@@ -1,0 +1,826 @@
+﻿#include "pch.h"
+#include "common.h"
+#include <time.h>
+#include <io.h>
+
+namespace common {
+	unsigned char auchCRCHi[] =
+	{
+		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
+		0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+		0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01,
+		0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41,
+		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81,
+		0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0,
+		0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01,
+		0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40,
+		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
+		0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+		0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01,
+		0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+		0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
+		0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
+		0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01,
+		0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41,
+		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
+		0x40
+	};
+
+
+	unsigned char auchCRCLo[] =
+	{
+		0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06, 0x07, 0xC7, 0x05, 0xC5, 0xC4,
+		0x04, 0xCC, 0x0C, 0x0D, 0xCD, 0x0F, 0xCF, 0xCE, 0x0E, 0x0A, 0xCA, 0xCB, 0x0B, 0xC9, 0x09,
+		0x08, 0xC8, 0xD8, 0x18, 0x19, 0xD9, 0x1B, 0xDB, 0xDA, 0x1A, 0x1E, 0xDE, 0xDF, 0x1F, 0xDD,
+		0x1D, 0x1C, 0xDC, 0x14, 0xD4, 0xD5, 0x15, 0xD7, 0x17, 0x16, 0xD6, 0xD2, 0x12, 0x13, 0xD3,
+		0x11, 0xD1, 0xD0, 0x10, 0xF0, 0x30, 0x31, 0xF1, 0x33, 0xF3, 0xF2, 0x32, 0x36, 0xF6, 0xF7,
+		0x37, 0xF5, 0x35, 0x34, 0xF4, 0x3C, 0xFC, 0xFD, 0x3D, 0xFF, 0x3F, 0x3E, 0xFE, 0xFA, 0x3A,
+		0x3B, 0xFB, 0x39, 0xF9, 0xF8, 0x38, 0x28, 0xE8, 0xE9, 0x29, 0xEB, 0x2B, 0x2A, 0xEA, 0xEE,
+		0x2E, 0x2F, 0xEF, 0x2D, 0xED, 0xEC, 0x2C, 0xE4, 0x24, 0x25, 0xE5, 0x27, 0xE7, 0xE6, 0x26,
+		0x22, 0xE2, 0xE3, 0x23, 0xE1, 0x21, 0x20, 0xE0, 0xA0, 0x60, 0x61, 0xA1, 0x63, 0xA3, 0xA2,
+		0x62, 0x66, 0xA6, 0xA7, 0x67, 0xA5, 0x65, 0x64, 0xA4, 0x6C, 0xAC, 0xAD, 0x6D, 0xAF, 0x6F,
+		0x6E, 0xAE, 0xAA, 0x6A, 0x6B, 0xAB, 0x69, 0xA9, 0xA8, 0x68, 0x78, 0xB8, 0xB9, 0x79, 0xBB,
+		0x7B, 0x7A, 0xBA, 0xBE, 0x7E, 0x7F, 0xBF, 0x7D, 0xBD, 0xBC, 0x7C, 0xB4, 0x74, 0x75, 0xB5,
+		0x77, 0xB7, 0xB6, 0x76, 0x72, 0xB2, 0xB3, 0x73, 0xB1, 0x71, 0x70, 0xB0, 0x50, 0x90, 0x91,
+		0x51, 0x93, 0x53, 0x52, 0x92, 0x96, 0x56, 0x57, 0x97, 0x55, 0x95, 0x94, 0x54, 0x9C, 0x5C,
+		0x5D, 0x9D, 0x5F, 0x9F, 0x9E, 0x5E, 0x5A, 0x9A, 0x9B, 0x5B, 0x99, 0x59, 0x58, 0x98, 0x88,
+		0x48, 0x49, 0x89, 0x4B, 0x8B, 0x8A, 0x4A, 0x4E, 0x8E, 0x8F, 0x4F, 0x8D, 0x4D, 0x4C, 0x8C,
+		0x44, 0x84, 0x85, 0x45, 0x87, 0x47, 0x46, 0x86, 0x82, 0x42, 0x43, 0x83, 0x41, 0x81, 0x80,
+		0x40
+	};
+
+
+	unsigned short N_CRC16(unsigned char* updata, long long len)
+	{
+		unsigned char uchCRCHi = 0xff;
+		unsigned char uchCRCLo = 0xff;
+		long long  uindex;
+		while (len--)
+		{
+			uindex = uchCRCHi ^ *updata++;
+			uchCRCHi = uchCRCLo ^ auchCRCHi[uindex];
+			uchCRCLo = auchCRCLo[uindex];
+		}
+		return (uchCRCHi << 8 | uchCRCLo);
+	}
+}
+
+namespace charCodec {
+
+	string utf8toAnsi(string instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string charstrtemp(charstr);
+		delete wcharstr;
+		delete charstr;
+		return charstrtemp;
+	}
+
+	wstring utf8toUtf16(string instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
+		return str;
+	}
+
+	string utf16toUtf8(wstring instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
+	string ansi2Utf8(string instr) //ansi-->utf-8
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string charstrtemp(charstr);
+		delete wcharstr;
+		delete charstr;
+		return charstrtemp;
+	}
+
+	string ToUtf8(LPCTSTR wstr) //-->utf-8
+	{
+#ifdef UNICODE
+		int srcLen = lstrlen(wstr);
+		string str = "";
+		int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+		if (len > 0)
+		{
+			char* des = new char[len + 1];
+			memset(des, 0, len + 1);
+			WideCharToMultiByte(CP_UTF8, 0, wstr, -1, des, len, NULL, NULL);
+			str = des;
+		}
+		return str;
+#else
+		string str = wstr;
+		return str;
+#endif
+	}
+}
+
+namespace timeopt {
+	string stTimeToStr(SYSTEMTIME time)
+	{
+		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
+		return str;
+	}
+
+	DWORD SysTime2Unix(SYSTEMTIME sDT)
+	{
+		tm temptm = { sDT.wSecond, sDT.wMinute, sDT.wHour,
+			sDT.wDay, sDT.wMonth - 1, sDT.wYear - 1900, sDT.wDayOfWeek, 0, 0 };
+		DWORD iReturn = (DWORD)mktime(&temptm);
+		return iReturn;
+	}
+
+	SYSTEMTIME Unix2SysTime(DWORD iUnix)
+	{
+		SYSTEMTIME sDT;
+		time_t tIn = (time_t)iUnix;
+		tm temptm;
+		localtime_s(&temptm, &tIn);
+		sDT.wYear = 1900 + temptm.tm_year;
+		sDT.wMonth = 1 + temptm.tm_mon;
+		sDT.wDay = temptm.tm_mday;
+		sDT.wDayOfWeek = temptm.tm_wday;
+		sDT.wHour = temptm.tm_hour;
+		sDT.wMinute = temptm.tm_min;
+		sDT.wSecond = temptm.tm_sec;
+		sDT.wMilliseconds = 0;
+		return sDT;
+	}
+
+	SYSTEMTIME str2st(string str)
+	{
+		SYSTEMTIME t;
+		int year,month,day,hour,min,sec;
+		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+			&year,
+			&month,
+			&day,
+			&hour,
+			&min,
+			&sec);
+		t.wYear = year;
+		t.wMonth =month;
+		t.wDay = day;
+		t.wHour = hour;
+		t.wMinute = min;
+		t.wSecond = sec;
+		t.wMilliseconds = 0;
+		return t;
+	}
+
+	int HMS2Sec(string hms)
+	{
+		vector<string> v;
+		str::split(v, hms, ":");
+		int sec = atoi(v[0].c_str()) * 3600 + atoi(v[1].c_str()) * 60 + atoi(v[2].c_str());
+		return sec;
+	}
+
+	bool isRelative(string time)
+	{
+		if (time.find("d") != string::npos || time.find("h") != string::npos
+			|| time.find("m") != string::npos || time.find("s") != string::npos || 
+			time.find("D") != string::npos || time.find("H") != string::npos
+			|| time.find("M") != string::npos || time.find("S") != string::npos)
+		{
+			return true;
+		}
+		return false;
+	}
+
+	DWORD duration2sec(string strTime)
+	{
+		DWORD dwSecond = 0;
+
+		std::smatch m;
+		std::regex e("([0-9]*)([d,h,m,s])");
+		std::string strSrc = strTime;
+		transform(strSrc.begin(), strSrc.end(), strSrc.begin(), ::tolower);
+
+		while (std::regex_search(strSrc, m, e))
+		{
+			if (m.size() > 2)
+			{
+				string strNum = m[1];
+				int nNum = atoi(strNum.c_str());
+				if (m[2] == "d")
+				{
+					dwSecond += nNum * 24 * 3600;
+				}
+				else if (m[2] == "h")
+				{
+					dwSecond += nNum * 3600;
+				}
+				else if (m[2] == "m")
+				{
+					dwSecond += nNum * 60;
+				}
+				else if (m[2] == "s")
+				{
+					dwSecond += nNum;
+				}
+
+			}
+			strSrc = m.suffix().str();
+		}
+
+		return dwSecond;
+	}
+
+	string rel2abs(string time)
+	{
+		string strTime1 = time;
+		if (isRelative(time)) {
+			//相对时间区间模式
+			string time1 = strTime1;
+			string strDay = "", strH = "", strM = "", strS = "";
+			int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
+			int pos = time1.find("d");
+			if (pos == string::npos)
+				pos = time1.find("D");
+			if (pos != string::npos) {
+				strDay = time1.substr(0, pos);
+				time1 = time1.erase(0, pos + 1);
+				n1 = atoi(strDay.c_str()) * 24 * 3600;
+			}
+			pos = time1.find("h");
+			if (pos == string::npos)
+				pos = time1.find("H");
+			if (pos != string::npos) {
+				strH = time1.substr(0, pos);
+				time1 = time1.erase(0, pos + 1);
+				n2 = atoi(strH.c_str()) * 3600;
+			}
+			pos = time1.find("m");
+			if (pos == string::npos)
+				pos = time1.find("M");
+			if (pos != string::npos) {
+				strM = time1.substr(0, pos);
+				time1 = time1.erase(0, pos + 1);
+				n3 = atoi(strM.c_str()) * 60;
+			}
+			pos = time1.find("s");
+			if (pos == string::npos)
+				pos = time1.find("S");
+			if (pos != string::npos) {
+				strS = time1.substr(0, pos);
+				time1 = time1.erase(0, pos + 1);
+				n4 = atoi(strS.c_str());
+			}
+			SYSTEMTIME stNow;
+			GetLocalTime(&stNow);
+			time_t endTime = timeopt::SysTime2Unix(stNow);
+			time_t startTime = endTime - n1 - n2 - n3 - n4;
+			SYSTEMTIME  stStart = timeopt::Unix2SysTime(startTime);
+			string strNow = timeopt::stTimeToStr(stNow);
+			string strStart = timeopt::stTimeToStr(stStart);
+			time = strStart + "~" + strNow;
+		}
+		return time;
+	}
+
+	string st2str(SYSTEMTIME t)
+	{
+		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
+			t.wYear, t.wMonth, t.wDay,
+			t.wHour, t.wMinute, t.wSecond);
+		return str;
+	}
+
+	string TimeToYMD(const SYSTEMTIME time)
+	{
+		string str;
+		if (time.wYear > 2000 && time.wDay > 0 && time.wDay < 40 && time.wHour >= 0 && time.wHour <= 24 && time.wMinute >= 0 && time.wMinute <= 60)
+		{
+			str = str::format("%.4d-%.2d-%.2d", time.wYear, time.wMonth, time.wDay);
+		}
+		return str;
+	}
+	int CalcTimePassSecond(SYSTEMTIME lastTime)
+	{
+		time_t last = SysTime2Unix(lastTime);
+		time_t now = time(NULL);
+
+		return (now - last)/1000;
+	}
+
+	time_t getTick(){
+		std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp =
+		std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+		auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+		time_t timestamp = tmp.count();
+		return timestamp;
+	}
+
+
+
+	string nowStr(bool enableMS)
+	{
+		time_t timestamp = getTick();
+		__int64 milli = timestamp + (__int64)8 * 60 * 60 * 1000;
+		auto mTime = std::chrono::milliseconds(milli);
+		auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>(mTime);
+		auto tt = std::chrono::system_clock::to_time_t(tp);
+		std::tm now;
+		::gmtime_s(&now,&tt);
+		char res[64] = { 0 };
+		if(enableMS)
+			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d.%03d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec, static_cast<int>(milli % 1000));
+		else
+		{
+			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
+		}
+		
+		return std::string(res);
+	}
+}
+
+
+
+namespace str {
+	string& trim(std::string& s, string toTrim)
+	{
+		s = trimPrefix(s, toTrim);
+		s = trimSuffix(s, toTrim);
+		return s;
+	}
+
+	string& trimPrefix(string& s, string prefix)
+	{
+		if (s.find(prefix) == 0)
+		{
+			s = s.substr(prefix.length(), s.length() - prefix.length());
+		}
+		return s;
+	}
+
+	string& trimSuffix(string& s, string suffix)
+	{
+		int ipos = s.find(suffix);
+		if (ipos + suffix.length() == s.length())
+		{
+			s = s.substr(0,ipos);
+		}
+		return s;
+	}
+
+	string& replace(string& str, const string to_replaced, const string newchars)
+	{
+		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		{
+			pos = str.find(to_replaced, pos);
+			if (pos != string::npos)
+				str.replace(pos, to_replaced.length(), newchars);
+			else
+				break;
+		}
+		return   str;
+	}
+
+
+	std::string str::format(const char* pszFmt, ...)
+	{
+		std::string str;
+		va_list args;
+		va_start(args, pszFmt);
+		{
+			int nLength = _vscprintf(pszFmt, args);
+			nLength += 1;  //上面返回的长度是包含\0，这里加上
+			std::vector<char> vectorChars(nLength);
+			_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+			str.assign(vectorChars.data());
+		}
+		va_end(args);
+		return str;
+	}
+
+	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
+	{
+		if (src.empty() || separator.empty())
+			return 0;
+
+		int nCount = 0;
+		std::string temp;
+		size_t pos = 0, offset = 0;
+
+		// 分割第1~n-1个
+		while ((pos = src.find(separator, offset)) != std::string::npos)
+		{
+			temp = src.substr(offset, pos - offset);
+			if (temp.length() > 0) {
+				dst.push_back(temp);
+				nCount++;
+			}
+			else
+			{
+				dst.push_back("");
+				nCount++;
+			}
+			offset = pos + separator.size();
+		}
+
+		// 分割第n个
+		temp = src.substr(offset, src.length() - offset);
+		if (temp.length() > 0) {
+			dst.push_back(temp);
+			nCount++;
+		}
+
+		return nCount;
+	}
+
+	void removeChar(string& str, char c)
+	{
+		str.erase(std::remove(str.begin(), str.end(), c), str.end());
+	}
+	string trimFloat(string str)
+	{
+		while (str.at(str.length() - 1) == '0')
+		{
+			str = str.substr(0, str.length() - 1);
+		}
+		if (str.at(str.length() - 1) == '.')
+		{
+			str = str.substr(0, str.length() - 1);
+		}
+		return str;
+	}
+	string fromFloat(float f)
+	{
+		string s;
+		s = str::format("%f", f);
+		s = str::trimFloat(s);
+		return s;
+	}
+
+	vector<char> toBytes(string str)
+	{
+		vector<char> bytes;
+		removeChar(str, ' ');
+		removeChar(str, '\t');
+		removeChar(str, '\r');
+		removeChar(str, '\n');
+
+		if (0 != str.length() % 2)
+		{
+			str += "0";
+		}
+
+		int strLen = 0;
+		strLen = str.length();
+
+		for (int i = 0; i < strLen / 2; i++)
+		{
+			char cByteHigh = str.at(i * 2);
+			char cByteLow = str.at(i * 2 + 1);
+			cByteHigh = toupper(cByteHigh);
+			cByteLow = toupper(cByteLow);
+			int bHigh = 0, bLow = 0;
+			if (cByteHigh >= 'A')
+			{
+				bHigh = cByteHigh - 'A' + 10;
+			}
+			else
+			{
+				bHigh = cByteHigh - '0';
+			}
+
+			if (cByteLow >= 'A')
+			{
+				bLow = cByteLow - 'A' + 10;
+			}
+			else
+			{
+				bLow = cByteLow - '0';
+			}
+
+			int val = (bHigh * 16 + bLow);
+			unsigned char b = (unsigned char)val;
+			bytes.push_back((char)b);
+		}
+		return bytes;
+	}
+	string fromBytes(vector<char>& bytes)
+	{
+		string str;
+		for (int i = 0; i < bytes.size(); i++)
+		{
+			string b = format("%02X", (unsigned char)bytes[i]);
+			str += b;
+		}
+
+		return str;
+	}
+	string fromBytes(char* p, int len)
+	{
+		string str;
+		for (int i = 0; i < len; i++)
+		{
+			string b = format("%02X", (unsigned char)p[i]);
+			str += b;
+		}
+
+		return str;
+	}
+	string fromInt(int v)
+	{
+		string s = str::format("%d", v);
+		return s;
+	}
+
+	int toInt(string s)
+	{
+		return atoi(s.c_str());
+	}
+
+	bool isInteger(string s)
+	{
+		for (int i = 0; i < s.size(); i++)
+		{
+			if (s.at(i) < '0' || s.at(i) > '9')return false;
+		}
+		return true;
+	}
+
+	bool isIp(string s)
+	{
+		vector<string> v;
+		str::split(v, s, ".");
+		if (v.size() != 4)return false;
+		for (int i = 0; i < v.size(); i++) 
+		{
+			if (!isInteger(v.at(i)))
+			return false; 
+		}
+		for (int i = 0; i < v.size(); i++) 
+		{ 
+			int n = toInt(v.at(i));
+			if (n > 255)return false;
+		}
+		return true;
+	}
+}
+
+
+namespace fs {
+	void createFolderOfPath(string strFile)
+	{
+		str::replace(strFile,"\\","/");
+		str::replace(strFile, "////", "/");
+		str::replace(strFile, "///", "/");
+		str::replace(strFile, "//", "/");
+
+		int iDotPos = strFile.rfind('.');
+		int iSlashPos = strFile.rfind('/');
+		if (iDotPos > iSlashPos)//是一个文件
+		{
+			strFile = strFile.substr(0, iSlashPos);
+		}
+
+		int iStartPos = 0;
+		while (1)
+		{
+			int iSlash = strFile.find('/', iStartPos);
+
+			if (iSlash == string::npos)//路径为文件夹的情况
+			{
+				int iDot = strFile.find('.', iStartPos);
+				if (iDot == string::npos)
+					CreateDirectoryW(charCodec::utf8toUtf16(strFile).c_str(), NULL);
+				break;
+			}
+
+			if (iSlash + 1 == strFile.length())//最后字符为 \\ 的情况
+				break;
+
+			string strFolder = strFile.substr(0, iSlash);
+			wstring wstrFolder = charCodec::utf8toUtf16(strFolder).c_str();
+			CreateDirectoryW(wstrFolder.c_str(), NULL);
+			iStartPos = iSlash + 1;
+		}
+	}
+	string toAbsolutePath(string str)
+	{
+		string s;
+		if (str.substr(0, 2) == ".\\")
+		{
+			s = str.substr(2, str.length() - 2);
+			s = fs::appPath() + "\\" + s;
+		}
+		else if (str.substr(0, 3) == "..\\")
+		{
+			s = fs::appPath() + "\\" + str;
+		}
+		else
+		{
+			s = str;
+		}
+		return s;
+	}
+
+	string appPath()
+	{
+#ifdef WINDOWS
+		TCHAR p[MAX_PATH] = { 0 };
+		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+		string strPath = (char*)p;
+		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+		strPath = strPath.substr(0, nEnd);
+		return strPath;
+#elif LINUX
+		return "";
+#else
+		return "";
+#endif
+	}
+	string getExt(string strFilePath)
+	{
+		size_t pos = strFilePath.rfind(".");
+		if (pos != strFilePath.npos)
+		{
+			string str = strFilePath.substr(pos, strFilePath.length() - pos);
+			return str;
+		}
+		return "";
+	}
+	bool readFile(string path, string& data)
+	{
+		FILE* fp = _wfopen(charCodec::utf8toUtf16(path).c_str(), L"rb");
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			long len = ftell(fp);
+			char* pdata = new char[len + 2];
+			memset(pdata, 0, len + 2);
+			fseek(fp, 0, SEEK_SET);
+			fread(pdata, 1, len, fp);
+			data = pdata;
+			fclose(fp);
+			return true;
+		}
+		return false;
+	}
+	bool writeFile(string path, char* data, int len)
+	{
+		wstring wpath = charCodec::utf8toUtf16(path);
+		FILE* fp = _wfopen(wpath.c_str(), L"wb");
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		else
+		{
+			int  iError = GetLastError();
+			std::cout << "open file failed,error=" <<iError<<","<< path << std::endl;
+		}
+		return false;
+	}
+	bool appendFile(string path, string data)
+	{
+		return appendFile(path,(char*)data.data(),data.length());
+	}
+	bool appendFile(string path, char* data, int len)
+	{
+		wstring wpath = charCodec::utf8toUtf16(path);
+		FILE* fp = _wfopen(wpath.c_str(), L"ab");
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		return false;
+	}
+	bool writeFile(string path, string& data)
+	{
+		return writeFile(path,(char*)data.c_str(), data.length());
+	}
+	bool fileExist(string pszFileName)
+	{
+		WIN32_FIND_DATAW FindFileData;
+		HANDLE hFind;
+
+		hFind = FindFirstFileW(charCodec::utf8toUtf16(pszFileName).c_str(), &FindFileData);
+
+		if (hFind == INVALID_HANDLE_VALUE)
+			return false;
+		else
+		{
+			FindClose(hFind);
+			return true;
+		}
+		return false;
+	}
+
+	bool deleteFile(string path){
+		wstring wpath = charCodec::utf8toUtf16(path);
+		int iret = _wremove(wpath.c_str());
+		return iret == 0;
+	}
+
+	vector<string> getFileList(string strFolder)
+	{
+		wstring wstrFolder = charCodec::utf8toUtf16(strFolder);
+		vector<string> list;
+		wchar_t dirNew[200];
+		wcscpy(dirNew, wstrFolder.c_str());
+		wcscat(dirNew, L"\\*.*");    // 在目录后面加上"\\*.*"进行第一次搜索
+
+		intptr_t handle;
+		_wfinddata64i32_t findData;
+
+		handle = _wfindfirst(dirNew, &findData);
+		if (handle == -1)        // 检查是否成功
+			return list;
+
+		do
+		{
+			if (findData.attrib & _A_SUBDIR)
+			{
+				if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
+					continue;
+
+				//list.push_back(charCodec::utf16toUtf8(findData.name));
+
+				// 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
+				wcscpy(dirNew, wstrFolder.c_str());
+				wcscat(dirNew, L"\\");
+				wcscat(dirNew, findData.name);
+
+				//getFileList(dirNew);
+			}
+			else
+			{
+				list.push_back(charCodec::utf16toUtf8(findData.name));
+			}
+		} while (_wfindnext(handle, &findData) == 0);
+
+		_findclose(handle);    // 关闭搜索句柄
+		return list;
+	}
+}
+
+namespace path {
+	string normalization(string& s)
+	{
+		s = str::replace(s, "\\\\", "/");
+		s = str::replace(s, "\\", "/");
+		s = str::replace(s, "//", "/");
+		return s;
+	}
+}
+
+string tds::getConf(string confName,string defaultVal)
+{
+	string str;
+	fs::readFile(fs::appPath() + "\\inputi", str);
+	vector<string> items;
+	str::split(items, str, "\r\n");
+	for (int i = 0; i < items.size(); i++)
+	{
+		string confItem = items.at(i);
+		vector<string> keyVal;
+		str::split(keyVal, confItem, "=");
+		if (keyVal.size() != 2)
+			return defaultVal;
+		if (keyVal.at(0) == confName)
+			return keyVal.at(1);
+	}
+	return defaultVal;
+}
+
+int tds::getConfInt(string confName, int defaultVal)
+{
+	string s = getConf(confName);
+	if (s.length() > 0)
+		return atoi(s.c_str());
+	else
+		return 80;
+}

@@ -1,0 +1,81 @@
+﻿#include "pch.h"
+#include "ioChan.h"
+#include "prj.h"
+#include "ioDev.h"
+#include "mp.h"
+#include "db.h"
+
+
+ioChannel::ioChannel()
+{
+
+}
+
+
+ioChannel::~ioChannel()
+{
+}
+
+string ioChannel::GetCommLinkTag()
+{
+	ioPath addr = m_pParent->getIOPath();
+	string str = addr.ToString();
+
+	str += "-" + m_addr;
+
+	return str;
+}
+
+bool ioChannel::match(string channelNo) {
+	if (m_addr.find("#"))//mqtt channel wildcard
+	{
+		string str = m_addr;
+		str = str::trim(str, "#");
+		if (channelNo.find(str) == 0)
+		{
+			return true;
+		}
+	}
+	else
+	{
+		if (channelNo == m_addr)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void ioChannel::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic) {
+	SYSTEMTIME t;
+	if (dataTime == NULL)
+	{
+		GetLocalTime(&t);
+		dataTime = &t;
+	}
+	m_stLastUpdateTime = *dataTime;
+	string tag = m_strLinkMPTag;
+	str::trimPrefix(tag, prj.m_strName + ".");
+	mp* pMP = (mp*)prj.GetMOByTag(tag);
+	if (pMP && pMP->m_moType == MO_TYPE::mp)
+	{
+		pMP->inputVal(jVal,dataTime);
+	}
+}
+
+bool ioChannel::outputVal(json jVal)
+{
+	return false;
+}
+
+bool ioChannel::IsValid()
+{
+	mp* pMP = (mp*)prj.GetMOByTag(m_strLinkMPTag);
+	if (pMP && pMP->m_moType == MO_TYPE::mp)
+		return true;
+	else
+		return false;
+}
+
+
+

@@ -1,0 +1,236 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="alarm_server">
+      <UniqueIdentifier>{ca20fe64-4ddf-458f-b947-dd3f1a2055ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{61f8ed5b-3995-4b52-98af-21ad15ab804f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="video">
+      <UniqueIdentifier>{19a95ac0-72f8-4259-aefd-f050c43fe1e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="mo_model">
+      <UniqueIdentifier>{5c041c2c-d942-445f-a645-2cdaba770361}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io_server">
+      <UniqueIdentifier>{b0a1e03c-3dcb-4bef-9321-c390636edfc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data_server">
+      <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\alarm_server\as.cpp">
+      <Filter>alarm_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\remoteDesktopServer.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\base64.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\common.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\logger.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\sha1.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\simdjson.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\tcpClt.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\tcpSrv.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\db.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\ds.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\tdspSrv.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\tdsSession.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\wsProto.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\wspSrv.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\io_server\commSrv.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioSrv.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\amo.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\conf.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\mo.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\mp.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\prj.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\stream2pkt.cpp">
+      <Filter>mo_model</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioChan_tuya.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_tuya.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioChan.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\alarm_server\as.h">
+      <Filter>alarm_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\ffmpeg.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\remoteDesktopServer.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\base64.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\cmdparser.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\httplib.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\json.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\logger.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\sha1.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\simdjson.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\tcpClt.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\tcpSrv.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\db.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\ds.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\tdspSrv.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\tdsSession.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\wsProto.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\wspSrv.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\commSrv.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioChan.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioSrv.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\amo.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\conf.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\mo.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\mp.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\prj.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\stream2pkt.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\tdscore.h">
+      <Filter>mo_model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioChan_tuya.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_tuya.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pch.h" />
+    <ClInclude Include="..\src\data_server\dsClientStream.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\src\logo.rc" />
+  </ItemGroup>
+</Project>
