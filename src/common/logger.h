@@ -5,6 +5,7 @@ using namespace std;
 
 //log level:  trace,debug,warn,error
 enum LOG_LEVEL {
+	LL_DETAIL = -2,
 	LL_TRACE = -1,
 	LL_DEBUG = 0,
 	LL_WARN = 1,

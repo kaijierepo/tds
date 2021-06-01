@@ -56,6 +56,8 @@ LOG_LEVEL Clogger::str2logLevel(string level)
 	LOG_LEVEL ll;
 	if (level == "trace")
 		ll = LL_TRACE;
+	else if (level == "detail")
+		ll = LL_DETAIL;
 	else if (level == "debug")
 		ll = LL_DEBUG;
 	else if (level == "warn")

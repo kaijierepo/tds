@@ -23,7 +23,7 @@ int main(int argc, char** argv)
 	cli::Parser parser(argc, argv);
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
-	parser.set_optional<string>("l", "loglevel", "debug", "trace,debug,warn,error;");
+	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
 	ds.conf.port = parser.get<int>("p");
 	ds.conf.debugMode = parser.get<bool>("d");
