@@ -4,7 +4,7 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand>
-    <LocalDebuggerCommandArguments>-p 80 -d -l debug</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-p 10080 -d -l debug</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup>
     <ShowAllFiles>false</ShowAllFiles>

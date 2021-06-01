@@ -173,25 +173,33 @@ bool dataServer::run()
 		m_tcpSrv->keepAliveTimeout = 30;
 	if(conf.port == 0) //not set by cmd line
 		conf.port = tds::getConfInt("port", 80);
-	while (!m_tcpSrv->run(this, conf.port))
+	int tryPort = conf.port;
+	while (!m_tcpSrv->run(this, tryPort))
 	{
-		if (m_tcpSrv->m_lastError == 10048)
+		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
 		{
-			string strData;
-			strData=str::format("port:%d is already used,change to ", conf.port,conf.port + 10000);
-			conf.port = conf.port + 10000;
-			LOG(strData);
+			LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
 		}
+		else if(m_tcpSrv->m_lastError == WSAEACCES)//10013)
+		{
+			LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
+		}
+		string strData;
+		int triedPort = tryPort;
+		if (tryPort = 80)tryPort = 666;
+		else tryPort++;
+		strData = str::format("bind to port:%d fail,try %d", triedPort, tryPort);
+		LOG(strData);
 
-		if(conf.port > 60080)
+		if(tryPort > 669)
 		{
 			LOG("[error]no valid port can be used!!");
 			exit(0);
 		}
 	}
-	LOG("TDS Server at port " + str::fromInt(conf.port));
+	LOG("TDS Server at port " + str::fromInt(tryPort));
 
-	strName=str::format("tds(%d)", conf.port);
+	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
 	tdsSrv.m_vecTLServer.push_back(this);

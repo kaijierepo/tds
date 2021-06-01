@@ -79,6 +79,8 @@ bool Clogger::isNeedLog(string info)
 	LOG_LEVEL ll = LL_DEBUG;
 	if (info.find("[trace]") != string::npos)
 		ll = str2logLevel("trace");
+	else if (info.find("[detail]") != string::npos)
+		ll = str2logLevel("detail");
 	else if (info.find("[debug]") != string::npos)
 		ll = str2logLevel("debug");
 	else if (info.find("[warn]") != string::npos)
