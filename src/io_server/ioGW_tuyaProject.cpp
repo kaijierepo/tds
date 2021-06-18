@@ -52,6 +52,11 @@ void tuyaProjectInitThread(ioGW_tuyaProject* pGw)
 							pGw->m_accessToken = jResult["access_token"];
 							pGw->m_refreshToken = jResult["refresh_token"];
 						}
+						else
+						{
+							LOG("[error]query access token of tuya project failed.please check project_id and key config for tuya project. sign in tuya iot platform to get these config");
+							return;
+						}
 					}
 					LOG("request " + url + "return " + tokenInfo);
 				}

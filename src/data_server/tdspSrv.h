@@ -39,6 +39,7 @@ public:
 	string rpc_getconffile(json params);
 	string rpc_setconffile(json params);
 	string rpc_heartbeat(json params);
+	string rpc_xiaot(json params);
 
 	//rpc error
 	string RPCError(int code,string msg);

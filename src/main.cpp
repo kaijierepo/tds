@@ -6,6 +6,8 @@
 #include "video/remoteDesktopServer.h"
 #include "cmdparser.hpp"
 #include "logger.h"
+#include "xiaot/xiaot.h"
+
 /*
 notes:
 all string data in memory is utf8 format 
@@ -28,6 +30,9 @@ int main(int argc, char** argv)
 	ds.conf.port = parser.get<int>("p");
 	ds.conf.debugMode = parser.get<bool>("d");
 	logger.setLogLevel(parser.get<string>("l"));
+
+	//startup xiaot
+	xiaot.init();
 
 	//startup tds modules
 	prj.loadConf();

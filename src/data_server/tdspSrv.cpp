@@ -14,6 +14,7 @@
 #include "db.h"
 #include <UrlMon.h>
 #include "logger.h"
+#include "xiaot/xiaot.h"
 
 tdsServer tdsSrv;
 
@@ -211,6 +212,10 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 		if (method == "heartbeat")
 		{
 			result = rpc_heartbeat(params);
+		}
+		else if (method == "xiaot")
+		{
+			result = rpc_xiaot(params);
 		}
 		else if (method == "input")
 		{
@@ -621,6 +626,12 @@ string tdsServer::rpc_setconffile(json params)
 string tdsServer::rpc_heartbeat(json params)
 {
 	return "\"pong\"";
+}
+
+string tdsServer::rpc_xiaot(json params)
+{
+	string reply = xiaot.getReply(params);
+	return reply;
 }
 
 vector<shared_ptr<TDS_SESSION>> tdsServer::GetAllSession()

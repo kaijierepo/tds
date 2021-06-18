@@ -19,6 +19,9 @@
     <Filter Include="data_server">
       <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="xiaot">
+      <UniqueIdentifier>{a0dd2bb4-1341-4a15-b383-58f388ed4508}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -114,6 +117,9 @@
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioChan.cpp">
       <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\xiaot\xiaot.cpp">
+      <Filter>xiaot</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -228,6 +234,9 @@
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\data_server\dsClientStream.h">
       <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\xiaot\xiaot.h">
+      <Filter>xiaot</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
