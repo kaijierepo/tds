@@ -29,6 +29,7 @@ public:
 	bool Init();
 
 	//json rpc implementation
+	//tds core function
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
 	string rpc_input(json params);
 	string rpc_output(json params);
@@ -40,6 +41,10 @@ public:
 	string rpc_setconffile(json params);
 	string rpc_heartbeat(json params);
 	string rpc_xiaot(json params);
+
+	//serial function
+	string rpc_openCom(json params);
+	string rpc_closeCom(json params);
 
 	//rpc error
 	string RPCError(int code,string msg);

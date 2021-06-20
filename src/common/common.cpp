@@ -1,7 +1,15 @@
-﻿#include "pch.h"
-#include "common.h"
+﻿#include "common.h"
 #include <time.h>
 #include <io.h>
+#include <tchar.h>
+#include <queue>
+#include <string>
+#include <map>
+#include <mutex>
+#include <thread>
+#include <iostream>
+#include <exception>
+#include <WinSock2.h>
 
 namespace common {
 	unsigned char auchCRCHi[] =

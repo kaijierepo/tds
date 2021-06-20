@@ -15,6 +15,7 @@
 #include <UrlMon.h>
 #include "logger.h"
 #include "xiaot/xiaot.h"
+#include "ioGW_localSerial.h"
 
 tdsServer tdsSrv;
 
@@ -264,6 +265,14 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 		else if (method == "setconf")
 		{
 			result = rpc_setconf(params);
+		}
+		else if (method == "opencom")
+		{
+			result = rpc_openCom(params);
+		}
+		else if (method == "closecom")
+		{
+			result = rpc_closeCom(params);
 		}
 		else
 		{
@@ -632,6 +641,29 @@ string tdsServer::rpc_xiaot(json params)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
+}
+
+
+
+string tdsServer::rpc_openCom(json params)
+{
+	ioGW_LocalSerial* pCom = new ioGW_LocalSerial();
+	if (pCom->OpenCom(params.dump()))
+	{
+		pCom->run();
+		ioSrv.localComList.push_back(pCom);
+		return "\"ok\"";
+	}
+	else
+	{
+		delete pCom;
+		return "\"fail\"";
+	}
+}
+
+string tdsServer::rpc_closeCom(json params)
+{
+	return "";
 }
 
 vector<shared_ptr<TDS_SESSION>> tdsServer::GetAllSession()

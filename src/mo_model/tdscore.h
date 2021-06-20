@@ -3,6 +3,7 @@
 #include <string>
 #include<map>
 #include "common.h"
+#include "tchar.h"
 using namespace std;
 
 #define Nan 0x7fc00000

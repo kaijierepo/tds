@@ -8,7 +8,6 @@
 #ifdef WINDOWS
 #include <windows.h>
 #endif
-#include <tchar.h>
 
 using namespace std;
 
