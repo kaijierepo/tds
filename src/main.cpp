@@ -29,7 +29,9 @@ int main(int argc, char** argv)
 	parser.run_and_exit_if_error();
 	ds.conf.port = parser.get<int>("p");
 	ds.conf.debugMode = parser.get<bool>("d");
-	logger.setLogLevel(parser.get<string>("l"));
+	string strLogLevel = parser.get<string>("l");
+	logger.setLogLevel(strLogLevel);
+	LOG("current log Level is:" + strLogLevel);
 
 	//startup xiaot
 	xiaot.init();

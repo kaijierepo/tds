@@ -15,6 +15,7 @@
 #include <UrlMon.h>
 #include "logger.h"
 #include "xiaot/xiaot.h"
+#include "ioGW_localSerial.h"
 
 tdsServer tdsSrv;
 
@@ -191,9 +192,9 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 	try
 	{
 		json jReq = json::parse(strReq);
-#ifdef DEBUG
-		//logging("tdsp Req:\r\n" + strReq + "\r\n");
-#endif
+
+		LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
+
 		method = jReq["method"].get<string>();
 		auto params = jReq["params"];
 		json jId = jReq["id"];
@@ -265,6 +266,14 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 		{
 			result = rpc_setconf(params);
 		}
+		else if (method == "opencom")
+		{
+			result = rpc_openCom(params);
+		}
+		else if (method == "closecom")
+		{
+			result = rpc_closeCom(params);
+		}
 		else
 		{
 			json jError = {
@@ -313,9 +322,9 @@ HANDLE_END:
 		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + result + "}";
 	}
 	
-#ifdef DEBUG
-	//logging("Tds RPC Response --> :\r\n" + strResp + "\r\n");
-#endif
+
+	LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
+
 }
 
 void tdsServer::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
@@ -632,6 +641,41 @@ string tdsServer::rpc_xiaot(json params)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
+}
+
+
+
+string tdsServer::rpc_openCom(json params)
+{
+	ioGW_LocalSerial* pCom = new ioGW_LocalSerial();
+	if (pCom->OpenCom(params.dump()))
+	{
+		pCom->run();
+		ioSrv.localComList.push_back(pCom);
+		return "\"ok\"";
+	}
+	else
+	{
+		json jError = "fail," + pCom->m_strErrorInfo;
+		delete pCom;
+		return jError.dump();
+	}
+}
+
+string tdsServer::rpc_closeCom(json params)
+{
+	string portNum = params["portNum"].get<string>();
+	ioGW_LocalSerial* pCom = ioSrv.getLocalComDev(portNum);
+	if (pCom)
+	{
+		pCom->closeCom();
+		json j = "ok";
+		return j.dump();
+	}
+	
+	json j = "portNum " + portNum + " is not opened";
+		
+	return j.dump();
 }
 
 vector<shared_ptr<TDS_SESSION>> tdsServer::GetAllSession()

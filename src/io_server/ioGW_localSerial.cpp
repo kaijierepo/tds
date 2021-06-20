@@ -2,21 +2,13 @@
 #include "ioGW_LocalSerial.h"
 #include "commSrv.h"
 
+
 DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
 	ioGW_LocalSerial* pGW = (ioGW_LocalSerial*)lpParam;
 	char buf[500] = {0};
 	while(1)
 	{
-		if(pGW->m_hCom == NULL)
-		{
-			if(!pGW->OpenCom())
-			{
-				Sleep(5000);
-				continue;
-			}
-		}
-
 		int iLen = 0;
 		pGW->ReadCom(buf,iLen);
 
@@ -34,6 +26,7 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 	m_devType = IO_DEV_TYPE::gw_local_serial;
 	m_addr = "COM1";
 	m_hCom = NULL;
+	pTdsSession = NULL;
 }
 
 
@@ -43,6 +36,11 @@ ioGW_LocalSerial::~ioGW_LocalSerial(void)
 
 bool ioGW_LocalSerial::run()
 {
+	if (m_hCom == NULL)
+	{
+		return false;
+	}
+
 	DWORD dwThread = 0;
 	HANDLE hThread = CreateThread(NULL, 0, GWLocalComWorkThread, (LPVOID)this, 0, &dwThread);
 	if (hThread != NULL)
@@ -105,8 +103,30 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 	return true;
 }
 
-bool ioGW_LocalSerial::OpenCom()
+bool ioGW_LocalSerial::closeCom()
 {
+	if (m_hCom)
+	{
+		CloseHandle(m_hCom);
+		m_hCom = NULL;
+	}
+	return true;
+}
+
+bool ioGW_LocalSerial::OpenCom(string conf)
+{
+	if (conf != "")
+	{
+		json j = json::parse(conf);
+
+		m_portNum = j["portNum"].get<string>();
+		m_baudRate = j["baudRate"].get<int>();
+		m_parity = j["parity"].get<int>();
+		m_byteSize = j["byteSize"].get<int>();
+		m_stopBits = j["stopBits"].get<int>();
+	}
+
+
 	if(m_hCom)
 	{
 		CloseHandle(m_hCom);
@@ -116,14 +136,15 @@ bool ioGW_LocalSerial::OpenCom()
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
-		0,
+		0, // 独占方式
 		NULL,
-		OPEN_EXISTING,
+		OPEN_EXISTING,// 打开而不是创建
 		0,
 		NULL);
 
 	if (m_hCom == INVALID_HANDLE_VALUE)
 	{
+		m_strErrorInfo = sys::getLastError("CreateFile");
 		m_hCom = NULL;
 		return false;
 	}
@@ -132,10 +153,10 @@ bool ioGW_LocalSerial::OpenCom()
 	SecureZeroMemory(&dcb, sizeof(DCB));
 	dcb.DCBlength = sizeof(DCB);
 	GetCommState(m_hCom, &dcb);
-	dcb.BaudRate = 19200;
-	dcb.ByteSize = 8;
-	dcb.Parity = 0;
-	dcb.StopBits = 0;//0Ϊ1��1Ϊ1.5 
+	dcb.BaudRate = m_baudRate;
+	dcb.ByteSize = m_byteSize;
+	dcb.Parity = m_parity;
+	dcb.StopBits = m_stopBits; 
 	SetCommState(m_hCom, &dcb);
 
 	SetupComm(m_hCom, 1024, 1024);

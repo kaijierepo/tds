@@ -1,7 +1,15 @@
-﻿#include "pch.h"
-#include "common.h"
+﻿#include "common.h"
 #include <time.h>
 #include <io.h>
+#include <tchar.h>
+#include <queue>
+#include <string>
+#include <map>
+#include <mutex>
+#include <thread>
+#include <iostream>
+#include <exception>
+#include <WinSock2.h>
 
 namespace common {
 	unsigned char auchCRCHi[] =
@@ -95,7 +103,7 @@ namespace charCodec {
 
 	string utf16toUtf8(wstring instr) //utf-8-->ansi
 	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		int MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
@@ -794,6 +802,51 @@ namespace path {
 		s = str::replace(s, "\\", "/");
 		s = str::replace(s, "//", "/");
 		return s;
+	}
+}
+
+namespace sys {
+	LPCSTR getLastError(LPCTSTR szReason)
+	{
+		static TCHAR szErrMsg[1024];
+		memset(szErrMsg, 0, sizeof(szErrMsg));
+
+		DWORD dwErrCode = GetLastError(); //之前的错误代码
+
+		LPVOID lpMsgBuf = NULL;
+		DWORD dwLen = FormatMessageW(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dwErrCode,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+			(LPWSTR)&lpMsgBuf,
+			0,
+			NULL
+		);
+		if (dwLen == 0)
+		{
+			DWORD dwFmtErrCode = GetLastError(); //FormatMessage 引起的错误代码
+			_stprintf_s(szErrMsg, _T("FormatMessage failed with %u\n"), dwFmtErrCode);
+		}
+
+		if (lpMsgBuf)
+		{
+			wstring utf16msg = (LPWSTR)lpMsgBuf;
+			string utf8Msg = charCodec::utf16toUtf8(utf16msg);
+			_stprintf_s(szErrMsg, _T("%s\n Code = %u, Mean = %s"),
+				szReason, dwErrCode, utf8Msg.c_str());
+		}
+
+		if (lpMsgBuf)
+		{
+			// Free the buffer.
+			LocalFree(lpMsgBuf);
+			lpMsgBuf = NULL;
+		}
+
+		return szErrMsg;
 	}
 }
 

@@ -2,6 +2,7 @@
 #include "ioDev.h"
 #include <string>
 #include "tdscore.h"
+#include "ioGW_localSerial.h"
 
 class ioServer : public ioDev
 {
@@ -13,6 +14,9 @@ public:
 	bool run() override;
 
 	string getTag(string ioPath);
+
+	ioGW_LocalSerial* getLocalComDev(string portNum);
+	vector<ioGW_LocalSerial*> localComList;
 };
 
 extern ioServer ioSrv;

@@ -8,9 +8,12 @@
 #ifdef WINDOWS
 #include <windows.h>
 #endif
-#include <tchar.h>
 
 using namespace std;
+
+namespace sys {
+	LPCSTR getLastError(LPCTSTR szReason);
+};
 
 namespace common
 {

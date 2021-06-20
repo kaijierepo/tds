@@ -8,6 +8,7 @@
 #include "tdspSrv.h"
 #include "video/remoteDesktopServer.h"
 #include <memory>
+#include "ioSrv.h"
 
 
 dataServer ds;
@@ -333,6 +334,32 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 			pAppLayerClt->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
 			if (CWSPPkt::isHandShake(strData))
 			{
+				if (strData.find("COM") != string::npos)
+				{
+					int pos = strData.rfind("/");
+					string serialPort = strData.substr(pos + 1, strData.length() - pos - 1);
+					ioGW_LocalSerial* p = ioSrv.getLocalComDev(serialPort);
+					if (p)
+					{
+						p->pTdsSession = pAppLayerClt;
+					}
+					else
+					{
+						string html = serialPort + " is not in the opened port list,please open it first";
+						std::string header = "HTTP/1.1 200 OK\r\n";
+						header += "Content-Type: text/html; charset=utf-8\r\n";
+						header += "Accept-Ranges: none\r\n"; // no support for partial requests
+						header += "Cache-Control: no-store, must-revalidate\r\n";
+						header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
+						header += "\r\n";
+
+						string resp = header + html;
+						send(pTcpSess->sock, (char*)resp.data(), resp.length(),0);
+						return;
+					}
+				}
+
+
 				CWSPPkt req;
 				std::string handshakeString = req.GetHandshakeString(strData);
 				send(pTcpSess->sock, handshakeString.c_str(), handshakeString.size(), 0);
@@ -384,6 +411,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						}
 					}
 				}
+				
 				return;
 			}
 		}
