@@ -136,9 +136,9 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
-		0, // 独占方式
+		0, // ��ռ��ʽ
 		NULL,
-		OPEN_EXISTING,// 打开而不是创建
+		OPEN_EXISTING,// �򿪶����Ǵ���
 		0,
 		NULL);
 
