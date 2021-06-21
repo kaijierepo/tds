@@ -1,5 +1,7 @@
 node_modules/
 /dist/
+threejs/
+
 
 *.ipch
 *.db*
@@ -12,6 +14,8 @@ node_modules/
 *.avi
 *.h264
 *.fmp4
+*.glb
+*.gltf
 db/
 
 

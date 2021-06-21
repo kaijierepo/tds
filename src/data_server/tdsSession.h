@@ -46,6 +46,7 @@ public:
 	CTLServer* pTLServer; //传输层服务器
 	bool bVideoStream;
     bool bInitSegSended;
+	string bridgedLocalCom; //和本地串口桥接
 
     void Init() override;
     string GetClientIp();

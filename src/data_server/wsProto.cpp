@@ -55,10 +55,12 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 	//std::cout << "opcode: " << opcode << std::endl;
 
 
-	if (opcode == WS_TEXT_FRAME || opcode == WS_CONTINUATION_FRAME)
+	if (opcode == WS_TEXT_FRAME || 
+		opcode == WS_BINARY_FRAME ||
+		opcode == WS_CONTINUATION_FRAME)
 	{
 		// 处理utf-8编码的文本帧
-		ret = WS_TEXT_FRAME;
+		ret = (WS_FrameType)opcode;
 		payloadLength = static_cast<uint64_t>(frameData[1] & 0x7f);
 		if (payloadLength == 0x7e)//max payload is 65535;  2 bytes for payload len value storage; the leading 7 bits is used as a flag
 		{
@@ -79,9 +81,9 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 			}
 		}
 	}
-	else if (opcode == WS_BINARY_FRAME || opcode == WS_PING_FRAME || opcode == WS_PONG_FRAME)
+	else if (opcode == WS_PING_FRAME || opcode == WS_PONG_FRAME)
 	{
-		// 二进制/ping/pong帧暂不处理
+		//ping/pong帧暂不处理
 	}
 	else if (opcode == WS_CLOSING_FRAME)
 	{

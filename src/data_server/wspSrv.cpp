@@ -46,7 +46,11 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen,tcpSession* pTcpSession)
 			}	
 		}
 		break;
-	case WS_BINARY_FRAME:
+	case WS_BINARY_FRAME://do no framing work when binary,used for video and transparent transfer
+		{
+			req.unpack((char*)pData, iLen);
+			m_pALServer->OnRecvAppLayerPkt((char*)req.payloadData, req.iPayloadLen, pTcpSession);
+		}
 		break;
 	case WS_PING_FRAME:
 		break;

@@ -336,16 +336,18 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 			{
 				if (strData.find("COM") != string::npos)
 				{
-					int pos = strData.rfind("/");
-					string serialPort = strData.substr(pos + 1, strData.length() - pos - 1);
-					ioGW_LocalSerial* p = ioSrv.getLocalComDev(serialPort);
+					int pos = strData.find("COM");
+					int pos1 = strData.find(" ", pos);
+					string portNum = strData.substr(pos,pos1-pos);
+					ioGW_LocalSerial* p = ioSrv.getLocalComDev(portNum);
 					if (p)
 					{
+						pAppLayerClt->bridgedLocalCom = portNum;
 						p->pTdsSession = pAppLayerClt;
 					}
 					else
 					{
-						string html = serialPort + " is not in the opened port list,please open it first";
+						string html = portNum + " is not in the opened port list,please open it first";
 						std::string header = "HTTP/1.1 200 OK\r\n";
 						header += "Content-Type: text/html; charset=utf-8\r\n";
 						header += "Accept-Ranges: none\r\n"; // no support for partial requests
@@ -368,9 +370,11 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 				string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d",pTcpSess->strIP,pTcpSess->iPort);
 				LOG(szLog);
 
-				if(ds.conf.debugMode)
+				if (strData.find("rpc") != string::npos)
 				{
-					string s = R"(
+					if (ds.conf.debugMode)
+					{
+						string s = R"(
 						{
 							"jsonrpc": "2.0", 
 							"method": "notify.close_heartbeat", 
@@ -379,8 +383,10 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 							"id": null
 						}
 					)";
-					pAppLayerClt->send((char*)s.data(),s.length());
+						pAppLayerClt->send((char*)s.data(), s.length());
+					}
 				}
+				
 
 				if (strData.find("teststream") != string::npos && !bTestStream)
 				{
@@ -566,7 +572,15 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
 	DWORD dwDataLen = iLen;
 
 	std::shared_ptr<TDS_SESSION> pALC = getTDSSession(pClt);
-	if (pALC->iALProto == APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC)
+	if (pALC->bridgedLocalCom != "")//tds link is bridged to a local com
+	{
+		ioGW_LocalSerial* p = ioSrv.getLocalComDev(pALC->bridgedLocalCom);
+		if (p)
+		{
+			p->SendData(pDataBuf, iLen);
+		}
+	}
+	else if (pALC->iALProto == APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC)
 	{
 		char* szJson = new char[iLen + 1];
 		memset(szJson, 0, iLen + 1);

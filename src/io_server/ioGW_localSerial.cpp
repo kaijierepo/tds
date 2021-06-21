@@ -17,7 +17,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 			pGW->OnRecvData(buf,iLen);
 		}
 
-		Sleep(200);
+		Sleep(20);
 	};
 }
 
@@ -100,6 +100,12 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 	{
 		m_vecChild.at(i)->OnRecvData(pData,iLen);
 	}
+
+	if (pTdsSession)
+	{
+		pTdsSession->send(pData, iLen);
+	}
+
 	return true;
 }
 
@@ -136,9 +142,9 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
-		0, // ç‹¬å æ–¹å¼
+		0, // ¶ÀÕ¼·½Ê½
 		NULL,
-		OPEN_EXISTING,// æ‰“å¼€è€Œä¸æ˜¯åˆ›å»º
+		OPEN_EXISTING,// ´ò¿ª¶ø²»ÊÇ´´½¨
 		0,
 		NULL);
 

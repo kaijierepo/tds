@@ -647,7 +647,16 @@ string tdsServer::rpc_xiaot(json params)
 
 string tdsServer::rpc_openCom(json params)
 {
-	ioGW_LocalSerial* pCom = new ioGW_LocalSerial();
+	ioGW_LocalSerial* pCom = NULL;
+	string portNum = params["portNum"].get<string>();
+	pCom = ioSrv.getLocalComDev(portNum);
+	if (pCom)
+	{
+		json jError = "ok";
+		return jError.dump();
+	}
+
+	pCom = new ioGW_LocalSerial();
 	if (pCom->OpenCom(params.dump()))
 	{
 		pCom->run();
@@ -669,6 +678,16 @@ string tdsServer::rpc_closeCom(json params)
 	if (pCom)
 	{
 		pCom->closeCom();
+		for (int i = 0; i < ioSrv.localComList.size(); i++)
+		{
+			ioGW_LocalSerial* pTemp = ioSrv.localComList.at(i);
+			if (pTemp == pCom)
+			{
+				ioSrv.localComList.erase(ioSrv.localComList.begin() + i);
+				break;
+			}	
+		}
+		delete pCom;
 		json j = "ok";
 		return j.dump();
 	}
