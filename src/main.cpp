@@ -7,6 +7,7 @@
 #include "cmdparser.hpp"
 #include "logger.h"
 #include "xiaot/xiaot.h"
+#include "conf.h"
 
 /*
 notes:
@@ -27,8 +28,8 @@ int main(int argc, char** argv)
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
 	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
-	ds.conf.port = parser.get<int>("p");
-	ds.conf.debugMode = parser.get<bool>("d");
+	tdsConf.port = parser.get<int>("p");
+	tdsConf.debugMode = parser.get<bool>("d");
 	string strLogLevel = parser.get<string>("l");
 	logger.setLogLevel(strLogLevel);
 	LOG("current log Level is:" + strLogLevel);

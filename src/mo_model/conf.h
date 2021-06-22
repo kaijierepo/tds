@@ -2,16 +2,18 @@
 #include <string>
 using namespace std;
 
-class config
+class tdsConfig
 {
 public:
-	config();
+	tdsConfig();
+	int port;
+	bool debugMode;
 
-	string path;
+	string projectConfPath;
 	bool bConcurrentGateway;
 	string dbPath;
 	string dataCenterIp;
 };
 
-extern config conf;
+extern tdsConfig tdsConf;
 

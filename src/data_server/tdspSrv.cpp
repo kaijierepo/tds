@@ -48,7 +48,7 @@ bool tdsServer::Init()
 {
 	m_DB = prj.DB;
 
-	string strDSIP = prj.m_conf.dataCenterIp;
+	string strDSIP = tdsConf.dataCenterIp;
 	str::removeChar(strDSIP, ' ');
 	if (strDSIP.length() > 0)
 	{
@@ -360,7 +360,7 @@ void tdsServer::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strT
 	string strTargetFile;
 	strTargetFile=str::format("\\%04d%02d\\%02d\\%s\\%02d%02d%02d%s",
 		stDateTime.wYear, stDateTime.wMonth, stDateTime.wDay, strTagTmp, stDateTime.wHour, stDateTime.wMinute, stDateTime.wSecond, suffix.c_str());
-	string allDBPath = prj.m_conf.dbPath;
+	string allDBPath = tdsConf.dbPath;
 	strTargetFile = allDBPath + strTargetFile;
 	fs::createFolderOfPath(strTargetFile);
 	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
@@ -519,7 +519,7 @@ string tdsServer::rpc_getconf(json params)
 	else if (type == "mo-mp-tree")
 	{
 		string conf;
-		fs::readFile(prj.m_conf.path + "\\mo.json", conf);
+		fs::readFile(tdsConf.projectConfPath + "\\mo.json", conf);
 		if (conf == "")
 		{
 			json j;
@@ -533,7 +533,7 @@ string tdsServer::rpc_getconf(json params)
 	else if(type == "io-tree")
 	{
 		string conf;
-		fs::readFile(prj.m_conf.path + "\\io.json", conf);
+		fs::readFile(tdsConf.projectConfPath + "\\io.json", conf);
 		return conf;
 	}
 	else if(type == "mp-list")
@@ -560,7 +560,7 @@ string tdsServer::rpc_getconf(json params)
 		if (path != "")
 		{
 			string conf = "";
-			path = prj.m_conf.path + "\\" + path;
+			path = tdsConf.projectConfPath + "\\" + path;
 			path::normalization(path);
 			vector<string> fl = fs::getFileList(path);
 			json j = fl;
@@ -580,7 +580,7 @@ string tdsServer::rpc_setconf(json params)
 	if (type == "mo-mp-tree")
 	{
 		string strData = params["conf"].dump(4);
-		fs::writeFile(prj.m_conf.path + "\\mo.json", strData);
+		fs::writeFile(tdsConf.projectConfPath + "\\mo.json", strData);
 		prj.m_childMO.clear();
 		prj.loadConf();
 		return "ok";
@@ -588,7 +588,7 @@ string tdsServer::rpc_setconf(json params)
 	else if (type == "io-tree")
 	{
 		string strData = params["conf"].dump(4);
-		fs::writeFile(prj.m_conf.path + "\\io.json", strData);
+		fs::writeFile(tdsConf.projectConfPath + "\\io.json", strData);
 		return "ok";
 	}
 	else if (type == "file")
@@ -607,7 +607,7 @@ string tdsServer::rpc_getconffile(json params)
 	if (path != "")
 	{
 		string conf = "";
-		path = prj.m_conf.path + "\\" + path;
+		path = tdsConf.projectConfPath + "\\" + path;
 		path::normalization(path);
 		fs::readFile(path, conf);
 		json j = conf;
@@ -624,7 +624,7 @@ string tdsServer::rpc_setconffile(json params)
 	if (path != "")
 	{
 		string conf = params["conf"].get<string>();
-		path = prj.m_conf.path + "\\" + path;
+		path = tdsConf.projectConfPath + "\\" + path;
 		fs::createFolderOfPath(path);
 		fs::writeFile(path, conf);
 		return "ok";

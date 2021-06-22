@@ -19,7 +19,6 @@ public:
 	bool loadConf();
 	json m_jMOTree;
 
-	config m_conf;
 	mp* getMp(string strTagname);
 	void getMpList(map<string, mp*>& MPlist, mo* pMO);
 	void getMpList(json& mpList);

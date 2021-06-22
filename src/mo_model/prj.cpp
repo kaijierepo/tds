@@ -24,7 +24,7 @@ project::~project()
 bool project::loadConf()
 {
 	string conf;
-	if (!fs::readFile(prj.m_conf.path + "\\mo.json", conf))
+	if (!fs::readFile(tdsConf.projectConfPath + "\\mo.json", conf))
 	{
 		LOG("project conf mo.json not find,use empty config!");
 		m_strName = "empty project";

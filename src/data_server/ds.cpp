@@ -138,43 +138,52 @@ int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 
 bool dataServer::run()
 {
-	db.Open(prj.m_conf.dbPath,prj.m_strName);
+	db.Open(tdsConf.dbPath,prj.m_strName);
 
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
 	m_wspSrv.m_pALServer = this;
 
-	string path = fs::appPath() + "\\tdskit\\ui";
+	
 	initHttpSrv(httpSrv);
-	//serve ui through http
+	//serve project specified ui through http.both are root path. specified ui path has higher priority
+	string prjUI = tdsConf.projectConfPath + "\\ui";
+	if(fs::fileExist(prjUI))
+	{
+		httpSrv.set_mount_point("/", +prjUI.c_str());
+		LOG("[HTTP Server] root at " + prjUI + "[high priority]");
+	}
+	//serve common ui through http
+	string path = fs::appPath() + "\\tdskit\\ui";
 	auto ret = httpSrv.set_mount_point("/", path.c_str());
 	if (!ret) {
-		LOG("[error]UI at " + path + " is not exist,check your configuration.");
+		LOG("[error]" + path + " is not exist,get a complete software package");
 	}
 	else
 	{
-		LOG("UI at " + path);
+		LOG("[HTTP Server] root at " + path);
 	}
 	//serve db files through http
 	ret = httpSrv.set_mount_point("/db/", db.m_path.c_str());
 	if (!ret) {
-		LOG("[error]DB at " + db.m_path + " is not exist,check your configuration.");
+		LOG("[error][Data Base] at " + db.m_path + " is not exist,check your configuration.");
 	}
 	else
 	{
-		LOG("DB at " + db.m_path);
+		LOG("[Data Base] at " + db.m_path);
 	}
+
 
 	httpSrv.set_file_extension_and_mimetype_mapping("jdb", "text/x-jdb");
 	httpSrv.set_file_extension_and_mimetype_mapping("html", "text/html");
 	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
 
 	string strName;
-	if(!conf.debugMode)
+	if(!tdsConf.debugMode)
 		m_tcpSrv->keepAliveTimeout = 30;
-	if(conf.port == 0) //not set by cmd line
-		conf.port = tds::getConfInt("port", 80);
-	int tryPort = conf.port;
+	if(tdsConf.port == 0) //not set by cmd line
+		tdsConf.port = tds::getConfInt("port", 80);
+	int tryPort = tdsConf.port;
 	while (!m_tcpSrv->run(this, tryPort))
 	{
 		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
@@ -198,7 +207,7 @@ bool dataServer::run()
 			exit(0);
 		}
 	}
-	LOG("TDS Server at port " + str::fromInt(tryPort));
+	LOG("[TDS Server] at port " + str::fromInt(tryPort));
 
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
@@ -372,7 +381,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 
 				if (strData.find("rpc") != string::npos)
 				{
-					if (ds.conf.debugMode)
+					if (tdsConf.debugMode)
 					{
 						string s = R"(
 						{

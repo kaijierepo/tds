@@ -14,20 +14,9 @@ dataserver
 #define UID_TIMER_CHECK 1
 #define MAX_RECEIVE_LENGTH 512
 
-struct DS_CONF{
-	DS_CONF(){
-		port = 0;
-		debugMode = false;
-	}
-	int port;
-	bool debugMode;
-};
-
 class database;
 class dataServer : public ITcpServerCallBack, public CALServer,public CTLServer
 {
-public:
-	DS_CONF conf;
 public:
 	void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) override;

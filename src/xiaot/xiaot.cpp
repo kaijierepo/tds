@@ -11,7 +11,7 @@ CXiaoT xiaot;
 bool CXiaoT::init()
 {
 	string conf;
-	if (!fs::readFile(prj.m_conf.path + "\\xiaot\\xiaot.json", conf))
+	if (!fs::readFile(tdsConf.projectConfPath + "\\xiaot\\xiaot.json", conf))
 	{
 		LOG("project conf xiaot.json not find,use empty config!");
 		return true;

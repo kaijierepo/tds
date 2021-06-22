@@ -2,11 +2,13 @@
 #include "conf.h"
 #include  "common.h"
 
-config conf;
+tdsConfig tdsConf;
 
-config::config()
+tdsConfig::tdsConfig()
 {
+	port = 0;
+	debugMode = false;
 	bConcurrentGateway = true;
-	path = fs::appPath() + "\\conf";
+	projectConfPath = fs::appPath() + "\\conf";
 	dbPath = fs::appPath() + "\\db";
 }
