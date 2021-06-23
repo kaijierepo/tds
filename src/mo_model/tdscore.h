@@ -11,7 +11,7 @@ using namespace std;
 namespace TDS{
 //数据类型
 namespace DATA_TYPE {
-	const string custom = "custom";	//自定义类型。是一个json对象字符串
+	const string json = "json";	//自定义类型。是一个json对象字符串
 	const string real = "real"; //实型
 	const string integer = "integer";
 	const string switching = "switching"; 
@@ -21,7 +21,7 @@ namespace DATA_TYPE {
 };
 
 const std::map<string,string> DATA_TYPE_LABEL = {
-	{std::map<string,string>::value_type("custom","自定义")},
+	{std::map<string,string>::value_type("json","自定义")},
 	{std::map<string,string>::value_type("real","实型")},
 	{std::map<string,string>::value_type("integer","整型")},
 	{std::map<string,string>::value_type("switching","开关量")},

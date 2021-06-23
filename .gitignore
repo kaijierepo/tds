@@ -1,7 +1,9 @@
 node_modules/
 /dist/
 threejs/
+out/conf/
 
+*.aps
 *.ipch
 *.db*
 *.opendb

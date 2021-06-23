@@ -34,6 +34,10 @@ bool mp::loadConf(json& conf)
 		if(conf["unit"]!=nullptr)
 			m_strUnit = conf["unit"].get<string>();
 	}
+	else if (m_valType == TDS::DATA_TYPE::json)
+	{
+		m_customValType = conf["custom_val_type"].get<string>();
+	}
 		
 	return false;
 }
@@ -72,6 +76,10 @@ void mp::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 	{
 		m_curVal = jVal;
 		jVal["type"]= this->m_valType;
+		if (this->m_valType == "json")
+		{
+			jVal["custom_type"] = this->m_customValType;
+		}
 	}
 	
 
@@ -107,6 +115,10 @@ string mp::getMpTypeLabel()
 	{
 		typeLabel = m_strName;
 	}
+	else if (m_valType == TDS::DATA_TYPE::json)
+	{
+		typeLabel = m_customValType;
+	}
 	else
 	{
 		typeLabel = TDS::DATA_TYPE_LABEL.at(m_valType);
@@ -126,6 +138,10 @@ string mp::getMpType()
 	else if (m_valType == TDS::DATA_TYPE::real)
 	{
 		mpType = TDS::DATA_TYPE::real + "." + m_strName;
+	}
+	else if (m_valType == TDS::DATA_TYPE::json)
+	{
+		mpType = m_customValType;
 	}
 	else
 	{

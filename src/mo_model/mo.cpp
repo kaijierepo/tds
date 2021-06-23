@@ -67,12 +67,23 @@ bool mo::loadConf(json& conf)
 
 bool mo::saveConf(json& conf, string opt)
 {
-	if (opt == "exclude-mp" && m_moType == MO_TYPE::mp)
+	if (opt == "exclude-common-mp" && m_moType == MO_TYPE::mp)
 	{
-		return false;
+		mp* p = (mp*)this;
+		if(p->m_valType != "json")
+   			return false;
 	}
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
+
+	if (m_moType == "mp")
+	{
+		mp* p = (mp*)this;
+		conf["val_type"] = p->m_valType;
+		if (p->m_valType == "json")
+			conf["custom_val_type"] = p->m_customValType;
+	}
+
 	json jChildren;
 	for (auto& pmochild : m_childMO)
 	{

@@ -23,6 +23,7 @@ public:
 	json m_orgVal;
 	json m_curVal;
 	string m_valType;
+	string m_customValType;
 	string m_physicalType;
 	string m_strUnit;
 	SYSTEMTIME m_lastUpdateTime;

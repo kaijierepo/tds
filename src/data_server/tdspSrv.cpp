@@ -122,12 +122,19 @@ string tdsServer::rpc_query(json params)
 	vector<mp*> tagSetTmp;
 	vector<mp*> tagSet;
 	prj.GetMPByTag(&tagSetTmp,tagSelector.tagExp);
-	for (auto& it : tagSetTmp)
+	if (typeFilter != "")//has type filter
 	{
-		if (it->getMpType() == typeFilter)
+		for (auto& it : tagSetTmp)
 		{
-			tagSet.push_back(it);
+			if (it->getMpType() == typeFilter)
+			{
+				tagSet.push_back(it);
+			}
 		}
+	}
+	else
+	{
+		tagSet = tagSetTmp;
 	}
 	DB_DATA_SET set;
 	for(auto& i:tagSet)
@@ -512,7 +519,7 @@ string tdsServer::rpc_getconf(json params)
 	if (type == "mo-tree")
 	{
 		json j;
-		prj.saveConf(j, "exclude-mp");
+		prj.saveConf(j, "exclude-common-mp"); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
 		string conf = j.dump(4);
 		return conf;
 	}

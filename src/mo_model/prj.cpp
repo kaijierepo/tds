@@ -92,7 +92,7 @@ void project::getMpTypeList(json& mpTypeList)
 		string mpType = "";
 		string typeLabel = "";
 		
-		mpType = pmp->getMpType();
+		mpType = pmp->getMpType();//common mp name is used as mptype; custom mp has a user defined mp type
 		typeLabel = pmp->getMpTypeLabel();
 
 		if(mapTypes.find(mpType) != mapTypes.end())

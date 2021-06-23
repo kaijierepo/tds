@@ -4503,6 +4503,21 @@ inline void Server::stop() {
   }
 }
 
+inline string utf8_to_ansi(string instr) //utf-8-->ansi
+{
+    int MAX_STRSIZE = instr.length() * 2 + 2;
+    WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+    memset(wcharstr, 0, MAX_STRSIZE);
+    MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+    char* charstr = new char[MAX_STRSIZE];
+    memset(charstr, 0, MAX_STRSIZE);
+    WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+    string charstrtemp(charstr);
+    delete wcharstr;
+    delete charstr;
+    return charstrtemp;
+}
+
 inline bool Server::parse_request_line(const char *s, Request &req) {
   const static std::regex re(
       "(GET|HEAD|POST|PUT|DELETE|CONNECT|OPTIONS|TRACE|PATCH|PRI) "
@@ -4514,6 +4529,8 @@ inline bool Server::parse_request_line(const char *s, Request &req) {
     req.method = std::string(m[1]);
     req.target = std::string(m[2]);
     req.path = detail::decode_url(m[3], false);
+    req.path = utf8_to_ansi(req.path);  //多字节项目，访问中文路径，api函数需要传入ansi编码
+
 
     // Parse query text
     auto len = std::distance(m[4].first, m[4].second);
