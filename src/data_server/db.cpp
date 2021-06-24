@@ -157,6 +157,13 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 				sDe += ",\"pic_url\":\"/db" + getFileUrl(tag,timeopt::str2st(strTime)) + ".jpg\"";
 			}
 
+			bool bHaveVideo = false;
+			error = de["video"].get(bHaveVideo);
+			if (bHaveVideo)
+			{
+				sDe += ",\"video_url\":\"/db" + getFileUrl(tag, timeopt::str2st(strTime)) + ".mp4\"";
+			}
+
 			sDe += "}";
 
 			result[strTime + "+" + tag] = sDe;
