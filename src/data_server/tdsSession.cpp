@@ -10,6 +10,8 @@ TDS_SESSION::TDS_SESSION()
     name = "";
     bVideoStream = false;
     bInitSegSended = false;
+    bridgedTcpCltHandler.pTdsSession = this;
+
 }
 
 void TDS_SESSION::Init()
@@ -32,4 +34,13 @@ string TDS_SESSION::GetClientIp()
      if(pTLServer == nullptr) // means lower layer has been disconneted
         return false; 
      return pTLServer->SendAppLayerData(p, len, this);
+ }
+
+ void TDS_SESSION::CBridgedTcpClientHandler::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
+ {
+ }
+
+ void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo)
+ {
+     pTdsSession->send(pData, iLen);
  }

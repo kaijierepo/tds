@@ -366,6 +366,25 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 
 						string resp = header + html;
 						send(pTcpSess->sock, (char*)resp.data(), resp.length(),0);
+						closesocket(pTcpSess->sock);
+						return;
+					}
+				}
+				else if (strData.find("tcp") != string::npos)
+				{
+					int pos = strData.find("tcp");
+					int pos1 = strData.find(" ", pos);
+					string host = strData.substr(pos+4, pos1 - (pos+4));
+					pAppLayerClt->pBridgedTcpClient = new CTCPClient();
+					if(pAppLayerClt->pBridgedTcpClient->connect(&pAppLayerClt->bridgedTcpCltHandler, host))
+					{
+
+					}
+					else
+					{
+						delete pAppLayerClt->pBridgedTcpClient;
+						pAppLayerClt->pBridgedTcpClient = NULL;
+						closesocket(pTcpSess->sock);
 						return;
 					}
 				}
@@ -588,6 +607,10 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
 		{
 			p->SendData(pDataBuf, iLen);
 		}
+	}
+	else if (pALC->pBridgedTcpClient != NULL)
+	{
+		pALC->pBridgedTcpClient->SendData(pDataBuf, iLen);
 	}
 	else if (pALC->iALProto == APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC)
 	{

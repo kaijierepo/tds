@@ -47,6 +47,14 @@ public:
 	bool bVideoStream;
     bool bInitSegSended;
 	string bridgedLocalCom; //和本地串口桥接
+	string bridgedTcpServer; //和tcp服务器的一个连接桥接
+	CTCPClient* pBridgedTcpClient;
+	class CBridgedTcpClientHandler:public ITcpClientCallBack {
+	public:
+		virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn);
+		virtual void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo);
+		TDS_SESSION* pTdsSession;
+	} bridgedTcpCltHandler;
 
     void Init() override;
     string GetClientIp();

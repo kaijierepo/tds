@@ -78,7 +78,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 	while (1)
 	{
 		if(!p->IsConnect())
-				p->Connect();
+				p->connect();
 		Sleep(5000);
 
 		ct++;
@@ -96,7 +96,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 DWORD WINAPI AsynConnectThread(LPVOID lpParam)
 {
 	CTCPClient* p = (CTCPClient*)lpParam;
-	p->Connect();
+	p->connect();
 	return 0;
 }
 
@@ -124,7 +124,7 @@ CTCPClient::~CTCPClient(void)
 {
 }
 
-bool CTCPClient::Connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
+bool CTCPClient::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
@@ -133,7 +133,21 @@ bool CTCPClient::Connect(ITcpClientCallBack* pUser, string strServIP,int iServPo
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 
-	return Connect();
+	return connect();
+}
+
+bool CTCPClient::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
+{
+	DisConnect();
+	m_pCallBackUser = pUser;
+	int pos = host.find(":");
+	string ip = host.substr(0, pos);
+	string strPort = host.substr(pos + 1, host.length() - pos - 1);
+	m_strServerIP = ip;
+	m_iServerPort = atoi(strPort.c_str());
+	m_strLocalIP = strLocalIp;
+	m_iLocalPort = iLocalPort;
+	return connect();
 }
 
 bool CTCPClient::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
@@ -163,7 +177,7 @@ void CTCPClient::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iSe
 	HANDLE hThread = CreateThread(NULL,0, AsynConnectThread,(LPVOID)this,0,&dwThread);
 }
 
-bool CTCPClient::Connect()
+bool CTCPClient::connect()
 {
 	if(sockClient !=0)
 	{
@@ -203,7 +217,7 @@ bool CTCPClient::Connect()
 	addrSrv.sin_family=AF_INET;
 	addrSrv.sin_port=htons(m_iServerPort);
 	m_bIsConnectting = true;
-	int nConnect = connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
+	int nConnect = ::connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
 	m_bIsConnectting = false;
 
 	if(nConnect == SOCKET_ERROR)
@@ -224,7 +238,7 @@ bool CTCPClient::Connect()
 bool CTCPClient::ReConnect()
 {
 	if (!m_pCallBackUser || m_strServerIP == "") return false;
-	return Connect(m_pCallBackUser, m_strServerIP, m_iServerPort);
+	return connect(m_pCallBackUser, m_strServerIP, m_iServerPort);
 }
 
 int CTCPClient::SendData(char* pData, int iLen)
