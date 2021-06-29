@@ -7,7 +7,7 @@ std::vector<CTCPClient*> m_vecTCPIOCPClient;
 DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 {
 	CTCPClient *pServ=(CTCPClient*)lpParam;
-
+	pServ->m_csLock.lock();
 	SOCKET sock = pServ->sockClient;
 	ConnInfo ci;
 	ci.peerIP = pServ->m_strServerIP;
@@ -68,6 +68,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 	pServ->sockClient=0;
 	pServ->m_bConn = false;
+	pServ->m_csLock.unlock();
 	return 0;
 }
 
@@ -122,6 +123,9 @@ CTCPClient::CTCPClient(void)
 
 CTCPClient::~CTCPClient(void)
 {
+	DisConnect();
+	m_csLock.lock();
+	m_csLock.unlock();
 }
 
 bool CTCPClient::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
@@ -297,9 +301,13 @@ string CTCPClient::GetLocalIP()
 
 bool CTCPClient::DisConnect()
 {
-	closesocket(sockClient);
-	sockClient = 0;
-	m_bConn = false;
+	if (sockClient)
+	{
+		closesocket(sockClient);
+		sockClient = 0;
+		m_bConn = false;
+	}
+
 	return true;
 }
 

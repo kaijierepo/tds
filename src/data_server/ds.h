@@ -41,9 +41,9 @@ public:
 	bool OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo) override;
 	bool OnRecvRawTdsRpc(char* pData, int iLen, void* pCltInfo);
 
-	vector<std::shared_ptr<TDS_SESSION>> m_vecDSClt;
+	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	vector<void*> GetSessionList() override;
-	mutex m_mutexDSClt;
+	mutex m_mutexTdsSessionList;
 	FILE* m_pRecFile;
 	SYSTEMTIME m_stLastFileRecvTime;
 };

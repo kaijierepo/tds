@@ -2,6 +2,7 @@
 #include <WinSock2.h>
 #include <string>
 #include <vector>
+#include <mutex>
 
 using namespace std;
 
@@ -93,4 +94,5 @@ public:
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
 	ITcpClientCallBack* m_pCallBackUser;
+	std::mutex m_csLock;
 };

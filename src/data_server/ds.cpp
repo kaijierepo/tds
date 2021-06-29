@@ -71,26 +71,30 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 		p->pTcpClt = pCltInfo;
 		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
 		pCltInfo->pALSession = p.get();
-		m_mutexDSClt.lock();
-		m_vecDSClt.push_back(p);
-		m_mutexDSClt.unlock();
+		m_mutexTdsSessionList.lock();
+		m_vecTdsSession.push_back(p);
+		m_mutexTdsSessionList.unlock();
 	}
 	else
 	{
 		if (pCltInfo->pALSession)
 		{
-			m_mutexDSClt.lock();
-			for (int i = 0; i < m_vecDSClt.size(); i++)
+			m_mutexTdsSessionList.lock();
+			for (int i = 0; i < m_vecTdsSession.size(); i++)
 			{
-				if (m_vecDSClt.at(i)->pTcpClt == pCltInfo)
+				if (m_vecTdsSession.at(i)->pTcpClt == pCltInfo)
 				{
-					std::shared_ptr<TDS_SESSION> p = m_vecDSClt[i];
-					p->pTLServer = nullptr;
-					p->pTcpClt = nullptr;
-					m_vecDSClt.erase(m_vecDSClt.begin() + i);
+					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];
+					//p->pTLServer = nullptr;
+					//p->pTcpClt = nullptr;
+					if (p->pBridgedTcpClient)
+					{
+						delete p->pBridgedTcpClient;
+					}
+					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
 				}
 			}
-			m_mutexDSClt.unlock();
+			m_mutexTdsSessionList.unlock();
 		}
 	}
 }
@@ -104,7 +108,13 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 	{
 		if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 		{
-			WS_FrameType ft = pALC->bVideoStream ? WS_BINARY_FRAME : WS_TEXT_FRAME;
+			WS_FrameType ft = WS_TEXT_FRAME;
+			if (pALC->bVideoStream)
+				ft = WS_BINARY_FRAME;
+			if(pALC->bridgedLocalCom!="")
+				ft = WS_BINARY_FRAME;
+			if (pALC->pBridgedTcpClient != NULL)
+				ft = WS_BINARY_FRAME;
 			return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 		}
 		else
@@ -305,10 +315,10 @@ int ThreadfMp4OverWS(std::shared_ptr<TDS_SESSION> pTestSess) {
 
 shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 {
-	lock_guard<mutex> g(m_mutexDSClt);
-	for(int i=0;i<m_vecDSClt.size();i++)
+	lock_guard<mutex> g(m_mutexTdsSessionList);
+	for(int i=0;i<m_vecTdsSession.size();i++)
 	{
-		shared_ptr<TDS_SESSION> p = m_vecDSClt.at(i);
+		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
 		if(p->pTcpClt == pTcpSess)
 		{
 			return p;
@@ -376,12 +386,14 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos1 = strData.find(" ", pos);
 					string host = strData.substr(pos+4, pos1 - (pos+4));
 					pAppLayerClt->pBridgedTcpClient = new CTCPClient();
+					
 					if(pAppLayerClt->pBridgedTcpClient->connect(&pAppLayerClt->bridgedTcpCltHandler, host))
 					{
-
+						LOG("bridge websocket to tcp %s success", host.c_str());
 					}
 					else
 					{
+						LOG("bridge websocket to tcp %s fail", host.c_str());
 						delete pAppLayerClt->pBridgedTcpClient;
 						pAppLayerClt->pBridgedTcpClient = NULL;
 						closesocket(pTcpSess->sock);
@@ -644,9 +656,9 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
 vector<void*> dataServer::GetSessionList()
 {
 	vector<void*> lst;
-	for (int i = 0; i < m_vecDSClt.size(); i++)
+	for (int i = 0; i < m_vecTdsSession.size(); i++)
 	{
-		std::shared_ptr<TDS_SESSION> p = m_vecDSClt.at(i);
+		std::shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
 		lst.push_back(p.get());
 	}
 	return lst;
