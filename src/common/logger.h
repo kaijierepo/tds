@@ -12,6 +12,7 @@ enum LOG_LEVEL {
 	LL_ERROR = 2,
 };
 
+typedef void (*fp_logOutputCallback)(string text);
 
 class  Clogger
 {
@@ -21,11 +22,14 @@ public:
 	LOG_LEVEL str2logLevel(string level);
 	void setLogLevel(string level);
 	bool isNeedLog(string info);
+	string logInternal(string info);
 	string appPath();
 	void log(string info);
 	bool dirCreated;
 	LOG_LEVEL logLevel;
 	mutex m_lock;
+
+	fp_logOutputCallback logOutput;
 };
 
 extern Clogger logger;

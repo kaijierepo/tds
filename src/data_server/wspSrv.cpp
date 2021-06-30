@@ -94,6 +94,7 @@ void wspSrv::OnClose()
 }
 
 //将数据加上websocket格式头再发送
+//如果数据发送给浏览器之后websocket断开,浏览器端进入onerror,很可能有中文并且不是utf8编码
 int wspSrv::sendData(char* sendData, int len, tcpSession* pCltInfo, WS_FrameType ft)
 {
 	CWSPPkt resp;

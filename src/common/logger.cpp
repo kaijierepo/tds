@@ -33,6 +33,7 @@ void loggingCB(char* info)
 Clogger::Clogger()
 {
 	dirCreated = false;
+	logOutput = NULL;
 }
 
 std::string Clogger::formatStr(const char* pszFmt, ...)
@@ -93,18 +94,19 @@ bool Clogger::isNeedLog(string info)
 	return false;
 }
 
-void Clogger::log(string info)
+string Clogger::logInternal(string info)
 {
 	if (!isNeedLog(info))
-		return;
+		return "";
 
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);
-	string time = formatStr("%2d:%2d:%2d.%d", stNow.wHour, stNow.wMinute, stNow.wSecond,stNow.wMilliseconds);
-	info = charCodec::utf8toAnsi(info);
-	info = time + " " + info;
+	string time = formatStr("%2d:%2d:%2d.%d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	//命令行和文件中的日志用gb2312编码
+	string logline = time + " " + info;
+	info = charCodec::utf8toAnsi(logline);
 
-	std::cout << info  << std::endl;
+	std::cout << info << std::endl;
 
 	//create log path
 	std::lock_guard<mutex> lockGuard(m_lock);
@@ -127,6 +129,21 @@ void Clogger::log(string info)
 	{
 		fseek(fp, 0L, SEEK_END);
 		fwrite(info.c_str(), 1, info.length(), fp);
+		fwrite("\r\n", 1, 2, fp);
 		fclose(fp);
+	}
+
+	return logline;
+}
+
+void Clogger::log(string info)
+{
+	//logInternal only log to file and cmdline
+	//log will log to some user specified place, the code must not trigger log again
+	//log to websocket code routine must not use log, but use logInternal
+	string log = logInternal(info);
+	if (log != "" && logOutput)
+	{
+		logOutput(log);
 	}
 }

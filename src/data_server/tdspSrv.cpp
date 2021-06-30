@@ -163,6 +163,77 @@ string tdsServer::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION>
 	return str;
 }
 
+string tdsServer::handleMethodCall(string method, json params)
+{
+	string result = "";
+	if (method == "heartbeat")
+	{
+		result = rpc_heartbeat(params);
+	}
+	else if (method == "xiaot")
+	{
+		result = rpc_xiaot(params);
+	}
+	else if (method == "input")
+	{
+		result = rpc_input(params);
+	}
+	else if (method == "output")
+	{
+		result = rpc_output(params);
+	}
+	else if (method == "rt")
+	{
+		result = rpc_rt(params);
+	}
+	else if (method == "query")
+	{
+		result = rpc_query(params);
+	}
+	else if (method == "alarm.current")
+	{
+		result = almSrv.getCurrent();
+	}
+	else if (method == "alarm.status")
+	{
+		result = almSrv.getStatus();
+	}
+	else if (method == "alarm.unack")
+	{
+		result = almSrv.getUnack();
+	}
+	else if (method == "alarm.history")
+	{
+		result = almSrv.getHistory(params);
+	}
+	else if (method == "alarm.add_event")
+	{
+		result = almSrv.rpc_addEvent(params);
+	}
+	else if (method == "alarm.update_status")
+	{
+		result = almSrv.rpc_updateStatus(params);
+	}
+	else if (method == "getconf")
+	{
+		result = rpc_getconf(params);
+	}
+	else if (method == "setconf")
+	{
+		result = rpc_setconf(params);
+	}
+	else if (method == "com.open")
+	{
+		result = rpc_openCom(params);
+	}
+	else if (method == "com.close")
+	{
+		result = rpc_closeCom(params);
+	}
+
+	return result;
+}
+
 
 void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TDS_SESSION> pSession)
 {
@@ -217,71 +288,8 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 			}
 		}
 		//result is a json string
-		if (method == "heartbeat")
-		{
-			result = rpc_heartbeat(params);
-		}
-		else if (method == "xiaot")
-		{
-			result = rpc_xiaot(params);
-		}
-		else if (method == "input")
-		{
-			 result = rpc_input(params);
-		}
-		else if (method == "output")
-		{
-			 result = rpc_output(params);
-		}
-		else if (method == "rt")
-		{
-			 result = rpc_rt(params);
-		}
-		else if (method == "query")
-		{
-			 result = rpc_query(params);
-		}
-		else if (method == "alarm.current")
-		{
-			result = almSrv.getCurrent();
-		}
-		else if (method == "alarm.status")
-		{
-			result = almSrv.getStatus();
-		}
-		else if(method== "alarm.unack")
-		{
-			result = almSrv.getUnack();
-		}
-		else if (method == "alarm.history")
-		{
-			result = almSrv.getHistory(params);
-		}
-		else if (method == "alarm.add_event")
-		{
-			result = almSrv.rpc_addEvent(params);
-		}
-		else if (method == "alarm.update_status")
-		{
-			result = almSrv.rpc_updateStatus(params);
-		}
-		else if (method == "getconf")
-		{
-			result = rpc_getconf(params);
-		}
-		else if (method == "setconf")
-		{
-			result = rpc_setconf(params);
-		}
-		else if (method == "opencom")
-		{
-			result = rpc_openCom(params);
-		}
-		else if (method == "closecom")
-		{
-			result = rpc_closeCom(params);
-		}
-		else
+		result = handleMethodCall(method, params);
+		if(result == "")
 		{
 			json jError = {
 				{"code", -32601},

@@ -1,13 +1,10 @@
 #include "pch.h"
-#include "prj.h"
-#include "ds.h"
-#include "ioSrv.h"
+#include "conf.h"
 #include "cmdparser.hpp"
 #include "video/remoteDesktopServer.h"
 #include "cmdparser.hpp"
 #include "logger.h"
-#include "xiaot/xiaot.h"
-#include "conf.h"
+#include "tds_imp.h"
 
 /*
 notes:
@@ -17,9 +14,15 @@ design problem:
 > mutithread accessing element in a dynamic list
   1.shared points
 
+代码不安全，未来需优化的地方，全局搜索 [unsafe]
+
 */
 
 #include "ioDev_mqttBroker.h"
+
+class TDS_img;
+TDS_img i_tds; //interface of tds;
+
 int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
@@ -34,21 +37,19 @@ int main(int argc, char** argv)
 	logger.setLogLevel(strLogLevel);
 	LOG("current log Level is:" + strLogLevel);
 
-	//startup xiaot
-	xiaot.init();
+	i_tds.run();
 
-	//startup tds modules
-	prj.loadConf();
-	ds.run();  //data server
-#ifdef ENABLE_FFMPEG
-	//rds.run(); //remote desktop server
-#endif
-	ioSrv.run();
 	while (1)
 	{
 		Sleep(1000);
 	}
 	return 0;
+}
+
+
+#define DllExport   extern "C" __declspec( dllexport )
+DllExport iTDS* getTds() {
+	return &i_tds;
 }
 
 

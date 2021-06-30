@@ -53,6 +53,7 @@ public:
 
 	void Notify(string strTag, string& szNotify);
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
+	string handleMethodCall(string method, json params);
 	database* m_DB;
 	//关联的传输层服务器
 	vector<CTLServer*> m_vecTLServer;

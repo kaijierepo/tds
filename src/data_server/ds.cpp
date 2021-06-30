@@ -85,8 +85,13 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 				if (m_vecTdsSession.at(i)->pTcpClt == pCltInfo)
 				{
 					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];
-					//p->pTLServer = nullptr;
-					//p->pTcpClt = nullptr;
+					//p->pTcpClt is a tcpSession will be deleted after ConnStatusChange callback
+					//but TDS_SESSION is not deleted until all users release it
+					//so here p->pTcpClt is set to none
+					//this is not safe,a critical section should be used for p->pTcpClt
+					//[unsafe]
+					p->pTLServer = nullptr;
+					p->pTcpClt = nullptr;
 					if (p->pBridgedTcpClient)
 					{
 						delete p->pBridgedTcpClient;
@@ -161,17 +166,24 @@ bool dataServer::run()
 	if(fs::fileExist(prjUI))
 	{
 		httpSrv.set_mount_point("/", +prjUI.c_str());
-		LOG("[HTTP Server] root at " + prjUI + "[high priority]");
+		LOG("[HTTP Server] root at " + prjUI + "[project specified ui]");
+	}
+	//custom tds ver specified ui through http
+	string customUI = fs::appPath() + "\\ui";
+	if (fs::fileExist(customUI))
+	{
+		httpSrv.set_mount_point("/", + customUI.c_str());
+		LOG("[HTTP Server] root at " + customUI + "[custom software ui]");
 	}
 	//serve common ui through http
 	string path = fs::appPath() + "\\tdskit\\ui";
 	auto ret = httpSrv.set_mount_point("/", path.c_str());
 	if (!ret) {
-		LOG("[error]" + path + " is not exist,get a complete software package");
+		LOG("[warn]" + path + " is not exist,get a complete software package");
 	}
 	else
 	{
-		LOG("[HTTP Server] root at " + path);
+		LOG("[HTTP Server] root at " + path + "[tdskit common ui]");
 	}
 	//serve db files through http
 	ret = httpSrv.set_mount_point("/db/", db.m_path.c_str());
@@ -332,10 +344,22 @@ string dataServer::checkTransportLayerProto(string& strData, tcpSession* pTcpSes
 	return "";
 }
 
+std::shared_ptr<TDS_SESSION> logTdsSession = NULL;
+void logToWebsock(string text)
+{
+	if (logTdsSession&&!logTdsSession->boolConnected)
+		logTdsSession = NULL;
+
+	if (logTdsSession)
+	{
+		logTdsSession->send((char*)text.c_str(), text.length());
+	}
+}
+
 
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
-	std::shared_ptr<TDS_SESSION> pAppLayerClt = getTDSSession(pTcpSess);
+	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
 
 	char* ptmp = new char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);
@@ -346,11 +370,11 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	//check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none
-	if (pAppLayerClt->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
+	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
 	{
 		if(isHttpPkt(strData))
 		{
-			pAppLayerClt->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
+			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
 			if (CWSPPkt::isHandShake(strData))
 			{
 				if (strData.find("COM") != string::npos)
@@ -361,8 +385,8 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					ioGW_LocalSerial* p = ioSrv.getLocalComDev(portNum);
 					if (p)
 					{
-						pAppLayerClt->bridgedLocalCom = portNum;
-						p->pTdsSession = pAppLayerClt;
+						tdsSession->bridgedLocalCom = portNum;
+						p->pTdsSession = tdsSession;
 					}
 					else
 					{
@@ -385,17 +409,17 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos = strData.find("tcp");
 					int pos1 = strData.find(" ", pos);
 					string host = strData.substr(pos+4, pos1 - (pos+4));
-					pAppLayerClt->pBridgedTcpClient = new CTCPClient();
+					tdsSession->pBridgedTcpClient = new CTCPClient();
 					
-					if(pAppLayerClt->pBridgedTcpClient->connect(&pAppLayerClt->bridgedTcpCltHandler, host))
+					if(tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
 					{
 						LOG("bridge websocket to tcp %s success", host.c_str());
 					}
 					else
 					{
 						LOG("bridge websocket to tcp %s fail", host.c_str());
-						delete pAppLayerClt->pBridgedTcpClient;
-						pAppLayerClt->pBridgedTcpClient = NULL;
+						delete tdsSession->pBridgedTcpClient;
+						tdsSession->pBridgedTcpClient = NULL;
 						closesocket(pTcpSess->sock);
 						return;
 					}
@@ -405,7 +429,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 				CWSPPkt req;
 				std::string handshakeString = req.GetHandshakeString(strData);
 				send(pTcpSess->sock, handshakeString.c_str(), handshakeString.size(), 0);
-				pAppLayerClt->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
+				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
 
 				string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d",pTcpSess->strIP,pTcpSess->iPort);
 				LOG(szLog);
@@ -423,22 +447,25 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 							"id": null
 						}
 					)";
-						pAppLayerClt->send((char*)s.data(), s.length());
+						tdsSession->send((char*)s.data(), s.length());
 					}
 				}
-				
-
-				if (strData.find("teststream") != string::npos && !bTestStream)
+				else if (strData.find("log"))
 				{
-					pAppLayerClt->bVideoStream = true;
-					std::thread t(ThreadfMp4OverWS,pAppLayerClt);
+					logTdsSession = tdsSession;
+					logger.logOutput = logToWebsock;
+				}
+				else if (strData.find("teststream") != string::npos && !bTestStream)
+				{
+					tdsSession->bVideoStream = true;
+					std::thread t(ThreadfMp4OverWS,tdsSession);
 					t.detach();
 				}
 				else if (strData.find("desktop") != string::npos)
 				{
-					pAppLayerClt->bVideoStream = true;
+					tdsSession->bVideoStream = true;
 #ifdef ENABLE_FFMPEG
-					rds.startStream(pAppLayerClt);
+					rds.startStream(tdsSession);
 #endif
 				}
 				else if (strData.find("video") != string::npos)
@@ -463,36 +490,36 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 		}
 		else
 		{
-			pAppLayerClt->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
+			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
 		}
 	}
 
 
 	// extract app layer data and handle it
 	// tds rpc over websocket
-	if (pAppLayerClt->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
+	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
-		if (!pAppLayerClt) {
+		if (!tdsSession) {
 			string str = "dataServer::OnRecvData_TCPServer: DSP_CLIENT_SESSION is null";
 			string strText = str.c_str();
 			LOG(strText);
 			return;
 		}
-		m_wspSrv.OnRecvWSData(pData, iLen, &pAppLayerClt->m_tlBuf, pTcpSess);
+		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, pTcpSess);
 		return;
 	}
 	//tds rpc over http
-	else if (pAppLayerClt->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
+	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		stream2pkt* pab = &pAppLayerClt->m_alBuf;
+		stream2pkt* pab = &tdsSession->m_alBuf;
 		pab->PushStream(pData, iLen);
 		while (pab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP))
 		{
-			pAppLayerClt->iALProto = pab->m_protocolType;
-			onRecvHttpPkt(pab->pkt, pab->iPktLen, pAppLayerClt);
+			tdsSession->iALProto = pab->m_protocolType;
+			onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
-	else if (pAppLayerClt->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
+	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
 		//tds rpc over tcp
 		OnRecvRawTdsRpc(pData, iLen, pTcpSess);

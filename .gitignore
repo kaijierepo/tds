@@ -2,12 +2,17 @@ node_modules/
 /dist/
 threejs/
 out/conf/
+.vs/x64/
+.vs/Debug/
+.vs/Release/
 
+*.obj
 *.aps
 *.ipch
 *.db*
 *.opendb
 
+*.webm
 *.mp4
 *.jdb
 *.txt
