@@ -9,6 +9,7 @@ typedef void* (*fp_ioAddrRecv)(char* pData, int iLen);
 class iTDS {
 public:
 	virtual string getVer() = 0;
+	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
 
 	// tds 数据服务功能
@@ -19,7 +20,7 @@ public:
 	virtual bool setIoAddrRecvCallback(fp_ioAddrRecv recvCallback) = 0;
 
 	// 通用服务功能
-	virtual void log(string text) = 0;
+	virtual void log(char* text) = 0;
 };
 
 

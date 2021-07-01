@@ -7,7 +7,15 @@
 #include "ioSrv.h"
 #include "xiaot/xiaot.h"
 
-bool TDS_img::run(string cmdline)
+string tdsEncoding = "utf8";
+
+bool TDS_imp::setEncodeing(string encoding)
+{
+	tdsEncoding = encoding;
+	return false;
+}
+
+bool TDS_imp::run(string cmdline)
 {
 	//startup xiaot
 	xiaot.init();
@@ -23,25 +31,39 @@ bool TDS_img::run(string cmdline)
 	return true;
 }
 
-string TDS_img::call(string method, string param)
+string TDS_imp::call(string method, string param)
 {
-	json jParam = json::parse(param);
-	return tdsSrv.handleMethodCall(method, jParam);
+	try {
+		json jParam = json::parse(param);
+		return tdsSrv.handleMethodCall(method, jParam);
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		return "error " + errorType;
+	}
+	
 }
 
-bool TDS_img::sendToIoAddr(string ioAddr)
+bool TDS_imp::sendToIoAddr(string ioAddr)
 {
 	return true;
 }
 
-bool TDS_img::setIoAddrRecvCallback(fp_ioAddrRecv recvCallback)
+bool TDS_imp::setIoAddrRecvCallback(fp_ioAddrRecv recvCallback)
 {
 	return true;
 }
 
-void TDS_img::log(string text)
+void TDS_imp::log(char* text)
 {
-	LOG(text);
+	if (tdsEncoding == "gb2312")
+	{
+		string strUtf8 = charCodec::ansi2Utf8(text);
+		LOG(strUtf8);
+	}
+	else
+		LOG(text);
 }
 
 

@@ -1,11 +1,13 @@
 #pragma once
 #include "tds.h"
 
-class TDS_img : public iTDS {
+class TDS_imp : public iTDS {
 public:
 	string getVer() {
 		return "1.0.0";
 	}
+
+	bool setEncodeing(string encoding);
 
 	 bool run(string cmdline = "");
 
@@ -16,6 +18,6 @@ public:
 	 bool sendToIoAddr(string ioAddr);
 	 bool setIoAddrRecvCallback(fp_ioAddrRecv recvCallback);
 
-	 void log(string text);
+	 void log(char* text);
 
 };

@@ -36,6 +36,7 @@ public:
 	int m_parity;
 	int m_stopBits;
 	string m_strErrorInfo;
+	HANDLE m_hRecvThread;
 
 	std::shared_ptr<TDS_SESSION> pTdsSession;
 };

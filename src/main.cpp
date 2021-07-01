@@ -20,8 +20,8 @@ design problem:
 
 #include "ioDev_mqttBroker.h"
 
-class TDS_img;
-TDS_img i_tds; //interface of tds;
+class TDS_imp;
+TDS_imp i_tds; //interface of tds;
 
 int main(int argc, char** argv)
 {

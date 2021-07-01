@@ -7,7 +7,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
 	ioGW_LocalSerial* pGW = (ioGW_LocalSerial*)lpParam;
 	char buf[500] = {0};
-	while(1)
+	while(pGW->m_hCom)
 	{
 		int iLen = 0;
 		pGW->ReadCom(buf,iLen);
@@ -16,9 +16,9 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 		{
 			pGW->OnRecvData(buf,iLen);
 		}
-
-		Sleep(20);
 	};
+
+	return 0;
 }
 
 ioGW_LocalSerial::ioGW_LocalSerial(void)
@@ -42,13 +42,7 @@ bool ioGW_LocalSerial::run()
 	}
 
 	DWORD dwThread = 0;
-	HANDLE hThread = CreateThread(NULL, 0, GWLocalComWorkThread, (LPVOID)this, 0, &dwThread);
-	if (hThread != NULL)
-	{
-		CloseHandle(hThread);
-		hThread = NULL;
-	}
-
+	m_hRecvThread = CreateThread(NULL, 0, GWLocalComWorkThread, (LPVOID)this, 0, &dwThread);
 	return true;
 }
 
@@ -111,10 +105,19 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 
 bool ioGW_LocalSerial::closeCom()
 {
-	if (m_hCom)
+	HANDLE hCom = m_hCom;
+	m_hCom = NULL;
+
+	if (m_hRecvThread)
 	{
-		CloseHandle(m_hCom);
-		m_hCom = NULL;
+		//必须先关闭readfile阻塞读取，否则closeHandle会阻塞
+		CancelSynchronousIo(m_hRecvThread);
+		CloseHandle(m_hRecvThread);
+	}
+
+	if (hCom)
+	{
+		CloseHandle(hCom);
 	}
 	return true;
 }
@@ -171,12 +174,14 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 	ZeroMemory(&CommTimeouts, sizeof(CommTimeouts));
 	CommTimeouts.ReadIntervalTimeout = 0;
 	CommTimeouts.ReadTotalTimeoutMultiplier = 0;
-	CommTimeouts.ReadTotalTimeoutConstant = 1000;
+	CommTimeouts.ReadTotalTimeoutConstant = 100000;
 	CommTimeouts.WriteTotalTimeoutMultiplier = 0;
 	CommTimeouts.WriteTotalTimeoutConstant = 0;
 	SetCommTimeouts(m_hCom, &CommTimeouts);
 
 	PurgeComm(m_hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
+
+	SetCommMask(m_hCom, EV_RXCHAR);
 
 	return true;
 }
