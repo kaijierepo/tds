@@ -40,6 +40,8 @@ ioDev::ioDev(void)
 	memset(&m_stEqpOnLineDateTime, 0, sizeof(SYSTEMTIME));
 	GetLocalTime(&m_stEqpOffLineDateTime);
 	m_pMO = NULL;
+	m_pRecvCallback = NULL;
+	m_pCallbackUser = NULL;
 }
 
 ioDev::~ioDev(void)
@@ -47,11 +49,11 @@ ioDev::~ioDev(void)
 
 }
 
-ioDev* ioDev::getIODev(ioPath iopath)
+ioDev* ioDev::getIODev(ioAddress iopath)
 {
 	for (auto& it : m_vecChild)
 	{
-		if (it->getIOPath() == iopath)
+		if (it->getIOAddr() == iopath)
 		{
 			return it;
 		}
@@ -65,10 +67,10 @@ ioDev* ioDev::getIODev(ioPath iopath)
 }
 
 
-ioPath ioDev::getIOPath()
+ioAddress ioDev::getIOAddr()
 {
-	ioPath addr;
-	addr.addr = m_addr;
+	ioAddress addr;
+	addr.devAddr = m_addr;
 	if (m_pParent)
 		addr.gwAddr = m_pParent->m_addr;
 
@@ -95,12 +97,12 @@ ioPath ioDev::getIOPath()
 
 void ioDev::CommLock()
 {
-	commSrv.CommLock(getIOPath());
+	commSrv.CommLock(getIOAddr());
 }
 
 void ioDev::CommUnlock()
 {
-	commSrv.CommUnlock(getIOPath());
+	commSrv.CommUnlock(getIOAddr());
 }
 
 bool ioDev::SendPkt(PKT_DATA& pkt)
@@ -110,7 +112,7 @@ bool ioDev::SendPkt(PKT_DATA& pkt)
 
 bool ioDev::SendData(char* pData, int iLen)
 {
-	ioPath addr = getIOPath();
+	ioAddress addr = getIOAddr();
 	return commSrv.SendData(pData, iLen, addr);
 }
 
@@ -121,7 +123,7 @@ bool ioDev::SendHeartbeatPkt()
 
 bool ioDev::IsConnected()
 {
-	return commSrv.IsAddrConnected(getIOPath());
+	return commSrv.IsAddrConnected(getIOAddr());
 }
 
 int ioDev::GetAcqInterval()
@@ -175,7 +177,7 @@ bool ioDev::CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount, strin
 	if (iRetryCount > 0)
 		reqParam.iRetryCount = iRetryCount;
 
-	bool bRet = commSrv.RequestAndWaitResponse(&req, &resp, getIOPath(), &reqParam);
+	bool bRet = commSrv.RequestAndWaitResponse(&req, &resp, getIOAddr(), &reqParam);
 
 	if (bRet)
 		resp.UnPack();
@@ -236,12 +238,12 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 	return NULL;
 }
 
-ioDev* ioDev::getChild(ioPath& iopath)
+ioDev* ioDev::getChild(ioAddress& iopath)
 {
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
 		ioDev* p = m_vecChild.at(i);
-		if (p->getIOPath() == iopath)
+		if (p->getIOAddr() == iopath)
 			return p;
 	}
 	return NULL;

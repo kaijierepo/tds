@@ -111,7 +111,7 @@ public:
 		m_csCommLock.unlock();
 	}
 
-	ioPath addr;
+	ioAddress addr;
 
 	int up_RevFrameNum;
 	int up_SendFrameNum;
@@ -158,14 +158,14 @@ struct CAN_TRANSMIT_BUF {
 
 
 //1.function
-//	send and recv data using ioPath
+//	send and recv data using ioAddr
 //2.key point
 /*
-data comm based on ioPath
+data comm based on ioAddr
 data buffer in commserver ,not in ioDev instance,so data comm can be excuted without an ioDev instance
 commserver can be bridged using tdsRPC
-ioPath can be lock,preventing concurrent operation
-comm statis based on ioPath
+ioAddr can be lock,preventing concurrent operation
+comm statis based on ioAddr
 
 对于网关下的设备的数据通讯，有两种设计方案
 1.将数据包转发给ioGateway对象，由网关对象转发给网关下设备的ioDev对象
@@ -179,24 +179,24 @@ public:
 	commServer(void);
 	~commServer(void);
 
-	bool RequestAndWaitResponse(PKT_DATA* req, PKT_DATA* resp, ioPath addr, REQ_PARAM* reqParam = NULL);
+	bool RequestAndWaitResponse(PKT_DATA* req, PKT_DATA* resp, ioAddress addr, REQ_PARAM* reqParam = NULL);
 
 	void Run();
 	void Stop();
 
 	//通信设备互斥锁 
 	ioAddrSession* GetCommAddrInfo(string iID, string strIP);
-	ioAddrSession* GetCommAddrInfo(ioPath addr);
-	void CommLock(ioPath addr);
-	bool CommLock(ioPath addr, int iMilliSecond);
-	void CommUnlock(ioPath addr);
+	ioAddrSession* GetCommAddrInfo(ioAddress addr);
+	void CommLock(ioAddress addr);
+	bool CommLock(ioAddress addr, int iMilliSecond);
+	void CommUnlock(ioAddress addr);
 
 
 	//传输层通信(Can包作为设备应用层数据的承载协议包，因此Can传输看作是通信传输层，实现应用层数据的传输，commServer实现对传输层协议封装)
 	virtual void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
-	void ClearRecvBuff(ioPath addr);
-	bool GetResponse(PKT_DATA& req, PKT_DATA& resp, ioPath addr, REQ_PARAM* reqParam);
-	bool IsAddrConnected(ioPath addr);
+	void ClearRecvBuff(ioAddress addr);
+	bool GetResponse(PKT_DATA& req, PKT_DATA& resp, ioAddress addr, REQ_PARAM* reqParam);
+	bool IsAddrConnected(ioAddress addr);
 	//应用层通信
 	void OnRecvData_EqpAppLayerData(char* pData, int iLen, string strID, string strIP, bool bIsWholePkt = false); //bIsWholePkt=0表示回调上来的是应用层字节流，需要进行应用层组包；为1表示回调上来的是一个完整的应用层数据包
 	void OnRecvData_EqpAppLayerPkt(PKT_DATA* ppd, ioAddrSession* pAddrInfo);
@@ -205,12 +205,12 @@ public:
 	//组装
 	int StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir);
 
-	void StatisOnRecv(char* recvData, int len, ioPath addr, recvPktType dealType = RECV_PKT_UNKNOWN);
-	void StatisOnSend(char* sendData, int len, ioPath addr);
+	void StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktType dealType = RECV_PKT_UNKNOWN);
+	void StatisOnSend(char* sendData, int len, ioAddress addr);
 	bool m_bEndSession;
 
 	//数据收发
-	bool SendData(char* pData, int iLen, ioPath addr);
+	bool SendData(char* pData, int iLen, ioAddress addr);
 	bool SendCanFrameRaw(void* buf, int iDataLen, int iID);
 
 	//用于发送自带组包功能的can载荷
@@ -228,13 +228,13 @@ public:
 public:
 	//网络通信
 	tcpSrv m_tcpServer;
-	map<ioPath, CTCPClient*> m_tcpClientList;
+	map<ioAddress, CTCPClient*> m_tcpClientList;
 
 	//中继通讯接收缓冲
 	std::map<string, CAN_TRANSMIT_BUF*> m_mapGateWay;
 
 	//设备通讯接受缓冲
-	std::map<ioPath, ioAddrSession*> m_mapCommAddrInfo;  //一个通讯地址的所有管理信息.首次收到该通信地址的数据，加入管理信息。后续就不再删除
+	std::map<ioAddress, ioAddrSession*> m_mapCommAddrInfo;  //一个通讯地址的所有管理信息.首次收到该通信地址的数据，加入管理信息。后续就不再删除
 	mutex m_csRecvBuffListLock;
 	HANDLE m_threadPackageDeal;
 	SOCKET m_RemoteBridgeSock;
@@ -243,4 +243,4 @@ public:
 };
 
 extern commServer commSrv;
-void CommServer_SendData(char* pData, int iLen, ioPath addr);
+void CommServer_SendData(char* pData, int iLen, ioAddress addr);

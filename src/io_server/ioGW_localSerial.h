@@ -27,8 +27,8 @@ public:
 
 	void SendData(char* pData, int iLen);
 
-	bool ReadCom(LPVOID buf, int& len);
-	bool WriteCom(LPVOID buf, int len);
+	bool ReadCom(char* buf, int& len);
+	bool WriteCom(char* buf, int len);
 	HANDLE m_hCom;
 	string m_portNum;
 	int m_baudRate;
@@ -37,6 +37,10 @@ public:
 	int m_stopBits;
 	string m_strErrorInfo;
 	HANDLE m_hRecvThread;
+
+	OVERLAPPED m_ovWaitEvent;
+	OVERLAPPED m_ovRead;
+	OVERLAPPED m_ovWrite;
 
 	std::shared_ptr<TDS_SESSION> pTdsSession;
 };

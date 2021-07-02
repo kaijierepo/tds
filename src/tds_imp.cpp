@@ -6,6 +6,7 @@
 #include "ds.h"
 #include "ioSrv.h"
 #include "xiaot/xiaot.h"
+#include "io_server/ioDev.h"
 
 string tdsEncoding = "utf8";
 
@@ -50,8 +51,16 @@ bool TDS_imp::sendToIoAddr(string ioAddr)
 	return true;
 }
 
-bool TDS_imp::setIoAddrRecvCallback(fp_ioAddrRecv recvCallback)
+bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback)
 {
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		d->m_pRecvCallback = recvCallback;
+		d->m_pCallbackUser = user;
+	}
 	return true;
 }
 

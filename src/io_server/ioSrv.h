@@ -13,7 +13,7 @@ public:
 	void saveConf();
 	bool run() override;
 
-	string getTag(string ioPath);
+	string getTag(string ioAddr);
 
 	ioGW_LocalSerial* getLocalComDev(string portNum);
 	vector<ioGW_LocalSerial*> localComList;

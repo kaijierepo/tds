@@ -98,8 +98,8 @@ void commServer::Run()
 
 bool commServer::CheckIsGateWay(string strIP)
 {
-	ioPath addr;
-	addr.addr = strIP;
+	ioAddress addr;
+	addr.devAddr = strIP;
 	addr.gwAddr = "";
 	ioDev* p = ioSrv.getIODev(addr);
 	if (p && p->IsGateway())
@@ -209,8 +209,8 @@ void commServer::OnRecvData_EqpAppLayerPkt(PKT_DATA* ppd, ioAddrSession* pAddrIn
 
 void commServer::OnRecvData_EqpAppLayerData(char* pData, int iLen, string strID, string strIP, bool bIsWholePkt)
 {
-	ioPath addr;
-	addr.addr = strIP;
+	ioAddress addr;
+	addr.devAddr = strIP;
 	addr.gwAddr = strID;
 
 	ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
@@ -258,8 +258,8 @@ void commServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInf
 		else //can网关
 		{
 			//打印中继数据收发信息
-			ioPath addr;
-			addr.addr = pCltInfo->strIP;
+			ioAddress addr;
+			addr.devAddr = pCltInfo->strIP;
 			addr.gwAddr = "";
 			StatisOnRecv((char*)pData, iLen, addr);
 
@@ -306,8 +306,8 @@ void commServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInf
 				}
 
 				//获得地址信息
-				ioPath addr;
-				addr.addr = pCltInfo->strIP;
+				ioAddress addr;
+				addr.devAddr = pCltInfo->strIP;
 				addr.gwAddr = str::format("%d", iID);
 				ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
 
@@ -331,7 +331,7 @@ void commServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInf
 
 						if (pAddrInfo->addr.proto == APP_LAYER_PROTO_TYPE::PROTOCOL_FRAMING_PROTOCOL)
 						{
-							OnRecvData_EqpAppLayerData(pCanBuf->canBuff + 5, pCanPkt->DLC, addr.gwAddr, addr.addr);
+							OnRecvData_EqpAppLayerData(pCanBuf->canBuff + 5, pCanPkt->DLC, addr.gwAddr, addr.devAddr);
 						}
 						else
 						{
@@ -380,7 +380,7 @@ void commServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInf
 					}
 					else if (pAddrInfo->addr.proto == TRANSFER_LAYER_PROTO_TYPE::TLT_CAN_V1)
 					{
-						OnRecvData_EqpAppLayerData(pCanBuf->canBuff + 5, pCanPkt->DLC, addr.gwAddr, addr.addr);
+						OnRecvData_EqpAppLayerData(pCanBuf->canBuff + 5, pCanPkt->DLC, addr.gwAddr, addr.devAddr);
 					}
 				}
 
@@ -402,7 +402,7 @@ void commServer::Stop()
 	m_tcpServer.stop();
 }
 
-ioAddrSession* commServer::GetCommAddrInfo(ioPath addr)
+ioAddrSession* commServer::GetCommAddrInfo(ioAddress addr)
 {
 	ioAddrSession* p = NULL;
 	m_csRecvBuffListLock.lock();
@@ -411,7 +411,7 @@ ioAddrSession* commServer::GetCommAddrInfo(ioPath addr)
 		ioAddrSession* pCai = new ioAddrSession();
 		ioDev* pRun = ioSrv.getIODev(addr);
 		if (pRun)
-			pCai->addr = pRun->getIOPath(); //从配置设备可以取到协议类型
+			pCai->addr = pRun->getIOAddr(); //从配置设备可以取到协议类型
 		else
 			pCai->addr = addr; //只有ip和id
 		m_mapCommAddrInfo[addr] = pCai;
@@ -426,10 +426,10 @@ ioAddrSession* commServer::GetCommAddrInfo(ioPath addr)
 ioAddrSession* commServer::GetCommAddrInfo(string iID, string strIP)
 {
 	//根据IP和ID信息  获取 ioAddrSession 的信息结构体
-	std::map<ioPath, ioAddrSession*>::iterator mapiter;
+	std::map<ioAddress, ioAddrSession*>::iterator mapiter;
 	for (mapiter = m_mapCommAddrInfo.begin(); mapiter != m_mapCommAddrInfo.end(); mapiter++)
 	{
-		if (mapiter->first.gwAddr == iID && mapiter->first.addr == strIP)
+		if (mapiter->first.gwAddr == iID && mapiter->first.devAddr == strIP)
 		{
 			return mapiter->second;
 		}
@@ -462,12 +462,12 @@ void commServer::sendCanV2(char* pData, int iLen, string strIP, int iID)
 }
 
 
-void CommServer_SendData(char* pData, int iLen, ioPath addr)
+void CommServer_SendData(char* pData, int iLen, ioAddress addr)
 {
 	commSrv.SendData(pData, iLen, addr);
 }
 
-bool commServer::SendData(char* pData, int iLen, ioPath addr)
+bool commServer::SendData(char* pData, int iLen, ioAddress addr)
 {
 	StatisOnSend((char*)pData, iLen, addr);
 
@@ -502,18 +502,18 @@ bool commServer::SendData(char* pData, int iLen, ioPath addr)
 			if (addr.gwType == GW_CAN_TRANSPARENT)
 			{
 				if (addr.tlProto == TRANSFER_LAYER_PROTO_TYPE::TLT_CAN_V1)
-					sendCanV1((char*)pData, iLen, addr.addr, atoi(addr.gwAddr.c_str()));
+					sendCanV1((char*)pData, iLen, addr.devAddr, atoi(addr.gwAddr.c_str()));
 				else if (addr.tlProto == TRANSFER_LAYER_PROTO_TYPE::TLT_CAN_V2)
-					sendCanV2((char*)pData, iLen, addr.addr, atoi(addr.gwAddr.c_str()));
+					sendCanV2((char*)pData, iLen, addr.devAddr, atoi(addr.gwAddr.c_str()));
 			}
 			else 
-				m_tcpServer.SendData((char*)pData, iLen, addr.addr);
+				m_tcpServer.SendData((char*)pData, iLen, addr.devAddr);
 
 			return true;
 		}
 		else//原始数据
 		{
-			m_tcpServer.SendData((char*)pData, iLen, addr.addr);
+			m_tcpServer.SendData((char*)pData, iLen, addr.devAddr);
 			return true;
 		}
 	}
@@ -527,27 +527,27 @@ bool commServer::SendCanFrameRaw(void* buf, int iDataLen, int iID)
 }
 
 
-void commServer::CommLock(ioPath addr)
+void commServer::CommLock(ioAddress addr)
 {
 	ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
 	pAddrInfo->CommLock();
 }
 
 
-bool commServer::CommLock(ioPath addr, int iMilliSecond)
+bool commServer::CommLock(ioAddress addr, int iMilliSecond)
 {
 	ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
 	return pAddrInfo->CommLockWithTime(iMilliSecond);
 }
 
-void commServer::CommUnlock(ioPath addr)
+void commServer::CommUnlock(ioAddress addr)
 {
 	ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
 	pAddrInfo->CommUnlock();
 }
 
 
-void commServer::ClearRecvBuff(ioPath addr)
+void commServer::ClearRecvBuff(ioAddress addr)
 {
 	PktQueue* ptrPktBuffer = NULL;
 	// 清除响应队列
@@ -556,7 +556,7 @@ void commServer::ClearRecvBuff(ioPath addr)
 	}
 }
 
-bool commServer::GetResponse(PKT_DATA& req, PKT_DATA& resp, ioPath addr, REQ_PARAM* reqParam)
+bool commServer::GetResponse(PKT_DATA& req, PKT_DATA& resp, ioAddress addr, REQ_PARAM* reqParam)
 {
 	ioAddrSession* pCommInfo = GetCommAddrInfo(addr);
 	if (!pCommInfo) return false;
@@ -602,14 +602,14 @@ bool commServer::GetResponse(PKT_DATA& req, PKT_DATA& resp, ioPath addr, REQ_PAR
 }
 
 
-bool commServer::IsAddrConnected(ioPath addr)
+bool commServer::IsAddrConnected(ioAddress addr)
 {
-	return m_tcpServer.IsIPOnline(addr.addr);
+	return m_tcpServer.IsIPOnline(addr.devAddr);
 }
 
 
 
-bool commServer::RequestAndWaitResponse(PKT_DATA* req, PKT_DATA* resp, ioPath addr, REQ_PARAM* reqParam)
+bool commServer::RequestAndWaitResponse(PKT_DATA* req, PKT_DATA* resp, ioAddress addr, REQ_PARAM* reqParam)
 {
 	string strCmd = ""; //该变量用于统计rtt时缓存cmd
 	if (this == NULL)
@@ -773,19 +773,19 @@ int commServer::StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir)
 	return 0;
 }
 
-void commServer::StatisOnRecv(char* recvData, int len, ioPath addr, recvPktType dealType)
+void commServer::StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktType dealType)
 {
 	
 }
 
-void commServer::StatisOnSend(char* sendData, int len, ioPath addr)
+void commServer::StatisOnSend(char* sendData, int len, ioAddress addr)
 {
 	
 }
 
 bool commServer::DealPackageAsyn()
 {
-	std::map<ioPath, ioAddrSession*>::iterator i;
+	std::map<ioAddress, ioAddrSession*>::iterator i;
 
 	
 	//先一次性取出所有地址。该列表可能被另外一个线程添加成员。需要锁住
@@ -845,7 +845,7 @@ bool ioAddrSession::CommLockWithTime(int dwTimeoutMS)
 {
 	if (!tdsConf.bConcurrentGateway && addr.gwAddr.length() > 0) //和串行网关下的一个设备通信，锁中继
 	{
-		ioPath gwAddr = addr;
+		ioAddress gwAddr = addr;
 		gwAddr.gwAddr = "";
 		ioAddrSession* pGw = commSrv.GetCommAddrInfo(gwAddr);
 		if (pGw)

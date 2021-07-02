@@ -18,7 +18,7 @@ ioChannel::~ioChannel()
 
 string ioChannel::GetCommLinkTag()
 {
-	ioPath addr = m_pParent->getIOPath();
+	ioAddress addr = m_pParent->getIOAddr();
 	string str = addr.ToString();
 
 	str += "-" + m_addr;

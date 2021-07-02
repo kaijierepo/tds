@@ -27,6 +27,27 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 	m_addr = "COM1";
 	m_hCom = NULL;
 	pTdsSession = NULL;
+
+	m_ovWaitEvent.hEvent = CreateEvent(
+		NULL,   // default security attributes 
+		TRUE,   // manual-reset event 
+		FALSE,  // not signaled 
+		NULL    // no name
+	);
+
+	m_ovRead.hEvent = CreateEvent(
+		NULL,   // default security attributes 
+		TRUE,   // manual-reset event 
+		FALSE,  // not signaled 
+		NULL    // no name
+	);
+
+	m_ovWrite.hEvent = CreateEvent(
+		NULL,   // default security attributes 
+		TRUE,   // manual-reset event 
+		FALSE,  // not signaled 
+		NULL    // no name
+	);
 }
 
 
@@ -49,30 +70,63 @@ bool ioGW_LocalSerial::run()
 
 void ioGW_LocalSerial::SendData(char* pData, int iLen)
 {
-	ioPath addr;
-	addr.addr = m_addr;
+	ioAddress addr;
+	addr.devAddr = m_addr;
 	commSrv.StatisOnSend((char*)pData,iLen,addr);
 	WriteCom(pData,iLen);
 }
 
-bool ioGW_LocalSerial::ReadCom(LPVOID buf, int& len)
+bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 {
 	if (m_hCom == NULL || m_hCom == INVALID_HANDLE_VALUE)
 	{
 		return false;
 	}
+	DWORD dwEvtMask = 0;
+	if (WaitCommEvent(m_hCom, &dwEvtMask, &m_ovWaitEvent))
+	{}
+	else
+	{
+		DWORD dwRet = GetLastError();
+		if (ERROR_IO_PENDING == dwRet)
+		{
+			printf("I/O is pending... dwEvtMask = 0x%x\n", dwEvtMask);
+			DWORD dwBytesRead = 0;
+			BOOL bResult = GetOverlappedResult(m_hCom,&m_ovWaitEvent,&dwBytesRead,TRUE); // 阻塞  Block
+			if (bResult) {
+			
+			}
+			else {
+				return false;
+			}
+		}
+		else {
+			return false;
+		}
+	}
 
-	if (!ReadFile(m_hCom, buf, 500, (LPDWORD)&len, NULL))
+
+	COMSTAT comstat;
+	DWORD dwError;
+	ClearCommError(m_hCom, &dwError, &comstat);
+
+	if (comstat.cbInQue == 0)
 		return false;
 
-	ioPath addr;
-	addr.addr = m_addr;
+	BOOL bRet = ReadFile(m_hCom, (LPVOID)(buf), comstat.cbInQue, (LPDWORD)&len, &m_ovRead);//该操作立即返回，因为缓冲区已经有数据
+	if (!bRet)
+		return false;
+	if(len == 0)
+		return false;
+
+	ioAddress addr;
+	addr.devAddr = m_addr;
 	commSrv.StatisOnRecv((char*)buf,len,addr);
 
 	return true;
 }
 
-bool ioGW_LocalSerial::WriteCom(LPVOID buf, int len)
+bool ioGW_LocalSerial::WriteCom(char* buf, int len)
 {
 	if (m_hCom == NULL || m_hCom == INVALID_HANDLE_VALUE)
 	{
@@ -80,7 +134,7 @@ bool ioGW_LocalSerial::WriteCom(LPVOID buf, int len)
 	}
 
 	DWORD dwLen = 0;
-	if (!WriteFile(m_hCom, buf, len, &dwLen, NULL))
+	if (!WriteFile(m_hCom, buf, len, &dwLen, &m_ovWrite))
 	{
 		return false;
 	}
@@ -100,6 +154,11 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 		pTdsSession->send(pData, iLen);
 	}
 
+	if (m_pRecvCallback)
+	{
+		m_pRecvCallback(m_pCallbackUser, pData, iLen);
+	}
+
 	return true;
 }
 
@@ -111,13 +170,13 @@ bool ioGW_LocalSerial::closeCom()
 	if (m_hRecvThread)
 	{
 		//必须先关闭readfile阻塞读取，否则closeHandle会阻塞
-		CancelSynchronousIo(m_hRecvThread);
+		//CancelSynchronousIo(m_hRecvThread);
 		CloseHandle(m_hRecvThread);
 	}
 
 	if (hCom)
 	{
-		CloseHandle(hCom);
+		CloseHandle(hCom);//这里会使得阻塞的 GetOverlappedResult 返回
 	}
 	return true;
 }
@@ -148,7 +207,7 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		0, // 独占方式
 		NULL,
 		OPEN_EXISTING,// 打开而不是创建
-		0,
+		FILE_FLAG_OVERLAPPED,
 		NULL);
 
 	if (m_hCom == INVALID_HANDLE_VALUE)
@@ -172,9 +231,9 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 
 	COMMTIMEOUTS CommTimeouts;
 	ZeroMemory(&CommTimeouts, sizeof(CommTimeouts));
-	CommTimeouts.ReadIntervalTimeout = 0;
+	CommTimeouts.ReadIntervalTimeout = 200;
 	CommTimeouts.ReadTotalTimeoutMultiplier = 0;
-	CommTimeouts.ReadTotalTimeoutConstant = 100000;
+	CommTimeouts.ReadTotalTimeoutConstant = 2000;
 	CommTimeouts.WriteTotalTimeoutMultiplier = 0;
 	CommTimeouts.WriteTotalTimeoutConstant = 0;
 	SetCommTimeouts(m_hCom, &CommTimeouts);

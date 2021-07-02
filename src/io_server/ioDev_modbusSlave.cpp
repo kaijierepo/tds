@@ -62,7 +62,7 @@ bool ioDev_ModbusSlave::RequestAndWaitResponse(PKT_DATA& req,PKT_DATA& resp)
 {
 	REQ_PARAM rp;
 	rp.iWaitTime =  3000; 
-	return commSrv.RequestAndWaitResponse(&req,&resp,getIOPath(),&rp);
+	return commSrv.RequestAndWaitResponse(&req,&resp,getIOAddr(),&rp);
 }
 
 /*
@@ -76,7 +76,7 @@ f7 03 04 FF 00 FF 00 00 00
 
 void ioDev_ModbusSlave::SendData(char* pData,int iLen)
 {
-	ioPath addr = getIOPath();
+	ioAddress addr = getIOAddr();
 	commSrv.StatisOnSend((char*)pData,iLen,addr);
 
 	if(m_pParent && m_pParent->m_devType == IO_DEV_TYPE::gw_local_serial)
@@ -153,7 +153,7 @@ WORD ioDev_ModbusSlave::GetCRC(const char *pBuf, UINT iLen)
 
 bool ioDev_ModbusSlave::OnRecvData(char* pData,int iLen)
 {	
-	ioPath addr = getIOPath();
+	ioAddress addr = getIOAddr();
 	commSrv.StatisOnRecv((char*)pData,iLen,addr);
 
 	char* pReg = pData + 3;

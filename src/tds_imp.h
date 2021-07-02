@@ -16,7 +16,7 @@ public:
 
 	// io 通信服务功能
 	 bool sendToIoAddr(string ioAddr);
-	 bool setIoAddrRecvCallback(fp_ioAddrRecv recvCallback);
+	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 void log(char* text);
 

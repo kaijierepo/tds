@@ -159,10 +159,10 @@ enum IODEV_MNG_STATUS {
 	DMS_UNCONF,
 };
 
-// unique identifier for an io device
-// any device in an IOT senario can be linked by addr and gateway addr
-struct ioPath {
-	string addr; //device addr
+// unique identifier for an io device in a certain system
+// any device in an IOT senario can be linked by device addr and gateway addr
+struct ioAddress {
+	string devAddr; //device addr
 	string gwAddr; // if device is under a gateway, this is the gateway addr
 	string proto;
 	string tlProto;
@@ -172,8 +172,8 @@ struct ioPath {
 		return _ttoi(gwAddr.c_str());
 	}
 
-	ioPath() {
-		addr = "";
+	ioAddress() {
+		devAddr = "";
 		gwAddr = ""; //0表示无效，ip即是设备地址
 		bIPOnline = false;
 		proto = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
@@ -185,11 +185,11 @@ struct ioPath {
 		int iPos = str.find('/');
 		if (iPos != string::npos)
 		{
-			addr = str;
+			devAddr = str;
 		}
 		else
 		{
-			addr = str.substr(0,iPos);
+			devAddr = str.substr(0,iPos);
 			gwAddr = str.substr(iPos + 1, str.length() - iPos - 1);
 		}
 
@@ -201,33 +201,33 @@ struct ioPath {
 		string str;
 		if (gwAddr == "")
 		{
-			str = addr;
+			str = devAddr;
 		}
 		else {
-			str = str::format(_T("%s/%s"), addr, gwAddr);
+			str = str::format(_T("%s/%s"), devAddr, gwAddr);
 		}
 		return str;
 	}
 
 	bool IsValid()
 	{
-		if (addr.length() > 0)
+		if (devAddr.length() > 0)
 			return true;
 
 		return false;
 	}
 
-	bool operator==(const ioPath& right)
+	bool operator==(const ioAddress& right)
 	{
-		if (addr == right.addr && gwAddr == right.gwAddr)
+		if (devAddr == right.devAddr && gwAddr == right.gwAddr)
 		{
 			return true;
 		}
 		return false;
 	}
 
-	friend bool operator<(const ioPath& left, const ioPath& right) {
-		int ret = left.addr.compare(right.addr);
+	friend bool operator<(const ioAddress& left, const ioAddress& right) {
+		int ret = left.devAddr.compare(right.devAddr);
 		if (ret < 0) return true;
 		else if (ret == 0 && left.gwAddr < right.gwAddr) return true;
 		else return false;
@@ -255,7 +255,7 @@ struct PKT_DATA {
 	char* m_DataBuf;
 	int m_iDataBufLen;
 	string proto;
-	ioPath addr;
+	ioAddress addr;
 	recvPktType dealType;
 
 	string m_strCmdName; //命令名称

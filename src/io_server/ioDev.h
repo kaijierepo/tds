@@ -7,6 +7,7 @@ class ioChannel;
 //asyn pkt received is not processed from DMS_UNCONF ioDev
 //no DoCycleTask for DMS_UNCONF ioDev
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
+typedef void* (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
 class ioDev
 {
 public:
@@ -22,9 +23,9 @@ public:
 	//is Channel
 	// can be 1. mqtt topic 2.tuya device id
 	string m_addr;
-	// addr of different level(gateway,device,channel) devices makes an ioPath
-	ioPath getIOPath();
-	ioDev* getIODev(ioPath iopath);
+	// addr of different level(gateway,device,channel) devices makes an ioAddr
+	ioAddress getIOAddr();
+	ioDev* getIODev(ioAddress iopath);
 
 	IODEV_MNG_STATUS m_mngStatus;
 
@@ -33,7 +34,7 @@ public:
 
 	//tree management
 	vector<ioDev*> m_vecChild;
-	ioDev* getChild(ioPath& iopath);
+	ioDev* getChild(ioAddress& iopath);
 	ioDev* getChild(string addr);
 	ioDev* m_pParent;
 
@@ -47,6 +48,9 @@ public:
 	string m_strGatewayIP;
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
 
+
+	fp_ioAddrRecvCallback m_pRecvCallback;
+	void* m_pCallbackUser;
 
 	//which monitor object this ioDevice is installed to 
 	string m_installedMoTag;

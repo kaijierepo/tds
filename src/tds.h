@@ -2,7 +2,7 @@
 #include <string>
 using namespace std;
 
-typedef void* (*fp_ioAddrRecv)(char* pData, int iLen);
+typedef void* (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 
 
 //interface of TDS
@@ -17,7 +17,7 @@ public:
 
 	// io 通信服务功能
 	virtual bool sendToIoAddr(string ioAddr) = 0;
-	virtual bool setIoAddrRecvCallback(fp_ioAddrRecv recvCallback) = 0;
+	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	// 通用服务功能
 	virtual void log(char* text) = 0;
