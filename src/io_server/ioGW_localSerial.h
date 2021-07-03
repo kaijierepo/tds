@@ -25,7 +25,7 @@ public:
 	bool OnRecvData(char* pData, int iLen) override;
 	bool run() override;
 
-	void SendData(char* pData, int iLen);
+	bool sendData(char* pData, int iLen) override;
 
 	bool ReadCom(char* buf, int& len);
 	bool WriteCom(char* buf, int len);
@@ -42,6 +42,6 @@ public:
 	OVERLAPPED m_ovRead;
 	OVERLAPPED m_ovWrite;
 
-	std::shared_ptr<TDS_SESSION> pTdsSession;
+
 };
 

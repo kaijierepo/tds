@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "pch.h"
+#include "tdsSession.h"
+
 class mo;
 class mp;
 class ioAddrSession;
@@ -26,14 +28,18 @@ public:
 	// addr of different level(gateway,device,channel) devices makes an ioAddr
 	ioAddress getIOAddr();
 	ioDev* getIODev(ioAddress iopath);
-
+	ioDev* getIODev(string ioAddr);
 	IODEV_MNG_STATUS m_mngStatus;
+
+	//directly bridge ioDev to tds websocket session
+	std::shared_ptr<TDS_SESSION> pTdsSession;
 
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 
 	//tree management
 	vector<ioDev*> m_vecChild;
+	void deleteChild(ioDev* p);
 	ioDev* getChild(ioAddress& iopath);
 	ioDev* getChild(string addr);
 	ioDev* m_pParent;
@@ -64,7 +70,7 @@ public:
 	void CommLock();
 	void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
-	bool SendData(char* pData, int iLen);
+	virtual bool sendData(char* pData, int iLen);
 	bool CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen);//发送并阻塞等待回包
 	bool CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount = 0, string strLogMsgWhenSend = "");//=0表示使用全局配置
 

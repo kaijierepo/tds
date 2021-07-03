@@ -183,7 +183,7 @@ struct ioAddress {
 	bool FromString(string str)
 	{
 		int iPos = str.find('/');
-		if (iPos != string::npos)
+		if (iPos == string::npos)
 		{
 			devAddr = str;
 		}

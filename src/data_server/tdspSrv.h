@@ -44,6 +44,7 @@ public:
 
 	//serial function
 	string rpc_openCom(json params);
+	string rpc_com_list(json params);
 	string rpc_closeCom(json params);
 
 	//rpc error

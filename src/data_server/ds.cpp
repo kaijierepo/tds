@@ -203,8 +203,6 @@ bool dataServer::run()
 	string strName;
 	if(!tdsConf.debugMode)
 		m_tcpSrv->keepAliveTimeout = 30;
-	if(tdsConf.port == 0) //not set by cmd line
-		tdsConf.port = tds::getConfInt("port", 80);
 	int tryPort = tdsConf.port;
 	while (!m_tcpSrv->run(this, tryPort))
 	{
@@ -382,7 +380,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos = strData.find("COM");
 					int pos1 = strData.find(" ", pos);
 					string portNum = strData.substr(pos,pos1-pos);
-					ioGW_LocalSerial* p = ioSrv.getLocalComDev(portNum);
+					ioDev* p = ioSrv.getIODev(portNum);
 					if (p)
 					{
 						tdsSession->bridgedLocalCom = portNum;
@@ -641,10 +639,10 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
 	std::shared_ptr<TDS_SESSION> pALC = getTDSSession(pClt);
 	if (pALC->bridgedLocalCom != "")//tds link is bridged to a local com
 	{
-		ioGW_LocalSerial* p = ioSrv.getLocalComDev(pALC->bridgedLocalCom);
+		ioDev* p = ioSrv.getIODev(pALC->bridgedLocalCom);
 		if (p)
 		{
-			p->SendData(pDataBuf, iLen);
+			p->sendData(pDataBuf, iLen);
 		}
 	}
 	else if (pALC->pBridgedTcpClient != NULL)

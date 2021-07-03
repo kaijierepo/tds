@@ -16,7 +16,7 @@ public:
 	virtual string call(string method, string param) = 0;
 
 	// io 通信服务功能
-	virtual bool sendToIoAddr(string ioAddr) = 0;
+	virtual bool sendToIoAddr(string ioAddr,char* p,int l) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	// 通用服务功能

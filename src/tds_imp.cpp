@@ -46,9 +46,16 @@ string TDS_imp::call(string method, string param)
 	
 }
 
-bool TDS_imp::sendToIoAddr(string ioAddr)
+bool TDS_imp::sendToIoAddr(string ioAddr, char* p, int l)
 {
-	return true;
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		return d->sendData(p, l);
+	}
+	return false;
 }
 
 bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback)

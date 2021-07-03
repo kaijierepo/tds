@@ -82,7 +82,7 @@ void ioDev_ModbusSlave::SendData(char* pData,int iLen)
 	if(m_pParent && m_pParent->m_devType == IO_DEV_TYPE::gw_local_serial)
 	{
 		ioGW_LocalSerial* pGW = (ioGW_LocalSerial*) m_pParent;
-		pGW->SendData(pData,iLen);
+		pGW->sendData(pData,iLen);
 	}
 }
 

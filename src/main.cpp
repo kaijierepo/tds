@@ -37,6 +37,9 @@ int main(int argc, char** argv)
 	logger.setLogLevel(strLogLevel);
 	LOG("current log Level is:" + strLogLevel);
 
+	//load tds.json
+	tdsConf.loadConf();
+
 	i_tds.run();
 
 	while (1)

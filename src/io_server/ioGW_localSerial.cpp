@@ -26,8 +26,6 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 	m_devType = IO_DEV_TYPE::gw_local_serial;
 	m_addr = "COM1";
 	m_hCom = NULL;
-	pTdsSession = NULL;
-
 	m_ovWaitEvent.hEvent = CreateEvent(
 		NULL,   // default security attributes 
 		TRUE,   // manual-reset event 
@@ -68,12 +66,12 @@ bool ioGW_LocalSerial::run()
 }
 
 
-void ioGW_LocalSerial::SendData(char* pData, int iLen)
+bool ioGW_LocalSerial::sendData(char* pData, int iLen)
 {
 	ioAddress addr;
 	addr.devAddr = m_addr;
 	commSrv.StatisOnSend((char*)pData,iLen,addr);
-	WriteCom(pData,iLen);
+	return WriteCom(pData,iLen);
 }
 
 bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
@@ -90,7 +88,6 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		DWORD dwRet = GetLastError();
 		if (ERROR_IO_PENDING == dwRet)
 		{
-			printf("I/O is pending... dwEvtMask = 0x%x\n", dwEvtMask);
 			DWORD dwBytesRead = 0;
 			BOOL bResult = GetOverlappedResult(m_hCom,&m_ovWaitEvent,&dwBytesRead,TRUE); // ×èÈû  Block
 			if (bResult) {

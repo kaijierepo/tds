@@ -15,7 +15,7 @@ public:
 	 string call(string method, string param);
 
 	// io 通信服务功能
-	 bool sendToIoAddr(string ioAddr);
+	 bool sendToIoAddr(string ioAddr, char* p, int l);
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 void log(char* text);

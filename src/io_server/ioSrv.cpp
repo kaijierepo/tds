@@ -180,15 +180,3 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-
-ioGW_LocalSerial* ioServer::getLocalComDev(string portNum)
-{
-	for (int i = 0; i < localComList.size(); i++)
-	{
-		ioGW_LocalSerial* pTemp = localComList.at(i);
-		if (pTemp->m_portNum == portNum)
-			return pTemp;
-	}
-	return NULL;
-}
-

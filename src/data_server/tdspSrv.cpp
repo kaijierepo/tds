@@ -230,7 +230,10 @@ string tdsServer::handleMethodCall(string method, json params)
 	{
 		result = rpc_closeCom(params);
 	}
-
+	else if (method == "com.list")
+	{
+		result = rpc_com_list(params);
+	}
 	return result;
 }
 
@@ -274,7 +277,7 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 		LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
 
 		method = jReq["method"].get<string>();
-		auto params = jReq["params"];
+		json params = jReq["params"];
 		json jId = jReq["id"];
 		if(jId != nullptr)
 		{
@@ -662,20 +665,20 @@ string tdsServer::rpc_xiaot(json params)
 
 string tdsServer::rpc_openCom(json params)
 {
-	ioGW_LocalSerial* pCom = NULL;
+	ioDev* pDev = NULL;
 	string portNum = params["portNum"].get<string>();
-	pCom = ioSrv.getLocalComDev(portNum);
-	if (pCom)
+	pDev = ioSrv.getIODev(portNum);
+	if (pDev)
 	{
 		json jError = "ok";
 		return jError.dump();
 	}
 
-	pCom = new ioGW_LocalSerial();
+	ioGW_LocalSerial* pCom = new ioGW_LocalSerial();
 	if (pCom->OpenCom(params.dump()))
 	{
 		pCom->run();
-		ioSrv.localComList.push_back(pCom);
+		ioSrv.m_vecChild.push_back(pCom);
 		return "\"ok\"";
 	}
 	else
@@ -686,23 +689,33 @@ string tdsServer::rpc_openCom(json params)
 	}
 }
 
+string tdsServer::rpc_com_list(json params)
+{
+	vector<sys::COM_INFO> ary;
+	ary = sys::getCOMInfoList();
+	json result;
+	for (auto& i : ary)
+	{
+		sys::COM_INFO ci = i;
+		json jComInfo;
+		jComInfo["portNum"] = ci.portNum;
+		jComInfo["desc"] = ci.desc;
+		result.push_back(jComInfo);
+	}
+	return result.dump();
+}
+
+
 string tdsServer::rpc_closeCom(json params)
 {
 	string portNum = params["portNum"].get<string>();
-	ioGW_LocalSerial* pCom = ioSrv.getLocalComDev(portNum);
+	ioDev* pCom = ioSrv.getIODev(portNum);
 	if (pCom)
 	{
-		pCom->closeCom();
-		for (int i = 0; i < ioSrv.localComList.size(); i++)
-		{
-			ioGW_LocalSerial* pTemp = ioSrv.localComList.at(i);
-			if (pTemp == pCom)
-			{
-				ioSrv.localComList.erase(ioSrv.localComList.begin() + i);
-				break;
-			}	
-		}
-		delete pCom;
+		ioGW_LocalSerial* p = (ioGW_LocalSerial*)pCom;
+		p->closeCom();
+		ioSrv.deleteChild(p);
+		delete p;
 		json j = "ok";
 		return j.dump();
 	}

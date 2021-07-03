@@ -12,6 +12,12 @@
 using namespace std;
 
 namespace sys {
+	struct COM_INFO {
+		string portNum;
+		string desc;
+	};
+	vector<string> getCOMList();
+	vector<COM_INFO> getCOMInfoList();
 	LPCSTR getLastError(LPCTSTR szReason);
 };
 
@@ -82,11 +88,6 @@ namespace fs {
 	bool fileExist(string pszFileName);
 	bool deleteFile(string path);
 	vector<string> getFileList(string strFolder);
-}
-
-namespace tds {
-	string getConf(string confName, string defaultVal= "");
-	int getConfInt(string confName, int defaultVal = 0);
 }
 
 

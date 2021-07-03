@@ -42,6 +42,7 @@ ioDev::ioDev(void)
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
+	pTdsSession = NULL;
 }
 
 ioDev::~ioDev(void)
@@ -64,6 +65,13 @@ ioDev* ioDev::getIODev(ioAddress iopath)
 	}
 
 	return nullptr;
+}
+
+ioDev* ioDev::getIODev(string ioAddr)
+{
+	ioAddress a;
+	a.FromString(ioAddr);
+	return getIODev(a);
 }
 
 
@@ -107,10 +115,10 @@ void ioDev::CommUnlock()
 
 bool ioDev::SendPkt(PKT_DATA& pkt)
 {
-	return SendData((char*)pkt.m_DataBuf, pkt.m_iDataBufLen);
+	return sendData((char*)pkt.m_DataBuf, pkt.m_iDataBufLen);
 }
 
-bool ioDev::SendData(char* pData, int iLen)
+bool ioDev::sendData(char* pData, int iLen)
 {
 	ioAddress addr = getIOAddr();
 	return commSrv.SendData(pData, iLen, addr);
@@ -236,6 +244,19 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 		if(it.second->m_strLinkMPTag == strMPTag) return it.second;
 	}
 	return NULL;
+}
+
+void ioDev::deleteChild(ioDev* p)
+{
+	for (int i=0;i<m_vecChild.size();i++)
+	{
+		ioDev* pTemp = m_vecChild.at(i);
+		if (pTemp == p)
+		{
+			m_vecChild.erase(m_vecChild.begin() + i);
+			break;
+		}
+	}
 }
 
 ioDev* ioDev::getChild(ioAddress& iopath)

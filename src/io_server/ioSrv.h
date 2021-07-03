@@ -14,9 +14,6 @@ public:
 	bool run() override;
 
 	string getTag(string ioAddr);
-
-	ioGW_LocalSerial* getLocalComDev(string portNum);
-	vector<ioGW_LocalSerial*> localComList;
 };
 
 extern ioServer ioSrv;
