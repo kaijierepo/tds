@@ -102,6 +102,8 @@ public:
 	ioChannel* GetDataChannelByMPTag(string strMPTag);
 	map<string,ioChannel*> m_mapDataChannel;
 	map<string, string> m_mapBatchDataLink;
+
+	std::mutex m_csThis;
 };
 
 

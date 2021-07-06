@@ -1,11 +1,13 @@
 #include "pch.h"
 #include "ioGW_LocalSerial.h"
 #include "commSrv.h"
+#include "logger.h"
 
 
 DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
 	ioGW_LocalSerial* pGW = (ioGW_LocalSerial*)lpParam;
+	pGW->m_csThis.lock();
 	char buf[500] = {0};
 	while(pGW->m_hCom)
 	{
@@ -17,7 +19,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 			pGW->OnRecvData(buf,iLen);
 		}
 	};
-
+	pGW->m_csThis.unlock();
 	return 0;
 }
 
@@ -51,6 +53,8 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 
 ioGW_LocalSerial::~ioGW_LocalSerial(void)
 {
+	m_csThis.lock();
+	m_csThis.unlock();
 }
 
 bool ioGW_LocalSerial::run()
@@ -96,6 +100,13 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 			else {
 				return false;
 			}
+		}
+		else if (ERROR_ACCESS_DENIED == dwRet)
+		{
+			//usb 串口 虚拟串口等，在串口被打开的情况下删除了设备，拔出了usb线等，进入到这里
+			LOG("[error]hardware " + m_addr + "is deleted,check your hardware connection!");
+			closeCom();
+			return false;
 		}
 		else {
 			return false;
@@ -161,6 +172,9 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 
 bool ioGW_LocalSerial::closeCom()
 {
+	if (m_hCom == NULL)
+		return true;
+
 	HANDLE hCom = m_hCom;
 	m_hCom = NULL;
 
@@ -190,7 +204,7 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		m_byteSize = j["byteSize"].get<int>();
 		m_stopBits = j["stopBits"].get<int>();
 	}
-
+	m_addr = m_portNum;
 
 	if(m_hCom)
 	{

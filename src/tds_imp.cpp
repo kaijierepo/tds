@@ -7,6 +7,7 @@
 #include "ioSrv.h"
 #include "xiaot/xiaot.h"
 #include "io_server/ioDev.h"
+#include "conf.h"
 
 string tdsEncoding = "utf8";
 
@@ -18,6 +19,9 @@ bool TDS_imp::setEncodeing(string encoding)
 
 bool TDS_imp::run(string cmdline)
 {
+	//load tds.json
+	tdsConf.loadConf();
+
 	//startup xiaot
 	xiaot.init();
 
@@ -35,7 +39,11 @@ bool TDS_imp::run(string cmdline)
 string TDS_imp::call(string method, string param)
 {
 	try {
-		json jParam = json::parse(param);
+		json jParam;
+		if(param == "")
+			jParam = nullptr;
+		else
+			jParam = json::parse(param);
 		return tdsSrv.handleMethodCall(method, jParam);
 	}
 	catch (std::exception& e)
