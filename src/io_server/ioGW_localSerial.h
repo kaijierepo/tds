@@ -21,7 +21,10 @@ public:
 	*/
 
 	bool OpenCom(string conf); // call openCom before run
-	bool closeCom(); 
+	bool closeCom();
+	int parseStopBits(string s);
+	int parseParity(string s);
+
 	bool OnRecvData(char* pData, int iLen) override;
 	bool run() override;
 

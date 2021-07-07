@@ -138,7 +138,7 @@
     <OutDir>../../atexpert/out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
-    <OutDir>../../atexpert/out</OutDir>
+    <OutDir>../../ui/out</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

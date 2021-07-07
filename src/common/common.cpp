@@ -945,11 +945,8 @@ namespace sys {
 			SetupDiDestroyDeviceInfoList(hDevInfo);
 			return ary;
 	}
-	LPCSTR getLastError(LPCTSTR szReason)
+	string getLastError(string szReason)
 	{
-		static TCHAR szErrMsg[1024];
-		memset(szErrMsg, 0, sizeof(szErrMsg));
-
 		DWORD dwErrCode = GetLastError(); //之前的错误代码
 
 		LPVOID lpMsgBuf = NULL;
@@ -964,18 +961,20 @@ namespace sys {
 			0,
 			NULL
 		);
+
+		string szErrMsg = "";
+
 		if (dwLen == 0)
 		{
 			DWORD dwFmtErrCode = GetLastError(); //FormatMessage 引起的错误代码
-			_stprintf_s(szErrMsg, _T("FormatMessage failed with %u\n"), dwFmtErrCode);
+			szErrMsg = str::format("FormatMessage failed with %u\n", dwFmtErrCode);
 		}
 
 		if (lpMsgBuf)
 		{
 			wstring utf16msg = (LPWSTR)lpMsgBuf;
 			string utf8Msg = charCodec::utf16toUtf8(utf16msg);
-			_stprintf_s(szErrMsg, _T("%s\n Code = %u, Mean = %s"),
-				szReason, dwErrCode, utf8Msg.c_str());
+			szErrMsg = str::format("%s\n Code = %u, Mean = %s", szReason.c_str(), dwErrCode, utf8Msg.c_str());
 		}
 
 		if (lpMsgBuf)

@@ -187,9 +187,41 @@ bool ioGW_LocalSerial::closeCom()
 
 	if (hCom)
 	{
-		CloseHandle(hCom);//这里会使得阻塞的 GetOverlappedResult 返回
+		BOOL bRet = CloseHandle(hCom);//这里会使得阻塞的 GetOverlappedResult 返回
+		if (!bRet)
+		{
+			m_strErrorInfo = sys::getLastError("CloseHandle");
+			return false;
+		}
 	}
 	return true;
+}
+
+int ioGW_LocalSerial::parseStopBits(string s)
+{
+	if (s == "1")
+		return 0;
+	else if (s == "1.5")
+		return 1;
+	else if (s == "2")
+		return 2;
+	return 0;
+}
+
+int ioGW_LocalSerial::parseParity(string s)
+{
+	/* 0-4=None,Odd,Even,Mark,Space    */
+	if (s == "None")
+		return 0;
+	else if (s == "Odd")
+		return 1;
+	else if (s == "Even")
+		return 2;
+	else if (s == "Mark")
+		return 3;
+	else if (s == "Space")
+		return 4;
+	return 0;
 }
 
 bool ioGW_LocalSerial::OpenCom(string conf)
@@ -197,19 +229,30 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 	if (conf != "")
 	{
 		json j = json::parse(conf);
-
-		m_portNum = j["portNum"].get<string>();
-		m_baudRate = j["baudRate"].get<int>();
-		m_parity = j["parity"].get<int>();
-		m_byteSize = j["byteSize"].get<int>();
-		m_stopBits = j["stopBits"].get<int>();
+		string str;
+		str = j["portNum"].get<string>();
+		m_portNum = str;
+		str = j["baudRate"].get<string>();
+		m_baudRate = atoi(str.c_str());
+		str = j["parity"].get<string>();
+		m_parity = parseParity(str);
+		str = j["byteSize"].get<string>();
+		m_byteSize = atoi(str.c_str());
+		str = j["stopBits"].get<string>();
+		m_stopBits =  parseStopBits(str);
 	}
 	m_addr = m_portNum;
 
 	if(m_hCom)
 	{
-		CloseHandle(m_hCom);
-		m_hCom = NULL;
+		BOOL bRet = CloseHandle(m_hCom);
+		if (!bRet)
+		{
+			m_strErrorInfo = sys::getLastError("CloseHandle");
+			return false;
+		}
+		else
+			m_hCom = NULL;
 	}
 	string  strComPort= _T("\\\\.\\") + m_addr;
 
@@ -228,6 +271,14 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		return false;
 	}
 
+	COMSTAT comstat;
+	DWORD dwError;
+	ClearCommError(m_hCom, &dwError, &comstat);
+
+
+	//dcb.StopBits = 0, 1, 2对应的是1bit, 1.5bits, 2bits.
+	//dcb.ByteSize = 6, 7, 8时   dcb.StopBits不能为1
+	//dcb.ByteSize = 5时   dcb.StopBits不能为2
 	DCB dcb;
 	SecureZeroMemory(&dcb, sizeof(DCB));
 	dcb.DCBlength = sizeof(DCB);
@@ -236,7 +287,14 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 	dcb.ByteSize = m_byteSize;
 	dcb.Parity = m_parity;
 	dcb.StopBits = m_stopBits; 
-	SetCommState(m_hCom, &dcb);
+	BOOL bRet = SetCommState(m_hCom, &dcb);
+	if (!bRet)
+	{
+		m_strErrorInfo = sys::getLastError("SetCommState");
+		CloseHandle(m_hCom);
+		m_hCom = NULL;
+		return false;
+	}
 
 	SetupComm(m_hCom, 1024, 1024);
 
