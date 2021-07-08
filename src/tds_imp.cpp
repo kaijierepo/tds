@@ -14,7 +14,7 @@ string tdsEncoding = "utf8";
 bool TDS_imp::setEncodeing(string encoding)
 {
 	tdsEncoding = encoding;
-	return false;
+	return true;
 }
 
 bool TDS_imp::run(string cmdline)

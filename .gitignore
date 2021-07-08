@@ -5,6 +5,7 @@ out/conf/
 .vs/x64/
 .vs/Debug/
 .vs/Release/
+7-Zip/
 
 *.obj
 *.aps

@@ -17,7 +17,7 @@ void tdsConfig::loadConf()
 {
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	string strConf;
-	fs::readFile(fs::appPath(), strConf);
+	fs::readFile(fs::appPath() + "\\tds.json", strConf);
 	if (strConf != "")
 	{
 		jsonConf = json::parse(strConf);
