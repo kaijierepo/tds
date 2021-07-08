@@ -448,7 +448,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						tdsSession->send((char*)s.data(), s.length());
 					}
 				}
-				else if (strData.find("log"))
+				else if (strData.find("/log") != string::npos)
 				{
 					logTdsSession = tdsSession;
 					logger.logOutput = logToWebsock;
