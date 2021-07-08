@@ -29,7 +29,6 @@ db/
 *.suo
 *.ntvs*
 *.njsproj
-*.sln
 package-lock.json
 
 tds.lib
