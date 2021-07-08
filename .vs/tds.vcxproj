@@ -140,6 +140,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <OutDir>../out</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
+    <OutDir>../out</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
