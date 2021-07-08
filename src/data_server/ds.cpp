@@ -153,7 +153,7 @@ int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 
 bool dataServer::run()
 {
-	db.Open(tdsConf.dbPath,prj.m_strName);
+	db.Open(tds->conf->dbPath,prj.m_strName);
 
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
@@ -162,7 +162,7 @@ bool dataServer::run()
 	
 	initHttpSrv(httpSrv);
 	//serve project specified ui through http.both are root path. specified ui path has higher priority
-	string prjUI = tdsConf.projectConfPath + "\\ui";
+	string prjUI = tds->conf->projectConfPath + "\\ui";
 	if(fs::fileExist(prjUI))
 	{
 		httpSrv.set_mount_point("/", +prjUI.c_str());
@@ -201,9 +201,9 @@ bool dataServer::run()
 	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
 
 	string strName;
-	if(!tdsConf.debugMode)
+	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = 30;
-	int tryPort = tdsConf.port;
+	int tryPort = tds->conf->port;
 	while (!m_tcpSrv->run(this, tryPort))
 	{
 		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
@@ -434,7 +434,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 
 				if (strData.find("rpc") != string::npos)
 				{
-					if (tdsConf.debugMode)
+					if (tds->conf->debugMode)
 					{
 						string s = R"(
 						{

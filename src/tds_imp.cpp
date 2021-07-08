@@ -11,6 +11,11 @@
 
 string tdsEncoding = "utf8";
 
+TDS_imp::TDS_imp()
+{
+	conf = &tdsConf;
+}
+
 bool TDS_imp::setEncodeing(string encoding)
 {
 	tdsEncoding = encoding;

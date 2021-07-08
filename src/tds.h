@@ -4,6 +4,15 @@ using namespace std;
 
 typedef void* (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 
+struct iTDSConf {
+	int port;
+	bool debugMode;
+	string projectConfPath;
+	bool bConcurrentGateway;
+	string dbPath;
+	string dataCenterIp;
+};
+
 
 //interface of TDS
 class iTDS {
@@ -21,6 +30,9 @@ public:
 
 	// 通用服务功能
 	virtual void log(char* text) = 0;
+
+	//数据接口
+	iTDSConf* conf;
 };
 
 
@@ -42,3 +54,5 @@ inline iTDS* getITDS() {
 }
 
 #endif
+
+extern iTDS* tds;

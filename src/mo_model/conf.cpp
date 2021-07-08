@@ -2,8 +2,6 @@
 #include "conf.h"
 #include  "common.h"
 
-tdsConfig tdsConf;
-
 tdsConfig::tdsConfig()
 {
 	port = 0;

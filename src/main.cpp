@@ -21,7 +21,8 @@ design problem:
 #include "ioDev_mqttBroker.h"
 
 class TDS_imp;
-TDS_imp i_tds; //interface of tds;
+TDS_imp tdsImp; //tds instance;
+iTDS* tds = &tdsImp;
 
 int main(int argc, char** argv)
 {
@@ -31,13 +32,13 @@ int main(int argc, char** argv)
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
 	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
-	tdsConf.port = parser.get<int>("p");
-	tdsConf.debugMode = parser.get<bool>("d");
+	tds->conf->port = parser.get<int>("p");
+	tds->conf->debugMode = parser.get<bool>("d");
 	string strLogLevel = parser.get<string>("l");
 	logger.setLogLevel(strLogLevel);
 	LOG("current log Level is:" + strLogLevel);
 
-	i_tds.run();
+	tds->run();
 
 	while (1)
 	{
@@ -49,7 +50,7 @@ int main(int argc, char** argv)
 
 #define DllExport   extern "C" __declspec( dllexport )
 DllExport iTDS* getTds() {
-	return &i_tds;
+	return &tdsImp;
 }
 
 

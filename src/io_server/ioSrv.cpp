@@ -119,7 +119,7 @@ ioDev* createIODev(json conf)
 bool ioServer::loadConf()
 {
 	string conf;
-	if (!fs::readFile(tdsConf.projectConfPath + "\\io.json", conf))
+	if (!fs::readFile(tds->conf->projectConfPath + "\\io.json", conf))
 	{
 		LOG("project conf io.json load fail,use empty conf");
 		return true;

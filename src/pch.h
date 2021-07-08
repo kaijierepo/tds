@@ -10,6 +10,7 @@
 #include "common.h"
 #include "tdscore.h"
 #include "json.hpp"
+#include "tds.h"
 using json = nlohmann::json;
 using namespace std;
 

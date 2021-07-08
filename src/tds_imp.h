@@ -1,8 +1,12 @@
 #pragma once
 #include "tds.h"
+#include "conf.h"
 
 class TDS_imp : public iTDS {
 public:
+	TDS_imp();
+
+
 	string getVer() {
 		return "1.0.0";
 	}
@@ -20,4 +24,5 @@ public:
 
 	 void log(char* text);
 
+	 tdsConfig tdsConf;
 };

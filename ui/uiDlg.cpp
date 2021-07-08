@@ -72,7 +72,9 @@ BOOL CuiDlg::OnInitDialog()
 	m_hView = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, this->m_hWnd, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top);
 	wkeShowWindow(m_hView, TRUE);
 
-	wkeLoadURL(m_hView, "http://localhost:666/comtest/");
+	CString str;
+	str.Format("http://localhost:%d/comtest/", tds->conf->port);
+	wkeLoadURL(m_hView, str.GetBuffer());
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }

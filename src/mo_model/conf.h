@@ -2,22 +2,15 @@
 #include <string>
 using namespace std;
 #include "json.hpp"
+#include "tds.h"
 
-class tdsConfig
+class tdsConfig : public iTDSConf
 {
 public:
 	tdsConfig();
-	int port;
-	bool debugMode;
-
 	void loadConf();
 
-	string projectConfPath;
-	bool bConcurrentGateway;
-	string dbPath;
-	string dataCenterIp;
+
 	json jsonConf;
 };
-
-extern tdsConfig tdsConf;
 

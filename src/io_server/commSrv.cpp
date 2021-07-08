@@ -77,7 +77,7 @@ commServer::~commServer(void)
 
 void commServer::Run()
 {
-	string confPath = tdsConf.projectConfPath + "\\commSrv.json";
+	string confPath = tds->conf->projectConfPath + "\\commSrv.json";
 	string confData;
 	fs::readFile(confPath, confData);
 	auto jc = json::parse(confData);
@@ -843,7 +843,7 @@ void ioAddrSession::CommLock()
 
 bool ioAddrSession::CommLockWithTime(int dwTimeoutMS)
 {
-	if (!tdsConf.bConcurrentGateway && addr.gwAddr.length() > 0) //和串行网关下的一个设备通信，锁中继
+	if (!tds->conf->bConcurrentGateway && addr.gwAddr.length() > 0) //和串行网关下的一个设备通信，锁中继
 	{
 		ioAddress gwAddr = addr;
 		gwAddr.gwAddr = "";
