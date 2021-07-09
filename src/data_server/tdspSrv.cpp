@@ -35,7 +35,7 @@ bool DownloadHTTPFile(std::string url, std::string file_save_path)//待下载文
 
 tdsServer::tdsServer()
 {
-
+	m_pluginHandler = NULL;
 }
 
 tdsServer::~tdsServer()
@@ -270,6 +270,14 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 		strReq = charCodec::ansi2Utf8(strReq);
 
 	strReq = ResolveTdsRpcEvnVar(strReq, pSession);
+
+
+	if (m_pluginHandler)
+	{
+		if (m_pluginHandler(strReq, strResp))//handled
+			return;
+	}
+
 	try
 	{
 		json jReq = json::parse(strReq);
@@ -691,6 +699,17 @@ string tdsServer::rpc_openCom(json params)
 
 string tdsServer::rpc_com_list(json params)
 {
+	/*
+	vector<string> aryName = sys::getCOMList();
+	json result;
+	for (auto& i : aryName)
+	{
+		json jComInfo;
+		jComInfo["portNum"] = i;
+		jComInfo["desc"] = "";
+		result.push_back(jComInfo);
+	}*/
+
 	vector<sys::COM_INFO> ary;
 	ary = sys::getCOMInfoList();
 	json result;

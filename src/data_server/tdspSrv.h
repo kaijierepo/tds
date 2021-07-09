@@ -66,5 +66,7 @@ public:
 	
 	vector<shared_ptr<TDS_SESSION>> GetAllSession();
 	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
+
+	fp_rpcHandler m_pluginHandler;
 };
 extern tdsServer tdsSrv;

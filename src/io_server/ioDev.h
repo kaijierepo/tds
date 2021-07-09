@@ -9,7 +9,7 @@ class ioChannel;
 //asyn pkt received is not processed from DMS_UNCONF ioDev
 //no DoCycleTask for DMS_UNCONF ioDev
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
-typedef void* (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
+typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
 class ioDev
 {
 public:

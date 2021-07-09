@@ -59,6 +59,11 @@ string TDS_imp::call(string method, string param)
 	
 }
 
+void TDS_imp::setRpcHandler(fp_rpcHandler handler)
+{
+	tdsSrv.m_pluginHandler = handler;
+}
+
 bool TDS_imp::sendToIoAddr(string ioAddr, char* p, int l)
 {
 	ioAddress sIoAddr;

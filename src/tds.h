@@ -2,7 +2,8 @@
 #include <string>
 using namespace std;
 
-typedef void* (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
+typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
+typedef bool (*fp_rpcHandler)(string strReq, string& strResp);
 
 struct iTDSConf {
 	int port;
@@ -23,6 +24,7 @@ public:
 
 	// tds 数据服务功能
 	virtual string call(string method, string param) = 0;
+	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 
 	// io 通信服务功能
 	virtual bool sendToIoAddr(string ioAddr,char* p,int l) = 0;

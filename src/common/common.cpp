@@ -891,9 +891,6 @@ namespace sys {
 			DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 			for (i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &DeviceInfoData); i++)
 			{
-				if (i % 2 > 0)
-					continue;
-
 				DWORD DataT = 0;
 				WCHAR buffer[256] = { 0 };
 				DWORD buffersize = sizeof(buffer);
@@ -922,6 +919,9 @@ namespace sys {
 				string comInfo = charCodec::utf16toUtf8(utf16str);
 
 				int iLeftBracket = comInfo.find("(");
+				if (iLeftBracket == string::npos)
+					continue;
+
 				int iRightBracket = comInfo.find(")");
 
 				COM_INFO ci;
