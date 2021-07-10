@@ -2,7 +2,7 @@
 #include "mo.h"
 #include "json.hpp"
 
-class amo : public mo
+class amo : public MO
 {
 public:
 	amo();

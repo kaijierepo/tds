@@ -119,8 +119,8 @@ string tdsServer::rpc_query(json params)
 	 	filter = params["attr"].get<string>();
 	
 	//load from database
-	vector<mp*> tagSetTmp;
-	vector<mp*> tagSet;
+	vector<MP*> tagSetTmp;
+	vector<MP*> tagSet;
 	prj.GetMPByTag(&tagSetTmp,tagSelector.tagExp);
 	if (typeFilter != "")//has type filter
 	{
@@ -404,7 +404,7 @@ string tdsServer::rpc_output(json params)
 	if (params.find("tag") != params.end())
 		tag = params["tag"].get<string>();
 
-	mp* pmp = prj.GetMPByTag(tag);
+	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
 		json jError = {
@@ -469,7 +469,7 @@ string tdsServer::rpc_input(json params)
 		tag = ioSrv.getTag(cid);
 	if (tag == "")
 		return "";
-	mp* pmp = prj.GetMPByTag(tag);
+	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
 		json jError = {
@@ -510,7 +510,7 @@ string tdsServer::rpc_rt(json params)
 		}
 		else
 		{
-			for (map<string, mp*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++) 
+			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++) 
 			{
 				rtList.push_back(it->second->getRTData());
 			}
@@ -520,7 +520,7 @@ string tdsServer::rpc_rt(json params)
 	}
 	else
 	{
-		mp* pmp = prj.GetMPByTag(szTag);
+		MP* pmp = prj.GetMPByTag(szTag);
 		if (pmp)
 		{
 			rtList.push_back(pmp->getRTData());

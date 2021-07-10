@@ -1,9 +1,10 @@
 #include "tdsSession.h"
+#include "mp.h"
 
 
 TDS_SESSION::TDS_SESSION()
 {
-    pTcpServ = NULL;
+    pTcpSessionActive = NULL;
     role = "";
     encode = "utf8";
     type = "";
@@ -11,7 +12,7 @@ TDS_SESSION::TDS_SESSION()
     bVideoStream = false;
     bInitSegSended = false;
     bridgedTcpCltHandler.pTdsSession = this;
-
+    streamMp = NULL;
 }
 
 void TDS_SESSION::Init()
@@ -24,8 +25,8 @@ void TDS_SESSION::Init()
 
 string TDS_SESSION::GetClientIp()
 {
-    if (pTcpServ)
-        return pTcpServ->m_strServerIP;
+    if (pTcpSessionActive)
+        return pTcpSessionActive->m_strServerIP;
     return "";
 }
 
@@ -43,4 +44,24 @@ string TDS_SESSION::GetClientIp()
  void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo)
  {
      pTdsSession->send(pData, iLen);
+ }
+
+ void TDS_SESSION::onTcpDisconnect()
+ {
+     //p->pTcpSession is a tcpSession will be deleted after ConnStatusChange callback
+     //but TDS_SESSION is not deleted until all users release it
+     //so here p->pTcpSession is set to none
+     //this is not safe,a critical section should be used for p->pTcpSession
+     //[unsafe]
+     pTLServer = nullptr;
+     pTcpSession = nullptr;
+     if (pBridgedTcpClient)
+     {
+         delete pBridgedTcpClient;
+     }
+     if (streamMp)
+     {
+         streamMp->m_streamPusher(false, NULL);
+     }
+     streamMp = NULL;
  }

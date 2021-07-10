@@ -189,7 +189,7 @@ int remoteDesktopServer::captureThread()
 			Sleep(100);
 			continue;
 		}
-		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpClt == nullptr)
+		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpSession == nullptr)
 		{
 			Sleep(100);
 			continue;
@@ -244,7 +244,7 @@ int remoteDesktopServer::encodeThread()
 			Sleep(100);
 			continue;
 		}
-		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpClt == nullptr)
+		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpSession == nullptr)
 		{
 			Sleep(100);
 			continue;
@@ -252,7 +252,7 @@ int remoteDesktopServer::encodeThread()
 
 		if(rds.m_tdsSession->bInitSegSended == false)
 		{
-			string szLog = str::format("[debug][rds]stream initial start,send initial segment,session %s:%d\n",rds.m_tdsSession->pTcpClt->strIP,rds.m_tdsSession->pTcpClt->iPort);
+			string szLog = str::format("[debug][rds]stream initial start,send initial segment,session %s:%d\n",rds.m_tdsSession->pTcpSession->strIP,rds.m_tdsSession->pTcpSession->iPort);
 			LOG(szLog);
 			prepareOutFmtCtx();
 			prepareOutCodecCtx();

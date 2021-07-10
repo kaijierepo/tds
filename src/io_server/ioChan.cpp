@@ -56,7 +56,7 @@ void ioChannel::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	m_stLastUpdateTime = *dataTime;
 	string tag = m_strLinkMPTag;
 	str::trimPrefix(tag, prj.m_strName + ".");
-	mp* pMP = (mp*)prj.GetMOByTag(tag);
+	MP* pMP = (MP*)prj.GetMOByTag(tag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 	{
 		pMP->inputVal(jVal,dataTime);
@@ -70,7 +70,7 @@ bool ioChannel::outputVal(json jVal)
 
 bool ioChannel::IsValid()
 {
-	mp* pMP = (mp*)prj.GetMOByTag(m_strLinkMPTag);
+	MP* pMP = (MP*)prj.GetMOByTag(m_strLinkMPTag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 		return true;
 	else

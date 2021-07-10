@@ -4,6 +4,7 @@ using namespace std;
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef bool (*fp_rpcHandler)(string strReq, string& strResp);
+typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 
 struct iTDSConf {
 	int port;
@@ -12,6 +13,11 @@ struct iTDSConf {
 	bool bConcurrentGateway;
 	string dbPath;
 	string dataCenterIp;
+};
+
+enum STREAM_TYPE {
+	ST_BMP, //bmp流
+	ST_h264_ES, //264 ES流
 };
 
 
@@ -29,6 +35,11 @@ public:
 	// io 通信服务功能
 	virtual bool sendToIoAddr(string ioAddr,char* p,int l) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
+
+	// 视频功能
+	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp) = 0;
+	//推流到指定的监测点mp
+	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st) = 0;
 
 	// 通用服务功能
 	virtual void log(char* text) = 0;

@@ -10,23 +10,24 @@
 #include "ioSrv.h"
 #include "ioChan.h"
 
-mp::mp()
+MP::MP()
 {
 	m_moType = "mp";
 	m_physicalType = PHYSICAL_TYPE::unknown;
 	memset(&m_lastUpdateTime, 0, sizeof(m_lastUpdateTime));
 	m_K = 1;
 	m_B = 0;
+	m_videoCodec = NULL;
 }
 
-mp::~mp()
+MP::~MP()
 {
 }
 
 
-bool mp::loadConf(json& conf)
+bool MP::loadConf(json& conf)
 {
-	mo::loadConf(conf);
+	MO::loadConf(conf);
 	m_valType = conf["val_type"].get<string>();
 	if (m_valType == TDS::DATA_TYPE::real)
 	{
@@ -43,7 +44,7 @@ bool mp::loadConf(json& conf)
 }
 
 
-void mp::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
+void MP::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 {
 	SYSTEMTIME t;
 	if (dataTime == NULL)
@@ -87,7 +88,7 @@ void mp::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 	db.INSERT(getTag().c_str(), *dataTime, jVal);
 }
 
-bool mp::outputVal(json jVal)
+bool MP::outputVal(json jVal)
 {
 	ioChannel* pC = ioSrv.getIOChan(getTag());
 	if (pC)
@@ -99,12 +100,12 @@ bool mp::outputVal(json jVal)
 }
 
 
-bool mp::IsCurValValid()
+bool MP::IsCurValValid()
 {
 	return !m_curVal.empty();
 }
 
-string mp::getMpTypeLabel()
+string MP::getMpTypeLabel()
 {
 	string typeLabel;
 	if (m_valType == TDS::DATA_TYPE::switching)
@@ -127,10 +128,10 @@ string mp::getMpTypeLabel()
 	return typeLabel;
 }
 
-string mp::getMpType()
+string MP::getMpType()
 {
 	string mpType;
-	// as a convention , a real type mp's name is named by data type.
+	// as a convention , a real type MP's name is named by data type.
 	if (m_valType == TDS::DATA_TYPE::switching)
 	{
 		mpType = TDS::DATA_TYPE::switching + "." + m_strName;
@@ -151,7 +152,7 @@ string mp::getMpType()
 	return mpType;
 }
 
-json mp::getRT()
+json MP::getRT()
 {
 	json j;
 	j["time"] = timeopt::st2str(m_lastUpdateTime);
@@ -161,7 +162,7 @@ json mp::getRT()
 	return j;
 }
 
-json mp::getRTData()
+json MP::getRTData()
 {
 	json j;
 	j["time"] = timeopt::st2str(m_lastUpdateTime);

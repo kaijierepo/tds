@@ -169,10 +169,10 @@ bool ioDev_ModbusSlave::OnRecvData(char* pData,int iLen)
 	float fDO = (float)wDO/1000.0;
 	float fTemp = (float)wTemp/100.0;
 
-	mo* pMO = m_pMO;
+	MO* pMO = m_pMO;
 	for(int i=0;i<pMO->m_childMO.size();i++)
 	{
-		mp* pMP = (mp*)pMO->m_childMO.at(i);
+		MP* pMP = (MP*)pMO->m_childMO.at(i);
 
 		if (pMP && pMP->m_moType == MO_TYPE::mp)
 		{

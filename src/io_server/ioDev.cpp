@@ -6,7 +6,7 @@
 #include "prj.h"
 
 
-void ioDev::AutoDataLink(mo* mo) {
+void ioDev::AutoDataLink(MO* mo) {
 
 }
 

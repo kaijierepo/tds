@@ -72,7 +72,7 @@ std::string CXiaoT::getReply(json msg)
 
 		if (!val.empty())
 		{
-			mp* pmp = prj.GetMPByName(tag);
+			MP* pmp = prj.GetMPByName(tag);
 			if (!pmp)
 			{
 				reply = "没找到需要控制的设备";

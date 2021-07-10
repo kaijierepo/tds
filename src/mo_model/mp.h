@@ -2,14 +2,18 @@
 #include "tdscore.h"
 #include "mo.h"
 #include "json.hpp"
+#include "tdsSession.h"
+#include "tds.h"
+#include "videoCodec.h"
+#include <memory>
 
 using namespace std;
-class mo;
-class mp : public mo
+class MO;
+class MP : public MO
 {
 public:
-	mp();
-	~mp();
+	MP();
+	~MP();
 
 	bool loadConf(json& conf);
 public:
@@ -27,7 +31,11 @@ public:
 	string m_physicalType;
 	string m_strUnit;
 	SYSTEMTIME m_lastUpdateTime;
-	
+
+	std::shared_ptr<TDS_SESSION> m_streamPuller; //拉流方
+	fp_startStream m_streamPusher; //推流方
+	videoCodec* m_videoCodec; //
+
 	float m_K; 
 	float m_B; 
 };

@@ -23,6 +23,10 @@ public:
 	 bool sendToIoAddr(string ioAddr, char* p, int l);
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
+	 // ÊÓÆµ¹¦ÄÜ
+	 void registerVideoTag(string tag, fp_startStream startStream, void*& mp);
+	 void pushStream(void* mp, char* pData, int len, STREAM_TYPE st);
+
 	 void log(char* text);
 
 	 tdsConfig tdsConf;

@@ -8,24 +8,24 @@
 #include "as.h"
 
 
-mo* createMO(string type)
+MO* createMO(string type)
 {
-	mo* p = NULL;
+	MO* p = NULL;
 	if (type == MO_TYPE::mo)
 	{
-		p = new mo();
+		p = new MO();
 	}
 	if (type == MO_TYPE::project)
 	{
-		p = new mo();
+		p = new MO();
 	}
 	else if (type == MO_TYPE::mp)
 	{
-		p = new mp();
+		p = new MP();
 	}
 	else if (type == MO_TYPE::mpgroup)
 	{
-		p = new mo();
+		p = new MO();
 	}
 	else if (type == MO_TYPE::amo)
 	{
@@ -35,26 +35,26 @@ mo* createMO(string type)
 	return p;
 }
 
-mo::mo()
+MO::MO()
 {
 	m_pParentMO = NULL;
 	m_moType = MO_TYPE::mo;
 	m_bShow = true;
 }
 
-mo::~mo()
+MO::~MO()
 {
 
 }
 
-bool mo::loadConf(json& conf)
+bool MO::loadConf(json& conf)
 {
 	m_strName = conf["name"];
 	m_moType = conf["type"];
 	auto children = conf["children"];
 	for (auto& child : children)
 	{
-		mo* pmo = createMO(child["type"]);
+		MO* pmo = createMO(child["type"]);
 		if (pmo)
 		{
 			pmo->loadConf(child);
@@ -65,11 +65,11 @@ bool mo::loadConf(json& conf)
 	return true;
 }
 
-bool mo::saveConf(json& conf, string opt)
+bool MO::saveConf(json& conf, string opt)
 {
 	if (opt == "exclude-common-mp" && m_moType == MO_TYPE::mp)
 	{
-		mp* p = (mp*)this;
+		MP* p = (MP*)this;
 		if(p->m_valType != "json")
    			return false;
 	}
@@ -78,7 +78,7 @@ bool mo::saveConf(json& conf, string opt)
 
 	if (m_moType == "mp")
 	{
-		mp* p = (mp*)this;
+		MP* p = (MP*)this;
 		conf["val_type"] = p->m_valType;
 		if (p->m_valType == "json")
 			conf["custom_val_type"] = p->m_customValType;
@@ -96,7 +96,7 @@ bool mo::saveConf(json& conf, string opt)
 	return true;
 }
 
-void mo::removeMp(json& mo)
+void MO::removeMp(json& mo)
 {
 	if (mo["children"] != nullptr)
 	{
@@ -104,9 +104,9 @@ void mo::removeMp(json& mo)
 	}
 }
 
-mo* mo::GetProjectMO()
+MO* MO::GetProjectMO()
 {
-	mo* pTmp = this;
+	MO* pTmp = this;
 	while (pTmp->m_pParentMO)
 	{
 		pTmp = pTmp->m_pParentMO;
@@ -114,7 +114,7 @@ mo* mo::GetProjectMO()
 
 	return pTmp;
 }
-json mo::getRT()
+json MO::getRT()
 {
 	json j;
 	j["name"] = m_strName;
@@ -122,16 +122,16 @@ json mo::getRT()
 	json jChildren;
 	for(int i=0;i<m_childMO.size();i++)
 	{
-		mo* pmo = m_childMO.at(i);
+		MO* pmo = m_childMO.at(i);
 		jChildren.push_back(pmo->getRT());
 	}
 	j["children"]=jChildren;
 	return j;
 }
 
-string mo::getTag()
+string MO::getTag()
 {
-	mo* pTmpParent = m_pParentMO;
+	MO* pTmpParent = m_pParentMO;
 	string strTagName = m_strName;
 
 	while (pTmpParent && pTmpParent->m_pParentMO)//第一级位号工程名称默认不显示
@@ -143,7 +143,7 @@ string mo::getTag()
 	return strTagName;
 }
 
-vector<string> mo::GetAlias()
+vector<string> MO::GetAlias()
 {
 	vector<string> vecAlias;
 	str::removeChar(m_alias, ' ');
@@ -153,9 +153,9 @@ vector<string> mo::GetAlias()
 	return vecAlias;
 }
 
-vector<string> mo::GetAllTagNamePlus()
+vector<string> MO::GetAllTagNamePlus()
 {
-	mo* pTmpParent = m_pParentMO;
+	MO* pTmpParent = m_pParentMO;
 	string tag = m_strName;
 
 	//获得名字数组
@@ -193,9 +193,9 @@ vector<string> mo::GetAllTagNamePlus()
 }
 
 
-string mo::getTagWithRoot()
+string MO::getTagWithRoot()
 {
-	mo* pTmpParent = m_pParentMO;
+	MO* pTmpParent = m_pParentMO;
 	string strTagName = m_strName;
 	while (pTmpParent)//包含工程节点名称的位号
 	{
@@ -205,7 +205,7 @@ string mo::getTagWithRoot()
 	return strTagName;
 }
 
-void mo::GetMOByTag(std::vector<mo*>* tagVec, string strTag)
+void MO::GetMOByTag(std::vector<MO*>* tagVec, string strTag)
 {
 	string tagCandidate = getTag();
 	TAG_SELECTOR ts;
@@ -215,28 +215,28 @@ void mo::GetMOByTag(std::vector<mo*>* tagVec, string strTag)
 
 	for (int i = 0; i < m_childMO.size(); i++)
 	{
-		mo* pMOChild = m_childMO.at(i);
+		MO* pMOChild = m_childMO.at(i);
 		pMOChild->GetMOByTag(tagVec, strTag);
 	}
 }
 
-void mo::GetMPByTag(std::vector<mp*>* tagVec, string strTag)
+void MO::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
 {
-	std::vector<mo*> vec;
+	std::vector<MO*> vec;
 	GetMOByTag(&vec, strTag);
 	for (int i = 0; i < vec.size(); i++)
 	{
-		mo* p = vec.at(i);
+		MO* p = vec.at(i);
 		if (p->m_moType == "mp")
 		{
-			tagVec->push_back((mp*)p);
+			tagVec->push_back((MP*)p);
 		}
 	}
 }
 
-mo* mo::GetMOByTag(string strTag)
+MO* MO::GetMOByTag(string strTag)
 {
-	vector<mo*> tags;
+	vector<MO*> tags;
 	GetMOByTag(&tags, strTag);
 	if (tags.size() > 0)
 		return tags[0];
@@ -244,25 +244,25 @@ mo* mo::GetMOByTag(string strTag)
 		return NULL;
 }
 
-mp* mo::GetMPByTag(string strTag)
+MP* MO::GetMPByTag(string strTag)
 {
-	mo* pMO = GetMOByTag(strTag);
+	MO* pMO = GetMOByTag(strTag);
 	if (pMO && pMO->m_moType == "mp")
-		return (mp*)pMO;
+		return (MP*)pMO;
 	return nullptr;
 }
 
-mp* mo::GetMPByName(string strName)
+MP* MO::GetMPByName(string strName)
 {
-	mo* p = GetMOByName(strName);
+	MO* p = GetMOByName(strName);
 	if (p && p->m_moType == "mp")
 	{
-		return (mp*)p;
+		return (MP*)p;
 	}
 	return NULL;
 }
 
-mo* mo::GetMOByName(string strName)
+MO* MO::GetMOByName(string strName)
 {
 	if (m_strName == strName)
 		return this;
@@ -270,8 +270,8 @@ mo* mo::GetMOByName(string strName)
 	{
 		for (int i = 0; i < m_childMO.size(); i++)
 		{
-			mo* pMOChild = m_childMO.at(i);
-			mo* pFind = pMOChild->GetMOByName(strName);
+			MO* pMOChild = m_childMO.at(i);
+			MO* pFind = pMOChild->GetMOByName(strName);
 			if (pFind)
 				return pFind;
 		}
@@ -280,18 +280,18 @@ mo* mo::GetMOByName(string strName)
 	return NULL;
 }
 
-mo* mo::GetMO(string strName)
+MO* MO::GetMO(string strName)
 {
-	mp* ret = (mp*)GetMOByName(strName);
+	MP* ret = (MP*)GetMOByName(strName);
 	if (ret == NULL)
 	{
-		ret = new mp();
+		ret = new MP();
 		ret->m_strName = strName;
 	}
 	return ret;
 }
 
-vector<string> mo::getTagPartials(string strTag)
+vector<string> MO::getTagPartials(string strTag)
 {
 	//使用*分割
 	vector<string> ary;
@@ -315,19 +315,19 @@ vector<string> mo::getTagPartials(string strTag)
 	return aryPartials;
 }
 
-string mo::getTypeLabel(string type)
+string MO::getTypeLabel(string type)
 {
 	return "";
 }
 
-string mo::AppendTagRoot(string& str)
+string MO::AppendTagRoot(string& str)
 {
 	return "";
 }
 
 
 
-string mo::ResolveTag(string strTagExp, string strTagThis)
+string MO::ResolveTag(string strTagExp, string strTagThis)
 {
 	string tagName = strTagExp;
 	//this的解析，this后面可能带 .std 等后缀
@@ -386,7 +386,7 @@ string mo::ResolveTag(string strTagExp, string strTagThis)
 	{
 		if (strTagExp.find(".") == string::npos)//仅指定name
 		{
-			mo* p = prj.GetMOByTag("*" + strTagExp);
+			MO* p = prj.GetMOByTag("*" + strTagExp);
 			if (p)
 				tagName = p->getTag();
 		}
@@ -402,7 +402,7 @@ string mo::ResolveTag(string strTagExp, string strTagThis)
 	return tagName;
 }
 
-string mo::trimProperty(string& strTagExp)
+string MO::trimProperty(string& strTagExp)
 {
 	string strTagProperty;
 	if (strTagExp.substr(strTagExp.length() - 4, 4) == ".std")
@@ -413,7 +413,7 @@ string mo::trimProperty(string& strTagExp)
 	return strTagProperty;
 }
 
-void mo::updateDataLink()
+void MO::updateDataLink()
 {
 	for (int i = 0; i < m_vecIODev.size(); i++)
 	{
@@ -423,13 +423,13 @@ void mo::updateDataLink()
 
 	for (int i = 0; i < m_childMO.size(); i++)
 	{
-		mo* pMO = m_childMO.at(i);
+		MO* pMO = m_childMO.at(i);
 		pMO->updateDataLink();
 	}
 }
 
 //该函数的参数必须是相对位号格式
-string mo::TranslateRelateTag(string rtag)
+string MO::TranslateRelateTag(string rtag)
 {
 	string tag = getTag();
 
@@ -478,7 +478,34 @@ string mo::TranslateRelateTag(string rtag)
 }
 
 
-void mo::GetAllChildMO(std::vector<mo*>& aryMO, string type)
+MO* MO::createChildMO(string subTag,string moType)
+{
+	vector<string> tagNode;
+	str::split(tagNode,subTag,".");
+
+	MO* pParent = this;
+	MO* pmo = NULL;
+	for (int i = 0; i < tagNode.size(); i++)
+	{
+		string strName = tagNode[i];
+		if (i == tagNode.size() - 1) //last node
+		{
+			pmo = createMO(moType);
+		}
+		else
+		{
+			pmo = createMO(MO_TYPE::mo);
+		}
+		pmo->m_strName = strName;
+		pmo->m_pParentMO = pParent;
+		pParent->m_childMO.push_back(pmo);
+		pParent = pmo;
+	}
+
+	return pmo;
+}
+
+void MO::GetAllChildMO(std::vector<MO*>& aryMO, string type)
 {
 	m_childMO;
 	for (int i = 0; i < m_childMO.size(); i++)
@@ -492,7 +519,7 @@ void mo::GetAllChildMO(std::vector<mo*>& aryMO, string type)
 }
 
 
-database* mo::GetDB()
+database* MO::GetDB()
 {
 	project* p = (project*)GetRootMO();
 	if (p)
@@ -502,12 +529,12 @@ database* mo::GetDB()
 	return nullptr;
 }
 
-mo* mo::GetRootMO()
+MO* MO::GetRootMO()
 {
 	if (this == nullptr)
 		return nullptr;
 
-	mo* p = this;
+	MO* p = this;
 
 	while (p->m_pParentMO)
 	{
@@ -517,9 +544,9 @@ mo* mo::GetRootMO()
 	return p;
 }
 
-mo* mo::GetFatherMO(string type)
+MO* MO::GetFatherMO(string type)
 {
-	mo* p = this;
+	MO* p = this;
 
 	while (p)
 	{
@@ -534,15 +561,15 @@ mo* mo::GetFatherMO(string type)
 	return NULL;
 }
 
-mo* mo::GetChildMO(string type)
+MO* MO::GetChildMO(string type)
 {
 	for (int i = 0; i < m_childMO.size(); i++)
 	{
-		mo* pMO = m_childMO.at(i);
+		MO* pMO = m_childMO.at(i);
 		if (pMO->m_moType == type)
 			return pMO;
 
-		mo* pChild = pMO->GetChildMO(type);
+		MO* pChild = pMO->GetChildMO(type);
 		if (pChild)
 			return pChild;
 	}
@@ -550,38 +577,38 @@ mo* mo::GetChildMO(string type)
 	return NULL;
 }
 
-mo* mo::CopyMO()
+MO* MO::CopyMO()
 {
-	mo* pMO = NULL;
-	if (m_moType == "mp")pMO = new mp();
-	else pMO = new mo();
+	MO* pMO = NULL;
+	if (m_moType == "mp")pMO = new MP();
+	else pMO = new MO();
 
 	*pMO = *this;
 
 	for (int i = 0; i < m_childMO.size(); i++)
 	{
-		mo* p = m_childMO[i]->CopyMO();
+		MO* p = m_childMO[i]->CopyMO();
 		pMO->m_childMO.push_back(p);
 	}
 
 	return pMO;
 }
 
-mo& mo::operator=(mo& right)
+MO& MO::operator=(MO& right)
 {
 	m_moType = right.m_moType;
 	m_strName = right.m_strName;
 
 	if (right.m_moType == "mp" && m_moType == "mp")
 	{
-		mp* pl = (mp*)this;
-		mp* pr = (mp*)&right;
+		MP* pl = (MP*)this;
+		MP* pr = (MP*)&right;
 		*pl = *pr;
 	}
 	return *this;
 }
 
-string mo::GetStatusSummary()
+string MO::GetStatusSummary()
 {
 	string str;
 	str += getTag().c_str(); str += "\r\n";
@@ -593,11 +620,11 @@ string mo::GetStatusSummary()
 }
 
 
-void mo::GetAllChildAlarmInfo(mo* pMO, string& strSummary)
+void MO::GetAllChildAlarmInfo(MO* pMO, string& strSummary)
 {
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
-		mo* pChild = pMO->m_childMO.at(i);
+		MO* pChild = pMO->m_childMO.at(i);
 		GetAllChildAlarmInfo(pChild, strSummary);
 	}
 }

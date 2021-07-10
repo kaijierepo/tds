@@ -13,6 +13,7 @@ project prj;
 project::project()
 {
 	m_ioSrv = new ioServer();
+	m_strName = "tds";
 	DB = &db;
 }
 
@@ -33,7 +34,7 @@ bool project::loadConf()
 
 	try {
 		json moRoot = json::parse(conf.c_str());
-		bool ret = mo::loadConf(moRoot);
+		bool ret = MO::loadConf(moRoot);
 		if (ret)
 			UpdateAllMPList();
 		return ret;
@@ -46,14 +47,14 @@ bool project::loadConf()
 }
 
 
-void project::getMpList(map<string, mp*>& MPlist, mo* pMO)
+void project::getMpList(map<string, MP*>& MPlist, MO* pMO)
 {
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
-		mo* p = pMO->m_childMO.at(i);
+		MO* p = pMO->m_childMO.at(i);
 		if (p->m_moType == "mp")
 		{
-			MPlist[p->getTag().c_str()] = (mp*)p;
+			MPlist[p->getTag().c_str()] = (MP*)p;
 		}
 		getMpList(MPlist, p);
 	}
@@ -67,9 +68,9 @@ void project::UpdateAllMPList()
 }
 
 
-mp* project::getMp(string strTagname)
+MP* project::getMp(string strTagname)
 {
-	for (map<string, mp*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++)
+	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++)
 	{
 		if (it->second->getTag().c_str() == strTagname) return it->second;
 	}
@@ -78,7 +79,7 @@ mp* project::getMp(string strTagname)
 
 void project::getMpList(json& mpList)
 {
-	for (map<string, mp*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
+	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
 		string strKey = it->first;
 		mpList.push_back(it->second->getTag());
 	}
@@ -87,12 +88,12 @@ void project::getMpList(json& mpList)
 void project::getMpTypeList(json& mpTypeList)
 {
 	map<string,string> mapTypes;
-	for (map<string, mp*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
-		mp* pmp = (mp*)it->second;
+	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
+		MP* pmp = (MP*)it->second;
 		string mpType = "";
 		string typeLabel = "";
 		
-		mpType = pmp->getMpType();//common mp name is used as mptype; custom mp has a user defined mp type
+		mpType = pmp->getMpType();//common MP name is used as mptype; custom MP has a user defined MP type
 		typeLabel = pmp->getMpTypeLabel();
 
 		if(mapTypes.find(mpType) != mapTypes.end())

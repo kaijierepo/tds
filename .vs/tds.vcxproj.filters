@@ -122,6 +122,9 @@
       <Filter>xiaot</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
+    <ClCompile Include="..\src\video\videoCodec.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -241,6 +244,9 @@
     </ClInclude>
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
+    <ClInclude Include="..\src\video\videoCodec.h">
+      <Filter>video</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\logo.rc" />

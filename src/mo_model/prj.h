@@ -3,14 +3,16 @@
 #include "conf.h"
 #include "json.hpp"
 using json = nlohmann::json;
+#include "tdsSession.h"
+#include "tds.h"
 
 class ioServer;
 class database;
 class ioDev;
 class amo;
-class mp;
+class MP;
 class ioServer;
-class project : public mo  
+class project : public MO  
 {
 public:
 	project();
@@ -19,13 +21,13 @@ public:
 	bool loadConf();
 	json m_jMOTree;
 
-	mp* getMp(string strTagname);
-	void getMpList(map<string, mp*>& MPlist, mo* pMO);
+	MP* getMp(string strTagname);
+	void getMpList(map<string, MP*>& MPlist, MO* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
 	
 	database* DB;
-	map<string, mp*> m_mapAllMP;
+	map<string, MP*> m_mapAllMP;
 	bool bFirstRefresh;
 	void UpdateAllMPList();
 	map<string, string> m_mapDataLink;

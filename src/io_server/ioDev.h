@@ -2,8 +2,8 @@
 #include "pch.h"
 #include "tdsSession.h"
 
-class mo;
-class mp;
+class MO;
+class MP;
 class ioAddrSession;
 class ioChannel;
 //asyn pkt received is not processed from DMS_UNCONF ioDev
@@ -46,7 +46,7 @@ public:
 
 	ioChannel* getIOChan(string tag);
 
-	void AutoDataLink(mo* mo);
+	void AutoDataLink(MO* mo);
 	string m_devType;
 	string m_level;
 	bool IsGateway();
@@ -60,7 +60,7 @@ public:
 
 	//which monitor object this ioDevice is installed to 
 	string m_installedMoTag;
-	mo* m_pMO;
+	MO* m_pMO;
 
 	bool bEnableAcq;
 	string GetCommIP();

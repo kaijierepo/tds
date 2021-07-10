@@ -68,7 +68,7 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 		p->sock = pCltInfo->sock;
 		p->boolConnected = true;
 		p->pTLServer = this;
-		p->pTcpClt = pCltInfo;
+		p->pTcpSession = pCltInfo;
 		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
 		pCltInfo->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
@@ -82,20 +82,10 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 			m_mutexTdsSessionList.lock();
 			for (int i = 0; i < m_vecTdsSession.size(); i++)
 			{
-				if (m_vecTdsSession.at(i)->pTcpClt == pCltInfo)
+				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
 				{
 					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];
-					//p->pTcpClt is a tcpSession will be deleted after ConnStatusChange callback
-					//but TDS_SESSION is not deleted until all users release it
-					//so here p->pTcpClt is set to none
-					//this is not safe,a critical section should be used for p->pTcpClt
-					//[unsafe]
-					p->pTLServer = nullptr;
-					p->pTcpClt = nullptr;
-					if (p->pBridgedTcpClient)
-					{
-						delete p->pBridgedTcpClient;
-					}
+					p->onTcpDisconnect();
 					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
 				}
 			}
@@ -108,7 +98,7 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 {
 	bool bRet = false;
 	TDS_SESSION* pALC = (TDS_SESSION*)pAppLayerCltInfo;
-	tcpSession* pCommLayerCltInfo = (pALC)->pTcpClt;
+	tcpSession* pCommLayerCltInfo = (pALC)->pTcpSession;
 	if (pCommLayerCltInfo)
 	{
 		if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
@@ -329,7 +319,7 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 	for(int i=0;i<m_vecTdsSession.size();i++)
 	{
 		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if(p->pTcpClt == pTcpSess)
+		if(p->pTcpSession == pTcpSess)
 		{
 			return p;
 		}
@@ -475,10 +465,13 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						int pos1 = strData.find(' ', pos);
 						string tag = strData.substr(pos + 1, pos1 - pos - 1);
 						tag = httplib::detail::decode_url(tag,false);
-						mp* p = prj.getMp(tag);
-						if (p && p->m_valType == "video")
+						MP* p = prj.getMp(tag);
+						if (p && p->m_valType == "video" && p->m_streamPusher)
 						{
-							
+							//p->m_streamPusher(true, p);
+							tdsSession->streamMp = p;
+							tdsSession->bVideoStream = true;
+							p->m_streamPuller = tdsSession;
 						}
 					}
 				}
@@ -578,7 +571,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 
 	if (strData.find("/rpc") != string::npos)
 	{
-		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpClt->strIP,pALC->pTcpClt->iPort);
+		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC;
 
@@ -610,7 +603,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	}
 	else
 	{
-		string szLog = str::format("[trace][ds]http session opened,client addr is %s:%d",pALC->pTcpClt->strIP,pALC->pTcpClt->iPort);
+		string szLog = str::format("[trace][ds]http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP;
 
@@ -620,9 +613,9 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 
 		//web server folder handle
 		httplib::detail::dsClientStream* bs = new httplib::detail::dsClientStream;
-		bs->sock_ = pALC->pTcpClt->sock;
+		bs->sock_ = pALC->pTcpSession->sock;
 		bs->setBuffer(pDataBuf,iLen);
-		std::thread t(httpReqHandleThread, bs, pALC->pTcpClt);
+		std::thread t(httpReqHandleThread, bs, pALC->pTcpSession);
 		t.detach();
 	}
 
