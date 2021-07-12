@@ -14,3 +14,9 @@
 using json = nlohmann::json;
 using namespace std;
 
+
+//一些编译问题
+/*
+宏定义 _HAS_STD_BYTE=0   windows sdk有byte类型， c++17有std::byte，解决定义冲突问题
+
+*/

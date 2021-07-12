@@ -50,6 +50,7 @@ public:
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有
 	bool bVideoStream;
+	string streamFmt;// vp9/bmp/fmp4
     bool bInitSegSended;
 	MP* streamMp; //tds拉流的源
 
