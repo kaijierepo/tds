@@ -9,6 +9,7 @@ typedef bool (*fp_startStream)(bool start,void* puller); //Æô¶¯ÂëÁ÷£¬²¢´«ÈëÀ­Á÷Õ
 struct iTDSConf {
 	int port;
 	bool debugMode;
+	string logLevel;
 	string projectConfPath;
 	bool bConcurrentGateway;
 	string dbPath;
@@ -16,8 +17,15 @@ struct iTDSConf {
 };
 
 enum STREAM_TYPE {
-	ST_BMP, //bmpÁ÷
+	ST_BMP, //bmpÁ÷ rgb
 	ST_h264_ES, //264 ESÁ÷
+	ST_RGBA, //Ô­Ê¼rgbaÊı¾İ ÓÃÓÚcanvas²¥·ÅÊÓÆµ
+};
+
+
+struct STREAM_INFO {
+	int w;
+	int h;
 };
 
 
@@ -39,7 +47,7 @@ public:
 	// ÊÓÆµ¹¦ÄÜ
 	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp) = 0;
 	//ÍÆÁ÷µ½Ö¸¶¨µÄ¼à²âµãmp
-	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st) = 0;
+	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si=NULL) = 0;
 
 	// Í¨ÓÃ·şÎñ¹¦ÄÜ
 	virtual void log(char* text) = 0;

@@ -463,13 +463,17 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					if (pos != string::npos)
 					{
 						int pos1 = strData.find(' ', pos);
-						string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流
+						string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流 ; rgba/机房1.码流
 						string tag;
 						string fmt = "vp9"; //default format
-						if (tagAndFmt.find("bmp") != string::npos)
+						if (tagAndFmt.find("rgba") != string::npos)
 						{
 							tag = tagAndFmt.substr(4, tagAndFmt.length() - 4);
-							fmt = "bmp";
+							fmt = "rgba";
+						}
+						else//fmt is not specified
+						{
+							tag = tagAndFmt;
 						}
 						tag = httplib::detail::decode_url(tag,false);
 						MP* p = prj.getMp(tag);
@@ -478,7 +482,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 							//p->m_streamPusher(true, p);
 							tdsSession->streamMp = p;
 							tdsSession->bVideoStream = true;
-							tdsSession->streamFmt = "bmp";
+							tdsSession->streamFmt = fmt;
 							p->m_streamPuller = tdsSession;
 						}
 					}

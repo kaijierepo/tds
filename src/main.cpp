@@ -34,9 +34,8 @@ int main(int argc, char** argv)
 	parser.run_and_exit_if_error();
 	tds->conf->port = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");
-	string strLogLevel = parser.get<string>("l");
-	logger.setLogLevel(strLogLevel);
-	LOG("current log Level is:" + strLogLevel);
+	tds->conf->logLevel = parser.get<string>("l");
+
 
 	tds->run();
 

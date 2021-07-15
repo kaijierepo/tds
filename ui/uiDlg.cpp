@@ -7,6 +7,7 @@
 #include "ui.h"
 #include "uiDlg.h"
 #include "afxdialogex.h"
+#include "tds.h"
 
 
 #ifdef _DEBUG

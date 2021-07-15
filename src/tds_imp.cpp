@@ -29,6 +29,9 @@ bool TDS_imp::run(string cmdline)
 	//load tds.json
 	tdsConf.loadConf();
 
+	logger.setLogLevel(tdsConf.logLevel);
+	LOG("current log Level is:" + tdsConf.logLevel);
+
 	//startup xiaot
 	xiaot.init();
 
@@ -104,7 +107,7 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp)
 	mp = pmp;
 }
 
-void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st)
+void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si)
 {
 	MP* pmp = (MP*)mp;
 	if (pmp->m_streamPuller == NULL)
@@ -112,6 +115,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st)
 	if (pmp->m_streamPuller->pTcpSession == NULL)
 	{
 		delete pmp->m_videoCodec;
+		pmp->m_videoCodec = NULL;
 		pmp->m_streamPuller = NULL;
 		return;
 	}
@@ -141,6 +145,13 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st)
 		}
 		pmp->m_streamPuller->send(vc.outputBuff, vc.iOutputLen);
 		vc.iOutputLen = 0;
+	}
+	else if (st == ST_RGBA)
+	{
+		if (pmp->m_streamPuller->streamFmt == "rgba")//直接转发
+		{
+			pmp->m_streamPuller->send(pData,len);
+		}
 	}
 }
 

@@ -27,6 +27,10 @@ void tdsConfig::loadConf()
 		j = jsonConf["ui_port"];
 		if (j != nullptr && port == 0)
 			port = j.get<int>();
+
+		j = jsonConf["log_level"];
+		if (j != nullptr && logLevel == "")
+			logLevel = j.get<string>();
 	}
 
 
