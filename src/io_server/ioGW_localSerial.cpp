@@ -25,9 +25,10 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 
 ioGW_LocalSerial::ioGW_LocalSerial(void)
 {
-	m_devType = IO_DEV_TYPE::gw_local_serial;
+	m_devType = IO_DEV_TYPE::GW::local_serial;
 	m_addr = "COM1";
 	m_hCom = NULL;
+	m_level = "gateway";
 	m_ovWaitEvent.hEvent = CreateEvent(
 		NULL,   // default security attributes 
 		TRUE,   // manual-reset event 

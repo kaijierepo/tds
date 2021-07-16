@@ -296,6 +296,7 @@
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
+    <ClCompile Include="..\src\io_server\ioSrv_serialDetection.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\mo_model\amo.cpp" />
     <ClCompile Include="..\src\mo_model\conf.cpp" />
@@ -337,6 +338,7 @@
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
+    <ClInclude Include="..\src\io_server\ioSrv_serialDetection.h" />
     <ClInclude Include="..\src\mo_model\amo.h" />
     <ClInclude Include="..\src\mo_model\conf.h" />
     <ClInclude Include="..\src\mo_model\mo.h" />

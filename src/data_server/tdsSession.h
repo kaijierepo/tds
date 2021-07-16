@@ -40,6 +40,7 @@ public:
 class TDS_SESSION : public DS_TRANS_LAYER_SESSION{
 public:
     TDS_SESSION();
+	~TDS_SESSION();
 	string role;
 	string type;
 	string name;

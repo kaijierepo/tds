@@ -50,6 +50,25 @@ ioDev::~ioDev(void)
 
 }
 
+bool ioDev::toJson(json& conf, string opt)
+{
+	conf["addr"] = m_addr;
+	conf["type"] = m_devType;
+	conf["level"] = m_level;
+	if(m_devTypeLabel!= "")
+		conf["type_label"] = m_devTypeLabel;
+	json children;
+	for (auto& i : m_vecChild)
+	{
+		json j;
+		i->toJson(j, opt);
+		children.push_back(j);
+	}
+	if(!children.empty())
+		conf["children"] = children;
+	return true;
+}
+
 ioDev* ioDev::getIODev(ioAddress iopath)
 {
 	for (auto& it : m_vecChild)
@@ -72,6 +91,23 @@ ioDev* ioDev::getIODev(string ioAddr)
 	ioAddress a;
 	a.FromString(ioAddr);
 	return getIODev(a);
+}
+
+vector<ioDev*> ioDev::getIODevices(string devType)
+{
+	vector<ioDev*> ary;
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* p = m_vecChild[i];
+		if (p->m_devType == devType)
+		{
+			ary.push_back(p);
+		}
+
+		vector<ioDev*> aryChild = p->getIODevices(devType);
+		ary.insert(ary.end(), aryChild.begin(), aryChild.end());
+	}
+	return ary;
 }
 
 
@@ -251,6 +287,20 @@ void ioDev::deleteChild(ioDev* p)
 	for (int i=0;i<m_vecChild.size();i++)
 	{
 		ioDev* pTemp = m_vecChild.at(i);
+		if (pTemp == p)
+		{
+			m_vecChild.erase(m_vecChild.begin() + i);
+			break;
+		}
+	}
+}
+
+void ioDev::deleteDescendant(ioDev* p)
+{
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* pTemp = m_vecChild.at(i);
+		pTemp->deleteDescendant(p);
 		if (pTemp == p)
 		{
 			m_vecChild.erase(m_vecChild.begin() + i);

@@ -125,6 +125,9 @@
     <ClCompile Include="..\src\video\videoCodec.cpp">
       <Filter>video</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioSrv_serialDetection.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -246,6 +249,9 @@
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\video\videoCodec.h">
       <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioSrv_serialDetection.h">
+      <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -17,55 +17,56 @@ public:
 	~ioDev(void);
 
 	virtual bool run() { return true; };
+	virtual bool toJson(json& conf, string opt = "");
 
+	/// iodev attributes
 	//is Gateway
 	// can be 1.ip or domain name with port 2.tuya project id
 	//is Device 
 	// can be 1.ip or domain name with port 2. field bus id
 	//is Channel
 	// can be 1. mqtt topic 2.tuya device id
-	string m_addr;
-	// addr of different level(gateway,device,channel) devices makes an ioAddr
-	ioAddress getIOAddr();
-	ioDev* getIODev(ioAddress iopath);
-	ioDev* getIODev(string ioAddr);
+	string m_addr;  //device addr .  io addr is composed by several device addr
+	ioAddress getIOAddr();// addr of different level(gateway,device,channel) devices makes an ioAddr
 	IODEV_MNG_STATUS m_mngStatus;
-
-	//directly bridge ioDev to tds websocket session
-	std::shared_ptr<TDS_SESSION> pTdsSession;
-
-	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
-	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
-
-	//tree management
-	vector<ioDev*> m_vecChild;
-	void deleteChild(ioDev* p);
-	ioDev* getChild(ioAddress& iopath);
-	ioDev* getChild(string addr);
-	ioDev* m_pParent;
-
-	ioChannel* getIOChan(string tag);
-
-	void AutoDataLink(MO* mo);
 	string m_devType;
+	string m_devTypeLabel;
 	string m_level;
 	bool IsGateway();
 	string m_secret;
 	string m_strGatewayIP;
+
+	//// iodev hierachy tree management
+	ioDev* getIODev(ioAddress iopath);
+	ioDev* getIODev(string ioAddr);
+	vector<ioDev*> getIODevices(string devType);
+	vector<ioDev*> m_vecChild;
+	void deleteChild(ioDev* p);
+	void deleteDescendant(ioDev* p);
+	ioDev* getChild(ioAddress& iopath);
+	ioDev* getChild(string addr);
+	ioDev* m_pParent;
+	ioChannel* getIOChan(string tag);
+
+	//// data io
+	//directly bridge ioDev to tds websocket session
+	std::shared_ptr<TDS_SESSION> pTdsSession;
+	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
+	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
+
+	
+
+
+	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
-
-
 	fp_ioAddrRecvCallback m_pRecvCallback;
 	void* m_pCallbackUser;
-
 	//which monitor object this ioDevice is installed to 
 	string m_installedMoTag;
 	MO* m_pMO;
-
 	bool bEnableAcq;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
-
 	//通信发送
 	void CommLock();
 	void CommUnlock();

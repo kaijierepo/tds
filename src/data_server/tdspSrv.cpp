@@ -234,6 +234,11 @@ string tdsServer::handleMethodCall(string method, json params)
 	{
 		result = rpc_com_list(params);
 	}
+	else if (method == "io.tree")
+	{
+		result = rpc_io_tree(params);
+	}
+
 	return result;
 }
 
@@ -538,7 +543,7 @@ string tdsServer::rpc_getconf(json params)
 	if (type == "mo-tree")
 	{
 		json j;
-		prj.saveConf(j, "exclude-common-mp"); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+		prj.toJson(j, "exclude-common-mp"); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
 		string conf = j.dump(4);
 		return conf;
 	}
@@ -697,6 +702,13 @@ string tdsServer::rpc_openCom(json params)
 	}
 }
 
+string tdsServer::rpc_io_tree(json params)
+{
+	json j;
+	ioSrv.toJson(j);
+	return j.dump();
+}
+
 string tdsServer::rpc_com_list(json params)
 {
 	/*
@@ -744,20 +756,16 @@ string tdsServer::rpc_closeCom(json params)
 	return j.dump();
 }
 
-vector<shared_ptr<TDS_SESSION>> tdsServer::GetAllSession()
+
+void tdsServer::notify(string method, json params)
 {
-	vector<shared_ptr<TDS_SESSION>> vecSess;
-	for (int i = 0; i < m_vecTLServer.size(); i++)
+	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"param\":" + params.dump() + "}";
+	vector<shared_ptr<TDS_SESSION>> tdsSessions = ds.m_vecTdsSession;
+	for (int i=0;i<tdsSessions.size();i++)
 	{
-		CTLServer* pTLSrv = m_vecTLServer.at(i);
-		vector<void*> clientList = pTLSrv->GetSessionList();
-		for (int j = 0; j < clientList.size(); j++)
-		{
-			shared_ptr<TDS_SESSION> p = std::shared_ptr<TDS_SESSION>((TDS_SESSION*)clientList.at(j));
-			vecSess.push_back(p);
-		}
+		shared_ptr<TDS_SESSION> p = tdsSessions[i];
+		p->send((char*)notify.c_str(), notify.length());
 	}
-	return vecSess;
 }
 
 void tdsServer::Notify(string strTag, string& szNotify)

@@ -25,7 +25,7 @@ DWORD WINAPI ModbusSlaveAcqThread(LPVOID lpParam)
 
 ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 {
-	m_devType = IO_DEV_TYPE::modbus_rtu;
+	m_devType = IO_DEV_TYPE::DEV::modbus_rtu;
 
 	g_ModbusSlaveList.push_back(this);
 
@@ -79,7 +79,7 @@ void ioDev_ModbusSlave::SendData(char* pData,int iLen)
 	ioAddress addr = getIOAddr();
 	commSrv.StatisOnSend((char*)pData,iLen,addr);
 
-	if(m_pParent && m_pParent->m_devType == IO_DEV_TYPE::gw_local_serial)
+	if(m_pParent && m_pParent->m_devType == IO_DEV_TYPE::GW::local_serial)
 	{
 		ioGW_LocalSerial* pGW = (ioGW_LocalSerial*) m_pParent;
 		pGW->sendData(pData,iLen);

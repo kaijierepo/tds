@@ -16,6 +16,8 @@
 #include "ioChan.h"
 #include "ioChan_tuya.h"
 
+#include "ioGW_localSerial.h"
+
 ioServer ioSrv;
 
 void IOThread()
@@ -148,6 +150,42 @@ void ioServer::saveConf()
 {
 }
 
+void ioServer::refreshSerialIODev()
+{
+	//如果组态里有配置，更新信息。如果没有配置，增加设备。作为空闲设备
+	vector<sys::COM_INFO> aryNew;
+	aryNew = sys::getCOMInfoList();
+	vector<ioDev*> ary = getIODevices(IO_DEV_TYPE::GW::local_serial);
+
+	for (auto& i : ary)
+	{
+		i->m_bOnline = false;
+	}
+
+	for (auto& i : aryNew)
+	{
+		sys::COM_INFO ci = i;
+		ioGW_LocalSerial* ls = (ioGW_LocalSerial*) getIODev(ci.portNum);
+		if (!ls)
+		{
+			ls = new ioGW_LocalSerial();
+			ls->m_addr = ci.portNum;
+			ls->m_devTypeLabel = ci.desc;
+			m_vecChild.push_back(ls);
+		}
+		ls->m_bOnline = true;
+	}
+
+	//串口
+	for (auto& i : ary)
+	{
+		if (i->m_bOnline == false)
+		{
+			ioSrv.deleteDescendant(i);
+		}
+	}
+}
+
 
 bool ioServer::run()
 {
@@ -159,6 +197,23 @@ bool ioServer::run()
 			i->run();
 		}
 		//std::thread io(IOThread);
+	}
+
+	serialDetectionService.run();
+
+	refreshSerialIODev();
+	
+	return true;
+}
+
+bool ioServer::toJson(json& conf, string opt)
+{
+	conf = json::array();//empty array
+	for (auto& i : m_vecChild)
+	{
+		json j;
+		i->toJson(j, opt);
+		conf.push_back(j);
 	}
 	return true;
 }

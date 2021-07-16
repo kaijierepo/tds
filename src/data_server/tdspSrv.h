@@ -29,8 +29,10 @@ public:
 	bool Init();
 
 	//json rpc implementation
-	//tds core function
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
+	string handleMethodCall(string method, json params);
+
+	//tds data service function
 	string rpc_input(json params);
 	string rpc_output(json params);
 	string rpc_query(json params);
@@ -42,19 +44,25 @@ public:
 	string rpc_heartbeat(json params);
 	string rpc_xiaot(json params);
 
+	////io service function
+	string rpc_io_tree(json params);
 	//serial function
 	string rpc_openCom(json params);
 	string rpc_com_list(json params);
 	string rpc_closeCom(json params);
+
+	//notification
+	void notify(string method, json params);
+	void Notify(string strTag, string& szNotify);
 
 	//rpc error
 	string RPCError(int code,string msg);
 	string parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector);//return "" if success
 	
 
-	void Notify(string strTag, string& szNotify);
+
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
-	string handleMethodCall(string method, json params);
+
 	database* m_DB;
 	//关联的传输层服务器
 	vector<CTLServer*> m_vecTLServer;
@@ -63,8 +71,6 @@ public:
 	virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn);
 	virtual void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo);
 
-	
-	vector<shared_ptr<TDS_SESSION>> GetAllSession();
 	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
 
 	fp_rpcHandler m_pluginHandler;

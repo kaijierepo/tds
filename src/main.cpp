@@ -39,9 +39,17 @@ int main(int argc, char** argv)
 
 	tds->run();
 
+	/*
 	while (1)
 	{
 		Sleep(1000);
+	}*/
+	// ÏûÏ¢Ñ­»·  
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 	}
 	return 0;
 }

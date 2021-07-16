@@ -15,6 +15,10 @@ TDS_SESSION::TDS_SESSION()
     streamMp = NULL;
 }
 
+TDS_SESSION::~TDS_SESSION()
+{
+}
+
 void TDS_SESSION::Init()
 {
      DS_TRANS_LAYER_SESSION::Init();

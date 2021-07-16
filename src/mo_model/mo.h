@@ -15,7 +15,7 @@ public:
 	virtual ~MO();
 
 	virtual bool loadConf(json& conf);
-	bool saveConf(json& conf,string opt = "");
+	bool toJson(json& conf,string opt = "");
 
 	void removeMp(json& mo);
 	

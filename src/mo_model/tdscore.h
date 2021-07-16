@@ -8,6 +8,12 @@ using namespace std;
 
 #define Nan 0x7fc00000
 
+/*字符串命名方式
+代码中函数/变量               骆驼式命名法    如：getIODevices
+rpc协议中的属性/常量/宏       下划线连接      如：io_addr
+枚举字符串			         短划线连接      如: gw-local-serial
+*/
+
 namespace TDS{
 //数据类型
 namespace DATA_TYPE {
@@ -112,10 +118,21 @@ namespace MO_TYPE_LABEL {
 	const string ACTIVE_OBJ = "活动监测点";
 }
 
+namespace IO_DEV_LEVEL {
+	const string server = "server";
+	const string gateway = "gateway";
+	const string device = "device";
+	const string channel = "channel";
+}
+
 
 namespace IO_DEV_TYPE {
-	const string modbus_rtu = "modbus_rtu";
-	const string gw_local_serial = "gw_local_serial";
+	namespace DEV {
+		const string modbus_rtu = "modbus_rtu";
+	}
+	namespace GW {
+		const string local_serial = "local-serial";
+	}
 }
 
 const std::map<string, string> IO_DEV_TYPE_LABEL = {

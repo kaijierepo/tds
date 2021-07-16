@@ -65,7 +65,7 @@ bool MO::loadConf(json& conf)
 	return true;
 }
 
-bool MO::saveConf(json& conf, string opt)
+bool MO::toJson(json& conf, string opt)
 {
 	if (opt == "exclude-common-mp" && m_moType == MO_TYPE::mp)
 	{
@@ -88,7 +88,7 @@ bool MO::saveConf(json& conf, string opt)
 	for (auto& pmochild : m_childMO)
 	{
 		json jChild;
-		if(pmochild->saveConf(jChild,opt))
+		if(pmochild->toJson(jChild,opt))
 			jChildren.push_back(jChild);
 	}
 	if(!jChildren.is_null())
