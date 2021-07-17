@@ -683,21 +683,21 @@ string tdsServer::rpc_openCom(json params)
 	pDev = ioSrv.getIODev(portNum);
 	if (pDev)
 	{
-		json jError = "ok";
-		return jError.dump();
-	}
-
-	ioGW_LocalSerial* pCom = new ioGW_LocalSerial();
-	if (pCom->OpenCom(params.dump()))
-	{
-		pCom->run();
-		ioSrv.m_vecChild.push_back(pCom);
-		return "\"ok\"";
+		ioGW_LocalSerial* pCom = (ioGW_LocalSerial*) pDev;
+		if (pCom->OpenCom(params.dump()))
+		{
+			pCom->run();
+			return "\"ok\"";
+		}
+		else
+		{
+			json jError = "fail," + pCom->m_strErrorInfo;
+			return jError.dump();
+		}
 	}
 	else
 	{
-		json jError = "fail," + pCom->m_strErrorInfo;
-		delete pCom;
+		json jError = "fail,portNum not found";
 		return jError.dump();
 	}
 }
@@ -711,26 +711,14 @@ string tdsServer::rpc_io_tree(json params)
 
 string tdsServer::rpc_com_list(json params)
 {
-	/*
-	vector<string> aryName = sys::getCOMList();
-	json result;
-	for (auto& i : aryName)
-	{
-		json jComInfo;
-		jComInfo["portNum"] = i;
-		jComInfo["desc"] = "";
-		result.push_back(jComInfo);
-	}*/
-
-	vector<sys::COM_INFO> ary;
-	ary = sys::getCOMInfoList();
+	vector<ioDev*> ary = ioSrv.getIODevices(IO_DEV_TYPE::GW::local_serial);
 	json result;
 	for (auto& i : ary)
 	{
-		sys::COM_INFO ci = i;
+		ioGW_LocalSerial* pls  =  (ioGW_LocalSerial*)i;
 		json jComInfo;
-		jComInfo["portNum"] = ci.portNum;
-		jComInfo["desc"] = ci.desc;
+		jComInfo["portNum"] = pls->m_addr;
+		jComInfo["desc"] = pls->m_devTypeLabel;
 		result.push_back(jComInfo);
 	}
 	return result.dump();
@@ -764,7 +752,8 @@ void tdsServer::notify(string method, json params)
 	for (int i=0;i<tdsSessions.size();i++)
 	{
 		shared_ptr<TDS_SESSION> p = tdsSessions[i];
-		p->send((char*)notify.c_str(), notify.length());
+		if(p->type == TDS_SESSION_TYPE::rpc)
+			p->send((char*)notify.c_str(), notify.length());
 	}
 }
 

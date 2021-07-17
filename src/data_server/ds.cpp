@@ -104,12 +104,11 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 		if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 		{
 			WS_FrameType ft = WS_TEXT_FRAME;
-			if (pALC->bVideoStream)
+			if (pALC->type == TDS_SESSION_TYPE::tunnel ||
+				pALC->type == TDS_SESSION_TYPE::video)
+			{
 				ft = WS_BINARY_FRAME;
-			if(pALC->bridgedLocalCom!="")
-				ft = WS_BINARY_FRAME;
-			if (pALC->pBridgedTcpClient != NULL)
-				ft = WS_BINARY_FRAME;
+			}
 			return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 		}
 		else
@@ -124,7 +123,12 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 			pCommLayerCltInfo = &m_tcpSrv->m_vecContInfo.at(i)->m_cltInfo;
 			if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 			{
-				WS_FrameType ft = pALC->bVideoStream ? WS_BINARY_FRAME : WS_TEXT_FRAME;
+				WS_FrameType ft = WS_TEXT_FRAME;
+				if (pALC->type == TDS_SESSION_TYPE::tunnel ||
+					pALC->type == TDS_SESSION_TYPE::video)
+				{
+					ft = WS_BINARY_FRAME;
+				}
 				return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 			}
 			else
@@ -290,9 +294,9 @@ int ThreadfMp4OverWS(std::shared_ptr<TDS_SESSION> pTestSess) {
 	}
 
 	Sleep(500);
-	while (pTestSess->bVideoStream)
+	while (pTestSess->type == TDS_SESSION_TYPE::video)
 	{
-		pTestSess->bVideoStream = true;
+		pTestSess->type = TDS_SESSION_TYPE::video;
 		for (int i = 0; i < iDataLen;)
 		{
 			int iSend = 20000;
@@ -300,14 +304,14 @@ int ThreadfMp4OverWS(std::shared_ptr<TDS_SESSION> pTestSess) {
 				iSend = iDataLen - i;
 			if (!pTestSess->send(pData + i, iSend))
 			{
-				pTestSess->bVideoStream = false;
+				pTestSess->type = TDS_SESSION_TYPE::none;
 				break;
 			}
 			i += iSend;
 			Sleep(40);
 		}
 	}
-	pTestSess->bVideoStream = false;
+	pTestSess->type = TDS_SESSION_TYPE::none;
 	delete pData;
 	bTestStream = false;
 	return 0;
@@ -371,6 +375,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos1 = strData.find(" ", pos);
 					string portNum = strData.substr(pos,pos1-pos);
 					ioDev* p = ioSrv.getIODev(portNum);
+					tdsSession->type = TDS_SESSION_TYPE::tunnel;
 					if (p)
 					{
 						tdsSession->bridgedLocalCom = portNum;
@@ -398,7 +403,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos1 = strData.find(" ", pos);
 					string host = strData.substr(pos+4, pos1 - (pos+4));
 					tdsSession->pBridgedTcpClient = new CTCPClient();
-					
+					tdsSession->type = TDS_SESSION_TYPE::tunnel;
 					if(tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
 					{
 						LOG("bridge websocket to tcp %s success", host.c_str());
@@ -437,21 +442,23 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					)";
 						tdsSession->send((char*)s.data(), s.length());
 					}
+					tdsSession->type = TDS_SESSION_TYPE::rpc;
 				}
 				else if (strData.find("/log") != string::npos)
 				{
 					logTdsSession = tdsSession;
 					logger.logOutput = logToWebsock;
+					tdsSession->type = TDS_SESSION_TYPE::log;
 				}
 				else if (strData.find("teststream") != string::npos && !bTestStream)
 				{
-					tdsSession->bVideoStream = true;
+					tdsSession->type = TDS_SESSION_TYPE::video;
 					std::thread t(ThreadfMp4OverWS,tdsSession);
 					t.detach();
 				}
 				else if (strData.find("desktop") != string::npos)
 				{
-					tdsSession->bVideoStream = true;
+					tdsSession->type = TDS_SESSION_TYPE::video;
 #ifdef ENABLE_FFMPEG
 					rds.startStream(tdsSession);
 #endif
@@ -481,7 +488,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						{
 							//p->m_streamPusher(true, p);
 							tdsSession->streamMp = p;
-							tdsSession->bVideoStream = true;
+							tdsSession->type = TDS_SESSION_TYPE::video;
 							tdsSession->streamFmt = fmt;
 							p->m_streamPuller = tdsSession;
 						}

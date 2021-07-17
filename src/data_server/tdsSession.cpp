@@ -9,7 +9,6 @@ TDS_SESSION::TDS_SESSION()
     encode = "utf8";
     type = "";
     name = "";
-    bVideoStream = false;
     bInitSegSended = false;
     bridgedTcpCltHandler.pTdsSession = this;
     streamMp = NULL;

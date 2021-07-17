@@ -37,20 +37,29 @@ public:
 	}
 };
 
+namespace TDS_SESSION_TYPE {
+	const string none = "none";
+	const string rpc = "rpc";
+	const string video = "video";
+	const string web = "web";
+	const string log = "log";
+	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
+}
+
+
 class TDS_SESSION : public DS_TRANS_LAYER_SESSION{
 public:
     TDS_SESSION();
 	~TDS_SESSION();
 	string role;
-	string type;
 	string name;
 	string user;
 	string loginTime;
 	string encode;
 	string ip;
+	string type;//session type
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有
-	bool bVideoStream;
 	string streamFmt;// vp9/bmp/fmp4
     bool bInitSegSended;
 	MP* streamMp; //tds拉流的源
