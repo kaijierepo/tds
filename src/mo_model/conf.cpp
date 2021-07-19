@@ -31,6 +31,14 @@ void tdsConfig::loadConf()
 		j = jsonConf["log_level"];
 		if (j != nullptr && logLevel == "")
 			logLevel = j.get<string>();
+
+		j = jsonConf["title"];
+		if (j != nullptr && title == "")
+			title = j.get<string>();
+
+		j = jsonConf["homepage"];
+		if (j != nullptr && title == "")
+			homepage = j.get<string>();
 	}
 
 
@@ -41,4 +49,8 @@ void tdsConfig::loadConf()
 		port = 80;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "\\db";
+	if (title == "")
+		title = "TDS";
+	if (homepage == "")
+		homepage = "http://localhost:666";
 }

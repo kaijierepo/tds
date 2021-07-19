@@ -14,6 +14,10 @@ struct iTDSConf {
 	bool bConcurrentGateway;
 	string dbPath;
 	string dataCenterIp;
+	string title;
+	string homepage;
+
+	string uiMode;
 };
 
 enum STREAM_TYPE {

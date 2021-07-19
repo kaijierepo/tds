@@ -210,7 +210,7 @@ bool dataServer::run()
 		}
 		string strData;
 		int triedPort = tryPort;
-		if (tryPort = 80)tryPort = 666;
+		if (tryPort == 80)tryPort = 666;
 		else tryPort++;
 		strData = str::format("bind to port:%d fail,try %d", triedPort, tryPort);
 		LOG(strData);
