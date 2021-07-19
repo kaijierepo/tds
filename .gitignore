@@ -6,6 +6,7 @@ out/conf/
 .vs/Debug/
 .vs/Release/
 7-Zip/
+localStorage/
 
 *.obj
 *.aps
