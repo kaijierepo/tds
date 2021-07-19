@@ -18,7 +18,7 @@ namespace sys {
 	};
 	vector<string> getCOMList();
 	vector<COM_INFO> getCOMInfoList();
-	string getLastError(string szReason);
+	string getLastError(string szReason = "");
 };
 
 namespace common

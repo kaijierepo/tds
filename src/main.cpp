@@ -5,6 +5,8 @@
 #include "cmdparser.hpp"
 #include "logger.h"
 #include "tds_imp.h"
+#include "wke.h"
+#include "res/resource.h"
 
 /*
 notes:
@@ -23,6 +25,80 @@ design problem:
 class TDS_imp;
 TDS_imp tdsImp; //tds instance;
 iTDS* tds = &tdsImp;
+wkeWebView m_hUI;
+
+
+// 消息处理函数的实现
+LRESULT CALLBACK WindowProc_tdsUI(
+	_In_  HWND hwnd,
+	_In_  UINT uMsg,
+	_In_  WPARAM wParam,
+	_In_  LPARAM lParam
+)
+{
+	if (uMsg == WM_SIZE)
+	{
+		int w = LOWORD(lParam);
+		int h = HIWORD(lParam);
+		wkeResize(m_hUI, w, h);
+	}
+	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+
+
+void createUIWnd()
+{
+	//注册窗口类
+	HINSTANCE hInstance;
+	hInstance = GetModuleHandle(NULL);
+	WNDCLASSEX tdsUIWnd;
+	tdsUIWnd.cbClsExtra = 0;
+	tdsUIWnd.cbWndExtra = 0;
+	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
+	tdsUIWnd.hIconSm = NULL;
+	tdsUIWnd.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON_LOGO));
+
+	string s = sys::getLastError();
+	tdsUIWnd.lpszMenuName = NULL;
+	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
+	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
+	tdsUIWnd.lpfnWndProc = WindowProc_tdsUI;
+	tdsUIWnd.lpszClassName = _T("tdsUI");
+	tdsUIWnd.hInstance = hInstance;
+	RegisterClassEx(&tdsUIWnd);
+
+
+	int x = 200;
+	int y = 200;
+	int w = 800;
+	int h = 600;
+
+	//创建窗口
+	HWND hwnd = CreateWindow(
+		"tdsUI",           //上面注册的类名，要完全一致  
+		"",                     //窗口标题文字  
+		WS_OVERLAPPEDWINDOW, //窗口外观样式  
+		x,             //窗口相对于父级的X坐标  
+		y,             //窗口相对于父级的Y坐标  
+		w,                //窗口的宽度  
+		h,                //窗口的高度  
+		NULL,               //没有父窗口，为NULL  
+		NULL,               //没有菜单，为NULL  
+		hInstance,          //当前应用程序的实例句柄  
+		NULL);              //没有附加数据，为NULL  
+
+	ShowWindow(hwnd, SW_SHOW);
+
+
+	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
+	wkeShowWindow(m_hUI, TRUE);
+
+
+	wkeLoadURL(m_hUI, "http://localhost:666/terminal/");
+}
+
+
 
 int main(int argc, char** argv)
 {
@@ -36,8 +112,15 @@ int main(int argc, char** argv)
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
-
 	tds->run();
+
+	//create browser window
+	if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
+	{
+		wkeSetWkeDllPath(L"miniblink_x64.dll");
+		wkeInitialize();
+		createUIWnd();
+	}
 
 	/*
 	while (1)

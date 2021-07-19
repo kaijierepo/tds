@@ -87,4 +87,6 @@ public:
 
     char*  output_buf;
 };
+
+#else
 #endif

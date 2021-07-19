@@ -17,7 +17,9 @@ MP::MP()
 	memset(&m_lastUpdateTime, 0, sizeof(m_lastUpdateTime));
 	m_K = 1;
 	m_B = 0;
+#ifdef ENABLE_FFMPEG
 	m_videoCodec = NULL;
+#endif
 }
 
 MP::~MP()

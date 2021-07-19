@@ -109,6 +109,7 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp)
 
 void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si)
 {
+#ifdef ENABLE_FFMPEG
 	MP* pmp = (MP*)mp;
 	if (pmp->m_streamPuller == NULL)
 		return;
@@ -153,6 +154,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 			pmp->m_streamPuller->send(pData,len);
 		}
 	}
+#endif
 }
 
 void TDS_imp::log(char* text)
