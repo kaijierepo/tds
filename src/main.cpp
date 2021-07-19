@@ -52,21 +52,20 @@ void createUIWnd()
 	//注册窗口类
 	HINSTANCE hInstance;
 	hInstance = GetModuleHandle(NULL);
-	WNDCLASSEX tdsUIWnd;
+	WNDCLASS tdsUIWnd;
 	tdsUIWnd.cbClsExtra = 0;
 	tdsUIWnd.cbWndExtra = 0;
 	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
-	tdsUIWnd.hIconSm = NULL;
-	tdsUIWnd.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON_LOGO));
-
-	string s = sys::getLastError();
+	//tdsUIWnd.hIconSm = NULL;
+	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDR_MAINFRAME));
+	//tdsUIWnd.hIcon = LoadIcon(hInstance, IDI_APPLICATION);;
 	tdsUIWnd.lpszMenuName = NULL;
 	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
 	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
 	tdsUIWnd.lpfnWndProc = WindowProc_tdsUI;
 	tdsUIWnd.lpszClassName = _T("tdsUI");
 	tdsUIWnd.hInstance = hInstance;
-	RegisterClassEx(&tdsUIWnd);
+	RegisterClass(&tdsUIWnd);
 
 
 	int x = 200;
@@ -86,7 +85,9 @@ void createUIWnd()
 		NULL,               //没有父窗口，为NULL  
 		NULL,               //没有菜单，为NULL  
 		hInstance,          //当前应用程序的实例句柄  
-		NULL);              //没有附加数据，为NULL  
+		NULL);              //没有附加数据，为NULL 
+
+	string s = sys::getLastError();
 
 	ShowWindow(hwnd, SW_SHOW);
 
