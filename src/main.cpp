@@ -56,9 +56,7 @@ void createUIWnd()
 	tdsUIWnd.cbClsExtra = 0;
 	tdsUIWnd.cbWndExtra = 0;
 	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
-	//tdsUIWnd.hIconSm = NULL;
-	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDR_MAINFRAME));
-	//tdsUIWnd.hIcon = LoadIcon(hInstance, IDI_APPLICATION);;
+	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDI_LOGO));
 	tdsUIWnd.lpszMenuName = NULL;
 	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
 	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
