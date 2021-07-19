@@ -253,8 +253,9 @@
     <ClInclude Include="..\src\io_server\ioSrv_serialDetection.h">
       <Filter>io_server</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\res\resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="..\src\logo.rc" />
+    <ResourceCompile Include="..\src\res\tds.rc" />
   </ItemGroup>
 </Project>
