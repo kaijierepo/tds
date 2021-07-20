@@ -8,6 +8,9 @@ out/conf/
 7-Zip/
 localStorage/
 
+publish/
+front_end/
+
 *.obj
 *.aps
 *.ipch
