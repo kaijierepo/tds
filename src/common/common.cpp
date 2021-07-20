@@ -924,11 +924,20 @@ namespace sys {
 
 				int iRightBracket = comInfo.find(")");
 
+				string portNum = comInfo.substr(iLeftBracket + 1, iRightBracket - iLeftBracket - 1);
+
+				//vspd 创建的虚拟串口是  COM1->COM2的格式
+				int iFPos = portNum.find("->");
+				if (iFPos != string::npos)
+				{
+					portNum = portNum.substr(iFPos + 2, portNum.size() - iFPos - 2);
+				}
+
 				COM_INFO ci;
-				ci.portNum = comInfo.substr(iLeftBracket + 1, iRightBracket - iLeftBracket - 1);
+				ci.portNum = portNum;
 				ci.desc = comInfo.substr(0, iLeftBracket);
 
-				ary.push_back(ci);
+				ary.insert(ary.begin(),ci);
 
 			
 				//if (buffer)                                                                            

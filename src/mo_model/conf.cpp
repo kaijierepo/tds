@@ -37,7 +37,7 @@ void tdsConfig::loadConf()
 			title = j.get<string>();
 
 		j = jsonConf["homepage"];
-		if (j != nullptr && title == "")
+		if (j != nullptr && homepage == "")
 			homepage = j.get<string>();
 	}
 

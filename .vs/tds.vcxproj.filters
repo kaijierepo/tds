@@ -254,6 +254,7 @@
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\res\resource.h" />
+    <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\res\tds.rc" />

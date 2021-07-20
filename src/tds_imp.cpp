@@ -17,7 +17,14 @@ string tdsEncoding = "utf8";
 
 
 wkeWebView m_hUI;
+int w;
+int h;
 
+
+void showDevToolCallback(wkeWebView webView, void* param)
+{
+
+}
 
 // 消息处理函数的实现
 LRESULT CALLBACK WindowProc_tdsUI(
@@ -29,14 +36,30 @@ LRESULT CALLBACK WindowProc_tdsUI(
 {
 	if (uMsg == WM_SIZE)
 	{
-		int w = LOWORD(lParam);
-		int h = HIWORD(lParam);
+		 w = LOWORD(lParam);
+		 h = HIWORD(lParam);
+		if(m_hUI)
 		wkeResize(m_hUI, w, h);
+	}
+	else if (uMsg == WM_SHOWWINDOW)
+	{
+		
 	}
 	else if (uMsg == WM_CLOSE)
 	{
 		exit(0);
 	}
+	else if(uMsg == WM_KEYDOWN)
+	{
+		switch (wParam)
+		{
+			case VK_F12:
+			string path = fs::appPath() + "\\front_end\\inspector.html";
+			wkeShowDevtools(m_hUI, charCodec::utf8toUtf16(path).c_str(), showDevToolCallback, NULL);
+			break;
+		}
+	}
+
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
@@ -63,28 +86,37 @@ void createUIWnd()
 
 	int x = 200;
 	int y = 200;
-	int w = 800;
-	int h = 600;
+	 w = 960;
+	 h = 720;
 
 	//创建窗口
 	string title = tds->conf->title;
+
+	RECT rc;
+	SetRect(&rc, 0, 0, w, h);
+	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+
+	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
+
 	HWND hwnd = CreateWindow(
 		"tdsUI",           //上面注册的类名，要完全一致  
 		title.c_str(),                     //窗口标题文字  
 		WS_OVERLAPPEDWINDOW, //窗口外观样式  
 		x,             //窗口相对于父级的X坐标  
 		y,             //窗口相对于父级的Y坐标  
-		w,                //窗口的宽度  
-		h,                //窗口的高度  
+		rc.right - rc.left,                //窗口的宽度  
+		rc.bottom - rc.top,                //窗口的高度  
 		NULL,               //没有父窗口，为NULL  
 		NULL,               //没有菜单，为NULL  
 		hInstance,          //当前应用程序的实例句柄  
 		NULL);              //没有附加数据，为NULL 
 
-	ShowWindow(hwnd, SW_SHOW);
+
 	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
-	wkeShowWindow(m_hUI, TRUE);
+	wkeSetZoomFactor(m_hUI, 1.5);
 	wkeLoadURL(m_hUI, tds->conf->homepage.c_str());
+	wkeShowWindow(m_hUI, TRUE);
+	ShowWindow(hwnd, SW_SHOW);
 }
 
 

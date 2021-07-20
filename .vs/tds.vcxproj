@@ -307,6 +307,7 @@
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
     <ClInclude Include="..\src\alarm_server\as.h" />
     <ClInclude Include="..\src\common\base64.h" />
     <ClInclude Include="..\src\common\cmdparser.hpp" />
