@@ -37,7 +37,9 @@ void createConsole()
 	freopen("CONIN$", "r+t", stdin);
 }
 
-#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
+
+#ifndef _WINDLL
+#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
 	//check mode
@@ -74,7 +76,7 @@ int main(int argc, char** argv)
 	}
 	return 0;
 }
-
+#endif // !_WINDLL
 
 #define DllExport   extern "C" __declspec( dllexport )
 DllExport iTDS* getTds() {

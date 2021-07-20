@@ -30,26 +30,27 @@ public:
 
 	//json rpc implementation
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
-	string handleMethodCall(string method, json params);
+	string handleMethodCall(string method, json params, string& error);
 
 	//tds data service function
-	string rpc_input(json params);
-	string rpc_output(json params);
-	string rpc_query(json params);
-	string rpc_rt(json params);
-	string rpc_getconf(json params);
-	string rpc_setconf(json params);
-	string rpc_getconffile(json params);
-	string rpc_setconffile(json params);
-	string rpc_heartbeat(json params);
-	string rpc_xiaot(json params);
+	string rpc_input(json params, string& error);
+	string rpc_output(json params, string& error);
+	string rpc_query(json params, string& error);
+	string rpc_rt(json params, string& error);
+	string rpc_getconf(json params, string& error);
+	string rpc_setconf(json params, string& error);
+	string rpc_getconffile(json params, string& error);
+	string rpc_setconffile(json params, string& error);
+	string rpc_heartbeat(json params, string& error);
+	string rpc_xiaot(json params, string& error);
 
 	////io service function
-	string rpc_io_tree(json params);
+	string rpc_io_tree(json params, string& error);
 	//serial function
-	string rpc_openCom(json params);
-	string rpc_com_list(json params);
-	string rpc_closeCom(json params);
+	string rpc_openCom(json params, string& error);
+	string rpc_getStreamInfo(json params, string& error);
+	string rpc_com_list(json params, string& error);
+	string rpc_closeCom(json params, string& error);
 
 	//notification
 	void notify(string method, json params);

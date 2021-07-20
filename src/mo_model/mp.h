@@ -34,6 +34,7 @@ public:
 
 	std::shared_ptr<TDS_SESSION> m_streamPuller; //拉流方
 	fp_startStream m_streamPusher; //推流方
+	STREAM_INFO m_streamInfo;
 #ifdef ENABLE_FFMPEG
 	videoCodec* m_videoCodec; //
 #endif

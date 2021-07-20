@@ -16,7 +16,7 @@ public:
 	 bool run(string cmdline = "");
 
 	// tds 数据服务功能
-	 string call(string method, string param);
+	 string call(string method, string param,string& error);
 	 void setRpcHandler(fp_rpcHandler handler);
 
 	// io 通信服务功能
@@ -24,7 +24,7 @@ public:
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能
-	 void registerVideoTag(string tag, fp_startStream startStream, void*& mp);
+	 void registerVideoTag(string tag, fp_startStream startStream, void*& mp, STREAM_INFO* si = NULL);
 	 void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si = NULL);
 
 	 void log(char* text);

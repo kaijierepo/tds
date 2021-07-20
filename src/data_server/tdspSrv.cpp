@@ -68,7 +68,7 @@ string tdsServer::RPCError(int code,string msg)
 			{"message" , msg}
 	};
 	string error = jError.dump();
-	return "!" + error;
+	return error;
 }
 
 string tdsServer::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector)
@@ -101,12 +101,12 @@ string tdsServer::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG
 }
 
 
-string tdsServer::rpc_query(json params)
+string tdsServer::rpc_query(json params,string& error)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
-	string error = parseDataSelector(params,timeSelector,tagSelector);
-	if(error != "") return error;
+	error = parseDataSelector(params,timeSelector,tagSelector);
+	if(error != "") return "";
 
 	//parse type filter
 	string typeFilter;
@@ -163,32 +163,32 @@ string tdsServer::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION>
 	return str;
 }
 
-string tdsServer::handleMethodCall(string method, json params)
+string tdsServer::handleMethodCall(string method, json params,string& error)
 {
 	string result = "";
 	if (method == "heartbeat")
 	{
-		result = rpc_heartbeat(params);
+		result = rpc_heartbeat(params,error);
 	}
 	else if (method == "xiaot")
 	{
-		result = rpc_xiaot(params);
+		result = rpc_xiaot(params, error);
 	}
 	else if (method == "input")
 	{
-		result = rpc_input(params);
+		result = rpc_input(params, error);
 	}
 	else if (method == "output")
 	{
-		result = rpc_output(params);
+		result = rpc_output(params, error);
 	}
 	else if (method == "rt")
 	{
-		result = rpc_rt(params);
+		result = rpc_rt(params, error);
 	}
 	else if (method == "query")
 	{
-		result = rpc_query(params);
+		result = rpc_query(params, error);
 	}
 	else if (method == "alarm.current")
 	{
@@ -216,27 +216,31 @@ string tdsServer::handleMethodCall(string method, json params)
 	}
 	else if (method == "getconf")
 	{
-		result = rpc_getconf(params);
+		result = rpc_getconf(params, error);
 	}
 	else if (method == "setconf")
 	{
-		result = rpc_setconf(params);
+		result = rpc_setconf(params, error);
 	}
 	else if (method == "com.open")
 	{
-		result = rpc_openCom(params);
+		result = rpc_openCom(params, error);
 	}
 	else if (method == "com.close")
 	{
-		result = rpc_closeCom(params);
+		result = rpc_closeCom(params, error);
 	}
 	else if (method == "com.list")
 	{
-		result = rpc_com_list(params);
+		result = rpc_com_list(params, error);
 	}
 	else if (method == "io.tree")
 	{
-		result = rpc_io_tree(params);
+		result = rpc_io_tree(params, error);
+	}
+	else if (method == "getStreamInfo")
+	{
+		result = rpc_getStreamInfo(params,error);
 	}
 
 	return result;
@@ -279,8 +283,12 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 
 	if (m_pluginHandler)
 	{
-		if (m_pluginHandler(strReq, strResp))//handled
-			return;
+		result = m_pluginHandler(strReq, strResp, error);
+	}
+
+	if (result != "" || error != "")
+	{
+		goto HANDLE_END;
 	}
 
 	try
@@ -304,8 +312,8 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 			}
 		}
 		//result is a json string
-		result = handleMethodCall(method, params);
-		if(result == "")
+		result = handleMethodCall(method, params,error);
+		if(result == "" && error == "")
 		{
 			json jError = {
 				{"code", -32601},
@@ -338,10 +346,6 @@ HANDLE_END:
 			};
 			error = jError.dump();
 		}
-		else if(result[0] == '!')
-		{
-			error = result.substr(1,result.length() - 1);
-		}
 	}
 
 	if (error != "")
@@ -355,7 +359,6 @@ HANDLE_END:
 	
 
 	LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
-
 }
 
 void tdsServer::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
@@ -397,7 +400,7 @@ void tdsServer::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strT
 	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
 }
 
-string tdsServer::rpc_output(json params)
+string tdsServer::rpc_output(json params, string& error)
 {
 	json val = "";
 	if (params.find("val") != params.end())
@@ -453,7 +456,7 @@ string tdsServer::rpc_output(json params)
 }
 
 
-string tdsServer::rpc_input(json params) 
+string tdsServer::rpc_input(json params, string& error)
 {
 	//parse param
 	SYSTEMTIME stTimeStamp;
@@ -498,7 +501,7 @@ string tdsServer::rpc_input(json params)
 	return "ok";
 }
 
-string tdsServer::rpc_rt(json params)
+string tdsServer::rpc_rt(json params, string& error)
 {
 	string szTag = params["tag"].get<string>();
 	string fmt = "table";
@@ -535,7 +538,7 @@ string tdsServer::rpc_rt(json params)
 	}
 }
 
-string tdsServer::rpc_getconf(json params)
+string tdsServer::rpc_getconf(json params, string& error)
 {
 	string type = "";
 	if(params.find("type") != params.end())
@@ -581,7 +584,7 @@ string tdsServer::rpc_getconf(json params)
 	}
 	else if (type == "file")
 	{
-		return rpc_getconffile(params);
+		return rpc_getconffile(params,error);
 	}
 	else if (type == "file-list")
 	{
@@ -602,7 +605,7 @@ string tdsServer::rpc_getconf(json params)
 	return "";
 }
 
-string tdsServer::rpc_setconf(json params)
+string tdsServer::rpc_setconf(json params, string& error)
 {
 	//按照类型配置
 	string type = "";
@@ -624,13 +627,13 @@ string tdsServer::rpc_setconf(json params)
 	}
 	else if (type == "file")
 	{
-		return rpc_setconffile(params);
+		return rpc_setconffile(params,error);
 	}
 
 	return "";
 }
 
-string tdsServer::rpc_getconffile(json params)
+string tdsServer::rpc_getconffile(json params, string& error)
 {
 	string path = "";
 	if (params.find("path") != params.end())
@@ -647,7 +650,7 @@ string tdsServer::rpc_getconffile(json params)
 	return string();
 }
 
-string tdsServer::rpc_setconffile(json params)
+string tdsServer::rpc_setconffile(json params, string& error)
 {
 	string path = "";
 	if (params.find("path") != params.end())
@@ -663,12 +666,12 @@ string tdsServer::rpc_setconffile(json params)
 	return string();
 }
 
-string tdsServer::rpc_heartbeat(json params)
+string tdsServer::rpc_heartbeat(json params, string& error)
 {
 	return "\"pong\"";
 }
 
-string tdsServer::rpc_xiaot(json params)
+string tdsServer::rpc_xiaot(json params, string& error)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
@@ -676,7 +679,7 @@ string tdsServer::rpc_xiaot(json params)
 
 
 
-string tdsServer::rpc_openCom(json params)
+string tdsServer::rpc_openCom(json params, string& error)
 {
 	ioDev* pDev = NULL;
 	string portNum = params["portNum"].get<string>();
@@ -702,14 +705,40 @@ string tdsServer::rpc_openCom(json params)
 	}
 }
 
-string tdsServer::rpc_io_tree(json params)
+string tdsServer::rpc_io_tree(json params, string& error)
 {
 	json j;
 	ioSrv.toJson(j);
 	return j.dump();
 }
 
-string tdsServer::rpc_com_list(json params)
+
+string tdsServer::rpc_getStreamInfo(json params,string& error)
+{
+	string tag;
+	if (params.find("tag") != params.end())
+		tag = params["tag"].get<string>();
+	if (tag == "")
+	{
+		error = RPCError(TDS_ERROR_CODE::TEC_PARAM_MISSING,"param missing,tag is not specified");
+		return "";
+	}
+	MP* pmp = prj.getMp(tag);
+	if(pmp == NULL)
+	{
+		error = RPCError(TDS_ERROR_CODE::TEC_TAG_NOT_EXIST, "tag not exist");
+		return "";
+	}
+
+	json jSi;
+	jSi["w"] = pmp->m_streamInfo.w;
+	jSi["h"] = pmp->m_streamInfo.h;
+	jSi["type"] = pmp->m_streamInfo.type;
+	
+	return jSi.dump();
+}
+
+string tdsServer::rpc_com_list(json params, string& error)
 {
 	vector<ioDev*> ary = ioSrv.getIODevices(IO_DEV_TYPE::GW::local_serial);
 	json result;
@@ -725,7 +754,7 @@ string tdsServer::rpc_com_list(json params)
 }
 
 
-string tdsServer::rpc_closeCom(json params)
+string tdsServer::rpc_closeCom(json params, string& error)
 {
 	string portNum = params["portNum"].get<string>();
 	ioDev* pCom = ioSrv.getIODev(portNum);

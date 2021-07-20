@@ -14,7 +14,9 @@ namespace httplib {
 		class dsClientStream : public httplib::Stream {
 		public:
 			dsClientStream() = default;
-			~dsClientStream() override = default;
+			~dsClientStream(){
+				clear();
+			};
 
 			bool is_readable() const override;
 			bool is_writable() const override;

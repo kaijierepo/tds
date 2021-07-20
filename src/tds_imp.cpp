@@ -96,7 +96,7 @@ void createUIWnd()
 	SetRect(&rc, 0, 0, w, h);
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
-	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
+	//wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
 
 	HWND hwnd = CreateWindow(
 		"tdsUI",           //上面注册的类名，要完全一致  
@@ -152,6 +152,13 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.run();
 
 	//create browser window
+#ifdef _WINDLL
+	if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
+	{
+		tds->conf->uiMode = "browser";
+	}
+#endif
+
 	if (tds->conf->uiMode == "browser")
 	{
 		wkeSetWkeDllPath(L"miniblink_x64.dll");
@@ -162,7 +169,7 @@ bool TDS_imp::run(string cmdline)
 	return true;
 }
 
-string TDS_imp::call(string method, string param)
+string TDS_imp::call(string method, string param, string& error)
 {
 	try {
 		json jParam;
@@ -170,7 +177,7 @@ string TDS_imp::call(string method, string param)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		return tdsSrv.handleMethodCall(method, jParam);
+		return tdsSrv.handleMethodCall(method, jParam,error);
 	}
 	catch (std::exception& e)
 	{
@@ -210,7 +217,7 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	return true;
 }
 
-void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp)
+void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,STREAM_INFO* si)
 {
 	MP* pmp = prj.getMp(tag);
 	if(pmp == NULL)
@@ -220,6 +227,8 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp)
 	}
 	pmp->m_valType = DATA_TYPE::video;
 	pmp->m_streamPusher = startStream;
+	if (si)
+		pmp->m_streamInfo = *si;
 	mp = pmp;
 }
 

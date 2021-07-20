@@ -3,7 +3,7 @@
 using namespace std;
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
-typedef bool (*fp_rpcHandler)(string strReq, string& strResp);
+typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 
 struct iTDSConf {
@@ -30,6 +30,7 @@ enum STREAM_TYPE {
 struct STREAM_INFO {
 	int w;
 	int h;
+	STREAM_TYPE type;
 };
 
 
@@ -41,7 +42,7 @@ public:
 	virtual bool run(string cmdline = "") = 0;
 
 	// tds 数据服务功能
-	virtual string call(string method, string param) = 0;
+	virtual string call(string method, string param,string& error) = 0;
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 
 	// io 通信服务功能
@@ -49,7 +50,7 @@ public:
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	// 视频功能
-	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp) = 0;
+	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp, STREAM_INFO* si = NULL) = 0;
 	//推流到指定的监测点mp
 	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si=NULL) = 0;
 

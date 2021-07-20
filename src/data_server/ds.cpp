@@ -590,9 +590,38 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 
 	if (strData.find("/rpc") != string::npos)
 	{
+		//响应跨域预检请求
+		//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
+		if (strData.find("OPTIONS") == 0)
+		{
+			httplib::detail::dsClientStream dscs;
+			dscs.setBuffer((char*)strData.c_str(), strData.length());
+			httplib::Request req;
+			detail::read_headers(dscs, req.headers);
+
+			string httpHead = "HTTP/1.1 200 OK\r\n";
+			httpHead += "Server: tds\r\n";
+			httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
+			httpHead += "Access-Control-Allow-Methods: POST,GET,OPTIONS\r\n";
+			httpHead += "Access-Control-Allow-Headers:" + req.get_header_value("Access-Control-Request-Headers")+"\r\n";
+			httpHead += "Access-Control-Max-Age: 86400\r\n";
+			httpHead += "Keep-Alive : timeout=2,max=100\r\n";
+			httpHead += "Connection: Keep-Alive\r\n";
+			
+			string resp = httpHead + "\r\n";
+			pALC->send((char*)resp.data(), resp.length());
+			return true;		
+		}
+
+
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC;
+
+		httplib::detail::dsClientStream dscs;
+		dscs.setBuffer((char*)strData.c_str(), strData.length());
+		httplib::Request req;
+		detail::read_headers(dscs, req.headers);
 
 		int ipos = strData.find("\r\n\r\n");
 		if (ipos == string::npos)
@@ -615,7 +644,11 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		httpHead += "Connection: close\r\n";
 		httpHead += "Content-Length: " + str::fromInt(resp.length()) + "\r\n";
 		httpHead += "Content-Type: application/json;charset=utf-8\r\n";
-
+		string origin = req.get_header_value("origin");
+		if (origin != "")
+		{
+			httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
+		}
 		resp = httpHead + "\r\n" + resp;
 
 		pALC->send((char*)resp.data(), resp.length());
