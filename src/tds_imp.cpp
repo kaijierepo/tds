@@ -16,6 +16,18 @@
 string tdsEncoding = "utf8";
 
 
+#include <stdio.h>
+#include <io.h>
+#include <FCNTL.H>
+void createConsole()
+{
+	BOOL bRet = AllocConsole(); //打开控制台窗口以显示调试信息
+	SetConsoleTitleA("TDS Console"); //设置标题
+	freopen("CONOUT$", "w+t", stdout);
+	freopen("CONIN$", "r+t", stdin);
+}
+
+
 wkeWebView m_hUI;
 int w;
 int h;
@@ -206,6 +218,13 @@ bool TDS_imp::run(string cmdline)
 	//load tds.json
 	tdsConf.loadConf();
 
+	//check mode
+	conf->uiMode = getUIMode();
+	if (conf->uiMode == "console")
+	{
+		createConsole();
+	}
+
 	logger.setLogLevel(tdsConf.logLevel);
 	LOG("current log Level is:" + tdsConf.logLevel);
 
@@ -221,17 +240,13 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.run();
 
 	//create browser window
-#ifdef _WINDLL
-	tds->conf->uiMode = getUIMode();
-#endif
-
-	if (tds->conf->uiMode == "miniblink")
+	if (conf->uiMode == "miniblink")
 	{
 		wkeSetWkeDllPath(L"miniblink_x64.dll");
 		wkeInitialize();
 		createMiniblinkWnd();
 	}
-	else if (tds->conf->uiMode == "chrome")
+	else if (conf->uiMode == "chrome")
 	{
 		createChromeWnd();
 	}

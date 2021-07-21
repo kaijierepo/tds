@@ -26,29 +26,10 @@ TDS_imp tdsImp; //tds instance;
 iTDS* tds = &tdsImp;
 
 
-#include <stdio.h>
-#include <io.h>
-#include <FCNTL.H>
-void createConsole()
-{
-	BOOL bRet = AllocConsole(); //打开控制台窗口以显示调试信息
-	SetConsoleTitleA("TDS Console"); //设置标题
-	freopen("CONOUT$", "w+t", stdout);
-	freopen("CONIN$", "r+t", stdin);
-}
-
-
 #ifndef _WINDLL
 #pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
-	//check mode
-	tds->conf->uiMode = tdsImp.getUIMode();
-	if (tds->conf->uiMode == "console")
-	{
-		createConsole();
-	}
-
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
