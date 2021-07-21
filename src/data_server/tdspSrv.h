@@ -30,7 +30,7 @@ public:
 
 	//json rpc implementation
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
-	string handleMethodCall(string method, json params, string& error);
+	string handleMethodCall(string method, json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 
 	//tds data service function
 	string rpc_input(json params, string& error);

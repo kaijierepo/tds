@@ -64,6 +64,8 @@ public:
     bool bInitSegSended;
 	MP* streamMp; //tds拉流的源
 
+	bool bMainWnd; //为true时，该连接断开就退出程序
+
 	void onTcpDisconnect();
 
 	class CBridgedTcpClientHandler:public ITcpClientCallBack {

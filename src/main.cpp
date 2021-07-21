@@ -43,12 +43,7 @@ void createConsole()
 int main(int argc, char** argv)
 {
 	//check mode
-	tds->conf->uiMode = "console";
-	if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
-	{
-		tds->conf->uiMode = "browser";
-	}
-
+	tds->conf->uiMode = tdsImp.getUIMode();
 	if (tds->conf->uiMode == "console")
 	{
 		createConsole();

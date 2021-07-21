@@ -163,7 +163,7 @@ string tdsServer::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION>
 	return str;
 }
 
-string tdsServer::handleMethodCall(string method, json params,string& error)
+string tdsServer::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string result = "";
 	if (method == "heartbeat")
@@ -242,6 +242,11 @@ string tdsServer::handleMethodCall(string method, json params,string& error)
 	{
 		result = rpc_getStreamInfo(params,error);
 	}
+	else if (method == "setMainWnd")//当前浏览器窗口为主窗口，该窗口关闭进程退出
+	{
+		pSession->bMainWnd = true;
+		result = "\"ok\"";
+	}
 
 	return result;
 }
@@ -312,7 +317,7 @@ void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TD
 			}
 		}
 		//result is a json string
-		result = handleMethodCall(method, params,error);
+		result = handleMethodCall(method, params,error,pSession);
 		if(result == "" && error == "")
 		{
 			json jError = {

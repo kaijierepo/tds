@@ -84,7 +84,7 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 			{
 				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
 				{
-					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];
+					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];\
 					p->onTcpDisconnect();
 					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
 				}
@@ -475,7 +475,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						string fmt = "vp9"; //default format
 						if (tagAndFmt.find("rgba") != string::npos)
 						{
-							tag = tagAndFmt.substr(4, tagAndFmt.length() - 4);
+							tag = tagAndFmt.substr(5, tagAndFmt.length() - 5);
 							fmt = "rgba";
 						}
 						else//fmt is not specified
@@ -484,7 +484,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						}
 						tag = httplib::detail::decode_url(tag,false);
 						MP* p = prj.getMp(tag);
-						if (p && p->m_valType == "video" && p->m_streamPusher)
+						if (p && p->m_valType == "video")
 						{
 							//p->m_streamPusher(true, p);
 							tdsSession->streamMp = p;

@@ -12,7 +12,7 @@ public:
 	}
 
 	bool setEncodeing(string encoding);
-
+	string getUIMode();
 	 bool run(string cmdline = "");
 
 	// tds 数据服务功能

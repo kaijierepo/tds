@@ -65,7 +65,7 @@ LRESULT CALLBACK WindowProc_tdsUI(
 
 
 
-void createUIWnd()
+void createMiniblinkWnd()
 {
 	//×¢²á´°¿ÚÀà
 	HINSTANCE hInstance;
@@ -120,6 +120,56 @@ void createUIWnd()
 }
 
 
+void chromeThread()
+{
+	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
+	string chromeParam = " --app=\"" + tds->conf->homepage + "\"";
+	if (fs::fileExist(chromePath))
+	{
+		chromePath += chromeParam;
+
+		STARTUPINFO si;
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+
+		// Start the child process.
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_SHOW;
+		if (!CreateProcess(NULL,   // No module name (use command line)
+			(LPSTR)chromePath.c_str(),        // Command line
+			NULL,           // Process handle not inheritable
+			NULL,           // Thread handle not inheritable
+			FALSE,          // Set handle inheritance to FALSE
+			0,              // No creation flags
+			NULL,           // Use parent's environment block
+			NULL,           // Use parent's starting directory
+			&si,            // Pointer to STARTUPINFO structure
+			&pi)           // Pointer to PROCESS_INFORMATION structure
+			)
+		{
+
+		}
+		else
+		{
+			WaitForSingleObject(pi.hProcess, INFINITE);
+		}
+
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+
+		exit(0);
+	}
+}
+
+void createChromeWnd()
+{
+	std::thread t(chromeThread);
+	t.detach();
+}
+
+
 
 TDS_imp::TDS_imp()
 {
@@ -130,6 +180,25 @@ bool TDS_imp::setEncodeing(string encoding)
 {
 	tdsEncoding = encoding;
 	return true;
+}
+
+string TDS_imp::getUIMode()
+{
+	string uimode;
+	if (fs::fileExist(fs::appPath() + "\\chrome\\chrome.exe"))
+	{
+		uimode = "chrome";
+	}
+	else if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
+	{
+		uimode = "miniblink";
+	}
+	else
+	{
+		uimode = "console";
+	}
+
+	return uimode;
 }
 
 bool TDS_imp::run(string cmdline)
@@ -153,17 +222,18 @@ bool TDS_imp::run(string cmdline)
 
 	//create browser window
 #ifdef _WINDLL
-	if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
-	{
-		tds->conf->uiMode = "browser";
-	}
+	tds->conf->uiMode = getUIMode();
 #endif
 
-	if (tds->conf->uiMode == "browser")
+	if (tds->conf->uiMode == "miniblink")
 	{
 		wkeSetWkeDllPath(L"miniblink_x64.dll");
 		wkeInitialize();
-		createUIWnd();
+		createMiniblinkWnd();
+	}
+	else if (tds->conf->uiMode == "chrome")
+	{
+		createChromeWnd();
 	}
 
 	return true;
@@ -177,7 +247,7 @@ string TDS_imp::call(string method, string param, string& error)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		return tdsSrv.handleMethodCall(method, jParam,error);
+		return tdsSrv.handleMethodCall(method, jParam,error,NULL);
 	}
 	catch (std::exception& e)
 	{
