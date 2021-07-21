@@ -219,7 +219,8 @@ bool TDS_imp::run(string cmdline)
 	tdsConf.loadConf();
 
 	//check mode
-	conf->uiMode = getUIMode();
+	if(conf->uiMode == "")
+		conf->uiMode = getUIMode();
 	if (conf->uiMode == "console")
 	{
 		createConsole();

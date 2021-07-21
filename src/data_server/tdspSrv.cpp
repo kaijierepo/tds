@@ -622,13 +622,13 @@ string tdsServer::rpc_setconf(json params, string& error)
 		fs::writeFile(tds->conf->projectConfPath + "\\mo.json", strData);
 		prj.m_childMO.clear();
 		prj.loadConf();
-		return "ok";
+		return "\"ok\"";
 	}
 	else if (type == "io-tree")
 	{
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
-		return "ok";
+		return "\"ok\"";
 	}
 	else if (type == "file")
 	{

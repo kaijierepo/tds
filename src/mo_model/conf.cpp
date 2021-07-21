@@ -39,6 +39,10 @@ void tdsConfig::loadConf()
 		j = jsonConf["homepage"];
 		if (j != nullptr && homepage == "")
 			homepage = j.get<string>();
+
+		j = jsonConf["ui_mode"];
+		if (j != nullptr && uiMode == "")
+			uiMode = j.get<string>();
 	}
 
 
