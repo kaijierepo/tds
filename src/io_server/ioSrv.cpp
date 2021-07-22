@@ -17,6 +17,7 @@
 #include "ioChan_tuya.h"
 
 #include "ioGW_localSerial.h"
+#include "ioDev_iq60.h"
 
 ioServer ioSrv;
 
@@ -63,7 +64,13 @@ ioDev* createIODev(json conf)
 		p = new ioDev_tuya();
 		p->m_addr = conf["addr"]["device_id"];
 	}
-
+	else if (conf["type"] == "iq60-gateway")
+	{
+		ioDev_iq60* piq60 = new ioDev_iq60();
+		p = piq60;
+		p->m_addr = conf["addr"]["gateway_id"];
+		g_mapIQ60[p->m_addr] = piq60;
+	}
 	if (p)
 	{
 		p->m_devType = conf["type"];

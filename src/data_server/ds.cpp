@@ -9,6 +9,7 @@
 #include "video/remoteDesktopServer.h"
 #include <memory>
 #include "ioSrv.h"
+#include "ioDev_iq60.h"
 
 
 dataServer ds;
@@ -531,8 +532,17 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	}
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
-		//tds rpc over tcp
-		OnRecvRawTdsRpc(pData, iLen, pTcpSess);
+		//智能协议检测
+		//傲华尔远程控制协议
+		if (pData[0] == '[' && pData[iLen - 1] == ']')
+		{
+			onRecvIQ60Pkt(pData, iLen);
+		}
+		else
+		{
+			//tds rpc over tcp
+			OnRecvRawTdsRpc(pData, iLen, pTcpSess);
+		}
 		return;
 	}
 }

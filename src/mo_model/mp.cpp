@@ -14,7 +14,8 @@ MP::MP()
 {
 	m_moType = "mp";
 	m_physicalType = PHYSICAL_TYPE::unknown;
-	memset(&m_lastUpdateTime, 0, sizeof(m_lastUpdateTime));
+	GetLocalTime(&m_lastUpdateTime);
+	GetLocalTime(&m_lastSaveTime);
 	m_K = 1;
 	m_B = 0;
 #ifdef ENABLE_FFMPEG
@@ -87,7 +88,12 @@ void MP::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 	
 
 	//save to db
-	db.INSERT(getTag().c_str(), *dataTime, jVal);
+	int timespan = getSaveInterval();
+	if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
+	{
+		GetLocalTime(&m_lastSaveTime);
+		db.INSERT(getTag().c_str(), *dataTime, jVal);
+	}
 }
 
 bool MP::outputVal(json jVal)
@@ -164,12 +170,24 @@ json MP::getRT()
 	return j;
 }
 
+int MP::getSaveInterval()
+{
+	int si = m_saveInterval.hour * 60 * 3600 + m_saveInterval.minute * 60 + m_saveInterval.second;
+	return si;
+}
+
 json MP::getRTData()
 {
 	json j;
-	j["time"] = timeopt::st2str(m_lastUpdateTime);
+	if(m_lastUpdateTime.wYear == 0)
+		j["time"] = "?";
+	else
+		j["time"] = timeopt::st2str(m_lastUpdateTime);
 	j["tag"] = getTag();
-	j["val"] = m_curVal;
+	if(m_curVal.empty())
+		j["val"] = "?";
+	else
+		j["val"] = m_curVal;
 	j["unit"] = m_strUnit;
 	j["val_type"] = m_valType;
 	return j;

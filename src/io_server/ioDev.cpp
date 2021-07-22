@@ -165,6 +165,11 @@ bool ioDev::SendHeartbeatPkt()
 	return false;
 }
 
+bool ioDev::onRecvPkt(json jPkt)
+{
+	return false;
+}
+
 bool ioDev::IsConnected()
 {
 	return commSrv.IsAddrConnected(getIOAddr());

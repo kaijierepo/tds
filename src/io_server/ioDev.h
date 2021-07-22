@@ -21,7 +21,7 @@ public:
 
 	/// iodev attributes
 	//is Gateway
-	// can be 1.ip or domain name with port 2.tuya project id
+	// can be 1.ip or domain name with port 2.tuya project id 3.gateway guid
 	//is Device 
 	// can be 1.ip or domain name with port 2. field bus id
 	//is Channel
@@ -77,6 +77,7 @@ public:
 
 	//通信接收
 	virtual bool SendHeartbeatPkt();
+	virtual bool onRecvPkt(json jPkt);
 	virtual bool OnRecvData(char* pData, int iLen);//接受数据异步处理函数
 	virtual bool OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);

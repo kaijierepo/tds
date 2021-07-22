@@ -7,6 +7,19 @@
 #include "videoCodec.h"
 #include <memory>
 
+
+struct TIME_SPAN {
+	TIME_SPAN()
+	{
+		hour = 0;
+		minute = 0;
+		second = 0;
+	}
+	int hour;
+	int minute;
+	int second;
+};
+
 using namespace std;
 class MO;
 class MP : public MO
@@ -31,7 +44,9 @@ public:
 	string m_physicalType;
 	string m_strUnit;
 	SYSTEMTIME m_lastUpdateTime;
-
+	SYSTEMTIME m_lastSaveTime;
+	TIME_SPAN m_saveInterval;
+	int getSaveInterval();
 	std::shared_ptr<TDS_SESSION> m_streamPuller; //拉流方
 	fp_startStream m_streamPusher; //推流方
 	STREAM_INFO m_streamInfo;

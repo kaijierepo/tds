@@ -128,6 +128,9 @@
     <ClCompile Include="..\src\io_server\ioSrv_serialDetection.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -255,6 +258,9 @@
     </ClInclude>
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
+    <ClInclude Include="..\src\io_server\ioDev_iq60.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\res\tds.rc" />

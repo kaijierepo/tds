@@ -337,8 +337,8 @@ namespace timeopt {
 	{
 		time_t last = SysTime2Unix(lastTime);
 		time_t now = time(NULL);
-
-		return (now - last)/1000;
+		time_t milli = now - last;
+		return milli;
 	}
 
 	time_t getTick(){

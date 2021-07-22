@@ -287,6 +287,7 @@
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
     <ClCompile Include="..\src\io_server\ioChan_tuya.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tuya.cpp" />
@@ -330,6 +331,7 @@
     <ClInclude Include="..\src\io_server\ioChan.h" />
     <ClInclude Include="..\src\io_server\ioChan_tuya.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
+    <ClInclude Include="..\src\io_server\ioDev_iq60.h" />
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />
     <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h" />
     <ClInclude Include="..\src\io_server\ioDev_tuya.h" />
