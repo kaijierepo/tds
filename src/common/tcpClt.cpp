@@ -1,20 +1,20 @@
 #include "pch.h"
 #include "tcpClt.h"
 #pragma warning(disable:4996)
-std::vector<CTCPClient*> m_vecTCPIOCPClient;
+std::vector<tcpClt*> m_vecTCPIOCPClient;
 
 
 DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 {
-	CTCPClient *pServ=(CTCPClient*)lpParam;
+	tcpClt *pServ=(tcpClt*)lpParam;
 	pServ->m_csLock.lock();
 	SOCKET sock = pServ->sockClient;
-	ConnInfo ci;
+	tcpSessionClt ci;
 	ci.peerIP = pServ->m_strServerIP;
 	ci.peerPort = pServ->m_iServerPort;
 	ci.sock = sock;
 
-	pServ->m_pCallBackUser->ConnStatusChange(&ci, true);
+	pServ->m_pCallBackUser->statusChange_tcpClt(&ci, true);
 
 	vector<char> recvBuff;
 	int iRecvBuffLen = 0;
@@ -32,7 +32,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		{
 			closesocket(sock);
 
-			pServ->m_pCallBackUser->ConnStatusChange(&ci, false);
+			pServ->m_pCallBackUser->statusChange_tcpClt(&ci, false);
 			pServ->sockClient = 0;
 			break;
 		}
@@ -53,16 +53,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 		//接收完成，送到应用层
 		pServ->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &ci);
-		
-		//发送到监控界面
-		PKT_DATA_WITH_CONNDIR* datawithdir = new PKT_DATA_WITH_CONNDIR((char*)recvBuff.data(), iRecvBuffLen);
-		datawithdir->dir = CONNDIR_RECV;
-		SYSTEMTIME st; GetLocalTime(&st);
-		datawithdir->st = st;
-		datawithdir->serverIP = pServ->m_strServerIP;
-		datawithdir->serverPort = pServ->m_iServerPort;
-		pServ->StaticConnData(datawithdir);
-
+	
 		iRecvBuffLen = 0;
 	}
 
@@ -74,7 +65,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 DWORD WINAPI ConnectThread(LPVOID lpParam)
 {
-	CTCPClient* p = (CTCPClient*) lpParam;
+	tcpClt* p = (tcpClt*) lpParam;
 	int ct = 0;
 	while (1)
 	{
@@ -96,14 +87,14 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 
 DWORD WINAPI AsynConnectThread(LPVOID lpParam)
 {
-	CTCPClient* p = (CTCPClient*)lpParam;
+	tcpClt* p = (tcpClt*)lpParam;
 	p->connect();
 	return 0;
 }
 
 
 
-CTCPClient::CTCPClient(void)
+tcpClt::tcpClt(void)
 {
 	sockClient = 0;
 	m_strServerIP = "127.0.0.1";
@@ -121,14 +112,14 @@ CTCPClient::CTCPClient(void)
 	m_vecTCPIOCPClient.push_back(this);
 }
 
-CTCPClient::~CTCPClient(void)
+tcpClt::~tcpClt(void)
 {
 	DisConnect();
 	m_csLock.lock();
 	m_csLock.unlock();
 }
 
-bool CTCPClient::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
+bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
@@ -140,7 +131,7 @@ bool CTCPClient::connect(ITcpClientCallBack* pUser, string strServIP,int iServPo
 	return connect();
 }
 
-bool CTCPClient::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
+bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
@@ -154,7 +145,7 @@ bool CTCPClient::connect(ITcpClientCallBack* pUser, string host, string strLocal
 	return connect();
 }
 
-bool CTCPClient::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
+bool tcpClt::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;
 	m_strServerIP = strServIP;
@@ -166,7 +157,7 @@ bool CTCPClient::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort,
 	return 0;
 }
 
-void CTCPClient::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)
+void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)
 {
 	if(m_bIsConnectting)
 		return;
@@ -181,7 +172,7 @@ void CTCPClient::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iSe
 	HANDLE hThread = CreateThread(NULL,0, AsynConnectThread,(LPVOID)this,0,&dwThread);
 }
 
-bool CTCPClient::connect()
+bool tcpClt::connect()
 {
 	if(sockClient !=0)
 	{
@@ -239,13 +230,13 @@ bool CTCPClient::connect()
 	return true;
 }
 
-bool CTCPClient::ReConnect()
+bool tcpClt::ReConnect()
 {
 	if (!m_pCallBackUser || m_strServerIP == "") return false;
 	return connect(m_pCallBackUser, m_strServerIP, m_iServerPort);
 }
 
-int CTCPClient::SendData(char* pData, int iLen)
+int tcpClt::SendData(char* pData, int iLen)
 {
 	if(iLen==0)
 	{
@@ -264,20 +255,10 @@ int CTCPClient::SendData(char* pData, int iLen)
 		m_bConn = false;
 	}
 
-	//发送到监控界面
-	PKT_DATA_WITH_CONNDIR* datawithdir = new PKT_DATA_WITH_CONNDIR((char*)pData, iLen);
-	datawithdir->dir = CONNDIR_SEND;
-	SYSTEMTIME st; GetLocalTime(&st);
-	datawithdir->st = st;
-	datawithdir->serverIP = m_strServerIP;
-	datawithdir->serverPort = m_iServerPort;
-	datawithdir->iSendResult = iRet;
-	StaticConnData(datawithdir);
-
 	return iRet;
 }
 
-string CTCPClient::GetLocalIP()
+string tcpClt::GetLocalIP()
 {
 	string strIP;
 	WSADATA wsaData;
@@ -299,7 +280,7 @@ string CTCPClient::GetLocalIP()
 	return strIP;
 };
 
-bool CTCPClient::DisConnect()
+bool tcpClt::DisConnect()
 {
 	if (sockClient)
 	{
@@ -311,12 +292,7 @@ bool CTCPClient::DisConnect()
 	return true;
 }
 
-int CTCPClient::StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir) {
-	
-	return 0;
-}
-
-bool operator==(const CTCPClient& lhs, const CTCPClient& rhs) {
+bool operator==(const tcpClt& lhs, const tcpClt& rhs) {
 	if (lhs.m_strServerIP == rhs.m_strServerIP &&
 		lhs.m_iServerPort == rhs.m_iServerPort &&
 		lhs.m_strLocalIP == rhs.m_strLocalIP &&
@@ -328,6 +304,6 @@ bool operator==(const CTCPClient& lhs, const CTCPClient& rhs) {
 		return false;
 	}
 }
-bool operator!=(const CTCPClient& lhs, const CTCPClient& rhs) {
+bool operator!=(const tcpClt& lhs, const tcpClt& rhs) {
 	return !operator==(lhs, rhs);
 }

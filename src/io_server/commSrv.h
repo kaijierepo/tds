@@ -218,17 +218,17 @@ public:
 	void sendCanV3(char* pData, int iLen, string strIP, int iID);
 	//用于利用Can分帧组包的Can载荷
 	void sendCanV2(char* pData, int iLen, string strIP, int iID);
-	virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn);
+	virtual void ConnStatusChange(tcpSessionClt* connInfo, bool bIsConn);
 	virtual void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
-	virtual void OnRecvData(char* pData, int iLen, ConnInfo* connInfo);
-	void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo);
+	virtual void OnRecvData(char* pData, int iLen, tcpSessionClt* connInfo);
+	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 	bool CheckIsGateWay(string strIP);
 	bool DealPackageAsyn();
 
 public:
 	//网络通信
 	tcpSrv m_tcpServer;
-	map<ioAddress, CTCPClient*> m_tcpClientList;
+	map<ioAddress, tcpClt*> m_tcpClientList;
 
 	//中继通讯接收缓冲
 	std::map<string, CAN_TRANSMIT_BUF*> m_mapGateWay;

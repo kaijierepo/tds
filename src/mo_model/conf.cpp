@@ -43,6 +43,20 @@ void tdsConfig::loadConf()
 		j = jsonConf["ui_mode"];
 		if (j != nullptr && uiMode == "")
 			uiMode = j.get<string>();
+
+		j = jsonConf["active_session"];
+		if (j != nullptr)
+		{
+			for (int i = 0; i < j.size(); i++)
+			{
+				json jas = j[i];
+				ACTIVE_TDS_SESSION ats;
+				ats.host = jas["host"];
+				ats.type = jas["type"];
+				vecActiveSession.push_back(ats);
+			}
+		}
+			
 	}
 
 

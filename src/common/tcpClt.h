@@ -6,67 +6,35 @@
 
 using namespace std;
 
-#define TCPIOCP_CLIENT "TcpIOCP client"
-#define UPDATE_CLIENT_ONE_DATA WM_USER + 1004
-// #define ADD_TCPIOCP WM_USER + 1002
-// #define ADD_CONNECT_TCPTOCP WM_USER + 1003
-
 //连接信息
-struct ConnInfo
+struct tcpSessionClt
 {
 	SOCKET sock;
 	std::string peerIP;//对端ip
 	int peerPort;//对端端口
-	void* p1;
+	void* pAppLayerClient;
 
-	ConnInfo()
+	tcpSessionClt()
 	{
 		sock = 0;
-		p1 = NULL;
-	}
-};
-
-typedef enum ConnDir {
-	CONNDIR_SEND = 0,
-	CONNDIR_RECV
-}ConnDir;
-
-struct PKT_DATA_WITH_CONNDIR {
-
-	char* pData;
-	int iLen;
-	std::string serverIP;
-	int serverPort;
-	ConnDir dir;
-	SYSTEMTIME st;
-	int iSendResult;
-	PKT_DATA_WITH_CONNDIR(char* p, int l)
-	{
-		pData = new char[l];
-		memcpy(pData, p, l);
-		iLen = l;
-		iSendResult = 0;
-	}
-
-	~PKT_DATA_WITH_CONNDIR() {
-		delete pData;
+		pAppLayerClient = NULL;
 	}
 };
 
 
 class ITcpClientCallBack {
 public:
-	virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo) = 0;
+	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) = 0;
+	virtual void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo) = 0;
 };
 
-class CTCPClient
+class tcpClt
 {
-	friend bool operator==(const CTCPClient&, const CTCPClient&);
-	friend bool operator!=(const CTCPClient&, const CTCPClient&);
+	friend bool operator==(const tcpClt&, const tcpClt&);
+	friend bool operator!=(const tcpClt&, const tcpClt&);
 public:
-	CTCPClient(void);
-	~CTCPClient(void);
+	tcpClt(void);
+	~tcpClt(void);
 
 	vector<char> heartbeat;
 
@@ -82,7 +50,6 @@ public:
 	};
 	int SendData(char* pData, int iLen);
 	static string GetLocalIP();
-	int StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir);
 
 	SOCKET sockClient;
 	string m_strServerIP;

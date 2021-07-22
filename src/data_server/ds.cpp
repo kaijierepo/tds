@@ -10,6 +10,7 @@
 #include <memory>
 #include "ioSrv.h"
 #include "ioDev_iq60.h"
+#include "tcpClt.h"
 
 
 dataServer ds;
@@ -146,6 +147,16 @@ int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 	return send(sock, pBuffer, iLength, 0);
 }
 
+void activeSessionThread()
+{
+	for (int i = 0; i < tds->conf->vecActiveSession.size(); i++)
+	{
+		ACTIVE_TDS_SESSION ats = tds->conf->vecActiveSession.at(i);
+		tcpClt* p = new tcpClt();
+		p->AsynConnect(ds, ats.ip, ats.port);
+	}
+}
+
 bool dataServer::run()
 {
 	db.Open(tds->conf->dbPath,prj.m_strName);
@@ -228,6 +239,11 @@ bool dataServer::run()
 	m_tcpSrv->SettIOCPName(strName);
 
 	tdsSrv.m_vecTLServer.push_back(this);
+
+
+	thread t(activeSessionThread);
+	t.detach();
+
 	return  1;
 }
 
@@ -403,7 +419,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 					int pos = strData.find("tcp");
 					int pos1 = strData.find(" ", pos);
 					string host = strData.substr(pos+4, pos1 - (pos+4));
-					tdsSession->pBridgedTcpClient = new CTCPClient();
+					tdsSession->pBridgedTcpClient = new tcpClt();
 					tdsSession->type = TDS_SESSION_TYPE::tunnel;
 					if(tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
 					{
@@ -545,6 +561,15 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 		}
 		return;
 	}
+}
+
+void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
+{
+}
+
+void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+{
+
 }
 
 //handle http not using files in disk

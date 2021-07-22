@@ -31,3 +31,5 @@ public:
 
 	 tdsConfig tdsConf;
 };
+
+extern void createConsole();

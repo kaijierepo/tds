@@ -366,13 +366,6 @@ HANDLE_END:
 	LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
 }
 
-void tdsServer::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
-{
-}
-
-void tdsServer::OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo)
-{
-}
 
 void tdsServer::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix)
 {

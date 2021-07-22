@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "tds_imp.h"
 #include "wke.h"
+#include "tools/tcpRoute.h"
 
 /*
 notes:
@@ -32,6 +33,9 @@ int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
+	parser.set_optional<string>("m", "mode", "tds", "tds mode; route mode;");
+	parser.set_optional<int>("sl", "serverleft", 666, "");
+	parser.set_optional<int>("sr", "serverright", 667, "");
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
 	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
@@ -40,8 +44,21 @@ int main(int argc, char** argv)
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
-	//run tds
-	tds->run();
+	string mode = parser.get<string>("m");
+	if (mode == "route")
+	{
+		createConsole();
+		tcpRoute* tr = new tcpRoute();
+		tr->portLeft = parser.get<int>("sl");
+		tr->portRight = parser.get<int>("sr");
+		tr->run();
+	}
+	else
+	{
+		//run tds
+		tds->run();
+	}
+
 
 	// ÏûÏ¢Ñ­»·  
 	MSG msg;

@@ -419,8 +419,6 @@ struct CAN_PKT_V2 //size = 13字节
 	}
 };
 
-
-
 //应用服务器基类 Application Layer Server
 class CALServer {
 public:

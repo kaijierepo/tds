@@ -15,13 +15,17 @@ dataserver
 #define MAX_RECEIVE_LENGTH 512
 
 class database;
-class dataServer : public ITcpServerCallBack, public CALServer,public CTLServer
+class dataServer : public ITcpServerCallBack,public ITcpClientCallBack, public CALServer,public CTLServer
 {
 public:
 	void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
+	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
+	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
+	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
+
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) override;
 	bool isHttpPkt(string str);
-	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
+
 	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
 	bool httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
@@ -31,7 +35,8 @@ public:
 	bool run();
 	dataServer();
 	virtual ~dataServer();
-	tcpSrv* m_tcpSrv;
+	tcpSrv* m_tcpSrv; //被动连接的tdsSession
+	vector<tcpClt> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
 
 	void SendData(char* pData, int iLen);

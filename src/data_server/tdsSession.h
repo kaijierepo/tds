@@ -18,14 +18,14 @@ public:
 	bool boolConnected;
 	CTLServer* pTLServer; //传输层服务器
 	tcpSession* pTcpSession; //服务端被动连接的 session
-	CTCPClient* pTcpSessionActive; //作为客户端连接数据中心的 主动式tcpSession
+	tcpClt* pTcpSessionActive; //作为客户端连接数据中心的 主动式tcpSession
 	SYSTEMTIME rCreateTime;
 	SOCKET sock;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data
 	string bridgedLocalCom; //和本地串口桥接
 	string bridgedTcpServer; //和tcp服务器的一个连接桥接
-	CTCPClient* pBridgedTcpClient;
+	tcpClt* pBridgedTcpClient;
 	
 	virtual void Init()
 	{
@@ -36,15 +36,6 @@ public:
 		m_alBuf.Init();
 	}
 };
-
-namespace TDS_SESSION_TYPE {
-	const string none = "none";
-	const string rpc = "rpc";
-	const string video = "video";
-	const string web = "web";
-	const string log = "log";
-	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
-}
 
 
 class TDS_SESSION : public DS_TRANS_LAYER_SESSION{
@@ -70,8 +61,8 @@ public:
 
 	class CBridgedTcpClientHandler:public ITcpClientCallBack {
 	public:
-		virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn);
-		virtual void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo);
+		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
+		virtual void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 		TDS_SESSION* pTdsSession;
 	} bridgedTcpCltHandler;
 

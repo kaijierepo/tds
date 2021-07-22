@@ -6,6 +6,24 @@ typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 
+
+namespace TDS_SESSION_TYPE {
+	const string none = "none";
+	const string rpc = "rpc";
+	const string video = "video";
+	const string web = "web";
+	const string log = "log";
+	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
+	const string iodev = "iodev"; //io设备会话 传输设备自定义的通信协议
+}
+
+struct ACTIVE_TDS_SESSION {
+	string ip;
+	int port;
+	string type;
+};
+
+
 struct iTDSConf {
 	int port;
 	bool debugMode;
@@ -16,8 +34,8 @@ struct iTDSConf {
 	string dataCenterIp;
 	string title;
 	string homepage;
-
 	string uiMode;
+	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 };
 
 enum STREAM_TYPE {

@@ -125,7 +125,7 @@ bool commServer::CheckIsGateWay(string strIP)
 	return false;
 }
 
-void commServer::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
+void commServer::ConnStatusChange(tcpSessionClt* connInfo, bool bIsConn)
 {
 
 }
@@ -147,12 +147,12 @@ void commServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 	}
 }
 
-void commServer::OnRecvData(char* pData, int iLen, ConnInfo* connInfo)
+void commServer::OnRecvData(char* pData, int iLen, tcpSessionClt* connInfo)
 {
 }
 
 // 315服务端数据接收
-void commServer::OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo)
+void commServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
 {
 	OnRecvData_EqpAppLayerData(pData, iLen, "", connInfo->peerIP);
 }
@@ -474,7 +474,7 @@ bool commServer::SendData(char* pData, int iLen, ioAddress addr)
 
 	if (m_tcpClientList.find(addr) != m_tcpClientList.end())
 	{
-		CTCPClient* pTcpClient = m_tcpClientList[addr];
+		tcpClt* pTcpClient = m_tcpClientList[addr];
 		pTcpClient->SendData((char*)pData, iLen);
 
 		//发送到监控界面

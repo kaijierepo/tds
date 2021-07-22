@@ -40,11 +40,11 @@ string TDS_SESSION::GetClientIp()
      return pTLServer->SendAppLayerData(p, len, this);
  }
 
- void TDS_SESSION::CBridgedTcpClientHandler::ConnStatusChange(ConnInfo* connInfo, bool bIsConn)
+ void TDS_SESSION::CBridgedTcpClientHandler::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
  {
  }
 
- void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo)
+ void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
  {
      pTdsSession->send(pData, iLen);
  }

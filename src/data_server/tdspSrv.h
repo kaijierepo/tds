@@ -20,7 +20,7 @@ enum TDS_ERROR_CODE{
 };
 
 
-class tdsServer : public CALServer,public ITcpClientCallBack
+class tdsServer : public CALServer
 {
 public:
 
@@ -68,9 +68,7 @@ public:
 	//关联的传输层服务器
 	vector<CTLServer*> m_vecTLServer;
 	//upper level tds
-	CTCPClient m_DataCenterClt;
-	virtual void ConnStatusChange(ConnInfo* connInfo, bool bIsConn);
-	virtual void OnRecvData_TCPClient(char* pData, int iLen, ConnInfo* connInfo);
+	tcpClt m_DataCenterClt;
 
 	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
 
