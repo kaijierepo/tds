@@ -18,7 +18,7 @@ public:
 	bool boolConnected;
 	CTLServer* pTLServer; //传输层服务器
 	tcpSession* pTcpSession; //服务端被动连接的 session
-	tcpClt* pTcpSessionActive; //作为客户端连接数据中心的 主动式tcpSession
+	tcpClt* pTcpSessionClt; //作为客户端连接数据中心的 主动式tcpSession
 	SYSTEMTIME rCreateTime;
 	SOCKET sock;
 	stream2pkt m_alBuf; //stream buff for app layer data

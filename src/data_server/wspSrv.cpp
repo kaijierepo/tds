@@ -16,7 +16,7 @@ wspSrv ::~wspSrv()
 
 }
 
-void wspSrv::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
+void wspSrv::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 }
 

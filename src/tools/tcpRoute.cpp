@@ -25,7 +25,7 @@ void tcpRoute::run()
 	}
 }
 
-void tcpRoute::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
+void tcpRoute::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{

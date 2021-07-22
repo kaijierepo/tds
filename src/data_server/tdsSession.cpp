@@ -4,7 +4,7 @@
 
 TDS_SESSION::TDS_SESSION()
 {
-    pTcpSessionActive = NULL;
+    pTcpSessionClt = NULL;
     role = "";
     encode = "utf8";
     type = "";
@@ -28,8 +28,8 @@ void TDS_SESSION::Init()
 
 string TDS_SESSION::GetClientIp()
 {
-    if (pTcpSessionActive)
-        return pTcpSessionActive->m_strServerIP;
+    if (pTcpSessionClt)
+        return pTcpSessionClt->m_strServerIP;
     return "";
 }
 
@@ -51,7 +51,7 @@ string TDS_SESSION::GetClientIp()
 
  void TDS_SESSION::onTcpDisconnect()
  {
-     //p->pTcpSession is a tcpSession will be deleted after ConnStatusChange callback
+     //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
      //this is not safe,a critical section should be used for p->pTcpSession

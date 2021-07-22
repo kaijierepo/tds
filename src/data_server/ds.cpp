@@ -62,7 +62,7 @@ dataServer::~dataServer()
 {
 }
 
-void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
+void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{
@@ -94,6 +94,41 @@ void dataServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
 			m_mutexTdsSessionList.unlock();
 		}
 	}
+}
+
+void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
+{
+/*
+	if (bIsConn)
+	{
+		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+		p->sock = pCltInfo->sock;
+		p->boolConnected = true;
+		p->pTLServer = this;
+		p->pTcpSession = pCltInfo;
+		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
+		pCltInfo->pALSession = p.get();
+		m_mutexTdsSessionList.lock();
+		m_vecTdsSession.push_back(p);
+		m_mutexTdsSessionList.unlock();
+	}
+	else
+	{
+		if (pCltInfo->pALSession)
+		{
+			m_mutexTdsSessionList.lock();
+			for (int i = 0; i < m_vecTdsSession.size(); i++)
+			{
+				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
+				{
+					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i]; \
+						p->onTcpDisconnect();
+					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
+				}
+			}
+			m_mutexTdsSessionList.unlock();
+		}
+	}*/
 }
 
 int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
@@ -153,7 +188,20 @@ void activeSessionThread()
 	{
 		ACTIVE_TDS_SESSION ats = tds->conf->vecActiveSession.at(i);
 		tcpClt* p = new tcpClt();
-		p->AsynConnect(ds, ats.ip, ats.port);
+		p->AsynConnect(&ds, ats.ip, ats.port);
+		ds.m_tcpCltList.push_back(p);
+	}
+
+	while (1)
+	{
+		Sleep(5000);
+		for (auto& i : ds.m_tcpCltList)
+		{
+			if (!i->m_bConn)
+			{
+				i->AsynConnect(i->m_pCallBackUser, i->m_strServerIP, i->m_iServerPort);
+			}
+		}
 	}
 }
 
@@ -563,9 +611,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	}
 }
 
-void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
-{
-}
+
 
 void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
 {

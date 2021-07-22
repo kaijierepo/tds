@@ -65,7 +65,7 @@ public:
 	wspSrv();
 	~wspSrv();
 
-	void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	void OnRecvWSFrame(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, tcpSession* pCltInfo);
 	void OnOpen();

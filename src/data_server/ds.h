@@ -18,7 +18,7 @@ class database;
 class dataServer : public ITcpServerCallBack,public ITcpClientCallBack, public CALServer,public CTLServer
 {
 public:
-	void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
@@ -36,7 +36,7 @@ public:
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
-	vector<tcpClt> m_tcpCltList; //主动连接的tdsSession
+	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
 
 	void SendData(char* pData, int iLen);

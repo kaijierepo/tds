@@ -202,9 +202,6 @@ public:
 	void OnRecvData_EqpAppLayerPkt(PKT_DATA* ppd, ioAddrSession* pAddrInfo);
 
 
-	//组装
-	int StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir);
-
 	void StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktType dealType = RECV_PKT_UNKNOWN);
 	void StatisOnSend(char* sendData, int len, ioAddress addr);
 	bool m_bEndSession;
@@ -218,8 +215,8 @@ public:
 	void sendCanV3(char* pData, int iLen, string strIP, int iID);
 	//用于利用Can分帧组包的Can载荷
 	void sendCanV2(char* pData, int iLen, string strIP, int iID);
-	virtual void ConnStatusChange(tcpSessionClt* connInfo, bool bIsConn);
-	virtual void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
+	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
+	virtual void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	virtual void OnRecvData(char* pData, int iLen, tcpSessionClt* connInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 	bool CheckIsGateWay(string strIP);

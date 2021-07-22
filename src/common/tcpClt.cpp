@@ -10,8 +10,8 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	pServ->m_csLock.lock();
 	SOCKET sock = pServ->sockClient;
 	tcpSessionClt ci;
-	ci.peerIP = pServ->m_strServerIP;
-	ci.peerPort = pServ->m_iServerPort;
+	ci.srvIP = pServ->m_strServerIP;
+	ci.srvPort = pServ->m_iServerPort;
 	ci.sock = sock;
 
 	pServ->m_pCallBackUser->statusChange_tcpClt(&ci, true);

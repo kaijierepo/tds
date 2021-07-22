@@ -51,8 +51,9 @@ void tdsConfig::loadConf()
 			{
 				json jas = j[i];
 				ACTIVE_TDS_SESSION ats;
-				ats.host = jas["host"];
-				ats.type = jas["type"];
+				ats.ip = jas["ip"].get<string>();
+				ats.port = jas["port"].get<int>();
+				ats.type = jas["type"].get<string>();
 				vecActiveSession.push_back(ats);
 			}
 		}

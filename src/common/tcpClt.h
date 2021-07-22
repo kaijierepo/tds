@@ -10,8 +10,8 @@ using namespace std;
 struct tcpSessionClt
 {
 	SOCKET sock;
-	std::string peerIP;//对端ip
-	int peerPort;//对端端口
+	std::string srvIP;//对端ip
+	int srvPort;//对端端口
 	void* pAppLayerClient;
 
 	tcpSessionClt()

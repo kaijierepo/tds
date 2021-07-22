@@ -11,6 +11,6 @@ public:
 
 	void run();
 
-	 void ConnStatusChange(tcpSession* pCltInfo, bool bIsConn);
+	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	 void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 };

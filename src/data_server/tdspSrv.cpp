@@ -47,17 +47,6 @@ tdsServer::~tdsServer()
 bool tdsServer::Init()
 {
 	m_DB = prj.DB;
-
-	string strDSIP = tds->conf->dataCenterIp;
-	str::removeChar(strDSIP, ' ');
-	if (strDSIP.length() > 0)
-	{
-		string str = "";
-		//..todo
-		m_DataCenterClt.heartbeat.resize(str.length());
-		memcpy(m_DataCenterClt.heartbeat.data(), str.data(), str.length());
-		m_DataCenterClt.Run(this, strDSIP.c_str(), 2107);
-	}
 	return true;
 }
 

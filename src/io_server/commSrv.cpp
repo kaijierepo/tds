@@ -125,12 +125,12 @@ bool commServer::CheckIsGateWay(string strIP)
 	return false;
 }
 
-void commServer::ConnStatusChange(tcpSessionClt* connInfo, bool bIsConn)
+void commServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
 
 }
 
-void commServer::ConnStatusChange(tcpSession* pCltInfo, bool bIsConn)
+void commServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{
@@ -154,7 +154,7 @@ void commServer::OnRecvData(char* pData, int iLen, tcpSessionClt* connInfo)
 // 315服务端数据接收
 void commServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
 {
-	OnRecvData_EqpAppLayerData(pData, iLen, "", connInfo->peerIP);
+	OnRecvData_EqpAppLayerData(pData, iLen, "", connInfo->srvIP);
 }
 
 void commServer::OnRecvData_EqpAppLayerPkt(PKT_DATA* ppd, ioAddrSession* pAddrInfo)
@@ -476,15 +476,6 @@ bool commServer::SendData(char* pData, int iLen, ioAddress addr)
 	{
 		tcpClt* pTcpClient = m_tcpClientList[addr];
 		pTcpClient->SendData((char*)pData, iLen);
-
-		//发送到监控界面
-		PKT_DATA_WITH_CONNDIR* datawithdir = new PKT_DATA_WITH_CONNDIR((char*)pData, iLen);
-		datawithdir->dir = CONNDIR_SEND;
-		SYSTEMTIME st; GetLocalTime(&st);
-		datawithdir->st = st;
-		datawithdir->serverIP = pTcpClient->m_strServerIP;
-		datawithdir->serverPort = pTcpClient->m_iServerPort;
-		pTcpClient->StaticConnData(datawithdir);
 	}
 	else
 	{
@@ -767,11 +758,6 @@ END:
 	return bRet;
 }
 
-
-int commServer::StaticConnData(PKT_DATA_WITH_CONNDIR* datawithdir)
-{
-	return 0;
-}
 
 void commServer::StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktType dealType)
 {
