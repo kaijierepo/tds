@@ -1,5 +1,5 @@
 ﻿#include "pch.h"
-#include "tdspSrv.h"
+#include "rpcHandler.h"
 #include "prj.h"
 #include "as.h"
 #include "mp.h"
@@ -17,7 +17,7 @@
 #include "xiaot/xiaot.h"
 #include "ioGW_localSerial.h"
 
-tdsServer tdsSrv;
+rpcHandler tdsSrv;
 
 size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 	if (stream == nullptr) return 0;
@@ -33,24 +33,24 @@ bool DownloadHTTPFile(std::string url, std::string file_save_path)//待下载文
 	return false;
 }
 
-tdsServer::tdsServer()
+rpcHandler::rpcHandler()
 {
 	m_pluginHandler = NULL;
 }
 
-tdsServer::~tdsServer()
+rpcHandler::~rpcHandler()
 {
 
 }
 
 
-bool tdsServer::Init()
+bool rpcHandler::Init()
 {
 	m_DB = prj.DB;
 	return true;
 }
 
-string tdsServer::RPCError(int code,string msg)
+string rpcHandler::RPCError(int code,string msg)
 {
 	json jError = {
 			{"code", code},
@@ -60,7 +60,7 @@ string tdsServer::RPCError(int code,string msg)
 	return error;
 }
 
-string tdsServer::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector)
+string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector)
 {
 	//parse time param
 	std::string strTime = "";
@@ -90,7 +90,7 @@ string tdsServer::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG
 }
 
 
-string tdsServer::rpc_query(json params,string& error)
+string rpcHandler::rpc_query(json params,string& error)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
@@ -136,7 +136,7 @@ string tdsServer::rpc_query(json params,string& error)
 }
 
 
-string tdsServer::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
 {
 	//使用正则搜寻 ${XXX}
 	//"${src_ip}" 替换成 pSession->ip
@@ -152,7 +152,7 @@ string tdsServer::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION>
 	return str;
 }
 
-string tdsServer::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string result = "";
 	if (method == "heartbeat")
@@ -241,7 +241,7 @@ string tdsServer::handleMethodCall(string method, json params,string& error, std
 }
 
 
-void tdsServer::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
 	string result = "";
@@ -356,7 +356,7 @@ HANDLE_END:
 }
 
 
-void tdsServer::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix)
+void rpcHandler::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix)
 {
 	string strTmpFile;
 	if (strUrl.find("http") != string::npos)
@@ -387,7 +387,7 @@ void tdsServer::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strT
 	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
 }
 
-string tdsServer::rpc_output(json params, string& error)
+string rpcHandler::rpc_output(json params, string& error)
 {
 	json val = "";
 	if (params.find("val") != params.end())
@@ -443,7 +443,7 @@ string tdsServer::rpc_output(json params, string& error)
 }
 
 
-string tdsServer::rpc_input(json params, string& error)
+string rpcHandler::rpc_input(json params, string& error)
 {
 	//parse param
 	SYSTEMTIME stTimeStamp;
@@ -488,7 +488,7 @@ string tdsServer::rpc_input(json params, string& error)
 	return "ok";
 }
 
-string tdsServer::rpc_rt(json params, string& error)
+string rpcHandler::rpc_rt(json params, string& error)
 {
 	string szTag = params["tag"].get<string>();
 	string fmt = "table";
@@ -525,7 +525,7 @@ string tdsServer::rpc_rt(json params, string& error)
 	}
 }
 
-string tdsServer::rpc_getconf(json params, string& error)
+string rpcHandler::rpc_getconf(json params, string& error)
 {
 	string type = "";
 	if(params.find("type") != params.end())
@@ -592,7 +592,7 @@ string tdsServer::rpc_getconf(json params, string& error)
 	return "";
 }
 
-string tdsServer::rpc_setconf(json params, string& error)
+string rpcHandler::rpc_setconf(json params, string& error)
 {
 	//按照类型配置
 	string type = "";
@@ -620,7 +620,7 @@ string tdsServer::rpc_setconf(json params, string& error)
 	return "";
 }
 
-string tdsServer::rpc_getconffile(json params, string& error)
+string rpcHandler::rpc_getconffile(json params, string& error)
 {
 	string path = "";
 	if (params.find("path") != params.end())
@@ -637,7 +637,7 @@ string tdsServer::rpc_getconffile(json params, string& error)
 	return string();
 }
 
-string tdsServer::rpc_setconffile(json params, string& error)
+string rpcHandler::rpc_setconffile(json params, string& error)
 {
 	string path = "";
 	if (params.find("path") != params.end())
@@ -653,12 +653,12 @@ string tdsServer::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-string tdsServer::rpc_heartbeat(json params, string& error)
+string rpcHandler::rpc_heartbeat(json params, string& error)
 {
 	return "\"pong\"";
 }
 
-string tdsServer::rpc_xiaot(json params, string& error)
+string rpcHandler::rpc_xiaot(json params, string& error)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
@@ -666,7 +666,7 @@ string tdsServer::rpc_xiaot(json params, string& error)
 
 
 
-string tdsServer::rpc_openCom(json params, string& error)
+string rpcHandler::rpc_openCom(json params, string& error)
 {
 	ioDev* pDev = NULL;
 	string portNum = params["portNum"].get<string>();
@@ -692,7 +692,7 @@ string tdsServer::rpc_openCom(json params, string& error)
 	}
 }
 
-string tdsServer::rpc_io_tree(json params, string& error)
+string rpcHandler::rpc_io_tree(json params, string& error)
 {
 	json j;
 	ioSrv.toJson(j);
@@ -700,7 +700,7 @@ string tdsServer::rpc_io_tree(json params, string& error)
 }
 
 
-string tdsServer::rpc_getStreamInfo(json params,string& error)
+string rpcHandler::rpc_getStreamInfo(json params,string& error)
 {
 	string tag;
 	if (params.find("tag") != params.end())
@@ -725,7 +725,7 @@ string tdsServer::rpc_getStreamInfo(json params,string& error)
 	return jSi.dump();
 }
 
-string tdsServer::rpc_com_list(json params, string& error)
+string rpcHandler::rpc_com_list(json params, string& error)
 {
 	vector<ioDev*> ary = ioSrv.getIODevices(IO_DEV_TYPE::GW::local_serial);
 	json result;
@@ -741,7 +741,7 @@ string tdsServer::rpc_com_list(json params, string& error)
 }
 
 
-string tdsServer::rpc_closeCom(json params, string& error)
+string rpcHandler::rpc_closeCom(json params, string& error)
 {
 	string portNum = params["portNum"].get<string>();
 	ioDev* pCom = ioSrv.getIODev(portNum);
@@ -761,7 +761,7 @@ string tdsServer::rpc_closeCom(json params, string& error)
 }
 
 
-void tdsServer::notify(string method, json params)
+void rpcHandler::notify(string method, json params)
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"param\":" + params.dump() + "}";
 	vector<shared_ptr<TDS_SESSION>> tdsSessions = ds.m_vecTdsSession;
@@ -773,7 +773,7 @@ void tdsServer::notify(string method, json params)
 	}
 }
 
-void tdsServer::Notify(string strTag, string& szNotify)
+void rpcHandler::Notify(string strTag, string& szNotify)
 {
 	string str;
 

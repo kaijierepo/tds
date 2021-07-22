@@ -8,7 +8,7 @@
 //#include <devguid.h>  
 #include "logger.h"
 #include "ioSrv.h"
-#include "tdspSrv.h"
+#include "rpcHandler.h"
 
 /*
 by default, Windows OS will only post WM_DEVICECHANGE to

@@ -20,7 +20,6 @@ public:
 	tcpSession* pTcpSession; //服务端被动连接的 session
 	tcpClt* pTcpSessionClt; //作为客户端连接数据中心的 主动式tcpSession
 	SYSTEMTIME rCreateTime;
-	SOCKET sock;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data
 	string bridgedLocalCom; //和本地串口桥接
@@ -32,7 +31,6 @@ public:
 		iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
 		iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
 		pTcpSession = NULL;
-		sock = 0;
 		m_alBuf.Init();
 	}
 };
@@ -49,12 +47,13 @@ public:
 	string encode;
 	string ip;
 	string type;//session type
+	int port;
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有
 	string streamFmt;// vp9/bmp/fmp4
     bool bInitSegSended;
 	MP* streamMp; //tds拉流的源
-
+	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
 
 	void onTcpDisconnect();

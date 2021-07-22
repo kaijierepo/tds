@@ -18,10 +18,13 @@ class database;
 class dataServer : public ITcpServerCallBack,public ITcpClientCallBack, public CALServer,public CTLServer
 {
 public:
-	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
-	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
+	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
+
+
 
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) override;
 	bool isHttpPkt(string str);
@@ -29,6 +32,7 @@ public:
 	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
 	bool httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
+	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 	string getRDSPage();
 public:
@@ -43,8 +47,8 @@ public:
 	char arrSendBuf[100000];
 
 	bool onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
-	bool OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo) override;
-	bool OnRecvRawTdsRpc(char* pData, int iLen, void* pCltInfo);
+	bool OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
+	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	vector<void*> GetSessionList() override;

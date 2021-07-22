@@ -6,15 +6,16 @@ std::vector<tcpClt*> m_vecTCPIOCPClient;
 
 DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 {
-	tcpClt *pServ=(tcpClt*)lpParam;
-	pServ->m_csLock.lock();
-	SOCKET sock = pServ->sockClient;
-	tcpSessionClt ci;
-	ci.srvIP = pServ->m_strServerIP;
-	ci.srvPort = pServ->m_iServerPort;
-	ci.sock = sock;
+	tcpClt *pTcpClt=(tcpClt*)lpParam;
+	pTcpClt->m_csLock.lock();
+	SOCKET sock = pTcpClt->sockClient;
 
-	pServ->m_pCallBackUser->statusChange_tcpClt(&ci, true);
+	pTcpClt->m_session.srvIP = pTcpClt->m_strServerIP;
+	pTcpClt->m_session.srvPort = pTcpClt->m_iServerPort;
+	pTcpClt->m_session.sock = sock;
+	pTcpClt->m_session.tcpClt = pTcpClt;
+
+	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
 
 	vector<char> recvBuff;
 	int iRecvBuffLen = 0;
@@ -32,8 +33,8 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		{
 			closesocket(sock);
 
-			pServ->m_pCallBackUser->statusChange_tcpClt(&ci, false);
-			pServ->sockClient = 0;
+			pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, false);
+			pTcpClt->sockClient = 0;
 			break;
 		}
 
@@ -52,14 +53,14 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		}
 
 		//接收完成，送到应用层
-		pServ->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &ci);
+		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
 	}
 
-	pServ->sockClient=0;
-	pServ->m_bConn = false;
-	pServ->m_csLock.unlock();
+	pTcpClt->sockClient=0;
+	pTcpClt->m_bConn = false;
+	pTcpClt->m_csLock.unlock();
 	return 0;
 }
 

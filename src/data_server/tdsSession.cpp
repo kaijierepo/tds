@@ -12,6 +12,7 @@ TDS_SESSION::TDS_SESSION()
     bInitSegSended = false;
     bridgedTcpCltHandler.pTdsSession = this;
     streamMp = NULL;
+    sock = 0;
 }
 
 TDS_SESSION::~TDS_SESSION()
@@ -58,6 +59,7 @@ string TDS_SESSION::GetClientIp()
      //[unsafe]
      pTLServer = nullptr;
      pTcpSession = nullptr;
+     pTcpSessionClt = nullptr;
      if (pBridgedTcpClient)
      {
          delete pBridgedTcpClient;

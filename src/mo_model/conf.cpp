@@ -53,7 +53,7 @@ void tdsConfig::loadConf()
 				ACTIVE_TDS_SESSION ats;
 				ats.ip = jas["ip"].get<string>();
 				ats.port = jas["port"].get<int>();
-				ats.type = jas["type"].get<string>();
+				//ats.type = jas["type"].get<string>();
 				vecActiveSession.push_back(ats);
 			}
 		}

@@ -20,11 +20,10 @@ void wspSrv::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 }
 
-void wspSrv::OnRecvWSFrame(char* pData, int iLen,tcpSession* pTcpSession)
+void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 {
 	CWSPPkt req;
 	WS_FrameType type = req.GetFrameType((char*)pData, iLen);
-    shared_ptr<TDS_SESSION> pALC =  ds.getTDSSession(pTcpSession);
 	
 	switch (type)
 	{
@@ -41,7 +40,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen,tcpSession* pTcpSession)
 				if (pALC->m_alBuf.PopAllAs(APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC))
 				{
 					pALC->iALProto = pALC->m_alBuf.m_protocolType;
-					m_pALServer->OnRecvAppLayerPkt((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pTcpSession);
+					ds.OnRecvAppLayerPkt((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pALC);
 				}
 			}	
 		}
@@ -49,7 +48,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen,tcpSession* pTcpSession)
 	case WS_BINARY_FRAME://do no framing work when binary,used for video and transparent transfer
 		{
 			req.unpack((char*)pData, iLen);
-			m_pALServer->OnRecvAppLayerPkt((char*)req.payloadData, req.iPayloadLen, pTcpSession);
+			ds.OnRecvAppLayerPkt((char*)req.payloadData, req.iPayloadLen, pALC);
 		}
 		break;
 	case WS_PING_FRAME:
@@ -66,17 +65,17 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen,tcpSession* pTcpSession)
 	}
 }
 
-void wspSrv::OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, tcpSession* pCltInfo)
+void wspSrv::OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TDS_SESSION> pALC)
 {
 	pPab->PushStream(pData, iLen);
 	while (pPab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_WEBSOCKET))
 	{
-		OnRecvWSFrame(pPab->pkt, pPab->iPktLen, pCltInfo);
+		OnRecvWSFrame(pPab->pkt, pPab->iPktLen, pALC);
 	}
 
 	if (pPab->iStreamLen > 1*1024*1024)
 	{
-		string str = str::format("%s:%d",pCltInfo->strIP,pCltInfo->iPort);
+		string str = str::format("%s",pALC->ip);
 		LOG("[error]websocket parse error,can not get a pkt when length exceeded 10Mb,Addr=" + str);
 		pPab->Init();
 	}

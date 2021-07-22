@@ -7,17 +7,20 @@
 using namespace std;
 
 //连接信息
+class tcpClt;
 struct tcpSessionClt
 {
 	SOCKET sock;
 	std::string srvIP;//对端ip
 	int srvPort;//对端端口
-	void* pAppLayerClient;
+	void* pALSession;
+	tcpClt* tcpClt;
 
 	tcpSessionClt()
 	{
 		sock = 0;
-		pAppLayerClient = NULL;
+		pALSession = NULL;
+		tcpClt = NULL;
 	}
 };
 
@@ -35,6 +38,8 @@ class tcpClt
 public:
 	tcpClt(void);
 	~tcpClt(void);
+
+	tcpSessionClt m_session;
 
 	vector<char> heartbeat;
 

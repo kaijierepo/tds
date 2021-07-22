@@ -5,7 +5,7 @@
 #include "httplib.h"
 #include "data_server/dsClientStream.h"
 #include "mp.h"
-#include "tdspSrv.h"
+#include "rpcHandler.h"
 #include "video/remoteDesktopServer.h"
 #include <memory>
 #include "ioSrv.h"
@@ -67,10 +67,11 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-		p->sock = pCltInfo->sock;
 		p->boolConnected = true;
 		p->pTLServer = this;
 		p->pTcpSession = pCltInfo;
+		p->sock = pCltInfo->sock;
+		p->port = pCltInfo->iPort;
 		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
 		pCltInfo->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
@@ -98,28 +99,28 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 
 void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
-/*
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-		p->sock = pCltInfo->sock;
 		p->boolConnected = true;
 		p->pTLServer = this;
-		p->pTcpSession = pCltInfo;
-		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
-		pCltInfo->pALSession = p.get();
+		p->pTcpSessionClt = connInfo->tcpClt;
+		p->sock = connInfo->sock;
+		p->port = connInfo->srvPort;
+		p->ip = str::format("%s:%d", connInfo->srvIP, connInfo->srvPort);
+		connInfo->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
 		m_mutexTdsSessionList.unlock();
 	}
 	else
 	{
-		if (pCltInfo->pALSession)
+		if (connInfo->pALSession)
 		{
 			m_mutexTdsSessionList.lock();
 			for (int i = 0; i < m_vecTdsSession.size(); i++)
 			{
-				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
+				if (m_vecTdsSession.at(i)->pTcpSessionClt == connInfo->tcpClt)
 				{
 					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i]; \
 						p->onTcpDisconnect();
@@ -128,7 +129,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			}
 			m_mutexTdsSessionList.unlock();
 		}
-	}*/
+	}
 }
 
 int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
@@ -295,23 +296,14 @@ bool dataServer::run()
 	return  1;
 }
 
-bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, void* pCltInfo)
+bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
-	tcpSession* pClt = (tcpSession*)pCltInfo;
-	std::shared_ptr<TDS_SESSION> pALC = getTDSSession(pClt);
-	if (!pALC) {
-		string str = "dataServer::OnRecvAppLayerData: DSP_CLIENT_SESSION is null";
-		string strText = str.c_str();
-		LOG(strText);
-		return false;
-	}
-
 	stream2pkt* pab = &pALC->m_alBuf;
 	pab->PushStream(pData, iLen);
 	while (pab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC))
 	{
 		pALC->iALProto = pab->m_protocolType;
-		OnRecvAppLayerPkt(pab->pkt, pab->iPktLen, pClt);
+		OnRecvAppLayerPkt(pab->pkt, pab->iPktLen, pALC);
 	}
 	return true;
 }
@@ -382,6 +374,8 @@ int ThreadfMp4OverWS(std::shared_ptr<TDS_SESSION> pTestSess) {
 	return 0;
 }
 
+
+//此处加锁，连接断开现成可能会并发操作此列表
 shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 {
 	lock_guard<mutex> g(m_mutexTdsSessionList);
@@ -389,6 +383,20 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 	{
 		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
 		if(p->pTcpSession == pTcpSess)
+		{
+			return p;
+		}
+	}
+	return nullptr;
+}
+
+shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSessionClt* pTcpSess)
+{
+	lock_guard<mutex> g(m_mutexTdsSessionList);
+	for (int i = 0; i < m_vecTdsSession.size(); i++)
+	{
+		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
+		if (p->pTcpSessionClt == pTcpSess->tcpClt)
 		{
 			return p;
 		}
@@ -413,11 +421,21 @@ void logToWebsock(string text)
 	}
 }
 
-
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
+	OnRecvData_TCP(pData, iLen, tdsSession);
+}
 
+void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+{
+	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(connInfo);
+	OnRecvData_TCP(pData, iLen, tdsSession);
+}
+
+
+void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
 	char* ptmp = new char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);
 	memcpy(ptmp, pData, iLen);
@@ -457,8 +475,8 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						header += "\r\n";
 
 						string resp = header + html;
-						send(pTcpSess->sock, (char*)resp.data(), resp.length(),0);
-						closesocket(pTcpSess->sock);
+						send(tdsSession->sock, (char*)resp.data(), resp.length(),0);
+						closesocket(tdsSession->sock);
 						return;
 					}
 				}
@@ -478,7 +496,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 						LOG("bridge websocket to tcp %s fail", host.c_str());
 						delete tdsSession->pBridgedTcpClient;
 						tdsSession->pBridgedTcpClient = NULL;
-						closesocket(pTcpSess->sock);
+						closesocket(tdsSession->sock);
 						return;
 					}
 				}
@@ -486,10 +504,10 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 
 				CWSPPkt req;
 				std::string handshakeString = req.GetHandshakeString(strData);
-				send(pTcpSess->sock, handshakeString.c_str(), handshakeString.size(), 0);
+				send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
 
-				string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d",pTcpSess->strIP,pTcpSess->iPort);
+				string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d",tdsSession->ip,tdsSession->port);
 				LOG(szLog);
 
 				if (strData.find("rpc") != string::npos)
@@ -580,7 +598,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 			LOG(strText);
 			return;
 		}
-		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, pTcpSess);
+		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, tdsSession);
 		return;
 	}
 	//tds rpc over http
@@ -598,14 +616,16 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	{	
 		//智能协议检测
 		//傲华尔远程控制协议
-		if (pData[0] == '[' && pData[iLen - 1] == ']')
+		if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
+			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
+			)
 		{
 			onRecvIQ60Pkt(pData, iLen);
 		}
 		else
 		{
 			//tds rpc over tcp
-			OnRecvRawTdsRpc(pData, iLen, pTcpSess);
+			OnRecvRawTdsRpc(pData, iLen, tdsSession);
 		}
 		return;
 	}
@@ -613,10 +633,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 
 
 
-void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
-{
 
-}
 
 //handle http not using files in disk
 bool dataServer::httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt)
@@ -756,13 +773,10 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 }
 
 
-bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
+bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
-	tcpSession* pClt = (tcpSession*)pCltInfo;
-	SOCKET* pSocket = &pClt->sock;
 	DWORD dwDataLen = iLen;
 
-	std::shared_ptr<TDS_SESSION> pALC = getTDSSession(pClt);
 	if (pALC->bridgedLocalCom != "")//tds link is bridged to a local com
 	{
 		ioDev* p = ioSrv.getIODev(pALC->bridgedLocalCom);
@@ -787,10 +801,6 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, void* pCltInfo)
 			delete szJson;
 			szJson = NULL;
 		}
-
-
-		string ipid;
-		ipid=str::format("%s,%d", pClt->strIP, pClt->iPort);
 
 		string resp;
 		tdsSrv.handleRpcCall(req, resp, pALC);

@@ -10,6 +10,7 @@
 #include "wsProto.h"
 #include "tcpSrv.h"
 #include "stream2pkt.h"
+#include "tdsSession.h"
 
 /*websocket 服务器类*/
 
@@ -66,8 +67,8 @@ public:
 	~wspSrv();
 
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
-	void OnRecvWSFrame(char* pData, int iLen, tcpSession* pCltInfo);
-	void OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, tcpSession* pCltInfo);
+	void OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC);
+	void OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TDS_SESSION> pALC);
 	void OnOpen();
 	void OnClose();
 

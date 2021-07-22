@@ -22,6 +22,9 @@
     <Filter Include="xiaot">
       <UniqueIdentifier>{a0dd2bb4-1341-4a15-b383-58f388ed4508}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{5c421f04-c8d6-46ac-910e-159730a81355}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -57,7 +60,7 @@
     <ClCompile Include="..\src\data_server\ds.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\tdspSrv.cpp">
+    <ClCompile Include="..\src\data_server\rpcHandler.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tdsSession.cpp">
@@ -131,6 +134,9 @@
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\tcpRoute.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -178,7 +184,7 @@
     <ClInclude Include="..\src\data_server\ds.h">
       <Filter>data_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\tdspSrv.h">
+    <ClInclude Include="..\src\data_server\rpcHandler.h">
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tdsSession.h">
@@ -260,6 +266,9 @@
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
     <ClInclude Include="..\src\io_server\ioDev_iq60.h">
       <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\tcpRoute.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

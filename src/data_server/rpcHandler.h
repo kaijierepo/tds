@@ -1,5 +1,5 @@
 ﻿/*
-tds server
+rpc handler
 */
 #pragma once
 
@@ -20,12 +20,12 @@ enum TDS_ERROR_CODE{
 };
 
 
-class tdsServer : public CALServer
+class rpcHandler
 {
 public:
 
-	tdsServer();
-	virtual ~tdsServer();
+	rpcHandler();
+	virtual ~rpcHandler();
 	bool Init();
 
 	//json rpc implementation
@@ -74,4 +74,4 @@ public:
 
 	fp_rpcHandler m_pluginHandler;
 };
-extern tdsServer tdsSrv;
+extern rpcHandler tdsSrv;
