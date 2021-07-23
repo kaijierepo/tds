@@ -16,6 +16,7 @@
 #include "logger.h"
 #include "xiaot/xiaot.h"
 #include "ioGW_localSerial.h"
+#include "ioDev_iq60.h"
 
 rpcHandler tdsSrv;
 
@@ -226,6 +227,10 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	else if (method == "io.tree")
 	{
 		result = rpc_io_tree(params, error);
+	}
+	else if (method == "io.scanChannel")
+	{
+		result = rpc_io_scanChannel(params, error, pSession);
 	}
 	else if (method == "getStreamInfo")
 	{
@@ -610,6 +615,10 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	{
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
+
+		ioSrv.m_vecChild.clear();
+		g_mapIQ60.clear();
+		ioSrv.loadConf();
 		return "\"ok\"";
 	}
 	else if (type == "file")
@@ -697,6 +706,33 @@ string rpcHandler::rpc_io_tree(json params, string& error)
 	json j;
 	ioSrv.toJson(j);
 	return j.dump();
+}
+
+
+string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string ioAddr = params["ioAddr"];
+	ioDev* pDev = ioSrv.getIODev(ioAddr);
+	if (pDev && pDev->m_devType == "iq60-gateway")
+	{
+		ioDev_iq60* p = (ioDev_iq60*)pDev;
+		json chanList;
+		if (p->scanChannel(chanList))
+		{
+			json result;
+			result["ioAddr"] = p->m_addr;
+			result["channels"] = chanList;
+			return result.dump();
+		}
+	}
+
+	json jError = {
+				{"code", -32603},
+				{"message" , "Internal error"}
+	};
+	error = jError.dump();
+
+	return "";
 }
 
 

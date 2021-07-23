@@ -9,7 +9,12 @@ rpc handler
 #include "ds.h"
 #include "tdsSession.h"
 
+
 enum TDS_ERROR_CODE{
+	//json rpc 标准部分
+	TDS_ERROR_CODE = -32603,
+
+	//tds 部分
 	TEC_TAG_NOT_EXIST = -40001,
 	TEC_PARAM_MISSING = -40002,
 	TEC_WRONG_PARAM_FMT = -40003,
@@ -46,6 +51,7 @@ public:
 
 	////io service function
 	string rpc_io_tree(json params, string& error);
+	string rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	//serial function
 	string rpc_openCom(json params, string& error);
 	string rpc_getStreamInfo(json params, string& error);

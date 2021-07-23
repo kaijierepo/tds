@@ -10,7 +10,7 @@ using namespace httplib;
 map<string, ioDev_iq60*> g_mapIQ60;
 
 
-void onRecvIQ60Pkt(char* pData, int iLen)
+void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 {
 	char* p = new char[iLen + 1];
 	memset(p, 0, iLen + 1);
@@ -18,25 +18,34 @@ void onRecvIQ60Pkt(char* pData, int iLen)
 	string pkt = p;
 	delete p;
 
-	try {
-		json jpkt = json::parse(pkt);
+	vector<string> aryPkt;
+	str::split(aryPkt,pkt,"\n");
 
-		if (jpkt.is_array()&&jpkt.size()>=1)
-		{
-			//转发给对应设备
-			string id = jpkt[0];
-			if (g_mapIQ60.find(id) != g_mapIQ60.end())
-			{
-				ioDev_iq60* p = g_mapIQ60[id];
-				p->onRecvPkt(jpkt);
-			}	
-		}
-	}
-	catch(std::exception& e)
+	//分开粘连包
+	for (int i = 0; i < aryPkt.size(); i++)
 	{
-		string errorType = e.what();
-		string log = "pkt from iq60,json parse error. " + errorType;
-		LOG(log);
+		string pktData = aryPkt[i];
+		try {
+			json jpkt = json::parse(pktData);
+
+			if (jpkt.is_array() && jpkt.size() >= 1)
+			{
+				//转发给对应设备
+				string id = jpkt[0];
+				if (g_mapIQ60.find(id) != g_mapIQ60.end())
+				{
+					ioDev_iq60* p = g_mapIQ60[id];
+					p->ioSession = pALC;
+					p->onRecvPkt(jpkt);
+				}
+			}
+		}
+		catch (std::exception& e)
+		{
+			string errorType = e.what();
+			string log = "pkt from iq60,json parse error. " + errorType;
+			LOG(log);
+		}
 	}
 }
 
@@ -59,6 +68,16 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 	if (jLast.is_string())
 	{
 		string cmd = jLast.get<string>();
+
+		if (cmd.find(currentCmd)!=string::npos)
+		{
+			currentResp.push_back(jPkt);
+			if (cmd.find("-") == string::npos) //结束包
+			{
+				getResponse = true;
+			}
+			return true;
+		}
 		/*
 		*r  【读】数据
 		请求：
@@ -78,23 +97,65 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 		{
 
 		}
+		/*
+		2、【搜】对象，hs指令：
+		请求：
+			[版本, 验证TOKEN, 物云名, hs指令]
+			[2, "IQK", "C1201020756", "hs"]
+		返回：
+			[物云名, 点1, 点2, 点3, hs指令]]
+			["C1201020756", "AI9", "AO8", "BI1", "RI3", "FR1", "FA2", "BO1", "RH496", "hs"]
+		*/
+		else if (cmd == "hs")
+		{
+			
+		}
+		/*
+		3、【读】对象，hr指令：
+		请求：
+			[版本, 验证TOKEN, 物云名, hr指令, 点1, 点2, 点3]
+			[2, "IQK", "C1201020756", "hr", "BO1", "AI9"]
+		返回：["C1201020756",
+		      { "Name":"BO1","COV" : 1,"Enable" : 1,"ValueType" : "bool","RW" : "rw","Unit" : "关:0,开:1" },
+			  { "Name":"AI9","DisplayName" : "CPU温度","COV" : 0.5,"Enable" : 1,"ValueType" : "float","RW" : "ro","Unit" : "℃" },
+			  "hr"]
+			[物云名, { 键1:值,键2 : 值,键3 : 值 }, { 键1:值,键2 : 值,键3 : 值 }, hr指令]
+		*/
+		else if (cmd == "hr")
+		{
+			
+		}
 	}
 	else//主动数据上报命令
 	{
 		for (int i = 1; i < jPkt.size();i++)
 		{
+			string valType = "real";
 			json point = jPkt[i];
 			string name = point[0].get<string>();
-			float val = point[1].get<float>();
+			float fVal;
+			bool bVal;
+			if (name.find("B") == 0)
+			{
+				valType = "bool";
+				bVal = point[1].get<int>() == 1?true:false;
+			}
+			else
+			{
+				fVal = point[1].get<float>();
+			}
+			
 			int time = point[2].get<int>();
 			int status = point[3].get<int>();
 
 			ioDev* pChild = getChild(name);
-			if (pChild->m_level == "channel")
+			if (pChild && pChild->m_level == "channel")
 			{
 				ioChannel* pC = (ioChannel*)pChild;
-				pC->inputVal(val);
-				return true;
+				if(valType == "real")
+					pC->inputVal(fVal);
+				else 
+					pC->inputVal(bVal);
 			}
 		}
 	}
@@ -103,5 +164,112 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 
 bool ioDev_iq60::getCurrentVal()
 {
+	return false;
+}
+
+bool ioDev_iq60::waitResponse(int timeout)
+{
+	while (timeout > 0)
+	{
+		Sleep(50);
+		timeout -= 50;
+		if (getResponse)
+			return true;
+	}
+	return false;
+}
+
+bool ioDev_iq60::scanChannel(json& chanList)
+{
+	if (ioSession == NULL)
+		return false;
+
+	currentCmd = "hs";
+	currentResp.clear();
+	getResponse = false;
+
+	string req = "[2,\"IQK\",\"" + m_addr + "\",\"hs\"]";
+	ioSession->send((char*)req.c_str(), req.length());
+
+
+	if (waitResponse(1000))
+	{
+		for (int i = 0; i < currentResp.size(); i++)
+		{
+			json jsubPkt = currentResp.at(i);
+			for (int j = 1; j < jsubPkt.size() - 1; j++)
+			{
+				string ptName = jsubPkt[j];
+				json jChan;
+				jChan["addr"] = ptName;
+				chanList.push_back(jChan);
+			}
+		}
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+
+	/*
+	if (waitResponse(1000))
+	{
+		json req;
+		req.push_back(2);
+		req.push_back("IQK");
+		req.push_back(m_addr);
+		req.push_back("hr");
+		for (int i = 0; i < currentResp.size(); i++)
+		{
+			json jsubPkt = currentResp.at(i);
+			for (int j = 1; j < jsubPkt.size() - 1; j++)
+			{
+				req.push_back(jsubPkt[i]);
+			}
+		}
+		string strReq = req.dump();
+
+		getResponse = false;
+		currentResp.clear();
+		currentCmd = "hr";
+
+		ioSession->send((char*)strReq.c_str(), strReq.length());
+	}
+	else
+	{
+		return false;
+	}
+
+	
+	if (waitResponse(5000))
+	{
+		for (int i = 0; i < currentResp.size(); i++)
+		{
+			json jsubPkt = currentResp.at(i);
+			for (int j = 1; j < jsubPkt.size() - 1; j++)
+			{
+				json jPt = jsubPkt[j];
+				json jChan;
+				jChan["addr"] = jPt["name"];
+				string valType = jPt["ValueType"].get<string>();
+				if (valType == "float")
+					jChan["valType"] = "real";
+				else if (valType == "bool")
+					jChan["valType"] = "bool";
+				chanList.push_back(jChan);
+			}
+		}
+
+		currentResp.clear();
+		currentCmd = "";
+		return true;
+	}
+	else
+	{
+		return false;
+	}*/
+
 	return false;
 }

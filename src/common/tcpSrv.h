@@ -21,6 +21,8 @@ struct tcpSession
 	void* pTcpServer;  
 	void* pALSession; 
 
+	bool bEnableActivityCheck; //是否进行活动检测
+
 	SYSTEMTIME stLastActive;
 
 	tcpSession()
@@ -35,6 +37,7 @@ struct tcpSession
 		iRecvCount = 0;
 		memset(strIP, 0, 16);
 		iKeepAliveTimeout = 0;
+		bEnableActivityCheck = true;
 	}
 
 	tcpSession* GenerateClienInfo() {

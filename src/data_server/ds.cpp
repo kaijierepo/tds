@@ -103,7 +103,6 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 		p->boolConnected = true;
-		p->pTLServer = this;
 		p->pTcpSessionClt = connInfo->tcpClt;
 		p->sock = connInfo->sock;
 		p->port = connInfo->srvPort;
@@ -459,6 +458,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 					string portNum = strData.substr(pos,pos1-pos);
 					ioDev* p = ioSrv.getIODev(portNum);
 					tdsSession->type = TDS_SESSION_TYPE::tunnel;
+					tdsSession->setActivityCheck(false);
 					if (p)
 					{
 						tdsSession->bridgedLocalCom = portNum;
@@ -487,6 +487,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 					string host = strData.substr(pos+4, pos1 - (pos+4));
 					tdsSession->pBridgedTcpClient = new tcpClt();
 					tdsSession->type = TDS_SESSION_TYPE::tunnel;
+					tdsSession->setActivityCheck(false);
 					if(tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
 					{
 						LOG("bridge websocket to tcp %s success", host.c_str());
@@ -620,7 +621,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
 			)
 		{
-			onRecvIQ60Pkt(pData, iLen);
+			onRecvIQ60Pkt(pData, iLen, tdsSession);
 		}
 		else
 		{

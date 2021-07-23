@@ -53,8 +53,8 @@ public:
 	std::shared_ptr<TDS_SESSION> pTdsSession;
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
-
-	
+	//长时间阻塞函数，启动线程调用
+	virtual bool scanChannel(json& chanList) { return false; };
 
 
 	void AutoDataLink(MO* mo);

@@ -57,7 +57,7 @@ public:
 	bool bMainWnd; //为true时，该连接断开就退出程序
 
 	void onTcpDisconnect();
-
+	void setActivityCheck(bool bEnable);
 	class CBridgedTcpClientHandler:public ITcpClientCallBack {
 	public:
 		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);

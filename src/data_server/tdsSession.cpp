@@ -36,9 +36,11 @@ string TDS_SESSION::GetClientIp()
 
  int TDS_SESSION::send(char* p,int len){
      std::lock_guard<std::mutex> gd(m_mutex);
-     if(pTLServer == nullptr) // means lower layer has been disconneted
-        return false; 
-     return pTLServer->SendAppLayerData(p, len, this);
+     if(pTLServer) // means lower layer has been disconneted
+        return pTLServer->SendAppLayerData(p, len, this);
+     if (pTcpSessionClt)
+         return pTcpSessionClt->SendData(p, len);
+     return 0;
  }
 
  void TDS_SESSION::CBridgedTcpClientHandler::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
@@ -69,4 +71,12 @@ string TDS_SESSION::GetClientIp()
          streamMp->m_streamPusher(false, NULL);
      }
      streamMp = NULL;
+ }
+
+ void TDS_SESSION::setActivityCheck(bool bEnable)
+ {
+     if (pTcpSession)
+     {
+         pTcpSession->bEnableActivityCheck = bEnable;
+     }
  }
