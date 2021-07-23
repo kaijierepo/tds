@@ -420,10 +420,19 @@ void logToWebsock(string text)
 	}
 }
 
+void tdsSessionProcessThread(char* pData, int iLen,std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	ds.OnRecvData_TCP(pData, iLen, tdsSession);
+	delete pData;
+}
+
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
-	OnRecvData_TCP(pData, iLen, tdsSession);
+	char* p = new char[iLen];
+	memcpy(p, pData, iLen);
+	thread t(tdsSessionProcessThread, p, iLen, tdsSession);
+	t.detach();
 }
 
 void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)

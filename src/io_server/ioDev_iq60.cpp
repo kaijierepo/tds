@@ -192,7 +192,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 	ioSession->send((char*)req.c_str(), req.length());
 
 
-	if (waitResponse(1000))
+	if (waitResponse(5000))
 	{
 		for (int i = 0; i < currentResp.size(); i++)
 		{
