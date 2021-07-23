@@ -42,6 +42,14 @@ bool MP::loadConf(json& conf)
 	{
 		m_customValType = conf["custom_val_type"].get<string>();
 	}
+
+	if (conf["save_interval"] != nullptr)
+	{
+		json jsi = conf["save_interval"];
+		m_saveInterval.hour = jsi["hour"].get<int>();
+		m_saveInterval.minute = jsi["minute"].get<int>();
+		m_saveInterval.second = jsi["second"].get<int>();
+	}
 		
 	return false;
 }

@@ -321,7 +321,7 @@ void httpReqHandleThread(httplib::detail::dsClientStream* bs, tcpSession* pCltIn
 	SOCKET sock = pCltInfo->sock;
 	bool close = false;
 	httpSrv.process_request(*bs, true, close,nullptr);
-	Sleep(3000);
+	Sleep(10000);//此处不能过早关闭，httpSrv内部启动了线程发送文件，必须等文件发完。
 	closesocket(sock);
 	delete bs;
 }
