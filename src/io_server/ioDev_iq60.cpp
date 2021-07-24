@@ -133,7 +133,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			string valType = "real";
 			json point = jPkt[i];
 			string name = point[0].get<string>();
-			float fVal;
+			double dbVal;
 			bool bVal;
 			if (name.find("B") == 0)
 			{
@@ -142,7 +142,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			}
 			else
 			{
-				fVal = point[1].get<float>();
+				dbVal = point[1].get<double>();
 			}
 			
 			int time = point[2].get<int>();
@@ -153,7 +153,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			{
 				ioChannel* pC = (ioChannel*)pChild;
 				if(valType == "real")
-					pC->inputVal(fVal);
+					pC->inputVal(dbVal);
 				else 
 					pC->inputVal(bVal);
 			}

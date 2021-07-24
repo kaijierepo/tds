@@ -35,7 +35,6 @@ string TDS_SESSION::GetClientIp()
 }
 
  int TDS_SESSION::send(char* p,int len){
-     std::lock_guard<std::mutex> gd(m_mutex);
      if(pTLServer) // means lower layer has been disconneted
         return pTLServer->SendAppLayerData(p, len, this);
      if (pTcpSessionClt)

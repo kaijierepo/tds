@@ -349,6 +349,14 @@ namespace timeopt {
 		return timestamp;
 	}
 
+	void setAsTimeOrg(SYSTEMTIME& st)
+	{
+		memset(&st, 0, sizeof(SYSTEMTIME));
+		st.wYear = 1970;
+		st.wMonth = 1;
+		st.wDay = 1;
+	}
+
 
 
 	string nowStr(bool enableMS)

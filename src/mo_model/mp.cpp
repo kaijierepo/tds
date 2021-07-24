@@ -14,8 +14,8 @@ MP::MP()
 {
 	m_moType = "mp";
 	m_physicalType = PHYSICAL_TYPE::unknown;
-	GetLocalTime(&m_lastUpdateTime);
-	GetLocalTime(&m_lastSaveTime);
+	timeopt::setAsTimeOrg(m_lastUpdateTime);
+	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
 	m_B = 0;
 #ifdef ENABLE_FFMPEG
@@ -150,11 +150,11 @@ string MP::getMpType()
 	// as a convention , a real type MP's name is named by data type.
 	if (m_valType == TDS::DATA_TYPE::switching)
 	{
-		mpType = TDS::DATA_TYPE::switching + "." + m_strName;
+		mpType = m_strName;
 	}
 	else if (m_valType == TDS::DATA_TYPE::real)
 	{
-		mpType = TDS::DATA_TYPE::real + "." + m_strName;
+		mpType = m_strName;
 	}
 	else if (m_valType == TDS::DATA_TYPE::json)
 	{

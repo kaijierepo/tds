@@ -102,8 +102,9 @@ void project::getMpTypeList(json& mpTypeList)
 		mapTypes[mpType] = mpType;
 
 		json oneType;
-		oneType.push_back(mpType);
-		oneType.push_back(typeLabel);
+		oneType["valType"] = pmp->m_valType;
+		oneType["type"] = mpType;
+		oneType["label"] = typeLabel;
 		mpTypeList.push_back(oneType);
 	}
 }

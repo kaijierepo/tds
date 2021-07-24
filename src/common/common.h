@@ -46,6 +46,7 @@ namespace timeopt {
 	int CalcTimePassSecond(SYSTEMTIME lastTime);
 	string nowStr(bool enableMS=false);
 	time_t getTick();  // unix time in milli second
+	void setAsTimeOrg(SYSTEMTIME& st);
 }
 
 

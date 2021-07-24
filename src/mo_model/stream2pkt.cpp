@@ -5,7 +5,6 @@
 
 void stream2pkt::Resize(char*& pData, int& iLen, int iNewSize)
 {
-	//����
 	char* pNewData = new char[iNewSize];
 
 	if (pData == NULL || iLen == 0)
@@ -18,7 +17,6 @@ void stream2pkt::Resize(char*& pData, int& iLen, int iNewSize)
 		delete pData;
 	}
 
-	//�޸Ļ��
 	pData = pNewData;
 	iLen = iNewSize;
 }

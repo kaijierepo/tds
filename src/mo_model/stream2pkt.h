@@ -1,7 +1,6 @@
 #pragma once
 #include "tdscore.h"
 
-
 class stream2pkt{
 public:
 	void Init() {
@@ -43,7 +42,6 @@ public:
 		tcpStreamData = NULL;
 		Init();
 	}
-
 
 	char* tcpStreamData;
 	int iStreaBuffSize;

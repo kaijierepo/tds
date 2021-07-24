@@ -422,6 +422,7 @@ void logToWebsock(string text)
 
 void tdsSessionProcessThread(char* pData, int iLen,std::shared_ptr<TDS_SESSION> tdsSession)
 {
+	std::lock_guard<mutex> g(tdsSession->m_mutex);
 	ds.OnRecvData_TCP(pData, iLen, tdsSession);
 	delete pData;
 }
