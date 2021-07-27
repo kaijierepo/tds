@@ -16,7 +16,7 @@ public:
 
 	std::shared_ptr<TDS_SESSION> ioSession;
 	string currentCmd;
-	vector<json> currentResp; //分包组包
+	vector<json> currentResp; //鍒嗗寘缁勫寘
 	bool getResponse;
 };
 

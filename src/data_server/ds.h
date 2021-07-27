@@ -24,6 +24,8 @@ public:
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 
+	void onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
+
 
 
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) override;

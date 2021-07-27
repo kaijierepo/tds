@@ -36,6 +36,12 @@ public:
 };
 
 
+struct TCP_DATA_BUFF {
+	char* pData;
+	int iLen;
+};
+
+
 class TDS_SESSION : public DS_TRANS_LAYER_SESSION{
 public:
     TDS_SESSION();
@@ -55,6 +61,7 @@ public:
 	MP* streamMp; //tds拉流的源
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
+	queue<TCP_DATA_BUFF> dataBuff;
 
 	void onTcpDisconnect();
 	void setActivityCheck(bool bEnable);

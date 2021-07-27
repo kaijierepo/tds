@@ -207,46 +207,49 @@ void activeSessionThread()
 
 bool dataServer::run()
 {
+	//if db folder is not exist. open will create an empty folder
 	db.Open(tds->conf->dbPath,prj.m_strName);
 
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
 	m_wspSrv.m_pALServer = this;
 
-	
+	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	initHttpSrv(httpSrv);
 	//serve project specified ui through http.both are root path. specified ui path has higher priority
 	string prjUI = tds->conf->projectConfPath + "\\ui";
 	if(fs::fileExist(prjUI))
 	{
-		httpSrv.set_mount_point("/", +prjUI.c_str());
-		LOG("[HTTP Server] root at " + prjUI + "[project specified ui]");
+		string asc_prjUI = charCodec::utf8toAnsi(prjUI);
+		httpSrv.set_mount_point("/",asc_prjUI.c_str());
+		LOG("[HTTP服务器]根目录位于: " + prjUI + "[project specified ui]");
 	}
 	//custom tds ver specified ui through http
 	string customUI = fs::appPath() + "\\ui";
 	if (fs::fileExist(customUI))
 	{
-		httpSrv.set_mount_point("/", + customUI.c_str());
-		LOG("[HTTP Server] root at " + customUI + "[custom software ui]");
+		string asc_customUI = charCodec::utf8toAnsi(customUI);
+		httpSrv.set_mount_point("/", + asc_customUI.c_str());
+		LOG("[HTTP服务器]根目录位于: " + customUI + "[custom software ui]");
 	}
 	//serve common ui through http
-	string path = fs::appPath() + "\\tdskit\\ui";
-	auto ret = httpSrv.set_mount_point("/", path.c_str());
-	if (!ret) {
-		LOG("[warn]" + path + " is not exist,get a complete software package");
-	}
-	else
-	{
-		LOG("[HTTP Server] root at " + path + "[tdskit common ui]");
-	}
+	//string path = fs::appPath() + "\\tdskit\\ui";
+	//auto ret = httpSrv.set_mount_point("/", path.c_str());
+	//if (!ret) {
+	//	LOG("[warn]" + path + " 路径不存在,get a complete software package");
+	//}
+	//else
+	//{
+	//	LOG("[HTTP Server] root at " + path + "[tdskit common ui]");
+	//}
 	//serve db files through http
-	ret = httpSrv.set_mount_point("/db/", db.m_path.c_str());
+	auto ret = httpSrv.set_mount_point("/db/", db.m_path.c_str());
 	if (!ret) {
-		LOG("[error][Data Base] at " + db.m_path + " is not exist,check your configuration.");
+		LOG("[error][数据库]路径 " + db.m_path + " 不存在,请检查配置");
 	}
 	else
 	{
-		LOG("[Data Base] at " + db.m_path);
+		LOG("[数据库]路径 " + db.m_path);
 	}
 
 
@@ -281,7 +284,7 @@ bool dataServer::run()
 			exit(0);
 		}
 	}
-	LOG("[TDS Server] at port " + str::fromInt(tryPort));
+	LOG("[TDS服务] 位于端口:" + str::fromInt(tryPort) + "   本机浏览器输入 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
 
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
@@ -420,19 +423,41 @@ void logToWebsock(string text)
 	}
 }
 
-void tdsSessionProcessThread(char* pData, int iLen,std::shared_ptr<TDS_SESSION> tdsSession)
+/*
+生产者-临时消费者模式  
+tdsSessionProcessThread  为消费者，临时线程
+OnRecvData_TCPServer 为生产者，常驻线程
+tdsSession->m_mutex 为任务队列
+
+此处使用队列的原因。
+不能直接将OnRecvData_TCPServer收到的数据多线程调用tdsSessionProcessThread去处理
+因为可能网络中一个大数据包可能会被分包为多次回调，触发多个tdsSessionProcessThread之后，
+多线程可能不按照数据流本身的先后顺序执行处理，导致数据包分片数据错误从而导致处理出错
+*/
+
+void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	std::lock_guard<mutex> g(tdsSession->m_mutex);
-	ds.OnRecvData_TCP(pData, iLen, tdsSession);
-	delete pData;
+	while (tdsSession->dataBuff.size() > 0)
+	{
+		TCP_DATA_BUFF tdb = tdsSession->dataBuff.front();
+		tdsSession->dataBuff.pop();
+		ds.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
+		delete tdb.pData;
+	}
 }
 
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
-	char* p = new char[iLen];
-	memcpy(p, pData, iLen);
-	thread t(tdsSessionProcessThread, p, iLen, tdsSession);
+	std::lock_guard<mutex> g(tdsSession->m_mutex);
+	TCP_DATA_BUFF tdb;
+	tdb.pData = new char[iLen];
+	tdb.iLen = iLen;
+	memcpy(tdb.pData, pData, iLen);
+	tdsSession->dataBuff.push(tdb);
+	//调用临时消费者
+	thread t(tdsSessionProcessThread, tdsSession);
 	t.detach();
 }
 
@@ -442,90 +467,71 @@ void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* conn
 	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
-
-void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	char* ptmp = new char[iLen + 1];
-	memset(ptmp, 0, iLen + 1);
-	memcpy(ptmp, pData, iLen);
-	string strData = ptmp;
-	delete ptmp;
+	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip, tdsSession->port);
+	LOG(szLog);
 
-	//check transport layer protocol first
-	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
-	//if applayer protocol is HTTP,transport layer is specified as none
-	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
+	if (strData.find("COM") != string::npos)
 	{
-		if(isHttpPkt(strData))
+		int pos = strData.find("COM");
+		int pos1 = strData.find(" ", pos);
+		string portNum = strData.substr(pos, pos1 - pos);
+		ioDev* p = ioSrv.getIODev(portNum);
+		tdsSession->type = TDS_SESSION_TYPE::tunnel;
+		tdsSession->setActivityCheck(false);
+		if (p)
 		{
-			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
-			if (CWSPPkt::isHandShake(strData))
-			{
-				if (strData.find("COM") != string::npos)
-				{
-					int pos = strData.find("COM");
-					int pos1 = strData.find(" ", pos);
-					string portNum = strData.substr(pos,pos1-pos);
-					ioDev* p = ioSrv.getIODev(portNum);
-					tdsSession->type = TDS_SESSION_TYPE::tunnel;
-					tdsSession->setActivityCheck(false);
-					if (p)
-					{
-						tdsSession->bridgedLocalCom = portNum;
-						p->pTdsSession = tdsSession;
-					}
-					else
-					{
-						string html = portNum + " is not in the opened port list,please open it first";
-						std::string header = "HTTP/1.1 200 OK\r\n";
-						header += "Content-Type: text/html; charset=utf-8\r\n";
-						header += "Accept-Ranges: none\r\n"; // no support for partial requests
-						header += "Cache-Control: no-store, must-revalidate\r\n";
-						header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
-						header += "\r\n";
+			tdsSession->bridgedLocalCom = portNum;
+			p->pTdsSession = tdsSession;
+		}
+		else
+		{
+			string html = portNum + " is not in the opened port list,please open it first";
+			std::string header = "HTTP/1.1 200 OK\r\n";
+			header += "Content-Type: text/html; charset=utf-8\r\n";
+			header += "Accept-Ranges: none\r\n"; // no support for partial requests
+			header += "Cache-Control: no-store, must-revalidate\r\n";
+			header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
+			header += "\r\n";
 
-						string resp = header + html;
-						send(tdsSession->sock, (char*)resp.data(), resp.length(),0);
-						closesocket(tdsSession->sock);
-						return;
-					}
-				}
-				else if (strData.find("tcp") != string::npos)
-				{
-					int pos = strData.find("tcp");
-					int pos1 = strData.find(" ", pos);
-					string host = strData.substr(pos+4, pos1 - (pos+4));
-					tdsSession->pBridgedTcpClient = new tcpClt();
-					tdsSession->type = TDS_SESSION_TYPE::tunnel;
-					tdsSession->setActivityCheck(false);
-					if(tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
-					{
-						LOG("bridge websocket to tcp %s success", host.c_str());
-					}
-					else
-					{
-						LOG("bridge websocket to tcp %s fail", host.c_str());
-						delete tdsSession->pBridgedTcpClient;
-						tdsSession->pBridgedTcpClient = NULL;
-						closesocket(tdsSession->sock);
-						return;
-					}
-				}
+			string resp = header + html;
+			send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
+	else if (strData.find("tcp") != string::npos)
+	{
+		int pos = strData.find("tcp");
+		int pos1 = strData.find(" ", pos);
+		string host = strData.substr(pos + 4, pos1 - (pos + 4));
+		tdsSession->pBridgedTcpClient = new tcpClt();
+		tdsSession->type = TDS_SESSION_TYPE::tunnel;
+		tdsSession->setActivityCheck(false);
+		if (tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
+		{
+			LOG("bridge websocket to tcp %s success", host.c_str());
+		}
+		else
+		{
+			LOG("bridge websocket to tcp %s fail", host.c_str());
+			delete tdsSession->pBridgedTcpClient;
+			tdsSession->pBridgedTcpClient = NULL;
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
 
+	CWSPPkt req;
+	std::string handshakeString = req.GetHandshakeString(strData);
+	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 
-				CWSPPkt req;
-				std::string handshakeString = req.GetHandshakeString(strData);
-				send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
-				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
-
-				string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d",tdsSession->ip,tdsSession->port);
-				LOG(szLog);
-
-				if (strData.find("rpc") != string::npos)
-				{
-					if (tds->conf->debugMode)
-					{
-						string s = R"(
+	if (strData.find("rpc") != string::npos)
+	{
+		if (tds->conf->debugMode)
+		{
+			string s = R"(
 						{
 							"jsonrpc": "2.0", 
 							"method": "notify.close_heartbeat", 
@@ -534,67 +540,95 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 							"id": null
 						}
 					)";
-						tdsSession->send((char*)s.data(), s.length());
-					}
-					tdsSession->type = TDS_SESSION_TYPE::rpc;
-				}
-				else if (strData.find("/log") != string::npos)
-				{
-					logTdsSession = tdsSession;
-					logger.logOutput = logToWebsock;
-					tdsSession->type = TDS_SESSION_TYPE::log;
-				}
-				else if (strData.find("teststream") != string::npos && !bTestStream)
-				{
-					tdsSession->type = TDS_SESSION_TYPE::video;
-					std::thread t(ThreadfMp4OverWS,tdsSession);
-					t.detach();
-				}
-				else if (strData.find("desktop") != string::npos)
-				{
-					tdsSession->type = TDS_SESSION_TYPE::video;
+			tdsSession->send((char*)s.data(), s.length());
+		}
+		tdsSession->type = TDS_SESSION_TYPE::rpc;
+	}
+	else if (strData.find("/log") != string::npos)
+	{
+		logTdsSession = tdsSession;
+		logger.logOutput = logToWebsock;
+		tdsSession->type = TDS_SESSION_TYPE::log;
+	}
+	else if (strData.find("teststream") != string::npos && !bTestStream)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::video;
+		std::thread t(ThreadfMp4OverWS, tdsSession);
+		t.detach();
+	}
+	else if (strData.find("desktop") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::video;
 #ifdef ENABLE_FFMPEG
-					rds.startStream(tdsSession);
+		rds.startStream(tdsSession);
 #endif
-				}
-				else if (strData.find("video") != string::npos)
-				{
-					int pos = strData.find("video");
-					pos = strData.find('/', pos);
-					if (pos != string::npos)
-					{
-						int pos1 = strData.find(' ', pos);
-						string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流 ; rgba/机房1.码流
-						string tag;
-						string fmt = "vp9"; //default format
-						if (tagAndFmt.find("rgba") != string::npos)
-						{
-							tag = tagAndFmt.substr(5, tagAndFmt.length() - 5);
-							fmt = "rgba";
-						}
-						else//fmt is not specified
-						{
-							tag = tagAndFmt;
-						}
-						tag = httplib::detail::decode_url(tag,false);
-						MP* p = prj.getMp(tag);
-						if (p && p->m_valType == "video")
-						{
-							//p->m_streamPusher(true, p);
-							tdsSession->streamMp = p;
-							tdsSession->type = TDS_SESSION_TYPE::video;
-							tdsSession->streamFmt = fmt;
-							p->m_streamPuller = tdsSession;
-						}
-					}
-				}
-				
-				return;
+	}
+	else if (strData.find("video") != string::npos)
+	{
+		int pos = strData.find("video");
+		pos = strData.find('/', pos);
+		if (pos != string::npos)
+		{
+			int pos1 = strData.find(' ', pos);
+			string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流 ; rgba/机房1.码流
+			string tag;
+			string fmt = "vp9"; //default format
+			if (tagAndFmt.find("rgba") != string::npos)
+			{
+				tag = tagAndFmt.substr(5, tagAndFmt.length() - 5);
+				fmt = "rgba";
+			}
+			else//fmt is not specified
+			{
+				tag = tagAndFmt;
+			}
+			tag = httplib::detail::decode_url(tag, false);
+			MP* p = prj.getMp(tag);
+			if (p && p->m_valType == "video")
+			{
+				//p->m_streamPusher(true, p);
+				tdsSession->streamMp = p;
+				tdsSession->type = TDS_SESSION_TYPE::video;
+				tdsSession->streamFmt = fmt;
+				p->m_streamPuller = tdsSession;
+			}
+		}
+	}
+}
+
+
+void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	//if it's the first time recv data from a connection. check transport layer protocol first
+	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
+	//if applayer protocol is HTTP,transport layer is specified as none
+	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
+	{
+		char* ptmp = new char[iLen + 1];
+		memset(ptmp, 0, iLen + 1);
+		memcpy(ptmp, pData, iLen);
+		string strData = ptmp;
+		delete ptmp;
+
+		//parse transfer layer protocol
+		if(isHttpPkt(strData))
+		{
+			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
+			if (CWSPPkt::isHandShake(strData))
+			{
+				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
 			}
 		}
 		else
 		{
 			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
+		}
+
+		//if websocket. deal the first handshake pkt 
+		if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
+		{
+			onWebsocketSessionOpen(strData, tdsSession);
+			return;
 		}
 	}
 

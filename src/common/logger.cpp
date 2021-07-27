@@ -112,11 +112,11 @@ string Clogger::logInternal(string info)
 	std::lock_guard<mutex> lockGuard(m_lock);
 	if (!dirCreated)
 	{
-		string strLogDir = fs::appPath() + "\\log";
-		DWORD dwAttr = ::GetFileAttributes(strLogDir.c_str());
+		wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
+		DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
 		if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
 		{
-			::CreateDirectory(strLogDir.c_str(), NULL);
+			::CreateDirectoryW(strLogDir.c_str(), NULL);
 		}
 		dirCreated = true;
 	}
@@ -124,14 +124,7 @@ string Clogger::logInternal(string info)
 	//save to log file
 	string strFile = formatStr("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
 	strFile = fs::appPath() + "\\log\\" + strFile + ".txt";
-	FILE* fp = fopen(strFile.c_str(), "ab");
-	if (fp)
-	{
-		fseek(fp, 0L, SEEK_END);
-		fwrite(info.c_str(), 1, info.length(), fp);
-		fwrite("\r\n", 1, 2, fp);
-		fclose(fp);
-	}
+	fs::appendFile(strFile, info + "\r\n");
 
 	return logline;
 }

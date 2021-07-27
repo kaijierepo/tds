@@ -65,7 +65,7 @@ void tdsConfig::loadConf()
 	if (projectConfPath == "")
 		projectConfPath = fs::appPath() + "\\conf";
 	if (port == 0)
-		port = 80;
+		port = 666;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "\\db";
 	if (title == "")

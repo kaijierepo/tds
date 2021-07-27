@@ -15,8 +15,8 @@ using json = nlohmann::json;
 using namespace std;
 
 
-//Ò»Ğ©±àÒëÎÊÌâ
+//ä¸€äº›ç¼–è¯‘é—®é¢˜
 /*
-ºê¶¨Òå _HAS_STD_BYTE=0   windows sdkÓĞbyteÀàĞÍ£¬ c++17ÓĞstd::byte£¬½â¾ö¶¨Òå³åÍ»ÎÊÌâ
+å®å®šä¹‰ _HAS_STD_BYTE=0   windows sdkæœ‰byteç±»å‹ï¼Œ c++17æœ‰std::byteï¼Œè§£å†³å®šä¹‰å†²çªé—®é¢˜
 
 */

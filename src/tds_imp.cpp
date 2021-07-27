@@ -21,8 +21,8 @@ string tdsEncoding = "utf8";
 #include <FCNTL.H>
 void createConsole()
 {
-	BOOL bRet = AllocConsole(); //´ò¿ª¿ØÖÆÌ¨´°¿ÚÒÔÏÔÊ¾µ÷ÊÔÐÅÏ¢
-	SetConsoleTitleA("TDS Console"); //ÉèÖÃ±êÌâ
+	BOOL bRet = AllocConsole(); //æ‰“å¼€æŽ§åˆ¶å°çª—å£ä»¥æ˜¾ç¤ºè°ƒè¯•ä¿¡æ¯
+	SetConsoleTitleA("TDS Console"); //è®¾ç½®æ ‡é¢˜
 	freopen("CONOUT$", "w+t", stdout);
 	freopen("CONIN$", "r+t", stdin);
 }
@@ -38,7 +38,7 @@ void showDevToolCallback(wkeWebView webView, void* param)
 
 }
 
-// ÏûÏ¢´¦Àíº¯ÊýµÄÊµÏÖ
+// æ¶ˆæ¯å¤„ç†å‡½æ•°çš„å®žçŽ°
 LRESULT CALLBACK WindowProc_tdsUI(
 	_In_  HWND hwnd,
 	_In_  UINT uMsg,
@@ -79,7 +79,7 @@ LRESULT CALLBACK WindowProc_tdsUI(
 
 void createMiniblinkWnd()
 {
-	//×¢²á´°¿ÚÀà
+	//æ³¨å†Œçª—å£ç±»
 	HINSTANCE hInstance;
 	hInstance = GetModuleHandle(NULL);
 	WNDCLASS tdsUIWnd;
@@ -101,27 +101,27 @@ void createMiniblinkWnd()
 	 w = 960;
 	 h = 720;
 
-	//´´½¨´°¿Ú
+	//åˆ›å»ºçª—å£
 	string title = tds->conf->title;
 
 	RECT rc;
 	SetRect(&rc, 0, 0, w, h);
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
-	//wkeEnableHighDPISupport();//Õâ¾ä»°Òª·ÅÔÚcreateWindowÖ®Ç°£¬·ñÔò»áµ¼ÖÂ±êÌâÀ¸µÄÍ¼±ê²»ÏÔÊ¾¡£Ô­Òò²»Öª
+	//wkeEnableHighDPISupport();//è¿™å¥è¯è¦æ”¾åœ¨createWindowä¹‹å‰ï¼Œå¦åˆ™ä¼šå¯¼è‡´æ ‡é¢˜æ çš„å›¾æ ‡ä¸æ˜¾ç¤ºã€‚åŽŸå› ä¸çŸ¥
 
 	HWND hwnd = CreateWindow(
-		"tdsUI",           //ÉÏÃæ×¢²áµÄÀàÃû£¬ÒªÍêÈ«Ò»ÖÂ  
-		title.c_str(),                     //´°¿Ú±êÌâÎÄ×Ö  
-		WS_OVERLAPPEDWINDOW, //´°¿ÚÍâ¹ÛÑùÊ½  
-		x,             //´°¿ÚÏà¶ÔÓÚ¸¸¼¶µÄX×ø±ê  
-		y,             //´°¿ÚÏà¶ÔÓÚ¸¸¼¶µÄY×ø±ê  
-		rc.right - rc.left,                //´°¿ÚµÄ¿í¶È  
-		rc.bottom - rc.top,                //´°¿ÚµÄ¸ß¶È  
-		NULL,               //Ã»ÓÐ¸¸´°¿Ú£¬ÎªNULL  
-		NULL,               //Ã»ÓÐ²Ëµ¥£¬ÎªNULL  
-		hInstance,          //µ±Ç°Ó¦ÓÃ³ÌÐòµÄÊµÀý¾ä±ú  
-		NULL);              //Ã»ÓÐ¸½¼ÓÊý¾Ý£¬ÎªNULL 
+		"tdsUI",           //ä¸Šé¢æ³¨å†Œçš„ç±»åï¼Œè¦å®Œå…¨ä¸€è‡´  
+		title.c_str(),                     //çª—å£æ ‡é¢˜æ–‡å­—  
+		WS_OVERLAPPEDWINDOW, //çª—å£å¤–è§‚æ ·å¼  
+		x,             //çª—å£ç›¸å¯¹äºŽçˆ¶çº§çš„Xåæ ‡  
+		y,             //çª—å£ç›¸å¯¹äºŽçˆ¶çº§çš„Yåæ ‡  
+		rc.right - rc.left,                //çª—å£çš„å®½åº¦  
+		rc.bottom - rc.top,                //çª—å£çš„é«˜åº¦  
+		NULL,               //æ²¡æœ‰çˆ¶çª—å£ï¼Œä¸ºNULL  
+		NULL,               //æ²¡æœ‰èœå•ï¼Œä¸ºNULL  
+		hInstance,          //å½“å‰åº”ç”¨ç¨‹åºçš„å®žä¾‹å¥æŸ„  
+		NULL);              //æ²¡æœ‰é™„åŠ æ•°æ®ï¼Œä¸ºNULL 
 
 
 	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
@@ -140,7 +140,7 @@ void chromeThread()
 	{
 		chromePath += chromeParam;
 
-		STARTUPINFO si;
+		STARTUPINFOW si;
 		PROCESS_INFORMATION pi;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
@@ -149,8 +149,8 @@ void chromeThread()
 		// Start the child process.
 		si.dwFlags = STARTF_USESHOWWINDOW;
 		si.wShowWindow = SW_SHOW;
-		if (!CreateProcess(NULL,   // No module name (use command line)
-			(LPSTR)chromePath.c_str(),        // Command line
+		if (!CreateProcessW(NULL,   // No module name (use command line)
+			(LPWSTR)charCodec::utf8toUtf16(chromePath).c_str(),        // Command line
 			NULL,           // Process handle not inheritable
 			NULL,           // Thread handle not inheritable
 			FALSE,          // Set handle inheritance to FALSE
@@ -161,7 +161,7 @@ void chromeThread()
 			&pi)           // Pointer to PROCESS_INFORMATION structure
 			)
 		{
-
+			LOG("å¯åŠ¨Chromeå¤±è´¥" + sys::getLastError());
 		}
 		else
 		{
@@ -227,7 +227,7 @@ bool TDS_imp::run(string cmdline)
 	}
 
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("current log Level is:" + tdsConf.logLevel);
+	LOG("æ—¥å¿—è®°å½•ç­‰çº§:" + tdsConf.logLevel);
 
 	//startup xiaot
 	xiaot.init();
@@ -350,7 +350,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 		int iStreamLen = 0;
 		char* pStream = NULL;
 		vc.output();
-		//·¢ËÍÊÓÆµÍ·£¬web¶ËmseÊÕµ½¸ÃÍ·²ÅÄÜÕýÈ·½âÂë
+		//å‘é€è§†é¢‘å¤´ï¼Œwebç«¯mseæ”¶åˆ°è¯¥å¤´æ‰èƒ½æ­£ç¡®è§£ç 
 		if (pmp->m_streamPuller->pTcpSession->iSendSucCount == 0)
 		{
 			pmp->m_streamPuller->send(vc.headerBuff, vc.iHeaderBuffLen);
@@ -360,7 +360,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 	}
 	else if (st == ST_RGBA)
 	{
-		if (pmp->m_streamPuller->streamFmt == "rgba")//Ö±½Ó×ª·¢
+		if (pmp->m_streamPuller->streamFmt == "rgba")//ç›´æŽ¥è½¬å‘
 		{
 			pmp->m_streamPuller->send(pData,len);
 		}

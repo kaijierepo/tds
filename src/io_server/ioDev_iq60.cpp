@@ -18,10 +18,12 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 	string pkt = p;
 	delete p;
 
+	LOG("æ”¶åˆ°IQ60æ•°æ®åŒ…: " + pkt);
+
 	vector<string> aryPkt;
 	str::split(aryPkt,pkt,"\n");
 
-	//·Ö¿ªÕ³Á¬°ü
+	//åˆ†å¼€ç²˜è¿åŒ…
 	for (int i = 0; i < aryPkt.size(); i++)
 	{
 		string pktData = aryPkt[i];
@@ -30,7 +32,7 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 
 			if (jpkt.is_array() && jpkt.size() >= 1)
 			{
-				//×ª·¢¸ø¶ÔÓ¦Éè±¸
+				//è½¬å‘ç»™å¯¹åº”è®¾å¤‡
 				string id = jpkt[0];
 				if (g_mapIQ60.find(id) != g_mapIQ60.end())
 				{
@@ -72,21 +74,21 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 		if (cmd.find(currentCmd)!=string::npos)
 		{
 			currentResp.push_back(jPkt);
-			if (cmd.find("-") == string::npos) //½áÊø°ü
+			if (cmd.find("-") == string::npos) //ç»“æŸåŒ…
 			{
 				getResponse = true;
 			}
 			return true;
 		}
 		/*
-		*r  ¡¾¶Á¡¿Êı¾İ
-		ÇëÇó£º
-			[°æ±¾,ÑéÖ¤TOKEN,ÎïÔÆÃû,rÖ¸Áî,µã1,µã2,µã3]
+		*r  ã€è¯»ã€‘æ•°æ®
+		è¯·æ±‚ï¼š
+			[ç‰ˆæœ¬,éªŒè¯TOKEN,ç‰©äº‘å,ræŒ‡ä»¤,ç‚¹1,ç‚¹2,ç‚¹3]
 			[2,"IQK","C1201020756","r","AI9","BO1"]
-		·µ»Ø£º
-			[ÎïÔÆÃû,[µã1,Öµ,Ê±¼ä´Á,×´Ì¬],[µã2,Öµ,Ê±¼ä´Á,×´Ì¬],rÖ¸Áî]
+		è¿”å›ï¼š
+			[ç‰©äº‘å,[ç‚¹1,å€¼,æ—¶é—´æˆ³,çŠ¶æ€],[ç‚¹2,å€¼,æ—¶é—´æˆ³,çŠ¶æ€],ræŒ‡ä»¤]
 			["C1201020756",["AI9",48.8,1540697466,0],["BO1",1,1540697466,0],"r"]
-			×´Ì¬0:ÔÚÏß  ×´Ì¬1:¶ÏÏß
+			çŠ¶æ€0:åœ¨çº¿  çŠ¶æ€1:æ–­çº¿
 		*/
 		if (cmd == "r")
 		{
@@ -98,12 +100,12 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 
 		}
 		/*
-		2¡¢¡¾ËÑ¡¿¶ÔÏó£¬hsÖ¸Áî£º
-		ÇëÇó£º
-			[°æ±¾, ÑéÖ¤TOKEN, ÎïÔÆÃû, hsÖ¸Áî]
+		2ã€ã€æœã€‘å¯¹è±¡ï¼ŒhsæŒ‡ä»¤ï¼š
+		è¯·æ±‚ï¼š
+			[ç‰ˆæœ¬, éªŒè¯TOKEN, ç‰©äº‘å, hsæŒ‡ä»¤]
 			[2, "IQK", "C1201020756", "hs"]
-		·µ»Ø£º
-			[ÎïÔÆÃû, µã1, µã2, µã3, hsÖ¸Áî]]
+		è¿”å›ï¼š
+			[ç‰©äº‘å, ç‚¹1, ç‚¹2, ç‚¹3, hsæŒ‡ä»¤]]
 			["C1201020756", "AI9", "AO8", "BI1", "RI3", "FR1", "FA2", "BO1", "RH496", "hs"]
 		*/
 		else if (cmd == "hs")
@@ -111,22 +113,22 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			
 		}
 		/*
-		3¡¢¡¾¶Á¡¿¶ÔÏó£¬hrÖ¸Áî£º
-		ÇëÇó£º
-			[°æ±¾, ÑéÖ¤TOKEN, ÎïÔÆÃû, hrÖ¸Áî, µã1, µã2, µã3]
+		3ã€ã€è¯»ã€‘å¯¹è±¡ï¼ŒhræŒ‡ä»¤ï¼š
+		è¯·æ±‚ï¼š
+			[ç‰ˆæœ¬, éªŒè¯TOKEN, ç‰©äº‘å, hræŒ‡ä»¤, ç‚¹1, ç‚¹2, ç‚¹3]
 			[2, "IQK", "C1201020756", "hr", "BO1", "AI9"]
-		·µ»Ø£º["C1201020756",
-		      { "Name":"BO1","COV" : 1,"Enable" : 1,"ValueType" : "bool","RW" : "rw","Unit" : "¹Ø:0,¿ª:1" },
-			  { "Name":"AI9","DisplayName" : "CPUÎÂ¶È","COV" : 0.5,"Enable" : 1,"ValueType" : "float","RW" : "ro","Unit" : "¡æ" },
+		è¿”å›ï¼š["C1201020756",
+		      { "Name":"BO1","COV" : 1,"Enable" : 1,"ValueType" : "bool","RW" : "rw","Unit" : "å…³:0,å¼€:1" },
+			  { "Name":"AI9","DisplayName" : "CPUæ¸©åº¦","COV" : 0.5,"Enable" : 1,"ValueType" : "float","RW" : "ro","Unit" : "â„ƒ" },
 			  "hr"]
-			[ÎïÔÆÃû, { ¼ü1:Öµ,¼ü2 : Öµ,¼ü3 : Öµ }, { ¼ü1:Öµ,¼ü2 : Öµ,¼ü3 : Öµ }, hrÖ¸Áî]
+			[ç‰©äº‘å, { é”®1:å€¼,é”®2 : å€¼,é”®3 : å€¼ }, { é”®1:å€¼,é”®2 : å€¼,é”®3 : å€¼ }, hræŒ‡ä»¤]
 		*/
 		else if (cmd == "hr")
 		{
 			
 		}
 	}
-	else//Ö÷¶¯Êı¾İÉÏ±¨ÃüÁî
+	else//ä¸»åŠ¨æ•°æ®ä¸ŠæŠ¥å‘½ä»¤
 	{
 		for (int i = 1; i < jPkt.size();i++)
 		{

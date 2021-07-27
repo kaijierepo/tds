@@ -668,6 +668,7 @@ namespace fs {
 		string strPath = (char*)p;
 		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
 		strPath = strPath.substr(0, nEnd);
+		strPath = charCodec::ansi2Utf8(strPath);
 		return strPath;
 #elif LINUX
 		return "";

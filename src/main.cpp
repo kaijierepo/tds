@@ -16,7 +16,7 @@ design problem:
 > mutithread accessing element in a dynamic list
   1.shared points
 
-代码不安全，未来需优化的地方，全局搜索 [unsafe]
+浠ｇ爜涓嶅畨鍏紝鏈潵闇�浼樺寲鐨勫湴鏂癸紝鍏ㄥ眬鎼滅储 [unsafe]
 
 */
 
@@ -28,7 +28,7 @@ iTDS* tds = &tdsImp;
 
 
 #ifndef _WINDLL
-#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
+#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//涓嶆樉绀洪粯璁ゆ帶鍒跺彴
 int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 	}
 
 
-	// 消息循环  
+	// 娑堟伅寰幆  
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))
 	{
