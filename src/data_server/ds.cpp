@@ -222,7 +222,7 @@ bool dataServer::run()
 	{
 		string asc_prjUI = charCodec::utf8toAnsi(prjUI);
 		httpSrv.set_mount_point("/",asc_prjUI.c_str());
-		LOG("[HTTP服务器]根目录位于: " + prjUI + "[project specified ui]");
+		LOG("[HTTP服务器] 根目录: " + prjUI + "[project specified ui]");
 	}
 	//custom tds ver specified ui through http
 	string customUI = fs::appPath() + "\\ui";
@@ -230,7 +230,7 @@ bool dataServer::run()
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
 		httpSrv.set_mount_point("/", + asc_customUI.c_str());
-		LOG("[HTTP服务器]根目录位于: " + customUI + "[custom software ui]");
+		LOG("[HTTP服务器] 根目录: " + customUI);
 	}
 	//serve common ui through http
 	//string path = fs::appPath() + "\\tdskit\\ui";
@@ -243,13 +243,14 @@ bool dataServer::run()
 	//	LOG("[HTTP Server] root at " + path + "[tdskit common ui]");
 	//}
 	//serve db files through http
-	auto ret = httpSrv.set_mount_point("/db/", db.m_path.c_str());
+	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
+	auto ret = httpSrv.set_mount_point("/db/", asc_dbPath.c_str());
 	if (!ret) {
 		LOG("[error][数据库]路径 " + db.m_path + " 不存在,请检查配置");
 	}
 	else
 	{
-		LOG("[数据库]路径 " + db.m_path);
+		LOG("[数据库    ] 路径 " + db.m_path);
 	}
 
 
@@ -284,8 +285,7 @@ bool dataServer::run()
 			exit(0);
 		}
 	}
-	LOG("[TDS服务] 位于端口:" + str::fromInt(tryPort) + "   本机浏览器输入 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
-
+	LOG("[TDS服务   ] 端口:" + str::fromInt(tryPort) + " 本机浏览器 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 

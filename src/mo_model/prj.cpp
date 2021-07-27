@@ -27,9 +27,13 @@ bool project::loadConf()
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "\\mo.json", conf))
 	{
-		LOG("project conf mo.json not find,use empty config!");
+		LOG("[项目配置  ] 未找到配置，打开空项目。路径:" + tds->conf->projectConfPath);
 		m_strName = "empty project";
 		return true;
+	}
+	else
+	{
+		LOG("[项目配置  ] 路径:" + tds->conf->projectConfPath);
 	}
 
 	try {

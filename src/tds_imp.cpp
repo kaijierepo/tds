@@ -15,6 +15,11 @@
 
 string tdsEncoding = "utf8";
 
+string build_date = __DATE__;
+string build_time = __TIME__;
+string version_build_info = "(build " + build_date + " " + build_time + ")";
+string version = "v1.0";
+
 
 #include <stdio.h>
 #include <io.h>
@@ -226,8 +231,11 @@ bool TDS_imp::run(string cmdline)
 		createConsole();
 	}
 
+	//display version
+	LOG("tds " + version + version_build_info);
+
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("日志记录等级:" + tdsConf.logLevel);
+	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 
 	//startup xiaot
 	xiaot.init();
