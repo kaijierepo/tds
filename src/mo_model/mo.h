@@ -18,7 +18,7 @@ public:
 	bool toJson(json& conf,string opt = "");
 
 	void removeMp(json& mo);
-	
+	void clearChildren();
 
 	string m_moType;
 	string m_strName;
@@ -65,7 +65,7 @@ public:
 
 	database* GetDB();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
-	static void GetAllChildAlarmInfo(MO* pMO, string& strSummary);
+	void GetAllChildAlarmInfo(string& strSummary);
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);
 

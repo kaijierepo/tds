@@ -15,23 +15,24 @@ class ioServer;
 class project : public MO  
 {
 public:
-	project();
-	virtual ~project();
-
 	bool loadConf();
-	json m_jMOTree;
-
 	MP* getMp(string strTagname);
 	void getMpList(map<string, MP*>& MPlist, MO* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
 	
 	database* DB;
+	ioServer* m_ioSrv;
 	map<string, MP*> m_mapAllMP;
+public:
+	project();
+	virtual ~project();
+
+private:
+	json m_jMOTree;
 	bool bFirstRefresh;
 	void UpdateAllMPList();
 	map<string, string> m_mapDataLink;
-	ioServer* m_ioSrv;
 };
 
 extern project prj;

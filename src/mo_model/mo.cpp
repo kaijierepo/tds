@@ -104,6 +104,15 @@ void MO::removeMp(json& mo)
 	}
 }
 
+void MO::clearChildren()
+{
+	for (auto& i : m_childMO)
+	{
+		delete i;
+	}
+	m_childMO.clear();
+}
+
 MO* MO::GetProjectMO()
 {
 	MO* pTmp = this;
@@ -612,7 +621,7 @@ string MO::GetStatusSummary()
 {
 	string str;
 	str += getTag().c_str(); str += "\r\n";
-	GetAllChildAlarmInfo(this, str);
+	GetAllChildAlarmInfo(str);
 
 
 	str = str.substr(0,str.length() - 2);//除掉最后的回车换行
@@ -620,11 +629,11 @@ string MO::GetStatusSummary()
 }
 
 
-void MO::GetAllChildAlarmInfo(MO* pMO, string& strSummary)
+void MO::GetAllChildAlarmInfo(string& strSummary)
 {
-	for (int i = 0; i < pMO->m_childMO.size(); i++)
+	for (int i = 0; i < m_childMO.size(); i++)
 	{
-		MO* pChild = pMO->m_childMO.at(i);
-		GetAllChildAlarmInfo(pChild, strSummary);
+		MO* pChild = m_childMO.at(i);
+		pChild->GetAllChildAlarmInfo(strSummary);
 	}
 }
