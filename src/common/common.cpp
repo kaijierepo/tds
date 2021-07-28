@@ -705,6 +705,7 @@ namespace fs {
 	}
 	bool writeFile(string path, char* data, int len)
 	{
+		fs::createFolderOfPath(path);
 		wstring wpath = charCodec::utf8toUtf16(path);
 		FILE* fp = _wfopen(wpath.c_str(), L"wb");
 		if (fp)
