@@ -5,6 +5,7 @@
 using json = nlohmann::json;
 #include "tdsSession.h"
 #include "tds.h"
+#include <shared_mutex>
 
 class ioServer;
 class database;
@@ -31,8 +32,11 @@ public:
 private:
 	json m_jMOTree;
 	bool bFirstRefresh;
-	void UpdateAllMPList();
+	void updateMPTable();
 	map<string, string> m_mapDataLink;
+
+public:
+	shared_mutex m_csPrj;
 };
 
 extern project prj;

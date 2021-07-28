@@ -156,29 +156,14 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 string rpcHandler::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string result = "";
+	//可完全并发的命令
 	if (method == "heartbeat")
 	{
-		result = rpc_heartbeat(params,error);
+		result = rpc_heartbeat(params, error);
 	}
 	else if (method == "xiaot")
 	{
 		result = rpc_xiaot(params, error);
-	}
-	else if (method == "input")
-	{
-		result = rpc_input(params, error);
-	}
-	else if (method == "output")
-	{
-		result = rpc_output(params, error);
-	}
-	else if (method == "rt")
-	{
-		result = rpc_rt(params, error);
-	}
-	else if (method == "query")
-	{
-		result = rpc_query(params, error);
 	}
 	else if (method == "alarm.current")
 	{
@@ -204,14 +189,6 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	{
 		result = almSrv.rpc_updateStatus(params);
 	}
-	else if (method == "getconf")
-	{
-		result = rpc_getconf(params, error);
-	}
-	else if (method == "setconf")
-	{
-		result = rpc_setconf(params, error);
-	}
 	else if (method == "com.open")
 	{
 		result = rpc_openCom(params, error);
@@ -224,23 +201,51 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	{
 		result = rpc_com_list(params, error);
 	}
-	else if (method == "io.tree")
+
+	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
+	if (method == "setconf")
 	{
-		result = rpc_io_tree(params, error);
+		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		result = rpc_setconf(params, error);
 	}
-	else if (method == "io.scanChannel")
+	else
 	{
-		result = rpc_io_scanChannel(params, error, pSession);
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		//以下配置使用 mo conf 和 io conf
+		if (method == "input")
+		{
+			result = rpc_input(params, error);
+		}
+		else if (method == "output")
+		{
+			result = rpc_output(params, error);
+		}
+		else if (method == "rt")
+		{
+			result = rpc_rt(params, error);
+		}
+		else if (method == "query")
+		{
+			result = rpc_query(params, error);
+		}
+		else if (method == "getconf")
+		{
+			result = rpc_getconf(params, error);
+		}
+		else if (method == "io.tree")
+		{
+			result = rpc_io_tree(params, error);
+		}
+		else if (method == "io.scanChannel")
+		{
+			result = rpc_io_scanChannel(params, error, pSession);
+		}
+		else if (method == "getStreamInfo")
+		{
+			result = rpc_getStreamInfo(params, error);
+		}
 	}
-	else if (method == "getStreamInfo")
-	{
-		result = rpc_getStreamInfo(params,error);
-	}
-	else if (method == "setMainWnd")//当前浏览器窗口为主窗口，该窗口关闭进程退出
-	{
-		pSession->bMainWnd = true;
-		result = "\"ok\"";
-	}
+
 
 	return result;
 }
@@ -608,6 +613,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\mo.json", strData);
 		//mo tree 热更新
+		prj.clearChildren();
 		prj.loadConf();
 		return "\"ok\"";
 	}

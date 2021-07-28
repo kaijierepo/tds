@@ -40,7 +40,7 @@ bool project::loadConf()
 		json moRoot = json::parse(conf.c_str());
 		bool ret = MO::loadConf(moRoot);
 		if (ret)
-			UpdateAllMPList();
+			updateMPTable();
 		return ret;
 	}
 	catch (std::exception& e)
@@ -65,7 +65,7 @@ void project::getMpList(map<string, MP*>& MPlist, MO* pMO)
 }
 
 
-void project::UpdateAllMPList()
+void project::updateMPTable()
 {
 	if (!bFirstRefresh) m_mapAllMP.clear();
 	getMpList(m_mapAllMP, this);
