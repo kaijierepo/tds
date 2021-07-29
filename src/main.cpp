@@ -6,7 +6,8 @@
 #include "logger.h"
 #include "tds_imp.h"
 #include "wke.h"
-#include "tools/tcpRoute.h"
+#include "tools/tcpHub.h"
+#include "tools/tcpSwitch.h"
 
 /*
 notes:
@@ -47,10 +48,18 @@ int main(int argc, char** argv)
 	tds->conf->logLevel = parser.get<string>("l");
 
 	string mode = parser.get<string>("m");
-	if (mode == "route")
+	if (mode == "hub")
 	{
 		createConsole();
-		tcpRoute* tr = new tcpRoute();
+		tcpHub* tr = new tcpHub();
+		tr->portLeft = parser.get<int>("sl");
+		tr->portRight = parser.get<int>("sr");
+		tr->run();
+	}
+	else if (mode == "switch")
+	{
+		createConsole();
+		tcpSwitch* tr = new tcpSwitch();
 		tr->portLeft = parser.get<int>("sl");
 		tr->portRight = parser.get<int>("sr");
 		tr->run();

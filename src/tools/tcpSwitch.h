@@ -1,10 +1,13 @@
 #pragma once
 #include "tcpSrv.h"
 
-class tcpRoute : public  ITcpServerCallBack {
+class tcpSwitch : public  ITcpServerCallBack {
 public:
+	tcpSwitch();
+
 	tcpSrv sLeft;
-	tcpSrv sRight;
+	vector<tcpSession*> sessionLeft;
+	vector<tcpSrv*> sRight;
 
 	int portLeft;
 	int portRight;

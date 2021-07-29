@@ -134,7 +134,10 @@
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tools\tcpRoute.cpp">
+    <ClCompile Include="..\src\tools\tcpHub.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tools\tcpSwitch.cpp">
       <Filter>tools</Filter>
     </ClCompile>
   </ItemGroup>
@@ -267,7 +270,10 @@
     <ClInclude Include="..\src\io_server\ioDev_iq60.h">
       <Filter>io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tools\tcpRoute.h">
+    <ClInclude Include="..\src\tools\tcpHub.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\tcpSwitch.h">
       <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>

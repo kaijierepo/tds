@@ -1,8 +1,8 @@
-#include "tcpRoute.h"
+#include "tcpHub.h"
 #include "logger.h"
 #include "common.h"
 
-void tcpRoute::run()
+void tcpHub::run()
 {
 	bool bsl = sLeft.run(this, portLeft);
 	if (bsl)
@@ -25,7 +25,7 @@ void tcpRoute::run()
 	}
 }
 
-void tcpRoute::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
+void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{
@@ -52,7 +52,7 @@ void tcpRoute::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
-void tcpRoute::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
+void tcpHub::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
 {
 	if (pCltInfo->pTcpServer == &sLeft)
 	{
