@@ -52,11 +52,22 @@ ioDev::~ioDev(void)
 
 bool ioDev::toJson(json& conf, string opt)
 {
-	conf["addr"] = m_addr;
+	conf["name"] = "IQ60";
+	conf["addr"] = getAddr();
 	conf["type"] = m_devType;
+	conf["type_label"] = m_devTypeLabel;
 	conf["level"] = m_level;
-	if(m_devTypeLabel!= "")
-		conf["type_label"] = m_devTypeLabel;
+	conf["parentType"] = m_parentDevType;
+	conf["online"] = m_bOnline;
+	conf["manageStatus"] = m_mngStatus;
+
+	if (m_channelType != "")
+	{
+		conf["channelType"] = m_channelType;
+		conf["channelTypeLabel"] = m_channelTypeLabel;
+	}
+
+
 	json children;
 	for (auto& i : m_vecChild)
 	{
@@ -110,6 +121,13 @@ vector<ioDev*> ioDev::getIODevices(string devType)
 	return ary;
 }
 
+
+json ioDev::getAddr()
+{
+	json j;
+	j = m_addr;
+	return j;
+}
 
 ioAddress ioDev::getIOAddr()
 {

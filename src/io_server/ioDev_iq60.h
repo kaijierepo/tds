@@ -13,6 +13,7 @@ public:
 	bool waitResponse(int timeout);
 	virtual bool scanChannel(json& chanList);
 
+	json getAddr() override;
 
 	std::shared_ptr<TDS_SESSION> ioSession;
 	string currentCmd;

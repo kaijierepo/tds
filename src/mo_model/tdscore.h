@@ -129,6 +129,7 @@ namespace IO_DEV_LEVEL {
 namespace IO_DEV_TYPE {
 	namespace DEV {
 		const string modbus_rtu = "modbus_rtu";
+		const string iq60_gateway = "iq60-gateway";
 	}
 	namespace GW {
 		const string local_serial = "local-serial";
@@ -136,8 +137,9 @@ namespace IO_DEV_TYPE {
 }
 
 const std::map<string, string> IO_DEV_TYPE_LABEL = {
-	{std::map<string,string>::value_type("modbus_rtu","modbus rtu")},
-	{std::map<string,string>::value_type("gw_local_serial","本地串口")}
+	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
+	{std::map<string,string>::value_type("local-serial","本地串口")},
+	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},	
 };
 
 //应用层协议类型
@@ -170,10 +172,9 @@ enum IO_GATEWAY_TYPE {
 
 
 //设备管理状态
-enum IODEV_MNG_STATUS {
-	DMS_CONF = 0,
-	DMS_UNASSIGN,
-	DMS_UNCONF,
+namespace IODEV_MNG_STATUS {
+	const string configured = "configured";
+	const string spare = "spare";
 };
 
 // unique identifier for an io device in a certain system

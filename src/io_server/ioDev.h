@@ -19,22 +19,31 @@ public:
 	virtual bool run() { return true; };
 	virtual bool toJson(json& conf, string opt = "");
 
-	/// iodev attributes
+
+	////value of device addr
 	//is Gateway
 	// can be 1.ip or domain name with port 2.tuya project id 3.gateway guid
 	//is Device 
 	// can be 1.ip or domain name with port 2. field bus id
 	//is Channel
 	// can be 1. mqtt topic 2.tuya device id
+	//device addr in string format
 	string m_addr;  //device addr .  io addr is composed by several device addr
+	//device addr in json format
+	virtual json getAddr(); 
+	//io addr in struct format
 	ioAddress getIOAddr();// addr of different level(gateway,device,channel) devices makes an ioAddr
-	IODEV_MNG_STATUS m_mngStatus;
+	
+	string m_mngStatus;
 	string m_devType;
 	string m_devTypeLabel;
+	string m_parentDevType;
 	string m_level;
 	bool IsGateway();
 	string m_secret;
 	string m_strGatewayIP;
+	string m_channelType;
+	string m_channelTypeLabel;
 
 	//// iodev hierachy tree management
 	ioDev* getIODev(ioAddress iopath);

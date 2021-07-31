@@ -13,7 +13,7 @@
 MP::MP()
 {
 	m_moType = "mp";
-	m_physicalType = PHYSICAL_TYPE::unknown;
+	//m_physicalType = PHYSICAL_TYPE::unknown;
 	timeopt::setAsTimeOrg(m_lastUpdateTime);
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
@@ -34,8 +34,8 @@ bool MP::loadConf(json& conf)
 	m_valType = conf["val_type"].get<string>();
 	if (m_valType == TDS::DATA_TYPE::real)
 	{
-		if(conf["physical_type"]!=nullptr)
-			m_physicalType = conf["physical_type"].get<string>();
+		//if(conf["physical_type"]!=nullptr)
+			//m_physicalType = conf["physical_type"].get<string>();
 		if(conf["unit"]!=nullptr)
 			m_strUnit = conf["unit"].get<string>();
 	}

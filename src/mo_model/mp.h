@@ -41,7 +41,7 @@ public:
 	json m_curVal;
 	string m_valType;
 	string m_customValType;
-	string m_physicalType;
+	//string m_physicalType;
 	string m_strUnit;
 	SYSTEMTIME m_lastUpdateTime;
 	SYSTEMTIME m_lastSaveTime;

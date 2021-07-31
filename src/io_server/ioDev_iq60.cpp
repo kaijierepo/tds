@@ -5,6 +5,9 @@
 #include "logger.h"
 #include "prj.h"
 #include "ioChan.h"
+#include "ioSrv.h"
+#include "rpcHandler.h"
+
 using namespace httplib;
 
 map<string, ioDev_iq60*> g_mapIQ60;
@@ -40,6 +43,17 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 					p->ioSession = pALC;
 					p->onRecvPkt(jpkt);
 				}
+				//设备上线功能
+				else
+				{
+					ioDev_iq60* p = new ioDev_iq60();
+					p->m_addr = id;
+					g_mapIQ60[id] = p;
+					ioSrv.m_vecChild.push_back(p);
+					json j;
+					p->toJson(j);
+					tdsSrv.notify("io.devDiscovered", j);
+				}
 			}
 		}
 		catch (std::exception& e)
@@ -54,7 +68,12 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 
 ioDev_iq60::ioDev_iq60()
 {
-	
+	m_devType = TDS::IO_DEV_TYPE::DEV::iq60_gateway;
+	m_devTypeLabel = IO_DEV_TYPE_LABEL.at(m_devType);
+	m_parentDevType = "tds";
+	m_channelType = "io-point";
+	m_channelTypeLabel = "IO点";
+	m_level = "device";
 }
 
 ioDev_iq60::~ioDev_iq60()
@@ -274,4 +293,11 @@ bool ioDev_iq60::scanChannel(json& chanList)
 	}*/
 
 	return false;
+}
+
+json ioDev_iq60::getAddr()
+{
+	json j;
+	j["gateway_id"] = m_addr;
+	return j;
 }
