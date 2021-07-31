@@ -30,7 +30,7 @@ int ioDev::m_heartBeatInterval = 10;
 ioDev::ioDev(void)
 {
 	bEnableAcq = true;
-	m_mngStatus = DMS_UNCONF;
+	m_mngStatus = IODEV_MNG_STATUS::configured;
 	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
 	m_bOnline = false;
@@ -52,7 +52,8 @@ ioDev::~ioDev(void)
 
 bool ioDev::toJson(json& conf, string opt)
 {
-	conf["name"] = "IQ60";
+	//conf["name"] = "IQ60";
+	conf["ioAddr"] = getIOAddrStr();
 	conf["addr"] = getAddr();
 	conf["type"] = m_devType;
 	conf["type_label"] = m_devTypeLabel;
@@ -132,6 +133,12 @@ json ioDev::getAddr()
 ioAddress ioDev::getIOAddr()
 {
 	ioAddress addr;
+	if (m_level == "channel")
+	{
+		//addr.chanAddr = m_addr;
+		//addr.devAddr = m_pParent->m_addr;
+		//if(m_pParent->)
+	}
 	addr.devAddr = m_addr;
 	if (m_pParent)
 		addr.gwAddr = m_pParent->m_addr;
@@ -155,6 +162,19 @@ ioAddress ioDev::getIOAddr()
 	}
 
 	return addr;
+}
+
+string ioDev::getIOAddrStr()
+{
+	string ioAddrStr = m_addr;
+	ioDev* pParent = m_pParent;
+	while (pParent)
+	{
+		ioAddrStr = pParent->m_addr + "/" + ioAddrStr;
+		pParent = pParent->m_pParent;
+	}
+		
+	return ioAddrStr;
 }
 
 void ioDev::CommLock()

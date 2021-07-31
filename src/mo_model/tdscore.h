@@ -180,6 +180,7 @@ namespace IODEV_MNG_STATUS {
 // unique identifier for an io device in a certain system
 // any device in an IOT senario can be linked by device addr and gateway addr
 struct ioAddress {
+	string chanAddr; //channel addr
 	string devAddr; //device addr
 	string gwAddr; // if device is under a gateway, this is the gateway addr
 	string proto;
@@ -193,6 +194,7 @@ struct ioAddress {
 	ioAddress() {
 		devAddr = "";
 		gwAddr = ""; //0表示无效，ip即是设备地址
+		chanAddr = "";
 		bIPOnline = false;
 		proto = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
 		tlProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
@@ -222,7 +224,7 @@ struct ioAddress {
 			str = devAddr;
 		}
 		else {
-			str = str::format(_T("%s/%s"), devAddr, gwAddr);
+			str = str::format(_T("%s/%s"), devAddr.c_str(), gwAddr.c_str());
 		}
 		return str;
 	}

@@ -42,12 +42,21 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 					ioDev_iq60* p = g_mapIQ60[id];
 					p->ioSession = pALC;
 					p->onRecvPkt(jpkt);
+					if (p->m_bOnline == false)
+					{
+						p->m_bOnline = true;
+						json j;
+						p->toJson(j);
+						tdsSrv.notify("io.online", j);
+					}
 				}
-				//设备上线功能
+				//设备发现功能
 				else
 				{
 					ioDev_iq60* p = new ioDev_iq60();
 					p->m_addr = id;
+					p->m_mngStatus = IODEV_MNG_STATUS::spare;
+					p->m_bOnline = true;
 					g_mapIQ60[id] = p;
 					ioSrv.m_vecChild.push_back(p);
 					json j;

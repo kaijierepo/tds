@@ -33,7 +33,7 @@ public:
 	virtual json getAddr(); 
 	//io addr in struct format
 	ioAddress getIOAddr();// addr of different level(gateway,device,channel) devices makes an ioAddr
-	
+	string getIOAddrStr();
 	string m_mngStatus;
 	string m_devType;
 	string m_devTypeLabel;

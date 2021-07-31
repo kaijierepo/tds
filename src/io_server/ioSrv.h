@@ -13,6 +13,8 @@ public:
 
 	bool loadConf();
 	void saveConf();
+	//bool loadStatus();
+	//void saveStatus();
 	void refreshSerialIODev();
 	bool run() override;
 	bool toJson(json& conf, string opt = "");

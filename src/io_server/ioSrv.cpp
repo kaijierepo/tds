@@ -178,6 +178,7 @@ void ioServer::refreshSerialIODev()
 			ls = new ioGW_LocalSerial();
 			ls->m_addr = ci.portNum;
 			ls->m_devTypeLabel = ci.desc;
+			ls->m_mngStatus = IODEV_MNG_STATUS::spare;
 			m_vecChild.push_back(ls);
 		}
 		ls->m_bOnline = true;
@@ -219,7 +220,12 @@ bool ioServer::toJson(json& conf, string opt)
 	for (auto& i : m_vecChild)
 	{
 		json j;
+		if (i->m_devType == IO_DEV_TYPE::GW::local_serial)
+		{
+			continue;
+		}
 		i->toJson(j, opt);
+		string s = j.dump();
 		conf.push_back(j);
 	}
 	return true;
