@@ -16,21 +16,21 @@ rpc协议中的属性/常量/宏       下划线连接      如：io_addr
 
 namespace TDS{
 //数据类型
-namespace DATA_TYPE {
+namespace VAL_TYPE {
 	const string json = "json";	//自定义类型。是一个json对象字符串
 	const string real = "real"; //实型
 	const string integer = "integer";
-	const string switching = "switching"; 
+	const string boolean = "bool"; 
 	const string video = "video";
 	const string car_strobe = "car_strobe";
 	const string man_strobe = "man_strobe";
 };
 
-const std::map<string,string> DATA_TYPE_LABEL = {
-	{std::map<string,string>::value_type("json","自定义")},
+const std::map<string,string> VAL_TYPE_LABEL = {
+	{std::map<string,string>::value_type("json","JSON")},
 	{std::map<string,string>::value_type("real","实型")},
 	{std::map<string,string>::value_type("integer","整型")},
-	{std::map<string,string>::value_type("switching","开关量")},
+	{std::map<string,string>::value_type("boolean","布尔型")},
 	{std::map<string,string>::value_type("video","视频")},
 	{std::map<string,string>::value_type("car_strobe","车闸")},
 	{std::map<string,string>::value_type("man_strobe","人闸")}
@@ -134,12 +134,16 @@ namespace IO_DEV_TYPE {
 	namespace GW {
 		const string local_serial = "local-serial";
 	}
+	namespace CHAN {
+		const string io_channel = "io-channel";
+	}
 }
 
 const std::map<string, string> IO_DEV_TYPE_LABEL = {
 	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
 	{std::map<string,string>::value_type("local-serial","本地串口")},
 	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},	
+	{std::map<string,string>::value_type("io-channel","IO通道")},
 };
 
 //应用层协议类型

@@ -319,7 +319,7 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 		pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
 		prj.m_mapAllMP[tag] = pmp;
 	}
-	pmp->m_valType = DATA_TYPE::video;
+	pmp->m_valType = VAL_TYPE::video;
 	pmp->m_streamPusher = startStream;
 	if (si)
 		pmp->m_streamInfo = *si;

@@ -11,6 +11,7 @@ public:
 	bool onRecvPkt(json jPkt);
 	bool getCurrentVal();
 	bool waitResponse(int timeout);
+	bool requestAndWaitResp(string cmd, string req);
 	virtual bool scanChannel(json& chanList);
 
 	json getAddr() override;

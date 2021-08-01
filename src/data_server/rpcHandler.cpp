@@ -421,7 +421,7 @@ string rpcHandler::rpc_output(json params, string& error)
 		return "!" + error;
 	}
 
-	if (val.is_boolean() && pmp->m_valType != DATA_TYPE::switching)
+	if (val.is_boolean() && pmp->m_valType != VAL_TYPE::boolean)
 	{
 		json jError = {
 				{"code", TEC_VAL_TYPE_ERROR},
@@ -430,7 +430,7 @@ string rpcHandler::rpc_output(json params, string& error)
 		string error = jError.dump();
 		return "!" + error;
 	}
-	else if (val.is_number() && pmp->m_valType != DATA_TYPE::real)
+	else if (val.is_number() && pmp->m_valType != VAL_TYPE::real)
 	{
 		json jError = {
 				{"code", TEC_VAL_TYPE_ERROR},

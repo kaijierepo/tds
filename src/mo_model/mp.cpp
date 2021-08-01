@@ -32,14 +32,14 @@ bool MP::loadConf(json& conf)
 {
 	MO::loadConf(conf);
 	m_valType = conf["val_type"].get<string>();
-	if (m_valType == TDS::DATA_TYPE::real)
+	if (m_valType == TDS::VAL_TYPE::real)
 	{
 		//if(conf["physical_type"]!=nullptr)
 			//m_physicalType = conf["physical_type"].get<string>();
 		if(conf["unit"]!=nullptr)
 			m_strUnit = conf["unit"].get<string>();
 	}
-	else if (m_valType == TDS::DATA_TYPE::json)
+	else if (m_valType == TDS::VAL_TYPE::json)
 	{
 		m_customValType = conf["custom_val_type"].get<string>();
 	}
@@ -125,21 +125,21 @@ bool MP::IsCurValValid()
 string MP::getMpTypeLabel()
 {
 	string typeLabel;
-	if (m_valType == TDS::DATA_TYPE::switching)
+	if (m_valType == TDS::VAL_TYPE::boolean)
 	{
 		typeLabel = m_strName;
 	}
-	else if (m_valType == TDS::DATA_TYPE::real)
+	else if (m_valType == TDS::VAL_TYPE::real)
 	{
 		typeLabel = m_strName;
 	}
-	else if (m_valType == TDS::DATA_TYPE::json)
+	else if (m_valType == TDS::VAL_TYPE::json)
 	{
 		typeLabel = m_customValType;
 	}
 	else
 	{
-		typeLabel = TDS::DATA_TYPE_LABEL.at(m_valType);
+		typeLabel = TDS::VAL_TYPE_LABEL.at(m_valType);
 	}
 
 	return typeLabel;
@@ -149,15 +149,15 @@ string MP::getMpType()
 {
 	string mpType;
 	// as a convention , a real type MP's name is named by data type.
-	if (m_valType == TDS::DATA_TYPE::switching)
+	if (m_valType == TDS::VAL_TYPE::boolean)
 	{
 		mpType = m_strName;
 	}
-	else if (m_valType == TDS::DATA_TYPE::real)
+	else if (m_valType == TDS::VAL_TYPE::real)
 	{
 		mpType = m_strName;
 	}
-	else if (m_valType == TDS::DATA_TYPE::json)
+	else if (m_valType == TDS::VAL_TYPE::json)
 	{
 		mpType = m_customValType;
 	}
