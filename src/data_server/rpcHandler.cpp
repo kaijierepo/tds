@@ -321,7 +321,8 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 		{
 			json jError = {
 				{"code", -32601},
-				{"message" , "Method not found"}
+				{"message" , "Method not found"},
+				{"method", method}
 			};
 			error = jError.dump();
 			goto HANDLE_END;
@@ -565,6 +566,10 @@ string rpcHandler::rpc_getconf(json params, string& error)
 	{
 		string conf;
 		fs::readFile(tds->conf->projectConfPath + "\\io.json", conf);
+		if (conf == "")
+		{
+			return "[]";
+		}
 		return conf;
 	}
 	else if(type == "mp-list")

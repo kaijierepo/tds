@@ -69,15 +69,14 @@ bool ioDev::toJson(json& conf, string opt)
 	}
 
 
-	json children;
+	json children = json::array();
 	for (auto& i : m_vecChild)
 	{
 		json j;
 		i->toJson(j, opt);
 		children.push_back(j);
 	}
-	if(!children.empty())
-		conf["children"] = children;
+	conf["children"] = children;
 	return true;
 }
 

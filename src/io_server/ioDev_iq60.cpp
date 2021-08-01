@@ -227,6 +227,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 		for (int i = 0; i < currentResp.size(); i++)
 		{
 			json jsubPkt = currentResp.at(i);
+			int iBatchSize = 20;
 			for (int j = 1; j < jsubPkt.size() - 1; j++)
 			{
 				string ptName = jsubPkt[j];
