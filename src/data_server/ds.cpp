@@ -302,7 +302,7 @@ bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESS
 {
 	stream2pkt* pab = &pALC->m_alBuf;
 	pab->PushStream(pData, iLen);
-	while (pab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC))
+	while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 	{
 		pALC->iALProto = pab->m_protocolType;
 		OnRecvAppLayerPkt(pab->pkt, pab->iPktLen, pALC);
@@ -651,7 +651,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	{
 		stream2pkt* pab = &tdsSession->m_alBuf;
 		pab->PushStream(pData, iLen);
-		while (pab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP))
+		while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
 		{
 			tdsSession->iALProto = pab->m_protocolType;
 			onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
@@ -659,13 +659,29 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	}
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
-		//智能协议检测
+		//应用层协议智能检测。根据收到的首包数据进行检测
 		//傲华尔远程控制协议
 		if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
 			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
 			)
 		{
-			onRecvIQ60Pkt(pData, iLen, tdsSession);
+			tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
+		}
+		//tdsRPC协议
+		else
+		{
+			tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
+		}
+
+
+		if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+		{
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+			{
+				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
+			}
 		}
 		else
 		{
@@ -759,7 +775,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
-		pALC->iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC;
+		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
 
 		httplib::detail::dsClientStream dscs;
 		dscs.setBuffer((char*)strData.c_str(), strData.length());
@@ -800,7 +816,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	{
 		string szLog = str::format("[trace][ds]http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
-		pALC->iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP;
+		pALC->iALProto = APP_LAYER_PROTO::HTTP;
 
 		//internal handle
 		if(httpHandleInternal(strData,pALC))
@@ -834,7 +850,7 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS
 	{
 		pALC->pBridgedTcpClient->SendData(pDataBuf, iLen);
 	}
-	else if (pALC->iALProto == APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC)
+	else if (pALC->iALProto == APP_LAYER_PROTO::TDSRPC)
 	{
 		char* szJson = new char[iLen + 1];
 		memset(szJson, 0, iLen + 1);

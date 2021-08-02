@@ -19,7 +19,7 @@ namespace TDS{
 namespace VAL_TYPE {
 	const string json = "json";	//自定义类型。是一个json对象字符串
 	const string real = "real"; //实型
-	const string integer = "integer";
+	const string integer = "int";
 	const string boolean = "bool"; 
 	const string video = "video";
 	const string car_strobe = "car_strobe";
@@ -29,8 +29,8 @@ namespace VAL_TYPE {
 const std::map<string,string> VAL_TYPE_LABEL = {
 	{std::map<string,string>::value_type("json","JSON")},
 	{std::map<string,string>::value_type("real","实型")},
-	{std::map<string,string>::value_type("integer","整型")},
-	{std::map<string,string>::value_type("boolean","布尔型")},
+	{std::map<string,string>::value_type("int","整型")},
+	{std::map<string,string>::value_type("bool","布尔型")},
 	{std::map<string,string>::value_type("video","视频")},
 	{std::map<string,string>::value_type("car_strobe","车闸")},
 	{std::map<string,string>::value_type("man_strobe","人闸")}
@@ -147,13 +147,14 @@ const std::map<string, string> IO_DEV_TYPE_LABEL = {
 };
 
 //应用层协议类型
-namespace APP_LAYER_PROTO_TYPE {
-	const string PROTOCOL_UNKNOWN = "alp_unknown";
-	const string PROTOCOL_HTTP= "alp_http";
-	const string PROTOCOL_MODBUS_RTU= "alp_modbus_rtu";
+namespace APP_LAYER_PROTO {
+	const string UNKNOWN = "alp_unknown";
+	const string HTTP= "alp_http";
+	const string MODBUS_RTU= "alp_modbus_rtu";
 	const string PROTOCOL_WEBSOCKET= "alp_websocket";
-	const string PROTOCOL_TDSRPC= "alp_tdsrpc";
+	const string TDSRPC= "alp_tdsrpc";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
+	const string IQ60 = "alp_iq60";
 };
 
 //the protocol used as a transportation layer (no command specified in this layer,only for data transfer)
@@ -200,7 +201,7 @@ struct ioAddress {
 		gwAddr = ""; //0表示无效，ip即是设备地址
 		chanAddr = "";
 		bIPOnline = false;
-		proto = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
+		proto = APP_LAYER_PROTO::UNKNOWN;
 		tlProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
 	}
 

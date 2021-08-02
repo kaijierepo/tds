@@ -29,7 +29,7 @@ public:
 	virtual void Init()
 	{
 		iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
-		iALProto = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
+		iALProto = APP_LAYER_PROTO::UNKNOWN;
 		pTcpSession = NULL;
 		m_alBuf.Init();
 	}

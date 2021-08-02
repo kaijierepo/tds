@@ -831,7 +831,7 @@ void rpcHandler::Notify(string strTag, string& szNotify)
 		for (int j = 0; j < clientList.size(); j++)
 		{
 			shared_ptr<TDS_SESSION> p = shared_ptr<TDS_SESSION>((TDS_SESSION*)clientList.at(j));
-			if (p->iALProto == APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP || p->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
+			if (p->iALProto == APP_LAYER_PROTO::HTTP || p->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 				continue;
 			if (p->role != "m_ioSrv")
 			{

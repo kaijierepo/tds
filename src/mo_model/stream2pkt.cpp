@@ -42,60 +42,75 @@ void stream2pkt::PushStream(char* pData, int iLen)
 
 bool stream2pkt::PopPkt(string cpt)
 {
+	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
 	for (int i = 0; i < iStreamLen; i++)
 	{
 		int ilen = 0;
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN || cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_MODBUS_RTU))
+			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::MODBUS_RTU))
 		{	
 			if (i == 0)
 			{
 				ilen = IsValidPkt_ModbusRTU(tcpStreamData + i, iStreamLen - i);
 				if (ilen > 0)
 				{
-					m_protocolType = APP_LAYER_PROTO_TYPE::PROTOCOL_MODBUS_RTU;
+					m_protocolType = APP_LAYER_PROTO::MODBUS_RTU;
 				}
 			}	
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN || cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC))
+			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::TDSRPC))
 		{
 			if (i == 0)
 			{
 				ilen = IsValidPkt_JSONRPC(tcpStreamData + i, iStreamLen - i);
 				if (ilen > 0)
 				{
-					m_protocolType = APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC;
+					m_protocolType = APP_LAYER_PROTO::TDSRPC;
 				}
 			}
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN || cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_HTTP))
+			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::HTTP))
 		{
 			if (i == 0)
 			{
 				ilen = IsValidPkt_HTTP(tcpStreamData + i, iStreamLen - i);
 				if (ilen > 0)
 				{
-					m_protocolType = APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC;
+					m_protocolType = APP_LAYER_PROTO::TDSRPC;
 				}
 			}
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO_TYPE::PROTOCOL_WEBSOCKET))
+			(cpt == APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
 		{
 			if (i > 0)
 				break;
 			ilen = IsValidPkt_WEBSOCKET(tcpStreamData + i, iStreamLen - i);
 			if (ilen > 0)
 			{
-				m_protocolType = APP_LAYER_PROTO_TYPE::PROTOCOL_WEBSOCKET;
+				m_protocolType = APP_LAYER_PROTO::PROTOCOL_WEBSOCKET;
 			}
 		}
+
+
+		if (ilen == 0 &&
+			(cpt == APP_LAYER_PROTO::IQ60))
+		{
+			if (i > 0)
+				break;
+			ilen = IsValidPkt_IQ60(tcpStreamData + i, iStreamLen - i);
+			if (ilen > 0)
+			{
+				m_protocolType = APP_LAYER_PROTO::IQ60;
+			}
+		}
+
 
 		if (ilen)
 		{
@@ -280,6 +295,24 @@ int stream2pkt::IsValidPkt_WEBSOCKET(char* pData, int iLen)
 	if (WS_ERROR_FRAME != req.unpack((char*)pData, iLen))
 	{
 		return req.iFrmLen;
+	}
+	return 0;
+}
+
+
+int stream2pkt::IsValidPkt_IQ60(char* pData, int iLen)
+{
+	if (iLen < 3)
+		return 0;
+	if (pData[0] == '[')
+	{
+		for (int i = 0; i < iLen; i++)
+		{
+			if (pData[i] == '\n' && pData[i - 1] == ']')
+			{
+				return i + 1;
+			}
+		}
 	}
 	return 0;
 }

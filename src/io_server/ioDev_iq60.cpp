@@ -23,54 +23,47 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 
 	LOG("收到IQ60数据包: " + pkt);
 
-	vector<string> aryPkt;
-	str::split(aryPkt,pkt,"\n");
 
-	//分开粘连包
-	for (int i = 0; i < aryPkt.size(); i++)
-	{
-		string pktData = aryPkt[i];
-		try {
-			json jpkt = json::parse(pktData);
+	try {
+		json jpkt = json::parse(pkt);
 
-			if (jpkt.is_array() && jpkt.size() >= 1)
+		if (jpkt.is_array() && jpkt.size() >= 1)
+		{
+			//转发给对应设备
+			string id = jpkt[0];
+			if (g_mapIQ60.find(id) != g_mapIQ60.end())
 			{
-				//转发给对应设备
-				string id = jpkt[0];
-				if (g_mapIQ60.find(id) != g_mapIQ60.end())
+				ioDev_iq60* p = g_mapIQ60[id];
+				p->ioSession = pALC;
+				p->onRecvPkt(jpkt);
+				if (p->m_bOnline == false)
 				{
-					ioDev_iq60* p = g_mapIQ60[id];
-					p->ioSession = pALC;
-					p->onRecvPkt(jpkt);
-					if (p->m_bOnline == false)
-					{
-						p->m_bOnline = true;
-						json j;
-						p->toJson(j);
-						tdsSrv.notify("io.online", j);
-					}
-				}
-				//设备发现功能
-				else
-				{
-					ioDev_iq60* p = new ioDev_iq60();
-					p->m_addr = id;
-					p->m_mngStatus = IODEV_MNG_STATUS::spare;
 					p->m_bOnline = true;
-					g_mapIQ60[id] = p;
-					ioSrv.m_vecChild.push_back(p);
 					json j;
 					p->toJson(j);
-					tdsSrv.notify("io.devDiscovered", j);
+					tdsSrv.notify("io.online", j);
 				}
 			}
+			//设备发现功能
+			else
+			{
+				ioDev_iq60* p = new ioDev_iq60();
+				p->m_addr = id;
+				p->m_mngStatus = IODEV_MNG_STATUS::spare;
+				p->m_bOnline = true;
+				g_mapIQ60[id] = p;
+				ioSrv.m_vecChild.push_back(p);
+				json j;
+				p->toJson(j);
+				tdsSrv.notify("io.devDiscovered", j);
+			}
 		}
-		catch (std::exception& e)
-		{
-			string errorType = e.what();
-			string log = "pkt from iq60,json parse error. " + errorType;
-			LOG(log);
-		}
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		string log = "pkt from iq60,json parse error. " + errorType;
+		LOG(log);
 	}
 }
 
@@ -277,15 +270,25 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			jChan["addr"] = jPt["Name"];
 			string valType = jPt["ValueType"].get<string>();
 			if (valType == "float")
-				jChan["valType"] = "real";
+				jChan["valType"] = VAL_TYPE::real;
 			else if (valType == "bool")
-				jChan["valType"] = "bool";
+				jChan["valType"] = VAL_TYPE::boolean;
+			else if (valType == "int")
+				jChan["valType"] = VAL_TYPE::integer;
+			else
+				continue;
 			jChan["valTypeLabel"] = VAL_TYPE_LABEL.at(jChan["valType"]);
 			jChan["name"] = jPt["DisplayName"];
 			if (jPt["RW"] == "rw")
+			{
 				jChan["io"] = "io";
+				jChan["ioLabel"] = "输出";
+			}
 			else
+			{
 				jChan["io"] = "i";
+				jChan["ioLabel"] = "输入";
+			}
 			jChan["tag_bind"] = "";
 			jChan["type"] = IO_DEV_TYPE::CHAN::io_channel;
 			jChan["type_label"] = IO_DEV_TYPE_LABEL.at(IO_DEV_TYPE::CHAN::io_channel);

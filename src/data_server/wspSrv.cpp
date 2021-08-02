@@ -37,7 +37,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 			pALC->m_alBuf.PushStream((char*)req.payloadData, req.iPayloadLen);
 			if (req.fin_)
 			{
-				if (pALC->m_alBuf.PopAllAs(APP_LAYER_PROTO_TYPE::PROTOCOL_TDSRPC))
+				if (pALC->m_alBuf.PopAllAs(APP_LAYER_PROTO::TDSRPC))
 				{
 					pALC->iALProto = pALC->m_alBuf.m_protocolType;
 					ds.OnRecvAppLayerPkt((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pALC);
@@ -68,7 +68,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 void wspSrv::OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TDS_SESSION> pALC)
 {
 	pPab->PushStream(pData, iLen);
-	while (pPab->PopPkt(APP_LAYER_PROTO_TYPE::PROTOCOL_WEBSOCKET))
+	while (pPab->PopPkt(APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
 	{
 		OnRecvWSFrame(pPab->pkt, pPab->iPktLen, pALC);
 	}

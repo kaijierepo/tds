@@ -7,7 +7,7 @@ public:
 		iAbandonBytes = 0;
 		iPktLen = 0;
 		iStreamLen = 0;
-		m_protocolType = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN;
+		m_protocolType = APP_LAYER_PROTO::UNKNOWN;
 
 		iPktBuffSize = 0;
 		iStreaBuffSize = 0;
@@ -26,7 +26,7 @@ public:
 	void ResizeStreamBuff(int iNewSize);
 	void ResizePopPktBuff(int iNewSize);
 	void PushStream(char* pData, int iLen);
-	bool PopPkt(string cpt = APP_LAYER_PROTO_TYPE::PROTOCOL_UNKNOWN);
+	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
 	bool PopAllAs(string cpt); 
 
 	char* pkt;
@@ -51,5 +51,6 @@ public:
 	int IsValidPkt_ModbusRTU(char* pData,int iLen);
 	int IsValidPkt_JSONRPC(char* pData, int iLen);
 	int IsValidPkt_WEBSOCKET(char* pData, int iLen);
+	int IsValidPkt_IQ60(char* pData, int iLen);
 	WORD GetCRC(const char *pBuf, UINT iLen);
 };

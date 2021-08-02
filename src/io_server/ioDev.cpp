@@ -144,7 +144,7 @@ ioAddress ioDev::getIOAddr()
 
 	 if (m_devType == "modbus_rtu")
 	{
-		addr.proto = APP_LAYER_PROTO_TYPE::PROTOCOL_MODBUS_RTU;
+		addr.proto = APP_LAYER_PROTO::MODBUS_RTU;
 	}
 	
 	addr.gwType = GW_UNKNOWN;

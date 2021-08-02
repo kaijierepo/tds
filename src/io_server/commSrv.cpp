@@ -188,7 +188,7 @@ void commServer::OnRecvData_EqpAppLayerPkt(PKT_DATA* ppd, ioAddrSession* pAddrIn
 
 	//确定应用层包进行同步处理还是异步处理
 	//异步处理由低层向上回调线程进行处理； 同步处理放入缓存由应用层线程进行处理
-	if (pAddrInfo->addr.proto == APP_LAYER_PROTO_TYPE::PROTOCOL_MODBUS_RTU)
+	if (pAddrInfo->addr.proto == APP_LAYER_PROTO::MODBUS_RTU)
 	{
 		ppd->dealType = RECV_PKT_ASYN;
 	}
@@ -329,7 +329,7 @@ void commServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInf
 						iID = (int)bAddress;
 						addr.gwAddr = str::format("%d", iID);
 
-						if (pAddrInfo->addr.proto == APP_LAYER_PROTO_TYPE::PROTOCOL_FRAMING_PROTOCOL)
+						if (pAddrInfo->addr.proto == APP_LAYER_PROTO::PROTOCOL_FRAMING_PROTOCOL)
 						{
 							OnRecvData_EqpAppLayerData(pCanBuf->canBuff + 5, pCanPkt->DLC, addr.gwAddr, addr.devAddr);
 						}
