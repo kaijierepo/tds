@@ -20,7 +20,7 @@ struct tcpSession
 	int iKeepAliveTimeout;
 	void* pTcpServer;  
 	void* pALSession; 
-
+	SOCKET bridgeSock;
 	bool bEnableActivityCheck; //是否进行活动检测
 
 	SYSTEMTIME stLastActive;

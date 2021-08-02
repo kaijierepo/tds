@@ -304,6 +304,7 @@
     <ClCompile Include="..\src\mo_model\stream2pkt.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
+    <ClCompile Include="..\src\tools\tcpReverseProxy.cpp" />
     <ClCompile Include="..\src\tools\tcpSwitch.cpp" />
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />
@@ -353,6 +354,7 @@
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
+    <ClInclude Include="..\src\tools\tcpReverseProxy.h" />
     <ClInclude Include="..\src\tools\tcpSwitch.h" />
     <ClInclude Include="..\src\video\ffmpeg.h" />
     <ClInclude Include="..\src\video\remoteDesktopServer.h" />

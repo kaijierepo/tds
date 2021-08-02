@@ -8,6 +8,7 @@
 #include "wke.h"
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
+#include "tools/tcpReverseProxy.h"
 
 /*
 notes:
@@ -36,9 +37,11 @@ int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
-	parser.set_optional<string>("m", "mode", "tds", "tds mode; route mode;");
+	parser.set_optional<string>("m", "mode", "tds", "tds: tds mode;hub: tcp hub mode;switch: tcp switch mode;rproxy: reverse proxy mode");
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
+	parser.set_optional<string>("sb", "serverbackend", "127.0.0.1:666", "backend server in reverse proxy mode");
+	parser.set_optional<int>("pp", "proxyport", 667, "proxy server port in reverse proxy mode");
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
 	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
@@ -62,6 +65,14 @@ int main(int argc, char** argv)
 		tcpSwitch* tr = new tcpSwitch();
 		tr->portLeft = parser.get<int>("sl");
 		tr->portRight = parser.get<int>("sr");
+		tr->run();
+	}
+	else if (mode == "rproxy")
+	{
+		createConsole();
+		tcpReverseProxy* tr = new tcpReverseProxy();
+		tr->realHost = parser.get<string>("sb");
+		tr->proxyPort = parser.get<int>("pp");
 		tr->run();
 	}
 	else

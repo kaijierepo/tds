@@ -15,10 +15,12 @@ struct tcpSessionClt
 	int srvPort;//对端端口
 	void* pALSession;
 	tcpClt* tcpClt;
+	SOCKET bridgeSock;
 
 	tcpSessionClt()
 	{
 		sock = 0;
+		bridgeSock = 0;
 		pALSession = NULL;
 		tcpClt = NULL;
 	}
