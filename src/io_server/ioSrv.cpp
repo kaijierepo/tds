@@ -69,7 +69,6 @@ ioDev* createIODev(json conf)
 		ioDev_iq60* piq60 = new ioDev_iq60();
 		p = piq60;
 		p->m_addr = conf["addr"]["gateway_id"];
-		g_mapIQ60[p->m_addr] = piq60;
 	}
 	if (p)
 	{
@@ -105,7 +104,25 @@ ioDev* createIODev(json conf)
 					pChild = pdc;
 					pdc->m_level = "channel";
 					pdc->m_addr = addr;
-					pdc->m_strLinkMPTag = i["tag_bind"];
+					if (i["tag_bind"] != nullptr)
+					{
+						if (i["tag_bind"].is_array())
+						{
+							json tagNodes = i["tag_bind"];
+							string tag;
+							for (int i = 0; i < tagNodes.size(); i++)
+							{
+								tag += tagNodes[i];
+								if (i < tagNodes.size() - 1)
+									tag += ".";
+							}
+							pdc->m_strLinkMPTag = tag;
+						}
+						else
+						{
+							pdc->m_strLinkMPTag = i["tag_bind"];
+						}
+					}
 					p->m_mapDataChannel[addr] = pdc;
 				}
 			}

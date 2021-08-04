@@ -23,4 +23,3 @@ public:
 };
 
 extern void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC);
-extern map<string, ioDev_iq60*> g_mapIQ60;

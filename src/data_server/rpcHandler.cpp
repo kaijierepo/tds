@@ -628,7 +628,6 @@ string rpcHandler::rpc_setconf(json params, string& error)
 		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
 		//io tree 热更新
 		ioSrv.m_vecChild.clear();
-		g_mapIQ60.clear();
 		ioSrv.loadConf();
 		return "\"ok\"";
 	}

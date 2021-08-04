@@ -10,8 +10,6 @@
 
 using namespace httplib;
 
-map<string, ioDev_iq60*> g_mapIQ60;
-
 
 void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 {
@@ -31,17 +29,25 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 		{
 			//转发给对应设备
 			string id = jpkt[0];
-			if (g_mapIQ60.find(id) != g_mapIQ60.end())
+			ioDev* pIoDev = ioSrv.getIODev(id);
+			if (pIoDev)
 			{
-				ioDev_iq60* p = g_mapIQ60[id];
-				p->ioSession = pALC;
-				p->onRecvPkt(jpkt);
-				if (p->m_bOnline == false)
+				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
 				{
-					p->m_bOnline = true;
-					json j;
-					p->toJson(j);
-					tdsSrv.notify("io.online", j);
+					ioDev_iq60* p = (ioDev_iq60*)pIoDev;
+					p->ioSession = pALC;
+					p->onRecvPkt(jpkt);
+					if (p->m_bOnline == false)
+					{
+						p->m_bOnline = true;
+						json j;
+						p->toJson(j);
+						tdsSrv.notify("io.online", j);
+					}
+				}
+				else
+				{
+					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id);
 				}
 			}
 			//设备发现功能
@@ -51,7 +57,6 @@ void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
 				p->m_addr = id;
 				p->m_mngStatus = IODEV_MNG_STATUS::spare;
 				p->m_bOnline = true;
-				g_mapIQ60[id] = p;
 				ioSrv.m_vecChild.push_back(p);
 				json j;
 				p->toJson(j);
@@ -80,7 +85,6 @@ ioDev_iq60::ioDev_iq60()
 
 ioDev_iq60::~ioDev_iq60()
 {
-	g_mapIQ60.erase(m_addr);
 }
 
 bool ioDev_iq60::onRecvPkt(json jPkt)
