@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <vector>
 using namespace std;
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
