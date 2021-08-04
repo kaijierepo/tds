@@ -210,10 +210,22 @@ bool ioDev_iq60::requestAndWaitResp(string cmd,string req)
 
 	ioSession->send((char*)req.c_str(), req.length());
 
-	if (waitResponse(5000))
+	if (cmd == "hs")
 	{
-		return true;
+		if (waitResponse(5000))
+		{
+			return true;
+		}
 	}
+	else if (cmd == "hr")
+	{
+		if (waitResponse(10000))
+		{
+			return true;
+		}
+
+	}
+
 
 	return false;
 }
