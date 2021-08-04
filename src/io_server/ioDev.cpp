@@ -62,6 +62,18 @@ bool ioDev::toJson(json& conf, string opt)
 	conf["online"] = m_bOnline;
 	conf["manageStatus"] = m_mngStatus;
 
+	if (m_level == "channel")
+	{
+		ioChannel* pC = (ioChannel*)this;
+		conf["tag_bind"] = pC->m_strLinkMPTag;
+		conf["io"] = pC->m_io;
+		conf["ioLabel"] = pC->m_ioLabel;
+		conf["valType"] = pC->m_valType;
+		conf["valTypeLabel"] = pC->m_valTypeLabel;
+		conf["name"] = pC->m_name;
+	}
+		
+
 	if (m_channelType != "")
 	{
 		conf["channelType"] = m_channelType;

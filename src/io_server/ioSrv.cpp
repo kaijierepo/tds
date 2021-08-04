@@ -124,6 +124,16 @@ ioDev* createIODev(json conf)
 						}
 					}
 					p->m_mapDataChannel[addr] = pdc;
+					if (i["io"] != nullptr)
+						pdc->m_io = i["io"];
+					if (i["ioLabel"] != nullptr)
+						pdc->m_ioLabel = i["ioLabel"];
+					if (i["valType"] != nullptr)
+						pdc->m_valType = i["valType"];
+					if (i["valTypeLabel"] != nullptr)
+						pdc->m_valTypeLabel = i["valTypeLabel"];
+					if(i["name"]!=nullptr)
+						pdc->m_name = i["name"];
 				}
 			}
 			else if(i["level"] == "device")
