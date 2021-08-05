@@ -41,7 +41,8 @@ bool MP::loadConf(json& conf)
 	}
 	else if (m_valType == TDS::VAL_TYPE::json)
 	{
-		m_customValType = conf["custom_val_type"].get<string>();
+		if(conf["mpType"]!=nullptr)
+		m_mpType = conf["mpType"].get<string>();
 	}
 
 	if (conf["save_interval"] != nullptr)
@@ -91,7 +92,7 @@ void MP::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 		jVal["type"]= this->m_valType;
 		if (this->m_valType == "json")
 		{
-			jVal["custom_type"] = this->m_customValType;
+			jVal["mpType"] = this->m_mpType;
 		}
 	}
 	
@@ -135,7 +136,7 @@ string MP::getMpTypeLabel()
 	}
 	else if (m_valType == TDS::VAL_TYPE::json)
 	{
-		typeLabel = m_customValType;
+		typeLabel = m_mpType;
 	}
 	else
 	{
@@ -157,13 +158,17 @@ string MP::getMpType()
 	{
 		mpType = m_strName;
 	}
+	else if (m_valType == TDS::VAL_TYPE::video)
+	{
+		mpType = "视频";
+	}
 	else if (m_valType == TDS::VAL_TYPE::json)
 	{
-		mpType = m_customValType;
+		mpType = m_mpType;
 	}
 	else
 	{
-		mpType = m_valType;
+		mpType = "未知类型";
 	}
 
 	return mpType;

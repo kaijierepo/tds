@@ -45,7 +45,8 @@ bool project::loadConf()
 	}
 	catch (std::exception& e)
 	{
-		std::cout<<e.what()<<std::endl;
+		string s = e.what();
+		std::cout<<s<<std::endl;
 		return false;
 	}
 }
@@ -95,10 +96,13 @@ void project::getMpTypeList(json& mpTypeList)
 	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
 		MP* pmp = (MP*)it->second;
 		string mpType = "";
-		string typeLabel = "";
-		
-		mpType = pmp->getMpType();//common MP name is used as mptype; custom MP has a user defined MP type
-		typeLabel = pmp->getMpTypeLabel();
+
+		//模拟量和开关量的监测点名称 name 作为 mptype
+		//因为实际使用中，需要用监测点名称区分类似温度、湿度等类型概念
+		//视频监测点一般可能使用位置命名，因此不是类型，是一个具体的位置，不作为mpType
+		//json类型数据 用户需要自己指定监测点类型，在mo配置中配置
+		//mpType是可阅读字符串
+		mpType = pmp->getMpType();
 
 		if(mapTypes.find(mpType) != mapTypes.end())
 			continue;
@@ -108,7 +112,6 @@ void project::getMpTypeList(json& mpTypeList)
 		json oneType;
 		oneType["valType"] = pmp->m_valType;
 		oneType["type"] = mpType;
-		oneType["label"] = typeLabel;
 		mpTypeList.push_back(oneType);
 	}
 }

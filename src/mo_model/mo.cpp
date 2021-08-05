@@ -81,7 +81,7 @@ bool MO::toJson(json& conf, string opt)
 		MP* p = (MP*)this;
 		conf["val_type"] = p->m_valType;
 		if (p->m_valType == "json")
-			conf["custom_val_type"] = p->m_customValType;
+			conf["mpType"] = p->m_mpType;
 	}
 
 	json jChildren;

@@ -425,7 +425,7 @@ string rpcHandler::rpc_output(json params, string& error)
 	{
 		json jError = {
 				{"code", TEC_VAL_TYPE_ERROR},
-				{"message" , "error: wrong val type , should be switching type "}
+				{"message" , "error: wrong val type , should be bool type "}
 		};
 		string error = jError.dump();
 		return "!" + error;
