@@ -13,7 +13,7 @@
 #include "wke.h"
 #include "res/resource.h"
 
-string tdsEncoding = "utf8";
+string InterfaceEncoding = "utf8";
 
 string build_date = __DATE__;
 string build_time = __TIME__;
@@ -195,7 +195,7 @@ TDS_imp::TDS_imp()
 
 bool TDS_imp::setEncodeing(string encoding)
 {
-	tdsEncoding = encoding;
+	InterfaceEncoding = encoding;
 	return true;
 }
 
@@ -313,6 +313,11 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 
 void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,STREAM_INFO* si)
 {
+	if (InterfaceEncoding == "gb2312")
+	{
+		tag = charCodec::ansi2Utf8(tag);
+	}
+
 	MP* pmp = prj.getMp(tag);
 	if(pmp == NULL)
 	{
@@ -378,7 +383,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 
 void TDS_imp::log(char* text)
 {
-	if (tdsEncoding == "gb2312")
+	if (InterfaceEncoding == "gb2312")
 	{
 		string strUtf8 = charCodec::ansi2Utf8(text);
 		LOG(strUtf8);

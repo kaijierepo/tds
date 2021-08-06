@@ -31,11 +31,9 @@ MP::~MP()
 bool MP::loadConf(json& conf)
 {
 	MO::loadConf(conf);
-	m_valType = conf["val_type"].get<string>();
+	m_valType = conf["valType"].get<string>();
 	if (m_valType == TDS::VAL_TYPE::real)
 	{
-		//if(conf["physical_type"]!=nullptr)
-			//m_physicalType = conf["physical_type"].get<string>();
 		if(conf["unit"]!=nullptr)
 			m_strUnit = conf["unit"].get<string>();
 	}
@@ -45,9 +43,9 @@ bool MP::loadConf(json& conf)
 		m_mpType = conf["mpType"].get<string>();
 	}
 
-	if (conf["save_interval"] != nullptr)
+	if (conf["saveInterval"] != nullptr)
 	{
-		json jsi = conf["save_interval"];
+		json jsi = conf["saveInterval"];
 		m_saveInterval.hour = jsi["hour"].get<int>();
 		m_saveInterval.minute = jsi["minute"].get<int>();
 		m_saveInterval.second = jsi["second"].get<int>();
@@ -57,7 +55,7 @@ bool MP::loadConf(json& conf)
 }
 
 
-void MP::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
+void MP::inputVal(json jVal, SYSTEMTIME* dataTime, json dataFile)
 {
 	SYSTEMTIME t;
 	if (dataTime == NULL)
@@ -102,7 +100,7 @@ void MP::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic)
 	if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
 	{
 		GetLocalTime(&m_lastSaveTime);
-		db.INSERT(getTag().c_str(), *dataTime, jVal);
+		db.INSERT(getTag().c_str(), *dataTime, jVal,dataFile);
 	}
 }
 

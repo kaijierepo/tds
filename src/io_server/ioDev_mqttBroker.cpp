@@ -3,14 +3,16 @@
 #include "logger.h"
 #include "ioChan.h"
 
-
+#ifdef ENABLE_MQTT
 #pragma comment(lib, "mqtt.lib")
+#endif
 
 #define EXIT_FAILURE -1
 #define CLIENTID    "tds ioserver"
 #define QOS         1
 #define TIMEOUT     10000L
 
+#ifdef ENABLE_MQTT
 MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
 
 volatile MQTTClient_deliveryToken deliveredtoken;
@@ -45,6 +47,7 @@ void connlost(void* context, char* cause)
     LOG("\nConnection lost\n");
     LOG("     cause: %s\n", cause);
 }
+#endif
 
 ioDev_mqttBroker::ioDev_mqttBroker()
 {
@@ -52,6 +55,7 @@ ioDev_mqttBroker::ioDev_mqttBroker()
 
 ioDev_mqttBroker::~ioDev_mqttBroker()
 {
+#ifdef ENABLE_MQTT
     int rc = 0;
     for (auto i : m_vecChild)
     {
@@ -69,11 +73,13 @@ ioDev_mqttBroker::~ioDev_mqttBroker()
     }
 
     MQTTClient_destroy(&m_mqttClt);
+#endif
 }
 
 
 bool ioDev_mqttBroker::run()
 {
+#ifdef ENABLE_MQTT
     MQTTClient_global_init(NULL);
     int rc;
     string serverAddr = "tcp://" + m_addr;
@@ -119,6 +125,6 @@ bool ioDev_mqttBroker::run()
             LOG("Failed to subscribe, return code %d\n", rc);
         }
     }
-    
+#endif
     return true;
 }

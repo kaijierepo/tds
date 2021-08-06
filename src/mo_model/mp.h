@@ -30,7 +30,13 @@ public:
 
 	bool loadConf(json& conf);
 public:
-	void inputVal(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic = false);//bPic: whether or not the data element have a related picture
+	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
+	//例如 deData = "[deFolder,video,pic]"
+	//deFolder表示数据元数据统一放在一个文件夹中，用于一些特别复杂的数据
+	//video表示有一个关联的视频文件
+	//pic表示有一个关联的图片文件
+	//当deFolder和video，pic同时存在时，pic和video放在deFolder中，否则和数据元索引文件放在同一个目录
+	void inputVal(json jVal, SYSTEMTIME* dataTime=NULL, json dataFile = nullptr);
 	bool outputVal(json jVal);
 	bool IsCurValValid();
 	string getMpTypeLabel();

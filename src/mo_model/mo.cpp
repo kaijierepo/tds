@@ -65,34 +65,57 @@ bool MO::loadConf(json& conf)
 	return true;
 }
 
-bool MO::toJson(json& conf, string opt)
+bool MO::toJson(json& conf, json params)
 {
-	if (opt == "exclude-common-mp" && m_moType == MO_TYPE::mp)
-	{
-		MP* p = (MP*)this;
-		if(p->m_valType != "json")
-   			return false;
-	}
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
 
 	if (m_moType == "mp")
 	{
 		MP* p = (MP*)this;
-		conf["val_type"] = p->m_valType;
+		bool bIncluded = false;
+		//确定是否请求了该类型的监测点
+		if (params["valType"] != nullptr)
+		{
+			json& vt = params["valType"];
+			for (int i = 0; i < vt.size(); i++)
+			{
+				json& jType = vt[i];
+				if (jType.get<string>() == p->m_valType)
+				{
+					bIncluded = true;
+					break;
+				}
+			}
+		}
+		else
+		{
+			bIncluded = true;
+		}
+		if (!bIncluded)
+			return false;
+
+		conf["valType"] = p->m_valType;
 		if (p->m_valType == "json")
 			conf["mpType"] = p->m_mpType;
+		json saveInterval;
+		saveInterval["hour"] = p->m_saveInterval.hour;
+		saveInterval["minute"] = p->m_saveInterval.minute;
+		saveInterval["second"] = p->m_saveInterval.second;
+		conf["saveInterval"] = saveInterval;
+	}
+	else
+	{
+		json jChildren = json::array();
+		for (auto& pmochild : m_childMO)
+		{
+			json jChild;
+			if (pmochild->toJson(jChild, params))
+				jChildren.push_back(jChild);
+		}
+		conf["children"] = jChildren;
 	}
 
-	json jChildren;
-	for (auto& pmochild : m_childMO)
-	{
-		json jChild;
-		if(pmochild->toJson(jChild,opt))
-			jChildren.push_back(jChild);
-	}
-	if(!jChildren.is_null())
-		conf["children"] = jChildren;
 	return true;
 }
 

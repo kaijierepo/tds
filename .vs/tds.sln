@@ -15,6 +15,10 @@ Global
 		exe - D|x86 = exe - D|x86
 		exe - R|x64 = exe - R|x64
 		exe - R|x86 = exe - R|x86
+		exe -D mtd|x64 = exe -D mtd|x64
+		exe -D mtd|x86 = exe -D mtd|x86
+		exe -R mt|x64 = exe -R mt|x64
+		exe -R mt|x86 = exe -R mt|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x64.ActiveCfg = dll - D|x64
@@ -33,6 +37,14 @@ Global
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.Build.0 = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.ActiveCfg = Release|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.Build.0 = Release|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -D mtd|x64.ActiveCfg = exe -D mtd|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -D mtd|x64.Build.0 = exe -D mtd|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -D mtd|x86.ActiveCfg = exe -D mtd|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -D mtd|x86.Build.0 = exe -D mtd|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R mt|x64.ActiveCfg = exe -R mt|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R mt|x64.Build.0 = exe -R mt|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R mt|x86.ActiveCfg = exe -R mt|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R mt|x86.Build.0 = exe -R mt|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

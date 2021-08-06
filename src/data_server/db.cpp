@@ -51,14 +51,15 @@ void database::INSERT_FILE(string strTag, SYSTEMTIME stTime, char* pData, int iL
 }
 
 
-void database::INSERT(string strTag, SYSTEMTIME stTime, json& jData,bool bPic)
+void database::INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
 {
 	string dlPath = getDBFolder(strTag, stTime) + "\\" + "db.json";
 	fs::createFolderOfPath(dlPath.c_str());
 	json jDE;
 	jDE["time"] = timeopt::st2str(stTime);
 	jDE["val"] = jData;
-	jDE["pic"] = bPic;
+	if(dataFile != nullptr)
+	jDE["dataFile"] = dataFile;
 	if (!fs::fileExist(dlPath.c_str()))
 	{
 		json jDataList;

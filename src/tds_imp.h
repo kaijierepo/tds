@@ -11,7 +11,7 @@ public:
 		return "1.0.0";
 	}
 
-	bool setEncodeing(string encoding);
+	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
 	 bool run(string cmdline = "");
 

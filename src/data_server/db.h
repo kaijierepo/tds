@@ -127,7 +127,7 @@ public:
 	void Close();
 
 	//crud options
-	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,bool bPic=false);
+	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr);
 	void INSERT_FILE(string strTag, SYSTEMTIME DataTime, string strDataFile, string suffix = "");
 	void INSERT_FILE(string strTag, SYSTEMTIME stTime, char* pData, int iLen, string fmt);//保存
 	//time: "2020-02-14~2020-02-15" or "1d1h1m30s"

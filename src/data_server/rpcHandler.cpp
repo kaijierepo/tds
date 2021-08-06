@@ -459,14 +459,14 @@ string rpcHandler::rpc_input(json params, string& error)
 	//parse param
 	SYSTEMTIME stTimeStamp;
 	string tag = "", cid = "",time="";
-	bool bHavePic = false;
+	json dataFile;
 	json val = "";
 	if (params.find("val") != params.end())
 		val = params["val"];
 	else
 		return "";
-	if (params.find("pic") != params.end())
-		bHavePic = params["pic"].get<bool>();
+	if (params.find("dataFile") != params.end())
+		dataFile = params["dataFile"];
 	if (params.find("tag") != params.end())
 		tag = params["tag"].get<string>();
 	if (params.find("cid") != params.end())
@@ -495,7 +495,8 @@ string rpcHandler::rpc_input(json params, string& error)
 		GetLocalTime(&stTimeStamp);
 	}
 
-	pmp->inputVal(val, &stTimeStamp, bHavePic);
+
+	pmp->inputVal(val, &stTimeStamp, dataFile);
 	return "ok";
 }
 
@@ -544,22 +545,8 @@ string rpcHandler::rpc_getconf(json params, string& error)
 	if (type == "mo-tree")
 	{
 		json j;
-		prj.toJson(j, "exclude-common-mp"); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+		prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
 		string conf = j.dump(4);
-		return conf;
-	}
-	else if (type == "mo-mp-tree")
-	{
-		string conf;
-		fs::readFile(tds->conf->projectConfPath + "\\mo.json", conf);
-		if (conf == "")
-		{
-			json j;
-			j["name"] = "空项目";
-			j["type"] = "project";
-			j["children"] = json::array();
-			conf = j.dump(4);
-		}
 		return conf;
 	}
 	else if(type == "io-tree")
@@ -613,7 +600,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	string type = "";
 	if (params.find("type") != params.end())
 		type = params["type"].get<string>();
-	if (type == "mo-mp-tree")
+	if (type == "mo-tree")
 	{
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\mo.json", strData);
