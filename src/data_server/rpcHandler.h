@@ -10,7 +10,7 @@ rpc handler
 #include "tdsSession.h"
 
 
-enum TDS_ERROR_CODE{
+enum RPC_ERROR{
 	//json rpc 标准部分
 	TDS_ERROR_CODE = -32603,
 
@@ -22,6 +22,9 @@ enum TDS_ERROR_CODE{
 	TEC_TAG_SELECTOR_FMT_ERROR = - 40005,
 	TEC_VAL_TYPE_ERROR = - 40006,
 	TEC_OUTPUT_EXECUTION_FAIL = 40007,
+
+	//io 部分
+	IO_DEV_NOT_FOUND = -41001,
 };
 
 

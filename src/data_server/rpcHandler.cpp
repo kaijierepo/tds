@@ -710,7 +710,12 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 {
 	string ioAddr = params["ioAddr"];
 	ioDev* pDev = ioSrv.getIODev(ioAddr);
-	if (pDev && pDev->m_devType == "iq60-gateway")
+	if (!pDev)
+	{
+		return RPCError(RPC_ERROR::IO_DEV_NOT_FOUND, "io device not found");
+	}
+
+	if (pDev->m_devType == "iq60-gateway")
 	{
 		ioDev_iq60* p = (ioDev_iq60*)pDev;
 		json chanList;
@@ -722,6 +727,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 			return result.dump();
 		}
 	}
+
 
 	json jError = {
 				{"code", -32603},
@@ -740,13 +746,13 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		tag = params["tag"].get<string>();
 	if (tag == "")
 	{
-		error = RPCError(TDS_ERROR_CODE::TEC_PARAM_MISSING,"param missing,tag is not specified");
+		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING,"param missing,tag is not specified");
 		return "";
 	}
 	MP* pmp = prj.getMp(tag);
 	if(pmp == NULL)
 	{
-		error = RPCError(TDS_ERROR_CODE::TEC_TAG_NOT_EXIST, "tag not exist");
+		error = RPCError(RPC_ERROR::TEC_TAG_NOT_EXIST, "tag not exist");
 		return "";
 	}
 
