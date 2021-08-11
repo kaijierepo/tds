@@ -153,10 +153,23 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 	return str;
 }
 
+void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
+{
+	string openFile = fs::GetOpenFile();
+	if (openFile != "")
+	{
+		json p;
+		p["path"] = openFile;
+		p["caller"] = params["caller"];
+		tdsSrv.notify("fs.openFileDlg", p);
+	}
+}
+
 string rpcHandler::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string result = "";
 	//可完全并发的命令
+	//#region concurrent cmd
 	if (method == "heartbeat")
 	{
 		result = rpc_heartbeat(params, error);
@@ -201,6 +214,17 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	{
 		result = rpc_com_list(params, error);
 	}
+	else if (method == "fs.openFileDlg")
+	{
+		std::thread t(openFileDlgThread, pSession, params);
+		t.detach();
+		result = "\"ok\"";
+	}
+	else if (method == "fs.saveFileDlg")
+	{
+
+	}
+	//#endregion
 
 	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
 	if (method == "setconf")
@@ -246,6 +270,14 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 		}
 	}
 
+
+	//文件操作
+	if (method == "fs.readfile")
+	{
+		fs::readFile(params["path"], result);
+		json j = result;
+		result = j.dump();
+	}
 
 	return result;
 }

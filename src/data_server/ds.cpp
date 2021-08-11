@@ -527,24 +527,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	std::string handshakeString = req.GetHandshakeString(strData);
 	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 
-	if (strData.find("rpc") != string::npos)
-	{
-		if (tds->conf->debugMode)
-		{
-			string s = R"(
-						{
-							"jsonrpc": "2.0", 
-							"method": "notify.close_heartbeat", 
-							"params": {
-							}, 
-							"id": null
-						}
-					)";
-			tdsSession->send((char*)s.data(), s.length());
-		}
-		tdsSession->type = TDS_SESSION_TYPE::rpc;
-	}
-	else if (strData.find("/log") != string::npos)
+	if (strData.find("/log") != string::npos)
 	{
 		logTdsSession = tdsSession;
 		logger.logOutput = logToWebsock;
@@ -593,6 +576,28 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 				p->m_streamPuller = tdsSession;
 			}
 		}
+	}
+	else //连接根地址 默认为rpc连接
+	{
+		if (strData.find("rpc") != string::npos)
+		{
+			
+		}
+		
+		if (tds->conf->debugMode)
+		{
+			string s = R"(
+						{
+							"jsonrpc": "2.0", 
+							"method": "notify.close_heartbeat", 
+							"params": {
+							}, 
+							"id": null
+						}
+					)";
+			tdsSession->send((char*)s.data(), s.length());
+		}
+		tdsSession->type = TDS_SESSION_TYPE::rpc;
 	}
 }
 

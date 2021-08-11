@@ -123,7 +123,7 @@ int CWSPPkt::pack(const char * inMessage, int messageLen,  enum WS_FrameType fra
 	int ret = WS_ERROR_FRAME;
 	const uint32_t messageLength = messageLen;
 
-	if (messageLength > 5*1024*1024) //暂时先改为最大5M 
+	if (messageLength > 20*1024*1024) //暂时先改为最大5M 
 	{
 		 //暂不支持这么长的数据
 		return WS_ERROR_FRAME;

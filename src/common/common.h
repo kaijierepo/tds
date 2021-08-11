@@ -89,6 +89,8 @@ namespace fs {
 	bool fileExist(string pszFileName);
 	bool deleteFile(string path);
 	vector<string> getFileList(string strFolder);
+	std::string GetSaveFile(char* filter = NULL, char* title = NULL, char* initDirectory = NULL);
+	std::string GetOpenFile(char* filter = NULL, char* title = NULL, char* initDirectory = NULL);
 }
 
 
