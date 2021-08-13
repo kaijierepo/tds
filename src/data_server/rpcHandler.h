@@ -14,6 +14,8 @@ enum RPC_ERROR{
 	//json rpc 标准部分
 	TDS_ERROR_CODE = -32603,
 
+	//通用失败
+	TEC_FAIL = -40000,
 	//tds 部分
 	TEC_TAG_NOT_EXIST = -40001,
 	TEC_PARAM_MISSING = -40002,

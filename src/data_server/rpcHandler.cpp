@@ -272,11 +272,24 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 
 
 	//文件操作
-	if (method == "fs.readfile")
+	if (method == "fs.readFile")
 	{
 		fs::readFile(params["path"], result);
 		json j = result;
 		result = j.dump();
+	}
+  	else if (method == "fs.writeFile")
+	{
+		string p = params["path"].get<string>();
+		string d = params["data"].get<string>();
+		if (fs::writeFile(p, d))
+		{
+			result = "\"ok\"";
+		}
+		else
+		{
+			error = RPCError(TEC_FAIL, "fail");
+		}
 	}
 
 	return result;
@@ -744,7 +757,8 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 	ioDev* pDev = ioSrv.getIODev(ioAddr);
 	if (!pDev)
 	{
-		return RPCError(RPC_ERROR::IO_DEV_NOT_FOUND, "io device not found");
+		error = RPCError(RPC_ERROR::IO_DEV_NOT_FOUND, "io device not found");
+		return "";
 	}
 
 	if (pDev->m_devType == "iq60-gateway")
