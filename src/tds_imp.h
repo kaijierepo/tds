@@ -18,6 +18,7 @@ public:
 	// tds 数据服务功能
 	 string call(string method, string param,string& error);
 	 void setRpcHandler(fp_rpcHandler handler);
+	 void rpcNotify(string method, string params="", string sessionId="");
 
 	// io 通信服务功能
 	 bool sendToIoAddr(string ioAddr, char* p, int l);

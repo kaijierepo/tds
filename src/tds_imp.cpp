@@ -286,6 +286,11 @@ void TDS_imp::setRpcHandler(fp_rpcHandler handler)
 	tdsSrv.m_pluginHandler = handler;
 }
 
+void TDS_imp::rpcNotify(string method, string params, string sessionId)
+{
+	tdsSrv.notify(method, params);
+}
+
 bool TDS_imp::sendToIoAddr(string ioAddr, char* p, int l)
 {
 	ioAddress sIoAddr;

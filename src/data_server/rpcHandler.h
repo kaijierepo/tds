@@ -38,6 +38,8 @@ public:
 	virtual ~rpcHandler();
 	bool Init();
 
+	bool needLog(string method);
+
 	//json rpc implementation
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
 	string handleMethodCall(string method, json params, string& error, std::shared_ptr<TDS_SESSION> pSession);

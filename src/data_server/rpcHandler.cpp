@@ -296,6 +296,15 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 }
 
 
+bool rpcHandler::needLog(string method)
+{
+	if (method == "fs.readFile" ||
+		method == "fs.writeFile" ||
+		method == "heartbeat")
+		return false;
+	return true;
+}
+
 void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
@@ -343,10 +352,11 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 	try
 	{
 		json jReq = json::parse(strReq);
-
-		LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
-
 		method = jReq["method"].get<string>();
+
+		if(needLog(method))
+			LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
+
 		json params = jReq["params"];
 		json jId = jReq["id"];
 		if(jId != nullptr)
@@ -408,7 +418,9 @@ HANDLE_END:
 	}
 	
 
-	LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
+
+	if(needLog(method))
+		LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
 }
 
 

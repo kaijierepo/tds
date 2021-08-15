@@ -63,6 +63,7 @@ public:
 	// tds 数据服务功能
 	virtual string call(string method, string param,string& error) = 0;
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
+	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 	// io 通信服务功能
 	virtual bool sendToIoAddr(string ioAddr,char* p,int l) = 0;
