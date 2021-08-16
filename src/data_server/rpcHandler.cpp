@@ -274,9 +274,15 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	//文件操作
 	if (method == "fs.readFile")
 	{
-		fs::readFile(params["path"], result);
-		json j = result;
-		result = j.dump();
+		if (fs::readFile(params["path"], result))
+		{
+			json j = result;
+			result = j.dump();
+		}
+		else
+		{
+			error = RPCError(TEC_FAIL, "fail");
+		}
 	}
   	else if (method == "fs.writeFile")
 	{
@@ -339,27 +345,14 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 	strReq = ResolveTdsRpcEvnVar(strReq, pSession);
 
 
-	if (m_pluginHandler)
-	{
-		result = m_pluginHandler(strReq, strResp, error);
-	}
-
-	if (result != "" || error != "")
-	{
-		goto HANDLE_END;
-	}
-
 	try
 	{
+		//解析请求基本信息
 		json jReq = json::parse(strReq);
 		method = jReq["method"].get<string>();
-
-		if(needLog(method))
-			LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
-
 		json params = jReq["params"];
 		json jId = jReq["id"];
-		if(jId != nullptr)
+		if (jId != nullptr)
 		{
 			if (jId.is_number_integer())
 			{
@@ -370,6 +363,23 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 				id = jId.get<string>();
 			}
 		}
+
+		//对部分命令日志记录
+		if(needLog(method))
+			LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
+
+
+		//先使用外部注册的handler受理请求
+		if (m_pluginHandler)
+		{
+			result = m_pluginHandler(strReq, strResp, error);
+		}
+		if (result != "" || error != "")
+		{
+			goto HANDLE_END;
+		}
+
+		//tds自身受理
 		//result is a json string
 		result = handleMethodCall(method, params,error,pSession);
 		if(result == "" && error == "")
