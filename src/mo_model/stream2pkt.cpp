@@ -223,8 +223,9 @@ int stream2pkt::IsValidPkt_HTTP( char* pData,int iLen )
 	string strData = ptmp;
 	delete ptmp;
 
-	int iPos = strData.find("Content-Length:"); //15
-	if (iPos == string::npos)
+	int iPos_contentLengthLineStart = strData.find("Content-Length:"); //15
+	//没有http body的情况
+	if (iPos_contentLengthLineStart == string::npos)
 	{
 		string tail = strData.substr(strData.length() - 4, 4);
 		if (tail == "\r\n\r\n")
@@ -234,15 +235,15 @@ int stream2pkt::IsValidPkt_HTTP( char* pData,int iLen )
 	}
 	else
 	{
-		int iPos1 = strData.find("\r\n", iPos);
-		if (iPos1 == string::npos)
+		int iPos_contentLengthLineEnd = strData.find("\r\n", iPos_contentLengthLineStart);
+		if (iPos_contentLengthLineEnd == string::npos)
 			return 0;
 
-		string strLen = strData.substr(iPos + 15, iPos1 - (iPos + 15));
+		string strLen = strData.substr(iPos_contentLengthLineStart + 15, iPos_contentLengthLineEnd - (iPos_contentLengthLineStart + 15));
 		int iContentLen = atoi(strLen.c_str());
 
 		int iBodyStart = 0;
-		for (int i = 0; i + 3 < iLen; i++)
+		for (int i = iPos_contentLengthLineEnd; i + 3 < iLen; i++)
 		{
 			if (pData[i] == '\r' &&
 				pData[i + 1] == '\n' &&
