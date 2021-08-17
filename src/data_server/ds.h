@@ -54,6 +54,7 @@ public:
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	vector<void*> GetSessionList() override;
+	string getSessionStatus();
 	mutex m_mutexTdsSessionList;
 	FILE* m_pRecFile;
 	SYSTEMTIME m_stLastFileRecvTime;

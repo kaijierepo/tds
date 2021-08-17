@@ -19,7 +19,7 @@ public:
 	CTLServer* pTLServer; //传输层服务器
 	tcpSession* pTcpSession; //服务端被动连接的 session
 	tcpClt* pTcpSessionClt; //作为客户端连接数据中心的 主动式tcpSession
-	SYSTEMTIME rCreateTime;
+	SYSTEMTIME stCreateTime;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data
 	string bridgedLocalCom; //和本地串口桥接
@@ -53,6 +53,9 @@ public:
 	string encode;
 	string ip;
 	string type;//session type
+	string lastMethodCalled;
+	SYSTEMTIME lastRecvTime;
+	SYSTEMTIME lastSendTime;
 	int port;
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有

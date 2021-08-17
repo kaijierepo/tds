@@ -44,6 +44,8 @@ public:
 	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
 	string handleMethodCall(string method, json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 
+	string getSessionStatus();
+
 	//tds data service function
 	string rpc_input(json params, string& error);
 	string rpc_output(json params, string& error);
@@ -53,7 +55,7 @@ public:
 	string rpc_setconf(json params, string& error);
 	string rpc_getconffile(json params, string& error);
 	string rpc_setconffile(json params, string& error);
-	string rpc_heartbeat(json params, string& error);
+	string rpc_heartbeat(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_xiaot(json params, string& error);
 
 	////io service function

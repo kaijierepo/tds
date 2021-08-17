@@ -67,6 +67,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+		GetLocalTime(&p->stCreateTime);
 		p->boolConnected = true;
 		p->pTLServer = this;
 		p->pTcpSession = pCltInfo;
@@ -598,12 +599,14 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			tdsSession->send((char*)s.data(), s.length());
 		}
 		tdsSession->type = TDS_SESSION_TYPE::rpc;
+		tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 	}
 }
 
 
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
+	GetLocalTime(&tdsSession->lastRecvTime);
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none
@@ -781,6 +784,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
+		pALC->type = TDS_SESSION_TYPE::rpc;
 
 		httplib::detail::dsClientStream dscs;
 		dscs.setBuffer((char*)strData.c_str(), strData.length());
@@ -889,6 +893,33 @@ vector<void*> dataServer::GetSessionList()
 		lst.push_back(p.get());
 	}
 	return lst;
+}
+
+string dataServer::getSessionStatus()
+{
+	lock_guard<mutex> g(m_mutexTdsSessionList);
+	json jList = json::array();
+	for (int i = 0; i < m_vecTdsSession.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
+		json jSession;
+		jSession["type"] = p->type;
+		jSession["ip"] = p->ip;
+		jSession["port"] = p->port;
+		jSession["name"] = p->name;
+		jSession["transLayer"] = p->iTLProto;
+		jSession["createTime"] = timeopt::st2str(p->stCreateTime);
+		if (p->lastMethodCalled != "")
+		{
+			jSession["lastMethodCalled"] = p->lastMethodCalled;
+		}
+		jSession["lastRecvTime"] = timeopt::st2str(p->lastRecvTime);
+		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
+		jList.push_back(jSession);
+	}
+
+	string s = jList.dump(2);
+	return s;
 }
 
 

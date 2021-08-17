@@ -35,6 +35,7 @@ string TDS_SESSION::GetClientIp()
 }
 
  int TDS_SESSION::send(char* p,int len){
+     GetLocalTime(&lastSendTime);
      if(pTLServer) // means lower layer has been disconneted
         return pTLServer->SendAppLayerData(p, len, this);
      if (pTcpSessionClt)

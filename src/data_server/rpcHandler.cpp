@@ -172,7 +172,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	//#region concurrent cmd
 	if (method == "heartbeat")
 	{
-		result = rpc_heartbeat(params, error);
+		result = rpc_heartbeat(params, error, pSession);
 	}
 	else if (method == "xiaot")
 	{
@@ -298,15 +298,23 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 		}
 	}
 
+	if (method == "sessionStatus")
+	{
+		result = ds.getSessionStatus();
+	}
+
 	return result;
 }
+
+
 
 
 bool rpcHandler::needLog(string method)
 {
 	if (method == "fs.readFile" ||
 		method == "fs.writeFile" ||
-		method == "heartbeat")
+		method == "heartbeat" ||
+		method == "sessionStatus")
 		return false;
 	return true;
 }
@@ -350,6 +358,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 		//解析请求基本信息
 		json jReq = json::parse(strReq);
 		method = jReq["method"].get<string>();
+		pSession->lastMethodCalled = method;
 		json params = jReq["params"];
 		json jId = jReq["id"];
 		if (jId != nullptr)
@@ -726,8 +735,12 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-string rpcHandler::rpc_heartbeat(json params, string& error)
+string rpcHandler::rpc_heartbeat(json params, string& error , std::shared_ptr<TDS_SESSION> pSession)
 {
+	if (params["clientName"] != nullptr)
+	{
+		pSession->name = params["clientName"];
+	}
 	return "\"pong\"";
 }
 
