@@ -251,6 +251,7 @@ int stream2pkt::IsValidPkt_HTTP( char* pData,int iLen )
 				)
 			{
 				iBodyStart = i + 4;
+				break; //找到header后面的空行 ，后面就是body。必须break。因为body数据里面可能也有两个换行
 			}
 		}
 
