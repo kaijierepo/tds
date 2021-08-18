@@ -220,6 +220,9 @@ string TDS_imp::getUIMode()
 
 bool TDS_imp::run(string cmdline)
 {
+	string cwd = fs::appPath();
+	SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
+
 	//load tds.json
 	tdsConf.loadConf();
 

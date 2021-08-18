@@ -143,13 +143,13 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 	//使用正则搜寻 ${XXX}
 	//"${src_ip}" 替换成 pSession->ip
 	string str = strIn;
-	if (str.find("${src_ip}") != str.npos) {
+	if (str.find("$srcIp$") != str.npos) {
 		string ip = pSession->ip;
 		string::size_type pos = pSession->ip.find(":");
 		if (std::string::npos != pos) {
 			ip = pSession->ip.substr(0, pos);
 		}
-		str::replace(str, "${src_ip}", ip);
+		str::replace(str, "$src_ip$", ip);
 		}
 	return str;
 }

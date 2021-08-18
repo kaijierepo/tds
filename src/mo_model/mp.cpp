@@ -201,6 +201,6 @@ json MP::getRTData()
 	else
 		j["val"] = m_curVal;
 	j["unit"] = m_strUnit;
-	j["val_type"] = m_valType;
+	j["valType"] = m_valType;
 	return j;
 }
