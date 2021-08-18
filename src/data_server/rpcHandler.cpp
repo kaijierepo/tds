@@ -17,6 +17,7 @@
 #include "xiaot/xiaot.h"
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"
+#include "ioChan.h"
 
 rpcHandler tdsSrv;
 
@@ -802,9 +803,29 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 		json chanList;
 		if (p->scanChannel(chanList))
 		{
+			//比对p->m_vecChild是否已经存在,只发不存在的给前端
+			for (int i = 0; i < chanList.size(); i++)
+			{
+				json jsubPkt = chanList.at(i);
+				string straddr = jsubPkt["addr"];
+
+				for (auto j : p->m_vecChild)
+				{
+					ioChannel* pioChannel = (ioChannel*)j;
+					if (pioChannel->m_addr == straddr)
+					{
+						chanList.erase(i);
+						i--;
+						break;
+					}
+				}
+			}
+			//
+
 			json result;
 			result["ioAddr"] = p->m_addr;
 			result["channels"] = chanList;
+
 			return result.dump();
 		}
 	}
