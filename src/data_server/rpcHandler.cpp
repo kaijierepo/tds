@@ -301,7 +301,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 
 	if (method == "sessionStatus")
 	{
-		result = ds.getSessionStatus();
+		result = ds.getSessionStatus(params);
 	}
 
 	return result;
@@ -315,7 +315,8 @@ bool rpcHandler::needLog(string method)
 	if (method == "fs.readFile" ||
 		method == "fs.writeFile" ||
 		method == "heartbeat" ||
-		method == "sessionStatus")
+		method == "sessionStatus"||
+		method == "rt")
 		return false;
 	return true;
 }
@@ -738,7 +739,7 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 
 string rpcHandler::rpc_heartbeat(json params, string& error , std::shared_ptr<TDS_SESSION> pSession)
 {
-	if (params["clientName"] != nullptr)
+	if (params.is_object() && params["clientName"] != nullptr)
 	{
 		pSession->name = params["clientName"];
 	}

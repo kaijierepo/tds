@@ -71,6 +71,7 @@ string TDS_SESSION::GetClientIp()
          streamMp->m_streamPusher(false, NULL);
      }
      streamMp = NULL;
+     boolConnected = false;
  }
 
  void TDS_SESSION::setActivityCheck(bool bEnable)

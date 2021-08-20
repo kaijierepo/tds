@@ -412,15 +412,18 @@ string dataServer::checkTransportLayerProto(string& strData, tcpSession* pTcpSes
 	return "";
 }
 
-std::shared_ptr<TDS_SESSION> logTdsSession = NULL;
+vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 void logToWebsock(string text)
 {
-	if (logTdsSession&&!logTdsSession->boolConnected)
-		logTdsSession = NULL;
-
-	if (logTdsSession)
+	for (int i = 0; i < logTdsSessions.size(); i++)
 	{
-		logTdsSession->send((char*)text.c_str(), text.length());
+		std::shared_ptr<TDS_SESSION> ps = logTdsSessions[i];
+		if (!ps->boolConnected)
+		{
+			logTdsSessions.erase(logTdsSessions.begin() + i);
+			i--;
+		}
+		ps->send((char*)text.c_str(), text.length());
 	}
 }
 
@@ -530,7 +533,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 
 	if (strData.find("/log") != string::npos)
 	{
-		logTdsSession = tdsSession;
+		logTdsSessions.push_back(tdsSession);
 		logger.logOutput = logToWebsock;
 		tdsSession->type = TDS_SESSION_TYPE::log;
 	}
@@ -895,13 +898,26 @@ vector<void*> dataServer::GetSessionList()
 	return lst;
 }
 
-string dataServer::getSessionStatus()
+string dataServer::getSessionStatus(json params)
 {
+	json typeFilter = nullptr;
+	if(params!=nullptr) typeFilter = params["type"];
 	lock_guard<mutex> g(m_mutexTdsSessionList);
 	json jList = json::array();
 	for (int i = 0; i < m_vecTdsSession.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
+
+		if (typeFilter != nullptr)
+		{
+			if (typeFilter.is_string())
+			{
+				if (typeFilter.get<string>() != p->type)
+					continue;
+			}
+		}
+
+
 		json jSession;
 		jSession["type"] = p->type;
 		jSession["ip"] = p->ip;
