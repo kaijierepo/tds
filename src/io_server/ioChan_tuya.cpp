@@ -8,7 +8,7 @@
 #include "logger.h"
 using namespace httplib;
 
-bool ioChan_tuya::outputVal(json jVal)
+bool ioChan_tuya::output(json jVal)
 {
 	//get gateway
 	ioGW_tuyaProject* pGw = nullptr;
@@ -79,7 +79,7 @@ bool ioChan_tuya::outputVal(json jVal)
 		{
 			if (j["success"] == true)
 			{
-				inputVal(jVal);
+				input(jVal);
 				return true;
 			}
 		}

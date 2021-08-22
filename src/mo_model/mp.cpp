@@ -55,7 +55,7 @@ bool MP::loadConf(json& conf)
 }
 
 
-void MP::inputVal(json jVal, SYSTEMTIME* dataTime, json dataFile)
+void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 {
 	SYSTEMTIME t;
 	if (dataTime == NULL)
@@ -104,12 +104,12 @@ void MP::inputVal(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	}
 }
 
-bool MP::outputVal(json jVal)
+bool MP::output(json jVal)
 {
 	ioChannel* pC = ioSrv.getIOChan(getTag());
 	if (pC)
 	{
-		return pC->outputVal(jVal);
+		return pC->output(jVal);
 	}
 	else
 		return false;

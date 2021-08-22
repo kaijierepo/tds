@@ -518,7 +518,7 @@ string rpcHandler::rpc_output(json params, string& error)
 		return "!" + error;
 	}
 	
-	if(pmp->outputVal(val))
+	if(pmp->output(val))
 		return "\"ok\"";
 	else
 	{
@@ -574,7 +574,7 @@ string rpcHandler::rpc_input(json params, string& error)
 	}
 
 
-	pmp->inputVal(val, &stTimeStamp, dataFile);
+	pmp->input(val, &stTimeStamp, dataFile);
 	return "ok";
 }
 

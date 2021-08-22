@@ -178,11 +178,11 @@ bool ioDev_ModbusSlave::OnRecvData(char* pData,int iLen)
 		{
 			if (pMP->m_strName == "溶解氧")
 			{
-				pMP->inputVal(fDO);
+				pMP->input(fDO);
 			}
 			if (pMP->m_strName == "温度")
 			{
-				pMP->inputVal(fTemp);
+				pMP->input(fTemp);
 			}
 		}
 	}

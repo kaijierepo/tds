@@ -68,7 +68,7 @@ bool ioDev_tuya::getCurrentVal()
 							if (pChild->m_level == "channel")
 							{
 								ioChannel* pC = (ioChannel*)pChild;
-								pC->inputVal(it["value"]);
+								pC->input(it["value"]);
 								return true;
 							}
 						}

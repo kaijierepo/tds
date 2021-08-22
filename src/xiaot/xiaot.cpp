@@ -79,7 +79,7 @@ std::string CXiaoT::getReply(json msg)
 			}
 			else
 			{
-				pmp->outputVal(val);
+				pmp->output(val);
 				reply = "好的";
 			}
 		}

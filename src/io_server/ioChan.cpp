@@ -46,7 +46,7 @@ bool ioChannel::match(string channelNo) {
 	return false;
 }
 
-void ioChannel::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic) {
+void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	SYSTEMTIME t;
 	if (dataTime == NULL)
 	{
@@ -59,11 +59,11 @@ void ioChannel::inputVal(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	MP* pMP = (MP*)prj.GetMOByTag(tag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 	{
-		pMP->inputVal(jVal,dataTime);
+		pMP->input(jVal,dataTime);
 	}
 }
 
-bool ioChannel::outputVal(json jVal)
+bool ioChannel::output(json jVal)
 {
 	return false;
 }

@@ -180,9 +180,9 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			{
 				ioChannel* pC = (ioChannel*)pChild;
 				if(valType == "real")
-					pC->inputVal(dbVal);
+					pC->input(dbVal);
 				else 
-					pC->inputVal(bVal);
+					pC->input(bVal);
 			}
 		}
 	}

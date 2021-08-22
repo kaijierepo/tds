@@ -13,8 +13,8 @@ public:
 	bool match(string channelNo);
 
 	string GetCommLinkTag();
-	virtual void inputVal(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
-	virtual bool outputVal(json jVal);
+	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
+	virtual bool output(json jVal);
 	bool IsValid();
 
 	string m_strLinkMPTag;
