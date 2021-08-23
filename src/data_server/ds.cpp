@@ -11,6 +11,7 @@
 #include "ioSrv.h"
 #include "ioDev_iq60.h"
 #include "tcpClt.h"
+#include "commSrv.h"
 
 
 dataServer ds;
@@ -536,6 +537,11 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		logTdsSessions.push_back(tdsSession);
 		logger.logOutput = logToWebsock;
 		tdsSession->type = TDS_SESSION_TYPE::log;
+	}
+	else if (strData.find("/commpkt") != string::npos)
+	{
+		commpktSessions.push_back(tdsSession);
+		tdsSession->type = TDS_SESSION_TYPE::commpkt;
 	}
 	else if (strData.find("teststream") != string::npos && !bTestStream)
 	{

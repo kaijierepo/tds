@@ -10,7 +10,7 @@
 using json = nlohmann::json;
 
 commServer commSrv;
-
+vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 
 //接受数据异步处理线程
 DWORD WINAPI ThreadRecvPktAsynDeal(LPVOID lparam) {
@@ -761,12 +761,40 @@ END:
 
 void commServer::StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktType dealType)
 {
-	
+	json j;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["ioAddr"] = addr.ToString();
+	j["type"] = "接收";
+	j["len"] = len;
+	j["data"] = str::fromBytes(recvData, len);
+	string s = j.dump();
+
+	for (int i = 0; i < commpktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
+		session->send((char*)s.c_str(), s.length());
+	}
 }
 
 void commServer::StatisOnSend(char* sendData, int len, ioAddress addr)
 {
-	
+	json j;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["ioAddr"] = addr.ToString();
+	j["type"] = "发送";
+	j["len"] = len;
+	j["data"] = str::fromBytes(sendData, len);
+	string s = j.dump();
+
+	for (int i = 0; i < commpktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
+		session->send((char*)s.c_str(), s.length());
+	}
 }
 
 bool commServer::DealPackageAsyn()

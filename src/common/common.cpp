@@ -328,6 +328,14 @@ namespace timeopt {
 		return str;
 	}
 
+	string st2strWithMilli(SYSTEMTIME t)
+	{
+		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+			t.wYear, t.wMonth, t.wDay,
+			t.wHour, t.wMinute, t.wSecond,t.wMilliseconds);
+		return str;
+	}
+
 	string TimeToYMD(const SYSTEMTIME time)
 	{
 		string str;
@@ -558,13 +566,14 @@ namespace str {
 
 		return str;
 	}
-	string fromBytes(char* p, int len)
+	string fromBytes(char* p, int len, string splitter)
 	{
 		string str;
 		for (int i = 0; i < len; i++)
 		{
 			string b = format("%02X", (unsigned char)p[i]);
 			str += b;
+			str += splitter;
 		}
 
 		return str;

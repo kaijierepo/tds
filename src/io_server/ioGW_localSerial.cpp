@@ -2,6 +2,9 @@
 #include "ioGW_LocalSerial.h"
 #include "commSrv.h"
 #include "logger.h"
+#include "tdsSession.h"
+
+
 
 
 DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)

@@ -42,6 +42,7 @@ namespace timeopt {
 	DWORD duration2sec(string strTime); //1d2h3m40s 的格式
 	string rel2abs(string time);//相对与当前时间的1d2h3m40s格式
 	string st2str(SYSTEMTIME t);
+	string st2strWithMilli(SYSTEMTIME t);
 	string TimeToYMD(const SYSTEMTIME time);
 	int CalcTimePassSecond(SYSTEMTIME lastTime);
 	string nowStr(bool enableMS=false);
@@ -63,7 +64,7 @@ namespace str {
 	string fromFloat(float f);
 	vector<char> toBytes(string str);
 	string fromBytes(vector<char>& bytes);
-	string fromBytes(char* p, int len);
+	string fromBytes(char* p, int len,string splitter = " ");
 	string fromInt(int v);
 	int toInt(string s);
 	bool isInteger(string s);

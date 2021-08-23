@@ -31,7 +31,9 @@ MP::~MP()
 bool MP::loadConf(json& conf)
 {
 	MO::loadConf(conf);
-	m_valType = conf["valType"].get<string>();
+	if(conf["valType"]!=nullptr)
+		m_valType = conf["valType"].get<string>();
+
 	if (m_valType == TDS::VAL_TYPE::real)
 	{
 		if(conf["unit"]!=nullptr)

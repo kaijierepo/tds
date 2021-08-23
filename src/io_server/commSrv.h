@@ -4,6 +4,7 @@
 #include "mutex"
 #include "tcpSrv.h"
 #include "tcpClt.h"
+#include "tdsSession.h"
 
 class ioDev;
 
@@ -240,4 +241,5 @@ public:
 };
 
 extern commServer commSrv;
+extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 void CommServer_SendData(char* pData, int iLen, ioAddress addr);

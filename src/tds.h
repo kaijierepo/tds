@@ -14,6 +14,7 @@ namespace TDS_SESSION_TYPE {
 	const string video = "video";
 	const string web = "web";
 	const string log = "log";
+	const string commpkt = "commpkt"; //通信数据包监视
 	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
 	const string iodev = "iodev"; //io设备会话 传输设备自定义的通信协议
 }
