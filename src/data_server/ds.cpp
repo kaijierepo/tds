@@ -424,7 +424,8 @@ void logToWebsock(string text)
 			logTdsSessions.erase(logTdsSessions.begin() + i);
 			i--;
 		}
-		ps->send((char*)text.c_str(), text.length());
+		else
+			ps->send((char*)text.c_str(), text.length());
 	}
 }
 

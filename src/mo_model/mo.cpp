@@ -103,6 +103,7 @@ bool MO::toJson(json& conf, json params)
 		saveInterval["minute"] = p->m_saveInterval.minute;
 		saveInterval["second"] = p->m_saveInterval.second;
 		conf["saveInterval"] = saveInterval;
+		conf["unit"] = p->m_strUnit;
 	}
 	else
 	{
