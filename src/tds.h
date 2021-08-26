@@ -76,7 +76,7 @@ public:
 	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si=NULL) = 0;
 
 	// 通用服务功能
-	virtual void log(char* text) = 0;
+	virtual void log(const char* text) = 0;
 
 	//数据接口
 	iTDSConf* conf;

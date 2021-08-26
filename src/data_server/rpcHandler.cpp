@@ -171,11 +171,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	string result = "";
 	//可完全并发的命令
 	//#region concurrent cmd
-	if (method == "heartbeat")
-	{
-		result = rpc_heartbeat(params, error, pSession);
-	}
-	else if (method == "xiaot")
+	if (method == "xiaot")
 	{
 		result = rpc_xiaot(params, error);
 	}
@@ -312,8 +308,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 
 bool rpcHandler::needLog(string method)
 {
-	if (method == "fs.readFile" ||
-		method == "fs.writeFile" ||
+	if (method == "fs.writeFile" ||
 		method == "heartbeat" ||
 		method == "sessionStatus"||
 		method == "rt")
@@ -377,8 +372,27 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 
 		//对部分命令日志记录
 		if(needLog(method))
-			LOG("[trace]tdsRPC call <--:\r\n" + strReq + "\r\n");
+			LOG("RPC call <--:\r\n" + strReq + "\r\n");
 
+		//心跳最先处理
+		if (method == "heartbeat")
+		{
+			if (params.is_object())
+			{
+				if (params["clientName"] != nullptr)
+					pSession->name = params["clientName"];
+				if (params["echo"] != nullptr)
+				{
+					if (params["echo"].get<bool>() == false)
+					{
+						return;
+					}
+				}
+			}
+			result = "\"pong\"";
+			goto HANDLE_END;
+		}
+		
 
 		//先使用外部注册的handler受理请求
 		if (m_pluginHandler)
@@ -429,6 +443,7 @@ HANDLE_END:
 		}
 	}
 
+	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (error != "")
 	{
 		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id +  "}";
@@ -436,12 +451,18 @@ HANDLE_END:
 	else
 	{
 		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + result + "}";
+
+		if (method == "fs.readFile")
+		{
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":\"$fileLen = " + str::fromInt(result.length()) + "$\"}";
+		}
 	}
 	
 
-
-	if(needLog(method))
-		LOG("[trace]tdsRPC return --> :\r\n" + strResp + "\r\n");
+	if(strRespForLog!="")
+		LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
+	else if(needLog(method))
+		LOG("RPC return --> :\r\n" + strResp + "\r\n");
 }
 
 
@@ -739,9 +760,10 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 
 string rpcHandler::rpc_heartbeat(json params, string& error , std::shared_ptr<TDS_SESSION> pSession)
 {
-	if (params.is_object() && params["clientName"] != nullptr)
+	if (params.is_object())
 	{
-		pSession->name = params["clientName"];
+		if(params["clientName"] != nullptr)
+			pSession->name = params["clientName"];
 	}
 	return "\"pong\"";
 }
@@ -856,6 +878,12 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 	if(pmp == NULL)
 	{
 		error = RPCError(RPC_ERROR::TEC_TAG_NOT_EXIST, "tag not exist");
+		return "";
+	}
+
+	if (pmp->m_streamInfo.w == 0 || pmp->m_streamInfo.h == 0)
+	{
+		error = RPCError(RPC_ERROR::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
 		return "";
 	}
 

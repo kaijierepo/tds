@@ -327,6 +327,7 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 	}
 
 	MP* pmp = prj.getMp(tag);
+	//没有则创建动态mp对象
 	if(pmp == NULL)
 	{
 		pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
@@ -381,6 +382,16 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 	}
 	else if (st == ST_RGBA)
 	{
+		//发送视频信息头
+		if (pmp->m_streamPuller->pTcpSession->iSendSucCount == 0)
+		{
+			json jSi;
+			jSi["w"] = pmp->m_streamInfo.w;
+			jSi["h"] = pmp->m_streamInfo.h;
+			jSi["type"] = pmp->m_streamInfo.type;
+			string s = jSi.dump();
+			pmp->m_streamPuller->send((char*)s.c_str(), s.length());
+		}
 		if (pmp->m_streamPuller->streamFmt == "rgba")//直接转发
 		{
 			pmp->m_streamPuller->send(pData,len);
@@ -389,7 +400,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 #endif
 }
 
-void TDS_imp::log(char* text)
+void TDS_imp::log(const char* text)
 {
 	if (InterfaceEncoding == "gb2312")
 	{

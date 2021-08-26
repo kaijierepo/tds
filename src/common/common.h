@@ -31,6 +31,7 @@ namespace charCodec {
 	wstring utf8toUtf16(string instr);
 	string ansi2Utf8(string instr);
 	string ToUtf8(LPCTSTR wstr);
+	string utf16toAnsi(wstring instr);
 }
 
 namespace timeopt {

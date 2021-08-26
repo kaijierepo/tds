@@ -74,7 +74,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 		p->pTcpSession = pCltInfo;
 		p->sock = pCltInfo->sock;
 		p->port = pCltInfo->iPort;
-		p->ip = str::format("%s:%d", pCltInfo->strIP, pCltInfo->iPort);
+		p->ip = pCltInfo->strIP;
 		pCltInfo->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
@@ -108,7 +108,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 		p->pTcpSessionClt = connInfo->tcpClt;
 		p->sock = connInfo->sock;
 		p->port = connInfo->srvPort;
-		p->ip = str::format("%s:%d", connInfo->srvIP, connInfo->srvPort);
+		p->ip = connInfo->srvIP;
 		connInfo->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
@@ -143,11 +143,21 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 		if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 		{
 			WS_FrameType ft = WS_TEXT_FRAME;
-			if (pALC->type == TDS_SESSION_TYPE::tunnel ||
-				pALC->type == TDS_SESSION_TYPE::video)
+			if (pALC->type == TDS_SESSION_TYPE::tunnel )
 			{
 				ft = WS_BINARY_FRAME;
 			}
+			if (pALC->type == TDS_SESSION_TYPE::video)
+			{
+				if (pALC->pTcpSession->iSendSucCount == 0)//视频首帧发文本
+				{
+					ft = WS_TEXT_FRAME;
+				}
+				else
+					ft = WS_BINARY_FRAME;
+			}
+				
+
 			return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 		}
 		else
@@ -163,10 +173,18 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 			if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 			{
 				WS_FrameType ft = WS_TEXT_FRAME;
-				if (pALC->type == TDS_SESSION_TYPE::tunnel ||
-					pALC->type == TDS_SESSION_TYPE::video)
+				if (pALC->type == TDS_SESSION_TYPE::tunnel)
 				{
 					ft = WS_BINARY_FRAME;
+				}
+				if (pALC->type == TDS_SESSION_TYPE::video)
+				{
+					if (pALC->pTcpSession->iSendSucCount == 0)//视频首帧发文本
+					{
+						ft = WS_TEXT_FRAME;
+					}
+					else
+						ft = WS_BINARY_FRAME;
 				}
 				return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 			}
@@ -585,6 +603,9 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 				tdsSession->type = TDS_SESSION_TYPE::video;
 				tdsSession->streamFmt = fmt;
 				p->m_streamPuller = tdsSession;
+
+				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+				LOG(szLog);
 			}
 		}
 	}
@@ -610,6 +631,9 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		}
 		tdsSession->type = TDS_SESSION_TYPE::rpc;
 		tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
+
+		string szLog = "[Session会话][开始] 类型:" + tdsSession->type + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+		LOG(szLog);
 	}
 }
 

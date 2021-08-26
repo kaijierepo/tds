@@ -120,6 +120,17 @@ namespace charCodec {
 		return str;
 	}
 
+	string utf16toAnsi(wstring instr)
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
 	string ansi2Utf8(string instr) //ansi-->utf-8
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;

@@ -23,7 +23,7 @@ void LOG(const char* pszFmt, ...)
 }
 void LOG(string info)
 {
-	logger.log(info);
+	logger.logInternal(info);
 }
 void loggingCB(char* info)
 {
