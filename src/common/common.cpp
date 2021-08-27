@@ -626,6 +626,28 @@ namespace str {
 		}
 		return true;
 	}
+
+	bool parseIpPort(string s, string& ip, int& port)
+	{
+		int ipos = s.find(":");
+		if (ipos == string::npos)
+			return false;
+
+		string sip = s.substr(0, ipos);
+		string sport = s.substr(ipos + 1, s.length() - ipos - 1);
+
+		if (!isIp(sip))
+			return false;
+
+		ip = sip;
+
+		if (sport == "")
+			return false;
+
+		port = atoi(sport.c_str());
+
+		return true;
+	}
 }
 
 namespace fs {

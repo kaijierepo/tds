@@ -70,6 +70,7 @@ namespace str {
 	int toInt(string s);
 	bool isInteger(string s);
 	bool isIp(string s);
+	bool parseIpPort(string s,string& ip,int& port);
 };
 
 

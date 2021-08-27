@@ -442,6 +442,7 @@
     <ClCompile Include="..\src\mo_model\prj.cpp" />
     <ClCompile Include="..\src\mo_model\stream2pkt.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
+    <ClCompile Include="..\src\tools\tcp2com.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
     <ClCompile Include="..\src\tools\tcpReverseProxy.cpp" />
     <ClCompile Include="..\src\tools\tcpSwitch.cpp" />
@@ -492,6 +493,7 @@
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
+    <ClInclude Include="..\src\tools\tcp2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
     <ClInclude Include="..\src\tools\tcpReverseProxy.h" />
     <ClInclude Include="..\src\tools\tcpSwitch.h" />

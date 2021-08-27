@@ -23,7 +23,7 @@ void LOG(const char* pszFmt, ...)
 }
 void LOG(string info)
 {
-	logger.logInternal(info);
+	logger.log(info);
 }
 void loggingCB(char* info)
 {
@@ -32,6 +32,7 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
+	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
 }

@@ -28,7 +28,7 @@ public:
 	bool dirCreated;
 	LOG_LEVEL logLevel;
 	mutex m_lock;
-
+	bool m_bSaveToFile; //工具模式下仅输出到命令行
 	fp_logOutputCallback logOutput;
 };
 
