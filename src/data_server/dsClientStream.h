@@ -32,16 +32,25 @@ namespace httplib {
 				buffSize = 0;
 			}
 
-			void setBuffer(char* data, int iLen) {
-				clear();
-				buffer = new char[iLen + 1];
-				memset(buffer, 0, iLen + 1);
-				memcpy(buffer, data, iLen);
+			void appendBuffer(char* data, int iLen)
+			{
+				if (buffer == nullptr)
+				{
+					buffer = new char[iLen];
+				}
+				else
+				{
+					char* pOld = buffer;
+					buffer = new char[buffSize + iLen];
+					memcpy(buffer, pOld, buffSize);
+					delete pOld;
+				}
+				memcpy(buffer + buffSize, data, iLen);
+				buffSize += iLen;
 			}
 
 			char* buffer = nullptr;
 			size_t buffSize = 0;
-			size_t position = 0;
 			socket_t sock_;
 		};
 
@@ -51,9 +60,21 @@ namespace httplib {
 		inline bool dsClientStream::is_writable() const { return true; }
 
 		inline ssize_t dsClientStream::read(char* ptr, size_t size) {
-			auto len_read = (buffSize - position - 1) < size ? (buffSize - position - 1) : size;
-			memcpy(ptr, buffer + position, len_read);
-			position += static_cast<size_t>(len_read);
+			auto len_read = buffSize < size ? buffSize  : size;
+			memcpy(ptr, buffer, len_read);
+			buffSize -= len_read;
+			if (buffSize == 0)
+			{
+				delete buffer;
+				buffer = nullptr;
+			}
+			else
+			{
+				char* pOld = buffer;
+				buffer = new char[buffSize];
+				memcpy(buffer,pOld + len_read, buffSize);
+				delete pOld;
+			}
 			return static_cast<ssize_t>(len_read);
 		}
 

@@ -796,7 +796,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		if (strData.find("OPTIONS") == 0)
 		{
 			httplib::detail::dsClientStream dscs;
-			dscs.setBuffer((char*)strData.c_str(), strData.length());
+			dscs.appendBuffer((char*)strData.c_str(), strData.length());
 			httplib::Request req;
 			detail::read_headers(dscs, req.headers);
 
@@ -821,7 +821,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		pALC->type = TDS_SESSION_TYPE::rpc;
 
 		httplib::detail::dsClientStream dscs;
-		dscs.setBuffer((char*)strData.c_str(), strData.length());
+		dscs.appendBuffer((char*)strData.c_str(), strData.length());
 		httplib::Request req;
 		detail::read_headers(dscs, req.headers);
 
@@ -868,7 +868,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		//web server folder handle
 		httplib::detail::dsClientStream* bs = new httplib::detail::dsClientStream;
 		bs->sock_ = pALC->pTcpSession->sock;
-		bs->setBuffer(pDataBuf,iLen);
+		bs->appendBuffer(pDataBuf,iLen);
 		std::thread t(httpReqHandleThread, bs, pALC->pTcpSession);
 		t.detach();
 	}

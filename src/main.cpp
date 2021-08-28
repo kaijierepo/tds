@@ -33,6 +33,7 @@ iTDS* tds = &tdsImp;
 
 
 #ifndef _WINDLL
+//#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
@@ -122,8 +123,6 @@ int main(int argc, char** argv)
 	}
 	return 0;
 }
-#else
-#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 #endif // !_WINDLL
 
 #define DllExport   extern "C" __declspec( dllexport )
