@@ -20,6 +20,8 @@ public:
 	}
 	*/
 
+	bool OpenCom(string confPort,int baudRate,int parity,int byteSize,int stopBits); // call openCom before run
+	bool OpenCom();
 	bool OpenCom(string conf); // call openCom before run
 	bool closeCom();
 	int parseStopBits(string s);
@@ -33,14 +35,17 @@ public:
 	bool ReadCom(char* buf, int& len);
 	bool WriteCom(char* buf, int len);
 	HANDLE m_hCom;
+
+	//´®¿Ú²ÎÊý
 	string m_portNum;
 	int m_baudRate;
-	int m_byteSize;
-	int m_parity;
-	int m_stopBits;
+	int m_byteSize;  
+	string m_parity;//None,Odd,Even,Mark,Space
+	string m_stopBits; //1 , 1,5 ,2 
+
+
 	string m_strErrorInfo;
 	HANDLE m_hRecvThread;
-
 	OVERLAPPED m_ovWaitEvent;
 	OVERLAPPED m_ovRead;
 	OVERLAPPED m_ovWrite;

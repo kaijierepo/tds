@@ -229,10 +229,13 @@ bool TDS_imp::run(string cmdline)
 	//check mode
 	if(conf->uiMode == "")
 		conf->uiMode = getUIMode();
+
+#ifdef _WINDLL // dll模式下需要创建命令行。 exe模式使用默认命令行
 	if (conf->uiMode == "console")
 	{
 		createConsole();
 	}
+#endif
 
 	//display version
 	LOG("tds " + version + version_build_info);

@@ -29,7 +29,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 ioGW_LocalSerial::ioGW_LocalSerial(void)
 {
 	m_devType = IO_DEV_TYPE::GW::local_serial;
-	m_addr = "COM1";
+	m_addr = "COM1"; 
 	m_hCom = NULL;
 	m_level = "gateway";
 	m_ovWaitEvent.hEvent = CreateEvent(
@@ -52,6 +52,13 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 		FALSE,  // not signaled 
 		NULL    // no name
 	);
+
+
+	m_portNum = "COM1";
+	m_baudRate = 19200;
+	m_byteSize = 8;
+	m_parity = "None";// None, Odd, Even, Mark, Space
+	m_stopBits = "1"; //1 , 1,5 ,2 
 }
 
 
@@ -228,26 +235,16 @@ int ioGW_LocalSerial::parseParity(string s)
 	return 0;
 }
 
-bool ioGW_LocalSerial::OpenCom(string conf)
+bool ioGW_LocalSerial::OpenCom(string confPort, int baudRate, int parity, int byteSize, int stopBits)
 {
-	if (conf != "")
-	{
-		json j = json::parse(conf);
-		string str;
-		str = j["portNum"].get<string>();
-		m_portNum = str;
-		str = j["baudRate"].get<string>();
-		m_baudRate = atoi(str.c_str());
-		str = j["parity"].get<string>();
-		m_parity = parseParity(str);
-		str = j["byteSize"].get<string>();
-		m_byteSize = atoi(str.c_str());
-		str = j["stopBits"].get<string>();
-		m_stopBits =  parseStopBits(str);
-	}
-	m_addr = m_portNum;
+	return false;
+}
 
-	if(m_hCom)
+
+bool ioGW_LocalSerial::OpenCom()
+{
+	m_addr = m_portNum;
+	if (m_hCom)
 	{
 		BOOL bRet = CloseHandle(m_hCom);
 		if (!bRet)
@@ -258,7 +255,7 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		else
 			m_hCom = NULL;
 	}
-	string  strComPort= _T("\\\\.\\") + m_addr;
+	string  strComPort = _T("\\\\.\\") + m_addr;
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
@@ -289,8 +286,8 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 	GetCommState(m_hCom, &dcb);
 	dcb.BaudRate = m_baudRate;
 	dcb.ByteSize = m_byteSize;
-	dcb.Parity = m_parity;
-	dcb.StopBits = m_stopBits; 
+	dcb.Parity = parseParity(m_parity);
+	dcb.StopBits = parseStopBits(m_stopBits);
 	BOOL bRet = SetCommState(m_hCom, &dcb);
 	if (!bRet)
 	{
@@ -316,5 +313,28 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 	SetCommMask(m_hCom, EV_RXCHAR);
 
 	return true;
+}
+
+
+bool ioGW_LocalSerial::OpenCom(string conf)
+{
+	if (conf != "")
+	{
+		json j = json::parse(conf);
+		string str;
+		str = j["portNum"].get<string>();
+		m_portNum = str;
+		str = j["baudRate"].get<string>();
+		m_baudRate = atoi(str.c_str());
+		str = j["parity"].get<string>();
+		m_parity = str;
+		str = j["byteSize"].get<string>();
+		m_byteSize = atoi(str.c_str());
+		str = j["stopBits"].get<string>();
+		m_stopBits = str;
+	}
+	m_addr = m_portNum;
+
+	return OpenCom();
 }
 

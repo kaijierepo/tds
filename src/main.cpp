@@ -33,12 +33,17 @@ iTDS* tds = &tdsImp;
 
 
 #ifndef _WINDLL
-#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
-	parser.set_optional<string>("m", "mode", "tds", "tds: tds mode;hub: tcp hub mode;switch: tcp switch mode;rproxy: reverse proxy mode;tcp2com: tcp to com;");
+	parser.set_optional<string>("m", "mode", "tds",charCodec::utf8toAnsi(
+"hub: tcp集线器模式，左侧数据将发往右侧所有连接;右侧数据将发往左侧所有连接\r\n\
+      示例:  tds -m hub -sl 666 -sr 667\r\n\
+   switch: tcp交换机模式\r\n\
+   rproxy: 反向代理模式\r\n\
+   tcp2com: tcp转串口模式;\r\n\
+      示例:  tds -m tcp2com -com COM1 -tcpc 127.0.0.1:666"));
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
 	parser.set_optional<string>("com", "com", "COM1", "com port number in tcp2com mode");
@@ -49,6 +54,10 @@ int main(int argc, char** argv)
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
 	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
+	parser.set_optional<int>("baudRate", "baudRate", 19200, charCodec::utf8toAnsi("串口波特率"));
+	parser.set_optional<int>("byteSize", "byteSize", 8, charCodec::utf8toAnsi("串口数据位"));
+	parser.set_optional<string>("stopBits", "stopBits", "1", charCodec::utf8toAnsi("停止位"));
+	parser.set_optional<string>("parity", "parity", "None", charCodec::utf8toAnsi("校验位"));
 	parser.run_and_exit_if_error();
 	tds->conf->port = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");
@@ -57,7 +66,6 @@ int main(int argc, char** argv)
 	string mode = parser.get<string>("m");
 	if (mode == "hub")
 	{
-		createConsole();
 		tcpHub* tr = new tcpHub();
 		tr->portLeft = parser.get<int>("sl");
 		tr->portRight = parser.get<int>("sr");
@@ -65,7 +73,6 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "switch")
 	{
-		createConsole();
 		tcpSwitch* tr = new tcpSwitch();
 		tr->portLeft = parser.get<int>("sl");
 		tr->portRight = parser.get<int>("sr");
@@ -73,7 +80,6 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "rproxy")
 	{
-		createConsole();
 		tcpReverseProxy* tr = new tcpReverseProxy();
 		tr->realHost = parser.get<string>("sb");
 		tr->proxyPort = parser.get<int>("pp");
@@ -81,9 +87,7 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "tcp2com")
 	{
-		createConsole();
 		tcp2com* t2c =  new tcp2com();
-		t2c->m_strComPort = parser.get<string>("com");
 		string tcpc = parser.get<string>("tcpc");
 		string tcpc_ip;
 		int tcpc_port;
@@ -94,6 +98,11 @@ int main(int argc, char** argv)
 		}
 		t2c->m_strDestIp = tcpc_ip;
 		t2c->m_iDestPort = tcpc_port;
+		t2c->serial.m_baudRate = parser.get<int>("baudRate");
+		t2c->serial.m_parity = parser.get<string>("parity");
+		t2c->serial.m_byteSize = parser.get<int>("byteSize");
+		t2c->serial.m_stopBits = parser.get<string>("stopBits");
+		t2c->serial.m_portNum = parser.get<string>("com");
 		t2c->run();
 	}
 	else
@@ -113,6 +122,8 @@ int main(int argc, char** argv)
 	}
 	return 0;
 }
+#else
+#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 #endif // !_WINDLL
 
 #define DllExport   extern "C" __declspec( dllexport )

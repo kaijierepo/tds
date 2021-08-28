@@ -73,6 +73,7 @@ public:
 
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
+	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback) { m_pCallbackUser = pUser; m_pRecvCallback = callback; }
 	fp_ioAddrRecvCallback m_pRecvCallback;
 	void* m_pCallbackUser;
 	//which monitor object this ioDevice is installed to 

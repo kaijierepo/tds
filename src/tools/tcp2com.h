@@ -2,6 +2,7 @@
 #include "tcpSrv.h"
 #include "tcpClt.h"
 #include <memory>
+#include "ioGW_localSerial.h"
 
 class tcp2com : public  ITcpServerCallBack ,public ITcpClientCallBack{
 public:
@@ -14,8 +15,6 @@ public:
 	int m_iSrvPort;
 	int m_iDestPort;
 	string m_strDestIp;
-
-	string m_strComPort;
 
 	void run();
 
