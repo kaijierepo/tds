@@ -385,8 +385,6 @@ ioDev* ioDev::getChild(string addr)
 	return nullptr;
 }
 
-
-
 bool ioDev::IsAsynPacket(PKT_DATA* pd)
 {
 	//除了当前正在同步请求的命令，其他都做异步处理
@@ -468,5 +466,3 @@ CCanTransparentGateway::CCanTransparentGateway()
 {
 	m_devType = "can_gateway";
 }
-
-

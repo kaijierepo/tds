@@ -4,6 +4,7 @@
 #include "ioDev.h"
 #include "mp.h"
 #include "db.h"
+#include "ioDev_iq60.h"
 
 
 ioChannel::ioChannel()
@@ -65,7 +66,16 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 
 bool ioChannel::output(json jVal)
 {
-	return false;
+	json chanResp;
+
+	ioAddress sIOAddr = getIOAddr();
+
+	ioDev* pDev = getIODev(sIOAddr);
+	ioDev_iq60* p = (ioDev_iq60*)pDev;
+	if (p)
+		p->writeChannel(jVal, chanResp);
+
+	return true;
 }
 
 bool ioChannel::IsValid()
@@ -76,6 +86,3 @@ bool ioChannel::IsValid()
 	else
 		return false;
 }
-
-
-

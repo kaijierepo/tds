@@ -11,7 +11,7 @@
 using namespace httplib;
 
 
-void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC)
+void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
 	char* p = new char[iLen + 1];
 	memset(p, 0, iLen + 1);
@@ -89,14 +89,13 @@ ioDev_iq60::~ioDev_iq60()
 
 bool ioDev_iq60::onRecvPkt(json jPkt)
 {
-	json jLast  = jPkt[jPkt.size() - 1];
-
+	json jLast = jPkt[jPkt.size() - 1];
 
 	if (jLast.is_string())
 	{
 		string cmd = jLast.get<string>();
 
-		if (cmd.find(currentCmd)!=string::npos)
+		if (cmd.find(currentCmd) != string::npos)
 		{
 			currentResp.push_back(jPkt);
 			if (cmd.find("-") == string::npos) //结束包
@@ -117,12 +116,18 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 		*/
 		if (cmd == "r")
 		{
-
-
 		}
+		/*
+		w指令：
+		请求：
+		[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
+		[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
+		返回：
+		["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
+		[物云名, [点1, 值, 时间戳, 状态], [点2, 值, 时间戳, 状态], w指令]
+		*/
 		else if (cmd == "w")
 		{
-
 		}
 		/*
 		2、【搜】对象，hs指令：
@@ -135,7 +140,6 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 		*/
 		else if (cmd == "hs")
 		{
-			
 		}
 		/*
 		3、【读】对象，hr指令：
@@ -143,19 +147,18 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			[版本, 验证TOKEN, 物云名, hr指令, 点1, 点2, 点3]
 			[2, "IQK", "C1201020756", "hr", "BO1", "AI9"]
 		返回：["C1201020756",
-		      { "Name":"BO1","COV" : 1,"Enable" : 1,"ValueType" : "bool","RW" : "rw","Unit" : "关:0,开:1" },
+			  { "Name":"BO1","COV" : 1,"Enable" : 1,"ValueType" : "bool","RW" : "rw","Unit" : "关:0,开:1" },
 			  { "Name":"AI9","DisplayName" : "CPU温度","COV" : 0.5,"Enable" : 1,"ValueType" : "float","RW" : "ro","Unit" : "℃" },
 			  "hr"]
 			[物云名, { 键1:值,键2 : 值,键3 : 值 }, { 键1:值,键2 : 值,键3 : 值 }, hr指令]
 		*/
 		else if (cmd == "hr")
 		{
-			
 		}
 	}
 	else//主动数据上报命令
 	{
-		for (int i = 1; i < jPkt.size();i++)
+		for (int i = 1; i < jPkt.size(); i++)
 		{
 			string valType = "real";
 			json point = jPkt[i];
@@ -165,13 +168,13 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			if (name.find("B") == 0)
 			{
 				valType = "bool";
-				bVal = point[1].get<int>() == 1?true:false;
+				bVal = point[1].get<int>() == 1 ? true : false;
 			}
 			else
 			{
 				dbVal = point[1].get<double>();
 			}
-			
+
 			int time = point[2].get<int>();
 			int status = point[3].get<int>();
 
@@ -179,9 +182,9 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			if (pChild && pChild->m_level == "channel")
 			{
 				ioChannel* pC = (ioChannel*)pChild;
-				if(valType == "real")
+				if (valType == "real")
 					pC->input(dbVal);
-				else 
+				else
 					pC->input(bVal);
 			}
 		}
@@ -206,7 +209,7 @@ bool ioDev_iq60::waitResponse(int timeout)
 	return false;
 }
 
-bool ioDev_iq60::requestAndWaitResp(string cmd,string req)
+bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
 {
 	currentCmd = cmd;
 	currentResp.clear();
@@ -227,9 +230,14 @@ bool ioDev_iq60::requestAndWaitResp(string cmd,string req)
 		{
 			return true;
 		}
-
 	}
-
+	else
+	{
+		if (waitResponse(10000))
+		{
+			return true;
+		}
+	}
 
 	return false;
 }
@@ -312,8 +320,54 @@ bool ioDev_iq60::scanChannel(json& chanList)
 
 			chanList.push_back(jChan);
 		}
-	}	
-	
+	}
+
+	return true;
+}
+
+//w指令：[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
+//请求：[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
+//返回：["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
+bool ioDev_iq60::writeChannel(json jVal, json& chanResp)
+{
+	ioAddress sIOAddr = getIOAddr();
+
+	json jCmdW;
+	jCmdW.push_back(2);
+	jCmdW.push_back("IQK");
+	jCmdW.push_back(sIOAddr.gwAddr);
+	jCmdW.push_back("w");
+
+	string strContent = "";
+
+	if (jVal.is_number())
+	{
+		double dbVal = jVal.get<double>();
+
+		strContent = str::format("[\"%s\", %.2f]", m_addr, dbVal);
+	}
+	else if (jVal.is_boolean())
+	{
+	}
+	else if (jVal.is_string())
+	{
+	}
+	else
+	{
+	}
+
+	jCmdW.push_back(strContent);
+
+	string req = jCmdW.dump();
+
+	if (!requestAndWaitResp("w", req))
+		return false;
+
+	for (int i = 0; i < currentResp.size(); i++)
+	{
+
+	}
+
 	return true;
 }
 
