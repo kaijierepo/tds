@@ -13,12 +13,13 @@ public:
 	bool waitResponse(int timeout);
 	bool requestAndWaitResp(string cmd, string req);
 	virtual bool scanChannel(json& chanList);
+	virtual bool writeChannel(json jVal, json& chanResp);
 
 	json getAddr() override;
 
 	std::shared_ptr<TDS_SESSION> ioSession;
 	string currentCmd;
-	vector<json> currentResp; //分包组包
+	vector<json> currentResp;//分包组包
 	bool getResponse;
 };
 
