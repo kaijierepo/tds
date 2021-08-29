@@ -3,7 +3,6 @@
 
 class ioChan_tuya : public ioChannel
 {
-	bool output(json jVal) override;
+	bool output(json jVal, json& jResp) override;
 	string m_deviceID;
 };
-

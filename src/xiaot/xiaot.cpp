@@ -55,14 +55,14 @@ std::string CXiaoT::getReply(json msg)
 	}
 
 	//控制类处理
-	json val;
+	json val, resp;
 	if (reply == "")
 	{
 		string tag = "";
 		if (text.find("打开") != string::npos)
 		{
 			val = true;
-			tag = str::trim(text, "打开");	
+			tag = str::trim(text, "打开");
 		}
 		else if (text.find("关闭") != string::npos)
 		{
@@ -79,7 +79,7 @@ std::string CXiaoT::getReply(json msg)
 			}
 			else
 			{
-				pmp->output(val);
+				pmp->output(val, resp);
 				reply = "好的";
 			}
 		}

@@ -14,7 +14,7 @@ public:
 
 	string GetCommLinkTag();
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
-	virtual bool output(json jVal);
+	virtual bool output(json jVal, json& jResp);
 	bool IsValid();
 
 	string m_strLinkMPTag;

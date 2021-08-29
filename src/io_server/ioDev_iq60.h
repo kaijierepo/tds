@@ -13,7 +13,7 @@ public:
 	bool waitResponse(int timeout);
 	bool requestAndWaitResp(string cmd, string req);
 	virtual bool scanChannel(json& chanList);
-	virtual bool writeChannel(json jVal, json& chanResp);
+	virtual bool writeChannel(json jVal, json& jResp);
 
 	json getAddr() override;
 

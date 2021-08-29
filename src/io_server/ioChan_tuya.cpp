@@ -8,7 +8,7 @@
 #include "logger.h"
 using namespace httplib;
 
-bool ioChan_tuya::output(json jVal)
+bool ioChan_tuya::output(json jVal, json& jResp)
 {
 	//get gateway
 	ioGW_tuyaProject* pGw = nullptr;

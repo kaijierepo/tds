@@ -539,8 +539,9 @@ string rpcHandler::rpc_output(json params, string& error)
 		return "!" + error;
 	}
 	
-	if(pmp->output(val))
-		return "\"ok\"";
+	json jResp;
+	if(pmp->output(val, jResp))
+		return jResp.dump();
 	else
 	{
 		json jError = {

@@ -257,7 +257,6 @@ void ioDev::DoCycleTask()
 bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen)
 {
 	PKT_DATA req(pReqData,iReqLen), resp;
-	
 
 	if (!CmdRequestSync(req, resp))
 	{
@@ -302,7 +301,7 @@ bool ioDev::OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen)
 
 ioChannel* ioDev::GetDataChannel(string strChanID)
 {
-	for (auto i : m_mapDataChannel) 
+	for (auto i : m_mapDataChannel)
 	{
 		if(i.second->m_addr == strChanID) return i.second;
 	}
@@ -329,7 +328,7 @@ ioChannel* ioDev::GetDataChannel(string strChanID)
 
 ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 {
-	for (auto it : m_mapDataChannel) 
+	for (auto it : m_mapDataChannel)
 	{
 		if(it.second->m_strLinkMPTag == strMPTag) return it.second;
 	}
