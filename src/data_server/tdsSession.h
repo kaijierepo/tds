@@ -65,6 +65,8 @@ public:
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
 	queue<TCP_DATA_BUFF> dataBuff;
+	void* dsCltStream; //转发给httplib的流
+	
 
 	void onTcpDisconnect();
 	void setActivityCheck(bool bEnable);

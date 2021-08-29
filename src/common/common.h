@@ -11,6 +11,50 @@
 
 using namespace std;
 
+#include <mutex>
+#include <condition_variable>
+class semaphore
+{
+public:
+	semaphore(int count_ = 0) : count(count_) {}
+	inline void notify()
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		count++;
+		cv.notify_one();
+	}
+	inline void wait()
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		while (count == 0)
+		{
+			cv.wait(lock);
+		}
+		//The while loop can be replaced as below.
+		//cv.wait ( lock, [&] () { return this->count > 0; } );
+		count--;
+	}
+
+	inline bool wait_for(int milliSec)
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		while (count == 0)
+		{
+			cv_status status = cv.wait_for(lock, std::chrono::milliseconds(milliSec));
+			if (status == cv_status::timeout)
+				return false;
+		}
+		//The while loop can be replaced as below.
+		//cv.wait ( lock, [&] () { return this->count > 0; } );
+		count--;
+		return true;
+	}
+private:
+	std::mutex mtx;
+	std::condition_variable cv;
+	int count;
+};
+
 namespace sys {
 	struct COM_INFO {
 		string portNum;

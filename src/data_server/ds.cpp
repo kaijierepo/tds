@@ -30,6 +30,13 @@ void initHttpSrv(httplib::Server& svr)
 		if(!fs::deleteFile(dbPath))return;
 	}
 	fs::createFolderOfPath(dbPath);
+
+	wstring wpath = charCodec::utf8toUtf16(dbPath);
+	FILE* fp = _wfopen(wpath.c_str(), L"ab");
+	if (!fp)
+	{
+		return;
+	}
 	
     if (req.is_multipart_form_data()) {
       MultipartFormDataItems files;
@@ -44,12 +51,16 @@ void initHttpSrv(httplib::Server& svr)
         });
     } else {
       std::string body;
-      content_reader([&](const char *data, size_t data_length) {
-		fs::appendFile(dbPath,(char*)data,data_length);
-        return true;
+      content_reader([&](const char *data, size_t data_length) 
+	  {
+			fwrite(data, 1, data_length, fp);
+			return true;
       });
       res.set_content(body, "text/plain");
     }
+
+	if(fp)
+		fclose(fp);
   });
 }
 
@@ -644,6 +655,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none
+	//首次从该链接收到数据时的处理。
 	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
 	{
 		char* ptmp = new char[iLen + 1];
@@ -659,6 +671,10 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			if (CWSPPkt::isHandShake(strData))
 			{
 				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
+			}
+			else if(strData.find("/rpc") != string::npos)
+			{
+				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 			}
 		}
 		else
@@ -691,12 +707,35 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//tds rpc over http
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		stream2pkt* pab = &tdsSession->m_alBuf;
-		pab->PushStream(pData, iLen);
-		while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
+		//rpc 先组包后处理
+		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		{
-			tdsSession->iALProto = pab->m_protocolType;
-			onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
+			{
+				tdsSession->iALProto = pab->m_protocolType;
+				onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
+			}
+		}
+		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗
+		else
+		{
+			httplib::detail::dsClientStream* bs = NULL;
+			if(tdsSession->dsCltStream == NULL)
+			{
+				bs = new httplib::detail::dsClientStream;
+				bs->sock_ = tdsSession->pTcpSession->sock;
+				tdsSession->dsCltStream = bs;
+				std::thread t(httpReqHandleThread, bs, tdsSession->pTcpSession);
+				t.detach();
+			}
+			else
+			{
+				bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
+			}
+
+			bs->appendBuffer(pData, iLen);
 		}
 	}
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
@@ -857,21 +896,11 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	}
 	else
 	{
-		string szLog = str::format("[trace][ds]http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
-		LOG(szLog);
-		pALC->iALProto = APP_LAYER_PROTO::HTTP;
-
 		//internal handle
-		if(httpHandleInternal(strData,pALC))
+		if (httpHandleInternal(strData, pALC))
 			return true;
-
-		//web server folder handle
-		httplib::detail::dsClientStream* bs = new httplib::detail::dsClientStream;
-		bs->sock_ = pALC->pTcpSession->sock;
-		bs->appendBuffer(pDataBuf,iLen);
-		std::thread t(httpReqHandleThread, bs, pALC->pTcpSession);
-		t.detach();
 	}
+	
 
 	return true;
 }

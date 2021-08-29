@@ -1,6 +1,6 @@
 #pragma once
 #include "httplib.h"
-
+#include "common.h"
 
 // tds client stream for itergration with httplib
 //using a selfdefined tcpserver layer
@@ -26,31 +26,32 @@ namespace httplib {
 			const std::string& get_buffer() const;
 			socket_t socket() const override;
 
+			mutex m_cs;
+			semaphore m_sem;
+
 			void clear() {
-				if (buffer != nullptr)delete buffer;
-				buffer = nullptr;
-				buffSize = 0;
+
 			}
+
+			struct BUFF {
+				char* p;
+				int len;
+			};
+
+			vector<BUFF> bufferList;
 
 			void appendBuffer(char* data, int iLen)
 			{
-				if (buffer == nullptr)
-				{
-					buffer = new char[iLen];
-				}
-				else
-				{
-					char* pOld = buffer;
-					buffer = new char[buffSize + iLen];
-					memcpy(buffer, pOld, buffSize);
-					delete pOld;
-				}
-				memcpy(buffer + buffSize, data, iLen);
-				buffSize += iLen;
+				m_cs.lock();
+				BUFF bf;
+				bf.p = new char[iLen];
+				bf.len = iLen;
+				memcpy(bf.p, data, iLen);
+				bufferList.push_back(bf);
+				m_cs.unlock();
+				m_sem.notify();
 			}
 
-			char* buffer = nullptr;
-			size_t buffSize = 0;
 			socket_t sock_;
 		};
 
@@ -59,24 +60,50 @@ namespace httplib {
 
 		inline bool dsClientStream::is_writable() const { return true; }
 
-		inline ssize_t dsClientStream::read(char* ptr, size_t size) {
-			auto len_read = buffSize < size ? buffSize  : size;
-			memcpy(ptr, buffer, len_read);
-			buffSize -= len_read;
-			if (buffSize == 0)
-			{
-				delete buffer;
-				buffer = nullptr;
-			}
-			else
-			{
-				char* pOld = buffer;
-				buffer = new char[buffSize];
-				memcpy(buffer,pOld + len_read, buffSize);
-				delete pOld;
-			}
-			return static_cast<ssize_t>(len_read);
-		}
+		inline ssize_t dsClientStream::read(char* ptr, size_t size)
+		 {
+			 int len_read = 0;
+
+			 while (1)
+			 {
+				 if (len_read > 0)
+				 {
+					 break;
+				 }
+				 else
+				 {
+					 if (!m_sem.wait_for(3000))
+						 return 0;
+				 }
+
+
+				 m_cs.lock();
+				 if (bufferList.size() == 0)
+				 {
+					 continue;
+				 }
+				 BUFF& bf = bufferList.at(0);
+				 len_read = bf.len < size ? bf.len : size;
+				 memcpy(ptr, bf.p, len_read);
+
+				 if (bf.len - len_read > 0)
+				 {
+					 bf.len -= len_read;
+					 char* pOld = bf.p;
+					 bf.p = new char[bf.len];
+					 memcpy(bf.p, pOld + len_read, bf.len);
+					 delete pOld;
+				 }
+				 else
+				 {
+					 delete bf.p;
+					 bufferList.erase(bufferList.begin());
+				 }
+				 m_cs.unlock();
+			 }
+
+			 return static_cast<ssize_t>(len_read);
+		 }
 
 		inline ssize_t dsClientStream::write(const char* ptr, size_t size) {
 			if (is_writable()) { return send(sock_, ptr, size, 0); }
@@ -85,7 +112,9 @@ namespace httplib {
 
 		inline void dsClientStream::get_remote_ip_and_port(std::string& ip, int& port) const {  }
 
-		inline const std::string& dsClientStream::get_buffer() const { return buffer; }
+		inline const std::string& dsClientStream::get_buffer() const { 
+			return nullptr; 
+		}
 
 		inline socket_t dsClientStream::socket() const { return 0; }
 	}

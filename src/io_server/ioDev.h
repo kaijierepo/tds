@@ -51,7 +51,7 @@ public:
 	string m_channelTypeLabel;
 
 	//// iodev hierachy tree management
-	ioDev* getIODev(ioAddress iopath);
+	ioDev* getIODev(ioAddress iopath); //从该设备和所有子设备中找到指定ioAdress的设备
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> getIODevices(string devType);
 	vector<ioDev*> m_vecChild;
