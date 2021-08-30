@@ -328,23 +328,30 @@ bool ioDev_iq60::scanChannel(json& chanList)
 //w指令：[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
 //请求：[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
 //返回：["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
-bool ioDev_iq60::writeChannel(json jVal, json& chanResp)
+bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 {
-	ioAddress sIOAddr = getIOAddr();
-
 	json jCmdW;
 	jCmdW.push_back(2);
 	jCmdW.push_back("IQK");
-	jCmdW.push_back(sIOAddr.gwAddr);
+	jCmdW.push_back(m_addr);
 	jCmdW.push_back("w");
-
-	string strContent = "";
 
 	if (jVal.is_number())
 	{
 		double dbVal = jVal.get<double>();
 
-		strContent = str::format("[\"%s\", %.2f]", m_addr, dbVal);
+		for (int i = 0; i < m_vecChild.size(); i++)
+		{
+			ioDev* p = m_vecChild.at(i);
+			if (p)
+			{
+				json jonechanval;
+				jonechanval.push_back(p->m_addr);
+				jonechanval.push_back(dbVal);
+
+				jCmdW.push_back(jonechanval);
+			}
+		}
 	}
 	else if (jVal.is_boolean())
 	{
@@ -356,17 +363,18 @@ bool ioDev_iq60::writeChannel(json jVal, json& chanResp)
 	{
 	}
 
-	jCmdW.push_back(strContent);
-
+	//[2,"IQK","C1210608622","w",["AI4986",36.3],["AI4987",36.3]]
 	string req = jCmdW.dump();
 
-	if (!requestAndWaitResp("w", req))
-		return false;
+	//if (!requestAndWaitResp("w", req))
+	//	return false;
 
 	for (int i = 0; i < currentResp.size(); i++)
 	{
-
 	}
+
+	string strResp = "[\"C1210608622\", [\"AI4986\", 36.3, 1540697972, 0], [\"AI4987\", 36.3, 1540697972, 0], \"w\"]";
+	jResp = json::parse(strResp);
 
 	return true;
 }

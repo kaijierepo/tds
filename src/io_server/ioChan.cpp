@@ -64,16 +64,12 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	}
 }
 
-bool ioChannel::output(json jVal)
+bool ioChannel::output(json jVal, json& jResp)
 {
-	json chanResp;
-
-	ioAddress sIOAddr = getIOAddr();
-
-	ioDev* pDev = getIODev(sIOAddr);
+	ioDev* pDev = ioDev::m_pParent;
 	ioDev_iq60* p = (ioDev_iq60*)pDev;
 	if (p)
-		p->writeChannel(jVal, chanResp);
+		p->writeChannel(jVal, jResp);
 
 	return true;
 }

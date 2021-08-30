@@ -106,12 +106,12 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	}
 }
 
-bool MP::output(json jVal)
+bool MP::output(json jVal, json& jResp)
 {
 	ioChannel* pC = ioSrv.getIOChan(getTag());
 	if (pC)
 	{
-		return pC->output(jVal);
+		return pC->output(jVal, jResp);
 	}
 	else
 		return false;

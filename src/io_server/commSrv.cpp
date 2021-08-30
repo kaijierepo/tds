@@ -19,7 +19,7 @@ DWORD WINAPI ThreadRecvPktAsynDeal(LPVOID lparam) {
 	while (pThis->DealPackageAsyn()) {
 		Sleep(1);
 	}
-	return 0;    
+	return 0;
 }
 
 REQ_PARAM::REQ_PARAM()
