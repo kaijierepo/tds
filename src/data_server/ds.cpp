@@ -991,6 +991,12 @@ string dataServer::getSessionStatus(json params)
 		}
 		jSession["lastRecvTime"] = timeopt::st2str(p->lastRecvTime);
 		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
+
+		if (p->type == "video" && p->pTcpSession)
+		{
+			jSession["sendBytes"] = p->pTcpSession->iSendSucCount;
+			jSession["sendFailBytes"] = p->pTcpSession->iSendFailCount;
+		}
 		jList.push_back(jSession);
 	}
 

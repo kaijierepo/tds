@@ -345,20 +345,22 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 
 void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si)
 {
-#ifdef ENABLE_FFMPEG
 	MP* pmp = (MP*)mp;
 	if (pmp->m_streamPuller == NULL)
 		return;
 	if (pmp->m_streamPuller->pTcpSession == NULL)
 	{
+#ifdef ENABLE_FFMPEG
 		delete pmp->m_videoCodec;
 		pmp->m_videoCodec = NULL;
+#endif
 		pmp->m_streamPuller = NULL;
 		return;
 	}
 
 	if (st == ST_BMP)
 	{
+#ifdef ENABLE_FFMPEG
 		if (pmp->m_videoCodec == NULL)
 		{
 			pmp->m_videoCodec = new videoCodec();
@@ -382,6 +384,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 		}
 		pmp->m_streamPuller->send(vc.outputBuff, vc.iOutputLen);
 		vc.iOutputLen = 0;
+#endif
 	}
 	else if (st == ST_RGBA)
 	{
@@ -400,7 +403,6 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 			pmp->m_streamPuller->send(pData,len);
 		}
 	}
-#endif
 }
 
 void TDS_imp::log(const char* text)
