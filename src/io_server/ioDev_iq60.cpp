@@ -366,15 +366,31 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 	//[2,"IQK","C1210608622","w",["AI4986",36.3],["AI4987",36.3]]
 	string req = jCmdW.dump();
 
-	//if (!requestAndWaitResp("w", req))
-	//	return false;
+	if (!requestAndWaitResp("w", req))
+		return false;
 
-	for (int i = 0; i < currentResp.size(); i++)
+	//string strResp = "[\"C1210608622\", [\"AI4986\", 36.3, 1540697972, 0], [\"AI4987\", 36.3, 1540697972, 0], \"w\"]";
+	currentResp.push_back(m_addr);
+	for (int i = 0; i < m_vecChild.size(); i++)
 	{
-	}
+		ioDev* p = m_vecChild.at(i);
+		if (p)
+		{
+			SYSTEMTIME t;
+			GetLocalTime(&t);
 
-	string strResp = "[\"C1210608622\", [\"AI4986\", 36.3, 1540697972, 0], [\"AI4987\", 36.3, 1540697972, 0], \"w\"]";
-	jResp = json::parse(strResp);
+			json jonechanval;
+			jonechanval.push_back(p->m_addr);
+			jonechanval.push_back(jVal.get<double>());
+			jonechanval.push_back(timeopt::SysTime2Unix(t));
+			jonechanval.push_back(0);
+
+			currentResp.push_back(jonechanval);
+		}
+	}
+	currentResp.push_back("w");
+
+	jResp = currentResp;
 
 	return true;
 }
