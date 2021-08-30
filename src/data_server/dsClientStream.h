@@ -72,16 +72,24 @@ namespace httplib {
 				 }
 				 else
 				 {
-					 if (!m_sem.wait_for(3000))
-						 return 0;
+					 bool bEmpty = false;
+					 m_cs.lock();
+					 if (bufferList.size() == 0)
+					 {
+						 bEmpty = true;
+					 }
+					 m_cs.unlock();
+					 if (bEmpty)
+					 {
+						 if (!m_sem.wait_for(3000))
+						 {
+							 return 0;
+						 }
+					 } 	 
 				 }
 
 
 				 m_cs.lock();
-				 if (bufferList.size() == 0)
-				 {
-					 continue;
-				 }
 				 BUFF& bf = bufferList.at(0);
 				 len_read = bf.len < size ? bf.len : size;
 				 memcpy(ptr, bf.p, len_read);
