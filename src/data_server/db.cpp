@@ -3,6 +3,9 @@
 #include "../common/simdjson.h"
 #include <iostream>
 #include <sstream>
+#include <filesystem>
+#include "logger.h"
+using namespace std::filesystem;
 using namespace simdjson;
 database db;
 
@@ -11,49 +14,42 @@ database::database()
 
 }
 
-string database::getFileUrl(string strTag,SYSTEMTIME date)
+string database::getPath_deFile(string strTag, SYSTEMTIME stTime)
 {
 	strTag = str::replace(strTag,".", "/");
-	string strURL= str::format("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+	string strURL= str::format("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
 	strURL += strTag;
-	string timeStamp = str::format("%02d%02d%02d",date.wHour,date.wMinute,date.wSecond);
+	string timeStamp = str::format("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
 	strURL += "/" + timeStamp;
 	return strURL;
 }
 
-string database::getDBFolder(string strTag, SYSTEMTIME date)
+string database::getName_deFile(string tag, SYSTEMTIME time)
 {
-	strTag = str::replace(strTag,".", "\\");
-	string strURL= str::format("\\%04d%02d\\%02d\\", date.wYear, date.wMonth, date.wDay);
+	string timeStamp = str::format("%02d%02d%02d", time.wHour, time.wMinute, time.wSecond);
+	return timeStamp;
+}
+
+string database::getPath_dataFolder(string strTag, SYSTEMTIME date)
+{
+	strTag = str::replace(strTag,".", "/");
+	string strURL= str::format("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
 	strURL += strTag;
-	strURL = m_path + "\\" + strURL;
+	strURL = m_path + "/" + strURL;
 	return strURL;
 }
 
-string database::getDBFile(string strTag,SYSTEMTIME date)
+string database::getPath_dbFile(string strTag,SYSTEMTIME date)
 {
-	string folder = getDBFolder(strTag,date);
-	return folder + "\\db.json";
+	string folder = getPath_dataFolder(strTag,date);
+	return folder + "/db.json";
 }
 
-
-void database::INSERT_FILE(string strTag, SYSTEMTIME stTime, char* pData, int iLen, string fmt)
-{
-	string strFileName = str::format("%02d%02d%02d.", stTime.wHour, stTime.wMinute, stTime.wSecond);
-	strFileName += fmt;
-
-	string strPath = getDBFolder(strTag.c_str(), stTime);
-	string strCurveURL = "\\" + strPath + "\\" + strFileName;
-
-	strFileName = m_path + strCurveURL;
-	fs::createFolderOfPath(strFileName.c_str());
-	fs::writeFile(strFileName, pData, iLen);
-}
 
 
 void database::INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
 {
-	string dlPath = getDBFolder(strTag, stTime) + "\\" + "db.json";
+	string dlPath = getPath_dataFolder(strTag, stTime) + "/" + "db.json";
 	fs::createFolderOfPath(dlPath.c_str());
 	json jDE;
 	jDE["time"] = timeopt::st2str(stTime);
@@ -116,7 +112,7 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 	{
 		//加载数据元列表
 		stTemp = timeopt::Unix2SysTime(loadTime);
-		string dbFile = getDBFile(tag,stTemp);
+		string dbFile = getPath_dbFile(tag,stTemp);
 		string dbData;
 		fs::readFile(dbFile,dbData);
 		if(dbData == "")
@@ -155,14 +151,14 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			error = de["pic"].get(bHavePic);
 			if(bHavePic)
 			{
-				sDe += ",\"pic_url\":\"/db" + getFileUrl(tag,timeopt::str2st(strTime)) + ".jpg\"";
+				sDe += ",\"pic_url\":\"/db" + getPath_deFile(tag,timeopt::str2st(strTime)) + ".jpg\"";
 			}
 
 			bool bHaveVideo = false;
 			error = de["video"].get(bHaveVideo);
 			if (bHaveVideo)
 			{
-				sDe += ",\"video_url\":\"/db" + getFileUrl(tag, timeopt::str2st(strTime)) + ".mp4\"";
+				sDe += ",\"video_url\":\"/db" + getPath_deFile(tag, timeopt::str2st(strTime)) + ".mp4\"";
 			}
 
 			sDe += "}";
@@ -173,22 +169,34 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 	return true;
 }
 
-
-void database::INSERT_FILE(string strTag, SYSTEMTIME DataTime, string strDataFile, string suffix)
+void database::saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl)
 {
-	/*
-	string strPath = GetFolderURL(strTag.c_str(), DataTime);
-	fs::createFolderOfPath(strPath.c_str());
-	strPath += "\\" + GetHMSTag(DataTime);
-	if (suffix.length() > 0)
-		strPath += "." + suffix;
-	CopyFile(strDataFile.c_str(), strPath.c_str(), false);*/
+	deFileUrl = str::replace(deFileUrl, "\\", "/");
+	string suffix = parseSuffix(deFileUrl);
+	string path = getPath_deFile(strTag, stTime);
+
+	if (suffix != "") //文件
+	{
+		path += "." + suffix;
+	}
+	
+	path = m_path + path;
+	try
+	{
+		fs::createFolderOfPath(path);
+		copy(charCodec::utf8toUtf16(deFileUrl),charCodec::utf8toUtf16(path));
+	}
+	catch (std::exception& e)
+	{
+		string log = "saveDEFile fail src=" + deFileUrl + ",des=" + path + "error=" + e.what();
+		LOG(log);
+	}
 }
 
 
 void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName, bool bIncludeChild)
 {
-	strPath += "\\";
+	strPath += "/";
 	char szFind[260];
 	char szFile[1000] = { 0 };
 	WIN32_FIND_DATA FindFileData;
@@ -207,7 +215,7 @@ void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<st
 				if (bIncludeChild)
 				{
 					string strSubName = FindFileData.cFileName;
-					string strSubPath = strPath + "\\" + strSubName;
+					string strSubPath = strPath + "/" + strSubName;
 					LoadAllFile_FromPath(strSubPath, strExtType, vecFiles, bOnlyName, bIncludeChild);
 				}
 			}
@@ -215,7 +223,7 @@ void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<st
 		else
 		{
 			string strTmp = FindFileData.cFileName;//保存文件名，包括后缀名
-			string strFilePath = strPath + "\\" + strTmp;
+			string strFilePath = strPath + "/" + strTmp;
 
 			bool bFindFile = false;
 
@@ -252,6 +260,7 @@ void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<st
 
 bool database::create(string strDBUrl,string name)
 {
+	strDBUrl = str::replace(strDBUrl, "\\", "/");
 	m_path = fs::toAbsolutePath(strDBUrl);
 	fs::createFolderOfPath(m_path);
 	json dbInfo;
@@ -285,6 +294,29 @@ void database::Close()
 
 }
 
+string database::parseSuffix(string deFileUrl)
+{
+	string suffix = "";
+	int posDot = deFileUrl.rfind(".");
+	int posSlash = deFileUrl.rfind("/");
+	if (posDot != string::npos)
+	{
+		if (posSlash != string::npos)
+		{
+			if (posSlash < posDot)
+			{
+				suffix = deFileUrl.substr(posDot + 1, deFileUrl.size() - posDot - 1);
+			}
+		}
+		else
+		{
+			suffix = deFileUrl.substr(posDot + 1, deFileUrl.size() - posDot - 1);
+		}
+	}
+
+	return suffix;
+}
+
 string database::dataSet2String(DB_DATA_SET& dataSet)
 {
 	string result = "]";
@@ -309,10 +341,10 @@ string database::dataSet2String(DB_DATA_SET& dataSet)
 
 void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 {
-	int iPos = strPath.rfind('\\');
+	int iPos = strPath.rfind('/');
 	pfi->strName = strPath.substr(iPos+1,strPath.length() - 1 - iPos);
 
-	strPath += "\\";
+	strPath += "/";
 	char szFind[260];
 	char szFile[1000] = { 0 };
 	WIN32_FIND_DATA FindFileData;
@@ -329,7 +361,7 @@ void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 			if (FindFileData.cFileName[0] != '.')
 			{
 				string strSubName = FindFileData.cFileName;
-				string strSubPath = strPath + "\\" + strSubName;
+				string strSubPath = strPath + "/" + strSubName;
 
 				FILE_ITEM* pSub = new FILE_ITEM;
 				pSub->strName = strSubName;

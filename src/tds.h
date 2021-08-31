@@ -3,9 +3,11 @@
 #include <vector>
 using namespace std;
 
+
+
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
-typedef bool (*fp_startStream)(bool start,void* puller); //Æô¶¯ÂëÁ÷£¬²¢´«ÈëÀ­Á÷Õßid
+typedef bool (*fp_startStream)(bool start,void* puller); //å¯åŠ¨ç æµï¼Œå¹¶ä¼ å…¥æ‹‰æµè€…id
 
 
 namespace TDS_SESSION_TYPE {
@@ -14,9 +16,9 @@ namespace TDS_SESSION_TYPE {
 	const string video = "video";
 	const string web = "web";
 	const string log = "log";
-	const string commpkt = "commpkt"; //Í¨ĞÅÊı¾İ°ü¼àÊÓ
+	const string commpkt = "commpkt"; //é€šä¿¡æ•°æ®åŒ…ç›‘è§†
 	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
-	const string iodev = "iodev"; //ioÉè±¸»á»° ´«ÊäÉè±¸×Ô¶¨ÒåµÄÍ¨ĞÅĞ­Òé
+	const string iodev = "iodev"; //ioè®¾å¤‡ä¼šè¯ ä¼ è¾“è®¾å¤‡è‡ªå®šä¹‰çš„é€šä¿¡åè®®
 }
 
 struct ACTIVE_TDS_SESSION {
@@ -41,9 +43,9 @@ struct iTDSConf {
 };
 
 enum STREAM_TYPE {
-	ST_BMP, //bmpÁ÷ rgb
-	ST_h264_ES, //264 ESÁ÷
-	ST_RGBA, //Ô­Ê¼rgbaÊı¾İ ÓÃÓÚcanvas²¥·ÅÊÓÆµ
+	ST_BMP, //bmpæµ rgb
+	ST_h264_ES, //264 ESæµ
+	ST_RGBA, //åŸå§‹rgbaæ•°æ® ç”¨äºcanvasæ’­æ”¾è§†é¢‘
 };
 
 
@@ -54,6 +56,27 @@ struct STREAM_INFO {
 };
 
 
+//interface of tds.db
+//key is timestamp as 2020-01-01 11:11:11,value is a json string of one data element
+#define DB_DATA_SET std::map<string,string>
+class i_database {
+public:
+	//å¢åˆ æ”¹æŸ¥æ“ä½œ crud options
+	//virtual void INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile = nullptr) = 0;
+	//time: "2020-02-14~2020-02-15" or "1d1h1m30s"
+	//filter: "humidiy==55 && temperature>30"
+	//dataSetæ˜¯ä¸€ä¸ªjsonæ•°ç»„ï¼Œæ•°ç»„æˆå‘˜ä¸º1ä¸ªæ•°æ®å…ƒã€‚ metaæ˜¯å…ƒæ•°æ®ï¼Œæè¿°æ•°æ®çš„ä¸€äº›ä¿¡æ¯
+	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
+
+
+	//åº•å±‚åŸºç¡€æ“ä½œ
+	
+	//ä¿å­˜ä¸€ä¸ªæ•°æ®å…ƒæ–‡ä»¶ã€‚deFileUrlå¯ä»¥æ˜¯ 1.æœ¬æœºæ–‡ä»¶è·¯å¾„ 2.æ–‡ä»¶å¤¹è·¯å¾„ 3.httpæ–‡ä»¶æˆ–æ–‡ä»¶å¤¹è·¯å¾„
+	virtual void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) = 0;
+};
+
+
+
 //interface of TDS
 class iTDS {
 public:
@@ -61,25 +84,26 @@ public:
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
 
-	// tds Êı¾İ·şÎñ¹¦ÄÜ
+	// tds æ•°æ®æœåŠ¡åŠŸèƒ½
 	virtual string call(string method, string param,string& error) = 0;
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
-	// io Í¨ĞÅ·şÎñ¹¦ÄÜ
+	// io é€šä¿¡æœåŠ¡åŠŸèƒ½
 	virtual bool sendToIoAddr(string ioAddr,char* p,int l) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
-	// ÊÓÆµ¹¦ÄÜ
+	// è§†é¢‘åŠŸèƒ½
 	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp, STREAM_INFO* si = NULL) = 0;
-	//ÍÆÁ÷µ½Ö¸¶¨µÄ¼à²âµãmp
+	//æ¨æµåˆ°æŒ‡å®šçš„ç›‘æµ‹ç‚¹mp
 	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si=NULL) = 0;
 
-	// Í¨ÓÃ·şÎñ¹¦ÄÜ
+	// é€šç”¨æœåŠ¡åŠŸèƒ½
 	virtual void log(const char* text) = 0;
 
-	//Êı¾İ½Ó¿Ú
+	//æ•°æ®æ¥å£
 	iTDSConf* conf;
+	i_database* db;
 };
 
 

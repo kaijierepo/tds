@@ -2,6 +2,7 @@
 #include "common.h"
 #include <map>
 #include "json.hpp"
+#include "tds.h"
 
 /*
 functions：
@@ -116,33 +117,40 @@ public:
 	vector<string> cdtList;
 };
 
-//key is timestamp as 2020-01-01 11:11:11,value is a json string of one data element
-#define DB_DATA_SET std::map<string,string>
 
-class database {
+//路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
+class database : public i_database{
 public:
 	database();
 	bool create(string strDBUrl,string name);
 	bool Open(string strDBUrl,string name="");
 	void Close();
 
-	//crud options
-	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr);
-	void INSERT_FILE(string strTag, SYSTEMTIME DataTime, string strDataFile, string suffix = "");
-	void INSERT_FILE(string strTag, SYSTEMTIME stTime, char* pData, int iLen, string fmt);//保存
-	//time: "2020-02-14~2020-02-15" or "1d1h1m30s"
-	//filter: "humidiy==55 && temperature>30"
-	//dataSet是一个json数组，数组成员为1个数据元。 meta是元数据，描述数据的一些信息
-	bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result);
+//接口部分
+public:
+	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
+	bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result) ;
+	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
 
 
+public:
+	string m_path; // without a slash in the end.  add a slash if you want to compose a path
+
+//路径管理
+public:
+	//获得数据库文件db.json的路径
+	string getPath_dbFile(string strTag, SYSTEMTIME date);
+	//获得数据元文件或者数据库文件的存储文件夹目录
+	string getPath_dataFolder(string strTag, SYSTEMTIME date);
+	//获得数据元文件或者数据元文件夹的路径
+	string getPath_deFile(string strTag, SYSTEMTIME stTime);
+
+	string getName_deFile(string tag, SYSTEMTIME time);
+
+	string parseSuffix(string deFileUrl);
 	string dataSet2String(DB_DATA_SET& dataSet);
-	string getFileUrl(string strTag,SYSTEMTIME date);
 	void LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName = false, bool bIncludeChild = true);
 	void GetFileTreeOfPath(FILE_ITEM* pfi, string strPath);
-	string getDBFolder(string strTag, SYSTEMTIME date);
-	string getDBFile(string strTag,SYSTEMTIME date);
-	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 	string m_name; //database name, same as project name
 };
 

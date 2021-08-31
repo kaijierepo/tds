@@ -31,6 +31,9 @@ class TDS_imp;
 TDS_imp tdsImp; //tds instance;
 iTDS* tds = &tdsImp;
 
+//exe模式下，都会有命令行窗口，通过设置 ui_mode = chrome 或者 miniblink打开 浏览器窗口
+//dll模式下，默认没有命名行窗口，通过设置 ui_mode = console 来打开命令行窗口
+
 
 #ifndef _WINDLL
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台

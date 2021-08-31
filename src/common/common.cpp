@@ -651,6 +651,8 @@ namespace str {
 }
 
 namespace fs {
+	//带后缀 .XXX 作为文件路径
+	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	void createFolderOfPath(string strFile)
 	{
 		str::replace(strFile,"\\","/");
@@ -690,14 +692,14 @@ namespace fs {
 	string toAbsolutePath(string str)
 	{
 		string s;
-		if (str.substr(0, 2) == ".\\")
+		if (str.substr(0, 2) == "./")
 		{
 			s = str.substr(2, str.length() - 2);
-			s = fs::appPath() + "\\" + s;
+			s = fs::appPath() + "/" + s;
 		}
-		else if (str.substr(0, 3) == "..\\")
+		else if (str.substr(0, 3) == "../")
 		{
-			s = fs::appPath() + "\\" + str;
+			s = fs::appPath() + "/" + str;
 		}
 		else
 		{
@@ -709,12 +711,14 @@ namespace fs {
 	string appPath()
 	{
 #ifdef WINDOWS
+		//windows获取到的是反斜杠，tds内统一使用斜杠
 		TCHAR p[MAX_PATH] = { 0 };
 		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
 		string strPath = (char*)p;
 		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
 		strPath = strPath.substr(0, nEnd);
 		strPath = charCodec::ansi2Utf8(strPath);
+		strPath = str::replace(strPath,"\\", "/");
 		return strPath;
 #elif LINUX
 		return "";

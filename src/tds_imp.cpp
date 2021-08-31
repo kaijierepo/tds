@@ -223,6 +223,9 @@ bool TDS_imp::run(string cmdline)
 	string cwd = fs::appPath();
 	SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
 
+	//初始化接口
+	tds->db = &::db;
+
 	//load tds.json
 	tdsConf.loadConf();
 
@@ -230,7 +233,7 @@ bool TDS_imp::run(string cmdline)
 	if(conf->uiMode == "")
 		conf->uiMode = getUIMode();
 
-#ifdef _WINDLL // dll模式下需要创建命令行。 exe模式使用默认命令行
+#ifdef _WINDLL // dll模式下需要创建命令行
 	if (conf->uiMode == "console")
 	{
 		createConsole();
