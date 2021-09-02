@@ -151,6 +151,9 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 		}
 		str::replace(str, "$src_ip$", ip);
 		}
+
+	str::replace(str, "$dbPath$", db.m_path);
+
 	return str;
 }
 
@@ -220,6 +223,25 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	else if (method == "fs.saveFileDlg")
 	{
 
+	}
+	else if (method == "fs.openFolder")
+	{
+		string s = params["path"];
+		s = str::replace(s,"/", "\\");
+		wstring ws = charCodec::utf8toUtf16(s);
+		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
+		result = "\"ok\"";
+	}
+	else if (method == "fs.openDEFolder")
+	{
+		string tag = params["tag"];
+		string time = params["time"];
+		string path = db.m_path  + db.getPath_deFile(tag, timeopt::str2st(time));
+
+		path = str::replace(path, "/", "\\");
+		wstring ws = charCodec::utf8toUtf16(path);
+		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
+		result = "\"ok\"";
 	}
 	//#endregion
 

@@ -13,6 +13,7 @@ public:
 
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
+	bool setWorkingDir();
 	 bool run(string cmdline = "");
 
 	// tds 数据服务功能
@@ -21,7 +22,7 @@ public:
 	 void rpcNotify(string method, string params="", string sessionId="");
 
 	// io 通信服务功能
-	 bool sendToIoAddr(string ioAddr, char* p, int l);
+	 bool sendToIoAddr(string ioAddr, const char* p, int l);
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能

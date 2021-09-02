@@ -218,10 +218,18 @@ string TDS_imp::getUIMode()
 	return uimode;
 }
 
-bool TDS_imp::run(string cmdline)
+bool TDS_imp::setWorkingDir()
 {
 	string cwd = fs::appPath();
-	SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
+	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
+	string s = bRet ? "成功" : "失败";
+	LOG("[工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
+	return true;
+}
+
+bool TDS_imp::run(string cmdline)
+{
+	setWorkingDir();
 
 	//初始化接口
 	tds->db = &::db;
@@ -300,14 +308,14 @@ void TDS_imp::rpcNotify(string method, string params, string sessionId)
 	tdsSrv.notify(method, params);
 }
 
-bool TDS_imp::sendToIoAddr(string ioAddr, char* p, int l)
+bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 {
 	ioAddress sIoAddr;
 	sIoAddr.FromString(ioAddr);
 	ioDev* d = ioSrv.getIODev(sIoAddr);
 	if (d)
 	{
-		return d->sendData(p, l);
+		return d->sendData((char*)p, l);
 	}
 	return false;
 }
