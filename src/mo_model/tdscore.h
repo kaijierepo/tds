@@ -146,6 +146,18 @@ const std::map<string, string> IO_DEV_TYPE_LABEL = {
 	{std::map<string,string>::value_type("io-channel","IO通道")},
 };
 
+
+namespace TDS_ERROR {
+	const string ok = "ok";
+	const string error1 = "error1";
+	const string error2 = "error2";
+}
+
+const std::map<string, string> TDS_ERROR_DESC = {
+	{std::map<string,string>::value_type("error1","error1的详细解释")},
+	{std::map<string,string>::value_type("error2","error2的详细解释")},
+};
+
 //应用层协议类型
 namespace APP_LAYER_PROTO {
 	const string UNKNOWN = "alp_unknown";

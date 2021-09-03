@@ -190,6 +190,27 @@ int MP::getSaveInterval()
 	return si;
 }
 
+void MP::refreshStreamPuller()
+{
+	for(int i=0;i<m_streamPuller.size();i++)
+	{
+		std::shared_ptr<TDS_SESSION> pSess = m_streamPuller[i];
+		if (pSess->pTcpSession == NULL)
+		{
+			m_streamPuller.erase(m_streamPuller.begin() + i);
+			i--;
+		}
+	}
+
+#ifdef ENABLE_FFMPEG
+	if (m_streamPuller.size() == 0)
+	{
+		delete m_videoCodec;
+		m_videoCodec = NULL;
+	}
+#endif
+}
+
 json MP::getRTData()
 {
 	json j;

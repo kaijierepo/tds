@@ -305,7 +305,18 @@ void TDS_imp::setRpcHandler(fp_rpcHandler handler)
 
 void TDS_imp::rpcNotify(string method, string params, string sessionId)
 {
-	tdsSrv.notify(method, params);
+	json jParams;
+	if (params != "")
+	{
+		try {
+			jParams = json::parse(params);
+		}
+		catch (std::exception& e)
+		{
+			string s = e.what();
+		}
+	}
+	tdsSrv.notify(method, jParams);
 }
 
 bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
@@ -357,18 +368,10 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si)
 {
 	MP* pmp = (MP*)mp;
-	if (pmp->m_streamPuller == NULL)
+	pmp->refreshStreamPuller();
+	if (pmp->m_streamPuller.size() == 0)
 		return;
-	if (pmp->m_streamPuller->pTcpSession == NULL)
-	{
-#ifdef ENABLE_FFMPEG
-		delete pmp->m_videoCodec;
-		pmp->m_videoCodec = NULL;
-#endif
-		pmp->m_streamPuller = NULL;
-		return;
-	}
-
+	
 	if (st == ST_BMP)
 	{
 #ifdef ENABLE_FFMPEG
@@ -389,29 +392,38 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 		char* pStream = NULL;
 		vc.output();
 		//发送视频头，web端mse收到该头才能正确解码
-		if (pmp->m_streamPuller->pTcpSession->iSendSucCount == 0)
+		for (int i = 0; i < pmp->m_streamPuller.size(); i++)
 		{
-			pmp->m_streamPuller->send(vc.headerBuff, vc.iHeaderBuffLen);
+			std::shared_ptr<TDS_SESSION> p = pmp->m_streamPuller[i];
+			if (p->pTcpSession->iSendSucCount == 0)
+			{
+				p->send(vc.headerBuff, vc.iHeaderBuffLen);
+			}
+			p->send(vc.outputBuff, vc.iOutputLen);
 		}
-		pmp->m_streamPuller->send(vc.outputBuff, vc.iOutputLen);
+
 		vc.iOutputLen = 0;
 #endif
 	}
 	else if (st == ST_RGBA)
 	{
 		//发送视频信息头
-		if (pmp->m_streamPuller->pTcpSession->iSendSucCount == 0)
+		for (int i = 0; i < pmp->m_streamPuller.size(); i++)
 		{
-			json jSi;
-			jSi["w"] = pmp->m_streamInfo.w;
-			jSi["h"] = pmp->m_streamInfo.h;
-			jSi["type"] = pmp->m_streamInfo.type;
-			string s = jSi.dump();
-			pmp->m_streamPuller->send((char*)s.c_str(), s.length());
-		}
-		if (pmp->m_streamPuller->streamFmt == "rgba")//直接转发
-		{
-			pmp->m_streamPuller->send(pData,len);
+			std::shared_ptr<TDS_SESSION> p = pmp->m_streamPuller[i];
+			if (p->pTcpSession->iSendSucCount == 0)
+			{
+				json jSi;
+				jSi["w"] = pmp->m_streamInfo.w;
+				jSi["h"] = pmp->m_streamInfo.h;
+				jSi["type"] = pmp->m_streamInfo.type;
+				string s = jSi.dump();
+				p->send((char*)s.c_str(), s.length());
+			}
+			if (p->streamFmt == "rgba")//直接转发
+			{
+				p->send(pData, len);
+			}
 		}
 	}
 }

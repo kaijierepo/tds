@@ -57,7 +57,8 @@ public:
 	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
-	std::shared_ptr<TDS_SESSION> m_streamPuller; //拉流方
+	void refreshStreamPuller();
+	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //拉流方
 	fp_startStream m_streamPusher; //推流方
 	STREAM_INFO m_streamInfo;
 #ifdef ENABLE_FFMPEG

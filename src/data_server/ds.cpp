@@ -613,7 +613,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 				tdsSession->streamMp = p;
 				tdsSession->type = TDS_SESSION_TYPE::video;
 				tdsSession->streamFmt = fmt;
-				p->m_streamPuller = tdsSession;
+				p->m_streamPuller.push_back(tdsSession);
 
 				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
 				LOG(szLog);
