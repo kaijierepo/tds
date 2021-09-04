@@ -367,7 +367,7 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 	}
 
 	//[2,"IQK","C1210608622","w",["AI4986",36.3],["AI4987",36.3]]
-	string req = jCmdW.dump();
+	string req = jCmdW.dump() +"\n";
 
 	if (!requestAndWaitResp("w", req))
 		return false;
