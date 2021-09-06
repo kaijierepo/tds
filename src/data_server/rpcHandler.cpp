@@ -317,6 +317,16 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 		}
 	}
 
+
+	if (method == "db.update")
+	{
+		string tag = params["tag"].get<string>();
+		string time = params["time"].get<string>();
+		json val = params["val"];
+		db.UPDATE(tag, timeopt::str2st(time), val);
+		result = "\"ok\"";
+	}
+
 	if (method == "sessionStatus")
 	{
 		result = ds.getSessionStatus(params);

@@ -24,6 +24,11 @@ string database::getPath_deFile(string strTag, SYSTEMTIME stTime)
 	return strURL;
 }
 
+string database::getPath_dbRoot()
+{
+	return m_path;
+}
+
 string database::getName_deFile(string tag, SYSTEMTIME time)
 {
 	string timeStamp = str::format("%02d%02d%02d", time.wHour, time.wMinute, time.wSecond);
@@ -166,6 +171,70 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			result[strTime + "+" + tag] = sDe;
 		}
 	}
+	return true;
+}
+
+bool database::updateJsonObj(json& jOld, json& jNew)
+{
+	//已经存在的key，用新value更新
+	//不存在key，增加
+	for (auto& [key, value] : jNew.items()) {
+		json& jOldVal = jOld[key];
+		json& jNewVal = jNew[key];
+
+		if (jOldVal.is_object())
+		{
+			updateJsonObj(jOldVal, jNewVal);
+		}
+		else
+		{
+			jOld[key] = jNewVal;
+		}
+	}
+
+	return true;
+}
+
+bool database::UPDATE(string tag, SYSTEMTIME stTime, string& sData)
+{
+	json jData = json::parse(sData);
+	return UPDATE(tag, stTime, jData);
+}
+
+bool database::UPDATE(string tag, SYSTEMTIME stTime, json& jData)
+{
+	//加载数据元列表
+	string dbFile = getPath_dbFile(tag, stTime);
+	string dbData;
+	fs::readFile(dbFile, dbData);
+	if (dbData == "")
+		return false;
+
+	json jDEList = json::parse(dbData);
+	string specifyTime = timeopt::st2str(stTime);
+	bool findDE = false;
+	for (int i = 0; i < jDEList.size(); i++)
+	{
+		json& jDE = jDEList[i];
+		string sHMS = jDE["time"].get<string>();
+		if (sHMS.length() > 8)
+		{
+			sHMS = sHMS.substr(sHMS.length() - 8, 8);
+		}
+		string specifyHMS = specifyTime.substr(specifyTime.length() - 8, 8);
+		if (sHMS == specifyHMS)
+		{
+			json& jOld = jDE["val"];
+			json& jNew = jData;
+			findDE = true;
+			updateJsonObj(jOld, jNew);
+		}
+	}
+	if (!findDE)
+		return false;
+
+	dbData = jDEList.dump(2);
+	fs::writeFile(dbFile, dbData);
 	return true;
 }
 

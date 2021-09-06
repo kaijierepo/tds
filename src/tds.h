@@ -67,12 +67,21 @@ public:
 	//filter: "humidiy==55 && temperature>30"
 	//dataSet是一个json数组，数组成员为1个数据元。 meta是元数据，描述数据的一些信息
 	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
-
+	virtual bool UPDATE(string tag, SYSTEMTIME stTime, string& sData) = 0;
 
 	//底层基础操作
 	
 	//保存一个数据元文件。deFileUrl可以是 1.本机文件路径 2.文件夹路径 3.http文件或文件夹路径
 	virtual void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) = 0;
+
+	//获得数据库文件db.json的路径
+	virtual string getPath_dbFile(string strTag, SYSTEMTIME date) = 0;
+	//获得数据元文件或者数据库文件的存储文件夹目录
+	virtual string getPath_dataFolder(string strTag, SYSTEMTIME date) = 0;
+	//获得数据元文件或者数据元文件夹的路径
+	virtual string getPath_deFile(string strTag, SYSTEMTIME stTime) = 0;
+	//获得数据库根路径
+	virtual string getPath_dbRoot() = 0;
 };
 
 

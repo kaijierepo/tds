@@ -3,6 +3,7 @@
 #include <map>
 #include "json.hpp"
 #include "tds.h"
+using json = nlohmann::json;
 
 /*
 functions：
@@ -130,11 +131,11 @@ public:
 public:
 	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
 	bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result) ;
+	bool updateJsonObj(json& jOld, json& jNew);
+	bool UPDATE(string tag, SYSTEMTIME stTime, string& sData);
+	bool UPDATE(string tag, SYSTEMTIME stTime, json& jData);
 	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
 
-
-public:
-	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 
 //路径管理
 public:
@@ -144,7 +145,7 @@ public:
 	string getPath_dataFolder(string strTag, SYSTEMTIME date);
 	//获得数据元文件或者数据元文件夹的路径
 	string getPath_deFile(string strTag, SYSTEMTIME stTime);
-
+	string getPath_dbRoot();
 	string getName_deFile(string tag, SYSTEMTIME time);
 
 	string parseSuffix(string deFileUrl);
@@ -152,6 +153,7 @@ public:
 	void LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName = false, bool bIncludeChild = true);
 	void GetFileTreeOfPath(FILE_ITEM* pfi, string strPath);
 	string m_name; //database name, same as project name
+	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 };
 
 extern database db;
