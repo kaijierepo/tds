@@ -23,6 +23,7 @@ public:
 	 void rpcNotify(string method, string params="", string sessionId="");
 
 	// io 通信服务功能
+	 bool enableIoLog(string ioAddr, bool bEnable);
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 

@@ -50,6 +50,8 @@ public:
 	string m_channelType;
 	string m_channelTypeLabel;
 
+	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
+
 	//// iodev hierachy tree management
 	ioDev* getIODev(ioAddress iopath); //从该设备和所有子设备中找到指定ioAdress的设备
 	ioDev* getIODev(string ioAddr);

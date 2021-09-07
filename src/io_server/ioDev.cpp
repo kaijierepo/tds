@@ -29,6 +29,7 @@ int ioDev::m_heartBeatInterval = 10;
 
 ioDev::ioDev(void)
 {
+	m_bEnableIoLog = true;
 	bEnableAcq = true;
 	m_mngStatus = IODEV_MNG_STATUS::configured;
 	m_pCommAddrInfo = NULL;

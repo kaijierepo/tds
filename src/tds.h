@@ -100,6 +100,7 @@ public:
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 	// io 通信服务功能
+	virtual bool enableIoLog(string ioAddr, bool bEnable) = 0;
 	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 

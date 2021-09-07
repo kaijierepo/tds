@@ -333,6 +333,19 @@ void TDS_imp::rpcNotify(string method, string params, string sessionId)
 	tdsSrv.notify(method, jParams);
 }
 
+bool TDS_imp::enableIoLog(string ioAddr, bool bEnable)
+{
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		d->m_bEnableIoLog = bEnable;
+		return true;
+	}
+	return false;
+}
+
 bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 {
 	ioAddress sIoAddr;
