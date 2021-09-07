@@ -8,7 +8,7 @@ using namespace std;
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
-
+typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
 
 namespace TDS_SESSION_TYPE {
 	const string none = "none";
@@ -92,6 +92,7 @@ public:
 	virtual string getVer() = 0;
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
+	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 
 	// tds 数据服务功能
 	virtual string call(string method, string param,string& error) = 0;

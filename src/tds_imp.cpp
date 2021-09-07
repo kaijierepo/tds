@@ -20,6 +20,8 @@ string build_time = __TIME__;
 string version_build_info = "(build " + build_date + " " + build_time + ")";
 string version = "v1.0";
 
+TDS_imp tdsImp; //tds instance;
+iTDS* tds = &tdsImp;
 
 #include <stdio.h>
 #include <io.h>
@@ -176,6 +178,11 @@ void chromeThread()
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 
+		if (tdsImp.m_fpProcBeforeExit!=NULL)
+		{
+			tdsImp.m_fpProcBeforeExit();	
+		}
+
 		exit(0);
 	}
 }
@@ -191,6 +198,7 @@ void createChromeWnd()
 TDS_imp::TDS_imp()
 {
 	conf = &tdsConf;
+	m_fpProcBeforeExit = NULL;
 }
 
 bool TDS_imp::setEncodeing(string encoding)
@@ -277,6 +285,12 @@ bool TDS_imp::run(string cmdline)
 		createChromeWnd();
 	}
 
+	return true;
+}
+
+bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
+{
+	m_fpProcBeforeExit = callback;
 	return true;
 }
 

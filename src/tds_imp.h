@@ -14,7 +14,8 @@ public:
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
 	bool setWorkingDir();
-	 bool run(string cmdline = "");
+	bool run(string cmdline = "");
+	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
 	 string call(string method, string param,string& error);
@@ -32,6 +33,9 @@ public:
 	 void log(const char* text);
 
 	 tdsConfig tdsConf;
+	 fp_procBeforeExit m_fpProcBeforeExit;
 };
 
 extern void createConsole();
+extern TDS_imp tdsImp; //tds instance;
+extern iTDS* tds;
