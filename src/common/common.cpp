@@ -131,6 +131,8 @@ namespace charCodec {
 		return str;
 	}
 
+	
+
 	string ansi2Utf8(string instr) //ansi-->utf-8
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
@@ -903,44 +905,56 @@ namespace fs {
 	std::string GetSaveFile(char* filter , char* title , char* initDirectory )
 	{
 		//文件名
-		std::string filename;
+		std::wstring filename;
+		std::wstring wFilter;
+		if(filter)
+		 wFilter = charCodec::utf8toUtf16(filter).c_str();//设置过滤
+		std::wstring wDir;
+		if(initDirectory)
+		 wDir = charCodec::utf8toUtf16(initDirectory).c_str();//初始目录为默认
+		std::wstring wTitle;
+		if(title)
+		 wTitle = charCodec::utf8toUtf16(title).c_str();
 
 		//打开文件
-		OPENFILENAME ofn = { 0 };
-		TCHAR strFilename[MAX_PATH] = { 0 };//用于接收文件名
+		OPENFILENAMEW ofn = { 0 };
+		WCHAR strFilename[MAX_PATH] = { 0 };//用于接收文件名
 		ofn.lStructSize = sizeof(OPENFILENAME);//结构体大小
 		ofn.hwndOwner = GetForegroundWindow();//拥有着窗口句柄
 		if (filter)
 		{
-			ofn.lpstrFilter = filter;//设置过滤
+			ofn.lpstrFilter = wFilter.c_str();
 		}
 		else
 		{
-			ofn.lpstrFilter = TEXT("所有文件\0*.*\0\0");//设置过滤
+			ofn.lpstrFilter = L"所有文件\0*.*\0\0";//设置过滤
 		}
 
 		ofn.nFilterIndex = 1;//过滤器索引
 		ofn.lpstrFile = strFilename;//接收返回的文件名，注意第一个字符需要为NULL
 		ofn.nMaxFile = sizeof(strFilename);//缓冲区长度
-		ofn.lpstrInitialDir = initDirectory;//初始目录为默认
+		if (initDirectory != NULL)
+			ofn.lpstrInitialDir = wDir.c_str();
 
 											//对话框标题
 		if (title)
 		{
-			ofn.lpstrTitle = title;
+			if (title != NULL)
+				ofn.lpstrTitle = wTitle.c_str();
 		}
 		else
 		{
-			ofn.lpstrTitle = TEXT("请选择一个文件");
+			ofn.lpstrTitle = L"请选择一个文件";
 		}
 
 		ofn.Flags = OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;//目录必须存在，覆盖文件前发出警告
-		ofn.lpstrDefExt = TEXT("aep");//默认追加的扩展名
-		if (GetSaveFileName(&ofn))
+		ofn.lpstrDefExt = L"json";//默认追加的扩展名
+		if (GetSaveFileNameW(&ofn))
 		{
 			filename = strFilename;
 		}
-		return filename;
+		string utf8Str = charCodec::utf16toUtf8(filename);
+		return utf8Str;
 	}
 }
 

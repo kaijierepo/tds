@@ -169,6 +169,24 @@ void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
 	}
 }
 
+void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
+{
+	string filter;
+	if (params["filter"] != nullptr)
+		filter = params["filter"].get<string>();
+	string title;
+	if(params["title"]!=nullptr)
+		title = params["title"].get<string>();
+	string file = fs::GetSaveFile((char*)filter.c_str(),(char*)title.c_str());
+	if (file != "")
+	{
+		json p;
+		p["path"] = file;
+		p["caller"] = params["caller"];
+		tdsSrv.notify("fs.saveFileDlg", p);
+	}
+}
+
 string rpcHandler::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string result = "";
@@ -222,7 +240,9 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	}
 	else if (method == "fs.saveFileDlg")
 	{
-
+		std::thread t(saveFileDlgThread, pSession, params);
+		t.detach();
+		result = "\"ok\"";
 	}
 	else if (method == "fs.openFolder")
 	{
@@ -316,7 +336,14 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 			error = RPCError(TEC_FAIL, "fail");
 		}
 	}
-
+	else if (method == "getCurDir")
+	{
+		WCHAR buff[300] = { 0 };
+		GetCurrentDirectoryW(300, buff);
+		wstring s = buff;
+		json j = charCodec::utf16toUtf8(s);
+		result = j.dump();
+	}
 
 	if (method == "db.update")
 	{

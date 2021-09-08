@@ -76,6 +76,7 @@ namespace charCodec {
 	string ansi2Utf8(string instr);
 	string ToUtf8(LPCTSTR wstr);
 	string utf16toAnsi(wstring instr);
+	string utf16toUtf8(wstring instr);
 }
 
 namespace timeopt {
