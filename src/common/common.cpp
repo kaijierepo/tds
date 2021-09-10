@@ -899,6 +899,8 @@ namespace fs {
 			filename = strFilename;
 		}
 		string utf8Str = charCodec::utf16toUtf8(filename);
+		string cwd = fs::appPath();
+		BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
 		return utf8Str;
 	}
 
@@ -953,6 +955,8 @@ namespace fs {
 		{
 			filename = strFilename;
 		}
+		string cwd = fs::appPath();
+		BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
 		string utf8Str = charCodec::utf16toUtf8(filename);
 		return utf8Str;
 	}
