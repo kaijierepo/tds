@@ -11,54 +11,81 @@ tdsConfig::tdsConfig()
 	dbPath = "";
 }
 
+struct TDS_CONF_ITEM {
+	string key;
+	string val;
+};
+
 void tdsConfig::loadConf()
 {
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	string strConf;
-	fs::readFile(fs::appPath() + "\\tds.json", strConf);
-	if (strConf != "")
+	fs::readFile(fs::appPath() + "\\tds.ini", strConf);
+	vector<string> confItems;
+	str::split(confItems, strConf, "\r\n");
+
+	//去掉注释
+	for (int i = 0; i < confItems.size(); i++)
 	{
-		jsonConf = json::parse(strConf);
-
-		json j = jsonConf["project_path"];
-		if (j != nullptr && projectConfPath=="")
-			projectConfPath = j.get<string>();
-
-		j = jsonConf["ui_port"];
-		if (j != nullptr && port == 0)
-			port = j.get<int>();
-
-		j = jsonConf["log_level"];
-		if (j != nullptr && logLevel == "")
-			logLevel = j.get<string>();
-
-		j = jsonConf["title"];
-		if (j != nullptr && title == "")
-			title = j.get<string>();
-
-		j = jsonConf["homepage"];
-		if (j != nullptr && homepage == "")
-			homepage = j.get<string>();
-
-		j = jsonConf["ui_mode"];
-		if (j != nullptr && uiMode == "")
-			uiMode = j.get<string>();
-
-		j = jsonConf["active_session"];
-		if (j != nullptr)
+		string& ci = confItems[i];
+		int pos = ci.find("#");
+		if (pos != string::npos)
 		{
-			for (int i = 0; i < j.size(); i++)
-			{
-				json jas = j[i];
-				ACTIVE_TDS_SESSION ats;
-				ats.ip = jas["ip"].get<string>();
-				ats.port = jas["port"].get<int>();
-				//ats.type = jas["type"].get<string>();
-				vecActiveSession.push_back(ats);
-			}
+			ci = ci.substr(0, pos);
 		}
-			
 	}
+	//解析
+	vector<TDS_CONF_ITEM> vecConf;
+	for (int i = 0; i < confItems.size(); i++)
+	{
+		string& ci = confItems[i];
+		TDS_CONF_ITEM tci;
+		int pos = ci.find("=");
+		if (pos != string::npos)
+		{
+			tci.key = ci.substr(0, pos);
+			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
+
+			//支持camelCase,下划线命名等多种命名方法
+			tci.key = str::trim(tci.key, " ");
+			str::removeChar(tci.key, '_');
+			str::removeChar(tci.key, '-');
+			tci.key = _strlwr((char*)tci.key.c_str());
+			tci.val = str::trim(tci.val, " ");
+			vecConf.push_back(tci);
+		}
+	}
+
+	for (int i = 0; i < vecConf.size(); i++)
+	{
+		TDS_CONF_ITEM& tci = vecConf[i];
+		if (tci.key == "confpath" && projectConfPath == "")
+			projectConfPath = tci.val;
+		else if (tci.key == "port" && port == 0)
+			port = atoi(tci.val.c_str());
+		else if (tci.key == "ui" && uiMode == "")
+			uiMode = tci.val;
+		else if ((tci.key == "loglevel") && logLevel == "")
+			logLevel = tci.val;
+		else if (tci.key == "title" && title == "")
+			title = tci.val;
+		else if (tci.key == "homepage" && homepage == "")
+			homepage = tci.val;
+	}
+
+		//j = jsonConf["active_session"];
+		//if (j != nullptr)
+		//{
+		//	for (int i = 0; i < j.size(); i++)
+		//	{
+		//		json jas = j[i];
+		//		ACTIVE_TDS_SESSION ats;
+		//		ats.ip = jas["ip"].get<string>();
+		//		ats.port = jas["port"].get<int>();
+		//		//ats.type = jas["type"].get<string>();
+		//		vecActiveSession.push_back(ats);
+		//	}
+		//}
 
 
 	//默认值
