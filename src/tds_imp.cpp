@@ -294,7 +294,7 @@ bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
 	return true;
 }
 
-string TDS_imp::call(string method, string param, string& error)
+bool TDS_imp::call(string method, string param, string& result)
 {
 	try {
 		json jParam;
@@ -302,14 +302,27 @@ string TDS_imp::call(string method, string param, string& error)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		return tdsSrv.handleMethodCall(method, jParam,error,NULL);
+		string error;
+		result = tdsSrv.handleMethodCall(method, jParam,error,NULL);
+		if (error != "")
+		{
+			result = error;
+			return false;
+		}
+		else
+		{
+			return true;
+		}
 	}
 	catch (std::exception& e)
 	{
 		string errorType = e.what();
-		return "error " + errorType;
+		json jException;
+		jException["exception"] = errorType;
+		result = jException.dump();
+		false;
 	}
-	
+	return false;
 }
 
 void TDS_imp::setRpcHandler(fp_rpcHandler handler)
@@ -354,6 +367,44 @@ bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 	if (d)
 	{
 		return d->sendData((char*)p, l);
+	}
+	return false;
+}
+
+bool TDS_imp::isOnline(string ioAddr)
+{
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		return d->m_bOnline;
+	}
+	return false;
+}
+
+bool TDS_imp::lockIoAddr(string ioAddr)
+{
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		d->CommLock();
+		return true;
+	}
+	return false;
+}
+
+bool TDS_imp::unlockIoAddr(string ioAddr)
+{
+	ioAddress sIoAddr;
+	sIoAddr.FromString(ioAddr);
+	ioDev* d = ioSrv.getIODev(sIoAddr);
+	if (d)
+	{
+		d->CommUnlock();
+		return true;
 	}
 	return false;
 }

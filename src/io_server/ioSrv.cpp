@@ -186,16 +186,18 @@ void ioServer::saveConf()
 
 void ioServer::refreshSerialIODev()
 {
-	//如果组态里有配置，更新信息。如果没有配置，增加设备。作为空闲设备
+	//从操作系统的设备管理器获得串口列表信息
 	vector<sys::COM_INFO> aryNew;
 	aryNew = sys::getCOMInfoList();
-	vector<ioDev*> ary = getChildren(IO_DEV_TYPE::GW::local_serial);
 
+	//将当前串口设备置为离线状态
+	vector<ioDev*> ary = getChildren(IO_DEV_TYPE::GW::local_serial);
 	for (auto& i : ary)
 	{
 		i->m_bOnline = false;
 	}
 
+	//为新上线的串口创建对应的ioDev.并更新在线状态
 	for (auto& i : aryNew)
 	{
 		sys::COM_INFO ci = i;
@@ -211,10 +213,10 @@ void ioServer::refreshSerialIODev()
 		ls->m_bOnline = true;
 	}
 
-	//串口
+	//离线的空闲设备，从io设备列表中删除。已配置设备保留
 	for (auto& i : ary)
 	{
-		if (i->m_bOnline == false)
+		if (i->m_bOnline == false && i->m_mngStatus == IODEV_MNG_STATUS::spare)
 		{
 			ioSrv.deleteDescendant(i);
 		}

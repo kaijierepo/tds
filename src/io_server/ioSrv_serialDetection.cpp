@@ -59,9 +59,18 @@ LRESULT CALLBACK WindowProc_hwDetect(
         {
             PDEV_BROADCAST_PORT pDevPort = (PDEV_BROADCAST_PORT)pHdr;
             string name = pDevPort->dbcp_name;
-            //插入拔出返回两次事件，一次name为  COM1 一次是 NULL_COM1 ，只使用COM1 这一次
-            if (name.find("COM") == 0)
+            //插入拔出返回两次事件，一次name为  COM1 一次是 NULL_COM1 ，
+            //上线只使用COM1 这一次
+            //下线只使用NULL_COM1 这一次
+            //串口打开一段时间后，删除时只会返回 NULL_COM一次，刚打开则是2次，原理不太清楚。
+            if ( (name.find("COM") == 0 && devEventType == "online") ||
+                (name.find("NULL_COM") == 0 && devEventType == "offline"))
             {
+                if (name.find("NULL_COM") == 0)
+                {
+                    name = name.substr(5, name.length() - 5);
+                }
+
                 string log = "port changes,name:" + name + ",event:" + devEventType;
                 LOG(log);
                 ioSrv.refreshSerialIODev();

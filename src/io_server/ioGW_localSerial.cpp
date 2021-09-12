@@ -318,6 +318,11 @@ bool ioGW_LocalSerial::OpenCom()
 	return true;
 }
 
+bool ioGW_LocalSerial::isOpen()
+{
+	return m_hCom != NULL;
+}
+
 
 bool ioGW_LocalSerial::OpenCom(string conf)
 {

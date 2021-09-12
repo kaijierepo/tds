@@ -20,7 +20,7 @@ struct MODULE_BUS_MSG {
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
-typedef string(*fp_msgSinker)(MODULE_BUS_MSG& msg);
+typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
 
@@ -109,13 +109,16 @@ public:
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 
 	// tds 数据服务功能
-	virtual string call(string method, string param,string& error) = 0;
+	virtual bool call(string method, string param,string& result) = 0;//返回true，result为结果;返回false,result为错误信息
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 	// io 通信服务功能
 	virtual bool enableIoLog(string ioAddr, bool bEnable) = 0;
 	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
+	virtual bool isOnline(string ioAddr) = 0;
+	virtual bool lockIoAddr(string ioAddr) = 0;
+	virtual bool unlockIoAddr(string ioAddr) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	// 视频功能

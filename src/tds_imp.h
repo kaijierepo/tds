@@ -18,13 +18,16 @@ public:
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
-	 string call(string method, string param,string& error);
+	 bool call(string method, string param, string& result);
 	 void setRpcHandler(fp_rpcHandler handler);
 	 void rpcNotify(string method, string params="", string sessionId="");
 
 	// io 通信服务功能
 	 bool enableIoLog(string ioAddr, bool bEnable);
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
+	  bool isOnline(string ioAddr);
+	  bool lockIoAddr(string ioAddr) ;
+	  bool unlockIoAddr(string ioAddr) ;
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能

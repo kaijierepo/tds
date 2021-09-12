@@ -22,6 +22,7 @@ public:
 
 	bool OpenCom(string confPort,int baudRate,int parity,int byteSize,int stopBits); // call openCom before run
 	bool OpenCom();
+	bool isOpen();
 	bool OpenCom(string conf); // call openCom before run
 	bool closeCom();
 	int parseStopBits(string s);
