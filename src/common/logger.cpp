@@ -107,7 +107,9 @@ string Clogger::logInternal(string info)
 	string logline = time + " " + info;
 	info = charCodec::utf8toAnsi(logline);
 
-	std::cout << info << std::endl;
+	printf(info.c_str());
+	printf("\r\n");
+	//std::cout << info << std::endl; 这句话在 AllocConsole 生成的命令行中不输出了
 
 	//create log path
 	std::lock_guard<mutex> lockGuard(m_lock);
