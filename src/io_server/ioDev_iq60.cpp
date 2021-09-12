@@ -54,7 +54,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 			else
 			{
 				ioDev_iq60* p = new ioDev_iq60();
-				p->m_addr = id;
+				p->m_devAddr = id;
 				p->m_mngStatus = IODEV_MNG_STATUS::spare;
 				p->m_bOnline = true;
 				ioSrv.m_vecChild.push_back(p);
@@ -251,7 +251,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 		return false;
 
 	//请求io点列表
-	string req = "[2,\"IQK\",\"" + m_addr + "\",\"hs\"]";
+	string req = "[2,\"IQK\",\"" + m_devAddr + "\",\"hs\"]";
 	if (!requestAndWaitResp("hs", req))
 		return false;
 
@@ -271,7 +271,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 	json jCmdHr;
 	jCmdHr.push_back(2);
 	jCmdHr.push_back("IQK");
-	jCmdHr.push_back(m_addr);
+	jCmdHr.push_back(m_devAddr);
 	jCmdHr.push_back("hr");
 
 	for (int i = 0; i < currentResp.size(); i++)
@@ -336,7 +336,7 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 	json jCmdW;
 	jCmdW.push_back(2);
 	jCmdW.push_back("IQK");
-	jCmdW.push_back(m_addr);
+	jCmdW.push_back(m_devAddr);
 	jCmdW.push_back("w");
 
 	if (jVal.is_number())
@@ -349,7 +349,7 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 			if (p)
 			{
 				json jonechanval;
-				jonechanval.push_back(p->m_addr);
+				jonechanval.push_back(p->m_devAddr);
 				jonechanval.push_back(dbVal);
 
 				jCmdW.push_back(jonechanval);
@@ -403,6 +403,6 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 json ioDev_iq60::getAddr()
 {
 	json j;
-	j["gateway_id"] = m_addr;
+	j["gateway_id"] = m_devAddr;
 	return j;
 }

@@ -3,10 +3,24 @@
 #include <vector>
 using namespace std;
 
+//通过 getITDS 获得tds接口总线，访问tds中的各项内容
+//总线上有一些固定元素，可以调用，例如
+//tds.db 数据库对象
+
+//模块总线消息
+//tds中的不同模块，可以通过总线消息沟通
+//基于tds的二次开发，可以看做是对总线上模块的扩展，与tds总线上的各个模块沟通
+struct MODULE_BUS_MSG {
+	string moduleName;
+	string eventName;
+	string content; //json格式
+	char* bin; //消息附带的二进制数据
+};
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
+typedef string(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
 
@@ -111,6 +125,10 @@ public:
 
 	// 通用服务功能
 	virtual void log(const char* text) = 0;
+
+	// 消息总线。注册消息接收器
+	virtual void registerMsgSinker(fp_msgSinker sinker) = 0;
+	virtual void publishMsg(MODULE_BUS_MSG& msg) = 0;
 
 	//数据接口
 	iTDSConf* conf;

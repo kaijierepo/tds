@@ -35,6 +35,10 @@ public:
 
 	 tdsConfig tdsConf;
 	 fp_procBeforeExit m_fpProcBeforeExit;
+
+	 void registerMsgSinker(fp_msgSinker sinker);
+	 void publishMsg(MODULE_BUS_MSG& msg);
+	 vector<fp_msgSinker> m_msgSinkers;
 };
 
 extern void createConsole();

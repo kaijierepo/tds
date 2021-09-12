@@ -20,7 +20,7 @@ public:
 	virtual bool toJson(json& conf, string opt = "");
 
 
-	////value of device addr
+	////
 	//is Gateway
 	// can be 1.ip or domain name with port 2.tuya project id 3.gateway guid
 	//is Device 
@@ -28,7 +28,7 @@ public:
 	//is Channel
 	// can be 1. mqtt topic 2.tuya device id
 	//device addr in string format
-	string m_addr;  //device addr .  io addr is composed by several device addr
+	string m_devAddr;  // 多个devAddr 使用 / 连接组合成 ioAddr 
 	//device addr in json format
 	virtual json getAddr(); 
 	//io addr in struct format
@@ -55,12 +55,11 @@ public:
 	//// iodev hierachy tree management
 	ioDev* getIODev(ioAddress iopath); //从该设备和所有子设备中找到指定ioAdress的设备
 	ioDev* getIODev(string ioAddr);
-	vector<ioDev*> getIODevices(string devType);
+	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
 	void deleteChild(ioDev* p);
 	void deleteDescendant(ioDev* p);
-	ioDev* getChild(ioAddress& iopath);
-	ioDev* getChild(string addr);
+	ioDev* getChild(string devAddr);
 	ioDev* m_pParent;
 	ioChannel* getIOChan(string tag);
 

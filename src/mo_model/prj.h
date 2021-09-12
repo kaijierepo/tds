@@ -12,7 +12,7 @@ class database;
 class ioDev;
 class amo;
 class MP;
-class ioServer;
+class ateIOSrv;
 class project : public MO  
 {
 public:

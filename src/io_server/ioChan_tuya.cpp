@@ -29,7 +29,7 @@ bool ioChan_tuya::output(json jVal, json& jResp)
 		return false;
 
 
-	string client_id = pGw->m_addr;
+	string client_id = pGw->m_devAddr;
 	string secret = pGw->m_secret;
 	string accessToken = pGw->m_accessToken;
 	string time = str::format("%lld", timeopt::getTick());
@@ -62,10 +62,10 @@ bool ioChan_tuya::output(json jVal, json& jResp)
 	)delimiter";
 
 	string val = jVal.dump();
-	str::replace(body, "{{1}}", m_addr);
+	str::replace(body, "{{1}}", m_devAddr);
 	str::replace(body, "{{2}}", val);
 
-	string url = "/v1.0/devices/" + pDev->m_addr + "/commands";
+	string url = "/v1.0/devices/" + pDev->m_devAddr + "/commands";
 	auto res = cli.Post(url.c_str(), headers,body,"text/plain");
 
 	if (res) {

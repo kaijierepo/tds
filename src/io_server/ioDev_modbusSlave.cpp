@@ -91,7 +91,7 @@ void ioDev_ModbusSlave::SendAcqRTData()
 {
 	MRP_REQ_READ_REG req;
 	memset(&req,0,sizeof(req));
-	req.eqp_addr = atoi(m_addr.c_str());
+	req.eqp_addr = atoi(m_devAddr.c_str());
 	req.fun_code = MODBUS_RTU_READ_REG;
 	req.reg_num_L = 0x02;
 	WORD crc = common::N_CRC16((unsigned char*)&req,sizeof(req) -2); 

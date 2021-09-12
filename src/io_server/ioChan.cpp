@@ -22,15 +22,15 @@ string ioChannel::GetCommLinkTag()
 	ioAddress addr = m_pParent->getIOAddr();
 	string str = addr.ToString();
 
-	str += "-" + m_addr;
+	str += "-" + m_devAddr;
 
 	return str;
 }
 
 bool ioChannel::match(string channelNo) {
-	if (m_addr.find("#"))//mqtt channel wildcard
+	if (m_devAddr.find("#"))//mqtt channel wildcard
 	{
-		string str = m_addr;
+		string str = m_devAddr;
 		str = str::trim(str, "#");
 		if (channelNo.find(str) == 0)
 		{
@@ -39,7 +39,7 @@ bool ioChannel::match(string channelNo) {
 	}
 	else
 	{
-		if (channelNo == m_addr)
+		if (channelNo == m_devAddr)
 		{
 			return true;
 		}

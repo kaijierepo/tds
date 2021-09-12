@@ -30,9 +30,9 @@ LRESULT CALLBACK WindowProc_hwDetect(
     {
         string devEventType;
         if (DBT_DEVICEARRIVAL == wParam)
-            devEventType = "connected";
+            devEventType = "online";
         else if (DBT_DEVICEREMOVECOMPLETE == wParam)
-            devEventType = "disconnected";
+            devEventType = "offline";
 
         PDEV_BROADCAST_HDR pHdr = (PDEV_BROADCAST_HDR)lParam;
         switch (pHdr->dbch_devicetype)
@@ -65,10 +65,14 @@ LRESULT CALLBACK WindowProc_hwDetect(
                 string log = "port changes,name:" + name + ",event:" + devEventType;
                 LOG(log);
                 ioSrv.refreshSerialIODev();
-                json j;
-                j["addr"] = name;
-                j["type"] = devEventType;
-                tdsSrv.notify("io.event.connection-change", j);
+
+                MODULE_BUS_MSG msg;
+                msg.eventName = "ioDev." + devEventType;
+                msg.moduleName = "serialDetection";
+                json jMsg;
+                jMsg["ioAddr"] = name;
+                msg.content = jMsg.dump();
+                tds->publishMsg(msg);
             }
             break;
         }

@@ -20,7 +20,7 @@ bool ioDev_tuya::getCurrentVal()
 	else
 		return false;
 
-	string client_id = pGw->m_addr;
+	string client_id = pGw->m_devAddr;
 	string secret = pGw->m_secret;
 	string accessToken = pGw->m_accessToken;
 	string time = str::format("%lld", timeopt::getTick());
@@ -40,7 +40,7 @@ bool ioDev_tuya::getCurrentVal()
 		{"sign_method","HMAC-SHA256"}
 	};
 
-	string url = "/v1.0/devices/" + m_addr;
+	string url = "/v1.0/devices/" + m_devAddr;
 	auto res = cli.Get(url.c_str(), headers);
 
 	if (res) {

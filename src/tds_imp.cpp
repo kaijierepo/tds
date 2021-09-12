@@ -466,4 +466,20 @@ void TDS_imp::log(const char* text)
 		LOG(text);
 }
 
+void TDS_imp::registerMsgSinker(fp_msgSinker sinker)
+{
+	m_msgSinkers.push_back(sinker);
+}
+
+void TDS_imp::publishMsg(MODULE_BUS_MSG& msg)
+{
+	LOG("MODULE EVENT: " + msg.moduleName + "," + msg.eventName + "," + msg.content);
+
+	for (int i = 0; i < m_msgSinkers.size(); i++)
+	{
+		fp_msgSinker s = m_msgSinkers.at(i);
+		s(msg);
+	}
+}
+
 

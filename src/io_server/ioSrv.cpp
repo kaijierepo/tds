@@ -51,24 +51,24 @@ ioDev* createIODev(json conf)
 		p = new ioDev_mqttBroker();
 		string ip = conf["addr"]["ip"];
 		string port = conf["addr"]["port"];
-		p->m_addr = ip + ":" + port ;
+		p->m_devAddr = ip + ":" + port ;
 	}
 	else if (conf["type"] == "tuya-iot-project")
 	{
 		p = new ioGW_tuyaProject();
-		p->m_addr = conf["addr"]["client_id"];
+		p->m_devAddr = conf["addr"]["client_id"];
 		p->m_secret = conf["addr"]["secret"];
 	}
 	else if (conf["type"] == "tuya.switch")
 	{
 		p = new ioDev_tuya();
-		p->m_addr = conf["addr"]["device_id"];
+		p->m_devAddr = conf["addr"]["device_id"];
 	}
 	else if (conf["type"] == "iq60-gateway")
 	{
 		ioDev_iq60* piq60 = new ioDev_iq60();
 		p = piq60;
-		p->m_addr = conf["addr"]["gateway_id"];
+		p->m_devAddr = conf["addr"]["gateway_id"];
 	}
 	if (p)
 	{
@@ -103,7 +103,7 @@ ioDev* createIODev(json conf)
 						pdc = new ioChannel();
 					pChild = pdc;
 					pdc->m_level = "channel";
-					pdc->m_addr = addr;
+					pdc->m_devAddr = addr;
 					if (i["tag_bind"] != nullptr)
 					{
 						if (i["tag_bind"].is_array())
@@ -189,7 +189,7 @@ void ioServer::refreshSerialIODev()
 	//如果组态里有配置，更新信息。如果没有配置，增加设备。作为空闲设备
 	vector<sys::COM_INFO> aryNew;
 	aryNew = sys::getCOMInfoList();
-	vector<ioDev*> ary = getIODevices(IO_DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = getChildren(IO_DEV_TYPE::GW::local_serial);
 
 	for (auto& i : ary)
 	{
@@ -203,7 +203,7 @@ void ioServer::refreshSerialIODev()
 		if (!ls)
 		{
 			ls = new ioGW_LocalSerial();
-			ls->m_addr = ci.portNum;
+			ls->m_devAddr = ci.portNum;
 			ls->m_devTypeLabel = ci.desc;
 			ls->m_mngStatus = IODEV_MNG_STATUS::spare;
 			m_vecChild.push_back(ls);

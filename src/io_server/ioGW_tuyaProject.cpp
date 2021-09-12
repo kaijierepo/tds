@@ -16,7 +16,7 @@ void tuyaProjectInitThread(ioGW_tuyaProject* pGw)
 		while (pGw->m_accessToken == "")
 		{
 			//get access token
-			string client_id = pGw->m_addr;
+			string client_id = pGw->m_devAddr;
 			string secret = pGw->m_secret;
 			string time = str::format("%lld", timeopt::getTick());
 

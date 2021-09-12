@@ -21,6 +21,18 @@
 
 rpcHandler tdsSrv;
 
+void msgSinker_rpcHandler(MODULE_BUS_MSG& msg)
+{
+	if (msg.eventName == "ioDev.offline")
+	{
+		json jMsg = json::parse(msg.content);
+		json j;
+		j["addr"] = jMsg["ioAddr"];
+		j["type"] = msg.eventName;
+		tdsSrv.notify("ioEvent", j);
+	}
+}
+
 size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 	if (stream == nullptr) return 0;
 	size_t written = fwrite(ptr, size, nmemb, stream);
@@ -895,7 +907,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 				for (auto j : p->m_vecChild)
 				{
 					ioChannel* pioChannel = (ioChannel*)j;
-					if (pioChannel->m_addr == straddr)
+					if (pioChannel->m_devAddr == straddr)
 					{
 						chanList.erase(i);
 						i--;
@@ -906,7 +918,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 			//
 
 			json result;
-			result["ioAddr"] = p->m_addr;
+			result["ioAddr"] = p->m_devAddr;
 			result["channels"] = chanList;
 
 			return result.dump();
@@ -957,13 +969,13 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {
-	vector<ioDev*> ary = ioSrv.getIODevices(IO_DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
 	json result;
 	for (auto& i : ary)
 	{
 		ioGW_LocalSerial* pls  =  (ioGW_LocalSerial*)i;
 		json jComInfo;
-		jComInfo["portNum"] = pls->m_addr;
+		jComInfo["portNum"] = pls->m_devAddr;
 		jComInfo["desc"] = pls->m_devTypeLabel;
 		result.push_back(jComInfo);
 	}

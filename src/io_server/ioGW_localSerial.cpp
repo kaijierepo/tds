@@ -29,7 +29,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 ioGW_LocalSerial::ioGW_LocalSerial(void)
 {
 	m_devType = IO_DEV_TYPE::GW::local_serial;
-	m_addr = "COM1"; 
+	m_devAddr = "COM1"; 
 	m_hCom = NULL;
 	m_level = "gateway";
 	m_ovWaitEvent.hEvent = CreateEvent(
@@ -84,7 +84,7 @@ bool ioGW_LocalSerial::run()
 bool ioGW_LocalSerial::sendData(char* pData, int iLen)
 {
 	ioAddress addr;
-	addr.devAddr = m_addr;
+	addr.devAddr = m_devAddr;
 	if (m_bEnableIoLog)
 		commSrv.StatisOnSend((char*)pData,iLen,addr);
 	return WriteCom(pData,iLen);
@@ -116,7 +116,7 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		else if (ERROR_ACCESS_DENIED == dwRet)
 		{
 			//usb 串口 虚拟串口等，在串口被打开的情况下删除了设备，拔出了usb线等，进入到这里
-			LOG("[error]hardware " + m_addr + "is deleted,check your hardware connection!");
+			LOG("[error]hardware " + m_devAddr + "is deleted,check your hardware connection!");
 			closeCom();
 			return false;
 		}
@@ -140,7 +140,7 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		return false;
 
 	ioAddress addr;
-	addr.devAddr = m_addr;
+	addr.devAddr = m_devAddr;
 
 	if(m_bEnableIoLog)
 		commSrv.StatisOnRecv((char*)buf,len,addr);
@@ -246,7 +246,7 @@ bool ioGW_LocalSerial::OpenCom(string confPort, int baudRate, int parity, int by
 
 bool ioGW_LocalSerial::OpenCom()
 {
-	m_addr = m_portNum;
+	m_devAddr = m_portNum;
 	if (m_hCom)
 	{
 		BOOL bRet = CloseHandle(m_hCom);
@@ -258,7 +258,7 @@ bool ioGW_LocalSerial::OpenCom()
 		else
 			m_hCom = NULL;
 	}
-	string  strComPort = _T("\\\\.\\") + m_addr;
+	string  strComPort = _T("\\\\.\\") + m_devAddr;
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
@@ -336,7 +336,7 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		str = j["stopBits"].get<string>();
 		m_stopBits = str;
 	}
-	m_addr = m_portNum;
+	m_devAddr = m_portNum;
 
 	return OpenCom();
 }

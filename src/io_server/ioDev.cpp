@@ -54,7 +54,7 @@ ioDev::~ioDev(void)
 bool ioDev::toJson(json& conf, string opt)
 {
 	//conf["name"] = "IQ60";
-	conf["ioAddr"] = getIOAddrStr();
+	conf["ioAddr"] = getIOAddr().ToString();
 	conf["addr"] = getAddr();
 	conf["type"] = m_devType;
 	conf["type_label"] = m_devTypeLabel;
@@ -117,7 +117,7 @@ ioDev* ioDev::getIODev(string ioAddr)
 	return getIODev(a);
 }
 
-vector<ioDev*> ioDev::getIODevices(string devType)
+vector<ioDev*> ioDev::getChildren(string devType)
 {
 	vector<ioDev*> ary;
 	for (int i = 0; i < m_vecChild.size(); i++)
@@ -128,7 +128,7 @@ vector<ioDev*> ioDev::getIODevices(string devType)
 			ary.push_back(p);
 		}
 
-		vector<ioDev*> aryChild = p->getIODevices(devType);
+		vector<ioDev*> aryChild = p->getChildren(devType);
 		ary.insert(ary.end(), aryChild.begin(), aryChild.end());
 	}
 	return ary;
@@ -138,7 +138,7 @@ vector<ioDev*> ioDev::getIODevices(string devType)
 json ioDev::getAddr()
 {
 	json j;
-	j = m_addr;
+	j = m_devAddr;
 	return j;
 }
 
@@ -151,9 +151,9 @@ ioAddress ioDev::getIOAddr()
 		//addr.devAddr = m_pParent->m_addr;
 		//if(m_pParent->)
 	}
-	addr.devAddr = m_addr;
+	addr.devAddr = m_devAddr;
 	if (m_pParent)
-		addr.gwAddr = m_pParent->m_addr;
+		addr.gwAddr = m_pParent->m_devAddr;
 
 	 if (m_devType == "modbus_rtu")
 	{
@@ -178,11 +178,11 @@ ioAddress ioDev::getIOAddr()
 
 string ioDev::getIOAddrStr()
 {
-	string ioAddrStr = m_addr;
+	string ioAddrStr = m_devAddr;
 	ioDev* pParent = m_pParent;
 	while (pParent)
 	{
-		ioAddrStr = pParent->m_addr + "/" + ioAddrStr;
+		ioAddrStr = pParent->m_devAddr + "/" + ioAddrStr;
 		pParent = pParent->m_pParent;
 	}
 		
@@ -304,7 +304,7 @@ ioChannel* ioDev::GetDataChannel(string strChanID)
 {
 	for (auto i : m_mapDataChannel)
 	{
-		if(i.second->m_addr == strChanID) return i.second;
+		if(i.second->m_devAddr == strChanID) return i.second;
 	}
 
 	for (auto i : m_mapBatchDataLink)
@@ -315,7 +315,7 @@ ioChannel* ioDev::GetDataChannel(string strChanID)
 		{
 			string wildCardVal = strChanID.substr(s.length(), strChanID.length() - s.length());
 			ioChannel* p = new ioChannel();
-			p->m_addr = strChanID;
+			p->m_devAddr = strChanID;
 			string bindTag = i.second;
 			str::replace(bindTag, "*", wildCardVal);
 			str::replace(bindTag, "/", ".");
@@ -363,23 +363,13 @@ void ioDev::deleteDescendant(ioDev* p)
 	}
 }
 
-ioDev* ioDev::getChild(ioAddress& iopath)
-{
-	for (int i = 0; i < m_vecChild.size(); i++)
-	{
-		ioDev* p = m_vecChild.at(i);
-		if (p->getIOAddr() == iopath)
-			return p;
-	}
-	return NULL;
-}
 
-ioDev* ioDev::getChild(string addr)
+ioDev* ioDev::getChild(string devAddr)
 {
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
 		ioDev* p = m_vecChild.at(i);
-		if (p->m_addr == addr)
+		if (p->m_devAddr == devAddr)
 			return p;
 	}
 	return nullptr;
@@ -403,7 +393,7 @@ bool ioDev::IsAsynPacket(PKT_DATA* pd)
 
 bool ioDev::NotNeedGateway()
 {
-	if (str::isIp(m_addr))
+	if (str::isIp(m_devAddr))
 		return true;
 
 	return false;
@@ -411,15 +401,15 @@ bool ioDev::NotNeedGateway()
 
 string ioDev::GetCommIP()
 {
-	if (m_addr.find('.') !=  string::npos || m_addr.find("COM") != string::npos) //如果自己配置了IP，那么该ip为该设备的ip或者是该设备网关的ip
+	if (m_devAddr.find('.') !=  string::npos || m_devAddr.find("COM") != string::npos) //如果自己配置了IP，那么该ip为该设备的ip或者是该设备网关的ip
 	{
-		return m_addr;
+		return m_devAddr;
 	}
 	else //没有配置ip，使用父网关采集设备的ip
 	{
 		if (m_pParent && m_pParent->IsGateway())
 		{
-			return m_pParent->m_addr;
+			return m_pParent->m_devAddr;
 		}
 	}
 
@@ -430,7 +420,7 @@ void ioDev::SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID
 {
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
-		if (m_vecChild.at(i)->m_addr == strID)
+		if (m_vecChild.at(i)->m_devAddr == strID)
 		{
 			m_vecChild.at(i)->OnRecvData(dataTime, pData, iLen);
 		}
