@@ -872,8 +872,22 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 				httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
 			}
 			string httpResp = httpHead + "\r\n" + resp.textResp;
-
 			pALC->send((char*)httpResp.data(), httpResp.length());
+		}
+		if (resp.binLen > 0)
+		{
+			string httpHead = "HTTP/1.1 200 OK\r\n";
+			httpHead += "Connection: close\r\n";
+			httpHead += "Content-Length: " + str::fromInt(resp.binLen) + "\r\n";
+			httpHead += "Content-Type: application/octet-stream\r\n";
+			string origin = req.get_header_value("origin");
+			if (origin != "")
+			{
+				httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
+			}
+			pALC->send((char*)httpHead.data(), httpHead.length());
+			pALC->send((char*)"\r\n", 2);
+			pALC->send((char*)resp.binResp, resp.binLen);
 		}
 	}
 	else

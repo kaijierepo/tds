@@ -303,14 +303,16 @@ bool TDS_imp::call(string method, string param, string& result)
 		else
 			jParam = json::parse(param);
 		string error;
-		result = tdsSrv.handleMethodCall(method, jParam,error,NULL);
-		if (error != "")
+		RPC_RESULT rpcResult;
+		bool bHandled = tdsSrv.handleMethodCall(method, jParam, rpcResult,error,NULL);
+		if (bHandled)
 		{
-			result = error;
-			return false;
-		}
-		else
-		{
+			if (error != "")
+			{
+				result = error;
+				return true;
+			}
+			result = rpcResult.textResult;
 			return true;
 		}
 	}
@@ -320,7 +322,7 @@ bool TDS_imp::call(string method, string param, string& result)
 		json jException;
 		jException["exception"] = errorType;
 		result = jException.dump();
-		false;
+		true;
 	}
 	return false;
 }

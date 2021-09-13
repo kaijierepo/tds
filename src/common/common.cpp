@@ -738,6 +738,21 @@ namespace fs {
 		}
 		return "";
 	}
+	bool readFile(string path, char*& pData,int& len)
+	{
+		FILE* fp = _wfopen(charCodec::utf8toUtf16(path).c_str(), L"rb");
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			len = ftell(fp);
+			pData = new char[len];
+			fseek(fp, 0, SEEK_SET);
+			fread(pData, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		return false;
+	}
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = _wfopen(charCodec::utf8toUtf16(path).c_str(), L"rb");

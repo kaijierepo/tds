@@ -129,6 +129,7 @@ namespace fs {
 	string toAbsolutePath(string str);
 	string appPath();
 	string getExt(string path);
+	bool readFile(string path, char*& pData, int& len);
 	bool readFile(string path, string& data);
 	bool writeFile(string path, char* data, int len);
 	bool appendFile(string path, string data);

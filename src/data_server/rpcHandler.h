@@ -60,7 +60,7 @@ public:
 
 	//json rpc implementation
 	void handleRpcCall(string strJReq, RPC_RESP& resp, std::shared_ptr<TDS_SESSION>);
-	string handleMethodCall(string method, json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
+	bool handleMethodCall(string method, json params, RPC_RESULT& rpcResult,string& error, std::shared_ptr<TDS_SESSION> pSession);
 
 	string getSessionStatus();
 

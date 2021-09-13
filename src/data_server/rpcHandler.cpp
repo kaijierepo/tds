@@ -199,9 +199,9 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 	}
 }
 
-string rpcHandler::handleMethodCall(string method, json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcResult, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
-	string result = "";
+	string& result = rpcResult.textResult;
 	//可完全并发的命令
 	//#region concurrent cmd
 	if (method == "xiaot")
@@ -259,7 +259,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	else if (method == "fs.openFolder")
 	{
 		string s = params["path"];
-		s = str::replace(s,"/", "\\");
+		s = str::replace(s, "/", "\\");
 		wstring ws = charCodec::utf8toUtf16(s);
 		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
 		result = "\"ok\"";
@@ -268,7 +268,7 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	{
 		string tag = params["tag"];
 		string time = params["time"];
-		string path = db.m_path  + db.getPath_deFile(tag, timeopt::str2st(time));
+		string path = db.m_path + db.getPath_deFile(tag, timeopt::str2st(time));
 
 		path = str::replace(path, "/", "\\");
 		wstring ws = charCodec::utf8toUtf16(path);
@@ -325,17 +325,30 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 	//文件操作
 	if (method == "fs.readFile")
 	{
-		if (fs::readFile(params["path"], result))
+		if (params["type"] != nullptr && params["type"].get<string>() == "binary")
 		{
-			json j = result;
-			result = j.dump();
+			char* p = NULL; int len = 0;
+			if (fs::readFile(params["path"].get<string>(), p, len))
+			{
+				rpcResult.setResult(p, len);
+				if (p)
+					delete p;
+			}
 		}
 		else
 		{
-			error = RPCError(TEC_FAIL, "fail");
+			if (fs::readFile(params["path"], result))
+			{
+				json j = result;
+				result = j.dump();
+			}
+			else
+			{
+				error = RPCError(TEC_FAIL, "fail");
+			}
 		}
 	}
-  	else if (method == "fs.writeFile")
+	else if (method == "fs.writeFile")
 	{
 		string p = params["path"].get<string>();
 		string d = params["data"].get<string>();
@@ -371,7 +384,9 @@ string rpcHandler::handleMethodCall(string method, json params,string& error, st
 		result = ds.getSessionStatus(params);
 	}
 
-	return result;
+	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "")
+		return true;
+	return false;
 }
 
 
@@ -390,7 +405,7 @@ bool rpcHandler::needLog(string method)
 void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
-	string result = "";
+	RPC_RESULT rpcResult;
 	string method = "";
 	string id = "null";
 	bool bGB2312 = false;
@@ -460,7 +475,7 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 					}
 				}
 			}
-			result = "\"pong\"";
+			rpcResult.textResult= "\"pong\"";
 			goto HANDLE_END;
 		}
 		
@@ -468,29 +483,17 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		//先使用外部注册的handler受理请求
 		if (m_pluginHandler)
 		{
-			RPC_RESULT rpcResult;
 			bool bHandled = m_pluginHandler(strReq, rpcResult, error);
 			if (bHandled)
 			{
-				if (rpcResult.textResult != "")
-				{
-					result = rpcResult.textResult;
-				}
-				else
-				{
-					resp.binResp = rpcResult.binResult;
-					resp.binLen = rpcResult.iBinLen;
-					return;
-				}
 				goto HANDLE_END;
 			}
 		}
 		
 
 		//tds自身受理
-		//result is a json string
-		result = handleMethodCall(method, params,error,pSession);
-		if(result == "" && error == "")
+		bool bHandled = handleMethodCall(method, params, rpcResult,error,pSession);
+		if(!bHandled)
 		{
 			json jError = {
 				{"code", -32601},
@@ -513,39 +516,40 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 	}
 
 HANDLE_END:
-
-	if (error.length() == 0)
-	{
-		if(result.length() == 0)
-		{
-			json jError = {
-				{"code", -32603},
-				{"message" , "Internal error"}
-			};
-			error = jError.dump();
-		}
-	}
-
+	//生成文本响应
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (error != "")
 	{
 		resp.textResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id +  "}";
 	}
-	else
+	else if(rpcResult.textResult!= "")
 	{
-		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + result + "}";
+		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + rpcResult.textResult + "}";
 
 		if (method == "fs.readFile")
 		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":\"$fileLen = " + str::fromInt(result.length()) + "$\"}";
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":\"$fileLen = " + str::fromInt(rpcResult.textResult.length()) + "$\"}";
 		}
 	}
-	
 
-	if(strRespForLog!="")
-		LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
-	else if(needLog(method))
-		LOG("RPC return --> :\r\n" + resp.textResp + "\r\n");
+	if (resp.textResp != "")
+	{
+		if (strRespForLog != "")
+			LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
+		else if (needLog(method))
+			LOG("RPC return --> :\r\n" + resp.textResp + "\r\n");
+	}
+
+
+	//处理二进制响应
+	if (rpcResult.iBinLen > 0)
+	{
+		resp.binResp = rpcResult.binResult;
+		resp.binLen = rpcResult.iBinLen;
+		rpcResult.binResult = NULL;
+		rpcResult.iBinLen = 0;
+		LOG("RPC return --> : 二进制数据 len = " + str::fromInt(resp.binLen));
+	}
 }
 
 
