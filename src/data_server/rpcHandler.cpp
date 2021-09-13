@@ -387,7 +387,7 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
-void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
 	string result = "";
@@ -468,12 +468,24 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp, std::shared_ptr<T
 		//先使用外部注册的handler受理请求
 		if (m_pluginHandler)
 		{
-			result = m_pluginHandler(strReq, strResp, error);
+			RPC_RESULT rpcResult;
+			bool bHandled = m_pluginHandler(strReq, rpcResult, error);
+			if (bHandled)
+			{
+				if (rpcResult.textResult != "")
+				{
+					result = rpcResult.textResult;
+				}
+				else
+				{
+					resp.binResp = rpcResult.binResult;
+					resp.binLen = rpcResult.iBinLen;
+					return;
+				}
+				goto HANDLE_END;
+			}
 		}
-		if (result != "" || error != "")
-		{
-			goto HANDLE_END;
-		}
+		
 
 		//tds自身受理
 		//result is a json string
@@ -517,11 +529,11 @@ HANDLE_END:
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (error != "")
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id +  "}";
+		resp.textResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id +  "}";
 	}
 	else
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + result + "}";
+		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + result + "}";
 
 		if (method == "fs.readFile")
 		{
@@ -533,7 +545,7 @@ HANDLE_END:
 	if(strRespForLog!="")
 		LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
 	else if(needLog(method))
-		LOG("RPC return --> :\r\n" + strResp + "\r\n");
+		LOG("RPC return --> :\r\n" + resp.textResp + "\r\n");
 }
 
 

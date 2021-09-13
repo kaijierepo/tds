@@ -149,62 +149,40 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 	bool bRet = false;
 	TDS_SESSION* pALC = (TDS_SESSION*)pAppLayerCltInfo;
 	tcpSession* pCommLayerCltInfo = (pALC)->pTcpSession;
-	if (pCommLayerCltInfo)
-	{
-		if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-		{
-			WS_FrameType ft = WS_TEXT_FRAME;
-			if (pALC->type == TDS_SESSION_TYPE::tunnel )
-			{
-				ft = WS_BINARY_FRAME;
-			}
-			if (pALC->type == TDS_SESSION_TYPE::video)
-			{
-				if (pALC->pTcpSession->iSendSucCount == 0)//视频首帧发文本
-				{
-					ft = WS_TEXT_FRAME;
-				}
-				else
-					ft = WS_BINARY_FRAME;
-			}
-				
 
-			return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
-		}
-		else
+	if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
+	{
+		WS_FrameType ft = WS_TEXT_FRAME;
+		if (pALC->type == TDS_SESSION_TYPE::tunnel )
 		{
-			return m_tcpSrv->SendData((char*)pData, iLen, pCommLayerCltInfo);
+			ft = WS_BINARY_FRAME;
 		}
+		else if (pALC->type == TDS_SESSION_TYPE::video)
+		{
+			if (pALC->pTcpSession->iSendSucCount == 0)//视频首帧发文本
+			{
+				ft = WS_TEXT_FRAME;
+			}
+			else
+				ft = WS_BINARY_FRAME;
+		}
+		else if (pALC->type == TDS_SESSION_TYPE::rpc)
+		{
+			if (pALC->sendContent == "text")
+			{
+				ft = WS_TEXT_FRAME;
+			}
+			else
+				ft = WS_BINARY_FRAME;
+		}
+
+		return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
 	}
 	else
 	{
-		for (int i = 0; i < m_tcpSrv->m_vecContInfo.size(); i++)
-		{
-			pCommLayerCltInfo = &m_tcpSrv->m_vecContInfo.at(i)->m_cltInfo;
-			if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-			{
-				WS_FrameType ft = WS_TEXT_FRAME;
-				if (pALC->type == TDS_SESSION_TYPE::tunnel)
-				{
-					ft = WS_BINARY_FRAME;
-				}
-				if (pALC->type == TDS_SESSION_TYPE::video)
-				{
-					if (pALC->pTcpSession->iSendSucCount == 0)//视频首帧发文本
-					{
-						ft = WS_TEXT_FRAME;
-					}
-					else
-						ft = WS_BINARY_FRAME;
-				}
-				return m_wspSrv.sendData((char*)pData, iLen, pCommLayerCltInfo, ft);
-			}
-			else
-			{
-				return m_tcpSrv->SendData((char*)pData, iLen, pCommLayerCltInfo);
-			}
-		}
+		return m_tcpSrv->SendData((char*)pData, iLen, pCommLayerCltInfo);
 	}
+	
 	return 0;
 }
 
@@ -878,21 +856,25 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		{
 			strRpc = "";
 		}
-		string resp;
+		
+		RPC_RESP resp;
 		tdsSrv.handleRpcCall(strRpc, resp, pALC);
 
-		string httpHead = "HTTP/1.1 200 OK\r\n";
-		httpHead += "Connection: close\r\n";
-		httpHead += "Content-Length: " + str::fromInt(resp.length()) + "\r\n";
-		httpHead += "Content-Type: application/json;charset=utf-8\r\n";
-		string origin = req.get_header_value("origin");
-		if (origin != "")
+		if (resp.textResp != "")
 		{
-			httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
-		}
-		resp = httpHead + "\r\n" + resp;
+			string httpHead = "HTTP/1.1 200 OK\r\n";
+			httpHead += "Connection: close\r\n";
+			httpHead += "Content-Length: " + str::fromInt(resp.textResp.length()) + "\r\n";
+			httpHead += "Content-Type: application/json;charset=utf-8\r\n";
+			string origin = req.get_header_value("origin");
+			if (origin != "")
+			{
+				httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
+			}
+			string httpResp = httpHead + "\r\n" + resp.textResp;
 
-		pALC->send((char*)resp.data(), resp.length());
+			pALC->send((char*)httpResp.data(), httpResp.length());
+		}
 	}
 	else
 	{
@@ -935,11 +917,20 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS
 			szJson = NULL;
 		}
 
-		string resp;
+		RPC_RESP resp;
 		tdsSrv.handleRpcCall(req, resp, pALC);
-		if (resp.length() > 0)
-			pALC->send((char*)resp.data(), resp.length());
 
+		if(resp.textResp!="")
+		{
+			pALC->sendContent = "text";
+			pALC->send((char*)resp.textResp.data(), resp.textResp.length());
+		}
+		else
+		{
+			pALC->sendContent = "binary";
+			pALC->send((char*)resp.binResp, resp.binLen);
+		}
+		
 		return 1;
 	}
 

@@ -33,6 +33,21 @@ enum RPC_ERROR {
 };
 
 
+class RPC_RESP {
+public:
+	char* binResp;
+	int binLen;
+	string textResp;
+
+	RPC_RESP()
+	{
+		textResp = "";
+		binLen = 0;
+		binResp = NULL;
+	}
+};
+
+
 class rpcHandler
 {
 public:
@@ -44,7 +59,7 @@ public:
 	bool needLog(string method);
 
 	//json rpc implementation
-	void handleRpcCall(string strJReq, string& strJResp, std::shared_ptr<TDS_SESSION>);
+	void handleRpcCall(string strJReq, RPC_RESP& resp, std::shared_ptr<TDS_SESSION>);
 	string handleMethodCall(string method, json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 
 	string getSessionStatus();

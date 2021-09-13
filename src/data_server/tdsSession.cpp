@@ -4,6 +4,15 @@
 
 TDS_SESSION::TDS_SESSION()
 {
+    Init();
+}
+
+TDS_SESSION::~TDS_SESSION()
+{
+}
+
+void TDS_SESSION::Init()
+{
     pTcpSessionClt = NULL;
     role = "";
     encode = "utf8";
@@ -13,15 +22,10 @@ TDS_SESSION::TDS_SESSION()
     bridgedTcpCltHandler.pTdsSession = this;
     streamMp = NULL;
     sock = 0;
-}
-
-TDS_SESSION::~TDS_SESSION()
-{
-}
-
-void TDS_SESSION::Init()
-{
-     DS_TRANS_LAYER_SESSION::Init();
+    iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
+    iALProto = APP_LAYER_PROTO::UNKNOWN;
+    pTcpSession = NULL;
+    m_alBuf.Init();
     mapTagDataSubscribe.clear();
     bSubAll = false;
     bInitSegSended = false;

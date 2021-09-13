@@ -17,9 +17,29 @@ struct MODULE_BUS_MSG {
 	char* bin; //消息附带的二进制数据
 };
 
+class RPC_RESULT {
+public:
+	void setResult(string& resp) { textResult = resp; }
+	void setResult(char* resp, int len) { binResult = new char[len]; memcpy(binResult, resp, len); iBinLen = len; }
+	RPC_RESULT() {
+		textResult = "";
+		binResult = NULL;
+		iBinLen = 0;
+	}
+	~RPC_RESULT()
+	{
+		if (binResult)
+			delete binResult;
+	}
+
+	string textResult;
+	char* binResult;
+	int iBinLen;
+};
+
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
-typedef string (*fp_rpcHandler)(string strReq, string& strResp, string& error);
+typedef bool (*fp_rpcHandler)(string strReq, RPC_RESULT& resp, string& error);//返回是否处理
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
