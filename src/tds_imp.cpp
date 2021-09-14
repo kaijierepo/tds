@@ -491,6 +491,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 		for (int i = 0; i < pmp->m_streamPuller.size(); i++)
 		{
 			std::shared_ptr<TDS_SESSION> p = pmp->m_streamPuller[i];
+			p->m_mutex.lock();//p->pTcpSession该指针不可多线程并发使用，加锁
 			if (p->pTcpSession->iSendSucCount == 0)
 			{
 				json jSi;
@@ -504,6 +505,7 @@ void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_
 			{
 				p->send(pData, len);
 			}
+			p->m_mutex.unlock();
 		}
 	}
 }

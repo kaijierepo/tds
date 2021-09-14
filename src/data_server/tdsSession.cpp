@@ -61,8 +61,7 @@ string TDS_SESSION::GetClientIp()
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
-     //this is not safe,a critical section should be used for p->pTcpSession
-     //[unsafe]
+     m_mutex.lock();
      pTLServer = nullptr;
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
@@ -76,6 +75,7 @@ string TDS_SESSION::GetClientIp()
      }
      streamMp = NULL;
      boolConnected = false;
+     m_mutex.unlock();
  }
 
  void TDS_SESSION::setActivityCheck(bool bEnable)

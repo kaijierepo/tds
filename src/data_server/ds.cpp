@@ -95,17 +95,22 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	{
 		if (pCltInfo->pALSession)
 		{
+			std::shared_ptr<TDS_SESSION> p = NULL;
+			//从列表中删除
 			m_mutexTdsSessionList.lock();
 			for (int i = 0; i < m_vecTdsSession.size(); i++)
 			{
 				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
 				{
-					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i];\
-					p->onTcpDisconnect();
+					p = m_vecTdsSession[i];
 					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
+					break;
 				}
 			}
 			m_mutexTdsSessionList.unlock();
+
+			//更新该session状态。等待其他零散指针引用销毁后自动删除
+			p->onTcpDisconnect();
 		}
 	}
 }
@@ -939,7 +944,8 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS
 			pALC->sendContent = "text";
 			pALC->send((char*)resp.textResp.data(), resp.textResp.length());
 		}
-		else
+		
+		if(resp.binLen > 0)
 		{
 			pALC->sendContent = "binary";
 			pALC->send((char*)resp.binResp, resp.binLen);
