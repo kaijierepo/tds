@@ -407,7 +407,7 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 	string error = "";
 	RPC_RESULT rpcResult;
 	string method = "";
-	string id = "null";
+	json id = nullptr;
 	bool bGB2312 = false;
 
 	str::trim(strReq);
@@ -443,18 +443,8 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		method = jReq["method"].get<string>();
 		pSession->lastMethodCalled = method;
 		json params = jReq["params"];
-		json jId = jReq["id"];
-		if (jId != nullptr)
-		{
-			if (jId.is_number_integer())
-			{
-				id = str::fromInt(jId.get<int>());
-			}
-			else
-			{
-				id = jId.get<string>();
-			}
-		}
+		id = jReq["id"];
+
 
 		//对部分命令日志记录
 		if(needLog(method))
@@ -520,15 +510,15 @@ HANDLE_END:
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (error != "")
 	{
-		resp.textResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id +  "}";
+		resp.textResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id.dump() +  "}";
 	}
 	else if(rpcResult.textResult!= "")
 	{
-		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":" + rpcResult.textResult + "}";
+		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResult.textResult + "}";
 
 		if (method == "fs.readFile")
 		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id + ",\"result\":\"$fileLen = " + str::fromInt(rpcResult.textResult.length()) + "$\"}";
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResult.textResult.length()) + "$\"}";
 		}
 	}
 

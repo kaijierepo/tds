@@ -80,7 +80,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 		GetLocalTime(&p->stCreateTime);
-		p->boolConnected = true;
+		p->bConnected = true;
 		p->pTLServer = this;
 		p->pTcpSession = pCltInfo;
 		p->sock = pCltInfo->sock;
@@ -120,7 +120,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-		p->boolConnected = true;
+		p->bConnected = true;
 		p->pTcpSessionClt = connInfo->tcpClt;
 		p->sock = connInfo->sock;
 		p->port = connInfo->srvPort;
@@ -431,7 +431,7 @@ void logToWebsock(string text)
 	for (int i = 0; i < logTdsSessions.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> ps = logTdsSessions[i];
-		if (!ps->boolConnected)
+		if (!ps->bConnected)
 		{
 			logTdsSessions.erase(logTdsSessions.begin() + i);
 			i--;
@@ -455,7 +455,7 @@ tdsSession->m_mutex 为任务队列
 
 void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	std::lock_guard<mutex> g(tdsSession->m_mutex);
+	std::unique_lock<recursive_mutex> g(tdsSession->m_mutex);
 	while (tdsSession->dataBuff.size() > 0)
 	{
 		TCP_DATA_BUFF tdb = tdsSession->dataBuff.front();
@@ -468,7 +468,7 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
-	std::lock_guard<mutex> g(tdsSession->m_mutex);
+	std::unique_lock<recursive_mutex> g(tdsSession->m_mutex);
 	TCP_DATA_BUFF tdb;
 	tdb.pData = new char[iLen];
 	tdb.iLen = iLen;

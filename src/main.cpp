@@ -10,6 +10,7 @@
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
 #include "tools/tcp2com.h"
+#include "tools/tdsShell.h"
 
 /*
 notes:
@@ -44,6 +45,7 @@ int main(int argc, char** argv)
    switch: tcp交换机模式\r\n\
    rproxy: 反向代理模式\r\n\
    tcp2com: tcp转串口模式;\r\n\
+   js: javascript解释器模式;\r\n\
       示例:  tds -m tcp2com -com COM1 -tcpc 127.0.0.1:666"));
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
@@ -65,7 +67,12 @@ int main(int argc, char** argv)
 	tds->conf->logLevel = parser.get<string>("l");
 
 	string mode = parser.get<string>("m");
-	if (mode == "hub")
+
+	if (mode == "js")
+	{
+		doShell();
+	}
+	else if (mode == "hub")
 	{
 		tcpHub* tr = new tcpHub();
 		tr->portLeft = parser.get<int>("sl");

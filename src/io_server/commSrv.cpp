@@ -11,6 +11,22 @@ using json = nlohmann::json;
 
 commServer commSrv;
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
+void sendToCommLog(string s)
+{
+	for (int i = 0; i < commpktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
+		if (!session->bConnected)
+		{
+			commpktSessions.erase(commpktSessions.begin() + i);
+			i--;
+			continue;
+		}
+			
+
+		session->send((char*)s.c_str(), s.length());
+	}
+}
 
 //接受数据异步处理线程
 DWORD WINAPI ThreadRecvPktAsynDeal(LPVOID lparam) {
@@ -771,11 +787,7 @@ void commServer::StatisOnRecv(char* recvData, int len, ioAddress addr, recvPktTy
 	j["data"] = str::fromBytes(recvData, len);
 	string s = j.dump();
 
-	for (int i = 0; i < commpktSessions.size(); i++)
-	{
-		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
-		session->send((char*)s.c_str(), s.length());
-	}
+	sendToCommLog(s);
 }
 
 void commServer::StatisOnSend(char* sendData, int len, ioAddress addr)
@@ -790,12 +802,10 @@ void commServer::StatisOnSend(char* sendData, int len, ioAddress addr)
 	j["data"] = str::fromBytes(sendData, len);
 	string s = j.dump();
 
-	for (int i = 0; i < commpktSessions.size(); i++)
-	{
-		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
-		session->send((char*)s.c_str(), s.length());
-	}
+	sendToCommLog(s);
 }
+
+
 
 bool commServer::DealPackageAsyn()
 {

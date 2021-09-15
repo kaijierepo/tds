@@ -146,6 +146,7 @@
     <ClCompile Include="..\src\tools\tcp2com.cpp">
       <Filter>tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\tdsShell.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -288,6 +289,7 @@
     <ClInclude Include="..\src\tools\tcp2com.h">
       <Filter>tools</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\tools\tdsShell.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\res\tds.rc" />

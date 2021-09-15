@@ -1,5 +1,6 @@
 #include "tdsSession.h"
 #include "mp.h"
+#include "logger.h"
 
 
 TDS_SESSION::TDS_SESSION()
@@ -39,8 +40,10 @@ string TDS_SESSION::GetClientIp()
 }
 
  int TDS_SESSION::send(char* p,int len){
+     unique_lock<recursive_mutex> lock(m_mutex);
      GetLocalTime(&lastSendTime);
-     if(pTLServer) // means lower layer has been disconneted
+
+     if(pTLServer && pTcpSession) // means lower layer has been disconneted
         return pTLServer->SendAppLayerData(p, len, this);
      if (pTcpSessionClt)
          return pTcpSessionClt->SendData(p, len);
@@ -74,7 +77,7 @@ string TDS_SESSION::GetClientIp()
          streamMp->m_streamPusher(false, NULL);
      }
      streamMp = NULL;
-     boolConnected = false;
+     bConnected = false;
      m_mutex.unlock();
  }
 
