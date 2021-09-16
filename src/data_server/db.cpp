@@ -5,6 +5,8 @@
 #include <sstream>
 #include <filesystem>
 #include "logger.h"
+
+
 using namespace std::filesystem;
 using namespace simdjson;
 database db;
@@ -105,8 +107,8 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 	string strRawDataFmt = "";
 	SYSTEMTIME stTemp;
 
-	CAttriFilter af;
-	af.Init(filter);
+	ATTRI_SELECTOR af;
+	af.init(filter);
 
 	double max = -1000000000;
 	double min = 1000000000;
@@ -144,7 +146,7 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			string strTime = timeopt::TimeToYMD(stTemp) + " " + string(szTime);
 			if (!tf.Match(strTime))
 				continue;
-
+			
 			stringstream ssDe;
 			ssDe << de;
 			string sDe = ssDe.str();
@@ -167,6 +169,11 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			}
 
 			sDe += "}";
+
+			if (af.bEnable && !af.match(sDe))
+			{
+				continue;
+			}
 
 			result[strTime + "+" + tag] = sDe;
 		}
@@ -640,22 +647,97 @@ bool TAG_SELECTOR::match(string tag){
 		}
 }
 
-CAttriFilter::CAttriFilter()
+ATTRI_SELECTOR::ATTRI_SELECTOR()
 {
+	bEnable = false;
 }
 
-bool CAttriFilter::Match(json& jAttri)
+ATTRI_SELECTOR::~ATTRI_SELECTOR()
 {
+	if (filterExp.length() > 0)
+	{
+		jerry_release_value(global_object);
+		jerry_cleanup();
+	}
+}
+
+bool ATTRI_SELECTOR::setScriptEngineObj(json& jObj, jerry_value_t engineObj)
+{
+	for (auto& [key, value] : jObj.items()) {
+
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
+		jerry_value_t prop_value;
+		if (value.is_string())
+			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)value.get<string>().c_str());
+		else if (value.is_number())
+			prop_value = jerry_create_number(value.get<double>());
+		else if (value.is_boolean())
+			prop_value = jerry_create_boolean(value.get<bool>());
+		else if (value.is_object())
+		{
+			prop_value = jerry_create_object();
+			setScriptEngineObj(value, prop_value);
+		}
+
+
+		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
+		if (jerry_value_is_error(set_result)) {
+			jerry_error_t error = jerry_get_error_type(set_result);
+		}
+		jerry_release_value(set_result);
+		jerry_release_value(prop_name);
+		jerry_release_value(prop_value);
+	}
+
 	return true;
 }
 
-
-
-
-bool CAttriFilter::Init(string filter)
+bool ATTRI_SELECTOR::match(string& de)
 {
-	/*
-	ScriptRunner sr;
-	sr.SplitByLogicOperator(filter, cdtList);*/
+	if (!bEnable)
+		return true;
+
+	bool bMatch = true;
+	json jDe = json::parse(de);
+	//将数据元的属性
+	if (jDe["val"].is_object())
+	{
+		json& jVal = jDe["val"];
+		setScriptEngineObj(jVal, global_object);
+	}
+	else
+	{
+
+	}
+
+
+	/* Run the demo script with 'eval' */
+	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
+		filterExp.length(),
+		JERRY_PARSE_NO_OPTS);
+
+	/* Check if there was any error (syntax or runtime) */
+	bool run_ok = !jerry_value_is_error(eval_ret);
+	jerry_error_t error = jerry_get_error_type(eval_ret);
+	jerry_release_value(eval_ret);
+
+	if (run_ok)
+	{
+		bMatch = jerry_value_to_boolean(eval_ret);
+		return bMatch;
+	}
+	//过滤器执行出错，统一不过滤
+	return true;
+}
+
+bool ATTRI_SELECTOR::init(string filter)
+{
+	if (filter.length() > 0)
+	{
+		filterExp = filter;
+		jerry_init(JERRY_INIT_EMPTY);
+		bEnable = true;
+		global_object = jerry_get_global_object();
+	}
 	return true;
 }

@@ -3,6 +3,7 @@
 #include <map>
 #include "json.hpp"
 #include "tds.h"
+#include "jerryscript.h"
 using json = nlohmann::json;
 
 /*
@@ -110,12 +111,16 @@ public:
 };
 
 
-class CAttriFilter {
+class ATTRI_SELECTOR {
 public:
-	CAttriFilter();
-	bool Match(json& jAttri);
-	bool Init(string filter);
-	vector<string> cdtList;
+	ATTRI_SELECTOR();
+	~ATTRI_SELECTOR();
+	bool setScriptEngineObj(json& jObj, jerry_value_t engineObj);
+	bool match(string& de); //检查一个de是否满足条件
+	bool init(string filter);
+	string filterExp;
+	bool bEnable;
+	jerry_value_t global_object;
 };
 
 

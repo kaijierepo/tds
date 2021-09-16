@@ -118,8 +118,8 @@ string rpcHandler::rpc_query(json params,string& error)
 
 	//parse attr filter
 	string filter;
-	if(params["attr"] != nullptr)
-	 	filter = params["attr"].get<string>();
+	if(params["filter"] != nullptr)
+	 	filter = params["filter"].get<string>();
 	
 	//load from database
 	vector<MP*> tagSetTmp;
