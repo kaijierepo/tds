@@ -73,20 +73,26 @@ struct iTDSConf {
 	string title;
 	string homepage;
 	string uiMode;
+	bool singleGenicamHost;
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 };
 
-enum STREAM_TYPE {
-	ST_BMP, //bmp流 rgb
-	ST_h264_ES, //264 ES流
-	ST_RGBA, //原始rgba数据 用于canvas播放视频
-};
+#define STREAM_TYPE_ENUM string
+namespace STREAM_TYPE {
+	const string bmp = "bmp"; //bmp流 rgb
+	const string h264 = "h264"; //264 ES流
+	const string rgba = "rgba"; //原始rgba数据 用于canvas播放视频
+	const string mono8 = "mono8";
+	const string mono16 = "mono16";
+}
 
 
 struct STREAM_INFO {
 	int w;
 	int h;
-	STREAM_TYPE type;
+	int pixelSize;
+	string genicamPixelFmt;
+	string type; //STREAM_TYPE
 };
 
 
@@ -144,7 +150,7 @@ public:
 	// 视频功能
 	virtual void registerVideoTag(string tag, fp_startStream startStream,void*& mp, STREAM_INFO* si = NULL) = 0;
 	//推流到指定的监测点mp
-	virtual void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si=NULL) = 0;
+	virtual void pushStream(void* mp, char* pData, int len, STREAM_INFO* si=NULL) = 0;
 
 	// 通用服务功能
 	virtual void log(const char* text) = 0;

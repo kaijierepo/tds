@@ -6,6 +6,7 @@
 #include "tds.h"
 #include "videoCodec.h"
 #include <memory>
+#include "videoSrvNode.h"
 
 
 struct TIME_SPAN {
@@ -57,13 +58,8 @@ public:
 	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
-	void refreshStreamPuller();
-	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //拉流方
-	fp_startStream m_streamPusher; //推流方
-	STREAM_INFO m_streamInfo;
-#ifdef ENABLE_FFMPEG
-	videoCodec* m_videoCodec; //
-#endif
+	
+	videoSrvNode m_videoSrvNode;
 
 	float m_K;
 	float m_B;

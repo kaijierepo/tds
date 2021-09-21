@@ -9,6 +9,7 @@ tdsConfig::tdsConfig()
 	bConcurrentGateway = true;
 	projectConfPath = "";
 	dbPath = "";
+	singleGenicamHost = false;
 }
 
 struct TDS_CONF_ITEM {
@@ -71,6 +72,8 @@ void tdsConfig::loadConf()
 			title = tci.val;
 		else if (tci.key == "homepage" && homepage == "")
 			homepage = tci.val;
+		else if (tci.key == "singlegenicamhost")
+			singleGenicamHost = tci.val == "1" ? true : false;
 	}
 
 		//j = jsonConf["active_session"];

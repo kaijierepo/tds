@@ -18,6 +18,7 @@
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"
 #include "ioChan.h"
+#include "ioDev_genicam.h"
 
 rpcHandler tdsSrv;
 
@@ -382,6 +383,19 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	if (method == "sessionStatus")
 	{
 		result = ds.getSessionStatus(params);
+	}
+
+	if (method == "findDev")
+	{
+		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
+		{
+			json j = ioDev_genicam::listDevices();
+			rpcResult.textResult = j.dump(2);
+		}
+	}
+	if (method == "captureFrame")
+	{
+		ioDev_genicam::captureImageToBmp("", "");
 	}
 
 	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "")
@@ -959,16 +973,16 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		return "";
 	}
 
-	if (pmp->m_streamInfo.w == 0 || pmp->m_streamInfo.h == 0)
+	if (pmp->m_videoSrvNode.m_streamInfo.w == 0 || pmp->m_videoSrvNode.m_streamInfo.h == 0)
 	{
 		error = RPCError(RPC_ERROR::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
 		return "";
 	}
 
 	json jSi;
-	jSi["w"] = pmp->m_streamInfo.w;
-	jSi["h"] = pmp->m_streamInfo.h;
-	jSi["type"] = pmp->m_streamInfo.type;
+	jSi["w"] = pmp->m_videoSrvNode.m_streamInfo.w;
+	jSi["h"] = pmp->m_videoSrvNode.m_streamInfo.h;
+	jSi["type"] = pmp->m_videoSrvNode.m_streamInfo.type;
 	
 	return jSi.dump();
 }

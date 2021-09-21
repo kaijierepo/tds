@@ -9,7 +9,7 @@ out/conf/
 localStorage/
 chrome/
 cef/
-
+out/
 publish/
 front_end/
 

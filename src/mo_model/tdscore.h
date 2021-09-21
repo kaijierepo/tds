@@ -130,6 +130,7 @@ namespace IO_DEV_TYPE {
 	namespace DEV {
 		const string modbus_rtu = "modbus_rtu";
 		const string iq60_gateway = "iq60-gateway";
+		const string genicam = "genicam";
 	}
 	namespace GW {
 		const string local_serial = "local-serial";

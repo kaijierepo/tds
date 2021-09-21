@@ -632,12 +632,12 @@ MO& MO::operator=(MO& right)
 	m_moType = right.m_moType;
 	m_strName = right.m_strName;
 
-	if (right.m_moType == "mp" && m_moType == "mp")
-	{
-		MP* pl = (MP*)this;
-		MP* pr = (MP*)&right;
-		*pl = *pr;
-	}
+	//if (right.m_moType == "mp" && m_moType == "mp")
+	//{
+	//	MP* pl = (MP*)this;
+	//	MP* pr = (MP*)&right;
+	//	*pl = *pr;
+	//}
 	return *this;
 }
 

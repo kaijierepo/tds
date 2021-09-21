@@ -147,6 +147,12 @@
       <Filter>tools</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tools\tdsShell.cpp" />
+    <ClCompile Include="..\src\video\ioDev_genicam.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\videoSrvNode.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -290,6 +296,12 @@
       <Filter>tools</Filter>
     </ClInclude>
     <ClInclude Include="..\src\tools\tdsShell.h" />
+    <ClInclude Include="..\src\video\ioDev_genicam.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\videoSrvNode.h">
+      <Filter>video</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\res\tds.rc" />

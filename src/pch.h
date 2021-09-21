@@ -15,3 +15,4 @@ using json = nlohmann::json;
 using namespace std;
 
 #define _HAS_STD_BYTE 0 //windows sdk有byte类型， c++17有std::byte，解决定义冲突问题
+#define GENICAM_MAIN_COMPILER VC141

@@ -18,9 +18,7 @@ MP::MP()
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
 	m_B = 0;
-#ifdef ENABLE_FFMPEG
-	m_videoCodec = NULL;
-#endif
+
 }
 
 MP::~MP()
@@ -188,27 +186,6 @@ int MP::getSaveInterval()
 {
 	int si = m_saveInterval.hour * 60 * 3600 + m_saveInterval.minute * 60 + m_saveInterval.second;
 	return si;
-}
-
-void MP::refreshStreamPuller()
-{
-	for(int i=0;i<m_streamPuller.size();i++)
-	{
-		std::shared_ptr<TDS_SESSION> pSess = m_streamPuller[i];
-		if (pSess->pTcpSession == NULL)
-		{
-			m_streamPuller.erase(m_streamPuller.begin() + i);
-			i--;
-		}
-	}
-
-#ifdef ENABLE_FFMPEG
-	if (m_streamPuller.size() == 0)
-	{
-		delete m_videoCodec;
-		m_videoCodec = NULL;
-	}
-#endif
 }
 
 json MP::getRTData()

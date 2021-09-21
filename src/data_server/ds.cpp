@@ -12,6 +12,7 @@
 #include "ioDev_iq60.h"
 #include "tcpClt.h"
 #include "commSrv.h"
+#include "ioDev_genicam.h"
 
 
 dataServer ds;
@@ -596,9 +597,32 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 				tdsSession->streamMp = p;
 				tdsSession->type = TDS_SESSION_TYPE::video;
 				tdsSession->streamFmt = fmt;
-				p->m_streamPuller.push_back(tdsSession);
+				p->m_videoSrvNode.m_streamPuller.push_back(tdsSession);
 
 				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+				LOG(szLog);
+			}
+		}
+	}
+	else if (strData.find("genicam") != string::npos)
+	{
+		int pos = strData.find("genicam");
+		pos = strData.find('/', pos);
+		if (pos != string::npos)
+		{
+			int pos1 = strData.find(' ', pos);
+			string index = strData.substr(pos + 1, pos1 - pos - 1);
+			
+			if (singleCamera)
+			{
+				singleCamera->m_videoSrvNode.m_streamPuller.push_back(tdsSession);
+				//tdsSession->streamMp = p;
+				tdsSession->type = TDS_SESSION_TYPE::video;
+				//tdsSession->streamFmt = fmt;
+				//string model = singleCamera->m_genicamDev->getModel();
+				//string vendor = singleCamera->m_genicamDev->getVendor();
+				//string device = singleCamera->m_genicamDev->getID();
+				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + ",设备:第一个GenICam设备";
 				LOG(szLog);
 			}
 		}

@@ -12,6 +12,7 @@
 #include "videoCodec.h"
 #include "wke.h"
 #include "res/resource.h"
+#include "ioDev_genicam.h"
 
 string InterfaceEncoding = "utf8";
 
@@ -273,6 +274,9 @@ bool TDS_imp::run(string cmdline)
 #endif
 	ioSrv.run();
 
+	if (conf->singleGenicamHost)
+		ioDev_genicam::runSingleHostMode();
+
 	//create browser window
 	if (conf->uiMode == "miniblink")
 	{
@@ -439,84 +443,16 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 		prj.m_mapAllMP[tag] = pmp;
 	}
 	pmp->m_valType = VAL_TYPE::video;
-	pmp->m_streamPusher = startStream;
+	pmp->m_videoSrvNode.m_streamPusher = startStream;
 	if (si)
-		pmp->m_streamInfo = *si;
+		pmp->m_videoSrvNode.m_streamInfo = *si;
 	mp = pmp;
 }
 
-void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si)
+void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_INFO* si)
 {
 	MP* pmp = (MP*)mp;
-	pmp->refreshStreamPuller();
-	if (pmp->m_streamPuller.size() == 0)
-		return;
-	
-	if (st == ST_BMP)
-	{
-#ifdef ENABLE_FFMPEG
-		if (pmp->m_videoCodec == NULL)
-		{
-			pmp->m_videoCodec = new videoCodec();
-		}
-
-		videoCodec& vc = *pmp->m_videoCodec;
-		if (!vc.bInit)
-		{
-			vc.inConf.pixelFmt = AV_PIX_FMT_RGB24;
-			vc.outConf.codecID = AV_CODEC_ID_VP9;
-		}
-
-		vc.input_Bmp((char*)pData, len);
-		int iStreamLen = 0;
-		char* pStream = NULL;
-		vc.output();
-		//发送视频头，web端mse收到该头才能正确解码
-		for (int i = 0; i < pmp->m_streamPuller.size(); i++)
-		{
-			std::shared_ptr<TDS_SESSION> p = pmp->m_streamPuller[i];
-			if (p->pTcpSession->iSendSucCount == 0)
-			{
-				p->send(vc.headerBuff, vc.iHeaderBuffLen);
-			}
-			p->send(vc.outputBuff, vc.iOutputLen);
-		}
-
-		vc.iOutputLen = 0;
-#endif
-	}
-	else if (st == ST_RGBA)
-	{
-		//发送视频信息头
-		for (int i = 0; i < pmp->m_streamPuller.size(); i++)
-		{
-			std::shared_ptr<TDS_SESSION> p = pmp->m_streamPuller[i];
-			p->m_mutex.lock();//p->pTcpSession该指针不可多线程并发使用，加锁
-			
-			//先检测session连接状态，失去连接的session释放引用
-			if (!p->bConnected)
-			{
-				pmp->m_streamPuller.erase(pmp->m_streamPuller.begin() + i);
-				i--;
-				continue;
-			}
-
-			if (p->pTcpSession->iSendSucCount == 0)
-			{
-				json jSi;
-				jSi["w"] = pmp->m_streamInfo.w;
-				jSi["h"] = pmp->m_streamInfo.h;
-				jSi["type"] = pmp->m_streamInfo.type;
-				string s = jSi.dump();
-				p->send((char*)s.c_str(), s.length());
-			}
-			if (p->streamFmt == "rgba")//直接转发
-			{
-				p->send(pData, len);
-			}
-			p->m_mutex.unlock();
-		}
-	}
+	pmp->m_videoSrvNode.pushStream(pData, len, *si);
 }
 
 void TDS_imp::log(const char* text)

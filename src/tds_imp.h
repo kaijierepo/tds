@@ -32,7 +32,7 @@ public:
 
 	 // 视频功能
 	 void registerVideoTag(string tag, fp_startStream startStream, void*& mp, STREAM_INFO* si = NULL);
-	 void pushStream(void* mp, char* pData, int len, STREAM_TYPE st, STREAM_INFO* si = NULL);
+	 void pushStream(void* mp, char* pData, int len, STREAM_INFO* si = NULL);
 
 	 void log(const char* text);
 

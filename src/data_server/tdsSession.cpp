@@ -72,9 +72,9 @@ string TDS_SESSION::GetClientIp()
      {
          delete pBridgedTcpClient;
      }
-     if (streamMp && streamMp->m_streamPusher)
+     if (streamMp && streamMp->m_videoSrvNode.m_streamPusher)
      {
-         streamMp->m_streamPusher(false, NULL);
+         streamMp->m_videoSrvNode.m_streamPusher(false, NULL);
      }
      streamMp = NULL;
      bConnected = false;

@@ -284,9 +284,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_STD_BYTE=0;ENABLE_FFMPEG;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;ENABLE_FFMPEG;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/mujs/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/mujs/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -295,8 +295,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\mujs\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MDd;..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\mujs\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -306,7 +306,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -316,7 +316,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -340,7 +340,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MD;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MD;..\src\3rdparty\jerryscript\lib\MD;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R mt|x64'">
@@ -391,7 +391,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <SupportJustMyCode>true</SupportJustMyCode>
@@ -403,8 +403,8 @@
       <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MDd;..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -447,8 +447,10 @@
     <ClCompile Include="..\src\tools\tcpReverseProxy.cpp" />
     <ClCompile Include="..\src\tools\tcpSwitch.cpp" />
     <ClCompile Include="..\src\tools\tdsShell.cpp" />
+    <ClCompile Include="..\src\video\ioDev_genicam.cpp" />
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />
+    <ClCompile Include="..\src\video\videoSrvNode.cpp" />
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -500,8 +502,10 @@
     <ClInclude Include="..\src\tools\tcpSwitch.h" />
     <ClInclude Include="..\src\tools\tdsShell.h" />
     <ClInclude Include="..\src\video\ffmpeg.h" />
+    <ClInclude Include="..\src\video\ioDev_genicam.h" />
     <ClInclude Include="..\src\video\remoteDesktopServer.h" />
     <ClInclude Include="..\src\video\videoCodec.h" />
+    <ClInclude Include="..\src\video\videoSrvNode.h" />
     <ClInclude Include="..\src\xiaot\xiaot.h" />
   </ItemGroup>
   <ItemGroup>
