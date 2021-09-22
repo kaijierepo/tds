@@ -444,12 +444,12 @@ void TDS_imp::pushStream(string tag, char* pData, int len, STREAM_INFO* si)
 	pmp->m_videoSrvNode.pushStream(pData, len, *si);
 }
 
-void TDS_imp::pullStream(string ioAddr, void* user, fp_onVideoStreamRecv onRecvStream)
+void TDS_imp::pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream)
 {
-	//ioDev* p = ioSrv.getIODev(ioAddr);
-	if (ioAddr == "genicam_0")
+	MP* pmp = prj.getMp(tag);
+	if (pmp)
 	{
-		singleCamera->m_videoSrvNode.addPuller(onRecvStream);
+		pmp->m_videoSrvNode.addPuller(user,onRecvStream);
 	}
 }
 

@@ -33,7 +33,7 @@ public:
 
 	 // 视频功能
 	 void pushStream(string tag, char* pData, int len, STREAM_INFO* si = NULL);
-	 void pullStream(string ioAddr, void* user, fp_onVideoStreamRecv onRecvStream);
+	 void pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream);
 	 void log(const char* text);
 
 	 tdsConfig tdsConf;

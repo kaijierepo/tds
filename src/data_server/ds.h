@@ -8,6 +8,7 @@ dataserver
 #include "tdsSession.h"
 #include <memory>
 #include "tdscore.h"
+#include "videoSrvNode.h"
 
 
 #define MAX_CLIENT_NUM int_MaxClients_MAX
@@ -37,6 +38,7 @@ public:
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 	string getRDSPage();
+	videoSrvNode* getVideoSrvNode(string tag);
 public:
 	bool run();
 	dataServer();

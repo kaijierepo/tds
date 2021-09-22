@@ -60,7 +60,7 @@ typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESULT& resp, string& error);//返回是否处理
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef bool (*fp_startStream)(bool start,void* puller); //启动码流，并传入拉流者id
-typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si);
+typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
 
 namespace TDS_SESSION_TYPE {
@@ -156,7 +156,7 @@ public:
 	//推流到指定的监测点mp
 	virtual void pushStream(string tag, char* pData, int len, STREAM_INFO* si=NULL) = 0;
 	//从指定通道拉流（必须是支持视频功能的io地址）
-	virtual void pullStream(string ioAddr, void* user, fp_onVideoStreamRecv onRecvStream) = 0;
+	virtual void pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream) = 0;
 
 	// 通用服务功能
 	virtual void log(const char* text) = 0;

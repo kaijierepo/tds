@@ -398,6 +398,33 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		ioDev_genicam::captureImageToBmp("", "");
 	}
 
+	if (method == "genicam.doCmd")
+	{
+		if (singleCamera)
+		{
+			singleCamera->doCmd(params["name"]);
+		}
+	}
+	else if (method == "genicam.setParam")
+	{
+		if (singleCamera)
+		{
+			string name = params["name"];
+			json val = params["val"];
+			bool isEnum = false;
+			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
+				isEnum = true;
+			singleCamera->setParam(name,val,isEnum);
+		}
+	}
+	else if (method == "genicam.getParam")
+	{
+		if (singleCamera)
+		{
+
+		}
+	}
+
 	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "")
 		return true;
 	return false;

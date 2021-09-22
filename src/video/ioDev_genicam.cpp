@@ -1,7 +1,9 @@
 #include "ioDev_genicam.h"
-
+#include "prj.h"
 #define PFNC_INCLUDE_HELPERS
 #include "GenTL/PFNC.h"
+#include "mp.h"
+#include "logger.h"
 
 ioDev_genicam* singleCamera = NULL;
 
@@ -118,9 +120,25 @@ void ioDev_genicam::startStream()
     if (dev)
     {
         dev->open(rcg::Device::CONTROL);
-        std::shared_ptr<GenApi::CNodeMapRef> nodemap = dev->getRemoteNodeMap();
+        m_nodemap = dev->getRemoteNodeMap();
 
-
+        //加载初始化参数
+        string sip;
+        fs::readFile(fs::appPath() + "/conf/genicam0_initParams.json", sip);
+        if (sip != "")
+        {
+            json jp = json::parse(sip);
+            for (int i = 0; i < jp.size(); i++)
+            {
+                json oneParam = jp[i];
+                string name = oneParam["name"];
+                json val = oneParam["val"];
+                bool isEnum = false;
+                if (oneParam["isEnum"] != nullptr && oneParam["isEnum"].get<bool>() == true)
+                    isEnum = true;
+                setParam(name, val, isEnum);
+            }
+        }
 
         std::vector<std::shared_ptr<rcg::Stream> > stream = dev->getStreams();
         if (stream.size() > 0)
@@ -130,7 +148,7 @@ void ioDev_genicam::startStream()
             stream[0]->attachBuffers(true);
             stream[0]->startStreaming();
 
-            std::cout << "Package size: " << rcg::getString(nodemap, "GevSCPSPacketSize") << std::endl;
+            std::cout << "Package size: " << rcg::getString(m_nodemap, "GevSCPSPacketSize") << std::endl;
 
             int buffers_received = 0;
             int buffers_incomplete = 0;
@@ -164,7 +182,8 @@ void ioDev_genicam::startStream()
                             si.h = h;
                             si.w = w;
                             si.genicamPixelFmt = GetPixelFormatName(iPixelFmt);
-                            m_videoSrvNode.AsynPushStream((char*)buffer->getBase(part),buffer->getSize(part), si);
+                            if(m_videoSrvNode)
+                            m_videoSrvNode->AsynPushStream((char*)buffer->getBase(part),buffer->getSize(part), si);
                         }
                     }
                     else
@@ -194,6 +213,31 @@ void ioDev_genicam::startStream()
 
         dev->close();
     }
+}
+
+void ioDev_genicam::setParam(string name,json val,bool isEnum)
+{
+    bool bRet = false;
+    if (val.is_number_integer())
+    {
+        bRet = rcg::setInteger(m_nodemap, name.c_str(), val.get<int>());
+    }
+    else if (val.is_number_float())
+    {
+        bRet = rcg::setFloat(m_nodemap, name.c_str(), val.get<float>());
+    }
+    else if (val.is_string() && isEnum)
+    {
+        bRet = rcg::setEnum(m_nodemap, name.c_str(), val.get<string>().c_str());
+    }
+   
+    string sRlt = bRet ? "成功" : "失败";
+    LOG("设置GenICam参数 " + name + " = " + val.dump() + " " + sRlt);
+}
+
+void ioDev_genicam::doCmd(string name)
+{
+    rcg::callCommand(m_nodemap, name.c_str());
 }
 
 void ioDev_genicam::mono8ToBmp(char* pData, int w, int h, string fileName)
@@ -244,7 +288,13 @@ void thread_singleHostMode()
         try
         {
             singleCamera->m_genicamDev = ioDev_genicam::getSingleGenicam();
-            singleCamera->startStream();
+
+            if (singleCamera->m_genicamDev)
+            {
+                MP* p = prj.getMp("genicam_0");
+                singleCamera->m_videoSrvNode = &p->m_videoSrvNode;
+                singleCamera->startStream();
+            }
         }
         catch (std::exception& e)
         {
@@ -252,6 +302,11 @@ void thread_singleHostMode()
         } 
     }
     
+}
+
+ioDev_genicam::ioDev_genicam()
+{
+    m_videoSrvNode = NULL;
 }
 
 void ioDev_genicam::runSingleHostMode()

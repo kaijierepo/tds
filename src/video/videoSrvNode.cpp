@@ -70,7 +70,7 @@ void videoSrvNode::sendToPuller_rgba(char* pData, int len)
 		}
 		else if(sp.callbackFunc)
 		{
-			sp.callbackFunc(pData, len, m_streamInfo);
+			sp.callbackFunc(pData, len, m_streamInfo,sp.user);
 		}
 	}
 }
@@ -213,10 +213,11 @@ void videoSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession)
 	m_streamPuller.push_back(sp);
 }
 
-void videoSrvNode::addPuller(fp_onVideoStreamRecv callbackFunc)
+void videoSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc)
 {
 	STREAM_PULLER sp;
 	sp.callbackFunc = callbackFunc;
+	sp.user = user;
 	m_streamPuller.push_back(sp);
 }
 

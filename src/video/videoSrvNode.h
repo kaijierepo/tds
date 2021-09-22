@@ -27,10 +27,12 @@ class STREAM_PULLER {
 public:
 	std::shared_ptr<TDS_SESSION> tdsSession;
 	fp_onVideoStreamRecv callbackFunc;
+	void* user;
 	STREAM_PULLER()
 	{
 		tdsSession = NULL;
 		callbackFunc = NULL;
+		user = NULL;
 	}
 };
 
@@ -43,7 +45,7 @@ public:
 	void AsynPushStream(char* pData, int len, STREAM_INFO si);
 	void doAsynPush();
 	void addPuller(std::shared_ptr<TDS_SESSION> tdsSession);
-	void addPuller(fp_onVideoStreamRecv callbackFunc);
+	void addPuller(void* user,fp_onVideoStreamRecv callbackFunc);
 	vector<STREAM_PULLER> m_streamPuller; //拉流方
 	fp_startStream m_streamPusher; //推流方
 	STREAM_INFO m_streamInfo;

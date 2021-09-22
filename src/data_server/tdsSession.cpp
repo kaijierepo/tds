@@ -1,6 +1,7 @@
 #include "tdsSession.h"
 #include "mp.h"
 #include "logger.h"
+#include "videoSrvNode.h"
 
 
 TDS_SESSION::TDS_SESSION()
@@ -21,7 +22,7 @@ void TDS_SESSION::Init()
     name = "";
     bInitSegSended = false;
     bridgedTcpCltHandler.pTdsSession = this;
-    streamMp = NULL;
+    videoServiceNode = NULL;
     sock = 0;
     iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
     iALProto = APP_LAYER_PROTO::UNKNOWN;
@@ -72,11 +73,7 @@ string TDS_SESSION::GetClientIp()
      {
          delete pBridgedTcpClient;
      }
-     if (streamMp && streamMp->m_videoSrvNode.m_streamPusher)
-     {
-         streamMp->m_videoSrvNode.m_streamPusher(false, NULL);
-     }
-     streamMp = NULL;
+     videoServiceNode = NULL;
      bConnected = false;
      m_mutex.unlock();
  }

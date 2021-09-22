@@ -15,6 +15,11 @@ project::project()
 	m_ioSrv = new ioServer();
 	m_strName = "tds";
 	DB = &db;
+
+	MP* p = new MP();
+	p->m_valType = VAL_TYPE::video;
+	p->m_strName = "genicam_0";
+	m_mapSpecialMP["genicam_0"] = p;
 }
 
 project::~project()
@@ -83,6 +88,11 @@ void project::updateMPTable()
 
 MP* project::getMp(string strTagname)
 {
+	for (map<string, MP*>::iterator it = m_mapSpecialMP.begin(); it != m_mapSpecialMP.end(); it++)
+	{
+		if (it->second->getTag().c_str() == strTagname) return it->second;
+	}
+
 	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++)
 	{
 		if (it->second->getTag().c_str() == strTagname) return it->second;
@@ -123,3 +133,5 @@ void project::getMpTypeList(json& mpTypeList)
 		mpTypeList.push_back(oneType);
 	}
 }
+
+

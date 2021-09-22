@@ -21,10 +21,11 @@ public:
 	void getMpList(map<string, MP*>& MPlist, MO* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
-	
+
 	database* DB;
 	ioServer* m_ioSrv;
 	map<string, MP*> m_mapAllMP;
+	map<string, MP*> m_mapSpecialMP;//×¨ÓÃÎ»ºÅ
 public:
 	project();
 	virtual ~project();
