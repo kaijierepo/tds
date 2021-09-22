@@ -428,7 +428,7 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	return true;
 }
 
-void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,STREAM_INFO* si)
+void TDS_imp::pushStream(string tag, char* pData, int len, STREAM_INFO* si)
 {
 	if (InterfaceEncoding == "gb2312")
 	{
@@ -436,23 +436,21 @@ void TDS_imp::registerVideoTag(string tag, fp_startStream startStream,void*& mp,
 	}
 
 	MP* pmp = prj.getMp(tag);
-	//没有则创建动态mp对象
-	if(pmp == NULL)
-	{
-		pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
-		prj.m_mapAllMP[tag] = pmp;
-	}
-	pmp->m_valType = VAL_TYPE::video;
-	pmp->m_videoSrvNode.m_streamPusher = startStream;
-	if (si)
-		pmp->m_videoSrvNode.m_streamInfo = *si;
-	mp = pmp;
+
+	if (pmp == NULL)
+		pmp = prj.createMP(tag, VAL_TYPE::video);
+
+	if(pmp)
+	pmp->m_videoSrvNode.pushStream(pData, len, *si);
 }
 
-void TDS_imp::pushStream(void* mp, char* pData, int len, STREAM_INFO* si)
+void TDS_imp::pullStream(string ioAddr, void* user, fp_onVideoStreamRecv onRecvStream)
 {
-	MP* pmp = (MP*)mp;
-	pmp->m_videoSrvNode.pushStream(pData, len, *si);
+	//ioDev* p = ioSrv.getIODev(ioAddr);
+	if (ioAddr == "genicam_0")
+	{
+		singleCamera->m_videoSrvNode.addPuller(onRecvStream);
+	}
 }
 
 void TDS_imp::log(const char* text)

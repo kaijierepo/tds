@@ -29,6 +29,8 @@ public:
 	project();
 	virtual ~project();
 
+	MP* createMP(string tag, string valType);
+
 private:
 	json m_jMOTree;
 	bool bFirstRefresh;

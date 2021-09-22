@@ -591,14 +591,14 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			}
 			tag = httplib::detail::decode_url(tag, false);
 			MP* p = prj.getMp(tag);
+			if (!p)
+				p = prj.createMP(tag, VAL_TYPE::video);
 			if (p && p->m_valType == "video")
 			{
-				//p->m_streamPusher(true, p);
 				tdsSession->streamMp = p;
 				tdsSession->type = TDS_SESSION_TYPE::video;
 				tdsSession->streamFmt = fmt;
-				p->m_videoSrvNode.m_streamPuller.push_back(tdsSession);
-
+				p->m_videoSrvNode.addPuller(tdsSession);
 				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
 				LOG(szLog);
 			}
@@ -615,7 +615,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			
 			if (singleCamera)
 			{
-				singleCamera->m_videoSrvNode.m_streamPuller.push_back(tdsSession);
+				singleCamera->m_videoSrvNode.addPuller(tdsSession);
 				//tdsSession->streamMp = p;
 				tdsSession->type = TDS_SESSION_TYPE::video;
 				//tdsSession->streamFmt = fmt;

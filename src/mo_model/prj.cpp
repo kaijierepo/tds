@@ -22,6 +22,14 @@ project::~project()
 
 }
 
+MP* project::createMP(string tag,string valType)
+{
+	MP* pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
+	prj.m_mapAllMP[tag] = pmp;		
+	pmp->m_valType = valType;
+	return pmp;
+}
+
 bool project::loadConf()
 {
 	string conf;

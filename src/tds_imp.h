@@ -1,6 +1,7 @@
 #pragma once
 #include "tds.h"
 #include "conf.h"
+#include "mp.h"
 
 class TDS_imp : public iTDS {
 public:
@@ -31,9 +32,8 @@ public:
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能
-	 void registerVideoTag(string tag, fp_startStream startStream, void*& mp, STREAM_INFO* si = NULL);
-	 void pushStream(void* mp, char* pData, int len, STREAM_INFO* si = NULL);
-
+	 void pushStream(string tag, char* pData, int len, STREAM_INFO* si = NULL);
+	 void pullStream(string ioAddr, void* user, fp_onVideoStreamRecv onRecvStream);
 	 void log(const char* text);
 
 	 tdsConfig tdsConf;

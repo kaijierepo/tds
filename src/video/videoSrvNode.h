@@ -23,6 +23,17 @@ struct STREAM_DATA {
 	}
 };
 
+class STREAM_PULLER {
+public:
+	std::shared_ptr<TDS_SESSION> tdsSession;
+	fp_onVideoStreamRecv callbackFunc;
+	STREAM_PULLER()
+	{
+		tdsSession = NULL;
+		callbackFunc = NULL;
+	}
+};
+
 class videoSrvNode {
 public:
 	videoSrvNode();
@@ -31,7 +42,9 @@ public:
 	void pushStream(char* pData, int len, STREAM_INFO si);
 	void AsynPushStream(char* pData, int len, STREAM_INFO si);
 	void doAsynPush();
-	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //拉流方
+	void addPuller(std::shared_ptr<TDS_SESSION> tdsSession);
+	void addPuller(fp_onVideoStreamRecv callbackFunc);
+	vector<STREAM_PULLER> m_streamPuller; //拉流方
 	fp_startStream m_streamPusher; //推流方
 	STREAM_INFO m_streamInfo;
 #ifdef ENABLE_FFMPEG

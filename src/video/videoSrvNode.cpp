@@ -14,12 +14,14 @@ void videoSrvNode::refreshStreamPuller()
 {
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
-		std::shared_ptr<TDS_SESSION> pSess = m_streamPuller[i];
-		if (pSess->pTcpSession == NULL)
+		STREAM_PULLER sp = m_streamPuller[i];
+		if ((sp.tdsSession && sp.tdsSession->pTcpSession == NULL) ||
+			(sp.tdsSession==NULL && sp.callbackFunc == NULL))
 		{
 			m_streamPuller.erase(m_streamPuller.begin() + i);
 			i--;
 		}
+		
 	}
 
 #ifdef ENABLE_FFMPEG
@@ -36,31 +38,40 @@ void videoSrvNode::sendToPuller_rgba(char* pData, int len)
 	//发送视频信息头
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
-		std::shared_ptr<TDS_SESSION> p = m_streamPuller[i];
-		
-		//先检测session连接状态，失去连接的session释放引用
-		if (!p->bConnected)
-		{
-			m_streamPuller.erase(m_streamPuller.begin() + i);
-			i--;
-			continue;
-		}
+		STREAM_PULLER sp = m_streamPuller[i];
 
-		p->m_mutex.lock();//p->pTcpSession该指针不可多线程并发使用，加锁
-		if (p->pTcpSession->iSendSucCount == 0)
+		if (sp.tdsSession)
 		{
-			json jSi;
-			jSi["w"] = m_streamInfo.w;
-			jSi["h"] = m_streamInfo.h;
-			jSi["type"] = "rgba";
-			string s = jSi.dump();
-			p->send((char*)s.c_str(), s.length());
-		}
-		//if (p->streamFmt == "rgba")//直接转发
-		//{
+			std::shared_ptr<TDS_SESSION> p = sp.tdsSession;
+
+			//先检测session连接状态，失去连接的session释放引用
+			if (!p->bConnected)
+			{
+				m_streamPuller.erase(m_streamPuller.begin() + i);
+				i--;
+				continue;
+			}
+
+			p->m_mutex.lock();//p->pTcpSession该指针不可多线程并发使用，加锁
+			if (p->pTcpSession->iSendSucCount == 0)
+			{
+				json jSi;
+				jSi["w"] = m_streamInfo.w;
+				jSi["h"] = m_streamInfo.h;
+				jSi["type"] = "rgba";
+				string s = jSi.dump();
+				p->send((char*)s.c_str(), s.length());
+			}
+			//if (p->streamFmt == "rgba")//直接转发
+			//{
 			p->send(pData, len);
-		//}
-		p->m_mutex.unlock();
+			//}
+			p->m_mutex.unlock();
+		}
+		else if(sp.callbackFunc)
+		{
+			sp.callbackFunc(pData, len, m_streamInfo);
+		}
 	}
 }
 
@@ -92,15 +103,16 @@ void videoSrvNode::pushStream(char* pData, int len, STREAM_INFO si)
 		char* pStream = NULL;
 		vc.output();
 		//发送视频头，web端mse收到该头才能正确解码
-		for (int i = 0; i < m_streamPuller.size(); i++)
-		{
-			std::shared_ptr<TDS_SESSION> p = m_streamPuller[i];
-			if (p->pTcpSession->iSendSucCount == 0)
-			{
-				p->send(vc.headerBuff, vc.iHeaderBuffLen);
-			}
-			p->send(vc.outputBuff, vc.iOutputLen);
-		}
+		// sendToPuller_h264
+		//for (int i = 0; i < m_streamPuller.size(); i++)
+		//{
+		//	std::shared_ptr<TDS_SESSION> p = m_streamPuller[i];
+		//	if (p->pTcpSession->iSendSucCount == 0)
+		//	{
+		//		p->send(vc.headerBuff, vc.iHeaderBuffLen);
+		//	}
+		//	p->send(vc.outputBuff, vc.iOutputLen);
+		//}
 
 		vc.iOutputLen = 0;
 #endif
@@ -192,6 +204,20 @@ void videoSrvNode::doAsynPush()
 
 		delete pFrm;
 	}
+}
+
+void videoSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	STREAM_PULLER sp;
+	sp.tdsSession = tdsSession;
+	m_streamPuller.push_back(sp);
+}
+
+void videoSrvNode::addPuller(fp_onVideoStreamRecv callbackFunc)
+{
+	STREAM_PULLER sp;
+	sp.callbackFunc = callbackFunc;
+	m_streamPuller.push_back(sp);
 }
 
 
