@@ -579,7 +579,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			int pos1 = strData.find(' ', pos);
 			string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流 ; rgba/机房1.码流
 			string tag;
-			string fmt = "vp9"; //default format
+			string fmt = ""; //为空，则图像不进行任何转换直接发送
 			if (tagAndFmt.find("rgba") != string::npos)
 			{
 				tag = tagAndFmt.substr(5, tagAndFmt.length() - 5);
@@ -597,8 +597,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			{
 				tdsSession->videoServiceNode = pVsn;
 				tdsSession->type = TDS_SESSION_TYPE::video;
-				tdsSession->streamFmt = fmt;
-				pVsn->addPuller(tdsSession);
+				pVsn->addPuller(tdsSession,fmt);
 				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
 				LOG(szLog);
 			}

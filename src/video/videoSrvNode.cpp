@@ -14,10 +14,11 @@ void videoSrvNode::refreshStreamPuller()
 {
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
-		STREAM_PULLER sp = m_streamPuller[i];
-		if ((sp.tdsSession && sp.tdsSession->pTcpSession == NULL) ||
-			(sp.tdsSession==NULL && sp.callbackFunc == NULL))
+		STREAM_PULLER* sp = m_streamPuller[i];
+		if ((sp->tdsSession && sp->tdsSession->pTcpSession == NULL) ||
+			(sp->tdsSession==NULL && sp->callbackFunc == NULL))
 		{
+			delete sp;
 			m_streamPuller.erase(m_streamPuller.begin() + i);
 			i--;
 		}
@@ -33,127 +34,60 @@ void videoSrvNode::refreshStreamPuller()
 #endif
 }
 
-void videoSrvNode::sendToPuller_rgba(char* pData, int len)
+void videoSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
+{
+	if (sp.tdsSession)
+	{
+		std::shared_ptr<TDS_SESSION> p = sp.tdsSession;
+		std::unique_lock<recursive_mutex> lock(p->m_mutex);//p->pTcpSession该指针不可多线程并发使用，加锁
+		if (p->pTcpSession == NULL)
+			return;
+		if (p->pTcpSession->iSendSucCount == 0)
+		{
+			json jSi;
+			jSi["w"] = sd.info.w;
+			jSi["h"] = sd.info.h;
+			jSi["pixelFmt"] = sd.info.genicamPixelFmt;
+			string s = jSi.dump();
+			p->send((char*)s.c_str(), s.length());
+		}
+		p->send(sd.pData, sd.len);
+	}
+	else if (sp.callbackFunc)
+	{
+		sp.callbackFunc(sd.pData, sd.len, sd.info, sp.user);
+	}
+}
+
+
+
+void videoSrvNode::sendToAllPullers(STREAM_DATA& sd)
 {
 	//发送视频信息头
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
-		STREAM_PULLER sp = m_streamPuller[i];
+		STREAM_PULLER* sp = m_streamPuller[i];
 
-		if (sp.tdsSession)
+		if (sd.info.genicamPixelFmt == sp->destData.info.genicamPixelFmt ||
+			sp->destData.info.genicamPixelFmt == "")
 		{
-			std::shared_ptr<TDS_SESSION> p = sp.tdsSession;
-
-			//先检测session连接状态，失去连接的session释放引用
-			if (!p->bConnected)
-			{
-				m_streamPuller.erase(m_streamPuller.begin() + i);
-				i--;
-				continue;
-			}
-
-			p->m_mutex.lock();//p->pTcpSession该指针不可多线程并发使用，加锁
-			if (p->pTcpSession->iSendSucCount == 0)
-			{
-				json jSi;
-				jSi["w"] = m_streamInfo.w;
-				jSi["h"] = m_streamInfo.h;
-				jSi["type"] = "rgba";
-				string s = jSi.dump();
-				p->send((char*)s.c_str(), s.length());
-			}
-			//if (p->streamFmt == "rgba")//直接转发
-			//{
-			p->send(pData, len);
-			//}
-			p->m_mutex.unlock();
+			sendToOnePuller(sd, *sp);
 		}
-		else if(sp.callbackFunc)
+		else
 		{
-			sp.callbackFunc(pData, len, m_streamInfo,sp.user);
+			convertFmt(sd, sp->destData);
+			sendToOnePuller(sp->destData, *sp);
 		}
 	}
 }
 
-void videoSrvNode::pushStream(char* pData, int len, STREAM_INFO si)
+void videoSrvNode::pushStream(STREAM_DATA& sd)
 {
 	refreshStreamPuller();
 	if (m_streamPuller.size() == 0)
 		return;
-
-	m_streamInfo = si;
-
-	if (si.genicamPixelFmt == "bmp")
-	{
-#ifdef ENABLE_FFMPEG
-		if (m_videoCodec == NULL)
-		{
-			m_videoCodec = new videoCodec();
-		}
-
-		videoCodec& vc = *m_videoCodec;
-		if (!vc.bInit)
-		{
-			vc.inConf.pixelFmt = AV_PIX_FMT_RGB24;
-			vc.outConf.codecID = AV_CODEC_ID_VP9;
-		}
-
-		vc.input_Bmp((char*)pData, len);
-		int iStreamLen = 0;
-		char* pStream = NULL;
-		vc.output();
-		//发送视频头，web端mse收到该头才能正确解码
-		// sendToPuller_h264
-		//for (int i = 0; i < m_streamPuller.size(); i++)
-		//{
-		//	std::shared_ptr<TDS_SESSION> p = m_streamPuller[i];
-		//	if (p->pTcpSession->iSendSucCount == 0)
-		//	{
-		//		p->send(vc.headerBuff, vc.iHeaderBuffLen);
-		//	}
-		//	p->send(vc.outputBuff, vc.iOutputLen);
-		//}
-
-		vc.iOutputLen = 0;
-#endif
-	}
-	else if (si.genicamPixelFmt == "rgba")
-	{
-		sendToPuller_rgba(pData, len);	
-	}
-	else if (si.genicamPixelFmt == "Mono8")
-	{
-		float* pFloatBuff = new float[si.w * si.h];
-		for (int i = 0; i < si.w * si.h; i++)
-		{
-			pFloatBuff[i] = (unsigned char)pData[i];
-		}
-
-		float min; float max;
-		DynamicRangeControl(pFloatBuff, si.w, si.h, min, max);
-		UCHAR* pRGBA = new UCHAR[si.w * si.h*4];
-		GrayImgConverToRainbowRGBA(pRGBA, pFloatBuff, si.w * si.h, min, max);
-		sendToPuller_rgba((char*)pRGBA, si.w * si.h * 4);
-		delete pFloatBuff;
-		delete pRGBA;
-	}
-	else if (si.genicamPixelFmt == "Mono16" || si.genicamPixelFmt == "Mono12")
-	{
-		float* pFloatBuff = new float[si.w * si.h];
-		for (int i = 0; i < si.w * si.h; i++)
-		{
-			unsigned short* pMono16 = (unsigned short*)pData;
-			pFloatBuff[i] = pMono16[i];
-		}
-
-		float min; float max;
-		DynamicRangeControl(pFloatBuff, si.w, si.h, min, max);
-		UCHAR* pRGBA = new UCHAR[si.w * si.h * 4];
-		GrayImgConverToRainbowRGBA(pRGBA, pFloatBuff, si.w * si.h, min, max);
-		sendToPuller_rgba((char*)pRGBA, si.w * si.h * 4);
-		delete pFloatBuff;
-		delete pRGBA;
-	}
+	m_streamInfo = sd.info;
+	sendToAllPullers(sd);
 }
 
 bool asynPushThreadRunning = false;
@@ -200,27 +134,114 @@ void videoSrvNode::doAsynPush()
 		if (pFrm == NULL)continue;
 
 
-		pushStream(pFrm->pData,pFrm->len,pFrm->info);
+		pushStream(*pFrm);
 
 		delete pFrm;
 	}
 }
 
-void videoSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession)
+void videoSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession,string fmt)
 {
-	STREAM_PULLER sp;
-	sp.tdsSession = tdsSession;
+	STREAM_PULLER*  sp  = new STREAM_PULLER();
+	sp->tdsSession = tdsSession;
+	sp->destData.info.genicamPixelFmt = fmt;
 	m_streamPuller.push_back(sp);
 }
 
-void videoSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc)
+void videoSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc,string fmt)
 {
-	STREAM_PULLER sp;
-	sp.callbackFunc = callbackFunc;
-	sp.user = user;
+	STREAM_PULLER* sp = new STREAM_PULLER();
+	sp->callbackFunc = callbackFunc;
+	sp->user = user;
+	sp->destData.info.genicamPixelFmt = fmt;
 	m_streamPuller.push_back(sp);
 }
 
+
+void videoSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
+{
+	STREAM_INFO& si = src.info;
+	if (si.genicamPixelFmt == "bmp")
+	{
+#ifdef ENABLE_FFMPEG
+		if (m_videoCodec == NULL)
+		{
+			m_videoCodec = new videoCodec();
+		}
+
+		videoCodec& vc = *m_videoCodec;
+		if (!vc.bInit)
+		{
+			vc.inConf.pixelFmt = AV_PIX_FMT_RGB24;
+			vc.outConf.codecID = AV_CODEC_ID_VP9;
+		}
+
+		vc.input_Bmp((char*)src.pData, src.len);
+		int iStreamLen = 0;
+		char* pStream = NULL;
+		vc.output();
+		//发送视频头，web端mse收到该头才能正确解码
+		// sendToPuller_h264
+		//for (int i = 0; i < m_streamPuller.size(); i++)
+		//{
+		//	std::shared_ptr<TDS_SESSION> p = m_streamPuller[i];
+		//	if (p->pTcpSession->iSendSucCount == 0)
+		//	{
+		//		p->send(vc.headerBuff, vc.iHeaderBuffLen);
+		//	}
+		//	p->send(vc.outputBuff, vc.iOutputLen);
+		//}
+
+		vc.iOutputLen = 0;
+#endif
+	}
+	else if (si.genicamPixelFmt == "Mono8" && dest.info.genicamPixelFmt == "rgba")
+	{
+		float* pFloatBuff = new float[si.w * si.h];
+		for (int i = 0; i < si.w * si.h; i++)
+		{
+			pFloatBuff[i] = (unsigned char)src.pData[i];
+		}
+
+		float min; float max;
+		DynamicRangeControl(pFloatBuff, si.w, si.h, min, max);
+		if (dest.pData == NULL)
+		{
+			dest.pData = new char[si.w * si.h * 4];
+			dest.len = si.w * si.h * 4;
+			dest.info = si;
+			dest.info.genicamPixelFmt = "rgba";
+		}
+			
+		GrayImgConverToRainbowRGBA((UCHAR*)dest.pData, pFloatBuff, si.w * si.h, min, max);	
+		delete pFloatBuff;
+	}
+	else if ((si.genicamPixelFmt == "Mono16" || si.genicamPixelFmt == "Mono12") && dest.info.genicamPixelFmt == "rgba")
+	{
+		float* pFloatBuff = new float[si.w * si.h];
+		for (int i = 0; i < si.w * si.h; i++)
+		{
+			unsigned short* pMono16 = (unsigned short*)src.pData;
+			pFloatBuff[i] = pMono16[i];
+		}
+
+		float min; float max;
+		DynamicRangeControl(pFloatBuff, si.w, si.h, min, max);
+		if (dest.pData == NULL)
+		{
+			dest.pData = new char[si.w * si.h * 4];
+			dest.len = si.w * si.h * 4;
+			dest.info = si;
+			dest.info.genicamPixelFmt = "rgba";
+		}
+		GrayImgConverToRainbowRGBA((UCHAR*)dest.pData, pFloatBuff, si.w * si.h, min, max);
+		delete pFloatBuff;
+	}
+	else
+	{
+		
+	}
+}
 
 int videoSrvNode::GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPixel, float minval, float maxval)
 {

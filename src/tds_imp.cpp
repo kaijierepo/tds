@@ -440,8 +440,16 @@ void TDS_imp::pushStream(string tag, char* pData, int len, STREAM_INFO* si)
 	if (pmp == NULL)
 		pmp = prj.createMP(tag, VAL_TYPE::video);
 
-	if(pmp)
-	pmp->m_videoSrvNode.pushStream(pData, len, *si);
+	if (pmp)
+	{
+		STREAM_DATA sd;
+		sd.pData = pData;
+		sd.len = len;
+		sd.info = *si;
+		pmp->m_videoSrvNode.pushStream(sd);
+		sd.pData = NULL;
+	}
+	
 }
 
 void TDS_imp::pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream)
