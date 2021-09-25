@@ -1,5 +1,6 @@
 #include "streamSrvNode.h"
 #include "json.hpp"
+#include "logger.h"
 
 using json = nlohmann::json;
 
@@ -9,6 +10,8 @@ streamSrvNode::streamSrvNode()
 	m_videoCodec = NULL;
 #endif
 	m_streamPusher = NULL;
+	m_pushFrameRateStatisCount = 0;
+	m_pushFrameRateStatisTick = 0;
 }
 
 void streamSrvNode::refreshStreamPuller()
@@ -48,7 +51,7 @@ void streamSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 			json jSi;
 			jSi["w"] = sd.info.w;
 			jSi["h"] = sd.info.h;
-			jSi["pixelFmt"] = sd.info.genicamPixelFmt;
+			jSi["pixelFmt"] = sd.info.pixelFmt;
 			string s = jSi.dump();
 			p->send((char*)s.c_str(), s.length());
 		}
@@ -67,19 +70,64 @@ void streamSrvNode::sendToAllPullers(STREAM_DATA& sd)
 	//发送视频信息头
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
-		STREAM_PULLER* sp = m_streamPuller[i];
+		STREAM_PULLER* puller = m_streamPuller[i];
 
-		if (sd.info.genicamPixelFmt == sp->destData.info.genicamPixelFmt ||
-			sp->destData.info.genicamPixelFmt == "")
+		//如果拉流者指定了帧率，且拉流帧率小于推流帧率，进行帧率转换
+		//LOG("[debug] pusherRate:" + str::fromFloat(m_streamPusher->m_streamInfo.frameRate) + ",pullerRate:"+ str::fromFloat(puller->m_streamInfo.frameRate));
+		if (puller->m_streamInfo.frameRate != 0 && 
+			m_streamPusher->m_streamInfo.frameRate != 0 &&
+			puller->m_streamInfo.frameRate < m_streamPusher->m_streamInfo.frameRate)
 		{
-			sendToOnePuller(sd, *sp);
+			//LOG("[debug] changeFrameRate");
+			puller->downSamplingInterval = m_streamPusher->m_streamInfo.frameRate / puller->m_streamInfo.frameRate;
+			puller->downSamplingInterval = round(puller->downSamplingInterval);
+			puller->frameIntervalIdx++;
+			//LOG("[debug] downSamplingInterval:" + str::fromFloat(puller->downSamplingInterval) + ",frameIntervalIdx:" + str::fromInt(puller->frameIntervalIdx));
+			if (puller->frameIntervalIdx < puller->downSamplingInterval)
+			{
+				//LOG("[debug] abandon frame");
+				continue;
+			}
+				
+			puller->frameIntervalIdx = 0;
 		}
+		
+		//LOG("[debug] send frame");
+		//拉流者未指定格式或者格式与推流者相同，直接发送
+		if (m_streamPusher->m_streamInfo.pixelFmt == puller->destData.info.pixelFmt ||
+			puller->m_streamInfo.pixelFmt == "")
+		{
+			sendToOnePuller(sd, *puller);
+		}
+		//先转化pixelFmt再发送
 		else
 		{
-			convertFmt(sd, sp->destData);
-			sendToOnePuller(sp->destData, *sp);
+			convertFmt(sd, puller->destData);
+			sendToOnePuller(puller->destData, *puller);
 		}
 	}
+}
+
+void streamSrvNode::calcPusherFrameRate()
+{
+	m_pushFrameRateStatisCount++;
+	if (m_pushFrameRateStatisTick == 0)
+	{
+		m_pushFrameRateStatisTick = timeopt::getTick();
+	}
+		
+	else
+	{
+		time_t now = timeopt::getTick();
+		time_t pass = now - m_pushFrameRateStatisTick;
+		if (pass >= 2000)
+		{
+			m_streamPusher->m_streamInfo.frameRate = ((float)m_pushFrameRateStatisCount / pass) * 1000;
+			m_pushFrameRateStatisTick = now;
+			m_pushFrameRateStatisCount = 0;
+		}
+	}
+
 }
 
 void streamSrvNode::pushStream(STREAM_DATA& sd)
@@ -87,7 +135,13 @@ void streamSrvNode::pushStream(STREAM_DATA& sd)
 	refreshStreamPuller();
 	if (m_streamPuller.size() == 0)
 		return;
-	m_streamInfo = sd.info;
+
+	m_streamPusher->m_streamInfo.w = sd.info.w;
+	m_streamPusher->m_streamInfo.h = sd.info.h;
+	m_streamPusher->m_streamInfo.pixelFmt = sd.info.pixelFmt;
+	m_streamPusher->m_streamInfo.pixelSize = sd.info.pixelSize;
+
+	calcPusherFrameRate();
 	sendToAllPullers(sd);
 }
 
@@ -141,16 +195,24 @@ void streamSrvNode::doAsynPush()
 	}
 }
 
+
+
+void streamSrvNode::addPuller(STREAM_PULLER* sp)
+{
+	m_streamPuller.push_back(sp);
+
+	if(m_streamPusher)
+		m_streamPusher->startStream();
+}
+
+
 void streamSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession, STREAM_INFO* si)
 {
 	STREAM_PULLER*  sp  = new STREAM_PULLER();
 	sp->tdsSession = tdsSession;
 	if(si)
-	sp->destData.info = *si;
-	m_streamPuller.push_back(sp);
-
-	if (m_streamPusher)
-		m_streamPusher->startStream();
+	sp->m_streamInfo = *si;
+	addPuller(sp);
 }
 
 void streamSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STREAM_INFO* si)
@@ -160,10 +222,7 @@ void streamSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STR
 	sp->user = user;
 	if (si)
 		sp->destData.info = *si;
-	m_streamPuller.push_back(sp);
-
-	if (m_streamPusher)
-		m_streamPusher->startStream();
+	addPuller(sp);
 }
 
 void streamSrvNode::setPusher(STREAM_PUSHER* pusher)
@@ -179,7 +238,7 @@ void streamSrvNode::setPusher(STREAM_PUSHER* pusher)
 void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 {
 	STREAM_INFO& si = src.info;
-	if (si.genicamPixelFmt == "bmp")
+	if (si.pixelFmt == "bmp")
 	{
 #ifdef ENABLE_FFMPEG
 		if (m_videoCodec == NULL)
@@ -213,7 +272,7 @@ void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 		vc.iOutputLen = 0;
 #endif
 	}
-	else if (si.genicamPixelFmt == "Mono8" && dest.info.genicamPixelFmt == "rgba")
+	else if (si.pixelFmt == "Mono8" && dest.info.pixelFmt == "rgba")
 	{
 		float* pFloatBuff = new float[si.w * si.h];
 		for (int i = 0; i < si.w * si.h; i++)
@@ -228,13 +287,13 @@ void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 			dest.pData = new char[si.w * si.h * 4];
 			dest.len = si.w * si.h * 4;
 			dest.info = si;
-			dest.info.genicamPixelFmt = "rgba";
+			dest.info.pixelFmt = "rgba";
 		}
 			
 		GrayImgConverToRainbowRGBA((UCHAR*)dest.pData, pFloatBuff, si.w * si.h, min, max);	
 		delete pFloatBuff;
 	}
-	else if ((si.genicamPixelFmt == "Mono16" || si.genicamPixelFmt == "Mono12") && dest.info.genicamPixelFmt == "rgba")
+	else if ((si.pixelFmt == "Mono16" || si.pixelFmt == "Mono12") && dest.info.pixelFmt == "rgba")
 	{
 		float* pFloatBuff = new float[si.w * si.h];
 		for (int i = 0; i < si.w * si.h; i++)
@@ -250,7 +309,7 @@ void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 			dest.pData = new char[si.w * si.h * 4];
 			dest.len = si.w * si.h * 4;
 			dest.info = si;
-			dest.info.genicamPixelFmt = "rgba";
+			dest.info.pixelFmt = "rgba";
 		}
 		GrayImgConverToRainbowRGBA((UCHAR*)dest.pData, pFloatBuff, si.w * si.h, min, max);
 		delete pFloatBuff;
@@ -354,4 +413,10 @@ int streamSrvNode::DynamicRangeControl(float* pData, int w, int h, float& minVal
 	}
 	delete pSortData;
 	return 0;
+}
+
+bool STREAM_PULLER::init()
+{
+
+	return false;
 }

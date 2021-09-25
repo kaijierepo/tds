@@ -17,9 +17,16 @@ struct STREAM_INFO {
 	int w;
 	int h;
 	int pixelSize;
-	string genicamPixelFmt;
-	string type; //STREAM_TYPE
-	int frameRate;
+	string pixelFmt;
+	float frameRate;
+	STREAM_INFO()
+	{
+		w = 0;
+		h = 0;
+		pixelSize = 0;
+		pixelFmt = "";
+		frameRate = 0;
+	}
 };
 
 //通过 getITDS 获得tds接口总线，访问tds中的各项内容

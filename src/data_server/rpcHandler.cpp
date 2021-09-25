@@ -1004,16 +1004,16 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		return "";
 	}
 
-	if (pssn->m_streamInfo.w == 0 || pssn->m_streamInfo.h == 0)
+	if (pssn->m_streamPusher->m_streamInfo.w == 0 || pssn->m_streamPusher->m_streamInfo.h == 0)
 	{
 		error = RPCError(RPC_ERROR::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
 		return "";
 	}
 
 	json jSi;
-	jSi["w"] = pssn->m_streamInfo.w;
-	jSi["h"] = pssn->m_streamInfo.h;
-	jSi["type"] = pssn->m_streamInfo.type;
+	jSi["w"] = pssn->m_streamPusher->m_streamInfo.w;
+	jSi["h"] = pssn->m_streamPusher->m_streamInfo.h;
+	jSi["pixelFmt"] = pssn->m_streamPusher->m_streamInfo.pixelFmt;
 	
 	return jSi.dump();
 }

@@ -176,7 +176,7 @@ void ioDev_genicam::doStreaming()
                             STREAM_INFO si;
                             si.h = h;
                             si.w = w;
-                            si.genicamPixelFmt = GetPixelFormatName(iPixelFmt);
+                            si.pixelFmt = GetPixelFormatName(iPixelFmt);
                             
                             STREAM_DATA sd;
                             sd.info = si;

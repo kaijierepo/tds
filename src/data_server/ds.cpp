@@ -599,30 +599,24 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		int pos = strData.find("video");
 		map<string, string> mapParams;
 		getUrlParams(strData, mapParams);
-		string tag; //支持码流的tag
-		string ioAddr; //支持码流的io地址
+		string streamId; //支持码流的tag
 		string fmt = ""; //为空，则图像不进行任何转换直接发送
+		int frameRate = 0;
 		if (mapParams.size() > 0)
 		{
-			if (mapParams.find("tag") != mapParams.end())
+			if (mapParams.find("streamId") != mapParams.end())
 			{
-				tag = mapParams["tag"];
+				streamId = mapParams["streamId"];
 			}
-			else if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
+			if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
 			{
 				fmt = mapParams["fmt"];
 			}
-			else if (mapParams.find("ioAddr") != mapParams.end())//fmt is not specified
+			if (mapParams.find("frameRate") != mapParams.end())//fmt is not specified
 			{
-				ioAddr = mapParams["ioAddr"];
+				frameRate = str::toInt(mapParams["frameRate"]);
 			}
-			tag = httplib::detail::decode_url(tag, false);
-
-			string streamId;
-			if (tag != "")
-				streamId = tag;
-			else if (ioAddr != "")
-				streamId = ioAddr;
+			streamId = httplib::detail::decode_url(streamId, false);
 
 
 			if (streamId != "")
@@ -633,9 +627,10 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 					tdsSession->videoServiceNode = pVsn;
 					tdsSession->type = TDS_SESSION_TYPE::video;
 					STREAM_INFO si;
-					si.genicamPixelFmt = fmt;
+					si.pixelFmt = fmt;
+					si.frameRate = frameRate;
 					pVsn->addPuller(tdsSession, &si);
-					string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+					string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 码流ID:" + streamId + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
 					LOG(szLog);
 				}
 			}
