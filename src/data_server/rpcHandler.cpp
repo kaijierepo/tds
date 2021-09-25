@@ -19,6 +19,7 @@
 #include "ioDev_iq60.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
+#include "streamServer.h"
 
 rpcHandler tdsSrv;
 
@@ -202,6 +203,8 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcResult, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
+	method = str::removeChar(method,'_');
+	transform(method.begin(), method.end(), method.begin(), ::tolower);
 	string& result = rpcResult.textResult;
 	//可完全并发的命令
 	//#region concurrent cmd
@@ -308,6 +311,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		{
 			result = rpc_getconf(params, error);
 		}
+		else if (method == "getmplist")//or getMpList or get_mp_list
+		{
+			json list;
+			prj.getMpList(list);
+			result = list.dump(2);
+		}
 		else if (method == "io.tree")
 		{
 			result = rpc_io_tree(params, error);
@@ -385,7 +394,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		result = ds.getSessionStatus(params);
 	}
 
-	if (method == "findDev")
+	if (method == "discoverdev" || method == "discoverdevice" || method == "devdiscover" || method == "devicediscover")
 	{
 		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
 		{
@@ -400,26 +409,26 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 
 	if (method == "genicam.doCmd")
 	{
-		if (singleCamera)
+		if (firstDiscoverGenicam)
 		{
-			singleCamera->doCmd(params["name"]);
+			firstDiscoverGenicam->doCmd(params["name"]);
 		}
 	}
 	else if (method == "genicam.setParam")
 	{
-		if (singleCamera)
+		if (firstDiscoverGenicam)
 		{
 			string name = params["name"];
 			json val = params["val"];
 			bool isEnum = false;
 			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
 				isEnum = true;
-			singleCamera->setParam(name,val,isEnum);
+			firstDiscoverGenicam->setParam(name,val,isEnum);
 		}
 	}
 	else if (method == "genicam.getParam")
 	{
-		if (singleCamera)
+		if (firstDiscoverGenicam)
 		{
 
 		}
@@ -777,12 +786,6 @@ string rpcHandler::rpc_getconf(json params, string& error)
 		}
 		return conf;
 	}
-	else if(type == "mp-list")
-	{
-		json mpList;
-		prj.getMpList(mpList);
-		return mpList.dump();
-	}
 	else if(type == "mp-type-list")
 	{
 		json list;
@@ -993,23 +996,24 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING,"param missing,tag is not specified");
 		return "";
 	}
-	MP* pmp = prj.getMp(tag);
-	if(pmp == NULL)
+
+	streamSrvNode* pssn = streamSrv.getSrvNode(tag);
+	if(pssn->m_streamPusher == NULL)
 	{
-		error = RPCError(RPC_ERROR::TEC_TAG_NOT_EXIST, "tag not exist");
+		error = RPCError(RPC_ERROR::TEC_NO_STREAM_SRC, "no stream src of this tag");
 		return "";
 	}
 
-	if (pmp->m_videoSrvNode.m_streamInfo.w == 0 || pmp->m_videoSrvNode.m_streamInfo.h == 0)
+	if (pssn->m_streamInfo.w == 0 || pssn->m_streamInfo.h == 0)
 	{
 		error = RPCError(RPC_ERROR::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
 		return "";
 	}
 
 	json jSi;
-	jSi["w"] = pmp->m_videoSrvNode.m_streamInfo.w;
-	jSi["h"] = pmp->m_videoSrvNode.m_streamInfo.h;
-	jSi["type"] = pmp->m_videoSrvNode.m_streamInfo.type;
+	jSi["w"] = pssn->m_streamInfo.w;
+	jSi["h"] = pssn->m_streamInfo.h;
+	jSi["type"] = pssn->m_streamInfo.type;
 	
 	return jSi.dump();
 }

@@ -128,7 +128,7 @@
     <ClCompile Include="..\src\video\videoCodec.cpp">
       <Filter>video</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioSrv_serialDetection.cpp">
+    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
@@ -150,7 +150,10 @@
     <ClCompile Include="..\src\video\ioDev_genicam.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\video\videoSrvNode.cpp">
+    <ClCompile Include="..\src\video\streamSrvNode.cpp">
+      <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\video\streamServer.cpp">
       <Filter>video</Filter>
     </ClCompile>
   </ItemGroup>
@@ -275,7 +278,7 @@
     <ClInclude Include="..\src\video\videoCodec.h">
       <Filter>video</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioSrv_serialDetection.h">
+    <ClInclude Include="..\src\io_server\ioDiscoverer.h">
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\res\resource.h" />
@@ -299,7 +302,10 @@
     <ClInclude Include="..\src\video\ioDev_genicam.h">
       <Filter>io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\video\videoSrvNode.h">
+    <ClInclude Include="..\src\video\streamSrvNode.h">
+      <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\video\streamServer.h">
       <Filter>video</Filter>
     </ClInclude>
   </ItemGroup>

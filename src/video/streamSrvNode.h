@@ -23,6 +23,13 @@ struct STREAM_DATA {
 	}
 };
 
+class STREAM_PUSHER {
+public:
+	virtual bool startStream() = 0;
+	virtual bool stopStream() = 0;
+	string m_streamId;
+};
+
 class STREAM_PULLER {
 public:
 	std::shared_ptr<TDS_SESSION> tdsSession;
@@ -39,19 +46,20 @@ public:
 	}
 };
 
-class videoSrvNode {
+class streamSrvNode {
 public:
-	videoSrvNode();
+	streamSrvNode();
 	void refreshStreamPuller();
 	void sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp);
 	void sendToAllPullers(STREAM_DATA& sd);
 	void pushStream(STREAM_DATA& sd);
-	void AsynPushStream(char* pData, int len, STREAM_INFO si);
+	void asynPushStream(char* pData, int len, STREAM_INFO si);
 	void doAsynPush();
-	void addPuller(std::shared_ptr<TDS_SESSION> tdsSession, string fmt="");
-	void addPuller(void* user, fp_onVideoStreamRecv callbackFunc, string fmt="");
+	void addPuller(std::shared_ptr<TDS_SESSION> tdsSession, STREAM_INFO* si=NULL);
+	void addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STREAM_INFO* si=NULL);
+	void setPusher(STREAM_PUSHER* pusher);
 	vector<STREAM_PULLER*> m_streamPuller; //拉流方
-	fp_startStream m_streamPusher; //推流方
+	STREAM_PUSHER* m_streamPusher;
 	STREAM_INFO m_streamInfo;
 #ifdef ENABLE_FFMPEG
 	videoCodec* m_videoCodec; //

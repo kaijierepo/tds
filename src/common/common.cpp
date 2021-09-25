@@ -497,9 +497,10 @@ namespace str {
 		return nCount;
 	}
 
-	void removeChar(string& str, char c)
+	string removeChar(string str, char c)
 	{
 		str.erase(std::remove(str.begin(), str.end(), c), str.end());
+		return str;
 	}
 	string trimFloat(string str)
 	{
@@ -524,10 +525,10 @@ namespace str {
 	vector<char> toBytes(string str)
 	{
 		vector<char> bytes;
-		removeChar(str, ' ');
-		removeChar(str, '\t');
-		removeChar(str, '\r');
-		removeChar(str, '\n');
+		str = removeChar(str, ' ');
+		str = removeChar(str, '\t');
+		str = removeChar(str, '\r');
+		str = removeChar(str, '\n');
 
 		if (0 != str.length() % 2)
 		{

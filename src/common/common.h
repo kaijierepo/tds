@@ -105,7 +105,7 @@ namespace str {
 	string& replace(string& str, const string to_replaced, const string newchars);
 	std::string format(const char* pszFmt, ...);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
-	void removeChar(string& str, char c);
+	string removeChar(string str, char c);
 	string trimFloat(string str);
 	string fromFloat(float f);
 	vector<char> toBytes(string str);

@@ -19,6 +19,10 @@
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"
 
+#include "ioDev_genicam.h"
+
+#include "rpcHandler.h"
+
 ioServer ioSrv;
 
 void IOThread()
@@ -43,7 +47,44 @@ bool isBatchLink(string addr)
 	}
 }
 
-ioDev* createIODev(json conf)
+ioDev* createIODev(string ioAddr, string type)
+{
+	ioDev* p = NULL;
+	if (type == "mqtt-broker")
+	{
+		p = new ioDev_mqttBroker();
+		//string ip = conf["addr"]["ip"];
+		//string port = conf["addr"]["port"];
+		//p->m_devAddr = ip + ":" + port;
+	}
+	else if (type == "tuya-iot-project")
+	{
+		p = new ioGW_tuyaProject();
+		/*p->m_devAddr = conf["addr"]["client_id"];
+		p->m_secret = conf["addr"]["secret"];*/
+	}
+	else if (type == "tuya.switch")
+	{
+		p = new ioDev_tuya();
+		//p->m_devAddr = conf["addr"]["device_id"];
+	}
+	else if (type == "iq60-gateway")
+	{
+		ioDev_iq60* piq60 = new ioDev_iq60();
+		//p = piq60;
+		//p->m_devAddr = conf["addr"]["gateway_id"];
+	}
+	else if (type == "genicam")
+	{
+		ioDev_genicam* pGenicam = new ioDev_genicam();
+		p = pGenicam;
+		p->m_devAddr = ioAddr;
+		p->m_level = "device";
+	}
+	return p;
+}
+
+ioDev* createIODevWithChildren(json conf)
 {
 	ioDev* p = NULL;
 	if (conf["type"] == "mqtt-broker")
@@ -138,7 +179,7 @@ ioDev* createIODev(json conf)
 			}
 			else if(i["level"] == "device")
 			{
-				pChild = createIODev(i);
+				pChild = createIODevWithChildren(i);
 			}
 
 			if (pChild)
@@ -167,7 +208,7 @@ bool ioServer::loadConf()
 		
 		for (auto it : io)
 		{
-			ioDev* p = createIODev(it);
+			ioDev* p = createIODevWithChildren(it);
 			if(p)
 				m_vecChild.push_back(p);
 		}
@@ -191,7 +232,7 @@ void ioServer::refreshSerialIODev()
 	aryNew = sys::getCOMInfoList();
 
 	//将当前串口设备置为离线状态
-	vector<ioDev*> ary = getChildren(IO_DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
 	for (auto& i : ary)
 	{
 		i->m_bOnline = false;
@@ -201,7 +242,7 @@ void ioServer::refreshSerialIODev()
 	for (auto& i : aryNew)
 	{
 		sys::COM_INFO ci = i;
-		ioGW_LocalSerial* ls = (ioGW_LocalSerial*) getIODev(ci.portNum);
+		ioGW_LocalSerial* ls = (ioGW_LocalSerial*)getIODev(ci.portNum);
 		if (!ls)
 		{
 			ls = new ioGW_LocalSerial();
@@ -223,7 +264,6 @@ void ioServer::refreshSerialIODev()
 	}
 }
 
-
 bool ioServer::run()
 {
 	if (loadConf())
@@ -236,7 +276,7 @@ bool ioServer::run()
 		//std::thread io(IOThread);
 	}
 
-	serialDetectionService.run();
+	ioDiscoverService.run();
 
 	refreshSerialIODev();
 	
@@ -275,5 +315,17 @@ string ioServer::getTag(string strDataChannelID)
 	}*/
 
 	return "";
+}
+
+ioDev* ioServer::onDevDiscovered(string ioAddr, string type)
+{
+	ioDev* p = createIODev(ioAddr,type);
+	p->m_mngStatus = IODEV_MNG_STATUS::spare;
+	p->m_bOnline = true;
+	ioSrv.m_vecChild.push_back(p);
+	json j;
+	p->toJson(j);
+	tdsSrv.notify("devDiscovered", j);
+	return p;
 }
 

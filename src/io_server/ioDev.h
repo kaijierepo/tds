@@ -16,8 +16,11 @@ public:
 	ioDev(void);
 	~ioDev(void);
 
-	virtual bool run() { return true; };
+	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
 	virtual bool toJson(json& conf, string opt = "");
+	virtual bool connect();
+	virtual bool disconnect();
+	virtual string getDesc();
 
 
 	////
@@ -109,7 +112,8 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
-	bool m_bOnline;
+	bool m_bOnline;  //设备发现后，处于在线状态
+	bool m_bConnected; //连接后，处于通信状态，可能有io任务执行
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	SYSTEMTIME m_stEqpOnLineDateTime;//设备上线时间戳
 	SYSTEMTIME m_stEqpOffLineDateTime;//设备掉线时间戳

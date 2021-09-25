@@ -8,32 +8,37 @@
 #include "stream.h"
 #include "config.h"
 #include "image.h"
-#include "videoSrvNode.h"
+#include "streamSrvNode.h"
 
 using json = nlohmann::json;
 
 
 
-class ioDev_genicam : public ioDev {
+class ioDev_genicam : public ioDev, public STREAM_PUSHER{
 public:
 	ioDev_genicam();
-	static void runSingleHostMode();//单摄像头主机模式
+	bool disconnect() override;
+	bool connect() override;
+	string getDesc() override;
+	bool run();
+
 	static json listDevices();
-	static std::shared_ptr<rcg::Device> getSingleGenicam();
 	static void mono8ToBmp(char* pData, int w, int h, string fileName);
 	static void captureImageToBmp(string devId, string fileName);
 	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //拉流方
 	std::shared_ptr<rcg::Device> m_genicamDev; //
 	std::shared_ptr<GenApi::CNodeMapRef> m_nodemap;
-	void startStream();
+	void doStreaming();
 
 	void setParam(string name, json val, bool isEnum);
 	void doCmd(string name);
 	
-
-	videoSrvNode* m_videoSrvNode;
-
+	bool startStream() override;
+	bool stopStream() override;
+	bool m_bStopStream;
+	bool m_bStreaming;
+	mutex m_csStreamThread;
 	json m_jDevInfo;
 };
 
-extern ioDev_genicam* singleCamera;
+extern ioDev_genicam* firstDiscoverGenicam;

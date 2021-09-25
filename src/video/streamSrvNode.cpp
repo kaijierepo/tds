@@ -1,16 +1,17 @@
-#include "videoSrvNode.h"
+#include "streamSrvNode.h"
 #include "json.hpp"
 
 using json = nlohmann::json;
 
-videoSrvNode::videoSrvNode()
+streamSrvNode::streamSrvNode()
 {
 #ifdef ENABLE_FFMPEG
 	m_videoCodec = NULL;
 #endif
+	m_streamPusher = NULL;
 }
 
-void videoSrvNode::refreshStreamPuller()
+void streamSrvNode::refreshStreamPuller()
 {
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
@@ -34,7 +35,7 @@ void videoSrvNode::refreshStreamPuller()
 #endif
 }
 
-void videoSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
+void streamSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 {
 	if (sp.tdsSession)
 	{
@@ -61,7 +62,7 @@ void videoSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 
 
 
-void videoSrvNode::sendToAllPullers(STREAM_DATA& sd)
+void streamSrvNode::sendToAllPullers(STREAM_DATA& sd)
 {
 	//发送视频信息头
 	for (int i = 0; i < m_streamPuller.size(); i++)
@@ -81,7 +82,7 @@ void videoSrvNode::sendToAllPullers(STREAM_DATA& sd)
 	}
 }
 
-void videoSrvNode::pushStream(STREAM_DATA& sd)
+void streamSrvNode::pushStream(STREAM_DATA& sd)
 {
 	refreshStreamPuller();
 	if (m_streamPuller.size() == 0)
@@ -91,13 +92,13 @@ void videoSrvNode::pushStream(STREAM_DATA& sd)
 }
 
 bool asynPushThreadRunning = false;
-void thread_pushStream(videoSrvNode* p)
+void thread_pushStream(streamSrvNode* p)
 {
 	asynPushThreadRunning = true;
 	p->doAsynPush();
 }
 
-void videoSrvNode::AsynPushStream(char* pData, int len, STREAM_INFO si)
+void streamSrvNode::asynPushStream(char* pData, int len, STREAM_INFO si)
 {
 	if (!asynPushThreadRunning)
 	{
@@ -120,7 +121,7 @@ void videoSrvNode::AsynPushStream(char* pData, int len, STREAM_INFO si)
 	m_csRtImg.unlock();
 }
 
-void videoSrvNode::doAsynPush()
+void streamSrvNode::doAsynPush()
 {
 	while (1)
 	{
@@ -140,25 +141,42 @@ void videoSrvNode::doAsynPush()
 	}
 }
 
-void videoSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession,string fmt)
+void streamSrvNode::addPuller(std::shared_ptr<TDS_SESSION> tdsSession, STREAM_INFO* si)
 {
 	STREAM_PULLER*  sp  = new STREAM_PULLER();
 	sp->tdsSession = tdsSession;
-	sp->destData.info.genicamPixelFmt = fmt;
+	if(si)
+	sp->destData.info = *si;
 	m_streamPuller.push_back(sp);
+
+	if (m_streamPusher)
+		m_streamPusher->startStream();
 }
 
-void videoSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc,string fmt)
+void streamSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STREAM_INFO* si)
 {
 	STREAM_PULLER* sp = new STREAM_PULLER();
 	sp->callbackFunc = callbackFunc;
 	sp->user = user;
-	sp->destData.info.genicamPixelFmt = fmt;
+	if (si)
+		sp->destData.info = *si;
 	m_streamPuller.push_back(sp);
+
+	if (m_streamPusher)
+		m_streamPusher->startStream();
+}
+
+void streamSrvNode::setPusher(STREAM_PUSHER* pusher)
+{
+	m_streamPusher = pusher;
+	if (m_streamPuller.size() > 0)
+	{
+		m_streamPusher->startStream();
+	}
 }
 
 
-void videoSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
+void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 {
 	STREAM_INFO& si = src.info;
 	if (si.genicamPixelFmt == "bmp")
@@ -243,7 +261,7 @@ void videoSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 	}
 }
 
-int videoSrvNode::GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPixel, float minval, float maxval)
+int streamSrvNode::GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPixel, float minval, float maxval)
 {
 	float range = maxval - minval;
 	UCHAR mapVal = 0;
@@ -305,7 +323,7 @@ int videoSrvNode::GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPixe
 	return 0;
 }
 
-int videoSrvNode::DynamicRangeControl(float* pData, int w, int h, float& minVal, float& maxVal)
+int streamSrvNode::DynamicRangeControl(float* pData, int w, int h, float& minVal, float& maxVal)
 {
 	float* pSortData = new float[w * h];
 	memcpy(pSortData, pData, w * h * sizeof(float));

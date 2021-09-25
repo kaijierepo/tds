@@ -32,8 +32,8 @@ public:
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能
-	 void pushStream(string tag, char* pData, int len, STREAM_INFO* si = NULL);
-	 void pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream);
+	 void pushStream(string streamId, char* pData, int len, STREAM_INFO* si = NULL);
+	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
 	 void log(const char* text);
 
 	 tdsConfig tdsConf;

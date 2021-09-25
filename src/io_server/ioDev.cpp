@@ -31,7 +31,7 @@ ioDev::ioDev(void)
 {
 	m_bEnableIoLog = true;
 	bEnableAcq = true;
-	m_mngStatus = IODEV_MNG_STATUS::configured;
+	m_mngStatus = IODEV_MNG_STATUS::managed;
 	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
 	m_bOnline = false;
@@ -91,6 +91,22 @@ bool ioDev::toJson(json& conf, string opt)
 	}
 	conf["children"] = children;
 	return true;
+}
+
+bool ioDev::connect()
+{
+	return false;
+}
+
+bool ioDev::disconnect()
+{
+	return false;
+}
+
+string ioDev::getDesc()
+{
+	
+	return "";
 }
 
 ioDev* ioDev::getIODev(ioAddress iopath)

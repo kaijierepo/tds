@@ -7,7 +7,7 @@
 
 
 class MP;
-class videoSrvNode;
+class streamSrvNode;
 
 struct TCP_DATA_BUFF {
 	char* pData;
@@ -34,7 +34,7 @@ public:
 	bool bSubAll;//订阅所有
 	string streamFmt;// vp9/bmp/fmp4
     bool bInitSegSended;
-	videoSrvNode* videoServiceNode; //tds拉流的源
+	streamSrvNode* videoServiceNode; //tds拉流的源
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
 	queue<TCP_DATA_BUFF> dataBuff;

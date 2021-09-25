@@ -6,7 +6,6 @@
 #include "tds.h"
 #include "videoCodec.h"
 #include <memory>
-#include "videoSrvNode.h"
 
 
 struct TIME_SPAN {
@@ -58,8 +57,6 @@ public:
 	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
-	
-	videoSrvNode m_videoSrvNode;
 
 	float m_K;
 	float m_B;

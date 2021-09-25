@@ -4,8 +4,38 @@
 #include "GenTL/PFNC.h"
 #include "mp.h"
 #include "logger.h"
+#include "streamServer.h"
 
-ioDev_genicam* singleCamera = NULL;
+ioDev_genicam* firstDiscoverGenicam = NULL;
+
+
+void thread_doStream(ioDev_genicam* p)
+{
+    while (1)
+    {
+        if (p->m_bStopStream)
+        {
+            break;
+        }
+        if (!p->m_bConnected) //用户没有停止码流，但是设备连接断开了。等待重连后继续获取码流
+        {
+            Sleep(50);
+            continue;
+        }
+        try
+        {
+            p->doStreaming();
+            if(!p->m_bStopStream)//异常退出码流
+                p->disconnect();
+        }
+        catch (std::exception& e)
+        {
+            p->disconnect();
+            Sleep(1000);
+        }
+    }
+}
+
 
 json ioDev_genicam::listDevices()
 {
@@ -74,56 +104,19 @@ json ioDev_genicam::listDevices()
         std::cerr << ex.what() << std::endl;
     }
 
-    rcg::System::clearSystems();
 	return info;
 }
 
-std::shared_ptr<rcg::Device> ioDev_genicam::getSingleGenicam()
+void ioDev_genicam::doStreaming()
 {
-    std::shared_ptr<rcg::Device> p = NULL;
-    try
-    {
-        std::vector<std::shared_ptr<rcg::System> > system = rcg::System::getSystems();
-        for (size_t i = 0; i < system.size(); i++)
-        {
-            system[i]->open();
-            std::vector<std::shared_ptr<rcg::Interface> > interf = system[i]->getInterfaces();
-            for (size_t k = 0; k < interf.size(); k++)
-            {
-                interf[k]->open();
-                std::vector<std::shared_ptr<rcg::Device> > device = interf[k]->getDevices();
-                for (size_t j = 0; j < device.size(); j++)
-                {
-                    p = device[j];
-                    break;
-                }
-                interf[k]->close();
-                if (p)break;
-            }
-            system[i]->close();
-            if (p)break;
-        }
-    }
-    catch (const std::exception& ex)
-    {
-        std::cerr << ex.what() << std::endl;
-    }
-
-    rcg::System::clearSystems();
-
-    return p;
-}
-
-void ioDev_genicam::startStream()
-{
+    m_bStreaming = true;
+    unique_lock<mutex> lock(m_csStreamThread);
+    m_bStopStream = false;
     std::shared_ptr<rcg::Device> dev = m_genicamDev;
     if (dev)
     {
-        dev->open(rcg::Device::CONTROL);
-        m_nodemap = dev->getRemoteNodeMap();
-
         //加载初始化参数
-        string sip;
+        /*string sip;
         fs::readFile(fs::appPath() + "/conf/genicam0_initParams.json", sip);
         if (sip != "")
         {
@@ -138,7 +131,7 @@ void ioDev_genicam::startStream()
                     isEnum = true;
                 setParam(name, val, isEnum);
             }
-        }
+        }*/
 
         std::vector<std::shared_ptr<rcg::Stream> > stream = dev->getStreams();
         if (stream.size() > 0)
@@ -156,9 +149,11 @@ void ioDev_genicam::startStream()
             double latency_ns = 0;
 
             int errorCount = 0;
-            while(errorCount<3)
+            while(errorCount<2)
             {
-                const rcg::Buffer* buffer = stream[0]->grab(3000);
+                if (m_bStopStream)
+                    break;
+                const rcg::Buffer* buffer = stream[0]->grab(2000);
                 if (buffer != 0)
                 {
                     buffers_received++;
@@ -182,8 +177,13 @@ void ioDev_genicam::startStream()
                             si.h = h;
                             si.w = w;
                             si.genicamPixelFmt = GetPixelFormatName(iPixelFmt);
-                            if(m_videoSrvNode)
-                            m_videoSrvNode->AsynPushStream((char*)buffer->getBase(part),buffer->getSize(part), si);
+                            
+                            STREAM_DATA sd;
+                            sd.info = si;
+                            sd.pData = (char*)buffer->getBase(part);
+                            sd.len = buffer->getSize(part);
+                            streamSrv.asynPushStream(m_streamId,sd);
+                            sd.pData = NULL;
                         }
                     }
                     else
@@ -202,17 +202,9 @@ void ioDev_genicam::startStream()
 
             stream[0]->stopStreaming();
             stream[0]->close();
-
-            // report received and incomplete buffers
-
-            std::cout << std::endl;
-            std::cout << "Received buffers:   " << buffers_received << std::endl;
-            std::cout << "Incomplete buffers: " << buffers_incomplete << std::endl;
-
         }
-
-        dev->close();
     }
+    m_bStreaming = false;
 }
 
 void ioDev_genicam::setParam(string name,json val,bool isEnum)
@@ -238,6 +230,23 @@ void ioDev_genicam::setParam(string name,json val,bool isEnum)
 void ioDev_genicam::doCmd(string name)
 {
     rcg::callCommand(m_nodemap, name.c_str());
+}
+
+bool ioDev_genicam::startStream()
+{
+    if (m_bStreaming)
+        return true;
+
+    thread t(thread_doStream, this);
+    t.detach();
+    return true;
+}
+
+bool ioDev_genicam::stopStream()
+{
+    m_bStopStream = true;
+    unique_lock<mutex> lock(m_csStreamThread);
+    return true;
 }
 
 void ioDev_genicam::mono8ToBmp(char* pData, int w, int h, string fileName)
@@ -274,45 +283,70 @@ void ioDev_genicam::mono8ToBmp(char* pData, int w, int h, string fileName)
     delete pBmp;
 }
 
-void thread_singleHostMode()
-{
-    singleCamera = new ioDev_genicam();
-    while (1)
-    {
-        if (singleCamera->m_bOnline)
-        {
-            Sleep(1000);
-            continue;
-        }
 
-        try
-        {
-            singleCamera->m_genicamDev = ioDev_genicam::getSingleGenicam();
-
-            if (singleCamera->m_genicamDev)
-            {
-                MP* p = prj.getMp("genicam_0");
-                singleCamera->m_videoSrvNode = &p->m_videoSrvNode;
-                singleCamera->startStream();
-            }
-        }
-        catch (std::exception& e)
-        {
-            Sleep(1000);
-        } 
-    }
-    
-}
 
 ioDev_genicam::ioDev_genicam()
 {
-    m_videoSrvNode = NULL;
+    m_bStopStream = false;
+    m_bStreaming = false;
 }
 
-void ioDev_genicam::runSingleHostMode()
+bool ioDev_genicam::disconnect()
 {
-    thread t(thread_singleHostMode);
+    try {
+        m_genicamDev->close();
+        m_nodemap = NULL;
+        m_bConnected = false;
+        string log = "[IO服务] 设备连接断开," + getDesc();
+        LOG(log);
+    }
+    catch (std::exception& e)
+    {
+        return false;
+    }
+    return true;
+}
+
+bool ioDev_genicam::connect()
+{
+    try {
+        m_genicamDev->open(rcg::Device::CONTROL);
+        m_nodemap = m_genicamDev->getRemoteNodeMap();
+        m_bConnected = true;
+        string log = "[IO服务] 连接设备成功," + getDesc();
+        LOG(log);
+    }
+    catch (std::exception& e)
+    {
+        return false;
+    }
+    return true;
+}
+
+string ioDev_genicam::getDesc()
+{
+    string s = "类型:genicam,型号:" + m_genicamDev->getModel() + ",厂家:" + m_genicamDev->getVendor() + ",IO地址:" + m_genicamDev->getID();
+    return s;
+}
+
+void thread_genicamKeepConnected(ioDev_genicam* p) {
+    //while (1)
+    //{
+    //   Sleep(2000);
+    //   
+    //   if (p->m_bConnected == false)
+    //   {
+    //       p->connect();
+    //   }
+    //}
+}
+
+bool ioDev_genicam::run()
+{
+    connect();
+    thread t(thread_genicamKeepConnected, this);
     t.detach();
+    return true;
 }
 
 

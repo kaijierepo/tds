@@ -191,7 +191,7 @@ enum IO_GATEWAY_TYPE {
 
 //设备管理状态
 namespace IODEV_MNG_STATUS {
-	const string configured = "configured";
+	const string managed = "managed";
 	const string spare = "spare";
 };
 

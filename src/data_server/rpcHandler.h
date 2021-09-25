@@ -27,6 +27,7 @@ enum RPC_ERROR {
 
 	//视频部分
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,
+	TEC_NO_STREAM_SRC = -40102,
 
 	//io 部分
 	IO_DEV_NOT_FOUND = -41001,

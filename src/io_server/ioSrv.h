@@ -3,7 +3,7 @@
 #include <string>
 #include "tdscore.h"
 #include "ioGW_localSerial.h"
-#include "ioSrv_serialDetection.h"
+#include "ioDiscoverer.h"
 
 class ioServer : public ioDev
 {
@@ -20,7 +20,9 @@ public:
 	bool toJson(json& conf, string opt = "");
 	string getTag(string ioAddr);
 
-	ioSrv_serialDetection  serialDetectionService;
+	ioDev* onDevDiscovered(string ioAddr, string type);
+
+	ioDiscoverer  ioDiscoverService;
 };
 
 extern ioServer ioSrv;

@@ -13,6 +13,7 @@
 #include "tcpClt.h"
 #include "commSrv.h"
 #include "ioDev_genicam.h"
+#include "streamServer.h"
 
 
 dataServer ds;
@@ -486,6 +487,29 @@ void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* conn
 	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
+void dataServer::getUrlParams(string& url,map<string, string>& mapParams)
+{
+	int paramStart = url.find('?', 0);
+	if (paramStart != string::npos)//解析携带参数
+	{
+		int paramEnd = url.find(' ', paramStart);
+		string paramStr = url.substr(paramStart + 1, paramEnd - paramStart - 1);
+		vector<string> params;
+		str::split(params, paramStr, "&");
+		
+		for (int i = 0; i < params.size(); i++)
+		{
+			string oneP = params[i];
+			vector<string> pkv;
+			str::split(pkv, oneP, "=");
+			if (pkv.size() == 2)
+			{
+				mapParams[pkv[0]] = pkv[1];
+			}
+		}
+	}
+}
+
 void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip, tdsSession->port);
@@ -573,33 +597,47 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	else if (strData.find("video") != string::npos)
 	{
 		int pos = strData.find("video");
-		pos = strData.find('/', pos);
-		if (pos != string::npos)
+		map<string, string> mapParams;
+		getUrlParams(strData, mapParams);
+		string tag; //支持码流的tag
+		string ioAddr; //支持码流的io地址
+		string fmt = ""; //为空，则图像不进行任何转换直接发送
+		if (mapParams.size() > 0)
 		{
-			int pos1 = strData.find(' ', pos);
-			string tagAndFmt = strData.substr(pos + 1, pos1 - pos - 1);// vp9/机房1.码流 ; rgba/机房1.码流
-			string tag;
-			string fmt = ""; //为空，则图像不进行任何转换直接发送
-			if (tagAndFmt.find("rgba") != string::npos)
+			if (mapParams.find("tag") != mapParams.end())
 			{
-				tag = tagAndFmt.substr(5, tagAndFmt.length() - 5);
-				fmt = "rgba";
+				tag = mapParams["tag"];
 			}
-			else//fmt is not specified
+			else if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
 			{
-				tag = tagAndFmt;
+				fmt = mapParams["fmt"];
+			}
+			else if (mapParams.find("ioAddr") != mapParams.end())//fmt is not specified
+			{
+				ioAddr = mapParams["ioAddr"];
 			}
 			tag = httplib::detail::decode_url(tag, false);
 
+			string streamId;
+			if (tag != "")
+				streamId = tag;
+			else if (ioAddr != "")
+				streamId = ioAddr;
 
-			videoSrvNode* pVsn = getVideoSrvNode(tag);
-			if (pVsn)
+
+			if (streamId != "")
 			{
-				tdsSession->videoServiceNode = pVsn;
-				tdsSession->type = TDS_SESSION_TYPE::video;
-				pVsn->addPuller(tdsSession,fmt);
-				string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
-				LOG(szLog);
+				streamSrvNode* pVsn = streamSrv.getSrvNode(streamId);
+				if (pVsn)
+				{
+					tdsSession->videoServiceNode = pVsn;
+					tdsSession->type = TDS_SESSION_TYPE::video;
+					STREAM_INFO si;
+					si.genicamPixelFmt = fmt;
+					pVsn->addPuller(tdsSession, &si);
+					string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 位号:" + tag + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+					LOG(szLog);
+				}
 			}
 		}
 	}
@@ -607,7 +645,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	{
 		if (strData.find("rpc") != string::npos)
 		{
-			
+
 		}
 		
 		if (tds->conf->debugMode)
@@ -836,6 +874,10 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			return true;		
 		}
 
+		//解析url参数模式的rpc调用
+		map<string, string> mapParams;
+		getUrlParams(strData, mapParams);
+
 
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
 		LOG(szLog);
@@ -863,6 +905,26 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		}
 		
 		RPC_RESP resp;
+		if (mapParams.size() > 0)
+		{
+			string method;
+			if (mapParams.find("m") != mapParams.end())
+				method = mapParams["m"];
+			if (mapParams.find("method") != mapParams.end())
+				method = mapParams["method"];
+			mapParams.erase("m");
+			mapParams.erase("method");
+			json j;
+			j["method"] = method;
+			json jP;
+			for (auto &[k,v] : mapParams)
+			{
+				jP[k] = v;
+			}
+			j["params"] = jP;
+			strRpc = j.dump();
+		}
+		
 		tdsSrv.handleRpcCall(strRpc, resp, pALC);
 
 		if (resp.textResp != "")
@@ -1207,17 +1269,4 @@ string dataServer::getRDSPage()
 
 	)delimiter";
 	return s;
-}
-
-
-videoSrvNode* dataServer::getVideoSrvNode(string tag)
-{
-	MP* p = prj.getMp(tag);
-	if (!p)
-		p = prj.createMP(tag, VAL_TYPE::video);
-	if (p && p->m_valType == "video")
-	{
-		return &p->m_videoSrvNode;
-	}
-	return nullptr;
 }

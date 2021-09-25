@@ -8,7 +8,6 @@ dataserver
 #include "tdsSession.h"
 #include <memory>
 #include "tdscore.h"
-#include "videoSrvNode.h"
 
 
 #define MAX_CLIENT_NUM int_MaxClients_MAX
@@ -25,6 +24,8 @@ public:
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 
+	void getUrlParams(string& url, map<string, string>& mapParams);
+
 	void onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
 
 
@@ -38,7 +39,7 @@ public:
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 	string getRDSPage();
-	videoSrvNode* getVideoSrvNode(string tag);
+
 public:
 	bool run();
 	dataServer();

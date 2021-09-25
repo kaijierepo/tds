@@ -53,14 +53,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 			//设备发现功能
 			else
 			{
-				ioDev_iq60* p = new ioDev_iq60();
-				p->m_devAddr = id;
-				p->m_mngStatus = IODEV_MNG_STATUS::spare;
-				p->m_bOnline = true;
-				ioSrv.m_vecChild.push_back(p);
-				json j;
-				p->toJson(j);
-				tdsSrv.notify("io.devDiscovered", j);
+				ioSrv.onDevDiscovered(id, IO_DEV_TYPE::DEV::iq60_gateway);
 			}
 		}
 	}

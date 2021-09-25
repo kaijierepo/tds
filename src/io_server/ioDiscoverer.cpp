@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "ioSrv_serialDetection.h"
+#include "ioDiscoverer.h"
 #include <WinUser.h>
 //#include <guiddef.h>
 //#include <winuser.h>
@@ -10,6 +10,11 @@
 #include "ioSrv.h"
 #include "rpcHandler.h"
 
+#include "ioDev_genicam.h"
+#define PFNC_INCLUDE_HELPERS
+#include "GenTL/PFNC.h"
+
+#include "streamServer.h"
 /*
 by default, Windows OS will only post WM_DEVICECHANGE to
 All applications with a top - level window, and
@@ -77,7 +82,7 @@ LRESULT CALLBACK WindowProc_hwDetect(
 
                 MODULE_BUS_MSG msg;
                 msg.eventName = "ioDev." + devEventType;
-                msg.moduleName = "serialDetection";
+                msg.moduleName = "ioDiscoverer";
                 json jMsg;
                 jMsg["ioAddr"] = name;
                 msg.content = jMsg.dump();
@@ -97,22 +102,25 @@ LRESULT CALLBACK WindowProc_hwDetect(
     }
 }
 
-bool ioSrv_serialDetection::run()
+
+
+
+bool ioDiscoverer::runSerialDiscover()
 {
     /*未来如需要检测除串口外的其他设备， 使用
-    * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
-    https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal
-    https://www.codeproject.com/Articles/119168/Hardware-Change-Detection
-    GUID guidForModemDevices = { 0x2c7089aa, 0x2e0e, 0x11d1,
-    {0xb1, 0x14, 0x00, 0xc0, 0x4f, 0xc2, 0xaa, 0xe4} };
-    DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
-    ZeroMemory(&notificationFilter, sizeof(notificationFilter));
-    notificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
-    notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
-    notificationFilter.dbcc_classguid = GUID_DEVCLASS_PORTS;
-    */
+   * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
+   https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal
+   https://www.codeproject.com/Articles/119168/Hardware-Change-Detection
+   GUID guidForModemDevices = { 0x2c7089aa, 0x2e0e, 0x11d1,
+   {0xb1, 0x14, 0x00, 0xc0, 0x4f, 0xc2, 0xaa, 0xe4} };
+   DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
+   ZeroMemory(&notificationFilter, sizeof(notificationFilter));
+   notificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+   notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+   notificationFilter.dbcc_classguid = GUID_DEVCLASS_PORTS;
+   */
 
-    //注册窗口类
+   //注册窗口类
     HINSTANCE hInstance;
     hInstance = GetModuleHandle(NULL);
     WNDCLASS hwDetect;
@@ -143,9 +151,91 @@ bool ioSrv_serialDetection::run()
         NULL);              //没有附加数据，为NULL  
 
     ShowWindow(hwnd, SW_HIDE);
-   
 
-	return false;
+    return true;
+}
+
+void thread_genicamDiscover(ioDiscoverer* p)
+{
+    p->doGenicamDiscover();
+}
+
+bool ioDiscoverer::runGenicamDiscover()
+{
+    thread t(thread_genicamDiscover, this);
+    t.detach();
+    return true;
+}
+
+bool ioDiscoverer::doGenicamDiscover()
+{
+    while (1)
+    {
+        if (firstDiscoverGenicam)
+        {
+            if (firstDiscoverGenicam->m_bConnected == false)
+            {
+                firstDiscoverGenicam->connect();
+            }
+        }
+        else
+        {
+            std::shared_ptr<rcg::Device> p = NULL;
+            try
+            {
+                //打开Common Transport Interface 一个system对应一个.cti文件
+                std::vector<std::shared_ptr<rcg::System> > system = rcg::System::getSystems();
+                for (size_t i = 0; i < system.size(); i++)
+                {
+                    system[i]->open();
+                    std::vector<std::shared_ptr<rcg::Interface> > interf = system[i]->getInterfaces();
+                    for (size_t k = 0; k < interf.size(); k++)
+                    {
+                        interf[k]->open();
+                        std::vector<std::shared_ptr<rcg::Device> > device = interf[k]->getDevices();
+                        for (size_t j = 0; j < device.size(); j++)
+                        {
+                            p = device[j];
+
+                            ioDev* piod = ioSrv.getIODev(p->getID());
+                            if (!piod)
+                            {
+                                ioDev_genicam* pgen = (ioDev_genicam*)ioSrv.onDevDiscovered(p->getID(), IO_DEV_TYPE::DEV::genicam);
+                                pgen->m_genicamDev = p;
+                                pgen->run();
+                                //第一个发现的genicam推流到 genicam_0 的streamId
+                                if (firstDiscoverGenicam == NULL)
+                                {
+                                    firstDiscoverGenicam = pgen;
+                                    firstDiscoverGenicam->m_streamId = "genicam_0";
+                                    streamSrvNode* pssn = streamSrv.getSrvNode(firstDiscoverGenicam->m_streamId);
+                                    pssn->setPusher(firstDiscoverGenicam);
+                                }
+                            }
+                        }
+                        interf[k]->close();
+                        if (p)break;
+                    }
+                    system[i]->close();
+                    if (p)break;
+                }
+            }
+            catch (const std::exception& ex)
+            {
+                std::cerr << ex.what() << std::endl;
+            }
+        }
+        Sleep(1000);
+    }
+}
+ 
+
+bool ioDiscoverer::run()
+{
+    runSerialDiscover();
+    runGenicamDiscover();
+
+    return true;
 }
 
 

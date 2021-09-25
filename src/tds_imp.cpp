@@ -13,6 +13,7 @@
 #include "wke.h"
 #include "res/resource.h"
 #include "ioDev_genicam.h"
+#include "streamServer.h"
 
 string InterfaceEncoding = "utf8";
 
@@ -274,9 +275,6 @@ bool TDS_imp::run(string cmdline)
 #endif
 	ioSrv.run();
 
-	if (conf->singleGenicamHost)
-		ioDev_genicam::runSingleHostMode();
-
 	//create browser window
 	if (conf->uiMode == "miniblink")
 	{
@@ -428,37 +426,25 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	return true;
 }
 
-void TDS_imp::pushStream(string tag, char* pData, int len, STREAM_INFO* si)
+void TDS_imp::pushStream(string streamId, char* pData, int len, STREAM_INFO* si)
 {
 	if (InterfaceEncoding == "gb2312")
 	{
-		tag = charCodec::ansi2Utf8(tag);
+		streamId = charCodec::ansi2Utf8(streamId);
 	}
 
-	MP* pmp = prj.getMp(tag);
-
-	if (pmp == NULL)
-		pmp = prj.createMP(tag, VAL_TYPE::video);
-
-	if (pmp)
-	{
-		STREAM_DATA sd;
-		sd.pData = pData;
-		sd.len = len;
-		sd.info = *si;
-		pmp->m_videoSrvNode.pushStream(sd);
-		sd.pData = NULL;
-	}
-	
+	STREAM_DATA sd;
+	sd.pData = pData;
+	sd.len = len;
+	sd.info = *si;
+	streamSrv.pushStream(streamId,sd);
+	sd.pData = NULL;
 }
 
-void TDS_imp::pullStream(string tag, void* user, fp_onVideoStreamRecv onRecvStream)
+void TDS_imp::pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream,STREAM_INFO* si)
 {
-	MP* pmp = prj.getMp(tag);
-	if (pmp)
-	{
-		pmp->m_videoSrvNode.addPuller(user,onRecvStream);
-	}
+	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
+	pssn->addPuller(user,onRecvStream);
 }
 
 void TDS_imp::log(const char* text)

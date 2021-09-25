@@ -433,7 +433,7 @@
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
-    <ClCompile Include="..\src\io_server\ioSrv_serialDetection.cpp" />
+    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\mo_model\amo.cpp" />
     <ClCompile Include="..\src\mo_model\conf.cpp" />
@@ -449,8 +449,9 @@
     <ClCompile Include="..\src\tools\tdsShell.cpp" />
     <ClCompile Include="..\src\video\ioDev_genicam.cpp" />
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
+    <ClCompile Include="..\src\video\streamServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />
-    <ClCompile Include="..\src\video\videoSrvNode.cpp" />
+    <ClCompile Include="..\src\video\streamSrvNode.cpp" />
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -484,7 +485,7 @@
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
-    <ClInclude Include="..\src\io_server\ioSrv_serialDetection.h" />
+    <ClInclude Include="..\src\io_server\ioDiscoverer.h" />
     <ClInclude Include="..\src\mo_model\amo.h" />
     <ClInclude Include="..\src\mo_model\conf.h" />
     <ClInclude Include="..\src\mo_model\mo.h" />
@@ -504,8 +505,9 @@
     <ClInclude Include="..\src\video\ffmpeg.h" />
     <ClInclude Include="..\src\video\ioDev_genicam.h" />
     <ClInclude Include="..\src\video\remoteDesktopServer.h" />
+    <ClInclude Include="..\src\video\streamServer.h" />
     <ClInclude Include="..\src\video\videoCodec.h" />
-    <ClInclude Include="..\src\video\videoSrvNode.h" />
+    <ClInclude Include="..\src\video\streamSrvNode.h" />
     <ClInclude Include="..\src\xiaot\xiaot.h" />
   </ItemGroup>
   <ItemGroup>
