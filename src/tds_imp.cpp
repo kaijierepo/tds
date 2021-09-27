@@ -375,6 +375,16 @@ bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 	return false;
 }
 
+bool TDS_imp::connectDev(string ioAddr)
+{
+	ioDev* p = ioSrv.getIODev(ioAddr);
+	if (p)
+	{
+		return p->connect();
+	}
+	return false;
+}
+
 bool TDS_imp::isOnline(string ioAddr)
 {
 	ioAddress sIoAddr;
@@ -424,6 +434,11 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 		d->m_pCallbackUser = user;
 	}
 	return true;
+}
+
+void TDS_imp::startStream(string streamId, STREAM_INFO* si)
+{
+	streamSrv.startStream(streamId,si);
 }
 
 void TDS_imp::pushStream(string streamId, char* pData, int len, STREAM_INFO* si)

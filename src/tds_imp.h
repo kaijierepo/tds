@@ -26,12 +26,14 @@ public:
 	// io 通信服务功能
 	 bool enableIoLog(string ioAddr, bool bEnable);
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
-	  bool isOnline(string ioAddr);
-	  bool lockIoAddr(string ioAddr) ;
-	  bool unlockIoAddr(string ioAddr) ;
+	 bool connectDev(string ioAddr);
+	 bool isOnline(string ioAddr);
+	 bool lockIoAddr(string ioAddr) ;
+	 bool unlockIoAddr(string ioAddr) ;
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
 
 	 // 视频功能
+	 void startStream(string streamId, STREAM_INFO* si = NULL);
 	 void pushStream(string streamId, char* pData, int len, STREAM_INFO* si = NULL);
 	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
 	 void log(const char* text);

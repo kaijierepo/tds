@@ -203,8 +203,8 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcResult, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
-	method = str::removeChar(method,'_');
-	transform(method.begin(), method.end(), method.begin(), ::tolower);
+	//method = str::removeChar(method,'_');
+	//transform(method.begin(), method.end(), method.begin(), ::tolower);
 	string& result = rpcResult.textResult;
 	//可完全并发的命令
 	//#region concurrent cmd
@@ -394,7 +394,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		result = ds.getSessionStatus(params);
 	}
 
-	if (method == "discoverdev" || method == "discoverdevice" || method == "devdiscover" || method == "devicediscover")
+	if (method == "discoverDev")
 	{
 		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
 		{
@@ -416,14 +416,18 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	}
 	else if (method == "genicam.setParam")
 	{
-		if (firstDiscoverGenicam)
+		string ioAddr = params["ioAddr"];
+		ioDev* p = ioSrv.getIODev(ioAddr);
+		if (p && p->m_devType == IO_DEV_TYPE::DEV::genicam)
 		{
+			ioDev_genicam* piod = (ioDev_genicam*)p;
+
 			string name = params["name"];
 			json val = params["val"];
 			bool isEnum = false;
 			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
 				isEnum = true;
-			firstDiscoverGenicam->setParam(name,val,isEnum);
+			piod->setParam(name, val, isEnum);
 		}
 	}
 	else if (method == "genicam.getParam")

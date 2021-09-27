@@ -19,8 +19,22 @@ streamSrvNode* streamServer::getSrvNode(string streamId)
 	if (m_mapSrvNodes.find(streamId) == m_mapSrvNodes.end())
 	{
 		streamSrvNode* pn = new streamSrvNode();
+		pn->m_streamId = streamId;
 		m_mapSrvNodes[streamId] = pn;
 	}
 
 	return m_mapSrvNodes[streamId];
+}
+
+bool streamServer::startStream(string streamId, STREAM_INFO* si)
+{
+	streamSrvNode* ssn = getSrvNode(streamId);
+	if (ssn && ssn->m_streamPusher)
+	{
+		return ssn->m_streamPusher->startStream(si);
+	}
+	else
+	{
+		return false;
+	}
 }

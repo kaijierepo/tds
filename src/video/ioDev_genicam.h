@@ -27,16 +27,19 @@ public:
 	static void captureImageToBmp(string devId, string fileName);
 	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //À­Á÷·½
 	std::shared_ptr<rcg::Device> m_genicamDev; //
+	void setGenicamDev(std::shared_ptr<rcg::Device> genDev);
 	std::shared_ptr<GenApi::CNodeMapRef> m_nodemap;
 	void doStreaming();
+	void addStreamId(string streamId);
 
 	void setParam(string name, json val, bool isEnum);
 	void doCmd(string name);
 	
-	bool startStream() override;
+	bool startStream(STREAM_INFO* si=NULL) override;
 	bool stopStream() override;
 	bool m_bStopStream;
 	bool m_bStreaming;
+	STREAM_INFO m_streamInfo;
 	mutex m_csStreamThread;
 	json m_jDevInfo;
 };

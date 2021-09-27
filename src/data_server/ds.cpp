@@ -914,8 +914,11 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			json jP;
 			for (auto &[k,v] : mapParams)
 			{
+				if (k == "tag")
+					v = httplib::detail::decode_url(v,true);
 				jP[k] = v;
 			}
+
 			j["params"] = jP;
 			strRpc = j.dump();
 		}

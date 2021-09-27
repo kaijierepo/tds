@@ -176,7 +176,11 @@ bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			}
 
 			result[strTime + "+" + tag] = sDe;
+			count++;
+			if (tf.AmountMatch(count))
+				return true;
 		}
+
 	}
 	return true;
 }

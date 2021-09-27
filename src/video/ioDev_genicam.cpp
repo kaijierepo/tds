@@ -107,6 +107,11 @@ json ioDev_genicam::listDevices()
 	return info;
 }
 
+void ioDev_genicam::setGenicamDev(std::shared_ptr<rcg::Device> genDev)
+{
+    m_genicamDev = genDev;
+}
+
 void ioDev_genicam::doStreaming()
 {
     m_bStreaming = true;
@@ -115,24 +120,6 @@ void ioDev_genicam::doStreaming()
     std::shared_ptr<rcg::Device> dev = m_genicamDev;
     if (dev)
     {
-        //加载初始化参数
-        /*string sip;
-        fs::readFile(fs::appPath() + "/conf/genicam0_initParams.json", sip);
-        if (sip != "")
-        {
-            json jp = json::parse(sip);
-            for (int i = 0; i < jp.size(); i++)
-            {
-                json oneParam = jp[i];
-                string name = oneParam["name"];
-                json val = oneParam["val"];
-                bool isEnum = false;
-                if (oneParam["isEnum"] != nullptr && oneParam["isEnum"].get<bool>() == true)
-                    isEnum = true;
-                setParam(name, val, isEnum);
-            }
-        }*/
-
         std::vector<std::shared_ptr<rcg::Stream> > stream = dev->getStreams();
         if (stream.size() > 0)
         {
@@ -177,12 +164,13 @@ void ioDev_genicam::doStreaming()
                             si.h = h;
                             si.w = w;
                             si.pixelFmt = GetPixelFormatName(iPixelFmt);
+                            si.pixelSize = PFNC_PIXEL_SIZE(iPixelFmt);
                             
                             STREAM_DATA sd;
                             sd.info = si;
                             sd.pData = (char*)buffer->getBase(part);
                             sd.len = buffer->getSize(part);
-                            streamSrv.asynPushStream(m_streamId,sd);
+                            pushStream(sd);
                             sd.pData = NULL;
                         }
                     }
@@ -205,6 +193,13 @@ void ioDev_genicam::doStreaming()
         }
     }
     m_bStreaming = false;
+}
+
+void ioDev_genicam::addStreamId(string streamId)
+{
+    m_streamId.push_back(streamId);
+    streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
+    pssn->setPusher(this);
 }
 
 void ioDev_genicam::setParam(string name,json val,bool isEnum)
@@ -232,11 +227,12 @@ void ioDev_genicam::doCmd(string name)
     rcg::callCommand(m_nodemap, name.c_str());
 }
 
-bool ioDev_genicam::startStream()
+bool ioDev_genicam::startStream(STREAM_INFO* si)
 {
     if (m_bStreaming)
         return true;
-
+    if(si)
+        m_streamInfoConf = *si;
     thread t(thread_doStream, this);
     t.detach();
     return true;

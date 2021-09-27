@@ -76,15 +76,16 @@ LRESULT CALLBACK WindowProc_hwDetect(
                     name = name.substr(5, name.length() - 5);
                 }
 
-                string log = "port changes,name:" + name + ",event:" + devEventType;
-                LOG(log);
+                //string log = "port changes,name:" + name + ",event:" + devEventType;
+                //LOG(log);
                 ioSrv.refreshSerialIODev();
 
                 MODULE_BUS_MSG msg;
-                msg.eventName = "ioDev." + devEventType;
+                msg.eventName =  devEventType;
                 msg.moduleName = "ioDiscoverer";
                 json jMsg;
                 jMsg["ioAddr"] = name;
+                jMsg["devType"] = IO_DEV_TYPE::GW::local_serial;
                 msg.content = jMsg.dump();
                 tds->publishMsg(msg);
             }
@@ -200,17 +201,30 @@ bool ioDiscoverer::doGenicamDiscover()
                             ioDev* piod = ioSrv.getIODev(p->getID());
                             if (!piod)
                             {
+                                //执行发现，加入到ioSrv
                                 ioDev_genicam* pgen = (ioDev_genicam*)ioSrv.onDevDiscovered(p->getID(), IO_DEV_TYPE::DEV::genicam);
                                 pgen->m_genicamDev = p;
-                                pgen->run();
-                                //第一个发现的genicam推流到 genicam_0 的streamId
+
+                                //初始化推流id
+                                pgen->addStreamId(p->getID());
+                                //第一个发现的genicam额外增加推流id到 genicam_0
                                 if (firstDiscoverGenicam == NULL)
                                 {
                                     firstDiscoverGenicam = pgen;
-                                    firstDiscoverGenicam->m_streamId = "genicam_0";
-                                    streamSrvNode* pssn = streamSrv.getSrvNode(firstDiscoverGenicam->m_streamId);
-                                    pssn->setPusher(firstDiscoverGenicam);
+                                    firstDiscoverGenicam->addStreamId("genicam_0");
                                 }
+
+                                //前两步完成后再发送通知，因为收到通知后的设备操作可能需要前两步完成后才能操作
+                                MODULE_BUS_MSG msg;
+                                msg.eventName = "online";
+                                msg.moduleName = "ioDiscoverer";
+                                json jMsg;
+                                jMsg["ioAddr"] = p->getID();
+                                jMsg["devType"] = "genicam";
+                                msg.content = jMsg.dump();
+                                tds->publishMsg(msg);
+                               
+       
                             }
                         }
                         interf[k]->close();

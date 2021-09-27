@@ -10,8 +10,7 @@ streamSrvNode::streamSrvNode()
 	m_videoCodec = NULL;
 #endif
 	m_streamPusher = NULL;
-	m_pushFrameRateStatisCount = 0;
-	m_pushFrameRateStatisTick = 0;
+	asynPushThreadRunning = false;
 }
 
 void streamSrvNode::refreshStreamPuller()
@@ -52,6 +51,7 @@ void streamSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 			jSi["w"] = sd.info.w;
 			jSi["h"] = sd.info.h;
 			jSi["pixelFmt"] = sd.info.pixelFmt;
+			jSi["pixelSize"] = sd.info.pixelSize;
 			string s = jSi.dump();
 			p->send((char*)s.c_str(), s.length());
 		}
@@ -108,7 +108,7 @@ void streamSrvNode::sendToAllPullers(STREAM_DATA& sd)
 	}
 }
 
-void streamSrvNode::calcPusherFrameRate()
+void STREAM_PUSHER::calcSrcFrameRate()
 {
 	m_pushFrameRateStatisCount++;
 	if (m_pushFrameRateStatisTick == 0)
@@ -122,7 +122,7 @@ void streamSrvNode::calcPusherFrameRate()
 		time_t pass = now - m_pushFrameRateStatisTick;
 		if (pass >= 2000)
 		{
-			m_streamPusher->m_streamInfo.frameRate = ((float)m_pushFrameRateStatisCount / pass) * 1000;
+			frameRate = ((float)m_pushFrameRateStatisCount / pass) * 1000;
 			m_pushFrameRateStatisTick = now;
 			m_pushFrameRateStatisCount = 0;
 		}
@@ -135,20 +135,13 @@ void streamSrvNode::pushStream(STREAM_DATA& sd)
 	refreshStreamPuller();
 	if (m_streamPuller.size() == 0)
 		return;
-
-	m_streamPusher->m_streamInfo.w = sd.info.w;
-	m_streamPusher->m_streamInfo.h = sd.info.h;
-	m_streamPusher->m_streamInfo.pixelFmt = sd.info.pixelFmt;
-	m_streamPusher->m_streamInfo.pixelSize = sd.info.pixelSize;
-
-	calcPusherFrameRate();
 	sendToAllPullers(sd);
 }
 
-bool asynPushThreadRunning = false;
+
 void thread_pushStream(streamSrvNode* p)
 {
-	asynPushThreadRunning = true;
+	p->asynPushThreadRunning = true;
 	p->doAsynPush();
 }
 
@@ -201,8 +194,8 @@ void streamSrvNode::addPuller(STREAM_PULLER* sp)
 {
 	m_streamPuller.push_back(sp);
 
-	if(m_streamPusher)
-		m_streamPusher->startStream();
+	//if(m_streamPusher)
+		//m_streamPusher->startStream();
 }
 
 
@@ -228,9 +221,10 @@ void streamSrvNode::addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STR
 void streamSrvNode::setPusher(STREAM_PUSHER* pusher)
 {
 	m_streamPusher = pusher;
+	pusher->m_srvNode.push_back(this);
 	if (m_streamPuller.size() > 0)
 	{
-		m_streamPusher->startStream();
+		//m_streamPusher->startStream();
 	}
 }
 
@@ -417,6 +411,45 @@ int streamSrvNode::DynamicRangeControl(float* pData, int w, int h, float& minVal
 
 bool STREAM_PULLER::init()
 {
+	return false;
+}
+
+bool STREAM_PUSHER::pushStream(STREAM_DATA& sd)
+{
+	if (m_srvNode.size() == 0) return false;
+
+	calcSrcFrameRate();
+
+	//推流端帧率控制
+	if (m_streamInfoConf.frameRate != 0 && frameRate != 0 &&
+		frameRate > m_streamInfoConf.frameRate)
+	{
+		downSamplingInterval = frameRate / m_streamInfoConf.frameRate;
+		downSamplingInterval = round(downSamplingInterval);
+		frameIntervalIdx++;	
+		if (frameIntervalIdx < downSamplingInterval)
+		{
+			return true;
+		}
+		frameIntervalIdx = 0;
+		m_streamInfo.frameRate = m_streamInfoConf.frameRate;
+	}
+	//无控制使用源帧率
+	else
+	{
+		m_streamInfo.frameRate = frameRate;
+	}
+
+	m_streamInfo.w = sd.info.w;
+	m_streamInfo.h = sd.info.h;
+	m_streamInfo.pixelFmt = sd.info.pixelFmt;
+	m_streamInfo.pixelSize = sd.info.pixelSize;
+
+	for (int i = 0; i < m_srvNode.size(); i++)
+	{
+		streamSrvNode* ssn = m_srvNode[i];
+		ssn->asynPushStream(sd.pData,sd.len, m_streamInfo);
+	}
 
 	return false;
 }

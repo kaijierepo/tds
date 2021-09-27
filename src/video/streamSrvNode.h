@@ -25,10 +25,27 @@ struct STREAM_DATA {
 
 class STREAM_PUSHER {
 public:
-	virtual bool startStream() = 0;
+	STREAM_PUSHER()
+	{
+		downSamplingInterval = 1;
+		frameIntervalIdx = 0;
+		frameRate = 0;
+		m_pushFrameRateStatisCount = 0;
+		m_pushFrameRateStatisTick = 0;
+	}
+	virtual bool startStream(STREAM_INFO* si=NULL) = 0;
 	virtual bool stopStream() = 0;
-	string m_streamId;
-	STREAM_INFO m_streamInfo;
+	virtual bool pushStream(STREAM_DATA& sd);
+	void calcSrcFrameRate();
+	vector<string> m_streamId; //可同时往多个id推流
+	vector<streamSrvNode*> m_srvNode;
+	STREAM_INFO m_streamInfoConf; //指定的推流参数
+	STREAM_INFO m_streamInfo; //实际的推流参数
+	float frameRate; //码流源帧率。 可以在推流端和拉流端进行帧率转换
+	time_t m_pushFrameRateStatisTick;
+	int m_pushFrameRateStatisCount;
+	float downSamplingInterval;
+	int frameIntervalIdx;
 };
 
 class STREAM_PULLER {
@@ -60,7 +77,6 @@ public:
 	void refreshStreamPuller();
 	void sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp);
 	void sendToAllPullers(STREAM_DATA& sd);
-	void calcPusherFrameRate();
 	void pushStream(STREAM_DATA& sd);
 	void asynPushStream(char* pData, int len, STREAM_INFO si);
 	void doAsynPush();
@@ -77,9 +93,10 @@ public:
 	STREAM_DATA* rtImgBuff;
 	std::mutex m_csRtImg;
 	semaphore m_evtNewFrame;
+	bool asynPushThreadRunning;
+	string m_streamId;
 
-	time_t m_pushFrameRateStatisTick;
-	int m_pushFrameRateStatisCount;
+
 
 	void convertFmt(STREAM_DATA& src, STREAM_DATA& puller);
 

@@ -80,6 +80,7 @@ ioDev* createIODev(string ioAddr, string type)
 		p = pGenicam;
 		p->m_devAddr = ioAddr;
 		p->m_level = "device";
+		p->m_devType = IO_DEV_TYPE::DEV::genicam;
 	}
 	return p;
 }

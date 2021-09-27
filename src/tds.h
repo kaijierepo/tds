@@ -154,12 +154,14 @@ public:
 	// io 通信服务功能
 	virtual bool enableIoLog(string ioAddr, bool bEnable) = 0;
 	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
+	virtual bool connectDev(string ioAddr) = 0; 
 	virtual bool isOnline(string ioAddr) = 0;
 	virtual bool lockIoAddr(string ioAddr) = 0;
 	virtual bool unlockIoAddr(string ioAddr) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	//视频功能
+	virtual void startStream(string streamId, STREAM_INFO* si=NULL) = 0;
 	//推流到指定的streamId  streamId可以是tag,ioAddr,或者其他自定义名称
 	virtual void pushStream(string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
 	//从指定通道拉流（必须是支持视频功能的io地址）
