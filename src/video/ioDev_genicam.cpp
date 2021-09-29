@@ -136,6 +136,8 @@ void ioDev_genicam::doStreaming()
             double latency_ns = 0;
 
             int errorCount = 0;
+            bool firstFrameRecv = false;
+            STREAM_INFO si;
             while(errorCount<2)
             {
                 if (m_bStopStream)
@@ -160,11 +162,18 @@ void ioDev_genicam::doStreaming()
 
                             //mono8ToBmp(p, width, height, "test.bmp");
 
-                            STREAM_INFO si;
-                            si.h = h;
-                            si.w = w;
-                            si.pixelFmt = GetPixelFormatName(iPixelFmt);
-                            si.pixelSize = PFNC_PIXEL_SIZE(iPixelFmt);
+                            if (!firstFrameRecv)
+                            {
+                                si.h = h;
+                                si.w = w;
+                                si.pixelFmt = GetPixelFormatName(iPixelFmt);
+                                si.pixelSize = PFNC_PIXEL_SIZE(iPixelFmt);
+                                firstFrameRecv = true;
+                                string log = str::format("开始接收码流,ioAddr:%s,width:%d,height:%d,像素格式:%s,像素大小:%d",
+                                  m_genicamDev->getID(), si.w, si.h, si.pixelFmt, si.pixelSize);
+                                LOG(log);
+                            }
+
                             
                             STREAM_DATA sd;
                             sd.info = si;
