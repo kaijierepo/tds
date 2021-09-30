@@ -43,6 +43,15 @@ bool MP::loadConf(json& conf)
 		m_mpType = conf["mpType"].get<string>();
 	}
 
+	if (conf["saveMode"] != nullptr)
+	{
+		m_saveMode = conf["saveMode"].get<string>();
+	}
+	else
+	{
+		m_saveMode = "never";
+	}
+
 	if (conf["saveInterval"] != nullptr)
 	{
 		json jsi = conf["saveInterval"];
@@ -70,6 +79,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 
 	//save to rt memory
 	bool bValChange = false;
+	m_lastVal = m_curVal;
 	if (jVal.is_number())
 	{
 		double dbVal = jVal.get<double>();
@@ -96,13 +106,28 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	
 
 	//save to db
-	int timespan = getSaveInterval();
-	if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
+	bool bNeedSave = false;
+	if (m_saveMode == "cyclic")
+	{
+		int timespan = getSaveInterval();
+		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
+		{bNeedSave = true;}
+	}
+	else if (m_saveMode == "onchange")
+	{
+		if (m_curVal != m_lastVal)
+		{
+			bNeedSave = true;
+		}
+	}
+	if (bNeedSave)
 	{
 		GetLocalTime(&m_lastSaveTime);
 		db.INSERT(getTag().c_str(), *dataTime, jVal,dataFile);
 	}
 }
+
+
 
 bool MP::output(json jVal, json& jResp)
 {

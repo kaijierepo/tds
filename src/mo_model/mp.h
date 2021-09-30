@@ -45,6 +45,7 @@ public:
 	json getRT();
 	json m_orgVal;
 	json m_curVal;
+	json m_lastVal;
 	string m_valType;//数值类型， bool，模拟量，json等
 	//监测点类型，按应用方式来区分，例如温度、湿度、车闸、人闸等。
 	//当使用者说 我想看一下温度的数据，我想看一下车闸的数据，这个XXX的数据就是监测点类型
@@ -57,6 +58,7 @@ public:
 	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
+	string m_saveMode;
 
 	float m_K;
 	float m_B;
