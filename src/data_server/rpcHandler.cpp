@@ -396,17 +396,20 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 
 	if (method == "discoverDev")
 	{
+#ifdef ENABLE_GENICAM
 		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
 		{
 			json j = ioDev_genicam::listDevices();
 			rpcResult.textResult = j.dump(2);
 		}
+#endif
 	}
 	if (method == "captureFrame")
 	{
-		ioDev_genicam::captureImageToBmp("", "");
+		
 	}
 
+#ifdef ENABLE_GENICAM
 	if (method == "genicam.doCmd")
 	{
 		if (firstDiscoverGenicam)
@@ -437,6 +440,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 
 		}
 	}
+#endif
 
 	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "")
 		return true;

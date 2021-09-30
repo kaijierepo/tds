@@ -1,7 +1,10 @@
 #pragma once
+#ifdef ENABLE_GENICAM
 #include "json.hpp"
 #include "ioDev.h"
 #include "tdsSession.h"
+#define PFNC_INCLUDE_HELPERS
+#include "GenTL/PFNC.h"
 #include "system.h"
 #include "interface.h"
 #include "device.h"
@@ -45,3 +48,4 @@ public:
 };
 
 extern ioDev_genicam* firstDiscoverGenicam;
+#endif

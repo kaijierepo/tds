@@ -376,12 +376,14 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -483,12 +485,14 @@
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <SupportJustMyCode>true</SupportJustMyCode>
-      <PreprocessorDefinitions>_HAS_STD_BYTE=0;ENABLE_FFMPEG;_TDS;_WINDLL;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_HAS_STD_BYTE=0;_TDS;_WINDLL;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zm200 %(AdditionalOptions)</AdditionalOptions>
       <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -497,11 +501,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp" />
-    <ClCompile Include="..\src\common\base64.cpp" />
-    <ClCompile Include="..\src\common\common.cpp" />
+    <ClCompile Include="..\src\common\base64.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\src\common\common.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
-    <ClCompile Include="..\src\common\simdjson.cpp" />
+    <ClCompile Include="..\src\common\simdjson.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\src\data_server\db.cpp" />
@@ -529,13 +542,19 @@
     <ClCompile Include="..\src\mo_model\mp.cpp" />
     <ClCompile Include="..\src\mo_model\prj.cpp" />
     <ClCompile Include="..\src\mo_model\stream2pkt.cpp" />
+    <ClCompile Include="..\src\pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\tcp2com.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
     <ClCompile Include="..\src\tools\tcpReverseProxy.cpp" />
     <ClCompile Include="..\src\tools\tcpSwitch.cpp" />
     <ClCompile Include="..\src\tools\tdsShell.cpp" />
-    <ClCompile Include="..\src\video\ioDev_genicam.cpp" />
+    <ClCompile Include="..\src\video\ioDev_genicam.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">pch.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />

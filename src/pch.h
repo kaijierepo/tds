@@ -1,4 +1,10 @@
 #pragma once
+
+//功能模块
+
+//#define ENABLE_GENICAM
+//#define ENABLE_FFMPEG
+
 #include <queue>
 #include <string>
 #include <map>

@@ -1,3 +1,4 @@
+#include "pch.h"
 #ifdef ENABLE_FFMPEG
 #include "remoteDesktopServer.h"
 #include "video/ffmpeg.h"

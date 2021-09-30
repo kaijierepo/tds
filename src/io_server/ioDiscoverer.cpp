@@ -11,8 +11,7 @@
 #include "rpcHandler.h"
 
 #include "ioDev_genicam.h"
-#define PFNC_INCLUDE_HELPERS
-#include "GenTL/PFNC.h"
+
 
 #include "streamServer.h"
 /*
@@ -170,6 +169,7 @@ bool ioDiscoverer::runGenicamDiscover()
 
 bool ioDiscoverer::doGenicamDiscover()
 {
+#ifdef ENABLE_GENICAM
     while (1)
     {
         if (firstDiscoverGenicam)
@@ -241,6 +241,8 @@ bool ioDiscoverer::doGenicamDiscover()
         }
         Sleep(1000);
     }
+#endif
+    return true;
 }
  
 

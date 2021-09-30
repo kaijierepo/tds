@@ -1,4 +1,6 @@
+#include "pch.h"
 #include "ioDev_genicam.h"
+#ifdef ENABLE_GENICAM
 #include "prj.h"
 #define PFNC_INCLUDE_HELPERS
 #include "GenTL/PFNC.h"
@@ -438,3 +440,4 @@ void ioDev_genicam::captureImageToBmp(string devId, string fileName)
        
     }
 }
+#endif

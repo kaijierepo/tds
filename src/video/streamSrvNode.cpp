@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "streamSrvNode.h"
 #include "json.hpp"
 #include "logger.h"
