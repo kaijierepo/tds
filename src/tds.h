@@ -117,7 +117,7 @@ public:
 	//filter: "humidiy==55 && temperature>30"
 	//dataSet是一个json数组，数组成员为1个数据元。 meta是元数据，描述数据的一些信息
 	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
-	virtual bool UPDATE(string tag, SYSTEMTIME stTime, string& sData) = 0;
+	virtual bool Update(string tag, SYSTEMTIME stTime, string& sData) = 0;
 
 	//底层基础操作
 	

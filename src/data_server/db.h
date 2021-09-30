@@ -134,13 +134,14 @@ public:
 
 //接口部分
 public:
-	void INSERT(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
-	bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result) ;
-	bool updateJsonObj(json& jOld, json& jNew);
-	bool UPDATE(string tag, SYSTEMTIME stTime, string& sData);
-	bool UPDATE(string tag, SYSTEMTIME stTime, json& jData);
-	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
+	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
+	bool Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
+	bool Update(string tag, SYSTEMTIME stTime, string& sData);
+	bool Update(string tag, SYSTEMTIME stTime, json& jData);
+	bool Delete(string tag, SYSTEMTIME stTime);
 
+	bool updateJsonObj(json& jOld, json& jNew);
+	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
 
 //路径管理
 public:

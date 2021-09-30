@@ -54,7 +54,7 @@ string database::getPath_dbFile(string strTag,SYSTEMTIME date)
 
 
 
-void database::INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
+void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
 {
 	string dlPath = getPath_dataFolder(strTag, stTime) + "/" + "db.json";
 	fs::createFolderOfPath(dlPath.c_str());
@@ -99,7 +99,7 @@ void database::INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFi
 	}
 }
 
-bool database::SELECT(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result)
+bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result)
 {
 	TIME_SELECTOR& tf = timeSelector;
 	time_t loadTime = tf.endTime;
@@ -206,13 +206,13 @@ bool database::updateJsonObj(json& jOld, json& jNew)
 	return true;
 }
 
-bool database::UPDATE(string tag, SYSTEMTIME stTime, string& sData)
+bool database::Update(string tag, SYSTEMTIME stTime, string& sData)
 {
 	json jData = json::parse(sData);
-	return UPDATE(tag, stTime, jData);
+	return Update(tag, stTime, jData);
 }
 
-bool database::UPDATE(string tag, SYSTEMTIME stTime, json& jData)
+bool database::Update(string tag, SYSTEMTIME stTime, json& jData)
 {
 	//加载数据元列表
 	string dbFile = getPath_dbFile(tag, stTime);
@@ -239,6 +239,42 @@ bool database::UPDATE(string tag, SYSTEMTIME stTime, json& jData)
 			json& jNew = jData;
 			findDE = true;
 			updateJsonObj(jOld, jNew);
+		}
+	}
+	if (!findDE)
+		return false;
+
+	dbData = jDEList.dump(2);
+	fs::writeFile(dbFile, dbData);
+	return true;
+}
+
+bool database::Delete(string tag, SYSTEMTIME stTime)
+{
+	//加载数据元列表
+	string dbFile = getPath_dbFile(tag, stTime);
+	string dbData;
+	fs::readFile(dbFile, dbData);
+	if (dbData == "")
+		return false;
+
+	json jDEList = json::parse(dbData);
+	string specifyTime = timeopt::st2str(stTime);
+	bool findDE = false;
+	for (int i = 0; i < jDEList.size(); i++)
+	{
+		json& jDE = jDEList[i];
+		string sHMS = jDE["time"].get<string>();
+		if (sHMS.length() > 8)
+		{
+			sHMS = sHMS.substr(sHMS.length() - 8, 8);
+		}
+		string specifyHMS = specifyTime.substr(specifyTime.length() - 8, 8);
+		if (sHMS == specifyHMS)
+		{
+			findDE = true;
+			jDEList.erase(jDEList.begin() + i);
+			break;
 		}
 	}
 	if (!findDE)

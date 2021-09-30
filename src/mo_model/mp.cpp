@@ -59,6 +59,8 @@ bool MP::loadConf(json& conf)
 		m_saveInterval.minute = jsi["minute"].get<int>();
 		m_saveInterval.second = jsi["second"].get<int>();
 	}
+
+
 		
 	return false;
 }
@@ -111,23 +113,27 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	{
 		int timespan = getSaveInterval();
 		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
-		{bNeedSave = true;}
-	}
-	else if (m_saveMode == "onchange")
-	{
-		if (m_curVal != m_lastVal)
 		{
 			bNeedSave = true;
 		}
 	}
+	else if (m_saveMode == "onchange")
+	{
+		if (m_lastVal != m_curVal)
+			bNeedSave = true;
+	}
+	else if(m_saveMode == "always")
+	{
+		bNeedSave = true;
+	}
+
+
 	if (bNeedSave)
 	{
 		GetLocalTime(&m_lastSaveTime);
-		db.INSERT(getTag().c_str(), *dataTime, jVal,dataFile);
+		db.Insert(getTag().c_str(), *dataTime, jVal,dataFile);
 	}
 }
-
-
 
 bool MP::output(json jVal, json& jResp)
 {

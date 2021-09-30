@@ -144,7 +144,7 @@ string rpcHandler::rpc_query(json params,string& error)
 	DB_DATA_SET set;
 	for(auto& i:tagSet)
 	{
-		db.SELECT(i->getTag(), timeSelector, filter, set);
+		db.Select(i->getTag(), timeSelector, filter, set);
 	}
 	string result = db.dataSet2String(set);
 	
@@ -385,7 +385,14 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		string tag = params["tag"].get<string>();
 		string time = params["time"].get<string>();
 		json val = params["val"];
-		db.UPDATE(tag, timeopt::str2st(time), val);
+		db.Update(tag, timeopt::str2st(time), val);
+		result = "\"ok\"";
+	}
+	else if (method == "db.delete")
+	{
+		string tag = params["tag"].get<string>();
+		string time = params["time"].get<string>();
+		db.Delete(tag, timeopt::str2st(time));
 		result = "\"ok\"";
 	}
 
