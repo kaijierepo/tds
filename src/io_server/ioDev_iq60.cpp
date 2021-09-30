@@ -13,7 +13,7 @@ using namespace httplib;
 
 void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
-	char* p = new char[iLen + 1];
+ 	char* p = new char[iLen + 1];
 	memset(p, 0, iLen + 1);
 	memcpy(p, pData, iLen);
 	string pkt = p;
