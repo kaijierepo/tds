@@ -11,9 +11,10 @@ public:
 	bool onRecvPkt(json jPkt);
 	bool getCurrentVal();
 	bool waitResponse(int timeout);
+	bool sendData(char* pData, int iLen);
 	bool requestAndWaitResp(string cmd, string req);
-	virtual bool scanChannel(json& chanList);
-	virtual bool writeChannel(json jVal, json& jResp);
+	bool scanChannel(json& chanList) override;
+	bool writeChannel(string chanAddr, json jVal, json& jResp) override;
 
 	json getAddr() override;
 

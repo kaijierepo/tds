@@ -60,9 +60,59 @@ bool MP::loadConf(json& conf)
 		m_saveInterval.second = jsi["second"].get<int>();
 	}
 
+	if (conf["k"] != nullptr)
+	{
+		m_K = conf["k"].get<double>();
+	}
+	if (conf["b"] != nullptr)
+	{
+		m_B = conf["b"].get<double>();
+	}
 
 		
 	return false;
+}
+
+bool MP::toJson(json& conf, json serializeOption)
+{
+	MO::toJson(conf, serializeOption);
+	MP* p = (MP*)this;
+	bool bIncluded = false;
+	//确定是否请求了该类型的监测点
+	if (serializeOption["valType"] != nullptr)
+	{
+		json& vt = serializeOption["valType"];
+		for (int i = 0; i < vt.size(); i++)
+		{
+			json& jType = vt[i];
+			if (jType.get<string>() == p->m_valType)
+			{
+				bIncluded = true;
+				break;
+			}
+		}
+	}
+	else
+	{
+		bIncluded = true;
+	}
+	if (!bIncluded)
+		return false;
+
+	conf["valType"] = p->m_valType;
+	if (p->m_valType == "json")
+		conf["mpType"] = p->m_mpType;
+	json saveInterval;
+	saveInterval["hour"] = p->m_saveInterval.hour;
+	saveInterval["minute"] = p->m_saveInterval.minute;
+	saveInterval["second"] = p->m_saveInterval.second;
+	conf["saveMode"] = p->m_saveMode;
+	conf["saveInterval"] = saveInterval;
+	conf["unit"] = p->m_strUnit;
+	conf["k"] = p->m_K;
+	conf["b"] = p->m_B;
+
+	return true;
 }
 
 

@@ -67,9 +67,14 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 bool ioChannel::output(json jVal, json& jResp)
 {
 	ioDev* pDev = ioDev::m_pParent;
-	ioDev_iq60* p = (ioDev_iq60*)pDev;
-	if (p)
-		p->writeChannel(jVal, jResp);
+
+	if (pDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
+	{
+		ioDev_iq60* p = (ioDev_iq60*)pDev;
+		if (p)
+			p->writeChannel(m_devAddr,jVal, jResp);
+	}
+
 
 	return true;
 }

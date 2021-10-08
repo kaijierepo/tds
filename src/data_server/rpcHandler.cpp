@@ -317,11 +317,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 			prj.getMpList(list);
 			result = list.dump(2);
 		}
-		else if (method == "io.tree")
+		else if (method == "ioTree" || method == "iotree")
 		{
 			result = rpc_io_tree(params, error);
 		}
-		else if (method == "io.scanChannel")
+		else if (method == "scanChannel" || method == "scanchannel")
 		{
 			result = rpc_io_scanChannel(params, error, pSession);
 		}

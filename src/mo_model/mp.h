@@ -29,6 +29,7 @@ public:
 	~MP();
 
 	bool loadConf(json& conf);
+	bool toJson(json& conf, json serializeOption) override;
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
 	//例如 deData = "[deFolder,video,pic]"
@@ -60,6 +61,6 @@ public:
 	int getSaveInterval();
 	string m_saveMode;
 
-	float m_K;
-	float m_B;
+	double m_K;
+	double m_B;
 };

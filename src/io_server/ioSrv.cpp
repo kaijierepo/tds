@@ -71,8 +71,8 @@ ioDev* createIODev(string ioAddr, string type)
 	else if (type == "iq60-gateway")
 	{
 		ioDev_iq60* piq60 = new ioDev_iq60();
-		//p = piq60;
-		//p->m_devAddr = conf["addr"]["gateway_id"];
+		p = piq60;
+		p->m_devAddr = ioAddr;
 	}
 	else if (type == "genicam")
 	{

@@ -15,7 +15,7 @@ public:
 	virtual ~MO();
 
 	virtual bool loadConf(json& conf);
-	bool toJson(json& conf, json params);
+	virtual bool toJson(json& conf, json serializeOption);
 
 	void removeMp(json& mo);
 	void clearChildren();

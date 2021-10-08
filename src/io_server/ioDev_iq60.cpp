@@ -7,6 +7,7 @@
 #include "ioChan.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
+#include "commSrv.h"
 
 using namespace httplib;
 
@@ -18,9 +19,6 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 	memcpy(p, pData, iLen);
 	string pkt = p;
 	delete p;
-
-	LOG("收到IQ60数据包: " + pkt);
-
 
 	try {
 		json jpkt = json::parse(pkt);
@@ -35,6 +33,12 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
 				{
 					ioDev_iq60* p = (ioDev_iq60*)pIoDev;
+
+					ioAddress addr;
+					addr.devAddr = p->m_devAddr;
+					if (p->m_bEnableIoLog)
+						commSrv.StatisOnRecv((char*)pkt.c_str(), pkt.length(), addr);
+
 					p->ioSession = pALC;
 					p->onRecvPkt(jpkt);
 					if (p->m_bOnline == false)
@@ -84,14 +88,15 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 {
 	json jLast = jPkt[jPkt.size() - 1];
 
-	if (jLast.is_string())
+	if (jLast.is_string())//请求的回包最后一个字段是字符串，则最后一个字段是命令码。 主动上报数据包最后一个字段是个数组
 	{
 		string cmd = jLast.get<string>();
 
 		if (cmd.find(currentCmd) != string::npos)
 		{
 			currentResp.push_back(jPkt);
-			if (cmd.find("-") == string::npos) //结束包
+			//如果一个回包非常大，会分多个包回复，分包的命令字段为"-"号，结束包
+			if (cmd.find("-") == string::npos) 
 			{
 				getResponse = true;
 			}
@@ -202,16 +207,26 @@ bool ioDev_iq60::waitResponse(int timeout)
 	return false;
 }
 
+bool ioDev_iq60::sendData(char* pData, int iLen)
+{
+	if (ioSession == NULL)
+		return false;
+
+	ioAddress addr;
+	addr.devAddr = m_devAddr;
+	if (m_bEnableIoLog)
+		commSrv.StatisOnSend((char*)pData, iLen, addr);
+
+	return ioSession->send(pData, iLen) > 0;
+}
+
 bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
 {
 	currentCmd = cmd;
 	currentResp.clear();
 	getResponse = false;
 
-	if (ioSession == NULL)
-		return false;
-
-	ioSession->send((char*)req.c_str(), req.length());
+	sendData((char*)req.c_str(), req.length());
 
 	if (cmd == "hs")
 	{
@@ -324,7 +339,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 //w指令：[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
 //请求：[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
 //返回：["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
-bool ioDev_iq60::writeChannel(json jVal, json& jResp)
+bool ioDev_iq60::writeChannel(string chanAddr,json jVal, json& jResp)
 {
 	json jCmdW;
 	jCmdW.push_back(2);
@@ -332,32 +347,24 @@ bool ioDev_iq60::writeChannel(json jVal, json& jResp)
 	jCmdW.push_back(m_devAddr);
 	jCmdW.push_back("w");
 
-	if (jVal.is_number())
+	if (jVal.is_boolean())
 	{
-		double dbVal = jVal.get<double>();
-
-		for (int i = 0; i < m_vecChild.size(); i++)
+		if (jVal.get<bool>() == true)
 		{
-			ioDev* p = m_vecChild.at(i);
-			if (p)
-			{
-				json jonechanval;
-				jonechanval.push_back(p->m_devAddr);
-				jonechanval.push_back(dbVal);
-
-				jCmdW.push_back(jonechanval);
-			}
+			jVal = 1;
+		}
+		else
+		{
+			jVal = 0;
 		}
 	}
-	else if (jVal.is_boolean())
-	{
-	}
-	else if (jVal.is_string())
-	{
-	}
-	else
-	{
-	}
+
+	json jonechanval;
+	jonechanval.push_back(chanAddr);
+	jonechanval.push_back(jVal);
+
+	jCmdW.push_back(jonechanval);
+
 
 	//[2,"IQK","C1210608622","w",["AI4986",36.3],["AI4987",36.3]]
 	string req = jCmdW.dump() +"\n";

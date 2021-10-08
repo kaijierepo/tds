@@ -65,59 +65,23 @@ bool MO::loadConf(json& conf)
 	return true;
 }
 
-bool MO::toJson(json& conf, json params)
+bool MO::toJson(json& conf, json serializeOption)
 {
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
 
-	if (m_moType == "mp")
-	{
-		MP* p = (MP*)this;
-		bool bIncluded = false;
-		//确定是否请求了该类型的监测点
-		if (params["valType"] != nullptr)
-		{
-			json& vt = params["valType"];
-			for (int i = 0; i < vt.size(); i++)
-			{
-				json& jType = vt[i];
-				if (jType.get<string>() == p->m_valType)
-				{
-					bIncluded = true;
-					break;
-				}
-			}
-		}
-		else
-		{
-			bIncluded = true;
-		}
-		if (!bIncluded)
-			return false;
-
-		conf["valType"] = p->m_valType;
-		if (p->m_valType == "json")
-			conf["mpType"] = p->m_mpType;
-		json saveInterval;
-		saveInterval["hour"] = p->m_saveInterval.hour;
-		saveInterval["minute"] = p->m_saveInterval.minute;
-		saveInterval["second"] = p->m_saveInterval.second;
-		conf["saveMode"] = p->m_saveMode;
-		conf["saveInterval"] = saveInterval;
-		conf["unit"] = p->m_strUnit;
-	}
-	else
+	if (m_moType != MO_TYPE::mp)
 	{
 		json jChildren = json::array();
 		for (auto& pmochild : m_childMO)
 		{
 			json jChild;
-			if (pmochild->toJson(jChild, params))
+			if (pmochild->toJson(jChild, serializeOption))
 				jChildren.push_back(jChild);
 		}
 		conf["children"] = jChildren;
 	}
-
+	
 	return true;
 }
 
