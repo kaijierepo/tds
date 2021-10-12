@@ -1032,7 +1032,9 @@ vector<void*> dataServer::GetSessionList()
 string dataServer::getSessionStatus(json params)
 {
 	json typeFilter = nullptr;
+	json nameFilter = nullptr;
 	if(params!=nullptr) typeFilter = params["type"];
+	if (params != nullptr) nameFilter = params["name"];
 	lock_guard<mutex> g(m_mutexTdsSessionList);
 	json jList = json::array();
 	for (int i = 0; i < m_vecTdsSession.size(); i++)
@@ -1046,6 +1048,11 @@ string dataServer::getSessionStatus(json params)
 				if (typeFilter.get<string>() != p->type)
 					continue;
 			}
+		}
+		if (nameFilter != nullptr && nameFilter.is_string())
+		{
+			if (nameFilter.get<string>() != p->name)
+				continue;
 		}
 
 

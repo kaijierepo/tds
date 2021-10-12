@@ -551,6 +551,7 @@ void commServer::CommUnlock(ioAddress addr)
 {
 	ioAddrSession* pAddrInfo = GetCommAddrInfo(addr);
 	pAddrInfo->CommUnlock();
+	pAddrInfo->m_dwLockThread = 0;
 }
 
 

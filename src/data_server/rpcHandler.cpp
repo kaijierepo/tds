@@ -522,6 +522,9 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 			{
 				if (params["clientName"] != nullptr)
 					pSession->name = params["clientName"];
+				else if(params["name"] != nullptr)
+					pSession->name = params["name"];
+
 				if (params["echo"] != nullptr)
 				{
 					if (params["echo"].get<bool>() == false)
@@ -769,9 +772,11 @@ string rpcHandler::rpc_rt(json params, string& error)
 	}
 	else
 	{
-		MP* pmp = prj.GetMPByTag(szTag);
-		if (pmp)
+		std::vector<MP*> tagVec;
+		prj.GetMPByTag(&tagVec,szTag);
+		for(int i=0;i<tagVec.size();i++)
 		{
+			MP* pmp = tagVec.at(i);
 			rtList.push_back(pmp->getRTData());
 		}
 		string strResult = rtList.dump(4);

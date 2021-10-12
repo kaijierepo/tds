@@ -20,7 +20,7 @@ public:
     TDS_SESSION();
 	~TDS_SESSION();
 	string role;
-	string name;
+	string name; //name is defined by tds client
 	string user;
 	string loginTime;
 	string encode;

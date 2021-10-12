@@ -130,7 +130,7 @@ public:
 	PktQueue SyncPktQueue; // 同步处理队列组
 	PktQueue AysnPktQueue; // 异步处理队列组// 异步处理队列。同步模式下的通知包。 异步模式下的所有包进入该队列。有专门的处理线程处理
 	std::mutex m_queueAysnLock;
-	std::timed_mutex m_csCommLock;
+	std::recursive_timed_mutex m_csCommLock;
 	DWORD m_dwLockThread;
 	ioDev* pIODev; //ioDev with this addr
 };
