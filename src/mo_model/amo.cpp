@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "amo.h"
-#include "common.h"
+#include "common.hpp"
 
 amo::amo()
 {

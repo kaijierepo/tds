@@ -3,7 +3,7 @@
 #include <vector>
 #include <stdio.h>
 #include <stdarg.h>
-#include "common.h"
+#include "common.hpp"
 
 Clogger logger;
 void LOG(const char* pszFmt, ...)

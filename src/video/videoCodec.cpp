@@ -6,7 +6,7 @@
 #include <time.h>
 #include <chrono>
 #include <queue>
-#include "common.h"
+#include "common.hpp"
 
 
 int write_data_videoCodec(void* opaque, unsigned char* buf, int buf_size)

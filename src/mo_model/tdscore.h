@@ -2,7 +2,7 @@
 #include <queue>
 #include <string>
 #include<map>
-#include "common.h"
+#include "common.hpp"
 #include "tchar.h"
 using namespace std;
 

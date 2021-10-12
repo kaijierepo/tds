@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "tcpSwitch.h"
 #include "logger.h"
-#include "common.h"
+#include "common.hpp"
 
 tcpSwitch::tcpSwitch()
 {

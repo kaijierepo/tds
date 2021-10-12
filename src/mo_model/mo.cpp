@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "mo.h"
-#include "common.h"
+#include "common.hpp"
 #include "prj.h"
 #include "mp.h"
 #include "amo.h"

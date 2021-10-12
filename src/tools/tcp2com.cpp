@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "tcp2com.h"
 #include "logger.h"
-#include "common.h"
+#include "common.hpp"
 #include "json.hpp"
 using json = nlohmann::json;
 

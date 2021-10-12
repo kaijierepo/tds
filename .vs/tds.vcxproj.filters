@@ -36,9 +36,6 @@
     <ClCompile Include="..\src\common\base64.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\common\common.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\logger.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -176,9 +173,6 @@
     <ClInclude Include="..\src\common\cmdparser.hpp">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\common\common.h">
-      <Filter>common</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\common\httplib.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -314,6 +308,9 @@
     </ClInclude>
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\common.hpp">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

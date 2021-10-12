@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "commSrv.h"
-#include "common.h"
+#include "common.hpp"
 #include "logger.h"
 #include "json.hpp"
 #include "conf.h"

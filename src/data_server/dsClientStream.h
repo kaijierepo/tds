@@ -1,6 +1,6 @@
 #pragma once
 #include "httplib.h"
-#include "common.h"
+#include "common.hpp"
 
 // tds client stream for itergration with httplib
 //using a selfdefined tcpserver layer

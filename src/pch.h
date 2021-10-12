@@ -2,7 +2,7 @@
 
 //功能模块
 
-//#define ENABLE_GENICAM
+#define ENABLE_GENICAM
 //#define ENABLE_FFMPEG
 
 #include <queue>
@@ -13,7 +13,7 @@
 #include <iostream>
 #include <exception>
 #include <WinSock2.h>
-#include "common.h"
+#include "common.hpp"
 #include "tdscore.h"
 #include "json.hpp"
 #include "tds.h"

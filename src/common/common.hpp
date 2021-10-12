@@ -1,4 +1,6 @@
-﻿#include "common.h"
+﻿#ifndef TDS_COMMON
+#define TDS_COMMON
+
 #include <time.h>
 #include <io.h>
 #include <tchar.h>
@@ -12,15 +14,77 @@
 #include <WinSock2.h>
 #include <SetupAPI.h>
 #include <devguid.h>
-
-#include <windows.h>
+#include <mutex>
+#include <condition_variable>
 #include <Commdlg.h>
-
-
 #pragma comment (lib, "Setupapi.lib")
+#include <vector>
+#include <map>
+#include <regex>
+#include <queue>
+#define WIN32_LEAN_AND_MEAN
+#ifdef WINDOWS
+#include <windows.h>
+#endif
+
+using namespace std;
+
+class semaphore
+{
+public:
+	semaphore(int count_ = 0) : count(count_) {}
+	inline void notify()
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		count++;
+		cv.notify_one();
+	}
+	inline void wait()
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		while (count == 0)
+		{
+			cv.wait(lock);
+		}
+		//The while loop can be replaced as below.
+		//cv.wait ( lock, [&] () { return this->count > 0; } );
+		count--;
+	}
+
+	inline bool wait_for(int milliSec)
+	{
+		std::unique_lock<std::mutex> lock(mtx);
+		while (count == 0)
+		{
+			cv_status status = cv.wait_for(lock, std::chrono::milliseconds(milliSec));
+			if (status == cv_status::timeout)
+				return false;
+		}
+		//The while loop can be replaced as below.
+		//cv.wait ( lock, [&] () { return this->count > 0; } );
+		count--;
+		return true;
+	}
+private:
+	std::mutex mtx;
+	std::condition_variable cv;
+	int count;
+};
+
 
 namespace common {
-	unsigned char auchCRCHi[] =
+	inline string& getCharCodec() {
+		static string charCodec = "utf8";
+		return charCodec;
+	}
+
+	inline void setCharCodec(string codec) {
+		string& cc = getCharCodec();
+		cc = codec;
+	}
+
+
+	const unsigned char auchCRCHi[] =
 	{
 		0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
 		0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
@@ -43,7 +107,7 @@ namespace common {
 	};
 
 
-	unsigned char auchCRCLo[] =
+	const unsigned char auchCRCLo[] =
 	{
 		0x00, 0xC0, 0xC1, 0x01, 0xC3, 0x03, 0x02, 0xC2, 0xC6, 0x06, 0x07, 0xC7, 0x05, 0xC5, 0xC4,
 		0x04, 0xCC, 0x0C, 0x0D, 0xCD, 0x0F, 0xCF, 0xCE, 0x0E, 0x0A, 0xCA, 0xCB, 0x0B, 0xC9, 0x09,
@@ -66,7 +130,7 @@ namespace common {
 	};
 
 
-	unsigned short N_CRC16(unsigned char* updata, long long len)
+	inline unsigned short N_CRC16(unsigned char* updata, long long len)
 	{
 		unsigned char uchCRCHi = 0xff;
 		unsigned char uchCRCLo = 0xff;
@@ -83,7 +147,29 @@ namespace common {
 
 namespace charCodec {
 
-	string utf8toAnsi(string instr) //utf-8-->ansi
+	inline string utf16toUtf8(wstring instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 4 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
+	inline string utf16toAnsi(wstring instr)
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
+	inline string utf8toAnsi(string instr) //utf-8-->ansi
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -98,7 +184,7 @@ namespace charCodec {
 		return charstrtemp;
 	}
 
-	wstring utf8toUtf16(string instr) //utf-8-->ansi
+	inline wstring utf8toUtf16(string instr) //utf-8-->ansi
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -109,31 +195,47 @@ namespace charCodec {
 		return str;
 	}
 
-	string utf16toUtf8(wstring instr) //utf-8-->ansi
-	{
-		int MAX_STRSIZE = instr.length() * 4 + 2;
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
-		delete charstr;
-		return str;
-	}
-
-	string utf16toAnsi(wstring instr)
+	inline wstring ansiToUtf16(string instr)
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
-		delete charstr;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
 		return str;
 	}
 
-	
+	inline wstring autoToUtf16(string instr)
+	{
+		wstring w;
+		if (common::getCharCodec() == "gb2312")
+		{
+			w = charCodec::ansiToUtf16(instr);
+		}
+		else
+		{
+			w = charCodec::utf8toUtf16(instr);
+		}
+		return w;
+	}
 
-	string ansi2Utf8(string instr) //ansi-->utf-8
+	inline string utf16ToAuto(wstring instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			s = charCodec::utf16toAnsi(instr);
+		}
+		else
+		{
+			s = charCodec::utf16toUtf8(instr);
+		}
+		return s;
+	}
+
+
+	inline string ansi2Utf8(string instr) //ansi-->utf-8
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -148,7 +250,7 @@ namespace charCodec {
 		return charstrtemp;
 	}
 
-	string ToUtf8(LPCTSTR wstr) //-->utf-8
+	inline string ToUtf8(LPCTSTR wstr) //-->utf-8
 	{
 #ifdef UNICODE
 		int srcLen = lstrlen(wstr);
@@ -168,15 +270,263 @@ namespace charCodec {
 #endif
 	}
 }
+namespace str {
+	
+	inline string& trimPrefix(string& s, string prefix = " ")
+	{
+		if (s.find(prefix) == 0)
+		{
+			s = s.substr(prefix.length(), s.length() - prefix.length());
+		}
+		return s;
+	}
 
+	inline string& trimSuffix(string& s, string suffix = " ")
+	{
+		int ipos = s.find(suffix);
+		if (ipos + suffix.length() == s.length())
+		{
+			s = s.substr(0,ipos);
+		}
+		return s;
+	}
+
+	inline string& trim(std::string& s, string toTrim = " ")
+	{
+		s = trimPrefix(s, toTrim);
+		s = trimSuffix(s, toTrim);
+		return s;
+	}
+
+
+	inline string& replace(string& str, const string to_replaced, const string newchars)
+	{
+		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		{
+			pos = str.find(to_replaced, pos);
+			if (pos != string::npos)
+				str.replace(pos, to_replaced.length(), newchars);
+			else
+				break;
+		}
+		return   str;
+	}
+
+
+	inline std::string format(const char* pszFmt, ...)
+	{
+		std::string str;
+		va_list args;
+		va_start(args, pszFmt);
+		{
+			int nLength = _vscprintf(pszFmt, args);
+			nLength += 1;  //上面返回的长度是包含\0，这里加上
+			std::vector<char> vectorChars(nLength);
+			_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+			str.assign(vectorChars.data());
+		}
+		va_end(args);
+		return str;
+	}
+
+	inline int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
+	{
+		if (src.empty() || separator.empty())
+			return 0;
+
+		int nCount = 0;
+		std::string temp;
+		size_t pos = 0, offset = 0;
+
+		// 分割第1~n-1个
+		while ((pos = src.find(separator, offset)) != std::string::npos)
+		{
+			temp = src.substr(offset, pos - offset);
+			if (temp.length() > 0) {
+				dst.push_back(temp);
+				nCount++;
+			}
+			else
+			{
+				dst.push_back("");
+				nCount++;
+			}
+			offset = pos + separator.size();
+		}
+
+		// 分割第n个
+		temp = src.substr(offset, src.length() - offset);
+		if (temp.length() > 0) {
+			dst.push_back(temp);
+			nCount++;
+		}
+
+		return nCount;
+	}
+
+	inline string removeChar(string str, char c)
+	{
+		str.erase(std::remove(str.begin(), str.end(), c), str.end());
+		return str;
+	}
+	inline string trimFloat(string str)
+	{
+		while (str.at(str.length() - 1) == '0')
+		{
+			str = str.substr(0, str.length() - 1);
+		}
+		if (str.at(str.length() - 1) == '.')
+		{
+			str = str.substr(0, str.length() - 1);
+		}
+		return str;
+	}
+	inline string fromFloat(float f)
+	{
+		string s;
+		s = str::format("%f", f);
+		s = str::trimFloat(s);
+		return s;
+	}
+
+	inline vector<char> toBytes(string str)
+	{
+		vector<char> bytes;
+		str = removeChar(str, ' ');
+		str = removeChar(str, '\t');
+		str = removeChar(str, '\r');
+		str = removeChar(str, '\n');
+
+		if (0 != str.length() % 2)
+		{
+			str += "0";
+		}
+
+		int strLen = 0;
+		strLen = str.length();
+
+		for (int i = 0; i < strLen / 2; i++)
+		{
+			char cByteHigh = str.at(i * 2);
+			char cByteLow = str.at(i * 2 + 1);
+			cByteHigh = toupper(cByteHigh);
+			cByteLow = toupper(cByteLow);
+			int bHigh = 0, bLow = 0;
+			if (cByteHigh >= 'A')
+			{
+				bHigh = cByteHigh - 'A' + 10;
+			}
+			else
+			{
+				bHigh = cByteHigh - '0';
+			}
+
+			if (cByteLow >= 'A')
+			{
+				bLow = cByteLow - 'A' + 10;
+			}
+			else
+			{
+				bLow = cByteLow - '0';
+			}
+
+			int val = (bHigh * 16 + bLow);
+			unsigned char b = (unsigned char)val;
+			bytes.push_back((char)b);
+		}
+		return bytes;
+	}
+	inline string fromBytes(vector<char>& bytes)
+	{
+		string str;
+		for (int i = 0; i < bytes.size(); i++)
+		{
+			string b = format("%02X", (unsigned char)bytes[i]);
+			str += b;
+		}
+
+		return str;
+	}
+	inline string fromBytes(char* p, int len, string splitter = " ")
+	{
+		string str;
+		for (int i = 0; i < len; i++)
+		{
+			string b = format("%02X", (unsigned char)p[i]);
+			str += b;
+			str += splitter;
+		}
+
+		return str;
+	}
+	inline string fromInt(int v)
+	{
+		string s = str::format("%d", v);
+		return s;
+	}
+
+	inline int toInt(string s)
+	{
+		return atoi(s.c_str());
+	}
+
+	inline bool isInteger(string s)
+	{
+		for (int i = 0; i < s.size(); i++)
+		{
+			if (s.at(i) < '0' || s.at(i) > '9')return false;
+		}
+		return true;
+	}
+
+	inline bool isIp(string s)
+	{
+		vector<string> v;
+		str::split(v, s, ".");
+		if (v.size() != 4)return false;
+		for (int i = 0; i < v.size(); i++) 
+		{
+			if (!isInteger(v.at(i)))
+			return false; 
+		}
+		for (int i = 0; i < v.size(); i++) 
+		{ 
+			int n = toInt(v.at(i));
+			if (n > 255)return false;
+		}
+		return true;
+	}
+
+	inline bool parseIpPort(string s, string& ip, int& port)
+	{
+		int ipos = s.find(":");
+		if (ipos == string::npos)
+			return false;
+
+		string sip = s.substr(0, ipos);
+		string sport = s.substr(ipos + 1, s.length() - ipos - 1);
+
+		if (!isIp(sip))
+			return false;
+
+		ip = sip;
+
+		if (sport == "")
+			return false;
+
+		port = atoi(sport.c_str());
+
+		return true;
+	}
+}
 namespace timeopt {
-	string stTimeToStr(SYSTEMTIME time)
+	inline string stTimeToStr(SYSTEMTIME time)
 	{
 		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
 		return str;
 	}
 
-	DWORD SysTime2Unix(SYSTEMTIME sDT)
+	inline DWORD SysTime2Unix(SYSTEMTIME sDT)
 	{
 		tm temptm = { sDT.wSecond, sDT.wMinute, sDT.wHour,
 			sDT.wDay, sDT.wMonth - 1, sDT.wYear - 1900, sDT.wDayOfWeek, 0, 0 };
@@ -184,7 +534,7 @@ namespace timeopt {
 		return iReturn;
 	}
 
-	SYSTEMTIME Unix2SysTime(DWORD iUnix)
+	inline SYSTEMTIME Unix2SysTime(DWORD iUnix)
 	{
 		SYSTEMTIME sDT;
 		time_t tIn = (time_t)iUnix;
@@ -201,10 +551,10 @@ namespace timeopt {
 		return sDT;
 	}
 
-	SYSTEMTIME str2st(string str)
+	inline SYSTEMTIME str2st(string str)
 	{
 		SYSTEMTIME t;
-		int year,month,day,hour,min,sec;
+		int year, month, day, hour, min, sec;
 		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
 			&month,
@@ -213,7 +563,7 @@ namespace timeopt {
 			&min,
 			&sec);
 		t.wYear = year;
-		t.wMonth =month;
+		t.wMonth = month;
 		t.wDay = day;
 		t.wHour = hour;
 		t.wMinute = min;
@@ -222,7 +572,7 @@ namespace timeopt {
 		return t;
 	}
 
-	int HMS2Sec(string hms)
+	inline int HMS2Sec(string hms)
 	{
 		vector<string> v;
 		str::split(v, hms, ":");
@@ -230,10 +580,10 @@ namespace timeopt {
 		return sec;
 	}
 
-	bool isRelative(string time)
+	inline bool isRelative(string time)
 	{
 		if (time.find("d") != string::npos || time.find("h") != string::npos
-			|| time.find("m") != string::npos || time.find("s") != string::npos || 
+			|| time.find("m") != string::npos || time.find("s") != string::npos ||
 			time.find("D") != string::npos || time.find("H") != string::npos
 			|| time.find("M") != string::npos || time.find("S") != string::npos)
 		{
@@ -242,7 +592,7 @@ namespace timeopt {
 		return false;
 	}
 
-	DWORD duration2sec(string strTime)
+	inline DWORD duration2sec(string strTime)
 	{
 		DWORD dwSecond = 0;
 
@@ -281,7 +631,7 @@ namespace timeopt {
 		return dwSecond;
 	}
 
-	string rel2abs(string time)
+	inline string rel2abs(string time)
 	{
 		string strTime1 = time;
 		if (isRelative(time)) {
@@ -333,7 +683,7 @@ namespace timeopt {
 		return time;
 	}
 
-	string st2str(SYSTEMTIME t)
+	inline string st2str(SYSTEMTIME t)
 	{
 		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
 			t.wYear, t.wMonth, t.wDay,
@@ -341,15 +691,15 @@ namespace timeopt {
 		return str;
 	}
 
-	string st2strWithMilli(SYSTEMTIME t)
+	inline string st2strWithMilli(SYSTEMTIME t)
 	{
 		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
 			t.wYear, t.wMonth, t.wDay,
-			t.wHour, t.wMinute, t.wSecond,t.wMilliseconds);
+			t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
 		return str;
 	}
 
-	string TimeToYMD(const SYSTEMTIME time)
+	inline string TimeToYMD(const SYSTEMTIME time)
 	{
 		string str;
 		if (time.wYear > 2000 && time.wDay > 0 && time.wDay < 40 && time.wHour >= 0 && time.wHour <= 24 && time.wMinute >= 0 && time.wMinute <= 60)
@@ -358,7 +708,7 @@ namespace timeopt {
 		}
 		return str;
 	}
-	int CalcTimePassSecond(SYSTEMTIME lastTime)
+	inline int CalcTimePassSecond(SYSTEMTIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
 		time_t now = time(NULL);
@@ -366,15 +716,15 @@ namespace timeopt {
 		return milli;
 	}
 
-	time_t getTick(){
+	inline time_t getTick() {
 		std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp =
-		std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+			std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
 		auto tmp = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
 		time_t timestamp = tmp.count();
 		return timestamp;
 	}
 
-	void setAsTimeOrg(SYSTEMTIME& st)
+	inline void setAsTimeOrg(SYSTEMTIME& st)
 	{
 		memset(&st, 0, sizeof(SYSTEMTIME));
 		st.wYear = 1970;
@@ -384,7 +734,7 @@ namespace timeopt {
 
 
 
-	string nowStr(bool enableMS)
+	inline string nowStr(bool enableMS = false)
 	{
 		time_t timestamp = getTick();
 		__int64 milli = timestamp + (__int64)8 * 60 * 60 * 1000;
@@ -392,271 +742,22 @@ namespace timeopt {
 		auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>(mTime);
 		auto tt = std::chrono::system_clock::to_time_t(tp);
 		std::tm now;
-		::gmtime_s(&now,&tt);
+		::gmtime_s(&now, &tt);
 		char res[64] = { 0 };
-		if(enableMS)
+		if (enableMS)
 			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d.%03d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec, static_cast<int>(milli % 1000));
 		else
 		{
 			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
 		}
-		
+
 		return std::string(res);
 	}
 }
-
-namespace str {
-	string& trim(std::string& s, string toTrim)
-	{
-		s = trimPrefix(s, toTrim);
-		s = trimSuffix(s, toTrim);
-		return s;
-	}
-
-	string& trimPrefix(string& s, string prefix)
-	{
-		if (s.find(prefix) == 0)
-		{
-			s = s.substr(prefix.length(), s.length() - prefix.length());
-		}
-		return s;
-	}
-
-	string& trimSuffix(string& s, string suffix)
-	{
-		int ipos = s.find(suffix);
-		if (ipos + suffix.length() == s.length())
-		{
-			s = s.substr(0,ipos);
-		}
-		return s;
-	}
-
-	string& replace(string& str, const string to_replaced, const string newchars)
-	{
-		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
-		{
-			pos = str.find(to_replaced, pos);
-			if (pos != string::npos)
-				str.replace(pos, to_replaced.length(), newchars);
-			else
-				break;
-		}
-		return   str;
-	}
-
-
-	std::string str::format(const char* pszFmt, ...)
-	{
-		std::string str;
-		va_list args;
-		va_start(args, pszFmt);
-		{
-			int nLength = _vscprintf(pszFmt, args);
-			nLength += 1;  //上面返回的长度是包含\0，这里加上
-			std::vector<char> vectorChars(nLength);
-			_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
-			str.assign(vectorChars.data());
-		}
-		va_end(args);
-		return str;
-	}
-
-	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
-	{
-		if (src.empty() || separator.empty())
-			return 0;
-
-		int nCount = 0;
-		std::string temp;
-		size_t pos = 0, offset = 0;
-
-		// 分割第1~n-1个
-		while ((pos = src.find(separator, offset)) != std::string::npos)
-		{
-			temp = src.substr(offset, pos - offset);
-			if (temp.length() > 0) {
-				dst.push_back(temp);
-				nCount++;
-			}
-			else
-			{
-				dst.push_back("");
-				nCount++;
-			}
-			offset = pos + separator.size();
-		}
-
-		// 分割第n个
-		temp = src.substr(offset, src.length() - offset);
-		if (temp.length() > 0) {
-			dst.push_back(temp);
-			nCount++;
-		}
-
-		return nCount;
-	}
-
-	string removeChar(string str, char c)
-	{
-		str.erase(std::remove(str.begin(), str.end(), c), str.end());
-		return str;
-	}
-	string trimFloat(string str)
-	{
-		while (str.at(str.length() - 1) == '0')
-		{
-			str = str.substr(0, str.length() - 1);
-		}
-		if (str.at(str.length() - 1) == '.')
-		{
-			str = str.substr(0, str.length() - 1);
-		}
-		return str;
-	}
-	string fromFloat(float f)
-	{
-		string s;
-		s = str::format("%f", f);
-		s = str::trimFloat(s);
-		return s;
-	}
-
-	vector<char> toBytes(string str)
-	{
-		vector<char> bytes;
-		str = removeChar(str, ' ');
-		str = removeChar(str, '\t');
-		str = removeChar(str, '\r');
-		str = removeChar(str, '\n');
-
-		if (0 != str.length() % 2)
-		{
-			str += "0";
-		}
-
-		int strLen = 0;
-		strLen = str.length();
-
-		for (int i = 0; i < strLen / 2; i++)
-		{
-			char cByteHigh = str.at(i * 2);
-			char cByteLow = str.at(i * 2 + 1);
-			cByteHigh = toupper(cByteHigh);
-			cByteLow = toupper(cByteLow);
-			int bHigh = 0, bLow = 0;
-			if (cByteHigh >= 'A')
-			{
-				bHigh = cByteHigh - 'A' + 10;
-			}
-			else
-			{
-				bHigh = cByteHigh - '0';
-			}
-
-			if (cByteLow >= 'A')
-			{
-				bLow = cByteLow - 'A' + 10;
-			}
-			else
-			{
-				bLow = cByteLow - '0';
-			}
-
-			int val = (bHigh * 16 + bLow);
-			unsigned char b = (unsigned char)val;
-			bytes.push_back((char)b);
-		}
-		return bytes;
-	}
-	string fromBytes(vector<char>& bytes)
-	{
-		string str;
-		for (int i = 0; i < bytes.size(); i++)
-		{
-			string b = format("%02X", (unsigned char)bytes[i]);
-			str += b;
-		}
-
-		return str;
-	}
-	string fromBytes(char* p, int len, string splitter)
-	{
-		string str;
-		for (int i = 0; i < len; i++)
-		{
-			string b = format("%02X", (unsigned char)p[i]);
-			str += b;
-			str += splitter;
-		}
-
-		return str;
-	}
-	string fromInt(int v)
-	{
-		string s = str::format("%d", v);
-		return s;
-	}
-
-	int toInt(string s)
-	{
-		return atoi(s.c_str());
-	}
-
-	bool isInteger(string s)
-	{
-		for (int i = 0; i < s.size(); i++)
-		{
-			if (s.at(i) < '0' || s.at(i) > '9')return false;
-		}
-		return true;
-	}
-
-	bool isIp(string s)
-	{
-		vector<string> v;
-		str::split(v, s, ".");
-		if (v.size() != 4)return false;
-		for (int i = 0; i < v.size(); i++) 
-		{
-			if (!isInteger(v.at(i)))
-			return false; 
-		}
-		for (int i = 0; i < v.size(); i++) 
-		{ 
-			int n = toInt(v.at(i));
-			if (n > 255)return false;
-		}
-		return true;
-	}
-
-	bool parseIpPort(string s, string& ip, int& port)
-	{
-		int ipos = s.find(":");
-		if (ipos == string::npos)
-			return false;
-
-		string sip = s.substr(0, ipos);
-		string sport = s.substr(ipos + 1, s.length() - ipos - 1);
-
-		if (!isIp(sip))
-			return false;
-
-		ip = sip;
-
-		if (sport == "")
-			return false;
-
-		port = atoi(sport.c_str());
-
-		return true;
-	}
-}
-
 namespace fs {
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	void createFolderOfPath(string strFile)
+	inline void createFolderOfPath(string strFile)
 	{
 		str::replace(strFile,"\\","/");
 		str::replace(strFile, "////", "/");
@@ -679,7 +780,7 @@ namespace fs {
 			{
 				int iDot = strFile.find('.', iStartPos);
 				if (iDot == string::npos)
-					CreateDirectoryW(charCodec::utf8toUtf16(strFile).c_str(), NULL);
+					CreateDirectoryW(charCodec::autoToUtf16(strFile).c_str(), NULL);
 				break;
 			}
 
@@ -687,12 +788,35 @@ namespace fs {
 				break;
 
 			string strFolder = strFile.substr(0, iSlash);
-			wstring wstrFolder = charCodec::utf8toUtf16(strFolder).c_str();
+			wstring wstrFolder = charCodec::autoToUtf16(strFolder).c_str();
 			CreateDirectoryW(wstrFolder.c_str(), NULL);
 			iStartPos = iSlash + 1;
 		}
 	}
-	string toAbsolutePath(string str)
+	
+
+	inline string appPath()
+	{
+#ifdef WINDOWS
+		//windows获取到的是反斜杠，tds内统一使用斜杠
+		TCHAR p[MAX_PATH] = { 0 };
+		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+		string strPath = (char*)p;
+		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+		strPath = strPath.substr(0, nEnd);
+		if(common::getCharCodec() == "gb2312")
+			strPath = strPath;
+		else
+			strPath = charCodec::ansi2Utf8(strPath);
+		strPath = str::replace(strPath,"\\", "/");
+		return strPath;
+#elif LINUX
+		return "";
+#else
+		return "";
+#endif
+	}
+	inline string toAbsolutePath(string str)
 	{
 		string s;
 		if (str.substr(0, 2) == "./")
@@ -710,26 +834,7 @@ namespace fs {
 		}
 		return s;
 	}
-
-	string appPath()
-	{
-#ifdef WINDOWS
-		//windows获取到的是反斜杠，tds内统一使用斜杠
-		TCHAR p[MAX_PATH] = { 0 };
-		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
-		string strPath = (char*)p;
-		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
-		strPath = strPath.substr(0, nEnd);
-		strPath = charCodec::ansi2Utf8(strPath);
-		strPath = str::replace(strPath,"\\", "/");
-		return strPath;
-#elif LINUX
-		return "";
-#else
-		return "";
-#endif
-	}
-	string getExt(string strFilePath)
+	inline string getExt(string strFilePath)
 	{
 		size_t pos = strFilePath.rfind(".");
 		if (pos != strFilePath.npos)
@@ -739,9 +844,9 @@ namespace fs {
 		}
 		return "";
 	}
-	bool readFile(string path, char*& pData,int& len)
+	inline bool readFile(string path, char*& pData,int& len)
 	{
-		FILE* fp = _wfopen(charCodec::utf8toUtf16(path).c_str(), L"rb");
+		FILE* fp = _wfopen(charCodec::autoToUtf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -754,9 +859,9 @@ namespace fs {
 		}
 		return false;
 	}
-	bool readFile(string path, string& data)
+	inline bool readFile(string path, string& data)
 	{
-		FILE* fp = _wfopen(charCodec::utf8toUtf16(path).c_str(), L"rb");
+		FILE* fp = _wfopen(charCodec::autoToUtf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -771,10 +876,11 @@ namespace fs {
 		}
 		return false;
 	}
-	bool writeFile(string path, char* data, int len)
+	inline bool writeFile(string path, char* data, int len)
 	{
 		fs::createFolderOfPath(path);
-		wstring wpath = charCodec::utf8toUtf16(path);
+		wstring wpath = charCodec::autoToUtf16(path);
+
 		FILE* fp = _wfopen(wpath.c_str(), L"wb");
 		if (fp)
 		{
@@ -789,13 +895,10 @@ namespace fs {
 		}
 		return false;
 	}
-	bool appendFile(string path, string data)
+	
+	inline bool appendFile(string path, char* data, int len)
 	{
-		return appendFile(path,(char*)data.data(),data.length());
-	}
-	bool appendFile(string path, char* data, int len)
-	{
-		wstring wpath = charCodec::utf8toUtf16(path);
+		wstring wpath = charCodec::autoToUtf16(path);
 		FILE* fp = _wfopen(wpath.c_str(), L"ab");
 		if (fp)
 		{
@@ -805,16 +908,21 @@ namespace fs {
 		}
 		return false;
 	}
-	bool writeFile(string path, string& data)
+
+	inline bool appendFile(string path, string data)
+	{
+		return appendFile(path, (char*)data.data(), data.length());
+	}
+	inline bool writeFile(string path, string& data)
 	{
 		return writeFile(path,(char*)data.c_str(), data.length());
 	}
-	bool fileExist(string pszFileName)
+	inline bool fileExist(string pszFileName)
 	{
 		WIN32_FIND_DATAW FindFileData;
 		HANDLE hFind;
 
-		hFind = FindFirstFileW(charCodec::utf8toUtf16(pszFileName).c_str(), &FindFileData);
+		hFind = FindFirstFileW(charCodec::autoToUtf16(pszFileName).c_str(), &FindFileData);
 
 		if (hFind == INVALID_HANDLE_VALUE)
 			return false;
@@ -826,15 +934,15 @@ namespace fs {
 		return false;
 	}
 
-	bool deleteFile(string path){
-		wstring wpath = charCodec::utf8toUtf16(path);
+	inline bool deleteFile(string path){
+		wstring wpath = charCodec::autoToUtf16(path);
 		int iret = _wremove(wpath.c_str());
 		return iret == 0;
 	}
 
-	vector<string> getFileList(string strFolder)
+	inline vector<string> getFileList(string strFolder)
 	{
-		wstring wstrFolder = charCodec::utf8toUtf16(strFolder);
+		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
 		vector<string> list;
 		wchar_t dirNew[200];
 		wcscpy(dirNew, wstrFolder.c_str());
@@ -873,7 +981,7 @@ namespace fs {
 		return list;
 	}
 
-	std::string GetOpenFile(char* filter , char* title , char* initDirectory )
+	inline std::string GetOpenFile(char* filter = NULL , char* title = NULL , char* initDirectory = NULL )
 	{
 		//文件名
 		std::wstring filename;
@@ -885,7 +993,7 @@ namespace fs {
 		ofn.hwndOwner = GetForegroundWindow();//拥有着窗口句柄
 		if (filter)
 		{
-			ofn.lpstrFilter = charCodec::utf8toUtf16(filter).c_str();//设置过滤
+			ofn.lpstrFilter = charCodec::autoToUtf16(filter).c_str();//设置过滤
 		}
 		else
 		{
@@ -896,13 +1004,13 @@ namespace fs {
 		ofn.lpstrFile = strFilename;//接收返回的文件名，注意第一个字符需要为NULL
 		ofn.nMaxFile = MAX_PATH;//缓冲区长度
 		if(initDirectory!=NULL)
-			ofn.lpstrInitialDir = charCodec::utf8toUtf16(initDirectory).c_str();//初始目录为默认
+			ofn.lpstrInitialDir = charCodec::autoToUtf16(initDirectory).c_str();//初始目录为默认
 
 		//对话框标题
 		if (title)
 		{
 			if(title!=NULL)
-				ofn.lpstrTitle = charCodec::utf8toUtf16(title).c_str();
+				ofn.lpstrTitle = charCodec::autoToUtf16(title).c_str();
 		}
 		else
 		{
@@ -914,25 +1022,25 @@ namespace fs {
 		{
 			filename = strFilename;
 		}
-		string utf8Str = charCodec::utf16toUtf8(filename);
+		string utf8Str = charCodec::utf16ToAuto(filename);
 		string cwd = fs::appPath();
-		BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
+		BOOL bRet = SetCurrentDirectoryW(charCodec::autoToUtf16(cwd).c_str());
 		return utf8Str;
 	}
 
-	std::string GetSaveFile(char* filter , char* title , char* initDirectory )
+	inline std::string GetSaveFile(char* filter = NULL , char* title = NULL , char* initDirectory = NULL)
 	{
 		//文件名
 		std::wstring filename;
 		std::wstring wFilter;
 		if(filter)
-		 wFilter = charCodec::utf8toUtf16(filter).c_str();//设置过滤
+		 wFilter = charCodec::autoToUtf16(filter).c_str();//设置过滤
 		std::wstring wDir;
 		if(initDirectory)
-		 wDir = charCodec::utf8toUtf16(initDirectory).c_str();//初始目录为默认
+		 wDir = charCodec::autoToUtf16(initDirectory).c_str();//初始目录为默认
 		std::wstring wTitle;
 		if(title)
-		 wTitle = charCodec::utf8toUtf16(title).c_str();
+		 wTitle = charCodec::autoToUtf16(title).c_str();
 
 		//打开文件
 		OPENFILENAMEW ofn = { 0 };
@@ -972,14 +1080,13 @@ namespace fs {
 			filename = strFilename;
 		}
 		string cwd = fs::appPath();
-		BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
-		string utf8Str = charCodec::utf16toUtf8(filename);
+		BOOL bRet = SetCurrentDirectoryW(charCodec::autoToUtf16(cwd).c_str());
+		string utf8Str = charCodec::utf16ToAuto(filename);
 		return utf8Str;
 	}
 }
-
 namespace path {
-	string normalization(string& s)
+	inline string normalization(string& s)
 	{
 		s = str::replace(s, "\\\\", "/");
 		s = str::replace(s, "\\", "/");
@@ -987,11 +1094,13 @@ namespace path {
 		return s;
 	}
 }
-
 namespace sys {
+	struct COM_INFO {
+		string portNum;
+		string desc;
+	};
 
-
-	vector<string> getCOMList()
+	inline vector<string> getCOMList()
 	{
 		vector<string> list;
 		HKEY hkey;
@@ -1018,8 +1127,8 @@ namespace sys {
 					//   枚举串口   
 					break;   //   commName就是串口名字"COM2"   
 				}
-				strComName = charCodec::utf16toUtf8(commName);
-				strDrName = charCodec::utf16toUtf8(portName);
+				strComName = charCodec::utf16ToAuto(commName);
+				strDrName = charCodec::utf16ToAuto(portName);
 				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
 				int len = strDrName.rfind('\\');
 				// 获取'\\'左边的字符串   
@@ -1035,7 +1144,7 @@ namespace sys {
 		return list;
 	}
 
-	vector<COM_INFO> getCOMInfoList() {
+	inline vector<COM_INFO> getCOMInfoList() {
 		vector<COM_INFO> ary;
 			HDEVINFO hDevInfo;
 			SP_DEVINFO_DATA DeviceInfoData;
@@ -1098,7 +1207,7 @@ namespace sys {
 				}
 
 				wstring utf16str = buffer;
-				string comInfo = charCodec::utf16toUtf8(utf16str);
+				string comInfo = charCodec::utf16ToAuto(utf16str);
 
 				int iLeftBracket = comInfo.find("(");
 				if (iLeftBracket == string::npos)
@@ -1136,7 +1245,7 @@ namespace sys {
 			SetupDiDestroyDeviceInfoList(hDevInfo);
 			return ary;
 	}
-	string getLastError(string szReason)
+	inline string getLastError(string szReason = "")
 	{
 		DWORD dwErrCode = GetLastError(); //之前的错误代码
 
@@ -1164,7 +1273,7 @@ namespace sys {
 		if (lpMsgBuf)
 		{
 			wstring utf16msg = (LPWSTR)lpMsgBuf;
-			string utf8Msg = charCodec::utf16toUtf8(utf16msg);
+			string utf8Msg = charCodec::utf16ToAuto(utf16msg);
 			szErrMsg = str::format("%s\n Code = %u, Mean = %s", szReason.c_str(), dwErrCode, utf8Msg.c_str());
 		}
 
@@ -1178,4 +1287,4 @@ namespace sys {
 		return szErrMsg;
 	}
 }
-
+#endif

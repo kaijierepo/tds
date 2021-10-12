@@ -505,10 +505,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\common\common.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
     <ClCompile Include="..\src\common\simdjson.cpp">
@@ -566,7 +562,7 @@
     <ClInclude Include="..\src\alarm_server\as.h" />
     <ClInclude Include="..\src\common\base64.h" />
     <ClInclude Include="..\src\common\cmdparser.hpp" />
-    <ClInclude Include="..\src\common\common.h" />
+    <ClInclude Include="..\src\common\common.hpp" />
     <ClInclude Include="..\src\common\httplib.h" />
     <ClInclude Include="..\src\common\json.hpp" />
     <ClInclude Include="..\src\common\logger.h" />

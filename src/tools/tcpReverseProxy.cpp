@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "tcpReverseProxy.h"
 #include "logger.h"
-#include "common.h"
+#include "common.hpp"
 
 tcpReverseProxy::tcpReverseProxy()
 {
