@@ -1064,8 +1064,6 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 	{
 		ioGW_LocalSerial* p = (ioGW_LocalSerial*)pCom;
 		p->closeCom();
-		ioSrv.deleteChild(p);
-		delete p;
 		json j = "ok";
 		return j.dump();
 	}

@@ -76,6 +76,10 @@ LRESULT CALLBACK WindowProc_tdsUI(
 		{
 			case VK_F12:
 			string path = fs::appPath() + "\\front_end\\inspector.html";
+			if (!fs::fileExist(path))
+			{
+				::MessageBox(NULL, charCodec::utf8toAnsi("没有找到./front_end/inspector.html,请将调试工具包放在程序运行目录下").c_str(), NULL, NULL);
+			}
 			wkeShowDevtools(m_hUI, charCodec::utf8toUtf16(path).c_str(), showDevToolCallback, NULL);
 			break;
 		}
@@ -117,7 +121,7 @@ void createMiniblinkWnd()
 	SetRect(&rc, 0, 0, w, h);
 	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
 
-	//wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
+	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
 
 	HWND hwnd = CreateWindow(
 		"tdsUI",           //上面注册的类名，要完全一致  
@@ -239,13 +243,14 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
-	setWorkingDir();
+	//load tds.json
+	tdsConf.loadConf();
+	logger.m_bEnable = tdsConf.enableLog;
 
 	//初始化接口
 	tds->db = &::db;
 
-	//load tds.json
-	tdsConf.loadConf();
+	setWorkingDir();
 
 	//check mode
 	if(conf->uiMode == "")
@@ -278,6 +283,7 @@ bool TDS_imp::run(string cmdline)
 	//create browser window
 	if (conf->uiMode == "miniblink")
 	{
+	    ::ShowWindow(GetConsoleWindow(), SW_HIDE);
 		wkeSetWkeDllPath(L"miniblink_x64.dll");
 		wkeInitialize();
 		createMiniblinkWnd();

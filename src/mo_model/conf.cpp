@@ -10,6 +10,8 @@ tdsConfig::tdsConfig()
 	projectConfPath = "";
 	dbPath = "";
 	singleGenicamHost = false;
+	enableDB = true;
+	enableLog = true;
 }
 
 struct TDS_CONF_ITEM {
@@ -74,6 +76,20 @@ void tdsConfig::loadConf()
 			homepage = tci.val;
 		else if (tci.key == "singlegenicamhost")
 			singleGenicamHost = tci.val == "1" ? true : false;
+		else if (tci.key == "enablelog")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableLog = true;
+			else if(tci.val == "false" || tci.val == "0")
+				enableLog = false;
+		}
+		else if (tci.key == "enabledb")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableDB = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableDB = false;
+		}
 	}
 
 		//j = jsonConf["active_session"];

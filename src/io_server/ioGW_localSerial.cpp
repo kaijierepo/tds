@@ -191,7 +191,7 @@ bool ioGW_LocalSerial::closeCom()
 
 	HANDLE hCom = m_hCom;
 	m_hCom = NULL;
-
+	m_bConnected = false;
 	if (m_hRecvThread)
 	{
 		//必须先关闭readfile阻塞读取，否则closeHandle会阻塞

@@ -34,6 +34,8 @@ design problem:
 
 
 #ifndef _WINDLL
+//命令行参数调用 ，js解释器等模式需要默认控制台，因此默认控制台不隐藏
+//terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {

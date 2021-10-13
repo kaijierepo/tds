@@ -35,6 +35,7 @@ Clogger::Clogger()
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
+	m_bEnable = true;
 }
 
 std::string Clogger::formatStr(const char* pszFmt, ...)
@@ -134,6 +135,8 @@ string Clogger::logInternal(string info)
 
 void Clogger::log(string info)
 {
+	if (!m_bEnable)
+		return;
 	//logInternal only log to file and cmdline
 	//log will log to some user specified place, the code must not trigger log again
 	//log to websocket code routine must not use log, but use logInternal

@@ -14,6 +14,8 @@
 #include "commSrv.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
+#include "conf.h"
+#include "tds.h"
 
 
 dataServer ds;
@@ -160,7 +162,7 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 	if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
 		WS_FrameType ft = WS_TEXT_FRAME;
-		if (pALC->type == TDS_SESSION_TYPE::tunnel )
+		if (pALC->type == TDS_SESSION_TYPE::tunnel || pALC->type == TDS_SESSION_TYPE::websocket2com)
 		{
 			ft = WS_BINARY_FRAME;
 		}
@@ -224,7 +226,8 @@ void activeSessionThread()
 bool dataServer::run()
 {
 	//if db folder is not exist. open will create an empty folder
-	db.Open(tds->conf->dbPath,prj.m_strName);
+	if(tds->conf->enableDB)
+		db.Open(tds->conf->dbPath,prj.m_strName);
 
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
@@ -515,13 +518,18 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip, tdsSession->port);
 	LOG(szLog);
 
+	//回复websocket握手
+	CWSPPkt req;
+	std::string handshakeString = req.GetHandshakeString(strData);
+	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
+
 	if (strData.find("COM") != string::npos)
 	{
 		int pos = strData.find("COM");
 		int pos1 = strData.find(" ", pos);
 		string portNum = strData.substr(pos, pos1 - pos);
 		ioDev* p = ioSrv.getIODev(portNum);
-		tdsSession->type = TDS_SESSION_TYPE::tunnel;
+		tdsSession->type = TDS_SESSION_TYPE::websocket2com;
 		tdsSession->setActivityCheck(false);
 		if (p)
 		{
@@ -530,16 +538,16 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		}
 		else
 		{
-			string html = portNum + " is not in the opened port list,please open it first";
-			std::string header = "HTTP/1.1 200 OK\r\n";
-			header += "Content-Type: text/html; charset=utf-8\r\n";
-			header += "Accept-Ranges: none\r\n"; // no support for partial requests
-			header += "Cache-Control: no-store, must-revalidate\r\n";
-			header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
-			header += "\r\n";
+			//string html = portNum + " is not in the opened port list,please open it first";
+			//std::string header = "HTTP/1.1 200 OK\r\n";
+			//header += "Content-Type: text/html; charset=utf-8\r\n";
+			//header += "Accept-Ranges: none\r\n"; // no support for partial requests
+			//header += "Cache-Control: no-store, must-revalidate\r\n";
+			//header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
+			//header += "\r\n";
 
-			string resp = header + html;
-			send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
+			//string resp = header + html;
+			//send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
 			closesocket(tdsSession->sock);
 			return;
 		}
@@ -565,12 +573,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			return;
 		}
 	}
-
-	CWSPPkt req;
-	std::string handshakeString = req.GetHandshakeString(strData);
-	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
-
-	if (strData.find("/log") != string::npos)
+	else if (strData.find("/log") != string::npos)
 	{
 		logTdsSessions.push_back(tdsSession);
 		logger.logOutput = logToWebsock;
