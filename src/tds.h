@@ -1,7 +1,44 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <map>
 using namespace std;
+
+
+//值类型
+namespace TDS {
+	namespace VAL_TYPE {
+		const string json = "json";	//自定义类型。是一个json对象字符串
+		const string real = "real"; //实型
+		const string integer = "int";
+		const string boolean = "bool";
+		const string video = "video";
+		const string car_strobe = "car_strobe";
+		const string man_strobe = "man_strobe";
+	};
+	//IO设备层级
+	namespace IO_DEV_LEVEL {
+		const string server = "server";
+		const string gateway = "gateway";
+		const string device = "device";
+		const string channel = "channel";
+	}
+	//IO设备类型
+	namespace IO_DEV_TYPE {
+		namespace DEV {
+			const string modbus_rtu = "modbus_rtu";
+			const string iq60_gateway = "iq60-gateway";
+			const string genicam = "genicam";
+		}
+		namespace GW {
+			const string local_serial = "local-serial";
+		}
+		namespace CHAN {
+			const string io_channel = "io-channel";
+		}
+	}
+};
+
 
 #define STREAM_TYPE_ENUM string
 namespace STREAM_TYPE {

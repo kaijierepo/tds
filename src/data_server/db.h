@@ -123,6 +123,12 @@ public:
 	jerry_value_t global_object;
 };
 
+class db_exception : public std::exception {
+public:
+	const char* what() const noexcept /*noexcept*/ override { return m_error.c_str(); }
+	string m_error;
+};
+
 
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
 class database : public i_database{

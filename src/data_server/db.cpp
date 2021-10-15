@@ -766,6 +766,15 @@ bool ATTRI_SELECTOR::match(string& de)
 		bMatch = jerry_value_to_boolean(eval_ret);
 		return bMatch;
 	}
+	else
+	{
+		db_exception e;
+		if(error == JERRY_ERROR_REFERENCE)
+			e.m_error = "db exception: error when execute filter script,reference not found!";
+		else
+			e.m_error = "db exception: error when execute filter script";
+		throw e;
+	}
 	//过滤器执行出错，统一不过滤
 	return true;
 }

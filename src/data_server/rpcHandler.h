@@ -68,7 +68,7 @@ public:
 	//tds data service function
 	string rpc_input(json params, string& error);
 	string rpc_output(json params, string& error);
-	string rpc_query(json params, string& error);
+	string rpc_db_select(json params, string& error);
 	string rpc_rt(json params, string& error);
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);

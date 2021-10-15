@@ -14,19 +14,8 @@ rpc协议中的属性/常量/宏       下划线连接      如：io_addr
 枚举字符串			         短划线连接      如: gw-local-serial
 */
 
-namespace TDS{
-//数据类型
-namespace VAL_TYPE {
-	const string json = "json";	//自定义类型。是一个json对象字符串
-	const string real = "real"; //实型
-	const string integer = "int";
-	const string boolean = "bool"; 
-	const string video = "video";
-	const string car_strobe = "car_strobe";
-	const string man_strobe = "man_strobe";
-};
-
-const std::map<string,string> VAL_TYPE_LABEL = {
+namespace TDS {
+	const std::map<string, string> VAL_TYPE_LABEL = {
 	{std::map<string,string>::value_type("json","JSON")},
 	{std::map<string,string>::value_type("real","实型")},
 	{std::map<string,string>::value_type("int","整型")},
@@ -34,8 +23,14 @@ const std::map<string,string> VAL_TYPE_LABEL = {
 	{std::map<string,string>::value_type("video","视频")},
 	{std::map<string,string>::value_type("car_strobe","车闸")},
 	{std::map<string,string>::value_type("man_strobe","人闸")}
-};
+	};
 
+	const std::map<string, string> IO_DEV_TYPE_LABEL = {
+	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
+	{std::map<string,string>::value_type("local-serial","本地串口")},
+	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},
+	{std::map<string,string>::value_type("io-channel","IO通道")},
+	};
 //物理量类型。
 //注意:不同的物理量可以有相同的单位，只是物理应用场景不同。
 //根据物理量类型可以确定默认单位,例如V，但是可依然可以修改具体单位例如 kV
@@ -117,36 +112,6 @@ namespace MO_TYPE_LABEL {
 	const string PROJECT = "工程";
 	const string ACTIVE_OBJ = "活动监测点";
 }
-
-namespace IO_DEV_LEVEL {
-	const string server = "server";
-	const string gateway = "gateway";
-	const string device = "device";
-	const string channel = "channel";
-}
-
-
-namespace IO_DEV_TYPE {
-	namespace DEV {
-		const string modbus_rtu = "modbus_rtu";
-		const string iq60_gateway = "iq60-gateway";
-		const string genicam = "genicam";
-	}
-	namespace GW {
-		const string local_serial = "local-serial";
-	}
-	namespace CHAN {
-		const string io_channel = "io-channel";
-	}
-}
-
-const std::map<string, string> IO_DEV_TYPE_LABEL = {
-	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
-	{std::map<string,string>::value_type("local-serial","本地串口")},
-	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},	
-	{std::map<string,string>::value_type("io-channel","IO通道")},
-};
-
 
 namespace TDS_ERROR {
 	const string ok = "ok";

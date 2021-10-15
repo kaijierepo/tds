@@ -106,7 +106,7 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 }
 
 
-string rpcHandler::rpc_query(json params,string& error)
+string rpcHandler::rpc_db_select(json params,string& error)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
@@ -141,13 +141,23 @@ string rpcHandler::rpc_query(json params,string& error)
 	{
 		tagSet = tagSetTmp;
 	}
-	DB_DATA_SET set;
-	for(auto& i:tagSet)
+
+	string result = "";
+	try
 	{
-		db.Select(i->getTag(), timeSelector, filter, set);
+		DB_DATA_SET set;
+		for (auto& i : tagSet)
+		{
+			db.Select(i->getTag(), timeSelector, filter, set);
+		}
+		result = db.dataSet2String(set);
 	}
-	string result = db.dataSet2String(set);
-	
+	catch (std::exception& e)
+	{
+		json jerror = e.what();
+		error = jerror.dump();
+	}
+
 	return result;
 }
 
@@ -305,7 +315,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		}
 		else if (method == "query")
 		{
-			result = rpc_query(params, error);
+			result = rpc_db_select(params, error);
 		}
 		else if (method == "getconf")
 		{
@@ -380,6 +390,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		result = j.dump();
 	}
 
+
+	if (method == "db.select")
+	{
+		result = rpc_db_select(params, error);
+	}
 	if (method == "db.update")
 	{
 		string tag = params["tag"].get<string>();
@@ -449,7 +464,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	}
 #endif
 
-	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "")
+	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "" || error!="")
 		return true;
 	return false;
 }
