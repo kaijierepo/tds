@@ -156,6 +156,11 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		}
 	}
 	
+	//notify to tds client
+	json rtList;
+	json pt = getRTData();
+	rtList.push_back(pt);
+	tdsSrv.notify("rt", rtList);
 
 	//save to db
 	bool bNeedSave = false;
@@ -251,16 +256,6 @@ string MP::getMpType()
 	}
 
 	return mpType;
-}
-
-json MP::getRT()
-{
-	json j;
-	j["time"] = timeopt::st2str(m_lastUpdateTime);
-	j["name"] = m_strName;
-	j["val"] = m_curVal;
-	j["type"] = m_moType;
-	return j;
 }
 
 int MP::getSaveInterval()

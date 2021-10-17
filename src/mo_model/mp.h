@@ -43,7 +43,6 @@ public:
 	string getMpTypeLabel();
 	string getMpType();
 	json getRTData();
-	json getRT();
 	json m_orgVal;
 	json m_curVal;
 	json m_lastVal;
