@@ -162,7 +162,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 	{
 		for (int i = 1; i < jPkt.size(); i++)
 		{
-			string valType = "real";
+			string valType = VAL_TYPE::Float;
 			json point = jPkt[i];
 			string name = point[0].get<string>();
 			double dbVal;
@@ -184,7 +184,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			if (pChild && pChild->m_level == "channel")
 			{
 				ioChannel* pC = (ioChannel*)pChild;
-				if (valType == "real")
+				if (valType == VAL_TYPE::Float)
 					pC->input(dbVal);
 				else
 					pC->input(bVal);
@@ -309,7 +309,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			jChan["addr"] = jPt["Name"];
 			string valType = jPt["ValueType"].get<string>();
 			if (valType == "float")
-				jChan["valType"] = VAL_TYPE::real;
+				jChan["valType"] = VAL_TYPE::Float;
 			else if (valType == "bool")
 				jChan["valType"] = VAL_TYPE::boolean;
 			else if (valType == "int")

@@ -689,7 +689,7 @@ string rpcHandler::rpc_output(json params, string& error)
 		string error = jError.dump();
 		return "!" + error;
 	}
-	else if (val.is_number() && pmp->m_valType != VAL_TYPE::real)
+	else if (val.is_number() && pmp->m_valType != VAL_TYPE::Float)
 	{
 		json jError = {
 				{"code", TEC_VAL_TYPE_ERROR},
@@ -1105,53 +1105,49 @@ void rpcHandler::Notify(string strTag, string& szNotify)
 {
 	string str;
 
-	for (int i = 0; i < m_vecTLServer.size(); i++)
+	vector<void*> clientList = ds.GetSessionList();
+	for (int j = 0; j < clientList.size(); j++)
 	{
-		CTLServer* pTLSrv = m_vecTLServer.at(i);
-		vector<void*> clientList = pTLSrv->GetSessionList();
-		for (int j = 0; j < clientList.size(); j++)
+		shared_ptr<TDS_SESSION> p = shared_ptr<TDS_SESSION>((TDS_SESSION*)clientList.at(j));
+		if (p->iALProto == APP_LAYER_PROTO::HTTP || p->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
+			continue;
+		if (p->role != "m_ioSrv")
 		{
-			shared_ptr<TDS_SESSION> p = shared_ptr<TDS_SESSION>((TDS_SESSION*)clientList.at(j));
-			if (p->iALProto == APP_LAYER_PROTO::HTTP || p->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
-				continue;
-			if (p->role != "m_ioSrv")
+			//if (m_pMonitorView)
+			//{
+			//	m_pMonitorView->StatisOnSend((char*)szNotify.c_str(), szNotify.size(), p->ip.c_str());
+			//}
+			if (p->encode == "utf8")
 			{
-				//if (m_pMonitorView)
-				//{
-				//	m_pMonitorView->StatisOnSend((char*)szNotify.c_str(), szNotify.size(), p->ip.c_str());
-				//}
-				if (p->encode == "utf8")
-				{
-					str = charCodec::ansi2Utf8(szNotify);
-				}
-				else
-				{
-					str = szNotify;
-				}
-				p->send((char*)str.data(), str.length());
+				str = charCodec::ansi2Utf8(szNotify);
 			}
 			else
 			{
-				map<string, string>::iterator i = p->mapTagDataSubscribe.begin();
-				for (; i != p->mapTagDataSubscribe.end(); i++)
+				str = szNotify;
+			}
+			p->send((char*)str.data(), str.length());
+		}
+		else
+		{
+			map<string, string>::iterator i = p->mapTagDataSubscribe.begin();
+			for (; i != p->mapTagDataSubscribe.end(); i++)
+			{
+				string tagSub = i->second;
+				if (tagSub == strTag)
 				{
-					string tagSub = i->second;
-					if (tagSub == strTag)
+					//if (m_pMonitorView)
+					//{
+					//	m_pMonitorView->StatisOnSend((char*)szNotify.c_str(), szNotify.size(), p->ip.c_str());
+					//}
+					if (p->encode == "utf8")
 					{
-						//if (m_pMonitorView)
-						//{
-						//	m_pMonitorView->StatisOnSend((char*)szNotify.c_str(), szNotify.size(), p->ip.c_str());
-						//}
-						if (p->encode == "utf8")
-						{
-							str = charCodec::ansi2Utf8(szNotify);
-						}
-						else
-						{
-							str = szNotify;
-						}
-						p->send((char*)str.data(), str.length());
+						str = charCodec::ansi2Utf8(szNotify);
 					}
+					else
+					{
+						str = szNotify;
+					}
+					p->send((char*)str.data(), str.length());
 				}
 			}
 		}

@@ -17,7 +17,7 @@ rpc协议中的属性/常量/宏       下划线连接      如：io_addr
 namespace TDS {
 	const std::map<string, string> VAL_TYPE_LABEL = {
 	{std::map<string,string>::value_type("json","JSON")},
-	{std::map<string,string>::value_type("real","实型")},
+	{std::map<string,string>::value_type("float","浮点型")},
 	{std::map<string,string>::value_type("int","整型")},
 	{std::map<string,string>::value_type("bool","布尔型")},
 	{std::map<string,string>::value_type("video","视频")},
@@ -404,20 +404,6 @@ struct CAN_PKT_V2 //size = 13字节
 		ZeroMemory(arrData, sizeof(arrData));
 	}
 };
-
-//应用服务器基类 Application Layer Server
-class CALServer {
-public:
-	virtual bool OnRecvAppLayerData(char* pData, int iLen, void* pCltInfo) { return 0; }
-	virtual bool OnRecvAppLayerPkt(char* pData, int iLen, void* pCltInfo) { return 0; }
-};
-
-class CTLServer {
-public:
-	virtual int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) { return 0; }
-	virtual vector<void*> GetSessionList() {vector<void*> v; return v; }
-};
-
 }
 using namespace TDS;
 

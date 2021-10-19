@@ -75,7 +75,6 @@ public:
 	int sendData(char* sendData, int len, tcpSession* pCltInfo= NULL,WS_FrameType ft= WS_TEXT_FRAME);
 
 	tcpSrv* m_pTcpServer;
-	CALServer* m_pALServer;
 };
 
 

@@ -9,7 +9,7 @@ using namespace std;
 namespace TDS {
 	namespace VAL_TYPE {
 		const string json = "json";	//自定义类型。是一个json对象字符串
-		const string real = "real"; //实型
+		const string Float = "float"; //实型
 		const string integer = "int";
 		const string boolean = "bool";
 		const string video = "video";

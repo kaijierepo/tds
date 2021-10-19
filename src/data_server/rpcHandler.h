@@ -99,8 +99,7 @@ public:
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
 	database* m_DB;
-	//关联的传输层服务器
-	vector<CTLServer*> m_vecTLServer;
+
 	//upper level tds
 	tcpClt m_DataCenterClt;
 

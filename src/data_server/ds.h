@@ -15,7 +15,7 @@ dataserver
 #define MAX_RECEIVE_LENGTH 512
 
 class database;
-class dataServer : public ITcpServerCallBack,public ITcpClientCallBack, public CALServer,public CTLServer
+class dataServer : public ITcpServerCallBack,public ITcpClientCallBack
 {
 public:
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
@@ -30,7 +30,7 @@ public:
 
 
 
-	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo) override;
+	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo);
 	bool isHttpPkt(string str);
 
 	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
@@ -56,7 +56,7 @@ public:
 	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
-	vector<void*> GetSessionList() override;
+	vector<void*> GetSessionList();
 	string getSessionStatus(json params);
 	mutex m_mutexTdsSessionList;
 	FILE* m_pRecFile;

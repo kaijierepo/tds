@@ -47,8 +47,8 @@ string TDS_SESSION::GetClientIp()
      unique_lock<recursive_mutex> lock(m_mutex);
      GetLocalTime(&lastSendTime);
 
-     if(pTLServer && pTcpSession) // means lower layer has been disconneted
-        return pTLServer->SendAppLayerData(p, len, this);
+     if(pTcpSession) // means lower layer has been disconneted
+        return ds.SendAppLayerData(p, len, this);
      if (pTcpSessionClt)
          return pTcpSessionClt->SendData(p, len);
      return 0;
@@ -82,7 +82,6 @@ string TDS_SESSION::GetClientIp()
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
      m_mutex.lock();
-     pTLServer = nullptr;
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
      if (pBridgedTcpClient)

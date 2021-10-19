@@ -8,7 +8,6 @@
 wspSrv::wspSrv()
 {
 	m_pTcpServer = NULL;
-	m_pALServer = NULL;
 }
 
 wspSrv ::~wspSrv()

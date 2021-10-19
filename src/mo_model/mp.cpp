@@ -32,7 +32,7 @@ bool MP::loadConf(json& conf)
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
-	if (m_valType == TDS::VAL_TYPE::real)
+	if (m_valType == TDS::VAL_TYPE::Float)
 	{
 		if(conf["unit"]!=nullptr)
 			m_strUnit = conf["unit"].get<string>();
@@ -214,7 +214,7 @@ string MP::getMpTypeLabel()
 	{
 		typeLabel = m_strName;
 	}
-	else if (m_valType == TDS::VAL_TYPE::real)
+	else if (m_valType == TDS::VAL_TYPE::Float)
 	{
 		typeLabel = m_strName;
 	}
@@ -238,7 +238,7 @@ string MP::getMpType()
 	{
 		mpType = m_strName;
 	}
-	else if (m_valType == TDS::VAL_TYPE::real)
+	else if (m_valType == TDS::VAL_TYPE::Float)
 	{
 		mpType = m_strName;
 	}

@@ -85,7 +85,6 @@ void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 		GetLocalTime(&p->stCreateTime);
 		p->bConnected = true;
-		p->pTLServer = this;
 		p->pTcpSession = pCltInfo;
 		p->sock = pCltInfo->sock;
 		p->port = pCltInfo->iPort;
@@ -231,8 +230,7 @@ bool dataServer::run()
 
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
-	m_wspSrv.m_pALServer = this;
-
+	
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	initHttpSrv(httpSrv);
 	//serve project specified ui through http.both are root path. specified ui path has higher priority
@@ -307,8 +305,6 @@ bool dataServer::run()
 	LOG("[TDS服务   ] 端口:" + str::fromInt(tryPort) + " 本机浏览器 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
-
-	tdsSrv.m_vecTLServer.push_back(this);
 
 
 	thread t(activeSessionThread);

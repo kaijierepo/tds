@@ -58,8 +58,7 @@ public:
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
-	CTLServer* pTLServer; //传输层服务器
-	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时
+	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
 	tcpClt* pTcpSessionClt; //作为客户端连接数据中心的 主动式tcpSession
 	SYSTEMTIME stCreateTime;
 	stream2pkt m_alBuf; //stream buff for app layer data
