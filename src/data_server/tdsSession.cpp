@@ -2,6 +2,8 @@
 #include "tdsSession.h"
 #include "mp.h"
 #include "logger.h"
+#include "ioDev.h"
+#include "rpcHandler.h"
 
 
 
@@ -52,6 +54,19 @@ string TDS_SESSION::GetClientIp()
      return 0;
  }
 
+ ioDev* TDS_SESSION::getIODev(string ioAddr)
+ {
+     for (int i = 0; i < m_vecIoDev.size(); i++)
+     {
+         ioDev* p = m_vecIoDev.at(i);
+         if (p->getIOAddr().ToString() == ioAddr)
+         {
+             return p;
+         }
+     }
+     return nullptr;
+ }
+
  void TDS_SESSION::CBridgedTcpClientHandler::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
  {
  }
@@ -76,6 +91,15 @@ string TDS_SESSION::GetClientIp()
      }
      videoServiceNode = NULL;
      bConnected = false;
+
+     for (int i = 0; i < m_vecIoDev.size(); i++)
+     {  
+         ioDev* p = m_vecIoDev[i];
+         p->m_bOnline = false;
+         json j;
+         p->toJson(j);
+         tdsSrv.notify("io.offline", j);
+     }
      m_mutex.unlock();
  }
 

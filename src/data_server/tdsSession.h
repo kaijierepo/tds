@@ -8,6 +8,7 @@
 
 class MP;
 class streamSrvNode;
+class ioDev;
 
 struct TCP_DATA_BUFF {
 	char* pData;
@@ -66,4 +67,6 @@ public:
 	string bridgedLocalCom; //和本地串口桥接
 	string bridgedTcpServer; //和tcp服务器的一个连接桥接
 	tcpClt* pBridgedTcpClient;
+	ioDev* getIODev(string ioAddr);
+	vector<ioDev*> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
 };

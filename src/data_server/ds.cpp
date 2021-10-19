@@ -766,6 +766,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			)
 		{
 			tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
+			tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
 		}
 		//tdsRPC协议
 		else
