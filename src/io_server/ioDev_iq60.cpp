@@ -263,7 +263,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 		return false;
 
 	//请求io点列表
-	string req = "[2,\"IQK\",\"" + m_devAddr + "\",\"hs\"]";
+	string req = "[2,\"IQK\",\"" + m_devAddr + "\",\"hs\"]\n";
 	if (!requestAndWaitResp("hs", req))
 		return false;
 
@@ -295,7 +295,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			jCmdHr.push_back(ptName);
 		}
 	}
-	req = jCmdHr.dump();
+	req = jCmdHr.dump() + "\n";
 	if (!requestAndWaitResp("hr", req))
 		return false;
 
