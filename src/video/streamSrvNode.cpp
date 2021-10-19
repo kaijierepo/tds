@@ -43,10 +43,7 @@ void streamSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 	if (sp.tdsSession)
 	{
 		std::shared_ptr<TDS_SESSION> p = sp.tdsSession;
-		std::unique_lock<recursive_mutex> lock(p->m_mutex);//p->pTcpSession该指针不可多线程并发使用，加锁
-		if (p->pTcpSession == NULL)
-			return;
-		if (p->pTcpSession->iSendSucCount == 0)
+		if (p->getSendedBytes() == 0)
 		{
 			json jSi;
 			jSi["w"] = sd.info.w;

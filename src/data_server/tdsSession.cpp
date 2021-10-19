@@ -44,13 +44,28 @@ string TDS_SESSION::GetClientIp()
 }
 
  int TDS_SESSION::send(char* p,int len){
-     unique_lock<recursive_mutex> lock(m_mutex);
+     unique_lock<mutex> lock(m_mutexTcpLink);//使用tcplink
      GetLocalTime(&lastSendTime);
 
      if(pTcpSession) // means lower layer has been disconneted
         return ds.SendAppLayerData(p, len, this);
      if (pTcpSessionClt)
          return pTcpSessionClt->SendData(p, len);
+     return 0;
+ }
+
+ int TDS_SESSION::getSendedBytes()
+ {
+     std::unique_lock<mutex> lock(m_mutexTcpLink);//使用tcplink
+     if (pTcpSession)
+     {
+         return pTcpSession->iSendSucCount;
+     }
+     else if (pTcpSessionClt)
+     {
+         //return pTcpSessionClt->
+         return 0;
+     }
      return 0;
  }
 
@@ -81,7 +96,7 @@ string TDS_SESSION::GetClientIp()
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
-     m_mutex.lock();
+     unique_lock<mutex> lock(m_mutexTcpLink);//修改tcplink
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
      if (pBridgedTcpClient)
@@ -99,7 +114,6 @@ string TDS_SESSION::GetClientIp()
          p->toJson(j);
          tdsSrv.notify("io.offline", j);
      }
-     m_mutex.unlock();
  }
 
  void TDS_SESSION::setActivityCheck(bool bEnable)

@@ -446,7 +446,8 @@ void logToWebsock(string text)
 生产者-临时消费者模式  
 tdsSessionProcessThread  为消费者，临时线程
 OnRecvData_TCPServer 为生产者，常驻线程
-tdsSession->m_mutex 为任务队列
+tdsSession->dataBuff 为任务队列
+当任务队列中有数据时，该模式控制 必有1个消费者 且 只有1个消费者
 
 此处使用队列的原因。
 不能直接将OnRecvData_TCPServer收到的数据多线程调用tdsSessionProcessThread去处理
@@ -456,20 +457,45 @@ tdsSession->m_mutex 为任务队列
 
 void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	std::unique_lock<recursive_mutex> g(tdsSession->m_mutex);
-	while (tdsSession->dataBuff.size() > 0)
+	//控制只有一个 - m_bSessionProcessing为false才能进入，因此不会出现两个工作者，
+	//控制必有一个 - 此处如果return后，创建消费者线程的代码前面的代码已经插入了新任务，并且解锁后已存在工作者一定会进行一次待办任务确认，不会有不被执行的任务
+	tdsSession->m_mutexTcpBuff.lock();
+	if (tdsSession->m_bSessionProcessing)
 	{
+		tdsSession->m_mutexTcpBuff.unlock();//必须保证此处unlock后，已有的消费者一定会去检查任务队列
+		return;
+	}
+	tdsSession->m_bSessionProcessing = true;
+	tdsSession->m_mutexTcpBuff.unlock();
+
+	while(1)
+	{
+		//取出任务
+		tdsSession->m_mutexTcpBuff.lock();
 		TCP_DATA_BUFF tdb = tdsSession->dataBuff.front();
 		tdsSession->dataBuff.pop();
+		tdsSession->m_mutexTcpBuff.unlock();
+
+		//执行任务
 		ds.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
 		delete tdb.pData;
+	
+		//是否继续工作判断。 当其他线程获得锁，并且m_bSessionProcessing==true时，当前消费者线程一定还在while循环当中
+		tdsSession->m_mutexTcpBuff.lock();
+		if (tdsSession->dataBuff.size() == 0)
+		{
+			tdsSession->m_bSessionProcessing = false;
+			tdsSession->m_mutexTcpBuff.unlock();
+			break;
+		}
+		tdsSession->m_mutexTcpBuff.unlock();
 	}
 }
 
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
-	std::unique_lock<recursive_mutex> g(tdsSession->m_mutex);
+	std::unique_lock<mutex> g(tdsSession->m_mutexTcpBuff);
 	TCP_DATA_BUFF tdb;
 	tdb.pData = new char[iLen];
 	tdb.iLen = iLen;

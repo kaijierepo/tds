@@ -38,7 +38,12 @@ public:
 	streamSrvNode* videoServiceNode; //tds拉流的源
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
+
+	//会话通信数据处理控制
 	queue<TCP_DATA_BUFF> dataBuff;
+	std::mutex m_mutexTcpBuff;
+	bool m_bSessionProcessing;
+
 	void* dsCltStream; //转发给httplib的流
 	string sendContent; //text or binary
 
@@ -54,7 +59,8 @@ public:
     void Init();
     string GetClientIp();
     int send(char* p,int len);
-    std::recursive_mutex m_mutex; //使用递归锁的原因是 接收处理线程当中可能调用session进行发送，可能锁两次
+	int getSendedBytes();
+    std::mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
