@@ -133,6 +133,7 @@ ioDev* createIODevWithChildren(json conf)
 			{
 				string addr = i["addr"];
 
+				//批量映射配置
 				if (isBatchLink(addr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
 				{
 					p->m_mapBatchDataLink[addr] = i["tag_bind"];
@@ -147,38 +148,7 @@ ioDev* createIODevWithChildren(json conf)
 					else
 						pdc = new ioChannel();
 					pChild = pdc;
-					pdc->m_level = "channel";
-					pdc->m_devAddr = addr;
-					if (i["tag_bind"] != nullptr)
-					{
-						if (i["tag_bind"].is_array())
-						{
-							json tagNodes = i["tag_bind"];
-							string tag;
-							for (int i = 0; i < tagNodes.size(); i++)
-							{
-								tag += tagNodes[i];
-								if (i < tagNodes.size() - 1)
-									tag += ".";
-							}
-							pdc->m_strLinkMPTag = tag;
-						}
-						else
-						{
-							pdc->m_strLinkMPTag = i["tag_bind"];
-						}
-					}
-					p->m_mapDataChannel[addr] = pdc;
-					if (i["io"] != nullptr)
-						pdc->m_io = i["io"];
-					if (i["ioLabel"] != nullptr)
-						pdc->m_ioLabel = i["ioLabel"];
-					if (i["valType"] != nullptr)
-						pdc->m_valType = i["valType"];
-					if (i["valTypeLabel"] != nullptr)
-						pdc->m_valTypeLabel = i["valTypeLabel"];
-					if(i["name"]!=nullptr)
-						pdc->m_name = i["name"];
+					pdc->loadConf(i);
 				}
 			}
 			else if(i["level"] == "device")
@@ -188,8 +158,7 @@ ioDev* createIODevWithChildren(json conf)
 
 			if (pChild)
 			{
-				p->m_vecChild.push_back(pChild);
-				pChild->m_pParent = p;
+				p->addChild(pChild);
 			}
 		}
 	}

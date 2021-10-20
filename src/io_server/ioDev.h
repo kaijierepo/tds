@@ -18,6 +18,7 @@ public:
 
 	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
 	virtual bool toJson(json& conf, string opt = "");
+	virtual bool loadConf(json& conf);
 	virtual bool connect();
 	virtual bool disconnect();
 	virtual string getDesc();
@@ -60,6 +61,7 @@ public:
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
+	bool addChild(ioDev* p);
 	void deleteChild(ioDev* p);
 	void deleteDescendant(ioDev* p);
 	ioDev* getChild(string devAddr);

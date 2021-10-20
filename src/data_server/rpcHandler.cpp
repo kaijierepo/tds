@@ -1006,6 +1006,17 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 			result["ioAddr"] = p->m_devAddr;
 			result["channels"] = chanList;
 
+
+			//新建空闲设备通道
+			for (int i = 0; i < chanList.size(); i++)
+			{
+				json jC = chanList[i];
+				ioChannel* pC = new ioChannel;
+				pC->m_mngStatus = IODEV_MNG_STATUS::spare;
+				pC->loadConf(jC);
+				p->addChild(pC);
+			}
+
 			return result.dump();
 		}
 	}

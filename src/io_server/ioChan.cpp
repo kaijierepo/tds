@@ -17,6 +17,44 @@ ioChannel::~ioChannel()
 {
 }
 
+bool ioChannel::loadConf(json& conf)
+{
+	m_level = "channel";
+	m_devAddr = conf["addr"];
+	if (conf["tag_bind"] != nullptr)
+	{
+		if (conf["tag_bind"].is_array())
+		{
+			json tagNodes = conf["tag_bind"];
+			string tag;
+			for (int i = 0; i < tagNodes.size(); i++)
+			{
+				tag += tagNodes[i];
+				if (i < tagNodes.size() - 1)
+					tag += ".";
+			}
+			m_strLinkMPTag = tag;
+		}
+		else
+		{
+			m_strLinkMPTag = conf["tag_bind"];
+		}
+	}
+	
+	if (conf["io"] != nullptr)
+		m_io = conf["io"];
+	if (conf["ioLabel"] != nullptr)
+		m_ioLabel = conf["ioLabel"];
+	if (conf["valType"] != nullptr)
+		m_valType = conf["valType"];
+	if (conf["valTypeLabel"] != nullptr)
+		m_valTypeLabel = conf["valTypeLabel"];
+	if (conf["name"] != nullptr)
+		m_name = conf["name"];
+
+	return true;
+}
+
 string ioChannel::GetCommLinkTag()
 {
 	ioAddress addr = m_pParent->getIOAddr();

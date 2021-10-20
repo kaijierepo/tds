@@ -93,6 +93,11 @@ bool ioDev::toJson(json& conf, string opt)
 	return true;
 }
 
+bool ioDev::loadConf(json& conf)
+{
+	return false;
+}
+
 bool ioDev::connect()
 {
 	return false;
@@ -350,6 +355,17 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 		if(it.second->m_strLinkMPTag == strMPTag) return it.second;
 	}
 	return NULL;
+}
+
+bool ioDev::addChild(ioDev* p)
+{
+	m_vecChild.push_back(p);
+	p->m_pParent = this;
+	if (p->m_level == "channel")
+	{
+		m_mapDataChannel[p->m_devAddr] = (ioChannel*)p;
+	}
+	return true;
 }
 
 void ioDev::deleteChild(ioDev* p)

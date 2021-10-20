@@ -10,6 +10,8 @@ public:
 	ioChannel();
 	~ioChannel();
 
+	bool loadConf(json& conf) override;
+
 	bool match(string channelNo);
 
 	string GetCommLinkTag();
