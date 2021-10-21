@@ -530,6 +530,12 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		if(needLog(method))
 			LOG("RPC call <--:\r\n" + strReq + "\r\n");
 
+		//通知消息，无需生成响应，转发后直接返回
+		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
+		{
+			notify("notify", params, pSession);
+		}
+
 		//心跳最先处理
 		if (method == "heartbeat")
 		{
@@ -1100,13 +1106,20 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 }
 
 
-void rpcHandler::notify(string method, json params)
+void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"param\":" + params.dump() + "}";
-	vector<shared_ptr<TDS_SESSION>> tdsSessions = ds.m_vecTdsSession;
+	vector<shared_ptr<TDS_SESSION>> tdsSessions;
+	tdsSessions = ds.m_vecTdsSession;
+	
+	
 	for (int i=0;i<tdsSessions.size();i++)
 	{
 		shared_ptr<TDS_SESSION> p = tdsSessions[i];
+
+		if (p == orgSession) //不发给来源
+			continue;
+
 		if(p->type == TDS_SESSION_TYPE::rpc)
 			p->send((char*)notify.c_str(), notify.length());
 	}

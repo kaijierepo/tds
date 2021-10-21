@@ -233,15 +233,10 @@ bool dataServer::run()
 	
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	initHttpSrv(httpSrv);
-	//serve project specified ui through http.both are root path. specified ui path has higher priority
-	string prjUI = tds->conf->projectConfPath + "\\ui";
-	if(fs::fileExist(prjUI))
-	{
-		string asc_prjUI = charCodec::utf8toAnsi(prjUI);
-		httpSrv.set_mount_point("/",asc_prjUI.c_str());
-		LOG("[HTTP服务器] 根目录: " + prjUI + "[project specified ui]");
-	}
-	//custom tds ver specified ui through http
+	
+
+	//基于tds的二次开发，ui根目录位于此
+	//并且将tds的app目录放置在该目录下
 	string customUI = fs::appPath() + "\\ui";
 	if (fs::fileExist(customUI))
 	{
@@ -249,16 +244,16 @@ bool dataServer::run()
 		httpSrv.set_mount_point("/", + asc_customUI.c_str());
 		LOG("[HTTP服务器] 根目录: " + customUI);
 	}
-	//serve common ui through http
-	//string path = fs::appPath() + "\\tdskit\\ui";
-	//auto ret = httpSrv.set_mount_point("/", path.c_str());
-	//if (!ret) {
-	//	LOG("[warn]" + path + " 路径不存在,get a complete software package");
-	//}
-	//else
-	//{
-	//	LOG("[HTTP Server] root at " + path + "[tdskit common ui]");
-	//}
+
+	//tds自己使用时，直接将app作为根目录
+	string uiApps = fs::appPath() + "\\app";
+	if (fs::fileExist(uiApps))
+	{
+		string asc_prjUI = charCodec::utf8toAnsi(uiApps);
+		httpSrv.set_mount_point("/", asc_prjUI.c_str());
+		LOG("[HTTP服务器] 根目录: " + uiApps);
+	}
+
 	//serve db files through http
 	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
 	auto ret = httpSrv.set_mount_point("/db/", asc_dbPath.c_str());
@@ -471,15 +466,6 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	while(1)
 	{
 		//取出任务
-		tdsSession->m_mutexTcpBuff.lock();
-		TCP_DATA_BUFF tdb = tdsSession->dataBuff.front();
-		tdsSession->dataBuff.pop();
-		tdsSession->m_mutexTcpBuff.unlock();
-
-		//执行任务
-		ds.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
-		delete tdb.pData;
-	
 		//是否继续工作判断。 当其他线程获得锁，并且m_bSessionProcessing==true时，当前消费者线程一定还在while循环当中
 		tdsSession->m_mutexTcpBuff.lock();
 		if (tdsSession->dataBuff.size() == 0)
@@ -488,7 +474,13 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 			tdsSession->m_mutexTcpBuff.unlock();
 			break;
 		}
+		TCP_DATA_BUFF tdb = tdsSession->dataBuff.front();
+		tdsSession->dataBuff.pop();
 		tdsSession->m_mutexTcpBuff.unlock();
+
+		//执行任务
+		ds.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
+		delete tdb.pData;
 	}
 }
 
@@ -619,9 +611,9 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		rds.startStream(tdsSession);
 #endif
 	}
-	else if (strData.find("video") != string::npos)
+	else if (strData.find("stream") != string::npos)
 	{
-		int pos = strData.find("video");
+		int pos = strData.find("stream");
 		map<string, string> mapParams;
 		getUrlParams(strData, mapParams);
 		string streamId; //支持码流的tag

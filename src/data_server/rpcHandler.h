@@ -87,7 +87,8 @@ public:
 	string rpc_closeCom(json params, string& error);
 
 	//notification
-	void notify(string method, json params);
+	//orgSession不为null表示来自于tds客户端，为null表示来自tds服务
+	void notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
 	void Notify(string strTag, string& szNotify);
 
 	//rpc error
