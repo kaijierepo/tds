@@ -855,11 +855,21 @@ bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engi
 		jerry_value_t prop_value;
 		if (yyjson_mut_is_str(value))
 			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_mut_get_str(value));
-		else if (yyjson_mut_is_num(value))
+		else if (yyjson_mut_is_uint(value)) //此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+		{
+			uint64_t digits[1] = {yyjson_mut_get_uint(value)};
+			prop_value = jerry_create_bigint(digits,1,false);
+		}
+		else if (yyjson_mut_is_sint(value))
+		{
+			uint64_t digits[1] = { yyjson_mut_get_sint(value) };
+			prop_value = jerry_create_bigint(digits, 1, true);
+		}
+		else if (yyjson_mut_is_real(value))
 			prop_value = jerry_create_number(yyjson_mut_get_real(value));
 		else if (yyjson_mut_is_bool(value))
 			prop_value = jerry_create_boolean(yyjson_mut_get_bool(value));
-		else if (yyjson_mut_is_str(value))
+		else if (yyjson_mut_is_obj(value))
 		{
 			prop_value = jerry_create_object();
 			setScriptEngineObj(value, prop_value);
