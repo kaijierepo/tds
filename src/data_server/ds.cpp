@@ -751,7 +751,8 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 				onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
-		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗
+		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
+		//因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
 		else
 		{
 			httplib::detail::dsClientStream* bs = NULL;

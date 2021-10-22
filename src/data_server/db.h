@@ -4,6 +4,7 @@
 #include "json.hpp"
 #include "tds.h"
 #include "jerryscript.h"
+#include "yyjson.h"
 using json = nlohmann::json;
 
 /*
@@ -116,7 +117,9 @@ public:
 	ATTRI_SELECTOR();
 	~ATTRI_SELECTOR();
 	bool setScriptEngineObj(json& jObj, jerry_value_t engineObj);
+	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 	bool match(string& de); //检查一个de是否满足条件
+	bool match(yyjson_mut_val* de);
 	bool init(string filter);
 	string filterExp;
 	bool bEnable;
@@ -141,6 +144,8 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
+	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result);
+	bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, SYSTEMTIME stTime, string& sData);
 	bool Update(string tag, SYSTEMTIME stTime, json& jData);

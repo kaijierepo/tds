@@ -123,7 +123,7 @@ string rpcHandler::rpc_db_select(json params,string& error)
 	if(params["filter"] != nullptr)
 	 	filter = params["filter"].get<string>();
 	
-	//load from database
+	//load from database 监测点类型过滤
 	vector<MP*> tagSetTmp;
 	vector<MP*> tagSet;
 	prj.GetMPByTag(&tagSetTmp,tagSelector.tagExp);
@@ -145,12 +145,14 @@ string rpcHandler::rpc_db_select(json params,string& error)
 	string result = "";
 	try
 	{
-		DB_DATA_SET set;
+		//DB_DATA_SET set;
+		vector<string> tags;
 		for (auto& i : tagSet)
 		{
-			db.Select(i->getTag(), timeSelector, filter, set);
+			tags.push_back(i->getTag());
 		}
-		result = db.dataSet2String(set);
+		//result = db.dataSet2String(set);
+		db.Select_yyjson(tags, timeSelector, filter, result);
 	}
 	catch (std::exception& e)
 	{

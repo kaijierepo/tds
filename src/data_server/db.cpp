@@ -5,6 +5,7 @@
 #include <sstream>
 #include <filesystem>
 #include "logger.h"
+#include "yyjson.h"
 
 
 using namespace std::filesystem;
@@ -99,7 +100,119 @@ void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFi
 	}
 }
 
-bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_DATA_SET& result)
+
+bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result)
+{
+	return Select_simdjson(tag, timeSelector, filter, result);
+}
+
+bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result)
+{
+	TIME_SELECTOR& tf = timeSelector;
+	time_t loadTime = tf.endTime;
+	string strDataFmt = "";
+	string strRawDataFmt = "";
+	SYSTEMTIME stTemp;
+
+	ATTRI_SELECTOR attriFilter;
+	attriFilter.init(filter);
+
+	double max = -1000000000;
+	double min = 1000000000;
+	double avg = 0;
+	int count = 0;
+
+	vector<yyjson_doc*> src_doc;
+	vector< yyjson_mut_doc*> src_mut_doc;
+	map<string, yyjson_mut_val*> mapRlt;
+
+	for (int tagIdx = 0; tagIdx < tagSet.size(); tagIdx++)
+	{
+		string& tag = tagSet[tagIdx]; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+		
+		for (; loadTime >= tf.startTime; loadTime -= 24 * 60 * 60)
+		{
+			//加载数据元列表
+			stTemp = timeopt::Unix2SysTime(loadTime);
+			string dbFile = getPath_dbFile(tag, stTemp);
+			string dbData;
+			fs::readFile(dbFile, dbData);
+			if (dbData == "")
+				continue;
+
+			// Read JSON and get root,change to mut for modification
+			yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+			src_doc.push_back(doc);
+			yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, NULL);
+			src_mut_doc.push_back(mut_doc);
+			yyjson_val* root = yyjson_doc_get_root(doc);
+			yyjson_mut_val* root_mut = yyjson_val_mut_copy(mut_doc, root);
+
+
+			for (int i = yyjson_mut_arr_size(root_mut) - 1; i >= 0; i--)
+			{
+				yyjson_mut_val* jDE = yyjson_mut_arr_get(root_mut, i);
+				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
+				string_view szTime = yyjson_mut_get_str(yyTime);
+
+				//先生成完整时间戳，再进行match判断
+				if (szTime.length() == 19)
+				{
+					szTime = szTime.substr(11, 8); //取出时分秒
+				}
+				string strTime = timeopt::TimeToYMD(stTemp) + " " + string(szTime);
+				if (!tf.Match(strTime))
+					continue;
+
+
+				//当进行多位号搜索时，需要加入tag标签
+				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, tag.c_str());
+				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, "tag");
+				yyjson_mut_obj_put(jDE, tagKey, tagVal);
+
+
+				if (attriFilter.bEnable && !attriFilter.match(jDE))
+				{
+					continue;
+				}
+
+				mapRlt[strTime + "+" + tag] = jDE; //不同位号的数据按照时间顺序排序
+				count++;
+				if (tf.AmountMatch(count))
+					goto DATA_SET_LOADED;
+			}
+		}
+	}
+
+DATA_SET_LOADED:
+
+	//使用新的yyjson doc对象输出结果
+	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
+	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
+	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
+
+	for (auto& i : mapRlt)
+	{
+		yyjson_mut_arr_append(rlt_mut_root, i.second);
+	}
+	
+	size_t len = 0;
+	result = yyjson_mut_write(rlt_mut_doc, 0, &len);
+
+	//释放结果
+	yyjson_mut_doc_free(rlt_mut_doc);
+	//释放源
+	for (int i = 0; i < src_doc.size(); i++)
+	{
+		yyjson_doc_free(src_doc[i]);
+		yyjson_mut_doc_free(src_mut_doc[i]);
+	}
+
+	return true;
+}
+
+//2021.10.21 此时simdjson还不支持使用数组下标访问数组元素
+bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result)
 {
 	TIME_SELECTOR& tf = timeSelector;
 	time_t loadTime = tf.endTime;
@@ -119,13 +232,13 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 	{
 		//加载数据元列表
 		stTemp = timeopt::Unix2SysTime(loadTime);
-		string dbFile = getPath_dbFile(tag,stTemp);
+		string dbFile = getPath_dbFile(tag, stTemp);
 		string dbData;
-		fs::readFile(dbFile,dbData);
-		if(dbData == "")
+		fs::readFile(dbFile, dbData);
+		if (dbData == "")
 			continue;
 
-		std::unique_ptr<char[]> padded_json_copy{new char[dbData.length() + SIMDJSON_PADDING]};
+		std::unique_ptr<char[]> padded_json_copy{ new char[dbData.length() + SIMDJSON_PADDING] };
 		memcpy(padded_json_copy.get(), dbData.c_str(), dbData.length());
 		memset(padded_json_copy.get() + dbData.length(), 0, SIMDJSON_PADDING);
 		simdjson::dom::parser parser;
@@ -134,7 +247,7 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 		if (dataList.is_null())
 			continue;
 
-		for(dom::object de : dataList)
+		for (dom::object de : dataList)
 		{
 			string_view szTime = de["time"];
 
@@ -146,19 +259,19 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 			string strTime = timeopt::TimeToYMD(stTemp) + " " + string(szTime);
 			if (!tf.Match(strTime))
 				continue;
-			
+
 			stringstream ssDe;
 			ssDe << de;
 			string sDe = ssDe.str();
-			sDe = sDe.substr(0,sDe.length()-1);// remove the last char "}" ,and append additional attributes
+			sDe = sDe.substr(0, sDe.length() - 1);// remove the last char "}" ,and append additional attributes
 			sDe += ",\"tag\":\"" + tag + "\"";
 
 			bool bHavePic = false;
 			simdjson::error_code error;
 			error = de["pic"].get(bHavePic);
-			if(bHavePic)
+			if (bHavePic)
 			{
-				sDe += ",\"pic_url\":\"/db" + getPath_deFile(tag,timeopt::str2st(strTime)) + ".jpg\"";
+				sDe += ",\"pic_url\":\"/db" + getPath_deFile(tag, timeopt::str2st(strTime)) + ".jpg\"";
 			}
 
 			bool bHaveVideo = false;
@@ -184,6 +297,7 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter,DB_
 	}
 	return true;
 }
+
 
 bool database::updateJsonObj(json& jOld, json& jNew)
 {
@@ -729,6 +843,83 @@ bool ATTRI_SELECTOR::setScriptEngineObj(json& jObj, jerry_value_t engineObj)
 		jerry_release_value(prop_value);
 	}
 
+	return true;
+}
+
+bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
+{
+	size_t idx, maxIdx;
+	yyjson_mut_val* key, * value;
+	yyjson_mut_obj_foreach(jObj, idx, maxIdx, key, value) {
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_mut_get_str(key));
+		jerry_value_t prop_value;
+		if (yyjson_mut_is_str(value))
+			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_mut_get_str(value));
+		else if (yyjson_mut_is_num(value))
+			prop_value = jerry_create_number(yyjson_mut_get_real(value));
+		else if (yyjson_mut_is_bool(value))
+			prop_value = jerry_create_boolean(yyjson_mut_get_bool(value));
+		else if (yyjson_mut_is_str(value))
+		{
+			prop_value = jerry_create_object();
+			setScriptEngineObj(value, prop_value);
+		}
+
+
+		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
+		if (jerry_value_is_error(set_result)) {
+			jerry_error_t error = jerry_get_error_type(set_result);
+		}
+		jerry_release_value(set_result);
+		jerry_release_value(prop_name);
+		jerry_release_value(prop_value);
+	}
+	return true;
+}
+
+
+bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
+{
+	if (!bEnable)
+		return true;
+
+	bool bMatch = true;
+
+	if (yyjson_mut_is_obj(de))
+	{
+		yyjson_mut_val* jVal = yyjson_mut_obj_get(de, "val");
+		setScriptEngineObj(jVal, global_object);
+	}
+	else
+	{
+
+	}
+
+	/* Run the demo script with 'eval' */
+	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
+		filterExp.length(),
+		JERRY_PARSE_NO_OPTS);
+
+	/* Check if there was any error (syntax or runtime) */
+	bool run_ok = !jerry_value_is_error(eval_ret);
+	jerry_error_t error = jerry_get_error_type(eval_ret);
+	jerry_release_value(eval_ret);
+
+	if (run_ok)
+	{
+		bMatch = jerry_value_to_boolean(eval_ret);
+		return bMatch;
+	}
+	else
+	{
+		db_exception e;
+		if (error == JERRY_ERROR_REFERENCE)
+			e.m_error = "db exception: error when execute filter script,reference not found!";
+		else
+			e.m_error = "db exception: error when execute filter script";
+		throw e;
+	}
+	//过滤器执行出错，统一不过滤
 	return true;
 }
 

@@ -513,6 +513,9 @@
     </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
+    <ClCompile Include="..\src\common\yyjson.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\src\data_server\db.cpp" />
     <ClCompile Include="..\src\data_server\ds.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler.cpp" />
@@ -570,6 +573,7 @@
     <ClInclude Include="..\src\common\simdjson.h" />
     <ClInclude Include="..\src\common\tcpClt.h" />
     <ClInclude Include="..\src\common\tcpSrv.h" />
+    <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\data_server\db.h" />
     <ClInclude Include="..\src\data_server\ds.h" />
     <ClInclude Include="..\src\data_server\dsClientStream.h" />

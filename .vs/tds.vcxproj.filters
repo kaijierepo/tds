@@ -156,6 +156,9 @@
       <Filter>tools</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pch.cpp" />
+    <ClCompile Include="..\src\common\yyjson.c">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -310,6 +313,9 @@
       <Filter>tools</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\common.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\yyjson.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
