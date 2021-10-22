@@ -515,6 +515,7 @@
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\data_server\db.cpp" />
     <ClCompile Include="..\src\data_server\ds.cpp" />

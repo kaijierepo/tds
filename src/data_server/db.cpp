@@ -166,8 +166,8 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 
 
 				//当进行多位号搜索时，需要加入tag标签
-				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, tag.c_str());
-				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, "tag");
+				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
+				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tag.c_str());
 				yyjson_mut_obj_put(jDE, tagKey, tagVal);
 
 
