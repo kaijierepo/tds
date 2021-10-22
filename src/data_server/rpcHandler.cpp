@@ -668,13 +668,13 @@ void rpcHandler::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& str
 string rpcHandler::rpc_output(json params, string& error)
 {
 	json val = "";
-	if (params.find("val") != params.end())
+	if (params["val"] != nullptr)
 		val = params["val"];
 	else
 		return "";
 
 	string tag;
-	if (params.find("tag") != params.end())
+	if (params["tag"] != nullptr)
 		tag = params["tag"].get<string>();
 
 	MP* pmp = prj.GetMPByTag(tag);
