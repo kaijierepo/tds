@@ -46,6 +46,7 @@ public:
 	json m_orgVal;
 	json m_curVal;
 	json m_lastVal;
+	json m_defaultVal; //默认值，软件刚启动时加载的值
 	string m_valType;//数值类型， bool，模拟量，json等
 	//监测点类型，按应用方式来区分，例如温度、湿度、车闸、人闸等。
 	//当使用者说 我想看一下温度的数据，我想看一下车闸的数据，这个XXX的数据就是监测点类型

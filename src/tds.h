@@ -13,6 +13,7 @@ namespace TDS {
 		const string integer = "int";
 		const string boolean = "bool";
 		const string video = "video";
+		const string str = "string";
 		const string car_strobe = "car_strobe";
 		const string man_strobe = "man_strobe";
 	};

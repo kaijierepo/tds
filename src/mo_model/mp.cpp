@@ -69,6 +69,44 @@ bool MP::loadConf(json& conf)
 		m_B = conf["b"].get<double>();
 	}
 
+	if (conf["defaultVal"] != nullptr)
+	{
+		string sdv = conf["defaultVal"].get<string>();
+		if (sdv == "" || sdv == "?")
+		{
+			//保持无效值
+			//m_curVal.empty()==true
+		}
+		else
+		{
+			if (m_valType == VAL_TYPE::boolean)
+			{
+				if (sdv == "1" || sdv == "true" || sdv == "开")
+					m_defaultVal = true;
+				else if (sdv == "0" || sdv == "false" || sdv == "关")
+					m_defaultVal = false;
+			}
+			else if (m_valType == VAL_TYPE::integer)
+			{
+				m_defaultVal = atoi(sdv.c_str());
+			}
+			else if (m_valType == VAL_TYPE::Float)
+			{
+				m_defaultVal = atof(sdv.c_str());
+			}
+			else if (m_valType == VAL_TYPE::str)
+			{
+				m_defaultVal = sdv;
+			}
+		}
+
+		if (!m_defaultVal.empty())
+		{
+			m_curVal = m_defaultVal;
+			GetLocalTime(&m_lastUpdateTime);
+		}
+	}
+
 		
 	return false;
 }
@@ -267,7 +305,7 @@ int MP::getSaveInterval()
 json MP::getRTData()
 {
 	json j;
-	if(m_lastUpdateTime.wYear == 0)
+	if(m_lastUpdateTime.wYear == 0 || m_lastUpdateTime.wYear == 1970)
 		j["time"] = "?";
 	else
 		j["time"] = timeopt::st2str(m_lastUpdateTime);
