@@ -341,6 +341,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		{
 			result = rpc_getStreamInfo(params, error);
 		}
+		else if (method == "setStream")
+		{
+			result = rpc_setStream(params, error);
+		}
 	}
 
 
@@ -1036,6 +1040,22 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 	};
 	error = jError.dump();
 
+	return "";
+}
+
+string rpcHandler::rpc_setStream(json params,string& error)
+{
+	string streamId = params["streamId"].get<string>();
+	
+	streamSrvNode* ssn = streamSrv.getSrvNode(streamId);
+	if (ssn)
+	{
+		int fr = params["frameRate"].get<int>();
+		ssn->m_streamPusher->m_streamInfoConf.frameRate = fr;
+		return "\"ok\"";
+	}
+
+	error = RPCError(TEC_STREAM_ID_NOT_FOUND, "stream id not found");
 	return "";
 }
 

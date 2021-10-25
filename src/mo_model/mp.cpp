@@ -32,12 +32,11 @@ bool MP::loadConf(json& conf)
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
-	if (m_valType == TDS::VAL_TYPE::Float)
-	{
-		if(conf["unit"]!=nullptr)
-			m_strUnit = conf["unit"].get<string>();
-	}
-	else if (m_valType == TDS::VAL_TYPE::json)
+	//不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
+	if (conf["unit"] != nullptr)
+		m_strUnit = conf["unit"].get<string>();
+
+	if (m_valType == TDS::VAL_TYPE::json)
 	{
 		if(conf["mpType"]!=nullptr)
 		m_mpType = conf["mpType"].get<string>();

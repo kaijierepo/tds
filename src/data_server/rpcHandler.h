@@ -28,6 +28,7 @@ enum RPC_ERROR {
 	//视频部分
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,
 	TEC_NO_STREAM_SRC = -40102,
+	TEC_STREAM_ID_NOT_FOUND = -40103,
 
 	//io 部分
 	IO_DEV_NOT_FOUND = -41001,
@@ -80,6 +81,7 @@ public:
 	////io service function
 	string rpc_io_tree(json params, string& error);
 	string rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
+	string rpc_setStream(json params, string& error);
 	//serial function
 	string rpc_openCom(json params, string& error);
 	string rpc_getStreamInfo(json params, string& error);

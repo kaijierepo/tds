@@ -39,8 +39,8 @@ public:
 	void calcSrcFrameRate();
 	vector<string> m_streamId; //可同时往多个id推流
 	vector<streamSrvNode*> m_srvNode;
-	STREAM_INFO m_streamInfoConf; //指定的推流参数
-	STREAM_INFO m_streamInfo; //实际的推流参数
+	STREAM_INFO m_streamInfoConf; //指定的推流参数.根据参数进行推流前转换。 如果需要设置推流的码率，在此处设置
+	STREAM_INFO m_streamInfo; //根据m_streamInfoConf进行图像转换后， 实际的推流参数
 	float frameRate; //码流源帧率。 可以在推流端和拉流端进行帧率转换
 	time_t m_pushFrameRateStatisTick;
 	int m_pushFrameRateStatisCount;
