@@ -260,7 +260,10 @@ bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
 bool ioDev_iq60::scanChannel(json& chanList)
 {
 	if (ioSession == NULL)
+	{
 		return false;
+	}
+		
 
 	//请求io点列表
 	string req = "[2,\"IQK\",\"" + m_devAddr + "\",\"hs\"]\n";

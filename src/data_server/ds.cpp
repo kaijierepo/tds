@@ -237,7 +237,7 @@ bool dataServer::run()
 
 	//基于tds的二次开发，ui根目录位于此
 	//并且将tds的app目录放置在该目录下
-	string customUI = fs::appPath() + "\\ui";
+	string customUI = fs::appPath() + "/ui"; 
 	if (fs::fileExist(customUI))
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
@@ -246,7 +246,7 @@ bool dataServer::run()
 	}
 
 	//tds自己使用时，直接将app作为根目录
-	string uiApps = fs::appPath() + "\\app";
+	string uiApps = fs::appPath() + "/app";
 	if (fs::fileExist(uiApps))
 	{
 		string asc_prjUI = charCodec::utf8toAnsi(uiApps);

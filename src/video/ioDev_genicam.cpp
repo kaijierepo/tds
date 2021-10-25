@@ -206,8 +206,10 @@ void ioDev_genicam::doStreaming()
     m_bStreaming = false;
 }
 
-void ioDev_genicam::addStreamId(string streamId)
+void ioDev_genicam::registerToStreamServer(string streamId)
 {
+    m_pusherType = "ioDev";
+    m_ioDev = this;
     m_streamId.push_back(streamId);
     streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
     pssn->setPusher(this);

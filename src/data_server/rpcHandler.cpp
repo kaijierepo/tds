@@ -459,6 +459,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
 				isEnum = true;
 			piod->setParam(name, val, isEnum);
+			rpcResult.textResult = "\"ok\"";
 		}
 	}
 	else if (method == "genicam.getParam")
@@ -993,7 +994,15 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 	{
 		ioDev_iq60* p = (ioDev_iq60*)pDev;
 		json chanList;
-		if (p->scanChannel(chanList))
+		if (p->ioSession == nullptr)
+		{
+			json jError = {
+				{"code", -32603},
+				{"message" , "设备不在线，请确认IQ60的连接配置，并在主动上送数据"}
+			};
+			error = jError.dump();
+		}
+		else if (p->scanChannel(chanList))
 		{
 			//比对p->m_vecChild是否已经存在,只发不存在的给前端
 			for (int i = 0; i < chanList.size(); i++)
@@ -1031,14 +1040,23 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 
 			return result.dump();
 		}
-	}
-
-
-	json jError = {
+		else
+		{
+			json jError = {
 				{"code", -32603},
-				{"message" , "Internal error"}
-	};
-	error = jError.dump();
+				{"message" , "设备响应超时"}
+			};
+			error = jError.dump();
+		}
+	}
+	else
+	{
+		json jError = {
+			{"code", -32603},
+			{"message" , "该ioAddr地址设备不是IQ60"}
+		};
+		error = jError.dump();
+	}
 
 	return "";
 }
@@ -1062,16 +1080,16 @@ string rpcHandler::rpc_setStream(json params,string& error)
 
 string rpcHandler::rpc_getStreamInfo(json params,string& error)
 {
-	string tag;
-	if (params.find("tag") != params.end())
-		tag = params["tag"].get<string>();
-	if (tag == "")
+	string streamId;
+	if (params.find("streamId") != params.end())
+		streamId = params["streamId"].get<string>();
+	if (streamId == "")
 	{
 		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING,"param missing,tag is not specified");
 		return "";
 	}
 
-	streamSrvNode* pssn = streamSrv.getSrvNode(tag);
+	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
 	if(pssn->m_streamPusher == NULL)
 	{
 		error = RPCError(RPC_ERROR::TEC_NO_STREAM_SRC, "no stream src of this tag");
@@ -1088,6 +1106,14 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 	jSi["w"] = pssn->m_streamPusher->m_streamInfo.w;
 	jSi["h"] = pssn->m_streamPusher->m_streamInfo.h;
 	jSi["pixelFmt"] = pssn->m_streamPusher->m_streamInfo.pixelFmt;
+	if (pssn->m_streamPusher->m_pusherType == "ioDev")
+	{
+		ioDev* p = pssn->m_streamPusher->m_ioDev;
+		json jIoDev = json::object();
+		jIoDev["type"] = p->m_devType;
+		jIoDev["ioAddr"] = p->getIOAddr().ToString();
+		jSi["ioDev"] = jIoDev;
+	}
 	
 	return jSi.dump();
 }

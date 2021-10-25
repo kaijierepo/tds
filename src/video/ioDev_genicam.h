@@ -33,7 +33,7 @@ public:
 	void setGenicamDev(std::shared_ptr<rcg::Device> genDev);
 	std::shared_ptr<GenApi::CNodeMapRef> m_nodemap;
 	void doStreaming();
-	void addStreamId(string streamId);
+	void registerToStreamServer(string streamId);
 
 	void setParam(string name, json val, bool isEnum);
 	void doCmd(string name);

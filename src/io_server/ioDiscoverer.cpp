@@ -206,12 +206,12 @@ bool ioDiscoverer::doGenicamDiscover()
                                 pgen->m_genicamDev = p;
 
                                 //初始化推流id
-                                pgen->addStreamId(p->getID());
+                                pgen->registerToStreamServer(p->getID());
                                 //第一个发现的genicam额外增加推流id到 genicam_0
                                 if (firstDiscoverGenicam == NULL)
                                 {
                                     firstDiscoverGenicam = pgen;
-                                    firstDiscoverGenicam->addStreamId("genicam_0");
+                                    firstDiscoverGenicam->registerToStreamServer("genicam_0");
                                 }
 
                                 //前两步完成后再发送通知，因为收到通知后的设备操作可能需要前两步完成后才能操作

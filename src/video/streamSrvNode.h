@@ -23,6 +23,12 @@ struct STREAM_DATA {
 	}
 };
 
+struct PUSHER_INFO {
+	string type;
+	string ioDevType;
+	string ioAddr;
+};
+
 class STREAM_PUSHER {
 public:
 	STREAM_PUSHER()
@@ -46,6 +52,9 @@ public:
 	int m_pushFrameRateStatisCount;
 	float downSamplingInterval;
 	int frameIntervalIdx;
+
+	string m_pusherType; //ioDev  /  sdk /
+	ioDev* m_ioDev;
 };
 
 class STREAM_PULLER {
