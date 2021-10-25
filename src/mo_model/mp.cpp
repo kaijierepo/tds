@@ -148,6 +148,7 @@ bool MP::toJson(json& conf, json serializeOption)
 	conf["unit"] = p->m_strUnit;
 	conf["k"] = p->m_K;
 	conf["b"] = p->m_B;
+	conf["defaultVal"] = p->m_defaultVal.dump();
 
 	return true;
 }
