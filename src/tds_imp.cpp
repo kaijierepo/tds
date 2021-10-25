@@ -152,8 +152,10 @@ void chromeThread()
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;
-
+		wstring title = charCodec::utf8toUtf16("123456");
 		STARTUPINFOW si;
+		si.lpTitle = (LPWSTR)title.c_str();
+		si.wShowWindow = SW_MAXIMIZE; 
 		PROCESS_INFORMATION pi;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
@@ -178,6 +180,15 @@ void chromeThread()
 		}
 		else
 		{
+			// 等待新进程初始化完毕  
+			WaitForInputIdle(pi.hProcess, 5000);
+			while (1)
+			{
+				tdsImp.mainWnd = FindWindowW(NULL, L"TDSUI");
+				if (tdsImp.mainWnd)
+					break;
+				Sleep(1);
+			}	
 			WaitForSingleObject(pi.hProcess, INFINITE);
 		}
 

@@ -219,6 +219,8 @@ public:
 	//数据接口
 	iTDSConf* conf;
 	i_database* db;
+
+	HWND mainWnd;
 };
 
 
