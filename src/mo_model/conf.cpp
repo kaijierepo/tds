@@ -90,6 +90,10 @@ void tdsConfig::loadConf()
 			else if (tci.val == "false" || tci.val == "0")
 				enableDB = false;
 		}
+		else if (tci.key == "uiTitle")
+		{
+			uiTitle = tci.val;
+		}
 	}
 
 		//j = jsonConf["active_session"];
@@ -118,4 +122,6 @@ void tdsConfig::loadConf()
 		title = "TDS";
 	if (homepage == "")
 		homepage = "http://localhost:666";
+	if (uiTitle == "")
+		uiTitle = "tdsUI";
 }

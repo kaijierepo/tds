@@ -148,7 +148,8 @@ void createMiniblinkWnd()
 void chromeThread()
 {
 	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
-	string chromeParam = " --app=\"" + tds->conf->homepage + "\"";
+	//--kiosk为全屏参数，并且鼠标移到屏幕上边缘不会出现退出全屏的 ×
+	string chromeParam = " --kiosk --app=\"" + tds->conf->homepage + "\"";
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;
@@ -184,11 +185,21 @@ void chromeThread()
 			WaitForInputIdle(pi.hProcess, 5000);
 			while (1)
 			{
-				tdsImp.mainWnd = FindWindowW(NULL, L"TDSUI");
-				if (tdsImp.mainWnd)
+				tdsImp.uiWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
+				if (tdsImp.uiWnd)
 					break;
 				Sleep(1);
 			}	
+
+			HICON hIcon = NULL;
+			wstring ws = charCodec::ansiToUtf16(fs::appPath() + "\\favicon.ico");
+			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+
+			Sleep(2000);
+
+			SendMessage(tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+			SendMessage(tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+			
 			WaitForSingleObject(pi.hProcess, INFINITE);
 		}
 

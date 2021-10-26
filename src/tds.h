@@ -138,6 +138,7 @@ struct iTDSConf {
 	string title;
 	string homepage;
 	string uiMode;
+	string uiTitle;
 	bool singleGenicamHost;
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
@@ -220,7 +221,9 @@ public:
 	iTDSConf* conf;
 	i_database* db;
 
-	HWND mainWnd;
+	//ui窗口
+	HWND uiWnd;
+	string uiWndTitle;
 };
 
 

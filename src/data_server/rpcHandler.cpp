@@ -473,12 +473,17 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 
 	if (method == "ui.maximize")
 	{
-		SendMessage(tds->mainWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
+		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
 		rpcResult.textResult = "\"ok\"";
 	}
 	else if (method == "ui.minimize")
 	{
-		SendMessage(tds->mainWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
+		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
+		rpcResult.textResult = "\"ok\"";
+	}
+	else if (method == "ui.close")
+	{
+		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
 		rpcResult.textResult = "\"ok\"";
 	}
 
