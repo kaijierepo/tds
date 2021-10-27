@@ -16,7 +16,6 @@
 #include <devguid.h>
 #include <mutex>
 #include <condition_variable>
-#include <Commdlg.h>
 #pragma comment (lib, "Setupapi.lib")
 #include <vector>
 #include <map>
@@ -25,6 +24,8 @@
 #define WIN32_LEAN_AND_MEAN
 #ifdef WINDOWS
 #include <windows.h>
+#include <Commdlg.h>
+#include <ShlObj_core.h>
 #endif
 
 using namespace std;
@@ -981,6 +982,26 @@ namespace fs {
 		return list;
 	}
 
+	inline std::string getFolder()
+	{
+		WCHAR szBuffer[MAX_PATH] = { 0 };
+		BROWSEINFOW bi = { 0 };
+		bi.hwndOwner = NULL;//拥有着窗口句柄，为NULL表示对话框是非模态的，实际应用中一般都要有这个句柄
+		bi.pszDisplayName = szBuffer;//接收文件夹的缓冲区
+		bi.lpszTitle = L"选择一个文件夹";//标题
+		bi.ulFlags = BIF_NEWDIALOGSTYLE;
+		LPITEMIDLIST idl = SHBrowseForFolderW(&bi);
+		if (SHGetPathFromIDListW(idl, szBuffer)) {
+			string s = charCodec::utf16toUtf8(szBuffer);
+			return s;
+		}
+		else {
+			//MessageBox(NULL, TEXT("请选择一个文件夹"), NULL, MB_ICONERROR);
+			return "";
+		}
+		return "";
+	}
+
 	inline std::string GetOpenFile(char* filter = NULL , char* title = NULL , char* initDirectory = NULL )
 	{
 		//文件名
@@ -1074,7 +1095,7 @@ namespace fs {
 		}
 
 		ofn.Flags = OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;//目录必须存在，覆盖文件前发出警告
-		ofn.lpstrDefExt = L"json";//默认追加的扩展名
+		//ofn.lpstrDefExt = L"json";//默认追加的扩展名
 		if (GetSaveFileNameW(&ofn))
 		{
 			filename = strFilename;
