@@ -487,6 +487,7 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
+
 	std::unique_lock<mutex> g(tdsSession->m_mutexTcpBuff);
 	TCP_DATA_BUFF tdb;
 	tdb.pData = new char[iLen];

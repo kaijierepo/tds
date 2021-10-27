@@ -183,15 +183,64 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 	return str;
 }
 
+
+void selectFolderDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
+{
+	vector<string> paths = fs::fileDlg(false,true,true);
+	if (paths.size() > 0)
+	{
+		json jn = json::object();
+
+		if (paths.size() > 1)
+		{
+			json jPs = json::array();
+			for (int i = 0; i < paths.size(); i++)
+			{
+				string p = paths[i];
+				jPs.push_back(p);
+			}
+			jn["path"] = jPs;
+			tdsSrv.notify("fs.selectFolderDlg", jn);
+		}
+		else if (paths.size() == 1)
+		{
+			jn["path"] = paths[0];
+			tdsSrv.notify("fs.selectFolderDlg", jn);
+		}
+	}
+}
+
+
 void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
 {
-	string openFile = fs::GetOpenFile();
-	if (openFile != "")
+	string filter;
+	if (params["filter"] != nullptr)
+		filter = params["filter"].get<string>();
+	string title;
+	if (params["title"] != nullptr)
+		title = params["title"].get<string>();
+	//filter = filter
+	vector<string> paths  = fs::fileDlg(false,true,false,(char*)filter.c_str(), (char*)title.c_str());
+	if (paths.size()>0)
 	{
-		json p;
-		p["path"] = openFile;
-		p["caller"] = params["caller"];
-		tdsSrv.notify("fs.openFileDlg", p);
+		json jn = json::object();
+
+		if (paths.size() > 1)
+		{
+			json jPs = json::array();
+			for (int i = 0; i < paths.size(); i++)
+			{
+				string p = paths[i];
+				jPs.push_back(p);
+			}
+			jn["path"] = jPs;
+			tdsSrv.notify("fs.openFileDlg", jn);
+		}
+		else if(paths.size() == 1)
+		{
+			jn["path"] = paths[0];
+			tdsSrv.notify("fs.openFileDlg", jn);
+		}
 	}
 }
 
@@ -203,13 +252,27 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 	string title;
 	if(params["title"]!=nullptr)
 		title = params["title"].get<string>();
-	string file = fs::GetSaveFile((char*)filter.c_str(),(char*)title.c_str());
-	if (file != "")
+	vector<string> paths = fs::fileDlg(false,false, false, (char*)filter.c_str(), (char*)title.c_str());
+	if (paths.size() > 0)
 	{
-		json p;
-		p["path"] = file;
-		p["caller"] = params["caller"];
-		tdsSrv.notify("fs.saveFileDlg", p);
+		json jn = json::object();
+
+		if (paths.size() > 1)
+		{
+			json jPs = json::array();
+			for (int i = 0; i < paths.size(); i++)
+			{
+				string p = paths[i];
+				jPs.push_back(p);
+			}
+			jn["path"] = jPs;
+			tdsSrv.notify("fs.saveFileDlg", jn);
+		}
+		else if (paths.size() == 1)
+		{
+			jn["path"] = paths[0];
+			tdsSrv.notify("fs.saveFileDlg", jn);
+		}
 	}
 }
 
@@ -269,6 +332,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	else if (method == "fs.saveFileDlg")
 	{
 		std::thread t(saveFileDlgThread, pSession, params);
+		t.detach();
+		result = "\"ok\"";
+	}
+	else if (method == "fs.selectFolderDlg")
+	{
+		std::thread t(selectFolderDlgThread, pSession, params);
 		t.detach();
 		result = "\"ok\"";
 	}
@@ -377,14 +446,23 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	else if (method == "fs.writeFile")
 	{
 		string p = params["path"].get<string>();
-		string d = params["data"].get<string>();
-		if (fs::writeFile(p, d))
+
+		if (params["data"] != nullptr)
 		{
-			result = "\"ok\"";
+			string d = params["data"].get<string>();
+			if (fs::writeFile(p, d))
+			{
+				result = "\"ok\"";
+			}
+			else
+			{
+				error = RPCError(TEC_FAIL, "fail");
+			}
 		}
-		else
+		else if (params["bin"] != nullptr)
 		{
-			error = RPCError(TEC_FAIL, "fail");
+			long len = params["len"].get<long>();
+			pSession->m_fileUploader.startWrite(p, len);
 		}
 	}
 	else if (method == "getCurDir")
@@ -557,6 +635,14 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
 		{
 			notify("notify", params, pSession);
+			return;
+		}
+		//后端总线，实现一种微前端模块之间可以相互调用函数的机制
+		//前端总线，可以在前端的app之间实现相互调用，相比于后端总线，只能调用本机浏览器上的app
+		else if (method.find("app.") != string::npos) 
+		{
+			notify(method, params, pSession);
+			return;
 		}
 
 		//心跳最先处理
@@ -1172,7 +1258,7 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 
 void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
 {
-	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"param\":" + params.dump() + "}";
+	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
 	vector<shared_ptr<TDS_SESSION>> tdsSessions;
 	tdsSessions = ds.m_vecTdsSession;
 	

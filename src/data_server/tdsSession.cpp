@@ -105,6 +105,7 @@ string TDS_SESSION::GetClientIp()
      }
      videoServiceNode = NULL;
      bConnected = false;
+     m_fileUploader.stopWrite();
 
      for (int i = 0; i < m_vecIoDev.size(); i++)
      {  
@@ -122,4 +123,60 @@ string TDS_SESSION::GetClientIp()
      {
          pTcpSession->bEnableActivityCheck = bEnable;
      }
+ }
+
+ bool FILE_WRITER::startWrite(string path, long len)
+ {
+     if (fp)
+     {
+         stopWrite();
+     }
+
+     totalLen = len;
+     filePath = path;
+     fs::createFolderOfPath(path);
+     wstring wpath = charCodec::autoToUtf16(path);
+
+     fp = _wfopen(wpath.c_str(), L"wb");
+     if (fp)
+     {
+         return true;
+     }
+     else
+     {
+         int  iError = GetLastError();
+         std::cout << "open file failed,error=" << iError << "," << path << std::endl;
+     }
+     return false;
+ }
+
+ void FILE_WRITER::stopWrite()
+ {
+     if (fp)
+     {
+         fclose(fp);
+         fp = nullptr;
+     }
+ }
+
+ long FILE_WRITER::write(char* pData, long iLen)
+ {
+     if (fp)
+     {
+         long leftLen = totalLen - writedLen;
+         long wlen = leftLen > iLen ? iLen : leftLen;
+
+         fwrite(pData, 1, wlen, fp);
+         writedLen += wlen;
+         
+         if (writedLen == totalLen)
+         {
+             stopWrite();
+         }
+         else if (writedLen > totalLen)
+             assert(false);
+
+         return wlen;
+     }
+     return 0;
  }

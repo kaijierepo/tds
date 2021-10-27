@@ -16,6 +16,30 @@ struct TCP_DATA_BUFF {
 };
 
 
+class FILE_WRITER {
+public:
+	FILE_WRITER() {
+		fp = nullptr;
+		totalLen = 0;
+		writedLen = 0;
+	}
+	~FILE_WRITER() {
+		if (fp)
+		{
+			fclose(fp);
+		}
+	}
+
+	bool startWrite(string path,long len);
+	void stopWrite();
+	long write(char* pData, long iLen);
+	FILE* fp;
+	long totalLen;
+	long writedLen;
+	string filePath;
+};
+
+
 class TDS_SESSION{
 public:
     TDS_SESSION();
@@ -74,4 +98,5 @@ public:
 	tcpClt* pBridgedTcpClient;
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
+	FILE_WRITER m_fileUploader;  //大文件上传控制
 };
