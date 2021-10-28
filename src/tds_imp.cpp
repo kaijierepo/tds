@@ -195,7 +195,7 @@ void chromeThread()
 			wstring ws = charCodec::ansiToUtf16(fs::appPath() + "\\favicon.ico");
 			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 
-			Sleep(2000);
+			Sleep(3000);
 
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);

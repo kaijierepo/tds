@@ -114,7 +114,10 @@ namespace httplib {
 		 }
 
 		inline ssize_t dsClientStream::write(const char* ptr, size_t size) {
-			if (is_writable()) { return send(sock_, ptr, size, 0); }
+			if (is_writable()) { 
+				size_t sended = send(sock_, ptr, size, 0);
+				return sended;
+			}
 			return -1;
 		}
 
