@@ -1065,7 +1065,7 @@ namespace fs {
 					hr = pfd->SetDefaultExtension(wDefExt.c_str());
 				}
 
-				hr = pfd->Show(NULL); //Show dialog
+				hr = pfd->Show(GetForegroundWindow()); //Show dialog
 					//if (SUCCEEDED(hr))
 					//{
 					//	if (!IsOpen)       //Capture user change when select differen file extension.
