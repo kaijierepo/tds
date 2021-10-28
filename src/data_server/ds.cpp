@@ -333,7 +333,20 @@ void httpReqHandleThread(httplib::detail::dsClientStream* bs, tcpSession* pCltIn
 {
 	SOCKET sock = pCltInfo->sock;
 	bool close = false;
-	httpSrv.process_request(*bs, true, close,nullptr);
+	while (1)
+	{
+		httpSrv.process_request(*bs, false, close, nullptr);
+		if (!close) //HTTP keep-alive 模式，该链接可能连续发送多个http请求
+		{
+			if (bs->m_sem.wait_for(5000)) //收到了后续请求
+			{
+				continue;
+			}
+			else
+				break;
+		}
+	}
+	shutdown(sock, SD_BOTH);
 	closesocket(sock); //对于大文件下载，此处等待发送完成再close，查看bool tcpSrv::DoAccept(SOCKET sockAccept, SOCKADDR_IN* ClientAddr)
 	delete bs;
 }
