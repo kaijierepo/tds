@@ -329,9 +329,51 @@ bool dataServer::isHttpPkt(string str)
 	return false;
 }
 
-void httpReqHandleThread(httplib::detail::dsClientStream* bs, tcpSession* pCltInfo)
+
+class httpReqHandleThread_threadPool;
+void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession);
+void httpReqHandleThread_poolThread(httpReqHandleThread_threadPool* p);
+class httpReqHandleThread_threadPool {
+public:
+	httpReqHandleThread_threadPool()
+	{
+		for (int i = 0; i < 15; i++)
+		{
+			thread t(httpReqHandleThread_poolThread, this);
+			t.detach();
+		}
+	}
+	mutex m_cs;
+	queue<std::shared_ptr<TDS_SESSION>> toProcess;
+	semaphore m_newTask;
+	void addTask(std::shared_ptr<TDS_SESSION> tdsSession) {
+		m_cs.lock();
+		toProcess.push(tdsSession);
+		m_cs.unlock();
+		m_newTask.notify();
+	}
+};
+
+//httpReqHandleThread_threadPool  threadPool1;
+
+void httpReqHandleThread_poolThread(httpReqHandleThread_threadPool* p)
 {
-	SOCKET sock = pCltInfo->sock;
+	while (1)
+	{
+		p->m_newTask.wait();
+		p->m_cs.lock();
+		std::shared_ptr<TDS_SESSION> tdsSession = p->toProcess.front();
+		p->toProcess.pop();
+		p->m_cs.unlock();
+
+		httpReqHandleThread(tdsSession);
+	}
+}
+
+void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	httplib::detail::dsClientStream* bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
+	SOCKET sock = bs->sock_;
 	bool close = false;
 	while (1)
 	{
@@ -461,6 +503,35 @@ tdsSession->dataBuff 为任务队列
 因为可能网络中一个大数据包可能会被分包为多次回调，触发多个tdsSessionProcessThread之后，
 多线程可能不按照数据流本身的先后顺序执行处理，导致数据包分片数据错误从而导致处理出错
 */
+class tdsSessionProcessThread_threadPool;
+int tdsSessionProcessThread_count = 0;
+int tdsSessionProcessThread_poolSize = 5;
+void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession);
+void tdsSessionProcessThread_poolThread(tdsSessionProcessThread_threadPool* p);
+class tdsSessionProcessThread_threadPool {
+public:
+	tdsSessionProcessThread_threadPool()
+	{
+		for (int i = 0; i < 5; i++)
+		{
+			thread t(tdsSessionProcessThread_poolThread,this);
+			t.detach();
+		}
+	}
+	mutex m_cs;
+	queue<std::shared_ptr<TDS_SESSION>> toProcess;
+	semaphore m_newTask;
+	void addTask(std::shared_ptr<TDS_SESSION> tdsSession) {
+		m_cs.lock();
+		toProcess.push(tdsSession);
+		m_cs.unlock();
+		m_newTask.notify();
+	}
+};
+
+//tdsSessionProcessThread_threadPool  threadPool;
+
+
 
 void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
@@ -496,6 +567,20 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	}
 }
 
+void tdsSessionProcessThread_poolThread(tdsSessionProcessThread_threadPool* p)
+{
+	while (1)
+	{
+		p->m_newTask.wait();
+		p->m_cs.lock();
+		std::shared_ptr<TDS_SESSION> tdsSession = p->toProcess.front();
+		p->toProcess.pop();
+		p->m_cs.unlock();
+
+		tdsSessionProcessThread(tdsSession);
+	}
+}
+
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
 	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
@@ -509,6 +594,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	//调用临时消费者
 	thread t(tdsSessionProcessThread, tdsSession);
 	t.detach();
+	//threadPool.addTask(tdsSession);
 }
 
 void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
@@ -774,8 +860,9 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 				bs = new httplib::detail::dsClientStream;
 				bs->sock_ = tdsSession->pTcpSession->sock;
 				tdsSession->dsCltStream = bs;
-				std::thread t(httpReqHandleThread, bs, tdsSession->pTcpSession);
+				std::thread t(httpReqHandleThread,tdsSession);
 				t.detach();
+				//threadPool1.addTask(tdsSession);
 			}
 			else
 			{

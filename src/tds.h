@@ -33,9 +33,14 @@ namespace TDS {
 		}
 		namespace GW {
 			const string local_serial = "local-serial";
+			const string can_gateway = "can-gateway";
+			const string rs485_gateway = "rs485-gateway";
 		}
 		namespace CHAN {
 			const string io_channel = "io-channel";
+		}
+		namespace SERVER {
+			const string tds = "tds";
 		}
 	}
 };
