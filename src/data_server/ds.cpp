@@ -23,6 +23,57 @@ httplib::Server httpSrv;
 using namespace httplib;
 void initHttpSrv(httplib::Server& svr)
 {
+//rpc Post命令处理
+	svr.Post("\\/rpc.*",
+	[&](const httplib::Request& req, httplib::Response& res) {
+			//解析url参数模式的rpc调用
+			map<string, string> mapParams;
+			string path = req.path;
+			ds.getUrlParams(path, mapParams);
+
+			shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
+
+			string strRpc;
+			RPC_RESP rpcResp;
+			if (mapParams.size() > 0)
+			{
+				string method;
+				if (mapParams.find("m") != mapParams.end())
+					method = mapParams["m"];
+				if (mapParams.find("method") != mapParams.end())
+					method = mapParams["method"];
+				mapParams.erase("m");
+				mapParams.erase("method");
+				json j;
+				j["method"] = method;
+				json jP;
+				for (auto& [k, v] : mapParams)
+				{
+					if (k == "tag")
+						v = httplib::detail::decode_url(v, true);
+					jP[k] = v;
+				}
+
+				j["params"] = jP;
+				strRpc = j.dump();
+			}
+			else
+				strRpc = req.body;
+
+			tdsSrv.handleRpcCall(strRpc, rpcResp, tdsSession);
+
+			if (rpcResp.textResp != "")
+			{
+				res.set_content(rpcResp.textResp, "text/plain");
+			}
+			else if (rpcResp.binLen > 0)
+			{
+				res.set_content(rpcResp.textResp, "application/octet-stream");
+			}
+	});
+
+
+//数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
   [&](const Request &req, Response &res, const ContentReader &content_reader) {
 	string pathReq = charCodec::ansi2Utf8(req.path);
@@ -372,15 +423,21 @@ void httpReqHandleThread_poolThread(httpReqHandleThread_threadPool* p)
 
 void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
+	tdsSession->httpReqHandleThreadID = GetCurrentThreadId();
 	httplib::detail::dsClientStream* bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
 	SOCKET sock = bs->sock_;
 	bool close = false;
 	while (1)
 	{
-		httpSrv.process_request(*bs, false, close, nullptr);
+		// rpc over http 不用通过GET发送，httplib处理GET命令不会读取BODY中的数据，会导致流的处理错误.
+		httpSrv.process_request(*bs, false, close, nullptr);   
 		if (!close) //HTTP keep-alive 模式，该链接可能连续发送多个http请求
 		{
-			if (bs->m_sem.wait_for(5000)) //收到了后续请求
+			if (bs->haveData())//粘连包的情况
+			{
+				continue;
+			}
+			else if(bs->m_sem.wait_for(5000)) //收到了后续请求
 			{
 				continue;
 			}
@@ -455,6 +512,38 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 	}
 	return nullptr;
 }
+
+
+shared_ptr<TDS_SESSION> dataServer::getTDSSession(DWORD dwThreadId)
+{
+	lock_guard<mutex> g(m_mutexTdsSessionList);
+	for (int i = 0; i < m_vecTdsSession.size(); i++)
+	{
+		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
+		if (p->httpReqHandleThreadID == dwThreadId)
+		{
+			return p;
+		}
+	}
+	return nullptr;
+}
+
+
+shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteAddr,int remotePort)
+{
+	lock_guard<mutex> g(m_mutexTdsSessionList);
+	for (int i = 0; i < m_vecTdsSession.size(); i++)
+	{
+		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
+		if (p->pTcpSession->strIP == remoteAddr && p->pTcpSession->iPort == remotePort)
+		{
+			return p;
+		}
+	}
+	return nullptr;
+}
+
+
 
 shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSessionClt* pTcpSess)
 {
@@ -839,21 +928,21 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//tds rpc over http
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		//rpc 先组包后处理
-		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
-			{
-				tdsSession->iALProto = pab->m_protocolType;
-				onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
-			}
-		}
-		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
-		//因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
-		else
-		{
+		////rpc 先组包后处理
+		//if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+		//{
+		//	stream2pkt* pab = &tdsSession->m_alBuf;
+		//	pab->PushStream(pData, iLen);
+		//	while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
+		//	{
+		//		tdsSession->iALProto = pab->m_protocolType;
+		//		onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
+		//	}
+		//}
+		////其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
+		////因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
+		//else
+		//{
 			httplib::detail::dsClientStream* bs = NULL;
 			if(tdsSession->dsCltStream == NULL)
 			{
@@ -870,7 +959,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			}
 
 			bs->appendBuffer(pData, iLen);
-		}
+		//}
 	}
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
@@ -954,6 +1043,11 @@ void dataServer::SendData(char* pData, int iLen)
 	}
 }
 
+void handleRPCOverHttp(const Request&, Response&)
+{
+
+}
+
 
 bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
@@ -993,7 +1087,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		getUrlParams(strData, mapParams);
 
 
-		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP,pALC->pTcpSession->iPort);
+		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP.c_str(),pALC->pTcpSession->iPort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
 		pALC->type = TDS_SESSION_TYPE::rpc;

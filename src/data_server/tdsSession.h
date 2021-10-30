@@ -99,4 +99,5 @@ public:
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
 	FILE_WRITER m_fileUploader;  //大文件上传控制
+	DWORD httpReqHandleThreadID;  //处理http请求的线程id
 };

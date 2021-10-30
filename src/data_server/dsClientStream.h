@@ -18,6 +18,8 @@ namespace httplib {
 				clear();
 			};
 
+			inline bool haveData();
+
 			bool is_readable() const override;
 			bool is_writable() const override;
 			ssize_t read(char* ptr, size_t size) override;
@@ -55,8 +57,21 @@ namespace httplib {
 			socket_t sock_;
 		};
 
+		inline bool dsClientStream::haveData() {
+			bool haveData = false;
+			m_cs.lock();
+			if (bufferList.size() > 0)
+			{
+				haveData = true;
+			}
+			m_cs.unlock();
+			return haveData;
+		}
+
 		// dsClientStream stream implementation
-		inline bool dsClientStream::is_readable() const { return true; }
+		inline bool dsClientStream::is_readable() const { 
+			return true;
+		}
 
 		inline bool dsClientStream::is_writable() const { return true; }
 

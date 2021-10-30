@@ -11,7 +11,7 @@ struct tcpSession
 {
 	SOCKET sock;
 	SOCKADDR_IN clientAddr;
-	TCHAR strIP[16];
+	string strIP;
 	int iPort;
 	bool bIsTransmit;
 	int iSendSucCount;
@@ -35,7 +35,6 @@ struct tcpSession
 		iSendSucCount = 0;
 		iSendFailCount = 0;
 		iRecvCount = 0;
-		memset(strIP, 0, 16);
 		iKeepAliveTimeout = 0;
 		bEnableActivityCheck = true;
 	}
