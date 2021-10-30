@@ -23,6 +23,20 @@ httplib::Server httpSrv;
 using namespace httplib;
 void initHttpSrv(httplib::Server& svr)
 {
+// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
+// 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
+//响应跨域预检请求
+//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
+	svr.Options("\\/rpc.*",
+		[&](const httplib::Request& req, httplib::Response& res) {
+			res.status = 200;
+			res.set_header("Server", "tds");
+			res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
+			res.set_header("Access-Control-Allow-Methods", "POST,GET,OPTIONS");
+			res.set_header("Access-Control-Allow-Headers", req.get_header_value("Access-Control-Request-Headers"));
+			res.set_header("Access-Control-Max-Age", "86400");
+		});
+
 //rpc Post命令处理
 	svr.Post("\\/rpc.*",
 	[&](const httplib::Request& req, httplib::Response& res) {
@@ -64,7 +78,9 @@ void initHttpSrv(httplib::Server& svr)
 
 			if (rpcResp.textResp != "")
 			{
-				res.set_content(rpcResp.textResp, "text/plain");
+				//下面两句都是必须的，不然跨域请求的前端收不到
+				res.set_content(rpcResp.textResp, "application/json;charset=utf-8");
+				res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
 			}
 			else if (rpcResp.binLen > 0)
 			{
@@ -928,7 +944,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//tds rpc over http
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		////rpc 先组包后处理
+		//rpc 先组包后处理
 		//if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		//{
 		//	stream2pkt* pab = &tdsSession->m_alBuf;
@@ -939,8 +955,8 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 		//		onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
 		//	}
 		//}
-		////其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
-		////因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
+		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
+		//因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
 		//else
 		//{
 			httplib::detail::dsClientStream* bs = NULL;
