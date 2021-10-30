@@ -27,7 +27,7 @@ namespace TDS {
 	//IO设备类型
 	namespace IO_DEV_TYPE {
 		namespace DEV {
-			const string modbus_rtu = "modbus_rtu";
+			const string modbus_rtu_slave = "modbus-rtu-slave";
 			const string iq60_gateway = "iq60-gateway";
 			const string genicam = "genicam";
 		}

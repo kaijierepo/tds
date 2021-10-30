@@ -12,6 +12,7 @@ cef/
 out/
 publish/
 front_end/
+temp/
 
 *.obj
 *.aps

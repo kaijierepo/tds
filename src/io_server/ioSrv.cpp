@@ -12,6 +12,7 @@
 #include "ioDev_modbusSlave.h"
 #include "ioDev_mqttBroker.h"
 #include "ioDev_tuya.h"
+#include "ioGW_rs485.h"
 
 #include "ioChan.h"
 #include "ioChan_tuya.h"
@@ -35,17 +36,7 @@ ioServer::~ioServer()
 {
 }
 
-bool isBatchLink(string addr)
-{
-	if (addr.find("#") != string::npos)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
+
 
 ioDev* createIODev(string ioAddr, string type)
 {
@@ -87,83 +78,7 @@ ioDev* createIODev(string ioAddr, string type)
 	return p;
 }
 
-ioDev* createIODevWithChildren(json conf)
-{
-	ioDev* p = NULL;
-	if (conf["type"] == "mqtt-broker")
-	{
-		p = new ioDev_mqttBroker();
-		string ip = conf["addr"]["ip"];
-		string port = conf["addr"]["port"];
-		p->m_devAddr = ip + ":" + port ;
-	}
-	else if (conf["type"] == "tuya-iot-project")
-	{
-		p = new ioGW_tuyaProject();
-		p->m_devAddr = conf["addr"]["client_id"];
-		p->m_secret = conf["addr"]["secret"];
-	}
-	else if (conf["type"] == "tuya.switch")
-	{
-		p = new ioDev_tuya();
-		p->m_devAddr = conf["addr"]["device_id"];
-	}
-	else if (conf["type"] == "iq60-gateway")
-	{
-		ioDev_iq60* piq60 = new ioDev_iq60();
-		p = piq60;
-		p->m_devAddr = conf["addr"]["gateway_id"];
-	}
-	if (p)
-	{
-		p->m_devType = conf["type"];
-		p->m_level = conf["level"];
-	}
-		
 
-
-	if (p && conf["children"] != nullptr)
-	{
-		json childDev = conf["children"];
-		for (auto i : childDev)
-		{
-			ioDev* pChild = nullptr;
-			if (i["level"] == "channel")
-			{
-				string addr = i["addr"];
-
-				//批量映射配置
-				if (isBatchLink(addr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
-				{
-					p->m_mapBatchDataLink[addr] = i["tag_bind"];
-				}
-				else
-				{
-					ioChannel* pdc = nullptr;
-					if (p->m_devType == "tuya.switch")
-					{
-						pdc = new ioChan_tuya();
-					}
-					else
-						pdc = new ioChannel();
-					pChild = pdc;
-					pdc->loadConf(i);
-				}
-			}
-			else if(i["level"] == "device")
-			{
-				pChild = createIODevWithChildren(i);
-			}
-
-			if (pChild)
-			{
-				p->addChild(pChild);
-			}
-		}
-	}
-
-	return p;
-}
 
 bool ioServer::loadConf()
 {
@@ -180,7 +95,8 @@ bool ioServer::loadConf()
 		
 		for (auto it : io)
 		{
-			ioDev* p = createIODevWithChildren(it);
+			ioDev* p = createIODev(it);
+			p->loadConf(it);
 			if(p)
 				m_vecChild.push_back(p);
 		}

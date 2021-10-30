@@ -333,7 +333,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			}
 			jChan["tag_bind"] = "";
 			jChan["type"] = IO_DEV_TYPE::CHAN::io_channel;
-			jChan["type_label"] = IO_DEV_TYPE_LABEL.at(IO_DEV_TYPE::CHAN::io_channel);
+			jChan["typeLabel"] = IO_DEV_TYPE_LABEL.at(IO_DEV_TYPE::CHAN::io_channel);
 			jChan["level"] = "channel";
 
 			chanList.push_back(jChan);

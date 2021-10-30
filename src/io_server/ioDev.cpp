@@ -5,6 +5,89 @@
 #include "db.h"
 #include "prj.h"
 
+#include "ioGW_tuyaProject.h"
+
+#include "ioDev_modbusSlave.h"
+#include "ioDev_mqttBroker.h"
+#include "ioDev_tuya.h"
+#include "ioGW_rs485.h"
+
+#include "ioChan.h"
+#include "ioChan_tuya.h"
+
+#include "ioGW_localSerial.h"
+#include "ioDev_iq60.h"
+
+#include "ioDev_genicam.h"
+
+
+bool isBatchLink(string addr)
+{
+	if (addr.find("#") != string::npos)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+ioDev* createIODev(json conf)
+{
+	ioDev* p = NULL;
+	if (conf["type"] == "mqtt-broker")
+	{
+		p = new ioDev_mqttBroker();
+		string ip = conf["addr"]["ip"];
+		string port = conf["addr"]["port"];
+		p->m_devAddr = ip + ":" + port;
+	}
+	else if (conf["type"] == "tuya-iot-project")
+	{
+		p = new ioGW_tuyaProject();
+		p->m_devAddr = conf["addr"]["client_id"];
+		p->m_secret = conf["addr"]["secret"];
+	}
+	else if (conf["type"] == "tuya.switch")
+	{
+		p = new ioDev_tuya();
+		p->m_devAddr = conf["addr"]["device_id"];
+	}
+	else if (conf["type"] == "iq60-gateway")
+	{
+		ioDev_iq60* piq60 = new ioDev_iq60();
+		p = piq60;
+		p->m_devAddr = conf["addr"]["gateway_id"];
+	}
+	else if (conf["type"] == IO_DEV_TYPE::GW::rs485_gateway)
+	{
+		ioGW_rs485* pRs485 = new ioGW_rs485();
+		p = pRs485;
+		if (conf["activeMode"] != nullptr && conf["activeMode"].get<bool>() == true)
+		{
+			p->m_devAddr = conf["addr"]["ip"].get<string>() + ":" + str::fromInt(conf["addr"]["port"].get<int>());
+		}
+		else
+		{
+			p->m_devAddr = conf["addr"]["ip"].get<string>();
+		}
+	}
+	else if (conf["type"] == IO_DEV_TYPE::DEV::modbus_rtu_slave)
+	{
+		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
+		p = pRtuSlave;
+		p->m_devAddr = conf["addr"].get<string>();
+	}
+	if (p)
+	{
+		p->m_devType = conf["type"];
+		p->m_level = conf["level"];
+	}
+
+	return p;
+}
+
 
 void ioDev::AutoDataLink(MO* mo) {
 
@@ -57,7 +140,7 @@ bool ioDev::toJson(json& conf, string opt)
 	conf["ioAddr"] = getIOAddr().ToString();
 	conf["addr"] = getAddr();
 	conf["type"] = m_devType;
-	conf["type_label"] = m_devTypeLabel;
+	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
 	conf["parentType"] = m_parentDevType;
 	conf["online"] = m_bOnline;
@@ -95,7 +178,49 @@ bool ioDev::toJson(json& conf, string opt)
 
 bool ioDev::loadConf(json& conf)
 {
-	return false;
+	m_devTypeLabel = conf["typeLabel"].get<string>();
+	if (conf["children"] != nullptr)
+	{
+		json childDev = conf["children"];
+		for (auto i : childDev)
+		{
+			ioDev* pChild = nullptr;
+			if (i["level"] == "channel")
+			{
+				string addr = i["addr"];
+
+				//批量映射配置
+				if (isBatchLink(addr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
+				{
+					m_mapBatchDataLink[addr] = i["tag_bind"];
+				}
+				else
+				{
+					ioChannel* pdc = nullptr;
+					if (m_devType == "tuya.switch")
+					{
+						pdc = new ioChan_tuya();
+					}
+					else
+						pdc = new ioChannel();
+					pChild = pdc;
+					pdc->loadConf(i);
+				}
+			}
+			else if (i["level"] == "device")
+			{
+				pChild = createIODev(i);
+				pChild->loadConf(i);
+			}
+
+			if (pChild)
+			{
+				addChild(pChild);
+			}
+		}
+	}
+
+	return true;
 }
 
 bool ioDev::connect()

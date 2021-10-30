@@ -25,7 +25,7 @@ DWORD WINAPI ModbusSlaveAcqThread(LPVOID lpParam)
 
 ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 {
-	m_devType = IO_DEV_TYPE::DEV::modbus_rtu;
+	m_devType = IO_DEV_TYPE::DEV::modbus_rtu_slave;
 
 	g_ModbusSlaveList.push_back(this);
 

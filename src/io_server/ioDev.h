@@ -33,6 +33,7 @@ public:
 	// can be 1. mqtt topic 2.tuya device id
 	//device addr in string format
 	string m_devAddr;  // 多个devAddr 使用 / 连接组合成 ioAddr 
+	json m_jDevAddr;  //json格式的设备地址
 	//device addr in json format
 	virtual json getAddr(); 
 	//io addr in struct format
@@ -130,6 +131,7 @@ public:
 	std::mutex m_csThis;
 };
 
+ioDev* createIODev(json conf);
 
 class TransparentGateway : public ioDev {
 public:

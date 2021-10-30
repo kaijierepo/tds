@@ -532,6 +532,7 @@
     <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tuya.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
+    <ClCompile Include="..\src\io_server\ioGW_rs485.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
     <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
@@ -591,6 +592,7 @@
     <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h" />
     <ClInclude Include="..\src\io_server\ioDev_tuya.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
+    <ClInclude Include="..\src\io_server\ioGW_rs485.h" />
     <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
     <ClInclude Include="..\src\io_server\ioDiscoverer.h" />

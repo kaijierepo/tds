@@ -159,6 +159,9 @@
     <ClCompile Include="..\src\common\yyjson.c">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -317,6 +320,9 @@
     </ClInclude>
     <ClInclude Include="..\src\common\yyjson.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_rs485.h">
+      <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
