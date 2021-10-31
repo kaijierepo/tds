@@ -20,7 +20,7 @@ ioChannel::~ioChannel()
 bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
-	m_devAddr = conf["addr"];
+	m_jDevAddr = conf["addr"];
 	if (conf["tag_bind"] != nullptr)
 	{
 		if (conf["tag_bind"].is_array())
@@ -102,19 +102,13 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	}
 }
 
+
+//ioChannel的输出统一由父设备实现，因为通道的特性是由设备决定的，什么设备决定了有什么通道
+//例如Modbus设备就有以寄存器为特征的通道
 bool ioChannel::output(json jVal, json& jResp)
 {
 	ioDev* pDev = ioDev::m_pParent;
-
-	if (pDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
-	{
-		ioDev_iq60* p = (ioDev_iq60*)pDev;
-		if (p)
-			p->writeChannel(m_devAddr,jVal, jResp);
-	}
-
-
-	return true;
+	return pDev->output(m_devAddr,jVal, jResp);
 }
 
 bool ioChannel::IsValid()

@@ -13,7 +13,6 @@
 #include "ioGW_rs485.h"
 
 #include "ioChan.h"
-#include "ioChan_tuya.h"
 
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"
@@ -137,8 +136,8 @@ ioDev::~ioDev(void)
 bool ioDev::toJson(json& conf, string opt)
 {
 	//conf["name"] = "IQ60";
-	conf["ioAddr"] = getIOAddr().ToString();
-	conf["addr"] = getAddr();
+	//conf["ioAddr"] = getIOAddr().ToString();
+	conf["addr"] = m_jDevAddr;
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
@@ -179,6 +178,7 @@ bool ioDev::toJson(json& conf, string opt)
 bool ioDev::loadConf(json& conf)
 {
 	m_devTypeLabel = conf["typeLabel"].get<string>();
+	m_jDevAddr = conf["addr"];
 	if (conf["children"] != nullptr)
 	{
 		json childDev = conf["children"];
@@ -187,24 +187,17 @@ bool ioDev::loadConf(json& conf)
 			ioDev* pChild = nullptr;
 			if (i["level"] == "channel")
 			{
-				string addr = i["addr"];
-
-				//批量映射配置
-				if (isBatchLink(addr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
+				ioChannel* pdc = nullptr;
+				pdc = new ioChannel();
+				pdc->m_jDevAddr = i["addr"];
+				if (i["addr"].is_string())
+					pdc->m_devAddr = i["addr"].get<string>();
+				pChild = pdc;
+				pdc->loadConf(i);
+				//批量映射配置.主要用于mqtt的场景，当mqtt的路径结构和MOTree的树结构一致时
+				if (pdc->m_devAddr!="" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
 				{
-					m_mapBatchDataLink[addr] = i["tag_bind"];
-				}
-				else
-				{
-					ioChannel* pdc = nullptr;
-					if (m_devType == "tuya.switch")
-					{
-						pdc = new ioChan_tuya();
-					}
-					else
-						pdc = new ioChannel();
-					pChild = pdc;
-					pdc->loadConf(i);
+					m_mapBatchDataLink[pdc->m_devAddr] = i["tag_bind"];
 				}
 			}
 			else if (i["level"] == "device")

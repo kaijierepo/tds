@@ -15,7 +15,6 @@
 #include "ioGW_rs485.h"
 
 #include "ioChan.h"
-#include "ioChan_tuya.h"
 
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"

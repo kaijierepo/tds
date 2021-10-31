@@ -525,7 +525,6 @@
     <ClCompile Include="..\src\data_server\wspSrv.cpp" />
     <ClCompile Include="..\src\io_server\commSrv.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
-    <ClCompile Include="..\src\io_server\ioChan_tuya.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_iq60.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
@@ -585,7 +584,6 @@
     <ClInclude Include="..\src\data_server\wspSrv.h" />
     <ClInclude Include="..\src\io_server\commSrv.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
-    <ClInclude Include="..\src\io_server\ioChan_tuya.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
     <ClInclude Include="..\src\io_server\ioDev_iq60.h" />
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />

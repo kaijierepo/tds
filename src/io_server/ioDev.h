@@ -72,11 +72,16 @@ public:
 	//// data io
 	//directly bridge ioDev to tds websocket session
 	std::shared_ptr<TDS_SESSION> pTdsSession;
+	//输出到设备
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
+	//输出到设备的下属通道
+	virtual bool output(string chanAddr, json jVal, json& chanResp) { return false; }
+
+
 	//长时间阻塞函数，启动线程调用
 	virtual bool scanChannel(json& chanList) { return false; };
-	virtual bool writeChannel(string chanAddr,json jVal, json& chanResp) { return false; }
+	
 
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求

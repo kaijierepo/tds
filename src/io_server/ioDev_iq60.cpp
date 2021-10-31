@@ -346,7 +346,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 //w指令：[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
 //请求：[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
 //返回：["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
-bool ioDev_iq60::writeChannel(string chanAddr,json jVal, json& jResp)
+bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp)
 {
 	json jCmdW;
 	jCmdW.push_back(2);

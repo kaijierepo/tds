@@ -106,9 +106,6 @@
     <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioChan_tuya.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_tuya.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
@@ -258,9 +255,6 @@
       <Filter>mo_model</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioChan_tuya.h">
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_tuya.h">
