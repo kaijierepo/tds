@@ -149,14 +149,16 @@ void chromeThread()
 {
 	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
 	//--kiosk为全屏参数，并且鼠标移到屏幕上边缘不会出现退出全屏的 ×
-	string chromeParam = " --kiosk --app=\"" + tds->conf->homepage + "\"";
+	string chromeParam = "";
+	if (tds->conf->fullscreen)
+		chromeParam += " --kiosk";
+	chromeParam += " --app=\"" + tds->conf->homepage + "\"";
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;
 		wstring title = charCodec::utf8toUtf16("123456");
 		STARTUPINFOW si;
 		si.lpTitle = (LPWSTR)title.c_str();
-		si.wShowWindow = SW_MAXIMIZE; 
 		PROCESS_INFORMATION pi;
 		ZeroMemory(&si, sizeof(si));
 		si.cb = sizeof(si);
@@ -164,7 +166,7 @@ void chromeThread()
 
 		// Start the child process.
 		si.dwFlags = STARTF_USESHOWWINDOW;
-		si.wShowWindow = SW_SHOW;
+		si.wShowWindow = SW_HIDE;
 		if (!CreateProcessW(NULL,   // No module name (use command line)
 			(LPWSTR)charCodec::utf8toUtf16(chromePath).c_str(),        // Command line
 			NULL,           // Process handle not inheritable
@@ -190,6 +192,7 @@ void chromeThread()
 					break;
 				Sleep(1);
 			}	
+			//SendMessage(tds->uiWnd, WM_SHOWWINDOW,NULL,NULL);
 
 			HICON hIcon = NULL;
 			wstring ws = charCodec::ansiToUtf16(fs::appPath() + "\\favicon.ico");

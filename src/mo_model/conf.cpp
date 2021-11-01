@@ -94,6 +94,13 @@ void tdsConfig::loadConf()
 		{
 			uiTitle = tci.val;
 		}
+		else if (tci.key == "fullscreen")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				fullscreen = true;
+			else if (tci.val == "false" || tci.val == "0")
+				fullscreen = false;
+		}
 	}
 
 		//j = jsonConf["active_session"];

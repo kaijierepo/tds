@@ -144,6 +144,7 @@ struct iTDSConf {
 	string homepage;
 	string uiMode;
 	string uiTitle;
+	bool fullscreen; //是否启用标题栏
 	bool singleGenicamHost;
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
