@@ -383,9 +383,7 @@ void TDS_imp::rpcNotify(string method, string params, string sessionId)
 
 bool TDS_imp::enableIoLog(string ioAddr, bool bEnable)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		d->m_bEnableIoLog = bEnable;
@@ -396,9 +394,7 @@ bool TDS_imp::enableIoLog(string ioAddr, bool bEnable)
 
 bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		return d->sendData((char*)p, l);
@@ -418,9 +414,7 @@ bool TDS_imp::connectDev(string ioAddr)
 
 bool TDS_imp::isOnline(string ioAddr)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		return d->m_bOnline;
@@ -430,9 +424,7 @@ bool TDS_imp::isOnline(string ioAddr)
 
 bool TDS_imp::lockIoAddr(string ioAddr)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		d->CommLock();
@@ -443,9 +435,7 @@ bool TDS_imp::lockIoAddr(string ioAddr)
 
 bool TDS_imp::unlockIoAddr(string ioAddr)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		d->CommUnlock();
@@ -456,9 +446,7 @@ bool TDS_imp::unlockIoAddr(string ioAddr)
 
 bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback)
 {
-	ioAddress sIoAddr;
-	sIoAddr.FromString(ioAddr);
-	ioDev* d = ioSrv.getIODev(sIoAddr);
+	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
 		d->m_pRecvCallback = recvCallback;

@@ -985,7 +985,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
 		//io tree 热更新
-		ioSrv.m_vecChild.clear();
+		ioSrv.clear();
 		ioSrv.loadConf();
 		return "\"ok\"";
 	}
@@ -1213,7 +1213,7 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		ioDev* p = pssn->m_streamPusher->m_ioDev;
 		json jIoDev = json::object();
 		jIoDev["type"] = p->m_devType;
-		jIoDev["ioAddr"] = p->getIOAddr().ToString();
+		jIoDev["ioAddr"] = p->getIOAddrStr();
 		jSi["ioDev"] = jIoDev;
 	}
 	

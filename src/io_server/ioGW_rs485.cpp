@@ -5,6 +5,18 @@
 #include "tdsSession.h"
 
 
+void ioGW_rs485_acqThread(ioGW_rs485* gw)
+{
+	std::unique_lock<mutex> lock(gw->m_csThis);
+	while (1)
+	{
+		if (gw->m_bStopAcq)
+			break;
+		gw->DoCycleTask();
+		Sleep(100);
+	}
+}
+
 
 ioGW_rs485::ioGW_rs485(void)
 {
@@ -12,11 +24,16 @@ ioGW_rs485::ioGW_rs485(void)
 	m_devTypeLabel = "RS485网关";
 	m_parentDevType = IO_DEV_TYPE::SERVER::tds;
 	m_level = "gateway";
+	m_bStopAcq = false;
+	thread t(ioGW_rs485_acqThread, this);
+	t.detach();
 }
 
 
 ioGW_rs485::~ioGW_rs485(void)
-{	m_csThis.lock();
+{	
+	m_bStopAcq = true;
+	m_csThis.lock();
 	m_csThis.unlock();
 }
 
@@ -29,14 +46,28 @@ bool ioGW_rs485::run()
 
 bool ioGW_rs485::sendData(char* pData, int iLen)
 {
+	unique_lock<mutex> lock(m_csIOSession);
+	if(pIOSession)
+		pIOSession->send(pData, iLen);
+	return true;
+}
 
-	return 1;
+void ioGW_rs485::DoCycleTask()
+{
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* pChild = m_vecChild[i];
+		pChild->DoCycleTask();
+	}
 }
 
 
 
 bool ioGW_rs485::OnRecvData(char* pData, int iLen )
 {
+	if (m_bEnableIoLog)
+		statisOnRecv(pData, iLen, getIOAddrStr());
+
 	for(int i = 0;i<m_vecChild.size();i++)
 	{
 		m_vecChild.at(i)->OnRecvData(pData,iLen);

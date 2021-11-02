@@ -11,13 +11,16 @@ public:
 	~ioChannel();
 
 	bool loadConf(json& conf) override;
+	bool toJson(json& conf, string opt = "") override;
 
 	bool match(string channelNo);
 
-	string GetCommLinkTag();
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
 	virtual bool output(json jVal, json& jResp);
 	bool IsValid();
+
+	string m_regType; //modbus寄存器类型
+	string m_storageFmt;
 
 	string m_strLinkMPTag;
 	SYSTEMTIME m_stLastUpdateTime;

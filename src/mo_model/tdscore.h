@@ -163,81 +163,8 @@ namespace IODEV_MNG_STATUS {
 // unique identifier for an io device in a certain system
 // any device in an IOT senario can be linked by device addr and gateway addr
 struct ioAddress {
-	string chanAddr; //channel addr
-	string devAddr; //device addr
-	string gwAddr; // if device is under a gateway, this is the gateway addr
-	string proto;
-	string tlProto;
-	bool bIPOnline;
-	IO_GATEWAY_TYPE gwType;
-	int GetID_int() {
-		return _ttoi(gwAddr.c_str());
-	}
-
-	ioAddress() {
-		devAddr = "";
-		gwAddr = ""; //0表示无效，ip即是设备地址
-		chanAddr = "";
-		bIPOnline = false;
-		proto = APP_LAYER_PROTO::UNKNOWN;
-		tlProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
-	}
-
-	bool FromString(string str)
-	{
-		int iPos = str.find('/');
-		if (iPos == string::npos)
-		{
-			devAddr = str;
-		}
-		else
-		{
-			devAddr = str.substr(0,iPos);
-			gwAddr = str.substr(iPos + 1, str.length() - iPos - 1);
-		}
-
-		return true;
-	}
-
-	string ToString()
-	{
-		string str;
-		if (gwAddr == "")
-		{
-			str = devAddr;
-		}
-		else {
-			str = str::format(_T("%s/%s"), devAddr.c_str(), gwAddr.c_str());
-		}
-		return str;
-	}
-
-	bool IsValid()
-	{
-		if (devAddr.length() > 0)
-			return true;
-
-		return false;
-	}
-
-	bool operator==(const ioAddress& right)
-	{
-		if (devAddr == right.devAddr && gwAddr == right.gwAddr)
-		{
-			return true;
-		}
-		return false;
-	}
-
-	friend bool operator<(const ioAddress& left, const ioAddress& right) {
-		int ret = left.devAddr.compare(right.devAddr);
-		if (ret < 0) return true;
-		else if (ret == 0 && left.gwAddr < right.gwAddr) return true;
-		else return false;
-	}
+	string ioAddr; //设备地址
 };
-
-
 
 
 typedef enum recvPktType {
@@ -255,64 +182,62 @@ typedef enum EPACKET_DIR {//表示请求, 响应, 通知
 }ePktDir;
 
 struct PKT_DATA {
-	char* m_DataBuf;
-	int m_iDataBufLen;
+	char* data;
+	int len;
 	string proto;
-	ioAddress addr;
 	recvPktType dealType;
 
 	string m_strCmdName; //命令名称
 	string m_strCmdContent;  //命令内容概要
 	string m_strPktDetail; //命令包详细解析信息
 
-	//表示请求, 响应, 通知
-	ePktDir m_ePktDir;//数据包方向或类型
-
+	virtual bool pack() { return false; };
 	virtual string GetCmdID() { return _T(""); };
 	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
 	virtual string GetPktDesc() { return _T(""); }; //包详细描述信息
 	virtual string GetCmdName() { return _T(""); };
 	virtual bool UnPack() { return 0; };
 
+	void setData(char* p, int l)
+	{
+		if (data)delete data;
+		data = new char[l];
+		memcpy(data, p, l);
+		len = l;
+	}
 	PKT_DATA(char* p, int l)
 	{
-		m_DataBuf = new char[l];
-		memcpy(m_DataBuf, p, l);
-		m_iDataBufLen = l;
-		//m_ePktDir = REQ;
+		data = NULL;
+		setData(p, l);
 	}
-
 	PKT_DATA()
 	{
-		m_DataBuf = NULL;
-		m_iDataBufLen = 0;
-		dealType = RECV_PKT_UNKNOWN;
-		//m_ePktDir = REQ;
+		data = NULL;
+		len = 0;
 	}
 
 	~PKT_DATA()
 	{
-		if (m_DataBuf)
-			delete m_DataBuf;
+		if (data)
+			delete data;
 	}
 
 
 	PKT_DATA& operator=(const PKT_DATA& pd)
 	{
-		this->m_iDataBufLen = pd.m_iDataBufLen;
+		this->len = pd.len;
 		this->proto = pd.proto;
-		this->addr = pd.addr;
 
-		if (pd.m_iDataBufLen > 0)
+		if (pd.len > 0)
 		{
-			if (this->m_DataBuf)
-				delete this->m_DataBuf;
-			this->m_DataBuf = new char[pd.m_iDataBufLen];
-			memcpy(this->m_DataBuf, pd.m_DataBuf, pd.m_iDataBufLen);
+			if (this->data)
+				delete this->data;
+			this->data = new char[pd.len];
+			memcpy(this->data, pd.data, pd.len);
 		}
 		else
 		{
-			this->m_DataBuf = NULL;
+			this->data = NULL;
 		}
 		return *this;
 	}

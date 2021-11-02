@@ -83,10 +83,8 @@ bool ioGW_LocalSerial::run()
 
 bool ioGW_LocalSerial::sendData(char* pData, int iLen)
 {
-	ioAddress addr;
-	addr.devAddr = m_devAddr;
 	if (m_bEnableIoLog)
-		commSrv.StatisOnSend((char*)pData,iLen,addr);
+		statisOnSend((char*)pData,iLen,getIOAddrStr());
 	return WriteCom(pData,iLen);
 }
 
@@ -139,11 +137,9 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 	if(len == 0)
 		return false;
 
-	ioAddress addr;
-	addr.devAddr = m_devAddr;
-
+	
 	if(m_bEnableIoLog)
-		commSrv.StatisOnRecv((char*)buf,len,addr);
+		statisOnRecv((char*)buf,len,getIOAddrStr());
 
 	return true;
 }

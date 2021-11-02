@@ -145,32 +145,40 @@ dataServer::~dataServer()
 {
 }
 
-void dataServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
+void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 {
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 		GetLocalTime(&p->stCreateTime);
 		p->bConnected = true;
-		p->pTcpSession = pCltInfo;
-		p->sock = pCltInfo->sock;
-		p->port = pCltInfo->iPort;
-		p->ip = pCltInfo->strIP;
-		pCltInfo->pALSession = p.get();
+		p->pTcpSession = pTcpSession;
+		p->sock = pTcpSession->sock;
+		p->port = pTcpSession->iPort;
+		p->ip = pTcpSession->strIP;
+
+		ioDev* pIoDev = ioSrv.getIODev(p->ip);
+		if (pIoDev)
+		{
+			p->m_IoDevTcpLink = pIoDev;
+			pIoDev->setIOSession(p);
+		}
+			
+		pTcpSession->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
 		m_mutexTdsSessionList.unlock();
 	}
 	else
 	{
-		if (pCltInfo->pALSession)
+		if (pTcpSession->pALSession)
 		{
 			std::shared_ptr<TDS_SESSION> p = NULL;
 			//从列表中删除
 			m_mutexTdsSessionList.lock();
 			for (int i = 0; i < m_vecTdsSession.size(); i++)
 			{
-				if (m_vecTdsSession.at(i)->pTcpSession == pCltInfo)
+				if (m_vecTdsSession.at(i)->pTcpSession == pTcpSession)
 				{
 					p = m_vecTdsSession[i];
 					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
@@ -889,6 +897,17 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	GetLocalTime(&tdsSession->lastRecvTime);
+
+	{
+		//后续此处加入互斥量保护
+		if (tdsSession->m_IoDevTcpLink)
+		{
+			tdsSession->m_IoDevTcpLink->OnRecvData(pData, iLen);
+			return;
+		}	 
+	}
+
+
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none

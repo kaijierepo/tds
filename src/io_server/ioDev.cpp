@@ -19,6 +19,24 @@
 
 #include "ioDev_genicam.h"
 
+vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
+void sendToCommLog(string s)
+{
+	for (int i = 0; i < commpktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
+		if (!session->bConnected)
+		{
+			commpktSessions.erase(commpktSessions.begin() + i);
+			i--;
+			continue;
+		}
+
+
+		session->send((char*)s.c_str(), s.length());
+	}
+}
+
 
 bool isBatchLink(string addr)
 {
@@ -121,11 +139,14 @@ ioDev::ioDev(void)
 	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stEqpOnLineDateTime, 0, sizeof(SYSTEMTIME));
+	memset(&m_stLastAcqTime, 0, sizeof(SYSTEMTIME));
 	GetLocalTime(&m_stEqpOffLineDateTime);
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
 	pTdsSession = NULL;
+	m_fAcqInterval = 0;
+	pIOSession = NULL;
 }
 
 ioDev::~ioDev(void)
@@ -144,24 +165,8 @@ bool ioDev::toJson(json& conf, string opt)
 	conf["parentType"] = m_parentDevType;
 	conf["online"] = m_bOnline;
 	conf["manageStatus"] = m_mngStatus;
-
-	if (m_level == "channel")
-	{
-		ioChannel* pC = (ioChannel*)this;
-		conf["tag_bind"] = pC->m_strLinkMPTag;
-		conf["io"] = pC->m_io;
-		conf["ioLabel"] = pC->m_ioLabel;
-		conf["valType"] = pC->m_valType;
-		conf["valTypeLabel"] = pC->m_valTypeLabel;
-		conf["name"] = pC->m_name;
-	}
-		
-
-	if (m_channelType != "")
-	{
-		conf["channelType"] = m_channelType;
-		conf["channelTypeLabel"] = m_channelTypeLabel;
-	}
+	if (m_fAcqInterval != 0)
+		conf["acqInterval"] = m_fAcqInterval;
 
 
 	json children = json::array();
@@ -179,6 +184,11 @@ bool ioDev::loadConf(json& conf)
 {
 	m_devTypeLabel = conf["typeLabel"].get<string>();
 	m_jDevAddr = conf["addr"];
+	if (conf["acqInterval"] != nullptr)
+	{
+		m_fAcqInterval = conf["acqInterval"].get<float>();
+	}
+
 	if (conf["children"] != nullptr)
 	{
 		json childDev = conf["children"];
@@ -197,7 +207,7 @@ bool ioDev::loadConf(json& conf)
 				//批量映射配置.主要用于mqtt的场景，当mqtt的路径结构和MOTree的树结构一致时
 				if (pdc->m_devAddr!="" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
 				{
-					m_mapBatchDataLink[pdc->m_devAddr] = i["tag_bind"];
+					m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 				}
 			}
 			else if (i["level"] == "device")
@@ -232,28 +242,22 @@ string ioDev::getDesc()
 	return "";
 }
 
-ioDev* ioDev::getIODev(ioAddress iopath)
+
+ioDev* ioDev::getIODev(string ioAddr)
 {
 	for (auto& it : m_vecChild)
 	{
-		if (it->getIOAddr() == iopath)
+		if (it->getIOAddrStr() == ioAddr)
 		{
 			return it;
 		}
 
-		ioDev* p = it->getIODev(iopath);
+		ioDev* p = it->getIODev(ioAddr);
 		if (p)
 			return p;
 	}
 
 	return nullptr;
-}
-
-ioDev* ioDev::getIODev(string ioAddr)
-{
-	ioAddress a;
-	a.FromString(ioAddr);
-	return getIODev(a);
 }
 
 vector<ioDev*> ioDev::getChildren(string devType)
@@ -281,40 +285,6 @@ json ioDev::getAddr()
 	return j;
 }
 
-ioAddress ioDev::getIOAddr()
-{
-	ioAddress addr;
-	if (m_level == "channel")
-	{
-		//addr.chanAddr = m_addr;
-		//addr.devAddr = m_pParent->m_addr;
-		//if(m_pParent->)
-	}
-	addr.devAddr = m_devAddr;
-	if (m_pParent)
-		addr.gwAddr = m_pParent->m_devAddr;
-
-	 if (m_devType == "modbus_rtu")
-	{
-		addr.proto = APP_LAYER_PROTO::MODBUS_RTU;
-	}
-	
-	addr.gwType = GW_UNKNOWN;
-	if (m_pParent)
-	{
-		if (m_pParent->m_devType == "can_gateway")
-		{
-			addr.gwType = GW_CAN_TRANSPARENT;
-		}
-		else if(m_pParent->m_devType == "modbus_gateway")
-		{
-			addr.gwType = GW_TRANSPARENT;
-		}
-	}
-
-	return addr;
-}
-
 string ioDev::getIOAddrStr()
 {
 	string ioAddrStr = m_devAddr;
@@ -330,23 +300,22 @@ string ioDev::getIOAddrStr()
 
 void ioDev::CommLock()
 {
-	commSrv.CommLock(getIOAddr());
+	
 }
 
 void ioDev::CommUnlock()
 {
-	commSrv.CommUnlock(getIOAddr());
+	
 }
 
 bool ioDev::SendPkt(PKT_DATA& pkt)
 {
-	return sendData((char*)pkt.m_DataBuf, pkt.m_iDataBufLen);
+	return sendData((char*)pkt.data, pkt.len);
 }
 
 bool ioDev::sendData(char* pData, int iLen)
 {
-	ioAddress addr = getIOAddr();
-	return commSrv.SendData(pData, iLen, addr);
+	return false;
 }
 
 bool ioDev::SendHeartbeatPkt()
@@ -361,7 +330,7 @@ bool ioDev::onRecvPkt(json jPkt)
 
 bool ioDev::IsConnected()
 {
-	return commSrv.IsAddrConnected(getIOAddr());
+	return false;
 }
 
 int ioDev::GetAcqInterval()
@@ -403,23 +372,24 @@ bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iR
 		return false;
 	}
 
-	memcpy(pRespData, resp.m_DataBuf, resp.m_iDataBufLen);
-	iRespLen = resp.m_iDataBufLen;
+	memcpy(pRespData, resp.data, resp.len);
+	iRespLen = resp.len;
 	return true;
 }
 
 bool ioDev::CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount, string strLogMsgWhenSend)
 {
-	REQ_PARAM reqParam;
-	if (iRetryCount > 0)
-		reqParam.iRetryCount = iRetryCount;
+	//REQ_PARAM reqParam;
+	//if (iRetryCount > 0)
+	//	reqParam.iRetryCount = iRetryCount;
 
-	bool bRet = commSrv.RequestAndWaitResponse(&req, &resp, getIOAddr(), &reqParam);
+	//bool bRet = commSrv.RequestAndWaitResponse(&req, &resp, getIOAddr(), &reqParam);
 
-	if (bRet)
-		resp.UnPack();
+	//if (bRet)
+	//	resp.UnPack();
 
-	return bRet;
+	//return bRet;
+	return false;
 }
 
 bool ioDev::OnRecvData(char* pData, int iLen)
@@ -527,16 +497,16 @@ ioDev* ioDev::getChild(string devAddr)
 
 bool ioDev::IsAsynPacket(PKT_DATA* pd)
 {
-	//除了当前正在同步请求的命令，其他都做异步处理
-	if (m_pCommAddrInfo->strInSyncCmdID == pd->GetCmdID()) //这条命令正在进行同步通讯，不能异步处理
-	{
-		return false;
-	}
+	////除了当前正在同步请求的命令，其他都做异步处理
+	//if (m_pCommAddrInfo->strInSyncCmdID == pd->GetCmdID()) //这条命令正在进行同步通讯，不能异步处理
+	//{
+	//	return false;
+	//}
 
-	if (m_pCommAddrInfo->strInSyncCmdID == "*")
-	{
-		return false;
-	}
+	//if (m_pCommAddrInfo->strInSyncCmdID == "*")
+	//{
+	//	return false;
+	//}
 
 	return true;
 }
@@ -601,8 +571,46 @@ ioChannel* ioDev::getIOChan(string tag)
 	return nullptr;
 }
 
+void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
+{
+	std::unique_lock<mutex> lock(m_csIOSession);
+	pIOSession = ioSession;
+}
+
 
 CCanTransparentGateway::CCanTransparentGateway()
 {
 	m_devType = "can_gateway";
+}
+
+
+void ioDev::statisOnRecv(char* recvData, int len, string addr)
+{
+	json j;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["ioAddr"] = addr;
+	j["type"] = "接收";
+	j["len"] = len;
+	j["data"] = str::fromBytes(recvData, len);
+	string s = j.dump();
+
+	sendToCommLog(s);
+}
+
+
+void ioDev::statisOnSend(char* sendData, int len, string addr)
+{
+	json j;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["ioAddr"] = addr;
+	j["type"] = "发送";
+	j["len"] = len;
+	j["data"] = str::fromBytes(sendData, len);
+	string s = j.dump();
+
+	sendToCommLog(s);
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include "ioDev.h"
+#include "stream2pkt.h"
 
 /*
 Modbus RTU
@@ -70,9 +71,21 @@ Modbus错误码（10进制）
 */
 
 
-#define MODBUS_RTU_READ_REG 0x03
-#define MODBUS_RTU_WRITE_REG 0x10
+namespace MODBUS_REG_TYPE {
+    const string discreteInput = "Discrete-Input";
+    const string coil = "Coil";
+    const string inputRegister = "Input-Register";
+    const string holdingRegister = "Holding-Register";
+}
 
+namespace MODBUS_FUNCTION_CODE {
+    const unsigned char readCoils = 1;
+    const unsigned char readDiscreteInputs = 2; 
+    const unsigned char readHoldingRegisters = 3;
+    const unsigned char readInputRegisters = 4;
+};
+
+#pragma pack(1)
 struct MRP_REQ_READ_REG{
 	char eqp_addr;
 	char fun_code;
@@ -83,6 +96,7 @@ struct MRP_REQ_READ_REG{
 	char crc_H;
 	char crc_L;
 };
+#pragma pack()
 
 class ioDev_ModbusSlave : public ioDev
 {
@@ -92,9 +106,15 @@ public:
 
 	void DoCycleTask();
 	void SendAcqRTData();
+    unsigned char getFCode(string regType);
+    json acqModbusReg(string regType, string regAddr, string storageFmt = STORAGE_FMT::UInt16, int regNum = 1);
 	bool RequestAndWaitResponse(PKT_DATA& req,PKT_DATA& resp);
-	void SendData(char* pData,int iLen);
+	bool sendData(char* pData,int iLen) override;
 	bool OnRecvData(char* pData,int iLen);
-	WORD GetCRC(const char *pBuf, UINT iLen);
+
+
+	stream2pkt m_recvBuff;
+	mutex m_csRecvBuff;
+	semaphore m_recvSignal;
 };
 

@@ -34,10 +34,8 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 				{
 					ioDev_iq60* p = (ioDev_iq60*)pIoDev;
 
-					ioAddress addr;
-					addr.devAddr = p->m_devAddr;
 					if (p->m_bEnableIoLog)
-						commSrv.StatisOnRecv((char*)pkt.c_str(), pkt.length(), addr);
+						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
 					p->ioSession = pALC;
 					p->onRecvPkt(jpkt);
@@ -46,7 +44,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						p->m_bOnline = true;
 						json j;
 						p->toJson(j);
-						if (!pALC->getIODev(p->getIOAddr().ToString()))
+						if (!pALC->getIODev(p->getIOAddrStr()))
 						{
 							pALC->m_vecIoDev.push_back(p);
 						}
@@ -216,10 +214,8 @@ bool ioDev_iq60::sendData(char* pData, int iLen)
 	if (ioSession == NULL)
 		return false;
 
-	ioAddress addr;
-	addr.devAddr = m_devAddr;
 	if (m_bEnableIoLog)
-		commSrv.StatisOnSend((char*)pData, iLen, addr);
+		statisOnSend((char*)pData, iLen, getIOAddrStr());
 
 	return ioSession->send(pData, iLen) > 0;
 }
@@ -331,7 +327,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 				jChan["io"] = "i";
 				jChan["ioLabel"] = "输入";
 			}
-			jChan["tag_bind"] = "";
+			jChan["tagBind"] = "";
 			jChan["type"] = IO_DEV_TYPE::CHAN::io_channel;
 			jChan["typeLabel"] = IO_DEV_TYPE_LABEL.at(IO_DEV_TYPE::CHAN::io_channel);
 			jChan["level"] = "channel";

@@ -11,10 +11,10 @@ public:
 
 		iPktBuffSize = 0;
 		iStreaBuffSize = 0;
-		if(tcpStreamData)
+		if(stream)
 		{
-			delete tcpStreamData;
-			tcpStreamData = NULL;
+			delete stream;
+			stream = NULL;
 		}
 		if (pkt)
 		{
@@ -29,6 +29,19 @@ public:
 	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
 	bool PopAllAs(string cpt); 
 
+	stream2pkt()
+	{
+		pkt = NULL;
+		stream = NULL;
+		Init();
+	}
+
+	//流数据
+	char* stream;
+	int iStreaBuffSize;
+	int iStreamLen;
+
+	//组包成功的数据
 	char* pkt;
 	int iPktBuffSize;
 	int iPktLen;
@@ -36,21 +49,9 @@ public:
 
 	int iAbandonBytes;
 
-	stream2pkt()
-	{
-		pkt = NULL;
-		tcpStreamData = NULL;
-		Init();
-	}
-
-	char* tcpStreamData;
-	int iStreaBuffSize;
-	int iStreamLen;
-
 	int IsValidPkt_HTTP(char* pData,int iLen);
 	int IsValidPkt_ModbusRTU(char* pData,int iLen);
 	int IsValidPkt_JSONRPC(char* pData, int iLen);
 	int IsValidPkt_WEBSOCKET(char* pData, int iLen);
 	int IsValidPkt_IQ60(char* pData, int iLen);
-	WORD GetCRC(const char *pBuf, UINT iLen);
 };

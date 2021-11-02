@@ -33,11 +33,10 @@ public:
 	// can be 1. mqtt topic 2.tuya device id
 	//device addr in string format
 	string m_devAddr;  // 多个devAddr 使用 / 连接组合成 ioAddr 
-	json m_jDevAddr;  //json格式的设备地址
+	json m_jDevAddr;  //json格式的设备地址   内部的数据结构按实际类型。例如地址如果是int，就用int类型，而不用string
 	//device addr in json format
 	virtual json getAddr(); 
 	//io addr in struct format
-	ioAddress getIOAddr();// addr of different level(gateway,device,channel) devices makes an ioAddr
 	string getIOAddrStr();
 	string m_mngStatus;
 	string m_devType;
@@ -56,9 +55,8 @@ public:
 	string m_channelTypeLabel;
 
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
-
+	float m_fAcqInterval; //数据采样间隔，精度0.1秒，为0表示不采样
 	//// iodev hierachy tree management
-	ioDev* getIODev(ioAddress iopath); //从该设备和所有子设备中找到指定ioAdress的设备
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
@@ -72,6 +70,12 @@ public:
 	//// data io
 	//directly bridge ioDev to tds websocket session
 	std::shared_ptr<TDS_SESSION> pTdsSession;
+
+	void setIOSession(shared_ptr<TDS_SESSION> ioSession);
+	void statisOnRecv(char* recvData, int len, string addr);
+	void statisOnSend(char* sendData, int len, string addr);
+	shared_ptr<TDS_SESSION> pIOSession;
+	mutex m_csIOSession;
 	//输出到设备
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
@@ -119,6 +123,7 @@ public:
 	static int m_heartBeatInterval;//单位秒
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
+	SYSTEMTIME m_stLastAcqTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool m_bOnline;  //设备发现后，处于在线状态
 	bool m_bConnected; //连接后，处于通信状态，可能有io任务执行.串口打开后，处于connect状态。
@@ -137,6 +142,7 @@ public:
 };
 
 ioDev* createIODev(json conf);
+extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 
 class TransparentGateway : public ioDev {
 public:

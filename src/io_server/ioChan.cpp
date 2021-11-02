@@ -21,11 +21,11 @@ bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
 	m_jDevAddr = conf["addr"];
-	if (conf["tag_bind"] != nullptr)
+	if (conf["tagBind"] != nullptr)
 	{
-		if (conf["tag_bind"].is_array())
+		if (conf["tagBind"].is_array())
 		{
-			json tagNodes = conf["tag_bind"];
+			json tagNodes = conf["tagBind"];
 			string tag;
 			for (int i = 0; i < tagNodes.size(); i++)
 			{
@@ -37,10 +37,22 @@ bool ioChannel::loadConf(json& conf)
 		}
 		else
 		{
-			m_strLinkMPTag = conf["tag_bind"];
+			m_strLinkMPTag = conf["tagBind"];
 		}
 	}
 	
+	if (conf["addr"] != nullptr && conf["addr"].is_object())
+	{
+		if (conf["addr"]["regType"] != nullptr)
+			m_regType = conf["addr"]["regType"].get<string>();
+		if (conf["addr"]["regAddr"] != nullptr)
+			m_devAddr = str::fromInt(conf["addr"]["regAddr"].get<int>());
+	}
+	
+	if (conf["storageFmt"] != nullptr)
+	{
+		m_storageFmt = conf["storageFmt"].get<string>();
+	}
 	if (conf["io"] != nullptr)
 		m_io = conf["io"];
 	if (conf["ioLabel"] != nullptr)
@@ -55,15 +67,28 @@ bool ioChannel::loadConf(json& conf)
 	return true;
 }
 
-string ioChannel::GetCommLinkTag()
+bool ioChannel::toJson(json& conf, string opt)
 {
-	ioAddress addr = m_pParent->getIOAddr();
-	string str = addr.ToString();
+	ioDev::toJson(conf, opt);
 
-	str += "-" + m_devAddr;
+	conf["storageFmt"] = m_storageFmt;
 
-	return str;
+	conf["tagBind"] = m_strLinkMPTag;
+	conf["io"] = m_io;
+	conf["ioLabel"] = m_ioLabel;
+	conf["valType"] = m_valType;
+	conf["valTypeLabel"] = m_valTypeLabel;
+	conf["name"] = m_name;
+
+	if (m_channelType != "")
+	{
+		conf["channelType"] = m_channelType;
+		conf["channelTypeLabel"] = m_channelTypeLabel;
+	}
+
+	return false;
 }
+
 
 bool ioChannel::match(string channelNo) {
 	if (m_devAddr.find("#"))//mqtt channel wildcard

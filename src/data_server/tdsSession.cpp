@@ -34,6 +34,7 @@ void TDS_SESSION::Init()
     mapTagDataSubscribe.clear();
     bSubAll = false;
     bInitSegSended = false;
+    m_IoDevTcpLink = NULL;
 }
 
 string TDS_SESSION::GetClientIp()
@@ -74,7 +75,7 @@ string TDS_SESSION::GetClientIp()
      for (int i = 0; i < m_vecIoDev.size(); i++)
      {
          ioDev* p = m_vecIoDev.at(i);
-         if (p->getIOAddr().ToString() == ioAddr)
+         if (p->getIOAddrStr() == ioAddr)
          {
              return p;
          }
@@ -103,6 +104,12 @@ string TDS_SESSION::GetClientIp()
      {
          delete pBridgedTcpClient;
      }
+     if (m_IoDevTcpLink)
+     {
+         m_IoDevTcpLink->setIOSession(NULL);
+         m_IoDevTcpLink = NULL;
+     }
+
      videoServiceNode = NULL;
      bConnected = false;
      m_fileUploader.stopWrite();

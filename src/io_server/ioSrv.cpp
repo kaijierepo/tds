@@ -112,6 +112,15 @@ void ioServer::saveConf()
 {
 }
 
+void ioServer::clear()
+{
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		delete m_vecChild[i];
+	}
+	m_vecChild.clear();
+}
+
 void ioServer::refreshSerialIODev()
 {
 	//从操作系统的设备管理器获得串口列表信息

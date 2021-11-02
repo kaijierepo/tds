@@ -12,7 +12,10 @@ public:
 	bool OnRecvData(char* pData, int iLen) override;
 	bool run() override;
 	bool sendData(char* pData, int iLen) override;
+
+	void DoCycleTask() override;
+
+	bool m_bStopAcq;
 	string m_strErrorInfo;
-	
 };
 
