@@ -202,7 +202,7 @@ bool ioDiscoverer::doGenicamDiscover()
                             if (!piod)
                             {
                                 //执行发现，加入到ioSrv
-                                ioDev_genicam* pgen = (ioDev_genicam*)ioSrv.onDevDiscovered(p->getID(), IO_DEV_TYPE::DEV::genicam);
+                                ioDev_genicam* pgen = (ioDev_genicam*)ioSrv.onChildDevDiscovered(p->getID(), IO_DEV_TYPE::DEV::genicam);
                                 pgen->m_genicamDev = p;
 
                                 //初始化推流id

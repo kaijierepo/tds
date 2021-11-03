@@ -19,7 +19,7 @@ public:
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
-	 bool call(string method, string param, string& result);
+	 bool call(string method, string param, RPC_RESP& resp);
 	 void setRpcHandler(fp_rpcHandler handler);
 	 void rpcNotify(string method, string params="", string sessionId="");
 

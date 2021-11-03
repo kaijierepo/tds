@@ -156,14 +156,14 @@ ioDev::~ioDev(void)
 
 bool ioDev::toJson(json& conf, string opt)
 {
-	//conf["name"] = "IQ60";
-	//conf["ioAddr"] = getIOAddr().ToString();
+	conf["ioAddr"] = getIOAddrStr();
 	conf["addr"] = m_jDevAddr;
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
 	conf["parentType"] = m_parentDevType;
 	conf["online"] = m_bOnline;
+	conf["connected"] = m_bConnected;
 	conf["manageStatus"] = m_mngStatus;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;

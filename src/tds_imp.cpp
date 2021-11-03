@@ -327,7 +327,7 @@ bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
 	return true;
 }
 
-bool TDS_imp::call(string method, string param, string& result)
+bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 {
 	try {
 		json jParam;
@@ -335,17 +335,9 @@ bool TDS_imp::call(string method, string param, string& result)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		string error;
-		RPC_RESULT rpcResult;
-		bool bHandled = tdsSrv.handleMethodCall(method, jParam, rpcResult,error,NULL);
+		bool bHandled = tdsSrv.handleMethodCall(method, jParam, resp,NULL);
 		if (bHandled)
 		{
-			if (error != "")
-			{
-				result = error;
-				return true;
-			}
-			result = rpcResult.textResult;
 			return true;
 		}
 	}
@@ -354,7 +346,7 @@ bool TDS_imp::call(string method, string param, string& result)
 		string errorType = e.what();
 		json jException;
 		jException["exception"] = errorType;
-		result = jException.dump();
+		resp.error = jException.dump();
 		true;
 	}
 	return false;

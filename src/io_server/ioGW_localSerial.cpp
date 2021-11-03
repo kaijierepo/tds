@@ -310,7 +310,7 @@ bool ioGW_LocalSerial::OpenCom()
 	PurgeComm(m_hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
 
 	SetCommMask(m_hCom, EV_RXCHAR);
-
+	m_bConnected = true;
 	return true;
 }
 

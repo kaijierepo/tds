@@ -23,7 +23,8 @@ public:
 	bool toJson(json& conf, string opt = "");
 	string getTag(string ioAddr);
 
-	ioDev* onDevDiscovered(string ioAddr, string type);
+	//设备发现必须是某个父设备发现了子设备
+	ioDev* onChildDevDiscovered(json childDevAddr, string type);
 
 	ioDiscoverer  ioDiscoverService;
 };

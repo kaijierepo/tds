@@ -46,9 +46,10 @@ void initHttpSrv(httplib::Server& svr)
 			ds.getUrlParams(path, mapParams);
 
 			shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
+			if (tdsSession == nullptr)//有可能连接在得到处理前就断开了连接，会进入到这里
+				return;
 
 			string strRpc;
-			RPC_RESP rpcResp;
 			if (mapParams.size() > 0)
 			{
 				string method;
@@ -74,17 +75,21 @@ void initHttpSrv(httplib::Server& svr)
 			else
 				strRpc = req.body;
 
-			tdsSrv.handleRpcCall(strRpc, rpcResp, tdsSession);
+			string resp;
+			char* binResp = NULL;
+			int iBinRespLen = 0;
+			tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, tdsSession);
 
-			if (rpcResp.textResp != "")
+			if (resp != "")
 			{
 				//下面两句都是必须的，不然跨域请求的前端收不到
-				res.set_content(rpcResp.textResp, "application/json;charset=utf-8");
+				res.set_content(resp, "application/json;charset=utf-8");
 				res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
 			}
-			else if (rpcResp.binLen > 0)
+			else if (binResp)
 			{
-				res.set_content(rpcResp.textResp, "application/octet-stream");
+				res.set_content(resp, "application/octet-stream");
+				delete binResp;
 			}
 	});
 
@@ -1147,7 +1152,6 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			strRpc = "";
 		}
 		
-		RPC_RESP resp;
 		if (mapParams.size() > 0)
 		{
 			string method;
@@ -1171,27 +1175,30 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			strRpc = j.dump();
 		}
 		
-		tdsSrv.handleRpcCall(strRpc, resp, pALC);
+		string resp;
+		char* binResp = NULL;
+		int iBinRespLen = 0;
+		tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, pALC);
 
-		if (resp.textResp != "")
+		if (resp != "")
 		{
 			string httpHead = "HTTP/1.1 200 OK\r\n";
 			httpHead += "Connection: close\r\n";
-			httpHead += "Content-Length: " + str::fromInt(resp.textResp.length()) + "\r\n";
+			httpHead += "Content-Length: " + str::fromInt(resp.length()) + "\r\n";
 			httpHead += "Content-Type: application/json;charset=utf-8\r\n";
 			string origin = req.get_header_value("origin");
 			if (origin != "")
 			{
 				httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
 			}
-			string httpResp = httpHead + "\r\n" + resp.textResp;
+			string httpResp = httpHead + "\r\n" + resp;
 			pALC->send((char*)httpResp.data(), httpResp.length());
 		}
-		if (resp.binLen > 0)
+		if (binResp != NULL)
 		{
 			string httpHead = "HTTP/1.1 200 OK\r\n";
 			httpHead += "Connection: close\r\n";
-			httpHead += "Content-Length: " + str::fromInt(resp.binLen) + "\r\n";
+			httpHead += "Content-Length: " + str::fromInt(iBinRespLen) + "\r\n";
 			httpHead += "Content-Type: application/octet-stream\r\n";
 			string origin = req.get_header_value("origin");
 			if (origin != "")
@@ -1200,7 +1207,8 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			}
 			pALC->send((char*)httpHead.data(), httpHead.length());
 			pALC->send((char*)"\r\n", 2);
-			pALC->send((char*)resp.binResp, resp.binLen);
+			pALC->send((char*)binResp, iBinRespLen);
+			delete binResp;
 		}
 	}
 	else
@@ -1244,21 +1252,26 @@ bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS
 			szJson = NULL;
 		}
 
-		RPC_RESP resp;
-		tdsSrv.handleRpcCall(req, resp, pALC);
+		string resp;
+		char* binResp = NULL;
+		int iBinRespLen = 0;
+		tdsSrv.handleRpcCall(req, resp,binResp,iBinRespLen, pALC);
 
-		if(resp.textResp!="")
+		if(resp!="")
 		{
 			pALC->sendContent = "text";
-			pALC->send((char*)resp.textResp.data(), resp.textResp.length());
+			pALC->send((char*)resp.data(), resp.length());
 		}
 		
-		if(resp.binLen > 0)
+		if(iBinRespLen > 0)
 		{
 			pALC->sendContent = "binary";
-			pALC->send((char*)resp.binResp, resp.binLen);
+			pALC->send(binResp, iBinRespLen);
 		}
 		
+		if (binResp)
+			delete binResp;
+
 		return 1;
 	}
 

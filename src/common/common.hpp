@@ -993,28 +993,8 @@ namespace fs {
 		return list;
 	}
 
-	inline std::string getFolder()
-	{
-		WCHAR szBuffer[MAX_PATH] = { 0 };
-		BROWSEINFOW bi = { 0 };
-		bi.hwndOwner = GetForegroundWindow();//拥有着窗口句柄
-		bi.pszDisplayName = szBuffer;//接收文件夹的缓冲区
-		bi.lpszTitle = L"选择一个文件夹";//标题
-		bi.ulFlags = BIF_NEWDIALOGSTYLE;
-		LPITEMIDLIST idl = SHBrowseForFolderW(&bi);
-		if (SHGetPathFromIDListW(idl, szBuffer)) {
-			string s = charCodec::utf16toUtf8(szBuffer);
-			return s;
-		}
-		else {
-			//MessageBox(NULL, TEXT("请选择一个文件夹"), NULL, MB_ICONERROR);
-			return "";
-		}
-		return "";
-	}
-
-
-	inline vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter = NULL, char* title = NULL, char* defExt = NULL,char* initDirectory = NULL)
+	
+	inline vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter = NULL, char* title = NULL, char* fileName = NULL,char* defExt = NULL,char* initDirectory = NULL)
 	{
 		vector<string> vecPath;
 		//文件名
@@ -1041,6 +1021,10 @@ namespace fs {
 		std::wstring wDefExt;
 		if (defExt)
 			wDefExt = charCodec::autoToUtf16(defExt).c_str();
+		std::wstring wFileName;
+		if (fileName)
+			wFileName = charCodec::autoToUtf16(fileName).c_str();
+
 
 		CoInitialize(nullptr);
 		if (!isMultiSelect)
@@ -1069,12 +1053,14 @@ namespace fs {
 				}
 				hr = pfd->SetFileTypes(vecWFilter.size()/2, fileType);
 				hr = pfd->SetFileTypeIndex(1);
+				
 
-
-				if (!IsOpen) //Save mode get file extension
+				if (!IsOpen)
 				{
+					hr = pfd->SetFileName(wFileName.c_str());
 					hr = pfd->SetDefaultExtension(wDefExt.c_str());
 				}
+				
 
 				hr = pfd->Show(GetForegroundWindow()); //Show dialog
 					//if (SUCCEEDED(hr))
@@ -1178,68 +1164,6 @@ namespace fs {
 
 		return vecPath;
 	}
-
-		inline std::string GetOpenFile(char* filter = NULL, char* title = NULL, char* initDirectory = NULL)
-		{
-			return "";
-		}
-
-		inline std::string GetSaveFile(char* filter = NULL, char* title = NULL, char* initDirectory = NULL)
-		{
-			//文件名
-			std::wstring filename;
-			std::wstring wFilter;
-			if (filter)
-				wFilter = charCodec::autoToUtf16(filter).c_str();//设置过滤
-			std::wstring wDir;
-			if (initDirectory)
-				wDir = charCodec::autoToUtf16(initDirectory).c_str();//初始目录为默认
-			std::wstring wTitle;
-			if (title)
-				wTitle = charCodec::autoToUtf16(title).c_str();
-
-			//打开文件
-			OPENFILENAMEW ofn = { 0 };
-			WCHAR strFilename[MAX_PATH] = { 0 };//用于接收文件名
-			ofn.lStructSize = sizeof(OPENFILENAME);//结构体大小
-			ofn.hwndOwner = GetForegroundWindow();//拥有着窗口句柄
-			if (filter)
-			{
-				ofn.lpstrFilter = wFilter.c_str();
-			}
-			else
-			{
-				ofn.lpstrFilter = L"所有文件\0*.*\0\0";//设置过滤
-			}
-
-			ofn.nFilterIndex = 1;//过滤器索引
-			ofn.lpstrFile = strFilename;//接收返回的文件名，注意第一个字符需要为NULL
-			ofn.nMaxFile = sizeof(strFilename);//缓冲区长度
-			if (initDirectory != NULL)
-				ofn.lpstrInitialDir = wDir.c_str();
-
-			//对话框标题
-			if (title)
-			{
-				if (title != NULL)
-					ofn.lpstrTitle = wTitle.c_str();
-			}
-			else
-			{
-				ofn.lpstrTitle = L"请选择一个文件";
-			}
-
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;//目录必须存在，覆盖文件前发出警告
-			//ofn.lpstrDefExt = L"json";//默认追加的扩展名
-			if (GetSaveFileNameW(&ofn))
-			{
-				filename = strFilename;
-			}
-			string cwd = fs::appPath();
-			BOOL bRet = SetCurrentDirectoryW(charCodec::autoToUtf16(cwd).c_str());
-			string utf8Str = charCodec::utf16ToAuto(filename);
-			return utf8Str;
-		}
 }
 namespace path {
 	inline string normalization(string& s)

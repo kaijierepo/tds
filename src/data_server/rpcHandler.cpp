@@ -252,7 +252,10 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 	string title;
 	if(params["title"]!=nullptr)
 		title = params["title"].get<string>();
-	vector<string> paths = fs::fileDlg(false,false, false, (char*)filter.c_str(), (char*)title.c_str());
+	string fileName;
+	if (params["fileName"] != nullptr)
+		fileName = params["fileName"].get<string>();
+	vector<string> paths = fs::fileDlg(false,false, false, (char*)filter.c_str(), (char*)title.c_str(),(char*)fileName.c_str());
 	if (paths.size() > 0)
 	{
 		json jn = json::object();
@@ -276,11 +279,12 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 	}
 }
 
-bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcResult, string& error, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
 {
 	//method = str::removeChar(method,'_');
 	//transform(method.begin(), method.end(), method.begin(), ::tolower);
-	string& result = rpcResult.textResult;
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
 	//可完全并发的命令
 	//#region concurrent cmd
 	if (method == "xiaot")
@@ -425,7 +429,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 			char* p = NULL; int len = 0;
 			if (fs::readFile(params["path"].get<string>(), p, len))
 			{
-				rpcResult.setResult(p, len);
+				rpcResp.setResult(p, len);
 				if (p)
 					delete p;
 			}
@@ -506,7 +510,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
 		{
 			json j = ioDev_genicam::listDevices();
-			rpcResult.textResult = j.dump(2);
+			rpcResp.result = j.dump(2);
 		}
 #endif
 	}
@@ -537,7 +541,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
 				isEnum = true;
 			piod->setParam(name, val, isEnum);
-			rpcResult.textResult = "\"ok\"";
+			rpcResp.result = "\"ok\"";
 		}
 	}
 	else if (method == "genicam.getParam")
@@ -552,20 +556,20 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESULT& rpcRes
 	if (method == "ui.maximize")
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
-		rpcResult.textResult = "\"ok\"";
+		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "ui.minimize")
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
-		rpcResult.textResult = "\"ok\"";
+		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "ui.close")
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
-		rpcResult.textResult = "\"ok\"";
+		rpcResp.result = "\"ok\"";
 	}
 
-	if (rpcResult.iBinLen > 0 || rpcResult.textResult != "" || error!="")
+	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
 		return true;
 	return false;
 }
@@ -583,10 +587,10 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
-void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
-	RPC_RESULT rpcResult;
+	RPC_RESP rpcResp;
 	string method = "";
 	json id = nullptr;
 	bool bGB2312 = false;
@@ -663,7 +667,7 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 					}
 				}
 			}
-			rpcResult.textResult= "\"pong\"";
+			rpcResp.result= "\"pong\"";
 			goto HANDLE_END;
 		}
 		
@@ -671,7 +675,7 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		//先使用外部注册的handler受理请求
 		if (m_pluginHandler)
 		{
-			bool bHandled = m_pluginHandler(strReq, rpcResult, error);
+			bool bHandled = m_pluginHandler(strReq, rpcResp, error);
 			if (bHandled)
 			{
 				goto HANDLE_END;
@@ -680,7 +684,7 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 		
 
 		//tds自身受理
-		bool bHandled = handleMethodCall(method, params, rpcResult,error,pSession);
+		bool bHandled = handleMethodCall(method, params, rpcResp,pSession);
 		if(!bHandled)
 		{
 			json jError = {
@@ -704,39 +708,38 @@ void rpcHandler::handleRpcCall(string strReq, RPC_RESP& resp, std::shared_ptr<TD
 	}
 
 HANDLE_END:
-	//生成文本响应
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
-	if (error != "")
+	if (rpcResp.error != "")
 	{
-		resp.textResp = "{\"jsonrpc\":\"2.0\",\"error\":" + error + ",\"id\":" + id.dump() +  "}";
+		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump() + "}";
 	}
-	else if(rpcResult.textResult!= "")
+	else if (rpcResp.result != "")
 	{
-		resp.textResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResult.textResult + "}";
+		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result + "}";
 
 		if (method == "fs.readFile")
 		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResult.textResult.length()) + "$\"}";
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
 	}
 
-	if (resp.textResp != "")
+	if (rpcResp.result != "")
 	{
 		if (strRespForLog != "")
 			LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
 		else if (needLog(method))
-			LOG("RPC return --> :\r\n" + resp.textResp + "\r\n");
+			LOG("RPC return --> :\r\n" + rpcResp.result + "\r\n");
 	}
 
 
 	//处理二进制响应
-	if (rpcResult.iBinLen > 0)
+	if (rpcResp.iBinLen > 0)
 	{
-		resp.binResp = rpcResult.binResult;
-		resp.binLen = rpcResult.iBinLen;
-		rpcResult.binResult = NULL;
-		rpcResult.iBinLen = 0;
-		LOG("RPC return --> : 二进制数据 len = " + str::fromInt(resp.binLen));
+		binResp = rpcResp.binResult;
+		iBinLen = rpcResp.iBinLen;
+		rpcResp.binResult = NULL;
+		rpcResp.iBinLen = 0;
+		LOG("RPC return --> : 二进制数据 len = " + str::fromInt(iBinLen));
 	}
 }
 
@@ -887,8 +890,8 @@ string rpcHandler::rpc_rt(json params, string& error)
 		if(fmt=="tree")
 		{
 			json j = prj.getRT();
-			string strResult = j.dump(4);
-			return strResult;
+			string result = j.dump(4);
+			return result;
 		}
 		else
 		{
@@ -896,8 +899,8 @@ string rpcHandler::rpc_rt(json params, string& error)
 			{
 				rtList.push_back(it->second->getRTData());
 			}
-			string strResult = rtList.dump(4);
-			return strResult;
+			string result = rtList.dump(4);
+			return result;
 		}
 	}
 	else
@@ -909,8 +912,8 @@ string rpcHandler::rpc_rt(json params, string& error)
 			MP* pmp = tagVec.at(i);
 			rtList.push_back(pmp->getRTData());
 		}
-		string strResult = rtList.dump(4);
-		return strResult;
+		string result = rtList.dump(4);
+		return result;
 	}
 }
 
@@ -1064,14 +1067,15 @@ string rpcHandler::rpc_openCom(json params, string& error)
 		else
 		{
 			json jError = "fail," + pCom->m_strErrorInfo;
-			return jError.dump();
+			error = jError.dump();
 		}
 	}
 	else
 	{
 		json jError = "fail,portNum not found";
-		return jError.dump();
+		error = jError.dump();
 	}
+	return "";
 }
 
 string rpcHandler::rpc_io_tree(json params, string& error)

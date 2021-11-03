@@ -172,7 +172,7 @@ void ioDev_genicam::doStreaming()
                                 si.pixelSize = PFNC_PIXEL_SIZE(iPixelFmt);
                                 firstFrameRecv = true;
                                 string log = str::format("开始接收码流,ioAddr:%s,width:%d,height:%d,像素格式:%s,像素大小:%d",
-                                  m_genicamDev->getID(), si.w, si.h, si.pixelFmt, si.pixelSize);
+                                  m_genicamDev->getID().c_str(), si.w, si.h, si.pixelFmt.c_str(), si.pixelSize);
                                 LOG(log);
                             }
 
@@ -298,6 +298,8 @@ ioDev_genicam::ioDev_genicam()
 {
     m_bStopStream = false;
     m_bStreaming = false;
+    m_level = "device";
+    m_devType = IO_DEV_TYPE::DEV::genicam;
 }
 
 bool ioDev_genicam::disconnect()

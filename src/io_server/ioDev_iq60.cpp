@@ -59,7 +59,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 			//设备发现功能
 			else
 			{
-				ioSrv.onDevDiscovered(id, IO_DEV_TYPE::DEV::iq60_gateway);
+				ioSrv.onChildDevDiscovered(id, IO_DEV_TYPE::DEV::iq60_gateway);
 			}
 		}
 	}

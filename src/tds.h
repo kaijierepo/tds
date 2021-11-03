@@ -30,11 +30,13 @@ namespace TDS {
 			const string modbus_rtu_slave = "modbus-rtu-slave";
 			const string iq60_gateway = "iq60-gateway";
 			const string genicam = "genicam";
+			const string mqttBroker = "mqtt-broker";
 		}
 		namespace GW {
 			const string local_serial = "local-serial";
 			const string can_gateway = "can-gateway";
 			const string rs485_gateway = "rs485-gateway";
+			const string tuya_iot_project = "tuya-iot-project";
 		}
 		namespace CHAN {
 			const string io_channel = "io-channel";
@@ -107,29 +109,32 @@ struct MODULE_BUS_MSG {
 	char* bin; //消息附带的二进制数据
 };
 
-class RPC_RESULT {
+//Response Result Error的命令规则保持和Json RPC标准一致
+class RPC_RESP {
 public:
-	void setResult(string& resp) { textResult = resp; }
-	void setResult(char* resp, int len) { binResult = new char[len]; memcpy(binResult, resp, len); iBinLen = len; }
-	RPC_RESULT() {
-		textResult = "";
+	void setResult(string& str) { result = str; }
+	void setResult(char* bin, int len) { binResult = new char[len]; memcpy(binResult, bin, len); iBinLen = len; }
+	RPC_RESP() {
+		result = "";
 		binResult = NULL;
 		iBinLen = 0;
 	}
-	~RPC_RESULT()
+	~RPC_RESP()
 	{
 		if (binResult)
 			delete binResult;
 	}
 
-	string textResult;
+	string strResp; //完整的字符串格式jsonRPC命令
+	string error;
+	string result;
 	char* binResult;
 	int iBinLen;
 };
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
-typedef bool (*fp_rpcHandler)(string strReq, RPC_RESULT& resp, string& error);//返回是否处理
+typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);//返回是否处理
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
@@ -215,7 +220,7 @@ public:
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 
 	// tds客户端访问接口
-	virtual bool call(string method, string param,string& result) = 0;//返回true，result为结果;返回false,result为错误信息
+	virtual bool call(string method, string param, RPC_RESP& resp) = 0;//返回true，result为结果;返回false,result为错误信息
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 	// tds服务功能扩展

@@ -37,42 +37,34 @@ ioServer::~ioServer()
 
 
 
-ioDev* createIODev(string ioAddr, string type)
+ioDev* createIODev(string type)
 {
 	ioDev* p = NULL;
-	if (type == "mqtt-broker")
+	if (type == IO_DEV_TYPE::DEV::mqttBroker)
 	{
 		p = new ioDev_mqttBroker();
-		//string ip = conf["addr"]["ip"];
-		//string port = conf["addr"]["port"];
-		//p->m_devAddr = ip + ":" + port;
 	}
-	else if (type == "tuya-iot-project")
+	else if (type == IO_DEV_TYPE::GW::tuya_iot_project)
 	{
 		p = new ioGW_tuyaProject();
-		/*p->m_devAddr = conf["addr"]["client_id"];
-		p->m_secret = conf["addr"]["secret"];*/
 	}
 	else if (type == "tuya.switch")
 	{
 		p = new ioDev_tuya();
-		//p->m_devAddr = conf["addr"]["device_id"];
 	}
 	else if (type == "iq60-gateway")
 	{
-		ioDev_iq60* piq60 = new ioDev_iq60();
-		p = piq60;
-		p->m_devAddr = ioAddr;
+		p = new ioDev_iq60();	
 	}
 	else if (type == "genicam")
 	{
 #ifdef ENABLE_GENICAM
-		ioDev_genicam* pGenicam = new ioDev_genicam();
-		p = pGenicam;
-		p->m_devAddr = ioAddr;
-		p->m_level = "device";
-		p->m_devType = IO_DEV_TYPE::DEV::genicam;
+		p = new ioDev_genicam();
 #endif
+	}
+	else if (type == IO_DEV_TYPE::GW::local_serial)
+	{
+		p = new ioGW_LocalSerial();
 	}
 	return p;
 }
@@ -138,16 +130,12 @@ void ioServer::refreshSerialIODev()
 	for (auto& i : aryNew)
 	{
 		sys::COM_INFO ci = i;
-		ioGW_LocalSerial* ls = (ioGW_LocalSerial*)getIODev(ci.portNum);
+		ioDev* ls = getIODev(ci.portNum);
 		if (!ls)
 		{
-			ls = new ioGW_LocalSerial();
-			ls->m_devAddr = ci.portNum;
+			ls = onChildDevDiscovered(ci.portNum, IO_DEV_TYPE::GW::local_serial);
 			ls->m_devTypeLabel = ci.desc;
-			ls->m_mngStatus = IODEV_MNG_STATUS::spare;
-			m_vecChild.push_back(ls);
 		}
-		ls->m_bOnline = true;
 	}
 
 	//离线的空闲设备，从io设备列表中删除。已配置设备保留
@@ -185,10 +173,6 @@ bool ioServer::toJson(json& conf, string opt)
 	for (auto& i : m_vecChild)
 	{
 		json j;
-		if (i->m_devType == IO_DEV_TYPE::GW::local_serial)
-		{
-			continue;
-		}
 		i->toJson(j, opt);
 		string s = j.dump();
 		conf.push_back(j);
@@ -213,9 +197,12 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-ioDev* ioServer::onDevDiscovered(string ioAddr, string type)
+ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
-	ioDev* p = createIODev(ioAddr,type);
+	ioDev* p = createIODev(type);
+	p->m_jDevAddr = childDevAddr;
+	if (childDevAddr.is_string())
+		p->m_devAddr = p->m_jDevAddr.get<string>();
 	p->m_mngStatus = IODEV_MNG_STATUS::spare;
 	p->m_bOnline = true;
 	ioSrv.m_vecChild.push_back(p);
