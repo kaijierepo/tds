@@ -384,9 +384,17 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_output(params, error);
 		}
-		else if (method == "rt")
+		else if (method == "getMpStatus")
 		{
-			result = rpc_rt(params, error);
+			result = rpc_getMpStatus(params, error);
+		}
+		else if (method == "getMoStatus")
+		{
+			result = rpc_getMoStatus(params, error);
+		}
+		else if (method == "getMoStatusList")
+		{
+			result = rpc_getMoStatusList(params, error);
 		}
 		else if (method == "query")
 		{
@@ -395,6 +403,27 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		else if (method == "getconf")
 		{
 			result = rpc_getconf(params, error);
+		}
+		else if (method == "getMpTypeList")
+		{
+			json list;
+			prj.getMpTypeList(list);
+			result = list.dump();
+		}
+		else if (method == "getMoTree")
+		{
+			json j;
+			prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+			result = j.dump(4);
+		}
+		else if (method == "getMoCustomType")
+		{
+			json jList = json::array();
+			for (auto& i : prj.m_mapCustomMOType)
+			{
+				jList.push_back(i.first);
+			}
+			result = jList.dump();
 		}
 		else if (method == "getmplist")//or getMpList or get_mp_list
 		{
@@ -582,7 +611,7 @@ bool rpcHandler::needLog(string method)
 	if (method == "fs.writeFile" ||
 		method == "heartbeat" ||
 		method == "sessionStatus"||
-		method == "rt")
+		method == "getMpStatus")
 		return false;
 	return true;
 }
@@ -878,7 +907,106 @@ string rpcHandler::rpc_input(json params, string& error)
 	return "ok";
 }
 
-string rpcHandler::rpc_rt(json params, string& error)
+string rpcHandler::rpc_getMoStatusList(json params, string& error)
+{
+	if (params["type"] == nullptr)
+	{
+		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
+		return "";
+	}
+	string moType = params["type"].get<string>();
+	json jList = json::array();
+	string strList = "[";
+
+	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
+	{
+		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		for (int i = 0; i < moList.size(); i++)
+		{
+			MO* pMo = moList[i];
+			
+			nlohmann::ordered_json oneData;
+			oneData["监控对象名称"] = pMo->m_strName;
+			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			{
+				MO* pChild = pMo->m_childMO[j];
+				if (pChild->m_moType == MO_TYPE::mp)
+				{
+					MP* pmp = (MP*)pChild;
+					oneData[pmp->m_strName] = pmp->m_curVal;
+				}
+			}
+			strList += oneData.dump();
+			if (i != moList.size() - 1)
+				strList += ",";
+			//jList.push_back(oneData);
+		}
+		strList += "]";
+		//return jList.dump();
+		return strList;
+	}
+	else
+	{
+		json j = json::array();
+		return j.dump();
+	}
+}
+
+
+
+string rpcHandler::rpc_getMoStatus(json params, string& error)
+{
+	if (params["type"] == nullptr)
+	{
+		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
+		return "";
+	}
+	string moType = params["type"].get<string>();
+	json jTable = json::array();
+	json jTableHead = json::array();
+
+	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
+	{
+		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		for (int i = 0; i < moList.size(); i++)
+		{
+			MO* pMo = moList[i];
+			if (i == 0)
+			{
+				for (int j = 0; j < pMo->m_childMO.size(); j++)
+				{
+					MO* pChild = pMo->m_childMO[j];
+					if (pChild->m_moType == MO_TYPE::mp)
+					{
+						MP* pmp = (MP*)pChild;
+						jTableHead.push_back(pmp->m_strName);
+					}
+				}
+				jTable.push_back(jTableHead);
+			}
+
+			json jTableRow;
+			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			{
+				MO* pChild = pMo->m_childMO[j];
+				if (pChild->m_moType == MO_TYPE::mp)
+				{
+					MP* pmp = (MP*)pChild;
+					jTableRow.push_back(pmp->m_curVal);
+				}
+			}
+			jTable.push_back(jTableRow);
+		}
+		return jTable.dump();
+	}
+	else
+	{
+		json j = json::array();
+		return j.dump();
+	}
+}
+
+string rpcHandler::rpc_getMpStatus(json params, string& error)
 {
 	string szTag = params["tag"].get<string>();
 	string fmt = "table";
@@ -922,14 +1050,8 @@ string rpcHandler::rpc_getconf(json params, string& error)
 	string type = "";
 	if(params.find("type") != params.end())
 		 type = params["type"].get<string>();
-	if (type == "mo-tree")
-	{
-		json j;
-		prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-		string conf = j.dump(4);
-		return conf;
-	}
-	else if(type == "io-tree")
+
+	if(type == "io-tree")
 	{
 		string conf;
 		fs::readFile(tds->conf->projectConfPath + "\\io.json", conf);
@@ -938,12 +1060,6 @@ string rpcHandler::rpc_getconf(json params, string& error)
 			return "[]";
 		}
 		return conf;
-	}
-	else if(type == "mp-type-list")
-	{
-		json list;
-		prj.getMpTypeList(list);
-		return list.dump();
 	}
 	else if (type == "file")
 	{

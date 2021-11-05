@@ -37,6 +37,9 @@ MP* project::createMP(string tag,string valType)
 
 bool project::loadConf()
 {
+	m_mapAllMP.clear();
+	m_mapCustomMOType.clear();
+
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "\\mo.json", conf))
 	{

@@ -41,28 +41,28 @@ void initHttpSrv(httplib::Server& svr)
 	svr.Post("\\/rpc.*",
 	[&](const httplib::Request& req, httplib::Response& res) {
 			//解析url参数模式的rpc调用
-			map<string, string> mapParams;
 			string path = req.path;
-			ds.getUrlParams(path, mapParams);
-
 			shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
 			if (tdsSession == nullptr)//有可能连接在得到处理前就断开了连接，会进入到这里
 				return;
 
 			string strRpc;
-			if (mapParams.size() > 0)
+			httplib::Params params = req.params;
+			if (params.size() > 0)
 			{
 				string method;
-				if (mapParams.find("m") != mapParams.end())
-					method = mapParams["m"];
-				if (mapParams.find("method") != mapParams.end())
-					method = mapParams["method"];
-				mapParams.erase("m");
-				mapParams.erase("method");
+				auto iter = params.find("m");
+				if (iter != params.end())
+					method = iter->second;
+				iter = params.find("method");
+				if (iter != params.end())
+					method = iter->second;
+				params.erase("m");
+				params.erase("method");
 				json j;
 				j["method"] = method;
 				json jP;
-				for (auto& [k, v] : mapParams)
+				for (auto& [k, v] : params)
 				{
 					if (k == "tag")
 						v = httplib::detail::decode_url(v, true);

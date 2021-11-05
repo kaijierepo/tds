@@ -26,6 +26,7 @@ public:
 	ioServer* m_ioSrv;
 	map<string, MP*> m_mapAllMP;
 	map<string, MP*> m_mapSpecialMP;//×¨ÓÃÎ»ºÅ
+	map<string, vector<MO*>> m_mapCustomMOType;
 public:
 	project();
 	virtual ~project();

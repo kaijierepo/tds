@@ -21,6 +21,7 @@ public:
 	void clearChildren();
 
 	string m_moType;
+	string m_moCustomType;
 	string m_strName;
 	string m_alias;
 	bool m_bShow;
@@ -55,6 +56,7 @@ public:
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
 	MO* GetMO(string strName);
+	vector<string> getAllCustomMoType();
 
 	string TranslateRelateTag(string rtag);
 	string m_status;

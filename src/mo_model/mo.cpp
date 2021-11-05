@@ -11,7 +11,7 @@
 MO* createMO(string type)
 {
 	MO* p = NULL;
-	if (type == MO_TYPE::mo)
+	if (type == MO_TYPE::mo || type == MO_TYPE::custom)
 	{
 		p = new MO();
 	}
@@ -51,6 +51,21 @@ bool MO::loadConf(json& conf)
 {
 	m_strName = conf["name"];
 	m_moType = conf["type"];
+	if (m_moType == "custom")
+	{
+		m_moCustomType = conf["customType"];
+		if (prj.m_mapCustomMOType.find(m_moCustomType) != prj.m_mapCustomMOType.end())
+		{
+			vector<MO*>& moList = prj.m_mapCustomMOType[m_moCustomType];
+			moList.push_back(this);
+		}
+		else
+		{
+			vector<MO*> moList;
+			moList.push_back(this);
+			prj.m_mapCustomMOType[m_moCustomType] = moList;
+		}
+	}
 	auto children = conf["children"];
 	for (auto& child : children)
 	{
@@ -69,6 +84,8 @@ bool MO::toJson(json& conf, json serializeOption)
 {
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
+	if (m_moCustomType != "")
+		conf["customType"] = m_moCustomType;
 
 	if (m_moType != MO_TYPE::mp)
 	{

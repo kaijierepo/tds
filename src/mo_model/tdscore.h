@@ -103,6 +103,7 @@ namespace MO_TYPE {
 	const string mpgroup = "mpgroup";
 	const string project = "project";
 	const string amo = "amo";
+	const string custom = "custom";
 }
 
 namespace MO_TYPE_LABEL {
