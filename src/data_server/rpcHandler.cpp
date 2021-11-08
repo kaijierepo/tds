@@ -412,9 +412,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 		else if (method == "getMoTree")
 		{
-			json j;
-			prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-			result = j.dump(4);
+			//json j;
+			//prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+			//result = j.dump(4);
+			result = prj.m_strMoTree; //每次重新加载时会更新，只包含配置，不包含实时数据信息
 		}
 		else if (method == "getMoCustomType")
 		{
@@ -1008,7 +1009,9 @@ string rpcHandler::rpc_getMoStatus(json params, string& error)
 
 string rpcHandler::rpc_getMpStatus(json params, string& error)
 {
-	string szTag = params["tag"].get<string>();
+	string szTag = "*"; //未指定位号默认查询所有位号
+	if(params["tag"]!=nullptr)
+		szTag = params["tag"].get<string>();
 	string fmt = "table";
 	if(params["fmt"]!=nullptr)
 	 	fmt = params["fmt"].get<string>();
@@ -1051,17 +1054,7 @@ string rpcHandler::rpc_getconf(json params, string& error)
 	if(params.find("type") != params.end())
 		 type = params["type"].get<string>();
 
-	if(type == "io-tree")
-	{
-		string conf;
-		fs::readFile(tds->conf->projectConfPath + "\\io.json", conf);
-		if (conf == "")
-		{
-			return "[]";
-		}
-		return conf;
-	}
-	else if (type == "file")
+	if (type == "file")
 	{
 		return rpc_getconffile(params,error);
 	}

@@ -40,7 +40,7 @@ bool project::loadConf()
 	m_mapAllMP.clear();
 	m_mapCustomMOType.clear();
 
-	string conf;
+	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->projectConfPath + "\\mo.json", conf))
 	{
 		LOG("[项目配置  ] 未找到配置，打开空项目。路径:" + tds->conf->projectConfPath);

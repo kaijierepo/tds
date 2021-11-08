@@ -21,6 +21,65 @@
 dataServer ds;
 httplib::Server httpSrv;
 using namespace httplib;
+
+void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
+{
+	//解析url参数模式的rpc调用
+	string path = req.path;
+	shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
+	if (tdsSession == nullptr)//有可能连接在得到处理前就断开了连接，会进入到这里
+		return;
+
+	string strRpc;
+	httplib::Params params = req.params;
+	if (params.size() > 0)
+	{
+		string method;
+		auto iter = params.find("m");
+		if (iter != params.end())
+			method = iter->second;
+		iter = params.find("method");
+		if (iter != params.end())
+			method = iter->second;
+		params.erase("m");
+		params.erase("method");
+		json j;
+		j["method"] = method;
+		json jP;
+		for (auto& [k, v] : params)
+		{
+			if (k == "tag")
+				v = httplib::detail::decode_url(v, true);
+			jP[k] = v;
+		}
+
+		j["params"] = jP;
+		strRpc = j.dump();
+	}
+	else
+		strRpc = req.body;
+	if (strRpc == "")
+		return;
+
+	string resp;
+	char* binResp = NULL;
+	int iBinRespLen = 0;
+	tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, tdsSession);
+
+	if (resp != "")
+	{
+		//下面两句都是必须的，不然跨域请求的前端收不到
+		res.set_content(resp, "application/json;charset=utf-8");
+		res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
+	}
+	else if (binResp)
+	{
+		res.set_content(resp, "application/octet-stream");
+		delete binResp;
+	}
+}
+
+
 void initHttpSrv(httplib::Server& svr)
 {
 // 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
@@ -38,61 +97,8 @@ void initHttpSrv(httplib::Server& svr)
 		});
 
 //rpc Post命令处理
-	svr.Post("\\/rpc.*",
-	[&](const httplib::Request& req, httplib::Response& res) {
-			//解析url参数模式的rpc调用
-			string path = req.path;
-			shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
-			if (tdsSession == nullptr)//有可能连接在得到处理前就断开了连接，会进入到这里
-				return;
-
-			string strRpc;
-			httplib::Params params = req.params;
-			if (params.size() > 0)
-			{
-				string method;
-				auto iter = params.find("m");
-				if (iter != params.end())
-					method = iter->second;
-				iter = params.find("method");
-				if (iter != params.end())
-					method = iter->second;
-				params.erase("m");
-				params.erase("method");
-				json j;
-				j["method"] = method;
-				json jP;
-				for (auto& [k, v] : params)
-				{
-					if (k == "tag")
-						v = httplib::detail::decode_url(v, true);
-					jP[k] = v;
-				}
-
-				j["params"] = jP;
-				strRpc = j.dump();
-			}
-			else
-				strRpc = req.body;
-
-			string resp;
-			char* binResp = NULL;
-			int iBinRespLen = 0;
-			tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, tdsSession);
-
-			if (resp != "")
-			{
-				//下面两句都是必须的，不然跨域请求的前端收不到
-				res.set_content(resp, "application/json;charset=utf-8");
-				res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
-			}
-			else if (binResp)
-			{
-				res.set_content(resp, "application/octet-stream");
-				delete binResp;
-			}
-	});
-
+	svr.Post("\\/rpc.*",handleRpcOverHttp);
+	svr.Get("\\/rpc.*", handleRpcOverHttp);
 
 //数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
