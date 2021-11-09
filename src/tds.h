@@ -4,7 +4,7 @@
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 SPDX-License-Identifier: MIT
-Copyright (c) 2020-2021 Tao Lu 卢涛 
+Copyright (c) 2020-present Tao Lu 卢涛 
 
 Permission is hereby  granted, free of charge, to any  person obtaining a copy
 of this software and associated  documentation files (the "Software"), to deal
