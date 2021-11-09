@@ -1,20 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug ebus|Win32">
-      <Configuration>Debug ebus</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug ebus|x64">
-      <Configuration>Debug ebus</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="dll - D|Win32">
       <Configuration>dll - D</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="dll - D|x64">
       <Configuration>dll - D</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll -D genicam|Win32">
+      <Configuration>dll -D genicam</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll -D genicam|x64">
+      <Configuration>dll -D genicam</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll -R genicam|Win32">
+      <Configuration>dll -R genicam</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll -R genicam|x64">
+      <Configuration>dll -R genicam</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="exe - D|Win32">
@@ -55,14 +63,6 @@
     </ProjectConfiguration>
     <ProjectConfiguration Include="exe -R mt|x64">
       <Configuration>exe -R mt</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release ebus|Win32">
-      <Configuration>Release ebus</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release ebus|x64">
-      <Configuration>Release ebus</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
@@ -107,7 +107,7 @@
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -147,7 +147,7 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -157,15 +157,16 @@
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
     <PlatformToolset>v142</PlatformToolset>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|Win32'" Label="Configuration">
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
   <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <PlatformToolset>v142</PlatformToolset>
     <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug ebus|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'" Label="Configuration">
     <PlatformToolset>v142</PlatformToolset>
-  </PropertyGroup>
-  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug ebus|Win32'">
-    <PlatformToolset>v142</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -187,7 +188,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
@@ -205,7 +206,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -224,7 +225,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'">
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
@@ -247,14 +248,20 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../../atexpert/out</OutDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../../atexpert/out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <OutDir>../../atexpert/out</OutDir>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">
+    <OutDir>../../atexpert/out</OutDir>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
+    <OutDir>../out</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|Win32'">
     <OutDir>../out</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
@@ -329,7 +336,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -456,15 +463,15 @@
       <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MD;..\src\3rdparty\jerryscript\lib\MD;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release ebus|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_STD_BYTE=0;_TDS;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_GENICAM;_HAS_STD_BYTE=0;_TDS;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
@@ -475,8 +482,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MD;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MD;..\src\3rdparty\jerryscript\lib\MD;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
@@ -499,16 +506,38 @@
       <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MDd;..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <SupportJustMyCode>true</SupportJustMyCode>
+      <PreprocessorDefinitions>ENABLE_GENICAM;_HAS_STD_BYTE=0;_TDS;_WINDLL;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 /Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MDd;..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp" />
     <ClCompile Include="..\src\common\base64.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
     <ClCompile Include="..\src\common\simdjson.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp" />
@@ -516,6 +545,7 @@
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\data_server\db.cpp" />
     <ClCompile Include="..\src\data_server\ds.cpp" />
@@ -544,6 +574,7 @@
     <ClCompile Include="..\src\mo_model\stream2pkt.cpp" />
     <ClCompile Include="..\src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
