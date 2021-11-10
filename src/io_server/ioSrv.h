@@ -20,6 +20,7 @@ public:
 	//void saveStatus();
 	void refreshSerialIODev();
 	bool run() override;
+	void stop() override;
 	bool toJson(json& conf, string opt = "");
 	string getTag(string ioAddr);
 

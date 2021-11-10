@@ -17,8 +17,6 @@ public:
 	bool output(string chanAddr, json jVal, json& jResp) override;
 
 	json getAddr() override;
-
-	std::shared_ptr<TDS_SESSION> ioSession;
 	string currentCmd;
 	vector<json> currentResp;//分包组包
 	bool getResponse;

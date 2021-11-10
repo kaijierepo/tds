@@ -27,6 +27,21 @@ ioServer ioSrv;
 
 void IOThread()
 {
+	ioSrv.m_csThis.lock();
+	while (1)
+	{
+		if (!ioSrv.m_bRunning)
+			break;
+		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+		{
+			ioDev* pIoDev = ioSrv.m_vecChild[i];
+			pIoDev->DoCycleTask();
+			if (!ioSrv.m_bRunning)
+				break;
+		}
+		Sleep(5);
+	}
+	ioSrv.m_csThis.unlock();
 }
 ioServer::ioServer()
 {
@@ -106,6 +121,7 @@ void ioServer::saveConf()
 
 void ioServer::clear()
 {
+	std::unique_lock<mutex> lock(m_csThis);
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
 		delete m_vecChild[i];
@@ -152,12 +168,12 @@ bool ioServer::run()
 {
 	if (loadConf())
 	{
-		//commSrv.Run();
 		for (auto i : m_vecChild)
 		{
 			i->run();
 		}
-		//std::thread io(IOThread);
+		std::thread io(IOThread);
+		io.detach();
 	}
 
 	ioDiscoverService.run();
@@ -165,6 +181,11 @@ bool ioServer::run()
 	refreshSerialIODev();
 	
 	return true;
+}
+
+void ioServer::stop()
+{
+	ioDev::stop();
 }
 
 bool ioServer::toJson(json& conf, string opt)

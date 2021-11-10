@@ -37,7 +37,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 					if (p->m_bEnableIoLog)
 						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
-					p->ioSession = pALC;
+					p->setIOSession(pALC);
 					p->onRecvPkt(jpkt);
 					if (p->m_bOnline == false)
 					{
@@ -211,13 +211,16 @@ bool ioDev_iq60::waitResponse(int timeout)
 
 bool ioDev_iq60::sendData(char* pData, int iLen)
 {
-	if (ioSession == NULL)
+	unique_lock<mutex> lock(m_csIOSession);
+	if (pIOSession)
+	{
+		pIOSession->send(pData, iLen);
+		if (m_bEnableIoLog)
+			statisOnSend((char*)pData, iLen, getIOAddrStr());
+	}
+	else
 		return false;
-
-	if (m_bEnableIoLog)
-		statisOnSend((char*)pData, iLen, getIOAddrStr());
-
-	return ioSession->send(pData, iLen) > 0;
+	return true;
 }
 
 bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
@@ -226,7 +229,8 @@ bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
 	currentResp.clear();
 	getResponse = false;
 
-	sendData((char*)req.c_str(), req.length());
+	if(!sendData((char*)req.c_str(), req.length()))
+		return false;
 
 	if (cmd == "hs")
 	{
@@ -255,12 +259,6 @@ bool ioDev_iq60::requestAndWaitResp(string cmd, string req)
 
 bool ioDev_iq60::scanChannel(json& chanList)
 {
-	if (ioSession == NULL)
-	{
-		return false;
-	}
-		
-
 	//请求io点列表
 	string req = "[2,\"IQK\",\"" + m_devAddr + "\",\"hs\"]\n";
 	if (!requestAndWaitResp("hs", req))
@@ -406,6 +404,6 @@ bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp)
 json ioDev_iq60::getAddr()
 {
 	json j;
-	j["gateway_id"] = m_devAddr;
+	j["id"] = m_devAddr;
 	return j;
 }

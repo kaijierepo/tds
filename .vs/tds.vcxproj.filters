@@ -159,6 +159,9 @@
     <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -316,6 +319,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioGW_rs485.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
       <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>

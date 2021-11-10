@@ -30,7 +30,7 @@ int onRecvMqttMsg(void* context, char* topicName, int topicLen, MQTTClient_messa
     LOG("     topic: %s\n", topicName);
     LOG("   message: %.*s\n", message->payloadlen, (char*)message->payload);
     string msg = (char*)message->payload;
-    ioChannel* pDc = p->GetDataChannel(topicName);
+    ioChannel* pDc = p->getChan(topicName);
 
     json j = atof(msg.c_str());
     if(pDc)

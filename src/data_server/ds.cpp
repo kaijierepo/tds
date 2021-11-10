@@ -958,7 +958,6 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	}
 
 
-	// extract app layer data and handle it
 	// tds rpc over websocket
 	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
@@ -971,7 +970,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, tdsSession);
 		return;
 	}
-	//tds rpc over http
+	//http处理   1.网页请求  2.tdsRpc over http   
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
 		//rpc 先组包后处理
@@ -1007,6 +1006,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			bs->appendBuffer(pData, iLen);
 		//}
 	}
+	//tcp直连
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
 		//应用层协议智能检测。根据收到的首包数据进行检测

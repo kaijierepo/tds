@@ -17,6 +17,8 @@ public:
 	~ioDev(void);
 
 	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
+	virtual void stop();
+	bool m_bRunning;
 	virtual bool toJson(json& conf, string opt = "");
 	virtual bool loadConf(json& conf);
 	virtual bool connect();
@@ -38,6 +40,7 @@ public:
 	virtual json getAddr(); 
 	//io addr in struct format
 	string getIOAddrStr();
+	string getDevAddrStr();
 	string m_mngStatus;
 	string m_devType;
 	string m_devTypeLabel;
@@ -58,6 +61,7 @@ public:
 	float m_fAcqInterval; //数据采样间隔，精度0.1秒，为0表示不采样
 	//// iodev hierachy tree management
 	ioDev* getIODev(string ioAddr);
+	ioDev* getIODev(json& ioAddr);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
 	bool addChild(ioDev* p);
@@ -65,7 +69,11 @@ public:
 	void deleteDescendant(ioDev* p);
 	ioDev* getChild(string devAddr);
 	ioDev* m_pParent;
-	ioChannel* getIOChan(string tag);
+
+	//通道管理
+	virtual bool scanChannel(json& chanList) { return false; };//长时间阻塞函数，启动线程调用
+	ioChannel* getChan(string addr);
+	ioChannel* getChanByTag(string tag);
 
 	//// data io
 	//directly bridge ioDev to tds websocket session
@@ -83,10 +91,6 @@ public:
 	virtual bool output(string chanAddr, json jVal, json& chanResp) { return false; }
 
 
-	//长时间阻塞函数，启动线程调用
-	virtual bool scanChannel(json& chanList) { return false; };
-	
-
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
 	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback) { m_pCallbackUser = pUser; m_pRecvCallback = callback; }
@@ -103,6 +107,7 @@ public:
 	void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
 	virtual bool sendData(char* pData, int iLen);
+	virtual bool sendStr(string& str);
 	bool CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen);//发送并阻塞等待回包
 	bool CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount = 0, string strLogMsgWhenSend = "");//=0表示使用全局配置
 
@@ -133,7 +138,7 @@ public:
 	bool IsConnected();
 	virtual int GetAcqInterval();
 	static bool m_bAsynAcqMode;//是否启用异步采集模式
-	ioChannel* GetDataChannel(string strChanID);
+	
 	ioChannel* GetDataChannelByMPTag(string strMPTag);
 	map<string,ioChannel*> m_mapDataChannel;
 	map<string, string> m_mapBatchDataLink;

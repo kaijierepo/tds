@@ -499,7 +499,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			pSession->m_fileUploader.startWrite(p, len);
 		}
 	}
-	else if (method == "getCurDir")
+	else if (method == "fs.getCurDir")
 	{
 		WCHAR buff[300] = { 0 };
 		GetCurrentDirectoryW(300, buff);
@@ -617,6 +617,8 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
+
+
 void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
@@ -659,6 +661,19 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		pSession->lastMethodCalled = method;
 		json params = jReq["params"];
 		id = jReq["id"];
+
+		//来自于io设备的响应消息，转发给io设备
+		if (jReq["ioAddr"]!=nullptr)
+		{
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			if (pIoDev)
+			{
+				pIoDev->setIOSession(pSession);
+				pIoDev->onRecvPkt(jReq);
+			}
+			return;
+		}
 
 
 		//对部分命令日志记录
@@ -1097,8 +1112,9 @@ string rpcHandler::rpc_setconf(json params, string& error)
 		string strData = params["conf"].dump(4);
 		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
 		//io tree 热更新
+		ioSrv.stop(); //退出所有工作线程
 		ioSrv.clear();
-		ioSrv.loadConf();
+		ioSrv.run();
 		return "\"ok\"";
 	}
 	else if (type == "file")
@@ -1209,7 +1225,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 	{
 		ioDev_iq60* p = (ioDev_iq60*)pDev;
 		json chanList;
-		if (p->ioSession == nullptr)
+		if (p->pIOSession == nullptr)
 		{
 			json jError = {
 				{"code", -32603},

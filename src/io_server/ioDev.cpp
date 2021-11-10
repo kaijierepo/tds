@@ -16,6 +16,7 @@
 
 #include "ioGW_localSerial.h"
 #include "ioDev_iq60.h"
+#include "ioDev_tdsp.h"
 
 #include "ioDev_genicam.h"
 
@@ -75,7 +76,7 @@ ioDev* createIODev(json conf)
 	{
 		ioDev_iq60* piq60 = new ioDev_iq60();
 		p = piq60;
-		p->m_devAddr = conf["addr"]["gateway_id"];
+		p->m_devAddr = conf["addr"]["id"];
 	}
 	else if (conf["type"] == IO_DEV_TYPE::GW::rs485_gateway)
 	{
@@ -95,6 +96,12 @@ ioDev* createIODev(json conf)
 		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
 		p = pRtuSlave;
 		p->m_devAddr = conf["addr"].get<string>();
+	}
+	else if (conf["type"] == IO_DEV_TYPE::DEV::tdsp_device)
+	{
+		ioDev_tdsp* ptdsp = new ioDev_tdsp();
+		p = ptdsp;
+		p->m_jDevAddr = conf["addr"];
 	}
 	if (p)
 	{
@@ -123,13 +130,14 @@ bool ioDev::IsGateway()
 }
 
 bool ioDev::m_bAsynAcqMode = false;
-int ioDev::m_heartBeatInterval = 10;
+int ioDev::m_heartBeatInterval = 3;
 
 
 
 ioDev::ioDev(void)
 {
 	m_bEnableIoLog = true;
+	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
 	bEnableAcq = true;
 	m_mngStatus = IODEV_MNG_STATUS::managed;
 	m_pCommAddrInfo = NULL;
@@ -151,7 +159,19 @@ ioDev::ioDev(void)
 
 ioDev::~ioDev(void)
 {
+	m_csThis.lock();
+	m_csThis.unlock();
+}
 
+void ioDev::stop()
+{
+	m_bRunning = false;
+	for (auto i : m_vecChild)
+	{
+		i->stop();
+	}
+	m_csThis.lock(); //等待与该设备关联的工作线程退出
+	m_csThis.unlock();
 }
 
 bool ioDev::toJson(json& conf, string opt)
@@ -260,6 +280,22 @@ ioDev* ioDev::getIODev(string ioAddr)
 	return nullptr;
 }
 
+ioDev* ioDev::getIODev(json& ioAddr)
+{
+	for (auto& it : m_vecChild)
+	{
+		if (it->m_jDevAddr == ioAddr)
+		{
+			return it;
+		}
+
+		ioDev* p = it->getIODev(ioAddr);
+		if (p)
+			return p;
+	}
+	return nullptr;
+}
+
 vector<ioDev*> ioDev::getChildren(string devType)
 {
 	vector<ioDev*> ary;
@@ -287,15 +323,42 @@ json ioDev::getAddr()
 
 string ioDev::getIOAddrStr()
 {
-	string ioAddrStr = m_devAddr;
+	string devAddr = getDevAddrStr();
 	ioDev* pParent = m_pParent;
 	while (pParent)
 	{
-		ioAddrStr = pParent->m_devAddr + "/" + ioAddrStr;
+		devAddr = pParent->getDevAddrStr() + "/" + devAddr;
 		pParent = pParent->m_pParent;
 	}
 		
-	return ioAddrStr;
+	return devAddr;
+}
+
+string ioDev::getDevAddrStr()
+{
+	string devAddr;
+
+	if (m_jDevAddr.is_object())
+	{
+		if (m_jDevAddr["id"] != nullptr)
+		{
+			devAddr = m_jDevAddr["id"].get<string>();
+		}
+		else if (m_jDevAddr["ip"] != nullptr)
+		{
+			devAddr = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["port"] != nullptr)
+			{
+				int iPort = m_jDevAddr["port"].get<int>();
+				devAddr += ":" + str::fromInt(iPort);
+			}
+		}
+	}
+	else {
+		devAddr = m_jDevAddr.get<string>();
+	}
+	
+	return devAddr;
 }
 
 void ioDev::CommLock()
@@ -315,7 +378,21 @@ bool ioDev::SendPkt(PKT_DATA& pkt)
 
 bool ioDev::sendData(char* pData, int iLen)
 {
-	return false;
+	unique_lock<mutex> lock(m_csIOSession);
+	if (pIOSession)
+	{
+		pIOSession->send(pData, iLen);
+		if (m_bEnableIoLog)
+			statisOnSend((char*)pData, iLen, getIOAddrStr());
+	}
+	else
+		return false;
+	return true;
+}
+
+bool ioDev::sendStr(string& str)
+{
+	return sendData((char*)str.c_str(), str.length());
 }
 
 bool ioDev::SendHeartbeatPkt()
@@ -409,27 +486,27 @@ bool ioDev::OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen)
 	return true;
 }
 
-ioChannel* ioDev::GetDataChannel(string strChanID)
+ioChannel* ioDev::getChan(string addr)
 {
 	for (auto i : m_mapDataChannel)
 	{
-		if(i.second->m_devAddr == strChanID) return i.second;
+		if(i.second->m_devAddr == addr) return i.second;
 	}
 
 	for (auto i : m_mapBatchDataLink)
 	{
 		string s = i.first;
 		s = str::trim(s, "#");
-		if (strChanID.find(s) == 0)
+		if (addr.find(s) == 0)
 		{
-			string wildCardVal = strChanID.substr(s.length(), strChanID.length() - s.length());
+			string wildCardVal = addr.substr(s.length(), addr.length() - s.length());
 			ioChannel* p = new ioChannel();
-			p->m_devAddr = strChanID;
+			p->m_devAddr = addr;
 			string bindTag = i.second;
 			str::replace(bindTag, "*", wildCardVal);
 			str::replace(bindTag, "/", ".");
 			p->m_strLinkMPTag = bindTag;
-			m_mapDataChannel[strChanID] = p;
+			m_mapDataChannel[addr] = p;
 			return p;
 		}
 	}
@@ -547,7 +624,7 @@ void ioDev::SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID
 	}
 }
 
-ioChannel* ioDev::getIOChan(string tag)
+ioChannel* ioDev::getChanByTag(string tag)
 {
 	for (auto& child : m_vecChild)
 	{
@@ -563,7 +640,7 @@ ioChannel* ioDev::getIOChan(string tag)
 			continue;
 		}
 
-		ioChannel* pC = child->getIOChan(tag);
+		ioChannel* pC = child->getChanByTag(tag);
 		if (pC)
 			return pC;
 	}

@@ -15,7 +15,6 @@ public:
 
 	void DoCycleTask() override;
 
-	bool m_bStopAcq;
 	string m_strErrorInfo;
 };
 
