@@ -32,6 +32,8 @@ bool MP::loadConf(json& conf)
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
+	m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+
 	//不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
 	if (conf["unit"] != nullptr)
 		m_strUnit = conf["unit"].get<string>();
@@ -316,5 +318,8 @@ json MP::getRTData()
 		j["val"] = m_curVal;
 	j["unit"] = m_strUnit;
 	j["valType"] = m_valType;
+	j["valTypeLabel"] = m_valTypeLabel;
+	j["ioType"] = m_ioType;
+	j["ioTypeLabel"] = m_ioTypeLabel;
 	return j;
 }

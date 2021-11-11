@@ -21,6 +21,28 @@ bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
 	m_jDevAddr = conf["addr"];
+	if (conf["addr"] != nullptr && conf["addr"].is_object())
+	{
+		if (conf["addr"]["regType"] != nullptr)
+			m_regType = conf["addr"]["regType"].get<string>();
+		if (conf["addr"]["regAddr"] != nullptr)
+			m_devAddr = str::fromInt(conf["addr"]["regAddr"].get<int>());
+	}
+	
+	if (conf["storageFmt"] != nullptr)
+	{
+		m_storageFmt = conf["storageFmt"].get<string>();
+	}
+	if (conf["ioType"] != nullptr)
+		m_ioType = conf["ioType"];
+	
+		m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
+	if (conf["valType"] != nullptr)
+		m_valType = conf["valType"];
+	if (conf["valTypeLabel"] != nullptr)
+		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+	if (conf["name"] != nullptr)
+		m_name = conf["name"];
 	if (conf["tagBind"] != nullptr)
 	{
 		if (conf["tagBind"].is_array())
@@ -39,31 +61,15 @@ bool ioChannel::loadConf(json& conf)
 		{
 			m_strLinkMPTag = conf["tagBind"];
 		}
-	}
-	
-	if (conf["addr"] != nullptr && conf["addr"].is_object())
-	{
-		if (conf["addr"]["regType"] != nullptr)
-			m_regType = conf["addr"]["regType"].get<string>();
-		if (conf["addr"]["regAddr"] != nullptr)
-			m_devAddr = str::fromInt(conf["addr"]["regAddr"].get<int>());
-	}
-	
-	if (conf["storageFmt"] != nullptr)
-	{
-		m_storageFmt = conf["storageFmt"].get<string>();
-	}
-	if (conf["io"] != nullptr)
-		m_io = conf["io"];
-	if (conf["ioLabel"] != nullptr)
-		m_ioLabel = conf["ioLabel"];
-	if (conf["valType"] != nullptr)
-		m_valType = conf["valType"];
-	if (conf["valTypeLabel"] != nullptr)
-		m_valTypeLabel = conf["valTypeLabel"];
-	if (conf["name"] != nullptr)
-		m_name = conf["name"];
 
+		m_strLinkMPTag = str::trimPrefix(m_strLinkMPTag, prj.m_strName + ".");
+		MP* pmp = prj.GetMPByTag(m_strLinkMPTag);
+		if (pmp)
+		{
+			pmp->m_ioType = m_ioType;
+			pmp->m_ioTypeLabel = m_ioTypeLabel;
+		}
+	}
 	return true;
 }
 
@@ -74,8 +80,8 @@ bool ioChannel::toJson(json& conf, string opt)
 	conf["storageFmt"] = m_storageFmt;
 
 	conf["tagBind"] = m_strLinkMPTag;
-	conf["io"] = m_io;
-	conf["ioLabel"] = m_ioLabel;
+	conf["ioType"] = m_ioType;
+	conf["ioTypeLabel"] = m_ioTypeLabel;
 	conf["valType"] = m_valType;
 	conf["valTypeLabel"] = m_valTypeLabel;
 	conf["name"] = m_name;

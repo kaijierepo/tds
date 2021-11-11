@@ -72,7 +72,7 @@ public:
 
 	virtual json getRT();
 
-	virtual string getTag();
+	virtual string getTag(); //返回不包含根节点的位号
 	vector<string> GetAlias();
 	vector<string> GetAllTagNamePlus();
 	virtual string getTagWithRoot();

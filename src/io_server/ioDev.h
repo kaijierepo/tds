@@ -48,8 +48,8 @@ public:
 	string m_level;
 	string m_valType;
 	string m_valTypeLabel;
-	string m_io;
-	string m_ioLabel;
+	string m_ioType;
+	string m_ioTypeLabel;
 	string m_name; //可以理解为在硬件中配置的 mo名称
 	bool IsGateway();
 	string m_secret;

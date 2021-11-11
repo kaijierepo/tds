@@ -22,6 +22,11 @@ public:
 	string m_regType; //modbus寄存器类型
 	string m_storageFmt;
 
+	string m_ioType;
+	string m_ioTypeLabel;
+	string m_valType;
+	string m_valTypeLabel;
+
 	string m_strLinkMPTag;
 	SYSTEMTIME m_stLastUpdateTime;
 };

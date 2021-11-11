@@ -25,6 +25,12 @@ namespace TDS {
 	{std::map<string,string>::value_type("man_strobe","人闸")}
 	};
 
+	const std::map<string, string> IO_TYPE_LABEL = {
+	{std::map<string,string>::value_type("i","输入")},
+	{std::map<string,string>::value_type("o","输出")},
+	{std::map<string,string>::value_type("io","输入/输出")}
+	};
+
 	const std::map<string, string> IO_DEV_TYPE_LABEL = {
 	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
 	{std::map<string,string>::value_type("local-serial","本地串口")},

@@ -317,13 +317,13 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			jChan["name"] = jPt["DisplayName"];
 			if (jPt["RW"] == "rw")
 			{
-				jChan["io"] = "io";
-				jChan["ioLabel"] = "输出";
+				jChan["ioType"] = "io";
+				jChan["ioTypeLabel"] = "输出";
 			}
 			else
 			{
-				jChan["io"] = "i";
-				jChan["ioLabel"] = "输入";
+				jChan["ioType"] = "i";
+				jChan["ioTypeLabel"] = "输入";
 			}
 			jChan["tagBind"] = "";
 			jChan["type"] = IO_DEV_TYPE::CHAN::io_channel;
