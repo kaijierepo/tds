@@ -1367,4 +1367,22 @@ namespace sys {
 		return szErrMsg;
 	}
 }
+
+namespace common {
+	inline string guid() {
+		GUID   m_guid;
+		string   strGUID;
+		if (S_OK == ::CoCreateGuid(&m_guid))
+		{
+			strGUID = str::format("%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X",
+				m_guid.Data1, m_guid.Data2, m_guid.Data3,
+				m_guid.Data4[0], m_guid.Data4[1],
+				m_guid.Data4[2], m_guid.Data4[3],
+				m_guid.Data4[4], m_guid.Data4[5],
+				m_guid.Data4[6], m_guid.Data4[7]);
+		}
+		return strGUID;
+	}
+}
+
 #endif

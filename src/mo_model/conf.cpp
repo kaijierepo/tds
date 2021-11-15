@@ -90,6 +90,13 @@ void tdsConfig::loadConf()
 			else if (tci.val == "false" || tci.val == "0")
 				enableDB = false;
 		}
+		else if (tci.key == "enableaccessctrl")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableAccessCtrl = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableAccessCtrl = false;
+		}
 		else if (tci.key == "uiTitle")
 		{
 			uiTitle = tci.val;

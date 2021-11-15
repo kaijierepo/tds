@@ -34,6 +34,13 @@ enum RPC_ERROR {
 	IO_DEV_NOT_FOUND = -41001,
 };
 
+struct ACCESS_INFO {
+	string user;
+	string token;
+	SYSTEMTIME stCreate;
+	int age; //秒为单位，过期时间
+};
+
 
 class rpcHandler
 {
@@ -55,17 +62,21 @@ public:
 
 	//tds data service function
 	string rpc_input(json params, string& error);
+	string rpc_getTopoList(json params, string& error);
 	string rpc_getMoStatusList(json params, string& error);
 	string rpc_getMoStatus(json params, string& error);
 	string rpc_output(json params, string& error);
 	string rpc_db_select(json params, string& error);
 	string rpc_getMpStatus(json params, string& error);
+	string rpc_getUsers(json params, string& error);
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);
 	string rpc_getconffile(json params, string& error);
 	string rpc_setconffile(json params, string& error);
 	string rpc_heartbeat(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_xiaot(json params, string& error);
+
+	string rpc_login(json params, string& error);
 
 	////io service function
 	string rpc_io_tree(json params, string& error);
@@ -98,5 +109,7 @@ public:
 	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
 
 	fp_rpcHandler m_pluginHandler;
+
+	map<string, ACCESS_INFO> m_mapAccessInfo;
 };
 extern rpcHandler tdsSrv;

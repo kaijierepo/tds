@@ -16,6 +16,7 @@
 #include "streamServer.h"
 #include "conf.h"
 #include "tds.h"
+#include "users/userMng.h"
 
 
 dataServer ds;
@@ -99,6 +100,7 @@ void initHttpSrv(httplib::Server& svr)
 //rpc Post命令处理
 	svr.Post("\\/rpc.*",handleRpcOverHttp);
 	svr.Get("\\/rpc.*", handleRpcOverHttp);
+
 
 //数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
@@ -387,6 +389,8 @@ bool dataServer::run()
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
+
+	userMng.loadConf();
 
 	thread t(activeSessionThread);
 	t.detach();

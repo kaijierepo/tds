@@ -584,6 +584,7 @@
     <ClCompile Include="..\src\tools\tcpReverseProxy.cpp" />
     <ClCompile Include="..\src\tools\tcpSwitch.cpp" />
     <ClCompile Include="..\src\tools\tdsShell.cpp" />
+    <ClCompile Include="..\src\users\userMng.cpp" />
     <ClCompile Include="..\src\video\ioDev_genicam.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -643,6 +644,7 @@
     <ClInclude Include="..\src\tools\tcpReverseProxy.h" />
     <ClInclude Include="..\src\tools\tcpSwitch.h" />
     <ClInclude Include="..\src\tools\tdsShell.h" />
+    <ClInclude Include="..\src\users\userMng.h" />
     <ClInclude Include="..\src\video\ffmpeg.h" />
     <ClInclude Include="..\src\video\ioDev_genicam.h" />
     <ClInclude Include="..\src\video\remoteDesktopServer.h" />

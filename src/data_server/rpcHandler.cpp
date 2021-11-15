@@ -20,6 +20,7 @@
 #include "ioChan.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
+#include "users/userMng.h"
 
 rpcHandler tdsSrv;
 
@@ -291,6 +292,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		result = rpc_xiaot(params, error);
 	}
+	else if (method == "login")
+	{
+		result = rpc_login(params, error);
+	}
 	else if (method == "alarm.current")
 	{
 		result = almSrv.getCurrent();
@@ -396,13 +401,18 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_getMoStatusList(params, error);
 		}
-		else if (method == "query")
+		else if (method == "getTopoList")
 		{
-			result = rpc_db_select(params, error);
+			result = rpc_getTopoList(params, error);
 		}
 		else if (method == "getconf")
 		{
 			result = rpc_getconf(params, error);
+		}
+		else if (method == "getUsers")
+		{
+			json j = userMng.getUsers(pSession->user);
+			result = j.dump(4);
 		}
 		else if (method == "getMpTypeList")
 		{
@@ -418,9 +428,24 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			}
 			else
 			{
-				json j;
-				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-				result = j.dump(4);
+				if (params["root"] != nullptr) //获取子树
+				{
+					MO* pmo = prj.GetMOByTag(params["root"].get<string>());
+					if (pmo)
+					{
+						json j;
+						pmo->toJson(j, params);
+						if(pmo->m_pParentMO)
+							j["parentTag"] = pmo->m_pParentMO->getTag();
+						result = j.dump(4);
+					}
+				}
+				else
+				{
+					json j;
+					prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+					result = j.dump(4);
+				}
 			}
 		}
 		else if (method == "getMoCustomType")
@@ -670,6 +695,45 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		json params = jReq["params"];
 		id = jReq["id"];
 
+
+		//访问控制
+		if (method == "login")
+		{
+			rpcResp.result = rpc_login(params, error);
+			if (error != "")
+				rpcResp.error = error;
+			goto HANDLE_END;
+		}
+		if (tds->conf->enableAccessCtrl)
+		{
+			if (jReq["user"] == nullptr || jReq["token"] == nullptr)
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied, set user and token.");
+				goto HANDLE_END;
+			}
+			string user = jReq["user"].get<string>();
+			string token = jReq["token"].get<string>();
+			if (m_mapAccessInfo.find(user) == m_mapAccessInfo.end())
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "please login first,use the access token returned.");
+				goto HANDLE_END;
+			}
+			string trueToken = m_mapAccessInfo[user].token;
+			if (trueToken != token)
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "token invalid");
+				goto HANDLE_END;
+			}
+
+			pSession->user = user;
+		}
+		else //没有打开权限控制，数据包也可以携带user，仅用于功能测试。
+		{
+			if (jReq["user"] != nullptr)
+				pSession->user = jReq["user"].get<string>();
+		}
+
+
 		//来自于io设备的响应消息，转发给io设备
 		if (jReq["ioAddr"]!=nullptr)
 		{
@@ -745,7 +809,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 				{"message" , "Method not found"},
 				{"method", method}
 			};
-			error = jError.dump();
+			rpcResp.error = jError.dump();
 			goto HANDLE_END;
 		}
 	}
@@ -756,7 +820,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 				{"code", -32700},
 				{"message" , "Parse error," + errorType}
 		};
-		error = jError.dump();
+		rpcResp.error = jError.dump();
 		goto HANDLE_END;
 	}
 
@@ -931,6 +995,16 @@ string rpcHandler::rpc_input(json params, string& error)
 	return "ok";
 }
 
+string rpcHandler::rpc_getTopoList(json params, string& error)
+{
+	string path = tds->conf->projectConfPath + "/topo";
+	path::normalization(path);
+	vector<string> fl = fs::getFileList(path);
+
+		json j = fl;
+		return j.dump();
+}
+
 string rpcHandler::rpc_getMoStatusList(json params, string& error)
 {
 	if (params["type"] == nullptr)
@@ -1071,6 +1145,12 @@ string rpcHandler::rpc_getMpStatus(json params, string& error)
 	}
 }
 
+string rpcHandler::rpc_getUsers(json params, string& error)
+{
+
+	return "";
+}
+
 string rpcHandler::rpc_getconf(json params, string& error)
 {
 	string type = "";
@@ -1180,6 +1260,38 @@ string rpcHandler::rpc_xiaot(json params, string& error)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
+}
+
+string rpcHandler::rpc_login(json params, string& error)
+{
+	try {
+		string user = params["user"].get<string>();
+		string pwd = params["pwd"].get<string>();
+
+		if (userMng.loginCheck(user, pwd))
+		{
+			json jRlt;
+			string token = common::guid();
+			jRlt["token"] = token;
+
+			ACCESS_INFO ai;
+			ai.age = 600;
+			GetLocalTime(&ai.stCreate);
+			ai.token = token;
+			ai.user = user;
+
+			m_mapAccessInfo[user] = ai;
+			return jRlt.dump(4);
+		}
+		else
+		{
+			return RPCError(RPC_ERROR::TEC_FAIL, "fail");
+		}
+	}
+	catch (std::exception& e)
+	{
+		return RPCError(RPC_ERROR::TEC_FAIL, "request data error");
+	}
 }
 
 

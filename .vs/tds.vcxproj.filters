@@ -25,6 +25,9 @@
     <Filter Include="tools">
       <UniqueIdentifier>{5c421f04-c8d6-46ac-910e-159730a81355}</UniqueIdentifier>
     </Filter>
+    <Filter Include="users">
+      <UniqueIdentifier>{9131bb6c-33a5-47b4-90cd-9f0ff87dde35}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -161,6 +164,9 @@
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
       <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\users\userMng.cpp">
+      <Filter>users</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -323,6 +329,9 @@
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
       <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\users\userMng.h">
+      <Filter>users</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
