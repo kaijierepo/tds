@@ -32,6 +32,8 @@ public:
 	project();
 	virtual ~project();
 
+	bool toJson(json& conf, json serializeOption) override;
+
 	MP* createMP(string tag, string valType);
 
 private:

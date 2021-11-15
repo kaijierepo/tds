@@ -42,7 +42,11 @@ MO* createMO(string type)
 	{
 		p = new MO();
 	}
-	if (type == MO_TYPE::project)
+	else if (type == MO_TYPE::org)
+	{
+		p = new MO();
+	}
+	else if (type == MO_TYPE::project)
 	{
 		p = new MO();
 	}
@@ -113,6 +117,16 @@ bool MO::toJson(json& conf, json serializeOption)
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
+
+	if (serializeOption["type"] != nullptr)
+	{
+		string type = serializeOption["type"].get<string>();
+		if (type == "org") //组织结构
+		{
+			if (m_moType != type && m_moType != "project")
+				return false; //请求组织结构，遇到不是组织结构的MO节点，不返回该节点
+		}
+	}
 
 	if (m_moType != MO_TYPE::mp)
 	{

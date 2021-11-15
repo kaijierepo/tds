@@ -412,10 +412,16 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 		else if (method == "getMoTree")
 		{
-			//json j;
-			//prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-			//result = j.dump(4);
-			result = prj.m_strMoTree; //每次重新加载时会更新，只包含配置，不包含实时数据信息
+			if (params == nullptr)
+			{
+				result = prj.m_strMoTree; //每次重新加载时会更新，只包含配置，不包含实时数据信息
+			}
+			else
+			{
+				json j;
+				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+				result = j.dump(4);
+			}
 		}
 		else if (method == "getMoCustomType")
 		{
@@ -612,7 +618,9 @@ bool rpcHandler::needLog(string method)
 	if (method == "fs.writeFile" ||
 		method == "heartbeat" ||
 		method == "sessionStatus"||
-		method == "getMpStatus")
+		method == "getMpStatus" ||
+		method == "getMoStatus" ||
+		method == "getMoStatusList")
 		return false;
 	return true;
 }

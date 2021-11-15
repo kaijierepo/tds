@@ -27,6 +27,29 @@ project::~project()
 
 }
 
+
+bool project::toJson(json& conf, json serializeOption)
+{
+	conf["name"] = m_strName;
+	conf["type"] = m_moType;
+	if (m_moCustomType != "")
+		conf["customType"] = m_moCustomType;
+
+	if (m_moType != MO_TYPE::mp)
+	{
+		json jChildren = json::array();
+		for (auto& pmochild : m_childMO)
+		{
+			json jChild;
+			if (pmochild->toJson(jChild, serializeOption))
+				jChildren.push_back(jChild);
+		}
+		conf["children"] = jChildren;
+	}
+
+	return true;
+}
+
 MP* project::createMP(string tag,string valType)
 {
 	MP* pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
