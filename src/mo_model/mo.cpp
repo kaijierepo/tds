@@ -33,6 +33,7 @@ SOFTWARE.
 #include "amo.h"
 #include "ioDev.h"
 #include "as.h"
+#include <algorithm>
 
 
 MO* createMO(string type)
@@ -114,6 +115,13 @@ bool MO::loadConf(json& conf)
 bool MO::toJson(json& conf, json serializeOption)
 {
 	conf["name"] = m_strName;
+	string tag = getTag();
+	if (serializeOption["root"] != nullptr)
+	{
+		string root = serializeOption["root"].get<string>();
+		tag = str::trimPrefix(tag, root + ".");
+	}
+	conf["tag"] = tag;
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
@@ -125,6 +133,11 @@ bool MO::toJson(json& conf, json serializeOption)
 		{
 			if (m_moType != type && m_moType != "project")
 				return false; //请求组织结构，遇到不是组织结构的MO节点，不返回该节点
+		}
+		else if (type == "mo")
+		{
+			if (m_moType == "mp")
+				return false;
 		}
 	}
 
@@ -684,3 +697,59 @@ void MO::GetAllChildAlarmInfo(string& strSummary)
 		pChild->GetAllChildAlarmInfo(strSummary);
 	}
 }
+
+string TAG::trimRoot(string& tag)
+{
+	string s = str::trim(tag, prj.m_strName + ".");
+	return s;
+}
+
+string TAG::addRoot(string& tag)
+{
+	if (tag.find(prj.m_strName) == 0)
+	{
+		return tag;
+	}
+	else
+	{
+		return prj.m_strName + "." + tag;
+	}
+}
+
+bool TAG::hasTag(json& tree, string tag)
+{
+	vector<string> nodeNames;
+	str::split(nodeNames, tag, ".");
+	json* node = &tree;
+	for (int i = 0; i < nodeNames.size(); i++)
+	{
+		string name = nodeNames[i];
+
+
+		//查找子节点中有没有是 指定name的节点。如果有node指向该节点，继续查找node的子节点中是否有下一个name
+		if ((*node)["children"] == nullptr)
+			return false;
+		json& jChildren = (*node)["children"];
+		bool bHaveChild = false;
+		for (int j = 0; j < jChildren.size(); j++)
+		{
+			json& child = jChildren[j];
+			if (child["name"].get<string>() == name)
+			{
+				bHaveChild = true;
+				node = &child;
+			}
+		}
+		if (!bHaveChild)return false;
+	}
+
+	return false;
+}
+
+int TAG::getMoLevel(string tag)
+{
+	tag = TAG::addRoot(tag);
+	return std::count(tag.begin(),tag.end(),'.');
+}
+
+

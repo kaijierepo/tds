@@ -62,7 +62,7 @@ public:
 
 	//tds data service function
 	string rpc_input(json params, string& error);
-	string rpc_getTopoList(json params, string& error);
+	string rpc_getTopoList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_getMoStatusList(json params, string& error);
 	string rpc_getMoStatus(json params, string& error);
 	string rpc_output(json params, string& error);

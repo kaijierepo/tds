@@ -114,7 +114,8 @@ bool MP::loadConf(json& conf)
 
 bool MP::toJson(json& conf, json serializeOption)
 {
-	MO::toJson(conf, serializeOption);
+	if (!MO::toJson(conf, serializeOption))
+		return false;
 	MP* p = (MP*)this;
 	bool bIncluded = false;
 	//确定是否请求了该类型的监测点

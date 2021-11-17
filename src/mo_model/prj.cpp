@@ -59,7 +59,7 @@ MP* project::createMP(string tag,string valType)
 }
 
 bool project::loadConf()
-{
+                                {
 	m_mapAllMP.clear();
 	m_mapCustomMOType.clear();
 

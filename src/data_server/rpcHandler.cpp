@@ -403,7 +403,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 		else if (method == "getTopoList")
 		{
-			result = rpc_getTopoList(params, error);
+			result = rpc_getTopoList(params, error,pSession);
 		}
 		else if (method == "getconf")
 		{
@@ -413,6 +413,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			json j = userMng.getUsers(pSession->user);
 			result = j.dump(4);
+		}
+		else if (method == "setUsers")
+		{
+			userMng.setUsers(params);
 		}
 		else if (method == "getMpTypeList")
 		{
@@ -430,7 +434,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			{
 				if (params["root"] != nullptr) //获取子树
 				{
-					MO* pmo = prj.GetMOByTag(params["root"].get<string>());
+					string tag = params["root"].get<string>();
+					tag = TAG::trimRoot(tag);
+					params["root"] = tag;
+					MO* pmo = prj.GetMOByTag(tag);
 					if (pmo)
 					{
 						json j;
@@ -995,14 +1002,39 @@ string rpcHandler::rpc_input(json params, string& error)
 	return "ok";
 }
 
-string rpcHandler::rpc_getTopoList(json params, string& error)
+string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string path = tds->conf->projectConfPath + "/topo";
 	path::normalization(path);
 	vector<string> fl = fs::getFileList(path);
+	map<string, string> mapTopo; //按照层级排序
+	vector<string> topoList;
+	for (int i = 0; i < fl.size(); i++)
+	{
+		string topoName = str::trimSuffix(fl[i], ".svg");
+		mapTopo[str::fromInt(TAG::getMoLevel(fl[i])) + topoName] = topoName;
+	}
+	for (auto& i : mapTopo)
+	{
+		topoList.push_back(i.second);
+	}
 
-		json j = fl;
-		return j.dump();
+	if (pSession->user != "")
+	{
+		//删除没有权限的拓扑图
+		for (int i = 0; i < topoList.size(); i++)
+		{
+			string& s = topoList[i];
+			if (!userMng.checkTagPermission(pSession->user, s))
+			{
+				topoList.erase(topoList.begin() + i);
+				i--;
+			}
+		}
+	}
+
+	json j = topoList;
+	return j.dump();
 }
 
 string rpcHandler::rpc_getMoStatusList(json params, string& error)
@@ -1267,12 +1299,11 @@ string rpcHandler::rpc_login(json params, string& error)
 	try {
 		string user = params["user"].get<string>();
 		string pwd = params["pwd"].get<string>();
-
-		if (userMng.loginCheck(user, pwd))
+		json jInfo;
+		if (userMng.checkLogin(user, pwd,jInfo))
 		{
-			json jRlt;
 			string token = common::guid();
-			jRlt["token"] = token;
+			jInfo["token"] = token;
 
 			ACCESS_INFO ai;
 			ai.age = 600;
@@ -1281,7 +1312,7 @@ string rpcHandler::rpc_login(json params, string& error)
 			ai.user = user;
 
 			m_mapAccessInfo[user] = ai;
-			return jRlt.dump(4);
+			return jInfo.dump(4);
 		}
 		else
 		{
