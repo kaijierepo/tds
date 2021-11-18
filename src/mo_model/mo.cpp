@@ -119,9 +119,11 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (serializeOption["root"] != nullptr)
 	{
 		string root = serializeOption["root"].get<string>();
-		tag = str::trimPrefix(tag, root + ".");
+		tag = str::trimPrefix(tag, root);
+		tag = str::trimPrefix(tag,".");
 	}
-	conf["tag"] = tag;
+	
+	conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
@@ -731,19 +733,27 @@ bool TAG::hasTag(json& tree, string tag)
 			return false;
 		json& jChildren = (*node)["children"];
 		bool bHaveChild = false;
-		for (int j = 0; j < jChildren.size(); j++)
+		if (jChildren.is_array())//具体指定
 		{
-			json& child = jChildren[j];
-			if (child["name"].get<string>() == name)
+			for (int j = 0; j < jChildren.size(); j++)
 			{
-				bHaveChild = true;
-				node = &child;
+				json& child = jChildren[j];
+				if (child["name"].get<string>() == name)
+				{
+					bHaveChild = true;
+					node = &child;
+				}
 			}
 		}
+		else if (jChildren.is_string() && jChildren.get<string>() == "*") //通配符指定，所有子节点
+		{
+			return true;
+		}
+		
 		if (!bHaveChild)return false;
 	}
 
-	return false;
+	return true;
 }
 
 int TAG::getMoLevel(string tag)

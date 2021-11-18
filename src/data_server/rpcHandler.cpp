@@ -391,15 +391,15 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 		else if (method == "getMpStatus")
 		{
-			result = rpc_getMpStatus(params, error);
+			result = rpc_getMpStatus(params, error, pSession);
 		}
 		else if (method == "getMoStatus")
 		{
-			result = rpc_getMoStatus(params, error);
+			result = rpc_getMoStatus(params, error,pSession);
 		}
 		else if (method == "getMoStatusList")
 		{
-			result = rpc_getMoStatusList(params, error);
+			result = rpc_getMoStatusList(params, error,pSession);
 		}
 		else if (method == "getTopoList")
 		{
@@ -442,8 +442,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 					{
 						json j;
 						pmo->toJson(j, params);
-						if(pmo->m_pParentMO)
-							j["parentTag"] = pmo->m_pParentMO->getTag();
+						j["root"] = tag; //子树的根节点有root属性，表示根在总的mo树中的位号
 						result = j.dump(4);
 					}
 				}
@@ -1037,7 +1036,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 	return j.dump();
 }
 
-string rpcHandler::rpc_getMoStatusList(json params, string& error)
+string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1084,7 +1083,7 @@ string rpcHandler::rpc_getMoStatusList(json params, string& error)
 
 
 
-string rpcHandler::rpc_getMoStatus(json params, string& error)
+string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1136,7 +1135,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error)
 	}
 }
 
-string rpcHandler::rpc_getMpStatus(json params, string& error)
+string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string szTag = "*"; //未指定位号默认查询所有位号
 	if(params["tag"]!=nullptr)
@@ -1155,12 +1154,25 @@ string rpcHandler::rpc_getMpStatus(json params, string& error)
 		}
 		else
 		{
-			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++) 
+			if (pSession->user != "")
 			{
-				rtList.push_back(it->second->getRTData());
+				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
+				{
+					if(userMng.checkTagPermission(pSession->user,it->second->getTag()))
+						rtList.push_back(it->second->getRTData());
+				}
+				string result = rtList.dump(4);
+				return result;
 			}
-			string result = rtList.dump(4);
-			return result;
+			else
+			{
+				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
+				{
+					rtList.push_back(it->second->getRTData());
+				}
+				string result = rtList.dump(4);
+				return result;
+			}
 		}
 	}
 	else
