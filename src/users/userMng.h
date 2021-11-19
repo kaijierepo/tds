@@ -12,11 +12,20 @@ struct USER_INFO {
 	bool enable;
 };
 
+
+struct ACCESS_INFO {
+	string user;
+	string token;
+	SYSTEMTIME stCreate;
+	int age; //秒为单位，过期时间
+};
+
 class userManager {
 public:
 	bool loadConf();
 
 	bool checkLogin(string user, string pwd, json& userInfo);
+	bool checkToken(string user, string token);
 	bool checkTagPermission(string user, string tag); //检查用户对某一个位号是否有权限
 
 	bool isChildMo(string parent, string child);
@@ -32,6 +41,8 @@ public:
 	std::map<string, json*> m_mapUsers;
 	json m_jUsers;
 	json m_jRoles;
+
+	map<string, ACCESS_INFO> m_mapAccessInfo;
 };
 
 extern userManager userMng;

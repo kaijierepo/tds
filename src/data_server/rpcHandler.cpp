@@ -397,9 +397,9 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_getMoStatus(params, error,pSession);
 		}
-		else if (method == "getMoStatusList")
+		else if (method == "getMoStatusTable")
 		{
-			result = rpc_getMoStatusList(params, error,pSession);
+			result = rpc_getMoStatusTable(params, error,pSession);
 		}
 		else if (method == "getTopoList")
 		{
@@ -542,6 +542,20 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		GetCurrentDirectoryW(300, buff);
 		wstring s = buff;
 		json j = charCodec::utf16toUtf8(s);
+		result = j.dump();
+	}
+	else if (method == "fs.getFileList")
+	{
+		string path = params["path"];
+		bool includeFolder = false;
+		bool recursive = false;
+		if (params["includeFolder"] != nullptr)
+			includeFolder = params["includeFolder"].get<bool>();
+		if (params["recursive"] != nullptr)
+			recursive = params["recursive"].get<bool>();
+		vector<string> fl;
+		fs::getFileList(fl,path, includeFolder, recursive);
+		json j = fl;
 		result = j.dump();
 	}
 
@@ -719,15 +733,10 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 			}
 			string user = jReq["user"].get<string>();
 			string token = jReq["token"].get<string>();
-			if (m_mapAccessInfo.find(user) == m_mapAccessInfo.end())
+
+			if (!userMng.checkToken(user, token))
 			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "please login first,use the access token returned.");
-				goto HANDLE_END;
-			}
-			string trueToken = m_mapAccessInfo[user].token;
-			if (trueToken != token)
-			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "token invalid");
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied; please login to get access token");
 				goto HANDLE_END;
 			}
 
@@ -1005,7 +1014,8 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 {
 	string path = tds->conf->projectConfPath + "/topo";
 	path::normalization(path);
-	vector<string> fl = fs::getFileList(path);
+	vector<string> fl;
+	fs::getFileList(fl,path);
 	map<string, string> mapTopo; //按照层级排序
 	vector<string> topoList;
 	for (int i = 0; i < fl.size(); i++)
@@ -1036,7 +1046,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 	return j.dump();
 }
 
-string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1044,7 +1054,6 @@ string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_p
 		return "";
 	}
 	string moType = params["type"].get<string>();
-	json jList = json::array();
 	string strList = "[";
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
@@ -1053,6 +1062,12 @@ string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_p
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
+
+			if(pSession->user != "")
+			{
+				if (!userMng.checkTagPermission(pSession->user, pMo->getTag()))
+					continue;
+			}
 			
 			nlohmann::ordered_json oneData;
 			oneData["监控对象名称"] = pMo->m_strName;
@@ -1065,13 +1080,11 @@ string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_p
 					oneData[pmp->m_strName] = pmp->m_curVal;
 				}
 			}
-			strList += oneData.dump();
-			if (i != moList.size() - 1)
+			if(strList != "[")
 				strList += ",";
-			//jList.push_back(oneData);
+			strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 		}
 		strList += "]";
-		//return jList.dump();
 		return strList;
 	}
 	else
@@ -1083,7 +1096,7 @@ string rpcHandler::rpc_getMoStatusList(json params, string& error, std::shared_p
 
 
 
-string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1156,16 +1169,18 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 		{
 			if (pSession->user != "")
 			{
+				json jUser = userMng.getUser(pSession->user);
 				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
 				{
 					if(userMng.checkTagPermission(pSession->user,it->second->getTag()))
-						rtList.push_back(it->second->getRTData());
+						rtList.push_back(it->second->getRTData(jUser["org"].get<string>()));
 				}
 				string result = rtList.dump(4);
 				return result;
 			}
 			else
 			{
+				
 				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
 				{
 					rtList.push_back(it->second->getRTData());
@@ -1215,7 +1230,8 @@ string rpcHandler::rpc_getconf(json params, string& error)
 			string conf = "";
 			path = tds->conf->projectConfPath + "\\" + path;
 			path::normalization(path);
-			vector<string> fl = fs::getFileList(path);
+			vector<string> fl;
+			fs::getFileList(fl,path);
 			json j = fl;
 			return j.dump();
 		}
@@ -1314,16 +1330,6 @@ string rpcHandler::rpc_login(json params, string& error)
 		json jInfo;
 		if (userMng.checkLogin(user, pwd,jInfo))
 		{
-			string token = common::guid();
-			jInfo["token"] = token;
-
-			ACCESS_INFO ai;
-			ai.age = 600;
-			GetLocalTime(&ai.stCreate);
-			ai.token = token;
-			ai.user = user;
-
-			m_mapAccessInfo[user] = ai;
 			return jInfo.dump(4);
 		}
 		else

@@ -305,14 +305,14 @@ int MP::getSaveInterval()
 	return si;
 }
 
-json MP::getRTData()
+json MP::getRTData(string root)
 {
 	json j;
 	if(m_lastUpdateTime.wYear == 0 || m_lastUpdateTime.wYear == 1970)
 		j["time"] = "?";
 	else
 		j["time"] = timeopt::st2str(m_lastUpdateTime);
-	j["tag"] = getTag();
+	j["tag"] = getTag(root);
 	if(m_curVal.empty())
 		j["val"] = "?";
 	else

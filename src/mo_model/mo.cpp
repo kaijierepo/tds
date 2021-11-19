@@ -200,7 +200,7 @@ json MO::getRT()
 	return j;
 }
 
-string MO::getTag()
+string MO::getTag(string root)
 {
 	MO* pTmpParent = m_pParentMO;
 	string strTagName = m_strName;
@@ -211,6 +211,12 @@ string MO::getTag()
 		pTmpParent = pTmpParent->m_pParentMO;
 	}
 
+	if (root != "")
+	{
+		strTagName = str::trimPrefix(strTagName, root);
+		strTagName = str::trimPrefix(strTagName, ".");
+	}
+		
 	return strTagName;
 }
 

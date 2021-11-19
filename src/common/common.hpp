@@ -952,10 +952,9 @@ namespace fs {
 		return iret == 0;
 	}
 
-	inline vector<string> getFileList(string strFolder)
+	inline  void getFileList(vector<string>& list,string strFolder,bool includeFolder = false,bool recursive = false)
 	{
 		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
-		vector<string> list;
 		wchar_t dirNew[200];
 		wcscpy(dirNew, wstrFolder.c_str());
 		wcscat(dirNew, L"\\*.*");    // 在目录后面加上"\\*.*"进行第一次搜索
@@ -965,7 +964,7 @@ namespace fs {
 
 		handle = _wfindfirst(dirNew, &findData);
 		if (handle == -1)        // 检查是否成功
-			return list;
+			return;
 
 		do
 		{
@@ -981,16 +980,19 @@ namespace fs {
 				wcscat(dirNew, L"\\");
 				wcscat(dirNew, findData.name);
 
-				//getFileList(dirNew);
+				if (includeFolder)
+					list.push_back(charCodec::utf16ToAuto(findData.name));
+
+				if(recursive)
+					getFileList(list,charCodec::utf16ToAuto(dirNew));
 			}
 			else
 			{
-				list.push_back(charCodec::utf16toUtf8(findData.name));
+				list.push_back(charCodec::utf16ToAuto(findData.name));
 			}
 		} while (_wfindnext(handle, &findData) == 0);
 
 		_findclose(handle);    // 关闭搜索句柄
-		return list;
 	}
 
 	

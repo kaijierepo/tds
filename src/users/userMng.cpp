@@ -57,12 +57,39 @@ bool userManager::checkLogin(string user, string pwd,json& userInfo)
 			userInfo = jUser;
 			string keyPwd = "pwd";
 			userInfo.erase(keyPwd);
+
+			//生成token
+			string token = common::guid();
+			userInfo["token"] = token;
+
+			ACCESS_INFO ai;
+			ai.age = 600;
+			GetLocalTime(&ai.stCreate);
+			ai.token = token;
+			ai.user = user;
+
+			m_mapAccessInfo[user] = ai;
+
 			return true;
 		}
 			
 	}
 
 	return false;
+}
+
+bool userManager::checkToken(string user, string token)
+{
+	if (m_mapAccessInfo.find(user) == m_mapAccessInfo.end())
+	{
+		return false;
+	}
+	string trueToken = m_mapAccessInfo[user].token;
+	if (trueToken != token)
+	{
+		return false;
+	}
+	return true;
 }
 
 bool userManager::checkTagPermission(string user, string tag)

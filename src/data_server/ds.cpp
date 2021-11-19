@@ -23,6 +23,50 @@ dataServer ds;
 httplib::Server httpSrv;
 using namespace httplib;
 
+httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& req, httplib::Response& res)
+{
+	if ((req.path.find("files") != string::npos))
+	{
+		string s = req.get_header_value("Cookie");
+		vector<string> params;
+		str::split(params, s, ";");
+		map<string, string> mapKV;
+		for (int i = 0; i < params.size(); i++)
+		{	
+			string p = params[i];
+			vector<string> ary;
+			str::split(ary, p, "=");
+			if (ary.size() == 2)
+			{
+				mapKV[str::trim(ary[0])] = str::trim(ary[1]);
+			}
+		}
+
+		
+		if (mapKV.find("user") == mapKV.end() || mapKV.find("token") == mapKV.end())
+		{
+			res.status = 401;
+			return httplib::Server::HandlerResponse::Handled;
+		}
+		else
+		{
+			string user = mapKV["user"];
+			string token = mapKV["token"];
+
+			if (userMng.checkToken(user, token))
+			{
+				return httplib::Server::HandlerResponse::Unhandled;
+			}
+			else
+			{
+				res.status = 401;
+				return httplib::Server::HandlerResponse::Handled;
+			}
+		}
+	}
+	return httplib::Server::HandlerResponse::Unhandled;
+}
+
 void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 {
 	//解析url参数模式的rpc调用
@@ -101,6 +145,8 @@ void initHttpSrv(httplib::Server& svr)
 	svr.Post("\\/rpc.*",handleRpcOverHttp);
 	svr.Get("\\/rpc.*", handleRpcOverHttp);
 
+//有权限控制的文件下载服务
+	svr.set_pre_routing_handler(handleFilePermission);
 
 //数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
@@ -351,6 +397,16 @@ bool dataServer::run()
 	else
 	{
 		LOG("[数据库    ] 路径 " + db.m_path);
+	}
+
+	//文件下载目录
+	string asc_filePath = charCodec::utf8toAnsi(fs::appPath() + "/files");
+	ret = httpSrv.set_mount_point("/files/", asc_filePath.c_str());
+	if (!ret) {
+	}
+	else
+	{
+		LOG("[文件下载服务] 路径 " + fs::appPath() + "/files");
 	}
 
 

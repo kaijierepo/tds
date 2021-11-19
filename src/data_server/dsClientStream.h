@@ -9,6 +9,15 @@
 
 // change process_request  function from protected to public
 
+//从github更新新版本的httplib需要修改处
+//1.中文路径支持。 tds使用utf8编码，httplib内部文件读取使用gb2312编码
+//2.设置不缓存，目前tds的应用场景都不需要缓存
+/*
+if (!res.has_header("cache-control")) {
+	res.set_header("cache-control", "max-age=1");
+}*/
+//3.process_request改为public
+
 namespace httplib {
 	namespace detail {
 		class dsClientStream : public httplib::Stream {
