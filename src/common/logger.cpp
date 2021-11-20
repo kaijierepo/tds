@@ -32,6 +32,7 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
+	strLogDirUtf16 = charCodec::utf8toUtf16(fs::appPath() + "\\log");
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
@@ -114,16 +115,19 @@ string Clogger::logInternal(string info)
 
 	//create log path
 	std::lock_guard<mutex> lockGuard(m_lock);
-	if (!dirCreated)
-	{
-		wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
-		DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
-		if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
-		{
-			::CreateDirectoryW(strLogDir.c_str(), NULL);
-		}
-		dirCreated = true;
-	}
+	//if (!dirCreated)
+	//{
+	//	wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
+	//	DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
+	//	if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
+	//	{
+	//		::CreateDirectoryW(strLogDir.c_str(), NULL);
+	//	}
+	//	dirCreated = true;
+	//}
+	//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
+	::CreateDirectoryW(strLogDirUtf16.c_str(), NULL);
+	
 
 	//save to log file
 	string strFile = formatStr("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);

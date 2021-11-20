@@ -44,6 +44,7 @@ public:
 
 public:
 	bool run();
+	void stop();
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession

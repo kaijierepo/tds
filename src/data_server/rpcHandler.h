@@ -41,7 +41,7 @@ public:
 
 	rpcHandler();
 	virtual ~rpcHandler();
-	bool Init();
+	bool init();
 
 	bool needLog(string method);
 
@@ -86,6 +86,7 @@ public:
 	void notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
 	void Notify(string strTag, string& szNotify);
 
+	
 	//rpc error
 	string RPCError(int code,string msg);
 	string parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector);//return "" if success

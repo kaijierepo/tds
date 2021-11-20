@@ -44,6 +44,10 @@ public:
 	string getUIMode();
 	bool setWorkingDir();
 	bool run(string cmdline = "");
+	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
+	//此时用户以为程序已经退出，再次打开程序。新打开的程序由于666端口被占用而没有启动服务。
+	//但是如果启动了chromeUI，ui依然可能从尚未关闭的前一个进程获取到一些web页面，让人误以为后一个tds服务启动成功了。
+	void stop();
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
@@ -67,7 +71,7 @@ public:
 	 void log(const char* text);
 
 	 tdsConfig tdsConf;
-	 fp_procBeforeExit m_fpProcBeforeExit;
+	 
 
 	 void registerMsgSinker(fp_msgSinker sinker);
 	 void publishMsg(MODULE_BUS_MSG& msg);

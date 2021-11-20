@@ -41,6 +41,7 @@ SOFTWARE.
 #include "res/resource.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
+#include "alarm_server/as.h"
 
 string InterfaceEncoding = "utf8";
 
@@ -216,7 +217,11 @@ void chromeThread()
 			{
 				tdsImp.uiWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
 				if (tdsImp.uiWnd)
+				{
+					string s = "chrome窗口句柄: " + str::format("%x", tdsImp.uiWnd);
+					LOG(s);
 					break;
+				}
 				Sleep(1);
 			}	
 			//SendMessage(tds->uiWnd, WM_SHOWWINDOW,NULL,NULL);
@@ -230,7 +235,7 @@ void chromeThread()
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 			
-			WaitForSingleObject(pi.hProcess, INFINITE);
+			WaitForSingleObject(pi.hProcess, INFINITE);//用户从任务栏右键关闭chrome浏览器，此处阻塞解除，程序从此处退出
 		}
 
 		CloseHandle(pi.hProcess);
@@ -241,6 +246,7 @@ void chromeThread()
 			tdsImp.m_fpProcBeforeExit();	
 		}
 
+		tdsImp.stop();
 		exit(0);
 	}
 }
@@ -331,6 +337,7 @@ bool TDS_imp::run(string cmdline)
 	//rds.run(); //remote desktop server
 #endif
 	ioSrv.run();
+	almSrv.run();
 
 	//create browser window
 	if (conf->uiMode == "miniblink")
@@ -346,6 +353,12 @@ bool TDS_imp::run(string cmdline)
 	}
 
 	return true;
+}
+
+void TDS_imp::stop()
+{
+	ds.stop();
+	ioSrv.stop();
 }
 
 bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)

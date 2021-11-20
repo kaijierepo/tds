@@ -67,7 +67,7 @@ struct CPoint2 {
 
 class TIME_CONDITON {
 public:
-	bool Init(string condition);
+	bool init(string condition);
 	bool Match(string& timeTag);
 	bool IsHMS; // only hms is specified, the timespan of each day is selected
 	TIME_CONDITON() {
@@ -100,7 +100,7 @@ public:
 	TIME_SELECTOR();
 	bool Match(string& timeTag);
 	bool AmountMatch(int amount);
-	bool Init(string time);
+	bool init(string time);
 	vector<TIME_CONDITON> vecCondition;
 	//多个条件组合出来的最宽的数据范围，用于数据库文件遍历
 	SYSTEMTIME stStart;

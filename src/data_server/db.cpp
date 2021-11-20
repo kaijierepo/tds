@@ -652,7 +652,7 @@ bool TIME_SELECTOR::AmountMatch(int amount)
 	}
 }
 
-bool TIME_SELECTOR::Init(string time)
+bool TIME_SELECTOR::init(string time)
 {
 	if (time.find("e") != string::npos)
 	{
@@ -661,9 +661,9 @@ bool TIME_SELECTOR::Init(string time)
 		SYSTEMTIME sysStTime, sysEdTime;
 		GetLocalTime(&sysEdTime);
 		TIME_CONDITON tcStartTime, tcEndTime;
-		tcStartTime.Init("2020-01-01 00:00:00");
+		tcStartTime.init("2020-01-01 00:00:00");
 		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", sysEdTime.wYear, sysEdTime.wMonth, sysEdTime.wDay, sysEdTime.wHour, sysEdTime.wMinute, sysEdTime.wSecond);
-		tcEndTime.Init(str);
+		tcEndTime.init(str);
 		startTime = tcStartTime.startTime;
 		endTime = tcEndTime.endTime;
 	}
@@ -684,7 +684,7 @@ bool TIME_SELECTOR::Init(string time)
 		for (int i = 0; i < v.size(); i++)
 		{
 			TIME_CONDITON tc;
-			tc.Init(v.at(i));
+			tc.init(v.at(i));
 			vecCondition.push_back(tc);
 		}
 
@@ -705,7 +705,7 @@ bool TIME_SELECTOR::Init(string time)
 	return true;
 }
 
-bool TIME_CONDITON::Init(string condition)
+bool TIME_CONDITON::init(string condition)
 {
 	if (condition.find('-') != string::npos)//年月日绝对区间模式
 	{

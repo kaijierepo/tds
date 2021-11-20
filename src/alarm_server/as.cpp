@@ -5,12 +5,13 @@
 #include <regex>
 #include "rpcHandler.h"
 #include "db.h"
+#include "tds.h"
 
 almServer almSrv;
 
 almServer::almServer(void)
 {
-	Init();
+	
 }
 
 
@@ -18,8 +19,19 @@ almServer::~almServer(void)
 {
 }
 
-void almServer::Init()
+void almServer::run()
 {
+	string s;
+	if (fs::readFile(tds->conf->projectConfPath, s) && s!="")
+	{
+		json jAlms = json::parse(s);
+		for(int i=0;i< jAlms.size();i++)
+		{
+			json& jAlmDesc = jAlms[i];
+			m_mapCustomAlarmDesc[jAlmDesc["type"].get<string>()] = jAlmDesc["typeLabel"].get<string>();
+		}
+	}
+	
 	tableStatus.init("\\alarms\\status");
 	tableUnack.init("\\alarms\\unack");
 	tableHist.init("\\alarms\\history");
@@ -329,10 +341,15 @@ string almServer::getHistory(json params)
 ALARM_INFO ALARM_INFO::fromJson(json j)
 {
 	ALARM_INFO& ai = *this;
+	//必填字段
 	ai.tag = j["tag"];
 	ai.type = j["type"];
-	ai.strAlarmDesc = j["desc"];
 	ai.level = j["level"];
+
+	//可选字段
+	if(j["desc"] != nullptr)
+		ai.strAlarmDesc = j["desc"];
+	
 	return ai;
 }
 
@@ -404,6 +421,12 @@ string ALARM_INFO::toJson()
 	json j;
 	j["tag"]=info->tag;
 	j["type"]=info->type;
+
+	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
+	{
+
+	}
+
 	j["level"]=info->level;
 	j["desc"]=info->strAlarmDesc;
 	j["detail"]=info->strAlarmDetail;

@@ -249,6 +249,7 @@ public:
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
+	fp_procBeforeExit m_fpProcBeforeExit;
 
 	// tds客户端访问接口
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;//返回true，result为结果;返回false,result为错误信息

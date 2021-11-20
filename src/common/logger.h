@@ -31,6 +31,7 @@ public:
 	bool m_bSaveToFile; //工具模式下仅输出到命令行
 	fp_logOutputCallback logOutput;
 	bool m_bEnable;
+	wstring strLogDirUtf16;
 };
 
 extern Clogger logger;

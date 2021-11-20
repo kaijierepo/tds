@@ -454,6 +454,11 @@ bool dataServer::run()
 	return  1;
 }
 
+void dataServer::stop()
+{
+	m_tcpSrv->stop();
+}
+
 bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
 	stream2pkt* pab = &pALC->m_alBuf;

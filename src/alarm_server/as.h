@@ -119,7 +119,7 @@ public:
 		static almServer inst;
 		return inst;
 	}
-	void Init();
+	void run();
 
 	//在Update接口中，AlarmService自动计算 报警消除 和 报警产生事件
 	void ClearAlarm(ALARM_KEY& key);
@@ -133,6 +133,7 @@ public:
 	almTable tableUnack;
 	almTable tableHist;
 	std::mutex m_csAlarmData;
+	map<string,string> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
 };
 
 extern almServer almSrv;

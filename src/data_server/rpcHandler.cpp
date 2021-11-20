@@ -61,7 +61,7 @@ rpcHandler::~rpcHandler()
 }
 
 
-bool rpcHandler::Init()
+bool rpcHandler::init()
 {
 	m_DB = prj.DB;
 	return true;
@@ -87,7 +87,7 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 	try{strTime = params["time"].get<string>();}
 	catch(...)
 	{ return RPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"time\" param should be a string");}
-	if(!timeSelector.Init(strTime))
+	if(!timeSelector.init(strTime))
 		return RPCError(TEC_TIME_SELECTOR_FMT_ERROR,"time selector format error:" + timeSelector.error);
 
 	//parse tag param
@@ -296,27 +296,27 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		result = rpc_login(params, error);
 	}
-	else if (method == "alarm.current")
+	else if (method == "getAlarmCurrent")
 	{
 		result = almSrv.getCurrent();
 	}
-	else if (method == "alarm.status")
+	else if (method == "getAlarmStatus")
 	{
 		result = almSrv.getStatus();
 	}
-	else if (method == "alarm.unack")
+	else if (method == "getAlarmUnack")
 	{
 		result = almSrv.getUnack();
 	}
-	else if (method == "alarm.history")
+	else if (method == "getAlarmHistory")
 	{
 		result = almSrv.getHistory(params);
 	}
-	else if (method == "alarm.add_event")
+	else if (method == "addAlarmEvent")
 	{
 		result = almSrv.rpc_addEvent(params);
 	}
-	else if (method == "alarm.update_status")
+	else if (method == "updateAlarmStatus")
 	{
 		result = almSrv.rpc_updateStatus(params);
 	}
@@ -643,11 +643,13 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
 		rpcResp.result = "\"ok\"";
+		LOG("[debug]ui.minimize");
 	}
 	else if (method == "ui.close")
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
 		rpcResp.result = "\"ok\"";
+		LOG("[debug]ui.close");
 	}
 
 	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
