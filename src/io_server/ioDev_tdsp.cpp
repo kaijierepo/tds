@@ -147,6 +147,10 @@ json ioDev_tdsp::getAddr()
 
 void ioDev_tdsp::DoCycleTask()
 {
+	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
+		return;
+	GetLocalTime(&m_stLastAcqTime);
+
 	json jChans = json::array();
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{

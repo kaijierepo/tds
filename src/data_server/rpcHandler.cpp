@@ -117,10 +117,15 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 }
 
 
-string rpcHandler::rpc_db_select(json params,string& error)
+string rpcHandler::rpc_db_select(json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
+
+	if (pSession->user != "")
+	{
+		params["root"] = pSession->org;
+	}
 	error = parseDataSelector(params,timeSelector,tagSelector);
 	if(error != "") return "";
 
@@ -445,32 +450,40 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 		else if (method == "getMoTree")
 		{
-			if (params == nullptr)
+			string subTreeRoot = "";
+			//如果指定了root，按照root取子树
+			if (params != nullptr && params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
 			{
-				result = prj.m_strMoTree; //每次重新加载时会更新，只包含配置，不包含实时数据信息
+				subTreeRoot = params["root"].get<string>();
+			}
+			//没有root按照用户权限取子树
+			else if (pSession->user != "")
+			{
+				json jUser = userMng.getUser(pSession->user);
+				if (jUser != nullptr)
+				{
+					subTreeRoot = jUser["org"].get<string>();
+				}
+			}
+
+			if (subTreeRoot != "")
+			{
+				subTreeRoot = TAG::trimRoot(subTreeRoot);
+				params["root"] = subTreeRoot;
+				MO* pmo = prj.GetMOByTag(subTreeRoot);
+				if (pmo)
+				{
+					json j;
+					pmo->toJson(j, params);
+					j["root"] = subTreeRoot; //子树的根节点有root属性，表示根在总的mo树中的位号
+					result = j.dump(4);
+				}
 			}
 			else
 			{
-				if (params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
-				{
-					string tag = params["root"].get<string>();
-					tag = TAG::trimRoot(tag);
-					params["root"] = tag;
-					MO* pmo = prj.GetMOByTag(tag);
-					if (pmo)
-					{
-						json j;
-						pmo->toJson(j, params);
-						j["root"] = tag; //子树的根节点有root属性，表示根在总的mo树中的位号
-						result = j.dump(4);
-					}
-				}
-				else
-				{
-					json j;
-					prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-					result = j.dump(4);
-				}
+				json j;
+				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+				result = j.dump(4);
 			}
 		}
 		else if (method == "getMoCustomType")
@@ -581,7 +594,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 
 	if (method == "db.select")
 	{
-		result = rpc_db_select(params, error);
+		result = rpc_db_select(params, error,pSession);
 	}
 	if (method == "db.update")
 	{
@@ -745,6 +758,18 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 				rpcResp.error = error;
 			goto HANDLE_END;
 		}
+
+		//没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
+		json jUser;
+		if (jReq["user"] != nullptr)
+		{
+			pSession->user = jReq["user"].get<string>();
+			jUser = userMng.getUser(pSession->user);
+			if(jUser!=nullptr)
+				pSession->org = jUser["org"].get<string>();
+		}
+			
+		//用户认证
 		if (tds->conf->enableAccessCtrl)
 		{
 			if (jReq["user"] == nullptr || jReq["token"] == nullptr)
@@ -760,15 +785,8 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied; please login to get access token");
 				goto HANDLE_END;
 			}
-
-			pSession->user = user;
 		}
-		else //没有打开权限控制，数据包也可以携带user，仅用于功能测试。
-		{
-			if (jReq["user"] != nullptr)
-				pSession->user = jReq["user"].get<string>();
-		}
-
+		
 
 		//来自于io设备的响应消息，转发给io设备
 		if (jReq["ioAddr"]!=nullptr)

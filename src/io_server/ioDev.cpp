@@ -153,7 +153,7 @@ ioDev::ioDev(void)
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
 	pTdsSession = NULL;
-	m_fAcqInterval = 0;
+	m_fAcqInterval = 1;
 	pIOSession = NULL;
 }
 

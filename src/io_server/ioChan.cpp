@@ -124,8 +124,8 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;
-	string tag = m_strLinkMPTag;
-	str::trimPrefix(tag, prj.m_strName + ".");
+	string tag = TAG::trimRoot(m_strLinkMPTag);
+
 	MP* pMP = (MP*)prj.GetMOByTag(tag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 	{

@@ -70,13 +70,14 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 	int ct = 0;
 	while (1)
 	{
+		//断开连接时，每秒尝试一次重连
 		if(!p->IsConnect())
 				p->connect();
-		Sleep(5000);
+		Sleep(1000);
 
+		//连接状态下，15秒发送一次心跳
 		ct++;
-
-		if (ct == 3)
+		if (ct == 15)
 		{
 			ct = 0;
 			if (p->IsConnect() && p->heartbeat.size() > 0 )

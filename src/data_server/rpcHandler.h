@@ -59,7 +59,7 @@ public:
 	string rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_output(json params, string& error);
-	string rpc_db_select(json params, string& error);
+	string rpc_db_select(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_getMpStatus(json params, string& error,std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_getUsers(json params, string& error);
 	string rpc_getconf(json params, string& error);
