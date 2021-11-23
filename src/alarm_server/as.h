@@ -3,6 +3,7 @@
 #include <mutex>
 #include "db.h"
 #include "json.hpp"
+#include "tds.h"
 
 /*  Alarm Key
 "tag","type","time" 3 attributes are used to identify an alarm status or an alarm event
@@ -20,6 +21,23 @@ value of level can by any of the 12 strings above
 there aren't 2 record with the same "tag","time","type" attributes and with different "level" attribute
 so level is not needed to specify an Alarm Key
 */
+
+namespace ALARM_LEVEL {
+	const string normal = "normal";
+	const string warn = "warn";
+	const string alarm = "alarm";
+}
+
+inline string getAlarmLevelLabel(string level)
+{
+	if (level == "alarm")
+		return "告警";
+	else if (level == "warn")
+		return "预警";
+	else if (level == "normal")
+		return "正常";
+	return "";
+}
 
 class ALARM_KEY{
 public:
@@ -76,9 +94,11 @@ public:
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY ai);
 
-	string toJson();
+	string toJson(string user);
 
 public:
+	
+
 	almTable(){
 		bOneFilePerMonth = false;
 	}
@@ -104,14 +124,14 @@ public:
 //acknow alarm
 	void acknowledge(ALARM_KEY& key,string ackInfo,string ackUser);
 //query alarm data
-	string getCurrent();//combined list of active status and unack event
-	string getStatus();
-	string getUnack();
-	string getHistory(json params);
+	string getCurrent(string user);//combined list of active status and unack event
+	string getStatus(string user);
+	string getUnack(string user);
+	string getHistory(json params,string user);
 
 ////TDS RPC
 	string rpc_addEvent(json j);
-	string rpc_updateStatus(json j);
+	void rpc_updateStatus(json j, RPC_RESP& resp);
 public:
 	almServer(void);
 	~almServer(void);

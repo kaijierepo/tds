@@ -6,6 +6,7 @@
 #include "rpcHandler.h"
 #include "db.h"
 #include "tds.h"
+#include "users/userMng.h"
 
 almServer almSrv;
 
@@ -22,7 +23,7 @@ almServer::~almServer(void)
 void almServer::run()
 {
 	string s;
-	if (fs::readFile(tds->conf->projectConfPath, s) && s!="")
+	if (fs::readFile(tds->conf->projectConfPath + "/alarm.json", s) && s!="")
 	{
 		json jAlms = json::parse(s);
 		for(int i=0;i< jAlms.size();i++)
@@ -119,13 +120,32 @@ string almServer::rpc_addEvent(json j)
 	return "\"success\"";
 }
 
-string almServer::rpc_updateStatus(json j)
+void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 {
-	ALARM_INFO ai;
-	ai.fromJson(j);
-	ai.time = timeopt::nowStr();
-	Update(ai);
-	return "\"success\"";
+	if (j["tag"] == nullptr && j["ioAddr"] == nullptr)
+	{
+		resp.error = "必须指定 tag 或者 ioAddr 字段";
+		return;
+	}
+	if (j["type"] == nullptr)
+	{
+		resp.error = "必须指定 type 字段";
+		return;
+	}
+
+	try
+	{
+		ALARM_INFO ai;
+		ai.fromJson(j);
+		ai.time = timeopt::nowStr();
+		Update(ai);
+		resp.result = "ok";
+	}
+	catch (std::exception& e)
+	{
+		resp.error = e.what();
+	}
+	
 }
 
 void almServer::AddEvent(ALARM_INFO ai)
@@ -276,25 +296,35 @@ void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
 	}
 }
 
-string almServer::getCurrent()
+string almServer::getCurrent(string user)
 {
 	return "";
 }
 
-string almServer::getStatus()
+string almServer::getStatus(string user)
 {
-	return tableStatus.toJson();
+	return tableStatus.toJson(user);
 }
 
-string almServer::getUnack()
+string almServer::getUnack(string user)
 {
-	return tableUnack.toJson();
+	return tableUnack.toJson(user);
 }
 
-string almServer::getHistory(json params)
+string almServer::getHistory(json params, string user)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
+	string tag = params["tag"].get<string>();
+	params["tag"] = TAG::trimRoot(tag);
+	if (user != "")
+	{
+		json jUser = userMng.getUser(user);
+		if (jUser != nullptr)//指定用户模式下，tag是相对位号，必须有根的位号。 报警的数据当中，存储的都是完整位号
+		{
+			params["root"] = jUser["org"];
+		}
+	}
 	string error = tdsSrv.parseDataSelector(params,timeSelector,tagSelector);
 	if(error != "") return error;
 	
@@ -318,6 +348,11 @@ string almServer::getHistory(json params)
 			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth),almHistory);
 			for (map<string, ALARM_INFO*>::iterator it = almHistory.begin(); it != almHistory.end(); it++)
 			{
+				if (user != "")
+				{
+					if (!userMng.checkTagPermission(user, it->second->tag))
+						continue;
+				}
 				if(!tagSelector.match(it->second->tag))
 				{
 					continue;
@@ -326,6 +361,8 @@ string almServer::getHistory(json params)
 				{
 					continue;
 				}
+				
+
 				if(dataSet !="[")
 					dataSet += "," + it->second->toJson();
 				else
@@ -344,7 +381,11 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	//必填字段
 	ai.tag = j["tag"];
 	ai.type = j["type"];
-	ai.level = j["level"];
+
+	if (j["desc"] != nullptr)
+		ai.level = j["level"];
+	else
+		ai.level = ALARM_LEVEL::alarm;
 
 	//可选字段
 	if(j["desc"] != nullptr)
@@ -424,10 +465,24 @@ string ALARM_INFO::toJson()
 
 	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
 	{
-
+		j["typeLabel"] = almSrv.m_mapCustomAlarmDesc[info->type];
+	}
+	else
+	{
+		j["typeLabel"] = j["type"];
 	}
 
 	j["level"]=info->level;
+	string levelLabel = getAlarmLevelLabel(level);
+	if (levelLabel != "")
+	{
+		j["levelLabel"] = levelLabel;
+	}
+	else
+	{
+		j["levelLabel"] = info->level;
+	}
+
 	j["desc"]=info->strAlarmDesc;
 	j["detail"]=info->strAlarmDetail;
 	j["time"] = info->time;
@@ -518,11 +573,18 @@ void almTable::remove(ALARM_KEY ai)
 	FreeAlarmList(temp);
 }
 
-string almTable::toJson(){
+string almTable::toJson(string user){
 	map<string, ALARM_INFO*> temp;
 	loadFile(getFilePath(),temp);
+	json jUser = userMng.getUser(user);
 	string dataSet = "[";
 	for (map<string, ALARM_INFO*>::iterator it = temp.begin(); it != temp.end(); it++) {
+		if (jUser != nullptr)
+		{
+			if (!userMng.checkTagPermission(user, it->second->tag))
+				continue;
+		}
+		
 		if(dataSet !="[")
 			dataSet += "," + it->second->toJson();
 		else
@@ -532,3 +594,5 @@ string almTable::toJson(){
 	FreeAlarmList(temp);
 	return dataSet;
 }
+
+

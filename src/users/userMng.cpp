@@ -6,7 +6,7 @@
 userManager userMng;
 bool userManager::loadConf()
 {
-	string sUsers,sRoles;
+	string sUsers, sRoles;
 	if (!fs::readFile("conf/users/users.json", sUsers))
 	{
 		return false;
@@ -14,8 +14,6 @@ bool userManager::loadConf()
 	try {
 		if (sUsers != "")
 			m_jUsers = json::parse(sUsers);
-		if (sRoles != "")
-			m_jRoles = json::parse(sRoles);
 
 		for (int i = 0; i < m_jUsers.size(); i++)
 		{
@@ -39,8 +37,28 @@ bool userManager::loadConf()
 	{
 		return false;
 	}
+	try {
+		if (sRoles != "")
+			m_jRoles = json::parse(sRoles);
+	}
+	catch (std::exception& e)
+	{
 
-	
+	}
+
+	string sUI;
+	if (!fs::readFile("conf/users/ui.json", sUI))
+	{
+		return false;
+	}
+	try {
+		if (sUI != "")
+			m_jUI = json::parse(sUI);
+	}
+	catch (std::exception& e)
+	{
+
+	}
 
 	return true;
 }
@@ -129,6 +147,11 @@ bool userManager::isChildMo(string parent, string child)
 		return true;
 	}
 	return false;
+}
+
+json userManager::getRoles(string user)
+{
+	return m_jRoles;
 }
 
 json userManager::getUsers(string user)

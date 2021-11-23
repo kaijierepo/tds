@@ -14,6 +14,8 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 	char buf[500] = {0};
 	while(pGW->m_hCom)
 	{
+		if (!pGW->m_bRunning)break;
+
 		int iLen = 0;
 		pGW->ReadCom(buf,iLen);
 
@@ -80,6 +82,12 @@ bool ioGW_LocalSerial::run()
 	return true;
 }
 
+void ioGW_LocalSerial::stop()
+{
+	m_bRunning = false;
+	closeCom();
+}
+
 
 bool ioGW_LocalSerial::sendData(char* pData, int iLen)
 {
@@ -95,6 +103,18 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		return false;
 	}
 	DWORD dwEvtMask = 0;
+
+
+	
+	//等待用SetCommMask()函数设置的串口事件发生，共有9种事件可被监视：
+	//EV_BREAK，EV_CTS，EV_DSR，EV_ERR，EV_RING，EV_RLSD，EV_RXCHAR，
+	//EV_RXFLAG，EV_TXEMPTY；当其中一个事件发生或错误发生时，函数将
+	//OVERLAPPED结构中的事件置为有信号状态，并将事件掩码填充到dwMask参数中
+	//在openCom函数里面设置了EV_RXCHAR事件
+
+	//如果异步操作不能立即完成的话,函数返回FALSE,并且调用GetLastError()函
+	//数分析错误原因后返回ERROR_IO_PENDING,指示异步操作正在后台进行.这种情
+	//况下,在函数返回之前系统设置OVERLAPPED结构中的事件为无信号状态
 	if (WaitCommEvent(m_hCom, &dwEvtMask, &m_ovWaitEvent))
 	{}
 	else
@@ -103,6 +123,9 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		if (ERROR_IO_PENDING == dwRet)
 		{
 			DWORD dwBytesRead = 0;
+			//https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-getoverlappedresult
+			//bWait=TRUE等待层叠读取操作完成
+			//CloseHandle关闭m_hCom可以使得阻塞的函数返回
 			BOOL bResult = GetOverlappedResult(m_hCom,&m_ovWaitEvent,&dwBytesRead,TRUE); // 阻塞  Block
 			if (bResult) {
 			
@@ -192,6 +215,7 @@ bool ioGW_LocalSerial::closeCom()
 	{
 		//必须先关闭readfile阻塞读取，否则closeHandle会阻塞
 		//CancelSynchronousIo(m_hRecvThread);
+		//现在已经改为非阻塞式的readFile.
 		CloseHandle(m_hRecvThread);
 	}
 

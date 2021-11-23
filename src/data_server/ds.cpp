@@ -1136,24 +1136,6 @@ bool dataServer::httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> 
 }
 
 
-
-void dataServer::SendData(char* pData, int iLen)
-{
-	for (int i = 0; i < m_tcpSrv->m_vecContInfo.size(); i++)
-	{
-		tcpSession* pCltInfo = &m_tcpSrv->m_vecContInfo.at(i)->m_cltInfo;
-		std::shared_ptr<TDS_SESSION> pAppLayerClt = getTDSSession(pCltInfo);
-		if (pAppLayerClt->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-		{
-			m_wspSrv.sendData((char*)pData, iLen, pCltInfo);
-		}
-		else
-		{
-			m_tcpSrv->SendData((char*)pData, iLen, pCltInfo);
-		}
-	}
-}
-
 void handleRPCOverHttp(const Request&, Response&)
 {
 

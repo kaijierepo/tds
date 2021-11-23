@@ -708,7 +708,8 @@ void MO::GetAllChildAlarmInfo(string& strSummary)
 
 string TAG::trimRoot(string& tag)
 {
-	string s = str::trim(tag, prj.m_strName + ".");
+	string s = str::trim(tag, prj.m_strName);
+	s = str::trim(s,".");
 	return s;
 }
 
@@ -720,7 +721,10 @@ string TAG::addRoot(string& tag)
 	}
 	else
 	{
-		return prj.m_strName + "." + tag;
+		if (tag != "")
+			return prj.m_strName + "." + tag;
+		else
+			return prj.m_strName;
 	}
 }
 

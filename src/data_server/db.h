@@ -87,7 +87,7 @@ public:
 class TAG_SELECTOR{
 public:
 	bool init(string tag);
-	bool match(string tag);
+	bool match(string tag);//使用不带根的绝对位号
 
 	string tagExp;
 	string regExp;

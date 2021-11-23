@@ -30,6 +30,7 @@ public:
 
 	bool OnRecvData(char* pData, int iLen) override;
 	bool run() override;
+	void stop() override;
 
 	bool sendData(char* pData, int iLen) override;
 

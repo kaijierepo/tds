@@ -260,17 +260,6 @@ struct REQ_PARAM {
 	REQ_PARAM();
 };
 
-
-enum ALARM_LEVEL {
-	AL_UNKNOWN,
-	AL_NORMAL,
-	AL_PRE_ALARM,
-	AL_ALARM, //不区分等级
-	AL_ALARM_L3,
-	AL_ALARM_L2,
-	AL_ALARM_L1, //一级等级最高
-};
-
 //Can总线协议
 //连续bit转换成字节,高位在前  ":"符号为取位域
 //取位域时,先取低位,再取高位

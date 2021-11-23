@@ -364,7 +364,7 @@ public:
 	std::vector<COverlappedIOInfo*> m_vecContInfo;
 	std::mutex m_csClientVectorLock;
 	CIOCP m_iocp;
-	std::map<string, ConnHistoryInfo*> m_mapConnHistory;//��ʱ���ã���������ʱ�ǵü�����ֹ���̲߳������ʡ����̲߳��������map��������ͬ��key
+	std::map<string, ConnHistoryInfo*> m_mapConnHistory;
 	string m_strMonitoringIP;
 
 	static void ListenThread_IOCPServer(LPVOID lpParam);

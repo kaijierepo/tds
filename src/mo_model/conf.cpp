@@ -127,7 +127,7 @@ void tdsConfig::loadConf()
 
 	//д╛хож╣
 	if (projectConfPath == "")
-		projectConfPath = fs::appPath() + "\\conf";
+		projectConfPath = fs::appPath() + "/conf";
 	if (port == 0)
 		port = 666;
 	if (dbPath == "")

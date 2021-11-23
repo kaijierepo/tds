@@ -93,7 +93,17 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 	//parse tag param
 	std::string strTag, strTagTmp;
 	if(params["tag"].is_null()){return RPCError(TEC_PARAM_MISSING,"param missing:\"tag\"");}
-	try{strTag = params["tag"].get<string>();}
+	try{
+		strTag = params["tag"].get<string>();
+		if (params["root"] != nullptr)
+		{
+			string strRoot = params["root"].get<string>();
+			if (strRoot != "")
+			{
+				strTag = strRoot + "." + strTag;
+			}
+		}
+	}
 	catch(...)
 	{return RPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param should be a string");}
 	if (0 == strTag.length()) {
@@ -298,19 +308,19 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "getAlarmCurrent")
 	{
-		result = almSrv.getCurrent();
+		result = almSrv.getCurrent(pSession->user);
 	}
 	else if (method == "getAlarmStatus")
 	{
-		result = almSrv.getStatus();
+		result = almSrv.getStatus(pSession->user);
 	}
 	else if (method == "getAlarmUnack")
 	{
-		result = almSrv.getUnack();
+		result = almSrv.getUnack(pSession->user);
 	}
 	else if (method == "getAlarmHistory")
 	{
-		result = almSrv.getHistory(params);
+		result = almSrv.getHistory(params, pSession->user);
 	}
 	else if (method == "addAlarmEvent")
 	{
@@ -318,7 +328,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "updateAlarmStatus")
 	{
-		result = almSrv.rpc_updateStatus(params);
+		almSrv.rpc_updateStatus(params,rpcResp);
 	}
 	else if (method == "com.open")
 	{
@@ -414,9 +424,18 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			json j = userMng.getUsers(pSession->user);
 			result = j.dump(4);
 		}
+		else if (method == "getRoles")
+		{
+			json j = userMng.getRoles(pSession->user);
+			result = j.dump(4);
+		}
 		else if (method == "setUsers")
 		{
 			userMng.setUsers(params);
+		}
+		else if (method == "getUiTree")
+		{
+			result = userMng.m_jUI.dump(4);
 		}
 		else if (method == "getMpTypeList")
 		{
@@ -432,7 +451,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			}
 			else
 			{
-				if (params["root"] != nullptr) //获取子树
+				if (params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
 				{
 					string tag = params["root"].get<string>();
 					tag = TAG::trimRoot(tag);
@@ -1230,7 +1249,7 @@ string rpcHandler::rpc_getconf(json params, string& error)
 		if (path != "")
 		{
 			string conf = "";
-			path = tds->conf->projectConfPath + "\\" + path;
+			path = tds->conf->projectConfPath + "/" + path;
 			path::normalization(path);
 			vector<string> fl;
 			fs::getFileList(fl,path);
@@ -1251,7 +1270,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	if (type == "mo-tree")
 	{
 		string strData = params["conf"].dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "\\mo.json", strData);
+		fs::writeFile(tds->conf->projectConfPath + "/mo.json", strData);
 		//mo tree 热更新
 		prj.clearChildren();
 		prj.loadConf();
@@ -1260,7 +1279,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	else if (type == "io-tree")
 	{
 		string strData = params["conf"].dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "\\io.json", strData);
+		fs::writeFile(tds->conf->projectConfPath + "/io.json", strData);
 		//io tree 热更新
 		ioSrv.stop(); //退出所有工作线程
 		ioSrv.clear();
@@ -1283,7 +1302,7 @@ string rpcHandler::rpc_getconffile(json params, string& error)
 	if (path != "")
 	{
 		string conf = "";
-		path = tds->conf->projectConfPath + "\\" + path;
+		path = tds->conf->projectConfPath + "/" + path;
 		path::normalization(path);
 		fs::readFile(path, conf);
 		json j = conf;
@@ -1300,7 +1319,7 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	if (path != "")
 	{
 		string conf = params["conf"].get<string>();
-		path = tds->conf->projectConfPath + "\\" + path;
+		path = tds->conf->projectConfPath + "/" + path;
 		fs::createFolderOfPath(path);
 		fs::writeFile(path, conf);
 		return "ok";

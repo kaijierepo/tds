@@ -30,7 +30,7 @@ public:
 
 	bool isChildMo(string parent, string child);
 
-
+	json getRoles(string user);
 	json getUsers(string user); //获得可以管理的用户列表
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
@@ -41,6 +41,7 @@ public:
 	std::map<string, json*> m_mapUsers;
 	json m_jUsers;
 	json m_jRoles;
+	json m_jUI;
 
 	map<string, ACCESS_INFO> m_mapAccessInfo;
 };
