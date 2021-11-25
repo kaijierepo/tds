@@ -1,0 +1,116 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "name": "温度",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "unit": "°C",
+                    "val_type": "real"
+                },
+                {
+                    "name": "湿度",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "unit": "RH",
+                    "val_type": "real"
+                }
+            ],
+            "name": "厨房",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "name": "温度",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "unit": "°C",
+                    "val_type": "real"
+                },
+                {
+                    "name": "湿度",
+                    "physical_type": "humidity",
+                    "type": "mp",
+                    "unit": "RH",
+                    "val_type": "real"
+                },
+                {
+                    "name": "暖光灯",
+                    "type": "mp",
+                    "val_type": "switching"
+                },
+                {
+                    "name": "冷光灯",
+                    "type": "mp",
+                    "val_type": "switching"
+                }
+            ],
+            "name": "客厅",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "name": "温度",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "unit": "°C",
+                    "val_type": "real"
+                },
+                {
+                    "name": "湿度",
+                    "physical_type": "humidity",
+                    "type": "mp",
+                    "unit": "RH",
+                    "val_type": "real"
+                },
+                {
+                    "name": "PM25",
+                    "physical_type": "gas_concentration",
+                    "type": "mp",
+                    "val_type": "real"
+                },
+                {
+                    "name": "二氧化碳",
+                    "physical_type": "gas_concentration",
+                    "type": "mp",
+                    "val_type": "real"
+                },
+                {
+                    "name": "TVOC",
+                    "physical_type": "gas_concentration",
+                    "type": "mp",
+                    "val_type": "real"
+                },
+                {
+                    "name": "PM10",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "val_type": "real"
+                },
+                {
+                    "name": "甲醛",
+                    "physical_type": "temperature",
+                    "type": "mp",
+                    "val_type": "real"
+                },
+                {
+                    "name": "床头灯",
+                    "type": "mp",
+                    "val_type": "switching"
+                },
+                {
+                    "name": "电风扇",
+                    "type": "mp",
+                    "val_type": "switching"
+                }
+            ],
+            "name": "卧室",
+            "type": "mo"
+        }
+    ],
+    "name": "智能家居Demo",
+    "type": "project"
+}

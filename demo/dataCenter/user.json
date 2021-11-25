@@ -1,0 +1,14 @@
+[
+    {
+        "name":"admin",
+        "pwd":"123456",
+        "permissions":[
+        ]
+    },
+    {
+        "name":"operator",
+        "pwd":"123456",
+        "permissions":[
+        ]
+    }
+]

@@ -1,0 +1,180 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "b": 0,
+                    "defaultVal": "null",
+                    "k": 1,
+                    "name": "启动开关",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "saveMode": "never",
+                    "type": "mp",
+                    "unit": "",
+                    "valType": "bool"
+                }
+            ],
+            "name": "新风机",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "b": 0,
+                    "defaultVal": "null",
+                    "k": 1,
+                    "name": "启动开关",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "saveMode": "never",
+                    "type": "mp",
+                    "unit": "",
+                    "valType": "bool"
+                }
+            ],
+            "name": "分水器",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "b": 0,
+                    "defaultVal": "null",
+                    "k": 1,
+                    "name": "启动开关",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "saveMode": "never",
+                    "type": "mp",
+                    "unit": "",
+                    "valType": "bool"
+                }
+            ],
+            "name": "空调主机",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "b": 0,
+                    "defaultVal": "null",
+                    "k": 0.1,
+                    "name": "温度",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "°C",
+                    "valType": "float"
+                },
+                {
+                    "b": 0,
+                    "defaultVal": "null",
+                    "k": 0.1,
+                    "name": "湿度",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "RH",
+                    "valType": "float"
+                },
+                {
+                    "children": [
+                        {
+                            "b": 0,
+                            "defaultVal": "null",
+                            "k": 1,
+                            "name": "启动开关",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 0,
+                                "second": 0
+                            },
+                            "saveMode": "never",
+                            "type": "mp",
+                            "unit": "",
+                            "valType": "bool"
+                        },
+                        {
+                            "b": 0,
+                            "defaultVal": "null",
+                            "k": 1,
+                            "name": "设定温度",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 0,
+                                "second": 0
+                            },
+                            "saveMode": "never",
+                            "type": "mp",
+                            "unit": "°C",
+                            "valType": "float"
+                        }
+                    ],
+                    "name": "空调",
+                    "type": "mo"
+                }
+            ],
+            "name": "客厅",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "b": 0,
+                    "k": 1,
+                    "mpType": "温度",
+                    "name": "温度",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "°C",
+                    "valType": "float"
+                },
+                {
+                    "mpType": "湿度",
+                    "name": "湿度",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "RH",
+                    "valType": "float"
+                }
+            ],
+            "name": "餐厅",
+            "saveInterval": {
+                "hour": 0,
+                "minute": 0,
+                "second": 0
+            },
+            "type": "mo"
+        }
+    ],
+    "name": "暖通空调系统",
+    "type": "mo"
+}

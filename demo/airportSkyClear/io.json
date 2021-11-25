@@ -1,0 +1,61 @@
+[
+    {
+        "acqInterval": 1,
+        "addr": {
+            "id": "tdsp00000001"
+        },
+        "children": [
+            {
+                "acqInterval": 1,
+                "addr": "solarCell.votage",
+                "children": [],
+                "connected": false,
+                "ioAddr": "tdsp00000001/solarCell.votage",
+                "ioType": "i",
+                "ioTypeLabel": "输入",
+                "level": "channel",
+                "manageStatus": "managed",
+                "name": "",
+                "nodeID": "bd9fd0b0-00bf-486d-8747-abfdd73671d7",
+                "online": false,
+                "parentType": "",
+                "storageFmt": "",
+                "tagBind": "安徽省.芜湖机场.煤气炮1#.电池电压",
+                "type": "",
+                "typeLabel": "",
+                "valType": "float",
+                "valTypeLabel": "浮点型"
+            },
+            {
+                "acqInterval": 1,
+                "addr": "solarCell.current",
+                "children": [],
+                "connected": false,
+                "ioAddr": "tdsp00000001/solarCell.current",
+                "ioType": "i",
+                "ioTypeLabel": "输入",
+                "level": "channel",
+                "manageStatus": "managed",
+                "name": "",
+                "nodeID": "cee5c14e-b059-4ab9-a103-e5c84f1465f2",
+                "online": false,
+                "parentType": "",
+                "storageFmt": "",
+                "tagBind": "安徽省.芜湖机场.煤气炮1#.电池电流",
+                "type": "",
+                "typeLabel": "",
+                "valType": "float",
+                "valTypeLabel": "浮点型"
+            }
+        ],
+        "connected": false,
+        "ioAddr": "tdsp00000001",
+        "level": "device",
+        "manageStatus": "managed",
+        "nodeID": "45dc6bec-0a8d-4520-a9fa-dd8a64980e47",
+        "online": false,
+        "parentType": "tds",
+        "type": "tdsp-device",
+        "typeLabel": "TDSP设备"
+    }
+]

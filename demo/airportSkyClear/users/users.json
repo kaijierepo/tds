@@ -1,0 +1,223 @@
+[
+    {
+        "createTime": "2021-10-10 21:11:12",
+        "enable": true,
+        "name": "admin",
+        "org": "",
+        "permission": null,
+        "pwd": "123",
+        "role": "管理员"
+    },
+    {
+        "createTime": "2021-10-10 21:11:12",
+        "enable": true,
+        "name": "卢涛",
+        "org": "",
+        "permission": null,
+        "pwd": "123",
+        "role": "管理员"
+    },
+    {
+        "createTime": "2021-11-15 13:43:55",
+        "enable": true,
+        "filePermission": "泰默检测",
+        "name": "小方",
+        "org": "安徽省.芜湖机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "children": [
+                    {
+                        "children": "*",
+                        "name": "煤气炮1#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮2#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮3#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮11#"
+                    }
+                ],
+                "name": "芜湖机场"
+            },
+            "ui": []
+        },
+        "pwd": "1",
+        "role": "操作员"
+    },
+    {
+        "createTime": "2021-11-15 13:43:41",
+        "enable": true,
+        "name": "小王",
+        "org": "安徽省.芜湖机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "name": "芜湖机场"
+            },
+            "ui": []
+        },
+        "pwd": "123",
+        "role": "观察员"
+    },
+    {
+        "createTime": "2021-11-15 13:45:03",
+        "enable": true,
+        "name": "老李",
+        "org": "安徽省.芜湖机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "children": [
+                    {
+                        "children": "*",
+                        "name": ""
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮1#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮2#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮3#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮4#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮5#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮6#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮7#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮8#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮9#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮10#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮11#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮12#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮13#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮14#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮15#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮16#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "煤气炮17#"
+                    },
+                    {
+                        "children": "*",
+                        "name": "蓝光灯1#"
+                    }
+                ],
+                "name": "芜湖机场"
+            },
+            "ui": []
+        },
+        "pwd": "1",
+        "role": "管理员"
+    },
+    {
+        "createTime": "2021-11-17 15:36:08",
+        "enable": true,
+        "name": "老赵",
+        "org": "浙江省.萧山国际机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "name": "萧山国际机场"
+            },
+            "ui": []
+        },
+        "pwd": "1",
+        "role": "管理员"
+    },
+    {
+        "createTime": "2021-11-17 15:36:33",
+        "enable": true,
+        "name": "小陈",
+        "org": "浙江省.萧山国际机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "name": "萧山国际机场"
+            },
+            "ui": []
+        },
+        "pwd": "1",
+        "role": "操作员"
+    },
+    {
+        "createTime": "2021-11-17 15:36:51",
+        "enable": true,
+        "name": "小唐",
+        "org": "浙江省.萧山国际机场",
+        "permission": {
+            "io": [],
+            "mo": {
+                "name": "萧山国际机场"
+            },
+            "ui": []
+        },
+        "pwd": "2",
+        "role": "观察员"
+    },
+    {
+        "createTime": "2021-11-22 14:50:12",
+        "enable": true,
+        "name": "郑晓辉",
+        "org": "",
+        "permission": {
+            "io": [],
+            "mo": {
+                "children": "*",
+                "name": "机场净空设备智慧管理平台"
+            },
+            "ui": []
+        },
+        "pwd": "123",
+        "role": "管理员"
+    }
+]

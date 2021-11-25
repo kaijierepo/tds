@@ -38,7 +38,6 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
 					p->setIOSession(pALC);
-					p->onRecvPkt(jpkt);
 					if (p->m_bOnline == false)
 					{
 						p->m_bOnline = true;
@@ -50,6 +49,9 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						}
 						tdsSrv.notify("io.online", j);
 					}
+
+
+					p->onRecvPkt(jpkt);
 				}
 				else
 				{
@@ -59,7 +61,9 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 			//设备发现功能
 			else
 			{
-				ioSrv.onChildDevDiscovered(id, IO_DEV_TYPE::DEV::iq60_gateway);
+				json jAddr;
+				jAddr["id"] = id;
+				ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::iq60_gateway);
 			}
 		}
 	}
@@ -165,15 +169,27 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			string name = point[0].get<string>();
 			double dbVal;
 			bool bVal;
-			if (name.find("B") == 0)
+			json jVal;
+
+			if (!point[1].is_null())
 			{
-				valType = "bool";
-				bVal = point[1].get<int>() == 1 ? true : false;
+				if (name.find("B") == 0)
+				{
+					valType = "bool";
+					bVal = point[1].get<int>() == 1 ? true : false;
+					jVal = bVal;
+				}
+				else
+				{
+					jVal = point[1];
+				}
 			}
 			else
 			{
-				dbVal = point[1].get<double>();
+				return true;
 			}
+
+			
 
 			int time = point[2].get<int>();
 			int status = point[3].get<int>();
@@ -182,10 +198,7 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			if (pChild && pChild->m_level == "channel")
 			{
 				ioChannel* pC = (ioChannel*)pChild;
-				if (valType == VAL_TYPE::Float)
-					pC->input(dbVal);
-				else
-					pC->input(bVal);
+				pC->input(jVal);
 			}
 		}
 	}

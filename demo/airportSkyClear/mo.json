@@ -1,0 +1,1618 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "children": [
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "a085fd84-f17b-4a03-bf44-e64f01cda029",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "f1286ca5-c828-4999-8560-6779fc170201",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "k": 1,
+                                    "name": "电池电流",
+                                    "nodeID": "7a8164b2-2aa3-440e-9435-226e440a43fa",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "mA",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "9ba9d32f-1c29-445a-a5fc-ce2b19751645",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "k": 1,
+                                    "name": "充电电压",
+                                    "nodeID": "a2298e40-e9a1-4669-b19b-990138079ee5",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "k": 1,
+                                    "name": "充电电流",
+                                    "nodeID": "216275aa-5dc6-4547-8cf1-1df1e1dc2691",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "mA",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "25786b31-05af-49ee-bd6c-9d2ed2fa8d68",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "e7dbc05e-09cb-40b3-8f0c-1cefe7b34fa8",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮1#",
+                            "nodeID": "ae1325d9-61a4-477a-81c3-7fae3a50ea53",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "170f3dd6-90ad-43f2-a22e-9f4e75b4549b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "fc622173-0378-443a-a429-1bced6dd5b56",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "b77a3193-49b9-4c2d-9e99-bdd9d85257e6",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "aac8606b-b118-4a71-b5f9-68e4865c04cb",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "92ac5581-f849-4426-bec9-d9549da3368f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮2#",
+                            "nodeID": "b8ff36e6-3268-4ced-a3c5-48fb25ba80ca",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "27402574-a094-4e42-9440-4ed58a94e16a",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "a6837191-bc3f-4044-8eff-b3c9b41a36e9",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "0842492d-6760-4b5e-99d9-93f30edd18fd",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "f86f7c51-7540-496e-a815-948766cfdf7b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "9f94ea36-abd8-446a-a111-fb1cffb29945",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮3#",
+                            "nodeID": "c2cdcc91-a15e-44f6-966a-e8df11adf472",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "37cf0d06-5724-4759-84f2-88350d0f9218",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "c3b91f00-841c-49ca-9d32-3b32ee10b5bd",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "9785b2b5-00df-4464-9720-051851b27670",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "d2eda4ce-5322-4f52-84ab-79dff7f9a959",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "e6135dc1-cb31-4b5c-9bc6-251dc41290b8",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮4#",
+                            "nodeID": "baa463ed-b08f-46bd-9181-430c2b1bd655",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "7315d177-d08e-4dce-bebe-4cab8a4b2630",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "df136b22-5b99-4396-b8fb-c9d6338228cb",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "751cf87f-3d4d-4207-a505-f14197df414a",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "e6823a16-05e3-49f7-bf81-24698c2f64fc",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "5445efd3-1bca-46fc-8010-02f682147684",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮5#",
+                            "nodeID": "301bf7a0-c19b-41ee-b570-c66730a37b87",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "4798b9d8-1b2f-4f81-b5ce-30d3cdc0734e",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "0144f606-12c9-450c-844e-a4fae98bcc39",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "fc5f3378-1b3d-4c95-8ad8-9df2bbaacd3b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "3529e09d-b402-4a3a-8c18-5155c5387b4d",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "3abca7fa-fcd8-4415-ba23-f3b00008985b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮6#",
+                            "nodeID": "cdf8c51a-8e6e-4482-bc05-c1a43b240942",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "290768f9-d7ac-49af-8100-1a9ebfc6d3f8",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "279d1488-788f-4484-9311-b159f9deed7f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "039daa2d-12c7-4b50-b1e8-219ee334a194",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "e7e7fe04-5e48-4be1-8be7-7cdb0d448a60",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "5dd7fa4b-e8f1-4ea6-b60f-2141197b1dc2",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮7#",
+                            "nodeID": "9af03950-4d12-42ba-93bc-e47866abda44",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "d96690ae-29cb-4d18-a068-ef078629ca9f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "c588cbbc-704f-434e-bd3b-948fdcd18b97",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "da30f589-1896-48f0-9719-72649181a2e0",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "3236ed87-3388-4c13-b293-11aa2abcc7ff",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "ce5188b5-148d-4d99-ae95-97d997e51fc2",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮8#",
+                            "nodeID": "98108237-6565-4c10-b2f6-9550b3adfb3d",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "2b2ff937-ddde-498a-8cca-beefb07ff3b9",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "955891c4-1294-46dd-8df6-6fa033a38580",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "8f4a859c-aff4-4571-91cf-8eeced4e9ae4",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "cf1d699b-2910-4be6-96a4-89788e07be2e",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "1c467900-5790-4e10-abb1-a964179261bc",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮9#",
+                            "nodeID": "a84fedfd-6dc4-4db8-a8b8-6a5f7ac076d7",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "13b2a956-6e08-4429-8e71-f7bb5ed728b4",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "4fac960c-8fcd-48bb-8cf3-e7167fc8e88f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "032e5650-3d02-4f23-86e0-a4ab75ec0e20",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "dea47d7d-60f5-4311-98f4-cf812b945d19",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "87d669b7-c44a-41c0-9efa-c7839b3130a5",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮10#",
+                            "nodeID": "be254f12-c939-49c4-9354-b43a0e4d4a4e",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "3a208201-cd5e-4e60-9542-5121e297f46a",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "1badf54c-78de-4d8d-ab1d-b85f3700d174",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "5a0ffd4a-7202-4c99-a507-89ab759ca08c",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "37d88444-936b-458a-9854-2e2f898def67",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "ccf01feb-ef83-4c4c-9a81-388e794b025f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮11#",
+                            "nodeID": "cd874793-d060-422a-b072-89f50fa85525",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "e46eee7f-6a2d-4b7e-98f5-493bbeaccdc4",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "93525025-2464-4793-9886-f78794fa19ef",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "fe2494e9-f82f-4293-92a1-7d82a9af4fe2",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "ebcace9f-f744-4f3d-9ee8-5e1c9f321908",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "5b9d9753-3d7d-45ca-a6d2-82135ab478cf",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮12#",
+                            "nodeID": "0ad6eeec-fb62-4dcc-84a1-2aedc4452d2a",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "e37e9f28-1835-4704-8943-b37bca0278ab",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "dc0ed6be-5978-4607-911e-3aaf6265a9ec",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "c1ead021-b14a-4cfc-a16f-dbac29e341c4",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "223a3d7f-85d3-490c-a85f-de69db0f81ab",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "14f649ea-fb81-4d97-9d46-546c0beb28fc",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮13#",
+                            "nodeID": "13fccc30-7bb8-437e-895d-b66ac3c880bd",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "e6717e76-8012-4267-a206-79720158a4aa",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "bad2e015-1ffd-4d1a-90ea-19a0796f5065",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "17ecd832-3516-4f56-abcb-78bd72f8c022",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "33bf90ec-c0c9-4e52-bec7-b69d89094d2b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "f8c69392-7736-423a-b7df-246ea079d196",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮14#",
+                            "nodeID": "f8dffc9e-a77f-4bd7-b5fd-376419aaec4b",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "ccb910f5-0357-4cdf-885a-df6b28b0ae14",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "a4fc1b52-ad49-424f-af05-24fdcb664367",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "2415ae9d-56e9-4a0b-af57-0c150cfb75be",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "40d66e5c-a4bd-405a-9698-a37b75cf7a4f",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "527d8fe7-22dd-4a96-9a17-112689384be6",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮15#",
+                            "nodeID": "39e3e631-4dd5-4363-a70b-b11ade0e0ba7",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "8295d65d-446e-44fe-86a1-e6ea682d79e9",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "482b98cd-8975-403c-aea8-b3b3e72a3e38",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "9720ea5c-2172-4669-9cd7-ce459702285b",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "234d416e-f74f-4391-80ca-440c69900fb3",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "6189f6b4-6331-4c7f-8ac2-722a86e2f178",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮16#",
+                            "nodeID": "3880f8d2-2fad-4888-9662-7f7618c97cd7",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "发炮次数",
+                                    "nodeID": "2b9ec6fa-2a4a-4e3d-98c6-ab071c5fb1b0",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "onchange",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "电池电压",
+                                    "nodeID": "07f76a22-61e4-495a-9b0d-0d88e1ff774e",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "V",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0",
+                                    "k": 1,
+                                    "name": "剩余气量",
+                                    "nodeID": "5cc1acc5-d0b3-43ca-9fc7-e3f415c86b7c",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 0,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "",
+                                    "valType": "int"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "温度",
+                                    "nodeID": "9e8f749e-7e51-4e88-bef3-43b34fc28065",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "°C",
+                                    "valType": "float"
+                                },
+                                {
+                                    "b": 0,
+                                    "defaultVal": "0.0",
+                                    "k": 1,
+                                    "name": "湿度",
+                                    "nodeID": "e7d86d91-20e2-4856-addf-02192c925dfa",
+                                    "saveInterval": {
+                                        "hour": 0,
+                                        "minute": 1,
+                                        "second": 0
+                                    },
+                                    "saveMode": "cyclic",
+                                    "type": "mp",
+                                    "unit": "RH",
+                                    "valType": "float"
+                                }
+                            ],
+                            "customType": "煤气炮",
+                            "name": "煤气炮17#",
+                            "nodeID": "684b4d33-db1d-4fdc-927e-34006ae007d9",
+                            "type": "custom"
+                        },
+                        {
+                            "children": [],
+                            "customType": "蓝光灯",
+                            "name": "蓝光灯1#",
+                            "nodeID": "8ce8750e-7b4f-497b-b0b1-0907c3c0be59",
+                            "type": "custom"
+                        }
+                    ],
+                    "name": "芜湖机场",
+                    "nodeID": "62c801ce-ce88-4835-a0e7-e6f92919d58f",
+                    "type": "project"
+                }
+            ],
+            "name": "安徽省",
+            "nodeID": "1357c631-fe79-4115-81a4-72b426d33fde",
+            "saveInterval": {
+                "hour": 0,
+                "minute": 0,
+                "second": 0
+            },
+            "type": "org"
+        },
+        {
+            "children": [
+                {
+                    "children": [
+                        {
+                            "name": "煤气炮1#",
+                            "nodeID": "fedb35de-b393-49bb-a6df-2747f244b92e",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 0,
+                                "second": 0
+                            },
+                            "type": "mo"
+                        },
+                        {
+                            "name": "煤气炮2#",
+                            "nodeID": "7d826875-6bc1-441e-a12b-c408c89525de",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 0,
+                                "second": 0
+                            },
+                            "type": "mo"
+                        }
+                    ],
+                    "name": "萧山国际机场",
+                    "nodeID": "135e20a8-09c9-434f-96a7-c4eb6125e45e",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "type": "project"
+                }
+            ],
+            "name": "浙江省",
+            "nodeID": "943e3b79-f0de-4b8c-b970-0c2f73d33a72",
+            "saveInterval": {
+                "hour": 0,
+                "minute": 0,
+                "second": 0
+            },
+            "type": "org"
+        }
+    ],
+    "name": "机场净空设备智慧管理平台",
+    "nodeID": "2d813fa5-f0ac-40a6-bc5b-360f0bc2743a",
+    "type": "mo"
+}

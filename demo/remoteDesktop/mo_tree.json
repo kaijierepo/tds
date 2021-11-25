@@ -1,0 +1,12 @@
+{
+    "children": [
+        {
+            "name": "screen1",
+            "type": "mp",
+            "val_type": "video",
+            "video_src_type": "screen_rec"
+        }
+    ],
+    "name": "remoteDesktop",
+    "type": "project"
+}

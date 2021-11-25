@@ -748,7 +748,9 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		pSession->lastMethodCalled = method;
 		json params = jReq["params"];
 		id = jReq["id"];
-
+		//对部分命令日志记录
+		if (needLog(method))
+			LOG("RPC call <--:\r\n" + strReq + "\r\n");
 
 		//访问控制
 		if (method == "login")
@@ -801,10 +803,6 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 			return;
 		}
 
-
-		//对部分命令日志记录
-		if(needLog(method))
-			LOG("RPC call <--:\r\n" + strReq + "\r\n");
 
 		//通知消息，无需生成响应，转发后直接返回
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
@@ -1421,6 +1419,12 @@ string rpcHandler::rpc_io_tree(json params, string& error)
 
 string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
+	if (params["ioAddr"] == nullptr)
+	{
+		error = RPCError(RPC_ERROR::TEC_FAIL, "必须指定ioAddr字段");
+		return "";
+	}
+
 	string ioAddr = params["ioAddr"];
 	ioDev* pDev = ioSrv.getIODev(ioAddr);
 	if (!pDev)
@@ -1463,7 +1467,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_pt
 			//
 
 			json result;
-			result["ioAddr"] = p->m_devAddr;
+			result["ioAddr"] = p->getIOAddrStr();
 			result["channels"] = chanList;
 
 
