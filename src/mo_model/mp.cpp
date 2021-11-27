@@ -38,6 +38,11 @@ bool MP::loadConf(json& conf)
 	if (conf["unit"] != nullptr)
 		m_strUnit = conf["unit"].get<string>();
 
+	if (conf["decimalDigits"] != nullptr)
+		m_decimalDigits = conf["decimalDigits"].get<string>();
+	else
+		m_decimalDigits = "自动";
+
 	if (m_valType == TDS::VAL_TYPE::json)
 	{
 		if(conf["mpType"]!=nullptr)
@@ -227,7 +232,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	if (bNeedSave)
 	{
 		GetLocalTime(&m_lastSaveTime);
-		db.Insert(getTag().c_str(), *dataTime, jVal,dataFile);
+		db.Insert(getTag().c_str(), *dataTime, m_curVal,dataFile);
 	}
 }
 
@@ -322,5 +327,6 @@ json MP::getRTData(string root)
 	j["valTypeLabel"] = m_valTypeLabel;
 	j["ioType"] = m_ioType;
 	j["ioTypeLabel"] = m_ioTypeLabel;
+	j["decimalDigits"] = m_decimalDigits;
 	return j;
 }

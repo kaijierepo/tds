@@ -52,7 +52,9 @@ public:
 	wspSrv m_wspSrv;
 
 	bool onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
-	bool OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
+	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+	void onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	
 	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;

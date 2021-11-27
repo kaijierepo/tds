@@ -612,7 +612,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		result = "\"ok\"";
 	}
 
-	if (method == "sessionStatus")
+	if (method == "getSessions")
 	{
 		result = ds.getSessionStatus(params);
 	}
@@ -696,7 +696,7 @@ bool rpcHandler::needLog(string method)
 {
 	if (method == "fs.writeFile" ||
 		method == "heartbeat" ||
-		method == "sessionStatus"||
+		method == "getSessions"||
 		method == "getMpStatus" ||
 		method == "getMoStatus" ||
 		method == "getMoStatusList")
@@ -750,7 +750,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		id = jReq["id"];
 		//对部分命令日志记录
 		if (needLog(method))
-			LOG("RPC call <--:\r\n" + strReq + "\r\n");
+			LOG("RPC请求:\r\n" + strReq + "\r\n");
 
 		//访问控制
 		if (method == "login")
@@ -890,14 +890,22 @@ HANDLE_END:
 		{
 			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
+		else if (method == "getMoTree")
+		{
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
+		}
+		else if (method == "getMoTree")
+		{
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
+		}
 	}
 
 	if (rpcResp.result != "")
 	{
 		if (strRespForLog != "")
-			LOG("RPC return --> :\r\n" + strRespForLog + "\r\n");
+			LOG("RPC响应:\r\n" + strRespForLog + "\r\n");
 		else if (needLog(method))
-			LOG("RPC return --> :\r\n" + rpcResp.result + "\r\n");
+			LOG("RPC响应:\r\n" + rpcResp.result + "\r\n");
 	}
 
 
@@ -908,7 +916,7 @@ HANDLE_END:
 		iBinLen = rpcResp.iBinLen;
 		rpcResp.binResult = NULL;
 		rpcResp.iBinLen = 0;
-		LOG("RPC return --> : 二进制数据 len = " + str::fromInt(iBinLen));
+		LOG("RPC响应: 二进制数据 len = " + str::fromInt(iBinLen));
 	}
 }
 

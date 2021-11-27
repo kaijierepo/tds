@@ -109,6 +109,16 @@ string TDS_SESSION::GetClientIp()
          m_IoDevTcpLink->setIOSession(NULL);
          m_IoDevTcpLink = NULL;
      }
+     if (bridgedIoSession)
+     {
+         bridgedIoSession->bridgedIoSessionClient = NULL;
+         bridgedIoSession = NULL;
+     }
+     if (bridgedIoSessionClient)
+     {
+         bridgedIoSessionClient->bridgedIoSession = NULL;
+         bridgedIoSessionClient = NULL;
+     }
 
      videoServiceNode = NULL;
      bConnected = false;

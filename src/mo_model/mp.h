@@ -58,6 +58,7 @@ public:
 	string m_mpType;
 	//string m_physicalType;
 	string m_strUnit;
+	string m_decimalDigits;
 	SYSTEMTIME m_lastUpdateTime;
 	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;

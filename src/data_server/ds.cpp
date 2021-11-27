@@ -461,13 +461,7 @@ void dataServer::stop()
 
 bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 {
-	stream2pkt* pab = &pALC->m_alBuf;
-	pab->PushStream(pData, iLen);
-	while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
-	{
-		pALC->iALProto = pab->m_protocolType;
-		OnRecvAppLayerPkt(pab->pkt, pab->iPktLen, pALC);
-	}
+
 	return true;
 }
 
@@ -875,6 +869,27 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			return;
 		}
 	}
+	else if (strData.find("/iodev") != string::npos)
+	{
+		int pos = strData.find("iodev");
+		int pos1 = strData.find(" ", pos);
+		string ioAddr = strData.substr(pos + 6, pos1 - (pos + 6));
+		ioDev* p = ioSrv.getIODev(ioAddr);
+		if (p && p->pIOSession != NULL)
+		{
+			tdsSession->type = TDS_SESSION_TYPE::bridgeToiodev;
+			tdsSession->bridgedIoSession = p->pIOSession;
+			p->pIOSession->bridgedIoSessionClient = tdsSession;
+			LOG("bridge websocket to ioAddr %s success", ioAddr.c_str());
+			tdsSession->setActivityCheck(false);
+			tdsSession->bridgedIoSession->setActivityCheck(false);
+		}
+		else
+		{
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
 	else if (strData.find("/log") != string::npos)
 	{
 		logTdsSessions.push_back(tdsSession);
@@ -1023,7 +1038,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	}
 
 
-	// tds rpc over websocket
+	//  rpc 或者 桥接数据
 	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
 		if (!tdsSession) {
@@ -1071,39 +1086,10 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			bs->appendBuffer(pData, iLen);
 		//}
 	}
-	//tcp直连
+	//tcp直连,没有传输层，表示全部都是应用层数据
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{	
-		//应用层协议智能检测。根据收到的首包数据进行检测
-		//傲华尔远程控制协议
-		if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
-			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
-			)
-		{
-			tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
-			tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
-		}
-		//tdsRPC协议
-		else
-		{
-			tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
-		}
-
-
-		if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
-		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
-			{
-				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
-			}
-		}
-		else
-		{
-			//tds rpc over tcp
-			OnRecvRawTdsRpc(pData, iLen, tdsSession);
-		}
+		OnRecvAppLayerData(pData, iLen, tdsSession);
 		return;
 	}
 }
@@ -1276,59 +1262,125 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 }
 
 
-bool dataServer::OnRecvAppLayerPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC)
+//onRecvData需要组包
+bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
 {
 	DWORD dwDataLen = iLen;
-
-	if (pALC->bridgedLocalCom != "")//tds link is bridged to a local com
+	//有桥接先判断桥接
+	if (tdsSession->bridgedLocalCom != "")//tds link is bridged to a local com
 	{
-		ioDev* p = ioSrv.getIODev(pALC->bridgedLocalCom);
+		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
 		if (p)
 		{
-			p->sendData(pDataBuf, iLen);
+			p->sendData(pData, iLen);
 		}
 	}
-	else if (pALC->pBridgedTcpClient != NULL)
+	else if (tdsSession->pBridgedTcpClient != NULL)
 	{
-		pALC->pBridgedTcpClient->SendData(pDataBuf, iLen);
+		tdsSession->pBridgedTcpClient->SendData(pData, iLen);
 	}
-	else if (pALC->iALProto == APP_LAYER_PROTO::TDSRPC)
+	else if (tdsSession->bridgedIoSession != NULL)
 	{
-		char* szJson = new char[iLen + 1];
-		memset(szJson, 0, iLen + 1);
-		memcpy(szJson, pDataBuf, iLen);
-
-		string req = szJson;
-		if (szJson)
+		tdsSession->bridgedIoSession->send(pData, iLen);
+		char* p = new char[iLen + 1];
+		memset(p, 0, iLen + 1);
+		memcpy(p, pData, iLen);
+		string s = p;
+		LOG("client->dev " + s);
+		delete p;
+	}
+	else if (tdsSession->bridgedIoSessionClient != NULL)
+	{
+		stream2pkt* pab = &tdsSession->m_alBuf;
+		pab->PushStream(pData, iLen);
+		while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
 		{
-			delete szJson;
-			szJson = NULL;
+			tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
 		}
-
-		string resp;
-		char* binResp = NULL;
-		int iBinRespLen = 0;
-		tdsSrv.handleRpcCall(req, resp,binResp,iBinRespLen, pALC);
-
-		if(resp!="")
+	}
+	else
+	{
+		if (tdsSession->iALProto == APP_LAYER_PROTO::UNKNOWN)//应用层协议类型检测
 		{
-			pALC->sendContent = "text";
-			pALC->send((char*)resp.data(), resp.length());
+			//应用层协议智能检测。根据收到的首包数据进行检测
+			//傲华尔远程控制协议
+			if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
+				(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
+				)
+			{
+				tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
+				tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
+			}
+			//tdsRPC协议
+			else
+			{
+				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
+			}
 		}
-		
-		if(iBinRespLen > 0)
+		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
 		{
-			pALC->sendContent = "binary";
-			pALC->send(binResp, iBinRespLen);
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+			{
+				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
+			}
 		}
-		
-		if (binResp)
-			delete binResp;
-
-		return 1;
+		else
+		{
+			//tds rpc over tcp
+			if (isPkt)
+			{
+				onRecvTdsRpcPkt(pData, iLen, tdsSession);
+			}
+			else
+			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+				{
+					tdsSession->iALProto = pab->m_protocolType;
+					onRecvTdsRpcPkt(pab->pkt, pab->iPktLen, tdsSession);
+				}
+			}
+		}
 	}
 
 	return(true);
+}
+
+void dataServer::onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	char* szJson = new char[iLen + 1];
+	memset(szJson, 0, iLen + 1);
+	memcpy(szJson, pData, iLen);
+
+	string req = szJson;
+	if (szJson)
+	{
+		delete szJson;
+		szJson = NULL;
+	}
+
+	string resp;
+	char* binResp = NULL;
+	int iBinRespLen = 0;
+	tdsSrv.handleRpcCall(req, resp, binResp, iBinRespLen, tdsSession);
+
+	if (resp != "")
+	{
+		tdsSession->sendContent = "text";
+		tdsSession->send((char*)resp.data(), resp.length());
+	}
+
+	if (iBinRespLen > 0)
+	{
+		tdsSession->sendContent = "binary";
+		tdsSession->send(binResp, iBinRespLen);
+	}
+
+	if (binResp)
+		delete binResp;
 }
 
 

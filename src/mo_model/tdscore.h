@@ -141,6 +141,7 @@ namespace APP_LAYER_PROTO {
 	const string TDSRPC= "alp_tdsrpc";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
 	const string IQ60 = "alp_iq60";
+	const string textEnd2LF = "textEnd2LF";  //以2个换行结尾的字符串
 };
 
 //the protocol used as a transportation layer (no command specified in this layer,only for data transfer)

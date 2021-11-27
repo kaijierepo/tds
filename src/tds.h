@@ -179,6 +179,8 @@ namespace TDS_SESSION_TYPE {
 	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
 	const string websocket2com = "websocket2com";
 	const string iodev = "iodev"; //io设备会话 传输设备自定义的通信协议
+	const string bridgeToiodev = "bridgeToiodev";
+	const string bridgeToTcpClient = "bridgeToTcpClient";
 }
 
 struct ACTIVE_TDS_SESSION {

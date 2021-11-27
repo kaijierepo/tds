@@ -97,6 +97,8 @@ public:
 	string bridgedLocalCom; //和本地串口桥接
 	string bridgedTcpServer; //和tcp服务器的一个连接桥接
 	tcpClt* pBridgedTcpClient;
+	std::shared_ptr<TDS_SESSION> bridgedIoSession; //this是界面session,保留ioSession指针
+	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
 	ioDev* getIODev(string ioAddr);
 	vector<ioDev*> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
 	ioDev* m_IoDevTcpLink;      //建立了tcp直连的io设备

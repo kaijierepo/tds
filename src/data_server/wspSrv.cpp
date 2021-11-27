@@ -39,7 +39,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 				if (pALC->m_alBuf.PopAllAs(APP_LAYER_PROTO::TDSRPC))
 				{
 					pALC->iALProto = pALC->m_alBuf.m_protocolType;
-					ds.OnRecvAppLayerPkt((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pALC);
+					ds.OnRecvAppLayerData((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pALC,true);
 				}
 			}	
 		}
@@ -47,7 +47,7 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 	case WS_BINARY_FRAME://do no framing work when binary,used for video and transparent transfer
 		{
 			req.unpack((char*)pData, iLen);
-			ds.OnRecvAppLayerPkt((char*)req.payloadData, req.iPayloadLen, pALC);
+			ds.OnRecvAppLayerData((char*)req.payloadData, req.iPayloadLen, pALC);
 		}
 		break;
 	case WS_PING_FRAME:
