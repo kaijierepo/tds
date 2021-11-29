@@ -1,0 +1,494 @@
+{
+    "children": [
+        {
+            "children": [
+                {
+                    "alarmLimit": {
+                        "enableHigh": false,
+                        "enableLow": false,
+                        "high": 0,
+                        "low": 0
+                    },
+                    "b": 0,
+                    "defaultVal": "0.0",
+                    "k": 1,
+                    "name": "水位",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "m",
+                    "valType": "float",
+                    "validRange": {
+                        "enable": false,
+                        "max": 0,
+                        "min": 0
+                    }
+                },
+                {
+                    "alarmLimit": {
+                        "enableHigh": false,
+                        "enableLow": false,
+                        "high": 0,
+                        "low": 0
+                    },
+                    "b": 0,
+                    "defaultVal": "false",
+                    "k": 1,
+                    "name": "开关",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "saveMode": "onchange",
+                    "type": "mp",
+                    "unit": "",
+                    "valType": "bool",
+                    "validRange": {
+                        "enable": false,
+                        "max": 0,
+                        "min": 0
+                    }
+                },
+                {
+                    "children": [
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 0.001,
+                            "name": "Ia",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 0.001,
+                            "name": "Ib",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 0.001,
+                            "name": "Ic",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": true,
+                                "enableLow": true,
+                                "high": 241,
+                                "low": 201
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 0.1,
+                            "name": "Ua",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": true,
+                                "max": 300,
+                                "min": 100
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": true,
+                                "enableLow": true,
+                                "high": 242,
+                                "low": 100
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Ub",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": true,
+                                "enableLow": true,
+                                "high": 244,
+                                "low": 101
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Uc",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "children": [],
+                            "name": "ΣP",
+                            "type": "mo"
+                        },
+                        {
+                            "children": [],
+                            "name": "Hz",
+                            "type": "mo"
+                        },
+                        {
+                            "children": [],
+                            "name": "cosQ",
+                            "type": "mo"
+                        }
+                    ],
+                    "customType": "水泵",
+                    "name": "水泵",
+                    "type": "custom"
+                }
+            ],
+            "name": "A",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "alarmLimit": {
+                        "enableHigh": false,
+                        "enableLow": false,
+                        "high": 0,
+                        "low": 0
+                    },
+                    "b": 0,
+                    "defaultVal": "0.0",
+                    "k": 1,
+                    "name": "水位",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 1,
+                        "second": 0
+                    },
+                    "saveMode": "cyclic",
+                    "type": "mp",
+                    "unit": "m",
+                    "valType": "float",
+                    "validRange": {
+                        "enable": false,
+                        "max": 0,
+                        "min": 0
+                    }
+                },
+                {
+                    "alarmLimit": {
+                        "enableHigh": false,
+                        "enableLow": false,
+                        "high": 0,
+                        "low": 0
+                    },
+                    "b": 0,
+                    "defaultVal": "false",
+                    "k": 1,
+                    "name": "开关",
+                    "saveInterval": {
+                        "hour": 0,
+                        "minute": 0,
+                        "second": 0
+                    },
+                    "saveMode": "onchange",
+                    "type": "mp",
+                    "unit": "",
+                    "valType": "bool",
+                    "validRange": {
+                        "enable": false,
+                        "max": 0,
+                        "min": 0
+                    }
+                },
+                {
+                    "children": [
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Ia",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Ib",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Ic",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "A",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 0.1,
+                            "name": "Ua",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Ub",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "alarmLimit": {
+                                "enableHigh": false,
+                                "enableLow": false,
+                                "high": 0,
+                                "low": 0
+                            },
+                            "b": 0,
+                            "defaultVal": "0.0",
+                            "k": 1,
+                            "name": "Uc",
+                            "saveInterval": {
+                                "hour": 0,
+                                "minute": 1,
+                                "second": 0
+                            },
+                            "saveMode": "cyclic",
+                            "type": "mp",
+                            "unit": "V",
+                            "valType": "float",
+                            "validRange": {
+                                "enable": false,
+                                "max": 0,
+                                "min": 0
+                            }
+                        },
+                        {
+                            "children": [],
+                            "name": "ΣP",
+                            "type": "mo"
+                        },
+                        {
+                            "children": [],
+                            "name": "Hz",
+                            "type": "mo"
+                        },
+                        {
+                            "children": [],
+                            "name": "cosQ",
+                            "type": "mo"
+                        }
+                    ],
+                    "customType": "水泵",
+                    "name": "水泵",
+                    "type": "custom"
+                }
+            ],
+            "name": "B",
+            "type": "mo"
+        },
+        {
+            "children": [
+                {
+                    "children": [],
+                    "name": "水位",
+                    "type": "mo"
+                },
+                {
+                    "children": [],
+                    "name": "电流",
+                    "type": "mo"
+                }
+            ],
+            "name": "C",
+            "type": "mo"
+        }
+    ],
+    "name": "供水监控系统",
+    "type": "mo"
+}
