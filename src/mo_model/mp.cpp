@@ -51,6 +51,13 @@ bool MP::loadConf(json& conf)
 		m_alarmLimit.low = conf["alarmLimit"]["low"].get<float>();
 	}
 
+	if (conf["validRange"] != nullptr)
+	{
+		m_validRange.enable = conf["validRange"]["enable"].get<bool>();
+		m_validRange.min = conf["validRange"]["min"].get<double>();
+		m_validRange.max = conf["validRange"]["max"].get<double>();
+	}
+
 	if (m_valType == TDS::VAL_TYPE::json)
 	{
 		if(conf["mpType"]!=nullptr)
@@ -173,6 +180,12 @@ bool MP::toJson(json& conf, json serializeOption)
 	alarmLimit["low"] = m_alarmLimit.low;
 	conf["alarmLimit"] = alarmLimit;
 
+	json validRange;
+	validRange["enable"] = m_validRange.enable;
+	validRange["min"] = m_validRange.min;
+	validRange["max"] = m_validRange.max;
+	conf["validRange"] = validRange;
+
 	return true;
 }
 
@@ -248,6 +261,16 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		m_orgVal = dbVal;
 		double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
 		m_curVal = dbCurVal;
+
+
+		if (m_validRange.enable)
+		{
+			if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
+			{
+				m_curVal = nullptr;
+			}
+		}
+
 		calcAlarm();
 	}
 	else if (jVal.is_boolean())
@@ -396,5 +419,11 @@ json MP::getRTData(string root)
 	j["ioType"] = m_ioType;
 	j["ioTypeLabel"] = m_ioTypeLabel;
 	j["decimalDigits"] = m_decimalDigits;
+
+	if (m_validRange.enable)
+	{
+		j["min"] = m_validRange.min;
+		j["max"] = m_validRange.max;
+	}
 	return j;
 }

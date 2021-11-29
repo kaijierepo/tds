@@ -34,6 +34,12 @@ struct ALARM_LIMIT {
 	}
 };
 
+struct VALID_RANGE {
+	bool enable;
+	float min;
+	float max;
+};
+
 using namespace std;
 class MO;
 class MP : public MO
@@ -80,6 +86,7 @@ public:
 	int getSaveInterval();
 	string m_saveMode;
 	ALARM_LIMIT m_alarmLimit;
+	VALID_RANGE m_validRange;
 	double m_K;
 	double m_B;
 };
