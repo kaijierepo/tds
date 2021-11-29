@@ -33,15 +33,16 @@ void almServer::run()
 		}
 	}
 	
-	tableStatus.init("\\alarms\\status");
-	tableUnack.init("\\alarms\\unack");
+	//tableStatus.init("\\alarms\\status");
+	//tableUnack.init("\\alarms\\unack");
+	tableCurrent.init("\\alarms\\current");
 	tableHist.init("\\alarms\\history");
 	tableHist.bOneFilePerMonth = true;
 }
 
-void almServer::ClearAlarm(ALARM_KEY& key)
+void almServer::recover(ALARM_KEY& key)
 {
-	tableStatus.remove(key);
+	/*tableStatus.remove(key);
 
 	ALARM_INFO ai;
 	if(tableUnack.query(key,ai))
@@ -54,14 +55,34 @@ void almServer::ClearAlarm(ALARM_KEY& key)
 	{
 		ai.bRecover = 1;
 		tableHist.update(ai);
+	}*/
+
+	ALARM_INFO ai;
+	json params;
+	params["time"] = key.time;
+	params["type"] = key.type;
+	params["tag"] = key.tag;
+	if (tableCurrent.query(params, ai))
+	{
+		ai.bRecover = 1;
+		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		{
+			tableCurrent.remove(key);
+		}
+		else
+			tableCurrent.update(ai);
+	}
+	if (tableHist.query(params, ai))
+	{
+		ai.bRecover = 1;
+		tableHist.update(ai);
 	}
 }
 
 
 void almServer::OccurAlarm(ALARM_INFO ai)
 {
-	tableStatus.add(ai);
-	tableUnack.add(ai);
+	tableCurrent.add(ai);
 	tableHist.add(ai);
 }
 
@@ -70,19 +91,26 @@ void almServer::Update(ALARM_INFO newStatus)
 {
 	std::lock_guard<mutex> g(m_csAlarmData);
 
+	if (newStatus.time == "")
+	{
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		newStatus.time = timeopt::stTimeToStr(st);
+	}
+
 	//the time attr of a status record is always the newest occuring event
 	//time attr is not needed to specify a status record 
-	ALARM_KEY filter;
-	filter.tag = newStatus.tag;
-	filter.type = newStatus.type;
-	filter.time = "*";
+	json filter;
+	filter["tag"] = newStatus.tag;
+	filter["type"] = newStatus.type;
+	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
-	if (tableStatus.query(filter,lastStatus))
+	if (tableCurrent.query(filter,lastStatus))
 	{
 		//check if status has changed
 		if (lastStatus.level != newStatus.level)
 		{
-			ClearAlarm(lastStatus);
+			recover(lastStatus);
 			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 			{
 				OccurAlarm(newStatus);
@@ -151,22 +179,29 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 void almServer::AddEvent(ALARM_INFO ai)
 {
 	std::lock_guard<mutex>  g(m_csAlarmData);
-	tableUnack.add(ai);
+	tableCurrent.add(ai);
 	tableHist.add(ai);
 }
 
 void almServer::acknowledge(ALARM_KEY& key,string ackInfo,string ackUser) {
 	ALARM_INFO ai;
-	if(tableStatus.query(key,ai))
+	json params;
+	params["time"] = key.time;
+	params["type"] = key.type;
+	params["tag"] = key.tag;
+	if(tableCurrent.query(params,ai))
 	{
-		ai.bConfirm = 1;
-		tableStatus.update(ai);
+		ai.bAck = 1;
+		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		{
+			tableCurrent.remove(key);
+		}
+		else
+			tableCurrent.update(ai);
 	}
-
-	tableUnack.remove(key);
-
-	if(tableHist.query(key,ai))
+	if(tableHist.query(params,ai))
 	{
+		ai.bAck = 1;
 		ai.strConfirmUser = ackUser;
 		ai.strConfirmInfo = ackInfo;
 		GetLocalTime(&ai.stConfirmTime);
@@ -298,17 +333,17 @@ void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
 
 string almServer::getCurrent(string user)
 {
-	return "";
+	return tableCurrent.toJson(user);
 }
 
 string almServer::getStatus(string user)
 {
-	return tableStatus.toJson(user);
+	return "";
 }
 
 string almServer::getUnack(string user)
 {
-	return tableUnack.toJson(user);
+	return "";
 }
 
 string almServer::getHistory(json params, string user)
@@ -428,7 +463,7 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	ai.strAlarmDetail = cols[5].c_str();
 	ai.bRecover = atoi(cols[6].c_str());
 	ai.stRecoverTime = timeopt::str2st(cols[7].c_str());
-	ai.bConfirm = atoi(cols[8].c_str());
+	ai.bAck = atoi(cols[8].c_str());
 	ai.stConfirmTime = timeopt::str2st(cols[9].c_str());
 	ai.strConfirmInfo = cols[10].c_str();
 	ai.strConfirmUser = cols[11].c_str();
@@ -447,7 +482,7 @@ string almTable::toCSV(ALARM_INFO& info)
 	/*5*/str += "\"" + info.strAlarmDetail + "\""; str += ",";
 	/*6*/str += info.bRecover ? "1" : "0"; str += ",";
 	/*7*/str += timeopt::st2str(info.stRecoverTime); str += ",";
-	/*8*/str += info.bConfirm ? "1" : "0"; str += ",";
+	/*8*/str += info.bAck ? "1" : "0"; str += ",";
 	/*9*/str += timeopt::st2str(info.stConfirmTime); str += ",";
 	/*10*/str +="\"" + info.strConfirmInfo + "\""; str += ",";
 	/*11*/str += info.strConfirmUser;str += ",";
@@ -487,9 +522,9 @@ string ALARM_INFO::toJson()
 	j["detail"]=info->strAlarmDetail;
 	j["time"] = info->time;
 	j["suggest"]=info->strSuggest;
-	j["is_recover"]=info->bRecover;
+	j["isRecover"]=info->bRecover;
 	j["recover_time"]=timeopt::st2str(info->stRecoverTime);
-	j["is_ack"]=info->bConfirm;
+	j["isAck"]=info->bAck;
 	j["ack_time"]=timeopt::st2str(info->stConfirmTime);
 	j["ack_info"]=info->strConfirmInfo;
 	j["ack_user"]=info->strConfirmUser;
@@ -528,28 +563,38 @@ void almTable::add(ALARM_INFO ai)
 	saveFile(getFilePath(ai.time),temp);
 	FreeAlarmList(temp);
 }
-bool almTable::query(ALARM_KEY key,ALARM_INFO& ai)
+
+bool almTable::query(json params, ALARM_INFO& ai)
 {
+	bool bFind = false;
 	ALARM_INFO* p = NULL;
 	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(key.time),temp);
+	string time;
+	if (params["time"] != nullptr)
+		time = params["time"].get<string>();
+	loadFile(getFilePath(time),temp);
 	for(auto& i:temp)
 	{
-		ALARM_KEY& it = *i.second;
-		if((it.tag == key.tag || key.tag == "*")&&
-		(it.time == key.time || key.time == "*")&&
-		(it.type == key.type || key.type == "*"))
-		{
-			p= i.second;
-		}
+		ALARM_INFO& it = *i.second;
+		if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
+			continue;
+		if (params["time"] != nullptr && it.time != params["time"].get<string>())
+			continue;
+		if (params["type"] != nullptr && it.type != params["type"].get<string>())
+			continue;
+		if (params["isAck"] != nullptr && it.bAck != params["isAck"].get<bool>())
+			continue;
+		if (params["isRecover"] != nullptr && it.bRecover != params["isRecover"].get<bool>())
+			continue;
+
+		ai = it;
+		bFind = true;
 	}
 	FreeAlarmList(temp);
-	if(p)
+	if(bFind)
 	{
-		ai=*p;
 		return true;
 	}
-		
 	return false;
 }
 void almTable::update(ALARM_INFO ai)

@@ -43,6 +43,14 @@ bool MP::loadConf(json& conf)
 	else
 		m_decimalDigits = "自动";
 
+	if (conf["alarmLimit"] != nullptr)
+	{
+		m_alarmLimit.enableHigh = conf["alarmLimit"]["enableHigh"].get<bool>();
+		m_alarmLimit.high = conf["alarmLimit"]["high"].get<float>();
+		m_alarmLimit.enableLow = conf["alarmLimit"]["enableLow"].get<bool>();
+		m_alarmLimit.low = conf["alarmLimit"]["low"].get<float>();
+	}
+
 	if (m_valType == TDS::VAL_TYPE::json)
 	{
 		if(conf["mpType"]!=nullptr)
@@ -158,7 +166,63 @@ bool MP::toJson(json& conf, json serializeOption)
 	conf["b"] = p->m_B;
 	conf["defaultVal"] = p->m_defaultVal.dump();
 
+	json alarmLimit;
+	alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
+	alarmLimit["enableLow"] = m_alarmLimit.enableLow;
+	alarmLimit["high"] = m_alarmLimit.high;
+	alarmLimit["low"] = m_alarmLimit.low;
+	conf["alarmLimit"] = alarmLimit;
+
 	return true;
+}
+
+void MP::calcAlarm()
+{
+	if (m_curVal.is_number_float())
+	{
+		double dbCurVal = m_curVal.get<double>();
+		//计算报警
+		if (m_alarmLimit.enableHigh)
+		{
+			if (dbCurVal > m_alarmLimit.high)
+			{
+				ALARM_INFO ai;
+				ai.tag = getTag();
+				ai.type = ALARM_TYPE::overHighLimit;
+				ai.level = ALARM_LEVEL::alarm;
+				ai.strAlarmDesc = str::format("报警值%f,上限值%f", dbCurVal, m_alarmLimit.high);
+				almSrv.Update(ai);
+			}
+			else
+			{
+				ALARM_INFO ai;
+				ai.tag = getTag();
+				ai.type = ALARM_TYPE::overHighLimit;
+				ai.level = ALARM_LEVEL::normal;
+				almSrv.Update(ai);
+			}
+		}
+		if (m_alarmLimit.enableLow)
+		{
+			if (dbCurVal < m_alarmLimit.low)
+			{
+				ALARM_INFO ai;
+				ai.tag = getTag();
+				ai.type = ALARM_TYPE::overLowLimit;
+				ai.level = ALARM_LEVEL::alarm;
+				ai.strAlarmDesc = str::format("报警值%f,下限值%f", dbCurVal, m_alarmLimit.low);
+				almSrv.Update(ai);
+			}
+			else
+			{
+				ALARM_INFO ai;
+				ai.tag = getTag();
+				ai.type = ALARM_TYPE::overLowLimit;
+				ai.level = ALARM_LEVEL::normal;
+				almSrv.Update(ai);
+			}
+		}
+	}
 }
 
 
@@ -182,7 +246,9 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	{
 		double dbVal = jVal.get<double>();
 		m_orgVal = dbVal;
-		m_curVal = dbVal * m_K + m_B; // linear calibration using K and B 
+		double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
+		m_curVal = dbCurVal;
+		calcAlarm();
 	}
 	else if (jVal.is_boolean())
 	{
@@ -234,6 +300,8 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		GetLocalTime(&m_lastSaveTime);
 		db.Insert(getTag().c_str(), *dataTime, m_curVal,dataFile);
 	}
+
+	
 }
 
 bool MP::output(json jVal, json& jResp)

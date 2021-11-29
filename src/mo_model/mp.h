@@ -20,6 +20,20 @@ struct TIME_SPAN {
 	int second;
 };
 
+struct ALARM_LIMIT {
+	bool enableHigh;
+	float high;
+	bool enableLow;
+	float low;
+	ALARM_LIMIT()
+	{
+		enableHigh = false;
+		enableLow = false;
+		high = 0;
+		low = 0;
+	}
+};
+
 using namespace std;
 class MO;
 class MP : public MO
@@ -30,6 +44,7 @@ public:
 
 	bool loadConf(json& conf);
 	bool toJson(json& conf, json serializeOption) override;
+	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
 	//例如 deData = "[deFolder,video,pic]"
@@ -64,7 +79,7 @@ public:
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
 	string m_saveMode;
-
+	ALARM_LIMIT m_alarmLimit;
 	double m_K;
 	double m_B;
 };

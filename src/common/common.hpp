@@ -744,7 +744,12 @@ namespace timeopt {
 		st.wDay = 1;
 	}
 
-
+	inline bool isValidTime(SYSTEMTIME& st)
+	{
+		if (st.wYear == 0 || st.wYear == 1970)
+			return false;
+		return true;
+	}
 
 	inline string nowStr(bool enableMS = false)
 	{

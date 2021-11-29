@@ -50,6 +50,11 @@ public:
 	}
 };
 
+namespace ALARM_TYPE {
+	const string overHighLimit = "超高限";
+	const string overLowLimit = "超低限";
+}
+
 
 class ALARM_INFO : public ALARM_KEY{
 public:
@@ -59,7 +64,7 @@ public:
 	string strSuggest;
 	bool bRecover;
 	SYSTEMTIME stRecoverTime;
-	bool bConfirm;
+	bool bAck;
 	SYSTEMTIME stConfirmTime;
 	string strConfirmInfo;
 	string strConfirmUser;
@@ -71,7 +76,7 @@ public:
 		strSuggest = "";
 		bRecover = 0;
 		memset(&stRecoverTime,0,sizeof(SYSTEMTIME));
-		bConfirm = 0;
+		bAck = 0;
 		memset(&stConfirmTime,0,sizeof(SYSTEMTIME));
 		strConfirmInfo = "";
 	}
@@ -90,7 +95,7 @@ public:
 
 	//table options
 	void add(ALARM_INFO ai);
-	bool query(ALARM_KEY key,ALARM_INFO& ai);
+	bool query(json params,ALARM_INFO& ai);
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY ai);
 
@@ -121,13 +126,17 @@ public:
 //alarm generation
 	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
-//acknow alarm
+	void OccurAlarm(ALARM_INFO ai);
+//报警恢复和报警确认接口
+	void recover(ALARM_KEY& key);
 	void acknowledge(ALARM_KEY& key,string ackInfo,string ackUser);
 //query alarm data
 	string getCurrent(string user);//combined list of active status and unack event
 	string getStatus(string user);
 	string getUnack(string user);
 	string getHistory(json params,string user);
+
+//通知报警状态更新
 
 ////TDS RPC
 	string rpc_addEvent(json j);
@@ -141,16 +150,14 @@ public:
 	}
 	void run();
 
-	//在Update接口中，AlarmService自动计算 报警消除 和 报警产生事件
-	void ClearAlarm(ALARM_KEY& key);
-	void OccurAlarm(ALARM_INFO ai);
 	bool CompareTime(SYSTEMTIME& time1, SYSTEMTIME& time2);
 
 	string FormatSystemTime(SYSTEMTIME time);
 
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
-	almTable tableStatus;
-	almTable tableUnack;
+	//almTable tableStatus;
+	//almTable tableUnack;
+	almTable tableCurrent;
 	almTable tableHist;
 	std::mutex m_csAlarmData;
 	map<string,string> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警

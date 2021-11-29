@@ -335,6 +335,16 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		almSrv.rpc_updateStatus(params,rpcResp);
 	}
+	else if (method == "ackAlarmEvent")
+	{
+		ALARM_KEY ai;
+		ai.tag = params["tag"].get<string>();
+		ai.time = params["time"].get<string>();
+		ai.type = params["type"].get<string>();
+		string user = pSession->user;
+		string info = params["ack_info"];
+		almSrv.acknowledge(ai, info, user);
+	}
 	else if (method == "com.open")
 	{
 		result = rpc_openCom(params, error);
