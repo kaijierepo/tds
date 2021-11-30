@@ -37,6 +37,12 @@ void TDS_SESSION::Init()
     m_IoDevTcpLink = NULL;
 }
 
+bool TDS_SESSION::isConnected()
+{
+    std::unique_lock<mutex> lock(m_mutexTcpLink);
+    return bConnected;
+}
+
 string TDS_SESSION::GetClientIp()
 {
     if (pTcpSessionClt)

@@ -661,10 +661,11 @@ string dataServer::checkTransportLayerProto(string& strData, tcpSession* pTcpSes
 vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 void logToWebsock(string text)
 {
+
 	for (int i = 0; i < logTdsSessions.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> ps = logTdsSessions[i];
-		if (!ps->bConnected)
+		if (!ps->isConnected())
 		{
 			logTdsSessions.erase(logTdsSessions.begin() + i);
 			i--;

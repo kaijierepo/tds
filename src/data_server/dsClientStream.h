@@ -113,7 +113,11 @@ namespace httplib {
 				 }
 
 
-				 m_cs.lock();
+				 std::unique_lock<mutex> lock(m_cs);
+				 if (bufferList.size() == 0)
+				 {
+					 continue;
+				 }
 				 BUFF& bf = bufferList.at(0);
 				 len_read = bf.len < size ? bf.len : size;
 				 memcpy(ptr, bf.p, len_read);
@@ -131,7 +135,6 @@ namespace httplib {
 					 delete bf.p;
 					 bufferList.erase(bufferList.begin());
 				 }
-				 m_cs.unlock();
 			 }
 
 			 return static_cast<ssize_t>(len_read);

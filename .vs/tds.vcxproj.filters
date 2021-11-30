@@ -168,6 +168,9 @@
     <ClCompile Include="..\src\users\userMng.cpp">
       <Filter>users</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\xiaot\scriptHost.cpp">
+      <Filter>xiaot</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -332,6 +335,9 @@
     </ClInclude>
     <ClInclude Include="..\src\users\userMng.h">
       <Filter>users</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\xiaot\scriptHost.h">
+      <Filter>xiaot</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

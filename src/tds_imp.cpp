@@ -42,6 +42,7 @@ SOFTWARE.
 #include "ioDev_genicam.h"
 #include "streamServer.h"
 #include "alarm_server/as.h"
+#include "xiaot/scriptHost.h"
 
 string InterfaceEncoding = "utf8";
 
@@ -338,6 +339,8 @@ bool TDS_imp::run(string cmdline)
 #endif
 	ioSrv.run();
 	almSrv.run();
+
+	sHost.run();
 
 	//create browser window
 	if (conf->uiMode == "miniblink")

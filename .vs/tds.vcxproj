@@ -592,6 +592,7 @@
     <ClCompile Include="..\src\video\streamServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />
     <ClCompile Include="..\src\video\streamSrvNode.cpp" />
+    <ClCompile Include="..\src\xiaot\scriptHost.cpp" />
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -651,6 +652,7 @@
     <ClInclude Include="..\src\video\streamServer.h" />
     <ClInclude Include="..\src\video\videoCodec.h" />
     <ClInclude Include="..\src\video\streamSrvNode.h" />
+    <ClInclude Include="..\src\xiaot\scriptHost.h" />
     <ClInclude Include="..\src\xiaot\xiaot.h" />
   </ItemGroup>
   <ItemGroup>

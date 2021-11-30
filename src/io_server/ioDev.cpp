@@ -26,7 +26,7 @@ void sendToCommLog(string s)
 	for (int i = 0; i < commpktSessions.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
-		if (!session->bConnected)
+		if (!session->isConnected())
 		{
 			commpktSessions.erase(commpktSessions.begin() + i);
 			i--;

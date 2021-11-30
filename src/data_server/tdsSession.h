@@ -82,6 +82,7 @@ public:
 	} bridgedTcpCltHandler;
 
     void Init();
+	bool isConnected();
     string GetClientIp();
     int send(char* p,int len);
 	int getSendedBytes();
