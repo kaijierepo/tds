@@ -216,25 +216,27 @@ void chromeThread()
 			string s = "chrome进程Id: " + str::format("0x%x,%d", pi.dwProcessId, pi.dwProcessId);
 			LOG(s);
 			WaitForInputIdle(pi.hProcess, 5000);
-			while (1)
+			int windowFindTime = 3000;  //3秒内持续查找ATExpert为标题的窗口,由于Chrome的某些机制,该标题对应的窗口句柄会发生变化
+			int idx = 0;
+			while (windowFindTime > 0)
 			{
 				HWND hWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
 				if (tdsImp.uiWnd != hWnd)
 				{
 					tdsImp.uiWnd = hWnd;
-					string s = "chrome窗口句柄: " + str::format("0x%x,%d", tdsImp.uiWnd, tdsImp.uiWnd);
+					string s = "chrome窗口句柄: " + str::format("[%d]0x%x,%d",idx, tdsImp.uiWnd, tdsImp.uiWnd);
 					LOG(s);
-					break;
+					idx++;
 				}
-				Sleep(1);
+				Sleep(50);
+				windowFindTime -= 50;
 			}	
-			//SendMessage(tds->uiWnd, WM_SHOWWINDOW,NULL,NULL);
 
 			HICON hIcon = NULL;
 			wstring ws = charCodec::ansiToUtf16(fs::appPath() + "\\favicon.ico");
 			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 
-			Sleep(3000);
+			Sleep(3000); //此处要sleep一下,不然任务栏图标替换不掉
 
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 			SendMessage(tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
