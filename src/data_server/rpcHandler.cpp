@@ -1527,7 +1527,7 @@ string rpcHandler::rpc_setStream(json params,string& error)
 	string streamId = params["streamId"].get<string>();
 	
 	streamSrvNode* ssn = streamSrv.getSrvNode(streamId);
-	if (ssn)
+	if (ssn && ssn->m_streamPusher)
 	{
 		int fr = params["frameRate"].get<int>();
 		ssn->m_streamPusher->m_streamInfoConf.frameRate = fr;
