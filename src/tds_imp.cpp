@@ -213,13 +213,16 @@ void chromeThread()
 		else
 		{
 			// 等待新进程初始化完毕  
+			string s = "chrome进程Id: " + str::format("0x%x,%d", pi.dwProcessId, pi.dwProcessId);
+			LOG(s);
 			WaitForInputIdle(pi.hProcess, 5000);
 			while (1)
 			{
-				tdsImp.uiWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
-				if (tdsImp.uiWnd)
+				HWND hWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
+				if (tdsImp.uiWnd != hWnd)
 				{
-					string s = "chrome窗口句柄: " + str::format("%x", tdsImp.uiWnd);
+					tdsImp.uiWnd = hWnd;
+					string s = "chrome窗口句柄: " + str::format("0x%x,%d", tdsImp.uiWnd, tdsImp.uiWnd);
 					LOG(s);
 					break;
 				}
