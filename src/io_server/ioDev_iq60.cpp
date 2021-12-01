@@ -353,7 +353,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 //w指令：[版本, 验证TOKEN, 物云名, w指令, [点1, 值], [点2, 值], [点3, 值]]
 //请求：[2, "IQK", "C1201020756", "w", ["AO9", 5], ["BO4", 1]]
 //返回：["C1201020756", ["AO9", 5, 1540697972, 0], ["BO4", 1, 1540697972, 0], "w"]
-bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp)
+bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp, bool sync)
 {
 	json jCmdW;
 	jCmdW.push_back(2);
@@ -383,9 +383,26 @@ bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp)
 	//[2,"IQK","C1210608622","w",["AI4986",36.3],["AI4987",36.3]]
 	string req = jCmdW.dump() +"\n";
 
-	if (!requestAndWaitResp("w", req))
-		return false;
+	if (sync)
+	{
+		bool bGetResp = requestAndWaitResp("w", req);
+		if (bGetResp)
+		{
+			jResp = currentResp;
+			return true;
+		}	
+		else
+			return false;
+	}
+	else
+	{
+		if (!sendData((char*)req.c_str(), req.length()))
+			return false;
+		else
+			return true;
+	}
 
+	
 	//--模拟设备回包
 	//string strResp = "[\"C1210608622\", [\"AI4986\", 36.3, 1540697972, 0], [\"AI4987\", 36.3, 1540697972, 0], \"w\"]";
 	//currentResp.push_back(m_addr);
@@ -408,10 +425,6 @@ bool ioDev_iq60::output(string chanAddr,json jVal, json& jResp)
 	//}
 	//currentResp.push_back("w");
 	//--
-
-	jResp = currentResp;
-
-	return true;
 }
 
 json ioDev_iq60::getAddr()

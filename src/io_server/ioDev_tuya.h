@@ -5,6 +5,6 @@ class ioDev_tuya : public ioDev
 {
 public:
 	bool getCurrentVal();
-	virtual bool output(string chanAddr, json jVal, json& chanResp) override;
+	virtual bool output(string chanAddr, json jVal, json& chanResp,bool sync) override;
 };
 

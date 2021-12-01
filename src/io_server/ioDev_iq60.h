@@ -62,7 +62,7 @@ public:
 	bool sendData(char* pData, int iLen);
 	bool requestAndWaitResp(string cmd, string req);
 	bool scanChannel(json& chanList) override;
-	bool output(string chanAddr, json jVal, json& jResp) override;
+	bool output(string chanAddr, json jVal, json& jResp, bool sync=false) override;
 
 	json getAddr() override;
 	string currentCmd;

@@ -1389,13 +1389,14 @@ string rpcHandler::rpc_login(json params, string& error)
 		}
 		else
 		{
-			return RPCError(RPC_ERROR::TEC_FAIL, "fail");
+			error =  RPCError(RPC_ERROR::TEC_FAIL, "fail");
 		}
 	}
 	catch (std::exception& e)
 	{
-		return RPCError(RPC_ERROR::TEC_FAIL, "request data error");
+		error =  RPCError(RPC_ERROR::TEC_FAIL, "request data error");
 	}
+	return "";
 }
 
 

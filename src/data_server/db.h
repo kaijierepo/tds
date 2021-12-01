@@ -116,7 +116,6 @@ class ATTRI_SELECTOR {
 public:
 	ATTRI_SELECTOR();
 	~ATTRI_SELECTOR();
-	bool setScriptEngineObj(json& jObj, jerry_value_t engineObj);
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 	bool match(string& de); //检查一个de是否满足条件
 	bool match(yyjson_mut_val* de);

@@ -88,7 +88,7 @@ public:
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 	//输出到设备的下属通道
-	virtual bool output(string chanAddr, json jVal, json& chanResp) { return false; }
+	virtual bool output(string chanAddr, json jVal, json& chanResp, bool sync = false) { return false; }
 
 
 	void AutoDataLink(MO* mo);

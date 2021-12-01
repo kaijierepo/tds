@@ -6,6 +6,7 @@
 #include <filesystem>
 #include "logger.h"
 #include "yyjson.h"
+#include "xiaot/scriptHost.h"
 
 
 using namespace std::filesystem;
@@ -815,36 +816,6 @@ ATTRI_SELECTOR::~ATTRI_SELECTOR()
 	}
 }
 
-bool ATTRI_SELECTOR::setScriptEngineObj(json& jObj, jerry_value_t engineObj)
-{
-	for (auto& [key, value] : jObj.items()) {
-
-		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
-		jerry_value_t prop_value;
-		if (value.is_string())
-			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)value.get<string>().c_str());
-		else if (value.is_number())
-			prop_value = jerry_create_number(value.get<double>());
-		else if (value.is_boolean())
-			prop_value = jerry_create_boolean(value.get<bool>());
-		else if (value.is_object())
-		{
-			prop_value = jerry_create_object();
-			setScriptEngineObj(value, prop_value);
-		}
-
-
-		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		if (jerry_value_is_error(set_result)) {
-			jerry_error_t error = jerry_get_error_type(set_result);
-		}
-		jerry_release_value(set_result);
-		jerry_release_value(prop_name);
-		jerry_release_value(prop_value);
-	}
-
-	return true;
-}
 
 bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
 {
@@ -944,7 +915,7 @@ bool ATTRI_SELECTOR::match(string& de)
 	if (jDe["val"].is_object())
 	{
 		json& jVal = jDe["val"];
-		setScriptEngineObj(jVal, global_object);
+		scriptHost::setScriptEngineObj(jVal, global_object);
 	}
 	else
 	{

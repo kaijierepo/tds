@@ -16,7 +16,7 @@ public:
 	bool match(string channelNo);
 
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
-	virtual bool output(json jVal, json& jResp);
+	virtual bool output(json jVal, json& jResp,bool sync = false); //sync指定为同步输出,该函数将阻塞
 	bool IsValid();
 
 	string m_regType; //modbus寄存器类型

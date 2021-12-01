@@ -85,7 +85,7 @@ bool ioDev_tuya::getCurrentVal()
 	return false;
 }
 
-bool ioDev_tuya::output(string chanAddr, json jVal, json& chanResp)
+bool ioDev_tuya::output(string chanAddr, json jVal, json& chanResp,bool sync)
 {
 	//get gateway
 	ioGW_tuyaProject* pGw = nullptr;
