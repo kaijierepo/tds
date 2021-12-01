@@ -14,7 +14,7 @@ using namespace httplib;
 
 ioDev_tdsp::ioDev_tdsp()
 {
-	m_devType = TDS::IO_DEV_TYPE::DEV::iq60_gateway;
+	m_devType = TDS::IO_DEV_TYPE::DEV::tdsp_device;
 	m_devTypeLabel = IO_DEV_TYPE_LABEL.at(m_devType);
 	m_parentDevType = "tds";
 	m_channelType = "io-point";
@@ -42,7 +42,7 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 	try {
 		if (jResp["id"] == nullptr) //主动上送命令
 		{
-
+			handleNotify(jResp);
 		}
 		else
 		{
@@ -60,6 +60,8 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
 	}
+
+	m_bOnline = true;
 	return true;
 }
 
@@ -85,8 +87,27 @@ bool ioDev_tdsp::sendData(char* pData, int iLen)
 
 bool ioDev_tdsp::handleNotify(json& jNotify)
 {
-	
-
+	string method = jNotify["method"].get<string>();
+	json rlt = jNotify["result"];
+	if (method == "getDevInfo")
+	{
+		if (rlt["softVer"] != nullptr)
+		{
+			m_softVer = rlt["softVer"].get<string>();
+		}
+		else if (rlt["hardVer"] != nullptr)
+		{
+			m_softVer = rlt["softVer"].get<string>();
+		}
+		else if (rlt["mfrDate"] != nullptr)
+		{
+			m_mfrDate = rlt["mfrDate"].get<string>();
+		}
+		else if (rlt["IMEI"] != nullptr)
+		{
+			m_IMEI = rlt["IMEI"].get<string>();
+		}
+	}
 
 	return true;
 }

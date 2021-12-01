@@ -205,20 +205,6 @@ bool ioServer::toJson(json& conf, string opt)
 	return true;
 }
 
-bool ioServer::getStatus(json& conf, string opt)
-{
-	conf = json::array();//empty array
-	for (auto& i : m_vecChild)
-	{
-		json j;
-		i->getStatus(j, opt);
-		string s = j.dump();
-		conf.push_back(j);
-	}
-	return true;
-	return true;
-}
-
 
 string ioServer::getTag(string strDataChannelID)
 {

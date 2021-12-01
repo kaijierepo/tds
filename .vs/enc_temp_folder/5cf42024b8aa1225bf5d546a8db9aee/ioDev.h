@@ -20,7 +20,6 @@ public:
 	virtual void stop();
 	bool m_bRunning;
 	virtual bool toJson(json& conf, string opt = "");
-	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool loadConf(json& conf);
 	virtual bool connect();
 	virtual bool disconnect();

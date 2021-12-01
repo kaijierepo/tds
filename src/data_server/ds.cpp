@@ -1301,6 +1301,7 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 	}
 	else
 	{
+		//协议检测
 		if (tdsSession->iALProto == APP_LAYER_PROTO::UNKNOWN)//应用层协议类型检测
 		{
 			//应用层协议智能检测。根据收到的首包数据进行检测
@@ -1318,7 +1319,9 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 			}
 		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+
+		//应用层协议处理
+		if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);

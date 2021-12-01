@@ -200,11 +200,6 @@ bool ioDev::toJson(json& conf, string opt)
 	return true;
 }
 
-bool ioDev::getStatus(json& status, string opt)
-{
-	return false;
-}
-
 bool ioDev::loadConf(json& conf)
 {
 	m_devTypeLabel = conf["typeLabel"].get<string>();

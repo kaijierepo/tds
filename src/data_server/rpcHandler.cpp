@@ -762,6 +762,22 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		if (needLog(method))
 			LOG("RPC请求:\r\n" + strReq + "\r\n");
 
+		//来自于io设备的响应消息，转发给io设备.放在用户认证前面处理
+		if (jReq["ioAddr"] != nullptr)
+		{
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			if (!pIoDev)
+			{
+				json jAddr;
+				jAddr["id"] = strIoAddr;
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+			}
+			pIoDev->setIOSession(pSession);
+			pIoDev->onRecvPkt(jReq);
+			return;
+		}
+
 		//访问控制
 		if (method == "login")
 		{
@@ -799,20 +815,6 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 			}
 		}
 		
-
-		//来自于io设备的响应消息，转发给io设备
-		if (jReq["ioAddr"]!=nullptr)
-		{
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-			if (pIoDev)
-			{
-				pIoDev->setIOSession(pSession);
-				pIoDev->onRecvPkt(jReq);
-			}
-			return;
-		}
-
 
 		//通知消息，无需生成响应，转发后直接返回
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端

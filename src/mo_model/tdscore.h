@@ -35,6 +35,7 @@ namespace TDS {
 	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
 	{std::map<string,string>::value_type("local-serial","本地串口")},
 	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},
+	{std::map<string,string>::value_type("tdsp-device","TDSP设备")},
 	{std::map<string,string>::value_type("io-channel","IO通道")},
 	};
 //物理量类型。

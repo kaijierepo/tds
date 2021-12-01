@@ -22,7 +22,6 @@ public:
 	bool run() override;
 	void stop() override;
 	bool toJson(json& conf, string opt = "");
-	bool getStatus(json& conf, string opt = "");
 	string getTag(string ioAddr);
 
 	//设备发现必须是某个父设备发现了子设备
