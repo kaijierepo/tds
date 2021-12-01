@@ -22,8 +22,8 @@
      inkscape:pagecheckerboard="false"
      showgrid="false"
      inkscape:zoom="1.5949187"
-     inkscape:cx="337.94827"
-     inkscape:cy="389.36155"
+     inkscape:cx="771.19918"
+     inkscape:cy="325.40844"
      inkscape:window-width="1920"
      inkscape:window-height="986"
      inkscape:window-x="-11"
@@ -1076,7 +1076,7 @@
      transform="translate(32.807882,-494.29556)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5721">A</tspan></text>
+       id="tspan4316">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-7"
@@ -1084,7 +1084,7 @@
      transform="translate(385.342,-492.31709)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5723">B</tspan></text>
+       id="tspan4318">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-7-5"
@@ -1092,28 +1092,46 @@
      transform="translate(753.00783,-499.41069)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5725">C</tspan></text>
+       id="tspan4320">C</tspan></text>
   <rect
      style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977"
      width="181.04926"
      height="193.95474"
      x="92.985466"
-     y="372.28687" />
+     y="372.28687">
+    <desc
+       id="desc1346">位号=A.水位
+动画={
+     类型=液位
+}</desc>
+  </rect>
   <rect
      style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977-2"
      width="181.04926"
      height="193.95474"
      x="445.14285"
-     y="273.51624" />
+     y="273.51624">
+    <desc
+       id="desc1347">位号=B.水位
+动画={
+     类型=液位
+}</desc>
+  </rect>
   <rect
      style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977-2-0"
      width="181.04926"
      height="193.95474"
      x="826.66986"
-     y="186.48627" />
+     y="186.48627">
+    <desc
+       id="desc3174">位号=C.水位
+动画={
+     类型=液位
+}</desc>
+  </rect>
   <text
      xml:space="preserve"
      id="text4169-8"
@@ -1121,7 +1139,7 @@
      transform="translate(283.13402,-541.7685)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5727">供水监控系统</tspan></text>
+       id="tspan4322">供水监控系统</tspan></text>
   <g
      id="Group_OutletPort"
      transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
@@ -1815,7 +1833,7 @@
      id="Group_Impeller-7"
      transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
     <desc
-       id="desc6196">位号=B.水泵.开关
+       id="desc6196">位号=B.开关
 动画={
      类型=旋转
      启动值=true
@@ -1966,7 +1984,7 @@
      d="M 579.81091,151.3976 H 534.98104 V 465.8337"
      id="path13698-4-2">
     <desc
-       id="desc2163">位号=B.水泵.开关
+       id="desc2163">位号=B.开关
 动画={
      类型=流动
      方向=正
@@ -2004,7 +2022,7 @@
      id="path13698-4-7-3"
      sodipodi:nodetypes="ccc">
     <desc
-       id="desc2165">位号=B.水泵.开关
+       id="desc2165">位号=B.开关
 动画={
      类型=流动
      方向=反
@@ -2019,7 +2037,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,126.62697,95.257872)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5729">当前水位:</tspan></text>
+       id="tspan4324">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9"
@@ -2028,7 +2046,7 @@
      inkscape:label="A.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5731">?</tspan></text>
+       id="tspan4326">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-3"
@@ -2036,15 +2054,16 @@
      transform="matrix(0.3399434,0,0,0.41825383,498.35498,2.3310825)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5733">当前水位:</tspan></text>
+       id="tspan4328">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-0"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-8-5);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,561.7834,3.8476425)"><tspan
+     transform="matrix(0.3399434,0,0,0.41825383,561.7834,3.8476425)"
+     inkscape:label="B.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5735">?</tspan></text>
+       id="tspan4330">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63"
@@ -2052,7 +2071,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,-0.685137,363.82241)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5737">相电流:</tspan></text>
+       id="tspan4332">相电流:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1"
@@ -2061,7 +2080,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5739">?</tspan></text>
+       id="tspan4334">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-6"
@@ -2069,15 +2088,16 @@
      transform="matrix(0.3399434,0,0,0.41825383,837.44212,-87.225568)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5741">当前水位:</tspan></text>
+       id="tspan4336">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-9"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-8-2);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,914.87054,-85.709008)"><tspan
+     transform="matrix(0.3399434,0,0,0.41825383,914.87054,-85.709008)"
+     inkscape:label="C.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5743">?</tspan></text>
+       id="tspan4338">?</tspan></text>
   <g
      id="g3751"
      onclick="tds.output(&quot;A.开关&quot;,true)"
@@ -2461,7 +2481,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,61.113536,364.40212)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5745">A</tspan></text>
+       id="tspan4340">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-3"
@@ -2470,7 +2490,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5747">?</tspan></text>
+       id="tspan4342">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-7"
@@ -2478,7 +2498,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,128.17558,363.23448)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5749">B</tspan></text>
+       id="tspan4344">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-8"
@@ -2487,7 +2507,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5751">?</tspan></text>
+       id="tspan4346">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-1"
@@ -2495,7 +2515,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,200.44218,362.92098)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5753">C</tspan></text>
+       id="tspan4348">C</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-2"
@@ -2503,7 +2523,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,-1.1859882,400.76762)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5755">相电压:</tspan></text>
+       id="tspan4350">相电压:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-7"
@@ -2512,7 +2532,7 @@
      inkscape:label="A.A相电压"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5757">?</tspan></text>
+       id="tspan4352">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-70"
@@ -2520,7 +2540,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,59.672198,401.97432)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5759">A</tspan></text>
+       id="tspan4354">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-3-9"
@@ -2529,7 +2549,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5761">?</tspan></text>
+       id="tspan4356">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-7-3"
@@ -2537,7 +2557,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,126.73424,402.80668)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5763">B</tspan></text>
+       id="tspan4358">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-8-8"
@@ -2546,7 +2566,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5765">?</tspan></text>
+       id="tspan4360">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-1-2"
@@ -2554,7 +2574,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,199.00084,402.49318)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5767">C</tspan></text>
+       id="tspan4362">C</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-3"
@@ -2562,7 +2582,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,368.69424,276.07719)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5769">相电流:</tspan></text>
+       id="tspan4364">相电流:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-9"
@@ -2571,7 +2591,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5771">?</tspan></text>
+       id="tspan4366">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-19"
@@ -2579,7 +2599,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,430.49292,276.6569)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5773">A</tspan></text>
+       id="tspan4368">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-3-2"
@@ -2588,7 +2608,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5775">?</tspan></text>
+       id="tspan4370">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-7-7"
@@ -2596,7 +2616,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,497.55496,275.48926)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5777">B</tspan></text>
+       id="tspan4372">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-8-9"
@@ -2605,7 +2625,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5779">?</tspan></text>
+       id="tspan4374">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-1-9"
@@ -2613,7 +2633,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,569.82156,275.17576)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5781">C</tspan></text>
+       id="tspan4376">C</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-2-2"
@@ -2621,7 +2641,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,368.19339,313.0224)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5783">相电压:</tspan></text>
+       id="tspan4378">相电压:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-7-3"
@@ -2630,7 +2650,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5785">?</tspan></text>
+       id="tspan4380">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-70-0"
@@ -2638,7 +2658,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,429.05158,314.2291)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5787">A</tspan></text>
+       id="tspan4382">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-3-9-1"
@@ -2647,7 +2667,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5789">?</tspan></text>
+       id="tspan4384">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-7-3-2"
@@ -2655,7 +2675,7 @@
      transform="matrix(0.3399434,0,0,0.41825383,496.11362,313.06146)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5791">B</tspan></text>
+       id="tspan4386">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-1-8-8-0"
@@ -2664,7 +2684,7 @@
      inkscape:label="A.电流"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5793">?</tspan></text>
+       id="tspan4388">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-63-6-1-2-1"
@@ -2672,5 +2692,5 @@
      transform="matrix(0.3399434,0,0,0.41825383,568.38022,312.74796)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan5795">C</tspan></text>
+       id="tspan4390">C</tspan></text>
 </svg>
