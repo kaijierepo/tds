@@ -95,6 +95,22 @@ bool ioChannel::toJson(json& conf, string opt)
 	return false;
 }
 
+bool ioChannel::getChanStatus(json& statusList)
+{
+	json j;
+	toJson(j);
+	j["val"] = m_curVal;
+	if (timeopt::isValidTime(m_stLastUpdateTime))
+	{
+		j["time"] = timeopt::st2str(m_stLastUpdateTime);
+	}
+	else
+		j["time"] = "?";
+	
+	statusList.push_back(j);
+	return true;
+}
+
 
 bool ioChannel::match(string channelNo) {
 	if (m_devAddr.find("#"))//mqtt channel wildcard
@@ -117,6 +133,7 @@ bool ioChannel::match(string channelNo) {
 }
 
 void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
+	//更新通道值
 	SYSTEMTIME t;
 	if (dataTime == NULL)
 	{
@@ -124,8 +141,10 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;
-	string tag = TAG::trimRoot(m_strLinkMPTag);
+	m_curVal = jVal;
 
+	//更新绑定位号值
+	string tag = TAG::trimRoot(m_strLinkMPTag);
 	MP* pMP = (MP*)prj.GetMOByTag(tag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 	{

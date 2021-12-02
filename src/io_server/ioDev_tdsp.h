@@ -23,7 +23,7 @@ public:
 	bool getCurrentVal();
 	bool sendData(char* pData, int iLen);
 	bool handleNotify(json& jNotify);
-	bool call(string method, json params,json& result,json& error);
+	bool call(string method, json params,json& result,json& error,bool sync = true);
 
 	json getAddr() override;
 	void DoCycleTask() override;

@@ -205,6 +205,18 @@ bool ioDev::getStatus(json& status, string opt)
 	return false;
 }
 
+
+bool ioDev::getChanStatus(json& statusList)
+{
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* p = m_vecChild[i];
+		p->getChanStatus(statusList);
+	}
+
+	return true;
+}
+
 bool ioDev::loadConf(json& conf)
 {
 	m_devTypeLabel = conf["typeLabel"].get<string>();

@@ -12,12 +12,14 @@ public:
 
 	bool loadConf(json& conf) override;
 	bool toJson(json& conf, string opt = "") override;
-
+	bool getChanStatus(json& statusList) override;
 	bool match(string channelNo);
 
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
 	virtual bool output(json jVal, json& jResp,bool sync = false); //sync指定为同步输出,该函数将阻塞
 	bool IsValid();
+
+	json m_curVal;
 
 	string m_regType; //modbus寄存器类型
 	string m_storageFmt;

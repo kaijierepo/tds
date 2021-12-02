@@ -53,6 +53,10 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 				p->jResp = jResp;
 				p->respSignal.notify();
 			}
+			else
+			{
+				handleNotify(jResp);
+			}
 		}
 	}
 	catch (std::exception& e)
@@ -89,6 +93,12 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 {
 	string method = jNotify["method"].get<string>();
 	json rlt = jNotify["result"];
+	if (rlt == nullptr)
+	{
+		LOG("TDSP设备,没有返回result字段");
+		return false;
+	}
+
 	if (method == "getDevInfo")
 	{
 		if (rlt["softVer"] != nullptr)
@@ -108,12 +118,22 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			m_IMEI = rlt["IMEI"].get<string>();
 		}
 	}
+	else if (method == "acq")
+	{
+		for (int i = 0; i < rlt.size(); i++)
+		{
+			json jDE = rlt[i];
+			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
+			if (pC)
+				pC->input(jDE["val"]);
+		}
+	}
 
 	return true;
 }
 
 
-bool ioDev_tdsp::call(string method, json params, json& result, json& error)
+bool ioDev_tdsp::call(string method, json params, json& result, json& error, bool sync)
 {
 	json req;
 	req["jsonrpc"] = "2.0";
@@ -124,8 +144,10 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error)
 	m_iRpcId++;
 	string strReq = req.dump() + "\n\n";
 	sendStr(strReq);
-	json resp;
+	if (!sync)
+		return true;
 
+	json resp;
 	m_csSyncRPCInfo.lock();
 	TDSP_SYNC_INFO* tsi = new TDSP_SYNC_INFO();
 	m_mapSyncRPCInfo[iId] = tsi;
@@ -172,25 +194,8 @@ void ioDev_tdsp::DoCycleTask()
 		return;
 	GetLocalTime(&m_stLastAcqTime);
 
-	json jChans = json::array();
-	for (int i = 0; i < m_vecChild.size(); i++)
-	{
-		ioChannel* pC = (ioChannel*) m_vecChild[i];
-		jChans.push_back(pC->m_devAddr);
-	}
 	json params;
-	params["ioAddr"] = jChans;
+	params["ioAddr"] = "*";
 	json jRlt, jErr;
-	call("acq", params, jRlt, jErr);
-
-	if (jRlt != nullptr)
-	{
-		for (int i = 0; i < jRlt.size(); i++)
-		{
-			json jDE = jRlt[i];
-			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
-			if (pC)
-				pC->input(jDE["val"]);
-		}
-	}
+	call("acq", params, jRlt, jErr, false);
 }

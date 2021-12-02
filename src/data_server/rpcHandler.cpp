@@ -515,6 +515,14 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_io_tree(params, error);
 		}
+		else if (method == "getChanStatus")
+		{
+			rpc_getChanStatus(params,rpcResp, pSession);
+		}
+		else if (method == "getChanVal")
+		{
+			rpc_getChanVal(params, rpcResp, pSession);
+		}
 		else if (method == "scanChannel" || method == "scanchannel")
 		{
 			result = rpc_io_scanChannel(params, error, pSession);
@@ -1435,6 +1443,53 @@ string rpcHandler::rpc_io_tree(json params, string& error)
 	json j;
 	ioSrv.toJson(j);
 	return j.dump();
+}
+
+void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	json list;
+	ioSrv.getChanStatus(list);
+	resp.result = list.dump(4);
+}
+
+
+void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	json list;
+	ioSrv.getChanStatus(list);
+	json valList = json::object();
+	string fmt = "";
+	if (params["fmt"] != nullptr)
+		fmt = params["fmt"].get<string>();
+	for (int i = 0; i < list.size(); i++)
+	{
+		json& j = list[i];
+		if (fmt == "")
+		{
+			if (j["val"] == nullptr)
+				valList[j["ioAddr"].get<string>()] = "?";
+			else
+				valList[j["ioAddr"].get<string>()] = j["val"];
+		}
+		else
+		{
+			string valStr = fmt;
+			string val;
+			if (j["val"] == nullptr)
+				val = "?";
+			else
+				val = j["val"].dump();
+
+			string time = j["time"].get<string>();
+
+			valStr = str::replace(valStr, "val", val);
+			valStr = str::replace(valStr, "time", time);
+
+			valList[j["ioAddr"].get<string>()] = valStr;
+		}
+		
+	}
+	resp.result = valList.dump(4);
 }
 
 
