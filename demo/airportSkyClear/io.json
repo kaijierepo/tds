@@ -6,54 +6,479 @@
         },
         "children": [
             {
-                "acqInterval": 1,
                 "addr": "solarCell.votage",
-                "children": [],
-                "connected": false,
-                "ioAddr": "tdsp00000001/solarCell.votage",
                 "ioType": "i",
-                "ioTypeLabel": "输入",
                 "level": "channel",
-                "manageStatus": "managed",
-                "name": "",
-                "nodeID": "bd9fd0b0-00bf-486d-8747-abfdd73671d7",
-                "online": false,
-                "parentType": "",
-                "storageFmt": "",
-                "tagBind": "安徽省.芜湖机场.煤气炮1#.电池电压",
-                "type": "",
-                "typeLabel": "",
-                "valType": "float",
-                "valTypeLabel": "浮点型"
+                "name": "太阳能电池电压",
+                "nodeID": "fc0472d8-df41-4ad0-8d1d-b8cbffa9fc83",
+                "valType": "float"
             },
             {
-                "acqInterval": 1,
                 "addr": "solarCell.current",
-                "children": [],
-                "connected": false,
-                "ioAddr": "tdsp00000001/solarCell.current",
                 "ioType": "i",
-                "ioTypeLabel": "输入",
                 "level": "channel",
-                "manageStatus": "managed",
-                "name": "",
-                "nodeID": "cee5c14e-b059-4ab9-a103-e5c84f1465f2",
-                "online": false,
-                "parentType": "",
-                "storageFmt": "",
-                "tagBind": "安徽省.芜湖机场.煤气炮1#.电池电流",
-                "type": "",
-                "typeLabel": "",
-                "valType": "float",
-                "valTypeLabel": "浮点型"
+                "name": "太阳能电池电流",
+                "nodeID": "448c6aee-0002-4b8b-9f41-edc99be675cc",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电压",
+                "nodeID": "55a4e9e6-ccdb-42da-9f73-2bfdb9ffd275",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电流",
+                "nodeID": "4d937f8f-5713-4d73-8817-dc368b4cc50e",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS经度",
+                "nodeID": "1601a87b-dc06-4c62-bc60-846536822d24",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS纬度",
+                "nodeID": "e345167c-2371-4251-9637-3f2541bd2789",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗经度",
+                "nodeID": "a43fed1d-b04e-4cf4-a104-8e4c6acc20ee",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗纬度",
+                "nodeID": "3675bb9b-9403-46d4-a0c7-2ae3b9991022",
+                "valType": "float"
+            },
+            {
+                "addr": "gasPressure",
+                "ioType": "i",
+                "level": "channel",
+                "name": "煤气气压",
+                "nodeID": "a628139b-8bca-4214-b605-fc4fb86ce882",
+                "valType": "float"
+            },
+            {
+                "addr": "temp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境温度",
+                "nodeID": "211ec34a-659b-422a-9d62-29b4d9f83f66",
+                "valType": "float"
+            },
+            {
+                "addr": "humidity",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境湿度",
+                "nodeID": "7876fade-b873-4b65-b11c-1af253f4e1aa",
+                "valType": "float"
+            },
+            {
+                "addr": "boardTemp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "控制板温度",
+                "nodeID": "d7512adc-4a7d-4f2e-bcf6-73a4dc86610c",
+                "valType": "float"
+            },
+            {
+                "addr": "shootCount",
+                "ioType": "i",
+                "level": "channel",
+                "name": "击发次数",
+                "nodeID": "de031d19-7f6c-44c3-be37-474e7a44fcf5",
+                "valType": "int"
             }
         ],
         "connected": false,
         "ioAddr": "tdsp00000001",
         "level": "device",
         "manageStatus": "managed",
-        "nodeID": "45dc6bec-0a8d-4520-a9fa-dd8a64980e47",
+        "nodeID": "2b703429-8034-4227-a3c4-44d0ae06fb0d",
         "online": false,
+        "parentType": "tds",
+        "type": "tdsp-device",
+        "typeLabel": "TDSP设备"
+    },
+    {
+        "acqInterval": 1,
+        "addr": {
+            "id": "tdsp00000002"
+        },
+        "children": [
+            {
+                "addr": "solarCell.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电压",
+                "nodeID": "4ef93168-17e5-48d1-afb9-4d58fb2575f9",
+                "valType": "float"
+            },
+            {
+                "addr": "solarCell.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电流",
+                "nodeID": "f407aff1-6c10-4565-9477-a85be20f1ca5",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电压",
+                "nodeID": "dd90b97a-0ae6-438a-9e57-df28ceb53862",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电流",
+                "nodeID": "3f5e6f55-449e-4a60-be40-03c5096e193a",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS经度",
+                "nodeID": "5029b796-e4f3-44ac-a8c3-e2195d1022e5",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS纬度",
+                "nodeID": "44a8576f-2cee-481d-a8da-672f52d07f2a",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗经度",
+                "nodeID": "38fe05a7-7b3f-413d-af13-424b63b3f680",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗纬度",
+                "nodeID": "3a40f483-d458-42e8-8b9e-cd582caaccc2",
+                "valType": "float"
+            },
+            {
+                "addr": "gasPressure",
+                "ioType": "i",
+                "level": "channel",
+                "name": "煤气气压",
+                "nodeID": "92324cec-8eaf-45ae-9105-92e9e70eb9f2",
+                "valType": "float"
+            },
+            {
+                "addr": "temp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境温度",
+                "nodeID": "84160ad6-5b63-4706-893c-b8cca3499f65",
+                "valType": "float"
+            },
+            {
+                "addr": "humidity",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境湿度",
+                "nodeID": "0916915c-68ef-4484-9ca0-a978f7cee2ae",
+                "valType": "float"
+            },
+            {
+                "addr": "boardTemp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "控制板温度",
+                "nodeID": "6c4c7538-0cff-40e6-a11c-204d90411923",
+                "valType": "float"
+            },
+            {
+                "addr": "shootCount",
+                "ioType": "i",
+                "level": "channel",
+                "name": "击发次数",
+                "nodeID": "2adf87bb-031c-41e2-9cd4-4257917fcee8",
+                "valType": "int"
+            }
+        ],
+        "connected": false,
+        "ioAddr": "tdsp00000002",
+        "level": "device",
+        "manageStatus": "managed",
+        "nodeID": "6",
+        "online": true,
+        "parentType": "tds",
+        "type": "tdsp-device",
+        "typeLabel": "TDSP设备"
+    },
+    {
+        "acqInterval": 1,
+        "addr": {
+            "id": "tdsp00000003"
+        },
+        "children": [
+            {
+                "addr": "solarCell.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电压",
+                "nodeID": "cecce327-7566-4f1d-ad49-20008fb0bee0",
+                "valType": "float"
+            },
+            {
+                "addr": "solarCell.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电流",
+                "nodeID": "0c49a650-e89a-4264-81e0-c420acf6d94c",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电压",
+                "nodeID": "caf8e5b0-2ad9-435e-b6fc-fdf0534ef3c2",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电流",
+                "nodeID": "5062da1b-246a-481b-b972-9c3cf891018f",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS经度",
+                "nodeID": "cc433a63-f61f-4393-bc50-3a3f0b1d2875",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS纬度",
+                "nodeID": "814dedaa-98cf-49b5-ab39-9eabaeff2f3a",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗经度",
+                "nodeID": "6dd83ea1-431b-4fb5-9ba7-3148b272fa30",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗纬度",
+                "nodeID": "38dfdb66-f845-4c36-9c03-4f8c685afda5",
+                "valType": "float"
+            },
+            {
+                "addr": "gasPressure",
+                "ioType": "i",
+                "level": "channel",
+                "name": "煤气气压",
+                "nodeID": "546c4231-6322-4d36-8e1d-a236e5a8cbef",
+                "valType": "float"
+            },
+            {
+                "addr": "temp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境温度",
+                "nodeID": "7cad8087-4679-4be6-a2d2-c3ab10343365",
+                "valType": "float"
+            },
+            {
+                "addr": "humidity",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境湿度",
+                "nodeID": "57424725-6ca1-49bb-8dd4-dd86651ca6cd",
+                "valType": "float"
+            },
+            {
+                "addr": "boardTemp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "控制板温度",
+                "nodeID": "1e98a4be-8ecb-46d0-89db-74bf1d66f9d6",
+                "valType": "float"
+            },
+            {
+                "addr": "shootCount",
+                "ioType": "i",
+                "level": "channel",
+                "name": "击发次数",
+                "nodeID": "c35cc782-1f58-48e9-bd71-fd988d484492",
+                "valType": "int"
+            }
+        ],
+        "connected": false,
+        "ioAddr": "tdsp00000003",
+        "level": "device",
+        "manageStatus": "managed",
+        "nodeID": "7",
+        "online": true,
+        "parentType": "tds",
+        "type": "tdsp-device",
+        "typeLabel": "TDSP设备"
+    },
+    {
+        "acqInterval": 1,
+        "addr": {
+            "id": "tdsp00000004"
+        },
+        "children": [
+            {
+                "addr": "solarCell.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电压",
+                "nodeID": "dd46f38b-1f60-407a-8e43-5eeb5e241026",
+                "valType": "float"
+            },
+            {
+                "addr": "solarCell.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "太阳能电池电流",
+                "nodeID": "f7f7c546-f096-4b86-b73c-14a3a0ce61fb",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.votage",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电压",
+                "nodeID": "b6253c4d-7349-4326-afef-b5bcda419ba1",
+                "valType": "float"
+            },
+            {
+                "addr": "battery.current",
+                "ioType": "i",
+                "level": "channel",
+                "name": "电池电流",
+                "nodeID": "f112887c-c3d4-49cf-809e-01ceaa731a80",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS经度",
+                "nodeID": "c55f2f64-66b0-4c74-b233-09d20315d7ad",
+                "valType": "float"
+            },
+            {
+                "addr": "gps.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "GPS纬度",
+                "nodeID": "fb52923d-a476-4ccb-bb8f-2d094d4c1c02",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.longitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗经度",
+                "nodeID": "04ec752f-cf78-409f-b1b6-d21f93da8e58",
+                "valType": "float"
+            },
+            {
+                "addr": "bds.latitude",
+                "ioType": "i",
+                "level": "channel",
+                "name": "北斗纬度",
+                "nodeID": "2ca8d4f1-87c8-4015-978a-89564b1c78be",
+                "valType": "float"
+            },
+            {
+                "addr": "gasPressure",
+                "ioType": "i",
+                "level": "channel",
+                "name": "煤气气压",
+                "nodeID": "d8a1176b-42a7-42b8-86d2-7b3551741a88",
+                "valType": "float"
+            },
+            {
+                "addr": "temp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境温度",
+                "nodeID": "78ba5f22-2bdc-429e-9a34-44ee24d1cff3",
+                "valType": "float"
+            },
+            {
+                "addr": "humidity",
+                "ioType": "i",
+                "level": "channel",
+                "name": "环境湿度",
+                "nodeID": "0abbb720-0dec-4fe1-b4fd-5ad128797e49",
+                "valType": "float"
+            },
+            {
+                "addr": "boardTemp",
+                "ioType": "i",
+                "level": "channel",
+                "name": "控制板温度",
+                "nodeID": "6cee7cc5-f577-49cc-8598-936e9987acae",
+                "valType": "float"
+            },
+            {
+                "addr": "shootCount",
+                "ioType": "i",
+                "level": "channel",
+                "name": "击发次数",
+                "nodeID": "81c1aee9-ac6a-4f69-9e3c-05454b449c08",
+                "valType": "int"
+            }
+        ],
+        "connected": false,
+        "ioAddr": "tdsp00000004",
+        "level": "device",
+        "manageStatus": "managed",
+        "nodeID": "8",
+        "online": true,
         "parentType": "tds",
         "type": "tdsp-device",
         "typeLabel": "TDSP设备"

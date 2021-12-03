@@ -1,0 +1,93 @@
+[
+    {
+        "addr": "solarCell.votage",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"太阳能电池电压"
+    },
+    {
+        "addr": "solarCell.current",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"太阳能电池电流"
+    },
+    {
+        "addr": "battery.votage",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"电池电压"
+    },
+    {
+        "addr": "battery.current",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"电池电流"
+    },
+    {
+        "addr": "gps.longitude",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"GPS经度"
+    },
+    {
+        "addr": "gps.latitude",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"GPS纬度"
+    },
+    {
+        "addr": "bds.longitude",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"北斗经度"
+    },
+    {
+        "addr": "bds.latitude",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"北斗纬度"
+    },
+    {
+        "addr": "gasPressure",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"煤气气压"
+    },
+    {
+        "addr": "temp",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"环境温度"
+    },
+    {
+        "addr": "humidity",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"环境湿度"
+    },
+    {
+        "addr": "boardTemp",
+        "ioType": "i",
+        "valType": "float",
+        "level":"channel",
+        "name":"控制板温度"
+    },
+    {
+        "addr": "shootCount",
+        "ioType": "i",
+        "valType": "int",
+        "level":"channel",
+        "name":"击发次数"
+    }
+]
