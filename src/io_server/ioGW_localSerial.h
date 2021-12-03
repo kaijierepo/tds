@@ -52,6 +52,6 @@ public:
 	OVERLAPPED m_ovRead;
 	OVERLAPPED m_ovWrite;
 
-
+	stream2pkt m_pab;
 };
 

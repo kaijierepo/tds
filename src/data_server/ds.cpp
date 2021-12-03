@@ -820,7 +820,34 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	std::string handshakeString = req.GetHandshakeString(strData);
 	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 
-	if (strData.find("COM") != string::npos)
+	if (strData.find("/terminal") != string::npos)
+	{
+		int pos = strData.find("terminal");
+		int pos1 = strData.find(" ", pos);
+		string ioAddr = strData.substr(pos + 9, pos1 - (pos + 9));
+		ioDev* p = ioSrv.getIODev(ioAddr);
+		tdsSession->type = TDS_SESSION_TYPE::terminal;
+		if (p && p->pIOSession != NULL)
+		{
+			tdsSession->bridgedIoSession = p->pIOSession;
+			p->pIOSession->bridgedIoSessionClient = tdsSession;
+			LOG("open websocket terminal at ioAddr %s success", ioAddr.c_str());
+			tdsSession->setActivityCheck(false);
+			tdsSession->bridgedIoSession->setActivityCheck(false);
+		}
+		else if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
+		{
+			tdsSession->setActivityCheck(false);
+			tdsSession->bridgedLocalCom = ioAddr;
+			p->pTdsSession = tdsSession;
+		}
+		else
+		{
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
+	else if (strData.find("/COM") != string::npos)
 	{
 		int pos = strData.find("COM");
 		int pos1 = strData.find(" ", pos);
@@ -866,27 +893,6 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			LOG("bridge websocket to tcp %s fail", host.c_str());
 			delete tdsSession->pBridgedTcpClient;
 			tdsSession->pBridgedTcpClient = NULL;
-			closesocket(tdsSession->sock);
-			return;
-		}
-	}
-	else if (strData.find("/iodev") != string::npos)
-	{
-		int pos = strData.find("iodev");
-		int pos1 = strData.find(" ", pos);
-		string ioAddr = strData.substr(pos + 6, pos1 - (pos + 6));
-		ioDev* p = ioSrv.getIODev(ioAddr);
-		if (p && p->pIOSession != NULL)
-		{
-			tdsSession->type = TDS_SESSION_TYPE::bridgeToiodev;
-			tdsSession->bridgedIoSession = p->pIOSession;
-			p->pIOSession->bridgedIoSessionClient = tdsSession;
-			LOG("bridge websocket to ioAddr %s success", ioAddr.c_str());
-			tdsSession->setActivityCheck(false);
-			tdsSession->bridgedIoSession->setActivityCheck(false);
-		}
-		else
-		{
 			closesocket(tdsSession->sock);
 			return;
 		}

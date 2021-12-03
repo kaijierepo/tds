@@ -174,6 +174,8 @@ void scriptHost::loopExe()
 	{
 		Sleep(100);
 
+		shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
+
 		jerry_init(JERRY_INIT_EMPTY);
 		jerry_value_t global_object = jerry_get_global_object();
 
@@ -243,6 +245,8 @@ void scriptHost::loopExe()
 bool scriptHost::setScriptEngineObj(json& jObj, jerry_value_t engineObj)
 {
 	for (auto& [key, value] : jObj.items()) {
+		if (value.is_null())
+			continue;
 
 		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
 		jerry_value_t prop_value;

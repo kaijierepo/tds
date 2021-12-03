@@ -181,6 +181,7 @@ namespace TDS_SESSION_TYPE {
 	const string iodev = "iodev"; //io设备会话 传输设备自定义的通信协议
 	const string bridgeToiodev = "bridgeToiodev";
 	const string bridgeToTcpClient = "bridgeToTcpClient";
+	const string terminal = "terminal";
 }
 
 struct ACTIVE_TDS_SESSION {

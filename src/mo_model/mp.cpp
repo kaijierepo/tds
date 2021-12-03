@@ -25,6 +25,41 @@ MP::~MP()
 {
 }
 
+//string格式主要是人容易阅读,书写的字符串格式. 一般默认为 Hjson格式
+json MP::strVal2Val(string sdv)
+{
+	json jVal;
+	if (sdv == "" || sdv == "?")
+	{
+		//保持无效值
+		//m_curVal.empty()==true
+	}
+	else
+	{
+		if (m_valType == VAL_TYPE::boolean)
+		{
+			if (sdv == "1" || sdv == "true" || sdv == "开")
+				jVal = true;
+			else if (sdv == "0" || sdv == "false" || sdv == "关")
+				jVal = false;
+		}
+		else if (m_valType == VAL_TYPE::integer)
+		{
+			jVal = atoi(sdv.c_str());
+		}
+		else if (m_valType == VAL_TYPE::Float)
+		{
+			jVal = atof(sdv.c_str());
+		}
+		else if (m_valType == VAL_TYPE::str)
+		{
+			jVal = sdv;
+		}
+	}
+
+	return jVal;
+}
+
 
 bool MP::loadConf(json& conf)
 {
@@ -39,9 +74,9 @@ bool MP::loadConf(json& conf)
 		m_strUnit = conf["unit"].get<string>();
 
 	if (conf["decimalDigits"] != nullptr)
-		m_decimalDigits = conf["decimalDigits"].get<string>();
+		m_decimalDigits = conf["decimalDigits"].get<int>();
 	else
-		m_decimalDigits = "自动";
+		m_decimalDigits = -1;
 
 	if (conf["alarmLimit"] != nullptr)
 	{
@@ -92,33 +127,14 @@ bool MP::loadConf(json& conf)
 
 	if (conf["defaultVal"] != nullptr)
 	{
-		string sdv = conf["defaultVal"].get<string>();
-		if (sdv == "" || sdv == "?")
+		//兼容一些错误书写,支持强转
+		if (conf["defaultVal"].is_string())
 		{
-			//保持无效值
-			//m_curVal.empty()==true
+			m_defaultVal = strVal2Val(conf["defaultVal"].get<string>());
 		}
 		else
 		{
-			if (m_valType == VAL_TYPE::boolean)
-			{
-				if (sdv == "1" || sdv == "true" || sdv == "开")
-					m_defaultVal = true;
-				else if (sdv == "0" || sdv == "false" || sdv == "关")
-					m_defaultVal = false;
-			}
-			else if (m_valType == VAL_TYPE::integer)
-			{
-				m_defaultVal = atoi(sdv.c_str());
-			}
-			else if (m_valType == VAL_TYPE::Float)
-			{
-				m_defaultVal = atof(sdv.c_str());
-			}
-			else if (m_valType == VAL_TYPE::str)
-			{
-				m_defaultVal = sdv;
-			}
+			m_defaultVal = strVal2Val(conf["defaultVal"].dump());
 		}
 
 		if (!m_defaultVal.empty())
@@ -171,7 +187,7 @@ bool MP::toJson(json& conf, json serializeOption)
 	conf["unit"] = p->m_strUnit;
 	conf["k"] = p->m_K;
 	conf["b"] = p->m_B;
-	conf["defaultVal"] = p->m_defaultVal.dump();
+	conf["defaultVal"] = p->m_defaultVal;
 
 	json alarmLimit;
 	alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
@@ -185,6 +201,9 @@ bool MP::toJson(json& conf, json serializeOption)
 	validRange["min"] = m_validRange.min;
 	validRange["max"] = m_validRange.max;
 	conf["validRange"] = validRange;
+
+	if (m_decimalDigits >= 0)
+		conf["decimalDigits"] = m_decimalDigits;
 
 	return true;
 }
@@ -421,7 +440,8 @@ json MP::getRTData(string root)
 	j["valTypeLabel"] = m_valTypeLabel;
 	j["ioType"] = m_ioType;
 	j["ioTypeLabel"] = m_ioTypeLabel;
-	j["decimalDigits"] = m_decimalDigits;
+	if (m_decimalDigits >= 0)
+		j["decimalDigits"] = m_decimalDigits;
 
 	if (m_validRange.enable)
 	{

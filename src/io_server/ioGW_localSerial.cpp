@@ -192,7 +192,18 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 
 	if (pTdsSession)
 	{
-		pTdsSession->send(pData, iLen);
+		if (pTdsSession->type == TDS_SESSION_TYPE::terminal)
+		{
+			m_pab.PushStream(pData, iLen);
+			while (m_pab.PopPkt(APP_LAYER_PROTO::textEnd2LF))
+			{
+				pTdsSession->send(m_pab.pkt, m_pab.iPktLen);
+			}
+		}
+		else
+		{
+			pTdsSession->send(pData, iLen);
+		}
 	}
 
 	if (m_pRecvCallback)
