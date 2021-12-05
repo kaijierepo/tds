@@ -19,6 +19,7 @@
 #include "ioDev_tdsp.h"
 
 #include "ioDev_genicam.h"
+#include "mp.h"
 
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 void sendToCommLog(string s)
@@ -136,7 +137,9 @@ int ioDev::m_heartBeatInterval = 3;
 
 ioDev::ioDev(void)
 {
+	m_bWorkingThreadRunning = false;
 	m_bEnableIoLog = true;
+	bEnableAcq = true;
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
 	bEnableAcq = true;
 	m_mngStatus = IODEV_MNG_STATUS::managed;
@@ -159,8 +162,6 @@ ioDev::ioDev(void)
 
 ioDev::~ioDev(void)
 {
-	m_csThis.lock();
-	m_csThis.unlock();
 }
 
 void ioDev::stop()
@@ -170,8 +171,10 @@ void ioDev::stop()
 	{
 		i->stop();
 	}
-	m_csThis.lock(); //等待与该设备关联的工作线程退出
-	m_csThis.unlock();
+	if (m_bWorkingThreadRunning)
+	{
+		m_signalWorkThreadExit.wait();
+	}
 }
 
 bool ioDev::toJson(json& conf, string opt)
@@ -187,7 +190,10 @@ bool ioDev::toJson(json& conf, string opt)
 	conf["manageStatus"] = m_mngStatus;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;
+	conf["enableAcq"] = bEnableAcq;
 
+	if (m_strTagBind != "")
+		conf["tagBind"] = m_strTagBind;
 
 	json children = json::array();
 	for (auto& i : m_vecChild)
@@ -225,6 +231,45 @@ bool ioDev::loadConf(json& conf)
 	{
 		m_fAcqInterval = conf["acqInterval"].get<float>();
 	}
+
+	if (conf["enableAcq"] != nullptr)
+	{
+		bEnableAcq = conf["enableAcq"].get<bool>();
+	}
+
+	if (conf["tagBind"] != nullptr)
+	{
+		if (conf["tagBind"].is_array())
+		{
+			json tagNodes = conf["tagBind"];
+			string tag;
+			for (int i = 0; i < tagNodes.size(); i++)
+			{
+				tag += tagNodes[i];
+				if (i < tagNodes.size() - 1)
+					tag += ".";
+			}
+			m_strTagBind = tag;
+		}
+		else
+		{
+			m_strTagBind = conf["tagBind"];
+		}
+
+		m_strTagBind = str::trimPrefix(m_strTagBind, prj.m_strName + ".");
+		MO* pmo = prj.GetMOByTag(m_strTagBind);
+		if (pmo)
+		{
+			if (pmo->m_moType == MO_TYPE::mp)
+			{
+				MP* pmp = (MP*)pmo;
+				pmp->m_ioType = m_ioType;
+				pmp->m_ioTypeLabel = m_ioTypeLabel;
+			}
+			pmo->m_strIoAddrBind = getIOAddrStr();
+		}
+	}
+
 
 	if (conf["children"] != nullptr)
 	{
@@ -366,8 +411,8 @@ string ioDev::getDevAddrStr()
 			devAddr = m_jDevAddr["ip"].get<string>();
 			if (m_jDevAddr["port"] != nullptr)
 			{
-				int iPort = m_jDevAddr["port"].get<int>();
-				devAddr += ":" + str::fromInt(iPort);
+				int remotePort = m_jDevAddr["port"].get<int>();
+				devAddr += ":" + str::fromInt(remotePort);
 			}
 		}
 	}
@@ -522,7 +567,7 @@ ioChannel* ioDev::getChan(string addr)
 			string bindTag = i.second;
 			str::replace(bindTag, "*", wildCardVal);
 			str::replace(bindTag, "/", ".");
-			p->m_strLinkMPTag = bindTag;
+			p->m_strTagBind = bindTag;
 			m_mapDataChannel[addr] = p;
 			return p;
 		}
@@ -534,7 +579,7 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 {
 	for (auto it : m_mapDataChannel)
 	{
-		if(it.second->m_strLinkMPTag == strMPTag) return it.second;
+		if(it.second->m_strTagBind == strMPTag) return it.second;
 	}
 	return NULL;
 }
@@ -648,7 +693,7 @@ ioChannel* ioDev::getChanByTag(string tag)
 		if (child->m_level == "channel")
 		{
 			ioChannel* pC = (ioChannel*)child;
-			string strMP = pC->m_strLinkMPTag;
+			string strMP = pC->m_strTagBind;
 			str::trimPrefix(strMP, prj.m_strName + ".");
 			if (strMP == tag)
 			{

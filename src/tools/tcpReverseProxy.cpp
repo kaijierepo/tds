@@ -26,7 +26,7 @@ void tcpReverseProxy::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		//创建real端session
-		LOG("S" + str::fromInt( ((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->strIP + " connected");
+		LOG("S" + str::fromInt( ((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->remoteIP + " connected");
 		shared_ptr<tcpClt> p(new tcpClt());
 		if (p->connect(this, realHost))
 		{
@@ -43,7 +43,7 @@ void tcpReverseProxy::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	else
 	{
 		//断开real端session
-		LOG("S" + str::fromInt(((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->strIP + " disconnected");
+		LOG("S" + str::fromInt(((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->remoteIP + " disconnected");
 		if (pCltInfo->bridgeSock)
 		{
 			closesocket(pCltInfo->bridgeSock);

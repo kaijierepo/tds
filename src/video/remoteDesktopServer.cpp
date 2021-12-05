@@ -253,7 +253,7 @@ int remoteDesktopServer::encodeThread()
 
 		if(rds.m_tdsSession->bInitSegSended == false)
 		{
-			string szLog = str::format("[debug][rds]stream initial start,send initial segment,session %s:%d\n",rds.m_tdsSession->pTcpSession->strIP,rds.m_tdsSession->pTcpSession->iPort);
+			string szLog = str::format("[debug][rds]stream initial start,send initial segment,session %s:%d\n",rds.m_tdsSession->pTcpSession->remoteIP,rds.m_tdsSession->pTcpSession->remotePort);
 			LOG(szLog);
 			prepareOutFmtCtx();
 			prepareOutCodecCtx();

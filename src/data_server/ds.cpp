@@ -213,8 +213,8 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		p->bConnected = true;
 		p->pTcpSession = pTcpSession;
 		p->sock = pTcpSession->sock;
-		p->port = pTcpSession->iPort;
-		p->ip = pTcpSession->strIP;
+		p->port = pTcpSession->remotePort;
+		p->ip = pTcpSession->remoteIP;
 
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
 		if (pIoDev)
@@ -623,18 +623,29 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(DWORD dwThreadId)
 }
 
 
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteAddr,int remotePort)
+shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteIP,int remotePort)
 {
 	lock_guard<mutex> g(m_mutexTdsSessionList);
 	for (int i = 0; i < m_vecTdsSession.size(); i++)
 	{
 		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if (p->pTcpSession->strIP == remoteAddr && p->pTcpSession->iPort == remotePort)
+		if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
 		{
 			return p;
 		}
 	}
 	return nullptr;
+}
+
+shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteAddr)
+{
+	int pos = remoteAddr.find(":");
+	if (pos < 0)
+		return nullptr;
+	string ip = remoteAddr.substr(0, pos);
+	string sPort = remoteAddr.substr(pos + 1, remoteAddr.length() - pos - 1);
+	int iPort = atoi(sPort.c_str());
+	return getTDSSession(ip, iPort);
 }
 
 
@@ -1173,7 +1184,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		getUrlParams(strData, mapParams);
 
 
-		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->strIP.c_str(),pALC->pTcpSession->iPort);
+		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->remoteIP.c_str(),pALC->pTcpSession->remotePort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
 		pALC->type = TDS_SESSION_TYPE::rpc;
@@ -1388,6 +1399,8 @@ void dataServer::onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESS
 		tdsSession->sendContent = "binary";
 		tdsSession->send(binResp, iBinRespLen);
 	}
+
+	//如果没有任何回复,可能是透传指令,不回复
 
 	if (binResp)
 		delete binResp;

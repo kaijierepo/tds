@@ -5,6 +5,10 @@
 #include "ioGW_localSerial.h"
 #include "ioDiscoverer.h"
 
+
+//并发问题
+//设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
+
 class ioServer : public ioDev
 {
 public:
@@ -13,6 +17,8 @@ public:
 
 	bool loadConf();
 	void saveConf();
+
+	ioDev* getIODev(string ioAddr) override;
 
 	void clear(); //清空所有ioDev对象及其相关的工作线程
 
@@ -29,6 +35,8 @@ public:
 	ioDev* onChildDevDiscovered(json childDevAddr, string type);
 
 	ioDiscoverer  ioDiscoverService;
+
+
 };
 
 extern ioServer ioSrv;

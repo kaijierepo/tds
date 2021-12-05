@@ -16,6 +16,16 @@ TDS_SESSION::~TDS_SESSION()
 {
 }
 
+string TDS_SESSION::getRemoteAddr()
+{
+    unique_lock<mutex> lock(m_mutexTcpLink);//Ê¹ÓÃtcplink
+    if (pTcpSession)
+    {
+       return pTcpSession->remoteIP + ":" + str::fromInt(pTcpSession->remotePort);
+    }
+    return "";
+}
+
 void TDS_SESSION::Init()
 {
     pTcpSessionClt = NULL;

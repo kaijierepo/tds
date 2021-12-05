@@ -19,8 +19,8 @@ ioChannel::~ioChannel()
 
 bool ioChannel::loadConf(json& conf)
 {
+	ioDev::loadConf(conf);
 	m_level = "channel";
-	m_jDevAddr = conf["addr"];
 	if (conf["addr"] != nullptr && conf["addr"].is_object())
 	{
 		if (conf["addr"]["regType"] != nullptr)
@@ -43,33 +43,6 @@ bool ioChannel::loadConf(json& conf)
 		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
 	if (conf["name"] != nullptr)
 		m_name = conf["name"];
-	if (conf["tagBind"] != nullptr)
-	{
-		if (conf["tagBind"].is_array())
-		{
-			json tagNodes = conf["tagBind"];
-			string tag;
-			for (int i = 0; i < tagNodes.size(); i++)
-			{
-				tag += tagNodes[i];
-				if (i < tagNodes.size() - 1)
-					tag += ".";
-			}
-			m_strLinkMPTag = tag;
-		}
-		else
-		{
-			m_strLinkMPTag = conf["tagBind"];
-		}
-
-		m_strLinkMPTag = str::trimPrefix(m_strLinkMPTag, prj.m_strName + ".");
-		MP* pmp = prj.GetMPByTag(m_strLinkMPTag);
-		if (pmp)
-		{
-			pmp->m_ioType = m_ioType;
-			pmp->m_ioTypeLabel = m_ioTypeLabel;
-		}
-	}
 	return true;
 }
 
@@ -79,7 +52,7 @@ bool ioChannel::toJson(json& conf, string opt)
 
 	conf["storageFmt"] = m_storageFmt;
 
-	conf["tagBind"] = m_strLinkMPTag;
+	conf["tagBind"] = m_strTagBind;
 	conf["ioType"] = m_ioType;
 	conf["ioTypeLabel"] = m_ioTypeLabel;
 	conf["valType"] = m_valType;
@@ -144,7 +117,7 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	m_curVal = jVal;
 
 	//更新绑定位号值
-	string tag = TAG::trimRoot(m_strLinkMPTag);
+	string tag = TAG::trimRoot(m_strTagBind);
 	MP* pMP = (MP*)prj.GetMOByTag(tag);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 	{
@@ -163,7 +136,7 @@ bool ioChannel::output(json jVal, json& jResp, bool sync)
 
 bool ioChannel::IsValid()
 {
-	MP* pMP = (MP*)prj.GetMOByTag(m_strLinkMPTag);
+	MP* pMP = (MP*)prj.GetMOByTag(m_strTagBind);
 	if (pMP && pMP->m_moType == MO_TYPE::mp)
 		return true;
 	else

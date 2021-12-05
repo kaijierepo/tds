@@ -10,7 +10,7 @@
 DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
 	ioGW_LocalSerial* pGW = (ioGW_LocalSerial*)lpParam;
-	pGW->m_csThis.lock();
+	pGW->m_bWorkingThreadRunning = true;
 	char buf[500] = {0};
 	while(pGW->m_hCom)
 	{
@@ -24,7 +24,8 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 			pGW->OnRecvData(buf,iLen);
 		}
 	};
-	pGW->m_csThis.unlock();
+	pGW->m_bWorkingThreadRunning = false;
+	pGW->m_signalWorkThreadExit.notify();
 	return 0;
 }
 
@@ -66,8 +67,7 @@ ioGW_LocalSerial::ioGW_LocalSerial(void)
 
 ioGW_LocalSerial::~ioGW_LocalSerial(void)
 {
-	m_csThis.lock();
-	m_csThis.unlock();
+	stop();
 }
 
 bool ioGW_LocalSerial::run()
@@ -84,7 +84,7 @@ bool ioGW_LocalSerial::run()
 
 void ioGW_LocalSerial::stop()
 {
-	m_bRunning = false;
+	ioDev::stop();
 	closeCom();
 }
 

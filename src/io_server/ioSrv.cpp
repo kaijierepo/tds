@@ -27,7 +27,7 @@ ioServer ioSrv;
 
 void IOThread()
 {
-	ioSrv.m_csThis.lock();
+	ioSrv.m_bWorkingThreadRunning = true;
 	while (1)
 	{
 		if (!ioSrv.m_bRunning)
@@ -35,13 +35,15 @@ void IOThread()
 		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChild[i];
-			pIoDev->DoCycleTask();
+			if(pIoDev->bEnableAcq)
+				pIoDev->DoCycleTask();
 			if (!ioSrv.m_bRunning)
 				break;
 		}
 		Sleep(5);
 	}
-	ioSrv.m_csThis.unlock();
+	ioSrv.m_bWorkingThreadRunning = false;
+	ioSrv.m_signalWorkThreadExit.notify();
 }
 ioServer::ioServer()
 {
@@ -92,6 +94,7 @@ ioDev* createIODev(string type)
 
 bool ioServer::loadConf()
 {
+	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
 	{
@@ -123,9 +126,15 @@ void ioServer::saveConf()
 {
 }
 
+ioDev* ioServer::getIODev(string ioAddr)
+{
+	std::shared_lock<shared_mutex> lock(m_csChildren); //读锁
+	return ioDev::getIODev(ioAddr);
+}
+
 void ioServer::clear()
 {
-	std::unique_lock<mutex> lock(m_csThis);
+	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
 		delete m_vecChild[i];
@@ -172,6 +181,7 @@ bool ioServer::run()
 {
 	if (loadConf())
 	{
+		std::shared_lock<shared_mutex> lock(m_csChildren);
 		for (auto i : m_vecChild)
 		{
 			i->run();
@@ -238,6 +248,7 @@ string ioServer::getTag(string strDataChannelID)
 
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
+	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
 	ioDev* p = createIODev(type);
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())

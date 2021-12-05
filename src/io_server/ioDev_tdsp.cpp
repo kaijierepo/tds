@@ -36,6 +36,28 @@ void ioDev_tdsp::stop()
 	}
 }
 
+bool ioDev_tdsp::asynHandleResp(json jResp)
+{
+	json rlt = jResp["result"];
+	string method = jResp["method"].get<string>();
+	if (rlt == nullptr)
+	{
+		LOG("TDSP设备,没有返回result字段");
+		return false;
+	}
+
+	if (method == "acq")
+	{
+		for (int i = 0; i < rlt.size(); i++)
+		{
+			json jDE = rlt[i];
+			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
+			if (pC)
+				pC->input(jDE["val"]);
+		}
+	}
+}
+
 bool ioDev_tdsp::onRecvPkt(json jResp)
 {
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
@@ -55,7 +77,7 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 			}
 			else
 			{
-				handleNotify(jResp);
+				asynHandleResp(jResp);
 			}
 		}
 	}
@@ -92,40 +114,26 @@ bool ioDev_tdsp::sendData(char* pData, int iLen)
 bool ioDev_tdsp::handleNotify(json& jNotify)
 {
 	string method = jNotify["method"].get<string>();
-	json rlt = jNotify["result"];
-	if (rlt == nullptr)
+	json jParams = jNotify["params"];
+	
+	if (method == "devRegister")
 	{
-		LOG("TDSP设备,没有返回result字段");
-		return false;
-	}
-
-	if (method == "getDevInfo")
-	{
-		if (rlt["softVer"] != nullptr)
+		json jInfo = jParams["info"];
+		if (jInfo["softVer"] != nullptr)
 		{
-			m_softVer = rlt["softVer"].get<string>();
+			m_softVer = jInfo["softVer"].get<string>();
 		}
-		else if (rlt["hardVer"] != nullptr)
+		else if (jInfo["hardVer"] != nullptr)
 		{
-			m_softVer = rlt["softVer"].get<string>();
+			m_softVer = jInfo["softVer"].get<string>();
 		}
-		else if (rlt["mfrDate"] != nullptr)
+		else if (jInfo["mfrDate"] != nullptr)
 		{
-			m_mfrDate = rlt["mfrDate"].get<string>();
+			m_mfrDate = jInfo["mfrDate"].get<string>();
 		}
-		else if (rlt["IMEI"] != nullptr)
+		else if (jInfo["IMEI"] != nullptr)
 		{
-			m_IMEI = rlt["IMEI"].get<string>();
-		}
-	}
-	else if (method == "acq")
-	{
-		for (int i = 0; i < rlt.size(); i++)
-		{
-			json jDE = rlt[i];
-			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
-			if (pC)
-				pC->input(jDE["val"]);
+			m_IMEI = jInfo["IMEI"].get<string>();
 		}
 	}
 

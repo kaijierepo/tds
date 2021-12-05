@@ -32,22 +32,22 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	{
 		if (pCltInfo->pTcpServer == &sLeft)
 		{
-			LOG("S" + str::fromInt(portLeft) + ": " + pCltInfo->strIP + " connected");
+			LOG("S" + str::fromInt(portLeft) + ": " + pCltInfo->remoteIP + " connected");
 		}
 		else if (pCltInfo->pTcpServer == &sRight)
 		{
-			LOG("S" + str::fromInt(portRight) + ": " + pCltInfo->strIP + " connected");
+			LOG("S" + str::fromInt(portRight) + ": " + pCltInfo->remoteIP + " connected");
 		}
 	}
 	else
 	{
 		if (pCltInfo->pTcpServer == &sLeft)
 		{
-			LOG("S" + str::fromInt(portLeft) + ": " + pCltInfo->strIP + " disconnected");
+			LOG("S" + str::fromInt(portLeft) + ": " + pCltInfo->remoteIP + " disconnected");
 		}
 		else if (pCltInfo->pTcpServer == &sRight)
 		{
-			LOG("S" + str::fromInt(portRight) + ": " + pCltInfo->strIP + " disconnected");
+			LOG("S" + str::fromInt(portRight) + ": " + pCltInfo->remoteIP + " disconnected");
 		}
 	}
 	

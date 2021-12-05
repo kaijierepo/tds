@@ -55,6 +55,9 @@ public:
 	string lastMethodCalled;
 	SYSTEMTIME lastRecvTime;
 	SYSTEMTIME lastSendTime;
+
+	string getRemoteAddr();
+
 	int port;
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有

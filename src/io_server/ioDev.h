@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "tdsSession.h"
 
+
 class MO;
 class MP;
 class ioAddrSession;
@@ -62,8 +63,8 @@ public:
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示不采样
 	//// iodev hierachy tree management
-	ioDev* getIODev(string ioAddr);
-	ioDev* getIODev(json& ioAddr);
+	virtual ioDev* getIODev(string ioAddr);
+	virtual ioDev* getIODev(json& ioAddr);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
 	bool addChild(ioDev* p);
@@ -98,10 +99,10 @@ public:
 	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback) { m_pCallbackUser = pUser; m_pRecvCallback = callback; }
 	fp_ioAddrRecvCallback m_pRecvCallback;
 	void* m_pCallbackUser;
-	//which monitor object this ioDevice is installed to 
-	string m_installedMoTag;
+	//对于通道tagBind表示数据连接的mp位号
+	//对于设备tagBind表示设备安装在某个对象上,该对象一般视作智能设备
+	string m_strTagBind;
 	MO* m_pMO;
-	bool bEnableAcq;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
 	//通信发送
@@ -132,6 +133,7 @@ public:
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
+	bool bEnableAcq;
 	bool m_bOnline;  //设备发现后，处于在线状态
 	bool m_bConnected; //连接后，处于通信状态，可能有io任务执行.串口打开后，处于connect状态。
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
@@ -150,7 +152,9 @@ public:
 	string m_mfrDate;
 	string m_IMEI; 
 
-	std::mutex m_csThis;
+	bool m_bWorkingThreadRunning;
+	semaphore m_signalWorkThreadExit; //工作线程退出信号
+	std::shared_mutex m_csChildren;  //内部结构修改互斥锁
 };
 
 ioDev* createIODev(json conf);

@@ -17,6 +17,7 @@
 #include "tdscore.h"
 #include "json.hpp"
 #include "tds.h"
+#include <shared_mutex>
 using json = nlohmann::json;
 using namespace std;
 

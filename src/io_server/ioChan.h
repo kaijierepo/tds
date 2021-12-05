@@ -29,6 +29,5 @@ public:
 	string m_valType;
 	string m_valTypeLabel;
 
-	string m_strLinkMPTag;
 	SYSTEMTIME m_stLastUpdateTime;
 };

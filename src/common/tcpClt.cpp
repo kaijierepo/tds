@@ -262,7 +262,7 @@ int tcpClt::SendData(char* pData, int iLen)
 
 string tcpClt::GetLocalIP()
 {
-	string strIP;
+	string remoteIP;
 	WSADATA wsaData;
 	char name[155];
 	char *ip;
@@ -274,12 +274,12 @@ string tcpClt::GetLocalIP()
 			if((hostinfo = gethostbyname(name)) != NULL)
 			{
 				ip = inet_ntoa (*(struct in_addr *)*hostinfo->h_addr_list); //得到地址字符串
-				strIP = ip;
+				remoteIP = ip;
 			}
 		}
 		WSACleanup( );
 	}
-	return strIP;
+	return remoteIP;
 };
 
 bool tcpClt::DisConnect()

@@ -128,6 +128,10 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
 
+	if (m_strIoAddrBind != "")
+		conf["ioAddrBind"] = m_strIoAddrBind;
+
+
 	if (serializeOption["type"] != nullptr)
 	{
 		string type = serializeOption["type"].get<string>();
@@ -141,6 +145,12 @@ bool MO::toJson(json& conf, json serializeOption)
 			if (m_moType == "mp")
 				return false;
 		}
+	}
+
+	//是否需要递归序列化子对象
+	if (serializeOption["recursive"] != nullptr && serializeOption["recursive"].get<bool>() == false)
+	{
+		return true;
 	}
 
 	if (m_moType != MO_TYPE::mp)
@@ -495,7 +505,7 @@ void MO::updateDataLink()
 	for (int i = 0; i < m_vecIODev.size(); i++)
 	{
 		ioDev* p = (ioDev*) m_vecIODev.at(i);
-		p->m_installedMoTag = getTag().c_str();
+		p->m_strTagBind = getTag().c_str();
 	}
 
 	for (int i = 0; i < m_childMO.size(); i++)

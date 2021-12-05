@@ -496,6 +496,29 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 				result = j.dump(4);
 			}
 		}
+		else if (method == "getMoConf")
+		{
+			if (params["tag"] == nullptr)
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "请求中缺少tag字段");
+				return true;
+			}
+				
+			string tag = params["tag"].get<string>();
+			MO* pmo = prj.GetMOByTag(tag);
+			if (pmo)
+			{
+				json j;
+				json jOpt;
+				jOpt["recursive"] = false;
+				pmo->toJson(j, jOpt);
+				rpcResp.result = j.dump(4);
+			}
+			else
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "没有找到位号");
+			}
+		}
 		else if (method == "getMoCustomType")
 		{
 			json jList = json::array();
@@ -723,6 +746,73 @@ bool rpcHandler::needLog(string method)
 }
 
 
+bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string method = jReq["method"].get<string>();
+	if (method == "devRegister")
+	{
+		string strIoAddr = jReq["ioAddr"].get<string>();
+		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+		if (!pIoDev)
+		{
+			json jAddr;
+			jAddr["id"] = strIoAddr;
+			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+		}
+		pSession->type = "ioDev.tdsp";
+		pIoDev->setIOSession(pSession);
+		pIoDev->onRecvPkt(jReq);
+		return true;
+	}
+	if (jReq.contains("ioAddr"))
+	{
+		// tds客户端 -> ioDev   
+		if (!jReq.contains("result") && !jReq.contains("error"))
+		{
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			if (!pIoDev || pIoDev->pIOSession == nullptr)
+			{
+				return true;
+			}
+			jReq["clientId"] = pSession->getRemoteAddr();
+			string s = jReq.dump(2) + "\n\n";
+			pIoDev->pIOSession->send((char*)s.c_str(), s.length());
+			LOG("RPC转发 客户端->设备:\r\n" + s + "\r\n");
+			return true;
+		}
+		//ioDev -> tdsClient
+		else if (jReq.contains("clientId"))
+		{
+			string addr = jReq["clientId"].get<string>();
+			shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
+			string s = jReq.dump(2) + "\n\n";
+			p->send((char*)s.c_str(), s.length());
+			LOG("RPC转发 设备->客户端:\r\n" + s + "\r\n");
+			return true;
+		}
+		//ioDev -> tds
+		else
+		{
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			if (!pIoDev)
+			{
+				json jAddr;
+				jAddr["id"] = strIoAddr;
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+			}
+			pIoDev->setIOSession(pSession);
+			pIoDev->onRecvPkt(jReq);
+			LOG("TDSP响应:\r\n" + strReq + "\r\n");
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
 
 void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession)
 {
@@ -762,29 +852,50 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	{
 		//解析请求基本信息
 		json jReq = json::parse(strReq);
+		//包有效性检测
+		if (!jReq.contains("result")&& !jReq.contains("error") && !jReq.contains("params"))
+		{
+			LOG("无效的rpc数据包,result,error,params中必须指定1个字段");
+			return;
+		}
 		method = jReq["method"].get<string>();
-		pSession->lastMethodCalled = method;
-		json params = jReq["params"];
+		json params;
+		if (jReq.contains("params"))
+			params = jReq["params"];
 		id = jReq["id"];
+		pSession->lastMethodCalled = method;
+			
+
+		//心跳最先处理
+		if (method == "heartbeat")
+		{
+			if (params.is_object())
+			{
+				if (params["clientName"] != nullptr)
+					pSession->name = params["clientName"];
+				else if (params["name"] != nullptr)
+					pSession->name = params["name"];
+
+				if (params["echo"] != nullptr)
+				{
+					if (params["echo"].get<bool>() == false)
+					{
+						return;
+					}
+				}
+			}
+			rpcResp.result = "\"pong\"";
+			goto HANDLE_END;
+		}
+
+		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
+		if (handleDevRpcDispatch(strReq,jReq, pSession))
+			return;
+
+
 		//对部分命令日志记录
 		if (needLog(method))
 			LOG("RPC请求:\r\n" + strReq + "\r\n");
-
-		//来自于io设备的响应消息，转发给io设备.放在用户认证前面处理
-		if (jReq["ioAddr"] != nullptr)
-		{
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-			if (!pIoDev)
-			{
-				json jAddr;
-				jAddr["id"] = strIoAddr;
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-			}
-			pIoDev->setIOSession(pSession);
-			pIoDev->onRecvPkt(jReq);
-			return;
-		}
 
 		//访问控制
 		if (method == "login")
@@ -838,29 +949,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 			return;
 		}
 
-		//心跳最先处理
-		if (method == "heartbeat")
-		{
-			if (params.is_object())
-			{
-				if (params["clientName"] != nullptr)
-					pSession->name = params["clientName"];
-				else if(params["name"] != nullptr)
-					pSession->name = params["name"];
-
-				if (params["echo"] != nullptr)
-				{
-					if (params["echo"].get<bool>() == false)
-					{
-						return;
-					}
-				}
-			}
-			rpcResp.result= "\"pong\"";
-			goto HANDLE_END;
-		}
 		
-
 		//先使用外部注册的handler受理请求
 		if (m_pluginHandler)
 		{

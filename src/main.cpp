@@ -51,6 +51,13 @@ design problem:
 
 */
 
+/*
+TDS是一个数据服务
+数据由数据的生产者ioDev(IO设备)提供给TDS,tdsClt(tds客户端)作为数据的使用者
+ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备被看作是服务端
+
+*/
+
 
 
 #include "ioDev_mqttBroker.h"

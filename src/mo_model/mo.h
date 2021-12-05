@@ -99,7 +99,7 @@ public:
 	//topo management
 	vector<void*> m_vecIODev;//挂接的采集设备.此处暂时用void，防止依赖ioDev.h文件，导致不容易多工程复用。需再考虑更好的办法
 	void updateDataLink();
-
+	string m_strIoAddrBind;
 	database* GetDB();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);

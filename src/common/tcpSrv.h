@@ -11,8 +11,8 @@ struct tcpSession
 {
 	SOCKET sock;
 	SOCKADDR_IN clientAddr;
-	string strIP;
-	int iPort;
+	string remoteIP;
+	int remotePort;
 	bool bIsTransmit;
 	int iSendSucCount;
 	int iSendFailCount;
@@ -309,11 +309,11 @@ typedef struct connHistoryInfo {
 
 class tcpSrv  {
 public:
-	bool run(ITcpServerCallBack* pUser, int iPort, string strLocalIP = "");
+	bool run(ITcpServerCallBack* pUser, int remotePort, string strLocalIP = "");
 	void stop();
 
 	bool SendData(char* pData, int iLen, tcpSession* pCltInfo);
-	bool SendData(char* pData, int iLen, string strIP);
+	bool SendData(char* pData, int iLen, string remoteIP);
 	bool SendData(char* pData, int iLen);
 	ITcpServerCallBack* m_pCallBackUser;
 
@@ -345,7 +345,7 @@ public:
 	bool DoRecv(COverlappedIOInfo* info);
 	bool DeleteLink(SOCKET s);
 
-	bool IsIPOnline(string strIP);
+	bool IsIPOnline(string remoteIP);
 	int StaticConnData(string strIp, char* data, int iLen, ConnDataWay way);
 	inline string GetIOCPName() {
 		return m_strName;

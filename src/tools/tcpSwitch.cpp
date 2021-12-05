@@ -47,11 +47,11 @@ void tcpSwitch::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 		{
 			sessionLeft.push_back(pCltInfo);
 		}
-		LOG("S" + str::fromInt( ((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->strIP + " connected");
+		LOG("S" + str::fromInt( ((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->remoteIP + " connected");
 	}
 	else
 	{
-		LOG("S" + str::fromInt(((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->strIP + " disconnected");
+		LOG("S" + str::fromInt(((tcpSrv*)pCltInfo->pTcpServer)->m_iServerPort) + ": " + pCltInfo->remoteIP + " disconnected");
 	}
 	
 }

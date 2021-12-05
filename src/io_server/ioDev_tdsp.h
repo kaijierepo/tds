@@ -19,6 +19,7 @@ public:
 	~ioDev_tdsp();
 
 	void stop();
+	bool asynHandleResp(json jResp);
 	bool onRecvPkt(json jPkt);
 	bool getCurrentVal();
 	bool sendData(char* pData, int iLen);

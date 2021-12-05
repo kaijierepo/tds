@@ -7,7 +7,7 @@
 
 void ioGW_rs485_acqThread(ioGW_rs485* gw)
 {
-	std::unique_lock<mutex> lock(gw->m_csThis);
+	gw->m_bWorkingThreadRunning = true;
 	while (1)
 	{
 		if (!gw->m_bRunning)
@@ -15,6 +15,8 @@ void ioGW_rs485_acqThread(ioGW_rs485* gw)
 		gw->DoCycleTask();
 		Sleep(100);
 	}
+	gw->m_bWorkingThreadRunning = false;
+	gw->m_signalWorkThreadExit.notify();
 }
 
 
@@ -31,9 +33,7 @@ ioGW_rs485::ioGW_rs485(void)
 
 ioGW_rs485::~ioGW_rs485(void)
 {	
-	m_bRunning = false;
-	m_csThis.lock();
-	m_csThis.unlock();
+	stop();
 }
 
 bool ioGW_rs485::run()
