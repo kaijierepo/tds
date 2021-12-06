@@ -66,6 +66,8 @@ LRESULT CALLBACK WindowProc_hwDetect(
             //插入拔出返回两次事件，一次name为  COM1 一次是 NULL_COM1 ，
             //有人虚拟串口打开一段时间后，删除时只会返回 NULL_COM一次，刚打开则是2次，原理不太清楚。
             //绿联rs485转usb线测试 都返回COM1不会返回NULL_COM,
+
+            //如果要避免有人虚拟串口的两次消息,需如下处理.但会不兼容真实硬件,摒弃该处理.未来需进一步确定是否是有人虚拟串口软件的bug
             /*  if ( (name.find("COM") == 0 && devEventType == "online") ||
                 (name.find("NULL_COM") == 0 && devEventType == "offline"))*/
 
