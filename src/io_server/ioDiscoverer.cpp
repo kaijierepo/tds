@@ -64,11 +64,12 @@ LRESULT CALLBACK WindowProc_hwDetect(
             PDEV_BROADCAST_PORT pDevPort = (PDEV_BROADCAST_PORT)pHdr;
             string name = pDevPort->dbcp_name;
             //插入拔出返回两次事件，一次name为  COM1 一次是 NULL_COM1 ，
-            //上线只使用COM1 这一次
-            //下线只使用NULL_COM1 这一次
-            //串口打开一段时间后，删除时只会返回 NULL_COM一次，刚打开则是2次，原理不太清楚。
-            if ( (name.find("COM") == 0 && devEventType == "online") ||
-                (name.find("NULL_COM") == 0 && devEventType == "offline"))
+            //有人虚拟串口打开一段时间后，删除时只会返回 NULL_COM一次，刚打开则是2次，原理不太清楚。
+            //绿联rs485转usb线测试 都返回COM1不会返回NULL_COM,
+            /*  if ( (name.find("COM") == 0 && devEventType == "online") ||
+                (name.find("NULL_COM") == 0 && devEventType == "offline"))*/
+
+            if (name.find("COM") == 0 ||name.find("NULL_COM") == 0)
             {
                 if (name.find("NULL_COM") == 0)
                 {
