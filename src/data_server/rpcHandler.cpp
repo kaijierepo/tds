@@ -766,6 +766,13 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 	}
 	if (jReq.contains("ioAddr"))
 	{
+		//包有效性检测
+		if (!jReq.contains("result") && !jReq.contains("error") && !jReq.contains("params"))
+		{
+			LOG("无效的设备通信rpc数据包,result,error,params中必须指定1个字段");
+			return true;
+		}
+
 		// tds客户端 -> ioDev   
 		if (!jReq.contains("result") && !jReq.contains("error"))
 		{
@@ -852,12 +859,6 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	{
 		//解析请求基本信息
 		json jReq = json::parse(strReq);
-		//包有效性检测
-		if (!jReq.contains("result")&& !jReq.contains("error") && !jReq.contains("params"))
-		{
-			LOG("无效的rpc数据包,result,error,params中必须指定1个字段");
-			return;
-		}
 		method = jReq["method"].get<string>();
 		json params;
 		if (jReq.contains("params"))

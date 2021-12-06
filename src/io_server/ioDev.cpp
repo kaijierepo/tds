@@ -260,11 +260,12 @@ bool ioDev::loadConf(json& conf)
 		MO* pmo = prj.GetMOByTag(m_strTagBind);
 		if (pmo)
 		{
-			if (pmo->m_moType == MO_TYPE::mp)
+			if (pmo->m_moType == MO_TYPE::mp && this->m_level == IO_DEV_LEVEL::channel)
 			{
 				MP* pmp = (MP*)pmo;
-				pmp->m_ioType = m_ioType;
-				pmp->m_ioTypeLabel = m_ioTypeLabel;
+				ioChannel* pChan = (ioChannel*)this;
+				pmp->m_ioType = pChan->m_ioType;
+				pmp->m_ioTypeLabel = pChan->m_ioTypeLabel;
 			}
 			pmo->m_strIoAddrBind = getIOAddrStr();
 		}

@@ -19,8 +19,24 @@ ioChannel::~ioChannel()
 
 bool ioChannel::loadConf(json& conf)
 {
-	ioDev::loadConf(conf);
 	m_level = "channel";
+	if (conf["storageFmt"] != nullptr)
+	{
+		m_storageFmt = conf["storageFmt"].get<string>();
+	}
+	if (conf["ioType"] != nullptr)
+		m_ioType = conf["ioType"];
+
+	m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
+	if (conf["valType"] != nullptr)
+		m_valType = conf["valType"];
+	if (conf["valTypeLabel"] != nullptr)
+		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+	if (conf["name"] != nullptr)
+		m_name = conf["name"];
+
+	//先加载ioType. 在ioDev::loadConf中需要赋值给绑定的位号
+	ioDev::loadConf(conf);
 	if (conf["addr"] != nullptr && conf["addr"].is_object())
 	{
 		if (conf["addr"]["regType"] != nullptr)
@@ -28,21 +44,6 @@ bool ioChannel::loadConf(json& conf)
 		if (conf["addr"]["regAddr"] != nullptr)
 			m_devAddr = str::fromInt(conf["addr"]["regAddr"].get<int>());
 	}
-	
-	if (conf["storageFmt"] != nullptr)
-	{
-		m_storageFmt = conf["storageFmt"].get<string>();
-	}
-	if (conf["ioType"] != nullptr)
-		m_ioType = conf["ioType"];
-	
-		m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
-	if (conf["valType"] != nullptr)
-		m_valType = conf["valType"];
-	if (conf["valTypeLabel"] != nullptr)
-		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
-	if (conf["name"] != nullptr)
-		m_name = conf["name"];
 	return true;
 }
 
