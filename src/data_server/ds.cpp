@@ -456,7 +456,9 @@ bool dataServer::run()
 
 void dataServer::stop()
 {
+	LOG("stoping dataServer...");
 	m_tcpSrv->stop();
+	LOG("dataServer stopped");
 }
 
 bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)

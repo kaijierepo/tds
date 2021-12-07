@@ -199,7 +199,9 @@ bool ioServer::run()
 
 void ioServer::stop()
 {
+	LOG("stoping ioServer...");
 	ioDev::stop();
+	LOG("ioServer stopped");
 }
 
 bool ioServer::toJson(json& conf, string opt)
