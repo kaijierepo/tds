@@ -97,6 +97,13 @@ void tdsConfig::loadConf()
 			else if (tci.val == "false" || tci.val == "0")
 				enableAccessCtrl = false;
 		}
+		else if (tci.key == "enablescript")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableScript = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableScript = false;
+		}
 		else if (tci.key == "uiTitle")
 		{
 			uiTitle = tci.val;

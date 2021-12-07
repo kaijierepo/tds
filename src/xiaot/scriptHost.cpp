@@ -162,6 +162,9 @@ void scriptThread1(scriptHost* p)
 
 bool scriptHost::run()
 {
+	if (!tds->conf->enableScript)
+		return false;
+
 	init();
 	thread t(scriptThread, this);
 	t.detach();

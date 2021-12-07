@@ -280,7 +280,14 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		m_orgVal = dbVal;
 		//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
 		double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
-		string sVal = str::format("%.10f", dbCurVal);
+		string sVal;
+		if (m_decimalDigits > 0)
+		{
+			string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
+			sVal = str::format(formatter.c_str(), dbCurVal);
+		}
+		else
+			sVal = str::format("%.10f", dbCurVal);
 		dbCurVal = atof(sVal.c_str());
 		m_curVal = dbCurVal;
 
@@ -337,6 +344,16 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	else if(m_saveMode == "always")
 	{
 		bNeedSave = true;
+	}
+	else if (m_saveMode == "cyclic|onchange")
+	{
+		if (m_lastVal != m_curVal)
+			bNeedSave = true;
+		int timespan = getSaveInterval();
+		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
+		{
+			bNeedSave = true;
+		}
 	}
 
 

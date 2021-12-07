@@ -211,6 +211,7 @@ struct iTDSConf {
 	bool enableLog;
 	bool enableDB;
 	bool enableAccessCtrl;
+	bool enableScript;
 };
 
 

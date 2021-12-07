@@ -1008,6 +1008,10 @@ HANDLE_END:
 		{
 			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
+		else if (method == "db.select")
+		{
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$dataSetLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
+		}
 	}
 
 	if (rpcResp.result != "")
