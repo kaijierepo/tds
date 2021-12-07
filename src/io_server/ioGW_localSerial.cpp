@@ -84,7 +84,7 @@ bool ioGW_LocalSerial::run()
 
 void ioGW_LocalSerial::stop()
 {
-	closeCom();
+	closeCom();//此处必须先closeCom让工作线程从阻塞等待中退出，工作线程才能检测到退出标记位
 	ioDev::stop();
 }
 
