@@ -84,8 +84,8 @@ bool ioGW_LocalSerial::run()
 
 void ioGW_LocalSerial::stop()
 {
-	ioDev::stop();
 	closeCom();
+	ioDev::stop();
 }
 
 
