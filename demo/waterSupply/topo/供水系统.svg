@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   width="1080"
-   height="720"
-   viewbox="0,0,1080,720"
+   width="1920"
+   height="1080"
+   viewbox="0,0,1920,1080"
    version="1.1"
    id="svg1605"
    sodipodi:docname="供水系统.svg"
@@ -21,9 +21,9 @@
      inkscape:pageopacity="0"
      inkscape:pagecheckerboard="false"
      showgrid="false"
-     inkscape:zoom="0.79745935"
-     inkscape:cx="561.78412"
-     inkscape:cy="403.78234"
+     inkscape:zoom="0.56388892"
+     inkscape:cx="877.83246"
+     inkscape:cy="519.60588"
      inkscape:window-width="1920"
      inkscape:window-height="986"
      inkscape:window-x="-11"
@@ -33,7 +33,8 @@
      fit-margin-top="0"
      fit-margin-left="0"
      fit-margin-right="0"
-     fit-margin-bottom="0" />
+     fit-margin-bottom="0"
+     width="1920px" />
   <metadata
      id="metadata8">image/svg+xmlimage/svg+xml</metadata>
   <defs
@@ -51,82 +52,82 @@
          id="stop4837" />
     </linearGradient>
     <rect
-       x="131.23153"
+       x="131.23154"
        y="556.84729"
-       width="76.256158"
-       height="47.881773"
+       width="76.256157"
+       height="47.881775"
        id="rect4171" />
     <rect
-       x="716.29135"
-       y="597.61586"
-       width="89.00662"
+       x="716.29132"
+       y="597.61584"
+       width="89.006622"
        height="48.03532"
        id="rect12513" />
     <rect
        x="688.03528"
-       y="628.69753"
-       width="59.33774"
-       height="42.3841"
+       y="628.69751"
+       width="59.337742"
+       height="42.384102"
        id="rect12507" />
     <clipPath
        id="clipPath1418"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1416"
-         d="m5267.21,3668.73l-69.57,-40.52l-65.37,37.79l70.43,39.9l64.51,-37.17z" />
+         d="m 5267.21,3668.73 -69.57,-40.52 -65.37,37.79 70.43,39.9 z" />
     </clipPath>
     <clipPath
        id="clipPath1660"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1658"
-         d="m6184.26,3810.42l-83.51,-48.64l-78.47,45.36l84.54,47.9l77.44,-44.62z" />
+         d="m 6184.26,3810.42 -83.51,-48.64 -78.47,45.36 84.54,47.9 z" />
     </clipPath>
     <clipPath
        id="clipPath1692"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1690"
-         d="m6532.95,3606.9l-83.52,-48.64l-78.46,45.36l84.54,47.9l77.44,-44.62z" />
+         d="m 6532.95,3606.9 -83.52,-48.64 -78.46,45.36 84.54,47.9 z" />
     </clipPath>
     <clipPath
        id="clipPath1724"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1722"
-         d="m6881.64,3403.4l-83.51,-48.65l-78.48,45.37l84.55,47.9l77.44,-44.62z" />
+         d="m 6881.64,3403.4 -83.51,-48.65 -78.48,45.37 84.55,47.9 z" />
     </clipPath>
     <clipPath
        id="clipPath1762"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1760"
-         d="m2709.79,3680.86l-85.79,-49.97l-80.6,46.59l86.83,49.2l79.56,-45.82z" />
+         d="m 2709.79,3680.86 -85.79,-49.97 -80.6,46.59 86.83,49.2 z" />
     </clipPath>
     <clipPath
        id="clipPath1784"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1782"
-         d="m5185.14,3298.14l-85.78,-49.96l-80.6,46.6l86.83,49.2l79.55,-45.84z" />
+         d="m 5185.14,3298.14 -85.78,-49.96 -80.6,46.6 86.83,49.2 z" />
     </clipPath>
     <clipPath
        id="clipPath1806"
        clipPathUnits="userSpaceOnUse">
       <path
          id="path1804"
-         d="m4308.13,2957.47l-73.63,-42.89l-69.18,40l74.53,42.23l68.28,-39.34z" />
+         d="m 4308.13,2957.47 -73.63,-42.89 -69.18,40 74.53,42.23 z" />
     </clipPath>
     <rect
        x="716.29132"
        y="597.61584"
-       width="89.00661"
+       width="89.006607"
        height="48.03532"
        id="rect12513-1" />
     <rect
        x="716.29132"
        y="597.61584"
-       width="89.00661"
+       width="89.006607"
        height="48.03532"
        id="rect12534" />
     <linearGradient
@@ -134,9 +135,9 @@
        xlink:href="#linearGradient4839"
        id="linearGradient4841"
        x1="131.24023"
-       y1="578.79985"
+       y1="578.79987"
        x2="158.56836"
-       y2="578.79985"
+       y2="578.79987"
        gradientUnits="userSpaceOnUse" />
     <rect
        x="131.23154"
@@ -153,8 +154,8 @@
     <rect
        x="131.23154"
        y="556.84729"
-       width="317.02079"
-       height="47.881775"
+       width="748.64882"
+       height="156.09668"
        id="rect4171-5" />
     <linearGradient
        id="SVGID_1_"
@@ -657,7 +658,7 @@
     <rect
        x="131.23154"
        y="556.84729"
-       width="173.7931"
+       width="173.79311"
        height="47.881775"
        id="rect4171-6" />
     <rect
@@ -1214,48 +1215,48 @@
        id="rect4171-6-4-6-16-02-1-55" />
   </defs>
   <path
-     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="M 88.669954,327.67488 V 570.63055 H 278.42365 V 322.35469"
+     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8.09773;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="M 246.56195,422.89205 V 649.17889 H 455.3028 V 417.93687"
      id="path2603" />
   <path
-     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="m 441.14286,228.51526 v 242.95567 h 189.7537 V 223.19507"
+     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8.09773;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="M 860.79596,330.83944 V 557.12627 H 1069.5368 V 325.88426"
      id="path2603-9" />
   <path
-     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="M 821.97044,141.20492 V 384.16059 H 1011.7242 V 135.88473"
+     style="fill:none;fill-opacity:1;stroke:#cbc5c1;stroke-width:8.09773;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="m 1545.34,252.42113 v 226.28684 h 208.7409 V 247.46595"
      id="path2603-94" />
   <text
      xml:space="preserve"
      id="text4169"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="translate(32.807882,-494.29556)"><tspan
+     transform="matrix(1.1000619,0,0,0.93139148,182.60225,-391.58951)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21841">A</tspan></text>
+       id="tspan9668">A</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-7"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-1);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="translate(385.342,-492.31709)"><tspan
+     transform="matrix(1.1000619,0,0,0.93139148,836.25601,-402.28661)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21843">B</tspan></text>
+       id="tspan9670">B</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-7-5"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-1-2);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="translate(753.00783,-499.41069)"><tspan
+     transform="matrix(1.1000619,0,0,0.93139148,1484.6967,-407.12013)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21845">C</tspan></text>
+       id="tspan9672">C</tspan></text>
   <rect
-     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.53638;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977"
-     width="181.04926"
-     height="193.95474"
-     x="92.985466"
-     y="372.28687">
+     width="199.16539"
+     height="180.6478"
+     x="251.30919"
+     y="464.44321">
     <desc
        id="desc1346">位号=A.水位
 动画={
@@ -1263,12 +1264,12 @@
 }</desc>
   </rect>
   <rect
-     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.53638;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977-2"
-     width="181.04926"
-     height="193.95474"
-     x="445.14285"
-     y="273.51624">
+     width="199.16539"
+     height="180.6478"
+     x="865.19629"
+     y="372.75293">
     <desc
        id="desc1347">位号=B.水位
 动画={
@@ -1276,12 +1277,12 @@
 }</desc>
   </rect>
   <rect
-     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.42122;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#4285ff;fill-opacity:1;stroke:none;stroke-width:9.53638;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect8977-2-0"
-     width="181.04926"
-     height="193.95474"
-     x="826.66986"
-     y="186.48627">
+     width="199.16539"
+     height="180.6478"
+     x="1550.5096"
+     y="294.59576">
     <desc
        id="desc3174">位号=C.水位
 动画={
@@ -1292,13 +1293,13 @@
      xml:space="preserve"
      id="text4169-8"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-5);fill:#ebebea;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="translate(283.13402,-541.7685)"><tspan
+     transform="matrix(1.2724945,0,0,1.3210195,372.72957,-698.86774)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21847">供水监控系统</tspan></text>
+       id="tspan9674">三阳镇农饮信息化 - 供水监控系统</tspan></text>
   <g
      id="Group_OutletPort"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <linearGradient
        id="linearGradient2331"
        gradientUnits="userSpaceOnUse"
@@ -1375,7 +1376,7 @@
   </g>
   <g
      id="Group_OutletPort-9"
-     transform="matrix(-0.50825518,0,0,-0.50825518,268.5285,256.39845)">
+     transform="matrix(-0.55911214,0,0,-0.47338454,475.18955,338.96191)">
     <linearGradient
        id="linearGradient973"
        gradientUnits="userSpaceOnUse"
@@ -1452,7 +1453,7 @@
   </g>
   <g
      id="Group_Legs"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <linearGradient
        id="linearGradient2363"
        gradientUnits="userSpaceOnUse"
@@ -1480,7 +1481,7 @@
   </g>
   <g
      id="Group_LegBase"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <path
        fill="#999999"
        stroke="#b3b3b3"
@@ -1496,7 +1497,7 @@
   </g>
   <g
      id="Group_PumpBody"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <radialGradient
        id="radialGradient2390"
        cx="126.48"
@@ -1553,7 +1554,7 @@
   </g>
   <g
      id="Group_CenterShade"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <radialGradient
        id="radialGradient2398"
        cx="52.4468"
@@ -1578,7 +1579,7 @@
   </g>
   <g
      id="Group_Impeller"
-     transform="matrix(0.50825518,0,0,0.50825518,215.685,203.30397)">
+     transform="matrix(0.55911214,0,0,0.47338454,417.0584,289.51016)">
     <desc
        id="desc6113">位号=A.开关
 动画={
@@ -1707,7 +1708,7 @@
   </g>
   <g
      id="Group_OutletPort-0"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <linearGradient
        id="linearGradient13475"
        gradientUnits="userSpaceOnUse"
@@ -1784,7 +1785,7 @@
   </g>
   <g
      id="Group_OutletPort-9-4"
-     transform="matrix(-0.50825518,0,0,-0.50825518,643.81142,163.76304)">
+     transform="matrix(-0.55911214,0,0,-0.47338454,1083.744,270.52977)">
     <linearGradient
        id="linearGradient13492"
        gradientUnits="userSpaceOnUse"
@@ -1861,7 +1862,7 @@
   </g>
   <g
      id="Group_Legs-1"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <linearGradient
        id="linearGradient13504"
        gradientUnits="userSpaceOnUse"
@@ -1889,7 +1890,7 @@
   </g>
   <g
      id="Group_LegBase-8"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <path
        fill="#999999"
        stroke="#b3b3b3"
@@ -1905,7 +1906,7 @@
   </g>
   <g
      id="Group_PumpBody-1"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <radialGradient
        id="radialGradient2390-6"
        cx="126.48"
@@ -1962,7 +1963,7 @@
   </g>
   <g
      id="Group_CenterShade-4"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <radialGradient
        id="radialGradient2398-0"
        cx="52.4468"
@@ -1987,7 +1988,7 @@
   </g>
   <g
      id="Group_Impeller-7"
-     transform="matrix(0.50825518,0,0,0.50825518,590.96792,110.66856)">
+     transform="matrix(0.55911214,0,0,0.47338454,1025.6129,221.07803)">
     <desc
        id="desc6196">位号=B.开关
 动画={
@@ -2115,13 +2116,15 @@
        style="fill:url(#SVGID_9_-8)" />
   </g>
   <path
-     style="fill:none;stroke:#c3c3c4;stroke-width:9;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="M 205.14293,243.2554 H 160.31306 V 557.6915"
-     id="path13698" />
+     style="fill:none;stroke:#c3c3c4;stroke-width:9.11;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="m 404.78503,326.70872 -86.38094,0.15213 0.0566,4.12373 3.70535,269.92964"
+     id="path13698"
+     sodipodi:nodetypes="cccc" />
   <path
-     style="fill:none;stroke:#367bc4;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10, 10;stroke-dashoffset:0;stroke-opacity:1"
-     d="M 205.14293,243.2554 H 160.31306 V 557.6915"
-     id="path13698-4">
+     style="fill:none;stroke:#367bc4;stroke-width:5.06109;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.1222, 10.1222;stroke-dashoffset:0;stroke-opacity:1"
+     d="m 404.78503,326.70872 -86.38094,0.15213 3.20776,271.39327"
+     id="path13698-4"
+     sodipodi:nodetypes="ccc">
     <desc
        id="desc2159">位号=A.开关
 动画={
@@ -2132,12 +2135,12 @@
 }</desc>
   </path>
   <path
-     style="fill:none;stroke:#c3c3c4;stroke-width:9;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="M 579.81091,151.3976 H 534.98104 V 465.8337"
+     style="fill:none;stroke:#c3c3c4;stroke-width:9.11;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="M 1013.3395,259.0127 H 964.02386 V 551.87581"
      id="path13698-8" />
   <path
-     style="fill:none;stroke:#367bc4;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10, 10;stroke-dashoffset:0;stroke-opacity:1"
-     d="M 579.81091,151.3976 H 534.98104 V 465.8337"
+     style="fill:none;stroke:#367bc4;stroke-width:5.06109;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.1222, 10.1222;stroke-dashoffset:0;stroke-opacity:1"
+     d="M 1013.3395,259.0127 H 964.02386 V 551.87581"
      id="path13698-4-2">
     <desc
        id="desc2163">位号=B.开关
@@ -2149,15 +2152,15 @@
 }</desc>
   </path>
   <path
-     style="fill:none;stroke:#c3c3c4;stroke-width:9;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="m 279.7538,215.6373 203.20179,0.0259 -0.25971,29.30268"
+     style="fill:none;stroke:#c3c3c4;stroke-width:9.11;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="m 487.46292,301.71289 417.72177,-0.8625 -0.69933,171.89302"
      id="path13698-44"
      sodipodi:nodetypes="ccc" />
   <path
-     style="fill:none;stroke:#367bc4;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10, 10;stroke-dashoffset:0;stroke-opacity:1"
-     d="m 279.7538,215.6373 203.20179,0.0259 -0.25971,29.30268"
+     style="fill:none;stroke:#367bc4;stroke-width:5.06109;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.1222, 10.1222;stroke-dashoffset:0;stroke-opacity:1"
+     d="m 487.46292,301.71289 417.72177,-0.8625 -0.69933,171.89302 v 0"
      id="path13698-4-7"
-     sodipodi:nodetypes="ccc">
+     sodipodi:nodetypes="cccc">
     <desc
        id="desc2161">位号=A.开关
 动画={
@@ -2168,13 +2171,13 @@
 }</desc>
   </path>
   <path
-     style="fill:none;stroke:#c3c3c4;stroke-width:9;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-     d="m 654.96843,124.65412 203.43461,0.0323 v 34.79801"
+     style="fill:none;stroke:#c3c3c4;stroke-width:9.11;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     d="m 1094.7406,234.00544 495.1207,0.9168 -0.8867,130.83421"
      id="path13698-44-2"
      sodipodi:nodetypes="ccc" />
   <path
-     style="fill:none;stroke:#367bc4;stroke-width:5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10, 10;stroke-dashoffset:0;stroke-opacity:1"
-     d="m 654.96843,124.65412 203.43461,0.0323 v 34.79801"
+     style="fill:none;stroke:#367bc4;stroke-width:5.06109;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:10.1222, 10.1222;stroke-dashoffset:0;stroke-opacity:1"
+     d="m 1094.7406,234.00544 495.1207,0.9168 -0.8867,130.83421"
      id="path13698-4-7-3"
      sodipodi:nodetypes="ccc">
     <desc
@@ -2190,57 +2193,57 @@
      xml:space="preserve"
      id="text4169-4"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,126.62697,95.257872)"><tspan
+     transform="matrix(0.37395876,0,0,0.38955805,288.31701,206.42083)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21849">当前水位:</tspan></text>
+       id="tspan9676">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-8);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,192.05538,96.774432)"
+     transform="matrix(0.37395876,0,0,0.38955805,360.29235,207.83334)"
      inkscape:label="A.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21851">?</tspan></text>
+       id="tspan9678">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-3"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-9);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,498.35498,2.3310825)"><tspan
+     transform="matrix(0.37395876,0,0,0.38955805,923.73286,120.17343)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21853">当前水位:</tspan></text>
+       id="tspan9680">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-0"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-8-5);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,561.7834,3.8476425)"
+     transform="matrix(0.37395876,0,0,0.38955805,993.50806,121.58594)"
      inkscape:label="B.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21855">?</tspan></text>
+       id="tspan9682">?</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-6"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-97);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,837.44212,-87.225568)"><tspan
+     transform="matrix(0.37395876,0,0,0.38955805,1562.3599,39.662932)"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21857">当前水位:</tspan></text>
+       id="tspan9684">当前水位:</tspan></text>
   <text
      xml:space="preserve"
      id="text4169-4-9-9"
      style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;white-space:pre;shape-inside:url(#rect4171-6-8-2);fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     transform="matrix(0.3399434,0,0,0.41825383,914.87054,-85.709008)"
+     transform="matrix(0.37395876,0,0,0.38955805,1647.5359,41.075444)"
      inkscape:label="C.水位"><tspan
        x="131.23242"
        y="593.34087"
-       id="tspan21859">?</tspan></text>
+       id="tspan9686">?</tspan></text>
   <g
      id="g3751"
      onclick="tds.output(&quot;A.开关&quot;,true)"
-     transform="translate(-7.0935956,-28.374384)">
+     transform="matrix(1.1000619,0,0,0.93139148,171.98817,73.726923)">
     <g
        id="Group_Green_Push_Button_Back_Ground"
        transform="matrix(0.18667034,0,0,0.18072911,223.48845,303.0193)">
@@ -2334,7 +2337,7 @@
   <g
      id="g3771"
      onclick="tds.output(&quot;A.开关&quot;,false)"
-     transform="translate(-7.0935956,-28.374384)">
+     transform="matrix(1.1000619,0,0,0.93139148,171.98817,73.726923)">
     <g
        id="Group_Red_Push_Button_Back_Ground"
        transform="matrix(0.18667034,0,0,0.18468993,254.96629,302.79538)">
@@ -2427,7 +2430,7 @@
   </g>
   <g
      id="g3751-8"
-     transform="translate(367.42609,-119.04927)"
+     transform="matrix(1.1000619,0,0,0.93139148,779.70296,7.120804)"
      onclick="tds.output(&quot;B.开关&quot;,true)">
     <g
        id="Group_Green_Push_Button_Back_Ground-9"
@@ -2521,7 +2524,7 @@
   </g>
   <g
      id="g3771-3"
-     transform="translate(367.42609,-119.04927)"
+     transform="matrix(1.1000619,0,0,0.93139148,779.70296,7.120804)"
      onclick="tds.output(&quot;B.开关&quot;,false)">
     <g
        id="Group_Red_Push_Button_Back_Ground-7"
@@ -2614,12 +2617,12 @@
     </g>
   </g>
   <rect
-     style="opacity:0.542579;fill:#4593dd;fill-opacity:1;stroke:#38c8df;stroke-width:0.722093;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="opacity:0.542579;fill:#4593dd;fill-opacity:1;stroke:#38c8df;stroke-width:0.637219;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="rect19864"
-     width="684.45233"
-     height="157.77968"
-     x="333.67038"
-     y="523.02167">
+     width="658.20355"
+     height="127.76897"
+     x="652.27814"
+     y="592.3186">
     <desc
        id="desc20811">控件 = 表格
 数据={
@@ -2627,6 +2630,45 @@
     params={
         type=水泵
 	}
+}</desc>
+  </rect>
+  <rect
+     style="opacity:0.542579;fill:#4593dd;fill-opacity:1;stroke:#38c8df;stroke-width:0.879371;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     id="rect19864-5"
+     width="551.61859"
+     height="290.34467"
+     x="68.190498"
+     y="767.29095">
+    <desc
+       id="desc20811-0">控件 = iframe
+iframe ={
+    src=/hist/?tag=A.水位&amp;time=24h&amp;showHeader=false
+}</desc>
+  </rect>
+  <rect
+     style="opacity:0.542579;fill:#4593dd;fill-opacity:1;stroke:#38c8df;stroke-width:0.897608;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     id="rect19864-5-0"
+     width="574.62738"
+     height="290.39874"
+     x="684.01331"
+     y="765.7478">
+    <desc
+       id="desc20811-0-3">控件 = iframe
+iframe ={
+    src=/hist/?tag=B.水位&amp;time=24h&amp;showHeader=false
+}</desc>
+  </rect>
+  <rect
+     style="opacity:0.542579;fill:#4593dd;fill-opacity:1;stroke:#38c8df;stroke-width:0.886552;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     id="rect19864-5-0-1"
+     width="563.99243"
+     height="288.63153"
+     x="1320.0034"
+     y="768.19824">
+    <desc
+       id="desc20811-0-3-3">控件 = iframe
+iframe ={
+    src=/hist/?tag=C.水位&amp;time=24h&amp;showHeader=false
 }</desc>
   </rect>
 </svg>

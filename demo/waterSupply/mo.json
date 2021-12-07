@@ -10,7 +10,7 @@
                         "low": 0
                     },
                     "b": 0,
-                    "decimalDigits": 2,
+                    "decimalDigits": 3,
                     "defaultVal": null,
                     "k": 1,
                     "name": "水位",
@@ -42,10 +42,10 @@
                     "name": "开关",
                     "saveInterval": {
                         "hour": 0,
-                        "minute": 0,
+                        "minute": 1,
                         "second": 0
                     },
-                    "saveMode": "onchange",
+                    "saveMode": "cyclic|onchange",
                     "type": "mp",
                     "unit": "",
                     "valType": "bool",
@@ -227,8 +227,9 @@
                                 "low": 0
                             },
                             "b": 0,
+                            "decimalDigits": 2,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.0001,
                             "name": "ΣP",
                             "saveInterval": {
                                 "hour": 0,
@@ -254,7 +255,7 @@
                             },
                             "b": 0,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.01,
                             "name": "Hz",
                             "saveInterval": {
                                 "hour": 0,
@@ -280,7 +281,7 @@
                             },
                             "b": 0,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.001,
                             "name": "cosQ",
                             "saveInterval": {
                                 "hour": 0,
@@ -350,10 +351,10 @@
                     "name": "开关",
                     "saveInterval": {
                         "hour": 0,
-                        "minute": 0,
+                        "minute": 1,
                         "second": 0
                     },
-                    "saveMode": "onchange",
+                    "saveMode": "cyclic|onchange",
                     "type": "mp",
                     "unit": "",
                     "valType": "bool",
@@ -535,8 +536,9 @@
                                 "low": 0
                             },
                             "b": 0,
+                            "decimalDigits": 2,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.0001,
                             "name": "ΣP",
                             "saveInterval": {
                                 "hour": 0,
@@ -562,7 +564,7 @@
                             },
                             "b": 0,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.01,
                             "name": "Hz",
                             "saveInterval": {
                                 "hour": 0,
@@ -588,7 +590,7 @@
                             },
                             "b": 0,
                             "defaultVal": null,
-                            "k": 1,
+                            "k": 0.001,
                             "name": "cosQ",
                             "saveInterval": {
                                 "hour": 0,
@@ -642,32 +644,6 @@
                     "validRange": {
                         "enable": true,
                         "max": 15,
-                        "min": 0
-                    }
-                },
-                {
-                    "alarmLimit": {
-                        "enableHigh": false,
-                        "enableLow": false,
-                        "high": 0,
-                        "low": 0
-                    },
-                    "b": 0,
-                    "defaultVal": null,
-                    "k": 1,
-                    "name": "开关",
-                    "saveInterval": {
-                        "hour": 0,
-                        "minute": 0,
-                        "second": 0
-                    },
-                    "saveMode": "onchange",
-                    "type": "mp",
-                    "unit": "",
-                    "valType": "bool",
-                    "validRange": {
-                        "enable": false,
-                        "max": 0,
                         "min": 0
                     }
                 }
