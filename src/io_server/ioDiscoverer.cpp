@@ -106,24 +106,22 @@ LRESULT CALLBACK WindowProc_hwDetect(
 }
 
 
-
-
-bool ioDiscoverer::runSerialDiscover()
+void serialDetectThread()
 {
     /*未来如需要检测除串口外的其他设备， 使用
-   * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
-   https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal
-   https://www.codeproject.com/Articles/119168/Hardware-Change-Detection
-   GUID guidForModemDevices = { 0x2c7089aa, 0x2e0e, 0x11d1,
-   {0xb1, 0x14, 0x00, 0xc0, 0x4f, 0xc2, 0xaa, 0xe4} };
-   DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
-   ZeroMemory(&notificationFilter, sizeof(notificationFilter));
-   notificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
-   notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
-   notificationFilter.dbcc_classguid = GUID_DEVCLASS_PORTS;
-   */
+  * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
+  https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal
+  https://www.codeproject.com/Articles/119168/Hardware-Change-Detection
+  GUID guidForModemDevices = { 0x2c7089aa, 0x2e0e, 0x11d1,
+  {0xb1, 0x14, 0x00, 0xc0, 0x4f, 0xc2, 0xaa, 0xe4} };
+  DEV_BROADCAST_DEVICEINTERFACE notificationFilter;
+  ZeroMemory(&notificationFilter, sizeof(notificationFilter));
+  notificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+  notificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+  notificationFilter.dbcc_classguid = GUID_DEVCLASS_PORTS;
+  */
 
-   //注册窗口类
+  //注册窗口类
     HINSTANCE hInstance;
     hInstance = GetModuleHandle(NULL);
     WNDCLASS hwDetect;
@@ -155,6 +153,19 @@ bool ioDiscoverer::runSerialDiscover()
 
     ShowWindow(hwnd, SW_HIDE);
 
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+
+
+bool ioDiscoverer::runSerialDiscover()
+{
+    thread t(serialDetectThread);
+    t.detach();
     return true;
 }
 
