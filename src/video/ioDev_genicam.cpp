@@ -304,12 +304,25 @@ ioDev_genicam::ioDev_genicam()
 
 bool ioDev_genicam::disconnect()
 {
+    if (!m_bConnected)
+        return true;
+
     try {
         m_genicamDev->close();
         m_nodemap = NULL;
         m_bConnected = false;
         string log = "[IO服务] 设备连接断开," + getDesc();
         LOG(log);
+
+        
+        MODULE_BUS_MSG msg;
+        msg.eventName = "disconnected";
+        msg.moduleName = "ioDev_genicam";
+        json jMsg;
+        jMsg["ioAddr"] = getIOAddrStr();
+        jMsg["devType"] = "genicam";
+        msg.content = jMsg.dump();
+        tds->publishMsg(msg);
     }
     catch (std::exception& e)
     {
@@ -320,12 +333,32 @@ bool ioDev_genicam::disconnect()
 
 bool ioDev_genicam::connect()
 {
+    if (m_bConnected)
+        return true;
+
     try {
         m_genicamDev->open(rcg::Device::CONTROL);
         m_nodemap = m_genicamDev->getRemoteNodeMap();
         m_bConnected = true;
         string log = "[IO服务] 连接设备成功," + getDesc();
         LOG(log);
+
+
+        /*
+        关于 online offline connected disconneted 事件的解释
+        设备上线online看作设备连接上了网络，可以被网络上的其他设备发现。但并没有人使用该设备，与该设备进行通信。
+        设备连接connected看作网络上其他设备连接了该设备，并与该设备进行通信与数据交互。如果是单一客户端的设备，connected之后该设备将被占用
+        例子：
+        genicam即使被其他设备连接，依然可以发现该设备，也就是说，可以online。但是此时并不能连接该设备。
+        */
+        MODULE_BUS_MSG msg;
+        msg.eventName = "connected";
+        msg.moduleName = "ioDev_genicam";
+        json jMsg;
+        jMsg["ioAddr"] = getIOAddrStr();
+        jMsg["devType"] = "genicam";
+        msg.content = jMsg.dump();
+        tds->publishMsg(msg);
     }
     catch (std::exception& e)
     {

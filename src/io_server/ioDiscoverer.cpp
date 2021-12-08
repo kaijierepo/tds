@@ -186,6 +186,7 @@ bool ioDiscoverer::doGenicamDiscover()
 #ifdef ENABLE_GENICAM
     while (1)
     {
+        //µôÏßÖØÁ¬
         if (firstDiscoverGenicam)
         {
             if (firstDiscoverGenicam->m_bConnected == false)
