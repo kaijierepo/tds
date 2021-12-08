@@ -60,6 +60,8 @@ public:
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
 	 bool connectDev(string ioAddr);
 	 bool isOnline(string ioAddr);
+	 bool isConnected(string ioAddr);
+	 bool isInUse(string ioAddr);
 	 bool lockIoAddr(string ioAddr) ;
 	 bool unlockIoAddr(string ioAddr) ;
 	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);

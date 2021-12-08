@@ -463,6 +463,26 @@ bool TDS_imp::isOnline(string ioAddr)
 	return false;
 }
 
+bool TDS_imp::isConnected(string ioAddr)
+{
+	ioDev* d = ioSrv.getIODev(ioAddr);
+	if (d)
+	{
+		return d->m_bConnected;
+	}
+	return false;
+}
+
+bool TDS_imp::isInUse(string ioAddr)
+{
+	ioDev* d = ioSrv.getIODev(ioAddr);
+	if (d)
+	{
+		return d->m_bInUse;
+	}
+	return false;
+}
+
 bool TDS_imp::lockIoAddr(string ioAddr)
 {
 	ioDev* d = ioSrv.getIODev(ioAddr);
@@ -490,8 +510,7 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
-		d->m_pRecvCallback = recvCallback;
-		d->m_pCallbackUser = user;
+		d->setRecvCallback(user, recvCallback);
 	}
 	return true;
 }

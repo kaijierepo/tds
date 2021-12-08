@@ -94,7 +94,7 @@ ioDev* createIODev(string type)
 
 bool ioServer::loadConf()
 {
-	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
+	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
 	{
@@ -128,13 +128,13 @@ void ioServer::saveConf()
 
 ioDev* ioServer::getIODev(string ioAddr)
 {
-	std::shared_lock<shared_mutex> lock(m_csChildren); //读锁
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
 	return ioDev::getIODev(ioAddr);
 }
 
 void ioServer::clear()
 {
-	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
+	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
 	for (int i = 0; i < m_vecChild.size(); i++)
 	{
 		delete m_vecChild[i];
@@ -186,7 +186,7 @@ bool ioServer::run()
 {
 	if (loadConf())
 	{
-		std::shared_lock<shared_mutex> lock(m_csChildren);
+		std::shared_lock<shared_mutex> lock(m_csThis);
 		for (auto i : m_vecChild)
 		{
 			i->run();
@@ -255,7 +255,7 @@ string ioServer::getTag(string strDataChannelID)
 
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
-	std::unique_lock<shared_mutex> lock(m_csChildren); //写锁
+	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
 	ioDev* p = createIODev(type);
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())

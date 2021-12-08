@@ -21,6 +21,8 @@
 #include "ioDev_genicam.h"
 #include "mp.h"
 
+#include "logger.h"
+
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 void sendToCommLog(string s)
 {
@@ -666,6 +668,17 @@ bool ioDev::NotNeedGateway()
 		return true;
 
 	return false;
+}
+
+void ioDev::setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback)
+{
+	LOG("ioAddr=" + getIOAddrStr() + ",设置接收回调" + str::fromInt((DWORD)pUser));
+	m_pCallbackUser = pUser; 
+	m_pRecvCallback = callback; 
+	if (m_pCallbackUser == nullptr)
+		m_bInUse = false;
+	else
+		m_bInUse = true;
 }
 
 string ioDev::GetCommIP()

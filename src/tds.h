@@ -268,6 +268,8 @@ public:
 	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
 	virtual bool connectDev(string ioAddr) = 0; 
 	virtual bool isOnline(string ioAddr) = 0;
+	virtual bool isConnected(string ioAddr) = 0;
+	virtual bool isInUse(string ioAddr) = 0;
 	virtual bool lockIoAddr(string ioAddr) = 0;
 	virtual bool unlockIoAddr(string ioAddr) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;

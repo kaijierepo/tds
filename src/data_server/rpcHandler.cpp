@@ -1742,7 +1742,9 @@ string rpcHandler::rpc_com_list(json params, string& error)
 		jComInfo["portNum"] = pls->m_devAddr;
 		jComInfo["desc"] = pls->m_devTypeLabel;
 		jComInfo["online"] = pls->m_bOnline;
-		jComInfo["open"] = pls->isOpen();
+		jComInfo["connected"] = pls->isOpen();
+		jComInfo["inUse"] = pls->m_bInUse;
+		jComInfo["callbackUser"] = (DWORD)pls->m_pCallbackUser;
 		result.push_back(jComInfo);
 	}
 	return result.dump();

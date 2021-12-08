@@ -177,6 +177,7 @@ bool ioGW_LocalSerial::WriteCom(char* buf, int len)
 	DWORD dwLen = 0;
 	if (!WriteFile(m_hCom, buf, len, &dwLen, &m_ovWrite))
 	{
+		m_strErrorInfo = sys::getLastError("WriteFile");
 		return false;
 	}
 
@@ -357,6 +358,10 @@ bool ioGW_LocalSerial::isOpen()
 
 bool ioGW_LocalSerial::OpenCom(string conf)
 {
+	std::unique_lock<shared_mutex>  lock(m_csThis);
+	if (m_bConnected)
+		return true;
+
 	if (conf != "")
 	{
 		json j = json::parse(conf);

@@ -92,7 +92,7 @@ public:
 
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
-	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback) { m_pCallbackUser = pUser; m_pRecvCallback = callback; }
+	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback);
 	fp_ioAddrRecvCallback m_pRecvCallback;
 	void* m_pCallbackUser;
 	//对于通道tagBind表示数据连接的mp位号
@@ -130,8 +130,9 @@ public:
 	SYSTEMTIME m_stLastAcqTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool bEnableAcq;
-	bool m_bOnline;  //设备发现后，处于在线状态
-	bool m_bConnected; //连接后，处于通信状态，可能有io任务执行.串口打开后，处于connect状态。
+	bool m_bOnline;    //设备发现后，处于在线状态
+	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
+	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	SYSTEMTIME m_stEqpOnLineDateTime;//设备上线时间戳
 	SYSTEMTIME m_stEqpOffLineDateTime;//设备掉线时间戳
@@ -150,7 +151,7 @@ public:
 
 	bool m_bWorkingThreadRunning;
 	semaphore m_signalWorkThreadExit; //工作线程退出信号
-	std::shared_mutex m_csChildren;  //内部结构修改互斥锁
+	std::shared_mutex m_csThis;  //内部结构修改互斥锁
 
 
 	std::recursive_timed_mutex m_csCommLock;
