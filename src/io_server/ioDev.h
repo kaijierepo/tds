@@ -102,7 +102,7 @@ public:
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
 	//通信发送
-	void CommLock();
+	bool CommLock(int dwTimeoutMS = 0);
 	void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
 	virtual bool sendData(char* pData, int iLen);
@@ -151,6 +151,10 @@ public:
 	bool m_bWorkingThreadRunning;
 	semaphore m_signalWorkThreadExit; //工作线程退出信号
 	std::shared_mutex m_csChildren;  //内部结构修改互斥锁
+
+
+	std::recursive_timed_mutex m_csCommLock;
+	DWORD m_dwLockThread;
 };
 
 ioDev* createIODev(json conf);

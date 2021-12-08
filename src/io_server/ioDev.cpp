@@ -424,14 +424,23 @@ string ioDev::getDevAddrStr()
 	return devAddr;
 }
 
-void ioDev::CommLock()
+bool ioDev::CommLock(int dwTimeoutMS)
 {
-	
+	if (dwTimeoutMS)
+	{
+		chrono::milliseconds timeout(dwTimeoutMS);
+		return m_csCommLock.try_lock_for(timeout);
+	}
+	else
+	{
+		m_csCommLock.lock();
+		return true;
+	}
 }
 
 void ioDev::CommUnlock()
 {
-	
+	m_csCommLock.unlock();
 }
 
 bool ioDev::SendPkt(PKT_DATA& pkt)
