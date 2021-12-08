@@ -148,14 +148,8 @@ void ioServer::refreshSerialIODev()
 	vector<sys::COM_INFO> aryNew;
 	aryNew = sys::getCOMInfoList();
 
-	//将当前串口设备置为离线状态
-	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
-	for (auto& i : ary)
-	{
-		i->m_bOnline = false;
-	}
 
-	//为新上线的串口创建对应的ioDev.并更新在线状态
+	//新列表里有，当前列表没有。  为新上线的串口创建对应的ioDev.置为在线
 	for (auto& i : aryNew)
 	{
 		sys::COM_INFO ci = i;
@@ -167,10 +161,21 @@ void ioServer::refreshSerialIODev()
 		}
 	}
 
-	//离线的空闲设备，从io设备列表中删除。已配置设备保留
+	//当前列表里有，新列表没有。 表示离线。 离线的空闲设备，从io设备列表中删除。已配置设备保留
+	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
 	for (auto& i : ary)
 	{
-		if (i->m_bOnline == false && i->m_mngStatus == IODEV_MNG_STATUS::spare)
+		bool bOnline = false;
+		//在新列表里面找的到才在线
+		for (auto& newStatus : aryNew)
+		{
+			if (newStatus.portNum == i->getIOAddrStr())
+			{
+				bOnline = true;
+			}
+		}
+
+		if (bOnline == false && i->m_mngStatus == IODEV_MNG_STATUS::spare)
 		{
 			ioSrv.deleteDescendant(i);
 		}
