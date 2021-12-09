@@ -740,7 +740,9 @@ bool rpcHandler::needLog(string method)
 		method == "getSessions"||
 		method == "getMpStatus" ||
 		method == "getMoStatus" ||
-		method == "getMoStatusList")
+		method == "getMoStatusList" ||
+		method == "getChanVal" ||
+		method == "acq")
 		return false;
 	return true;
 }
@@ -821,7 +823,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 
 
 
-void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen,bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
 	RPC_RESP rpcResp;
@@ -895,7 +897,8 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 
 
 		//对部分命令日志记录
-		if (needLog(method))
+		bNeedLog = needLog(method);
+		if (bNeedLog)
 			LOG("RPC请求:\r\n" + strReq + "\r\n");
 
 		//访问控制
@@ -1018,7 +1021,7 @@ HANDLE_END:
 	{
 		if (strRespForLog != "")
 			LOG("RPC响应:\r\n" + strRespForLog + "\r\n");
-		else if (needLog(method))
+		else if (bNeedLog)
 			LOG("RPC响应:\r\n" + rpcResp.result + "\r\n");
 	}
 
@@ -1783,7 +1786,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 		if (p == orgSession) //不发给来源
 			continue;
 
-		if(p->type == TDS_SESSION_TYPE::rpc)
+		if(p->type == TDS_SESSION_TYPE::tdsClient)
 			p->send((char*)notify.c_str(), notify.length());
 	}
 }

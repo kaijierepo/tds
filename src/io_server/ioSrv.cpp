@@ -35,7 +35,8 @@ void IOThread()
 		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChild[i];
-			if(pIoDev->bEnableAcq)
+			//空闲设备不轮询数据
+			if(pIoDev->bEnableAcq && pIoDev->m_mngStatus == IODEV_MNG_STATUS::managed)
 				pIoDev->DoCycleTask();
 			if (!ioSrv.m_bRunning)
 				break;

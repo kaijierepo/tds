@@ -477,6 +477,16 @@ namespace str {
 		return s;
 	}
 
+	inline string fromBuff(char* p, int len)
+	{
+		char* tmp = new char[len+1];
+		memcpy(tmp, p, len);
+		tmp[len] = 0;
+		string s = tmp;
+		delete tmp;
+		return s;
+	}
+
 	inline int toInt(string s)
 	{
 		return atoi(s.c_str());

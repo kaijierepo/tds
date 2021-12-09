@@ -16,9 +16,14 @@ TDS_SESSION::~TDS_SESSION()
 {
 }
 
+string TDS_SESSION::getId()
+{
+    return getRemoteAddr();
+}
+
 string TDS_SESSION::getRemoteAddr()
 {
-    unique_lock<mutex> lock(m_mutexTcpLink);//ʹ��tcplink
+    unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
     if (pTcpSession)
     {
        return pTcpSession->remoteIP + ":" + str::fromInt(pTcpSession->remotePort);
@@ -26,8 +31,23 @@ string TDS_SESSION::getRemoteAddr()
     return "";
 }
 
+bool TDS_SESSION::getTcpSession(tcpSession& ts)
+{
+    std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);
+    if (pTcpSession)
+    {
+        ts = *pTcpSession;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void TDS_SESSION::Init()
 {
+    m_bNeedLog = true;
     pTcpSessionClt = NULL;
     role = "";
     encode = "utf8";
@@ -49,7 +69,7 @@ void TDS_SESSION::Init()
 
 bool TDS_SESSION::isConnected()
 {
-    std::unique_lock<mutex> lock(m_mutexTcpLink);
+    std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);
     return bConnected;
 }
 
@@ -60,9 +80,84 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
- int TDS_SESSION::send(char* p,int len){
-     unique_lock<mutex> lock(m_mutexTcpLink);//ʹ��tcplink
+
+vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
+void sendToSessionPktSessions(char* p,int len)
+{
+    for (int i = 0; i < sessionPktSessions.size(); i++)
+    {
+        std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+        if (!session->isConnected())
+        {
+            sessionPktSessions.erase(sessionPktSessions.begin() + i);
+            i--;
+            continue;
+        }
+        session->send(p,len);
+    }
+}
+
+void TDS_SESSION::statisOnSend(char* p, int len)
+{
+    //监视会话的数据包不记录日志
+    if (type == TDS_SESSION_TYPE::sessionPkt ||
+        type == TDS_SESSION_TYPE::commpkt ||
+        type == TDS_SESSION_TYPE::log ||
+        type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    {
+        return;
+    }
+    if (!m_bNeedLog)
+        return;
+
+    json j;
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    j["time"] = timeopt::st2strWithMilli(st);
+    j["remoteAddr"] = getRemoteAddr();
+    j["type"] = "发送";
+    j["len"] = len;
+    j["data"] = str::fromBuff(p, len);
+    j["sessionType"] = type;
+    string s = j.dump(4);
+
+    sendToSessionPktSessions((char*)s.c_str(), s.length());
+}
+
+
+void TDS_SESSION::statisOnRecv(char* p, int len)
+{
+    //监视会话的数据包不记录日志
+    if (type == TDS_SESSION_TYPE::sessionPkt ||
+        type == TDS_SESSION_TYPE::commpkt ||
+        type == TDS_SESSION_TYPE::log ||
+        type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    {
+        return;
+    }
+
+    json j;
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    j["time"] = timeopt::st2strWithMilli(st);
+    j["remoteAddr"] = getRemoteAddr();
+    j["type"] = "接收";
+    j["len"] = len;
+    j["data"] = str::fromBuff(p, len);
+    j["sessionType"] = type;
+    string s = j.dump();
+
+    sendToSessionPktSessions((char*)s.c_str(), s.length());
+}
+
+
+
+ int TDS_SESSION::send(char* p,int len,bool bNeedLog){
+     unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      GetLocalTime(&lastSendTime);
+
+     if(bNeedLog)
+        statisOnSend(p, len);
 
      if(pTcpSession) // means lower layer has been disconneted
         return ds.SendAppLayerData(p, len, this);
@@ -73,7 +168,7 @@ string TDS_SESSION::GetClientIp()
 
  int TDS_SESSION::getSendedBytes()
  {
-     std::unique_lock<mutex> lock(m_mutexTcpLink);//ʹ��tcplink
+     std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      if (pTcpSession)
      {
          return pTcpSession->iSendSucCount;
@@ -113,7 +208,7 @@ string TDS_SESSION::GetClientIp()
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
-     unique_lock<mutex> lock(m_mutexTcpLink);//�޸�tcplink
+     unique_lock<recursive_mutex> lock(m_mutexTcpLink);//修改tcplink
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
      if (pBridgedTcpClient)

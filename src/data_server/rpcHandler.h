@@ -50,7 +50,7 @@ public:
 	bool isIoDevMethod(string method);
 
 	//json rpc implementation
-	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, std::shared_ptr<TDS_SESSION> pSession);
+	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, std::shared_ptr<TDS_SESSION> pSession);
 
 	string getSessionStatus();

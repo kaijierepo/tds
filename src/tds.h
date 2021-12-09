@@ -171,18 +171,23 @@ typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* use
 typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
 
 namespace TDS_SESSION_TYPE {
+	//tds业务功能会话
 	const string none = "none";
-	const string rpc = "rpc";
+	const string tdsClient = "tdsClient";  //tds客户端。 http客户端
 	const string video = "video";
-	const string web = "web";
-	const string log = "log";
-	const string commpkt = "commpkt"; //通信数据包监视
+	const string iodev = "ioDev"; //io设备会话 传输设备自定义的通信协议
+
+	//透传与通道类会话
 	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
 	const string websocket2com = "websocket2com";
-	const string iodev = "iodev"; //io设备会话 传输设备自定义的通信协议
 	const string bridgeToiodev = "bridgeToiodev";
 	const string bridgeToTcpClient = "bridgeToTcpClient";
 	const string terminal = "terminal";
+
+	//数据监视类会话。调试功能
+	const string log = "log";
+	const string commpkt = "commpkt"; //ioDev通信数据包监视
+	const string sessionPkt = "sessionPkt"; //session通信数据包监视
 }
 
 struct ACTIVE_TDS_SESSION {

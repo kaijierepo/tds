@@ -56,7 +56,9 @@ public:
 	SYSTEMTIME lastRecvTime;
 	SYSTEMTIME lastSendTime;
 
+	string getId();
 	string getRemoteAddr();
+	bool getTcpSession(tcpSession& ts);
 
 	int port;
 	map<string, string> mapTagDataSubscribe;
@@ -67,6 +69,7 @@ public:
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
 
+	bool m_bNeedLog; //该session是否要记录日志
 	//会话通信数据处理控制
 	queue<TCP_DATA_BUFF> dataBuff;
 	std::mutex m_mutexTcpBuff;
@@ -87,9 +90,11 @@ public:
     void Init();
 	bool isConnected();
     string GetClientIp();
-    int send(char* p,int len);
+	void statisOnSend(char* p, int len);
+	void statisOnRecv(char* p, int len);
+	int send(char* p,int len,bool bNeedLog = true);
 	int getSendedBytes();
-    std::mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
+    std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
@@ -109,3 +114,5 @@ public:
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	DWORD httpReqHandleThreadID;  //处理http请求的线程id
 };
+
+extern vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;

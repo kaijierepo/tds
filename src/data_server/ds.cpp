@@ -109,7 +109,8 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	string resp;
 	char* binResp = NULL;
 	int iBinRespLen = 0;
-	tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, tdsSession);
+	bool bNeedLog = true;
+	tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
 
 	if (resp != "")
 	{
@@ -308,7 +309,7 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 			else
 				ft = WS_BINARY_FRAME;
 		}
-		else if (pALC->type == TDS_SESSION_TYPE::rpc)
+		else if (pALC->type == TDS_SESSION_TYPE::tdsClient)
 		{
 			if (pALC->sendContent == "text")
 			{
@@ -912,14 +913,22 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	}
 	else if (strData.find("/log") != string::npos)
 	{
+		tdsSession->type = TDS_SESSION_TYPE::log;
 		logTdsSessions.push_back(tdsSession);
 		logger.logOutput = logToWebsock;
-		tdsSession->type = TDS_SESSION_TYPE::log;
+		tdsSession->setActivityCheck(false);
+	}
+	else if (strData.find("/sessionpkt") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
+		sessionPktSessions.push_back(tdsSession);
+		tdsSession->setActivityCheck(false);
 	}
 	else if (strData.find("/commpkt") != string::npos)
 	{
-		commpktSessions.push_back(tdsSession);
 		tdsSession->type = TDS_SESSION_TYPE::commpkt;
+		commpktSessions.push_back(tdsSession); 
+		tdsSession->setActivityCheck(false);
 	}
 	else if (strData.find("teststream") != string::npos && !bTestStream)
 	{
@@ -978,9 +987,20 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	}
 	else //连接根地址 默认为rpc连接
 	{
-		if (strData.find("rpc") != string::npos)
+		if (strData.find("tdsClient") != string::npos)
 		{
 
+		}
+
+		map<string, string> mapParams;
+		getUrlParams(strData, mapParams);
+		if (mapParams.find("needLog") != mapParams.end())
+		{
+			string needLog = mapParams["needLog"];
+			if (needLog == "0")
+			{
+				tdsSession->m_bNeedLog = false;
+			}
 		}
 		
 		if (tds->conf->debugMode)
@@ -996,7 +1016,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 					)";
 			tdsSession->send((char*)s.data(), s.length());
 		}
-		tdsSession->type = TDS_SESSION_TYPE::rpc;
+		tdsSession->type = TDS_SESSION_TYPE::tdsClient;
 		tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 
 		string szLog = "[Session会话][开始] 类型:" + tdsSession->type + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
@@ -1007,6 +1027,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
+
 	GetLocalTime(&tdsSession->lastRecvTime);
 
 	{
@@ -1039,7 +1060,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			{
 				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
 			}
-			else if(strData.find("/rpc") != string::npos)
+			else if(strData.find("/tdsClient") != string::npos)
 			{
 				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 			}
@@ -1189,7 +1210,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->remoteIP.c_str(),pALC->pTcpSession->remotePort);
 		LOG(szLog);
 		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
-		pALC->type = TDS_SESSION_TYPE::rpc;
+		pALC->type = TDS_SESSION_TYPE::tdsClient;
 
 		httplib::detail::dsClientStream dscs;
 		dscs.appendBuffer((char*)strData.c_str(), strData.length());
@@ -1237,7 +1258,8 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		string resp;
 		char* binResp = NULL;
 		int iBinRespLen = 0;
-		tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, pALC);
+		bool bNeedLog = true;
+		tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, bNeedLog,pALC);
 
 		if (resp != "")
 		{
@@ -1251,7 +1273,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 				httpHead += "Access-Control-Allow-Origin: " + req.get_header_value("Origin") + "\r\n";
 			}
 			string httpResp = httpHead + "\r\n" + resp;
-			pALC->send((char*)httpResp.data(), httpResp.length());
+			pALC->send((char*)httpResp.data(), httpResp.length(),bNeedLog);
 		}
 		if (binResp != NULL)
 		{
@@ -1266,7 +1288,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 			}
 			pALC->send((char*)httpHead.data(), httpHead.length());
 			pALC->send((char*)"\r\n", 2);
-			pALC->send((char*)binResp, iBinRespLen);
+			pALC->send((char*)binResp, iBinRespLen, bNeedLog);
 			delete binResp;
 		}
 	}
@@ -1285,6 +1307,8 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 //onRecvData需要组包
 bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
 {
+	tdsSession->statisOnSend(pData, iLen);
+
 	DWORD dwDataLen = iLen;
 	//有桥接先判断桥接
 	if (tdsSession->bridgedLocalCom != "")//tds link is bridged to a local com
@@ -1388,18 +1412,19 @@ void dataServer::onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESS
 	string resp;
 	char* binResp = NULL;
 	int iBinRespLen = 0;
-	tdsSrv.handleRpcCall(req, resp, binResp, iBinRespLen, tdsSession);
+	bool bNeedLog = true;
+	tdsSrv.handleRpcCall(req, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
 
 	if (resp != "")
 	{
 		tdsSession->sendContent = "text";
-		tdsSession->send((char*)resp.data(), resp.length());
+		tdsSession->send((char*)resp.data(), resp.length(),bNeedLog);
 	}
 
 	if (iBinRespLen > 0)
 	{
 		tdsSession->sendContent = "binary";
-		tdsSession->send(binResp, iBinRespLen);
+		tdsSession->send(binResp, iBinRespLen, bNeedLog);
 	}
 
 	//如果没有任何回复,可能是透传指令,不回复
