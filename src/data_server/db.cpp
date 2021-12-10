@@ -896,6 +896,11 @@ bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
 		db_exception e;
 		if (error == JERRY_ERROR_REFERENCE)
 			e.m_error = "db exception: error when execute filter script,reference not found!";
+		else if (error == JERRY_ERROR_TYPE)
+		{
+			// A.str1.indexOf("xxx") 如果A不存在 str1成员，会抛出此错误
+			e.m_error = "db exception: error when execute filter script,error type!";
+		}
 		else
 			e.m_error = "db exception: error when execute filter script";
 		throw e;
