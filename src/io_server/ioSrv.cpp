@@ -117,7 +117,8 @@ bool ioServer::loadConf()
 	}
 	catch (std::exception& e)
 	{
-		std::cout << e.what() << std::endl;
+		string error = e.what();
+		LOG("加载io.json失败," + error);
 		return false;
 	}
 	return true;
@@ -185,6 +186,8 @@ void ioServer::refreshSerialIODev()
 
 bool ioServer::run()
 {
+	m_bRunning = true;
+
 	if (loadConf())
 	{
 		std::shared_lock<shared_mutex> lock(m_csThis);

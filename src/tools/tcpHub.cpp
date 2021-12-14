@@ -62,7 +62,7 @@ void tcpHub::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
 		memset(p, 0, iLen + 1);
 		memcpy(p, pData, iLen);
 		string s = p;
-		LOG( "Server" + str::fromInt(portLeft) + "-->Server" + str::fromInt(portRight) + " " + str::fromInt(iLen) + "bytes   "  + s);
+		LOG( "Server" + str::fromInt(portLeft) + "-->Server" + str::fromInt(portRight) + " " + str::fromInt(iLen) + "bytes\r\n"  + s);
 		delete p;
 	}
 	else if (pCltInfo->pTcpServer == &sRight)
@@ -72,7 +72,7 @@ void tcpHub::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
 		memset(p, 0, iLen + 1);
 		memcpy(p, pData, iLen);
 		string s = p;
-		LOG("Server" + str::fromInt(portLeft) + "<--Server" + str::fromInt(portRight) + " " + str::fromInt(iLen) + "bytes   " + s);
+		LOG("Server" + str::fromInt(portLeft) + "<--Server" + str::fromInt(portRight) + " " + str::fromInt(iLen) + "bytes\r\n" + s);
 		delete p;
 	}
 }

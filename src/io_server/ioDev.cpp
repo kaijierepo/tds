@@ -227,7 +227,9 @@ bool ioDev::getChanStatus(json& statusList)
 
 bool ioDev::loadConf(json& conf)
 {
-	m_devTypeLabel = conf["typeLabel"].get<string>();
+	if(conf.contains("typeLabel"))
+		m_devTypeLabel = conf["typeLabel"].get<string>();
+
 	m_jDevAddr = conf["addr"];
 	if (conf["acqInterval"] != nullptr)
 	{
@@ -737,6 +739,7 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
 	pIOSession = ioSession;
+	ioSession->m_vecIoDev.push_back(this);
 }
 
 

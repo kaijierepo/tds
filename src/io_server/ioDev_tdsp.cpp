@@ -8,6 +8,7 @@
 #include "ioSrv.h"
 #include "rpcHandler.h"
 #include "commSrv.h"
+#include "alarm_server/as.h"
 
 using namespace httplib;
 
@@ -54,6 +55,17 @@ bool ioDev_tdsp::asynHandleResp(json jResp)
 			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
 			if (pC)
 				pC->input(jDE["val"]);
+		}
+	}
+	else if (method == "getAlarmStatus")
+	{
+		for (int i = 0; i < rlt.size(); i++)
+		{
+			json jAlm = rlt[i];
+			ALARM_INFO aiStatus;
+			aiStatus.type = jAlm["name"].get<string>();
+			aiStatus.level = ALARM_LEVEL::alarm;
+			almSrv.Update(aiStatus);
 		}
 	}
 }
@@ -149,6 +161,7 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	req["params"] = params;
 	int iId = m_iRpcId;
 	req["id"] = iId;
+	req["clientId"] = "tds";
 	m_iRpcId++;
 	string strReq = req.dump() + "\n\n";
 	sendStr(strReq);
@@ -202,8 +215,18 @@ void ioDev_tdsp::DoCycleTask()
 		return;
 	GetLocalTime(&m_stLastAcqTime);
 
-	json params;
-	params["ioAddr"] = "*";
-	json jRlt, jErr;
-	call("acq", params, jRlt, jErr, false);
+	{
+		json params;
+		params["ioAddr"] = "*";
+		json jRlt, jErr;
+		call("acq", params, jRlt, jErr, false);
+	}
+	
+	Sleep(500);
+
+	{
+		json jRlt, jErr;
+		call("getAlarmStatus", nullptr, jRlt, jErr, false);
+	}
+
 }

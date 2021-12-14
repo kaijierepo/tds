@@ -47,7 +47,10 @@ bool TDS_SESSION::getTcpSession(tcpSession& ts)
 
 void TDS_SESSION::Init()
 {
+    m_bActiveSession = false;
     m_bNeedLog = true;
+    bConnected = false;
+    pTcpSession = NULL;
     pTcpSessionClt = NULL;
     role = "";
     encode = "utf8";
@@ -76,7 +79,7 @@ bool TDS_SESSION::isConnected()
 string TDS_SESSION::GetClientIp()
 {
     if (pTcpSessionClt)
-        return pTcpSessionClt->m_strServerIP;
+        return pTcpSessionClt->m_remoteIP;
     return "";
 }
 
@@ -203,6 +206,8 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      pTdsSession->send(pData, iLen);
  }
 
+ 
+
  void TDS_SESSION::onTcpDisconnect()
  {
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
@@ -218,6 +223,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      if (m_IoDevTcpLink)
      {
          m_IoDevTcpLink->setIOSession(NULL);
+         m_IoDevTcpLink->m_bOnline = false;
          m_IoDevTcpLink = NULL;
      }
      if (bridgedIoSession)

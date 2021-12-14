@@ -10,8 +10,8 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	pTcpClt->m_csLock.lock();
 	SOCKET sock = pTcpClt->sockClient;
 
-	pTcpClt->m_session.srvIP = pTcpClt->m_strServerIP;
-	pTcpClt->m_session.srvPort = pTcpClt->m_iServerPort;
+	pTcpClt->m_session.srvIP = pTcpClt->m_remoteIP;
+	pTcpClt->m_session.srvPort = pTcpClt->m_remotePort;
 	pTcpClt->m_session.sock = sock;
 	pTcpClt->m_session.tcpClt = pTcpClt;
 
@@ -99,8 +99,8 @@ DWORD WINAPI AsynConnectThread(LPVOID lpParam)
 tcpClt::tcpClt(void)
 {
 	sockClient = 0;
-	m_strServerIP = "127.0.0.1";
-	m_iServerPort = 0;
+	m_remoteIP = "127.0.0.1";
+	m_remotePort = 0;
 	m_bConn = false;
 	m_bIsConnectting = false;
 	lastConnTime.wYear = 0; 
@@ -125,8 +125,8 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,s
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
-	m_strServerIP = strServIP;
-	m_iServerPort = iServPort;
+	m_remoteIP = strServIP;
+	m_remotePort = iServPort;
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 
@@ -140,8 +140,8 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 	int pos = host.find(":");
 	string ip = host.substr(0, pos);
 	string strPort = host.substr(pos + 1, host.length() - pos - 1);
-	m_strServerIP = ip;
-	m_iServerPort = atoi(strPort.c_str());
+	m_remoteIP = ip;
+	m_remotePort = atoi(strPort.c_str());
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 	return connect();
@@ -150,8 +150,8 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 bool tcpClt::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;
-	m_strServerIP = strServIP;
-	m_iServerPort = iServPort;
+	m_remoteIP = strServIP;
+	m_remotePort = iServPort;
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 	DWORD dwThread;
@@ -166,8 +166,8 @@ void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPo
 	if(m_bConn)
 	DisConnect();
 	m_pCallBackUser = pUser;
-	m_strServerIP = strServIP;
-	m_iServerPort = iServPort;
+	m_remoteIP = strServIP;
+	m_remotePort = iServPort;
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 	DWORD dwThread;
@@ -210,9 +210,9 @@ bool tcpClt::connect()
 
 	//2.向服务器发送连接请求(connect)
 	SOCKADDR_IN addrSrv;
-	addrSrv.sin_addr.S_un.S_addr=inet_addr(m_strServerIP.c_str());
+	addrSrv.sin_addr.S_un.S_addr=inet_addr(m_remoteIP.c_str());
 	addrSrv.sin_family=AF_INET;
-	addrSrv.sin_port=htons(m_iServerPort);
+	addrSrv.sin_port=htons(m_remotePort);
 	m_bIsConnectting = true;
 	int nConnect = ::connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
 	m_bIsConnectting = false;
@@ -234,8 +234,8 @@ bool tcpClt::connect()
 
 bool tcpClt::ReConnect()
 {
-	if (!m_pCallBackUser || m_strServerIP == "") return false;
-	return connect(m_pCallBackUser, m_strServerIP, m_iServerPort);
+	if (!m_pCallBackUser || m_remoteIP == "") return false;
+	return connect(m_pCallBackUser, m_remoteIP, m_remotePort);
 }
 
 int tcpClt::SendData(char* pData, int iLen)
@@ -295,8 +295,8 @@ bool tcpClt::DisConnect()
 }
 
 bool operator==(const tcpClt& lhs, const tcpClt& rhs) {
-	if (lhs.m_strServerIP == rhs.m_strServerIP &&
-		lhs.m_iServerPort == rhs.m_iServerPort &&
+	if (lhs.m_remoteIP == rhs.m_remoteIP &&
+		lhs.m_remotePort == rhs.m_remotePort &&
 		lhs.m_strLocalIP == rhs.m_strLocalIP &&
 		lhs.m_iLocalPort == rhs.m_iLocalPort ) 
 	{

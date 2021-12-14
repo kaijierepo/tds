@@ -77,7 +77,7 @@ public:
 
 	void* dsCltStream; //转发给httplib的流
 	string sendContent; //text or binary
-
+	bool m_bActiveSession; //是否是主动式连接会话
 	void onTcpDisconnect();
 	void setActivityCheck(bool bEnable);
 	class CBridgedTcpClientHandler:public ITcpClientCallBack {

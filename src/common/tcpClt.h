@@ -59,8 +59,8 @@ public:
 	static string GetLocalIP();
 
 	SOCKET sockClient;
-	string m_strServerIP;
-	int m_iServerPort;
+	string m_remoteIP;
+	int m_remotePort;
 	string m_strLocalIP;
 	int m_iLocalPort;
 	bool m_bConn;

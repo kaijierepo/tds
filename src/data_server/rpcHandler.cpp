@@ -550,6 +550,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_io_scanChannel(params, error, pSession);
 		}
+		else if (method == "getIoDevStatis")
+		{
+			rpc_getIoDevStatis(params, rpcResp, pSession);
+		}
 		else if (method == "getStreamInfo")
 		{
 			result = rpc_getStreamInfo(params, error);
@@ -791,13 +795,22 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			return true;
 		}
 		//ioDev -> tdsClient
-		else if (jReq.contains("clientId"))
+		else if (jReq.contains("clientId") && jReq["clientId"].get<string>()!="tds")
 		{
 			string addr = jReq["clientId"].get<string>();
 			shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
-			string s = jReq.dump(2) + "\n\n";
-			p->send((char*)s.c_str(), s.length());
-			LOG("RPC转发 设备->客户端:\r\n" + s + "\r\n");
+			if (p != nullptr)
+			{
+				string s = jReq.dump(2) + "\n\n";
+				p->send((char*)s.c_str(), s.length());
+				LOG("RPC转发 设备->客户端:\r\n" + s + "\r\n");
+			}
+			else
+			{
+				string s = jReq.dump(2) + "\n\n";
+				LOG("RPC转发 设备->客户端 未找到会话:\r\n" + s + "\r\n");
+			}
+
 			return true;
 		}
 		//ioDev -> tds
@@ -868,6 +881,10 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		id = jReq["id"];
 		pSession->lastMethodCalled = method;
 			
+		//对部分命令日志记录
+		bNeedLog = needLog(method);
+		if (bNeedLog)
+			LOG("RPC请求:\r\n" + strReq + "\r\n");
 
 		//心跳最先处理
 		if (method == "heartbeat")
@@ -895,11 +912,6 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		if (handleDevRpcDispatch(strReq,jReq, pSession))
 			return;
 
-
-		//对部分命令日志记录
-		bNeedLog = needLog(method);
-		if (bNeedLog)
-			LOG("RPC请求:\r\n" + strReq + "\r\n");
 
 		//访问控制
 		if (method == "login")
@@ -981,6 +993,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	catch (std::exception& e)
 	{
 		string errorType = e.what();
+		LOG("handleRpcCall异常" + errorType);
 		json jError = {
 				{"code", -32700},
 				{"message" , "Parse error," + errorType}
@@ -1547,6 +1560,60 @@ void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<
 	json list;
 	ioSrv.getChanStatus(list);
 	resp.result = list.dump(4);
+}
+
+void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string rootTag = "";
+	if (params.contains("rootTag"))
+	{
+		rootTag = params["rootTag"].get<string>();
+	}
+	string devType = "*";
+	if (params.contains("devType"))
+	{
+		devType = params["devType"].get<string>();
+	}
+	
+	//仅统计1级设备
+	vector<ioDev*> m_devList;
+	for (auto& i : ioSrv.m_vecChild)
+	{
+		if(i->m_strTagBind == "")
+			continue;
+
+		if (devType!="*"  &&  i->m_devType != devType)
+			continue;
+
+		if (rootTag != "")
+		{
+			string tagBind = i->m_strTagBind;
+			tagBind = TAG::trimRoot(tagBind);
+			rootTag = TAG::trimRoot(rootTag);
+
+			if (tagBind.find(rootTag) == string::npos)
+				continue;
+		}
+		
+		m_devList.push_back(i);
+	}
+
+
+	//生成统计信息
+	int onlineCount = 0;
+	for (auto& i : m_devList)
+	{
+		if (i->m_bOnline)
+			onlineCount++;
+	}
+
+
+	json j;
+	j["total"] = m_devList.size();
+	j["online"] = onlineCount;
+	j["offline"] = m_devList.size() - onlineCount;
+
+	resp.result = j.dump(4);
 }
 
 

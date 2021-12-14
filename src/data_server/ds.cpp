@@ -221,6 +221,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		if (pIoDev)
 		{
 			p->m_IoDevTcpLink = pIoDev;
+			pIoDev->m_bOnline = true;
 			pIoDev->setIOSession(p);
 		}
 			
@@ -258,6 +259,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+		p->m_bActiveSession = true;
 		p->bConnected = true;
 		p->pTcpSessionClt = connInfo->tcpClt;
 		p->sock = connInfo->sock;
@@ -336,10 +338,39 @@ int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 
 void activeSessionThread()
 {
+	string asConf;
+	fs::readFile("conf/activeSession.json",asConf);
+	if (asConf == "")
+		return;
+	try {
+		json jAs = json::parse(asConf);
+		if (jAs.size() == 0)
+			return;
+		for (int i = 0; i < jAs.size(); i++)
+		{
+			json oneSession = jAs[i];
+			ACTIVE_TDS_SESSION ats;
+			ats.ip = oneSession["ip"].get<string>();
+			ats.port = oneSession["port"].get<int>();
+			tds->conf->vecActiveSession.push_back(ats);
+		}
+	}
+	catch (std::exception& e)
+	{
+		string log = e.what();
+		log = "[error]conf/activeSession.json解析失败," + log;
+		LOG(log);
+		return;
+	}
+
+
 	for (int i = 0; i < tds->conf->vecActiveSession.size(); i++)
 	{
 		ACTIVE_TDS_SESSION ats = tds->conf->vecActiveSession.at(i);
 		tcpClt* p = new tcpClt();
+
+		string log = str::format("启动主动式tdsSession,tcpServer地址,%s:%d", ats.ip.c_str(), ats.port);
+		LOG(log);
 		p->AsynConnect(&ds, ats.ip, ats.port);
 		ds.m_tcpCltList.push_back(p);
 	}
@@ -351,7 +382,7 @@ void activeSessionThread()
 		{
 			if (!i->m_bConn)
 			{
-				i->AsynConnect(i->m_pCallBackUser, i->m_strServerIP, i->m_iServerPort);
+				i->AsynConnect(i->m_pCallBackUser, i->m_remoteIP, i->m_remotePort);
 			}
 		}
 	}
@@ -399,6 +430,18 @@ bool dataServer::run()
 	{
 		LOG("[数据库    ] 路径 " + db.m_path);
 	}
+
+
+	string asc_confPath = charCodec::utf8toAnsi(tds->conf->projectConfPath);
+	ret = httpSrv.set_mount_point("/conf/", asc_confPath.c_str());
+	if (!ret) {
+		LOG("[error][配置]路径 " + tds->conf->projectConfPath + " 不存在,请检查配置");
+	}
+	else
+	{
+		LOG("[配置    ] 路径 " + tds->conf->projectConfPath);
+	}
+
 
 	//文件下载目录
 	string asc_filePath = charCodec::utf8toAnsi(fs::appPath() + "/files");
@@ -632,9 +675,24 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteIP,int remotePort
 	for (int i = 0; i < m_vecTdsSession.size(); i++)
 	{
 		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
+		std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
+		if (p->isConnected())
 		{
-			return p;
+			if (p->m_bActiveSession)
+			{
+				//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
+				if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
+				{
+					return p;
+				}
+			}
+			else
+			{
+				if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
+				{
+					return p;
+				}
+			}
 		}
 	}
 	return nullptr;
@@ -1307,7 +1365,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 //onRecvData需要组包
 bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
 {
-	tdsSession->statisOnSend(pData, iLen);
+	tdsSession->statisOnRecv(pData, iLen);
 
 	DWORD dwDataLen = iLen;
 	//有桥接先判断桥接
