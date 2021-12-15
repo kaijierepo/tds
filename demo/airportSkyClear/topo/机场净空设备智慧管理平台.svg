@@ -9,6 +9,7 @@
    height="1080"
    inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
    viewBox="0 0 1920 1080"
+   rootTag=""
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -313,15 +314,15 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:50.3606px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#d9d9da;fill-opacity:1;stroke:#ffffff;stroke-width:1.25902px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="734.33862"
-       y="56.703491"
+       x="644.7392"
+       y="64.389984"
        id="text2706"
        transform="scale(1.0146166,0.98559397)"><tspan
          sodipodi:role="line"
          id="tspan2704"
-         x="734.33862"
-         y="56.703491"
-         style="stroke:#ffffff;stroke-width:1.25902px;stroke-opacity:1">驱鸟设备管理平台</tspan></text>
+         x="644.7392"
+         y="64.389984"
+         style="stroke:#ffffff;stroke-width:1.25902px;stroke-opacity:1">机场净空设备智能管理平台</tspan></text>
     <image
        width="1928.6633"
        height="88.765358"

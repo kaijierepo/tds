@@ -10,6 +10,7 @@
    preserveAspectRatio="none"
    inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
    viewBox="0 0 1920 1080"
+   rootTag="安徽省.芜湖机场"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -29,9 +30,9 @@
      fit-margin-left="0"
      fit-margin-right="0"
      fit-margin-bottom="0"
-     inkscape:zoom="1.8667619"
-     inkscape:cx="970.12908"
-     inkscape:cy="79.28167"
+     inkscape:zoom="5.28"
+     inkscape:cx="452.84091"
+     inkscape:cy="231.81818"
      inkscape:window-width="1920"
      inkscape:window-height="986"
      inkscape:window-x="-11"
@@ -256,7 +257,8 @@
        id="g5059"
        transform="translate(37.5,-3.5984848)">
       <desc
-         id="desc882">位号=安徽省.芜湖机场.煤气炮1#
+         id="desc882">位号=煤气炮1#
+报警=true
 mopanel=\mopanel\</desc>
       <rect
          style="fill:#6bf86f;fill-opacity:1;stroke:none;stroke-width:2.759;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
@@ -276,6 +278,10 @@ mopanel=\mopanel\</desc>
     <g
        id="g5059-8"
        transform="translate(628.32947,-5.1473416)">
+      <desc
+         id="desc884">位号=煤气炮2#
+报警=true
+mopanel=\mopanel\</desc>
       <rect
          style="fill:#6bf86f;fill-opacity:1;stroke:none;stroke-width:2.759;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
          id="rect4791-7"
@@ -348,7 +354,7 @@ mopanel=\mopanel\</desc>
        id="g5059-8-2"
        transform="translate(619.47402,728.57641)">
       <desc
-         id="desc950">位号=安徽省.芜湖机场.煤气炮5#
+         id="desc950">位号=煤气炮5#
 mopanel=\mopanel\</desc>
       <rect
          style="fill:#6bf86f;fill-opacity:1;stroke:none;stroke-width:2.759;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"

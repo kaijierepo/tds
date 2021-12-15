@@ -1,6 +1,6 @@
 [
     {
-        "addr": "solarCell.votage",
+        "addr": "solarCell.voltage",
         "ioType": "i",
         "valType": "float",
         "level":"channel",
@@ -14,7 +14,7 @@
         "name":"太阳能电池电流"
     },
     {
-        "addr": "battery.votage",
+        "addr": "battery.voltage",
         "ioType": "i",
         "valType": "float",
         "level":"channel",

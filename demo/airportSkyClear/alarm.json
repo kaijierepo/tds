@@ -1,19 +1,15 @@
 [
     {
-        "type":"gasGun.gasLeak",
-        "typeLabel" : "煤气泄漏"
-    },
-    {
         "type":"gasGun.gasOverPressure",
         "typeLabel" : "煤气过压"
     },{
         "type":"gasGun.gasLowPressure",
         "typeLabel" : "煤气低压"
     },{
-        "type":"gasGun.batteryOverVotage",
+        "type":"gasGun.batteryOverVoltage",
         "typeLabel" : "电池过压"
     },{
-        "type":"gasGun.batteryLowVotage",
+        "type":"gasGun.batteryLowVoltage",
         "typeLabel" : "电池低压"
     },{
         "type":"gasGun.batteryOverTemperature",
