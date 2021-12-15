@@ -739,7 +739,7 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
 	pIOSession = ioSession;
-	ioSession->m_vecIoDev.push_back(this);
+	ioSession->m_vecIoDev.push_back(this->getIOAddrStr());
 }
 
 

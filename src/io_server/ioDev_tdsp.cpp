@@ -56,6 +56,7 @@ bool ioDev_tdsp::asynHandleResp(json jResp)
 			if (pC)
 				pC->input(jDE["val"]);
 		}
+		m_jAcq = rlt;
 	}
 	else if (method == "getAlarmStatus")
 	{
@@ -63,10 +64,12 @@ bool ioDev_tdsp::asynHandleResp(json jResp)
 		{
 			json jAlm = rlt[i];
 			ALARM_INFO aiStatus;
-			aiStatus.type = jAlm["name"].get<string>();
+			aiStatus.tag = m_strTagBind;
+			aiStatus.type = jAlm["type"].get<string>();
 			aiStatus.level = ALARM_LEVEL::alarm;
 			almSrv.Update(aiStatus);
 		}
+		m_jAlarmStatus = rlt;
 	}
 }
 

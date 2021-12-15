@@ -4891,7 +4891,7 @@ inline bool Server::write_response_core(Stream &strm, bool close_connection,
   }
 
   if (!res.has_header("cache-control")) {
-      res.set_header("cache-control", "max-age=1");
+      res.set_header("cache-control", "max-age=600");
   }
 
   if (post_routing_handler_) { post_routing_handler_(req, res); }

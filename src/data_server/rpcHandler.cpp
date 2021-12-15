@@ -542,6 +542,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			rpc_getChanStatus(params,rpcResp, pSession);
 		}
+		else if (method == "getDevStatus")
+		{
+			rpc_getDevStatus(params, rpcResp, pSession);
+		}
 		else if (method == "getChanVal")
 		{
 			rpc_getChanVal(params, rpcResp, pSession);
@@ -789,6 +793,8 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 				return true;
 			}
 			jReq["clientId"] = pSession->getRemoteAddr();
+			jReq.erase("user");
+			jReq.erase("token");
 			string s = jReq.dump(2) + "\n\n";
 			pIoDev->pIOSession->send((char*)s.c_str(), s.length());
 			LOG("RPC转发 客户端->设备:\r\n" + s + "\r\n");
@@ -1560,6 +1566,35 @@ void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<
 	json list;
 	ioSrv.getChanStatus(list);
 	resp.result = list.dump(4);
+}
+
+
+void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string ioAddr = params["ioAddr"];
+	ioDev* p = ioSrv.getIODev(ioAddr);
+	if (p)
+	{
+		json status;
+		//json channels = json::array();
+
+		/*for (int i = 0; i < p->m_vecChild.size(); i++)
+		{
+			ioDev* pChild = p->m_vecChild[i];
+			if (pChild->m_level == IO_DEV_LEVEL::channel)
+			{
+				ioChannel* pC = (ioChannel*)pChild;
+				json jDe;
+				jDe["ioAddr"] = pC->m_name;
+				jDe["val"] = pC->m_curVal;
+				channels.push_back(jDe);
+			}
+		}*/
+		status["channels"] = p->m_jAcq;
+		status["alarmStatus"] = p->m_jAlarmStatus;
+
+		resp.result = status.dump();
+	}
 }
 
 void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)

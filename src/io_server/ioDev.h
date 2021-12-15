@@ -156,6 +156,9 @@ public:
 
 	std::recursive_timed_mutex m_csCommLock;
 	DWORD m_dwLockThread;
+
+	json m_jAlarmStatus;
+	json m_jAcq;
 };
 
 ioDev* createIODev(json conf);

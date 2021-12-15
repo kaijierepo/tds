@@ -199,6 +199,7 @@ struct ACTIVE_TDS_SESSION {
 
 struct iTDSConf {
 	int port;
+	int httpPort;
 	bool debugMode;
 	string logLevel;
 	string projectConfPath;

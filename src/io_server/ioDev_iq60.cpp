@@ -45,7 +45,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						p->toJson(j);
 						if (!pALC->getIODev(p->getIOAddrStr()))
 						{
-							pALC->m_vecIoDev.push_back(p);
+							pALC->m_vecIoDev.push_back(p->getIOAddrStr());
 						}
 						tdsSrv.notify("io.online", j);
 					}

@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "ioDev.h"
 #include "rpcHandler.h"
+#include "ioSrv.h"
 
 
 
@@ -188,10 +189,10 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
  {
      for (int i = 0; i < m_vecIoDev.size(); i++)
      {
-         ioDev* p = m_vecIoDev.at(i);
-         if (p->getIOAddrStr() == ioAddr)
+         string p = m_vecIoDev.at(i);
+         if (p == ioAddr)
          {
-             return p;
+             return ioSrv.getIODev(ioAddr);
          }
      }
      return nullptr;
@@ -214,6 +215,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
      unique_lock<recursive_mutex> lock(m_mutexTcpLink);//修改tcplink
+     dsCltStream = nullptr;
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
      if (pBridgedTcpClient)
@@ -243,11 +245,16 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
 
      for (int i = 0; i < m_vecIoDev.size(); i++)
      {  
-         ioDev* p = m_vecIoDev[i];
-         p->m_bOnline = false;
-         json j;
-         p->toJson(j);
-         tdsSrv.notify("io.offline", j);
+         string ioAddr = m_vecIoDev[i];
+         ioDev* p = ioSrv.getIODev(ioAddr);
+         if (p)
+         {
+             p->m_bOnline = false;
+             json j;
+             p->toJson(j);
+             tdsSrv.notify("io.offline", j);
+         }
+         
      }
  }
 

@@ -388,6 +388,14 @@ void activeSessionThread()
 	}
 }
 
+
+void httpSrvThread()
+{
+	LOG("[HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
+	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
+}
+
+
 bool dataServer::run()
 {
 	//if db folder is not exist. open will create an empty folder
@@ -495,6 +503,10 @@ bool dataServer::run()
 	thread t(activeSessionThread);
 	t.detach();
 
+
+	thread t2(httpSrvThread);
+	t2.detach();
+
 	return  1;
 }
 
@@ -587,6 +599,9 @@ void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	}
 	shutdown(sock, SD_BOTH);
 	closesocket(sock); //对于大文件下载，此处等待发送完成再close，查看bool tcpSrv::DoAccept(SOCKET sockAccept, SOCKADDR_IN* ClientAddr)
+	
+	//大量http请求时，会出现此处删除后，tcpRecvCallback又收到数据的情况。
+	tdsSession->dsCltStream = nullptr;
 	delete bs;
 }
 
@@ -1182,6 +1197,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 				bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
 			}
 
+			//httpReqHandleThread内部可能删除bs导致野指针，需要优化
 			bs->appendBuffer(pData, iLen);
 		//}
 	}

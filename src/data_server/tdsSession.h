@@ -109,7 +109,7 @@ public:
 	std::shared_ptr<TDS_SESSION> bridgedIoSession; //this是界面session,保留ioSession指针
 	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
 	ioDev* getIODev(string ioAddr);
-	vector<ioDev*> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
+	vector<string> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
 	ioDev* m_IoDevTcpLink;      //建立了tcp直连的io设备
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	DWORD httpReqHandleThreadID;  //处理http请求的线程id
