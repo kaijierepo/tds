@@ -99,7 +99,7 @@ public:
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY ai);
 
-	string toJson(string user);
+	string toJson(json filter);
 
 public:
 	
@@ -131,9 +131,9 @@ public:
 	void recover(ALARM_KEY& key);
 	void acknowledge(ALARM_KEY& key,string ackInfo,string ackUser);
 //query alarm data
-	string getCurrent(string user);//combined list of active status and unack event
-	string getStatus(string user);
-	string getUnack(string user);
+	string getCurrent(json filter);//combined list of active status and unack event
+	string getStatus(json filter);
+	string getUnack(json filter);
 	string getHistory(json params,string user);
 
 //通知报警状态更新

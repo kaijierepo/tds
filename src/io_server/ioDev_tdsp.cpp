@@ -60,15 +60,52 @@ bool ioDev_tdsp::asynHandleResp(json jResp)
 	}
 	else if (method == "getAlarmStatus")
 	{
-		for (int i = 0; i < rlt.size(); i++)
+		json filter;
+		filter["tag"] = m_strTagBind;
+		filter["isRecover"] = false;
+		json jStatusList = json::parse(almSrv.getCurrent(filter));
+
+
+
+		//当前有的报警，新的里面没有的，消除
+		for (int i = 0; i < jStatusList.size(); i++)
 		{
-			json jAlm = rlt[i];
+			json jStatus = jStatusList[i];
+
+			bool bIsAlarm = false;
+			for (int j = 0; j < rlt.size(); j++)
+			{
+				json jAlm = rlt[j];
+				if (jAlm["type"].get<string>() == jStatus["type"].get<string>())
+				{
+					bIsAlarm = true;
+				}
+			}
+	
+			if (!bIsAlarm)
+			{
+				ALARM_INFO aiStatus;
+				aiStatus.tag = m_strTagBind;
+				aiStatus.type = jStatus["type"].get<string>();
+				aiStatus.level = ALARM_LEVEL::normal;
+				almSrv.Update(aiStatus);
+			}
+		}
+
+
+		//原来没有现在有的，产生报警
+		for (int j = 0; j < rlt.size(); j++)
+		{
+			json jAlm = rlt[j];
 			ALARM_INFO aiStatus;
 			aiStatus.tag = m_strTagBind;
 			aiStatus.type = jAlm["type"].get<string>();
 			aiStatus.level = ALARM_LEVEL::alarm;
 			almSrv.Update(aiStatus);
 		}
+
+
+		
 		m_jAlarmStatus = rlt;
 	}
 }

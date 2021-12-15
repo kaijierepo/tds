@@ -313,15 +313,21 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "getAlarmCurrent")
 	{
-		result = almSrv.getCurrent(pSession->user);
+		json jFilter;
+		jFilter["user"] = pSession->user;
+		result = almSrv.getCurrent(jFilter);
 	}
 	else if (method == "getAlarmStatus")
 	{
-		result = almSrv.getStatus(pSession->user);
+		json jFilter;
+		jFilter["user"] = pSession->user;
+		result = almSrv.getStatus(jFilter);
 	}
 	else if (method == "getAlarmUnack")
 	{
-		result = almSrv.getUnack(pSession->user);
+		json jFilter;
+		jFilter["user"] = pSession->user;
+		result = almSrv.getUnack(jFilter);
 	}
 	else if (method == "getAlarmHistory")
 	{

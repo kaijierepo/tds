@@ -331,19 +331,21 @@ void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
 	}
 }
 
-string almServer::getCurrent(string user)
+string almServer::getCurrent(json fitler)
 {
-	return tableCurrent.toJson(user);
+	return tableCurrent.toJson(fitler);
 }
 
-string almServer::getStatus(string user)
+string almServer::getStatus(json fitler)
 {
-	return "";
+	fitler["isRecover"] = false;
+	return tableCurrent.toJson(fitler);
 }
 
-string almServer::getUnack(string user)
+string almServer::getUnack(json fitler)
 {
-	return "";
+	fitler["isAck"] = false;
+	return tableCurrent.toJson(fitler);
 }
 
 string almServer::getHistory(json params, string user)
@@ -618,15 +620,45 @@ void almTable::remove(ALARM_KEY ai)
 	FreeAlarmList(temp);
 }
 
-string almTable::toJson(string user){
+string almTable::toJson(json filter){
 	map<string, ALARM_INFO*> temp;
 	loadFile(getFilePath(),temp);
-	json jUser = userMng.getUser(user);
+	json jUser = nullptr;
+	string user;
+	if (filter.contains("user"))
+	{
+		user = filter["user"].get<string>();
+		jUser  = userMng.getUser(user);
+	}
+
+	
 	string dataSet = "[";
 	for (map<string, ALARM_INFO*>::iterator it = temp.begin(); it != temp.end(); it++) {
 		if (jUser != nullptr)
 		{
 			if (!userMng.checkTagPermission(user, it->second->tag))
+				continue;
+		}
+
+		ALARM_INFO* pAi = it->second;
+		if (filter.contains("isAck"))
+		{
+			bool bAck = filter["isAck"].get<bool>();
+			if (bAck != pAi->bAck)
+				continue;
+		}
+
+		if (filter.contains("isRecover"))
+		{
+			bool bRecover = filter["isRecover"].get<bool>();
+			if (bRecover != pAi->bRecover)
+				continue;
+		}
+
+		if (filter.contains("tag"))
+		{
+			string tag = filter["tag"].get<string>();
+			if (tag != pAi->tag)
 				continue;
 		}
 		
