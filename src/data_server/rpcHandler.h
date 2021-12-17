@@ -77,6 +77,7 @@ public:
 	string rpc_io_tree(json params, string& error);
 	void rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
 	void rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
+	void rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
 	void rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
 	void rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);

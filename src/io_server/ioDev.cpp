@@ -179,7 +179,7 @@ void ioDev::stop()
 	}
 }
 
-bool ioDev::toJson(json& conf, string opt)
+bool ioDev::toJson(json& conf, json opt)
 {
 	conf["ioAddr"] = getIOAddrStr();
 	conf["addr"] = m_jDevAddr;
@@ -197,14 +197,18 @@ bool ioDev::toJson(json& conf, string opt)
 	if (m_strTagBind != "")
 		conf["tagBind"] = m_strTagBind;
 
-	json children = json::array();
-	for (auto& i : m_vecChild)
+
+	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))
 	{
-		json j;
-		i->toJson(j, opt);
-		children.push_back(j);
+		json children = json::array();
+		for (auto& i : m_vecChild)
+		{
+			json j;
+			i->toJson(j, opt);
+			children.push_back(j);
+		}
+		conf["children"] = children;
 	}
-	conf["children"] = children;
 	return true;
 }
 

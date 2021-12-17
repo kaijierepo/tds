@@ -11,7 +11,7 @@ public:
 	~ioChannel();
 
 	bool loadConf(json& conf) override;
-	bool toJson(json& conf, string opt = "") override;
+	bool toJson(json& conf, json opt = nullptr) override;
 	bool getChanStatus(json& statusList) override;
 	bool match(string channelNo);
 

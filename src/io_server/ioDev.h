@@ -20,7 +20,7 @@ public:
 	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
-	virtual bool toJson(json& conf, string opt = "");
+	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
 	virtual bool loadConf(json& conf);

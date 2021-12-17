@@ -213,12 +213,34 @@ void ioServer::stop()
 	LOG("ioServer stopped");
 }
 
-bool ioServer::toJson(json& conf, string opt)
+bool ioServer::toJson(json& conf, json opt)
 {
 	conf = json::array();//empty array
 	for (auto& i : m_vecChild)
 	{
 		json j;
+
+		if (opt != nullptr)
+		{
+			if (opt.contains("tagBind"))
+			{
+				string tagBind = opt["tagBind"].get<string>();
+
+				//指定查找智能设备。但是是非智能设备
+				if (i->m_strTagBind == "")
+				{
+					if(tagBind != "")
+						continue;
+				}
+				else
+				{
+					if (tagBind != "*" && tagBind != i->m_strTagBind)
+						continue;
+				}
+			}
+		}
+
+
 		i->toJson(j, opt);
 		string s = j.dump();
 		conf.push_back(j);

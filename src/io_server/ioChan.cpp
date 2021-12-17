@@ -47,7 +47,7 @@ bool ioChannel::loadConf(json& conf)
 	return true;
 }
 
-bool ioChannel::toJson(json& conf, string opt)
+bool ioChannel::toJson(json& conf, json opt)
 {
 	ioDev::toJson(conf, opt);
 

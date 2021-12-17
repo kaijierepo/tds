@@ -564,6 +564,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			rpc_getIoDevStatis(params, rpcResp, pSession);
 		}
+		else if (method == "getDevList")
+		{
+			rpc_getDevList(params, rpcResp, pSession);
+		}
 		else if (method == "getStreamInfo")
 		{
 			result = rpc_getStreamInfo(params, error);
@@ -1600,6 +1604,16 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<T
 		status["alarmStatus"] = p->m_jAlarmStatus;
 
 		resp.result = status.dump();
+	}
+}
+
+void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	json j;  
+	params["recursive"] = false;
+	if (ioSrv.toJson(j, params))
+	{
+		resp.result = j.dump(2);
 	}
 }
 
