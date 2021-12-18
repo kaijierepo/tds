@@ -507,6 +507,9 @@ bool dataServer::run()
 	thread t2(httpSrvThread);
 	t2.detach();
 
+	//程序崩溃
+	//int i = 13; int j = 0; int m = i / j;
+
 	return  1;
 }
 

@@ -743,6 +743,15 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		LOG("[debug]ui.close");
 	}
 
+	if (method == "testCrash")
+	{
+		rpcResp.result = "\"ok\"";
+		LOG("[debug]tds.Crash");
+
+		int i = 13; int j = 0;
+		int m = i / j;
+	}
+
 	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
 		return true;
 	return false;
