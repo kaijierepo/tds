@@ -26,7 +26,7 @@ void tdsConfig::loadConf()
 	string strConf;
 	fs::readFile(fs::appPath() + "\\tds.ini", strConf);
 	vector<string> confItems;
-	str::split(confItems, strConf, "\r\n");
+	str::split(confItems, strConf, "\n");
 
 	//È¥µô×¢ÊÍ
 	for (int i = 0; i < confItems.size(); i++)
@@ -56,6 +56,7 @@ void tdsConfig::loadConf()
 			str::removeChar(tci.key, '-');
 			tci.key = _strlwr((char*)tci.key.c_str());
 			tci.val = str::trim(tci.val, " ");
+			tci.val = str::trim(tci.val, "\r");
 			vecConf.push_back(tci);
 		}
 	}
