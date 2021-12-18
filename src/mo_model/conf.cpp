@@ -64,7 +64,10 @@ void tdsConfig::loadConf()
 	{
 		TDS_CONF_ITEM& tci = vecConf[i];
 		if (tci.key == "confpath" && projectConfPath == "")
+		{
 			projectConfPath = tci.val;
+			projectConfPath = fs::toAbsolutePath(projectConfPath);
+		}
 		else if (tci.key == "port" && port == 0)
 			port = atoi(tci.val.c_str());
 		else if (tci.key == "httpport" && httpPort == 0)
@@ -140,12 +143,16 @@ void tdsConfig::loadConf()
 		projectConfPath = fs::appPath() + "/conf";
 	if (port == 0)
 		port = 666;
+	if (httpPort == 0)
+		httpPort = 8080;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "\\db";
 	if (title == "")
 		title = "TDS";
 	if (homepage == "")
-		homepage = "http://localhost:666";
+	{
+		homepage = "http://localhost:" + str::fromInt(httpPort);
+	}
 	if (uiTitle == "")
 		uiTitle = "tdsUI";
 }

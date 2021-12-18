@@ -7,7 +7,8 @@ userManager userMng;
 bool userManager::loadConf()
 {
 	string sUsers, sRoles;
-	if (!fs::readFile("conf/users/users.json", sUsers))
+	string userConf = tds->conf->projectConfPath + "/users/users.json";
+	if (!fs::readFile(userConf, sUsers))
 	{
 		return false;
 	}
