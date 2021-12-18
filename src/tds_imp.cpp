@@ -661,6 +661,10 @@ LONG WINAPI CDumpCatch::UnhandledExceptionFilterEx(struct _EXCEPTION_POINTERS* p
 	::PathRemoveFileSpec(szPath);
 	std::string strPath = szPath;
 
+	string dmpfile = strPath + "\\*.dmp";
+	string strcmd = "del /s /q " + dmpfile;
+	system(strcmd.c_str());
+
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);
 	string strFile = str::format("%4d.%02d.%02d %02d-%02d-%02d.dmp", stNow.wYear, stNow.wMonth, stNow.wDay, stNow.wHour, stNow.wMinute, stNow.wSecond);
