@@ -194,7 +194,8 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 		str::replace(str, "$src_ip$", ip);
 		}
 
-	str::replace(str, "$dbPath$", db.m_path);
+	str = str::replace(str, "$dbPath$", db.m_path);
+	str = str::replace(str, "$confPath$", tds->conf->projectConfPath);
 
 	return str;
 }

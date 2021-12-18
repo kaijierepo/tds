@@ -332,6 +332,8 @@ bool TDS_imp::run(string cmdline)
 		createConsole();
 	}
 #endif
+	string sTitle = "TDS " + version + version_build_info;
+	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	//display version
 	LOG("tds " + version + version_build_info);
