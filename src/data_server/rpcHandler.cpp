@@ -746,10 +746,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	if (method == "testCrash")
 	{
 		rpcResp.result = "\"ok\"";
-		LOG("[debug]tds.Crash");
+		
 
-		int i = 13; int j = 0;
-		int m = i / j;
+		//程序崩溃
+		int i = 13; int j = 0; int m = i / j;
+		LOG("[debug]tds.Crash" + str::fromInt(m));
 	}
 
 	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
