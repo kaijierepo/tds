@@ -21,8 +21,7 @@ namespace TDS {
 	{std::map<string,string>::value_type("int","整型")},
 	{std::map<string,string>::value_type("bool","布尔型")},
 	{std::map<string,string>::value_type("video","视频")},
-	{std::map<string,string>::value_type("car_strobe","车闸")},
-	{std::map<string,string>::value_type("man_strobe","人闸")}
+	{std::map<string,string>::value_type("string","字符串型")}
 	};
 
 	const std::map<string, string> IO_TYPE_LABEL = {
