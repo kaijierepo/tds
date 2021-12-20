@@ -392,7 +392,7 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		bool bHandled = tdsSrv.handleMethodCall(method, jParam, resp,NULL);
+		bool bHandled = rpcSrv.handleMethodCall(method, jParam, resp,NULL);
 		if (bHandled)
 		{
 			return true;
@@ -411,7 +411,7 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 
 void TDS_imp::setRpcHandler(fp_rpcHandler handler)
 {
-	tdsSrv.m_pluginHandler = handler;
+	rpcSrv.m_pluginHandler = handler;
 }
 
 void TDS_imp::rpcNotify(string method, string params, string sessionId)
@@ -427,7 +427,7 @@ void TDS_imp::rpcNotify(string method, string params, string sessionId)
 			string s = e.what();
 		}
 	}
-	tdsSrv.notify(method, jParams);
+	rpcSrv.notify(method, jParams);
 }
 
 bool TDS_imp::enableIoLog(string ioAddr, bool bEnable)

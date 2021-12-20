@@ -28,6 +28,7 @@ ioServer ioSrv;
 void IOThread()
 {
 	ioSrv.m_bWorkingThreadRunning = true;
+	int statisUpdateInterval = 10;
 	while (1)
 	{
 		if (!ioSrv.m_bRunning)
@@ -38,6 +39,7 @@ void IOThread()
 			//空闲设备不轮询数据
 			if(pIoDev->bEnableAcq && pIoDev->m_mngStatus == IODEV_MNG_STATUS::managed)
 				pIoDev->DoCycleTask();
+
 			if (!ioSrv.m_bRunning)
 				break;
 		}
@@ -291,7 +293,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 	ioSrv.m_vecChild.push_back(p);
 	json j;
 	p->toJson(j);
-	tdsSrv.notify("devDiscovered", j);
+	rpcSrv.notify("devDiscovered", j);
 	return p;
 }
 

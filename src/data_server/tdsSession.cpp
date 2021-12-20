@@ -252,7 +252,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
              p->m_bOnline = false;
              json j;
              p->toJson(j);
-             tdsSrv.notify("io.offline", j);
+             rpcSrv.notify("io.offline", j);
          }
          
      }

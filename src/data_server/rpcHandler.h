@@ -57,30 +57,31 @@ public:
 
 	//tds data service function
 	string rpc_input(json params, string& error);
-	string rpc_getTopoList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
-	string rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
-	string rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
+	string rpc_getTopoList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	void rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_output(json params, string& error);
-	string rpc_db_select(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
-	string rpc_getMpStatus(json params, string& error,std::shared_ptr<TDS_SESSION> pSession);
+	string rpc_db_select(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_getMpStatus(json params, string& error,std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_getUsers(json params, string& error);
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);
 	string rpc_getconffile(json params, string& error);
 	string rpc_setconffile(json params, string& error);
-	string rpc_heartbeat(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
+	string rpc_heartbeat(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_xiaot(json params, string& error);
 
 	string rpc_login(json params, string& error);
 
 	////io service function
 	string rpc_io_tree(json params, string& error);
-	void rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
-	void rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
-	void rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
-	void rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
-	void rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession);
-	string rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
+	void rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	void rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	void rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	void rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	void rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_setStream(json params, string& error);
 	//serial function
 	string rpc_openCom(json params, string& error);
@@ -111,4 +112,4 @@ public:
 
 	fp_rpcHandler m_pluginHandler;
 };
-extern rpcHandler tdsSrv;
+extern rpcHandler rpcSrv;

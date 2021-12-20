@@ -782,4 +782,10 @@ int TAG::getMoLevel(string tag)
 	return std::count(tag.begin(),tag.end(),'.');
 }
 
+json TAG::mapTree2List(json mapTree)
+{
+
+	return json();
+}
+
 

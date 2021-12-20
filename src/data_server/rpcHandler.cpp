@@ -22,7 +22,7 @@
 #include "streamServer.h"
 #include "users/userMng.h"
 
-rpcHandler tdsSrv;
+rpcHandler rpcSrv;
 
 void msgSinker_rpcHandler(MODULE_BUS_MSG& msg)
 {
@@ -32,7 +32,7 @@ void msgSinker_rpcHandler(MODULE_BUS_MSG& msg)
 		json j;
 		j["addr"] = jMsg["ioAddr"];
 		j["type"] = msg.eventName;
-		tdsSrv.notify("ioEvent", j);
+		rpcSrv.notify("ioEvent", j);
 	}
 }
 
@@ -217,12 +217,12 @@ void selectFolderDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 				jPs.push_back(p);
 			}
 			jn["path"] = jPs;
-			tdsSrv.notify("fs.selectFolderDlg", jn);
+			rpcSrv.notify("fs.selectFolderDlg", jn);
 		}
 		else if (paths.size() == 1)
 		{
 			jn["path"] = paths[0];
-			tdsSrv.notify("fs.selectFolderDlg", jn);
+			rpcSrv.notify("fs.selectFolderDlg", jn);
 		}
 	}
 }
@@ -251,12 +251,12 @@ void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
 				jPs.push_back(p);
 			}
 			jn["path"] = jPs;
-			tdsSrv.notify("fs.openFileDlg", jn);
+			rpcSrv.notify("fs.openFileDlg", jn);
 		}
 		else if(paths.size() == 1)
 		{
 			jn["path"] = paths[0];
-			tdsSrv.notify("fs.openFileDlg", jn);
+			rpcSrv.notify("fs.openFileDlg", jn);
 		}
 	}
 }
@@ -286,12 +286,12 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 				jPs.push_back(p);
 			}
 			jn["path"] = jPs;
-			tdsSrv.notify("fs.saveFileDlg", jn);
+			rpcSrv.notify("fs.saveFileDlg", jn);
 		}
 		else if (paths.size() == 1)
 		{
 			jn["path"] = paths[0];
-			tdsSrv.notify("fs.saveFileDlg", jn);
+			rpcSrv.notify("fs.saveFileDlg", jn);
 		}
 	}
 }
@@ -428,6 +428,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		else if (method == "getMoStatus")
 		{
 			result = rpc_getMoStatus(params, error,pSession);
+		}
+		else if (method == "getMoStatis")
+		{
+			rpc_getMoStatis(params, rpcResp, pSession);
 		}
 		else if (method == "getMoStatusTable")
 		{
@@ -816,7 +820,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			jReq["clientId"] = pSession->getRemoteAddr();
 			jReq.erase("user");
 			jReq.erase("token");
-			string s = jReq.dump(2) + "\n\n";
+			string s = jReq.dump() + "\n\n";
 			pIoDev->pIOSession->send((char*)s.c_str(), s.length());
 			LOG("RPC转发 客户端->设备:\r\n" + s + "\r\n");
 			return true;
@@ -828,7 +832,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
 			if (p != nullptr)
 			{
-				string s = jReq.dump(2) + "\n\n";
+				string s = jReq.dump() + "\n\n";
 				p->send((char*)s.c_str(), s.length());
 				LOG("RPC转发 设备->客户端:\r\n" + s + "\r\n");
 			}
@@ -1248,6 +1252,92 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 	return j.dump();
 }
 
+void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string rootTag = "";
+	if (params.contains("rootTag"))
+	{
+		rootTag = params["rootTag"].get<string>();
+	}
+	string devType = "*";
+	if (params.contains("devType"))
+	{
+		devType = params["devType"].get<string>();
+	}
+
+	//仅统计1级设备
+	vector<ioDev*> m_devList;
+	for (auto& i : ioSrv.m_vecChild)
+	{
+		if (i->m_strTagBind == "")
+			continue;
+
+		if (devType != "*" && i->m_devType != devType)
+			continue;
+
+		if (rootTag != "")
+		{
+			string tagBind = i->m_strTagBind;
+			tagBind = TAG::trimRoot(tagBind);
+			rootTag = TAG::trimRoot(rootTag);
+
+			if (tagBind.find(rootTag) == string::npos)
+				continue;
+		}
+
+		m_devList.push_back(i);
+	}
+
+
+	//生成统计信息
+	int onlineCount = 0;
+	for (auto& i : m_devList)
+	{
+		if (i->m_bOnline)
+			onlineCount++;
+	}
+
+	string fmt = "tree";
+	if (params.contains("fmt"))
+	{
+		if(params["fmt"].get<string>() == "list")
+		{
+			fmt = "list";
+		}
+	}
+
+
+	json j;
+	j["total"] = m_devList.size();
+	j["online"] = onlineCount;
+	j["offline"] = m_devList.size() - onlineCount;
+	json jRlt;
+	jRlt["smartDev"] = j;
+
+	if (fmt == "tree")
+	{
+		resp.result = jRlt.dump(4);
+	}
+	else
+	{
+		json jRlt = json::array();
+		json de;
+		de["tag"] = "statis.smartDev.total";
+		de["val"] = m_devList.size();
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.smartDev.online";
+		de["val"] = onlineCount;
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.smartDev.offline";
+		de["val"] = m_devList.size() - onlineCount;;
+		jRlt.push_back(de);
+		resp.result = jRlt.dump(4);
+	}
+}
+
+
 string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	if (params["type"] == nullptr)
@@ -1630,56 +1720,7 @@ void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS
 
 void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
 {
-	string rootTag = "";
-	if (params.contains("rootTag"))
-	{
-		rootTag = params["rootTag"].get<string>();
-	}
-	string devType = "*";
-	if (params.contains("devType"))
-	{
-		devType = params["devType"].get<string>();
-	}
 	
-	//仅统计1级设备
-	vector<ioDev*> m_devList;
-	for (auto& i : ioSrv.m_vecChild)
-	{
-		if(i->m_strTagBind == "")
-			continue;
-
-		if (devType!="*"  &&  i->m_devType != devType)
-			continue;
-
-		if (rootTag != "")
-		{
-			string tagBind = i->m_strTagBind;
-			tagBind = TAG::trimRoot(tagBind);
-			rootTag = TAG::trimRoot(rootTag);
-
-			if (tagBind.find(rootTag) == string::npos)
-				continue;
-		}
-		
-		m_devList.push_back(i);
-	}
-
-
-	//生成统计信息
-	int onlineCount = 0;
-	for (auto& i : m_devList)
-	{
-		if (i->m_bOnline)
-			onlineCount++;
-	}
-
-
-	json j;
-	j["total"] = m_devList.size();
-	j["online"] = onlineCount;
-	j["offline"] = m_devList.size() - onlineCount;
-
-	resp.result = j.dump(4);
 }
 
 

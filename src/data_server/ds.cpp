@@ -110,7 +110,7 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	char* binResp = NULL;
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
-	tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
+	rpcSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
 
 	if (resp != "")
 	{
@@ -1333,7 +1333,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 		char* binResp = NULL;
 		int iBinRespLen = 0;
 		bool bNeedLog = true;
-		tdsSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, bNeedLog,pALC);
+		rpcSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, bNeedLog,pALC);
 
 		if (resp != "")
 		{
@@ -1487,7 +1487,7 @@ void dataServer::onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESS
 	char* binResp = NULL;
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
-	tdsSrv.handleRpcCall(req, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
+	rpcSrv.handleRpcCall(req, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
 
 	if (resp != "")
 	{

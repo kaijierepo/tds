@@ -362,7 +362,7 @@ string almServer::getHistory(json params, string user)
 			params["root"] = jUser["org"];
 		}
 	}
-	string error = tdsSrv.parseDataSelector(params,timeSelector,tagSelector);
+	string error = rpcSrv.parseDataSelector(params,timeSelector,tagSelector);
 	if(error != "") return error;
 	
 	string dataSet = "[";

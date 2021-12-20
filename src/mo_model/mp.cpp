@@ -324,7 +324,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	json rtList;
 	json pt = getRTData();
 	rtList.push_back(pt);
-	tdsSrv.notify("rt", rtList);
+	rpcSrv.notify("rt", rtList);
 
 	//save to db
 	bool bNeedSave = false;
