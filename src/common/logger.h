@@ -10,6 +10,7 @@ enum LOG_LEVEL {
 	LL_DEBUG = 0,
 	LL_WARN = 1,
 	LL_ERROR = 2,
+	LL_KEYINFO = 3,
 };
 
 typedef void (*fp_logOutputCallback)(string text);
@@ -21,8 +22,8 @@ public:
 	std::string formatStr(const char* pszFmt, ...);
 	LOG_LEVEL str2logLevel(string level);
 	void setLogLevel(string level);
-	bool isNeedLog(string info);
-	string logInternal(string info);
+	LOG_LEVEL getLogLevel(string& info);
+	string logInternal(string info); //bForceWrite为true,忽略级别过滤，直接输出
 	string appPath();
 	void log(string info);
 	bool dirCreated;

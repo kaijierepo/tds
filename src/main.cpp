@@ -92,11 +92,13 @@ int main(int argc, char** argv)
 	parser.set_optional<int>("pp", "proxyport", 667, "proxy server port in reverse proxy mode");
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
-	parser.set_optional<string>("l", "loglevel", "debug", "value can be detail,trace,debug,warn,error");
 	parser.set_optional<int>("baudRate", "baudRate", 19200, charCodec::utf8toAnsi("串口波特率"));
 	parser.set_optional<int>("byteSize", "byteSize", 8, charCodec::utf8toAnsi("串口数据位"));
 	parser.set_optional<string>("stopBits", "stopBits", "1", charCodec::utf8toAnsi("停止位"));
 	parser.set_optional<string>("parity", "parity", "None", charCodec::utf8toAnsi("校验位"));
+
+	//保持无效值，使用配置文件当中的值
+	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
 	tds->conf->port = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");

@@ -140,18 +140,23 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
         return;
     }
 
-    json j;
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    j["time"] = timeopt::st2strWithMilli(st);
-    j["remoteAddr"] = getRemoteAddr();
-    j["type"] = "接收";
-    j["len"] = len;
-    j["data"] = str::fromBuff(p, len);
-    j["sessionType"] = type;
-    string s = j.dump();
-
-    sendToSessionPktSessions((char*)s.c_str(), s.length());
+    try {
+        json j;
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        j["time"] = timeopt::st2strWithMilli(st);
+        j["remoteAddr"] = getRemoteAddr();
+        j["type"] = "接收";
+        j["len"] = len;
+        j["data"] = str::fromBuff(p, len);
+        j["sessionType"] = type;
+        string s = j.dump();
+        sendToSessionPktSessions((char*)s.c_str(), s.length());
+    }
+    catch (std::exception& e)
+    {
+        LOG("[error]接收到非utf8字符串,tdsSession=%s,%s", getRemoteAddr().c_str(), e.what());
+    }
 }
 
 

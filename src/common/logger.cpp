@@ -68,6 +68,8 @@ LOG_LEVEL Clogger::str2logLevel(string level)
 		ll = LL_WARN;
 	else if (level == "error")
 		ll = LL_ERROR;
+	else if (level == "keyinfo")
+		ll = LL_KEYINFO;
 	else
 		ll = LL_DEBUG;
 	return ll;
@@ -78,7 +80,7 @@ void Clogger::setLogLevel(string level)
 	logLevel = str2logLevel(level);
 }
 
-bool Clogger::isNeedLog(string info)
+LOG_LEVEL Clogger::getLogLevel(string& info)
 {
 	LOG_LEVEL ll = LL_DEBUG;
 	if (info.find("[trace]") != string::npos)
@@ -91,16 +93,24 @@ bool Clogger::isNeedLog(string info)
 		ll = str2logLevel("warn");
 	else if (info.find("[error]") != string::npos)
 		ll = str2logLevel("error");
+	else if (info.find("[keyinfo]") != string::npos)
+		ll = str2logLevel("keyinfo");
 
-	if (ll >= logLevel)
-		return true;
-	return false;
+
+	return ll;
 }
 
 string Clogger::logInternal(string info)
 {
-	if (!isNeedLog(info))
+	LOG_LEVEL ll = getLogLevel(info);
+	if (ll < logLevel)
 		return "";
+
+	if (ll == LOG_LEVEL::LL_KEYINFO)
+	{
+		info = str::trim(info, "[keyinfo]");
+	}
+
 
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);

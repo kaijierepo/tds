@@ -307,7 +307,7 @@ bool TDS_imp::setWorkingDir()
 	string cwd = fs::appPath();
 	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
 	string s = bRet ? "成功" : "失败";
-	LOG("[工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
+	LOG("[keyinfo][工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
 	return true;
 }
 
@@ -332,14 +332,12 @@ bool TDS_imp::run(string cmdline)
 		createConsole();
 	}
 #endif
-	string sTitle = "TDS " + version + version_build_info;
-	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	//display version
-	LOG("tds " + version + version_build_info);
+	LOG("[keyinfo]tds " + version + version_build_info);
 
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
+	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 
 	//startup xiaot
 	xiaot.init();
@@ -368,6 +366,10 @@ bool TDS_imp::run(string cmdline)
 	{
 		createChromeWnd();
 	}
+
+
+	string sTitle = "TDS   版本:" + version + version_build_info + ",数据服务端口:" + str::fromInt(tds->conf->port);
+	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	return true;
 }

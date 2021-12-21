@@ -416,7 +416,7 @@ bool dataServer::run()
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
 		httpSrv.set_mount_point("/", + asc_customUI.c_str());
-		LOG("[HTTP服务器] 根目录: " + customUI);
+		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
 	}
 
 	//tds自己使用时，直接将app作为根目录
@@ -425,7 +425,7 @@ bool dataServer::run()
 	{
 		string asc_prjUI = charCodec::utf8toAnsi(uiApps);
 		httpSrv.set_mount_point("/", asc_prjUI.c_str());
-		LOG("[HTTP服务器] 根目录: " + uiApps);
+		LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
 	}
 
 	//serve db files through http
@@ -436,7 +436,7 @@ bool dataServer::run()
 	}
 	else
 	{
-		LOG("[数据库    ] 路径 " + db.m_path);
+		LOG("[keyinfo][数据库    ] 路径 " + db.m_path);
 	}
 
 
@@ -447,7 +447,7 @@ bool dataServer::run()
 	}
 	else
 	{
-		LOG("[配置    ] 路径 " + tds->conf->projectConfPath);
+		LOG("[keyinfo][配置    ] 路径 " + tds->conf->projectConfPath);
 	}
 
 
@@ -458,7 +458,7 @@ bool dataServer::run()
 	}
 	else
 	{
-		LOG("[文件下载服务] 路径 " + fs::appPath() + "/files");
+		LOG("[keyinfo][文件下载服务] 路径 " + fs::appPath() + "/files");
 	}
 
 
@@ -493,7 +493,7 @@ bool dataServer::run()
 			exit(0);
 		}
 	}
-	LOG("[TDS服务   ] 端口:" + str::fromInt(tryPort) + " 本机浏览器 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
+	LOG("[keyinfo][TDS服务   ] 端口:" + str::fromInt(tryPort) + " 本机浏览器 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
@@ -512,9 +512,9 @@ bool dataServer::run()
 
 void dataServer::stop()
 {
-	LOG("stoping dataServer...");
+	LOG("[keyinfo]正在停止数据服务DataServer...");
 	m_tcpSrv->stop();
-	LOG("dataServer stopped");
+	LOG("[keyinfo]数据服务已停止");
 }
 
 bool dataServer::OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
