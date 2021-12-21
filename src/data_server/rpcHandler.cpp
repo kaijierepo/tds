@@ -308,10 +308,6 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		result = rpc_xiaot(params, error);
 	}
-	else if (method == "login")
-	{
-		result = rpc_login(params, error);
-	}
 	else if (method == "getAlarmCurrent")
 	{
 		json jFilter;
@@ -948,6 +944,13 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		if (method == "login")
 		{
 			rpcResp.result = rpc_login(params, error);
+			if (error != "")
+				rpcResp.error = error;
+			goto HANDLE_END;
+		}
+		else if (method == "logout")
+		{
+			rpcResp.result = rpc_logout(params, error);
 			if (error != "")
 				rpcResp.error = error;
 			goto HANDLE_END;
@@ -1612,6 +1615,28 @@ string rpcHandler::rpc_xiaot(json params, string& error)
 {
 	string reply = xiaot.getReply(params);
 	return reply;
+}
+
+string rpcHandler::rpc_logout(json params, string& error)
+{
+	try {
+		string user = params["user"].get<string>();
+		string pwd = params["pwd"].get<string>();
+		json jInfo;
+		if (userMng.checkLogin(user, pwd, jInfo))
+		{
+			return jInfo.dump(4);
+		}
+		else
+		{
+			error = RPCError(RPC_ERROR::TEC_FAIL, "fail");
+		}
+	}
+	catch (std::exception& e)
+	{
+		error = RPCError(RPC_ERROR::TEC_FAIL, "request data error");
+	}
+	return "";
 }
 
 string rpcHandler::rpc_login(json params, string& error)

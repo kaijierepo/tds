@@ -97,6 +97,12 @@ bool userManager::checkLogin(string user, string pwd,json& userInfo)
 	return false;
 }
 
+bool userManager::logout(string user)
+{
+	m_mapAccessInfo.erase(user);
+	return true;
+}
+
 bool userManager::checkToken(string user, string token)
 {
 	if (m_mapAccessInfo.find(user) == m_mapAccessInfo.end())

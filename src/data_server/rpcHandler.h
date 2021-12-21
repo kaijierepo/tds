@@ -72,6 +72,8 @@ public:
 	string rpc_heartbeat(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_xiaot(json params, string& error);
 
+	string rpc_logout(json params, string& error);
+
 	string rpc_login(json params, string& error);
 
 	////io service function
