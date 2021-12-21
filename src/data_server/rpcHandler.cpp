@@ -1366,6 +1366,15 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 			
 			nlohmann::ordered_json oneData;
 			oneData["监控对象"] = pMo->getTag();
+			if (pMo->m_strIoAddrBind != "") //智能设备，加入在线离线信息
+			{
+				ioDev* piod = ioSrv.getIODev(pMo->m_strIoAddrBind);
+				if (piod)
+				{
+					oneData["在线"] = piod->m_bOnline;
+				}
+			}
+
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				MO* pChild = pMo->m_childMO[j];
