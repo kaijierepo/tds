@@ -202,6 +202,7 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	int iId = m_iRpcId;
 	req["id"] = iId;
 	req["clientId"] = "tds";
+	req["ioAddr"] = getIOAddrStr();
 	m_iRpcId++;
 	string strReq = req.dump() + "\n\n";
 	sendStr(strReq);
