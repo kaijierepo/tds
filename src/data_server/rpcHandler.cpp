@@ -1516,12 +1516,16 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error, std::shared_
 string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string szTag = "*"; //未指定位号默认查询所有位号
+	string rootTag = "";
 	if(params["tag"]!=nullptr)
 		szTag = params["tag"].get<string>();
 	string fmt = "table";
 	if(params["fmt"]!=nullptr)
 	 	fmt = params["fmt"].get<string>();
-	json rtList;
+	if (params["rootTag"] != nullptr)
+		rootTag = params["rootTag"].get<string>();
+
+	json rtList = json::array();
 	if (szTag == "*")
 	{
 		if(fmt=="tree")
@@ -1532,27 +1536,36 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 		}
 		else
 		{
+			json jUser = nullptr;
 			if (pSession->user != "")
 			{
 				json jUser = userMng.getUser(pSession->user);
-				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
-				{
-					if(userMng.checkTagPermission(pSession->user,it->second->getTag()))
-						rtList.push_back(it->second->getRTData(jUser["org"].get<string>()));
-				}
-				string result = rtList.dump(4);
-				return result;
 			}
-			else
+
+			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
 			{
-				
-				for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
+				string tag = it->second->getTag();
+
+				if (pSession->user != "")
 				{
-					rtList.push_back(it->second->getRTData());
+					if (!userMng.checkTagPermission(pSession->user, tag))
+						continue;
 				}
-				string result = rtList.dump(4);
-				return result;
+
+				if (rootTag != "")
+				{
+					if (tag.find(rootTag) == string::npos)
+						continue;
+				}
+
+				string rootTag = "";
+				if (jUser["org"] != nullptr)
+					rootTag = jUser["org"].get<string>();
+
+				rtList.push_back(it->second->getRTData(rootTag));
 			}
+			string result = rtList.dump(4);
+			return result;
 		}
 	}
 	else

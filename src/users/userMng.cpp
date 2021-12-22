@@ -16,6 +16,7 @@ bool userManager::loadConf()
 		if (sUsers != "")
 			m_jUsers = json::parse(sUsers);
 
+		std::unique_lock<shared_mutex> lock(m_csUserConf);
 		for (int i = 0; i < m_jUsers.size(); i++)
 		{
 			json& jOneUser = m_jUsers[i];
@@ -66,6 +67,7 @@ bool userManager::loadConf()
 
 bool userManager::checkLogin(string user, string pwd,json& userInfo)
 {
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
 		json* pUser = m_mapUsers[user];
@@ -164,6 +166,7 @@ json userManager::getRoles(string user)
 json userManager::getUsers(string user)
 {
 	json jRet = json::array();
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
 		json* pUser = m_mapUsers[user];
@@ -189,6 +192,7 @@ json userManager::getUsers(string user)
 
 bool userManager::setUsers(json& users)
 {
+	std::unique_lock<shared_mutex> lock(m_csUserConf);
 	for (int i = 0; i < users.size(); i++)
 	{
 		json& oneUser = users[i];
@@ -214,6 +218,7 @@ bool userManager::setUsers(json& users)
 json userManager::getMoPermission(string user)
 {
 	try {
+		std::shared_lock<shared_mutex> lock(m_csUserConf);
 		if (m_mapUsers.find(user) != m_mapUsers.end())
 		{
 			json& jUser = *m_mapUsers[user];
@@ -228,6 +233,7 @@ json userManager::getMoPermission(string user)
 
 json userManager::getUser(string user)
 {
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
 		json& jUser = *m_mapUsers[user];

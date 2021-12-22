@@ -40,6 +40,7 @@ public:
 
 
 	std::map<string, json*> m_mapUsers;
+	std::shared_mutex m_csUserConf;
 	json m_jUsers;
 	json m_jRoles;
 	json m_jUI;
