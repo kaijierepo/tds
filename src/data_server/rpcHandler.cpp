@@ -1349,6 +1349,11 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 		return "";
 	}
 	string moType = params["type"].get<string>();
+	string rootTag = "";
+	if (params["rootTag"] != nullptr) 
+	{
+		rootTag = params["rootTag"].get<string>();
+	}
 	string strList = "[";
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
@@ -1357,15 +1362,27 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
+			string tag = pMo->getTag();
 
+			//过滤用户权限
 			if(pSession->user != "")
 			{
-				if (!userMng.checkTagPermission(pSession->user, pMo->getTag()))
+				if (!userMng.checkTagPermission(pSession->user, tag))
 					continue;
+			}
+
+			//过滤根mo
+			if (rootTag != "")
+			{
+				if (tag.find(rootTag) == string::npos)
+				{
+					continue;
+				}
+				tag = str::trim(tag, rootTag + ".");
 			}
 			
 			nlohmann::ordered_json oneData;
-			oneData["监控对象"] = pMo->getTag();
+			oneData["监控对象"] = tag;
 			if (pMo->m_strIoAddrBind != "") //智能设备，加入在线离线信息
 			{
 				ioDev* piod = ioSrv.getIODev(pMo->m_strIoAddrBind);

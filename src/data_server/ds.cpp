@@ -391,7 +391,7 @@ void activeSessionThread()
 
 void httpSrvThread()
 {
-	LOG("[HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
+	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
 	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
 }
 
