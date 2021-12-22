@@ -1540,6 +1540,12 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 			if (pSession->user != "")
 			{
 				json jUser = userMng.getUser(pSession->user);
+				//优先使用参数中指定的rootTag，如果没有指定，使用用户的所属组织作为rootTag
+				if (rootTag == "")
+				{
+					if (jUser["org"] != nullptr)
+						rootTag = jUser["org"].get<string>();
+				}
 			}
 
 			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
@@ -1557,10 +1563,6 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 					if (tag.find(rootTag) == string::npos)
 						continue;
 				}
-
-				string rootTag = "";
-				if (jUser["org"] != nullptr)
-					rootTag = jUser["org"].get<string>();
 
 				rtList.push_back(it->second->getRTData(rootTag));
 			}
