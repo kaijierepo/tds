@@ -784,6 +784,10 @@ int TAG::getMoLevel(string tag)
 
 json TAG::mapTree2List(json mapTree)
 {
+	for (auto& [k,v] : mapTree.items())
+	{
+
+	}
 
 	return json();
 }

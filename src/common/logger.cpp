@@ -103,9 +103,6 @@ LOG_LEVEL Clogger::getLogLevel(string& info)
 string Clogger::logInternal(string info)
 {
 	LOG_LEVEL ll = getLogLevel(info);
-	if (ll < logLevel)
-		return "";
-
 	if (ll == LOG_LEVEL::LL_KEYINFO)
 	{
 		info = str::trim(info, "[keyinfo]");
@@ -117,6 +114,11 @@ string Clogger::logInternal(string info)
 	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	//命令行和文件中的日志用gb2312编码
 	string logline = time + " " + info;
+
+	//logLevel用户控制本地命令行界面和日志文件当中是否记录。weblog监视统一全部推送
+	if (ll < logLevel)
+		return logline;
+
 	info = charCodec::utf8toAnsi(logline);
 
 	printf(info.c_str());

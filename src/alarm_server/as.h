@@ -131,6 +131,15 @@ public:
 	void recover(ALARM_KEY& key);
 	void acknowledge(ALARM_KEY& key,string ackInfo,string ackUser);
 //query alarm data
+	//过滤器参数
+	/*
+	{
+		isAck:false,
+		isRecover:false,
+		tag:null,
+		user:null
+	}
+	*/
 	string getCurrent(json filter);//combined list of active status and unack event
 	string getStatus(json filter);
 	string getUnack(json filter);

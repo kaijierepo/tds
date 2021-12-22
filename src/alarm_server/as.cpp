@@ -661,6 +661,13 @@ string almTable::toJson(json filter){
 			if (tag != pAi->tag)
 				continue;
 		}
+
+		if (filter.contains("rootTag"))
+		{
+			string rootTag = filter["rootTag"].get<string>();
+			if (pAi->tag.find(rootTag) == string::npos)
+				continue;
+		}
 		
 		if(dataSet !="[")
 			dataSet += "," + it->second->toJson();

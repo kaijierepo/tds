@@ -159,6 +159,7 @@ public:
 	string strResp; //完整的字符串格式jsonRPC命令
 	string error;
 	string result;
+	string params;  //某些情况下，回复params,方便调试诊断
 	char* binResult;
 	int iBinLen;
 };

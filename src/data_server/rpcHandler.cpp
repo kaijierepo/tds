@@ -800,7 +800,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		//包有效性检测
 		if (!jReq.contains("result") && !jReq.contains("error") && !jReq.contains("params"))
 		{
-			LOG("无效的设备通信rpc数据包,result,error,params中必须指定1个字段");
+			LOG("[设备透传]无效的设备通信rpc数据包,result,error,params中必须指定1个字段");
 			return true;
 		}
 
@@ -818,7 +818,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			jReq.erase("token");
 			string s = jReq.dump() + "\n\n";
 			pIoDev->pIOSession->send((char*)s.c_str(), s.length());
-			LOG("RPC转发 客户端->设备:\r\n" + s + "\r\n");
+			LOG("[设备透传]客户端->设备:\r\n" + s + "\r\n");
 			return true;
 		}
 		//ioDev -> tdsClient
@@ -830,12 +830,12 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			{
 				string s = jReq.dump() + "\n\n";
 				p->send((char*)s.c_str(), s.length());
-				LOG("RPC转发 设备->客户端:\r\n" + s + "\r\n");
+				LOG("[设备透传]设备->客户端:\r\n" + s + "\r\n");
 			}
 			else
 			{
 				string s = jReq.dump(2) + "\n\n";
-				LOG("RPC转发 设备->客户端 未找到会话:\r\n" + s + "\r\n");
+				LOG("[设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
 			}
 
 			return true;
@@ -1310,12 +1310,37 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 	}
 
 
-	json j;
-	j["total"] = m_devList.size();
-	j["online"] = onlineCount;
-	j["offline"] = m_devList.size() - onlineCount;
+	json jDev;
+	jDev["total"] = m_devList.size();
+	jDev["online"] = onlineCount;
+	jDev["offline"] = m_devList.size() - onlineCount;
 	json jRlt;
-	jRlt["smartDev"] = j;
+	jRlt["smartDev"] = jDev;
+
+
+	//统计报警
+	json jFilter = nullptr;
+	if (pSession->user != "")
+		jFilter["user"] = pSession->user;
+	if (rootTag != "")
+		jFilter["rootTag"] = rootTag;
+	string szAlm = almSrv.getStatus(jFilter);
+	json jAlarms = json::parse(szAlm);
+	int iAlarmCount = 0;
+	int iWarnCount = 0;
+	for (int i = 0; i < jAlarms.size(); i++)
+	{
+		json& jAlm = jAlarms[i];
+		if (jAlm["level"].get<string>() == "alarm")
+			iAlarmCount++;
+		if (jAlm["level"].get<string>() == "warn")
+			iWarnCount++;
+	}
+	json jAlmStatis;
+	jAlmStatis["alarmCount"] = iAlarmCount;
+	jAlmStatis["warnCount"] = iWarnCount;
+	jRlt["alarms"] = jAlmStatis;
+
 
 	if (fmt == "tree")
 	{
@@ -1336,7 +1361,26 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 		de["tag"] = "statis.smartDev.offline";
 		de["val"] = m_devList.size() - onlineCount;;
 		jRlt.push_back(de);
+
+		de["tag"] = "statis.alarms.alarmCount";
+		de["val"] = iAlarmCount;
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.alarms.warnCount";
+		de["val"] = iWarnCount;
+		jRlt.push_back(de);
+
+		/*if (rootTag != "")
+		{
+			for (int i = 0; i < jRlt.size(); i++)
+			{
+				json& de = jRlt[i];
+				de["tag"] = rootTag + "." + de["tag"].get<string>();
+			}
+		}*/
+
 		resp.result = jRlt.dump(4);
+		resp.params = params.dump(4);
 	}
 }
 
