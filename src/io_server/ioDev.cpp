@@ -57,31 +57,32 @@ bool isBatchLink(string addr)
 ioDev* createIODev(json conf)
 {
 	ioDev* p = NULL;
-	if (conf["type"] == "mqtt-broker")
+	string type = conf["type"].get<string>();
+	if (type == "mqtt-broker")
 	{
 		p = new ioDev_mqttBroker();
 		string ip = conf["addr"]["ip"];
 		string port = conf["addr"]["port"];
 		p->m_devAddr = ip + ":" + port;
 	}
-	else if (conf["type"] == "tuya-iot-project")
+	else if (type == "tuya-iot-project")
 	{
 		p = new ioGW_tuyaProject();
 		p->m_devAddr = conf["addr"]["client_id"];
 		p->m_secret = conf["addr"]["secret"];
 	}
-	else if (conf["type"] == "tuya.switch")
+	else if (type == "tuya.switch")
 	{
 		p = new ioDev_tuya();
 		p->m_devAddr = conf["addr"]["device_id"];
 	}
-	else if (conf["type"] == "iq60-gateway")
+	else if (type == "iq60-gateway")
 	{
 		ioDev_iq60* piq60 = new ioDev_iq60();
 		p = piq60;
 		p->m_devAddr = conf["addr"]["id"];
 	}
-	else if (conf["type"] == IO_DEV_TYPE::GW::rs485_gateway)
+	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
 	{
 		ioGW_rs485* pRs485 = new ioGW_rs485();
 		p = pRs485;
@@ -94,16 +95,22 @@ ioDev* createIODev(json conf)
 			p->m_devAddr = conf["addr"]["ip"].get<string>();
 		}
 	}
-	else if (conf["type"] == IO_DEV_TYPE::DEV::modbus_rtu_slave)
+	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
 	{
 		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
 		p = pRtuSlave;
 		p->m_devAddr = conf["addr"].get<string>();
 	}
-	else if (conf["type"] == IO_DEV_TYPE::DEV::tdsp_device)
+	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
 	{
 		ioDev_tdsp* ptdsp = new ioDev_tdsp();
 		p = ptdsp;
+		p->m_jDevAddr = conf["addr"];
+	}
+	else if (type == IO_DEV_TYPE::GW::local_serial)
+	{
+		ioGW_LocalSerial* pLs = new ioGW_LocalSerial();
+		p = pLs;
 		p->m_jDevAddr = conf["addr"];
 	}
 	if (p)
@@ -158,7 +165,7 @@ ioDev::ioDev(void)
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
 	pTdsSession = NULL;
-	m_fAcqInterval = 1;
+	m_fAcqInterval = 30;
 	pIOSession = NULL;
 }
 
@@ -196,6 +203,9 @@ bool ioDev::toJson(json& conf, json opt)
 
 	if (m_strTagBind != "")
 		conf["tagBind"] = m_strTagBind;
+
+	if (m_strChanTemplate != "")
+		conf["chanTemplate"] = m_strChanTemplate;
 
 
 	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))
@@ -243,6 +253,11 @@ bool ioDev::loadConf(json& conf)
 	if (conf["enableAcq"] != nullptr)
 	{
 		bEnableAcq = conf["enableAcq"].get<bool>();
+	}
+
+	if (conf["chanTemplate"] != nullptr)
+	{
+		m_strChanTemplate = conf["chanTemplate"].get<string>();
 	}
 
 	if (conf["tagBind"] != nullptr)

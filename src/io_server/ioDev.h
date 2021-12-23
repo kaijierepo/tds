@@ -98,6 +98,7 @@ public:
 	//对于通道tagBind表示数据连接的mp位号
 	//对于设备tagBind表示设备安装在某个对象上,该对象一般视作智能设备
 	string m_strTagBind;
+	string m_strChanTemplate;
 	MO* m_pMO;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
