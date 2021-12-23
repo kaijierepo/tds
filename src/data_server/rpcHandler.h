@@ -59,6 +59,7 @@ public:
 	string rpc_input(json params, string& error);
 	string rpc_getTopoList(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_getMoOnlineStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession);
 	string rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_output(json params, string& error);

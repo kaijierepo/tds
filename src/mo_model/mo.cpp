@@ -594,7 +594,6 @@ MO* MO::createChildMO(string subTag,string moType)
 
 void MO::GetAllChildMO(std::vector<MO*>& aryMO, string type)
 {
-	m_childMO;
 	for (int i = 0; i < m_childMO.size(); i++)
 	{
 		if (m_childMO[i]->m_moType == type)
@@ -602,6 +601,18 @@ void MO::GetAllChildMO(std::vector<MO*>& aryMO, string type)
 			aryMO.push_back(m_childMO[i]);
 		}
 		m_childMO[i]->GetAllChildMO(aryMO, type);
+	}
+}
+
+void MO::getAllSmartDev(std::vector<MO*>& aryMO)
+{
+	for (int i = 0; i < m_childMO.size(); i++)
+	{
+		if (m_childMO[i]->m_strIoAddrBind != "")
+		{
+			aryMO.push_back(m_childMO[i]);
+		}
+		m_childMO[i]->getAllSmartDev(aryMO);
 	}
 }
 

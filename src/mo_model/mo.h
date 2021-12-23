@@ -66,6 +66,7 @@ public:
 	MO* createChildMO(string subTag, string moType);
 	void DeleteChildAMO(string& strName);
 	void GetAllChildMO(std::vector<MO*>& aryMO, string type);
+	void getAllSmartDev(std::vector<MO*>& aryMO); //与ioDev进行位号绑定的mo对象称为智能设备
 
 	MO* GetRootMO();
 	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
@@ -100,7 +101,7 @@ public:
 	//topo management
 	vector<void*> m_vecIODev;//挂接的采集设备.此处暂时用void，防止依赖ioDev.h文件，导致不容易多工程复用。需再考虑更好的办法
 	void updateDataLink();
-	string m_strIoAddrBind;
+	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
 	database* GetDB();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);

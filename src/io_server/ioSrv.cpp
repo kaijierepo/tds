@@ -297,3 +297,14 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 	return p;
 }
 
+void ioServer::getAllSmartDev(vector<ioDev*>& aryDev)
+{
+	for (auto& it : m_vecChild)
+	{
+		if (it->m_strTagBind != "" && it->m_level != IO_DEV_LEVEL::channel)
+		{
+			aryDev.push_back(it);
+		}
+	}
+}
+

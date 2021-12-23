@@ -36,7 +36,7 @@ public:
 
 	ioDiscoverer  ioDiscoverService;
 
-
+	void getAllSmartDev(vector<ioDev*>& aryDev);
 };
 
 extern ioServer ioSrv;

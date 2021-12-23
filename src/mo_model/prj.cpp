@@ -16,10 +16,12 @@ project::project()
 	m_strName = "tds";
 	DB = &db;
 
+#ifdef ENABLE_GENICAM
 	MP* p = new MP();
 	p->m_valType = VAL_TYPE::video;
 	p->m_strName = "genicam_0";
 	m_mapSpecialMP["genicam_0"] = p;
+#endif
 }
 
 project::~project()

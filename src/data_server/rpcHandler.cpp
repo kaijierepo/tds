@@ -425,6 +425,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			result = rpc_getMoStatus(params, error,pSession);
 		}
+		else if (method == "getMoOnlineStatus") //智能设备在线状态
+		{
+			result = rpc_getMoOnlineStatus(params, error, pSession);
+		}
 		else if (method == "getMoStatis")
 		{
 			rpc_getMoStatis(params, rpcResp, pSession);
@@ -1384,6 +1388,25 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 	}
 }
 
+string rpcHandler::rpc_getMoOnlineStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+{
+	//智能设备的在线状态  专用监测点位号
+	vector<ioDev*> arySmartDev;
+	ioSrv.getAllSmartDev(arySmartDev);
+	json list = json::array();
+	for (int i = 0; i < arySmartDev.size(); i++)
+	{
+		ioDev* pdev = arySmartDev[i];
+		string tag = pdev->m_strTagBind;
+
+		json de;
+		de["tag"] = tag;
+		de["online"] = pdev->m_bOnline;
+	
+		list.push_back(de);
+	}
+	return list.dump(4);
+}
 
 string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
 {
@@ -1566,6 +1589,41 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 
 				rtList.push_back(it->second->getRTData(rootTag));
 			}
+
+
+			////智能设备的在线状态  专用监测点位号
+			//vector<ioDev*> arySmartDev;
+			//ioSrv.getAllSmartDev(arySmartDev);
+			//for (int i = 0; i < arySmartDev.size(); i++)
+			//{
+			//	ioDev* pdev = arySmartDev[i];
+			//	string tag = pdev->m_strTagBind + ".在线";
+
+			//	if (pSession->user != "")
+			//	{
+			//		if (!userMng.checkTagPermission(pSession->user, tag))
+			//			continue;
+			//	}
+
+			//	if (rootTag != "")
+			//	{
+			//		if (tag.find(rootTag) == string::npos)
+			//			continue;
+			//		tag = str::trim(tag, rootTag + ".");
+			//	}
+
+			//	json de;
+			//	de["tag"] = tag;
+			//	de["val"] = pdev->m_bOnline;
+			//	de["valType"] = "bool";
+			//	de["valTypeLabel"] = "布尔型";
+			//	de["ioType"] = "system";
+			//	de["ioTypeLabel"] = "系统";
+			//	de["time"] = timeopt::nowStr();
+
+			//	rtList.push_back(de);
+			//}
+
 			string result = rtList.dump(4);
 			return result;
 		}
