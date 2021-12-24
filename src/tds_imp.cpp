@@ -41,6 +41,7 @@ SOFTWARE.
 #include "ioDev_genicam.h"
 #include "streamServer.h"
 #include "alarm_server/as.h"
+#include "logServer/logServer.h"
 #include "xiaot/scriptHost.h"
 
 #include <dbghelp.h>
@@ -351,7 +352,7 @@ bool TDS_imp::run(string cmdline)
 #endif
 
 	almSrv.run();
-
+	logSrv.run();
 	sHost.run();
 
 	//create browser window

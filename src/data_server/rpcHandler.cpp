@@ -21,6 +21,7 @@
 #include "ioDev_genicam.h"
 #include "streamServer.h"
 #include "users/userMng.h"
+#include "logServer/logServer.h"
 
 rpcHandler rpcSrv;
 
@@ -307,6 +308,15 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	if (method == "xiaot")
 	{
 		result = rpc_xiaot(params, error);
+	}
+	else if (method == "addLog")
+	{
+		logSrv.addLog(params);
+		result = "\"ok\"";
+	}
+	else if (method == "queryLog")
+	{
+		result = logSrv.queryLog(params,pSession->user);
 	}
 	else if (method == "getAlarmCurrent")
 	{
