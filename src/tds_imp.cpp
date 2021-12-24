@@ -53,9 +53,6 @@ CDumpCatch g_dumpCatch;//全局虽然未使用但不能删除
 
 string InterfaceEncoding = "utf8";
 
-string build_date = __DATE__;
-string build_time = __TIME__;
-string version_build_info = "(build " + build_date + " " + build_time + ")";
 string version = "v1.0";
 
 TDS_imp tdsImp; //tds instance;
@@ -335,7 +332,7 @@ bool TDS_imp::run(string cmdline)
 #endif
 
 	//display version
-	LOG("[keyinfo]tds " + version + version_build_info);
+	LOG("[keyinfo]tds " + version + getbuildtime());
 
 	logger.setLogLevel(tdsConf.logLevel);
 	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
@@ -369,7 +366,7 @@ bool TDS_imp::run(string cmdline)
 	}
 
 
-	string sTitle = "TDS   版本:" + version + version_build_info + ",数据服务端口:" + str::fromInt(tds->conf->port);
+	string sTitle = "TDS   版本:" + version + " build(" + getbuildtime() + "),数据服务端口:" + str::fromInt(tds->conf->port);
 	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	return true;
