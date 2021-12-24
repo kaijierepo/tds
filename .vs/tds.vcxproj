@@ -566,6 +566,8 @@
     <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
     <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
+    <ClCompile Include="..\src\logServer\csvTable.cpp" />
+    <ClCompile Include="..\src\logServer\logServer.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\mo_model\amo.cpp" />
     <ClCompile Include="..\src\mo_model\conf.cpp" />
@@ -629,6 +631,8 @@
     <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
     <ClInclude Include="..\src\io_server\ioDiscoverer.h" />
+    <ClInclude Include="..\src\logServer\csvTable.h" />
+    <ClInclude Include="..\src\logServer\logServer.h" />
     <ClInclude Include="..\src\mo_model\amo.h" />
     <ClInclude Include="..\src\mo_model\conf.h" />
     <ClInclude Include="..\src\mo_model\mo.h" />

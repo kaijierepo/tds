@@ -311,6 +311,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "addLog")
 	{
+		if (params["host"] != nullptr)
+		{
+			params["host"] = pSession->getRemoteAddr() + ";" + params["host"].get<string>();
+		}
 		logSrv.addLog(params);
 		result = "\"ok\"";
 	}

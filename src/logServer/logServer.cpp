@@ -24,7 +24,7 @@ logServer::~logServer(void)
 void logServer::run()
 {
 	//org表示事件发生的所属组织结构
-	string header = "time,object,event,level,detail,org";
+	string header = "time,object,event,level,detail,org,host";
 	vector<string> vecHeader;
 	str::split(vecHeader, header, ",");
 	tableLog.init("/log/log",vecHeader);
