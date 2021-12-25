@@ -6,9 +6,14 @@
 userManager userMng;
 bool userManager::loadConf()
 {
+	m_userConfPath = tds->conf->projectConfPath + "/users/users.json";
+	m_roleConfPath = tds->conf->projectConfPath + "/users/roles.json";
+	m_uiConfPath = tds->conf->projectConfPath + "/users/ui.json";
+
+
 	string sUsers, sRoles;
-	string userConf = tds->conf->projectConfPath + "/users/users.json";
-	if (!fs::readFile(userConf, sUsers))
+
+	if (!fs::readFile(m_userConfPath, sUsers))
 	{
 		return false;
 	}
@@ -34,8 +39,8 @@ bool userManager::loadConf()
 
 	}
 
-
-	if (!fs::readFile("conf/users/roles.json", sRoles))
+	
+	if (!fs::readFile(m_roleConfPath, sRoles))
 	{
 		return false;
 	}
@@ -49,7 +54,7 @@ bool userManager::loadConf()
 	}
 
 	string sUI;
-	if (!fs::readFile("conf/users/ui.json", sUI))
+	if (!fs::readFile(m_uiConfPath, sUI))
 	{
 		return false;
 	}
@@ -210,7 +215,9 @@ bool userManager::setUsers(json& users)
 	}
 
 	string s = m_jUsers.dump(4);
-	fs::writeFile("conf/users/users.json", s);
+
+
+	fs::writeFile(m_userConfPath, s);
 
 	return true;
 }

@@ -749,6 +749,18 @@ string TAG::addRoot(string& tag)
 	}
 }
 
+string TAG::addRoot(string tag, string root)
+{
+	if (root == "")
+		return tag;
+
+	//tag是相对于root的相对位号
+	if (tag == "")
+		return root;
+
+	return root + "." + tag;
+}
+
 bool TAG::hasTag(json& tree, string tag)
 {
 	vector<string> nodeNames;

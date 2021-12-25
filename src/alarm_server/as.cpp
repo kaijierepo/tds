@@ -636,12 +636,20 @@ string almTable::toJson(json filter){
 	loadFile(getFilePath(),temp);
 	json jUser = nullptr;
 	string user;
+	string rootTag = "";
 	if (filter.contains("user"))
 	{
 		user = filter["user"].get<string>();
 		jUser  = userMng.getUser(user);
+		rootTag = jUser["org"].get<string>();
 	}
-	string rootTag = "";
+
+	//请求中的rootTag都是相对于 userRootTag的相对位号。 对于tds客户端，userRootTag都是不可见的。只有tds服务端可见
+	if (filter.contains("rootTag")) 
+	{
+		string relativeTag = filter["rootTag"].get<string>();
+		rootTag = TAG::addRoot(relativeTag, rootTag);
+	}
 	
 	string dataSet = "[";
 	for (map<string, ALARM_INFO*>::iterator it = temp.begin(); it != temp.end(); it++) {
@@ -673,12 +681,10 @@ string almTable::toJson(json filter){
 				continue;
 		}
 
-		if (filter.contains("rootTag"))
-		{
-			rootTag = filter["rootTag"].get<string>();
-			if (pAi->tag.find(rootTag) == string::npos)
-				continue;
-		}
+
+		if (pAi->tag.find(rootTag) == string::npos)
+			continue;
+		
 		
 		if(dataSet !="[")
 			dataSet += "," + it->second->toJson(rootTag);

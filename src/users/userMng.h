@@ -45,6 +45,10 @@ public:
 	json m_jRoles;
 	json m_jUI;
 
+	string m_userConfPath;
+	string m_roleConfPath;
+	string m_uiConfPath;
+
 	map<string, ACCESS_INFO> m_mapAccessInfo;
 };
 

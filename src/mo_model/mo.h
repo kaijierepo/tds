@@ -35,6 +35,8 @@ using json = nlohmann::json;
 namespace TAG {
 	string trimRoot(string& tag);
 	string addRoot(string& tag);
+	string addRoot(string tag, string root);
+
 	bool hasTag(json& tree, string tag); //moTree中是否包含某个tag.该tag不包含前面树的根节点
 	int getMoLevel(string tag); //根节点level 为0，依次增加
 	json mapTree2List(json mapTree);

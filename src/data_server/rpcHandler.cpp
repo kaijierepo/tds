@@ -1276,10 +1276,11 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 
 void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
 {
-	string rootTag = "";
+	string rootTag = pSession->org; //absolute queryRoot
 	if (params.contains("rootTag"))
 	{
-		rootTag = params["rootTag"].get<string>();
+		string relativeQueryRoot = params["rootTag"].get<string>();
+		rootTag = TAG::addRoot(relativeQueryRoot, rootTag);
 	}
 	string devType = "*";
 	if (params.contains("devType"))
@@ -1342,7 +1343,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 	if (pSession->user != "")
 		jFilter["user"] = pSession->user;
 	if (rootTag != "")
-		jFilter["rootTag"] = rootTag;
+		jFilter["rootTag"] = params["rootTag"];
 	string szAlm = almSrv.getStatus(jFilter);
 	json jAlarms = json::parse(szAlm);
 	int iAlarmCount = 0;
@@ -1431,10 +1432,11 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 		return "";
 	}
 	string moType = params["type"].get<string>();
-	string rootTag = "";
+	string rootTag = pSession->org;
 	if (params["rootTag"] != nullptr) 
 	{
-		rootTag = params["rootTag"].get<string>();
+		string relativeQueryRootTag = params["rootTag"].get<string>();
+		rootTag = TAG::addRoot(relativeQueryRootTag, rootTag); 
 	}
 	string strList = "[";
 
