@@ -81,7 +81,7 @@ public:
 		strConfirmInfo = "";
 	}
 
-	string toJson();
+	string toJson(string rootTag = "");
 	ALARM_INFO fromJson(json j);
 };
 

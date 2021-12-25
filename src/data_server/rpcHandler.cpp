@@ -326,6 +326,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		json jFilter;
 		jFilter["user"] = pSession->user;
+		jFilter["rootTag"] = params["rootTag"];
 		result = almSrv.getCurrent(jFilter);
 	}
 	else if (method == "getAlarmStatus")

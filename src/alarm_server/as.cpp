@@ -493,11 +493,22 @@ string almTable::toCSV(ALARM_INFO& info)
 	return str;
 }
 
-string ALARM_INFO::toJson()
+string ALARM_INFO::toJson(string rootTag)
 {
 	ALARM_INFO* info = this;
 	json j;
-	j["tag"]=info->tag;
+	
+	if (rootTag == "")
+	{
+		j["tag"] = info->tag;
+	}
+	else
+	{
+		string tag = info->tag;
+		tag = str::trimPrefix(tag,rootTag + ".");
+		j["tag"] = tag;
+	}
+	
 	j["type"]=info->type;
 
 	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
@@ -630,7 +641,7 @@ string almTable::toJson(json filter){
 		user = filter["user"].get<string>();
 		jUser  = userMng.getUser(user);
 	}
-
+	string rootTag = "";
 	
 	string dataSet = "[";
 	for (map<string, ALARM_INFO*>::iterator it = temp.begin(); it != temp.end(); it++) {
@@ -664,15 +675,15 @@ string almTable::toJson(json filter){
 
 		if (filter.contains("rootTag"))
 		{
-			string rootTag = filter["rootTag"].get<string>();
+			rootTag = filter["rootTag"].get<string>();
 			if (pAi->tag.find(rootTag) == string::npos)
 				continue;
 		}
 		
 		if(dataSet !="[")
-			dataSet += "," + it->second->toJson();
+			dataSet += "," + it->second->toJson(rootTag);
 		else
-			dataSet +=  it->second->toJson();
+			dataSet +=  it->second->toJson(rootTag);
 	}
 	dataSet += "]";
 	FreeAlarmList(temp);
