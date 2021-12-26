@@ -498,6 +498,16 @@ bool dataServer::run()
 	m_tcpSrv->SettIOCPName(strName);
 
 
+	m_tcpSrv_IOSrv = new tcpSrv();
+	if (m_tcpSrv_IOSrv->run(this, tds->conf->ioServerPort))
+	{
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort));
+	}
+	else
+	{
+		LOG("[keyinfo][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
+	}
+
 	userMng.loadConf();
 
 	thread t(activeSessionThread);

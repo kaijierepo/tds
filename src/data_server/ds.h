@@ -49,6 +49,7 @@ public:
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
+	tcpSrv* m_tcpSrv_IOSrv;
 	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
 

@@ -6,6 +6,7 @@ tdsConfig::tdsConfig()
 {
 	port = 0;
 	httpPort = 0;
+	ioServerPort = 0;
 	debugMode = false;
 	bConcurrentGateway = true;
 	projectConfPath = "";
@@ -73,6 +74,8 @@ void tdsConfig::loadConf()
 			port = atoi(tci.val.c_str());
 		else if (tci.key == "httpport" && httpPort == 0)
 			httpPort = atoi(tci.val.c_str());
+		else if (tci.key == "ioserverport" && ioServerPort == 0)
+			ioServerPort = atoi(tci.val.c_str());
 		else if (tci.key == "ui" && uiMode == "")
 			uiMode = tci.val;
 		else if ((tci.key == "loglevel") && logLevel == "")
