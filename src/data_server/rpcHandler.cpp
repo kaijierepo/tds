@@ -990,6 +990,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		{
 			if (jReq["user"] == nullptr || jReq["token"] == nullptr)
 			{
+				//LOG("[warn]无效请求，未携带用户名与token,method=" + method);
 				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied, set user and token.");
 				goto HANDLE_END;
 			}
@@ -998,6 +999,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 
 			if (!userMng.checkToken(user, token))
 			{
+				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
 				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied; please login to get access token");
 				goto HANDLE_END;
 			}
