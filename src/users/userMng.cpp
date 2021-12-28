@@ -70,6 +70,13 @@ bool userManager::loadConf()
 	return true;
 }
 
+bool userManager::saveConf()
+{
+	string s = m_jUsers.dump(4);
+	fs::writeFile(m_userConfPath, s);
+	return true;
+}
+
 bool userManager::checkLogin(string user, string pwd,json& userInfo)
 {
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
@@ -163,6 +170,36 @@ bool userManager::isChildMo(string parent, string child)
 	return false;
 }
 
+bool userManager::rpc_changePwd(json& params, json& rlt, json& err)
+{
+	string error;
+	string user = params["user"].get<string>();
+	string oldPwd = params["oldPwd"].get<string>();
+	string newPwd = params["newPwd"].get<string>();
+	json jUser = getUser(user);
+	string currentPwd = jUser["pwd"].get<string>();
+	if (oldPwd == currentPwd)
+	{
+		if (m_mapUsers.find(user) != m_mapUsers.end())
+		{
+			json& userTmp = *m_mapUsers[user];
+			userTmp["pwd"] = newPwd;
+			saveConf();
+			rlt = "ok";
+		}
+		else
+		{
+			err = "用户名不存在";
+		}
+	}
+	else
+	{
+		err = "当前密码输入不正确";
+	}
+
+	return true;
+}
+
 json userManager::getRoles(string user)
 {
 	return m_jRoles;
@@ -214,9 +251,29 @@ bool userManager::setUsers(json& users)
 		}
 	}
 
+	saveConf();
+
+	return true;
+}
+
+bool userManager::setUser(json& user,json& result,json& err)
+{
+	std::unique_lock<shared_mutex> lock(m_csUserConf);
+	
+	string name = user["name"].get<string>();
+	if (m_mapUsers.find(name) != m_mapUsers.end())
+	{
+		json& userTmp = *m_mapUsers[name];
+		userTmp = user;
+	}
+	else
+	{
+		err = "用户名不存在";
+		return false;
+	}
+	
+
 	string s = m_jUsers.dump(4);
-
-
 	fs::writeFile(m_userConfPath, s);
 
 	return true;

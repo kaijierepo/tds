@@ -297,308 +297,12 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 	}
 }
 
-bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+
+bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
 {
-	//method = str::removeChar(method,'_');
-	//transform(method.begin(), method.end(), method.begin(), ::tolower);
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
-	//可完全并发的命令
-	//#region concurrent cmd
-	if (method == "xiaot")
-	{
-		result = rpc_xiaot(params, error);
-	}
-	else if (method == "addLog")
-	{
-		if (params["host"] != nullptr)
-		{
-			params["host"] = pSession->getRemoteAddr() + ";" + params["host"].get<string>();
-		}
-		logSrv.addLog(params);
-		result = "\"ok\"";
-	}
-	else if (method == "queryLog")
-	{
-		result = logSrv.queryLog(params,pSession->user);
-	}
-	else if (method == "getAlarmCurrent")
-	{
-		json jFilter;
-		jFilter["user"] = pSession->user;
-		jFilter["rootTag"] = params["rootTag"];
-		result = almSrv.getCurrent(jFilter);
-	}
-	else if (method == "getAlarmStatus")
-	{
-		json jFilter;
-		jFilter["user"] = pSession->user;
-		result = almSrv.getStatus(jFilter);
-	}
-	else if (method == "getAlarmUnack")
-	{
-		json jFilter;
-		jFilter["user"] = pSession->user;
-		result = almSrv.getUnack(jFilter);
-	}
-	else if (method == "getAlarmHistory")
-	{
-		result = almSrv.getHistory(params, pSession->user);
-	}
-	else if (method == "addAlarmEvent")
-	{
-		result = almSrv.rpc_addEvent(params);
-	}
-	else if (method == "updateAlarmStatus")
-	{
-		almSrv.rpc_updateStatus(params,rpcResp);
-	}
-	else if (method == "ackAlarmEvent")
-	{
-		ALARM_KEY ai;
-		ai.tag = params["tag"].get<string>();
-		ai.time = params["time"].get<string>();
-		ai.type = params["type"].get<string>();
-		string user = pSession->user;
-		string info = params["ack_info"];
-		almSrv.acknowledge(ai, info, user);
-	}
-	else if (method == "com.open")
-	{
-		result = rpc_openCom(params, error);
-	}
-	else if (method == "com.close")
-	{
-		result = rpc_closeCom(params, error);
-	}
-	else if (method == "com.list")
-	{
-		result = rpc_com_list(params, error);
-	}
-	else if (method == "fs.openFileDlg")
-	{
-		std::thread t(openFileDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
-	}
-	else if (method == "fs.saveFileDlg")
-	{
-		std::thread t(saveFileDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
-	}
-	else if (method == "fs.selectFolderDlg")
-	{
-		std::thread t(selectFolderDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
-	}
-	else if (method == "fs.openFolder")
-	{
-		string s = params["path"];
-		s = str::replace(s, "/", "\\");
-		wstring ws = charCodec::utf8toUtf16(s);
-		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
-		result = "\"ok\"";
-	}
-	else if (method == "fs.openDEFolder")
-	{
-		string tag = params["tag"];
-		string time = params["time"];
-		string path = db.m_path + db.getPath_deFile(tag, timeopt::str2st(time));
-
-		path = str::replace(path, "/", "\\");
-		wstring ws = charCodec::utf8toUtf16(path);
-		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
-		result = "\"ok\"";
-	}
-	//#endregion
-
-	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
-	if (method == "setconf")
-	{
-		unique_lock<shared_mutex> lock(prj.m_csPrj);
-		result = rpc_setconf(params, error);
-	}
-	else
-	{
-		shared_lock<shared_mutex> lock(prj.m_csPrj);
-		//以下配置使用 mo conf 和 io conf
-		if (method == "input")
-		{
-			result = rpc_input(params, error);
-		}
-		else if (method == "output")
-		{
-			result = rpc_output(params, error);
-		}
-		else if (method == "getMpStatus")
-		{
-			result = rpc_getMpStatus(params, error, pSession);
-		}
-		else if (method == "getMoStatus")
-		{
-			result = rpc_getMoStatus(params, error,pSession);
-		}
-		else if (method == "getMoOnlineStatus") //智能设备在线状态
-		{
-			result = rpc_getMoOnlineStatus(params, error, pSession);
-		}
-		else if (method == "getMoStatis")
-		{
-			rpc_getMoStatis(params, rpcResp, pSession);
-		}
-		else if (method == "getMoStatusTable")
-		{
-			result = rpc_getMoStatusTable(params, error,pSession);
-		}
-		else if (method == "getTopoList")
-		{
-			result = rpc_getTopoList(params, error,pSession);
-		}
-		else if (method == "getconf")
-		{
-			result = rpc_getconf(params, error);
-		}
-		else if (method == "getUsers")
-		{
-			json j = userMng.getUsers(pSession->user);
-			result = j.dump(4);
-		}
-		else if (method == "getRoles")
-		{
-			json j = userMng.getRoles(pSession->user);
-			result = j.dump(4);
-		}
-		else if (method == "setUsers")
-		{
-			userMng.setUsers(params);
-		}
-		else if (method == "getUiTree")
-		{
-			result = userMng.m_jUI.dump(4);
-		}
-		else if (method == "getMpTypeList")
-		{
-			json list;
-			prj.getMpTypeList(list);
-			result = list.dump();
-		}
-		else if (method == "getMoTree")
-		{
-			string subTreeRoot = "";
-			//如果指定了root，按照root取子树
-			if (params != nullptr && params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
-			{
-				subTreeRoot = params["root"].get<string>();
-			}
-			//没有root按照用户权限取子树
-			else if (pSession->user != "")
-			{
-				json jUser = userMng.getUser(pSession->user);
-				if (jUser != nullptr)
-				{
-					subTreeRoot = jUser["org"].get<string>();
-				}
-			}
-
-			if (subTreeRoot != "")
-			{
-				subTreeRoot = TAG::trimRoot(subTreeRoot);
-				params["root"] = subTreeRoot;
-				MO* pmo = prj.GetMOByTag(subTreeRoot);
-				if (pmo)
-				{
-					json j;
-					pmo->toJson(j, params);
-					j["root"] = subTreeRoot; //子树的根节点有root属性，表示根在总的mo树中的位号
-					result = j.dump(4);
-				}
-			}
-			else
-			{
-				json j;
-				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-				result = j.dump(4);
-			}
-		}
-		else if (method == "getMoConf")
-		{
-			if (params["tag"] == nullptr)
-			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "请求中缺少tag字段");
-				return true;
-			}
-				
-			string tag = params["tag"].get<string>();
-			MO* pmo = prj.GetMOByTag(tag);
-			if (pmo)
-			{
-				json j;
-				json jOpt;
-				jOpt["recursive"] = false;
-				pmo->toJson(j, jOpt);
-				rpcResp.result = j.dump(4);
-			}
-			else
-			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "没有找到位号");
-			}
-		}
-		else if (method == "getMoCustomType")
-		{
-			json jList = json::array();
-			for (auto& i : prj.m_mapCustomMOType)
-			{
-				jList.push_back(i.first);
-			}
-			result = jList.dump();
-		}
-		else if (method == "getmplist")//or getMpList or get_mp_list
-		{
-			json list;
-			prj.getMpList(list);
-			result = list.dump(2);
-		}
-		else if (method == "ioTree" || method == "iotree")
-		{
-			result = rpc_io_tree(params, error);
-		}
-		else if (method == "getChanStatus")
-		{
-			rpc_getChanStatus(params,rpcResp, pSession);
-		}
-		else if (method == "getDevStatus")
-		{
-			rpc_getDevStatus(params, rpcResp, pSession);
-		}
-		else if (method == "getChanVal")
-		{
-			rpc_getChanVal(params, rpcResp, pSession);
-		}
-		else if (method == "scanChannel" || method == "scanchannel")
-		{
-			result = rpc_io_scanChannel(params, error, pSession);
-		}
-		else if (method == "getIoDevStatis")
-		{
-			rpc_getIoDevStatis(params, rpcResp, pSession);
-		}
-		else if (method == "getDevList")
-		{
-			rpc_getDevList(params, rpcResp, pSession);
-		}
-		else if (method == "getStreamInfo")
-		{
-			result = rpc_getStreamInfo(params, error);
-		}
-		else if (method == "setStream")
-		{
-			result = rpc_setStream(params, error);
-		}
-	}
-
-
+	bool bHandled = true;
 	//文件操作
 	if (method == "fs.readFile")
 	{
@@ -665,87 +369,60 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		if (params["recursive"] != nullptr)
 			recursive = params["recursive"].get<bool>();
 		vector<string> fl;
-		fs::getFileList(fl,path, includeFolder, recursive);
+		fs::getFileList(fl, path, includeFolder, recursive);
 		json j = fl;
 		result = j.dump();
 	}
-
-
-	if (method == "db.select")
+	else if (method == "com.open")
 	{
-		result = rpc_db_select(params, error,pSession);
+		result = rpc_openCom(params, error);
 	}
-	if (method == "db.update")
+	else if (method == "com.close")
 	{
-		string tag = params["tag"].get<string>();
-		string time = params["time"].get<string>();
-		json val = params["val"];
-		db.Update(tag, timeopt::str2st(time), val);
+		result = rpc_closeCom(params, error);
+	}
+	else if (method == "com.list")
+	{
+		result = rpc_com_list(params, error);
+	}
+	else if (method == "fs.openFileDlg")
+	{
+		std::thread t(openFileDlgThread, pSession, params);
+		t.detach();
 		result = "\"ok\"";
 	}
-	else if (method == "db.delete")
+	else if (method == "fs.saveFileDlg")
 	{
-		string tag = params["tag"].get<string>();
-		string time = params["time"].get<string>();
-		db.Delete(tag, timeopt::str2st(time));
+		std::thread t(saveFileDlgThread, pSession, params);
+		t.detach();
 		result = "\"ok\"";
 	}
-
-	if (method == "getSessions")
+	else if (method == "fs.selectFolderDlg")
 	{
-		result = ds.getSessionStatus(params);
+		std::thread t(selectFolderDlgThread, pSession, params);
+		t.detach();
+		result = "\"ok\"";
 	}
-
-	if (method == "discoverDev")
+	else if (method == "fs.openFolder")
 	{
-#ifdef ENABLE_GENICAM
-		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
-		{
-			json j = ioDev_genicam::listDevices();
-			rpcResp.result = j.dump(2);
-		}
-#endif
+		string s = params["path"];
+		s = str::replace(s, "/", "\\");
+		wstring ws = charCodec::utf8toUtf16(s);
+		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
+		result = "\"ok\"";
 	}
-	if (method == "captureFrame")
+	else if (method == "fs.openDEFolder")
 	{
-		
-	}
+		string tag = params["tag"];
+		string time = params["time"];
+		string path = db.m_path + db.getPath_deFile(tag, timeopt::str2st(time));
 
-#ifdef ENABLE_GENICAM
-	if (method == "genicam.doCmd")
-	{
-		if (firstDiscoverGenicam)
-		{
-			firstDiscoverGenicam->doCmd(params["name"]);
-		}
+		path = str::replace(path, "/", "\\");
+		wstring ws = charCodec::utf8toUtf16(path);
+		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
+		result = "\"ok\"";
 	}
-	else if (method == "genicam.setParam")
-	{
-		string ioAddr = params["ioAddr"];
-		ioDev* p = ioSrv.getIODev(ioAddr);
-		if (p && p->m_devType == IO_DEV_TYPE::DEV::genicam)
-		{
-			ioDev_genicam* piod = (ioDev_genicam*)p;
-
-			string name = params["name"];
-			json val = params["val"];
-			bool isEnum = false;
-			if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
-				isEnum = true;
-			piod->setParam(name, val, isEnum);
-			rpcResp.result = "\"ok\"";
-		}
-	}
-	else if (method == "genicam.getParam")
-	{
-		if (firstDiscoverGenicam)
-		{
-
-		}
-	}
-#endif
-
-	if (method == "ui.maximize")
+	else if (method == "ui.maximize")
 	{
 		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
 		rpcResp.result = "\"ok\"";
@@ -762,17 +439,473 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		rpcResp.result = "\"ok\"";
 		LOG("[debug]ui.close");
 	}
+	else
+	{
+		bHandled = false;
+	}
 
-	if (method == "testCrash")
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "getStreamInfo")
+	{
+	result = rpc_getStreamInfo(params, error);
+	}
+	else if (method == "setStream")
+	{
+	result = rpc_setStream(params, error);
+	}
+#ifdef ENABLE_GENICAM
+	else if (method == "genicam.doCmd")
+	{
+	if (firstDiscoverGenicam)
+	{
+		firstDiscoverGenicam->doCmd(params["name"]);
+	}
+	}
+	else if (method == "genicam.setParam")
+	{
+	string ioAddr = params["ioAddr"];
+	ioDev* p = ioSrv.getIODev(ioAddr);
+	if (p && p->m_devType == IO_DEV_TYPE::DEV::genicam)
+	{
+		ioDev_genicam* piod = (ioDev_genicam*)p;
+
+		string name = params["name"];
+		json val = params["val"];
+		bool isEnum = false;
+		if (params["isEnum"] != nullptr && params["isEnum"].get<bool>() == true)
+			isEnum = true;
+		piod->setParam(name, val, isEnum);
+		rpcResp.result = "\"ok\"";
+	}
+	}
+	else if (method == "genicam.getParam")
+	{
+	if (firstDiscoverGenicam)
+	{
+
+	}
+	}
+#endif
+	else
+	{
+		bHandled = false;
+	}
+
+	return bHandled;
+}
+
+
+bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "db.select")
+	{
+		result = rpc_db_select(params, error, pSession);
+	}
+	if (method == "db.update")
+	{
+		string tag = params["tag"].get<string>();
+		string time = params["time"].get<string>();
+		json val = params["val"];
+		db.Update(tag, timeopt::str2st(time), val);
+		result = "\"ok\"";
+	}
+	else if (method == "db.delete")
+	{
+		string tag = params["tag"].get<string>();
+		string time = params["time"].get<string>();
+		db.Delete(tag, timeopt::str2st(time));
+		result = "\"ok\"";
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
+
+
+bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "getSessions")
+	{
+		result = ds.getSessionStatus(params);
+	}
+	else if (method == "captureFrame")
+	{
+
+	}
+	else if (method == "testCrash")
 	{
 		rpcResp.result = "\"ok\"";
-		
+
 
 		//程序崩溃
 		int i = 13; int j = 0; int m = i / j;
 		LOG("[debug]tds.Crash" + str::fromInt(m));
 	}
+	else
+	{
+		bHandled = false;
+	}
 
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "ioTree" || method == "iotree")
+	{
+		result = rpc_io_tree(params, error);
+	}
+	else if (method == "getChanStatus")
+	{
+		rpc_getChanStatus(params,rpcResp, pSession);
+	}
+	else if (method == "getDevStatus")
+	{
+		rpc_getDevStatus(params, rpcResp, pSession);
+	}
+	else if (method == "getChanVal")
+	{
+		rpc_getChanVal(params, rpcResp, pSession);
+	}
+	else if (method == "scanChannel" || method == "scanchannel")
+	{
+		result = rpc_io_scanChannel(params, error, pSession);
+	}
+	else if (method == "getIoDevStatis")
+	{
+		rpc_getIoDevStatis(params, rpcResp, pSession);
+	}
+	else if (method == "getDevList")
+	{
+		rpc_getDevList(params, rpcResp, pSession);
+	}
+	else if (method == "discoverDev")
+	{
+#ifdef ENABLE_GENICAM
+		if (params["type"] == IO_DEV_TYPE::DEV::genicam)
+		{
+			json j = ioDev_genicam::listDevices();
+			rpcResp.result = j.dump(2);
+		}
+#endif
+	}
+	else
+	{
+		bHandled = false;
+	}
+
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
+	if (method == "setconf")
+	{
+		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		result = rpc_setconf(params, error);
+	}
+	else
+	{
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		//以下配置使用 mo conf 和 io conf
+		if (method == "input")
+		{
+			result = rpc_input(params, error);
+		}
+		else if (method == "output")
+		{
+			result = rpc_output(params, error);
+		}
+		else if (method == "getMpStatus")
+		{
+			result = rpc_getMpStatus(params, error, pSession);
+		}
+		else if (method == "getMoStatus")
+		{
+			result = rpc_getMoStatus(params, error, pSession);
+		}
+		else if (method == "getMoOnlineStatus") //智能设备在线状态
+		{
+			result = rpc_getMoOnlineStatus(params, error, pSession);
+		}
+		else if (method == "getMoStatis")
+		{
+			rpc_getMoStatis(params, rpcResp, pSession);
+		}
+		else if (method == "getMoStatusTable")
+		{
+			result = rpc_getMoStatusTable(params, error, pSession);
+		}
+		else if (method == "getTopoList")
+		{
+			result = rpc_getTopoList(params, error, pSession);
+		}
+		else if (method == "getconf")
+		{
+			result = rpc_getconf(params, error);
+		}
+		else if (method == "getMpTypeList")
+		{
+			json list;
+			prj.getMpTypeList(list);
+			result = list.dump();
+		}
+		else if (method == "getMoTree")
+		{
+			string subTreeRoot = "";
+			//如果指定了root，按照root取子树
+			if (params != nullptr && params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
+			{
+				subTreeRoot = params["root"].get<string>();
+			}
+			//没有root按照用户权限取子树
+			else if (pSession->user != "")
+			{
+				json jUser = userMng.getUser(pSession->user);
+				if (jUser != nullptr)
+				{
+					subTreeRoot = jUser["org"].get<string>();
+				}
+			}
+
+			if (subTreeRoot != "")
+			{
+				subTreeRoot = TAG::trimRoot(subTreeRoot);
+				params["root"] = subTreeRoot;
+				MO* pmo = prj.GetMOByTag(subTreeRoot);
+				if (pmo)
+				{
+					json j;
+					pmo->toJson(j, params);
+					j["root"] = subTreeRoot; //子树的根节点有root属性，表示根在总的mo树中的位号
+					result = j.dump(4);
+				}
+			}
+			else
+			{
+				json j;
+				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
+				result = j.dump(4);
+			}
+		}
+		else if (method == "getMoConf")
+		{
+			if (params["tag"] == nullptr)
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "请求中缺少tag字段");
+				return true;
+			}
+
+			string tag = params["tag"].get<string>();
+			MO* pmo = prj.GetMOByTag(tag);
+			if (pmo)
+			{
+				json j;
+				json jOpt;
+				jOpt["recursive"] = false;
+				pmo->toJson(j, jOpt);
+				rpcResp.result = j.dump(4);
+			}
+			else
+			{
+				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "没有找到位号");
+			}
+		}
+		else if (method == "getMoCustomType")
+		{
+			json jList = json::array();
+			for (auto& i : prj.m_mapCustomMOType)
+			{
+				jList.push_back(i.first);
+			}
+			result = jList.dump();
+		}
+		else if (method == "getmplist")//or getMpList or get_mp_list
+		{
+			json list;
+			prj.getMpList(list);
+			result = list.dump(2);
+		}
+		else
+		{
+			bHandled = false;
+		}
+	}
+
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	bool bHandled = true;
+	if (method == "getAlarmCurrent")
+	{
+	json jFilter;
+	jFilter["user"] = pSession->user;
+	jFilter["rootTag"] = params["rootTag"];
+	result = almSrv.getCurrent(jFilter);
+	}
+	else if (method == "getAlarmStatus")
+	{
+	json jFilter;
+	jFilter["user"] = pSession->user;
+	result = almSrv.getStatus(jFilter);
+	}
+	else if (method == "getAlarmUnack")
+	{
+	json jFilter;
+	jFilter["user"] = pSession->user;
+	result = almSrv.getUnack(jFilter);
+	}
+	else if (method == "getAlarmHistory")
+	{
+	result = almSrv.getHistory(params, pSession->user);
+	}
+	else if (method == "addAlarmEvent")
+	{
+	result = almSrv.rpc_addEvent(params);
+	}
+	else if (method == "updateAlarmStatus")
+	{
+	almSrv.rpc_updateStatus(params, rpcResp);
+	}
+	else if (method == "ackAlarmEvent")
+	{
+	ALARM_KEY ai;
+	ai.tag = params["tag"].get<string>();
+	ai.time = params["time"].get<string>();
+	ai.type = params["type"].get<string>();
+	string user = pSession->user;
+	string info = params["ack_info"];
+	almSrv.acknowledge(ai, info, user);
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	json jRlt;
+	json jErr;
+	if (method == "getUsers")
+	{
+		json j = userMng.getUsers(pSession->user);
+		result = j.dump(4);
+	}
+	else if (method == "changePwd")
+	{
+		params["user"] = pSession->user;
+		userMng.rpc_changePwd(params, jRlt, jErr);
+	}
+	else if (method == "getRoles")
+	{
+		json j = userMng.getRoles(pSession->user);
+		result = j.dump(4);
+	}
+	else if (method == "setUsers")
+	{
+		userMng.setUsers(params);
+	}
+	else if (method == "getUiTree")
+	{
+		result = userMng.m_jUI.dump(4);
+	}
+	else
+	{
+		bHandled = false;
+	}
+
+
+	if (jRlt != nullptr)
+		result = jRlt.dump();
+	else if (jErr != nullptr)
+		error = jErr.dump();
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	//可完全并发的命令
+	if (method == "xiaot")
+	{
+		result = rpc_xiaot(params, error);
+	}
+	else if (method == "addLog")
+	{
+		if (params["host"] != nullptr)
+		{
+			params["host"] = pSession->getRemoteAddr() + ";" + params["host"].get<string>();
+		}
+		logSrv.addLog(params);
+		result = "\"ok\"";
+	}
+	else if (method == "queryLog")
+	{
+		result = logSrv.queryLog(params,pSession->user);
+	}
+	
+
+	if (handleMethodCall_MoMng(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_alarmMng(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_userMng(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_OSFunc(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_db(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_IoMng(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+	if (handleMethodCall_debugFunc(method, params, rpcResp, pSession))
+	{
+		return true;
+	}
+
+	
 	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
 		return true;
 	return false;
