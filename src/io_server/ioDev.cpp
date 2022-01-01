@@ -207,6 +207,8 @@ bool ioDev::toJson(json& conf, json opt)
 	if (m_strChanTemplate != "")
 		conf["chanTemplate"] = m_strChanTemplate;
 
+	conf["nodeID"] = m_confNodeId;
+
 	//if(pIOSession)
 
 
@@ -260,6 +262,11 @@ bool ioDev::loadConf(json& conf)
 	if (conf["chanTemplate"] != nullptr)
 	{
 		m_strChanTemplate = conf["chanTemplate"].get<string>();
+	}
+
+	if (conf["nodeID"] != nullptr)
+	{
+		m_confNodeId = conf["nodeID"].get<string>();
 	}
 
 	if (conf["tagBind"] != nullptr)
