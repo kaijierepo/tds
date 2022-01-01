@@ -67,20 +67,23 @@ string logServer::queryLog(json params, string user)
 	int startMonth = timeSelector.stStart.wMonth;
 	int endYear = timeSelector.stEnd.wYear;
 	int endMonth = timeSelector.stEnd.wMonth;
-	int iMonth = 0;
-	int iEndMonth = 0;
-	for (int iYear = startYear; iYear <= endYear; iYear++)
+
+	//默认逆序查询
+	for (int iYear = endYear; iYear >= startYear; iYear--)
 	{
-		if (iYear == startYear) iMonth = startMonth;
-		else iMonth = 1;
+		//获得月份遍历范围
+		int iEndMonth = 12;   //遍历结束月份   中间的年份其实结束都是0-12. 两端的年份按照指定的开始月份和结束月份
+		int iStartMonth = 1; //遍历起始月份
+		if (iYear == startYear) iStartMonth = startMonth;
 		if (iYear == endYear) iEndMonth = endMonth;
-		else iEndMonth = 12;
-		for (; iMonth <= iEndMonth; iMonth++)
+
+
+		for (int iMonth = iEndMonth; iMonth >= iStartMonth; iMonth--)
 		{
 			tableLog.loadFile(tableLog.getFilePath(iYear, iMonth));
-			for (json*& i : tableLog.buffData)
+			for (int i=tableLog.buffData.size()-1 ;i >=0; i--)
 			{
-				json& j = *i;
+				json& j = *tableLog.buffData[i];
 				string time = j["time"].get<string>();
 				string org;
 				if(j["org"]!=nullptr)
