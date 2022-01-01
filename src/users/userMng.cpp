@@ -202,7 +202,35 @@ bool userManager::rpc_changePwd(json& params, json& rlt, json& err)
 
 json userManager::getRoles(string user)
 {
-	return m_jRoles;
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
+	if (m_mapUsers.find(user) != m_mapUsers.end())
+	{
+		json jRet = json::array();
+		json* pUser = m_mapUsers[user];
+		json& jUser = *pUser;
+		string role = jUser["role"].get<string>();
+
+		for (int i = 0; i < m_jRoles.size(); i++)
+		{
+			json& jR = m_jRoles[i];
+
+			//只有系统管理员才能够看到系统管理员角色
+			if (jR["name"].get<string>() == "系统管理员")
+			{
+				if (role != "系统管理员")
+				{
+					continue;
+				}
+			}
+
+			jRet.push_back(jR);
+		}
+		return jRet;
+	}
+	else
+	{
+		return m_jRoles;
+	}
 }
 
 json userManager::getUsers(string user)
