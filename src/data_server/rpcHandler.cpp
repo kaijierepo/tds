@@ -719,6 +719,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 
 			string tag = params["tag"].get<string>();
+			if (pSession->org != "")
+			{
+				tag = TAG::addRoot(tag, pSession->org);
+			}
+
 			MO* pmo = prj.GetMOByTag(tag);
 			if (pmo)
 			{

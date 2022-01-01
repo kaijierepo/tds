@@ -209,6 +209,7 @@ json userManager::getRoles(string user)
 		json* pUser = m_mapUsers[user];
 		json& jUser = *pUser;
 		string role = jUser["role"].get<string>();
+		string name = jUser["name"].get<string>();
 
 		for (int i = 0; i < m_jRoles.size(); i++)
 		{
@@ -217,7 +218,7 @@ json userManager::getRoles(string user)
 			//只有系统管理员才能够看到系统管理员角色
 			if (jR["name"].get<string>() == "系统管理员")
 			{
-				if (role != "系统管理员")
+				if (role != "系统管理员" && name != "admin")
 				{
 					continue;
 				}
@@ -242,7 +243,7 @@ json userManager::getUsers(string user)
 		json* pUser = m_mapUsers[user];
 		json& jUser = *pUser;
 		string role = jUser["role"].get<string>();
-		if (role == "管理员")
+		if (role == "管理员" || role == "系统管理员")
 		{
 			string org = jUser["org"].get<string>();
 

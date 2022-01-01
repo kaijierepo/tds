@@ -1177,6 +1177,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//http处理   1.网页请求  2.tdsRpc over http   
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
+		return;
 		//rpc 先组包后处理
 		//if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		//{
