@@ -207,6 +207,8 @@ bool ioDev::toJson(json& conf, json opt)
 	if (m_strChanTemplate != "")
 		conf["chanTemplate"] = m_strChanTemplate;
 
+	//if(pIOSession)
+
 
 	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))
 	{
