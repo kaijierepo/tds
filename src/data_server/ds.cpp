@@ -462,10 +462,18 @@ bool dataServer::run()
 	}
 
 
-	httpSrv.set_file_extension_and_mimetype_mapping("jdb", "text/x-jdb");
+	httpSrv.set_file_extension_and_mimetype_mapping("json", "text/json");
 	httpSrv.set_file_extension_and_mimetype_mapping("html", "text/html");
 	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
-
+	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
+	httpSrv.set_file_extension_and_mimetype_mapping("apk", "application/octet-stream");
+	httpSrv.set_file_extension_and_mimetype_mapping("rar", "application/octet-stream");
+	httpSrv.set_file_extension_and_mimetype_mapping("doc", "application/octet-stream");
+	httpSrv.set_file_extension_and_mimetype_mapping("docx", "application/octet-stream");
+	httpSrv.set_file_extension_and_mimetype_mapping("md", "application/octet-stream");
+	httpSrv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
+	httpSrv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
+	
 	string strName;
 	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = 30;
