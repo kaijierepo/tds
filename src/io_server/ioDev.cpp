@@ -209,7 +209,10 @@ bool ioDev::toJson(json& conf, json opt)
 
 	conf["nodeID"] = m_confNodeId;
 
-	//if(pIOSession)
+	if (pIOSession != nullptr)
+	{
+		conf["remoteIP"] = pIOSession->getRemoteAddr();
+	}
 
 
 	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))

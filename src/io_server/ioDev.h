@@ -82,6 +82,8 @@ public:
 	void setIOSession(shared_ptr<TDS_SESSION> ioSession);
 	void statisOnRecv(char* recvData, int len, string addr);
 	void statisOnSend(char* sendData, int len, string addr);
+
+	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	shared_ptr<TDS_SESSION> pIOSession;
 	mutex m_csIOSession;
 	//输出到设备
