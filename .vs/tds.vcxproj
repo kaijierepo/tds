@@ -442,6 +442,9 @@
     <PreBuildEvent>
       <Command>../build/autoversion.bat</Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>../build/publish.bat</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
     <ClCompile>
