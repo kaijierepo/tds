@@ -43,6 +43,7 @@ SOFTWARE.
 #include "alarm_server/as.h"
 #include "logServer/logServer.h"
 #include "xiaot/scriptHost.h"
+#include "version.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -366,7 +367,7 @@ bool TDS_imp::run(string cmdline)
 	}
 
 
-	string sTitle = "TDS   版本:" + version + " build(" + getbuildtime() + "),数据服务端口:" + str::fromInt(tds->conf->port);
+	string sTitle = "TDS   版本:" + version + "." + SVN_VERSION + " build(" + getbuildtime() + "),数据服务端口:" + str::fromInt(tds->conf->port);
 	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	return true;
