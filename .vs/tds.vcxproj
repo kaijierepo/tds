@@ -439,6 +439,9 @@
       <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
+    <PreBuildEvent>
+      <Command>../build/autoversion.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
     <ClCompile>
