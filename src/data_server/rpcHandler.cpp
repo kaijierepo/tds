@@ -1007,8 +1007,9 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 				json jAddr;
 				jAddr["id"] = strIoAddr;
 				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				pIoDev->setIOSession(pSession);
 			}
-			pIoDev->setIOSession(pSession);
+		
 			pIoDev->onRecvPkt(jReq);
 			LOG("TDSP响应:\r\n" + strReq + "\r\n");
 			return true;

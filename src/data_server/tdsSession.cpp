@@ -148,7 +148,8 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
         j["remoteAddr"] = getRemoteAddr();
         j["type"] = "接收";
         j["len"] = len;
-        j["data"] = str::fromBuff(p, len);
+        //j["data"] = str::fromBuff(p, len);
+        j["data"] = str::fromBytes(p, len);
         j["sessionType"] = type;
         string s = j.dump();
         sendToSessionPktSessions((char*)s.c_str(), s.length());
@@ -181,6 +182,21 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      if (pTcpSession)
      {
          return pTcpSession->iSendSucCount;
+     }
+     else if (pTcpSessionClt)
+     {
+         //return pTcpSessionClt->
+         return 0;
+     }
+     return 0;
+ }
+
+ int TDS_SESSION::getRecvedBytes()
+ {
+     std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
+     if (pTcpSession)
+     {
+         return pTcpSession->iRecvCount;
      }
      else if (pTcpSessionClt)
      {

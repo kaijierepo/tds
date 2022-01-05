@@ -1185,7 +1185,14 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//http处理   1.网页请求  2.tdsRpc over http   
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		return;
+		char* ptmp = new char[iLen + 1];
+		memset(ptmp, 0, iLen + 1);
+		memcpy(ptmp, pData, iLen);
+		string strData = ptmp;
+		delete ptmp;
+
+		if (strData.find("/rpc") == string::npos) //仅处理rpc请求。 http网页请求走667端口
+			return;
 		//rpc 先组包后处理
 		//if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		//{
@@ -1554,7 +1561,8 @@ string dataServer::getSessionStatus(json params)
 		{
 			if (typeFilter.is_string())
 			{
-				if (typeFilter.get<string>() != p->type)
+				string stf = typeFilter.get<string>();
+				if (p->type.find(stf)==string::npos)
 					continue;
 			}
 		}
@@ -1578,6 +1586,16 @@ string dataServer::getSessionStatus(json params)
 		}
 		jSession["lastRecvTime"] = timeopt::st2str(p->lastRecvTime);
 		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
+		jSession["sendBytes"] = p->getSendedBytes();
+		jSession["recvBytes"] = p->getRecvedBytes();
+		string ioAddrInSession = "";
+		for (int i = 0; i < p->m_vecIoDev.size(); i++)
+		{
+			if (i > 0)
+				ioAddrInSession += ",";
+			ioAddrInSession += p->m_vecIoDev[i];
+		}
+		jSession["ioAddr"] = ioAddrInSession;
 
 		if (p->type == "video" && p->pTcpSession)
 		{

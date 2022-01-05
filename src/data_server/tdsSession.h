@@ -94,6 +94,7 @@ public:
 	void statisOnRecv(char* p, int len);
 	int send(char* p,int len,bool bNeedLog = true);
 	int getSendedBytes();
+	int getRecvedBytes();
     std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
@@ -109,7 +110,7 @@ public:
 	std::shared_ptr<TDS_SESSION> bridgedIoSession; //this是界面session,保留ioSession指针
 	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
 	ioDev* getIODev(string ioAddr);
-	vector<string> m_vecIoDev;  //通过该tdsSession和tds通信的io设备
+	vector<string> m_vecIoDev;  //通过该tdsSession和tds通信的io设备.可以有多个
 	ioDev* m_IoDevTcpLink;      //建立了tcp直连的io设备
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	DWORD httpReqHandleThreadID;  //处理http请求的线程id
