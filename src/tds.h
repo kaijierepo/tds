@@ -4,7 +4,7 @@
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 SPDX-License-Identifier: MIT
-Copyright (c) 2020-present Tao Lu 卢涛 
+Copyright (c) 2020-present Tao Lu  
 
 Permission is hereby  granted, free of charge, to any  person obtaining a copy
 of this software and associated  documentation files (the "Software"), to deal
@@ -32,14 +32,15 @@ SOFTWARE.
 #include <string>
 #include <vector>
 #include <map>
+#include <Windows.h>
 using namespace std;
 
 
-//值类型
+
 namespace TDS {
 	namespace VAL_TYPE {
-		const string json = "json";	//自定义类型。是一个json对象字符串
-		const string Float = "float"; //实型
+		const string json = "json";	
+		const string Float = "float"; 
 		const string integer = "int";
 		const string boolean = "bool";
 		const string video = "video";
@@ -47,14 +48,14 @@ namespace TDS {
 		const string car_strobe = "car_strobe";
 		const string man_strobe = "man_strobe";
 	};
-	//IO设备层级
+	
 	namespace IO_DEV_LEVEL {
 		const string server = "server";
 		const string gateway = "gateway";
 		const string device = "device";
 		const string channel = "channel";
 	}
-	//IO设备类型
+	
 	namespace IO_DEV_TYPE {
 		namespace DEV {
 			const string tdsp_device = "tdsp-device";
@@ -102,9 +103,9 @@ inline int storageSize(string fmt) {
 
 #define STREAM_TYPE_ENUM string
 namespace STREAM_TYPE {
-	const string bmp = "bmp"; //bmp流 rgb
-	const string h264 = "h264"; //264 ES流
-	const string rgba = "rgba"; //原始rgba数据 用于canvas播放视频
+	const string bmp = "bmp"; 
+	const string h264 = "h264"; 
+	const string rgba = "rgba"; 
 	const string mono8 = "mono8";
 	const string mono16 = "mono16";
 }
@@ -126,21 +127,15 @@ struct STREAM_INFO {
 	}
 };
 
-//通过 getITDS 获得tds接口总线，访问tds中的各项内容
-//总线上有一些固定元素，可以调用，例如
-//tds.db 数据库对象
 
-//模块总线消息
-//tds中的不同模块，可以通过总线消息沟通
-//基于tds的二次开发，可以看做是对总线上模块的扩展，与tds总线上的各个模块沟通
 struct MODULE_BUS_MSG {
 	string moduleName;
 	string eventName;
-	string content; //json格式
-	char* bin; //消息附带的二进制数据
+	string content; //json
+	char* bin; 
 };
 
-//Response Result Error的命令规则保持和Json RPC标准一致
+
 class RPC_RESP {
 public:
 	void setResult(string& str) { result = str; }
@@ -156,39 +151,36 @@ public:
 			delete binResult;
 	}
 
-	string strResp; //完整的字符串格式jsonRPC命令
+	string strResp; 
 	string error;
 	string result;
-	string params;  //某些情况下，回复params,方便调试诊断
+	string params; 
 	char* binResult;
 	int iBinLen;
 };
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
-typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);//返回是否处理
+typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
-typedef void (*fp_procBeforeExit)();//由tds模块触发的程序退出，主程序退出前需要做的清理工作
+typedef void (*fp_procBeforeExit)();
 
 namespace TDS_SESSION_TYPE {
-	//tds业务功能会话
 	const string none = "none";
-	const string tdsClient = "tdsClient";  //tds客户端。 http客户端
+	const string tdsClient = "tdsClient";  
 	const string video = "video";
-	const string iodev = "ioDev"; //io设备会话 传输设备自定义的通信协议
+	const string iodev = "ioDev"; 
 
-	//透传与通道类会话
-	const string tunnel = "tunnel"; //tunnel to serial ,tcpserver 
+	const string tunnel = "tunnel"; 
 	const string websocket2com = "websocket2com";
 	const string bridgeToiodev = "bridgeToiodev";
 	const string bridgeToTcpClient = "bridgeToTcpClient";
 	const string terminal = "terminal";
 
-	//数据监视类会话。调试功能
 	const string log = "log";
-	const string commpkt = "commpkt"; //ioDev通信数据包监视
-	const string sessionPkt = "sessionPkt"; //session通信数据包监视
+	const string commpkt = "commpkt"; 
+	const string sessionPkt = "sessionPkt";
 }
 
 struct ACTIVE_TDS_SESSION {
@@ -212,7 +204,7 @@ struct iTDSConf {
 	string homepage;
 	string uiMode;
 	string uiTitle;
-	bool fullscreen; //是否启用标题栏
+	bool fullscreen; 
 	bool singleGenicamHost;
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
@@ -230,26 +222,24 @@ struct iTDSConf {
 #define DB_DATA_SET std::map<string,string>
 class i_database {
 public:
-	//增删改查操作 crud options
+	//crud options
 	//virtual void INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile = nullptr) = 0;
 	//time: "2020-02-14~2020-02-15" or "1d1h1m30s"
 	//filter: "humidiy==55 && temperature>30"
-	//dataSet是一个json数组，数组成员为1个数据元。 meta是元数据，描述数据的一些信息
+	//dataSet is json de array
 	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
 	virtual bool Update(string tag, SYSTEMTIME stTime, string& sData) = 0;
 
-	//底层基础操作
+
 	
-	//保存一个数据元文件。deFileUrl可以是 1.本机文件路径 2.文件夹路径 3.http文件或文件夹路径
+	//deFileUrl  1.localfile 2.localfolder 3.http url
 	virtual void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) = 0;
 
-	//获得数据库文件db.json的路径
+	//get db.json path
 	virtual string getPath_dbFile(string strTag, SYSTEMTIME date) = 0;
-	//获得数据元文件或者数据库文件的存储文件夹目录
+	//de folder path
 	virtual string getPath_dataFolder(string strTag, SYSTEMTIME date) = 0;
-	//获得数据元文件或者数据元文件夹的路径
 	virtual string getPath_deFile(string strTag, SYSTEMTIME stTime) = 0;
-	//获得数据库根路径
 	virtual string getPath_dbRoot() = 0;
 };
 
@@ -264,14 +254,13 @@ public:
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 	fp_procBeforeExit m_fpProcBeforeExit;
 
-	// tds客户端访问接口
-	virtual bool call(string method, string param, RPC_RESP& resp) = 0;//返回true，result为结果;返回false,result为错误信息
+	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
-	// tds服务功能扩展
+
 	virtual void setRpcHandler(fp_rpcHandler handler) = 0;
 
-	// io 通信服务功能
+
 	virtual bool enableIoLog(string ioAddr, bool bEnable) = 0;
 	virtual bool sendToIoAddr(string ioAddr, const char* p,int l) = 0;
 	virtual bool connectDev(string ioAddr) = 0; 
@@ -282,25 +271,24 @@ public:
 	virtual bool unlockIoAddr(string ioAddr) = 0;
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
-	//视频功能
+	//video function
 	virtual void startStream(string streamId, STREAM_INFO* si=NULL) = 0;
-	//推流到指定的streamId  streamId可以是tag,ioAddr,或者其他自定义名称
+	//push to sepecified streamId 
 	virtual void pushStream(string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
-	//从指定通道拉流（必须是支持视频功能的io地址）
 	virtual void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO*si = NULL) = 0;
 
-	// 通用服务功能
+
 	virtual void log(const char* text) = 0;
 
-	// 消息总线。注册消息接收器
+	//event bus
 	virtual void registerMsgSinker(fp_msgSinker sinker) = 0;
 	virtual void publishMsg(MODULE_BUS_MSG& msg) = 0;
 
-	//数据接口
+	
 	iTDSConf* conf;
 	i_database* db;
 
-	//ui窗口
+
 	HWND uiWnd;
 	string uiWndTitle;
 };
