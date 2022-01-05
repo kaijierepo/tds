@@ -217,6 +217,15 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		p->port = pTcpSession->remotePort;
 		p->ip = pTcpSession->remoteIP;
 
+		if (pTcpSession->pTcpServer)
+		{
+			tcpSrv* pts = (tcpSrv*)pTcpSession->pTcpServer;
+			if (pts->m_iServerPort == tds->conf->ioServerPort)
+			{
+				p->type = "ioDev";
+			}
+		}
+
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
 		if (pIoDev)
 		{
@@ -1592,11 +1601,13 @@ string dataServer::getSessionStatus(json params)
 		for (int i = 0; i < p->m_vecIoDev.size(); i++)
 		{
 			if (i > 0)
-				ioAddrInSession += ",";
+				ioAddrInSession += ";";
 			ioAddrInSession += p->m_vecIoDev[i];
+			ioAddrInSession += ",";
+			ioAddrInSession += p->m_vecIoBindTag[i];
 		}
 		jSession["ioAddr"] = ioAddrInSession;
-
+		
 		if (p->type == "video" && p->pTcpSession)
 		{
 			jSession["sendBytes"] = p->pTcpSession->iSendSucCount;

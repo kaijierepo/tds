@@ -310,8 +310,23 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }
 
+void thread_feedDog()
+{
+	while (1)
+	{
+		Sleep(200);
+		int iTime = time(NULL);
+		string s = str::fromInt(iTime);
+		::WritePrivateProfileString("watchDog", "lastActive", s.c_str(), "watchDog.ini");
+	}
+}
+
+
 bool TDS_imp::run(string cmdline)
 {
+	thread t(thread_feedDog);
+	t.detach();
+
 	//load tds.json
 	tdsConf.loadConf();
 	logger.m_bEnable = tdsConf.enableLog;

@@ -27,23 +27,22 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 		ret = WS_ERROR_FRAME;
 	}
 
-	// 检查扩展位并忽略
 	if ((frameData[0] & 0x70) != 0x0)
 	{
 		ret = WS_ERROR_FRAME;
 	}
 
-	// fin位: 为1表示已接收完整报文, 为0表示继续监听后续报文
+	// fin   1 complete frame  0 to be continued
 	fin_ = frameData[0] >> 7;
 
 
-	// mask位, 为1表示数据被加密
+	// mask
 	if ((frameData[1] & 0x80) != 0x80)
 	{
 		ret = WS_ERROR_FRAME;
 	}
 
-	// 操作码
+	// opt code
 	uint64_t payloadLength = 0;
 	uint8_t payloadFieldExtraBytes = 0;
 	uint8_t opcode = static_cast<uint8_t>(frameData[0] & 0x0f);
@@ -59,7 +58,7 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 		opcode == WS_BINARY_FRAME ||
 		opcode == WS_CONTINUATION_FRAME)
 	{
-		// 处理utf-8编码的文本帧
+		//utf-8 text
 		ret = (WS_FrameType)opcode;
 		payloadLength = static_cast<uint64_t>(frameData[1] & 0x7f);
 		if (payloadLength == 0x7e)//max payload is 65535;  2 bytes for payload len value storage; the leading 7 bits is used as a flag
@@ -83,7 +82,7 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 	}
 	else if (opcode == WS_PING_FRAME || opcode == WS_PONG_FRAME)
 	{
-		//ping/pong帧暂不处理
+		
 	}
 	else if (opcode == WS_CLOSING_FRAME)
 	{
@@ -98,10 +97,10 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 		return WS_ERROR_FRAME;
 
 
-	// 数据解码
+	//unmask
 	if ((ret != WS_ERROR_FRAME) && (payloadLength > 0))
 	{
-		// header: 2字节, masking key: 4字节
+		// header  2  masking key  4 
 		char *maskingKey = (char*)&frameData[2 + payloadFieldExtraBytes];
 		payloadData = new char[payloadLength + 1];
 		memset(payloadData, 0, payloadLength + 1);
@@ -112,7 +111,7 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 		}
 
 		iPayloadLen = payloadLength;
-		iFrmLen = iPayloadLen + 2/*2字节头*/ + 4/*4字节masking key*/ + payloadFieldExtraBytes;
+		iFrmLen = iPayloadLen + 2/*2 head*/ + 4/*4 masking key*/ + payloadFieldExtraBytes;
 		
 	}
 	return ret;

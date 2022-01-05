@@ -770,7 +770,22 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
 	pIOSession = ioSession;
-	ioSession->m_vecIoDev.push_back(this->getIOAddrStr());
+	if (ioSession == nullptr)
+		return;
+
+	bool bExist = false;
+	string ioAddr = this->getIOAddrStr();
+	for (int i = 0; i < ioSession->m_vecIoDev.size(); i++)
+	{
+		string tmp = ioSession->m_vecIoDev[i];
+		if (tmp == ioAddr)
+			bExist = true;
+	}
+	if (!bExist)
+	{
+		ioSession->m_vecIoDev.push_back(ioAddr);
+		ioSession->m_vecIoBindTag.push_back(this->m_strTagBind);
+	}
 }
 
 

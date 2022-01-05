@@ -38,6 +38,7 @@ SOFTWARE.
 #include "tools/tcpReverseProxy.h"
 #include "tools/tcp2com.h"
 #include "tools/tdsShell.h"
+#include "tools/tdsWatchDog.h"
 
 /*
 notes:
@@ -61,6 +62,7 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 
 
 #include "ioDev_mqttBroker.h"
+
 
 
 //exe模式下，都会有命令行窗口，通过设置 ui = chrome 或者 miniblink打开 浏览器窗口
@@ -109,6 +111,10 @@ int main(int argc, char** argv)
 	if (mode == "js")
 	{
 		doShell();
+	}
+	else if (mode == "dog")
+	{
+		watchDog.run();
 	}
 	else if (mode == "hub")
 	{

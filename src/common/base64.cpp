@@ -3,9 +3,7 @@
 
 string Base64Encode(const unsigned char* Data, int DataByte)
 {
-	//编码表
 	const char EncodeTable[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-	//返回值
 	string strEncode;
 	unsigned char Tmp[4] = { 0 };
 	int LineLength = 0;
@@ -20,7 +18,7 @@ string Base64Encode(const unsigned char* Data, int DataByte)
 		strEncode += EncodeTable[Tmp[3] & 0x3F];
 		if (LineLength += 4, LineLength == 76) { strEncode += "\r\n"; LineLength = 0; }
 	}
-	//对剩余数据进行编码
+	
 	int Mod = DataByte % 3;
 	if (Mod == 1)
 	{
@@ -45,7 +43,7 @@ string Base64Encode(const unsigned char* Data, int DataByte)
 string Base64Decode(const char* Data, int DataByte)
 {
 	int OutByte = 0;
-	//解码表
+	
 	const char DecodeTable[] =
 	{
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -61,7 +59,7 @@ string Base64Decode(const char* Data, int DataByte)
 		26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
 		39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, // 'a'-'z'
 	};
-	//返回值
+	
 	string strDecode;
 	int nValue;
 	int i = 0;
@@ -87,7 +85,7 @@ string Base64Decode(const char* Data, int DataByte)
 			}
 			i += 4;
 		}
-		else// 回车换行,跳过
+		else
 		{
 			Data++;
 			i++;

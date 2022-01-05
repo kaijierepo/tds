@@ -547,6 +547,17 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 
 	}
+	else if (method == "sendToSession")
+	{
+		string tdsSession = params["sessionAddr"].get<string>();
+		string data = params["data"].get<string>();
+		shared_ptr<TDS_SESSION> pDestSession = ds.getTDSSession(tdsSession);
+		if (pDestSession == nullptr)
+		{
+			return true;
+		}
+		pDestSession->send((char*)data.c_str(), data.length());
+	}
 	else if (method == "testCrash")
 	{
 		rpcResp.result = "\"ok\"";
@@ -952,7 +963,23 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		pIoDev->onRecvPkt(jReq);
 		return true;
 	}
-	if (jReq.contains("ioAddr"))
+	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
+	{
+		string tdsSession = jReq["tdsSession"].get<string>();
+		shared_ptr<TDS_SESSION> pDestSession = ds.getTDSSession(tdsSession);
+		
+		if (pDestSession == nullptr)
+		{
+			return true;
+		}
+		jReq["clientId"] = pSession->getRemoteAddr();
+		jReq.erase("user");
+		jReq.erase("token");
+		string s = jReq.dump() + "\n\n";
+		pDestSession->send((char*)s.c_str(), s.length());
+		return true;
+	}
+	else if (jReq.contains("ioAddr"))
 	{
 		//包有效性检测
 		if (!jReq.contains("result") && !jReq.contains("error") && !jReq.contains("params"))

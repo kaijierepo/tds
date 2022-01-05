@@ -121,7 +121,7 @@ void TDS_SESSION::statisOnSend(char* p, int len)
     j["remoteAddr"] = getRemoteAddr();
     j["type"] = "发送";
     j["len"] = len;
-    j["data"] = str::fromBuff(p, len);
+    j["data"] = str::fromBytes(p, len);
     j["sessionType"] = type;
     string s = j.dump(4);
 
