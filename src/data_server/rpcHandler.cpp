@@ -550,7 +550,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 }
 
 
-bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -599,7 +599,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -610,27 +610,27 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "getChanStatus")
 	{
-		rpc_getChanStatus(params,rpcResp, pSession);
+		rpc_getChanStatus(params,rpcResp);
 	}
 	else if (method == "getDevStatus")
 	{
-		rpc_getDevStatus(params, rpcResp, pSession);
+		rpc_getDevStatus(params, rpcResp);
 	}
 	else if (method == "getChanVal")
 	{
-		rpc_getChanVal(params, rpcResp, pSession);
+		rpc_getChanVal(params, rpcResp);
 	}
 	else if (method == "scanChannel" || method == "scanchannel")
 	{
-		result = rpc_io_scanChannel(params, error, pSession);
+		result = rpc_io_scanChannel(params, error);
 	}
 	else if (method == "getIoDevStatis")
 	{
-		rpc_getIoDevStatis(params, rpcResp, pSession);
+		rpc_getIoDevStatis(params, rpcResp);
 	}
 	else if (method == "getDevList")
 	{
-		rpc_getDevList(params, rpcResp, pSession);
+		rpc_getDevList(params, rpcResp);
 	}
 	else if (method == "discoverDev")
 	{
@@ -650,7 +650,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -675,27 +675,27 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMpStatus")
 		{
-			result = rpc_getMpStatus(params, error, pSession);
+			result = rpc_getMpStatus(params, error, session);
 		}
 		else if (method == "getMoStatus")
 		{
-			result = rpc_getMoStatus(params, error, pSession);
+			result = rpc_getMoStatus(params, error, session);
 		}
 		else if (method == "getMoOnlineStatus") //智能设备在线状态
 		{
-			result = rpc_getMoOnlineStatus(params, error, pSession);
+			result = rpc_getMoOnlineStatus(params, error);
 		}
 		else if (method == "getMoStatis")
 		{
-			rpc_getMoStatis(params, rpcResp, pSession);
+			rpc_getMoStatis(params, rpcResp, session);
 		}
 		else if (method == "getMoStatusTable")
 		{
-			result = rpc_getMoStatusTable(params, error, pSession);
+			result = rpc_getMoStatusTable(params, error);
 		}
 		else if (method == "getTopoList")
 		{
-			result = rpc_getTopoList(params, error, pSession);
+			result = rpc_getTopoList(params, error,session);
 		}
 		else if (method == "getconf")
 		{
@@ -716,9 +716,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				subTreeRoot = params["root"].get<string>();
 			}
 			//没有root按照用户权限取子树
-			else if (pSession->user != "")
+			else if (session.user != "")
 			{
-				json jUser = userMng.getUser(pSession->user);
+				json jUser = userMng.getUser(session.user);
 				if (jUser != nullptr)
 				{
 					subTreeRoot = jUser["org"].get<string>();
@@ -754,9 +754,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 
 			string tag = params["tag"].get<string>();
-			if (pSession->org != "")
+			if (session.org != "")
 			{
-				tag = TAG::addRoot(tag, pSession->org);
+				tag = TAG::addRoot(tag, session.org);
 			}
 
 			MO* pmo = prj.GetMOByTag(tag);
@@ -916,7 +916,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	
 
-	if (handleMethodCall_MoMng(method, params, rpcResp, pSession))
+	if (handleMethodCall_MoMng(method, params, rpcResp, pSession->getRpcSession()))
 	{
 		return true;
 	}
@@ -936,11 +936,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		return true;
 	}
-	if (handleMethodCall_IoMng(method, params, rpcResp, pSession))
+	if (handleMethodCall_IoMng(method, params, rpcResp))
 	{
 		return true;
 	}
-	if (handleMethodCall_debugFunc(method, params, rpcResp, pSession))
+	if (handleMethodCall_debugFunc(method, params, rpcResp))
 	{
 		return true;
 	}
@@ -1430,7 +1430,7 @@ string rpcHandler::rpc_input(json params, string& error)
 	return "ok";
 }
 
-string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
 {
 	string path = tds->conf->projectConfPath + "/topo";
 	path::normalization(path);
@@ -1448,13 +1448,13 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 		topoList.push_back(i.second);
 	}
 
-	if (pSession->user != "")
+	if (session.user != "")
 	{
 		//删除没有权限的拓扑图
 		for (int i = 0; i < topoList.size(); i++)
 		{
 			string& s = topoList[i];
-			if (!userMng.checkTagPermission(pSession->user, s))
+			if (!userMng.checkTagPermission(session.user, s))
 			{
 				topoList.erase(topoList.begin() + i);
 				i--;
@@ -1466,9 +1466,9 @@ string rpcHandler::rpc_getTopoList(json params, string& error,std::shared_ptr<TD
 	return j.dump();
 }
 
-void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session)
 {
-	string rootTag = pSession->org; //absolute queryRoot
+	string rootTag = session.org; //absolute queryRoot
 	if (params.contains("rootTag"))
 	{
 		string relativeQueryRoot = params["rootTag"].get<string>();
@@ -1532,8 +1532,8 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 
 	//统计报警
 	json jFilter = nullptr;
-	if (pSession->user != "")
-		jFilter["user"] = pSession->user;
+	if (session.user != "")
+		jFilter["user"] = session.user;
 	if (rootTag != "")
 		jFilter["rootTag"] = params["rootTag"];
 	string szAlm = almSrv.getStatus(jFilter);
@@ -1596,7 +1596,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, std::shared_ptr<TD
 	}
 }
 
-string rpcHandler::rpc_getMoOnlineStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMoOnlineStatus(json params, string& error)
 {
 	//智能设备的在线状态  专用监测点位号
 	vector<ioDev*> arySmartDev;
@@ -1616,7 +1616,7 @@ string rpcHandler::rpc_getMoOnlineStatus(json params, string& error, std::shared
 	return list.dump(4);
 }
 
-string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION session)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1624,7 +1624,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 		return "";
 	}
 	string moType = params["type"].get<string>();
-	string rootTag = pSession->org;
+	string rootTag = session.org;
 	if (params["rootTag"] != nullptr) 
 	{
 		string relativeQueryRootTag = params["rootTag"].get<string>();
@@ -1641,9 +1641,9 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 			string tag = pMo->getTag();
 
 			//过滤用户权限
-			if(pSession->user != "")
+			if(session.user != "")
 			{
-				if (!userMng.checkTagPermission(pSession->user, tag))
+				if (!userMng.checkTagPermission(session.user, tag))
 					continue;
 			}
 
@@ -1693,7 +1693,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error, std::shared_ptr<T
 
 
 
-string rpcHandler::rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 {
 	if (params["type"] == nullptr)
 	{
@@ -1745,7 +1745,7 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error, std::shared_
 	}
 }
 
-string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session)
 {
 	string szTag = "*"; //未指定位号默认查询所有位号
 	string rootTag = "";
@@ -1769,9 +1769,9 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 		else
 		{
 			json jUser = nullptr;
-			if (pSession->user != "")
+			if (session.user != "")
 			{
-				json jUser = userMng.getUser(pSession->user);
+				json jUser = userMng.getUser(session.user);
 				//优先使用参数中指定的rootTag，如果没有指定，使用用户的所属组织作为rootTag
 				if (rootTag == "")
 				{
@@ -1784,9 +1784,9 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, std::shared_ptr<T
 			{
 				string tag = it->second->getTag();
 
-				if (pSession->user != "")
+				if (session.user != "")
 				{
-					if (!userMng.checkTagPermission(pSession->user, tag))
+					if (!userMng.checkTagPermission(session.user, tag))
 						continue;
 				}
 
@@ -1953,12 +1953,12 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-string rpcHandler::rpc_heartbeat(json params, string& error , std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION session)
 {
 	if (params.is_object())
 	{
 		if(params["clientName"] != nullptr)
-			pSession->name = params["clientName"];
+			session.name = params["clientName"];
 	}
 	return "\"pong\"";
 }
@@ -2049,7 +2049,7 @@ string rpcHandler::rpc_io_tree(json params, string& error)
 	return j.dump();
 }
 
-void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp)
 {
 	json list;
 	ioSrv.getChanStatus(list);
@@ -2057,7 +2057,7 @@ void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp, std::shared_ptr<
 }
 
 
-void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 {
 	string ioAddr = params["ioAddr"];
 	ioDev* p = ioSrv.getIODev(ioAddr);
@@ -2085,7 +2085,7 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp, std::shared_ptr<T
 	}
 }
 
-void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp)
 {
 	json j;  
 	params["recursive"] = false;
@@ -2095,13 +2095,13 @@ void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp, std::shared_ptr<TDS
 	}
 }
 
-void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp)
 {
 	
 }
 
 
-void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp)
 {
 	json list;
 	ioSrv.getChanStatus(list);
@@ -2141,7 +2141,7 @@ void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp, std::shared_ptr<TDS
 }
 
 
-string rpcHandler::rpc_io_scanChannel(json params, string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_io_scanChannel(json params, string& error)
 {
 	if (params["ioAddr"] == nullptr)
 	{
