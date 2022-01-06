@@ -613,7 +613,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "addDev")
 	{
-		ioSrv.rpc_addDev(params);
+		//ioSrv.rpc_addDev(params);
 		result = "\"ok\"";
 	}
 	else if (method == "deleteDev")
