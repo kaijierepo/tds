@@ -17,6 +17,12 @@ TDS_SESSION::~TDS_SESSION()
 {
 }
 
+RPC_SESSION TDS_SESSION::getRpcSession()
+{
+    RPC_SESSION s = *this;
+    return s;
+}
+
 string TDS_SESSION::getId()
 {
     return getRemoteAddr();
@@ -48,6 +54,7 @@ bool TDS_SESSION::getTcpSession(tcpSession& ts)
 
 void TDS_SESSION::Init()
 {
+    m_bStateLessSession = false;
     m_bActiveSession = false;
     m_bNeedLog = true;
     bConnected = false;

@@ -118,14 +118,14 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 }
 
 
-string rpcHandler::rpc_db_select(json params,string& error, std::shared_ptr<TDS_SESSION> pSession)
+string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
 
-	if (pSession->user != "")
+	if (session.user != "")
 	{
-		params["root"] = pSession->org;
+		params["root"] = session.org;
 	}
 	error = parseDataSelector(params,timeSelector,tagSelector);
 	if(error != "") return "";
@@ -345,11 +345,6 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 				error = RPCError(TEC_FAIL, "fail");
 			}
 		}
-		else if (params["bin"] != nullptr)
-		{
-			long len = params["len"].get<long>();
-			pSession->m_fileUploader.startWrite(p, len);
-		}
 	}
 	else if (method == "fs.getCurDir")
 	{
@@ -387,21 +382,42 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.openFileDlg")
 	{
-		std::thread t(openFileDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
+		if (pSession->m_bStateLessSession)
+		{
+			error = "rpc function can only be used in TDS-Rpc over websocket";
+		}
+		else
+		{
+			std::thread t(openFileDlgThread, pSession, params);
+			t.detach();
+			result = "\"ok\"";
+		}
 	}
 	else if (method == "fs.saveFileDlg")
 	{
-		std::thread t(saveFileDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
+		if (pSession->m_bStateLessSession)
+		{
+			error = "rpc function can only be used in TDS-Rpc over websocket";
+		}
+		else
+		{
+			std::thread t(saveFileDlgThread, pSession, params);
+			t.detach();
+			result = "\"ok\"";
+		}
 	}
 	else if (method == "fs.selectFolderDlg")
 	{
-		std::thread t(selectFolderDlgThread, pSession, params);
-		t.detach();
-		result = "\"ok\"";
+		if (pSession->m_bStateLessSession)
+		{
+			error = "rpc function can only be used in TDS-Rpc over websocket";
+		}
+		else
+		{
+			std::thread t(selectFolderDlgThread, pSession, params);
+			t.detach();
+			result = "\"ok\"";
+		}
 	}
 	else if (method == "fs.openFolder")
 	{
@@ -447,7 +463,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -502,14 +518,14 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 }
 
 
-bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	if (method == "db.select")
 	{
-		result = rpc_db_select(params, error, pSession);
+		result = rpc_db_select(params, error, session);
 	}
 	if (method == "db.update")
 	{
@@ -912,11 +928,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		return true;
 	}
-	if (handleMethodCall_OSFunc(method, params, rpcResp, pSession))
+	if (handleMethodCall_OSFunc(method, params, rpcResp,pSession))
 	{
 		return true;
 	}
-	if (handleMethodCall_db(method, params, rpcResp, pSession))
+	if (handleMethodCall_db(method, params, rpcResp, pSession->getRpcSession()))
 	{
 		return true;
 	}

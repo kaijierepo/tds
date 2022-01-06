@@ -52,8 +52,8 @@ public:
 	//json rpc implementation
 	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
-	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
-	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp);
+	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
@@ -71,7 +71,7 @@ public:
 	string rpc_getMoStatusTable(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_getMoStatus(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_output(json params, string& error);
-	string rpc_db_select(json params, string& error, std::shared_ptr<TDS_SESSION> pSession = NULL);
+	string rpc_db_select(json params, string& error, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error,std::shared_ptr<TDS_SESSION> pSession = NULL);
 	string rpc_getUsers(json params, string& error);
 	string rpc_getconf(json params, string& error);

@@ -39,15 +39,21 @@ public:
 	string filePath;
 };
 
+//无状态会话信息
+class RPC_SESSION {
+public:
+	string name; //name is defined by tds client
+	string user;
+	string org; //用户所在组织。根位号
+};
 
-class TDS_SESSION{
+
+//有状态会话信息，包含通信链路信息
+class TDS_SESSION : public RPC_SESSION{
 public:
     TDS_SESSION();
 	~TDS_SESSION();
 	string role;
-	string name; //name is defined by tds client
-	string user;
-	string org; //用户所在组织。根位号
 	string loginTime;
 	string encode;
 	string ip;
@@ -55,6 +61,10 @@ public:
 	string lastMethodCalled;
 	SYSTEMTIME lastRecvTime;
 	SYSTEMTIME lastSendTime;
+
+	RPC_SESSION getRpcSession();
+
+	bool m_bStateLessSession; //http协议发起的rpc请求都是无状态会话
 
 	string getId();
 	string getRemoteAddr();
