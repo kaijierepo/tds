@@ -547,6 +547,14 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 
 	}
+	else if (method == "stopCycleAcq")
+	{
+		ioSrv.m_stopCycleAcq = true;
+	}
+	else if (method == "startCycleAcq")
+	{
+		ioSrv.m_stopCycleAcq = false;
+	}
 	else if (method == "sendToSession")
 	{
 		string tdsSession = params["sessionAddr"].get<string>();

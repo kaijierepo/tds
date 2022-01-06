@@ -22,10 +22,10 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	int ret;
 	while(1)
 	{
-		//如果接收缓冲区满，动态增大10k
+		//buffer full , dynamicly increase 10k
 		if(recvBuff.size() == iRecvBuffLen)
 		{
-			recvBuff.resize(recvBuff.size() + 100000);//动态调整接收缓冲区大小
+			recvBuff.resize(recvBuff.size() + 100000);
 		}
 
 		ret=recv(sock,(char*)recvBuff.data() + iRecvBuffLen,recvBuff.size() - iRecvBuffLen,0);
@@ -40,7 +40,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 		iRecvBuffLen += ret;
 
-		//如果接收缓冲区还有数据，继续接收(该机制可以防止大数据分多次接收导致多次回调应用层，造成不必要的计算消耗)
+		//keep recv   prevent callback to applayer too many times.
 		unsigned long bytesToRecv = 0;
 		int iRet = ioctlsocket(sock, FIONREAD, &bytesToRecv);
 		if (iRet == 0)
@@ -52,7 +52,6 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		{
 		}
 
-		//接收完成，送到应用层
 		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
@@ -70,12 +69,10 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 	int ct = 0;
 	while (1)
 	{
-		//断开连接时，每秒尝试一次重连
 		if(!p->IsConnect())
 				p->connect();
 		Sleep(1000);
 
-		//连接状态下，15秒发送一次心跳
 		ct++;
 		if (ct == 15)
 		{
@@ -192,7 +189,7 @@ bool tcpClt::connect()
 		return false;
 	}
 
-	//1.创建套接字(socket)
+	//create socket
 	SOCKADDR_IN sAddTemp;
 	sAddTemp.sin_family = AF_INET;
 	sAddTemp.sin_addr.S_un.S_addr=inet_addr(m_strLocalIP.c_str());
@@ -208,7 +205,6 @@ bool tcpClt::connect()
 		}
 	}
 
-	//2.向服务器发送连接请求(connect)
 	SOCKADDR_IN addrSrv;
 	addrSrv.sin_addr.S_un.S_addr=inet_addr(m_remoteIP.c_str());
 	addrSrv.sin_family=AF_INET;

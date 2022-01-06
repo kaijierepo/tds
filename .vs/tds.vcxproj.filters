@@ -183,6 +183,9 @@
     <ClCompile Include="..\src\logServer\csvTable.cpp">
       <Filter>logServer</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\tdsWatchDog.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -356,6 +359,9 @@
     </ClInclude>
     <ClInclude Include="..\src\logServer\csvTable.h">
       <Filter>logServer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\tdsWatchDog.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

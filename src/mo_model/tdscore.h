@@ -8,10 +8,9 @@ using namespace std;
 
 #define Nan 0x7fc00000
 
-/*字符串命名方式
-代码中函数/变量               骆驼式命名法    如：getIODevices
-rpc协议中的属性/常量/宏       下划线连接      如：io_addr
-枚举字符串			         短划线连接      如: gw-local-serial
+/*name patern
+functions variable              camel mode    getIODevices
+enum string			         short dash     gw-local-serial
 */
 
 namespace TDS {

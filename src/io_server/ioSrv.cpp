@@ -31,8 +31,14 @@ void IOThread()
 	int statisUpdateInterval = 10;
 	while (1)
 	{
+		Sleep(5);
+
 		if (!ioSrv.m_bRunning)
 			break;
+
+		if (ioSrv.m_stopCycleAcq)
+			continue;
+
 		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChild[i];
@@ -43,13 +49,13 @@ void IOThread()
 			if (!ioSrv.m_bRunning)
 				break;
 		}
-		Sleep(5);
 	}
 	ioSrv.m_bWorkingThreadRunning = false;
 	ioSrv.m_signalWorkThreadExit.notify();
 }
 ioServer::ioServer()
 {
+	m_stopCycleAcq = false;
 }
 ioServer::~ioServer()
 {
