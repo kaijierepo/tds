@@ -408,7 +408,8 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 			jParam = nullptr;
 		else
 			jParam = json::parse(param);
-		bool bHandled = rpcSrv.handleMethodCall(method, jParam, resp,NULL);
+		RPC_SESSION session;
+		bool bHandled = rpcSrv.handleMethodCall(method, jParam, resp, session);
 		if (bHandled)
 		{
 			return true;

@@ -47,21 +47,18 @@ public:
 
 	bool handleDevRpcDispatch(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
 
-	bool isIoDevMethod(string method);
-
 	//json rpc implementation
 	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);
-	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
-	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
-	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
-	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, std::shared_ptr<TDS_SESSION> pSession);
+	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
+	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
 
-	string getSessionStatus();
 
 	//tds data service function
 	string rpc_input(json params, string& error);

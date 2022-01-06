@@ -71,10 +71,6 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 {
 	//解析url参数模式的rpc调用
 	string path = req.path;
-	shared_ptr<TDS_SESSION> tdsSession = ds.getTDSSession(GetCurrentThreadId());
-	if (tdsSession == nullptr)//有可能连接在得到处理前就断开了连接，会进入到这里
-		return;
-
 	string strRpc;
 	httplib::Params params = req.params;
 	if (params.size() > 0)
@@ -110,7 +106,9 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	char* binResp = NULL;
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
-	rpcSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
+
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	rpcSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen,bNeedLog, pSession);
 
 	if (resp != "")
 	{
@@ -1194,6 +1192,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//http处理   1.网页请求  2.tdsRpc over http   
 	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
+		return;
 		char* ptmp = new char[iLen + 1];
 		memset(ptmp, 0, iLen + 1);
 		memcpy(ptmp, pData, iLen);

@@ -20,6 +20,7 @@ TDS_SESSION::~TDS_SESSION()
 RPC_SESSION TDS_SESSION::getRpcSession()
 {
     RPC_SESSION s = *this;
+    s.remoteAddr = getRemoteAddr();
     return s;
 }
 

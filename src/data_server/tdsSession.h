@@ -45,6 +45,7 @@ public:
 	string name; //name is defined by tds client
 	string user;
 	string org; //用户所在组织。根位号
+	string remoteAddr;
 };
 
 

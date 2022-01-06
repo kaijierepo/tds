@@ -202,7 +202,7 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 }
 
 
-void selectFolderDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
+void selectFolderDlgThread(json params)
 {
 	vector<string> paths = fs::fileDlg(false,true,true);
 	if (paths.size() > 0)
@@ -229,7 +229,7 @@ void selectFolderDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 }
 
 
-void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
+void openFileDlgThread(json params)
 {
 	string filter;
 	if (params["filter"] != nullptr)
@@ -262,7 +262,7 @@ void openFileDlgThread(std::shared_ptr<TDS_SESSION> pSession,json params)
 	}
 }
 
-void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
+void saveFileDlgThread(json params)
 {
 	string filter;
 	if (params["filter"] != nullptr)
@@ -298,7 +298,7 @@ void saveFileDlgThread(std::shared_ptr<TDS_SESSION> pSession, json params)
 }
 
 
-bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -382,42 +382,21 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.openFileDlg")
 	{
-		if (pSession->m_bStateLessSession)
-		{
-			error = "rpc function can only be used in TDS-Rpc over websocket";
-		}
-		else
-		{
-			std::thread t(openFileDlgThread, pSession, params);
-			t.detach();
-			result = "\"ok\"";
-		}
+		std::thread t(openFileDlgThread, params);
+		t.detach();
+		result = "\"ok\"";
 	}
 	else if (method == "fs.saveFileDlg")
 	{
-		if (pSession->m_bStateLessSession)
-		{
-			error = "rpc function can only be used in TDS-Rpc over websocket";
-		}
-		else
-		{
-			std::thread t(saveFileDlgThread, pSession, params);
-			t.detach();
-			result = "\"ok\"";
-		}
+		std::thread t(saveFileDlgThread, params);
+		t.detach();
+		result = "\"ok\"";
 	}
 	else if (method == "fs.selectFolderDlg")
 	{
-		if (pSession->m_bStateLessSession)
-		{
-			error = "rpc function can only be used in TDS-Rpc over websocket";
-		}
-		else
-		{
-			std::thread t(selectFolderDlgThread, pSession, params);
-			t.detach();
-			result = "\"ok\"";
-		}
+		std::thread t(selectFolderDlgThread, params);
+		t.detach();
+		result = "\"ok\"";
 	}
 	else if (method == "fs.openFolder")
 	{
@@ -797,32 +776,32 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	bool bHandled = true;
 	if (method == "getAlarmCurrent")
 	{
 	json jFilter;
-	jFilter["user"] = pSession->user;
+	jFilter["user"] = session.user;
 	jFilter["rootTag"] = params["rootTag"];
 	result = almSrv.getCurrent(jFilter);
 	}
 	else if (method == "getAlarmStatus")
 	{
 	json jFilter;
-	jFilter["user"] = pSession->user;
+	jFilter["user"] = session.user;
 	result = almSrv.getStatus(jFilter);
 	}
 	else if (method == "getAlarmUnack")
 	{
 	json jFilter;
-	jFilter["user"] = pSession->user;
+	jFilter["user"] = session.user;
 	result = almSrv.getUnack(jFilter);
 	}
 	else if (method == "getAlarmHistory")
 	{
-	result = almSrv.getHistory(params, pSession->user);
+	result = almSrv.getHistory(params, session.user);
 	}
 	else if (method == "addAlarmEvent")
 	{
@@ -838,7 +817,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	ai.tag = params["tag"].get<string>();
 	ai.time = params["time"].get<string>();
 	ai.type = params["type"].get<string>();
-	string user = pSession->user;
+	string user = session.user;
 	string info = params["ack_info"];
 	almSrv.acknowledge(ai, info, user);
 	}
@@ -849,7 +828,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -858,17 +837,17 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	json jErr;
 	if (method == "getUsers")
 	{
-		json j = userMng.getUsers(pSession->user);
+		json j = userMng.getUsers(session.user);
 		result = j.dump(4);
 	}
 	else if (method == "changePwd")
 	{
-		params["user"] = pSession->user;
+		params["user"] = session.user;
 		userMng.rpc_changePwd(params, jRlt, jErr);
 	}
 	else if (method == "getRoles")
 	{
-		json j = userMng.getRoles(pSession->user);
+		json j = userMng.getRoles(session.user);
 		result = j.dump(4);
 	}
 	else if (method == "setUsers")
@@ -892,7 +871,7 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -905,34 +884,34 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		if (params["host"] != nullptr)
 		{
-			params["host"] = pSession->getRemoteAddr() + ";" + params["host"].get<string>();
+			params["host"] = session.remoteAddr + ";" + params["host"].get<string>();
 		}
 		logSrv.addLog(params);
 		result = "\"ok\"";
 	}
 	else if (method == "queryLog")
 	{
-		result = logSrv.queryLog(params,pSession->user);
+		result = logSrv.queryLog(params,session.user);
 	}
 	
 
-	if (handleMethodCall_MoMng(method, params, rpcResp, pSession->getRpcSession()))
+	if (handleMethodCall_MoMng(method, params, rpcResp, session))
 	{
 		return true;
 	}
-	if (handleMethodCall_alarmMng(method, params, rpcResp, pSession))
+	if (handleMethodCall_alarmMng(method, params, rpcResp, session))
 	{
 		return true;
 	}
-	if (handleMethodCall_userMng(method, params, rpcResp, pSession))
+	if (handleMethodCall_userMng(method, params, rpcResp, session))
 	{
 		return true;
 	}
-	if (handleMethodCall_OSFunc(method, params, rpcResp,pSession))
+	if (handleMethodCall_OSFunc(method, params, rpcResp))
 	{
 		return true;
 	}
-	if (handleMethodCall_db(method, params, rpcResp, pSession->getRpcSession()))
+	if (handleMethodCall_db(method, params, rpcResp, session))
 	{
 		return true;
 	}
@@ -1223,7 +1202,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		
 
 		//tds自身受理
-		bool bHandled = handleMethodCall(method, params, rpcResp,pSession);
+		bool bHandled = handleMethodCall(method, params, rpcResp,pSession->getRpcSession());
 		if(!bHandled)
 		{
 			json jError = {
