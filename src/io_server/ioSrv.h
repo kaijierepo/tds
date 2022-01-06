@@ -18,6 +18,10 @@ public:
 	bool loadConf();
 	void saveConf();
 
+	void rpc_addDev(json& params,RPC_RESP& rpcResp);
+	void rpc_deleteDev(json& params,RPC_RESP& rpcResp);
+	void rpc_modifyDev(json& params,RPC_RESP& rpcResp);
+
 	ioDev* getIODev(string ioAddr) override;
 
 	void clear(); //清空所有ioDev对象及其相关的工作线程

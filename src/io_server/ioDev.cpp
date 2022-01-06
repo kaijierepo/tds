@@ -188,32 +188,35 @@ void ioDev::stop()
 
 bool ioDev::toJson(json& conf, json opt)
 {
-	conf["ioAddr"] = getIOAddrStr();
+	//配置数据
 	conf["addr"] = m_jDevAddr;
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
 	conf["parentType"] = m_parentDevType;
-	conf["online"] = m_bOnline;
-	conf["connected"] = m_bConnected;
 	conf["manageStatus"] = m_mngStatus;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;
 	conf["enableAcq"] = bEnableAcq;
-
 	if (m_strTagBind != "")
 		conf["tagBind"] = m_strTagBind;
-
 	if (m_strChanTemplate != "")
 		conf["chanTemplate"] = m_strChanTemplate;
-
 	conf["nodeID"] = m_confNodeId;
 
-	if (pIOSession != nullptr)
+	
+	//运行时数据
+	if (opt.contains("withStatus") && opt["withStatus"].get<bool>() == true)
 	{
-		conf["remoteIP"] = pIOSession->getRemoteAddr();
+		conf["online"] = m_bOnline;
+		conf["connected"] = m_bConnected;
+		if (pIOSession != nullptr)
+		{
+			conf["remoteIP"] = pIOSession->getRemoteAddr();
+		}
+		conf["ioAddr"] = getIOAddrStr();
 	}
-
+	
 
 	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))
 	{

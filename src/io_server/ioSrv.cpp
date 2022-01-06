@@ -134,6 +134,54 @@ bool ioServer::loadConf()
 
 void ioServer::saveConf()
 {
+	std::shared_lock<shared_mutex> lock(m_csThis);
+	json conf;
+	json opt;
+	opt["withStatus"] = false;
+	toJson(conf,opt);
+	string sConf = conf.dump(4);
+	if (fs::writeFile(tds->conf->projectConfPath + "/io.json",sConf))
+	{
+		
+	}
+}
+
+void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
+{
+	std::unique_lock<shared_mutex> lock(m_csThis);
+	string type = params["type"].get<string>();
+	ioDev* pd = createIODev(type);
+	if (pd)
+	{
+		pd->loadConf(params);
+		m_vecChild.push_back(pd);
+		saveConf();
+	}
+}
+
+void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
+{
+	std::unique_lock<shared_mutex> lock(m_csThis);
+	string sNodeId = params["nodeID"].get<string>();
+
+	bool bDeleted = false;
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* p = m_vecChild[i];
+		if (p->m_confNodeId == sNodeId)
+		{
+			m_vecChild.erase(m_vecChild.begin() + i);
+			delete p;
+			bDeleted = true;
+			break;
+		}
+	}
+
+	saveConf();
+}
+
+void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
+{
 }
 
 ioDev* ioServer::getIODev(string ioAddr)

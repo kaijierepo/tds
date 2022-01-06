@@ -611,6 +611,19 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getDevList(params, rpcResp);
 	}
+	else if (method == "addDev")
+	{
+		ioSrv.rpc_addDev(params);
+		result = "\"ok\"";
+	}
+	else if (method == "deleteDev")
+	{
+
+	}
+	else if (method == "modifyDev")
+	{
+
+	}
 	else if (method == "discoverDev")
 	{
 #ifdef ENABLE_GENICAM
