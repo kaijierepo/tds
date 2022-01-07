@@ -267,7 +267,11 @@ bool ioDev::loadConf(json& conf)
 	if(conf.contains("typeLabel"))
 		m_devTypeLabel = conf["typeLabel"].get<string>();
 
-	m_jDevAddr = conf["addr"];
+	if (conf.contains("addr"))
+	{
+		m_jDevAddr = conf["addr"];
+	}
+
 	if (conf["acqInterval"] != nullptr)
 	{
 		m_fAcqInterval = conf["acqInterval"].get<float>();
@@ -276,6 +280,11 @@ bool ioDev::loadConf(json& conf)
 	if (conf["enableAcq"] != nullptr)
 	{
 		bEnableAcq = conf["enableAcq"].get<bool>();
+	}
+
+	if (conf["manageStatus"] != nullptr)
+	{
+		m_dispositionMode = conf["manageStatus"].get<string>();
 	}
 
 	if (conf["chanTemplate"] != nullptr)

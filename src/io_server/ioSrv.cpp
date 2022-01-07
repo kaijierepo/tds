@@ -99,6 +99,7 @@ ioDev* createIODev(string type)
 	{
 		p = new ioGW_LocalSerial();
 	}
+	p->m_confNodeId = common::guid();
 	return p;
 }
 
@@ -225,8 +226,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
 	{
 		p->loadConf(params);
 		saveConf();
-		rpcResp.result = "\"ok\"";
+		p->toJson(params);
 		rpcSrv.notify("devModified", params);
+		rpcResp.result = params.dump(2);
 	}
 	else {
 		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
