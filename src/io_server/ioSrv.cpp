@@ -44,6 +44,7 @@ void IOThread()
 		{
 			ioDev* pIoDev = ioSrv.m_vecChild[i];
 			//空闲设备不轮询数据
+			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
 			if(pIoDev->bEnableAcq && pIoDev->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
 				pIoDev->DoCycleTask();
 
@@ -136,12 +137,11 @@ bool ioServer::loadConf()
 
 void ioServer::saveConf()
 {
-	std::shared_lock<shared_mutex> lock(m_csThis);
 	json conf;
 	json opt;
-	opt["onlyConf"] = false;
+	opt["onlyConf"] = true;
 	toJson(conf,opt);
-	string sConf = conf.dump(4);
+	string sConf = conf.dump(1);
 	if (fs::writeFile(tds->conf->projectConfPath + "/io.json",sConf))
 	{
 		

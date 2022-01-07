@@ -24,14 +24,19 @@ bool ioChannel::loadConf(json& conf)
 	{
 		m_storageFmt = conf["storageFmt"].get<string>();
 	}
+
+
+
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
+	if(m_ioType!="")
+		m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
 
-	m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
 	if (conf["valType"] != nullptr)
 		m_valType = conf["valType"];
 	if (conf["valTypeLabel"] != nullptr)
 		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+
 	if (conf["name"] != nullptr)
 		m_name = conf["name"];
 
@@ -50,20 +55,29 @@ bool ioChannel::loadConf(json& conf)
 bool ioChannel::toJson(json& conf, json opt)
 {
 	ioDev::toJson(conf, opt);
-
-	conf["storageFmt"] = m_storageFmt;
-
 	conf["tagBind"] = m_strTagBind;
 	conf["ioType"] = m_ioType;
-	conf["ioTypeLabel"] = m_ioTypeLabel;
 	conf["valType"] = m_valType;
-	conf["valTypeLabel"] = m_valTypeLabel;
 	conf["name"] = m_name;
+
+	//optional fields
+	if (m_storageFmt != "")
+		conf["storageFmt"] = m_storageFmt;
 
 	if (m_channelType != "")
 	{
 		conf["channelType"] = m_channelType;
 		conf["channelTypeLabel"] = m_channelTypeLabel;
+	}
+
+	if (opt.contains("onlyConf") && opt["onlyConf"].get<bool>() == true)
+	{
+
+	}
+	else
+	{
+		conf["ioTypeLabel"] = m_ioTypeLabel;
+		conf["valTypeLabel"] = m_valTypeLabel;
 	}
 
 	return false;

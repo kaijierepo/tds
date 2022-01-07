@@ -262,8 +262,6 @@ void ioDev_tdsp::DoCycleTask()
 		json jRlt, jErr;
 		call("acq", params, jRlt, jErr, false);
 	}
-	
-	Sleep(500);
 
 	{
 		json jRlt, jErr;

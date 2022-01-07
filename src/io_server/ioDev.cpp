@@ -193,7 +193,6 @@ bool ioDev::toJson(json& conf, json opt)
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
-	conf["parentType"] = m_parentDevType;
 	conf["manageStatus"] = m_dispositionMode;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;
@@ -205,13 +204,14 @@ bool ioDev::toJson(json& conf, json opt)
 	conf["nodeID"] = m_confNodeId;
 
 	
-	//运行时数据
+	
 	if (opt.contains("onlyConf") && opt["onlyConf"].get<bool>() == true)
 	{
 		
 	}
 	else
 	{
+		//运行时数据
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;
 		if (pIOSession != nullptr)
@@ -219,10 +219,18 @@ bool ioDev::toJson(json& conf, json opt)
 			conf["remoteIP"] = pIOSession->getRemoteAddr();
 		}
 		conf["ioAddr"] = getIOAddrStr();
-	}
-	
 
-	if (opt == nullptr || (opt != nullptr && opt["recursive"].get<bool>() == true))
+		//详细信息
+		conf["parentType"] = m_parentDevType;
+	}
+
+
+	//显式指定不递归才不递归
+	if (opt != nullptr && opt["recursive"] != nullptr && opt["recursive"].get<bool>() == false)
+	{
+
+	}
+	else//默认递归
 	{
 		json children = json::array();
 		for (auto& i : m_vecChild)
@@ -233,6 +241,7 @@ bool ioDev::toJson(json& conf, json opt)
 		}
 		conf["children"] = children;
 	}
+	
 	return true;
 }
 
