@@ -44,7 +44,7 @@ public:
 	//io addr in struct format
 	string getIOAddrStr();
 	string getDevAddrStr();
-	string m_mngStatus;
+	string m_dispositionMode;
 	string m_devType;
 	string m_devTypeLabel;
 	string m_parentDevType;
@@ -65,6 +65,7 @@ public:
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChild;
 	bool addChild(ioDev* p);
+	void deleteChildren();
 	void deleteChild(ioDev* p);
 	void deleteDescendant(ioDev* p);
 	ioDev* getChild(string devAddr);

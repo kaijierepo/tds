@@ -21,6 +21,7 @@ public:
 	void rpc_addDev(json& params,RPC_RESP& rpcResp);
 	void rpc_deleteDev(json& params,RPC_RESP& rpcResp);
 	void rpc_modifyDev(json& params,RPC_RESP& rpcResp);
+	void rpc_disposeDev(json& params, RPC_RESP& rpcResp); //设置设备的管理状态
 
 	ioDev* getIODev(string ioAddr) override;
 

@@ -613,16 +613,19 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "addDev")
 	{
-		//ioSrv.rpc_addDev(params);
-		result = "\"ok\"";
+		ioSrv.rpc_addDev(params,rpcResp);
 	}
 	else if (method == "deleteDev")
 	{
-
+		ioSrv.rpc_deleteDev(params, rpcResp);
 	}
 	else if (method == "modifyDev")
 	{
-
+		ioSrv.rpc_modifyDev(params, rpcResp);
+	}
+	else if (method == "disposeDev")
+	{
+		ioSrv.rpc_disposeDev(params, rpcResp);
 	}
 	else if (method == "discoverDev")
 	{
@@ -2192,7 +2195,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 			{
 				json jC = chanList[i];
 				ioChannel* pC = new ioChannel;
-				pC->m_mngStatus = IODEV_MNG_STATUS::spare;
+				pC->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 				pC->loadConf(jC);
 				p->addChild(pC);
 			}

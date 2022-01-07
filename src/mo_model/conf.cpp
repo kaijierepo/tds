@@ -86,6 +86,13 @@ void tdsConfig::loadConf()
 			homepage = tci.val;
 		else if (tci.key == "singlegenicamhost")
 			singleGenicamHost = tci.val == "1" ? true : false;
+		else if (tci.key == "authdownload")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				authDownload = true;
+			else if (tci.val == "false" || tci.val == "0")
+				authDownload = false;
+		}
 		else if (tci.key == "enablelog")
 		{
 			if (tci.val == "true" || tci.val == "1")

@@ -212,6 +212,7 @@ struct iTDSConf {
 	bool enableDB;
 	bool enableAccessCtrl;
 	bool enableScript;
+	bool authDownload; 
 };
 
 

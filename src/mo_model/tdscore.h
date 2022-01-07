@@ -163,8 +163,8 @@ enum IO_GATEWAY_TYPE {
 
 
 //设备管理状态
-namespace IODEV_MNG_STATUS {
-	const string managed = "managed";
+namespace DEV_DISPOSITION_MODE {
+	const string managed = "managed"; //后续重构为 inService 表示启用
 	const string spare = "spare";
 };
 

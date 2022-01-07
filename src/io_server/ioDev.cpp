@@ -151,7 +151,7 @@ ioDev::ioDev(void)
 	bEnableAcq = true;
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
 	bEnableAcq = true;
-	m_mngStatus = IODEV_MNG_STATUS::managed;
+	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
 	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
 	m_bOnline = false;
@@ -194,7 +194,7 @@ bool ioDev::toJson(json& conf, json opt)
 	conf["typeLabel"] = m_devTypeLabel;
 	conf["level"] = m_level;
 	conf["parentType"] = m_parentDevType;
-	conf["manageStatus"] = m_mngStatus;
+	conf["manageStatus"] = m_dispositionMode;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;
 	conf["enableAcq"] = bEnableAcq;
@@ -206,7 +206,11 @@ bool ioDev::toJson(json& conf, json opt)
 
 	
 	//运行时数据
-	if (opt.contains("withStatus") && opt["withStatus"].get<bool>() == true)
+	if (opt.contains("onlyConf") && opt["onlyConf"].get<bool>() == true)
+	{
+		
+	}
+	else
 	{
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;
@@ -312,6 +316,7 @@ bool ioDev::loadConf(json& conf)
 
 	if (conf["children"] != nullptr)
 	{
+		deleteChildren();
 		json childDev = conf["children"];
 		for (auto i : childDev)
 		{
@@ -641,6 +646,16 @@ bool ioDev::addChild(ioDev* p)
 		m_mapDataChannel[p->m_devAddr] = (ioChannel*)p;
 	}
 	return true;
+}
+
+void ioDev::deleteChildren()
+{
+	m_mapDataChannel.clear();
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		delete m_vecChild[i];
+	}
+	m_vecChild.clear();
 }
 
 void ioDev::deleteChild(ioDev* p)

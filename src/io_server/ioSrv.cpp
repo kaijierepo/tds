@@ -39,16 +39,18 @@ void IOThread()
 		if (ioSrv.m_stopCycleAcq)
 			continue;
 
+		ioSrv.m_csThis.lock();
 		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChild[i];
 			//空闲设备不轮询数据
-			if(pIoDev->bEnableAcq && pIoDev->m_mngStatus == IODEV_MNG_STATUS::managed)
+			if(pIoDev->bEnableAcq && pIoDev->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
 				pIoDev->DoCycleTask();
 
 			if (!ioSrv.m_bRunning)
 				break;
 		}
+		ioSrv.m_csThis.unlock();
 	}
 	ioSrv.m_bWorkingThreadRunning = false;
 	ioSrv.m_signalWorkThreadExit.notify();
@@ -137,7 +139,7 @@ void ioServer::saveConf()
 	std::shared_lock<shared_mutex> lock(m_csThis);
 	json conf;
 	json opt;
-	opt["withStatus"] = false;
+	opt["onlyConf"] = false;
 	toJson(conf,opt);
 	string sConf = conf.dump(4);
 	if (fs::writeFile(tds->conf->projectConfPath + "/io.json",sConf))
@@ -148,20 +150,32 @@ void ioServer::saveConf()
 
 void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 {
-	std::unique_lock<shared_mutex> lock(m_csThis);
 	string type = params["type"].get<string>();
+	if (!params.contains("nodeID"))
+	{
+		params["nodeID"] = common::guid();
+	}
+
 	ioDev* pd = createIODev(type);
 	if (pd)
 	{
 		pd->loadConf(params);
+		m_csThis.lock();
 		m_vecChild.push_back(pd);
+		m_csThis.unlock();
 		saveConf();
+		rpcResp.result = "\"ok\"";
+		pd->toJson(params);
+		rpcSrv.notify("devAdded", params);
+	}
+	else {
+		rpcResp.error = "device type not supported, type:" + type;
 	}
 }
 
 void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
 {
-	std::unique_lock<shared_mutex> lock(m_csThis);
+	m_csThis.lock();
 	string sNodeId = params["nodeID"].get<string>();
 
 	bool bDeleted = false;
@@ -176,12 +190,78 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
 			break;
 		}
 	}
+	m_csThis.unlock();
 
-	saveConf();
+	if (bDeleted)
+	{
+		saveConf();
+		rpcResp.result = "\"ok\"";
+		rpcSrv.notify("devDeleted", params);
+	}
+	else {
+		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
+	}
 }
 
 void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
 {
+	string sNodeId = params["nodeID"].get<string>();
+	bool bFinded = false;
+	ioDev* p = NULL;
+
+	m_csThis.lock();
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		p = m_vecChild[i];
+		if (p->m_confNodeId == sNodeId)
+		{
+			bFinded = true;
+			break;
+		}
+	}
+	m_csThis.unlock();
+
+	if (bFinded)
+	{
+		p->loadConf(params);
+		saveConf();
+		rpcResp.result = "\"ok\"";
+		rpcSrv.notify("devModified", params);
+	}
+	else {
+		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
+	}
+}
+
+void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp)
+{
+	string sNodeId = params["nodeID"].get<string>();
+	string mode = params["mode"].get<string>();
+	bool bFinded = false;
+	ioDev* p = NULL;
+
+	m_csThis.lock();
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		p = m_vecChild[i];
+		if (p->m_confNodeId == sNodeId)
+		{
+			bFinded = true;
+			p->m_dispositionMode = mode;
+			break;
+		}
+	}
+	m_csThis.unlock();
+
+	if (bFinded)
+	{
+		saveConf();
+		rpcResp.result = "\"ok\"";
+		rpcSrv.notify("devDisposed", params);
+	}
+	else {
+		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
+	}
 }
 
 ioDev* ioServer::getIODev(string ioAddr)
@@ -233,7 +313,7 @@ void ioServer::refreshSerialIODev()
 			}
 		}
 
-		if (bOnline == false && i->m_mngStatus == IODEV_MNG_STATUS::spare)
+		if (bOnline == false && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
 		{
 			ioSrv.deleteDescendant(i);
 		}
@@ -271,6 +351,7 @@ void ioServer::stop()
 
 bool ioServer::toJson(json& conf, json opt)
 {
+	std::shared_lock<shared_mutex> lock(m_csThis);
 	conf = json::array();//empty array
 	for (auto& i : m_vecChild)
 	{
@@ -342,7 +423,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())
 		p->m_devAddr = p->m_jDevAddr.get<string>();
-	p->m_mngStatus = IODEV_MNG_STATUS::spare;
+	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 	p->m_bOnline = true;
 	ioSrv.m_vecChild.push_back(p);
 	json j;

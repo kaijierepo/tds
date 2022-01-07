@@ -42,6 +42,11 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 			}
 		}
 
+		if (!tds->conf->authDownload)
+		{
+			return httplib::Server::HandlerResponse::Unhandled;
+		}
+
 		
 		if (mapKV.find("user") == mapKV.end() || mapKV.find("token") == mapKV.end())
 		{
