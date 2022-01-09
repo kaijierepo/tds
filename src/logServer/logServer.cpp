@@ -32,17 +32,23 @@ void logServer::run()
 }
 
 
-void logServer::addLog(json& log)
+void logServer::rpc_addLog(json& log, RPC_SESSION session)
 {
 	if (!log.contains("time"))
 	{
 		log["time"] = timeopt::nowStr();
 	}
+	if (session.org != "") //转换为绝对位号存储
+	{
+		string org = log["org"].get<string>();
+		org = TAG::addRoot(org, session.org);
+		log["org"] = org;
+	}
 	tableLog.add(log);
 }
 
 
-string logServer::queryLog(json params, string user)
+string logServer::rpc_queryLog(json params, RPC_SESSION session)
 {
 	//事件过滤器
 	TIME_SELECTOR timeSelector;
@@ -52,9 +58,9 @@ string logServer::queryLog(json params, string user)
 
 	//组织结构过滤器
 	string rootTag = "";
-	if (user != "")
+	if (session.user != "")
 	{
-		json jUser = userMng.getUser(user);
+		json jUser = userMng.getUser(session.user);
 		if (jUser != nullptr)//指定用户模式下，tag是相对位号，必须有根的位号。 报警的数据当中，存储的都是完整位号
 		{
 			rootTag = jUser["org"];
@@ -83,7 +89,7 @@ string logServer::queryLog(json params, string user)
 			tableLog.loadFile(tableLog.getFilePath(iYear, iMonth));
 			for (int i=tableLog.buffData.size()-1 ;i >=0; i--)
 			{
-				json& j = *tableLog.buffData[i];
+				json j = *tableLog.buffData[i];
 				string time = j["time"].get<string>();
 				string org;
 				if(j["org"]!=nullptr)
@@ -97,6 +103,9 @@ string logServer::queryLog(json params, string user)
 				{
 					if (org.find(rootTag) == string::npos)
 						continue;
+
+					//历史记录中的org是绝对位号，删去用户rootTag，转换成用户会话的相对位号。
+					j["org"] = TAG::trimRoot(org, rootTag);
 				}
 
 				if (dataSet != "[")

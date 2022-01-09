@@ -18,8 +18,8 @@
 class logServer
 {
 public:
-	void addLog(json& log);
-	string queryLog(json params, string user);
+	void rpc_addLog(json& log,RPC_SESSION session);
+	string rpc_queryLog(json params, RPC_SESSION session);
 
 public:
 	logServer(void);

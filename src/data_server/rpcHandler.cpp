@@ -902,12 +902,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			params["host"] = session.remoteAddr + ";" + params["host"].get<string>();
 		}
-		logSrv.addLog(params);
+		logSrv.rpc_addLog(params,session);
 		result = "\"ok\"";
 	}
 	else if (method == "queryLog")
 	{
-		result = logSrv.queryLog(params,session.user);
+		result = logSrv.rpc_queryLog(params,session);
 	}
 	
 

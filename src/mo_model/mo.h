@@ -34,6 +34,7 @@ using json = nlohmann::json;
 
 namespace TAG {
 	string trimRoot(string& tag);
+	string trimRoot(string& tag,string root);
 	string addRoot(string& tag);
 	string addRoot(string tag, string root);
 

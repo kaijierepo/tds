@@ -39,6 +39,7 @@ SOFTWARE.
 #include "tools/tcp2com.h"
 #include "tools/tdsShell.h"
 #include "tools/tdsWatchDog.h"
+#include "httplib.h"
 
 /*
 notes:
@@ -111,6 +112,21 @@ int main(int argc, char** argv)
 	if (mode == "js")
 	{
 		doShell();
+	}
+	else if (mode == "hs") //httpServer
+	{
+		httplib::Server* httpSrv  = new httplib::Server;
+		string webPath = fs::appPath();
+		if (fs::fileExist(webPath))
+		{
+			string asc_path = charCodec::utf8toAnsi(webPath);
+			httpSrv->set_mount_point("/", +asc_path.c_str());
+			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
+		}
+
+		LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->port));
+
+		httpSrv->listen("0.0.0.0", tds->conf->port);
 	}
 	else if (mode == "dog")
 	{

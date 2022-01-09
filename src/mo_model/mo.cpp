@@ -734,6 +734,12 @@ string TAG::trimRoot(string& tag)
 	return s;
 }
 
+string TAG::trimRoot(string& tag, string root)
+{
+	tag = str::trimPrefix(tag, root + ".");
+	return tag;
+}
+
 string TAG::addRoot(string& tag)
 {
 	if (tag.find(prj.m_strName) == 0)
