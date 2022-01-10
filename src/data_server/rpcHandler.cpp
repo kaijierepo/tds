@@ -543,6 +543,25 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 
 	}
+	else if (method == "getSessionBuff")
+	{
+		string remoteAddr = params["remoteAddr"].get<string>();
+		shared_ptr<TDS_SESSION> pSession = ds.getTDSSession(remoteAddr);
+
+		if (pSession != nullptr)
+		{
+			json buff;
+			buff["len"] = pSession->m_alBuf.iStreamLen;
+			buff["data"] = str::fromBytes(pSession->m_alBuf.stream, pSession->m_alBuf.iStreamLen);
+
+			rpcResp.result = buff.dump(2);
+		}
+		else
+		{
+			json jError = "session not found";
+			rpcResp.error = jError.dump();
+		}
+	}
 	else if (method == "stopCycleAcq")
 	{
 		ioSrv.m_stopCycleAcq = true;
