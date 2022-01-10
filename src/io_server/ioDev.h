@@ -164,6 +164,11 @@ public:
 
 	json m_jAlarmStatus;
 	json m_jAcq;
+	json m_jConf;
+	json m_jInfo;
+
+	void saveConfBuff();
+	bool loadConfBuff();
 };
 
 ioDev* createIODev(json conf);

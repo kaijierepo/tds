@@ -29,6 +29,16 @@ void IOThread()
 {
 	ioSrv.m_bWorkingThreadRunning = true;
 	int statisUpdateInterval = 10;
+
+	//加载设备配置缓存
+	ioSrv.m_csThis.lock();
+	for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+	{
+		ioDev* pIoDev = ioSrv.m_vecChild[i];
+		pIoDev->loadConfBuff();
+	}
+	ioSrv.m_csThis.unlock();
+
 	while (1)
 	{
 		Sleep(5);

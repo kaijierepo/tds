@@ -22,6 +22,7 @@
 #include "streamServer.h"
 #include "users/userMng.h"
 #include "logServer/logServer.h"
+#include "ioDev_tdsp.h"
 
 rpcHandler rpcSrv;
 
@@ -627,6 +628,28 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		ioSrv.rpc_disposeDev(params, rpcResp);
 	}
+	else if (method == "getDevConfBuff") //获取服务缓存的设备配置信息。目前仅用于tdsp设备
+	{
+		string ioAddr = params["ioAddr"].get<string>();
+		ioDev* pD = ioSrv.getIODev(ioAddr);
+		if (pD)
+		{
+			if (pD->m_jConf != nullptr)
+			{
+				rpcResp.result = pD->m_jConf.dump();
+			}
+			else
+			{
+				json jError = "device conf buff not exist";
+				rpcResp.error = jError.dump();
+			}
+		}
+		else
+		{
+			json jError = "device not found";
+			rpcResp.error = jError.dump();
+		}
+	}
 	else if (method == "discoverDev")
 	{
 #ifdef ENABLE_GENICAM
@@ -1039,6 +1062,15 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			{
 				string s = jReq.dump(2) + "\n\n";
 				LOG("[设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
+			}
+
+			//部分命令拦截并记录
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+			{
+				ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;
+				pDevTdsp->handleAsynResp(jReq);
 			}
 
 			return true;

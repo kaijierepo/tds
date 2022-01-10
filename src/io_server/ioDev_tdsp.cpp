@@ -37,7 +37,7 @@ void ioDev_tdsp::stop()
 	}
 }
 
-bool ioDev_tdsp::asynHandleResp(json jResp)
+bool ioDev_tdsp::handleAsynResp(json jResp)
 {
 	json rlt = jResp["result"];
 	string method = jResp["method"].get<string>();
@@ -108,6 +108,11 @@ bool ioDev_tdsp::asynHandleResp(json jResp)
 		
 		m_jAlarmStatus = rlt;
 	}
+	else if (method == "getDevConf")
+	{
+		m_jConf = jResp["result"];
+		saveConfBuff();
+	}
 }
 
 bool ioDev_tdsp::onRecvPkt(json jResp)
@@ -129,7 +134,7 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 			}
 			else
 			{
-				asynHandleResp(jResp);
+				handleAsynResp(jResp);
 			}
 		}
 	}

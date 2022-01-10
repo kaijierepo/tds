@@ -44,6 +44,7 @@ SOFTWARE.
 #include "logServer/logServer.h"
 #include "xiaot/scriptHost.h"
 #include "version.h"
+#include "data_server/db.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -357,6 +358,12 @@ bool TDS_imp::run(string cmdline)
 	xiaot.init();
 
 	//startup tds modules
+	//if db folder is not exist. open will create an empty folder
+	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
+	//ioSrv会从数据库加载设备配置缓存数据
+	if (tds->conf->enableDB)
+		::db.Open(tds->conf->dbPath, prj.m_strName);
+
 	prj.loadConf();
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	ds.run();  //data server

@@ -655,6 +655,32 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 	return NULL;
 }
 
+void ioDev::saveConfBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
+	fs::createFolderOfPath(path);
+	string data = m_jConf.dump(4);
+	fs::writeFile(path, data);
+}
+
+bool ioDev::loadConfBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
+	string s;
+	if (!fs::readFile(path, s))
+		return false;
+	try
+	{
+		m_jConf = json::parse(s);
+	}
+	catch (std::exception& e)
+	{
+		return false;
+	}
+	
+	return true;
+}
+
 bool ioDev::addChild(ioDev* p)
 {
 	m_vecChild.push_back(p);

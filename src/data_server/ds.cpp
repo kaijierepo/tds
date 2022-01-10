@@ -410,10 +410,6 @@ void httpSrvThread()
 
 bool dataServer::run()
 {
-	//if db folder is not exist. open will create an empty folder
-	if(tds->conf->enableDB)
-		db.Open(tds->conf->dbPath,prj.m_strName);
-
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
 	
