@@ -289,6 +289,7 @@ public:
 	iTDSConf* conf;
 	i_database* db;
 
+	SYSTEMTIME stStartupTime;
 
 	HWND uiWnd;
 	string uiWndTitle;

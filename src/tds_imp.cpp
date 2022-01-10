@@ -381,8 +381,9 @@ bool TDS_imp::run(string cmdline)
 		createChromeWnd();
 	}
 
+	GetLocalTime(&stStartupTime);
 
-	string sTitle = "TDS   版本:" + version + "." + SVN_VERSION + " build(" + getbuildtime() + "),数据服务端口:" + str::fromInt(tds->conf->port);
+	string sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuilddate() + ")|DS端口:" + str::fromInt(tds->conf->port) + "|启动时间:" + timeopt::st2str(tds->stStartupTime);
 	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
 
 	return true;

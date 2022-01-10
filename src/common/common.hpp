@@ -1437,4 +1437,12 @@ inline string getbuildtime()
 	return s;
 }
 
+inline string getbuilddate()
+{
+	static char buildtime[256] = { 0 };
+	sprintf(buildtime, "%d-%02d-%02d", YEAR, MONTH + 1, DAY);
+	string s = buildtime;
+	return s;
+}
+
 #endif
