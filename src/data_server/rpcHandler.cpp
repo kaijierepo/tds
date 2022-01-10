@@ -2105,9 +2105,11 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 				channels.push_back(jDe);
 			}
 		}*/
+
+		p->m_csThis.lock_shared();
 		status["channels"] = p->m_jAcq;
 		status["alarmStatus"] = p->m_jAlarmStatus;
-
+		p->m_csThis.unlock_shared();
 		resp.result = status.dump();
 	}
 }

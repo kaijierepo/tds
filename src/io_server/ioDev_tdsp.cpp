@@ -56,7 +56,10 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 			if (pC)
 				pC->input(jDE["val"]);
 		}
+
+		m_csThis.lock();
 		m_jAcq = rlt;
+		m_csThis.unlock();
 	}
 	else if (method == "getAlarmStatus")
 	{
@@ -105,13 +108,16 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 		}
 
 
-		
+		m_csThis.lock();
 		m_jAlarmStatus = rlt;
+		m_csThis.unlock();
 	}
 	else if (method == "getDevConf")
 	{
+		m_csThis.lock();
 		m_jConf = jResp["result"];
 		saveConfBuff();
+		m_csThis.unlock();
 	}
 }
 
