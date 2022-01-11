@@ -6,6 +6,7 @@ tdsWatchDog watchDog;
 tdsDogFeeder dogFeeder;
 
 string foodPath = fs::appPath() + "/watchDog.ini";
+wstring foodPathW = charCodec::utf8toUtf16(foodPath);
 
 tdsWatchDog::tdsWatchDog()
 {
@@ -19,7 +20,8 @@ void thread_feedDog()
 	{
 		Sleep(100);
 		string t = timeopt::nowStr(true);
-		::WritePrivateProfileString("watchDog", "lastActive", t.c_str(), foodPath.c_str());
+		wstring wt = charCodec::utf8toUtf16(t);
+		::WritePrivateProfileStringW(L"watchDog", L"lastActive", wt.c_str(), foodPathW.c_str());
 	}
 }
 
@@ -62,10 +64,10 @@ void thread_watchDog() {
 	while (1)
 	{
 		Sleep(100);
-		char szTime[30] = { 0 };
-		::GetPrivateProfileString("watchDog", "lastActive","", szTime,30,foodPath.c_str());
-		string t = szTime;
-
+		WCHAR szTime[30] = { 0 };
+		::GetPrivateProfileStringW(L"watchDog", L"lastActive",L"", szTime,30,foodPathW.c_str());
+		wstring wt = szTime;
+		string t = charCodec::utf16toUtf8(wt);
 		int pass = timeopt::CalcTimePassMilliSecond(timeopt::str2st(t));
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 2500)
