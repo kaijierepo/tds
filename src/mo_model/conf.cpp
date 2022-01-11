@@ -155,7 +155,9 @@ void tdsConfig::loadConf()
 	if (port == 0)
 		port = 666;
 	if (httpPort == 0)
-		httpPort = 8080;
+		httpPort = 667;
+	if (ioServerPort == 0)
+		ioServerPort = 665;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "\\db";
 	if (title == "")

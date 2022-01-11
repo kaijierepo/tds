@@ -689,7 +689,8 @@ LONG WINAPI CDumpCatch::UnhandledExceptionFilterEx(struct _EXCEPTION_POINTERS* p
 	strFile = strPath + "\\" + strFile;
 	BOOL bRelease = ReleaseDumpFile(strFile.c_str(), pException);
 
-	ShellExecute(NULL, "open", strexe.c_str(), NULL, NULL, SW_SHOW);
+	//不使用自启动机制。内核态奔溃无法 进入此回调。还是用软件狗
+	//ShellExecute(NULL, "open", strexe.c_str(), NULL, NULL, SW_SHOW);
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }

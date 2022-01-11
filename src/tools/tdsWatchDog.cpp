@@ -2,31 +2,16 @@
 #include "tdsWatchDog.h"
 #include "logger.h"
 
+
 tdsWatchDog watchDog;
 tdsDogFeeder dogFeeder;
 
-string foodPath = fs::appPath() + "/watchDog.ini";
-wstring foodPathW = charCodec::utf8toUtf16(foodPath);
-
 tdsWatchDog::tdsWatchDog()
 {
+	GetLocalTime(&m_lastFeedTime);
 }
 
-
-void thread_feedDog()
-{
-	LOG("[keyinfo][软件狗   ]软件狗通讯线程启动");
-	while (1)
-	{
-		Sleep(100);
-		string t = timeopt::nowStr(true);
-		wstring wt = charCodec::utf8toUtf16(t);
-		::WritePrivateProfileStringW(L"watchDog", L"lastActive", wt.c_str(), foodPathW.c_str());
-	}
-}
-
-
-void runTds() {
+void wakeUpFeeder() {
 	STARTUPINFOW si;
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&si, sizeof(si));
@@ -60,22 +45,18 @@ void runTds() {
 }
 
 
-void thread_watchDog() {
+void thread_checkFood() {
 	while (1)
 	{
 		Sleep(100);
-		WCHAR szTime[30] = { 0 };
-		::GetPrivateProfileStringW(L"watchDog", L"lastActive",L"", szTime,30,foodPathW.c_str());
-		wstring wt = szTime;
-		string t = charCodec::utf16toUtf8(wt);
-		int pass = timeopt::CalcTimePassMilliSecond(timeopt::str2st(t));
+		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
-		if (pass > 2500)
+		if (pass > 1000)
 		{
 			LOG("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			Sleep(200);
-			runTds();
+			wakeUpFeeder();
 			Sleep(5000);
 		}
 	}
@@ -84,12 +65,41 @@ void thread_watchDog() {
 void tdsWatchDog::run()
 {
 	LOG("软件狗启动");
-	thread t(thread_watchDog);
+	m_foodPlate.m_pCallback = this;
+	m_foodPlate.m_port = 660;
+	m_foodPlate.start();
+	thread t(thread_checkFood);
 	t.detach();
 }
 
+int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+{
+	//string food = recvData;
+	//LOG("food is " + food);
+	GetLocalTime(&m_lastFeedTime);
+	return 0;
+}
+
+
+void thread_feedDog() {
+	while (1)
+	{
+		dogFeeder.sendFood();
+		Sleep(100);
+	}	
+}
+
+
 void tdsDogFeeder::run()
 {
+	m_foodCart.m_port = 661;
+	m_foodCart.start();
 	thread t(thread_feedDog);
 	t.detach();
+}
+
+void tdsDogFeeder::sendFood()
+{
+	string data = "yummy bone";
+	m_foodCart.SendData((char*)data.c_str(), data.length(), "127.0.0.1", 660);
 }
