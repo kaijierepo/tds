@@ -48,6 +48,7 @@ public:
 	string m_protocolType;
 
 	int iAbandonBytes;
+	string abandonData;
 
 	int IsValidPkt_HTTP(char* pData,int iLen);
 	int IsValidPkt_ModbusRTU(char* pData,int iLen);

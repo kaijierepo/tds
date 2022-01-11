@@ -1495,6 +1495,11 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 				pab->PushStream(pData, iLen);
 				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 				{
+					if (pab->abandonData != "")
+					{
+						string remoteAddr = tdsSession->getRemoteAddr();
+						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+					}
 					tdsSession->iALProto = pab->m_protocolType;
 					onRecvTdsRpcPkt(pab->pkt, pab->iPktLen, tdsSession);
 				}

@@ -63,14 +63,14 @@ bool stream2pkt::PopPkt(string cpt)
 		if (ilen == 0 &&
 			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::TDSRPC))
 		{
-			if (i == 0)
-			{
+			//if (i == 0) //如果确定数据包不会出错，提高性能，则加入i==0判断。  如果数据中会有错误数据，需要容错。除掉i==0判断
+			//{
 				ilen = IsValidPkt_JSONRPC(stream + i, iStreamLen - i);
 				if (ilen > 0)
 				{
 					m_protocolType = APP_LAYER_PROTO::TDSRPC;
 				}
-			}
+			//}
 		}
 
 		if (ilen == 0 &&
@@ -129,6 +129,13 @@ bool stream2pkt::PopPkt(string cpt)
 			if (ilen > iPktBuffSize)
 				ResizePopPktBuff(ilen);
 
+
+
+			if (i > 0)
+				abandonData = str::fromBytes(stream, i);
+			else
+				abandonData = "";
+			
 			memcpy_s(pkt, iPktBuffSize, stream + i, ilen);
 			iPktLen = ilen;
 
