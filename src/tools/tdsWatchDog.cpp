@@ -32,8 +32,8 @@ void runTds() {
 	ZeroMemory(&pi, sizeof(pi));
 
 	// Start the child process.
-	si.dwFlags = STARTF_USESHOWWINDOW;
-	si.wShowWindow = SW_SHOW;
+	//si.dwFlags = STARTF_USESHOWWINDOW;
+	//si.wShowWindow = SW_SHOW;
 	if (!CreateProcessW(NULL,   // No module name (use command line)
 		(LPWSTR)charCodec::utf8toUtf16("tds.exe").c_str(),        // Command line
 		NULL,           // Process handle not inheritable
@@ -50,7 +50,7 @@ void runTds() {
 	}
 	else
 	{
-		
+		LOG("启动tds成功");
 	}
 
 	CloseHandle(pi.hProcess);
@@ -70,7 +70,7 @@ void thread_watchDog() {
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 2500)
 		{
-			LOG("启动tds");
+			LOG("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			Sleep(200);
 			runTds();
