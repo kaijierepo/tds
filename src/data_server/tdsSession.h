@@ -101,7 +101,7 @@ public:
     void Init();
 	bool isConnected();
     string GetClientIp();
-	void statisOnSend(char* p, int len);
+	void statisOnSend(char* p, int len,bool success);
 	void statisOnRecv(char* p, int len);
 	int send(char* p,int len,bool bNeedLog = true);
 	int getSendedBytes();

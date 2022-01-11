@@ -109,7 +109,7 @@ void sendToSessionPktSessions(char* p,int len)
     }
 }
 
-void TDS_SESSION::statisOnSend(char* p, int len)
+void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 {
     //监视会话的数据包不记录日志
     if (type == TDS_SESSION_TYPE::sessionPkt ||
@@ -127,7 +127,10 @@ void TDS_SESSION::statisOnSend(char* p, int len)
     GetLocalTime(&st);
     j["time"] = timeopt::st2strWithMilli(st);
     j["remoteAddr"] = getRemoteAddr();
-    j["type"] = "发送";
+    if(success)
+        j["type"] = "发送成功";
+    else
+        j["type"] = "发送失败";
     j["len"] = len;
     j["data"] = str::fromBytes(p, len);
     j["sessionType"] = type;
@@ -174,13 +177,16 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      GetLocalTime(&lastSendTime);
 
-     if(bNeedLog)
-        statisOnSend(p, len);
+     int iSend = 0;
 
      if(pTcpSession) // means lower layer has been disconneted
-        return ds.SendAppLayerData(p, len, this);
+         iSend = ds.SendAppLayerData(p, len, this);
      if (pTcpSessionClt)
-         return pTcpSessionClt->SendData(p, len);
+         iSend = pTcpSessionClt->SendData(p, len);
+
+
+     if (bNeedLog)
+         statisOnSend(p, len,iSend>0);
      return 0;
  }
 
