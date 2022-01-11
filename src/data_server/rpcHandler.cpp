@@ -23,6 +23,7 @@
 #include "users/userMng.h"
 #include "logServer/logServer.h"
 #include "ioDev_tdsp.h"
+#include "xiaot/scriptHost.h"
 
 rpcHandler rpcSrv;
 
@@ -950,6 +951,33 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	else if (method == "queryLog")
 	{
 		result = logSrv.rpc_queryLog(params,session);
+	}
+	else if (method == "runScript")
+	{
+		sHost.rpc_runScript(params, rpcResp, session);
+	}
+	else if (method == "callDevMethod")
+	{
+		string tag = params["tag"].get<string>();
+		MO* pmo = prj.GetMOByTag(tag);
+		if (pmo)
+		{
+			string ioAddr = pmo->m_strIoAddrBind;
+			ioDev* pd = ioSrv.getIODev(ioAddr);
+
+			if(pd && pd->pIOSession)
+			{	
+				json jReq;
+				jReq["jsonrpc"] = "2.0";
+				jReq["method"] = params["method"];
+				jReq["params"] = params["params"];
+				jReq["id"] = 0;
+				jReq["clientId"] = "tds";
+				string sReq = jReq.dump();
+
+				pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
+			}
+		}
 	}
 	
 
