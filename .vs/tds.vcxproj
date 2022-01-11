@@ -548,6 +548,7 @@
     </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
+    <ClCompile Include="..\src\common\udpSrv.cpp" />
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
@@ -617,6 +618,7 @@
     <ClInclude Include="..\src\common\simdjson.h" />
     <ClInclude Include="..\src\common\tcpClt.h" />
     <ClInclude Include="..\src\common\tcpSrv.h" />
+    <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\data_server\db.h" />
     <ClInclude Include="..\src\data_server\ds.h" />
