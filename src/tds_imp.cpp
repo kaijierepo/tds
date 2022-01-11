@@ -45,6 +45,7 @@ SOFTWARE.
 #include "xiaot/scriptHost.h"
 #include "version.h"
 #include "data_server/db.h"
+#include "tools/tdsWatchDog.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -311,22 +312,12 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }
 
-void thread_feedDog()
-{
-	while (1)
-	{
-		Sleep(200);
-		int iTime = time(NULL);
-		string s = str::fromInt(iTime);
-		::WritePrivateProfileString("watchDog", "lastActive", s.c_str(), "watchDog.ini");
-	}
-}
+
 
 
 bool TDS_imp::run(string cmdline)
 {
-	thread t(thread_feedDog);
-	t.detach();
+	dogFeeder.run();
 
 	//load tds.json
 	tdsConf.loadConf();

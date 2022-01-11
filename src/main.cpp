@@ -76,6 +76,8 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
+	string appName = fs::appName();
+
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
 	parser.set_optional<string>("m", "mode", "tds",charCodec::utf8toAnsi(
@@ -109,7 +111,12 @@ int main(int argc, char** argv)
 
 	string mode = parser.get<string>("m");
 
-	if (mode == "js")
+
+	if (appName == "watchDog" || appName == "wd" || appName == "dog")
+	{
+		watchDog.run();
+	}
+	else if (mode == "js")
 	{
 		doShell();
 	}

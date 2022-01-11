@@ -738,6 +738,18 @@ namespace timeopt {
 		return milli;
 	}
 
+	inline int CalcTimePassMilliSecond(SYSTEMTIME lastTime)
+	{
+		time_t last = SysTime2Unix(lastTime);
+		SYSTEMTIME stNow;
+		GetLocalTime(&stNow);
+		time_t now = SysTime2Unix(stNow);
+		int second = now - last;
+		int milli = stNow.wMilliseconds - lastTime.wMilliseconds;
+		milli = second * 1000 + milli;
+		return milli;
+	}
+
 	inline time_t getTick() {
 		std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp =
 			std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
@@ -819,6 +831,28 @@ namespace fs {
 			CreateDirectoryW(wstrFolder.c_str(), NULL);
 			iStartPos = iSlash + 1;
 		}
+	}
+
+	inline string appName()
+	{
+#ifdef WINDOWS
+		//windows获取到的是反斜杠，tds内统一使用斜杠
+		TCHAR p[MAX_PATH] = { 0 };
+		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+		string strPath = (char*)p;
+		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+		strPath = strPath.substr(nEnd+1, strPath.length() - nEnd - 1);
+		if (common::getCharCodec() == "gb2312")
+			strPath = strPath;
+		else
+			strPath = charCodec::ansi2Utf8(strPath);
+		strPath = str::trimSuffix(strPath, ".exe");
+		return strPath;
+#elif LINUX
+		return "";
+#else
+		return "";
+#endif
 	}
 
 

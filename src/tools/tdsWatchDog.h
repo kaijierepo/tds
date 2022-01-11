@@ -10,5 +10,14 @@ public:
 	tcpClt m_tcpClt;
 };
 
+
+class tdsDogFeeder {
+public:
+	tdsDogFeeder() {};
+	void run();
+
+};
+
 extern tdsWatchDog watchDog;
+extern tdsDogFeeder dogFeeder;
 
