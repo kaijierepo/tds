@@ -198,6 +198,8 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 		{
 			m_IMEI = jInfo["IMEI"].get<string>();
 		}
+
+		timeopt::setAsTimeOrg(m_stLastAcqTime);//触发周期采集
 	}
 
 	return true;
@@ -261,10 +263,8 @@ json ioDev_tdsp::getAddr()
 	return j;
 }
 
-void ioDev_tdsp::DoCycleTask()
+void ioDev_tdsp::DoAcq()
 {
-	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
-		return;
 	GetLocalTime(&m_stLastAcqTime);
 
 	{
@@ -278,5 +278,12 @@ void ioDev_tdsp::DoCycleTask()
 		json jRlt, jErr;
 		call("getAlarmStatus", nullptr, jRlt, jErr, false);
 	}
+}
 
+void ioDev_tdsp::DoCycleTask()
+{
+	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
+		return;
+	
+	DoAcq();
 }

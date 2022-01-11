@@ -45,6 +45,8 @@ public:
 
 	bool needLog(string method);
 
+	bool handleDevRpcByTds(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
+
 	bool handleDevRpcDispatch(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
 
 	//json rpc implementation

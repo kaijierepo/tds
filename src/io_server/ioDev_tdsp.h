@@ -27,6 +27,7 @@ public:
 	bool call(string method, json params,json& result,json& error,bool sync = true);
 
 	json getAddr() override;
+	void DoAcq();
 	void DoCycleTask() override;
 
 	map<int, TDSP_SYNC_INFO*> m_mapSyncRPCInfo;

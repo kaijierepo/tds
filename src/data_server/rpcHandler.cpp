@@ -1033,6 +1033,23 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
+bool rpcHandler::handleDevRpcByTds(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession)
+{
+	string strIoAddr = jReq["ioAddr"].get<string>();
+	ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+	if (!pIoDev)
+	{
+		json jAddr;
+		jAddr["id"] = strIoAddr;
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+		pIoDev->setIOSession(pSession);
+	}
+
+	pIoDev->onRecvPkt(jReq);
+	LOG("TDSP响应:\r\n" + strReq + "\r\n");
+	return true;
+}
+
 
 bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr<TDS_SESSION> pSession)
 {
@@ -1108,7 +1125,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			else
 			{
 				string s = jReq.dump(2) + "\n\n";
-				LOG("[设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
+				LOG("[error][设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
 			}
 
 			//部分命令拦截并记录
@@ -1125,18 +1142,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		//ioDev -> tds
 		else
 		{
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-			if (!pIoDev)
-			{
-				json jAddr;
-				jAddr["id"] = strIoAddr;
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-				pIoDev->setIOSession(pSession);
-			}
-		
-			pIoDev->onRecvPkt(jReq);
-			LOG("TDSP响应:\r\n" + strReq + "\r\n");
+			handleDevRpcByTds(strReq, jReq, pSession);
 			return true;
 		}
 	}
