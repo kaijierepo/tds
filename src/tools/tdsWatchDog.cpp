@@ -71,7 +71,7 @@ void thread_watchDog() {
 		if (pass > 2500)
 		{
 			LOG("启动tds");
-			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。
+			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			Sleep(200);
 			runTds();
 			Sleep(5000);
