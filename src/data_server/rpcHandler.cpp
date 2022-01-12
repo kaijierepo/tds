@@ -531,6 +531,22 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 }
 
 
+
+void threadAdd() {
+	while (1)
+	{
+		std::shared_ptr<TDS_SESSION> t(new TDS_SESSION);
+		ds.m_vecTdsSession.push_back(t);
+	}
+}
+
+void threadErase() {
+	while (1)
+	{
+		ds.m_vecTdsSession.erase(ds.m_vecTdsSession.begin());
+	}
+}
+
 bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
@@ -590,6 +606,26 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		//程序崩溃
 		int i = 13; int j = 0; int m = i / j;
 		LOG("[debug]tds.Crash" + str::fromInt(m));
+	}
+	else if (method == "testCrash1")
+	{
+		rpcResp.result = "\"ok\"";
+
+
+		//该仿真可以仿真出dumpCatch无法抓取的奔溃 windows Server 2008
+		thread t(threadAdd);
+		t.detach();
+
+		thread t2(threadErase);
+		t2.detach();
+	}
+	else if (method == "testCrash2")
+	{
+		rpcResp.result = "\"ok\"";
+
+
+		vector<string> vec;
+		vec.erase(vec.begin());
 	}
 	else
 	{

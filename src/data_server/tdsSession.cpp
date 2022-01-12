@@ -92,10 +92,13 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
-
+//会话数据包 监视会话。不监视自己的数据包发送。
+//rpc的实时数据轮询时。 响应线程多线程处理。 会并发调用此发送接口。
 vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
+shared_mutex csSessionPktSessions;
 void sendToSessionPktSessions(char* p,int len)
 {
+    csSessionPktSessions.lock();
     for (int i = 0; i < sessionPktSessions.size(); i++)
     {
         std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
@@ -105,17 +108,32 @@ void sendToSessionPktSessions(char* p,int len)
             i--;
             continue;
         }
-        session->send(p,len);
     }
+    csSessionPktSessions.unlock();
+
+    csSessionPktSessions.lock_shared();
+    for (int i = 0; i < sessionPktSessions.size(); i++)
+    {
+        std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+        session->send(p, len, false);
+    }
+    csSessionPktSessions.unlock_shared();
 }
 
 void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 {
     //监视会话的数据包不记录日志
-    if (type == TDS_SESSION_TYPE::sessionPkt ||
-        type == TDS_SESSION_TYPE::commpkt ||
-        type == TDS_SESSION_TYPE::log ||
-        type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    //if (type == TDS_SESSION_TYPE::sessionPkt ||
+    //    type == TDS_SESSION_TYPE::commpkt ||
+    //    type == TDS_SESSION_TYPE::log ||
+    //    type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    //{
+    //    return;
+    //}
+
+
+    //仅监视io数据包
+    if (type.find(TDS_SESSION_TYPE::iodev) == string::npos)
     {
         return;
     }
@@ -143,10 +161,16 @@ void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 void TDS_SESSION::statisOnRecv(char* p, int len)
 {
     //监视会话的数据包不记录日志
-    if (type == TDS_SESSION_TYPE::sessionPkt ||
-        type == TDS_SESSION_TYPE::commpkt ||
-        type == TDS_SESSION_TYPE::log ||
-        type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    //if (type == TDS_SESSION_TYPE::sessionPkt ||
+    //    type == TDS_SESSION_TYPE::commpkt ||
+    //    type == TDS_SESSION_TYPE::log ||
+    //    type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
+    //{
+    //    return;
+    //}
+
+    //仅监视io数据包
+    if (type.find(TDS_SESSION_TYPE::iodev) == string::npos)
     {
         return;
     }
