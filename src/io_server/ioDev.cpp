@@ -296,6 +296,8 @@ bool ioDev::loadConf(json& conf)
 	{
 		m_confNodeId = conf["nodeID"].get<string>();
 	}
+	if (m_confNodeId == "") //该操作主要用于升级没有nodeId的配置
+		m_confNodeId = common::guid();
 
 	if (conf["tagBind"] != nullptr)
 	{
