@@ -656,6 +656,22 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getChanVal(params, rpcResp);
 	}
+	else if (method == "rebootAllDev")
+	{
+		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+		{
+			ioDev* p = ioSrv.m_vecChild[i];
+			if (p->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+			{
+				ioDev_tdsp* pt = (ioDev_tdsp*)p;
+				json params = json::object();
+				json jRlt;
+				json jErr;
+				pt->call("rebootDev", params, jRlt, jErr, false);
+				logger.logInternal("[keyinfo][ioDev]重启设备,ioAddr=" + pt->getIOAddrStr() + ",tagBind=" + pt->m_strTagBind);
+			}
+		}
+	}
 	else if (method == "scanChannel" || method == "scanchannel")
 	{
 		result = rpc_io_scanChannel(params, error);
