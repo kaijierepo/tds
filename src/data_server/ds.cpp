@@ -17,6 +17,7 @@
 #include "conf.h"
 #include "tds.h"
 #include "users/userMng.h"
+#include "ioDev_tdsp.h"
 
 
 dataServer ds;
@@ -237,6 +238,13 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->setIOSession(p);
+			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+			{
+				ioDev_tdsp* ptdsp = (ioDev_tdsp*)pIoDev;
+				json params = json::object();
+				json jRlt, jErr;
+				ptdsp->call("getDevInfo", params, jRlt, jErr,false);
+			}
 		}
 			
 		pTcpSession->pALSession = p.get();
