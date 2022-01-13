@@ -161,6 +161,7 @@ ioDev::ioDev(void)
 	memset(&m_stEqpOnLineDateTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastAcqTime, 0, sizeof(SYSTEMTIME));
 	GetLocalTime(&m_stEqpOffLineDateTime);
+	GetLocalTime(&m_stLastActiveTime);
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;

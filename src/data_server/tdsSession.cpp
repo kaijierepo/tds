@@ -285,6 +285,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      {
          m_IoDevTcpLink->setIOSession(NULL);
          m_IoDevTcpLink->m_bOnline = false;
+         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDevTcpLink->getIOAddrStr());
          m_IoDevTcpLink = NULL;
      }
      if (bridgedIoSession)

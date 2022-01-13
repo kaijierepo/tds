@@ -124,6 +124,7 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 bool ioDev_tdsp::onRecvPkt(json jResp)
 {
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
+	GetLocalTime(&m_stLastActiveTime);
 	try {
 		if (jResp["id"] == nullptr) //主动上送命令
 		{
@@ -150,7 +151,12 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 		string log = "tdsp device ,json parse error. " + errorType;
 	}
 
-	m_bOnline = true;
+	if (m_bOnline == false)
+	{
+		m_bOnline = true;
+		logger.logInternal("[ioDev]设备上线，ioAddr=" + getIOAddrStr());
+	}
+	
 	return true;
 }
 
@@ -282,6 +288,30 @@ void ioDev_tdsp::DoAcq()
 
 void ioDev_tdsp::DoCycleTask()
 {
+	if (tds->conf->enableDevCommReboot)
+	{
+		if (CalcTimePassSecond(&m_stLastActiveTime) > tds->conf->devCommRebootTime)
+		{
+			json params = json::object();
+			json jRlt, jErr;
+			call("rebootComm", params, jRlt, jErr, false);
+			logger.logInternal("[ioDev]重启设备通讯模块，ioAddr=" + getIOAddrStr());
+		}
+	}
+
+
+	if (tds->conf->enableDevReboot)
+	{
+		if (CalcTimePassSecond(&m_stLastActiveTime) > tds->conf->devRebootTime)
+		{
+			json params = json::object();
+			json jRlt, jErr;
+			call("rebootDev", params, jRlt, jErr, false);
+			logger.logInternal("[ioDev]重启设备，ioAddr=" + getIOAddrStr());
+		}
+	}
+
+
 	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
 		return;
 	

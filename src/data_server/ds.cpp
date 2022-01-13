@@ -234,6 +234,8 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		{
 			p->m_IoDevTcpLink = pIoDev;
 			pIoDev->m_bOnline = true;
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->setIOSession(p);
 		}
 			

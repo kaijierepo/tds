@@ -212,6 +212,10 @@ struct iTDSConf {
 	bool enableDB;
 	bool enableAccessCtrl;
 	bool enableScript;
+	bool enableDevReboot;
+	bool enableDevCommReboot;
+	int devRebootTime; //seconds
+	int devCommRebootTime;
 	bool authDownload; 
 };
 

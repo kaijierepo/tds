@@ -133,6 +133,7 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;
+	SYSTEMTIME m_stLastActiveTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool bEnableAcq;
 	bool m_bOnline;    //设备发现后，处于在线状态

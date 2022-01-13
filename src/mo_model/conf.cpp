@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "conf.h"
 #include  "common.hpp"
+#include "logger.h"
 
 tdsConfig::tdsConfig()
 {
@@ -14,6 +15,10 @@ tdsConfig::tdsConfig()
 	singleGenicamHost = false;
 	enableDB = true;
 	enableLog = true;
+	enableDevReboot = false;
+	enableDevCommReboot = false;
+	devRebootTime = 15 * 60;
+	devCommRebootTime = 5 * 60;
 }
 
 struct TDS_CONF_ITEM {
@@ -76,6 +81,8 @@ void tdsConfig::loadConf()
 			httpPort = atoi(tci.val.c_str());
 		else if (tci.key == "ioserverport" && ioServerPort == 0)
 			ioServerPort = atoi(tci.val.c_str());
+		else if (tci.key == "devreboottime")
+			devRebootTime = atoi(tci.val.c_str());
 		else if (tci.key == "ui" && uiMode == "")
 			uiMode = tci.val;
 		else if ((tci.key == "loglevel") && logLevel == "")
@@ -99,6 +106,13 @@ void tdsConfig::loadConf()
 				enableLog = true;
 			else if(tci.val == "false" || tci.val == "0")
 				enableLog = false;
+		}
+		else if (tci.key == "enabledevreboot")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableDevReboot = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableDevReboot = false;
 		}
 		else if (tci.key == "enabledb")
 		{
@@ -168,4 +182,10 @@ void tdsConfig::loadConf()
 	}
 	if (uiTitle == "")
 		uiTitle = "tdsUI";
+
+	//关键配置信息
+	if (enableDevReboot)
+		LOG("[TDS参数   ]启用设备自动重启机制,重启周期" + str::fromInt(devRebootTime) +"秒");
+	if (enableDevCommReboot)
+		LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
 }
