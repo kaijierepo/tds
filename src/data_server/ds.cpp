@@ -515,6 +515,7 @@ bool dataServer::run()
 
 
 	m_tcpSrv_IOSrv = new tcpSrv();
+	m_tcpSrv_IOSrv->keepAliveTimeout = 60*20;
 	if (m_tcpSrv_IOSrv->run(this, tds->conf->ioServerPort))
 	{
 		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort));
