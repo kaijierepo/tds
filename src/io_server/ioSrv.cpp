@@ -437,6 +437,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 		p->m_devAddr = p->m_jDevAddr.get<string>();
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 	p->m_bOnline = true;
+	logger.logInternal("[ioDev]空闲设备上线，ioAddr=" + p->getIOAddrStr());
 	ioSrv.m_vecChild.push_back(p);
 	json j;
 	p->toJson(j);

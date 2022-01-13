@@ -1100,6 +1100,15 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			jAddr["id"] = strIoAddr;
 			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
 		}
+		else
+		{
+			if (pIoDev->m_bOnline == false)
+			{
+				pIoDev->m_bOnline = true;
+				timeopt::setAsTimeOrg(pIoDev->m_stLastAcqTime);
+				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			}
+		}
 		pSession->type = "ioDev.tdsp";
 		pIoDev->setIOSession(pSession);
 		pIoDev->onRecvPkt(jReq);

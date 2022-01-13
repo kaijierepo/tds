@@ -121,7 +121,6 @@ public:
 	virtual bool OnRecvData(char* pData, int iLen);//接受数据异步处理函数
 	virtual bool OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
-	int CalcTimePassSecond(SYSTEMTIME* stLast);
 	//命令回包超时
 	virtual bool IsAsynPacket(PKT_DATA* pd);
 

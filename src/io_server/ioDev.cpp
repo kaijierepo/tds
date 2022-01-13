@@ -556,20 +556,11 @@ void ioDev::OnRequestTimeout(int cmd1, int cmd2)
 
 }
 
-int ioDev::CalcTimePassSecond(SYSTEMTIME* stLast)
-{
-	SYSTEMTIME stNow;
-	GetLocalTime(&stNow);
-	DWORD l = timeopt::SysTime2Unix(*stLast);
-	DWORD n = timeopt::SysTime2Unix(stNow);
-
-	return (n - l) / 1000;
-}
 
 void ioDev::DoCycleTask()
 {
 	PKT_DATA req, resp;
-	if (CalcTimePassSecond(&m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0)
+	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0)
 	{
 		SendHeartbeatPkt();
 		GetLocalTime(&m_stLastHeartbeatTime);

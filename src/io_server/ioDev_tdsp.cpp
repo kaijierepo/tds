@@ -304,24 +304,27 @@ void ioDev_tdsp::DoCycleTask()
 {
 	if (tds->conf->enableDevCommReboot)
 	{
-		if (CalcTimePassSecond(&m_stLastActiveTime) > tds->conf->devCommRebootTime)
+		int iPass = timeopt::CalcTimePassSecond(m_stLastActiveTime);
+		if (iPass > tds->conf->devCommRebootTime)
 		{
 			json params = json::object();
 			json jRlt, jErr;
 			call("rebootComm", params, jRlt, jErr, false);
 			logger.logInternal("[ioDev]重启设备通讯模块，ioAddr=" + getIOAddrStr());
+			GetLocalTime(&m_stLastActiveTime);
 		}
 	}
 
 
 	if (tds->conf->enableDevReboot)
 	{
-		if (CalcTimePassSecond(&m_stLastActiveTime) > tds->conf->devRebootTime)
+		if (timeopt::CalcTimePassSecond(m_stLastActiveTime) > tds->conf->devRebootTime)
 		{
 			json params = json::object();
 			json jRlt, jErr;
 			call("rebootDev", params, jRlt, jErr, false);
 			logger.logInternal("[ioDev]重启设备，ioAddr=" + getIOAddrStr());
+			GetLocalTime(&m_stLastActiveTime);
 		}
 	}
 
