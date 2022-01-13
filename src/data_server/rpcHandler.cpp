@@ -1093,6 +1093,11 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 	if (method == "devRegister")
 	{
 		string strIoAddr = jReq["ioAddr"].get<string>();
+
+		//硕放机场项目，由于设备通电会发一个固定imei的包，为防止该imei上线，忽略该包
+		if (strIoAddr == "861714058021670")
+			return true;
+
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
 		{

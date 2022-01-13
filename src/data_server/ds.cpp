@@ -1605,6 +1605,8 @@ string dataServer::getSessionStatus(json params)
 		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
 		jSession["sendBytes"] = p->getSendedBytes();
 		jSession["recvBytes"] = p->getRecvedBytes();
+		jSession["buffLen"] = p->m_alBuf.iStreamLen;
+
 		string ioAddrInSession = "";
 		for (int i = 0; i < p->m_vecIoDev.size(); i++)
 		{
