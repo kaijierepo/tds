@@ -227,6 +227,22 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			if (pts->m_iServerPort == tds->conf->ioServerPort)
 			{
 				p->type = "ioDev";
+
+
+				string req = R"s(
+					{
+						"jsonrpc": "2.0",
+						"method": "getDevInfo",
+						"params": {},
+						"clientId": "tds",
+						"ioAddr": "any",
+						"id": 1
+					}
+
+
+				)s";
+
+				p->send((char*)req.c_str(), req.length());
 			}
 		}
 
@@ -238,13 +254,6 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->setIOSession(p);
-			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-			{
-				ioDev_tdsp* ptdsp = (ioDev_tdsp*)pIoDev;
-				json params = json::object();
-				json jRlt, jErr;
-				ptdsp->call("getDevInfo", params, jRlt, jErr,false);
-			}
 		}
 			
 		pTcpSession->pALSession = p.get();
