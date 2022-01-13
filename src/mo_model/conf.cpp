@@ -28,13 +28,13 @@ struct TDS_CONF_ITEM {
 
 void tdsConfig::loadConf()
 {
-	//ÅäÖÃÎÄ¼şµ±ÖĞµÄÖµ  Èç¹ûÓĞÖµ£¬ËµÃ÷ÊÇÃüÁîĞĞÉèÖÃ£¬ÃüÁîĞĞÓÅÏÈ¼¶×î¸ß
+	//é…ç½®æ–‡ä»¶å½“ä¸­çš„å€¼  å¦‚æœæœ‰å€¼ï¼Œè¯´æ˜æ˜¯å‘½ä»¤è¡Œè®¾ç½®ï¼Œå‘½ä»¤è¡Œä¼˜å…ˆçº§æœ€é«˜
 	string strConf;
 	fs::readFile(fs::appPath() + "\\tds.ini", strConf);
 	vector<string> confItems;
 	str::split(confItems, strConf, "\n");
 
-	//È¥µô×¢ÊÍ
+	//å»æ‰æ³¨é‡Š
 	for (int i = 0; i < confItems.size(); i++)
 	{
 		string& ci = confItems[i];
@@ -44,7 +44,7 @@ void tdsConfig::loadConf()
 			ci = ci.substr(0, pos);
 		}
 	}
-	//½âÎö
+	//è§£æ
 	vector<TDS_CONF_ITEM> vecConf;
 	for (int i = 0; i < confItems.size(); i++)
 	{
@@ -56,7 +56,7 @@ void tdsConfig::loadConf()
 			tci.key = ci.substr(0, pos);
 			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
-			//Ö§³ÖcamelCase,ÏÂ»®ÏßÃüÃûµÈ¶àÖÖÃüÃû·½·¨
+			//æ”¯æŒcamelCase,ä¸‹åˆ’çº¿å‘½åç­‰å¤šç§å‘½åæ–¹æ³•
 			tci.key = str::trim(tci.key, " ");
 			str::removeChar(tci.key, '_');
 			str::removeChar(tci.key, '-');
@@ -83,6 +83,8 @@ void tdsConfig::loadConf()
 			ioServerPort = atoi(tci.val.c_str());
 		else if (tci.key == "devreboottime")
 			devRebootTime = atoi(tci.val.c_str());
+		else if (tci.key == "devcommreboottime")
+			devCommRebootTime = atoi(tci.val.c_str());
 		else if (tci.key == "ui" && uiMode == "")
 			uiMode = tci.val;
 		else if ((tci.key == "loglevel") && logLevel == "")
@@ -113,6 +115,13 @@ void tdsConfig::loadConf()
 				enableDevReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevReboot = false;
+		}
+		else if (tci.key == "enabledevcommreboot")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableDevCommReboot = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableDevCommReboot = false;
 		}
 		else if (tci.key == "enabledb")
 		{
@@ -163,7 +172,7 @@ void tdsConfig::loadConf()
 		//}
 
 
-	//Ä¬ÈÏÖµ
+	//é»˜è®¤å€¼
 	if (projectConfPath == "")
 		projectConfPath = fs::appPath() + "/conf";
 	if (port == 0)
@@ -183,9 +192,9 @@ void tdsConfig::loadConf()
 	if (uiTitle == "")
 		uiTitle = "tdsUI";
 
-	//¹Ø¼üÅäÖÃĞÅÏ¢
+	//å…³é”®é…ç½®ä¿¡æ¯
 	if (enableDevReboot)
-		LOG("[TDS²ÎÊı   ]ÆôÓÃÉè±¸×Ô¶¯ÖØÆô»úÖÆ,ÖØÆôÖÜÆÚ" + str::fromInt(devRebootTime) +"Ãë");
+		LOG("[TDSå‚æ•°   ]å¯ç”¨è®¾å¤‡è‡ªåŠ¨é‡å¯æœºåˆ¶,é‡å¯å‘¨æœŸ" + str::fromInt(devRebootTime) +"ç§’");
 	if (enableDevCommReboot)
-		LOG("[TDS²ÎÊı   ]ÆôÓÃÉè±¸Í¨ĞÅÄ£¿é×Ô¶¯ÖØÆô»úÖÆ,ÖØÆôÖÜÆÚ" + str::fromInt(devCommRebootTime) + "Ãë");
+		LOG("[TDSå‚æ•°   ]å¯ç”¨è®¾å¤‡é€šä¿¡æ¨¡å—è‡ªåŠ¨é‡å¯æœºåˆ¶,é‡å¯å‘¨æœŸ" + str::fromInt(devCommRebootTime) + "ç§’");
 }

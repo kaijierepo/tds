@@ -187,28 +187,43 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	
 	if (method == "devRegister")
 	{
-		json jInfo = jParams["info"];
-		if (jInfo["softVer"] != nullptr)
+		if (jParams != nullptr)
 		{
-			m_softVer = jInfo["softVer"].get<string>();
+			json jInfo = jParams["info"];
+			if (jInfo["softVer"] != nullptr)
+			{
+				m_softVer = jInfo["softVer"].get<string>();
+			}
+			else if (jInfo["hardVer"] != nullptr)
+			{
+				m_softVer = jInfo["softVer"].get<string>();
+			}
+			else if (jInfo["mfrDate"] != nullptr)
+			{
+				m_mfrDate = jInfo["mfrDate"].get<string>();
+			}
+			else if (jInfo["IMEI"] != nullptr)
+			{
+				m_IMEI = jInfo["IMEI"].get<string>();
+			}
 		}
-		else if (jInfo["hardVer"] != nullptr)
-		{
-			m_softVer = jInfo["softVer"].get<string>();
-		}
-		else if (jInfo["mfrDate"] != nullptr)
-		{
-			m_mfrDate = jInfo["mfrDate"].get<string>();
-		}
-		else if (jInfo["IMEI"] != nullptr)
-		{
-			m_IMEI = jInfo["IMEI"].get<string>();
-		}
+		
 
 		timeopt::setAsTimeOrg(m_stLastAcqTime);//触发周期采集
 	}
 
 	return true;
+}
+
+int ioDev_tdsp::getRpcId()
+{
+	int id = m_iRpcId;
+	m_iRpcId++;
+	if (m_iRpcId > 250)
+	{
+		m_iRpcId = 0;
+	}
+	return id;
 }
 
 
@@ -218,11 +233,10 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	req["jsonrpc"] = "2.0";
 	req["method"] = method;
 	req["params"] = params;
-	int iId = m_iRpcId;
+	int iId = getRpcId();
 	req["id"] = iId;
 	req["clientId"] = "tds";
 	req["ioAddr"] = getIOAddrStr();
-	m_iRpcId++;
 	string strReq = req.dump() + "\n\n";
 	sendStr(strReq);
 	if (!sync)
