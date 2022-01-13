@@ -229,8 +229,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 				p->type = "ioDev";
 
 
-				string req = R"s(
-					{
+				string req = R"s({
 						"jsonrpc": "2.0",
 						"method": "getDevInfo",
 						"params": {},
@@ -238,7 +237,6 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 						"ioAddr": "any",
 						"id": 1
 					}
-
 
 				)s";
 
