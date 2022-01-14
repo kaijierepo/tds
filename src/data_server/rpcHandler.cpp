@@ -658,19 +658,18 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "rebootAllDev")
 	{
-		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
-		{
-			ioDev* p = ioSrv.m_vecChild[i];
-			if (p->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-			{
-				ioDev_tdsp* pt = (ioDev_tdsp*)p;
-				json params = json::object();
-				json jRlt;
-				json jErr;
-				pt->call("rebootDev", params, jRlt, jErr, false);
-				logger.logInternal("[keyinfo][ioDev]重启设备,ioAddr=" + pt->getIOAddrStr() + ",tagBind=" + pt->m_strTagBind);
-			}
-		}
+		string req = R"s({
+						"jsonrpc": "2.0",
+						"method": "rebootDev",
+						"params": {},
+						"clientId": "tds",
+						"ioAddr": "any",
+						"id": 1
+					}
+
+				)s";
+
+		ds.m_tcpSrv_IOSrv->SendData((char*)req.c_str(),req.length());
 	}
 	else if (method == "scanChannel" || method == "scanchannel")
 	{

@@ -55,6 +55,7 @@ bool TDS_SESSION::getTcpSession(tcpSession& ts)
 
 void TDS_SESSION::Init()
 {
+    abandonLen = 0;
     m_bStateLessSession = false;
     m_bActiveSession = false;
     m_bNeedLog = true;

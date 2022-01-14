@@ -141,7 +141,7 @@ bool stream2pkt::PopPkt(string cpt)
 
 			memcpy_s(stream, iStreaBuffSize, stream + i + ilen, iStreamLen - i - ilen);
 			iStreamLen -= i + ilen;
-			iAbandonBytes += i;
+			iAbandonBytes = i;
 
 			ResizeStreamBuff(iStreamLen);
 

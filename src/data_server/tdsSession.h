@@ -113,6 +113,7 @@ public:
 	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
 	tcpClt* pTcpSessionClt; //作为客户端连接数据中心的 主动式tcpSession
 	SYSTEMTIME stCreateTime;
+	int abandonLen;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data
 	string bridgedLocalCom; //和本地串口桥接

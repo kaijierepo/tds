@@ -1517,6 +1517,7 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 					{
 						string remoteAddr = tdsSession->getRemoteAddr();
 						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+						tdsSession->abandonLen += pab->iAbandonBytes;
 					}
 					tdsSession->iALProto = pab->m_protocolType;
 					onRecvTdsRpcPkt(pab->pkt, pab->iPktLen, tdsSession);
@@ -1621,6 +1622,8 @@ string dataServer::getSessionStatus(json params)
 		jSession["sendBytes"] = p->getSendedBytes();
 		jSession["recvBytes"] = p->getRecvedBytes();
 		jSession["buffLen"] = p->m_alBuf.iStreamLen;
+		jSession["abandonLen"] = p->abandonLen;
+		jSession["lastMethod"] = p->lastMethodCalled;
 
 		string ioAddrInSession = "";
 		for (int i = 0; i < p->m_vecIoDev.size(); i++)
