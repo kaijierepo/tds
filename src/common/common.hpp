@@ -492,6 +492,26 @@ namespace str {
 		return atoi(s.c_str());
 	}
 
+	inline string encodeAscII(string s)
+	{
+		string sDest = "";
+		char c[2] = { 0 };
+		for (int i = 0; i < s.length(); i++)
+		{
+			c[0] = s[i];
+			if (isascii(c[0]))
+			{
+				sDest += c;
+			}
+			else
+			{
+				string hexView = format("\\0x%02X", (unsigned char)c[0]);
+				sDest += hexView;
+			}
+		}
+		return sDest;
+	}
+
 	inline bool isInteger(string s)
 	{
 		for (int i = 0; i < s.size(); i++)
@@ -652,6 +672,7 @@ namespace timeopt {
 
 		return dwSecond;
 	}
+
 
 	inline string rel2abs(string time)
 	{

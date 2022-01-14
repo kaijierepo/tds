@@ -627,6 +627,38 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		vector<string> vec;
 		vec.erase(vec.begin());
 	}
+	//json异常字符串解析奔溃问题
+	else if (method == "testCrash3")
+	{
+		string s = "{\"123\":\"123\"}";
+		char sTmp[200] = { 0 };
+		memcpy(sTmp, s.c_str(), s.length());
+		sTmp[2] = -74;
+		sTmp[3] = 116;
+		s = sTmp;
+		try {
+			json j = json::parse(s);
+		}
+		catch (std::exception& e)
+		{
+			//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符
+			//所以也非法。后面 jError如果使用这段字符串dump会导致奔溃。不知道如何展示这个错误信息好
+			char* szError = (char*)e.what();
+			string errorType = "";
+			if (szError)
+			{
+				errorType = szError;
+				errorType = str::encodeAscII(errorType);
+			}
+			else
+			    errorType = "unknown error";
+			json jError = {
+					{"code", -32700},
+					{"message" , "Parse error," + errorType}
+			};
+			string sError = jError.dump();
+		}
+	}
 	else
 	{
 		bHandled = false;
@@ -1382,12 +1414,20 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	catch (std::exception& e)
 	{
 		string errorType = e.what();
+		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
+		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
+		errorType = str::encodeAscII(errorType);
 		LOG("handleRpcCall异常" + errorType);
 		json jError = {
 				{"code", -32700},
 				{"message" , "Parse error," + errorType}
 		};
-		rpcResp.error = jError.dump();
+
+		//TDSP设备协议。不发送回包。
+		if (pSession->type.find("ioDev") == string::npos)
+		{
+			rpcResp.error = jError.dump();
+		}
 		goto HANDLE_END;
 	}
 
