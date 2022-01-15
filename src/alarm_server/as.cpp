@@ -183,12 +183,13 @@ void almServer::AddEvent(ALARM_INFO ai)
 	tableHist.add(ai);
 }
 
-void almServer::acknowledge(ALARM_KEY& key,string ackInfo,string ackUser) {
+void almServer::rpc_acknowledge(ALARM_KEY& key,string ackInfo,RPC_SESSION session) {
 	ALARM_INFO ai;
 	json params;
 	params["time"] = key.time;
 	params["type"] = key.type;
-	params["tag"] = key.tag;
+	string tag = TAG::addRoot(key.tag, session.org);
+	params["tag"] = tag;
 	if(tableCurrent.query(params,ai))
 	{
 		ai.bAck = 1;
@@ -202,7 +203,7 @@ void almServer::acknowledge(ALARM_KEY& key,string ackInfo,string ackUser) {
 	if(tableHist.query(params,ai))
 	{
 		ai.bAck = 1;
-		ai.strConfirmUser = ackUser;
+		ai.strConfirmUser = session.user;
 		ai.strConfirmInfo = ackInfo;
 		GetLocalTime(&ai.stConfirmTime);
 		tableHist.update(ai);
@@ -348,20 +349,14 @@ string almServer::getUnack(json fitler)
 	return tableCurrent.toJson(fitler);
 }
 
-string almServer::getHistory(json params, string user)
+string almServer::rpc_getHistory(json params, RPC_SESSION session)
 {
 	TIME_SELECTOR timeSelector;
 	TAG_SELECTOR tagSelector;
-	string tag = params["tag"].get<string>();
-	params["tag"] = TAG::trimRoot(tag);
-	if (user != "")
-	{
-		json jUser = userMng.getUser(user);
-		if (jUser != nullptr)//指定用户模式下，tag是相对位号，必须有根的位号。 报警的数据当中，存储的都是完整位号
-		{
-			params["root"] = jUser["org"];
-		}
-	}
+	string rootTag = params["rootTag"].get<string>();
+	rootTag = TAG::addRoot(rootTag, session.org);
+	params["tag"] = rootTag + "*"; //此处采用历史数据的搜索语法
+
 	string error = rpcSrv.parseDataSelector(params,timeSelector,tagSelector);
 	if(error != "") return error;
 	
@@ -385,9 +380,9 @@ string almServer::getHistory(json params, string user)
 			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth),almHistory);
 			for (map<string, ALARM_INFO*>::iterator it = almHistory.begin(); it != almHistory.end(); it++)
 			{
-				if (user != "")
+				if (session.user != "")
 				{
-					if (!userMng.checkTagPermission(user, it->second->tag))
+					if (!userMng.checkTagPermission(session.user, it->second->tag))
 						continue;
 				}
 				if(!tagSelector.match(it->second->tag))
@@ -401,9 +396,9 @@ string almServer::getHistory(json params, string user)
 				
 
 				if(dataSet !="[")
-					dataSet += "," + it->second->toJson();
+					dataSet += "," + it->second->toJson(rootTag);
 				else
-					dataSet += it->second->toJson();
+					dataSet += it->second->toJson(rootTag);
 			}
 			tableHist.FreeAlarmList(almHistory);
 		}

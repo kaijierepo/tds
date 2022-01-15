@@ -674,7 +674,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
-	if (method == "ioTree" || method == "iotree")
+	if (method == "ioTree" || method == "iotree" || method == "getIOTree")
 	{
 		result = rpc_io_tree(params, error);
 	}
@@ -945,7 +945,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	}
 	else if (method == "getAlarmHistory")
 	{
-	result = almSrv.getHistory(params, session.user);
+	result = almSrv.rpc_getHistory(params, session);
 	}
 	else if (method == "addAlarmEvent")
 	{
@@ -963,7 +963,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	ai.type = params["type"].get<string>();
 	string user = session.user;
 	string info = params["ack_info"];
-	almSrv.acknowledge(ai, info, user);
+	almSrv.rpc_acknowledge(ai, info, session);
 	}
 	else
 	{
@@ -1159,6 +1159,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			{
 				pIoDev->m_bOnline = true;
 				timeopt::setAsTimeOrg(pIoDev->m_stLastAcqTime);
+				GetLocalTime(&pIoDev->m_stLastActiveTime);
 				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 			}
 		}
@@ -1229,6 +1230,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			//部分命令拦截并记录
 			string strIoAddr = jReq["ioAddr"].get<string>();
 			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
 			{
 				ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;

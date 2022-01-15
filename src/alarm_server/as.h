@@ -4,6 +4,7 @@
 #include "db.h"
 #include "json.hpp"
 #include "tds.h"
+#include "tdsSession.h"
 
 /*  Alarm Key
 "tag","type","time" 3 attributes are used to identify an alarm status or an alarm event
@@ -129,7 +130,7 @@ public:
 	void OccurAlarm(ALARM_INFO ai);
 //报警恢复和报警确认接口
 	void recover(ALARM_KEY& key);
-	void acknowledge(ALARM_KEY& key,string ackInfo,string ackUser);
+	void rpc_acknowledge(ALARM_KEY& key,string ackInfo,RPC_SESSION session);
 //query alarm data
 	//过滤器参数
 	/*
@@ -143,7 +144,7 @@ public:
 	string getCurrent(json filter);//combined list of active status and unack event
 	string getStatus(json filter);
 	string getUnack(json filter);
-	string getHistory(json params,string user);
+	string rpc_getHistory(json params, RPC_SESSION session);
 
 //通知报警状态更新
 
