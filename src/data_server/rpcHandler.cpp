@@ -612,7 +612,9 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		rpcResp.result = "\"ok\"";
 
 
-		//该仿真可以仿真出dumpCatch无法抓取的奔溃 windows Server 2008
+		//该仿真可以仿真出dumpCatch无法抓取的奔溃
+		//windows Server 2008 R2 enterprize有时会显示 程序当前遇到问题需要关闭的对话框,程序卡住； 有时能够退出截取dump
+		//win10 直接退出，dumpCatch不能截取到dump。能不能出现截取到 dump 的现象可能还需更多测试
 		thread t(threadAdd);
 		t.detach();
 
