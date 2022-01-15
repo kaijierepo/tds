@@ -1130,7 +1130,7 @@ bool rpcHandler::handleDevRpcByTds(string& strReq, json& jReq, std::shared_ptr<T
 	}
 	pIoDev->setIOSession(pSession);
 	pIoDev->onRecvPkt(jReq);
-	LOG("TDSP响应:\r\n" + strReq + "\r\n");
+	LOG("[trace]TDSP响应:\r\n" + strReq + "\r\n");
 	return true;
 }
 
@@ -1298,7 +1298,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		//对部分命令日志记录
 		bNeedLog = needLog(method);
 		if (bNeedLog)
-			LOG("RPC请求:\r\n" + strReq + "\r\n");
+			LOG("[trace]RPC请求:\r\n" + strReq + "\r\n");
 
 		//心跳最先处理
 		if (method == "heartbeat")
@@ -1464,9 +1464,9 @@ HANDLE_END:
 	if (rpcResp.result != "")
 	{
 		if (strRespForLog != "")
-			LOG("RPC响应:\r\n" + strRespForLog + "\r\n");
+			LOG("[trace]RPC响应:\r\n" + strRespForLog + "\r\n");
 		else if (bNeedLog)
-			LOG("RPC响应:\r\n" + rpcResp.result + "\r\n");
+			LOG("[trace]RPC响应:\r\n" + rpcResp.result + "\r\n");
 	}
 
 
@@ -1477,7 +1477,7 @@ HANDLE_END:
 		iBinLen = rpcResp.iBinLen;
 		rpcResp.binResult = NULL;
 		rpcResp.iBinLen = 0;
-		LOG("RPC响应: 二进制数据 len = " + str::fromInt(iBinLen));
+		LOG("[trace]RPC响应: 二进制数据 len = " + str::fromInt(iBinLen));
 	}
 }
 
