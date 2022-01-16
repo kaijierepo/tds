@@ -4,6 +4,7 @@
 #include <string.h>
 #include "wsProto.h"
 #include "shellServer.h"
+#include "ioSrv.h"
 
 shellServer shellSrv;
 
@@ -41,6 +42,47 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
     {
         resp = "help h 帮助\n";
         resp += "enableGlobalAlarm  ega  全局报警使能\n";
+        resp += "ioDev.setAcqInterval  * 30  所有设备采集周期设置为30秒\n";
+        resp += "ioSrv.saveConf 保存io配置";
+
+    }
+    else if (sc.method == "ioSrv.saveConf")
+    {
+        ioSrv.saveConf();
+        resp = "保存io配置到io.json";
+    }
+    else if (sc.method == "ioSrv.loadConf")
+    {
+        ioSrv.loadConf();
+        resp = "加载io配置从io.json";
+    }
+    else if (sc.method == "ioDev.setAcqInterval")
+    {
+        if (sc.params.size() >= 2)
+        {
+            string p = sc.params[0];
+            string interval = sc.params[1];
+            float fInterval = atof(interval.c_str());
+            if (p == "*")
+            {
+                ioSrv.m_csThis.lock();
+                for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+                {
+                    ioDev* p = ioSrv.m_vecChild[i];
+                    p->m_fAcqInterval = fInterval;
+                }
+                ioSrv.m_csThis.unlock();
+                resp += "所有设备的周期采集间隔设置为" + str::fromFloat(fInterval) + "秒";
+            }
+            else
+            {
+                resp = "参数错误";
+            }
+        }
+        else
+        {
+            resp = "参数错误";
+        }
     }
     else if(sc.method == "enableGlobalAlarm" || sc.method == "ega")
     {
@@ -50,25 +92,28 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
             if (p == "1")
             {
                 tds->conf->enableGlobalAlarm = true;
-                resp = "全局报警启用\n";
+                resp = "全局报警启用";
             }
             else if(p== "0")
             {
                 tds->conf->enableGlobalAlarm = false;
-                resp = "全局报警禁用\n";
+                resp = "全局报警禁用";
             }
             else
             {
-                resp = "参数错误\n";
+                resp = "参数错误";
             }
         }
         else
         {
-            resp = "参数错误\n";
+            resp = "参数错误";
         }
     }
+    else {
+        resp = "未知命令";
+    }
 
-
+    resp += "\n";
     CWSPPkt wsPkt;
     wsPkt.pack(resp.c_str(), resp.length(), WS_FrameType::WS_TEXT_FRAME);
     m_tcpSrv.SendData(wsPkt.data, wsPkt.len, pCltInfo);
@@ -88,6 +133,7 @@ void shellServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltIn
     }
     else
     {
+        m_s2p.Init();
         m_s2p.PushStream(pData, iLen);
         while (m_s2p.PopPkt(APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
         {
