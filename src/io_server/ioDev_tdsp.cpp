@@ -310,7 +310,7 @@ void ioDev_tdsp::DoCycleTask()
 			json params = json::object();
 			json jRlt, jErr;
 			call("rebootComm", params, jRlt, jErr, false);
-			logger.logInternal("[ioDev]重启设备通讯模块，ioAddr=" + getIOAddrStr());
+			logger.logInternal("[ioDev]重启设备通讯模块，ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind);
 			GetLocalTime(&m_stLastActiveTime);
 		}
 	}
@@ -323,7 +323,7 @@ void ioDev_tdsp::DoCycleTask()
 			json params = json::object();
 			json jRlt, jErr;
 			call("rebootDev", params, jRlt, jErr, false);
-			logger.logInternal("[ioDev]重启设备，ioAddr=" + getIOAddrStr());
+			logger.logInternal("[ioDev]重启设备，ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind);
 			GetLocalTime(&m_stLastActiveTime);
 		}
 	}

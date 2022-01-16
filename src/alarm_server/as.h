@@ -56,6 +56,13 @@ namespace ALARM_TYPE {
 	const string overLowLimit = "超低限";
 }
 
+class ALARM_TEMPLATE {
+public:
+	string label;
+	bool enable;
+	string name;
+};
+
 
 class ALARM_INFO : public ALARM_KEY{
 public:
@@ -170,7 +177,7 @@ public:
 	almTable tableCurrent;
 	almTable tableHist;
 	std::mutex m_csAlarmData;
-	map<string,string> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
+	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
 };
 
 extern almServer almSrv;

@@ -29,7 +29,15 @@ void almServer::run()
 		for(int i=0;i< jAlms.size();i++)
 		{
 			json& jAlmDesc = jAlms[i];
-			m_mapCustomAlarmDesc[jAlmDesc["type"].get<string>()] = jAlmDesc["typeLabel"].get<string>();
+			ALARM_TEMPLATE at;
+			at.name = jAlmDesc["type"].get<string>();
+			at.label = jAlmDesc["typeLabel"].get<string>();
+			at.enable = true;
+			if (jAlmDesc["enable"] != nullptr && jAlmDesc["enable"].get<bool>() == false) //报警屏蔽
+			{
+				at.enable = false;
+			}
+			m_mapCustomAlarmDesc[jAlmDesc["type"].get<string>()] = at;
 		}
 	}
 	
@@ -89,6 +97,15 @@ void almServer::OccurAlarm(ALARM_INFO ai)
 
 void almServer::Update(ALARM_INFO newStatus)
 {
+	//忽略屏蔽报警
+	if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
+	{
+		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
+		if (at.enable == false)
+			return;
+	}
+
+
 	std::lock_guard<mutex> g(m_csAlarmData);
 
 	if (newStatus.time == "")
@@ -508,7 +525,8 @@ string ALARM_INFO::toJson(string rootTag)
 
 	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
 	{
-		j["typeLabel"] = almSrv.m_mapCustomAlarmDesc[info->type];
+		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[info->type];
+		j["typeLabel"] = at.label;
 	}
 	else
 	{
