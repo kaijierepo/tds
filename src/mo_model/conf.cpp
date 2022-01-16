@@ -19,6 +19,7 @@ tdsConfig::tdsConfig()
 	enableDevCommReboot = false;
 	devRebootTime = 15 * 60;
 	devCommRebootTime = 5 * 60;
+	enableGlobalAlarm = true;
 }
 
 struct TDS_CONF_ITEM {
@@ -143,6 +144,13 @@ void tdsConfig::loadConf()
 				enableScript = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableScript = false;
+		}
+		else if (tci.key == "enableglobalalarm")
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableGlobalAlarm = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableGlobalAlarm = false;
 		}
 		else if (tci.key == "uiTitle")
 		{

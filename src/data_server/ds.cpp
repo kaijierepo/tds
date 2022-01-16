@@ -136,7 +136,7 @@ void initHttpSrv(httplib::Server& svr)
 // 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
 //响应跨域预检请求
 //https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
-	svr.Options("\\/rpc.*",
+	svr.Options("\\/.*",
 		[&](const httplib::Request& req, httplib::Response& res) {
 			res.status = 200;
 			res.set_header("Server", "tds");

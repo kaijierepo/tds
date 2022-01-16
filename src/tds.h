@@ -214,6 +214,7 @@ struct iTDSConf {
 	bool enableScript;
 	bool enableDevReboot;
 	bool enableDevCommReboot;
+	bool enableGlobalAlarm;
 	int devRebootTime; //seconds
 	int devCommRebootTime;
 	bool authDownload; 

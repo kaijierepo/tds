@@ -46,6 +46,7 @@ SOFTWARE.
 #include "version.h"
 #include "data_server/db.h"
 #include "tools/tdsWatchDog.h"
+#include "tools/shellServer.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -369,6 +370,8 @@ bool TDS_imp::run(string cmdline)
 	almSrv.run();
 	logSrv.run();
 	sHost.run();
+
+	shellSrv.run();
 
 	//create browser window
 	if (conf->uiMode == "miniblink")

@@ -123,6 +123,18 @@ bool stream2pkt::PopPkt(string cpt)
 			}
 		}
 
+		if (ilen == 0 &&
+			(cpt == APP_LAYER_PROTO::textEnd1LF))
+		{
+			if (i > 0)
+				break;
+			ilen = IsValidPkt_textEnd1LF(stream + i, iStreamLen - i);
+			if (ilen > 0)
+			{
+				m_protocolType = APP_LAYER_PROTO::textEnd1LF;
+			}
+		}
+
 
 		if (ilen)
 		{
@@ -277,6 +289,18 @@ int stream2pkt::IsValidPkt_textEnd2LF(char* pData, int iLen)
 	for (int i = 1; i < iLen; i++)
 	{
 		if (pData[i] == '\n' || pData[i] == '>')
+		{
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+int stream2pkt::IsValidPkt_textEnd1LF(char* pData, int iLen)
+{
+	for (int i = 0; i < iLen; i++)
+	{
+		if (pData[i] == '\n')
 		{
 			return i + 1;
 		}

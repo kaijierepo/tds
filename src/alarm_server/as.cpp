@@ -351,17 +351,35 @@ void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
 
 string almServer::getCurrent(json fitler)
 {
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		return "[]";
+	}
+
 	return tableCurrent.toJson(fitler);
 }
 
 string almServer::getStatus(json fitler)
 {
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		return "[]";
+	}
+
 	fitler["isRecover"] = false;
 	return tableCurrent.toJson(fitler);
 }
 
 string almServer::getUnack(json fitler)
 {
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		return "[]";
+	}
+
 	fitler["isAck"] = false;
 	return tableCurrent.toJson(fitler);
 }

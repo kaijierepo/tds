@@ -1737,6 +1737,14 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session
 			iWarnCount++;
 	}
 	json jAlmStatis;
+
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		iAlarmCount = 0;
+		iWarnCount = 0;
+	}
+
 	jAlmStatis["alarmCount"] = iAlarmCount;
 	jAlmStatis["warnCount"] = iWarnCount;
 	jRlt["alarms"] = jAlmStatis;
@@ -2270,6 +2278,7 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 		p->m_csThis.lock_shared();
 		status["channels"] = p->m_jAcq;
 		status["alarmStatus"] = p->m_jAlarmStatus;
+		status["enableAlarm"] = tds->conf->enableGlobalAlarm;
 		p->m_csThis.unlock_shared();
 		resp.result = status.dump();
 	}

@@ -189,6 +189,9 @@
     <ClCompile Include="..\src\common\udpSrv.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\shellServer.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -368,6 +371,9 @@
     </ClInclude>
     <ClInclude Include="..\src\common\udpSrv.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\shellServer.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
