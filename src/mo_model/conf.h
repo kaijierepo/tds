@@ -29,7 +29,7 @@ class tdsConfig : public iTDSConf
 public:
 	tdsConfig();
 	void loadConf();
-
+	json toJson();
 
 	json jsonConf;
 };

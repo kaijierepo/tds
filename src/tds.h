@@ -218,6 +218,9 @@ struct iTDSConf {
 	int devRebootTime; //seconds
 	int devCommRebootTime;
 	bool authDownload; 
+
+	int tcpKeepAliveIO;
+	int tcpKeepAliveDS;
 };
 
 

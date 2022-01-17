@@ -20,6 +20,8 @@ tdsConfig::tdsConfig()
 	devRebootTime = 15 * 60;
 	devCommRebootTime = 5 * 60;
 	enableGlobalAlarm = true;
+	tcpKeepAliveIO = 60 * 60;
+	tcpKeepAliveDS = 30;
 }
 
 struct TDS_CONF_ITEM {
@@ -76,6 +78,10 @@ void tdsConfig::loadConf()
 			projectConfPath = tci.val;
 			projectConfPath = fs::toAbsolutePath(projectConfPath);
 		}
+		else if (tci.key == "tcpkeepaliveio")
+			tcpKeepAliveIO = atoi(tci.val.c_str());
+		else if (tci.key == "tcpkeepaliveds")
+			tcpKeepAliveDS = atoi(tci.val.c_str());
 		else if (tci.key == "port" && port == 0)
 			port = atoi(tci.val.c_str());
 		else if (tci.key == "httpport" && httpPort == 0)
@@ -205,4 +211,24 @@ void tdsConfig::loadConf()
 		LOG("[TDS参数   ]启用设备自动重启机制,重启周期" + str::fromInt(devRebootTime) +"秒");
 	if (enableDevCommReboot)
 		LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
+}
+
+json tdsConfig::toJson()
+{
+	json conf;
+	conf["port"] = port;
+	conf["httpPort"] = httpPort;
+	conf["ioServerPort"] = ioServerPort;
+	conf["debugMode"] = debugMode;
+	conf["enableDB"] = enableDB;
+	conf["enableLog"] = enableLog;
+	conf["enableDevReboot"] = enableDevReboot;
+	conf["enableDevCommReboot"] = enableDevCommReboot;
+	conf["devRebootTime"] = devRebootTime;
+	conf["devCommRebootTime"] = devCommRebootTime;
+	conf["enableGlobalAlarm"] = enableGlobalAlarm;
+	conf["tcpKeepAliveIO"] = tcpKeepAliveIO;
+	conf["tcpKeepAliveDS"] = tcpKeepAliveDS;
+
+	return conf;
 }

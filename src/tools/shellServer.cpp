@@ -5,6 +5,7 @@
 #include "wsProto.h"
 #include "shellServer.h"
 #include "ioSrv.h"
+#include "tds_imp.h"
 
 shellServer shellSrv;
 
@@ -50,6 +51,11 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
     {
         ioSrv.saveConf();
         resp = "保存io配置到io.json";
+    }
+    else if (sc.method == "getTdsConf")
+    {
+        json j = tdsImp.tdsConf.toJson();
+        resp = j.dump(2);
     }
     else if (sc.method == "ioSrv.loadConf")
     {
