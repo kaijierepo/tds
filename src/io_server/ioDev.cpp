@@ -830,8 +830,21 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 
 	if (pIOSession != ioSession && ioSession != nullptr && pIOSession!= nullptr)
 	{
+		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
 		LOG("[error][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
+		//从老的连接里面把ioAddr映射删除，防止老连接断开造成设备掉线。 容错机制
+		for (int i = 0; i < pIOSession->m_vecIoDev.size(); i++)
+		{
+			string temp = pIOSession->m_vecIoDev[i];
+			if (temp == ioAddr)
+			{
+				pIOSession->m_vecIoDev.erase(pIOSession->m_vecIoDev.begin() + i);
+				pIOSession->m_vecIoBindTag.erase(pIOSession->m_vecIoBindTag.begin() + i);
+				LOG("[ioDev]删除" + pIOSession->getRemoteAddr() + "中对" + devInfo + "的映射");
+				break;
+			}
+		}
 	}
 
 
