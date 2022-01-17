@@ -286,7 +286,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      {
          m_IoDevTcpLink->setIOSession(NULL);
          m_IoDevTcpLink->m_bOnline = false;
-         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDevTcpLink->getIOAddrStr());
+         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDevTcpLink->getIOAddrStr() + ",tag=" + m_IoDevTcpLink->m_strTagBind);
          m_IoDevTcpLink = NULL;
      }
      if (bridgedIoSession)
@@ -310,6 +310,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
          ioDev* p = ioSrv.getIODev(ioAddr);
          if (p)
          {
+             logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
              p->m_bOnline = false;
              json j;
              p->toJson(j);

@@ -44,7 +44,7 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
         resp += "enableGlobalAlarm  ega  全局报警使能\n";
         resp += "ioDev.setAcqInterval  * 30  所有设备采集周期设置为30秒\n";
         resp += "ioSrv.saveConf 保存io配置";
-
+        resp += "ioSrv.triggerAllCycleAcq 触发所有设备进行一次周期采集";
     }
     else if (sc.method == "ioSrv.saveConf")
     {
@@ -65,6 +65,17 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
     {
         ioSrv.m_stopCycleAcq = false;
         resp = "启动所有周期采集";
+    }
+    else if (sc.method == "ioSrv.triggerAllCycleAcq")
+    {
+        ioSrv.m_csThis.lock();
+        for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+        {
+            ioDev* p = ioSrv.m_vecChild[i];
+            timeopt::setAsTimeOrg(p->m_stLastAcqTime);
+        }
+        ioSrv.m_csThis.unlock();
+        resp += "通知所有设备进行一次周期采集";
     }
     else if (sc.method == "ioDev.setAcqInterval")
     {

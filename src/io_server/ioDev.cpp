@@ -827,7 +827,23 @@ ioChannel* ioDev::getChanByTag(string tag)
 void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
+
+	if (pIOSession != ioSession && ioSession != nullptr && pIOSession!= nullptr)
+	{
+		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
+		LOG("[error][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
+	}
+
+
+	//新的有效连接
+	if (ioSession != nullptr && ioSession != pIOSession)
+	{
+		timeopt::setAsTimeOrg(m_stLastAcqTime);
+	}
+
+
 	pIOSession = ioSession;
+
 	if (ioSession == nullptr)
 		return;
 
