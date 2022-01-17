@@ -132,6 +132,8 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;
+	SYSTEMTIME m_stLastChanDataTime;
+	SYSTEMTIME m_stLastAlarmStatusTime;
 	SYSTEMTIME m_stLastActiveTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool bEnableAcq;

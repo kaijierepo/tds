@@ -60,6 +60,8 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 		m_csThis.lock();
 		m_jAcq = rlt;
 		m_csThis.unlock();
+
+		GetLocalTime(&m_stLastChanDataTime);
 	}
 	else if (method == "getAlarmStatus")
 	{
@@ -111,6 +113,8 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 		m_csThis.lock();
 		m_jAlarmStatus = rlt;
 		m_csThis.unlock();
+
+		GetLocalTime(&m_stLastAlarmStatusTime);
 	}
 	else if (method == "getDevConf")
 	{

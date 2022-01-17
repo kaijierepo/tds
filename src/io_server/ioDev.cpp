@@ -159,7 +159,9 @@ ioDev::ioDev(void)
 	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stEqpOnLineDateTime, 0, sizeof(SYSTEMTIME));
-	memset(&m_stLastAcqTime, 0, sizeof(SYSTEMTIME));
+	timeopt::setAsTimeOrg(m_stLastChanDataTime);
+	timeopt::setAsTimeOrg(m_stLastAcqTime);
+	timeopt::setAsTimeOrg(m_stLastAlarmStatusTime);
 	GetLocalTime(&m_stEqpOffLineDateTime);
 	GetLocalTime(&m_stLastActiveTime);
 	m_pMO = NULL;

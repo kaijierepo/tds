@@ -56,6 +56,16 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
         ioSrv.loadConf();
         resp = "加载io配置从io.json";
     }
+    else if (sc.method == "ioSrv.stopCycleAcq")
+    {
+        ioSrv.m_stopCycleAcq = true;
+        resp = "暂停所有周期采集";
+    }
+    else if (sc.method == "ioSrv.startCycleAcq")
+    {
+        ioSrv.m_stopCycleAcq = false;
+        resp = "启动所有周期采集";
+    }
     else if (sc.method == "ioDev.setAcqInterval")
     {
         if (sc.params.size() >= 2)

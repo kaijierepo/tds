@@ -1143,8 +1143,8 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		string strIoAddr = jReq["ioAddr"].get<string>();
 
 		//硕放机场项目，由于设备通电会发一个固定imei的包，为防止该imei上线，忽略该包
-		if (strIoAddr == "861714058021670")
-			return true;
+		//if (strIoAddr == "861714058021670")
+		//	return true;
 
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
@@ -2277,7 +2277,9 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 
 		p->m_csThis.lock_shared();
 		status["channels"] = p->m_jAcq;
+		status["chanUpdateTime"] = timeopt::st2str(p->m_stLastChanDataTime);
 		status["alarmStatus"] = p->m_jAlarmStatus;
+		status["alarmUpdateTime"] = timeopt::st2str(p->m_stLastAlarmStatusTime);
 		status["enableAlarm"] = tds->conf->enableGlobalAlarm;
 		p->m_csThis.unlock_shared();
 		resp.result = status.dump();
