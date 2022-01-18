@@ -303,7 +303,7 @@ namespace str {
 		return s;
 	}
 
-	inline string& trim(std::string& s, string toTrim = " ")
+	inline string trim(std::string s, string toTrim = " ")
 	{
 		s = trimPrefix(s, toTrim);
 		s = trimSuffix(s, toTrim);

@@ -1044,24 +1044,18 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	else if (method == "callDevMethod")
 	{
 		string tag = params["tag"].get<string>();
-		MO* pmo = prj.GetMOByTag(tag);
-		if (pmo)
-		{
-			string ioAddr = pmo->m_strIoAddrBind;
-			ioDev* pd = ioSrv.getIODev(ioAddr);
+		ioDev* pd = ioSrv.getIODevByTag(tag);
+		if(pd && pd->pIOSession)
+		{	
+			json jReq;
+			jReq["jsonrpc"] = "2.0";
+			jReq["method"] = params["method"];
+			jReq["params"] = params["params"];
+			jReq["id"] = 0;
+			jReq["clientId"] = "tds";
+			string sReq = jReq.dump();
 
-			if(pd && pd->pIOSession)
-			{	
-				json jReq;
-				jReq["jsonrpc"] = "2.0";
-				jReq["method"] = params["method"];
-				jReq["params"] = params["params"];
-				jReq["id"] = 0;
-				jReq["clientId"] = "tds";
-				string sReq = jReq.dump();
-
-				pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
-			}
+			pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
 		}
 	}
 	
@@ -1260,7 +1254,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	json id = nullptr;
 	bool bGB2312 = false;
 
-	str::trim(strReq);
+	strReq = str::trim(strReq);
 	if (strReq.length() == 0) 
 	{
 		json jError = {
@@ -1820,11 +1814,11 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 		return "";
 	}
 	string moType = params["type"].get<string>();
-	string rootTag = session.org;
+	string queryRootTag = session.org;
 	if (params["rootTag"] != nullptr) 
 	{
-		string relativeQueryRootTag = params["rootTag"].get<string>();
-		rootTag = TAG::addRoot(relativeQueryRootTag, rootTag); 
+		string userQueryRootTag = params["rootTag"].get<string>();
+		queryRootTag = TAG::addRoot(userQueryRootTag, queryRootTag);
 	}
 	string strList = "[";
 
@@ -1834,36 +1828,36 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
-			string tag = pMo->getTag();
+			string sysTag = pMo->getTag();
+			string queryTag = sysTag;
 
 			//过滤用户权限
 			if(session.user != "")
 			{
-				if (!userMng.checkTagPermission(session.user, tag))
+				if (!userMng.checkTagPermission(session.user, sysTag))
 					continue;
 			}
 
 			//过滤根mo
-			if (rootTag != "")
+			if (queryRootTag != "")
 			{
-				if (tag.find(rootTag) == string::npos)
+				if (sysTag.find(queryRootTag) == string::npos)
 				{
 					continue;
 				}
-				tag = str::trim(tag, rootTag + ".");
+				queryTag = str::trim(sysTag, queryRootTag + ".");
 			}
 			
 			nlohmann::ordered_json oneData;
-			oneData["监控对象"] = tag;
-			if (pMo->m_strIoAddrBind != "") //智能设备，加入在线离线信息
-			{
-				ioDev* piod = ioSrv.getIODev(pMo->m_strIoAddrBind);
-				if (piod)
-				{
-					oneData["在线"] = piod->m_bOnline;
-				}
-			}
+			oneData["监控对象"] = queryTag;
 
+			//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
+			ioDev* piod = ioSrv.getIODevByTag(sysTag);
+			if (piod)
+			{
+				oneData["在线"] = piod->m_bOnline;
+			}
+			
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				MO* pChild = pMo->m_childMO[j];
@@ -2096,6 +2090,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 		//mo tree 热更新
 		prj.clearChildren();
 		prj.loadConf();
+		ioSrv.updateTag2IOAddrBinding();
 		return "\"ok\"";
 	}
 	else if (type == "io-tree")

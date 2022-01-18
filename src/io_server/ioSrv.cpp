@@ -282,6 +282,39 @@ ioDev* ioServer::getIODev(string ioAddr)
 	return ioDev::getIODev(ioAddr);
 }
 
+ioDev* ioServer::getIODevByTag(string tag)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	for (int i = 0; i < m_vecChild.size(); i++)
+	{
+		ioDev* p = m_vecChild[i];
+		if (p->m_strTagBind == tag)
+		{
+			return p;
+		}
+	}
+	return nullptr;
+}
+
+void ioServer::updateTag2IOAddrBinding()
+{
+	m_csThis.lock_shared();
+	for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+	{
+		ioDev* p = ioSrv.m_vecChild[i];
+		string ioAddr = p->getIOAddrStr();
+		if (p->m_strTagBind != "")
+		{
+			MO* pmo = prj.GetMOByTag(p->m_strTagBind);
+			if (pmo)
+			{
+				pmo->m_strIoAddrBind = ioAddr;
+			}
+		}
+	}
+	m_csThis.unlock_shared();
+}
+
 void ioServer::clear()
 {
 	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
