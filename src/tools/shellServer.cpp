@@ -78,7 +78,7 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
         for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
         {
             ioDev* p = ioSrv.m_vecChild[i];
-            timeopt::setAsTimeOrg(p->m_stLastAcqTime);
+            p->triggerCycleAcq();
         }
         ioSrv.m_csThis.unlock();
         resp += "通知所有设备进行一次周期采集";

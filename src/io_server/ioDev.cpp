@@ -391,6 +391,11 @@ string ioDev::getDesc()
 	return "";
 }
 
+void ioDev::triggerCycleAcq()
+{
+	timeopt::setAsTimeOrg(m_stLastAcqTime);
+}
+
 
 ioDev* ioDev::getIODev(string ioAddr)
 {
@@ -851,7 +856,7 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 	//新的有效连接
 	if (ioSession != nullptr && ioSession != pIOSession)
 	{
-		timeopt::setAsTimeOrg(m_stLastAcqTime);
+		triggerCycleAcq();
 	}
 
 

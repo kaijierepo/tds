@@ -27,6 +27,7 @@ public:
 	virtual bool connect();
 	virtual bool disconnect();
 	virtual string getDesc();
+	void triggerCycleAcq();
 
 
 	////

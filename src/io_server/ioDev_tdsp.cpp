@@ -213,7 +213,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 		}
 		
 
-		timeopt::setAsTimeOrg(m_stLastAcqTime);//触发周期采集
+		triggerCycleAcq();
 	}
 
 	return true;

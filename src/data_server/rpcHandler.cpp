@@ -1152,7 +1152,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 			if (pIoDev->m_bOnline == false)
 			{
 				pIoDev->m_bOnline = true;
-				timeopt::setAsTimeOrg(pIoDev->m_stLastAcqTime);
+				pIoDev->triggerCycleAcq();
 				GetLocalTime(&pIoDev->m_stLastActiveTime);
 				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 			}
