@@ -322,17 +322,23 @@ bool ioDev::loadConf(json& conf)
 		}
 
 		m_strTagBind = str::trimPrefix(m_strTagBind, prj.m_strName + ".");
-		MO* pmo = prj.GetMOByTag(m_strTagBind);
-		if (pmo)
+
+		//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
+		//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
+		if (m_dispositionMode == DEV_DISPOSITION_MODE::managed)
 		{
-			if (pmo->m_moType == MO_TYPE::mp && this->m_level == IO_DEV_LEVEL::channel)
+			MO* pmo = prj.GetMOByTag(m_strTagBind);
+			if (pmo)
 			{
-				MP* pmp = (MP*)pmo;
-				ioChannel* pChan = (ioChannel*)this;
-				pmp->m_ioType = pChan->m_ioType;
-				pmp->m_ioTypeLabel = pChan->m_ioTypeLabel;
+				if (pmo->m_moType == MO_TYPE::mp && this->m_level == IO_DEV_LEVEL::channel)
+				{
+					MP* pmp = (MP*)pmo;
+					ioChannel* pChan = (ioChannel*)this;
+					pmp->m_ioType = pChan->m_ioType;
+					pmp->m_ioTypeLabel = pChan->m_ioTypeLabel;
+				}
+				pmo->m_strIoAddrBind = getIOAddrStr();
 			}
-			pmo->m_strIoAddrBind = getIOAddrStr();
 		}
 	}
 
