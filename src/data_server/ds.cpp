@@ -420,7 +420,7 @@ void activeSessionThread()
 
 void httpSrvThread()
 {
-	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
+	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort) + " 本机浏览器 http://localhost:667 访问软件用户界面");
 	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
 }
 
@@ -520,13 +520,13 @@ bool dataServer::run()
 		strData = str::format("bind to port:%d fail,try %d", triedPort, tryPort);
 		LOG(strData);
 
-		if(tryPort > 669)
+		if(tryPort > 666)
 		{
 			LOG("[error]no valid port can be used!!");
 			exit(0);
 		}
 	}
-	LOG("[keyinfo][TDS服务   ] 端口:" + str::fromInt(tryPort) + " 本机浏览器 http://localhost:" + str::fromInt(tryPort) + "访问软件用户界面");
+	LOG("[keyinfo][TDS服务   ] 端口:" + str::fromInt(tryPort) + " 使用tdsRPC over websocket协议访问");
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
@@ -535,7 +535,7 @@ bool dataServer::run()
 	m_tcpSrv_IOSrv->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_IOSrv->run(this, tds->conf->ioServerPort))
 	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort));
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 使用设备通信协议访问");
 	}
 	else
 	{
@@ -1162,12 +1162,8 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//if applayer protocol is HTTP,transport layer is specified as none
 	//首次从该链接收到数据时的处理。
 	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
-	{
-		char* ptmp = new char[iLen + 1];
-		memset(ptmp, 0, iLen + 1);
-		memcpy(ptmp, pData, iLen);
-		string strData = ptmp;
-		delete ptmp;
+	{	
+		string strData = str::fromBuff(pData,iLen);
 
 		//parse transfer layer protocol
 		if(isHttpPkt(strData))
