@@ -317,6 +317,49 @@ bool scriptHost::runScript(string& script)
 	return true;
 }
 
+bool scriptHost::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string rootTag = params["rootTag"].get<string>();
+	rootTag = str::replace(rootTag, ".", "/");
+	string path = tds->conf->projectConfPath + "/scripts/" + rootTag;
+
+	//有信息文件
+	if (fs::fileExist(path + "/list.json"))
+	{
+		string s;
+		fs::readFile(path + "/list.json", s);
+		if (s.length() > 0)
+		{
+			json j = json::parse(s);
+			rpcResp.result = j.dump(4);
+			return true;
+		}
+		
+	}
+
+
+	//无信息文件
+	vector<string> scriptList;
+	fs::getFileList(scriptList, path);
+
+	vector<string> nameList;
+	//提取出.js文件
+	for (int i = 0; i < scriptList.size(); i++)
+	{
+		string s = scriptList[i];
+		if (s.find(".js") != string::npos)
+		{
+			string n = str::trimSuffix(s, ".js");
+			nameList.push_back(n);
+		}
+	}
+	json j = nameList;
+	rpcResp.result = j.dump(4);
+	
+
+	return true;
+}
+
 void scriptHost::loopExe()
 {
 	while (1)

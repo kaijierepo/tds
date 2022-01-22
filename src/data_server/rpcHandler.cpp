@@ -1041,6 +1041,10 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		sHost.rpc_runScript(params, rpcResp, session);
 	}
+	else if (method == "getScriptList")
+	{
+		sHost.rpc_getScriptList(params, rpcResp, session);
+	}
 	else if (method == "callDevMethod")
 	{
 		string tag = params["tag"].get<string>();
