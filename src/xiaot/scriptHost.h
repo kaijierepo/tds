@@ -15,6 +15,9 @@ public:
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool runScript(string& script);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	string getScriptPath(json& params, RPC_SESSION session);
+	bool rpc_getScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	void loopExe();
 	std::map<string, string> m_mapScripts;

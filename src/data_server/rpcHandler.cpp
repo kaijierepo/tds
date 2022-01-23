@@ -1045,9 +1045,18 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		sHost.rpc_getScriptList(params, rpcResp, session);
 	}
+	else if (method == "getScriptFile")
+	{
+		sHost.rpc_getScriptFile(params, rpcResp, session);
+	}
+	else if (method == "setScriptFile")
+	{
+		sHost.rpc_setScriptFile(params, rpcResp, session);
+	}
 	else if (method == "callDevMethod")
 	{
 		string tag = params["tag"].get<string>();
+		tag = TAG::addRoot(tag, session.rootTag);
 		ioDev* pd = ioSrv.getIODevByTag(tag);
 		if(pd && pd->pIOSession)
 		{	
@@ -1057,7 +1066,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			jReq["params"] = params["params"];
 			jReq["id"] = 0;
 			jReq["clientId"] = "tds";
-			string sReq = jReq.dump();
+			string sReq = jReq.dump() + "\n\n";
 
 			pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
 		}

@@ -159,7 +159,7 @@ json scriptHost::engineArgsToJson(const jerry_value_t arguments[],const jerry_le
 		}
 		else if (jerry_value_is_object(arguments[i]))
 		{
-
+			scriptHost::getScriptEngineObj(j, arguments[i]);
 		}
 		jArguments.push_back(j);
 	}
@@ -209,11 +209,13 @@ bool scriptHost::run()
 
 bool scriptHost::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
-	string org = session.org;
-	org = str::replace(org, ".", "/");
 	string scriptName = params["name"].get<string>();
-	string scriptPath = tds->conf->projectConfPath + "/tasks/" + org + "/" + scriptName + ".js";
-
+	string scriptPath = getScriptPath(params,session) + "/" + scriptName + ".js";
+	session.queryRootTag = "";
+	if(params["tag"]!=nullptr)
+		session.queryRootTag = params["tag"].get<string>();
+	
+	session.rootTag = TAG::addRoot(session.queryRootTag, session.org);
 	string script;
 	fs::readFile(scriptPath, script);
 	if (script.length() > 0)
@@ -280,7 +282,7 @@ bool scriptHost::runScript(string& script)
 		jerry_release_value(set_result);
 
 
-		/* Run the demo script with 'eval' */
+		///* Run the demo script with 'eval' */
 		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
 			script.length(),
 			JERRY_PARSE_NO_OPTS);
@@ -306,6 +308,8 @@ bool scriptHost::runScript(string& script)
 		jerry_release_value(property_func_log);
 		jerry_release_value(property_name_output);
 		jerry_release_value(property_func_output);
+		jerry_release_value(property_name_call);
+		jerry_release_value(property_func_call);
 		jerry_release_value(global_object);
 
 		jerry_cleanup();
@@ -319,11 +323,7 @@ bool scriptHost::runScript(string& script)
 
 bool scriptHost::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string rootTag = params["rootTag"].get<string>();
-	rootTag = TAG::addRoot(rootTag, session.org);
-
-	rootTag = str::replace(rootTag, ".", "/");
-	string path = tds->conf->projectConfPath + "/scripts/" + rootTag;
+	string path = getScriptPath(params, session);
 
 	//有信息文件
 	if (fs::fileExist(path + "/list.json"))
@@ -358,6 +358,62 @@ bool scriptHost::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	json j = nameList;
 	rpcResp.result = j.dump(4);
 	
+
+	return true;
+}
+
+string scriptHost::getScriptPath(json& params, RPC_SESSION session)
+{
+	string rootTag = "";
+	if (!params.is_null())
+	{
+		if(!params["tag"].is_null())
+			rootTag = params["tag"].get<string>();
+	}
+		
+
+	rootTag = TAG::addRoot(rootTag, session.org);
+	rootTag = str::replace(rootTag, ".", "/");
+	string path = tds->conf->projectConfPath + "/scripts/" + rootTag;
+	return path;
+}
+
+bool scriptHost::rpc_getScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string path = getScriptPath(params,session);
+	string fileName = params["name"].get<string>();
+	path += "/" + fileName + ".js";
+
+	string s;
+	if (fs::readFile(path, s))
+	{
+		json j = s;
+		rpcResp.result = j.dump();
+	}
+	else
+	{
+		rpcResp.result = "";
+	}
+
+
+	return true;
+}
+
+bool scriptHost::rpc_setScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string path = getScriptPath(params, session);
+	string fileName = params["name"].get<string>();
+	path += "/" + fileName + ".js";
+
+	string s = params["code"].get<string>();
+	if (fs::writeFile(path, s))
+	{
+		rpcResp.result = "\"ok\"";
+	}
+	else
+	{
+		rpcResp.error = "\"save fail\"";
+	}
 
 	return true;
 }
@@ -488,38 +544,35 @@ static bool setEngineObj2Json(const jerry_value_t prop_name,
 	json& jObj = *(json*)user_data_p;
 
 	//解析key
-	//if (jerry_value_is_string(prop_name)) {
-	//	jerry_char_t string_buffer[128];
-	//	jerry_size_t copied_bytes = jerry_substring_to_char_buffer(prop_name,
-	//		0,
-	//		127,
-	//		string_buffer,
-	//		127);
-	//	string_buffer[copied_bytes] = '\0';
+	string key;
+	if (jerry_value_is_string(prop_name)) {
+		jerry_char_t string_buffer[128];
+		jerry_size_t copied_bytes = jerry_substring_to_char_buffer(prop_name,
+			0,
+			127,
+			string_buffer,
+			127);
+		string_buffer[copied_bytes] = '\0';
+		key = (char*)string_buffer;
+	}
 
-	//	printf("Property: %s\n", string_buffer);
-
-	//	struct iteration_data* data = (struct iteration_data*)user_data_p;
-	//	data->string_property_count++;
-	//}
-
-
+	//解析val
 	json j;
-	if (jerry_value_is_boolean(prop_name))
+	if (jerry_value_is_boolean(prop_value))
 	{
-		j = jerry_value_to_boolean(prop_name);
+		j = jerry_value_to_boolean(prop_value);
 	}
-	else if (jerry_value_is_bigint(prop_name))
+	else if (jerry_value_is_bigint(prop_value))
 	{
-		j = jerry_value_as_integer(prop_name);
+		j = jerry_value_as_integer(prop_value);
 	}
-	else if (jerry_value_is_number(prop_name))
+	else if (jerry_value_is_number(prop_value))
 	{
-		j = jerry_get_number_value(prop_name);
+		j = jerry_get_number_value(prop_value);
 	}
-	else if (jerry_value_is_string(prop_name))
+	else if (jerry_value_is_string(prop_value))
 	{
-		jerry_value_t string_value = jerry_value_to_string(prop_name);
+		jerry_value_t string_value = jerry_value_to_string(prop_value);
 		jerry_size_t tSize = jerry_get_string_size(string_value);
 		jerry_char_t* buffer = new jerry_char_t[tSize + 1];
 		jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, tSize);
@@ -529,10 +582,12 @@ static bool setEngineObj2Json(const jerry_value_t prop_name,
 		j = s;
 		delete buffer;
 	}
-	else if (jerry_value_is_object(prop_name))
+	else if (jerry_value_is_object(prop_value))
 	{
-
+		json j;
+		scriptHost::getScriptEngineObj(j,prop_value);
 	}
+	jObj[key] = j;
 	return true;
 }
 
