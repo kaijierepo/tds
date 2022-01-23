@@ -1631,6 +1631,17 @@ string dataServer::getSessionStatus(json params)
 			ioAddrInSession += p->m_vecIoBindTag[i];
 		}
 		jSession["ioAddr"] = ioAddrInSession;
+
+		string ioAddrInSessionHist = "";
+		for (int i = 0; i < p->m_vecHistIoDev.size(); i++)
+		{
+			if (i > 0)
+				ioAddrInSessionHist += ";";
+			ioAddrInSessionHist += p->m_vecHistIoDev[i];
+			ioAddrInSessionHist += ",";
+			ioAddrInSessionHist += p->m_vecHistIoBindTag[i];
+		}
+		jSession["ioAddrHist"] = ioAddrInSessionHist;
 		
 		if (p->type == "video" && p->pTcpSession)
 		{

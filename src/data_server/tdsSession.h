@@ -123,7 +123,14 @@ public:
 	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
 	ioDev* getIODev(string ioAddr);
 	vector<string> m_vecIoDev;  //通过该tdsSession和tds通信的io设备.可以有多个。4g模式下用到
+	//历史曾经在这个连接上上线过的io设备。当该设备重新在新的连接上线时。
+	//m_vecIoDev中的关联关系会被删除。m_vecHistIoDev中的依然保留
+	//在通过当前连接进行诊断时，方便追溯连接的来源。
+	//因为4g模块可能会不断产生连接，特别是没电的时候。导致设备不断在新的连接上上线。解除老连接的关联
+	//此时通过m_vecIoBindTag可以追溯连接产生的原因。分析问题
+	vector<string> m_vecHistIoDev; 
 	vector<string> m_vecIoBindTag;
+	vector<string> m_vecHistIoBindTag;
 	ioDev* m_IoDevTcpLink;      //建立了tcp直连的io设备。 4g连接模式下用不到，为NULL。局域网内系统用到
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	DWORD httpReqHandleThreadID;  //处理http请求的线程id

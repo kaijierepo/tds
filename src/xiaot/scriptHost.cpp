@@ -320,6 +320,8 @@ bool scriptHost::runScript(string& script)
 bool scriptHost::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string rootTag = params["rootTag"].get<string>();
+	rootTag = TAG::addRoot(rootTag, session.org);
+
 	rootTag = str::replace(rootTag, ".", "/");
 	string path = tds->conf->projectConfPath + "/scripts/" + rootTag;
 

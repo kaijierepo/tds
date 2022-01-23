@@ -883,6 +883,8 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 	{
 		ioSession->m_vecIoDev.push_back(ioAddr);
 		ioSession->m_vecIoBindTag.push_back(this->m_strTagBind);
+		ioSession->m_vecHistIoDev.push_back(ioAddr);
+		ioSession->m_vecHistIoBindTag.push_back(this->m_strTagBind);
 	}
 }
 
