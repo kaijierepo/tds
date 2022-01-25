@@ -16,8 +16,10 @@ public:
 	bool runScript(string& script);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	string getScriptPath(json& params, RPC_SESSION session);
-	bool rpc_getScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool rpc_setScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	//获得属于某一个位号的脚本列表
+	json getScriptList(string tag);
 
 	void loopExe();
 	std::map<string, string> m_mapScripts;

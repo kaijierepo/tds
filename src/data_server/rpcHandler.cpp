@@ -1047,11 +1047,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "getScriptFile")
 	{
-		sHost.rpc_getScriptFile(params, rpcResp, session);
+		sHost.rpc_getScript(params, rpcResp, session);
 	}
 	else if (method == "setScriptFile")
 	{
-		sHost.rpc_setScriptFile(params, rpcResp, session);
+		sHost.rpc_setScript(params, rpcResp, session);
 	}
 	else if (method == "callDevMethod")
 	{
@@ -1065,6 +1065,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			jReq["method"] = params["method"];
 			jReq["params"] = params["params"];
 			jReq["id"] = 0;
+			jReq["ioAddr"] = pd->getIOAddrStr();
 			jReq["clientId"] = "tds";
 			string sReq = jReq.dump() + "\n\n";
 

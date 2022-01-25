@@ -362,6 +362,7 @@ bool scriptHost::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	return true;
 }
 
+
 string scriptHost::getScriptPath(json& params, RPC_SESSION session)
 {
 	string rootTag = "";
@@ -378,7 +379,7 @@ string scriptHost::getScriptPath(json& params, RPC_SESSION session)
 	return path;
 }
 
-bool scriptHost::rpc_getScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool scriptHost::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string path = getScriptPath(params,session);
 	string fileName = params["name"].get<string>();
@@ -399,14 +400,17 @@ bool scriptHost::rpc_getScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	return true;
 }
 
-bool scriptHost::rpc_setScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool scriptHost::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string path = getScriptPath(params, session);
-	string fileName = params["name"].get<string>();
-	path += "/" + fileName + ".js";
+	json jInfo = params["info"];
+	string sDesc = params["info"]["desc"].get<string>();
+	string sName = params["info"]["name"].get<string>();
 
+	//保存脚本代码
+	string codePath = path + "/" + sName + ".js";
 	string s = params["code"].get<string>();
-	if (fs::writeFile(path, s))
+	if (fs::writeFile(codePath, s))
 	{
 		rpcResp.result = "\"ok\"";
 	}
@@ -415,7 +419,32 @@ bool scriptHost::rpc_setScriptFile(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 		rpcResp.error = "\"save fail\"";
 	}
 
+	//保存脚本信息
+	json jList = json::array();
+	string infoPath = path + "/list.json";
+	string sList;
+	fs::readFile(infoPath, sList);
+	if (sList != "")
+	{
+		jList = json::parse(sList);
+	}
+	for (int i = 0; i < jList.size(); i++)
+	{
+		json& jInfoTmp = jList[i];
+		if (jInfoTmp["name"].get<string>() == sName)
+		{
+			jInfoTmp = jInfo;
+		}
+	}
+	sList = jList.dump(4);
+	fs::writeFile(infoPath,sList);
+
 	return true;
+}
+
+json scriptHost::getScriptList(string tag)
+{
+	return json();
 }
 
 void scriptHost::loopExe()
