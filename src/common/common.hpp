@@ -286,19 +286,34 @@ namespace str {
 	
 	inline string& trimPrefix(string& s, string prefix = " ")
 	{
-		if (s.find(prefix) == 0)
+		while (1)
 		{
-			s = s.substr(prefix.length(), s.length() - prefix.length());
+			if (s.find(prefix) == 0)
+			{
+				s = s.substr(prefix.length(), s.length() - prefix.length());
+			}
+			else
+			{
+				break;
+			}
 		}
+		
 		return s;
 	}
 
 	inline string& trimSuffix(string& s, string suffix = " ")
 	{
-		int ipos = s.find(suffix);
-		if (ipos + suffix.length() == s.length())
+		while(1)
 		{
-			s = s.substr(0,ipos);
+			int ipos = s.rfind(suffix);
+			if (ipos != string::npos && ipos + suffix.length() == s.length())
+			{
+				s = s.substr(0, ipos);
+			}
+			else
+			{
+				break;
+			}
 		}
 		return s;
 	}

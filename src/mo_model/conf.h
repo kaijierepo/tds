@@ -31,6 +31,8 @@ public:
 	void loadConf();
 	json toJson();
 
+	string getDefaultConfFile();
+
 	json jsonConf;
 };
 

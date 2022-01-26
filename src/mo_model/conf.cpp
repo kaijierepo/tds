@@ -31,9 +31,17 @@ struct TDS_CONF_ITEM {
 
 void tdsConfig::loadConf()
 {
+	string confPath = fs::appPath() + "\\tds.ini";
+	if (!fs::fileExist(confPath))
+	{
+		string s = getDefaultConfFile();
+		s = str::replace(s, "\n", "\r\n");
+		fs::writeFile(confPath, s);
+	}
+
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	string strConf;
-	fs::readFile(fs::appPath() + "\\tds.ini", strConf);
+	fs::readFile(confPath, strConf);
 	vector<string> confItems;
 	str::split(confItems, strConf, "\n");
 
@@ -231,4 +239,31 @@ json tdsConfig::toJson()
 	conf["tcpKeepAliveDS"] = tcpKeepAliveDS;
 
 	return conf;
+}
+
+string tdsConfig::getDefaultConfFile()
+{
+	string s = R"(#TDS 配置文件
+#基础配置
+confpath=./conf        #配置路径
+port=666               #数据服务端口websocket协议
+httpPort=667           #http服务端口
+ioServerPort=665       #io通信服务端口
+loglevel=debug         #日志级别
+
+#功能模块启用
+enableDB = 1           #启用数据库
+enableLog = 1          #启用日志记录
+authDownload = 0       #开启文件下载用户认证
+enableAccessCtrl = 0   #开启用户认证
+enableScript = 0       #启用脚本功能
+
+#IO服务功能
+enableDevReboot=1      #启用设备重启功能      
+devRebootTime=180      #设备无通信重启时间
+
+#桌面软件模式
+ui=console             #ui模式  console:命令行模式   chrome:浏览器模式
+)";
+	return s;
 }

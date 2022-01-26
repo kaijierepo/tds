@@ -662,16 +662,18 @@ void almTable::remove(ALARM_KEY ai)
 	FreeAlarmList(temp);
 }
 
-string almTable::toJson(json filter){
+string almTable::toJson(json filter) {
 	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(),temp);
+	loadFile(getFilePath(), temp);
 	json jUser = nullptr;
 	string user;
 	string rootTag = "";
 	if (filter.contains("user"))
 	{
 		user = filter["user"].get<string>();
-		jUser  = userMng.getUser(user);
+		jUser = userMng.getUser(user);
+		if (jUser == nullptr)
+			return "[]";
 		rootTag = jUser["org"].get<string>();
 	}
 
