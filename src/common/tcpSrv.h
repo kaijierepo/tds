@@ -190,122 +190,7 @@ public:
 };
 
 #define HISTORY_CONN_STATIC_COUNT 500
-//#define IN_WINDOWS 
 
-typedef enum connDataWay {
-	CONN_DATA_SEND = 0,
-	CONN_DATA_RECV
-}ConnDataWay;
-
-typedef struct connDataNode {
-	SYSTEMTIME time;
-	ConnDataWay way; // 0 send. 1 recv.
-	char* data;
-	int iDataLen;
-	connDataNode() {
-		memset(&time, 0, sizeof(SYSTEMTIME));
-		data = NULL;
-		iDataLen = 0;
-	}
-	~connDataNode() {
-		if (data) delete[]data;
-	}
-}ConnDataNode;
-
-typedef struct connHistoryData {
-	ConnDataNode dataBuffer[HISTORY_CONN_STATIC_COUNT];
-	HANDLE m_mutex;
-	int startIndex;
-	int iLastIndex;
-	int endIndex;
-	bool bIsFull;
-
-	connHistoryData() {
-		startIndex = endIndex = iLastIndex = 0;
-		bIsFull = false;
-		m_mutex = CreateMutex(NULL, false, NULL);
-	}
-
-	~connHistoryData() {
-		if (m_mutex) {
-			CloseHandle(m_mutex);
-			m_mutex = NULL;
-		}
-	}
-
-	bool isFull() {
-		return bIsFull;
-	}
-
-	bool Lock() {
-		if (m_mutex) {
-			WaitForSingleObject(m_mutex, INFINITE);
-			return true;
-		}
-		return false;
-	}
-
-	void Unlock() {
-		if (m_mutex) ReleaseMutex(m_mutex);
-	}
-
-	void AddData(char* buf, int iLen, ConnDataWay way) {
-		if (!Lock()) return;
-		::GetLocalTime(&dataBuffer[endIndex].time);
-		dataBuffer[endIndex].way = way;
-		if (dataBuffer[endIndex].data) delete[]dataBuffer[endIndex].data;
-		dataBuffer[endIndex].data = new char[iLen];
-		if (!dataBuffer[endIndex].data) return;
-		memcpy(dataBuffer[endIndex].data, buf, iLen);
-		dataBuffer[endIndex].iDataLen = iLen;
-		iLastIndex = endIndex;
-		endIndex = (endIndex + 1) % HISTORY_CONN_STATIC_COUNT;
-		if (bIsFull) startIndex = endIndex;
-		else if (endIndex == startIndex) bIsFull = true;
-		Unlock();
-	}
-}ConnHistoryData;
-
-typedef struct connHistoryInfo {
-	string strIp;
-	SOCKET socket;
-	HANDLE m_mutex;
-	int iSendSucCount;
-	int iSendFailCount;
-	int iRecvCount;
-	int iReconnnectCount;
-	bool bOnline;
-	tcpSession* pCltInfo;
-	SYSTEMTIME lastConnectTime;
-	connHistoryInfo() {
-		pCltInfo = NULL;
-		strIp = "";
-		socket = 0;
-		iSendSucCount = 0;
-		iSendFailCount = 0;
-		iRecvCount = 0;
-		iReconnnectCount = 0;
-		bOnline = false;
-		memset(&lastConnectTime, 0, sizeof(SYSTEMTIME));
-		m_mutex = CreateMutex(NULL, false, NULL);
-	}
-	~connHistoryInfo() {
-		if (m_mutex) {
-			CloseHandle(m_mutex);
-			m_mutex = NULL;
-		}
-	}
-	bool Lock() {
-		if (m_mutex) {
-			WaitForSingleObject(m_mutex, INFINITE);
-			return true;
-		}
-		return false;
-	}
-	void Unlock() {
-		if (m_mutex) ReleaseMutex(m_mutex);
-	}
-}ConnHistoryInfo;
 
 class tcpSrv  {
 public:
@@ -346,7 +231,6 @@ public:
 	bool DeleteLink(SOCKET s);
 
 	bool IsIPOnline(string remoteIP);
-	int StaticConnData(string strIp, char* data, int iLen, ConnDataWay way);
 	inline string GetIOCPName() {
 		return m_strName;
 	}
@@ -364,7 +248,6 @@ public:
 	std::vector<COverlappedIOInfo*> m_vecContInfo;
 	std::mutex m_csClientVectorLock;
 	CIOCP m_iocp;
-	std::map<string, ConnHistoryInfo*> m_mapConnHistory;
 	string m_strMonitoringIP;
 
 	static void ListenThread_IOCPServer(LPVOID lpParam);
