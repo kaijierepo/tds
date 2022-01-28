@@ -294,16 +294,54 @@ string MO::getTagWithRoot()
 
 void MO::GetMOByTag(std::vector<MO*>* tagVec, string strTag)
 {
-	string tagCandidate = getTag();
-	TAG_SELECTOR ts;
-	ts.init(strTag);
-	if(ts.match(tagCandidate))
-		tagVec->push_back(this);
-
-	for (int i = 0; i < m_childMO.size(); i++)
+	if (strTag.find("*") == string::npos)//精确查找
 	{
-		MO* pMOChild = m_childMO.at(i);
-		pMOChild->GetMOByTag(tagVec, strTag);
+		vector<string> vecNames;
+		str::split(vecNames, strTag, ".");
+
+		MO* toQuery = NULL;
+		std::vector<MO*>* childMO = &m_childMO;
+		for (int i = 0; i < vecNames.size(); i++)
+		{
+			string name = vecNames[i];
+			bool findNode = false;
+			for (int i = 0; i < childMO->size(); i++)
+			{
+				MO* tmp = childMO->at(i);
+				if (tmp->m_strName == name)
+				{
+					toQuery = tmp;
+					findNode = true;
+					break;
+				}
+			}
+
+			if (findNode)
+			{
+				childMO = &toQuery->m_childMO;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		if (toQuery)
+			tagVec->push_back(toQuery);
+	}
+	else //通配符匹配
+	{
+		string tagCandidate = getTag();
+		TAG_SELECTOR ts;
+		ts.init(strTag);
+		if (ts.match(tagCandidate))
+			tagVec->push_back(this);
+
+		for (int i = 0; i < m_childMO.size(); i++)
+		{
+			MO* pMOChild = m_childMO.at(i);
+			pMOChild->GetMOByTag(tagVec, strTag);
+		}
 	}
 }
 

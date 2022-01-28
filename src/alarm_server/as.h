@@ -117,12 +117,14 @@ public:
 	}
 	string getFilePath(string time = "");
 	string getFilePath(int y,int m);
-	void loadFile(string strFile, map<string, ALARM_INFO*>& memData);
+	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
-	void FreeAlarmList(map<string, ALARM_INFO*>& mapAlarm);
+	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 	ALARM_INFO fromCSV(const string& line);
 	string toCSV(ALARM_INFO& info);
 	string filePath;
+	map<string, ALARM_INFO*> buff;
+	string buffFilePath;
 	bool bOneFilePerMonth;
 };
 

@@ -286,6 +286,9 @@ namespace str {
 	
 	inline string& trimPrefix(string& s, string prefix = " ")
 	{
+		if (prefix == "")
+			return s;
+
 		while (1)
 		{
 			if (s.find(prefix) == 0)
@@ -303,6 +306,9 @@ namespace str {
 
 	inline string& trimSuffix(string& s, string suffix = " ")
 	{
+		if (suffix == "")
+			return s;
+
 		while(1)
 		{
 			int ipos = s.rfind(suffix);

@@ -147,7 +147,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	}
 }
 
-void almTable::FreeAlarmList(map<string, ALARM_INFO*>& mapAlarm)
+void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 {
 	map<string, ALARM_INFO*>::iterator i = mapAlarm.begin();
 	for (; i != mapAlarm.end(); i++)
@@ -332,8 +332,14 @@ string almTable::getFilePath(string time){
 	return getFilePath(y,m);
 }
 
-void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
+void almTable::loadFile(string strFile)
 {
+	if (buffFilePath == strFile)
+		return;
+
+	freeBuff(buff);
+	buffFilePath = strFile;
+
 	string strDBData;
 	fs::readFile(strFile, strDBData);
 	vector<string> recLines;
@@ -345,7 +351,7 @@ void almTable::loadFile(string strFile, map<string, ALARM_INFO*>& memData)
 			continue;
 		ALARM_INFO* pAi = new ALARM_INFO();
 		*pAi = fromCSV(str);
-		memData[pAi->getKey()]=pAi;
+		buff[pAi->getKey()]=pAi;
 	}
 }
 
@@ -411,9 +417,8 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		else iEndMonth = 12;
 		for(;iMonth<=iEndMonth;iMonth++)
 		{
-			map<string, ALARM_INFO*> almHistory;
-			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth),almHistory);
-			for (map<string, ALARM_INFO*>::iterator it = almHistory.begin(); it != almHistory.end(); it++)
+			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth));
+			for (map<string, ALARM_INFO*>::iterator it = tableHist.buff.begin(); it != tableHist.buff.end(); it++)
 			{
 				if (session.user != "")
 				{
@@ -435,7 +440,6 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				else
 					dataSet += it->second->toJson(rootTag);
 			}
-			tableHist.FreeAlarmList(almHistory);
 		}
 	}
 	dataSet += "]";
@@ -599,25 +603,22 @@ void almTable::init(string file)
 
 void almTable::add(ALARM_INFO ai)
 {
-	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(ai.time),temp);
+	loadFile(getFilePath(ai.time));
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
-	temp[ai.getKey()] = pNew;
-	saveFile(getFilePath(ai.time),temp);
-	FreeAlarmList(temp);
+	buff[ai.getKey()] = pNew;
+	saveFile(getFilePath(ai.time),buff);
 }
 
 bool almTable::query(json params, ALARM_INFO& ai)
 {
 	bool bFind = false;
 	ALARM_INFO* p = NULL;
-	map<string, ALARM_INFO*> temp;
 	string time;
 	if (params["time"] != nullptr)
 		time = params["time"].get<string>();
-	loadFile(getFilePath(time),temp);
-	for(auto& i:temp)
+	loadFile(getFilePath(time));
+	for(auto& i:buff)
 	{
 		ALARM_INFO& it = *i.second;
 		if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
@@ -634,7 +635,6 @@ bool almTable::query(json params, ALARM_INFO& ai)
 		ai = it;
 		bFind = true;
 	}
-	FreeAlarmList(temp);
 	if(bFind)
 	{
 		return true;
@@ -644,27 +644,23 @@ bool almTable::query(json params, ALARM_INFO& ai)
 void almTable::update(ALARM_INFO ai)
 {
 	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(ai.time),temp);
+	loadFile(getFilePath(ai.time));
 	ALARM_INFO* p = temp.at(ai.getKey());
 	if(p)
 	{
 		*p = ai;
 		saveFile(getFilePath(ai.time),temp);
 	}
-	FreeAlarmList(temp);
 }
 void almTable::remove(ALARM_KEY ai)
 {
-	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(ai.time),temp);
-	temp.erase(ai.getKey());
-	saveFile(getFilePath(ai.time),temp);
-	FreeAlarmList(temp);
+	loadFile(getFilePath(ai.time));
+	buff.erase(ai.getKey());
+	saveFile(getFilePath(ai.time),buff);
 }
 
 string almTable::toJson(json filter) {
-	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(), temp);
+	loadFile(getFilePath());
 	json jUser = nullptr;
 	string user;
 	string rootTag = "";
@@ -685,7 +681,7 @@ string almTable::toJson(json filter) {
 	}
 	
 	string dataSet = "[";
-	for (map<string, ALARM_INFO*>::iterator it = temp.begin(); it != temp.end(); it++) {
+	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
 		if (jUser != nullptr)
 		{
 			if (!userMng.checkTagPermission(user, it->second->tag))
@@ -725,7 +721,6 @@ string almTable::toJson(json filter) {
 			dataSet +=  it->second->toJson(rootTag);
 	}
 	dataSet += "]";
-	FreeAlarmList(temp);
 	return dataSet;
 }
 
