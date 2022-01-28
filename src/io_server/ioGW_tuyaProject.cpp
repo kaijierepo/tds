@@ -73,7 +73,7 @@ void tuyaProjectInitThread(ioGW_tuyaProject* pGw)
 		}
 
 		//get current status of devices
-		for (auto& it : pGw->m_vecChild)
+		for (auto& it : pGw->m_vecChildDev)
 		{
 			if (it->m_devType.find("tuya") != string::npos)
 			{

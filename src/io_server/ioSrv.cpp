@@ -32,9 +32,9 @@ void IOThread()
 
 	//加载设备配置缓存
 	ioSrv.m_csThis.lock();
-	for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 	{
-		ioDev* pIoDev = ioSrv.m_vecChild[i];
+		ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 		pIoDev->loadConfBuff();
 	}
 	ioSrv.m_csThis.unlock();
@@ -50,9 +50,9 @@ void IOThread()
 			continue;
 
 		ioSrv.m_csThis.lock();
-		for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
-			ioDev* pIoDev = ioSrv.m_vecChild[i];
+			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 			//空闲设备不轮询数据
 			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
 			if(pIoDev->bEnableAcq && pIoDev->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
@@ -69,6 +69,7 @@ void IOThread()
 ioServer::ioServer()
 {
 	m_stopCycleAcq = false;
+	m_devType = IO_DEV_TYPE::SERVER::tds;
 }
 ioServer::~ioServer()
 {
@@ -117,7 +118,6 @@ ioDev* createIODev(string type)
 
 bool ioServer::loadConf()
 {
-	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
 	{
@@ -133,8 +133,10 @@ bool ioServer::loadConf()
 		{
 			ioDev* p = createIODev(it);
 			p->loadConf(it);
-			if(p)
-				m_vecChild.push_back(p);
+			if (p)
+			{
+				ioDev::addChild(p);
+			}
 		}
 	}
 	catch (std::exception& e)
@@ -171,9 +173,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 	if (pd)
 	{
 		pd->loadConf(params);
-		m_csThis.lock();
-		m_vecChild.push_back(pd);
-		m_csThis.unlock();
+		ioDev::addChild(pd);
 		saveConf();
 		rpcResp.result = "\"ok\"";
 		pd->toJson(params);
@@ -190,12 +190,12 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
 	string sNodeId = params["nodeID"].get<string>();
 
 	bool bDeleted = false;
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChild[i];
+		ioDev* p = m_vecChildDev[i];
 		if (p->m_confNodeId == sNodeId)
 		{
-			m_vecChild.erase(m_vecChild.begin() + i);
+			m_vecChildDev.erase(m_vecChildDev.begin() + i);
 			delete p;
 			bDeleted = true;
 			break;
@@ -221,9 +221,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
 	ioDev* p = NULL;
 
 	m_csThis.lock();
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		p = m_vecChild[i];
+		p = m_vecChildDev[i];
 		if (p->m_confNodeId == sNodeId)
 		{
 			bFinded = true;
@@ -253,9 +253,9 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp)
 	ioDev* p = NULL;
 
 	m_csThis.lock();
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		p = m_vecChild[i];
+		p = m_vecChildDev[i];
 		if (p->m_confNodeId == sNodeId)
 		{
 			bFinded = true;
@@ -285,9 +285,9 @@ ioDev* ioServer::getIODev(string ioAddr)
 ioDev* ioServer::getIODevByTag(string tag)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChild[i];
+		ioDev* p = m_vecChildDev[i];
 		//备用的设备允许和相同的位号绑定，但是实际没有效果
 		//因为在实际工程当中，可能会删除一台在线的设备变成备用。绑定关系没改
 		//然后将另外一台设备和相同的位号绑定。此处不让那个备用的绑定影响启用的设备。
@@ -304,9 +304,9 @@ ioDev* ioServer::getIODevByTag(string tag)
 void ioServer::updateTag2IOAddrBinding()
 {
 	m_csThis.lock_shared();
-	for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 	{
-		ioDev* p = ioSrv.m_vecChild[i];
+		ioDev* p = ioSrv.m_vecChildDev[i];
 		string ioAddr = p->getIOAddrStr();
 		if (p->m_strTagBind != "")
 		{
@@ -323,11 +323,11 @@ void ioServer::updateTag2IOAddrBinding()
 void ioServer::clear()
 {
 	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		delete m_vecChild[i];
+		delete m_vecChildDev[i];
 	}
-	m_vecChild.clear();
+	m_vecChildDev.clear();
 }
 
 void ioServer::refreshSerialIODev()
@@ -377,7 +377,7 @@ bool ioServer::run()
 	if (loadConf())
 	{
 		std::shared_lock<shared_mutex> lock(m_csThis);
-		for (auto i : m_vecChild)
+		for (auto i : m_vecChildDev)
 		{
 			i->run();
 		}
@@ -403,7 +403,7 @@ bool ioServer::toJson(json& conf, json opt)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis);
 	conf = json::array();//empty array
-	for (auto& i : m_vecChild)
+	for (auto& i : m_vecChildDev)
 	{
 		json j;
 
@@ -438,7 +438,7 @@ bool ioServer::toJson(json& conf, json opt)
 bool ioServer::getStatus(json& conf, string opt)
 {
 	conf = json::array();//empty array
-	for (auto& i : m_vecChild)
+	for (auto& i : m_vecChildDev)
 	{
 		json j;
 		i->getStatus(j, opt);
@@ -476,7 +476,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 	p->m_bOnline = true;
 	logger.logInternal("[ioDev]空闲设备上线，ioAddr=" + p->getIOAddrStr());
-	ioSrv.m_vecChild.push_back(p);
+	ioSrv.addChild(p);
 	json j;
 	p->toJson(j);
 	rpcSrv.notify("devDiscovered", j);
@@ -485,7 +485,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 
 void ioServer::getAllSmartDev(vector<ioDev*>& aryDev)
 {
-	for (auto& it : m_vecChild)
+	for (auto& it : m_vecChildDev)
 	{
 		if (it->m_strTagBind != "" && it->m_level != IO_DEV_LEVEL::channel)
 		{

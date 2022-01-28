@@ -29,9 +29,9 @@ void ioDev_ModbusSlave::DoCycleTask()
 {
 	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
 	{
-		for (int i = 0; i < m_vecChild.size(); i++)
+		for (int i = 0; i < m_vecChildDev.size(); i++)
 		{
-			ioChannel* pC = (ioChannel*)m_vecChild[i];
+			ioChannel* pC = (ioChannel*)m_vecChildDev[i];
 			json jVal = acqModbusReg(pC->m_regType, pC->m_devAddr, pC->m_storageFmt);
 			if (!jVal.is_null())
 				pC->input(jVal);

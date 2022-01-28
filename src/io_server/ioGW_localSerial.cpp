@@ -186,9 +186,9 @@ bool ioGW_LocalSerial::WriteCom(char* buf, int len)
 
 bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 {
-	for(int i = 0;i<m_vecChild.size();i++)
+	for(int i = 0;i<m_vecChildDev.size();i++)
 	{
-		m_vecChild.at(i)->OnRecvData(pData,iLen);
+		m_vecChildDev.at(i)->OnRecvData(pData,iLen);
 	}
 
 	if (pTdsSession)

@@ -22,6 +22,7 @@
 #include "mp.h"
 
 #include "logger.h"
+#include "ioSrv.h"
 
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 void sendToCommLog(string s)
@@ -179,7 +180,7 @@ ioDev::~ioDev(void)
 void ioDev::stop()
 {
 	m_bRunning = false;
-	for (auto i : m_vecChild)
+	for (auto i : m_vecChildDev)
 	{
 		i->stop();
 	}
@@ -236,7 +237,7 @@ bool ioDev::toJson(json& conf, json opt)
 	else//默认递归
 	{
 		json children = json::array();
-		for (auto& i : m_vecChild)
+		for (auto& i : m_vecChildDev)
 		{
 			json j;
 			i->toJson(j, opt);
@@ -256,9 +257,9 @@ bool ioDev::getStatus(json& status, string opt)
 
 bool ioDev::getChanStatus(json& statusList)
 {
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChild[i];
+		ioDev* p = m_vecChildDev[i];
 		p->getChanStatus(statusList);
 	}
 
@@ -405,7 +406,7 @@ void ioDev::triggerCycleAcq()
 
 ioDev* ioDev::getIODev(string ioAddr)
 {
-	for (auto& it : m_vecChild)
+	for (auto& it : m_vecChildDev)
 	{
 		if (it->getIOAddrStr() == ioAddr)
 		{
@@ -422,7 +423,7 @@ ioDev* ioDev::getIODev(string ioAddr)
 
 ioDev* ioDev::getIODev(json& ioAddr)
 {
-	for (auto& it : m_vecChild)
+	for (auto& it : m_vecChildDev)
 	{
 		if (it->m_jDevAddr == ioAddr)
 		{
@@ -439,9 +440,9 @@ ioDev* ioDev::getIODev(json& ioAddr)
 vector<ioDev*> ioDev::getChildren(string devType)
 {
 	vector<ioDev*> ary;
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChild[i];
+		ioDev* p = m_vecChildDev[i];
 		if (p->m_devType == devType)
 		{
 			ary.push_back(p);
@@ -465,7 +466,7 @@ string ioDev::getIOAddrStr()
 {
 	string devAddr = getDevAddrStr();
 	ioDev* pParent = m_pParent;
-	while (pParent)
+	while (pParent && pParent->m_devType != IO_DEV_TYPE::SERVER::tds)
 	{
 		devAddr = pParent->getDevAddrStr() + "/" + devAddr;
 		pParent = pParent->m_pParent;
@@ -690,33 +691,35 @@ bool ioDev::loadConfBuff()
 
 bool ioDev::addChild(ioDev* p)
 {
-	m_vecChild.push_back(p);
+	m_csThis.lock();
+	m_vecChildDev.push_back(p);
 	p->m_pParent = this;
 	if (p->m_level == "channel")
 	{
 		m_mapDataChannel[p->m_devAddr] = (ioChannel*)p;
 	}
+	m_csThis.unlock();
 	return true;
 }
 
 void ioDev::deleteChildren()
 {
 	m_mapDataChannel.clear();
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		delete m_vecChild[i];
+		delete m_vecChildDev[i];
 	}
-	m_vecChild.clear();
+	m_vecChildDev.clear();
 }
 
 void ioDev::deleteChild(ioDev* p)
 {
-	for (int i=0;i<m_vecChild.size();i++)
+	for (int i=0;i<m_vecChildDev.size();i++)
 	{
-		ioDev* pTemp = m_vecChild.at(i);
+		ioDev* pTemp = m_vecChildDev.at(i);
 		if (pTemp == p)
 		{
-			m_vecChild.erase(m_vecChild.begin() + i);
+			m_vecChildDev.erase(m_vecChildDev.begin() + i);
 			break;
 		}
 	}
@@ -724,13 +727,13 @@ void ioDev::deleteChild(ioDev* p)
 
 void ioDev::deleteDescendant(ioDev* p)
 {
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* pTemp = m_vecChild.at(i);
+		ioDev* pTemp = m_vecChildDev.at(i);
 		pTemp->deleteDescendant(p);
 		if (pTemp == p)
 		{
-			m_vecChild.erase(m_vecChild.begin() + i);
+			m_vecChildDev.erase(m_vecChildDev.begin() + i);
 			break;
 		}
 	}
@@ -739,9 +742,9 @@ void ioDev::deleteDescendant(ioDev* p)
 
 ioDev* ioDev::getChild(string devAddr)
 {
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChild.at(i);
+		ioDev* p = m_vecChildDev.at(i);
 		if (p->m_devAddr == devAddr)
 			return p;
 	}
@@ -802,18 +805,18 @@ string ioDev::GetCommIP()
 
 void ioDev::SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID)
 {
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		if (m_vecChild.at(i)->m_devAddr == strID)
+		if (m_vecChildDev.at(i)->m_devAddr == strID)
 		{
-			m_vecChild.at(i)->OnRecvData(dataTime, pData, iLen);
+			m_vecChildDev.at(i)->OnRecvData(dataTime, pData, iLen);
 		}
 	}
 }
 
 ioChannel* ioDev::getChanByTag(string tag)
 {
-	for (auto& child : m_vecChild)
+	for (auto& child : m_vecChildDev)
 	{
 		if (child->m_level == "channel")
 		{

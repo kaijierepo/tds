@@ -41,11 +41,9 @@ public:
 
 	//设备发现必须是某个父设备发现了子设备
 	ioDev* onChildDevDiscovered(json childDevAddr, string type);
-
 	ioDiscoverer  ioDiscoverService;
 
 	void getAllSmartDev(vector<ioDev*>& aryDev);
-
 	bool m_stopCycleAcq; //全局周期采集开关，调试时使用，调试时全局关闭周期采集。方便手工发送数据并观察
 };
 

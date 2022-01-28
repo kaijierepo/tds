@@ -75,9 +75,9 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
     else if (sc.method == "ioSrv.triggerAllCycleAcq")
     {
         ioSrv.m_csThis.lock();
-        for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+        for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
         {
-            ioDev* p = ioSrv.m_vecChild[i];
+            ioDev* p = ioSrv.m_vecChildDev[i];
             p->triggerCycleAcq();
         }
         ioSrv.m_csThis.unlock();
@@ -93,9 +93,9 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
             if (p == "*")
             {
                 ioSrv.m_csThis.lock();
-                for (int i = 0; i < ioSrv.m_vecChild.size(); i++)
+                for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
                 {
-                    ioDev* p = ioSrv.m_vecChild[i];
+                    ioDev* p = ioSrv.m_vecChildDev[i];
                     p->m_fAcqInterval = fInterval;
                 }
                 ioSrv.m_csThis.unlock();

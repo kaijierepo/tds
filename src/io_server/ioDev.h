@@ -64,7 +64,7 @@ public:
 	virtual ioDev* getIODev(string ioAddr);
 	virtual ioDev* getIODev(json& ioAddr);
 	vector<ioDev*> getChildren(string devType);
-	vector<ioDev*> m_vecChild;
+	vector<ioDev*> m_vecChildDev;
 	bool addChild(ioDev* p);
 	void deleteChildren();
 	void deleteChild(ioDev* p);

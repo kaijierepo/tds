@@ -59,9 +59,9 @@ bool ioGW_rs485::sendData(char* pData, int iLen)
 
 void ioGW_rs485::DoCycleTask()
 {
-	for (int i = 0; i < m_vecChild.size(); i++)
+	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* pChild = m_vecChild[i];
+		ioDev* pChild = m_vecChildDev[i];
 		pChild->DoCycleTask();
 	}
 }
@@ -73,9 +73,9 @@ bool ioGW_rs485::OnRecvData(char* pData, int iLen )
 	if (m_bEnableIoLog)
 		statisOnRecv(pData, iLen, getIOAddrStr());
 
-	for(int i = 0;i<m_vecChild.size();i++)
+	for(int i = 0;i<m_vecChildDev.size();i++)
 	{
-		m_vecChild.at(i)->OnRecvData(pData,iLen);
+		m_vecChildDev.at(i)->OnRecvData(pData,iLen);
 	}
 
 	if (pTdsSession)

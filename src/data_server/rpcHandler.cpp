@@ -1678,7 +1678,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session
 
 	//仅统计1级设备
 	vector<ioDev*> m_devList;
-	for (auto& i : ioSrv.m_vecChild)
+	for (auto& i : ioSrv.m_vecChildDev)
 	{
 		if (i->m_strTagBind == "")
 			continue;
@@ -2387,7 +2387,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 				json jsubPkt = chanList.at(i);
 				string straddr = jsubPkt["addr"];
 
-				for (auto j : p->m_vecChild)
+				for (auto j : p->m_vecChildDev)
 				{
 					ioChannel* pioChannel = (ioChannel*)j;
 					if (pioChannel->m_devAddr == straddr)

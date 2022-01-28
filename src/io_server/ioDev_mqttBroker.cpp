@@ -57,7 +57,7 @@ ioDev_mqttBroker::~ioDev_mqttBroker()
 {
 #ifdef ENABLE_MQTT
     int rc = 0;
-    for (auto i : m_vecChild)
+    for (auto i : m_vecChildDev)
     {
         ioChannel* p = (ioChannel*)i;
         string strTopic = p->m_addr;
@@ -105,7 +105,7 @@ bool ioDev_mqttBroker::run()
     }
 
 
-    for (auto i : m_vecChild)
+    for (auto i : m_vecChildDev)
     {
         ioChannel* p = (ioChannel*)i;
         string strTopic = p->m_addr;
