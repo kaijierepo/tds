@@ -58,8 +58,10 @@ string database::getPath_dbFile(string strTag,SYSTEMTIME date)
 
 void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
 {
-	string dlPath = getPath_dataFolder(strTag, stTime) + "/" + "db.json";
-	fs::createFolderOfPath(dlPath.c_str());
+	string folderPath = getPath_dataFolder(strTag, stTime);
+	string dlPath = folderPath + "/" + "db.json";
+	if(!fs::fileExist(folderPath))
+		fs::createFolderOfPath(folderPath.c_str());
 	json jDE;
 	jDE["time"] = timeopt::st2str(stTime);
 	jDE["val"] = jData;

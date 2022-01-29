@@ -927,21 +927,18 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	if (method == "getAlarmCurrent")
 	{
 	json jFilter;
-	jFilter["user"] = session.user;
 	jFilter["rootTag"] = params["rootTag"];
-	result = almSrv.getCurrent(jFilter);
+	result = almSrv.rpc_getCurrent(jFilter, session);
 	}
 	else if (method == "getAlarmStatus")
 	{
 	json jFilter;
-	jFilter["user"] = session.user;
-	result = almSrv.getStatus(jFilter);
+	result = almSrv.rpc_getStatus(jFilter, session);
 	}
 	else if (method == "getAlarmUnack")
 	{
 	json jFilter;
-	jFilter["user"] = session.user;
-	result = almSrv.getUnack(jFilter);
+	result = almSrv.rpc_getUnack(jFilter, session);
 	}
 	else if (method == "getAlarmHistory")
 	{
@@ -1727,21 +1724,21 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session
 
 
 	//统计报警
-	json jFilter = nullptr;
+	json querier = nullptr;
 	if (session.user != "")
-		jFilter["user"] = session.user;
+		querier["user"] = session.user;
 	if (rootTag != "")
-		jFilter["rootTag"] = params["rootTag"];
-	string szAlm = almSrv.getStatus(jFilter);
-	json jAlarms = json::parse(szAlm);
+		querier["rootTag"] = params["rootTag"];
+
+	vector<ALARM_INFO*> vecAlarms = almSrv.tableCurrent.query(querier);
 	int iAlarmCount = 0;
 	int iWarnCount = 0;
-	for (int i = 0; i < jAlarms.size(); i++)
+	for (int i = 0; i < vecAlarms.size(); i++)
 	{
-		json& jAlm = jAlarms[i];
-		if (jAlm["level"].get<string>() == "alarm")
+		ALARM_INFO* pai = vecAlarms[i];
+		if (pai->level == "alarm")
 			iAlarmCount++;
-		if (jAlm["level"].get<string>() == "warn")
+		if (pai->level == "warn")
 			iWarnCount++;
 	}
 	json jAlmStatis;

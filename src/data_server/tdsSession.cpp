@@ -123,6 +123,13 @@ void sendToSessionPktSessions(char* p,int len)
 
 void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 {
+    {
+        shared_lock<shared_mutex> lock(csSessionPktSessions);
+        if (sessionPktSessions.size() == 0)
+            return;
+    }
+    
+
     //监视会话的数据包不记录日志
     //if (type == TDS_SESSION_TYPE::sessionPkt ||
     //    type == TDS_SESSION_TYPE::commpkt ||
@@ -161,6 +168,11 @@ void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 
 void TDS_SESSION::statisOnRecv(char* p, int len)
 {
+    {
+        shared_lock<shared_mutex> lock(csSessionPktSessions);
+        if (sessionPktSessions.size() == 0)
+            return;
+    }
     //监视会话的数据包不记录日志
     //if (type == TDS_SESSION_TYPE::sessionPkt ||
     //    type == TDS_SESSION_TYPE::commpkt ||

@@ -321,10 +321,10 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	}
 	
 	//notify to tds client
-	json rtList;
-	json pt = getRTData();
-	rtList.push_back(pt);
-	rpcSrv.notify("rt", rtList);
+	//json rtList;
+	//json pt = getRTData();
+	//rtList.push_back(pt);
+	//rpcSrv.notify("getMpStatus", rtList);
 
 	//save to db
 	bool bNeedSave = false;

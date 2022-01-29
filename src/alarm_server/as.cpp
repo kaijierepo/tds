@@ -355,18 +355,23 @@ void almTable::loadFile(string strFile)
 	}
 }
 
-string almServer::getCurrent(json fitler)
+json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 {
-	//全局报警禁用功能
-	if (!tds->conf->enableGlobalAlarm)
+	//参数种的 rootTag 是 userQueryRootTag 
+	//返回的 querier 中的rootTag是 sysQueryRootTag
+	json querier;
+	if (params["rootTag"] != nullptr)
 	{
-		return "[]";
+		string rootTag = params["rootTag"].get<string>();
+		rootTag = TAG::addRoot(rootTag, session.org);
+		querier["rootTag"] = rootTag;
 	}
 
-	return tableCurrent.toJson(fitler);
+	querier["user"] = session.user;
+	return querier;
 }
 
-string almServer::getStatus(json fitler)
+string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 {
 	//全局报警禁用功能
 	if (!tds->conf->enableGlobalAlarm)
@@ -374,11 +379,12 @@ string almServer::getStatus(json fitler)
 		return "[]";
 	}
 
-	fitler["isRecover"] = false;
-	return tableCurrent.toJson(fitler);
+
+	json querier = rpcReqParams2Querier(params, session);
+	return tableCurrent.toJson(querier);
 }
 
-string almServer::getUnack(json fitler)
+string almServer::rpc_getStatus(json params, RPC_SESSION session)
 {
 	//全局报警禁用功能
 	if (!tds->conf->enableGlobalAlarm)
@@ -386,8 +392,22 @@ string almServer::getUnack(json fitler)
 		return "[]";
 	}
 
-	fitler["isAck"] = false;
-	return tableCurrent.toJson(fitler);
+	json querier = rpcReqParams2Querier(params, session);
+	querier["isRecover"] = false;
+	return tableCurrent.toJson(querier);
+}
+
+string almServer::rpc_getUnack(json params, RPC_SESSION session)
+{
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		return "[]";
+	}
+
+	json querier = rpcReqParams2Querier(params, session);
+	querier["isAck"] = false;
+	return tableCurrent.toJson(querier);
 }
 
 string almServer::rpc_getHistory(json params, RPC_SESSION session)
@@ -603,6 +623,7 @@ void almTable::init(string file)
 
 void almTable::add(ALARM_INFO ai)
 {
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	loadFile(getFilePath(ai.time));
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
@@ -612,6 +633,7 @@ void almTable::add(ALARM_INFO ai)
 
 bool almTable::query(json params, ALARM_INFO& ai)
 {
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	bool bFind = false;
 	ALARM_INFO* p = NULL;
 	string time;
@@ -643,6 +665,7 @@ bool almTable::query(json params, ALARM_INFO& ai)
 }
 void almTable::update(ALARM_INFO ai)
 {
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	map<string, ALARM_INFO*> temp;
 	loadFile(getFilePath(ai.time));
 	ALARM_INFO* p = temp.at(ai.getKey());
@@ -654,58 +677,46 @@ void almTable::update(ALARM_INFO ai)
 }
 void almTable::remove(ALARM_KEY ai)
 {
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	loadFile(getFilePath(ai.time));
 	buff.erase(ai.getKey());
 	saveFile(getFilePath(ai.time),buff);
 }
 
-string almTable::toJson(json filter) {
+vector<ALARM_INFO*> almTable::query(json querier)
+{
+	vector<ALARM_INFO*> dataSet;
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	loadFile(getFilePath());
-	json jUser = nullptr;
-	string user;
+	string user = ""; 
 	string rootTag = "";
-	if (filter.contains("user"))
-	{
-		user = filter["user"].get<string>();
-		jUser = userMng.getUser(user);
-		if (jUser == nullptr)
-			return "[]";
-		rootTag = jUser["org"].get<string>();
-	}
-
-	//请求中的rootTag都是相对于 userRootTag的相对位号。 对于tds客户端，userRootTag都是不可见的。只有tds服务端可见
-	if (filter.contains("rootTag")) 
-	{
-		string relativeTag = filter["rootTag"].get<string>();
-		rootTag = TAG::addRoot(relativeTag, rootTag);
-	}
+	if(querier.contains("user"))
+		user = querier["user"].get<string>();
+	if(querier.contains("rootTag"))
+		rootTag = querier["rootTag"].get<string>();
 	
-	string dataSet = "[";
 	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
-		if (jUser != nullptr)
-		{
-			if (!userMng.checkTagPermission(user, it->second->tag))
-				continue;
-		}
-
+		if (user != "" && !userMng.checkTagPermission(user, it->second->tag))
+			continue;
+		
 		ALARM_INFO* pAi = it->second;
-		if (filter.contains("isAck"))
+		if (querier.contains("isAck"))
 		{
-			bool bAck = filter["isAck"].get<bool>();
+			bool bAck = querier["isAck"].get<bool>();
 			if (bAck != pAi->bAck)
 				continue;
 		}
 
-		if (filter.contains("isRecover"))
+		if (querier.contains("isRecover"))
 		{
-			bool bRecover = filter["isRecover"].get<bool>();
+			bool bRecover = querier["isRecover"].get<bool>();
 			if (bRecover != pAi->bRecover)
 				continue;
 		}
 
-		if (filter.contains("tag"))
+		if (querier.contains("tag"))
 		{
-			string tag = filter["tag"].get<string>();
+			string tag = querier["tag"].get<string>();
 			if (tag != pAi->tag)
 				continue;
 		}
@@ -713,12 +724,21 @@ string almTable::toJson(json filter) {
 
 		if (pAi->tag.find(rootTag) == string::npos)
 			continue;
-		
-		
+
+		dataSet.push_back(it->second);
+	}
+	return dataSet;
+}
+
+string almTable::toJson(json querier) {
+	string rootTag = querier["rootTag"].get<string>();
+	vector<ALARM_INFO*> vec = query(querier);
+	string dataSet = "[";
+	for (auto& it :vec) {
 		if(dataSet !="[")
-			dataSet += "," + it->second->toJson(rootTag);
+			dataSet += "," + it->toJson(rootTag);
 		else
-			dataSet +=  it->second->toJson(rootTag);
+			dataSet +=  it->toJson(rootTag);
 	}
 	dataSet += "]";
 	return dataSet;

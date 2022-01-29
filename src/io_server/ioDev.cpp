@@ -406,17 +406,44 @@ void ioDev::triggerCycleAcq()
 
 ioDev* ioDev::getIODev(string ioAddr)
 {
-	for (auto& it : m_vecChildDev)
+	vector<string> vecNodeName;
+	str::split(vecNodeName, ioAddr, "/");
+
+	ioDev* treeNode = NULL;
+	vector<ioDev*>* vecChildNode = &m_vecChildDev;
+	bool findDev = false;
+	//根据节点的名字，在树型结构上一层层往下找
+	for (int i = 0; i < vecNodeName.size(); i++)
 	{
-		if (it->getIOAddrStr() == ioAddr)
+		string nodeName = vecNodeName[i];
+
+		bool findNode = false;
+		for (auto& it : *vecChildNode)
 		{
-			return it;
+			if (it->getDevAddrStr() == nodeName)
+			{
+				findNode = true;
+				treeNode = it;
+				if (i == vecNodeName.size() - 1)//找到了最后一个节点
+				{
+					findDev = true;
+				}
+				break;
+			}
 		}
 
-		ioDev* p = it->getIODev(ioAddr);
-		if (p)
-			return p;
+		if (findNode)
+		{
+			vecChildNode = &treeNode->m_vecChildDev;
+		}
+		else
+		{
+			break;
+		}
 	}
+
+	if (findDev)
+		return treeNode;
 
 	return nullptr;
 }
@@ -900,6 +927,9 @@ CCanTransparentGateway::CCanTransparentGateway()
 
 void ioDev::statisOnRecv(char* recvData, int len, string addr)
 {
+	if (commpktSessions.size() == 0)
+		return;
+
 	json j;
 	SYSTEMTIME st;
 	GetLocalTime(&st);
@@ -916,6 +946,9 @@ void ioDev::statisOnRecv(char* recvData, int len, string addr)
 
 void ioDev::statisOnSend(char* sendData, int len, string addr)
 {
+	if (commpktSessions.size() == 0)
+		return;
+
 	json j;
 	SYSTEMTIME st;
 	GetLocalTime(&st);

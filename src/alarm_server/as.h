@@ -96,6 +96,8 @@ public:
 //manage 3 data tables
 // status table;  unack table;  history table;
 // encapsulate function of data sync with files
+
+
 class almTable{
 public:
 	//bind with disk data file
@@ -106,7 +108,7 @@ public:
 	bool query(json params,ALARM_INFO& ai);
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY ai);
-
+	vector<ALARM_INFO*> query(json filter);
 	string toJson(json filter);
 
 public:
@@ -126,6 +128,7 @@ public:
 	map<string, ALARM_INFO*> buff;
 	string buffFilePath;
 	bool bOneFilePerMonth;
+	shared_mutex m_csTable;
 };
 
 
@@ -140,7 +143,8 @@ public:
 //报警恢复和报警确认接口
 	void recover(ALARM_KEY& key);
 	void rpc_acknowledge(ALARM_KEY& key,string ackInfo,RPC_SESSION session);
-//query alarm data
+	json rpcReqParams2Querier(json& params, RPC_SESSION session);
+	//query alarm data
 	//过滤器参数
 	/*
 	{
@@ -150,16 +154,13 @@ public:
 		user:null
 	}
 	*/
-	string getCurrent(json filter);//combined list of active status and unack event
-	string getStatus(json filter);
-	string getUnack(json filter);
+	string rpc_getCurrent(json filter,RPC_SESSION session);//combined list of active status and unack event
+	string rpc_getStatus(json filter, RPC_SESSION session);
+	string rpc_getUnack(json filter, RPC_SESSION session);
 	string rpc_getHistory(json params, RPC_SESSION session);
-
-//通知报警状态更新
-
-////TDS RPC
 	string rpc_addEvent(json j);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
+
 public:
 	almServer(void);
 	~almServer(void);

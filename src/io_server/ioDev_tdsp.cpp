@@ -65,23 +65,21 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 	}
 	else if (method == "getAlarmStatus")
 	{
-		json filter;
-		filter["tag"] = m_strTagBind;
-		filter["isRecover"] = false;
-		json jStatusList = json::parse(almSrv.getCurrent(filter));
-
-
+		json querier;
+		querier["tag"] = m_strTagBind;
+		querier["isRecover"] = false;
+		vector<ALARM_INFO*> statusList = almSrv.tableCurrent.query(querier);
 
 		//当前有的报警，新的里面没有的，消除
-		for (int i = 0; i < jStatusList.size(); i++)
+		for (int i = 0; i < statusList.size(); i++)
 		{
-			json jStatus = jStatusList[i];
+			ALARM_INFO* pai  = statusList[i];
 
 			bool bIsAlarm = false;
 			for (int j = 0; j < rlt.size(); j++)
 			{
 				json jAlm = rlt[j];
-				if (jAlm["type"].get<string>() == jStatus["type"].get<string>())
+				if (jAlm["type"].get<string>() == pai->type)
 				{
 					bIsAlarm = true;
 				}
@@ -91,7 +89,7 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 			{
 				ALARM_INFO aiStatus;
 				aiStatus.tag = m_strTagBind;
-				aiStatus.type = jStatus["type"].get<string>();
+				aiStatus.type = pai->type;
 				aiStatus.level = ALARM_LEVEL::normal;
 				almSrv.Update(aiStatus);
 			}

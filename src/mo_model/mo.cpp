@@ -301,17 +301,22 @@ void MO::GetMOByTag(std::vector<MO*>* tagVec, string strTag)
 
 		MO* toQuery = NULL;
 		std::vector<MO*>* childMO = &m_childMO;
+		bool findMO = false;
 		for (int i = 0; i < vecNames.size(); i++)
 		{
 			string name = vecNames[i];
 			bool findNode = false;
-			for (int i = 0; i < childMO->size(); i++)
+			for (int j = 0; j < childMO->size(); j++)
 			{
-				MO* tmp = childMO->at(i);
+				MO* tmp = childMO->at(j);
 				if (tmp->m_strName == name)
 				{
 					toQuery = tmp;
 					findNode = true;
+					if (i == vecNames.size() - 1)
+					{
+						findMO = true;
+					}
 					break;
 				}
 			}
@@ -326,7 +331,7 @@ void MO::GetMOByTag(std::vector<MO*>* tagVec, string strTag)
 			}
 		}
 
-		if (toQuery)
+		if (findMO)
 			tagVec->push_back(toQuery);
 	}
 	else //通配符匹配
