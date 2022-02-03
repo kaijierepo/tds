@@ -68,7 +68,7 @@ bool project::loadConf()
 	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->projectConfPath + "/mo.json", conf))
 	{
-		LOG("[项目配置  ] 未找到配置，打开空项目。路径:" + tds->conf->projectConfPath);
+		LOG("[warn][项目配置  ] 未找到配置，打开空项目。路径:" + tds->conf->projectConfPath);
 		m_strName = "empty project";
 		return true;
 	}
