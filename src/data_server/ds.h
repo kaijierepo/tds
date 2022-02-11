@@ -44,12 +44,13 @@ public:
 	string getRDSPage();
 
 public:
-	bool run();
+	bool runAsCloud();
+	bool runAsEdge();
 	void stop();
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
-	tcpSrv* m_tcpSrv_IOSrv;
+	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
 	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
 

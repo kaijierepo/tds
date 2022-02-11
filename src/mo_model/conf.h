@@ -30,6 +30,9 @@ public:
 	tdsConfig();
 	void loadConf();
 	json toJson();
+	
+	bool checkKey(string toCheck, string key);
+	string normalizationKey(string key);
 
 	string getDefaultConfFile();
 

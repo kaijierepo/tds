@@ -221,6 +221,11 @@ struct iTDSConf {
 
 	int tcpKeepAliveIO;
 	int tcpKeepAliveDS;
+
+	bool edge; //tds edge gateway mode
+	string cloudIP;
+	int cloudPort;
+	string deviceID;
 };
 
 

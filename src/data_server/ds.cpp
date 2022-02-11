@@ -283,6 +283,18 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 	}
 }
 
+void tdsEdgeRegisterThread(std::shared_ptr<TDS_SESSION> p)
+{
+	Sleep(1000);
+	//向服务器发送注册包
+	json j;
+	j["method"] = "devRegister";
+	j["ioAddr"] = tds->conf->deviceID;
+
+	string s = j.dump() + "\n\n";
+	p->send((char*)s.c_str(), s.length());
+}
+
 void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
 	if (bIsConn)
@@ -298,6 +310,14 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
 		m_mutexTdsSessionList.unlock();
+
+		//作为tdsEdge连接上了服务器
+		if (connInfo->tcpClt == m_tcpCltEdge)
+		{
+			LOG("[边缘网关]连接tds服务器成功");
+			thread t(tdsEdgeRegisterThread,p);
+			t.detach();
+		}
 	}
 	else
 	{
@@ -502,7 +522,7 @@ void httpSrvThread()
 }
 
 
-bool dataServer::run()
+bool dataServer::runAsCloud()
 {
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
@@ -539,28 +559,28 @@ bool dataServer::run()
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
-	//io服务 665
-	m_tcpSrv_IOSrv = new tcpSrv();
-	m_tcpSrv_IOSrv->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_IOSrv->run(this, tds->conf->ioServerPort))
-	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 使用设备通信协议访问");
-	}
-	else
-	{
-		LOG("[keyinfo][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
-	}
-
-	userMng.loadConf();
-
-	thread t(activeSessionThread);
-	t.detach();
-
 	//http服务 667
 	thread t2(httpSrvThread);
 	t2.detach();
 
+	userMng.loadConf();
+
+	thread t(activeSessionThread);//主要用于io设备通过tcp中转而非直接连接的情况
+	t.detach();
+
 	return  1;
+}
+
+bool dataServer::runAsEdge()
+{
+	//tdsEdge连接
+	if (tds->conf->edge)
+	{
+		m_tcpCltEdge = new tcpClt();
+		m_tcpCltEdge->Run(this, tds->conf->cloudIP, tds->conf->cloudPort);
+		LOG("[keyinfo][边缘网关模式] 云服务器地址:%s:%d", tds->conf->cloudIP.c_str(), tds->conf->cloudPort);
+	}
+	return false;
 }
 
 void dataServer::stop()

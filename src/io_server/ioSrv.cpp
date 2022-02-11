@@ -22,6 +22,7 @@
 #include "ioDev_genicam.h"
 
 #include "rpcHandler.h"
+#include "ds.h"
 
 ioServer ioSrv;
 
@@ -404,7 +405,7 @@ void ioServer::refreshSerialIODev()
 	}
 }
 
-bool ioServer::run()
+bool ioServer::runAsCloud()
 {
 	m_bRunning = true;
 
@@ -420,10 +421,41 @@ bool ioServer::run()
 	}
 
 	ioDiscoverService.run();
-
 	refreshSerialIODev();
+
+	//io服务 665
+	m_tcpSrv_IOSrv = new tcpSrv();
+	m_tcpSrv_IOSrv->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_IOSrv->run(&ds, tds->conf->ioServerPort))
+	{
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 使用设备通信协议访问");
+	}
+	else
+	{
+		LOG("[keyinfo][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
+	}
 	
 	return true;
+}
+
+bool ioServer::runAsEdge()
+{
+	m_bRunning = true;
+
+	if (loadConf())
+	{
+		std::shared_lock<shared_mutex> lock(m_csThis);
+		for (auto i : m_vecChildDev)
+		{
+			i->run();
+		}
+		std::thread io(IOThread);
+		io.detach();
+	}
+
+	ioDiscoverService.run();
+	refreshSerialIODev();
+	return false;
 }
 
 void ioServer::stop()

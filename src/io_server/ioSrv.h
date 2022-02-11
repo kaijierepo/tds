@@ -15,6 +15,8 @@ public:
 	ioServer();
 	virtual ~ioServer();
 
+	tcpSrv* m_tcpSrv_IOSrv;
+
 	bool loadConf();
 	void saveConf();
 
@@ -33,7 +35,8 @@ public:
 	//bool loadStatus();
 	//void saveStatus();
 	void refreshSerialIODev();
-	bool run() override;
+	bool runAsCloud();
+	bool runAsEdge();
 	void stop() override;
 	bool toJson(json& conf, json opt = nullptr);
 	bool getStatus(json& conf, string opt = "");

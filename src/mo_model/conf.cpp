@@ -67,11 +67,7 @@ void tdsConfig::loadConf()
 			tci.key = ci.substr(0, pos);
 			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
-			//支持camelCase,下划线命名等多种命名方法
 			tci.key = str::trim(tci.key, " ");
-			str::removeChar(tci.key, '_');
-			str::removeChar(tci.key, '-');
-			tci.key = _strlwr((char*)tci.key.c_str());
 			tci.val = str::trim(tci.val, " ");
 			tci.val = str::trim(tci.val, "\r");
 			vecConf.push_back(tci);
@@ -86,91 +82,106 @@ void tdsConfig::loadConf()
 			projectConfPath = tci.val;
 			projectConfPath = fs::toAbsolutePath(projectConfPath);
 		}
-		else if (tci.key == "tcpkeepaliveio")
+		else if (checkKey(tci.key,"tcpkeepaliveio"))
 			tcpKeepAliveIO = atoi(tci.val.c_str());
-		else if (tci.key == "tcpkeepaliveds")
+		else if (checkKey(tci.key , "tcpkeepaliveds"))
 			tcpKeepAliveDS = atoi(tci.val.c_str());
-		else if (tci.key == "port" && port == 0)
+		else if (checkKey(tci.key , "port") && port == 0)
 			port = atoi(tci.val.c_str());
-		else if (tci.key == "httpport" && httpPort == 0)
+		else if (checkKey(tci.key , "httpport") && httpPort == 0)
 			httpPort = atoi(tci.val.c_str());
-		else if (tci.key == "ioserverport" && ioServerPort == 0)
+		else if (checkKey(tci.key , "ioserverport") && ioServerPort == 0)
 			ioServerPort = atoi(tci.val.c_str());
-		else if (tci.key == "devreboottime")
+		else if (checkKey(tci.key , "devreboottime"))
 			devRebootTime = atoi(tci.val.c_str());
-		else if (tci.key == "devcommreboottime")
+		else if (checkKey(tci.key , "devcommreboottime"))
 			devCommRebootTime = atoi(tci.val.c_str());
-		else if (tci.key == "ui" && uiMode == "")
+		else if (checkKey(tci.key , "ui") && uiMode == "")
 			uiMode = tci.val;
-		else if ((tci.key == "loglevel") && logLevel == "")
+		else if ((checkKey(tci.key , "loglevel")) && logLevel == "")
 			logLevel = tci.val;
-		else if (tci.key == "title" && title == "")
+		else if (checkKey(tci.key , "title") && title == "")
 			title = tci.val;
-		else if (tci.key == "homepage" && homepage == "")
+		else if (checkKey(tci.key , "homepage") && homepage == "")
 			homepage = tci.val;
-		else if (tci.key == "singlegenicamhost")
+		else if (checkKey(tci.key , "singlegenicamhost"))
 			singleGenicamHost = tci.val == "1" ? true : false;
-		else if (tci.key == "authdownload")
+		else if (checkKey(tci.key , "authdownload"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				authDownload = true;
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
 		}
-		else if (tci.key == "enablelog")
+		else if (checkKey(tci.key , "enablelog"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableLog = true;
 			else if(tci.val == "false" || tci.val == "0")
 				enableLog = false;
 		}
-		else if (tci.key == "enabledevreboot")
+		else if (checkKey(tci.key , "enabledevreboot"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDevReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevReboot = false;
 		}
-		else if (tci.key == "enabledevcommreboot")
+		else if (checkKey(tci.key , "enabledevcommreboot"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDevCommReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevCommReboot = false;
 		}
-		else if (tci.key == "enabledb")
+		else if (checkKey(tci.key , "enabledb"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDB = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDB = false;
 		}
-		else if (tci.key == "enableaccessctrl")
+		else if (checkKey(tci.key ,"enableaccessctrl"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableAccessCtrl = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableAccessCtrl = false;
 		}
-		else if (tci.key == "enablescript")
+		else if (checkKey(tci.key ,"enablescript"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableScript = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableScript = false;
 		}
-		else if (tci.key == "enableglobalalarm")
+		else if (checkKey(tci.key, "enableglobalalarm"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableGlobalAlarm = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableGlobalAlarm = false;
 		}
-		else if (tci.key == "uiTitle")
+		else if (checkKey(tci.key, "edge"))
 		{
-			uiTitle = tci.val;
+			if (tci.val == "true" || tci.val == "1")
+				edge = true;
+			else if (tci.val == "false" || tci.val == "0")
+				edge = false;
 		}
-		else if (tci.key == "fullscreen")
+		else if (checkKey(tci.key,"cloudIP"))
+		{
+			cloudIP = tci.val;
+		}
+		else if (checkKey(tci.key,"deviceID"))
+		{
+			deviceID = tci.val;
+		}
+		else if (checkKey(tci.key,"cloudPort"))
+		{
+			cloudPort = atoi(tci.val.c_str());
+		}
+		else if (checkKey(tci.key,"fullscreen"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				fullscreen = true;
@@ -239,6 +250,23 @@ json tdsConfig::toJson()
 	conf["tcpKeepAliveDS"] = tcpKeepAliveDS;
 
 	return conf;
+}
+
+bool tdsConfig::checkKey(string toCheck, string key)
+{
+	toCheck = normalizationKey(toCheck);
+	key = normalizationKey(key);
+	if (toCheck == key)
+		return true;
+	return false;
+}
+
+string tdsConfig::normalizationKey(string key)
+{
+	str::removeChar(key, '_');
+	str::removeChar(key, '-');
+	key = _strlwr((char*)key.c_str());
+	return key;
 }
 
 string tdsConfig::getDefaultConfFile()

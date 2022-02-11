@@ -55,6 +55,7 @@ public:
 	DWORD m_currentDevId;
 	vector<AUDIO_INFO> m_audioList;
 	AUDIO_INFO m_currentPlay;
+	bool m_paused;
 };
 
 extern AudioPlayer audioPlayer;

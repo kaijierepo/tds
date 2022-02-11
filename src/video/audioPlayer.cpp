@@ -83,8 +83,8 @@ void audioPlayerThread()
 Mci::Mci()
 {
 	HINSTANCE hins = LoadLibraryA("winmm.dll");
-	mciSendStr = (w32mciSendStr)GetProcAddress(hins, "mciSendStringA");
-	mciSendCmd = (w32mciSendCmd)GetProcAddress(hins, "mciSendCommandA");
+	mciSendStr = (w32mciSendStr)GetProcAddress(hins, "mciSendStringW");
+	mciSendCmd = (w32mciSendCmd)GetProcAddress(hins, "mciSendCommandW");
 	wmcierror = (w32mcierror)GetProcAddress(hins, "mciGetErrorStringA");
 }
 Mci::~Mci()
@@ -131,6 +131,7 @@ AudioPlayer audioPlayer;
 AudioPlayer::AudioPlayer()
 {
 	m_currentDevId = 0;
+	m_paused = false;
 }
 AudioPlayer::~AudioPlayer()
 {
@@ -174,9 +175,10 @@ bool AudioPlayer::loadPlayList()
 bool AudioPlayer::getAudioTimeLen(AUDIO_INFO& ai)
 {
 	//打开设备
-	MCI_OPEN_PARMS mciOpen;
+	MCI_OPEN_PARMSW mciOpen;
 	memset(&mciOpen, 0, sizeof(mciOpen));
-	mciOpen.lpstrElementName = ai.filePath.c_str();
+	wstring wpath = charCodec::utf8toUtf16(ai.filePath);
+	mciOpen.lpstrElementName = wpath.c_str();
 	mci.sendCmd(NULL, MCI_OPEN, MCI_OPEN_ELEMENT, (DWORD_PTR)&mciOpen); //发送打开相关设备的命令
 	//检测播放总长度
 	DWORD wDeviceID = mciOpen.wDeviceID; //得到打开的设备的ID
@@ -202,9 +204,10 @@ bool AudioPlayer::play(AUDIO_INFO ai,int start_ms, int end_ms)
 	if (m_currentDevId == 0)
 	{
 		//打开设备
-		MCI_OPEN_PARMS mciOpen;
+		MCI_OPEN_PARMSW mciOpen;
 		memset(&mciOpen, 0, sizeof(mciOpen));
-		mciOpen.lpstrElementName = ai.filePath.c_str();
+		wstring wpath = charCodec::utf8toUtf16(ai.filePath);
+		mciOpen.lpstrElementName = wpath.c_str();
 		if (!mci.sendCmdMsg(NULL, MCI_OPEN, MCI_OPEN_ELEMENT, (DWORD_PTR)&mciOpen)) //发送打开相关设备的命令
 		{
 			return false;
@@ -230,6 +233,8 @@ bool AudioPlayer::play(AUDIO_INFO ai,int start_ms, int end_ms)
 	{
 		return false;
 	}
+	m_paused = false;
+	return true;
 }
 
 bool AudioPlayer::playListItem(int itemIdx, int start_ms, int end_ms)
@@ -264,6 +269,7 @@ bool AudioPlayer::pause()
 	{
 		return false;
 	}
+	m_paused = true;
 	return true;
 }
 bool AudioPlayer::unpause()
@@ -347,6 +353,14 @@ bool AudioPlayer::rpc_getPlayList(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 		json j;
 		j["name"] = ai.filename;
 		j["length"] = (float)ai.length_ms / 1000.0;
+		if (ai.filename == m_currentPlay.filename)
+		{
+			j["playing"] = true;
+			if (m_paused)
+			{
+				j["paused"] = true;
+			}
+		}
 		list.push_back(j);
 	}
 
