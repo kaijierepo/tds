@@ -24,6 +24,7 @@
 #include "logServer/logServer.h"
 #include "ioDev_tdsp.h"
 #include "xiaot/scriptHost.h"
+#include "audioPlayer.h"
 
 rpcHandler rpcSrv;
 
@@ -773,6 +774,49 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
+bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "audioPlayer.play")
+	{
+		//audioPlayer.test();
+		audioPlayer.playListItem(0);
+	}
+	else if("audioPlayer.pause")
+	{
+		audioPlayer.pause();
+	}
+	else if ("audioPlayer.unpause")
+	{
+		audioPlayer.unpause();
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
+
+bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method.find("gamepad")!= string::npos)
+	{
+		json p;
+		p["user"] = session.user;
+		rpcSrv.notify(method, p);
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
+
 bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -1070,7 +1114,14 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 	}
 	
-
+	if (handleMethodCall_gamePad(method, params, rpcResp, session))
+	{
+		return true;
+	}
+	if (handleMethodCall_audioPlayer(method, params, rpcResp, session))
+	{
+		return true;
+	}
 	if (handleMethodCall_MoMng(method, params, rpcResp, session))
 	{
 		return true;

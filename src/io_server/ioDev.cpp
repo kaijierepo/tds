@@ -193,6 +193,7 @@ void ioDev::stop()
 bool ioDev::toJson(json& conf, json opt)
 {
 	//配置数据
+	conf["addrMode"] = m_addrMode;
 	conf["addr"] = m_jDevAddr;
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
@@ -270,6 +271,13 @@ bool ioDev::loadConf(json& conf)
 {
 	if(conf.contains("typeLabel"))
 		m_devTypeLabel = conf["typeLabel"].get<string>();
+
+	if (conf.contains("addrMode"))
+	{
+		m_addrMode = conf["addrMode"].get<string>();
+	}
+	else
+		m_addrMode = DEV_ADDR_MODE::deviceID;
 
 	if (conf.contains("addr"))
 	{

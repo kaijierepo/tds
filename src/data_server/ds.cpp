@@ -420,27 +420,16 @@ void activeSessionThread()
 
 void httpSrvThread()
 {
-	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort) + " 本机浏览器 http://localhost:667 访问软件用户界面");
-	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
-}
-
-
-bool dataServer::run()
-{
-	m_tcpSrv = new tcpSrv();
-	m_wspSrv.m_pTcpServer = m_tcpSrv;
-	
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	initHttpSrv(httpSrv);
-	
 
 	//基于tds的二次开发，ui根目录位于此
 	//并且将tds的app目录放置在该目录下
-	string customUI = fs::appPath() + "/ui"; 
+	string customUI = fs::appPath() + "/ui";
 	if (fs::fileExist(customUI))
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
-		httpSrv.set_mount_point("/", + asc_customUI.c_str());
+		httpSrv.set_mount_point("/", +asc_customUI.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
 	}
 
@@ -451,6 +440,15 @@ bool dataServer::run()
 		string asc_prjUI = charCodec::utf8toAnsi(uiApps);
 		httpSrv.set_mount_point("/", asc_prjUI.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
+	}
+
+	//默认将程序运行路径作为根目录
+	string tdsPath = fs::appPath();
+	if (fs::fileExist(tdsPath))
+	{
+		string asc_tdsPath = charCodec::utf8toAnsi(tdsPath);
+		httpSrv.set_mount_point("/", asc_tdsPath.c_str());
+		LOG("[keyinfo][HTTP服务器] 根目录: " + tdsPath);
 	}
 
 	//serve db files through http
@@ -472,7 +470,7 @@ bool dataServer::run()
 	}
 	else
 	{
-		LOG("[keyinfo][配置    ] 路径 " + tds->conf->projectConfPath);
+		LOG("[keyinfo][HTTP服务器] 根目录: " + tds->conf->projectConfPath);
 	}
 
 
@@ -498,7 +496,18 @@ bool dataServer::run()
 	httpSrv.set_file_extension_and_mimetype_mapping("md", "application/octet-stream");
 	httpSrv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
 	httpSrv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
+
+	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort) + " 本机浏览器 http://localhost:667 访问软件用户界面");
+	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
+}
+
+
+bool dataServer::run()
+{
+	m_tcpSrv = new tcpSrv();
+	m_wspSrv.m_pTcpServer = m_tcpSrv;
 	
+	//tds websocket服务 666
 	string strName;
 	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = tds->conf->tcpKeepAliveDS;
@@ -530,7 +539,7 @@ bool dataServer::run()
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 
-
+	//io服务 665
 	m_tcpSrv_IOSrv = new tcpSrv();
 	m_tcpSrv_IOSrv->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_IOSrv->run(this, tds->conf->ioServerPort))
@@ -547,7 +556,7 @@ bool dataServer::run()
 	thread t(activeSessionThread);
 	t.detach();
 
-
+	//http服务 667
 	thread t2(httpSrvThread);
 	t2.detach();
 

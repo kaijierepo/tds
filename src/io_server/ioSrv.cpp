@@ -110,6 +110,15 @@ ioDev* createIODev(string type)
 	{
 		p = new ioGW_LocalSerial();
 	}
+	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
+	{
+		p = new ioGW_rs485();
+	}
+	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
+	{
+		p = new ioDev_ModbusSlave();
+	}
+
 	p->m_confNodeId = common::guid();
 	return p;
 }
@@ -167,6 +176,17 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 	if (!params.contains("nodeID"))
 	{
 		params["nodeID"] = common::guid();
+	}
+
+	ioDev* parentDev = this;
+	if (params["parentID"] != nullptr) {
+		string parentID = params["parentID"].get<string>();
+		parentDev = getIODevByNodeID(parentID);
+	}
+	if (parentDev == NULL)
+	{
+		rpcResp.error = "device type not supported, type:" + type;
+		return;
 	}
 
 	ioDev* pd = createIODev(type);
@@ -294,6 +314,20 @@ ioDev* ioServer::getIODevByTag(string tag)
 		if (p->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
 			continue;
 		if (p->m_strTagBind == tag)
+		{
+			return p;
+		}
+	}
+	return nullptr;
+}
+
+ioDev* ioServer::getIODevByNodeID(string nodeID)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		if (p->m_confNodeId == nodeID)
 		{
 			return p;
 		}
@@ -468,7 +502,6 @@ string ioServer::getTag(string strDataChannelID)
 
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
-	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
 	ioDev* p = createIODev(type);
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())

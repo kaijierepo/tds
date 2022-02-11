@@ -47,6 +47,7 @@ SOFTWARE.
 #include "data_server/db.h"
 #include "tools/tdsWatchDog.h"
 #include "tools/shellServer.h"
+#include "video/audioPlayer.h"
 
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
@@ -372,6 +373,7 @@ bool TDS_imp::run(string cmdline)
 	sHost.run();
 
 	shellSrv.run();
+	audioPlayer.run();
 
 	//create browser window
 	if (conf->uiMode == "miniblink")
