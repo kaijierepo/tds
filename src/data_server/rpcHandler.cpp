@@ -781,16 +781,23 @@ bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_R
 	bool bHandled = true;
 	if (method == "audioPlayer.play")
 	{
-		//audioPlayer.test();
-		audioPlayer.playListItem(0);
+		audioPlayer.rpc_play(params, rpcResp, session);
 	}
-	else if("audioPlayer.pause")
+	else if(method == "audioPlayer.pause")
 	{
 		audioPlayer.pause();
 	}
-	else if ("audioPlayer.unpause")
+	else if (method == "audioPlayer.stop")
+	{
+		audioPlayer.stop();
+	}
+	else if (method == "audioPlayer.unpause")
 	{
 		audioPlayer.unpause();
+	}
+	else if (method == "audioPlayer.getPlayList")
+	{
+		audioPlayer.rpc_getPlayList(params, rpcResp, session);
 	}
 	else
 	{
