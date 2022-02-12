@@ -59,10 +59,7 @@ CDumpCatch g_dumpCatch;//全局虽然未使用但不能删除
 string InterfaceEncoding = "utf8";
 
 string version = "v1.0";
-inline string getVersion() {
-	string s = version + "." + SVN_VERSION;
-	return s;
-}
+
 
 TDS_imp tdsImp; //tds instance;
 iTDS* tds = &tdsImp;
@@ -495,6 +492,11 @@ bool TDS_imp::connectDev(string ioAddr)
 	return false;
 }
 
+string TDS_imp::getVersion() {
+	string s = version + "." + SVN_VERSION;
+	return s;
+}
+
 bool TDS_imp::isOnline(string ioAddr)
 {
 	ioDev* d = ioSrv.getIODev(ioAddr);
@@ -704,7 +706,7 @@ LONG WINAPI CDumpCatch::UnhandledExceptionFilterEx(struct _EXCEPTION_POINTERS* p
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);
 	
-	string strFile = str::format("%s %4d.%02d.%02d %02d-%02d-%02d.dmp",getVersion().c_str(), stNow.wYear, stNow.wMonth, stNow.wDay, stNow.wHour, stNow.wMinute, stNow.wSecond);
+	string strFile = str::format("%s %4d.%02d.%02d %02d-%02d-%02d.dmp",tds->getVersion().c_str(), stNow.wYear, stNow.wMonth, stNow.wDay, stNow.wHour, stNow.wMinute, stNow.wSecond);
 	strFile = strPath + "\\" + strFile;
 	BOOL bRelease = ReleaseDumpFile(strFile.c_str(), pException);
 

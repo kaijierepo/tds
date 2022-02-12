@@ -806,6 +806,28 @@ bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_R
 	return bHandled;
 }
 
+bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	string& result = rpcResp.result;
+	string& error = rpcResp.error;
+	bool bHandled = true;
+	if (method == "getDevInfo")
+	{
+		json p;
+		p["softVer"] = tds->getVersion();
+		p["hardVer"] = "v1.0";
+		p["deviceId"] = tds->conf->deviceID;
+		p["deviceType"] = "TDS-Edge智能边缘网关";
+
+		result = p.dump();
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
+
 bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -1121,6 +1143,11 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 	}
 	
+
+	if (handleMethodCall_edgeDev(method, params, rpcResp, session))
+	{
+		return true;
+	}
 	if (handleMethodCall_gamePad(method, params, rpcResp, session))
 	{
 		return true;
@@ -1204,10 +1231,6 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 	if (method == "devRegister")
 	{
 		string strIoAddr = jReq["ioAddr"].get<string>();
-
-		//硕放机场项目，由于设备通电会发一个固定imei的包，为防止该imei上线，忽略该包
-		//if (strIoAddr == "861714058021670")
-		//	return true;
 
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
@@ -1321,6 +1344,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	RPC_RESP rpcResp;
 	string method = "";
 	json id = nullptr;
+	json clientId = nullptr;
 	bool bGB2312 = false;
 
 	strReq = str::trim(strReq);
@@ -1358,6 +1382,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		if (jReq.contains("params"))
 			params = jReq["params"];
 		id = jReq["id"];
+		clientId = jReq["clientId"]; //tds edge模式使用
 		pSession->lastMethodCalled = method;
 			
 		//对部分命令日志记录
@@ -1388,8 +1413,12 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		}
 
 		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
-		if (handleDevRpcDispatch(strReq,jReq, pSession))
-			return;
+		if (!tds->conf->edge) //tds edge模式无需转发
+		{
+			if (handleDevRpcDispatch(strReq, jReq, pSession))
+				return;
+		}
+		
 
 
 		//访问控制
@@ -1502,11 +1531,30 @@ HANDLE_END:
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (rpcResp.error != "")
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump() + "}";
+		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
+		if (tds->conf->edge)
+		{
+			strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
+			if (clientId != nullptr)
+			{
+				strResp += ",\"clientId\":" +  clientId.dump();
+			}
+		}
+		strResp += "}\n\n";
 	}
 	else if (rpcResp.result != "")
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result + "}";
+		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result;
+		if (tds->conf->edge)
+		{
+			strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
+			if (clientId != nullptr)
+			{
+				strResp += ",\"clientId\":" + clientId.dump();
+			}
+		}
+		strResp += "}\n\n";
+
 
 		if (method == "fs.readFile")
 		{

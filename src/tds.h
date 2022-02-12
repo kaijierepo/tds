@@ -262,7 +262,7 @@ public:
 //interface of TDS
 class iTDS {
 public:
-	virtual string getVer() = 0;
+	virtual string getVersion() = 0;
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;

@@ -238,7 +238,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 						"id": 1
 					}
 
-				)s";
+)s";
 
 				p->send((char*)req.c_str(), req.length());
 			}

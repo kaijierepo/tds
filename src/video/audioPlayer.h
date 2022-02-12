@@ -48,6 +48,8 @@ public:
 	bool unpause();
 	bool test();
 
+	AUDIO_INFO* getAudioInfo(string name);
+
 	bool rpc_play(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getPlayList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 

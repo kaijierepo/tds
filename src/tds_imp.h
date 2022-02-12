@@ -35,11 +35,6 @@ class TDS_imp : public iTDS {
 public:
 	TDS_imp();
 
-
-	string getVer() {
-		return "1.0.0";
-	}
-
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
 	bool setWorkingDir();
@@ -59,6 +54,7 @@ public:
 	 bool enableIoLog(string ioAddr, bool bEnable);
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
 	 bool connectDev(string ioAddr);
+	 string getVersion() override;
 	 bool isOnline(string ioAddr);
 	 bool isConnected(string ioAddr);
 	 bool isInUse(string ioAddr);

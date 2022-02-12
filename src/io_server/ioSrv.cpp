@@ -432,7 +432,7 @@ bool ioServer::runAsCloud()
 	}
 	else
 	{
-		LOG("[keyinfo][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
 	}
 	
 	return true;
@@ -538,6 +538,13 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())
 		p->m_devAddr = p->m_jDevAddr.get<string>();
+	else if (childDevAddr.is_object())
+	{
+		if (childDevAddr.contains("id"))
+		{
+			p->m_addrMode = DEV_ADDR_MODE::deviceID;
+		}
+	}
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 	p->m_bOnline = true;
 	logger.logInternal("[ioDev]空闲设备上线，ioAddr=" + p->getIOAddrStr());

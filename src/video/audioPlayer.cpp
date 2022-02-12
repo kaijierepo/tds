@@ -287,6 +287,21 @@ bool AudioPlayer::test()
 	return false;
 }
 
+AUDIO_INFO* AudioPlayer::getAudioInfo(string name)
+{
+	AUDIO_INFO* pai = NULL;
+	for (int i = 0; i < m_audioList.size(); i++)
+	{
+		AUDIO_INFO& ai = m_audioList[i];
+		if (ai.filename == name)
+		{
+			pai = &ai;
+			break;
+		}
+	}
+	return pai;
+}
+
 bool AudioPlayer::rpc_play(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	int start = 0;
@@ -313,7 +328,18 @@ bool AudioPlayer::rpc_play(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 	}
 	else if (params.contains("name"))
 	{
-
+		string name = params["name"].get<string>();
+		AUDIO_INFO* pai = getAudioInfo(name);
+		if (pai)
+		{
+			ai = *pai;
+		}
+		else
+		{
+			json j = "错误,未找到指定名称的音频," + name;
+			rpcResp.error = j.dump();
+			return true;
+		}
 	}
 	else
 	{

@@ -13,13 +13,26 @@ bool userManager::loadConf()
 
 	string sUsers, sRoles;
 
-	if (!fs::readFile(m_userConfPath, sUsers))
-	{
-		return false;
-	}
+	fs::readFile(m_userConfPath, sUsers);
 	try {
-		if (sUsers != "")
-			m_jUsers = json::parse(sUsers);
+		if (sUsers == "")
+		{
+			sUsers = R"(
+[
+    {
+        "createTime": "2021-10-10 21:11:12",
+        "enable": true,
+        "name": "admin",
+        "org": "",
+        "permission": null,
+        "pwd": "123",
+        "role": "管理员"
+    }
+]
+			)";
+		}
+
+		m_jUsers = json::parse(sUsers);
 
 		std::unique_lock<shared_mutex> lock(m_csUserConf);
 		for (int i = 0; i < m_jUsers.size(); i++)
@@ -38,6 +51,9 @@ bool userManager::loadConf()
 	{
 
 	}
+
+	//如果没有配置，添加一个默认的admin用户，密码123
+
 
 	
 	if (!fs::readFile(m_roleConfPath, sRoles))
