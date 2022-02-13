@@ -49,12 +49,12 @@
       <Configuration>exe - R</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -D mtd|Win32">
-      <Configuration>exe -D mtd</Configuration>
+    <ProjectConfiguration Include="exe -D mtd edge|Win32">
+      <Configuration>exe -D mtd edge</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -D mtd|x64">
-      <Configuration>exe -D mtd</Configuration>
+    <ProjectConfiguration Include="exe -D mtd edge|x64">
+      <Configuration>exe -D mtd edge</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="exe -R mt|Win32">
@@ -80,7 +80,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -120,7 +120,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -176,7 +176,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
@@ -194,7 +194,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
@@ -213,7 +213,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|Win32'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
@@ -232,9 +232,9 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../out</OutDir>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../out-edge</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -276,7 +276,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -372,7 +372,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
@@ -537,18 +537,18 @@
     <ClCompile Include="..\src\common\base64.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
     <ClCompile Include="..\src\common\simdjson.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\src\common\udpSrv.cpp" />
     <ClCompile Include="..\src\common\yyjson.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -583,7 +583,7 @@
     <ClCompile Include="..\src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\shellServer.cpp" />
@@ -596,7 +596,7 @@
     <ClCompile Include="..\src\users\userMng.cpp" />
     <ClCompile Include="..\src\video\audioPlayer.cpp" />
     <ClCompile Include="..\src\video\ioDev_genicam.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='exe -D mtd edge|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
