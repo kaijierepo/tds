@@ -26,11 +26,13 @@ void tcp2com::run()
 	if (m_iDestPort != 0 && m_strDestIp != "")
 	{
 		tcpClt.Run(this, m_strDestIp, m_iDestPort);
+		LOG("启动tcp客户端，服务器地址:%s:%d", m_strDestIp.c_str(), m_iDestPort);
 	}
 
-	serial.setRecvCallback(this,serialRecvCallback);
+	
 	if (serial.OpenCom())
 	{
+		serial.setRecvCallback(this, serialRecvCallback);
 		serial.run();
 		LOG("打开串口成功: " + serial.m_portNum);
 		string comParam = "波特率:" + str::fromInt(serial.m_baudRate) + ",";
@@ -42,6 +44,7 @@ void tcp2com::run()
 	else
 	{
 		LOG("打开串口失败: " + serial.m_portNum);
+		getchar();
 		exit(0);
 	}
 }
@@ -70,6 +73,8 @@ void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		LOG("连接Tcp服务成功: " + m_strDestIp + ":" + str::fromInt(m_iDestPort));
+		string s = tds->conf->conf_tcp2com.registerPktStr + "\n\n";
+		tcpClt.SendData((char*)s.c_str(), s.length());
 	}
 	else
 	{

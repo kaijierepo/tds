@@ -530,8 +530,12 @@ string ioDev::getDevAddrStr()
 			}
 		}
 	}
-	else {
+	else if(m_jDevAddr.is_string()){
 		devAddr = m_jDevAddr.get<string>();
+	}
+	else
+	{
+		devAddr = "";
 	}
 	
 	return devAddr;

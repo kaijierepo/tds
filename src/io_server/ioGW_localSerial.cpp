@@ -278,6 +278,7 @@ bool ioGW_LocalSerial::OpenCom(string confPort, int baudRate, int parity, int by
 
 bool ioGW_LocalSerial::OpenCom()
 {
+	m_jDevAddr = m_portNum;
 	m_devAddr = m_portNum;
 	if (m_hCom)
 	{

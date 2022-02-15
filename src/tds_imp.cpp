@@ -323,7 +323,6 @@ bool TDS_imp::run(string cmdline)
 	dogFeeder.run();
 
 	//load tds.json
-	tdsConf.loadConf();
 	logger.m_bEnable = tdsConf.enableLog;
 
 	//初始化接口

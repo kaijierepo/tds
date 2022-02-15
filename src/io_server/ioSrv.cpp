@@ -424,15 +424,29 @@ bool ioServer::runAsCloud()
 	refreshSerialIODev();
 
 	//io服务 665
-	m_tcpSrv_IOSrv = new tcpSrv();
-	m_tcpSrv_IOSrv->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_IOSrv->run(&ds, tds->conf->ioServerPort))
+	m_tcpSrv_tdsp = new tcpSrv();
+	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_tdsp->run(&ds, tds->conf->ioServerPort))
 	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 使用设备通信协议访问");
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 设备通信协议 TDSP");
 	}
 	else
 	{
 		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
+	}
+
+
+	//io服务 664
+	m_tcpSrv_rtu = new tcpSrv();
+	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	int ioSrvPort_rtu = 664;
+	if (m_tcpSrv_tdsp->run(&ds, ioSrvPort_rtu))
+	{
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(ioSrvPort_rtu) + " 设备通信协议 modbus RTU over TCP");
+	}
+	else
+	{
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_rtu));
 	}
 	
 	return true;

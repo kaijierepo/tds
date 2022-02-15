@@ -704,7 +704,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 
 				)s";
 
-		ioSrv.m_tcpSrv_IOSrv->SendData((char*)req.c_str(),req.length());
+		ioSrv.m_tcpSrv_tdsp->SendData((char*)req.c_str(),req.length());
 	}
 	else if (method == "scanChannel" || method == "scanchannel")
 	{

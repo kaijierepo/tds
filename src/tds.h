@@ -172,12 +172,13 @@ namespace TDS_SESSION_TYPE {
 	const string video = "video";
 	const string iodev = "ioDev"; 
 
-	const string tunnel = "tunnel"; 
-	const string websocket2com = "websocket2com";
+	//bridge data interfaces
+	const string bridgeToLocalCom = "bridgeToLocalCom";
 	const string bridgeToiodev = "bridgeToiodev";
 	const string bridgeToTcpClient = "bridgeToTcpClient";
-	const string terminal = "terminal";
 
+	//debug tools
+	const string terminal = "terminal";
 	const string log = "log";
 	const string commpkt = "commpkt"; 
 	const string sessionPkt = "sessionPkt";
@@ -189,8 +190,23 @@ struct ACTIVE_TDS_SESSION {
 	string type;
 };
 
+struct tcp2com_Conf {
+	string mode;
+	string com;
+	int baudRate;
+	int	byteSize;
+	string stopBits; 
+	string parity;
+	string remoteIP; 
+	int remotePort; 
+	int localPort;
+	string registerPktStr;
+	string registerPktHexStr;
+};
+
 
 struct iTDSConf {
+	string mode;
 	int port;
 	int httpPort;
 	int ioServerPort;
@@ -226,6 +242,9 @@ struct iTDSConf {
 	string cloudIP;
 	int cloudPort;
 	string deviceID;
+
+	//tcp2comƒ£ Ω≈‰÷√
+	tcp2com_Conf conf_tcp2com;
 };
 
 

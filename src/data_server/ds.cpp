@@ -224,11 +224,10 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		if (pTcpSession->pTcpServer)
 		{
 			tcpSrv* pts = (tcpSrv*)pTcpSession->pTcpServer;
+			//tdsp协议端口发送请求设备信息命令
 			if (pts->m_iServerPort == tds->conf->ioServerPort)
 			{
-				p->type = "ioDev";
-
-
+				p->type = TDS_SESSION_TYPE::iodev;
 				string req = R"s({
 						"jsonrpc": "2.0",
 						"method": "getDevInfo",
@@ -241,6 +240,10 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 )s";
 
 				p->send((char*)req.c_str(), req.length());
+			}
+			else if (pts->m_iServerPort == 664)
+			{
+				p->type = TDS_SESSION_TYPE::iodev;
 			}
 		}
 
@@ -347,7 +350,8 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 	if (pALC->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
 		WS_FrameType ft = WS_TEXT_FRAME;
-		if (pALC->type == TDS_SESSION_TYPE::tunnel || pALC->type == TDS_SESSION_TYPE::websocket2com)
+		if (pALC->type == TDS_SESSION_TYPE::bridgeToTcpClient 
+			|| pALC->type == TDS_SESSION_TYPE::bridgeToLocalCom)
 		{
 			ft = WS_BINARY_FRAME;
 		}
@@ -742,21 +746,6 @@ shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
 }
 
 
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(DWORD dwThreadId)
-{
-	lock_guard<mutex> g(m_mutexTdsSessionList);
-	for (int i = 0; i < m_vecTdsSession.size(); i++)
-	{
-		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if (p->httpReqHandleThreadID == dwThreadId)
-		{
-			return p;
-		}
-	}
-	return nullptr;
-}
-
-
 shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteIP,int remotePort)
 {
 	lock_guard<mutex> g(m_mutexTdsSessionList);
@@ -998,6 +987,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		else if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
 		{
 			tdsSession->setActivityCheck(false);
+			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
 			tdsSession->bridgedLocalCom = ioAddr;
 			p->pTdsSession = tdsSession;
 		}
@@ -1013,7 +1003,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		int pos1 = strData.find(" ", pos);
 		string portNum = strData.substr(pos, pos1 - pos);
 		ioDev* p = ioSrv.getIODev(portNum);
-		tdsSession->type = TDS_SESSION_TYPE::websocket2com;
+		tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
 		tdsSession->setActivityCheck(false);
 		if (p)
 		{
@@ -1042,7 +1032,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		int pos1 = strData.find(" ", pos);
 		string host = strData.substr(pos + 4, pos1 - (pos + 4));
 		tdsSession->pBridgedTcpClient = new tcpClt();
-		tdsSession->type = TDS_SESSION_TYPE::tunnel;
+		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpClient;
 		tdsSession->setActivityCheck(false);
 		if (tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
 		{

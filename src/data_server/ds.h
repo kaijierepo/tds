@@ -36,7 +36,6 @@ public:
 	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
 	bool httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
-	shared_ptr<TDS_SESSION> getTDSSession(DWORD dwThreadId);
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);

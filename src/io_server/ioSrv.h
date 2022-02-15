@@ -15,7 +15,8 @@ public:
 	ioServer();
 	virtual ~ioServer();
 
-	tcpSrv* m_tcpSrv_IOSrv;
+	tcpSrv* m_tcpSrv_tdsp; //665 tdsp协议
+	tcpSrv* m_tcpSrv_rtu; //664 modbus RTU over tcp协议
 
 	bool loadConf();
 	void saveConf();

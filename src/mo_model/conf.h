@@ -24,17 +24,25 @@ json作为配置文件的缺点
 否则使用默认值
 */
 
+struct TDS_CONF_ITEM {
+	string key;
+	string val;
+};
+
 class tdsConfig : public iTDSConf
 {
 public:
 	tdsConfig();
+	void generateDefaultConfFile(string m);
+	string defaultConf_tcp2com();
+	string defaultConf_tds();
+	void loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf);
+	void loadConf_tds(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf();
 	json toJson();
 	
 	bool checkKey(string toCheck, string key);
 	string normalizationKey(string key);
-
-	string getDefaultConfFile();
 
 	json jsonConf;
 };

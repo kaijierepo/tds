@@ -76,11 +76,9 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
-	string appName = fs::appName();
-
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
-	parser.set_optional<string>("m", "mode", "tds",charCodec::utf8toAnsi(
+	parser.set_optional<string>("m", "mode", "",charCodec::utf8toAnsi(
 "hub: tcp集线器模式，左侧数据将发往右侧所有连接;右侧数据将发往左侧所有连接\r\n\
       示例:  tds -m hub -sl 666 -sr 667\r\n\
    switch: tcp交换机模式\r\n\
@@ -109,10 +107,17 @@ int main(int argc, char** argv)
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
-	string mode = parser.get<string>("m");
+	//确认程序运行模式
+	string mode = fs::appName();
+	string cmdlineMode = parser.get<string>("m");
+	if (cmdlineMode != "")
+		mode = cmdlineMode;
 
+	//根据模式差异化加载配置
+	tdsImp.tdsConf.mode = mode;
+	tdsImp.tdsConf.loadConf();
 
-	if (appName == "watchDog" || appName == "wd" || appName == "dog")
+	if (mode == "watchDog" || mode == "wd" || mode == "dog")
 	{
 		watchDog.run();
 	}
@@ -163,21 +168,14 @@ int main(int argc, char** argv)
 	else if (mode == "tcp2com")
 	{
 		tcp2com* t2c =  new tcp2com();
-		string tcpc = parser.get<string>("tcpc");
-		string tcpc_ip;
-		int tcpc_port;
-		if (!str::parseIpPort(tcpc, tcpc_ip, tcpc_port))
-		{
-			LOG("参数错误");
-			return 0;
-		}
-		t2c->m_strDestIp = tcpc_ip;
-		t2c->m_iDestPort = tcpc_port;
-		t2c->serial.m_baudRate = parser.get<int>("baudRate");
-		t2c->serial.m_parity = parser.get<string>("parity");
-		t2c->serial.m_byteSize = parser.get<int>("byteSize");
-		t2c->serial.m_stopBits = parser.get<string>("stopBits");
-		t2c->serial.m_portNum = parser.get<string>("com");
+		tcp2com_Conf& conf = tds->conf->conf_tcp2com;
+		t2c->m_strDestIp = conf.remoteIP;
+		t2c->m_iDestPort = conf.remotePort;
+		t2c->serial.m_baudRate = conf.baudRate;
+		t2c->serial.m_parity = conf.parity;
+		t2c->serial.m_byteSize = conf.byteSize;
+		t2c->serial.m_stopBits = conf.stopBits;
+		t2c->serial.m_portNum = conf.com;
 		t2c->run();
 	}
 	else
