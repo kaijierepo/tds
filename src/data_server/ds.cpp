@@ -228,7 +228,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			if (pts->m_iServerPort == tds->conf->ioServerPort)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
-				p->iALProto = APP_LAYER_PROTO::TDSP;
+				p->iALProto = APP_LAYER_PROTO::TDSRPC;
 				string req = R"s({
 						"jsonrpc": "2.0",
 						"method": "getDevInfo",
@@ -1465,11 +1465,6 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 				tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
 				tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
 			}
-			//tdsRPC协议
-			else
-			{
-				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
-			}
 		}
 
 		//应用层协议处理
@@ -1482,11 +1477,11 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
-		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSP)
+		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::TDSP))
+			while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 			{
 				if (pab->abandonData != "")
 				{
@@ -1504,7 +1499,7 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 			pab->PushStream(pData, iLen);
 			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 			{
-				if (pab->PopPkt(APP_LAYER_PROTO::TDSP))
+				if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 				{
 					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 				}
@@ -1607,7 +1602,7 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 
 void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	if (tdsSession->iALProto == APP_LAYER_PROTO::TDSP)
+	if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 	{
 		string sResp = str::fromBuff(pData, iLen);
 		try{

@@ -440,7 +440,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_rtu = new tcpSrv();
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	int ioSrvPort_rtu = 664;
-	if (m_tcpSrv_tdsp->run(&ds, ioSrvPort_rtu))
+	if (m_tcpSrv_rtu->run(&ds, ioSrvPort_rtu))
 	{
 		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(ioSrvPort_rtu) + " 设备通信协议 modbus RTU over TCP");
 	}
