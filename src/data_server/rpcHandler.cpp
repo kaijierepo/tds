@@ -1208,52 +1208,9 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
-bool rpcHandler::handleDevRpcByTds(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession)
-{
-	string strIoAddr = jReq["ioAddr"].get<string>();
-	ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-	if (!pIoDev)
-	{
-		json jAddr;
-		jAddr["id"] = strIoAddr;
-		pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-	}
-	pIoDev->setIOSession(pSession);
-	pIoDev->onRecvPkt(jReq);
-	LOG("[trace]TDSP响应:\r\n" + strReq + "\r\n");
-	return true;
-}
-
-
 bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
-	if (method == "devRegister")
-	{
-		string strIoAddr = jReq["ioAddr"].get<string>();
-
-		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-		if (!pIoDev)
-		{
-			json jAddr;
-			jAddr["id"] = strIoAddr;
-			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-		}
-		else
-		{
-			if (pIoDev->m_bOnline == false)
-			{
-				pIoDev->m_bOnline = true;
-				pIoDev->triggerCycleAcq();
-				GetLocalTime(&pIoDev->m_stLastActiveTime);
-				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
-			}
-		}
-		pSession->type = "ioDev.tdsp";
-		pIoDev->setIOSession(pSession);
-		pIoDev->onRecvPkt(jReq);
-		return true;
-	}
 	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
 	{
 		string tdsSession = jReq["tdsSession"].get<string>();
@@ -1272,65 +1229,19 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 	}
 	else if (jReq.contains("ioAddr"))
 	{
-		//包有效性检测
-		if (!jReq.contains("result") && !jReq.contains("error") && !jReq.contains("params"))
+		string strIoAddr = jReq["ioAddr"].get<string>();
+		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+		if (!pIoDev || pIoDev->pIOSession == nullptr)
 		{
-			LOG("[设备透传]无效的设备通信rpc数据包,result,error,params中必须指定1个字段");
 			return true;
 		}
-
-		// tds客户端 -> ioDev   
-		if (!jReq.contains("result") && !jReq.contains("error"))
-		{
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-			if (!pIoDev || pIoDev->pIOSession == nullptr)
-			{
-				return true;
-			}
-			jReq["clientId"] = pSession->getRemoteAddr();
-			jReq.erase("user");
-			jReq.erase("token");
-			string s = jReq.dump() + "\n\n";
-			pIoDev->pIOSession->send((char*)s.c_str(), s.length());
-			LOG("[设备透传]客户端->设备:\r\n" + s + "\r\n");
-			return true;
-		}
-		//ioDev -> tdsClient
-		else if (jReq.contains("clientId") && jReq["clientId"].get<string>()!="tds")
-		{
-			string addr = jReq["clientId"].get<string>();
-			shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
-			if (p != nullptr)
-			{
-				string s = jReq.dump() + "\n\n";
-				p->send((char*)s.c_str(), s.length());
-				LOG("[设备透传]设备->客户端:\r\n" + s + "\r\n");
-			}
-			else
-			{
-				string s = jReq.dump(2) + "\n\n";
-				LOG("[error][设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
-			}
-
-			//部分命令拦截并记录
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
-			if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-			{
-				ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;
-				pDevTdsp->handleAsynResp(jReq);
-			}
-
-			return true;
-		}
-		//ioDev -> tds
-		else
-		{
-			handleDevRpcByTds(strReq, jReq, pSession);
-			return true;
-		}
+		jReq["clientId"] = pSession->getRemoteAddr();
+		jReq.erase("user");
+		jReq.erase("token");
+		string s = jReq.dump() + "\n\n";
+		pIoDev->pIOSession->send((char*)s.c_str(), s.length());
+		LOG("[设备透传]客户端->设备:\r\n" + s + "\r\n");
+		return true;
 	}
 
 	return false;

@@ -61,7 +61,7 @@ bool stream2pkt::PopPkt(string cpt)
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::TDSRPC))
+			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::TDSRPC || cpt == APP_LAYER_PROTO::TDSP))
 		{
 			//if (i == 0) //如果确定数据包不会出错，提高性能，则加入i==0判断。  如果数据中会有错误数据，需要容错。除掉i==0判断
 			//{

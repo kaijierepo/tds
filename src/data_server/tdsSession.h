@@ -73,6 +73,7 @@ public:
 
 	string getId();
 	string getRemoteAddr();
+	bool m_bAppDataRecved;
 	bool getTcpSession(tcpSession& ts);
 
 	int port;

@@ -45,8 +45,7 @@ public:
 
 	bool needLog(string method);
 
-	bool handleDevRpcByTds(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
-
+	//透传到io设备的命令
 	bool handleDevRpcDispatch(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
 
 	//json rpc implementation
@@ -68,7 +67,7 @@ public:
 	//tds data service function
 	string rpc_input(json params, string& error);
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
-	void rpc_getMoStatis(json params, RPC_RESP& resp , RPC_SESSION session);
+	void   rpc_getMoStatis(json params, RPC_RESP& resp , RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string rpc_getMoStatusTable(json params, string& error);
 	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);
@@ -82,9 +81,7 @@ public:
 	string rpc_setconffile(json params, string& error);
 	string rpc_heartbeat(json params, string& error, RPC_SESSION session);
 	string rpc_xiaot(json params, string& error);
-
 	string rpc_logout(json params, string& error);
-
 	string rpc_login(json params, string& error);
 
 	////io service function

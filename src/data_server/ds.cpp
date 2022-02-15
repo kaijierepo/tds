@@ -228,6 +228,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			if (pts->m_iServerPort == tds->conf->ioServerPort)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
+				p->iALProto = APP_LAYER_PROTO::TDSP;
 				string req = R"s({
 						"jsonrpc": "2.0",
 						"method": "getDevInfo",
@@ -244,6 +245,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			else if (pts->m_iServerPort == 664)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
+				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
 			}
 		}
 
@@ -969,15 +971,16 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	std::string handshakeString = req.GetHandshakeString(strData);
 	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 
+	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)
 	{
 		int pos = strData.find("terminal");
 		int pos1 = strData.find(" ", pos);
 		string ioAddr = strData.substr(pos + 9, pos1 - (pos + 9));
 		ioDev* p = ioSrv.getIODev(ioAddr);
-		tdsSession->type = TDS_SESSION_TYPE::terminal;
 		if (p && p->pIOSession != NULL)
 		{
+			tdsSession->type = TDS_SESSION_TYPE::bridgeToiodev;
 			tdsSession->bridgedIoSession = p->pIOSession;
 			p->pIOSession->bridgedIoSessionClient = tdsSession;
 			LOG("open websocket terminal at ioAddr %s success", ioAddr.c_str());
@@ -1445,46 +1448,10 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	return true;
 }
 
-
-//onRecvData需要组包
-bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
+bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	tdsSession->statisOnRecv(pData, iLen);
-
-	DWORD dwDataLen = iLen;
-	//有桥接先判断桥接
-	if (tdsSession->bridgedLocalCom != "")//tds link is bridged to a local com
-	{
-		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
-		if (p)
-		{
-			p->sendData(pData, iLen);
-		}
-	}
-	else if (tdsSession->pBridgedTcpClient != NULL)
-	{
-		tdsSession->pBridgedTcpClient->SendData(pData, iLen);
-	}
-	else if (tdsSession->bridgedIoSession != NULL)
-	{
-		tdsSession->bridgedIoSession->send(pData, iLen);
-		char* p = new char[iLen + 1];
-		memset(p, 0, iLen + 1);
-		memcpy(p, pData, iLen);
-		string s = p;
-		LOG("client->dev " + s);
-		delete p;
-	}
-	else if (tdsSession->bridgedIoSessionClient != NULL)
-	{
-		stream2pkt* pab = &tdsSession->m_alBuf;
-		pab->PushStream(pData, iLen);
-		while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
-		{
-			tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-		}
-	}
-	else
+	bool bHandled = true;
+	if (tdsSession->type == TDS_SESSION_TYPE::iodev)
 	{
 		//协议检测
 		if (tdsSession->iALProto == APP_LAYER_PROTO::UNKNOWN)//应用层协议类型检测
@@ -1515,18 +1482,40 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
-		else
+		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSP)
 		{
-			//tds rpc over tcp
-			if (isPkt)
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			while (pab->PopPkt(APP_LAYER_PROTO::TDSP))
 			{
-				onRecvTdsRpcPkt(pData, iLen, tdsSession);
+				if (pab->abandonData != "")
+				{
+					string remoteAddr = tdsSession->getRemoteAddr();
+					LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+					tdsSession->abandonLen += pab->iAbandonBytes;
+				}
+				tdsSession->iALProto = pab->m_protocolType;
+				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+			}
+		}
+		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+		{
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
+			{
+				if (pab->PopPkt(APP_LAYER_PROTO::TDSP))
+				{
+					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+				}
+				else
+				{
+					LOG("[error]首包注册包数据格式错误," + str::fromBytes(pData, iLen));
+				}
 			}
 			else
 			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+				while (pab->PopPkt(APP_LAYER_PROTO::MODBUS_RTU))
 				{
 					if (pab->abandonData != "")
 					{
@@ -1535,28 +1524,193 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 						tdsSession->abandonLen += pab->iAbandonBytes;
 					}
 					tdsSession->iALProto = pab->m_protocolType;
-					onRecvTdsRpcPkt(pab->pkt, pab->iPktLen, tdsSession);
+					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 				}
 			}
 		}
 	}
-
-	return(true);
+	else
+	{
+		bHandled = false;
+	}
+	return true;
 }
 
-void dataServer::onRecvTdsRpcPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+//应用层数据桥接
+bool dataServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	char* szJson = new char[iLen + 1];
-	memset(szJson, 0, iLen + 1);
-	memcpy(szJson, pData, iLen);
-
-	string req = szJson;
-	if (szJson)
+	bool bHandled = true;
+	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
 	{
-		delete szJson;
-		szJson = NULL;
+		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
+		if (p)
+		{
+			p->sendData(pData, iLen);
+		}
 	}
+	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpClient)
+	{
+		if (tdsSession->pBridgedTcpClient)
+			tdsSession->pBridgedTcpClient->SendData(pData, iLen);
+	}
+	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToiodev)
+	{
+		if (tdsSession->bridgedIoSession)
+			tdsSession->bridgedIoSession->send(pData, iLen);
+		char* p = new char[iLen + 1];
+		memset(p, 0, iLen + 1);
+		memcpy(p, pData, iLen);
+		string s = p;
+		LOG("client->dev " + s);
+		delete p;
+	}
+	else if (tdsSession->bridgedIoSessionClient != NULL)
+	{
+		stream2pkt* pab = &tdsSession->m_alBuf;
+		pab->PushStream(pData, iLen);
+		while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
+		{
+			tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+		}
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
+}
 
+
+//onRecvData需要组包
+bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
+{
+	tdsSession->statisOnRecv(pData, iLen);
+
+	DWORD dwDataLen = iLen;
+
+	//根据 tdsSessionType 对应用层数据做不同的处理
+	//有桥接先判断桥接
+	handleAppLayerData_Bridge(pData, iLen, tdsSession);
+
+	//处理来自于io设备的数据
+	handleAppLayerData_IODev(pData, iLen, tdsSession);
+	
+	//tds rpc over tcp
+	if (tdsSession->type == TDS_SESSION_TYPE::tdsClient && isPkt)
+	{
+		onRecvPkt_tdsClient(pData, iLen, tdsSession);
+	}
+	
+	tdsSession->m_bAppDataRecved = true;
+	return true;
+}
+
+void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	if (tdsSession->iALProto == APP_LAYER_PROTO::TDSP)
+	{
+		string sResp = str::fromBuff(pData, iLen);
+		try{
+			//解析请求基本信息
+			json jResp = json::parse(sResp);
+			string method = jResp["method"].get<string>();
+			json params;
+			if (jResp.contains("params"))
+				params = jResp["params"];
+			json id = jResp["id"];
+			json clientId = jResp["clientId"]; //tds edge模式使用
+			tdsSession->lastMethodCalled = method;
+
+			//注册包			
+			if (method == "devRegister")
+			{
+				string strIoAddr = jResp["ioAddr"].get<string>();
+
+				ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+				if (!pIoDev)
+				{
+					json jAddr;
+					jAddr["id"] = strIoAddr;
+					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				}
+				else
+				{
+					if (pIoDev->m_bOnline == false)
+					{
+						pIoDev->m_bOnline = true;
+						pIoDev->triggerCycleAcq();
+						GetLocalTime(&pIoDev->m_stLastActiveTime);
+						logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+					}
+				}
+				pIoDev->setIOSession(tdsSession);
+				pIoDev->onRecvPkt(jResp);
+			}
+			//透传到tds客户端的指令
+			else if (clientId !=nullptr  && clientId.get<string>() != "tds")
+			{
+				string addr = jResp["clientId"].get<string>();
+				shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
+				if (p != nullptr)
+				{
+					string s = jResp.dump() + "\n\n";
+					p->send((char*)s.c_str(), s.length());
+					LOG("[设备透传]设备->客户端:\r\n" + s + "\r\n");
+				}
+				else
+				{
+					string s = jResp.dump(2) + "\n\n";
+					LOG("[error][设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
+				}
+
+				//部分命令拦截并记录
+				string strIoAddr = jResp["ioAddr"].get<string>();
+				ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+				GetLocalTime(&pIoDev->m_stLastActiveTime);
+				if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+				{
+					ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;
+					pDevTdsp->handleAsynResp(jResp);
+				}
+			}
+			//ioDev -> tds
+			else
+			{
+				string strIoAddr = jResp["ioAddr"].get<string>();
+				ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+				if (!pIoDev)
+				{
+					json jAddr;
+					jAddr["id"] = strIoAddr;
+					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				}
+				pIoDev->setIOSession(tdsSession);
+				pIoDev->onRecvPkt(jResp);
+				LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
+			}
+		}
+		catch (std::exception& e)
+		{
+			string errorType = e.what();
+			//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
+			//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
+			errorType = str::encodeAscII(errorType);
+			LOG("handleRpcCall异常" + errorType);
+			json jError = {
+					{"code", -32700},
+					{"message" , "Parse error," + errorType}
+			};
+		}
+	}
+	else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+	{
+
+	}
+}
+
+void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	string req = str::fromBuff(pData,iLen);
 	string resp;
 	char* binResp = NULL;
 	int iBinRespLen = 0;

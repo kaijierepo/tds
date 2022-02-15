@@ -133,13 +133,14 @@ const std::map<string, string> TDS_ERROR_DESC = {
 
 //应用层协议类型
 namespace APP_LAYER_PROTO {
-	const string UNKNOWN = "alp_unknown";
-	const string HTTP= "alp_http";
-	const string MODBUS_RTU= "alp_modbus_rtu";
-	const string PROTOCOL_WEBSOCKET= "alp_websocket";
-	const string TDSRPC= "alp_tdsrpc";
+	const string UNKNOWN = "unknown";
+	const string HTTP= "httmp";
+	const string MODBUS_RTU= "modbusRTU";
+	const string PROTOCOL_WEBSOCKET= "websocket";
+	const string TDSRPC= "tdsRPC";
+	const string TDSP = "TDSP";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
-	const string IQ60 = "alp_iq60";
+	const string IQ60 = "iq60";
 	const string textEnd2LF = "textEnd2LF";  //以2个换行结尾的字符串
 	const string textEnd1LF = "textEnd1LF";
 };
