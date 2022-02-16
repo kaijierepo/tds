@@ -131,7 +131,7 @@ bool ioServer::loadConf()
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
 	{
-		LOG("project conf io.json load fail,use empty conf");
+		LOG("[warn]未找到IO设备配置文件io.json,使用空配置");
 		return true;
 	}
 
@@ -152,7 +152,7 @@ bool ioServer::loadConf()
 	catch (std::exception& e)
 	{
 		string error = e.what();
-		LOG("加载io.json失败," + error);
+		LOG("[error]解析IO设备配置文件io.json失败," + error);
 		return false;
 	}
 	return true;
@@ -213,6 +213,9 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 		string parentID = params["parentID"].get<string>();
 		parentDev = getIODevByNodeID(parentID);
 	}
+	else
+		parentDev = this;
+
 	if (parentDev == NULL)
 	{
 		rpcResp.error = "device type not supported, type:" + type;
@@ -223,7 +226,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 	if (pd)
 	{
 		pd->loadConf(params);
-		ioDev::addChild(pd);
+		parentDev->addChild(pd);
 		saveConf();
 		rpcResp.result = "\"ok\"";
 		pd->toJson(params);
@@ -268,21 +271,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
 {
 	string sNodeId = params["nodeID"].get<string>();
 	bool bFinded = false;
-	ioDev* p = NULL;
+	ioDev* p = getIODevByNodeID(sNodeId);
 
-	m_csThis.lock();
-	for (int i = 0; i < m_vecChildDev.size(); i++)
-	{
-		p = m_vecChildDev[i];
-		if (p->m_confNodeId == sNodeId)
-		{
-			bFinded = true;
-			break;
-		}
-	}
-	m_csThis.unlock();
-
-	if (bFinded)
+	if (p)
 	{
 		p->loadConf(params);
 		saveConf();
@@ -344,20 +335,6 @@ ioDev* ioServer::getIODevByTag(string tag)
 		if (p->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
 			continue;
 		if (p->m_strTagBind == tag)
-		{
-			return p;
-		}
-	}
-	return nullptr;
-}
-
-ioDev* ioServer::getIODevByNodeID(string nodeID)
-{
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	for (int i = 0; i < m_vecChildDev.size(); i++)
-	{
-		ioDev* p = m_vecChildDev[i];
-		if (p->m_confNodeId == nodeID)
 		{
 			return p;
 		}

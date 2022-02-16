@@ -16,6 +16,8 @@
 ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 {
 	m_devType = IO_DEV_TYPE::DEV::modbus_rtu_slave;
+	m_level = IO_DEV_LEVEL::device;
+	m_addrMode = DEV_ADDR_MODE::busAddr;
 }
 
 

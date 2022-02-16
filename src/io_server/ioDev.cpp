@@ -64,42 +64,41 @@ ioDev* createIODev(json conf)
 		p = new ioDev_mqttBroker();
 		string ip = conf["addr"]["ip"];
 		string port = conf["addr"]["port"];
+		p->m_jDevAddr = conf["addr"];
 		p->m_devAddr = ip + ":" + port;
 	}
 	else if (type == "tuya-iot-project")
 	{
 		p = new ioGW_tuyaProject();
+		p->m_jDevAddr = conf["addr"];
 		p->m_devAddr = conf["addr"]["client_id"];
 		p->m_secret = conf["addr"]["secret"];
 	}
 	else if (type == "tuya.switch")
 	{
 		p = new ioDev_tuya();
+		p->m_jDevAddr = conf["addr"];
 		p->m_devAddr = conf["addr"]["device_id"];
 	}
 	else if (type == "iq60-gateway")
 	{
 		ioDev_iq60* piq60 = new ioDev_iq60();
 		p = piq60;
+		p->m_jDevAddr = conf["addr"];
 		p->m_devAddr = conf["addr"]["id"];
 	}
 	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
 	{
 		ioGW_rs485* pRs485 = new ioGW_rs485();
 		p = pRs485;
-		if (conf["activeMode"] != nullptr && conf["activeMode"].get<bool>() == true)
-		{
-			p->m_devAddr = conf["addr"]["ip"].get<string>() + ":" + str::fromInt(conf["addr"]["port"].get<int>());
-		}
-		else
-		{
-			p->m_devAddr = conf["addr"]["ip"].get<string>();
-		}
+		p->m_jDevAddr = conf["addr"];
+		p->m_devAddr = p->getDevAddrStr();
 	}
 	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
 	{
 		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
 		p = pRtuSlave;
+		p->m_jDevAddr = conf["addr"];
 		p->m_devAddr = conf["addr"].get<string>();
 	}
 	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
@@ -114,6 +113,7 @@ ioDev* createIODev(json conf)
 		p = pLs;
 		p->m_jDevAddr = conf["addr"];
 	}
+
 	if (p)
 	{
 		p->m_devType = conf["type"];
@@ -237,14 +237,29 @@ bool ioDev::toJson(json& conf, json opt)
 	}
 	else//默认递归
 	{
-		json children = json::array();
-		for (auto& i : m_vecChildDev)
+		if (m_vecChildDev.size() > 0)
 		{
-			json j;
-			i->toJson(j, opt);
-			children.push_back(j);
+			json children = json::array();
+			for (auto& i : m_vecChildDev)
+			{
+				json j;
+				i->toJson(j, opt);
+				children.push_back(j);
+			}
+			conf["children"] = children;
 		}
-		conf["children"] = children;
+		
+		if (m_channels.size() > 0)
+		{
+			json channels = json::array();
+			for (auto& i : m_channels)
+			{
+				json j;
+				i->toJson(j, opt);
+				channels.push_back(j);
+			}
+			conf["channels"] = channels;
+		}
 	}
 	
 	return true;
@@ -276,8 +291,6 @@ bool ioDev::loadConf(json& conf)
 	{
 		m_addrMode = conf["addrMode"].get<string>();
 	}
-	else
-		m_addrMode = DEV_ADDR_MODE::deviceID;
 
 	if (conf.contains("addr"))
 	{
@@ -351,11 +364,11 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
-
 	if (conf["children"] != nullptr)
 	{
 		deleteChildren();
 		json childDev = conf["children"];
+
 		for (auto i : childDev)
 		{
 			ioDev* pChild = nullptr;
@@ -369,7 +382,7 @@ bool ioDev::loadConf(json& conf)
 				pChild = pdc;
 				pdc->loadConf(i);
 				//批量映射配置.主要用于mqtt的场景，当mqtt的路径结构和MOTree的树结构一致时
-				if (pdc->m_devAddr!="" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
+				if (pdc->m_devAddr != "" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
 				{
 					m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 				}
@@ -387,6 +400,30 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+
+	if (conf["channels"] != nullptr)
+	{
+		deleteAllChannels();
+		
+		json childDev = conf["channels"];
+
+		for (auto i : childDev)
+		{
+			ioChannel* pdc = nullptr;
+			pdc = new ioChannel();
+			pdc->m_jDevAddr = i["addr"];
+			if (i["addr"].is_string())
+				pdc->m_devAddr = i["addr"].get<string>();
+			pdc->loadConf(i);
+			//批量映射配置.主要用于mqtt的场景，当mqtt的路径结构和MOTree的树结构一致时
+			if (pdc->m_devAddr != "" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
+			{
+				m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
+			}
+			addChannel(pdc);
+		}
+	}
+		
 	return true;
 }
 
@@ -411,6 +448,23 @@ void ioDev::triggerCycleAcq()
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 }
 
+ioDev* ioDev::getIODevByNodeID(string nodeID)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		if (p->m_confNodeId == nodeID)
+		{
+			return p;
+		}
+
+		ioDev* ptmp = p->getIODevByNodeID(nodeID);
+		if (ptmp)
+			return ptmp;
+	}
+	return nullptr;
+}
 
 ioDev* ioDev::getIODev(string ioAddr)
 {
@@ -728,14 +782,28 @@ bool ioDev::loadConfBuff()
 	return true;
 }
 
+bool ioDev::addChannel(ioChannel* p)
+{
+	m_csThis.lock();
+	p->m_pParent = this;
+	m_channels.push_back(p);
+	m_mapDataChannel[p->m_devAddr] = p;
+	m_csThis.unlock();
+	return true;
+}
+
 bool ioDev::addChild(ioDev* p)
 {
 	m_csThis.lock();
-	m_vecChildDev.push_back(p);
 	p->m_pParent = this;
 	if (p->m_level == "channel")
 	{
+		m_channels.push_back((ioChannel*)p);
 		m_mapDataChannel[p->m_devAddr] = (ioChannel*)p;
+	}
+	else
+	{
+		m_vecChildDev.push_back(p);
 	}
 	m_csThis.unlock();
 	return true;
@@ -743,12 +811,21 @@ bool ioDev::addChild(ioDev* p)
 
 void ioDev::deleteChildren()
 {
-	m_mapDataChannel.clear();
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		delete m_vecChildDev[i];
 	}
 	m_vecChildDev.clear();
+}
+
+void ioDev::deleteAllChannels()
+{
+	m_mapDataChannel.clear();
+	for (int i = 0; i < m_channels.size(); i++)
+	{
+		delete m_channels[i];
+	}
+	m_channels.clear();
 }
 
 void ioDev::deleteChild(ioDev* p)

@@ -30,7 +30,7 @@ public:
 
 	ioDev* getIODev(string ioAddr) override;
 	ioDev* getIODevByTag(string tag);
-	ioDev* getIODevByNodeID(string nodeID);
+	
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
 
 	void clear(); //清空所有ioDev对象及其相关的工作线程

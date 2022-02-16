@@ -55,7 +55,14 @@ namespace TDS {
 		const string device = "device";
 		const string channel = "channel";
 	}
-	
+
+	namespace DEV_ADDR_MODE {
+		const string tcpClient = "tcpClient";
+		const string tcpServer = "tcpServer";
+		const string deviceID = "deviceID";
+		const string busAddr = "busAddr";
+	}
+
 	namespace IO_DEV_TYPE {
 		namespace DEV {
 			const string tdsp_device = "tdsp-device";

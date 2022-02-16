@@ -2,12 +2,6 @@
 #include "pch.h"
 #include "tdsSession.h"
 
-namespace DEV_ADDR_MODE {
-	const string tcpClient = "tcpClient";
-	const string tcpServer = "tcpServer";
-	const string deviceID = "deviceID";
-}
-
 class MO;
 class MP;
 class ioAddrSession;
@@ -69,10 +63,13 @@ public:
 	//// iodev hierachy tree management
 	virtual ioDev* getIODev(string ioAddr);
 	virtual ioDev* getIODev(json& ioAddr);
+	ioDev* getIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChildDev;
+	vector<ioChannel*> m_channels;
 	bool addChild(ioDev* p);
 	void deleteChildren();
+	void deleteAllChannels();
 	void deleteChild(ioDev* p);
 	void deleteDescendant(ioDev* p);
 	ioDev* getChild(string devAddr);
@@ -178,6 +175,7 @@ public:
 
 	void saveConfBuff();
 	bool loadConfBuff();
+	bool addChannel(ioChannel* p);
 };
 
 ioDev* createIODev(json conf);
