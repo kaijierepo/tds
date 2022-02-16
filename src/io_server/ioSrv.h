@@ -21,6 +21,8 @@ public:
 	bool loadConf();
 	void saveConf();
 
+	ioDev* handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
+
 	void rpc_addDev(json& params,RPC_RESP& rpcResp);
 	void rpc_deleteDev(json& params,RPC_RESP& rpcResp);
 	void rpc_modifyDev(json& params,RPC_RESP& rpcResp);

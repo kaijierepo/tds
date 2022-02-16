@@ -1501,7 +1501,7 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 			{
 				if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 				{
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession,true);
 				}
 				else
 				{
@@ -1600,12 +1600,14 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 	return true;
 }
 
-void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
 {
-	if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+	try 
 	{
-		string sResp = str::fromBuff(pData, iLen);
-		try{
+		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+		{
+			string sResp = str::fromBuff(pData, iLen);
+
 			//解析请求基本信息
 			json jResp = json::parse(sResp);
 			string method = jResp["method"].get<string>();
@@ -1620,29 +1622,11 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			if (method == "devRegister")
 			{
 				string strIoAddr = jResp["ioAddr"].get<string>();
-
-				ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-				if (!pIoDev)
-				{
-					json jAddr;
-					jAddr["id"] = strIoAddr;
-					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-				}
-				else
-				{
-					if (pIoDev->m_bOnline == false)
-					{
-						pIoDev->m_bOnline = true;
-						pIoDev->triggerCycleAcq();
-						GetLocalTime(&pIoDev->m_stLastActiveTime);
-						logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
-					}
-				}
-				pIoDev->setIOSession(tdsSession);
+				ioDev* pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 				pIoDev->onRecvPkt(jResp);
 			}
 			//透传到tds客户端的指令
-			else if (clientId !=nullptr  && clientId.get<string>() != "tds")
+			else if (clientId != nullptr && clientId.get<string>() != "tds")
 			{
 				string addr = jResp["clientId"].get<string>();
 				shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
@@ -1684,22 +1668,31 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 				LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
 			}
 		}
-		catch (std::exception& e)
+		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
 		{
-			string errorType = e.what();
-			//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
-			//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
-			errorType = str::encodeAscII(errorType);
-			LOG("handleRpcCall异常" + errorType);
-			json jError = {
-					{"code", -32700},
-					{"message" , "Parse error," + errorType}
-			};
+			//4g模式下的modbus RTU over tcp 第一包必须发送注册包
+			if (registerPkt)
+			{
+				string sResp = str::fromBuff(pData, iLen);
+				json jResp = json::parse(sResp);
+				string method = jResp["method"].get<string>();
+				string strIoAddr = jResp["ioAddr"].get<string>();
+				if (method == "devRegister")
+					ioSrv.handleDevOnline(strIoAddr, tdsSession);
+			}
+			else
+			{
+
+			}
 		}
 	}
-	else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+	catch (std::exception& e)
 	{
-
+		string errorType = e.what();
+		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
+		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
+		errorType = str::encodeAscII(errorType);
+		LOG("onRecvPkt_ioDev 处理异常" + errorType);
 	}
 }
 

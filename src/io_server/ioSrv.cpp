@@ -171,6 +171,35 @@ void ioServer::saveConf()
 	}
 }
 
+ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+	//设备发现
+	if (!pIoDev)
+	{
+		json jAddr;
+		jAddr["id"] = ioAddr;
+
+		if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+		else if(tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::GW::rs485_gateway);
+	}
+	//设备上线
+	else
+	{
+		if (pIoDev->m_bOnline == false)
+		{
+			pIoDev->m_bOnline = true;
+			pIoDev->triggerCycleAcq();
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+		}
+	}
+	pIoDev->setIOSession(tdsSession);
+	return pIoDev;
+}
+
 void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 {
 	string type = params["type"].get<string>();
