@@ -247,6 +247,11 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
 			}
+			else if (pts->m_iServerPort == 663)
+			{
+				p->type = TDS_SESSION_TYPE::iodev;
+				p->iALProto = APP_LAYER_PROTO::IQ60;
+			}
 		}
 
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
@@ -1468,7 +1473,20 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		}
 
 		//应用层协议处理
-		if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+		if (tdsSession->bridgedIoSessionClient != NULL)
+		{
+			if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC ||
+				tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
+				{
+					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+				}
+			}
+		}
+		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1558,15 +1576,6 @@ bool dataServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_pt
 		string s = p;
 		LOG("client->dev " + s);
 		delete p;
-	}
-	else if (tdsSession->bridgedIoSessionClient != NULL)
-	{
-		stream2pkt* pab = &tdsSession->m_alBuf;
-		pab->PushStream(pData, iLen);
-		while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
-		{
-			tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-		}
 	}
 	else
 	{

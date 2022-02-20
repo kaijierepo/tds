@@ -4,6 +4,7 @@
 #include<map>
 #include "common.hpp"
 #include "tchar.h"
+#include "tds.h"
 using namespace std;
 
 #define Nan 0x7fc00000
@@ -29,13 +30,15 @@ namespace TDS {
 	{std::map<string,string>::value_type("io","输入/输出")}
 	};
 
-	const std::map<string, string> IO_DEV_TYPE_LABEL = {
-	{std::map<string,string>::value_type("modbus-rtu","modbus rtu")},
-	{std::map<string,string>::value_type("local-serial","本地串口")},
-	{std::map<string,string>::value_type("iq60-gateway","IQ60物联网网关")},
-	{std::map<string,string>::value_type("tdsp-device","TDSP设备")},
-	{std::map<string,string>::value_type("io-channel","IO通道")},
-	};
+inline string getDevTypeLabel(string devType) {
+	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
+	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
+	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485网关";
+	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IO通道";
+	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
+	else return "未知类型";
+}
+
 //物理量类型。
 //注意:不同的物理量可以有相同的单位，只是物理应用场景不同。
 //根据物理量类型可以确定默认单位,例如V，但是可依然可以修改具体单位例如 kV

@@ -17,6 +17,7 @@ public:
 
 	tcpSrv* m_tcpSrv_tdsp; //665 tdsp协议
 	tcpSrv* m_tcpSrv_rtu; //664 modbus RTU over tcp协议
+	tcpSrv* m_tcpSrv_iq60; //
 
 	bool loadConf();
 	void saveConf();

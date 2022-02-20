@@ -99,7 +99,7 @@ ioDev* createIODev(json conf)
 		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
 		p = pRtuSlave;
 		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = conf["addr"].get<string>();
+		p->m_devAddr = p->getDevAddrStr();
 	}
 	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
 	{
@@ -284,9 +284,6 @@ bool ioDev::getChanStatus(json& statusList)
 
 bool ioDev::loadConf(json& conf)
 {
-	if(conf.contains("typeLabel"))
-		m_devTypeLabel = conf["typeLabel"].get<string>();
-
 	if (conf.contains("addrMode"))
 	{
 		m_addrMode = conf["addrMode"].get<string>();
@@ -464,6 +461,25 @@ ioDev* ioDev::getIODevByNodeID(string nodeID)
 			return ptmp;
 	}
 	return nullptr;
+}
+
+bool ioDev::deleteIODevByNodeID(string nodeID)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		if (p->m_confNodeId == nodeID)
+		{
+			delete p;
+			m_vecChildDev.erase(m_vecChildDev.begin() + i);
+			return true;
+		}
+
+		if (p->deleteIODevByNodeID(nodeID))
+			return true;
+	}
+	return false;
 }
 
 ioDev* ioDev::getIODev(string ioAddr)

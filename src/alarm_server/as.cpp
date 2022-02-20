@@ -731,7 +731,9 @@ vector<ALARM_INFO*> almTable::query(json querier)
 }
 
 string almTable::toJson(json querier) {
-	string rootTag = querier["rootTag"].get<string>();
+	string rootTag = "";
+	if(querier.contains("rootTag"))
+		rootTag = querier["rootTag"].get<string>();
 	vector<ALARM_INFO*> vec = query(querier);
 	string dataSet = "[";
 	for (auto& it :vec) {

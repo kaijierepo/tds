@@ -17,6 +17,7 @@ ioChannel::~ioChannel()
 {
 }
 
+
 bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
@@ -34,7 +35,7 @@ bool ioChannel::loadConf(json& conf)
 
 	if (conf["valType"] != nullptr)
 		m_valType = conf["valType"];
-	if (conf["valTypeLabel"] != nullptr)
+	if (m_valType != "")
 		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
 
 	if (conf["name"] != nullptr)

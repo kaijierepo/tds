@@ -16,6 +16,7 @@
 ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 {
 	m_devType = IO_DEV_TYPE::DEV::modbus_rtu_slave;
+	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_level = IO_DEV_LEVEL::device;
 	m_addrMode = DEV_ADDR_MODE::busAddr;
 }
@@ -23,6 +24,14 @@ ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 
 ioDev_ModbusSlave::~ioDev_ModbusSlave(void)
 {
+}
+
+bool ioDev_ModbusSlave::loadConf(json& conf)
+{
+	if (!ioDev::loadConf(conf))
+		return false;
+	generateAcqCmd();
+	return true;
 }
 
 
@@ -179,4 +188,120 @@ bool ioDev_ModbusSlave::OnRecvData(char* pData,int iLen)
 	m_recvBuff.PushStream(pData, iLen);
 	m_recvSignal.notify();
 	return true;
+}
+
+unsigned char ioDev_ModbusSlave::funcName2funcCode(string name)
+{
+	if (name == MODBUS_REG_TYPE::coil)
+	{
+		return MODBUS_FUNCTION_CODE::readCoils;
+	}
+	else if (name == MODBUS_REG_TYPE::discreteInput)
+	{
+		return MODBUS_FUNCTION_CODE::readDiscreteInputs;
+	}
+	else if (name == MODBUS_REG_TYPE::holdingRegister)
+	{
+		return MODBUS_FUNCTION_CODE::readHoldingRegisters;
+	}
+	else if (name == MODBUS_REG_TYPE::inputRegister)
+	{
+		return MODBUS_FUNCTION_CODE::readInputRegisters;
+	}
+	return 0;
+}
+
+bool sortChan(ioChannel* a, ioChannel* b) {
+	if (a->m_regOffset <= b->m_regOffset)
+		return true;
+	return false;
+}
+
+void ioDev_ModbusSlave::generateAcqCmd()
+{
+	return;
+	vector<ioChannel*> f1List;
+	vector<ioChannel*> f2List;
+	vector<ioChannel*> f3List;
+	vector<ioChannel*> f4List;
+	//分类排序所有通道
+	for (int i = 0; i < m_channels.size(); i++)
+	{
+		ioChannel* c = m_channels[i];
+		if (c->m_regType == MODBUS_REG_TYPE::coil)
+		{
+			f1List.push_back(c);	
+		}
+		else if (c->m_regType == MODBUS_REG_TYPE::discreteInput)
+		{
+			f2List.push_back(c);
+		}
+		else if (c->m_regType == MODBUS_REG_TYPE::holdingRegister)
+		{
+			f3List.push_back(c);
+		}
+		else if (c->m_regType == MODBUS_REG_TYPE::inputRegister)
+		{
+			f4List.push_back(c);
+		}
+	}
+
+	//按照寄存器偏移排序
+	std::sort(f1List.begin(), f1List.end(), sortChan);
+	std::sort(f2List.begin(), f2List.end(), sortChan);
+	std::sort(f3List.begin(), f3List.end(), sortChan);
+	std::sort(f4List.begin(), f4List.end(), sortChan);
+
+	//间隔不超过100个寄存器的通道，使用同1条命令读取
+	vector<ACQ_CMD> acqCmd = chanList2AcqCmd(f1List);
+	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
+	acqCmd = chanList2AcqCmd(f2List);
+	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
+	acqCmd = chanList2AcqCmd(f3List);
+	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
+	acqCmd = chanList2AcqCmd(f4List);
+	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
+}
+
+vector<ACQ_CMD> ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
+{
+	vector<ACQ_CMD> vecAcqCmd;
+	ACQ_CMD ac;
+	for (int i = 0; i < list.size(); i++)
+	{
+		ioChannel* c = list[i];
+		if(ac.fCode == 0)
+			ac.fCode = funcName2funcCode(c->m_regType);
+		//是否需要生成1条读取指令
+		bool bAddCmd = false;
+		if (i == 0)
+		{
+			bAddCmd = true;
+		}
+		else
+		{
+			unsigned short lastOffset = list[i - 1]->m_regOffset;
+			unsigned short Offset = list[i]->m_regOffset;
+			if (Offset - lastOffset > 100)
+			{
+				bAddCmd = true;
+			}
+		}
+
+		if (bAddCmd)
+		{
+			if (ac.regNum > 0)
+			{
+				vecAcqCmd.push_back(ac);
+			}
+
+			ac.startRegOffset = c->m_regOffset;
+			ac.regNum = 0;
+		}
+		else
+		{
+			ac.regNum++;
+		}
+	}
+	return vecAcqCmd;
 }

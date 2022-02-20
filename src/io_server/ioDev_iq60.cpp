@@ -79,7 +79,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 ioDev_iq60::ioDev_iq60()
 {
 	m_devType = TDS::IO_DEV_TYPE::DEV::iq60_gateway;
-	m_devTypeLabel = IO_DEV_TYPE_LABEL.at(m_devType);
+	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_parentDevType = "tds";
 	m_channelType = "io-point";
 	m_channelTypeLabel = "IO点";
@@ -340,7 +340,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 			}
 			jChan["tagBind"] = "";
 			jChan["type"] = IO_DEV_TYPE::CHAN::io_channel;
-			jChan["typeLabel"] = IO_DEV_TYPE_LABEL.at(IO_DEV_TYPE::CHAN::io_channel);
+			jChan["typeLabel"] = getDevTypeLabel(IO_DEV_TYPE::CHAN::io_channel);
 			jChan["level"] = "channel";
 
 			chanList.push_back(jChan);

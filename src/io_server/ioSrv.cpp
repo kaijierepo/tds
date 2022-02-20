@@ -239,22 +239,8 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 
 void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
 {
-	m_csThis.lock();
 	string sNodeId = params["nodeID"].get<string>();
-
-	bool bDeleted = false;
-	for (int i = 0; i < m_vecChildDev.size(); i++)
-	{
-		ioDev* p = m_vecChildDev[i];
-		if (p->m_confNodeId == sNodeId)
-		{
-			m_vecChildDev.erase(m_vecChildDev.begin() + i);
-			delete p;
-			bDeleted = true;
-			break;
-		}
-	}
-	m_csThis.unlock();
+	bool bDeleted = deleteIODevByNodeID(sNodeId);
 
 	if (bDeleted)
 	{
@@ -454,6 +440,20 @@ bool ioServer::runAsCloud()
 	{
 		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_rtu));
 	}
+
+
+	m_tcpSrv_iq60 = new tcpSrv();
+	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	int ioSrvPort_iq60 = 663;
+	if (m_tcpSrv_iq60->run(&ds, ioSrvPort_iq60))
+	{
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(ioSrvPort_iq60) + " 设备通信协议 IQ60物云通信协议");
+	}
+	else
+	{
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_iq60));
+	}
+
 	
 	return true;
 }

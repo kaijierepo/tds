@@ -23,7 +23,7 @@ void ioGW_rs485_acqThread(ioGW_rs485* gw)
 ioGW_rs485::ioGW_rs485(void)
 {
 	m_devType = IO_DEV_TYPE::GW::rs485_gateway;
-	m_devTypeLabel = "RS485网关";
+	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_parentDevType = IO_DEV_TYPE::SERVER::tds;
 	m_level = "gateway";
 	thread t(ioGW_rs485_acqThread, this);

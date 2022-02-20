@@ -98,11 +98,25 @@ struct MRP_REQ_READ_REG{
 };
 #pragma pack()
 
+struct ACQ_CMD {
+	unsigned char fCode;
+	unsigned short startRegOffset;
+	unsigned short regNum;
+
+	ACQ_CMD() {
+		fCode = 0;
+		startRegOffset = 0;
+		regNum = 0;
+	}
+};
+
 class ioDev_ModbusSlave : public ioDev
 {
 public:
 	ioDev_ModbusSlave(void);
 	~ioDev_ModbusSlave(void);
+
+	bool loadConf(json& conf) override;
 
 	void DoCycleTask();
 	void SendAcqRTData();
@@ -111,7 +125,10 @@ public:
 	bool RequestAndWaitResponse(PKT_DATA& req,PKT_DATA& resp);
 	bool sendData(char* pData,int iLen) override;
 	bool OnRecvData(char* pData,int iLen);
-
+	unsigned char funcName2funcCode(string name);
+	void generateAcqCmd();
+	vector<ACQ_CMD> chanList2AcqCmd(vector<ioChannel*>& list);
+	vector<ACQ_CMD> m_vecAcqCmd;
 
 	stream2pkt m_recvBuff;
 	mutex m_csRecvBuff;

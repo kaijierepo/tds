@@ -16,7 +16,7 @@ using namespace httplib;
 ioDev_tdsp::ioDev_tdsp()
 {
 	m_devType = TDS::IO_DEV_TYPE::DEV::tdsp_device;
-	m_devTypeLabel = IO_DEV_TYPE_LABEL.at(m_devType);
+	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_parentDevType = "tds";
 	m_channelType = "io-point";
 	m_channelTypeLabel = "IO点";
