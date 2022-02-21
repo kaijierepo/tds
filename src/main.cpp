@@ -138,7 +138,7 @@ int main(int argc, char** argv)
 
 		LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
 
-		httpSrv->listen("0.0.0.0", tds->conf->port);
+		httpSrv->listen("0.0.0.0", tds->conf->httpPort);
 	}
 	else if (mode == "dog")
 	{
