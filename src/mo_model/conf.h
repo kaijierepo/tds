@@ -35,7 +35,9 @@ public:
 	tdsConfig();
 	void generateDefaultConfFile(string m);
 	string defaultConf_tcp2com();
+	string defaultConf_httpServer();
 	string defaultConf_tds();
+	void loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tds(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf();

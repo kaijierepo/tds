@@ -36,6 +36,10 @@ void tdsConfig::generateDefaultConfFile(string m)
 	{
 		s = defaultConf_tcp2com();
 	}
+	else if (m == "hs" || m == "httpServer")
+	{
+		s = defaultConf_httpServer();
+	}
 
 	s = str::replace(s, "\n", "\r\n");
 	string confPath = fs::appPath() + "/" + mode + ".ini";
@@ -56,6 +60,14 @@ remoteIP=127.0.0.1     #client模式下的服务器IP
 remotePort=664         #client模式下的服务器端口
 localPort=663          #server模式下的服务端口
 registerPktStr={"method":"devRegister","ioAddr":"RS485Gateway_0001"}
+)";
+	return s;
+}
+
+string tdsConfig::defaultConf_httpServer() 
+{
+	string s = R"(#HTTP服务器配置
+httpPort=80            #http服务端口
 )";
 	return s;
 }
@@ -87,6 +99,18 @@ ui=console             #ui模式  console:命令行模式   chrome:浏览器模�
 )";
 	return s;
 }
+
+void tdsConfig::loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf) {
+	for (int i = 0; i < vecConf.size(); i++)
+	{
+		TDS_CONF_ITEM& tci = vecConf[i];
+		if (checkKey(tci.key, "httpPort"))
+		{
+			httpPort = atoi(tci.val.c_str());
+		}
+	}
+}
+
 
 void tdsConfig::loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
@@ -344,6 +368,10 @@ void tdsConfig::loadConf()
 	else if (mode == "tcp2com")
 	{
 		loadConf_tcp2com(vecConf);
+	}
+	else if (mode == "hs" || mode == "httpServer")
+	{
+		loadConf_httpServer(vecConf);
 	}
 }
 

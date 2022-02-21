@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 	{
 		doShell();
 	}
-	else if (mode == "hs") //httpServer
+	else if (mode == "hs" || mode == "httpServer") //httpServer
 	{
 		httplib::Server* httpSrv  = new httplib::Server;
 		string webPath = fs::appPath();
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
 		}
 
-		LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->port));
+		LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
 
 		httpSrv->listen("0.0.0.0", tds->conf->port);
 	}
