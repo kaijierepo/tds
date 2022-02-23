@@ -196,7 +196,7 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 		if (pTdsSession->type == TDS_SESSION_TYPE::terminal)
 		{
 			m_pab.PushStream(pData, iLen);
-			while (m_pab.PopPkt(APP_LAYER_PROTO::textEnd2LF))
+			while (m_pab.PopPkt(APP_LAYER_PROTO::terminalPrompt))
 			{
 				pTdsSession->send(m_pab.pkt, m_pab.iPktLen);
 			}

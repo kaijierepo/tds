@@ -194,10 +194,9 @@ bool ioDev_iq60::onRecvPkt(json jPkt)
 			int time = point[2].get<int>();
 			int status = point[3].get<int>();
 
-			ioDev* pChild = getChild(name);
-			if (pChild && pChild->m_level == "channel")
+			ioChannel* pC = getChan(name);
+			if (pC)
 			{
-				ioChannel* pC = (ioChannel*)pChild;
 				pC->input(jVal);
 			}
 		}
@@ -326,7 +325,7 @@ bool ioDev_iq60::scanChannel(json& chanList)
 				jChan["valType"] = VAL_TYPE::integer;
 			else
 				continue;
-			jChan["valTypeLabel"] = VAL_TYPE_LABEL.at(jChan["valType"]);
+			jChan["valTypeLabel"] = getValTypeLabel(jChan["valType"]);
 			jChan["name"] = jPt["DisplayName"];
 			if (jPt["RW"] == "rw")
 			{

@@ -31,12 +31,12 @@ bool ioChannel::loadConf(json& conf)
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
 	if(m_ioType!="")
-		m_ioTypeLabel = IO_TYPE_LABEL.at(m_ioType);
+		m_ioTypeLabel = getIOTypeLabel(m_ioType);
 
 	if (conf["valType"] != nullptr)
 		m_valType = conf["valType"];
 	if (m_valType != "")
-		m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+		m_valTypeLabel = getValTypeLabel(m_valType);
 
 	if (conf["name"] != nullptr)
 		m_name = conf["name"];

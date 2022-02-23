@@ -15,20 +15,25 @@ enum string			         short dash     gw-local-serial
 */
 
 namespace TDS {
-	const std::map<string, string> VAL_TYPE_LABEL = {
-	{std::map<string,string>::value_type("json","JSON")},
-	{std::map<string,string>::value_type("float","浮点型")},
-	{std::map<string,string>::value_type("int","整型")},
-	{std::map<string,string>::value_type("bool","布尔型")},
-	{std::map<string,string>::value_type("video","视频")},
-	{std::map<string,string>::value_type("string","字符串型")}
-	};
+	inline string getValTypeLabel(string valType)
+	{
+		if (valType == "json") return "JSON";
+		else if (valType == "float") return "浮点型";
+		else if (valType == "int") return "整型";
+		else if (valType == "bool") return "布尔型";
+		else if (valType == "video") return "视频";
+		else if (valType == "string") return "字符串型";
+		else return "未知值类型";
+	}
 
-	const std::map<string, string> IO_TYPE_LABEL = {
-	{std::map<string,string>::value_type("i","输入")},
-	{std::map<string,string>::value_type("o","输出")},
-	{std::map<string,string>::value_type("io","输入/输出")}
-	};
+	inline string getIOTypeLabel(string valType)
+	{
+		if (valType == "i") return "输入";
+		else if (valType == "o") return "输出";
+		else if (valType == "io") return "输入/输出";
+		else return "未知IO类型";
+	}
+
 
 inline string getDevTypeLabel(string devType) {
 	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
@@ -38,6 +43,14 @@ inline string getDevTypeLabel(string devType) {
 	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
 	else return "未知类型";
 }
+
+	namespace DATA_SAVE_MODE {
+		const string always = "always";
+		const string onchange = "onchange";
+		const string cyclic = "cyclic";
+		const string never = "never";
+		const string cyclic_onchange = "cyclic|onchange";
+	}
 
 //物理量类型。
 //注意:不同的物理量可以有相同的单位，只是物理应用场景不同。
@@ -143,8 +156,9 @@ namespace APP_LAYER_PROTO {
 	const string TDSRPC= "tdsRPC";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
 	const string IQ60 = "iq60";
-	const string textEnd2LF = "textEnd2LF";  //以2个换行结尾的字符串
+	const string terminalPrompt = "->";  //以 -> 结尾的字符串 
 	const string textEnd1LF = "textEnd1LF";
+	const string textEnd2LF = "textEnd2LF";
 };
 
 //the protocol used as a transportation layer (no command specified in this layer,only for data transfer)

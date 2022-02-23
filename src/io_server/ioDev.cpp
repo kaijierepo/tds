@@ -190,6 +190,9 @@ void ioDev::stop()
 	}
 }
 
+// 默认选项
+// opt.recursive = true
+// opt.onlyConf = false
 bool ioDev::toJson(json& conf, json opt)
 {
 	//配置数据
@@ -248,18 +251,18 @@ bool ioDev::toJson(json& conf, json opt)
 			}
 			conf["children"] = children;
 		}
-		
-		if (m_channels.size() > 0)
+	}
+
+	if (m_channels.size() > 0)
+	{
+		json channels = json::array();
+		for (auto& i : m_channels)
 		{
-			json channels = json::array();
-			for (auto& i : m_channels)
-			{
-				json j;
-				i->toJson(j, opt);
-				channels.push_back(j);
-			}
-			conf["channels"] = channels;
+			json j;
+			i->toJson(j, opt);
+			channels.push_back(j);
 		}
+		conf["channels"] = channels;
 	}
 	
 	return true;

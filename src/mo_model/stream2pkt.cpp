@@ -135,6 +135,18 @@ bool stream2pkt::PopPkt(string cpt)
 			}
 		}
 
+		if (ilen == 0 &&
+			(cpt == APP_LAYER_PROTO::terminalPrompt))
+		{
+			if (i > 0)
+				break;
+			ilen = IsValidPkt_terminalPrompt(stream + i, iStreamLen - i);
+			if (ilen > 0)
+			{
+				m_protocolType = APP_LAYER_PROTO::terminalPrompt;
+			}
+		}
+
 
 		if (ilen)
 		{
@@ -282,13 +294,29 @@ int stream2pkt::IsValidPkt_WEBSOCKET(char* pData, int iLen)
 	return 0;
 }
 
+int stream2pkt::IsValidPkt_terminalPrompt(char* pData, int iLen)
+{
+	if (iLen < 5)
+		return 0;
+	for (int i = 2; i < iLen; i++)
+	{
+		//冒号中的 ->提示符不算
+		if (pData[i-1] == '-' && pData[i] == '>' && pData[i-2]!='\"')
+		{
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+
 int stream2pkt::IsValidPkt_textEnd2LF(char* pData, int iLen)
 {
 	if (iLen < 5)
 		return 0;
 	for (int i = 1; i < iLen; i++)
 	{
-		if (pData[i] == '\n' || pData[i] == '>')
+		if (pData[i] == '\n' || pData[i] == '\n')
 		{
 			return i + 1;
 		}

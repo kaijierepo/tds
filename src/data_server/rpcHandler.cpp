@@ -679,6 +679,16 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		result = rpc_io_tree(params, error);
 	}
+	else if (method == "setIOTree")
+	{
+		string strData = params.dump(4);
+		fs::writeFile(tds->conf->projectConfPath + "/io.json", strData);
+		//io tree 热更新
+		ioSrv.stop(); //退出所有工作线程
+		ioSrv.clear();
+		ioSrv.run();
+		result = "\"ok\"";
+	}
 	else if (method == "getChanStatus")
 	{
 		rpc_getChanStatus(params,rpcResp);
@@ -857,6 +867,21 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 		result = rpc_setconf(params, error);
 	}
+	else if (method == "setMOTree")
+	{
+		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		string strData = params.dump(4);
+		fs::writeFile(tds->conf->projectConfPath + "/mo.json", strData);
+		//mo tree 热更新
+		prj.clearChildren();
+		prj.loadConf();
+		ioSrv.updateTag2IOAddrBinding();
+		result = "\"ok\"";
+	}
+	else if (method == "createFromDataLink")
+	{
+		
+	}
 	else
 	{
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
@@ -983,6 +1008,23 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			json list;
 			prj.getMpList(list);
 			result = list.dump(2);
+		}
+		else if (method == "getMOBindDev") {
+			string tag = params["tag"].get<string>();
+			ioDev* p = ioSrv.getIODevByTag(tag);
+			if (p)
+			{
+				json j;
+				json opt;
+				opt["recursive"] = false;
+				p->toJson(j,opt);
+				result = j.dump(4);
+			}
+			else
+			{
+				json jErr = "device not found";
+				error = jErr.dump();
+			}
 		}
 		else
 		{
@@ -2111,27 +2153,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	string type = "";
 	if (params.find("type") != params.end())
 		type = params["type"].get<string>();
-	if (type == "mo-tree")
-	{
-		string strData = params["conf"].dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "/mo.json", strData);
-		//mo tree 热更新
-		prj.clearChildren();
-		prj.loadConf();
-		ioSrv.updateTag2IOAddrBinding();
-		return "\"ok\"";
-	}
-	else if (type == "io-tree")
-	{
-		string strData = params["conf"].dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "/io.json", strData);
-		//io tree 热更新
-		ioSrv.stop(); //退出所有工作线程
-		ioSrv.clear();
-		ioSrv.run();
-		return "\"ok\"";
-	}
-	else if (type == "file")
+	if (type == "file")
 	{
 		return rpc_setconffile(params,error);
 	}

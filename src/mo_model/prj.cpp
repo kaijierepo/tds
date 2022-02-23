@@ -87,7 +87,7 @@ bool project::loadConf()
 	catch (std::exception& e)
 	{
 		string s = e.what();
-		std::cout<<s<<std::endl;
+		LOG("[error]加载监控对象配置mo.json异常,错误信息:" + s);
 		return false;
 	}
 }

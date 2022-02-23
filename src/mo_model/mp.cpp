@@ -67,7 +67,7 @@ bool MP::loadConf(json& conf)
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
-	m_valTypeLabel = VAL_TYPE_LABEL.at(m_valType);
+	m_valTypeLabel = getValTypeLabel(m_valType);
 
 	//不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
 	if (conf["unit"] != nullptr)
@@ -105,7 +105,7 @@ bool MP::loadConf(json& conf)
 	}
 	else
 	{
-		m_saveMode = "never";
+		m_saveMode = DATA_SAVE_MODE::always;
 	}
 
 	if (conf["saveInterval"] != nullptr)
@@ -403,7 +403,7 @@ string MP::getMpTypeLabel()
 	}
 	else
 	{
-		typeLabel = TDS::VAL_TYPE_LABEL.at(m_valType);
+		typeLabel = TDS::getValTypeLabel(m_valType);
 	}
 
 	return typeLabel;

@@ -1475,24 +1475,53 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		//应用层协议处理
 		if (tdsSession->bridgedIoSessionClient != NULL)
 		{
-			if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC ||
-				tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+			if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 			{
 				stream2pkt* pab = &tdsSession->m_alBuf;
 				pab->PushStream(pData, iLen);
 				while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
 				{
 					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+					string s = str::fromBuff(pab->pkt, pab->iPktLen);
+					LOG("[IO设备透传]dev->client " + s);
+				}
+			}
+			//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
+			else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				while (pab->PopPkt(APP_LAYER_PROTO::IQ60) || pab->PopPkt(APP_LAYER_PROTO::terminalPrompt))
+				{
+					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+					string s = str::fromBuff(pab->pkt, pab->iPktLen);
+					LOG("[IO设备透传]dev->client " + s);
 				}
 			}
 		}
 		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
 		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+			bool regPkt = false;
+			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 			{
-				onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
+				string s = str::fromBuff(pData, iLen);
+				if (s.find("IQ60_") == 0)
+				{
+					LOG("IQ60首发数据," + s);
+					regPkt = true;
+					string strIoAddr = s.substr(5,s.length()-5);
+					ioSrv.handleDevOnline(strIoAddr, tdsSession);
+				}
+			}
+			
+			if (!regPkt)
+			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+				{
+					onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
+				}
 			}
 		}
 		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
@@ -1570,12 +1599,8 @@ bool dataServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_pt
 	{
 		if (tdsSession->bridgedIoSession)
 			tdsSession->bridgedIoSession->send(pData, iLen);
-		char* p = new char[iLen + 1];
-		memset(p, 0, iLen + 1);
-		memcpy(p, pData, iLen);
-		string s = p;
-		LOG("client->dev " + s);
-		delete p;
+		string s = str::fromBuff(pData,iLen);
+		LOG("[IO设备透传]client->dev " + s);
 	}
 	else
 	{

@@ -54,6 +54,7 @@ public:
 	int IsValidPkt_ModbusRTU(char* pData,int iLen);
 	int IsValidPkt_JSONRPC(char* pData, int iLen);
 	int IsValidPkt_WEBSOCKET(char* pData, int iLen);
+	int IsValidPkt_terminalPrompt(char* pData, int iLen);
 	int IsValidPkt_textEnd2LF(char* pData, int iLen);
 	int IsValidPkt_textEnd1LF(char* pData, int iLen);
 	int IsValidPkt_IQ60(char* pData, int iLen);
