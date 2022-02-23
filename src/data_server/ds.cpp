@@ -9,7 +9,6 @@
 #include "video/remoteDesktopServer.h"
 #include <memory>
 #include "ioSrv.h"
-#include "ioDev_iq60.h"
 #include "tcpClt.h"
 #include "commSrv.h"
 #include "ioDev_genicam.h"
@@ -1451,6 +1450,66 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	
 
 	return true;
+}
+
+void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
+{
+	char* p = new char[iLen + 1];
+	memset(p, 0, iLen + 1);
+	memcpy(p, pData, iLen);
+	string pkt = p;
+	delete p;
+
+	try {
+		json jpkt = json::parse(pkt);
+
+		if (jpkt.is_array() && jpkt.size() >= 1)
+		{
+			//转发给对应设备
+			string id = jpkt[0];
+			ioDev* pIoDev = ioSrv.getIODev(id);
+			if (pIoDev)
+			{
+				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
+				{
+					ioDev* p = pIoDev;
+					if (p->m_bEnableIoLog)
+						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
+
+					p->setIOSession(pALC);
+					if (p->m_bOnline == false)
+					{
+						p->m_bOnline = true;
+						json j;
+						p->toJson(j);
+						if (!pALC->getIODev(p->getIOAddrStr()))
+						{
+							pALC->m_vecIoDev.push_back(p->getIOAddrStr());
+						}
+						rpcSrv.notify("io.online", j);
+					}
+					p->onRecvPkt(jpkt);
+				}
+				else
+				{
+					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id);
+				}
+			}
+			//设备发现功能
+			else
+			{
+				json jAddr;
+				jAddr["id"] = id;
+				ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::iq60_gateway);
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		string log = "pkt from iq60,json parse error. " + errorType;
+		LOG(log);
+	}
 }
 
 bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)

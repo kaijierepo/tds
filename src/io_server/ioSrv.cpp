@@ -17,7 +17,6 @@
 #include "ioChan.h"
 
 #include "ioGW_localSerial.h"
-#include "ioDev_iq60.h"
 #include "ioDev_tdsp.h"
 #include "ioDev_genicam.h"
 
@@ -78,51 +77,7 @@ ioServer::~ioServer()
 
 
 
-ioDev* createIODev(string type)
-{
-	ioDev* p = NULL;
-	if (type == IO_DEV_TYPE::DEV::mqttBroker)
-	{
-		p = new ioDev_mqttBroker();
-	}
-	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
-	{
-		p = new ioDev_tdsp();
-	}
-	else if (type == IO_DEV_TYPE::GW::tuya_iot_project)
-	{
-		p = new ioGW_tuyaProject();
-	}
-	else if (type == "tuya.switch")
-	{
-		p = new ioDev_tuya();
-	}
-	else if (type == "iq60-gateway")
-	{
-		p = new ioDev_iq60();	
-	}
-	else if (type == "genicam")
-	{
-#ifdef ENABLE_GENICAM
-		p = new ioDev_genicam();
-#endif
-	}
-	else if (type == IO_DEV_TYPE::GW::local_serial)
-	{
-		p = new ioGW_LocalSerial();
-	}
-	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
-	{
-		p = new ioGW_rs485();
-	}
-	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
-	{
-		p = new ioDev_ModbusSlave();
-	}
 
-	p->m_confNodeId = common::guid();
-	return p;
-}
 
 
 

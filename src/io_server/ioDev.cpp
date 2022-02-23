@@ -4,20 +4,14 @@
 #include "commSrv.h"
 #include "db.h"
 #include "prj.h"
-
 #include "ioGW_tuyaProject.h"
-
 #include "ioDev_modbusSlave.h"
 #include "ioDev_mqttBroker.h"
 #include "ioDev_tuya.h"
 #include "ioGW_rs485.h"
-
 #include "ioChan.h"
-
 #include "ioGW_localSerial.h"
-#include "ioDev_iq60.h"
 #include "ioDev_tdsp.h"
-
 #include "ioDev_genicam.h"
 #include "mp.h"
 
@@ -55,72 +49,70 @@ bool isBatchLink(string addr)
 	}
 }
 
+
+std::map<string, fp_createDev> mapDevCreateFunc;
 ioDev* createIODev(json conf)
 {
-	ioDev* p = NULL;
+    ioDev* p = NULL;
 	string type = conf["type"].get<string>();
-	if (type == "mqtt-broker")
+	if (mapDevCreateFunc.find(type) != mapDevCreateFunc.end())
+	{
+		fp_createDev func_create = mapDevCreateFunc[type];
+		p = func_create();
+	}
+	else if (type == "mqtt-broker")
 	{
 		p = new ioDev_mqttBroker();
-		string ip = conf["addr"]["ip"];
-		string port = conf["addr"]["port"];
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = ip + ":" + port;
 	}
 	else if (type == "tuya-iot-project")
 	{
 		p = new ioGW_tuyaProject();
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = conf["addr"]["client_id"];
-		p->m_secret = conf["addr"]["secret"];
 	}
 	else if (type == "tuya.switch")
 	{
 		p = new ioDev_tuya();
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = conf["addr"]["device_id"];
-	}
-	else if (type == "iq60-gateway")
-	{
-		ioDev_iq60* piq60 = new ioDev_iq60();
-		p = piq60;
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = conf["addr"]["id"];
 	}
 	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
 	{
-		ioGW_rs485* pRs485 = new ioGW_rs485();
-		p = pRs485;
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = p->getDevAddrStr();
+		p = new ioGW_rs485();
 	}
 	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
 	{
-		ioDev_ModbusSlave* pRtuSlave = new ioDev_ModbusSlave();
-		p = pRtuSlave;
-		p->m_jDevAddr = conf["addr"];
-		p->m_devAddr = p->getDevAddrStr();
+		p = new ioDev_ModbusSlave();
 	}
 	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
 	{
-		ioDev_tdsp* ptdsp = new ioDev_tdsp();
-		p = ptdsp;
-		p->m_jDevAddr = conf["addr"];
+		p = new ioDev_tdsp();;
 	}
 	else if (type == IO_DEV_TYPE::GW::local_serial)
 	{
-		ioGW_LocalSerial* pLs = new ioGW_LocalSerial();
-		p = pLs;
-		p->m_jDevAddr = conf["addr"];
+		p = new ioGW_LocalSerial();
+	}
+	else if (type == "genicam")
+	{
+#ifdef ENABLE_GENICAM
+		p = new ioDev_genicam();
+#endif
 	}
 
 	if (p)
 	{
-		p->m_devType = conf["type"];
-		p->m_level = conf["level"];
+		p->m_confNodeId = common::guid();
+		if (conf.contains("addr"))
+		{
+			p->m_jDevAddr = conf["addr"];
+			p->m_devAddr = p->getDevAddrStr();
+		}
 	}
 
 	return p;
+}
+
+ioDev* createIODev(string type)
+{
+	json j;
+	j["type"] = type;
+	return createIODev(j);
 }
 
 

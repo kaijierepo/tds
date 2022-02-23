@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "tdsSession.h"
 
+class ioDev;
 class MO;
 class MP;
 class ioAddrSession;
@@ -10,6 +11,7 @@ class ioChannel;
 //no DoCycleTask for DMS_UNCONF ioDev
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
 typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
+typedef ioDev* (*fp_createDev)();
 class ioDev
 {
 public:
@@ -181,6 +183,7 @@ public:
 
 ioDev* createIODev(json conf);
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
+extern std::map<string, fp_createDev> mapDevCreateFunc;
 
 class TransparentGateway : public ioDev {
 public:

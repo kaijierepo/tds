@@ -16,7 +16,6 @@
 #include "logger.h"
 #include "xiaot/xiaot.h"
 #include "ioGW_localSerial.h"
-#include "ioDev_iq60.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
@@ -2403,70 +2402,59 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 		return "";
 	}
 
-	if (pDev->m_devType == "iq60-gateway")
+	
+	json chanList;
+	if (pDev->pIOSession == nullptr)
 	{
-		ioDev_iq60* p = (ioDev_iq60*)pDev;
-		json chanList;
-		if (p->pIOSession == nullptr)
+		json jError = {
+			{"code", -32603},
+			{"message" , "设备不在线，请确认IQ60的连接配置，并在主动上送数据"}
+		};
+		error = jError.dump();
+	}
+	else if (pDev->scanChannel(chanList))
+	{
+		//比对p->m_vecChild是否已经存在,只发不存在的给前端
+		for (int i = 0; i < chanList.size(); i++)
 		{
-			json jError = {
-				{"code", -32603},
-				{"message" , "设备不在线，请确认IQ60的连接配置，并在主动上送数据"}
-			};
-			error = jError.dump();
-		}
-		else if (p->scanChannel(chanList))
-		{
-			//比对p->m_vecChild是否已经存在,只发不存在的给前端
-			for (int i = 0; i < chanList.size(); i++)
-			{
-				json jsubPkt = chanList.at(i);
-				string straddr = jsubPkt["addr"];
+			json jsubPkt = chanList.at(i);
+			string straddr = jsubPkt["addr"];
 
-				for (auto j : p->m_vecChildDev)
+			for (auto j : pDev->m_vecChildDev)
+			{
+				ioChannel* pioChannel = (ioChannel*)j;
+				if (pioChannel->m_devAddr == straddr)
 				{
-					ioChannel* pioChannel = (ioChannel*)j;
-					if (pioChannel->m_devAddr == straddr)
-					{
-						chanList.erase(i);
-						i--;
-						break;
-					}
+					chanList.erase(i);
+					i--;
+					break;
 				}
 			}
-			//
-
-			json result;
-			result["ioAddr"] = p->getIOAddrStr();
-			result["channels"] = chanList;
-
-
-			//新建空闲设备通道
-			for (int i = 0; i < chanList.size(); i++)
-			{
-				json jC = chanList[i];
-				ioChannel* pC = new ioChannel;
-				pC->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
-				pC->loadConf(jC);
-				p->addChild(pC);
-			}
-
-			return result.dump();
 		}
-		else
+		//
+
+		json result;
+		result["ioAddr"] = pDev->getIOAddrStr();
+		result["channels"] = chanList;
+
+
+		//新建空闲设备通道
+		for (int i = 0; i < chanList.size(); i++)
 		{
-			json jError = {
-				{"code", -32603},
-				{"message" , "设备响应超时"}
-			};
-			error = jError.dump();
+			json jC = chanList[i];
+			ioChannel* pC = new ioChannel;
+			pC->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
+			pC->loadConf(jC);
+			pDev->addChild(pC);
 		}
+
+		return result.dump();
 	}
 	else
 	{
 		json jError = {
 			{"code", -32603},
-			{"message" , "该ioAddr地址设备不是IQ60"}
+			{"message" , "设备响应超时"}
 		};
 		error = jError.dump();
 	}
