@@ -312,7 +312,7 @@ bool TDS_imp::setWorkingDir()
 	string cwd = fs::appPath();
 	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
 	string s = bRet ? "成功" : "失败";
-	LOG("[keyinfo][工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
+	//LOG("[keyinfo][工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
 	return true;
 }
 
@@ -342,8 +342,6 @@ bool TDS_imp::run(string cmdline)
 	}
 #endif
 
-	//display version
-	LOG("[keyinfo]tds " + version + getbuildtime());
 
 	logger.setLogLevel(tdsConf.logLevel);
 	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
@@ -396,9 +394,8 @@ bool TDS_imp::run(string cmdline)
 
 	GetLocalTime(&stStartupTime);
 
-	string sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|DS端口:" + str::fromInt(tds->conf->port) + "|启动时间:" + timeopt::st2str(tds->stStartupTime);
+	string sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
-
 	return true;
 }
 

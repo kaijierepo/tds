@@ -312,10 +312,10 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		uiTitle = "tdsUI";
 
 	//关键配置信息
-	if (enableDevReboot)
-		LOG("[TDS参数   ]启用设备自动重启机制,重启周期" + str::fromInt(devRebootTime) + "秒");
-	if (enableDevCommReboot)
-		LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
+	//if (enableDevReboot)
+		//LOG("[TDS参数   ]启用设备自动重启机制,重启周期" + str::fromInt(devRebootTime) + "秒");
+	//if (enableDevCommReboot)
+		//LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
 }
 
 void tdsConfig::loadConf()
