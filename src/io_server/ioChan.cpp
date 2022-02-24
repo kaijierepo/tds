@@ -4,7 +4,6 @@
 #include "ioDev.h"
 #include "mp.h"
 #include "db.h"
-#include "ioDev_iq60.h"
 
 
 ioChannel::ioChannel()

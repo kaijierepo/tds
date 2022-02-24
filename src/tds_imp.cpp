@@ -279,6 +279,7 @@ TDS_imp::TDS_imp()
 {
 	conf = &tdsConf;
 	m_fpProcBeforeExit = NULL;
+	createLicence = NULL;
 }
 
 bool TDS_imp::setEncodeing(string encoding)

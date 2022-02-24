@@ -168,6 +168,7 @@ public:
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
+typedef void (*fp_createLicence)();
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
 typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
@@ -285,6 +286,8 @@ public:
 
 
 
+
+
 //interface of TDS
 class iTDS {
 public:
@@ -293,7 +296,7 @@ public:
 	virtual bool run(string cmdline = "") = 0;
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 	fp_procBeforeExit m_fpProcBeforeExit;
-
+	fp_createLicence createLicence;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 

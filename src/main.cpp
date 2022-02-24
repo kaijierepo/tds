@@ -107,6 +107,12 @@ int main(int argc, char** argv)
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
+	//专业版创建授权文件
+	if (tds->createLicence)
+	{
+		tds->createLicence();
+	}
+
 	//确认程序运行模式
 	string mode = fs::appName();
 	string cmdlineMode = parser.get<string>("m");

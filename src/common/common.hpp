@@ -11,7 +11,6 @@
 #include <thread>
 #include <iostream>
 #include <exception>
-#include <WinSock2.h>
 #include <SetupAPI.h>
 #include <devguid.h>
 #include <mutex>
@@ -355,7 +354,7 @@ namespace str {
 			int nLength = _vscprintf(pszFmt, args);
 			nLength += 1;  //上面返回的长度是包含\0，这里加上
 			std::vector<char> vectorChars(nLength);
-			_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+			_vsnprintf_s(vectorChars.data(), nLength,nLength, pszFmt, args);
 			str.assign(vectorChars.data());
 		}
 		va_end(args);
@@ -618,7 +617,7 @@ namespace timeopt {
 	{
 		SYSTEMTIME t;
 		int year, month, day, hour, min, sec;
-		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+		sscanf_s(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
 			&month,
 			&day,
@@ -949,7 +948,8 @@ namespace fs {
 	}
 	inline bool readFile(string path, char*& pData, int& len)
 	{
-		FILE* fp = _wfopen(charCodec::autoToUtf16(path).c_str(), L"rb");
+		FILE* fp = nullptr;
+		_wfopen_s(&fp,charCodec::autoToUtf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -964,7 +964,8 @@ namespace fs {
 	}
 	inline bool readFile(string path, string& data)
 	{
-		FILE* fp = _wfopen(charCodec::autoToUtf16(path).c_str(), L"rb");
+		FILE* fp = nullptr;
+		_wfopen_s(&fp,charCodec::autoToUtf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -984,7 +985,8 @@ namespace fs {
 		fs::createFolderOfPath(path);
 		wstring wpath = charCodec::autoToUtf16(path);
 
-		FILE* fp = _wfopen(wpath.c_str(), L"wb");
+		FILE* fp = nullptr;
+		_wfopen_s(&fp,wpath.c_str(), L"wb");
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -1002,7 +1004,8 @@ namespace fs {
 	inline bool appendFile(string path, char* data, int len)
 	{
 		wstring wpath = charCodec::autoToUtf16(path);
-		FILE* fp = _wfopen(wpath.c_str(), L"ab");
+		FILE* fp = nullptr;
+		_wfopen_s(&fp,wpath.c_str(), L"ab");
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -1046,14 +1049,14 @@ namespace fs {
 	inline  void getFileList(vector<string>& list,string strFolder,bool includeFolder = false,bool recursive = false)
 	{
 		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
-		wchar_t dirNew[200];
-		wcscpy(dirNew, wstrFolder.c_str());
-		wcscat(dirNew, L"\\*.*");    // 在目录后面加上"\\*.*"进行第一次搜索
+		wstring dirNew;
+		dirNew = wstrFolder;
+		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
 
 		intptr_t handle;
 		_wfinddata64i32_t findData;
 
-		handle = _wfindfirst(dirNew, &findData);
+		handle = _wfindfirst(dirNew.c_str(), &findData);
 		if (handle == -1)        // 检查是否成功
 			return;
 
@@ -1067,9 +1070,9 @@ namespace fs {
 				//list.push_back(charCodec::utf16toUtf8(findData.name));
 
 				// 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
-				wcscpy(dirNew, wstrFolder.c_str());
-				wcscat(dirNew, L"\\");
-				wcscat(dirNew, findData.name);
+				dirNew = wstrFolder.c_str();
+				dirNew += L"\\";
+				dirNew += findData.name;
 
 				if (includeFolder)
 					list.push_back(charCodec::utf16ToAuto(findData.name));
@@ -1308,7 +1311,7 @@ namespace sys {
 				string strFilePath = strDrName.substr(0,len + 1);
 				// 获取'\\'右边的字符串   
 				string fileName = strDrName.substr(len+1,strDrName.length() - len - 1);
-				fileName = strComName + _T(": ") + fileName;
+				fileName = strComName + ": " + fileName;
 				list.push_back(fileName);
 				i++;
 			} while (1);
@@ -1508,7 +1511,7 @@ __TIME__ 程序被编译的时间, 以"hh:mm:ss"格式的字符串标注, 该时
 inline string getbuildtime()
 {
 	static char buildtime[256] = { 0 };
-	sprintf(buildtime, "%d-%02d-%02d %s", YEAR, MONTH + 1, DAY, __TIME__);
+	sprintf_s(buildtime, 256,"%d-%02d-%02d %s", YEAR, MONTH + 1, DAY, __TIME__);
 	string s = buildtime;
 	return s;
 }
@@ -1516,7 +1519,7 @@ inline string getbuildtime()
 inline string getbuilddate()
 {
 	static char buildtime[256] = { 0 };
-	sprintf(buildtime, "%d-%02d-%02d", YEAR, MONTH + 1, DAY);
+	sprintf_s(buildtime,256, "%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 	string s = buildtime;
 	return s;
 }
