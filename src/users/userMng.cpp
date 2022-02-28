@@ -4,20 +4,103 @@
 #include "mo.h"
 
 userManager userMng;
-bool userManager::loadConf()
+
+
+string getDefaultRoleConf() {
+	return R"(
+[
+     {
+	"name":"系统管理员",
+	"createTime": "2021-11-22 00:00:00",
+ 	"permission":[
+   {
+       "name" : "项目组态"
+   },{
+       "name" : "监控视图"
+   },{
+       "name" : "实时状态"
+   },{
+       "name" : "历史数据"
+   },{
+       "name" : "报警管理"
+   },{
+       "name" : "用户管理"
+   }
+]
+      },
+     {
+	"name":"管理员",
+	"createTime": "2021-11-22 00:00:00",
+ 	"permission":[
 {
-	m_userConfPath = tds->conf->projectConfPath + "/users/users.json";
-	m_roleConfPath = tds->conf->projectConfPath + "/users/roles.json";
-	m_uiConfPath = tds->conf->projectConfPath + "/users/ui.json";
+       "name" : "监控视图"
+   },{
+       "name" : "实时状态"
+   },{
+       "name" : "历史数据"
+   },{
+       "name" : "报警管理"
+   },{
+       "name" : "用户管理"
+   }
+]
+      },
+      {
+	"name":"操作员",
+	"createTime": "2021-11-22 00:00:00",
+ 	"permission":[
+{
+       "name" : "监控视图"
+   },{
+       "name" : "实时状态"
+   },{
+       "name" : "历史数据"
+   },{
+       "name" : "报警管理"
+   }
+]
+      },{
+	"name":"观察员",
+	"createTime": "2021-11-22 00:00:00",
+ 	"permission":[
+{
+       "name" : "监控视图"
+   },{
+       "name" : "实时状态"
+   },{
+       "name" : "历史数据"
+   },{
+       "name" : "报警管理"
+   }
+]
+      }
+]
+)";
+}
 
 
-	string sUsers, sRoles;
+string getDefaultUIConf() {
+	return R"(
+[
+   {
+       "name" : "项目组态"
+   },{
+       "name" : "监控视图"
+   },{
+       "name" : "实时状态"
+   },{
+       "name" : "历史数据"
+   },{
+       "name" : "报警管理"
+   },{
+       "name" : "用户管理"
+   }
+]
+)";
+}
 
-	fs::readFile(m_userConfPath, sUsers);
-	try {
-		if (sUsers == "")
-		{
-			sUsers = R"(
+string getDefaultUserConf() {
+	return R"(
 [
     {
         "createTime": "2021-10-10 21:11:12",
@@ -30,21 +113,52 @@ bool userManager::loadConf()
     }
 ]
 			)";
-		}
+}
 
-		m_jUsers = json::parse(sUsers);
+bool userManager::loadConf()
+{
+	m_userConfPath = tds->conf->projectConfPath + "/users/users.json";
+	m_roleConfPath = tds->conf->projectConfPath + "/users/roles.json";
+	m_uiConfPath = tds->conf->projectConfPath + "/users/ui.json";
 
-		std::unique_lock<shared_mutex> lock(m_csUserConf);
-		for (int i = 0; i < m_jUsers.size(); i++)
+	if (!fs::fileExist(m_userConfPath))
+	{
+		string s = getDefaultUserConf();
+		fs::writeFile(m_userConfPath, s);
+	}
+
+	if (!fs::fileExist(m_roleConfPath))
+	{
+		string s = getDefaultRoleConf();
+		fs::writeFile(m_roleConfPath, s);
+	}
+
+	if (!fs::fileExist(m_uiConfPath))
+	{
+		string s = getDefaultUIConf();
+		fs::writeFile(m_uiConfPath, s);
+	}
+
+
+	string sUsers, sRoles;
+
+	fs::readFile(m_userConfPath, sUsers);
+	try {
+		if (sUsers != "")
 		{
-			json& jOneUser = m_jUsers[i];
-			USER_INFO ui;
-			ui.name = jOneUser["name"].get<string>();
-			//ui.pwd = jOneUser["pwd"].get<string>();
-			//ui.org = jOneUser["org"].get<string>();
-			//ui.enable = jOneUser["enable"].get<bool>();
-			//ui.role = jOneUser["role"].get<string>();
-			m_mapUsers[ui.name] = &jOneUser;
+			m_jUsers = json::parse(sUsers);
+			std::unique_lock<shared_mutex> lock(m_csUserConf);
+			for (int i = 0; i < m_jUsers.size(); i++)
+			{
+				json& jOneUser = m_jUsers[i];
+				USER_INFO ui;
+				ui.name = jOneUser["name"].get<string>();
+				//ui.pwd = jOneUser["pwd"].get<string>();
+				//ui.org = jOneUser["org"].get<string>();
+				//ui.enable = jOneUser["enable"].get<bool>();
+				//ui.role = jOneUser["role"].get<string>();
+				m_mapUsers[ui.name] = &jOneUser;
+			}
 		}
 	}
 	catch (std::exception& e)
@@ -54,12 +168,7 @@ bool userManager::loadConf()
 
 	//如果没有配置，添加一个默认的admin用户，密码123
 
-
-	
-	if (!fs::readFile(m_roleConfPath, sRoles))
-	{
-		return false;
-	}
+	fs::readFile(m_roleConfPath, sRoles);
 	try {
 		if (sRoles != "")
 			m_jRoles = json::parse(sRoles);
@@ -70,10 +179,7 @@ bool userManager::loadConf()
 	}
 
 	string sUI;
-	if (!fs::readFile(m_uiConfPath, sUI))
-	{
-		return false;
-	}
+	fs::readFile(m_uiConfPath, sUI);
 	try {
 		if (sUI != "")
 			m_jUI = json::parse(sUI);
