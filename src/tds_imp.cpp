@@ -348,7 +348,14 @@ bool TDS_imp::run(string cmdline)
 
 
 	//如果配置中没有自定义商标信息，写入良途软件商标信息
-
+	if (tds->conf->projectConfPath == fs::appPath() + "/conf")
+	{
+		if (!fs::fileExist(tds->conf->projectConfPath)) {
+			fs::createFolderOfPath(tds->conf->projectConfPath);
+			LOG("[warn]新建配置文件夹,路径:" + tds->conf->projectConfPath);
+		}
+	}
+	createDefaultCompanyInfo();
 
 	//startup xiaot
 	xiaot.init();
@@ -600,17 +607,17 @@ using namespace std::filesystem;
 void TDS_imp::createDefaultCompanyInfo() {
 	string confPath = tds->conf->projectConfPath;
 
-	if (fs::fileExist(confPath + "/info.json"))
+	if (!fs::fileExist(confPath + "/info.json"))
 	{
 		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/info.json"), charCodec::utf8toUtf16(confPath + "/info.json"));
 	}
 
-	if (fs::fileExist(confPath + "/banner.svg"))
+	if (!fs::fileExist(confPath + "/banner.svg"))
 	{
 		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/banner.svg"), charCodec::utf8toUtf16(confPath + "/banner.svg"));
 	}
 
-	if (fs::fileExist(confPath + "/logo.svg"))
+	if (!fs::fileExist(confPath + "/logo.svg"))
 	{
 		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/logo.svg"), charCodec::utf8toUtf16(confPath + "/logo.svg"));
 	}

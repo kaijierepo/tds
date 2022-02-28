@@ -86,7 +86,7 @@ bool ioServer::loadConf()
 	string conf;
 	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
 	{
-		LOG("[warn]未找到IO设备配置文件io.json,使用空配置");
+		LOG("[warn]未找到IO设备配置io.json,新建配置");
 		return true;
 	}
 
