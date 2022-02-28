@@ -139,6 +139,8 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
 		else if(tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
 			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::GW::rs485_gateway);
+		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::iq60_gateway);
 	}
 	//设备上线
 	else
@@ -151,7 +153,9 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 		}
 	}
-	pIoDev->setIOSession(tdsSession);
+
+	if(pIoDev)
+		pIoDev->setIOSession(tdsSession);
 	return pIoDev;
 }
 
@@ -509,7 +513,9 @@ string ioServer::getTag(string strDataChannelID)
 
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
-	ioDev* p = createIODev(type);
+	json conf;
+	conf["type"] = type;
+	ioDev* p = createIODev(conf);
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())
 		p->m_devAddr = p->m_jDevAddr.get<string>();
