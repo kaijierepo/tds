@@ -1562,10 +1562,21 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 				string s = str::fromBuff(pData, iLen);
 				if (s.find("IQ60_") == 0)
 				{
+					s = s.substr(0, 16);
 					LOG("IQ60首发数据," + s);
 					regPkt = true;
 					string strIoAddr = s.substr(5,s.length()-5);
 					ioSrv.handleDevOnline(strIoAddr, tdsSession);
+
+					if (iLen > 16)
+					{
+						stream2pkt* pab = &tdsSession->m_alBuf;
+						pab->PushStream(pData + 16, iLen-16);
+						while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+						{
+							onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
+						}
+					}
 				}
 			}
 			
