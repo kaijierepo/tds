@@ -68,6 +68,8 @@ public:
 	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
 	 void log(const char* text);
 
+	 void createDefaultCompanyInfo();
+
 	 tdsConfig tdsConf;
 	 
 

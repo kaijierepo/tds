@@ -48,7 +48,7 @@ SOFTWARE.
 #include "tools/tdsWatchDog.h"
 #include "tools/shellServer.h"
 #include "video/audioPlayer.h"
-
+#include <filesystem>
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #include <Shlwapi.h>
@@ -346,6 +346,10 @@ bool TDS_imp::run(string cmdline)
 	logger.setLogLevel(tdsConf.logLevel);
 	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 
+
+	//如果配置中没有自定义商标信息，写入良途软件商标信息
+
+
 	//startup xiaot
 	xiaot.init();
 
@@ -592,6 +596,25 @@ void TDS_imp::log(const char* text)
 	else
 		LOG(text);
 }
+using namespace std::filesystem;
+void TDS_imp::createDefaultCompanyInfo() {
+	string confPath = tds->conf->projectConfPath;
+
+	if (fs::fileExist(confPath + "/info.json"))
+	{
+		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/info.json"), charCodec::utf8toUtf16(confPath + "/info.json"));
+	}
+
+	if (fs::fileExist(confPath + "/banner.svg"))
+	{
+		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/banner.svg"), charCodec::utf8toUtf16(confPath + "/banner.svg"));
+	}
+
+	if (fs::fileExist(confPath + "/logo.svg"))
+	{
+		copy(charCodec::utf8toUtf16(fs::appPath() + "/app/logo.svg"), charCodec::utf8toUtf16(confPath + "/logo.svg"));
+	}
+}
 
 void TDS_imp::registerMsgSinker(fp_msgSinker sinker)
 {
@@ -743,3 +766,5 @@ BOOL CDumpCatch::PreventSetUnhandledExceptionFilter()
 	::VirtualProtect(pOrgEntry, 5, dwOldFlag, &dwTempFlag);
 	return bRet;
 }
+
+
