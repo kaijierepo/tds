@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "common.hpp"
+#include "tools/dumpCatch.h"
+#include "tds.h"
 
 //linuxÏÂÑÕÉ«¿ØÖÆ
 #define COLOR_(msg, color, ctl) \
@@ -143,6 +145,14 @@ string Clogger::logInternal(string info)
 	if (ll == LOG_LEVEL::LL_KEYINFO)
 	{
 		info = str::trim(info, "[keyinfo]");
+	}
+	else if (ll == LOG_LEVEL::LL_ERROR)
+	{
+		if (tds->conf->bCreateDumpWhenLogError)
+		{
+			::MessageBox(NULL, "error", "error", MB_OK);
+			CDumpCatch::createDump(NULL);
+		}
 	}
 
 

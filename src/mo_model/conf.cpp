@@ -22,6 +22,7 @@ tdsConfig::tdsConfig()
 	enableGlobalAlarm = true;
 	tcpKeepAliveIO = 60 * 60;
 	tcpKeepAliveDS = 30;
+	bCreateDumpWhenLogError = false;
 }
 
 
@@ -198,6 +199,13 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 				authDownload = true;
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
+		}
+		else if (checkKey(tci.key, "createDumpWhenLogError"))
+		{
+			if (tci.val == "true" || tci.val == "1")
+				bCreateDumpWhenLogError = true;
+			else if (tci.val == "false" || tci.val == "0")
+				bCreateDumpWhenLogError = false;
 		}
 		else if (checkKey(tci.key, "enablelog"))
 		{

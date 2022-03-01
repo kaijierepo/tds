@@ -596,7 +596,8 @@ bool dataServer::runAsEdge()
 void dataServer::stop()
 {
 	LOG("[keyinfo]正在停止数据服务DataServer...");
-	m_tcpSrv->stop();
+	if(m_tcpSrv)
+		m_tcpSrv->stop();
 	LOG("[keyinfo]数据服务已停止");
 }
 

@@ -42,7 +42,7 @@ public:
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
 	//此时用户以为程序已经退出，再次打开程序。新打开的程序由于666端口被占用而没有启动服务。
 	//但是如果启动了chromeUI，ui依然可能从尚未关闭的前一个进程获取到一些web页面，让人误以为后一个tds服务启动成功了。
-	void stop();
+	void stop() override;
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
@@ -76,31 +76,6 @@ public:
 	 void registerMsgSinker(fp_msgSinker sinker);
 	 void publishMsg(MODULE_BUS_MSG& msg);
 	 vector<fp_msgSinker> m_msgSinkers;
-};
-
-class CDumpCatch
-{
-public:
-	CDumpCatch();
-	~CDumpCatch();
-
-private:
-	static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI TempSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter);
-	static BOOL ReleaseDumpFile(const std::string& strPath, EXCEPTION_POINTERS* pException);
-	static LONG WINAPI UnhandledExceptionFilterEx(struct _EXCEPTION_POINTERS* pException);
-	static void MyPureCallHandler(void);
-	static void MyInvalidParameterHandler(const wchar_t* expression, const wchar_t* function, const wchar_t* file, unsigned int line, uintptr_t pReserved);
-
-	BOOL AddExceptionHandle();
-	BOOL RemoveExceptionHandle();
-	BOOL PreventSetUnhandledExceptionFilter();
-	void SetInvalidHandle();
-	void UnSetInvalidHandle();
-
-private:
-	LPTOP_LEVEL_EXCEPTION_FILTER m_preFilter;
-	_invalid_parameter_handler m_preIph;
-	_purecall_handler m_prePch;
 };
 
 extern void createConsole();

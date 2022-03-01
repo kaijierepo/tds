@@ -439,6 +439,13 @@ bool ioServer::runAsEdge()
 
 void ioServer::stop()
 {
+	if (m_tcpSrv_iq60)
+		m_tcpSrv_iq60->stop();
+	if (m_tcpSrv_rtu)
+		m_tcpSrv_rtu->stop();
+	if (m_tcpSrv_tdsp)
+		m_tcpSrv_tdsp->stop();
+
 	LOG("stoping ioServer...");
 	ioDev::stop();
 	LOG("ioServer stopped");
