@@ -996,7 +996,6 @@ namespace fs {
 		else
 		{
 			int  iError = GetLastError();
-			std::cout << "open file failed,error=" << iError << "," << path << std::endl;
 		}
 		return false;
 	}

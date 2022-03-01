@@ -157,6 +157,7 @@ public:
 public:
 	//获得数据库文件db.json的路径
 	string getPath_dbFile(string strTag, SYSTEMTIME date);
+	string changeCharForFileName(string s);
 	//获得数据元文件或者数据库文件的存储文件夹目录
 	string getPath_dataFolder(string strTag, SYSTEMTIME date);
 	//获得数据元文件或者数据元文件夹的路径

@@ -943,20 +943,20 @@ void ioDev::SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID
 
 ioChannel* ioDev::getChanByTag(string tag)
 {
+	for (auto& child : m_channels)
+	{
+		ioChannel* pC = (ioChannel*)child;
+		string strMP = pC->m_strTagBind;
+		str::trimPrefix(strMP, prj.m_strName + ".");
+		if (strMP == tag)
+		{
+			return pC;
+		}
+	}
+
+
 	for (auto& child : m_vecChildDev)
 	{
-		if (child->m_level == "channel")
-		{
-			ioChannel* pC = (ioChannel*)child;
-			string strMP = pC->m_strTagBind;
-			str::trimPrefix(strMP, prj.m_strName + ".");
-			if (strMP == tag)
-			{
-				return pC;
-			}
-			continue;
-		}
-
 		ioChannel* pC = child->getChanByTag(tag);
 		if (pC)
 			return pC;
@@ -973,7 +973,7 @@ void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
 	{
 		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
-		LOG("[error][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
+		LOG("[warn][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
 		//从老的连接里面把ioAddr映射删除，防止老连接断开造成设备掉线。 容错机制
 		for (int i = 0; i < pIOSession->m_vecIoDev.size(); i++)
 		{

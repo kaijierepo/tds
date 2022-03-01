@@ -2010,16 +2010,17 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	string rootTag = "";
 	if(params["tag"]!=nullptr)
 		szTag = params["tag"].get<string>();
-	string fmt = "table";
-	if(params["fmt"]!=nullptr)
-	 	fmt = params["fmt"].get<string>();
+	string mode = "array";
+	if(params["mode"]!=nullptr)
+	 	mode = params["mode"].get<string>();
 	if (params["rootTag"] != nullptr)
 		rootTag = params["rootTag"].get<string>();
 
 	json rtList = json::array();
+	json rtMap = json::object();
 	if (szTag == "*")
 	{
-		if(fmt=="tree")
+		if(mode=="tree")
 		{
 			json j = prj.getRT();
 			string result = j.dump(4);
@@ -2092,7 +2093,25 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			//	rtList.push_back(de);
 			//}
 
-			string result = rtList.dump(4);
+			string result;
+			if (mode == "array")
+			{
+				result = rtList.dump(4);
+			}
+			else if (mode == "map")
+			{
+				for (int i = 0; i < rtList.size(); i++)
+				{
+					json& de = rtList[i];
+					rtMap[de["tag"].get<string>()] = de;
+				}
+				result = rtMap.dump(4);
+			}
+			else
+			{
+				result = rtList.dump(4);
+			}
+			
 			return result;
 		}
 	}

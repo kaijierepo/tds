@@ -39,8 +39,50 @@ string database::getName_deFile(string tag, SYSTEMTIME time)
 	return timeStamp;
 }
 
+//对9个文件名非法字符进行转义  / \ : * ? " < > |
+string database::changeCharForFileName(string s) {
+	unsigned char c = '/';
+	string r = str::format("[%02X]", c);
+	s = str::replace(s, "/", r);
+
+	c = '\\';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "\\", r);
+
+	c = ':';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, ":", r);
+
+	c = '*';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "*", r);
+
+	c = '?';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "?", r);
+
+	c = '\"';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "\"", r);
+
+	c = '<';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "<", r);
+
+	c = '>';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, ">", r);
+
+	c = '|';
+	r = str::format("[%02X]", c);
+	s = str::replace(s, "|", r);
+
+	return s;
+}
+
 string database::getPath_dataFolder(string strTag, SYSTEMTIME date)
 {
+	strTag = changeCharForFileName(strTag);
 	strTag = str::replace(strTag,".", "/");
 	string strURL= str::format("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
 	strURL += strTag;
@@ -72,7 +114,10 @@ void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFi
 		json jDataList;
 		jDataList.push_back(jDE);
 		string str = jDataList.dump(2);
-		fs::writeFile(dlPath,str);
+		if (!fs::writeFile(dlPath, str))
+		{
+			LOG("[error]写入数据库文件失败,路径:%s,数据:%s", dlPath.c_str(), str.c_str());
+		}
 	}
 	else
 	{
