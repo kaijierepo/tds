@@ -79,6 +79,12 @@ bool MP::loadConf(json& conf)
 	else
 		m_decimalDigits = -1;
 
+	if (conf["ioType"] != nullptr)
+	{
+		m_ioType = conf["ioType"].get<string>();
+		//m_ioTypeLabel = getIOTypeLabel(m_ioType);
+	}
+
 	if (conf["alarmLimit"] != nullptr)
 	{
 		m_alarmLimit.enableHigh = conf["alarmLimit"]["enableHigh"].get<bool>();
@@ -177,6 +183,7 @@ bool MP::toJson(json& conf, json serializeOption)
 		return false;
 
 	conf["valType"] = p->m_valType;
+	conf["ioType"] = p->m_ioType;
 	if (p->m_valType == "json")
 		conf["mpType"] = p->m_mpType;
 	json saveInterval;
@@ -375,10 +382,15 @@ bool MP::output(json jVal, json& jResp, bool sync)
 	ioChannel* pC = ioSrv.getChanByTag(getTag());
 	if (pC)
 	{
+		LOG("[控制输出]位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
 		return pC->output(jVal, jResp,sync);
 	}
 	else
+	{
+		LOG("[控制输出]位号:%s,值:%s,未找到绑定的IO通道", getTag().c_str(), jVal.dump().c_str());
 		return false;
+	}
+		
 }
 
 

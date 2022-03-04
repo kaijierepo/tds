@@ -51,10 +51,9 @@ bool isBatchLink(string addr)
 
 
 std::map<string, fp_createDev> mapDevCreateFunc;
-ioDev* createIODev(json conf)
+ioDev* createIODev(string type)
 {
     ioDev* p = NULL;
-	string type = conf["type"].get<string>();
 	if (mapDevCreateFunc.find(type) != mapDevCreateFunc.end())
 	{
 		fp_createDev func_create = mapDevCreateFunc[type];
@@ -98,21 +97,9 @@ ioDev* createIODev(json conf)
 	if (p)
 	{
 		p->m_confNodeId = common::guid();
-		if (conf.contains("addr"))
-		{
-			p->m_jDevAddr = conf["addr"];
-			p->m_devAddr = p->getDevAddrStr();
-		}
 	}
 
 	return p;
-}
-
-ioDev* createIODev(string type)
-{
-	json j;
-	j["type"] = type;
-	return createIODev(j);
 }
 
 
@@ -381,7 +368,7 @@ bool ioDev::loadConf(json& conf)
 			}
 			else if (i["level"] == "device")
 			{
-				pChild = createIODev(i);
+				pChild = createIODev(i["type"].get<string>());
 				pChild->loadConf(i);
 			}
 

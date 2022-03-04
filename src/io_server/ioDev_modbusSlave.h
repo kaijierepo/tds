@@ -127,7 +127,8 @@ public:
 	bool OnRecvData(char* pData,int iLen);
 	unsigned char funcName2funcCode(string name);
 	void generateAcqCmd();
-	vector<ACQ_CMD> chanList2AcqCmd(vector<ioChannel*>& list);
+	vector<ACQ_CMD> chanList2MultiAcqCmd(vector<ioChannel*>& list);
+	ACQ_CMD chanList2AcqCmd(vector<ioChannel*>& list);
 	vector<ACQ_CMD> m_vecAcqCmd;
 
 	stream2pkt m_recvBuff;

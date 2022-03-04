@@ -327,6 +327,31 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			thread t(tdsEdgeRegisterThread,p);
 			t.detach();
 		}
+
+		//tds服务连接上了TcpServer模式的设备
+		string ioAddr = str::format("%s:%d", connInfo->srvIP.c_str(), connInfo->srvPort);
+		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+		if (pIoDev)
+		{
+			p->m_IoDevTcpLink = pIoDev;
+			p->type = TDS_SESSION_TYPE::iodev;
+			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
+			{
+				p->iALProto = APP_LAYER_PROTO::IQ60;
+			}
+			else if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+			{
+				p->iALProto = APP_LAYER_PROTO::TDSRPC;
+			}
+			else if (pIoDev->m_devType == IO_DEV_TYPE::GW::rs485_gateway)
+			{
+				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
+			}
+			pIoDev->m_bOnline = true;
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
+			pIoDev->setIOSession(p);
+		}
 	}
 	else
 	{
@@ -500,7 +525,7 @@ void httpSrvThread()
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] 根目录: " + tds->conf->projectConfPath);
+		LOG("[keyinfo][HTTP服务器] /conf 路径映射->  " + tds->conf->projectConfPath);
 	}
 
 

@@ -60,7 +60,6 @@ namespace TDS {
 		const string tcpClient = "tcpClient";
 		const string tcpServer = "tcpServer";
 		const string deviceID = "deviceID";
-		const string busAddr = "busAddr";
 	}
 
 	namespace IO_DEV_TYPE {

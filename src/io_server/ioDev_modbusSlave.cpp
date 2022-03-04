@@ -18,7 +18,7 @@ ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 	m_devType = IO_DEV_TYPE::DEV::modbus_rtu_slave;
 	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_level = IO_DEV_LEVEL::device;
-	m_addrMode = DEV_ADDR_MODE::busAddr;
+	m_addrMode = DEV_ADDR_MODE::deviceID;
 }
 
 
@@ -212,14 +212,13 @@ unsigned char ioDev_ModbusSlave::funcName2funcCode(string name)
 }
 
 bool sortChan(ioChannel* a, ioChannel* b) {
-	if (a->m_regOffset <= b->m_regOffset)
+	if (a->m_regOffset < b->m_regOffset)
 		return true;
 	return false;
 }
 
 void ioDev_ModbusSlave::generateAcqCmd()
 {
-	return;
 	vector<ioChannel*> f1List;
 	vector<ioChannel*> f2List;
 	vector<ioChannel*> f3List;
@@ -249,59 +248,67 @@ void ioDev_ModbusSlave::generateAcqCmd()
 	//按照寄存器偏移排序
 	std::sort(f1List.begin(), f1List.end(), sortChan);
 	std::sort(f2List.begin(), f2List.end(), sortChan);
-	std::sort(f3List.begin(), f3List.end(), sortChan);
+	std::sort(f3List.begin(), f3List.begin() + f3List.size(), sortChan);
 	std::sort(f4List.begin(), f4List.end(), sortChan);
 
 	//间隔不超过100个寄存器的通道，使用同1条命令读取
-	vector<ACQ_CMD> acqCmd = chanList2AcqCmd(f1List);
+	vector<ACQ_CMD> acqCmd = chanList2MultiAcqCmd(f1List);
 	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
-	acqCmd = chanList2AcqCmd(f2List);
+	acqCmd = chanList2MultiAcqCmd(f2List);
 	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
-	acqCmd = chanList2AcqCmd(f3List);
+	acqCmd = chanList2MultiAcqCmd(f3List);
 	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
-	acqCmd = chanList2AcqCmd(f4List);
+	acqCmd = chanList2MultiAcqCmd(f4List);
 	m_vecAcqCmd.insert(m_vecAcqCmd.end(), acqCmd.begin(), acqCmd.end());
 }
 
-vector<ACQ_CMD> ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
+vector<ACQ_CMD> ioDev_ModbusSlave::chanList2MultiAcqCmd(vector<ioChannel*>& list)
 {
 	vector<ACQ_CMD> vecAcqCmd;
-	ACQ_CMD ac;
+	vector<ioChannel*> batchAcqList;
 	for (int i = 0; i < list.size(); i++)
 	{
 		ioChannel* c = list[i];
-		if(ac.fCode == 0)
-			ac.fCode = funcName2funcCode(c->m_regType);
-		//是否需要生成1条读取指令
-		bool bAddCmd = false;
-		if (i == 0)
+		batchAcqList.push_back(c);
+
+		//是否生成1条批量读取指令
+		bool addCmd = false;
+		if (i == list.size() - 1)//最后1条
 		{
-			bAddCmd = true;
+			addCmd = true;
 		}
-		else
+		else //不是最后一条，对比和后面一条是否间隔100个寄存器
 		{
-			unsigned short lastOffset = list[i - 1]->m_regOffset;
+			unsigned short nextOffset = list[i + 1]->m_regOffset;
 			unsigned short Offset = list[i]->m_regOffset;
-			if (Offset - lastOffset > 100)
+			if (nextOffset - Offset > 100)
 			{
-				bAddCmd = true;
+				addCmd = true;
 			}
 		}
+		
 
-		if (bAddCmd)
+		//生成读取指令，清空批量获取的通道队列
+		if (addCmd)
 		{
-			if (ac.regNum > 0)
-			{
-				vecAcqCmd.push_back(ac);
-			}
-
-			ac.startRegOffset = c->m_regOffset;
-			ac.regNum = 0;
-		}
-		else
-		{
-			ac.regNum++;
+			ACQ_CMD ac = chanList2AcqCmd(batchAcqList);
+			vecAcqCmd.push_back(ac);
+			batchAcqList.clear();
 		}
 	}
 	return vecAcqCmd;
+}
+
+ACQ_CMD ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
+{
+	ioChannel* lastChan = list[list.size() - 1];
+	ioChannel* firstChan = list[0];
+	ACQ_CMD ac;
+	ac.startRegOffset = list[0]->m_regOffset;
+	//最后1个通道和第一个通道的偏移差
+	ac.regNum = lastChan->m_regOffset - firstChan->m_regOffset;
+	int lastChanSize = storageSize(lastChan->m_storageFmt); //最后1个通道字节数
+	int lastChanRegNum = lastChanSize / 2;//最后1个通道寄存器数
+	ac.regNum += lastChanRegNum;
+	return ac;
 }

@@ -96,7 +96,7 @@ bool ioServer::loadConf()
 		
 		for (auto it : io)
 		{
-			ioDev* p = createIODev(it);
+			ioDev* p = createIODev(it["type"].get<string>());
 			p->loadConf(it);
 			if (p)
 			{
@@ -520,9 +520,7 @@ string ioServer::getTag(string strDataChannelID)
 
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
-	json conf;
-	conf["type"] = type;
-	ioDev* p = createIODev(conf);
+	ioDev* p = createIODev(type);
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())
 		p->m_devAddr = p->m_jDevAddr.get<string>();
