@@ -20,13 +20,7 @@ ioChannel::~ioChannel()
 bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
-	if (conf["storageFmt"] != nullptr)
-	{
-		m_storageFmt = conf["storageFmt"].get<string>();
-	}
-
-
-
+	
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
 	if(m_ioType!="")
@@ -46,8 +40,10 @@ bool ioChannel::loadConf(json& conf)
 	{
 		if (conf["addr"]["regType"] != nullptr)
 			m_regType = conf["addr"]["regType"].get<string>();
-		if (conf["addr"]["regAddr"] != nullptr)
-			m_devAddr = str::fromInt(conf["addr"]["regAddr"].get<int>());
+		if (conf["addr"]["regOffset"] != nullptr)
+			m_regOffset = conf["addr"]["regOffset"].get<int>();
+		if (conf["addr"]["storageFmt"] != nullptr)
+			m_storageFmt = conf["addr"]["storageFmt"].get<string>();
 	}
 	return true;
 }

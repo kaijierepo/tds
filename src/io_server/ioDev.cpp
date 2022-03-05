@@ -127,6 +127,7 @@ int ioDev::m_heartBeatInterval = 3;
 ioDev::ioDev(void)
 {
 	m_bWorkingThreadRunning = false;
+	m_bIsAcqing = false;
 	m_bEnableIoLog = true;
 	bEnableAcq = true;
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
@@ -142,6 +143,7 @@ ioDev::ioDev(void)
 	timeopt::setAsTimeOrg(m_stLastChanDataTime);
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 	timeopt::setAsTimeOrg(m_stLastAlarmStatusTime);
+	timeopt::setAsTimeOrg(m_stLastReqSendTime);
 	GetLocalTime(&m_stEqpOffLineDateTime);
 	GetLocalTime(&m_stLastActiveTime);
 	m_pMO = NULL;
@@ -670,6 +672,16 @@ void ioDev::DoCycleTask()
 		SendHeartbeatPkt();
 		GetLocalTime(&m_stLastHeartbeatTime);
 	}
+}
+
+bool ioDev::checkAcqReqTimeout()
+{
+	if (timeopt::CalcTimePassSecond(m_stLastReqSendTime) > 5)
+	{
+		m_bIsAcqing = false;
+		return true;
+	}	
+	return false;
 }
 
 bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen)

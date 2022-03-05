@@ -102,11 +102,13 @@ struct ACQ_CMD {
 	unsigned char fCode;
 	unsigned short startRegOffset;
 	unsigned short regNum;
+	SYSTEMTIME stLastAcq;
 
 	ACQ_CMD() {
 		fCode = 0;
 		startRegOffset = 0;
 		regNum = 0;
+		timeopt::setAsTimeOrg(stLastAcq);
 	}
 };
 

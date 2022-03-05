@@ -55,8 +55,12 @@ void IOThread()
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 			//空闲设备不轮询数据
 			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
-			if(pIoDev->bEnableAcq && pIoDev->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
+			if (pIoDev->bEnableAcq && pIoDev->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
+			{
 				pIoDev->DoCycleTask();
+				pIoDev->checkAcqReqTimeout();
+			}
+				
 
 			if (!ioSrv.m_bRunning)
 				break;

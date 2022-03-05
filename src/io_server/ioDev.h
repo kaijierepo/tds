@@ -21,6 +21,8 @@ public:
 	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
+	bool m_bIsAcqing; //是否正在采集中，在采集中表示正在异步的等待响应
+	virtual bool isAcqing() { return m_bIsAcqing; };
 	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
@@ -134,12 +136,13 @@ public:
 
 	//周期性采集任务执行
 	virtual void DoCycleTask();
-
+	virtual bool checkAcqReqTimeout();
 
 	static int m_heartBeatInterval;//单位秒
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
-	SYSTEMTIME m_stLastAcqTime;
+	SYSTEMTIME m_stLastAcqTime;  //上一次采集任务开始时间
+	SYSTEMTIME m_stLastReqSendTime; //上一次采集请求发送时间
 	SYSTEMTIME m_stLastChanDataTime;
 	SYSTEMTIME m_stLastAlarmStatusTime;
 	SYSTEMTIME m_stLastActiveTime;

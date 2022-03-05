@@ -37,6 +37,17 @@ ioGW_rs485::~ioGW_rs485(void)
 	stop();
 }
 
+bool ioGW_rs485::isAcqing()
+{
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		if (p->isAcqing())
+			return true;
+	}
+	return false;
+}
+
 bool ioGW_rs485::run()
 {
 	if (m_addrMode == DEV_ADDR_MODE::tcpServer)
@@ -86,6 +97,9 @@ bool ioGW_rs485::sendData(char* pData, int iLen)
 
 void ioGW_rs485::DoCycleTask()
 {
+	if (isAcqing())
+		return;
+
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* pChild = m_vecChildDev[i];
@@ -99,6 +113,8 @@ bool ioGW_rs485::OnRecvData(char* pData, int iLen )
 {
 	if (m_bEnableIoLog)
 		statisOnRecv(pData, iLen, getIOAddrStr());
+
+	
 
 	for(int i = 0;i<m_vecChildDev.size();i++)
 	{

@@ -38,16 +38,30 @@ bool ioDev_ModbusSlave::loadConf(json& conf)
 
 void ioDev_ModbusSlave::DoCycleTask()
 {
-	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
+	if (isAcqing())return;
+
+	for (int i = 0; i < m_vecAcqCmd.size(); i++)
 	{
-		for (int i = 0; i < m_vecChildDev.size(); i++)
+		ACQ_CMD& ac = m_vecAcqCmd[i];
+		if (timeopt::CalcTimePassSecond(ac.stLastAcq) > m_fAcqInterval)
 		{
-			ioChannel* pC = (ioChannel*)m_vecChildDev[i];
-			json jVal = acqModbusReg(pC->m_regType, pC->m_devAddr, pC->m_storageFmt);
-			if (!jVal.is_null())
-				pC->input(jVal);
+			//选择一条需要采集的命令发送请求，进入请求状态，表示设备正忙，设备正忙时不会发起新的请求
+			m_bIsAcqing = true;
+			
+			MRP_REQ_READ_REG req;
+			memset(&req, 0, sizeof(req));
+			req.eqp_addr = ac.startRegOffset;
+			req.fun_code = ac.fCode;
+			req.reg_num_L = LOBYTE(ac.regNum);
+			req.reg_num_H = HIBYTE(ac.regNum);
+			WORD crc = common::N_CRC16((unsigned char*)&req, sizeof(req) - 2);
+			req.crc_H = HIBYTE(crc);
+			req.crc_L = LOBYTE(crc);
+
+			sendData((char*)&req, sizeof(req));
+			GetLocalTime(&m_stLastReqSendTime);
+			return;
 		}
-		GetLocalTime(&m_stLastAcqTime);
 	}
 }
 
@@ -304,6 +318,7 @@ ACQ_CMD ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
 	ioChannel* lastChan = list[list.size() - 1];
 	ioChannel* firstChan = list[0];
 	ACQ_CMD ac;
+	ac.fCode = getFCode(firstChan->m_regType);
 	ac.startRegOffset = list[0]->m_regOffset;
 	//最后1个通道和第一个通道的偏移差
 	ac.regNum = lastChan->m_regOffset - firstChan->m_regOffset;
