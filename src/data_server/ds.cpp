@@ -256,11 +256,11 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
 		if (pIoDev)
 		{
-			p->m_IoDevTcpLink = pIoDev;
+			p->m_IoDev = pIoDev;
 			pIoDev->m_bOnline = true;
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
-			pIoDev->setIOSession(p);
+			pIoDev->bindIOSession(p);
 		}
 			
 		pTcpSession->pALSession = p.get();
@@ -333,7 +333,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
 		if (pIoDev)
 		{
-			p->m_IoDevTcpLink = pIoDev;
+			p->m_IoDev = pIoDev;
 			p->type = TDS_SESSION_TYPE::iodev;
 			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
 			{
@@ -350,7 +350,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			pIoDev->m_bOnline = true;
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
-			pIoDev->setIOSession(p);
+			pIoDev->bindIOSession(p);
 		}
 	}
 	else
@@ -1201,11 +1201,11 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 
 	{
 		//后续此处加入互斥量保护
-		if (tdsSession->m_IoDevTcpLink)
-		{
-			tdsSession->m_IoDevTcpLink->OnRecvData(pData, iLen);
-			return;
-		}	 
+		//if (tdsSession->m_IoDev)
+		//{
+		//	tdsSession->m_IoDev->OnRecvData(pData, iLen);
+		//	return;
+		//}	 
 	}
 
 
@@ -1498,7 +1498,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 					if (p->m_bEnableIoLog)
 						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
-					p->setIOSession(pALC);
+					p->bindIOSession(pALC);
 					if (p->m_bOnline == false)
 					{
 						p->m_bOnline = true;
@@ -1636,18 +1636,19 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
+			bool bRegPkt = false;
 			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 			{
 				if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 				{
+					bRegPkt = true;
 					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession,true);
-				}
-				else
-				{
-					LOG("[error]首包注册包数据格式错误," + str::fromBytes(pData, iLen));
+					LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
 				}
 			}
-			else
+			
+
+			if (!bRegPkt)
 			{
 				while (pab->PopPkt(APP_LAYER_PROTO::MODBUS_RTU))
 				{
@@ -1789,7 +1790,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 					jAddr["id"] = strIoAddr;
 					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
 				}
-				pIoDev->setIOSession(tdsSession);
+				pIoDev->bindIOSession(tdsSession);
 				pIoDev->onRecvPkt(jResp);
 				LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
 			}
@@ -1808,7 +1809,10 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			}
 			else
 			{
-
+				if (tdsSession->m_IoDev)
+				{
+					tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+				}
 			}
 		}
 	}

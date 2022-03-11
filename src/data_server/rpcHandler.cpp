@@ -569,7 +569,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		{
 			json buff;
 			buff["len"] = pSession->m_alBuf.iStreamLen;
-			buff["data"] = str::fromBytes(pSession->m_alBuf.stream, pSession->m_alBuf.iStreamLen);
+			buff["data"] = str::bytesToHexStr(pSession->m_alBuf.stream, pSession->m_alBuf.iStreamLen);
 
 			rpcResp.result = buff.dump(2);
 		}
@@ -2368,7 +2368,24 @@ void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp)
 void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp)
 {
 	json list;
-	ioSrv.getChanStatus(list);
+	string ioAddrSelector = params["ioAddr"].get<string>();
+	if(ioAddrSelector == "*")
+		ioSrv.getChanStatus(list);
+	else if (ioAddrSelector.find("/*") != string::npos) //某个设备下面的所有通道
+	{
+		string devIOAddr = str::trim(ioAddrSelector, "/*");
+		ioDev* p = ioSrv.getIODev(devIOAddr);
+		if (p)
+		{
+			p->getChanStatus(list);
+		}
+		else
+		{
+			return;
+		}
+	}
+
+
 	json valList = json::object();
 	string fmt = "";
 	if (params["fmt"] != nullptr)

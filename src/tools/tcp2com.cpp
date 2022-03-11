@@ -14,7 +14,7 @@ void  serialRecvCallback(void* user, char* pData, int iLen)
 {
 	tcp2com* pt2c = (tcp2com*)user;
 	pt2c->tcpClt.SendData(pData, iLen);      
-	string log = str::fromBytes(pData, iLen);
+	string log = str::bytesToHexStr(pData, iLen);
 	LOG(pt2c->serial.m_portNum + " --> " + pt2c->m_strDestIp + ":" + str::fromInt(pt2c->m_iDestPort) + "  " + log);
 }
 
@@ -86,6 +86,6 @@ void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 void tcp2com::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
 {
 	serial.sendData(pData, iLen);
-	string log = str::fromBytes(pData, iLen);
+	string log = str::bytesToHexStr(pData, iLen);
 	LOG(serial.m_portNum + " <-- " + m_strDestIp + ":" + str::fromInt(m_iDestPort) + "  " + log);
 }

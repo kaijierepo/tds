@@ -12,10 +12,13 @@ public:
 	bool isAcqing() override;
 
 	bool OnRecvData(char* pData, int iLen) override;
+	bool onRecvPkt(char* pData, int iLen) override;
 	bool run() override;
 	bool sendData(char* pData, int iLen) override;
-
+	void checkAcqReqTimeout() override;
 	void DoCycleTask() override;
+
+	stream2pkt m_stream2pkt;
 
 	string m_strErrorInfo;
 };

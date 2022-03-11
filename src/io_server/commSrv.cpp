@@ -267,7 +267,7 @@
 //	//		{
 //	//			string strData = "";
 //	//			string strPkt;
-//	//			strPkt  = str::fromBytes((char*)pData, iLen );
+//	//			strPkt  = str::bytesToHexStr((char*)pData, iLen );
 //
 //	//			if (iLen <= 30)
 //	//				strData = str::format("[异常]收到Can中继[%s]数据长度不是13的倍数,可能是异常数据包,丢弃,长度:%d,数据:%s",
@@ -770,7 +770,7 @@
 //	j["ioAddr"] = addr.toString();
 //	j["type"] = "接收";
 //	j["len"] = len;
-//	j["data"] = str::fromBytes(recvData, len);
+//	j["data"] = str::bytesToHexStr(recvData, len);
 //	string s = j.dump();
 //
 //	sendToCommLog(s);

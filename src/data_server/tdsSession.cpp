@@ -78,7 +78,7 @@ void TDS_SESSION::Init()
     mapTagDataSubscribe.clear();
     bSubAll = false;
     bInitSegSended = false;
-    m_IoDevTcpLink = NULL;
+    m_IoDev = NULL;
 }
 
 bool TDS_SESSION::isConnected()
@@ -159,7 +159,7 @@ void TDS_SESSION::statisOnSend(char* p, int len,bool success)
     else
         j["type"] = "发送失败";
     j["len"] = len;
-    j["data"] = str::fromBytes(p, len);
+    j["data"] = str::bytesToHexStr(p, len);
     j["sessionType"] = type;
     string s = j.dump(4);
 
@@ -198,7 +198,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
         j["type"] = "接收";
         j["len"] = len;
         //j["data"] = str::fromBuff(p, len);
-        j["data"] = str::fromBytes(p, len);
+        j["data"] = str::bytesToHexStr(p, len);
         j["sessionType"] = type;
         string s = j.dump();
         sendToSessionPktSessions((char*)s.c_str(), s.length());
@@ -295,12 +295,12 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      {
          delete pBridgedTcpClient;
      }
-     if (m_IoDevTcpLink)
+     if (m_IoDev)
      {
-         m_IoDevTcpLink->setIOSession(NULL);
-         m_IoDevTcpLink->m_bOnline = false;
-         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDevTcpLink->getIOAddrStr() + ",tag=" + m_IoDevTcpLink->m_strTagBind);
-         m_IoDevTcpLink = NULL;
+         m_IoDev->bindIOSession(NULL);
+         m_IoDev->m_bOnline = false;
+         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDev->getIOAddrStr() + ",tag=" + m_IoDev->m_strTagBind);
+         m_IoDev = NULL;
      }
      if (bridgedIoSession)
      {

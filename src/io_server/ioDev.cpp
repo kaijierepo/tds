@@ -257,6 +257,12 @@ bool ioDev::getStatus(json& status, string opt)
 
 bool ioDev::getChanStatus(json& statusList)
 {
+	for (int i = 0; i < m_channels.size(); i++)
+	{
+		ioDev* p = m_channels[i];
+		p->getChanStatus(statusList);
+	}
+
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -583,6 +589,10 @@ string ioDev::getDevAddrStr()
 				devAddr += ":" + str::fromInt(remotePort);
 			}
 		}
+		else if (m_jDevAddr.contains("regOffset"))
+		{
+			devAddr = str::fromInt(m_jDevAddr["regOffset"].get<int>());
+		}
 	}
 	else if(m_jDevAddr.is_string()){
 		devAddr = m_jDevAddr.get<string>();
@@ -674,14 +684,12 @@ void ioDev::DoCycleTask()
 	}
 }
 
-bool ioDev::checkAcqReqTimeout()
+void ioDev::checkAcqReqTimeout()
 {
 	if (timeopt::CalcTimePassSecond(m_stLastReqSendTime) > 5)
 	{
 		m_bIsAcqing = false;
-		return true;
 	}	
-	return false;
 }
 
 bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen)
@@ -871,7 +879,7 @@ ioDev* ioDev::getChild(string devAddr)
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev.at(i);
-		if (p->m_devAddr == devAddr)
+		if (p->getDevAddrStr() == devAddr)
 			return p;
 	}
 	return nullptr;
@@ -964,15 +972,22 @@ ioChannel* ioDev::getChanByTag(string tag)
 	return nullptr;
 }
 
-void ioDev::setIOSession(shared_ptr<TDS_SESSION> ioSession)
+void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
+
+	//1个tcp链接对应1个io设备的场景
+	if(ioSession!=nullptr)
+		ioSession->m_IoDev = this;
 
 	if (pIOSession != ioSession && ioSession != nullptr && pIOSession!= nullptr)
 	{
 		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
 		LOG("[warn][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
+		
+		//1个tcp链接对应 多个 io设备的场景
+		//应用层数据包包含地址信息时，同一个tcp链接可以用于多个设备通信。
 		//从老的连接里面把ioAddr映射删除，防止老连接断开造成设备掉线。 容错机制
 		for (int i = 0; i < pIOSession->m_vecIoDev.size(); i++)
 		{
@@ -1036,7 +1051,7 @@ void ioDev::statisOnRecv(char* recvData, int len, string addr)
 	j["ioAddr"] = addr;
 	j["type"] = "接收";
 	j["len"] = len;
-	j["data"] = str::fromBytes(recvData, len);
+	j["data"] = str::bytesToHexStr(recvData, len);
 	string s = j.dump();
 
 	sendToCommLog(s);
@@ -1055,7 +1070,7 @@ void ioDev::statisOnSend(char* sendData, int len, string addr)
 	j["ioAddr"] = addr;
 	j["type"] = "发送";
 	j["len"] = len;
-	j["data"] = str::fromBytes(sendData, len);
+	j["data"] = str::bytesToHexStr(sendData, len);
 	string s = j.dump();
 
 	sendToCommLog(s);

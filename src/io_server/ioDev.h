@@ -89,7 +89,7 @@ public:
 	//directly bridge ioDev to tds websocket session
 	std::shared_ptr<TDS_SESSION> pTdsSession;
 
-	void setIOSession(shared_ptr<TDS_SESSION> ioSession);
+	void bindIOSession(shared_ptr<TDS_SESSION> ioSession);
 	void statisOnRecv(char* recvData, int len, string addr);
 	void statisOnSend(char* sendData, int len, string addr);
 
@@ -128,6 +128,7 @@ public:
 	//通信接收
 	virtual bool SendHeartbeatPkt();
 	virtual bool onRecvPkt(json jPkt);
+	virtual bool onRecvPkt(char* pData, int iLen) { return false; }; //接收到完整的协议数据包
 	virtual bool OnRecvData(char* pData, int iLen);//接受数据异步处理函数
 	virtual bool OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
@@ -136,7 +137,7 @@ public:
 
 	//周期性采集任务执行
 	virtual void DoCycleTask();
-	virtual bool checkAcqReqTimeout();
+	virtual void checkAcqReqTimeout();
 
 	static int m_heartBeatInterval;//单位秒
 	SYSTEMTIME m_stLastHeartbeatTime;

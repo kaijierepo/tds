@@ -468,7 +468,7 @@ namespace str {
 		}
 		return bytes;
 	}
-	inline string fromBytes(vector<char>& bytes)
+	inline string bytesToHexStr(vector<char>& bytes)
 	{
 		string str;
 		for (int i = 0; i < bytes.size(); i++)
@@ -479,7 +479,7 @@ namespace str {
 
 		return str;
 	}
-	inline string fromBytes(char* p, int len, string splitter = " ")
+	inline string bytesToHexStr(char* p, int len, string splitter = " ")
 	{
 		string str;
 		for (int i = 0; i < len; i++)

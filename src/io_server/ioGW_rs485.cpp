@@ -95,6 +95,15 @@ bool ioGW_rs485::sendData(char* pData, int iLen)
 	return true;
 }
 
+void ioGW_rs485::checkAcqReqTimeout()
+{
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		p->checkAcqReqTimeout();
+	}
+}
+
 void ioGW_rs485::DoCycleTask()
 {
 	if (isAcqing())
@@ -131,6 +140,18 @@ bool ioGW_rs485::OnRecvData(char* pData, int iLen )
 		m_pRecvCallback(m_pCallbackUser, pData, iLen);
 	}
 
+	return true;
+}
+
+bool ioGW_rs485::onRecvPkt(char* pData, int iLen)
+{
+	int addr = pData[0];
+
+	ioDev* p = getChild(str::fromInt(addr));
+	if (p)
+	{
+		p->onRecvPkt(pData, iLen);
+	}
 	return true;
 }
 

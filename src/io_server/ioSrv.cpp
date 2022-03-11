@@ -159,7 +159,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	}
 
 	if(pIoDev)
-		pIoDev->setIOSession(tdsSession);
+		pIoDev->bindIOSession(tdsSession);
 	return pIoDev;
 }
 

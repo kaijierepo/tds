@@ -29,7 +29,7 @@ bool ioDev_tuya::getCurrentVal()
 	string data = client_id + accessToken + time;
 	hmac_sha256_calc(out, (uint8_t*)data.data(), data.length(), (uint8_t*)secret.data(), secret.length());
 
-	string sign = str::fromBytes((char*)out, SHA256_DIGESTLEN);
+	string sign = str::bytesToHexStr((char*)out, SHA256_DIGESTLEN);
 
 	httplib::Client cli("https://openapi.tuyacn.com");
 	httplib::Headers headers = {
@@ -108,7 +108,7 @@ bool ioDev_tuya::output(string chanAddr, json jVal, json& chanResp,bool sync)
 	string data = client_id + accessToken + time;
 	hmac_sha256_calc(out, (uint8_t*)data.data(), data.length(), (uint8_t*)secret.data(), secret.length());
 
-	string sign = str::fromBytes((char*)out, SHA256_DIGESTLEN);
+	string sign = str::bytesToHexStr((char*)out, SHA256_DIGESTLEN);
 
 	httplib::Client cli("https://openapi.tuyacn.com");
 	httplib::Headers headers = {

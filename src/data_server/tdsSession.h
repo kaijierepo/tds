@@ -136,7 +136,7 @@ public:
 	vector<string> m_vecHistIoDev; 
 	vector<string> m_vecIoBindTag;
 	vector<string> m_vecHistIoBindTag;
-	ioDev* m_IoDevTcpLink;      //建立了tcp直连的io设备。 4g连接模式下用不到，为NULL。局域网内系统用到
+	ioDev* m_IoDev;      //建立了tcp直连的io设备。 当1个io设备对应一个tcp连接时。该指针指向该io设备
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	DWORD httpReqHandleThreadID;  //处理http请求的线程id
 };

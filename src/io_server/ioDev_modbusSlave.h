@@ -70,6 +70,60 @@ Modbus错误码（10进制）
 11	网关目标设备响应失败。与网关一起使用，指示没有从目标设备中获得响应。通常意味着设备未在网络中。
 */
 
+namespace MODBUS_EXP_CODE {
+	const  char illegalFunction = 1;
+	const  char illegalDataAddress= 2;
+	const  char illegalDataValue = 3;
+	const  char serverDeviceFailure = 4;
+	const  char acknowledge = 5;
+	const  char serverDeviceBusy = 6;
+	const  char memoryParityError = 8;
+	const  char gatewayPathUnavailable = 10;
+	const  char gatewayTargetDeviceFailedToRespond = 11;
+}
+
+inline string getExpCodeDesc(char code)
+{
+	if (code == MODBUS_EXP_CODE::illegalFunction)
+	{
+		return "非法功能码";
+	}
+	else if (code == MODBUS_EXP_CODE::illegalDataAddress)
+	{
+		return "非法数据地址";
+	}
+	else if (code == MODBUS_EXP_CODE::illegalDataValue)
+	{
+		return "非法数据值";
+	}
+	else if (code == MODBUS_EXP_CODE::serverDeviceFailure)
+	{
+		return "从站设备故障";
+	}
+	else if (code == MODBUS_EXP_CODE::acknowledge)
+	{
+		return "确认";
+	}
+	else if (code == MODBUS_EXP_CODE::serverDeviceBusy)
+	{
+		return "从属设备忙";
+	}
+	else if (code == MODBUS_EXP_CODE::memoryParityError)
+	{
+		return "存储奇偶差错";
+	}
+	else if (code == MODBUS_EXP_CODE::gatewayPathUnavailable)
+	{
+		return "不可用网关路径";
+	}
+	else if (code == MODBUS_EXP_CODE::gatewayTargetDeviceFailedToRespond)
+	{
+		return "网关目标设备响应失败";
+	}
+	
+	return "未知错误";
+}
+
 
 namespace MODBUS_REG_TYPE {
     const string discreteInput = "Discrete-Input";
@@ -86,16 +140,29 @@ namespace MODBUS_FUNCTION_CODE {
 };
 
 #pragma pack(1)
-struct MRP_REQ_READ_REG{
-	char eqp_addr;
-	char fun_code;
-	char start_reg_addr_H;
-	char start_reg_addr_L;
-	char reg_num_H;
-	char reg_num_L;
+struct RTU_REQ{
+	unsigned char eqp_addr;
+	unsigned char fun_code;
+	unsigned char start_reg_addr_H;
+	unsigned char start_reg_addr_L;
+	unsigned char reg_num_H;
+	unsigned char reg_num_L;
 	char crc_H;
 	char crc_L;
+
+	int getRegNum() {
+		unsigned short num = reg_num_H * 256 + reg_num_L;
+		return num;
+	}
 };
+
+
+class RTU_RESP {
+public:
+	char eqp_addr;
+	char fun_code;
+};
+
 #pragma pack()
 
 struct ACQ_CMD {
@@ -103,6 +170,7 @@ struct ACQ_CMD {
 	unsigned short startRegOffset;
 	unsigned short regNum;
 	SYSTEMTIME stLastAcq;
+	vector<ioChannel*> ioChannels; //该采集命令数据所对应的io通道
 
 	ACQ_CMD() {
 		fCode = 0;
@@ -123,16 +191,21 @@ public:
 	void DoCycleTask();
 	void SendAcqRTData();
     unsigned char getFCode(string regType);
+	json getChanDataFromBuff(ioChannel* pC, char* pData, int len);
     json acqModbusReg(string regType, string regAddr, string storageFmt = STORAGE_FMT::UInt16, int regNum = 1);
 	bool RequestAndWaitResponse(PKT_DATA& req,PKT_DATA& resp);
 	bool sendData(char* pData,int iLen) override;
-	bool OnRecvData(char* pData,int iLen);
+	bool OnRecvData(char* pData,int iLen) override;
+	bool checkRespValication(char* pData, int iLen, string& errorInfo);
+	bool onRecvPkt(char* pData, int iLen) override;
 	unsigned char funcName2funcCode(string name);
 	void generateAcqCmd();
 	vector<ACQ_CMD> chanList2MultiAcqCmd(vector<ioChannel*>& list);
 	ACQ_CMD chanList2AcqCmd(vector<ioChannel*>& list);
 	vector<ACQ_CMD> m_vecAcqCmd;
 
+	RTU_REQ m_currentReq; 
+	ACQ_CMD* m_pCurrentAcqCmd;
 	stream2pkt m_recvBuff;
 	mutex m_csRecvBuff;
 	semaphore m_recvSignal;

@@ -24,7 +24,7 @@ void tuyaProjectInitThread(ioGW_tuyaProject* pGw)
 			string data = client_id + time;
 			hmac_sha256_calc(out, (uint8_t*)data.data(), data.length(), (uint8_t*)secret.data(), secret.length());
 
-			string sign = str::fromBytes((char*)out, SHA256_DIGESTLEN);
+			string sign = str::bytesToHexStr((char*)out, SHA256_DIGESTLEN);
 			pGw->m_sign = sign;
 
 			string host = "https://openapi.tuyacn.com";

@@ -156,7 +156,7 @@ bool stream2pkt::PopPkt(string cpt)
 
 
 			if (i > 0)
-				abandonData = str::fromBytes(stream, i);
+				abandonData = str::bytesToHexStr(stream, i);
 			else
 				abandonData = "";
 			

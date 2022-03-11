@@ -89,11 +89,17 @@ namespace TDS {
 namespace STORAGE_FMT {
 	const string Int16 = "Int16";
 	const string UInt16 = "UInt16";
-	const string Int32 = "Int32";
+	const string Int32_AB_CD = "Int32 AB CD";
+	const string Int32_CD_AB = "Int32 CD AB";
+	const string Int32_BA_DC = "Int32 BA DC";
+	const string Int32_DC_BA = "Int32 DC BA";
 	const string UInt32 = "UInt32";
 	const string Int64 = "Int64";
 	const string Uint64 = "UInt64";
-	const string Float = "Float";
+	const string Float_AB_CD = "Float AB CD";
+	const string Float_CD_AB = "Float CD AB";
+	const string Float_BA_DC = "Float BA DC";
+	const string Float_DC_BA = "Float DC BA";
 	const string Double = "Double";
 	const string BCD16 = "BCD16";
 	const string BCD32 = "BCD32";

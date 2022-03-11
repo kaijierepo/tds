@@ -19,6 +19,7 @@ ioDev_ModbusSlave::ioDev_ModbusSlave(void)
 	m_devTypeLabel = getDevTypeLabel(m_devType);
 	m_level = IO_DEV_LEVEL::device;
 	m_addrMode = DEV_ADDR_MODE::deviceID;
+	m_pCurrentAcqCmd = nullptr;
 }
 
 
@@ -47,17 +48,20 @@ void ioDev_ModbusSlave::DoCycleTask()
 		{
 			//选择一条需要采集的命令发送请求，进入请求状态，表示设备正忙，设备正忙时不会发起新的请求
 			m_bIsAcqing = true;
-			
-			MRP_REQ_READ_REG req;
+			m_pCurrentAcqCmd = &ac;
+			RTU_REQ req;
 			memset(&req, 0, sizeof(req));
-			req.eqp_addr = ac.startRegOffset;
+			req.eqp_addr = atoi(getDevAddrStr().c_str());
 			req.fun_code = ac.fCode;
+			req.start_reg_addr_L = LOBYTE(ac.startRegOffset);
+			req.start_reg_addr_H = HIBYTE(ac.startRegOffset);
 			req.reg_num_L = LOBYTE(ac.regNum);
 			req.reg_num_H = HIBYTE(ac.regNum);
 			WORD crc = common::N_CRC16((unsigned char*)&req, sizeof(req) - 2);
 			req.crc_H = HIBYTE(crc);
 			req.crc_L = LOBYTE(crc);
 
+			m_currentReq = req;
 			sendData((char*)&req, sizeof(req));
 			GetLocalTime(&m_stLastReqSendTime);
 			return;
@@ -106,7 +110,7 @@ f7 03 04 FF 00 FF 00 00 00
 
 void ioDev_ModbusSlave::SendAcqRTData()
 {
-	MRP_REQ_READ_REG req;
+	RTU_REQ req;
 	memset(&req,0,sizeof(req));
 	req.eqp_addr = atoi(m_devAddr.c_str());
 	req.fun_code = MODBUS_FUNCTION_CODE::readInputRegisters;
@@ -130,13 +134,116 @@ unsigned char ioDev_ModbusSlave::getFCode(string regType)
 		return MODBUS_FUNCTION_CODE::readHoldingRegisters;
 }
 
+json ioDev_ModbusSlave::getChanDataFromBuff(ioChannel* pC, char* pData,int len)
+{
+	string storageFmt = pC->m_storageFmt;
+	json jVal;
+	if (storageFmt == STORAGE_FMT::UInt16)
+	{
+		unsigned short mbVal;
+		memcpy(&mbVal, pData, 2);
+		common::endianSwap((char*)&mbVal, 2);
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Int16)
+	{
+		short mbVal;
+		memcpy(&mbVal, pData, 2);
+		common::endianSwap((char*)&mbVal, 2);
+		jVal = mbVal;
+	}
+	//AB CD 表示的是在返回的buff中的排序规则
+	else if (storageFmt == STORAGE_FMT::Int32_AB_CD)
+	{
+		int mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[0];
+		pBuff[2] = pData[1];
+		pBuff[1] = pData[2];
+		pBuff[0] = pData[3];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Int32_CD_AB)
+	{
+		int mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[2];  
+		pBuff[2] = pData[3];
+		pBuff[1] = pData[0];
+		pBuff[0] = pData[1];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Int32_BA_DC)
+	{
+		int mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[1];
+		pBuff[2] = pData[0];
+		pBuff[1] = pData[3];
+		pBuff[0] = pData[2];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Int32_DC_BA)
+	{
+		int mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[3];
+		pBuff[2] = pData[2];
+		pBuff[1] = pData[1];
+		pBuff[0] = pData[0];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Float_AB_CD)
+	{
+		float mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[0];
+		pBuff[2] = pData[1];
+		pBuff[1] = pData[2];
+		pBuff[0] = pData[3];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Float_CD_AB)
+	{
+		float mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[2];
+		pBuff[2] = pData[3];
+		pBuff[1] = pData[0];
+		pBuff[0] = pData[1];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Float_BA_DC)
+	{
+		float mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[1];
+		pBuff[2] = pData[0];
+		pBuff[1] = pData[3];
+		pBuff[0] = pData[2];
+		jVal = mbVal;
+	}
+	else if (storageFmt == STORAGE_FMT::Float_DC_BA)
+	{
+		float mbVal;
+		char* pBuff = (char*)&mbVal;
+		pBuff[3] = pData[3];
+		pBuff[2] = pData[2];
+		pBuff[1] = pData[1];
+		pBuff[0] = pData[0];
+		jVal = mbVal;
+	}
+
+	return jVal;
+}
+
 json ioDev_ModbusSlave::acqModbusReg(string regType,string regAddr,string storageFmt, int regNum)
 {
 	if (regType == "" || regAddr == "" || storageFmt == "")
 		return nullptr;
 
 	json jRet;
-	MRP_REQ_READ_REG req;
+	RTU_REQ req;
 	memset(&req, 0, sizeof(req));
 	req.eqp_addr = atoi(m_devAddr.c_str());
 	req.fun_code = getFCode(regType);
@@ -180,13 +287,7 @@ json ioDev_ModbusSlave::acqModbusReg(string regType,string regAddr,string storag
 			common::endianSwap((char*)&mbVal, 4);
 			jRet = mbVal;
 		}
-		else if (storageFmt == STORAGE_FMT::Int32)
-		{
-			int mbVal;
-			memcpy(&mbVal, respPkt.data + 3, retSize);
-			common::endianSwap((char*)&mbVal, 4);
-			jRet = mbVal;
-		}
+		
 		return jRet;
 	}
 	return nullptr;
@@ -202,6 +303,81 @@ bool ioDev_ModbusSlave::OnRecvData(char* pData,int iLen)
 	m_recvBuff.PushStream(pData, iLen);
 	m_recvSignal.notify();
 	return true;
+}
+
+bool ioDev_ModbusSlave::checkRespValication(char* pData, int iLen,string& errorInfo)
+{
+	unsigned char FCode = pData[1];
+	unsigned int byteCount = pData[2];
+	if (m_currentReq.fun_code != FCode)
+	{
+		errorInfo = str::format("功能码不一致,请求功能码:%d,响应功能码:%d", m_currentReq.fun_code, FCode);
+		return false;
+	}
+	else if (m_currentReq.getRegNum() * 2 != byteCount)
+	{
+		errorInfo = str::format("寄存器个数不一致,请求个数:%d,响应个数:%d", m_currentReq.getRegNum(), byteCount/2);
+		return false;
+	}
+
+	return true;
+}
+
+bool ioDev_ModbusSlave::onRecvPkt(char* pData, int iLen)
+{
+	unsigned char FCode = pData[1];
+	unsigned int byteCount = pData[2];
+	char* pRegData = pData + 3;
+	string errorInfo;
+	string req = str::bytesToHexStr((char*)&m_currentReq, sizeof(m_currentReq));
+	string resp = str::bytesToHexStr(pData, iLen);
+	unsigned char FCodeResp = 0x80 | m_currentReq.fun_code;
+	if (FCode == FCodeResp)
+	{
+		errorInfo = getExpCodeDesc(pData[2]);
+		LOG("[warn][Modbus通讯]返回失败,错误信息:%s,ioAddr:%s,请求:%s,响应:%s", errorInfo.c_str(), getIOAddrStr().c_str(), req.c_str(), resp.c_str());
+	}
+	else if (!checkRespValication(pData,iLen,errorInfo))
+	{
+		LOG("[warn][Modbus通讯]请求与响应包不匹配,%s,ioAddr:%s,请求:%s,响应:%s",errorInfo.c_str(), getIOAddrStr().c_str(), req.c_str(), resp.c_str());
+	}
+	else
+	{
+		if (FCode == MODBUS_FUNCTION_CODE::readHoldingRegisters)
+		{
+			for (int i = 0; i < m_pCurrentAcqCmd->ioChannels.size(); i++)
+			{
+				ioChannel* pC = m_pCurrentAcqCmd->ioChannels[i];
+				int regOffsetResp = pC->m_regOffset - m_pCurrentAcqCmd->startRegOffset;
+				char* pChanData = pRegData + regOffsetResp * 2;
+				json jVal = getChanDataFromBuff(pC, pChanData,(iLen - regOffsetResp * 2));
+				pC->input(jVal);
+			}
+		}
+		else if (FCode == MODBUS_FUNCTION_CODE::readInputRegisters)
+		{
+			for (int i = 0; i < m_pCurrentAcqCmd->ioChannels.size(); i++)
+			{
+				ioChannel* pC = m_pCurrentAcqCmd->ioChannels[i];
+				int regOffsetResp = pC->m_regOffset - m_pCurrentAcqCmd->startRegOffset;
+				char* pChanData = pData + regOffsetResp * 2;
+				json jVal = getChanDataFromBuff(pC, pChanData, (iLen - regOffsetResp * 2));
+				pC->input(jVal);
+			}
+		}
+		else if (FCode == MODBUS_FUNCTION_CODE::readCoils)
+		{
+
+		}
+		else if (FCode == MODBUS_FUNCTION_CODE::readDiscreteInputs)
+		{
+
+		}
+	}
+
+	m_bIsAcqing = false;
+	m_pCurrentAcqCmd = nullptr;
+	return false;
 }
 
 unsigned char ioDev_ModbusSlave::funcName2funcCode(string name)
@@ -325,5 +501,6 @@ ACQ_CMD ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
 	int lastChanSize = storageSize(lastChan->m_storageFmt); //最后1个通道字节数
 	int lastChanRegNum = lastChanSize / 2;//最后1个通道寄存器数
 	ac.regNum += lastChanRegNum;
+	ac.ioChannels = list;
 	return ac;
 }
