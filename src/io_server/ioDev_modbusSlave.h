@@ -168,7 +168,7 @@ public:
 struct ACQ_CMD {
 	unsigned char fCode;
 	unsigned short startRegOffset;
-	unsigned short regNum;
+	unsigned short regNum; //寄存器或者线圈数量
 	SYSTEMTIME stLastAcq;
 	vector<ioChannel*> ioChannels; //该采集命令数据所对应的io通道
 
@@ -191,7 +191,7 @@ public:
 	void DoCycleTask();
 	void SendAcqRTData();
     unsigned char getFCode(string regType);
-	json getChanDataFromBuff(ioChannel* pC, char* pData, int len);
+	json getChanDataFromBuff(ioChannel* pC, int regOffsetOfData, char* pData, int len);
     json acqModbusReg(string regType, string regAddr, string storageFmt = STORAGE_FMT::UInt16, int regNum = 1);
 	bool RequestAndWaitResponse(PKT_DATA& req,PKT_DATA& resp);
 	bool sendData(char* pData,int iLen) override;

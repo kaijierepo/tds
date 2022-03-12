@@ -589,9 +589,20 @@ string ioDev::getDevAddrStr()
 				devAddr += ":" + str::fromInt(remotePort);
 			}
 		}
-		else if (m_jDevAddr.contains("regOffset"))
+		else if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
 		{
-			devAddr = str::fromInt(m_jDevAddr["regOffset"].get<int>());
+			string regTypeAddr;
+			string regType = m_jDevAddr["regType"].get<string>();
+			if (regType == MODBUS_REG_TYPE::coil)
+				regTypeAddr = "C";
+			else if (regType == MODBUS_REG_TYPE::discreteInput)
+				regTypeAddr = "DI";
+			else if (regType == MODBUS_REG_TYPE::holdingRegister)
+				regTypeAddr = "HR";
+			else if (regType == MODBUS_REG_TYPE::inputRegister)
+				regTypeAddr = "IR";
+
+			devAddr = regTypeAddr + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
 		}
 	}
 	else if(m_jDevAddr.is_string()){

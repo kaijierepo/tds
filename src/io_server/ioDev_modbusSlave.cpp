@@ -63,7 +63,7 @@ void ioDev_ModbusSlave::DoCycleTask()
 
 			m_currentReq = req;
 			sendData((char*)&req, sizeof(req));
-			GetLocalTime(&m_stLastReqSendTime);
+			GetLocalTime(&ac.stLastAcq);
 			return;
 		}
 	}
@@ -134,106 +134,118 @@ unsigned char ioDev_ModbusSlave::getFCode(string regType)
 		return MODBUS_FUNCTION_CODE::readHoldingRegisters;
 }
 
-json ioDev_ModbusSlave::getChanDataFromBuff(ioChannel* pC, char* pData,int len)
+json ioDev_ModbusSlave::getChanDataFromBuff(ioChannel* pC,int regOffsetOfData, char* pData,int len)
 {
-	string storageFmt = pC->m_storageFmt;
+	int regOffsetResp = pC->m_regOffset - regOffsetOfData/*pData中第一个数据的偏移地址*/;
 	json jVal;
-	if (storageFmt == STORAGE_FMT::UInt16)
+	if (pC->m_regType == MODBUS_REG_TYPE::holdingRegister || pC->m_regType == MODBUS_REG_TYPE::inputRegister)
 	{
-		unsigned short mbVal;
-		memcpy(&mbVal, pData, 2);
-		common::endianSwap((char*)&mbVal, 2);
-		jVal = mbVal;
+		char* pChanData = pData + regOffsetResp * 2;
+		string storageFmt = pC->m_storageFmt;
+		if (storageFmt == STORAGE_FMT::UInt16)
+		{
+			unsigned short mbVal;
+			memcpy(&mbVal, pData, 2);
+			common::endianSwap((char*)&mbVal, 2);
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Int16)
+		{
+			short mbVal;
+			memcpy(&mbVal, pData, 2);
+			common::endianSwap((char*)&mbVal, 2);
+			jVal = mbVal;
+		}
+		//AB CD 表示的是在返回的buff中的排序规则
+		else if (storageFmt == STORAGE_FMT::Int32_AB_CD)
+		{
+			int mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[0];
+			pBuff[2] = pData[1];
+			pBuff[1] = pData[2];
+			pBuff[0] = pData[3];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Int32_CD_AB)
+		{
+			int mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[2];
+			pBuff[2] = pData[3];
+			pBuff[1] = pData[0];
+			pBuff[0] = pData[1];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Int32_BA_DC)
+		{
+			int mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[1];
+			pBuff[2] = pData[0];
+			pBuff[1] = pData[3];
+			pBuff[0] = pData[2];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Int32_DC_BA)
+		{
+			int mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[3];
+			pBuff[2] = pData[2];
+			pBuff[1] = pData[1];
+			pBuff[0] = pData[0];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Float_AB_CD)
+		{
+			float mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[0];
+			pBuff[2] = pData[1];
+			pBuff[1] = pData[2];
+			pBuff[0] = pData[3];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Float_CD_AB)
+		{
+			float mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[2];
+			pBuff[2] = pData[3];
+			pBuff[1] = pData[0];
+			pBuff[0] = pData[1];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Float_BA_DC)
+		{
+			float mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[1];
+			pBuff[2] = pData[0];
+			pBuff[1] = pData[3];
+			pBuff[0] = pData[2];
+			jVal = mbVal;
+		}
+		else if (storageFmt == STORAGE_FMT::Float_DC_BA)
+		{
+			float mbVal;
+			char* pBuff = (char*)&mbVal;
+			pBuff[3] = pData[3];
+			pBuff[2] = pData[2];
+			pBuff[1] = pData[1];
+			pBuff[0] = pData[0];
+			jVal = mbVal;
+		}
 	}
-	else if (storageFmt == STORAGE_FMT::Int16)
+	else
 	{
-		short mbVal;
-		memcpy(&mbVal, pData, 2);
-		common::endianSwap((char*)&mbVal, 2);
-		jVal = mbVal;
+		char dataByte = pData[regOffsetResp / 8];
+		int idx = regOffsetResp % 8;
+		char mask = 1 << idx;
+		bool val = (dataByte & mask) > 0;
+		jVal = val;
 	}
-	//AB CD 表示的是在返回的buff中的排序规则
-	else if (storageFmt == STORAGE_FMT::Int32_AB_CD)
-	{
-		int mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[0];
-		pBuff[2] = pData[1];
-		pBuff[1] = pData[2];
-		pBuff[0] = pData[3];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Int32_CD_AB)
-	{
-		int mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[2];  
-		pBuff[2] = pData[3];
-		pBuff[1] = pData[0];
-		pBuff[0] = pData[1];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Int32_BA_DC)
-	{
-		int mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[1];
-		pBuff[2] = pData[0];
-		pBuff[1] = pData[3];
-		pBuff[0] = pData[2];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Int32_DC_BA)
-	{
-		int mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[3];
-		pBuff[2] = pData[2];
-		pBuff[1] = pData[1];
-		pBuff[0] = pData[0];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Float_AB_CD)
-	{
-		float mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[0];
-		pBuff[2] = pData[1];
-		pBuff[1] = pData[2];
-		pBuff[0] = pData[3];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Float_CD_AB)
-	{
-		float mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[2];
-		pBuff[2] = pData[3];
-		pBuff[1] = pData[0];
-		pBuff[0] = pData[1];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Float_BA_DC)
-	{
-		float mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[1];
-		pBuff[2] = pData[0];
-		pBuff[1] = pData[3];
-		pBuff[0] = pData[2];
-		jVal = mbVal;
-	}
-	else if (storageFmt == STORAGE_FMT::Float_DC_BA)
-	{
-		float mbVal;
-		char* pBuff = (char*)&mbVal;
-		pBuff[3] = pData[3];
-		pBuff[2] = pData[2];
-		pBuff[1] = pData[1];
-		pBuff[0] = pData[0];
-		jVal = mbVal;
-	}
-
 	return jVal;
 }
 
@@ -314,10 +326,30 @@ bool ioDev_ModbusSlave::checkRespValication(char* pData, int iLen,string& errorI
 		errorInfo = str::format("功能码不一致,请求功能码:%d,响应功能码:%d", m_currentReq.fun_code, FCode);
 		return false;
 	}
-	else if (m_currentReq.getRegNum() * 2 != byteCount)
+	else 
 	{
-		errorInfo = str::format("寄存器个数不一致,请求个数:%d,响应个数:%d", m_currentReq.getRegNum(), byteCount/2);
-		return false;
+		if (m_currentReq.fun_code == MODBUS_FUNCTION_CODE::readHoldingRegisters ||
+			m_currentReq.fun_code == MODBUS_FUNCTION_CODE::readInputRegisters)
+		{
+			if (m_currentReq.getRegNum() * 2 != byteCount)
+			{
+				errorInfo = str::format("寄存器个数不一致,请求个数:%d,响应个数:%d", m_currentReq.getRegNum(), byteCount / 2);
+				return false;
+			}
+		}
+		else
+		{
+			if (byteCount * 8 >= m_currentReq.getRegNum() &&
+				byteCount * 8 - m_currentReq.getRegNum() < 8)
+			{
+
+			}
+			else
+			{
+				errorInfo = str::format("线圈个数不一致,请求个数:%d,响应字节数:%d", m_currentReq.getRegNum(), byteCount);
+				return false;
+			}
+		}
 	}
 
 	return true;
@@ -343,35 +375,11 @@ bool ioDev_ModbusSlave::onRecvPkt(char* pData, int iLen)
 	}
 	else
 	{
-		if (FCode == MODBUS_FUNCTION_CODE::readHoldingRegisters)
+		for (int i = 0; i < m_pCurrentAcqCmd->ioChannels.size(); i++)
 		{
-			for (int i = 0; i < m_pCurrentAcqCmd->ioChannels.size(); i++)
-			{
-				ioChannel* pC = m_pCurrentAcqCmd->ioChannels[i];
-				int regOffsetResp = pC->m_regOffset - m_pCurrentAcqCmd->startRegOffset;
-				char* pChanData = pRegData + regOffsetResp * 2;
-				json jVal = getChanDataFromBuff(pC, pChanData,(iLen - regOffsetResp * 2));
-				pC->input(jVal);
-			}
-		}
-		else if (FCode == MODBUS_FUNCTION_CODE::readInputRegisters)
-		{
-			for (int i = 0; i < m_pCurrentAcqCmd->ioChannels.size(); i++)
-			{
-				ioChannel* pC = m_pCurrentAcqCmd->ioChannels[i];
-				int regOffsetResp = pC->m_regOffset - m_pCurrentAcqCmd->startRegOffset;
-				char* pChanData = pData + regOffsetResp * 2;
-				json jVal = getChanDataFromBuff(pC, pChanData, (iLen - regOffsetResp * 2));
-				pC->input(jVal);
-			}
-		}
-		else if (FCode == MODBUS_FUNCTION_CODE::readCoils)
-		{
-
-		}
-		else if (FCode == MODBUS_FUNCTION_CODE::readDiscreteInputs)
-		{
-
+			ioChannel* pC = m_pCurrentAcqCmd->ioChannels[i];
+			json jVal = getChanDataFromBuff(pC, m_pCurrentAcqCmd->startRegOffset, pRegData,iLen);
+			pC->input(jVal);
 		}
 	}
 
@@ -498,9 +506,18 @@ ACQ_CMD ioDev_ModbusSlave::chanList2AcqCmd(vector<ioChannel*>& list)
 	ac.startRegOffset = list[0]->m_regOffset;
 	//最后1个通道和第一个通道的偏移差
 	ac.regNum = lastChan->m_regOffset - firstChan->m_regOffset;
-	int lastChanSize = storageSize(lastChan->m_storageFmt); //最后1个通道字节数
-	int lastChanRegNum = lastChanSize / 2;//最后1个通道寄存器数
-	ac.regNum += lastChanRegNum;
+
+	if (ac.fCode == MODBUS_FUNCTION_CODE::readHoldingRegisters || ac.fCode == MODBUS_FUNCTION_CODE::readInputRegisters)
+	{
+		int lastChanSize = storageSize(lastChan->m_storageFmt); //最后1个通道字节数
+		int lastChanRegNum = lastChanSize / 2;//最后1个通道寄存器数
+		ac.regNum += lastChanRegNum;
+	}
+	else
+	{
+		ac.regNum += 1;
+	}
+	
 	ac.ioChannels = list;
 	return ac;
 }
