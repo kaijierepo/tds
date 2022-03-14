@@ -127,11 +127,11 @@ int ioDev::m_heartBeatInterval = 3;
 ioDev::ioDev(void)
 {
 	m_bWorkingThreadRunning = false;
-	m_bIsAcqing = false;
+	m_bIsWaitingResp = false;
 	m_bEnableIoLog = true;
-	bEnableAcq = true;
+	m_bEnableAcq = true;
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
-	bEnableAcq = true;
+	m_bEnableAcq = true;
 	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
 	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
@@ -185,7 +185,7 @@ bool ioDev::toJson(json& conf, json opt)
 	conf["manageStatus"] = m_dispositionMode;
 	if (m_fAcqInterval != 0)
 		conf["acqInterval"] = m_fAcqInterval;
-	conf["enableAcq"] = bEnableAcq;
+	conf["enableAcq"] = m_bEnableAcq;
 	if (m_strTagBind != "")
 		conf["tagBind"] = m_strTagBind;
 	if (m_strChanTemplate != "")
@@ -257,6 +257,7 @@ bool ioDev::getStatus(json& status, string opt)
 
 bool ioDev::getChanStatus(json& statusList)
 {
+	std::shared_lock<shared_mutex> lock(m_csThis);
 	for (int i = 0; i < m_channels.size(); i++)
 	{
 		ioDev* p = m_channels[i];
@@ -291,7 +292,7 @@ bool ioDev::loadConf(json& conf)
 
 	if (conf["enableAcq"] != nullptr)
 	{
-		bEnableAcq = conf["enableAcq"].get<bool>();
+		m_bEnableAcq = conf["enableAcq"].get<bool>();
 	}
 
 	if (conf["manageStatus"] != nullptr)
@@ -699,7 +700,6 @@ void ioDev::checkAcqReqTimeout()
 {
 	if (timeopt::CalcTimePassSecond(m_stLastReqSendTime) > 5)
 	{
-		m_bIsAcqing = false;
 	}	
 }
 
@@ -753,7 +753,7 @@ ioChannel* ioDev::getChan(string addr)
 {
 	for (auto i : m_mapDataChannel)
 	{
-		if(i.second->m_devAddr == addr) return i.second;
+		if(i.second->getDevAddrStr() == addr) return i.second;
 	}
 
 	for (auto i : m_mapBatchDataLink)

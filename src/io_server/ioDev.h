@@ -18,11 +18,10 @@ public:
 	ioDev(void);
 	~ioDev(void);
 
-	virtual bool run() { return true; }; //连接； 执行io任务； 断线重连
+	virtual bool run() { m_bRunning = true; return true; }; //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
-	bool m_bIsAcqing; //是否正在采集中，在采集中表示正在异步的等待响应
-	virtual bool isAcqing() { return m_bIsAcqing; };
+	virtual bool isAcqing() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
@@ -99,10 +98,11 @@ public:
 	mutex m_csIOSession;
 	//输出到设备
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
+	
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 	//输出到设备的下属通道
 	virtual bool output(string chanAddr, json jVal, json& chanResp, bool sync = false) { return false; }
-
+	virtual bool output(ioChannel* pC, json jVal, json& jResp, bool sync = false) { return false; };
 
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
@@ -143,12 +143,13 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;  //上一次采集任务开始时间
+	bool m_bIsWaitingResp; //表示正在异步的等待响应
 	SYSTEMTIME m_stLastReqSendTime; //上一次采集请求发送时间
 	SYSTEMTIME m_stLastChanDataTime;
 	SYSTEMTIME m_stLastAlarmStatusTime;
 	SYSTEMTIME m_stLastActiveTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
-	bool bEnableAcq;
+	bool m_bEnableAcq;
 	bool m_bOnline;    //设备发现后，处于在线状态
 	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
@@ -170,10 +171,12 @@ public:
 
 	bool m_bWorkingThreadRunning;
 	semaphore m_signalWorkThreadExit; //工作线程退出信号
-	std::shared_mutex m_csThis;  //内部结构修改互斥锁
 
-
-	std::recursive_timed_mutex m_csCommLock;
+	//动态数据锁与配置数据锁设计概要
+	//动态数据在修改时，不影响配置，因此不应当影响配置的读取
+	//
+	std::shared_mutex m_csThis;  //配置-静态-数据锁
+	std::recursive_timed_mutex m_csCommLock;  //运行时-动态-数据锁
 	DWORD m_dwLockThread;
 
 	json m_jAlarmStatus;

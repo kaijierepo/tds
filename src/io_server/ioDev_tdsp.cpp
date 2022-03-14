@@ -304,6 +304,11 @@ void ioDev_tdsp::DoAcq()
 
 void ioDev_tdsp::DoCycleTask()
 {
+	if (!m_bEnableAcq)
+		return;
+	if (m_dispositionMode != DEV_DISPOSITION_MODE::managed)
+		return;
+
 	if (tds->conf->enableDevCommReboot)
 	{
 		int iPass = timeopt::CalcTimePassSecond(m_stLastActiveTime);

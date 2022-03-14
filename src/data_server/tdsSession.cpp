@@ -237,8 +237,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      }
      else if (pTcpSessionClt)
      {
-         //return pTcpSessionClt->
-         return 0;
+         return pTcpSessionClt->m_session.iSendSucCount;
      }
      return 0;
  }
@@ -252,8 +251,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      }
      else if (pTcpSessionClt)
      {
-         //return pTcpSessionClt->
-         return 0;
+         return  pTcpSessionClt->m_session.iRecvCount;
      }
      return 0;
  }

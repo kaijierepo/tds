@@ -38,6 +38,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 			break;
 		}
 
+		pTcpClt->m_session.iRecvCount += ret;
 		iRecvBuffLen += ret;
 
 		//keep recv   prevent callback to applayer too many times.
@@ -251,6 +252,11 @@ int tcpClt::SendData(char* pData, int iLen)
 		closesocket(sockClient);
 		sockClient = 0;
 		m_bConn = false;
+		m_session.iSendFailCount += iRet;
+	}
+	else
+	{
+		m_session.iSendSucCount += iRet;
 	}
 
 	return iRet;

@@ -62,6 +62,12 @@ namespace TDS {
 		const string deviceID = "deviceID";
 	}
 
+	namespace CHAN_IO_TYPE {
+		const string I = "i";
+		const string O = "o";
+		const string IO = "io";
+	}
+
 	namespace IO_DEV_TYPE {
 		namespace DEV {
 			const string tdsp_device = "tdsp-device";

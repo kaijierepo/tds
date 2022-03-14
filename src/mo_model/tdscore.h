@@ -207,7 +207,8 @@ typedef enum EPACKET_DIR {//表示请求, 响应, 通知
 	NOTIFY
 }ePktDir;
 
-struct PKT_DATA {
+class PKT_DATA {
+public:
 	char* data;
 	int len;
 	string proto;

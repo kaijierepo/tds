@@ -17,12 +17,19 @@ struct tcpSessionClt
 	tcpClt* tcpClt;
 	SOCKET bridgeSock;
 
+	int iSendSucCount;
+	int iSendFailCount;
+	int iRecvCount;
+
 	tcpSessionClt()
 	{
 		sock = 0;
 		bridgeSock = 0;
 		pALSession = NULL;
 		tcpClt = NULL;
+		iSendSucCount = 0;
+		iSendFailCount = 0;
+		iRecvCount = 0;
 	}
 };
 

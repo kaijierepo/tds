@@ -20,7 +20,7 @@ public:
 	bool IsValid();
 
 	json m_curVal;
-	int m_regOffset;
+	unsigned short m_regOffset;
 	string m_regType; //modbus寄存器类型
 	string m_storageFmt;
 

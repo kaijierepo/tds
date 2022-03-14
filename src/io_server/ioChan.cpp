@@ -20,9 +20,22 @@ ioChannel::~ioChannel()
 bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
+
+
+	if (conf["addr"] != nullptr && conf["addr"].is_object())
+	{
+		if (conf["addr"]["regType"] != nullptr)
+			m_regType = conf["addr"]["regType"].get<string>();
+		if (conf["addr"]["regOffset"] != nullptr)
+			m_regOffset = conf["addr"]["regOffset"].get<int>();
+		if (conf["addr"]["storageFmt"] != nullptr)
+			m_storageFmt = conf["addr"]["storageFmt"].get<string>();
+	}
+
 	
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
+
 	if(m_ioType!="")
 		m_ioTypeLabel = getIOTypeLabel(m_ioType);
 
@@ -36,15 +49,7 @@ bool ioChannel::loadConf(json& conf)
 
 	//先加载ioType. 在ioDev::loadConf中需要赋值给绑定的位号
 	ioDev::loadConf(conf);
-	if (conf["addr"] != nullptr && conf["addr"].is_object())
-	{
-		if (conf["addr"]["regType"] != nullptr)
-			m_regType = conf["addr"]["regType"].get<string>();
-		if (conf["addr"]["regOffset"] != nullptr)
-			m_regOffset = conf["addr"]["regOffset"].get<int>();
-		if (conf["addr"]["storageFmt"] != nullptr)
-			m_storageFmt = conf["addr"]["storageFmt"].get<string>();
-	}
+	
 	return true;
 }
 
@@ -142,7 +147,7 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 bool ioChannel::output(json jVal, json& jResp, bool sync)
 {
 	ioDev* pDev = ioDev::m_pParent;
-	return pDev->output(m_devAddr,jVal, jResp,sync);
+	return pDev->output(this,jVal, jResp,sync);
 }
 
 bool ioChannel::IsValid()
