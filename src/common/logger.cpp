@@ -146,15 +146,7 @@ string Clogger::logInternal(string info)
 	{
 		info = str::trim(info, "[keyinfo]");
 	}
-	else if (ll == LOG_LEVEL::LL_ERROR)
-	{
-		if (tds->conf->bCreateDumpWhenLogError)
-		{
-			::MessageBox(NULL, "error", "error", MB_OK);
-			CDumpCatch::createDump(NULL);
-		}
-	}
-
+	
 
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);
@@ -210,6 +202,19 @@ string Clogger::logInternal(string info)
 	string strFile = formatStr("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
 	strFile = fs::appPath() + "\\log\\" + strFile + ".txt";
 	fs::appendFile(strFile, info + "\r\n");
+
+
+	if (ll == LOG_LEVEL::LL_ERROR)
+	{
+		if (tds->conf->bCreateDumpWhenLogError)
+		{
+			int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
+			if (iRet = IDOK)
+			{
+				CDumpCatch::createDump(NULL);
+			}
+		}
+	}
 
 	return logline;
 }

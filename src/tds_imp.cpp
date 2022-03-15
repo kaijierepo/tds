@@ -365,15 +365,16 @@ bool TDS_imp::run(string cmdline)
 		::db.Open(tds->conf->dbPath, prj.m_strName);
 
 	prj.loadConf();
-	
+
+	ioSrv.loadConf();
+	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
+
 	if (tds->conf->edge)
 	{
-		ioSrv.runAsEdge();
 		ds.runAsEdge();
 	}
 	else
 	{
-		ioSrv.runAsCloud(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 		ds.runAsCloud();  //data server
 	}
 #ifdef ENABLE_FFMPEG

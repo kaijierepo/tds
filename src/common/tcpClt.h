@@ -48,14 +48,17 @@ public:
 	tcpClt(void);
 	~tcpClt(void);
 
-	tcpSessionClt m_session;
+	//指定服务器运行，断线自动重连
+	bool run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
+	void stop();
 
+	tcpSessionClt m_session;
 	vector<char> heartbeat;
 
 	void AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
 	bool connect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
 	bool connect(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = -1);
-	bool Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
+	
 	bool connect();
 	bool ReConnect();
 	bool DisConnect();

@@ -612,7 +612,7 @@ bool dataServer::runAsEdge()
 	if (tds->conf->edge)
 	{
 		m_tcpCltEdge = new tcpClt();
-		m_tcpCltEdge->Run(this, tds->conf->cloudIP, tds->conf->cloudPort);
+		m_tcpCltEdge->run(this, tds->conf->cloudIP, tds->conf->cloudPort);
 		LOG("[keyinfo][边缘网关模式] 云服务器地址:%s:%d", tds->conf->cloudIP.c_str(), tds->conf->cloudPort);
 	}
 	return false;

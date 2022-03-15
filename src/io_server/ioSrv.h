@@ -39,6 +39,7 @@ public:
 	//bool loadStatus();
 	//void saveStatus();
 	void refreshSerialIODev();
+	bool run() override;
 	bool runAsCloud();
 	bool runAsEdge();
 	void stop() override;

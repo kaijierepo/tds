@@ -161,6 +161,8 @@ ioDev::~ioDev(void)
 void ioDev::stop()
 {
 	m_bRunning = false;
+	m_tcpClt.stop();
+
 	for (auto i : m_vecChildDev)
 	{
 		i->stop();

@@ -359,25 +359,38 @@ void ioServer::refreshSerialIODev()
 	}
 }
 
+bool ioServer::run()
+{
+	if (tds->conf->edge)
+	{
+		runAsEdge();
+	}
+	else
+	{
+		runAsCloud();
+	}
+	return false;
+}
+
 bool ioServer::runAsCloud()
 {
 	m_bRunning = true;
 
-	if (loadConf())
+	//启动所有子设备
+	for (auto i : m_vecChildDev)
 	{
-		std::shared_lock<shared_mutex> lock(m_csThis);
-		for (auto i : m_vecChildDev)
-		{
-			i->run();
-		}
-		std::thread io(IOThread);
-		io.detach();
+		i->run();
 	}
 
+	//启动IO工作线程
+	std::thread io(IOThread);
+	io.detach();
+	
+	//启动设备发现线程
 	ioDiscoverService.run();
 	refreshSerialIODev();
 
-	//io服务 665
+	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_tdsp->run(&ds, tds->conf->ioServerPort))
@@ -390,7 +403,7 @@ bool ioServer::runAsCloud()
 	}
 
 
-	//io服务 664
+	//io服务 664 Modbus over TCP
 	m_tcpSrv_rtu = new tcpSrv();
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	int ioSrvPort_rtu = 664;
@@ -403,7 +416,7 @@ bool ioServer::runAsCloud()
 		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_rtu));
 	}
 
-
+	//io服务 663 IQ60
 	m_tcpSrv_iq60 = new tcpSrv();
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	int ioSrvPort_iq60 = 663;
@@ -424,17 +437,13 @@ bool ioServer::runAsEdge()
 {
 	m_bRunning = true;
 
-	if (loadConf())
+	for (auto i : m_vecChildDev)
 	{
-		std::shared_lock<shared_mutex> lock(m_csThis);
-		for (auto i : m_vecChildDev)
-		{
-			i->run();
-		}
-		std::thread io(IOThread);
-		io.detach();
+		i->run();
 	}
-
+	std::thread io(IOThread);
+	io.detach();
+	
 	ioDiscoverService.run();
 	refreshSerialIODev();
 	return false;

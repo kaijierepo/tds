@@ -114,9 +114,7 @@ tcpClt::tcpClt(void)
 
 tcpClt::~tcpClt(void)
 {
-	DisConnect();
-	m_csLock.lock();
-	m_csLock.unlock();
+	stop();
 }
 
 bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
@@ -145,7 +143,7 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 	return connect();
 }
 
-bool tcpClt::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
+bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;
 	m_remoteIP = strServIP;
@@ -155,6 +153,13 @@ bool tcpClt::Run(ITcpClientCallBack* pUser, string strServIP, int iServPort, str
 	DWORD dwThread;
 	HANDLE hThread = CreateThread(NULL, 0, ConnectThread, (LPVOID)this, 0, &dwThread);
 	return 0;
+}
+
+void tcpClt::stop()
+{
+	DisConnect();
+	m_csLock.lock();
+	m_csLock.unlock();
 }
 
 void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)

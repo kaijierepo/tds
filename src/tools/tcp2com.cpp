@@ -25,7 +25,7 @@ void tcp2com::run()
 {
 	if (m_iDestPort != 0 && m_strDestIp != "")
 	{
-		tcpClt.Run(this, m_strDestIp, m_iDestPort);
+		tcpClt.run(this, m_strDestIp, m_iDestPort);
 		LOG("启动tcp客户端，服务器地址:%s:%d", m_strDestIp.c_str(), m_iDestPort);
 	}
 

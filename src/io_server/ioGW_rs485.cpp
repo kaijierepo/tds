@@ -74,7 +74,7 @@ bool ioGW_rs485::run()
 			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到port配置");
 			return false;
 		}
-		m_tcpClt.Run(&ds, ip, port);
+		m_tcpClt.run(&ds, ip, port);
 		LOG("[IO设备]连接TCP服务模式设备,设备类型:%s,设备地址:%s", m_devType.c_str(), getDevAddrStr().c_str());
 	}
 	return true;
