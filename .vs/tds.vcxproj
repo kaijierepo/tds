@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="dll - D|Win32">
@@ -376,9 +376,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 /Zm200 %(AdditionalOptions)</AdditionalOptions>
@@ -389,8 +389,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MTd;..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>hjson.lib;winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -423,9 +423,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -436,8 +436,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>hjson.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MT;..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>../build/autoversion.bat</Command>
@@ -544,6 +544,7 @@
     <ClCompile Include="..\src\common\simdjson.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\common\stream2pkt.cpp" />
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\src\common\udpSrv.cpp" />
@@ -561,16 +562,15 @@
     <ClCompile Include="..\src\io_server\commSrv.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
-    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tuya.cpp" />
+    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_rs485.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
-    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
     <ClCompile Include="..\src\logServer\csvTable.cpp" />
     <ClCompile Include="..\src\logServer\logServer.cpp" />
     <ClCompile Include="..\src\main.cpp" />
@@ -579,13 +579,15 @@
     <ClCompile Include="..\src\mo_model\mo.cpp" />
     <ClCompile Include="..\src\mo_model\mp.cpp" />
     <ClCompile Include="..\src\mo_model\prj.cpp" />
-    <ClCompile Include="..\src\mo_model\stream2pkt.cpp" />
     <ClCompile Include="..\src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp" />
+    <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
+    <ClCompile Include="..\src\tools\dumpCatch.cpp" />
     <ClCompile Include="..\src\tools\shellServer.cpp" />
     <ClCompile Include="..\src\tools\tcp2com.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
@@ -595,15 +597,13 @@
     <ClCompile Include="..\src\tools\tdsWatchDog.cpp" />
     <ClCompile Include="..\src\users\userMng.cpp" />
     <ClCompile Include="..\src\video\audioPlayer.cpp" />
-    <ClCompile Include="..\src\video\ioDev_genicam.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">pch.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="..\src\video\remoteDesktopServer.cpp" />
     <ClCompile Include="..\src\video\streamServer.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp" />
     <ClCompile Include="..\src\video\streamSrvNode.cpp" />
     <ClCompile Include="..\src\xiaot\scriptHost.cpp" />
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
@@ -616,6 +616,7 @@
     <ClInclude Include="..\src\common\logger.h" />
     <ClInclude Include="..\src\common\sha1.h" />
     <ClInclude Include="..\src\common\simdjson.h" />
+    <ClInclude Include="..\src\common\stream2pkt.h" />
     <ClInclude Include="..\src\common\tcpClt.h" />
     <ClInclude Include="..\src\common\tcpSrv.h" />
     <ClInclude Include="..\src\common\udpSrv.h" />
@@ -630,16 +631,15 @@
     <ClInclude Include="..\src\io_server\commSrv.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
-    <ClInclude Include="..\src\io_server\ioDev_iq60.h" />
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />
     <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
     <ClInclude Include="..\src\io_server\ioDev_tuya.h" />
+    <ClInclude Include="..\src\io_server\ioDiscoverer.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_rs485.h" />
     <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
-    <ClInclude Include="..\src\io_server\ioDiscoverer.h" />
     <ClInclude Include="..\src\logServer\csvTable.h" />
     <ClInclude Include="..\src\logServer\logServer.h" />
     <ClInclude Include="..\src\mo_model\amo.h" />
@@ -647,12 +647,14 @@
     <ClInclude Include="..\src\mo_model\mo.h" />
     <ClInclude Include="..\src\mo_model\mp.h" />
     <ClInclude Include="..\src\mo_model\prj.h" />
-    <ClInclude Include="..\src\mo_model\stream2pkt.h" />
     <ClInclude Include="..\src\mo_model\tdscore.h" />
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
+    <ClInclude Include="..\src\tdspro\ioDev_iq60.h" />
+    <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h" />
     <ClInclude Include="..\src\tds_imp.h" />
+    <ClInclude Include="..\src\tools\dumpCatch.h" />
     <ClInclude Include="..\src\tools\shellServer.h" />
     <ClInclude Include="..\src\tools\tcp2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
@@ -663,7 +665,6 @@
     <ClInclude Include="..\src\users\userMng.h" />
     <ClInclude Include="..\src\video\audioPlayer.h" />
     <ClInclude Include="..\src\video\ffmpeg.h" />
-    <ClInclude Include="..\src\video\ioDev_genicam.h" />
     <ClInclude Include="..\src\video\remoteDesktopServer.h" />
     <ClInclude Include="..\src\video\streamServer.h" />
     <ClInclude Include="..\src\video\videoCodec.h" />

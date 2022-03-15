@@ -25,14 +25,17 @@
     <Filter Include="logServer">
       <UniqueIdentifier>{2ceef404-76b7-46d3-825a-f27e496c0dda}</UniqueIdentifier>
     </Filter>
-    <Filter Include="moManage">
-      <UniqueIdentifier>{5c041c2c-d942-445f-a645-2cdaba770361}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="ioServer">
-      <UniqueIdentifier>{b0a1e03c-3dcb-4bef-9321-c390636edfc2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="globalManage">
       <UniqueIdentifier>{839651a6-0e6f-4680-b62a-3d40e2674a4c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tdsPro">
+      <UniqueIdentifier>{55f4ffc4-1c52-448a-9316-d0c36fe31046}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IO管理">
+      <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MO管理">
+      <UniqueIdentifier>{9b0e2a3a-cc4f-43b1-813a-b1d7577c25a6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -76,60 +79,12 @@
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\io_server\commSrv.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioSrv.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mo_model\amo.cpp">
-      <Filter>moManage</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mo_model\mo.cpp">
-      <Filter>moManage</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mo_model\mp.cpp">
-      <Filter>moManage</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mo_model\prj.cpp">
-      <Filter>moManage</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\mo_model\stream2pkt.cpp">
-      <Filter>moManage</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_tuya.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioChan.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\xiaot\xiaot.cpp">
       <Filter>xiaot</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp">
       <Filter>video</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
-      <Filter>ioServer</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tools\tcpHub.cpp">
       <Filter>tools</Filter>
@@ -143,9 +98,6 @@
     <ClCompile Include="..\src\tools\tcp2com.cpp">
       <Filter>tools</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\video\ioDev_genicam.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\video\streamSrvNode.cpp">
       <Filter>video</Filter>
     </ClCompile>
@@ -158,12 +110,6 @@
     <ClCompile Include="..\src\pch.cpp" />
     <ClCompile Include="..\src\common\yyjson.c">
       <Filter>common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
-      <Filter>ioServer</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
-      <Filter>ioServer</Filter>
     </ClCompile>
     <ClCompile Include="..\src\users\userMng.cpp">
       <Filter>users</Filter>
@@ -194,6 +140,67 @@
     </ClCompile>
     <ClCompile Include="..\src\video\audioPlayer.cpp">
       <Filter>video</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\commSrv.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioChan.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_tuya.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDiscoverer.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioSrv.cpp">
+      <Filter>IO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\amo.cpp">
+      <Filter>MO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\mo.cpp">
+      <Filter>MO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\mp.cpp">
+      <Filter>MO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\mo_model\prj.cpp">
+      <Filter>MO管理</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp">
+      <Filter>tdsPro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\stream2pkt.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp">
+      <Filter>tdsPro</Filter>
+    </ClCompile>
+    <ClCompile Include="Source.cpp" />
+    <ClCompile Include="..\src\tools\dumpCatch.cpp">
+      <Filter>tools</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -248,51 +255,6 @@
     <ClInclude Include="..\src\data_server\wspSrv.h">
       <Filter>data_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\commSrv.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioChan.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioSrv.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\amo.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\mo.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\mp.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\prj.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\stream2pkt.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mo_model\tdscore.h">
-      <Filter>moManage</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_tuya.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\data_server\dsClientStream.h">
       <Filter>data_server</Filter>
@@ -305,13 +267,7 @@
     <ClInclude Include="..\src\video\videoCodec.h">
       <Filter>video</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDiscoverer.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\res\resource.h" />
-    <ClInclude Include="..\src\io_server\ioDev_iq60.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\tools\tcpHub.h">
       <Filter>tools</Filter>
     </ClInclude>
@@ -323,9 +279,6 @@
     </ClInclude>
     <ClInclude Include="..\src\tools\tcp2com.h">
       <Filter>tools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\video\ioDev_genicam.h">
-      <Filter>ioServer</Filter>
     </ClInclude>
     <ClInclude Include="..\src\video\streamSrvNode.h">
       <Filter>video</Filter>
@@ -344,12 +297,6 @@
     </ClInclude>
     <ClInclude Include="..\src\common\yyjson.h">
       <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_rs485.h">
-      <Filter>ioServer</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
-      <Filter>ioServer</Filter>
     </ClInclude>
     <ClInclude Include="..\src\users\userMng.h">
       <Filter>users</Filter>
@@ -380,6 +327,69 @@
     </ClInclude>
     <ClInclude Include="..\src\video\audioPlayer.h">
       <Filter>video</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\commSrv.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioChan.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_tuya.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDiscoverer.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_rs485.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioSrv.h">
+      <Filter>IO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\amo.h">
+      <Filter>MO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\mo.h">
+      <Filter>MO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\mp.h">
+      <Filter>MO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\prj.h">
+      <Filter>MO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mo_model\tdscore.h">
+      <Filter>MO管理</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev_iq60.h">
+      <Filter>tdsPro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\stream2pkt.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h">
+      <Filter>tdsPro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\dumpCatch.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
