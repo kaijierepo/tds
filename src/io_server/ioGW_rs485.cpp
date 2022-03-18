@@ -37,12 +37,13 @@ ioGW_rs485::~ioGW_rs485(void)
 	stop();
 }
 
-bool ioGW_rs485::isAcqing()
+
+bool ioGW_rs485::isCommBusy()
 {
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
-		if (p->isAcqing())
+		if (p->m_bIsWaitingResp)
 			return true;
 	}
 	return false;
@@ -106,9 +107,6 @@ void ioGW_rs485::checkAcqReqTimeout()
 
 void ioGW_rs485::DoCycleTask()
 {
-	if (isAcqing())
-		return;
-
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* pChild = m_vecChildDev[i];

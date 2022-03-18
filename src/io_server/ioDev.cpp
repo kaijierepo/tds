@@ -17,6 +17,7 @@
 
 #include "logger.h"
 #include "ioSrv.h"
+#include "rpcHandler.h"
 
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 void sendToCommLog(string s)
@@ -670,6 +671,22 @@ bool ioDev::SendHeartbeatPkt()
 bool ioDev::onRecvPkt(json jPkt)
 {
 	return false;
+}
+
+void ioDev::setOnline()
+{
+	m_bOnline = true;
+	json jNotify;
+	jNotify["ioAddr"] = getIOAddrStr();
+	rpcSrv.notify("devOnline", jNotify);
+}
+
+void ioDev::setOffline()
+{
+	m_bOnline = true;
+	json jNotify;
+	jNotify["ioAddr"] = getIOAddrStr();
+	rpcSrv.notify("devOffline", jNotify);
 }
 
 bool ioDev::IsConnected()

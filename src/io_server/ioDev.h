@@ -21,7 +21,7 @@ public:
 	virtual bool run() { m_bRunning = true; return true; }; //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
-	virtual bool isAcqing() { return m_bIsWaitingResp; };
+	virtual bool isCommBusy() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
@@ -150,6 +150,8 @@ public:
 	SYSTEMTIME m_stLastActiveTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool m_bEnableAcq;
+	void setOnline();
+	void setOffline();
 	bool m_bOnline;    //设备发现后，处于在线状态
 	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。

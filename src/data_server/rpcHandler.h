@@ -46,7 +46,7 @@ public:
 	bool needLog(string method);
 
 	//透传到io设备的命令
-	bool handleDevRpcDispatch(string& strReq, json& jReq, std::shared_ptr<TDS_SESSION> pSession);
+	bool handleDevRpcDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 
 	//json rpc implementation
 	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);

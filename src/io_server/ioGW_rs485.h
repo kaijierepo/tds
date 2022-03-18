@@ -9,7 +9,7 @@ public:
 	ioGW_rs485(void);
 	~ioGW_rs485(void);
 
-	bool isAcqing() override;
+	bool isCommBusy() override;
 
 	bool OnRecvData(char* pData, int iLen) override;
 	bool onRecvPkt(char* pData, int iLen) override;

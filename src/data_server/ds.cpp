@@ -1508,7 +1508,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						{
 							pALC->m_vecIoDev.push_back(p->getIOAddrStr());
 						}
-						rpcSrv.notify("io.online", j);
+						rpcSrv.notify("devOnline", j);
 					}
 					p->onRecvPkt(jpkt);
 				}
@@ -1752,33 +1752,33 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 				ioDev* pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 				pIoDev->onRecvPkt(jResp);
 			}
-			//透传到tds客户端的指令
-			else if (clientId != nullptr && clientId.get<string>() != "tds")
-			{
-				string addr = jResp["clientId"].get<string>();
-				shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
-				if (p != nullptr)
-				{
-					string s = jResp.dump() + "\n\n";
-					p->send((char*)s.c_str(), s.length());
-					LOG("[设备透传]设备->客户端:\r\n" + s + "\r\n");
-				}
-				else
-				{
-					string s = jResp.dump(2) + "\n\n";
-					LOG("[error][设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
-				}
+			//透传到tds客户端的指令。使用clientId进行透传机制，暂时取消
+			//else if (clientId != nullptr && clientId.get<string>() != "tds")
+			//{
+			//	string addr = jResp["clientId"].get<string>();
+			//	shared_ptr<TDS_SESSION> p = ds.getTDSSession(addr);
+			//	if (p != nullptr)
+			//	{
+			//		string s = jResp.dump() + "\n\n";
+			//		p->send((char*)s.c_str(), s.length());
+			//		LOG("[设备透传]设备->客户端:\r\n" + s + "\r\n");
+			//	}
+			//	else
+			//	{
+			//		string s = jResp.dump(2) + "\n\n";
+			//		LOG("[error][设备透传]设备->客户端 未找到会话:\r\n" + s + "\r\n");
+			//	}
 
-				//部分命令拦截并记录
-				string strIoAddr = jResp["ioAddr"].get<string>();
-				ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-				GetLocalTime(&pIoDev->m_stLastActiveTime);
-				if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-				{
-					ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;
-					pDevTdsp->handleAsynResp(jResp);
-				}
-			}
+			//	//部分命令拦截并记录.用户点击查询数据时，也记录数据库。
+			//	string strIoAddr = jResp["ioAddr"].get<string>();
+			//	ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+			//	GetLocalTime(&pIoDev->m_stLastActiveTime);
+			//	if (pIoDev && pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+			//	{
+			//		ioDev_tdsp* pDevTdsp = (ioDev_tdsp*)pIoDev;
+			//		pDevTdsp->handleAsynResp(jResp);
+			//	}
+			//}
 			//ioDev -> tds
 			else
 			{

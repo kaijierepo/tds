@@ -231,6 +231,9 @@ int ioDev_tdsp::getRpcId()
 
 bool ioDev_tdsp::call(string method, json params, json& result, json& error, bool sync)
 {
+	if (!m_bRunning)
+		return false;
+
 	json req;
 	req["jsonrpc"] = "2.0";
 	req["method"] = method;
@@ -258,9 +261,6 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	delete tsi;
 	m_mapSyncRPCInfo.erase(iId);
 	m_csSyncRPCInfo.unlock();
-
-	if (!m_bRunning)
-		return false;
 
 	if (bGetResp)
 	{

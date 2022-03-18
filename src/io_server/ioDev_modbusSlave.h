@@ -210,6 +210,7 @@ public:
 	bool output(string chanAddr, json jVal, json& jResp, bool sync = false) override;
 	bool output(ioChannel* pC, json jVal, json& jResp, bool sync = false) override;
 
+	bool isCommBusy() override;
 	void sendIOCmd(MB_IO_CMD* cmd);
 	void DoCycleTask();
 	void SendAcqRTData();

@@ -35,7 +35,7 @@ void msgSinker_rpcHandler(MODULE_BUS_MSG& msg)
 		json j;
 		j["addr"] = jMsg["ioAddr"];
 		j["type"] = msg.eventName;
-		rpcSrv.notify("ioEvent", j);
+		rpcSrv.notify("devOffline", j);
 	}
 }
 
@@ -1250,7 +1250,7 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
-bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
 	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
@@ -1269,7 +1269,8 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		pDestSession->send((char*)s.c_str(), s.length());
 		return true;
 	}
-	else if (jReq.contains("ioAddr"))
+	//使用clientId进行透传机制取消。 不需要clientId.不再视为一种透传，视为转发
+	/*else if (jReq.contains("ioAddr"))
 	{
 		string strIoAddr = jReq["ioAddr"].get<string>();
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
@@ -1283,6 +1284,56 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, std::shared_ptr
 		string s = jReq.dump() + "\n\n";
 		pIoDev->pIOSession->send((char*)s.c_str(), s.length());
 		LOG("[设备透传]客户端->设备:\r\n" + s + "\r\n");
+		return true;
+	}*/
+	//设备TDSP命令转发
+	else if (jReq.contains("ioAddr"))
+	{
+		string strIoAddr = jReq["ioAddr"].get<string>();
+		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
+		if (!pIoDev)
+		{
+			json jError = "device with specified ioAddr not found";
+			rpcResp.error = jError.dump();
+			return true;
+		}
+		if (pIoDev->pIOSession == nullptr)
+		{
+			json jError = "device offline";
+			rpcResp.error = jError.dump();
+			return true;
+		}
+		if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
+		{
+			json jError = "device with specified ioAddr is not a TDSP device";
+			rpcResp.error = jError.dump();
+			return true;
+		}
+
+		ioDev_tdsp* pT = (ioDev_tdsp*)pIoDev;
+
+		jReq["clientId"] = "tds";
+		jReq.erase("user");
+		jReq.erase("token");
+		string method = jReq["method"].get<string>();
+		json jParams = jReq["params"];
+		json jId = jReq["id"];
+
+		json jRlt,jErr;
+		//发起同步请求，此处阻塞
+		LOG("[TDSP转发]客户端->设备:\r\n" + jReq.dump() + "\r\n");
+		if (pT->call(method, jParams, jRlt, jErr))
+		{
+			jRlt.erase("id");
+			jRlt["id"] = jId;
+			rpcResp.result = jRlt.dump();
+			LOG("[TDSP转发]设备->客户端:\r\n" + rpcResp.result + "\r\n");
+		}
+		else
+		{
+			json jError = "request time out";
+			rpcResp.error = jError.dump();
+		}
 		return true;
 	}
 
@@ -1368,8 +1419,10 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
 		if (!tds->conf->edge) //tds edge模式无需转发
 		{
-			if (handleDevRpcDispatch(strReq, jReq, pSession))
-				return;
+			if (handleDevRpcDispatch(strReq, jReq, rpcResp, pSession))
+			{
+				goto HANDLE_END;
+			}
 		}
 		
 

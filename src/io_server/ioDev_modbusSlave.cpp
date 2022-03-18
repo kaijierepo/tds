@@ -97,6 +97,7 @@ bool ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& jResp, bool sync)
 		MB_IO_CMD* p = new MB_IO_CMD();
 		p->devAddr = atoi(getDevAddrStr().c_str());
 		p->fCode = MODBUS_FUNCTION_CODE::writeSingleCoil;
+		p->offset = pC->m_regOffset;
 		p->ioChannels.push_back(pC);
 		p->jOuputVal = jVal;
 
@@ -105,6 +106,12 @@ bool ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& jResp, bool sync)
 		return true;
 	}
 	return false;
+}
+
+bool ioDev_ModbusSlave::isCommBusy()
+{
+	assert(m_pParent);
+	return m_pParent->isCommBusy();
 }
 
 void ioDev_ModbusSlave::sendIOCmd(MB_IO_CMD* cmd)
@@ -128,10 +135,11 @@ void ioDev_ModbusSlave::DoCycleTask()
 		if (timeopt::CalcTimePassSecond(m_pCurrentIOCmd->stLastAcq) > 5)
 		{
 			setCurrentIOCmd(nullptr);
+			m_bOnline = false;
 		}
 	}
 
-	if (isAcqing())return;
+	if (isCommBusy())return;
 
 	//周期时间到，将周期采集命令放入IO队列
 	if (m_vecIOTask.size() == 0 && m_bEnableAcq)
@@ -465,6 +473,7 @@ bool ioDev_ModbusSlave::checkRespValication(char* pData, int iLen, string& error
 
 bool ioDev_ModbusSlave::onRecvPkt(char* pData, int iLen)
 {
+	m_bOnline = true;
 	std::unique_lock<recursive_timed_mutex> lock(m_csCommLock); //锁住m_pCurrentIOCmd
 	if (!m_bRunning)return false;
 
