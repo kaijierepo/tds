@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 	{
 		doShell();
 	}
-	else if (mode == "hs" || mode == "httpServer") //httpServer
+	else if (mode == "hs" || mode == "httpServer" || mode == "httpserver") //httpServer
 	{
 		httplib::Server* httpSrv  = new httplib::Server;
 		string webPath = fs::appPath();

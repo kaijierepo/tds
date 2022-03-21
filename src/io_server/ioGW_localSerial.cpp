@@ -11,7 +11,7 @@ DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
 	ioGW_LocalSerial* pGW = (ioGW_LocalSerial*)lpParam;
 	pGW->m_bWorkingThreadRunning = true;
-	char buf[500] = {0};
+	char buf[500*1000] = {0};
 	while(pGW->m_hCom)
 	{
 		if (!pGW->m_bRunning)break;
@@ -84,7 +84,7 @@ bool ioGW_LocalSerial::run()
 
 void ioGW_LocalSerial::stop()
 {
-	closeCom();//´Ë´¦±ØĞëÏÈcloseComÈÃ¹¤×÷Ïß³Ì´Ó×èÈûµÈ´ıÖĞÍË³ö£¬¹¤×÷Ïß³Ì²ÅÄÜ¼ì²âµ½ÍË³ö±ê¼ÇÎ»
+	closeCom();//æ­¤å¤„å¿…é¡»å…ˆcloseComè®©å·¥ä½œçº¿ç¨‹ä»é˜»å¡ç­‰å¾…ä¸­é€€å‡ºï¼Œå·¥ä½œçº¿ç¨‹æ‰èƒ½æ£€æµ‹åˆ°é€€å‡ºæ ‡è®°ä½
 	ioDev::stop();
 }
 
@@ -106,15 +106,15 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 
 
 	
-	//µÈ´ıÓÃSetCommMask()º¯ÊıÉèÖÃµÄ´®¿ÚÊÂ¼ş·¢Éú£¬¹²ÓĞ9ÖÖÊÂ¼ş¿É±»¼àÊÓ£º
-	//EV_BREAK£¬EV_CTS£¬EV_DSR£¬EV_ERR£¬EV_RING£¬EV_RLSD£¬EV_RXCHAR£¬
-	//EV_RXFLAG£¬EV_TXEMPTY£»µ±ÆäÖĞÒ»¸öÊÂ¼ş·¢Éú»ò´íÎó·¢ÉúÊ±£¬º¯Êı½«
-	//OVERLAPPED½á¹¹ÖĞµÄÊÂ¼şÖÃÎªÓĞĞÅºÅ×´Ì¬£¬²¢½«ÊÂ¼şÑÚÂëÌî³äµ½dwMask²ÎÊıÖĞ
-	//ÔÚopenComº¯ÊıÀïÃæÉèÖÃÁËEV_RXCHARÊÂ¼ş
+	//ç­‰å¾…ç”¨SetCommMask()å‡½æ•°è®¾ç½®çš„ä¸²å£äº‹ä»¶å‘ç”Ÿï¼Œå…±æœ‰9ç§äº‹ä»¶å¯è¢«ç›‘è§†ï¼š
+	//EV_BREAKï¼ŒEV_CTSï¼ŒEV_DSRï¼ŒEV_ERRï¼ŒEV_RINGï¼ŒEV_RLSDï¼ŒEV_RXCHARï¼Œ
+	//EV_RXFLAGï¼ŒEV_TXEMPTYï¼›å½“å…¶ä¸­ä¸€ä¸ªäº‹ä»¶å‘ç”Ÿæˆ–é”™è¯¯å‘ç”Ÿæ—¶ï¼Œå‡½æ•°å°†
+	//OVERLAPPEDç»“æ„ä¸­çš„äº‹ä»¶ç½®ä¸ºæœ‰ä¿¡å·çŠ¶æ€ï¼Œå¹¶å°†äº‹ä»¶æ©ç å¡«å……åˆ°dwMaskå‚æ•°ä¸­
+	//åœ¨openComå‡½æ•°é‡Œé¢è®¾ç½®äº†EV_RXCHARäº‹ä»¶
 
-	//Èç¹ûÒì²½²Ù×÷²»ÄÜÁ¢¼´Íê³ÉµÄ»°,º¯Êı·µ»ØFALSE,²¢ÇÒµ÷ÓÃGetLastError()º¯
-	//Êı·ÖÎö´íÎóÔ­Òòºó·µ»ØERROR_IO_PENDING,Ö¸Ê¾Òì²½²Ù×÷ÕıÔÚºóÌ¨½øĞĞ.ÕâÖÖÇé
-	//¿öÏÂ,ÔÚº¯Êı·µ»ØÖ®Ç°ÏµÍ³ÉèÖÃOVERLAPPED½á¹¹ÖĞµÄÊÂ¼şÎªÎŞĞÅºÅ×´Ì¬
+	//å¦‚æœå¼‚æ­¥æ“ä½œä¸èƒ½ç«‹å³å®Œæˆçš„è¯,å‡½æ•°è¿”å›FALSE,å¹¶ä¸”è°ƒç”¨GetLastError()å‡½
+	//æ•°åˆ†æé”™è¯¯åŸå› åè¿”å›ERROR_IO_PENDING,æŒ‡ç¤ºå¼‚æ­¥æ“ä½œæ­£åœ¨åå°è¿›è¡Œ.è¿™ç§æƒ…
+	//å†µä¸‹,åœ¨å‡½æ•°è¿”å›ä¹‹å‰ç³»ç»Ÿè®¾ç½®OVERLAPPEDç»“æ„ä¸­çš„äº‹ä»¶ä¸ºæ— ä¿¡å·çŠ¶æ€
 	if (WaitCommEvent(m_hCom, &dwEvtMask, &m_ovWaitEvent))
 	{}
 	else
@@ -124,9 +124,9 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		{
 			DWORD dwBytesRead = 0;
 			//https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-getoverlappedresult
-			//bWait=TRUEµÈ´ı²ãµş¶ÁÈ¡²Ù×÷Íê³É
-			//CloseHandle¹Ø±Õm_hCom¿ÉÒÔÊ¹µÃ×èÈûµÄº¯Êı·µ»Ø
-			BOOL bResult = GetOverlappedResult(m_hCom,&m_ovWaitEvent,&dwBytesRead,TRUE); // ×èÈû  Block
+			//bWait=TRUEç­‰å¾…å±‚å è¯»å–æ“ä½œå®Œæˆ
+			//CloseHandleå…³é—­m_hComå¯ä»¥ä½¿å¾—é˜»å¡çš„å‡½æ•°è¿”å›
+			BOOL bResult = GetOverlappedResult(m_hCom,&m_ovWaitEvent,&dwBytesRead,TRUE); // é˜»å¡  Block
 			if (bResult) {
 			
 			}
@@ -136,7 +136,7 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 		}
 		else if (ERROR_ACCESS_DENIED == dwRet)
 		{
-			//usb ´®¿Ú ĞéÄâ´®¿ÚµÈ£¬ÔÚ´®¿Ú±»´ò¿ªµÄÇé¿öÏÂÉ¾³ıÁËÉè±¸£¬°Î³öÁËusbÏßµÈ£¬½øÈëµ½ÕâÀï
+			//usb ä¸²å£ è™šæ‹Ÿä¸²å£ç­‰ï¼Œåœ¨ä¸²å£è¢«æ‰“å¼€çš„æƒ…å†µä¸‹åˆ é™¤äº†è®¾å¤‡ï¼Œæ‹”å‡ºäº†usbçº¿ç­‰ï¼Œè¿›å…¥åˆ°è¿™é‡Œ
 			LOG("[error]hardware " + m_devAddr + "is deleted,check your hardware connection!");
 			closeCom();
 			return false;
@@ -154,13 +154,15 @@ bool ioGW_LocalSerial::ReadCom(char* buf, int& len)
 	if (comstat.cbInQue == 0)
 		return false;
 
-	BOOL bRet = ReadFile(m_hCom, (LPVOID)(buf), comstat.cbInQue, (LPDWORD)&len, &m_ovRead);//¸Ã²Ù×÷Á¢¼´·µ»Ø£¬ÒòÎª»º³åÇøÒÑ¾­ÓĞÊı¾İ
+	assert(comstat.cbInQue < 500 * 1000);
+
+	BOOL bRet = ReadFile(m_hCom, (LPVOID)(buf), comstat.cbInQue, (LPDWORD)&len, &m_ovRead);//è¯¥æ“ä½œç«‹å³è¿”å›ï¼Œå› ä¸ºç¼“å†²åŒºå·²ç»æœ‰æ•°æ®
 	if (!bRet)
 		return false;
 	if(len == 0)
 		return false;
 
-	
+	buf[len] = 0;//æ–¹ä¾¿å­—ç¬¦ä¸²æ‰“å°
 	if(m_bEnableIoLog)
 		statisOnRecv((char*)buf,len,getIOAddrStr());
 
@@ -186,6 +188,9 @@ bool ioGW_LocalSerial::WriteCom(char* buf, int len)
 
 bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 {
+	string s = str::fromBuff(pData, iLen);
+	LOG("[ä¸²å£æ¥æ”¶]" + s);
+
 	for(int i = 0;i<m_vecChildDev.size();i++)
 	{
 		m_vecChildDev.at(i)->OnRecvData(pData,iLen);
@@ -203,6 +208,8 @@ bool ioGW_LocalSerial::OnRecvData(char* pData, int iLen )
 		}
 		else
 		{
+			string s1 = str::fromBuff(pData, iLen);
+			LOG("[WSä¸²å£]" + s1);
 			pTdsSession->send(pData, iLen);
 		}
 	}
@@ -225,15 +232,15 @@ bool ioGW_LocalSerial::closeCom()
 	m_bConnected = false;
 	if (m_hRecvThread)
 	{
-		//±ØĞëÏÈ¹Ø±Õreadfile×èÈû¶ÁÈ¡£¬·ñÔòcloseHandle»á×èÈû
+		//å¿…é¡»å…ˆå…³é—­readfileé˜»å¡è¯»å–ï¼Œå¦åˆ™closeHandleä¼šé˜»å¡
 		//CancelSynchronousIo(m_hRecvThread);
-		//ÏÖÔÚÒÑ¾­¸ÄÎª·Ç×èÈûÊ½µÄreadFile.
+		//ç°åœ¨å·²ç»æ”¹ä¸ºéé˜»å¡å¼çš„readFile.
 		CloseHandle(m_hRecvThread);
 	}
 
 	if (hCom)
 	{
-		BOOL bRet = CloseHandle(hCom);//ÕâÀï»áÊ¹µÃ×èÈûµÄ GetOverlappedResult ·µ»Ø
+		BOOL bRet = CloseHandle(hCom);//è¿™é‡Œä¼šä½¿å¾—é˜»å¡çš„ GetOverlappedResult è¿”å›
 		if (!bRet)
 		{
 			m_strErrorInfo = sys::getLastError("CloseHandle");
@@ -295,9 +302,9 @@ bool ioGW_LocalSerial::OpenCom()
 
 	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
-		0, // ¶ÀÕ¼·½Ê½
+		0, // ç‹¬å æ–¹å¼
 		NULL,
-		OPEN_EXISTING,// ´ò¿ª¶ø²»ÊÇ´´½¨
+		OPEN_EXISTING,// æ‰“å¼€è€Œä¸æ˜¯åˆ›å»º
 		FILE_FLAG_OVERLAPPED,
 		NULL);
 
@@ -313,9 +320,9 @@ bool ioGW_LocalSerial::OpenCom()
 	ClearCommError(m_hCom, &dwError, &comstat);
 
 
-	//dcb.StopBits = 0, 1, 2¶ÔÓ¦µÄÊÇ1bit, 1.5bits, 2bits.
-	//dcb.ByteSize = 6, 7, 8Ê±   dcb.StopBits²»ÄÜÎª1
-	//dcb.ByteSize = 5Ê±   dcb.StopBits²»ÄÜÎª2
+	//dcb.StopBits = 0, 1, 2å¯¹åº”çš„æ˜¯1bit, 1.5bits, 2bits.
+	//dcb.ByteSize = 6, 7, 8æ—¶   dcb.StopBitsä¸èƒ½ä¸º1
+	//dcb.ByteSize = 5æ—¶   dcb.StopBitsä¸èƒ½ä¸º2
 	DCB dcb;
 	SecureZeroMemory(&dcb, sizeof(DCB));
 	dcb.DCBlength = sizeof(DCB);
