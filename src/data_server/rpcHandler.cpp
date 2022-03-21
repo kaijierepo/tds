@@ -1324,8 +1324,6 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		LOG("[TDSP转发]客户端->设备:\r\n" + jReq.dump() + "\r\n");
 		if (pT->call(method, jParams, jRlt, jErr))
 		{
-			jRlt.erase("id");
-			jRlt["id"] = jId;
 			rpcResp.result = jRlt.dump();
 			LOG("[TDSP转发]设备->客户端:\r\n" + rpcResp.result + "\r\n");
 		}

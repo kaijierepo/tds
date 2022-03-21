@@ -267,6 +267,16 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 		if (resp["result"] != nullptr)
 		{
 			result = resp["result"];
+			//如果是获取配置命令，将配置存入缓存
+			if (method == "getDevConf" && result.is_object())
+			{
+				m_csThis.lock();
+				for (auto& [key, value] : result.items()) {
+					m_jConf[key] = value;
+				}
+				saveConfBuff();
+				m_csThis.unlock();
+			}
 		}
 		if (resp["error"] != nullptr)
 		{
