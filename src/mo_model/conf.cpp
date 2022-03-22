@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "conf.h"
 #include  "common.hpp"
-#include "logger.h"
 
 tdsConfig::tdsConfig()
 {
@@ -23,6 +22,7 @@ tdsConfig::tdsConfig()
 	tcpKeepAliveIO = 60 * 60;
 	tcpKeepAliveDS = 30;
 	bCreateDumpWhenLogError = false;
+	mode = "tds";
 }
 
 

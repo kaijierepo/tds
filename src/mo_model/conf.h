@@ -2,7 +2,8 @@
 #include <string>
 using namespace std;
 #include "json.hpp"
-#include "tds.h"
+using json = nlohmann::json;
+using namespace std;
 
 //设计考虑。 不使用json作为配置文件 参考https://www.lucidchart.com/techblog/2018/07/16/why-json-isnt-a-good-configuration-language/
 /*
