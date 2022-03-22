@@ -150,7 +150,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	{
 		if (pIoDev->m_bOnline == false)
 		{
-			pIoDev->m_bOnline = true;
+			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());

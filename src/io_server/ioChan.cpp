@@ -55,7 +55,8 @@ bool ioChannel::loadConf(json& conf)
 
 bool ioChannel::toJson(json& conf, json opt)
 {
-	ioDev::toJson(conf, opt);
+	conf["addr"] = m_jDevAddr;
+	conf["nodeID"] = m_confNodeId;
 	conf["tagBind"] = m_strTagBind;
 	conf["ioType"] = m_ioType;
 	conf["valType"] = m_valType;
