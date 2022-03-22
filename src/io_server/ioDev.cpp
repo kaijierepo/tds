@@ -180,7 +180,6 @@ void ioDev::stop()
 bool ioDev::toJson(json& conf, json opt)
 {
 	//配置数据
-	conf["addrMode"] = m_addrMode;
 	conf["addr"] = m_jDevAddr;
 	conf["type"] = m_devType;
 	conf["typeLabel"] = m_devTypeLabel;
@@ -204,6 +203,7 @@ bool ioDev::toJson(json& conf, json opt)
 	else
 	{
 		//运行时数据
+		conf["addrMode"] = m_addrMode;
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;
 		if (pIOSession != nullptr)
@@ -278,14 +278,15 @@ bool ioDev::getChanStatus(json& statusList)
 
 bool ioDev::loadConf(json& conf)
 {
-	if (conf.contains("addrMode"))
-	{
-		m_addrMode = conf["addrMode"].get<string>();
-	}
-
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
+		if (m_jDevAddr.contains("id"))
+			m_addrMode = DEV_ADDR_MODE::deviceID;
+		else if (m_jDevAddr.contains("port"))
+			m_addrMode = DEV_ADDR_MODE::tcpServer;
+		else 
+			m_addrMode = DEV_ADDR_MODE::tcpClient;
 	}
 
 	if (conf["acqInterval"] != nullptr)
