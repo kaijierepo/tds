@@ -603,7 +603,6 @@
     <ClCompile Include="..\src\video\streamSrvNode.cpp" />
     <ClCompile Include="..\src\xiaot\scriptHost.cpp" />
     <ClCompile Include="..\src\xiaot\xiaot.cpp" />
-    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />

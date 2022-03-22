@@ -198,7 +198,6 @@
     <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp">
       <Filter>tdsPro</Filter>
     </ClCompile>
-    <ClCompile Include="Source.cpp" />
     <ClCompile Include="..\src\tools\dumpCatch.cpp">
       <Filter>tools</Filter>
     </ClCompile>
