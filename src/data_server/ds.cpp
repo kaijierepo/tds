@@ -20,7 +20,6 @@
 
 
 dataServer ds;
-httplib::Server httpSrv;
 using namespace httplib;
 
 httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& req, httplib::Response& res)
@@ -70,6 +69,21 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 		}
 	}
 	return httplib::Server::HandlerResponse::Unhandled;
+}
+
+void handleWeixinGZHRequest(const httplib::Request& req, httplib::Response& res)
+{
+	LOG("[微信公众号] 请求\n" + req.body);
+	
+	json jResp = "ok";
+	string resp = jResp.dump();
+
+	if (resp != "")
+	{
+		//下面两句都是必须的，不然跨域请求的前端收不到
+		res.set_content(resp, "application/json;charset=utf-8");
+		res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
+	}
 }
 
 void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
@@ -148,6 +162,9 @@ void initHttpSrv(httplib::Server& svr)
 //rpc Post命令处理
 	svr.Post("\\/rpc.*",handleRpcOverHttp);
 	svr.Get("\\/rpc.*", handleRpcOverHttp);
+
+//微信公众号消息处理
+	svr.Get("\\/gzh.*", handleWeixinGZHRequest);
 
 //有权限控制的文件下载服务
 	svr.set_pre_routing_handler(handleFilePermission);
@@ -473,10 +490,20 @@ void activeSessionThread()
 }
 
 
-void httpSrvThread()
+void httpSrvThread(int port)
 {
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
+	httplib::Server httpSrv;
 	initHttpSrv(httpSrv);
+
+	//web网页端口
+	string webPath = fs::appPath() + "/web";
+	if (fs::fileExist(webPath))
+	{
+		string asc_customUI = charCodec::utf8toAnsi(webPath);
+		httpSrv.set_mount_point("/", +asc_customUI.c_str());
+		LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
+	}
 
 	//基于tds的二次开发，ui根目录位于此
 	//并且将tds的app目录放置在该目录下
@@ -552,8 +579,8 @@ void httpSrvThread()
 	httpSrv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
 	httpSrv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
 
-	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort) + " 本机浏览器 http://localhost:667 访问软件用户界面");
-	httpSrv.listen("0.0.0.0", tds->conf->httpPort);
+	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(port) + " 本机浏览器 http://localhost:" + str::fromInt(port) + " 访问软件用户界面");
+	httpSrv.listen("0.0.0.0", port);
 }
 
 
@@ -595,8 +622,16 @@ bool dataServer::runAsCloud()
 	m_tcpSrv->SettIOCPName(strName);
 
 	//http服务 667
-	thread t2(httpSrvThread);
+	thread t2(httpSrvThread,tds->conf->httpPort);
 	t2.detach();
+
+	//http服务 80端口
+	string webPath = fs::appPath() + "/web";
+	if (fs::fileExist(webPath))
+	{
+		thread t(httpSrvThread,80);
+		t.detach();
+	}
 
 	userMng.loadConf();
 
@@ -684,34 +719,34 @@ void httpReqHandleThread_poolThread(httpReqHandleThread_threadPool* p)
 
 void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	tdsSession->httpReqHandleThreadID = GetCurrentThreadId();
-	httplib::detail::dsClientStream* bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
-	SOCKET sock = bs->sock_;
-	bool close = false;
-	while (1)
-	{
-		// rpc over http 不用通过GET发送，httplib处理GET命令不会读取BODY中的数据，会导致流的处理错误.
-		httpSrv.process_request(*bs, false, close, nullptr);   
-		if (!close) //HTTP keep-alive 模式，该链接可能连续发送多个http请求
-		{
-			if (bs->haveData())//粘连包的情况
-			{
-				continue;
-			}
-			else if(bs->m_sem.wait_for(5000)) //收到了后续请求
-			{
-				continue;
-			}
-			else
-				break;
-		}
-	}
-	shutdown(sock, SD_BOTH);
-	closesocket(sock); //对于大文件下载，此处等待发送完成再close，查看bool tcpSrv::DoAccept(SOCKET sockAccept, SOCKADDR_IN* ClientAddr)
-	
-	//大量http请求时，会出现此处删除后，tcpRecvCallback又收到数据的情况。
-	tdsSession->dsCltStream = nullptr;
-	delete bs;
+	//tdsSession->httpReqHandleThreadID = GetCurrentThreadId();
+	//httplib::detail::dsClientStream* bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
+	//SOCKET sock = bs->sock_;
+	//bool close = false;
+	//while (1)
+	//{
+	//	// rpc over http 不用通过GET发送，httplib处理GET命令不会读取BODY中的数据，会导致流的处理错误.
+	//	httpSrv.process_request(*bs, false, close, nullptr);   
+	//	if (!close) //HTTP keep-alive 模式，该链接可能连续发送多个http请求
+	//	{
+	//		if (bs->haveData())//粘连包的情况
+	//		{
+	//			continue;
+	//		}
+	//		else if(bs->m_sem.wait_for(5000)) //收到了后续请求
+	//		{
+	//			continue;
+	//		}
+	//		else
+	//			break;
+	//	}
+	//}
+	//shutdown(sock, SD_BOTH);
+	//closesocket(sock); //对于大文件下载，此处等待发送完成再close，查看bool tcpSrv::DoAccept(SOCKET sockAccept, SOCKADDR_IN* ClientAddr)
+	//
+	////大量http请求时，会出现此处删除后，tcpRecvCallback又收到数据的情况。
+	//tdsSession->dsCltStream = nullptr;
+	//delete bs;
 }
 
 bool bTestStream = false;
