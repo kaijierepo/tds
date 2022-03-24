@@ -247,13 +247,15 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	if (!sync)
 		return true;
 
+	LOG("[io设备同步请求]\n" + req.dump());
+
 	json resp;
 	m_csSyncRPCInfo.lock();
 	TDSP_SYNC_INFO* tsi = new TDSP_SYNC_INFO();
 	m_mapSyncRPCInfo[iId] = tsi;
 	m_csSyncRPCInfo.unlock();
 
-	bool bGetResp = tsi->respSignal.wait_for(3000);
+	bool bGetResp = tsi->respSignal.wait_for(tds->conf->iotimeoutTdsp);
 	
 	
 	m_csSyncRPCInfo.lock();
@@ -264,6 +266,7 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 
 	if (bGetResp)
 	{
+		LOG("[io设备同步响应]\n" + resp.dump());
 		if (resp["result"] != nullptr)
 		{
 			result = resp["result"];
@@ -284,7 +287,9 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 		}
 		return true;
 	}
-		
+
+
+	LOG("[io设备同步请求]请求超时,超时时间" + str::fromInt(tds->conf->iotimeoutTdsp) + "毫秒");
 	return false;
 }
 

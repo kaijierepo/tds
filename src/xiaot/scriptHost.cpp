@@ -8,10 +8,44 @@
 
 scriptHost sHost;
 
+void scriptThread(scriptHost* p)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	p->loopExe();
+#endif
+}
+
+bool scriptHost::init()
+{
+	string conf;
+	vector<string> sList;
+	fs::getFileList(sList, tds->conf->projectConfPath + "/scripts");
+
+	for (int i = 0; i < sList.size(); i++)
+	{
+		string name = sList[i];
+		string script;
+		if (fs::readFile(tds->conf->projectConfPath + "/scripts/" + name, script))
+		{
+			m_mapScripts[name] = script;
+		}
+	}
+	return true;
+}
+
+bool scriptHost::run()
+{
+	if (!tds->conf->enableScript)
+		return false;
+
+	init();
+	thread t(scriptThread, this);
+	t.detach();
+	return false;
+}
 
 
-
-
+#ifdef ENABLE_JERRY_SCRIPT
 static jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -168,44 +202,16 @@ json scriptHost::engineArgsToJson(const jerry_value_t arguments[],const jerry_le
 }
 
 
-bool scriptHost::init()
-{
-	string conf;
-	vector<string> sList;
-	fs::getFileList(sList, tds->conf->projectConfPath + "/scripts");
 
-	for (int i = 0; i < sList.size(); i++)
-	{
-		string name = sList[i];
-		string script;
-		if (fs::readFile(tds->conf->projectConfPath + "/scripts/" + name, script))
-		{
-			m_mapScripts[name] = script;
-		}
-	}
-	return true;
-}
 
-void scriptThread(scriptHost* p)
-{
-	p->loopExe();
-}
+
 
 void scriptThread1(scriptHost* p)
 {
 	p->loopExe();
 }
 
-bool scriptHost::run()
-{
-	if (!tds->conf->enableScript)
-		return false;
 
-	init();
-	thread t(scriptThread, this);
-	t.detach();
-	return false;
-}
 
 bool scriptHost::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
@@ -625,3 +631,4 @@ bool scriptHost::getScriptEngineObj(json& jObj, jerry_value_t engineObj)
 	bool iteration_result = jerry_foreach_object_property(engineObj, setEngineObj2Json, &jObj);
 	return false;
 }
+#endif

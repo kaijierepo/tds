@@ -262,6 +262,11 @@ struct iTDSConf {
 	int cloudPort;
 	string deviceID;
 
+	//ioDev
+	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
+	int iotimeoutModbusRtu;
+	int iotimeoutIQ60;
+
 	//tcp2comƒ£ Ω≈‰÷√
 	tcp2com_Conf conf_tcp2com;
 

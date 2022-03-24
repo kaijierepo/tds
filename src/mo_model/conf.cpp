@@ -22,6 +22,9 @@ tdsConfig::tdsConfig()
 	tcpKeepAliveIO = 60 * 60;
 	tcpKeepAliveDS = 30;
 	bCreateDumpWhenLogError = false;
+	iotimeoutTdsp = 7000;
+	iotimeoutModbusRtu = 5000;
+	iotimeoutIQ60 = 5000;
 	mode = "tds";
 }
 
@@ -94,6 +97,9 @@ enableScript = 0       #启用脚本功能
 #IO服务功能
 enableDevReboot=1      #启用设备重启功能      
 devRebootTime=180      #设备无通信重启时间
+iotimeoutTdsp=7000
+iotimeoutModbusRtu=5000
+iotimeoutIQ60=5000
 
 #桌面软件模式
 ui=console             #ui模式  console:命令行模式   chrome:浏览器模式
@@ -173,6 +179,12 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			tcpKeepAliveIO = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tcpkeepaliveds"))
 			tcpKeepAliveDS = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "iotimeoutTdsp"))
+			iotimeoutTdsp = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "iotimeoutModbusRtu"))
+			iotimeoutModbusRtu = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "iotimeoutIQ60"))
+			iotimeoutIQ60 = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "port") && port == 0)
 			port = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpport") && httpPort == 0)

@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
 #include "jerryscript-ext/handler.h"
 
@@ -73,11 +75,11 @@ print_value(const jerry_value_t jsvalue)
     printf("\n");
     jerry_release_value(value);
 }
-
+#endif
 int doShell(void)
 {
     printf("ª∂”≠ π”√ TDS javascript shell \r\n");
-
+#ifdef ENABLE_JERRY_SCRIPT
     bool is_done = false;
 
     /* Initialize engine */
@@ -133,6 +135,6 @@ int doShell(void)
 
     /* Cleanup engine */
     jerry_cleanup();
-
+#endif
     return 0;
 }

@@ -1149,6 +1149,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		result = logSrv.rpc_queryLog(params,session);
 	}
+#ifdef ENABLE_JERRY_SCRIPT
 	else if (method == "runScript")
 	{
 		sHost.rpc_runScript(params, rpcResp, session);
@@ -1165,6 +1166,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		sHost.rpc_setScript(params, rpcResp, session);
 	}
+#endif
 	else if (method == "callDevMethod")
 	{
 		string tag = params["tag"].get<string>();
@@ -1321,11 +1323,11 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 
 		json jRlt,jErr;
 		//发起同步请求，此处阻塞
-		LOG("[TDSP转发]客户端->设备:\r\n" + jReq.dump() + "\r\n");
+		LOG("[TDSP转发]客户端->设备\r\n");
 		if (pT->call(method, jParams, jRlt, jErr))
 		{
 			rpcResp.result = jRlt.dump();
-			LOG("[TDSP转发]设备->客户端:\r\n" + rpcResp.result + "\r\n");
+			LOG("[TDSP转发]设备->客户端\r\n");
 		}
 		else
 		{

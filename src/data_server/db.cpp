@@ -856,14 +856,16 @@ ATTRI_SELECTOR::ATTRI_SELECTOR()
 
 ATTRI_SELECTOR::~ATTRI_SELECTOR()
 {
+#ifdef ENABLE_JERRY_SCRIPT
 	if (filterExp.length() > 0)
 	{
 		jerry_release_value(global_object);
 		jerry_cleanup();
 	}
+#endif
 }
 
-
+#ifdef ENABLE_JERRY_SCRIPT
 bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
 {
 	size_t idx, maxIdx;
@@ -904,10 +906,11 @@ bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engi
 	}
 	return true;
 }
-
+#endif
 
 bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
 {
+#ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
 		return true;
 
@@ -953,11 +956,13 @@ bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
 		throw e;
 	}
 	//过滤器执行出错，统一不过滤
+#endif
 	return true;
 }
 
 bool ATTRI_SELECTOR::match(string& de)
 {
+#ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
 		return true;
 
@@ -1000,11 +1005,13 @@ bool ATTRI_SELECTOR::match(string& de)
 		throw e;
 	}
 	//过滤器执行出错，统一不过滤
+#endif
 	return true;
 }
 
 bool ATTRI_SELECTOR::init(string filter)
 {
+#ifdef ENABLE_JERRY_SCRIPT
 	if (filter.length() > 0)
 	{
 		filterExp = filter;
@@ -1012,5 +1019,6 @@ bool ATTRI_SELECTOR::init(string filter)
 		bEnable = true;
 		global_object = jerry_get_global_object();
 	}
+#endif
 	return true;
 }

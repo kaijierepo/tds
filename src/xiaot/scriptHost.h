@@ -12,6 +12,8 @@ public:
 	bool init();
 	bool run();
 
+	std::map<string, string> m_mapScripts;
+#ifdef ENABLE_JERRY_SCRIPT
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool runScript(string& script);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -22,11 +24,11 @@ public:
 	json getScriptList(string tag);
 
 	void loopExe();
-	std::map<string, string> m_mapScripts;
 	json engineValToJson(const jerry_value_t value);
 	static json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argument_count);
 	static bool setScriptEngineObj(json& jObj, jerry_value_t engineObj);
 	static bool getScriptEngineObj(json& jObj, jerry_value_t engineObj);
+#endif
 };
 
 extern scriptHost sHost;
