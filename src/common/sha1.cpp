@@ -1,12 +1,12 @@
 /*
- *  sha1.cpp
+ *  SHA_1.cpp
  *
  *  Copyright (C) 1998, 2009
  *  Paul E. Jones <paulej@packetizer.com>
  *  All Rights Reserved.
  *
  *****************************************************************************
- *  $Id: sha1.cpp 12 2009-06-22 19:34:25Z paulej $
+ *  $Id: SHA_1.cpp 12 2009-06-22 19:34:25Z paulej $
  *****************************************************************************
  *
  *  Description:
@@ -41,10 +41,10 @@
 #include "sha1.h"
 
  /*
-  *  SHA1
+  *  SHA_1
   *
   *  Description:
-  *      This is the constructor for the sha1 class.
+  *      This is the constructor for the SHA_1 class.
   *
   *  Parameters:
   *      None.
@@ -55,16 +55,16 @@
   *  Comments:
   *
   */
-SHA1::SHA1()
+SHA_1::SHA_1()
 {
 	Reset();
 }
 
 /*
- *  ~SHA1
+ *  ~SHA_1
  *
  *  Description:
- *      This is the destructor for the sha1 class
+ *      This is the destructor for the SHA_1 class
  *
  *  Parameters:
  *      None.
@@ -75,7 +75,7 @@ SHA1::SHA1()
  *  Comments:
  *
  */
-SHA1::~SHA1()
+SHA_1::~SHA_1()
 {
 	// The destructor does nothing
 }
@@ -84,7 +84,7 @@ SHA1::~SHA1()
  *  Reset
  *
  *  Description:
- *      This function will initialize the sha1 class member variables
+ *      This function will initialize the SHA_1 class member variables
  *      in preparation for computing a new message digest.
  *
  *  Parameters:
@@ -96,7 +96,7 @@ SHA1::~SHA1()
  *  Comments:
  *
  */
-void SHA1::Reset()
+void SHA_1::Reset()
 {
 	Length_Low = 0;
 	Length_High = 0;
@@ -130,7 +130,7 @@ void SHA1::Reset()
  *  Comments:
  *
  */
-bool SHA1::Result(unsigned *message_digest_array)
+bool SHA_1::Result(unsigned *message_digest_array)
 {
 	int i;                                  // Counter
 
@@ -171,7 +171,7 @@ bool SHA1::Result(unsigned *message_digest_array)
  *  Comments:
  *
  */
-void SHA1::Input(const unsigned char *message_array,
+void SHA_1::Input(const unsigned char *message_array,
 	unsigned            length)
 {
 	if (!length)
@@ -230,7 +230,7 @@ void SHA1::Input(const unsigned char *message_array,
  *  Comments:
  *
  */
-void SHA1::Input(const char  *message_array,
+void SHA_1::Input(const char  *message_array,
 	unsigned    length)
 {
 	Input((unsigned char *)message_array, length);
@@ -252,7 +252,7 @@ void SHA1::Input(const char  *message_array,
  *  Comments:
  *
  */
-void SHA1::Input(unsigned char message_element)
+void SHA_1::Input(unsigned char message_element)
 {
 	Input(&message_element, 1);
 }
@@ -273,7 +273,7 @@ void SHA1::Input(unsigned char message_element)
  *  Comments:
  *
  */
-void SHA1::Input(char message_element)
+void SHA_1::Input(char message_element)
 {
 	Input((unsigned char *)&message_element, 1);
 }
@@ -283,20 +283,20 @@ void SHA1::Input(char message_element)
  *
  *  Description:
  *      This operator makes it convenient to provide character strings to
- *      the SHA1 object for processing.
+ *      the SHA_1 object for processing.
  *
  *  Parameters:
  *      message_array: [in]
  *          The character array to take as input.
  *
  *  Returns:
- *      A reference to the SHA1 object.
+ *      A reference to the SHA_1 object.
  *
  *  Comments:
  *      Each character is assumed to hold 8 bits of information.
  *
  */
-SHA1& SHA1::operator<<(const char *message_array)
+SHA_1& SHA_1::operator<<(const char *message_array)
 {
 	const char *p = message_array;
 
@@ -314,20 +314,20 @@ SHA1& SHA1::operator<<(const char *message_array)
  *
  *  Description:
  *      This operator makes it convenient to provide character strings to
- *      the SHA1 object for processing.
+ *      the SHA_1 object for processing.
  *
  *  Parameters:
  *      message_array: [in]
  *          The character array to take as input.
  *
  *  Returns:
- *      A reference to the SHA1 object.
+ *      A reference to the SHA_1 object.
  *
  *  Comments:
  *      Each character is assumed to hold 8 bits of information.
  *
  */
-SHA1& SHA1::operator<<(const unsigned char *message_array)
+SHA_1& SHA_1::operator<<(const unsigned char *message_array)
 {
 	const unsigned char *p = message_array;
 
@@ -351,13 +351,13 @@ SHA1& SHA1::operator<<(const unsigned char *message_array)
  *          The next octet in the message
  *
  *  Returns:
- *      A reference to the SHA1 object.
+ *      A reference to the SHA_1 object.
  *
  *  Comments:
  *      The character is assumed to hold 8 bits of information.
  *
  */
-SHA1& SHA1::operator<<(const char message_element)
+SHA_1& SHA_1::operator<<(const char message_element)
 {
 	Input((unsigned char *)&message_element, 1);
 
@@ -375,13 +375,13 @@ SHA1& SHA1::operator<<(const char message_element)
  *          The next octet in the message
  *
  *  Returns:
- *      A reference to the SHA1 object.
+ *      A reference to the SHA_1 object.
  *
  *  Comments:
  *      The character is assumed to hold 8 bits of information.
  *
  */
-SHA1& SHA1::operator<<(const unsigned char message_element)
+SHA_1& SHA_1::operator<<(const unsigned char message_element)
 {
 	Input(&message_element, 1);
 
@@ -407,7 +407,7 @@ SHA1& SHA1::operator<<(const unsigned char message_element)
  *      in the publication.
  *
  */
-void SHA1::ProcessMessageBlock()
+void SHA_1::ProcessMessageBlock()
 {
 	const unsigned K[] = {               // Constants defined for SHA-1
 								0x5A827999,
@@ -517,7 +517,7 @@ void SHA1::ProcessMessageBlock()
  *  Comments:
  *
  */
-void SHA1::PadMessage()
+void SHA_1::PadMessage()
 {
 	/*
 	 *  Check to see if the current message block is too small to hold
@@ -583,7 +583,7 @@ void SHA1::PadMessage()
  *  Comments:
  *
  */
-unsigned SHA1::CircularShift(int bits, unsigned word)
+unsigned SHA_1::CircularShift(int bits, unsigned word)
 {
 	return ((word << bits) & 0xFFFFFFFF) | ((word & 0xFFFFFFFF) >> (32 - bits));
 }

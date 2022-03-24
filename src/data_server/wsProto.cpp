@@ -198,7 +198,7 @@ const std::string MAGIstring = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 std::string CWSPPkt::getKey(std::string strKey)
 {
-	SHA1 sha;
+	SHA_1 sha;
 	strKey += MAGIstring;
 	//strcat(strKey, MAGIstring);
 	unsigned int iDigSet[5];

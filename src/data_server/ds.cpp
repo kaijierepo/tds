@@ -17,6 +17,7 @@
 #include "tds.h"
 #include "users/userMng.h"
 #include "ioDev_tdsp.h"
+#include "sha1.hpp"
 
 
 dataServer ds;
@@ -71,9 +72,39 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 	return httplib::Server::HandlerResponse::Unhandled;
 }
 
-void handleWeixinGZHRequest(const httplib::Request& req, httplib::Response& res)
+void handleGet_gzh(const httplib::Request& req, httplib::Response& res)
 {
-	LOG("[微信公众号] 请求\n" + req.body);
+	string timestamp= req.get_param_value("timestamp");
+	string	nonce = req.get_param_value("nonce");
+	string	echostr = req.get_param_value("echostr");
+	string signature = req.get_param_value("signature");
+
+	LOG("[微信公众号] Get请求\n");
+	LOG("timestamp " + timestamp + "\n");
+	LOG("nonce " + nonce + "\n");
+	LOG("echostr " + echostr + "\n");
+	LOG("signature " + signature + "\n");
+
+	vector<string> vec;
+	vec.push_back(timestamp);
+	vec.push_back(nonce);
+	vec.push_back(echostr);
+
+	sort(vec.begin(), vec.end());
+
+	string s = vec[0] + vec[1] + vec[2];
+
+	SHA1 checksum;
+	checksum.update(s);
+	string hash = checksum.final();
+	LOG("signature calc  " + hash + "\n");
+
+	res.set_content(echostr, "text/plain;charset=UTF-8");
+}
+
+void handlePost_gzh(const httplib::Request& req, httplib::Response& res)
+{
+	LOG("[微信公众号] Post请求\n" + req.body);
 	
 	json jResp = "ok";
 	string resp = jResp.dump();
@@ -164,7 +195,8 @@ void initHttpSrv(httplib::Server& svr)
 	svr.Get("\\/rpc.*", handleRpcOverHttp);
 
 //微信公众号消息处理
-	svr.Get("\\/gzh.*", handleWeixinGZHRequest);
+	svr.Get("\\/gzh.*", handleGet_gzh);
+	svr.Post("\\/gzh.*", handlePost_gzh);
 
 //有权限控制的文件下载服务
 	svr.set_pre_routing_handler(handleFilePermission);

@@ -1,13 +1,13 @@
 #pragma once
 /*
- *  sha1.h
+ *  SHA_1.h
  *
  *  Copyright (C) 1998, 2009
  *  Paul E. Jones <paulej@packetizer.com>
  *  All Rights Reserved.
  *
  *****************************************************************************
- *  $Id: sha1.h 12 2009-06-22 19:34:25Z paulej $
+ *  $Id: SHA_1.h 12 2009-06-22 19:34:25Z paulej $
  *****************************************************************************
  *
  *  Description:
@@ -18,20 +18,20 @@
  *      character names, were used because those were the names used
  *      in the publication.
  *
- *      Please read the file sha1.cpp for more information.
+ *      Please read the file SHA_1.cpp for more information.
  *
  */
 
-#ifndef _SHA1_H_
-#define _SHA1_H_
+#ifndef _SHA_1_H_
+#define _SHA_1_H_
 
-class SHA1
+class SHA_1
 {
 
 public:
 
-	SHA1();
-	virtual ~SHA1();
+	SHA_1();
+	virtual ~SHA_1();
 
 	/*
 	 *  Re-initialize the class
@@ -44,7 +44,7 @@ public:
 	bool Result(unsigned *message_digest_array);
 
 	/*
-	 *  Provide input to SHA1
+	 *  Provide input to SHA_1
 	 */
 	void Input(const unsigned char *message_array,
 		unsigned            length);
@@ -52,10 +52,10 @@ public:
 		unsigned    length);
 	void Input(unsigned char message_element);
 	void Input(char message_element);
-	SHA1& operator<<(const char *message_array);
-	SHA1& operator<<(const unsigned char *message_array);
-	SHA1& operator<<(const char message_element);
-	SHA1& operator<<(const unsigned char message_element);
+	SHA_1& operator<<(const char *message_array);
+	SHA_1& operator<<(const unsigned char *message_array);
+	SHA_1& operator<<(const char message_element);
+	SHA_1& operator<<(const unsigned char message_element);
 
 private:
 
