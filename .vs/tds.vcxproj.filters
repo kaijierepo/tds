@@ -51,9 +51,6 @@
     <ClCompile Include="..\src\common\logger.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\common\sha1.cpp">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\tcpClt.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -201,6 +198,9 @@
     <ClCompile Include="..\src\tools\dumpCatch.cpp">
       <Filter>tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\common\sha1.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -225,9 +225,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\logger.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\common\sha1.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\tcpClt.h">
@@ -389,6 +386,12 @@
     </ClInclude>
     <ClInclude Include="..\src\tools\dumpCatch.h">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\sha1.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\sha1.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

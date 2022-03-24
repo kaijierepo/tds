@@ -97,8 +97,8 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -221,6 +221,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R mt|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -310,14 +311,21 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MT;..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
@@ -376,7 +384,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;_TDS;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -390,7 +398,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MTd;..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>hjson.lib;winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
@@ -423,7 +431,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;_TDS;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -436,7 +444,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>hjson.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MT;..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
@@ -614,6 +622,7 @@
     <ClInclude Include="..\src\common\json.hpp" />
     <ClInclude Include="..\src\common\logger.h" />
     <ClInclude Include="..\src\common\sha1.h" />
+    <ClInclude Include="..\src\common\sha1.hpp" />
     <ClInclude Include="..\src\common\simdjson.h" />
     <ClInclude Include="..\src\common\stream2pkt.h" />
     <ClInclude Include="..\src\common\tcpClt.h" />
