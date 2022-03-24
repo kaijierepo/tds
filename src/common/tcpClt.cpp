@@ -68,18 +68,21 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 {
 	tcpClt* p = (tcpClt*) lpParam;
 	int ct = 0;
+	if (!p->IsConnect())
+		p->connect();
 	while (1)
 	{
-		if(!p->IsConnect())
-				p->connect();
-		Sleep(1000);
-
+		if (!p->m_bRun)
+			break;
+		Sleep(100);
 		ct++;
-		if (ct == 15)
+		if (ct == 10)
 		{
 			ct = 0;
-			if (p->IsConnect() && p->heartbeat.size() > 0 )
-				p->SendData(p->heartbeat.data(), p->heartbeat.size());
+			if (!p->IsConnect())
+				p->connect();
+			//if (p->IsConnect() && p->heartbeat.size() > 0 )
+			//	p->SendData(p->heartbeat.data(), p->heartbeat.size());
 		}
 	}
 	return 0;
@@ -100,6 +103,7 @@ tcpClt::tcpClt(void)
 	m_remoteIP = "127.0.0.1";
 	m_remotePort = 0;
 	m_bConn = false;
+	m_bRun = false;
 	m_bIsConnectting = false;
 	lastConnTime.wYear = 0; 
 	lastConnTime.wMonth = 0;
@@ -150,6 +154,7 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, str
 	m_remotePort = iServPort;
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
+	m_bRun = true;
 	DWORD dwThread;
 	HANDLE hThread = CreateThread(NULL, 0, ConnectThread, (LPVOID)this, 0, &dwThread);
 	return 0;
@@ -157,7 +162,8 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, str
 
 void tcpClt::stop()
 {
-	DisConnect();
+	m_bRun = false; //触发重连线程退出
+	DisConnect();   //触发接收线程退出。
 	m_csLock.lock();
 	m_csLock.unlock();
 }

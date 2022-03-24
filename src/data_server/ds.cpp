@@ -1060,7 +1060,7 @@ void dataServer::getUrlParams(string& url,map<string, string>& mapParams)
 
 void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip, tdsSession->port);
+	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip.c_str(), tdsSession->port);
 	LOG(szLog);
 
 	//回复websocket握手

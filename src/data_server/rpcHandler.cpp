@@ -1295,20 +1295,17 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
 		{
-			json jError = "device with specified ioAddr not found";
-			rpcResp.error = jError.dump();
+			rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound, "未找到指定IO地址的IO设备");
 			return true;
 		}
 		if (pIoDev->pIOSession == nullptr)
 		{
-			json jError = "device offline";
-			rpcResp.error = jError.dump();
+			rpcResp.error = RPCError(RPC_ERROR::IO_devOffline, "设备离线");
 			return true;
 		}
 		if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
 		{
-			json jError = "device with specified ioAddr is not a TDSP device";
-			rpcResp.error = jError.dump();
+			rpcResp.error = RPCError(RPC_ERROR::IO_devTypeError, "IO设备类型错误");
 			return true;
 		}
 
@@ -1331,8 +1328,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		}
 		else
 		{
-			json jError = "request time out";
-			rpcResp.error = jError.dump();
+			rpcResp.error = RPCError(RPC_ERROR::IO_reqTimeout,"IO设备响应超时");
 		}
 		return true;
 	}
@@ -2488,7 +2484,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 	ioDev* pDev = ioSrv.getIODev(ioAddr);
 	if (!pDev)
 	{
-		error = RPCError(RPC_ERROR::IO_DEV_NOT_FOUND, "io device not found");
+		error = RPCError(RPC_ERROR::IO_devNotFound, "io device not found");
 		return "";
 	}
 

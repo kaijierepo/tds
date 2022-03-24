@@ -74,6 +74,7 @@ public:
 	string m_strLocalIP;
 	int m_iLocalPort;
 	bool m_bConn;
+	bool m_bRun;
 	SYSTEMTIME lastConnTime;
 	bool m_bIsConnectting;
 	string m_strErrorInfo;

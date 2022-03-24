@@ -31,7 +31,10 @@ enum RPC_ERROR {
 	TEC_STREAM_ID_NOT_FOUND = -40103,
 
 	//io 部分
-	IO_DEV_NOT_FOUND = -41001,
+	IO_devNotFound = -41001,   //未找到指定IO地址的IO设备
+	IO_devOffline = -41002,    //设备离线
+	IO_reqTimeout = -41003,	   //IO设备响应超时
+	IO_devTypeError = -41004,  //IO设备类型错误
 };
 
 

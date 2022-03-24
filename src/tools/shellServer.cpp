@@ -42,12 +42,15 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
     else if (sc.method == "help" || sc.method == "h")
     {
         resp = "help h 帮助\n";
-        resp += "enableGlobalAlarm  ega  全局报警使能\n";
-        resp += "ioDev.setAcqInterval  * 30  所有设备采集周期设置为30秒\n";
-        resp += "ioSrv.saveConf 保存io配置";
-        resp += "ioSrv.triggerAllCycleAcq 触发所有设备进行一次周期采集";
+        resp += "命令简写        完整命令                 命令功能\n";
+        resp += "ega            enableGlobalAlarm       全局报警使能\n";
+        resp += "sca            stopCycleAcq            关闭周期采集\n";
+        resp += "rca            runCycleAcq             启动周期采集\n";
+        resp += "sai * 30       setAcqInterval * 30     所有设备采集周期设置为30秒\n";
+        resp += "io.sc          io.saveConf             保存io配置\n";
+        resp += "io.taca        io.triggerAllCycleAcq   触发所有设备进行一次周期采集\n";
     }
-    else if (sc.method == "ioSrv.saveConf")
+    else if (sc.method == "io.saveConf")
     {
         ioSrv.saveConf();
         resp = "保存io配置到io.json";
@@ -57,22 +60,22 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
         json j = tdsImp.tdsConf.toJson();
         resp = j.dump(2);
     }
-    else if (sc.method == "ioSrv.loadConf")
+    else if (sc.method == "io.loadConf")
     {
         ioSrv.loadConf();
         resp = "加载io配置从io.json";
     }
-    else if (sc.method == "ioSrv.stopCycleAcq")
+    else if (sc.method == "io.stopCycleAcq" || sc.method == "io.sca")
     {
         ioSrv.m_stopCycleAcq = true;
         resp = "暂停所有周期采集";
     }
-    else if (sc.method == "ioSrv.startCycleAcq")
+    else if (sc.method == "io.runCycleAcq" || sc.method == "io.rca")
     {
         ioSrv.m_stopCycleAcq = false;
         resp = "启动所有周期采集";
     }
-    else if (sc.method == "ioSrv.triggerAllCycleAcq")
+    else if (sc.method == "io.triggerAllCycleAcq")
     {
         ioSrv.m_csThis.lock();
         for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
@@ -83,7 +86,7 @@ void shellServer::handleCmd(string cmd, tcpSession* pCltInfo)
         ioSrv.m_csThis.unlock();
         resp += "通知所有设备进行一次周期采集";
     }
-    else if (sc.method == "ioDev.setAcqInterval")
+    else if (sc.method == "io.setAcqInterval" || sc.method == "io.sai")
     {
         if (sc.params.size() >= 2)
         {
