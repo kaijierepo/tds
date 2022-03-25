@@ -1292,6 +1292,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 	else if (jReq.contains("ioAddr"))
 	{
 		string strIoAddr = jReq["ioAddr"].get<string>();
+		pSession->ioAddr = strIoAddr;
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
 		{
@@ -1323,7 +1324,10 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		LOG("[TDSP转发]客户端->设备\r\n");
 		if (pT->call(method, jParams, jRlt, jErr))
 		{
-			rpcResp.result = jRlt.dump();
+			if(jRlt!=nullptr)
+				rpcResp.result = jRlt.dump();
+			if (jErr != nullptr)
+				rpcResp.error = jErr.dump();
 			LOG("[TDSP转发]设备->客户端\r\n");
 		}
 		else
@@ -1554,6 +1558,10 @@ HANDLE_END:
 			{
 				strResp += ",\"clientId\":" + clientId.dump();
 			}
+		}
+		if (pSession->ioAddr != "")
+		{
+			strResp += ",\"ioAddr\":\"" + pSession->ioAddr + "\"";
 		}
 		strResp += "}\n\n";
 

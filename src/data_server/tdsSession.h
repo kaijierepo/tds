@@ -45,6 +45,7 @@ public:
 	string name; //name is defined by tds client
 	string user;
 	string org; //用户所在组织。根位号
+	string ioAddr;
 	string queryRootTag;
 	//当前会话中的所有tag表示 都是绝对位号减去rootTag;  rootTag = org + queryRootTag;
 	//如果该字段不为空。 可以不使用org和queryRootTag重新组合rootTag;

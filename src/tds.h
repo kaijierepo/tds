@@ -275,6 +275,38 @@ struct iTDSConf {
 };
 
 
+enum RPC_ERROR {
+	//json rpc standard
+	TDS_ERROR_CODE = -32603,
+
+	//common
+	TEC_FAIL = -40000,
+
+	//tds client
+	TEC_TAG_NOT_EXIST = -40001,
+	TEC_PARAM_MISSING = -40002,
+	TEC_WRONG_PARAM_FMT = -40003,
+	TEC_TIME_SELECTOR_FMT_ERROR = -40004,
+	TEC_TAG_SELECTOR_FMT_ERROR = -40005,
+	TEC_VAL_TYPE_ERROR = -40006,
+	TEC_OUTPUT_EXECUTION_FAIL = -40007,
+
+	//video
+	TEC_VIDEO_PARAM_NOT_VALID = -40101,
+	TEC_NO_STREAM_SRC = -40102,
+	TEC_STREAM_ID_NOT_FOUND = -40103,
+
+	//io
+	IO_devNotFound = -41001,   
+	IO_devOffline = -41002,   
+	IO_reqTimeout = -41003,	   
+	IO_devTypeError = -41004,  
+
+	//tdsp
+	DEV_confNameNotFound = -42001,
+	DEV_confCategoryNotFound = -42002
+};
+
 
 
 //interface of tds.db
