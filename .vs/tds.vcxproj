@@ -84,7 +84,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -215,6 +215,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -281,12 +282,21 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_TDS;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>../src/3rdparty/hjson/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <AdditionalOptions>/utf-8 /Zm200 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MTd;..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
