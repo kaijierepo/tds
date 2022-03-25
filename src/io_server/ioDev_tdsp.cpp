@@ -116,10 +116,7 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 	}
 	else if (method == "getDevConf")
 	{
-		m_csThis.lock();
-		m_jConf = jResp["result"];
-		saveConfBuff();
-		m_csThis.unlock();
+		LOG("[warn]收到异步getDevConf");
 	}
 }
 
@@ -219,6 +216,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 
 int ioDev_tdsp::getRpcId()
 {
+	std::unique_lock<mutex> lock(m_csRPCId);
 	int id = m_iRpcId;
 	m_iRpcId++;
 	if (m_iRpcId > 250)
@@ -243,54 +241,59 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	req["clientId"] = "tds";
 	req["ioAddr"] = getIOAddrStr();
 	string strReq = req.dump() + "\n\n";
-	sendStr(strReq);
+
 	if (!sync)
-		return true;
-
-	LOG("[io设备同步请求]\n" + req.dump());
-
-	json resp;
-	m_csSyncRPCInfo.lock();
-	TDSP_SYNC_INFO* tsi = new TDSP_SYNC_INFO();
-	m_mapSyncRPCInfo[iId] = tsi;
-	m_csSyncRPCInfo.unlock();
-
-	bool bGetResp = tsi->respSignal.wait_for(tds->conf->iotimeoutTdsp);
-	
-	
-	m_csSyncRPCInfo.lock();
-	resp = tsi->jResp;
-	delete tsi;
-	m_mapSyncRPCInfo.erase(iId);
-	m_csSyncRPCInfo.unlock();
-
-	if (bGetResp)
 	{
-		LOG("[io设备同步响应]\n" + resp.dump());
-		if (resp["result"] != nullptr)
-		{
-			result = resp["result"];
-			//如果是获取配置命令，将配置存入缓存
-			if (method == "getDevConf" && result.is_object())
-			{
-				m_csThis.lock();
-				for (auto& [key, value] : result.items()) {
-					m_jConf[key] = value;
-				}
-				saveConfBuff();
-				m_csThis.unlock();
-			}
-		}
-		if (resp["error"] != nullptr)
-		{
-			error = resp["error"];
-		}
-		return true;
+		return sendStr(strReq);
 	}
-
-
-	LOG("[io设备同步请求]请求超时,超时时间" + str::fromInt(tds->conf->iotimeoutTdsp) + "毫秒");
-	return false;
+	else
+	{
+		//设置指定id命令的同步等待信息。
+		//[注意] 必须先设置等待信息，再发送请求。本机release模式下配合模拟器调试。
+		// 有可能还没运行到设置等待信息,就收到了响应，导致响应找不到匹配的请求。
+		TDSP_SYNC_INFO* tsi = nullptr;
+		LOG("[io设备同步请求]\n" + req.dump());
+		m_csSyncRPCInfo.lock();
+		tsi = new TDSP_SYNC_INFO();
+		m_mapSyncRPCInfo[iId] = tsi;
+		m_csSyncRPCInfo.unlock();
+		//发送请求
+		sendStr(strReq);
+		//等待请求
+		bool bGetResp = tsi->respSignal.wait_for(tds->conf->iotimeoutTdsp);
+		//删除同步信息
+		m_csSyncRPCInfo.lock();
+		json resp = tsi->jResp;
+		delete tsi;
+		m_mapSyncRPCInfo.erase(iId);
+		m_csSyncRPCInfo.unlock();
+		//处理响应
+		if (bGetResp)
+		{
+			LOG("[io设备同步响应]\n" + resp.dump());
+			if (resp["result"] != nullptr)
+			{
+				result = resp["result"];
+				//如果是获取配置命令，将配置存入缓存
+				if (method == "getDevConf" && result.is_object())
+				{
+					m_csThis.lock();
+					for (auto& [key, value] : result.items()) {
+						m_jConf[key] = value;
+					}
+					saveConfBuff();
+					m_csThis.unlock();
+				}
+			}
+			if (resp["error"] != nullptr)
+			{
+				error = resp["error"];
+			}
+			return true;
+		}
+		LOG("[io设备同步请求]请求超时,超时时间" + str::fromInt(tds->conf->iotimeoutTdsp) + "毫秒");
+		return false;
+	}
 }
 
 json ioDev_tdsp::getAddr()

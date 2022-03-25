@@ -35,6 +35,7 @@ public:
 	mutex m_csSyncRPCInfo;
 	bool getResponse;
 	int m_iRpcId;
+	mutex m_csRPCId;
 };
 
 extern void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC);
