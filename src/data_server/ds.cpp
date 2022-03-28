@@ -547,6 +547,15 @@ void httpSrvThread(int port)
 		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
 	}
 
+	//ui/app
+	string customUIApp = fs::appPath() + "/ui/app";
+	if (fs::fileExist(customUIApp))
+	{
+		string s = charCodec::utf8toAnsi(customUIApp);
+		httpSrv.set_mount_point("/", + s.c_str());
+		LOG("[keyinfo][HTTP服务器] 根目录: " + customUIApp);
+	}
+
 	//tds自己使用时，直接将app作为根目录
 	string uiApps = fs::appPath() + "/app";
 	if (fs::fileExist(uiApps))
@@ -554,6 +563,17 @@ void httpSrvThread(int port)
 		string asc_prjUI = charCodec::utf8toAnsi(uiApps);
 		httpSrv.set_mount_point("/", asc_prjUI.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
+	}
+
+	//配置路径作为根目录
+	string asc_confPath = charCodec::utf8toAnsi(tds->conf->projectConfPath);
+	auto ret = httpSrv.set_mount_point("/", asc_confPath.c_str());
+	if (!ret) {
+		LOG("[error][配置]路径 " + tds->conf->projectConfPath + " 不存在,请检查配置");
+	}
+	else
+	{
+		LOG("[keyinfo][HTTP服务器] 根目录  " + tds->conf->projectConfPath);
 	}
 
 	//默认将程序运行路径作为根目录
@@ -567,7 +587,7 @@ void httpSrvThread(int port)
 
 	//serve db files through http
 	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
-	auto ret = httpSrv.set_mount_point("/db/", asc_dbPath.c_str());
+	 ret = httpSrv.set_mount_point("/db/", asc_dbPath.c_str());
 	if (!ret) {
 		LOG("[error][数据库]路径 " + db.m_path + " 不存在,请检查配置");
 	}
@@ -577,17 +597,7 @@ void httpSrvThread(int port)
 	}
 
 
-	string asc_confPath = charCodec::utf8toAnsi(tds->conf->projectConfPath);
-	ret = httpSrv.set_mount_point("/conf/", asc_confPath.c_str());
-	if (!ret) {
-		LOG("[error][配置]路径 " + tds->conf->projectConfPath + " 不存在,请检查配置");
-	}
-	else
-	{
-		LOG("[keyinfo][HTTP服务器] /conf 路径映射->  " + tds->conf->projectConfPath);
-	}
-
-
+	
 	//文件下载目录
 	string asc_filePath = charCodec::utf8toAnsi(fs::appPath() + "/files");
 	ret = httpSrv.set_mount_point("/files/", asc_filePath.c_str());
