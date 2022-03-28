@@ -567,23 +567,23 @@ void httpSrvThread(int port)
 
 	//配置路径作为根目录
 	string asc_confPath = charCodec::utf8toAnsi(tds->conf->projectConfPath);
-	auto ret = httpSrv.set_mount_point("/", asc_confPath.c_str());
+	auto ret = httpSrv.set_mount_point("/config/", asc_confPath.c_str());
 	if (!ret) {
-		LOG("[error][配置]路径 " + tds->conf->projectConfPath + " 不存在,请检查配置");
+		LOG("[error][HTTP服务器] " + tds->conf->projectConfPath + " 不存在,请检查配置");
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] 根目录  " + tds->conf->projectConfPath);
+		LOG("[keyinfo][HTTP服务器] 路径/config/" + tds->conf->projectConfPath);
 	}
 
 	//默认将程序运行路径作为根目录
-	string tdsPath = fs::appPath();
+	/*string tdsPath = fs::appPath();
 	if (fs::fileExist(tdsPath))
 	{
 		string asc_tdsPath = charCodec::utf8toAnsi(tdsPath);
 		httpSrv.set_mount_point("/", asc_tdsPath.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + tdsPath);
-	}
+	}*/
 
 	//serve db files through http
 	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
@@ -593,7 +593,7 @@ void httpSrvThread(int port)
 	}
 	else
 	{
-		LOG("[keyinfo][数据库    ] 路径 " + db.m_path);
+		LOG("[keyinfo][HTTP服务器] /db/ " + db.m_path);
 	}
 
 
@@ -605,7 +605,7 @@ void httpSrvThread(int port)
 	}
 	else
 	{
-		LOG("[keyinfo][文件下载服务] 路径 " + fs::appPath() + "/files");
+		LOG("[keyinfo][HTTP服务器] 路径/files/ " + fs::appPath() + "/files");
 	}
 
 
