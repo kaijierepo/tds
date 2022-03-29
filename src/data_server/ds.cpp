@@ -1812,6 +1812,12 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 		{
 			string sResp = str::fromBuff(pData, iLen);
 
+			//编解码转换
+			if (sResp.find("gb2312") != string::npos || sResp.find("gbk") != string::npos)
+			{
+				sResp = charCodec::ansi2Utf8(sResp);
+			}
+
 			//解析请求基本信息
 			json jResp = json::parse(sResp);
 			string method = jResp["method"].get<string>();
@@ -1828,6 +1834,11 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 				string strIoAddr = jResp["ioAddr"].get<string>();
 				ioDev* pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 				pIoDev->onRecvPkt(jResp);
+				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device && jResp.contains("charset"))
+				{
+					ioDev_tdsp* pt = (ioDev_tdsp*)pIoDev;
+					pt->m_TDSPCharset = jResp["charset"].get<string>();
+				}
 			}
 			//透传到tds客户端的指令。使用clientId进行透传机制，暂时取消
 			//else if (clientId != nullptr && clientId.get<string>() != "tds")

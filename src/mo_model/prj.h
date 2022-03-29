@@ -28,6 +28,7 @@ public:
 	map<string, MP*> m_mapAllMP;
 	map<string, MP*> m_mapSpecialMP;//专用位号 名字是约定的。
 	map<string, vector<MO*>> m_mapCustomMOType;
+
 public:
 	project();
 	virtual ~project();

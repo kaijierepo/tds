@@ -36,6 +36,7 @@ public:
 	bool getResponse;
 	int m_iRpcId;
 	mutex m_csRPCId;
+	string m_TDSPCharset;
 };
 
 extern void onRecvIQ60Pkt(char* pData, int iLen,std::shared_ptr<TDS_SESSION> pALC);

@@ -996,12 +996,36 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMoCustomType")
 		{
-			json jList = json::array();
-			for (auto& i : prj.m_mapCustomMOType)
+			MO* pmo = nullptr;
+			if (params != nullptr && params.contains("tag"))
 			{
-				jList.push_back(i.first);
+				string tag = params["tag"].get<string>();
+				if (tag == "")
+				{
+					pmo = &prj;
+				}
+				else
+					pmo = prj.GetMOByTag(tag);
 			}
-			result = jList.dump();
+			else
+			{
+				pmo = &prj;
+			}
+
+			if (pmo != nullptr)
+			{
+				map<string, string> list = pmo->getChildCustomMoTypeList();
+				json jList = json::array();
+				for (auto& i : list)
+				{
+					jList.push_back(i.first);
+				}
+				result = jList.dump();
+			}
+			else
+			{
+				error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "未找到指定位号");
+			}
 		}
 		else if (method == "getmplist")//or getMpList or get_mp_list
 		{
@@ -1652,7 +1676,7 @@ string rpcHandler::rpc_output(json params, string& error)
 	if (!pmp)
 	{
 		json jError = {
-				{"code", TEC_TAG_NOT_EXIST},
+				{"code", MO_specifiedTagNotFound},
 				{"message" , "error: tag not exist"}
 		};
 		string error = jError.dump();
@@ -1718,7 +1742,7 @@ string rpcHandler::rpc_input(json params, string& error)
 	if (!pmp)
 	{
 		json jError = {
-				{"code", TEC_TAG_NOT_EXIST},
+				{"code", MO_specifiedTagNotFound},
 				{"message" , "error: tag not exist"}
 		};
 		string error = jError.dump();
