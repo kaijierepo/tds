@@ -1045,6 +1045,28 @@ namespace fs {
 		return iret == 0;
 	}
 
+	struct FILE_INFO {
+		string modifyTime;
+		string createTime;
+		string len;
+		string accessTime;
+	};
+
+	inline bool getFileInfo(string path, FILE_INFO& fi)
+	{
+		wstring wpath = charCodec::utf8toUtf16(path);
+		struct _stat64 tmpInfo;
+		if (_wstat64(wpath.c_str(), &tmpInfo) != 0)
+		{
+			return false;
+		}
+		fi.modifyTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_mtime)));
+		fi.accessTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_atime)));
+		fi.createTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_ctime)));
+		fi.len = static_cast<int>(tmpInfo.st_size);
+		return true;
+	}
+
 	inline  void getFileList(vector<string>& list,string strFolder,bool includeFolder = false,bool recursive = false)
 	{
 		wstring wstrFolder = charCodec::autoToUtf16(strFolder);

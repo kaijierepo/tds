@@ -72,6 +72,38 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 	return httplib::Server::HandlerResponse::Unhandled;
 }
 
+//自动找到 files/apk 文件夹下面最新的apk文件并下载
+void handleGet_apk(const httplib::Request& req, httplib::Response& res)
+{
+	res.status = 301;
+	string redirectPath = "/files/apk/";
+	string localPath = fs::appPath() + "/files/apk";
+	vector<string> fl;
+	fs::getFileList(fl, localPath);
+
+	map<string, string> fil;
+
+	for (auto& i : fl)
+	{
+		fs::FILE_INFO fi;
+		string p = localPath + "/" + i;
+		fs::getFileInfo(p, fi);
+		fil[fi.modifyTime] = i;
+	}
+
+
+	if (fil.size() > 0) //默认按照时间的升序排列
+	{
+		redirectPath += fil.rbegin()->second;
+		res.set_header("location", redirectPath);
+	}
+	else
+	{
+		redirectPath += "tds.apk";
+		res.set_header("location", redirectPath);
+	}
+}
+
 void handleGet_gzh(const httplib::Request& req, httplib::Response& res)
 {
 	string timestamp= req.get_param_value("timestamp");
@@ -197,6 +229,9 @@ void initHttpSrv(httplib::Server& svr)
 //微信公众号消息处理
 	svr.Get("\\/gzh.*", handleGet_gzh);
 	svr.Post("\\/gzh.*", handlePost_gzh);
+
+//最新版本的apk下载
+	svr.Get("\\/apk", handleGet_apk);
 
 //有权限控制的文件下载服务
 	svr.set_pre_routing_handler(handleFilePermission);
@@ -573,17 +608,9 @@ void httpSrvThread(int port)
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] 路径/config/" + tds->conf->projectConfPath);
+		LOG("[keyinfo][HTTP服务器] /config/" + tds->conf->projectConfPath);
 	}
 
-	//默认将程序运行路径作为根目录
-	/*string tdsPath = fs::appPath();
-	if (fs::fileExist(tdsPath))
-	{
-		string asc_tdsPath = charCodec::utf8toAnsi(tdsPath);
-		httpSrv.set_mount_point("/", asc_tdsPath.c_str());
-		LOG("[keyinfo][HTTP服务器] 根目录: " + tdsPath);
-	}*/
 
 	//serve db files through http
 	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
@@ -596,7 +623,6 @@ void httpSrvThread(int port)
 		LOG("[keyinfo][HTTP服务器] /db/ " + db.m_path);
 	}
 
-
 	
 	//文件下载目录
 	string asc_filePath = charCodec::utf8toAnsi(fs::appPath() + "/files");
@@ -605,7 +631,7 @@ void httpSrvThread(int port)
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] 路径/files/ " + fs::appPath() + "/files");
+		LOG("[keyinfo][HTTP服务器] /files/ " + fs::appPath() + "/files");
 	}
 
 
