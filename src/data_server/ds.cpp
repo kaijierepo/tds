@@ -96,11 +96,13 @@ void handleGet_apk(const httplib::Request& req, httplib::Response& res)
 	{
 		redirectPath += fil.rbegin()->second;
 		res.set_header("location", redirectPath);
+		res.set_header("Cache-Control", "max-age=1");
 	}
 	else
 	{
 		redirectPath += "tds.apk";
 		res.set_header("location", redirectPath);
+		res.set_header("Cache-Control", "max-age=1");
 	}
 }
 
