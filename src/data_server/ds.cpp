@@ -1837,7 +1837,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device && jResp.contains("charset"))
 				{
 					ioDev_tdsp* pt = (ioDev_tdsp*)pIoDev;
-					pt->m_TDSPCharset = jResp["charset"].get<string>();
+					pt->m_charset = jResp["charset"].get<string>();
 				}
 			}
 			//透传到tds客户端的指令。使用clientId进行透传机制，暂时取消

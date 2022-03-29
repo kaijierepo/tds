@@ -203,6 +203,8 @@ bool ioDev::toJson(json& conf, json opt)
 	else
 	{
 		//运行时数据
+		if (m_charset != "")
+			conf["charset"] = m_charset;
 		conf["addrMode"] = m_addrMode;
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;

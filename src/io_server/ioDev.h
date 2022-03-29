@@ -60,6 +60,7 @@ public:
 	string m_channelType;
 	string m_channelTypeLabel;
 	string m_confNodeId; //配置节点id
+	string m_charset;  //协议文本编码类型
 
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示不采样

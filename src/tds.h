@@ -267,7 +267,7 @@ struct iTDSConf {
 	int iotimeoutModbusRtu;
 	int iotimeoutIQ60;
 
-	//tcp2comƒ£ Ω≈‰÷√
+	//tcp2com
 	tcp2com_Conf conf_tcp2com;
 
 	//debug
