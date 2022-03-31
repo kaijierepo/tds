@@ -746,24 +746,30 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "getDevConfBuff") //获取服务缓存的设备配置信息。目前仅用于tdsp设备
 	{
-		string ioAddr = params["ioAddr"].get<string>();
-		ioDev* pD = ioSrv.getIODev(ioAddr);
-		if (pD)
+		if (params.contains("ioAddr"))
 		{
-			if (pD->m_jConf != nullptr)
+			string ioAddr = params["ioAddr"].get<string>();
+			ioDev* pD = ioSrv.getIODev(ioAddr);
+			if (pD)
 			{
-				rpcResp.result = pD->m_jConf.dump();
+				if (pD->m_jConf != nullptr)
+				{
+					rpcResp.result = pD->m_jConf.dump();
+				}
+				else
+				{
+					json j = json::object();
+					rpcResp.result = j.dump();
+				}
 			}
 			else
 			{
-				json jError = "device conf buff not exist";
-				rpcResp.error = jError.dump();
+				rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound,"ioDev with specified ioAddr not found");
 			}
 		}
 		else
 		{
-			json jError = "device not found";
-			rpcResp.error = jError.dump();
+			rpcResp.error = RPCError(RPC_ERROR::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
 	else if (method == "discoverDev")

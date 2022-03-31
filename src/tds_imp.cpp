@@ -354,6 +354,8 @@ bool TDS_imp::run(string cmdline)
 	}
 	createDefaultCompanyInfo();
 
+	LOG("[项目配置  ] 路径:" + tds->conf->projectConfPath);
+
 	//startup xiaot
 	xiaot.init();
 

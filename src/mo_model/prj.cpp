@@ -72,10 +72,6 @@ bool project::loadConf()
 		m_strName = "empty project";
 		return true;
 	}
-	else
-	{
-		LOG("[项目配置  ]监控对象配置路径:" + tds->conf->projectConfPath + ".mo.json");
-	}
 
 	try {
 		json moRoot = json::parse(conf.c_str());

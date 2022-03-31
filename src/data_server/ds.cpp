@@ -18,6 +18,7 @@
 #include "users/userMng.h"
 #include "ioDev_tdsp.h"
 #include "sha1.hpp"
+#include "ioGW_LocalSerial.h"
 
 
 dataServer ds;
@@ -1783,9 +1784,17 @@ bool dataServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_pt
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
 	{
 		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
-		if (p)
+		if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
 		{
-			p->sendData(pData, iLen);
+			ioGW_LocalSerial* pLs = (ioGW_LocalSerial*)p;
+			if (!pLs->sendData(pData, iLen))
+			{
+				LOG("[warn][数据桥接]发送数据到串口失败," + tdsSession->bridgedLocalCom + "," + pLs->m_strErrorInfo);
+			}
+		}
+		else
+		{
+			LOG("[warn][数据桥接]未找到串口设备" + tdsSession->bridgedLocalCom);
 		}
 	}
 	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpClient)

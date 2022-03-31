@@ -301,6 +301,7 @@ enum RPC_ERROR {
 	IO_devOffline = -41002,   
 	IO_reqTimeout = -41003,	   
 	IO_devTypeError = -41004,  
+	IO_ioAddrNotSpecified = -41005,
 
 	//tdsp
 	DEV_confNameNotFound = -42001,
