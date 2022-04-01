@@ -284,6 +284,11 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 					saveConfBuff();
 					m_csThis.unlock();
 				}
+				//手工发起的请求也更新数据
+				else if (method == "acq" || method == "getAlarmStatus")
+				{
+					handleAsynResp(resp);
+				}
 			}
 			if (resp["error"] != nullptr)
 			{
