@@ -305,7 +305,10 @@ enum RPC_ERROR {
 
 	//tdsp
 	DEV_confNameNotFound = -42001,
-	DEV_confCategoryNotFound = -42002
+	DEV_confCategoryNotFound = -42002,
+
+	//os
+	OS_fileNotExist = -43001
 };
 
 

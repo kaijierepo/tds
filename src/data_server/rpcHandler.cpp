@@ -327,7 +327,12 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			}
 			else
 			{
-				error = RPCError(TEC_FAIL, "fail");
+				if (!fs::fileExist(params["path"]))
+				{
+					error = RPCError(OS_fileNotExist, "file not exist");
+				}
+				else
+					error = RPCError(TEC_FAIL, "fail");
 			}
 		}
 	}
