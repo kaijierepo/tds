@@ -1724,18 +1724,28 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		}
 		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+			//检查是否是imei直接注册包,15位且都是数字，认为是imei
+			if (!tdsSession->m_bAppDataRecved && iLen == 15 && str::isDigits(pData,iLen))//首包数据,按照tdsp注册包处理
 			{
-				if (pab->abandonData != "")
+				string imei = str::fromBuff(pData, iLen);
+				LOG("TDSP端口665收到首发IMEI注册包,IMEI=" + imei);
+				ioDev* pIoDev = ioSrv.handleDevOnline(imei, tdsSession);
+			}
+			else
+			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 				{
-					string remoteAddr = tdsSession->getRemoteAddr();
-					LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-					tdsSession->abandonLen += pab->iAbandonBytes;
+					if (pab->abandonData != "")
+					{
+						string remoteAddr = tdsSession->getRemoteAddr();
+						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+						tdsSession->abandonLen += pab->iAbandonBytes;
+					}
+					tdsSession->iALProto = pab->m_protocolType;
+					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 				}
-				tdsSession->iALProto = pab->m_protocolType;
-				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
@@ -1864,6 +1874,11 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			json id = jResp["id"];
 			json clientId = jResp["clientId"]; //tds edge模式使用
 			tdsSession->lastMethodCalled = method;
+			string charset = "utf8";
+			if (jResp.contains("charset"))
+			{
+				charset = jResp["charset"].get<string>();
+			}
 
 			//注册包			
 			if (method == "devRegister")
@@ -1871,11 +1886,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 				string strIoAddr = jResp["ioAddr"].get<string>();
 				ioDev* pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 				pIoDev->onRecvPkt(jResp);
-				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device && jResp.contains("charset"))
-				{
-					ioDev_tdsp* pt = (ioDev_tdsp*)pIoDev;
-					pt->m_charset = jResp["charset"].get<string>();
-				}
+				pIoDev->m_charset = charset;
 			}
 			//透传到tds客户端的指令。使用clientId进行透传机制，暂时取消
 			//else if (clientId != nullptr && clientId.get<string>() != "tds")
@@ -1915,6 +1926,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 					jAddr["id"] = strIoAddr;
 					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
 				}
+				pIoDev->m_charset = charset;
 				pIoDev->bindIOSession(tdsSession);
 				pIoDev->onRecvPkt(jResp);
 				LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");

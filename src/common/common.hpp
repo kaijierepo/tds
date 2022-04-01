@@ -344,6 +344,39 @@ namespace str {
 		return   str;
 	}
 
+	inline bool isDigits(char* pData, int len) {
+		for (int i = 0; i < len; i++)
+		{
+			char c = pData[i];
+			if (c >= '0' && c <= '9')
+			{
+				continue;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	inline bool isDigits(string s)
+	{
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s[i];
+			if (c >= '0' && c <= '9')
+			{
+				continue;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 
 	inline std::string format(const char* pszFmt, ...)
 	{
