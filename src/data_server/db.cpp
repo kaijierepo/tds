@@ -820,8 +820,8 @@ bool TIME_CONDITON::Match(string& timeTag)
 bool TAG_SELECTOR::init(string tag){
 	tagExp = tag;
 	regExp = tagExp;
-	str::replace(regExp, ".", "\\.");
-	str::replace(regExp, "*", ".*");
+	regExp = str::replace(regExp, ".", "\\.");
+	regExp = str::replace(regExp, "*", ".*");
 	return true;
 }
 

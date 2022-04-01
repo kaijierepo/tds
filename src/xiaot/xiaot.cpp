@@ -94,7 +94,7 @@ std::string CXiaoT::getReply(json msg)
 
 
 	string from = msg["from"];
-	str::replace(reply, "{{talker.from}}", from);
+	reply = str::replace(reply, "{{talker.from}}", from);
 	json jReply;
 	jReply["text"] = reply;
 	jReply["to"] = from;

@@ -194,7 +194,7 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 		if (std::string::npos != pos) {
 			ip = pSession->ip.substr(0, pos);
 		}
-		str::replace(str, "$src_ip$", ip);
+		str = str::replace(str, "$src_ip$", ip);
 		}
 
 	str = str::replace(str, "$dbPath$", db.m_path);

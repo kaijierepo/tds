@@ -463,7 +463,7 @@ string MO::ResolveTag(string strTagExp, string strTagThis)
 	//this的解析，this后面可能带 .std 等后缀
 	if (strTagExp.find("this") != string::npos)
 	{
-		str::replace(tagName, "this", strTagThis);
+		tagName = str::replace(tagName, "this", strTagThis);
 	}
 	//解析仅名字的情况，等效于 ./XXX（使用当前监测点的父监测对象组成完整名字）
 	else if (strTagExp.find(".") == string::npos && strTagExp.find("*") == string::npos && strTagThis != "")
@@ -485,8 +485,8 @@ string MO::ResolveTag(string strTagExp, string strTagThis)
 		string tag = strTagContext;
 		string rtag = strTagExp;
 		//先规范化 替换\为/  替换\\为/  
-		str::replace(rtag, "\\", "/");
-		str::replace(rtag, "\\\\", "/");
+		rtag = str::replace(rtag, "\\", "/");
+		rtag = str::replace(rtag, "\\\\", "/");
 
 		while (1) {
 			int ipos = rtag.find("../");
@@ -505,7 +505,7 @@ string MO::ResolveTag(string strTagExp, string strTagThis)
 			}
 		}
 		//替换./
-		str::replace(rtag, "./", "");
+		rtag = str::replace(rtag, "./", "");
 
 		if (rtag.length() > 0)
 			tag = tag + "." + rtag;
@@ -587,7 +587,7 @@ string MO::TranslateRelateTag(string rtag)
 	}
 
 	//替换./
-	str::replace(rtag, "./", "");
+	rtag = str::replace(rtag, "./", "");
 	if (rtag.find("?") != string::npos) {
 		int pos1 = tag.find("#");
 		int pos2 = -1;
@@ -596,7 +596,7 @@ string MO::TranslateRelateTag(string rtag)
 			pos2 = tag.rfind(".", pos1);
 			if (pos2 >= 0 && pos1 - pos2 - 1 >= 0) {
 				strDC = tag.substr(pos2 + 1, pos1 - pos2 - 1);
-				str::replace(rtag, "?", strDC.c_str());
+				rtag = str::replace(rtag, "?", strDC.c_str());
 			}
 
 		}

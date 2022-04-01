@@ -321,7 +321,7 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 	if (ioServerPort == 0)
 		ioServerPort = 665;
 	if (dbPath == "")
-		dbPath = fs::appPath() + "\\db";
+		dbPath = fs::appPath() + "/db";
 	if (title == "")
 		title = "TDS";
 	if (homepage == "")

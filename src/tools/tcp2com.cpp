@@ -73,7 +73,7 @@ void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	if (bIsConn)
 	{
 		LOG("连接Tcp服务成功: " + m_strDestIp + ":" + str::fromInt(m_iDestPort));
-		string s = tds->conf->conf_tcp2com.registerPktStr + "\n\n";
+		string s = str::parseEscapeChar(tds->conf->conf_tcp2com.registerPktStr);
 		tcpClt.SendData((char*)s.c_str(), s.length());
 		LOG("发送首发注册包,长度=%d,[%s]",s.length(), s.c_str());
 	}

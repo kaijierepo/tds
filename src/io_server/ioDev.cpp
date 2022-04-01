@@ -788,8 +788,8 @@ ioChannel* ioDev::getChan(string addr)
 			ioChannel* p = new ioChannel();
 			p->m_devAddr = addr;
 			string bindTag = i.second;
-			str::replace(bindTag, "*", wildCardVal);
-			str::replace(bindTag, "/", ".");
+			bindTag = str::replace(bindTag, "*", wildCardVal);
+			bindTag = str::replace(bindTag, "/", ".");
 			p->m_strTagBind = bindTag;
 			m_mapDataChannel[addr] = p;
 			return p;

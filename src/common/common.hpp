@@ -331,7 +331,7 @@ namespace str {
 	}
 
 
-	inline string& replace(string& str, const string to_replaced, const string newchars)
+	inline string replace(string str, const string to_replaced, const string newchars)
 	{
 		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
 		{
@@ -375,6 +375,14 @@ namespace str {
 			}
 		}
 		return true;
+	}
+
+	inline std::string parseEscapeChar(string s)
+	{
+		s = str::replace(s, "\\n", "\n");
+		s = str::replace(s, "\\r", "\r");
+		s = str::replace(s, "\\t", "\t");
+		return s;
 	}
 
 
@@ -872,10 +880,10 @@ namespace fs {
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	inline void createFolderOfPath(string strFile)
 	{
-		str::replace(strFile, "\\", "/");
-		str::replace(strFile, "////", "/");
-		str::replace(strFile, "///", "/");
-		str::replace(strFile, "//", "/");
+		strFile = str::replace(strFile, "\\", "/");
+		strFile = str::replace(strFile, "////", "/");
+		strFile = str::replace(strFile, "///", "/");
+		strFile = str::replace(strFile, "//", "/");
 
 		int iDotPos = strFile.rfind('.');
 		int iSlashPos = strFile.rfind('/');

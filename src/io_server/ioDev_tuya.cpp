@@ -132,8 +132,8 @@ bool ioDev_tuya::output(string chanAddr, json jVal, json& chanResp,bool sync)
 	)delimiter";
 
 	string val = jVal.dump();
-	str::replace(body, "{{1}}", m_devAddr);
-	str::replace(body, "{{2}}", val);
+	body = str::replace(body, "{{1}}", m_devAddr);
+	body = str::replace(body, "{{2}}", val);
 
 	string url = "/v1.0/devices/" + pDev->m_devAddr + "/commands";
 	auto res = cli.Post(url.c_str(), headers, body, "text/plain");

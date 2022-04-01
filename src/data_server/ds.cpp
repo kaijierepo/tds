@@ -245,7 +245,7 @@ void initHttpSrv(httplib::Server& svr)
 	string pathReq = charCodec::ansi2Utf8(req.path);
 	pathReq = pathReq.substr(3,pathReq.length()-3);
 	string dbPath = db.m_path  +  pathReq;
-	str::replace(dbPath,"\\","/");
+	dbPath = str::replace(dbPath,"\\","/");
 	if(fs::fileExist(dbPath))
 	{
 		if(!fs::deleteFile(dbPath))return;
