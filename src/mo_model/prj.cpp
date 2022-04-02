@@ -61,24 +61,27 @@ MP* project::createMP(string tag,string valType)
 }
 
 bool project::loadConf()
-                                {
-	m_mapAllMP.clear();
-	m_mapCustomMOType.clear();
-
+{
 	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->projectConfPath + "/mo.json", conf))
 	{
 		LOG("[warn]未找到监控对象配置mo.json，新建配置");
 		m_strName = "empty project";
-		return true;
+		conf = "";
 	}
 
+	return loadConf(conf);
+}
+
+bool project::loadConf(string& confStr)
+{
+	//加载空配置
+	if (confStr == "")
+		return true;
+
 	try {
-		json moRoot = json::parse(conf.c_str());
-		bool ret = MO::loadConf(moRoot);
-		if (ret)
-			updateMPTable();
-		return ret;
+		json moRoot = json::parse(confStr.c_str());
+		return loadConf(moRoot);
 	}
 	catch (std::exception& e)
 	{
@@ -86,6 +89,32 @@ bool project::loadConf()
 		LOG("[error]加载监控对象配置mo.json异常,错误信息:" + s);
 		return false;
 	}
+	return false;
+}
+
+bool project::loadConf(json& jConf)
+{
+	bool ret = MO::loadConf(jConf);
+	if (ret)
+		updateMPTable();
+	return ret;
+}
+
+void project::saveConf()
+{
+	json j;
+	json opt;
+	opt["onlyConf"] = true;
+	toJson(j, opt);
+	string s = j.dump(2);
+	fs::writeFile(tds->conf->projectConfPath + "/mo.json", s);
+}
+
+void project::clear()
+{
+	m_mapAllMP.clear();
+	m_mapCustomMOType.clear();
+	clearChildren();
 }
 
 

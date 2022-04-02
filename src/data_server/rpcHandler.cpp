@@ -881,11 +881,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "setMOTree")
 	{
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
-		string strData = params.dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "/mo.json", strData);
-		//mo tree 热更新
-		prj.clearChildren();
-		prj.loadConf();
+		prj.clear();
+		prj.loadConf(params);
+		prj.saveConf();
 		ioSrv.updateTag2IOAddrBinding();
 		result = "\"ok\"";
 	}

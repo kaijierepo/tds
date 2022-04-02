@@ -183,33 +183,54 @@ bool MP::toJson(json& conf, json serializeOption)
 		return false;
 
 	conf["valType"] = p->m_valType;
-	conf["ioType"] = p->m_ioType;
+	if(p->m_ioType!= "")
+		conf["ioType"] = p->m_ioType;
 	if (p->m_valType == "json")
 		conf["mpType"] = p->m_mpType;
-	json saveInterval;
+
+	/*json saveInterval;
 	saveInterval["hour"] = p->m_saveInterval.hour;
 	saveInterval["minute"] = p->m_saveInterval.minute;
 	saveInterval["second"] = p->m_saveInterval.second;
 	conf["saveMode"] = p->m_saveMode;
-	conf["saveInterval"] = saveInterval;
-	conf["unit"] = p->m_strUnit;
-	conf["k"] = p->m_K;
-	conf["b"] = p->m_B;
-	conf["defaultVal"] = p->m_defaultVal;
+	conf["saveInterval"] = saveInterval;*/
 
+	if(p->m_strUnit!="")
+		conf["unit"] = p->m_strUnit;
+
+	//KB  不等于默认值则保存
+	if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001)
+	{
+		conf["k"] = p->m_K;
+		conf["b"] = p->m_B;
+	}
+	//默认值 
+	if(p->m_defaultVal!=nullptr)
+		conf["defaultVal"] = p->m_defaultVal;
+	//报警限
 	json alarmLimit;
-	alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
-	alarmLimit["enableLow"] = m_alarmLimit.enableLow;
-	alarmLimit["high"] = m_alarmLimit.high;
-	alarmLimit["low"] = m_alarmLimit.low;
-	conf["alarmLimit"] = alarmLimit;
-
-	json validRange;
-	validRange["enable"] = m_validRange.enable;
-	validRange["min"] = m_validRange.min;
-	validRange["max"] = m_validRange.max;
-	conf["validRange"] = validRange;
-
+	if (m_alarmLimit.enableHigh)
+	{
+		alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
+		alarmLimit["high"] = m_alarmLimit.high;
+	}
+	if (m_alarmLimit.enableLow)
+	{
+		alarmLimit["enableLow"] = m_alarmLimit.enableLow;
+		alarmLimit["low"] = m_alarmLimit.low;
+	}
+	if(alarmLimit!=nullptr)
+		conf["alarmLimit"] = alarmLimit;
+	//有效值范围
+	if (m_validRange.enable)
+	{
+		json validRange;
+		validRange["enable"] = m_validRange.enable;
+		validRange["min"] = m_validRange.min;
+		validRange["max"] = m_validRange.max;
+		conf["validRange"] = validRange;
+	}
+	//有效小数位
 	if (m_decimalDigits >= 0)
 		conf["decimalDigits"] = m_decimalDigits;
 

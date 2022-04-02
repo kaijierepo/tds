@@ -83,7 +83,7 @@ bool MO::loadConf(json& conf)
 {
 	m_strName = conf["name"];
 	m_moType = conf["type"];
-	if (m_moType == "custom")
+	if (m_moType == "custom" && conf.contains("customType") && conf["customType"].get<string>().length() > 0)
 	{
 		m_moCustomType = conf["customType"];
 		if (prj.m_mapCustomMOType.find(m_moCustomType) != prj.m_mapCustomMOType.end())
@@ -112,25 +112,36 @@ bool MO::loadConf(json& conf)
 	return true;
 }
 
+//serializeOption
+//root 返回位号的相对根
+//type mo类型
+//recursive 是否递归
+//onlyConf 仅配置
 bool MO::toJson(json& conf, json serializeOption)
 {
 	conf["name"] = m_strName;
-	string tag = getTag();
-	if (serializeOption["root"] != nullptr)
-	{
-		string root = serializeOption["root"].get<string>();
-		tag = str::trimPrefix(tag, root);
-		tag = str::trimPrefix(tag,".");
-	}
-	
-	conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
 
-	if (m_strIoAddrBind != "")
-		conf["ioAddrBind"] = m_strIoAddrBind;
+	if (serializeOption["onlyConf"] != nullptr && serializeOption["onlyConf"].get<bool>() == true)
+	{
 
+	}
+	else
+	{
+		if (m_strIoAddrBind != "")
+			conf["ioAddrBind"] = m_strIoAddrBind;
+		string tag = getTag();
+		if (serializeOption["root"] != nullptr)
+		{
+			string root = serializeOption["root"].get<string>();
+			tag = str::trimPrefix(tag, root);
+			tag = str::trimPrefix(tag, ".");
+		}
+		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+	}
+	
 
 	if (serializeOption["type"] != nullptr)
 	{

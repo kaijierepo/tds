@@ -17,6 +17,10 @@ class project : public MO
 {
 public:
 	bool loadConf();
+	bool loadConf(string& confStr);
+	bool loadConf(json& jConf);
+	void saveConf();
+	void clear();
 	MP* getMp(string strTagname);
 	void getMpList(map<string, MP*>& MPlist, MO* pMO);
 	void getMpList(json& mpList);
