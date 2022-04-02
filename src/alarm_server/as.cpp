@@ -7,6 +7,7 @@
 #include "db.h"
 #include "tds.h"
 #include "users/userMng.h"
+#include "logger.h"
 
 almServer almSrv;
 
@@ -103,6 +104,10 @@ void almServer::Update(ALARM_INFO newStatus)
 		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
 		if (at.enable == false)
 			return;
+	}
+	else
+	{
+		LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
 	}
 
 
