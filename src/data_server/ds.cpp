@@ -1863,6 +1863,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			if(rpcSrv.isGB2312Pkt(sResp))
 			{
 				sResp = charCodec::ansi2Utf8(sResp);
+				tdsSession->m_charset = "gb2312";
 			}
 
 			//解析请求基本信息

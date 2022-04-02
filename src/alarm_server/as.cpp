@@ -125,11 +125,14 @@ void almServer::Update(ALARM_INFO newStatus)
 	if (tableCurrent.query(filter,lastStatus))
 	{
 		//check if status has changed
+		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
+			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus);
 			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 			{
+				//再产生新的报警
 				OccurAlarm(newStatus);
 			}
 		}
@@ -334,9 +337,11 @@ string almTable::getFilePath(string time){
 
 void almTable::loadFile(string strFile)
 {
+	//如果当前缓存对应的数据文件和要加载的相同，直接使用内存即可，返回
 	if (buffFilePath == strFile)
 		return;
 
+	//加载新的路径到缓存
 	freeBuff(buff);
 	buffFilePath = strFile;
 
@@ -666,13 +671,12 @@ bool almTable::query(json params, ALARM_INFO& ai)
 void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	map<string, ALARM_INFO*> temp;
-	loadFile(getFilePath(ai.time));
-	ALARM_INFO* p = temp.at(ai.getKey());
+	loadFile(getFilePath(ai.time)); //获取报警对应的数据文件
+	ALARM_INFO* p = buff.at(ai.getKey());
 	if(p)
 	{
 		*p = ai;
-		saveFile(getFilePath(ai.time),temp);
+		saveFile(getFilePath(ai.time),buff);
 	}
 }
 void almTable::remove(ALARM_KEY ai)

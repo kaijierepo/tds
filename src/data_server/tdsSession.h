@@ -86,6 +86,7 @@ public:
 	SOCKET sock;
 	bool bMainWnd; //为true时，该连接断开就退出程序
 
+	string m_charset; //如果链接上走的是文本协议。文本协议的编码
 	bool m_bNeedLog; //该session是否要记录日志
 	//会话通信数据处理控制
 	queue<TCP_DATA_BUFF> dataBuff;
