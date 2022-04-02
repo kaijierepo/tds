@@ -23,6 +23,8 @@ public:
 	//透传到io设备的命令
 	bool handleDevRpcDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 
+	bool isGB2312Pkt(string& req);
+
 	//json rpc implementation
 	void handleRpcCall(string strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);

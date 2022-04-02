@@ -1860,7 +1860,7 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			string sResp = str::fromBuff(pData, iLen);
 
 			//编解码转换
-			if (sResp.find("gb2312") != string::npos || sResp.find("gbk") != string::npos)
+			if(rpcSrv.isGB2312Pkt(sResp))
 			{
 				sResp = charCodec::ansi2Utf8(sResp);
 			}

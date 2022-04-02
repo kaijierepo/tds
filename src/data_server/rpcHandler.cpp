@@ -1375,6 +1375,39 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 	return false;
 }
 
+bool rpcHandler::isGB2312Pkt(string& req)
+{
+	//如果jsonRPC的json结构的第一个字段是charset，根据charset的参数决定编码类型
+	int pos = req.find("GB2312");
+	if (pos != string::npos)
+	{
+		int quoteNum = 0;  //gb2312前面有3个冒号，表示是第一个字段。  排除协议内部也有gb2312字段的可能性。
+		for (int i = 0; i < pos; i++)
+		{
+			if (req[i] == '"') {
+				quoteNum++;
+			}
+		}
+		if (quoteNum == 3)
+			return true;
+	}
+	pos = req.find("gb2312");
+	if (pos != string::npos)
+	{
+		int quoteNum = 0;
+		for (int i = 0; i < pos; i++)
+		{
+			if (req[i] == '"') {
+				quoteNum++;
+			}
+		}
+		if (quoteNum == 3)
+			return true;
+	}
+
+	return false;
+}
+
 
 
 void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen,bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession)
@@ -1398,14 +1431,7 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	}
 
 	
-	if (strReq.find("GB2312") != strReq.npos)
-	{
-		bGB2312 = true;
-	}
-	else if (strReq.find("gb2312") != strReq.npos) {
-		bGB2312 = true;
-	}
-	
+	bGB2312 = isGB2312Pkt(strReq);
 	if(bGB2312)
 		strReq = charCodec::ansi2Utf8(strReq);
 
