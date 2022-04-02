@@ -467,10 +467,30 @@ bool ioServer::toJson(json& conf, json opt)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis);
 	conf = json::array();//empty array
+
+	//只差找绑定位号属于某个根位号的设备。
+	string rootTag = "";
+	string interfaceType = "net"; //默认没有串口，指定接口类型为*所有才发串口
+	if (opt != nullptr)
+	{
+		if(opt.contains("rootTag"))
+			rootTag = opt["rootTag"].get<string>();
+		if (opt.contains("interface"))
+			interfaceType = opt["interface"].get<string>();
+	}
+
+	
+
 	for (auto& i : m_vecChildDev)
 	{
 		json j;
 
+		//为指定所有忽略串口
+		if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
+		{
+			continue;
+		}
+		
 		if (opt != nullptr)
 		{
 			if (opt.contains("tagBind"))
@@ -487,6 +507,18 @@ bool ioServer::toJson(json& conf, json opt)
 				{
 					if (tagBind != "*" && tagBind != i->m_strTagBind)
 						continue;
+				}
+			}
+		}
+
+		//启用设备，绑定了监控对象的，根据指定的rootTag进行过滤；
+		if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
+		{
+			if (i->m_strTagBind != "" && rootTag != "")
+			{
+				if (i->m_strTagBind.find(rootTag) == string::npos)
+				{
+					continue;
 				}
 			}
 		}

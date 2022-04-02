@@ -31,7 +31,7 @@ public:
 	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp);
-	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp);
+	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -62,7 +62,7 @@ public:
 	string rpc_login(json params, string& error);
 
 	////io service function
-	string rpc_io_tree(json params, string& error);
+	void rpc_getIOTree(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
 	void rpc_getDevStatus(json params, RPC_RESP& resp);
 	void rpc_getDevList(json params, RPC_RESP& resp);

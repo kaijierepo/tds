@@ -674,14 +674,14 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp)
+bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	if (method == "ioTree" || method == "iotree" || method == "getIOTree")
 	{
-		result = rpc_io_tree(params, error);
+		rpc_getIOTree(params, rpcResp,session);
 	}
 	else if (method == "setIOTree")
 	{
@@ -1255,7 +1255,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		return true;
 	}
-	if (handleMethodCall_IoMng(method, params, rpcResp))
+	if (handleMethodCall_IoMng(method, params, rpcResp,session))
 	{
 		return true;
 	}
@@ -2420,11 +2420,20 @@ string rpcHandler::rpc_openCom(json params, string& error)
 	return "";
 }
 
-string rpcHandler::rpc_io_tree(json params, string& error)
+void rpcHandler::rpc_getIOTree(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	json j;
-	ioSrv.toJson(j);
-	return j.dump();
+
+	//用户rootTag转系统rootTag
+	if (params != nullptr && params.contains("rootTag"))
+	{
+		string rootTag = params["rootTag"].get<string>();
+		rootTag = TAG::addRoot(rootTag, session.org);
+		params["rootTag"] = rootTag;
+	}
+
+	ioSrv.toJson(j,params);
+	resp.result = j.dump();
 }
 
 void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp)
