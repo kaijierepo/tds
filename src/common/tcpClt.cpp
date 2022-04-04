@@ -227,15 +227,18 @@ bool tcpClt::connect()
 
 	if(nConnect == SOCKET_ERROR)
 	{
+		m_strErrorInfo = charCodec::utf8toAnsi("连接失败:") + sys::getLastError();
 		closesocket(sockClient);
 		sockClient = 0;
 		return false;
 	}
-
+	m_strErrorInfo = "";
 	DWORD dwThread;
 	HANDLE hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
 	GetLocalTime(&lastConnTime);
 	m_bConn = true;
+
+	m_pCallBackUser->statusChange_tcpClt(&m_session, m_bConn);
 
 	return true;
 }
