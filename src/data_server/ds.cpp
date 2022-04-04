@@ -344,7 +344,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		if (pIoDev)
 		{
 			p->m_IoDev = pIoDev;
-			pIoDev->m_bOnline = true;
+			pIoDev->setOnline();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->bindIOSession(p);
@@ -434,7 +434,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			{
 				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
 			}
-			pIoDev->m_bOnline = true;
+			pIoDev->setOnline();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->bindIOSession(p);
@@ -1605,16 +1605,12 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
 					p->bindIOSession(pALC);
-					if (p->m_bOnline == false)
+					p->setOnline();
+					json j;
+					p->toJson(j);
+					if (!pALC->getIODev(p->getIOAddrStr()))
 					{
-						p->m_bOnline = true;
-						json j;
-						p->toJson(j);
-						if (!pALC->getIODev(p->getIOAddrStr()))
-						{
-							pALC->m_vecIoDev.push_back(p->getIOAddrStr());
-						}
-						rpcSrv.notify("devOnline", j);
+						pALC->m_vecIoDev.push_back(p->getIOAddrStr());
 					}
 					p->onRecvPkt(jpkt);
 				}

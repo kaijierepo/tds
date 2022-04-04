@@ -296,7 +296,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      if (m_IoDev)
      {
          m_IoDev->bindIOSession(NULL);
-         m_IoDev->m_bOnline = false;
+         m_IoDev->setOffline();
          logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDev->getIOAddrStr() + ",tag=" + m_IoDev->m_strTagBind);
          m_IoDev = NULL;
      }
@@ -322,10 +322,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
          if (p)
          {
              logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
-             p->m_bOnline = false;
-             json j;
-             p->toJson(j);
-             rpcSrv.notify("devOffline", j);
+             p->setOffline();
          }
          
      }

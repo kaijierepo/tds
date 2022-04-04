@@ -122,6 +122,7 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 
 bool ioDev_tdsp::onRecvPkt(json jResp)
 {
+	setOnline();
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
 	GetLocalTime(&m_stLastActiveTime);
 	try {
@@ -149,13 +150,6 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
 	}
-
-	if (m_bOnline == false)
-	{
-		m_bOnline = true;
-		logger.logInternal("[ioDev]设备上线，ioAddr=" + getIOAddrStr());
-	}
-	
 	return true;
 }
 

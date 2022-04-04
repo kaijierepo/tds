@@ -676,20 +676,38 @@ bool ioDev::onRecvPkt(json jPkt)
 	return false;
 }
 
+void notifyDevOnline(json jNotify)
+{
+	rpcSrv.notify("devOnline", jNotify);
+}
+
+void notifyDevOffline(json jNotify)
+{
+	rpcSrv.notify("devOffline", jNotify);
+}
+
 void ioDev::setOnline()
 {
-	m_bOnline = true;
-	json jNotify;
-	jNotify["ioAddr"] = getIOAddrStr();
-	rpcSrv.notify("devOnline", jNotify);
+	if (m_bOnline == false)
+	{
+		m_bOnline = true;
+		json jNotify;
+		jNotify["ioAddr"] = getIOAddrStr();
+		thread t(notifyDevOnline, jNotify);
+		t.detach();
+	}
 }
 
 void ioDev::setOffline()
 {
-	m_bOnline = true;
-	json jNotify;
-	jNotify["ioAddr"] = getIOAddrStr();
-	rpcSrv.notify("devOffline", jNotify);
+	if (m_bOnline)
+	{
+		m_bOnline = false;
+		json jNotify;
+		jNotify["ioAddr"] = getIOAddrStr();
+		thread t(notifyDevOffline, jNotify);
+		t.detach();
+	}
 }
 
 bool ioDev::IsConnected()

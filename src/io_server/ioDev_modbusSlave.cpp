@@ -135,7 +135,7 @@ void ioDev_ModbusSlave::DoCycleTask()
 		if (timeopt::CalcTimePassSecond(m_pCurrentIOCmd->stLastAcq) > 5)
 		{
 			setCurrentIOCmd(nullptr);
-			m_bOnline = false;
+			setOffline();
 		}
 	}
 
@@ -473,7 +473,7 @@ bool ioDev_ModbusSlave::checkRespValication(char* pData, int iLen, string& error
 
 bool ioDev_ModbusSlave::onRecvPkt(char* pData, int iLen)
 {
-	m_bOnline = true;
+	setOnline();
 	std::unique_lock<recursive_timed_mutex> lock(m_csCommLock); //锁住m_pCurrentIOCmd
 	if (!m_bRunning)return false;
 
