@@ -1868,6 +1868,11 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 
 			//解析请求基本信息
 			json jResp = json::parse(sResp);
+			if (!jResp.contains("method"))
+			{
+				LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
+				return;
+			}
 			string method = jResp["method"].get<string>();
 			json params;
 			if (jResp.contains("params"))

@@ -82,7 +82,8 @@ public:
 
 	//通道管理
 	virtual bool scanChannel(json& chanList) { return false; };//长时间阻塞函数，启动线程调用
-	ioChannel* getChan(string addr);
+	ioChannel* getChanByDevAddr(string addr);
+	ioChannel* getChanByIOAddr(string addr);
 	ioChannel* getChanByTag(string tag);
 
 	//// data io

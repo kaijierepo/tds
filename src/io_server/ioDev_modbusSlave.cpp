@@ -71,7 +71,7 @@ bool ioDev_ModbusSlave::loadConf(json& conf)
 
 bool ioDev_ModbusSlave::output(string chanAddr, json jVal, json& jResp, bool sync)
 {
-	ioChannel* pC = getChan(chanAddr);
+	ioChannel* pC = getChanByDevAddr(chanAddr);
 	if (pC)
 		return output(pC, jVal, jResp, sync);
 	else

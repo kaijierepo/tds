@@ -542,7 +542,6 @@ bool ioServer::getStatus(json& conf, string opt)
 		conf.push_back(j);
 	}
 	return true;
-	return true;
 }
 
 

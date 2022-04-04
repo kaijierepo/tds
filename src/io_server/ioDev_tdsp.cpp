@@ -52,7 +52,7 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 		for (int i = 0; i < rlt.size(); i++)
 		{
 			json jDE = rlt[i];
-			ioChannel* pC = getChan(jDE["ioAddr"].get<string>());
+			ioChannel* pC = getChanByDevAddr(jDE["ioAddr"].get<string>());
 			if (pC)
 				pC->input(jDE["val"]);
 		}

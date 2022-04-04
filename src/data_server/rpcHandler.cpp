@@ -897,7 +897,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
 		{
-			result = rpc_input(params, error);
+			rpc_input(params, rpcResp,session);
 		}
 		else if (method == "output")
 		{
@@ -1359,8 +1359,12 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		{
 			if(jRlt!=nullptr)
 				rpcResp.result = jRlt.dump();
-			if (jErr != nullptr)
+			else if (jErr != nullptr)
 				rpcResp.error = jErr.dump();
+			else
+			{
+				LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
+			}
 			LOG("[TDSP转发]设备->客户端\r\n");
 		}
 		else
@@ -1440,6 +1444,12 @@ void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int
 	{
 		//解析请求基本信息
 		json jReq = json::parse(strReq);
+		if (!jReq.contains("method"))
+		{
+			LOG("[error][TDS-RPC]协议数据包必须包含method字段\n" + strReq);
+			return;
+		}
+
 		method = jReq["method"].get<string>();
 		json params;
 		if (jReq.contains("params"))
@@ -1752,50 +1762,56 @@ string rpcHandler::rpc_output(json params, string& error)
 }
 
 
-string rpcHandler::rpc_input(json params, string& error)
+void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
 	//parse param
 	SYSTEMTIME stTimeStamp;
-	string tag = "", cid = "",time="";
+	string tag = "", ioAddr = "",time="";
 	json dataFile;
 	json val = "";
 	if (params.find("val") != params.end())
 		val = params["val"];
 	else
-		return "";
+	{
+		resp.error = RPCError(TEC_PARAM_MISSING, "param val must be specified");
+		return;
+	}
 	if (params.find("dataFile") != params.end())
 		dataFile = params["dataFile"];
 	if (params.find("tag") != params.end())
 		tag = params["tag"].get<string>();
-	if (params.find("cid") != params.end())
-		cid = params["cid"].get<string>();
-	if(tag==""&& cid!="")
-		tag = ioSrv.getTag(cid);
-	if (tag == "")
-		return "";
-	MP* pmp = prj.GetMPByTag(tag);
-	if (!pmp)
+	if (params.find("ioAddr") != params.end())
+		ioAddr = params["ioAddr"].get<string>();
+	if (tag == "" && ioAddr == "")
 	{
-		json jError = {
-				{"code", MO_specifiedTagNotFound},
-				{"message" , "error: tag not exist"}
-		};
-		string error = jError.dump();
-		return "!" + error;
-	}
-	if (params.find("time") != params.end())
-	{
-		time = params["time"];
-		stTimeStamp = timeopt::str2st(time);
-	}
-	else
-	{
-		GetLocalTime(&stTimeStamp);
+		resp.error = RPCError(TEC_PARAM_MISSING, "param ioAddr or tag must be specified");
+		return;
 	}
 
-
-	pmp->input(val, &stTimeStamp, dataFile);
-	return "ok";
+	if (tag != "")
+	{
+		MP* pmp = prj.GetMPByTag(tag);
+		if (!pmp)
+		{
+			resp.error = RPCError(MO_specifiedTagNotFound, "tag not exist");
+			return;
+		}
+		if (params.find("time") != params.end())
+		{
+			time = params["time"];
+			stTimeStamp = timeopt::str2st(time);
+		}
+		else
+		{
+			GetLocalTime(&stTimeStamp);
+		}
+		pmp->input(val, &stTimeStamp, dataFile);
+	}
+	else if (ioAddr != "")
+	{
+		ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
+		pC->input(val);
+	}
 }
 
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
@@ -2449,23 +2465,19 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 	if (p)
 	{
 		json status;
-		//json channels = json::array();
-
-		/*for (int i = 0; i < p->m_vecChild.size(); i++)
-		{
-			ioDev* pChild = p->m_vecChild[i];
-			if (pChild->m_level == IO_DEV_LEVEL::channel)
-			{
-				ioChannel* pC = (ioChannel*)pChild;
-				json jDe;
-				jDe["ioAddr"] = pC->m_name;
-				jDe["val"] = pC->m_curVal;
-				channels.push_back(jDe);
-			}
-		}*/
+		json channels = json::array();
 
 		p->m_csThis.lock_shared();
-		status["channels"] = p->m_jAcq;
+		for (int i = 0; i < p->m_channels.size(); i++)
+		{
+			ioChannel* pC = p->m_channels[i];
+			json jDe;
+			jDe["ioAddr"] = pC->m_name;
+			jDe["val"] = pC->m_curVal;
+			channels.push_back(jDe);
+		}
+		//status["channels"] = p->m_jAcq;
+		status["channels"] = channels;
 		status["chanUpdateTime"] = timeopt::st2str(p->m_stLastChanDataTime);
 		status["alarmStatus"] = p->m_jAlarmStatus;
 		status["alarmUpdateTime"] = timeopt::st2str(p->m_stLastAlarmStatusTime);

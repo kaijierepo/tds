@@ -771,11 +771,11 @@ bool ioDev::OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen)
 	return true;
 }
 
-ioChannel* ioDev::getChan(string addr)
+ioChannel* ioDev::getChanByDevAddr(string addr)
 {
 	for (auto i : m_mapDataChannel)
 	{
-		if(i.second->getDevAddrStr() == addr) return i.second;
+		if (i.second->getDevAddrStr() == addr) return i.second;
 	}
 
 	for (auto i : m_mapBatchDataLink)
@@ -795,6 +795,26 @@ ioChannel* ioDev::getChan(string addr)
 			return p;
 		}
 	}
+	return NULL;
+}
+
+ioChannel* ioDev::getChanByIOAddr(string addr)
+{
+	for (int i = 0; i < m_channels.size(); i++)
+	{
+		ioChannel* pC = m_channels[i];
+		if (pC->getIOAddrStr() == addr)
+			return pC;
+	}
+
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* pChild = m_vecChildDev[i];
+		ioChannel* pC = pChild->getChanByIOAddr(addr);
+		if (pC)
+			return pC;
+	}
+
 	return NULL;
 }
 

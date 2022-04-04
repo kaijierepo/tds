@@ -8,7 +8,7 @@
 
 ioChannel::ioChannel()
 {
-
+	m_level = "channel";
 }
 
 
