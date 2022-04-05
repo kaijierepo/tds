@@ -245,7 +245,7 @@ namespace charCodec {
 		return s;
 	}
 
-
+	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	inline string ansi2Utf8(string instr) //ansi-->utf-8
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
@@ -259,6 +259,48 @@ namespace charCodec {
 		delete wcharstr;
 		delete charstr;
 		return charstrtemp;
+	}
+
+	inline bool isValidGB2312(string s)
+	{
+		for (int i = 0; i < s.length();)
+		{
+			byte b = s.at(i);
+			if (b > 0 && b < 127) //ascii
+			{
+				i++;
+				continue;
+			}
+			else
+			{
+				if (b >= 0xA1 && b <= 0xFE) //gb2312
+				{
+					if (i + 1 < s.length())
+					{
+						byte bNext = s.at(i + 1);
+						if (bNext >= 0xA1 && bNext <= 0xFE)
+						{
+							i += 2;
+							continue;
+						}
+						else
+						{
+							return false;
+						}
+					}
+					else // invalid length
+					{
+						return false;
+					}
+				}
+				else // wrong hex value
+				{
+					return false;
+				}
+			}
+		}
+
+		return true;
 	}
 
 	inline string ToUtf8(LPCTSTR wstr) //-->utf-8
@@ -520,6 +562,49 @@ namespace str {
 
 		return str;
 	}
+
+	inline vector<byte> hexStrToBytes(string hexStr)
+	{
+		vector<byte> ary;
+		hexStr = str::removeChar(hexStr, ' ');
+		if (0 != hexStr.length() % 2)
+		{
+			hexStr += "0";
+		}
+		int strLen = 0;
+		strLen = hexStr.length();
+		transform(hexStr.begin(), hexStr.end(), hexStr.begin(), ::toupper);
+
+		for (int i = 0; i < strLen / 2; i++)
+		{
+			char cByteHigh = hexStr.at(i * 2);
+			char cByteLow = hexStr.at(i * 2 + 1);
+			int bHigh = 0, bLow = 0;
+			if (cByteHigh >= 'A')
+			{
+				bHigh = cByteHigh - 'A' + 10;
+			}
+			else
+			{
+				bHigh = cByteHigh - '0';
+			}
+
+			if (cByteLow >= 'A')
+			{
+				bLow = cByteLow - 'A' + 10;
+			}
+			else
+			{
+				bLow = cByteLow - '0';
+			}
+
+			int val = (bHigh * 16 + bLow);
+			unsigned char b = (unsigned char)val;
+			ary.push_back((byte)b);
+		}
+		return ary;
+	}
+
 	inline string bytesToHexStr(char* p, int len, string splitter = " ")
 	{
 		string str;
