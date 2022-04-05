@@ -236,6 +236,11 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	req["ioAddr"] = getIOAddrStr();
 	string strReq = req.dump() + "\n\n";
 
+	if (m_charset == "gb2312")
+	{
+		strReq = charCodec::utf8toAnsi(strReq);
+	}
+
 	if (!sync)
 	{
 		return sendStr(strReq);
