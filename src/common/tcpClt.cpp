@@ -239,9 +239,6 @@ bool tcpClt::connect()
 	HANDLE hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
 	GetLocalTime(&lastConnTime);
 	m_bConn = true;
-
-	m_pCallBackUser->statusChange_tcpClt(&m_session, m_bConn);
-
 	return true;
 }
 
