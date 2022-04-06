@@ -155,176 +155,8 @@ namespace common {
 		delete pNew;
 	}
 }
-
-namespace charCodec {
-
-	inline string utf16toUtf8(wstring instr) //utf-8-->ansi
-	{
-		int MAX_STRSIZE = instr.length() * 4 + 2;
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
-		delete charstr;
-		return str;
-	}
-
-	inline string utf16toAnsi(wstring instr)
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
-		delete charstr;
-		return str;
-	}
-
-	inline string utf8toAnsi(string instr) //utf-8-->ansi
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string charstrtemp(charstr);
-		delete wcharstr;
-		delete charstr;
-		return charstrtemp;
-	}
-
-	inline wstring utf8toUtf16(string instr) //utf-8-->ansi
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
-		delete wcharstr;
-		return str;
-	}
-
-	inline wstring ansiToUtf16(string instr)
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
-		delete wcharstr;
-		return str;
-	}
-
-	inline wstring autoToUtf16(string instr)
-	{
-		wstring w;
-		if (common::getCharCodec() == "gb2312")
-		{
-			w = charCodec::ansiToUtf16(instr);
-		}
-		else
-		{
-			w = charCodec::utf8toUtf16(instr);
-		}
-		return w;
-	}
-
-	inline string utf16ToAuto(wstring instr)
-	{
-		string s;
-		if (common::getCharCodec() == "gb2312")
-		{
-			s = charCodec::utf16toAnsi(instr);
-		}
-		else
-		{
-			s = charCodec::utf16toUtf8(instr);
-		}
-		return s;
-	}
-
-	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
-	inline string ansi2Utf8(string instr) //ansi-->utf-8
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string charstrtemp(charstr);
-		delete wcharstr;
-		delete charstr;
-		return charstrtemp;
-	}
-
-	inline bool isValidGB2312(string s)
-	{
-		for (int i = 0; i < s.length();)
-		{
-			byte b = s.at(i);
-			if (b > 0 && b < 127) //ascii
-			{
-				i++;
-				continue;
-			}
-			else
-			{
-				if (b >= 0xA1 && b <= 0xFE) //gb2312
-				{
-					if (i + 1 < s.length())
-					{
-						byte bNext = s.at(i + 1);
-						if (bNext >= 0xA1 && bNext <= 0xFE)
-						{
-							i += 2;
-							continue;
-						}
-						else
-						{
-							return false;
-						}
-					}
-					else // invalid length
-					{
-						return false;
-					}
-				}
-				else // wrong hex value
-				{
-					return false;
-				}
-			}
-		}
-
-		return true;
-	}
-
-	inline string ToUtf8(LPCTSTR wstr) //-->utf-8
-	{
-#ifdef UNICODE
-		int srcLen = lstrlen(wstr);
-		string str = "";
-		int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
-		if (len > 0)
-		{
-			char* des = new char[len + 1];
-			memset(des, 0, len + 1);
-			WideCharToMultiByte(CP_UTF8, 0, wstr, -1, des, len, NULL, NULL);
-			str = des;
-		}
-		return str;
-#else
-		string str = wstr;
-		return str;
-#endif
-	}
-}
 namespace str {
-	
+
 	inline string& trimPrefix(string& s, string prefix = " ")
 	{
 		if (prefix == "")
@@ -341,7 +173,7 @@ namespace str {
 				break;
 			}
 		}
-		
+
 		return s;
 	}
 
@@ -350,7 +182,7 @@ namespace str {
 		if (suffix == "")
 			return s;
 
-		while(1)
+		while (1)
 		{
 			int ipos = s.rfind(suffix);
 			if (ipos != string::npos && ipos + suffix.length() == s.length())
@@ -437,7 +269,7 @@ namespace str {
 			int nLength = _vscprintf(pszFmt, args);
 			nLength += 1;  //上面返回的长度是包含\0，这里加上
 			std::vector<char> vectorChars(nLength);
-			_vsnprintf_s(vectorChars.data(), nLength,nLength, pszFmt, args);
+			_vsnprintf_s(vectorChars.data(), nLength, nLength, pszFmt, args);
 			str.assign(vectorChars.data());
 		}
 		va_end(args);
@@ -625,7 +457,7 @@ namespace str {
 
 	inline string fromBuff(char* p, int len)
 	{
-		char* tmp = new char[len+1];
+		char* tmp = new char[len + 1];
 		memcpy(tmp, p, len);
 		tmp[len] = 0;
 		string s = tmp;
@@ -672,13 +504,13 @@ namespace str {
 		vector<string> v;
 		str::split(v, s, ".");
 		if (v.size() != 4)return false;
-		for (int i = 0; i < v.size(); i++) 
+		for (int i = 0; i < v.size(); i++)
 		{
 			if (!isInteger(v.at(i)))
-			return false; 
+				return false;
 		}
-		for (int i = 0; i < v.size(); i++) 
-		{ 
+		for (int i = 0; i < v.size(); i++)
+		{
 			int n = toInt(v.at(i));
 			if (n > 255)return false;
 		}
@@ -707,6 +539,180 @@ namespace str {
 		return true;
 	}
 }
+namespace charCodec {
+
+	inline string utf16toUtf8(wstring instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 4 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
+	inline string utf16toAnsi(wstring instr)
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string str = charstr;
+		delete charstr;
+		return str;
+	}
+
+	inline string utf8toAnsi(string instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string charstrtemp(charstr);
+		delete wcharstr;
+		delete charstr;
+		return charstrtemp;
+	}
+
+	inline wstring utf8toUtf16(string instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
+		return str;
+	}
+
+	inline wstring ansiToUtf16(string instr)
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
+		return str;
+	}
+
+	inline wstring autoToUtf16(string instr)
+	{
+		wstring w;
+		if (common::getCharCodec() == "gb2312")
+		{
+			w = charCodec::ansiToUtf16(instr);
+		}
+		else
+		{
+			w = charCodec::utf8toUtf16(instr);
+		}
+		return w;
+	}
+
+	inline string utf16ToAuto(wstring instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			s = charCodec::utf16toAnsi(instr);
+		}
+		else
+		{
+			s = charCodec::utf16toUtf8(instr);
+		}
+		return s;
+	}
+
+	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
+	inline string ansi2Utf8(string instr) //ansi-->utf-8
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		string charstrtemp(charstr);
+		delete wcharstr;
+		delete charstr;
+		return charstrtemp;
+	}
+
+	inline bool isValidGB2312(string s,int& errorPos,string& errorChar)
+	{
+		for (int i = 0; i < s.length();)
+		{
+			byte b = s.at(i);
+			if (b > 0 && b < 127) //ascii
+			{
+				i++;
+				continue;
+			}
+			else
+			{
+				if (b >= 0xA1 && b <= 0xFE) //gb2312
+				{
+					if (i + 1 < s.length())
+					{
+						byte bNext = s.at(i + 1);
+						if (bNext >= 0xA1 && bNext <= 0xFE)
+						{
+							i += 2;
+							continue;
+						}
+						else
+						{
+							errorPos = i;
+							errorChar = str::format("%02X%02X", b, bNext);
+							return false;
+						}
+					}
+					else // invalid length
+					{
+						errorPos = i;
+						errorChar = "invalid length";
+						return false;
+					}
+				}
+				else // wrong hex value
+				{
+					errorPos = i;
+					errorChar = str::format("%02X", b);
+					return false;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	inline string ToUtf8(LPCTSTR wstr) //-->utf-8
+	{
+#ifdef UNICODE
+		int srcLen = lstrlen(wstr);
+		string str = "";
+		int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+		if (len > 0)
+		{
+			char* des = new char[len + 1];
+			memset(des, 0, len + 1);
+			WideCharToMultiByte(CP_UTF8, 0, wstr, -1, des, len, NULL, NULL);
+			str = des;
+		}
+		return str;
+#else
+		string str = wstr;
+		return str;
+#endif
+	}
+}
+
 namespace timeopt {
 	inline string stTimeToStr(SYSTEMTIME time)
 	{

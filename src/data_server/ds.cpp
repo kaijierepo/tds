@@ -1859,9 +1859,10 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			if(rpcSrv.isGB2312Pkt(sResp))
 			{
 				tdsSession->m_charset = "gb2312";
-				if (!charCodec::isValidGB2312(sResp)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
+				int ipos = 0; string errChar;
+				if (!charCodec::isValidGB2312(sResp,ipos,errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
 				{
-					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\n" + str::bytesToHexStr(pData,iLen));
+					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData,iLen));
 					return;
 				}
 
