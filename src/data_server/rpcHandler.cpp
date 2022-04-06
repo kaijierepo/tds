@@ -1129,6 +1129,10 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 		json j = userMng.getUsers(session.user);
 		result = j.dump(4);
 	}
+	else if (method == "deleteUser")
+	{
+		userMng.rpc_deleteUser(params, rpcResp, session);
+	}
 	else if (method == "changePwd")
 	{
 		params["user"] = session.user;
@@ -2262,11 +2266,6 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	}
 }
 
-string rpcHandler::rpc_getUsers(json params, string& error)
-{
-
-	return "";
-}
 
 string rpcHandler::rpc_getconf(json params, string& error)
 {

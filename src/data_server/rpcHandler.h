@@ -51,7 +51,6 @@ public:
 	string rpc_output(json params, string& error);
 	string rpc_db_select(json params, string& error, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error, RPC_SESSION session);
-	string rpc_getUsers(json params, string& error);
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);
 	string rpc_getconffile(json params, string& error);

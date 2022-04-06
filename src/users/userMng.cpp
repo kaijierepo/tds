@@ -146,18 +146,13 @@ bool userManager::loadConf()
 	try {
 		if (sUsers != "")
 		{
-			m_jUsers = json::parse(sUsers);
+			json jUsers = json::parse(sUsers);
 			std::unique_lock<shared_mutex> lock(m_csUserConf);
-			for (int i = 0; i < m_jUsers.size(); i++)
+			for (int i = 0; i < jUsers.size(); i++)
 			{
-				json& jOneUser = m_jUsers[i];
-				USER_INFO ui;
-				ui.name = jOneUser["name"].get<string>();
-				//ui.pwd = jOneUser["pwd"].get<string>();
-				//ui.org = jOneUser["org"].get<string>();
-				//ui.enable = jOneUser["enable"].get<bool>();
-				//ui.role = jOneUser["role"].get<string>();
-				m_mapUsers[ui.name] = &jOneUser;
+				json& jOneUser = jUsers[i];
+				string name = jOneUser["name"].get<string>();
+				m_mapUsers[name] = jOneUser;
 			}
 		}
 	}
@@ -194,7 +189,13 @@ bool userManager::loadConf()
 
 bool userManager::saveConf()
 {
-	string s = m_jUsers.dump(4);
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
+	json jUsers;
+	for (auto& i : m_mapUsers)
+	{
+		jUsers.push_back(i.second);
+	}
+	string s = jUsers.dump(4);
 	fs::writeFile(m_userConfPath, s);
 	return true;
 }
@@ -204,8 +205,7 @@ bool userManager::checkLogin(string user, string pwd,json& userInfo)
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
-		json* pUser = m_mapUsers[user];
-		json& jUser = *pUser;
+		json& jUser = m_mapUsers[user];
 		string truePwd = jUser["pwd"].get<string>();
 		if (pwd == truePwd)
 		{
@@ -304,7 +304,7 @@ bool userManager::rpc_changePwd(json& params, json& rlt, json& err)
 	{
 		if (m_mapUsers.find(user) != m_mapUsers.end())
 		{
-			json& userTmp = *m_mapUsers[user];
+			json& userTmp = m_mapUsers[user];
 			userTmp["pwd"] = newPwd;
 			saveConf();
 			rlt = "ok";
@@ -328,8 +328,7 @@ json userManager::getRoles(string user)
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
 		json jRet = json::array();
-		json* pUser = m_mapUsers[user];
-		json& jUser = *pUser;
+		json& jUser = m_mapUsers[user];
 		string role = jUser["role"].get<string>();
 		string name = jUser["name"].get<string>();
 
@@ -362,8 +361,7 @@ json userManager::getUsers(string user)
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
-		json* pUser = m_mapUsers[user];
-		json& jUser = *pUser;
+		json& jUser = m_mapUsers[user];
 		string role = jUser["role"].get<string>();
 		if (role == "管理员" || role == "系统管理员")
 		{
@@ -371,7 +369,7 @@ json userManager::getUsers(string user)
 
 			for (auto& i : m_mapUsers)
 			{
-				json& userTmp = *i.second;
+				json& userTmp = i.second;
 				string orgTmp = userTmp["org"].get<string>();
 				if (isChildMo(org,orgTmp))
 				{
@@ -392,13 +390,12 @@ bool userManager::setUsers(json& users)
 		string name = oneUser["name"].get<string>();
 		if (m_mapUsers.find(name) != m_mapUsers.end())
 		{
-			json& userTmp = *m_mapUsers[name];
+			json& userTmp = m_mapUsers[name];
 			userTmp = oneUser;
 		}
 		else
 		{
-			m_jUsers.push_back(oneUser);
-			m_mapUsers[name] = &m_jUsers[m_jUsers.size()-1];
+			m_mapUsers[name] = oneUser;
 		}
 	}
 
@@ -414,7 +411,7 @@ bool userManager::setUser(json& user,json& result,json& err)
 	string name = user["name"].get<string>();
 	if (m_mapUsers.find(name) != m_mapUsers.end())
 	{
-		json& userTmp = *m_mapUsers[name];
+		json& userTmp = m_mapUsers[name];
 		userTmp = user;
 	}
 	else
@@ -423,10 +420,7 @@ bool userManager::setUser(json& user,json& result,json& err)
 		return false;
 	}
 	
-
-	string s = m_jUsers.dump(4);
-	fs::writeFile(m_userConfPath, s);
-
+	saveConf();
 	return true;
 }
 
@@ -436,7 +430,7 @@ json userManager::getMoPermission(string user)
 		std::shared_lock<shared_mutex> lock(m_csUserConf);
 		if (m_mapUsers.find(user) != m_mapUsers.end())
 		{
-			json& jUser = *m_mapUsers[user];
+			json& jUser = m_mapUsers[user];
 			return jUser["permission"]["mo"];
 		}
 	}
@@ -451,11 +445,20 @@ json userManager::getUser(string user)
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
-		json& jUser = *m_mapUsers[user];
+		json& jUser = m_mapUsers[user];
 		return jUser;
 	}
 
 	return nullptr;
+}
+
+void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	string name = params["name"].get<string>();
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
+	m_mapUsers.erase(name);
+	saveConf();
+	resp.result = "\"ok\"";
 }
 
 

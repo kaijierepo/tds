@@ -1,5 +1,6 @@
 
 #include "json.hpp"
+#include "tdsSession.h"
 
 using json = nlohmann::json;
 
@@ -37,6 +38,7 @@ public:
 	json getUsers(string user); //获得可以管理的用户列表
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
+	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
 
 	//保存用户配置，如果已经存在则更新。如果不存在则添加。不一定是全部。相当于是merge操作
 	bool setUsers(json& users);
@@ -45,9 +47,7 @@ public:
 	
 	
 	//map和json共用相同的数据内存对象。
-	std::map<string, json*> m_mapUsers;
-	json m_jUsers;
-
+	std::map<string, json> m_mapUsers;
 	std::shared_mutex m_csUserConf;
 	
 	json m_jRoles;
