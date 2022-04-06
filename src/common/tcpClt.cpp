@@ -75,6 +75,8 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 		if (!p->m_bRun)
 			break;
 		Sleep(100);
+		if (!p->m_bRun)
+			break;
 		ct++;
 		if (ct == 10)
 		{

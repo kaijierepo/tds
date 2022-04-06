@@ -1746,22 +1746,27 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		}
 		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
 		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			bool bRegPkt = false;
-			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
+			//检查是否是imei直接注册包,15位且都是数字，认为是imei
+			if (!tdsSession->m_bAppDataRecved && iLen == 15 && str::isDigits(pData, iLen))//首包数据,按照tdsp注册包处理
 			{
-				if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
-				{
-					bRegPkt = true;
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession,true);
-					LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
-				}
+				string imei = str::fromBuff(pData, iLen);
+				LOG("TDSP端口664收到首发IMEI注册包,IMEI=" + imei);
+				ioDev* pIoDev = ioSrv.handleDevOnline(imei, tdsSession);
 			}
-			
-
-			if (!bRegPkt)
+			else
 			{
+				stream2pkt* pab = &tdsSession->m_alBuf;
+				pab->PushStream(pData, iLen);
+				bool bRegPkt = false;
+				if (!tdsSession->m_bAppDataRecved)//如果是第一包，尝试检查是不是rpc注册包
+				{
+					if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+					{
+						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession, true);
+						LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
+					}
+				}
+
 				while (pab->PopPkt(APP_LAYER_PROTO::MODBUS_RTU))
 				{
 					if (pab->abandonData != "")
