@@ -694,8 +694,8 @@ void almTable::remove(ALARM_KEY ai)
 
 vector<ALARM_INFO*> almTable::query(json querier)
 {
+	std::unique_lock<shared_mutex> lock(m_csTable);
 	vector<ALARM_INFO*> dataSet;
-	std::shared_lock<shared_mutex> lock(m_csTable);
 	loadFile(getFilePath());
 	string user = ""; 
 	string rootTag = "";
