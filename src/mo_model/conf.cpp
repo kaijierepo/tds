@@ -175,6 +175,8 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			projectConfPath = tci.val;
 			projectConfPath = fs::toAbsolutePath(projectConfPath);
 		}
+		else if (checkKey(tci.key, "dbpath"))
+			dbPath = tci.val.c_str();
 		else if (checkKey(tci.key, "tcpkeepaliveio"))
 			tcpKeepAliveIO = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tcpkeepaliveds"))

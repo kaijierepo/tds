@@ -555,6 +555,8 @@ bool database::Open(string strDBUrl,string name)
 	if (strDBUrl == "")
 		return false;
 
+	m_path = fs::toAbsolutePath(strDBUrl);
+
 	if(!fs::fileExist(m_path + "/db.json"))
 		create(strDBUrl,name);
 
