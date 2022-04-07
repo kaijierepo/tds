@@ -685,12 +685,9 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "setIOTree")
 	{
-		string strData = params.dump(4);
-		fs::writeFile(tds->conf->projectConfPath + "/io.json", strData);
 		//io tree 热更新
 		ioSrv.stop(); //退出所有工作线程.包括采集线程，tcp客户端线程。stop不会锁住配置
-		ioSrv.clear(); //清空配置
-		ioSrv.loadConf();
+		ioSrv.loadConf(params);
 		ioSrv.run();
 		result = "\"ok\"";
 	}
@@ -2471,7 +2468,7 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 		{
 			ioChannel* pC = p->m_channels[i];
 			json jDe;
-			jDe["ioAddr"] = pC->m_name;
+			jDe["ioAddr"] = pC->m_devAddr;
 			jDe["val"] = pC->m_curVal;
 			channels.push_back(jDe);
 		}

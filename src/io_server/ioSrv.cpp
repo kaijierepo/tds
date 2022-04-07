@@ -96,22 +96,30 @@ bool ioServer::loadConf()
 
 	try {
 		json io = json::parse(conf.c_str());
-		
-		for (auto it : io)
-		{
-			ioDev* p = createIODev(it["type"].get<string>());
-			p->loadConf(it);
-			if (p)
-			{
-				ioDev::addChild(p);
-			}
-		}
+		return loadConf(io);
 	}
 	catch (std::exception& e)
 	{
 		string error = e.what();
 		LOG("[error]解析IO设备配置文件io.json失败," + error);
 		return false;
+	}
+	return true;
+}
+
+bool ioServer::loadConf(json& j)
+{
+	for (auto it : j)
+	{
+		ioDev* p = getIODevByNodeID(it["nodeID"].get<string>());
+		if (!p)
+		{
+			p = createIODev(it["type"].get<string>());
+			p->loadConf(it);
+			ioDev::addChild(p);
+		}
+		else
+			p->loadConf(it);
 	}
 	return true;
 }
