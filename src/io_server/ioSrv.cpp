@@ -96,7 +96,7 @@ bool ioServer::loadConf()
 
 	try {
 		json io = json::parse(conf.c_str());
-		return loadConf(io);
+		return loadConfAppend(io);
 	}
 	catch (std::exception& e)
 	{
@@ -107,7 +107,7 @@ bool ioServer::loadConf()
 	return true;
 }
 
-bool ioServer::loadConf(json& j)
+bool ioServer::loadConfMerge(json& j)
 {
 	for (auto it : j)
 	{
@@ -120,6 +120,17 @@ bool ioServer::loadConf(json& j)
 		}
 		else
 			p->loadConf(it);
+	}
+	return true;
+}
+
+bool ioServer::loadConfAppend(json& j)
+{
+	for (auto it : j)
+	{
+		ioDev* p = createIODev(it["type"].get<string>());
+		p->loadConf(it);
+		ioDev::addChild(p);
 	}
 	return true;
 }

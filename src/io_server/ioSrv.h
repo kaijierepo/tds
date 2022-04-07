@@ -20,7 +20,8 @@ public:
 	tcpSrv* m_tcpSrv_iq60; //
 
 	bool loadConf();
-	bool loadConf(json& j);
+	bool loadConfMerge(json& j);
+	bool loadConfAppend(json& j);
 	void saveConf();
 
 	ioDev* handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);

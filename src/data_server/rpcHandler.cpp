@@ -687,7 +687,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		//io tree 热更新
 		ioSrv.stop(); //退出所有工作线程.包括采集线程，tcp客户端线程。stop不会锁住配置
-		ioSrv.loadConf(params);
+		ioSrv.loadConfMerge(params);
 		ioSrv.run();
 		result = "\"ok\"";
 	}
