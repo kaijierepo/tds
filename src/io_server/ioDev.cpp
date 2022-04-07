@@ -280,6 +280,7 @@ bool ioDev::getChanStatus(json& statusList)
 
 bool ioDev::loadConf(json& conf)
 {
+	std::unique_lock<shared_mutex> lock(m_csThis);
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
@@ -414,7 +415,9 @@ bool ioDev::loadConf(json& conf)
 			{
 				m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 			}
-			addChannel(pdc);
+			pdc->m_pParent = this;
+			m_channels.push_back(pdc);
+			m_mapDataChannel[pdc->m_devAddr] = pdc;
 		}
 	}
 		
@@ -868,16 +871,6 @@ bool ioDev::loadConfBuff()
 		return false;
 	}
 	
-	return true;
-}
-
-bool ioDev::addChannel(ioChannel* p)
-{
-	m_csThis.lock();
-	p->m_pParent = this;
-	m_channels.push_back(p);
-	m_mapDataChannel[p->m_devAddr] = p;
-	m_csThis.unlock();
 	return true;
 }
 

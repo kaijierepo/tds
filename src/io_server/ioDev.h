@@ -190,7 +190,6 @@ public:
 
 	void saveConfBuff();
 	bool loadConfBuff();
-	bool addChannel(ioChannel* p);
 };
 
 ioDev* createIODev(string type);
