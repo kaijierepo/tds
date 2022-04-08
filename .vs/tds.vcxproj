@@ -411,6 +411,9 @@
       <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
+    <PreBuildEvent>
+      <Command>../build/autoversion.bat</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <ClCompile>
