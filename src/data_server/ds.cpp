@@ -77,10 +77,11 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 void handleGet_apk(const httplib::Request& req, httplib::Response& res)
 {
 	res.status = 301;
-	string redirectPath = "/files/apk/";
 	string localPath = fs::appPath() + "/files/apk";
 	vector<string> fl;
 	fs::getFileList(fl, localPath);
+	string host = req.get_header_value("Host");
+	string redirectPath = "http://" + host + "/files/apk/";
 
 	map<string, string> fil;
 

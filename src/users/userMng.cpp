@@ -383,7 +383,7 @@ json userManager::getUsers(string user)
 
 bool userManager::setUsers(json& users)
 {
-	std::unique_lock<shared_mutex> lock(m_csUserConf);
+	m_csUserConf.lock();
 	for (int i = 0; i < users.size(); i++)
 	{
 		json& oneUser = users[i];
@@ -398,6 +398,7 @@ bool userManager::setUsers(json& users)
 			m_mapUsers[name] = oneUser;
 		}
 	}
+	m_csUserConf.unlock();
 
 	saveConf();
 
