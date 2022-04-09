@@ -229,6 +229,7 @@ public:
 	bool PostRecv(COverlappedIOInfo* info);
 	bool DoRecv(COverlappedIOInfo* info);
 	bool DeleteLink(SOCKET s);
+	void disconnect(string remoteAddr);
 
 	bool IsIPOnline(string remoteIP);
 	inline string GetIOCPName() {

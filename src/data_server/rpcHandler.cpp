@@ -692,6 +692,24 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		ioSrv.run();
 		result = "\"ok\"";
 	}
+	else if (method == "closeIOSession")
+	{
+		string remoteAddr = "";
+		if(params.contains("remoteAddr"))
+			remoteAddr = params["remoteAddr"].get<string>();
+		if (ioSrv.m_tcpSrv_tdsp)
+		{
+			ioSrv.m_tcpSrv_tdsp->disconnect(remoteAddr);
+		}
+		if (ioSrv.m_tcpSrv_rtu)
+		{
+			ioSrv.m_tcpSrv_rtu->disconnect(remoteAddr);
+		}
+		if (ioSrv.m_tcpSrv_iq60)
+		{
+			ioSrv.m_tcpSrv_iq60->disconnect(remoteAddr);
+		}
+	}
 	else if (method == "getChanStatus")
 	{
 		rpc_getChanStatus(params,rpcResp);
