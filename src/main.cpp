@@ -39,6 +39,7 @@ SOFTWARE.
 #include "tools/tcp2com.h"
 #include "tools/tdsShell.h"
 #include "tools/tdsWatchDog.h"
+#include "tools/rproxy.h"
 #include "httplib.h"
 
 /*
@@ -164,7 +165,12 @@ int main(int argc, char** argv)
 		tr->portRight = parser.get<int>("sr");
 		tr->run();
 	}
-	else if (mode == "rproxy")
+	else if (mode == "rphttp")
+	{
+		rpProxy  = new RProxy();
+		rpProxy->run();
+	}
+	else if (mode == "rptcp")
 	{
 		tcpReverseProxy* tr = new tcpReverseProxy();
 		tr->realHost = parser.get<string>("sb");
