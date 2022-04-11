@@ -162,6 +162,7 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	{
 		delete i->second;
 	}
+	mapAlarm.clear();
 }
 
 string almServer::rpc_addEvent(json j)

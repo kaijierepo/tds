@@ -381,16 +381,16 @@ bool ioDev::loadConf(json& conf)
 				{
 					m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 				}
+				pdc->m_pParent = this;
+				m_channels.push_back(pdc);
+				m_mapDataChannel[pdc->getDevAddrStr()] = pdc;
 			}
 			else if (i["level"] == "device")
 			{
 				pChild = createIODev(i["type"].get<string>());
 				pChild->loadConf(i);
-			}
-
-			if (pChild)
-			{
-				addChild(pChild);
+				pChild->m_pParent = this;
+				m_vecChildDev.push_back(pChild);
 			}
 		}
 	}
