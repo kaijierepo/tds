@@ -379,6 +379,9 @@ bool TDS_imp::run(string cmdline)
 	shellSrv.run();
 	audioPlayer.run();
 
+	//其他插件
+	tds->gzhServer->init();
+
 	//create browser window
 	if (conf->uiMode == "miniblink")
 	{

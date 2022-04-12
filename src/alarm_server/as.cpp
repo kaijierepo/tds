@@ -377,16 +377,20 @@ void almTable::loadFile(string strFile)
 
 json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 {
-	//参数种的 rootTag 是 userQueryRootTag 
-	//返回的 querier 中的rootTag是 sysQueryRootTag
 	json querier;
+	string rootTag = "";
+	//把用户rootTag转成系统rootTag
 	if (params["rootTag"] != nullptr)
 	{
-		string rootTag = params["rootTag"].get<string>();
+		rootTag = params["rootTag"].get<string>();
 		rootTag = TAG::addRoot(rootTag, session.org);
-		querier["rootTag"] = rootTag;
 	}
-
+	//用户没有设置rootTag.将用户的org直接作为rootTag
+	else
+	{
+		rootTag = TAG::addRoot(rootTag, session.org);
+	}
+	querier["rootTag"] = rootTag;
 	querier["user"] = session.user;
 	return querier;
 }

@@ -38,6 +38,7 @@ public:
 	json getUsers(string user); //获得可以管理的用户列表
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
+	json getUserByOpenID(string openID); //公众号的openID
 	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
 
 	//保存用户配置，如果已经存在则更新。如果不存在则添加。不一定是全部。相当于是merge操作
