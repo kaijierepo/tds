@@ -209,31 +209,40 @@ void almServer::AddEvent(ALARM_INFO ai)
 	tableHist.add(ai);
 }
 
-void almServer::rpc_acknowledge(ALARM_KEY& key,string ackInfo,RPC_SESSION session) {
+void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
+	string user = session.user;
+	string info = params["ack_info"];
 	ALARM_INFO ai;
-	json params;
-	params["time"] = key.time;
-	params["type"] = key.type;
-	string tag = TAG::addRoot(key.tag, session.org);
+	//用户位号转系统位号
+	string tag = params["tag"].get<string>();
+	tag = TAG::addRoot(tag, session.org);
 	params["tag"] = tag;
 	if(tableCurrent.query(params,ai))
 	{
 		ai.bAck = 1;
 		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		{
-			tableCurrent.remove(key);
+			tableCurrent.remove(ai);
 		}
 		else
 			tableCurrent.update(ai);
+	}
+	else
+	{
+		string error = rpcSrv.RPCError(RPC_ERROR::ALM_alarmEventNotFound, "未找到报警事件");
+		resp.error = error;
+		return;
 	}
 	if(tableHist.query(params,ai))
 	{
 		ai.bAck = 1;
 		ai.strConfirmUser = session.user;
-		ai.strConfirmInfo = ackInfo;
+		ai.strConfirmInfo = info;
 		GetLocalTime(&ai.stConfirmTime);
 		tableHist.update(ai);
 	}
+
+	resp.result = "\"ok\"";
 }
 
 /*
@@ -685,7 +694,7 @@ void almTable::update(ALARM_INFO ai)
 		saveFile(getFilePath(ai.time),buff);
 	}
 }
-void almTable::remove(ALARM_KEY ai)
+void almTable::remove(ALARM_KEY& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	loadFile(getFilePath(ai.time));

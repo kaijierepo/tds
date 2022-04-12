@@ -38,9 +38,11 @@ public:
 	string defaultConf_tcp2com();
 	string defaultConf_httpServer();
 	string defaultConf_tds();
+	string defaultConf_rphttp();
 	void loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tds(vector<TDS_CONF_ITEM>& vecConf);
+	void loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf();
 	json toJson();
 	

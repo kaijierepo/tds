@@ -33,8 +33,6 @@ SOFTWARE.
 
 class TDS_imp : public iTDS {
 public:
-	TDS_imp();
-
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
 	bool setWorkingDir();

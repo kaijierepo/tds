@@ -308,7 +308,10 @@ enum RPC_ERROR {
 	DEV_confCategoryNotFound = -42002,
 
 	//os
-	OS_fileNotExist = -43001
+	OS_fileNotExist = -43001,
+
+	//alarm
+	ALM_alarmEventNotFound = -44001
 };
 
 
@@ -340,6 +343,17 @@ public:
 };
 
 
+class i_xiaoT {
+public:
+	virtual bool init() = 0;
+	virtual std::string getReply(string msg) = 0;
+};
+
+class i_gzhServer {
+public:
+	virtual bool init() = 0;
+	virtual std::string getReply(string msg) = 0;
+};
 
 
 
@@ -386,6 +400,8 @@ public:
 	
 	iTDSConf* conf;
 	i_database* db;
+	i_xiaoT* xiaoT;
+	i_gzhServer* gzhServer;
 
 	SYSTEMTIME stStartupTime;
 

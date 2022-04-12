@@ -55,7 +55,7 @@ public:
 
 	bool onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 
-	bool handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	bool handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 
 	bool handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);

@@ -141,10 +141,10 @@ void handleGet_gzh(const httplib::Request& req, httplib::Response& res)
 void handlePost_gzh(const httplib::Request& req, httplib::Response& res)
 {
 	LOG("[微信公众号] Post请求\n" + req.body);
-	
-	json jResp = "ok";
-	string resp = jResp.dump();
 
+	string respBody = tds->gzhServer->getReply(req.body);
+	
+	string resp = respBody;
 	if (resp != "")
 	{
 		//下面两句都是必须的，不然跨域请求的前端收不到
@@ -316,18 +316,6 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::TDSRPC;
-				string req = R"s({
-						"jsonrpc": "2.0",
-						"method": "getDevInfo",
-						"params": {},
-						"clientId": "tds",
-						"ioAddr": "any",
-						"id": 1
-					}
-
-)s";
-
-				p->send((char*)req.c_str(), req.length());
 			}
 			else if (pts->m_iServerPort == 664)
 			{
@@ -1292,10 +1280,11 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 					)";
 			tdsSession->send((char*)s.data(), s.length());
 		}
-		tdsSession->type = TDS_SESSION_TYPE::tdsClient;
+		if(tdsSession->type == "")
+			tdsSession->type = TDS_SESSION_TYPE::tdsClient;
 		tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
 
-		string szLog = "[Session会话][开始] 类型:" + tdsSession->type + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+		string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
 		LOG(szLog);
 	}
 }
@@ -1303,18 +1292,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-
 	GetLocalTime(&tdsSession->lastRecvTime);
-
-	{
-		//后续此处加入互斥量保护
-		//if (tdsSession->m_IoDev)
-		//{
-		//	tdsSession->m_IoDev->OnRecvData(pData, iLen);
-		//	return;
-		//}	 
-	}
-
 
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
@@ -1354,12 +1332,6 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	//  rpc 或者 桥接数据
 	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
-		if (!tdsSession) {
-			string str = "dataServer::OnRecvData_TCPServer: DSP_CLIENT_SESSION is null";
-			string strText = str.c_str();
-			LOG(strText);
-			return;
-		}
 		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, tdsSession);
 		return;
 	}
@@ -1637,7 +1609,7 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 	}
 }
 
-bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
 	bool bHandled = true;
 	if (tdsSession->type == TDS_SESSION_TYPE::iodev)
@@ -1730,18 +1702,25 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 			}
 			else
 			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+				if (isPkt)
 				{
-					if (pab->abandonData != "")
+					onRecvPkt_ioDev(pData, iLen, tdsSession);
+				}
+				else
+				{
+					stream2pkt* pab = &tdsSession->m_alBuf;
+					pab->PushStream(pData, iLen);
+					while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
 					{
-						string remoteAddr = tdsSession->getRemoteAddr();
-						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-						tdsSession->abandonLen += pab->iAbandonBytes;
+						if (pab->abandonData != "")
+						{
+							string remoteAddr = tdsSession->getRemoteAddr();
+							LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+							tdsSession->abandonLen += pab->iAbandonBytes;
+						}
+						tdsSession->iALProto = pab->m_protocolType;
+						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 					}
-					tdsSession->iALProto = pab->m_protocolType;
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 				}
 			}
 		}
@@ -1841,7 +1820,7 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 	handleAppLayerData_Bridge(pData, iLen, tdsSession);
 
 	//处理来自于io设备的数据
-	handleAppLayerData_IODev(pData, iLen, tdsSession);
+	handleAppLayerData_IODev(pData, iLen, tdsSession,isPkt);
 	
 	//tds rpc over tcp
 	if (tdsSession->type == TDS_SESSION_TYPE::tdsClient && isPkt)

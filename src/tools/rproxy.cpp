@@ -7,6 +7,7 @@ RProxy* rpProxy = nullptr;
 
 void handleHttpByRProxy(const httplib::Request& req, httplib::Response& res)
 {
+	std::cout << req.path << std::endl;
 	for (auto& [key, val] : rpProxy->m_jConf.items())
 	{
 		if (req.path.find(key) == 0 || req.path.find(key) == 1)
@@ -19,7 +20,6 @@ void handleHttpByRProxy(const httplib::Request& req, httplib::Response& res)
 				path = "/";
 			if (auto realSrvRes = cli.Get(path.c_str())) {
 				if (realSrvRes->status == 200) {
-					std::cout << realSrvRes->body << std::endl;
 					res = realSrvRes.value();
 				}
 			}
@@ -35,9 +35,9 @@ void handleHttpByRProxy(const httplib::Request& req, httplib::Response& res)
 
 void initRpHttpSrv(httplib::Server& svr)
 {
-	// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
-	// 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
-	//响应跨域预检请求
+	// 璺ㄥ煙璇锋眰锛屼娇鐢╒SCode璋冭瘯鏃讹紝缃戦〉浠嶸SCode鐨刪ttp鏈嶅姟鍣ㄨ蛋銆傝鍔熻兘涓昏鏂逛究璋冭瘯
+	// 缃戦〉涓婁娇鐢ㄧ殑fetch杩涜rpc璋冪敤鏃讹紝浠巘ds鐨刪ttp鏈嶅姟璧帮紝鍥犳娴忚鍣ㄤ細鍏堝彂閫丱PTION璇锋眰璺ㄥ煙
+	//鍝嶅簲璺ㄥ煙棰勬璇锋眰
 	//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
 	svr.Options("\\/.*",
 		[&](const httplib::Request& req, httplib::Response& res) {
@@ -49,14 +49,14 @@ void initRpHttpSrv(httplib::Server& svr)
 			res.set_header("Access-Control-Max-Age", "86400");
 		});
 
-	//rpc Post命令处理
+	//rpc Post鍛戒护澶勭悊
 	svr.Get("\\/.*", handleHttpByRProxy);
 }
 
 
 void rphttpSrvThread(int port)
 {
-	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
+	//http鐩稿叧鎺ュ彛闇�瑕佷娇鐢╣b2312.鍥犱负閲岄潰璋冪敤浜嗗瀛楄妭windows api锛屼负鏀寔涓枃锛屾澶勫皢utf8杞负gb2312
 	httplib::Server httpSrv;
 	initRpHttpSrv(httpSrv);
 
@@ -82,7 +82,8 @@ RProxy::RProxy()
 
 void RProxy::run()
 {
-	thread t(rphttpSrvThread, 667);
+	LOG("[HTTP鍙嶅悜浠ｇ悊]绔彛:" + str::fromInt(tds->conf->httpPort));
+	thread t(rphttpSrvThread, tds->conf->httpPort);
 	t.detach();
 
 	string s;

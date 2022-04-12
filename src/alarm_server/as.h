@@ -107,7 +107,7 @@ public:
 	void add(ALARM_INFO ai);
 	bool query(json params,ALARM_INFO& ai);
 	void update(ALARM_INFO ai);
-	void remove(ALARM_KEY ai);
+	void remove(ALARM_KEY& ai);
 	vector<ALARM_INFO*> query(json filter);
 	string toJson(json filter);
 
@@ -142,7 +142,7 @@ public:
 	void OccurAlarm(ALARM_INFO ai);
 //报警恢复和报警确认接口
 	void recover(ALARM_KEY& key);
-	void rpc_acknowledge(ALARM_KEY& key,string ackInfo,RPC_SESSION session);
+	void rpc_acknowledge(json& params, RPC_RESP& resp,RPC_SESSION session);
 	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
 	//过滤器参数

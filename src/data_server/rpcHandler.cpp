@@ -14,7 +14,6 @@
 #include "db.h"
 #include <UrlMon.h>
 #include "logger.h"
-#include "xiaot/xiaot.h"
 #include "ioGW_localSerial.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
@@ -1114,17 +1113,11 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	}
 	else if (method == "updateAlarmStatus")
 	{
-	almSrv.rpc_updateStatus(params, rpcResp);
+		almSrv.rpc_updateStatus(params, rpcResp);
 	}
 	else if (method == "ackAlarmEvent")
 	{
-	ALARM_KEY ai;
-	ai.tag = params["tag"].get<string>();
-	ai.time = params["time"].get<string>();
-	ai.type = params["type"].get<string>();
-	string user = session.user;
-	string info = params["ack_info"];
-	almSrv.rpc_acknowledge(ai, info, session);
+		almSrv.rpc_acknowledge(params,rpcResp, session);
 	}
 	else
 	{
@@ -2372,7 +2365,7 @@ string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION sessio
 
 string rpcHandler::rpc_xiaot(json params, string& error)
 {
-	string reply = xiaot.getReply(params);
+	string reply = tds->xiaoT->getReply(params);
 	return reply;
 }
 

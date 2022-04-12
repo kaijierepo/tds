@@ -24,6 +24,7 @@ LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
+
 #include "pch.h"
 #include "tds_imp.h"
 #include "rpcHandler.h"
@@ -31,7 +32,6 @@ SOFTWARE.
 #include "prj.h"
 #include "ds.h"
 #include "ioSrv.h"
-#include "xiaot/xiaot.h"
 #include "io_server/ioDev.h"
 #include "conf.h"
 #include "mp.h"
@@ -57,9 +57,6 @@ string InterfaceEncoding = "utf8";
 
 string version = "v1.0";
 
-
-TDS_imp tdsImp; //tds instance;
-iTDS* tds = &tdsImp;
 
 #include <stdio.h>
 #include <io.h>
@@ -271,14 +268,6 @@ void createChromeWnd()
 }
 
 
-
-TDS_imp::TDS_imp()
-{
-	conf = &tdsConf;
-	m_fpProcBeforeExit = NULL;
-	createLicence = NULL;
-}
-
 bool TDS_imp::setEncodeing(string encoding)
 {
 	InterfaceEncoding = encoding;
@@ -357,7 +346,7 @@ bool TDS_imp::run(string cmdline)
 	LOG("[项目配置  ] 路径:" + tds->conf->projectConfPath);
 
 	//startup xiaot
-	xiaot.init();
+	tds->xiaoT->init();
 
 	//startup tds modules
 	//if db folder is not exist. open will create an empty folder

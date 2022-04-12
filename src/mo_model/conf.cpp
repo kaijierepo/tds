@@ -44,6 +44,10 @@ void tdsConfig::generateDefaultConfFile(string m)
 	{
 		s = defaultConf_httpServer();
 	}
+	else if (m == "rphttp")
+	{
+		s = defaultConf_rphttp();
+	}
 
 	s = str::replace(s, "\n", "\r\n");
 	string confPath = fs::appPath() + "/" + mode + ".ini";
@@ -103,6 +107,14 @@ iotimeoutIQ60=5000
 
 #桌面软件模式
 ui=console             #ui模式  console:命令行模式   chrome:浏览器模式
+)";
+	return s;
+}
+
+string tdsConfig::defaultConf_rphttp()
+{
+	string s = R"(#HTTP 反向代理服务器配置
+httpPort=80            #http服务代理端口
 )";
 	return s;
 }
@@ -340,6 +352,18 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		//LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
 }
 
+void tdsConfig::loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf)
+{
+	for (int i = 0; i < vecConf.size(); i++)
+	{
+		TDS_CONF_ITEM& tci = vecConf[i];
+		if (checkKey(tci.key, "httpPort"))
+		{
+			httpPort = atoi(tci.val.c_str());
+		}
+	}
+}
+
 void tdsConfig::loadConf()
 {
 	string confPath = fs::appPath() + "/" + mode + ".ini";
@@ -394,6 +418,10 @@ void tdsConfig::loadConf()
 	else if (mode == "hs" || mode == "httpServer")
 	{
 		loadConf_httpServer(vecConf);
+	}
+	else if (mode == "rphttp")
+	{
+		loadConf_rphttp(vecConf);
 	}
 }
 
