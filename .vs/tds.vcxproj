@@ -605,8 +605,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\tdspro\gzhServer.cpp" />
     <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp" />
     <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp" />
+    <ClCompile Include="..\src\tdspro\xiaot.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\dumpCatch.cpp" />
     <ClCompile Include="..\src\tools\rproxy.cpp" />
@@ -624,7 +626,6 @@
     <ClCompile Include="..\src\video\videoCodec.cpp" />
     <ClCompile Include="..\src\video\streamSrvNode.cpp" />
     <ClCompile Include="..\src\xiaot\scriptHost.cpp" />
-    <ClCompile Include="..\src\xiaot\xiaot.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\3rdparty\miniblink\include\wke.h" />
@@ -673,8 +674,10 @@
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
+    <ClInclude Include="..\src\tdspro\gzhServer.h" />
     <ClInclude Include="..\src\tdspro\ioDev_iq60.h" />
     <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h" />
+    <ClInclude Include="..\src\tdspro\xiaot.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\dumpCatch.h" />
     <ClInclude Include="..\src\tools\rproxy.h" />
@@ -693,7 +696,6 @@
     <ClInclude Include="..\src\video\videoCodec.h" />
     <ClInclude Include="..\src\video\streamSrvNode.h" />
     <ClInclude Include="..\src\xiaot\scriptHost.h" />
-    <ClInclude Include="..\src\xiaot\xiaot.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\src\res\tds.rc" />

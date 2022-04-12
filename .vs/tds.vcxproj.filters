@@ -76,9 +76,6 @@
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\xiaot\xiaot.cpp">
-      <Filter>xiaot</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\video\videoCodec.cpp">
       <Filter>video</Filter>
@@ -204,6 +201,12 @@
     <ClCompile Include="..\src\tools\rproxy.cpp">
       <Filter>tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tdspro\xiaot.cpp">
+      <Filter>tdsPro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\gzhServer.cpp">
+      <Filter>tdsPro</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -257,9 +260,6 @@
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\data_server\dsClientStream.h">
       <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\xiaot\xiaot.h">
-      <Filter>xiaot</Filter>
     </ClInclude>
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
@@ -398,6 +398,12 @@
     </ClInclude>
     <ClInclude Include="..\src\tools\rproxy.h">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\xiaot.h">
+      <Filter>tdsPro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\gzhServer.h">
+      <Filter>tdsPro</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
