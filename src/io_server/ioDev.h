@@ -187,9 +187,12 @@ public:
 	json m_jAcq;
 	json m_jConf;
 	json m_jInfo;
+	json m_jSettingConf; //当前正在尝试设置的设备配置。如果setConf命令返回成功。将m_jSettingConf合并到m_jConf
 
 	void saveConfBuff();
 	bool loadConfBuff();
+	void saveInfoBuff();
+	bool loadInfoBuff();
 };
 
 ioDev* createIODev(string type);

@@ -874,6 +874,32 @@ bool ioDev::loadConfBuff()
 	return true;
 }
 
+void ioDev::saveInfoBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
+	fs::createFolderOfPath(path);
+	string data = m_jInfo.dump(4);
+	fs::writeFile(path, data);
+}
+
+bool ioDev::loadInfoBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
+	string s;
+	if (!fs::readFile(path, s))
+		return false;
+	try
+	{
+		m_jInfo = json::parse(s);
+	}
+	catch (std::exception& e)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 bool ioDev::addChild(ioDev* p)
 {
 	m_csThis.lock();

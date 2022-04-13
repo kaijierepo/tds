@@ -792,6 +792,34 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = RPCError(RPC_ERROR::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
+	else if (method == "getDevInfoBuff") //获取服务缓存的设备配置信息。目前仅用于tdsp设备
+	{
+		if (params.contains("ioAddr"))
+		{
+			string ioAddr = params["ioAddr"].get<string>();
+			ioDev* pD = ioSrv.getIODev(ioAddr);
+			if (pD)
+			{
+				if (pD->m_jInfo != nullptr)
+				{
+					rpcResp.result = pD->m_jInfo.dump();
+				}
+				else
+				{
+					json j = json::object();
+					rpcResp.result = j.dump();
+				}
+			}
+			else
+			{
+				rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound, "ioDev with specified ioAddr not found");
+			}
+		}
+		else
+		{
+			rpcResp.error = RPCError(RPC_ERROR::IO_ioAddrNotSpecified, "ioAddr not specified in params");
+		}
+	}
 	else if (method == "discoverDev")
 	{
 #ifdef ENABLE_GENICAM

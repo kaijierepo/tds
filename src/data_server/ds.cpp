@@ -143,6 +143,8 @@ void handlePost_gzh(const httplib::Request& req, httplib::Response& res)
 	LOG("[微信公众号] Post请求\n" + req.body);
 
 	string respBody = tds->gzhServer->getReply(req.body);
+
+	LOG("[微信公众号] Post回复\n" + respBody);
 	
 	string resp = respBody;
 	if (resp != "")

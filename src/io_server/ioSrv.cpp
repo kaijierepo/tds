@@ -36,6 +36,7 @@ void IOThread()
 	{
 		ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 		pIoDev->loadConfBuff();
+		pIoDev->loadInfoBuff();
 	}
 	ioSrv.m_csThis.unlock();
 
@@ -608,6 +609,17 @@ void ioServer::getAllSmartDev(vector<ioDev*>& aryDev)
 	for (auto& it : m_vecChildDev)
 	{
 		if (it->m_strTagBind != "" && it->m_level != IO_DEV_LEVEL::channel)
+		{
+			aryDev.push_back(it);
+		}
+	}
+}
+
+void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
+{
+	for (auto& it : m_vecChildDev)
+	{
+		if (it->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
 		{
 			aryDev.push_back(it);
 		}

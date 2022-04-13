@@ -405,6 +405,13 @@ bool userManager::setUsers(json& users)
 	return true;
 }
 
+bool userManager::addUser(json& user)
+{
+	json users = json::array();
+	users.push_back(user);
+	return setUsers(users);
+}
+
 bool userManager::setUser(json& user,json& result,json& err)
 {
 	std::unique_lock<shared_mutex> lock(m_csUserConf);
@@ -450,6 +457,22 @@ json userManager::getUser(string user)
 		return jUser;
 	}
 
+	return nullptr;
+}
+
+json* userManager::getUserByOpenID(string openID)
+{
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
+	for (auto& i : m_mapUsers)
+	{
+		json& jUser = i.second;
+		if (jUser.contains("gzhOpenID"))
+		{
+			string tmp = jUser["gzhOpenID"].get<string>();
+			if (openID == tmp)
+				return &jUser;
+		}
+	}
 	return nullptr;
 }
 

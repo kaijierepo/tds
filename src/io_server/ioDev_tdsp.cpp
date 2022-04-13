@@ -247,6 +247,11 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	}
 	else
 	{
+		if (method == "setDevConf")
+		{
+			m_jSettingConf = params;
+		}
+
 		//设置指定id命令的同步等待信息。
 		//[注意] 必须先设置等待信息，再发送请求。本机release模式下配合模拟器调试。
 		// 有可能还没运行到设置等待信息,就收到了响应，导致响应找不到匹配的请求。
@@ -287,6 +292,23 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 				else if (method == "acq" || method == "getAlarmStatus")
 				{
 					handleAsynResp(resp);
+				}
+				else if (method == "setDevConf") //设置成功，更新到当前配置信息缓存
+				{
+					m_csThis.lock();
+					for (auto& [key, val] : m_jSettingConf.items())
+					{
+						m_jConf[key] = val;
+					}
+					saveConfBuff();
+					m_csThis.unlock();
+				}
+				else if (method == "getDevInfo")
+				{
+					m_csThis.lock();
+					m_jInfo = result;
+					saveInfoBuff();
+					m_csThis.unlock();
 				}
 			}
 			if (resp["error"] != nullptr)
