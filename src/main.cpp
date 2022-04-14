@@ -91,6 +91,7 @@ int main(int argc, char** argv)
       示例:  tds -m tcp2com -com COM1 -tcpc 127.0.0.1:666"));
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
+	parser.set_optional<string>("tc", "tdsconf", "", "tds config file");
 	parser.set_optional<string>("com", "com", "COM1", "com port number in tcp2com mode");
 	parser.set_optional<string>("tcpc", "tcpc", "", "tcp client in format XXX.XXX.XXX.XXX:XXXX");
 	parser.set_optional<string>("tcps", "tcps", "", "tcp server in format XXXX");
@@ -124,6 +125,8 @@ int main(int argc, char** argv)
 
 	//根据模式差异化加载配置
 	tdsImp.tdsConf.mode = mode;
+	tdsImp.tdsConf.m_confFileName = parser.get<string>("tc");
+	tdsImp.tdsConf.m_confFileName = str::trimSuffix(tdsImp.tdsConf.m_confFileName, ".ini");
 	tdsImp.tdsConf.loadConf();
 
 	if (mode == "watchDog" || mode == "wd" || mode == "dog")

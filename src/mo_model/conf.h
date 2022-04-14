@@ -50,5 +50,6 @@ public:
 	string normalizationKey(string key);
 
 	json jsonConf;
+	string m_confFileName;
 };
 

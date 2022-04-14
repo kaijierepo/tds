@@ -366,10 +366,23 @@ void tdsConfig::loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf)
 
 void tdsConfig::loadConf()
 {
-	string confPath = fs::appPath() + "/" + mode + ".ini";
+	string confPath;
+	string confFileName;
+	if (m_confFileName != "")
+	{
+		confPath = fs::appPath() + "/" + m_confFileName + ".ini";
+		confFileName = m_confFileName;
+	}
+	else
+	{
+		confPath = fs::appPath() + "/" + mode + ".ini";
+		confFileName = mode;
+	}
+	
+	
 	if (!fs::fileExist(confPath))
 	{
-		generateDefaultConfFile(mode);
+		generateDefaultConfFile(confFileName);
 	}
 
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
