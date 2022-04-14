@@ -21,7 +21,7 @@ void shellServer::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 
 }
 
-void shellServer::sendResp(string resp)
+void shellServer::packGzhResp(string resp)
 {
     CWSPPkt wsPkt;
     wsPkt.pack(resp.c_str(),resp.length(), WS_FrameType::WS_TEXT_FRAME);

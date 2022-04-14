@@ -557,14 +557,18 @@ void httpSrvThread(int port)
 	httplib::Server httpSrv;
 	initHttpSrv(httpSrv);
 
-	//web网页端口
-	string webPath = fs::appPath() + "/web";
-	if (fs::fileExist(webPath))
+	//web网页端口。只有80端口用于网站目录
+	if (port == 80)
 	{
-		string asc_customUI = charCodec::utf8toAnsi(webPath);
-		httpSrv.set_mount_point("/", +asc_customUI.c_str());
-		LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
+		string webPath = fs::appPath() + "/web";
+		if (fs::fileExist(webPath))
+		{
+			string asc_customUI = charCodec::utf8toAnsi(webPath);
+			httpSrv.set_mount_point("/", +asc_customUI.c_str());
+			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
+		}
 	}
+	
 
 	//基于tds的二次开发，ui根目录位于此
 	//并且将tds的app目录放置在该目录下
@@ -691,6 +695,7 @@ bool dataServer::runAsCloud()
 	string webPath = fs::appPath() + "/web";
 	if (fs::fileExist(webPath))
 	{
+		LOG("[HTTP服务  ]检测到./web目录，启用80端口");
 		thread t(httpSrvThread,80);
 		t.detach();
 	}

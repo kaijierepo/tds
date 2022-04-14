@@ -12,7 +12,7 @@ class shellServer : public ITcpServerCallBack {
 public:
 	bool run();
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
-	void sendResp(string resp);
+	void packGzhResp(string resp);
 	void handleCmd(string cmd ,tcpSession* pCltInfo);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	SHELL_CMD parseCmd(string req);
