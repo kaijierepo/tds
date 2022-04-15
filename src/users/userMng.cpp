@@ -414,18 +414,19 @@ bool userManager::addUser(json& user)
 
 bool userManager::setUser(json& user,json& result,json& err)
 {
-	std::unique_lock<shared_mutex> lock(m_csUserConf);
-	
-	string name = user["name"].get<string>();
-	if (m_mapUsers.find(name) != m_mapUsers.end())
 	{
-		json& userTmp = m_mapUsers[name];
-		userTmp = user;
-	}
-	else
-	{
-		err = "用户名不存在";
-		return false;
+		std::unique_lock<shared_mutex> lock(m_csUserConf);
+		string name = user["name"].get<string>();
+		if (m_mapUsers.find(name) != m_mapUsers.end())
+		{
+			json& userTmp = m_mapUsers[name];
+			userTmp = user;
+		}
+		else
+		{
+			err = "用户名不存在";
+			return false;
+		}
 	}
 	
 	saveConf();
