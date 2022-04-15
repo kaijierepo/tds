@@ -234,6 +234,8 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (m_decimalDigits >= 0)
 		conf["decimalDigits"] = m_decimalDigits;
 
+	conf["val"] = m_curVal;
+
 	return true;
 }
 
@@ -347,6 +349,16 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		{
 			jVal["mpType"] = this->m_mpType;
 		}
+	}
+
+	//特殊的属性监测点
+	if (m_strName == "经度")
+	{
+		m_pParentMO->m_longitude = m_curVal;
+	}
+	else if (m_strName == "纬度")
+	{
+		m_pParentMO->m_latitude = m_curVal;
 	}
 	
 	//notify to tds client

@@ -140,6 +140,13 @@ bool MO::toJson(json& conf, json serializeOption)
 			tag = str::trimPrefix(tag, ".");
 		}
 		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+		if (m_longitude != nullptr)
+			conf["longitude"] = m_longitude;
+		if (m_latitude != nullptr)
+			conf["latitude"] = m_latitude;
+
+		if (m_jAlarmStatus != nullptr)
+			conf["alarmStatus"] = m_jAlarmStatus;
 	}
 	
 
@@ -419,17 +426,6 @@ MO* MO::GetMOByName(string strName)
 	}
 
 	return NULL;
-}
-
-MO* MO::GetMO(string strName)
-{
-	MP* ret = (MP*)GetMOByName(strName);
-	if (ret == NULL)
-	{
-		ret = new MP();
-		ret->m_strName = strName;
-	}
-	return ret;
 }
 
 vector<string> MO::getTagPartials(string strTag)

@@ -460,8 +460,9 @@ json userManager::getUser(string user)
 	return nullptr;
 }
 
-json* userManager::getUserByOpenID(string openID)
+json userManager::getUserByOpenID(string openID)
 {
+	json j = nullptr;
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	for (auto& i : m_mapUsers)
 	{
@@ -470,10 +471,10 @@ json* userManager::getUserByOpenID(string openID)
 		{
 			string tmp = jUser["gzhOpenID"].get<string>();
 			if (openID == tmp)
-				return &jUser;
+				return jUser;
 		}
 	}
-	return nullptr;
+	return j;
 }
 
 void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session)

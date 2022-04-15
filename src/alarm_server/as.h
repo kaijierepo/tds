@@ -89,8 +89,15 @@ public:
 		strConfirmInfo = "";
 	}
 
-	string toJson(string rootTag = "");
+	bool isAlarming() {
+		if (level != "" && level != "normal" && level != "正常")
+			return true;
+		return false;
+	}
+
+	string toJsonStr(string rootTag = "");
 	ALARM_INFO fromJson(json j);
+	json toJson(string rootTag = "");
 };
 
 //manage 3 data tables
@@ -109,7 +116,7 @@ public:
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
 	vector<ALARM_INFO*> query(json filter);
-	string toJson(json filter);
+	string toJsonStr(json filter);
 
 public:
 	
@@ -160,6 +167,9 @@ public:
 	string rpc_getHistory(json params, RPC_SESSION session);
 	string rpc_addEvent(json j);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
+
+	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表
+	void initMOAlarmStatus();
 
 public:
 	almServer(void);

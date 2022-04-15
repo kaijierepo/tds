@@ -47,6 +47,8 @@ void almServer::run()
 	tableCurrent.init("\\alarms\\current");
 	tableHist.init("\\alarms\\history");
 	tableHist.bOneFilePerMonth = true;
+
+	initMOAlarmStatus();
 }
 
 void almServer::recover(ALARM_KEY& key)
@@ -127,6 +129,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	filter["type"] = newStatus.type;
 	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
+	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
 	if (tableCurrent.query(filter,lastStatus))
 	{
 		//check if status has changed
@@ -140,6 +143,7 @@ void almServer::Update(ALARM_INFO newStatus)
 				//再产生新的报警
 				OccurAlarm(newStatus);
 			}
+			bTagAlarmStatusChanged = true;
 		}
 		else
 		{
@@ -151,8 +155,20 @@ void almServer::Update(ALARM_INFO newStatus)
 		if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 		{
 			OccurAlarm(newStatus);
+			bTagAlarmStatusChanged = true;
 		}
 	}
+
+
+	//更新mo对象中的缓存
+	//if (bTagAlarmStatusChanged)
+	//{
+		MO* pmo = prj.GetMOByTag(newStatus.tag);
+		if (pmo)
+		{
+			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
+		}
+	//}
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
@@ -200,6 +216,28 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		resp.error = e.what();
 	}
 	
+}
+
+json almServer::getAlarmStatus(string tag)
+{
+	json querier;
+	querier["tag"] = tag;
+	querier["isRecover"] = false;
+	vector<ALARM_INFO*> statusList = almSrv.tableCurrent.query(querier);
+	json list = json::array();
+
+	for (int i = 0; i < statusList.size(); i++)
+	{
+		ALARM_INFO* p = statusList[i];
+		json j = p->toJson();
+		list.push_back(j);
+	}
+	return list;
+}
+
+void almServer::initMOAlarmStatus()
+{
+
 }
 
 void almServer::AddEvent(ALARM_INFO ai)
@@ -405,7 +443,7 @@ string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 
 
 	json querier = rpcReqParams2Querier(params, session);
-	return tableCurrent.toJson(querier);
+	return tableCurrent.toJsonStr(querier);
 }
 
 string almServer::rpc_getStatus(json params, RPC_SESSION session)
@@ -418,7 +456,7 @@ string almServer::rpc_getStatus(json params, RPC_SESSION session)
 
 	json querier = rpcReqParams2Querier(params, session);
 	querier["isRecover"] = false;
-	return tableCurrent.toJson(querier);
+	return tableCurrent.toJsonStr(querier);
 }
 
 string almServer::rpc_getUnack(json params, RPC_SESSION session)
@@ -431,7 +469,7 @@ string almServer::rpc_getUnack(json params, RPC_SESSION session)
 
 	json querier = rpcReqParams2Querier(params, session);
 	querier["isAck"] = false;
-	return tableCurrent.toJson(querier);
+	return tableCurrent.toJsonStr(querier);
 }
 
 string almServer::rpc_getHistory(json params, RPC_SESSION session)
@@ -480,9 +518,9 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				
 
 				if(dataSet !="[")
-					dataSet += "," + it->second->toJson(rootTag);
+					dataSet += "," + it->second->toJsonStr(rootTag);
 				else
-					dataSet += it->second->toJson(rootTag);
+					dataSet += it->second->toJsonStr(rootTag);
 			}
 		}
 	}
@@ -507,6 +545,58 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 		ai.strAlarmDesc = j["desc"];
 	
 	return ai;
+}
+
+json ALARM_INFO::toJson(string rootTag)
+{
+	ALARM_INFO* info = this;
+	json j;
+	if (rootTag == "")
+	{
+		j["tag"] = info->tag;
+	}
+	else
+	{
+		string tag = info->tag;
+		tag = str::trimPrefix(tag, rootTag + ".");
+		j["tag"] = tag;
+	}
+
+	j["type"] = info->type;
+
+	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
+	{
+		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[info->type];
+		j["typeLabel"] = at.label;
+	}
+	else
+	{
+		j["typeLabel"] = j["type"];
+	}
+
+	j["level"] = info->level;
+	string levelLabel = getAlarmLevelLabel(level);
+	if (levelLabel != "")
+	{
+		j["levelLabel"] = levelLabel;
+	}
+	else
+	{
+		j["levelLabel"] = info->level;
+	}
+
+	j["desc"] = info->strAlarmDesc;
+	j["detail"] = info->strAlarmDetail;
+	j["time"] = info->time;
+	j["suggest"] = info->strSuggest;
+	j["isRecover"] = info->bRecover;
+	j["recover_time"] = timeopt::st2str(info->stRecoverTime);
+	j["isAck"] = info->bAck;
+	j["ack_time"] = timeopt::st2str(info->stConfirmTime);
+	j["ack_info"] = info->strConfirmInfo;
+	j["ack_user"] = info->strConfirmUser;
+	j["pic_url"] = info->pic_url;
+	return j;
 }
 
 ALARM_INFO almTable::fromCSV(const string& line)
@@ -571,56 +661,9 @@ string almTable::toCSV(ALARM_INFO& info)
 	return str;
 }
 
-string ALARM_INFO::toJson(string rootTag)
+string ALARM_INFO::toJsonStr(string rootTag)
 {
-	ALARM_INFO* info = this;
-	json j;
-	
-	if (rootTag == "")
-	{
-		j["tag"] = info->tag;
-	}
-	else
-	{
-		string tag = info->tag;
-		tag = str::trimPrefix(tag,rootTag + ".");
-		j["tag"] = tag;
-	}
-	
-	j["type"]=info->type;
-
-	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
-	{
-		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[info->type];
-		j["typeLabel"] = at.label;
-	}
-	else
-	{
-		j["typeLabel"] = j["type"];
-	}
-
-	j["level"]=info->level;
-	string levelLabel = getAlarmLevelLabel(level);
-	if (levelLabel != "")
-	{
-		j["levelLabel"] = levelLabel;
-	}
-	else
-	{
-		j["levelLabel"] = info->level;
-	}
-
-	j["desc"]=info->strAlarmDesc;
-	j["detail"]=info->strAlarmDetail;
-	j["time"] = info->time;
-	j["suggest"]=info->strSuggest;
-	j["isRecover"]=info->bRecover;
-	j["recover_time"]=timeopt::st2str(info->stRecoverTime);
-	j["isAck"]=info->bAck;
-	j["ack_time"]=timeopt::st2str(info->stConfirmTime);
-	j["ack_info"]=info->strConfirmInfo;
-	j["ack_user"]=info->strConfirmUser;
-	j["pic_url"]=info->pic_url;
+	json j = toJson(rootTag);
 	return j.dump(2);
 }
 
@@ -753,7 +796,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 	return dataSet;
 }
 
-string almTable::toJson(json querier) {
+string almTable::toJsonStr(json querier) {
 	string rootTag = "";
 	if(querier.contains("rootTag"))
 		rootTag = querier["rootTag"].get<string>();
@@ -761,9 +804,9 @@ string almTable::toJson(json querier) {
 	string dataSet = "[";
 	for (auto& it :vec) {
 		if(dataSet !="[")
-			dataSet += "," + it->toJson(rootTag);
+			dataSet += "," + it->toJsonStr(rootTag);
 		else
-			dataSet +=  it->toJson(rootTag);
+			dataSet +=  it->toJsonStr(rootTag);
 	}
 	dataSet += "]";
 	return dataSet;

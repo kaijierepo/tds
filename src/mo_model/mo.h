@@ -90,6 +90,10 @@ public:
 	string m_alias;
 	bool m_bShow;
 
+	json m_longitude;
+	json m_latitude;
+
+	json m_jAlarmStatus;
 
 	MO* createChildMO(string subTag, string moType);
 	void DeleteChildAMO(string& strName);
@@ -123,7 +127,6 @@ public:
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
-	MO* GetMO(string strName);
 	vector<string> getAllCustomMoType();
 
 	string TranslateRelateTag(string rtag);
