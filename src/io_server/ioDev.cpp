@@ -1056,6 +1056,10 @@ ioChannel* ioDev::getChanByTag(string tag)
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);
+	
+	//已绑定
+	if (pIOSession == ioSession)
+		return;
 
 	//1个tcp链接对应1个io设备的场景
 	if(ioSession!=nullptr)

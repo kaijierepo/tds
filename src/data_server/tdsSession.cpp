@@ -55,6 +55,7 @@ bool TDS_SESSION::getTcpSession(tcpSession& ts)
 
 void TDS_SESSION::Init()
 {
+    m_bSingleDevMode = false;
     m_bAppDataRecved = false;
     abandonLen = 0;
     m_bStateLessSession = false;

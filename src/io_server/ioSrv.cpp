@@ -138,6 +138,8 @@ void ioServer::saveConf()
 	}
 }
 
+//io设备在一个tdsSession上线
+//该函数必须返回非空值
 ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
