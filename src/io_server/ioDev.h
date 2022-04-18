@@ -160,7 +160,7 @@ public:
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	SYSTEMTIME m_stEqpOnLineDateTime;//设备上线时间戳
 	SYSTEMTIME m_stEqpOffLineDateTime;//设备掉线时间戳
-	bool IsConnected();
+	virtual bool isConnected();
 	virtual int GetAcqInterval();
 	static bool m_bAsynAcqMode;//是否启用异步采集模式
 	

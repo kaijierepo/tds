@@ -75,6 +75,7 @@ namespace TDS {
 			const string iq60_gateway = "iq60-gateway";
 			const string genicam = "genicam";
 			const string mqttBroker = "mqtt-broker";
+			const string tuya = "tuya";
 		}
 		namespace GW {
 			const string local_serial = "local-serial";
