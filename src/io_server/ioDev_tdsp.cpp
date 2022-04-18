@@ -322,6 +322,15 @@ bool ioDev_tdsp::call(string method, json params, json& result, json& error, boo
 	}
 }
 
+bool ioDev_tdsp::isConnected()
+{
+	if (pIOSession != nullptr && pIOSession->isConnected())
+	{
+		return true;
+	}
+	return false;
+}
+
 json ioDev_tdsp::getAddr()
 {
 	json j;

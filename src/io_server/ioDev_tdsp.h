@@ -27,6 +27,8 @@ public:
 	int getRpcId();
 	bool call(string method, json params,json& result,json& error,bool sync = true);
 
+	bool isConnected() override;
+
 	json getAddr() override;
 	void DoAcq();
 	void DoCycleTask() override;
