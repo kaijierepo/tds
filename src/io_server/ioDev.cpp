@@ -1067,6 +1067,9 @@ void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
 		LOG("[warn][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
 		
+
+		//解除原有session对该io设备的绑定
+		pIOSession->m_IoDev = nullptr;
 		//1个tcp链接对应 多个 io设备的场景
 		//应用层数据包包含地址信息时，同一个tcp链接可以用于多个设备通信。
 		//从老的连接里面把ioAddr映射删除，防止老连接断开造成设备掉线。 容错机制

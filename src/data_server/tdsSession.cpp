@@ -324,7 +324,6 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
              logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
              p->setOffline();
          }
-         
      }
  }
 
