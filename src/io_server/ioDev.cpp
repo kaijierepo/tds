@@ -4,10 +4,8 @@
 #include "commSrv.h"
 #include "db.h"
 #include "prj.h"
-#include "ioGW_tuyaProject.h"
 #include "ioDev_modbusSlave.h"
 #include "ioDev_mqttBroker.h"
-#include "ioDev_tuya.h"
 #include "ioGW_rs485.h"
 #include "ioChan.h"
 #include "ioGW_localSerial.h"
@@ -55,6 +53,7 @@ std::map<string, fp_createDev> mapDevCreateFunc;
 ioDev* createIODev(string type)
 {
     ioDev* p = NULL;
+	
 	if (mapDevCreateFunc.find(type) != mapDevCreateFunc.end())
 	{
 		fp_createDev func_create = mapDevCreateFunc[type];
@@ -63,14 +62,6 @@ ioDev* createIODev(string type)
 	else if (type == "mqtt-broker")
 	{
 		p = new ioDev_mqttBroker();
-	}
-	else if (type == "tuya-iot-project")
-	{
-		p = new ioGW_tuyaProject();
-	}
-	else if (type == "tuya.switch")
-	{
-		p = new ioDev_tuya();
 	}
 	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
 	{
@@ -713,7 +704,7 @@ void ioDev::setOffline()
 	}
 }
 
-bool ioDev::IsConnected()
+bool ioDev::isConnected()
 {
 	return false;
 }
@@ -1070,7 +1061,7 @@ void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 	if(ioSession!=nullptr)
 		ioSession->m_IoDev = this;
 
-	if (pIOSession != ioSession && ioSession != nullptr && pIOSession!= nullptr)
+	if (pIOSession != ioSession && ioSession != nullptr && isConnected())
 	{
 		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
