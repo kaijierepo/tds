@@ -37,6 +37,9 @@
     <Filter Include="io">
       <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tdsPro\ioDev">
+      <UniqueIdentifier>{a0b0ae6f-8db0-4b7b-8685-cd78ae935884}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -153,9 +156,6 @@
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_tuya.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioDiscoverer.cpp">
       <Filter>io</Filter>
     </ClCompile>
@@ -163,9 +163,6 @@
       <Filter>io</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp">
       <Filter>io</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioSrv.cpp">
@@ -206,6 +203,12 @@
     </ClCompile>
     <ClCompile Include="..\src\tdspro\gzhServer.cpp">
       <Filter>tdsPro</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tuya.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp">
+      <Filter>tdsPro\ioDev</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -345,9 +348,6 @@
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
       <Filter>io</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_tuya.h">
-      <Filter>io</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDiscoverer.h">
       <Filter>io</Filter>
     </ClInclude>
@@ -355,9 +355,6 @@
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioGW_rs485.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h">
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioSrv.h">
@@ -404,6 +401,12 @@
     </ClInclude>
     <ClInclude Include="..\src\tdspro\gzhServer.h">
       <Filter>tdsPro</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tuya.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioGW_tuyaProject.h">
+      <Filter>tdsPro\ioDev</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

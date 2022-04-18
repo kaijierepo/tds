@@ -408,7 +408,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MTd;..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>winmm.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
@@ -457,7 +457,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcrypto-1_1-static.lib;libssl-1_1-static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\src\3rdparty\hjson\lib\MT;..\src\3rdparty\jerryscript\lib\MT;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
@@ -586,11 +586,9 @@
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
-    <ClCompile Include="..\src\io_server\ioDev_tuya.cpp" />
     <ClCompile Include="..\src\io_server\ioDiscoverer.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_rs485.cpp" />
-    <ClCompile Include="..\src\io_server\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
     <ClCompile Include="..\src\logServer\csvTable.cpp" />
     <ClCompile Include="..\src\logServer\logServer.cpp" />
@@ -606,6 +604,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\tdspro\gzhServer.cpp" />
+    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tuya.cpp" />
+    <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp" />
     <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp" />
     <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp" />
     <ClCompile Include="..\src\tdspro\xiaot.cpp" />
@@ -657,11 +657,9 @@
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />
     <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
-    <ClInclude Include="..\src\io_server\ioDev_tuya.h" />
     <ClInclude Include="..\src\io_server\ioDiscoverer.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_rs485.h" />
-    <ClInclude Include="..\src\io_server\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
     <ClInclude Include="..\src\logServer\csvTable.h" />
     <ClInclude Include="..\src\logServer\logServer.h" />
@@ -675,6 +673,8 @@
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tdspro\gzhServer.h" />
+    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tuya.h" />
+    <ClInclude Include="..\src\tdspro\ioDev\ioGW_tuyaProject.h" />
     <ClInclude Include="..\src\tdspro\ioDev_iq60.h" />
     <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h" />
     <ClInclude Include="..\src\tdspro\xiaot.h" />
