@@ -92,6 +92,13 @@ public:
 
 	json m_longitude;
 	json m_latitude;
+	//从监测点获取的经纬度
+	bool m_bDynLocation; //动态定位模式，从监控点获取
+	json m_longitudeDyn;
+	json m_latitudeDyn;
+	bool m_bLocationCalib;
+	double m_dbLongitudeCalib;
+	double m_dbLatitudeCalib;
 
 	json m_jAlarmStatus;
 

@@ -72,6 +72,10 @@ MO::MO()
 	m_pParentMO = NULL;
 	m_moType = MO_TYPE::mo;
 	m_bShow = true;
+	m_bDynLocation = false;
+	m_dbLongitudeCalib = 0;
+	m_dbLatitudeCalib = 0;
+	m_bLocationCalib = false;
 }
 
 MO::~MO()
@@ -83,6 +87,29 @@ bool MO::loadConf(json& conf)
 {
 	m_strName = conf["name"];
 	m_moType = conf["type"];
+
+	if (conf.contains("dynamicLocation"))
+	{
+		m_bDynLocation = conf["dynamicLocation"].get<bool>();
+	}
+	if (conf.contains("locationCalib"))
+	{
+		m_bLocationCalib = conf["locationCalib"].get<bool>();
+	}
+
+
+	if (conf.contains("longitudeCalib"))
+	{
+		m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
+	}
+	if (conf.contains("latitudeCalib"))
+	{
+		m_dbLatitudeCalib = conf["latitudeCalib"].get<double>();
+	}
+	
+	m_longitude = conf["longitude"];
+	m_latitude = conf["latitude"];
+
 	if (m_moType == "custom" && conf.contains("customType") && conf["customType"].get<string>().length() > 0)
 	{
 		m_moCustomType = conf["customType"];
@@ -124,6 +151,26 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
 
+	if (m_bDynLocation)
+	{
+		conf["dynamicLocation"] = m_bDynLocation;
+	}
+	if (m_bLocationCalib)
+	{
+		conf["locationCalib"] = m_bLocationCalib;
+	}
+
+	if(m_dbLongitudeCalib > 0.000001)
+		conf["longitudeCalib"] = m_dbLongitudeCalib;
+	if(m_dbLatitudeCalib > 0.000001)
+		conf["latitudeCalib"] = m_dbLatitudeCalib;
+
+		
+	if (m_longitude != nullptr)
+		conf["longitude"] = m_longitude;
+	if (m_latitude != nullptr)
+		conf["latitude"] = m_latitude;
+
 	if (serializeOption["onlyConf"] != nullptr && serializeOption["onlyConf"].get<bool>() == true)
 	{
 
@@ -140,10 +187,10 @@ bool MO::toJson(json& conf, json serializeOption)
 			tag = str::trimPrefix(tag, ".");
 		}
 		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
-		if (m_longitude != nullptr)
-			conf["longitude"] = m_longitude;
-		if (m_latitude != nullptr)
-			conf["latitude"] = m_latitude;
+		if (m_longitudeDyn != nullptr)
+			conf["longitudeDyn"] = m_longitudeDyn;
+		if (m_latitudeDyn != nullptr)
+			conf["latitudeDyn"] = m_latitudeDyn;
 
 		if (m_jAlarmStatus != nullptr)
 			conf["alarmStatus"] = m_jAlarmStatus;

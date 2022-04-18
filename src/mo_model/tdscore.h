@@ -41,6 +41,8 @@ inline string getDevTypeLabel(string devType) {
 	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485网关";
 	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IO通道";
 	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
+	else if (devType == IO_DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";
+	else if (devType == "tuya") return "涂鸦设备";
 	else return "未知类型";
 }
 
