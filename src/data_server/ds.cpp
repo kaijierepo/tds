@@ -130,7 +130,7 @@ void handleGet_gzh(const httplib::Request& req, httplib::Response& res)
 
 	string s = vec[0] + vec[1] + vec[2];
 
-	SHA1 checksum;
+	nsSHA1::SHA1 checksum;
 	checksum.update(s);
 	string hash = checksum.final();
 	LOG("signature calc  " + hash + "\n");
