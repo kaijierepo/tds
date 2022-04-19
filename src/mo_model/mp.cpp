@@ -417,8 +417,10 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 
 bool MP::output(json jVal, json& jResp, bool sync)
 {
-	//当前值变为nullptr,直到采集到新的数据值,才能确认当前值
-	m_curVal = nullptr;
+	//方案1：当前值变为nullptr,直到采集到新的数据值,才能确认当前值
+	//m_curVal = nullptr;
+	//方案2. 值不变。采集到新的数据值或者收到输出反馈，才变成新的值
+	//do nothing
 
 	ioChannel* pC = ioSrv.getChanByTag(getTag());
 	if (pC)
