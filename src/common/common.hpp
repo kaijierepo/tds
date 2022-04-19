@@ -538,6 +538,11 @@ namespace str {
 
 		return true;
 	}
+
+	inline string hanZi2Pinyin(string hanZi)
+	{
+		return "";
+	}
 }
 namespace charCodec {
 

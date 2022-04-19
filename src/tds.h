@@ -290,7 +290,11 @@ enum RPC_ERROR {
 	TEC_TIME_SELECTOR_FMT_ERROR = -40004,
 	TEC_TAG_SELECTOR_FMT_ERROR = -40005,
 	TEC_VAL_TYPE_ERROR = -40006,
-	TEC_OUTPUT_EXECUTION_FAIL = -40007,
+	MO_outputFail = -40007,
+	MO_outputValNotSpecified = -40008,
+	MO_outputValShouldBeBool = -40009,
+	MO_outputValShouldBeNumber = -40010,
+	MO_currentValIsNull = -40011,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,

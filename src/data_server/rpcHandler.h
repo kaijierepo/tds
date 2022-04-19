@@ -48,7 +48,7 @@ public:
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string rpc_getMoStatusTable(json params, string& error);
 	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);
-	string rpc_output(json params, string& error);
+	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_db_select(json params, string& error, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error, RPC_SESSION session);
 	string rpc_getconf(json params, string& error);

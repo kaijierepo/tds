@@ -944,7 +944,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "output")
 		{
-			result = rpc_output(params, error);
+			rpc_output(params, rpcResp,session);
 		}
 		else if (method == "getMpStatus")
 		{
@@ -1746,13 +1746,21 @@ void rpcHandler::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& str
 	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
 }
 
-string rpcHandler::rpc_output(json params, string& error)
+void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	json val = "";
-	if (params["val"] != nullptr)
-		val = params["val"];
+	json val = nullptr;
+
+	//获取输出参数
+	if (params.is_object())
+	{
+		if (params["val"] != nullptr)
+			val = params["val"];
+	}
 	else
-		return "";
+	{
+		val = params;
+	}
+
 
 	string tag;
 	if (params["tag"] != nullptr)
@@ -1761,44 +1769,44 @@ string rpcHandler::rpc_output(json params, string& error)
 	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
-		json jError = {
-				{"code", MO_specifiedTagNotFound},
-				{"message" , "error: tag not exist"}
-		};
-		string error = jError.dump();
-		return "!" + error;
+		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "specified tag not found");
+		return;
 	}
 
-	if (val.is_boolean() && pmp->m_valType != VAL_TYPE::boolean)
+	if (pmp->m_valType == VAL_TYPE::boolean)
 	{
-		json jError = {
-				{"code", TEC_VAL_TYPE_ERROR},
-				{"message" , "error: wrong val type , should be bool type "}
-		};
-		string error = jError.dump();
-		return "!" + error;
+		if (!val.is_boolean())
+		{
+			if (val.is_null()) //开关量输出值省略 表示输出当前值取反
+			{
+				if(pmp->m_curVal.is_boolean())
+					val = !pmp->m_curVal.get<bool>();
+				else {
+					resp.error = RPCError(RPC_ERROR::MO_currentValIsNull, "current value is null");
+					return;
+				}
+			}
+			else
+			{
+				resp.error = RPCError(RPC_ERROR::MO_outputValShouldBeBool, "output val should be bool type");
+				return;
+			}
+		}
 	}
-	else if (val.is_number() && pmp->m_valType != VAL_TYPE::Float)
+	else if (!val.is_number() && pmp->m_valType == VAL_TYPE::Float)
 	{
-		json jError = {
-				{"code", TEC_VAL_TYPE_ERROR},
-				{"message" , "error: wrong val type , should be real type "}
-		};
-		string error = jError.dump();
-		return "!" + error;
+		resp.error = RPCError(RPC_ERROR::MO_outputValShouldBeNumber, "output val should be number type");
+		return;
 	}
 	
 	json jResp;
-	if(pmp->output(val, jResp))
-		return jResp.dump();
+	if (pmp->output(val, jResp))
+	{
+		resp.result = jResp.dump();
+	}
 	else
 	{
-		json jError = {
-		{"code", TEC_OUTPUT_EXECUTION_FAIL},
-		{"message" , "error: output execution fail"}
-		};
-		string error = jError.dump();
-		return "!" + error;
+		resp.error = RPCError(RPC_ERROR::MO_outputFail, "output fail");
 	}
 }
 
