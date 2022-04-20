@@ -40,6 +40,9 @@
     <Filter Include="tdsPro\ioDev">
       <UniqueIdentifier>{a0b0ae6f-8db0-4b7b-8685-cd78ae935884}</UniqueIdentifier>
     </Filter>
+    <Filter Include="proto">
+      <UniqueIdentifier>{88cd19a6-1696-4a46-bcd9-a44ffc57646d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -70,9 +73,6 @@
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tdsSession.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\wsProto.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\wspSrv.cpp">
@@ -210,6 +210,9 @@
     <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp">
       <Filter>tdsPro\ioDev</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\proto\wsProto.cpp">
+      <Filter>proto</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -252,9 +255,6 @@
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\tdsSession.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\wsProto.h">
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\wspSrv.h">
@@ -407,6 +407,12 @@
     </ClInclude>
     <ClInclude Include="..\src\tdspro\ioDev\ioGW_tuyaProject.h">
       <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\proto\proto_rtu.hpp">
+      <Filter>proto</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\proto\wsProto.h">
+      <Filter>proto</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

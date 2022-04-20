@@ -578,7 +578,6 @@
     <ClCompile Include="..\src\data_server\ds.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler.cpp" />
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
-    <ClCompile Include="..\src\data_server\wsProto.cpp" />
     <ClCompile Include="..\src\data_server\wspSrv.cpp" />
     <ClCompile Include="..\src\io_server\commSrv.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
@@ -603,6 +602,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\proto\wsProto.cpp" />
     <ClCompile Include="..\src\tdspro\gzhServer.cpp" />
     <ClCompile Include="..\src\tdspro\ioDev\ioDev_tuya.cpp" />
     <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp" />
@@ -649,7 +649,6 @@
     <ClInclude Include="..\src\data_server\dsClientStream.h" />
     <ClInclude Include="..\src\data_server\rpcHandler.h" />
     <ClInclude Include="..\src\data_server\tdsSession.h" />
-    <ClInclude Include="..\src\data_server\wsProto.h" />
     <ClInclude Include="..\src\data_server\wspSrv.h" />
     <ClInclude Include="..\src\io_server\commSrv.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
@@ -670,6 +669,8 @@
     <ClInclude Include="..\src\mo_model\prj.h" />
     <ClInclude Include="..\src\mo_model\tdscore.h" />
     <ClInclude Include="..\src\pch.h" />
+    <ClInclude Include="..\src\proto\proto_rtu.hpp" />
+    <ClInclude Include="..\src\proto\wsProto.h" />
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tdspro\gzhServer.h" />
