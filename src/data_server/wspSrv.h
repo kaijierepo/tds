@@ -7,7 +7,7 @@
 #include <set>
 #pragma comment(lib,"ws2_32.lib")
 #define DATA_BUFSIZE 4096
-#include "wsProto.h"
+#include "proto/wsProto.h"
 #include "tcpSrv.h"
 #include "stream2pkt.h"
 #include "tdsSession.h"

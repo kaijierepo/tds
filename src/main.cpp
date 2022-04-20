@@ -195,6 +195,41 @@ int main(int argc, char** argv)
 		t2c->serial.m_portNum = conf.com;
 		t2c->run();
 	}
+	else if (mode == "gb2u8")
+	{
+		vector<string> fileList;
+		fs::getFileList(fileList, fs::appPath());
+		LOG("文件总数:" + str::fromInt(fileList.size()));
+		try {
+			for (int i = 0; i < fileList.size(); i++)
+			{
+				string p = fs::appPath() + "/" + fileList[i];
+				if (p.find(".h") == string::npos && p.find(".cpp") == string::npos)
+				{
+					continue;
+				}
+
+				string gbData;
+				fs::readFile(p, gbData);
+				if (charCodec::hasGB2312(gbData))
+				{
+					string u8Data = charCodec::ansi2Utf8(gbData);
+					fs::writeFile(p, u8Data);
+					LOG("已转换:" + p);
+				}
+				else
+				{
+					LOG("未找到GB2312字符:" + p);
+				}
+			}
+		}
+		catch (exception& e)
+		{
+			string es = e.what();
+			LOG("转换异常:" + es);
+		}
+		return 0;
+	}
 	else
 	{
 		//run tds

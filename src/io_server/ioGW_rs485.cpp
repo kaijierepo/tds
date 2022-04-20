@@ -51,6 +51,7 @@ bool ioGW_rs485::isCommBusy()
 
 bool ioGW_rs485::run()
 {
+	m_bRunning = true;
 	if (m_addrMode == DEV_ADDR_MODE::tcpServer)
 	{
 		string ip;

@@ -12,7 +12,6 @@ public:
 	unsigned short count;   //读写的寄存器或者线圈数量
 	json jOuputVal;
 
-
 	MB_IO_CMD() {
 		timeopt::setAsTimeOrg(stLastAcq);
 	}

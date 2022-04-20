@@ -66,8 +66,8 @@ CDumpCatch::CDumpCatch()
 
 CDumpCatch::~CDumpCatch()
 {
-	UnSetInvalidHandle();
-	RemoveExceptionHandle();
+	//UnSetInvalidHandle();
+	//RemoveExceptionHandle();
 }
 
 BOOL CDumpCatch::ReleaseDumpFile(const std::string& strPath, EXCEPTION_POINTERS* pException)

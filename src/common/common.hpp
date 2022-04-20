@@ -336,7 +336,7 @@ namespace str {
 		return s;
 	}
 
-	inline vector<char> toBytes(string str)
+	inline vector<char> toChars(string str)
 	{
 		vector<char> bytes;
 		str = removeChar(str, ' ');
@@ -383,7 +383,32 @@ namespace str {
 		}
 		return bytes;
 	}
+	
+	inline vector<byte> toBytes(string str)
+	{
+		vector<char> vec = toChars(str);
+		vector<byte> vecB;
+		for (int i = 0; i < vec.size(); i++)
+		{
+			byte& b = *((byte*)(&vec[i]));
+			vecB.push_back(b);
+		}
+		return vecB;
+	}
+	
 	inline string bytesToHexStr(vector<char>& bytes)
+	{
+		string str;
+		for (int i = 0; i < bytes.size(); i++)
+		{
+			string b = format("%02X", (unsigned char)bytes[i]);
+			str += b;
+		}
+
+		return str;
+	}
+
+	inline string bytesToHexStr(vector<byte>& bytes)
 	{
 		string str;
 		for (int i = 0; i < bytes.size(); i++)
@@ -449,6 +474,12 @@ namespace str {
 
 		return str;
 	}
+
+	inline string bytesToHexStr(byte* p, int len, string splitter = " ")
+	{
+		return bytesToHexStr((char*)p, len, splitter);
+	}
+
 	inline string fromInt(int v)
 	{
 		string s = str::format("%d", v);
@@ -647,6 +678,27 @@ namespace charCodec {
 		delete wcharstr;
 		delete charstr;
 		return charstrtemp;
+	}
+
+	inline bool hasGB2312(string s)
+	{
+		for (int i = 0; i < s.length();i++)
+		{
+			byte b = s.at(i);
+			if (b >= 0xA1 && b <= 0xFE) //gb2312
+			{
+				if (i + 1 < s.length())
+				{
+					byte bNext = s.at(i + 1);
+					if (bNext >= 0xA1 && bNext <= 0xFE)
+					{
+						return true;
+					}
+				}
+			}
+		}
+
+		return false;
 	}
 
 	inline bool isValidGB2312(string s,int& errorPos,string& errorChar)
@@ -1681,5 +1733,7 @@ inline string getbuilddate()
 	string s = buildtime;
 	return s;
 }
+
+#define _GB(s) charCodec::utf8toAnsi(s).c_str()
 
 #endif

@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "wsProto.h"
+#include "proto/wsProto.h"
 #include "stream2pkt.h"
 
 

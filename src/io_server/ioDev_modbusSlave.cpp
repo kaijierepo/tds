@@ -90,7 +90,11 @@ bool ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& jResp, bool sync)
 
 		unique_lock<mutex> lock(m_csIOTask);
 		m_vecIOTask.push_back(p);
-		return true;
+
+		if (!sync)
+			return true;
+
+
 	}
 	else if (pC->m_regType == MODBUS_REG_TYPE::coil)
 	{
@@ -103,8 +107,18 @@ bool ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& jResp, bool sync)
 
 		unique_lock<mutex> lock(m_csIOTask);
 		m_vecIOTask.push_back(p);
-		return true;
+
+		if (!sync)
+			return true;
 	}
+
+
+	
+
+
+
+
+
 	return false;
 }
 

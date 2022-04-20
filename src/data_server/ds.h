@@ -3,7 +3,7 @@ dataserver
 */
 #pragma once
 #include "wspSrv.h"
-#include "wsProto.h"
+#include "proto/wsProto.h"
 #include <condition_variable>
 #include "tdsSession.h"
 #include <memory>

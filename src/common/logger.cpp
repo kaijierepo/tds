@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "common.hpp"
+#ifdef _TDS
 #include "tools/dumpCatch.h"
+#endif
 #include "tds.h"
 
 //linuxÏÂÑÕÉ«¿ØÖÆ
@@ -203,7 +205,7 @@ string Clogger::logInternal(string info)
 	strFile = fs::appPath() + "\\log\\" + strFile + ".txt";
 	fs::appendFile(strFile, info + "\r\n");
 
-
+#ifdef _TDS
 	if (ll == LOG_LEVEL::LL_ERROR)
 	{
 		if (tds->conf->bCreateDumpWhenLogError)
@@ -215,6 +217,7 @@ string Clogger::logInternal(string info)
 			}
 		}
 	}
+#endif
 
 	return logline;
 }

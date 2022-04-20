@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "wsProto.h"
+#include "proto/wsProto.h"
 #include "shellServer.h"
 #include "ioSrv.h"
 #include "tds_imp.h"
