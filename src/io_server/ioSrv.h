@@ -2,7 +2,6 @@
 #include "ioDev.h"
 #include <string>
 #include "tdscore.h"
-#include "ioGW_localSerial.h"
 #include "ioDiscoverer.h"
 
 

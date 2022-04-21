@@ -14,13 +14,11 @@
 #include "db.h"
 #include <UrlMon.h>
 #include "logger.h"
-#include "ioGW_localSerial.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
 #include "users/userMng.h"
 #include "logServer/logServer.h"
-#include "ioDev_tdsp.h"
 #include "xiaot/scriptHost.h"
 #include "audioPlayer.h"
 
@@ -1384,8 +1382,6 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 			return true;
 		}
 
-		ioDev_tdsp* pT = (ioDev_tdsp*)pIoDev;
-
 		jReq["clientId"] = "tds";
 		jReq.erase("user");
 		jReq.erase("token");
@@ -1396,7 +1392,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		json jRlt,jErr;
 		//发起同步请求，此处阻塞
 		LOG("[TDSP转发]客户端->设备\r\n");
-		if (pT->call(method, jParams, jRlt, jErr))
+		if (pIoDev->call(method, jParams, jRlt, jErr))
 		{
 			if(jRlt!=nullptr)
 				rpcResp.result = jRlt.dump();
@@ -2458,15 +2454,14 @@ string rpcHandler::rpc_openCom(json params, string& error)
 	pDev = ioSrv.getIODev(portNum);
 	if (pDev)
 	{
-		ioGW_LocalSerial* pCom = (ioGW_LocalSerial*) pDev;
-		if (pCom->OpenCom(params.dump()))
+		if (pDev->connect(params))
 		{
-			pCom->run();
+			pDev->run();
 			return "\"ok\"";
 		}
 		else
 		{
-			json jError = "fail," + pCom->m_strErrorInfo;
+			json jError = "fail," + pDev->m_strErrorInfo;
 			error = jError.dump();
 		}
 	}
@@ -2743,12 +2738,12 @@ string rpcHandler::rpc_com_list(json params, string& error)
 	json result;
 	for (auto& i : ary)
 	{
-		ioGW_LocalSerial* pls  =  (ioGW_LocalSerial*)i;
+		ioDev* pls  =  (ioDev*)i;
 		json jComInfo;
-		jComInfo["portNum"] = pls->m_devAddr;
+		jComInfo["portNum"] = pls->getIOAddrStr();
 		jComInfo["desc"] = pls->m_devTypeLabel;
 		jComInfo["online"] = pls->m_bOnline;
-		jComInfo["connected"] = pls->isOpen();
+		jComInfo["connected"] = pls->isConnected();
 		jComInfo["inUse"] = pls->m_bInUse;
 		jComInfo["callbackUser"] = (DWORD)pls->m_pCallbackUser;
 		result.push_back(jComInfo);
@@ -2763,14 +2758,12 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 	ioDev* pCom = ioSrv.getIODev(portNum);
 	if (pCom)
 	{
-		ioGW_LocalSerial* p = (ioGW_LocalSerial*)pCom;
-		p->closeCom();
+		pCom->stop();
 		json j = "ok";
 		return j.dump();
 	}
 	
 	json j = "portNum " + portNum + " is not opened";
-		
 	return j.dump();
 }
 

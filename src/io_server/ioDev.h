@@ -27,10 +27,11 @@ public:
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
 	virtual bool loadConf(json& conf);
 	virtual bool connect();
+	virtual bool connect(json params) { return false; };
 	virtual bool disconnect();
 	virtual string getDesc();
 	void triggerCycleAcq();
-
+	virtual bool call(string method, json params, json& result, json& error, bool sync = true) { return false; };
 
 	////
 	//is Gateway
@@ -193,6 +194,8 @@ public:
 	bool loadConfBuff();
 	void saveInfoBuff();
 	bool loadInfoBuff();
+
+	string m_strErrorInfo;
 };
 
 ioDev* createIODev(string type);

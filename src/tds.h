@@ -361,6 +361,7 @@ public:
 };
 
 
+typedef void (*fp_toolRun)();
 
 //interface of TDS
 class iTDS {
@@ -412,6 +413,8 @@ public:
 
 	HWND uiWnd;
 	string uiWndTitle;
+
+	map<string, fp_toolRun> tools;//注册到tds总线的工具插件
 };
 
 

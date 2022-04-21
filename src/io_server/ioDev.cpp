@@ -4,15 +4,10 @@
 #include "commSrv.h"
 #include "db.h"
 #include "prj.h"
-#include "ioDev_modbusSlave.h"
-#include "ioDev_mqttBroker.h"
-#include "ioGW_rs485.h"
 #include "ioChan.h"
-#include "ioGW_localSerial.h"
-#include "ioDev_tdsp.h"
 #include "ioDev_genicam.h"
 #include "mp.h"
-
+#include "proto/proto_rtu.hpp"
 #include "logger.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
@@ -58,26 +53,6 @@ ioDev* createIODev(string type)
 	{
 		fp_createDev func_create = mapDevCreateFunc[type];
 		p = func_create();
-	}
-	else if (type == "mqtt-broker")
-	{
-		p = new ioDev_mqttBroker();
-	}
-	else if (type == IO_DEV_TYPE::GW::rs485_gateway)
-	{
-		p = new ioGW_rs485();
-	}
-	else if (type == IO_DEV_TYPE::DEV::modbus_rtu_slave)
-	{
-		p = new ioDev_ModbusSlave();
-	}
-	else if (type == IO_DEV_TYPE::DEV::tdsp_device)
-	{
-		p = new ioDev_tdsp();;
-	}
-	else if (type == IO_DEV_TYPE::GW::local_serial)
-	{
-		p = new ioGW_LocalSerial();
 	}
 	else if (type == "genicam")
 	{

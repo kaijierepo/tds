@@ -36,7 +36,6 @@ SOFTWARE.
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
-#include "tools/tcp2com.h"
 #include "tools/tdsShell.h"
 #include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
@@ -60,11 +59,6 @@ TDS是一个数据服务
 ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备被看作是服务端
 
 */
-
-
-
-#include "ioDev_mqttBroker.h"
-
 
 
 //exe模式下，都会有命令行窗口，通过设置 ui = chrome 或者 miniblink打开 浏览器窗口
@@ -184,16 +178,8 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "tcp2com")
 	{
-		tcp2com* t2c =  new tcp2com();
-		tcp2com_Conf& conf = tds->conf->conf_tcp2com;
-		t2c->m_strDestIp = conf.remoteIP;
-		t2c->m_iDestPort = conf.remotePort;
-		t2c->serial.m_baudRate = conf.baudRate;
-		t2c->serial.m_parity = conf.parity;
-		t2c->serial.m_byteSize = conf.byteSize;
-		t2c->serial.m_stopBits = conf.stopBits;
-		t2c->serial.m_portNum = conf.com;
-		t2c->run();
+		fp_toolRun ptr = tds->tools["tcp2com"];
+		if (ptr) ptr();
 	}
 	else if (mode == "gb2u8")
 	{

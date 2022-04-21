@@ -6,14 +6,7 @@
 #include "mp.h"
 #include "prj.h"
 #include "logger.h"
-
-
-#include "ioDev_modbusSlave.h"
-#include "ioDev_mqttBroker.h"
-#include "ioGW_rs485.h"
 #include "ioChan.h"
-#include "ioGW_localSerial.h"
-#include "ioDev_tdsp.h"
 #include "ioDev_genicam.h"
 #include "rpcHandler.h"
 #include "ds.h"
