@@ -85,7 +85,8 @@ public:
 	void clearChildren();
 
 	string m_moType;
-	string m_moCustomType;
+	string m_moCustomType;  //如果用中文命名，此处转为中文首字母
+	string m_moCustomTypeLabel;
 	string m_strName;
 	string m_alias;
 	bool m_bShow;
@@ -134,7 +135,6 @@ public:
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
-	vector<string> getAllCustomMoType();
 
 	string TranslateRelateTag(string rtag);
 	string m_status;

@@ -978,7 +978,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getMoTree")
+		else if (method == "getMoTree" || method == "getMOTree")
 		{
 			string subTreeRoot = "";
 			//如果指定了root，按照root取子树

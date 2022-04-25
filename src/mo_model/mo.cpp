@@ -113,6 +113,17 @@ bool MO::loadConf(json& conf)
 	if (m_moType == "custom" && conf.contains("customType") && conf["customType"].get<string>().length() > 0)
 	{
 		m_moCustomType = conf["customType"];
+
+		if (conf.contains("customTypeLabel"))
+		{
+			m_moCustomTypeLabel = conf["customTypeLabel"];
+		}
+		else
+		{
+			m_moCustomTypeLabel = m_moCustomType;
+			str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
+		}
+		
 		if (prj.m_mapCustomMOType.find(m_moCustomType) != prj.m_mapCustomMOType.end())
 		{
 			vector<MO*>& moList = prj.m_mapCustomMOType[m_moCustomType];
@@ -146,10 +157,18 @@ bool MO::loadConf(json& conf)
 //onlyConf 仅配置
 bool MO::toJson(json& conf, json serializeOption)
 {
+	bool withMp = true;
+	if (serializeOption.contains("mp"))
+	{
+		withMp = serializeOption["mp"].get<bool>();
+	}
+
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
+	if(m_moCustomTypeLabel != "")
+		conf["customTypeLabel"] = m_moCustomTypeLabel;
 
 	if (m_bDynLocation)
 	{
@@ -210,6 +229,11 @@ bool MO::toJson(json& conf, json serializeOption)
 			if (m_moType == "mp")
 				return false;
 		}
+		else if(m_moType == MO_TYPE::custom)
+		{
+			if (m_moCustomType != type)
+				return false;
+		}	
 	}
 
 	//是否需要递归序列化子对象
@@ -223,11 +247,15 @@ bool MO::toJson(json& conf, json serializeOption)
 		json jChildren = json::array();
 		for (auto& pmochild : m_childMO)
 		{
+			if (pmochild->m_moType == "mp" && !withMp)
+				continue;
+
 			json jChild;
 			if (pmochild->toJson(jChild, serializeOption))
 				jChildren.push_back(jChild);
 		}
-		conf["children"] = jChildren;
+		if(jChildren.size() > 0)
+			conf["children"] = jChildren;
 	}
 	
 	return true;
