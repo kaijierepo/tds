@@ -107,9 +107,9 @@ public:
 	void DeleteChildAMO(string& strName);
 	void GetAllChildMO(std::vector<MO*>& aryMO, string type);
 	void getAllSmartDev(std::vector<MO*>& aryMO); //与ioDev进行位号绑定的mo对象称为智能设备
-	map<string,string> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
-	map<string,string> getChildCustomMoTypeList();
-	void statisChildCustomMoType(map<string,string>& list);
+	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
+	map<string, json> getChildCustomMoTypeList();
+	void statisChildCustomMoType(map<string, json>& list);
 
 	MO* GetRootMO();
 	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身

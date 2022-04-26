@@ -1064,11 +1064,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			if (pmo != nullptr)
 			{
-				map<string, string> list = pmo->getChildCustomMoTypeList();
+				map<string, json> list = pmo->getChildCustomMoTypeList();
 				json jList = json::array();
 				for (auto& i : list)
 				{
-					jList.push_back(i.first);
+					jList.push_back(i.second);
 				}
 				result = jList.dump();
 			}

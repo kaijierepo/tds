@@ -741,7 +741,7 @@ void MO::getAllSmartDev(std::vector<MO*>& aryMO)
 	}
 }
 
-map<string,string> MO::getChildCustomMoTypeList()
+map<string,json> MO::getChildCustomMoTypeList()
 {
 	if (m_childCustomMoTypeList.size() > 0)
 		return m_childCustomMoTypeList;
@@ -750,13 +750,16 @@ map<string,string> MO::getChildCustomMoTypeList()
 	return m_childCustomMoTypeList;
 }
 
-void MO::statisChildCustomMoType(map<string,string>& list)
+void MO::statisChildCustomMoType(map<string, json>& list)
 {
 	for (auto& i : m_childMO)
 	{
 		if (i->m_moType == MO_TYPE::custom)
 		{
-			list[i->m_moCustomType] = i->m_moCustomType;
+			json jType;
+			jType["type"] = i->m_moCustomType;
+			jType["label"] = i->m_moCustomTypeLabel;
+			list[i->m_moCustomType] = jType;
 		}
 
 		i->statisChildCustomMoType(list);
