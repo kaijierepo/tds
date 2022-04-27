@@ -23,6 +23,7 @@ public:
 	bool loadConfAppend(json& j);
 	void saveConf();
 
+	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
 	ioDev* handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
 
 	void rpc_addDev(json& params,RPC_RESP& rpcResp);

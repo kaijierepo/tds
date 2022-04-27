@@ -131,10 +131,21 @@ void ioServer::saveConf()
 	}
 }
 
+void thread_handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession) {
+	ioSrv.handleDevOnline(ioAddr, tdsSession);
+}
+
+void ioServer::handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	thread t(thread_handleDevOnlineAsyn,ioAddr, tdsSession);
+	t.detach();
+}
+
 //io设备在一个tdsSession上线
 //该函数必须返回非空值
 ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
 {
+	tdsSession->m_ioAddr = ioAddr;
 	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
 	//设备发现
 	if (!pIoDev)
@@ -579,12 +590,14 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 		}
 	}
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
+	p->m_bOnline = true;
 	logger.logInternal("[ioDev]空闲设备上线，ioAddr=" + p->getIOAddrStr());
 	ioSrv.addChild(p);
+
+
 	json j;
 	p->toJson(j);
 	rpcSrv.notify("devDiscovered", j);
-	p->setOnline();
 	return p;
 }
 

@@ -89,7 +89,7 @@ public:
 
 	//// data io
 	//directly bridge ioDev to tds websocket session
-	std::shared_ptr<TDS_SESSION> pTdsSession;
+	std::shared_ptr<TDS_SESSION> pSessionClientBridge;
 
 	void bindIOSession(shared_ptr<TDS_SESSION> ioSession);
 	void statisOnRecv(char* recvData, int len, string addr);

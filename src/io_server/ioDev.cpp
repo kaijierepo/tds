@@ -116,13 +116,18 @@ ioDev::ioDev(void)
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
-	pTdsSession = NULL;
+	pSessionClientBridge = NULL;
 	m_fAcqInterval = 30;
 	pIOSession = NULL;
 }
 
 ioDev::~ioDev(void)
 {
+	if (pIOSession)
+	{
+		pIOSession->m_IoDev = nullptr;
+		ioSrv.handleDevOnlineAsyn(pIOSession->m_ioAddr, pIOSession);
+	}
 }
 
 void ioDev::stop()
@@ -437,8 +442,8 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 		ioDev* p = m_vecChildDev[i];
 		if (p->m_confNodeId == nodeID)
 		{
-			delete p;
 			m_vecChildDev.erase(m_vecChildDev.begin() + i);
+			delete p;
 			return true;
 		}
 
@@ -662,6 +667,7 @@ void ioDev::setOnline()
 		m_bOnline = true;
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
+		jNotify["nodeID"] = m_confNodeId;
 		thread t(notifyDevOnline, jNotify);
 		t.detach();
 	}
@@ -674,6 +680,7 @@ void ioDev::setOffline()
 		m_bOnline = false;
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
+		jNotify["nodeID"] = m_confNodeId;
 		thread t(notifyDevOffline, jNotify);
 		t.detach();
 	}

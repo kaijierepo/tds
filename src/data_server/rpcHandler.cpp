@@ -1044,7 +1044,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "没有找到位号");
 			}
 		}
-		else if (method == "getMoCustomType")
+		else if (method == "getMoCustomType" || method == "getMoTypes")
 		{
 			MO* pmo = nullptr;
 			if (params != nullptr && params.contains("tag"))
@@ -1066,10 +1066,22 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			{
 				map<string, json> list = pmo->getChildCustomMoTypeList();
 				json jList = json::array();
-				for (auto& i : list)
+
+				if (method == "getMoTypes")
 				{
-					jList.push_back(i.second);
+					for (auto& i : list)
+					{
+						jList.push_back(i.second);
+					}
 				}
+				else
+				{
+					for (auto& i : list)
+					{
+						jList.push_back(i.second["label"].get<string>());
+					}
+				}
+				
 				result = jList.dump();
 			}
 			else
@@ -2060,7 +2072,10 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
 		return "";
 	}
+	//支持中文直接输入moType
 	string moType = params["type"].get<string>();
+	str::hanZi2Pinyin(moType, moType);
+
 	string queryRootTag = session.org;
 	if (params["rootTag"] != nullptr) 
 	{

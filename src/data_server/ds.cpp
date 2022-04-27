@@ -1122,7 +1122,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 			tdsSession->setActivityCheck(false);
 			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
 			tdsSession->bridgedLocalCom = ioAddr;
-			p->pTdsSession = tdsSession;
+			p->pSessionClientBridge = tdsSession;
 		}
 		else
 		{
@@ -1141,7 +1141,7 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 		if (p)
 		{
 			tdsSession->bridgedLocalCom = portNum;
-			p->pTdsSession = tdsSession;
+			p->pSessionClientBridge = tdsSession;
 		}
 		else
 		{

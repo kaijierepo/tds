@@ -88,6 +88,20 @@ bool TDS_SESSION::isConnected()
     return bConnected;
 }
 
+bool TDS_SESSION::disconnect()
+{
+    std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
+    if (pTcpSession)
+    {
+        closesocket(pTcpSession->sock);
+    }
+    else if (pTcpSessionClt)
+    {
+        closesocket(pTcpSessionClt->m_session.sock);
+    }
+    return true;
+}
+
 string TDS_SESSION::GetClientIp()
 {
     if (pTcpSessionClt)

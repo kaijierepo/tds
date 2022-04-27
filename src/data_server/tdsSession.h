@@ -107,6 +107,7 @@ public:
 
     void Init();
 	bool isConnected();
+	bool disconnect();
     string GetClientIp();
 	void statisOnSend(char* p, int len,bool success);
 	void statisOnRecv(char* p, int len);
@@ -138,6 +139,7 @@ public:
 	vector<string> m_vecHistIoDev; 
 	vector<string> m_vecIoBindTag;
 	vector<string> m_vecHistIoBindTag;
+	string m_ioAddr;     //当1个io设备对应一个tcp连接时，该ioAddr为设备io地址
 	ioDev* m_IoDev;      //建立了tcp直连的io设备。 当1个io设备对应一个tcp连接时。该指针指向该io设备
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	//单设备模式，只有第一个注册包的地址信息有用。后面的地址信息无效
