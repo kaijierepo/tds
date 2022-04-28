@@ -71,6 +71,40 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 	return httplib::Server::HandlerResponse::Unhandled;
 }
 
+void handleGet_tdsRelease(const httplib::Request& req, httplib::Response& res)
+{
+	res.status = 301;
+	string localPath = fs::appPath() + "/files/release";
+	vector<string> fl;
+	fs::getFileList(fl, localPath);
+	string host = req.get_header_value("Host");
+	string redirectPath = "http://" + host + "/files/release/";
+
+	map<string, string> fil;
+
+	for (auto& i : fl)
+	{
+		fs::FILE_INFO fi;
+		string p = localPath + "/" + i;
+		fs::getFileInfo(p, fi);
+		fil[fi.modifyTime] = i;
+	}
+
+
+	if (fil.size() > 0) //默认按照时间的升序排列
+	{
+		redirectPath += fil.rbegin()->second;
+		res.set_header("location", redirectPath);
+		res.set_header("Cache-Control", "max-age=1");
+	}
+	else
+	{
+		redirectPath += "tds.zip";
+		res.set_header("location", redirectPath);
+		res.set_header("Cache-Control", "max-age=1");
+	}
+}
+
 //自动找到 files/apk 文件夹下面最新的apk文件并下载
 void handleGet_apk(const httplib::Request& req, httplib::Response& res)
 {
@@ -236,6 +270,9 @@ void initHttpSrv(httplib::Server& svr)
 
 //最新版本的apk下载
 	svr.Get("\\/apk", handleGet_apk);
+
+//最新版本的tds发布包
+	svr.Get("\\/release", handleGet_tdsRelease);
 
 //有权限控制的文件下载服务
 	svr.set_pre_routing_handler(handleFilePermission);
