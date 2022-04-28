@@ -43,6 +43,9 @@
     <Filter Include="proto">
       <UniqueIdentifier>{88cd19a6-1696-4a46-bcd9-a44ffc57646d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tdsPro\tools">
+      <UniqueIdentifier>{43de31cb-b143-41c2-b170-3588fd3239e7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\alarm_server\as.cpp">
@@ -90,9 +93,6 @@
       <Filter>tools</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tools\tcpReverseProxy.cpp">
-      <Filter>tools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tools\tcp2com.cpp">
       <Filter>tools</Filter>
     </ClCompile>
     <ClCompile Include="..\src\video\streamSrvNode.cpp">
@@ -147,22 +147,7 @@
     <ClCompile Include="..\src\io_server\ioDev.cpp">
       <Filter>io</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_mqttBroker.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioDiscoverer.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>io</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_rs485.cpp">
       <Filter>io</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioSrv.cpp">
@@ -212,6 +197,24 @@
     </ClCompile>
     <ClCompile Include="..\src\proto\wsProto.cpp">
       <Filter>proto</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioDev_modbusSlave.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioDev_mqttBroker.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tdsp.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioGW_localSerial.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev\ioGW_rs485.cpp">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\tools\tcp2com.cpp">
+      <Filter>tdsPro\tools</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -279,9 +282,6 @@
     <ClInclude Include="..\src\tools\tcpReverseProxy.h">
       <Filter>tools</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tools\tcp2com.h">
-      <Filter>tools</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\video\streamSrvNode.h">
       <Filter>video</Filter>
     </ClInclude>
@@ -339,22 +339,7 @@
     <ClInclude Include="..\src\io_server\ioDev.h">
       <Filter>io</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_mqttBroker.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
-      <Filter>io</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDiscoverer.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
-      <Filter>io</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_rs485.h">
       <Filter>io</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioSrv.h">
@@ -413,6 +398,24 @@
     </ClInclude>
     <ClInclude Include="..\src\proto\wsProto.h">
       <Filter>proto</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioDev_modbusSlave.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioDev_mqttBroker.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tdsp.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioGW_localSerial.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev\ioGW_rs485.h">
+      <Filter>tdsPro\ioDev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\tools\tcp2com.h">
+      <Filter>tdsPro\tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
