@@ -3,6 +3,9 @@
 
 以极简、方便、工程易用性为设计目标的基于JSON的文件型数据库
 
+下载试用:  www.liangtusoft.com/release
+更多文档:  http://www.liangtusoft.com/doc/#/
+
 ### 存储形式
 
 数据库基于json文件进行存储，在磁盘上，通过时间，位号组织成特定的目录结构。
