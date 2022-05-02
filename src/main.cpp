@@ -40,6 +40,7 @@ SOFTWARE.
 #include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
 #include "httplib.h"
+#include "db.h"
 
 /*
 notes:
@@ -73,6 +74,8 @@ int main(int argc, char** argv)
 {
 	tds->conf = &tdsImp.tdsConf;
 	
+	string cmd;
+
 	//use cmd line conf first ,or use tds.json 
 	cli::Parser parser(argc, argv);
 	parser.set_optional<string>("m", "mode", "",charCodec::utf8toAnsi(
@@ -83,8 +86,10 @@ int main(int argc, char** argv)
    tcp2com: tcp转串口模式;\r\n\
    js: javascript解释器模式;\r\n\
       示例:  tds -m tcp2com -com COM1 -tcpc 127.0.0.1:666"));
+
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
+	parser.set_optional<string>("sd", "simudata", "", _GB("生成仿真数据; 10kdb: 生成1个有10k条数据的数据库"));
 	parser.set_optional<string>("tc", "tdsconf", "", "tds config file");
 	parser.set_optional<string>("com", "com", "COM1", "com port number in tcp2com mode");
 	parser.set_optional<string>("tcpc", "tcpc", "", "tcp client in format XXX.XXX.XXX.XXX:XXXX");
@@ -93,10 +98,10 @@ int main(int argc, char** argv)
 	parser.set_optional<int>("pp", "proxyport", 667, "proxy server port in reverse proxy mode");
 	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
 	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
-	parser.set_optional<int>("baudRate", "baudRate", 19200, charCodec::utf8toAnsi("串口波特率"));
-	parser.set_optional<int>("byteSize", "byteSize", 8, charCodec::utf8toAnsi("串口数据位"));
-	parser.set_optional<string>("stopBits", "stopBits", "1", charCodec::utf8toAnsi("停止位"));
-	parser.set_optional<string>("parity", "parity", "None", charCodec::utf8toAnsi("校验位"));
+	parser.set_optional<int>("baudRate", "baudRate", 19200, _GB("串口波特率"));
+	parser.set_optional<int>("byteSize", "byteSize", 8, _GB("串口数据位"));
+	parser.set_optional<string>("stopBits", "stopBits", "1", _GB("停止位"));
+	parser.set_optional<string>("parity", "parity", "None", _GB("校验位"));
 
 	//保持无效值，使用配置文件当中的值
 	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
@@ -104,6 +109,32 @@ int main(int argc, char** argv)
 	tds->conf->port = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
+
+	string simuDataCmd = parser.get<string>("sd");
+	if (simuDataCmd == "10kdb")
+	{
+		LOG("正在向数据库写入10k条数据...");
+		SYSTEMTIME stT;
+		GetLocalTime(&stT);
+		json j;
+		j["time"] = timeopt::st2str(stT);
+		j["temp"] = 23.5;
+		j["humidity"] = 65.1;
+		j["pm25"] = 45.5;
+		j["co2"] = 345.1;
+
+		json jA;
+		SYSTEMTIME ststart;
+		GetLocalTime(&ststart);
+		for (int i = 0; i < 10000; i++)
+		{
+			db.Insert("deviceData", stT, j);
+		}
+
+		int tt = timeopt::CalcTimePassMilliSecond(ststart);
+		LOG("写入成功，耗时" + str::fromInt(tt) + "mm");
+		return 0;
+	}
 
 	//专业版创建授权文件
 	if (tds->createLicence)

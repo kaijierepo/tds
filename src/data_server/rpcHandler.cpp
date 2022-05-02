@@ -139,35 +139,43 @@ string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 	if(params["filter"] != nullptr)
 	 	filter = params["filter"].get<string>();
 	
-	//load from database 监测点类型过滤
-	vector<MP*> tagSetTmp;
-	vector<MP*> tagSet;
-	prj.GetMPByTag(&tagSetTmp,tagSelector.tagExp);
-	if (typeFilter != "")//has type filter
+	
+	
+	//获取需要加载数据的位号集合
+	vector<string> tags;
+	if (tagSelector.singleMode)
 	{
-		for (auto& it : tagSetTmp)
-		{
-			if (it->getMpType() == typeFilter)
-			{
-				tagSet.push_back(it);
-			}
-		}
+		tags.push_back(tagSelector.tagExp);
 	}
 	else
 	{
-		tagSet = tagSetTmp;
-	}
-
-	string result = "";
-	try
-	{
-		//DB_DATA_SET set;
-		vector<string> tags;
+		vector<MP*> tagSet;
+		vector<MP*> tagSetTmp;
+		prj.GetMPByTag(&tagSetTmp, tagSelector.tagExp);
+		if (typeFilter != "")//has type filter //load from database 监测点类型过滤
+		{
+			for (auto& it : tagSetTmp)
+			{
+				if (it->getMpType() == typeFilter)
+				{
+					tagSet.push_back(it);
+				}
+			}
+		}
+		else
+		{
+			tagSet = tagSetTmp;
+		}
 		for (auto& i : tagSet)
 		{
 			tags.push_back(i->getTag());
 		}
-		//result = db.dataSet2String(set);
+	}
+	
+
+	string result = "";
+	try
+	{
 		db.Select_yyjson(tags, timeSelector, filter, result);
 	}
 	catch (std::exception& e)

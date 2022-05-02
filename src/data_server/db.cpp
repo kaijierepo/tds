@@ -15,7 +15,7 @@ database db;
 
 database::database()
 {
-
+	m_path = fs::appPath() + "/db";
 }
 
 string database::getPath_deFile(string strTag, SYSTEMTIME stTime)
@@ -178,6 +178,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 	{
 		string& tag = tagSet[tagIdx]; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
 		
+		//按天加载数据库文件
 		for (; loadTime >= tf.startTime; loadTime -= 24 * 60 * 60)
 		{
 			//加载数据元列表
@@ -188,18 +189,18 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 			if (dbData == "")
 				continue;
 
-			// Read JSON and get root,change to mut for modification
+			// Read JSON and get root,转为带 mut,因为后面会修改里面的值
 			yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
 			src_doc.push_back(doc);
-			yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, NULL);
+			yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(NULL);
 			src_mut_doc.push_back(mut_doc);
 			yyjson_val* root = yyjson_doc_get_root(doc);
-			yyjson_mut_val* root_mut = yyjson_val_mut_copy(mut_doc, root);
 
 
-			for (int i = yyjson_mut_arr_size(root_mut) - 1; i >= 0; i--)
-			{
-				yyjson_mut_val* jDE = yyjson_mut_arr_get(root_mut, i);
+			size_t idx, max;
+			yyjson_val* val;
+			yyjson_arr_foreach(root, idx, max, val) {
+				yyjson_mut_val* jDE = yyjson_val_mut_copy(mut_doc, val);
 				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
 				string_view szTime = yyjson_mut_get_str(yyTime);
 
@@ -224,7 +225,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 					continue;
 				}
 
-				mapRlt[strTime + "+" + tag] = jDE; //不同位号的数据按照时间顺序排序
+				mapRlt[strTime  + tag + str::fromInt(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 				if (tf.AmountMatch(count))
 					goto DATA_SET_LOADED;
@@ -232,11 +233,13 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 		}
 	}
 
+	return true;
+
 DATA_SET_LOADED:
 
-	//使用新的yyjson doc对象输出结果
+	//使用新的yyjson doc对象输出结果. 将多个位号，多个时间段的原始数据合并成1个json查询结果对象
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
-	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
+	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); //创建一个数组
 	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 
 	for (auto& i : mapRlt)
@@ -824,6 +827,16 @@ bool TAG_SELECTOR::init(string tag){
 	regExp = tagExp;
 	regExp = str::replace(regExp, ".", "\\.");
 	regExp = str::replace(regExp, "*", ".*");
+
+	if (tagExp.find('*') == string::npos)
+	{
+		singleMode = true;
+	}
+	else
+	{
+		singleMode = false;
+	}
+
 	return true;
 }
 

@@ -229,7 +229,7 @@ bool tcpClt::connect()
 
 	if(nConnect == SOCKET_ERROR)
 	{
-		m_strErrorInfo = charCodec::utf8toAnsi("连接失败:") + sys::getLastError();
+		m_strErrorInfo = "连接失败:" + sys::getLastError();
 		closesocket(sockClient);
 		sockClient = 0;
 		return false;

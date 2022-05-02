@@ -92,6 +92,7 @@ public:
 	string tagExp;
 	string regExp;
 	string error;
+	bool singleMode; //单位号选中模式
 };
 
 class TIME_SELECTOR

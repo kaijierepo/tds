@@ -1233,6 +1233,7 @@ namespace fs {
 			fseek(fp, 0, SEEK_SET);
 			fread(pData, 1, len, fp);
 			fclose(fp);
+			delete pData;
 			return true;
 		}
 		return false;
@@ -1251,6 +1252,7 @@ namespace fs {
 			fread(pdata, 1, len, fp);
 			data = pdata;
 			fclose(fp);
+			delete pdata;
 			return true;
 		}
 		return false;
