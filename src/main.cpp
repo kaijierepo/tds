@@ -89,7 +89,7 @@ int main(int argc, char** argv)
 
 	parser.set_optional<int>("sl", "serverleft", 666, "");
 	parser.set_optional<int>("sr", "serverright", 667, "");
-	parser.set_optional<string>("sd", "simudata", "", _GB("生成仿真数据; 10kdb: 生成1个有10k条数据的数据库"));
+	parser.set_optional<int>("gsd", "gensimudb", 0, _GB("生成db仿真数据; 输入生成条数"));
 	parser.set_optional<string>("tc", "tdsconf", "", "tds config file");
 	parser.set_optional<string>("com", "com", "COM1", "com port number in tcp2com mode");
 	parser.set_optional<string>("tcpc", "tcpc", "", "tcp client in format XXX.XXX.XXX.XXX:XXXX");
@@ -110,10 +110,24 @@ int main(int argc, char** argv)
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
-	string simuDataCmd = parser.get<string>("sd");
-	if (simuDataCmd == "10kdb")
+	//确认程序运行模式
+	string mode = fs::appName();
+	string cmdlineMode = parser.get<string>("m");
+	if (cmdlineMode != "")
+		mode = cmdlineMode;
+
+	//根据模式差异化加载配置
+	tdsImp.tdsConf.mode = mode;
+	tdsImp.tdsConf.m_confFileName = parser.get<string>("tc");
+	tdsImp.tdsConf.m_confFileName = str::trimSuffix(tdsImp.tdsConf.m_confFileName, ".ini");
+	tdsImp.tdsConf.loadConf();
+
+
+	int simuRecCount = parser.get<int>("gsd");
+	if (simuRecCount > 0)
 	{
-		LOG("正在向数据库写入10k条数据...");
+		tds->conf->mode = "cmd";
+		LOG("正在向数据库写入" + to_string(simuRecCount) + "条数据...");
 		SYSTEMTIME stT;
 		GetLocalTime(&stT);
 		json j;
@@ -126,13 +140,13 @@ int main(int argc, char** argv)
 		json jA;
 		SYSTEMTIME ststart;
 		GetLocalTime(&ststart);
-		for (int i = 0; i < 10000; i++)
+		for (int i = 0; i < simuRecCount; i++)
 		{
-			db.Insert("deviceData", stT, j);
+			db.Insert("devicedata", stT, j);
 		}
 
 		int tt = timeopt::CalcTimePassMilliSecond(ststart);
-		LOG("写入成功，耗时" + str::fromInt(tt) + "mm");
+		LOG("写入" + to_string(simuRecCount) + "条仿真数据, 位号:devicedata, 耗时" + str::fromInt(tt) + "ms");
 		return 0;
 	}
 
@@ -142,17 +156,7 @@ int main(int argc, char** argv)
 		tds->createLicence();
 	}
 
-	//确认程序运行模式
-	string mode = fs::appName();
-	string cmdlineMode = parser.get<string>("m");
-	if (cmdlineMode != "")
-		mode = cmdlineMode;
 
-	//根据模式差异化加载配置
-	tdsImp.tdsConf.mode = mode;
-	tdsImp.tdsConf.m_confFileName = parser.get<string>("tc");
-	tdsImp.tdsConf.m_confFileName = str::trimSuffix(tdsImp.tdsConf.m_confFileName, ".ini");
-	tdsImp.tdsConf.loadConf();
 
 	if (mode == "watchDog" || mode == "wd" || mode == "dog")
 	{
