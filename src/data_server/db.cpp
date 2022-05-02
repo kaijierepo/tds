@@ -183,6 +183,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 		{
 			//加载数据元列表
 			stTemp = timeopt::Unix2SysTime(loadTime);
+			string ymd = timeopt::TimeToYMD(stTemp);
 			string dbFile = getPath_dbFile(tag, stTemp);
 			string dbData;
 			fs::readFile(dbFile, dbData);
@@ -209,7 +210,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 				{
 					szTime = szTime.substr(11, 8); //取出时分秒
 				}
-				string strTime = timeopt::TimeToYMD(stTemp) + " " + string(szTime);
+				string strTime = ymd + " " + string(szTime);
 				if (!tf.Match(strTime))
 					continue;
 
@@ -225,7 +226,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 					continue;
 				}
 
-				mapRlt[strTime  + tag + str::fromInt(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				mapRlt[strTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 				if (tf.AmountMatch(count))
 					goto DATA_SET_LOADED;
