@@ -9,12 +9,12 @@
 数据库的目录结构和数据文件都是直接可以阅读和操作的。
 数据库的结构示意图：
 
-| ![image-20220502225658497](C:\Users\admin\AppData\Roaming\Typora\typora-user-images\image-20220502225658497.png) | ![image-20211015143942620](https://gitee.com/liangtuSoft/tds/raw/master/README/image-20211015143942620.png) |
+| ![image-20220502225658497](https://gitee.com/liangtuSoft/tds/raw/master/README/dbfs.png) | ![image-20211015143942620](https://gitee.com/liangtuSoft/tds/raw/master/README/image-20211015143942620.png) |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
 
 ### 性能
 
-针对物联网时序数据场景优化，可以比mysql有更快的读取速度。
+针对物联网时序数据场景优化，可以比mysql有更快的读取速度。    
 对比测试报告：http://www.liangtusoft.com/doc/#/tds-vs-mysql
 
 ![banner image](http://www.liangtusoft.com/assets/tds_vs_mysql.png)
@@ -44,7 +44,7 @@
 
 请求与返回都遵从jsonRPC格式。例如以下请求向服务器请求了最近的1个数据元，温度需要大于1
 
-![image-20220502231314280](C:\Users\admin\Desktop\tds\README\api-fmt.png)
+![image-20220502231314280](https://gitee.com/liangtuSoft/tds/raw/master/README/api-fmt.png)
 
 ### RPC方法
 
