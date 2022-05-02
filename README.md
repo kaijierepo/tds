@@ -1,16 +1,35 @@
 # TDB - 极简物联网时序数据库
 ## 概要
 
-没有繁多复杂的功能，以极简、方便、工程易用性为设计目标的基于JSON的文件型数据库
+以极简、方便、工程易用性为设计目标的基于JSON的文件型数据库
 
-## 存储形式
+### 存储形式
+
 数据库基于json文件进行存储，在磁盘上，通过时间，位号组织成特定的目录结构。
 数据库的目录结构和数据文件都是直接可以阅读和操作的。
 数据库的结构示意图：
 
-![image-20211015143942620](https://gitee.com/liangtuSoft/tds/blob/master/README/image-20211015143942620.png)
+| ![image-20220502225658497](C:\Users\admin\AppData\Roaming\Typora\typora-user-images\image-20220502225658497.png) | ![image-20211015143942620](https://gitee.com/liangtuSoft/tds/raw/master/README/image-20211015143942620.png) |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
 
-## 数据元结构
+### 性能
+
+针对物联网时序数据场景优化，可以比mysql有更快的读取速度。
+对比测试报告：http://www.liangtusoft.com/doc/#/tds-vs-mysql
+
+![banner image](http://www.liangtusoft.com/assets/tds_vs_mysql.png)
+
+### 连接方式（SDK 接口）
+
+| 连接方式                   | 应用场景                                      |
+| -------------------------- | --------------------------------------------- |
+| jsonRPC over **WebSocket** | 浏览器端开发，使用javascript创建websocket连接 |
+| jsonRPC over **HTTP**      | 浏览器端开发                                  |
+| jsonRPC over **TCP**       | 后端服务类程序连接时                          |
+
+### 存储格式
+
+**数据元结构**
 
 | 数据元属性 |                                                              |
 | ---------- | ------------------------------------------------------------ |
@@ -19,55 +38,23 @@
 | dataFile   | 关联的二进制数据信息，如视频，图片等                         |
 | val        | 数据的值，可以有 整形，浮点型，布尔型，字符串型和json格式的自定义类型 |
 
-## 数据库操作接口
+## API
 
-### 操作接口协议
+### 请求与响应格式
 
-通过jsonRPC协议的4条命令：
+请求与返回都遵从jsonRPC格式。例如以下请求向服务器请求了最近的1个数据元，温度需要大于1
 
-db.select
+![image-20220502231314280](C:\Users\admin\Desktop\tds\README\api-fmt.png)
 
-db.update
+### RPC方法
 
-db.insert
+| 增        | 删        | 改        | 查        |
+| --------- | --------- | --------- | --------- |
+| db.insert | db.delete | db.update | db.select |
 
-db.delete
+### RPC参数
 
-操作参数：
-
-tag 空间选择器
-
-time 时间选择器
-
-filter 自定义选择器
-
-可以通过jsonRPC形式或者URL参数形式进行请求
-
-### 数据库连接方式
-
-| 连接方式  | 应用场景                                      |
-| --------- | --------------------------------------------- |
-| webSocket | 浏览器端开发，使用javascript创建websocket连接 |
-| http      | 浏览器端开发                                  |
-| tcp       | 后端服务类程序连接时                          |
-
-使用Postman进行http数据库查询示例：
-
-![image-20211015145646858](database\image-20211015145646858.png)
-
-使用浏览器进行数据库查询示例
-
-![image-20211015151138930](database\image-20211015151138930.png)
-
-tcp连接直接进行数据库查询示例
-
-tdsTerminal下载链接 http://www.liangtusoft.com/download/tools/tdsTerminal.exe
-
-![image-20211015172507776](database\image-20211015172507776.png)
-
-## 操作参数说明
-
-### time 参数设置和功能
+#### time 时间选择器
 
 |模式|值||
 |-|-|-|
@@ -79,7 +66,8 @@ tdsTerminal下载链接 http://www.liangtusoft.com/download/tools/tdsTerminal.ex
 |       数据元个数模式       | `3e`                                       | 选择最近的 3个数据元(data element)                                                                                |
 | 多条件模式，使用&&组合条件 | `2020-02-10~2020-02-15&&06:00:00~07:00:00` | 两个时间范围条件同时满足    |
 
-### tag 设置和功能
+#### tag 空间选择器
+
 **选择一个位号**
 
 "tag":"浙江.杭州.滨江.pm25"
@@ -96,7 +84,8 @@ tdsTerminal下载链接 http://www.liangtusoft.com/download/tools/tdsTerminal.ex
 | "tag":"浙江.杭州*"|可以选中 浙江.杭州南.XXX格式的位号 |
 | "tag":"*.*北.*"| 可以选中此格式下带一个“北"字的位号  浙江.杭州.下沙.pm25;江苏.徐州.和睦小区.pm25;|
 
-### filter 设置和功能
+#### filter 条件选择器
+
 使用javascript表达式，并且可以使用一些常用的javascript函数。
 
 表达式中的变量是val的属性
@@ -131,8 +120,4 @@ indexOf是查找是否包含子字符串的函数。注意字符串中包含 " �
     }
   }
 ```
-
-## 状态数据库
-
-状态数据库用于存储设备状态数据，相对于时序数据，状态数据库可以用于存储一些人工录入的静态信息。或者用户更倾向于从状态的角度来观察的数据，例如次数统计等。状态数据库使用csv文件实现
 
