@@ -71,6 +71,7 @@ MO::MO()
 {
 	m_pParentMO = NULL;
 	m_moType = MO_TYPE::mo;
+	m_bOnline = false;
 	m_bShow = true;
 	m_bDynLocation = false;
 	m_dbLongitudeCalib = 0;
@@ -197,7 +198,11 @@ bool MO::toJson(json& conf, json serializeOption)
 	else
 	{
 		if (m_strIoAddrBind != "")
+		{
 			conf["ioAddrBind"] = m_strIoAddrBind;
+			conf["online"] = m_bOnline;
+		}
+			
 		string tag = getTag();
 		if (serializeOption["root"] != nullptr)
 		{
@@ -495,6 +500,24 @@ MO* MO::GetMOByName(string strName)
 		{
 			MO* pMOChild = m_childMO.at(i);
 			MO* pFind = pMOChild->GetMOByName(strName);
+			if (pFind)
+				return pFind;
+		}
+	}
+
+	return NULL;
+}
+
+MO* MO::GetMOByIOAddr(string ioAddr)
+{
+	if (m_strIoAddrBind == ioAddr)
+		return this;
+	else
+	{
+		for (int i = 0; i < m_childMO.size(); i++)
+		{
+			MO* pMOChild = m_childMO.at(i);
+			MO* pFind = pMOChild->GetMOByIOAddr(ioAddr);
 			if (pFind)
 				return pFind;
 		}

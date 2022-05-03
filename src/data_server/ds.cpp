@@ -1651,6 +1651,29 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 	}
 }
 
+bool dataServer::handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	if (!tdsSession->m_bAppDataRecved)
+	{
+		if (iLen == 15 && str::isDigits(pData, iLen))
+		{
+			string imei = str::fromBuff(pData, iLen);
+			LOG("收到首发注册包,15位IMEI格式,IMEI=" + imei);
+			ioSrv.handleDevOnline(imei, tdsSession);
+			return true;
+		}
+		else if ( iLen > 4 && ( str::fromBuff(pData,4) == "imei" || str::fromBuff(pData, 4) == "IMEI"))
+		{
+			string imei = str::fromBuff(pData+4, iLen-4);
+			LOG("收到首发注册包,IMEI前缀格式,IMEI=" + imei);
+			ioSrv.handleDevOnline(imei, tdsSession);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
 	bool bHandled = true;
@@ -1735,12 +1758,8 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		}
 		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
 		{
-			//检查是否是imei直接注册包,15位且都是数字，认为是imei
-			if (!tdsSession->m_bAppDataRecved && iLen == 15 && str::isDigits(pData,iLen))//首包数据,按照tdsp注册包处理
+			if (handleFirstRegPkt(pData,iLen,tdsSession))
 			{
-				string imei = str::fromBuff(pData, iLen);
-				LOG("TDSP端口665收到首发IMEI注册包,IMEI=" + imei);
-				ioDev* pIoDev = ioSrv.handleDevOnline(imei, tdsSession);
 				tdsSession->m_bSingleDevMode = true;
 			}
 			else
@@ -1770,11 +1789,8 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
 		{
 			//检查是否是imei直接注册包,15位且都是数字，认为是imei
-			if (!tdsSession->m_bAppDataRecved && iLen == 15 && str::isDigits(pData, iLen))//首包数据,按照tdsp注册包处理
+			if (handleFirstRegPkt(pData,iLen,tdsSession))//首包数据,按照tdsp注册包处理
 			{
-				string imei = str::fromBuff(pData, iLen);
-				LOG("TDSP端口664收到首发IMEI注册包,IMEI=" + imei);
-				ioDev* pIoDev = ioSrv.handleDevOnline(imei, tdsSession);
 			}
 			else
 			{

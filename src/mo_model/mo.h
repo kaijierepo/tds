@@ -135,6 +135,7 @@ public:
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
+	MO* GetMOByIOAddr(string ioAddr);
 
 	string TranslateRelateTag(string rtag);
 	string m_status;
@@ -143,6 +144,7 @@ public:
 	vector<void*> m_vecIODev;//挂接的采集设备.此处暂时用void，防止依赖ioDev.h文件，导致不容易多工程复用。需再考虑更好的办法
 	void updateDataLink();
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
+	bool m_bOnline;
 	database* GetDB();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);

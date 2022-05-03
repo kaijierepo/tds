@@ -652,11 +652,19 @@ bool ioDev::onRecvPkt(json jPkt)
 
 void notifyDevOnline(json jNotify)
 {
+	string ioAddr = jNotify["ioAddr"];
+	MO* pmo = prj.GetMOByIOAddr(ioAddr);
+	if (pmo)
+		pmo->m_bOnline = true;
 	rpcSrv.notify("devOnline", jNotify);
 }
 
 void notifyDevOffline(json jNotify)
 {
+	string ioAddr = jNotify["ioAddr"];
+	MO* pmo = prj.GetMOByIOAddr(ioAddr);
+	if (pmo)
+		pmo->m_bOnline = false;
 	rpcSrv.notify("devOffline", jNotify);
 }
 

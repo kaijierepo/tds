@@ -590,14 +590,16 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 		}
 	}
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
-	p->m_bOnline = true;
-	logger.logInternal("[ioDev]空闲设备上线，ioAddr=" + p->getIOAddrStr());
 	ioSrv.addChild(p);
 
+	//通知设备上线
+	p->setOnline();
 
+	//通知设备发现
 	json j;
 	p->toJson(j);
 	rpcSrv.notify("devDiscovered", j);
+
 	return p;
 }
 
