@@ -227,14 +227,21 @@ struct tcp2com_Conf {
 
 struct iTDSConf {
 	string mode;
-	int port;
-	int httpPort;
-	int ioServerPort;
 	bool debugMode;
 	string logLevel;
-	string projectConfPath;
+
+	//tcp port conf
+	int wsPort;    //websocket port of tds;  default value 666
+	int httpPort;  //http port of tds;  default value 667
+	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
+	
+	//path conf
+	string confPath;   //config data path
+	string dbPath;     //database folder path
+	string uiPath;     //ui web files path
+
+	//ui conf
 	bool bConcurrentGateway;
-	string dbPath;
 	string dataCenterIp;
 	string title;
 	string homepage;
@@ -244,26 +251,25 @@ struct iTDSConf {
 	bool singleGenicamHost;
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
+	//module enable/disable
 	bool enableLog;
 	bool enableDB;
 	bool enableAccessCtrl;
 	bool enableScript;
 	bool enableDevReboot;
-	bool enableDevCommReboot;
-	bool enableGlobalAlarm;
 	int devRebootTime; //seconds
 	int devCommRebootTime;
 	bool authDownload; 
-
-	int tcpKeepAliveIO;
+	bool enableGlobalAlarm;
 	int tcpKeepAliveDS;
-
 	bool edge; //tds edge gateway mode
 	string cloudIP;
 	int cloudPort;
 	string deviceID;
 
-	//ioDev
+	//io conf
+	int tcpKeepAliveIO;
+	bool enableDevCommReboot;
 	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
 	int iotimeoutModbusRtu;
 	int iotimeoutIQ60;

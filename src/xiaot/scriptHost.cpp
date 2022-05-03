@@ -19,13 +19,13 @@ bool scriptHost::init()
 {
 	string conf;
 	vector<string> sList;
-	fs::getFileList(sList, tds->conf->projectConfPath + "/scripts");
+	fs::getFileList(sList, tds->conf->confPath + "/scripts");
 
 	for (int i = 0; i < sList.size(); i++)
 	{
 		string name = sList[i];
 		string script;
-		if (fs::readFile(tds->conf->projectConfPath + "/scripts/" + name, script))
+		if (fs::readFile(tds->conf->confPath + "/scripts/" + name, script))
 		{
 			m_mapScripts[name] = script;
 		}
@@ -381,7 +381,7 @@ string scriptHost::getScriptPath(json& params, RPC_SESSION session)
 
 	rootTag = TAG::addRoot(rootTag, session.org);
 	rootTag = str::replace(rootTag, ".", "/");
-	string path = tds->conf->projectConfPath + "/scripts/" + rootTag;
+	string path = tds->conf->confPath + "/scripts/" + rootTag;
 	return path;
 }
 

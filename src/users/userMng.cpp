@@ -117,9 +117,9 @@ string getDefaultUserConf() {
 
 bool userManager::loadConf()
 {
-	m_userConfPath = tds->conf->projectConfPath + "/users/users.json";
-	m_roleConfPath = tds->conf->projectConfPath + "/users/roles.json";
-	m_uiConfPath = tds->conf->projectConfPath + "/users/ui.json";
+	m_userConfPath = tds->conf->confPath + "/users/users.json";
+	m_roleConfPath = tds->conf->confPath + "/users/roles.json";
+	m_uiConfPath = tds->conf->confPath + "/users/ui.json";
 
 	if (!fs::fileExist(m_userConfPath))
 	{

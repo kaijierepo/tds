@@ -4,12 +4,12 @@
 
 tdsConfig::tdsConfig()
 {
-	port = 0;
+	wsPort = 0;
 	httpPort = 0;
-	ioServerPort = 0;
+	tdspPort = 0;
 	debugMode = false;
 	bConcurrentGateway = true;
-	projectConfPath = "";
+	confPath = "";
 	dbPath = "";
 	singleGenicamHost = false;
 	enableDB = true;
@@ -182,10 +182,15 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
 		TDS_CONF_ITEM& tci = vecConf[i];
-		if (tci.key == "confpath" && projectConfPath == "")
+		if (tci.key == "confpath" && confPath == "")
 		{
-			projectConfPath = tci.val;
-			projectConfPath = fs::toAbsolutePath(projectConfPath);
+			confPath = tci.val;
+			confPath = fs::toAbsolutePath(confPath);
+		}
+		else if (tci.key == "uipath" && uiPath == "")
+		{
+			uiPath = tci.val;
+			uiPath = fs::toAbsolutePath(uiPath);
 		}
 		else if (checkKey(tci.key, "dbpath"))
 			dbPath = tci.val.c_str();
@@ -199,12 +204,12 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			iotimeoutModbusRtu = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutIQ60"))
 			iotimeoutIQ60 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "port") && port == 0)
-			port = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "port") && wsPort == 0)
+			wsPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpport") && httpPort == 0)
 			httpPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "ioserverport") && ioServerPort == 0)
-			ioServerPort = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "ioserverport") && tdspPort == 0)
+			tdspPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "devreboottime"))
 			devRebootTime = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "devcommreboottime"))
@@ -326,14 +331,14 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 
 
 //默认值
-	if (projectConfPath == "")
-		projectConfPath = fs::appPath() + "/conf";
-	if (port == 0)
-		port = 666;
+	if (confPath == "")
+		confPath = fs::appPath() + "/conf";
+	if (wsPort == 0)
+		wsPort = 666;
 	if (httpPort == 0)
 		httpPort = 667;
-	if (ioServerPort == 0)
-		ioServerPort = 665;
+	if (tdspPort == 0)
+		tdspPort = 665;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "/db";
 	if (title == "")
@@ -441,9 +446,9 @@ void tdsConfig::loadConf()
 json tdsConfig::toJson()
 {
 	json conf;
-	conf["port"] = port;
+	conf["port"] = wsPort;
 	conf["httpPort"] = httpPort;
-	conf["ioServerPort"] = ioServerPort;
+	conf["ioServerPort"] = tdspPort;
 	conf["debugMode"] = debugMode;
 	conf["enableDB"] = enableDB;
 	conf["enableLog"] = enableLog;

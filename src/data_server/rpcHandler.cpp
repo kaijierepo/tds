@@ -203,7 +203,7 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 		}
 
 	str = str::replace(str, "$dbPath$", db.m_path);
-	str = str::replace(str, "$confPath$", tds->conf->projectConfPath);
+	str = str::replace(str, "$confPath$", tds->conf->confPath);
 
 	return str;
 }
@@ -1881,7 +1881,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
 {
-	string path = tds->conf->projectConfPath + "/topo";
+	string path = tds->conf->confPath + "/topo";
 	path::normalization(path);
 	vector<string> fl;
 	fs::getFileList(fl,path);
@@ -2349,7 +2349,7 @@ string rpcHandler::rpc_getconf(json params, string& error)
 		if (path != "")
 		{
 			string conf = "";
-			path = tds->conf->projectConfPath + "/" + path;
+			path = tds->conf->confPath + "/" + path;
 			path::normalization(path);
 			vector<string> fl;
 			fs::getFileList(fl,path);
@@ -2383,7 +2383,7 @@ string rpcHandler::rpc_getconffile(json params, string& error)
 	if (path != "")
 	{
 		string conf = "";
-		path = tds->conf->projectConfPath + "/" + path;
+		path = tds->conf->confPath + "/" + path;
 		path::normalization(path);
 		fs::readFile(path, conf);
 		json j = conf;
@@ -2400,7 +2400,7 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	if (path != "")
 	{
 		string conf = params["conf"].get<string>();
-		path = tds->conf->projectConfPath + "/" + path;
+		path = tds->conf->confPath + "/" + path;
 		fs::createFolderOfPath(path);
 		fs::writeFile(path, conf);
 		return "ok";

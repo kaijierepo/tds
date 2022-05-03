@@ -349,7 +349,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		{
 			tcpSrv* pts = (tcpSrv*)pTcpSession->pTcpServer;
 			//tdsp协议端口发送请求设备信息命令
-			if (pts->m_iServerPort == tds->conf->ioServerPort)
+			if (pts->m_iServerPort == tds->conf->tdspPort)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::TDSRPC;
@@ -604,44 +604,44 @@ void httpSrvThread(int port)
 		}
 	}
 	
-
-	//基于tds的二次开发，ui根目录位于此
-	//并且将tds的app目录放置在该目录下
-	string customUI = fs::appPath() + "/ui";
+	//ui网页文件路径
+	string customUI = tds->conf->uiPath;
 	if (fs::fileExist(customUI))
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
 		httpSrv.set_mount_point("/", +asc_customUI.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
-	}
 
-	//ui/app
-	string customUIApp = fs::appPath() + "/ui/app";
-	if (fs::fileExist(customUIApp))
-	{
-		string s = charCodec::utf8toAnsi(customUIApp);
-		httpSrv.set_mount_point("/", + s.c_str());
-		LOG("[keyinfo][HTTP服务器] 根目录: " + customUIApp);
-	}
-
-	//tds自己使用时，直接将app作为根目录
-	string uiApps = fs::appPath() + "/app";
-	if (fs::fileExist(uiApps))
-	{
-		string asc_prjUI = charCodec::utf8toAnsi(uiApps);
-		httpSrv.set_mount_point("/", asc_prjUI.c_str());
-		LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
-	}
-
-	//配置路径作为根目录
-	string asc_confPath = charCodec::utf8toAnsi(tds->conf->projectConfPath);
-	auto ret = httpSrv.set_mount_point("/config/", asc_confPath.c_str());
-	if (!ret) {
-		LOG("[error][HTTP服务器] " + tds->conf->projectConfPath + " 不存在,请检查配置");
+		//ui/app
+		string customUIApp = tds->conf->uiPath + "/app";
+		if (fs::fileExist(customUIApp))
+		{
+			string s = charCodec::utf8toAnsi(customUIApp);
+			httpSrv.set_mount_point("/", +s.c_str());
+			LOG("[keyinfo][HTTP服务器] 根目录: " + customUIApp);
+		}
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] /config/" + tds->conf->projectConfPath);
+		//tds自己使用时，直接将app作为根目录
+		string uiApps = fs::appPath() + "/app";
+		if (fs::fileExist(uiApps))
+		{
+			string asc_prjUI = charCodec::utf8toAnsi(uiApps);
+			httpSrv.set_mount_point("/", asc_prjUI.c_str());
+			LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
+		}
+	}
+
+	//配置路径作为根目录
+	string asc_confPath = charCodec::utf8toAnsi(tds->conf->confPath);
+	auto ret = httpSrv.set_mount_point("/config/", asc_confPath.c_str());
+	if (!ret) {
+		LOG("[error][HTTP服务器] " + tds->conf->confPath + " 不存在,请检查配置");
+	}
+	else
+	{
+		LOG("[keyinfo][HTTP服务器] /config/" + tds->conf->confPath);
 	}
 
 
@@ -694,7 +694,7 @@ bool dataServer::runAsCloud()
 	string strName;
 	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = tds->conf->tcpKeepAliveDS;
-	int tryPort = tds->conf->port;
+	int tryPort = tds->conf->wsPort;
 	while (!m_tcpSrv->run(this, tryPort))
 	{
 		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
@@ -718,7 +718,7 @@ bool dataServer::runAsCloud()
 			exit(0);
 		}
 	}
-	LOG("[keyinfo][TDS服务   ] 端口:" + str::fromInt(tryPort) + " 使用tdsRPC over websocket协议访问");
+	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(tryPort) + " 使用tdsRPC over websocket协议访问");
 	strName=str::format("tds(%d)", tryPort);
 	m_tcpSrv->SettIOCPName(strName);
 

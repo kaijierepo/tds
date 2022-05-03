@@ -70,7 +70,7 @@ ioServer::~ioServer()
 bool ioServer::loadConf()
 {
 	string conf;
-	if (!fs::readFile(tds->conf->projectConfPath + "/io.json", conf))
+	if (!fs::readFile(tds->conf->confPath + "/io.json", conf))
 	{
 		LOG("[warn]未找到IO设备配置io.json,新建配置");
 		return true;
@@ -125,7 +125,7 @@ void ioServer::saveConf()
 	opt["onlyConf"] = true;
 	toJson(conf,opt);
 	string sConf = conf.dump(3);
-	if (fs::writeFile(tds->conf->projectConfPath + "/io.json",sConf))
+	if (fs::writeFile(tds->conf->confPath + "/io.json",sConf))
 	{
 		
 	}
@@ -408,13 +408,13 @@ bool ioServer::runAsCloud()
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_tdsp->run(&ds, tds->conf->ioServerPort))
+	if (m_tcpSrv_tdsp->run(&ds, tds->conf->tdspPort))
 	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->ioServerPort) + " 设备通信协议 TDSP");
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
 	}
 	else
 	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->ioServerPort));
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
 	}
 
 

@@ -63,7 +63,7 @@ MP* project::createMP(string tag,string valType)
 bool project::loadConf()
 {
 	string& conf = m_strMoTree;
-	if (!fs::readFile(tds->conf->projectConfPath + "/mo.json", conf))
+	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf))
 	{
 		LOG("[warn]未找到监控对象配置mo.json，新建配置");
 		m_strName = "empty project";
@@ -107,7 +107,7 @@ void project::saveConf()
 	opt["onlyConf"] = true;
 	toJson(j, opt);
 	string s = j.dump(2);
-	fs::writeFile(tds->conf->projectConfPath + "/mo.json", s);
+	fs::writeFile(tds->conf->confPath + "/mo.json", s);
 }
 
 void project::clear()

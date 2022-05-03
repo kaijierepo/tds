@@ -334,16 +334,18 @@ bool TDS_imp::run(string cmdline)
 
 
 	//如果配置中没有自定义商标信息，写入良途软件商标信息
-	if (tds->conf->projectConfPath == fs::appPath() + "/conf")
+	if (tds->conf->confPath == fs::appPath() + "/conf")
 	{
-		if (!fs::fileExist(tds->conf->projectConfPath)) {
-			fs::createFolderOfPath(tds->conf->projectConfPath);
-			LOG("[warn]新建配置文件夹,路径:" + tds->conf->projectConfPath);
+		if (!fs::fileExist(tds->conf->confPath)) {
+			fs::createFolderOfPath(tds->conf->confPath);
+			LOG("[warn]新建配置文件夹,路径:" + tds->conf->confPath);
 		}
 	}
 	createDefaultCompanyInfo();
 
-	LOG("[项目配置  ] 路径:" + tds->conf->projectConfPath);
+	LOG("[UI路径	]" + tds->conf->uiPath);
+	LOG("[组态路径	]" + tds->conf->confPath);
+	LOG("[数据库	]" + tds->conf->dbPath);
 
 	//startup xiaot
 	tds->xiaoT->init();
@@ -597,7 +599,7 @@ void TDS_imp::log(const char* text)
 }
 using namespace std::filesystem;
 void TDS_imp::createDefaultCompanyInfo() {
-	string confPath = tds->conf->projectConfPath;
+	string confPath = tds->conf->confPath;
 
 	try
 	{

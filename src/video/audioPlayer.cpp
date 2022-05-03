@@ -148,7 +148,7 @@ bool AudioPlayer::run()
 }
 bool AudioPlayer::loadPlayList()
 {
-	m_audioPath = tds->conf->projectConfPath + "audio";
+	m_audioPath = tds->conf->confPath + "audio";
 	vector<string> fileList;
 	fs::getFileList(fileList, m_audioPath);
 

@@ -24,7 +24,7 @@ almServer::~almServer(void)
 void almServer::run()
 {
 	string s;
-	if (fs::readFile(tds->conf->projectConfPath + "/alarm.json", s) && s!="")
+	if (fs::readFile(tds->conf->confPath + "/alarm.json", s) && s!="")
 	{
 		json jAlms = json::parse(s);
 		for(int i=0;i< jAlms.size();i++)

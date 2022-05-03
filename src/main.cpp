@@ -106,7 +106,7 @@ int main(int argc, char** argv)
 	//保持无效值，使用配置文件当中的值
 	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
-	tds->conf->port = parser.get<int>("p");
+	tds->conf->wsPort = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
