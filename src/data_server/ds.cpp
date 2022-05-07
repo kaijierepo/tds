@@ -1940,6 +1940,12 @@ void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESS
 			{
 				//获得该io地址的设备对象
 				string strIoAddr = jResp["ioAddr"].get<string>();
+				if (strIoAddr == "")
+				{
+					LOG("[error]注册包devRegister中的ioAddr为空，无效");
+					return;
+				}
+
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
 
