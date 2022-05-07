@@ -216,6 +216,9 @@
     <ClCompile Include="..\src\tdspro\tools\tcp2com.cpp">
       <Filter>tdsPro\tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\fileWatcher.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\alarm_server\as.h">
@@ -416,6 +419,9 @@
     </ClInclude>
     <ClInclude Include="..\src\tdspro\tools\tcp2com.h">
       <Filter>tdsPro\tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\fileWatcher.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

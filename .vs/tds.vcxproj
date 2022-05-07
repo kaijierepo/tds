@@ -612,6 +612,7 @@
     <ClCompile Include="..\src\tdspro\xiaot.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\dumpCatch.cpp" />
+    <ClCompile Include="..\src\tools\fileWatcher.cpp" />
     <ClCompile Include="..\src\tools\rproxy.cpp" />
     <ClCompile Include="..\src\tools\shellServer.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
@@ -682,6 +683,7 @@
     <ClInclude Include="..\src\tdspro\xiaot.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\dumpCatch.h" />
+    <ClInclude Include="..\src\tools\fileWatcher.h" />
     <ClInclude Include="..\src\tools\rproxy.h" />
     <ClInclude Include="..\src\tools\shellServer.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
