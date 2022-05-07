@@ -243,6 +243,11 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      return 0;
  }
 
+ int TDS_SESSION::sendStr(string str, bool bNeedLog)
+ {
+     return send((char*)str.c_str(),str.length(),bNeedLog);
+ }
+
  int TDS_SESSION::getSendedBytes()
  {
      std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink

@@ -112,6 +112,7 @@ public:
 	void statisOnSend(char* p, int len,bool success);
 	void statisOnRecv(char* p, int len);
 	int send(char* p,int len,bool bNeedLog = true);
+	int sendStr(string str, bool bNeedLog = true);
 	int getSendedBytes();
 	int getRecvedBytes();
     std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题

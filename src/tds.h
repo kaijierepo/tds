@@ -191,6 +191,7 @@ namespace TDS_SESSION_TYPE {
 	const string tdsClient = "tdsClient";  
 	const string video = "video";
 	const string iodev = "ioDev"; 
+	const string webHMR = "webHMR"; //web hot module replacement
 
 	//bridge data interfaces
 	const string bridgeToLocalCom = "bridgeToLocalCom";

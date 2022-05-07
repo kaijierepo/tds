@@ -49,6 +49,7 @@ public:
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
+	tcpSrv* m_httpHotUpdateSrv;
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
 	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
@@ -67,9 +68,14 @@ public:
 	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
+	mutex m_mutexTdsSessionList;
+
+	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession_webHMR;
+	mutex m_mutexTdsSessionList_webHMR;
+
 	vector<void*> GetSessionList();
 	string getSessionStatus(json params);
-	mutex m_mutexTdsSessionList;
+	
 	FILE* m_pRecFile;
 	SYSTEMTIME m_stLastFileRecvTime;
 };

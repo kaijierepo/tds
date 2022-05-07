@@ -50,6 +50,7 @@ SOFTWARE.
 #include "video/audioPlayer.h"
 #include <filesystem>
 #include "tools/dumpCatch.h"
+#include "tools/fileWatcher.h"
 
 
 
@@ -383,6 +384,11 @@ bool TDS_imp::run(string cmdline)
 
 	//其他插件
 	tds->gzhServer->init();
+
+	if (conf->debugMode)
+	{
+		fileWatcher.run(tds->conf->uiPath);
+	}
 
 	//create browser window
 	if (conf->uiMode == "miniblink")

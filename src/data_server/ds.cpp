@@ -243,6 +243,63 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	}
 }
 
+void injectHMRCode(const Request& req, Response& resp)
+{
+	string s = R"(
+<!--code injected by TDS for hot module replacement-->
+<script>
+if ('WebSocket' in window) {
+    (function () {
+        function refreshCSS() {
+            var sheets = [].slice.call(document.getElementsByTagName("link"));
+            var head = document.getElementsByTagName("head")[0];
+            for (var i = 0; i < sheets.length; ++i) {
+                var elem = sheets[i];
+                var parent = elem.parentElement || head;
+                parent.removeChild(elem);
+                var rel = elem.rel;
+                if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+                    var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+                    elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+                }
+                parent.appendChild(elem);
+            }
+        }
+        var wsSock = connectHMRSrv();
+        function connectHMRSrv()
+        {
+            var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+            var address = protocol + window.location.hostname + ":668" + window.location.pathname;
+            var socket = new WebSocket(address);
+            socket.onmessage = function (msg) {
+                if (msg.data == 'reload') window.location.reload();
+                else if (msg.data == 'refreshcss') refreshCSS();
+            };
+            if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+                console.log('Live reload enabled.');
+                sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+            }
+            return socket;
+        }
+
+        setInterval(() => {
+            if(wsSock != null && wsSock.readyState == wsSock.CLOSED)
+            {
+                wsSock = connectHMRSrv();
+            }
+        }, 500);
+    })();
+}
+else {
+    console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+}
+</script>
+</body>
+)";
+
+	resp.body = str::replace(resp.body, "</body>", s);
+}
+
 
 void initHttpSrv(httplib::Server& svr)
 {
@@ -276,6 +333,9 @@ void initHttpSrv(httplib::Server& svr)
 
 //有权限控制的文件下载服务
 	svr.set_pre_routing_handler(handleFilePermission);
+
+//插入HMR代码
+	svr.set_file_request_handler(injectHMRCode);
 
 //数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
@@ -363,6 +423,14 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::IQ60;
+			}
+			else if (pts->m_iServerPort == 668)
+			{
+				p->type = TDS_SESSION_TYPE::webHMR;
+				p->iALProto = APP_LAYER_PROTO::tdsHMR;
+				m_mutexTdsSessionList_webHMR.lock();
+				m_vecTdsSession_webHMR.push_back(p);
+				m_mutexTdsSessionList_webHMR.unlock();
 			}
 		}
 
@@ -694,8 +762,7 @@ bool dataServer::runAsCloud()
 	string strName;
 	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = tds->conf->tcpKeepAliveDS;
-	int tryPort = tds->conf->wsPort;
-	while (!m_tcpSrv->run(this, tryPort))
+	if(!m_tcpSrv->run(this, tds->conf->wsPort))
 	{
 		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
 		{
@@ -705,26 +772,35 @@ bool dataServer::runAsCloud()
 		{
 			LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
 		}
-		string strData;
-		int triedPort = tryPort;
-		if (tryPort == 80)tryPort = 666;
-		else tryPort++;
-		strData = str::format("bind to port:%d fail,try %d", triedPort, tryPort);
-		LOG(strData);
-
-		if(tryPort > 666)
-		{
-			LOG("[error]no valid port can be used!!");
-			exit(0);
-		}
+		LOG("[error]websocket服务端口启动失败！");
 	}
-	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(tryPort) + " 使用tdsRPC over websocket协议访问");
-	strName=str::format("tds(%d)", tryPort);
+	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(tds->conf->wsPort) + " 使用tdsRPC over websocket协议访问");
+	strName=str::format("tds(%d)", tds->conf->wsPort);
 	m_tcpSrv->SettIOCPName(strName);
 
 	//http服务 667
 	thread t2(httpSrvThread,tds->conf->httpPort);
 	t2.detach();
+
+	//http热更新服务 668
+	if (tds->conf->debugMode)
+	{
+		m_httpHotUpdateSrv = new tcpSrv();
+		if (!m_httpHotUpdateSrv->run(this, 668))
+		{
+			if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
+			{
+				LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
+			}
+			else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
+			{
+				LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
+			}
+			LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
+		}
+		LOG("[keyinfo][HTTP热更新服务] 端口:" + str::fromInt(668));
+	}
+	
 
 	//http服务 80端口
 	string webPath = fs::appPath() + "/web";
@@ -1137,6 +1213,9 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	CWSPPkt req;
 	std::string handshakeString = req.GetHandshakeString(strData);
 	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
+
+	if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
+		return;
 
 	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)

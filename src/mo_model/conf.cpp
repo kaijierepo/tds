@@ -231,6 +231,13 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
 		}
+		else if (checkKey(tci.key, "debugMode"))
+		{
+			if (tci.val == "true" || tci.val == "1")
+				debugMode = true;
+			else if (tci.val == "false" || tci.val == "0")
+				debugMode = false;
+		}
 		else if (checkKey(tci.key, "createDumpWhenLogError"))
 		{
 			if (tci.val == "true" || tci.val == "1")

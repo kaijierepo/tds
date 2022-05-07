@@ -158,6 +158,7 @@ namespace APP_LAYER_PROTO {
 	const string TDSRPC= "tdsRPC";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
 	const string IQ60 = "iq60";
+	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
 	const string terminalPrompt = "->";  //以 -> 结尾的字符串 
 	const string textEnd1LF = "textEnd1LF";
 	const string textEnd2LF = "textEnd2LF";
