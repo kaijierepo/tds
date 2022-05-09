@@ -300,6 +300,7 @@ namespace charCodec {
 		return false;
 	}
 
+	
 	inline bool isValidGB2312(string s, int& errorPos, string& errorChar)
 	{
 		for (int i = 0; i < s.length();)
@@ -346,6 +347,13 @@ namespace charCodec {
 		}
 
 		return true;
+	}
+
+	inline bool isValidGB2312(string s)
+	{
+		int pos = 0;
+		string errorChar;
+		return isValidGB2312(s, pos, errorChar);
 	}
 
 	inline string ToUtf8(LPCTSTR wstr) //-->utf-8

@@ -234,8 +234,6 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 		}
 	}
 
-	return true;
-
 DATA_SET_LOADED:
 
 	//使用新的yyjson doc对象输出结果. 将多个位号，多个时间段的原始数据合并成1个json查询结果对象

@@ -245,6 +245,13 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 
 void injectHMRCode(const Request& req, Response& resp)
 {
+	bool isHtml = false;
+
+	if (req.path.find("html") != string::npos)isHtml = true;
+	if (req.path[req.path.length() - 1] == '/') isHtml = true;
+
+	if (!isHtml)return;
+
 	string s = R"(
 <!--code injected by TDS for hot module replacement-->
 <script>
@@ -1215,7 +1222,16 @@ void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SES
 	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
 
 	if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
+	{
+		httplib::Request req;
+		httplib::Server srv;
+		srv.parse_request_line(strData.c_str(), req);
+		string path = str::trimSuffix(req.target, "index.html");
+		 path = str::trimSuffix(path, "/");
+		 tdsSession->webHMRPath = path;
 		return;
+	}
+		
 
 	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)

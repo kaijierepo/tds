@@ -70,7 +70,7 @@ void watchFile_thread(const std::string dir_path)
                 {
                     lastFileModify = file_name;
                     GetLocalTime(&lastFileModifyTime);
-                    LOG("[keyinfo]检测到文件改变:" + dir_path + "/" + file_name);
+                    //LOG("[keyinfo]检测到文件改变:" + dir_path + "/" + file_name);
 
                     ds.m_mutexTdsSessionList_webHMR.lock();
                     for (int i = 0; i < ds.m_vecTdsSession_webHMR.size(); i++)
@@ -79,6 +79,12 @@ void watchFile_thread(const std::string dir_path)
                         if (file_name.find(".css") != string::npos)
                         {
                             p->sendStr("refreshcss");
+                        }
+                        else if (file_name.find(".html") != string::npos) //html只有当前路径下面的才触发更新
+                        {
+                            file_name = "/" + file_name;
+                            if(file_name.find(p->webHMRPath) != string::npos)
+                                p->sendStr("reload");
                         }
                         else
                         {
