@@ -426,7 +426,13 @@ bool MP::output(json jVal, json& jResp, bool sync)
 	if (pC)
 	{
 		LOG("[控制输出]位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-		return pC->output(jVal, jResp,sync);
+		if (pC->output(jVal, jResp, sync))
+		{
+			input(jVal);
+			return true;
+		}
+		else
+			return false;
 	}
 	else
 	{

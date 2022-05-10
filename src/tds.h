@@ -302,6 +302,7 @@ enum RPC_ERROR {
 	MO_outputValShouldBeBool = -40009,
 	MO_outputValShouldBeNumber = -40010,
 	MO_currentValIsNull = -40011,
+	MO_outputTimeout = -40012,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,
@@ -318,6 +319,7 @@ enum RPC_ERROR {
 	//tdsp
 	DEV_confNameNotFound = -42001,
 	DEV_confCategoryNotFound = -42002,
+	DEV_chanNotFound = -42003,
 
 	//os
 	OS_fileNotExist = -43001,
@@ -326,6 +328,11 @@ enum RPC_ERROR {
 	ALM_alarmEventNotFound = -44001
 };
 
+inline string RPCError(int code, string msg)
+{
+	string error = "{\"code\":" + std::to_string(code) + ",\"message\":" + msg + "}";
+	return error;
+}
 
 
 //interface of tds.db

@@ -81,12 +81,7 @@ public:
 	void Notify(string strTag, string& szNotify);
 
 	
-	//rpc error
-	string RPCError(int code,string msg);
 	string parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector);//return "" if success
-	
-
-
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
 	database* m_DB;

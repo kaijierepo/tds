@@ -67,16 +67,6 @@ bool rpcHandler::init()
 	return true;
 }
 
-string rpcHandler::RPCError(int code,string msg)
-{
-	json jError = {
-			{"code", code},
-			{"message" , msg}
-	};
-	string error = jError.dump();
-	return error;
-}
-
 string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector)
 {
 	//parse time param
@@ -1822,7 +1812,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 	else
 	{
-		resp.error = RPCError(RPC_ERROR::MO_outputFail, "output fail");
+		resp.error = RPCError(RPC_ERROR::MO_outputTimeout, "输出超时");
 	}
 }
 
