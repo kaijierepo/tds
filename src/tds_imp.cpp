@@ -607,6 +607,7 @@ using namespace std::filesystem;
 void TDS_imp::createDefaultCompanyInfo() {
 	string confPath = tds->conf->confPath;
 
+	//生成默认配置
 	try
 	{
 		if (!fs::fileExist(confPath + "/info.json"))
@@ -625,6 +626,30 @@ void TDS_imp::createDefaultCompanyInfo() {
 		}
 	}
 	catch(exception& e)
+	{
+
+	}
+
+
+	//拷贝到ui目录
+	try
+	{
+		if (fs::fileExist(confPath + "/info.json"))
+		{
+			std::filesystem::copy( charCodec::utf8toUtf16(confPath + "/info.json"), charCodec::utf8toUtf16(fs::appPath() + "/ui/info.json"), std::filesystem::copy_options::overwrite_existing);
+		}
+
+		if (fs::fileExist(confPath + "/banner.svg"))
+		{
+			std::filesystem::copy(charCodec::utf8toUtf16(confPath + "/banner.svg"), charCodec::utf8toUtf16(fs::appPath() + "/ui/banner.svg"), std::filesystem::copy_options::overwrite_existing);
+		}
+
+		if (fs::fileExist(confPath + "/logo.svg"))
+		{
+			std::filesystem::copy(charCodec::utf8toUtf16(confPath + "/logo.svg"), charCodec::utf8toUtf16(fs::appPath() + "/ui/logo.svg"), std::filesystem::copy_options::overwrite_existing);
+		}
+	}
+	catch (exception& e)
 	{
 
 	}

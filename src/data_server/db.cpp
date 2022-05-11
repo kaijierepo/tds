@@ -154,7 +154,7 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB
 	return Select_simdjson(tag, timeSelector, filter, result);
 }
 
-bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result)
+bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result, int dsi)
 {
 	TIME_SELECTOR& tf = timeSelector;
 	time_t loadTime = tf.endTime;
@@ -169,6 +169,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 	double min = 1000000000;
 	double avg = 0;
 	int count = 0;
+	if (dsi == 0)dsi = 1;
 
 	vector<yyjson_doc*> src_doc;
 	vector< yyjson_mut_doc*> src_mut_doc;
@@ -201,6 +202,9 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 			size_t idx, max;
 			yyjson_val* val;
 			yyjson_arr_foreach(root, idx, max, val) {
+				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
+				if (idx % dsi > 0) continue;
+
 				yyjson_mut_val* jDE = yyjson_val_mut_copy(mut_doc, val);
 				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
 				string_view szTime = yyjson_mut_get_str(yyTime);
@@ -226,8 +230,10 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 					continue;
 				}
 
+
 				mapRlt[strTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
+
 				if (tf.AmountMatch(count))
 					goto DATA_SET_LOADED;
 			}

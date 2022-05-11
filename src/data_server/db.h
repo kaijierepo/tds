@@ -146,7 +146,7 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
-	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result);
+	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result,int dsi = 0); //dsi = downsamplingInterval
 	bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, SYSTEMTIME stTime, string& sData);

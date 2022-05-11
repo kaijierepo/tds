@@ -129,6 +129,11 @@ string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 	if(params["filter"] != nullptr)
 	 	filter = params["filter"].get<string>();
 	
+	//down sampling interval  针对高密度数据的下采样间隔。无需则为0
+	int dsi = 0;
+	if (params["dsi"] != nullptr)
+		dsi = params["dsi"].get<int>();
+
 	
 	
 	//获取需要加载数据的位号集合
@@ -166,7 +171,7 @@ string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 	string result = "";
 	try
 	{
-		db.Select_yyjson(tags, timeSelector, filter, result);
+		db.Select_yyjson(tags, timeSelector, filter, result,dsi);
 	}
 	catch (std::exception& e)
 	{
