@@ -243,8 +243,15 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	}
 }
 
-void injectHMRCode(const Request& req, Response& resp)
+void handleAfterFileRead(const Request& req, Response& resp)
 {
+	if (!tds->conf->debugMode) return;
+
+	//调试模式不缓存任何数据
+	resp.set_header("cache-control", "max-age=0");
+
+
+	//html插入热更新代码
 	bool isHtml = false;
 
 	if (req.path.find("html") != string::npos)isHtml = true;
@@ -342,7 +349,7 @@ void initHttpSrv(httplib::Server& svr)
 	svr.set_pre_routing_handler(handleFilePermission);
 
 //插入HMR代码
-	svr.set_file_request_handler(injectHMRCode);
+	svr.set_file_request_handler(handleAfterFileRead);
 
 //数据库文件上传Post命令处理
 	svr.Post("\\/db.*",
