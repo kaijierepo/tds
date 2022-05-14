@@ -668,11 +668,21 @@ void activeSessionThread()
 }
 
 
-void httpSrvThread(int port)
+void httpSrvThread(int port,bool https = false)
 {
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	httplib::Server httpSrv;
-	initHttpSrv(httpSrv);
+	httplib::Server* pSrv = &httpSrv;
+
+#ifdef ENABLE_OPENSSL
+	httplib::SSLServer httpsSrv(charCodec::utf8toAnsi(fs::appPath() + "/crt.crt").c_str(), charCodec::utf8toAnsi(fs::appPath() + "/key.key").c_str());
+	if (https)
+		pSrv = &httpsSrv;
+#endif
+	
+	httplib::Server& srv = *pSrv;
+
+	initHttpSrv(srv);
 
 	//web网页端口。只有80端口用于网站目录
 	if (port == 80)
@@ -681,7 +691,7 @@ void httpSrvThread(int port)
 		if (fs::fileExist(webPath))
 		{
 			string asc_customUI = charCodec::utf8toAnsi(webPath);
-			httpSrv.set_mount_point("/", +asc_customUI.c_str());
+			srv.set_mount_point("/", +asc_customUI.c_str());
 			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
 		}
 	}
@@ -691,7 +701,7 @@ void httpSrvThread(int port)
 	if (fs::fileExist(customUI))
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
-		httpSrv.set_mount_point("/", +asc_customUI.c_str());
+		srv.set_mount_point("/", +asc_customUI.c_str());
 		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
 
 		//ui/app
@@ -699,7 +709,7 @@ void httpSrvThread(int port)
 		if (fs::fileExist(customUIApp))
 		{
 			string s = charCodec::utf8toAnsi(customUIApp);
-			httpSrv.set_mount_point("/", +s.c_str());
+			srv.set_mount_point("/", +s.c_str());
 			LOG("[keyinfo][HTTP服务器] 根目录: " + customUIApp);
 		}
 	}
@@ -710,14 +720,14 @@ void httpSrvThread(int port)
 		if (fs::fileExist(uiApps))
 		{
 			string asc_prjUI = charCodec::utf8toAnsi(uiApps);
-			httpSrv.set_mount_point("/", asc_prjUI.c_str());
+			srv.set_mount_point("/", asc_prjUI.c_str());
 			LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
 		}
 	}
 
 	//配置路径作为根目录
 	string asc_confPath = charCodec::utf8toAnsi(tds->conf->confPath);
-	auto ret = httpSrv.set_mount_point("/config/", asc_confPath.c_str());
+	auto ret = srv.set_mount_point("/config/", asc_confPath.c_str());
 	if (!ret) {
 		LOG("[error][HTTP服务器] " + tds->conf->confPath + " 不存在,请检查配置");
 	}
@@ -729,7 +739,7 @@ void httpSrvThread(int port)
 
 	//serve db files through http
 	string asc_dbPath = charCodec::utf8toAnsi(db.m_path);
-	 ret = httpSrv.set_mount_point("/db/", asc_dbPath.c_str());
+	 ret = srv.set_mount_point("/db/", asc_dbPath.c_str());
 	if (!ret) {
 		LOG("[error][数据库]路径 " + db.m_path + " 不存在,请检查配置");
 	}
@@ -741,7 +751,7 @@ void httpSrvThread(int port)
 	
 	//文件下载目录
 	string asc_filePath = charCodec::utf8toAnsi(fs::appPath() + "/files");
-	ret = httpSrv.set_mount_point("/files/", asc_filePath.c_str());
+	ret = srv.set_mount_point("/files/", asc_filePath.c_str());
 	if (!ret) {
 	}
 	else
@@ -750,20 +760,20 @@ void httpSrvThread(int port)
 	}
 
 
-	httpSrv.set_file_extension_and_mimetype_mapping("json", "text/json");
-	httpSrv.set_file_extension_and_mimetype_mapping("html", "text/html");
-	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
-	httpSrv.set_file_extension_and_mimetype_mapping("htm", "text/html");
-	httpSrv.set_file_extension_and_mimetype_mapping("apk", "application/octet-stream");
-	httpSrv.set_file_extension_and_mimetype_mapping("rar", "application/octet-stream");
-	httpSrv.set_file_extension_and_mimetype_mapping("doc", "application/octet-stream");
-	httpSrv.set_file_extension_and_mimetype_mapping("docx", "application/octet-stream");
-	httpSrv.set_file_extension_and_mimetype_mapping("md", "application/octet-stream");
-	httpSrv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
-	httpSrv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
+	srv.set_file_extension_and_mimetype_mapping("json", "text/json");
+	srv.set_file_extension_and_mimetype_mapping("html", "text/html");
+	srv.set_file_extension_and_mimetype_mapping("htm", "text/html");
+	srv.set_file_extension_and_mimetype_mapping("htm", "text/html");
+	srv.set_file_extension_and_mimetype_mapping("apk", "application/octet-stream");
+	srv.set_file_extension_and_mimetype_mapping("rar", "application/octet-stream");
+	srv.set_file_extension_and_mimetype_mapping("doc", "application/octet-stream");
+	srv.set_file_extension_and_mimetype_mapping("docx", "application/octet-stream");
+	srv.set_file_extension_and_mimetype_mapping("md", "application/octet-stream");
+	srv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
+	srv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
 
 	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(port) + " 本机浏览器 http://localhost:" + str::fromInt(port) + " 访问软件用户界面");
-	httpSrv.listen("0.0.0.0", port);
+	srv.listen("0.0.0.0", port);
 }
 
 
@@ -792,9 +802,17 @@ bool dataServer::runAsCloud()
 	strName=str::format("tds(%d)", tds->conf->wsPort);
 	m_tcpSrv->SettIOCPName(strName);
 
-	//http服务 667
-	thread t2(httpSrvThread,tds->conf->httpPort);
-	t2.detach();
+	//http服务 667 默认都打开
+	thread t1(httpSrvThread,667,false);
+	t1.detach();
+	if (tds->conf->httpPort != 667)
+	{
+		thread t2(httpSrvThread, tds->conf->httpPort,false);
+		t2.detach();
+	}
+
+	thread t3(httpSrvThread, 443,true);
+	t3.detach();
 
 	//http热更新服务 668
 	if (tds->conf->debugMode)
@@ -821,7 +839,7 @@ bool dataServer::runAsCloud()
 	if (fs::fileExist(webPath))
 	{
 		LOG("[HTTP服务  ]检测到./web目录，启用80端口");
-		thread t(httpSrvThread,80);
+		thread t(httpSrvThread,80,false);
 		t.detach();
 	}
 
