@@ -1850,6 +1850,7 @@ bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr
 			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 			{
 				string s = str::fromBuff(pData, iLen);
+				LOG("[IQ60首发数据]" + s);
 				if (s.find("IQ60_") == 0)
 				{
 					s = s.substr(0, 16);

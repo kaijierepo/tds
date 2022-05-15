@@ -1780,7 +1780,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
-		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "specified tag not found");
+		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "specified tag not found:" + tag);
 		return;
 	}
 
@@ -1811,13 +1811,13 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 	
 	json jResp;
-	if (pmp->output(val, jResp))
+	if (pmp->output(val, jResp,true))
 	{
 		resp.result = jResp.dump();
 	}
 	else
 	{
-		resp.error = RPCError(RPC_ERROR::MO_outputTimeout, "输出超时");
+		resp.error = RPCError(RPC_ERROR::MO_outputTimeout, "输出失败");
 	}
 }
 

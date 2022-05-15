@@ -333,7 +333,7 @@ enum RPC_ERROR {
 
 inline string RPCError(int code, string msg)
 {
-	string error = "{\"code\":" + std::to_string(code) + ",\"message\":" + msg + "}";
+	string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"}";
 	return error;
 }
 

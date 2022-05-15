@@ -425,14 +425,18 @@ bool MP::output(json jVal, json& jResp, bool sync)
 	ioChannel* pC = ioSrv.getChanByTag(getTag());
 	if (pC)
 	{
-		LOG("[控制输出]位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
+		LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
 		if (pC->output(jVal, jResp, sync))
 		{
+			LOG("[控制输出]输出成功;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
 			input(jVal);
 			return true;
 		}
 		else
+		{
+			LOG("[控制输出]输出失败;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
 			return false;
+		}
 	}
 	else
 	{
