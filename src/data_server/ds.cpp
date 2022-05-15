@@ -428,12 +428,12 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::TDSRPC;
 			}
-			else if (pts->m_iServerPort == 664)
+			else if (pts->m_iServerPort == tds->conf->mbPort)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
 			}
-			else if (pts->m_iServerPort == 663)
+			else if (pts->m_iServerPort == tds->conf->iq60Port)
 			{
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::IQ60;
@@ -811,8 +811,12 @@ bool dataServer::runAsCloud()
 		t2.detach();
 	}
 
-	thread t3(httpSrvThread, 443,true);
-	t3.detach();
+	if (tds->conf->enableHttps)
+	{
+		thread t3(httpSrvThread, 443, true);
+		t3.detach();
+	}
+	
 
 	//http热更新服务 668
 	if (tds->conf->debugMode)
@@ -1784,7 +1788,7 @@ bool dataServer::handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SE
 		}
 		else if ( iLen > 4 && ( str::fromBuff(pData,4) == "imei" || str::fromBuff(pData, 4) == "IMEI"))
 		{
-			string imei = str::fromBuff(pData+4, iLen-4);
+			string imei = str::fromBuff(pData, iLen);
 			LOG("收到首发注册包,IMEI前缀格式,IMEI=" + imei);
 			ioSrv.handleDevOnline(imei, tdsSession);
 			return true;

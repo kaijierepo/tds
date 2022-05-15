@@ -421,27 +421,25 @@ bool ioServer::runAsCloud()
 	//io服务 664 Modbus over TCP
 	m_tcpSrv_rtu = new tcpSrv();
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	int ioSrvPort_rtu = 664;
-	if (m_tcpSrv_rtu->run(&ds, ioSrvPort_rtu))
+	if (m_tcpSrv_rtu->run(&ds, tds->conf->mbPort))
 	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(ioSrvPort_rtu) + " 设备通信协议 modbus RTU over TCP");
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
 	}
 	else
 	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_rtu));
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->mbPort));
 	}
 
 	//io服务 663 IQ60
 	m_tcpSrv_iq60 = new tcpSrv();
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	int ioSrvPort_iq60 = 663;
-	if (m_tcpSrv_iq60->run(&ds, ioSrvPort_iq60))
+	if (m_tcpSrv_iq60->run(&ds, tds->conf->iq60Port))
 	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(ioSrvPort_iq60) + " 设备通信协议 IQ60物云通信协议");
+		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
 	}
 	else
 	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(ioSrvPort_iq60));
+		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->iq60Port));
 	}
 
 	

@@ -235,6 +235,8 @@ struct iTDSConf {
 	int wsPort;    //websocket port of tds;  default value 666
 	int httpPort;  //http port of tds;  default value 667
 	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
+	int mbPort;    //modbus protocol port of ioServer; default value 664
+	int iq60Port;  //iq60 protocol port of ioServer; default value 663
 	
 	//path conf
 	string confPath;   //config data path
@@ -253,6 +255,7 @@ struct iTDSConf {
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
 	//module enable/disable
+	bool enableHttps;
 	bool enableLog;
 	bool enableDB;
 	bool enableAccessCtrl;

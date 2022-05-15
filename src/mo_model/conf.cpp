@@ -6,7 +6,10 @@ tdsConfig::tdsConfig()
 {
 	wsPort = 0;
 	httpPort = 0;
-	tdspPort = 0;
+	tdspPort = 665;
+	mbPort = 664;
+	iq60Port = 663;
+	enableHttps = false;
 	debugMode = false;
 	bConcurrentGateway = true;
 	confPath = "";
@@ -86,12 +89,12 @@ string tdsConfig::defaultConf_tds()
 	string s = R"(#TDS 配置文件
 #基础配置
 confpath=./conf        #配置路径
-port=666               #数据服务端口websocket协议
+wsPort=666               #数据服务端口websocket协议
 httpPort=667           #http服务端口
-ioServerPort=665       #io通信服务端口
 loglevel=debug         #日志级别
 
 #功能模块启用
+enableHttps = 0        #启用https
 enableDB = 1           #启用数据库
 enableLog = 1          #启用日志记录
 authDownload = 0       #开启文件下载用户认证
@@ -99,6 +102,9 @@ enableAccessCtrl = 0   #开启用户认证
 enableScript = 0       #启用脚本功能
 
 #IO服务功能
+tdspPort = 665         #TDSP协议  IO服务端口
+mbPort = 664           #Modbus-RTU over TCP  IO服务端口；使用串转网网关连接Modbus总线的情况
+iq60Port = 663         #IQ60物云协议 IO服务端口
 enableDevReboot=1      #启用设备重启功能      
 devRebootTime=180      #设备无通信重启时间
 iotimeoutTdsp=7000
@@ -204,12 +210,16 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			iotimeoutModbusRtu = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutIQ60"))
 			iotimeoutIQ60 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "port") && wsPort == 0)
+		else if (checkKey(tci.key, "wsPort"))
 			wsPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "httpport") && httpPort == 0)
+		else if (checkKey(tci.key, "httpPort"))
 			httpPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "ioserverport") && tdspPort == 0)
+		else if (checkKey(tci.key, "tdspPort"))
 			tdspPort = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "mbPort"))
+			mbPort = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "iq60Port"))
+			iq60Port = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "devreboottime"))
 			devRebootTime = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "devcommreboottime"))
@@ -230,6 +240,13 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 				authDownload = true;
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
+		}
+		else if (checkKey(tci.key, "enableHttps"))
+		{
+			if (tci.val == "true" || tci.val == "1")
+				enableHttps = true;
+			else if (tci.val == "false" || tci.val == "0")
+				enableHttps = false;
 		}
 		else if (checkKey(tci.key, "debugMode"))
 		{
