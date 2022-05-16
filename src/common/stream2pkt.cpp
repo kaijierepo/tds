@@ -102,8 +102,8 @@ bool stream2pkt::PopPkt(string cpt)
 		if (ilen == 0 &&
 			(cpt == APP_LAYER_PROTO::IQ60))
 		{
-			if (i > 0)
-				break;
+			//if (i > 0)//如果确定数据包不会出错，提高性能，则启用该break;
+				//break;
 			ilen = IsValidPkt_IQ60(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{

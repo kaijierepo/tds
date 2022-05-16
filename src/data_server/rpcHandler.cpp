@@ -1773,9 +1773,12 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 
 
-	string tag;
+	string tag, rootTag;
 	if (params["tag"] != nullptr)
 		tag = params["tag"].get<string>();
+	if (params["rootTag"] != nullptr && params["rootTag"] != "")
+		tag = params["rootTag"].get<string>() + "." + tag;
+	tag = TAG::addRoot(tag, session.org);
 
 	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)

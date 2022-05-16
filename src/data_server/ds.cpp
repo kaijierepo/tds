@@ -1723,7 +1723,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	return true;
 }
 
-void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
+void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	string pkt = str::fromBuff(pData,iLen);
 
@@ -1734,7 +1734,14 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 		{
 			//转发给对应设备
 			string id = jpkt[0];
-			ioDev* pIoDev = ioSrv.getIODev(id);
+
+			//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
+			ioDev* pIoDev = tdsSession->m_IoDev;
+			if (tdsSession->m_IoDev == nullptr)
+			{
+				pIoDev = ioSrv.handleDevOnline(id, tdsSession);
+			}
+
 			if (pIoDev)
 			{
 				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
@@ -1743,13 +1750,13 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 					if (p->m_bEnableIoLog)
 						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
-					p->bindIOSession(pALC);
+					p->bindIOSession(tdsSession);
 					p->setOnline();
 					json j;
 					p->toJson(j);
-					if (!pALC->getIODev(p->getIOAddrStr()))
+					if (!tdsSession->getIODev(p->getIOAddrStr()))
 					{
-						pALC->m_vecIoDev.push_back(p->getIOAddrStr());
+						tdsSession->m_vecIoDev.push_back(p->getIOAddrStr());
 					}
 					p->onRecvPkt(jpkt);
 				}
@@ -1757,13 +1764,6 @@ void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC)
 				{
 					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id);
 				}
-			}
-			//设备发现功能
-			else
-			{
-				json jAddr;
-				jAddr["id"] = id;
-				ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::iq60_gateway);
 			}
 		}
 	}
