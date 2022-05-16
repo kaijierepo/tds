@@ -111,17 +111,17 @@ bool MO::loadConf(json& conf)
 	m_longitude = conf["longitude"];
 	m_latitude = conf["latitude"];
 
-	if (m_moType == "custom" && conf.contains("customType") && conf["customType"].get<string>().length() > 0)
+	if (m_moType == "custom" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
-		m_moCustomType = conf["customType"];
+		m_moCustomTypeLabel = conf["customTypeLabel"];
 
-		if (conf.contains("customTypeLabel"))
+		if (conf.contains("customType"))
 		{
-			m_moCustomTypeLabel = conf["customTypeLabel"];
+			m_moCustomType = conf["customType"];
 		}
 		else
 		{
-			m_moCustomTypeLabel = m_moCustomType;
+			m_moCustomType = m_moCustomTypeLabel;
 			str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
 		}
 		
