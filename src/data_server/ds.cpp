@@ -673,12 +673,18 @@ void httpSrvThread(int port,bool https = false)
 	//http相关接口需要使用gb2312.因为里面调用了多字节windows api，为支持中文，此处将utf8转为gb2312
 	httplib::Server httpSrv;
 	httplib::Server* pSrv = &httpSrv;
+	string logName = "[HTTP服务	]";
 
-#ifdef ENABLE_OPENSSL
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 	httplib::SSLServer httpsSrv(charCodec::utf8toAnsi(fs::appPath() + "/crt.crt").c_str(), charCodec::utf8toAnsi(fs::appPath() + "/key.key").c_str());
 	if (https)
+	{
 		pSrv = &httpsSrv;
+		logName = "[HTTPS服务]";
+	}
 #endif
+
+	
 	
 	httplib::Server& srv = *pSrv;
 
@@ -692,7 +698,7 @@ void httpSrvThread(int port,bool https = false)
 		{
 			string asc_customUI = charCodec::utf8toAnsi(webPath);
 			srv.set_mount_point("/", +asc_customUI.c_str());
-			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
+			LOG("[keyinfo]" + logName + "根目录		<--> " + webPath);
 		}
 	}
 	
@@ -702,38 +708,38 @@ void httpSrvThread(int port,bool https = false)
 	{
 		string asc_customUI = charCodec::utf8toAnsi(customUI);
 		srv.set_mount_point("/", +asc_customUI.c_str());
-		LOG("[keyinfo][HTTP服务器] 根目录: " + customUI);
+		LOG("[keyinfo]" + logName + "根目录		<--> " + customUI);
 
-		//ui/app
-		string customUIApp = tds->conf->uiPath + "/app";
-		if (fs::fileExist(customUIApp))
-		{
-			string s = charCodec::utf8toAnsi(customUIApp);
-			srv.set_mount_point("/", +s.c_str());
-			LOG("[keyinfo][HTTP服务器] 根目录: " + customUIApp);
-		}
+		////ui/app
+		//string customUIApp = tds->conf->uiPath + "/app";
+		//if (fs::fileExist(customUIApp))
+		//{
+		//	string s = charCodec::utf8toAnsi(customUIApp);
+		//	srv.set_mount_point("/", +s.c_str());
+		//	LOG("[keyinfo]" + logName + " 根目录: " + customUIApp);
+		//}
 	}
 	else
 	{
 		//tds自己使用时，直接将app作为根目录
-		string uiApps = fs::appPath() + "/app";
+		/*string uiApps = fs::appPath() + "/app";
 		if (fs::fileExist(uiApps))
 		{
 			string asc_prjUI = charCodec::utf8toAnsi(uiApps);
 			srv.set_mount_point("/", asc_prjUI.c_str());
-			LOG("[keyinfo][HTTP服务器] 根目录: " + uiApps);
-		}
+			LOG("[keyinfo]" + logName + " 根目录: " + uiApps);
+		}*/
 	}
 
 	//配置路径作为根目录
 	string asc_confPath = charCodec::utf8toAnsi(tds->conf->confPath);
 	auto ret = srv.set_mount_point("/config/", asc_confPath.c_str());
 	if (!ret) {
-		LOG("[error][HTTP服务器] " + tds->conf->confPath + " 不存在,请检查配置");
+		LOG("[error]" + logName + " " + tds->conf->confPath + " 不存在,请检查配置");
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] /config/" + tds->conf->confPath);
+		LOG("[keyinfo]" + logName + "/config/	<--> " + tds->conf->confPath);
 	}
 
 
@@ -745,7 +751,7 @@ void httpSrvThread(int port,bool https = false)
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] /db/ " + db.m_path);
+		LOG("[keyinfo]" + logName + "/db/\t\t<--> " + db.m_path);
 	}
 
 	
@@ -756,7 +762,7 @@ void httpSrvThread(int port,bool https = false)
 	}
 	else
 	{
-		LOG("[keyinfo][HTTP服务器] /files/ " + fs::appPath() + "/files");
+		LOG("[keyinfo]" + logName + "/files/	<--> " + fs::appPath() + "/files");
 	}
 
 
@@ -772,7 +778,7 @@ void httpSrvThread(int port,bool https = false)
 	srv.set_file_extension_and_mimetype_mapping("zip", "application/x-zip-compressed");
 	srv.set_file_extension_and_mimetype_mapping("txt", "text/plain");
 
-	LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(port) + " 本机浏览器 http://localhost:" + str::fromInt(port) + " 访问软件用户界面");
+	LOG("[keyinfo]" + logName + " 端口: " + str::fromInt(port) + " http://localhost:" + str::fromInt(port) + " 访问软件界面");
 	srv.listen("0.0.0.0", port);
 }
 
@@ -802,10 +808,8 @@ bool dataServer::runAsCloud()
 	strName=str::format("tds(%d)", tds->conf->wsPort);
 	m_tcpSrv->SettIOCPName(strName);
 
-	//http服务 667 默认都打开
-	thread t1(httpSrvThread,667,false);
-	t1.detach();
-	if (tds->conf->httpPort != 667)
+	//http服务
+	if (tds->conf->httpPort != 0)
 	{
 		thread t2(httpSrvThread, tds->conf->httpPort,false);
 		t2.detach();
@@ -813,8 +817,12 @@ bool dataServer::runAsCloud()
 
 	if (tds->conf->enableHttps)
 	{
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 		thread t3(httpSrvThread, 443, true);
 		t3.detach();
+#else
+		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
+#endif
 	}
 	
 

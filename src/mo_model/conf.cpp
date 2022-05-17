@@ -359,12 +359,6 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		confPath = fs::appPath() + "/conf";
 	if(uiPath == "")
 		uiPath = fs::appPath() + "/ui";
-	if (wsPort == 0)
-		wsPort = 666;
-	if (httpPort == 0)
-		httpPort = 667;
-	if (tdspPort == 0)
-		tdspPort = 665;
 	if (dbPath == "")
 		dbPath = fs::appPath() + "/db";
 	if (title == "")

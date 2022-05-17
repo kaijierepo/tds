@@ -2803,8 +2803,11 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 		if (p == orgSession) //不发给来源
 			continue;
 
-		if(p->type == TDS_SESSION_TYPE::tdsClient)
+		if (p->type == TDS_SESSION_TYPE::tdsClient)
+		{
+			p->sendContent = "text";
 			p->send((char*)notify.c_str(), notify.length());
+		}
 	}
 }
 
