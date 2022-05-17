@@ -2532,7 +2532,7 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 		{
 			ioChannel* pC = p->m_channels[i];
 			json jDe;
-			jDe["ioAddr"] = pC->m_devAddr;
+			jDe["ioAddr"] = pC->getDevAddrStr();
 			jDe["val"] = pC->m_curVal;
 			channels.push_back(jDe);
 		}

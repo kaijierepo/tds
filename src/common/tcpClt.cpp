@@ -219,8 +219,13 @@ bool tcpClt::connect()
 		}
 	}
 
+
+	struct hostent* hptr = gethostbyname(m_remoteIP.c_str());
+	if (hptr == NULL || hptr->h_addr == NULL)
+		return false;
+
 	SOCKADDR_IN addrSrv;
-	addrSrv.sin_addr.S_un.S_addr=inet_addr(m_remoteIP.c_str());
+	CopyMemory(&addrSrv.sin_addr.S_un.S_addr, hptr->h_addr_list[0], hptr->h_length);
 	addrSrv.sin_family=AF_INET;
 	addrSrv.sin_port=htons(m_remotePort);
 	m_bIsConnectting = true;

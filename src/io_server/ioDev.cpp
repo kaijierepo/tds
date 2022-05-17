@@ -386,13 +386,18 @@ bool ioDev::loadConf(json& conf)
 			{
 				m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 			}
-			pdc->m_pParent = this;
-			m_channels.push_back(pdc);
-			m_mapDataChannel[pdc->m_devAddr] = pdc;
+			addChannel(pdc);
 		}
 	}
 		
 	return true;
+}
+
+void ioDev::addChannel(ioChannel* pdc)
+{
+	pdc->m_pParent = this;
+	m_channels.push_back(pdc);
+	m_mapDataChannel[pdc->getDevAddrStr()] = pdc;
 }
 
 bool ioDev::connect()

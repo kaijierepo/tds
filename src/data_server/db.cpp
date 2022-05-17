@@ -203,7 +203,8 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 			yyjson_val* val;
 			yyjson_arr_foreach(root, idx, max, val) {
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
-				if (idx % dsi > 0) continue;
+				//最后1个下采样间隔全部输出
+				if (idx % dsi > 0 && idx < max - dsi) continue;
 
 				yyjson_mut_val* jDE = yyjson_val_mut_copy(mut_doc, val);
 				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");

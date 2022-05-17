@@ -331,13 +331,13 @@ void initHttpSrv(httplib::Server& svr)
 			res.set_header("Access-Control-Max-Age", "86400");
 		});
 
-//rpc Post命令处理
-	svr.Post("\\/.*",handleRpcOverHttp);
-	svr.Get("\\/rpc.*", handleRpcOverHttp);
-
 //微信公众号消息处理
 	svr.Get("\\/gzh.*", handleGet_gzh);
 	svr.Post("\\/gzh.*", handlePost_gzh);
+
+//rpc Post命令处理
+	svr.Post("\\/.*",handleRpcOverHttp);
+	svr.Get("\\/rpc.*", handleRpcOverHttp);
 
 //最新版本的apk下载
 	svr.Get("\\/apk", handleGet_apk);
