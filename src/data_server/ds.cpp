@@ -332,7 +332,7 @@ void initHttpSrv(httplib::Server& svr)
 		});
 
 //rpc Post命令处理
-	svr.Post("\\/rpc.*",handleRpcOverHttp);
+	svr.Post("\\/.*",handleRpcOverHttp);
 	svr.Get("\\/rpc.*", handleRpcOverHttp);
 
 //微信公众号消息处理
