@@ -165,9 +165,6 @@
     <ClCompile Include="..\src\mo_model\prj.cpp">
       <Filter>mo</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp">
-      <Filter>tdsPro</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\stream2pkt.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -218,6 +215,9 @@
     </ClCompile>
     <ClCompile Include="..\src\tools\fileWatcher.cpp">
       <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp">
+      <Filter>tdsPro\ioDev</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -363,9 +363,6 @@
     <ClInclude Include="..\src\mo_model\tdscore.h">
       <Filter>mo</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev_iq60.h">
-      <Filter>tdsPro</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\common\stream2pkt.h">
       <Filter>common</Filter>
     </ClInclude>
@@ -422,6 +419,9 @@
     </ClInclude>
     <ClInclude Include="..\src\tools\fileWatcher.h">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tdspro\ioDev_iq60.h">
+      <Filter>tdsPro\ioDev</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
