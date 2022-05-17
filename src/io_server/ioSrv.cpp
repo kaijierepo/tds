@@ -349,7 +349,8 @@ void ioServer::refreshSerialIODev()
 		if (!ls)
 		{
 			ls = onChildDevDiscovered(ci.portNum, IO_DEV_TYPE::GW::local_serial);
-			ls->m_devTypeLabel = ci.desc;
+			if(ls)
+				ls->m_devTypeLabel = ci.desc;
 		}
 	}
 
@@ -577,6 +578,8 @@ string ioServer::getTag(string strDataChannelID)
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
 	ioDev* p = createIODev(type);
+	if (p == nullptr) return nullptr;
+
 	p->m_jDevAddr = childDevAddr;
 	if (childDevAddr.is_string())
 		p->m_devAddr = p->m_jDevAddr.get<string>();

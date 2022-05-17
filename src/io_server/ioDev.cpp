@@ -60,6 +60,10 @@ ioDev* createIODev(string type)
 		p = new ioDev_genicam();
 #endif
 	}
+	else
+	{
+		LOG("[warn]不支持设备类型:" + type + ",您可以联系厂家获取支持该类型设备的专业版");
+	}
 
 	if (p)
 	{
