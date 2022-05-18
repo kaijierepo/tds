@@ -598,18 +598,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='exe -D mtd|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\proto\wsProto.cpp" />
-    <ClCompile Include="..\src\tdspro\gzhServer.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_modbusSlave.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_mqttBroker.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tdsp.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tuya.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_localSerial.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_rs485.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp" />
-    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp" />
-    <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp" />
-    <ClCompile Include="..\src\tdspro\tools\tcp2com.cpp" />
-    <ClCompile Include="..\src\tdspro\xiaot.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\tools\dumpCatch.cpp" />
     <ClCompile Include="..\src\tools\fileWatcher.cpp" />
@@ -669,18 +657,6 @@
     <ClInclude Include="..\src\proto\wsProto.h" />
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
-    <ClInclude Include="..\src\tdspro\gzhServer.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_modbusSlave.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_mqttBroker.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tdsp.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tuya.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_localSerial.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_rs485.h" />
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_tuyaProject.h" />
-    <ClInclude Include="..\src\tdspro\ioDev_iq60.h" />
-    <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h" />
-    <ClInclude Include="..\src\tdspro\tools\tcp2com.h" />
-    <ClInclude Include="..\src\tdspro\xiaot.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\dumpCatch.h" />
     <ClInclude Include="..\src\tools\fileWatcher.h" />

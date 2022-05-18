@@ -28,23 +28,14 @@
     <Filter Include="globalManage">
       <UniqueIdentifier>{839651a6-0e6f-4680-b62a-3d40e2674a4c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdsPro">
-      <UniqueIdentifier>{55f4ffc4-1c52-448a-9316-d0c36fe31046}</UniqueIdentifier>
-    </Filter>
     <Filter Include="mo">
       <UniqueIdentifier>{9b0e2a3a-cc4f-43b1-813a-b1d7577c25a6}</UniqueIdentifier>
     </Filter>
     <Filter Include="io">
       <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdsPro\ioDev">
-      <UniqueIdentifier>{a0b0ae6f-8db0-4b7b-8685-cd78ae935884}</UniqueIdentifier>
-    </Filter>
     <Filter Include="proto">
       <UniqueIdentifier>{88cd19a6-1696-4a46-bcd9-a44ffc57646d}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="tdsPro\tools">
-      <UniqueIdentifier>{43de31cb-b143-41c2-b170-3588fd3239e7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -168,9 +159,6 @@
     <ClCompile Include="..\src\common\stream2pkt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tdspro\tdsLicensing\licenceMng.cpp">
-      <Filter>tdsPro</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tools\dumpCatch.cpp">
       <Filter>tools</Filter>
     </ClCompile>
@@ -180,44 +168,11 @@
     <ClCompile Include="..\src\tools\rproxy.cpp">
       <Filter>tools</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tdspro\xiaot.cpp">
-      <Filter>tdsPro</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\gzhServer.cpp">
-      <Filter>tdsPro</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tuya.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_tuyaProject.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\proto\wsProto.cpp">
       <Filter>proto</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_modbusSlave.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_mqttBroker.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioDev_tdsp.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_localSerial.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev\ioGW_rs485.cpp">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\tools\tcp2com.cpp">
-      <Filter>tdsPro\tools</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\tools\fileWatcher.cpp">
       <Filter>tools</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tdspro\ioDev_iq60.cpp">
-      <Filter>tdsPro\ioDev</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -366,9 +321,6 @@
     <ClInclude Include="..\src\common\stream2pkt.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tdspro\tdsLicensing\licenceMng.h">
-      <Filter>tdsPro</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\tools\dumpCatch.h">
       <Filter>tools</Filter>
     </ClInclude>
@@ -381,47 +333,14 @@
     <ClInclude Include="..\src\tools\rproxy.h">
       <Filter>tools</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tdspro\xiaot.h">
-      <Filter>tdsPro</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\gzhServer.h">
-      <Filter>tdsPro</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tuya.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_tuyaProject.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\proto\proto_rtu.hpp">
       <Filter>proto</Filter>
     </ClInclude>
     <ClInclude Include="..\src\proto\wsProto.h">
       <Filter>proto</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_modbusSlave.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_mqttBroker.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioDev_tdsp.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_localSerial.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev\ioGW_rs485.h">
-      <Filter>tdsPro\ioDev</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\tools\tcp2com.h">
-      <Filter>tdsPro\tools</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\tools\fileWatcher.h">
       <Filter>tools</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tdspro\ioDev_iq60.h">
-      <Filter>tdsPro\ioDev</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
