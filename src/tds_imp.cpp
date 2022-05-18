@@ -349,7 +349,8 @@ bool TDS_imp::run(string cmdline)
 	LOG("[数据库	]" + tds->conf->dbPath);
 
 	//startup xiaot
-	tds->xiaoT->init();
+	if(tds->xiaoT)
+		tds->xiaoT->init();
 
 	//startup tds modules
 	//if db folder is not exist. open will create an empty folder
@@ -383,7 +384,8 @@ bool TDS_imp::run(string cmdline)
 	audioPlayer.run();
 
 	//其他插件
-	tds->gzhServer->init();
+	if(tds->gzhServer)
+		tds->gzhServer->init();
 
 	if (conf->debugMode)
 	{

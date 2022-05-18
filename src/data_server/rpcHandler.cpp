@@ -509,6 +509,19 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
+
+	if (!params.contains("tag"))
+	{
+		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : tag");
+		return true;
+	}
+	if (!params.contains("time"))
+	{
+		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : time");
+		return true;
+	}
+	
+
 	if (method == "db.select")
 	{
 		result = rpc_db_select(params, error, session);
@@ -526,6 +539,18 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		string tag = params["tag"].get<string>();
 		string time = params["time"].get<string>();
 		db.Delete(tag, timeopt::str2st(time));
+		result = "\"ok\"";
+	}
+	else if (method == "db.insert")
+	{
+		if (!params.contains("val"))
+		{
+			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : val");
+			return true;
+		}
+		string tag = params["tag"].get<string>();
+		string time = params["time"].get<string>();
+		db.Insert(tag, timeopt::str2st(time),params["val"]);
 		result = "\"ok\"";
 	}
 	else
