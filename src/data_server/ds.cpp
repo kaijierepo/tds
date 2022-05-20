@@ -17,6 +17,7 @@
 #include "tds.h"
 #include "users/userMng.h"
 #include "sha1.hpp"
+#include "webSrv.h"
 
 
 dataServer ds;
@@ -809,21 +810,23 @@ bool dataServer::runAsCloud()
 	m_tcpSrv->SettIOCPName(strName);
 
 	//http服务
-	if (tds->conf->httpPort != 0)
-	{
-		thread t2(httpSrvThread, tds->conf->httpPort,false);
-		t2.detach();
-	}
-
-	if (tds->conf->enableHttps)
-	{
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-		thread t3(httpSrvThread, 443, true);
-		t3.detach();
-#else
-		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
-#endif
-	}
+//	if (tds->conf->httpPort != 0)
+//	{
+//		thread t2(httpSrvThread, tds->conf->httpPort,false);
+//		t2.detach();
+//	}
+//
+//	if (tds->conf->enableHttps)
+//	{
+//#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+//		thread t3(httpSrvThread, 443, true);
+//		t3.detach();
+//#else
+//		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
+//#endif
+//	}
+	
+	webSrv.run(667);
 	
 
 	//http热更新服务 668

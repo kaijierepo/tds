@@ -691,6 +691,16 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			string sError = jError.dump();
 		}
 	}
+	else if (method == "testCall")
+	{
+	    int timeCost = 5;
+		if (params["time"] != nullptr)
+		{
+			timeCost = params["time"].get<int>();
+		}
+		Sleep(1000 * timeCost);
+		rpcResp.result =  params.dump();
+	}
 	else
 	{
 		bHandled = false;

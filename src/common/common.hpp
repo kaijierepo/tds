@@ -693,7 +693,7 @@ namespace str {
 		return s;
 	}
 
-	inline string fromBuff(char* p, int len)
+	inline string fromBuff(const char* p, int len)
 	{
 		char* tmp = new char[len + 1];
 		memcpy(tmp, p, len);

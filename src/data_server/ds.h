@@ -8,6 +8,7 @@ dataserver
 #include "tdsSession.h"
 #include <memory>
 #include "tdscore.h"
+#include "webSrv.h"
 
 
 #define MAX_CLIENT_NUM int_MaxClients_MAX
@@ -48,6 +49,7 @@ public:
 	void stop();
 	dataServer();
 	virtual ~dataServer();
+	WebServer webSrv;
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
 	tcpSrv* m_httpHotUpdateSrv;
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
