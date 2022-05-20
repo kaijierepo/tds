@@ -44,6 +44,7 @@ public:
 	string getRDSPage();
 
 public:
+	bool runAsCloud1();
 	bool runAsCloud();
 	bool runAsEdge();
 	void stop();

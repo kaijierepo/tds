@@ -711,14 +711,14 @@ void httpSrvThread(int port,bool https = false)
 		srv.set_mount_point("/", +asc_customUI.c_str());
 		LOG("[keyinfo]" + logName + "根目录		<--> " + customUI);
 
-		////ui/app
-		//string customUIApp = tds->conf->uiPath + "/app";
-		//if (fs::fileExist(customUIApp))
-		//{
-		//	string s = charCodec::utf8toAnsi(customUIApp);
-		//	srv.set_mount_point("/", +s.c_str());
-		//	LOG("[keyinfo]" + logName + " 根目录: " + customUIApp);
-		//}
+		//ui/app
+		string customUIApp = tds->conf->uiPath + "/app";
+		if (fs::fileExist(customUIApp))
+		{
+			string s = charCodec::utf8toAnsi(customUIApp);
+			srv.set_mount_point("/", +s.c_str());
+			LOG("[keyinfo]" + logName + " 根目录: " + customUIApp);
+		}
 	}
 	else
 	{
@@ -784,6 +784,13 @@ void httpSrvThread(int port,bool https = false)
 }
 
 
+bool dataServer::runAsCloud1()
+{
+	webSrv.run(667);
+	return true;
+}
+
+
 bool dataServer::runAsCloud()
 {
 	m_tcpSrv = new tcpSrv();
@@ -810,23 +817,21 @@ bool dataServer::runAsCloud()
 	m_tcpSrv->SettIOCPName(strName);
 
 	//http服务
-//	if (tds->conf->httpPort != 0)
-//	{
-//		thread t2(httpSrvThread, tds->conf->httpPort,false);
-//		t2.detach();
-//	}
-//
-//	if (tds->conf->enableHttps)
-//	{
-//#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-//		thread t3(httpSrvThread, 443, true);
-//		t3.detach();
-//#else
-//		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
-//#endif
-//	}
-	
-	webSrv.run(667);
+	if (tds->conf->httpPort != 0)
+	{
+		thread t2(httpSrvThread, tds->conf->httpPort,false);
+		t2.detach();
+	}
+
+	if (tds->conf->enableHttps)
+	{
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+		thread t3(httpSrvThread, 443, true);
+		t3.detach();
+#else
+		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
+#endif
+	}
 	
 
 	//http热更新服务 668

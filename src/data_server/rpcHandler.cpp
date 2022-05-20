@@ -510,48 +510,50 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	string& error = rpcResp.error;
 	bool bHandled = true;
 
-	if (!params.contains("tag"))
-	{
-		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : tag");
-		return true;
-	}
-	if (!params.contains("time"))
-	{
-		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : time");
-		return true;
-	}
 	
-
-	if (method == "db.select")
+	if (method.find("db.") != string::npos)
 	{
-		result = rpc_db_select(params, error, session);
-	}
-	if (method == "db.update")
-	{
-		string tag = params["tag"].get<string>();
-		string time = params["time"].get<string>();
-		json val = params["val"];
-		db.Update(tag, timeopt::str2st(time), val);
-		result = "\"ok\"";
-	}
-	else if (method == "db.delete")
-	{
-		string tag = params["tag"].get<string>();
-		string time = params["time"].get<string>();
-		db.Delete(tag, timeopt::str2st(time));
-		result = "\"ok\"";
-	}
-	else if (method == "db.insert")
-	{
-		if (!params.contains("val"))
+		if (!params.contains("tag"))
 		{
-			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : val");
-			return true;
+			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : tag");
 		}
-		string tag = params["tag"].get<string>();
-		string time = params["time"].get<string>();
-		db.Insert(tag, timeopt::str2st(time),params["val"]);
-		result = "\"ok\"";
+		else if (!params.contains("time"))
+		{
+			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : time");
+		}
+		else if (method == "db.select")
+		{
+			result = rpc_db_select(params, error, session);
+		}
+		else if (method == "db.update")
+		{
+			string tag = params["tag"].get<string>();
+			string time = params["time"].get<string>();
+			json val = params["val"];
+			db.Update(tag, timeopt::str2st(time), val);
+			result = "\"ok\"";
+		}
+		else if (method == "db.delete")
+		{
+			string tag = params["tag"].get<string>();
+			string time = params["time"].get<string>();
+			db.Delete(tag, timeopt::str2st(time));
+			result = "\"ok\"";
+		}
+		else if (method == "db.insert")
+		{
+			if (!params.contains("val"))
+			{
+				error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : val");
+			}
+			else
+			{
+				string tag = params["tag"].get<string>();
+				string time = params["time"].get<string>();
+				db.Insert(tag, timeopt::str2st(time), params["val"]);
+				result = "\"ok\"";
+			}
+		}
 	}
 	else
 	{

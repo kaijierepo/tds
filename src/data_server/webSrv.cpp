@@ -30,10 +30,7 @@ static void start_thread(void (*f)(void*), void* p) {
 }
 
 static void thread_function(void* param) {
-	int sock = (int)(size_t)param;  // Paired socket. We own it
-	sleep(2);                         // Simulate long execution
-	send(sock, "hi", 2, 2);           // Wakeup event manager
-	close(sock);                      // Close the connection
+
 }
 
 static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
@@ -66,7 +63,7 @@ static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 }
 
 // HTTP request callback
-static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
+static void fn1(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	if (ev == MG_EV_HTTP_MSG) {
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
 		if (mg_http_match_uri(hm, "/fast")) {
@@ -81,7 +78,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 	}
 	else if (ev == MG_EV_CLOSE) {
-		if (c->fn_data != NULL) unlink_conns(c, c->fn_data);
+		if (c->fn_data != NULL) unlink_conns(c, (mg_connection *) c->fn_data);
 	}
 }
 
@@ -121,8 +118,8 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
 		if (mg_http_match_uri(hm, "/rpc")) {
 			string header, body;
-			handleRpcOverHttp_webSrv(hm, header, body);
-			mg_http_reply(c, 200,header.c_str(),body.c_str());  // Serve dynamic content
+			//handleRpcOverHttp_webSrv(hm, header, body);
+			//mg_http_reply(c, 200,header.c_str(),body.c_str());  // Serve dynamic content
 		}
 		else if (mg_http_match_uri(hm, "/ws")) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
@@ -134,11 +131,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		{
 			int sock = mg_mkpipe(c->mgr, pcb, c);                   // Create pipe
 
-			thread t(thread_handleRpcOverHttp,)
-			start_thread(thread_function, (void*)(size_t)sock);  // Start thread
-			string header, body;
-			handleRpcOverHttp_webSrv(hm, header, body);
-			mg_http_reply(c, 200, header.c_str(), body.c_str());  // Serve dynamic content
+			//thread t(thread_handleRpcOverHttp,)
+			//start_thread(thread_function, (void*)(size_t)sock);  // Start thread
+			//string header, body;
+			//handleRpcOverHttp_webSrv(hm, header, body);
+			//mg_http_reply(c, 200, header.c_str(), body.c_str());  // Serve dynamic content
 		}
 		else {
 			struct mg_http_serve_opts opts;
