@@ -4,12 +4,11 @@
 
 tdsConfig::tdsConfig()
 {
-	wsPort = 0;
-	httpPort = 0;
+	httpsPort = 666;
+	httpPort = 667;
 	tdspPort = 665;
 	mbPort = 664;
 	iq60Port = 663;
-	enableHttps = false;
 	debugMode = false;
 	bConcurrentGateway = true;
 	confPath = "";
@@ -89,12 +88,11 @@ string tdsConfig::defaultConf_tds()
 	string s = R"(#TDS 配置文件
 #基础配置
 confpath=./conf        #配置路径
-wsPort=666               #数据服务端口websocket协议
-httpPort=667           #http服务端口
+httpsPort=666          #https服务端口,同时支持websocket secure
+httpPort=667           #http服务端口,同时支持websocket
 loglevel=debug         #日志级别
 
 #功能模块启用
-enableHttps = 0        #启用https
 enableDB = 1           #启用数据库
 enableLog = 1          #启用日志记录
 authDownload = 0       #开启文件下载用户认证
@@ -210,8 +208,8 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			iotimeoutModbusRtu = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutIQ60"))
 			iotimeoutIQ60 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "wsPort"))
-			wsPort = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "httpsPort"))
+			httpsPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpPort"))
 			httpPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tdspPort"))
@@ -240,13 +238,6 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 				authDownload = true;
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
-		}
-		else if (checkKey(tci.key, "enableHttps"))
-		{
-			if (tci.val == "true" || tci.val == "1")
-				enableHttps = true;
-			else if (tci.val == "false" || tci.val == "0")
-				enableHttps = false;
 		}
 		else if (checkKey(tci.key, "debugMode"))
 		{
@@ -369,12 +360,6 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 	}
 	if (uiTitle == "")
 		uiTitle = "tdsUI";
-
-	//关键配置信息
-	//if (enableDevReboot)
-		//LOG("[TDS参数   ]启用设备自动重启机制,重启周期" + str::fromInt(devRebootTime) + "秒");
-	//if (enableDevCommReboot)
-		//LOG("[TDS参数   ]启用设备通信模块自动重启机制,重启周期" + str::fromInt(devCommRebootTime) + "秒");
 }
 
 void tdsConfig::loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf)
@@ -466,7 +451,7 @@ void tdsConfig::loadConf()
 json tdsConfig::toJson()
 {
 	json conf;
-	conf["port"] = wsPort;
+	conf["httpsPort"] = httpsPort;
 	conf["httpPort"] = httpPort;
 	conf["ioServerPort"] = tdspPort;
 	conf["debugMode"] = debugMode;

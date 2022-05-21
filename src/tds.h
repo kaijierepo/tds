@@ -232,8 +232,8 @@ struct iTDSConf {
 	string logLevel;
 
 	//tcp port conf
-	int wsPort;    //websocket port of tds;  default value 666
-	int httpPort;  //http port of tds;  default value 667
+	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure
+	int httpPort;  //http port of tds;  default value 667; can be upgraded to websocket
 	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
 	int mbPort;    //modbus protocol port of ioServer; default value 664
 	int iq60Port;  //iq60 protocol port of ioServer; default value 663
@@ -255,7 +255,6 @@ struct iTDSConf {
 	vector<ACTIVE_TDS_SESSION> vecActiveSession;
 
 	//module enable/disable
-	bool enableHttps;
 	bool enableLog;
 	bool enableDB;
 	bool enableAccessCtrl;

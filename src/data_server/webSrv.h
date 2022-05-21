@@ -5,5 +5,7 @@ class WebServer {
 public:
 	WebServer();
 	~WebServer();
-	void run(int port);
+	void run(int port, bool https = false);
+
+	bool enableHttps;
 };

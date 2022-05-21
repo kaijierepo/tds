@@ -283,6 +283,11 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	resp.result = "\"ok\"";
 }
 
+void almServer::rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session)
+{
+	
+}
+
 /*
 ALARM_LEVEL almServer::StringToAlarmLevel(string level)
 {

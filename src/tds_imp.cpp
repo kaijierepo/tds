@@ -51,6 +51,7 @@ SOFTWARE.
 #include <filesystem>
 #include "tools/dumpCatch.h"
 #include "tools/fileWatcher.h"
+#include "users/userMng.h"
 
 
 
@@ -371,6 +372,7 @@ bool TDS_imp::run(string cmdline)
 	else
 	{
 		ds.runAsCloud();  //data server
+		userMng.loadConf();
 	}
 #ifdef ENABLE_FFMPEG
 	//rds.run(); //remote desktop server

@@ -784,14 +784,44 @@ void httpSrvThread(int port,bool https = false)
 }
 
 
-bool dataServer::runAsCloud1()
+bool dataServer::runAsCloud()
 {
-	webSrv.run(667);
+	if (tds->conf->httpPort != 0)
+	{
+		webSrv.run(tds->conf->httpPort);
+	}
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+	if (tds->conf->httpsPort != 0)
+	{
+		webSrvS.run(tds->conf->httpsPort,true);
+	}
+#endif
+
+	//http热更新服务 668
+	if (tds->conf->debugMode)
+	{
+		m_httpHotUpdateSrv = new tcpSrv();
+		if (!m_httpHotUpdateSrv->run(this, 668))
+		{
+			if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
+			{
+				LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
+			}
+			else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
+			{
+				LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
+			}
+			LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
+		}
+		LOG("[keyinfo][HTTP热更新服务] 端口:" + str::fromInt(668));
+	}
+	
 	return true;
 }
 
 
-bool dataServer::runAsCloud()
+bool dataServer::runAsCloud1()
 {
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;
@@ -800,7 +830,7 @@ bool dataServer::runAsCloud()
 	string strName;
 	if(!tds->conf->debugMode)
 		m_tcpSrv->keepAliveTimeout = tds->conf->tcpKeepAliveDS;
-	if(!m_tcpSrv->run(this, tds->conf->wsPort))
+	if(!m_tcpSrv->run(this, 666))
 	{
 		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
 		{
@@ -812,8 +842,8 @@ bool dataServer::runAsCloud()
 		}
 		LOG("[error]websocket服务端口启动失败！");
 	}
-	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(tds->conf->wsPort) + " 使用tdsRPC over websocket协议访问");
-	strName=str::format("tds(%d)", tds->conf->wsPort);
+	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(666) + " 使用tdsRPC over websocket协议访问");
+	strName=str::format("tds(%d)", 666);
 	m_tcpSrv->SettIOCPName(strName);
 
 	//http服务
@@ -823,10 +853,10 @@ bool dataServer::runAsCloud()
 		t2.detach();
 	}
 
-	if (tds->conf->enableHttps)
+	if (tds->conf->httpsPort!=0)
 	{
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-		thread t3(httpSrvThread, 443, true);
+		thread t3(httpSrvThread, tds->conf->httpsPort, true);
 		t3.detach();
 #else
 		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
@@ -862,8 +892,6 @@ bool dataServer::runAsCloud()
 		thread t(httpSrvThread,80,false);
 		t.detach();
 	}
-
-	userMng.loadConf();
 
 	thread t(activeSessionThread);//主要用于io设备通过tcp中转而非直接连接的情况
 	t.detach();

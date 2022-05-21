@@ -1197,6 +1197,10 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		almSrv.rpc_acknowledge(params,rpcResp, session);
 	}
+	else if (method == "ackAllAlarmEvent")
+	{
+		almSrv.rpc_acknowledge(params, rpcResp, session);
+	}
 	else
 	{
 		bHandled = false;

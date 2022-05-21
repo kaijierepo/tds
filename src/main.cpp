@@ -106,7 +106,6 @@ int main(int argc, char** argv)
 	//保持无效值，使用配置文件当中的值
 	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
 	parser.run_and_exit_if_error();
-	tds->conf->wsPort = parser.get<int>("p");
 	tds->conf->debugMode = parser.get<bool>("d");
 	tds->conf->logLevel = parser.get<string>("l");
 
@@ -276,6 +275,17 @@ DllExport iTDS* getTds() {
 	return &tdsImp;
 }
 
+
+//如果tds主程序中不使用_strdup ， strspn 这两个函数
+// /MT 编译的openssl的crypto.lib会出现   这两个函数unresolved错误
+//可能openssl编译的时候没有指定需要链接的lib. 主程序使用则产生了lib链接。原因不明。后续研究
+void forLink() {
+	char* a = new char[100];
+	memset(a, 0, 100);
+	string b = "abc";
+	a = _strdup(b.c_str());
+	int pos = strspn(a, "b");
+}
 
 
 
