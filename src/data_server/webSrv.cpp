@@ -5,6 +5,7 @@
 #include "common/common.hpp"
 #include "logger.h"
 
+ 
 string rootDir;
 string confDir;
 string filesDir;
@@ -148,17 +149,13 @@ WebServer::~WebServer()
 void WebServer::run(int port,bool https)
 {
 	enableHttps = https;
-	rootDir = "./ui";
-	confDir = tds->conf->confPath;
-	filesDir = fs::appPath() + "/files";
-
 	if (https)
 	{
-		LOG("[HTTPS服务	] 端口:" + to_string(port));
+		LOG("[HTTPS服务	] 端口:" + to_string(port) + ",支持websocket secure");
 	}
 	else
 	{
-		LOG("[HTTP服务	] 端口:" + to_string(port));
+		LOG("[HTTP服务	] 端口:" + to_string(port) + ",支持websocket");
 	}
 
 	thread t(webThread,this,port);

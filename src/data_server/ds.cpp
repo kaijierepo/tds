@@ -784,8 +784,17 @@ void httpSrvThread(int port,bool https = false)
 }
 
 
-bool dataServer::runAsCloud()
+bool dataServer::runAsCloud1()
 {
+	rootDir = "./ui";
+	confDir = tds->conf->confPath;
+	filesDir = "./files";
+
+	LOG("[Web目录	] /       <--> " + rootDir);
+	LOG("[Web目录	] /config <--> " + confDir);
+	LOG("[Web目录	] /files  <--> " + filesDir);
+
+
 	if (tds->conf->httpPort != 0)
 	{
 		webSrv.run(tds->conf->httpPort);
@@ -821,7 +830,7 @@ bool dataServer::runAsCloud()
 }
 
 
-bool dataServer::runAsCloud1()
+bool dataServer::runAsCloud()
 {
 	m_tcpSrv = new tcpSrv();
 	m_wspSrv.m_pTcpServer = m_tcpSrv;

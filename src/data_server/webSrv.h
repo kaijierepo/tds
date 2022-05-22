@@ -9,3 +9,7 @@ public:
 
 	bool enableHttps;
 };
+
+extern string rootDir;
+extern string confDir;
+extern string filesDir;
