@@ -1203,21 +1203,11 @@ namespace fs {
 	}
 	inline string toAbsolutePath(string str)
 	{
-		string s;
-		if (str.substr(0, 2) == "./")
-		{
-			s = str.substr(2, str.length() - 2);
-			s = fs::appPath() + "/" + s;
-		}
-		else if (str.substr(0, 3) == "../")
-		{
-			s = fs::appPath() + "/" + str;
-		}
-		else
-		{
-			s = str;
-		}
-		return s;
+		char absPath[1024] = { 0 };
+		_fullpath(absPath, str.c_str(), 1024);
+		str = absPath;
+		str = str::replace(str, "\\", "/");
+		return str;
 	}
 	inline string getExt(string strFilePath)
 	{
