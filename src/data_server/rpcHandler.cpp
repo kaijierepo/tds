@@ -2833,11 +2833,14 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
+
 	ds.m_mutexTdsSessionList.lock();
 	vector<shared_ptr<TDS_SESSION>> tdsSessions;
 	tdsSessions = ds.m_vecTdsSession;
 	ds.m_mutexTdsSessionList.unlock();
 	
+	ds.webSrv.sendToWs(notify);
+	ds.webSrvS.sendToWs(notify);
 	
 	for (int i=0;i<tdsSessions.size();i++)
 	{

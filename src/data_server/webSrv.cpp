@@ -4,6 +4,7 @@
 #include "rpcHandler.h"
 #include "common/common.hpp"
 #include "logger.h"
+#include "proto/wsProto.h"
 
  
 string rootDir;
@@ -28,17 +29,16 @@ static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		c->is_closing = 1;
 	}
 	else if (ev == MG_EV_READ) {  // Got data from the worker thread
-		string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 
-		mg_http_reply(parent, 200, resHeader.c_str(), "%.*s\n", c->recv.len,
-			c->recv.buf);  // Respond!
-		c->recv.len = 0;             // Tell Mongoose we've consumed data
 	}
 	else if (ev == MG_EV_OPEN) {
 		link_conns(c, parent);
 	}
 	else if (ev == MG_EV_CLOSE) {
 		unlink_conns(c, parent);
+		string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+		mg_http_reply(parent, 200, resHeader.c_str(), "%.*s\n", c->recv.len, c->recv.buf);  // Respond!
+		c->recv.len = 0;             // Tell Mongoose we've consumed data
 	}
 }
 
@@ -57,14 +57,14 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 	string resBody = rpcRespStr;
 	string ctLen = to_string(resBody.length());
 
-	send(sock,resBody.c_str(), resBody.length(),MSG_DONTROUTE);           // Wakeup event manager
+	int isend = send(sock,resBody.c_str(), resBody.length(),MSG_DONTROUTE);         
 	closesocket(sock);                      // Close the connection
 }
 
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
+	WebServer* pWs = (WebServer*)fn_data;
 	if (ev == MG_EV_ACCEPT) {
-		WebServer* pWs = (WebServer*)fn_data;
 		if (pWs->enableHttps)
 		{
 			struct mg_tls_opts opts;
@@ -77,14 +77,20 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	else if (ev == MG_EV_HTTP_MSG)
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		if (mg_http_match_uri(hm, "/rpc")) {
 			int sock = mg_mkpipe(c->mgr, pcb, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
 		}
-		else if (mg_http_match_uri(hm, "/ws")) {
+		else if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
+			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+			p->sock = (SOCKET) c->fd;
+			pWs->m_csWsSessions.lock();
+			pWs->m_wsSessions[c] = p;
+			pWs->m_csWsSessions.unlock();
 		}
 		else if (mg_http_match_uri(hm, "/gzh")) {
 			
@@ -119,6 +125,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			mg_ws_send(c, rpcRespStr.c_str(), rpcRespStr.length(), WEBSOCKET_OP_TEXT);
 	}
 	else if (ev == MG_EV_CLOSE) {
+		SOCKET s = (SOCKET)c->fd;
+		pWs->m_csWsSessions.lock();
+		pWs->m_wsSessions.erase(c);
+		pWs->m_csWsSessions.unlock();
+
 		if (c->fn_data != NULL) unlink_conns(c, (mg_connection*)c->fn_data);
 	}
 }
@@ -130,6 +141,7 @@ void webThread(WebServer* pSrv,int port) {
 		proto = "https:";
 	string url = proto + "//localhost:" + to_string(port);
 	struct mg_mgr mgr;
+	pSrv->pMgr = &mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
 	mg_http_listen(&mgr, url.c_str() , fn , pSrv);  // Setup listener
 	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
@@ -160,4 +172,16 @@ void WebServer::run(int port,bool https)
 
 	thread t(webThread,this,port);
 	t.detach();
+}
+
+void WebServer::sendToWs(string& s)
+{
+	m_csWsSessions.lock();
+	for (auto& i : m_wsSessions)
+	{
+		CWSPPkt resp;
+		resp.pack(s.c_str(), s.length(), WS_TEXT_FRAME);
+		send(i.second->sock, resp.data, resp.len,0);
+	}
+	m_csWsSessions.unlock();
 }
