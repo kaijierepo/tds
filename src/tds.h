@@ -227,23 +227,39 @@ struct tcp2com_Conf {
 
 
 struct iTDSConf {
+	//software conf
 	string mode;
 	bool debugMode;
 	string logLevel;
-
-	//tcp port conf
-	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure
-	int httpPort;  //http port of tds;  default value 667; can be upgraded to websocket
-	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
-	int mbPort;    //modbus protocol port of ioServer; default value 664
-	int iq60Port;  //iq60 protocol port of ioServer; default value 663
+	bool enableGlobalAlarm;
 	
 	//path conf
 	string confPath;   //config data path
 	string dbPath;     //database folder path
 	string uiPath;     //ui web files path
 
-	//ui conf
+	//tds service conf
+	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure
+	int httpPort;  //http port of tds;  default value 667; can be upgraded to websocket
+	int httpsPort2;//default 0 not enable; another httpsport
+	int httpPort2; //default 0 not enable; another httpport
+	bool authDownload;
+	int tcpKeepAliveDS;
+
+	//io service conf
+	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
+	int mbPort;    //modbus protocol port of ioServer; default value 664
+	int iq60Port;  //iq60 protocol port of ioServer; default value 663
+	int tcpKeepAliveIO;
+	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
+	int iotimeoutModbusRtu;
+	int iotimeoutIQ60;
+	bool enableDevCommReboot;
+	bool enableDevReboot;
+	int devRebootTime; //seconds
+	int devCommRebootTime;
+
+	//desktop app mode conf
 	bool bConcurrentGateway;
 	string dataCenterIp;
 	string title;
@@ -259,23 +275,13 @@ struct iTDSConf {
 	bool enableDB;
 	bool enableAccessCtrl;
 	bool enableScript;
-	bool enableDevReboot;
-	int devRebootTime; //seconds
-	int devCommRebootTime;
-	bool authDownload; 
-	bool enableGlobalAlarm;
-	int tcpKeepAliveDS;
+
+	//tds edge conf
 	bool edge; //tds edge gateway mode
 	string cloudIP;
 	int cloudPort;
 	string deviceID;
 
-	//io conf
-	int tcpKeepAliveIO;
-	bool enableDevCommReboot;
-	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
-	int iotimeoutModbusRtu;
-	int iotimeoutIQ60;
 
 	//tcp2com
 	tcp2com_Conf conf_tcp2com;

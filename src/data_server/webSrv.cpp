@@ -79,6 +79,15 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		{
 			struct mg_tls_opts opts;
 			memset(&opts, 0, sizeof(opts));
+
+			//string certPath = fs::appPath() + "/cert.pem";
+			//certPath = _GB(certPath);
+			//opts.cert = certPath.c_str();
+
+			//string keyPath = fs::appPath() + "/key.pem";
+			//keyPath = _GB(keyPath);
+			//opts.certkey = keyPath.c_str();
+
 			opts.cert = "cert.pem";
 			opts.certkey = "key.pem";
 			mg_tls_init(c, &opts);

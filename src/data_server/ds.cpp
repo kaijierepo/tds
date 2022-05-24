@@ -800,11 +800,30 @@ bool dataServer::runAsCloud()
 	{
 		webSrv.run(tds->conf->httpPort);
 	}
+	if (tds->conf->httpPort2 != 0)
+	{
+		webSrv.run(tds->conf->httpPort2);
+	}
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 	if (tds->conf->httpsPort != 0)
 	{
+		string certFile = fs::appPath() + "/cert.pem";
+		if (!fs::fileExist(certFile))
+		{
+			LOG("[error]HTTPS服务缺少证书文件 ./cert.pem");
+		}
+		string keyFile = fs::appPath() + "/key.pem";
+		if (!fs::fileExist(keyFile))
+		{
+			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
+		}
+
 		webSrvS.run(tds->conf->httpsPort,true);
+	}
+	if (tds->conf->httpsPort2 != 0)
+	{
+		webSrvS.run(tds->conf->httpsPort2, true);
 	}
 #endif
 
