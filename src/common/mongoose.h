@@ -634,7 +634,7 @@ int sscanf(const char *, const char *, ...);
 
 // Granularity of the send/recv IO buffer growth
 #ifndef MG_IO_SIZE
-#define MG_IO_SIZE 2048
+#define MG_IO_SIZE 1024*300
 #endif
 
 // Maximum size of the recv IO buffer

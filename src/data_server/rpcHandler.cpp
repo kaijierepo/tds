@@ -1505,7 +1505,7 @@ bool rpcHandler::isGB2312Pkt(string& req)
 
 
 
-void rpcHandler::handleRpcCall(string strReq, string& strResp,char*& binResp,int& iBinLen,bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,int& iBinLen,bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession)
 {
 	string error = "";
 	RPC_RESP rpcResp;

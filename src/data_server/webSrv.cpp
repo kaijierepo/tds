@@ -29,16 +29,25 @@ static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		c->is_closing = 1;
 	}
 	else if (ev == MG_EV_READ) {  // Got data from the worker thread
-
+		mg_ws_send(parent,(const char*)c->recv.buf, c->recv.len, WEBSOCKET_OP_TEXT);
+		c->recv.len = 0;
 	}
 	else if (ev == MG_EV_OPEN) {
 		link_conns(c, parent);
 	}
 	else if (ev == MG_EV_CLOSE) {
 		unlink_conns(c, parent);
-		string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-		mg_http_reply(parent, 200, resHeader.c_str(), "%.*s\n", c->recv.len, c->recv.buf);  // Respond!
-		c->recv.len = 0;             // Tell Mongoose we've consumed data
+
+		if (c->is_websocket)
+		{
+
+		}
+		else
+		{
+			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
+			mg_iobuf_free(&c->recv);
+		}
 	}
 }
 
@@ -63,7 +72,7 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
-	WebServer* pWs = (WebServer*)fn_data;
+	WebServer* pWs = (WebServer*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->enableHttps)
 		{
@@ -78,19 +87,20 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
-		if (mg_http_match_uri(hm, "/rpc")) {
+		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
+			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
+			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+			int sock = mg_mkpipe(c->mgr, pcb, c);
+			p->sock = (SOCKET) sock;
+			pWs->m_csWsSessions.lock();
+			pWs->m_wsSessions[c] = p;
+			pWs->m_csWsSessions.unlock();
+		}
+		else if (mg_http_match_uri(hm, "/rpc")) {
 			int sock = mg_mkpipe(c->mgr, pcb, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
-		}
-		else if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
-			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
-			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-			p->sock = (SOCKET) c->fd;
-			pWs->m_csWsSessions.lock();
-			pWs->m_wsSessions[c] = p;
-			pWs->m_csWsSessions.unlock();
 		}
 		else if (mg_http_match_uri(hm, "/gzh")) {
 			
@@ -125,10 +135,15 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			mg_ws_send(c, rpcRespStr.c_str(), rpcRespStr.length(), WEBSOCKET_OP_TEXT);
 	}
 	else if (ev == MG_EV_CLOSE) {
-		SOCKET s = (SOCKET)c->fd;
-		pWs->m_csWsSessions.lock();
-		pWs->m_wsSessions.erase(c);
-		pWs->m_csWsSessions.unlock();
+		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
+		{
+			mg_connection* pairC = (mg_connection*)c->fn_data;
+			SOCKET s = (SOCKET)pairC->fd;
+			closesocket(s);
+			pWs->m_csWsSessions.lock();
+			pWs->m_wsSessions.erase(c);
+			pWs->m_csWsSessions.unlock();
+		}
 
 		if (c->fn_data != NULL) unlink_conns(c, (mg_connection*)c->fn_data);
 	}
@@ -144,6 +159,8 @@ void webThread(WebServer* pSrv,int port) {
 	pSrv->pMgr = &mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
 	mg_http_listen(&mgr, url.c_str() , fn , pSrv);  // Setup listener
+	mgr.userdata = pSrv;
+	LOG("%x", pSrv);
 	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
 	mg_mgr_free(&mgr);                                        // Cleanup
 }
@@ -179,9 +196,7 @@ void WebServer::sendToWs(string& s)
 	m_csWsSessions.lock();
 	for (auto& i : m_wsSessions)
 	{
-		CWSPPkt resp;
-		resp.pack(s.c_str(), s.length(), WS_TEXT_FRAME);
-		send(i.second->sock, resp.data, resp.len,0);
+		send(i.second->sock, s.c_str(), s.length(),0);
 	}
 	m_csWsSessions.unlock();
 }
