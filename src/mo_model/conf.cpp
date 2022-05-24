@@ -87,7 +87,8 @@ string tdsConfig::defaultConf_tds()
 {
 	string s = R"(#TDS 配置文件
 #基础配置
-confpath=./conf        #配置路径
+uiPath=./ui            #web根目录
+confPath=./conf        #配置路径
 httpsPort=666          #https服务端口,同时支持websocket secure
 httpPort=667           #http服务端口,同时支持websocket
 loglevel=debug         #日志级别
@@ -186,12 +187,12 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
 		TDS_CONF_ITEM& tci = vecConf[i];
-		if (tci.key == "confpath" && confPath == "")
+		if (checkKey(tci.key, "confpath"))
 		{
 			confPath = tci.val;
 			confPath = fs::toAbsolutePath(confPath);
 		}
-		else if (tci.key == "uipath" && uiPath == "")
+		else if (checkKey(tci.key,"uipath"))
 		{
 			uiPath = tci.val;
 			uiPath = fs::toAbsolutePath(uiPath);

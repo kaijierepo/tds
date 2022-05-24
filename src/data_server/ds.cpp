@@ -786,7 +786,7 @@ void httpSrvThread(int port,bool https = false)
 
 bool dataServer::runAsCloud()
 {
-	rootDir = "./ui";
+	rootDir = tds->conf->uiPath;
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
 	filesDir = "./files";

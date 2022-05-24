@@ -115,6 +115,9 @@ int main(int argc, char** argv)
 	if (cmdlineMode != "")
 		mode = cmdlineMode;
 
+	//设置当前路径为程序运行目录 tdsConf.loadConf();中的相对路径解析会用到当前路径
+	tdsImp.setWorkingDir();
+
 	//根据模式差异化加载配置
 	tdsImp.tdsConf.mode = mode;
 	tdsImp.tdsConf.m_confFileName = parser.get<string>("tc");

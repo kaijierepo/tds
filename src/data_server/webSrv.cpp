@@ -28,16 +28,17 @@ static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	if (parent == NULL) {  // If parent connection closed, close too
 		c->is_closing = 1;
 	}
-	else if (ev == MG_EV_READ) {  // Got data from the worker thread
-		mg_ws_send(parent,(const char*)c->recv.buf, c->recv.len, WEBSOCKET_OP_TEXT);
-		c->recv.len = 0;
+	else if (ev == MG_EV_READ) {  // websocket的 pairsocket发完不断开
+		if (c->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+		{
+			mg_ws_send(parent, (const char*)c->recv.buf, c->recv.len, WEBSOCKET_OP_TEXT);
+			c->recv.len = 0;
+		}
 	}
 	else if (ev == MG_EV_OPEN) {
 		link_conns(c, parent);
 	}
-	else if (ev == MG_EV_CLOSE) {
-		unlink_conns(c, parent);
-
+	else if (ev == MG_EV_CLOSE) { //http的 pair sock发完就断开
 		if (c->is_websocket)
 		{
 
@@ -46,8 +47,8 @@ static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		{
 			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
-			mg_iobuf_free(&c->recv);
 		}
+		unlink_conns(c, parent);
 	}
 }
 
@@ -154,13 +155,12 @@ void webThread(WebServer* pSrv,int port) {
 	string proto = "http:";
 	if (pSrv->enableHttps)
 		proto = "https:";
-	string url = proto + "//localhost:" + to_string(port);
+	string url = proto + "//0.0.0.0:" + to_string(port);
 	struct mg_mgr mgr;
 	pSrv->pMgr = &mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
 	mg_http_listen(&mgr, url.c_str() , fn , pSrv);  // Setup listener
 	mgr.userdata = pSrv;
-	LOG("%x", pSrv);
 	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
 	mg_mgr_free(&mgr);                                        // Cleanup
 }
@@ -196,6 +196,7 @@ void WebServer::sendToWs(string& s)
 	m_csWsSessions.lock();
 	for (auto& i : m_wsSessions)
 	{
+		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 		send(i.second->sock, s.c_str(), s.length(),0);
 	}
 	m_csWsSessions.unlock();
