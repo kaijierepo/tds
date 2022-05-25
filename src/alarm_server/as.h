@@ -104,6 +104,27 @@ public:
 // status table;  unack table;  history table;
 // encapsulate function of data sync with files
 
+struct ALARM_QUERY {
+	bool filter_user;
+	string user;
+	bool filter_rootTag;
+	string rootTag;
+	bool filter_tag;
+	string tag;
+	bool filter_isAck;
+	bool isAck;
+	bool filter_isRecover;
+	bool isRecover;
+
+	ALARM_QUERY() {
+		filter_user = false;
+		filter_rootTag = false;
+		filter_tag = false;
+		filter_isAck = false;
+		filter_isRecover = false;
+	}
+};
+
 
 class almTable{
 public:
@@ -115,6 +136,7 @@ public:
 	bool query(json params,ALARM_INFO& ai);
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
+	ALARM_QUERY parseQuerier(json& querier);
 	vector<ALARM_INFO*> query(json filter);
 	string toJsonStr(json filter);
 

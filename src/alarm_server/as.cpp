@@ -754,46 +754,70 @@ void almTable::remove(ALARM_KEY& ai)
 	saveFile(getFilePath(ai.time),buff);
 }
 
+ALARM_QUERY almTable::parseQuerier(json& querier)
+{
+	ALARM_QUERY aq;
+	if (querier.contains("user"))
+	{
+		aq.filter_user = true;
+		aq.user = querier["user"].get<string>();
+	}
+	if (querier.contains("rootTag"))
+	{
+		aq.filter_rootTag = true;
+		aq.rootTag = querier["rootTag"].get<string>();
+	}
+	if (querier.contains("tag"))
+	{
+		aq.filter_tag = true;
+		aq.tag = querier["tag"].get<string>();
+	}
+	if (querier.contains("isAck"))
+	{
+		aq.filter_isAck = true;
+		aq.isAck = querier["isAck"].get<bool>();
+	}
+	if (querier.contains("isRecover"))
+	{
+		aq.filter_isRecover = true;
+		aq.isRecover = querier["isRecover"].get<bool>();
+	}
+
+	return aq;
+}
+
 vector<ALARM_INFO*> almTable::query(json querier)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	vector<ALARM_INFO*> dataSet;
 	loadFile(getFilePath());
-	string user = ""; 
-	string rootTag = "";
-	if(querier.contains("user"))
-		user = querier["user"].get<string>();
-	if(querier.contains("rootTag"))
-		rootTag = querier["rootTag"].get<string>();
+	ALARM_QUERY aq = parseQuerier(querier);
+
 	
 	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
-		if (user != "" && !userMng.checkTagPermission(user, it->second->tag))
+		if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
 			continue;
 		
 		ALARM_INFO* pAi = it->second;
-		if (querier.contains("isAck"))
+		if (aq.filter_isAck)
 		{
-			bool bAck = querier["isAck"].get<bool>();
-			if (bAck != pAi->bAck)
+			if (aq.isAck != pAi->bAck)
 				continue;
 		}
 
-		if (querier.contains("isRecover"))
+		if (aq.filter_isRecover)
 		{
-			bool bRecover = querier["isRecover"].get<bool>();
-			if (bRecover != pAi->bRecover)
+			if (aq.isRecover != pAi->bRecover)
 				continue;
 		}
 
-		if (querier.contains("tag"))
+		if (aq.filter_tag)
 		{
-			string tag = querier["tag"].get<string>();
-			if (tag != pAi->tag)
+			if (aq.tag != pAi->tag)
 				continue;
 		}
 
-
-		if (pAi->tag.find(rootTag) == string::npos)
+		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
 			continue;
 
 		dataSet.push_back(it->second);
