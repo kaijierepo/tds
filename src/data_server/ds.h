@@ -50,10 +50,6 @@ public:
 	void stop();
 	dataServer();
 	virtual ~dataServer();
-	WebServer webSrv;
-	WebServer webSrvS;
-	WebServer webSrv2;
-	WebServer webSrvS2;
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
 	tcpSrv* m_httpHotUpdateSrv;
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端

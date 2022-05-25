@@ -19,3 +19,9 @@ public:
 extern string rootDir;
 extern string confDir;
 extern string filesDir;
+
+
+extern WebServer* webSrv;
+extern WebServer* webSrvS;
+extern WebServer* webSrv2;
+extern WebServer* webSrvS2;

@@ -798,11 +798,11 @@ bool dataServer::runAsCloud()
 
 	if (tds->conf->httpPort != 0)
 	{
-		webSrv.run(tds->conf->httpPort);
+		webSrv->run(tds->conf->httpPort);
 	}
 	if (tds->conf->httpPort2 != 0)
 	{
-		webSrv2.run(tds->conf->httpPort2);
+		webSrv2->run(tds->conf->httpPort2);
 	}
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -819,11 +819,11 @@ bool dataServer::runAsCloud()
 			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
 		}
 
-		webSrvS.run(tds->conf->httpsPort,true);
+		webSrvS->run(tds->conf->httpsPort,true);
 	}
 	if (tds->conf->httpsPort2 != 0)
 	{
-		webSrvS2.run(tds->conf->httpsPort2, true);
+		webSrvS2->run(tds->conf->httpsPort2, true);
 	}
 #endif
 

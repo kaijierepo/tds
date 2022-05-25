@@ -11,6 +11,18 @@ string rootDir;
 string confDir;
 string filesDir;
 
+//webServer原来以栈内存方式放在 dataServer的成员变量中
+//但是会出现WebServer::sendToWs执行时 ，出现如下错误
+//Exception thrown: read access violation.
+//std::_Tree<std::_Tmap_traits<void*, std::shared_ptr<TDS_SESSION>, std::less<void*>, std::allocator<std::pair<void* const, std::shared_ptr<TDS_SESSION> > >, 0> >::_Get_scary(...)->** _Myhead** was nullptr.
+// map::begin()变成了NULL原因不明。
+// 错误出现在webSrvS中，但是实际测试的时候只用了webSrv
+//改成如下这种方式后就不出现了。
+WebServer* webSrv = new WebServer();
+WebServer* webSrvS = new WebServer();
+WebServer* webSrv2 = new WebServer();
+WebServer* webSrvS2 = new WebServer();
+
 
 static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
 	c1->fn_data = c2;
@@ -105,7 +117,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			//记录管道发送sock口
 			p->sock = (SOCKET) sock;
 			//加入websocket连接列表
-			if (pWs->enableHttps)assert(false);
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions[c] = p;
 			pWs->m_csWsSessions.unlock();
@@ -150,7 +161,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			SOCKET s = (SOCKET)pairC->fd;
 			closesocket(s);
 			//从连接的websocket列表中删除
-			if (pWs->enableHttps)assert(false);
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions.erase(c);
 			pWs->m_csWsSessions.unlock();
