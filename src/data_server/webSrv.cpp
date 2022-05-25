@@ -112,10 +112,13 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+			p->bConnected = true;
+			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			ds.initWsSessionInfo(uri, p);
 			//建立一个发往实际sock的管道
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);
 			//记录管道发送sock口
-			p->sock = (SOCKET) sock;
+			p->sockPipe = (SOCKET) sock;
 			//加入websocket连接列表
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions[c] = p;
@@ -162,6 +165,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			closesocket(s);
 			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
+			std::shared_ptr<TDS_SESSION> p = pWs->m_wsSessions[c];
+			p->sockPipe = 0;
+			p->bConnected = false;
 			pWs->m_wsSessions.erase(c);
 			pWs->m_csWsSessions.unlock();
 		}
@@ -212,13 +218,14 @@ void WebServer::run(int port,bool https)
 	t.detach();
 }
 
+//如果不使用mongoose里面的 tls加密的话，可以直接发原始sock 不发paird sock
 void WebServer::sendToWs(string& s)
 {
 	m_csWsSessions.lock();
 	for (auto i : m_wsSessions)
 	{
 		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-		send(i.second->sock, s.c_str(), s.length(),0);
+		send(i.second->sockPipe, s.c_str(), s.length(),0);
 	}
 	m_csWsSessions.unlock();
 }

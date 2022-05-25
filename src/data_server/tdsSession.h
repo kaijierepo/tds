@@ -105,6 +105,12 @@ public:
 		TDS_SESSION* pTdsSession;
 	} bridgedTcpCltHandler;
 
+
+	//session使用的通信方式
+	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
+	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
+	SOCKET sockPipe;         //socket管道。
+
     void Init();
 	bool isConnected();
 	bool disconnect();
@@ -119,8 +125,6 @@ public:
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
-	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
-	tcpClt* pTcpSessionClt; //tds作为客户端主动连接远端
 	SYSTEMTIME stCreateTime;
 	int abandonLen;
 	stream2pkt m_alBuf; //stream buff for app layer data

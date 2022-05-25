@@ -227,15 +227,23 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
 
 
  int TDS_SESSION::send(char* p,int len,bool bNeedLog){
-     unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      GetLocalTime(&lastSendTime);
-
      int iSend = 0;
 
-     if(pTcpSession) // means lower layer has been disconneted
-         iSend = ds.SendAppLayerData(p, len, this);
-     if (pTcpSessionClt)
+     if (sockPipe != 0)
+     {
+         iSend = ::send(sockPipe, p, len, 0);
+     }
+     else if (pTcpSessionClt)
+     {
          iSend = pTcpSessionClt->SendData(p, len);
+     }
+     else
+     {
+         unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
+         if (pTcpSession) // means lower layer has been disconneted
+             iSend = ds.SendAppLayerData(p, len, this);
+     }
 
 
      if (bNeedLog)
