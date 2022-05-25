@@ -335,16 +335,19 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      bConnected = false;
      m_fileUploader.stopWrite();
 
-     for (int i = 0; i < m_vecIoDev.size(); i++)
-     {  
-         string ioAddr = m_vecIoDev[i];
-         ioDev* p = ioSrv.getIODev(ioAddr);
-         if (p)
-         {
-             logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
-             p->setOffline();
-         }
-     }
+     //暂时取消1个链接上线多台设备机制
+     //此处ioSrv.getIODev会锁住ioSrv，如果此时刚好进行doCycleTask周期采集。会导致死锁
+     // m_mutexTcpLink 套 ioSrv.m_csThis  和 ioSrv.m_csThis 套m_mutexTcpLink导致。doCycleTask后面的发送会锁m_mutexTcpLink
+     //for (int i = 0; i < m_vecIoDev.size(); i++)
+     //{  
+     //    string ioAddr = m_vecIoDev[i];
+     //    ioDev* p = ioSrv.getIODev(ioAddr);
+     //    if (p)
+     //    {
+     //        logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
+     //        p->setOffline();
+     //    }
+     //}
  }
 
  void TDS_SESSION::setActivityCheck(bool bEnable)

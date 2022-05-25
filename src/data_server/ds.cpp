@@ -401,7 +401,7 @@ void initHttpSrv(httplib::Server& svr)
 
 dataServer::dataServer()
 {
-	
+	//memset(test, 1, 1000);
 }
 
 dataServer::~dataServer()
@@ -802,7 +802,7 @@ bool dataServer::runAsCloud()
 	}
 	if (tds->conf->httpPort2 != 0)
 	{
-		webSrv.run(tds->conf->httpPort2);
+		webSrv2.run(tds->conf->httpPort2);
 	}
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
@@ -823,7 +823,7 @@ bool dataServer::runAsCloud()
 	}
 	if (tds->conf->httpsPort2 != 0)
 	{
-		webSrvS.run(tds->conf->httpsPort2, true);
+		webSrvS2.run(tds->conf->httpsPort2, true);
 	}
 #endif
 

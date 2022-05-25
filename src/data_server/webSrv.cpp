@@ -21,15 +21,15 @@ static void unlink_conns(struct mg_connection* c1, struct mg_connection* c2) {
 	c1->fn_data = c2->fn_data = NULL;
 }
 
-// Pipe event handler
-static void pcb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
+//websocket主动通知数据和所线程的响应都通过触发pairdsock的 pcb 实现
+static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	struct mg_connection* parent = (struct mg_connection*)fn_data;
 	//MG_INFO(("%lu %p %d %p", c->id, c->fd, ev, parent));
 	if (parent == NULL) {  // If parent connection closed, close too
 		c->is_closing = 1;
 	}
 	else if (ev == MG_EV_READ) {  // websocket的 pairsocket发完不断开
-		if (c->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+		if (parent->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 		{
 			mg_ws_send(parent, (const char*)c->recv.buf, c->recv.len, WEBSOCKET_OP_TEXT);
 			c->recv.len = 0;
@@ -100,24 +100,21 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-			int sock = mg_mkpipe(c->mgr, pcb, c);
+			//建立一个发往实际sock的管道
+			int sock = mg_mkpipe(c->mgr, pipeCallback, c);
+			//记录管道发送sock口
 			p->sock = (SOCKET) sock;
+			//加入websocket连接列表
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions[c] = p;
 			pWs->m_csWsSessions.unlock();
 		}
-		else if (mg_http_match_uri(hm, "/rpc")) {
-			int sock = mg_mkpipe(c->mgr, pcb, c);                   // Create pipe
-			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
-			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
-			t.detach();
-		}
 		else if (mg_http_match_uri(hm, "/gzh")) {
 			
 		}
-		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
+		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
-			int sock = mg_mkpipe(c->mgr, pcb, c);                   // Create pipe
+			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
@@ -147,9 +144,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	else if (ev == MG_EV_CLOSE) {
 		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
 		{
+			//关闭关联的pipe socket
 			mg_connection* pairC = (mg_connection*)c->fn_data;
 			SOCKET s = (SOCKET)pairC->fd;
 			closesocket(s);
+			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions.erase(c);
 			pWs->m_csWsSessions.unlock();
@@ -203,7 +202,7 @@ void WebServer::run(int port,bool https)
 void WebServer::sendToWs(string& s)
 {
 	m_csWsSessions.lock();
-	for (auto& i : m_wsSessions)
+	for (auto i : m_wsSessions)
 	{
 		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 		send(i.second->sock, s.c_str(), s.length(),0);
