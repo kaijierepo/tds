@@ -5,8 +5,9 @@
 #include "common/common.hpp"
 #include "logger.h"
 #include "proto/wsProto.h"
-
- 
+#include "httplib.h"
+#include "sha1.hpp"
+#include "common/mongoose.h"
 string rootDir;
 string confDir;
 string filesDir;
@@ -64,6 +65,61 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 	}
 }
 
+void handleGet_gzh(mg_http_message* hm, string& resHeader,string& respBody)
+{
+	map<string, string> mapParams;
+	string query = str::fromBuff(hm->query.ptr, hm->query.len);
+	vector<string> vecParams;
+	str::split(vecParams, query, "&");
+	for (auto& i : vecParams)
+	{
+		int pos = i.find("=");
+		string key = i.substr(0, pos);
+		string val = i.substr(pos + 1, i.length() - pos - 1);
+		mapParams[key] = val;
+	}
+
+	string  timestamp = mapParams["timestamp"];
+	string	nonce = mapParams["nonce"];
+	string	echostr = mapParams["echostr"];
+	string  signature = mapParams["signature"];
+
+	LOG("[微信公众号] Get请求\n");
+	LOG("timestamp " + timestamp + "\n");
+	LOG("nonce " + nonce + "\n");
+	LOG("echostr " + echostr + "\n");
+	LOG("signature " + signature + "\n");
+
+	vector<string> vec;
+	vec.push_back(timestamp);
+	vec.push_back(nonce);
+	vec.push_back(echostr);
+
+	sort(vec.begin(), vec.end());
+
+	string s = vec[0] + vec[1] + vec[2];
+
+	nsSHA1::SHA1 checksum;
+	checksum.update(s);
+	string hash = checksum.final();
+	LOG("signature calc  " + hash + "\n");
+
+	resHeader = "Content-Type:text/plain;charset=UTF-8\r\n";
+	respBody = echostr;
+}
+
+void handlePost_gzh(string reqBody, string& resHeader,string& resBody)
+{
+	LOG("[微信公众号] Post请求\n" + reqBody);
+
+	resBody = tds->gzhServer->getReply(reqBody);
+
+	LOG("[微信公众号] Post回复\n" + resBody);
+
+	string resp = resBody;
+	resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+}
+
 
 void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 {
@@ -116,16 +172,29 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 			ds.initWsSessionInfo(uri, p);
 			//建立一个发往实际sock的管道
-			int sock = mg_mkpipe(c->mgr, pipeCallback, c);
+			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c);
 			//记录管道发送sock口
-			p->sockPipe = (SOCKET) sock;
+			p->sockPipe = (SOCKET)sPipe;
 			//加入websocket连接列表
 			pWs->m_csWsSessions.lock();
-			pWs->m_wsSessions[c] = p;
+			pWs->m_wsSessions[sPipe] = (SOCKET)c->fd;
+			//pWs->addPipeSock(sPipe);
 			pWs->m_csWsSessions.unlock();
 		}
-		else if (mg_http_match_uri(hm, "/gzh")) {
-			
+		else if (mg_http_match_uri(hm, "/gzh/*") || mg_http_match_uri(hm, "/gzh*")) {
+			string httpReqStr = str::fromBuff(hm->message.ptr, hm->message.len);
+			string resHeader, resBody;
+			httplib::Server srv;
+			if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
+			{
+				handlePost_gzh(hm->body.ptr, resHeader, resBody);
+				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());  
+			}
+			else
+			{
+				handleGet_gzh(hm, resHeader, resBody);
+				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+			}
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
@@ -160,15 +229,14 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
 		{
 			//关闭关联的pipe socket
-			mg_connection* pairC = (mg_connection*)c->fn_data;
-			SOCKET s = (SOCKET)pairC->fd;
-			closesocket(s);
+			mg_connection* cPipe = (mg_connection*)c->fn_data;
+			SOCKET sPipe = (SOCKET)cPipe->fd;
+			closesocket(sPipe);
 			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
-			std::shared_ptr<TDS_SESSION> p = pWs->m_wsSessions[c];
-			p->sockPipe = 0;
-			p->bConnected = false;
-			pWs->m_wsSessions.erase(c);
+			//SOCKET sClt = pWs->m_wsSessions[sPipe];
+			//pWs->delPipeSock(sPipe);
+			pWs->m_wsSessions.erase(sPipe);
 			pWs->m_csWsSessions.unlock();
 		}
 
@@ -178,13 +246,13 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 
 
 void webThread(WebServer* pSrv,int port) {
-	SetThreadDescription(GetCurrentThread(), L"mongoose polling thread");
+	setThreadName("mongoose polling thread");
 	string proto = "http:";
 	if (pSrv->enableHttps)
 		proto = "https:";
 	string url = proto + "//0.0.0.0:" + to_string(port);
 	struct mg_mgr mgr;
-	pSrv->pMgr = &mgr;
+	//pSrv->pMgr = &mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
 	mg_http_listen(&mgr, url.c_str() , fn , pSrv);  // Setup listener
 	mgr.userdata = pSrv;
@@ -196,6 +264,7 @@ void webThread(WebServer* pSrv,int port) {
 WebServer::WebServer()
 {
 	enableHttps = false;
+	memset(a, 0xAA, 10);
 }
 
 WebServer::~WebServer()
@@ -219,13 +288,49 @@ void WebServer::run(int port,bool https)
 }
 
 //如果不使用mongoose里面的 tls加密的话，可以直接发原始sock 不发paird sock
-void WebServer::sendToWs(string& s)
+//void WebServer::sendToWs(string& s)
+//{
+//	m_csWsSessions.lock();
+//	//std::map<SOCKET,SOCKET>::iterator i = m_wsSessions.begin();
+//	//for (;i!=m_wsSessions.end();i++)
+//	//{
+//	//	assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+//	//	send(i->first, s.c_str(), s.length(),0);
+//	//}
+//	for (int i = 0; i < m_vecPipe.size(); i++)
+//	{
+//		SOCKET sTmp = m_vecPipe[i];
+//		send(sTmp, s.c_str(), s.length(), 0);
+//	}
+//	m_csWsSessions.unlock();
+//}
+
+void WebServer::sendToWs1(string& s)
 {
 	m_csWsSessions.lock();
-	for (auto i : m_wsSessions)
+	std::map<SOCKET,SOCKET>::iterator i = m_wsSessions.begin();
+	for (;i!=m_wsSessions.end();i++)
 	{
 		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-		send(i.second->sockPipe, s.c_str(), s.length(),0);
+		send(i->first, s.c_str(), s.length(),0);
 	}
 	m_csWsSessions.unlock();
 }
+
+//void WebServer::addPipeSock(SOCKET s)
+//{
+//	m_vecPipe.push_back(s);
+//}
+//
+//void WebServer::delPipeSock(SOCKET s)
+//{
+//	for (int i = 0; i < m_vecPipe.size(); i++)
+//	{
+//		SOCKET sTmp = m_vecPipe[i];
+//		if (sTmp == s)
+//		{
+//			m_vecPipe.erase(m_vecPipe.begin() + i);
+//			return;
+//		}
+//	}
+//}

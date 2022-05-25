@@ -84,7 +84,7 @@ int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, in
 
 
 void thread_feedDog() {
-	SetThreadDescription(GetCurrentThread(), L"feed dog thread");
+	setThreadName("feed dog thread");
 	while (1)
 	{
 		dogFeeder.sendFood();

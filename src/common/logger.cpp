@@ -66,6 +66,11 @@ void LOG(string info)
 {
 	logger.log(info);
 }
+void LOG3(char* p, int len)
+{
+	//string s = str::fromBuff(p, len);
+	//LOG(s);
+}
 void loggingCB(char* info)
 {
 	logger.log(info);

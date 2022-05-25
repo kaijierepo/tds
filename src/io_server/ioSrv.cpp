@@ -15,7 +15,7 @@ ioServer ioSrv;
 
 void IOThread()
 {
-	SetThreadDescription(GetCurrentThread(), L"ioSrv io thread");
+	setThreadName("ioSrv io thread");
 	ioSrv.m_bWorkingThreadRunning = true;
 	int statisUpdateInterval = 10;
 

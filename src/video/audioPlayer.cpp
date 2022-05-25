@@ -38,7 +38,7 @@ LRESULT CALLBACK WindowProc_audioPlayer(
 
 void audioPlayerThread()
 {
-	SetThreadDescription(GetCurrentThread(), L"audio player thread");
+	setThreadName("audio player thread");
   //注册窗口类
 	HINSTANCE hInstance;
 	hInstance = GetModuleHandle(NULL);

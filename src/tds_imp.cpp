@@ -314,9 +314,11 @@ bool TDS_imp::run(string cmdline)
 	//load tds.json
 	logger.m_bEnable = tdsConf.enableLog;
 
+	//funcMongooseLogCb = LOG3;
 	#ifndef DEBUG
-	  mg_log_set("0");
+	 // mg_log_set("0");
 	#endif
+	 
 
 	//初始化接口
 	tds->db = &::db;

@@ -26,6 +26,9 @@
 extern "C" {
 #endif
 
+typedef void (*fp_mongooselogCallback)(char* p,int len);
+
+extern fp_mongooselogCallback funcMongooseLogCb;
 
 #define MG_ARCH_CUSTOM 0
 #define MG_ARCH_UNIX 1

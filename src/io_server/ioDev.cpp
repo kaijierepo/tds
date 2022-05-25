@@ -659,7 +659,7 @@ bool ioDev::onRecvPkt(json jPkt)
 
 void notifyDevOnline(json jNotify)
 {
-	SetThreadDescription(GetCurrentThread(), L"notify dev online thread");
+	setThreadName("notify dev online thread");
 	string ioAddr = jNotify["ioAddr"];
 	MO* pmo = prj.GetMOByIOAddr(ioAddr);
 	if (pmo)
@@ -669,7 +669,7 @@ void notifyDevOnline(json jNotify)
 
 void notifyDevOffline(json jNotify)
 {
-	SetThreadDescription(GetCurrentThread(), L"notify dev offline thread");
+	setThreadName("notify dev offline thread");
 	string ioAddr = jNotify["ioAddr"];
 	MO* pmo = prj.GetMOByIOAddr(ioAddr);
 	if (pmo)

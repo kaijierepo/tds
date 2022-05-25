@@ -796,6 +796,9 @@ bool dataServer::runAsCloud()
 	LOG("[Web目录	] /files  <--> " + filesDir);
 
 
+	LOG("webSrv init %lx", webSrv);
+	LOG("webSrvS init %lx", webSrvS);
+
 	if (tds->conf->httpPort != 0)
 	{
 		webSrv->run(tds->conf->httpPort);
@@ -819,7 +822,7 @@ bool dataServer::runAsCloud()
 			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
 		}
 
-		webSrvS->run(tds->conf->httpsPort,true);
+		//webSrvS->run(tds->conf->httpsPort,true);
 	}
 	if (tds->conf->httpsPort2 != 0)
 	{

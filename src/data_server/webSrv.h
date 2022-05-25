@@ -1,5 +1,5 @@
 #pragma once
-#include "common/mongoose.h"
+
 #include "tdsSession.h"
 
 
@@ -8,12 +8,18 @@ public:
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
-	void sendToWs(string& s);
+	//void sendToWs(string& s);
+	void sendToWs1(string& s);
 	bool enableHttps;
 
-	mg_mgr* pMgr;
-	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
+	//mg_mgr* pMgr;
+	//std::vector<SOCKET> m_vecPipe;
+	//void addPipeSock(SOCKET s);
+	//void delPipeSock(SOCKET s);
+
+	std::map<SOCKET,SOCKET>  m_wsSessions;
 	std::mutex m_csWsSessions;
+	char a[10];
 };
 
 extern string rootDir;

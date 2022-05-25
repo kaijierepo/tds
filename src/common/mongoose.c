@@ -17,13 +17,18 @@
 //
 // SPDX-License-Identifier: GPL-2.0 or commercial
 
+
 #include "mongoose.h"
+
 
 #ifdef MG_ENABLE_LINES
 #line 1 "src/base64.c"
 #endif
 
 #include <string.h>
+
+fp_mongooselogCallback funcMongooseLogCb = NULL;
+
 
 static int mg_b64idx(int c) {
   if (c < 26) {
@@ -2002,6 +2007,7 @@ static void logc(int c) {
 }
 
 static void logs(const char *buf, size_t len) {
+   funcMongooseLogCb(buf, len);
   size_t i;
   for (i = 0; i < len; i++) logc(buf[i]);
 }

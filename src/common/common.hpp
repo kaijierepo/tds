@@ -72,6 +72,15 @@ private:
 };
 
 
+typedef struct tagTHREADNAME_INFO
+{
+	DWORD dwType; // must be 0x1000
+	LPCSTR szName; // pointer to name (in user addr space)
+	DWORD dwThreadID; // thread ID (-1=caller thread)
+	DWORD dwFlags; // reserved for future use, must be zero
+} THREADNAME_INFO;
+
+
 namespace common {
 	inline string& getCharCodec() {
 		static string charCodec = "utf8";
@@ -83,6 +92,23 @@ namespace common {
 		cc = codec;
 	}
 
+	
+	//void setThreadName1(string name)
+	//{
+		//THREADNAME_INFO info;
+		//info.dwType = 0x1000;
+		//info.szName = name.c_str();
+		//info.dwThreadID = GetCurrentThreadId();
+		//info.dwFlags = 0;
+
+		//__try
+		//{
+		//	RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD), (DWORD*)&info);
+		//}
+		//__except (EXCEPTION_CONTINUE_EXECUTION)
+		//{
+		//}
+	//}
 
 	const unsigned char auchCRCHi[] =
 	{
@@ -1818,6 +1844,18 @@ inline string getbuilddate()
 	sprintf_s(buildtime,256, "%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 	string s = buildtime;
 	return s;
+}
+
+inline void setThreadName2(string name)
+{
+#ifdef _DEBUG
+	SetThreadDescription(GetCurrentThread(), charCodec::utf8toUtf16(name).c_str());
+#endif
+}
+
+inline void setThreadName(string name)
+{
+	setThreadName2(name);
 }
 
 #define _GB(s) charCodec::utf8toAnsi(s).c_str()
