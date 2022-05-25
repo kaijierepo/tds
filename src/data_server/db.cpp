@@ -39,45 +39,65 @@ string database::getName_deFile(string tag, SYSTEMTIME time)
 	return timeStamp;
 }
 
+//8个不能做文件名的非法字符
+string ic1 = str::format("[%02X]", '\\');
+string ic2 = str::format("[%02X]", ':');
+string ic3 = str::format("[%02X]", '*');
+string ic4 = str::format("[%02X]", '?');
+string ic5 = str::format("[%02X]", '\"');
+string ic6 = str::format("[%02X]", '<');
+string ic7 = str::format("[%02X]", '>');
+string ic8 = str::format("[%02X]", '|');
+string ic9 = str::format("[%02X]", '/');
+
 //对9个文件名非法字符进行转义  / \ : * ? " < > |
 string database::changeCharForFileName(string s) {
-	unsigned char c = '/';
-	string r = str::format("[%02X]", c);
-	s = str::replace(s, "/", r);
-
-	c = '\\';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "\\", r);
-
-	c = ':';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, ":", r);
-
-	c = '*';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "*", r);
-
-	c = '?';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "?", r);
-
-	c = '\"';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "\"", r);
-
-	c = '<';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "<", r);
-
-	c = '>';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, ">", r);
-
-	c = '|';
-	r = str::format("[%02X]", c);
-	s = str::replace(s, "|", r);
-
-	return s;
+	string out;
+	for (int i = 0; i < s.length(); i++)
+	{
+		char c = s[i];
+		if (c == '\\')
+		{
+			out.append(ic1);
+		}
+		else if (c == ':')
+		{
+			out.append(ic2);
+		}
+		else if (c == '*')
+		{
+			out.append(ic3);
+		}
+		else if (c == '?')
+		{
+			out.append(ic4);
+		}
+		else if (c == '\"')
+		{
+			out.append(ic5);
+		}
+		else if (c == '<')
+		{
+			out.append(ic6);
+		}
+		else if (c == '>')
+		{
+			out.append(ic7);
+		}
+		else if (c == '|')
+		{
+			out.append(ic8);
+		}
+		else if (c == '/')
+		{
+			out.append(ic9);
+		}
+		else
+		{
+			out.append(1, c);
+		}
+	}
+	return out;
 }
 
 string database::getPath_dataFolder(string strTag, SYSTEMTIME date)
