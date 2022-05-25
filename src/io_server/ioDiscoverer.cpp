@@ -108,6 +108,7 @@ LRESULT CALLBACK WindowProc_hwDetect(
 
 void serialDetectThread()
 {
+    SetThreadDescription(GetCurrentThread(), L"serial detection thread");
     /*未来如需要检测除串口外的其他设备， 使用
   * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
   https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal

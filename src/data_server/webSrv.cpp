@@ -105,6 +105,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			//记录管道发送sock口
 			p->sock = (SOCKET) sock;
 			//加入websocket连接列表
+			if (pWs->enableHttps)assert(false);
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions[c] = p;
 			pWs->m_csWsSessions.unlock();
@@ -149,6 +150,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			SOCKET s = (SOCKET)pairC->fd;
 			closesocket(s);
 			//从连接的websocket列表中删除
+			if (pWs->enableHttps)assert(false);
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions.erase(c);
 			pWs->m_csWsSessions.unlock();
@@ -160,6 +162,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 
 
 void webThread(WebServer* pSrv,int port) {
+	SetThreadDescription(GetCurrentThread(), L"mongoose polling thread");
 	string proto = "http:";
 	if (pSrv->enableHttps)
 		proto = "https:";

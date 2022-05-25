@@ -661,6 +661,7 @@ bool ioDev::onRecvPkt(json jPkt)
 
 void notifyDevOnline(json jNotify)
 {
+	SetThreadDescription(GetCurrentThread(), L"notify dev online thread");
 	string ioAddr = jNotify["ioAddr"];
 	MO* pmo = prj.GetMOByIOAddr(ioAddr);
 	if (pmo)
@@ -670,6 +671,7 @@ void notifyDevOnline(json jNotify)
 
 void notifyDevOffline(json jNotify)
 {
+	SetThreadDescription(GetCurrentThread(), L"notify dev offline thread");
 	string ioAddr = jNotify["ioAddr"];
 	MO* pmo = prj.GetMOByIOAddr(ioAddr);
 	if (pmo)
@@ -679,7 +681,9 @@ void notifyDevOffline(json jNotify)
 
 void ioDev::setOnline()
 {
-	if (m_bOnline == false)
+	//[问题]观察到有pIOSession已经为空，也就是说链接已经断开。却还有缓存数据没有处理，导致处理后设置为上线的问题
+	//该问题需优化
+	if (m_bOnline == false && pIOSession != nullptr)
 	{
 		m_bOnline = true;
 		json jNotify;
@@ -687,6 +691,11 @@ void ioDev::setOnline()
 		jNotify["nodeID"] = m_confNodeId;
 		thread t(notifyDevOnline, jNotify);
 		t.detach();
+	}
+
+	if (pIOSession == nullptr)
+	{
+		LOG("[error]IO设备链接已断开，但仍在进行该设备的数据接收处理,ioAddr=" + getIOAddrStr());
 	}
 }
 

@@ -51,7 +51,7 @@ design problem:
   1.shared points
 
 代码不安全，未来需优化的地方，全局搜索 [unsafe]
-
+需要改进的问题  全局搜索[问题]
 */
 
 /*
@@ -72,6 +72,7 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
+	SetThreadDescription(GetCurrentThread(), L"main thread");
 	tds->conf = &tdsImp.tdsConf;
 	
 	string cmd;
