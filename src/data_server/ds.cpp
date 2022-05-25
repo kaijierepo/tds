@@ -822,7 +822,7 @@ bool dataServer::runAsCloud()
 			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
 		}
 
-		//webSrvS->run(tds->conf->httpsPort,true);
+		webSrvS->run(tds->conf->httpsPort,true);
 	}
 	if (tds->conf->httpsPort2 != 0)
 	{

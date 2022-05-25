@@ -27,7 +27,7 @@
 
 #include <string.h>
 
-fp_mongooselogCallback funcMongooseLogCb = NULL;
+//fp_mongooselogCallback funcMongooseLogCb = NULL;
 
 
 static int mg_b64idx(int c) {
@@ -2007,7 +2007,7 @@ static void logc(int c) {
 }
 
 static void logs(const char *buf, size_t len) {
-   funcMongooseLogCb(buf, len);
+   //funcMongooseLogCb(buf, len);
   size_t i;
   for (i = 0; i < len; i++) logc(buf[i]);
 }
