@@ -27,7 +27,7 @@ public:
 
 	void getUrlParams(string& url, map<string, string>& mapParams);
 
-	void onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
+	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
 
 
 

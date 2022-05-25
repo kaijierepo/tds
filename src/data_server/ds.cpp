@@ -1313,28 +1313,8 @@ void dataServer::getUrlParams(string& url,map<string, string>& mapParams)
 	}
 }
 
-void dataServer::onWebsocketSessionOpen(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
+void dataServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	string szLog = str::format("[trace][ds]websocket session opened,client addr is %s:%d", tdsSession->ip.c_str(), tdsSession->port);
-	LOG(szLog);
-
-	//回复websocket握手
-	CWSPPkt req;
-	std::string handshakeString = req.GetHandshakeString(strData);
-	send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
-
-	if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
-	{
-		httplib::Request req;
-		httplib::Server srv;
-		srv.parse_request_line(strData.c_str(), req);
-		string path = str::trimSuffix(req.target, "index.html");
-		 path = str::trimSuffix(path, "/");
-		 tdsSession->webHMRPath = path;
-		return;
-	}
-		
-
 	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)
 	{
@@ -1533,6 +1513,12 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 {
 	GetLocalTime(&tdsSession->lastRecvTime);
 
+	if (!tdsSession->isConnected())
+	{
+		LOG("[warn]链接已断开，但仍有tcp数据未处理，丢弃,len=%d", iLen);
+		return;
+	}
+
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none
@@ -1562,7 +1548,24 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 		//if websocket. deal the first handshake pkt 
 		if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 		{
-			onWebsocketSessionOpen(strData, tdsSession);
+			//回复websocket握手
+			CWSPPkt req;
+			std::string handshakeString = req.GetHandshakeString(strData);
+			send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
+
+			httplib::Request httpReq;
+			httplib::Server srv;
+			srv.parse_request_line(strData.c_str(), httpReq);
+
+
+			if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
+			{
+				string path = str::trimSuffix(strData, "index.html");
+				path = str::trimSuffix(path, "/");
+				tdsSession->webHMRPath = path;
+			}
+			else
+				initWsSessionInfo(httpReq.target, tdsSession);
 			return;
 		}
 	}

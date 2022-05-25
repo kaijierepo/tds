@@ -563,7 +563,6 @@ string ioDev::getIOAddrStr()
 string ioDev::getDevAddrStr()
 {
 	string devAddr;
-
 	if (m_jDevAddr.is_object())
 	{
 		if (m_jDevAddr["id"] != nullptr)
@@ -602,7 +601,6 @@ string ioDev::getDevAddrStr()
 	{
 		devAddr = "";
 	}
-	
 	return devAddr;
 }
 
@@ -683,7 +681,7 @@ void ioDev::setOnline()
 {
 	//[问题]观察到有pIOSession已经为空，也就是说链接已经断开。却还有缓存数据没有处理，导致处理后设置为上线的问题
 	//该问题需优化
-	if (m_bOnline == false && pIOSession != nullptr)
+	if (m_bOnline == false)
 	{
 		m_bOnline = true;
 		json jNotify;
@@ -693,10 +691,10 @@ void ioDev::setOnline()
 		t.detach();
 	}
 
-	if (pIOSession == nullptr)
-	{
-		LOG("[error]IO设备链接已断开，但仍在进行该设备的数据接收处理,ioAddr=" + getIOAddrStr());
-	}
+	//if (pIOSession == nullptr)
+	//{
+	//	LOG("[error]IO设备链接已断开，但仍在进行该设备的数据接收处理,ioAddr=" + getIOAddrStr());
+	//}
 }
 
 void ioDev::setOffline()
