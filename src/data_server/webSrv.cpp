@@ -12,13 +12,7 @@ string rootDir;
 string confDir;
 string filesDir;
 
-//webServer原来以栈内存方式放在 dataServer的成员变量中
-//但是会出现WebServer::sendToWs执行时 ，出现如下错误
-//Exception thrown: read access violation.
-//std::_Tree<std::_Tmap_traits<void*, std::shared_ptr<TDS_SESSION>, std::less<void*>, std::allocator<std::pair<void* const, std::shared_ptr<TDS_SESSION> > >, 0> >::_Get_scary(...)->** _Myhead** was nullptr.
-// map::begin()变成了NULL原因不明。
-// 错误出现在webSrvS中，但是实际测试的时候只用了webSrv
-//改成如下这种方式后就不出现了。
+
 WebServer* webSrv = new WebServer();
 WebServer* webSrvS = new WebServer();
 WebServer* webSrv2 = new WebServer();
@@ -177,8 +171,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			p->sockPipe = (SOCKET)sPipe;
 			//加入websocket连接列表
 			pWs->m_csWsSessions.lock();
-			pWs->m_wsSessions[sPipe] = (SOCKET)c->fd;
-			//pWs->addPipeSock(sPipe);
+			pWs->m_wsSessions[sPipe] = p;
 			pWs->m_csWsSessions.unlock();
 		}
 		else if (mg_http_match_uri(hm, "/gzh/*") || mg_http_match_uri(hm, "/gzh*")) {
@@ -234,8 +227,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			closesocket(sPipe);
 			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
-			//SOCKET sClt = pWs->m_wsSessions[sPipe];
-			//pWs->delPipeSock(sPipe);
+			std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[sPipe];
+			p->sockPipe = 0;
+			p->bConnected = false;
 			pWs->m_wsSessions.erase(sPipe);
 			pWs->m_csWsSessions.unlock();
 		}
@@ -254,7 +248,18 @@ void webThread(WebServer* pSrv,int port) {
 	struct mg_mgr mgr;
 	//pSrv->pMgr = &mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
-	mg_http_listen(&mgr, url.c_str() , fn , pSrv);  // Setup listener
+	// !!!!!非常重要。 mg_http_listen最后一个参数不要传入pSrv等其他外部线程会操作的指针
+	//传入pSrv后。由于WebServer::sendToWs会被其他线程调用。可能和mongoose内部发生多线程读写pSrv指针冲突。会导致奔溃
+	//问题描述如下：
+	//WebServer::sendToWs执行时 ，出现如下错误
+	//Exception thrown: read access violation.
+	//std::_Tree<std::_Tmap_traits<void*, std::shared_ptr<TDS_SESSION>, std::less<void*>, std::allocator<std::pair<void* const, std::shared_ptr<TDS_SESSION> > >, 0> >::_Get_scary(...)->** _Myhead** was nullptr.
+	// map::begin()变成了NULL原因不明。
+	// 错误出现在webSrvS中，但是实际测试的时候只用了webSrv
+	//测试发现mongoose必须工作过，产生过http交互后，才会出现该问题。因此怀疑是mongoose的代码影响
+	//mongoose唯一能拿到这个pSrv指针的地方就是mg_http_listen和userdata。 
+	//测试发现usrdata无影响，mg_http_listen传入后就会导致偶先的奔溃
+	mg_http_listen(&mgr, url.c_str() , fn , NULL);  // Setup listener 
 	mgr.userdata = pSrv;
 	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
 	mg_mgr_free(&mgr);                                        // Cleanup
@@ -287,28 +292,11 @@ void WebServer::run(int port,bool https)
 	t.detach();
 }
 
-//如果不使用mongoose里面的 tls加密的话，可以直接发原始sock 不发paird sock
-//void WebServer::sendToWs(string& s)
-//{
-//	m_csWsSessions.lock();
-//	//std::map<SOCKET,SOCKET>::iterator i = m_wsSessions.begin();
-//	//for (;i!=m_wsSessions.end();i++)
-//	//{
-//	//	assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-//	//	send(i->first, s.c_str(), s.length(),0);
-//	//}
-//	for (int i = 0; i < m_vecPipe.size(); i++)
-//	{
-//		SOCKET sTmp = m_vecPipe[i];
-//		send(sTmp, s.c_str(), s.length(), 0);
-//	}
-//	m_csWsSessions.unlock();
-//}
 
-void WebServer::sendToWs1(string& s)
+void WebServer::sendToWs(string& s)
 {
 	m_csWsSessions.lock();
-	std::map<SOCKET,SOCKET>::iterator i = m_wsSessions.begin();
+	std::map<SOCKET,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)
 	{
 		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
@@ -316,21 +304,3 @@ void WebServer::sendToWs1(string& s)
 	}
 	m_csWsSessions.unlock();
 }
-
-//void WebServer::addPipeSock(SOCKET s)
-//{
-//	m_vecPipe.push_back(s);
-//}
-//
-//void WebServer::delPipeSock(SOCKET s)
-//{
-//	for (int i = 0; i < m_vecPipe.size(); i++)
-//	{
-//		SOCKET sTmp = m_vecPipe[i];
-//		if (sTmp == s)
-//		{
-//			m_vecPipe.erase(m_vecPipe.begin() + i);
-//			return;
-//		}
-//	}
-//}

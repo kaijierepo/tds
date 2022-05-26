@@ -2839,14 +2839,9 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 	tdsSessions = ds.m_vecTdsSession;
 	ds.m_mutexTdsSessionList.unlock();
 	
-	LOG("webSrv %lx", webSrv);
-	LOG("webSrvS %lx", webSrvS);
+	webSrvS->sendToWs(notify);
+	webSrv->sendToWs(notify);
 
-	webSrvS->sendToWs1(notify);
-	webSrv->sendToWs1(notify);
-
-
-	
 	for (int i=0;i<tdsSessions.size();i++)
 	{
 		shared_ptr<TDS_SESSION> p = tdsSessions[i];
