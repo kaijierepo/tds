@@ -10,4 +10,4 @@ echo %buildDate%
 set buildTag=TDS_%buildDate%_%svnVersion%
 echo %buildTag%
 
-7za a -t7z %buildTag%.zip ./out/tds.exe ./out/ui -xr!.svn -xr!db -xr!log -xr!files -xr!unpackage -xr!tds.exp -xr!tds.lib -xr!tds.pdb -xr!apkPublish -xr!tds.ilk -xr!tds.ini
+7za a -t7z %buildTag%.zip ./out/tds.exe ./out/ui ./out/iosimu.exe -xr!.svn -xr!db -xr!log -xr!files -xr!unpackage -xr!tds.exp -xr!tds.lib -xr!tds.pdb -xr!apkPublish -xr!tds.ilk -xr!tds.ini
