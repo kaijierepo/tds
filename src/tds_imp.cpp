@@ -620,17 +620,17 @@ void TDS_imp::createDefaultCompanyInfo() {
 	{
 		if (!fs::fileExist(confPath + "/info.json"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/app/assets/info.json"), charCodec::utf8toUtf16(confPath + "/info.json"));
+			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/info.json"), charCodec::utf8toUtf16(confPath + "/info.json"));
 		}
 
 		if (!fs::fileExist(confPath + "/banner.svg"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/app/assets/banner.svg"), charCodec::utf8toUtf16(confPath + "/banner.svg"));
+			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/banner.svg"), charCodec::utf8toUtf16(confPath + "/banner.svg"));
 		}
 
 		if (!fs::fileExist(confPath + "/logo.svg"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/app/assets/logo.svg"), charCodec::utf8toUtf16(confPath + "/logo.svg"));
+			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/logo.svg"), charCodec::utf8toUtf16(confPath + "/logo.svg"));
 		}
 	}
 	catch(exception& e)
