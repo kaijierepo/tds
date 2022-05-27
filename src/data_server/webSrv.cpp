@@ -227,10 +227,17 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			closesocket(sPipe);
 			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
-			std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[sPipe];
-			p->sockPipe = 0;
-			p->bConnected = false;
-			pWs->m_wsSessions.erase(sPipe);
+			if (pWs->m_wsSessions.find(sPipe)!= pWs->m_wsSessions.end())
+			{
+				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[sPipe];
+				p->sockPipe = 0;
+				p->bConnected = false;
+				pWs->m_wsSessions.erase(sPipe);
+			}
+			else
+			{
+				LOG("[warn]websocket连接断开，但是在连接列表中未找到");
+			}
 			pWs->m_csWsSessions.unlock();
 		}
 
