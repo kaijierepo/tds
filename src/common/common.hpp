@@ -261,19 +261,7 @@ namespace charCodec {
 		return str;
 	}
 
-	inline wstring autoToUtf16(string instr)
-	{
-		wstring w;
-		if (common::getCharCodec() == "gb2312")
-		{
-			w = charCodec::ansiToUtf16(instr);
-		}
-		else
-		{
-			w = charCodec::utf8toUtf16(instr);
-		}
-		return w;
-	}
+	
 
 	inline string utf16ToAuto(wstring instr)
 	{
@@ -400,6 +388,73 @@ namespace charCodec {
 		string str = wstr;
 		return str;
 #endif
+	}
+
+	inline wstring autoToUtf16(string instr)
+	{
+		wstring w;
+		if (common::getCharCodec() == "gb2312")
+		{
+			w = charCodec::ansiToUtf16(instr);
+		}
+		else
+		{
+			w = charCodec::utf8toUtf16(instr);
+		}
+		return w;
+	}
+
+	inline string autoToUtf8(string instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			s = charCodec::ansi2Utf8(instr);
+			return s;
+		}
+		else
+		{
+			return instr;
+		}
+	}
+
+	inline string autoToAnsi(string instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			return instr;
+		}
+		else
+		{
+			return charCodec::utf8toAnsi(instr);
+		}
+	}
+
+	inline string ansiToAuto(string instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			return instr;
+		}
+		else
+		{
+			return charCodec::ansi2Utf8(instr);
+		}
+	}
+
+	inline string utf8ToAuto(string instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			return charCodec::utf8toAnsi(instr);
+		}
+		else
+		{
+			return instr;
+		}
 	}
 }
 namespace str {
@@ -1229,10 +1284,12 @@ namespace fs {
 	}
 	inline string toAbsolutePath(string str)
 	{
+		str = charCodec::autoToAnsi(str);
 		char absPath[1024] = { 0 };
 		_fullpath(absPath, str.c_str(), 1024);
 		str = absPath;
 		str = str::replace(str, "\\", "/");
+		str = charCodec::ansiToAuto(str);
 		return str;
 	}
 	inline string getExt(string strFilePath)
