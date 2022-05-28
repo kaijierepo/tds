@@ -276,6 +276,9 @@ if ('WebSocket' in window) {
                 if (msg.data == 'reload') window.location.reload();
                 else if (msg.data == 'refreshcss') refreshCSS();
             };
+			socket.onopen = (event)=>{
+				console.log("tds hot module replacement on 668 connected!");
+			};
             if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
                 console.log('Live reload enabled.');
                 sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
@@ -1575,7 +1578,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 
 			if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
 			{
-				string path = str::trimSuffix(strData, "index.html");
+				string path = str::trimSuffix(httpReq.target, "index.html");
 				path = str::trimSuffix(path, "/");
 				tdsSession->webHMRPath = path;
 			}

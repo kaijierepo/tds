@@ -97,9 +97,10 @@ int wspSrv::sendData(char* sendData, int len, tcpSession* pCltInfo, WS_FrameType
 {
 	CWSPPkt resp;
 	resp.pack(sendData,len, ft);
-	if (m_pTcpServer)
+	if (pCltInfo->pTcpServer)
 	{
-		if(m_pTcpServer->SendData((char*)resp.data, resp.len,pCltInfo))
+		tcpSrv* pts = (tcpSrv*)pCltInfo->pTcpServer;
+		if(pts->SendData((char*)resp.data, resp.len,pCltInfo))
 		{
 			return len;
 		}
