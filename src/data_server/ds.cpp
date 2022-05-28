@@ -18,6 +18,7 @@
 #include "users/userMng.h"
 #include "sha1.hpp"
 #include "webSrv.h"
+#include "mongoose.h"
 
 
 dataServer ds;
@@ -244,23 +245,8 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	}
 }
 
-void handleAfterFileRead(const Request& req, Response& resp)
-{
-	if (!tds->conf->debugMode) return;
 
-	//调试模式不缓存任何数据
-	resp.set_header("cache-control", "max-age=0");
-
-
-	//html插入热更新代码
-	bool isHtml = false;
-
-	if (req.path.find("html") != string::npos)isHtml = true;
-	if (req.path[req.path.length() - 1] == '/') isHtml = true;
-
-	if (!isHtml)return;
-
-	string s = R"(
+string hmrCodeStr = R"(
 <!--code injected by TDS for hot module replacement-->
 <script>
 if ('WebSocket' in window) {
@@ -309,8 +295,25 @@ else {
     console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
 }
 </script>
-</body>
 )";
+
+void handleAfterFileRead(const Request& req, Response& resp)
+{
+	if (!tds->conf->debugMode) return;
+
+	//调试模式不缓存任何数据
+	resp.set_header("cache-control", "max-age=0");
+
+
+	//html插入热更新代码
+	bool isHtml = false;
+
+	if (req.path.find("html") != string::npos)isHtml = true;
+	if (req.path[req.path.length() - 1] == '/') isHtml = true;
+
+	if (!isHtml)return;
+
+	string s = hmrCodeStr + "</body>";
 
 	resp.body = str::replace(resp.body, "</body>", s);
 }
@@ -784,12 +787,21 @@ void httpSrvThread(int port,bool https = false)
 }
 
 
+
 bool dataServer::runAsCloud()
 {
 	rootDir = tds->conf->uiPath;
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
 	filesDir = "./files";
+
+	initHMRConf();
+	if (tds->conf->debugMode)
+	{
+		hmr_conf.code = (char*)hmrCodeStr.c_str();
+		hmr_conf.len = hmrCodeStr.length();
+		hmr_conf.enable = 1;
+	}
 
 	LOG("[Web目录	] /       <--> " + rootDir);
 	LOG("[Web目录	] /config <--> " + confDir);

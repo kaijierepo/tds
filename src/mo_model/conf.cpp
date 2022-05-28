@@ -430,9 +430,10 @@ void tdsConfig::loadConf()
 			tci.key = ci.substr(0, pos);
 			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
+			tci.val = str::trim(tci.val, "\r");
 			tci.key = str::trim(tci.key, " ");
 			tci.val = str::trim(tci.val, " ");
-			tci.val = str::trim(tci.val, "\r");
+
 			vecConf.push_back(tci);
 		}
 	}

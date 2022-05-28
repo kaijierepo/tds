@@ -18,8 +18,18 @@
 // SPDX-License-Identifier: GPL-2.0 or commercial
 
 
+
+
+
 #include "mongoose.h"
 
+
+struct HMR_CONF hmr_conf;
+void initHMRConf() {
+    hmr_conf.enable = 0;
+    hmr_conf.code = 0;
+    hmr_conf.len = 0;
+}
 
 #ifdef MG_ENABLE_LINES
 #line 1 "src/base64.c"
@@ -1340,12 +1350,48 @@ static void static_cb(struct mg_connection *c, int ev, void *ev_data,
     struct mg_fd *fd = (struct mg_fd *) fn_data;
     // Read to send IO buffer directly, avoid extra on-stack buffer
     size_t n, max = MG_IO_SIZE, space, *cl = (size_t *) c->label;
-    if (c->send.size < max) mg_iobuf_resize(&c->send, max);
-    if (c->send.len >= c->send.size) return;  // Rate limit
-    if ((space = c->send.size - c->send.len) > *cl) space = *cl;
-    n = fd->fs->rd(fd->fd, c->send.buf + c->send.len, space);
-    c->send.len += n;
+    //if (c->send.size < max) mg_iobuf_resize(&c->send, max);
+    //if (c->send.len >= c->send.size) return;  // Rate limit
+    //if ((space = c->send.size - c->send.len) > *cl) space = *cl;
+    //n = fd->fs->rd(fd->fd, c->send.buf + c->send.len, space);
+    //c->send.len += n;
+    //*cl -= n;
+
+    size_t file_len =  *cl;
+    if (c->is_hmr)
+    {
+        file_len -= hmr_conf.len;
+    }
+
+    if (c->send.size < c->send.len + file_len + hmr_conf.len) mg_iobuf_resize(&c->send, c->send.len + file_len + hmr_conf.len);
+    if (c->send.len >= c->send.size) return;
+    n = fd->fs->rd(fd->fd, c->send.buf + c->send.len, file_len);
+    char* p_file = c->send.buf + c->send.len;
     *cl -= n;
+    if (c->is_hmr > 0 && file_len > 7)
+    {
+        //find </body>
+        int pos = -1;
+        for (int i = 0; i < file_len - 7; i++)
+        {
+            char c = p_file[i];
+            if (c == '<' && memcmp(&p_file[i], "</body>", 7) == 0)
+            {
+                pos = i;
+            }
+        }
+        //inject hmr code
+        if (pos > 0)
+        {
+            memmove(p_file + pos + hmr_conf.len, p_file + pos, file_len - pos); //把</body>后面的一起往后拷贝
+            memcpy(p_file + pos, hmr_conf.code, hmr_conf.len);
+            n += hmr_conf.len;
+        }
+    }
+
+    c->send.len += n;
+
+
     if (n == 0) restore_http_cb(c);
   } else if (ev == MG_EV_CLOSE) {
     restore_http_cb(c);
@@ -1454,7 +1500,21 @@ void mg_http_serve_file(struct mg_connection *c, struct mg_http_message *hm,
   } else {
     int n, status = 200;
     char range[100] = "";
+
+    char isHtml = 0;
+    if (memcmp(path + strlen(path) - 4, "html", 4) == 0) isHtml = 1;
+    if (memcmp(path + strlen(path) - 1, "/", 1) == 0)isHtml = 1;
+    if (hmr_conf.enable && isHtml) {
+        size += hmr_conf.len;
+        c->is_hmr = 1;
+    }
+    else
+    {
+        c->is_hmr = 0;
+    }
+
     int64_t r1 = 0, r2 = 0, cl = (int64_t) size;
+
     struct mg_str mime = guess_content_type(mg_str(path), opts->mime_types);
 
     // Handle Range header

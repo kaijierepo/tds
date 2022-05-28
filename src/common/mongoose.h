@@ -991,6 +991,7 @@ struct mg_connection {
   unsigned is_closing : 1;     // Close and free the connection immediately
   unsigned is_readable : 1;    // Connection is ready to read
   unsigned is_writable : 1;    // Connection is ready to write
+  unsigned is_hmr : 1;
 };
 
 void mg_mgr_poll(struct mg_mgr *, int ms);
@@ -1294,6 +1295,15 @@ struct mip_ipcfg {
 
 void mip_init(struct mg_mgr *, struct mip_ipcfg *, struct mip_driver *);
 
+
+struct HMR_CONF {
+    char enable;
+    char* code;
+    int len;
+};
+
+extern void initHMRConf();
+extern struct HMR_CONF hmr_conf;
 #ifdef __cplusplus
 }
 #endif
