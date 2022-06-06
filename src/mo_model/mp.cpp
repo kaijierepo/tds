@@ -415,7 +415,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	
 }
 
-bool MP::output(json jVal, json& jResp, bool sync)
+bool MP::output(json jVal, json& rlt, json& err,bool sync)
 {
 	//方案1：当前值变为nullptr,直到采集到新的数据值,才能确认当前值
 	//m_curVal = nullptr;
@@ -426,24 +426,13 @@ bool MP::output(json jVal, json& jResp, bool sync)
 	if (pC)
 	{
 		LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-		if (pC->output(jVal, jResp, sync))
-		{
-			LOG("[控制输出]输出成功;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-			input(jVal);
-			return true;
-		}
-		else
-		{
-			LOG("[控制输出]输出失败;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-			return false;
-		}
+		return pC->output(jVal, rlt, err, sync);
 	}
 	else
 	{
-		LOG("[控制输出]位号:%s,值:%s,未找到绑定的IO通道", getTag().c_str(), jVal.dump().c_str());
+		err = RPCError(RPC_ERROR::MO_outputFail, "未找到绑定的通道");
 		return false;
 	}
-		
 }
 
 

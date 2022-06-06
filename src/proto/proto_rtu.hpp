@@ -1,4 +1,5 @@
 #pragma once
+#include "tdscore.h"
 #include "stream2pkt.h"
 
 /*
@@ -138,40 +139,123 @@ namespace MODBUS_FUNCTION_CODE {
     const unsigned char readInputRegisters = 4;
 	const unsigned char writeSingleCoil = 5;
 	const unsigned char writeSingleRegister = 6;
+	const unsigned char writeMultipleRegister = 0x10;
 };
 
 #pragma pack(1)
-
-struct RTU_REQ_read {
+//modbus包框架
+class MB_RTU_PKT : public PKT_DATA {
+public:
 	unsigned char eqp_addr;
 	unsigned char fun_code;
+	char crc_H;
+	char crc_L;
+
+	MB_RTU_PKT() {
+
+	}
+
+	~MB_RTU_PKT() {
+
+	}
+
+	void copy(const MB_RTU_PKT& r) {
+		PKT_DATA::copy(r);
+		eqp_addr = r.eqp_addr;
+		fun_code = r.fun_code;
+		crc_H = r.crc_H;
+		crc_L = r.crc_L;
+	}
+
+	MB_RTU_PKT(const MB_RTU_PKT& r)
+	{
+		copy(r);
+	}
+
+	MB_RTU_PKT& operator=(const MB_RTU_PKT& pd) {
+		copy(pd);
+		return *this;
+	}
+
+	bool unpack() override {
+		eqp_addr = (unsigned char)data[0];
+		fun_code = (unsigned char)data[1];
+		cmd_data_len = len - 4;
+		if (cmd_data_len > 0)
+		{
+			cmd_data = new char[cmd_data_len];
+			memcpy(cmd_data, data + 2, cmd_data_len);
+		}
+		return true;
+	};
+	bool unpack(char* p, int len) override {
+		setData(p, len);
+		return unpack();
+	};
+	bool pack() override {
+		len = 4 + cmd_data_len;
+		data = new char[len];
+		data[0] = eqp_addr;
+		data[1] = fun_code;
+		memcpy(data + 2, cmd_data, cmd_data_len);
+		WORD crc = common::N_CRC16((unsigned char*)data, len -2 );
+		crc_H = HIBYTE(crc);
+		crc_L = LOBYTE(crc);
+		data[2 + cmd_data_len] = crc_H;
+		data[2 + cmd_data_len + 1] = crc_L;
+		return true;
+	}
+};
+//命令数据区结构
+struct RTU_REQ_read {
 	unsigned char start_reg_addr_H;
 	unsigned char start_reg_addr_L;
 	unsigned char reg_num_H;
 	unsigned char reg_num_L;
-	char crc_H;
-	char crc_L;
-
+	void setRegNum(unsigned short n) {
+		reg_num_H = HIBYTE(n);
+		reg_num_L = LOBYTE(n);
+	}
+	void setStartReg(unsigned short s) {
+		start_reg_addr_H = HIBYTE(s);
+		start_reg_addr_L = LOBYTE(s);
+	}
 	int getRegNum() {
 		unsigned short num = reg_num_H * 256 + reg_num_L;
 		return num;
 	}
-
 	int getStartReg() {
 		int start = start_reg_addr_H * 256 + start_reg_addr_L;
 		return start;
 	}
 };
+struct RTU_RESP_read{
+	unsigned char byte_count;
+	char reg_data[255];
+};
 
-struct RTU_REQ_writeSingleCoil {
-	unsigned char eqp_addr;
-	unsigned char fun_code;
+struct RTU_REQ_writeSingleCoil{
 	unsigned char addr_H;
 	unsigned char addr_L;
 	unsigned char val_H;
 	unsigned char val_L;
-	char crc_H;
-	char crc_L;
+	void setOffset(unsigned short a) {
+		addr_H = HIBYTE(a);
+		addr_L = LOBYTE(a);
+	}
+	void setVal(bool v) {
+		if (v)
+		{
+			val_H == 0xFF;
+			val_L == 0;
+		}
+		else
+		{
+			val_H == 0;
+			val_L == 0;
+		}
+	}
+
 
 	int getOffset() {
 		int offset = addr_H * 256 + addr_L;
@@ -185,5 +269,58 @@ struct RTU_REQ_writeSingleCoil {
 	}
 };
 
+struct RTU_REQ_writeSingleReg {
+	unsigned char addr_H;
+	unsigned char addr_L;
+	unsigned char val_H;
+	unsigned char val_L;
+	void setOffset(unsigned short a) {
+		addr_H = HIBYTE(a);
+		addr_L = LOBYTE(a);
+	}
+	void setVal(short v) {
+		val_H = HIBYTE(v);
+		val_L = LOBYTE(v);
+	}
+	void setVal(unsigned short v) {
+		val_H = HIBYTE(v);
+		val_L = LOBYTE(v);
+	}
+	int getOffset() {
+		int offset = addr_H * 256 + addr_L;
+		return offset;
+	}
+	int getVal() {
+		if (val_H == 0xFF)
+			return 1;
+		else
+			return 0;
+	}
+};
+
+struct RTU_REQ_writeMultiReg {
+	unsigned char start_reg_addr_H;
+	unsigned char start_reg_addr_L;
+	unsigned char reg_num_H;
+	unsigned char reg_num_L;
+	unsigned char byte_count;
+	char reg_data[255];
+	void setRegNum(unsigned short n) {
+		reg_num_H = HIBYTE(n);
+		reg_num_L = LOBYTE(n);
+	}
+	void setStartReg(unsigned short s) {
+		start_reg_addr_H = HIBYTE(s);
+		start_reg_addr_L = LOBYTE(s);
+	}
+	int getRegNum() {
+		unsigned short num = reg_num_H * 256 + reg_num_L;
+		return num;
+	}
+	int getStartReg() {
+		int start = start_reg_addr_H * 256 + start_reg_addr_L;
+		return start;
+	}
+};
 #pragma pack()
 

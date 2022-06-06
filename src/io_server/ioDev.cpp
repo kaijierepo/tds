@@ -604,6 +604,32 @@ string ioDev::getDevAddrStr()
 	return devAddr;
 }
 
+
+ioDev* ioDev::getIODevByTag(string tag)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		//备用的设备允许和相同的位号绑定，但是实际没有效果
+		//因为在实际工程当中，可能会删除一台在线的设备变成备用。绑定关系没改
+		//然后将另外一台设备和相同的位号绑定。此处不让那个备用的绑定影响启用的设备。
+		if (p->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
+			continue;
+		if (p->m_strTagBind == tag)
+		{
+			return p;
+		}
+
+		ioDev* pTmp = p->getIODevByTag(tag);
+		if (pTmp)
+		{
+			return pTmp;
+		}
+	}
+	return nullptr;
+}
+
 bool ioDev::CommLock(int dwTimeoutMS)
 {
 	if (dwTimeoutMS)

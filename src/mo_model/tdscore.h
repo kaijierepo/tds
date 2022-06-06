@@ -196,38 +196,35 @@ struct ioAddress {
 };
 
 
-typedef enum recvPktType {
-	RECV_PKT_UNKNOWN = -1, // 未知
-	RECV_PKT_UNCONF = 0, // 未配置数据包
-	RECV_PKT_ASYN, // 通知包
-	RECV_PKT_SYNC // 响应包
-}RecvPktType;
-
-
-typedef enum EPACKET_DIR {//表示请求, 响应, 通知
-	REQ = 0,
-	RESP,
-	NOTIFY
-}ePktDir;
+enum IO_PKT_TYPE {
+	IO_Unknown,
+	IO_Request,
+	IO_Response,
+	IO_Notify
+};
 
 class PKT_DATA {
 public:
 	char* data;
 	int len;
+	char* cmd_data;
+	int cmd_data_len;
 	string proto;
-	recvPktType dealType;
+	IO_PKT_TYPE type;
 
 	string m_strCmdName; //命令名称
 	string m_strCmdContent;  //命令内容概要
 	string m_strPktDetail; //命令包详细解析信息
 
 	virtual bool pack() { return false; };
+	virtual bool unpack() { return 0; };
+	virtual bool unpack(char* p,int len) { return 0; };
+
 	virtual string GetCmdID() { return _T(""); };
 	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
 	virtual string GetPktDesc() { return _T(""); }; //包详细描述信息
 	virtual string GetCmdName() { return _T(""); };
-	virtual bool UnPack() { return 0; };
-
+	
 	void setData(char* p, int l)
 	{
 		if (data)delete data;
@@ -244,31 +241,60 @@ public:
 	{
 		data = NULL;
 		len = 0;
+		cmd_data = nullptr;
+		cmd_data_len = 0;
 	}
 
 	~PKT_DATA()
 	{
 		if (data)
 			delete data;
+		if (cmd_data)
+			delete cmd_data;
 	}
 
+	void copy(const PKT_DATA& r) {
+		this->len = r.len;
+		this->cmd_data_len = r.cmd_data_len;
+		this->proto = r.proto;
+		this->type = r.type;
+		this->m_strCmdName = r.m_strCmdName; 
+		this->m_strCmdContent = r.m_strCmdContent;  
+		this->m_strPktDetail = r.m_strPktDetail; 
 
-	PKT_DATA& operator=(const PKT_DATA& pd)
-	{
-		this->len = pd.len;
-		this->proto = pd.proto;
-
-		if (pd.len > 0)
+		if (r.len > 0)
 		{
 			if (this->data)
 				delete this->data;
-			this->data = new char[pd.len];
-			memcpy(this->data, pd.data, pd.len);
+			this->data = new char[r.len];
+			memcpy(this->data, r.data, r.len);
 		}
 		else
 		{
 			this->data = NULL;
 		}
+
+		if (r.cmd_data_len > 0)
+		{
+			if (this->cmd_data)delete this->cmd_data;
+			this->cmd_data = new char[r.cmd_data_len];
+			memcpy(cmd_data, r.cmd_data, r.cmd_data_len);
+		}
+		else
+		{
+			this->cmd_data = NULL;
+		}
+	}
+
+	PKT_DATA(const PKT_DATA& r)
+	{
+		copy(r);
+	}
+
+
+	PKT_DATA& operator=(const PKT_DATA& pd)
+	{
+		copy(pd);
 		return *this;
 	}
 };

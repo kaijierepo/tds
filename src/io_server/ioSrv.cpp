@@ -36,16 +36,13 @@ void IOThread()
 		if (!ioSrv.m_bRunning)
 			break;
 
-		if (ioSrv.m_stopCycleAcq)
-			continue;
-
 		ioSrv.m_csThis.lock();
 		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 			//空闲设备不轮询数据
 			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
-			if (pIoDev->m_bRunning)
+			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq)
 			{
 				pIoDev->DoCycleTask();
 			}
@@ -287,24 +284,7 @@ ioDev* ioServer::getIODev(string ioAddr)
 	return ioDev::getIODev(ioAddr);
 }
 
-ioDev* ioServer::getIODevByTag(string tag)
-{
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	for (int i = 0; i < m_vecChildDev.size(); i++)
-	{
-		ioDev* p = m_vecChildDev[i];
-		//备用的设备允许和相同的位号绑定，但是实际没有效果
-		//因为在实际工程当中，可能会删除一台在线的设备变成备用。绑定关系没改
-		//然后将另外一台设备和相同的位号绑定。此处不让那个备用的绑定影响启用的设备。
-		if (p->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
-			continue;
-		if (p->m_strTagBind == tag)
-		{
-			return p;
-		}
-	}
-	return nullptr;
-}
+
 
 void ioServer::updateTag2IOAddrBinding()
 {

@@ -21,6 +21,7 @@ public:
 	virtual bool run() { m_bRunning = true; return true; }; //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
+	semaphore m_evtIO;
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
@@ -105,8 +106,8 @@ public:
 	
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 	//输出到设备的下属通道
-	virtual bool output(string chanAddr, json jVal, json& chanResp, bool sync = false) { return false; }
-	virtual bool output(ioChannel* pC, json jVal, json& jResp, bool sync = false) { return false; };
+	virtual bool output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) { return false; }
+	virtual bool output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { return false; };
 
 	void AutoDataLink(MO* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
@@ -120,9 +121,10 @@ public:
 	MO* m_pMO;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
+	ioDev* getIODevByTag(string tag);
 	//通信发送
-	bool CommLock(int dwTimeoutMS = 0);
-	void CommUnlock();
+	virtual bool CommLock(int dwTimeoutMS = 0);
+	virtual void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
 	virtual bool sendData(char* pData, int iLen);
 	virtual bool sendStr(string& str);
@@ -147,7 +149,8 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;  //上一次采集任务开始时间
-	bool m_bIsWaitingResp; //表示正在异步的等待响应
+	bool m_bIsSyncSession;  //是否为同步会话，表示有线程正在等待响应并处理
+	bool m_bIsWaitingResp;  //表示一次通信会话正在进行中。可能是异步处理，也可能是同步处理
 	SYSTEMTIME m_stLastReqSendTime; //上一次采集请求发送时间
 	SYSTEMTIME m_stLastChanDataTime;
 	SYSTEMTIME m_stLastAlarmStatusTime;

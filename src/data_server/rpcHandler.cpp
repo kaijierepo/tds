@@ -1854,14 +1854,15 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 		return;
 	}
 	
-	json jResp;
-	if (pmp->output(val, jResp,true))
+	json rlt,err;
+	if (pmp->output(val, rlt,err,true))
 	{
-		resp.result = jResp.dump();
+		resp.result = rlt.dump();
 	}
 	else
 	{
-		resp.error = RPCError(RPC_ERROR::MO_outputTimeout, "输出失败");
+		resp.error = err.dump();
+		LOG("[warn]输出失败," + resp.error);
 	}
 }
 
