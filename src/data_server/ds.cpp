@@ -811,8 +811,8 @@ bool dataServer::runAsCloud()
 	LOG("[Web目录	] /files  <--> " + filesDir);
 
 
-	LOG("webSrv init %lx", webSrv);
-	LOG("webSrvS init %lx", webSrvS);
+	//LOG("webSrv init %lx", webSrv);
+	//LOG("webSrvS init %lx", webSrvS);
 
 	if (tds->conf->httpPort != 0)
 	{

@@ -259,7 +259,7 @@ bool ioDev::loadConf(json& conf)
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
-		if (m_jDevAddr.contains("id"))
+		if (m_jDevAddr["id"]!= nullptr)
 			m_addrMode = DEV_ADDR_MODE::deviceID;
 		else if (m_jDevAddr.contains("port"))
 			m_addrMode = DEV_ADDR_MODE::tcpServer;
@@ -462,7 +462,7 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 	return false;
 }
 
-ioDev* ioDev::getIODev(string ioAddr)
+ioDev* ioDev::getIODev(string ioAddr,bool bChn)
 {
 	vector<string> vecNodeName;
 	str::split(vecNodeName, ioAddr, "/");
@@ -478,7 +478,13 @@ ioDev* ioDev::getIODev(string ioAddr)
 		bool findNode = false;
 		for (auto& it : *vecChildNode)
 		{
-			if (it->getDevAddrStr() == nodeName)
+			string nodeNameTmp = it->getDevAddrStr();
+			if (bChn) {
+				str::hanZi2Pinyin(nodeNameTmp, nodeNameTmp);
+				str::hanZi2Pinyin(nodeName, nodeName);
+			}
+
+			if (nodeNameTmp == nodeName)
 			{
 				findNode = true;
 				treeNode = it;

@@ -278,10 +278,10 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp)
 	}
 }
 
-ioDev* ioServer::getIODev(string ioAddr)
+ioDev* ioServer::getIODev(string ioAddr,bool bChn)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	return ioDev::getIODev(ioAddr);
+	return ioDev::getIODev(ioAddr,bChn);
 }
 
 

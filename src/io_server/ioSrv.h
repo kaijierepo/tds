@@ -31,7 +31,7 @@ public:
 	void rpc_modifyDev(json& params,RPC_RESP& rpcResp);
 	void rpc_disposeDev(json& params, RPC_RESP& rpcResp); //设置设备的管理状态
 
-	ioDev* getIODev(string ioAddr) override;
+	ioDev* getIODev(string ioAddr,bool bChn = false) override;
 	
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
 

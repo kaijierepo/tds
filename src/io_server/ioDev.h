@@ -68,7 +68,7 @@ public:
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示不采样
 	//// iodev hierachy tree management
-	virtual ioDev* getIODev(string ioAddr);
+	virtual ioDev* getIODev(string ioAddr, bool bChn = false); //是否启用中文地址拼音模式查找
 	virtual ioDev* getIODev(json& ioAddr);
 	ioDev* getIODevByNodeID(string nodeID);
 	bool deleteIODevByNodeID(string nodeID);
