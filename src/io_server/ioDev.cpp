@@ -445,7 +445,7 @@ ioDev* ioDev::getIODevByNodeID(string nodeID)
 
 bool ioDev::deleteIODevByNodeID(string nodeID)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	std::unique_lock<shared_mutex> lock(m_csThis);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];

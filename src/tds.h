@@ -116,8 +116,11 @@ inline int storageSize(string fmt) {
 	if (fmt.find("16") != string::npos)return 2;
 	else if (fmt.find("32") != string::npos)return 4;
 	else if (fmt.find("64") != string::npos)return 8;
-	else if (fmt == "Float")return 4;
-	else if (fmt == "Double")return 8;
+	else if (fmt.find("float") != string::npos || fmt.find("Float") != string::npos)return 4;
+	else if (fmt.find("Double") != string::npos || fmt.find("Double")!= string::npos)return 8;
+	else {
+		return 0;
+	}
 }
 
 #define STREAM_TYPE_ENUM string

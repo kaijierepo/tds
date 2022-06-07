@@ -551,7 +551,8 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			}
 			pIoDev->setOnline();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
+			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
+			logger.logInternal(s);
 			pIoDev->bindIOSession(p);
 		}
 	}
