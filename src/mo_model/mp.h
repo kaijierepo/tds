@@ -65,7 +65,7 @@ public:
 	bool IsCurValValid();
 	string getMpTypeLabel();
 	string getMpType();
-	json getRTData(string root="");
+	json getRTData(string root="",bool bValOnly = false);
 	json m_orgVal;
 	json m_curVal;
 	json m_lastVal;

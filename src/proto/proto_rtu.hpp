@@ -246,13 +246,13 @@ struct RTU_REQ_writeSingleCoil{
 	void setVal(bool v) {
 		if (v)
 		{
-			val_H == 0xFF;
-			val_L == 0;
+			val_H = 0xFF;
+			val_L = 0;
 		}
 		else
 		{
-			val_H == 0;
-			val_L == 0;
+			val_H = 0;
+			val_L = 0;
 		}
 	}
 

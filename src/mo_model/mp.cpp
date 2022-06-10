@@ -188,12 +188,12 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (p->m_valType == "json")
 		conf["mpType"] = p->m_mpType;
 
-	/*json saveInterval;
+	json saveInterval;
 	saveInterval["hour"] = p->m_saveInterval.hour;
 	saveInterval["minute"] = p->m_saveInterval.minute;
 	saveInterval["second"] = p->m_saveInterval.second;
 	conf["saveMode"] = p->m_saveMode;
-	conf["saveInterval"] = saveInterval;*/
+	conf["saveInterval"] = saveInterval;
 
 	if(p->m_strUnit!="")
 		conf["unit"] = p->m_strUnit;
@@ -498,7 +498,7 @@ int MP::getSaveInterval()
 	return si;
 }
 
-json MP::getRTData(string root)
+json MP::getRTData(string root, bool bValOnly)
 {
 	json j;
 	if(m_lastUpdateTime.wYear == 0 || m_lastUpdateTime.wYear == 1970)
@@ -510,18 +510,23 @@ json MP::getRTData(string root)
 		j["val"] = "?";
 	else
 		j["val"] = m_curVal;
-	j["unit"] = m_strUnit;
-	j["valType"] = m_valType;
-	j["valTypeLabel"] = m_valTypeLabel;
-	j["ioType"] = m_ioType;
-	j["ioTypeLabel"] = m_ioTypeLabel;
-	if (m_decimalDigits >= 0)
-		j["decimalDigits"] = m_decimalDigits;
 
-	if (m_validRange.enable)
+	if (!bValOnly)
 	{
-		j["min"] = m_validRange.min;
-		j["max"] = m_validRange.max;
+		j["unit"] = m_strUnit;
+		j["valType"] = m_valType;
+		j["valTypeLabel"] = m_valTypeLabel;
+		j["ioType"] = m_ioType;
+		j["ioTypeLabel"] = m_ioTypeLabel;
+		if (m_decimalDigits >= 0)
+			j["decimalDigits"] = m_decimalDigits;
+
+		if (m_validRange.enable)
+		{
+			j["min"] = m_validRange.min;
+			j["max"] = m_validRange.max;
+		}
 	}
+
 	return j;
 }

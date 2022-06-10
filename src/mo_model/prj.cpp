@@ -139,16 +139,12 @@ void project::updateMPTable()
 }
 
 
-MP* project::getMp(string strTagname)
+MP* project::getMp(string strSysTag)
 {
-	for (map<string, MP*>::iterator it = m_mapSpecialMP.begin(); it != m_mapSpecialMP.end(); it++)
+	map<string, MP*>::iterator it = m_mapAllMP.find(strSysTag);
+	if (it != m_mapAllMP.end())
 	{
-		if (it->second->getTag().c_str() == strTagname) return it->second;
-	}
-
-	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++)
-	{
-		if (it->second->getTag().c_str() == strTagname) return it->second;
+		return it->second;
 	}
 	return NULL;
 }

@@ -988,6 +988,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			result = rpc_getMpStatus(params, error, session);
 		}
+		else if (method == "getMpVal")
+		{
+			result = rpc_getMpStatus(params, error, session,true);
+		}
 		else if (method == "getMoStatus")
 		{
 			result = rpc_getMoStatus(params, error, session);
@@ -2245,21 +2249,27 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 	}
 }
 
-string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session)
+string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session, bool bValOnly)
 {
-	string szTag = "*"; //未指定位号默认查询所有位号
+	//获取位号查询参数
+	json jTagQuerier = params["tag"];
+
+
+	//获取查询根
 	string rootTag = "";
-	if(params["tag"]!=nullptr)
-		szTag = params["tag"].get<string>();
+	if (params["rootTag"] != nullptr)
+		rootTag = params["rootTag"].get<string>();
+	rootTag = TAG::addRoot(rootTag, session.org);
+
 	string mode = "array";
 	if(params["mode"]!=nullptr)
 	 	mode = params["mode"].get<string>();
-	if (params["rootTag"] != nullptr)
-		rootTag = params["rootTag"].get<string>();
+
 
 	json rtList = json::array();
 	json rtMap = json::object();
-	if (szTag == "*")
+	//获取所有点
+	if ( jTagQuerier == nullptr || (jTagQuerier.is_string() && jTagQuerier.get<string>() == "*"))
 	{
 		if(mode=="tree")
 		{
@@ -2269,18 +2279,6 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 		}
 		else
 		{
-			json jUser = nullptr;
-			if (session.user != "")
-			{
-				json jUser = userMng.getUser(session.user);
-				//优先使用参数中指定的rootTag，如果没有指定，使用用户的所属组织作为rootTag
-				if (rootTag == "")
-				{
-					if (jUser["org"] != nullptr)
-						rootTag = jUser["org"].get<string>();
-				}
-			}
-
 			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
 			{
 				string tag = it->second->getTag();
@@ -2297,42 +2295,8 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 						continue;
 				}
 
-				rtList.push_back(it->second->getRTData(rootTag));
+				rtList.push_back(it->second->getRTData(rootTag,bValOnly));
 			}
-
-
-			////智能设备的在线状态  专用监测点位号
-			//vector<ioDev*> arySmartDev;
-			//ioSrv.getAllSmartDev(arySmartDev);
-			//for (int i = 0; i < arySmartDev.size(); i++)
-			//{
-			//	ioDev* pdev = arySmartDev[i];
-			//	string tag = pdev->m_strTagBind + ".在线";
-
-			//	if (pSession->user != "")
-			//	{
-			//		if (!userMng.checkTagPermission(pSession->user, tag))
-			//			continue;
-			//	}
-
-			//	if (rootTag != "")
-			//	{
-			//		if (tag.find(rootTag) == string::npos)
-			//			continue;
-			//		tag = str::trim(tag, rootTag + ".");
-			//	}
-
-			//	json de;
-			//	de["tag"] = tag;
-			//	de["val"] = pdev->m_bOnline;
-			//	de["valType"] = "bool";
-			//	de["valTypeLabel"] = "布尔型";
-			//	de["ioType"] = "system";
-			//	de["ioTypeLabel"] = "系统";
-			//	de["time"] = timeopt::nowStr();
-
-			//	rtList.push_back(de);
-			//}
 
 			string result;
 			if (mode == "array")
@@ -2356,14 +2320,34 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			return result;
 		}
 	}
-	else
-	{
+	//模糊查询模式
+	else if (jTagQuerier.is_string()) {
+		string szTag = jTagQuerier.get<string>();
 		std::vector<MP*> tagVec;
-		prj.GetMPByTag(&tagVec,szTag);
-		for(int i=0;i<tagVec.size();i++)
+		prj.GetMPByTag(&tagVec, szTag);
+		for (int i = 0; i < tagVec.size(); i++)
 		{
 			MP* pmp = tagVec.at(i);
-			rtList.push_back(pmp->getRTData());
+			rtList.push_back(pmp->getRTData("", bValOnly));
+		}
+		string result = rtList.dump(4);
+		return result;
+	}
+	else if(jTagQuerier.is_array())
+	{
+		for (auto& tag : jTagQuerier) {
+			string sysTag = TAG::addRoot(tag, rootTag);
+			MP* pmp = prj.getMp(sysTag);
+			if(pmp)
+				rtList.push_back(pmp->getRTData("", bValOnly));
+			else
+			{
+				json j;
+				j["tag"] = tag;
+				j["time"] = nullptr;
+				j["val"] = nullptr;
+				rtList.push_back(j);
+			}
 		}
 		string result = rtList.dump(4);
 		return result;

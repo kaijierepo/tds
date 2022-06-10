@@ -259,12 +259,16 @@ bool ioDev::loadConf(json& conf)
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
-		if (m_jDevAddr["id"]!= nullptr)
-			m_addrMode = DEV_ADDR_MODE::deviceID;
-		else if (m_jDevAddr.contains("port"))
-			m_addrMode = DEV_ADDR_MODE::tcpServer;
-		else 
-			m_addrMode = DEV_ADDR_MODE::tcpClient;
+
+		if (m_jDevAddr.is_object())
+		{
+			if (m_jDevAddr["id"] != nullptr)
+				m_addrMode = DEV_ADDR_MODE::deviceID;
+			else if (m_jDevAddr.contains("port"))
+				m_addrMode = DEV_ADDR_MODE::tcpServer;
+			else
+				m_addrMode = DEV_ADDR_MODE::tcpClient;
+		}
 	}
 
 	if (conf["acqInterval"] != nullptr)
