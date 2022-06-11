@@ -1057,6 +1057,46 @@ namespace timeopt {
 		return dwSecond;
 	}
 
+	inline int dhmsSpan2Seconds(string timeSpan) {
+		string time1 = timeSpan;
+		string strDay = "", strH = "", strM = "", strS = "";
+		int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
+		int pos = time1.find("d");
+		if (pos == string::npos)
+			pos = time1.find("D");
+		if (pos != string::npos) {
+			strDay = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n1 = atof(strDay.c_str()) * 24 * 3600;
+		}
+		pos = time1.find("h");
+		if (pos == string::npos)
+			pos = time1.find("H");
+		if (pos != string::npos) {
+			strH = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n2 = atof(strH.c_str()) * 3600;
+		}
+		pos = time1.find("m");
+		if (pos == string::npos)
+			pos = time1.find("M");
+		if (pos != string::npos) {
+			strM = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n3 = atof(strM.c_str()) * 60;
+		}
+		pos = time1.find("s");
+		if (pos == string::npos)
+			pos = time1.find("S");
+		if (pos != string::npos) {
+			strS = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n4 = atof(strS.c_str());
+		}
+
+		return n1 + n2 + n3 + n4;
+	}
+
 
 	inline string rel2abs(string time)
 	{
@@ -1072,7 +1112,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strDay = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n1 = atoi(strDay.c_str()) * 24 * 3600;
+				n1 = atof(strDay.c_str()) * 24 * 3600;
 			}
 			pos = time1.find("h");
 			if (pos == string::npos)
@@ -1080,7 +1120,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strH = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n2 = atoi(strH.c_str()) * 3600;
+				n2 = atof(strH.c_str()) * 3600;
 			}
 			pos = time1.find("m");
 			if (pos == string::npos)
@@ -1088,7 +1128,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strM = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n3 = atoi(strM.c_str()) * 60;
+				n3 = atof(strM.c_str()) * 60;
 			}
 			pos = time1.find("s");
 			if (pos == string::npos)
@@ -1096,7 +1136,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strS = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n4 = atoi(strS.c_str());
+				n4 = atof(strS.c_str());
 			}
 			SYSTEMTIME stNow;
 			GetLocalTime(&stNow);

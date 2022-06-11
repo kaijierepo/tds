@@ -65,10 +65,17 @@ struct CPoint2 {
 };
 
 
+struct DE_TIME {
+	SYSTEMTIME st;
+	time_t tt;
+	string strT;
+};
+
+
 class TIME_CONDITON {
 public:
 	bool init(string condition);
-	bool Match(string& timeTag);
+	bool Match(string& deTime);
 	bool IsHMS; // only hms is specified, the timespan of each day is selected
 	TIME_CONDITON() {
 		IsHMS = false;
@@ -82,6 +89,8 @@ public:
 	SYSTEMTIME stEnd;
 	time_t startTime;
 	time_t endTime;
+	string strStart;
+	string strEnd;
 };
 
 class TAG_SELECTOR{
@@ -99,7 +108,7 @@ class TIME_SELECTOR
 {
 public:
 	TIME_SELECTOR();
-	bool Match(string& timeTag);
+	bool Match(string& deTime);
 	bool AmountMatch(int amount);
 	bool init(string time);
 	vector<TIME_CONDITON> vecCondition;
@@ -110,6 +119,63 @@ public:
 	time_t endTime;
 	int m_dataNum;//存储传入参数的，ne,n代表获取几个数据。
 	string error;
+	DE_TIME deTime;
+};
+
+enum DOWN_SAMPLING_TYPE {
+	DST_None,
+	DST_Count,
+	DST_Time
+};
+
+struct DOWN_SAMPLING_PARAM {
+	DOWN_SAMPLING_TYPE type;
+	int dsi;   //降采样元素个数间隔
+	int dsti;  //降采样的时间间隔 单位秒
+
+	DOWN_SAMPLING_PARAM() {
+		type = DST_None;
+		dsi = 0;
+		dsti = 0;
+	}
+};
+
+
+struct DB_FILE {
+	bool boundaryFile;
+	string data;
+	string path;
+	string ymd;
+	SYSTEMTIME time;
+};
+
+class DB_FILE_SET {
+public:
+	vector<DB_FILE*> fileList;
+	~DB_FILE_SET() {
+		if (fileList.size() > 0)
+		{
+			for (int i = 0; i < fileList.size(); i++)
+			{
+				delete fileList[i];
+			}
+		}
+	}
+};
+
+struct HMS_STR {
+	unsigned char hourH;
+	unsigned char hourL;
+	unsigned char semicolon1;
+	unsigned char minH;
+	unsigned char minL;
+	unsigned char semicolon2;
+	unsigned char secH;
+	unsigned char secL;
+
+	int getTotalSec() {
+		return (hourH * 10 + hourL) * 3600 + (minH * 10 + minL) * 60 + (secH * 10 + secL);
+	}
 };
 
 
@@ -146,7 +212,7 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
-	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result,int dsi = 0); //dsi = downsamplingInterval
+	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result, DOWN_SAMPLING_PARAM dsp); //dsi = downsamplingInterval
 	bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, SYSTEMTIME stTime, string& sData);

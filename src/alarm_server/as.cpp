@@ -21,7 +21,7 @@ almServer::~almServer(void)
 {
 }
 
-void almServer::run()
+void almServer::init()
 {
 	string s;
 	if (fs::readFile(tds->conf->confPath + "/alarm.json", s) && s!="")

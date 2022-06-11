@@ -174,7 +174,7 @@ bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB
 	return Select_simdjson(tag, timeSelector, filter, result);
 }
 
-bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result, int dsi)
+bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result, DOWN_SAMPLING_PARAM dsp)
 {
 	TIME_SELECTOR& tf = timeSelector;
 	time_t loadTime = tf.endTime;
@@ -189,30 +189,47 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 	double min = 1000000000;
 	double avg = 0;
 	int count = 0;
-	if (dsi == 0)dsi = 1;
+
+	bool withTag = tagSet.size() > 1 ? true : false;
 
 	vector<yyjson_doc*> src_doc;
 	vector< yyjson_mut_doc*> src_mut_doc;
 	map<string, yyjson_mut_val*> mapRlt;
 
+	
 	for (int tagIdx = 0; tagIdx < tagSet.size(); tagIdx++)
 	{
 		string& tag = tagSet[tagIdx]; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
-		
-		//按天加载数据库文件
+
+		//准备数据文件集
+		DB_FILE_SET fSet;
 		for (; loadTime >= tf.startTime; loadTime -= 24 * 60 * 60)
 		{
-			//加载数据元列表
-			stTemp = timeopt::Unix2SysTime(loadTime);
-			string ymd = timeopt::TimeToYMD(stTemp);
-			string dbFile = getPath_dbFile(tag, stTemp);
-			string dbData;
-			fs::readFile(dbFile, dbData);
-			if (dbData == "")
+			DB_FILE* pdf = new DB_FILE();
+			pdf->time = timeopt::Unix2SysTime(loadTime);
+			pdf->ymd = timeopt::TimeToYMD(pdf->time);
+			pdf->path = getPath_dbFile(tag, pdf->time);
+			fs::readFile(pdf->path, pdf->data);
+			if (pdf->data == "") {
+				delete pdf;
 				continue;
+			}
+			fSet.fileList.push_back(pdf);
+		}
+		if (fSet.fileList.size() == 0)
+			continue;
+		//头尾两个数据文件需要进行时间范围检查，中间的不需要
+		fSet.fileList[0]->boundaryFile = true;
+		fSet.fileList[fSet.fileList.size()-1]->boundaryFile = true;
+		
+		//加载每个数据文件中的数据
+		for (int i=0;i<fSet.fileList.size();i++)
+		{
+			//加载数据元列表
+			DB_FILE* pdf = fSet.fileList[i];
 
 			// Read JSON and get root,转为带 mut,因为后面会修改里面的值
-			yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+			yyjson_doc* doc = yyjson_read(pdf->data.c_str(), pdf->data.length(), 0);
 			src_doc.push_back(doc);
 			yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(NULL);
 			src_mut_doc.push_back(mut_doc);
@@ -221,29 +238,50 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 
 			size_t idx, max;
 			yyjson_val* val;
+			int lastDeTime = 0;
+			int currDeTime = 0;
+			string deTime = pdf->ymd + " 00:00:00";
 			yyjson_arr_foreach(root, idx, max, val) {
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
-				if (idx % dsi > 0 && idx < max - dsi) continue;
+				if (dsp.type == DST_Count)
+				{
+					if (idx % dsp.dsi > 0 && idx < max - dsp.dsi) continue;
+				}
 
+			
 				yyjson_mut_val* jDE = yyjson_val_mut_copy(mut_doc, val);
 				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
 				string_view szTime = yyjson_mut_get_str(yyTime);
 
 				//先生成完整时间戳，再进行match判断
+				const char* pHms = nullptr;
 				if (szTime.length() == 19)
 				{
-					szTime = szTime.substr(11, 8); //取出时分秒
+					pHms = szTime.data() + 11;//取出时分秒
 				}
-				string strTime = ymd + " " + string(szTime);
-				if (!tf.Match(strTime))
+				else
+				{
+					pHms = szTime.data();
+				}
+				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
+				
+				if (pdf->boundaryFile && !tf.Match(deTime))
 					continue;
 
+				if (dsp.type == DST_Time) {
+					HMS_STR* p = (HMS_STR*)pHms;
+					currDeTime = p->getTotalSec();
+					if (currDeTime - lastDeTime < dsp.dsti) continue;
+				}
 
-				//当进行多位号搜索时，需要加入tag标签
-				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
-				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tag.c_str());
-				yyjson_mut_obj_put(jDE, tagKey, tagVal);
+				if (withTag)
+				{
+					//当进行多位号搜索时，需要加入tag标签
+					yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
+					yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tag.c_str());
+					yyjson_mut_obj_put(jDE, tagKey, tagVal);
+				}
 
 
 				if (attriFilter.bEnable && !attriFilter.match(jDE))
@@ -251,8 +289,8 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 					continue;
 				}
 
-
-				mapRlt[strTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				lastDeTime = currDeTime;
+				mapRlt[deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 
 				if (tf.AmountMatch(count))
@@ -704,12 +742,14 @@ TIME_SELECTOR::TIME_SELECTOR()
 	m_dataNum = 0;
 }
 
-bool TIME_SELECTOR::Match(string& timeTag)
+bool TIME_SELECTOR::Match(string& deTime)
 {
+	//deTime.st = timeopt::str2st(timeTag);
+	//deTime.tt = timeopt::SysTime2Unix(deTime.st);
 	for (int i = 0; i < vecCondition.size(); i++)
 	{
 		TIME_CONDITON& tc = vecCondition.at(i);
-		if (!tc.Match(timeTag))
+		if (!tc.Match(deTime))
 			return false;
 	}
 	return true;
@@ -789,8 +829,8 @@ bool TIME_CONDITON::init(string condition)
 	if (condition.find('-') != string::npos)//年月日绝对区间模式
 	{
 		int pos = condition.find("~");
-		string strStart = condition.substr(0, pos);
-		string strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
+		strStart = condition.substr(0, pos);
+		strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 		if (strStart.find(":") == string::npos)
 			strStart += " 00:00:00";
 		if (strEnd.find(":") == string::npos)
@@ -806,8 +846,8 @@ bool TIME_CONDITON::init(string condition)
 		{
 			IsHMS = true;
 			int pos = condition.find("~");
-			string strStart = condition.substr(0, pos);
-			string strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
+			strStart = condition.substr(0, pos);
+			strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 			startHMS = timeopt::HMS2Sec(strStart);
 			endHMS = timeopt::HMS2Sec(strEnd);
 		}
@@ -815,8 +855,8 @@ bool TIME_CONDITON::init(string condition)
 		{
 			condition = timeopt::rel2abs(condition);
 			int pos = condition.find("~");
-			string strStart = condition.substr(0, pos);
-			string strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
+			strStart = condition.substr(0, pos);
+			strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 			if (strStart.find(":") == string::npos)
 				strStart += " 00:00:00";
 			if (strEnd.find(":") == string::npos)
@@ -830,19 +870,18 @@ bool TIME_CONDITON::init(string condition)
 	return true;
 }
 
-bool TIME_CONDITON::Match(string& timeTag)
+bool TIME_CONDITON::Match(string& deTime)
 {
 	if (IsHMS)
 	{
-		string hms = timeTag.substr(11, 8);
-		int iTime = timeopt::HMS2Sec(hms);
-		if (iTime >= startHMS && iTime <= endHMS)
-			return true;
+		//int iTime = det.st.wHour*60*60 + det.st.wMinute*60 + det.st.wSecond;
+		//if (iTime >= startHMS && iTime <= endHMS)
+		//	return true;
 	}
 	else
 	{
-		time_t tt = timeopt::SysTime2Unix(timeopt::str2st(timeTag));
-		if (tt >= startTime && tt <= endTime)
+		//字符串直接比较应该可以获得比先转换 time_t 跟高的性能
+		if (deTime >= strStart && deTime <= strEnd)
 			return true;
 	}
 	return false;

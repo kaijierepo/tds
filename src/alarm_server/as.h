@@ -201,7 +201,7 @@ public:
 		static almServer inst;
 		return inst;
 	}
-	void run();
+	void init();
 
 	bool CompareTime(SYSTEMTIME& time1, SYSTEMTIME& time2);
 

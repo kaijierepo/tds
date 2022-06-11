@@ -130,9 +130,21 @@ string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 	 	filter = params["filter"].get<string>();
 	
 	//down sampling interval  针对高密度数据的下采样间隔。无需则为0
-	int dsi = 0;
-	if (params["dsi"] != nullptr)
-		dsi = params["dsi"].get<int>();
+	DOWN_SAMPLING_PARAM dsp;
+	json jDsi = params["dsi"];
+	if (jDsi.is_number())
+	{
+		dsp.type = DST_Count;
+		dsp.dsi = jDsi.get<int>();
+	}
+	else if (jDsi.is_string())
+	{
+		string sDsti = params["dsi"].get<string>();
+		dsp.dsti = timeopt::dhmsSpan2Seconds(sDsti);
+		if (dsp.dsti > 0)
+			dsp.type = DST_Time;
+	}
+		
 
 	
 	
@@ -171,7 +183,7 @@ string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
 	string result = "";
 	try
 	{
-		db.Select_yyjson(tags, timeSelector, filter, result,dsi);
+		db.Select_yyjson(tags, timeSelector, filter, result,dsp);
 	}
 	catch (std::exception& e)
 	{

@@ -216,9 +216,9 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		else if (checkKey(tci.key, "httpPort"))
 			httpPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpsPort2"))
-			httpsPort = atoi(tci.val.c_str());
+			httpsPort2 = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpPort2"))
-			httpPort = atoi(tci.val.c_str());
+			httpPort2 = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tdspPort"))
 			tdspPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "mbPort"))
