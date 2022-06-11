@@ -89,6 +89,10 @@ bool MO::loadConf(json& conf)
 	m_strName = conf["name"];
 	m_moType = conf["type"];
 
+	if (conf.contains("group")) {
+		m_groupName = conf["group"].get<string>();
+	}
+
 	if (conf.contains("dynamicLocation"))
 	{
 		m_bDynLocation = conf["dynamicLocation"].get<bool>();
@@ -170,6 +174,10 @@ bool MO::toJson(json& conf, json serializeOption)
 		conf["customType"] = m_moCustomType;
 	if(m_moCustomTypeLabel != "")
 		conf["customTypeLabel"] = m_moCustomTypeLabel;
+
+	if (m_groupName != "") {
+		conf["group"] = m_groupName;
+	}
 
 	if (m_bDynLocation)
 	{

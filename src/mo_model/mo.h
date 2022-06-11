@@ -87,6 +87,7 @@ public:
 	string m_moType;
 	string m_moCustomType;  //如果用中文命名，此处转为中文首字母
 	string m_moCustomTypeLabel;
+	string m_groupName; //设备编组。1个自定义的字符串
 	string m_strName;
 	string m_alias;
 	bool m_bShow;
