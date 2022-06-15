@@ -358,9 +358,9 @@ bool TDS_imp::run(string cmdline)
 	}
 	createDefaultCompanyInfo();
 
-	LOG("[UI路径	]" + tds->conf->uiPath);
-	LOG("[组态路径	]" + tds->conf->confPath);
-	LOG("[数据库	]" + tds->conf->dbPath);
+	LOG("[UI路径	] " + tds->conf->uiPath);
+	LOG("[组态路径	] " + tds->conf->confPath);
+	LOG("[数据库	] " + tds->conf->dbPath);
 
 	//初始化系统组件，完成静态结构建立。loadConf和init类函数。在调用run之前，要先完成.否则在结构建立之前就进行数据io，可能会出现一些不必要的错误。
 	//startup xiaot

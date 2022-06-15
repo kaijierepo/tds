@@ -16,9 +16,9 @@ public:
 
 	void fromJson(json& j) {
 		if (j.contains("name")) name = j["name"].get<string>();
-		if (j.contains("createTime")) name = j["createTime"].get<string>();
-		if (j.contains("role")) name = j["role"].get<string>();
-		if (j.contains("pwd")) name = j["pwd"].get<string>();
+		if (j.contains("createTime")) createTime = j["createTime"].get<string>();
+		if (j.contains("role")) role = j["role"].get<string>();
+		if (j.contains("pwd")) pwd = j["pwd"].get<string>();
 		if (j.contains("org")) org = j["org"].get<string>();
 		if (j.contains("phone")) phone = j["phone"].get<string>();
 		if (j.contains("enable")) enable = j["enable"].get<bool>();

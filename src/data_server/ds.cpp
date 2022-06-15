@@ -862,7 +862,7 @@ bool dataServer::runAsCloud()
 			}
 			LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
 		}
-		LOG("[keyinfo][HTTP热更新服务] 端口:" + str::fromInt(668));
+		LOG("[keyinfo][Web热更新 ] 端口:" + str::fromInt(668));
 	}
 	
 	return true;

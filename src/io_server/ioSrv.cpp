@@ -373,6 +373,49 @@ bool ioServer::runAsCloud()
 {
 	m_bRunning = true;
 
+	//启动服务端口
+	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
+	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
+	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
+
+	//io服务 665 TDSP
+	m_tcpSrv_tdsp = new tcpSrv();
+	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_tdsp->run(&ds, tds->conf->tdspPort))
+	{
+		
+	}
+	else
+	{
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
+	}
+
+
+	//io服务 664 Modbus over TCP
+	m_tcpSrv_rtu = new tcpSrv();
+	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_rtu->run(&ds, tds->conf->mbPort))
+	{
+		
+	}
+	else
+	{
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->mbPort));
+	}
+
+	//io服务 663 IQ60
+	m_tcpSrv_iq60 = new tcpSrv();
+	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_iq60->run(&ds, tds->conf->iq60Port))
+	{
+		
+	}
+	else
+	{
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->iq60Port));
+	}
+
+
 	//启动所有子设备
 	for (auto i : m_vecChildDev)
 	{
@@ -382,47 +425,10 @@ bool ioServer::runAsCloud()
 	//启动IO工作线程
 	std::thread io(IOThread);
 	io.detach();
-	
+
 	//启动设备发现线程
 	ioDiscoverService.run();
 	refreshSerialIODev();
-
-	//io服务 665 TDSP
-	m_tcpSrv_tdsp = new tcpSrv();
-	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_tdsp->run(&ds, tds->conf->tdspPort))
-	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
-	}
-	else
-	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
-	}
-
-
-	//io服务 664 Modbus over TCP
-	m_tcpSrv_rtu = new tcpSrv();
-	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_rtu->run(&ds, tds->conf->mbPort))
-	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
-	}
-	else
-	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->mbPort));
-	}
-
-	//io服务 663 IQ60
-	m_tcpSrv_iq60 = new tcpSrv();
-	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_iq60->run(&ds, tds->conf->iq60Port))
-	{
-		LOG("[keyinfo][IO服务   ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
-	}
-	else
-	{
-		LOG("[error][IO服务   ] 启动失败 端口:" + str::fromInt(tds->conf->iq60Port));
-	}
 
 	
 	return true;
