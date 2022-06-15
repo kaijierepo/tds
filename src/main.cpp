@@ -36,7 +36,6 @@ SOFTWARE.
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
-#include "tools/tdsShell.h"
 #include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
 #include "httplib.h"
@@ -174,7 +173,7 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "js")
 	{
-		doShell();
+		//doShell();
 	}
 	else if (mode == "hs" || mode == "httpServer" || mode == "httpserver") //httpServer
 	{

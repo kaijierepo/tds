@@ -46,7 +46,6 @@ SOFTWARE.
 #include "version.h"
 #include "data_server/db.h"
 #include "tools/tdsWatchDog.h"
-#include "tools/shellServer.h"
 #include "video/audioPlayer.h"
 #include <filesystem>
 #include "tools/dumpCatch.h"
@@ -398,7 +397,6 @@ bool TDS_imp::run(string cmdline)
 #endif
 	logSrv.run();
 	sHost.run();
-	shellSrv.run();
 	audioPlayer.run();
 	if (conf->debugMode)
 	{
