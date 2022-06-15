@@ -270,6 +270,15 @@ void createChromeWnd()
 }
 
 
+TDS_imp::TDS_imp()
+{
+	conf = nullptr;
+	db = nullptr;
+	xiaoT = nullptr;
+	gzhServer = nullptr;
+	smsServer = nullptr;
+}
+
 bool TDS_imp::setEncodeing(string encoding)
 {
 	InterfaceEncoding = encoding;
@@ -357,6 +366,8 @@ bool TDS_imp::run(string cmdline)
 	//startup xiaot
 	if(tds->xiaoT)
 		tds->xiaoT->init();
+	if (tds->smsServer)
+		tds->smsServer->init();
 	//startup tds modules
 	//if db folder is not exist. open will create an empty folder
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。

@@ -980,10 +980,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		ioSrv.updateTag2IOAddrBinding();
 		result = "\"ok\"";
 	}
-	else if (method == "createFromDataLink")
-	{
-		
-	}
 	else
 	{
 		shared_lock<shared_mutex> lock(prj.m_csPrj);

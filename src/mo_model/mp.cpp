@@ -70,6 +70,11 @@ bool MP::loadConf(json& conf)
 
 	m_valTypeLabel = getValTypeLabel(m_valType);
 
+	if (conf["alarmMp"] != nullptr)
+		m_alarmMp = conf["alarmMp"].get<bool>();
+	else
+		m_alarmMp = false;
+
 	//不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
 	if (conf["unit"] != nullptr)
 		m_strUnit = conf["unit"].get<string>();
@@ -187,6 +192,8 @@ bool MP::toJson(json& conf, json serializeOption)
 		conf["ioType"] = p->m_ioType;
 	if (p->m_valType == "json")
 		conf["mpType"] = p->m_mpType;
+	if (p->m_alarmMp)
+		conf["alarmMp"] = true;
 
 	json saveInterval;
 	saveInterval["hour"] = p->m_saveInterval.hour;
@@ -367,6 +374,20 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	else if (m_strName == "纬度")
 	{
 		m_pParentMO->m_latitudeDyn = m_curVal;
+	}
+
+
+	if (m_alarmMp) //是一个报警监控点，更新报警
+	{
+		ALARM_INFO ai;
+		ai.type = m_strName;
+		if(m_curVal.get<bool>() == true)
+			ai.level = ALARM_LEVEL::alarm;
+		else
+			ai.level = ALARM_LEVEL::normal;
+		ai.tag = getTag();
+		ai.typeLabel = m_strName;
+		almSrv.Update(ai);
 	}
 	
 	//notify to tds client

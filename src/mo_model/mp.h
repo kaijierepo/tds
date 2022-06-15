@@ -80,6 +80,7 @@ public:
 	//其他类型可以不指定，将mp的name当做物理量类型。 也可以指定
 	string m_mpType;
 	//string m_physicalType;
+	bool m_alarmMp;//该监控点是1个报警状态。 报警类型默认为监控点名称
 	string m_strUnit;
 	int m_decimalDigits;
 	SYSTEMTIME m_lastUpdateTime;

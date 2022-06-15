@@ -70,6 +70,7 @@ public:
 	string strAlarmDesc;
 	string strAlarmDetail;
 	string strSuggest;
+	string typeLabel;
 	bool bRecover;
 	SYSTEMTIME stRecoverTime;
 	bool bAck;

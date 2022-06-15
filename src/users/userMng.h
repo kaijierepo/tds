@@ -4,13 +4,35 @@
 
 using json = nlohmann::json;
 
-struct USER_INFO {
+class USER_INFO {
+public:
 	string name;
 	string createTime;
 	string role;
 	string pwd;
 	string org;
+	string phone;
 	bool enable;
+
+	void fromJson(json& j) {
+		if (j.contains("name")) name = j["name"].get<string>();
+		if (j.contains("createTime")) name = j["createTime"].get<string>();
+		if (j.contains("role")) name = j["role"].get<string>();
+		if (j.contains("pwd")) name = j["pwd"].get<string>();
+		if (j.contains("org")) org = j["org"].get<string>();
+		if (j.contains("phone")) phone = j["phone"].get<string>();
+		if (j.contains("enable")) enable = j["enable"].get<bool>();
+	}
+
+	void toJson(json& j) {
+		j["name"] = name;
+		j["createTime"] = createTime;
+		j["role"] = role;
+		j["pwd"] = pwd;
+		j["org"] = org;
+		j["phone"] = phone;
+		j["enable"] = enable;
+	}
 };
 
 
@@ -47,7 +69,9 @@ public:
 	//设置单个用户，必须已经存在，否则设置失败
 	bool setUser(json& user, json& result, json& err);
 	
-	
+	vector<USER_INFO> getRelateUsers(string tag); //获取与该位号关联的用户的电话号码。 关联表示该位号在该用户的所属组织结构内
+	string getPhoneList(vector<USER_INFO>& users);
+
 	//map和json共用相同的数据内存对象。
 	std::map<string, json> m_mapUsers;
 	std::shared_mutex m_csUserConf;

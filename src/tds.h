@@ -262,6 +262,11 @@ struct iTDSConf {
 	int devRebootTime; //seconds
 	int devCommRebootTime;
 
+	//3rd party services integration
+	string smsApiUser;
+	string smsApiKey;
+	string smsApiUrl;
+
 	//desktop app mode conf
 	bool bConcurrentGateway;
 	string dataCenterIp;
@@ -385,6 +390,12 @@ public:
 	virtual std::string getReply(string msg) = 0;
 };
 
+class i_smsServer {
+public:
+	virtual bool init() = 0;
+	virtual bool send(string& msg,string& phoneNum) = 0;
+};
+
 
 typedef void (*fp_toolRun)();
 
@@ -433,6 +444,7 @@ public:
 	i_database* db;
 	i_xiaoT* xiaoT;
 	i_gzhServer* gzhServer;
+	i_smsServer* smsServer;
 
 	SYSTEMTIME stStartupTime;
 

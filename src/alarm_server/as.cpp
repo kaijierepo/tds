@@ -8,6 +8,7 @@
 #include "tds.h"
 #include "users/userMng.h"
 #include "logger.h"
+#include "tds.h"
 
 almServer almSrv;
 
@@ -95,24 +96,53 @@ void almServer::OccurAlarm(ALARM_INFO ai)
 {
 	tableCurrent.add(ai);
 	tableHist.add(ai);
+
+	//报警短信通知
+	string msg = "报警类型:" + ai.typeLabel + "; ";
+	msg += "报警对象:" + ai.tag + "; ";
+	msg += "报警时间:" + ai.time + "; ";
+
+	vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
+	string pl, pnl;
+
+	for (int i = 0; i < relateUsers.size(); i++)
+	{
+		USER_INFO& ui = relateUsers[i];
+		if (ui.phone != "")
+		{
+			if (pl != "") pl += ",";
+			pl += ui.phone;
+
+			if (pnl != "") pnl += ";";
+			pnl += ui.name + "," + ui.phone;
+		}
+	}
+
+	if (pl != "" && tds->smsServer->send(msg, pl))
+	{
+		LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
+	}
 }
 
 
 void almServer::Update(ALARM_INFO newStatus)
 {
 	//忽略屏蔽报警
-	if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
+	if (newStatus.typeLabel == "")
 	{
-		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
-		if (at.enable == false)
-			return;
+		if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
+		{
+			ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
+			newStatus.typeLabel = at.label;
+			if (at.enable == false)
+				return;
+		}
+		else
+		{
+			LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
+		}
 	}
-	else
-	{
-		LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
-	}
-
-
+	
 	std::lock_guard<mutex> g(m_csAlarmData);
 
 	if (newStatus.time == "")
@@ -568,6 +598,7 @@ json ALARM_INFO::toJson(string rootTag)
 	}
 
 	j["type"] = info->type;
+
 
 	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
 	{

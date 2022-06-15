@@ -433,6 +433,49 @@ bool userManager::setUser(json& user,json& result,json& err)
 	return true;
 }
 
+vector<USER_INFO> userManager::getRelateUsers(string tag)
+{
+	vector<USER_INFO> vec;
+	try {
+		std::shared_lock<shared_mutex> lock(m_csUserConf);
+
+		for (auto& i : m_mapUsers)
+		{
+			json& jUser = i.second;
+			string org = jUser["org"].get<string>();
+			if (tag.find(org) != string::npos)
+			{
+				USER_INFO ui;
+				ui.fromJson(jUser);
+				vec.push_back(ui);
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+
+	}
+
+	return vec;
+}
+
+string userManager::getPhoneList(vector<USER_INFO>& users)
+{
+	string pl;
+
+	for (int i = 0; i < users.size(); i++)
+	{
+		USER_INFO& ui = users[i];
+		if (ui.phone != "")
+		{
+			if (pl != "") pl += ",";
+			pl += ui.phone;
+		}
+	}
+
+	return pl;
+}
+
 json userManager::getMoPermission(string user)
 {
 	try {

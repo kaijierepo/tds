@@ -112,6 +112,11 @@ iotimeoutTdsp=7000
 iotimeoutModbusRtu=5000
 iotimeoutIQ60=5000
 
+#短信服务
+smsApiUrl =			   #短信平台api地址
+smsApiUser =           #短信平台api账号
+smsApiKey =            #短信平台api秘钥
+
 #桌面软件模式
 ui=console             #ui模式  console:命令行模式   chrome:浏览器模式
 )";
@@ -334,6 +339,18 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 				fullscreen = true;
 			else if (tci.val == "false" || tci.val == "0")
 				fullscreen = false;
+		}
+		else if (checkKey(tci.key, "smsApiUrl"))
+		{
+			smsApiUrl = tci.val;
+		}
+		else if (checkKey(tci.key, "smsApiUser"))
+		{
+			smsApiUser = tci.val;
+		}
+		else if (checkKey(tci.key, "smsApiKey"))
+		{
+			smsApiKey = tci.val;
 		}
 	}
 
