@@ -196,6 +196,36 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
 		}
+		else if (mg_http_match_uri(hm, "/release"))
+		{
+			string localPath = fs::appPath() + "/files/release";
+			vector<string> fl;
+			fs::getFileList(fl, localPath);
+			string redirectPath = "/files/release/";
+
+			map<string, string> fil;
+
+			for (auto& i : fl)
+			{
+				fs::FILE_INFO fi;
+				string p = localPath + "/" + i;
+				fs::getFileInfo(p, fi);
+				fil[fi.modifyTime] = i;
+			}
+
+			string sHeader;
+			if (fil.size() > 0) //默认按照时间的升序排列
+			{
+				sHeader = "location:" + redirectPath + "\r\n";
+				sHeader += "Cache-Control:max-age=1\r\n";
+			}
+			else
+			{
+				sHeader = "location:tds.zip\r\n";
+				sHeader += "Cache-Control:max-age=1\r\n";
+			}
+			mg_http_reply(c, 301, sHeader.c_str(),NULL);
+		}
 		else {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));

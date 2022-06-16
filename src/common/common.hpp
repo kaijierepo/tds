@@ -1898,6 +1898,30 @@ namespace common {
 		}
 		return strGUID;
 	}
+
+	inline float randomFloat(float min, float max) {
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		//当前毫秒作为随机数种子
+		int seed = abs(st.wMilliseconds - rand() % 1000);
+		seed = seed % 100;
+		float diffRate = float(seed) / 100.0;
+		float diff = (max - min)*diffRate;
+		float v = min + diff;
+		return v;
+	}
+
+	inline int randomInt(int min, int max) {
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		//当前毫秒作为随机数种子
+		int seed = abs(st.wMilliseconds - rand() % 1000);
+		seed = seed % 100;
+		float diffRate = float(seed) / 100.0;
+		float diff = (max - min) * diffRate;
+		float v = min + diff;
+		return v;
+	}
 }
 
 #include <stdio.h>
