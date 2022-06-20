@@ -239,11 +239,13 @@ bool tcpClt::connect()
 		sockClient = 0;
 		return false;
 	}
+	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
+	m_bConn = true;
+	GetLocalTime(&lastConnTime);
 	m_strErrorInfo = "";
 	DWORD dwThread;
 	HANDLE hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
-	GetLocalTime(&lastConnTime);
-	m_bConn = true;
+
 	return true;
 }
 

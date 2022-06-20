@@ -2179,6 +2179,10 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 			{
 				oneData["在线"] = piod->m_bOnline;
 			}
+			else
+			{
+				oneData["在线"] = pMo->m_bOnline;
+			}
 			
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
@@ -2191,6 +2195,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 			}
 			if(strList != "[")
 				strList += ",";
+
 			strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 		}
 		strList += "]";
@@ -2222,8 +2227,11 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
+			//表头
 			if (i == 0)
 			{
+				jTableHead.push_back("在线");
+				jTableHead.push_back("更新时间");
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
 					MO* pChild = pMo->m_childMO[j];
@@ -2236,7 +2244,10 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 				jTable.push_back(jTableHead);
 			}
 
+			//数据行
 			json jTableRow;
+			jTableRow.push_back(pMo->m_bOnline);
+			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				MO* pChild = pMo->m_childMO[j];
@@ -2246,7 +2257,8 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 					jTableRow.push_back(pmp->m_curVal);
 				}
 			}
-			jTable.push_back(jTableRow);
+			if(jTableRow!=nullptr && jTableRow.size() == jTableHead.size())
+				jTable.push_back(jTableRow);
 		}
 		return jTable.dump();
 	}
