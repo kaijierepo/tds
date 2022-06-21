@@ -1014,7 +1014,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMoStatusTable")
 		{
-			result = rpc_getMoStatusTable(params, error);
+			rpc_getMoStatusTable(params, rpcResp,session);
 		}
 		else if (method == "getTopoList")
 		{
@@ -2210,13 +2210,20 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 
 
 
-string rpcHandler::rpc_getMoStatusTable(json params, string& error)
+void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	if (params["type"] == nullptr)
 	{
-		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
-		return "";
+		resp.error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
+		return ;
 	}
+	string rootTag;
+	if (params["rootTag"] != nullptr) {
+		rootTag = params["rootTag"];
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);
+
+
 	string moType = params["type"].get<string>();
 	json jTable = json::array();
 	json jTableHead = json::array();
@@ -2227,11 +2234,11 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
+	
 			//表头
 			if (i == 0)
 			{
-				jTableHead.push_back("在线");
-				jTableHead.push_back("更新时间");
+				jTableHead.push_back("位号");
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
 					MO* pChild = pMo->m_childMO[j];
@@ -2241,13 +2248,14 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 						jTableHead.push_back(pmp->m_strName);
 					}
 				}
+				jTableHead.push_back("在线");
+				jTableHead.push_back("更新时间");
 				jTable.push_back(jTableHead);
 			}
 
 			//数据行
 			json jTableRow;
-			jTableRow.push_back(pMo->m_bOnline);
-			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
+			jTableRow.push_back(pMo->getTag(rootTag));
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				MO* pChild = pMo->m_childMO[j];
@@ -2257,15 +2265,17 @@ string rpcHandler::rpc_getMoStatusTable(json params, string& error)
 					jTableRow.push_back(pmp->m_curVal);
 				}
 			}
+			jTableRow.push_back(pMo->m_bOnline);
+			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
 			if(jTableRow!=nullptr && jTableRow.size() == jTableHead.size())
 				jTable.push_back(jTableRow);
 		}
-		return jTable.dump();
+		resp.result = jTable.dump();
 	}
 	else
 	{
 		json j = json::array();
-		return j.dump();
+		resp.result = j.dump();
 	}
 }
 

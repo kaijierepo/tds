@@ -46,7 +46,7 @@ public:
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
 	void   rpc_getMoStatis(json params, RPC_RESP& resp , RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
-	string rpc_getMoStatusTable(json params, string& error);
+	void rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);
 	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_db_select(json params, string& error, RPC_SESSION session);
