@@ -120,7 +120,7 @@ void ioServer::saveConf()
 {
 	json conf;
 	json opt;
-	opt["onlyConf"] = true;
+	opt["getStatus"] = false;
 	toJson(conf,opt);
 	string sConf = conf.dump(3);
 	if (fs::writeFile(tds->conf->confPath + "/io.json",sConf))

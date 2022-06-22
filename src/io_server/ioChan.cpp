@@ -72,7 +72,7 @@ bool ioChannel::toJson(json& conf, json opt)
 		conf["channelTypeLabel"] = m_channelTypeLabel;
 	}
 
-	if (opt.contains("onlyConf") && opt["onlyConf"].get<bool>() == true)
+	if (opt.contains("getStatus") && opt["getStatus"].get<bool>() == false)
 	{
 
 	}

@@ -159,13 +159,14 @@ bool MO::loadConf(json& conf)
 //root 返回位号的相对根
 //type mo类型
 //recursive 是否递归
-//onlyConf 仅配置
+//getStatus 是否包含状态信息
+//getMp 是否获取mp。缺省获取
 bool MO::toJson(json& conf, json serializeOption)
 {
 	bool withMp = true;
-	if (serializeOption.contains("mp"))
+	if (serializeOption.contains("getMp"))
 	{
-		withMp = serializeOption["mp"].get<bool>();
+		withMp = serializeOption["getMp"].get<bool>();
 	}
 
 	conf["name"] = m_strName;
@@ -199,7 +200,7 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (m_latitude != nullptr)
 		conf["latitude"] = m_latitude;
 
-	if (serializeOption["onlyConf"] != nullptr && serializeOption["onlyConf"].get<bool>() == true)
+	if (serializeOption["getStatus"] != nullptr && serializeOption["getStatus"].get<bool>() == false)
 	{
 
 	}

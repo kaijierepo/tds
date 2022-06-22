@@ -2127,6 +2127,7 @@ string rpcHandler::rpc_getMoOnlineStatus(json params, string& error)
 
 string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION session)
 {
+	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
 	{
 		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
@@ -2212,11 +2213,15 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 
 void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
 	{
 		resp.error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
-		return ;
 	}
+	//支持中文直接输入moType
+	string moType = params["type"].get<string>();
+	str::hanZi2Pinyin(moType, moType);
+	//查询根
 	string rootTag;
 	if (params["rootTag"] != nullptr) {
 		rootTag = params["rootTag"];
@@ -2224,7 +2229,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 	rootTag = TAG::addRoot(rootTag, session.org);
 
 
-	string moType = params["type"].get<string>();
+
 	json jTable = json::array();
 	json jTableHead = json::array();
 
@@ -2234,9 +2239,27 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 		for (int i = 0; i < moList.size(); i++)
 		{
 			MO* pMo = moList[i];
+			string tag = pMo->getTag();
+
+			//过滤用户权限
+			if (session.user != "")
+			{
+				if (!userMng.checkTagPermission(session.user, tag))
+					continue;
+			}
+
+			//过滤根mo
+			if (rootTag != "")
+			{
+				if (tag.find(rootTag) == string::npos)
+				{
+					continue;
+				}
+				tag = str::trim(tag, rootTag + ".");
+			}
 	
 			//表头
-			if (i == 0)
+			if (jTableHead.size() == 0)
 			{
 				jTableHead.push_back("位号");
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
@@ -2255,7 +2278,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 
 			//数据行
 			json jTableRow;
-			jTableRow.push_back(pMo->getTag(rootTag));
+			jTableRow.push_back(tag);
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				MO* pChild = pMo->m_childMO[j];

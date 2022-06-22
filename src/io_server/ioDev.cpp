@@ -171,7 +171,7 @@ bool ioDev::toJson(json& conf, json opt)
 
 	
 	
-	if (opt.contains("onlyConf") && opt["onlyConf"].get<bool>() == true)
+	if (opt.contains("getStatus") && opt["getStatus"].get<bool>() == false)
 	{
 		
 	}

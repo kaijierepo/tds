@@ -195,12 +195,18 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (p->m_alarmMp)
 		conf["alarmMp"] = true;
 
-	json saveInterval;
-	saveInterval["hour"] = p->m_saveInterval.hour;
-	saveInterval["minute"] = p->m_saveInterval.minute;
-	saveInterval["second"] = p->m_saveInterval.second;
+
 	conf["saveMode"] = p->m_saveMode;
-	conf["saveInterval"] = saveInterval;
+
+	if (p->m_saveMode == DATA_SAVE_MODE::cyclic || p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange)
+	{
+		json saveInterval;
+		saveInterval["hour"] = p->m_saveInterval.hour;
+		saveInterval["minute"] = p->m_saveInterval.minute;
+		saveInterval["second"] = p->m_saveInterval.second;
+		conf["saveInterval"] = saveInterval;
+	}
+	
 
 	if(p->m_strUnit!="")
 		conf["unit"] = p->m_strUnit;
@@ -241,7 +247,7 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (m_decimalDigits >= 0)
 		conf["decimalDigits"] = m_decimalDigits;
 
-	if (serializeOption["onlyConf"] != nullptr && serializeOption["onlyConf"].get<bool>() == true)
+	if (serializeOption["getStatus"] != nullptr && serializeOption["getStatus"].get<bool>() == false)
 	{
 
 	}
@@ -316,6 +322,8 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	if (memcmp(&dataTime, &m_lastUpdateTime, sizeof(SYSTEMTIME)) == 0)
 		return;
 	m_lastUpdateTime = *dataTime;
+	if (m_pParentMO)
+		m_pParentMO->m_stDataLastUpdate = *dataTime;
 
 	//save to rt memory
 	bool bValChange = false;
