@@ -163,11 +163,33 @@ bool MO::loadConf(json& conf)
 //getMp 是否获取mp。缺省获取
 bool MO::toJson(json& conf, json serializeOption)
 {
-	bool withMp = true;
+	bool getMp = true;
 	if (serializeOption.contains("getMp"))
 	{
-		withMp = serializeOption["getMp"].get<bool>();
+		getMp = serializeOption["getMp"].get<bool>();
 	}
+	string type = "mo";
+	if (serializeOption["type"] != nullptr)
+	{
+		type = serializeOption["type"].get<string>();
+	}
+
+	//根据请求的moType判断是否需要返回当前节点。
+	if (m_moType == "mp" && !getMp)
+		return false;
+	if (type == "org") //组织结构。project看做是一种特殊的组织结构
+	{
+		if (m_moType != type && m_moType != "project")
+			return false; //请求组织结构，遇到不是组织结构的MO节点，不返回该节点
+	}
+	else if (m_moType == MO_TYPE::custom) //通过mo或者自定义类型名称 取自定义节点
+	{
+		if (type == "mo" || m_moCustomType == type) 
+		{}
+		else 
+			return false;
+	}
+
 
 	conf["name"] = m_strName;
 	conf["type"] = m_moType;
@@ -228,27 +250,13 @@ bool MO::toJson(json& conf, json serializeOption)
 		if (m_jAlarmStatus != nullptr)
 			conf["alarmStatus"] = m_jAlarmStatus;
 	}
-	
 
-	if (serializeOption["type"] != nullptr)
+	//如果请求项目节点，不返回项目节点以下的节点
+	if (type == "project" && m_moType == "project")
 	{
-		string type = serializeOption["type"].get<string>();
-		if (type == "org") //组织结构
-		{
-			if (m_moType != type && m_moType != "project")
-				return false; //请求组织结构，遇到不是组织结构的MO节点，不返回该节点
-		}
-		else if (type == "mo")
-		{
-			if (m_moType == "mp")
-				return false;
-		}
-		else if(m_moType == MO_TYPE::custom)
-		{
-			if (m_moCustomType != type)
-				return false;
-		}	
+		return true;
 	}
+	
 
 	//是否需要递归序列化子对象
 	if (serializeOption["recursive"] != nullptr && serializeOption["recursive"].get<bool>() == false)
@@ -261,7 +269,7 @@ bool MO::toJson(json& conf, json serializeOption)
 		json jChildren = json::array();
 		for (auto& pmochild : m_childMO)
 		{
-			if (pmochild->m_moType == "mp" && !withMp)
+			if (pmochild->m_moType == "mp" && !getMp)
 				continue;
 
 			json jChild;
