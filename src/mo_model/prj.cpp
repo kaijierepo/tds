@@ -29,6 +29,17 @@ project::~project()
 
 }
 
+bool project::setMo(json& mo, string tag)
+{
+	MO* pmo = GetMOByTag(tag);
+	if (pmo)
+	{
+		pmo->loadConf(mo);
+		return true;
+	}
+	return false;
+}
+
 
 bool project::toJson(json& conf, json serializeOption)
 {

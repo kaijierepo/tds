@@ -86,9 +86,14 @@ MO::~MO()
 
 bool MO::loadConf(json& conf)
 {
-	m_strName = conf["name"];
-	m_moType = conf["type"];
-
+	if (conf.contains("name")) {
+		m_strName = conf["name"];
+	}
+	
+	if (conf.contains("type")) {
+		m_moType = conf["type"];
+	}
+	
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
 	}
@@ -102,7 +107,6 @@ bool MO::loadConf(json& conf)
 		m_bLocationCalib = conf["locationCalib"].get<bool>();
 	}
 
-
 	if (conf.contains("longitudeCalib"))
 	{
 		m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
@@ -111,9 +115,10 @@ bool MO::loadConf(json& conf)
 	{
 		m_dbLatitudeCalib = conf["latitudeCalib"].get<double>();
 	}
-	
-	m_longitude = conf["longitude"];
-	m_latitude = conf["latitude"];
+	if(conf.contains("longitude"))
+		m_longitude = conf["longitude"];
+	if(conf.contains("latitude"))
+		m_latitude = conf["latitude"];
 
 	if (m_moType == "custom" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
@@ -141,17 +146,21 @@ bool MO::loadConf(json& conf)
 			prj.m_mapCustomMOType[m_moCustomType] = moList;
 		}
 	}
-	auto children = conf["children"];
-	for (auto& child : children)
-	{
-		MO* pmo = createMO(child["type"]);
-		if (pmo)
+	
+	if (conf.contains("children")) {
+		auto children = conf["children"];
+		for (auto& child : children)
 		{
-			pmo->loadConf(child);
-			m_childMO.push_back(pmo);
-			pmo->m_pParentMO = this;
+			MO* pmo = createMO(child["type"]);
+			if (pmo)
+			{
+				pmo->loadConf(child);
+				m_childMO.push_back(pmo);
+				pmo->m_pParentMO = this;
+			}
 		}
 	}
+
 	return true;
 }
 

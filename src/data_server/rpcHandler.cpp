@@ -980,6 +980,26 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		ioSrv.updateTag2IOAddrBinding();
 		result = "\"ok\"";
 	}
+	else if (method == "setMo") { //只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
+		if (params.is_object()) //单个设置
+		{
+			json mo = params;
+			string tag = mo["tag"].get<string>();
+			tag = TAG::addRoot(tag, session.org);
+			prj.setMo(mo,tag);
+		}
+		else if (params.is_array())
+		{
+			for (int i = 0; i < params.size(); i++) {
+				json& mo = params[i];
+				string tag = mo["tag"].get<string>();
+				tag = TAG::addRoot(tag, session.org);
+				prj.setMo(mo, tag);
+			}
+		}
+		prj.saveConf();
+		result = "\"ok\"";
+	}
 	else
 	{
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
@@ -1385,6 +1405,7 @@ bool rpcHandler::needLog(string method)
 		method == "getSessions"||
 		method == "getMpStatus" ||
 		method == "getMoStatus" ||
+		method == "getMoStatusTable"||
 		method == "getMoStatusList" ||
 		method == "getChanVal" ||
 		method == "acq")
