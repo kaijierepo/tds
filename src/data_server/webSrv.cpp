@@ -127,6 +127,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 		else
 		{
 			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+			resHeader += "Access-Control-Allow-Origin:*\r\n";
 			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
 		}
 		unlink_conns(c, parent);
@@ -283,8 +284,15 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
+			
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
+
+			if (rpcReqStr.find("getDevConf") != string::npos)
+			{
+				LOG("RPC post");
+			}
+
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
 		}
@@ -317,6 +325,26 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
 			mg_http_reply(c, 301, sHeader.c_str(),NULL);
+		}
+		else if (memcmp(hm->method.ptr, "OPTIONS", hm->method.len) == 0)
+		{
+			// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
+			// 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
+			//响应跨域预检请求
+			//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
+
+			mg_str* mgsOrg = mg_http_get_header(hm, "Origin");
+			string sOrg = str::fromBuff(mgsOrg->ptr,mgsOrg->len);
+			mg_str* mgsHeaders = mg_http_get_header(hm, "Access-Control-Request-Headers");
+			string sHeaders = str::fromBuff(mgsHeaders->ptr,mgsHeaders->len);
+
+			string resHeader = "Server:tds\r\n";
+			resHeader += "Access-Control-Allow-Origin:" + sOrg + "\r\n";
+			resHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
+			resHeader += "Access-Control-Allow-Headers:" + sHeaders + "\r\n";
+			resHeader += "Access-Control-Max-Age:86400\r\n";
+
+			mg_http_reply(c, 200, resHeader.c_str(), "");
 		}
 		else {
 			struct mg_http_serve_opts opts;
