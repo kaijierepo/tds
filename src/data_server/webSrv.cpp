@@ -85,7 +85,7 @@ bool extractWsPkt(mg_iobuf& iobuff,int& pktLen) {
 
 	int* pLen = (int*)iobuff.buf;
 	pktLen = *pLen + sizeof(int);
-	if (iobuff.len > pktLen) {
+	if (iobuff.len >= pktLen) {
 		return true;
 	}
 	return false;
