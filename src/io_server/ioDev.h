@@ -203,7 +203,6 @@ public:
 };
 
 ioDev* createIODev(string type);
-extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern std::map<string, fp_createDev> mapDevCreateFunc;
 
 class TransparentGateway : public ioDev {

@@ -13,10 +13,61 @@ string confDir;
 string filesDir;
 
 
+int WS_PKT_HEADER_LEN = sizeof(int);
+
+
 WebServer* webSrv = new WebServer();
 WebServer* webSrvS = new WebServer();
 WebServer* webSrv2 = new WebServer();
 WebServer* webSrvS2 = new WebServer();
+
+//io通信日志包监视会话
+vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
+void sendToCommLog(string s)
+{
+	for (int i = 0; i < commpktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
+		if (!session->isConnected())
+		{
+			commpktSessions.erase(commpktSessions.begin() + i);
+			i--;
+			continue;
+		}
+
+
+		session->send((char*)s.c_str(), s.length());
+	}
+}
+
+//session通信监视会话
+//会话数据包 监视会话。不监视自己的数据包发送。
+//rpc的实时数据轮询时。 响应线程多线程处理。 会并发调用此发送接口。
+vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
+shared_mutex csSessionPktSessions;
+void sendToSessionPktSessions(char* p, int len)
+{
+	csSessionPktSessions.lock();
+	for (int i = 0; i < sessionPktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+		if (!session->isConnected())
+		{
+			sessionPktSessions.erase(sessionPktSessions.begin() + i);
+			i--;
+			continue;
+		}
+	}
+	csSessionPktSessions.unlock();
+
+	csSessionPktSessions.lock_shared();
+	for (int i = 0; i < sessionPktSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+		session->send(p, len, false);
+	}
+	csSessionPktSessions.unlock_shared();
+}
 
 
 static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
@@ -26,6 +77,18 @@ static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
 
 static void unlink_conns(struct mg_connection* c1, struct mg_connection* c2) {
 	c1->fn_data = c2->fn_data = NULL;
+}
+
+bool extractWsPkt(mg_iobuf& iobuff,int& pktLen) {
+	if (iobuff.len < sizeof(int))
+		return false;
+
+	int* pLen = (int*)iobuff.buf;
+	pktLen = *pLen + sizeof(int);
+	if (iobuff.len > pktLen) {
+		return true;
+	}
+	return false;
 }
 
 //websocket主动通知数据和所线程的响应都通过触发pairdsock的 pcb 实现
@@ -38,12 +101,23 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 	else if (ev == MG_EV_READ) {  // websocket的 pairsocket发完不断开
 		if (parent->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 		{
-			mg_ws_send(parent, (const char*)c->recv.buf, c->recv.len, WEBSOCKET_OP_TEXT);
-			c->recv.len = 0;
+			//此处可能收到粘连包，使用\n\n分包
+			int pktLen = 0;
+			while (extractWsPkt(c->recv, pktLen)) {
+				//发送1包
+				mg_ws_send(parent, (const char*)c->recv.buf + WS_PKT_HEADER_LEN, pktLen - WS_PKT_HEADER_LEN, WEBSOCKET_OP_TEXT);
+				//删除已发送数据
+				long leftLen = c->recv.len - pktLen;
+				memcpy(c->recv.buf, c->recv.buf + pktLen, leftLen);
+				c->recv.len = leftLen;
+			}
 		}
 	}
 	else if (ev == MG_EV_OPEN) {
 		link_conns(c, parent);
+#ifdef DEBUG
+		//LOG("websocket pipe建立： src conn = %p ,src sock=%d,pipe conn=%p,pipe sock=%d", parent, parent->fd, c, c->fd);
+#endif
 	}
 	else if (ev == MG_EV_CLOSE) { //http的 pair sock发完就断开
 		if (c->is_websocket)
@@ -133,6 +207,23 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 	closesocket(sock);                      // Close the connection
 }
 
+void thread_handleRpcOverWebsocket(string rpcReqStr, int pipeSock)
+{
+	string rpcRespStr;
+	string resp;
+	char* binResp = NULL;
+	int iBinRespLen = 0;
+	bool bNeedLog = true;
+
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
+
+	string resBody = rpcRespStr;
+	string ctLen = to_string(resBody.length());
+
+	WebServer::sendToWs(resBody, pipeSock);
+}
+
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
@@ -167,11 +258,12 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			ds.initWsSessionInfo(uri, p);
 			//建立一个发往实际sock的管道
 			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c);
+			c->pipeSock = sPipe;
 			//记录管道发送sock口
 			p->sockPipe = (SOCKET)sPipe;
 			//加入websocket连接列表
 			pWs->m_csWsSessions.lock();
-			pWs->m_wsSessions[sPipe] = p;
+			pWs->m_wsSessions[c] = p;
 			pWs->m_csWsSessions.unlock();
 		}
 		else if (mg_http_match_uri(hm, "/gzh/*") || mg_http_match_uri(hm, "/gzh*")) {
@@ -235,34 +327,27 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 	}
 	else if (ev == MG_EV_WS_MSG) {
-		struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
-		string rpcReqStr = str::fromBuff(wm->data.ptr, wm->data.len);
-		string rpcRespStr;
-		string resp;
-		char* binResp = NULL;
-		int iBinRespLen = 0;
-		bool bNeedLog = true;
-		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-		rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
-
-		if(rpcRespStr.length()>0)
-			mg_ws_send(c, rpcRespStr.c_str(), rpcRespStr.length(), WEBSOCKET_OP_TEXT);
+		//websocket通道不用于请求，仅用于通知。后续逐步重构
+		if (c->pipeSock != 0)
+		{
+			struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
+			string rpcReqStr = str::fromBuff(wm->data.ptr, wm->data.len);
+			thread t(thread_handleRpcOverWebsocket, rpcReqStr, c->pipeSock);
+			t.detach();
+		}
 	}
 	else if (ev == MG_EV_CLOSE) {
 		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
 		{
-			//关闭关联的pipe socket
-			mg_connection* cPipe = (mg_connection*)c->fn_data;
-			SOCKET sPipe = (SOCKET)cPipe->fd;
-			closesocket(sPipe);
 			//从连接的websocket列表中删除
 			pWs->m_csWsSessions.lock();
-			if (pWs->m_wsSessions.find(sPipe)!= pWs->m_wsSessions.end())
+			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
 			{
-				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[sPipe];
+				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
+				closesocket(p->sockPipe);
 				p->sockPipe = 0;
 				p->bConnected = false;
-				pWs->m_wsSessions.erase(sPipe);
+				pWs->m_wsSessions.erase(c);
 			}
 			else
 			{
@@ -330,14 +415,36 @@ void WebServer::run(int port,bool https)
 }
 
 
+//websocket通过pipe发送的原因是为了使用moogoose的websocket secure功能
+//所以不选择直接组装websocket pkt通过socket发送
+//但是通过pipe发送会导致粘连包问题
 void WebServer::sendToWs(string& s)
 {
 	m_csWsSessions.lock();
-	std::map<SOCKET,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
+	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)
 	{
 		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-		send(i->first, s.c_str(), s.length(),0);
+		int len = s.length();
+		send(i->second->sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
+		send(i->second->sockPipe, s.c_str(), s.length(), MSG_DONTROUTE);
 	}
 	m_csWsSessions.unlock();
+}
+
+int WebServer::sendToWs(string& s, int sockPipe)
+{
+	assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+	int len = s.length();
+	send(sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
+	int iSend = send(sockPipe, s.c_str(), s.length(), MSG_DONTROUTE);
+	return iSend;
+}
+
+int WebServer::sendToWs(char* p, int len, int sockPipe)
+{
+	assert(len < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+	send(sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
+	int iSend = send(sockPipe, p, len, MSG_DONTROUTE);
+	return iSend;
 }

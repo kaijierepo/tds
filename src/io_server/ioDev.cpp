@@ -11,24 +11,7 @@
 #include "logger.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
-
-vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
-void sendToCommLog(string s)
-{
-	for (int i = 0; i < commpktSessions.size(); i++)
-	{
-		std::shared_ptr<TDS_SESSION> session = commpktSessions[i];
-		if (!session->isConnected())
-		{
-			commpktSessions.erase(commpktSessions.begin() + i);
-			i--;
-			continue;
-		}
-
-
-		session->send((char*)s.c_str(), s.length());
-	}
-}
+#include "webSrv.h"
 
 
 bool isBatchLink(string addr)

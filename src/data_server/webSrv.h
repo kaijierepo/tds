@@ -9,9 +9,11 @@ public:
 	~WebServer();
 	void run(int port, bool https = false);
 	void sendToWs(string& s);
+	static int sendToWs(string& s,int sockPipe);
+	static int sendToWs(char* p,int len, int sockPipe);
 	bool enableHttps;
 
-	std::map<SOCKET, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
+	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	char a[10];
 };
@@ -25,3 +27,10 @@ extern WebServer* webSrv;
 extern WebServer* webSrvS;
 extern WebServer* webSrv2;
 extern WebServer* webSrvS2;
+
+extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
+extern void sendToCommLog(string s);
+
+extern vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
+extern shared_mutex csSessionPktSessions;
+extern void sendToSessionPktSessions(char* p, int len);

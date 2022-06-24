@@ -977,6 +977,7 @@ struct mg_connection {
   void *pfn_data;              // Protocol-specific function parameter
   char label[50];              // Arbitrary label
   void *tls;                   // TLS specific data
+  int pipeSock;
   unsigned is_listening : 1;   // Listening connection
   unsigned is_client : 1;      // Outbound (client) connection
   unsigned is_accepted : 1;    // Accepted (server) connection

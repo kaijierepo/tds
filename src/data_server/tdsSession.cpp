@@ -5,6 +5,7 @@
 #include "ioDev.h"
 #include "rpcHandler.h"
 #include "ioSrv.h"
+#include "webSrv.h"
 
 
 
@@ -109,34 +110,6 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
-//会话数据包 监视会话。不监视自己的数据包发送。
-//rpc的实时数据轮询时。 响应线程多线程处理。 会并发调用此发送接口。
-vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
-shared_mutex csSessionPktSessions;
-void sendToSessionPktSessions(char* p,int len)
-{
-    csSessionPktSessions.lock();
-    for (int i = 0; i < sessionPktSessions.size(); i++)
-    {
-        std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
-        if (!session->isConnected())
-        {
-            sessionPktSessions.erase(sessionPktSessions.begin() + i);
-            i--;
-            continue;
-        }
-    }
-    csSessionPktSessions.unlock();
-
-    csSessionPktSessions.lock_shared();
-    for (int i = 0; i < sessionPktSessions.size(); i++)
-    {
-        std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
-        session->send(p, len, false);
-    }
-    csSessionPktSessions.unlock_shared();
-}
-
 void TDS_SESSION::statisOnSend(char* p, int len,bool success)
 {
     {
@@ -232,7 +205,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
 
      if (sockPipe != 0)
      {
-         iSend = ::send(sockPipe, p, len, 0);
+         iSend = WebServer::sendToWs(p, len, sockPipe);
      }
      else if (pTcpSessionClt)
      {
