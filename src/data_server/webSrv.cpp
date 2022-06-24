@@ -127,7 +127,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 		else
 		{
 			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-			resHeader += "Access-Control-Allow-Origin:*\r\n";
+			resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
 			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
 		}
 		unlink_conns(c, parent);
@@ -222,7 +222,7 @@ void thread_handleRpcOverWebsocket(string rpcReqStr, int pipeSock)
 	string resBody = rpcRespStr;
 	string ctLen = to_string(resBody.length());
 
-	WebServer::sendToWs(resBody, pipeSock);
+	WebServer::sendToWs((char*)resBody.c_str(),resBody.length(), pipeSock);
 }
 
 
@@ -284,15 +284,8 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
-			
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
-
-			if (rpcReqStr.find("getDevConf") != string::npos)
-			{
-				LOG("RPC post");
-			}
-
 			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
 			t.detach();
 		}
@@ -446,33 +439,32 @@ void WebServer::run(int port,bool https)
 //websocket通过pipe发送的原因是为了使用moogoose的websocket secure功能
 //所以不选择直接组装websocket pkt通过socket发送
 //但是通过pipe发送会导致粘连包问题
-void WebServer::sendToWs(string& s)
+void WebServer::sendToAllWs(string& s)
 {
 	m_csWsSessions.lock();
 	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)
 	{
-		assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-		int len = s.length();
-		send(i->second->sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
-		send(i->second->sockPipe, s.c_str(), s.length(), MSG_DONTROUTE);
+		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
+			continue;
+
+		WebServer::sendToWs((char*)s.c_str(), s.length(), i->second->sockPipe);
 	}
 	m_csWsSessions.unlock();
 }
 
-int WebServer::sendToWs(string& s, int sockPipe)
-{
-	assert(s.length() < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-	int len = s.length();
-	send(sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
-	int iSend = send(sockPipe, s.c_str(), s.length(), MSG_DONTROUTE);
-	return iSend;
-}
 
+
+//同一个websocket上存在多个rpc请求重叠调用时
+//例如再等待一个设备响应，时间比较长。 同时在读取服务器缓存
+//因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
 int WebServer::sendToWs(char* p, int len, int sockPipe)
 {
-	assert(len < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-	send(sockPipe, (char*)&len, sizeof(len), MSG_DONTROUTE);
-	int iSend = send(sockPipe, p, len, MSG_DONTROUTE);
+	assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+	char* pData = new char[sizeof(len) + len];
+	memcpy(pData, &len, sizeof(len));
+	memcpy(pData + sizeof(len), p, len);
+	int iSend = send(sockPipe, pData, len + sizeof(len), MSG_DONTROUTE);
+	delete pData;
 	return iSend;
 }

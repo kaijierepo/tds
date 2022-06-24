@@ -8,8 +8,7 @@ public:
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
-	void sendToWs(string& s);
-	static int sendToWs(string& s,int sockPipe);
+	void sendToAllWs(string& s);
 	static int sendToWs(char* p,int len, int sockPipe);
 	bool enableHttps;
 
