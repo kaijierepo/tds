@@ -44,7 +44,9 @@ public:
 	//tds data service function
 	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
-	void   rpc_getMoStatis(json params, RPC_RESP& resp , RPC_SESSION session);
+	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
+	json getAlarmStatis(string rootTag, RPC_SESSION session);
+	void   rpc_getDevStatis(json params, RPC_RESP& resp , RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	void rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);

@@ -490,6 +490,9 @@ void MO::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
 
 MO* MO::GetMOByTag(string strTag)
 {
+	if (strTag == "")
+		return this;
+
 	vector<MO*> tags;
 	GetMOByTag(&tags, strTag);
 	if (tags.size() > 0)
@@ -812,6 +815,45 @@ void MO::statisChildCustomMoType(map<string, json>& list)
 		}
 
 		i->statisChildCustomMoType(list);
+	}
+}
+
+void MO::statisChildMo(json& jStatis)
+{
+	if (jStatis["project"] == nullptr) {
+		jStatis["project"] = 0;
+	}
+
+	if (jStatis["online"] == nullptr) {
+		jStatis["online"] = 0;
+	}
+
+	if (jStatis["offline"] == nullptr) {
+		jStatis["offline"] = 0;
+	}
+
+	if (jStatis["smartDev"] == nullptr) {
+		jStatis["smartDev"] = 0;
+	}
+
+
+
+	if (m_moType == MO_TYPE::project) {
+		jStatis["project"]= jStatis["project"].get<int>() + 1;
+	}
+	else if (m_moType == "custom") {
+		jStatis["smartDev"] = jStatis["smartDev"].get<int>() + 1;
+
+		if (m_bOnline)
+			jStatis["online"] = jStatis["online"].get<int>() + 1;
+		else
+			jStatis["offline"] = jStatis["offline"].get<int>() + 1;
+	}
+
+	for (int i = 0; i < m_childMO.size(); i++)
+	{
+		MO* pC = m_childMO[i];
+		pC->statisChildMo(jStatis);
 	}
 }
 

@@ -1988,7 +1988,99 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 	return j.dump();
 }
 
-void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session)
+
+void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	string rootTag = ""; 
+	if (params.contains("rootTag"))
+	{
+		rootTag = params["rootTag"].get<string>();
+	}
+	rootTag = TAG::addRoot(rootTag,session.org);
+
+
+	MO* pMo = prj.GetMOByTag(rootTag);
+	json jStatis;
+	if (pMo)
+	{
+		pMo->statisChildMo(jStatis);
+		json almStatis = getAlarmStatis(rootTag, session);
+		jStatis["alarm"] = almStatis["alarm"];
+		jStatis["warn"] = almStatis["warn"];
+		jStatis["tag"] = params["rootTag"];
+
+		//resp.result = jStatis.dump(2);
+
+		json jRlt = json::array();
+		json de;
+		de["tag"] = "statis.smartDev.total";
+		de["val"] = jStatis["smartDev"];
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.smartDev.online";
+		de["val"] = jStatis["online"];
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.smartDev.offline";
+		de["val"] = jStatis["offline"];
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.alarms.alarmCount";
+		de["val"] = jStatis["alarm"];
+		jRlt.push_back(de);
+
+		de["tag"] = "statis.alarms.warnCount";
+		de["val"] = jStatis["warn"];
+		jRlt.push_back(de);
+
+			
+		resp.result = jRlt.dump(4);
+		resp.params = params.dump(4);
+	}
+	else {
+		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
+	}
+}
+
+json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
+	json querier = nullptr;
+	if (session.user != "")
+		querier["user"] = session.user;
+	if (rootTag != "")
+		querier["rootTag"] = rootTag;
+
+	vector<ALARM_INFO*> vecAlarms = almSrv.tableCurrent.query(querier);
+	int iAlarmCount = 0;
+	int iWarnCount = 0;
+	for (int i = 0; i < vecAlarms.size(); i++)
+	{
+		ALARM_INFO* pai = vecAlarms[i];
+		if (pai->bRecover)
+			continue;
+
+		if (pai->level == "alarm")
+			iAlarmCount++;
+		if (pai->level == "warn")
+			iWarnCount++;
+	}
+
+
+	//全局报警禁用功能
+	if (!tds->conf->enableGlobalAlarm)
+	{
+		iAlarmCount = 0;
+		iWarnCount = 0;
+	}
+
+	json jAlmStatis;
+	jAlmStatis["alarm"] = iAlarmCount;
+	jAlmStatis["warn"] = iWarnCount;
+
+	return jAlmStatis;
+}
+
+
+void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp,RPC_SESSION session)
 {
 	string rootTag = session.org; //absolute queryRoot
 	if (params.contains("rootTag"))
@@ -2053,34 +2145,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session
 
 
 	//统计报警
-	json querier = nullptr;
-	if (session.user != "")
-		querier["user"] = session.user;
-	if (rootTag != "")
-		querier["rootTag"] = params["rootTag"];
-
-	vector<ALARM_INFO*> vecAlarms = almSrv.tableCurrent.query(querier);
-	int iAlarmCount = 0;
-	int iWarnCount = 0;
-	for (int i = 0; i < vecAlarms.size(); i++)
-	{
-		ALARM_INFO* pai = vecAlarms[i];
-		if (pai->level == "alarm")
-			iAlarmCount++;
-		if (pai->level == "warn")
-			iWarnCount++;
-	}
-	json jAlmStatis;
-
-	//全局报警禁用功能
-	if (!tds->conf->enableGlobalAlarm)
-	{
-		iAlarmCount = 0;
-		iWarnCount = 0;
-	}
-
-	jAlmStatis["alarmCount"] = iAlarmCount;
-	jAlmStatis["warnCount"] = iWarnCount;
+	json jAlmStatis = getAlarmStatis(rootTag, session);
 	jRlt["alarms"] = jAlmStatis;
 
 
@@ -2105,12 +2170,12 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp,RPC_SESSION session
 		jRlt.push_back(de);
 
 		de["tag"] = "statis.alarms.alarmCount";
-		de["val"] = iAlarmCount;
-		jRlt.push_back(de);
+		//de["val"] = iAlarmCount;
+		//jRlt.push_back(de);
 
 		de["tag"] = "statis.alarms.warnCount";
-		de["val"] = iWarnCount;
-		jRlt.push_back(de);
+		//de["val"] = iWarnCount;
+		//jRlt.push_back(de);
 
 		/*if (rootTag != "")
 		{

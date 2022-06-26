@@ -111,6 +111,7 @@ public:
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
 	map<string, json> getChildCustomMoTypeList();
 	void statisChildCustomMoType(map<string, json>& list);
+	void statisChildMo(json& jStatis);
 
 	MO* GetRootMO();
 	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身

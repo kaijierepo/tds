@@ -7,6 +7,8 @@ using json = nlohmann::json;
 #include "tds.h"
 #include <shared_mutex>
 
+
+
 class ioServer;
 class database;
 class ioDev;
@@ -41,6 +43,8 @@ public:
 	bool toJson(json& conf, json serializeOption) override;
 
 	MP* createMP(string tag, string valType);
+
+	
 
 private:
 	json m_jMOTree;
