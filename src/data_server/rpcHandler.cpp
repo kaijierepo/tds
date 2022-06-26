@@ -1998,6 +1998,10 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 	rootTag = TAG::addRoot(rootTag,session.org);
 
+	string fmt = "";
+	if (params.contains("fmt")) {
+		fmt = params["fmt"];
+	}
 
 	MO* pMo = prj.GetMOByTag(rootTag);
 	json jStatis;
@@ -2009,33 +2013,41 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 		jStatis["warn"] = almStatis["warn"];
 		jStatis["tag"] = params["rootTag"];
 
-		//resp.result = jStatis.dump(2);
+		//该模式暂时只给topo用，后续还要优化
+		if (fmt == "mplist") {
+			json jRlt = json::array();
+			json de;
 
-		json jRlt = json::array();
-		json de;
-		de["tag"] = "statis.smartDev.total";
-		de["val"] = jStatis["smartDev"];
-		jRlt.push_back(de);
+			de["tag"] = "statis.project";
+			de["val"] = jStatis["project"];
+			jRlt.push_back(de);
 
-		de["tag"] = "statis.smartDev.online";
-		de["val"] = jStatis["online"];
-		jRlt.push_back(de);
+			de["tag"] = "statis.smartDev.total";
+			de["val"] = jStatis["smartDev"];
+			jRlt.push_back(de);
 
-		de["tag"] = "statis.smartDev.offline";
-		de["val"] = jStatis["offline"];
-		jRlt.push_back(de);
+			de["tag"] = "statis.smartDev.online";
+			de["val"] = jStatis["online"];
+			jRlt.push_back(de);
 
-		de["tag"] = "statis.alarms.alarmCount";
-		de["val"] = jStatis["alarm"];
-		jRlt.push_back(de);
+			de["tag"] = "statis.smartDev.offline";
+			de["val"] = jStatis["offline"];
+			jRlt.push_back(de);
 
-		de["tag"] = "statis.alarms.warnCount";
-		de["val"] = jStatis["warn"];
-		jRlt.push_back(de);
+			de["tag"] = "statis.alarms.alarmCount";
+			de["val"] = jStatis["alarm"];
+			jRlt.push_back(de);
 
-			
-		resp.result = jRlt.dump(4);
-		resp.params = params.dump(4);
+			de["tag"] = "statis.alarms.warnCount";
+			de["val"] = jStatis["warn"];
+			jRlt.push_back(de);
+
+			resp.result = jRlt.dump(4);
+			resp.params = params.dump(4);
+		}
+		else {
+			resp.result = jStatis.dump(2);
+		}
 	}
 	else {
 		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
