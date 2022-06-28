@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "FileWatcher.h"
+#include "hmrSrv.h"
 #include "logger.h"
 #include "common.hpp"
 #include "data_server/ds.h"
@@ -18,14 +18,13 @@ string wstring2string(wstring wstr) {
     return result;
 }
 
-FileWatcher fileWatcher;
+HMRServer hmrServer;
 
-FileWatcher::FileWatcher()
+HMRServer::HMRServer()
 {
 }
 
-void watchFile_thread(const std::string dir_path)
-{
+void HMRServer::watchFile_process(string dir_path) {
     if (dir_path.empty()) {
         printf("path is null");
         return;
@@ -63,38 +62,38 @@ void watchFile_thread(const std::string dir_path)
 
             if (tmp->Action == FILE_ACTION_MODIFIED) {//判断文件发生变化具体的事件
                 string file_name = wstring2string(ws_file_name);//得到发生变化的文件名
-                file_name = str::replace( file_name,"\\","/");
-                
-                
-                if (file_name!= lastFileModify ||  timeopt::CalcTimePassMilliSecond(lastFileModifyTime) > 50)
+                file_name = str::replace(file_name, "\\", "/");
+
+
+                if (file_name != lastFileModify || timeopt::CalcTimePassMilliSecond(lastFileModifyTime) > 50)
                 {
                     lastFileModify = file_name;
                     GetLocalTime(&lastFileModifyTime);
                     //LOG("[keyinfo]检测到文件改变:" + dir_path + "/" + file_name);
 
-                    ds.m_mutexTdsSessionList_webHMR.lock();
-                    for (int i = 0; i < ds.m_vecTdsSession_webHMR.size(); i++)
+                    m_mutexSessions.lock();
+                    for (auto& i : m_mapSessions)
                     {
-                        shared_ptr<TDS_SESSION> p = ds.m_vecTdsSession_webHMR[i];
+                        HMR_SESSION hs = i.second;
                         if (file_name.find(".css") != string::npos)
                         {
-                            p->sendStr("refreshcss");
+                            websocketSend("refreshcss",hs.sock);
                         }
                         else if (file_name.find(".html") != string::npos) //html只有当前路径下面的才触发更新
                         {
                             file_name = "/" + file_name;
-                            if(file_name.find(p->webHMRPath) != string::npos)
-                                p->sendStr("reload");
+                            if (file_name.find(hs.webHMRPath) != string::npos)
+                                websocketSend("reload",hs.sock);
                         }
                         else
                         {
-                            p->sendStr("reload");
+                            websocketSend("reload",hs.sock);
                         }
                     }
-                    ds.m_mutexTdsSessionList_webHMR.unlock();
+                    m_mutexSessions.unlock();
                 }
 
-                
+
             }
             ZeroMemory(tmp, 1024);
         }
@@ -138,9 +137,87 @@ close(inotify_fd);
 #endif
 }
 
-void FileWatcher::run(const std::string dir_path)
+void watchFile_thread(HMRServer* p,const std::string dir_path)
 {
-    thread t(watchFile_thread, dir_path);
+    p->watchFile_process(dir_path);
+}
+
+void HMRServer::run(const std::string dir_path)
+{
+    thread t(watchFile_thread, this,dir_path);
     t.detach();
+
+    //http热更新服务 668
+    if (tds->conf->debugMode)
+    {
+        m_httpHotUpdateSrv = new tcpSrv();
+        if (!m_httpHotUpdateSrv->run(this, 668))
+        {
+            if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
+            {
+                LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
+            }
+            else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
+            {
+                LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
+            }
+            LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
+        }
+        LOG("[keyinfo][Web热更新 ] 端口:" + str::fromInt(668));
+    }
+}
+
+
+void HMRServer::websocketSend(string s, int sock)
+{
+    CWSPPkt req;
+    req.pack(s.c_str(), s.length(), WS_FrameType::WS_TEXT_FRAME);
+    send(sock, req.data, req.len,0);
+}
+
+
+void HMRServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
+{
+    if (bIsConn)
+    {
+        HMR_SESSION s;
+        s.sock = pTcpSession->sock;
+        m_mutexSessions.lock();
+        m_mapSessions[pTcpSession] = s;
+        m_mutexSessions.unlock();
+    }
+    else
+    {
+        if (pTcpSession->pALSession)
+        {
+            m_mutexSessions.lock();
+            delete pTcpSession->pALSession;
+            m_mapSessions.erase(pTcpSession);
+            m_mutexSessions.unlock();
+        }
+    }
+}
+
+void HMRServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
+{
+    m_mutexSessions.lock();
+    HMR_SESSION hs = m_mapSessions[pTcpSess];
+    m_mutexSessions.unlock();
+
+    string strData = str::fromBuff(pData, iLen);
+    if (CWSPPkt::isHandShake(strData)) {
+        httplib::Request httpReq;
+        httplib::Server srv;
+        srv.parse_request_line(strData.c_str(), httpReq);
+        string path = str::trimSuffix(httpReq.target, "index.html");
+        path = str::trimSuffix(path, "/");
+        hs.webHMRPath = path; //当前链接关联的web热更新目录
+
+        //回复websocket握手
+        CWSPPkt req;
+        std::string handshakeString = req.GetHandshakeString(strData);
+        //http协议回复
+        ::send(pTcpSess->sock,handshakeString.c_str(), handshakeString.length(),0);
+    }
 }
 

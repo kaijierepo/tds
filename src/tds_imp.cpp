@@ -49,7 +49,7 @@ SOFTWARE.
 #include "video/audioPlayer.h"
 #include <filesystem>
 #include "tools/dumpCatch.h"
-#include "tools/fileWatcher.h"
+#include "tools/hmrSrv.h"
 #include "users/userMng.h"
 
 
@@ -400,7 +400,7 @@ bool TDS_imp::run(string cmdline)
 	audioPlayer.run();
 	if (conf->debugMode)
 	{
-		fileWatcher.run(tds->conf->uiPath);
+		hmrServer.run(tds->conf->uiPath);
 	}
 
 	//create browser window

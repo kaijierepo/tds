@@ -59,6 +59,9 @@ class TDS_SESSION : public RPC_SESSION{
 public:
     TDS_SESSION();
 	~TDS_SESSION();
+
+	TDS_SESSION(tcpSession* p);
+
 	string role;
 	string loginTime;
 	string encode;

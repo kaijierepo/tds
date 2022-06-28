@@ -44,14 +44,12 @@ public:
 	string getRDSPage();
 
 public:
-	bool runAsCloud1();
 	bool runAsCloud();
 	bool runAsEdge();
 	void stop();
 	dataServer();
 	virtual ~dataServer();
 	tcpSrv* m_tcpSrv; //被动连接的tdsSession
-	tcpSrv* m_httpHotUpdateSrv;
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
 	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
@@ -71,9 +69,6 @@ public:
 
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	mutex m_mutexTdsSessionList;
-
-	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession_webHMR;
-	mutex m_mutexTdsSessionList_webHMR;
 
 	vector<void*> GetSessionList();
 	string getSessionStatus(json params);

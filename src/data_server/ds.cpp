@@ -445,14 +445,6 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 				p->type = TDS_SESSION_TYPE::iodev;
 				p->iALProto = APP_LAYER_PROTO::IQ60;
 			}
-			else if (pts->m_iServerPort == 668)
-			{
-				p->type = TDS_SESSION_TYPE::webHMR;
-				p->iALProto = APP_LAYER_PROTO::tdsHMR;
-				m_mutexTdsSessionList_webHMR.lock();
-				m_vecTdsSession_webHMR.push_back(p);
-				m_mutexTdsSessionList_webHMR.unlock();
-			}
 		}
 
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
@@ -846,106 +838,10 @@ bool dataServer::runAsCloud()
 	}
 #endif
 
-	//http热更新服务 668
-	if (tds->conf->debugMode)
-	{
-		m_httpHotUpdateSrv = new tcpSrv();
-		if (!m_httpHotUpdateSrv->run(this, 668))
-		{
-			if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
-			{
-				LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
-			}
-			else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
-			{
-				LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
-			}
-			LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
-		}
-		LOG("[keyinfo][Web热更新 ] 端口:" + str::fromInt(668));
-	}
-	
+
 	return true;
 }
 
-
-bool dataServer::runAsCloud1()
-{
-	m_tcpSrv = new tcpSrv();
-	m_wspSrv.m_pTcpServer = m_tcpSrv;
-	
-	//tds websocket服务 666
-	string strName;
-	if(!tds->conf->debugMode)
-		m_tcpSrv->keepAliveTimeout = tds->conf->tcpKeepAliveDS;
-	if(!m_tcpSrv->run(this, 666))
-	{
-		if (m_tcpSrv->m_lastError == WSAEADDRINUSE)//10048)
-		{
-			LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
-		}
-		else if(m_tcpSrv->m_lastError == WSAEACCES)//10013)
-		{
-			LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
-		}
-		LOG("[error]websocket服务端口启动失败！");
-	}
-	LOG("[keyinfo][RPC服务   ] 端口:" + str::fromInt(666) + " 使用tdsRPC over websocket协议访问");
-	strName=str::format("tds(%d)", 666);
-	m_tcpSrv->SettIOCPName(strName);
-
-	//http服务
-	if (tds->conf->httpPort != 0)
-	{
-		thread t2(httpSrvThread, tds->conf->httpPort,false);
-		t2.detach();
-	}
-
-	if (tds->conf->httpsPort!=0)
-	{
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-		thread t3(httpSrvThread, tds->conf->httpsPort, true);
-		t3.detach();
-#else
-		LOG("[error]您启用了HTTPS，但当前TDS版本不支持HTTPS，请联系厂家获取支持HTTPS版本");
-#endif
-	}
-	
-
-	//http热更新服务 668
-	if (tds->conf->debugMode)
-	{
-		m_httpHotUpdateSrv = new tcpSrv();
-		if (!m_httpHotUpdateSrv->run(this, 668))
-		{
-			if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
-			{
-				LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
-			}
-			else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
-			{
-				LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
-			}
-			LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
-		}
-		LOG("[keyinfo][HTTP热更新服务] 端口:" + str::fromInt(668));
-	}
-	
-
-	//http服务 80端口
-	string webPath = fs::appPath() + "/web";
-	if (fs::fileExist(webPath))
-	{
-		LOG("[HTTP服务  ]检测到./web目录，启用80端口");
-		thread t(httpSrvThread,80,false);
-		t.detach();
-	}
-
-	thread t(activeSessionThread);//主要用于io设备通过tcp中转而非直接连接的情况
-	t.detach();
-
-	return  1;
-}
 
 bool dataServer::runAsEdge()
 {
@@ -1575,16 +1471,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 			httplib::Request httpReq;
 			httplib::Server srv;
 			srv.parse_request_line(strData.c_str(), httpReq);
-
-
-			if (tdsSession->type == TDS_SESSION_TYPE::webHMR)
-			{
-				string path = str::trimSuffix(httpReq.target, "index.html");
-				path = str::trimSuffix(path, "/");
-				tdsSession->webHMRPath = path;
-			}
-			else
-				initWsSessionInfo(httpReq.target, tdsSession);
+			initWsSessionInfo(httpReq.target, tdsSession);
 			return;
 		}
 	}

@@ -18,6 +18,17 @@ TDS_SESSION::~TDS_SESSION()
 {
 }
 
+TDS_SESSION::TDS_SESSION(tcpSession* p)
+{
+    GetLocalTime(&stCreateTime);
+    bConnected = true;
+    pTcpSession = p;
+    sock = p->sock;
+    port = p->remotePort;
+    ip = p->remoteIP;
+    p->pALSession = this;
+}
+
 RPC_SESSION TDS_SESSION::getRpcSession()
 {
     RPC_SESSION s = *this;

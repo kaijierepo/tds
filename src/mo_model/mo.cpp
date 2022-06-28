@@ -122,17 +122,9 @@ bool MO::loadConf(json& conf)
 
 	if (m_moType == "custom" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
-		m_moCustomTypeLabel = conf["customTypeLabel"];
-
-		if (conf.contains("customType"))
-		{
-			m_moCustomType = conf["customType"];
-		}
-		else
-		{
-			m_moCustomType = m_moCustomTypeLabel;
-			str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
-		}
+		m_moCustomTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
+		m_moCustomType = m_moCustomTypeLabel;
+		str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
 		
 		if (prj.m_mapCustomMOType.find(m_moCustomType) != prj.m_mapCustomMOType.end())
 		{
