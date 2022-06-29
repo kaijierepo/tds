@@ -30,7 +30,7 @@ public:
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp);
+	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);

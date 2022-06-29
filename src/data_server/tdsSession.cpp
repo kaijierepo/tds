@@ -29,6 +29,7 @@ TDS_SESSION::TDS_SESSION(tcpSession* p)
     port = p->remotePort;
     ip = p->remoteIP;
     p->pALSession = this;
+    type = TDS_SESSION_TYPE::iodev;
 }
 
 TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
@@ -41,6 +42,7 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
     port = p->srvPort;
     ip = p->srvIP;
     p->pALSession = this;
+    type = TDS_SESSION_TYPE::iodev;
 }
 
 RPC_SESSION TDS_SESSION::getRpcSession()

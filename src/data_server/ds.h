@@ -37,7 +37,6 @@ public:
 	string getRDSPage();
 
 public:
-	bool runAsCloud();
 	bool runAsEdge();
 	void stop();
 	dataServer();
@@ -54,7 +53,6 @@ public:
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	mutex m_mutexTdsSessionList;
 	vector<void*> GetSessionList();
-	string getSessionStatus(json params);
 	FILE* m_pRecFile;
 	SYSTEMTIME m_stLastFileRecvTime;
 };

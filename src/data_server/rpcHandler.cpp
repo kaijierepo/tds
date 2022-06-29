@@ -591,14 +591,14 @@ void threadErase() {
 	}
 }
 
-bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp)
+bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
-	if (method == "getSessions")
+	if (method == "getIoSessions")
 	{
-		result = ds.getSessionStatus(params);
+		ioSrv.rpc_getSessionStatus(params,rpcResp,session);
 	}
 	else if (method == "captureFrame")
 	{
@@ -1384,7 +1384,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		return true;
 	}
-	if (handleMethodCall_debugFunc(method, params, rpcResp))
+	if (handleMethodCall_debugFunc(method, params, rpcResp,session))
 	{
 		return true;
 	}

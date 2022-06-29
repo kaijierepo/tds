@@ -1133,3 +1133,73 @@ bool ioServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 	tdsSession->m_bAppDataRecved = true;
 	return true;
 }
+
+
+void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+	json typeFilter = nullptr;
+	json nameFilter = nullptr;
+	if (params != nullptr) typeFilter = params["type"];
+	if (params != nullptr) nameFilter = params["name"];
+	lock_guard<mutex> g(m_mutexIoSessions);
+	json jList = json::array();
+	for (auto i : m_IoSessions)
+	{
+		std::shared_ptr<TDS_SESSION> p = i.second;
+		if (nameFilter != nullptr && nameFilter.is_string())
+		{
+			if (nameFilter.get<string>() != p->name)
+				continue;
+		}
+
+
+		json jSession;
+		jSession["type"] = p->type;
+		jSession["ip"] = p->ip;
+		jSession["port"] = p->port;
+		jSession["name"] = p->name;
+		jSession["transLayer"] = p->iTLProto;
+		jSession["createTime"] = timeopt::st2str(p->stCreateTime);
+		if (p->lastMethodCalled != "")
+		{
+			jSession["lastMethodCalled"] = p->lastMethodCalled;
+		}
+		jSession["lastRecvTime"] = timeopt::st2str(p->lastRecvTime);
+		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
+		jSession["sendBytes"] = p->getSendedBytes();
+		jSession["recvBytes"] = p->getRecvedBytes();
+		jSession["buffLen"] = p->m_alBuf.iStreamLen;
+		jSession["abandonLen"] = p->abandonLen;
+		jSession["lastMethod"] = p->lastMethodCalled;
+
+		string ioAddrInSession = "";
+		for (int i = 0; i < p->m_vecIoDev.size(); i++)
+		{
+			if (i > 0)
+				ioAddrInSession += ";";
+			ioAddrInSession += p->m_vecIoDev[i];
+			ioAddrInSession += ",";
+			ioAddrInSession += p->m_vecIoBindTag[i];
+		}
+		jSession["ioAddr"] = ioAddrInSession;
+
+		string ioAddrInSessionHist = "";
+		for (int i = 0; i < p->m_vecHistIoDev.size(); i++)
+		{
+			if (i > 0)
+				ioAddrInSessionHist += ";";
+			ioAddrInSessionHist += p->m_vecHistIoDev[i];
+			ioAddrInSessionHist += ",";
+			ioAddrInSessionHist += p->m_vecHistIoBindTag[i];
+		}
+		jSession["ioAddrHist"] = ioAddrInSessionHist;
+
+		if (p->type == "video" && p->pTcpSession)
+		{
+			jSession["sendBytes"] = p->pTcpSession->iSendSucCount;
+			jSession["sendFailBytes"] = p->pTcpSession->iSendFailCount;
+		}
+		jList.push_back(jSession);
+	}
+
+	rpcResp.result = jList.dump(2);
+}

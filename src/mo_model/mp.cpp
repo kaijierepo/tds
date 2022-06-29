@@ -384,6 +384,11 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		m_pParentMO->m_latitudeDyn = m_curVal;
 	}
 
+	if (m_pParentMO->m_strIoAddrBind != "")//父mo是智能设备，收到数据表示在线. 重新加载moTree后 online状态会丢失
+	{
+		m_pParentMO->m_bOnline = true;
+	}
+
 
 	if (m_alarmMp) //是一个报警监控点，更新报警
 	{

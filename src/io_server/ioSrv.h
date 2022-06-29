@@ -58,6 +58,9 @@ public:
 	bool handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 
+	//tdsRPC服务
+	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+
 	//IO会话
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;
 	mutex m_mutexIoSessions;
