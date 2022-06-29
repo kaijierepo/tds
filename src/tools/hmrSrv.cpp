@@ -4,6 +4,61 @@
 #include "common.hpp"
 #include "data_server/ds.h"
 
+string hmrCodeStr = R"(
+<!--code injected by TDS for hot module replacement-->
+<script>
+if ('WebSocket' in window) {
+    (function () {
+        function refreshCSS() {
+            var sheets = [].slice.call(document.getElementsByTagName("link"));
+            var head = document.getElementsByTagName("head")[0];
+            for (var i = 0; i < sheets.length; ++i) {
+                var elem = sheets[i];
+                var parent = elem.parentElement || head;
+                parent.removeChild(elem);
+                var rel = elem.rel;
+                if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+                    var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+                    elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+                }
+                parent.appendChild(elem);
+            }
+        }
+        var wsSock = connectHMRSrv();
+        function connectHMRSrv()
+        {
+            var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+            var address = protocol + window.location.hostname + ":668" + window.location.pathname;
+            var socket = new WebSocket(address);
+            socket.onmessage = function (msg) {
+                if (msg.data == 'reload') window.location.reload();
+                else if (msg.data == 'refreshcss') refreshCSS();
+            };
+			socket.onopen = (event)=>{
+				console.log("tds hot module replacement on 668 connected!");
+			};
+            if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+                console.log('Live reload enabled.');
+                sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+            }
+            return socket;
+        }
+
+        setInterval(() => {
+            if(wsSock != null && wsSock.readyState == wsSock.CLOSED)
+            {
+                wsSock = connectHMRSrv();
+            }
+        }, 500);
+    })();
+}
+else {
+    console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+}
+</script>
+)";
+
+
 string wstring2string(wstring wstr) {
     string result;
     //获取缓冲区大小，并申请空间，缓冲区大小事按字节计算的  

@@ -134,10 +134,12 @@ public:
 	char* payloadData;
 	int iPayloadLen;
 	int iFrmLen;
+	WS_FrameType frmType;
 
 	WS_FrameType unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false);
 	int pack(const char* inMessage, int len, enum WS_FrameType frameType, bool bFin=1, bool bOpt=1);
 
+	bool isDataFrame();
 	static bool isHandShake(string& request);  ////判断是否为客户端发送的升级WS握手请求，"Upgrade: websocket"
 	std::string getKey(std::string strKey);          //解码client的key（sha1 + base64），得到解码后的key
 	std::string GetHandshakeString(std::string request);

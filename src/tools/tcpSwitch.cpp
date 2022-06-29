@@ -96,7 +96,7 @@ void tcpSwitch::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo
 		if (idx < sessionLeft.size())
 		{
 			tcpSession* pS = sessionLeft.at(idx);
-			sLeft.SendData(pData, iLen,pS);
+			pS->send(pData, iLen);
 			char* p = new char[iLen + 1];
 			memset(p, 0, iLen + 1);
 			memcpy(p, pData, iLen);

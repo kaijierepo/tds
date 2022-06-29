@@ -27,3 +27,4 @@ public:
 };
 
 extern HMRServer hmrServer;
+extern string hmrCodeStr;

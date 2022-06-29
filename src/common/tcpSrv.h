@@ -48,6 +48,8 @@ struct tcpSession
 		}
 		return ptr;
 	}
+
+	bool send(char* pData, int iLen);
 };
 
 class ITcpServerCallBack {
@@ -197,7 +199,6 @@ public:
 	bool run(ITcpServerCallBack* pUser, int remotePort, string strLocalIP = "");
 	void stop();
 
-	bool SendData(char* pData, int iLen, tcpSession* pCltInfo);
 	bool SendData(char* pData, int iLen, string remoteIP);
 	bool SendData(char* pData, int iLen);
 	ITcpServerCallBack* m_pCallBackUser;

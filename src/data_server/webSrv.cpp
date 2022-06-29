@@ -8,6 +8,7 @@
 #include "httplib.h"
 #include "sha1.hpp"
 #include "common/mongoose.h"
+#include "tools/hmrSrv.h"
 string rootDir;
 string confDir;
 string filesDir;
@@ -20,6 +21,25 @@ WebServer* webSrv = new WebServer();
 WebServer* webSrvS = new WebServer();
 WebServer* webSrv2 = new WebServer();
 WebServer* webSrvS2 = new WebServer();
+
+//日志监视会话
+vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
+void logToWebsock(string text)
+{
+
+	for (int i = 0; i < logTdsSessions.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> ps = logTdsSessions[i];
+		if (!ps->isConnected())
+		{
+			logTdsSessions.erase(logTdsSessions.begin() + i);
+			i--;
+		}
+		else
+			ps->send((char*)text.c_str(), text.length());
+	}
+}
+
 
 //io通信日志包监视会话
 vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
@@ -68,6 +88,9 @@ void sendToSessionPktSessions(char* p, int len)
 	}
 	csSessionPktSessions.unlock_shared();
 }
+
+
+
 
 
 static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
@@ -467,4 +490,63 @@ int WebServer::sendToWs(char* p, int len, int sockPipe)
 	int iSend = send(sockPipe, pData, len + sizeof(len), MSG_DONTROUTE);
 	delete pData;
 	return iSend;
+}
+
+
+bool runWebServers()
+{
+	rootDir = tds->conf->uiPath;
+	confDir = tds->conf->confPath;
+	confDir = fs::toAbsolutePath(confDir);
+	filesDir = "./files";
+
+	initHMRConf();
+	if (tds->conf->debugMode)
+	{
+		hmr_conf.code = (char*)hmrCodeStr.c_str();
+		hmr_conf.len = hmrCodeStr.length();
+		hmr_conf.enable = 1;
+	}
+
+	LOG("[Web目录	] /       <--> " + rootDir);
+	LOG("[Web目录	] /config <--> " + confDir);
+	LOG("[Web目录	] /files  <--> " + filesDir);
+
+
+	//LOG("webSrv init %lx", webSrv);
+	//LOG("webSrvS init %lx", webSrvS);
+
+	if (tds->conf->httpPort != 0)
+	{
+		webSrv->run(tds->conf->httpPort);
+	}
+	if (tds->conf->httpPort2 != 0)
+	{
+		webSrv2->run(tds->conf->httpPort2);
+	}
+
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+	if (tds->conf->httpsPort != 0)
+	{
+		string certFile = fs::appPath() + "/cert.pem";
+		if (!fs::fileExist(certFile))
+		{
+			LOG("[error]HTTPS服务缺少证书文件 ./cert.pem");
+		}
+		string keyFile = fs::appPath() + "/key.pem";
+		if (!fs::fileExist(keyFile))
+		{
+			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
+		}
+
+		webSrvS->run(tds->conf->httpsPort, true);
+	}
+	if (tds->conf->httpsPort2 != 0)
+	{
+		webSrvS2->run(tds->conf->httpsPort2, true);
+	}
+#endif
+
+
+	return true;
 }

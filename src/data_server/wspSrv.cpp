@@ -7,7 +7,6 @@
 
 wspSrv::wspSrv()
 {
-	m_pTcpServer = NULL;
 }
 
 wspSrv ::~wspSrv()
@@ -15,9 +14,6 @@ wspSrv ::~wspSrv()
 
 }
 
-void wspSrv::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
-{
-}
 
 void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 {
@@ -80,17 +76,6 @@ void wspSrv::OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TD
 	}
 }
 
-
-void wspSrv::OnOpen()
-{
-
-}
-
-void wspSrv::OnClose()
-{
-
-}
-
 //将数据加上websocket格式头再发送
 //如果数据发送给浏览器之后websocket断开,浏览器端进入onerror,很可能有中文并且不是utf8编码
 int wspSrv::sendData(char* sendData, int len, tcpSession* pCltInfo, WS_FrameType ft)
@@ -100,7 +85,7 @@ int wspSrv::sendData(char* sendData, int len, tcpSession* pCltInfo, WS_FrameType
 	if (pCltInfo->pTcpServer)
 	{
 		tcpSrv* pts = (tcpSrv*)pCltInfo->pTcpServer;
-		if(pts->SendData((char*)resp.data, resp.len,pCltInfo))
+		if(pCltInfo->send((char*)resp.data, resp.len))
 		{
 			return len;
 		}

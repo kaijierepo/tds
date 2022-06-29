@@ -388,7 +388,7 @@ bool TDS_imp::run(string cmdline)
 	}
 	else
 	{
-		ds.runAsCloud();  //data server
+		runWebServers();
 		userMng.loadConf();
 	}
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备

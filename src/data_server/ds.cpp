@@ -19,6 +19,7 @@
 #include "sha1.hpp"
 #include "webSrv.h"
 #include "mongoose.h"
+#include "tools/hmrSrv.h"
 
 
 dataServer ds;
@@ -245,60 +246,6 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	}
 }
 
-
-string hmrCodeStr = R"(
-<!--code injected by TDS for hot module replacement-->
-<script>
-if ('WebSocket' in window) {
-    (function () {
-        function refreshCSS() {
-            var sheets = [].slice.call(document.getElementsByTagName("link"));
-            var head = document.getElementsByTagName("head")[0];
-            for (var i = 0; i < sheets.length; ++i) {
-                var elem = sheets[i];
-                var parent = elem.parentElement || head;
-                parent.removeChild(elem);
-                var rel = elem.rel;
-                if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
-                    var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
-                    elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
-                }
-                parent.appendChild(elem);
-            }
-        }
-        var wsSock = connectHMRSrv();
-        function connectHMRSrv()
-        {
-            var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-            var address = protocol + window.location.hostname + ":668" + window.location.pathname;
-            var socket = new WebSocket(address);
-            socket.onmessage = function (msg) {
-                if (msg.data == 'reload') window.location.reload();
-                else if (msg.data == 'refreshcss') refreshCSS();
-            };
-			socket.onopen = (event)=>{
-				console.log("tds hot module replacement on 668 connected!");
-			};
-            if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
-                console.log('Live reload enabled.');
-                sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
-            }
-            return socket;
-        }
-
-        setInterval(() => {
-            if(wsSock != null && wsSock.readyState == wsSock.CLOSED)
-            {
-                wsSock = connectHMRSrv();
-            }
-        }, 500);
-    })();
-}
-else {
-    console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
-}
-</script>
-)";
 
 void handleAfterFileRead(const Request& req, Response& resp)
 {
@@ -604,7 +551,7 @@ int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
 	}
 	else
 	{
-		return m_tcpSrv->SendData((char*)pData, iLen, pCommLayerCltInfo);
+		return pCommLayerCltInfo->send((char*)pData, iLen);
 	}
 	
 	return 0;
@@ -784,63 +731,7 @@ void httpSrvThread(int port,bool https = false)
 
 
 
-bool dataServer::runAsCloud()
-{
-	rootDir = tds->conf->uiPath;
-	confDir = tds->conf->confPath;
-	confDir = fs::toAbsolutePath(confDir);
-	filesDir = "./files";
 
-	initHMRConf();
-	if (tds->conf->debugMode)
-	{
-		hmr_conf.code = (char*)hmrCodeStr.c_str();
-		hmr_conf.len = hmrCodeStr.length();
-		hmr_conf.enable = 1;
-	}
-
-	LOG("[Web目录	] /       <--> " + rootDir);
-	LOG("[Web目录	] /config <--> " + confDir);
-	LOG("[Web目录	] /files  <--> " + filesDir);
-
-
-	//LOG("webSrv init %lx", webSrv);
-	//LOG("webSrvS init %lx", webSrvS);
-
-	if (tds->conf->httpPort != 0)
-	{
-		webSrv->run(tds->conf->httpPort);
-	}
-	if (tds->conf->httpPort2 != 0)
-	{
-		webSrv2->run(tds->conf->httpPort2);
-	}
-
-#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
-	if (tds->conf->httpsPort != 0)
-	{
-		string certFile = fs::appPath() + "/cert.pem";
-		if (!fs::fileExist(certFile))
-		{
-			LOG("[error]HTTPS服务缺少证书文件 ./cert.pem");
-		}
-		string keyFile = fs::appPath() + "/key.pem";
-		if (!fs::fileExist(keyFile))
-		{
-			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
-		}
-
-		webSrvS->run(tds->conf->httpsPort,true);
-	}
-	if (tds->conf->httpsPort2 != 0)
-	{
-		webSrvS2->run(tds->conf->httpsPort2, true);
-	}
-#endif
-
-
-	return true;
-}
 
 
 bool dataServer::runAsEdge()
@@ -858,8 +749,6 @@ bool dataServer::runAsEdge()
 void dataServer::stop()
 {
 	LOG("[keyinfo]正在停止数据服务DataServer...");
-	if(m_tcpSrv)
-		m_tcpSrv->stop();
 	LOG("[keyinfo]数据服务已停止");
 }
 
@@ -951,52 +840,7 @@ void httpReqHandleThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	//delete bs;
 }
 
-bool bTestStream = false;
-int ThreadfMp4OverWS(std::shared_ptr<TDS_SESSION> pTestSess) {
-	bTestStream = true;
-	string str = fs::appPath() + "\\test.mp4";
-	//string str = "E:\\VideoTest\\1.avi";
-	char* pData = NULL;
-	int iDataLen = 0;
-	FILE* f = fopen(str.c_str(), "rb");
-	if (f)
-	{
-		fseek(f, 0, SEEK_END);
-		iDataLen = ftell(f);
-		pData = new char[iDataLen];
-		fseek(f, 0, SEEK_SET);
-		fread(pData,1,iDataLen,f);
-		fclose(f);
-	}
-	if (iDataLen == 0)
-	{
-		bTestStream = false;
-		return 0;
-	}
 
-	Sleep(500);
-	while (pTestSess->type == TDS_SESSION_TYPE::video)
-	{
-		pTestSess->type = TDS_SESSION_TYPE::video;
-		for (int i = 0; i < iDataLen;)
-		{
-			int iSend = 20000;
-			if (i + iSend > iDataLen)
-				iSend = iDataLen - i;
-			if (!pTestSess->send(pData + i, iSend))
-			{
-				pTestSess->type = TDS_SESSION_TYPE::none;
-				break;
-			}
-			i += iSend;
-			Sleep(40);
-		}
-	}
-	pTestSess->type = TDS_SESSION_TYPE::none;
-	delete pData;
-	bTestStream = false;
-	return 0;
-}
 
 
 //此处加锁，连接断开现成可能会并发操作此列表
@@ -1076,22 +920,7 @@ string dataServer::checkTransportLayerProto(string& strData, tcpSession* pTcpSes
 	return "";
 }
 
-vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
-void logToWebsock(string text)
-{
 
-	for (int i = 0; i < logTdsSessions.size(); i++)
-	{
-		std::shared_ptr<TDS_SESSION> ps = logTdsSessions[i];
-		if (!ps->isConnected())
-		{
-			logTdsSessions.erase(logTdsSessions.begin() + i);
-			i--;
-		}
-		else
-			ps->send((char*)text.c_str(), text.length());
-	}
-}
 
 /*
 生产者-临时消费者模式  
@@ -1228,200 +1057,6 @@ void dataServer::getUrlParams(string& url,map<string, string>& mapParams)
 	}
 }
 
-void dataServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
-{
-	//terminal可以用来打开与某一接口的透传桥接，并发送指令
-	if (strData.find("/terminal") != string::npos)
-	{
-		int pos = strData.find("terminal");
-		int pos1 = strData.find(" ", pos);
-		string ioAddr = strData.substr(pos + 9, pos1 - (pos + 9));
-		ioDev* p = ioSrv.getIODev(ioAddr);
-		if (p && p->pIOSession != NULL)
-		{
-			tdsSession->type = TDS_SESSION_TYPE::bridgeToiodev;
-			tdsSession->bridgedIoSession = p->pIOSession;
-			p->pIOSession->bridgedIoSessionClient = tdsSession;
-			LOG("open websocket terminal at ioAddr %s success", ioAddr.c_str());
-			tdsSession->setActivityCheck(false);
-			tdsSession->bridgedIoSession->setActivityCheck(false);
-		}
-		else if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
-		{
-			tdsSession->setActivityCheck(false);
-			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
-			tdsSession->bridgedLocalCom = ioAddr;
-			p->pSessionClientBridge = tdsSession;
-		}
-		else
-		{
-			closesocket(tdsSession->sock);
-			return;
-		}
-	}
-	else if (strData.find("/COM") != string::npos)
-	{
-		int pos = strData.find("COM");
-		int pos1 = strData.find(" ", pos);
-		string portNum = strData.substr(pos, pos1 - pos);
-		ioDev* p = ioSrv.getIODev(portNum);
-		tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
-		tdsSession->setActivityCheck(false);
-		if (p)
-		{
-			tdsSession->bridgedLocalCom = portNum;
-			p->pSessionClientBridge = tdsSession;
-		}
-		else
-		{
-			//string html = portNum + " is not in the opened port list,please open it first";
-			//std::string header = "HTTP/1.1 200 OK\r\n";
-			//header += "Content-Type: text/html; charset=utf-8\r\n";
-			//header += "Accept-Ranges: none\r\n"; // no support for partial requests
-			//header += "Cache-Control: no-store, must-revalidate\r\n";
-			//header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
-			//header += "\r\n";
-
-			//string resp = header + html;
-			//send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
-			closesocket(tdsSession->sock);
-			return;
-		}
-	}
-	else if (strData.find("tcp") != string::npos)
-	{
-		int pos = strData.find("tcp");
-		int pos1 = strData.find(" ", pos);
-		string host = strData.substr(pos + 4, pos1 - (pos + 4));
-		tdsSession->pBridgedTcpClient = new tcpClt();
-		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpClient;
-		tdsSession->setActivityCheck(false);
-		if (tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
-		{
-			LOG("bridge websocket to tcp %s success", host.c_str());
-		}
-		else
-		{
-			LOG("bridge websocket to tcp %s fail", host.c_str());
-			delete tdsSession->pBridgedTcpClient;
-			tdsSession->pBridgedTcpClient = NULL;
-			closesocket(tdsSession->sock);
-			return;
-		}
-	}
-	else if (strData.find("/log") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::log;
-		logTdsSessions.push_back(tdsSession);
-		logger.logOutput = logToWebsock;
-		tdsSession->setActivityCheck(false);
-	}
-	else if (strData.find("/sessionpkt") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
-		sessionPktSessions.push_back(tdsSession);
-		tdsSession->setActivityCheck(false);
-	}
-	else if (strData.find("/commpkt") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::commpkt;
-		commpktSessions.push_back(tdsSession); 
-		tdsSession->setActivityCheck(false);
-	}
-	else if (strData.find("teststream") != string::npos && !bTestStream)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::video;
-		std::thread t(ThreadfMp4OverWS, tdsSession);
-		t.detach();
-	}
-	else if (strData.find("desktop") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::video;
-#ifdef ENABLE_FFMPEG
-		rds.startStream(tdsSession);
-#endif
-	}
-	else if (strData.find("stream") != string::npos)
-	{
-		int pos = strData.find("stream");
-		map<string, string> mapParams;
-		getUrlParams(strData, mapParams);
-		string streamId; //支持码流的tag
-		string fmt = ""; //为空，则图像不进行任何转换直接发送
-		int frameRate = 0;
-		if (mapParams.size() > 0)
-		{
-			if (mapParams.find("streamId") != mapParams.end())
-			{
-				streamId = mapParams["streamId"];
-			}
-			if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
-			{
-				fmt = mapParams["fmt"];
-			}
-			if (mapParams.find("frameRate") != mapParams.end())//fmt is not specified
-			{
-				frameRate = str::toInt(mapParams["frameRate"]);
-			}
-			streamId = httplib::detail::decode_url(streamId, false);
-
-
-			if (streamId != "")
-			{
-				streamSrvNode* pVsn = streamSrv.getSrvNode(streamId);
-				if (pVsn)
-				{
-					tdsSession->videoServiceNode = pVsn;
-					tdsSession->type = TDS_SESSION_TYPE::video;
-					STREAM_INFO si;
-					si.pixelFmt = fmt;
-					si.frameRate = frameRate;
-					pVsn->addPuller(tdsSession, &si);
-					string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 码流ID:" + streamId + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
-					LOG(szLog);
-				}
-			}
-		}
-	}
-	else //连接根地址 默认为rpc连接
-	{
-		if (strData.find("tdsClient") != string::npos)
-		{
-
-		}
-
-		map<string, string> mapParams;
-		getUrlParams(strData, mapParams);
-		if (mapParams.find("needLog") != mapParams.end())
-		{
-			string needLog = mapParams["needLog"];
-			if (needLog == "0")
-			{
-				tdsSession->m_bNeedLog = false;
-			}
-		}
-		
-		if (tds->conf->debugMode)
-		{
-			string s = R"(
-						{
-							"jsonrpc": "2.0", 
-							"method": "notify.close_heartbeat", 
-							"params": {
-							}, 
-							"id": null
-						}
-					)";
-			tdsSession->send((char*)s.data(), s.length());
-		}
-		if(tdsSession->type == "")
-			tdsSession->type = TDS_SESSION_TYPE::tdsClient;
-		tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
-
-		string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
-		LOG(szLog);
-	}
-}
 
 
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
@@ -1705,234 +1340,8 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 	return true;
 }
 
-void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
-{
-	string pkt = str::fromBuff(pData,iLen);
 
-	try {
-		json jpkt = json::parse(pkt);
 
-		if (jpkt.is_array() && jpkt.size() >= 1)
-		{
-			//转发给对应设备
-			string id = jpkt[0];
-
-			//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
-			ioDev* pIoDev = tdsSession->m_IoDev;
-			if (tdsSession->m_IoDev == nullptr)
-			{
-				pIoDev = ioSrv.handleDevOnline(id, tdsSession);
-			}
-
-			if (pIoDev)
-			{
-				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
-				{
-					ioDev* p = pIoDev;
-					if (p->m_bEnableIoLog)
-						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
-
-					p->bindIOSession(tdsSession);
-					p->setOnline();
-					json j;
-					p->toJson(j);
-					if (!tdsSession->getIODev(p->getIOAddrStr()))
-					{
-						tdsSession->m_vecIoDev.push_back(p->getIOAddrStr());
-					}
-					p->onRecvPkt(jpkt);
-				}
-				else
-				{
-					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id);
-				}
-			}
-		}
-	}
-	catch (std::exception& e)
-	{
-		string errorType = e.what();
-		string log = "pkt from iq60,json parse error. " + errorType;
-		LOG(log);
-	}
-}
-
-bool dataServer::handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
-{
-	if (!tdsSession->m_bAppDataRecved)
-	{
-		if (iLen == 15 && str::isDigits(pData, iLen))
-		{
-			string imei = str::fromBuff(pData, iLen);
-			LOG("收到首发注册包,15位IMEI格式,IMEI=" + imei);
-			ioSrv.handleDevOnline(imei, tdsSession);
-			return true;
-		}
-		else if ( iLen > 4 && ( str::fromBuff(pData,4) == "imei" || str::fromBuff(pData, 4) == "IMEI"))
-		{
-			string imei = str::fromBuff(pData, iLen);
-			LOG("收到首发注册包,IMEI前缀格式,IMEI=" + imei);
-			ioSrv.handleDevOnline(imei, tdsSession);
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool dataServer::handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
-{
-	bool bHandled = true;
-	if (tdsSession->type == TDS_SESSION_TYPE::iodev)
-	{
-		//协议检测
-		if (tdsSession->iALProto == APP_LAYER_PROTO::UNKNOWN)//应用层协议类型检测
-		{
-			//应用层协议智能检测。根据收到的首包数据进行检测
-			//傲华尔远程控制协议
-			if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
-				(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
-				)
-			{
-				tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
-				tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
-			}
-		}
-
-		//应用层协议处理
-		if (tdsSession->bridgedIoSessionClient != NULL)
-		{
-			if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
-				{
-					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-					string s = str::fromBuff(pab->pkt, pab->iPktLen);
-					LOG("[IO设备透传]dev->client " + s);
-				}
-			}
-			//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-			else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
-			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::IQ60) || pab->PopPkt(APP_LAYER_PROTO::terminalPrompt))
-				{
-					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-					string s = str::fromBuff(pab->pkt, pab->iPktLen);
-					LOG("[IO设备透传]dev->client " + s);
-				}
-			}
-		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
-		{
-			bool regPkt = false;
-			if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
-			{
-				string s = str::fromBuff(pData, iLen);
-				LOG("[IQ60首发数据]" + s);
-				if (s.find("IQ60_") == 0)
-				{
-					s = s.substr(0, 16);
-					LOG("IQ60首发数据," + s);
-					regPkt = true;
-					string strIoAddr = s.substr(5,s.length()-5);
-					ioSrv.handleDevOnline(strIoAddr, tdsSession);
-
-					if (iLen > 16)
-					{
-						stream2pkt* pab = &tdsSession->m_alBuf;
-						pab->PushStream(pData + 16, iLen-16);
-						while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
-						{
-							onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
-						}
-					}
-				}
-			}
-			
-			if (!regPkt)
-			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
-				{
-					onRecvIQ60Pkt(pab->pkt, pab->iPktLen, tdsSession);
-				}
-			}
-		}
-		else if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-		{
-			if (handleFirstRegPkt(pData,iLen,tdsSession))
-			{
-				tdsSession->m_bSingleDevMode = true;
-			}
-			else
-			{
-				if (isPkt)
-				{
-					onRecvPkt_ioDev(pData, iLen, tdsSession);
-				}
-				else
-				{
-					stream2pkt* pab = &tdsSession->m_alBuf;
-					pab->PushStream(pData, iLen);
-					while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
-					{
-						if (pab->abandonData != "")
-						{
-							string remoteAddr = tdsSession->getRemoteAddr();
-							LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-							tdsSession->abandonLen += pab->iAbandonBytes;
-						}
-						tdsSession->iALProto = pab->m_protocolType;
-						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
-					}
-				}
-			}
-		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
-		{
-			//检查是否是imei直接注册包,15位且都是数字，认为是imei
-			if (handleFirstRegPkt(pData,iLen,tdsSession))//首包数据,按照tdsp注册包处理
-			{
-			}
-			else
-			{
-				stream2pkt* pab = &tdsSession->m_alBuf;
-				pab->PushStream(pData, iLen);
-				bool bRegPkt = false;
-				if (!tdsSession->m_bAppDataRecved)//如果是第一包，尝试检查是不是rpc注册包
-				{
-					if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
-					{
-						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession, true);
-						LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
-					}
-				}
-
-				while (pab->PopPkt(APP_LAYER_PROTO::MODBUS_RTU))
-				{
-					if (pab->abandonData != "")
-					{
-						string remoteAddr = tdsSession->getRemoteAddr();
-						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-						tdsSession->abandonLen += pab->iAbandonBytes;
-					}
-					tdsSession->iALProto = pab->m_protocolType;
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
-				}
-			}
-		}
-	}
-	else
-	{
-		bHandled = false;
-	}
-	return true;
-}
 
 //应用层数据桥接
 bool dataServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
@@ -1984,9 +1393,6 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 	//有桥接先判断桥接
 	handleAppLayerData_Bridge(pData, iLen, tdsSession);
 
-	//处理来自于io设备的数据
-	handleAppLayerData_IODev(pData, iLen, tdsSession,isPkt);
-	
 	//tds rpc over tcp
 	if (tdsSession->type == TDS_SESSION_TYPE::tdsClient && isPkt)
 	{
@@ -1997,99 +1403,6 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 	return true;
 }
 
-void dataServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
-{
-	try 
-	{
-		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-		{
-			string sResp = str::fromBuff(pData, iLen);
-
-			//编解码转换
-			if(rpcSrv.isGB2312Pkt(sResp))
-			{
-				tdsSession->m_charset = "gb2312";
-				int ipos = 0; string errChar;
-				if (!charCodec::isValidGB2312(sResp,ipos,errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
-				{
-					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData,iLen));
-					return;
-				}
-
-				sResp = charCodec::ansi2Utf8(sResp);
-			}
-
-			//解析请求基本信息
-			json jResp = json::parse(sResp);
-			if (!jResp.contains("method"))
-			{
-				LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
-				return;
-			}
-			string method = jResp["method"].get<string>();
-			json params;
-			if (jResp.contains("params"))
-				params = jResp["params"];
-			json id = jResp["id"];
-			json clientId = jResp["clientId"]; //tds edge模式使用
-			tdsSession->lastMethodCalled = method;
-			string charset = "utf8";
-			if (jResp.contains("charset"))
-			{
-				charset = jResp["charset"].get<string>();
-			}
-
-			//多设备模式或者还没有设备在该session上上线，处理设备上线
-			//获取当前session关联的设备
-			ioDev* pIoDev = tdsSession->m_IoDev;
-			//如果无关联设备或者是多关联模式
-			if (!tdsSession->m_bSingleDevMode || tdsSession->m_IoDev == nullptr)
-			{
-				//获得该io地址的设备对象
-				string strIoAddr = jResp["ioAddr"].get<string>();
-				if (strIoAddr == "")
-				{
-					LOG("[error]注册包devRegister中的ioAddr为空，无效");
-					return;
-				}
-
-				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
-			}
-
-			pIoDev->m_charset = charset;
-			pIoDev->onRecvPkt(jResp);
-			LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
-		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
-		{
-			//4g模式下的modbus RTU over tcp 第一包必须发送注册包
-			if (registerPkt)
-			{
-				string sResp = str::fromBuff(pData, iLen);
-				json jResp = json::parse(sResp);
-				string method = jResp["method"].get<string>();
-				string strIoAddr = jResp["ioAddr"].get<string>();
-				if (method == "devRegister")
-					ioSrv.handleDevOnline(strIoAddr, tdsSession);
-			}
-			else
-			{
-				if (tdsSession->m_IoDev)
-				{
-					tdsSession->m_IoDev->onRecvPkt(pData, iLen);
-				}
-			}
-		}
-	}
-	catch (std::exception& e)
-	{
-		string errorType = e.what();
-		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
-		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
-		errorType = str::encodeAscII(errorType);
-		LOG("onRecvPkt_ioDev 处理异常" + errorType);
-	}
-}
 
 void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {

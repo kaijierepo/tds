@@ -66,15 +66,9 @@ public:
 	wspSrv();
 	~wspSrv();
 
-	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	void OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC);
 	void OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TDS_SESSION> pALC);
-	void OnOpen();
-	void OnClose();
-
 	int sendData(char* sendData, int len, tcpSession* pCltInfo= NULL,WS_FrameType ft= WS_TEXT_FRAME);
-
-	tcpSrv* m_pTcpServer;
 };
 
 

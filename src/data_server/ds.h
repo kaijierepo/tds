@@ -15,7 +15,6 @@ dataserver
 #define UID_TIMER_CHECK 1
 #define MAX_RECEIVE_LENGTH 512
 
-class database;
 class dataServer : public ITcpServerCallBack,public ITcpClientCallBack
 {
 public:
@@ -24,16 +23,10 @@ public:
 	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
-
 	void getUrlParams(string& url, map<string, string>& mapParams);
-
 	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
-
-
-
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo);
 	bool isHttpPkt(string str);
-
 	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
 	bool httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
@@ -49,30 +42,19 @@ public:
 	void stop();
 	dataServer();
 	virtual ~dataServer();
-	tcpSrv* m_tcpSrv; //被动连接的tdsSession
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
 	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
 	wspSrv m_wspSrv;
 
 	bool onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
-
-	bool handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-
-	bool handleAppLayerData_IODev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
-
 	bool handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
-	void onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	
 	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
-
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	mutex m_mutexTdsSessionList;
-
 	vector<void*> GetSessionList();
 	string getSessionStatus(json params);
-	
 	FILE* m_pRecFile;
 	SYSTEMTIME m_stLastFileRecvTime;
 };

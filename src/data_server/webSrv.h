@@ -33,3 +33,8 @@ extern void sendToCommLog(string s);
 extern vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
 extern shared_mutex csSessionPktSessions;
 extern void sendToSessionPktSessions(char* p, int len);
+
+extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
+extern void logToWebsock(string text);
+
+extern bool runWebServers();

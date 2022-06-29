@@ -114,6 +114,9 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 		iFrmLen = iPayloadLen + 2/*2 head*/ + 4/*4 masking key*/ + payloadFieldExtraBytes;
 		
 	}
+
+
+	frmType = GetFrameType((char*)pBuf,iBufLen);
 	return ret;
 }
 
@@ -174,6 +177,14 @@ int CWSPPkt::pack(const char * inMessage, int messageLen,  enum WS_FrameType fra
 	data = frame;
 	len = frameSize;
 	return ret;
+}
+
+bool CWSPPkt::isDataFrame()
+{
+	if (frmType == WS_BINARY_FRAME || frmType == WS_TEXT_FRAME || frmType == WS_CONTINUATION_FRAME) {
+		return true;
+	}
+	return false;
 }
 
 bool CWSPPkt::isHandShake(string& request)
