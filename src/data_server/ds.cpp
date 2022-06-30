@@ -10,7 +10,6 @@
 #include <memory>
 #include "ioSrv.h"
 #include "tcpClt.h"
-#include "commSrv.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
 #include "conf.h"

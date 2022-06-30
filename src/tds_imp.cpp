@@ -461,6 +461,19 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 	return false;
 }
 
+void handleRpcCall(string method,string param) {
+	json j = json::parse(param);
+	RPC_SESSION session;
+	RPC_RESP resp;
+	rpcSrv.handleMethodCall(method, j, resp, session);
+}
+
+void TDS_imp::callAsyn(string method, string param)
+{
+	thread t(handleRpcCall, method, param);
+	t.detach();
+}
+
 void TDS_imp::setRpcHandler(fp_rpcHandler handler)
 {
 	rpcSrv.m_pluginHandler = handler;

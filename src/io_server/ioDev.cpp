@@ -1,12 +1,7 @@
 ﻿#include "pch.h"
 #include "ioDev.h"
 #include "ioChan.h"
-#include "commSrv.h"
-#include "db.h"
-#include "prj.h"
-#include "ioChan.h"
 #include "ioDev_genicam.h"
-#include "mp.h"
 #include "proto/proto_rtu.hpp"
 #include "logger.h"
 #include "ioSrv.h"
@@ -300,24 +295,17 @@ bool ioDev::loadConf(json& conf)
 			m_strTagBind = conf["tagBind"];
 		}
 
-		m_strTagBind = str::trimPrefix(m_strTagBind, prj.m_strName + ".");
 
 		//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
 		//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
 		if (m_dispositionMode == DEV_DISPOSITION_MODE::managed)
 		{
-			MO* pmo = prj.GetMOByTag(m_strTagBind);
-			if (pmo)
-			{
-				if (pmo->m_moType == MO_TYPE::mp && this->m_level == IO_DEV_LEVEL::channel)
-				{
-					MP* pmp = (MP*)pmo;
-					ioChannel* pChan = (ioChannel*)this;
-					pmp->m_ioType = pChan->m_ioType;
-					pmp->m_ioTypeLabel = pChan->m_ioTypeLabel;
-				}
-				pmo->m_strIoAddrBind = getIOAddrStr();
-			}
+			json tagBinding = json::array();
+			json binding;
+			binding["ioAddr"] = getIOAddrStr();
+			binding["tag"] = m_strTagBind;
+			tagBinding.push_back(binding);
+			tds->callAsyn("updateTagBinding", tagBinding.dump());
 		}
 	}
 
@@ -680,9 +668,6 @@ void notifyDevOnline(json jNotify)
 {
 	setThreadName("notify dev online thread");
 	string ioAddr = jNotify["ioAddr"];
-	MO* pmo = prj.GetMOByIOAddr(ioAddr);
-	if (pmo)
-		pmo->m_bOnline = true;
 	rpcSrv.notify("devOnline", jNotify);
 }
 
@@ -690,9 +675,6 @@ void notifyDevOffline(json jNotify)
 {
 	setThreadName("notify dev offline thread");
 	string ioAddr = jNotify["ioAddr"];
-	MO* pmo = prj.GetMOByIOAddr(ioAddr);
-	if (pmo)
-		pmo->m_bOnline = false;
 	rpcSrv.notify("devOffline", jNotify);
 }
 
@@ -706,6 +688,8 @@ void ioDev::setOnline()
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
 		jNotify["nodeID"] = m_confNodeId;
+		if (m_strTagBind != "")
+			jNotify["tag"] = m_strTagBind;
 		thread t(notifyDevOnline, jNotify);
 		t.detach();
 	}
@@ -724,6 +708,8 @@ void ioDev::setOffline()
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
 		jNotify["nodeID"] = m_confNodeId;
+		if (m_strTagBind != "")
+			jNotify["tag"] = m_strTagBind;
 		thread t(notifyDevOffline, jNotify);
 		t.detach();
 	}
@@ -916,6 +902,37 @@ bool ioDev::loadInfoBuff()
 	return true;
 }
 
+void ioDev::saveStatusBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
+	fs::createFolderOfPath(path);
+	json status;
+	status["alarms"] = m_jAlarmStatus;
+	status["channels"] = m_jAcq;
+	string data = status.dump(4);
+	fs::writeFile(path, data);
+}
+
+bool ioDev::loadStatusBuff()
+{
+	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
+	string s;
+	if (!fs::readFile(path, s))
+		return false;
+	try
+	{
+		json status = json::parse(s);
+		m_jAlarmStatus = status["alarms"];
+		m_jAcq = status["channels"];
+	}
+	catch (std::exception& e)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 bool ioDev::addChild(ioDev* p)
 {
 	m_csThis.lock();
@@ -1060,7 +1077,6 @@ ioChannel* ioDev::getChanByTag(string tag)
 	{
 		ioChannel* pC = (ioChannel*)child;
 		string strMP = pC->m_strTagBind;
-		str::trimPrefix(strMP, prj.m_strName + ".");
 		if (strMP == tag)
 		{
 			return pC;

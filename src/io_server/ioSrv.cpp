@@ -1,6 +1,5 @@
 ﻿#include "pch.h"
 #include "ioSrv.h"
-#include "commSrv.h"
 #include <thread>
 #include "mo.h"
 #include "mp.h"
@@ -28,6 +27,7 @@ void IOThread()
 		ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 		pIoDev->loadConfBuff();
 		pIoDev->loadInfoBuff();
+		pIoDev->loadStatusBuff();
 	}
 	ioSrv.m_csThis.unlock();
 
@@ -530,20 +530,20 @@ ioDev* ioServer::getIODev(string ioAddr,bool bChn)
 void ioServer::updateTag2IOAddrBinding()
 {
 	m_csThis.lock_shared();
+	json tagBindings = json::array();
 	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 	{
 		ioDev* p = ioSrv.m_vecChildDev[i];
-		string ioAddr = p->getIOAddrStr();
 		if (p->m_strTagBind != "")
 		{
-			MO* pmo = prj.GetMOByTag(p->m_strTagBind);
-			if (pmo)
-			{
-				pmo->m_strIoAddrBind = ioAddr;
-			}
+			json binding;
+			binding["ioAddr"] = p->getIOAddrStr();
+			binding["tag"] = p->m_strTagBind;
+			tagBindings.push_back(binding);
 		}
 	}
 	m_csThis.unlock_shared();
+	tds->callAsyn("updateTagBinding", tagBindings.dump());
 }
 
 void ioServer::clear()

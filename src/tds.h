@@ -400,7 +400,7 @@ public:
 typedef void (*fp_toolRun)();
 
 //interface of TDS
-class iTDS {
+class i_tds {
 public:
 	virtual string getVersion() = 0;
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
@@ -410,6 +410,7 @@ public:
 	fp_procBeforeExit m_fpProcBeforeExit;
 	fp_createLicence createLicence;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
+	virtual void callAsyn(string method, string param) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 
@@ -457,9 +458,9 @@ public:
 
 #ifndef _TDS
 
-typedef iTDS* (*fp_getTds)();
+typedef i_tds* (*fp_getTds)();
 
-inline iTDS* getITDS() {
+inline i_tds* getITDS() {
 	HMODULE hMod = LoadLibrary("tds.dll");
 	if (hMod)
 	{
@@ -474,4 +475,4 @@ inline iTDS* getITDS() {
 
 #endif
 
-extern iTDS* tds;
+extern i_tds* tds;

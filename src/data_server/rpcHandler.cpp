@@ -3,7 +3,6 @@
 #include "prj.h"
 #include "as.h"
 #include "mp.h"
-#include "commSrv.h"
 #include "ds.h"
 #include "logger.h"
 #include "db.h"
@@ -999,6 +998,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		prj.saveConf();
 		result = "\"ok\"";
+	}
+	else if (method == "updateTagBinding") {
+		for (auto& binding : params) {
+			string tag = binding["tag"];
+			MO* p = prj.GetMOByTag(tag);
+			if (p)
+				p->m_strIoAddrBind = binding["ioAddr"];
+		}
 	}
 	else
 	{
@@ -2968,6 +2975,19 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 
 void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
 {
+	if (method == "devOnline" || method == "devOffline") {
+		if (params.contains("tag")) {
+			string tag = params["tag"];
+			MO* p = prj.GetMOByTag(tag);
+			if (p) {
+				if (method == "devOnline")
+					p->m_bOnline = true;
+				else
+					p->m_bOnline = false;
+			}
+		}
+	}
+
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
 
 	ds.m_mutexTdsSessionList.lock();

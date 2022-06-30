@@ -529,24 +529,6 @@ MO* MO::GetMOByName(string strName)
 	return NULL;
 }
 
-MO* MO::GetMOByIOAddr(string ioAddr)
-{
-	if (m_strIoAddrBind == ioAddr)
-		return this;
-	else
-	{
-		for (int i = 0; i < m_childMO.size(); i++)
-		{
-			MO* pMOChild = m_childMO.at(i);
-			MO* pFind = pMOChild->GetMOByIOAddr(ioAddr);
-			if (pFind)
-				return pFind;
-		}
-	}
-
-	return NULL;
-}
-
 vector<string> MO::getTagPartials(string strTag)
 {
 	//使用*分割
@@ -773,17 +755,6 @@ void MO::GetAllChildMO(std::vector<MO*>& aryMO, string type)
 	}
 }
 
-void MO::getAllSmartDev(std::vector<MO*>& aryMO)
-{
-	for (int i = 0; i < m_childMO.size(); i++)
-	{
-		if (m_childMO[i]->m_strIoAddrBind != "")
-		{
-			aryMO.push_back(m_childMO[i]);
-		}
-		m_childMO[i]->getAllSmartDev(aryMO);
-	}
-}
 
 map<string,json> MO::getChildCustomMoTypeList()
 {

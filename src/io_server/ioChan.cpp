@@ -1,9 +1,6 @@
 ﻿#include "pch.h"
 #include "ioChan.h"
-#include "prj.h"
 #include "ioDev.h"
-#include "mp.h"
-#include "db.h"
 
 
 ioChannel::ioChannel()
@@ -134,12 +131,11 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	m_curVal = jVal;
 
 	//更新绑定位号值
-	string tag = TAG::trimRoot(m_strTagBind);
-	MP* pMP = (MP*)prj.GetMOByTag(tag);
-	if (pMP && pMP->m_moType == MO_TYPE::mp)
-	{
-		pMP->input(jVal,dataTime);
-	}
+	json param;
+	param["tag"] = m_strTagBind;
+	param["val"] = m_curVal;
+	param["time"] = timeopt::st2str(m_stLastUpdateTime);
+	tds->callAsyn("input", param.dump());
 }
 
 
@@ -149,13 +145,4 @@ bool ioChannel::output(json jVal, json& rlt,json& err, bool sync)
 {
 	ioDev* pDev = ioDev::m_pParent;
 	return pDev->output(this,jVal, rlt,err,sync);
-}
-
-bool ioChannel::IsValid()
-{
-	MP* pMP = (MP*)prj.GetMOByTag(m_strTagBind);
-	if (pMP && pMP->m_moType == MO_TYPE::mp)
-		return true;
-	else
-		return false;
 }

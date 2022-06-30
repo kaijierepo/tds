@@ -3,4 +3,4 @@
 
 #pragma init_seg(lib)
 TDS_imp tdsImp; //tds instance;
-iTDS* tds = &tdsImp;
+i_tds* tds = &tdsImp;

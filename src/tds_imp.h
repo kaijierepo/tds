@@ -31,7 +31,7 @@ SOFTWARE.
 #include "conf.h"
 #include "mp.h"
 
-class TDS_imp : public iTDS {
+class TDS_imp : public i_tds {
 public:
 	TDS_imp();
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
@@ -45,7 +45,8 @@ public:
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
-	 bool call(string method, string param, RPC_RESP& resp);
+	 bool call(string method, string param, RPC_RESP& resp) override;
+	 void callAsyn(string method, string param) override;
 	 void setRpcHandler(fp_rpcHandler handler);
 	 void rpcNotify(string method, string params="", string sessionId="");
 
@@ -79,4 +80,4 @@ public:
 
 extern void createConsole();
 extern TDS_imp tdsImp; //tds instance;
-extern iTDS* tds;
+extern i_tds* tds;

@@ -281,7 +281,7 @@ int main(int argc, char** argv)
 #endif // !_WINDLL
 
 #define DllExport   extern "C" __declspec( dllexport )
-DllExport iTDS* getTds() {
+DllExport i_tds* getTds() {
 	return &tdsImp;
 }
 

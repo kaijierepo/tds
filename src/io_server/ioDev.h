@@ -198,6 +198,8 @@ public:
 	bool loadConfBuff();
 	void saveInfoBuff();
 	bool loadInfoBuff();
+	void saveStatusBuff();
+	bool loadStatusBuff();
 
 	string m_strErrorInfo;
 };

@@ -105,9 +105,7 @@ public:
 	json m_jAlarmStatus;
 
 	MO* createChildMO(string subTag, string moType);
-	void DeleteChildAMO(string& strName);
 	void GetAllChildMO(std::vector<MO*>& aryMO, string type);
-	void getAllSmartDev(std::vector<MO*>& aryMO); //与ioDev进行位号绑定的mo对象称为智能设备
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
 	map<string, json> getChildCustomMoTypeList();
 	void statisChildCustomMoType(map<string, json>& list);
@@ -137,7 +135,6 @@ public:
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
-	MO* GetMOByIOAddr(string ioAddr);
 
 	string TranslateRelateTag(string rtag);
 	string m_status;
