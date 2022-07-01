@@ -621,6 +621,7 @@ bool ioServer::runAsCloud()
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
+	m_tcpSrv_tdsp->m_strName = "tdsp";
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort))
 	{
@@ -634,6 +635,7 @@ bool ioServer::runAsCloud()
 
 	//io服务 664 Modbus over TCP
 	m_tcpSrv_rtu = new tcpSrv();
+	m_tcpSrv_rtu->m_strName = "modbus rtu";
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort))
 	{
@@ -646,6 +648,7 @@ bool ioServer::runAsCloud()
 
 	//io服务 663 IQ60
 	m_tcpSrv_iq60 = new tcpSrv();
+	m_tcpSrv_iq60->m_strName = "iq60";
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
 	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port))
 	{

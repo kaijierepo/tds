@@ -464,6 +464,7 @@ void WebServer::run(int port,bool https)
 //但是通过pipe发送会导致粘连包问题
 void WebServer::sendToAllWs(string& s)
 {
+	LOG("sendToAllWs "); 
 	m_csWsSessions.lock();
 	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)

@@ -296,6 +296,7 @@ struct iTDSConf {
 
 	//debug
 	bool bCreateDumpWhenLogError;
+	bool bStopCycleAcq;
 };
 
 

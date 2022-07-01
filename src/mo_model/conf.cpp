@@ -30,6 +30,7 @@ tdsConfig::tdsConfig()
 	iotimeoutModbusRtu = 5000;
 	iotimeoutIQ60 = 5000;
 	mode = "tds";
+	bStopCycleAcq = false;
 }
 
 
@@ -111,6 +112,7 @@ devRebootTime=180      #设备无通信重启时间
 iotimeoutTdsp=7000
 iotimeoutModbusRtu=5000
 iotimeoutIQ60=5000
+stopCycleAcq=0         #全局关闭主动采集
 
 #短信服务
 smsApiUrl =			   #短信平台api地址
@@ -250,6 +252,13 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 				authDownload = true;
 			else if (tci.val == "false" || tci.val == "0")
 				authDownload = false;
+		}
+		else if (checkKey(tci.key, "stopCycleAcq"))
+		{
+			if (tci.val == "true" || tci.val == "1")
+				bStopCycleAcq = true;
+			else if (tci.val == "false" || tci.val == "0")
+				bStopCycleAcq = false;
 		}
 		else if (checkKey(tci.key, "debugMode"))
 		{

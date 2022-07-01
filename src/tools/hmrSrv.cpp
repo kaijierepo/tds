@@ -206,6 +206,7 @@ void HMRServer::run(const std::string dir_path)
     if (tds->conf->debugMode)
     {
         m_httpHotUpdateSrv = new tcpSrv();
+        m_httpHotUpdateSrv->m_strName = "hmr service";
         if (!m_httpHotUpdateSrv->run(this, 668))
         {
             if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)

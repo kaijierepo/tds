@@ -2985,32 +2985,16 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 				else
 					p->m_bOnline = false;
 			}
+			else {
+			}
 		}
 	}
 
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
 
-	ds.m_mutexTdsSessionList.lock();
-	vector<shared_ptr<TDS_SESSION>> tdsSessions;
-	tdsSessions = ds.m_vecTdsSession;
-	ds.m_mutexTdsSessionList.unlock();
-	
+
 	webSrvS->sendToAllWs(notify);
 	webSrv->sendToAllWs(notify);
-
-	for (int i=0;i<tdsSessions.size();i++)
-	{
-		shared_ptr<TDS_SESSION> p = tdsSessions[i];
-
-		if (p == orgSession) //不发给来源
-			continue;
-
-		if (p->type == TDS_SESSION_TYPE::tdsClient)
-		{
-			p->sendContent = "text";
-			p->send((char*)notify.c_str(), notify.length());
-		}
-	}
 }
 
 void rpcHandler::Notify(string strTag, string& szNotify)
