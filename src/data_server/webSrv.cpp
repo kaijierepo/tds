@@ -350,17 +350,21 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
 
 			mg_str* mgsOrg = mg_http_get_header(hm, "Origin");
-			string sOrg = str::fromBuff(mgsOrg->ptr,mgsOrg->len);
-			mg_str* mgsHeaders = mg_http_get_header(hm, "Access-Control-Request-Headers");
-			string sHeaders = str::fromBuff(mgsHeaders->ptr,mgsHeaders->len);
+			if (mgsOrg != nullptr)
+			{
+				string sOrg = str::fromBuff(mgsOrg->ptr, mgsOrg->len);
+				mg_str* mgsHeaders = mg_http_get_header(hm, "Access-Control-Request-Headers");
+				string sHeaders = str::fromBuff(mgsHeaders->ptr, mgsHeaders->len);
 
-			string resHeader = "Server:tds\r\n";
-			resHeader += "Access-Control-Allow-Origin:" + sOrg + "\r\n";
-			resHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
-			resHeader += "Access-Control-Allow-Headers:" + sHeaders + "\r\n";
-			resHeader += "Access-Control-Max-Age:86400\r\n";
+				string resHeader = "Server:tds\r\n";
+				resHeader += "Access-Control-Allow-Origin:" + sOrg + "\r\n";
+				resHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
+				resHeader += "Access-Control-Allow-Headers:" + sHeaders + "\r\n";
+				resHeader += "Access-Control-Max-Age:86400\r\n";
 
-			mg_http_reply(c, 200, resHeader.c_str(), "");
+				mg_http_reply(c, 200, resHeader.c_str(), "");
+			}
+			
 		}
 		else {
 			struct mg_http_serve_opts opts;
@@ -464,7 +468,6 @@ void WebServer::run(int port,bool https)
 //但是通过pipe发送会导致粘连包问题
 void WebServer::sendToAllWs(string& s)
 {
-	LOG("sendToAllWs "); 
 	m_csWsSessions.lock();
 	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)
@@ -484,7 +487,11 @@ void WebServer::sendToAllWs(string& s)
 //因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
 int WebServer::sendToWs(char* p, int len, int sockPipe)
 {
-	assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+	//assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
+	if (len + sizeof(len) > MG_IO_SIZE) {
+		LOG("[error]websocket发送数据大小超限，丢弃数据。当前发送长度:%d", len);
+		return 0;
+	}
 	char* pData = new char[sizeof(len) + len];
 	memcpy(pData, &len, sizeof(len));
 	memcpy(pData + sizeof(len), p, len);
