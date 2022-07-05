@@ -33,10 +33,10 @@ public:
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
 
 	//在线组态
-	void rpc_addDev(json& params, RPC_RESP& rpcResp);
-	void rpc_deleteDev(json& params, RPC_RESP& rpcResp);
-	void rpc_modifyDev(json& params, RPC_RESP& rpcResp);
-	void rpc_disposeDev(json& params, RPC_RESP& rpcResp); //设置设备的管理状态
+	void rpc_addDev(json& params, RPC_RESP& rpcResp,RPC_SESSION sesion);
+	void rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion); //设置设备的管理状态
 
 	//设备上下线
 	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);

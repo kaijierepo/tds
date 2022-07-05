@@ -72,16 +72,16 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 	std::string strTime = "";
 	std::string strStartDate, strEndDate;
 	SYSTEMTIME stStartDate, stEndDate;
-	if(params["time"].is_null()){return RPCError(TEC_PARAM_MISSING,"param missing:\"time\"");}
+	if(params["time"].is_null()){return makeRPCError(TEC_PARAM_MISSING,"param missing:\"time\"");}
 	try{strTime = params["time"].get<string>();}
 	catch(...)
-	{ return RPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"time\" param should be a string");}
+	{ return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"time\" param should be a string");}
 	if(!timeSelector.init(strTime))
-		return RPCError(TEC_TIME_SELECTOR_FMT_ERROR,"time selector format error:" + timeSelector.error);
+		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR,"time selector format error:" + timeSelector.error);
 
 	//parse tag param
 	std::string strTag, strTagTmp;
-	if(params["tag"].is_null()){return RPCError(TEC_PARAM_MISSING,"param missing:\"tag\"");}
+	if(params["tag"].is_null()){return makeRPCError(TEC_PARAM_MISSING,"param missing:\"tag\"");}
 	try{
 		strTag = params["tag"].get<string>();
 		if (params["root"] != nullptr)
@@ -94,13 +94,13 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 		}
 	}
 	catch(...)
-	{return RPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param should be a string");}
+	{return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param should be a string");}
 	if (0 == strTag.length()) {
-		return RPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param can not be empty");
+		return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param can not be empty");
 	}
 	str::trimPrefix(strTag,prj.m_strName+".");
 	if(!tagSelector.init(strTag))
-		return RPCError(TEC_TAG_SELECTOR_FMT_ERROR,"tag selector format error:" + tagSelector.error);
+		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR,"tag selector format error:" + tagSelector.error);
 
 	return "";
 }
@@ -340,10 +340,10 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			{
 				if (!fs::fileExist(params["path"]))
 				{
-					error = RPCError(OS_fileNotExist, "file not exist");
+					error = makeRPCError(OS_fileNotExist, "file not exist");
 				}
 				else
-					error = RPCError(TEC_FAIL, "fail");
+					error = makeRPCError(TEC_FAIL, "fail");
 			}
 		}
 	}
@@ -360,7 +360,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			}
 			else
 			{
-				error = RPCError(TEC_FAIL, "fail");
+				error = makeRPCError(TEC_FAIL, "fail");
 			}
 		}
 	}
@@ -526,11 +526,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	{
 		if (!params.contains("tag"))
 		{
-			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : tag");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : tag");
 		}
 		else if (!params.contains("time"))
 		{
-			error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : time");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : time");
 		}
 		else if (method == "db.select")
 		{
@@ -555,7 +555,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		{
 			if (!params.contains("val"))
 			{
-				error = RPCError(RPC_ERROR::TEC_PARAM_MISSING, "missing param : val");
+				error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : val");
 			}
 			else
 			{
@@ -799,19 +799,19 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "addDev")
 	{
-		ioSrv.rpc_addDev(params,rpcResp);
+		ioSrv.rpc_addDev(params,rpcResp,session);
 	}
 	else if (method == "deleteDev")
 	{
-		ioSrv.rpc_deleteDev(params, rpcResp);
+		ioSrv.rpc_deleteDev(params, rpcResp, session);
 	}
 	else if (method == "modifyDev")
 	{
-		ioSrv.rpc_modifyDev(params, rpcResp);
+		ioSrv.rpc_modifyDev(params, rpcResp, session);
 	}
 	else if (method == "disposeDev")
 	{
-		ioSrv.rpc_disposeDev(params, rpcResp);
+		ioSrv.rpc_disposeDev(params, rpcResp, session);
 	}
 	else if (method == "getDevConfBuff") //获取服务缓存的设备配置信息。目前仅用于tdsp设备
 	{
@@ -833,12 +833,12 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			}
 			else
 			{
-				rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound,"ioDev with specified ioAddr not found");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound,"ioDev with specified ioAddr not found");
 			}
 		}
 		else
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_ioAddrNotSpecified, "ioAddr not specified in params");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
 	else if (method == "getDevInfoBuff") //获取服务缓存的设备配置信息。目前仅用于tdsp设备
@@ -861,12 +861,12 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			}
 			else
 			{
-				rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound, "ioDev with specified ioAddr not found");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
 			}
 		}
 		else
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_ioAddrNotSpecified, "ioAddr not specified in params");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
 	else if (method == "discoverDev")
@@ -1099,7 +1099,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			if (params["tag"] == nullptr)
 			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "请求中缺少tag字段");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "请求中缺少tag字段");
 				return true;
 			}
 
@@ -1120,7 +1120,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			else
 			{
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "没有找到位号");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "没有找到位号");
 			}
 		}
 		else if (method == "getMoCustomType" || method == "getMoTypes")
@@ -1165,7 +1165,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			else
 			{
-				error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "未找到指定位号");
+				error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "未找到指定位号");
 			}
 		}
 		else if (method == "getmplist")//or getMpList or get_mp_list
@@ -1464,17 +1464,17 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_devNotFound, "未找到指定IO地址的IO设备");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
 			return true;
 		}
 		if (pIoDev->pIOSession == nullptr)
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_devOffline, "设备离线");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
 			return true;
 		}
 		if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_devTypeError, "IO设备类型错误");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "IO设备类型错误");
 			return true;
 		}
 
@@ -1502,7 +1502,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		}
 		else
 		{
-			rpcResp.error = RPCError(RPC_ERROR::IO_reqTimeout,"IO设备响应超时");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout,"IO设备响应超时");
 		}
 		return true;
 	}
@@ -1661,7 +1661,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			if (jReq["user"] == nullptr || jReq["token"] == nullptr)
 			{
 				//LOG("[warn]无效请求，未携带用户名与token,method=" + method);
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied, set user and token.");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, set user and token.");
 				goto HANDLE_END;
 			}
 			string user = jReq["user"].get<string>();
@@ -1670,7 +1670,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			if (!userMng.checkToken(user, token))
 			{
 				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
-				rpcResp.error = RPCError(RPC_ERROR::TEC_FAIL, "access denied; please login to get access token");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied; please login to get access token");
 				goto HANDLE_END;
 			}
 		}
@@ -1864,7 +1864,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
-		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "specified tag not found:" + tag);
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found:" + tag);
 		return;
 	}
 
@@ -1877,20 +1877,20 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 				if(pmp->m_curVal.is_boolean())
 					val = !pmp->m_curVal.get<bool>();
 				else {
-					resp.error = RPCError(RPC_ERROR::MO_currentValIsNull, "current value is null");
+					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					return;
 				}
 			}
 			else
 			{
-				resp.error = RPCError(RPC_ERROR::MO_outputValShouldBeBool, "output val should be bool type");
+				resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeBool, "output val should be bool type");
 				return;
 			}
 		}
 	}
 	else if (!val.is_number() && pmp->m_valType == VAL_TYPE::Float)
 	{
-		resp.error = RPCError(RPC_ERROR::MO_outputValShouldBeNumber, "output val should be number type");
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be number type");
 		return;
 	}
 	
@@ -1918,7 +1918,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		val = params["val"];
 	else
 	{
-		resp.error = RPCError(TEC_PARAM_MISSING, "param val must be specified");
+		resp.error = makeRPCError(TEC_PARAM_MISSING, "param val must be specified");
 		return;
 	}
 	if (params.find("dataFile") != params.end())
@@ -1929,7 +1929,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		ioAddr = params["ioAddr"].get<string>();
 	if (tag == "" && ioAddr == "")
 	{
-		resp.error = RPCError(TEC_PARAM_MISSING, "param ioAddr or tag must be specified");
+		resp.error = makeRPCError(TEC_PARAM_MISSING, "param ioAddr or tag must be specified");
 		return;
 	}
 
@@ -1938,7 +1938,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		MP* pmp = prj.GetMPByTag(tag);
 		if (!pmp)
 		{
-			resp.error = RPCError(MO_specifiedTagNotFound, "tag not exist");
+			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
 			return;
 		}
 		if (params.find("time") != params.end())
@@ -2057,7 +2057,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 		}
 	}
 	else {
-		resp.error = RPCError(RPC_ERROR::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
 	}
 }
 
@@ -2235,7 +2235,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
 	{
-		error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
 		return "";
 	}
 	//支持中文直接输入moType
@@ -2321,7 +2321,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
 	{
-		resp.error = RPCError(RPC_ERROR::TEC_FAIL, "type is not specified");
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
 	}
 	//支持中文直接输入moType
 	string moType = params["type"].get<string>();
@@ -2618,12 +2618,12 @@ string rpcHandler::rpc_logout(json params, string& error)
 		}
 		else
 		{
-			error = RPCError(RPC_ERROR::TEC_FAIL, "fail");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
 		}
 	}
 	catch (std::exception& e)
 	{
-		error = RPCError(RPC_ERROR::TEC_FAIL, "request data error");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
 	}
 	return "";
 }
@@ -2640,12 +2640,12 @@ string rpcHandler::rpc_login(json params, string& error)
 		}
 		else
 		{
-			error =  RPCError(RPC_ERROR::TEC_FAIL, "fail");
+			error =  makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
 		}
 	}
 	catch (std::exception& e)
 	{
-		error =  RPCError(RPC_ERROR::TEC_FAIL, "request data error");
+		error =  makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
 	}
 	return "";
 }
@@ -2808,7 +2808,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 {
 	if (params["ioAddr"] == nullptr)
 	{
-		error = RPCError(RPC_ERROR::TEC_FAIL, "必须指定ioAddr字段");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "必须指定ioAddr字段");
 		return "";
 	}
 
@@ -2816,7 +2816,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 	ioDev* pDev = ioSrv.getIODev(ioAddr);
 	if (!pDev)
 	{
-		error = RPCError(RPC_ERROR::IO_devNotFound, "io device not found");
+		error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device not found");
 		return "";
 	}
 
@@ -2892,7 +2892,7 @@ string rpcHandler::rpc_setStream(json params,string& error)
 		return "\"ok\"";
 	}
 
-	error = RPCError(TEC_STREAM_ID_NOT_FOUND, "stream id not found");
+	error = makeRPCError(TEC_STREAM_ID_NOT_FOUND, "stream id not found");
 	return "";
 }
 
@@ -2904,20 +2904,20 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		streamId = params["streamId"].get<string>();
 	if (streamId == "")
 	{
-		error = RPCError(RPC_ERROR::TEC_PARAM_MISSING,"param missing,tag is not specified");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING,"param missing,tag is not specified");
 		return "";
 	}
 
 	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
 	if(pssn->m_streamPusher == NULL)
 	{
-		error = RPCError(RPC_ERROR::TEC_NO_STREAM_SRC, "no stream src of this tag");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_NO_STREAM_SRC, "no stream src of this tag");
 		return "";
 	}
 
 	if (pssn->m_streamPusher->m_streamInfo.w == 0 || pssn->m_streamPusher->m_streamInfo.h == 0)
 	{
-		error = RPCError(RPC_ERROR::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_VIDEO_PARAM_NOT_VALID, "video param is not valid");
 		return "";
 	}
 
@@ -2992,9 +2992,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
 
-
-	webSrvS->sendToAllWs(notify);
-	webSrv->sendToAllWs(notify);
+	WebServer::sendToAllWebsock(notify);
 }
 
 void rpcHandler::Notify(string strTag, string& szNotify)

@@ -462,7 +462,7 @@ bool MP::output(json jVal, json& rlt, json& err,bool sync)
 	}
 	else
 	{
-		err = RPCError(RPC_ERROR::MO_outputFail, "未找到绑定的通道");
+		err = makeRPCError(RPC_ERROR_CODE::MO_outputFail, "未找到绑定的通道");
 		return false;
 	}
 }

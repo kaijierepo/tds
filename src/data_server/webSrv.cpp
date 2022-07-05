@@ -369,7 +369,8 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
-			string dir = rootDir + ",/config=" + confDir + ",/files=" + filesDir;
+			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir;
+			//string dir = "/=" + rootDir;
 			opts.root_dir = dir.c_str();   // Serve local dir
 			mg_http_serve_dir(c, (mg_http_message*)ev_data, &opts);
 		}
@@ -478,6 +479,19 @@ void WebServer::sendToAllWs(string& s)
 		WebServer::sendToWs((char*)s.c_str(), s.length(), i->second->sockPipe);
 	}
 	m_csWsSessions.unlock();
+}
+
+int WebServer::sendToAllWebsock(string& s)
+{
+	if(webSrvS)
+		webSrvS->sendToAllWs(s);
+	if(webSrv)
+		webSrv->sendToAllWs(s);
+	if (webSrvS2)
+		webSrvS2->sendToAllWs(s);
+	if (webSrv2)
+		webSrv2->sendToAllWs(s);
+	return 0;
 }
 
 

@@ -297,7 +297,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 	else
 	{
-		string error = RPCError(RPC_ERROR::ALM_alarmEventNotFound, "未找到报警事件");
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
 		resp.error = error;
 		return;
 	}

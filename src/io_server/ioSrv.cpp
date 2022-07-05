@@ -416,7 +416,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	return pIoDev;
 }
 
-void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
+void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string type = params["type"].get<string>();
 	if (!params.contains("nodeID"))
@@ -425,8 +425,9 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 	}
 
 	ioDev* parentDev = this;
+	string parentID;
 	if (params["parentID"] != nullptr) {
-		string parentID = params["parentID"].get<string>();
+		parentID = params["parentID"].get<string>();
 		parentDev = getIODevByNodeID(parentID);
 	}
 	else
@@ -434,8 +435,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 
 	if (parentDev == NULL)
 	{
-		rpcResp.error = "device type not supported, type:" + type;
-		return;
+		rpcResp.error =  makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID,"未找到父节点，父节点ID:" + parentID);
 	}
 
 	ioDev* pd = createIODev(type);
@@ -449,11 +449,11 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp)
 		rpcSrv.notify("devAdded", params);
 	}
 	else {
-		rpcResp.error = "device type not supported, type:" + type;
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "device type not supported, type:" + type, "不支持的设备类型:" + type);
 	}
 }
 
-void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
+void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string sNodeId = params["nodeID"].get<string>();
 	bool bDeleted = deleteIODevByNodeID(sNodeId);
@@ -469,7 +469,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp)
 	}
 }
 
-void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
+void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string sNodeId = params["nodeID"].get<string>();
 	bool bFinded = false;
@@ -488,7 +488,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp)
 	}
 }
 
-void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp)
+void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string sNodeId = params["nodeID"].get<string>();
 	string mode = params["mode"].get<string>();

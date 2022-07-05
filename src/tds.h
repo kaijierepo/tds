@@ -300,7 +300,7 @@ struct iTDSConf {
 };
 
 
-enum RPC_ERROR {
+enum RPC_ERROR_CODE {
 	//json rpc standard
 	TDS_ERROR_CODE = -32603,
 
@@ -345,9 +345,17 @@ enum RPC_ERROR {
 	ALM_alarmEventNotFound = -44001
 };
 
-inline string RPCError(int code, string msg)
+//code ,msg is specified by JSON RPC stardard. desc is for detail description by TDS.can be Chinese Charactors
+inline string makeRPCError(int code, string msg,string desc = "")
 {
-	string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"}";
+	string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"";
+	if (desc != "")
+	{
+		string data = ",\"data\":{\"desc\":\"" + desc + "\"}";
+		error += data;
+	}
+	error += "}";
+
 	return error;
 }
 

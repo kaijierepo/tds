@@ -130,9 +130,17 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	m_stLastUpdateTime = *dataTime;
 	m_curVal = jVal;
 
+	//获得绑定的位号。如果父节点有关联位号。并且位号没有包含父节点位号，拼接父节点位号
+	string tagBind = m_strTagBind;
+	if (m_pParent->m_strTagBind != "") {
+		if (tagBind.find(m_pParent->m_strTagBind) == string::npos) {
+			tagBind = m_pParent->m_strTagBind + "." + tagBind;
+		}
+	}
+
 	//更新绑定位号值
 	json param;
-	param["tag"] = m_strTagBind;
+	param["tag"] = tagBind;
 	param["val"] = m_curVal;
 	param["time"] = timeopt::st2str(m_stLastUpdateTime);
 	tds->callAsyn("input", param.dump());
