@@ -7,7 +7,7 @@ std::vector<tcpClt*> m_vecTCPIOCPClient;
 DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 {
 	tcpClt *pTcpClt=(tcpClt*)lpParam;
-	pTcpClt->m_csLock.lock();
+	pTcpClt->m_bRecvThreadRunning = true;
 	SOCKET sock = pTcpClt->sockClient;
 
 	pTcpClt->m_session.srvIP = pTcpClt->m_remoteIP;
@@ -60,13 +60,14 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 	pTcpClt->sockClient=0;
 	pTcpClt->m_bConn = false;
-	pTcpClt->m_csLock.unlock();
+	pTcpClt->m_bRecvThreadRunning = false;
 	return 0;
 }
 
 DWORD WINAPI ConnectThread(LPVOID lpParam)
 {
 	tcpClt* p = (tcpClt*) lpParam;
+	p->m_bConnThreadRunning = true;
 	int ct = 0;
 	if (!p->IsConnect())
 		p->connect();
@@ -87,6 +88,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 			//	p->SendData(p->heartbeat.data(), p->heartbeat.size());
 		}
 	}
+	p->m_bConnThreadRunning = false;
 	return 0;
 }
 
@@ -116,6 +118,8 @@ tcpClt::tcpClt(void)
 	lastConnTime.wMilliseconds = 0;
 	ZeroMemory(&lastConnTime, 0);
 	m_vecTCPIOCPClient.push_back(this);
+	m_bRecvThreadRunning = false;
+	m_bConnThreadRunning = false;
 }
 
 tcpClt::~tcpClt(void)
@@ -166,8 +170,11 @@ void tcpClt::stop()
 {
 	m_bRun = false; //触发重连线程退出
 	DisConnect();   //触发接收线程退出。
-	m_csLock.lock();
-	m_csLock.unlock();
+	while (1) {
+		Sleep(1);
+		if (!m_bConnThreadRunning && !m_bRecvThreadRunning)
+			break;
+	}
 }
 
 void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)

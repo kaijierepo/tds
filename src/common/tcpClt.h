@@ -79,5 +79,6 @@ public:
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
 	ITcpClientCallBack* m_pCallBackUser;
-	std::mutex m_csLock;
+	bool m_bRecvThreadRunning;
+	bool m_bConnThreadRunning;
 };

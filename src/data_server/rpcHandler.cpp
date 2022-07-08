@@ -1043,6 +1043,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			rpc_getMoStatusTable(params, rpcResp,session);
 		}
+		else if (method == "getMoStatusMap")
+		{
+			rpc_getMoStatusTable(params, rpcResp, session);
+		}
 		else if (method == "getTopoList")
 		{
 			result = rpc_getTopoList(params, error,session);
@@ -1632,16 +1636,12 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		//访问控制
 		if (method == "login")
 		{
-			rpcResp.result = rpc_login(params, error);
-			if (error != "")
-				rpcResp.error = error;
+			userMng.rpc_login(params, rpcResp, pSession->getRpcSession());
 			goto HANDLE_END;
 		}
 		else if (method == "logout")
 		{
-			rpcResp.result = rpc_logout(params, error);
-			if (error != "")
-				rpcResp.error = error;
+			userMng.rpc_logout(params, rpcResp, pSession->getRpcSession());
 			goto HANDLE_END;
 		}
 
@@ -2314,6 +2314,97 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 	}
 }
 
+void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	//检查mo类型参数是否填写
+	if (params["type"] == nullptr)
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
+	}
+	//支持中文直接输入moType
+	string moType = params["type"].get<string>();
+	str::hanZi2Pinyin(moType, moType);
+	//查询根
+	string rootTag;
+	if (params["rootTag"] != nullptr) {
+		rootTag = params["rootTag"];
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);
+
+
+
+	json jTable = json::array();
+	json jTableHead = json::array();
+
+	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
+	{
+		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		for (int i = 0; i < moList.size(); i++)
+		{
+			MO* pMo = moList[i];
+			string tag = pMo->getTag();
+
+			//过滤用户权限
+			if (session.user != "")
+			{
+				if (!userMng.checkTagPermission(session.user, tag))
+					continue;
+			}
+
+			//过滤根mo
+			if (rootTag != "")
+			{
+				if (tag.find(rootTag) == string::npos)
+				{
+					continue;
+				}
+				tag = str::trim(tag, rootTag + ".");
+			}
+
+			//表头
+			if (jTableHead.size() == 0)
+			{
+				jTableHead.push_back("位号");
+				for (int j = 0; j < pMo->m_childMO.size(); j++)
+				{
+					MO* pChild = pMo->m_childMO[j];
+					if (pChild->m_moType == MO_TYPE::mp)
+					{
+						MP* pmp = (MP*)pChild;
+						jTableHead.push_back(pmp->m_strName);
+					}
+				}
+				jTableHead.push_back("在线");
+				jTableHead.push_back("更新时间");
+				jTable.push_back(jTableHead);
+			}
+
+			//数据行
+			json jTableRow;
+			jTableRow.push_back(tag);
+			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			{
+				MO* pChild = pMo->m_childMO[j];
+				if (pChild->m_moType == MO_TYPE::mp)
+				{
+					MP* pmp = (MP*)pChild;
+					jTableRow.push_back(pmp->m_curVal);
+				}
+			}
+			jTableRow.push_back(pMo->m_bOnline);
+			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
+			if (jTableRow != nullptr && jTableRow.size() == jTableHead.size())
+				jTable.push_back(jTableRow);
+		}
+		resp.result = jTable.dump();
+	}
+	else
+	{
+		json j = json::array();
+		resp.result = j.dump();
+	}
+}
+
 
 
 void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session)
@@ -2605,51 +2696,6 @@ string rpcHandler::rpc_xiaot(json params, string& error)
 	string reply = tds->xiaoT->getReply(params);
 	return reply;
 }
-
-string rpcHandler::rpc_logout(json params, string& error)
-{
-	try {
-		string user = params["user"].get<string>();
-		string pwd = params["pwd"].get<string>();
-		json jInfo;
-		if (userMng.checkLogin(user, pwd, jInfo))
-		{
-			return jInfo.dump(4);
-		}
-		else
-		{
-			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
-		}
-	}
-	catch (std::exception& e)
-	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
-	}
-	return "";
-}
-
-string rpcHandler::rpc_login(json params, string& error)
-{
-	try {
-		string user = params["user"].get<string>();
-		string pwd = params["pwd"].get<string>();
-		json jInfo;
-		if (userMng.checkLogin(user, pwd,jInfo))
-		{
-			return jInfo.dump(4);
-		}
-		else
-		{
-			error =  makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
-		}
-	}
-	catch (std::exception& e)
-	{
-		error =  makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
-	}
-	return "";
-}
-
 
 
 string rpcHandler::rpc_openCom(json params, string& error)

@@ -2,6 +2,7 @@
 #include "userMng.h"
 #include "common/common.hpp"
 #include "mo.h"
+#include "logger.h"
 
 userManager userMng;
 
@@ -202,41 +203,9 @@ bool userManager::saveConf()
 
 bool userManager::checkLogin(string user, string pwd,json& userInfo)
 {
-	std::shared_lock<shared_mutex> lock(m_csUserConf);
-	if (m_mapUsers.find(user) != m_mapUsers.end())
-	{
-		json& jUser = m_mapUsers[user];
-		string truePwd = jUser["pwd"].get<string>();
-		if (pwd == truePwd)
-		{
-			userInfo = jUser;
-			string keyPwd = "pwd";
-			userInfo.erase(keyPwd);
-
-			//生成token
-			string token = common::guid();
-			userInfo["token"] = token;
-
-			ACCESS_INFO ai;
-			ai.age = 600;
-			GetLocalTime(&ai.stCreate);
-			ai.token = token;
-			ai.user = user;
-
-			m_mapAccessInfo[user] = ai;
-
-			return true;
-		}
-			
-	}
+	
 
 	return false;
-}
-
-bool userManager::logout(string user)
-{
-	m_mapAccessInfo.erase(user);
-	return true;
 }
 
 bool userManager::checkToken(string user, string token)
@@ -530,4 +499,66 @@ void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION sessio
 	resp.result = "\"ok\"";
 }
 
+
+void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	try {
+		string user = params["user"].get<string>();
+		string pwd = params["pwd"].get<string>();
+		json userInfo;
+		std::shared_lock<shared_mutex> lock(m_csUserConf);
+		if (m_mapUsers.find(user) != m_mapUsers.end())
+		{
+			json& jUser = m_mapUsers[user];
+			string truePwd = jUser["pwd"].get<string>();
+			if (pwd == truePwd)
+			{
+				userInfo = jUser;
+				string keyPwd = "pwd";
+				userInfo.erase(keyPwd);
+				//生成token
+				string token = common::guid();
+				userInfo["token"] = token;
+				ACCESS_INFO ai;
+				ai.age = 600;
+				GetLocalTime(&ai.stCreate);
+				ai.token = token;
+				ai.user = user;
+				m_mapAccessInfo[token] = ai;
+				resp.result = userInfo.dump(4);
+			}
+			else {
+				resp.error = makeRPCError(RPC_ERROR_CODE::USER_passwordError, "password error","密码错误");
+			}
+		}
+		else {
+			resp.error = makeRPCError(RPC_ERROR_CODE::USER_passwordError, "user not found","用户不存在");
+		}
+	}
+	catch (std::exception& e)
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
+	}
+
+	if (resp.error != "")
+	{
+		LOG("[warn]login fail,info:%s,error:%s", params.dump().c_str(), resp.error.c_str());
+	}
+	else {
+		LOG("[keyinfo]login success,info:%s,result:%s", params.dump().c_str(), resp.result.c_str());
+	}
+}
+
+void userManager::rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	string token;
+	if (params.contains("token")) {
+		token = params["token"].get<string>();
+		m_mapAccessInfo.erase(token);
+		resp.result = "\"ok\"";
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param token");
+	}
+}
 

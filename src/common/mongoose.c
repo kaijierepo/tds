@@ -1538,6 +1538,7 @@ void mg_http_serve_file(struct mg_connection *c, struct mg_http_message *hm,
     }
     mg_printf(c,
               "HTTP/1.1 %d %s\r\n"
+              "Access-Control-Allow-Origin:*\r\n"
               "Content-Type: %.*s\r\n"
               "Etag: %s\r\n"
               "Content-Length: %llu\r\n"

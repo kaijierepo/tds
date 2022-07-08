@@ -320,6 +320,8 @@ enum RPC_ERROR_CODE {
 	MO_outputValShouldBeNumber = -40010,
 	MO_currentValIsNull = -40011,
 	MO_outputTimeout = -40012,
+	USER_userNotFound = -40013,
+	USER_passwordError = -40014,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,

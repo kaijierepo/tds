@@ -440,7 +440,6 @@ void webThread(WebServer* pSrv,int port) {
 WebServer::WebServer()
 {
 	enableHttps = false;
-	memset(a, 0xAA, 10);
 }
 
 WebServer::~WebServer()
@@ -517,6 +516,16 @@ int WebServer::sendToWs(char* p, int len, int sockPipe)
 
 bool runWebServers()
 {
+/*
+	spec - String, containing log level, can be one of the following values :
+	0 - Disable logging
+		1 - Log errors only
+		2 - Log errors and info messages
+		3 - Log errors, intoand debug messages
+		4 - Log everything
+*/
+	mg_log_set("0");//禁用mongoose日志
+
 	rootDir = tds->conf->uiPath;
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);

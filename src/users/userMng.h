@@ -36,11 +36,15 @@ public:
 };
 
 
-struct ACCESS_INFO {
+class ACCESS_INFO {
+public:
 	string user;
 	string token;
 	SYSTEMTIME stCreate;
 	int age; //秒为单位，过期时间
+	bool isExpired() {
+		return timeopt::CalcTimePassSecond(stCreate) > age;
+	}
 };
 
 class userManager {
@@ -48,8 +52,12 @@ public:
 	bool loadConf();
 	bool saveConf();
 
+	//rpc service
+	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_login(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session);
+
 	bool checkLogin(string user, string pwd, json& userInfo);
-	bool logout(string user);
 	bool checkToken(string user, string token);
 	bool checkTagPermission(string user, string tag); //检查用户对某一个位号是否有权限
 
@@ -61,7 +69,7 @@ public:
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
 	json getUserByOpenID(string openID); //公众号的openID
-	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
+	
 
 	//保存用户配置，如果已经存在则更新。如果不存在则添加。不一定是全部。相当于是merge操作
 	bool setUsers(json& users);
@@ -83,7 +91,7 @@ public:
 	string m_roleConfPath;
 	string m_uiConfPath;
 
-	map<string, ACCESS_INFO> m_mapAccessInfo;
+	map<string,ACCESS_INFO> m_mapAccessInfo;
 };
 
 extern userManager userMng;
