@@ -12,3 +12,4 @@ set buildTag=TDS_V1.0.%svnVersion%_%buildDate%
 echo %buildTag%
 
 .\tds -m replace -path ../src/res/tds.rc -os CI_VERSION_TAG -ns %buildTag%
+echo %buildTag%
