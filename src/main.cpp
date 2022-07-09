@@ -40,6 +40,7 @@ SOFTWARE.
 #include "tools/rproxy.h"
 #include "httplib.h"
 #include "db.h"
+#include "tools/tools.hpp"
 
 /*
 notes:
@@ -109,6 +110,8 @@ int main(int argc, char** argv)
 	parser.set_optional<int>("byteSize", "byteSize", 8, _GB("串口数据位"));
 	parser.set_optional<string>("stopBits", "stopBits", "1", _GB("停止位"));
 	parser.set_optional<string>("parity", "parity", "None", _GB("校验位"));
+	parser.set_optional<string>("oldstr", "oldstr", "None", _GB("被替换的字符串"));
+	parser.set_optional<string>("newstr", "newstr", "None", _GB("新字符串"));
 
 	//保持无效值，使用配置文件当中的值
 	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
@@ -167,7 +170,7 @@ int main(int argc, char** argv)
 
 
 
-	if (mode == "watchDog" || mode == "wd" || mode == "dog")
+	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd")
 	{
 		watchDog.run();
 	}
@@ -224,6 +227,13 @@ int main(int argc, char** argv)
 	{
 		fp_toolRun ptr = tds->tools["tcp2com"];
 		if (ptr) ptr();
+	}
+	else if (mode == "replace") {
+		string path = parser.get<string>("path");
+		string oldstr = parser.get<string>("oldstr");
+		string newstr = parser.get<string>("newstr");
+		Tools::replaceStrInFile(path, oldstr, newstr);
+		return 0;
 	}
 	else if (mode == "gb2u8")
 	{

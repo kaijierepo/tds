@@ -332,6 +332,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			string sHeader;
 			if (fil.size() > 0) //默认按照时间的升序排列
 			{
+				redirectPath += fil.rbegin()->second;
 				sHeader = "location:" + redirectPath + "\r\n";
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
@@ -341,6 +342,37 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
 			mg_http_reply(c, 301, sHeader.c_str(),NULL);
+		}
+		else if (mg_http_match_uri(hm, "/apk"))
+		{
+			string localPath = fs::appPath() + "/files/apk";
+			vector<string> fl;
+			fs::getFileList(fl, localPath);
+			string redirectPath = "/files/apk/";
+
+			map<string, string> fil;
+
+			for (auto& i : fl)
+			{
+				fs::FILE_INFO fi;
+				string p = localPath + "/" + i;
+				fs::getFileInfo(p, fi);
+				fil[fi.modifyTime] = i;
+			}
+
+			string sHeader;
+			if (fil.size() > 0) //默认按照时间的升序排列
+			{
+				redirectPath += fil.rbegin()->second;
+				sHeader = "location:" + redirectPath + "\r\n";
+				sHeader += "Cache-Control:max-age=1\r\n";
+			}
+			else
+			{
+				sHeader = "location:tds.zip\r\n";
+				sHeader += "Cache-Control:max-age=1\r\n";
+			}
+			mg_http_reply(c, 301, sHeader.c_str(), "");
 		}
 		else if (memcmp(hm->method.ptr, "OPTIONS", hm->method.len) == 0)
 		{

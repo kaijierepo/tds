@@ -1653,8 +1653,7 @@ static void listdir(struct mg_connection *c, struct mg_http_message *hm,
   fs->ls(dir, printdirentry, &d);
   mg_printf(c,
             "</tbody><tfoot><tr><td colspan=\"3\"><hr></td></tr></tfoot>"
-            "</table><address>Mongoose v.%s</address></body></html>\n",
-            MG_VERSION);
+            "</table><address>TDS SSI</address></body></html>\n");
   n = mg_snprintf(tmp, sizeof(tmp), "%lu", (unsigned long) (c->send.len - off));
   if (n > sizeof(tmp)) n = 0;
   memcpy(c->send.buf + off - 10, tmp, n);  // Set content length

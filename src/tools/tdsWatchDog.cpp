@@ -8,7 +8,7 @@ tdsDogFeeder dogFeeder;
 
 tdsWatchDog::tdsWatchDog()
 {
-	GetLocalTime(&m_lastFeedTime);
+	
 }
 
 void wakeUpFeeder() {
@@ -46,11 +46,12 @@ void wakeUpFeeder() {
 
 
 void thread_checkFood() {
+	GetLocalTime(&watchDog.m_lastFeedTime);
 	while (1)
 	{
 		Sleep(100);
 		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
-		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
+		LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 1000)
 		{
 			LOG("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
@@ -66,7 +67,7 @@ void thread_checkFood() {
 
 void tdsWatchDog::run()
 {
-	LOG("软件狗启动");
+	LOG("tds daemon 守护进程启动");
 	m_foodPlate.m_pCallback = this;
 	m_foodPlate.m_port = 660;
 	m_foodPlate.start();
@@ -76,8 +77,8 @@ void tdsWatchDog::run()
 
 int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
-	//string food = recvData;
-	//LOG("food is " + food);
+	string food = recvData;
+	LOG("food is " + food);
 	GetLocalTime(&m_lastFeedTime);
 	return 0;
 }
