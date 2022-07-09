@@ -362,11 +362,7 @@ bool TDS_imp::run(string cmdline)
 	LOG("[数据库	] " + tds->conf->dbPath);
 
 	//初始化系统组件，完成静态结构建立。loadConf和init类函数。在调用run之前，要先完成.否则在结构建立之前就进行数据io，可能会出现一些不必要的错误。
-	//startup xiaot
-	if(tds->xiaoT)
-		tds->xiaoT->init();
-	if (tds->smsServer)
-		tds->smsServer->init();
+
 	//startup tds modules
 	//if db folder is not exist. open will create an empty folder
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
@@ -376,7 +372,15 @@ bool TDS_imp::run(string cmdline)
 	prj.loadConf();
 	ioSrv.loadConf();
 	almSrv.init();
-	//其他插件
+
+
+	//初始化tds插件
+	if (tds->xiaoT)
+		tds->xiaoT->init();
+	if (tds->smsServer)
+		tds->smsServer->init();
+	if (tds->shellServer)
+		tds->shellServer->init();
 	if (tds->gzhServer)
 		tds->gzhServer->init();
 	
@@ -402,6 +406,17 @@ bool TDS_imp::run(string cmdline)
 	{
 		hmrServer.run(tds->conf->uiPath);
 	}
+
+
+	//运行tds插件
+	if (tds->xiaoT)
+		tds->xiaoT->run();
+	if (tds->smsServer)
+		tds->smsServer->run();
+	if (tds->shellServer)
+		tds->shellServer->run();
+	if (tds->gzhServer)
+		tds->gzhServer->run();
 
 	//create browser window
 	if (conf->uiMode == "miniblink")

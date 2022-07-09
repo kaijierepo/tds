@@ -110,8 +110,9 @@ int main(int argc, char** argv)
 	parser.set_optional<int>("byteSize", "byteSize", 8, _GB("串口数据位"));
 	parser.set_optional<string>("stopBits", "stopBits", "1", _GB("停止位"));
 	parser.set_optional<string>("parity", "parity", "None", _GB("校验位"));
-	parser.set_optional<string>("oldstr", "oldstr", "None", _GB("被替换的字符串"));
-	parser.set_optional<string>("newstr", "newstr", "None", _GB("新字符串"));
+	parser.set_optional<string>("path", "path", "None", _GB("文件路径"));
+	parser.set_optional<string>("os", "oldstr", "None", _GB("被替换的字符串"));
+	parser.set_optional<string>("ns", "newstr", "None", _GB("新字符串"));
 
 	//保持无效值，使用配置文件当中的值
 	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
@@ -229,9 +230,10 @@ int main(int argc, char** argv)
 		if (ptr) ptr();
 	}
 	else if (mode == "replace") {
+		//.rc文件为gb2312编码
 		string path = parser.get<string>("path");
-		string oldstr = parser.get<string>("oldstr");
-		string newstr = parser.get<string>("newstr");
+		string oldstr = parser.get<string>("os");
+		string newstr = parser.get<string>("ns");
 		Tools::replaceStrInFile(path, oldstr, newstr);
 		return 0;
 	}

@@ -361,6 +361,12 @@ inline string makeRPCError(int code, string msg,string desc = "")
 	return error;
 }
 
+class i_tdsPlugin {
+public:
+	virtual bool init() = 0;
+	virtual bool run() = 0;
+};
+
 
 //interface of tds.db
 //key is timestamp as 2020-01-01 11:11:11,value is a json string of one data element
@@ -389,21 +395,18 @@ public:
 };
 
 
-class i_xiaoT {
+class i_xiaoT : public i_tdsPlugin {
 public:
-	virtual bool init() = 0;
 	virtual std::string getReply(string msg) = 0;
 };
 
-class i_gzhServer {
+class i_gzhServer : public i_tdsPlugin {
 public:
-	virtual bool init() = 0;
 	virtual std::string getReply(string msg) = 0;
 };
 
-class i_smsServer {
+class i_smsServer : public i_tdsPlugin {
 public:
-	virtual bool init() = 0;
 	virtual bool send(string& msg,string& phoneNum) = 0;
 };
 
@@ -457,6 +460,7 @@ public:
 	i_xiaoT* xiaoT;
 	i_gzhServer* gzhServer;
 	i_smsServer* smsServer;
+	i_tdsPlugin* shellServer;
 
 	SYSTEMTIME stStartupTime;
 

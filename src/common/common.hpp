@@ -1238,6 +1238,204 @@ namespace timeopt {
 		return std::string(res);
 	}
 }
+
+
+namespace sys {
+	struct COM_INFO {
+		string portNum;
+		string desc;
+	};
+
+	inline vector<string> getCOMList()
+	{
+		vector<string> list;
+		HKEY hkey;
+		int result;
+		int i = 0;
+		string strComName;//串口名称   
+		string strDrName;//串口详细名称   
+		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+			_T("Hardware\\DeviceMap\\SerialComm"),
+			NULL,
+			KEY_READ,
+			&hkey);
+		if (ERROR_SUCCESS == result)   //   打开串口注册表      
+		{
+			WCHAR portName[0x100], commName[0x100];
+			DWORD dwLong, dwSize;
+			do
+			{
+				dwSize = sizeof(portName) / sizeof(TCHAR);
+				dwLong = dwSize;
+				result = RegEnumValueW(hkey, i, portName, &dwLong, NULL, NULL, (LPBYTE)commName, &dwSize);
+				if (ERROR_NO_MORE_ITEMS == result)
+				{
+					//   枚举串口   
+					break;   //   commName就是串口名字"COM2"   
+				}
+				strComName = charCodec::utf16ToAuto(commName);
+				strDrName = charCodec::utf16ToAuto(portName);
+				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
+				int len = strDrName.rfind('\\');
+				// 获取'\\'左边的字符串   
+				string strFilePath = strDrName.substr(0, len + 1);
+				// 获取'\\'右边的字符串   
+				string fileName = strDrName.substr(len + 1, strDrName.length() - len - 1);
+				fileName = strComName + ": " + fileName;
+				list.push_back(fileName);
+				i++;
+			} while (1);
+			RegCloseKey(hkey);
+		}
+		return list;
+	}
+
+	inline vector<COM_INFO> getCOMInfoList() {
+		vector<COM_INFO> ary;
+		HDEVINFO hDevInfo;
+		SP_DEVINFO_DATA DeviceInfoData;
+		DWORD i = 0;
+		hDevInfo = SetupDiGetClassDevsW((LPGUID)&GUID_DEVCLASS_PORTS, 0, 0, DIGCF_PRESENT);
+		/*
+		GUID_DEVCLASS_FDC软盘控制器
+		GUID_DEVCLASS_DISPLAY显示卡
+		GUID_DEVCLASS_CDROM光驱
+		GUID_DEVCLASS_KEYBOARD键盘
+		GUID_DEVCLASS_COMPUTER计算机
+		GUID_DEVCLASS_SYSTEM系统
+		GUID_DEVCLASS_DISKDRIVE磁盘驱动器
+		GUID_DEVCLASS_MEDIA声音、视频和游戏控制器
+		GUID_DEVCLASS_MODEMMODEM
+		GUID_DEVCLASS_MOUSE鼠标和其他指针设备
+		GUID_DEVCLASS_NET网络设备器
+		GUID_DEVCLASS_USB通用串行总线控制器
+		GUID_DEVCLASS_FLOPPYDISK软盘驱动器
+		GUID_DEVCLASS_UNKNOWN未知设备
+		GUID_DEVCLASS_SCSIADAPTERSCSI 和 RAID 控制器
+		GUID_DEVCLASS_HDCIDE ATA/ATAPI 控制器
+		GUID_DEVCLASS_PORTS端口（COM 和 LPT）
+		GUID_DEVCLASS_MONITOR监视器
+		*/
+
+		if (hDevInfo == INVALID_HANDLE_VALUE)
+		{
+			DWORD dwError = GetLastError();
+			// Insert error handling here.   
+			return ary;
+		}
+
+		// Enumerate through all devices in Set.        
+		DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+		for (i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &DeviceInfoData); i++)
+		{
+			DWORD DataT = 0;
+			WCHAR buffer[256] = { 0 };
+			DWORD buffersize = sizeof(buffer);
+
+			while (!SetupDiGetDeviceRegistryPropertyW(hDevInfo,
+				&DeviceInfoData,
+				SPDRP_FRIENDLYNAME,
+				&DataT,
+				(PBYTE)buffer,
+				buffersize,
+				&buffersize))
+			{
+				if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+				{
+					// Change the buffer size.   
+					//if (buffer) LocalFree(buffer);   
+				}
+				else
+				{
+					// Insert error handling here. 
+					break;
+				}
+			}
+
+			wstring utf16str = buffer;
+			string comInfo = charCodec::utf16ToAuto(utf16str);
+
+			int iLeftBracket = comInfo.find("(");
+			if (iLeftBracket == string::npos)
+				continue;
+
+			int iRightBracket = comInfo.find(")");
+
+			string portNum = comInfo.substr(iLeftBracket + 1, iRightBracket - iLeftBracket - 1);
+
+			//vspd 创建的虚拟串口是  COM1->COM2的格式
+			int iFPos = portNum.find("->");
+			if (iFPos != string::npos)
+			{
+				portNum = portNum.substr(iFPos + 2, portNum.size() - iFPos - 2);
+			}
+
+			COM_INFO ci;
+			ci.portNum = portNum;
+			ci.desc = comInfo.substr(0, iLeftBracket);
+
+			ary.insert(ary.begin(), ci);
+
+
+			//if (buffer)                                                                            
+			//{
+			//	LocalFree(buffer);
+			//}
+		}
+		if (GetLastError() != NO_ERROR && GetLastError() != ERROR_NO_MORE_ITEMS)
+		{
+			return ary;
+		}
+
+		// Cleanup   
+		SetupDiDestroyDeviceInfoList(hDevInfo);
+		return ary;
+	}
+	inline string getLastError(string szReason = "")
+	{
+		DWORD dwErrCode = GetLastError(); //之前的错误代码
+
+		LPVOID lpMsgBuf = NULL;
+		DWORD dwLen = FormatMessageW(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			FORMAT_MESSAGE_FROM_SYSTEM |
+			FORMAT_MESSAGE_IGNORE_INSERTS,
+			NULL,
+			dwErrCode,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+			(LPWSTR)&lpMsgBuf,
+			0,
+			NULL
+		);
+
+		string szErrMsg = "";
+
+		if (dwLen == 0)
+		{
+			DWORD dwFmtErrCode = GetLastError(); //FormatMessage 引起的错误代码
+			szErrMsg = str::format("FormatMessage failed with %u\n", dwFmtErrCode);
+		}
+
+		if (lpMsgBuf)
+		{
+			wstring utf16msg = (LPWSTR)lpMsgBuf;
+			string utf8Msg = charCodec::utf16ToAuto(utf16msg);
+			szErrMsg = str::format("%s\n Code = %u, Mean = %s", szReason.c_str(), dwErrCode, utf8Msg.c_str());
+		}
+
+		if (lpMsgBuf)
+		{
+			// Free the buffer.
+			LocalFree(lpMsgBuf);
+			lpMsgBuf = NULL;
+		}
+
+		return szErrMsg;
+	}
+}
+
+
+
 namespace fs {
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
@@ -1393,7 +1591,8 @@ namespace fs {
 		}
 		else
 		{
-			int  iError = GetLastError();
+			string err = sys::getLastError();
+			printf("[error]%s", err.c_str());
 		}
 		return false;
 	}
@@ -1687,199 +1886,6 @@ namespace path {
 		s = str::replace(s, "\\", "/");
 		s = str::replace(s, "//", "/");
 		return s;
-	}
-}
-namespace sys {
-	struct COM_INFO {
-		string portNum;
-		string desc;
-	};
-
-	inline vector<string> getCOMList()
-	{
-		vector<string> list;
-		HKEY hkey;
-		int result;
-		int i = 0;
-		string strComName;//串口名称   
-		string strDrName;//串口详细名称   
-		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			_T("Hardware\\DeviceMap\\SerialComm"),
-			NULL,
-			KEY_READ,
-			&hkey);
-		if (ERROR_SUCCESS == result)   //   打开串口注册表      
-		{
-			WCHAR portName[0x100], commName[0x100];
-			DWORD dwLong, dwSize;
-			do
-			{
-				dwSize = sizeof(portName) / sizeof(TCHAR);
-				dwLong = dwSize;
-				result = RegEnumValueW(hkey, i, portName, &dwLong, NULL, NULL, (LPBYTE)commName, &dwSize);
-				if (ERROR_NO_MORE_ITEMS == result)
-				{
-					//   枚举串口   
-					break;   //   commName就是串口名字"COM2"   
-				}
-				strComName = charCodec::utf16ToAuto(commName);
-				strDrName = charCodec::utf16ToAuto(portName);
-				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
-				int len = strDrName.rfind('\\');
-				// 获取'\\'左边的字符串   
-				string strFilePath = strDrName.substr(0,len + 1);
-				// 获取'\\'右边的字符串   
-				string fileName = strDrName.substr(len+1,strDrName.length() - len - 1);
-				fileName = strComName + ": " + fileName;
-				list.push_back(fileName);
-				i++;
-			} while (1);
-			RegCloseKey(hkey);
-		}
-		return list;
-	}
-
-	inline vector<COM_INFO> getCOMInfoList() {
-		vector<COM_INFO> ary;
-			HDEVINFO hDevInfo;
-			SP_DEVINFO_DATA DeviceInfoData;
-			DWORD i = 0;
-			hDevInfo = SetupDiGetClassDevsW((LPGUID)&GUID_DEVCLASS_PORTS, 0, 0, DIGCF_PRESENT);
-			/*
-			GUID_DEVCLASS_FDC软盘控制器
-			GUID_DEVCLASS_DISPLAY显示卡
-			GUID_DEVCLASS_CDROM光驱
-			GUID_DEVCLASS_KEYBOARD键盘
-			GUID_DEVCLASS_COMPUTER计算机
-			GUID_DEVCLASS_SYSTEM系统
-			GUID_DEVCLASS_DISKDRIVE磁盘驱动器
-			GUID_DEVCLASS_MEDIA声音、视频和游戏控制器
-			GUID_DEVCLASS_MODEMMODEM
-			GUID_DEVCLASS_MOUSE鼠标和其他指针设备
-			GUID_DEVCLASS_NET网络设备器
-			GUID_DEVCLASS_USB通用串行总线控制器
-			GUID_DEVCLASS_FLOPPYDISK软盘驱动器
-			GUID_DEVCLASS_UNKNOWN未知设备
-			GUID_DEVCLASS_SCSIADAPTERSCSI 和 RAID 控制器
-			GUID_DEVCLASS_HDCIDE ATA/ATAPI 控制器
-			GUID_DEVCLASS_PORTS端口（COM 和 LPT）
-			GUID_DEVCLASS_MONITOR监视器
-			*/
-
-			if (hDevInfo == INVALID_HANDLE_VALUE)
-			{
-				DWORD dwError = GetLastError();
-				// Insert error handling here.   
-				return ary;
-			}
-
-			// Enumerate through all devices in Set.        
-			DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-			for (i = 0; SetupDiEnumDeviceInfo(hDevInfo, i, &DeviceInfoData); i++)
-			{
-				DWORD DataT = 0;
-				WCHAR buffer[256] = { 0 };
-				DWORD buffersize = sizeof(buffer);
-
-				while (!SetupDiGetDeviceRegistryPropertyW(hDevInfo,
-					&DeviceInfoData,
-					SPDRP_FRIENDLYNAME,
-					&DataT,
-					(PBYTE)buffer,
-					buffersize,
-					&buffersize))
-				{
-					if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-					{
-						// Change the buffer size.   
-						//if (buffer) LocalFree(buffer);   
-					}
-					else
-					{
-						// Insert error handling here. 
-						break;
-					}
-				}
-
-				wstring utf16str = buffer;
-				string comInfo = charCodec::utf16ToAuto(utf16str);
-
-				int iLeftBracket = comInfo.find("(");
-				if (iLeftBracket == string::npos)
-					continue;
-
-				int iRightBracket = comInfo.find(")");
-
-				string portNum = comInfo.substr(iLeftBracket + 1, iRightBracket - iLeftBracket - 1);
-
-				//vspd 创建的虚拟串口是  COM1->COM2的格式
-				int iFPos = portNum.find("->");
-				if (iFPos != string::npos)
-				{
-					portNum = portNum.substr(iFPos + 2, portNum.size() - iFPos - 2);
-				}
-
-				COM_INFO ci;
-				ci.portNum = portNum;
-				ci.desc = comInfo.substr(0, iLeftBracket);
-
-				ary.insert(ary.begin(),ci);
-
-			
-				//if (buffer)                                                                            
-				//{
-				//	LocalFree(buffer);
-				//}
-			}
-			if (GetLastError() != NO_ERROR && GetLastError() != ERROR_NO_MORE_ITEMS)
-			{
-				return ary;
-			}
-
-			// Cleanup   
-			SetupDiDestroyDeviceInfoList(hDevInfo);
-			return ary;
-	}
-	inline string getLastError(string szReason = "")
-	{
-		DWORD dwErrCode = GetLastError(); //之前的错误代码
-
-		LPVOID lpMsgBuf = NULL;
-		DWORD dwLen = FormatMessageW(
-			FORMAT_MESSAGE_ALLOCATE_BUFFER |
-			FORMAT_MESSAGE_FROM_SYSTEM |
-			FORMAT_MESSAGE_IGNORE_INSERTS,
-			NULL,
-			dwErrCode,
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
-			(LPWSTR)&lpMsgBuf,
-			0,
-			NULL
-		);
-
-		string szErrMsg = "";
-
-		if (dwLen == 0)
-		{
-			DWORD dwFmtErrCode = GetLastError(); //FormatMessage 引起的错误代码
-			szErrMsg = str::format("FormatMessage failed with %u\n", dwFmtErrCode);
-		}
-
-		if (lpMsgBuf)
-		{
-			wstring utf16msg = (LPWSTR)lpMsgBuf;
-			string utf8Msg = charCodec::utf16ToAuto(utf16msg);
-			szErrMsg = str::format("%s\n Code = %u, Mean = %s", szReason.c_str(), dwErrCode, utf8Msg.c_str());
-		}
-
-		if (lpMsgBuf)
-		{
-			// Free the buffer.
-			LocalFree(lpMsgBuf);
-			lpMsgBuf = NULL;
-		}
-
-		return szErrMsg;
 	}
 }
 
