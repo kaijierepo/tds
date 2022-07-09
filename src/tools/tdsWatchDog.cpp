@@ -1,7 +1,10 @@
 #include "pch.h"
 #include "tdsWatchDog.h"
 #include "logger.h"
+#include <winver.h>
 
+
+#pragma comment(lib, "version.lib")
 
 tdsWatchDog watchDog;
 tdsDogFeeder dogFeeder;
@@ -18,6 +21,9 @@ void wakeUpFeeder() {
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
+	//获取程序版本信息
+	string ver = watchDog.getCurTdsVer();
+
 	// Start the child process.
 	//si.dwFlags = STARTF_USESHOWWINDOW;
 	//si.wShowWindow = SW_SHOW;
@@ -33,11 +39,11 @@ void wakeUpFeeder() {
 		&pi)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		LOG("启动tds失败" + sys::getLastError());
+		LOG("启动TDS失败!错误信息:" + sys::getLastError() + ",版本:" + ver);
 	}
 	else
 	{
-		LOG("启动tds成功,启动时间 " + timeopt::nowStr());
+		LOG("启动TDS成功!启动时间: " + timeopt::nowStr() + ",版本:" + ver);
 	}
 
 	CloseHandle(pi.hProcess);
@@ -51,7 +57,7 @@ void thread_checkFood() {
 	{
 		Sleep(100);
 		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
-		LOG("[keyinfo]wait food for " + str::fromInt(pass));
+		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 1000)
 		{
 			LOG("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
@@ -75,10 +81,96 @@ void tdsWatchDog::run()
 	t.detach();
 }
 
+
+
+
+
+string tdsWatchDog::getFileVerInfo(string path)
+{
+	DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
+	LPVOID pBlock = malloc(dwSize);
+	GetFileVersionInfo(path.c_str(), 0, dwSize, pBlock);
+	char* pVerValue = NULL;
+	UINT nSize = 0;
+	VerQueryValue(pBlock, TEXT("\\VarFileInfo\\Translation"), (LPVOID*)&pVerValue, &nSize);
+	if (pVerValue == NULL)
+		return "";
+	string strSubBlock, strTranslation, strTemp;
+	strTemp = str::format("000%x", *((unsigned short int*)pVerValue));
+	strTranslation = strTemp.substr(strTemp.length()-4,4);
+	strTemp = str::format("000%x", *((unsigned short int*) & pVerValue[2]));
+	strTranslation += strTemp.substr(strTemp.length() - 4, 4);
+	//080404b0为中文，040904E4为英文
+	//文件描述
+	strSubBlock = str::format("\\StringFileInfo\\%s\\FileDescription", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format(_GB("文件描述: %s"), pVerValue);
+	strTemp = charCodec::ansi2Utf8(strTemp);
+	//文件版本
+	strSubBlock = str::format("\\StringFileInfo\\%s\\FileVersion", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp =str::format("%s", pVerValue);
+	string strFileVersion = strTemp;
+	//内部名称
+	strSubBlock = str::format("\\StringFileInfo\\%s\\InternalName", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format("内部名称: %s", pVerValue);
+	//合法版权
+	strSubBlock = str::format("\\StringFileInfo\\%s\\LegalTradeMarks", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format("合法版权: %s", pVerValue);
+	//原始文件名
+	strSubBlock = str::format("\\StringFileInfo\\%s\\OriginalFileName", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format("原始文件名: %s", pVerValue);
+	//产品名称
+	strSubBlock = str::format("\\StringFileInfo\\%s\\ProductName", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format("产品名称: %s", pVerValue);
+	//产品版本
+	strSubBlock = str::format("\\StringFileInfo\\%s\\ProductVersion", strTranslation.c_str());
+	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	strTemp = str::format("产品版本: %s", pVerValue);
+	string str =str::format("%s", pVerValue);
+	str = charCodec::ansi2Utf8(str);
+	free(pBlock);
+	return str;
+}
+
+string tdsWatchDog::getCurTdsVer()
+{
+	return getFileVerInfo(fs::appPath() + "/tds.exe");
+}
+
+string tdsWatchDog::getUpdateTdsVer()
+{
+	return getFileVerInfo(fs::appPath() + "/update/tds.exe");
+}
+
+
+bool tdsWatchDog::checkRevUpdate()
+{
+	string localPath = fs::appPath() + "/update";
+	vector<string> fl;
+	fs::getFileList(fl, localPath);
+	string redirectPath = "/files/apk/";
+
+	map<string, string> fil;
+
+	for (auto& i : fl)
+	{
+		fs::FILE_INFO fi;
+		string p = localPath + "/" + i;
+		fs::getFileInfo(p, fi);
+		fil[fi.modifyTime] = i;
+	}
+	return false;
+}
+
 int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
 	string food = recvData;
-	LOG("food is " + food);
+	//LOG("food is " + food);
 	GetLocalTime(&m_lastFeedTime);
 	return 0;
 }

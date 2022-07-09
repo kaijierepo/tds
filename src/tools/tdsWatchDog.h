@@ -7,9 +7,14 @@ class tdsWatchDog : public IUdpServerCallBack
 public:
 	tdsWatchDog();
 	void run();
+	string getFileVerInfo(string path);
+	string getCurTdsVer();
+	string getUpdateTdsVer();
+	bool checkRevUpdate();
 	int OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
 	udpServer m_foodPlate; //Ê³ÎïÅÌ×Ó
 	SYSTEMTIME m_lastFeedTime;
+	string m_curVer;
 };
 
 
