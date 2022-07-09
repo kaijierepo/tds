@@ -235,7 +235,7 @@ int main(int argc, char** argv)
 		string oldstr = parser.get<string>("os");
 		string newstr = parser.get<string>("ns");
 		Tools::replaceStrInFile(path, oldstr, newstr);
-		return 0;
+		exit(0);
 	}
 	else if (mode == "gb2u8")
 	{
