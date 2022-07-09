@@ -3,7 +3,7 @@
 // Used by tds.rc
 //
 #define IDI_LOGO                        1000
-#define VS_VERSION_INFO                 1001
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
