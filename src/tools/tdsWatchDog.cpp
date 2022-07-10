@@ -21,6 +21,8 @@ void wakeUpFeeder() {
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
 
+	watchDog.m_curVer = watchDog.getCurTdsVer();
+
 	// Start the child process.
 	//si.dwFlags = STARTF_USESHOWWINDOW;
 	//si.wShowWindow = SW_SHOW;
@@ -65,7 +67,15 @@ void thread_checkFood() {
 				WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 				WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
 				Sleep(200);
-				WinExec("copy .\\update\\tds.exe .\\tds.exe", SW_SHOW);
+				try {
+					filesystem::copy(charCodec::utf8toUtf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8toUtf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
+				}
+				catch (std::exception& e)
+				{
+					string err = e.what();
+					watchDog.log(err);
+				}
+				
 				wakeUpFeeder();
 				Sleep(5000);
 			}
@@ -76,6 +86,7 @@ void thread_checkFood() {
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 1000)
 		{
+			watchDog.log("没有检测到活动的服务，重启服务");
 			//watchDog.log("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
@@ -176,8 +187,11 @@ int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, in
 
 void tdsWatchDog::log(string s)
 {
+	SYSTEMTIME stNow;
+	GetLocalTime(&stNow);
+	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	s = charCodec::utf8toAnsi(s);
-	s += "\r\n";
+	s = time + " " + s +  "\r\n";
 	printf(s.c_str());
 	fs::appendFile(fs::appPath() + "/tdsd.log.txt", s);
 }
