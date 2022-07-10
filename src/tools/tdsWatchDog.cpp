@@ -10,7 +10,14 @@ tdsDogFeeder dogFeeder;
 
 tdsWatchDog::tdsWatchDog()
 {
-	//获取程序版本信息
+	if (fs::appName() == "tdsd") {
+		HANDLE m_hMutex = CreateMutex(NULL, FALSE, "tdsWatchDog");
+		if (GetLastError() == ERROR_ALREADY_EXISTS) {
+			CloseHandle(m_hMutex);
+			m_hMutex = NULL;
+			exit(0);
+		}
+	}
 	m_curVer = watchDog.getCurTdsVer();
 }
 
@@ -100,7 +107,25 @@ void thread_checkFood() {
 
 void tdsWatchDog::run()
 {
-	watchDog.log("tds daemon 守护进程启动");
+	//if (!isServiceInstalled()) {
+	//	string info = _GB("是否安装tdsd服务?");
+	//	string title = _GB("安装服务");
+	//	if (MB_OK == ::MessageBox(NULL, info.c_str(), title.c_str(), MB_OKCANCEL)) {
+	//		if (installService()) {
+	//		    info = _GB("tdsd服务安装成功!");
+	//			title = _GB("服务安装");
+	//			::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+	//		}
+	//		else {
+	//			info = _GB("tdsd服务安装失败!");
+	//			title = _GB("服务安装");
+	//			::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+	//		}
+	//	}
+	//	exit(0);
+	//}
+
+	watchDog.log("TDS Daemon 服务启动");
 	m_foodPlate.m_pCallback = this;
 	m_foodPlate.m_port = 660;
 	m_foodPlate.start();
@@ -175,6 +200,154 @@ string tdsWatchDog::getCurTdsVer()
 string tdsWatchDog::getUpdateTdsVer()
 {
 	return getFileVerInfo(fs::appPath() + "/update/tds.exe");
+}
+
+bool tdsWatchDog::installService()
+{
+	string path = fs::appPath() + "/tdsd.exe";
+	SC_HANDLE schSCManager, schService;
+	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+
+	if (schSCManager == NULL)
+		return false;
+
+	schService = CreateService(schSCManager, "tdsd", "tdsd",
+		SERVICE_ALL_ACCESS,
+		SERVICE_WIN32_OWN_PROCESS | SERVICE_INTERACTIVE_PROCESS,
+		SERVICE_AUTO_START,
+		SERVICE_ERROR_NORMAL,
+		path.c_str(),
+		NULL,
+		NULL,
+		NULL,
+		NULL,
+		NULL);
+
+	if (schService == NULL)
+		return false;
+
+	CloseServiceHandle(schService);
+	return true;
+}
+
+bool tdsWatchDog::uninstallService()
+{
+	SC_HANDLE schSCManager, schService;
+	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+
+	if (schSCManager == NULL)
+		return false;
+
+	// 打开www服务。
+	SC_HANDLE hSvc = ::OpenService(schSCManager, "tdsd",SERVICE_ALL_ACCESS);
+	if (hSvc == NULL)
+	{
+		string info = _GB("没有找到服务tdsd");
+		string title = _GB("错误");
+		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+		return false;
+	}
+
+	if (::DeleteService(hSvc)) {
+		string info = _GB("服务tdsd卸载成功");
+		string title = _GB("卸载服务");
+		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+	}
+	else
+	{
+		string info = _GB("服务tdsd卸载失败");
+		string title = _GB("卸载服务");
+		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+	}
+
+	CloseServiceHandle(hSvc);
+	return true;
+}
+
+bool tdsWatchDog::isServiceInstalled()
+{
+	SC_HANDLE hSC = ::OpenSCManager(NULL,
+		NULL, GENERIC_EXECUTE);
+	if (hSC == NULL)
+	{
+		return false;
+	}
+	SC_HANDLE hSvc = ::OpenService(hSC, "tdsd",
+		SERVICE_START | SERVICE_QUERY_STATUS | SERVICE_STOP);
+	if (hSvc == NULL)
+	{
+		return false;
+	}
+	return true;
+}
+
+BOOL Reg_LocalMachine(char* lpszFileName, char* lpszValueName)
+{
+	// 管理员权限
+	HKEY hKey;
+	// 打开注册表键
+	if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey))
+	{
+		return FALSE;
+	}
+	// 修改注册表值，实现开机自启
+	if (ERROR_SUCCESS != ::RegSetValueEx(hKey, lpszValueName, 0, REG_SZ, (BYTE*)lpszFileName, (1 + ::lstrlen(lpszFileName))))
+	{
+		::RegCloseKey(hKey);
+		return FALSE;
+	}
+	// 关闭注册表键
+	::RegCloseKey(hKey);
+
+	return TRUE;
+}
+
+
+bool tdsWatchDog::regSelfStart()
+{
+	string path = fs::appPath() + "/tdsd.exe";
+	path = charCodec::utf8toAnsi(path);
+	if (Reg_LocalMachine((char*)path.c_str(), (char*)"tdsd"))
+	{
+		printf(_GB("开机启动添加成功!"));
+		return true;
+	}
+	else {
+		printf(_GB("开机启动添加失败!"));
+	}
+	return false;
+}
+
+bool tdsWatchDog::unregSelfStart()
+{
+	HKEY hkey;
+	if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hkey))
+	{
+		if (ERROR_SUCCESS == ::RegDeleteValue(hkey, "tdsd"))
+		{
+			printf(_GB("开机启动删除成功!"));
+			return true;
+		}
+	}
+	printf(_GB("开机启动删除失败!"));
+	return false;
+}
+
+bool tdsWatchDog::isSelfStartReg()
+{
+	HKEY hkey;
+	if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hkey))
+	{
+		//hKEY是上面打开时得到的指针
+		LPBYTE getValue = new BYTE[80];//得到的键值
+		DWORD keyType = REG_SZ;//定义数据类型
+		DWORD DataLen = 80;//定义数据长度
+		if (ERROR_SUCCESS == ::RegQueryValueEx(hkey, "tdsd", NULL, &keyType, getValue, &DataLen))
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)

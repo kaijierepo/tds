@@ -10,7 +10,12 @@ public:
 	string getFileVerInfo(string path);
 	string getCurTdsVer();
 	string getUpdateTdsVer();
-	bool checkRevUpdate();
+	bool installService();
+	bool uninstallService();
+	bool isServiceInstalled();
+	bool regSelfStart();
+	bool unregSelfStart();
+	bool isSelfStartReg();
 	int OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
 	udpServer m_foodPlate; //Ê³ÎïÅÌ×Ó
 	SYSTEMTIME m_lastFeedTime;

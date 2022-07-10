@@ -73,70 +73,34 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
-	MB_RTU_PKT a, b;
-	b.crc_H = 0xAA;
-	a = b;
-	vector<MB_RTU_PKT> vec;
-	vec.push_back(a);
+	vector<string> args;
+	for (int i = 0; i < argc; i++) {
+		string s = argv[i];
+		args.push_back(s);
+	}
 
 	setThreadName("main thread");
 	tds->conf = &tdsImp.tdsConf;
 	
-	string cmd;
-
-	//use cmd line conf first ,or use tds.json 
-	cli::Parser parser(argc, argv);
-	parser.set_optional<string>("m", "mode", "",charCodec::utf8toAnsi(
-"hub: tcp集线器模式，左侧数据将发往右侧所有连接;右侧数据将发往左侧所有连接\r\n\
-      示例:  tds -m hub -sl 666 -sr 667\r\n\
-   switch: tcp交换机模式\r\n\
-   rproxy: 反向代理模式\r\n\
-   tcp2com: tcp转串口模式;\r\n\
-   js: javascript解释器模式;\r\n\
-      示例:  tds -m tcp2com -com COM1 -tcpc 127.0.0.1:666"));
-
-	parser.set_optional<int>("sl", "serverleft", 666, "");
-	parser.set_optional<int>("sr", "serverright", 667, "");
-	parser.set_optional<int>("gsd", "gensimudb", 0, _GB("生成db仿真数据; 输入生成条数"));
-	parser.set_optional<string>("tc", "tdsconf", "", "tds config file");
-	parser.set_optional<string>("com", "com", "COM1", "com port number in tcp2com mode");
-	parser.set_optional<string>("tcpc", "tcpc", "", "tcp client in format XXX.XXX.XXX.XXX:XXXX");
-	parser.set_optional<string>("tcps", "tcps", "", "tcp server in format XXXX");
-	parser.set_optional<string>("sb", "serverbackend", "127.0.0.1:666", "backend server in reverse proxy mode");
-	parser.set_optional<int>("pp", "proxyport", 667, "proxy server port in reverse proxy mode");
-	parser.set_optional<int>("p", "port", 0, "Integers in all forms, e.g., unsigned int, long long, ..., are possible. Hexadecimal and Ocatl numbers parsed as well");
-	parser.set_optional<bool>("d", "debug", false, "run in debug mode. heartbeat will be closed;more log will be added;");
-	parser.set_optional<int>("baudRate", "baudRate", 19200, _GB("串口波特率"));
-	parser.set_optional<int>("byteSize", "byteSize", 8, _GB("串口数据位"));
-	parser.set_optional<string>("stopBits", "stopBits", "1", _GB("停止位"));
-	parser.set_optional<string>("parity", "parity", "None", _GB("校验位"));
-	parser.set_optional<string>("path", "path", "None", _GB("文件路径"));
-	parser.set_optional<string>("os", "oldstr", "None", _GB("被替换的字符串"));
-	parser.set_optional<string>("ns", "newstr", "None", _GB("新字符串"));
-
-	//保持无效值，使用配置文件当中的值
-	parser.set_optional<string>("l", "loglevel", "", "value can be detail,trace,debug,warn,error");
-	parser.run_and_exit_if_error();
-	tds->conf->debugMode = parser.get<bool>("d");
-	tds->conf->logLevel = parser.get<string>("l");
-
 	//确认程序运行模式
-	string mode = fs::appName();
-	string cmdlineMode = parser.get<string>("m");
-	if (cmdlineMode != "")
-		mode = cmdlineMode;
-
+	string appName = fs::appName();
+	string mode = "tds";
+	if (appName == "tds") {
+		if(args.size() > 1)
+		   mode = args[1];
+	}
+	else {
+		mode = appName;
+	}
+	
 	//设置当前路径为程序运行目录 tdsConf.loadConf();中的相对路径解析会用到当前路径
 	tdsImp.setWorkingDir();
 
 	//根据模式差异化加载配置
 	tdsImp.tdsConf.mode = mode;
-	tdsImp.tdsConf.m_confFileName = parser.get<string>("tc");
-	tdsImp.tdsConf.m_confFileName = str::trimSuffix(tdsImp.tdsConf.m_confFileName, ".ini");
 	tdsImp.tdsConf.loadConf();
 
-
-	int simuRecCount = parser.get<int>("gsd");
+	int simuRecCount = 0;
 	if (simuRecCount > 0)
 	{
 		tds->conf->mode = "cmd";
@@ -173,6 +137,37 @@ int main(int argc, char** argv)
 
 	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd")
 	{
+		if (args.size() > 1) {
+			if (args[1] == "unreg") {
+				printf(_GB("是否从开机启动项删除? (y/n)"));
+				char c = getchar();
+				if (c == 'y' || c == 'Y') {
+					watchDog.unregSelfStart();
+				}
+				return 0;
+			}
+			else if (args[1] == "reg") {
+				printf(_GB("是否添加到开机启动? (y/n)"));
+				char c = getchar();
+				if (c == 'y' || c == 'Y') {
+					watchDog.regSelfStart();
+					return 0;
+				}
+			}
+		}
+		else {
+			if (!watchDog.isSelfStartReg()) {
+				printf(_GB("是否添加到开机启动? (y/n)"));
+				char c = getchar();
+				if (c == 'y' || c == 'Y') {
+					watchDog.regSelfStart();
+					return 0;
+				}
+				printf(_GB("tdsd未添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
+			}
+			else
+				printf(_GB("tdsd已添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
+		}
 		watchDog.run();
 	}
 	else if (mode == "js")
@@ -194,22 +189,18 @@ int main(int argc, char** argv)
 
 		httpSrv->listen("0.0.0.0", tds->conf->httpPort);
 	}
-	else if (mode == "dog")
-	{
-		watchDog.run();
-	}
 	else if (mode == "hub")
 	{
 		tcpHub* tr = new tcpHub();
-		tr->portLeft = parser.get<int>("sl");
-		tr->portRight = parser.get<int>("sr");
+		//tr->portLeft = parser.get<int>("sl");
+		//tr->portRight = parser.get<int>("sr");
 		tr->run();
 	}
 	else if (mode == "switch")
 	{
 		tcpSwitch* tr = new tcpSwitch();
-		tr->portLeft = parser.get<int>("sl");
-		tr->portRight = parser.get<int>("sr");
+		//tr->portLeft = parser.get<int>("sl");
+		//tr->portRight = parser.get<int>("sr");
 		tr->run();
 	}
 	else if (mode == "rphttp")
@@ -220,8 +211,8 @@ int main(int argc, char** argv)
 	else if (mode == "rptcp")
 	{
 		tcpReverseProxy* tr = new tcpReverseProxy();
-		tr->realHost = parser.get<string>("sb");
-		tr->proxyPort = parser.get<int>("pp");
+		//tr->realHost = parser.get<string>("sb");
+		//tr->proxyPort = parser.get<int>("pp");
 		tr->run();
 	}
 	else if (mode == "tcp2com")
@@ -231,10 +222,10 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "replace") {
 		//.rc文件为gb2312编码
-		string path = parser.get<string>("path");
-		string oldstr = parser.get<string>("os");
-		string newstr = parser.get<string>("ns");
-		Tools::replaceStrInFile(path, oldstr, newstr);
+		//string path = parser.get<string>("path");
+		//string oldstr = parser.get<string>("os");
+		//string newstr = parser.get<string>("ns");
+		//Tools::replaceStrInFile(path, oldstr, newstr);
 		exit(0);
 	}
 	else if (mode == "gb2u8")
