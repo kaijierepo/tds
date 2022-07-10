@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "tdsWatchDog.h"
-#include "logger.h"
 #include <winver.h>
 
 
@@ -11,7 +10,8 @@ tdsDogFeeder dogFeeder;
 
 tdsWatchDog::tdsWatchDog()
 {
-	
+	//获取程序版本信息
+	m_curVer = watchDog.getCurTdsVer();
 }
 
 void wakeUpFeeder() {
@@ -20,9 +20,6 @@ void wakeUpFeeder() {
 	ZeroMemory(&si, sizeof(si));
 	si.cb = sizeof(si);
 	ZeroMemory(&pi, sizeof(pi));
-
-	//获取程序版本信息
-	string ver = watchDog.getCurTdsVer();
 
 	// Start the child process.
 	//si.dwFlags = STARTF_USESHOWWINDOW;
@@ -39,11 +36,11 @@ void wakeUpFeeder() {
 		&pi)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		LOG("启动TDS失败!错误信息:" + sys::getLastError() + ",版本:" + ver);
+		watchDog.log("启动TDS失败!错误信息:" + sys::getLastError() + ",版本:" + watchDog.m_curVer);
 	}
 	else
 	{
-		LOG("启动TDS成功!启动时间: " + timeopt::nowStr() + ",版本:" + ver);
+		watchDog.log("启动TDS成功!启动时间: " + timeopt::nowStr() + ",版本:" + watchDog.m_curVer);
 	}
 
 	CloseHandle(pi.hProcess);
@@ -53,14 +50,33 @@ void wakeUpFeeder() {
 
 void thread_checkFood() {
 	GetLocalTime(&watchDog.m_lastFeedTime);
+	GetLocalTime(&watchDog.m_lastUpdateCheckTime);
 	while (1)
 	{
 		Sleep(100);
 		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
+		int updateCheckPass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastUpdateCheckTime);
+
+		if (updateCheckPass > 1000) {
+			string newRev = watchDog.getUpdateTdsVer();
+			if (newRev != "" && newRev > watchDog.m_curVer) {
+				watchDog.log("发现新版本:" + newRev + ",当前版本:" + watchDog.m_curVer);
+
+				WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
+				WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
+				Sleep(200);
+				WinExec("copy .\\update\\tds.exe .\\tds.exe", SW_SHOW);
+				wakeUpFeeder();
+				Sleep(5000);
+			}
+			GetLocalTime(&watchDog.m_lastUpdateCheckTime);
+		}
+
+
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 		if (pass > 1000)
 		{
-			LOG("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
+			//watchDog.log("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
 			//就是一个对话框显示 tds.exe 已停止工作。联机检查解决方案并关闭程序  按钮  和  关闭程序 按钮
@@ -73,7 +89,7 @@ void thread_checkFood() {
 
 void tdsWatchDog::run()
 {
-	LOG("tds daemon 守护进程启动");
+	watchDog.log("tds daemon 守护进程启动");
 	m_foodPlate.m_pCallback = this;
 	m_foodPlate.m_port = 660;
 	m_foodPlate.start();
@@ -87,6 +103,9 @@ void tdsWatchDog::run()
 
 string tdsWatchDog::getFileVerInfo(string path)
 {
+	if (!fs::fileExist(path))
+		return "";
+
 	DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
 	LPVOID pBlock = malloc(dwSize);
 	GetFileVersionInfo(path.c_str(), 0, dwSize, pBlock);
@@ -147,32 +166,20 @@ string tdsWatchDog::getUpdateTdsVer()
 	return getFileVerInfo(fs::appPath() + "/update/tds.exe");
 }
 
-
-bool tdsWatchDog::checkRevUpdate()
-{
-	string localPath = fs::appPath() + "/update";
-	vector<string> fl;
-	fs::getFileList(fl, localPath);
-	string redirectPath = "/files/apk/";
-
-	map<string, string> fil;
-
-	for (auto& i : fl)
-	{
-		fs::FILE_INFO fi;
-		string p = localPath + "/" + i;
-		fs::getFileInfo(p, fi);
-		fil[fi.modifyTime] = i;
-	}
-	return false;
-}
-
 int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
 	string food = recvData;
 	//LOG("food is " + food);
 	GetLocalTime(&m_lastFeedTime);
 	return 0;
+}
+
+void tdsWatchDog::log(string s)
+{
+	s = charCodec::utf8toAnsi(s);
+	s += "\r\n";
+	printf(s.c_str());
+	fs::appendFile(fs::appPath() + "/tdsd.log.txt", s);
 }
 
 

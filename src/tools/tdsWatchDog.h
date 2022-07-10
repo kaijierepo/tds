@@ -14,7 +14,9 @@ public:
 	int OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
 	udpServer m_foodPlate; //Ê³ÎïÅÌ×Ó
 	SYSTEMTIME m_lastFeedTime;
+	SYSTEMTIME m_lastUpdateCheckTime;
 	string m_curVer;
+	void log(string s);
 };
 
 
