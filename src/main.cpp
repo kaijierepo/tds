@@ -137,7 +137,7 @@ int main(int argc, char** argv)
 
 	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd")
 	{
-		if (args.size() > 1) {
+		/*if (args.size() > 1) {
 			if (args[1] == "unreg") {
 				printf(_GB("是否从开机启动项删除? (y/n)"));
 				char c = getchar();
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
 			}
 			else
 				printf(_GB("tdsd已添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
-		}
+		}*/
 		watchDog.run();
 	}
 	else if (mode == "js")
