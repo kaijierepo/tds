@@ -116,6 +116,7 @@ void project::saveConf()
 	json j;
 	json opt;
 	opt["getStatus"] = false;
+	opt["getMp"] = true;
 	toJson(j, opt);
 	string s = j.dump(2);
 	fs::writeFile(tds->conf->confPath + "/mo.json", s);

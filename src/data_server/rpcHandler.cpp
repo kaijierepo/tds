@@ -984,6 +984,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			json mo = params;
 			string tag = mo["tag"].get<string>();
+			string rootTag = "";
+			if (mo.contains("rootTag"))
+				rootTag = mo["rootTag"].get<string>();
+			tag = TAG::addRoot(tag, rootTag);
 			tag = TAG::addRoot(tag, session.org);
 			prj.setMo(mo,tag);
 		}
@@ -992,6 +996,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			for (int i = 0; i < params.size(); i++) {
 				json& mo = params[i];
 				string tag = mo["tag"].get<string>();
+				string rootTag = "";
+				if (mo.contains("rootTag"))
+					rootTag = mo["rootTag"].get<string>();
+				tag = TAG::addRoot(tag, rootTag);
 				tag = TAG::addRoot(tag, session.org);
 				prj.setMo(mo, tag);
 			}

@@ -138,6 +138,7 @@ public:
 
 	string TranslateRelateTag(string rtag);
 	string m_status;
+	json m_mapConf;
 
 	//topo management
 	vector<void*> m_vecIODev;//挂接的采集设备.此处暂时用void，防止依赖ioDev.h文件，导致不容易多工程复用。需再考虑更好的办法

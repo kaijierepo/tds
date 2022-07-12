@@ -120,6 +120,8 @@ bool MO::loadConf(json& conf)
 	if(conf.contains("latitude"))
 		m_latitude = conf["latitude"];
 
+	m_mapConf = conf["map"];
+
 	if (m_moType == "custom" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
 		m_moCustomTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
@@ -217,6 +219,8 @@ bool MO::toJson(json& conf, json serializeOption)
 	if(m_dbLatitudeCalib > 0.000001)
 		conf["latitudeCalib"] = m_dbLatitudeCalib;
 
+	if (m_mapConf != nullptr)
+		conf["map"] = m_mapConf;
 		
 	if (m_longitude != nullptr)
 		conf["longitude"] = m_longitude;
