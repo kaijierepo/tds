@@ -142,6 +142,8 @@ string tdsWatchDog::getFileVerInfo(string path)
 	if (!fs::fileExist(path))
 		return "";
 
+	path = charCodec::utf8toAnsi(path);
+
 	DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
 	LPVOID pBlock = malloc(dwSize);
 	GetFileVersionInfo(path.c_str(), 0, dwSize, pBlock);
