@@ -56,6 +56,9 @@ public:
 	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_login(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session);
+	bool rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session);
+	bool rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session);
+	json rpc_getUsers(json params, RPC_RESP& resp, RPC_SESSION session); //获得可以管理的用户列表
 
 	bool checkLogin(string user, string pwd, json& userInfo);
 	bool checkToken(string user, string token);
@@ -65,15 +68,14 @@ public:
 	bool rpc_changePwd(json& params, json& rlt, json& err);
 
 	json getRoles(string user);
-	json getUsers(string user); //获得可以管理的用户列表
+	
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
 	json getUserByOpenID(string openID); //公众号的openID
 	
 
 	//保存用户配置，如果已经存在则更新。如果不存在则添加。不一定是全部。相当于是merge操作
-	bool setUsers(json& users);
-	bool addUser(json& user);
+	
 	//设置单个用户，必须已经存在，否则设置失败
 	bool setUser(json& user, json& result, json& err);
 	

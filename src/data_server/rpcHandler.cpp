@@ -1268,7 +1268,7 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	json jErr;
 	if (method == "getUsers")
 	{
-		json j = userMng.getUsers(session.user);
+		json j = userMng.rpc_getUsers(params,rpcResp,session);
 		result = j.dump(4);
 	}
 	else if (method == "deleteUser")
@@ -1287,7 +1287,7 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	}
 	else if (method == "setUsers")
 	{
-		userMng.setUsers(params);
+		userMng.rpc_setUsers(params,rpcResp,session);
 	}
 	else if (method == "getUiTree")
 	{

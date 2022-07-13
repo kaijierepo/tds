@@ -324,8 +324,9 @@ json userManager::getRoles(string user)
 	}
 }
 
-json userManager::getUsers(string user)
+json userManager::rpc_getUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	string user = session.user;
 	json jRet = json::array();
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
@@ -338,10 +339,14 @@ json userManager::getUsers(string user)
 
 			for (auto& i : m_mapUsers)
 			{
-				json& userTmp = i.second;
+				json userTmp = i.second;
 				string orgTmp = userTmp["org"].get<string>();
 				if (isChildMo(org,orgTmp))
 				{
+					//当管理员用户查看 所辖范围内的用户时
+					//用户的所属组织结构位号为管理员的用户位号。非系统位号。
+					string userTag = TAG::sysTag2userTag(orgTmp, org);
+					userTmp["org"] = userTag;
 					jRet.push_back(userTmp);
 				}
 			}
@@ -350,12 +355,28 @@ json userManager::getUsers(string user)
 	return jRet;
 }
 
-bool userManager::setUsers(json& users)
+bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	json users = json::array();
+	if (params.is_object())
+		users.push_back(params);
+	else
+		users = params;
+
 	m_csUserConf.lock();
 	for (int i = 0; i < users.size(); i++)
 	{
 		json& oneUser = users[i];
+
+		//组织结构的用户位号转为系统位号
+		//浙江省.杭州市.拱墅区
+		//所属杭州市的管理员用户配置一个拱墅区的用户时，指定的用户组织结构为用户位号  “拱墅区”
+		//管理员用户组织结构为 浙江省.杭州市
+		//因此指定用户的组织结构的系统位号为   “浙江省.杭州市.拱墅区”
+		string org = oneUser["org"].get<string>();
+		org = TAG::addRoot(org, session.org);
+		oneUser["org"] = org;
+
 		string name = oneUser["name"].get<string>();
 		if (m_mapUsers.find(name) != m_mapUsers.end())
 		{
@@ -374,12 +395,13 @@ bool userManager::setUsers(json& users)
 	return true;
 }
 
-bool userManager::addUser(json& user)
+bool userManager::rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	json users = json::array();
-	users.push_back(user);
-	return setUsers(users);
+	users.push_back(params);
+	return rpc_setUsers(users,resp,session);
 }
+
 
 bool userManager::setUser(json& user,json& result,json& err)
 {

@@ -944,8 +944,19 @@ string TAG::trimRoot(string& tag)
 
 string TAG::trimRoot(string& tag, string root)
 {
-	tag = str::trimPrefix(tag, root + ".");
+	tag = str::trimPrefix(tag, root);
+	tag = str::trimPrefix(tag, ".");
 	return tag;
+}
+
+string TAG::userTag2sysTag(string userTag, string userOrg)
+{
+	return TAG::addRoot(userTag, userOrg);
+}
+
+string TAG::sysTag2userTag(string sysTag, string userOrg)
+{
+	return TAG::trimRoot(sysTag, userOrg);
 }
 
 string TAG::addRoot(string& tag)
