@@ -192,7 +192,12 @@ bool ioDev::toJson(json& conf, json opt)
 		}
 	}
 
-	if (m_channels.size() > 0)
+	bool getChan = true;
+	if (opt.contains("getChan") && opt["getChan"].get<bool>() == false) {
+		getChan = false;
+	}
+
+	if (getChan && m_channels.size() > 0)
 	{
 		json channels = json::array();
 		for (auto& i : m_channels)
