@@ -869,6 +869,32 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
+	else if(method == "getChanTemplateList")
+	{
+		json jList = json::array();
+		for (auto& i : ioSrv.m_mapChanTempalte) {
+			json tplInfo;
+			tplInfo["name"] = i.second.name;
+			tplInfo["label"] = i.second.label;
+			jList.push_back(tplInfo);
+		}
+		rpcResp.result = jList.dump();
+	}
+	else if(method == "getChanTemplate"){
+		if (params.contains("name")) {
+			string name = params["name"];
+			if (ioSrv.m_mapChanTempalte.find(name) != ioSrv.m_mapChanTempalte.end()) {
+				CHAN_TEMPLATE ct = ioSrv.m_mapChanTempalte[name];
+				rpcResp.result = ct.channels.dump();
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_chanTemplateNotFound, "chan template not found");
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "param name is not specified");
+		}
+	}
 	else if (method == "discoverDev")
 	{
 #ifdef ENABLE_GENICAM

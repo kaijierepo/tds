@@ -471,21 +471,34 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
-	string sNodeId = params["nodeID"].get<string>();
-	bool bFinded = false;
-	ioDev* p = getIODevByNodeID(sNodeId);
+	json devList = json::array();
+	if (params.is_object())
+		devList.push_back(params);
+	else
+		devList = params;
 
-	if (p)
-	{
-		p->loadConf(params);
+	bool modified = false;
+	for (auto& devConf : devList) {
+		string sNodeId = devConf["nodeID"].get<string>();
+		bool bFinded = false;
+		ioDev* p = getIODevByNodeID(sNodeId);
+
+		if (p)
+		{
+			p->loadConf(devConf);
+			p->toJson(devConf);
+			rpcSrv.notify("devModified", devConf);
+			rpcResp.result = devConf.dump(2);
+			modified = true;
+		}
+		else {
+			rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
+			break;
+		}
+	}
+
+	if(modified)
 		saveConf();
-		p->toJson(params);
-		rpcSrv.notify("devModified", params);
-		rpcResp.result = params.dump(2);
-	}
-	else {
-		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
-	}
 }
 
 void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
@@ -556,6 +569,43 @@ void ioServer::clear()
 	m_vecChildDev.clear();
 }
 
+json ioServer::getDevTemplate(string devTplType)
+{
+	for (auto& i : m_mapChanTempalte) {
+		string tplName = i.first;
+		if (devTplType.find(tplName) != string::npos) {
+			return i.second.toJson();
+		}
+	}
+	return nullptr;
+}
+
+bool ioServer::loadChanTemplate()
+{
+	string p = tds->conf->confPath + "/template/conf.json";
+	string tplListStr;
+	if (fs::readFile(p, tplListStr)) {
+		try {
+			json jTplList = json::parse(tplListStr);
+			for (auto& i : jTplList) {
+				CHAN_TEMPLATE ct;
+				ct.name = i["name"];
+				ct.label = i["label"];
+				string tplDataStr;
+				string p1 = tds->conf->confPath + "/template/" + ct.name + ".json";
+				if (fs::readFile(p1, tplDataStr)) {
+					ct.channels = json::parse(tplDataStr);
+					m_mapChanTempalte[ct.name] = ct;
+				}
+			}
+		}
+		catch (exception& e) {
+
+		}
+	}
+	return false;
+}
+
 void ioServer::refreshSerialIODev()
 {
 	//从操作系统的设备管理器获得串口列表信息
@@ -613,6 +663,7 @@ bool ioServer::run()
 bool ioServer::runAsCloud()
 {
 	m_bRunning = true;
+	loadChanTemplate();
 
 	//启动服务端口
 	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");

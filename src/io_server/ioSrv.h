@@ -5,6 +5,21 @@
 #include "ioDiscoverer.h"
 
 
+class CHAN_TEMPLATE {
+public:
+	string name;
+	string label;
+	json channels;
+	json toJson() {
+		json j;
+		j["name"] = name;
+		j["label"] = label;
+		j["channels"] = channels;
+		return j;
+	}
+};
+
+
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
@@ -27,6 +42,11 @@ public:
 	bool loadConfAppend(json& j);
 	void saveConf();
 	void clear(); //清空所有ioDev对象及其相关的工作线程
+
+	//通道模版配置
+	json getDevTemplate(string devTplType);
+	bool loadChanTemplate();
+	map<string, CHAN_TEMPLATE> m_mapChanTempalte;
 
 	//查询与管理
 	void getAllSmartDev(vector<ioDev*>& aryDev);

@@ -88,12 +88,12 @@ ioDev::ioDev(void)
 	m_iSendDataFailCount = 0;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
-	memset(&m_stEqpOnLineDateTime, 0, sizeof(SYSTEMTIME));
+	memset(&m_stOnlineTime, 0, sizeof(SYSTEMTIME));
+	GetLocalTime(&m_stOfflineTime);
 	timeopt::setAsTimeOrg(m_stLastChanDataTime);
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 	timeopt::setAsTimeOrg(m_stLastAlarmStatusTime);
 	timeopt::setAsTimeOrg(m_stLastReqSendTime);
-	GetLocalTime(&m_stEqpOffLineDateTime);
 	GetLocalTime(&m_stLastActiveTime);
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
@@ -101,6 +101,7 @@ ioDev::ioDev(void)
 	pSessionClientBridge = NULL;
 	m_fAcqInterval = 30;
 	pIOSession = NULL;
+	m_onlineInfoQueried = false;
 }
 
 ioDev::~ioDev(void)
@@ -283,24 +284,8 @@ bool ioDev::loadConf(json& conf)
 
 	if (conf["tagBind"] != nullptr)
 	{
-		if (conf["tagBind"].is_array())
-		{
-			json tagNodes = conf["tagBind"];
-			string tag;
-			for (int i = 0; i < tagNodes.size(); i++)
-			{
-				tag += tagNodes[i];
-				if (i < tagNodes.size() - 1)
-					tag += ".";
-			}
-			m_strTagBind = tag;
-		}
-		else
-		{
-			m_strTagBind = conf["tagBind"];
-		}
-
-
+		m_strTagBind = conf["tagBind"];
+		
 		//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
 		//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
 		if (m_dispositionMode == DEV_DISPOSITION_MODE::managed)
@@ -322,25 +307,7 @@ bool ioDev::loadConf(json& conf)
 		for (auto i : childDev)
 		{
 			ioDev* pChild = nullptr;
-			if (i["level"] == "channel")
-			{
-				ioChannel* pdc = nullptr;
-				pdc = new ioChannel();
-				pdc->m_jDevAddr = i["addr"];
-				if (i["addr"].is_string())
-					pdc->m_devAddr = i["addr"].get<string>();
-				pChild = pdc;
-				pdc->loadConf(i);
-				//批量映射配置.主要用于mqtt的场景，当mqtt的路径结构和MOTree的树结构一致时
-				if (pdc->m_devAddr != "" && isBatchLink(pdc->m_devAddr)) //datachannel instance of the batch data link will be created dynamicly when the channel data is received
-				{
-					m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
-				}
-				pdc->m_pParent = this;
-				m_channels.push_back(pdc);
-				m_mapDataChannel[pdc->getDevAddrStr()] = pdc;
-			}
-			else if (i["level"] == "device")
+			if (i["level"] == "device")
 			{
 				pChild = createIODev(i["type"].get<string>());
 				pChild->loadConf(i);
@@ -371,6 +338,11 @@ bool ioDev::loadConf(json& conf)
 				m_mapBatchDataLink[pdc->m_devAddr] = i["tagBind"];
 			}
 			addChannel(pdc);
+
+			if (m_strTagBind != "") {
+				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, m_strTagBind);
+				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, ".");
+			}
 		}
 	}
 		
@@ -690,6 +662,7 @@ void ioDev::setOnline()
 	if (m_bOnline == false)
 	{
 		m_bOnline = true;
+		m_onlineInfoQueried = false;
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
 		jNotify["nodeID"] = m_confNodeId;

@@ -163,8 +163,8 @@ public:
 	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
-	SYSTEMTIME m_stEqpOnLineDateTime;//设备上线时间戳
-	SYSTEMTIME m_stEqpOffLineDateTime;//设备掉线时间戳
+	SYSTEMTIME m_stOnlineTime;//设备上线时间戳
+	SYSTEMTIME m_stOfflineTime;//设备掉线时间戳
 	virtual bool isConnected();
 	virtual int GetAcqInterval();
 	static bool m_bAsynAcqMode;//是否启用异步采集模式
@@ -192,6 +192,7 @@ public:
 	json m_jAcq;
 	json m_jConf;
 	json m_jInfo;
+	bool m_onlineInfoQueried; //上线后2秒，执行一次信息查询。等两秒是为了防止串口转网络数据错误问题
 	json m_jSettingConf; //当前正在尝试设置的设备配置。如果setConf命令返回成功。将m_jSettingConf合并到m_jConf
 
 	void saveConfBuff();

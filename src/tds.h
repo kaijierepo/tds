@@ -334,6 +334,7 @@ enum RPC_ERROR_CODE {
 	IO_reqTimeout = -41003,	   
 	IO_devTypeError = -41004,  
 	IO_ioAddrNotSpecified = -41005,
+	IO_chanTemplateNotFound = -41006,
 
 	//tdsp
 	DEV_confNameNotFound = -42001,
