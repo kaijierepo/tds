@@ -662,6 +662,7 @@ void ioDev::setOnline()
 	if (m_bOnline == false)
 	{
 		m_bOnline = true;
+		GetLocalTime(&m_stOnlineTime);
 		m_onlineInfoQueried = false;
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
