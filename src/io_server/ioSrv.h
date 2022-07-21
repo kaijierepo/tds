@@ -19,9 +19,51 @@ public:
 	}
 };
 
+namespace IO_PROTO {
+	const string leakDetect = "iop_leakDetect";
+	const string MODBUS_RTU = "modbusRTU";
+	const string TDSRPC = "tdsRPC";
+	const string IQ60 = "iq60";
+};
 
-//²¢·¢ÎÊÌâ
-//Éè±¸ÉÏÏß²Ù×÷ioDevÁĞ±íºÍ¶ÁÈ¡ÁĞ±íµÄ²¢·¢ÎÊÌâ,Ä¿Ç°È±ÉÙÓĞĞ§µÄ¿ØÖÆ
+namespace IO_DEV_TYPE {
+	namespace DEV {
+		const string tdsp_device = "tdsp-device";
+		const string modbus_rtu_slave = "modbus-rtu-slave";
+		const string iq60_gateway = "iq60-gateway";
+		const string leakDetect = "leak-detect";
+		const string genicam = "genicam";
+		const string mqttBroker = "mqtt-broker";
+		const string tuya = "tuya";
+	}
+	namespace GW {
+		const string local_serial = "local-serial";
+		const string can_gateway = "can-gateway";
+		const string rs485_gateway = "rs485-gateway";
+		const string tuya_iot_project = "tuya-iot-project";
+	}
+	namespace CHAN {
+		const string io_channel = "io-channel";
+	}
+	namespace SERVER {
+		const string tds = "tds";
+	}
+};
+
+inline string getDevTypeLabel(string devType) {
+	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
+	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
+	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485ç½‘å…³";
+	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IOé€šé“";
+	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
+	else if (devType == IO_DEV_TYPE::GW::tuya_iot_project)return "æ¶‚é¸¦é¡¹ç›®";
+	else if (devType == "tuya") return "æ¶‚é¸¦è®¾å¤‡";
+	else return "æœªçŸ¥ç±»å‹";
+}
+
+
+//å¹¶å‘é—®é¢˜
+//è®¾å¤‡ä¸Šçº¿æ“ä½œioDevåˆ—è¡¨å’Œè¯»å–åˆ—è¡¨çš„å¹¶å‘é—®é¢˜,ç›®å‰ç¼ºå°‘æœ‰æ•ˆçš„æ§åˆ¶
 
 class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
 {
@@ -29,77 +71,80 @@ public:
 	ioServer();
 	virtual ~ioServer();
 
-	//Ö÷¿ª¹Ø
+	//ä¸»å¼€å…³
 	bool run() override;
 	bool runAsCloud();
 	bool runAsEdge();
 	void stop() override;
 
-	//×éÌ¬ĞÅÏ¢
+	//ç»„æ€ä¿¡æ¯
 	bool toJson(json& conf, json opt = nullptr);
 	bool loadConf();
 	bool loadConfMerge(json& j);
 	bool loadConfAppend(json& j);
 	void saveConf();
-	void clear(); //Çå¿ÕËùÓĞioDev¶ÔÏó¼°ÆäÏà¹ØµÄ¹¤×÷Ïß³Ì
+	void clear(); //æ¸…ç©ºæ‰€æœ‰ioDevå¯¹è±¡åŠå…¶ç›¸å…³çš„å·¥ä½œçº¿ç¨‹
 
-	//Í¨µÀÄ£°æÅäÖÃ
+	//é€šé“æ¨¡ç‰ˆé…ç½®
 	json getDevTemplate(string devTplType);
 	bool loadChanTemplate();
 	map<string, CHAN_TEMPLATE> m_mapChanTempalte;
 
-	//²éÑ¯Óë¹ÜÀí
+	//æŸ¥è¯¢ä¸ç®¡ç†
 	void getAllSmartDev(vector<ioDev*>& aryDev);
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
 
-	//ÔÚÏß×éÌ¬
+	//åœ¨çº¿ç»„æ€
 	void rpc_addDev(json& params, RPC_RESP& rpcResp,RPC_SESSION sesion);
 	void rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
-	void rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion); //ÉèÖÃÉè±¸µÄ¹ÜÀí×´Ì¬
+	void rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion); //è®¾ç½®è®¾å¤‡çš„ç®¡ç†çŠ¶æ€
 
-	//Éè±¸ÉÏÏÂÏß
+	//è®¾å¤‡ä¸Šä¸‹çº¿
 	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
 	ioDev* handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
 
-	//TcpÍ¨ĞÅ
-	tcpSrv* m_tcpSrv_tdsp; //665 tdspĞ­Òé
-	tcpSrv* m_tcpSrv_rtu; //664 modbus RTU over tcpĞ­Òé
+	//Tcpé€šä¿¡
+	map<int, string> m_mapPort2DevType;
+	tcpSrv* m_tcpSrv_tdsp; //665 tdspåè®®
+	tcpSrv* m_tcpSrv_rtu; //664 modbus RTU over tcpåè®®
 	tcpSrv* m_tcpSrv_iq60; //
+	tcpSrv* m_tcpSrv_leakDetect; //
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
-	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 
-	//´«Êä²ã´¦Àí
-	void handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
-	void onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
-	bool handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+	//ä¼ è¾“å±‚å¤„ç†
+	void handleAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+	void onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
+	void onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	bool handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	bool OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 
-	//tdsRPC·şÎñ
+	//tdsRPCæœåŠ¡
 	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	//IO»á»°
+	//IOä¼šè¯
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;
 	mutex m_mutexIoSessions;
 
 	ioDev* getIODev(string ioAddr,bool bChn = false) override;
 	
-	void updateTag2IOAddrBinding();//¸üĞÂmoÖĞµÄioAddr°ó¶¨ĞÅÏ¢
+	void updateTag2IOAddrBinding();//æ›´æ–°moä¸­çš„ioAddrç»‘å®šä¿¡æ¯
 
 	void refreshSerialIODev();
 
 	bool getStatus(json& conf, string opt = "");
 	string getTag(string ioAddr);
 
-	//Éè±¸·¢ÏÖ±ØĞëÊÇÄ³¸ö¸¸Éè±¸·¢ÏÖÁË×ÓÉè±¸
+	//è®¾å¤‡å‘ç°å¿…é¡»æ˜¯æŸä¸ªçˆ¶è®¾å¤‡å‘ç°äº†å­è®¾å¤‡
 	ioDev* onChildDevDiscovered(json childDevAddr, string type);
 	ioDiscoverer  ioDiscoverService;
 
 
-	bool m_stopCycleAcq; //È«¾ÖÖÜÆÚ²É¼¯¿ª¹Ø£¬µ÷ÊÔÊ±Ê¹ÓÃ£¬µ÷ÊÔÊ±È«¾Ö¹Ø±ÕÖÜÆÚ²É¼¯¡£·½±ãÊÖ¹¤·¢ËÍÊı¾İ²¢¹Û²ì
+	bool m_stopCycleAcq; //å…¨å±€å‘¨æœŸé‡‡é›†å¼€å…³ï¼Œè°ƒè¯•æ—¶ä½¿ç”¨ï¼Œè°ƒè¯•æ—¶å…¨å±€å…³é—­å‘¨æœŸé‡‡é›†ã€‚æ–¹ä¾¿æ‰‹å·¥å‘é€æ•°æ®å¹¶è§‚å¯Ÿ
 };
 
 extern ioServer ioSrv;

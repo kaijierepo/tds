@@ -127,6 +127,7 @@ public:
     std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
+	string ioDevType;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
 	SYSTEMTIME stCreateTime;
 	int abandonLen;

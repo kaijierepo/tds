@@ -657,7 +657,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
          }
          if (tdsSession->type == "")
              tdsSession->type = TDS_SESSION_TYPE::tdsClient;
-         tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
+         tdsSession->iALProto = "tdsRPC";
 
          string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
          LOG(szLog);

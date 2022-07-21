@@ -49,12 +49,7 @@ namespace TDS {
 		const string man_strobe = "man_strobe";
 	};
 	
-	namespace IO_DEV_LEVEL {
-		const string server = "server";
-		const string gateway = "gateway";
-		const string device = "device";
-		const string channel = "channel";
-	}
+
 
 	namespace DEV_ADDR_MODE {
 		const string tcpClient = "tcpClient";
@@ -68,27 +63,11 @@ namespace TDS {
 		const string IO = "io";
 	}
 
-	namespace IO_DEV_TYPE {
-		namespace DEV {
-			const string tdsp_device = "tdsp-device";
-			const string modbus_rtu_slave = "modbus-rtu-slave";
-			const string iq60_gateway = "iq60-gateway";
-			const string genicam = "genicam";
-			const string mqttBroker = "mqtt-broker";
-			const string tuya = "tuya";
-		}
-		namespace GW {
-			const string local_serial = "local-serial";
-			const string can_gateway = "can-gateway";
-			const string rs485_gateway = "rs485-gateway";
-			const string tuya_iot_project = "tuya-iot-project";
-		}
-		namespace CHAN {
-			const string io_channel = "io-channel";
-		}
-		namespace SERVER {
-			const string tds = "tds";
-		}
+	namespace IO_DEV_LEVEL {
+		const string server = "server";
+		const string gateway = "gateway";
+		const string device = "device";
+		const string channel = "channel";
 	}
 };
 

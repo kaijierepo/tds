@@ -60,9 +60,9 @@ void IOThread()
 }
 
 
-void onRecvIQ60Pkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void onRecvIQ60Pkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	string pkt = str::fromBuff(pData, iLen);
+	string pkt = str::fromBuff((char*)pData, iLen);
 
 	try {
 		json jpkt = json::parse(pkt);
@@ -139,15 +139,15 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 			p->m_IoDev = pIoDev;
 			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
 			{
-				p->iALProto = APP_LAYER_PROTO::IQ60;
+				p->iALProto = IO_PROTO::IQ60;
 			}
 			else if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
 			{
-				p->iALProto = APP_LAYER_PROTO::TDSRPC;
+				p->iALProto = IO_PROTO::TDSRPC;
 			}
 			else if (pIoDev->m_devType == IO_DEV_TYPE::GW::rs485_gateway)
 			{
-				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
+				p->iALProto = IO_PROTO::MODBUS_RTU;
 			}
 			pIoDev->setOnline();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
@@ -173,19 +173,10 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
 
 		tcpSrv* pts = (tcpSrv*)pTcpSess->pTcpServer;
-		if (pts->m_iServerPort == tds->conf->tdspPort)
-		{
-			p->iALProto = APP_LAYER_PROTO::TDSRPC;
+		if (m_mapPort2DevType.find(pts->m_iServerPort) != m_mapPort2DevType.end()) {
+			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
 		}
-		else if (pts->m_iServerPort == tds->conf->mbPort)
-		{
-			p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
-		}
-		else if (pts->m_iServerPort == tds->conf->iq60Port)
-		{
-			p->iALProto = APP_LAYER_PROTO::IQ60;
-		}
-		
+
 		ioDev* pIoDev = ioSrv.getIODev(p->ip);
 		if (pIoDev)
 		{
@@ -211,7 +202,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	}
 }
 
-void ioServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> ioSession)
+void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> ioSession)
 {
 	GetLocalTime(&ioSession->lastRecvTime);
 
@@ -221,7 +212,7 @@ void ioServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION
 	//首次从该链接收到数据时的处理。
 	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
 	{
-		string strData = str::fromBuff(pData, iLen);
+		string strData = str::fromBuff((char*)pData, iLen);
 		//parse transfer layer protocol
 		if (strData.find("HTTP") != string::npos)
 		{
@@ -251,13 +242,13 @@ void ioServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION
 	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
 	{
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
-		tlBuf.PushStream(pData, iLen);
+		tlBuf.PushStream((unsigned char*)pData, iLen);
 		while (tlBuf.PopPkt(APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
 		{
 			CWSPPkt wsPkt;
 			wsPkt.unpack(tlBuf.pkt, tlBuf.iPktLen);
 			if (wsPkt.isDataFrame())
-				OnRecvAppLayerData(wsPkt.payloadData, wsPkt.iPayloadLen,ioSession,wsPkt.fin_?true:false);
+				OnRecvAppLayerData((unsigned char*)wsPkt.payloadData, wsPkt.iPayloadLen,ioSession,wsPkt.fin_?true:false);
 		}
 
 		if (tlBuf.iStreamLen > 1 * 1024 * 1024)
@@ -271,14 +262,14 @@ void ioServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION
 	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
-		tlBuf.PushStream(pData, iLen);
+		tlBuf.PushStream((unsigned char*)pData, iLen);
 		while (tlBuf.PopPkt(APP_LAYER_PROTO::HTTP))
 		{
-			string sHttp = str::fromBuff(tlBuf.pkt, tlBuf.iPktLen);
+			string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
 			httplib::Request httpReq;
 			httplib::Server srv;
 			srv.parse_request_line(sHttp.c_str(), httpReq);
-			OnRecvAppLayerData((char*)httpReq.body.c_str(),httpReq.body.length(), ioSession,true);
+			OnRecvAppLayerData((unsigned char*)httpReq.body.c_str(),httpReq.body.length(), ioSession,true);
 		}
 	}
 	//tcp直连,没有传输层，表示全部都是应用层数据
@@ -294,7 +285,7 @@ void ioServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
-	OnRecvData_TCP(pData, iLen, ioSession);
+	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
 void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSessClt)
@@ -303,7 +294,7 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
-	OnRecvData_TCP(pData, iLen, ioSession);
+	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
 bool ioServer::loadConf()
@@ -315,6 +306,10 @@ bool ioServer::loadConf()
 		return true;
 	}
 
+	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
+	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::DEV::modbus_rtu_slave;
+	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
+	m_mapPort2DevType[662] = IO_DEV_TYPE::DEV::leakDetect;
 
 	try {
 		json io = json::parse(conf.c_str());
@@ -391,13 +386,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	{
 		json jAddr;
 		jAddr["id"] = ioAddr;
-
-		if(tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-		else if(tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
-			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::GW::rs485_gateway);
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
-			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::iq60_gateway);
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr, tdsSession->ioDevType);
 	}
 	//设备上线
 	else
@@ -665,10 +654,13 @@ bool ioServer::runAsCloud()
 	m_bRunning = true;
 	loadChanTemplate();
 
+	int leakDetectPort = 662;
+
 	//启动服务端口
 	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
 	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
 	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
+	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
@@ -708,6 +700,19 @@ bool ioServer::runAsCloud()
 	else
 	{
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->iq60Port));
+	}
+
+	//io服务 663 IQ60
+	m_tcpSrv_leakDetect = new tcpSrv();
+	m_tcpSrv_leakDetect->m_strName = "leakDetect";
+	m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_leakDetect->run(this, leakDetectPort))
+	{
+
+	}
+	else
+	{
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(leakDetectPort));
 	}
 
 
@@ -908,10 +913,10 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 	}
 }
 
-void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
+void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
 	//协议检测
-	if (tdsSession->iALProto == APP_LAYER_PROTO::UNKNOWN)//应用层协议类型检测
+	if (tdsSession->ioDevType == "")//应用层协议类型检测
 	{
 		//应用层协议智能检测。根据收到的首包数据进行检测
 		//傲华尔远程控制协议
@@ -919,7 +924,7 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
 			)
 		{
-			tdsSession->iALProto = APP_LAYER_PROTO::IQ60;
+			tdsSession->iALProto = IO_PROTO::IQ60;
 			tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
 		}
 	}
@@ -927,36 +932,36 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 	//应用层协议处理
 	if (tdsSession->bridgedIoSessionClient != NULL)
 	{
-		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+		if (tdsSession->iALProto == IO_PROTO::TDSRPC)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
 			while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
 			{
-				tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-				string s = str::fromBuff(pab->pkt, pab->iPktLen);
+				tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}
 		}
 		//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+		else if (tdsSession->iALProto == IO_PROTO::IQ60)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::IQ60) || pab->PopPkt(APP_LAYER_PROTO::terminalPrompt))
+			while (pab->PopPkt(IsValidPkt_IQ60) || pab->PopPkt(APP_LAYER_PROTO::terminalPrompt))
 			{
-				tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
-				string s = str::fromBuff(pab->pkt, pab->iPktLen);
+				tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}
 		}
 	}
-	else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60)
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway)
 	{
 		bool regPkt = false;
 		if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 		{
-			string s = str::fromBuff(pData, iLen);
+			string s = str::fromBuff((char*)pData, iLen);
 			LOG("[IQ60首发数据]" + s);
 			if (s.find("IQ60_") == 0)
 			{
@@ -970,7 +975,7 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 				{
 					stream2pkt* pab = &tdsSession->m_alBuf;
 					pab->PushStream(pData + 16, iLen - 16);
-					while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+					while (pab->PopPkt(IsValidPkt_IQ60))
 					{
 						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 					}
@@ -982,13 +987,13 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::IQ60))
+			while (pab->PopPkt(IsValidPkt_IQ60))
 			{
 				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 	}
-	else if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
 	{
 		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
@@ -1004,7 +1009,7 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 			{
 				stream2pkt* pab = &tdsSession->m_alBuf;
 				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+				while (pab->PopPkt(IsValidPkt_TDSP))
 				{
 					if (pab->abandonData != "")
 					{
@@ -1018,7 +1023,7 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 			}
 		}
 	}
-	else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_rtu_slave)
 	{
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
 		if (handleFirstRegPkt(pData, iLen, tdsSession))//首包数据,按照tdsp注册包处理
@@ -1031,14 +1036,14 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 			bool bRegPkt = false;
 			if (!tdsSession->m_bAppDataRecved)//如果是第一包，尝试检查是不是rpc注册包
 			{
-				if (pab->PopPkt(APP_LAYER_PROTO::TDSRPC))
+				if (pab->PopPkt(IsValidPkt_ModbusRTU))
 				{
 					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession, true);
 					LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
 				}
 			}
 
-			while (pab->PopPkt(APP_LAYER_PROTO::MODBUS_RTU))
+			while (pab->PopPkt(IsValidPkt_ModbusRTU))
 			{
 				if (pab->abandonData != "")
 				{
@@ -1051,15 +1056,29 @@ void ioServer::handleAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SES
 			}
 		}
 	}
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::leakDetect) {
+		stream2pkt* pab = &tdsSession->m_alBuf;
+		pab->PushStream((unsigned char*)pData, iLen);
+		while (pab->PopPkt(IsValidPkt_LeakDetect))
+		{
+			if (pab->abandonData != "")
+			{
+				string remoteAddr = tdsSession->getRemoteAddr();
+				LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+				tdsSession->abandonLen += pab->iAbandonBytes;
+			}
+			onRecvPkt_ioDev((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
+		}
+	}
 }
 
-void ioServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
+void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
 {
 	try
 	{
-		if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
+		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
 		{
-			string sResp = str::fromBuff(pData, iLen);
+			string sResp = str::fromBuff((char*)pData, iLen);
 
 			//编解码转换
 			if (rpcSrv.isGB2312Pkt(sResp))
@@ -1116,12 +1135,12 @@ void ioServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSIO
 			pIoDev->onRecvPkt(jResp);
 			LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
 		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::MODBUS_RTU)
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_rtu_slave)
 		{
 			//4g模式下的modbus RTU over tcp 第一包必须发送注册包
 			if (registerPkt)
 			{
-				string sResp = str::fromBuff(pData, iLen);
+				string sResp = str::fromBuff((char*)pData, iLen);
 				json jResp = json::parse(sResp);
 				string method = jResp["method"].get<string>();
 				string strIoAddr = jResp["ioAddr"].get<string>();
@@ -1132,12 +1151,15 @@ void ioServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSIO
 			{
 				if (tdsSession->m_IoDev)
 				{
-					tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+					tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
 				}
 			}
 		}
-		else if (tdsSession->iALProto == APP_LAYER_PROTO::IQ60) {
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway) {
 			onRecvIQ60Pkt(pData, iLen, tdsSession);
+		}
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::leakDetect) {
+			onRecvPkt_leakDetect(pData, iLen, tdsSession);
 		}
 	}
 	catch (std::exception& e)
@@ -1150,21 +1172,42 @@ void ioServer::onRecvPkt_ioDev(char* pData, int iLen, std::shared_ptr<TDS_SESSIO
 	}
 }
 
+void ioServer::onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	int id = pData[6];
+	string sId = str::fromInt(id);
 
-bool ioServer::handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+	//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
+	ioDev* pIoDev = tdsSession->m_IoDev;
+	if (tdsSession->m_IoDev == nullptr)
+	{
+		pIoDev = ioSrv.handleDevOnline(sId, tdsSession);
+	}
+
+	if (pIoDev)
+	{
+		ioDev* p = pIoDev;
+		p->bindIOSession(tdsSession);
+		p->setOnline();
+		p->onRecvPkt((char*)pData,iLen);
+	}
+}
+
+
+bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	if (!tdsSession->m_bAppDataRecved)
 	{
-		if (iLen == 15 && str::isDigits(pData, iLen))
+		if (iLen == 15 && str::isDigits((char*)pData, iLen))
 		{
-			string imei = str::fromBuff(pData, iLen);
+			string imei = str::fromBuff((char*)pData, iLen);
 			LOG("收到首发注册包,15位IMEI格式,IMEI=" + imei);
 			ioSrv.handleDevOnline(imei, tdsSession);
 			return true;
 		}
-		else if (iLen > 4 && (str::fromBuff(pData, 4) == "imei" || str::fromBuff(pData, 4) == "IMEI"))
+		else if (iLen > 4 && (str::fromBuff((char*)pData, 4) == "imei" || str::fromBuff((char*)pData, 4) == "IMEI"))
 		{
-			string imei = str::fromBuff(pData, iLen);
+			string imei = str::fromBuff((char*)pData, iLen);
 			LOG("收到首发注册包,IMEI前缀格式,IMEI=" + imei);
 			ioSrv.handleDevOnline(imei, tdsSession);
 			return true;
@@ -1175,9 +1218,9 @@ bool ioServer::handleFirstRegPkt(char* pData, int iLen, std::shared_ptr<TDS_SESS
 }
 
 //onRecvData需要组包
-bool ioServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
+bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
-	tdsSession->statisOnRecv(pData, iLen);
+	tdsSession->statisOnRecv((char*)pData, iLen);
 
 	DWORD dwDataLen = iLen;
 

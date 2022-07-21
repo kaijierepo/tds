@@ -29,10 +29,10 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 		{
 			req.unpack((char*)pData, iLen);
 			string strJson = req.payloadData;
-			pALC->m_alBuf.PushStream((char*)req.payloadData, req.iPayloadLen);
+			pALC->m_alBuf.PushStream((unsigned char*)req.payloadData, req.iPayloadLen);
 			if (req.fin_)
 			{
-				if (pALC->m_alBuf.PopAllAs(APP_LAYER_PROTO::TDSRPC))
+				if (pALC->m_alBuf.PopAllAs("tdsRPC"))
 				{
 					pALC->iALProto = pALC->m_alBuf.m_protocolType;
 					ds.OnRecvAppLayerData((char*)pALC->m_alBuf.pkt, pALC->m_alBuf.iPktLen, pALC,true);
@@ -62,10 +62,10 @@ void wspSrv::OnRecvWSFrame(char* pData, int iLen, shared_ptr<TDS_SESSION> pALC)
 
 void wspSrv::OnRecvWSData(char* pData, int iLen, stream2pkt* pPab, shared_ptr<TDS_SESSION> pALC)
 {
-	pPab->PushStream(pData, iLen);
+	pPab->PushStream((unsigned char*)pData, iLen);
 	while (pPab->PopPkt(APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
 	{
-		OnRecvWSFrame(pPab->pkt, pPab->iPktLen, pALC);
+		OnRecvWSFrame(( char*)pPab->pkt, pPab->iPktLen, pALC);
 	}
 
 	if (pPab->iStreamLen > 1*1024*1024)

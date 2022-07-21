@@ -2,10 +2,87 @@
 #include "proto/wsProto.h"
 #include "stream2pkt.h"
 
-
-void stream2pkt::Resize(char*& pData, int& iLen, int iNewSize)
+int IsValidPkt_IQ60(unsigned char* pData, int iLen)
 {
-	char* pNewData = new char[iNewSize];
+	if (iLen < 3)
+		return 0;
+	if (pData[0] == '[')
+	{
+		for (int i = 0; i < iLen; i++)
+		{
+			if (pData[i] == '\n' && pData[i - 1] == ']')
+			{
+				return i + 1;
+			}
+		}
+	}
+	return 0;
+}
+
+int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen)
+{
+	if (iLen < 4)
+		return 0;
+
+	WORD crc1 = *(WORD*)(pData + iLen - 2);
+	common::endianSwap((char*)&crc1, 2);
+	WORD crc2 = common::N_CRC16((unsigned char*)pData, iLen - 2);
+	if (crc1 == crc2)
+		return iLen;
+	else
+		return 0;
+}
+
+int IsValidPkt_TDSP(unsigned char* pData, int iLen)
+{
+	if (iLen < 15)
+		return 0;
+	if (pData[0] != '{')
+		return 0;
+
+	for (int i = 0; i < iLen - 3; i++)
+	{
+		if (pData[i] == '\r' && pData[i + 1] == '\n' && pData[i + 2] == '\r' && pData[i + 3] == '\n')
+		{
+			return i + 4;
+		}
+	}
+
+	for (int i = 0; i < iLen - 1; i++)
+	{
+		if (pData[i] == '\n' && pData[i + 1] == '\n')
+		{
+			return i + 2;
+		}
+	}
+	return 0;
+}
+
+int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
+{
+	if (iLen < 12)
+		return 0;
+	if (pData[0] == 0xA5 && pData[1] == 0xA5)
+	{
+
+	}
+	else
+		return 0;
+
+	for (int i = 0; i <= iLen - 2; i++)
+	{
+		if (pData[i] == 0x5A && pData[i + 1] == 0x5A)
+		{
+			return i + 2;
+		}
+	}
+
+	return 0;
+}
+
+void stream2pkt::Resize(unsigned char*& pData, int& iLen, int iNewSize)
+{
+	unsigned char* pNewData = new unsigned char[iNewSize];
 
 	if (pData == NULL || iLen == 0)
 	{
@@ -31,7 +108,7 @@ void stream2pkt::ResizePopPktBuff(int iNewSize)
 	Resize(pkt, iPktBuffSize, iNewSize);
 }
 
-void stream2pkt::PushStream(char* pData, int iLen)
+void stream2pkt::PushStream(unsigned char* pData, int iLen)
 {
 	if (iStreamLen + iLen > iStreaBuffSize)
 		ResizeStreamBuff(iStreamLen + iLen);
@@ -46,70 +123,6 @@ bool stream2pkt::PopPkt(string cpt)
 	for (int i = 0; i < iStreamLen; i++)
 	{
 		int ilen = 0;
-
-		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::MODBUS_RTU))
-		{	
-			if (i == 0)
-			{
-				ilen = IsValidPkt_ModbusRTU(stream + i, iStreamLen - i);
-				if (ilen > 0)
-				{
-					m_protocolType = APP_LAYER_PROTO::MODBUS_RTU;
-				}
-			}	
-		}
-
-		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::TDSRPC))
-		{
-			//if (i == 0) //如果确定数据包不会出错，提高性能，则加入i==0判断。  如果数据中会有错误数据，需要容错。除掉i==0判断
-			//{
-				ilen = IsValidPkt_JSONRPC(stream + i, iStreamLen - i);
-				if (ilen > 0)
-				{
-					m_protocolType = APP_LAYER_PROTO::TDSRPC;
-				}
-			//}
-		}
-
-		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::UNKNOWN || cpt == APP_LAYER_PROTO::HTTP))
-		{
-			if (i == 0)
-			{
-				ilen = IsValidPkt_HTTP(stream + i, iStreamLen - i);
-				if (ilen > 0)
-				{
-					m_protocolType = APP_LAYER_PROTO::TDSRPC;
-				}
-			}
-		}
-
-		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
-		{
-			if (i > 0)
-				break;
-			ilen = IsValidPkt_WEBSOCKET(stream + i, iStreamLen - i);
-			if (ilen > 0)
-			{
-				m_protocolType = APP_LAYER_PROTO::PROTOCOL_WEBSOCKET;
-			}
-		}
-
-
-		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::IQ60))
-		{
-			//if (i > 0)//如果确定数据包不会出错，提高性能，则启用该break;
-				//break;
-			ilen = IsValidPkt_IQ60(stream + i, iStreamLen - i);
-			if (ilen > 0)
-			{
-				m_protocolType = APP_LAYER_PROTO::IQ60;
-			}
-		}
 
 		if (ilen == 0 &&
 			(cpt == APP_LAYER_PROTO::textEnd2LF))
@@ -176,6 +189,44 @@ bool stream2pkt::PopPkt(string cpt)
 	return false;
 }
 
+bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
+{
+	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
+	for (int i = 0; i < iStreamLen; i++)
+	{
+		int ilen = 0;
+
+		if (!faultTolerant && i > 0)
+			break;
+
+		ilen = pktCheckFn(stream + i, iStreamLen - i);
+
+		if (ilen)
+		{
+			if (ilen > iPktBuffSize)
+				ResizePopPktBuff(ilen);
+
+			if (i > 0)
+				abandonData = str::bytesToHexStr(stream, i);
+			else
+				abandonData = "";
+
+			memcpy_s(pkt, iPktBuffSize, stream + i, ilen);
+			iPktLen = ilen;
+
+			memcpy_s(stream, iStreaBuffSize, stream + i + ilen, iStreamLen - i - ilen);
+			iStreamLen -= i + ilen;
+			iAbandonBytes = i;
+
+			ResizeStreamBuff(iStreamLen);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool stream2pkt::PopAllAs(string cpt)
 {
 	if(iStreamLen > iPktBuffSize)
@@ -193,27 +244,13 @@ bool stream2pkt::PopAllAs(string cpt)
 	return 0;
 }
 
-int stream2pkt::IsValidPkt_ModbusRTU( char* pData,int iLen )
+
+int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 {
-	if (iLen < 4)
-		return 0;
-
-	WORD crc1 = *(WORD*)(pData + iLen -2);
-	common::endianSwap((char*)&crc1, 2);
-	WORD crc2 = common::N_CRC16((unsigned char*)pData,iLen - 2);
-	if(crc1 == crc2)
-		return iLen;
-	else
-		return 0;
-}
-
-
-int stream2pkt::IsValidPkt_HTTP( char* pData,int iLen )
-{
-	char* ptmp = new char[iLen + 1];
+	unsigned char* ptmp = new unsigned char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);
 	memcpy(ptmp, pData, iLen);
-	string strData = ptmp;
+	string strData = (char*)ptmp;
 	delete ptmp;
 
 	int iPos_contentLengthLineStart = strData.find("Content-Length:"); //15
@@ -259,42 +296,17 @@ int stream2pkt::IsValidPkt_HTTP( char* pData,int iLen )
 	}
 }
 
-int stream2pkt::IsValidPkt_JSONRPC(char* pData, int iLen)
-{
-	if (iLen < 15)
-		return 0;
-	if (pData[0] != '{')
-		return 0;
-
-	for (int i = 0; i < iLen - 3; i++)
-	{
-		if (pData[i] == '\r' && pData[i + 1] == '\n' && pData[i + 2] == '\r' && pData[i + 3] == '\n')
-		{
-			return i + 4;
-		}
-	}
-
-	for (int i = 0; i < iLen - 1; i++)
-	{
-		if (pData[i] == '\n' && pData[i + 1] == '\n')
-		{
-			return i + 2;
-		}
-	}
-	return 0;
-}
-
-int stream2pkt::IsValidPkt_WEBSOCKET(char* pData, int iLen)
+int stream2pkt::IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen)
 {
 	CWSPPkt req;
-	if (WS_ERROR_FRAME != req.unpack((char*)pData, iLen))
+	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))
 	{
 		return req.iFrmLen;
 	}
 	return 0;
 }
 
-int stream2pkt::IsValidPkt_terminalPrompt(char* pData, int iLen)
+int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 {
 	if (iLen < 5)
 		return 0;
@@ -310,7 +322,7 @@ int stream2pkt::IsValidPkt_terminalPrompt(char* pData, int iLen)
 }
 
 
-int stream2pkt::IsValidPkt_textEnd2LF(char* pData, int iLen)
+int stream2pkt::IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
 {
 	if (iLen < 5)
 		return 0;
@@ -324,30 +336,13 @@ int stream2pkt::IsValidPkt_textEnd2LF(char* pData, int iLen)
 	return 0;
 }
 
-int stream2pkt::IsValidPkt_textEnd1LF(char* pData, int iLen)
+int stream2pkt::IsValidPkt_textEnd1LF(unsigned char* pData, int iLen)
 {
 	for (int i = 0; i < iLen; i++)
 	{
 		if (pData[i] == '\n')
 		{
 			return i + 1;
-		}
-	}
-	return 0;
-}
-
-int stream2pkt::IsValidPkt_IQ60(char* pData, int iLen)
-{
-	if (iLen < 3)
-		return 0;
-	if (pData[0] == '[')
-	{
-		for (int i = 0; i < iLen; i++)
-		{
-			if (pData[i] == '\n' && pData[i - 1] == ']')
-			{
-				return i + 1;
-			}
 		}
 	}
 	return 0;

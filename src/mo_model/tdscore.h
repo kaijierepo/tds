@@ -35,17 +35,6 @@ namespace TDS {
 	}
 
 
-inline string getDevTypeLabel(string devType) {
-	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
-	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
-	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485网关";
-	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IO通道";
-	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
-	else if (devType == IO_DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";
-	else if (devType == "tuya") return "涂鸦设备";
-	else return "未知类型";
-}
-
 	namespace DATA_SAVE_MODE {
 		const string always = "always";
 		const string onchange = "onchange";
@@ -153,11 +142,8 @@ const std::map<string, string> TDS_ERROR_DESC = {
 namespace APP_LAYER_PROTO {
 	const string UNKNOWN = "unknown";
 	const string HTTP= "http";
-	const string MODBUS_RTU= "modbusRTU";
 	const string PROTOCOL_WEBSOCKET= "websocket";
-	const string TDSRPC= "tdsRPC";
 	const string PROTOCOL_FRAMING_PROTOCOL= "alp_framing_protocol";
-	const string IQ60 = "iq60";
 	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
 	const string terminalPrompt = "->";  //以 -> 结尾的字符串 
 	const string textEnd1LF = "textEnd1LF";

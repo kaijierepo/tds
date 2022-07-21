@@ -372,37 +372,7 @@ void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 		p->port = pTcpSession->remotePort;
 		p->ip = pTcpSession->remoteIP;
 
-		if (pTcpSession->pTcpServer)
-		{
-			tcpSrv* pts = (tcpSrv*)pTcpSession->pTcpServer;
-			//tdsp协议端口发送请求设备信息命令
-			if (pts->m_iServerPort == tds->conf->tdspPort)
-			{
-				p->type = TDS_SESSION_TYPE::iodev;
-				p->iALProto = APP_LAYER_PROTO::TDSRPC;
-			}
-			else if (pts->m_iServerPort == tds->conf->mbPort)
-			{
-				p->type = TDS_SESSION_TYPE::iodev;
-				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
-			}
-			else if (pts->m_iServerPort == tds->conf->iq60Port)
-			{
-				p->type = TDS_SESSION_TYPE::iodev;
-				p->iALProto = APP_LAYER_PROTO::IQ60;
-			}
-		}
 
-		ioDev* pIoDev = ioSrv.getIODev(p->ip);
-		if (pIoDev)
-		{
-			p->m_IoDev = pIoDev;
-			pIoDev->setOnline();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
-			pIoDev->bindIOSession(p);
-		}
-			
 		pTcpSession->pALSession = p.get();
 		m_mutexTdsSessionList.lock();
 		m_vecTdsSession.push_back(p);
@@ -466,32 +436,6 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 			LOG("[边缘网关]连接tds服务器成功");
 			thread t(tdsEdgeRegisterThread,p);
 			t.detach();
-		}
-
-		//tds服务连接上了TcpServer模式的设备
-		string ioAddr = str::format("%s:%d", connInfo->srvIP.c_str(), connInfo->srvPort);
-		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
-		if (pIoDev)
-		{
-			p->m_IoDev = pIoDev;
-			p->type = TDS_SESSION_TYPE::iodev;
-			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
-			{
-				p->iALProto = APP_LAYER_PROTO::IQ60;
-			}
-			else if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-			{
-				p->iALProto = APP_LAYER_PROTO::TDSRPC;
-			}
-			else if (pIoDev->m_devType == IO_DEV_TYPE::GW::rs485_gateway)
-			{
-				p->iALProto = APP_LAYER_PROTO::MODBUS_RTU;
-			}
-			pIoDev->setOnline();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
-			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
-			logger.logInternal(s);
-			pIoDev->bindIOSession(p);
 		}
 	}
 	else
@@ -1062,113 +1006,6 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 {
 	GetLocalTime(&tdsSession->lastRecvTime);
 
-	if (!tdsSession->isConnected())
-	{
-		LOG("[warn]链接已断开，但仍有tcp数据未处理，丢弃,len=%d", iLen);
-		return;
-	}
-
-	//if it's the first time recv data from a connection. check transport layer protocol first
-	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
-	//if applayer protocol is HTTP,transport layer is specified as none
-	//首次从该链接收到数据时的处理。
-	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
-	{	
-		string strData = str::fromBuff(pData,iLen);
-
-		//parse transfer layer protocol
-		if(isHttpPkt(strData))
-		{
-			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
-			if (CWSPPkt::isHandShake(strData))
-			{
-				tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
-			}
-			else if(strData.find("/tdsClient") != string::npos)
-			{
-				tdsSession->iALProto = APP_LAYER_PROTO::TDSRPC;
-			}
-		}
-		else
-		{
-			tdsSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
-		}
-
-		//if websocket. deal the first handshake pkt 
-		if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-		{
-			//回复websocket握手
-			CWSPPkt req;
-			std::string handshakeString = req.GetHandshakeString(strData);
-			send(tdsSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
-
-			httplib::Request httpReq;
-			httplib::Server srv;
-			srv.parse_request_line(strData.c_str(), httpReq);
-			initWsSessionInfo(httpReq.target, tdsSession);
-			return;
-		}
-	}
-
-
-	//  rpc 或者 桥接数据
-	if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-	{
-		m_wspSrv.OnRecvWSData(pData, iLen, &tdsSession->m_tlBuf, tdsSession);
-		return;
-	}
-	//http处理   1.网页请求  2.tdsRpc over http   
-	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
-	{
-		return;
-		char* ptmp = new char[iLen + 1];
-		memset(ptmp, 0, iLen + 1);
-		memcpy(ptmp, pData, iLen);
-		string strData = ptmp;
-		delete ptmp;
-
-		if (strData.find("/rpc") == string::npos) //仅处理rpc请求。 http网页请求走667端口
-			return;
-		//rpc 先组包后处理
-		//if (tdsSession->iALProto == APP_LAYER_PROTO::TDSRPC)
-		//{
-		//	stream2pkt* pab = &tdsSession->m_alBuf;
-		//	pab->PushStream(pData, iLen);
-		//	while (pab->PopPkt(APP_LAYER_PROTO::HTTP))
-		//	{
-		//		tdsSession->iALProto = pab->m_protocolType;
-		//		onRecvHttpPkt(pab->pkt, pab->iPktLen, tdsSession);
-		//	}
-		//}
-		//其他url流式处理，避免长度很长的请求包造成不必要的组包消耗.httplib内部是先接收http header。再处理content的
-		//因此无需先获得整个的http包。特别针对大文件上传时，必须采用流式处理。否则每次分片尝试识别是否完整包造成不必要的计算消耗
-		//else
-		//{
-			httplib::detail::dsClientStream* bs = NULL;
-			if(tdsSession->dsCltStream == NULL)
-			{
-				bs = new httplib::detail::dsClientStream;
-				bs->sock_ = tdsSession->pTcpSession->sock;
-				tdsSession->dsCltStream = bs;
-				std::thread t(httpReqHandleThread,tdsSession);
-				t.detach();
-				//threadPool1.addTask(tdsSession);
-			}
-			else
-			{
-				bs = (httplib::detail::dsClientStream*)tdsSession->dsCltStream;
-			}
-
-			//httpReqHandleThread内部可能删除bs导致野指针，需要优化
-			bs->appendBuffer(pData, iLen);
-		//}
-	}
-	//tcp直连,没有传输层，表示全部都是应用层数据
-	else if (tdsSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
-	{	
-		OnRecvAppLayerData(pData, iLen, tdsSession);
-		return;
-	}
 }
 
 
@@ -1245,7 +1082,7 @@ bool dataServer::onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SES
 
 		string szLog = str::format("[trace][ds]tdsrpc over http session opened,client addr is %s:%d",pALC->pTcpSession->remoteIP.c_str(),pALC->pTcpSession->remotePort);
 		LOG(szLog);
-		pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
+		//pALC->iALProto = APP_LAYER_PROTO::TDSRPC;
 		pALC->type = TDS_SESSION_TYPE::tdsClient;
 
 		httplib::detail::dsClientStream dscs;
