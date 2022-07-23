@@ -191,9 +191,9 @@ enum IO_PKT_TYPE {
 
 class PKT_DATA {
 public:
-	char* data;
+	unsigned char* data;
 	int len;
-	char* cmd_data;
+	unsigned char* cmd_data;
 	int cmd_data_len;
 	string proto;
 	IO_PKT_TYPE type;
@@ -203,22 +203,25 @@ public:
 	string m_strPktDetail; //命令包详细解析信息
 
 	virtual bool pack() { return false; };
-	virtual bool unpack() { return 0; };
-	virtual bool unpack(char* p,int len) { return 0; };
+	virtual bool unpack() 
+	{ 
+		return false;
+	};
+	virtual bool unpack(unsigned char* p,int len) { return 0; };
 
 	virtual string GetCmdID() { return _T(""); };
 	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
 	virtual string GetPktDesc() { return _T(""); }; //包详细描述信息
 	virtual string GetCmdName() { return _T(""); };
 	
-	void setData(char* p, int l)
+	void setData(unsigned char* p, int l)
 	{
 		if (data)delete data;
-		data = new char[l];
+		data = new unsigned char[l];
 		memcpy(data, p, l);
 		len = l;
 	}
-	PKT_DATA(char* p, int l)
+	PKT_DATA(unsigned char* p, int l)
 	{
 		data = NULL;
 		setData(p, l);
@@ -252,7 +255,7 @@ public:
 		{
 			if (this->data)
 				delete this->data;
-			this->data = new char[r.len];
+			this->data = new unsigned char[r.len];
 			memcpy(this->data, r.data, r.len);
 		}
 		else
@@ -263,7 +266,7 @@ public:
 		if (r.cmd_data_len > 0)
 		{
 			if (this->cmd_data)delete this->cmd_data;
-			this->cmd_data = new char[r.cmd_data_len];
+			this->cmd_data = new unsigned char[r.cmd_data_len];
 			memcpy(cmd_data, r.cmd_data, r.cmd_data_len);
 		}
 		else

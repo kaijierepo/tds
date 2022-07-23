@@ -1237,6 +1237,13 @@ namespace timeopt {
 
 		return std::string(res);
 	}
+
+	inline SYSTEMTIME addTime(SYSTEMTIME base, int h, int m, int s) {
+		time_t tBase = SysTime2Unix(base);
+		tBase += h * 3600 + m * 60 + s;
+		SYSTEMTIME st = Unix2SysTime(tBase);
+		return st;
+	}
 }
 
 

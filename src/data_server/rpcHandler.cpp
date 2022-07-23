@@ -2792,16 +2792,16 @@ void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
 		json channels = json::array();
 
 		p->m_csThis.lock_shared();
-		for (int i = 0; i < p->m_channels.size(); i++)
-		{
-			ioChannel* pC = p->m_channels[i];
-			json jDe;
-			jDe["ioAddr"] = pC->getDevAddrStr();
-			jDe["val"] = pC->m_curVal;
-			channels.push_back(jDe);
-		}
-		//status["channels"] = p->m_jAcq;
-		status["channels"] = channels;
+		//for (int i = 0; i < p->m_channels.size(); i++)
+		//{
+		//	ioChannel* pC = p->m_channels[i];
+		//	json jDe;
+		//	jDe["ioAddr"] = pC->getDevAddrStr();
+		//	jDe["val"] = pC->m_curVal;
+		//	channels.push_back(jDe);
+		//}
+		status["channels"] = p->m_jAcq;
+		//status["channels"] = channels;
 		status["chanUpdateTime"] = timeopt::st2str(p->m_stLastChanDataTime);
 		status["alarmStatus"] = p->m_jAlarmStatus;
 		status["alarmUpdateTime"] = timeopt::st2str(p->m_stLastAlarmStatusTime);

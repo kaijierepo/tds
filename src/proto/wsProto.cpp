@@ -174,7 +174,7 @@ int CWSPPkt::pack(const char * inMessage, int messageLen,  enum WS_FrameType fra
 	frame[frameSize] = '\0';
 
 	delete[] frameHeader;
-	data = frame;
+	data = (unsigned char*)frame;
 	len = frameSize;
 	return ret;
 }

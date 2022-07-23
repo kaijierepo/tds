@@ -228,7 +228,7 @@ void HMRServer::websocketSend(string s, int sock)
 {
     CWSPPkt req;
     req.pack(s.c_str(), s.length(), WS_FrameType::WS_TEXT_FRAME);
-    send(sock, req.data, req.len,0);
+    send(sock,(char*) req.data, req.len,0);
 }
 
 

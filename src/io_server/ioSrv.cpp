@@ -299,17 +299,17 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 
 bool ioServer::loadConf()
 {
+	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
+	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::DEV::modbus_rtu_slave;
+	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
+	m_mapPort2DevType[662] = IO_DEV_TYPE::DEV::leakDetect;
+
 	string conf;
 	if (!fs::readFile(tds->conf->confPath + "/io.json", conf))
 	{
 		LOG("[warn]未找到IO设备配置io.json,新建配置");
 		return true;
 	}
-
-	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::DEV::modbus_rtu_slave;
-	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
-	m_mapPort2DevType[662] = IO_DEV_TYPE::DEV::leakDetect;
 
 	try {
 		json io = json::parse(conf.c_str());

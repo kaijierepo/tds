@@ -29,6 +29,7 @@ public:
 	void ResizeStreamBuff(int iNewSize);
 	void ResizePopPktBuff(int iNewSize);
 	void PushStream(unsigned char* pData, int iLen);
+	void PushStream(char* pData, int iLen);
 	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
 	//faultTolerant是否容错，允许数据包之间有异常数据出现
 	//打开容错会降低性能

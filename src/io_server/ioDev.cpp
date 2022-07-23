@@ -729,7 +729,7 @@ void ioDev::checkAcqReqTimeout()
 
 bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen)
 {
-	PKT_DATA req(pReqData,iReqLen), resp;
+	PKT_DATA req((unsigned char*)pReqData,iReqLen), resp;
 
 	if (!CmdRequestSync(req, resp))
 	{

@@ -149,7 +149,6 @@ public:
 	SYSTEMTIME m_stLastHeartbeatTime;
 	SYSTEMTIME m_stLastSetClockTime;
 	SYSTEMTIME m_stLastAcqTime;  //上一次采集任务开始时间
-	bool m_bIsSyncSession;  //是否为同步会话，表示有线程正在等待响应并处理
 	bool m_bIsWaitingResp;  //表示一次通信会话正在进行中。可能是异步处理，也可能是同步处理
 	SYSTEMTIME m_stLastReqSendTime; //上一次采集请求发送时间
 	SYSTEMTIME m_stLastChanDataTime;

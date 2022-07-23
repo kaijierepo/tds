@@ -117,6 +117,11 @@ void stream2pkt::PushStream(unsigned char* pData, int iLen)
 	iStreamLen += iLen;
 }
 
+void stream2pkt::PushStream(char* pData, int iLen)
+{
+	PushStream((unsigned char*)pData, iLen);
+}
+
 bool stream2pkt::PopPkt(string cpt)
 {
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包

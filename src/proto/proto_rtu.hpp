@@ -183,18 +183,18 @@ public:
 		cmd_data_len = len - 4;
 		if (cmd_data_len > 0)
 		{
-			cmd_data = new char[cmd_data_len];
+			cmd_data = new unsigned char[cmd_data_len];
 			memcpy(cmd_data, data + 2, cmd_data_len);
 		}
 		return true;
 	};
-	bool unpack(char* p, int len) override {
+	bool unpack(unsigned char* p, int len) override {
 		setData(p, len);
 		return unpack();
 	};
 	bool pack() override {
 		len = 4 + cmd_data_len;
-		data = new char[len];
+		data = new unsigned char[len];
 		data[0] = eqp_addr;
 		data[1] = fun_code;
 		memcpy(data + 2, cmd_data, cmd_data_len);
