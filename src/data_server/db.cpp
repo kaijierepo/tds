@@ -538,6 +538,20 @@ void database::saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl)
 	}
 }
 
+bool database::saveDEFile(string tag, SYSTEMTIME stTime, unsigned char* pData, int len, string suffix)
+{
+	string path = getPath_deFile(tag, stTime);
+	path = m_path + path + "." + suffix;
+	if (fs::writeFile(path,(char*) pData, len))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 
 void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName, bool bIncludeChild)
 {

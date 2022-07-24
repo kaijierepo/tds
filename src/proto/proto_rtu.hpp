@@ -188,7 +188,7 @@ public:
 		}
 		return true;
 	};
-	bool unpack(unsigned char* p, int len) override {
+	bool unpack(unsigned char* p, int len,bool withDetail =false) override {
 		setData(p, len);
 		return unpack();
 	};

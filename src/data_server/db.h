@@ -221,7 +221,7 @@ public:
 
 	bool updateJsonObj(json& jOld, json& jNew);
 	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
-
+	bool saveDEFile(string tag, SYSTEMTIME stTime, unsigned char* pData, int len,string suffix);
 //路径管理
 public:
 	//获得数据库文件db.json的路径

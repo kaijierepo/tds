@@ -479,7 +479,7 @@ namespace str {
 		return s;
 	}
 
-	inline string& trimSuffix(string& s, string suffix = " ")
+	inline string trimSuffix(string s, string suffix = " ")
 	{
 		if (suffix == "")
 			return s;
@@ -1559,7 +1559,6 @@ namespace fs {
 			fseek(fp, 0, SEEK_SET);
 			fread(pData, 1, len, fp);
 			fclose(fp);
-			delete pData;
 			return true;
 		}
 		return false;

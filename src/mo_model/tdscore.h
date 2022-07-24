@@ -207,7 +207,7 @@ public:
 	{ 
 		return false;
 	};
-	virtual bool unpack(unsigned char* p,int len) { return 0; };
+	virtual bool unpack(unsigned char* p,int len,bool withDetail = false) { return 0; };
 
 	virtual string GetCmdID() { return _T(""); };
 	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
