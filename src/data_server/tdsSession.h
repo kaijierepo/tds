@@ -51,6 +51,7 @@ public:
 	//如果该字段不为空。 可以不使用org和queryRootTag重新组合rootTag;
 	string rootTag; 
 	string remoteAddr;
+	string token;
 };
 
 

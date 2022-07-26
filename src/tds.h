@@ -214,6 +214,10 @@ struct iTDSConf {
 	bool debugMode;
 	string logLevel;
 	bool enableGlobalAlarm;
+
+	//security
+	int tokenExpireTime;
+	bool enableAccessCtrl;
 	
 	//path conf
 	string confPath;   //config data path
@@ -260,7 +264,6 @@ struct iTDSConf {
 	//module enable/disable
 	bool enableLog;
 	bool enableDB;
-	bool enableAccessCtrl;
 	bool enableScript;
 
 	//tds edge conf
@@ -301,6 +304,7 @@ enum RPC_ERROR_CODE {
 	MO_outputTimeout = -40012,
 	USER_userNotFound = -40013,
 	USER_passwordError = -40014,
+	USER_TokenError = -40015,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,

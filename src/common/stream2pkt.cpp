@@ -58,6 +58,20 @@ int IsValidPkt_TDSP(unsigned char* pData, int iLen)
 	return 0;
 }
 
+unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
+	byte crc = 0;
+	for (int j = 0; j < len; j++)
+	{
+		crc ^= pData[j];
+		for (int i = 0; i < 8; i++)
+		{
+			if ((byte)(crc & 0x01) > 0) crc = (byte)((byte)(crc >> 1) ^ 0x8C);
+			else crc >>= 1;
+		}
+	}
+	return crc;
+}
+
 int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
 {
 	if (iLen < 12)
@@ -73,7 +87,8 @@ int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
 	{
 		if (pData[i] == 0x5A && pData[i + 1] == 0x5A)
 		{
-			return i + 2;
+			if(calcLeakDetectCheckCode(pData+2,iLen-5) == pData[i-1])
+				return i + 2;
 		}
 	}
 

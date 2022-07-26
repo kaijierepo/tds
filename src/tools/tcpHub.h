@@ -1,13 +1,22 @@
 #pragma once
 #include "tcpSrv.h"
+#include "tcpClt.h"
 
-class tcpHub : public  ITcpServerCallBack {
+class tcpHub : public  ITcpServerCallBack  {
 public:
 	tcpSrv sLeft;
 	tcpSrv sRight;
+	int sPortLeft;
+	int sPortRight;
 
-	int portLeft;
-	int portRight;
+	tcpClt cLeft;
+	tcpSrv cRight;
+	string cIPLeft;
+	string cIPRight;
+	int cPortLeft;
+	int cPortRight;
+
+
 
 	void run();
 

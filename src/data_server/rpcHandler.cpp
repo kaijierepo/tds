@@ -1319,6 +1319,10 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	{
 		result = userMng.m_jUI.dump(4);
 	}
+	else if (method == "updateToken" || method == "refreshToken")
+	{
+		userMng.rpc_updateToken(params,rpcResp,session);
+	}
 	else
 	{
 		bHandled = false;
@@ -1690,18 +1694,25 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		}
 			
 		//用户认证
+		if (jReq["token"] != nullptr)
+		{
+			pSession->token = jReq["token"].get<string>();
+		}
 		if (tds->conf->enableAccessCtrl)
 		{
-			if (jReq["user"] == nullptr || jReq["token"] == nullptr)
+			if (jReq["token"] == nullptr)
 			{
-				//LOG("[warn]无效请求，未携带用户名与token,method=" + method);
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, set user and token.");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, please set access token.");
 				goto HANDLE_END;
 			}
-			string user = jReq["user"].get<string>();
+			if (jReq["user"] == nullptr)
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, please set user.");
+				goto HANDLE_END;
+			}
 			string token = jReq["token"].get<string>();
-
-			if (!userMng.checkToken(user, token))
+			string user = jReq["user"].get<string>();
+			if (!userMng.checkToken(user,token))
 			{
 				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied; please login to get access token");

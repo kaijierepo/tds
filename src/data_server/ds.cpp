@@ -59,7 +59,7 @@ httplib::Server::HandlerResponse handleFilePermission(const httplib::Request& re
 			string user = mapKV["user"];
 			string token = mapKV["token"];
 
-			if (userMng.checkToken(user, token))
+			if (userMng.checkToken(user,token))
 			{
 				return httplib::Server::HandlerResponse::Unhandled;
 			}

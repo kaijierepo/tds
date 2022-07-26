@@ -41,8 +41,12 @@ public:
 	string user;
 	string token;
 	SYSTEMTIME stCreate;
+	bool bDynamic;
 	int age; //秒为单位，过期时间
 	bool isExpired() {
+		if (age <= 0)
+			return false;
+
 		return timeopt::CalcTimePassSecond(stCreate) > age;
 	}
 };
@@ -52,16 +56,19 @@ public:
 	bool loadConf();
 	bool saveConf();
 
+	bool run();
+
 	//rpc service
 	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_login(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session);
+	bool rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION session);
 	json rpc_getUsers(json params, RPC_RESP& resp, RPC_SESSION session); //获得可以管理的用户列表
 
 	bool checkLogin(string user, string pwd, json& userInfo);
-	bool checkToken(string user, string token);
+	bool checkToken(string user,string token);
 	bool checkTagPermission(string user, string tag); //检查用户对某一个位号是否有权限
 
 	bool isChildMo(string parent, string child);
@@ -72,6 +79,8 @@ public:
 	json getMoPermission(string user); //获得可以管理的MO树
 	json getUser(string user);
 	json getUserByOpenID(string openID); //公众号的openID
+
+	bool saveTokens();
 	
 
 	//保存用户配置，如果已经存在则更新。如果不存在则添加。不一定是全部。相当于是merge操作
@@ -88,12 +97,17 @@ public:
 	
 	json m_jRoles;
 	json m_jUI;
+	json m_jTokens;
+	json m_jTokensDynamic;
 
 	string m_userConfPath;
 	string m_roleConfPath;
 	string m_uiConfPath;
+	string m_tokenConfPath;
+	string m_tokenDynamicPath;
 
 	map<string,ACCESS_INFO> m_mapAccessInfo;
+	mutex m_csAccessToken;
 };
 
 extern userManager userMng;

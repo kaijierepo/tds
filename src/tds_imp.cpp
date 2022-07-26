@@ -407,6 +407,7 @@ bool TDS_imp::run(string cmdline)
 	{
 		hmrServer.run(tds->conf->uiPath);
 	}
+	userMng.run();
 
 
 	//运行tds插件

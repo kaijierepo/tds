@@ -121,6 +121,8 @@ bool userManager::loadConf()
 	m_userConfPath = tds->conf->confPath + "/users/users.json";
 	m_roleConfPath = tds->conf->confPath + "/users/roles.json";
 	m_uiConfPath = tds->conf->confPath + "/users/ui.json";
+	m_tokenConfPath = tds->conf->confPath + "/users/tokens.json";
+	m_tokenDynamicPath = tds->conf->dbPath + "/tokens.json";
 
 	if (!fs::fileExist(m_userConfPath))
 	{
@@ -185,6 +187,53 @@ bool userManager::loadConf()
 
 	}
 
+
+	string sTokens;
+	fs::readFile(m_tokenConfPath, sTokens);
+	try {
+		if (sTokens != "")
+			m_jTokens = json::parse(sTokens);
+
+		for (auto& i : m_jTokens) {
+			ACCESS_INFO ai;
+			ai.age = i["age"].get<int>();
+			ai.token = i["token"].get<string>();
+			ai.user = i["user"].get<string>();
+			ai.bDynamic = false;
+			m_csAccessToken.lock();
+			m_mapAccessInfo[ai.token] = ai;
+			m_csAccessToken.unlock();
+		}
+	}
+	catch (std::exception& e)
+	{
+
+	}
+
+
+	string sTokensDynamic;
+	fs::readFile(m_tokenDynamicPath, sTokensDynamic);
+	try {
+		json jTokens;
+		if (sTokensDynamic != "")
+			jTokens = json::parse(sTokensDynamic);
+
+		for (auto& i : jTokens) {
+			ACCESS_INFO ai;
+			ai.age = i["age"].get<int>();
+			ai.token = i["token"].get<string>();
+			ai.user = i["user"].get<string>();
+			ai.bDynamic = true;
+			m_csAccessToken.lock();
+			m_mapAccessInfo[ai.token] = ai;
+			m_csAccessToken.unlock();
+		}
+	}
+	catch (std::exception& e)
+	{
+
+	}
+
 	return true;
 }
 
@@ -201,24 +250,50 @@ bool userManager::saveConf()
 	return true;
 }
 
+void tokenExpire_thread(userManager* p) {
+	while (1) {
+		Sleep(10000);
+		p->m_csAccessToken.lock();
+		vector<ACCESS_INFO> tokenList;
+		for (auto& i : p->m_mapAccessInfo) {
+			if (i.second.isExpired()) {
+				tokenList.push_back(i.second);
+			}
+		}
+
+		for (int i = 0; i < tokenList.size(); i++) {
+			ACCESS_INFO ai = tokenList[i];
+			p->m_mapAccessInfo.erase(ai.token);
+			LOG("[warn]Token过期,token=%s,user=%s", ai.token.c_str(), ai.user.c_str());
+		}
+		p->m_csAccessToken.unlock();
+		p->saveTokens();
+	}
+}
+
+bool userManager::run()
+{
+	thread t(tokenExpire_thread, this);
+	t.detach();
+	return true;
+}
+
 bool userManager::checkLogin(string user, string pwd,json& userInfo)
 {
 	
-
 	return false;
 }
 
 bool userManager::checkToken(string user, string token)
 {
-	if (m_mapAccessInfo.find(user) == m_mapAccessInfo.end())
+	std::unique_lock<mutex> lock(m_csAccessToken);
+	if (m_mapAccessInfo.find(token) == m_mapAccessInfo.end())
 	{
 		return false;
 	}
-	string trueToken = m_mapAccessInfo[user].token;
-	if (trueToken != token)
-	{
+	ACCESS_INFO ai = m_mapAccessInfo[token];
+	if (ai.user != user)
 		return false;
-	}
 	return true;
 }
 
@@ -402,6 +477,34 @@ bool userManager::rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session)
 	return rpc_setUsers(users,resp,session);
 }
 
+bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	bool changed = false;
+	m_csAccessToken.lock();
+	if (m_mapAccessInfo.find(session.token)!= m_mapAccessInfo.end()) {
+		ACCESS_INFO ai = m_mapAccessInfo[session.token];
+		ai.token = common::guid();
+		GetLocalTime(&ai.stCreate);
+		m_mapAccessInfo.erase(session.token);
+		m_mapAccessInfo[ai.token] = ai;
+		json rlt;
+		rlt["token"] = ai.token;
+		resp.result = rlt.dump();
+		changed = true;
+	}
+	else
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::USER_TokenError, "token error");
+	}
+	m_csAccessToken.unlock();
+
+	if (changed)
+	{
+		saveTokens();
+	}
+	return true;
+}
+
 
 bool userManager::setUser(json& user,json& result,json& err)
 {
@@ -512,6 +615,24 @@ json userManager::getUserByOpenID(string openID)
 	return j;
 }
 
+bool userManager::saveTokens()
+{
+	m_csAccessToken.lock();
+	json jTokens = json::array();
+	for (auto& i : m_mapAccessInfo) {
+		json j;
+		j["age"] = i.second.age;
+		j["user"] = i.second.user;
+		j["token"] = i.second.token;
+		j["createTime"] = timeopt::st2str(i.second.stCreate);
+		jTokens.push_back(j);
+	}
+	m_csAccessToken.unlock();
+	string s = jTokens.dump(2);
+	fs::writeFile(m_tokenDynamicPath, s);
+	return false;
+}
+
 void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	string name = params["name"].get<string>();
@@ -542,11 +663,15 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				string token = common::guid();
 				userInfo["token"] = token;
 				ACCESS_INFO ai;
-				ai.age = 600;
+				ai.age = tds->conf->tokenExpireTime * 60;
 				GetLocalTime(&ai.stCreate);
 				ai.token = token;
 				ai.user = user;
+				ai.bDynamic = true;
+				m_csAccessToken.lock();
 				m_mapAccessInfo[token] = ai;
+				m_csAccessToken.unlock();
+				saveTokens();
 				resp.result = userInfo.dump(4);
 			}
 			else {
@@ -576,7 +701,10 @@ void userManager::rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session)
 	string token;
 	if (params.contains("token")) {
 		token = params["token"].get<string>();
+		m_csAccessToken.lock();
 		m_mapAccessInfo.erase(token);
+		m_csAccessToken.unlock();
+		saveTokens();
 		resp.result = "\"ok\"";
 	}
 	else {

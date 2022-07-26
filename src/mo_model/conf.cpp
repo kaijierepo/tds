@@ -96,11 +96,14 @@ httpsPort=666          #https服务端口,同时支持websocket secure
 httpPort=667           #http服务端口,同时支持websocket
 loglevel=debug         #日志级别
 
+#安全性
+enableAccessCtrl = 0   #开启用户认证
+tokenExpireTime = 60   #token失效时间，单位分钟
+
 #功能模块启用
 enableDB = 1           #启用数据库
 enableLog = 1          #启用日志记录
 authDownload = 0       #开启文件下载用户认证
-enableAccessCtrl = 0   #开启用户认证
 enableScript = 0       #启用脚本功能
 
 #IO服务功能
@@ -208,6 +211,8 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		}
 		else if (checkKey(tci.key, "dbpath"))
 			dbPath = tci.val.c_str();
+		else if (checkKey(tci.key, "tokenExpireTime"))
+			tokenExpireTime = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tcpkeepaliveio"))
 			tcpKeepAliveIO = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tcpkeepaliveds"))
