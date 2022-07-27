@@ -44,7 +44,7 @@ public:
 	bool bDynamic;
 	int age; //秒为单位，过期时间
 	bool isExpired() {
-		if (age <= 0)
+		if (!bDynamic)
 			return false;
 
 		return timeopt::CalcTimePassSecond(stCreate) > age;

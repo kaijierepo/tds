@@ -188,6 +188,32 @@ bool userManager::loadConf()
 	}
 
 
+	//动态token
+	string sTokensDynamic;
+	fs::readFile(m_tokenDynamicPath, sTokensDynamic);
+	try {
+		json jTokens;
+		if (sTokensDynamic != "")
+			jTokens = json::parse(sTokensDynamic);
+
+		for (auto& i : jTokens) {
+			ACCESS_INFO ai;
+			ai.age = tds->conf->tokenExpireTime*60;
+			ai.token = i["token"].get<string>();
+			ai.user = i["user"].get<string>();
+			ai.stCreate = timeopt::str2st(i["createTime"].get<string>());
+			ai.bDynamic = true;
+			m_csAccessToken.lock();
+			m_mapAccessInfo[ai.token] = ai;
+			m_csAccessToken.unlock();
+		}
+	}
+	catch (std::exception& e)
+	{
+
+	}
+
+	//静态token
 	string sTokens;
 	fs::readFile(m_tokenConfPath, sTokens);
 	try {
@@ -200,30 +226,6 @@ bool userManager::loadConf()
 			ai.token = i["token"].get<string>();
 			ai.user = i["user"].get<string>();
 			ai.bDynamic = false;
-			m_csAccessToken.lock();
-			m_mapAccessInfo[ai.token] = ai;
-			m_csAccessToken.unlock();
-		}
-	}
-	catch (std::exception& e)
-	{
-
-	}
-
-
-	string sTokensDynamic;
-	fs::readFile(m_tokenDynamicPath, sTokensDynamic);
-	try {
-		json jTokens;
-		if (sTokensDynamic != "")
-			jTokens = json::parse(sTokensDynamic);
-
-		for (auto& i : jTokens) {
-			ACCESS_INFO ai;
-			ai.age = i["age"].get<int>();
-			ai.token = i["token"].get<string>();
-			ai.user = i["user"].get<string>();
-			ai.bDynamic = true;
 			m_csAccessToken.lock();
 			m_mapAccessInfo[ai.token] = ai;
 			m_csAccessToken.unlock();
@@ -264,7 +266,7 @@ void tokenExpire_thread(userManager* p) {
 		for (int i = 0; i < tokenList.size(); i++) {
 			ACCESS_INFO ai = tokenList[i];
 			p->m_mapAccessInfo.erase(ai.token);
-			LOG("[warn]Token过期,token=%s,user=%s", ai.token.c_str(), ai.user.c_str());
+			LOG("[warn]Token过期,token=%s,user=%s,过期时间=%d秒", ai.token.c_str(), ai.user.c_str(),ai.age);
 		}
 		p->m_csAccessToken.unlock();
 		p->saveTokens();

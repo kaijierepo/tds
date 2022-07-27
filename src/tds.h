@@ -288,23 +288,24 @@ enum RPC_ERROR_CODE {
 
 	//common
 	TEC_FAIL = -40000,
-
-	//tds client
-	MO_specifiedTagNotFound = -40001,
-	TEC_PARAM_MISSING = -40002,
-	TEC_WRONG_PARAM_FMT = -40003,
+	TEC_PARAM_MISSING = -40001,
+	TEC_WRONG_PARAM_FMT = -40002,
 	TEC_TIME_SELECTOR_FMT_ERROR = -40004,
 	TEC_TAG_SELECTOR_FMT_ERROR = -40005,
-	TEC_VAL_TYPE_ERROR = -40006,
+
+	//tds client
+	MO_specifiedTagNotFound = -40006,
 	MO_outputFail = -40007,
 	MO_outputValNotSpecified = -40008,
 	MO_outputValShouldBeBool = -40009,
 	MO_outputValShouldBeNumber = -40010,
 	MO_currentValIsNull = -40011,
 	MO_outputTimeout = -40012,
-	USER_userNotFound = -40013,
-	USER_passwordError = -40014,
-	USER_TokenError = -40015,
+	TEC_VAL_TYPE_ERROR = -40013,
+    //User
+	USER_userNotFound = -40053,
+	USER_passwordError = -40054,
+	USER_TokenError = -40055,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40101,

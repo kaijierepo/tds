@@ -1095,7 +1095,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getMoTree" || method == "getMOTree")
+		else if (method == "getMoTree" || method == "getMOTree" || method == "getMo")
 		{
 			string subTreeRoot = "";
 			//如果指定了root，按照root取子树
@@ -1481,34 +1481,33 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		pDestSession->send((char*)s.c_str(), s.length());
 		return true;
 	}
-	//使用clientId进行透传机制取消。 不需要clientId.不再视为一种透传，视为转发
-	/*else if (jReq.contains("ioAddr"))
+	else if (jReq.contains("ioAddr") || jReq.contains("tag"))
 	{
-		string strIoAddr = jReq["ioAddr"].get<string>();
-		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-		if (!pIoDev || pIoDev->pIOSession == nullptr)
-		{
-			return true;
+		ioDev* pIoDev = nullptr;
+		if (jReq.contains("ioAddr")) {
+			string strIoAddr = jReq["ioAddr"].get<string>();
+			pSession->ioAddr = strIoAddr;
+			pIoDev  = ioSrv.getIODev(strIoAddr);
+			if (!pIoDev)
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
+				return true;
+			}
 		}
-		jReq["clientId"] = pSession->getRemoteAddr();
-		jReq.erase("user");
-		jReq.erase("token");
-		string s = jReq.dump() + "\n\n";
-		pIoDev->pIOSession->send((char*)s.c_str(), s.length());
-		LOG("[设备透传]客户端->设备:\r\n" + s + "\r\n");
-		return true;
-	}*/
-	//设备TDSP命令转发
-	else if (jReq.contains("ioAddr"))
-	{
-		string strIoAddr = jReq["ioAddr"].get<string>();
-		pSession->ioAddr = strIoAddr;
-		ioDev* pIoDev = ioSrv.getIODev(strIoAddr);
-		if (!pIoDev)
+		else
 		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
-			return true;
+			string tag = jReq["tag"].get<string>();
+			pSession->tag = tag;
+			string sysTag = TAG::addRoot(tag, pSession->org);
+			pIoDev = ioSrv.getIODevByTag(sysTag);
+			if (!pIoDev)
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
+				return true;
+			}
 		}
+
+
 		if (pIoDev->pIOSession == nullptr)
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
@@ -1532,10 +1531,13 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		LOG("[TDSP转发]客户端->设备\r\n");
 		if (pIoDev->call(method, jParams, jRlt, jErr))
 		{
-			if(jRlt!=nullptr)
+			if (jRlt != nullptr) {
 				rpcResp.result = jRlt.dump();
+			}
 			else if (jErr != nullptr)
+			{
 				rpcResp.error = jErr.dump();
+			}
 			else
 			{
 				LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
@@ -1660,16 +1662,6 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			goto HANDLE_END;
 		}
 
-		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
-		if (!tds->conf->edge) //tds edge模式无需转发
-		{
-			if (handleDevRpcDispatch(strReq, jReq, rpcResp, pSession))
-			{
-				goto HANDLE_END;
-			}
-		}
-		
-
 
 		//访问控制
 		if (method == "login")
@@ -1716,6 +1708,15 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			{
 				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied; please login to get access token");
+				goto HANDLE_END;
+			}
+		}
+
+		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
+		if (!tds->conf->edge) //tds edge模式无需转发
+		{
+			if (handleDevRpcDispatch(strReq, jReq, rpcResp, pSession))
+			{
 				goto HANDLE_END;
 			}
 		}
@@ -1810,6 +1811,10 @@ HANDLE_END:
 		{
 			strResp += ",\"ioAddr\":\"" + pSession->ioAddr + "\"";
 		}
+		if (pSession->tag != "")
+		{
+			strResp += ",\"tag\":\"" + pSession->tag + "\"";
+		}
 		strResp += "}\n\n";
 
 
@@ -1817,11 +1822,11 @@ HANDLE_END:
 		{
 			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
-		else if (method == "getMoTree")
+		else if (method == "getMoTree" || method == "getMo")
 		{
 			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
-		else if (method == "getMoTree")
+		else if (method == "getMoTree" || method == "getMo")
 		{
 			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
 		}
