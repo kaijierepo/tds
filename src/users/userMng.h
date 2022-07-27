@@ -47,7 +47,13 @@ public:
 		if (!bDynamic)
 			return false;
 
-		return timeopt::CalcTimePassSecond(stCreate) > age;
+		bool ret = timeopt::CalcTimePassSecond(stCreate) > age;
+		if (ret)
+		{
+			return true;
+		}
+		else
+			return false;
 	}
 };
 

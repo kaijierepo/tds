@@ -72,7 +72,7 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 	std::string strTime = "";
 	std::string strStartDate, strEndDate;
 	SYSTEMTIME stStartDate, stEndDate;
-	if(params["time"].is_null()){return makeRPCError(TEC_PARAM_MISSING,"param missing:\"time\"");}
+	if(params["time"].is_null()){return makeRPCError(TEC_paramMissing,"param missing:\"time\"");}
 	try{strTime = params["time"].get<string>();}
 	catch(...)
 	{ return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"time\" param should be a string");}
@@ -81,7 +81,7 @@ string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TA
 
 	//parse tag param
 	std::string strTag, strTagTmp;
-	if(params["tag"].is_null()){return makeRPCError(TEC_PARAM_MISSING,"param missing:\"tag\"");}
+	if(params["tag"].is_null()){return makeRPCError(TEC_paramMissing,"param missing:\"tag\"");}
 	try{
 		strTag = params["tag"].get<string>();
 		if (params["root"] != nullptr)
@@ -526,11 +526,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	{
 		if (!params.contains("tag"))
 		{
-			error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : tag");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : tag");
 		}
 		else if (!params.contains("time"))
 		{
-			error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : time");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
 		else if (method == "db.select")
 		{
@@ -555,7 +555,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		{
 			if (!params.contains("val"))
 			{
-				error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param : val");
+				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : val");
 			}
 			else
 			{
@@ -892,7 +892,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "param name is not specified");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
 		}
 	}
 	else if (method == "discoverDev")
@@ -1694,12 +1694,12 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		{
 			if (jReq["token"] == nullptr)
 			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, please set access token.");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
 				goto HANDLE_END;
 			}
 			if (jReq["user"] == nullptr)
 			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied, please set user.");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "access denied, please set user.");
 				goto HANDLE_END;
 			}
 			string token = jReq["token"].get<string>();
@@ -1707,7 +1707,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			if (!userMng.checkToken(user,token))
 			{
 				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "access denied; please login to get access token");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
 				goto HANDLE_END;
 			}
 		}
@@ -1968,7 +1968,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		val = params["val"];
 	else
 	{
-		resp.error = makeRPCError(TEC_PARAM_MISSING, "param val must be specified");
+		resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
 		return;
 	}
 	if (params.find("dataFile") != params.end())
@@ -1979,7 +1979,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		ioAddr = params["ioAddr"].get<string>();
 	if (tag == "" && ioAddr == "")
 	{
-		resp.error = makeRPCError(TEC_PARAM_MISSING, "param ioAddr or tag must be specified");
+		resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
 		return;
 	}
 
@@ -3000,7 +3000,7 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 		streamId = params["streamId"].get<string>();
 	if (streamId == "")
 	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING,"param missing,tag is not specified");
+		error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing,"param missing,tag is not specified");
 		return "";
 	}
 

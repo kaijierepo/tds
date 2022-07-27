@@ -484,19 +484,22 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 	bool changed = false;
 	m_csAccessToken.lock();
 	if (m_mapAccessInfo.find(session.token)!= m_mapAccessInfo.end()) {
-		ACCESS_INFO ai = m_mapAccessInfo[session.token];
-		ai.token = common::guid();
+		ACCESS_INFO& ai = m_mapAccessInfo[session.token];
 		GetLocalTime(&ai.stCreate);
-		m_mapAccessInfo.erase(session.token);
-		m_mapAccessInfo[ai.token] = ai;
+		ai.age = 5; //老的 Token 继续维护5秒的生存期。 使得客户端再收到新token前使用老token发的命令仍能被执行
+
+		ACCESS_INFO aiTmp = ai;
+		aiTmp.token = common::guid();
+		GetLocalTime(&aiTmp.stCreate);
+		m_mapAccessInfo[aiTmp.token] = aiTmp;
 		json rlt;
-		rlt["token"] = ai.token;
+		rlt["token"] = aiTmp.token;
 		resp.result = rlt.dump();
 		changed = true;
 	}
 	else
 	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::USER_TokenError, "token error");
+		resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "invalid token");
 	}
 	m_csAccessToken.unlock();
 
@@ -659,7 +662,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 			if (pwd == truePwd)
 			{
 				userInfo = jUser;
-				string keyPwd = "pwd";
+				string keyPwd = "pwd"; 
 				userInfo.erase(keyPwd);
 				//生成token
 				string token = common::guid();
@@ -677,11 +680,11 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				resp.result = userInfo.dump(4);
 			}
 			else {
-				resp.error = makeRPCError(RPC_ERROR_CODE::USER_passwordError, "password error","密码错误");
+				resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "password error","密码错误");
 			}
 		}
 		else {
-			resp.error = makeRPCError(RPC_ERROR_CODE::USER_passwordError, "user not found","用户不存在");
+			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "user not found","用户不存在");
 		}
 	}
 	catch (std::exception& e)
@@ -710,7 +713,7 @@ void userManager::rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session)
 		resp.result = "\"ok\"";
 	}
 	else {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_PARAM_MISSING, "missing param token");
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param token");
 	}
 }
 

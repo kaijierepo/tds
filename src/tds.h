@@ -288,37 +288,40 @@ enum RPC_ERROR_CODE {
 
 	//common
 	TEC_FAIL = -40000,
-	TEC_PARAM_MISSING = -40001,
+	TEC_paramMissing = -40001,
 	TEC_WRONG_PARAM_FMT = -40002,
-	TEC_TIME_SELECTOR_FMT_ERROR = -40004,
-	TEC_TAG_SELECTOR_FMT_ERROR = -40005,
+	TEC_TIME_SELECTOR_FMT_ERROR = -40003,
+	TEC_TAG_SELECTOR_FMT_ERROR = -40004,
 
-	//tds client
-	MO_specifiedTagNotFound = -40006,
-	MO_outputFail = -40007,
-	MO_outputValNotSpecified = -40008,
-	MO_outputValShouldBeBool = -40009,
-	MO_outputValShouldBeNumber = -40010,
-	MO_currentValIsNull = -40011,
-	MO_outputTimeout = -40012,
-	TEC_VAL_TYPE_ERROR = -40013,
-    //User
-	USER_userNotFound = -40053,
-	USER_passwordError = -40054,
-	USER_TokenError = -40055,
+	//user
+	AUTH_tokenError = -40101,
+	AUTH_tokenMissing = -40102,
+	AUTH_userNotFound = -40103,
+	AUTH_userMissing = -40104,
+	AUTH_passwordError = -40105,
 
-	//video
-	TEC_VIDEO_PARAM_NOT_VALID = -40101,
-	TEC_NO_STREAM_SRC = -40102,
-	TEC_STREAM_ID_NOT_FOUND = -40103,
+	//mo
+	MO_specifiedTagNotFound = -40201,
+	MO_outputFail = -40202,
+	MO_outputValNotSpecified = -40203,
+	MO_outputValShouldBeBool = -40204,
+	MO_outputValShouldBeNumber = -40205,
+	MO_currentValIsNull = -40206,
+	MO_outputTimeout = -40207,
+	TEC_VAL_TYPE_ERROR = -40208,
 
 	//io
-	IO_devNotFound = -41001,   
-	IO_devOffline = -41002,   
-	IO_reqTimeout = -41003,	   
-	IO_devTypeError = -41004,  
-	IO_ioAddrNotSpecified = -41005,
-	IO_chanTemplateNotFound = -41006,
+	IO_devNotFound = -40301,
+	IO_devOffline = -40302,
+	IO_reqTimeout = -40303,
+	IO_devTypeError = -40304,
+	IO_ioAddrNotSpecified = -40305,
+	IO_chanTemplateNotFound = -40306,
+
+	//video
+	TEC_VIDEO_PARAM_NOT_VALID = -40401,
+	TEC_NO_STREAM_SRC = -40402,
+	TEC_STREAM_ID_NOT_FOUND = -40403,
 
 	//tdsp
 	DEV_confNameNotFound = -42001,
