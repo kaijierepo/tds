@@ -218,6 +218,7 @@ struct iTDSConf {
 	//security
 	int tokenExpireTime;
 	bool enableAccessCtrl;
+	string testToken;
 	
 	//path conf
 	string confPath;   //config data path

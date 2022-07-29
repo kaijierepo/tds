@@ -252,6 +252,12 @@ bool userManager::saveConf()
 	return true;
 }
 
+bool userManager::init()
+{
+	loadConf();
+	return true;
+}
+
 void tokenExpire_thread(userManager* p) {
 	while (1) {
 		Sleep(10000);
@@ -275,8 +281,10 @@ void tokenExpire_thread(userManager* p) {
 
 bool userManager::run()
 {
-	thread t(tokenExpire_thread, this);
-	t.detach();
+	if (tds->conf->enableAccessCtrl) {
+		thread t(tokenExpire_thread, this);
+		t.detach();
+	}
 	return true;
 }
 
@@ -288,6 +296,9 @@ bool userManager::checkLogin(string user, string pwd,json& userInfo)
 
 bool userManager::checkToken(string user, string token)
 {
+	if (tds->conf->testToken != "" && tds->conf->testToken == token)
+		return true;
+
 	std::unique_lock<mutex> lock(m_csAccessToken);
 	if (m_mapAccessInfo.find(token) == m_mapAccessInfo.end())
 	{
@@ -488,8 +499,11 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 		GetLocalTime(&ai.stCreate);
 		ai.age = 5; //老的 Token 继续维护5秒的生存期。 使得客户端再收到新token前使用老token发的命令仍能被执行
 
-		ACCESS_INFO aiTmp = ai;
+		ACCESS_INFO aiTmp;
+		aiTmp.user = ai.user;
 		aiTmp.token = common::guid();
+		aiTmp.bDynamic = true;
+		aiTmp.age = tds->conf->tokenExpireTime * 60;
 		GetLocalTime(&aiTmp.stCreate);
 		m_mapAccessInfo[aiTmp.token] = aiTmp;
 		json rlt;

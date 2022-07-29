@@ -727,9 +727,9 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
-	if (method == "ioTree" || method == "iotree" || method == "getIOTree")
+	if (method == "ioTree" || method == "iotree" || method == "getIOTree" || method == "getDev")
 	{
-		rpc_getIOTree(params, rpcResp,session);
+		rpc_getDev(params, rpcResp,session);
 	}
 	else if (method == "setIOTree")
 	{
@@ -762,10 +762,6 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getChanStatus(params,rpcResp);
 	}
-	else if (method == "getDevStatus")
-	{
-		rpc_getDevStatus(params, rpcResp);
-	}
 	else if (method == "getChanVal")
 	{
 		rpc_getChanVal(params, rpcResp);
@@ -788,14 +784,6 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	else if (method == "scanChannel" || method == "scanchannel")
 	{
 		result = rpc_io_scanChannel(params, error);
-	}
-	else if (method == "getIoDevStatis")
-	{
-		rpc_getIoDevStatis(params, rpcResp);
-	}
-	else if (method == "getDevList")
-	{
-		rpc_getDevList(params, rpcResp);
 	}
 	else if (method == "addDev")
 	{
@@ -1095,42 +1083,38 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getMoTree" || method == "getMOTree" || method == "getMo")
+		else if (method == "getMoTree" || method == "getMOTree" || method == "getMo" || method == "getObj")
 		{
-			string subTreeRoot = "";
-			//如果指定了root，按照root取子树
-			if (params != nullptr && params["root"] != nullptr && params["root"].get<string>() != "") //获取子树
+			//用户查询时 tag默认"",rootTag默认""
+			//tag是相对于rootTag的相对位号
+			//rootTag和tag组合出用户位号。
+			//用户位号和用户组织结构组合成系统位号
+			string tag = "";//相对位号
+			if (params != nullptr && params["tag"] != nullptr && params["tag"].get<string>() != "") //获取子树
 			{
-				subTreeRoot = params["root"].get<string>();
+				tag = params["tag"].get<string>();
 			}
-			//没有root按照用户权限取子树
-			else if (session.user != "")
+			string rootTag = "";//查询根
+			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") //获取子树
 			{
-				json jUser = userMng.getUser(session.user);
-				if (jUser != nullptr)
-				{
-					subTreeRoot = jUser["org"].get<string>();
-				}
+				rootTag = params["rootTag"].get<string>();
 			}
 
-			if (subTreeRoot != "")
+			tag = TAG::addRoot(tag, rootTag);//组合为用户位号
+			tag = TAG::addRoot(tag, session.org);//组合为系统位号
+
+			MO* pmo = prj.GetMOByTag(tag);
+			if (pmo)
 			{
-				subTreeRoot = TAG::trimRoot(subTreeRoot);
-				params["root"] = subTreeRoot;
-				MO* pmo = prj.GetMOByTag(subTreeRoot);
-				if (pmo)
-				{
-					json j;
-					pmo->toJson(j, params);
-					j["root"] = subTreeRoot; //子树的根节点有root属性，表示根在总的mo树中的位号
-					result = j.dump(4);
-				}
+				//所有位号以用户位号的方式展示。除非另外指定rootTag
+				json j;
+				params["rootTag"] = rootTag;
+				pmo->toJson(j, params);
+				result = j.dump(4);
 			}
 			else
 			{
-				json j;
-				prj.toJson(j, params); //不包含通用mp的树，例如开关量，模拟量；但包含自定义值类型mp，例如 车闸，人闸，测试结果
-				result = j.dump(4);
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
 			}
 		}
 		else if (method == "getMoConf")
@@ -1211,23 +1195,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			json list;
 			prj.getMpList(list);
 			result = list.dump(2);
-		}
-		else if (method == "getMOBindDev") {
-			string tag = params["tag"].get<string>();
-			ioDev* p = ioSrv.getIODevByTag(tag);
-			if (p)
-			{
-				json j;
-				json opt;
-				opt["recursive"] = false;
-				p->toJson(j,opt);
-				result = j.dump(4);
-			}
-			else
-			{
-				json jErr = "device not found";
-				error = jErr.dump();
-			}
 		}
 		else
 		{
@@ -1505,6 +1472,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
 				return true;
 			}
+			pSession->ioAddr = pIoDev->getIOAddrStr();
 		}
 
 
@@ -2774,19 +2742,41 @@ string rpcHandler::rpc_openCom(json params, string& error)
 	return "";
 }
 
-void rpcHandler::rpc_getIOTree(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	json j;
+	if (!params.contains("rootTag"))
+		params["rootTag"] = "";
 
 	//用户rootTag转系统rootTag
-	if (params != nullptr && params.contains("rootTag"))
-	{
-		string rootTag = params["rootTag"].get<string>();
-		rootTag = TAG::addRoot(rootTag, session.org);
-		params["rootTag"] = rootTag;
-	}
+	string rootTag = params["rootTag"].get<string>();
+	rootTag = TAG::addRoot(rootTag, session.org);
+	params["rootTag"] = rootTag;
 
-	ioSrv.toJson(j,params);
+	ioDev* p = nullptr;
+	if (params.contains("ioAddr")) {
+		string ioAddr = params["ioAddr"];
+		p = ioSrv.getIODev(ioAddr);
+		if (p)
+			p->toJson(j, params);
+		else {
+			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified ioAddr not found");
+		}
+	}
+	else if(params.contains("tag")){
+		string tag = params["tag"];
+		tag = TAG::addRoot(tag, session.org);
+		p = ioSrv.getIODevByTag(tag);
+		if (p)
+			p->toJson(j, params);
+		else {
+			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified bindTag not found");
+		}
+	}
+	else {
+		ioSrv.toJson(j, params);
+	};
+
 	resp.result = j.dump();
 }
 
@@ -2795,51 +2785,6 @@ void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp)
 	json list;
 	ioSrv.getChanStatus(list);
 	resp.result = list.dump(4);
-}
-
-
-void rpcHandler::rpc_getDevStatus(json params, RPC_RESP& resp)
-{
-	string ioAddr = params["ioAddr"];
-	ioDev* p = ioSrv.getIODev(ioAddr);
-	if (p)
-	{
-		json status;
-		json channels = json::array();
-
-		p->m_csThis.lock_shared();
-		//for (int i = 0; i < p->m_channels.size(); i++)
-		//{
-		//	ioChannel* pC = p->m_channels[i];
-		//	json jDe;
-		//	jDe["ioAddr"] = pC->getDevAddrStr();
-		//	jDe["val"] = pC->m_curVal;
-		//	channels.push_back(jDe);
-		//}
-		status["channels"] = p->m_jAcq;
-		//status["channels"] = channels;
-		status["chanUpdateTime"] = timeopt::st2str(p->m_stLastChanDataTime);
-		status["alarmStatus"] = p->m_jAlarmStatus;
-		status["alarmUpdateTime"] = timeopt::st2str(p->m_stLastAlarmStatusTime);
-		status["enableAlarm"] = tds->conf->enableGlobalAlarm;
-		p->m_csThis.unlock_shared();
-		resp.result = status.dump();
-	}
-}
-
-void rpcHandler::rpc_getDevList(json params, RPC_RESP& resp)
-{
-	json j;  
-	params["recursive"] = false;
-	if (ioSrv.toJson(j, params))
-	{
-		resp.result = j.dump(2);
-	}
-}
-
-void rpcHandler::rpc_getIoDevStatis(json params, RPC_RESP& resp)
-{
-	
 }
 
 

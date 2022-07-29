@@ -115,8 +115,11 @@ void project::saveConf()
 {
 	json j;
 	json opt;
-	opt["getStatus"] = false;
+	opt["getConf"] = true;
+	opt["getChild"] = true;
 	opt["getMp"] = true;
+	opt["getStatus"] = false;
+	opt["getDetailConf"] = false;
 	toJson(j, opt);
 	string s = j.dump(2);
 	fs::writeFile(tds->conf->confPath + "/mo.json", s);

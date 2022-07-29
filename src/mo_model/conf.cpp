@@ -99,6 +99,7 @@ loglevel=debug         #日志级别
 #安全性
 enableAccessCtrl = 0   #开启用户认证
 tokenExpireTime = 60   #token失效时间，单位分钟
+testToken=             #测试用Token
 
 #功能模块启用
 enableDB = 1           #启用数据库
@@ -204,13 +205,15 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			confPath = tci.val;
 			confPath = fs::toAbsolutePath(confPath);
 		}
-		else if (checkKey(tci.key,"uipath"))
+		else if (checkKey(tci.key, "uipath"))
 		{
 			uiPath = tci.val;
 			uiPath = fs::toAbsolutePath(uiPath);
 		}
 		else if (checkKey(tci.key, "dbpath"))
 			dbPath = tci.val.c_str();
+		else if (checkKey(tci.key, "testToken"))
+			testToken = tci.val.c_str();
 		else if (checkKey(tci.key, "tokenExpireTime"))
 			tokenExpireTime = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tcpkeepaliveio"))

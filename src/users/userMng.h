@@ -61,7 +61,7 @@ class userManager {
 public:
 	bool loadConf();
 	bool saveConf();
-
+	bool init();
 	bool run();
 
 	//rpc service

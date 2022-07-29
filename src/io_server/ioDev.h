@@ -12,6 +12,22 @@ class ioChannel;
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
 typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
 typedef ioDev* (*fp_createDev)();
+
+struct DEV_QUERIER {
+	bool getStatus;
+	bool getConf;
+	bool getChild;
+	bool getChan;
+	bool getDetail;
+	DEV_QUERIER() {
+		getStatus = false;
+		getConf = true;
+		getChild = true;
+		getChan = true;
+		getDetail = true;
+	}
+};
+
 class ioDev
 {
 public:
@@ -34,7 +50,7 @@ public:
 	virtual string getDesc();
 	void triggerCycleAcq();
 	virtual bool call(string method, json params, json& result, json& error, bool sync = true) { return false; };
-
+	DEV_QUERIER parseQueryOpt(json& opt);
 	////
 	//is Gateway
 	// can be 1.ip or domain name with port 2.tuya project id 3.gateway guid

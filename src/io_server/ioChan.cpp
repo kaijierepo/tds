@@ -52,31 +52,34 @@ bool ioChannel::loadConf(json& conf)
 
 bool ioChannel::toJson(json& conf, json opt)
 {
+	DEV_QUERIER querier = parseQueryOpt(opt);
+
 	conf["addr"] = m_jDevAddr;
-	conf["nodeID"] = m_confNodeId;
-	conf["tagBind"] = m_strTagBind;
-	conf["ioType"] = m_ioType;
-	conf["valType"] = m_valType;
-	conf["name"] = m_name;
 
-	//optional fields
-	if (m_storageFmt != "")
-		conf["storageFmt"] = m_storageFmt;
+	if (querier.getConf) {
+		conf["nodeID"] = m_confNodeId;
+		conf["tagBind"] = m_strTagBind;
+		conf["ioType"] = m_ioType;
+		conf["valType"] = m_valType;
+		conf["name"] = m_name;
 
-	if (m_channelType != "")
-	{
-		conf["channelType"] = m_channelType;
-		conf["channelTypeLabel"] = m_channelTypeLabel;
+		//optional fields
+		if (m_storageFmt != "")
+			conf["storageFmt"] = m_storageFmt;
+
+		if (m_channelType != "")
+		{
+			conf["channelType"] = m_channelType;
+			conf["channelTypeLabel"] = m_channelTypeLabel;
+		}
 	}
 
-	if (opt.contains("getStatus") && opt["getStatus"].get<bool>() == false)
-	{
 
-	}
-	else
+	if(querier.getStatus)
 	{
 		conf["ioTypeLabel"] = m_ioTypeLabel;
 		conf["valTypeLabel"] = m_valTypeLabel;
+		conf["val"] = m_curVal;
 	}
 
 	return false;

@@ -39,7 +39,7 @@ SOFTWARE.
 MO* createMO(string type)
 {
 	MO* p = NULL;
-	if (type == MO_TYPE::mo || type == MO_TYPE::custom)
+	if (type == MO_TYPE::mo || type == MO_TYPE::customMo)
 	{
 		p = new MO();
 	}
@@ -47,7 +47,7 @@ MO* createMO(string type)
 	{
 		p = new MO();
 	}
-	else if (type == MO_TYPE::project)
+	else if (type == MO_TYPE::customOrg)
 	{
 		p = new MO();
 	}
@@ -122,7 +122,7 @@ bool MO::loadConf(json& conf)
 
 	m_mapConf = conf["map"];
 
-	if (m_moType == "custom" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
+	if (m_moType == "customMo" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
 		m_moCustomTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
 		m_moCustomType = m_moCustomTypeLabel;
@@ -140,6 +140,14 @@ bool MO::loadConf(json& conf)
 			prj.m_mapCustomMOType[m_moCustomType] = moList;
 		}
 	}
+
+	if (m_moType == "customOrg" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
+	{
+		m_moCustomTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
+		m_moCustomType = m_moCustomTypeLabel;
+		str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
+	}
+
 	
 	if (conf.contains("children")) {
 		auto children = conf["children"];
@@ -158,95 +166,108 @@ bool MO::loadConf(json& conf)
 	return true;
 }
 
+//根据leafType选择器，该节点是否要返回
+bool MO::isSelectedByLeafType(string leafType)
+{
+	if (leafType == "")
+		return true;
+	if (m_moType == "mp")
+		return true;
+	else if (m_moType == "org")
+	{
+		return true;
+	}
+	else if (m_moType == "mo") {
+		if(leafType == "mo")
+			return true;
+	}
+	else if (m_moType == MO_TYPE::customOrg) {
+		if (leafType == "org" ||leafType == "mo") {
+			return true;
+		}
+		else if (leafType == m_moCustomType || leafType == m_moCustomTypeLabel)
+			return true;
+	}
+	else if (m_moType == MO_TYPE::customMo) {
+		if (leafType == "mo") {
+			return true;
+		}
+		else if(leafType == m_moCustomType || leafType == m_moCustomTypeLabel)
+			return true;
+	}
+	
+	return false;
+}
+
 //serializeOption
 //root 返回位号的相对根
 //type mo类型
-//recursive 是否递归
+//getChild 是否递归
 //getStatus 是否包含状态信息
 //getMp 是否获取mp。缺省获取
 bool MO::toJson(json& conf, json serializeOption)
 {
-	bool getMp = true;
-	if (serializeOption.contains("getMp"))
-	{
-		getMp = serializeOption["getMp"].get<bool>();
-	}
-	string type = "mo";
-	if (serializeOption["type"] != nullptr)
-	{
-		type = serializeOption["type"].get<string>();
-	}
+	MO_QUERIER q = parseQuerier(serializeOption);
+
+	if (m_moType == "mp" && !q.getMp)
+		return false;
 
 	//根据请求的moType判断是否需要返回当前节点。
-	if (m_moType == "mp" && !getMp)
+	if (!isSelectedByLeafType(q.leafType))
 		return false;
-	if (type == "org") //组织结构。project看做是一种特殊的组织结构
-	{
-		if (m_moType != type && m_moType != "project")
-			return false; //请求组织结构，遇到不是组织结构的MO节点，不返回该节点
-	}
-	else if (m_moType == MO_TYPE::custom) //通过mo或者自定义类型名称 取自定义节点
-	{
-		if (type == "mo" || m_moCustomType == type) 
-		{}
-		else 
-			return false;
-	}
 
-
-	conf["name"] = m_strName;
-	conf["type"] = m_moType;
-	if (m_moCustomType != "")
-		conf["customType"] = m_moCustomType;
-	if(m_moCustomTypeLabel != "")
-		conf["customTypeLabel"] = m_moCustomTypeLabel;
-
-	if (m_groupName != "") {
-		conf["group"] = m_groupName;
-	}
-
-	if (m_bDynLocation)
-	{
-		conf["dynamicLocation"] = m_bDynLocation;
-	}
-	if (m_bLocationCalib)
-	{
-		conf["locationCalib"] = m_bLocationCalib;
-	}
-
-	if(m_dbLongitudeCalib > 0.000001)
-		conf["longitudeCalib"] = m_dbLongitudeCalib;
-	if(m_dbLatitudeCalib > 0.000001)
-		conf["latitudeCalib"] = m_dbLatitudeCalib;
-
-	if (m_mapConf != nullptr)
-		conf["map"] = m_mapConf;
-		
-	if (m_longitude != nullptr)
-		conf["longitude"] = m_longitude;
-	if (m_latitude != nullptr)
-		conf["latitude"] = m_latitude;
-
-	if (serializeOption["getStatus"] != nullptr && serializeOption["getStatus"].get<bool>() == false)
-	{
-
-	}
-	else
-	{
-		if (m_strIoAddrBind != "")
-		{
-			conf["ioAddrBind"] = m_strIoAddrBind;
-			conf["online"] = m_bOnline;
-		}
-			
+	if (q.getConfDetail) {
 		string tag = getTag();
-		if (serializeOption["root"] != nullptr)
+		if (serializeOption["rootTag"] != nullptr)
 		{
-			string root = serializeOption["root"].get<string>();
-			tag = str::trimPrefix(tag, root);
+			string rootTag = serializeOption["rootTag"].get<string>();
+			tag = str::trimPrefix(tag, rootTag);
 			tag = str::trimPrefix(tag, ".");
 		}
 		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+		conf["ioAddrBind"] = m_strIoAddrBind;
+	}
+
+
+	if (q.getConf) {
+		conf["name"] = m_strName;
+		conf["type"] = m_moType;
+		if (m_moCustomType != "")
+			conf["customType"] = m_moCustomType;
+		if (m_moCustomTypeLabel != "")
+			conf["customTypeLabel"] = m_moCustomTypeLabel;
+		if (m_groupName != "") {
+			conf["group"] = m_groupName;
+		}
+		if (m_bDynLocation)
+		{
+			conf["dynamicLocation"] = m_bDynLocation;
+		}
+		if (m_bLocationCalib)
+		{
+			conf["locationCalib"] = m_bLocationCalib;
+		}
+		if (m_dbLongitudeCalib > 0.000001)
+			conf["longitudeCalib"] = m_dbLongitudeCalib;
+		if (m_dbLatitudeCalib > 0.000001)
+			conf["latitudeCalib"] = m_dbLatitudeCalib;
+		if (m_mapConf != nullptr)
+			conf["map"] = m_mapConf;
+		if (m_longitude != nullptr)
+			conf["longitude"] = m_longitude;
+		if (m_latitude != nullptr)
+			conf["latitude"] = m_latitude;
+	}
+	
+
+	//运行时状态数据
+	if (q.getStatus)
+	{
+		if (m_strIoAddrBind != "")
+		{
+			conf["online"] = m_bOnline;
+		}
+			
 		if (m_longitudeDyn != nullptr)
 			conf["longitudeDyn"] = m_longitudeDyn;
 		if (m_latitudeDyn != nullptr)
@@ -256,15 +277,9 @@ bool MO::toJson(json& conf, json serializeOption)
 			conf["alarmStatus"] = m_jAlarmStatus;
 	}
 
-	//如果请求项目节点，不返回项目节点以下的节点
-	if (type == "project" && m_moType == "project")
-	{
-		return true;
-	}
-	
 
 	//是否需要递归序列化子对象
-	if (serializeOption["recursive"] != nullptr && serializeOption["recursive"].get<bool>() == false)
+	if (!q.getChild)
 	{
 		return true;
 	}
@@ -274,7 +289,7 @@ bool MO::toJson(json& conf, json serializeOption)
 		json jChildren = json::array();
 		for (auto& pmochild : m_childMO)
 		{
-			if (pmochild->m_moType == "mp" && !getMp)
+			if (pmochild->m_moType == "mp" && !q.getMp)
 				continue;
 
 			json jChild;
@@ -304,6 +319,8 @@ void MO::clearChildren()
 	}
 	m_childMO.clear();
 }
+
+
 
 MO* MO::GetProjectMO()
 {
@@ -773,7 +790,7 @@ void MO::statisChildCustomMoType(map<string, json>& list)
 {
 	for (auto& i : m_childMO)
 	{
-		if (i->m_moType == MO_TYPE::custom)
+		if (i->m_moType == MO_TYPE::customMo)
 		{
 			json jType;
 			jType["type"] = i->m_moCustomType;
@@ -805,10 +822,10 @@ void MO::statisChildMo(json& jStatis)
 
 
 
-	if (m_moType == MO_TYPE::project) {
+	if (m_moType == MO_TYPE::customOrg) {
 		jStatis["project"]= jStatis["project"].get<int>() + 1;
 	}
-	else if (m_moType == "custom") {
+	else if (m_moType == MO_TYPE::customMo) {
 		jStatis["smartDev"] = jStatis["smartDev"].get<int>() + 1;
 
 		if (m_bOnline)
@@ -822,6 +839,38 @@ void MO::statisChildMo(json& jStatis)
 		MO* pC = m_childMO[i];
 		pC->statisChildMo(jStatis);
 	}
+}
+
+MO_QUERIER MO::parseQuerier(json& opt)
+{
+	MO_QUERIER q;
+	if (opt == nullptr)
+		return q;
+
+	if (opt.contains("getStatus")) {
+		q.getStatus = opt["getStatus"].get<bool>();
+	};
+	if (opt.contains("getMp")) {
+		q.getMp = opt["getMp"].get<bool>();
+	}
+	if (opt["getChild"] != nullptr) {
+		q.getChild = opt["getChild"].get<bool>();
+	}
+	if (opt["getConf"] != nullptr) {
+		q.getConf = opt["getConf"].get<bool>();
+	}
+	if (opt["type"] != nullptr)
+	{
+		q.type = opt["type"].get<string>();
+	}
+	if (opt["leafType"] != nullptr)
+	{
+		q.leafType = opt["leafType"].get<string>();
+	}
+	if (opt["getDetailConf"] != nullptr) {
+		q.getConfDetail = opt["getDetailConf"].get<bool>();
+	}
+	return q;
 }
 
 

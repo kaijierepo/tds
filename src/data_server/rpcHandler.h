@@ -60,15 +60,10 @@ public:
 	string rpc_setconffile(json params, string& error);
 	string rpc_heartbeat(json params, string& error, RPC_SESSION session);
 	string rpc_xiaot(json params, string& error);
-	string rpc_logout(json params, string& error);
-	string rpc_login(json params, string& error);
 
 	////io service function
-	void rpc_getIOTree(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
-	void rpc_getDevStatus(json params, RPC_RESP& resp);
-	void rpc_getDevList(json params, RPC_RESP& resp);
-	void rpc_getIoDevStatis(json params, RPC_RESP& resp);
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	string rpc_io_scanChannel(json params, string& error);
 	string rpc_setStream(json params, string& error);

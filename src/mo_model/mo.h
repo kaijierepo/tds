@@ -70,6 +70,26 @@ namespace TAG {
 	json mapTree2List(json mapTree);
 }
 
+struct MO_QUERIER {
+	bool getMp;
+	bool getStatus;
+	bool getChild;
+	bool getConf;
+	bool getConfDetail;
+	string type;
+	string leafType;
+
+	MO_QUERIER() {
+		 getConf = true;
+		 getMp = false;
+		 getStatus = false;
+		 getChild = false;
+		 type = "obj";
+		 leafType = "mo";
+		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
+	}
+};
+
 
 class amo;
 class MP;
@@ -85,6 +105,7 @@ public:
 
 	void removeMp(json& mo);
 	void clearChildren();
+	bool isSelectedByLeafType(string leafType);
 
 	string m_moType;
 	string m_moCustomType;  //如果用中文命名，此处转为中文首字母
@@ -112,6 +133,7 @@ public:
 	map<string, json> getChildCustomMoTypeList();
 	void statisChildCustomMoType(map<string, json>& list);
 	void statisChildMo(json& jStatis);
+	MO_QUERIER parseQuerier(json& opt);
 
 	MO* GetRootMO();
 	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身

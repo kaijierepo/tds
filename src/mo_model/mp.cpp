@@ -164,94 +164,91 @@ bool MP::toJson(json& conf, json serializeOption)
 {
 	if (!MO::toJson(conf, serializeOption))
 		return false;
-	MP* p = (MP*)this;
-	bool bIncluded = false;
-	//确定是否请求了该类型的监测点
-	if (serializeOption["valType"] != nullptr)
+
+	MO_QUERIER q = parseQuerier(serializeOption);
+
+
+	if (q.getConf)
 	{
-		json& vt = serializeOption["valType"];
-		for (int i = 0; i < vt.size(); i++)
+		//确定是否请求了该类型的监测点
+		MP* p = (MP*)this;
+		bool bIncluded = false;
+		if (serializeOption["valType"] != nullptr)
 		{
-			json& jType = vt[i];
-			if (jType.get<string>() == p->m_valType)
+			json& vt = serializeOption["valType"];
+			for (int i = 0; i < vt.size(); i++)
 			{
-				bIncluded = true;
-				break;
+				json& jType = vt[i];
+				if (jType.get<string>() == p->m_valType)
+				{
+					bIncluded = true;
+					break;
+				}
 			}
 		}
-	}
-	else
-	{
-		bIncluded = true;
-	}
-	if (!bIncluded)
-		return false;
-
-	conf["valType"] = p->m_valType;
-	if(p->m_ioType!= "")
-		conf["ioType"] = p->m_ioType;
-	if (p->m_valType == "json")
-		conf["mpType"] = p->m_mpType;
-	if (p->m_alarmMp)
-		conf["alarmMp"] = true;
-
-
-	conf["saveMode"] = p->m_saveMode;
-
-	if (p->m_saveMode == DATA_SAVE_MODE::cyclic || p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange)
-	{
-		json saveInterval;
-		saveInterval["hour"] = p->m_saveInterval.hour;
-		saveInterval["minute"] = p->m_saveInterval.minute;
-		saveInterval["second"] = p->m_saveInterval.second;
-		conf["saveInterval"] = saveInterval;
+		else
+		{
+			bIncluded = true;
+		}
+		if (!bIncluded)
+			return false;
+		conf["valType"] = p->m_valType;
+		if (p->m_ioType != "")
+			conf["ioType"] = p->m_ioType;
+		if (p->m_valType == "json")
+			conf["mpType"] = p->m_mpType;
+		if (p->m_alarmMp)
+			conf["alarmMp"] = true;
+		conf["saveMode"] = p->m_saveMode;
+		if (p->m_saveMode == DATA_SAVE_MODE::cyclic || p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange)
+		{
+			json saveInterval;
+			saveInterval["hour"] = p->m_saveInterval.hour;
+			saveInterval["minute"] = p->m_saveInterval.minute;
+			saveInterval["second"] = p->m_saveInterval.second;
+			conf["saveInterval"] = saveInterval;
+		}
+		if (p->m_strUnit != "")
+			conf["unit"] = p->m_strUnit;
+		//KB  不等于默认值则保存
+		if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001)
+		{
+			conf["k"] = p->m_K;
+			conf["b"] = p->m_B;
+		}
+		//默认值 
+		if (p->m_defaultVal != nullptr)
+			conf["defaultVal"] = p->m_defaultVal;
+		//报警限
+		json alarmLimit;
+		if (m_alarmLimit.enableHigh)
+		{
+			alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
+			alarmLimit["high"] = m_alarmLimit.high;
+		}
+		if (m_alarmLimit.enableLow)
+		{
+			alarmLimit["enableLow"] = m_alarmLimit.enableLow;
+			alarmLimit["low"] = m_alarmLimit.low;
+		}
+		if (alarmLimit != nullptr)
+			conf["alarmLimit"] = alarmLimit;
+		//有效值范围
+		if (m_validRange.enable)
+		{
+			json validRange;
+			validRange["enable"] = m_validRange.enable;
+			validRange["min"] = m_validRange.min;
+			validRange["max"] = m_validRange.max;
+			conf["validRange"] = validRange;
+		}
+		//有效小数位
+		if (m_decimalDigits >= 0)
+			conf["decimalDigits"] = m_decimalDigits;
 	}
 	
 
-	if(p->m_strUnit!="")
-		conf["unit"] = p->m_strUnit;
-
-	//KB  不等于默认值则保存
-	if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001)
-	{
-		conf["k"] = p->m_K;
-		conf["b"] = p->m_B;
-	}
-	//默认值 
-	if(p->m_defaultVal!=nullptr)
-		conf["defaultVal"] = p->m_defaultVal;
-	//报警限
-	json alarmLimit;
-	if (m_alarmLimit.enableHigh)
-	{
-		alarmLimit["enableHigh"] = m_alarmLimit.enableHigh;
-		alarmLimit["high"] = m_alarmLimit.high;
-	}
-	if (m_alarmLimit.enableLow)
-	{
-		alarmLimit["enableLow"] = m_alarmLimit.enableLow;
-		alarmLimit["low"] = m_alarmLimit.low;
-	}
-	if(alarmLimit!=nullptr)
-		conf["alarmLimit"] = alarmLimit;
-	//有效值范围
-	if (m_validRange.enable)
-	{
-		json validRange;
-		validRange["enable"] = m_validRange.enable;
-		validRange["min"] = m_validRange.min;
-		validRange["max"] = m_validRange.max;
-		conf["validRange"] = validRange;
-	}
-	//有效小数位
-	if (m_decimalDigits >= 0)
-		conf["decimalDigits"] = m_decimalDigits;
-
-	if (serializeOption["getStatus"] != nullptr && serializeOption["getStatus"].get<bool>() == false)
-	{
-
-	}
-	else
+	if (q.getStatus)
 	{
 		conf["val"] = m_curVal;
 	}

@@ -129,56 +129,59 @@ void ioDev::stop()
 }
 
 // 默认选项
-// opt.recursive = true
-// opt.onlyConf = false
+// opt.getChan = true
+// opt.getStatus = false
 bool ioDev::toJson(json& conf, json opt)
 {
-	//配置数据
-	conf["addr"] = m_jDevAddr;
-	conf["type"] = m_devType;
-	conf["typeLabel"] = m_devTypeLabel;
-	conf["level"] = m_level;
-	conf["manageStatus"] = m_dispositionMode;
-	if (m_fAcqInterval != 0)
-		conf["acqInterval"] = m_fAcqInterval;
-	conf["enableAcq"] = m_bEnableAcq;
-	if (m_strTagBind != "")
-		conf["tagBind"] = m_strTagBind;
-	if (m_strChanTemplate != "")
-		conf["chanTemplate"] = m_strChanTemplate;
-	conf["nodeID"] = m_confNodeId;
+	DEV_QUERIER querier = parseQueryOpt(opt);
 
-	
-	
-	if (opt.contains("getStatus") && opt["getStatus"].get<bool>() == false)
-	{
-		
+
+	//配置数据 - 保存在配置文件中
+	if (querier.getConf) {
+		conf["addr"] = m_jDevAddr;
+		conf["type"] = m_devType;
+		conf["typeLabel"] = m_devTypeLabel;
+		conf["level"] = m_level;
+		conf["manageStatus"] = m_dispositionMode;
+		if (m_fAcqInterval != 0)
+			conf["acqInterval"] = m_fAcqInterval;
+		conf["enableAcq"] = m_bEnableAcq;
+		if (m_strTagBind != "")
+			conf["tagBind"] = m_strTagBind;
+		if (m_strChanTemplate != "")
+			conf["chanTemplate"] = m_strChanTemplate;
+		conf["nodeID"] = m_confNodeId;
 	}
-	else
+
+	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
+	if(querier.getStatus)
 	{
-		//运行时数据
 		if (m_charset != "")
 			conf["charset"] = m_charset;
-		conf["addrMode"] = m_addrMode;
+		
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;
 		if (pIOSession != nullptr)
 		{
 			conf["remoteIP"] = pIOSession->getRemoteAddr();
 		}
-		conf["ioAddr"] = getIOAddrStr();
 
 		//详细信息
-		conf["parentType"] = m_parentDevType;
-	}
+		conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
+
+		if (m_jAlarmStatus != nullptr) {
+			conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
+			conf["alarmStatus"] = m_jAlarmStatus;
+		}
 
 
-	//显式指定不递归才不递归
-	if (opt != nullptr && opt["recursive"] != nullptr && opt["recursive"].get<bool>() == false)
-	{
+		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
+		conf["ioAddr"] = getIOAddrStr();
+		conf["addrMode"] = m_addrMode;
+		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
+	} 
 
-	}
-	else//默认递归
+	if(querier.getChild)
 	{
 		if (m_vecChildDev.size() > 0)
 		{
@@ -193,16 +196,15 @@ bool ioDev::toJson(json& conf, json opt)
 		}
 	}
 
-	bool getChan = true;
-	if (opt.contains("getChan") && opt["getChan"].get<bool>() == false) {
-		getChan = false;
-	}
-
-	if (getChan && m_channels.size() > 0)
+	if (querier.getChan && m_channels.size() > 0)
 	{
 		json channels = json::array();
 		for (auto& i : m_channels)
 		{
+			//空闲通道作为状态数据，必须指定获取状态才返回
+			if (!querier.getStatus && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare) {
+				continue;
+			}
 			json j;
 			i->toJson(j, opt);
 			channels.push_back(j);
@@ -375,6 +377,27 @@ string ioDev::getDesc()
 void ioDev::triggerCycleAcq()
 {
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
+}
+
+DEV_QUERIER ioDev::parseQueryOpt(json& opt)
+{
+	DEV_QUERIER q;
+	if (opt.contains("getStatus")) {
+		q.getStatus = opt["getStatus"].get<bool>();
+	};
+	if (opt.contains("getChan")) {
+		q.getChan = opt["getChan"].get<bool>();
+	}
+	if (opt.contains("getChild")) {
+		q.getChild = opt["getChild"].get<bool>();
+	}
+	if (opt.contains("getConf")) {
+		q.getConf = opt["getConf"].get<bool>();
+	}
+	if (opt.contains("getDetail")) {
+		q.getDetail = opt["getDetail"].get<bool>();
+	}
+	return q;
 }
 
 ioDev* ioDev::getIODevByNodeID(string nodeID)

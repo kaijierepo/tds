@@ -111,12 +111,12 @@ const std::map<string, string> PHYSICAL_TYPE_LABEL = {
 
 namespace MO_TYPE {
 	const string mo = "mo";
-	const string mp = "mp";
+	const string customMo = "customMo";
 	const string org = "org";
+	const string customOrg = "customOrg";
+	const string mp = "mp";
 	const string mpgroup = "mpgroup";
-	const string project = "project";
 	const string amo = "amo";
-	const string custom = "custom";
 }
 
 namespace MO_TYPE_LABEL {
