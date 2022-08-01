@@ -508,6 +508,7 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 		m_mapAccessInfo[aiTmp.token] = aiTmp;
 		json rlt;
 		rlt["token"] = aiTmp.token;
+		rlt["tokenExpire"] = aiTmp.age;
 		resp.result = rlt.dump();
 		changed = true;
 	}
@@ -734,6 +735,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				ai.token = token;
 				ai.user = user;
 				ai.bDynamic = true;
+				userInfo["tokenExpire"] = ai.age;
 				m_csAccessToken.lock();
 				m_mapAccessInfo[token] = ai;
 				m_csAccessToken.unlock();
