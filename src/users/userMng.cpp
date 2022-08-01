@@ -3,9 +3,9 @@
 #include "common/common.hpp"
 #include "mo.h"
 #include "logger.h"
+#include "pbkdf2_sha256.h"
 
 userManager userMng;
-
 
 string getDefaultRoleConf() {
 	return R"(
@@ -666,18 +666,65 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	try {
 		string user = params["user"].get<string>();
-		string pwd = params["pwd"].get<string>();
+		string pwd = "";
+		string sign = "";
+		if(params.contains("pwd"))
+			pwd = params["pwd"].get<string>();
+		if (params.contains("sign"))
+			sign = params["sign"].get<string>();
+
+		if (pwd == "" && sign == "") {
+			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_signatureMissing, "param sign must be specified to login.use HMAC-SHA256 to generate signature");
+			return;
+		}
+
+		bool loginSuccess = false;
 		json userInfo;
 		std::shared_lock<shared_mutex> lock(m_csUserConf);
 		if (m_mapUsers.find(user) != m_mapUsers.end())
 		{
 			json& jUser = m_mapUsers[user];
-			string truePwd = jUser["pwd"].get<string>();
-			if (pwd == truePwd)
+
+			//校验密码或者签名
+			if (pwd != "")
 			{
+				string truePwd = jUser["pwd"].get<string>();
+				if (pwd == truePwd)
+				{
+					loginSuccess = true;
+				}
+				else {
+					resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "password error", "密码错误");
+				}
+			}
+			else {
+				string truePwd = jUser["pwd"].get<string>();
+				string time = "";
+				if (params.contains("time"))
+					time = params["time"].get<string>();
+				else {
+					resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param time must be specified to login");
+					return;
+				}
+
+				string msg = user + time;
+				uint8_t out[SHA256_DIGESTLEN] = { 0 };
+				hmac_sha256_calc(out, (uint8_t*)msg.data(), msg.length(), (uint8_t*)truePwd.data(), truePwd.length());
+				string trueSign = str::bytesToHexStr((char*)out, SHA256_DIGESTLEN, "");
+
+				if (trueSign == sign)
+				{
+					loginSuccess = true;
+				}
+			}
+
+			//校验成功
+			if (loginSuccess) {
 				userInfo = jUser;
-				string keyPwd = "pwd"; 
+				string keyPwd = "pwd";
 				userInfo.erase(keyPwd);
+				userInfo.erase("createTime");
+				userInfo.erase("enable");
 				//生成token
 				string token = common::guid();
 				userInfo["token"] = token;
@@ -692,9 +739,6 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				m_csAccessToken.unlock();
 				saveTokens();
 				resp.result = userInfo.dump(4);
-			}
-			else {
-				resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "password error","密码错误");
 			}
 		}
 		else {

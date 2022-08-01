@@ -1095,7 +1095,8 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 				sResp = charCodec::ansi2Utf8(sResp);
 			}
 
-			//解析请求基本信息
+			//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
+			sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
 			json jResp = json::parse(sResp);
 			if (!jResp.contains("method"))
 			{
@@ -1122,7 +1123,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 			if (!tdsSession->m_bSingleDevMode || tdsSession->m_IoDev == nullptr)
 			{
 				//获得该io地址的设备对象
-				string strIoAddr = jResp["ioAddr"].get<string>();
+				string strIoAddr = jResp["addr"].get<string>();
 				if (strIoAddr == "")
 				{
 					LOG("[error]注册包devRegister中的ioAddr为空，无效");

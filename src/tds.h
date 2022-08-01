@@ -300,6 +300,7 @@ enum RPC_ERROR_CODE {
 	AUTH_userNotFound = -40103,
 	AUTH_userMissing = -40104,
 	AUTH_passwordError = -40105,
+	AUTH_signatureMissing = -40106,
 
 	//mo
 	MO_specifiedTagNotFound = -40201,
