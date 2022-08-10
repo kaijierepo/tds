@@ -2,27 +2,104 @@
 #include "tcpHub.h"
 #include "logger.h"
 #include "common.hpp"
+#include "conf.h"
+
+
+string tcpHub::defaultConf() 
+{
+	string s = R"(#tcpHub TCP数据转发工具
+#左侧配置
+left_s_port=0          #左侧服务器模式端口
+left_c_ip=0            #左侧客户端模式连接的服务器ip
+left_c_port=0          #左侧客户端模式连接的服务器端口
+
+
+#右侧配置
+right_s_port=0          #右侧服务器模式端口
+right_c_ip=0            #右侧客户端模式连接的服务器ip
+right_c_port=0          #右侧客户端模式连接的服务器端口
+)";
+
+	s = str::replace(s, "\n", "\r\n");
+	return s;
+}
+
+bool tcpHub::loadConf()
+{
+	return false;
+}
 
 void tcpHub::run()
 {
-	bool bsl = sLeft.run(this, sPortLeft);
-	if (bsl)
+	logInText = false; 
+
+	string confPath = fs::appPath() + "/tcpHub.ini";
+	if (!fs::fileExist(confPath))
 	{
-		LOG("Server at port " + str::fromInt(sPortLeft) + "   start sucess");
+		string s = defaultConf();
+		fs::writeFile(confPath, s);
 	}
-	else
+	
+	TDS_INI tdsIni;
+	tdsIni.load(confPath);
+
+	left_s_port = tdsIni.getValInt("left_s_port", 0);
+	left_c_port = tdsIni.getValInt("left_c_port", 0);
+	left_c_ip = tdsIni.getValStr("left_c_ip", "");
+
+	right_s_port = tdsIni.getValInt("right_s_port", 0);
+	right_c_port = tdsIni.getValInt("right_c_port", 0);
+	right_c_ip = tdsIni.getValStr("right_c_ip", "");
+
+	//left side
+	if (left_s_port != 0)
 	{
-		LOG("Server at port " + str::fromInt(sPortLeft) + "   start fail");
+		bool ret = sLeft.run(this, left_s_port);
+		if (ret)
+		{
+			LOG("Left Server at port " + str::fromInt(left_s_port) + "   start sucess");
+		}
+		else
+		{
+			LOG("Left Server at port " + str::fromInt(left_s_port) + "   start fail");
+		}
+	}
+	if (left_c_port != 0 && left_c_ip != "") {
+		bool ret = cLeft.run(this,left_c_ip, left_c_port);
+		if (ret)
+		{
+			LOG("Left Client at addr %s:%d start success", left_c_ip.c_str(), left_c_port);
+		}
+		else
+		{
+			LOG("Left Client at addr %s:%d start fail", left_c_ip.c_str(), left_c_port);
+		}
 	}
 
-	bool bsr = sRight.run(this, sPortRight);
-	if (bsl)
+
+	//right side
+	if (right_s_port != 0)
 	{
-		LOG("Server at port " + str::fromInt(sPortRight) + "   start sucess");
+		bool ret = sRight.run(this, right_s_port);
+		if (ret)
+		{
+			LOG("Right Server at port " + str::fromInt(right_s_port) + "   start sucess");
+		}
+		else
+		{
+			LOG("Right Server at port " + str::fromInt(right_s_port) + "   start fail");
+		}
 	}
-	else
-	{
-		LOG("Server at port " + str::fromInt(sPortRight) + "   start fail");
+	if (right_c_port != 0 && right_c_ip != "") {
+		bool ret = cRight.run(this, right_c_ip, right_c_port);
+		if (ret)
+		{
+			LOG("Right Client at addr %s:%d start success",right_c_ip.c_str(),right_c_port);
+		}
+		else
+		{
+			LOG("Right Client at addr %s:%d start fail", right_c_ip.c_str(), right_c_port);
+		}
 	}
 }
 
@@ -32,22 +109,22 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	{
 		if (pCltInfo->pTcpServer == &sLeft)
 		{
-			LOG("S" + str::fromInt(sPortLeft) + ": " + pCltInfo->remoteIP + " connected");
+			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + " connected");
 		}
 		else if (pCltInfo->pTcpServer == &sRight)
 		{
-			LOG("S" + str::fromInt(sPortRight) + ": " + pCltInfo->remoteIP + " connected");
+			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + " connected");
 		}
 	}
 	else
 	{
 		if (pCltInfo->pTcpServer == &sLeft)
 		{
-			LOG("S" + str::fromInt(sPortLeft) + ": " + pCltInfo->remoteIP + " disconnected");
+			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + " disconnected");
 		}
 		else if (pCltInfo->pTcpServer == &sRight)
 		{
-			LOG("S" + str::fromInt(sPortRight) + ": " + pCltInfo->remoteIP + " disconnected");
+			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + " disconnected");
 		}
 	}
 	
@@ -55,24 +132,57 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 
 void tcpHub::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
 {
+	string sData = str::bytesToHexStr(pData, iLen);
+
 	if (pCltInfo->pTcpServer == &sLeft)
 	{
 		sRight.SendData(pData, iLen);
-		char* p = new char[iLen + 1];
-		memset(p, 0, iLen + 1);
-		memcpy(p, pData, iLen);
-		string s = p;
-		LOG( "Server" + str::fromInt(sPortLeft) + "-->Server" + str::fromInt(sPortRight) + " " + str::fromInt(iLen) + "bytes\r\n"  + s);
-		delete p;
+		cRight.SendData(pData, iLen);
+		LOG(" --> (%d) %s",iLen, sData.c_str());
 	}
 	else if (pCltInfo->pTcpServer == &sRight)
 	{
 		sLeft.SendData(pData, iLen);
-		char* p = new char[iLen + 1];
-		memset(p, 0, iLen + 1);
-		memcpy(p, pData, iLen);
-		string s = p;
-		LOG("Server" + str::fromInt(sPortLeft) + "<--Server" + str::fromInt(sPortRight) + " " + str::fromInt(iLen) + "bytes\r\n" + s);
-		delete p;
+		cLeft.SendData(pData, iLen);
+		LOG(" <-- (%d) %s", iLen, sData.c_str());
+	}
+}
+
+void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
+{
+	if (bIsConn)
+	{
+		if (connInfo->tcpClt == &cLeft) {
+			LOG("Left Client to %s:%d connected",left_c_ip.c_str(),left_c_port);
+		}
+		else if (connInfo->tcpClt == &cRight) {
+			LOG("Right Client to %s:%d connected", right_c_ip.c_str(), right_c_port);
+		}
+	}
+	else {
+		if (connInfo->tcpClt == &cLeft) {
+			LOG("Left Client to %s:%d disconnected", left_c_ip.c_str(), left_c_port);
+		}
+		else if (connInfo->tcpClt == &cRight) {
+			LOG("Right Client to %s:%d disconnected", right_c_ip.c_str(), right_c_port);
+		}
+	}
+}
+
+void tcpHub::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+{
+	string sData = str::bytesToHexStr(pData, iLen);
+
+	if (connInfo->tcpClt == &cLeft)
+	{
+		sRight.SendData(pData, iLen);
+		cRight.SendData(pData, iLen);
+		LOG(" --> (%d) %s", iLen, sData.c_str());
+	}
+	else if (connInfo->tcpClt == &cRight)
+	{
+		sLeft.SendData(pData, iLen);
+		cLeft.SendData(pData, iLen);
+		LOG(" <-- (%d) %s", iLen, sData.c_str());
 	}
 }

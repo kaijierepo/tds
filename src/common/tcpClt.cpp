@@ -64,33 +64,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	return 0;
 }
 
-DWORD WINAPI ConnectThread(LPVOID lpParam)
-{
-	tcpClt* p = (tcpClt*) lpParam;
-	p->m_bConnThreadRunning = true;
-	int ct = 0;
-	if (!p->IsConnect())
-		p->connect();
-	while (1)
-	{
-		if (!p->m_bRun)
-			break;
-		Sleep(100);
-		if (!p->m_bRun)
-			break;
-		ct++;
-		if (ct == 10)
-		{
-			ct = 0;
-			if (!p->IsConnect())
-				p->connect();
-			//if (p->IsConnect() && p->heartbeat.size() > 0 )
-			//	p->SendData(p->heartbeat.data(), p->heartbeat.size());
-		}
-	}
-	p->m_bConnThreadRunning = false;
-	return 0;
-}
+
 
 DWORD WINAPI AsynConnectThread(LPVOID lpParam)
 {
@@ -100,6 +74,33 @@ DWORD WINAPI AsynConnectThread(LPVOID lpParam)
 }
 
 
+map<tcpClt*, tcpClt*> mapAllTcpClt;
+mutex csAllTcpClt;
+bool connectThreadRunning = false;
+
+
+DWORD WINAPI ConnectThread(LPVOID lpParam)
+{
+	while (1)
+	{
+		Sleep(500);
+		for (map<tcpClt*, tcpClt*>::iterator  i = mapAllTcpClt.begin(); i != mapAllTcpClt.end(); i++) {
+			tcpClt* p = i->first;
+			if (!p->m_bRun)
+				continue;
+
+			if (p->IsConnect())
+				continue;
+
+			if (timeopt::CalcTimePassMilliSecond(p->lastConnTime) > 3000) {
+				GetLocalTime(&p->lastConnTime);
+				thread t(AsynConnectThread, p);
+				t.detach();
+			}
+		}
+	}
+	return 0;
+}
 
 tcpClt::tcpClt(void)
 {
@@ -109,22 +110,26 @@ tcpClt::tcpClt(void)
 	m_bConn = false;
 	m_bRun = false;
 	m_bIsConnectting = false;
-	lastConnTime.wYear = 0; 
-	lastConnTime.wMonth = 0;
-	lastConnTime.wDay = 0;
-	lastConnTime.wHour = 0;
-	lastConnTime.wMinute = 0;
-	lastConnTime.wSecond = 0;
-	lastConnTime.wMilliseconds = 0;
-	ZeroMemory(&lastConnTime, 0);
+	GetLocalTime(&lastConnTime);
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
 	m_bConnThreadRunning = false;
+	csAllTcpClt.lock();
+	mapAllTcpClt[this] = this;
+	if (!connectThreadRunning){
+		connectThreadRunning = true;
+		DWORD dwThread;
+		HANDLE hThread = CreateThread(NULL, 0, ConnectThread, (LPVOID)this, 0, &dwThread);
+	}
+	csAllTcpClt.unlock();
 }
 
 tcpClt::~tcpClt(void)
 {
 	stop();
+	csAllTcpClt.lock();
+	mapAllTcpClt.erase(this);
+	csAllTcpClt.unlock();
 }
 
 bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
@@ -161,9 +166,7 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, str
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
 	m_bRun = true;
-	DWORD dwThread;
-	HANDLE hThread = CreateThread(NULL, 0, ConnectThread, (LPVOID)this, 0, &dwThread);
-	return 0;
+	return true;
 }
 
 void tcpClt::stop()

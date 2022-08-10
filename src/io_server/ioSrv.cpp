@@ -299,11 +299,6 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 
 bool ioServer::loadConf()
 {
-	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::DEV::modbus_rtu_slave;
-	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
-	m_mapPort2DevType[662] = IO_DEV_TYPE::DEV::leakDetect;
-
 	string conf;
 	if (!fs::readFile(tds->conf->confPath + "/io.json", conf))
 	{
@@ -435,7 +430,12 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		parentDev->addChild(pd);
 		saveConf();
 		rpcResp.result = "\"ok\"";
-		pd->toJson(params);
+		json opt;
+		opt["getConf"] = true;
+		opt["getChild"] = true;
+		opt["getChan"] = true;
+		opt["getStatus"] = true;
+		pd->toJson(params,opt);
 		rpcSrv.notify("devAdded", params);
 	}
 	else {
@@ -655,7 +655,12 @@ bool ioServer::runAsCloud()
 	m_bRunning = true;
 	loadChanTemplate();
 
-	int leakDetectPort = 662;
+	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
+
+	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
+	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
+	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
+	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
 
 	//启动服务端口
 	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
@@ -883,10 +888,16 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 
 	//通知设备上线
 	p->setOnline();
+	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,设备类型=%s",p->getIOAddrStr().c_str(),type.c_str()));
 
 	//通知设备发现
 	json j;
-	p->toJson(j);
+	json opt;
+	opt["getConf"] = true;
+	opt["getChan"] = true;
+	opt["getChild"] = true;
+	opt["getStatus"] = true;
+	p->toJson(j,opt);
 	rpcSrv.notify("devDiscovered", j);
 
 	return p;
@@ -1024,7 +1035,7 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_rtu_slave)
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
 	{
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
 		if (handleFirstRegPkt(pData, iLen, tdsSession))//首包数据,按照tdsp注册包处理
@@ -1037,7 +1048,7 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			bool bRegPkt = false;
 			if (!tdsSession->m_bAppDataRecved)//如果是第一包，尝试检查是不是rpc注册包
 			{
-				if (pab->PopPkt(IsValidPkt_ModbusRTU))
+				if (pab->PopPkt(IsValidPkt_TDSP))
 				{
 					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession, true);
 					LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
@@ -1137,7 +1148,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 			pIoDev->onRecvPkt(jResp);
 			LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
 		}
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_rtu_slave)
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
 		{
 			//4g模式下的modbus RTU over tcp 第一包必须发送注册包
 			if (registerPkt)

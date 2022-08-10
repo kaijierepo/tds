@@ -53,7 +53,7 @@ namespace IO_DEV_TYPE {
 inline string getDevTypeLabel(string devType) {
 	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
 	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
-	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485网关";
+	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485转网络";
 	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IO通道";
 	else if (devType == IO_DEV_TYPE::DEV::iq60_gateway)return "IQ60";
 	else if (devType == IO_DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";

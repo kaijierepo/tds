@@ -83,12 +83,24 @@ int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
 	else
 		return 0;
 
+	unsigned char cmdCode = pData[2];
+
+
 	for (int i = 0; i <= iLen - 2; i++)
 	{
 		if (pData[i] == 0x5A && pData[i + 1] == 0x5A)
 		{
-			if(calcLeakDetectCheckCode(pData+2,iLen-5) == pData[i-1])
+			//除了采样数据包校验了，其他命令包都是0xff
+			if (calcLeakDetectCheckCode(pData + 2, i - 1 - 2) == pData[i - 1] || 0xFF == pData[i - 1])
+			{
+				if (cmdCode == 0x23)//读数据包命令
+				{
+					if (i + 2 != 1013)
+						return 0;
+				}
+
 				return i + 2;
+			}		
 		}
 	}
 

@@ -221,6 +221,10 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 		//头尾两个数据文件需要进行时间范围检查，中间的不需要
 		fSet.fileList[0]->boundaryFile = true;
 		fSet.fileList[fSet.fileList.size()-1]->boundaryFile = true;
+
+		//数据只有1天的，不进行下采样
+		if (fSet.fileList.size() <= 1)
+			dsp.type = DST_None;
 		
 		//加载每个数据文件中的数据
 		for (int i=0;i<fSet.fileList.size();i++)

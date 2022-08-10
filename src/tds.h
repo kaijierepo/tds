@@ -193,21 +193,6 @@ struct ACTIVE_TDS_SESSION {
 	string type;
 };
 
-struct tcp2com_Conf {
-	string mode;
-	string com;
-	int baudRate;
-	int	byteSize;
-	string stopBits; 
-	string parity;
-	string remoteIP; 
-	int remotePort; 
-	int localPort;
-	string registerPktStr;
-	string registerPktHexStr;
-};
-
-
 struct iTDSConf {
 	//software conf
 	string mode;
@@ -273,13 +258,12 @@ struct iTDSConf {
 	int cloudPort;
 	string deviceID;
 
-
-	//tcp2com
-	tcp2com_Conf conf_tcp2com;
-
 	//debug
 	bool bCreateDumpWhenLogError;
 	bool bStopCycleAcq;
+
+	virtual int getInt(string key, int iDef) = 0;
+	virtual string getStr(string key, string sDef) = 0;
 };
 
 

@@ -189,11 +189,9 @@ int main(int argc, char** argv)
 
 		httpSrv->listen("0.0.0.0", tds->conf->httpPort);
 	}
-	else if (mode == "hub")
+	else if (mode == "tcpHub")
 	{
 		tcpHub* tr = new tcpHub();
-		//tr->portLeft = parser.get<int>("sl");
-		//tr->portRight = parser.get<int>("sr");
 		tr->run();
 	}
 	else if (mode == "switch")

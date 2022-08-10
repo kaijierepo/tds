@@ -41,10 +41,6 @@ void tdsConfig::generateDefaultConfFile(string m)
 	{
 		s = defaultConf_tds();
 	}
-	else if (m == "tcp2com")
-	{
-		s = defaultConf_tcp2com();
-	}
 	else if (m == "hs" || m == "httpServer")
 	{
 		s = defaultConf_httpServer();
@@ -54,28 +50,15 @@ void tdsConfig::generateDefaultConfFile(string m)
 		s = defaultConf_rphttp();
 	}
 
-	s = str::replace(s, "\n", "\r\n");
-	string confPath = fs::appPath() + "/" + mode + ".ini";
-	fs::writeFile(confPath, s);
+	if (s != "")
+	{
+		s = str::replace(s, "\n", "\r\n");
+		string confPath = fs::appPath() + "/" + mode + ".ini";
+		fs::writeFile(confPath, s);
+	}
 }
 
-string tdsConfig::defaultConf_tcp2com()
-{
-	string s = R"(#TDS 配置文件
-#串口转tcp透传网关配置
-com=COM1
-baudRate=19200
-byteSize=8
-stopBits=1
-parity=None            #None Even Odd
-mode=tcpclient         #tcpclient  tcpServer
-remoteIP=127.0.0.1     #client模式下的服务器IP
-remotePort=664         #client模式下的服务器端口
-localPort=663          #server模式下的服务端口
-registerPktStr={"method":"devRegister","ioAddr":"RS485Gateway_0001"}
-)";
-	return s;
-}
+
 
 string tdsConfig::defaultConf_httpServer() 
 {
@@ -111,6 +94,7 @@ enableScript = 0       #启用脚本功能
 tdspPort = 665         #TDSP协议  IO服务端口
 mbPort = 664           #Modbus-RTU over TCP  IO服务端口；使用串转网网关连接Modbus总线的情况
 iq60Port = 663         #IQ60物云协议 IO服务端口
+leakDetectPort = 8085  #漏点监测设备端口
 enableDevReboot=1      #启用设备重启功能      
 devRebootTime=180      #设备无通信重启时间
 iotimeoutTdsp=7000
@@ -149,52 +133,7 @@ void tdsConfig::loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf) {
 }
 
 
-void tdsConfig::loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf) {
-	for (int i = 0; i < vecConf.size(); i++)
-	{
-		TDS_CONF_ITEM& tci = vecConf[i];
-		if(checkKey(tci.key,"mode"))
-		{
-			conf_tcp2com.mode = tci.val;
-		}
-		else if (checkKey(tci.key, "com"))
-		{
-			conf_tcp2com.com = tci.val;
-		}
-		else if (checkKey(tci.key, "baudRate"))
-		{
-			conf_tcp2com.baudRate = atoi(tci.val.c_str());
-		}
-		else if (checkKey(tci.key, "byteSize"))
-		{
-			conf_tcp2com.byteSize = atoi(tci.val.c_str());
-		}
-		else if (checkKey(tci.key, "stopBits"))
-		{
-			conf_tcp2com.stopBits = tci.val;
-		}
-		else if (checkKey(tci.key, "parity"))
-		{
-			conf_tcp2com.parity = tci.val;
-		}
-		else if (checkKey(tci.key, "remoteIP"))
-		{
-			conf_tcp2com.remoteIP = tci.val;
-		}
-		else if (checkKey(tci.key, "remotePort"))
-		{
-			conf_tcp2com.remotePort = atoi(tci.val.c_str());
-		}
-		else if (checkKey(tci.key, "localPort"))
-		{
-			conf_tcp2com.localPort = atoi(tci.val.c_str());
-		}
-		else if (checkKey(tci.key, "registerPktStr"))
-		{
-			conf_tcp2com.registerPktStr = tci.val;
-		}
-	}
-}
+
 
 void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
@@ -436,6 +375,8 @@ void tdsConfig::loadConf()
 		generateDefaultConfFile(confFileName);
 	}
 
+	tdsIni.load(confPath);
+
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	string strConf;
 	fs::readFile(confPath, strConf);
@@ -475,10 +416,6 @@ void tdsConfig::loadConf()
 	if (mode == "tds")
 	{
 		loadConf_tds(vecConf);
-	}
-	else if (mode == "tcp2com")
-	{
-		loadConf_tcp2com(vecConf);
 	}
 	else if (mode == "hs" || mode == "httpServer")
 	{
@@ -525,4 +462,76 @@ string tdsConfig::normalizationKey(string key)
 	str::removeChar(key, '-');
 	key = _strlwr((char*)key.c_str());
 	return key;
+}
+
+int tdsConfig::getInt(string key, int iDef)
+{
+	return tdsIni.getValInt(key, iDef);
+}
+
+string tdsConfig::getStr(string key, string sDef)
+{
+	return tdsIni.getValStr(key, sDef);
+}
+
+bool TDS_INI::load(string path)
+{
+	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
+	string strConf;
+	fs::readFile(path, strConf);
+	vector<string> confItems;
+	str::split(confItems, strConf, "\n");
+
+	//去掉注释
+	for (int i = 0; i < confItems.size(); i++)
+	{
+		string& ci = confItems[i];
+		int pos = ci.find("#");
+		if (pos != string::npos)
+		{
+			ci = ci.substr(0, pos);
+		}
+	}
+	//解析
+	vector<TDS_CONF_ITEM> vecConf;
+	for (int i = 0; i < confItems.size(); i++)
+	{
+		string& ci = confItems[i];
+		TDS_CONF_ITEM tci;
+		int pos = ci.find("=");
+		if (pos != string::npos)
+		{
+			tci.key = ci.substr(0, pos);
+			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
+
+			tci.val = str::trim(tci.val, "\r");
+			tci.key = str::trim(tci.key, " ");
+			tci.val = str::trim(tci.val, " ");
+
+			mapConf[tci.key] = tci.val;
+		}
+	}
+	return true;
+}
+
+int TDS_INI::getValInt(string key, int defaultVal)
+{
+	if (mapConf.find(key) == mapConf.end())
+	{
+		return defaultVal;
+	}
+
+	string sVal = mapConf[key];
+	return atoi(sVal.c_str());
+}
+
+string TDS_INI::getValStr(string key, string defaultVal)
+{
+	if (mapConf.find(key) == mapConf.end())
+	{
+		return defaultVal;
+	}
+
+	string sVal = mapConf[key];
+	return sVal;
 }

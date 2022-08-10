@@ -1036,7 +1036,7 @@ bool ioDev::NotNeedGateway()
 
 void ioDev::setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback)
 {
-	LOG("ioAddr=" + getIOAddrStr() + ",设置接收回调" + str::fromInt((DWORD)pUser));
+	//LOG("ioAddr=" + getIOAddrStr() + ",设置接收回调" + str::fromInt((DWORD)pUser));
 	m_pCallbackUser = pUser; 
 	m_pRecvCallback = callback; 
 	if (m_pCallbackUser == nullptr)

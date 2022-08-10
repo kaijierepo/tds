@@ -30,17 +30,24 @@ struct TDS_CONF_ITEM {
 	string val;
 };
 
+class TDS_INI {
+public:
+	TDS_INI() {};
+	bool load(string path);
+	int getValInt(string key, int defaultVal);
+	string getValStr(string key, string defaultVal);
+	map<string, string> mapConf;
+};
+
 class tdsConfig : public iTDSConf
 {
 public:
 	tdsConfig();
 	void generateDefaultConfFile(string m);
-	string defaultConf_tcp2com();
 	string defaultConf_httpServer();
 	string defaultConf_tds();
 	string defaultConf_rphttp();
 	void loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf);
-	void loadConf_tcp2com(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tds(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf();
@@ -48,6 +55,11 @@ public:
 	
 	bool checkKey(string toCheck, string key);
 	string normalizationKey(string key);
+
+	TDS_INI tdsIni;
+
+	int getInt(string key, int iDef) override;
+	string getStr(string key, string sDef) override;
 
 	json jsonConf;
 	string m_confFileName;
