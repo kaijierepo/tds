@@ -2790,6 +2790,7 @@ void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp)
 
 void rpcHandler::rpc_getChanVal(json params, RPC_RESP& resp)
 {
+	return;
 	json list;
 	string ioAddrSelector = params["ioAddr"].get<string>();
 	if(ioAddrSelector == "*")
