@@ -313,7 +313,18 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }
 
-
+bool TDS_imp::runAsTDB()
+{
+	tds->db = &::db;
+	logger.setLogLevel(tdsConf.logLevel);
+	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
+	LOG("[数据库	] " + tds->conf->dbPath);
+	::db.Open(tds->conf->dbPath, prj.m_strName);
+	runWebServers();
+	GetLocalTime(&stStartupTime);
+	string sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
+}
 
 
 bool TDS_imp::run(string cmdline)

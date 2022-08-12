@@ -572,9 +572,11 @@ bool runWebServers()
 	}
 
 	LOG("[Web目录	] /       <--> " + rootDir);
-	LOG("[Web目录	] /config <--> " + confDir);
-	LOG("[Web目录	] /files  <--> " + filesDir);
 
+	if (fs::appName() == "tds") { //tdb模式不需要
+		LOG("[Web目录	] /config <--> " + confDir);
+		LOG("[Web目录	] /files  <--> " + filesDir);
+	}
 
 	//LOG("webSrv init %lx", webSrv);
 	//LOG("webSrvS init %lx", webSrvS);

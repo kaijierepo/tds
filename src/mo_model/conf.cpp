@@ -41,6 +41,9 @@ void tdsConfig::generateDefaultConfFile(string m)
 	{
 		s = defaultConf_tds();
 	}
+	else if (m == "tdb") {
+		s = defaultConf_tdb();
+	}
 	else if (m == "hs" || m == "httpServer")
 	{
 		s = defaultConf_httpServer();
@@ -113,6 +116,18 @@ ui=console             #ui模式  console:命令行模式   chrome:浏览器模�
 	return s;
 }
 
+string tdsConfig::defaultConf_tdb()
+{
+	string s = R"(#TDB 数据库配置
+dbPath=./db            #数据库数据存储路径
+uiPath=./ui            #管理后台web根目录
+httpsPort=666          #https服务端口,同时支持websocket secure
+httpPort=667           #http服务端口,同时支持websocket
+loglevel=debug         #日志级别
+)";
+	return s;
+}
+
 string tdsConfig::defaultConf_rphttp()
 {
 	string s = R"(#HTTP 反向代理服务器配置
@@ -149,8 +164,10 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 			uiPath = tci.val;
 			uiPath = fs::toAbsolutePath(uiPath);
 		}
-		else if (checkKey(tci.key, "dbpath"))
+		else if (checkKey(tci.key, "dbpath")) {
 			dbPath = tci.val.c_str();
+			dbPath = fs::toAbsolutePath(dbPath);
+		}
 		else if (checkKey(tci.key, "testToken"))
 			testToken = tci.val.c_str();
 		else if (checkKey(tci.key, "tokenExpireTime"))
@@ -413,7 +430,7 @@ void tdsConfig::loadConf()
 		}
 	}
 
-	if (mode == "tds")
+	if (mode == "tds" || mode=="tdb")
 	{
 		loadConf_tds(vecConf);
 	}

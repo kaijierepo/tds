@@ -46,6 +46,7 @@ public:
 	void generateDefaultConfFile(string m);
 	string defaultConf_httpServer();
 	string defaultConf_tds();
+	string defaultConf_tdb();
 	string defaultConf_rphttp();
 	void loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf);
 	void loadConf_tds(vector<TDS_CONF_ITEM>& vecConf);
