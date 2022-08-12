@@ -170,8 +170,13 @@ void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFi
 }
 
 
-bool database::Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_RLT& result)
+bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
+	//获取需要加载数据的位号集合
+	vector<string> tagSet;
+	prj.getTags(tagSet, deSel.tag);
+
+
 	time_t loadTime = deSel.time.endTime;
 	string strDataFmt = "";
 	string strRawDataFmt = "";
@@ -224,12 +229,15 @@ bool database::Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_R
 			//加载数据元列表
 			DB_FILE* pdf = fSet.fileList[i];
 
-			// Read JSON and get root,转为带 mut,因为后面会修改里面的值
+			//从数据库的原始json数据。
 			yyjson_doc* doc = yyjson_read(pdf->data.c_str(), pdf->data.length(), 0);
 			src_doc.push_back(doc);
+			yyjson_val* root = yyjson_doc_get_root(doc);
+
+			//输出到查询结果的json数据.转为带 mut,因为后面会修改里面的值
 			yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(NULL);
 			src_mut_doc.push_back(mut_doc);
-			yyjson_val* root = yyjson_doc_get_root(doc);
+			
 
 
 			size_t idx, max;
@@ -286,7 +294,23 @@ bool database::Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_R
 				}
 
 				lastDeTime = currDeTime;
-				mapRlt[deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				string sortFlag = std::to_string(idx);
+				if (deSel.sortKey.length()>0) {
+					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jDE, "val");
+					if (yyjson_mut_is_obj(yyVal)) {
+						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+						if (yyjson_mut_is_str(yySortKey)) {
+							sortFlag = yyjson_mut_get_str(yySortKey);
+						}
+						else if (yyjson_mut_is_num(yySortKey)) {
+							float f = yyjson_mut_get_real(yySortKey);
+							sortFlag = str::fromFloat(f);
+						}
+					}
+					
+				}
+
+				mapRlt[deTime  + tag + sortFlag] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 
 				if (deSel.time.AmountMatch(count))
@@ -304,11 +328,17 @@ DATA_SET_LOADED:
 
 	for (auto& i : mapRlt)
 	{
-		yyjson_mut_arr_append(rlt_mut_root, i.second);
+		if(deSel.ascendingSort)
+			yyjson_mut_arr_append(rlt_mut_root, i.second);
+		else
+			yyjson_mut_arr_prepend(rlt_mut_root, i.second);
 	}
 	
 	size_t len = 0;
-	result.deList = yyjson_mut_write(rlt_mut_doc, 0, &len);
+	if (result.getDE){
+		result.deList = yyjson_mut_write(rlt_mut_doc, 0, &len);
+	}
+	result.count = count;
 
 	//释放结果
 	yyjson_mut_doc_free(rlt_mut_doc);
@@ -658,7 +688,7 @@ void database::Close()
 
 }
 
-string database::parseDESelector(json params, DE_SELECTOR& deSelector)
+string database::parseDESelector(json params, DE_SELECTOR& deSel)
 {
 	//parse time selector
 	std::string strTime = "";
@@ -670,8 +700,8 @@ string database::parseDESelector(json params, DE_SELECTOR& deSelector)
 	{
 		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"time\" param should be a string");
 	}
-	if (!deSelector.time.init(strTime))
-		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSelector.time.error);
+	if (!deSel.time.init(strTime))
+		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.time.error);
 
 	//parse tag selector
 	std::string strTag, strTagTmp;
@@ -695,33 +725,42 @@ string database::parseDESelector(json params, DE_SELECTOR& deSelector)
 		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"tag\" param can not be empty");
 	}
 
-	if (!deSelector.tag.init(strTag))
-		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSelector.tag.error);
+	if (!deSel.tag.init(strTag))
+		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSel.tag.error);
 
 	//监控对象类型
 	if (params["type"] != nullptr)
-		deSelector.tag.type = params["type"].get<string>();
+		deSel.tag.type = params["type"].get<string>();
 
 	//parse interval selector
 	json jDsi = params["interval"];
 	if (jDsi.is_number())
 	{
-		deSelector.interval.type = DST_Count;
-		deSelector.interval.dsi = jDsi.get<int>();
+		deSel.interval.type = DST_Count;
+		deSel.interval.dsi = jDsi.get<int>();
 	}
 	else if (jDsi.is_string())
 	{
 		string sDsti = params["interval"].get<string>();
-		deSelector.interval.dsti = timeopt::dhmsSpan2Seconds(sDsti);
-		if (deSelector.interval.dsti > 0)
-			deSelector.interval.type = DST_Time;
+		deSel.interval.dsti = timeopt::dhmsSpan2Seconds(sDsti);
+		if (deSel.interval.dsti > 0)
+			deSel.interval.type = DST_Time;
 	}
 
 	//parse condition selector
 	string filter;
 	if (params["match"] != nullptr) {
 		filter = params["match"].get<string>();
-		deSelector.condition.init(filter);
+		deSel.condition.init(filter);
+	}
+
+	if (params["a-sort"] != nullptr) {
+		deSel.ascendingSort = true;
+		deSel.sortKey = params["a-sort"].get<string>();
+	}
+	else if (params["d-sort"] != nullptr) {
+		deSel.ascendingSort = false;
+		deSel.sortKey = params["d-sort"].get<string>();
 	}
 		
 	return "";
@@ -735,14 +774,10 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 	resp.error = parseDESelector(params, deSel);
 	if (resp.error != "") return;
 
-	//获取需要加载数据的位号集合
-	vector<string> tags;
-	prj.getTags(tags, deSel.tag);
-	
 	SELECT_RLT result;
 	try
 	{
-		db.Select_yyjson(tags, deSel, result);
+		db.Select_yyjson(deSel, result);
 	}
 	catch (std::exception& e)
 	{
@@ -755,7 +790,26 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 
 void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	DE_SELECTOR deSel;
 
+	params["root"] = session.org;
+	resp.error = parseDESelector(params, deSel);
+	if (resp.error != "") return;
+
+	SELECT_RLT result;
+	result.getDE = false;
+	try
+	{
+		db.Select_yyjson(deSel, result);
+	}
+	catch (std::exception& e)
+	{
+		json jerror = e.what();
+		resp.error = jerror.dump();
+	}
+
+	json jRlt = result.count;
+	resp.result = jRlt.dump();
 }
 
 string database::parseSuffix(string deFileUrl)

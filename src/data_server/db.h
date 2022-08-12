@@ -202,6 +202,8 @@ struct DE_SELECTOR {
 	TAG_SELECTOR tag;
 	CONDITION_SELECTOR condition;
 	INTERVAL_SELECTOR interval;
+	bool ascendingSort;
+	string sortKey;
 };
 
 class db_exception : public std::exception {
@@ -240,7 +242,7 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
-	bool Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_RLT& result);
+	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, SYSTEMTIME stTime, string& sData);
 	bool Update(string tag, SYSTEMTIME stTime, json& jData);
