@@ -12,9 +12,7 @@ project prj;
 
 project::project()
 {
-	m_ioSrv = new ioServer();
 	m_strName = "tds";
-	DB = &db;
 
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
@@ -196,6 +194,40 @@ void project::getMpTypeList(json& mpTypeList)
 		oneType["type"] = mpType;
 		mpTypeList.push_back(oneType);
 	}
+}
+
+bool project::getTags(vector<string>& tags, TAG_SELECTOR& tagSelector)
+{
+	if (tagSelector.singleMode)
+	{
+		tags.push_back(tagSelector.tagExp);
+	}
+	else
+	{
+		vector<MP*> tagSet;
+		vector<MP*> tagSetTmp;
+		prj.GetMPByTag(&tagSetTmp, tagSelector.tagExp);
+		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		{
+			for (auto& it : tagSetTmp)
+			{
+				if (it->getMpType() == tagSelector.type)
+				{
+					tagSet.push_back(it);
+				}
+			}
+		}
+		else
+		{
+			tagSet = tagSetTmp;
+		}
+		for (auto& i : tagSet)
+		{
+			tags.push_back(i->getTag());
+		}
+	}
+
+	return false;
 }
 
 

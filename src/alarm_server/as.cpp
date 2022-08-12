@@ -509,15 +509,16 @@ string almServer::rpc_getUnack(json params, RPC_SESSION session)
 
 string almServer::rpc_getHistory(json params, RPC_SESSION session)
 {
-	TIME_SELECTOR timeSelector;
-	TAG_SELECTOR tagSelector;
+	DE_SELECTOR deSel;
 	string rootTag = params["rootTag"].get<string>();
 	rootTag = TAG::addRoot(rootTag, session.org);
 	params["tag"] = rootTag + "*"; //此处采用历史数据的搜索语法
 
-	string error = rpcSrv.parseDataSelector(params,timeSelector,tagSelector);
+	string error = db.parseDESelector(params, deSel);
 	if(error != "") return error;
-	
+	TIME_SELECTOR& timeSelector = deSel.time;
+	TAG_SELECTOR& tagSelector = deSel.tag;
+
 	string dataSet = "[";
 	std::lock_guard<mutex> g(m_csAlarmData);
 	int startYear = timeSelector.stStart.wYear;

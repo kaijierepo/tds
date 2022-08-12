@@ -14,7 +14,7 @@ class database;
 class ioDev;
 class amo;
 class MP;
-class ateIOServer;
+class TAG_SELECTOR;
 class project : public MO  
 {
 public:
@@ -27,9 +27,8 @@ public:
 	void getMpList(map<string, MP*>& MPlist, MO* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
+	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
-	database* DB;
-	ioServer* m_ioSrv;
 	string m_strMoTree;
 	map<string, MP*> m_mapAllMP;
 	map<string, vector<MO*>> m_mapCustomMOType;

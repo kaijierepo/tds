@@ -5,6 +5,7 @@
 #include "tds.h"
 #include "jerryscript.h"
 #include "yyjson.h"
+
 using json = nlohmann::json;
 
 /*
@@ -19,7 +20,7 @@ use dbRoot + URL to compose an absolute path of a db file
 */
 
 using namespace std;
-
+class RPC_SESSION;
 
 enum EXP_CURVE_TYPE
 {
@@ -102,6 +103,7 @@ public:
 	string regExp;
 	string error;
 	bool singleMode; //单位号选中模式
+	string type;
 };
 
 class TIME_SELECTOR
@@ -128,12 +130,12 @@ enum DOWN_SAMPLING_TYPE {
 	DST_Time
 };
 
-struct DOWN_SAMPLING_PARAM {
+struct INTERVAL_SELECTOR {
 	DOWN_SAMPLING_TYPE type;
 	int dsi;   //降采样元素个数间隔
 	int dsti;  //降采样的时间间隔 单位秒
 
-	DOWN_SAMPLING_PARAM() {
+	INTERVAL_SELECTOR() {
 		type = DST_None;
 		dsi = 0;
 		dsti = 0;
@@ -179,10 +181,10 @@ struct HMS_STR {
 };
 
 
-class ATTRI_SELECTOR {
+class CONDITION_SELECTOR {
 public:
-	ATTRI_SELECTOR();
-	~ATTRI_SELECTOR();
+	CONDITION_SELECTOR();
+	~CONDITION_SELECTOR();
 #ifdef ENABLE_JERRY_SCRIPT
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 #endif
@@ -194,10 +196,28 @@ public:
 	jerry_value_t global_object;
 };
 
+
+struct DE_SELECTOR {
+	TIME_SELECTOR time;
+	TAG_SELECTOR tag;
+	CONDITION_SELECTOR condition;
+	INTERVAL_SELECTOR interval;
+};
+
 class db_exception : public std::exception {
 public:
 	const char* what() const noexcept /*noexcept*/ override { return m_error.c_str(); }
 	string m_error;
+};
+
+struct SELECT_RLT {
+	bool getDE;
+	string deList;
+	int count;
+
+	SELECT_RLT() {
+		getDE = true;
+	}
 };
 
 
@@ -209,15 +229,23 @@ public:
 	bool Open(string strDBUrl,string name="");
 	void Close();
 
+	string parseDESelector(json params, DE_SELECTOR& deSelector);
+
+
+//rpc接口
+public:
+	void rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session);
+
 //接口部分
 public:
 	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
-	bool Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter, string& result, DOWN_SAMPLING_PARAM dsp); //dsi = downsamplingInterval
-	bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
-	bool Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
+	bool Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_RLT& result);
+	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, SYSTEMTIME stTime, string& sData);
 	bool Update(string tag, SYSTEMTIME stTime, json& jData);
 	bool Delete(string tag, SYSTEMTIME stTime);
+	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
 	bool updateJsonObj(json& jOld, json& jNew);
 	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;

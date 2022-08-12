@@ -62,136 +62,11 @@ rpcHandler::~rpcHandler()
 
 bool rpcHandler::init()
 {
-	m_DB = prj.DB;
 	return true;
 }
 
-string rpcHandler::parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector)
-{
-	//parse time param
-	std::string strTime = "";
-	std::string strStartDate, strEndDate;
-	SYSTEMTIME stStartDate, stEndDate;
-	if(params["time"].is_null()){return makeRPCError(TEC_paramMissing,"param missing:\"time\"");}
-	try{strTime = params["time"].get<string>();}
-	catch(...)
-	{ return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"time\" param should be a string");}
-	if(!timeSelector.init(strTime))
-		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR,"time selector format error:" + timeSelector.error);
-
-	//parse tag param
-	std::string strTag, strTagTmp;
-	if(params["tag"].is_null()){return makeRPCError(TEC_paramMissing,"param missing:\"tag\"");}
-	try{
-		strTag = params["tag"].get<string>();
-		if (params["root"] != nullptr)
-		{
-			string strRoot = params["root"].get<string>();
-			if (strRoot != "")
-			{
-				strTag = strRoot + "." + strTag;
-			}
-		}
-	}
-	catch(...)
-	{return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param should be a string");}
-	if (0 == strTag.length()) {
-		return makeRPCError(TEC_WRONG_PARAM_FMT,"wrong param format:\"tag\" param can not be empty");
-	}
-	str::trimPrefix(strTag,prj.m_strName+".");
-	if(!tagSelector.init(strTag))
-		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR,"tag selector format error:" + tagSelector.error);
-
-	return "";
-}
 
 
-string rpcHandler::rpc_db_select(json params,string& error, RPC_SESSION session)
-{
-	TIME_SELECTOR timeSelector;
-	TAG_SELECTOR tagSelector;
-
-	if (session.user != "")
-	{
-		params["root"] = session.org;
-	}
-	error = parseDataSelector(params,timeSelector,tagSelector);
-	if(error != "") return "";
-
-	//parse type filter
-	string typeFilter;
-	if (params["type"] != nullptr)
-		typeFilter = params["type"].get<string>();
-
-	//parse attr filter
-	string filter;
-	if(params["filter"] != nullptr)
-	 	filter = params["filter"].get<string>();
-	
-	//down sampling interval  针对高密度数据的下采样间隔。无需则为0
-	DOWN_SAMPLING_PARAM dsp;
-	json jDsi = params["dsi"];
-	if (jDsi.is_number())
-	{
-		dsp.type = DST_Count;
-		dsp.dsi = jDsi.get<int>();
-	}
-	else if (jDsi.is_string())
-	{
-		string sDsti = params["dsi"].get<string>();
-		dsp.dsti = timeopt::dhmsSpan2Seconds(sDsti);
-		if (dsp.dsti > 0)
-			dsp.type = DST_Time;
-	}
-		
-
-	
-	
-	//获取需要加载数据的位号集合
-	vector<string> tags;
-	if (tagSelector.singleMode)
-	{
-		tags.push_back(tagSelector.tagExp);
-	}
-	else
-	{
-		vector<MP*> tagSet;
-		vector<MP*> tagSetTmp;
-		prj.GetMPByTag(&tagSetTmp, tagSelector.tagExp);
-		if (typeFilter != "")//has type filter //load from database 监测点类型过滤
-		{
-			for (auto& it : tagSetTmp)
-			{
-				if (it->getMpType() == typeFilter)
-				{
-					tagSet.push_back(it);
-				}
-			}
-		}
-		else
-		{
-			tagSet = tagSetTmp;
-		}
-		for (auto& i : tagSet)
-		{
-			tags.push_back(i->getTag());
-		}
-	}
-	
-
-	string result = "";
-	try
-	{
-		db.Select_yyjson(tags, timeSelector, filter, result,dsp);
-	}
-	catch (std::exception& e)
-	{
-		json jerror = e.what();
-		error = jerror.dump();
-	}
-
-	return result;
-}
 
 
 string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
@@ -534,7 +409,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.select")
 		{
-			result = rpc_db_select(params, error, session);
+			db.rpc_db_select(params, rpcResp, session);
+		}
+		else if (method == "db.count")
+		{
+			db.rpc_db_count(params, rpcResp, session);
 		}
 		else if (method == "db.update")
 		{
@@ -1310,7 +1189,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	//可完全并发的命令
 	if (method == "xiaot")
 	{
-		result = rpc_xiaot(params, error);
+		result = tds->xiaoT->getReply(params);
 	}
 	else if (method == "addLog")
 	{
@@ -2707,12 +2586,6 @@ string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION sessio
 			session.name = params["clientName"];
 	}
 	return "\"pong\"";
-}
-
-string rpcHandler::rpc_xiaot(json params, string& error)
-{
-	string reply = tds->xiaoT->getReply(params);
-	return reply;
 }
 
 

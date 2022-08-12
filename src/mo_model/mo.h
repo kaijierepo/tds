@@ -170,7 +170,6 @@ public:
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
 	bool m_bOnline;
 	SYSTEMTIME m_stDataLastUpdate;
-	database* GetDB();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);
 	vector<string> getTagPartials(string strTag);

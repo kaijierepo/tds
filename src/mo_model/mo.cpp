@@ -874,16 +874,6 @@ MO_QUERIER MO::parseQuerier(json& opt)
 }
 
 
-database* MO::GetDB()
-{
-	project* p = (project*)GetRootMO();
-	if (p)
-	{
-		return p->DB;
-	}
-	return nullptr;
-}
-
 MO* MO::GetRootMO()
 {
 	if (this == nullptr)

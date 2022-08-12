@@ -1,16 +1,17 @@
 ﻿#include "pch.h"
 #include "db.h"
-#include "../common/simdjson.h"
+//#include "../common/simdjson.h"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
 #include "logger.h"
 #include "yyjson.h"
 #include "xiaot/scriptHost.h"
-
+#include "prj.h"
+#include "tdsSession.h"
 
 using namespace std::filesystem;
-using namespace simdjson;
+//using namespace simdjson;
 database db;
 
 database::database()
@@ -169,21 +170,12 @@ void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFi
 }
 
 
-bool database::Select(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result)
+bool database::Select_yyjson(vector<string> tagSet, DE_SELECTOR& deSel, SELECT_RLT& result)
 {
-	return Select_simdjson(tag, timeSelector, filter, result);
-}
-
-bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector, string filter,string& result, DOWN_SAMPLING_PARAM dsp)
-{
-	TIME_SELECTOR& tf = timeSelector;
-	time_t loadTime = tf.endTime;
+	time_t loadTime = deSel.time.endTime;
 	string strDataFmt = "";
 	string strRawDataFmt = "";
 	SYSTEMTIME stTemp;
-
-	ATTRI_SELECTOR attriFilter;
-	attriFilter.init(filter);
 
 	double max = -1000000000;
 	double min = 1000000000;
@@ -203,7 +195,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 
 		//准备数据文件集
 		DB_FILE_SET fSet;
-		for (; loadTime >= tf.startTime; loadTime -= 24 * 60 * 60)
+		for (; loadTime >= deSel.time.startTime; loadTime -= 24 * 60 * 60)
 		{
 			DB_FILE* pdf = new DB_FILE();
 			pdf->time = timeopt::Unix2SysTime(loadTime);
@@ -224,7 +216,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 
 		//数据只有1天的，不进行下采样
 		if (fSet.fileList.size() <= 1)
-			dsp.type = DST_None;
+			deSel.interval.type = DST_None;
 		
 		//加载每个数据文件中的数据
 		for (int i=0;i<fSet.fileList.size();i++)
@@ -248,9 +240,9 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 			yyjson_arr_foreach(root, idx, max, val) {
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
-				if (dsp.type == DST_Count)
+				if (deSel.interval.type == DST_Count)
 				{
-					if (idx % dsp.dsi > 0 && idx < max - dsp.dsi) continue;
+					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
 				}
 
 			
@@ -270,13 +262,13 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 				}
 				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
 				
-				if (pdf->boundaryFile && !tf.Match(deTime))
+				if (pdf->boundaryFile && !deSel.time.Match(deTime))
 					continue;
 
-				if (dsp.type == DST_Time) {
+				if (deSel.interval.type == DST_Time) {
 					HMS_STR* p = (HMS_STR*)pHms;
 					currDeTime = p->getTotalSec();
-					if (currDeTime - lastDeTime < dsp.dsti) continue;
+					if (currDeTime - lastDeTime < deSel.interval.dsti) continue;
 				}
 
 				if (withTag)
@@ -288,7 +280,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 				}
 
 
-				if (attriFilter.bEnable && !attriFilter.match(jDE))
+				if (deSel.condition.bEnable && !deSel.condition.match(jDE))
 				{
 					continue;
 				}
@@ -297,7 +289,7 @@ bool database::Select_yyjson(vector<string> tagSet, TIME_SELECTOR& timeSelector,
 				mapRlt[deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 
-				if (tf.AmountMatch(count))
+				if (deSel.time.AmountMatch(count))
 					goto DATA_SET_LOADED;
 			}
 		}
@@ -316,7 +308,7 @@ DATA_SET_LOADED:
 	}
 	
 	size_t len = 0;
-	result = yyjson_mut_write(rlt_mut_doc, 0, &len);
+	result.deList = yyjson_mut_write(rlt_mut_doc, 0, &len);
 
 	//释放结果
 	yyjson_mut_doc_free(rlt_mut_doc);
@@ -330,6 +322,8 @@ DATA_SET_LOADED:
 	return true;
 }
 
+
+/*
 //2021.10.21 此时simdjson还不支持使用数组下标访问数组元素
 bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result)
 {
@@ -339,7 +333,7 @@ bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string f
 	string strRawDataFmt = "";
 	SYSTEMTIME stTemp;
 
-	ATTRI_SELECTOR af;
+	CONDITION_SELECTOR af;
 	af.init(filter);
 
 	double max = -1000000000;
@@ -416,7 +410,7 @@ bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string f
 	}
 	return true;
 }
-
+*/
 
 bool database::updateJsonObj(json& jOld, json& jNew)
 {
@@ -516,6 +510,11 @@ bool database::Delete(string tag, SYSTEMTIME stTime)
 	dbData = jDEList.dump(2);
 	fs::writeFile(dbFile, dbData);
 	return true;
+}
+
+bool database::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount)
+{
+	return false;
 }
 
 void database::saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl)
@@ -655,6 +654,106 @@ bool database::Open(string strDBUrl,string name)
 }
 
 void database::Close()
+{
+
+}
+
+string database::parseDESelector(json params, DE_SELECTOR& deSelector)
+{
+	//parse time selector
+	std::string strTime = "";
+	std::string strStartDate, strEndDate;
+	SYSTEMTIME stStartDate, stEndDate;
+	if (params["time"].is_null()) { return makeRPCError(TEC_paramMissing, "param missing:\"time\""); }
+	try { strTime = params["time"].get<string>(); }
+	catch (...)
+	{
+		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"time\" param should be a string");
+	}
+	if (!deSelector.time.init(strTime))
+		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSelector.time.error);
+
+	//parse tag selector
+	std::string strTag, strTagTmp;
+	if (params["tag"].is_null()) { return makeRPCError(TEC_paramMissing, "param missing:\"tag\""); }
+	try {
+		strTag = params["tag"].get<string>();
+		if (params["root"] != nullptr)
+		{
+			string strRoot = params["root"].get<string>();
+			if (strRoot != "")
+			{
+				strTag = strRoot + "." + strTag;
+			}
+		}
+	}
+	catch (...)
+	{
+		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"tag\" param should be a string");
+	}
+	if (0 == strTag.length()) {
+		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"tag\" param can not be empty");
+	}
+
+	if (!deSelector.tag.init(strTag))
+		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSelector.tag.error);
+
+	//监控对象类型
+	if (params["type"] != nullptr)
+		deSelector.tag.type = params["type"].get<string>();
+
+	//parse interval selector
+	json jDsi = params["interval"];
+	if (jDsi.is_number())
+	{
+		deSelector.interval.type = DST_Count;
+		deSelector.interval.dsi = jDsi.get<int>();
+	}
+	else if (jDsi.is_string())
+	{
+		string sDsti = params["interval"].get<string>();
+		deSelector.interval.dsti = timeopt::dhmsSpan2Seconds(sDsti);
+		if (deSelector.interval.dsti > 0)
+			deSelector.interval.type = DST_Time;
+	}
+
+	//parse condition selector
+	string filter;
+	if (params["match"] != nullptr) {
+		filter = params["match"].get<string>();
+		deSelector.condition.init(filter);
+	}
+		
+	return "";
+}
+
+void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	DE_SELECTOR deSel;
+
+	params["root"] = session.org;
+	resp.error = parseDESelector(params, deSel);
+	if (resp.error != "") return;
+
+	//获取需要加载数据的位号集合
+	vector<string> tags;
+	prj.getTags(tags, deSel.tag);
+	
+	SELECT_RLT result;
+	try
+	{
+		db.Select_yyjson(tags, deSel, result);
+	}
+	catch (std::exception& e)
+	{
+		json jerror = e.what();
+		resp.error = jerror.dump();
+	}
+
+	resp.result = result.deList;
+}
+
+void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 
 }
@@ -947,12 +1046,12 @@ bool TAG_SELECTOR::match(string tag){
 		}
 }
 
-ATTRI_SELECTOR::ATTRI_SELECTOR()
+CONDITION_SELECTOR::CONDITION_SELECTOR()
 {
 	bEnable = false;
 }
 
-ATTRI_SELECTOR::~ATTRI_SELECTOR()
+CONDITION_SELECTOR::~CONDITION_SELECTOR()
 {
 #ifdef ENABLE_JERRY_SCRIPT
 	if (filterExp.length() > 0)
@@ -964,7 +1063,7 @@ ATTRI_SELECTOR::~ATTRI_SELECTOR()
 }
 
 #ifdef ENABLE_JERRY_SCRIPT
-bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
+bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
 {
 	size_t idx, maxIdx;
 	yyjson_mut_val* key, * value;
@@ -1006,7 +1105,7 @@ bool ATTRI_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engi
 }
 #endif
 
-bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
+bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 {
 #ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
@@ -1058,7 +1157,7 @@ bool ATTRI_SELECTOR::match(yyjson_mut_val* de)
 	return true;
 }
 
-bool ATTRI_SELECTOR::match(string& de)
+bool CONDITION_SELECTOR::match(string& de)
 {
 #ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
@@ -1107,7 +1206,7 @@ bool ATTRI_SELECTOR::match(string& de)
 	return true;
 }
 
-bool ATTRI_SELECTOR::init(string filter)
+bool CONDITION_SELECTOR::init(string filter)
 {
 #ifdef ENABLE_JERRY_SCRIPT
 	if (filter.length() > 0)

@@ -9,7 +9,6 @@ rpc handler
 #include "ds.h"
 #include "tdsSession.h"
 
-
 class rpcHandler
 {
 public:
@@ -41,32 +40,26 @@ public:
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
 
 
-	//tds data service function
+	//object manage
 	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
-	json getAlarmStatis(string rootTag, RPC_SESSION session);
-	void   rpc_getDevStatis(json params, RPC_RESP& resp , RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	void rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);
 	void rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
-	string rpc_db_select(json params, string& error, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error, RPC_SESSION session,bool bValOnly =false);
-	string rpc_getconf(json params, string& error);
-	string rpc_setconf(json params, string& error);
-	string rpc_getconffile(json params, string& error);
-	string rpc_setconffile(json params, string& error);
 	string rpc_heartbeat(json params, string& error, RPC_SESSION session);
-	string rpc_xiaot(json params, string& error);
 
-	////io service function
+	//device manage
 	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	string rpc_io_scanChannel(json params, string& error);
 	string rpc_setStream(json params, string& error);
+
 	//serial function
 	string rpc_openCom(json params, string& error);
 	string rpc_getStreamInfo(json params, string& error);
@@ -78,11 +71,16 @@ public:
 	void notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
 	void Notify(string strTag, string& szNotify);
 
+	//alarm
+	json getAlarmStatis(string rootTag, RPC_SESSION session);
 	
-	string parseDataSelector(json params,TIME_SELECTOR& timeSelector, TAG_SELECTOR& tagSelector);//return "" if success
-    string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
+	//辅助功能
+	string rpc_getconf(json params, string& error);
+	string rpc_setconf(json params, string& error);
+	string rpc_getconffile(json params, string& error);
+	string rpc_setconffile(json params, string& error);
 
-	database* m_DB;
+    string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
 	//upper level tds
 	tcpClt m_DataCenterClt;
