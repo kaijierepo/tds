@@ -38,6 +38,9 @@ LRESULT CALLBACK WindowProc_hwDetect(
         else if (DBT_DEVICEREMOVECOMPLETE == wParam)
             devEventType = "offline";
 
+        if (lParam == 0)
+            return 0;
+
         PDEV_BROADCAST_HDR pHdr = (PDEV_BROADCAST_HDR)lParam;
         switch (pHdr->dbch_devicetype)
         {

@@ -90,8 +90,8 @@ static jerry_value_t func_output(const jerry_call_info_t* call_info_p,
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp)
 		{
-			json jResp;
-			pmp->output(jVal, jResp);
+			json jResp,jErr;
+			pmp->output(jVal, jResp,jErr);
 		}
 	}
 
