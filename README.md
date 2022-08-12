@@ -21,9 +21,9 @@
 
     所有的数据插入或者查询都基于JSON格式。
 
-    [Postman API 测试接口链接](https://www.postman.com/planetary-sunset-285884/workspace/tds-api)
+    [数据库接口API文档- 点击查看](https://www.liangtusoft.com/doc/api.html#/api-db)
 
-    [数据库接口API](https://www.liangtusoft.com/doc/#/api-db)
+    [Postman API 测试用例 - 点击查看](https://www.postman.com/planetary-sunset-285884/workspace/tds-api)
 
 ### 高性能
 
