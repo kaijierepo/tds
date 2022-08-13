@@ -204,6 +204,9 @@ struct DE_SELECTOR {
 	INTERVAL_SELECTOR interval;
 	bool ascendingSort;
 	string sortKey;
+	DE_SELECTOR() {
+		ascendingSort = true;
+	}
 };
 
 class db_exception : public std::exception {

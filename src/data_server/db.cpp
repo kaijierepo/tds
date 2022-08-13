@@ -294,7 +294,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				}
 
 				lastDeTime = currDeTime;
-				string sortFlag = std::to_string(idx);
+				string sortFlag = "";
 				if (deSel.sortKey.length()>0) {
 					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jDE, "val");
 					if (yyjson_mut_is_obj(yyVal)) {
@@ -310,7 +310,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 					
 				}
 
-				mapRlt[deTime  + tag + sortFlag] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				mapRlt[sortFlag + deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 
 				if (deSel.time.AmountMatch(count))
