@@ -25,6 +25,12 @@
 
     [Postman API 测试用例 - 点击查看](https://www.postman.com/planetary-sunset-285884/workspace/tds-api)
 
+### 快速开始
+
+   [最新版本下载链接](http://www.liangtusoft.com/release)
+
+   [快速体验视频教程](http://)
+
 ### 高性能
 
 针对物联网时序数据场景优化，可以比mysql有更快的读取速度。    

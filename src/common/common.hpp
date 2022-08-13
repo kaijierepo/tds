@@ -1244,6 +1244,16 @@ namespace timeopt {
 		SYSTEMTIME st = Unix2SysTime(tBase);
 		return st;
 	}
+
+	inline bool isValidTimeStr(string time) {
+		if (time.length() != 19)
+			return false;
+		if (time.at(4) != '-' || time.at(7) != '-')
+			return false;
+		if (time.at(13) != ':' || time.at(16) != ':')
+			return false;
+		return true;
+	}
 }
 
 

@@ -374,6 +374,13 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			}
 			mg_http_reply(c, 301, sHeader.c_str(), "");
 		}
+		else if (mg_http_match_uri(hm, "/apitest"))
+		{
+			string redirectPath = "/app/apitest";
+			string sHeader = "location:" + redirectPath + "\r\n";
+			sHeader += "Cache-Control:max-age=1\r\n";
+			mg_http_reply(c, 301, sHeader.c_str(), "");
+		}
 		else if (memcmp(hm->method.ptr, "OPTIONS", hm->method.len) == 0)
 		{
 			// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试

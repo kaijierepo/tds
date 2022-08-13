@@ -440,8 +440,13 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			{
 				string tag = params["tag"].get<string>();
 				string time = params["time"].get<string>();
-				db.Insert(tag, timeopt::str2st(time), params["val"]);
-				result = "\"ok\"";
+				if (!timeopt::isValidTimeStr(time)) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
+				}
+				else {
+					db.Insert(tag, timeopt::str2st(time), params["val"]);
+					rpcResp.result = "\"ok\"";
+				}
 			}
 		}
 	}
