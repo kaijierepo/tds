@@ -698,7 +698,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	try { strTime = params["time"].get<string>(); }
 	catch (...)
 	{
-		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"time\" param should be a string");
+		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"time\" param should be a string");
 	}
 	if (!deSel.time.init(strTime))
 		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.time.error);
@@ -719,10 +719,10 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	}
 	catch (...)
 	{
-		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"tag\" param should be a string");
+		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"tag\" param should be a string");
 	}
 	if (0 == strTag.length()) {
-		return makeRPCError(TEC_WRONG_PARAM_FMT, "wrong param format:\"tag\" param can not be empty");
+		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"tag\" param can not be empty");
 	}
 
 	if (!deSel.tag.init(strTag))

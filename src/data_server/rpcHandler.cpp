@@ -1448,11 +1448,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 	strReq = str::trim(strReq);
 	if (strReq.length() == 0) 
 	{
-		json jError = {
-		{"code", -32700},
-		{"message" , "Parse error"}
-		};
-		error = jError.dump();
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_InvalidReqFmt, "invalid request format. request length is 0.");
 		goto HANDLE_END;
 	}
 

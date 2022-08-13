@@ -273,10 +273,11 @@ enum RPC_ERROR_CODE {
 
 	//common
 	TEC_FAIL = -40000,
-	TEC_paramMissing = -40001,
-	TEC_WRONG_PARAM_FMT = -40002,
+	TEC_InvalidReqFmt = -40001,
+	TEC_WrongParamFmt = -40002,
 	TEC_TIME_SELECTOR_FMT_ERROR = -40003,
 	TEC_TAG_SELECTOR_FMT_ERROR = -40004,
+	TEC_paramMissing = -40021,
 
 	//user
 	AUTH_tokenError = -40101,
