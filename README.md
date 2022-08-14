@@ -29,7 +29,7 @@
 
    [最新版本下载链接](http://www.liangtusoft.com/release)
 
-   [快速体验视频教程](http://)
+   [3分钟快速体验 - 点击看视频](https://www.bilibili.com/video/BV1zS4y1s7KF?share_source=copy_web&vd_source=4711b38a4edbc7f25c4a98d4c399e893)
 
 ### 高性能
 
