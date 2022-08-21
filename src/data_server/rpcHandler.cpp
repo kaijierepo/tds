@@ -1381,8 +1381,10 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		json jRlt,jErr;
 		//发起同步请求，此处阻塞
 		LOG("[TDSP转发]客户端->设备\r\n");
+		bool callRet = false;
 		if (pIoDev->call(method, jParams, jRlt, jErr))
 		{
+			callRet = true;
 			if (jRlt != nullptr) {
 				rpcResp.result = jRlt.dump();
 			}
@@ -1400,10 +1402,32 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout,"IO设备响应超时");
 		}
+		logTDSPDispatch(method, jParams, callRet, *pSession);
 		return true;
 	}
 
 	return false;
+}
+
+bool rpcHandler::logTDSPDispatch(string method,json& params,bool callRet,RPC_SESSION& session) {
+	if (method == "startRepel") {
+		json logParams;
+		logParams["object"] = "用户:" + session.user;
+		logParams["event"] = "探驱联动开始";
+		logParams["org"] = session.org;
+		logParams["host"] = session.remoteAddr;
+		logParams["detail"] = "设备名称:" + session.tag + ",设备地址:" + session.ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
+		logSrv.rpc_addLog(logParams, session);
+	}	
+	else if (method == "stopRepel") {
+		json logParams;
+		logParams["object"] = "用户:" + session.user;
+		logParams["event"] = "探驱联动结束";
+		logParams["org"] = session.org;
+		logParams["host"] = session.remoteAddr;
+		logParams["detail"] = "设备名称:" + session.tag + ",设备地址:" + session.ioAddr;
+		logSrv.rpc_addLog(logParams, session);
+	}
 }
 
 bool rpcHandler::isGB2312Pkt(string& req)
@@ -1532,13 +1556,19 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			if(jUser!=nullptr)
 				pSession->org = jUser["org"].get<string>();
 		}
+		else
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "user is not set to call api");
+			goto HANDLE_END;
+		}
 			
 		//用户认证
 		if (jReq["token"] != nullptr)
 		{
 			pSession->token = jReq["token"].get<string>();
 		}
-		if (tds->conf->enableAccessCtrl)
+		//即使服务端没有打开鉴权，如果用户指定了token或者user中的
+		if (tds->conf->enableAccessCtrl || jReq["token"] == nullptr || jReq["user"] == nullptr)
 		{
 			if (jReq["token"] == nullptr)
 			{
