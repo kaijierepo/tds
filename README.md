@@ -29,7 +29,7 @@
 
    [最新版本下载链接](http://www.liangtusoft.com/release)
 
-   [3分钟快速体验 - 点击看视频](https://www.bilibili.com/video/BV1zS4y1s7KF?share_source=copy_web&vd_source=4711b38a4edbc7f25c4a98d4c399e893)
+   [3分钟快速体验 - 点击播放视频](https://www.bilibili.com/video/BV1zS4y1s7KF?share_source=copy_web&vd_source=4711b38a4edbc7f25c4a98d4c399e893)
 
 ### 高性能
 
@@ -56,8 +56,12 @@
 
     TDS不仅仅是数据库，还具有监控对象管理功能，硬件设备接入管理功能，内存数据库功能。共同组成了一个物联网组态软件。
 
-    可以实现硬件设备接入，历史数据查询，实时数据查询等物联网监控功能。
+   可以实现硬件设备接入，历史数据查询，实时数据查询等物联网监控功能。
 
-    了解更多功能: http://www.liangtusoft.com/doc/#/
+   [使用透传网关接入Modbus设备 - 点击播放视频](https://www.bilibili.com/video/BV1sV4y1W7PX/?vd_source=3b5c83dc2775dbd078466c5fe0eed7de)
 
-    下载试用: [www.liangtusoft.com/release](http://www.liangtusoft.com/release)
+   了解更多功能: http://www.liangtusoft.com/doc/#/
+
+   下载试用: [www.liangtusoft.com/release](http://www.liangtusoft.com/release)
+
+   硬件接入部分功能尚未开源，专业版提供50个IO点免费版本

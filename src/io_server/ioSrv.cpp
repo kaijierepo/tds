@@ -1211,6 +1211,7 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr
 {
 	if (!tdsSession->m_bAppDataRecved)
 	{
+		//15位IMEI模式
 		if (iLen == 15 && str::isDigits((char*)pData, iLen))
 		{
 			string imei = str::fromBuff((char*)pData, iLen);
@@ -1218,11 +1219,20 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr
 			ioSrv.handleDevOnline(imei, tdsSession);
 			return true;
 		}
+		//imei前缀模式
 		else if (iLen > 4 && (str::fromBuff((char*)pData, 4) == "imei" || str::fromBuff((char*)pData, 4) == "IMEI"))
 		{
 			string imei = str::fromBuff((char*)pData, iLen);
 			LOG("收到首发注册包,IMEI前缀格式,IMEI=" + imei);
 			ioSrv.handleDevOnline(imei, tdsSession);
+			return true;
+		}
+		//RS485
+		else if (iLen > 5 && (str::fromBuff((char*)pData, 5) == "RS485" || str::fromBuff((char*)pData, 5) == "rs485"))
+		{
+			string reg = str::fromBuff((char*)pData, iLen);
+			LOG("收到首发注册包," + reg);
+			ioSrv.handleDevOnline(reg, tdsSession);
 			return true;
 		}
 	}
