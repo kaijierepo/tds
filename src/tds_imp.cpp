@@ -324,6 +324,7 @@ bool TDS_imp::runAsTDB()
 	GetLocalTime(&stStartupTime);
 	string sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
+	return true;
 }
 
 

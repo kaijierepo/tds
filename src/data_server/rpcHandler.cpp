@@ -1409,7 +1409,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 	return false;
 }
 
-bool rpcHandler::logTDSPDispatch(string method,json& params,bool callRet,RPC_SESSION& session) {
+void rpcHandler::logTDSPDispatch(string method,json& params,bool callRet,RPC_SESSION& session) {
 	if (method == "startRepel") {
 		json logParams;
 		logParams["object"] = "用户:" + session.user;

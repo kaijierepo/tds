@@ -22,7 +22,7 @@ public:
 	//透传到io设备的命令
 	bool handleDevRpcDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 
-	bool logTDSPDispatch(string method, json& params, bool callRet, RPC_SESSION& session);
+	void logTDSPDispatch(string method, json& params, bool callRet, RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 
