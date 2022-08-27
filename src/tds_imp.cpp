@@ -365,7 +365,7 @@ bool TDS_imp::run(string cmdline)
 	{
 		if (!fs::fileExist(tds->conf->confPath)) {
 			fs::createFolderOfPath(tds->conf->confPath);
-			LOG("[warn]新建配置文件夹,路径:" + tds->conf->confPath);
+			LOG("[keyinfo]配置路径未找到配置文件夹,新建配置,路径:" + tds->conf->confPath);
 		}
 	}
 	createDefaultCompanyInfo();
