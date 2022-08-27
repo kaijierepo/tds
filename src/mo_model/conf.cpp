@@ -78,7 +78,7 @@ string tdsConfig::defaultConf_tds()
 #基础配置
 uiPath=./ui            #web根目录
 confPath=./conf        #配置路径
-httpsPort=666          #https服务端口,同时支持websocket secure
+httpsPort=0            #https服务端口,同时支持websocket secure
 httpPort=667           #http服务端口,同时支持websocket
 loglevel=debug         #日志级别
 

@@ -74,7 +74,7 @@ bool project::loadConf()
 	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf))
 	{
-		LOG("[warn]未找到监控对象配置mo.json，新建配置");
+		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
 		m_strName = "empty project";
 		conf = "";
 	}

@@ -25,6 +25,9 @@ bool isBatchLink(string addr)
 std::map<string, fp_createDev> mapDevCreateFunc;
 ioDev* createIODev(string type)
 {
+	if (type == "")
+		return nullptr;
+
     ioDev* p = NULL;
 	
 	if (mapDevCreateFunc.find(type) != mapDevCreateFunc.end())

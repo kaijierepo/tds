@@ -302,7 +302,7 @@ bool ioServer::loadConf()
 	string conf;
 	if (!fs::readFile(tds->conf->confPath + "/io.json", conf))
 	{
-		LOG("[warn]未找到IO设备配置io.json,新建配置");
+		LOG("[keyinfo]未找到IO设备配置io.json,新建配置");
 		return true;
 	}
 
@@ -341,8 +341,10 @@ bool ioServer::loadConfAppend(json& j)
 	for (auto it : j)
 	{
 		ioDev* p = createIODev(it["type"].get<string>());
-		p->loadConf(it);
-		ioDev::addChild(p);
+		if (p) {
+			p->loadConf(it);
+			ioDev::addChild(p);
+		}
 	}
 	return true;
 }
@@ -663,10 +665,10 @@ bool ioServer::runAsCloud()
 	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
 
 	//启动服务端口
-	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
-	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
-	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
-	LOG("[keyinfo][IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
+	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
+	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
+	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
+	LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();

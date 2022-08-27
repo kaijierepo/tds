@@ -317,7 +317,7 @@ bool TDS_imp::runAsTDB()
 {
 	tds->db = &::db;
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
+	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 	LOG("[数据库	] " + tds->conf->dbPath);
 	::db.Open(tds->conf->dbPath, prj.m_strName);
 	runWebServers();
@@ -357,7 +357,7 @@ bool TDS_imp::run(string cmdline)
 
 
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("[keyinfo][日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
+	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 
 
 	//如果配置中没有自定义商标信息，写入良途软件商标信息

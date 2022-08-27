@@ -181,6 +181,11 @@ string Clogger::logInternal(string info)
 		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | 0x06);
 		cout << info;
 	}
+	else if (ll == LOG_LEVEL::LL_KEYINFO)
+	{
+		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+		cout << info;
+	}
 	else
 	{
 		SetConsoleTextAttribute(handle, 0x07);
