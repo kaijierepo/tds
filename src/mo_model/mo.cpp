@@ -120,7 +120,8 @@ bool MO::loadConf(json& conf)
 	if(conf.contains("latitude"))
 		m_latitude = conf["latitude"];
 
-	m_mapConf = conf["map"];
+	if(conf.contains("map"))
+		m_mapConf = conf["map"];
 
 	if (m_moType == "customMo" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{

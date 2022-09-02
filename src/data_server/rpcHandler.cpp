@@ -986,6 +986,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			tag = TAG::addRoot(tag, rootTag);//组合为用户位号
 			tag = TAG::addRoot(tag, session.org);//组合为系统位号
+			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
 
 			MO* pmo = prj.GetMOByTag(tag);
 			if (pmo)
