@@ -676,7 +676,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 
 		if (pwd == "" && sign == "") {
 			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_signatureMissing, "param sign must be specified to login.use HMAC-SHA256 to generate signature");
-			return;
+			goto LOGIN_END;
 		}
 
 		bool loginSuccess = false;
@@ -696,6 +696,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				}
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "password error", "密码错误");
+					goto LOGIN_END;
 				}
 			}
 			else {
@@ -705,7 +706,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 					time = params["time"].get<string>();
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param time must be specified to login");
-					return;
+					goto LOGIN_END;
 				}
 
 				string msg = user + time;
@@ -716,6 +717,10 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				if (trueSign == sign)
 				{
 					loginSuccess = true;
+				}
+				else {
+					resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_signatureInvalid, "invalid signature");
+					goto LOGIN_END;
 				}
 			}
 
@@ -742,6 +747,9 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				saveTokens();
 				resp.result = userInfo.dump(4);
 			}
+			else {
+
+			}
 		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "user not found","用户不存在");
@@ -751,6 +759,8 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 	{
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
 	}
+
+LOGIN_END:
 
 	if (resp.error != "")
 	{

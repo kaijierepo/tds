@@ -38,6 +38,7 @@ SOFTWARE.
 #include "tools/tcpReverseProxy.h"
 #include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
+#include "tools/tcp2wsRproxy.h"
 #include "httplib.h"
 #include "db.h"
 #include "tools/tools.hpp"
@@ -211,6 +212,11 @@ int main(int argc, char** argv)
 		tcpReverseProxy* tr = new tcpReverseProxy();
 		//tr->realHost = parser.get<string>("sb");
 		//tr->proxyPort = parser.get<int>("pp");
+		tr->run();
+	}
+	else if (mode == "tcp2ws")
+	{
+		Tcp2wsRproxy* tr = new Tcp2wsRproxy();
 		tr->run();
 	}
 	else if (mode == "tcp2com")
