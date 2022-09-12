@@ -203,6 +203,7 @@ public:
 	string m_strPktDetail; //命令包详细解析信息
 
 	virtual bool pack() { return false; };
+	virtual bool pack(char* cmdData, int len) { return false; };
 	virtual bool unpack() 
 	{ 
 		return false;

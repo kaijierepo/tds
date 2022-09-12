@@ -132,7 +132,7 @@ namespace MODBUS_REG_TYPE {
     const string holdingRegister = "Holding-Register";
 }
 
-namespace MODBUS_FUNCTION_CODE {
+namespace MB_FUNC_CODE {
     const unsigned char readCoils = 1;
     const unsigned char readDiscreteInputs = 2; 
     const unsigned char readHoldingRegisters = 3;
@@ -143,75 +143,15 @@ namespace MODBUS_FUNCTION_CODE {
 };
 
 #pragma pack(1)
-//modbus包框架
-class MB_RTU_PKT : public PKT_DATA {
-public:
-	unsigned char eqp_addr;
-	unsigned char fun_code;
-	char crc_H;
-	char crc_L;
-
-	MB_RTU_PKT() {
-
-	}
-
-	~MB_RTU_PKT() {
-
-	}
-
-	void copy(const MB_RTU_PKT& r) {
-		PKT_DATA::copy(r);
-		eqp_addr = r.eqp_addr;
-		fun_code = r.fun_code;
-		crc_H = r.crc_H;
-		crc_L = r.crc_L;
-	}
-
-	MB_RTU_PKT(const MB_RTU_PKT& r)
-	{
-		copy(r);
-	}
-
-	MB_RTU_PKT& operator=(const MB_RTU_PKT& pd) {
-		copy(pd);
-		return *this;
-	}
-
-	bool unpack() override {
-		eqp_addr = (unsigned char)data[0];
-		fun_code = (unsigned char)data[1];
-		cmd_data_len = len - 4;
-		if (cmd_data_len > 0)
-		{
-			cmd_data = new unsigned char[cmd_data_len];
-			memcpy(cmd_data, data + 2, cmd_data_len);
-		}
-		return true;
-	};
-	bool unpack(unsigned char* p, int len,bool withDetail =false) override {
-		setData(p, len);
-		return unpack();
-	};
-	bool pack() override {
-		len = 4 + cmd_data_len;
-		data = new unsigned char[len];
-		data[0] = eqp_addr;
-		data[1] = fun_code;
-		memcpy(data + 2, cmd_data, cmd_data_len);
-		WORD crc = common::N_CRC16((unsigned char*)data, len -2 );
-		crc_H = HIBYTE(crc);
-		crc_L = LOBYTE(crc);
-		data[2 + cmd_data_len] = crc_H;
-		data[2 + cmd_data_len + 1] = crc_L;
-		return true;
-	}
-};
-//命令数据区结构
-struct RTU_REQ_read {
+//PDU结构定义，该部分独立于传输层协议，可以作为modbusRTU的载荷也可以作为modbusTCP的载荷
+struct PDU_REQ_read
+{
+	unsigned char func_code;
 	unsigned char start_reg_addr_H;
 	unsigned char start_reg_addr_L;
 	unsigned char reg_num_H;
 	unsigned char reg_num_L;
+
 	void setRegNum(unsigned short n) {
 		reg_num_H = HIBYTE(n);
 		reg_num_L = LOBYTE(n);
@@ -229,16 +169,18 @@ struct RTU_REQ_read {
 		return start;
 	}
 };
-struct RTU_RESP_read{
+struct PDU_RESP_read {
+	unsigned char func_code;
 	unsigned char byte_count;
 	char reg_data[255];
 };
-
-struct RTU_REQ_writeSingleCoil{
+struct PDU_REQ_writeSingleCoil {
+	unsigned char func_code;
 	unsigned char addr_H;
 	unsigned char addr_L;
 	unsigned char val_H;
 	unsigned char val_L;
+
 	void setOffset(unsigned short a) {
 		addr_H = HIBYTE(a);
 		addr_L = LOBYTE(a);
@@ -268,12 +210,13 @@ struct RTU_REQ_writeSingleCoil{
 			return 0;
 	}
 };
-
-struct RTU_REQ_writeSingleReg {
+struct PDU_REQ_writeSingleReg{
+	unsigned char func_code;
 	unsigned char addr_H;
 	unsigned char addr_L;
 	unsigned char val_H;
 	unsigned char val_L;
+
 	void setOffset(unsigned short a) {
 		addr_H = HIBYTE(a);
 		addr_L = LOBYTE(a);
@@ -297,14 +240,15 @@ struct RTU_REQ_writeSingleReg {
 			return 0;
 	}
 };
-
-struct RTU_REQ_writeMultiReg {
+struct PDU_REQ_writeMultiReg {
+	unsigned char func_code;
 	unsigned char start_reg_addr_H;
 	unsigned char start_reg_addr_L;
 	unsigned char reg_num_H;
 	unsigned char reg_num_L;
 	unsigned char byte_count;
 	char reg_data[255];
+
 	void setRegNum(unsigned short n) {
 		reg_num_H = HIBYTE(n);
 		reg_num_L = LOBYTE(n);
@@ -320,6 +264,167 @@ struct RTU_REQ_writeMultiReg {
 	int getStartReg() {
 		int start = start_reg_addr_H * 256 + start_reg_addr_L;
 		return start;
+	}
+};
+//pdu结构  | function code | data |
+struct MB_PDU {
+	unsigned char* data;
+	int len;
+	MB_PDU() {
+		data = nullptr;
+	}
+	~MB_PDU() {
+		if (data)
+			delete data;
+	}
+	unsigned char getFuncCode() {
+		return data[0];
+	};
+
+	void setData(void* pData, int l) {
+		if (data)
+			delete data;
+		data = new unsigned char[l];
+		memcpy(data, pData, l);
+		len = l;
+	}
+
+	void copy(const MB_PDU& r) {
+		data = r.data;
+		len = len;
+		if (data) {
+			delete data;
+			data = nullptr;
+		}
+		if (r.data) {
+			data = new unsigned char[r.len];
+			memcpy(data, r.data, r.len);
+		}
+	}
+
+	MB_PDU(const MB_PDU& r)
+	{
+		copy(r);
+	}
+
+	MB_PDU& operator=(const MB_PDU& pd) {
+		copy(pd);
+		return *this;
+	}
+};
+//modbusRTU的ADU结构定义
+//  | additional address | function code | data | error check |
+class MB_RTU_PKT : public PKT_DATA {
+public:
+	unsigned char eqp_addr;
+	MB_PDU pdu;
+	char crc_H;
+	char crc_L;
+
+	MB_RTU_PKT() {
+
+	}
+
+	~MB_RTU_PKT() {
+
+	}
+
+	void copy(const MB_RTU_PKT& r) {
+		PKT_DATA::copy(r);
+		eqp_addr = r.eqp_addr;
+		pdu = r.pdu;
+		crc_H = r.crc_H;
+		crc_L = r.crc_L;
+	}
+
+	MB_RTU_PKT(const MB_RTU_PKT& r)
+	{
+		copy(r);
+	}
+
+	MB_RTU_PKT& operator=(const MB_RTU_PKT& pd) {
+		copy(pd);
+		return *this;
+	}
+
+	bool unpack() override {
+		eqp_addr = (unsigned char)data[0];
+		pdu.setData(data + 1, len - 3);
+		crc_H = data[len - 2];
+		crc_L = data[len - 1];
+		return true;
+	};
+	bool unpack(unsigned char* p, int len, bool withDetail = false) override {
+		setData(p, len);
+		return unpack();
+	};
+	bool pack() override {
+		data[0] = eqp_addr;
+		memcpy(data + 1, pdu.data, pdu.len);
+		WORD crc = common::N_CRC16((unsigned char*)data, len - 2);
+		crc_H = HIBYTE(crc);
+		crc_L = LOBYTE(crc);
+		data[2 + cmd_data_len] = crc_H;
+		data[2 + cmd_data_len + 1] = crc_L;
+		return true;
+	}
+};
+//modbusTCP的ADU结构的定义
+//  | MBAP Header | function code | data | 
+class MB_TCP_PKT : public PKT_DATA {
+public:
+	unsigned short transId; //transaction id
+	unsigned short protoId; //protocol id
+	unsigned short payloadLen;     //length of following fields; including unitId
+	unsigned char unitId;   //id of a remote slave connectted via serial line 
+	MB_PDU* pdu;
+
+	MB_TCP_PKT() {
+
+	}
+
+	~MB_TCP_PKT() {
+
+	}
+
+	void copy(const MB_TCP_PKT& r) {
+		PKT_DATA::copy(r);
+		transId = r.transId;
+		protoId = r.protoId;
+		len = r.len;
+		unitId = r.unitId;
+	}
+
+	MB_TCP_PKT(const MB_TCP_PKT& r)
+	{
+		copy(r);
+	}
+
+	MB_TCP_PKT& operator=(const MB_TCP_PKT& pd) {
+		copy(pd);
+		return *this;
+	}
+
+	bool unpack() override {
+		memcpy((char*)&transId, data, 7);
+		cmd_data_len = len - 7;
+		if (cmd_data_len > 0)
+		{
+			cmd_data = new unsigned char[cmd_data_len];
+			memcpy(cmd_data, data + 7, cmd_data_len);
+		}
+		return true;
+	};
+	bool unpack(unsigned char* p, int len, bool withDetail = false) override {
+		setData(p, len);
+		return unpack();
+	};
+	bool pack() override {
+		len = 7 + cmd_data_len;
+		data = new unsigned char[len];
+		memcpy(data, (char*)transId, 7);
+		memcpy(data + 7, cmd_data, cmd_data_len);
+		return true;
 	}
 };
 #pragma pack()

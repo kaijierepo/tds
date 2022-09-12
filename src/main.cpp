@@ -42,6 +42,8 @@ SOFTWARE.
 #include "httplib.h"
 #include "db.h"
 #include "tools/tools.hpp"
+#include "base64.h"
+#include "base85.h"
 
 /*
 notes:
@@ -88,7 +90,8 @@ int main(int argc, char** argv)
 	string mode = "tds";
 	if (appName == "tds") {
 		if(args.size() > 1)
-		   mode = args[1];
+		   mode = args[1];   //第一个参数为运行模式
+		args.erase(args.begin());
 	}
 	else {
 		mode = appName;
@@ -264,6 +267,47 @@ int main(int argc, char** argv)
 		{
 			string es = e.what();
 			LOG("转换异常:" + es);
+		}
+		return 0;
+	}
+	else if (mode == "base64") {
+		if (args.size() != 3) {
+			printf("参数错误");
+			return 0;
+		}
+
+		if (args[1] == "enc") {
+			char* pFile = nullptr;
+			int len;
+			if (fs::readFile(args[2], pFile, len) ){
+				string encData = Base64Encode((const unsigned char*)pFile, len);
+				fs::writeFile(args[2] + "base64_enc.txt", encData);
+			}
+		}
+		else {
+
+		}
+		return 0;
+	}
+	else if (mode == "base85") {
+		if (args.size() != 3) {
+			printf("参数错误");
+			return 0;
+		}
+
+		if (args[1] == "enc") {
+			char* pFile = nullptr;
+			int len;
+			if (fs::readFile(args[2], pFile, len)) {
+				char* dest = new char[10 * 1024 * 1024];
+				memset(dest, 0, 10 * 1024 * 1024);
+				 bintob85(dest,(void const*)pFile,len);
+				 string encData = dest;
+				 fs::writeFile(args[2] + "base85_enc.txt", encData);
+			}
+		}
+		else {
+
 		}
 		return 0;
 	}
