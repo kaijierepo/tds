@@ -30,6 +30,7 @@ namespace IO_DEV_TYPE {
 	namespace DEV {
 		const string tdsp_device = "tdsp-device";
 		const string modbus_rtu_slave = "modbus-rtu-slave";
+		const string modbus_tcp_slave = "modbus-tcp-slave";
 		const string iq60_gateway = "iq60-gateway";
 		const string leakDetect = "leak-detect";
 		const string genicam = "genicam";
@@ -52,6 +53,7 @@ namespace IO_DEV_TYPE {
 
 inline string getDevTypeLabel(string devType) {
 	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
+	else if (devType == IO_DEV_TYPE::DEV::modbus_tcp_slave)return "ModbusTCP";
 	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
 	else if (devType == IO_DEV_TYPE::GW::rs485_gateway)return "RS485转网络";
 	else if (devType == IO_DEV_TYPE::CHAN::io_channel)return "IO通道";

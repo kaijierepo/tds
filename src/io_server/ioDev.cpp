@@ -2,7 +2,7 @@
 #include "ioDev.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
-#include "proto/proto_rtu.hpp"
+#include "ioProto/proto_rtu.hpp"
 #include "logger.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
