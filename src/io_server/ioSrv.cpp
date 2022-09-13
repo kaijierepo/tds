@@ -137,18 +137,7 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		if (pIoDev)
 		{
 			p->m_IoDev = pIoDev;
-			if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
-			{
-				p->iALProto = IO_PROTO::IQ60;
-			}
-			else if (pIoDev->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
-			{
-				p->iALProto = IO_PROTO::TDSRPC;
-			}
-			else if (pIoDev->m_devType == IO_DEV_TYPE::GW::rs485_gateway)
-			{
-				p->iALProto = IO_PROTO::MODBUS_RTU;
-			}
+			p->ioDevType = pIoDev->m_devType;
 			pIoDev->setOnline();
 			GetLocalTime(&pIoDev->m_stLastActiveTime);
 			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
@@ -658,15 +647,18 @@ bool ioServer::runAsCloud()
 	loadChanTemplate();
 
 	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
+	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
 
 	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
 	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
 	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
 	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
+	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
 
 	//启动服务端口
 	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
 	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
+	LOG("[IO服务    ] 端口:" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
 	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
 	LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
 
@@ -695,6 +687,19 @@ bool ioServer::runAsCloud()
 	else
 	{
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->mbPort));
+	}
+
+	//io服务 502 Modbus over TCP
+	m_tcpSrv_mbTcp = new tcpSrv();
+	m_tcpSrv_mbTcp->m_strName = "modbus tcp";
+	m_tcpSrv_mbTcp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_mbTcp->run(this, mbTcpPort))
+	{
+
+	}
+	else
+	{
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(mbTcpPort));
 	}
 
 	//io服务 663 IQ60
@@ -1037,6 +1042,15 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			}
 		}
 	}
+	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_tcp_slave)
+	{
+		stream2pkt* pab = &tdsSession->m_alBuf;
+		pab->PushStream(pData, iLen);
+		while (pab->PopPkt(IsValidPkt_ModbusTcp,false))
+		{
+			onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+		}
+	}
 	else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
 	{
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
@@ -1168,6 +1182,13 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 				{
 					tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
 				}
+			}
+		}
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_tcp_slave)
+		{
+			if (tdsSession->m_IoDev)
+			{
+				tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
 			}
 		}
 		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway) {

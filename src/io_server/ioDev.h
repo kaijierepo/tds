@@ -34,7 +34,7 @@ public:
 	ioDev(void);
 	~ioDev(void);
 
-	virtual bool run() { m_bRunning = true; return true; }; //连接； 执行io任务； 断线重连
+	virtual bool run(); //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;
 	semaphore m_evtIO;

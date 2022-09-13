@@ -19,6 +19,20 @@ int IsValidPkt_IQ60(unsigned char* pData, int iLen)
 	return 0;
 }
 
+
+int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen)
+{
+	if (iLen < 7)
+		return 0;
+
+	int len = pData[4] * 256 + pData[5];
+	if (iLen == len + 6) {
+		return iLen;
+	}
+	return 0;
+}
+
+
 int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen)
 {
 	if (iLen < 4)

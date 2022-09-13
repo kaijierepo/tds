@@ -116,6 +116,39 @@ ioDev::~ioDev(void)
 	}
 }
 
+bool ioDev::run()
+{
+	m_bRunning = true;
+	if (m_addrMode == DEV_ADDR_MODE::tcpServer)
+	{
+		string ip;
+		if (m_jDevAddr.contains("ip"))
+		{
+			ip = m_jDevAddr["ip"].get<string>();
+		}
+		else
+		{
+			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到ip配置");
+			return false;
+		}
+
+
+		int port;
+		if (m_jDevAddr.contains("port"))
+		{
+			port = m_jDevAddr["port"].get<int>();
+		}
+		else
+		{
+			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到port配置");
+			return false;
+		}
+		m_tcpClt.run(&ioSrv, ip, port);
+		LOG("[IO设备]连接TCP服务模式设备,设备类型:%s,设备地址:%s", m_devType.c_str(), getDevAddrStr().c_str());
+	}
+	return true;
+}
+
 void ioDev::stop()
 {
 	m_bRunning = false;

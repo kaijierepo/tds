@@ -69,5 +69,6 @@ public:
 
 extern int IsValidPkt_IQ60(unsigned char* pData, int iLen);
 extern int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen);
+extern int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen);
 extern int IsValidPkt_TDSP(unsigned char* pData, int iLen);
 extern int IsValidPkt_LeakDetect(unsigned char* pData, int iLen);
