@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include  "common.hpp"
 
 tdsConfig::tdsConfig()

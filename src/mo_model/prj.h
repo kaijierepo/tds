@@ -1,6 +1,6 @@
 #pragma once
 #include "mo.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include "json.hpp"
 using json = nlohmann::json;
 #include "tdsSession.h"
