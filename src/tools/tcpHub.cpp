@@ -2,7 +2,7 @@
 #include "tcpHub.h"
 #include "logger.h"
 #include "common.hpp"
-#include "conf.h"
+#include "tdsConf.h"
 
 
 string tcpHub::defaultConf() 

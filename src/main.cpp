@@ -26,7 +26,7 @@ SOFTWARE.
 */
 
 #include "pch.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include "cmdparser.hpp"
 #include "video/remoteDesktopServer.h"
 #include "cmdparser.hpp"
@@ -280,8 +280,21 @@ int main(int argc, char** argv)
 			char* pFile = nullptr;
 			int len;
 			if (fs::readFile(args[2], pFile, len) ){
-				string encData = Base64Encode((const unsigned char*)pFile, len);
-				fs::writeFile(args[2] + "base64_enc.txt", encData);
+				char* out = new char[len * 2];
+				memset(out, 0, len * 2);
+				base64_encode((const unsigned char*)pFile, len,out);
+				string s = out;
+				fs::writeFile(args[2] + "base64_enc.txt", s);
+			}
+		}
+		else if (args[1] == "dec") {
+			char* pFile = nullptr;
+			int len;
+			if (fs::readFile(args[2], pFile, len)) {
+				unsigned char* out = new unsigned char[len * 2];
+				memset(out, 0, len * 2);
+				int outLen = base64_decode(pFile, len, out);
+				fs::writeFile(args[2] + "base64_dec.bin",(char*)out,outLen);
 			}
 		}
 		else {

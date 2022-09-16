@@ -28,7 +28,7 @@ SOFTWARE.
 
 #pragma once
 #include "tds.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include "mp.h"
 
 class TDS_imp : public i_tds {

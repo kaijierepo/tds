@@ -741,6 +741,11 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
+	else if (method == "getFirmwareList")
+	{
+		vector<string> list;
+		fs::getFileList(list,fs::appPath() +"/files/firmware",false);
+	}
 	else if(method == "getChanTemplateList")
 	{
 		json jList = json::array();

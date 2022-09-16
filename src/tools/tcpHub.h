@@ -1,7 +1,7 @@
 #pragma once
 #include "tcpSrv.h"
 #include "tcpClt.h"
-#include "conf.h"
+#include "tdsConf.h"
 
 
 class TDS_INI1 {

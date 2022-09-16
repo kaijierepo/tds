@@ -221,7 +221,9 @@ std::string CWSPPkt::getKey(std::string strKey)
 
 	//进行base64编码
 	//strcpy(strKey , base64code.base64_encode(reinterpret_cast<const unsigned char*>(iDigSet), 20).c_str() );
-	strKey = Base64Encode(reinterpret_cast<const unsigned char*>(iDigSet), 20);
+	char out[100] = { 0 };
+	base64_encode(reinterpret_cast<const unsigned char*>(iDigSet), 20,out);
+	strKey = out;
 	return strKey;
 }
 

@@ -12,7 +12,7 @@
 #include "tcpClt.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include "tds.h"
 #include "users/userMng.h"
 #include "sha1.hpp"

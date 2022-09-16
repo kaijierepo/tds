@@ -33,7 +33,7 @@ SOFTWARE.
 #include "ds.h"
 #include "ioSrv.h"
 #include "io_server/ioDev.h"
-#include "conf.h"
+#include "tdsConf.h"
 #include "mp.h"
 #include "videoCodec.h"
 #include "wke.h"
