@@ -741,10 +741,15 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_ioAddrNotSpecified, "ioAddr not specified in params");
 		}
 	}
-	else if (method == "getFirmwareList")
+	else if (method == "getDevFirmware")
 	{
 		vector<string> list;
 		fs::getFileList(list,fs::appPath() +"/files/firmware",false);
+		json j = json::array();
+		for (int i = 0; i < list.size(); i++) {
+			j.push_back(list[i]);
+		}
+		rpcResp.result = j.dump();
 	}
 	else if(method == "getChanTemplateList")
 	{
@@ -756,6 +761,28 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			jList.push_back(tplInfo);
 		}
 		rpcResp.result = jList.dump();
+	}
+	else if (method == "startDevUpgrade")
+	{
+		if (!params.contains("ioAddr")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: ioAddr");
+		}
+		else if (!params.contains("firmware")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: firmware");
+		}
+		else {
+			string ioAddr = params["ioAddr"].get<string>();
+			string firmware = params["firmware"].get<string>();
+			ioDev* pD = ioSrv.getIODev(ioAddr);
+			if (pD)
+			{
+				pD->startUpgrade(firmware);
+			}
+			else
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
+			}
+		}
 	}
 	else if(method == "getChanTemplate"){
 		if (params.contains("name")) {
@@ -1553,7 +1580,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			goto HANDLE_END;
 		}
 
-		//没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
+		//验证user;    没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
 		json jUser;
 		if (jReq["user"] != nullptr)
 		{
@@ -1564,30 +1591,31 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		}
 		else
 		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "user is not set to call api");
-			goto HANDLE_END;
+			if (tds->conf->enableAccessCtrl) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "user is not set to call api");
+				goto HANDLE_END;
+			}
+			else {//没开权限控制，且没有设置用户，默认用户都是admin
+				pSession->user = "admin";
+			}
 		}
 			
-		//用户认证
+		//验证token
+		if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
+			goto HANDLE_END;
+		}
+
 		if (jReq["token"] != nullptr)
 		{
 			pSession->token = jReq["token"].get<string>();
 		}
 		//即使服务端没有打开鉴权，如果用户指定了token或者user中的
-		if (tds->conf->enableAccessCtrl || jReq["token"] == nullptr || jReq["user"] == nullptr)
+		if (pSession->token != "")
 		{
-			if (jReq["token"] == nullptr)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
-				goto HANDLE_END;
-			}
-			if (jReq["user"] == nullptr)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "access denied, please set user.");
-				goto HANDLE_END;
-			}
-			string token = jReq["token"].get<string>();
-			string user = jReq["user"].get<string>();
+			string token = pSession->token;
+			string user = pSession->user;
 			if (!userMng.checkToken(user,token))
 			{
 				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
