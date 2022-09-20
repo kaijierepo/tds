@@ -526,6 +526,11 @@ void ioServer::rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	else {
 		string ioAddr = params["ioAddr"].get<string>();
 		string firmware = params["firmware"].get<string>();
+		int pktLen = 4000;
+		if (params.contains("pktLen")) {
+			pktLen = params["pktLen"].get<int>();
+		}
+
 		ioDev* pD = ioSrv.getIODev(ioAddr);
 		bool uploadFirmware = true;
 		if (params.contains("firmware")) {
@@ -546,7 +551,7 @@ void ioServer::rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "upgrade is in process");
 			}
-			else if (!pTdsp->m_upgradeInfo.loadFirmwareFile(firmware)) {
+			else if (!pTdsp->m_upgradeInfo.loadFirmwareFile(firmware, pktLen)) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not load specified firmware");
 			}
 			else if (pTdsp->m_upgradeInfo.devType.find(pTdsp->m_strChanTemplate) == string::npos) {
@@ -567,7 +572,7 @@ void ioServer::rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 						if (uploadFirmware) {
 							pTdsp->startUploadFirmware(ui.fileName);
 						}
-						rpcResp.result = "\"ok\"";
+						rpcResp.result = jp.dump();
 					}
 					else {
 						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "start upgrade fail:" + err.dump());
