@@ -1573,6 +1573,13 @@ namespace fs {
 		}
 		return false;
 	}
+	inline bool readFile(string path, unsigned char*& pData, int& len)
+	{
+		char* p = nullptr;
+		bool bRet = readFile(path, p, len);
+		pData = (unsigned char*)p;
+		return bRet;
+	}
 	inline bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
@@ -1661,7 +1668,7 @@ namespace fs {
 	struct FILE_INFO {
 		string modifyTime;
 		string createTime;
-		string len;
+		size_t len;
 		string accessTime;
 	};
 
@@ -1676,9 +1683,47 @@ namespace fs {
 		fi.modifyTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_mtime)));
 		fi.accessTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_atime)));
 		fi.createTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_ctime)));
-		fi.len = static_cast<int>(tmpInfo.st_size);
+		fi.len = tmpInfo.st_size;
 		return true;
 	}
+
+
+	inline  void getFolderList(vector<string>& list, string strFolder)
+	{
+		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
+		wstring dirNew;
+		dirNew = wstrFolder;
+		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
+
+		intptr_t handle;
+		_wfinddata64i32_t findData;
+
+		handle = _wfindfirst(dirNew.c_str(), &findData);
+		if (handle == -1)        // 检查是否成功
+			return;
+
+		do
+		{
+			if (findData.attrib & _A_SUBDIR)
+			{
+				if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
+					continue;
+
+				//list.push_back(charCodec::utf16toUtf8(findData.name));
+
+				// 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
+				dirNew = wstrFolder.c_str();
+				dirNew += L"\\";
+				dirNew += findData.name;
+
+
+				list.push_back(charCodec::utf16ToAuto(findData.name));
+			}
+		} while (_wfindnext(handle, &findData) == 0);
+
+		_findclose(handle);    // 关闭搜索句柄
+	}
+
 
 	inline  void getFileList(vector<string>& list,string strFolder,bool includeFolder = false,bool recursive = false)
 	{

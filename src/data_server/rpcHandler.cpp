@@ -20,6 +20,7 @@
 #include "logServer/logServer.h"
 #include "xiaot/scriptHost.h"
 #include "audioPlayer.h"
+#include "base64.h"
 
 rpcHandler rpcSrv;
 
@@ -222,6 +223,16 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			}
 		}
 	}
+	else if (method == "fs.deleteFile")
+	{
+		string p = params["path"].get<string>();
+		if (fs::deleteFile(p)) {
+			result = "\"ok\"";
+		}
+		else {
+			error = makeRPCError(TEC_FAIL, "fail");
+		}
+	}
 	else if (method == "fs.writeFile")
 	{
 		string p = params["path"].get<string>();
@@ -229,13 +240,28 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		if (params["data"] != nullptr)
 		{
 			string d = params["data"].get<string>();
-			if (fs::writeFile(p, d))
-			{
-				result = "\"ok\"";
+			string encode = params["encode"].get<string>();
+			if (encode == "base64") {
+				unsigned char* out = new unsigned char[d.length()];
+				int len = base64_decode(d.c_str(), d.length(), out);
+				if (fs::writeFile(p,(char*)out, len))
+				{
+					result = "\"ok\"";
+				}
+				else
+				{
+					error = makeRPCError(TEC_FAIL, "fail");
+				}
 			}
-			else
-			{
-				error = makeRPCError(TEC_FAIL, "fail");
+			else {
+				if (fs::writeFile(p, d))
+				{
+					result = "\"ok\"";
+				}
+				else
+				{
+					error = makeRPCError(TEC_FAIL, "fail");
+				}
 			}
 		}
 	}
@@ -260,6 +286,37 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		fs::getFileList(fl, path, includeFolder, recursive);
 		json j = fl;
 		result = j.dump();
+	}
+	else if (method == "fs.exploreFolder")
+	{
+		string path = params["path"];
+		vector<string> fileList,folderList;
+		fs::getFileList(fileList, path);
+		fs::getFolderList(folderList, path);
+		json infoList = json::array();
+		for (int i = 0; i < folderList.size(); i++) {
+			string sFolder = folderList[i];
+			fs::FILE_INFO fi;
+			fs::getFileInfo(path + "/" + sFolder, fi);
+			json j;
+			j["name"] = sFolder;
+			j["size"] = fi.len;
+			j["modifyTime"] = fi.modifyTime;
+			j["isFolder"] = true;
+			infoList.push_back(j);
+		}
+		for (int i = 0; i < fileList.size(); i++) {
+			string sFile = fileList[i];
+			fs::FILE_INFO fi;
+			fs::getFileInfo(path + "/" + sFile, fi);
+			json j;
+			j["name"] = sFile;
+			j["size"] = fi.len;
+			j["modifyTime"] = fi.modifyTime;
+			j["isFolder"] = false;
+			infoList.push_back(j);
+		}
+		result = infoList.dump();
 	}
 	else if (method == "com.open")
 	{
@@ -764,25 +821,15 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "startDevUpgrade")
 	{
-		if (!params.contains("ioAddr")) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: ioAddr");
-		}
-		else if (!params.contains("firmware")) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: firmware");
-		}
-		else {
-			string ioAddr = params["ioAddr"].get<string>();
-			string firmware = params["firmware"].get<string>();
-			ioDev* pD = ioSrv.getIODev(ioAddr);
-			if (pD)
-			{
-				pD->startUpgrade(firmware);
-			}
-			else
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
-			}
-		}
+		ioSrv.rpc_startDevUpgrade(params, rpcResp, session);
+	}
+	else if (method == "stopDevUpgrade")
+	{
+		ioSrv.rpc_stopDevUpgrade(params, rpcResp, session);
+	}
+	else if (method == "uploadDevFirmware")
+	{
+		ioSrv.rpc_uploadDevFirmware(params, rpcResp, session);
 	}
 	else if(method == "getChanTemplate"){
 		if (params.contains("name")) {

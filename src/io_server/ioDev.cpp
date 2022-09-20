@@ -1062,6 +1062,11 @@ bool ioDev::IsAsynPacket(PKT_DATA* pd)
 	return true;
 }
 
+bool ioDev::startUploadFirmware(string firmwareFileName)
+{
+	return false;
+}
+
 bool ioDev::NotNeedGateway()
 {
 	if (str::isIp(m_devAddr))

@@ -305,7 +305,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
 			}
 		}
-		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
+		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 && mg_http_match_uri(hm, "/rpc"))
 		{
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);

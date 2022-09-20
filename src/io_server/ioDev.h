@@ -157,6 +157,8 @@ public:
 	//命令回包超时
 	virtual bool IsAsynPacket(PKT_DATA* pd);
 
+	virtual bool startUploadFirmware(string firmwareFileName);
+	virtual bool stopUpgrade() { return false; };
 	//周期性采集任务执行
 	virtual void DoCycleTask();
 	virtual void checkAcqReqTimeout();
