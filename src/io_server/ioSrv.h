@@ -104,6 +104,8 @@ public:
 	void rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_stopDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_startDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 
 	//设备上下线
 	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);

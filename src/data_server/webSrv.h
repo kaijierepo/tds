@@ -13,6 +13,7 @@ public:
 	static int sendToWs(char* p,int len, int sockPipe);
 	bool enableHttps;
 
+	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	char a[10];

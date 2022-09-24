@@ -19,13 +19,61 @@ struct DEV_QUERIER {
 	bool getChild;
 	bool getChan;
 	bool getDetail;
+	bool getUpgradeInfo;
 	DEV_QUERIER() {
 		getStatus = false;
 		getConf = true;
 		getChild = true;
 		getChan = true;
 		getDetail = true;
+		getUpgradeInfo = false;
 	}
+};
+
+class UPGRADE_INFO {
+public:
+	unsigned char* fileData;
+	int fileLen;
+	int pktNum;
+	int pktLen;
+	int currentPktNo;
+	unsigned fileCrc;
+	string fileName;
+	string binPath;
+	bool isUpgrading;
+	string version;
+	string devType;
+	bool stopUpgradeSignal;
+	string grogressInfo;
+	string statusInfo;
+
+	UPGRADE_INFO() {
+		fileData = nullptr;
+		fileLen = 0;
+		pktNum = 0;
+		pktLen = 0;
+		currentPktNo = 0;
+		isUpgrading = false;
+		stopUpgradeSignal = false;
+		isUpgrading = false;
+	}
+
+	json toJson() {
+		json j;
+		j["progress"] = grogressInfo;
+		j["fileLen"] = fileLen;
+		j["pktNum"] = pktNum;
+		j["pktLen"] = pktLen;
+		j["currentPktNo"] = currentPktNo;
+		j["fileName"] = fileName;
+		j["isUpgrading"] = isUpgrading;
+		j["version"] = version;
+		j["devType"] = devType;
+		j["status"] = statusInfo;
+		return j;
+	}
+	int calcPktNum(int pl);
+	bool loadFirmwareFile(string fileName, int pl = 4000);
 };
 
 class ioDev
@@ -197,6 +245,8 @@ public:
 
 	bool m_bWorkingThreadRunning;
 	semaphore m_signalWorkThreadExit; //工作线程退出信号
+
+	UPGRADE_INFO m_upgradeInfo;
 
 	//动态数据锁与配置数据锁设计概要
 	//动态数据在修改时，不影响配置，因此不应当影响配置的读取

@@ -91,8 +91,6 @@ void onRecvIQ60Pkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> 
 
 					p->bindIOSession(tdsSession);
 					p->setOnline();
-					json j;
-					p->toJson(j);
 					if (!tdsSession->getIODev(p->getIOAddrStr()))
 					{
 						tdsSession->m_vecIoDev.push_back(p->getIOAddrStr());
@@ -526,62 +524,26 @@ void ioServer::rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	else {
 		string ioAddr = params["ioAddr"].get<string>();
 		string firmware = params["firmware"].get<string>();
-		int pktLen = 4000;
+		int pktLen = 4096;
 		if (params.contains("pktLen")) {
 			pktLen = params["pktLen"].get<int>();
 		}
 
 		ioDev* pD = ioSrv.getIODev(ioAddr);
-		bool uploadFirmware = true;
-		if (params.contains("firmware")) {
-			uploadFirmware = params["uploadFirmware"].get<bool>();
-		}
-
-
 		if (pD == nullptr) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
 		}
 		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
 		}
+		else if (pD->isCommBusy())
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device busy,another command is requesting");
+		}
 		else
 		{
 			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
-			if (pTdsp->m_upgradeInfo.isUpgrading)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "upgrade is in process");
-			}
-			else if (!pTdsp->m_upgradeInfo.loadFirmwareFile(firmware, pktLen)) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not load specified firmware");
-			}
-			else if (pTdsp->m_upgradeInfo.devType.find(pTdsp->m_strChanTemplate) == string::npos) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type is " + m_strChanTemplate + ",but firmware device type is " + pTdsp->m_upgradeInfo.devType);
-			}
-			else {
-				json jp;
-				UPGRADE_INFO& ui = pTdsp->m_upgradeInfo;
-				jp["fileLen"] = ui.fileLen;
-				jp["fileCrc"] = ui.fileCrc;
-				jp["pktNum"] = ui.pktNum;
-				jp["pktLen"] = ui.pktLen;
-				jp["version"] = ui.version;
-				jp["devType"] = ui.devType;
-				json rlt, err;
-				if (pTdsp->call("startUpgrade", jp, rlt, err)) {
-					if (rlt != nullptr) {
-						if (uploadFirmware) {
-							pTdsp->startUploadFirmware(ui.fileName);
-						}
-						rpcResp.result = jp.dump();
-					}
-					else {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "start upgrade fail:" + err.dump());
-					}
-				}
-				else {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "start upgrade fail,request timeout");
-				}
-			}
+			pTdsp->rpc_startUpgrade(firmware, pktLen, rpcResp);
 		}
 	}
 }
@@ -600,10 +562,19 @@ void ioServer::rpc_stopDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 		else
 		{
 			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
-			pTdsp->m_upgradeInfo.stopUpgradeSignal = true;	
 			json jp = json::object();
 			json rlt, err;
-			pTdsp->call("stopUpgrade", jp, rlt, err, false);
+			if (pTdsp->call("stopUpgrade", jp, rlt, err, true)) {
+				if (rlt != nullptr) {
+					rpcResp.result = rlt.dump();
+				}
+				else {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stopUpgrade fail:" + err.dump());
+				}
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stopUpgrade fail,request timeout");
+			}
 		}
 	}
 }
@@ -634,6 +605,10 @@ void ioServer::rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 		}
 		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
+		}
+		else if (pD->isCommBusy())
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device busy,another command is requesting");
 		}
 		else
 		{
@@ -683,6 +658,79 @@ void ioServer::rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 					}
 				}
 			}
+		}
+	}
+}
+
+void ioServer::rpc_startDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	if (!params.contains("ioAddr")) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: ioAddr");
+	}
+	else if (!params.contains("firmware")) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: firmware");
+	}
+	else {
+		string ioAddr = params["ioAddr"].get<string>();
+		string firmware = params["firmware"].get<string>();
+		int pktLen = 4096;
+		if (params.contains("pktLen")) {
+			pktLen = params["pktLen"].get<int>();
+		}
+
+		ioDev* pD = ioSrv.getIODev(ioAddr);
+		if (pD == nullptr) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
+		}
+		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
+		}
+		else
+		{
+			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
+			if (pTdsp->m_upgradeInfo.isUpgrading) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device upgrade process is running");
+			}
+			else if (!pTdsp->m_upgradeInfo.loadFirmwareFile(firmware, pktLen)) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not load specified firmware");
+			}
+			else if (pTdsp->m_upgradeInfo.devType.find(m_strChanTemplate) == string::npos) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type is " + m_strChanTemplate + ",but firmware device type is " + pTdsp->m_upgradeInfo.devType);
+			}
+			else {
+				pTdsp->startUpgradeProcess(firmware);
+				json jp;
+				UPGRADE_INFO& ui = pTdsp->m_upgradeInfo;
+				jp["fileLen"] = ui.fileLen;
+				jp["fileCrc"] = ui.fileCrc;
+				jp["pktNum"] = ui.pktNum;
+				jp["pktLen"] = ui.pktLen;
+				jp["version"] = ui.version;
+				jp["devType"] = ui.devType;
+				rpcResp.result = jp.dump();
+			}
+		}
+	}
+}
+
+void ioServer::rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	if (!params.contains("ioAddr")) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: ioAddr");
+	}
+	else {
+		string ioAddr = params["ioAddr"].get<string>();
+		ioDev* pD = ioSrv.getIODev(ioAddr);
+		if (pD == nullptr) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
+		}
+		else
+		{
+			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
+			json jp = json::object();
+			json rlt, err;
+			pTdsp->m_upgradeInfo.stopUpgradeSignal = true;
+			rpcResp.result = "\"ok\"";
 		}
 	}
 }

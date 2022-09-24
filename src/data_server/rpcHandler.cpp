@@ -827,6 +827,14 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		ioSrv.rpc_stopDevUpgrade(params, rpcResp, session);
 	}
+	else if (method == "startDevUpgradeProcess")
+	{
+		ioSrv.rpc_startDevUpgradeProc(params, rpcResp, session);
+	}
+	else if (method == "stopDevUpgradeProcess")
+	{
+		ioSrv.rpc_stopDevUpgradeProc(params, rpcResp, session);
+	}
 	else if (method == "uploadDevFirmware")
 	{
 		ioSrv.rpc_uploadDevFirmware(params, rpcResp, session);

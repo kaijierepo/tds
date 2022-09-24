@@ -231,7 +231,7 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 	closesocket(sock);                      // Close the connection
 }
 
-void thread_handleRpcOverWebsocket(string rpcReqStr, int pipeSock)
+void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
 {
 	string rpcRespStr;
 	string resp;
@@ -239,13 +239,20 @@ void thread_handleRpcOverWebsocket(string rpcReqStr, int pipeSock)
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
 
-	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
+	if (ds.handleAppLayerData_Bridge(pData, len, p)) {
 
-	string resBody = rpcRespStr;
-	string ctLen = to_string(resBody.length());
+	}
+	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
+		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+		string rpcReqStr = pData;
+		rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
+		string resBody = rpcRespStr;
+		string ctLen = to_string(resBody.length());
+		WebServer::sendToWs((char*)resBody.c_str(), resBody.length(), pipeSock);
+	}
+	else if (p->type == TDS_SESSION_TYPE::terminal) {
 
-	WebServer::sendToWs((char*)resBody.c_str(),resBody.length(), pipeSock);
+	}
 }
 
 
@@ -305,7 +312,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
 			}
 		}
-		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 && mg_http_match_uri(hm, "/rpc"))
+		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
@@ -415,12 +422,19 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 	}
 	else if (ev == MG_EV_WS_MSG) {
-		//websocket通道不用于请求，仅用于通知。后续逐步重构
+		//websocket通道一般不用于请求，仅用于通知。
+		//但如果需要启动6个以上的阻塞请求通信时，例如和设备通信的命令
+		//由于浏览器有6个以上http连接限制，为提高并发量，此时会使用websockt 
+		//目前仅用于设备面板多开的批量配置的场景
 		if (c->pipeSock != 0)
 		{
+			std::shared_ptr<TDS_SESSION> p = pWs->getWsSession(c);
 			struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
-			string rpcReqStr = str::fromBuff(wm->data.ptr, wm->data.len);
-			thread t(thread_handleRpcOverWebsocket, rpcReqStr, c->pipeSock);
+			int len = wm->data.len;
+			char* pData = new char[len+1];
+			pData[len] = 0;
+			memcpy(pData, wm->data.ptr, wm->data.len);
+			thread t(thread_handleDataOverWebsocket, pData,len, c->pipeSock, p);
 			t.detach();
 		}
 	}
@@ -552,6 +566,14 @@ int WebServer::sendToWs(char* p, int len, int sockPipe)
 	int iSend = send(sockPipe, pData, len + sizeof(len), MSG_DONTROUTE);
 	delete pData;
 	return iSend;
+}
+
+std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)
+{
+	m_csWsSessions.lock();
+	std::shared_ptr<TDS_SESSION> p = m_wsSessions[conn];
+	m_csWsSessions.unlock();
+	return p;
 }
 
 

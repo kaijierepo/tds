@@ -169,8 +169,8 @@ void ioDev::stop()
 // opt.getStatus = false
 bool ioDev::toJson(json& conf, json opt)
 {
+	shared_lock<shared_mutex> lock(m_csThis);
 	DEV_QUERIER querier = parseQueryOpt(opt);
-
 
 	//配置数据 - 保存在配置文件中
 	if (querier.getConf) {
@@ -216,6 +216,13 @@ bool ioDev::toJson(json& conf, json opt)
 		conf["addrMode"] = m_addrMode;
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 	} 
+
+	//升级状态信息数据
+	if (querier.getUpgradeInfo) {
+		json jui;
+		jui = m_upgradeInfo.toJson();
+		conf["upgradeInfo"] = jui;
+	}
 
 	if(querier.getChild)
 	{
@@ -432,6 +439,9 @@ DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 	}
 	if (opt.contains("getDetail")) {
 		q.getDetail = opt["getDetail"].get<bool>();
+	}
+	if (opt.contains("getUpgradeInfo")) {
+		q.getUpgradeInfo = opt["getUpgradeInfo"].get<bool>();
 	}
 	return q;
 }
@@ -1245,4 +1255,36 @@ void ioDev::statisOnSend(char* sendData, int len, string addr)
 	string s = j.dump();
 
 	sendToCommLog(s);
+}
+
+
+int UPGRADE_INFO::calcPktNum(int pl)
+{
+	int pn = fileLen / pl;
+	if (fileLen % pl)
+		pn++;
+	return pn;
+}
+
+bool UPGRADE_INFO::loadFirmwareFile(string fn, int pl)
+{
+	if (fileData) delete fileData;
+	fileLen = 0;
+	fileName = fn;
+	binPath = fs::appPath() + "/files/firmware/" + fileName;
+	if (fs::readFile(binPath, fileData, fileLen)) {
+		pktLen = pl;
+		pktNum = calcPktNum(pktLen);
+		currentPktNo = 0;
+		fileCrc = common::N_CRC16(fileData, fileLen);
+		vector<string> infoList;
+		str::split(infoList, fileName, "_");
+		if (infoList.size() < 2) {
+			return false;
+		}
+		version = infoList[1];
+		devType = infoList[0];
+		return true;
+	}
+	return false;
 }
