@@ -1173,7 +1173,7 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 	//应用层协议处理
 	if (tdsSession->bridgedIoSessionClient != NULL)
 	{
-		if (tdsSession->iALProto == IO_PROTO::TDSRPC)
+		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1185,7 +1185,7 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			}
 		}
 		//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-		else if (tdsSession->iALProto == IO_PROTO::IQ60)
+		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
