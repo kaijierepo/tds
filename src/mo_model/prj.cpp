@@ -45,6 +45,8 @@ bool project::toJson(json& conf, json serializeOption)
 	conf["type"] = m_moType;
 	if (m_moCustomType != "")
 		conf["customType"] = m_moCustomType;
+	if (m_mapConf != nullptr)
+		conf["map"] = m_mapConf;
 
 	if (m_moType != MO_TYPE::mp)
 	{
