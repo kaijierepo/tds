@@ -958,6 +958,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "setMOTree")
 	{
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
+
+		project tmpPrj;
+		tmpPrj.loadConf(params);
+		tmpPrj.loadStatus(&prj);
 		prj.clear();
 		prj.loadConf(params);
 		prj.saveConf();

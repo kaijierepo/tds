@@ -52,6 +52,7 @@ public:
 
 	bool loadConf(json& conf);
 	bool toJson(json& conf, json serializeOption) override;
+	bool loadStatus(MO* pSrc) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
@@ -66,9 +67,8 @@ public:
 	string getMpTypeLabel();
 	string getMpType();
 	json getRTData(string root="",bool bValOnly = false);
-	json m_orgVal;
-	json m_curVal;
-	json m_lastVal;
+
+	//配置
 	json m_defaultVal; //默认值，软件刚启动时加载的值
 	string m_valType;//数值类型， bool，模拟量，json等
 	string m_valTypeLabel;
@@ -83,8 +83,6 @@ public:
 	bool m_alarmMp;//该监控点是1个报警状态。 报警类型默认为监控点名称
 	string m_strUnit;
 	int m_decimalDigits;
-	SYSTEMTIME m_lastUpdateTime;
-	SYSTEMTIME m_lastSaveTime;
 	TIME_SPAN m_saveInterval;
 	int getSaveInterval();
 	string m_saveMode;
@@ -92,4 +90,12 @@ public:
 	VALID_RANGE m_validRange;
 	double m_K;
 	double m_B;
+
+
+	//状态
+	json m_orgVal;
+	json m_curVal;
+	json m_lastVal;
+	SYSTEMTIME m_lastUpdateTime;
+	SYSTEMTIME m_lastSaveTime;
 };

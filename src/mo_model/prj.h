@@ -47,7 +47,6 @@ public:
 
 private:
 	json m_jMOTree;
-	bool bFirstRefresh;
 	void updateMPTable();
 	map<string, string> m_mapDataLink;
 

@@ -304,6 +304,28 @@ bool MO::toJson(json& conf, json serializeOption)
 	return true;
 }
 
+bool MO::loadStatus(MO* pSrc)
+{
+	MO* ptmp = pSrc->GetMOByTag(getTag());
+	if (ptmp) {
+		m_bOnline = pSrc->m_bOnline;
+		m_stDataLastUpdate = pSrc->m_stDataLastUpdate;
+		m_longitudeDyn = pSrc->m_longitudeDyn;
+		m_latitudeDyn = pSrc->m_latitudeDyn;
+		m_status = pSrc->m_status;
+		m_jAlarmStatus = pSrc->m_jAlarmStatus;
+		m_strIoAddrBind = pSrc->m_strIoAddrBind;
+
+		for (int i = 0; i < m_childMO.size(); i++)
+		{
+			MO* pC = m_childMO[i];
+			pC->loadStatus(pSrc);
+		}
+	}
+	else
+		return false;
+}
+
 void MO::removeMp(json& mo)
 {
 	if (mo["children"] != nullptr)
@@ -673,20 +695,6 @@ string MO::trimProperty(string& strTagExp)
 	return strTagProperty;
 }
 
-void MO::updateDataLink()
-{
-	for (int i = 0; i < m_vecIODev.size(); i++)
-	{
-		ioDev* p = (ioDev*) m_vecIODev.at(i);
-		p->m_strTagBind = getTag().c_str();
-	}
-
-	for (int i = 0; i < m_childMO.size(); i++)
-	{
-		MO* pMO = m_childMO.at(i);
-		pMO->updateDataLink();
-	}
-}
 
 //该函数的参数必须是相对位号格式
 string MO::TranslateRelateTag(string rtag)

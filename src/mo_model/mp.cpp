@@ -257,6 +257,20 @@ bool MP::toJson(json& conf, json serializeOption)
 	return true;
 }
 
+bool MP::loadStatus(MO* pSrc)
+{
+	MP* ptmp = pSrc->GetMPByTag(getTag());
+	if (ptmp) {
+		m_orgVal = ptmp->m_orgVal;
+		m_curVal = ptmp->m_curVal;
+		m_lastVal = ptmp->m_lastVal;
+		m_lastUpdateTime = ptmp->m_lastUpdateTime;
+		m_lastSaveTime = ptmp->m_lastSaveTime;
+	}
+	else
+		return false;
+}
+
 void MP::calcAlarm()
 {
 	if (m_curVal.is_number_float())

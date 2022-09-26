@@ -102,11 +102,9 @@ public:
 
 	virtual bool loadConf(json& conf);
 	virtual bool toJson(json& conf, json serializeOption);
+	virtual bool loadStatus(MO* pMo);
 
-	void removeMp(json& mo);
-	void clearChildren();
-	bool isSelectedByLeafType(string leafType);
-
+	//配置数据
 	string m_moType;
 	string m_moCustomType;  //如果用中文命名，此处转为中文首字母
 	string m_moCustomTypeLabel;
@@ -114,45 +112,24 @@ public:
 	string m_strName;
 	string m_alias;
 	bool m_bShow;
-
 	json m_longitude;
 	json m_latitude;
-	//从监测点获取的经纬度
 	bool m_bDynLocation; //动态定位模式，从监控点获取
-	json m_longitudeDyn;
-	json m_latitudeDyn;
 	bool m_bLocationCalib;
 	double m_dbLongitudeCalib;
 	double m_dbLatitudeCalib;
 
+	//状态数据
+	bool m_bOnline;
+	SYSTEMTIME m_stDataLastUpdate;
+	json m_longitudeDyn;
+	json m_latitudeDyn;
+	string m_status;
 	json m_jAlarmStatus;
+	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
 
-	MO* createChildMO(string subTag, string moType);
-	void GetAllChildMO(std::vector<MO*>& aryMO, string type);
-	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
-	map<string, json> getChildCustomMoTypeList();
-	void statisChildCustomMoType(map<string, json>& list);
-	void statisChildMo(json& jStatis);
-	MO_QUERIER parseQuerier(json& opt);
-
-	MO* GetRootMO();
-	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
-	MO* GetChildMO(string type);
-	MO* CopyMO();//复制一份与该mo相同的配置
-	virtual MO& operator=(MO& right);
-
-	std::vector<MO*> m_childMO;
-
-	MO* m_pParentMO;
-	MO* GetProjectMO();//获得当前设备所属的Project节点，MO树根节点
-
+	//查询接口
 	virtual json getRT();
-
-	virtual string getTag(string root = ""); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
-	vector<string> GetAlias();
-	vector<string> GetAllTagNamePlus();
-	virtual string getTagWithRoot();
-
 	MO* GetMOByTag(string strTag);//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
 	MP* GetMPByTag(string strTag);
 	void GetMOByTag(std::vector<MO*>* tagVec, string strTag);
@@ -160,16 +137,35 @@ public:
 	MP* GetMPByName(string strName);
 	MO* GetMOByName(string strName);
 
+	//树管理
+	std::vector<MO*> m_childMO;
+	MO* m_pParentMO;
+	MO* createChildMO(string subTag, string moType);
+	void GetAllChildMO(std::vector<MO*>& aryMO, string type);
+	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
+	map<string, json> getChildCustomMoTypeList();
+	void statisChildCustomMoType(map<string, json>& list);
+	void statisChildMo(json& jStatis);
+	void removeMp(json& mo);
+	void clearChildren();
+	bool isSelectedByLeafType(string leafType);
+	MO_QUERIER parseQuerier(json& opt);
+	MO* GetRootMO();
+	MO* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
+	MO* GetChildMO(string type);
+	MO* CopyMO();//复制一份与该mo相同的配置
+	virtual MO& operator=(MO& right);
+	MO* GetProjectMO();//获得当前设备所属的Project节点，MO树根节点
+
+
+	virtual string getTag(string root = ""); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
+	vector<string> GetAlias();
+	vector<string> GetAllTagNamePlus();
+	virtual string getTagWithRoot();
 	string TranslateRelateTag(string rtag);
-	string m_status;
 	json m_mapConf;
 
-	//topo management
-	vector<void*> m_vecIODev;//挂接的采集设备.此处暂时用void，防止依赖ioDev.h文件，导致不容易多工程复用。需再考虑更好的办法
-	void updateDataLink();
-	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
-	bool m_bOnline;
-	SYSTEMTIME m_stDataLastUpdate;
+
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);
 	vector<string> getTagPartials(string strTag);

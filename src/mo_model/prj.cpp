@@ -147,7 +147,7 @@ void project::getMpList(map<string, MP*>& MPlist, MO* pMO)
 
 void project::updateMPTable()
 {
-	if (!bFirstRefresh) m_mapAllMP.clear();
+	m_mapAllMP.clear();
 	getMpList(m_mapAllMP, this);
 }
 
