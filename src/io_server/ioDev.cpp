@@ -351,15 +351,16 @@ bool ioDev::loadConf(json& conf)
 		
 		//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
 		//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
-		if (m_dispositionMode == DEV_DISPOSITION_MODE::managed && m_strTagBind != "")
-		{
-			json tagBinding = json::array();
-			json binding;
-			binding["ioAddr"] = getIOAddrStr();
-			binding["tag"] = m_strTagBind;
-			tagBinding.push_back(binding);
-			tds->callAsyn("updateTagBinding", tagBinding.dump());
-		}
+		//配置加载完成后，统一更新
+		//if (m_dispositionMode == DEV_DISPOSITION_MODE::managed && m_strTagBind != "")
+		//{
+		//	json tagBinding = json::array();
+		//	json binding;
+		//	binding["ioAddr"] = getIOAddrStr();
+		//	binding["tag"] = m_strTagBind;
+		//	tagBinding.push_back(binding);
+		//	tds->callAsyn("updateTagBinding", tagBinding.dump());
+		//}
 	}
 
 	if (conf["children"] != nullptr)

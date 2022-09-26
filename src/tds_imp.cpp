@@ -432,6 +432,8 @@ bool TDS_imp::run(string cmdline)
 	if (tds->gzhServer)
 		tds->gzhServer->run();
 
+	ioSrv.updateTag2IOAddrBinding();
+
 	//create browser window
 	if (conf->uiMode == "miniblink")
 	{
