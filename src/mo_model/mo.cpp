@@ -306,7 +306,8 @@ bool MO::toJson(json& conf, json serializeOption)
 
 bool MO::loadStatus(MO* pSrc)
 {
-	MO* ptmp = pSrc->GetMOByTag(getTag());
+	string tag = getTag();
+	MO* ptmp = pSrc->GetMOByTag(tag);
 	if (ptmp) {
 		m_bOnline = pSrc->m_bOnline;
 		m_stDataLastUpdate = pSrc->m_stDataLastUpdate;
@@ -372,6 +373,9 @@ json MO::getRT()
 
 string MO::getTag(string root)
 {
+	if (m_pParentMO == nullptr)
+		return "";
+
 	MO* pTmpParent = m_pParentMO;
 	string strTagName = m_strName;
 

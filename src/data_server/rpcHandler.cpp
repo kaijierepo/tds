@@ -959,13 +959,21 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	{
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 
+		//加载新的树
 		project tmpPrj;
 		tmpPrj.loadConf(params);
-		tmpPrj.loadStatus(&prj);
+		tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
 		prj.clear();
-		prj.loadConf(params);
+		prj.m_strName = tmpPrj.m_strName;
+		prj.m_mapAllMP = tmpPrj.m_mapAllMP;
+		prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
+		prj.m_childMO = tmpPrj.m_childMO;
+		for (int i = 0; i < prj.m_childMO.size(); i++) {
+			MO* p = prj.m_childMO[i];
+			p->m_pParentMO = &prj;
+		}
+		tmpPrj.m_childMO.clear();
 		prj.saveConf();
-		ioSrv.updateTag2IOAddrBinding();
 		result = "\"ok\"";
 	}
 	else if (method == "setMo") { //只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
