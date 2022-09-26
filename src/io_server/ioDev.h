@@ -89,6 +89,7 @@ public:
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, json opt = nullptr);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
+	virtual bool getChanVal(json& valList);
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
 	virtual bool loadConf(json& conf);
 	void addChannel(ioChannel* pC);

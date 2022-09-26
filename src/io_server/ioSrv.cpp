@@ -471,6 +471,11 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			rpcSrv.notify("devModified", devConf);
 			rpcResp.result = devConf.dump(2);
 			modified = true;
+
+			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
+			if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway) {
+				p->pIOSession->disconnect();
+			}
 		}
 		else {
 			rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
@@ -760,6 +765,13 @@ void ioServer::updateTag2IOAddrBinding()
 	}
 	m_csThis.unlock_shared();
 	tds->callAsyn("updateTagBinding", tagBindings.dump());
+}
+
+void ioServer::updateAllChanVal()
+{
+	json valList;
+	getChanVal(valList);
+	tds->callAsyn("input", valList.dump());
 }
 
 void ioServer::clear()

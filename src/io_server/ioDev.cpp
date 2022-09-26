@@ -263,6 +263,24 @@ bool ioDev::getStatus(json& status, string opt)
 	return false;
 }
 
+bool ioDev::getChanVal(json& valList)
+{
+	std::shared_lock<shared_mutex> lock(m_csThis);
+	for (int i = 0; i < m_channels.size(); i++)
+	{
+		ioDev* p = m_channels[i];
+		p->getChanVal(valList);
+	}
+
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		p->getChanVal(valList);
+	}
+
+	return true;
+}
+
 
 bool ioDev::getChanStatus(json& statusList)
 {

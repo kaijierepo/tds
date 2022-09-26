@@ -974,6 +974,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		tmpPrj.m_childMO.clear();
 		prj.saveConf();
+		ioSrv.updateTag2IOAddrBinding();
+		ioSrv.updateAllChanVal();
 		result = "\"ok\"";
 	}
 	else if (method == "setMo") { //只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
@@ -1018,7 +1020,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
 		{
-			rpc_input(params, rpcResp,session);
+			if (params.is_array()) {
+				for (int i = 0; i < params.size(); i++) {
+					json de = params[i];
+					rpc_input(params, rpcResp, session);
+				}
+			}
+			else
+				rpc_input(params, rpcResp,session);
 		}
 		else if (method == "output")
 		{

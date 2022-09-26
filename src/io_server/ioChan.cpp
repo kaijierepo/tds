@@ -101,6 +101,23 @@ bool ioChannel::getChanStatus(json& statusList)
 	return true;
 }
 
+bool ioChannel::getChanVal(json& valList)
+{
+	json j;
+	string tag = m_strTagBind;
+	if (tag != "" && timeopt::isValidTime(m_stLastUpdateTime)) {
+		if (m_pParent->m_strTagBind != "") {
+			tag = m_pParent->m_strTagBind + "." + tag;
+		}
+		j["time"] = timeopt::st2str(m_stLastUpdateTime);
+		j["tag"] = tag;
+		j["val"] = m_curVal;
+		valList.push_back(j);
+	}
+
+	return true;
+}
+
 
 bool ioChannel::match(string channelNo) {
 	if (m_devAddr.find("#"))//mqtt channel wildcard

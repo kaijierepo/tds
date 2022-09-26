@@ -141,7 +141,7 @@ public:
 	ioDev* getIODev(string ioAddr,bool bChn = false) override;
 	
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
-
+	void updateAllChanVal();
 	void refreshSerialIODev();
 
 	bool getStatus(json& conf, string opt = "");

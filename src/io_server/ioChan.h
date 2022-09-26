@@ -13,6 +13,7 @@ public:
 	bool loadConf(json& conf) override;
 	bool toJson(json& conf, json opt = nullptr) override;
 	bool getChanStatus(json& statusList) override;
+	bool getChanVal(json& valList) override;
 	bool match(string channelNo);
 
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
