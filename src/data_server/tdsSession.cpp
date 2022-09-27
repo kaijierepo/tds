@@ -472,7 +472,7 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
  void dataServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
  {
      //terminal可以用来打开与某一接口的透传桥接，并发送指令
-     if (strData.find("/terminal") != string::npos)
+     if (strData.find("/terminal") != string::npos) 
      {
          int pos = strData.find("terminal");
          int pos1 = strData.find(" ", pos);
