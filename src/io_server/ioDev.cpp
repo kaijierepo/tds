@@ -1165,6 +1165,15 @@ ioChannel* ioDev::getChanByTag(string tag)
 	return nullptr;
 }
 
+void ioDev::recursiveGetChanCount(ioDev* p, long& count) {
+	count += p->m_channels.size();
+	for (int i = 0; i < p->m_vecChildDev.size(); i++)//网络直连设备
+	{
+		ioDev* c = p->m_vecChildDev[i];
+		recursiveGetChanCount(c, count);
+	}
+}
+
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
 	std::unique_lock<mutex> lock(m_csIOSession);

@@ -87,6 +87,9 @@ public:
 	//upper level tds
 	tcpClt m_DataCenterClt;
 
+	json m_licenceStatus;
+	mutex m_csLicenceStatus;
+
 	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
 
 	fp_rpcHandler m_pluginHandler;

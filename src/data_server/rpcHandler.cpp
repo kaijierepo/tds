@@ -1355,6 +1355,16 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 			pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
 		}
 	}
+	else if (method == "getLicenceStatus") {
+		m_csLicenceStatus.lock();
+		if (m_licenceStatus == nullptr) {
+			m_licenceStatus["valid"] = true;
+		}
+
+		rpcResp.result = m_licenceStatus.dump();
+		m_csLicenceStatus.unlock();
+		return true;
+	}
 	
 
 	if (handleMethodCall_edgeDev(method, params, rpcResp, session))

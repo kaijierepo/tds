@@ -72,7 +72,8 @@ public:
 	 void createDefaultCompanyInfo();
 
 	 tdsConfig tdsConf;
-	 
+	 string m_sTitle;
+
 
 	 void registerMsgSinker(fp_msgSinker sinker);
 	 void publishMsg(MODULE_BUS_MSG& msg);

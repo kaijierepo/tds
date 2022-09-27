@@ -117,6 +117,7 @@ ioServer::ioServer()
 {
 	m_stopCycleAcq = false;
 	m_devType = IO_DEV_TYPE::SERVER::tds;
+	m_totalPtCount = 0;
 }
 ioServer::~ioServer()
 {
@@ -297,7 +298,7 @@ bool ioServer::loadConf()
 
 	try {
 		json io = json::parse(conf.c_str());
-		return loadConfAppend(io);
+		bool ret = loadConfAppend(io);
 	}
 	catch (std::exception& e)
 	{
@@ -307,6 +308,8 @@ bool ioServer::loadConf()
 	}
 	return true;
 }
+
+
 
 bool ioServer::loadConfMerge(json& j)
 {
@@ -782,6 +785,14 @@ void ioServer::clear()
 		delete m_vecChildDev[i];
 	}
 	m_vecChildDev.clear();
+}
+
+long ioServer::getChanCount()
+{
+	std::unique_lock<shared_mutex> lock(m_csThis);
+	long count = 0;
+	ioDev::recursiveGetChanCount(this, count);
+	return count;
 }
 
 json ioServer::getDevTemplate(string devTplType)

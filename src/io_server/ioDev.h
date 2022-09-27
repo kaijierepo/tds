@@ -153,6 +153,7 @@ public:
 	ioChannel* getChanByDevAddr(string addr);
 	ioChannel* getChanByIOAddr(string addr);
 	ioChannel* getChanByTag(string tag);
+	static void recursiveGetChanCount(ioDev* p, long& count);
 
 	//// data io
 	//directly bridge ioDev to tds websocket session

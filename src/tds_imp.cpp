@@ -322,8 +322,8 @@ bool TDS_imp::runAsTDB()
 	::db.Open(tds->conf->dbPath, prj.m_strName);
 	runWebServers();
 	GetLocalTime(&stStartupTime);
-	string sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
-	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
+	m_sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
 	return true;
 }
 
@@ -449,8 +449,9 @@ bool TDS_imp::run(string cmdline)
 
 	GetLocalTime(&stStartupTime);
 
-	string sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
-	SetConsoleTitleW(charCodec::utf8toUtf16(sTitle).c_str());
+	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+	m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
+	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
 	return true;
 }
 

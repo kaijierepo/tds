@@ -86,6 +86,10 @@ public:
 	bool loadConfAppend(json& j);
 	void saveConf();
 	void clear(); //清空所有ioDev对象及其相关的工作线程
+	long getChanCount();
+
+	//统计信息
+	int m_totalPtCount;
 
 	//通道模版配置
 	json getDevTemplate(string devTplType);
