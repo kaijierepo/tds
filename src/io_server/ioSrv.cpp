@@ -455,7 +455,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
-	json devList = json::array();
+	json devList = json::array(); 
 	if (params.is_object())
 		devList.push_back(params);
 	else
@@ -476,7 +476,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			modified = true;
 
 			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
-			if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway) {
+			if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway && p->pIOSession != nullptr) {
 				p->pIOSession->disconnect();
 			}
 		}
