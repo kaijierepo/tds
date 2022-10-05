@@ -44,7 +44,6 @@ class tdsConfig : public iTDSConf
 public:
 	tdsConfig();
 	void generateDefaultConfFile(string m);
-	string defaultConf_httpServer();
 	string defaultConf_tds();
 	string defaultConf_tdb();
 	string defaultConf_rphttp();

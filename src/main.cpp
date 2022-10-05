@@ -39,7 +39,7 @@ SOFTWARE.
 #include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
 #include "tools/tcp2wsRproxy.h"
-#include "httplib.h"
+#include "tools/httpServer.h"
 #include "db.h"
 #include "tools/tools.hpp"
 #include "base64.h"
@@ -178,20 +178,11 @@ int main(int argc, char** argv)
 	{
 		//doShell();
 	}
-	else if (mode == "hs" || mode == "httpServer" || mode == "httpserver") //httpServer
+	else if (mode == "hs" || mode == "httpServer" || mode == "httpserver" || mode == "httpSrv" || mode == "httpsrv") //httpServer
 	{
-		httplib::Server* httpSrv  = new httplib::Server;
-		string webPath = fs::appPath();
-		if (fs::fileExist(webPath))
-		{
-			string asc_path = charCodec::utf8toAnsi(webPath);
-			httpSrv->set_mount_point("/", +asc_path.c_str());
-			LOG("[keyinfo][HTTP服务器] 根目录: " + webPath);
-		}
-
-		LOG("[keyinfo][HTTP服务器] 端口: " + str::fromInt(tds->conf->httpPort));
-
-		httpSrv->listen("0.0.0.0", tds->conf->httpPort);
+		HttpServer* hs = new HttpServer();
+		hs->m_ProcName = mode;
+		hs->run();
 	}
 	else if (mode == "tcpHub")
 	{
@@ -201,8 +192,6 @@ int main(int argc, char** argv)
 	else if (mode == "switch")
 	{
 		tcpSwitch* tr = new tcpSwitch();
-		//tr->portLeft = parser.get<int>("sl");
-		//tr->portRight = parser.get<int>("sr");
 		tr->run();
 	}
 	else if (mode == "rphttp")
@@ -213,8 +202,6 @@ int main(int argc, char** argv)
 	else if (mode == "rptcp")
 	{
 		tcpReverseProxy* tr = new tcpReverseProxy();
-		//tr->realHost = parser.get<string>("sb");
-		//tr->proxyPort = parser.get<int>("pp");
 		tr->run();
 	}
 	else if (mode == "tcp2ws")

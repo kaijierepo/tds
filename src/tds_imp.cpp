@@ -360,7 +360,7 @@ bool TDS_imp::run(string cmdline)
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 
 
-	//如果配置中没有自定义商标信息，写入良途软件商标信息
+	//指定配置路径没有配置文件夹，则新建
 	if (tds->conf->confPath == fs::appPath() + "/conf")
 	{
 		if (!fs::fileExist(tds->conf->confPath)) {
@@ -368,7 +368,6 @@ bool TDS_imp::run(string cmdline)
 			LOG("[keyinfo]配置路径未找到配置文件夹,新建配置,路径:" + tds->conf->confPath);
 		}
 	}
-	createDefaultCompanyInfo();
 
 	LOG("[UI路径	] " + tds->conf->uiPath);
 	LOG("[组态路径	] " + tds->conf->confPath);

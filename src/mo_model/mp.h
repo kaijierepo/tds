@@ -91,6 +91,11 @@ public:
 	double m_K;
 	double m_B;
 
+	//视频
+	string m_videoSrcType;
+	string m_rtspAddr;
+	bool m_bIsStreaming;
+	DWORD m_srcPullingFFmpegProcID;
 
 	//状态
 	json m_orgVal;

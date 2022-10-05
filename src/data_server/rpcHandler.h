@@ -29,7 +29,7 @@ public:
 	//json rpc implementation
 	void handleRpcCall(string& strReq, string& strResp, char*& binResp, int& iBinLen, bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
-	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp);
+	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);

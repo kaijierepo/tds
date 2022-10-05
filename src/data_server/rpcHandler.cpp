@@ -21,6 +21,7 @@
 #include "xiaot/scriptHost.h"
 #include "audioPlayer.h"
 #include "base64.h"
+#include "ffmpegCmd.h"
 
 rpcHandler rpcSrv;
 
@@ -392,14 +393,67 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp)
+bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	if (method == "getStreamInfo")
 	{
-	result = rpc_getStreamInfo(params, error);
+		result = rpc_getStreamInfo(params, error);
+	}
+	else if (method == "openStream") {
+		string tag = params["tag"].get<string>();
+		if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
+		}
+		else {
+			MP* pmp = prj.GetMPByTag(tag);
+			if (!pmp) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+			}
+			else {
+				if (!pmp->m_bIsStreaming)
+				{
+					pmp->m_srcPullingFFmpegProcID = openRtspSrc(tag, pmp->m_rtspAddr);
+					if(pmp->m_srcPullingFFmpegProcID)
+					{
+						pmp->m_bIsStreaming = true;
+					}
+				}
+				if(pmp->m_bIsStreaming)
+				{
+					rpcResp.result = "\"ok\"";
+				}
+				else{
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
+				}
+			}
+		}
+	}
+	else if (method == "closeStream") {
+		string tag = params["tag"].get<string>();
+		if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
+		}
+		else {
+			MP* pmp = prj.GetMPByTag(tag);
+			if (!pmp) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+			}
+			else {
+				if (pmp->m_srcPullingFFmpegProcID)
+				{
+					HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
+					if (hProcess) {
+						TerminateProcess(hProcess, 0);
+					}
+					pmp->m_bIsStreaming = false;
+					pmp->m_srcPullingFFmpegProcID = 0;
+				}
+				rpcResp.result = "\"ok\"";
+			}
+		}
 	}
 	else if (method == "setStream")
 	{
@@ -1405,6 +1459,9 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	if (handleMethodCall_debugFunc(method, params, rpcResp,session))
 	{
+		return true;
+	}
+	if (handleMethodCall_video(method, params, rpcResp, session)) {
 		return true;
 	}
 

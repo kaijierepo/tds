@@ -19,7 +19,7 @@ MP::MP()
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
 	m_B = 0;
-
+	m_bIsStreaming = false;
 }
 
 MP::~MP()
@@ -156,6 +156,13 @@ bool MP::loadConf(json& conf)
 		}
 	}
 
+	if (conf["videoSrcType"] != nullptr) {
+		m_videoSrcType = conf["videoSrcType"].get<string>();
+	}
+
+	if (conf["rtspAddr"] != nullptr) {
+		m_rtspAddr = conf["rtspAddr"].get<string>();
+	}
 		
 	return false;
 }
@@ -245,6 +252,10 @@ bool MP::toJson(json& conf, json serializeOption)
 		//有效小数位
 		if (m_decimalDigits >= 0)
 			conf["decimalDigits"] = m_decimalDigits;
+		if (p->m_valType == "video") {
+			conf["videoSrcType"] = m_videoSrcType;
+			conf["rtspAddr"] = m_rtspAddr;
+		}
 	}
 	
 

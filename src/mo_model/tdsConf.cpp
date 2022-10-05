@@ -44,10 +44,6 @@ void tdsConfig::generateDefaultConfFile(string m)
 	else if (m == "tdb") {
 		s = defaultConf_tdb();
 	}
-	else if (m == "hs" || m == "httpServer")
-	{
-		s = defaultConf_httpServer();
-	}
 	else if (m == "rphttp")
 	{
 		s = defaultConf_rphttp();
@@ -59,16 +55,6 @@ void tdsConfig::generateDefaultConfFile(string m)
 		string confPath = fs::appPath() + "/" + mode + ".ini";
 		fs::writeFile(confPath, s);
 	}
-}
-
-
-
-string tdsConfig::defaultConf_httpServer() 
-{
-	string s = R"(#HTTP服务器配置
-httpPort=80            #http服务端口
-)";
-	return s;
 }
 
 
