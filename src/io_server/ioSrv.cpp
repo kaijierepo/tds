@@ -1591,3 +1591,75 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 
 	rpcResp.result = jList.dump(2);
 }
+
+//此处加锁，连接断开现成可能会并发操作此列表
+shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSession* pTcpSess)
+{
+	lock_guard<mutex> g(m_mutexIoSessions);
+	/*for (int i = 0; i < m_IoSessions.size(); i++)
+	{
+		shared_ptr<TDS_SESSION> p = m_IoSessions.at(i);
+		if (p->pTcpSession == pTcpSess)
+		{
+			return p;
+		}
+	}*/
+	return nullptr;
+}
+
+
+shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
+{
+	//lock_guard<mutex> g(m_mutexIoSessions);
+	//for (int i = 0; i < m_IoSessions.size(); i++)
+	//{
+	//	shared_ptr<TDS_SESSION> p = m_IoSessions.at(i);
+	//	std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
+	//	if (p->isConnected())
+	//	{
+	//		if (p->m_bActiveSession)
+	//		{
+	//			//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
+	//			if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
+	//			{
+	//				return p;
+	//			}
+	//		}
+	//		else
+	//		{
+	//			if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
+	//			{
+	//				return p;
+	//			}
+	//		}
+	//	}
+	//}
+	return nullptr;
+}
+
+shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteAddr)
+{
+	int pos = remoteAddr.find(":");
+	if (pos < 0)
+		return nullptr;
+	string ip = remoteAddr.substr(0, pos);
+	string sPort = remoteAddr.substr(pos + 1, remoteAddr.length() - pos - 1);
+	int iPort = atoi(sPort.c_str());
+	return getTDSSession(ip, iPort);
+}
+
+
+
+shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSessionClt* pTcpSess)
+{
+	lock_guard<mutex> g(m_mutexIoSessions);
+	/*for (int i = 0; i < m_IoSessions.size(); i++)
+	{
+		shared_ptr<TDS_SESSION> p = m_IoSessions.at(i);
+		if (p->pTcpSessionClt == pTcpSess->tcpClt)
+		{
+			return p;
+		}
+	}*/
+	return nullptr;
+}

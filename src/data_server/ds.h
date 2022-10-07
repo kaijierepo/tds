@@ -1,8 +1,7 @@
 /*
 dataserver
 rpc服务的tcp服务接口
-parentTdsServer功能
-childTdsServer功能
+作为子服务主动连接master服务
 
 */
 #pragma once
@@ -15,10 +14,6 @@ childTdsServer功能
 #include "webSrv.h"
 
 
-#define MAX_CLIENT_NUM int_MaxClients_MAX
-#define UID_TIMER_CHECK 1
-#define MAX_RECEIVE_LENGTH 512
-
 class dataServer : public ITcpServerCallBack,public ITcpClientCallBack
 {
 public:
@@ -28,10 +23,6 @@ public:
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo);
-	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
-	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
-	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
-	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 
 public:
@@ -45,13 +36,14 @@ public:
 
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
-	mutex m_mutexTdsSessionList;
+
+	//应用层会话
+	map<void*,std::shared_ptr<TDS_SESSION>> m_Sessions;
+	mutex m_mutexSessions;
 
 	//级联功能
-	string m_parentTdsIP;
-	int m_parentTdsPort;
-	int m_childTdsPort;
+	string m_masterTdsIP;
+	int m_masterTdsPort;
 };
 
 

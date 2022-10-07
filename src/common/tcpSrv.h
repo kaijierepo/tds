@@ -196,7 +196,7 @@ public:
 
 class tcpSrv  {
 public:
-	bool run(ITcpServerCallBack* pUser, int remotePort, string strLocalIP = "");
+	bool run(ITcpServerCallBack* pUser, int port, string strLocalIP = "");
 	void stop();
 
 	bool SendData(char* pData, int iLen, string remoteIP);

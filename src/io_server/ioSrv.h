@@ -139,6 +139,10 @@ public:
 	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	//IO会话
+	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
+	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
+	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
+	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;
 	mutex m_mutexIoSessions;
 

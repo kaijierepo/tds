@@ -57,6 +57,15 @@ sysTag = userRootTag + queryRootTag + queryTag
 
 */
 
+/* 对象数据类型族 
+									obj 对象  
+							_________|__________ 
+						   mo 监控对象          org 组织结构                大类，用大类可以一起查询其子类             
+					_______|______         _____|_______
+				   |       |      |       |             |
+			   customMO    mo     mp     org         customOrg             type取值可以为该5种
+*/
+
 namespace TAG {
 	string trimRoot(string& tag);
 	string trimRoot(string& tag,string root);
@@ -118,6 +127,11 @@ public:
 	bool m_bLocationCalib;
 	double m_dbLongitudeCalib;
 	double m_dbLatitudeCalib;
+	bool m_bChildTds; //是否是下级服务
+	SYSTEMTIME m_stLastModify;  //上一次配置修改时间
+
+	//动态创建
+	MO* createObjBranchByTag(string tag);
 
 	//状态数据
 	bool m_bOnline;

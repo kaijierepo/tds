@@ -601,7 +601,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	else if (method == "getSessionBuff")
 	{
 		string remoteAddr = params["remoteAddr"].get<string>();
-		shared_ptr<TDS_SESSION> pSession = ds.getTDSSession(remoteAddr);
+		shared_ptr<TDS_SESSION> pSession = ioSrv.getTDSSession(remoteAddr);
 
 		if (pSession != nullptr)
 		{
@@ -629,7 +629,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 		string tdsSession = params["sessionAddr"].get<string>();
 		string data = params["data"].get<string>();
-		shared_ptr<TDS_SESSION> pDestSession = ds.getTDSSession(tdsSession);
+		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
 		if (pDestSession == nullptr)
 		{
 			return true;
@@ -1495,7 +1495,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
 	{
 		string tdsSession = jReq["tdsSession"].get<string>();
-		shared_ptr<TDS_SESSION> pDestSession = ds.getTDSSession(tdsSession);
+		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
 		
 		if (pDestSession == nullptr)
 		{

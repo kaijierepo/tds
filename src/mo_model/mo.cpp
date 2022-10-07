@@ -77,6 +77,7 @@ MO::MO()
 	m_dbLongitudeCalib = 0;
 	m_dbLatitudeCalib = 0;
 	m_bLocationCalib = false;
+	m_bChildTds = false;
 }
 
 MO::~MO()
@@ -96,6 +97,10 @@ bool MO::loadConf(json& conf)
 	
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
+	}
+
+	if (conf.contains("lastModify")) {
+		m_stLastModify = timeopt::str2st(conf["lastModify"]);
 	}
 
 	if (conf.contains("dynamicLocation"))
@@ -233,6 +238,8 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (q.getConf) {
 		conf["name"] = m_strName;
 		conf["type"] = m_moType;
+		if (m_bChildTds)
+			conf["childTds"] = true;
 		if (m_moCustomType != "")
 			conf["customType"] = m_moCustomType;
 		if (m_moCustomTypeLabel != "")
@@ -355,6 +362,21 @@ MO* MO::GetProjectMO()
 	}
 
 	return pTmp;
+}
+MO* MO::createObjBranchByTag(string tag)
+{
+	vector<string> nodes;
+	str::split(nodes, tag, ".");
+	MO* pParent = &prj;
+	MO* pChild = nullptr;
+	for (int i = 0; i < nodes.size(); i++) {
+		MO* pChild = new MO();
+		pChild->m_strName = nodes[i];
+		pParent->m_childMO.push_back(pChild);
+		pChild->m_pParentMO = pParent;
+		pParent = pChild;
+	}
+	return pChild;
 }
 json MO::getRT()
 {

@@ -20,45 +20,23 @@ dataServer::~dataServer()
 {
 }
 
-void dataServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
+void dataServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
 	{
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-		GetLocalTime(&p->stCreateTime);
-		p->bConnected = true;
-		p->pTcpSession = pTcpSession;
-		p->sock = pTcpSession->sock;
-		p->port = pTcpSession->remotePort;
-		p->ip = pTcpSession->remoteIP;
-
-
-		pTcpSession->pALSession = p.get();
-		m_mutexTdsSessionList.lock();
-		m_vecTdsSession.push_back(p);
-		m_mutexTdsSessionList.unlock();
+		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
+		m_mutexSessions.lock();
+		m_Sessions[pTcpSess] = p;
+		m_mutexSessions.unlock();
 	}
 	else
 	{
-		if (pTcpSession->pALSession)
-		{
-			std::shared_ptr<TDS_SESSION> p = NULL;
-			//从列表中删除
-			m_mutexTdsSessionList.lock();
-			for (int i = 0; i < m_vecTdsSession.size(); i++)
-			{
-				if (m_vecTdsSession.at(i)->pTcpSession == pTcpSession)
-				{
-					p = m_vecTdsSession[i];
-					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
-					break;
-				}
-			}
-			m_mutexTdsSessionList.unlock();
-
-			//更新该session状态。等待其他零散指针引用销毁后自动删除
-			p->onTcpDisconnect();
-		}
+		m_mutexSessions.lock();
+		std::shared_ptr<TDS_SESSION> p = m_Sessions[pTcpSess];
+		m_Sessions.erase(pTcpSess);
+		m_mutexSessions.unlock();
+		//更新该session状态。等待其他零散指针引用销毁后自动删除
+		p->onTcpDisconnect();
 	}
 }
 
@@ -74,46 +52,22 @@ void tdsEdgeRegisterThread(std::shared_ptr<TDS_SESSION> p)
 	p->send((char*)s.c_str(), s.length());
 }
 
-void dataServer::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
+void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
 	{
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-		p->m_bActiveSession = true;
-		p->bConnected = true;
-		p->pTcpSessionClt = connInfo->tcpClt;
-		p->sock = connInfo->sock;
-		p->port = connInfo->srvPort;
-		p->ip = connInfo->srvIP;
-		connInfo->pALSession = p.get();
-		m_mutexTdsSessionList.lock();
-		m_vecTdsSession.push_back(p);
-		m_mutexTdsSessionList.unlock();
-
-		//作为tdsEdge连接上了服务器
-		if (connInfo->tcpClt == m_tcpCltEdge)
-		{
-			LOG("[边缘网关]连接tds服务器成功");
-			thread t(tdsEdgeRegisterThread,p);
-			t.detach();
-		}
+		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
+		m_mutexSessions.lock();
+		m_Sessions[pTcpSess] = p;
+		m_mutexSessions.unlock();
 	}
 	else
 	{
-		if (connInfo->pALSession)
-		{
-			m_mutexTdsSessionList.lock();
-			for (int i = 0; i < m_vecTdsSession.size(); i++)
-			{
-				if (m_vecTdsSession.at(i)->pTcpSessionClt == connInfo->tcpClt)
-				{
-					std::shared_ptr<TDS_SESSION> p = m_vecTdsSession[i]; \
-						p->onTcpDisconnect();
-					m_vecTdsSession.erase(m_vecTdsSession.begin() + i);
-				}
-			}
-			m_mutexTdsSessionList.unlock();
-		}
+		m_mutexSessions.lock();
+		std::shared_ptr<TDS_SESSION> p = m_Sessions[pTcpSess];
+		m_Sessions.erase(pTcpSess);
+		m_mutexSessions.unlock();
+		p->onTcpDisconnect();
 	}
 }
 
@@ -145,10 +99,12 @@ bool dataServer::runAsEdge()
 
 bool dataServer::run()
 {
-	m_parentTdsIP = tds->conf->getStr("parentTdsIP", "");
-	m_parentTdsPort = tds->conf->getInt("parentTdsPort", 0);
-	if (m_parentTdsIP != "" && m_parentTdsPort != 0) {
-
+	m_masterTdsIP = tds->conf->getStr("masterTdsIP", "");
+	m_masterTdsPort = tds->conf->getInt("masterTdsPort", 0);
+	if (m_masterTdsIP != "" && m_masterTdsPort != 0) {
+		m_tcpCltChildServer = new tcpClt();
+		m_tcpCltChildServer->run(this, m_masterTdsIP, m_masterTdsPort);
+		LOG("[子服务模式]连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
 	}
 
 	return false;
@@ -158,80 +114,6 @@ void dataServer::stop()
 {
 	LOG("[keyinfo]正在停止数据服务DataServer...");
 	LOG("[keyinfo]数据服务已停止");
-}
-
-
-
-//此处加锁，连接断开现成可能会并发操作此列表
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSession* pTcpSess)
-{
-	lock_guard<mutex> g(m_mutexTdsSessionList);
-	for(int i=0;i<m_vecTdsSession.size();i++)
-	{
-		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if(p->pTcpSession == pTcpSess)
-		{
-			return p;
-		}
-	}
-	return nullptr;
-}
-
-
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteIP,int remotePort)
-{
-	lock_guard<mutex> g(m_mutexTdsSessionList);
-	for (int i = 0; i < m_vecTdsSession.size(); i++)
-	{
-		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
-		if (p->isConnected())
-		{
-			if (p->m_bActiveSession)
-			{
-				//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
-				if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
-				{
-					return p;
-				}
-			}
-			else
-			{
-				if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
-				{
-					return p;
-				}
-			}
-		}
-	}
-	return nullptr;
-}
-
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(string remoteAddr)
-{
-	int pos = remoteAddr.find(":");
-	if (pos < 0)
-		return nullptr;
-	string ip = remoteAddr.substr(0, pos);
-	string sPort = remoteAddr.substr(pos + 1, remoteAddr.length() - pos - 1);
-	int iPort = atoi(sPort.c_str());
-	return getTDSSession(ip, iPort);
-}
-
-
-
-shared_ptr<TDS_SESSION> dataServer::getTDSSession(tcpSessionClt* pTcpSess)
-{
-	lock_guard<mutex> g(m_mutexTdsSessionList);
-	for (int i = 0; i < m_vecTdsSession.size(); i++)
-	{
-		shared_ptr<TDS_SESSION> p = m_vecTdsSession.at(i);
-		if (p->pTcpSessionClt == pTcpSess->tcpClt)
-		{
-			return p;
-		}
-	}
-	return nullptr;
 }
 
 
@@ -284,22 +166,17 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 
 void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
-	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(pTcpSess);
-
-	std::unique_lock<mutex> g(tdsSession->m_mutexTcpBuff);
-	TCP_DATA_BUFF tdb;
-	tdb.pData = new char[iLen];
-	tdb.iLen = iLen;
-	memcpy(tdb.pData, pData, iLen);
-	tdsSession->dataBuff.push(tdb);
-	//调用临时消费者
-	thread t(tdsSessionProcessThread, tdsSession);
-	t.detach();
+	m_mutexSessions.lock();
+	std::shared_ptr<TDS_SESSION> tdsSession = m_Sessions[pTcpSess];
+	m_mutexSessions.unlock();
+	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
-void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSess)
 {
-	std::shared_ptr<TDS_SESSION> tdsSession = getTDSSession(connInfo);
+	m_mutexSessions.lock();
+	std::shared_ptr<TDS_SESSION> tdsSession = m_Sessions[pTcpSess];
+	m_mutexSessions.unlock();
 	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
@@ -310,7 +187,18 @@ void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* conn
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	GetLocalTime(&tdsSession->lastRecvTime);
+	stream2pkt& tlBuf = tdsSession->m_tlBuf;
+	tlBuf.PushStream((unsigned char*)pData, iLen);
+	while (tlBuf.PopPkt(IsValidPkt_TDSP, false))
+	{
+		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
+		string resp;
+		char* binResp;
+		int binLen;
+		rpcSrv.handleRpcCall(req, resp, binResp, binLen, false, tdsSession);
 
+		tdsSession->send(resp.data(), resp.length(), false);
+	}
 }
 
 

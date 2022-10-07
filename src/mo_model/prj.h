@@ -29,6 +29,7 @@ public:
 	void getMpTypeList(json& mpTypeList);
 	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
+
 	string m_strMoTree;
 	map<string, MP*> m_mapAllMP;
 	map<string, vector<MO*>> m_mapCustomMOType;
