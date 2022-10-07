@@ -1,5 +1,9 @@
 /*
 dataserver
+rpc服务的tcp服务接口
+parentTdsServer功能
+childTdsServer功能
+
 */
 #pragma once
 #include "wspSrv.h"
@@ -23,38 +27,31 @@ public:
 	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
-	void getUrlParams(string& url, map<string, string>& mapParams);
-	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
 	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo);
-	bool isHttpPkt(string str);
-	string checkTransportLayerProto(string& strData, tcpSession* pTcpSess);
-	bool httpHandleInternal(string strData,std::shared_ptr<TDS_SESSION> pAppLayerClt);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSession* pTcpSess);
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
-	string getRDSPage();
 
 public:
 	bool runAsEdge();
+	bool run();
 	void stop();
 	dataServer();
 	virtual ~dataServer();
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
-	vector<tcpClt*> m_tcpCltList; //主动连接的tdsSession
-	wspSrv m_wspSrv;
+	tcpClt* m_tcpCltChildServer; //作为子服务连接上级服务的客户端
 
-	bool onRecvHttpPkt(char* pDataBuf, int iLen, std::shared_ptr<TDS_SESSION> pALC);
-	bool handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	bool OnRecvRawTdsRpc(char* pData, int iLen, std::shared_ptr<TDS_SESSION> pALC);
 	vector<std::shared_ptr<TDS_SESSION>> m_vecTdsSession;
 	mutex m_mutexTdsSessionList;
-	vector<void*> GetSessionList();
-	FILE* m_pRecFile;
-	SYSTEMTIME m_stLastFileRecvTime;
+
+	//级联功能
+	string m_parentTdsIP;
+	int m_parentTdsPort;
+	int m_childTdsPort;
 };
 
 

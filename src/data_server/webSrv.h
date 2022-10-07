@@ -14,6 +14,9 @@ public:
 	bool enableHttps;
 
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
+	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
+	void getUrlParams(string& url, map<string, string>& mapParams);
+	static bool handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	char a[10];

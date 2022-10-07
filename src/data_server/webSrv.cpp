@@ -9,6 +9,8 @@
 #include "sha1.hpp"
 #include "common/mongoose.h"
 #include "tools/hmrSrv.h"
+#include "ioSrv.h"
+
 string rootDir;
 string confDir;
 string filesDir;
@@ -239,7 +241,7 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
 
-	if (ds.handleAppLayerData_Bridge(pData, len, p)) {
+	if (WebServer::handleAppLayerData_Bridge(pData, len, p)) {
 
 	}
 	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
@@ -286,7 +288,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
 			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-			ds.initWsSessionInfo(uri, p);
+			pWs->initWsSessionInfo(uri, p);
 			//建立一个发往实际sock的管道
 			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c);
 			c->pipeSock = sPipe;
@@ -645,4 +647,257 @@ bool runWebServers()
 
 
 	return true;
+}
+
+
+void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	//terminal可以用来打开与某一接口的透传桥接，并发送指令
+	if (strData.find("/terminal") != string::npos)
+	{
+		int pos = strData.find("terminal");
+		int pos1 = strData.find(" ", pos);
+		string ioAddr = strData.substr(pos + 9, pos1 - (pos + 9));
+		ioDev* p = ioSrv.getIODev(ioAddr);
+		if (p && p->pIOSession != NULL)
+		{
+			tdsSession->type = TDS_SESSION_TYPE::bridgeToiodev;
+			tdsSession->bridgedIoSession = p->pIOSession;
+			p->pIOSession->bridgedIoSessionClient = tdsSession;
+			LOG("open websocket terminal at ioAddr %s success", ioAddr.c_str());
+			tdsSession->setActivityCheck(false);
+			tdsSession->bridgedIoSession->setActivityCheck(false);
+		}
+		else if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
+		{
+			tdsSession->setActivityCheck(false);
+			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
+			tdsSession->bridgedLocalCom = ioAddr;
+			p->pSessionClientBridge = tdsSession;
+		}
+		else
+		{
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
+	else if (strData.find("/COM") != string::npos)
+	{
+		int pos = strData.find("COM");
+		int pos1 = strData.find(" ", pos);
+		string portNum = strData.substr(pos, pos1 - pos);
+		ioDev* p = ioSrv.getIODev(portNum);
+		tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
+		tdsSession->setActivityCheck(false);
+		if (p)
+		{
+			tdsSession->bridgedLocalCom = portNum;
+			p->pSessionClientBridge = tdsSession;
+		}
+		else
+		{
+			//string html = portNum + " is not in the opened port list,please open it first";
+			//std::string header = "HTTP/1.1 200 OK\r\n";
+			//header += "Content-Type: text/html; charset=utf-8\r\n";
+			//header += "Accept-Ranges: none\r\n"; // no support for partial requests
+			//header += "Cache-Control: no-store, must-revalidate\r\n";
+			//header += "Content-Length: " + std::to_string(html.length()) + "\r\n";
+			//header += "\r\n";
+
+			//string resp = header + html;
+			//send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
+	else if (strData.find("tcp") != string::npos)
+	{
+		int pos = strData.find("tcp");
+		int pos1 = strData.find(" ", pos);
+		string host = strData.substr(pos + 4, pos1 - (pos + 4));
+		tdsSession->pBridgedTcpClient = new tcpClt();
+		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpClient;
+		tdsSession->setActivityCheck(false);
+		if (tdsSession->pBridgedTcpClient->connect(&tdsSession->bridgedTcpCltHandler, host))
+		{
+			LOG("bridge websocket to tcp %s success", host.c_str());
+		}
+		else
+		{
+			LOG("bridge websocket to tcp %s fail", host.c_str());
+			delete tdsSession->pBridgedTcpClient;
+			tdsSession->pBridgedTcpClient = NULL;
+			closesocket(tdsSession->sock);
+			return;
+		}
+	}
+	else if (strData.find("/log") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::log;
+		logTdsSessions.push_back(tdsSession);
+		logger.logOutput = logToWebsock;
+		tdsSession->setActivityCheck(false);
+	}
+	else if (strData.find("/sessionpkt") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
+		sessionPktSessions.push_back(tdsSession);
+		tdsSession->setActivityCheck(false);
+	}
+	else if (strData.find("/commpkt") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::commpkt;
+		commpktSessions.push_back(tdsSession);
+		tdsSession->setActivityCheck(false);
+	}
+	else if (strData.find("desktop") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::video;
+#ifdef ENABLE_FFMPEG
+		rds.startStream(tdsSession);
+#endif
+	}
+	else if (strData.find("stream") != string::npos)
+	{
+		//用于 泰默检测ATExpert的Genicam
+		//int pos = strData.find("stream");
+		//map<string, string> mapParams;
+		//getUrlParams(strData, mapParams);
+		//string streamId; //支持码流的tag
+		//string fmt = ""; //为空，则图像不进行任何转换直接发送
+		//int frameRate = 0;
+		//if (mapParams.size() > 0)
+		//{
+		//	if (mapParams.find("streamId") != mapParams.end())
+		//	{
+		//		streamId = mapParams["streamId"];
+		//	}
+		//	if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
+		//	{
+		//		fmt = mapParams["fmt"];
+		//	}
+		//	if (mapParams.find("frameRate") != mapParams.end())//fmt is not specified
+		//	{
+		//		frameRate = str::toInt(mapParams["frameRate"]);
+		//	}
+		//	streamId = httplib::detail::decode_url(streamId, false);
+
+
+		//	if (streamId != "")
+		//	{
+		//		streamSrvNode* pVsn = streamSrv.getSrvNode(streamId);
+		//		if (pVsn)
+		//		{
+		//			tdsSession->videoServiceNode = pVsn;
+		//			tdsSession->type = TDS_SESSION_TYPE::video;
+		//			STREAM_INFO si;
+		//			si.pixelFmt = fmt;
+		//			si.frameRate = frameRate;
+		//			pVsn->addPuller(tdsSession, &si);
+		//			string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 码流ID:" + streamId + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+		//			LOG(szLog);
+		//		}
+		//	}
+		//}
+	}
+	else //连接根地址 默认为rpc连接
+	{
+		if (strData.find("tdsClient") != string::npos)
+		{
+
+		}
+
+		map<string, string> mapParams;
+		getUrlParams(strData, mapParams);
+		if (mapParams.find("needLog") != mapParams.end())
+		{
+			string needLog = mapParams["needLog"];
+			if (needLog == "0")
+			{
+				tdsSession->m_bNeedLog = false;
+			}
+		}
+
+		if (tds->conf->debugMode)
+		{
+			string s = R"(
+						{
+							"jsonrpc": "2.0", 
+							"method": "notify.close_heartbeat", 
+							"params": {
+							}, 
+							"id": null
+						}
+					)";
+			tdsSession->send((char*)s.data(), s.length());
+		}
+		if (tdsSession->type == "")
+			tdsSession->type = TDS_SESSION_TYPE::tdsClient;
+		tdsSession->iALProto = "tdsRPC";
+
+		string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+		LOG(szLog);
+	}
+}
+
+void WebServer::getUrlParams(string& url, map<string, string>& mapParams)
+{
+	int paramStart = url.find('?', 0);
+	if (paramStart != string::npos)//解析携带参数
+	{
+		int paramEnd = url.find(' ', paramStart);
+		string paramStr = url.substr(paramStart + 1, paramEnd - paramStart - 1);
+		vector<string> params;
+		str::split(params, paramStr, "&");
+
+		for (int i = 0; i < params.size(); i++)
+		{
+			string oneP = params[i];
+			vector<string> pkv;
+			str::split(pkv, oneP, "=");
+			if (pkv.size() == 2)
+			{
+				mapParams[pkv[0]] = pkv[1];
+			}
+		}
+	}
+}
+
+
+//应用层数据桥接
+bool WebServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	bool bHandled = true;
+	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
+	{
+		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
+		if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
+		{
+			if (!p->sendData(pData, iLen))
+			{
+				LOG("[warn][数据桥接]发送数据到串口失败," + tdsSession->bridgedLocalCom + "," + p->m_strErrorInfo);
+			}
+		}
+		else
+		{
+			LOG("[warn][数据桥接]未找到串口设备" + tdsSession->bridgedLocalCom);
+		}
+	}
+	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpClient)
+	{
+		if (tdsSession->pBridgedTcpClient)
+			tdsSession->pBridgedTcpClient->SendData(pData, iLen);
+	}
+	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToiodev)
+	{
+		if (tdsSession->bridgedIoSession)
+			tdsSession->bridgedIoSession->send(pData, iLen);
+		string s = str::fromBuff(pData, iLen);
+		LOG("[IO设备透传]client->dev " + s);
+	}
+	else
+	{
+		bHandled = false;
+	}
+	return bHandled;
 }
