@@ -1,7 +1,9 @@
 #include <string>
 #include <map>
 #include "json.hpp"
+#ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
+#endif
 #include "tdsSession.h"
 
 using json = nlohmann::json;
