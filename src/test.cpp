@@ -1,6 +1,5 @@
-#include "3rdparty/rapidonvif/include/onvifclient.hpp"
-
 #ifdef HAVE_ONVIF
+#include "3rdparty/rapidonvif/include/onvifclient.hpp"
 #pragma comment(lib, "onvifcpplib.lib")
 
 string strUrl;
