@@ -569,19 +569,20 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 }
 
 
+vector<std::shared_ptr<TDS_SESSION>>  concurrentTestVec;
 
 void threadAdd() {
 	while (1)
 	{
 		std::shared_ptr<TDS_SESSION> t(new TDS_SESSION);
-		ds.m_vecTdsSession.push_back(t);
+		concurrentTestVec.push_back(t);
 	}
 }
 
 void threadErase() {
 	while (1)
 	{
-		ds.m_vecTdsSession.erase(ds.m_vecTdsSession.begin());
+		concurrentTestVec.erase(concurrentTestVec.begin());
 	}
 }
 
