@@ -893,19 +893,23 @@ bool ioServer::runAsCloud()
 
 	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
+	int tdspPort = tds->conf->getInt("tdspPort", 665);
+	int mbPort = tds->conf->getInt("mbPort", 664);
+	int iq60Port = tds->conf->getInt("iq60Port", 663);
 
-	m_mapPort2DevType[tds->conf->tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[tds->conf->mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
-	m_mapPort2DevType[tds->conf->iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
+
+	m_mapPort2DevType[tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
+	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::GW::rs485_gateway;
+	m_mapPort2DevType[iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
 	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
 	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
 
 	//启动服务端口
-	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->tdspPort) + " 设备通信协议 TDSP");
-	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->mbPort) + " 设备通信协议 modbus RTU over TCP");
-	LOG("[IO服务    ] 端口:" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
-	LOG("[IO服务    ] 端口:" + str::fromInt(tds->conf->iq60Port) + " 设备通信协议 IQ60物云通信协议");
-	LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
+	if(tdspPort)LOG("[IO服务    ] 端口:" + str::fromInt(tdspPort) + " 设备通信协议 TDSP");
+	if(mbPort)LOG("[IO服务    ] 端口:" + str::fromInt(mbPort) + " 设备通信协议 modbus RTU over TCP");
+	if(mbTcpPort)LOG("[IO服务    ] 端口:" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
+	if(iq60Port)LOG("[IO服务    ] 端口:" + str::fromInt(iq60Port) + " 设备通信协议 IQ60物云通信协议");
+	if(leakDetectPort)LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();

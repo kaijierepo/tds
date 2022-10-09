@@ -506,12 +506,12 @@ void WebServer::run(int port,bool https)
 	enableHttps = https;
 	if (https)
 	{
-		string log = "[HTTPS服务	] 端口:" + to_string(port) + ",支持websocket secure, https://localhost:666 访问用户界面";
+		string log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);
 		LOG(log);
 	}
 	else
 	{
-		string log = "[HTTP服务	] 端口:" + to_string(port) + ",支持websocket, http://localhost:667 访问用户界面";
+		string log = str::format("[HTTP服务	] 端口:%d,支持websocket, http://localhost:%d 访问用户界面",port,port);
 		LOG(log);
 	}
 
