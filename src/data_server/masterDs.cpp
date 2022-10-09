@@ -22,12 +22,15 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		json jReq, jParam;
 		jReq["method"] = "getObj";
 		jParam["getConf"] = true;
+		jParam["getConfDetail"] = true;
 		jParam["getMp"] = true;
 		jParam["getChild"] = true;
 		jParam["getStatus"] = true;
 		jReq["params"] = jParam;
 		jReq["id"] = m_rpcId;
 		m_rpcId++;
+
+		LOG("TDS子服务上线,%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
 
 		string s = jReq.dump();
 		s += "\n\n";
@@ -70,13 +73,13 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 	json resp = json::parse(pkt);
 
 	if (resp["method"] == "getObj") {
-		json params = resp["params"];
-		if (params.contains("lastModify") && params.contains("rootTag")) {
+		json rlt = resp["params"];
+		if (rlt.contains("lastModify") && rlt.contains("rootTag")) {
 			//获取参数
-			string rootTag = params["rootTag"];
-			string tag = params["name"];
+			string rootTag = rlt["rootTag"];
+			string tag = rlt["name"];
 			tag = TAG::addRoot(tag, rootTag);
-			string strLastModify = params["lastModify"];
+			string strLastModify = rlt["lastModify"];
 
 			//如果上次修改时间和本地保存的一致，忽略
 			MO* p = prj.GetMOByTag(tag);
@@ -92,7 +95,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			if (!p) {
 				p = prj.createObjBranchByTag(tag);
 			}
-			p->loadConf(params);
+			p->loadConf(rlt);
 			p->m_bChildTds = true;
 			p->m_bOnline = true;
 			prj.saveConfFile();
