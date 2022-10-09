@@ -129,6 +129,7 @@ public:
 	double m_dbLatitudeCalib;
 	bool m_bChildTds; //是否是下级服务
 	string m_strLastModify;  //上一次配置修改时间
+	string m_parentTag;
 
 	//动态创建
 	MO* createObjBranchByTag(string tag);

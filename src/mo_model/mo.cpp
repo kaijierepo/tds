@@ -95,6 +95,10 @@ bool MO::loadConf(json& conf)
 		m_strLastModify = conf["lastModify"];
 	}
 
+	if (conf.contains("parentTag")) {
+		m_parentTag = conf["parentTag"];
+	}
+
 	if (conf.contains("type")) {
 		m_moType = conf["type"];
 	}
@@ -179,6 +183,9 @@ bool MO::isSelectedByLeafType(string leafType)
 		return true;
 	if (m_moType == "mp")
 		return true;
+	if (m_moType == "project") {
+		return true;
+	}
 	else if (m_moType == "org")
 	{
 		return true;
@@ -230,11 +237,10 @@ bool MO::toJson(json& conf, json serializeOption)
 			tag = str::trimPrefix(tag, rootTag);
 			tag = str::trimPrefix(tag, ".");
 		}
-		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
-		conf["ioAddrBind"] = m_strIoAddrBind;
-		if (m_strLastModify != "") {
-			conf["lastModify"] = m_strLastModify;
-		}
+		if(tag!="")
+			conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+		if(m_strIoAddrBind!="")
+			conf["ioAddrBind"] = m_strIoAddrBind;
 	}
 
 
@@ -243,6 +249,8 @@ bool MO::toJson(json& conf, json serializeOption)
 		conf["type"] = m_moType;
 		if (m_bChildTds)
 			conf["childTds"] = true;
+		if (m_parentTag != "")
+			conf["parentTag"] = m_parentTag;
 		if (m_moCustomType != "")
 			conf["customType"] = m_moCustomType;
 		if (m_moCustomTypeLabel != "")
@@ -268,6 +276,9 @@ bool MO::toJson(json& conf, json serializeOption)
 			conf["longitude"] = m_longitude;
 		if (m_latitude != nullptr)
 			conf["latitude"] = m_latitude;
+		if (m_strLastModify != "") {
+			conf["lastModify"] = m_strLastModify;
+		}
 	}
 	
 

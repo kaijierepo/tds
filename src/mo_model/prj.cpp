@@ -13,7 +13,7 @@ project prj;
 project::project()
 {
 	m_strName = "tds";
-
+	m_moType = "project";
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
 	p->m_valType = VAL_TYPE::video;
@@ -36,33 +36,6 @@ bool project::setMo(json& mo, string tag)
 		return true;
 	}
 	return false;
-}
-
-
-bool project::toJson(json& conf, json serializeOption)
-{
-	conf["name"] = m_strName;
-	conf["type"] = m_moType;
-	if (m_moCustomType != "")
-		conf["customType"] = m_moCustomType;
-	if (m_mapConf != nullptr)
-		conf["map"] = m_mapConf;
-	if (m_parentTag != "")
-		conf["parentTag"] = m_parentTag;
-
-	if (m_moType != MO_TYPE::mp)
-	{
-		json jChildren = json::array();
-		for (auto& pmochild : m_childMO)
-		{
-			json jChild;
-			if (pmochild->toJson(jChild, serializeOption))
-				jChildren.push_back(jChild);
-		}
-		conf["children"] = jChildren;
-	}
-
-	return true;
 }
 
 MP* project::createMP(string tag,string valType)
@@ -127,7 +100,9 @@ bool project::loadConf(string& confStr)
 
 	try {
 		json moRoot = json::parse(confStr.c_str());
-		return loadConf(moRoot);
+		moRoot["type"] = "project";
+		bool ret = loadConf(moRoot);
+		return ret;
 	}
 	catch (std::exception& e)
 	{
@@ -140,9 +115,6 @@ bool project::loadConf(string& confStr)
 
 bool project::loadConf(json& jConf)
 {
-	if (jConf.contains("parentTag")) {
-		m_parentTag = jConf["parentTag"];
-	}
 	bool ret = MO::loadConf(jConf);
 	if (ret)
 		updateMPTable();
