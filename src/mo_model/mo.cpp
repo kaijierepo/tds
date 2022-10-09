@@ -91,16 +91,16 @@ bool MO::loadConf(json& conf)
 		m_strName = conf["name"];
 	}
 	
+	if (conf.contains("lastModify")) {
+		m_strLastModify = conf["lastModify"];
+	}
+
 	if (conf.contains("type")) {
 		m_moType = conf["type"];
 	}
 	
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
-	}
-
-	if (conf.contains("lastModify")) {
-		m_stLastModify = timeopt::str2st(conf["lastModify"]);
 	}
 
 	if (conf.contains("dynamicLocation"))

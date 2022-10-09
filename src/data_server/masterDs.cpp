@@ -81,7 +81,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			//如果上次修改时间和本地保存的一致，忽略
 			MO* p = prj.GetMOByTag(tag);
 			if (p) {
-				string localLastModify = timeopt::st2str(p->m_stLastModify);
+				string localLastModify = p->m_strLastModify;
 				if (strLastModify == localLastModify){
 					return;
 				}
