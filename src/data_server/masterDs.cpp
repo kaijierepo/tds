@@ -113,6 +113,7 @@ bool MasterDs::run()
 		m_tcpSrv->run(this, m_masterTdsPort);
 		thread t(thread_masterDsWorkProc, this);
 		t.detach();
+		LOG("[中心服务] 端口:%d,TDS子服务数据汇聚", m_masterTdsPort);
 	}
 	return false;
 }

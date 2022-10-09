@@ -51,6 +51,7 @@ SOFTWARE.
 #include "tools/dumpCatch.h"
 #include "tools/hmrSrv.h"
 #include "users/userMng.h"
+#include "masterDs.h"
 
 
 
@@ -408,9 +409,6 @@ bool TDS_imp::run(string cmdline)
 		
 	}
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
-#ifdef ENABLE_FFMPEG
-	//rds.run(); //remote desktop server
-#endif
 	logSrv.run();
 	sHost.run();
 	audioPlayer.run();
@@ -419,7 +417,10 @@ bool TDS_imp::run(string cmdline)
 		hmrServer.run(tds->conf->uiPath);
 	}
 	userMng.run();
-
+	if (tds->conf->getInt("masterSrvPort", 0) > 0) {
+		MasterDs* p = new MasterDs();
+		p->run();
+	}
 
 	//运行tds插件
 	if (tds->xiaoT)
