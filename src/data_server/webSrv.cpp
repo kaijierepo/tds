@@ -221,10 +221,9 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock)
 	string resp;
 	char* binResp = NULL;
 	int iBinRespLen = 0;
-	bool bNeedLog = true;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
+	rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, pSession);
 
 	string resBody = rpcRespStr;
 	string ctLen = to_string(resBody.length());
@@ -239,7 +238,6 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	string resp;
 	char* binResp = NULL;
 	int iBinRespLen = 0;
-	bool bNeedLog = true;
 
 	if (WebServer::handleAppLayerData_Bridge(pData, len, p)) {
 
@@ -247,7 +245,7 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
 		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
 		string rpcReqStr = pData;
-		rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, bNeedLog, pSession);
+		rpcSrv.handleRpcCall(rpcReqStr, rpcRespStr, binResp, iBinRespLen, pSession);
 		string resBody = rpcRespStr;
 		string ctLen = to_string(resBody.length());
 		WebServer::sendToWs((char*)resBody.c_str(), resBody.length(), pipeSock);

@@ -232,6 +232,9 @@ bool MO::toJson(json& conf, json serializeOption)
 		}
 		conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
 		conf["ioAddrBind"] = m_strIoAddrBind;
+		if (m_strLastModify != "") {
+			conf["lastModify"] = m_strLastModify;
+		}
 	}
 
 

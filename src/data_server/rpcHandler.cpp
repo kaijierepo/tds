@@ -1020,6 +1020,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
 		prj.clear();
 		prj.m_strName = tmpPrj.m_strName;
+		prj.m_parentTag = tmpPrj.m_parentTag;
 		prj.m_mapAllMP = tmpPrj.m_mapAllMP;
 		prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
 		prj.m_childMO = tmpPrj.m_childMO;
@@ -1028,7 +1029,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			p->m_pParentMO = &prj;
 		}
 		tmpPrj.m_childMO.clear();
-		prj.saveConf();
+		prj.saveConfFile();
 		ioSrv.updateTag2IOAddrBinding();
 		ioSrv.updateAllChanVal();
 		result = "\"ok\"";
@@ -1058,7 +1059,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.setMo(mo, tag);
 			}
 		}
-		prj.saveConf();
+		prj.saveConfFile();
 		result = "\"ok\"";
 	}
 	else if (method == "updateTagBinding") {
@@ -1642,7 +1643,7 @@ bool rpcHandler::isGB2312Pkt(string& req)
 
 
 
-void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,int& iBinLen,bool bNeedLog, std::shared_ptr<TDS_SESSION> pSession)
+void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
 	string error = "";
 	RPC_RESP rpcResp;
@@ -1650,6 +1651,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 	json id = nullptr;
 	json clientId = nullptr;
 	bool bGB2312 = false;
+	bool bNeedLog = true;
 
 	strReq = str::trim(strReq);
 	if (strReq.length() == 0) 
@@ -1745,26 +1747,28 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		}
 			
 		//验证token
-		if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr)
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
-			goto HANDLE_END;
-		}
-
-		if (jReq["token"] != nullptr)
-		{
-			pSession->token = jReq["token"].get<string>();
-		}
-		//即使服务端没有打开鉴权，如果用户指定了token或者user中的
-		if (pSession->token != "")
-		{
-			string token = pSession->token;
-			string user = pSession->user;
-			if (!userMng.checkToken(user,token))
+		if (bAccessCtrl) {
+			if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr)
 			{
-				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
 				goto HANDLE_END;
+			}
+
+			if (jReq["token"] != nullptr)
+			{
+				pSession->token = jReq["token"].get<string>();
+			}
+			//即使服务端没有打开鉴权，如果用户指定了token或者user中的
+			if (pSession->token != "")
+			{
+				string token = pSession->token;
+				string user = pSession->user;
+				if (!userMng.checkToken(user, token))
+				{
+					//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
+					goto HANDLE_END;
+				}
 			}
 		}
 
@@ -1777,7 +1781,6 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 			}
 		}
 		
-
 		//通知消息，无需生成响应，转发后直接返回
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
 		{

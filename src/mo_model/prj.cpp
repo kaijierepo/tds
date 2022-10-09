@@ -47,6 +47,8 @@ bool project::toJson(json& conf, json serializeOption)
 		conf["customType"] = m_moCustomType;
 	if (m_mapConf != nullptr)
 		conf["map"] = m_mapConf;
+	if (m_parentTag != "")
+		conf["parentTag"] = m_parentTag;
 
 	if (m_moType != MO_TYPE::mp)
 	{
@@ -71,7 +73,7 @@ MP* project::createMP(string tag,string valType)
 	return pmp;
 }
 
-bool project::loadConf()
+bool project::loadConfFile()
 {
 	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf))
@@ -79,9 +81,42 @@ bool project::loadConf()
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
 		m_strName = "empty project";
 		conf = "";
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		m_strLastModify = timeopt::st2str(st);
+	}
+	else {
+		TDS_INI ini;
+		ini.load(tds->conf->confPath + "/lastModify.ini");
+		string stime = ini.getValStr("mo","");
+		m_strLastModify = stime;
 	}
 
 	return loadConf(conf);
+}
+
+void project::saveConfFile()
+{
+	json j;
+	json opt;
+	opt["getConf"] = true;
+	opt["getChild"] = true;
+	opt["getMp"] = true;
+	opt["getStatus"] = false;
+	opt["getDetailConf"] = false;
+
+	toJson(j, opt);
+	string s = j.dump(2);
+
+	if (s != m_strMoTree) {
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		TDS_INI ini;
+		ini.load(tds->conf->confPath + "/lastModify.ini");
+		ini.setVal("mo", timeopt::st2str(st));
+		m_strMoTree = s;
+		fs::writeFile(tds->conf->confPath + "/mo.json", s);
+	}
 }
 
 bool project::loadConf(string& confStr)
@@ -105,25 +140,16 @@ bool project::loadConf(string& confStr)
 
 bool project::loadConf(json& jConf)
 {
+	if (jConf.contains("parentTag")) {
+		m_parentTag = jConf["parentTag"];
+	}
 	bool ret = MO::loadConf(jConf);
 	if (ret)
 		updateMPTable();
 	return ret;
 }
 
-void project::saveConf()
-{
-	json j;
-	json opt;
-	opt["getConf"] = true;
-	opt["getChild"] = true;
-	opt["getMp"] = true;
-	opt["getStatus"] = false;
-	opt["getDetailConf"] = false;
-	toJson(j, opt);
-	string s = j.dump(2);
-	fs::writeFile(tds->conf->confPath + "/mo.json", s);
-}
+
 
 void project::clear()
 {

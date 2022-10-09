@@ -128,7 +128,7 @@ public:
 	double m_dbLongitudeCalib;
 	double m_dbLatitudeCalib;
 	bool m_bChildTds; //是否是下级服务
-	SYSTEMTIME m_stLastModify;  //上一次配置修改时间
+	string m_strLastModify;  //上一次配置修改时间
 
 	//动态创建
 	MO* createObjBranchByTag(string tag);

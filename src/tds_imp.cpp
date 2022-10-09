@@ -382,7 +382,7 @@ bool TDS_imp::run(string cmdline)
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB)
 		::db.Open(tds->conf->dbPath, prj.m_strName);
-	prj.loadConf();
+	prj.loadConfFile();
 	ioSrv.loadConf();
 	almSrv.init();
 	userMng.init();
@@ -406,8 +406,8 @@ bool TDS_imp::run(string cmdline)
 	else
 	{
 		runWebServers();
-		
 	}
+	ds.run();
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
 	sHost.run();

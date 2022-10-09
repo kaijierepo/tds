@@ -484,6 +484,7 @@ string tdsConfig::getStr(string key, string sDef)
 
 bool TDS_INI::load(string path)
 {
+	m_path = path;
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	string strConf;
 	fs::readFile(path, strConf);
@@ -520,6 +521,30 @@ bool TDS_INI::load(string path)
 		}
 	}
 	return true;
+}
+
+bool TDS_INI::save(string path)
+{
+	string s;
+	for (auto& i : mapConf) {
+		string item = i.first + "=" + i.second;
+		s += item + "\r\n";
+	}
+	fs::writeFile(path, s);
+	return true;
+}
+
+void TDS_INI::setVal(string key, int val)
+{
+	string s = str::fromInt(val);
+	mapConf[key] = s;
+	save(m_path);
+}
+
+void TDS_INI::setVal(string key, string val)
+{
+	mapConf[key] = val;
+	save(m_path);
 }
 
 int TDS_INI::getValInt(string key, int defaultVal)

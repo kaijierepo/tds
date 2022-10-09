@@ -44,6 +44,7 @@ public:
 	//级联功能
 	string m_masterTdsIP;
 	int m_masterTdsPort;
+	string m_tdsID;
 };
 
 

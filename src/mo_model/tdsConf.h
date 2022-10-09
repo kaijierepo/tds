@@ -34,9 +34,13 @@ class TDS_INI {
 public:
 	TDS_INI() {};
 	bool load(string path);
+	bool save(string path);
+	void setVal(string key, int val);
+	void setVal(string key, string val);
 	int getValInt(string key, int defaultVal);
 	string getValStr(string key, string defaultVal);
 	map<string, string> mapConf;
+	string m_path;
 };
 
 class tdsConfig : public iTDSConf

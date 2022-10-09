@@ -18,10 +18,10 @@ class TAG_SELECTOR;
 class project : public MO  
 {
 public:
-	bool loadConf();
+	bool loadConfFile();
 	bool loadConf(string& confStr);
 	bool loadConf(json& jConf);
-	void saveConf();
+	void saveConfFile();
 	void clear();
 	MP* getMp(string strTagname);
 	void getMpList(map<string, MP*>& MPlist, MO* pMO);
@@ -29,8 +29,8 @@ public:
 	void getMpTypeList(json& mpTypeList);
 	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
-
-	string m_strMoTree;
+	string m_parentTag;
+	string m_strMoTree; //×Ö·û´®ÅäÖÃÊý¾Ý
 	map<string, MP*> m_mapAllMP;
 	map<string, vector<MO*>> m_mapCustomMOType;
 

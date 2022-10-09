@@ -95,7 +95,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			p->loadConf(params);
 			p->m_bChildTds = true;
 			p->m_bOnline = true;
-			prj.saveConf();
+			prj.saveConfFile();
 		}
 	}
 }

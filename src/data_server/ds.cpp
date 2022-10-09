@@ -101,10 +101,12 @@ bool dataServer::run()
 {
 	m_masterTdsIP = tds->conf->getStr("masterTdsIP", "");
 	m_masterTdsPort = tds->conf->getInt("masterTdsPort", 0);
-	if (m_masterTdsIP != "" && m_masterTdsPort != 0) {
+	m_tdsID = tds->conf->getStr("tdsID", "");
+
+	if (m_masterTdsIP != "" && m_masterTdsPort != 0 && m_tdsID != "") {
 		m_tcpCltChildServer = new tcpClt();
 		m_tcpCltChildServer->run(this, m_masterTdsIP, m_masterTdsPort);
-		LOG("[子服务模式]连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
+		LOG("[子服务模式] 连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
 	}
 
 	return false;
@@ -195,7 +197,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 		string resp;
 		char* binResp;
 		int binLen;
-		rpcSrv.handleRpcCall(req, resp, binResp, binLen, false, tdsSession);
+		rpcSrv.handleRpcCall(req, resp, binResp, binLen, tdsSession,false);
 
 		tdsSession->send(resp.data(), resp.length(), false);
 	}
@@ -230,7 +232,7 @@ void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_
 	char* binResp = NULL;
 	int iBinRespLen = 0;
 	bool bNeedLog = true;
-	rpcSrv.handleRpcCall(req, resp, binResp, iBinRespLen,bNeedLog, tdsSession);
+	rpcSrv.handleRpcCall(req, resp, binResp, iBinRespLen, tdsSession);
 
 	if (resp != "")
 	{
