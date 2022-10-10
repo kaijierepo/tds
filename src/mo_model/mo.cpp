@@ -247,6 +247,9 @@ bool MO::toJson(json& conf, json serializeOption)
 	if (!isSelectedByLeafType(q.leafType))
 		return false;
 
+	conf["name"] = m_strName;
+	conf["type"] = m_moType;
+
 	if (q.getConfDetail) {
 		string tag = getTag();
 		if (serializeOption["rootTag"] != nullptr)
@@ -263,8 +266,6 @@ bool MO::toJson(json& conf, json serializeOption)
 
 
 	if (q.getConf) {
-		conf["name"] = m_strName;
-		conf["type"] = m_moType;
 		if (m_bChildTds)
 			conf["childTds"] = true;
 		if (m_parentTag != "")

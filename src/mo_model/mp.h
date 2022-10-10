@@ -101,6 +101,5 @@ public:
 	json m_orgVal;
 	json m_curVal;
 	json m_lastVal;
-	SYSTEMTIME m_lastUpdateTime;
 	SYSTEMTIME m_lastSaveTime;
 };

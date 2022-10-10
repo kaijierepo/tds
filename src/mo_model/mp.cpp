@@ -14,8 +14,7 @@
 MP::MP()
 {
 	m_moType = "mp";
-	//m_physicalType = PHYSICAL_TYPE::unknown;
-	timeopt::setAsTimeOrg(m_lastUpdateTime);
+	timeopt::setAsTimeOrg(m_stDataLastUpdate);
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
 	m_B = 0;
@@ -152,7 +151,7 @@ bool MP::loadConf(json& conf)
 		if (!m_defaultVal.empty())
 		{
 			m_curVal = m_defaultVal;
-			GetLocalTime(&m_lastUpdateTime);
+			GetLocalTime(&m_stDataLastUpdate);
 		}
 	}
 
@@ -166,8 +165,14 @@ bool MP::loadConf(json& conf)
 
 
 	//状态数据
-	m_curVal = conf["val"];
-		
+	if(conf.contains("val"))
+		m_curVal = conf["val"];
+	if (conf.contains("updateTime"))
+	{
+		string s = conf["updateTime"].get<string>();
+		m_stDataLastUpdate = timeopt::str2st(s);
+	}
+
 	return false;
 }
 
@@ -266,6 +271,7 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (q.getStatus)
 	{
 		conf["val"] = m_curVal;
+		conf["updateTime"] = timeopt::st2str(m_stDataLastUpdate);
 	}
 	
 
@@ -280,7 +286,7 @@ bool MP::loadStatus(MO* pSrc)
 		m_orgVal = ptmp->m_orgVal;
 		m_curVal = ptmp->m_curVal;
 		m_lastVal = ptmp->m_lastVal;
-		m_lastUpdateTime = ptmp->m_lastUpdateTime;
+		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 		m_lastSaveTime = ptmp->m_lastSaveTime;
 	}
 	else
@@ -346,9 +352,9 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		dataTime = &t;
 	}
 		
-	if (memcmp(&dataTime, &m_lastUpdateTime, sizeof(SYSTEMTIME)) == 0)
+	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
 		return;
-	m_lastUpdateTime = *dataTime;
+	m_stDataLastUpdate = *dataTime;
 	if (m_pParentMO)
 		m_pParentMO->m_stDataLastUpdate = *dataTime;
 
@@ -560,10 +566,10 @@ int MP::getSaveInterval()
 json MP::getRTData(string root, bool bValOnly)
 {
 	json j;
-	if(m_lastUpdateTime.wYear == 0 || m_lastUpdateTime.wYear == 1970)
+	if(m_stDataLastUpdate.wYear == 0 || m_stDataLastUpdate.wYear == 1970)
 		j["time"] = "?";
 	else
-		j["time"] = timeopt::st2str(m_lastUpdateTime);
+		j["time"] = timeopt::st2str(m_stDataLastUpdate);
 	j["tag"] = getTag(root);
 	if(m_curVal.empty())
 		j["val"] = "?";
