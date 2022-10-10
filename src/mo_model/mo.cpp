@@ -384,10 +384,13 @@ MO* MO::createObjBranchByTag(string tag)
 	MO* pParent = &prj;
 	MO* pChild = nullptr;
 	for (int i = 0; i < nodes.size(); i++) {
-		MO* pChild = new MO();
-		pChild->m_strName = nodes[i];
-		pParent->m_childMO.push_back(pChild);
-		pChild->m_pParentMO = pParent;
+		pChild = pParent->GetMOByName(nodes[i]);
+		if (!pChild) {
+			pChild = new MO();
+			pChild->m_strName = nodes[i];
+			pParent->m_childMO.push_back(pChild);
+			pChild->m_pParentMO = pParent;
+		}
 		pParent = pChild;
 	}
 	return pChild;

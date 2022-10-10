@@ -130,6 +130,19 @@ void project::clear()
 	clearChildren();
 }
 
+void project::getMpList(vector<MP*>& MPlist, MO* pMO)
+{
+	for (int i = 0; i < pMO->m_childMO.size(); i++)
+	{
+		MO* p = pMO->m_childMO.at(i);
+		if (p->m_moType == "mp")
+		{
+			MPlist.push_back((MP*)p);
+		}
+		getMpList(MPlist, p);
+	}
+}
+
 
 void project::getMpList(map<string, MP*>& MPlist, MO* pMO)
 {

@@ -80,10 +80,11 @@ authDownload = 0       #开启文件下载用户认证
 enableScript = 0       #启用脚本功能
 
 #IO服务功能
-tdspPort = 665         #TDSP协议  IO服务端口
-mbPort = 664           #Modbus-RTU over TCP  IO服务端口；使用串转网网关连接Modbus总线的情况
-iq60Port = 663         #IQ60物云协议 IO服务端口
-leakDetectPort = 8085  #漏点监测设备端口
+tdspPort = 665         #IO服务端口 默认665  TDSP协议   
+mbPort = 664           #IO服务端口 默认664  Modbus-RTU over TCP 使用串转网网关连接Modbus总线
+iq60Port = 663         #IO服务端口 默认663  IQ60物云协议  
+mbTcpPort = 502        #IO服务端口 默认502  modbusTcp协议 
+leakDetectPort = 8085  #IO服务端口 默认8085 漏点监测设备
 enableDevReboot=1      #启用设备重启功能      
 devRebootTime=180      #设备无通信重启时间
 iotimeoutTdsp=7000

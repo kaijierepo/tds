@@ -1097,6 +1097,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			result = rpc_getMpStatus(params, error, session,true);
 		}
+		else if (method == "getMp")
+		{
+			result = rpc_getMpStatus(params, error, session);
+		}
 		else if (method == "getMoStatus")
 		{
 			result = rpc_getMoStatus(params, error, session);
@@ -2609,6 +2613,19 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 
 string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session, bool bValOnly)
 {
+	bool getStatus = true;
+	bool getConf = true;
+
+	if (params.contains("getConf"))
+	{
+		getConf = params["getConf"].get<bool>();
+		if (getConf == false)
+			bValOnly = true;
+	}
+	if (params.contains("getStatus")){}
+		getStatus = params["getStatus"].get<bool>();
+
+
 	//获取位号查询参数
 	json jTagQuerier = params["tag"];
 
@@ -2637,9 +2654,12 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 		}
 		else
 		{
-			for (map<string, MP*>::iterator it = prj.m_mapAllMP.begin(); it != prj.m_mapAllMP.end(); it++)
+			vector<MP*> mpList;
+			prj.getMpList(mpList, &prj);
+			for (int i=0;i<mpList.size();i++)
 			{
-				string tag = it->second->getTag();
+				MP* pmp = mpList[i];
+				string tag = pmp->getTag();
 
 				if (session.user != "")
 				{
@@ -2653,7 +2673,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 						continue;
 				}
 
-				rtList.push_back(it->second->getRTData(rootTag,bValOnly));
+				rtList.push_back(pmp->getRTData(rootTag,bValOnly));
 			}
 
 			string result;

@@ -73,12 +73,12 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 	json resp = json::parse(pkt);
 
 	if (resp["method"] == "getObj") {
-		json rlt = resp["params"];
-		if (rlt.contains("lastModify") && rlt.contains("rootTag")) {
+		json rlt = resp["result"];
+		if (rlt.contains("lastModify") && rlt.contains("parentTag")) {
 			//获取参数
-			string rootTag = rlt["rootTag"];
+			string parentTag = rlt["parentTag"];
 			string tag = rlt["name"];
-			tag = TAG::addRoot(tag, rootTag);
+			tag = TAG::addRoot(tag, parentTag);
 			string strLastModify = rlt["lastModify"];
 
 			//如果上次修改时间和本地保存的一致，忽略
@@ -98,6 +98,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			p->loadConf(rlt);
 			p->m_bChildTds = true;
 			p->m_bOnline = true;
+
 			prj.saveConfFile();
 		}
 	}
