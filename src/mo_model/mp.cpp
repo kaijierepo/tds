@@ -163,6 +163,10 @@ bool MP::loadConf(json& conf)
 	if (conf["rtspAddr"] != nullptr) {
 		m_rtspAddr = conf["rtspAddr"].get<string>();
 	}
+
+
+	//状态数据
+	m_curVal = conf["val"];
 		
 	return false;
 }
@@ -270,7 +274,8 @@ bool MP::toJson(json& conf, json serializeOption)
 
 bool MP::loadStatus(MO* pSrc)
 {
-	MP* ptmp = pSrc->GetMPByTag(getTag());
+	string tag = getTag();
+	MP* ptmp = pSrc->GetMPByTag(tag);
 	if (ptmp) {
 		m_orgVal = ptmp->m_orgVal;
 		m_curVal = ptmp->m_curVal;

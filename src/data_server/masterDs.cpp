@@ -103,6 +103,15 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 
 			prj.saveConfFile();
 		}
+		else {
+			json rlt = resp["result"];
+			project prjTmp;
+			prjTmp.loadConf(rlt);
+			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
+			shared_lock<shared_mutex> lock(prj.m_csPrj);
+			MO* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
+			pMO->loadStatus(&prjTmp);
+		}
 	}
 	//同步实时值
 	else if(method == "getMp"){
@@ -143,9 +152,11 @@ void MasterDs::workingProc()
 	while (1) {
 		Sleep(1000);
 		json jReq,jParam;
-		jReq["method"] = "getMp";
+		jReq["method"] = "getObj";
 		jParam["getConf"] = false;
 		jParam["getStatus"] = true;
+		jParam["getMp"] = true;
+		jParam["getChild"] = true;
 		jReq["params"] = jParam;
 		jReq["id"] = m_rpcId;
 		m_rpcId++;

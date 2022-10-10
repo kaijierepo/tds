@@ -63,6 +63,10 @@ MO* createMO(string type)
 	{
 		p = new amo();
 	}
+	else
+	{
+		p = new MO();
+	}
 
 	return p;
 }
@@ -87,26 +91,19 @@ MO::~MO()
 
 bool MO::loadConf(json& conf)
 {
+	//载入配置
 	if (conf.contains("name")) {
 		m_strName = conf["name"];
 	}
-	
-	if (conf.contains("lastModify")) {
-		m_strLastModify = conf["lastModify"];
-	}
-
 	if (conf.contains("parentTag")) {
 		m_parentTag = conf["parentTag"];
 	}
-
 	if (conf.contains("type")) {
 		m_moType = conf["type"];
 	}
-	
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
 	}
-
 	if (conf.contains("dynamicLocation"))
 	{
 		m_bDynLocation = conf["dynamicLocation"].get<bool>();
@@ -115,7 +112,6 @@ bool MO::loadConf(json& conf)
 	{
 		m_bLocationCalib = conf["locationCalib"].get<bool>();
 	}
-
 	if (conf.contains("longitudeCalib"))
 	{
 		m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
@@ -128,7 +124,6 @@ bool MO::loadConf(json& conf)
 		m_longitude = conf["longitude"];
 	if(conf.contains("latitude"))
 		m_latitude = conf["latitude"];
-
 	if(conf.contains("map"))
 		m_mapConf = conf["map"];
 
@@ -158,13 +153,36 @@ bool MO::loadConf(json& conf)
 		str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
 	}
 
+	if (conf.contains("ioAddrBind"))
+		m_strIoAddrBind = conf["ioAddrBind"];
+
+
+	//载入状态
+	if (conf.contains("lastModify")) {
+		m_strLastModify = conf["lastModify"];
+	}
+	if(conf.contains("online"))
+		m_bOnline = conf["online"].get<bool>();
+	if (conf.contains("longitudeDyn"))
+		m_longitudeDyn = conf["longitudeDyn"];
+	if (conf.contains("latitudeDyn"))
+		m_latitudeDyn = conf["latitudeDyn"];
+	if (conf.contains("alarmStatus"))
+		m_jAlarmStatus = conf["alarmStatus"];
+
 	
 	if (conf.contains("children")) {
 		auto children = conf["children"];
 		for (auto& child : children)
 		{
-			MO* pmo = createMO(child["type"]);
-			if (pmo)
+			MO* pmo;
+			if (child.contains("type") && child["type"] == "mp") {
+				pmo = new MP();
+			}
+			else
+				pmo = new MO();
+
+			if (pmo)			
 			{
 				pmo->loadConf(child);
 				m_childMO.push_back(pmo);
@@ -508,6 +526,13 @@ void MO::GetMOByTag(std::vector<MO*>* tagVec, string strTag)
 {
 	if (strTag.find("*") == string::npos)//精确查找
 	{
+		if (m_rootTag != "")
+			strTag = TAG::trimRoot(strTag, m_rootTag);
+		if (strTag == "")
+		{
+			tagVec->push_back(this);
+		}
+
 		vector<string> vecNames;
 		str::split(vecNames, strTag, ".");
 
