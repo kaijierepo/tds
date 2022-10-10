@@ -2622,7 +2622,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 		if (getConf == false)
 			bValOnly = true;
 	}
-	if (params.contains("getStatus")){}
+	if (params.contains("getStatus"))
 		getStatus = params["getStatus"].get<bool>();
 
 
