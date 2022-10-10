@@ -348,6 +348,15 @@ bool MO::loadStatus(MO* pSrc)
 		return false;
 }
 
+bool MO::loadStatus(json& jMpList)
+{
+	for (auto& i : jMpList) {
+		string tag = i["tag"].get<string>();
+		//MP* pmp = 
+	}
+	return false;
+}
+
 void MO::removeMp(json& mo)
 {
 	if (mo["children"] != nullptr)

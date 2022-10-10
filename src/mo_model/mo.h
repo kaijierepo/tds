@@ -112,6 +112,7 @@ public:
 	virtual bool loadConf(json& conf);
 	virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(MO* pMo);
+	bool loadStatus(json& jMpList);
 
 	//配置数据
 	string m_moType;

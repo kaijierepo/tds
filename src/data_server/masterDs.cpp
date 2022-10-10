@@ -71,14 +71,16 @@ void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SE
 void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 {
 	json resp = json::parse(pkt);
+	string method = resp["method"];
 
-	if (resp["method"] == "getObj") {
+	if (method == "getObj") {
 		json rlt = resp["result"];
 		if (rlt.contains("lastModify") && rlt.contains("parentTag")) {
 			//获取参数
 			string parentTag = rlt["parentTag"];
 			string tag = rlt["name"];
 			tag = TAG::addRoot(tag, parentTag);
+			childSession->m_childTdsTag = tag;
 			string strLastModify = rlt["lastModify"];
 
 			//如果上次修改时间和本地保存的一致，忽略
@@ -101,6 +103,13 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 
 			prj.saveConfFile();
 		}
+	}
+	//同步实时值
+	else if(method == "getMp"){
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
+		MO* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
+		json rlt = resp["result"];
+		pMO->loadStatus(rlt);
 	}
 }
 
@@ -134,10 +143,8 @@ void MasterDs::workingProc()
 	while (1) {
 		Sleep(1000);
 		json jReq,jParam;
-		jReq["method"] = "getObj";
+		jReq["method"] = "getMp";
 		jParam["getConf"] = false;
-		jParam["getMp"] = true;
-		jParam["getChild"] = true;
 		jParam["getStatus"] = true;
 		jReq["params"] = jParam;
 		jReq["id"] = m_rpcId;

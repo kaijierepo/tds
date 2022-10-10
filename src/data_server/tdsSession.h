@@ -81,7 +81,9 @@ public:
 	string getRemoteAddr();
 	bool m_bAppDataRecved;
 	bool getTcpSession(tcpSession& ts);
-
+	
+	string m_childTdsTag;
+	
 	int port;
 	map<string, string> mapTagDataSubscribe;
 	bool bSubAll;//订阅所有

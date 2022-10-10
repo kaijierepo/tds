@@ -765,6 +765,17 @@ void ioServer::updateTag2IOAddrBinding()
 			binding["tag"] = p->m_strTagBind;
 			tagBindings.push_back(binding);
 		}
+		for (int i = 0; i < p->m_vecChildDev.size(); i++)
+		{
+			ioDev* pp = p->m_vecChildDev[i];
+			if (pp->m_strTagBind != "")
+			{
+				json binding;
+				binding["ioAddr"] = pp->getIOAddrStr();
+				binding["tag"] = pp->m_strTagBind;
+				tagBindings.push_back(binding);
+			}
+		}
 	}
 	m_csThis.unlock_shared();
 	tds->callAsyn("updateTagBinding", tagBindings.dump());
@@ -899,7 +910,7 @@ bool ioServer::runAsCloud()
 
 
 	m_mapPort2DevType[tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::GW::rs485_gateway;
+	m_mapPort2DevType[mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
 	m_mapPort2DevType[iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
 	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
 	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
