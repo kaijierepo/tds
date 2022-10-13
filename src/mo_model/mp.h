@@ -51,8 +51,9 @@ public:
 	json strVal2Val(string s);
 
 	bool loadConf(json& conf);
+	bool toJson(json& conf, MO_QUERIER q) override;
 	bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(MO* pSrc) override;
+	bool loadStatus(MO* pSrc, bool saveToDB = true) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
@@ -62,6 +63,7 @@ public:
 	//pic表示有一个关联的图片文件
 	//当deFolder和video，pic同时存在时，pic和video放在deFolder中，否则和数据元索引文件放在同一个目录
 	void input(json jVal, SYSTEMTIME* dataTime=NULL, json dataFile = nullptr);
+	void saveToDB();
 	bool output(json jVal, json& rlt, json& err,bool sync = true);
 	bool IsCurValValid();
 	string getMpTypeLabel();

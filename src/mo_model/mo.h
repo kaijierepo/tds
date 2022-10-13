@@ -85,6 +85,8 @@ struct MO_QUERIER {
 	bool getChild;
 	bool getConf;
 	bool getConfDetail;
+	bool getDispVal; //获得用于显示的值+单位 组成的字符串
+	string rootTag;  //查询该根位号下的位号，并且返回的位号除去该根位号
 	string type;
 	string leafType;
 
@@ -93,6 +95,7 @@ struct MO_QUERIER {
 		 getMp = false;
 		 getStatus = false;
 		 getChild = false;
+		 getDispVal = false;
 		 type = "obj";
 		 leafType = "mo";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
@@ -110,8 +113,9 @@ public:
 	virtual ~MO();
 
 	virtual bool loadConf(json& conf);
+	virtual bool toJson(json& conf, MO_QUERIER querier);
 	virtual bool toJson(json& conf, json serializeOption);
-	virtual bool loadStatus(MO* pMo);
+	virtual bool loadStatus(MO* pMo,bool saveToDB = false);
 	bool loadStatus(json& jMpList);
 
 	//配置数据

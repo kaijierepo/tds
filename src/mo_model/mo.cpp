@@ -133,16 +133,18 @@ bool MO::loadConf(json& conf)
 		m_moCustomType = m_moCustomTypeLabel;
 		str::hanZi2Pinyin(m_moCustomType, m_moCustomType);
 		
-		if (prj.m_mapCustomMOType.find(m_moCustomType) != prj.m_mapCustomMOType.end())
+		project* pPrj = (project*)GetRootMO();
+
+		if (pPrj->m_mapCustomMOType.find(m_moCustomType) != pPrj->m_mapCustomMOType.end())
 		{
-			vector<MO*>& moList = prj.m_mapCustomMOType[m_moCustomType];
+			vector<MO*>& moList = pPrj->m_mapCustomMOType[m_moCustomType];
 			moList.push_back(this);
 		}
 		else
 		{
 			vector<MO*> moList;
 			moList.push_back(this);
-			prj.m_mapCustomMOType[m_moCustomType] = moList;
+			pPrj->m_mapCustomMOType[m_moCustomType] = moList;
 		}
 	}
 
@@ -184,15 +186,17 @@ bool MO::loadConf(json& conf)
 
 			if (pmo)			
 			{
+				pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
 				pmo->loadConf(child);
 				m_childMO.push_back(pmo);
-				pmo->m_pParentMO = this;
 			}
 		}
 	}
 
 	return true;
 }
+
+
 
 //根据leafType选择器，该节点是否要返回
 bool MO::isSelectedByLeafType(string leafType)
@@ -236,10 +240,15 @@ bool MO::isSelectedByLeafType(string leafType)
 //getChild 是否递归
 //getStatus 是否包含状态信息
 //getMp 是否获取mp。缺省获取
+
 bool MO::toJson(json& conf, json serializeOption)
 {
 	MO_QUERIER q = parseQuerier(serializeOption);
+	return toJson(conf, q);
+}
 
+bool MO::toJson(json& conf, MO_QUERIER q)
+{
 	if (m_moType == "mp" && !q.getMp)
 		return false;
 
@@ -252,11 +261,9 @@ bool MO::toJson(json& conf, json serializeOption)
 
 	if (q.getConfDetail) {
 		string tag = getTag();
-		if (serializeOption["rootTag"] != nullptr)
+		if (q.rootTag !=  "")
 		{
-			string rootTag = serializeOption["rootTag"].get<string>();
-			tag = str::trimPrefix(tag, rootTag);
-			tag = str::trimPrefix(tag, ".");
+			tag = TAG::trimRoot(tag, q.rootTag);
 		}
 		if(tag!="")
 			conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
@@ -334,7 +341,7 @@ bool MO::toJson(json& conf, json serializeOption)
 				continue;
 
 			json jChild;
-			if (pmochild->toJson(jChild, serializeOption))
+			if (pmochild->toJson(jChild, q))
 				jChildren.push_back(jChild);
 		}
 		if(jChildren.size() > 0)
@@ -344,7 +351,7 @@ bool MO::toJson(json& conf, json serializeOption)
 	return true;
 }
 
-bool MO::loadStatus(MO* pSrc)
+bool MO::loadStatus(MO* pSrc,bool saveToDB)
 {
 	string tag = getTag();
 	MO* ptmp = pSrc->GetMOByTag(tag);
@@ -360,7 +367,7 @@ bool MO::loadStatus(MO* pSrc)
 		for (int i = 0; i < m_childMO.size(); i++)
 		{
 			MO* pC = m_childMO[i];
-			pC->loadStatus(pSrc);
+			pC->loadStatus(pSrc,saveToDB);
 		}
 	}
 	else
@@ -857,14 +864,14 @@ void MO::GetAllChildMO(std::vector<MO*>& aryMO, string type)
 	{
 		if (m_childMO[i]->m_moType == type)
 		{
-			aryMO.push_back(m_childMO[i]);
+aryMO.push_back(m_childMO[i]);
 		}
 		m_childMO[i]->GetAllChildMO(aryMO, type);
 	}
 }
 
 
-map<string,json> MO::getChildCustomMoTypeList()
+map<string, json> MO::getChildCustomMoTypeList()
 {
 	if (m_childCustomMoTypeList.size() > 0)
 		return m_childCustomMoTypeList;
@@ -910,7 +917,7 @@ void MO::statisChildMo(json& jStatis)
 
 
 	if (m_moType == MO_TYPE::customOrg) {
-		jStatis["project"]= jStatis["project"].get<int>() + 1;
+		jStatis["project"] = jStatis["project"].get<int>() + 1;
 	}
 	else if (m_moType == MO_TYPE::customMo) {
 		jStatis["smartDev"] = jStatis["smartDev"].get<int>() + 1;
@@ -956,6 +963,9 @@ MO_QUERIER MO::parseQuerier(json& opt)
 	}
 	if (opt["getDetailConf"] != nullptr) {
 		q.getConfDetail = opt["getDetailConf"].get<bool>();
+	}
+	if (opt["rootTag"] != nullptr){
+		q.rootTag = opt["rootTag"].get<string>();
 	}
 	return q;
 }

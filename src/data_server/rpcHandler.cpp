@@ -1135,17 +1135,20 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getMoTree" || method == "getMOTree" || method == "getMo" || method == "getObj")
+		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp")
 		{
+			//位号参数处理
 			//用户查询时 tag默认"",rootTag默认""
 			//tag是相对于rootTag的相对位号
 			//rootTag和tag组合出用户位号。
 			//用户位号和用户组织结构组合成系统位号
 			string tag = "";//相对位号
-			if (params != nullptr && params["tag"] != nullptr && params["tag"].get<string>() != "") //获取子树
+			if (params["tag"] == nullptr) //获取子树
 			{
-				tag = params["tag"].get<string>();
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+				return true;
 			}
+			tag = params["tag"].get<string>();
 			string rootTag = "";//查询根
 			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") //获取子树
 			{
@@ -1156,18 +1159,38 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			tag = TAG::addRoot(tag, session.org);//组合为系统位号
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
 
-			MO* pmo = prj.GetMOByTag(tag);
-			if (pmo)
-			{
-				//所有位号以用户位号的方式展示。除非另外指定rootTag
-				json j;
+			//将getOrg,getMp,getMo统一转化为getObj
+
+
+			//通配模式，返回一个数组
+			if (tag.find("*") == string::npos) {
+				vector<MO*> objList;
+				prj.GetMOByTag(&objList, tag);
+				json jRlt = json::array();
 				params["rootTag"] = rootTag;
-				pmo->toJson(j, params);
-				result = j.dump(4);
+				for (int i = 0; i < objList.size(); i++) {
+					MO* pObj = objList[i];
+					json jObj;
+					pObj->toJson(jObj, params);
+					jRlt.push_back(jObj);
+				}
+				result = jRlt.dump(2);
 			}
-			else
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
+			//精确查找模式，返回一个对象
+			else {
+				MO* pmo = prj.GetMOByTag(tag);
+				if (pmo)
+				{
+					//所有位号以用户位号的方式展示。除非另外指定rootTag
+					json j;
+					params["rootTag"] = rootTag;
+					pmo->toJson(j, params);
+					result = j.dump(4);
+				}
+				else
+				{
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
+				}
 			}
 		}
 		else if (method == "getMoConf")
@@ -2615,6 +2638,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 {
 	bool getStatus = true;
 	bool getConf = true;
+	bool getDispVal = false;
 
 	if (params.contains("getConf"))
 	{
@@ -2639,6 +2663,11 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	string mode = "array";
 	if(params["mode"]!=nullptr)
 	 	mode = params["mode"].get<string>();
+
+	if (params.contains("getDispVal")) {
+		if(params["getDispVal"].get<bool>() == true)
+			getDispVal = true;
+	}
 
 
 	json rtList = json::array();
@@ -2669,13 +2698,24 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 
 				if (rootTag != "")
 				{
-					if (tag.find(rootTag) == string::npos)
+					if (tag.find(rootTag)  != 0)
 						continue;
 				}
 
-				rtList.push_back(pmp->getRTData(rootTag,bValOnly));
-			}
 
+				MO_QUERIER q;
+				//以下两句是基于树结构的查询，应当是不需要的，以后重构
+				q.getChild = true;
+				q.getMp = true;
+				q.getConf = getConf;
+				q.getDispVal = getDispVal;
+				q.getStatus = getStatus;
+				q.rootTag = rootTag;
+				json j;
+				pmp->toJson(j,q);
+				rtList.push_back(j);
+			}	
+						
 			string result;
 			if (mode == "array")
 			{

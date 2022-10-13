@@ -177,37 +177,41 @@ bool MP::loadConf(json& conf)
 }
 
 bool MP::toJson(json& conf, json serializeOption)
-{
-	if (!MO::toJson(conf, serializeOption))
-		return false;
-
+{	
 	MO_QUERIER q = parseQuerier(serializeOption);
+	return toJson(conf, q);
+}
 
+bool MP::toJson(json& conf, MO_QUERIER q)
+{
+	if (!MO::toJson(conf, q))
+		return false;
 
 	if (q.getConf)
 	{
 		//确定是否请求了该类型的监测点
 		MP* p = (MP*)this;
-		bool bIncluded = false;
-		if (serializeOption["valType"] != nullptr)
-		{
-			json& vt = serializeOption["valType"];
-			for (int i = 0; i < vt.size(); i++)
-			{
-				json& jType = vt[i];
-				if (jType.get<string>() == p->m_valType)
-				{
-					bIncluded = true;
-					break;
-				}
-			}
-		}
-		else
-		{
-			bIncluded = true;
-		}
-		if (!bIncluded)
-			return false;
+		//bool bIncluded = false;
+		//if (serializeOption["valType"] != nullptr)
+		//{
+		//	json& vt = serializeOption["valType"];
+		//	for (int i = 0; i < vt.size(); i++)
+		//	{
+		//		json& jType = vt[i];
+		//		if (jType.get<string>() == p->m_valType)
+		//		{
+		//			bIncluded = true;
+		//			break;
+		//		}
+		//	}
+		//}
+		//else
+		//{
+		//	bIncluded = true;
+		//}
+		//if (!bIncluded)
+		//	return false;
+
 		conf["valType"] = p->m_valType;
 		if (p->m_ioType != "")
 			conf["ioType"] = p->m_ioType;
@@ -271,14 +275,18 @@ bool MP::toJson(json& conf, json serializeOption)
 	if (q.getStatus)
 	{
 		conf["val"] = m_curVal;
-		conf["updateTime"] = timeopt::st2str(m_stDataLastUpdate);
+		conf["time"] = timeopt::st2str(m_stDataLastUpdate);
+	}
+
+	if (q.getDispVal) {
+		conf["dispVal"] = m_curVal.dump() + m_strUnit;
 	}
 	
 
 	return true;
 }
 
-bool MP::loadStatus(MO* pSrc)
+bool MP::loadStatus(MO* pSrc, bool saveDB)
 {
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
@@ -287,7 +295,10 @@ bool MP::loadStatus(MO* pSrc)
 		m_curVal = ptmp->m_curVal;
 		m_lastVal = ptmp->m_lastVal;
 		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
-		m_lastSaveTime = ptmp->m_lastSaveTime;
+
+		if (saveDB) {
+			saveToDB();
+		}
 	}
 	else
 		return false;
@@ -440,6 +451,15 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	//rtList.push_back(pt);
 	//rpcSrv.notify("getMpStatus", rtList);
 
+	saveToDB();
+}
+
+
+void MP::saveToDB() {
+	if (m_curVal == nullptr)
+		return;
+
+
 	//save to db
 	bool bNeedSave = false;
 	if (m_saveMode == "cyclic")
@@ -455,7 +475,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		if (m_lastVal != m_curVal)
 			bNeedSave = true;
 	}
-	else if(m_saveMode == "always")
+	else if (m_saveMode == "always")
 	{
 		bNeedSave = true;
 	}
@@ -474,10 +494,8 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	if (bNeedSave)
 	{
 		GetLocalTime(&m_lastSaveTime);
-		db.Insert(getTag().c_str(), *dataTime, m_curVal,dataFile);
+		db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
 	}
-
-	
 }
 
 bool MP::output(json jVal, json& rlt, json& err,bool sync)

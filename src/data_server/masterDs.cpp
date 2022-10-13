@@ -110,7 +110,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 			shared_lock<shared_mutex> lock(prj.m_csPrj);
 			MO* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
-			pMO->loadStatus(&prjTmp);
+			pMO->loadStatus(&prjTmp,true);
 		}
 	}
 	//同步实时值
