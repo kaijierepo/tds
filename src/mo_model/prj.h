@@ -1,5 +1,5 @@
 #pragma once
-#include "mo.h"
+#include "obj.h"
 #include "tdsConf.h"
 #include "json.hpp"
 using json = nlohmann::json;
@@ -15,7 +15,7 @@ class ioDev;
 class amo;
 class MP;
 class TAG_SELECTOR;
-class project : public MO  
+class project : public OBJ  
 {
 public:
 	bool loadConfFile();
@@ -24,8 +24,8 @@ public:
 	void saveConfFile();
 	void clear();
 	MP* getMp(string strTagname);
-	void getMpList(vector<MP*>& MPlist, MO* pMO);
-	void getMpList(map<string, MP*>& MPlist, MO* pMO);
+	void getMpList(vector<MP*>& MPlist, OBJ* pMO);
+	void getMpList(map<string, MP*>& MPlist, OBJ* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
 	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
@@ -33,7 +33,7 @@ public:
 
 	string m_strMoTree; //×Ö·û´®ÅäÖÃÊý¾Ý
 	map<string, MP*> m_mapAllMP;
-	map<string, vector<MO*>> m_mapCustomMOType;
+	map<string, vector<OBJ*>> m_mapCustomMOType;
 
 public:
 	project();

@@ -2,7 +2,7 @@
 #include "prj.h"
 #include "db.h"
 #include "ioSrv.h"
-#include "mo.h"
+#include "obj.h"
 #include "amo.h"
 #include "mp.h"
 #include "logger.h"
@@ -29,7 +29,7 @@ project::~project()
 
 bool project::setMo(json& mo, string tag)
 {
-	MO* pmo = GetMOByTag(tag);
+	OBJ* pmo = GetMOByTag(tag);
 	if (pmo)
 	{
 		pmo->loadConf(mo);
@@ -115,7 +115,7 @@ bool project::loadConf(string& confStr)
 
 bool project::loadConf(json& jConf)
 {
-	bool ret = MO::loadConf(jConf);
+	bool ret = OBJ::loadConf(jConf);
 	if (ret)
 		updateMPTable();
 	return ret;
@@ -130,11 +130,11 @@ void project::clear()
 	clearChildren();
 }
 
-void project::getMpList(vector<MP*>& MPlist, MO* pMO)
+void project::getMpList(vector<MP*>& MPlist, OBJ* pMO)
 {
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
-		MO* p = pMO->m_childMO.at(i);
+		OBJ* p = pMO->m_childMO.at(i);
 		if (p->m_moType == "mp")
 		{
 			MPlist.push_back((MP*)p);
@@ -144,11 +144,11 @@ void project::getMpList(vector<MP*>& MPlist, MO* pMO)
 }
 
 
-void project::getMpList(map<string, MP*>& MPlist, MO* pMO)
+void project::getMpList(map<string, MP*>& MPlist, OBJ* pMO)
 {
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
-		MO* p = pMO->m_childMO.at(i);
+		OBJ* p = pMO->m_childMO.at(i);
 		if (p->m_moType == "mp")
 		{
 			MPlist[p->getTag().c_str()] = (MP*)p;

@@ -1,8 +1,8 @@
 #pragma once
-#include "mo.h"
+#include "obj.h"
 #include "json.hpp"
 
-class amo : public MO
+class amo : public OBJ
 {
 public:
 	amo();

@@ -1025,7 +1025,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
 		prj.m_childMO = tmpPrj.m_childMO;
 		for (int i = 0; i < prj.m_childMO.size(); i++) {
-			MO* p = prj.m_childMO[i];
+			OBJ* p = prj.m_childMO[i];
 			p->m_pParentMO = &prj;
 		}
 		tmpPrj.m_childMO.clear();
@@ -1065,7 +1065,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
 			string tag = binding["tag"];
-			MO* p = prj.GetMOByTag(tag);
+			OBJ* p = prj.GetMOByTag(tag);
 			if (p)
 				p->m_strIoAddrBind = binding["ioAddr"];
 		}
@@ -1164,12 +1164,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			//通配模式，返回一个数组
 			if (tag.find("*") == string::npos) {
-				vector<MO*> objList;
+				vector<OBJ*> objList;
 				prj.GetMOByTag(&objList, tag);
 				json jRlt = json::array();
 				params["rootTag"] = rootTag;
 				for (int i = 0; i < objList.size(); i++) {
-					MO* pObj = objList[i];
+					OBJ* pObj = objList[i];
 					json jObj;
 					pObj->toJson(jObj, params);
 					jRlt.push_back(jObj);
@@ -1178,7 +1178,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			//精确查找模式，返回一个对象
 			else {
-				MO* pmo = prj.GetMOByTag(tag);
+				OBJ* pmo = prj.GetMOByTag(tag);
 				if (pmo)
 				{
 					//所有位号以用户位号的方式展示。除非另外指定rootTag
@@ -1207,7 +1207,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				tag = TAG::addRoot(tag, session.org);
 			}
 
-			MO* pmo = prj.GetMOByTag(tag);
+			OBJ* pmo = prj.GetMOByTag(tag);
 			if (pmo)
 			{
 				json j;
@@ -1223,7 +1223,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMoCustomType" || method == "getMoTypes")
 		{
-			MO* pmo = nullptr;
+			OBJ* pmo = nullptr;
 			if (params != nullptr && params.contains("tag"))
 			{
 				string tag = params["tag"].get<string>();
@@ -2146,7 +2146,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 		fmt = params["fmt"];
 	}
 
-	MO* pMo = prj.GetMOByTag(rootTag);
+	OBJ* pMo = prj.GetMOByTag(rootTag);
 	json jStatis;
 	if (pMo)
 	{
@@ -2388,10 +2388,10 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
 	{
-		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
 		for (int i = 0; i < moList.size(); i++)
 		{
-			MO* pMo = moList[i];
+			OBJ* pMo = moList[i];
 			string sysTag = pMo->getTag();
 			string queryTag = sysTag;
 
@@ -2428,7 +2428,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 			
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
-				MO* pChild = pMo->m_childMO[j];
+				OBJ* pChild = pMo->m_childMO[j];
 				if (pChild->m_moType == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
@@ -2474,10 +2474,10 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
 	{
-		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
 		for (int i = 0; i < moList.size(); i++)
 		{
-			MO* pMo = moList[i];
+			OBJ* pMo = moList[i];
 			string tag = pMo->getTag();
 
 			//过滤用户权限
@@ -2503,7 +2503,7 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 				jTableHead.push_back("位号");
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
-					MO* pChild = pMo->m_childMO[j];
+					OBJ* pChild = pMo->m_childMO[j];
 					if (pChild->m_moType == MO_TYPE::mp)
 					{
 						MP* pmp = (MP*)pChild;
@@ -2520,7 +2520,7 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 			jTableRow.push_back(tag);
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
-				MO* pChild = pMo->m_childMO[j];
+				OBJ* pChild = pMo->m_childMO[j];
 				if (pChild->m_moType == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
@@ -2567,10 +2567,10 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
 	{
-		vector<MO*> moList = prj.m_mapCustomMOType[moType];
+		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
 		for (int i = 0; i < moList.size(); i++)
 		{
-			MO* pMo = moList[i];
+			OBJ* pMo = moList[i];
 			string tag = pMo->getTag();
 
 			//过滤用户权限
@@ -2596,7 +2596,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 				jTableHead.push_back("位号");
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
-					MO* pChild = pMo->m_childMO[j];
+					OBJ* pChild = pMo->m_childMO[j];
 					if (pChild->m_moType == MO_TYPE::mp)
 					{
 						MP* pmp = (MP*)pChild;
@@ -2613,7 +2613,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 			jTableRow.push_back(tag);
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
-				MO* pChild = pMo->m_childMO[j];
+				OBJ* pChild = pMo->m_childMO[j];
 				if (pChild->m_moType == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
@@ -2703,7 +2703,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 				}
 
 
-				MO_QUERIER q;
+				OBJ_QUERIER q;
 				//以下两句是基于树结构的查询，应当是不需要的，以后重构
 				q.getChild = true;
 				q.getMp = true;
@@ -3165,7 +3165,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 	if (method == "devOnline" || method == "devOffline") {
 		if (params.contains("tag")) {
 			string tag = params["tag"];
-			MO* p = prj.GetMOByTag(tag);
+			OBJ* p = prj.GetMOByTag(tag);
 			if (p) {
 				if (method == "devOnline")
 					p->m_bOnline = true;

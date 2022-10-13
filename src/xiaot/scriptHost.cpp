@@ -3,7 +3,7 @@
 #include "prj.h"
 #include "logger.h"
 #include "mp.h"
-#include "mo.h"
+#include "obj.h"
 #include "rpcHandler.h"
 
 scriptHost sHost;

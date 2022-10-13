@@ -55,7 +55,7 @@ ioDev* createIODev(string type)
 }
 
 
-void ioDev::AutoDataLink(MO* mo) {
+void ioDev::AutoDataLink(OBJ* mo) {
 
 }
 

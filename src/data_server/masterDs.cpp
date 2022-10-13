@@ -84,7 +84,7 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			string strLastModify = rlt["lastModify"];
 
 			//如果上次修改时间和本地保存的一致，忽略
-			MO* p = prj.GetMOByTag(tag);
+			OBJ* p = prj.GetMOByTag(tag);
 			if (p) {
 				string localLastModify = p->m_strLastModify;
 				if (strLastModify == localLastModify){
@@ -109,14 +109,14 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			prjTmp.loadConf(rlt);
 			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 			shared_lock<shared_mutex> lock(prj.m_csPrj);
-			MO* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
+			OBJ* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
 			pMO->loadStatus(&prjTmp,true);
 		}
 	}
 	//同步实时值
 	else if(method == "getMp"){
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
-		MO* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
+		OBJ* pMO = prj.GetMOByTag(childSession->m_childTdsTag);
 		json rlt = resp["result"];
 		pMO->loadStatus(rlt);
 	}

@@ -1,6 +1,6 @@
 ﻿#pragma once 
 #include "tdscore.h"
-#include "mo.h"
+#include "obj.h"
 #include "json.hpp"
 #include "tdsSession.h"
 #include "tds.h"
@@ -41,8 +41,8 @@ struct VALID_RANGE {
 };
 
 using namespace std;
-class MO;
-class MP : public MO
+class OBJ;
+class MP : public OBJ
 {
 public:
 	MP();
@@ -51,9 +51,9 @@ public:
 	json strVal2Val(string s);
 
 	bool loadConf(json& conf);
-	bool toJson(json& conf, MO_QUERIER q) override;
+	bool toJson(json& conf, OBJ_QUERIER q) override;
 	bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(MO* pSrc, bool saveToDB = true) override;
+	bool loadStatus(OBJ* pSrc, bool saveToDB = true) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串

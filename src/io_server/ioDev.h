@@ -3,7 +3,7 @@
 #include "tdsSession.h"
 
 class ioDev;
-class MO;
+class OBJ;
 class MP;
 class ioAddrSession;
 class ioChannel;
@@ -175,7 +175,7 @@ public:
 	virtual bool output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) { return false; }
 	virtual bool output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { return false; };
 
-	void AutoDataLink(MO* mo);
+	void AutoDataLink(OBJ* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
 	void setRecvCallback(void* pUser, fp_ioAddrRecvCallback callback);
 	fp_ioAddrRecvCallback m_pRecvCallback;
@@ -184,7 +184,7 @@ public:
 	//对于设备tagBind表示设备安装在某个对象上,该对象一般视作智能设备
 	string m_strTagBind;
 	string m_strChanTemplate;
-	MO* m_pMO;
+	OBJ* m_pMO;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
 	ioDev* getIODevByTag(string tag);

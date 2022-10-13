@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 #include "mp.h"
-#include "mo.h"
+#include "obj.h"
 #include "common.hpp"
 #include "prj.h"
 #include "as.h"
@@ -63,7 +63,7 @@ json MP::strVal2Val(string sdv)
 
 bool MP::loadConf(json& conf)
 {
-	MO::loadConf(conf);
+	OBJ::loadConf(conf);
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
@@ -178,13 +178,13 @@ bool MP::loadConf(json& conf)
 
 bool MP::toJson(json& conf, json serializeOption)
 {	
-	MO_QUERIER q = parseQuerier(serializeOption);
+	OBJ_QUERIER q = parseQuerier(serializeOption);
 	return toJson(conf, q);
 }
 
-bool MP::toJson(json& conf, MO_QUERIER q)
+bool MP::toJson(json& conf, OBJ_QUERIER q)
 {
-	if (!MO::toJson(conf, q))
+	if (!OBJ::toJson(conf, q))
 		return false;
 
 	if (q.getConf)
@@ -286,7 +286,7 @@ bool MP::toJson(json& conf, MO_QUERIER q)
 	return true;
 }
 
-bool MP::loadStatus(MO* pSrc, bool saveDB)
+bool MP::loadStatus(OBJ* pSrc, bool saveDB)
 {
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
