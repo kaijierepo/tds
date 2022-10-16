@@ -193,7 +193,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	//更新mo对象中的缓存
 	//if (bTagAlarmStatusChanged)
 	//{
-		OBJ* pmo = prj.GetMOByTag(newStatus.tag);
+		OBJ* pmo = prj.queryObj(newStatus.tag);
 		if (pmo)
 		{
 			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);

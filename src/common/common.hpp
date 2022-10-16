@@ -2037,7 +2037,7 @@ inline string getbuilddate()
 inline void setThreadName2(string name)
 {
 #ifdef _DEBUG
-	SetThreadDescription(GetCurrentThread(), charCodec::utf8toUtf16(name).c_str());
+	//SetThreadDescription(GetCurrentThread(), charCodec::utf8toUtf16(name).c_str());
 #endif
 }
 

@@ -1019,7 +1019,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		tmpPrj.loadConf(params);
 		tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
 		prj.clear();
-		prj.m_strName = tmpPrj.m_strName;
+		prj.m_name = tmpPrj.m_name;
 		prj.m_parentTag = tmpPrj.m_parentTag;
 		prj.m_mapAllMP = tmpPrj.m_mapAllMP;
 		prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
@@ -1065,7 +1065,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
 			string tag = binding["tag"];
-			OBJ* p = prj.GetMOByTag(tag);
+			OBJ* p = prj.queryObj(tag);
 			if (p)
 				p->m_strIoAddrBind = binding["ioAddr"];
 		}
@@ -1096,10 +1096,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		else if (method == "getMpVal")
 		{
 			result = rpc_getMpStatus(params, error, session,true);
-		}
-		else if (method == "getMp")
-		{
-			result = rpc_getMpStatus(params, error, session);
 		}
 		else if (method == "getMoStatus")
 		{
@@ -1158,27 +1154,55 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			tag = TAG::addRoot(tag, rootTag);//组合为用户位号
 			tag = TAG::addRoot(tag, session.org);//组合为系统位号
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
-
+			string type = "obj";
+			if (params["type"] != nullptr)
+				type = params["type"].get<string>();
 			//将getOrg,getMp,getMo统一转化为getObj
-
+			else if (method == "getOrg") type = "org";
+			else if (method == "getMo") type = "mo";
+			else if (method == "getMp") {
+				params["getMp"] = true;
+				type = "mp";
+			}
+			string mode = "array";
+			if (params["mode"] != nullptr) {
+				mode = params["mode"].get<string>();
+			}
+			
 
 			//通配模式，返回一个数组
-			if (tag.find("*") == string::npos) {
+			if (tag.find("*") != string::npos) {
 				vector<OBJ*> objList;
-				prj.GetMOByTag(&objList, tag);
-				json jRlt = json::array();
+				prj.queryObj(&objList, tag,type);
 				params["rootTag"] = rootTag;
-				for (int i = 0; i < objList.size(); i++) {
-					OBJ* pObj = objList[i];
-					json jObj;
-					pObj->toJson(jObj, params);
-					jRlt.push_back(jObj);
+
+				if (mode == "array") {
+					json jRlt = json::array();
+					for (int i = 0; i < objList.size(); i++) {
+						OBJ* pObj = objList[i];
+						json jObj;
+						pObj->toJson(jObj, params);
+						jRlt.push_back(jObj);
+					}
+					result = jRlt.dump(2);
 				}
-				result = jRlt.dump(2);
+				else
+				{
+					json jRlt = json::object();
+					for (int i = 0; i < objList.size(); i++) {
+						OBJ* pObj = objList[i];
+						json jObj;
+						pObj->toJson(jObj, params);
+						string tag = jObj["tag"].get<string>();
+						tag = str::replace(tag, ".", "_");
+						jRlt[tag] = jObj;
+					}
+					result = jRlt.dump(2);
+				}
 			}
 			//精确查找模式，返回一个对象
 			else {
-				OBJ* pmo = prj.GetMOByTag(tag);
+				OBJ* pmo = prj.queryObj(tag);
 				if (pmo)
 				{
 					//所有位号以用户位号的方式展示。除非另外指定rootTag
@@ -1207,7 +1231,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				tag = TAG::addRoot(tag, session.org);
 			}
 
-			OBJ* pmo = prj.GetMOByTag(tag);
+			OBJ* pmo = prj.queryObj(tag);
 			if (pmo)
 			{
 				json j;
@@ -1232,7 +1256,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					pmo = &prj;
 				}
 				else
-					pmo = prj.GetMOByTag(tag);
+					pmo = prj.queryObj(tag);
 			}
 			else
 			{
@@ -1513,7 +1537,9 @@ bool rpcHandler::needLog(string method)
 		method == "getMoStatusTable"||
 		method == "getMoStatusList" ||
 		method == "getChanVal" ||
-		method == "acq")
+		method == "acq" ||
+		method == "getLicenceStatus" ||
+		method == "updateToken")
 		return false;
 	return true;
 }
@@ -1717,6 +1743,8 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		bNeedLog = needLog(method);
 		if (bNeedLog)
 			LOG("[trace]RPC请求:\r\n" + strReq + "\r\n");
+		if(method == "output")
+			LOG("[warn]RPC请求:\r\n" + strReq + "\r\n");
 
 		//心跳最先处理
 		if (method == "heartbeat")
@@ -2146,7 +2174,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 		fmt = params["fmt"];
 	}
 
-	OBJ* pMo = prj.GetMOByTag(rootTag);
+	OBJ* pMo = prj.queryObj(rootTag);
 	json jStatis;
 	if (pMo)
 	{
@@ -2429,10 +2457,10 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				OBJ* pChild = pMo->m_childMO[j];
-				if (pChild->m_moType == MO_TYPE::mp)
+				if (pChild->m_type == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
-					oneData[pmp->m_strName] = pmp->m_curVal;
+					oneData[pmp->m_name] = pmp->m_curVal;
 				}
 			}
 			if(strList != "[")
@@ -2504,10 +2532,10 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
 					OBJ* pChild = pMo->m_childMO[j];
-					if (pChild->m_moType == MO_TYPE::mp)
+					if (pChild->m_type == MO_TYPE::mp)
 					{
 						MP* pmp = (MP*)pChild;
-						jTableHead.push_back(pmp->m_strName);
+						jTableHead.push_back(pmp->m_name);
 					}
 				}
 				jTableHead.push_back("在线");
@@ -2521,7 +2549,7 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				OBJ* pChild = pMo->m_childMO[j];
-				if (pChild->m_moType == MO_TYPE::mp)
+				if (pChild->m_type == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
 					jTableRow.push_back(pmp->m_curVal);
@@ -2597,10 +2625,10 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 				for (int j = 0; j < pMo->m_childMO.size(); j++)
 				{
 					OBJ* pChild = pMo->m_childMO[j];
-					if (pChild->m_moType == MO_TYPE::mp)
+					if (pChild->m_type == MO_TYPE::mp)
 					{
 						MP* pmp = (MP*)pChild;
-						jTableHead.push_back(pmp->m_strName);
+						jTableHead.push_back(pmp->m_name);
 					}
 				}
 				jTableHead.push_back("在线");
@@ -2614,7 +2642,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 			for (int j = 0; j < pMo->m_childMO.size(); j++)
 			{
 				OBJ* pChild = pMo->m_childMO[j];
-				if (pChild->m_moType == MO_TYPE::mp)
+				if (pChild->m_type == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
 					jTableRow.push_back(pmp->m_curVal);
@@ -2638,7 +2666,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 {
 	bool getStatus = true;
 	bool getConf = true;
-	bool getDispVal = false;
+	bool getStatusDesc = false;
 
 	if (params.contains("getConf"))
 	{
@@ -2664,9 +2692,9 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	if(params["mode"]!=nullptr)
 	 	mode = params["mode"].get<string>();
 
-	if (params.contains("getDispVal")) {
-		if(params["getDispVal"].get<bool>() == true)
-			getDispVal = true;
+	if (params.contains("getStatusDesc")) {
+		if(params["getStatusDesc"].get<bool>() == true)
+			getStatusDesc = true;
 	}
 
 
@@ -2708,7 +2736,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 				q.getChild = true;
 				q.getMp = true;
 				q.getConf = getConf;
-				q.getDispVal = getDispVal;
+				q.getStatusDesc = getStatusDesc;
 				q.getStatus = getStatus;
 				q.rootTag = rootTag;
 				json j;
@@ -3165,7 +3193,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 	if (method == "devOnline" || method == "devOffline") {
 		if (params.contains("tag")) {
 			string tag = params["tag"];
-			OBJ* p = prj.GetMOByTag(tag);
+			OBJ* p = prj.queryObj(tag);
 			if (p) {
 				if (method == "devOnline")
 					p->m_bOnline = true;

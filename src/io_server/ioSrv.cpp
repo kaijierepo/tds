@@ -1422,7 +1422,6 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 
 			pIoDev->m_charset = charset;
 			pIoDev->onRecvPkt(jResp);
-			LOG("[trace]TDSP响应:\r\n" + sResp + "\r\n");
 		}
 		else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
 		{

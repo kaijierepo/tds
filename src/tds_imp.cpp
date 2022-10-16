@@ -320,7 +320,7 @@ bool TDS_imp::runAsTDB()
 	logger.setLogLevel(tdsConf.logLevel);
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
 	LOG("[数据库	] " + tds->conf->dbPath);
-	::db.Open(tds->conf->dbPath, prj.m_strName);
+	::db.Open(tds->conf->dbPath, prj.m_name);
 	runWebServers();
 	GetLocalTime(&stStartupTime);
 	m_sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
@@ -381,7 +381,7 @@ bool TDS_imp::run(string cmdline)
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB)
-		::db.Open(tds->conf->dbPath, prj.m_strName);
+		::db.Open(tds->conf->dbPath, prj.m_name);
 	prj.loadConfFile();
 	ioSrv.loadConf();
 	almSrv.init();
