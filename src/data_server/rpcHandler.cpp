@@ -2115,11 +2115,13 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			GetLocalTime(&stTimeStamp);
 		}
 		pmp->input(val, &stTimeStamp, dataFile);
+		resp.result = "\"ok\"";
 	}
 	else if (ioAddr != "")
 	{
 		ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
 		pC->input(val);
+		resp.result = "\"ok\"";
 	}
 }
 
