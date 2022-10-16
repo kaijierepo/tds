@@ -4,7 +4,7 @@
 
 amo::amo()
 {
-	m_moType = "active_obj";
+	m_type = "active_obj";
 }
 
 amo::~amo()
@@ -13,7 +13,7 @@ amo::~amo()
 
 void amo::GetRTStatusJson(json& j)
 {
-	j["name"] = m_strName;
+	j["name"] = m_name;
 	j["area"] = m_strTagName;
 	j["mo_type"] = m_strAMOType;
 	j["enter_time"]= timeopt::st2str(m_enterTime);

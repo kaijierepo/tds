@@ -12,8 +12,8 @@ project prj;
 
 project::project()
 {
-	m_strName = "tds";
-	m_moType = "project";
+	m_name = "tds";
+	m_type = "project";
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
 	p->m_valType = VAL_TYPE::video;
@@ -29,7 +29,7 @@ project::~project()
 
 bool project::setMo(json& mo, string tag)
 {
-	OBJ* pmo = GetMOByTag(tag);
+	OBJ* pmo = queryObj(tag);
 	if (pmo)
 	{
 		pmo->loadConf(mo);
@@ -52,7 +52,7 @@ bool project::loadConfFile()
 	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf))
 	{
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
-		m_strName = "empty project";
+		m_name = "empty project";
 		conf = "";
 		SYSTEMTIME st;
 		GetLocalTime(&st);
@@ -135,7 +135,7 @@ void project::getMpList(vector<MP*>& MPlist, OBJ* pMO)
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
 		OBJ* p = pMO->m_childMO.at(i);
-		if (p->m_moType == "mp")
+		if (p->m_type == "mp")
 		{
 			MPlist.push_back((MP*)p);
 		}
@@ -149,7 +149,7 @@ void project::getMpList(map<string, MP*>& MPlist, OBJ* pMO)
 	for (int i = 0; i < pMO->m_childMO.size(); i++)
 	{
 		OBJ* p = pMO->m_childMO.at(i);
-		if (p->m_moType == "mp")
+		if (p->m_type == "mp")
 		{
 			MPlist[p->getTag().c_str()] = (MP*)p;
 		}

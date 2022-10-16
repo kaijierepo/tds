@@ -13,7 +13,7 @@
 
 MP::MP()
 {
-	m_moType = "mp";
+	m_type = "mp";
 	timeopt::setAsTimeOrg(m_stDataLastUpdate);
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	m_K = 1;
@@ -278,8 +278,8 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		conf["time"] = timeopt::st2str(m_stDataLastUpdate);
 	}
 
-	if (q.getDispVal) {
-		conf["dispVal"] = m_curVal.dump() + m_strUnit;
+	if (q.getStatusDesc) {
+		conf["valDesc"] = m_curVal.dump() + m_strUnit;
 	}
 	
 
@@ -419,11 +419,11 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	}
 
 	//特殊的属性监测点
-	if (m_strName == "经度")
+	if (m_name == "经度")
 	{
 		m_pParentMO->m_longitudeDyn = m_curVal;
 	}
-	else if (m_strName == "纬度")
+	else if (m_name == "纬度")
 	{
 		m_pParentMO->m_latitudeDyn = m_curVal;
 	}
@@ -435,13 +435,13 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	if (m_alarmMp) //是一个报警监控点，更新报警
 	{
 		ALARM_INFO ai;
-		ai.type = m_strName;
+		ai.type = m_name;
 		if(m_curVal.get<bool>() == true)
 			ai.level = ALARM_LEVEL::alarm;
 		else
 			ai.level = ALARM_LEVEL::normal;
 		ai.tag = getTag();
-		ai.typeLabel = m_strName;
+		ai.typeLabel = m_name;
 		almSrv.Update(ai);
 	}
 	
@@ -529,11 +529,11 @@ string MP::getMpTypeLabel()
 	string typeLabel;
 	if (m_valType == TDS::VAL_TYPE::boolean)
 	{
-		typeLabel = m_strName;
+		typeLabel = m_name;
 	}
 	else if (m_valType == TDS::VAL_TYPE::Float)
 	{
-		typeLabel = m_strName;
+		typeLabel = m_name;
 	}
 	else if (m_valType == TDS::VAL_TYPE::json)
 	{
@@ -553,11 +553,11 @@ string MP::getMpType()
 	// as a convention , a real type MP's name is named by data type.
 	if (m_valType == TDS::VAL_TYPE::boolean)
 	{
-		mpType = m_strName;
+		mpType = m_name;
 	}
 	else if (m_valType == TDS::VAL_TYPE::Float)
 	{
-		mpType = m_strName;
+		mpType = m_name;
 	}
 	else if (m_valType == TDS::VAL_TYPE::video)
 	{
