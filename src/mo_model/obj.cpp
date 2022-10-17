@@ -101,6 +101,9 @@ bool OBJ::loadConf(json& conf)
 	if (conf.contains("type")) {
 		m_type = conf["type"];
 	}
+	if (conf.contains("childTds")) {
+		m_bChildTds = conf["childTds"].get<bool>();
+	}
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
 	}

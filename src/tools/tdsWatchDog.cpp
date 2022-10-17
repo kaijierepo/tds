@@ -352,12 +352,11 @@ bool tdsWatchDog::isSelfStartReg()
 	return false;
 }
 
-int tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+void tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
 	string food = recvData;
 	//LOG("food is " + food);
 	GetLocalTime(&m_lastFeedTime);
-	return 0;
 }
 
 void tdsWatchDog::log(string s)

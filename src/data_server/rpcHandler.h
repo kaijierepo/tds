@@ -19,6 +19,8 @@ public:
 
 	bool needLog(string method);
 
+	bool handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+
 	//透传到io设备的命令
 	bool handleDevRpcDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 

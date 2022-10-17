@@ -418,8 +418,8 @@ bool TDS_imp::run(string cmdline)
 	}
 	userMng.run();
 	if (tds->conf->getInt("masterSrvPort", 0) > 0) {
-		MasterDs* p = new MasterDs();
-		p->run();
+		pMasterDs = new MasterDs();
+		pMasterDs->run();
 	}
 
 	//运行tds插件

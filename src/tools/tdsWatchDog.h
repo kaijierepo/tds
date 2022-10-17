@@ -16,7 +16,7 @@ public:
 	bool regSelfStart();
 	bool unregSelfStart();
 	bool isSelfStartReg();
-	int OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
 	udpServer m_foodPlate; //Ê³ÎïÅÌ×Ó
 	SYSTEMTIME m_lastFeedTime;
 	SYSTEMTIME m_lastUpdateCheckTime;

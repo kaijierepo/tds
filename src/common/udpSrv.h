@@ -3,7 +3,7 @@
 
 class IUdpServerCallBack {
 public:
-	virtual int OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) = 0;
+	virtual void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) = 0;
 };
 
 

@@ -404,18 +404,28 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 	}
 
 	ioDev* parentDev = this;
-	string parentID;
-	if (params["parentID"] != nullptr) {
-		parentID = params["parentID"].get<string>();
-		parentDev = getIODevByNodeID(parentID);
-	}
-	else
-		parentDev = this;
 
-	if (parentDev == NULL)
+	if (type == IO_DEV_TYPE::DEV::tdsp_device)
 	{
-		rpcResp.error =  makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID,"未找到父节点，父节点ID:" + parentID);
+
 	}
+	else {
+		string parentID;
+		if (params["parentID"] != nullptr) {
+			parentID = params["parentID"].get<string>();
+			parentDev = getIODevByNodeID(parentID);
+			if (parentDev == NULL)
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID, "未找到父节点，父节点ID:" + parentID);
+			}
+			return;
+		}
+		else
+			parentDev = this;
+	}
+
+
+
 
 	ioDev* pd = createIODev(type);
 	if (pd)

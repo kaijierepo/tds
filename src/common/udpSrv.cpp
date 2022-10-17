@@ -20,6 +20,13 @@ udpServer::~udpServer(void)
 
 void udpServer::start()
 {
+	// initial socket library
+	WORD wVerisonRequested;
+	WSADATA wsaData;
+	int err;
+	wVerisonRequested = MAKEWORD(1, 1);
+	err = WSAStartup(wVerisonRequested, &wsaData);
+
 	DWORD dwThread = 0;
 	HANDLE hThread = CreateThread(NULL, 0, RecvThread, (LPVOID)this, 0, &dwThread);
 	if (hThread == NULL)
@@ -42,7 +49,7 @@ int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int por
 {
 	if (m_pCallback)
 	{
-		return m_pCallback->OnRecvUdpData(recvData, recvDataLen, strIP, port);
+		m_pCallback->OnRecvUdpData(recvData, recvDataLen, strIP, port);
 	}
 	return 0;
 }
@@ -77,7 +84,12 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 	pServ->m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (INVALID_SOCKET == pServ->m_sock)
 	{
+		int iErr = GetLastError();
+		LOG("create udp sock error,%d", iErr);
 		return 0;
+	}
+	else {
+
 	}
 
 	//绑定

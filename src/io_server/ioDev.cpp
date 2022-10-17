@@ -468,6 +468,10 @@ DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 ioDev* ioDev::getIODevByNodeID(string nodeID)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	if (m_confNodeId == nodeID)
+		return this;
+
+
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];

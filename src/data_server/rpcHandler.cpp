@@ -22,6 +22,7 @@
 #include "audioPlayer.h"
 #include "base64.h"
 #include "ffmpegCmd.h"
+#include "masterDs.h"
 
 rpcHandler rpcSrv;
 
@@ -1544,6 +1545,24 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
+bool rpcHandler::handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	if (pMasterDs == nullptr)
+		return false;
+
+	string method = jReq["method"].get<string>();
+	if (jReq.contains("childTds"))
+	{
+		jReq.erase("user");
+		jReq.erase("token");
+		pMasterDs->rpc_childTdsDispatch(jReq, rpcResp);
+		return true;
+	}
+
+
+	return false;
+}
+
 bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
@@ -1831,6 +1850,10 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		if (!tds->conf->edge) //tds edge模式无需转发
 		{
 			if (handleDevRpcDispatch(strReq, jReq, rpcResp, pSession))
+			{
+				goto HANDLE_END;
+			}
+			if (handleChildTdsDispatch(strReq, jReq, rpcResp, pSession))
 			{
 				goto HANDLE_END;
 			}

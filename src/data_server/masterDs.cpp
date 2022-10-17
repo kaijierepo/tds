@@ -9,6 +9,8 @@
 #include "tds.h"
 #include "users/userMng.h"
 
+MasterDs* pMasterDs = nullptr;
+
 void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
@@ -63,14 +65,18 @@ void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SE
 	while (tlBuf.PopPkt(IsValidPkt_TDSP,false))
 	{
 		string s = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
-		onRecvPkt(s, childSession);
+		try {
+			json pkt = json::parse(s);
+			onRecvPkt(pkt, childSession);
+		}
+		catch (exception& e) {
+
+		}
 	}
 
 }
 
-void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
-{
-	json resp = json::parse(pkt);
+bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSession) {
 	string method = resp["method"];
 
 	if (method == "getObj") {
@@ -84,24 +90,24 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			string strLastModify = rlt["lastModify"];
 
 			//如果上次修改时间和本地保存的一致，忽略
+			//根据修改时间自动同步机制取消，统一改为手动设置
 			OBJ* p = prj.queryObj(tag);
-			if (p) {
-				string localLastModify = p->m_strLastModify;
-				if (strLastModify == localLastModify){
-					return;
-				}
-			}
+			//if (p) {
+			//	string localLastModify = p->m_strLastModify;
+			//	if (strLastModify == localLastModify){
+			//		return;
+			//	}
+			//}
 
 			//将最新子服务配置保存到本地
 			unique_lock<shared_mutex> lock(prj.m_csPrj);
 			if (!p) {
 				p = prj.createObjBranchByTag(tag);
+				p->loadConf(rlt);
+				p->m_bChildTds = true;
+				p->m_bOnline = true;
+				prj.saveConfFile();
 			}
-			p->loadConf(rlt);
-			p->m_bChildTds = true;
-			p->m_bOnline = true;
-
-			prj.saveConfFile();
 		}
 		else {
 			json rlt = resp["result"];
@@ -110,17 +116,125 @@ void MasterDs::onRecvPkt(string pkt, std::shared_ptr<TDS_SESSION> childSession)
 			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 			shared_lock<shared_mutex> lock(prj.m_csPrj);
 			OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
-			pMO->loadStatus(&prjTmp,true);
+			pMO->loadStatus(&prjTmp, true);
 		}
 	}
 	//同步实时值
-	else if(method == "getMp"){
+	else if (method == "getMp") {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
 		json rlt = resp["result"];
 		pMO->loadStatus(rlt);
 	}
+
+	return true;
 }
+
+bool MasterDs::handleNotify(json jResp, std::shared_ptr<TDS_SESSION> childSession) {
+	return true;
+
+}
+
+void MasterDs::onRecvPkt(json& jResp, std::shared_ptr<TDS_SESSION> childSession)
+{
+	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
+	try {
+		if (jResp["id"] == nullptr) //主动上送命令
+		{
+			handleNotify(jResp,childSession);
+		}
+		else
+		{
+			int id = jResp["id"].get<int>();
+			if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
+			{
+				RPC_SYNC_INFO* p = m_mapSyncRPCInfo[id];
+				p->jResp = jResp;
+				p->respSignal.notify();
+			}
+			else
+			{
+				handleAsynResp(jResp,childSession);
+			}
+		}
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		string log = "tdsp device ,json parse error. " + errorType;
+	}
+
+
+
+	
+}
+
+bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
+{
+	int iId = m_rpcId++;
+	string childTds = req["childTds"].get<string>();
+	req["id"] = iId;
+	req.erase("childTds");
+	string strReq = req.dump() + "\n\n";
+	
+	LOG("[子服务转发]主->子\r\n" + strReq);
+
+	//找到childSession
+	m_mutexChildTdsList.lock();
+	std::shared_ptr<TDS_SESSION> ioSession = getSessionByTag(childTds);
+	m_mutexChildTdsList.unlock();
+
+	if (ioSession == nullptr) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "子服务离线");
+		return true;
+	}
+
+
+	//设置指定id命令的同步等待信息。
+	//[注意] 必须先设置等待信息，再发送请求。本机release模式下配合模拟器调试。
+	// 有可能还没运行到设置等待信息,就收到了响应，导致响应找不到匹配的请求。
+	RPC_SYNC_INFO* tsi = nullptr;
+	m_csSyncRPCInfo.lock();
+	tsi = new RPC_SYNC_INFO();
+	m_mapSyncRPCInfo[iId] = tsi;
+	m_csSyncRPCInfo.unlock();
+	//发送请求
+	ioSession->sendStr(strReq);
+	//等待请求
+	bool bGetResp = tsi->respSignal.wait_for(3000);
+	//删除同步信息
+	m_csSyncRPCInfo.lock();
+	json resp = tsi->jResp;
+	delete tsi;
+	m_mapSyncRPCInfo.erase(iId);
+	m_csSyncRPCInfo.unlock();
+	//处理响应
+	if (bGetResp)
+	{
+		if (resp["result"] != nullptr) {
+			rpcResp.result = resp["result"].dump();
+			LOG("[子服务转发]子->主\r\n" + rpcResp.result);
+		}
+		else if (resp["error"] != nullptr)
+		{
+			rpcResp.error = resp["error"].dump();
+			LOG("[子服务转发]子->主\r\n" + rpcResp.error);
+		}
+		else
+		{
+			LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
+		}
+	}
+	else
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "子服务响应超时");
+	}
+
+
+	return false;
+}
+
+
 
 
 void thread_masterDsWorkProc(MasterDs* p) {
@@ -173,4 +287,13 @@ MasterDs::MasterDs()
 
 MasterDs::~MasterDs()
 {
+}
+
+std::shared_ptr<TDS_SESSION> MasterDs::getSessionByTag(string tag)
+{
+	for (auto& i : m_vecChildTds) {
+		if (i.second->m_childTdsTag == tag)
+			return i.second;
+	}
+	return nullptr;
 }
