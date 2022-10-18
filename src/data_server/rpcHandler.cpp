@@ -1618,7 +1618,7 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		}
 
 
-		if (pIoDev->pIOSession == nullptr)
+		if (pIoDev->pIOSession == nullptr && pIoDev->m_bUdpDev == false)
 		{
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
 			return true;

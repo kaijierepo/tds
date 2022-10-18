@@ -18,6 +18,13 @@ udpServer::~udpServer(void)
 {
 }
 
+bool udpServer::run(int port)
+{
+	m_port = port;
+	start();
+	return true;
+}
+
 void udpServer::start()
 {
 	// initial socket library
@@ -118,7 +125,7 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 	getsockname(pServ->m_sock, (sockaddr*)&addr, &nLen);
 
 	//等待并接收数据
-	char szBuff[1025];
+	char szBuff[10025];
 	while (true)
 	{
 		SOCKADDR_IN addrCli;
@@ -128,7 +135,8 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 		int recvlen = recvfrom(pServ->m_sock, szBuff, 1024, 0, (sockaddr*)&addrCli, &fromlen);
 		if (recvlen < 0)
 		{
-			break;
+			int iErr = GetLastError();
+			continue;
 		}
 		else
 		{

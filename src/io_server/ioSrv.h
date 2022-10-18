@@ -3,6 +3,7 @@
 #include <string>
 #include "tdscore.h"
 #include "ioDiscoverer.h"
+#include "udpSrv.h"
 
 
 class CHAN_TEMPLATE {
@@ -67,7 +68,7 @@ inline string getDevTypeLabel(string devType) {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
-class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
+class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack ,public IUdpServerCallBack
 {
 public:
 	ioServer();
@@ -122,11 +123,13 @@ public:
 	tcpSrv* m_tcpSrv_mbTcp; //502 modbus tcp协议
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
+	udpServer* m_udpSrv_adaptor;
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 	void OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
+	void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port);
 
 	//传输层处理
 	void handleAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
@@ -156,7 +159,7 @@ public:
 	string getTag(string ioAddr);
 
 	//设备发现必须是某个父设备发现了子设备
-	ioDev* onChildDevDiscovered(json childDevAddr, string type);
+	ioDev* onChildDevDiscovered(json childDevAddr, string type, bool udpDev = false);
 	ioDiscoverer  ioDiscoverService;
 
 

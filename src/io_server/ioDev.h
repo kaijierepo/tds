@@ -229,6 +229,7 @@ public:
 	bool m_bOnline;    //设备发现后，处于在线状态
 	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
+	bool m_bUdpDev;    //udp设备。udp设备没有连接
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	SYSTEMTIME m_stOnlineTime;//设备上线时间戳
 	SYSTEMTIME m_stOfflineTime;//设备掉线时间戳

@@ -28,14 +28,14 @@ if ('WebSocket' in window) {
         function connectHMRSrv()
         {
             var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-            var address = protocol + window.location.hostname + ":668" + window.location.pathname;
+            var address = protocol + window.location.hostname + ":670" + window.location.pathname;
             var socket = new WebSocket(address);
             socket.onmessage = function (msg) {
                 if (msg.data == 'reload') window.location.reload();
                 else if (msg.data == 'refreshcss') refreshCSS();
             };
 			socket.onopen = (event)=>{
-				console.log("tds hot module replacement on 668 connected!");
+				console.log("tds hot module replacement on 670 connected!");
 			};
             if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
                 console.log('Live reload enabled.');
@@ -202,12 +202,13 @@ void HMRServer::run(const std::string dir_path)
     thread t(watchFile_thread, this,dir_path);
     t.detach();
 
-    //http热更新服务 668
+    //http热更新服务 670
     if (tds->conf->debugMode)
     {
         m_httpHotUpdateSrv = new tcpSrv();
         m_httpHotUpdateSrv->m_strName = "hmr service";
-        if (!m_httpHotUpdateSrv->run(this, 668))
+        int hmrPort = 670;
+        if (!m_httpHotUpdateSrv->run(this, hmrPort))
         {
             if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
             {
@@ -217,9 +218,9 @@ void HMRServer::run(const std::string dir_path)
             {
                 LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
             }
-            LOG("[error]HTTP热更新服务websocket服务端口668启动失败！");
+            LOG("[error]HTTP热更新服务websocket服务端口" + str::fromInt(hmrPort) + "668启动失败！");
         }
-        LOG("[Web热更新 ] 端口:" + str::fromInt(668));
+        LOG("[Web热更新 ] 端口:" + str::fromInt(hmrPort));
     }
 }
 

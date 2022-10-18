@@ -287,6 +287,40 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
+void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+{
+	string ioAddr = "adp_" + strIP + ":" + str::fromInt(port);
+
+	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+	//设备发现
+	if (!pIoDev)
+	{
+		json jAddr;
+		jAddr["id"] = ioAddr;
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+	}
+	//设备上线
+	else
+	{
+		if (pIoDev->m_bOnline == false)
+		{
+			pIoDev->setOnline();
+			pIoDev->triggerCycleAcq();
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+		}
+	}
+
+	try {
+		string s = str::fromBuff(recvData, recvDataLen);
+		json jPkt = json::parse(s);
+		pIoDev->onRecvPkt(jPkt);
+	}
+	catch (exception& e) {
+
+	}
+}
+
 bool ioServer::loadConf()
 {
 	string conf;
@@ -917,7 +951,8 @@ bool ioServer::runAsCloud()
 	int tdspPort = tds->conf->getInt("tdspPort", 665);
 	int mbPort = tds->conf->getInt("mbPort", 664);
 	int iq60Port = tds->conf->getInt("iq60Port", 663);
-
+	//adaptor接入端口
+	int adpPort = tds->conf->getInt("adpPort", 662);
 
 	m_mapPort2DevType[tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
 	m_mapPort2DevType[mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
@@ -931,6 +966,7 @@ bool ioServer::runAsCloud()
 	if(mbTcpPort)LOG("[IO服务    ] 端口:" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
 	if(iq60Port)LOG("[IO服务    ] 端口:" + str::fromInt(iq60Port) + " 设备通信协议 IQ60物云通信协议");
 	if(leakDetectPort)LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
+	if (adpPort)LOG("[IO服务    ] UDP端口:" + str::fromInt(adpPort) + " adaptor接入");
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
@@ -996,6 +1032,15 @@ bool ioServer::runAsCloud()
 	else
 	{
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(leakDetectPort));
+	}
+
+	//adaptor接入服务
+	m_udpSrv_adaptor = new udpServer();
+	if (m_udpSrv_adaptor->run(adpPort)) {
+
+	}
+	else {
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(adpPort));
 	}
 
 
@@ -1145,9 +1190,10 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
+ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type,bool udpDev)
 {
 	ioDev* p = createIODev(type);
+	p->m_bUdpDev = udpDev;
 	if (p == nullptr) return nullptr;
 
 	p->m_jDevAddr = childDevAddr;

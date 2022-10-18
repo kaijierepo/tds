@@ -127,7 +127,7 @@ void tdsWatchDog::run()
 
 	watchDog.log("TDS Daemon 服务启动");
 	m_foodPlate.m_pCallback = this;
-	m_foodPlate.m_port = 660;
+	m_foodPlate.m_port = FOOD_PLATE_PORT;
 	m_foodPlate.start();
 	thread t(thread_checkFood);
 	t.detach();
@@ -383,7 +383,7 @@ void thread_feedDog() {
 
 void tdsDogFeeder::run()
 {
-	m_foodCart.m_port = 661;
+	m_foodCart.m_port = FOOD_FEEDER_PORT;
 	m_foodCart.start();
 	thread t(thread_feedDog);
 	t.detach();
@@ -392,5 +392,5 @@ void tdsDogFeeder::run()
 void tdsDogFeeder::sendFood()
 {
 	string data = "yummy bone";
-	m_foodCart.SendData((char*)data.c_str(), data.length(), "127.0.0.1", 660);
+	m_foodCart.SendData((char*)data.c_str(), data.length(), "127.0.0.1", FOOD_PLATE_PORT);
 }

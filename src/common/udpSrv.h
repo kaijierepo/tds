@@ -16,6 +16,7 @@ public:
 	int OnRecvData(char* recvData, int recvDataLen, string strIP, int port);
 	int SendData(char* pData, int iLen, string strIP, int port);
 
+	bool run(int port);
 	void start();
 	void stop();
 

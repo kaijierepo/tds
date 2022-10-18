@@ -89,6 +89,7 @@ ioDev::ioDev(void)
 	m_pParent = NULL;
 	m_bOnline = false;
 	m_iSendDataFailCount = 0;
+	m_bUdpDev = false;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stOnlineTime, 0, sizeof(SYSTEMTIME));
@@ -309,8 +310,13 @@ bool ioDev::loadConf(json& conf)
 
 		if (m_jDevAddr.is_object())
 		{
-			if (m_jDevAddr["id"] != nullptr)
+			if (m_jDevAddr["id"] != nullptr) {
 				m_addrMode = DEV_ADDR_MODE::deviceID;
+				string id = m_jDevAddr["id"];
+				if (id.find("adp") != string::npos) {
+					m_bUdpDev = true;
+				}
+			}
 			else if (m_jDevAddr.contains("port"))
 				m_addrMode = DEV_ADDR_MODE::tcpServer;
 			else
@@ -713,8 +719,18 @@ bool ioDev::sendData(char* pData, int iLen)
 		if (m_bEnableIoLog)
 			statisOnSend((char*)pData, iLen, getIOAddrStr());
 	}
-	else
-		return false;
+	else {
+		string ioAddr = getIOAddrStr();
+		if (ioAddr.find("adp") != string::npos) {
+			if (ioSrv.m_udpSrv_adaptor != nullptr) {
+				ioSrv.m_udpSrv_adaptor->SendData(pData, iLen, "127.0.0.1", 660);
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
 	return true;
 }
 
