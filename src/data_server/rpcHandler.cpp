@@ -1011,57 +1011,65 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 		result = rpc_setconf(params, error);
 	}
-	else if (method == "setMOTree")
+	else if (method == "setMOTree" || method == "setObj")
 	{
-		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		if (!params.contains("tag")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");	
+		}
+		else {
+			string tag = params["tag"];
 
-		//加载新的树
-		project tmpPrj;
-		tmpPrj.loadConf(params);
-		tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
-		prj.clear();
-		prj.m_name = tmpPrj.m_name;
-		prj.m_parentTag = tmpPrj.m_parentTag;
-		prj.m_mapAllMP = tmpPrj.m_mapAllMP;
-		prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
-		prj.m_childMO = tmpPrj.m_childMO;
-		for (int i = 0; i < prj.m_childMO.size(); i++) {
-			OBJ* p = prj.m_childMO[i];
-			p->m_pParentMO = &prj;
-		}
-		tmpPrj.m_childMO.clear();
-		prj.saveConfFile();
-		ioSrv.updateTag2IOAddrBinding();
-		ioSrv.updateAllChanVal();
-		result = "\"ok\"";
-	}
-	else if (method == "setMo") { //只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
-		if (params.is_object()) //单个设置
-		{
-			json mo = params;
-			string tag = mo["tag"].get<string>();
-			string rootTag = "";
-			if (mo.contains("rootTag"))
-				rootTag = mo["rootTag"].get<string>();
-			tag = TAG::addRoot(tag, rootTag);
-			tag = TAG::addRoot(tag, session.org);
-			prj.setMo(mo,tag);
-		}
-		else if (params.is_array())
-		{
-			for (int i = 0; i < params.size(); i++) {
-				json& mo = params[i];
-				string tag = mo["tag"].get<string>();
-				string rootTag = "";
-				if (mo.contains("rootTag"))
-					rootTag = mo["rootTag"].get<string>();
-				tag = TAG::addRoot(tag, rootTag);
-				tag = TAG::addRoot(tag, session.org);
-				prj.setMo(mo, tag);
+			if (tag == "") {
+				unique_lock<shared_mutex> lock(prj.m_csPrj);
+				//加载新的树
+				project tmpPrj;
+				tmpPrj.loadConf(params);
+				tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
+				prj.clear();
+				prj.m_name = tmpPrj.m_name;
+				prj.m_parentTag = tmpPrj.m_parentTag;
+				prj.m_mapAllMP = tmpPrj.m_mapAllMP;
+				prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
+				prj.m_childMO = tmpPrj.m_childMO;
+				for (int i = 0; i < prj.m_childMO.size(); i++) {
+					OBJ* p = prj.m_childMO[i];
+					p->m_pParentMO = &prj;
+				}
+				tmpPrj.m_childMO.clear();
+				prj.saveConfFile();
+				ioSrv.updateTag2IOAddrBinding();
+				ioSrv.updateAllChanVal();
+				result = "\"ok\"";
+			}
+			else {//只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
+				if (params.is_object()) //单个设置
+				{
+					json mo = params;
+					string tag = mo["tag"].get<string>();
+					string rootTag = "";
+					if (mo.contains("rootTag"))
+						rootTag = mo["rootTag"].get<string>();
+					tag = TAG::addRoot(tag, rootTag);
+					tag = TAG::addRoot(tag, session.org);
+					prj.setMo(mo, tag);
+				}
+				else if (params.is_array())
+				{
+					for (int i = 0; i < params.size(); i++) {
+						json& mo = params[i];
+						string tag = mo["tag"].get<string>();
+						string rootTag = "";
+						if (mo.contains("rootTag"))
+							rootTag = mo["rootTag"].get<string>();
+						tag = TAG::addRoot(tag, rootTag);
+						tag = TAG::addRoot(tag, session.org);
+						prj.setMo(mo, tag);
+					}
+				}
+				prj.saveConfFile();
+				result = "\"ok\"";
 			}
 		}
-		prj.saveConfFile();
-		result = "\"ok\"";
 	}
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
