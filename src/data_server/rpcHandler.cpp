@@ -2128,6 +2128,12 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		return;
 	}
 
+	string rootTag = "";
+	if (params.contains("rootTag"))
+		rootTag = params["rootTag"].get<string>();
+	tag = TAG::addRoot(tag, rootTag);
+	tag = TAG::addRoot(tag, session.org);
+
 	if (tag != "")
 	{
 		MP* pmp = prj.GetMPByTag(tag);
