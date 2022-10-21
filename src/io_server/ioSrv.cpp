@@ -298,8 +298,15 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 		json jPkt = json::parse(s);
 
 		string ioAddr = jPkt["ioAddr"].get<string>();
+		string ioAddrWithoutPort = ioAddr;
+		//除去端口号
+		int pos = ioAddr.find(":");
+		if (pos > 0) {
+			ioAddrWithoutPort = ioAddr.substr(0, pos);
+		}
 
-		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
+		ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort,false,true); 
 		//设备发现
 		if (!pIoDev)
 		{
@@ -791,10 +798,10 @@ void ioServer::rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSI
 	}
 }
 
-ioDev* ioServer::getIODev(string ioAddr,bool bChn)
+ioDev* ioServer::getIODev(string ioAddr,bool bChn,bool ignorePort)
 {
 	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	return ioDev::getIODev(ioAddr,bChn);
+	return ioDev::getIODev(ioAddr,bChn,ignorePort);
 }
 
 

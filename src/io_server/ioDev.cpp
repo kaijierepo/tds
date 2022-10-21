@@ -525,7 +525,7 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 	return false;
 }
 
-ioDev* ioDev::getIODev(string ioAddr,bool bChn)
+ioDev* ioDev::getIODev(string ioAddr,bool bChn,bool ignorePort)
 {
 	vector<string> vecNodeName;
 	str::split(vecNodeName, ioAddr, "/");
@@ -541,7 +541,7 @@ ioDev* ioDev::getIODev(string ioAddr,bool bChn)
 		bool findNode = false;
 		for (auto& it : *vecChildNode)
 		{
-			string nodeNameTmp = it->getDevAddrStr();
+			string nodeNameTmp = it->getDevAddrStr(ignorePort);
 			if (bChn) {
 				str::hanZi2Pinyin(nodeNameTmp, nodeNameTmp);
 				str::hanZi2Pinyin(nodeName, nodeName);
@@ -629,7 +629,7 @@ string ioDev::getIOAddrStr()
 	return devAddr;
 }
 
-string ioDev::getDevAddrStr()
+string ioDev::getDevAddrStr(bool ignorePort)
 {
 	string devAddr;
 	if (m_jDevAddr.is_object())
@@ -637,6 +637,12 @@ string ioDev::getDevAddrStr()
 		if (m_jDevAddr["id"] != nullptr)
 		{
 			devAddr = m_jDevAddr["id"].get<string>();
+			if (ignorePort) {
+				int pos = devAddr.find(":");
+				if (pos > 0) {
+					devAddr = devAddr.substr(0, pos);
+				}
+			}
 		}
 		else if (m_jDevAddr["ip"] != nullptr)
 		{
@@ -644,7 +650,8 @@ string ioDev::getDevAddrStr()
 			if (m_jDevAddr["port"] != nullptr)
 			{
 				int remotePort = m_jDevAddr["port"].get<int>();
-				devAddr += ":" + str::fromInt(remotePort);
+				if(!ignorePort)
+					devAddr += ":" + str::fromInt(remotePort);
 			}
 		}
 		else if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
