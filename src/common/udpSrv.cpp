@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "udpSrv.h"
 #include "logger.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <WS2tcpip.h>
 
 DWORD WINAPI RecvThread(LPVOID lpParam);
 
@@ -35,6 +39,44 @@ void udpServer::start()
 	wVerisonRequested = MAKEWORD(1, 1);
 	err = WSAStartup(wVerisonRequested, &wsaData);
 
+	//创建socket套接字
+	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (INVALID_SOCKET == m_sock)
+	{
+		int iErr = GetLastError();
+		LOG("create udp sock error,%d", iErr);
+		return;
+	}
+	else {
+
+	}
+
+	//绑定
+	sockaddr_in addr = { 0 };
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons((u_short)(m_port));
+	if (m_bindIP == "0.0.0.0")
+	{
+		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	}
+	else
+	{
+		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
+
+	}
+	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
+	if (0 != nBind)
+	{
+		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		LOG(strData);
+		return;
+	}
+
+	//获得已经绑定的端口号
+	int nLen = sizeof(addr);
+	getsockname(m_sock, (sockaddr*)&addr, &nLen);
+
+
 	DWORD dwThread = 0;
 	HANDLE hThread = CreateThread(NULL, 0, RecvThread, (LPVOID)this, 0, &dwThread);
 	if (hThread == NULL)
@@ -51,6 +93,72 @@ void udpServer::stop()
 {
 	closesocket(m_sock);//关闭套接字
 	m_sock = 0;
+}
+
+void udpServer::startMultiCast(string multiCastAddr, int port)
+{
+	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+	//sock = m_sock;
+
+	//绑定
+	struct in_addr localInterface;
+	localInterface.s_addr = inet_addr(m_bindIP.c_str());
+	
+	//int iRet = setsockopt(sock, IPPROTO_IP, IP_MULTICAST_IF, (char*)&localInterface, sizeof(localInterface));
+	//if (iRet != 0) {
+	//	printf("setsockopt fail:%d", WSAGetLastError());
+	//	return;
+	//}
+
+
+	//绑定
+	sockaddr_in addr = { 0 };
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons((u_short)(m_port+10));
+	if (m_bindIP == "0.0.0.0")
+	{
+		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+	}
+	else
+	{
+		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
+
+	}
+	int nBind = ::bind(sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
+	if (0 != nBind)
+	{
+		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		LOG(strData);
+		return;
+	}
+
+
+	int ttl = 255;
+	int iRet = setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (char*)&ttl, sizeof(ttl));
+	if (iRet != 0) {
+		printf("setsockopt fail:%d", WSAGetLastError());
+		return;
+	}
+
+	m_multiCastSendAddr = multiCastAddr;
+	m_multiCastSendPort = port;
+	m_multiCastSendSock = sock;
+}
+
+void udpServer::multiCast(char* pData, int len)
+{
+	sockaddr_in addr;
+	addr.sin_addr.S_un.S_addr = inet_addr(m_multiCastSendAddr.c_str());
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(m_multiCastSendPort);
+
+	int iSend = sendto(m_multiCastSendSock, pData, len, 0, (sockaddr*)&addr, sizeof(sockaddr));
+}
+
+void udpServer::addToMultiCast(string multiCastAddr, int port)
+{
+
+
 }
 
 int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int port)
@@ -88,42 +196,6 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 {
 	udpServer* pServ = (udpServer*)lpParam;
 
-	//创建socket套接字
-	pServ->m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (INVALID_SOCKET == pServ->m_sock)
-	{
-		int iErr = GetLastError();
-		LOG("create udp sock error,%d", iErr);
-		return 0;
-	}
-	else {
-
-	}
-
-	//绑定
-	sockaddr_in addr = { 0 };
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons((u_short)(pServ->m_port));
-	if (pServ->m_bindIP == "0.0.0.0")
-	{
-		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
-	}
-	else
-	{
-		addr.sin_addr.s_addr = inet_addr(pServ->m_bindIP.c_str());
-
-	}
-	int nBind = ::bind(pServ->m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
-	if (0 != nBind)
-	{
-		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d", pServ->m_bindIP.c_str(), pServ->m_port);
-		LOG(strData);
-		return 0;
-	}
-
-	//获得已经绑定的端口号
-	int nLen = sizeof(addr);
-	getsockname(pServ->m_sock, (sockaddr*)&addr, &nLen);
 
 	//等待并接收数据
 	char szBuff[10025];

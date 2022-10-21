@@ -1991,6 +1991,25 @@ namespace common {
 	}
 }
 
+
+namespace buffer {
+	inline unsigned char setBit(unsigned char byte, int bitIdx, int val) {
+		if (val) {
+			unsigned char byteSet = 1 << bitIdx;
+			byte |= byteSet;
+		}
+		else {
+			unsigned char byteSet = 1 << bitIdx;
+			byteSet = 0xFF - byteSet;
+			byte &= byteSet;
+		}
+		return byte;
+	}
+	inline unsigned char setBit(unsigned char byte, int bitIdx, bool val) {
+		return setBit(byte, bitIdx, val ? 1 : 0);
+	}
+}
+
 #include <stdio.h>
 
 /**

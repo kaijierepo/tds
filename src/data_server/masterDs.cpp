@@ -23,6 +23,7 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 
 		json jReq, jParam;
 		jReq["method"] = "getObj";
+		jParam["tag"] = "";
 		jParam["getConf"] = true;
 		jParam["getConfDetail"] = true;
 		jParam["getMp"] = true;
