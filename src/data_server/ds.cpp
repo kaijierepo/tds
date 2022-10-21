@@ -210,8 +210,6 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 //onRecvData需要组包
 bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
 {
-	tdsSession->statisOnRecv(pData, iLen);
-
 	DWORD dwDataLen = iLen;
 
 	//tds rpc over tcp

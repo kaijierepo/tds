@@ -12,6 +12,7 @@
 #include "httplib.h"
 #include "ioDev/ioDev_tdsp.h"
 #include "base64.h"
+#include "webSrv.h"
 
 
 ioServer ioSrv;
@@ -289,31 +290,34 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 
 void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
-	string ioAddr = "adp_" + strIP + ":" + str::fromInt(port);
-
-	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
-	//设备发现
-	if (!pIoDev)
-	{
-		json jAddr;
-		jAddr["id"] = ioAddr;
-		pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-	}
-	//设备上线
-	else
-	{
-		if (pIoDev->m_bOnline == false)
-		{
-			pIoDev->setOnline();
-			pIoDev->triggerCycleAcq();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
-		}
-	}
+	IOLogRecv(recvData, recvDataLen, "UDP - " + strIP + ":" + str::fromInt(port));
 
 	try {
 		string s = str::fromBuff(recvData, recvDataLen);
+	
 		json jPkt = json::parse(s);
+
+		string ioAddr = jPkt["ioAddr"].get<string>();
+
+		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+		//设备发现
+		if (!pIoDev)
+		{
+			json jAddr;
+			jAddr["id"] = ioAddr;
+			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+		}
+		//设备上线
+		else
+		{
+			if (pIoDev->m_bOnline == false)
+			{
+				pIoDev->setOnline();
+				pIoDev->triggerCycleAcq();
+				GetLocalTime(&pIoDev->m_stLastActiveTime);
+				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			}
+		}
 		pIoDev->onRecvPkt(jPkt);
 	}
 	catch (exception& e) {
@@ -1036,7 +1040,7 @@ bool ioServer::runAsCloud()
 
 	//adaptor接入服务
 	m_udpSrv_adaptor = new udpServer();
-	if (m_udpSrv_adaptor->run(adpPort)) {
+	if (m_udpSrv_adaptor->run(this,adpPort)) {
 
 	}
 	else {
@@ -1581,7 +1585,7 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
-	tdsSession->statisOnRecv((char*)pData, iLen);
+	IOLogRecv((char*)pData, iLen,tdsSession->getRemoteAddr());
 
 	DWORD dwDataLen = iLen;
 

@@ -188,6 +188,11 @@ bool ioDev::toJson(json& conf, json opt)
 		if (m_strChanTemplate != "")
 			conf["chanTemplate"] = m_strChanTemplate;
 		conf["nodeID"] = m_confNodeId;
+		if (m_acqMode != "")
+			conf["acqMode"] = m_acqMode;
+		if (m_chanGroup != "")
+			conf["chanGroup"] = m_chanGroup;
+
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
@@ -342,6 +347,14 @@ bool ioDev::loadConf(json& conf)
 	if (conf["chanTemplate"] != nullptr)
 	{
 		m_strChanTemplate = conf["chanTemplate"].get<string>();
+	}
+
+	if (conf["acqMode"] != nullptr) {
+		m_acqMode = conf["acqMode"].get<string>();
+	}
+
+	if (conf["chanGroup"] != nullptr) {
+		m_chanGroup = conf["chanGroup"].get<string>();
 	}
 
 	if (conf["nodeID"] != nullptr)
@@ -717,13 +730,15 @@ bool ioDev::sendData(char* pData, int iLen)
 	{
 		pIOSession->send(pData, iLen);
 		if (m_bEnableIoLog)
-			statisOnSend((char*)pData, iLen, getIOAddrStr());
+			IOLogSend((char*)pData, iLen,true, pIOSession->getRemoteAddr());
 	}
 	else {
 		string ioAddr = getIOAddrStr();
 		if (ioAddr.find("adp") != string::npos) {
 			if (ioSrv.m_udpSrv_adaptor != nullptr) {
 				ioSrv.m_udpSrv_adaptor->SendData(pData, iLen, "127.0.0.1", 660);
+				if (m_bEnableIoLog)
+					IOLogSend((char*)pData, iLen,true, "UDP - 127.0.0.1:660");
 			}
 		}
 		else

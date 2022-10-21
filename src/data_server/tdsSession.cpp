@@ -137,94 +137,6 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
-void TDS_SESSION::statisOnSend(char* p, int len,bool success)
-{
-    {
-        shared_lock<shared_mutex> lock(csSessionPktSessions);
-        if (sessionPktSessions.size() == 0)
-            return;
-    }
-    
-
-    //监视会话的数据包不记录日志
-    //if (type == TDS_SESSION_TYPE::sessionPkt ||
-    //    type == TDS_SESSION_TYPE::commpkt ||
-    //    type == TDS_SESSION_TYPE::log ||
-    //    type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
-    //{
-    //    return;
-    //}
-
-
-    //仅监视io数据包
-    if (type.find(TDS_SESSION_TYPE::iodev) == string::npos)
-    {
-        return;
-    }
-    if (!m_bNeedLog)
-        return;
-
-    json j;
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    j["time"] = timeopt::st2strWithMilli(st);
-    j["remoteAddr"] = getRemoteAddr();
-    if(success)
-        j["type"] = "发送成功";
-    else
-        j["type"] = "发送失败";
-    j["len"] = len;
-    j["data"] = str::bytesToHexStr(p, len);
-    j["sessionType"] = type;
-    string s = j.dump(4);
-
-    sendToSessionPktSessions((char*)s.c_str(), s.length());
-}
-
-
-void TDS_SESSION::statisOnRecv(char* p, int len)
-{
-    {
-        shared_lock<shared_mutex> lock(csSessionPktSessions);
-        if (sessionPktSessions.size() == 0)
-            return;
-    }
-    //监视会话的数据包不记录日志
-    //if (type == TDS_SESSION_TYPE::sessionPkt ||
-    //    type == TDS_SESSION_TYPE::commpkt ||
-    //    type == TDS_SESSION_TYPE::log ||
-    //    type == TDS_SESSION_TYPE::video) //sessionPkt自己的日志不记录
-    //{
-    //    return;
-    //}
-
-    //仅监视io数据包
-    if (type.find(TDS_SESSION_TYPE::iodev) == string::npos)
-    {
-        return;
-    }
-
-    try {
-        json j;
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        j["time"] = timeopt::st2strWithMilli(st);
-        j["remoteAddr"] = getRemoteAddr();
-        j["type"] = "接收";
-        j["len"] = len;
-        //j["data"] = str::fromBuff(p, len);
-        j["data"] = str::bytesToHexStr(p, len);
-        j["sessionType"] = type;
-        string s = j.dump();
-        sendToSessionPktSessions((char*)s.c_str(), s.length());
-    }
-    catch (std::exception& e)
-    {
-        LOG("[error]接收到非utf8字符串,tdsSession=%s,%s", getRemoteAddr().c_str(), e.what());
-    }
-}
-
-
 
  int TDS_SESSION::send(char* p,int len,bool bNeedLog){
      GetLocalTime(&lastSendTime);
@@ -246,8 +158,8 @@ void TDS_SESSION::statisOnRecv(char* p, int len)
      }
 
 
-     if (bNeedLog)
-         statisOnSend(p, len,iSend>0);
+     if (bNeedLog && type == TDS_SESSION_TYPE::iodev)
+         IOLogSend(p, len,iSend>0,getRemoteAddr());
      return 0;
  }
 

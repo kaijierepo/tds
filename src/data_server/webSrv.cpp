@@ -62,36 +62,83 @@ void sendToCommLog(string s)
 	}
 }
 
-//session通信监视会话
+//io通信监视会话
 //会话数据包 监视会话。不监视自己的数据包发送。
 //rpc的实时数据轮询时。 响应线程多线程处理。 会并发调用此发送接口。
-vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
-shared_mutex csSessionPktSessions;
-void sendToSessionPktSessions(char* p, int len)
+vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
+shared_mutex csIoPktMonitorClient;
+void sendToPktMonitorClient(char* p, int len)
 {
-	csSessionPktSessions.lock();
-	for (int i = 0; i < sessionPktSessions.size(); i++)
+	csIoPktMonitorClient.lock();
+	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
-		std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
 		if (!session->isConnected())
 		{
-			sessionPktSessions.erase(sessionPktSessions.begin() + i);
+			ioPktMonitorClient.erase(ioPktMonitorClient.begin() + i);
 			i--;
 			continue;
 		}
 	}
-	csSessionPktSessions.unlock();
+	csIoPktMonitorClient.unlock();
 
-	csSessionPktSessions.lock_shared();
-	for (int i = 0; i < sessionPktSessions.size(); i++)
+	csIoPktMonitorClient.lock_shared();
+	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
-		std::shared_ptr<TDS_SESSION> session = sessionPktSessions[i];
+		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
 		session->send(p, len, false);
 	}
-	csSessionPktSessions.unlock_shared();
+	csIoPktMonitorClient.unlock_shared();
 }
+void IOLogSend(char* p, int len, bool success,string remoteAddr)
+{
+	{
+		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
+		if (ioPktMonitorClient.size() == 0)
+			return;
+	}
 
 
+	json j;
+	SYSTEMTIME st;
+	GetLocalTime(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["remoteAddr"] = remoteAddr;
+	if (success)
+		j["type"] = "发送成功";
+	else
+		j["type"] = "发送失败";
+	j["len"] = len;
+	j["data"] = str::bytesToHexStr(p, len);
+	string s = j.dump(4);
+	sendToPktMonitorClient((char*)s.c_str(), s.length());
+}
+void IOLogRecv(char* p, int len,string remoteAddr)
+{
+	{
+		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
+		if (ioPktMonitorClient.size() == 0)
+			return;
+	}
+	
+	try {
+		json j;
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		j["time"] = timeopt::st2strWithMilli(st);
+		j["remoteAddr"] = remoteAddr;
+		j["type"] = "接收";
+		j["len"] = len;
+		//j["data"] = str::fromBuff(p, len);
+		j["data"] = str::bytesToHexStr(p, len);
+		string s = j.dump();
+		sendToPktMonitorClient((char*)s.c_str(), s.length());
+	}
+	catch (std::exception& e)
+	{
+		LOG("[error]接收到非utf8字符串,ioSession=%s,%s", remoteAddr.c_str(), e.what());
+	}
+}
 
 
 
@@ -736,10 +783,10 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		logger.logOutput = logToWebsock;
 		tdsSession->setActivityCheck(false);
 	}
-	else if (strData.find("/sessionpkt") != string::npos)
+	else if (strData.find("/iopkt") != string::npos)
 	{
 		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
-		sessionPktSessions.push_back(tdsSession);
+		ioPktMonitorClient.push_back(tdsSession);
 		tdsSession->setActivityCheck(false);
 	}
 	else if (strData.find("/commpkt") != string::npos)

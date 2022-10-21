@@ -122,8 +122,6 @@ public:
 	bool isConnected();
 	bool disconnect();
     string GetClientIp();
-	void statisOnSend(char* p, int len,bool success);
-	void statisOnRecv(char* p, int len);
 	int send(char* p,int len,bool bNeedLog = true);
 	int sendStr(string str, bool bNeedLog = true);
 	int getSendedBytes();
@@ -159,4 +157,4 @@ public:
 	bool m_bSingleDevMode; //单设备模式，默认可以多设备。 收到imei首发数据包则转换为单设备模式。
 };
 
-extern vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
+extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;

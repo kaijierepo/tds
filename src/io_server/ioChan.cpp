@@ -6,6 +6,7 @@
 ioChannel::ioChannel()
 {
 	m_level = "channel";
+	m_ioType = CHAN_IO_TYPE::I;
 }
 
 
@@ -172,5 +173,5 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 bool ioChannel::output(json jVal, json& rlt,json& err, bool sync)
 {
 	ioDev* pDev = ioDev::m_pParent;
-	return pDev->output(this,jVal, rlt,err,sync);
+	return pDev->output(getDevAddrStr(),jVal, rlt,err,sync);
 }

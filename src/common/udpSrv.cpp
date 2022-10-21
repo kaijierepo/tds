@@ -18,9 +18,10 @@ udpServer::~udpServer(void)
 {
 }
 
-bool udpServer::run(int port)
+bool udpServer::run(IUdpServerCallBack* pcb, int port)
 {
 	m_port = port;
+	m_pCallback = pcb;
 	start();
 	return true;
 }

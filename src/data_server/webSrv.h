@@ -35,9 +35,11 @@ extern WebServer* webSrvS2;
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern void sendToCommLog(string s);
 
-extern vector<std::shared_ptr<TDS_SESSION>> sessionPktSessions;
-extern shared_mutex csSessionPktSessions;
-extern void sendToSessionPktSessions(char* p, int len);
+extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
+extern shared_mutex csIoPktMonitorClient;
+extern void sendToPktMonitorClient(char* p, int len);
+extern void IOLogSend(char* p, int len, bool success, string remoteAddr);
+extern void IOLogRecv(char* p, int len, string remoteAddr);
 
 extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);

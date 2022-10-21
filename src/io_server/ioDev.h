@@ -184,6 +184,8 @@ public:
 	//对于设备tagBind表示设备安装在某个对象上,该对象一般视作智能设备
 	string m_strTagBind;
 	string m_strChanTemplate;
+	string m_acqMode; //周期采集模式，分 all group single 三种模式
+	string m_chanGroup;//在acqMode为group模式下有效
 	OBJ* m_pMO;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
