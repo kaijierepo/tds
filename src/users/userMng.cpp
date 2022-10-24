@@ -3,6 +3,7 @@
 #include "common/common.h"
 #include "obj.h"
 #include "logger.h"
+#define PBKDF2_SHA256_IMPLEMENTATION
 #include "pbkdf2_sha256.h"
 
 userManager userMng;

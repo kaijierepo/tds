@@ -53,7 +53,7 @@ namespace IO_DEV_TYPE {
 	}
 };
 
-string getDevTypeLabel(string devType) {
+inline string getDevTypeLabel(string devType) {
 	if (devType == IO_DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
 	else if (devType == IO_DEV_TYPE::DEV::modbus_tcp_slave)return "ModbusTCP";
 	else if (devType == IO_DEV_TYPE::DEV::tdsp_device)return "TDSP";
