@@ -1,4 +1,6 @@
 #pragma once
+
+#ifdef ENABLE_GENICAM
 #include "tdsSession.h"
 #include "tds.h"
 #include "tdscore.h"
@@ -43,11 +45,11 @@ public:
 	virtual bool stopStream() = 0;
 	virtual bool pushStream(STREAM_DATA& sd);
 	void calcSrcFrameRate();
-	vector<string> m_streamId; //¿ÉÍ¬Ê±Íù¶à¸öidÍÆÁ÷
+	vector<string> m_streamId; //å¯åŒæ—¶å¾€å¤šä¸ªidæ¨æµ
 	vector<streamSrvNode*> m_srvNode;
-	STREAM_INFO m_streamInfoConf; //Ö¸¶¨µÄÍÆÁ÷²ÎÊı.¸ù¾İ²ÎÊı½øĞĞÍÆÁ÷Ç°×ª»»¡£ Èç¹ûĞèÒªÉèÖÃÍÆÁ÷µÄÂëÂÊ£¬ÔÚ´Ë´¦ÉèÖÃ
-	STREAM_INFO m_streamInfo; //¸ù¾İm_streamInfoConf½øĞĞÍ¼Ïñ×ª»»ºó£¬ Êµ¼ÊµÄÍÆÁ÷²ÎÊı
-	float frameRate; //ÂëÁ÷Ô´Ö¡ÂÊ¡£ ¿ÉÒÔÔÚÍÆÁ÷¶ËºÍÀ­Á÷¶Ë½øĞĞÖ¡ÂÊ×ª»»
+	STREAM_INFO m_streamInfoConf; //æŒ‡å®šçš„æ¨æµå‚æ•°.æ ¹æ®å‚æ•°è¿›è¡Œæ¨æµå‰è½¬æ¢ã€‚ å¦‚æœéœ€è¦è®¾ç½®æ¨æµçš„ç ç‡ï¼Œåœ¨æ­¤å¤„è®¾ç½®
+	STREAM_INFO m_streamInfo; //æ ¹æ®m_streamInfoConfè¿›è¡Œå›¾åƒè½¬æ¢åï¼Œ å®é™…çš„æ¨æµå‚æ•°
+	float frameRate; //ç æµæºå¸§ç‡ã€‚ å¯ä»¥åœ¨æ¨æµç«¯å’Œæ‹‰æµç«¯è¿›è¡Œå¸§ç‡è½¬æ¢
 	time_t m_pushFrameRateStatisTick;
 	int m_pushFrameRateStatisCount;
 	float downSamplingInterval;
@@ -64,8 +66,8 @@ public:
 	void* user;
 
 	STREAM_DATA destData;
-	STREAM_INFO m_streamInfo; //À­Á÷ÕßÇëÇóµÄÂëÁ÷²ÎÊı
-	float downSamplingInterval; //À­Á÷Õß¿ÉÒÔÖ¸¶¨Ö¡ÂÊ£¬µ«±ØĞëĞ¡ÓÚÍÆÁ÷µÄÖ¡ÂÊ
+	STREAM_INFO m_streamInfo; //æ‹‰æµè€…è¯·æ±‚çš„ç æµå‚æ•°
+	float downSamplingInterval; //æ‹‰æµè€…å¯ä»¥æŒ‡å®šå¸§ç‡ï¼Œä½†å¿…é¡»å°äºæ¨æµçš„å¸§ç‡
 	int frameIntervalIdx; // 0 - downSamplingInterval-1
 
 	STREAM_PULLER()
@@ -93,7 +95,7 @@ public:
 	void addPuller(std::shared_ptr<TDS_SESSION> tdsSession, STREAM_INFO* si=NULL);
 	void addPuller(void* user, fp_onVideoStreamRecv callbackFunc, STREAM_INFO* si=NULL);
 	void setPusher(STREAM_PUSHER* pusher);
-	vector<STREAM_PULLER*> m_streamPuller; //À­Á÷·½
+	vector<STREAM_PULLER*> m_streamPuller; //æ‹‰æµæ–¹
 	STREAM_PUSHER* m_streamPusher;
 	
 #ifdef ENABLE_FFMPEG
@@ -112,3 +114,5 @@ public:
 	int GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPixel, float minval, float maxval);
 	int DynamicRangeControl(float* pData, int w, int h, float& minVal, float& maxVal);
 };
+
+#endif

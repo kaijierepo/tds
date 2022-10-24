@@ -62,13 +62,18 @@ public:
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	string rpc_io_scanChannel(json params, string& error);
-	string rpc_setStream(json params, string& error);
+
 
 	//serial function
 	string rpc_openCom(json params, string& error);
-	string rpc_getStreamInfo(json params, string& error);
 	string rpc_com_list(json params, string& error);
 	string rpc_closeCom(json params, string& error);
+
+	//genicam steam function
+#ifdef ENABLE_GENICAM
+	string rpc_getStreamInfo(json params, string& error);
+	string rpc_setStream(json params, string& error);
+#endif
 
 	//notification
 	//orgSession不为null表示来自于tds客户端，为null表示来自tds服务

@@ -2,7 +2,7 @@
 #include "webSrv.h"
 #include "tdsSession.h"
 #include "rpcHandler.h"
-#include "common/common.hpp"
+#include "common/common.h"
 #include "logger.h"
 #include "proto/wsProto.h"
 #include "httplib.h"
@@ -600,7 +600,7 @@ int WebServer::sendToAllWebsock(string& s)
 //同一个websocket上存在多个rpc请求重叠调用时
 //例如再等待一个设备响应，时间比较长。 同时在读取服务器缓存
 //因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
-int WebServer::sendToWs(char* p, int len, int sockPipe)
+int WebServer::sendToWs(char* p, size_t len, int sockPipe)
 {
 	//assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 	if (len + sizeof(len) > MG_IO_SIZE) {
@@ -700,8 +700,8 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)
 	{
-		int pos = strData.find("terminal");
-		int pos1 = strData.find(" ", pos);
+		size_t pos = strData.find("terminal");
+		size_t pos1 = strData.find(" ", pos);
 		string ioAddr = strData.substr(pos + 9, pos1 - (pos + 9));
 		ioDev* p = ioSrv.getIODev(ioAddr);
 		if (p && p->pIOSession != NULL)

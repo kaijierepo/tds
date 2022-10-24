@@ -22,7 +22,6 @@ public:
 	string getScriptPath(json& params, RPC_SESSION session);
 	bool rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	//获得属于某一个位号的脚本列表
 	json getScriptList(string tag);
 
 	void loopExe();

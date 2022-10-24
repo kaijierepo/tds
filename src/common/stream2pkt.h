@@ -31,8 +31,8 @@ public:
 	void PushStream(unsigned char* pData, int iLen);
 	void PushStream(char* pData, int iLen);
 	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
-	//faultTolerantÊÇ·ñÈİ´í£¬ÔÊĞíÊı¾İ°üÖ®¼äÓĞÒì³£Êı¾İ³öÏÖ
-	//´ò¿ªÈİ´í»á½µµÍĞÔÄÜ
+	//faultTolerantæ˜¯å¦å®¹é”™ï¼Œå…è®¸æ•°æ®åŒ…ä¹‹é—´æœ‰å¼‚å¸¸æ•°æ®å‡ºç°
+	//æ‰“å¼€å®¹é”™ä¼šé™ä½æ€§èƒ½
 	bool PopPkt(fp_validPktCheck pktCheckFn,bool faultTolerant = true);
 	bool PopAllAs(string cpt); 
 
@@ -43,12 +43,12 @@ public:
 		Init();
 	}
 
-	//Á÷Êı¾İ
+	//æµæ•°æ®
 	unsigned char* stream;
 	int iStreaBuffSize;
 	int iStreamLen;
 
-	//×é°ü³É¹¦µÄÊı¾İ
+	//ç»„åŒ…æˆåŠŸçš„æ•°æ®
 	unsigned char* pkt;
 	int iPktBuffSize;
 	int iPktLen;

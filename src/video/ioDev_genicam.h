@@ -28,8 +28,8 @@ public:
 	static json listDevices();
 	static void mono8ToBmp(char* pData, int w, int h, string fileName);
 	static void captureImageToBmp(string devId, string fileName);
-	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; //À­Á÷·½
-	std::shared_ptr<rcg::Device> m_genicamDev; //
+	vector<std::shared_ptr<TDS_SESSION>> m_streamPuller; 
+	std::shared_ptr<rcg::Device> m_genicamDev; 
 	void setGenicamDev(std::shared_ptr<rcg::Device> genDev);
 	std::shared_ptr<GenApi::CNodeMapRef> m_nodemap;
 	void doStreaming();

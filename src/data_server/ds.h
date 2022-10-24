@@ -1,7 +1,7 @@
 /*
 dataserver
-rpc·şÎñµÄtcp·şÎñ½Ó¿Ú
-×÷Îª×Ó·şÎñÖ÷¶¯Á¬½Ómaster·şÎñ
+rpcæœåŠ¡çš„tcpæœåŠ¡æ¥å£
+ä½œä¸ºå­æœåŠ¡ä¸»åŠ¨è¿æ¥masteræœåŠ¡
 
 */
 #pragma once
@@ -31,17 +31,17 @@ public:
 	void stop();
 	dataServer();
 	virtual ~dataServer();
-	tcpClt* m_tcpCltEdge; //×÷Îª±ßÔµÍø¹ØÊ±ºòµÄ¿Í»§¶Ë
-	tcpClt* m_tcpCltChildServer; //×÷Îª×Ó·şÎñÁ¬½ÓÉÏ¼¶·şÎñµÄ¿Í»§¶Ë
+	tcpClt* m_tcpCltEdge; //ä½œä¸ºè¾¹ç¼˜ç½‘å…³æ—¶å€™çš„å®¢æˆ·ç«¯
+	tcpClt* m_tcpCltChildServer; //ä½œä¸ºå­æœåŠ¡è¿æ¥ä¸Šçº§æœåŠ¡çš„å®¢æˆ·ç«¯
 
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 
-	//Ó¦ÓÃ²ã»á»°
+	//åº”ç”¨å±‚ä¼šè¯
 	map<void*,std::shared_ptr<TDS_SESSION>> m_Sessions;
 	mutex m_mutexSessions;
 
-	//¼¶Áª¹¦ÄÜ
+	//çº§è”åŠŸèƒ½
 	string m_masterTdsIP;
 	int m_masterTdsPort;
 	string m_tdsID;

@@ -65,7 +65,7 @@ public:
 	inline bool IsConnect(){
 		return m_bConn;
 	};
-	int SendData(char* pData, int iLen);
+	int SendData(char* pData, size_t iLen);
 	static string GetLocalIP();
 
 	SOCKET sockClient;

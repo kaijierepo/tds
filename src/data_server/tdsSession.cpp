@@ -138,7 +138,7 @@ string TDS_SESSION::GetClientIp()
 }
 
 
- int TDS_SESSION::send(char* p,int len,bool bNeedLog){
+ int TDS_SESSION::send(char* p,size_t len,bool bNeedLog){
      GetLocalTime(&lastSendTime);
      int iSend = 0;
 

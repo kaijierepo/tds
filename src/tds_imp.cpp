@@ -36,7 +36,6 @@ SOFTWARE.
 #include "tdsConf.h"
 #include "mp.h"
 #include "videoCodec.h"
-#include "wke.h"
 #include "res/resource.h"
 #include "ioDev_genicam.h"
 #include "streamServer.h"
@@ -46,7 +45,7 @@ SOFTWARE.
 #include "version.h"
 #include "data_server/db.h"
 #include "tools/tdsWatchDog.h"
-#include "video/audioPlayer.h"
+//#include "video/audioPlayer.h"
 #include <filesystem>
 #include "tools/dumpCatch.h"
 #include "tools/hmrSrv.h"
@@ -72,16 +71,9 @@ void createConsole()
 }
 
 
-wkeWebView m_hUI;
 int w;
 int h;
 
-
-
-void showDevToolCallback(wkeWebView webView, void* param)
-{
-
-}
 
 // 消息处理函数的实现
 LRESULT CALLBACK WindowProc_tdsUI(
@@ -93,10 +85,7 @@ LRESULT CALLBACK WindowProc_tdsUI(
 {
 	if (uMsg == WM_SIZE)
 	{
-		 w = LOWORD(lParam);
-		 h = HIWORD(lParam);
-		if(m_hUI)
-		wkeResize(m_hUI, w, h);
+
 	}
 	else if (uMsg == WM_SHOWWINDOW)
 	{
@@ -108,77 +97,77 @@ LRESULT CALLBACK WindowProc_tdsUI(
 	}
 	else if(uMsg == WM_KEYDOWN)
 	{
-		switch (wParam)
-		{
-			case VK_F12:
-			string path = fs::appPath() + "\\front_end\\inspector.html";
-			if (!fs::fileExist(path))
-			{
-				::MessageBox(NULL, charCodec::utf8toAnsi("没有找到./front_end/inspector.html,请将调试工具包放在程序运行目录下").c_str(), NULL, NULL);
-			}
-			wkeShowDevtools(m_hUI, charCodec::utf8toUtf16(path).c_str(), showDevToolCallback, NULL);
-			break;
-		}
+		//switch (wParam)
+		//{
+		//	case VK_F12:
+		//	string path = fs::appPath() + "\\front_end\\inspector.html";
+		//	if (!fs::fileExist(path))
+		//	{
+		//		::MessageBox(NULL, charCodec::utf8toAnsi("没有找到./front_end/inspector.html,请将调试工具包放在程序运行目录下").c_str(), NULL, NULL);
+		//	}
+		//	wkeShowDevtools(m_hUI, charCodec::utf8toUtf16(path).c_str(), showDevToolCallback, NULL);
+		//	break;
+		//}
 	}
 
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
 
-
-void createMiniblinkWnd()
-{
-	//注册窗口类
-	HINSTANCE hInstance;
-	hInstance = GetModuleHandle(NULL);
-	WNDCLASS tdsUIWnd;
-	tdsUIWnd.cbClsExtra = 0;
-	tdsUIWnd.cbWndExtra = 0;
-	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
-	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDI_LOGO));
-	tdsUIWnd.lpszMenuName = NULL;
-	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
-	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
-	tdsUIWnd.lpfnWndProc = WindowProc_tdsUI;
-	tdsUIWnd.lpszClassName = _T("tdsUI");
-	tdsUIWnd.hInstance = hInstance;
-	RegisterClass(&tdsUIWnd);
-
-
-	int x = 200;
-	int y = 200;
-	 w = 960;
-	 h = 720;
-
-	//创建窗口
-	string title = tds->conf->title;
-
-	RECT rc;
-	SetRect(&rc, 0, 0, w, h);
-	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-
-	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
-
-	HWND hwnd = CreateWindow(
-		"tdsUI",           //上面注册的类名，要完全一致  
-		title.c_str(),                     //窗口标题文字  
-		WS_OVERLAPPEDWINDOW, //窗口外观样式  
-		x,             //窗口相对于父级的X坐标  
-		y,             //窗口相对于父级的Y坐标  
-		rc.right - rc.left,                //窗口的宽度  
-		rc.bottom - rc.top,                //窗口的高度  
-		NULL,               //没有父窗口，为NULL  
-		NULL,               //没有菜单，为NULL  
-		hInstance,          //当前应用程序的实例句柄  
-		NULL);              //没有附加数据，为NULL 
-
-
-	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
-	wkeSetZoomFactor(m_hUI, 1.5);
-	wkeLoadURL(m_hUI, tds->conf->homepage.c_str());
-	wkeShowWindow(m_hUI, TRUE);
-	ShowWindow(hwnd, SW_SHOW);
-}
+//
+//void createMiniblinkWnd()
+//{
+//	//注册窗口类
+//	HINSTANCE hInstance;
+//	hInstance = GetModuleHandle(NULL);
+//	WNDCLASS tdsUIWnd;
+//	tdsUIWnd.cbClsExtra = 0;
+//	tdsUIWnd.cbWndExtra = 0;
+//	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
+//	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDI_LOGO));
+//	tdsUIWnd.lpszMenuName = NULL;
+//	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
+//	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
+//	tdsUIWnd.lpfnWndProc = WindowProc_tdsUI;
+//	tdsUIWnd.lpszClassName = _T("tdsUI");
+//	tdsUIWnd.hInstance = hInstance;
+//	RegisterClass(&tdsUIWnd);
+//
+//
+//	int x = 200;
+//	int y = 200;
+//	 w = 960;
+//	 h = 720;
+//
+//	//创建窗口
+//	string title = tds->conf->title;
+//
+//	RECT rc;
+//	SetRect(&rc, 0, 0, w, h);
+//	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
+//
+//	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
+//
+//	HWND hwnd = CreateWindow(
+//		"tdsUI",           //上面注册的类名，要完全一致  
+//		title.c_str(),                     //窗口标题文字  
+//		WS_OVERLAPPEDWINDOW, //窗口外观样式  
+//		x,             //窗口相对于父级的X坐标  
+//		y,             //窗口相对于父级的Y坐标  
+//		rc.right - rc.left,                //窗口的宽度  
+//		rc.bottom - rc.top,                //窗口的高度  
+//		NULL,               //没有父窗口，为NULL  
+//		NULL,               //没有菜单，为NULL  
+//		hInstance,          //当前应用程序的实例句柄  
+//		NULL);              //没有附加数据，为NULL 
+//
+//
+//	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
+//	wkeSetZoomFactor(m_hUI, 1.5);
+//	wkeLoadURL(m_hUI, tds->conf->homepage.c_str());
+//	wkeShowWindow(m_hUI, TRUE);
+//	ShowWindow(hwnd, SW_SHOW);
+//}
 
 
 void chromeThread()
@@ -451,7 +440,7 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
 	sHost.run();
-	audioPlayer.run();
+	//audioPlayer.run();
 	if (conf->debugMode)
 	{
 		hmrServer.run(tds->conf->uiPath);
@@ -475,14 +464,7 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.updateTag2IOAddrBinding();
 
 	//create browser window
-	if (conf->uiMode == "miniblink")
-	{
-	    ::ShowWindow(GetConsoleWindow(), SW_HIDE);
-		wkeSetWkeDllPath(L"miniblink_x64.dll");
-		wkeInitialize();
-		createMiniblinkWnd();
-	}
-	else if (conf->uiMode == "chrome")
+	if (conf->uiMode == "chrome")
 	{
 		createChromeWnd();
 	}
@@ -676,6 +658,8 @@ bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv rec
 	return true;
 }
 
+
+#ifdef ENABLE_GENICAM
 void TDS_imp::startStream(string streamId, STREAM_INFO* si)
 {
 	streamSrv.startStream(streamId,si);
@@ -701,6 +685,7 @@ void TDS_imp::pullStream(string streamId, void* user, fp_onVideoStreamRecv onRec
 	streamSrvNode* pssn = streamSrv.getSrvNode(streamId);
 	pssn->addPuller(user,onRecvStream);
 }
+#endif
 
 void TDS_imp::log(const char* text)
 {

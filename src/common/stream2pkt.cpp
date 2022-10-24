@@ -104,10 +104,10 @@ int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
 	{
 		if (pData[i] == 0x5A && pData[i + 1] == 0x5A)
 		{
-			//³ıÁË²ÉÑùÊı¾İ°üĞ£ÑéÁË£¬ÆäËûÃüÁî°ü¶¼ÊÇ0xff
+			//é™¤äº†é‡‡æ ·æ•°æ®åŒ…æ ¡éªŒäº†ï¼Œå…¶ä»–å‘½ä»¤åŒ…éƒ½æ˜¯0xff
 			if (calcLeakDetectCheckCode(pData + 2, i - 1 - 2) == pData[i - 1] || 0xFF == pData[i - 1])
 			{
-				if (cmdCode == 0x23)//¶ÁÊı¾İ°üÃüÁî
+				if (cmdCode == 0x23)//è¯»æ•°æ®åŒ…å‘½ä»¤
 				{
 					if (i + 2 != 1013)
 						return 0;
@@ -165,7 +165,7 @@ void stream2pkt::PushStream(char* pData, int iLen)
 
 bool stream2pkt::PopPkt(string cpt)
 {
-	//¶ÔÎ»ÖÃiµ½Ä©Î²µÄÊı¾İ½øĞĞÓĞĞ§Êı¾İ°üÅĞ¶Ï£¬ÔÊĞíiÖ®Ç°³öÏÖ´íÎóÊı¾İ¡£ÓĞ¿ÉÄÜiµ½Ä©Î²Ö®Ç°ÓĞ¶à¸öÊı¾İ°ü
+	//å¯¹ä½ç½®iåˆ°æœ«å°¾çš„æ•°æ®è¿›è¡Œæœ‰æ•ˆæ•°æ®åŒ…åˆ¤æ–­ï¼Œå…è®¸iä¹‹å‰å‡ºç°é”™è¯¯æ•°æ®ã€‚æœ‰å¯èƒ½iåˆ°æœ«å°¾ä¹‹å‰æœ‰å¤šä¸ªæ•°æ®åŒ…
 	for (int i = 0; i < iStreamLen; i++)
 	{
 		int ilen = 0;
@@ -237,7 +237,7 @@ bool stream2pkt::PopPkt(string cpt)
 
 bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 {
-	//¶ÔÎ»ÖÃiµ½Ä©Î²µÄÊı¾İ½øĞĞÓĞĞ§Êı¾İ°üÅĞ¶Ï£¬ÔÊĞíiÖ®Ç°³öÏÖ´íÎóÊı¾İ¡£ÓĞ¿ÉÄÜiµ½Ä©Î²Ö®Ç°ÓĞ¶à¸öÊı¾İ°ü
+	//å¯¹ä½ç½®iåˆ°æœ«å°¾çš„æ•°æ®è¿›è¡Œæœ‰æ•ˆæ•°æ®åŒ…åˆ¤æ–­ï¼Œå…è®¸iä¹‹å‰å‡ºç°é”™è¯¯æ•°æ®ã€‚æœ‰å¯èƒ½iåˆ°æœ«å°¾ä¹‹å‰æœ‰å¤šä¸ªæ•°æ®åŒ…
 	for (int i = 0; i < iStreamLen; i++)
 	{
 		int ilen = 0;
@@ -299,8 +299,8 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 	string strData = (char*)ptmp;
 	delete ptmp;
 
-	int iPos_contentLengthLineStart = strData.find("Content-Length:"); //15
-	//Ã»ÓĞhttp bodyµÄÇé¿ö
+	size_t iPos_contentLengthLineStart = strData.find("Content-Length:"); //15
+	//æ²¡æœ‰http bodyçš„æƒ…å†µ
 	if (iPos_contentLengthLineStart == string::npos)
 	{
 		string tail = strData.substr(strData.length() - 4, 4);
@@ -311,7 +311,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 	}
 	else
 	{
-		int iPos_contentLengthLineEnd = strData.find("\r\n", iPos_contentLengthLineStart);
+		size_t iPos_contentLengthLineEnd = strData.find("\r\n", iPos_contentLengthLineStart);
 		if (iPos_contentLengthLineEnd == string::npos)
 			return 0;
 
@@ -319,7 +319,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 		int iContentLen = atoi(strLen.c_str());
 
 		int iBodyStart = 0;
-		for (int i = iPos_contentLengthLineEnd; i + 3 < iLen; i++)
+		for (size_t i = iPos_contentLengthLineEnd; i + 3 < iLen; i++)
 		{
 			if (pData[i] == '\r' &&
 				pData[i + 1] == '\n' &&
@@ -328,7 +328,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 				)
 			{
 				iBodyStart = i + 4;
-				break; //ÕÒµ½headerºóÃæµÄ¿ÕĞĞ £¬ºóÃæ¾ÍÊÇbody¡£±ØĞëbreak¡£ÒòÎªbodyÊı¾İÀïÃæ¿ÉÄÜÒ²ÓĞÁ½¸ö»»ĞĞ
+				break; //æ‰¾åˆ°headeråé¢çš„ç©ºè¡Œ ï¼Œåé¢å°±æ˜¯bodyã€‚å¿…é¡»breakã€‚å› ä¸ºbodyæ•°æ®é‡Œé¢å¯èƒ½ä¹Ÿæœ‰ä¸¤ä¸ªæ¢è¡Œ
 			}
 		}
 
@@ -358,7 +358,7 @@ int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 		return 0;
 	for (int i = 2; i < iLen; i++)
 	{
-		//Ã°ºÅÖĞµÄ ->ÌáÊ¾·û²»Ëã
+		//å†’å·ä¸­çš„ ->æç¤ºç¬¦ä¸ç®—
 		if (pData[i-1] == '-' && pData[i] == '>' && pData[i-2]!='\"')
 		{
 			return i + 1;

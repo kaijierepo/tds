@@ -20,7 +20,7 @@ public:
 	bool unregSelfStart();
 	bool isSelfStartReg();
 	void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port) override;
-	udpServer m_foodPlate; //食物盘子
+	udpServer m_foodPlate; //椋熺墿鐩樺瓙
 	SYSTEMTIME m_lastFeedTime;
 	SYSTEMTIME m_lastUpdateCheckTime;
 	string m_curVer;
@@ -34,7 +34,7 @@ public:
 	void run();
 	void sendFood();
 
-	udpServer m_foodCart; //发食物的袋子
+	udpServer m_foodCart; //鍙戦鐗╃殑琚嬪瓙
 };
 
 extern tdsWatchDog watchDog;

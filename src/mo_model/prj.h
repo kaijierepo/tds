@@ -31,7 +31,7 @@ public:
 	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
 
-	string m_strMoTree; //×Ö·û´®ÅäÖÃÊı¾İ
+	string m_strMoTree; //å­—ç¬¦ä¸²é…ç½®æ•°æ®
 	map<string, MP*> m_mapAllMP;
 	map<string, vector<OBJ*>> m_mapCustomMOType;
 

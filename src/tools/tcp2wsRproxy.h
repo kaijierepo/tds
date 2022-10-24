@@ -11,13 +11,13 @@ public:
 	map<DWORD, tcpClt*> m_connMap;
 
 
-	string tcp_remote_ip; //        #tcp服务器ip
-	int tcp_remote_port;  //    #tcp服务端口
+	string tcp_remote_ip; //        #tcp鏈嶅姟鍣╥p
+	int tcp_remote_port;  //    #tcp鏈嶅姟绔彛
 
 
-	//#websocket服务参数
-	int ws_local_port;//        #websocket服务端口
-	int wss_local_port;//          #websocket secure服务端口
+	//#websocket鏈嶅姟鍙傛暟
+	int ws_local_port;//        #websocket鏈嶅姟绔彛
+	int wss_local_port;//          #websocket secure鏈嶅姟绔彛
 };
 
 extern Tcp2wsRproxy* tcp2wsRproxy;

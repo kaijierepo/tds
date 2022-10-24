@@ -634,6 +634,12 @@ namespace str {
 		return s;
 	}
 
+	string fromInt(size_t v)
+	{
+		string s = str::format("%d", v);
+		return s;
+	}
+
 	string fromBuff(const char* p, int len)
 	{
 		char* tmp = new char[len + 1];
@@ -1148,7 +1154,7 @@ namespace sys {
 				strComName = charCodec::utf16ToAuto(commName);
 				strDrName = charCodec::utf16ToAuto(portName);
 				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
-				int len = strDrName.rfind('\\');
+				size_t len = strDrName.rfind('\\');
 				// 获取'\\'左边的字符串   
 				string strFilePath = strDrName.substr(0, len + 1);
 				// 获取'\\'右边的字符串   
@@ -1231,12 +1237,12 @@ namespace sys {
 			if (iLeftBracket == string::npos)
 				continue;
 
-			int iRightBracket = comInfo.find(")");
+			size_t iRightBracket = comInfo.find(")");
 
 			string portNum = comInfo.substr(iLeftBracket + 1, iRightBracket - iLeftBracket - 1);
 
 			//vspd 创建的虚拟串口是  COM1->COM2的格式
-			int iFPos = portNum.find("->");
+			size_t iFPos = portNum.find("->");
 			if (iFPos != string::npos)
 			{
 				portNum = portNum.substr(iFPos + 2, portNum.size() - iFPos - 2);
@@ -1318,21 +1324,21 @@ namespace fs {
 		strFile = str::replace(strFile, "///", "/");
 		strFile = str::replace(strFile, "//", "/");
 
-		int iDotPos = strFile.rfind('.');
-		int iSlashPos = strFile.rfind('/');
+		size_t iDotPos = strFile.rfind('.');
+		size_t iSlashPos = strFile.rfind('/');
 		if (iDotPos > iSlashPos)//是一个文件
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
 
-		int iStartPos = 0;
+		size_t iStartPos = 0;
 		while (1)
 		{
-			int iSlash = strFile.find('/', iStartPos);
+			size_t iSlash = strFile.find('/', iStartPos);
 
 			if (iSlash == string::npos)//路径为文件夹的情况
 			{
-				int iDot = strFile.find('.', iStartPos);
+				size_t iDot = strFile.find('.', iStartPos);
 				if (iDot == string::npos)
 					CreateDirectoryW(charCodec::autoToUtf16(strFile).c_str(), NULL);
 				break;
@@ -1378,7 +1384,7 @@ namespace fs {
 		TCHAR p[MAX_PATH] = { 0 };
 		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
 		string strPath = (char*)p;
-		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+		size_t nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
 		strPath = strPath.substr(0, nEnd);
 		if (common::getCharCodec() == "gb2312")
 			strPath = strPath;
@@ -1454,7 +1460,7 @@ namespace fs {
 		}
 		return false;
 	}
-	bool writeFile(string path, char* data, int len)
+	bool writeFile(string path, char* data, size_t len)
 	{
 		fs::createFolderOfPath(path);
 		wstring wpath = charCodec::autoToUtf16(path);
@@ -1475,7 +1481,7 @@ namespace fs {
 		return false;
 	}
 
-	bool appendFile(string path, char* data, int len)
+	bool appendFile(string path, char* data, size_t len)
 	{
 		wstring wpath = charCodec::autoToUtf16(path);
 		FILE* fp = nullptr;
@@ -1674,7 +1680,7 @@ namespace fs {
 					fs.pszName = vecWFilter[i * 2].c_str();
 					fs.pszSpec = vecWFilter[i * 2 + 1].c_str();
 				}
-				hr = pfd->SetFileTypes(vecWFilter.size()/2, fileType);
+				hr = pfd->SetFileTypes((UINT)vecWFilter.size()/2, fileType);
 				hr = pfd->SetFileTypeIndex(1);
 				
 

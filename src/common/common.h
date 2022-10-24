@@ -197,6 +197,7 @@ namespace str {
 	string bytesToHexStr(char* p, int len, string splitter = " ");
 	string bytesToHexStr(byte* p, int len, string splitter = " ");
 	string fromInt(int v);
+	string fromInt(size_t v);
 	string fromBuff(const char* p, int len);
 	int toInt(string s);
 	string encodeAscII(string s);
@@ -254,8 +255,8 @@ namespace fs {
 	bool readFile(string path, char*& pData, int& len);
 	bool readFile(string path, unsigned char*& pData, int& len);
 	bool readFile(string path, string& data);
-	bool writeFile(string path, char* data, int len);
-	bool appendFile(string path, char* data, int len);
+	bool writeFile(string path, char* data, size_t len);
+	bool appendFile(string path, char* data, size_t len);
 	bool appendFile(string path, string data);
 	bool writeFile(string path, string& data);
 	bool fileExist(string pszFileName);

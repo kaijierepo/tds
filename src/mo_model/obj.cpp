@@ -878,8 +878,8 @@ string OBJ::TranslateRelateTag(string rtag)
 	//替换./
 	rtag = str::replace(rtag, "./", "");
 	if (rtag.find("?") != string::npos) {
-		int pos1 = tag.find("#");
-		int pos2 = -1;
+		size_t pos1 = tag.find("#");
+		size_t pos2 = -1;
 		string strDC = "";//dao cha
 		if (pos1 >= 0) {
 			pos2 = tag.rfind(".", pos1);

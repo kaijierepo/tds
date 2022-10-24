@@ -400,9 +400,10 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
+
 	if (method == "getStreamInfo")
 	{
-		result = rpc_getStreamInfo(params, error);
+		//result = rpc_getStreamInfo(params, error);
 	}
 	else if (method == "openStream") {
 		string tag = params["tag"].get<string>();
@@ -457,11 +458,11 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			}
 		}
 	}
+#ifdef ENABLE_GENICAM
 	else if (method == "setStream")
 	{
-	result = rpc_setStream(params, error);
+		result = rpc_setStream(params, error);
 	}
-#ifdef ENABLE_GENICAM
 	else if (method == "genicam.doCmd")
 	{
 	if (firstDiscoverGenicam)
@@ -976,7 +977,8 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 
 bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string& result = rpcResp.result;
+	return false;
+	/*string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	if (method == "audioPlayer.play")
@@ -1003,7 +1005,7 @@ bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_R
 	{
 		bHandled = false;
 	}
-	return bHandled;
+	return bHandled;*/
 }
 
 bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -1737,7 +1739,7 @@ void rpcHandler::logTDSPDispatch(string method,json& params,bool callRet,RPC_SES
 bool rpcHandler::isGB2312Pkt(string& req)
 {
 	//如果jsonRPC的json结构的第一个字段是charset，根据charset的参数决定编码类型
-	int pos = req.find("GB2312");
+	size_t pos = req.find("GB2312");
 	if (pos != string::npos)
 	{
 		int quoteNum = 0;  //gb2312前面有3个冒号，表示是第一个字段。  排除协议内部也有gb2312字段的可能性。
@@ -3180,6 +3182,7 @@ string rpcHandler::rpc_io_scanChannel(json params, string& error)
 	return "";
 }
 
+#ifdef ENABLE_GENICAM
 string rpcHandler::rpc_setStream(json params,string& error)
 {
 	string streamId = params["streamId"].get<string>();
@@ -3236,6 +3239,7 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 	
 	return jSi.dump();
 }
+#endif
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {

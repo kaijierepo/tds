@@ -9,7 +9,7 @@
 #endif
 #include "tds.h"
 
-//linuxÏÂÑÕÉ«¿ØÖÆ
+//linux console color control
 #define COLOR_(msg, color, ctl) \
   "\033[0;" #ctl ";" #color ";m" msg "\033[0m"
 
@@ -158,18 +158,18 @@ string Clogger::logInternal(string info)
 	SYSTEMTIME stNow;
 	GetLocalTime(&stNow);
 	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
-	//ÃüÁîĞĞºÍÎÄ¼şÖĞµÄÈÕÖ¾ÓÃgb2312±àÂë
+	//å‘½ä»¤è¡Œå’Œæ–‡ä»¶ä¸­çš„æ—¥å¿—ç”¨gb2312ç¼–ç 
 	string logline = time + " " + info;
 
-	//logLevelÓÃ»§¿ØÖÆ±¾µØÃüÁîĞĞ½çÃæºÍÈÕÖ¾ÎÄ¼şµ±ÖĞÊÇ·ñ¼ÇÂ¼¡£weblog¼àÊÓÍ³Ò»È«²¿ÍÆËÍ
+	//logLevelç”¨æˆ·æ§åˆ¶æœ¬åœ°å‘½ä»¤è¡Œç•Œé¢å’Œæ—¥å¿—æ–‡ä»¶å½“ä¸­æ˜¯å¦è®°å½•ã€‚weblogç›‘è§†ç»Ÿä¸€å…¨éƒ¨æ¨é€
 	if (ll < logLevel)
 		return logline;
 
 	info = charCodec::utf8toAnsi(logline);
 
-	//Ê¹ÓÃcoutÊä³ö£¬²»ÒªÊ¹ÓÃprintfÊä³ö£¬printf»á½«Ä³Ğ©¸ñÊ½½øĞĞ½âÎö£¬ÀıÈçÏÂÃæ×Ö·û´®
-	//R"([IOÉè±¸Í¸´«]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
-	//Ê¹ÓÃprintfÊä³ö»áµ¼ÖÂ±¼À£ £¬Ó¦¸Ãprint½« %N% ×÷ÎªÄ³ÖÖÌØÊâ×Ö·û´¦ÀíÁË
+	//ä½¿ç”¨coutè¾“å‡ºï¼Œä¸è¦ä½¿ç”¨printfè¾“å‡ºï¼Œprintfä¼šå°†æŸäº›æ ¼å¼è¿›è¡Œè§£æï¼Œä¾‹å¦‚ä¸‹é¢å­—ç¬¦ä¸²
+	//R"([IOè®¾å¤‡é€ä¼ ]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
+	//ä½¿ç”¨printfè¾“å‡ºä¼šå¯¼è‡´å¥”æºƒ ï¼Œåº”è¯¥printå°† %N% ä½œä¸ºæŸç§ç‰¹æ®Šå­—ç¬¦å¤„ç†äº†
 	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (ll == LOG_LEVEL::LL_ERROR)
 	{
@@ -192,7 +192,7 @@ string Clogger::logInternal(string info)
 		cout << info;
 	}
 	printf("\r\n");
-	//std::cout << info << std::endl; Õâ¾ä»°ÔÚ AllocConsole Éú³ÉµÄÃüÁîĞĞÖĞ²»Êä³öÁË
+	//std::cout << info << std::endl; è¿™å¥è¯åœ¨ AllocConsole ç”Ÿæˆçš„å‘½ä»¤è¡Œä¸­ä¸è¾“å‡ºäº†
 
 	//create log path
 	std::lock_guard<mutex> lockGuard(m_lock);
@@ -206,7 +206,7 @@ string Clogger::logInternal(string info)
 	//	}
 	//	dirCreated = true;
 	//}
-	//³ÌĞòµ÷ÊÔ¹ı³ÌÖĞ£¬¿ÉÄÜ¾­³£ÓĞÉ¾³ıÕû¸öÈÕÖ¾ÎÄ¼ş¼Ğ£¬È»ºóÔËĞĞÒ»»á¿´ÏÂÈÕÖ¾ÕâÑùµÄ²Ù×÷¡£Òò´ËÃ¿´Î¶¼³¢ÊÔ´´½¨ÎÄ¼ş¼Ğ
+	//ç¨‹åºè°ƒè¯•è¿‡ç¨‹ä¸­ï¼Œå¯èƒ½ç»å¸¸æœ‰åˆ é™¤æ•´ä¸ªæ—¥å¿—æ–‡ä»¶å¤¹ï¼Œç„¶åè¿è¡Œä¸€ä¼šçœ‹ä¸‹æ—¥å¿—è¿™æ ·çš„æ“ä½œã€‚å› æ­¤æ¯æ¬¡éƒ½å°è¯•åˆ›å»ºæ–‡ä»¶å¤¹
 	::CreateDirectoryW(strLogDirUtf16.c_str(), NULL);
 	
 
@@ -220,7 +220,7 @@ string Clogger::logInternal(string info)
 	{
 		if (tds->conf->bCreateDumpWhenLogError)
 		{
-			int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogError¹¦ÄÜ¿ªÆô,´íÎóÈÕÖ¾,ÊÇ·ñ½ØÈ¡dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
+			int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogErroråŠŸèƒ½å¼€å¯,é”™è¯¯æ—¥å¿—,æ˜¯å¦æˆªå–dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
 			if (iRet = IDOK)
 			{
 				CDumpCatch::createDump(NULL);

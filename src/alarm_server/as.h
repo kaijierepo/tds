@@ -29,7 +29,7 @@ namespace ALARM_LEVEL {
 	const string alarm = "alarm";
 }
 
-inline string getAlarmLevelLabel(string level)
+string getAlarmLevelLabel(string level)
 {
 	if (level == "alarm")
 		return "告警";

@@ -122,7 +122,7 @@ public:
 	bool isConnected();
 	bool disconnect();
     string GetClientIp();
-	int send(char* p,int len,bool bNeedLog = true);
+	int send(char* p,size_t len,bool bNeedLog = true);
 	int sendStr(string str, bool bNeedLog = true);
 	int getSendedBytes();
 	int getRecvedBytes();

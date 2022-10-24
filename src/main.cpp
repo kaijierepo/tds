@@ -27,9 +27,7 @@ SOFTWARE.
 
 #include "pch.h"
 #include "tdsConf.h"
-#include "cmdparser.hpp"
 #include "video/remoteDesktopServer.h"
-#include "cmdparser.hpp"
 #include "logger.h"
 #include "tds_imp.h"
 #include "wke.h"

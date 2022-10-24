@@ -73,36 +73,6 @@ namespace TDS {
 };
 
 
-namespace STORAGE_FMT {
-	const string Int16 = "Int16";
-	const string UInt16 = "UInt16";
-	const string Int32_AB_CD = "Int32 AB CD";
-	const string Int32_CD_AB = "Int32 CD AB";
-	const string Int32_BA_DC = "Int32 BA DC";
-	const string Int32_DC_BA = "Int32 DC BA";
-	const string UInt32 = "UInt32";
-	const string Int64 = "Int64";
-	const string Uint64 = "UInt64";
-	const string Float_AB_CD = "Float AB CD";
-	const string Float_CD_AB = "Float CD AB";
-	const string Float_BA_DC = "Float BA DC";
-	const string Float_DC_BA = "Float DC BA";
-	const string Double = "Double";
-	const string BCD16 = "BCD16";
-	const string BCD32 = "BCD32";
-}
-
-inline int storageSize(string fmt) {
-	if (fmt.find("16") != string::npos)return 2;
-	else if (fmt.find("32") != string::npos)return 4;
-	else if (fmt.find("64") != string::npos)return 8;
-	else if (fmt.find("float") != string::npos || fmt.find("Float") != string::npos)return 4;
-	else if (fmt.find("Double") != string::npos || fmt.find("Double")!= string::npos)return 8;
-	else {
-		return 0;
-	}
-}
-
 #define STREAM_TYPE_ENUM string
 namespace STREAM_TYPE {
 	const string bmp = "bmp"; 
@@ -419,11 +389,12 @@ public:
 	virtual bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) = 0;
 
 	//video function
+#ifdef ENABLE_GENICAM
 	virtual void startStream(string streamId, STREAM_INFO* si=NULL) = 0;
 	//push to sepecified streamId 
 	virtual void pushStream(string streamId, char* pData, int len, STREAM_INFO* si=NULL) = 0;
 	virtual void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO*si = NULL) = 0;
-
+#endif
 
 	virtual void log(const char* text) = 0;
 
@@ -444,7 +415,7 @@ public:
 	HWND uiWnd;
 	string uiWndTitle;
 
-	map<string, fp_toolRun> tools;//注册到tds总线的工具插件
+	map<string, fp_toolRun> tools;
 };
 
 
@@ -452,7 +423,7 @@ public:
 
 typedef i_tds* (*fp_getTds)();
 
-inline i_tds* getITDS() {
+i_tds* getITDS() {
 	HMODULE hMod = LoadLibrary("tds.dll");
 	if (hMod)
 	{

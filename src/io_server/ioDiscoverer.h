@@ -5,7 +5,7 @@ public:
 	bool run();
 
 	bool runSerialDiscover();
-	bool runGenicamDiscover();//genicam发现只用于发现第一台设备
+	bool runGenicamDiscover();//discover only one genicam device
 
 	bool doGenicamDiscover();
 };

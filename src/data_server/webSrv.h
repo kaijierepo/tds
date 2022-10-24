@@ -10,7 +10,7 @@ public:
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
-	static int sendToWs(char* p,int len, int sockPipe);
+	static int sendToWs(char* p, size_t len, int sockPipe);
 	bool enableHttps;
 
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);

@@ -1,4 +1,6 @@
 #include "pch.h"
+
+#ifdef ENABLE_GENICAM
 #include "streamSrvNode.h"
 #include "json.hpp"
 #include "logger.h"
@@ -65,12 +67,12 @@ void streamSrvNode::sendToOnePuller(STREAM_DATA& sd, STREAM_PULLER& sp)
 
 void streamSrvNode::sendToAllPullers(STREAM_DATA& sd)
 {
-	//·¢ËÍÊÓÆµĞÅÏ¢Í·
+	//å‘é€è§†é¢‘ä¿¡æ¯å¤´
 	for (int i = 0; i < m_streamPuller.size(); i++)
 	{
 		STREAM_PULLER* puller = m_streamPuller[i];
 
-		//Èç¹ûÀ­Á÷ÕßÖ¸¶¨ÁËÖ¡ÂÊ£¬ÇÒÀ­Á÷Ö¡ÂÊĞ¡ÓÚÍÆÁ÷Ö¡ÂÊ£¬½øĞĞÖ¡ÂÊ×ª»»
+		//å¦‚æœæ‹‰æµè€…æŒ‡å®šäº†å¸§ç‡ï¼Œä¸”æ‹‰æµå¸§ç‡å°äºæ¨æµå¸§ç‡ï¼Œè¿›è¡Œå¸§ç‡è½¬æ¢
 		//LOG("[debug] pusherRate:" + str::fromFloat(m_streamPusher->m_streamInfo.frameRate) + ",pullerRate:"+ str::fromFloat(puller->m_streamInfo.frameRate));
 		if (puller->m_streamInfo.frameRate != 0 && 
 			m_streamPusher->m_streamInfo.frameRate != 0 &&
@@ -91,13 +93,13 @@ void streamSrvNode::sendToAllPullers(STREAM_DATA& sd)
 		}
 		
 		//LOG("[debug] send frame");
-		//À­Á÷ÕßÎ´Ö¸¶¨¸ñÊ½»òÕß¸ñÊ½ÓëÍÆÁ÷ÕßÏàÍ¬£¬Ö±½Ó·¢ËÍ
+		//æ‹‰æµè€…æœªæŒ‡å®šæ ¼å¼æˆ–è€…æ ¼å¼ä¸æ¨æµè€…ç›¸åŒï¼Œç›´æ¥å‘é€
 		if (m_streamPusher->m_streamInfo.pixelFmt == puller->destData.info.pixelFmt ||
 			puller->m_streamInfo.pixelFmt == "")
 		{
 			sendToOnePuller(sd, *puller);
 		}
-		//ÏÈ×ª»¯pixelFmtÔÙ·¢ËÍ
+		//å…ˆè½¬åŒ–pixelFmtå†å‘é€
 		else
 		{
 			convertFmt(sd, puller->destData);
@@ -170,7 +172,7 @@ void streamSrvNode::doAsynPush()
 {
 	while (1)
 	{
-		//È¡³öµ±Ç°Ö¡
+		//å–å‡ºå½“å‰å¸§
 		m_evtNewFrame.wait();
 		STREAM_DATA* pFrm = NULL;
 		m_csRtImg.lock();
@@ -249,7 +251,7 @@ void streamSrvNode::convertFmt(STREAM_DATA& src, STREAM_DATA& dest)
 		int iStreamLen = 0;
 		char* pStream = NULL;
 		vc.output();
-		//·¢ËÍÊÓÆµÍ·£¬web¶ËmseÊÕµ½¸ÃÍ·²ÅÄÜÕıÈ·½âÂë
+		//å‘é€è§†é¢‘å¤´ï¼Œwebç«¯mseæ”¶åˆ°è¯¥å¤´æ‰èƒ½æ­£ç¡®è§£ç 
 		// sendToPuller_h264
 		//for (int i = 0; i < m_streamPuller.size(); i++)
 		//{
@@ -322,7 +324,7 @@ int streamSrvNode::GrayImgConverToRainbowRGBA(UCHAR* data, float* pSrc, int nPix
 	while (i < nPixel * 4)
 	{
 		srcVal = pSrc[i / 4];
-		mapVal = (((srcVal - minval) * 255 / range));	//Ó³Éäµ½0-255
+		mapVal = (((srcVal - minval) * 255 / range));	//æ˜ å°„åˆ°0-255
 
 		if (mapVal > 255 || mapVal < 0)
 		{
@@ -381,11 +383,11 @@ int streamSrvNode::DynamicRangeControl(float* pData, int w, int h, float& minVal
 	std::sort(pSortData, pSortData + w * h, [](const float& a, const float& b) { return a < b; });
 	int ignoreNum = 0.05 * w * h;
 
-	//ºöÂÔ×î´óºÍ×îĞ¡µÄ5%
+	//å¿½ç•¥æœ€å¤§å’Œæœ€å°çš„5%
 	minVal = pSortData[ignoreNum];
 	maxVal = pSortData[w * h - 1 - ignoreNum];
 
-	////¾²Ì¬·§ÖµÉèÖÃ
+	////é™æ€é˜€å€¼è®¾ç½®
 	//if (TRUE == m_bStaticRange && maxVal < m_fThreshold)
 	//{
 	//	maxVal = m_fThreshold;
@@ -418,7 +420,7 @@ bool STREAM_PUSHER::pushStream(STREAM_DATA& sd)
 
 	calcSrcFrameRate();
 
-	//ÍÆÁ÷¶ËÖ¡ÂÊ¿ØÖÆ
+	//æ¨æµç«¯å¸§ç‡æ§åˆ¶
 	if (m_streamInfoConf.frameRate != 0 && frameRate != 0 &&
 		frameRate > m_streamInfoConf.frameRate)
 	{
@@ -432,7 +434,7 @@ bool STREAM_PUSHER::pushStream(STREAM_DATA& sd)
 		frameIntervalIdx = 0;
 		m_streamInfo.frameRate = m_streamInfoConf.frameRate;
 	}
-	//ÎŞ¿ØÖÆÊ¹ÓÃÔ´Ö¡ÂÊ
+	//æ— æ§åˆ¶ä½¿ç”¨æºå¸§ç‡
 	else
 	{
 		m_streamInfo.frameRate = frameRate;
@@ -451,3 +453,4 @@ bool STREAM_PUSHER::pushStream(STREAM_DATA& sd)
 
 	return false;
 }
+#endif

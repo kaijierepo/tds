@@ -22,7 +22,7 @@ Only upon port and volume change.
 top-level window is a window without WM_CHILD attribute
 */
 
-// ÏûÏ¢´¦Àíº¯ÊıµÄÊµÏÖ
+// æ¶ˆæ¯å¤„ç†å‡½æ•°çš„å®ç°
 LRESULT CALLBACK WindowProc_hwDetect(
     _In_  HWND hwnd,
     _In_  UINT uMsg,
@@ -66,11 +66,11 @@ LRESULT CALLBACK WindowProc_hwDetect(
         {
             PDEV_BROADCAST_PORT pDevPort = (PDEV_BROADCAST_PORT)pHdr;
             string name = pDevPort->dbcp_name;
-            //²åÈë°Î³ö·µ»ØÁ½´ÎÊÂ¼ş£¬Ò»´ÎnameÎª  COM1 Ò»´ÎÊÇ NULL_COM1 £¬
-            //ÓĞÈËĞéÄâ´®¿Ú´ò¿ªÒ»¶ÎÊ±¼äºó£¬É¾³ıÊ±Ö»»á·µ»Ø NULL_COMÒ»´Î£¬¸Õ´ò¿ªÔòÊÇ2´Î£¬Ô­Àí²»Ì«Çå³ş¡£
-            //ÂÌÁªrs485×ªusbÏß²âÊÔ ¶¼·µ»ØCOM1²»»á·µ»ØNULL_COM,
+            //æ’å…¥æ‹”å‡ºè¿”å›ä¸¤æ¬¡äº‹ä»¶ï¼Œä¸€æ¬¡nameä¸º  COM1 ä¸€æ¬¡æ˜¯ NULL_COM1 ï¼Œ
+            //æœ‰äººè™šæ‹Ÿä¸²å£æ‰“å¼€ä¸€æ®µæ—¶é—´åï¼Œåˆ é™¤æ—¶åªä¼šè¿”å› NULL_COMä¸€æ¬¡ï¼Œåˆšæ‰“å¼€åˆ™æ˜¯2æ¬¡ï¼ŒåŸç†ä¸å¤ªæ¸…æ¥šã€‚
+            //ç»¿è”rs485è½¬usbçº¿æµ‹è¯• éƒ½è¿”å›COM1ä¸ä¼šè¿”å›NULL_COM,
 
-            //Èç¹ûÒª±ÜÃâÓĞÈËĞéÄâ´®¿ÚµÄÁ½´ÎÏûÏ¢,ĞèÈçÏÂ´¦Àí.µ«»á²»¼æÈİÕæÊµÓ²¼ş,ŞğÆú¸Ã´¦Àí.Î´À´Ğè½øÒ»²½È·¶¨ÊÇ·ñÊÇÓĞÈËĞéÄâ´®¿ÚÈí¼şµÄbug
+            //å¦‚æœè¦é¿å…æœ‰äººè™šæ‹Ÿä¸²å£çš„ä¸¤æ¬¡æ¶ˆæ¯,éœ€å¦‚ä¸‹å¤„ç†.ä½†ä¼šä¸å…¼å®¹çœŸå®ç¡¬ä»¶,æ‘’å¼ƒè¯¥å¤„ç†.æœªæ¥éœ€è¿›ä¸€æ­¥ç¡®å®šæ˜¯å¦æ˜¯æœ‰äººè™šæ‹Ÿä¸²å£è½¯ä»¶çš„bug
             /*  if ( (name.find("COM") == 0 && devEventType == "online") ||
                 (name.find("NULL_COM") == 0 && devEventType == "offline"))*/
 
@@ -112,7 +112,7 @@ LRESULT CALLBACK WindowProc_hwDetect(
 void serialDetectThread()
 {
     setThreadName("serial detection thread");
-    /*Î´À´ÈçĞèÒª¼ì²â³ı´®¿ÚÍâµÄÆäËûÉè±¸£¬ Ê¹ÓÃ
+    /*æœªæ¥å¦‚éœ€è¦æ£€æµ‹é™¤ä¸²å£å¤–çš„å…¶ä»–è®¾å¤‡ï¼Œ ä½¿ç”¨
   * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
   https://www.codeproject.com/Articles/14500/Detecting-Hardware-Insertion-and-or-Removal
   https://www.codeproject.com/Articles/119168/Hardware-Change-Detection
@@ -125,7 +125,7 @@ void serialDetectThread()
   notificationFilter.dbcc_classguid = GUID_DEVCLASS_PORTS;
   */
 
-  //×¢²á´°¿ÚÀà
+  //æ³¨å†Œçª—å£ç±»
     HINSTANCE hInstance;
     hInstance = GetModuleHandle(NULL);
     WNDCLASS hwDetect;
@@ -141,19 +141,19 @@ void serialDetectThread()
     hwDetect.hInstance = hInstance;
     RegisterClass(&hwDetect);
 
-    //´´½¨´°¿Ú
+    //åˆ›å»ºçª—å£
     HWND hwnd = CreateWindow(
-        "hwDetect",           //ÉÏÃæ×¢²áµÄÀàÃû£¬ÒªÍêÈ«Ò»ÖÂ  
-        "",                     //´°¿Ú±êÌâÎÄ×Ö  
-        WS_OVERLAPPEDWINDOW, //´°¿ÚÍâ¹ÛÑùÊ½  
-        0,             //´°¿ÚÏà¶ÔÓÚ¸¸¼¶µÄX×ø±ê  
-        0,             //´°¿ÚÏà¶ÔÓÚ¸¸¼¶µÄY×ø±ê  
-        100,                //´°¿ÚµÄ¿í¶È  
-        100,                //´°¿ÚµÄ¸ß¶È  
-        NULL,               //Ã»ÓĞ¸¸´°¿Ú£¬ÎªNULL  
-        NULL,               //Ã»ÓĞ²Ëµ¥£¬ÎªNULL  
-        hInstance,          //µ±Ç°Ó¦ÓÃ³ÌĞòµÄÊµÀı¾ä±ú  
-        NULL);              //Ã»ÓĞ¸½¼ÓÊı¾İ£¬ÎªNULL  
+        "hwDetect",           //ä¸Šé¢æ³¨å†Œçš„ç±»åï¼Œè¦å®Œå…¨ä¸€è‡´  
+        "",                     //çª—å£æ ‡é¢˜æ–‡å­—  
+        WS_OVERLAPPEDWINDOW, //çª—å£å¤–è§‚æ ·å¼  
+        0,             //çª—å£ç›¸å¯¹äºçˆ¶çº§çš„Xåæ ‡  
+        0,             //çª—å£ç›¸å¯¹äºçˆ¶çº§çš„Yåæ ‡  
+        100,                //çª—å£çš„å®½åº¦  
+        100,                //çª—å£çš„é«˜åº¦  
+        NULL,               //æ²¡æœ‰çˆ¶çª—å£ï¼Œä¸ºNULL  
+        NULL,               //æ²¡æœ‰èœå•ï¼Œä¸ºNULL  
+        hInstance,          //å½“å‰åº”ç”¨ç¨‹åºçš„å®ä¾‹å¥æŸ„  
+        NULL);              //æ²¡æœ‰é™„åŠ æ•°æ®ï¼Œä¸ºNULL  
 
     ShowWindow(hwnd, SW_HIDE);
 
@@ -190,7 +190,7 @@ bool ioDiscoverer::doGenicamDiscover()
 #ifdef ENABLE_GENICAM
     while (1)
     {
-        //µôÏßÖØÁ¬
+        //æ‰çº¿é‡è¿
         if (firstDiscoverGenicam)
         {
             if (firstDiscoverGenicam->m_bConnected == false)
@@ -203,7 +203,7 @@ bool ioDiscoverer::doGenicamDiscover()
             std::shared_ptr<rcg::Device> p = NULL;
             try
             {
-                //´ò¿ªCommon Transport Interface Ò»¸ösystem¶ÔÓ¦Ò»¸ö.ctiÎÄ¼ş
+                //æ‰“å¼€Common Transport Interface ä¸€ä¸ªsystemå¯¹åº”ä¸€ä¸ª.ctiæ–‡ä»¶
                 std::vector<std::shared_ptr<rcg::System> > system = rcg::System::getSystems();
                 for (size_t i = 0; i < system.size(); i++)
                 {
@@ -220,20 +220,20 @@ bool ioDiscoverer::doGenicamDiscover()
                             ioDev* piod = ioSrv.getIODev(p->getID());
                             if (!piod)
                             {
-                                //Ö´ĞĞ·¢ÏÖ£¬¼ÓÈëµ½ioSrv
+                                //æ‰§è¡Œå‘ç°ï¼ŒåŠ å…¥åˆ°ioSrv
                                 ioDev_genicam* pgen = (ioDev_genicam*)ioSrv.onChildDevDiscovered(p->getID(), IO_DEV_TYPE::DEV::genicam);
                                 pgen->m_genicamDev = p;
 
-                                //³õÊ¼»¯ÍÆÁ÷id
+                                //åˆå§‹åŒ–æ¨æµid
                                 pgen->registerToStreamServer(p->getID());
-                                //µÚÒ»¸ö·¢ÏÖµÄgenicam¶îÍâÔö¼ÓÍÆÁ÷idµ½ genicam_0
+                                //ç¬¬ä¸€ä¸ªå‘ç°çš„genicamé¢å¤–å¢åŠ æ¨æµidåˆ° genicam_0
                                 if (firstDiscoverGenicam == NULL)
                                 {
                                     firstDiscoverGenicam = pgen;
                                     firstDiscoverGenicam->registerToStreamServer("genicam_0");
                                 }
 
-                                //Ç°Á½²½Íê³ÉºóÔÙ·¢ËÍÍ¨Öª£¬ÒòÎªÊÕµ½Í¨ÖªºóµÄÉè±¸²Ù×÷¿ÉÄÜĞèÒªÇ°Á½²½Íê³Éºó²ÅÄÜ²Ù×÷
+                                //å‰ä¸¤æ­¥å®Œæˆåå†å‘é€é€šçŸ¥ï¼Œå› ä¸ºæ”¶åˆ°é€šçŸ¥åçš„è®¾å¤‡æ“ä½œå¯èƒ½éœ€è¦å‰ä¸¤æ­¥å®Œæˆåæ‰èƒ½æ“ä½œ
                                 MODULE_BUS_MSG msg;
                                 msg.eventName = "online";
                                 msg.moduleName = "ioDiscoverer";

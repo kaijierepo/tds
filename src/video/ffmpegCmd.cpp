@@ -26,15 +26,13 @@ DWORD runProcess(string exe, string cmdline) {
 		&pi)           // Pointer to PROCESS_INFORMATION structure
 		)
 	{
-		LOG("runProcess失败:" + exe + " " + cmdline + "  " + sys::getLastError());
+		LOG("runProcess澶辫触:" + exe + " " + cmdline + "  " + sys::getLastError());
 		return 0;
 	}
 	else
 	{
-		// 等待新进程初始化完毕  
-		string s = "runProcess成功: " + exe + " " + cmdline;
+		string s = "runProcess鎴愬姛: " + exe + " " + cmdline;
 		LOG(s);
-		//WaitForSingleObject(pi.hProcess, INFINITE);//用户从任务栏右键关闭chrome浏览器，此处阻塞解除，程序从此处退出
 	}
 
 	CloseHandle(pi.hProcess);

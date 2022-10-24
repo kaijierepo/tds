@@ -14,9 +14,9 @@ struct tcpSession
 	string remoteIP;
 	int remotePort;
 	bool bIsTransmit;
-	int iSendSucCount;
-	int iSendFailCount;
-	int iRecvCount;
+	size_t iSendSucCount;
+	size_t iSendFailCount;
+	size_t iRecvCount;
 	int iKeepAliveTimeout;
 	void* pTcpServer;  
 	void* pALSession; 
@@ -49,7 +49,7 @@ struct tcpSession
 		return ptr;
 	}
 
-	bool send(char* pData, int iLen);
+	bool send(char* pData, size_t iLen);
 };
 
 class ITcpServerCallBack {
@@ -199,8 +199,8 @@ public:
 	bool run(ITcpServerCallBack* pUser, int port, string strLocalIP = "");
 	void stop();
 
-	bool SendData(char* pData, int iLen, string remoteIP);
-	bool SendData(char* pData, int iLen);
+	bool SendData(char* pData, size_t iLen, string remoteIP);
+	bool SendData(char* pData, size_t iLen);
 	ITcpServerCallBack* m_pCallBackUser;
 
 	bool m_bStarted;

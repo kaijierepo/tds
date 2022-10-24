@@ -180,7 +180,6 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	time_t loadTime = deSel.time.endTime;
 	string strDataFmt = "";
 	string strRawDataFmt = "";
-	SYSTEMTIME stTemp;
 
 	double max = -1000000000;
 	double min = 1000000000;
@@ -621,7 +620,7 @@ void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<st
 
 			if (strExtType.length() > 0)//指定后缀
 			{
-				int iPos = strTmp.find(strExtType);
+				size_t iPos = strTmp.find(strExtType);
 				if (iPos >= 0 && strTmp.length() == iPos + strExtType.length())
 				{
 					bFindFile = true;
@@ -815,8 +814,8 @@ void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)
 string database::parseSuffix(string deFileUrl)
 {
 	string suffix = "";
-	int posDot = deFileUrl.rfind(".");
-	int posSlash = deFileUrl.rfind("/");
+	size_t posDot = deFileUrl.rfind(".");
+	size_t posSlash = deFileUrl.rfind("/");
 	if (posDot != string::npos)
 	{
 		if (posSlash != string::npos)
@@ -859,7 +858,7 @@ string database::dataSet2String(DB_DATA_SET& dataSet)
 
 void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 {
-	int iPos = strPath.rfind('/');
+	size_t iPos = strPath.rfind('/');
 	pfi->strName = strPath.substr(iPos+1,strPath.length() - 1 - iPos);
 
 	strPath += "/";
@@ -999,7 +998,7 @@ bool TIME_CONDITON::init(string condition)
 {
 	if (condition.find('-') != string::npos)//年月日绝对区间模式
 	{
-		int pos = condition.find("~");
+		size_t pos = condition.find("~");
 		strStart = condition.substr(0, pos);
 		strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 		if (strStart.find(":") == string::npos)
@@ -1016,7 +1015,7 @@ bool TIME_CONDITON::init(string condition)
 		if (condition.find(':') != string::npos)//时分秒模式
 		{
 			IsHMS = true;
-			int pos = condition.find("~");
+			size_t pos = condition.find("~");
 			strStart = condition.substr(0, pos);
 			strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 			startHMS = timeopt::HMS2Sec(strStart);

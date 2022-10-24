@@ -27,7 +27,7 @@ namespace httplib {
 				clear();
 			};
 
-			inline bool haveData();
+			bool haveData();
 
 			bool is_readable() const override;
 			bool is_writable() const override;
@@ -66,7 +66,7 @@ namespace httplib {
 			socket_t sock_;
 		};
 
-		inline bool dsClientStream::haveData() {
+		bool dsClientStream::haveData() {
 			bool haveData = false;
 			m_cs.lock();
 			if (bufferList.size() > 0)
@@ -78,13 +78,13 @@ namespace httplib {
 		}
 
 		// dsClientStream stream implementation
-		inline bool dsClientStream::is_readable() const { 
+		bool dsClientStream::is_readable() const { 
 			return true;
 		}
 
-		inline bool dsClientStream::is_writable() const { return true; }
+		bool dsClientStream::is_writable() const { return true; }
 
-		inline ssize_t dsClientStream::read(char* ptr, size_t size)
+		ssize_t dsClientStream::read(char* ptr, size_t size)
 		 {
 			 int len_read = 0;
 
@@ -140,7 +140,7 @@ namespace httplib {
 			 return static_cast<ssize_t>(len_read);
 		 }
 
-		inline ssize_t dsClientStream::write(const char* ptr, size_t size) {
+		ssize_t dsClientStream::write(const char* ptr, size_t size) {
 			if (is_writable()) { 
 				size_t sended = send(sock_, ptr, size, 0);
 				return sended;
@@ -148,13 +148,13 @@ namespace httplib {
 			return -1;
 		}
 
-		inline void dsClientStream::get_remote_ip_and_port(std::string& ip, int& port) const {  }
+		void dsClientStream::get_remote_ip_and_port(std::string& ip, int& port) const {  }
 
-		inline const std::string& dsClientStream::get_buffer() const { 
+		const std::string& dsClientStream::get_buffer() const { 
 			return nullptr; 
 		}
 
-		inline socket_t dsClientStream::socket() const { return 0; }
+		socket_t dsClientStream::socket() const { return 0; }
 	}
 }
 

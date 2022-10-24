@@ -718,7 +718,7 @@ protected:
   time_t idle_interval_usec_ = CPPHTTPLIB_IDLE_INTERVAL_USECOND;
   size_t payload_max_length_ = CPPHTTPLIB_PAYLOAD_MAX_LENGTH;
 
-private:
+public:
   using Handlers = std::vector<std::pair<std::regex, Handler>>;
   using HandlersForContentReader =
       std::vector<std::pair<std::regex, HandlerWithContentReader>>;

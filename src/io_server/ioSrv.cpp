@@ -249,20 +249,20 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TD
 			tlBuf.Init();
 		}
 	}
-	//http处理   1.网页请求  2.tdsRpc over http   
-	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
-	{
-		stream2pkt& tlBuf = ioSession->m_tlBuf;
-		tlBuf.PushStream((unsigned char*)pData, iLen);
-		while (tlBuf.PopPkt(APP_LAYER_PROTO::HTTP))
-		{
-			string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
-			httplib::Request httpReq;
-			httplib::Server srv;
-			srv.parse_request_line(sHttp.c_str(), httpReq);
-			OnRecvAppLayerData((unsigned char*)httpReq.body.c_str(),httpReq.body.length(), ioSession,true);
-		}
-	}
+	//http处理    设备端http看以后是否需要支持
+	//else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
+	//{
+	//	stream2pkt& tlBuf = ioSession->m_tlBuf;
+	//	tlBuf.PushStream((unsigned char*)pData, iLen);
+	//	while (tlBuf.PopPkt(APP_LAYER_PROTO::HTTP))
+	//	{
+	//		string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
+	//		httplib::Request httpReq;
+	//		httplib::Server srv;
+	//		srv.parse_request_line(sHttp.c_str(), httpReq);
+	//		OnRecvAppLayerData((unsigned char*)httpReq.body.c_str(),httpReq.body.length(), ioSession,true);
+	//	}
+	//}
 	//tcp直连,没有传输层，表示全部都是应用层数据
 	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
 	{

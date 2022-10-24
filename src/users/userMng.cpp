@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "userMng.h"
-#include "common/common.hpp"
+#include "common/common.h"
 #include "obj.h"
 #include "logger.h"
 #include "pbkdf2_sha256.h"
@@ -161,7 +161,7 @@ bool userManager::loadConf()
 	}
 	catch (std::exception& e)
 	{
-
+		LOG("[error]加载用户配置失败,error=%s", e.what());
 	}
 
 	//如果没有配置，添加一个默认的admin用户，密码123
@@ -598,6 +598,9 @@ json userManager::getMoPermission(string user)
 		{
 			json& jUser = m_mapUsers[user];
 			return jUser["permission"]["mo"];
+		}
+		else {
+			return nullptr;
 		}
 	}
 	catch (std::exception& e)

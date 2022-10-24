@@ -19,7 +19,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 	vector<char> recvBuff;
 	int iRecvBuffLen = 0;
-	int ret;
+	size_t ret;
 	while(1)
 	{
 		//buffer full , dynamicly increase 10k
@@ -148,7 +148,7 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
-	int pos = host.find(":");
+	size_t pos = host.find(":");
 	string ip = host.substr(0, pos);
 	string strPort = host.substr(pos + 1, host.length() - pos - 1);
 	m_remoteIP = ip;
@@ -265,7 +265,7 @@ bool tcpClt::ReConnect()
 	return connect(m_pCallBackUser, m_remoteIP, m_remotePort);
 }
 
-int tcpClt::SendData(char* pData, int iLen)
+int tcpClt::SendData(char* pData, size_t iLen)
 {
 	if(iLen==0)
 	{

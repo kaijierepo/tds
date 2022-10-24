@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "tdsConf.h"
-#include  "common.hpp"
+#include  "common.h"
 
 tdsConfig::tdsConfig()
 {
