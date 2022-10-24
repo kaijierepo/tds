@@ -30,6 +30,7 @@ struct tcpSessionClt
 		iSendSucCount = 0;
 		iSendFailCount = 0;
 		iRecvCount = 0;
+		srvPort = 0;
 	}
 };
 

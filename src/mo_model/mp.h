@@ -36,8 +36,8 @@ struct ALARM_LIMIT {
 
 struct VALID_RANGE {
 	bool enable;
-	float min;
-	float max;
+	double min;
+	double max;
 };
 
 using namespace std;

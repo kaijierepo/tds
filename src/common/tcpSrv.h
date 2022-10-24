@@ -37,6 +37,8 @@ struct tcpSession
 		iRecvCount = 0;
 		iKeepAliveTimeout = 0;
 		bEnableActivityCheck = true;
+		remotePort = 0;
+		bridgeSock = 0;
 	}
 
 	tcpSession* GenerateClienInfo() {

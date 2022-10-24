@@ -233,6 +233,7 @@ public:
 		len = 0;
 		cmd_data = nullptr;
 		cmd_data_len = 0;
+		type = IO_PKT_TYPE::IO_Unknown;
 	}
 
 	~PKT_DATA()

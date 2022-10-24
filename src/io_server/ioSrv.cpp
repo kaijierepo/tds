@@ -911,7 +911,7 @@ bool ioServer::loadChanTemplate()
 			}
 		}
 		catch (exception& e) {
-
+			LOG("[error]加载/template/conf.json失败,error=%s", e.what());
 		}
 	}
 	return false;

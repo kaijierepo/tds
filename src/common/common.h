@@ -212,7 +212,7 @@ namespace str {
 namespace timeopt {
 	string stTimeToStr(SYSTEMTIME time);
 	DWORD SysTime2Unix(SYSTEMTIME sDT);
-	SYSTEMTIME Unix2SysTime(DWORD iUnix);
+	SYSTEMTIME Unix2SysTime(time_t iUnix);
 	SYSTEMTIME str2st(string str);
 	int HMS2Sec(string hms);
 	bool isRelative(string time);

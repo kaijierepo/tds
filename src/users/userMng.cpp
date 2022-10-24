@@ -177,16 +177,16 @@ bool userManager::loadConf()
 
 	}
 
-	string sUI;
-	fs::readFile(m_uiConfPath, sUI);
-	try {
-		if (sUI != "")
-			m_jUI = json::parse(sUI);
-	}
-	catch (std::exception& e)
-	{
+	//string sUI;
+	//fs::readFile(m_uiConfPath, sUI);
+	//try {
+	//	if (sUI != "")
+	//		m_jUI = json::parse(sUI);
+	//}
+	//catch (std::exception& e)
+	//{
 
-	}
+	//}
 
 
 	//动态token

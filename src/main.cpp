@@ -288,26 +288,26 @@ int main(int argc, char** argv)
 		return 0;
 	}
 	else if (mode == "base85") {
-		if (args.size() != 3) {
-			printf("参数错误");
-			return 0;
-		}
+		//if (args.size() != 3) {
+		//	printf("参数错误");
+		//	return 0;
+		//}
 
-		if (args[1] == "enc") {
-			char* pFile = nullptr;
-			int len;
-			if (fs::readFile(args[2], pFile, len)) {
-				char* dest = new char[10 * 1024 * 1024];
-				memset(dest, 0, 10 * 1024 * 1024);
-				 bintob85(dest,(void const*)pFile,len);
-				 string encData = dest;
-				 fs::writeFile(args[2] + "base85_enc.txt", encData);
-			}
-		}
-		else {
+		//if (args[1] == "enc") {
+		//	char* pFile = nullptr;
+		//	int len;
+		//	if (fs::readFile(args[2], pFile, len)) {
+		//		char* dest = new char[10 * 1024 * 1024];
+		//		memset(dest, 0, 10 * 1024 * 1024);
+		//		 bintob85(dest,(void const*)pFile,len);
+		//		 string encData = dest;
+		//		 fs::writeFile(args[2] + "base85_enc.txt", encData);
+		//	}
+		//}
+		//else {
 
-		}
-		return 0;
+		//}
+		//return 0;
 	}
 	else if (mode == "tdb") {
 		logger.m_bSaveToFile = true;

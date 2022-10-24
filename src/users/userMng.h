@@ -14,6 +14,10 @@ public:
 	string phone;
 	bool enable;
 
+	USER_INFO() {
+		enable = true;
+	}
+
 	void fromJson(json& j) {
 		if (j.contains("name")) name = j["name"].get<string>();
 		if (j.contains("createTime")) createTime = j["createTime"].get<string>();
@@ -43,6 +47,11 @@ public:
 	SYSTEMTIME stCreate;
 	bool bDynamic;
 	int age; //秒为单位，过期时间
+
+	ACCESS_INFO() {
+		age = 300;
+	}
+
 	bool isExpired() {
 		if (!bDynamic)
 			return false;

@@ -826,7 +826,7 @@ namespace timeopt {
 		return iReturn;
 	}
 
-	SYSTEMTIME Unix2SysTime(DWORD iUnix)
+	SYSTEMTIME Unix2SysTime(time_t iUnix)
 	{
 		SYSTEMTIME sDT;
 		time_t tIn = (time_t)iUnix;
