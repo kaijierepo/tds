@@ -1383,7 +1383,7 @@ static void static_cb(struct mg_connection *c, int ev, void *ev_data,
         //inject hmr code
         if (pos > 0)
         {
-            memmove(p_file + pos + hmr_conf.len, p_file + pos, file_len - pos); //°Ñ</body>ºóÃæµÄÒ»ÆğÍùºó¿½±´
+            memmove(p_file + pos + hmr_conf.len, p_file + pos, file_len - pos); //æŠŠ</body>åé¢çš„ä¸€èµ·å¾€åæ‹·è´
             memcpy(p_file + pos, hmr_conf.code, hmr_conf.len);
             n += hmr_conf.len;
         }
