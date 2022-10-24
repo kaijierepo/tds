@@ -37,6 +37,7 @@ namespace IO_DEV_TYPE {
 		const string genicam = "genicam";
 		const string mqttBroker = "mqtt-broker";
 		const string tuya = "tuya";
+		const string visca = "visca";
 	}
 	namespace GW {
 		const string local_serial = "local-serial";
@@ -123,7 +124,7 @@ public:
 	tcpSrv* m_tcpSrv_mbTcp; //502 modbus tcp协议
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
-	udpServer* m_udpSrv_adaptor;
+	udpServer* m_udpSrv_adaptor; //请求响应式设备的udp统一出口
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 	void OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);

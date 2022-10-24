@@ -96,6 +96,7 @@ public:
 	virtual bool connect();
 	virtual bool connect(json params) { return false; };
 	virtual bool disconnect();
+	virtual bool isCamera() { return false; };
 	virtual string getDesc();
 	void triggerCycleAcq();
 	virtual bool call(string method, json params, json& result, json& error, bool sync = true) { return false; };

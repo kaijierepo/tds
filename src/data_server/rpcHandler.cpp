@@ -23,6 +23,7 @@
 #include "base64.h"
 #include "ffmpegCmd.h"
 #include "masterDs.h"
+#include "ioDev/ioDev_visca.h"
 
 rpcHandler rpcSrv;
 
@@ -493,6 +494,51 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	}
 	}
 #endif
+	else if (method == "ptz.startMove")
+	{
+		string tag = params["tag"]; 
+		string dir = params["dir"];
+		int panSpeed = params["panSpeed"].get<int>();
+		int tiltSpeed = params["tiltSpeed"].get<int>();
+		ioDev* p = ioSrv.getIODevByTag(tag);
+		if (p && p->isCamera()) {
+			ioDev_camera* pCam = (ioDev_camera*)p;
+			pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
+		}
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "ptz.stopMove")
+	{
+		string tag = params["tag"];
+		ioDev* p = ioSrv.getIODevByTag(tag);
+		if (p && p->isCamera()) {
+			ioDev_camera* pCam = (ioDev_camera*)p;
+			pCam->ptz_stopMove();
+		}
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "ptz.startZoom")
+	{
+		string tag = params["tag"];
+		string dir = params["dir"];
+		//int zoomSpeed = params["zoomSpeed"].get<int>();
+		ioDev* p = ioSrv.getIODevByTag(tag);
+		if (p && p->isCamera()) {
+			ioDev_camera* pCam = (ioDev_camera*)p;
+			pCam->ptz_startZoom(dir);
+		}
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "ptz.stopZoom")
+	{
+		string tag = params["tag"];
+		ioDev* p = ioSrv.getIODevByTag(tag);
+		if (p && p->isCamera()) {
+			ioDev_camera* pCam = (ioDev_camera*)p;
+			pCam->ptz_stopZoom();
+		}
+		rpcResp.result = "\"ok\"";
+	}
 	else
 	{
 		bHandled = false;

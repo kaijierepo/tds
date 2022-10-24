@@ -292,43 +292,60 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 {
 	IOLogRecv(recvData, recvDataLen, "UDP - " + strIP + ":" + str::fromInt(port));
 
-	try {
-		string s = str::fromBuff(recvData, recvDataLen);
-	
-		json jPkt = json::parse(s);
 
-		string ioAddr = jPkt["ioAddr"].get<string>();
-		string ioAddrWithoutPort = ioAddr;
-		//除去端口号
-		int pos = ioAddr.find(":");
-		if (pos > 0) {
-			ioAddrWithoutPort = ioAddr.substr(0, pos);
-		}
+	if (port == 660)//来自于adaptor
+	{
+		try {
+			string s = str::fromBuff(recvData, recvDataLen);
 
-		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
-		ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort,false,true); 
-		//设备发现
-		if (!pIoDev)
-		{
-			json jAddr;
-			jAddr["id"] = ioAddr;
-			pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-		}
-		//设备上线
-		else
-		{
-			if (pIoDev->m_bOnline == false)
-			{
-				pIoDev->setOnline();
-				pIoDev->triggerCycleAcq();
-				GetLocalTime(&pIoDev->m_stLastActiveTime);
-				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			json jPkt = json::parse(s);
+
+			string ioAddr = jPkt["ioAddr"].get<string>();
+			string ioAddrWithoutPort = ioAddr;
+			//除去端口号
+			int pos = ioAddr.find(":");
+			if (pos > 0) {
+				ioAddrWithoutPort = ioAddr.substr(0, pos);
 			}
-		}
-		pIoDev->onRecvPkt(jPkt);
-	}
-	catch (exception& e) {
 
+			//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
+			ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
+			//设备发现
+			if (!pIoDev)
+			{
+				json jAddr;
+				jAddr["id"] = ioAddr;
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+			}
+			//设备上线
+			else
+			{
+				if (pIoDev->m_bOnline == false)
+				{
+					pIoDev->setOnline();
+					pIoDev->triggerCycleAcq();
+					GetLocalTime(&pIoDev->m_stLastActiveTime);
+					logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+				}
+			}
+			pIoDev->onRecvPkt(jPkt);
+		}
+		catch (exception& e) {
+
+		}
+	}
+	// udp设备
+	else {
+		string ioAddr = strIP + ":" + str::fromInt(port);
+		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
+		ioDev* pIoDev = ioSrv.getIODev(strIP, false, true);
+		if (pIoDev->m_bOnline == false)
+		{
+			pIoDev->setOnline();
+			pIoDev->triggerCycleAcq();
+			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+		}
 	}
 }
 
@@ -462,8 +479,8 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 			if (parentDev == NULL)
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID, "未找到父节点，父节点ID:" + parentID);
+				return;
 			}
-			return;
 		}
 		else
 			parentDev = this;
@@ -520,13 +537,15 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 	for (auto& devConf : devList) {
 		string sNodeId = devConf["nodeID"].get<string>();
 		bool bFinded = false;
-		ioDev* p = getIODevByNodeID(sNodeId);
+		ioDev* p = getIODevByNodeID(sNodeId); 
 
 		if (p)
 		{
 			p->loadConf(devConf);
-			p->toJson(devConf);
-			rpcSrv.notify("devModified", devConf);
+			json opt;
+			opt["getStatus"] = true; 
+			p->toJson(devConf,opt);
+			rpcSrv.notify("devModified", devConf); 
 			rpcResp.result = devConf.dump(2);
 			modified = true;
 

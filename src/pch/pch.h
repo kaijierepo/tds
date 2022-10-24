@@ -13,7 +13,7 @@
 #include <iostream>
 #include <exception>
 #include <WinSock2.h>
-#include "common.hpp"
+#include "common.h"
 #include "tdscore.h"
 #include "json.hpp"
 #include "tds.h"

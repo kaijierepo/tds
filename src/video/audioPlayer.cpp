@@ -3,7 +3,7 @@
 #include<iostream>
 #include<random>
 #include<time.h>
-#include "common.hpp"
+#include "common.h"
 #include "logger.h"
 
 HWND hwndPlayer = NULL;

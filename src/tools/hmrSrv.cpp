@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "hmrSrv.h"
 #include "logger.h"
-#include "common.hpp"
+#include "common.h"
 #include "data_server/ds.h"
 
 string hmrCodeStr = R"(

@@ -106,6 +106,7 @@ ioDev::ioDev(void)
 	m_fAcqInterval = 30;
 	pIOSession = NULL;
 	m_onlineInfoQueried = false;
+	m_acqMode = "all";
 }
 
 ioDev::~ioDev(void)
@@ -322,8 +323,10 @@ bool ioDev::loadConf(json& conf)
 					m_bUdpDev = true;
 				}
 			}
-			else if (m_jDevAddr.contains("port"))
+			else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>()!=0)
 				m_addrMode = DEV_ADDR_MODE::tcpServer;
+			else if (m_jDevAddr["udpPort"].is_number_integer() && m_jDevAddr["udpPort"].get<int>()!=0)
+				m_addrMode = DEV_ADDR_MODE::udp;
 			else
 				m_addrMode = DEV_ADDR_MODE::tcpClient;
 		}

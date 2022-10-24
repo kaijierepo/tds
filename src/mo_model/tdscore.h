@@ -2,7 +2,7 @@
 #include <queue>
 #include <string>
 #include<map>
-#include "common.hpp"
+#include "common.h"
 #include "tchar.h"
 #include "tds.h"
 using namespace std;

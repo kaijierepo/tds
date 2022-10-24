@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "mp.h"
 #include "obj.h"
-#include "common.hpp"
+#include "common.h"
 #include "prj.h"
 #include "as.h"
 #include "rpcHandler.h"

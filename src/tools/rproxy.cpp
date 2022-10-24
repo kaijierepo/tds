@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "rproxy.h"
 #include "logger.h"
-#include "common.hpp"
+#include "common.h"
 
 RProxy* rpProxy = nullptr;
 

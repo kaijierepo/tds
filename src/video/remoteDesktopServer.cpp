@@ -6,7 +6,7 @@
 #include <time.h>
 #include "tdsSession.h"
 #include <chrono>
-#include "common.hpp"
+#include "common.h"
 #include "logger.h"
 #include <queue>
 

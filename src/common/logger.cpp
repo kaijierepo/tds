@@ -3,7 +3,7 @@
 #include <vector>
 #include <stdio.h>
 #include <stdarg.h>
-#include "common.hpp"
+#include "common.h"
 #ifdef _TDS
 #include "tools/dumpCatch.h"
 #endif

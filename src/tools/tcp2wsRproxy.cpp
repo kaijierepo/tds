@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "Tcp2wsRproxy.h"
 #include "tdsConf.h"
-#include "common.hpp"
+#include "common.h"
 
 Tcp2wsRproxy* tcp2wsRproxy = nullptr;
 

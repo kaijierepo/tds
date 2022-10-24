@@ -1,5 +1,5 @@
 #pragma once
-#include "common.hpp"
+#include "common.h"
 #include "logger.h"
 using namespace std;
 namespace Tools {

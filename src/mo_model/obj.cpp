@@ -27,7 +27,7 @@ SOFTWARE.
 
 #include "pch.h"
 #include "obj.h"
-#include "common.hpp"
+#include "common.h"
 #include "prj.h"
 #include "mp.h"
 #include "amo.h"

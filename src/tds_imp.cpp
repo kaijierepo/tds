@@ -271,6 +271,46 @@ void createChromeWnd()
 }
 
 
+void startMicroService(string path)
+{
+	if (fs::fileExist(path))
+	{
+		wstring title = charCodec::utf8toUtf16("123456");
+		STARTUPINFOW si;
+		si.lpTitle = (LPWSTR)title.c_str();
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+
+		// Start the child process.
+		si.dwFlags = STARTF_USESHOWWINDOW;
+		si.wShowWindow = SW_HIDE;
+		if (!CreateProcessW(NULL,   // No module name (use command line)
+			(LPWSTR)charCodec::utf8toUtf16(path).c_str(),        // Command line
+			NULL,           // Process handle not inheritable
+			NULL,           // Thread handle not inheritable
+			FALSE,          // Set handle inheritance to FALSE
+			0,              // No creation flags
+			NULL,           // Use parent's environment block
+			NULL,           // Use parent's starting directory
+			&si,            // Pointer to STARTUPINFO structure
+			&pi)           // Pointer to PROCESS_INFORMATION structure
+			)
+		{
+			LOG("启动失败" + path + sys::getLastError());
+		}
+		else
+		{
+
+		}
+
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
+}
+
+
 TDS_imp::TDS_imp()
 {
 	conf = nullptr;
@@ -452,6 +492,17 @@ bool TDS_imp::run(string cmdline)
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
 	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
+
+
+	//启动微服务组件
+	string ms_mediaServer = fs::appPath() + "/com/mediaServer/MediaServer.exe";
+	if (fs::fileExist(ms_mediaServer)) {
+		startMicroService(ms_mediaServer);
+		LOG("[微服务] 启动MediaServer成功");
+	}
+
+
+
 	return true;
 }
 
