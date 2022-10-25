@@ -128,10 +128,10 @@ httpPort=80            #http服务代理端口
 	return s;
 }
 
-void tdsConfig::loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf) {
+void tdsConfig::loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
-		TDS_CONF_ITEM& tci = vecConf[i];
+		KV_CONF_ITEM& tci = vecConf[i];
 		if (checkKey(tci.key, "httpPort"))
 		{
 			httpPort = atoi(tci.val.c_str());
@@ -142,10 +142,10 @@ void tdsConfig::loadConf_httpServer(vector<TDS_CONF_ITEM>& vecConf) {
 
 
 
-void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
+void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
-		TDS_CONF_ITEM& tci = vecConf[i];
+		KV_CONF_ITEM& tci = vecConf[i];
 		if (checkKey(tci.key, "confpath"))
 		{
 			confPath = tci.val;
@@ -351,11 +351,11 @@ void tdsConfig::loadConf_tds(vector<TDS_CONF_ITEM>& vecConf) {
 		uiTitle = "tdsUI";
 }
 
-void tdsConfig::loadConf_rphttp(vector<TDS_CONF_ITEM>& vecConf)
+void tdsConfig::loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf)
 {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
-		TDS_CONF_ITEM& tci = vecConf[i];
+		KV_CONF_ITEM& tci = vecConf[i];
 		if (checkKey(tci.key, "httpPort"))
 		{
 			httpPort = atoi(tci.val.c_str());
@@ -403,11 +403,11 @@ void tdsConfig::loadConf()
 		}
 	}
 	//解析
-	vector<TDS_CONF_ITEM> vecConf;
+	vector<KV_CONF_ITEM> vecConf;
 	for (int i = 0; i < confItems.size(); i++)
 	{
 		string& ci = confItems[i];
-		TDS_CONF_ITEM tci;
+		KV_CONF_ITEM tci;
 		int pos = ci.find("=");
 		if (pos != string::npos)
 		{
@@ -483,89 +483,3 @@ string tdsConfig::getStr(string key, string sDef)
 	return tdsIni.getValStr(key, sDef);
 }
 
-bool TDS_INI::load(string path)
-{
-	m_path = path;
-	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
-	string strConf;
-	fs::readFile(path, strConf);
-	vector<string> confItems;
-	str::split(confItems, strConf, "\n");
-
-	//去掉注释
-	for (int i = 0; i < confItems.size(); i++)
-	{
-		string& ci = confItems[i];
-		int pos = ci.find("#");
-		if (pos != string::npos)
-		{
-			ci = ci.substr(0, pos);
-		}
-	}
-	//解析
-	vector<TDS_CONF_ITEM> vecConf;
-	for (int i = 0; i < confItems.size(); i++)
-	{
-		string& ci = confItems[i];
-		TDS_CONF_ITEM tci;
-		int pos = ci.find("=");
-		if (pos != string::npos)
-		{
-			tci.key = ci.substr(0, pos);
-			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
-
-			tci.val = str::trim(tci.val, "\r");
-			tci.key = str::trim(tci.key, " ");
-			tci.val = str::trim(tci.val, " ");
-
-			mapConf[tci.key] = tci.val;
-		}
-	}
-	return true;
-}
-
-bool TDS_INI::save(string path)
-{
-	string s;
-	for (auto& i : mapConf) {
-		string item = i.first + "=" + i.second;
-		s += item + "\r\n";
-	}
-	fs::writeFile(path, s);
-	return true;
-}
-
-void TDS_INI::setVal(string key, int val)
-{
-	string s = str::fromInt(val);
-	mapConf[key] = s;
-	save(m_path);
-}
-
-void TDS_INI::setVal(string key, string val)
-{
-	mapConf[key] = val;
-	save(m_path);
-}
-
-int TDS_INI::getValInt(string key, int defaultVal)
-{
-	if (mapConf.find(key) == mapConf.end())
-	{
-		return defaultVal;
-	}
-
-	string sVal = mapConf[key];
-	return atoi(sVal.c_str());
-}
-
-string TDS_INI::getValStr(string key, string defaultVal)
-{
-	if (mapConf.find(key) == mapConf.end())
-	{
-		return defaultVal;
-	}
-
-	string sVal = mapConf[key];
-	return sVal;
-}

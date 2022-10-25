@@ -1078,12 +1078,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.m_parentTag = tmpPrj.m_parentTag;
 				prj.m_mapAllMP = tmpPrj.m_mapAllMP;
 				prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
-				prj.m_childMO = tmpPrj.m_childMO;
-				for (int i = 0; i < prj.m_childMO.size(); i++) {
-					OBJ* p = prj.m_childMO[i];
+				prj.m_childObj = tmpPrj.m_childObj;
+				for (int i = 0; i < prj.m_childObj.size(); i++) {
+					OBJ* p = prj.m_childObj[i];
 					p->m_pParentMO = &prj;
 				}
-				tmpPrj.m_childMO.clear();
+				tmpPrj.m_childObj.clear();
 				prj.saveConfFile();
 				ioSrv.updateTag2IOAddrBinding();
 				ioSrv.updateAllChanVal();
@@ -2541,9 +2541,9 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 				oneData["在线"] = pMo->m_bOnline;
 			}
 			
-			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			for (int j = 0; j < pMo->m_childObj.size(); j++)
 			{
-				OBJ* pChild = pMo->m_childMO[j];
+				OBJ* pChild = pMo->m_childObj[j];
 				if (pChild->m_type == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
@@ -2616,9 +2616,9 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 			if (jTableHead.size() == 0)
 			{
 				jTableHead.push_back("位号");
-				for (int j = 0; j < pMo->m_childMO.size(); j++)
+				for (int j = 0; j < pMo->m_childObj.size(); j++)
 				{
-					OBJ* pChild = pMo->m_childMO[j];
+					OBJ* pChild = pMo->m_childObj[j];
 					if (pChild->m_type == MO_TYPE::mp)
 					{
 						MP* pmp = (MP*)pChild;
@@ -2633,9 +2633,9 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 			//数据行
 			json jTableRow;
 			jTableRow.push_back(tag);
-			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			for (int j = 0; j < pMo->m_childObj.size(); j++)
 			{
-				OBJ* pChild = pMo->m_childMO[j];
+				OBJ* pChild = pMo->m_childObj[j];
 				if (pChild->m_type == MO_TYPE::mp)
 				{
 					MP* pmp = (MP*)pChild;
@@ -2686,7 +2686,8 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 		for (int i = 0; i < moList.size(); i++)
 		{
 			OBJ* pMo = moList[i];
-			string tag = pMo->getTag();
+			string moTag = pMo->getTag();
+			string tag = moTag;
 
 			//过滤用户权限
 			if (session.user != "")
@@ -2704,19 +2705,20 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 				}
 				tag = str::trim(tag, rootTag + ".");
 			}
+
+
+			//下属所有监控点列表
+			vector<MP*> childMps;
+			pMo->GetAllChildMp(childMps);
 	
 			//表头
 			if (jTableHead.size() == 0)
 			{
 				jTableHead.push_back("位号");
-				for (int j = 0; j < pMo->m_childMO.size(); j++)
+				for (int j = 0; j < childMps.size(); j++)
 				{
-					OBJ* pChild = pMo->m_childMO[j];
-					if (pChild->m_type == MO_TYPE::mp)
-					{
-						MP* pmp = (MP*)pChild;
-						jTableHead.push_back(pmp->m_name);
-					}
+					MP* pmp = childMps[j];
+					jTableHead.push_back(pmp->getTag(moTag));
 				}
 				jTableHead.push_back("在线");
 				jTableHead.push_back("更新时间");
@@ -2726,14 +2728,10 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 			//数据行
 			json jTableRow;
 			jTableRow.push_back(tag);
-			for (int j = 0; j < pMo->m_childMO.size(); j++)
+			for (int j = 0; j < childMps.size(); j++)
 			{
-				OBJ* pChild = pMo->m_childMO[j];
-				if (pChild->m_type == MO_TYPE::mp)
-				{
-					MP* pmp = (MP*)pChild;
-					jTableRow.push_back(pmp->m_curVal);
-				}
+				MP* pmp = childMps[j];
+				jTableRow.push_back(pmp->m_curVal);
 			}
 			jTableRow.push_back(pMo->m_bOnline);
 			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));

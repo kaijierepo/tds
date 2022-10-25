@@ -59,7 +59,7 @@ bool project::loadConfFile()
 		m_strLastModify = timeopt::st2str(st);
 	}
 	else {
-		TDS_INI ini;
+		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
 		string stime = ini.getValStr("mo","");
 		m_strLastModify = stime;
@@ -84,7 +84,7 @@ void project::saveConfFile()
 	if (s != m_strMoTree) {
 		SYSTEMTIME st;
 		GetLocalTime(&st);
-		TDS_INI ini;
+		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
 		ini.setVal("mo", timeopt::st2str(st));
 		m_strMoTree = s;
@@ -132,9 +132,9 @@ void project::clear()
 
 void project::getMpList(vector<MP*>& MPlist, OBJ* pMO)
 {
-	for (int i = 0; i < pMO->m_childMO.size(); i++)
+	for (int i = 0; i < pMO->m_childObj.size(); i++)
 	{
-		OBJ* p = pMO->m_childMO.at(i);
+		OBJ* p = pMO->m_childObj.at(i);
 		if (p->m_type == "mp")
 		{
 			MPlist.push_back((MP*)p);
@@ -146,9 +146,9 @@ void project::getMpList(vector<MP*>& MPlist, OBJ* pMO)
 
 void project::getMpList(map<string, MP*>& MPlist, OBJ* pMO)
 {
-	for (int i = 0; i < pMO->m_childMO.size(); i++)
+	for (int i = 0; i < pMO->m_childObj.size(); i++)
 	{
-		OBJ* p = pMO->m_childMO.at(i);
+		OBJ* p = pMO->m_childObj.at(i);
 		if (p->m_type == "mp")
 		{
 			MPlist[p->getTag().c_str()] = (MP*)p;

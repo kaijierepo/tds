@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Tcp2wsRproxy.h"
-#include "tdsConf.h"
+#include "kvIni.h"
 #include "common.h"
 
 Tcp2wsRproxy* tcp2wsRproxy = nullptr;
@@ -35,7 +35,7 @@ void Tcp2wsRproxy::run()
 		fs::writeFile(confPath, s);
 	}
 
-	TDS_INI tdsIni;
+	KV_INI tdsIni;
 	tdsIni.load(confPath);
 
 	

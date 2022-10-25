@@ -2,7 +2,7 @@
 #include "tcpHub.h"
 #include "logger.h"
 #include "common.h"
-#include "tdsConf.h"
+#include "kvIni.h"
 
 
 string tcpHub::defaultConf() 
@@ -40,7 +40,7 @@ void tcpHub::run()
 		fs::writeFile(confPath, s);
 	}
 	
-	TDS_INI tdsIni;
+	KV_INI tdsIni;
 	tdsIni.load(confPath);
 
 	left_s_port = tdsIni.getValInt("left_s_port", 0);

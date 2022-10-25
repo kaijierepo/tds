@@ -163,10 +163,11 @@ public:
 	bool isSelectedByLeafType(string leafType);
 
 	//树管理
-	std::vector<OBJ*> m_childMO;
+	std::vector<OBJ*> m_childObj;
 	OBJ* m_pParentMO;
 	OBJ* createChildMO(string subTag, string moType);
-	void GetAllChildMO(std::vector<OBJ*>& aryMO, string type);
+	void GetAllChildObj(std::vector<OBJ*>& aryMO, string type);
+	void GetAllChildMp(std::vector<MP*>& aryMP);
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
 	map<string, json> getChildCustomMoTypeList();
 	void statisChildCustomMoType(map<string, json>& list);

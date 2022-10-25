@@ -275,7 +275,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	if (q.getStatus)
 	{
 		conf["val"] = m_curVal;
-		conf["time"] = timeopt::st2str(m_stDataLastUpdate);
+		if (timeopt::isValidTime(m_stDataLastUpdate))
+			conf["time"] = timeopt::st2str(m_stDataLastUpdate);
+		else
+			conf["time"] = "-";
 	}
 
 	if (q.getStatusDesc) {

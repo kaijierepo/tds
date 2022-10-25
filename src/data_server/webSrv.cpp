@@ -16,7 +16,7 @@ string confDir;
 string filesDir;
 
 
-int WS_PKT_HEADER_LEN = sizeof(int);
+int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 
 WebServer* webSrv = new WebServer();
@@ -151,12 +151,12 @@ static void unlink_conns(struct mg_connection* c1, struct mg_connection* c2) {
 	c1->fn_data = c2->fn_data = NULL;
 }
 
-bool extractWsPkt(mg_iobuf& iobuff,int& pktLen) {
-	if (iobuff.len < sizeof(int))
+bool extractWsPkt(mg_iobuf& iobuff, size_t& pktLen) {
+	if (iobuff.len < sizeof(size_t))
 		return false;
 
-	int* pLen = (int*)iobuff.buf;
-	pktLen = *pLen + sizeof(int);
+	size_t* pLen = (size_t*)iobuff.buf;
+	pktLen = *pLen + sizeof(size_t);
 	if (iobuff.len >= pktLen) {
 		return true;
 	}
@@ -174,7 +174,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 		if (parent->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 		{
 			//此处可能收到粘连包，使用\n\n分包
-			int pktLen = 0;
+			size_t pktLen = 0;
 			while (extractWsPkt(c->recv, pktLen)) {
 				//发送1包
 				mg_ws_send(parent, (const char*)c->recv.buf + WS_PKT_HEADER_LEN, pktLen - WS_PKT_HEADER_LEN, WEBSOCKET_OP_TEXT);

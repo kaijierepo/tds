@@ -191,7 +191,7 @@ bool OBJ::loadConf(json& conf)
 			{
 				pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
 				pmo->loadConf(child);
-				m_childMO.push_back(pmo);
+				m_childObj.push_back(pmo);
 			}
 		}
 	}
@@ -348,7 +348,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	if (m_type != MO_TYPE::mp)
 	{
 		json jChildren = json::array();
-		for (auto& pmochild : m_childMO)
+		for (auto& pmochild : m_childObj)
 		{
 			if (pmochild->m_type == "mp" && !q.getMp)
 				continue;
@@ -377,9 +377,9 @@ bool OBJ::loadStatus(OBJ* pSrc,bool saveToDB)
 		m_jAlarmStatus = pSrc->m_jAlarmStatus;
 		m_strIoAddrBind = pSrc->m_strIoAddrBind;
 
-		for (int i = 0; i < m_childMO.size(); i++)
+		for (int i = 0; i < m_childObj.size(); i++)
 		{
-			OBJ* pC = m_childMO[i];
+			OBJ* pC = m_childObj[i];
 			pC->loadStatus(pSrc,saveToDB);
 		}
 	}
@@ -406,11 +406,11 @@ void OBJ::removeMp(json& mo)
 
 void OBJ::clearChildren()
 {
-	for (auto& i : m_childMO)
+	for (auto& i : m_childObj)
 	{
 		delete i;
 	}
-	m_childMO.clear();
+	m_childObj.clear();
 }
 
 
@@ -436,7 +436,7 @@ OBJ* OBJ::createObjBranchByTag(string tag)
 		if (!pChild) {
 			pChild = new OBJ();
 			pChild->m_name = nodes[i];
-			pParent->m_childMO.push_back(pChild);
+			pParent->m_childObj.push_back(pChild);
 			pChild->m_pParentMO = pParent;
 		}
 		pParent = pChild;
@@ -449,9 +449,9 @@ json OBJ::getRT()
 	j["name"] = m_name;
 	j["type"] = m_type;
 	json jChildren;
-	for(int i=0;i<m_childMO.size();i++)
+	for(int i=0;i<m_childObj.size();i++)
 	{
-		OBJ* pmo = m_childMO.at(i);
+		OBJ* pmo = m_childObj.at(i);
 		jChildren.push_back(pmo->getRT());
 	}
 	j["children"]=jChildren;
@@ -560,7 +560,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
 		str::split(vecNames, strTag, ".");
 
 		OBJ* toQuery = NULL;
-		std::vector<OBJ*>* childMO = &m_childMO;
+		std::vector<OBJ*>* childMO = &m_childObj;
 		bool findMO = false;
 		for (int i = 0; i < vecNames.size(); i++)
 		{
@@ -583,7 +583,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
 
 			if (findNode)
 			{
-				childMO = &toQuery->m_childMO;
+				childMO = &toQuery->m_childObj;
 			}
 			else
 			{
@@ -607,9 +607,9 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
 				tagVec->push_back(this);
 		}
 
-		for (int i = 0; i < m_childMO.size(); i++)
+		for (int i = 0; i < m_childObj.size(); i++)
 		{
-			OBJ* pMOChild = m_childMO.at(i);
+			OBJ* pMOChild = m_childObj.at(i);
 			pMOChild->queryObj(tagVec, strTag,type);
 		}
 	}
@@ -666,9 +666,9 @@ OBJ* OBJ::GetMOByName(string strName)
 		return this;
 	else
 	{
-		for (int i = 0; i < m_childMO.size(); i++)
+		for (int i = 0; i < m_childObj.size(); i++)
 		{
-			OBJ* pMOChild = m_childMO.at(i);
+			OBJ* pMOChild = m_childObj.at(i);
 			OBJ* pFind = pMOChild->GetMOByName(strName);
 			if (pFind)
 				return pFind;
@@ -917,22 +917,34 @@ OBJ* OBJ::createChildMO(string subTag,string moType)
 		}
 		pmo->m_name = strName;
 		pmo->m_pParentMO = pParent;
-		pParent->m_childMO.push_back(pmo);
+		pParent->m_childObj.push_back(pmo);
 		pParent = pmo;
 	}
 
 	return pmo;
 }
 
-void OBJ::GetAllChildMO(std::vector<OBJ*>& aryMO, string type)
+void OBJ::GetAllChildObj(std::vector<OBJ*>& aryMO, string type)
 {
-	for (int i = 0; i < m_childMO.size(); i++)
+	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		if (m_childMO[i]->m_type == type)
+		if (m_childObj[i]->m_type == type)
 		{
-aryMO.push_back(m_childMO[i]);
+			aryMO.push_back(m_childObj[i]);
 		}
-		m_childMO[i]->GetAllChildMO(aryMO, type);
+		m_childObj[i]->GetAllChildObj(aryMO, type);
+	}
+}
+
+void OBJ::GetAllChildMp(std::vector<MP*>& aryMP)
+{
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		if (m_childObj[i]->m_type == "mp")
+		{
+			aryMP.push_back((MP*)m_childObj[i]);
+		}
+		m_childObj[i]->GetAllChildMp(aryMP);
 	}
 }
 
@@ -948,7 +960,7 @@ map<string, json> OBJ::getChildCustomMoTypeList()
 
 void OBJ::statisChildCustomMoType(map<string, json>& list)
 {
-	for (auto& i : m_childMO)
+	for (auto& i : m_childObj)
 	{
 		if (i->m_type == MO_TYPE::customMo)
 		{
@@ -994,9 +1006,9 @@ void OBJ::statisChildMo(json& jStatis)
 			jStatis["offline"] = jStatis["offline"].get<int>() + 1;
 	}
 
-	for (int i = 0; i < m_childMO.size(); i++)
+	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		OBJ* pC = m_childMO[i];
+		OBJ* pC = m_childObj[i];
 		pC->statisChildMo(jStatis);
 	}
 }
@@ -1070,9 +1082,9 @@ OBJ* OBJ::GetFatherMO(string type)
 
 OBJ* OBJ::GetChildMO(string type)
 {
-	for (int i = 0; i < m_childMO.size(); i++)
+	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		OBJ* pMO = m_childMO.at(i);
+		OBJ* pMO = m_childObj.at(i);
 		if (pMO->m_type == type)
 			return pMO;
 
@@ -1092,10 +1104,10 @@ OBJ* OBJ::CopyMO()
 
 	*pMO = *this;
 
-	for (int i = 0; i < m_childMO.size(); i++)
+	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		OBJ* p = m_childMO[i]->CopyMO();
-		pMO->m_childMO.push_back(p);
+		OBJ* p = m_childObj[i]->CopyMO();
+		pMO->m_childObj.push_back(p);
 	}
 
 	return pMO;
@@ -1129,9 +1141,9 @@ string OBJ::GetStatusSummary()
 
 void OBJ::GetAllChildAlarmInfo(string& strSummary)
 {
-	for (int i = 0; i < m_childMO.size(); i++)
+	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		OBJ* pChild = m_childMO.at(i);
+		OBJ* pChild = m_childObj.at(i);
 		pChild->GetAllChildAlarmInfo(strSummary);
 	}
 }
