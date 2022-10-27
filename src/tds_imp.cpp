@@ -273,14 +273,15 @@ void startMicroService(string path)
 		ZeroMemory(&pi, sizeof(pi));
 
 		// Start the child process.
-		si.dwFlags = STARTF_USESHOWWINDOW;
-		si.wShowWindow = SW_HIDE;
+		si.dwFlags = STARTF_USESHOWWINDOW; // 指定wShowWindow成员有效
+		si.wShowWindow = TRUE; // 此成员设为TRUE的话则显示新建进程的主窗口
+
 		if (!CreateProcessW(NULL,   // No module name (use command line)
 			(LPWSTR)charCodec::utf8toUtf16(path).c_str(),        // Command line
 			NULL,           // Process handle not inheritable
 			NULL,           // Thread handle not inheritable
 			FALSE,          // Set handle inheritance to FALSE
-			0,              // No creation flags
+			CREATE_NEW_CONSOLE,              // No creation flags
 			NULL,           // Use parent's environment block
 			NULL,           // Use parent's starting directory
 			&si,            // Pointer to STARTUPINFO structure
@@ -477,11 +478,11 @@ bool TDS_imp::run(string cmdline)
 
 
 	//启动微服务组件
-	string ms_mediaServer = fs::appPath() + "/com/mediaServer/MediaServer.exe";
-	if (fs::fileExist(ms_mediaServer)) {
-		startMicroService(ms_mediaServer);
-		LOG("[微服务] 启动MediaServer成功");
-	}
+	//string ms_mediaServer = fs::appPath() + "/com/mediaServer/MediaServer.exe";
+	//if (fs::fileExist(ms_mediaServer)) {
+	//	startMicroService(ms_mediaServer);
+	//	LOG("[微服务] 启动MediaServer成功");
+	//}
 
 
 

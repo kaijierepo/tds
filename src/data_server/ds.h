@@ -45,6 +45,9 @@ public:
 	string m_masterTdsIP;
 	int m_masterTdsPort;
 	string m_tdsID;
+
+	//zlm的码流管理
+	map<string, SYSTEMTIME> m_mapPullerActive;
 };
 
 

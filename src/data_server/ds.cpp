@@ -97,6 +97,49 @@ bool dataServer::runAsEdge()
 	return false;
 }
 
+
+void streamPusherMng_thread() {
+	while (1) {
+		Sleep(2000);
+		vector<string> toErase;
+		prj.m_csPrj.lock_shared();
+		for (auto i : ds.m_mapPullerActive) {
+			SYSTEMTIME st = i.second;
+			if (timeopt::CalcTimePassSecond(st) > 5) {
+				MP* pmp = prj.GetMPByTag(i.first);
+				string src = "?";
+				string status = "";
+				if (pmp) {
+					if (pmp->m_srcPullingFFmpegProcID)
+					{
+						HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
+						if (hProcess) {
+							TerminateProcess(hProcess, 0);
+						}
+						pmp->m_bIsStreaming = false;
+						pmp->m_srcPullingFFmpegProcID = 0;
+						status = "正常断开";
+					}
+					else {
+						status = "已断开";
+					}
+					src = pmp->m_rtspAddr;
+				}
+				else {
+					status = "位号未找到";
+				}
+				LOG("[流媒体]5秒没有活动的媒体客户端，断开媒体源，tag=%s,src=%s,status=%s", i.first.c_str(), src.c_str(),status.c_str());
+				toErase.push_back(i.first);
+			}
+		}
+		prj.m_csPrj.unlock_shared();
+
+		for (int i = 0; i < toErase.size(); i++) {
+			ds.m_mapPullerActive.erase(toErase[i]);
+		}
+	}
+}
+
 bool dataServer::run()
 {
 	m_masterTdsIP = tds->conf->getStr("masterTdsIP", "");
@@ -108,6 +151,9 @@ bool dataServer::run()
 		m_tcpCltChildServer->run(this, m_masterTdsIP, m_masterTdsPort);
 		LOG("[子服务模式] 连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
 	}
+
+	thread t(streamPusherMng_thread);
+	t.detach();
 
 	return false;
 }

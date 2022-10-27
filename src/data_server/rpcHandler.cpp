@@ -422,6 +422,9 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 					if(pmp->m_srcPullingFFmpegProcID)
 					{
 						pmp->m_bIsStreaming = true;
+						SYSTEMTIME st;
+						GetLocalTime(&st);
+						ds.m_mapPullerActive[tag] = st;
 					}
 				}
 				if(pmp->m_bIsStreaming)
@@ -433,6 +436,13 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				}
 			}
 		}
+	}
+	else if (method == "keepStream") {
+		string tag = params["tag"].get<string>();
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		ds.m_mapPullerActive[tag] = st;
+		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "closeStream") {
 		string tag = params["tag"].get<string>();

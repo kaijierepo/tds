@@ -12,14 +12,14 @@ DWORD runProcess(string exe, string cmdline) {
 
 	// Start the child process.
 	si.dwFlags = STARTF_USESHOWWINDOW;
-	si.wShowWindow = SW_HIDE;
+	si.wShowWindow = TRUE;
 	if (!CreateProcessW(
 		NULL,   // No module name (use command line)
 		(LPWSTR)charCodec::utf8toUtf16(exe + " " + cmdline).c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inheritable
 		FALSE,          // Set handle inheritance to FALSE
-		0,              // No creation flags
+		CREATE_NEW_CONSOLE,              // No creation flags
 		NULL,           // Use parent's environment block
 		NULL,           // Use parent's starting directory
 		&si,            // Pointer to STARTUPINFO structure

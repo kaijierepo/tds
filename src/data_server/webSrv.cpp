@@ -200,6 +200,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 		{
 			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 			resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
+			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
 			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
 		}
 		unlink_conns(c, parent);
@@ -328,6 +329,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
+		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
@@ -343,6 +345,32 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			pWs->m_csWsSessions.lock();
 			pWs->m_wsSessions[c] = p;
 			pWs->m_csWsSessions.unlock();
+		}
+		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
+		//向互联网请求最新网页代码，向局域网发起rpc请求
+		else if (memcmp(hm->method.ptr, "OPTIONS", hm->method.len) == 0)
+		{
+			// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
+			// 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
+			//响应跨域预检请求
+			//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
+
+			mg_str* mgsOrg = mg_http_get_header(hm, "Origin");
+			if (mgsOrg != nullptr)
+			{
+				string sOrg = str::fromBuff(mgsOrg->ptr, mgsOrg->len);
+				mg_str* mgsHeaders = mg_http_get_header(hm, "Access-Control-Request-Headers");
+				string sHeaders = str::fromBuff(mgsHeaders->ptr, mgsHeaders->len);
+
+				string resHeader = "Server:tds\r\n";
+				resHeader += "Access-Control-Allow-Origin:" + sOrg + "\r\n";
+				resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+				resHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
+				resHeader += "Access-Control-Allow-Headers:" + sHeaders + "\r\n";
+				resHeader += "Access-Control-Max-Age:86400\r\n";
+
+				mg_http_reply(c, 200, resHeader.c_str(), "");
+			}
 		}
 		else if (mg_http_match_uri(hm, "/gzh/*") || mg_http_match_uri(hm, "/gzh*")) {
 			string httpReqStr = str::fromBuff(hm->message.ptr, hm->message.len);
@@ -434,30 +462,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			string sHeader = "location:" + redirectPath + "\r\n";
 			sHeader += "Cache-Control:max-age=1\r\n";
 			mg_http_reply(c, 301, sHeader.c_str(), "");
-		}
-		else if (memcmp(hm->method.ptr, "OPTIONS", hm->method.len) == 0)
-		{
-			// 跨域请求，使用VSCode调试时，网页从VSCode的http服务器走。该功能主要方便调试
-			// 网页上使用的fetch进行rpc调用时，从tds的http服务走，因此浏览器会先发送OPTION请求跨域
-			//响应跨域预检请求
-			//https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CORS
-
-			mg_str* mgsOrg = mg_http_get_header(hm, "Origin");
-			if (mgsOrg != nullptr)
-			{
-				string sOrg = str::fromBuff(mgsOrg->ptr, mgsOrg->len);
-				mg_str* mgsHeaders = mg_http_get_header(hm, "Access-Control-Request-Headers");
-				string sHeaders = str::fromBuff(mgsHeaders->ptr, mgsHeaders->len);
-
-				string resHeader = "Server:tds\r\n";
-				resHeader += "Access-Control-Allow-Origin:" + sOrg + "\r\n";
-				resHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
-				resHeader += "Access-Control-Allow-Headers:" + sHeaders + "\r\n";
-				resHeader += "Access-Control-Max-Age:86400\r\n";
-
-				mg_http_reply(c, 200, resHeader.c_str(), "");
-			}
-			
 		}
 		else {
 			struct mg_http_serve_opts opts;
