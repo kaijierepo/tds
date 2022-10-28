@@ -518,15 +518,18 @@ bool MP::output(json jVal, json& rlt, json& err,bool sync)
 
 			tag = TAG::trimRoot(tag, childTdsTag);
 			json params;
-			params[tag] = jVal;
+			params["tag"] = tag;
+			params["val"] = jVal;
 
 			json childRlt, childErr;
 			if (pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr))
 			{
-				if (childRlt) {
+				if (childRlt != nullptr) {
 					rlt = params;
+					m_curVal = jVal;
+					GetLocalTime(&m_stDataLastUpdate);
 				}
-				if (childErr) {
+				if (childErr != nullptr) {
 					err = childErr;
 				}
 				return true;

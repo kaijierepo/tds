@@ -191,6 +191,8 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	json req;
 	req["method"] = method;
 	req["params"] = params;
+	int iId = m_rpcId++;
+	req["id"] = iId;
 	string strReq = req.dump() + "\n\n";
 	LOG("[子服务请求]\r\n" + strReq);
 
@@ -202,8 +204,6 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	RPC_SYNC_INFO* tsi = nullptr;
 	m_csSyncRPCInfo.lock();
 	tsi = new RPC_SYNC_INFO();
-	int iId = m_rpcId++;
-	req["id"] = iId;
 	m_mapSyncRPCInfo[iId] = tsi;
 	m_csSyncRPCInfo.unlock();
 	//发送请求
@@ -230,6 +230,7 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 		{
 			LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
 		}
+		return true;
 	}
 	else
 	{
@@ -292,6 +293,7 @@ void MasterDs::workingProc()
 		Sleep(masterDataSyncInterval);
 		json jReq,jParam;
 		jReq["method"] = "getObj";
+		jParam["tag"] = "";
 		jParam["getConf"] = false;
 		jParam["getStatus"] = true;
 		jParam["getMp"] = true;
