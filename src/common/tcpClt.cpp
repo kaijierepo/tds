@@ -19,7 +19,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 	vector<char> recvBuff;
 	int iRecvBuffLen = 0;
-	size_t ret;
+	int ret;
 	while(1)
 	{
 		//buffer full , dynamicly increase 10k
