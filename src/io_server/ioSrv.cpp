@@ -288,6 +288,7 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
+
 void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
 	IOLogRecv(recvData, recvDataLen, "UDP - " + strIP + ":" + str::fromInt(port));
@@ -301,12 +302,8 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 			json jPkt = json::parse(s);
 
 			string ioAddr = jPkt["ioAddr"].get<string>();
-			string ioAddrWithoutPort = ioAddr;
-			//除去端口号
-			int pos = ioAddr.find(":");
-			if (pos > 0) {
-				ioAddrWithoutPort = ioAddr.substr(0, pos);
-			}
+			string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
+
 
 			//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
 			ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);

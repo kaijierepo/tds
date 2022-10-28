@@ -528,66 +528,74 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 	return false;
 }
 
-ioDev* ioDev::getIODev(string ioAddr,bool bChn,bool ignorePort)
+//ioDev* ioDev::getIODev(string ioAddr,bool bChn,bool ignorePort)
+//{
+//	vector<string> vecNodeName;
+//	str::split(vecNodeName, ioAddr, "/");
+//
+//	ioDev* treeNode = NULL;
+//	vector<ioDev*>* vecChildNode = &m_vecChildDev;
+//	bool findDev = false;
+//	//根据节点的名字，在树型结构上一层层往下找
+//	for (int i = 0; i < vecNodeName.size(); i++)
+//	{
+//		string nodeName = vecNodeName[i];
+//
+//		bool findNode = false;
+//		for (auto& it : *vecChildNode)
+//		{
+//			string nodeNameTmp = it->getDevAddrStr(ignorePort);
+//			if (bChn) {
+//				str::hanZi2Pinyin(nodeNameTmp, nodeNameTmp);
+//				str::hanZi2Pinyin(nodeName, nodeName);
+//			}
+//
+//			if (nodeNameTmp == nodeName)
+//			{
+//				findNode = true;
+//				treeNode = it;
+//				if (i == vecNodeName.size() - 1)//找到了最后一个节点
+//				{
+//					findDev = true;
+//				}
+//				break;
+//			}
+//		}
+//
+//		if (findNode)
+//		{
+//			vecChildNode = &treeNode->m_vecChildDev;
+//		}
+//		else
+//		{
+//			break;
+//		}
+//	}
+//
+//	if (findDev)
+//		return treeNode;
+//
+//	return nullptr;
+//}
+
+ioDev* ioDev::getIODev(string ioAddr,bool bChn, bool ignorePort)
 {
-	vector<string> vecNodeName;
-	str::split(vecNodeName, ioAddr, "/");
-
-	ioDev* treeNode = NULL;
-	vector<ioDev*>* vecChildNode = &m_vecChildDev;
-	bool findDev = false;
-	//根据节点的名字，在树型结构上一层层往下找
-	for (int i = 0; i < vecNodeName.size(); i++)
-	{
-		string nodeName = vecNodeName[i];
-
-		bool findNode = false;
-		for (auto& it : *vecChildNode)
-		{
-			string nodeNameTmp = it->getDevAddrStr(ignorePort);
-			if (bChn) {
-				str::hanZi2Pinyin(nodeNameTmp, nodeNameTmp);
-				str::hanZi2Pinyin(nodeName, nodeName);
-			}
-
-			if (nodeNameTmp == nodeName)
-			{
-				findNode = true;
-				treeNode = it;
-				if (i == vecNodeName.size() - 1)//找到了最后一个节点
-				{
-					findDev = true;
-				}
-				break;
-			}
-		}
-
-		if (findNode)
-		{
-			vecChildNode = &treeNode->m_vecChildDev;
-		}
-		else
-		{
-			break;
-		}
+	if (bChn) {
+		str::hanZi2Pinyin(ioAddr, ioAddr);
 	}
 
-	if (findDev)
-		return treeNode;
-
-	return nullptr;
-}
-
-ioDev* ioDev::getIODev(json& ioAddr)
-{
 	for (auto& it : m_vecChildDev)
 	{
-		if (it->m_jDevAddr == ioAddr)
+		string tmp = it->getIOAddrStr(ignorePort);
+		if (bChn) {
+			str::hanZi2Pinyin(tmp, tmp);
+		}
+		if (tmp == ioAddr)
 		{
 			return it;
 		}
 
-		ioDev* p = it->getIODev(ioAddr);
+		ioDev* p = it->getIODev(ioAddr,bChn,ignorePort);
 		if (p)
 			return p;
 	}
@@ -619,13 +627,13 @@ json ioDev::getAddr()
 	return j;
 }
 
-string ioDev::getIOAddrStr()
+string ioDev::getIOAddrStr(bool ignorePort)
 {
-	string devAddr = getDevAddrStr();
+	string devAddr = getDevAddrStr(ignorePort);
 	ioDev* pParent = m_pParent;
 	while (pParent && pParent->m_devType != IO_DEV_TYPE::SERVER::tds)
 	{
-		devAddr = pParent->getDevAddrStr() + "/" + devAddr;
+		devAddr = pParent->getDevAddrStr(ignorePort) + "/" + devAddr;
 		pParent = pParent->m_pParent;
 	}
 		
@@ -641,10 +649,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		{
 			devAddr = m_jDevAddr["id"].get<string>();
 			if (ignorePort) {
-				int pos = devAddr.find(":");
-				if (pos > 0) {
-					devAddr = devAddr.substr(0, pos);
-				}
+				devAddr = ioDev::removePortFromIoAddr(devAddr);
 			}
 		}
 		else if (m_jDevAddr["ip"] != nullptr)
@@ -1360,4 +1365,39 @@ bool UPGRADE_INFO::loadFirmwareFile(string fn, int pl)
 		return true;
 	}
 	return false;
+}
+
+
+string ioDev::removePortFromIoAddr(string ioAddr) {
+	vector<string> addrNodes, addrNodes1;
+	str::split(addrNodes, ioAddr, "/");
+	for (int i = 0; i < addrNodes.size(); i++) {
+		string a = addrNodes[i];
+		a = ioDev::removePortFromDevAddr(a);
+		addrNodes1.push_back(a);
+	}
+
+	string ioAddrNew;
+	for (int i = 0; i < addrNodes1.size(); i++) {
+		string a = addrNodes1[i];
+		if (i == 0)
+			ioAddrNew += a;
+		else
+		{
+			ioAddrNew += "/";
+			ioAddrNew += a;
+		}
+	}
+
+	return ioAddrNew;
+}
+
+string ioDev::removePortFromDevAddr(string devAddr) {
+	//除去端口号
+	int pos = devAddr.find(":");
+	if (pos > 0) {
+		devAddr = devAddr.substr(0, pos);
+	}
+
+	return devAddr;
 }

@@ -264,8 +264,10 @@ void MasterDs::stop()
 
 void MasterDs::workingProc()
 {
+	int masterDataSyncInterval = tds->conf->getInt("masterDataSyncInterval", 2000);
+	LOG("[主服务]数据同步周期,%d", masterDataSyncInterval);
 	while (1) {
-		Sleep(1000);
+		Sleep(masterDataSyncInterval);
 		json jReq,jParam;
 		jReq["method"] = "getObj";
 		jParam["getConf"] = false;

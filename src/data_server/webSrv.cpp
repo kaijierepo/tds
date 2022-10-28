@@ -207,6 +207,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 	}
 }
 
+//https://blog.csdn.net/weixin_34242509/article/details/86260104
 void handleGet_gzh(mg_http_message* hm, string& resHeader,string& respBody)
 {
 	map<string, string> mapParams;

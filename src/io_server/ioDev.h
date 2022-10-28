@@ -115,7 +115,7 @@ public:
 	//device addr in json format
 	virtual json getAddr(); 
 	//io addr in struct format
-	string getIOAddrStr();
+	string getIOAddrStr(bool ignorePort = false);
 	string getDevAddrStr(bool ignorePort = false);
 	string m_dispositionMode;
 	string m_devType;
@@ -135,7 +135,6 @@ public:
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示不采样
 	//// iodev hierachy tree management
 	virtual ioDev* getIODev(string ioAddr, bool bChn = false, bool ignorePort = false); //是否启用中文地址拼音模式查找
-	virtual ioDev* getIODev(json& ioAddr);
 	ioDev* getIODevByNodeID(string nodeID);
 	bool deleteIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
@@ -163,6 +162,9 @@ public:
 	void bindIOSession(shared_ptr<TDS_SESSION> ioSession);
 	void statisOnRecv(char* recvData, int len, string addr);
 	void statisOnSend(char* sendData, int len, string addr);
+
+	static string removePortFromIoAddr(string ioAddr);
+	static string removePortFromDevAddr(string devAddr);
 
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	tcpClt m_tcpClt;
