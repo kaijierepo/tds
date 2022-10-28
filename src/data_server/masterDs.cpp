@@ -112,6 +112,10 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				p->m_bOnline = true;
 				prj.saveConfFile();
 			}
+			else {
+				p->m_bChildTds = true;
+				p->m_bOnline = true;
+			}
 		}
 		else {
 			json rlt = resp["result"];
@@ -254,9 +258,9 @@ bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
 	json rlt, err;
 	callChildTds(childTds,req["method"],req["params"],rlt,err,sync);
 
-	if (rlt)
+	if (rlt != nullptr)
 		rpcResp.result = rlt.dump();
-	if (err)
+	if (err != nullptr)
 		rpcResp.error = err.dump();
 	return true;
 }
