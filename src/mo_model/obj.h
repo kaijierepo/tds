@@ -174,6 +174,7 @@ public:
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
+	OBJ* getOwnerChildTds();
 
 	OBJ_QUERIER parseQuerier(json& opt);
 	OBJ* GetRootMO();

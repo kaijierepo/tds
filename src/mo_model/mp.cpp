@@ -9,6 +9,7 @@
 #include "logger.h"
 #include "ioSrv.h"
 #include "ioChan.h"
+#include "masterDs.h"
 
 
 MP::MP()
@@ -508,16 +509,44 @@ bool MP::output(json jVal, json& rlt, json& err,bool sync)
 	//方案2. 值不变。采集到新的数据值或者收到输出反馈，才变成新的值
 	//do nothing
 
-	ioChannel* pC = ioSrv.getChanByTag(getTag());
-	if (pC)
-	{
-		LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-		return pC->output(jVal, rlt, err, sync);
+	OBJ* pOwnerChlidTds = getOwnerChildTds();
+
+	if (pOwnerChlidTds) {
+		if (pMasterDs) {
+			string childTdsTag = pOwnerChlidTds->getTag();
+			string tag = getTag();
+
+			tag = TAG::trimRoot(tag, childTdsTag);
+			json params;
+			params[tag] = jVal;
+
+			json childRlt, childErr;
+			if (pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr))
+			{
+				if (childRlt) {
+					rlt = params;
+				}
+				if (childErr) {
+					err = childErr;
+				}
+				return true;
+			}
+			else
+				return false;
+		}
 	}
-	else
-	{
-		err = makeRPCError(RPC_ERROR_CODE::MO_outputFail, "未找到绑定的通道");
-		return false;
+	else {
+		ioChannel* pC = ioSrv.getChanByTag(getTag());
+		if (pC)
+		{
+			LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
+			return pC->output(jVal, rlt, err, sync);
+		}
+		else
+		{
+			err = makeRPCError(RPC_ERROR_CODE::MO_outputFail, "未找到绑定的通道");
+			return false;
+		}
 	}
 }
 

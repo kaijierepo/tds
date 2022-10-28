@@ -170,25 +170,30 @@ void MasterDs::onRecvPkt(json& jResp, std::shared_ptr<TDS_SESSION> childSession)
 	
 }
 
-bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
-{
-	int iId = m_rpcId++;
-	string childTds = req["childTds"].get<string>();
-	req["id"] = iId;
-	req.erase("childTds");
-	string strReq = req.dump() + "\n\n";
-	
-	LOG("[子服务转发]主->子\r\n" + strReq);
 
+bool MasterDs::doChildTdsTransaction(string childTdsTag,json& req, RPC_RESP& rpcResp, bool sync)
+{
+	return true;
+}
+
+bool MasterDs::callChildTds(string childTds, string method, json params, json& rlt, json& err, bool sync)
+{
 	//找到childSession
 	m_mutexChildTdsList.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = getSessionByTag(childTds);
 	m_mutexChildTdsList.unlock();
-
 	if (ioSession == nullptr) {
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "子服务离线");
+		err = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "子服务离线"));
 		return true;
 	}
+
+
+	json req;
+	req["method"] = method;
+	req["params"] = params;
+	string strReq = req.dump() + "\n\n";
+	LOG("[子服务请求]\r\n" + strReq);
+
 
 
 	//设置指定id命令的同步等待信息。
@@ -197,6 +202,8 @@ bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
 	RPC_SYNC_INFO* tsi = nullptr;
 	m_csSyncRPCInfo.lock();
 	tsi = new RPC_SYNC_INFO();
+	int iId = m_rpcId++;
+	req["id"] = iId;
 	m_mapSyncRPCInfo[iId] = tsi;
 	m_csSyncRPCInfo.unlock();
 	//发送请求
@@ -213,13 +220,11 @@ bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
 	if (bGetResp)
 	{
 		if (resp["result"] != nullptr) {
-			rpcResp.result = resp["result"].dump();
-			LOG("[子服务转发]子->主\r\n" + rpcResp.result);
+			rlt = resp["result"];
 		}
 		else if (resp["error"] != nullptr)
 		{
-			rpcResp.error = resp["error"].dump();
-			LOG("[子服务转发]子->主\r\n" + rpcResp.error);
+			err = resp["error"];
 		}
 		else
 		{
@@ -228,11 +233,28 @@ bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
 	}
 	else
 	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "子服务响应超时");
+		err = json::parse(makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "子服务响应超时"));
 	}
 
-
 	return false;
+}
+
+
+//请求转发
+bool MasterDs::rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync)
+{
+	string childTds = req["childTds"].get<string>();
+	req.erase("childTds");
+	json id = req["id"];
+
+	json rlt, err;
+	callChildTds(childTds,req["method"],req["params"],rlt,err,sync);
+
+	if (rlt)
+		rpcResp.result = rlt.dump();
+	if (err)
+		rpcResp.error = err.dump();
+	return true;
 }
 
 

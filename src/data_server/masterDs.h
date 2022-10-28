@@ -31,6 +31,9 @@ public:
 	bool handleNotify(json jResp, std::shared_ptr<TDS_SESSION> childSession);
 	void onRecvPkt(json& pkt, std::shared_ptr<TDS_SESSION> childSession);
 
+	bool doChildTdsTransaction(string childTdsTag, json& req, RPC_RESP& rpcResp, bool sync);
+	bool callChildTds(string childTds,string method, json params, json& rlt, json& err, bool sync = true);
+
 	bool rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync = true);
 
 public:

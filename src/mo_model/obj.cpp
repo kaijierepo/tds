@@ -413,6 +413,19 @@ void OBJ::clearChildren()
 	m_childObj.clear();
 }
 
+OBJ* OBJ::getOwnerChildTds()
+{
+	OBJ* pTmp = this;
+	while (pTmp)
+	{
+		pTmp = pTmp->m_pParentMO;
+
+		if (pTmp->m_bChildTds)
+			return pTmp;
+	}
+
+	return nullptr;
+}
 
 
 OBJ* OBJ::GetProjectMO()
