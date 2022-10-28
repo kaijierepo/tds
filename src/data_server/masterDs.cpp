@@ -33,7 +33,7 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		jReq["id"] = m_rpcId;
 		m_rpcId++;
 
-		LOG("TDS子服务上线,%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+		LOG("TDS子服务上线,%s:%d,查询子服务对象树配置", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
 
 		string s = jReq.dump();
 		s += "\n\n";
@@ -90,6 +90,8 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 			childSession->m_childTdsTag = tag;
 			string strLastModify = rlt["lastModify"];
 
+			LOG("[主从服务]获取到子服务对象树配置,子服务位号:%s", tag.c_str());
+
 			//如果上次修改时间和本地保存的一致，忽略
 			//根据修改时间自动同步机制取消，统一改为手动设置
 			OBJ* p = prj.queryObj(tag);
@@ -103,6 +105,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 			//将最新子服务配置保存到本地
 			unique_lock<shared_mutex> lock(prj.m_csPrj);
 			if (!p) {
+				LOG("[主从服务]主服务中未包含子服务对象,创建子服务对象树并保存到主服务");
 				p = prj.createObjBranchByTag(tag);
 				p->loadConf(rlt);
 				p->m_bChildTds = true;

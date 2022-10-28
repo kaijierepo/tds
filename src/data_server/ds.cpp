@@ -60,6 +60,10 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 		m_mutexSessions.lock();
 		m_Sessions[pTcpSess] = p;
 		m_mutexSessions.unlock();
+
+		if (m_tcpCltChildServer == pTcpSess->tcpClt) {
+			LOG("[主从服务]连接到主服务成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+		}
 	}
 	else
 	{
