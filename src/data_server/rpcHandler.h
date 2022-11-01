@@ -9,6 +9,9 @@ rpc handler
 #include "ds.h"
 #include "tdsSession.h"
 
+//一些设计考虑
+//参数使用RPC_RESP而没有使用json对象，主要为了考虑和外部集成，外部不需要json.hpp
+//目前看来外部集成需求很少，未来改成直接使用json对象应该更加方便
 class rpcHandler
 {
 public:
@@ -43,6 +46,8 @@ public:
 	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
 
+	//参数处理
+	bool parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session,string& tag,string& rootTag);
 
 	//object manage
 	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);

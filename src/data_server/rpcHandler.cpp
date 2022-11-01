@@ -505,50 +505,77 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	}
 	}
 #endif
-	else if (method == "ptz.startMove")
+	else if (method == "startPanTilt" ||
+				method == "stopPanTilt" ||
+				method == "startZoom" ||
+				method == "stopZoom" ||
+				method == "startFocus" ||
+				method == "stopFocus")
 	{
-		string tag = params["tag"]; 
-		string dir = params["dir"];
-		int panSpeed = params["panSpeed"].get<int>();
-		int tiltSpeed = params["tiltSpeed"].get<int>();
-		ioDev* p = ioSrv.getIODevByTag(tag);
-		if (p && p->isCamera()) {
-			ioDev_camera* pCam = (ioDev_camera*)p;
-			pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
+		string tag, rootTag;
+		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
+			return true;
+
+		OBJ* pObj = prj.queryObj(tag);
+		if (!pObj) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "object of specified tag not found");
+			return true;
 		}
-		rpcResp.result = "\"ok\"";
-	}
-	else if (method == "ptz.stopMove")
-	{
-		string tag = params["tag"];
-		ioDev* p = ioSrv.getIODevByTag(tag);
-		if (p && p->isCamera()) {
-			ioDev_camera* pCam = (ioDev_camera*)p;
-			pCam->ptz_stopMove();
+
+		OBJ* childTds = pObj->getOwnerChildTds();
+		if (childTds) {
+			if (pMasterDs) {
+				string childTdsTag = childTds->getTag();
+				tag = TAG::trimRoot(tag, childTdsTag);
+				json params;
+				params["tag"] = tag;
+				json childRlt, childErr;
+				pMasterDs->callChildTds(childTdsTag, method, params, childRlt, childErr);
+				
+				if (childRlt != nullptr) {
+					rpcResp.result = childRlt.dump();
+				}
+				else{
+					rpcResp.error = childErr.dump();
+				}
+			}
 		}
-		rpcResp.result = "\"ok\"";
-	}
-	else if (method == "ptz.startZoom")
-	{
-		string tag = params["tag"];
-		string dir = params["dir"];
-		//int zoomSpeed = params["zoomSpeed"].get<int>();
-		ioDev* p = ioSrv.getIODevByTag(tag);
-		if (p && p->isCamera()) {
+		else {
+			ioDev* p = ioSrv.getIODevByTag(tag);
+			if (!p) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "no io device bind to specified tag");
+				return true;
+			}
+
+			if (!p->isCamera()) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "io device binded is not a camera");
+				return true;
+			}
+
 			ioDev_camera* pCam = (ioDev_camera*)p;
-			pCam->ptz_startZoom(dir);
+			if (method == "startPanTilt")
+			{
+				string dir = params["dir"];
+				float panSpeed = params["panSpeed"].get<float>();
+				float tiltSpeed = params["tiltSpeed"].get<float>();
+				pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
+			}
+			else if (method == "stopPanTilt")
+			{
+				pCam->ptz_stopMove();
+			}
+			else if (method == "startZoom")
+			{
+				string dir = params["dir"];
+				float speed = params["speed"].get<float>();
+				pCam->ptz_startZoom(dir);
+			}	
+			else if (method == "stopZoom")
+			{
+				pCam->ptz_stopZoom();
+			}
+			rpcResp.result = "\"ok\"";
 		}
-		rpcResp.result = "\"ok\"";
-	}
-	else if (method == "ptz.stopZoom")
-	{
-		string tag = params["tag"];
-		ioDev* p = ioSrv.getIODevByTag(tag);
-		if (p && p->isCamera()) {
-			ioDev_camera* pCam = (ioDev_camera*)p;
-			pCam->ptz_stopZoom();
-		}
-		rpcResp.result = "\"ok\"";
 	}
 	else
 	{
@@ -558,6 +585,31 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
+
+//参见核心概念，位号表示法
+//https://www.liangtusoft.com/doc/#/核心概念?id=位号表示法
+//sysTag = session.org + rootTag + tag
+bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session, string& tag, string& rootTag)
+{
+	if (!params.contains("tag"))
+	{
+		rpcResult.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : tag");
+		return false;
+	}
+
+	tag = params["tag"];
+
+
+	//获取查询根
+	rootTag = "";
+	if (params["rootTag"] != nullptr)
+		rootTag = params["rootTag"].get<string>();
+	rootTag = TAG::addRoot(rootTag, session.org);
+
+
+	tag = TAG::addRoot(tag, rootTag);
+	return true;
+}
 
 bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
@@ -1590,6 +1642,7 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		return true;
 	return false;
 }
+
 
 
 
