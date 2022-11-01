@@ -514,7 +514,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	{
 		string tag, rootTag;
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
-			return true;
+			return true; 
 
 		OBJ* pObj = prj.queryObj(tag);
 		if (!pObj) {
@@ -527,10 +527,10 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			if (pMasterDs) {
 				string childTdsTag = childTds->getTag();
 				tag = TAG::trimRoot(tag, childTdsTag);
-				json params;
-				params["tag"] = tag;
+				json paramsChild = params;
+				paramsChild["tag"] = tag;
 				json childRlt, childErr;
-				pMasterDs->callChildTds(childTdsTag, method, params, childRlt, childErr);
+				pMasterDs->callChildTds(childTdsTag, method, paramsChild, childRlt, childErr);
 				
 				if (childRlt != nullptr) {
 					rpcResp.result = childRlt.dump();

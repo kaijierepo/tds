@@ -168,10 +168,11 @@ bool MP::loadConf(json& conf)
 	//状态数据
 	if(conf.contains("val"))
 		m_curVal = conf["val"];
-	if (conf.contains("updateTime"))
+	if (conf.contains("time"))
 	{
-		string s = conf["updateTime"].get<string>();
-		m_stDataLastUpdate = timeopt::str2st(s);
+		string s = conf["time"].get<string>();
+		if(s != "" && s != "-")
+			m_stDataLastUpdate = timeopt::str2st(s);
 	}
 
 	return false;
