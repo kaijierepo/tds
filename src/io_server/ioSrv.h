@@ -38,6 +38,7 @@ namespace IO_DEV_TYPE {
 		const string mqttBroker = "mqtt-broker";
 		const string tuya = "tuya";
 		const string visca = "visca";
+		const string onvif = "onvif";
 	}
 	namespace GW {
 		const string local_serial = "local-serial";
