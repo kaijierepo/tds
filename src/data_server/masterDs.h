@@ -46,7 +46,7 @@ public:
 	virtual ~MasterDs();
 
 	std::shared_ptr<TDS_SESSION> getSessionByTag(string tag);
-
+	string getChildTdsIP(string childTdsTag);
 
 	map<int, RPC_SYNC_INFO*> m_mapSyncRPCInfo;
 	mutex m_csSyncRPCInfo;

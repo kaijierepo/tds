@@ -331,3 +331,14 @@ std::shared_ptr<TDS_SESSION> MasterDs::getSessionByTag(string tag)
 	}
 	return nullptr;
 }
+
+string MasterDs::getChildTdsIP(string childTdsTag)
+{
+	m_mutexChildTdsList.lock();
+	std::shared_ptr<TDS_SESSION> ioSession = getSessionByTag(childTdsTag);
+	m_mutexChildTdsList.unlock();
+	if (ioSession == nullptr) {
+		return "";
+	}
+	return ioSession->ip;
+}

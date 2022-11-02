@@ -405,69 +405,6 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	{
 		//result = rpc_getStreamInfo(params, error);
 	}
-	else if (method == "openStream") {
-		string tag = params["tag"].get<string>();
-		if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
-		}
-		else {
-			MP* pmp = prj.GetMPByTag(tag);
-			if (!pmp) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-			}
-			else {
-				if (!pmp->m_bIsStreaming)
-				{
-					pmp->m_srcPullingFFmpegProcID = openRtspSrc(tag, pmp->m_rtspAddr);
-					if(pmp->m_srcPullingFFmpegProcID)
-					{
-						pmp->m_bIsStreaming = true;
-						SYSTEMTIME st;
-						GetLocalTime(&st);
-						ds.m_mapPullerActive[tag] = st;
-					}
-				}
-				if(pmp->m_bIsStreaming)
-				{
-					rpcResp.result = "\"ok\"";
-				}
-				else{
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
-				}
-			}
-		}
-	}
-	else if (method == "keepStream") {
-		string tag = params["tag"].get<string>();
-		SYSTEMTIME st;
-		GetLocalTime(&st);
-		ds.m_mapPullerActive[tag] = st;
-		rpcResp.result = "\"ok\"";
-	}
-	else if (method == "closeStream") {
-		string tag = params["tag"].get<string>();
-		if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
-		}
-		else {
-			MP* pmp = prj.GetMPByTag(tag);
-			if (!pmp) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-			}
-			else {
-				if (pmp->m_srcPullingFFmpegProcID)
-				{
-					HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
-					if (hProcess) {
-						TerminateProcess(hProcess, 0);
-					}
-					pmp->m_bIsStreaming = false;
-					pmp->m_srcPullingFFmpegProcID = 0;
-				}
-				rpcResp.result = "\"ok\"";
-			}
-		}
-	}
 #ifdef ENABLE_GENICAM
 	else if (method == "setStream")
 	{
@@ -510,7 +447,10 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				method == "startZoom" ||
 				method == "stopZoom" ||
 				method == "startFocus" ||
-				method == "stopFocus")
+				method == "stopFocus" ||
+				method == "openStream" ||
+				method == "keepStream" ||
+				method == "closeStream")
 	{
 		string tag, rootTag;
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
@@ -533,14 +473,21 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				pMasterDs->callChildTds(childTdsTag, method, paramsChild, childRlt, childErr);
 				
 				if (childRlt != nullptr) {
-					rpcResp.result = childRlt.dump();
+					json jRlt;
+					jRlt["ip"] = pMasterDs->getChildTdsIP(childTdsTag);
+					rpcResp.result = jRlt.dump();
 				}
 				else{
 					rpcResp.error = childErr.dump();
 				}
 			}
 		}
-		else {
+		else if (method == "startPanTilt" ||
+			method == "stopPanTilt" ||
+			method == "startZoom" ||
+			method == "stopZoom" ||
+			method == "startFocus" ||
+			method == "stopFocus") {
 			ioDev* p = ioSrv.getIODevByTag(tag);
 			if (!p) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "no io device bind to specified tag");
@@ -575,6 +522,70 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				pCam->ptz_stopZoom();
 			}
 			rpcResp.result = "\"ok\"";
+		}
+		else if (method == "openStream") {
+			if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
+			}
+			else {
+				MP* pmp = prj.GetMPByTag(tag);
+				if (!pmp) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+				}
+				else {
+					if (!pmp->m_bIsStreaming)
+					{
+						pmp->m_srcPullingFFmpegProcID = openRtspSrc(tag, pmp->m_rtspAddr);
+						if (pmp->m_srcPullingFFmpegProcID)
+						{
+							pmp->m_bIsStreaming = true;
+							SYSTEMTIME st;
+							GetLocalTime(&st);
+							ds.m_mapPullerActive[tag] = st;
+						}
+					}
+					if (pmp->m_bIsStreaming)
+					{
+						json rlt;
+						string tagPY;
+						str::hanZi2Pinyin(tag, tagPY);
+						rlt["url"] = "/tds/" + tagPY + ".live.flv";
+						rpcResp.result = rlt.dump();
+					}
+					else {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
+					}
+				}
+			}
+		}
+		else if (method == "keepStream") {
+			SYSTEMTIME st;
+			GetLocalTime(&st);
+			ds.m_mapPullerActive[tag] = st;
+			rpcResp.result = "\"ok\"";
+		}
+		else if (method == "closeStream") {
+			if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
+			}
+			else {
+				MP* pmp = prj.GetMPByTag(tag);
+				if (!pmp) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+				}
+				else {
+					if (pmp->m_srcPullingFFmpegProcID)
+					{
+						HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
+						if (hProcess) {
+							TerminateProcess(hProcess, 0);
+						}
+						pmp->m_bIsStreaming = false;
+						pmp->m_srcPullingFFmpegProcID = 0;
+					}
+					rpcResp.result = "\"ok\"";
+				}
+			}
 		}
 	}
 	else
