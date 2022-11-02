@@ -183,6 +183,13 @@ bool MasterDs::doChildTdsTransaction(string childTdsTag,json& req, RPC_RESP& rpc
 	return true;
 }
 
+bool MasterDs::needLog(string method) {
+	if (method == "keepStream")
+		return false;
+
+	return true;
+}
+
 bool MasterDs::callChildTds(string childTds, string method, json params, json& rlt, json& err, bool sync)
 {
 	//找到childSession
@@ -201,7 +208,9 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	int iId = m_rpcId++;
 	req["id"] = iId;
 	string strReq = req.dump() + "\n\n";
-	LOG("[子服务请求]\r\n" + strReq);
+
+	if(needLog(method))
+		LOG("[子服务请求]\r\n" + strReq);
 
 
 
@@ -228,10 +237,14 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	{
 		if (resp["result"] != nullptr) {
 			rlt = resp["result"];
+			if (needLog(method))
+				LOG("[子服务响应]\r\n" + rlt.dump());
 		}
 		else if (resp["error"] != nullptr)
 		{
 			err = resp["error"];
+			if (needLog(method))
+				LOG("[子服务响应]\r\n" + err.dump());
 		}
 		else
 		{

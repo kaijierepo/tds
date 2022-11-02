@@ -327,7 +327,7 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	string ip; int port;
 	parseIpPort(sHost, ip, port);
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-	string tag = str::trimPrefix(uri, "/stream");
+	string tag = str::trimPrefix(uri, "/stream/");
 	tag = str::trimSuffix(tag, ".flv");
 	tag = httplib::detail::decode_url(tag, false);
 
@@ -354,6 +354,12 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	sHeader += "Cache-Control:max-age=1\r\n";
 
 	LOG("[实时码流]uri=%s,重定向到 %s", uri.c_str(), redirectPath.c_str());
+
+
+	sHeader += "Access-Control-Allow-Origin:*\r\n";
+	sHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+	sHeader += "Access-Control-Allow-Methods:POST,GET,OPTIONS\r\n";
+	sHeader += "Access-Control-Max-Age:86400\r\n";
 
 	//307	Temporary Redirect	方法和消息主体都不发生变化。	由于不可预见的原因该页面暂不可用。在这种情况下，搜索引擎不会更新它们的链接。当站点支持非 GET 方法的链接或操作的时候，该状态码优于 302 状态码。
 	mg_http_reply(c, 307, sHeader.c_str(), "");

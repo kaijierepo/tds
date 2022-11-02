@@ -32,6 +32,7 @@ public:
 	void onRecvPkt(json& pkt, std::shared_ptr<TDS_SESSION> childSession);
 
 	bool doChildTdsTransaction(string childTdsTag, json& req, RPC_RESP& rpcResp, bool sync);
+	bool needLog(string method);
 	bool callChildTds(string childTds,string method, json params, json& rlt, json& err, bool sync = true);
 
 	bool rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync = true);
