@@ -10,6 +10,8 @@
 #include "common/mongoose.h"
 #include "tools/hmrSrv.h"
 #include "ioSrv.h"
+#include "prj.h"
+#include "masterDs.h"
 
 string rootDir;
 string confDir;
@@ -140,6 +142,21 @@ void IOLogRecv(char* p, int len,string remoteAddr)
 	}
 }
 
+bool parseIpPort(string host, string& ip, int& port)
+{
+	if (host.find(":") != string::npos)
+	{
+		vector<string> v;
+		str::split(v, host, ":");
+		ip = v[0];
+		port = atoi(v[1].c_str());
+	}
+	else {
+		ip = host;
+		port = 80;
+	}
+	return true;
+}
 
 
 static void link_conns(struct mg_connection* c1, struct mg_connection* c2) {
@@ -304,6 +321,44 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	}
 }
 
+void handle_stream(mg_http_message* hm, struct mg_connection* c) {
+	mg_str* mgs_host = mg_http_get_header(hm, "Host");
+	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
+	string ip; int port;
+	parseIpPort(sHost, ip, port);
+	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+	string tag = str::trimPrefix(uri, "/stream");
+	tag = str::trimSuffix(tag, ".flv");
+	tag = httplib::detail::decode_url(tag, false);
+
+
+	OBJ* pObj = prj.queryObj(tag);
+	if (!pObj) {
+		mg_http_reply(c, 404,"","");
+		return;
+	}
+
+	OBJ* childTds = pObj->getOwnerChildTds();
+	//重定向到子服务
+	if (childTds && pMasterDs) {
+		string childTdsTag = childTds->getTag();
+		ip = pMasterDs->getChildTdsIP(childTdsTag);
+		tag = TAG::trimRoot(tag, childTdsTag);
+	}
+
+	string tagPY;
+	str::hanZi2Pinyin(tag, tagPY, true);
+
+	string 	redirectPath = "http://" + ip + ":672/tds/" + tagPY + ".live.flv";
+	string sHeader = "location:" + redirectPath + "\r\n";
+	sHeader += "Cache-Control:max-age=1\r\n";
+
+	LOG("[实时码流]uri=%s,重定向到 %s", uri.c_str(), redirectPath.c_str());
+
+	//307	Temporary Redirect	方法和消息主体都不发生变化。	由于不可预见的原因该页面暂不可用。在这种情况下，搜索引擎不会更新它们的链接。当站点支持非 GET 方法的链接或操作的时候，该状态码优于 302 状态码。
+	mg_http_reply(c, 307, sHeader.c_str(), "");
+}
+
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
@@ -425,6 +480,10 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
 			mg_http_reply(c, 301, sHeader.c_str(),"");
+		}
+		else if (mg_http_match_uri(hm, "/stream/*"))
+		{
+			handle_stream(hm,c);
 		}
 		else if (mg_http_match_uri(hm, "/apk"))
 		{

@@ -762,7 +762,7 @@ namespace str {
 		return   '\0';
 	}
 
-	bool hanZi2Pinyin(string hanZi,string& pinyin)
+	bool hanZi2Pinyin(string hanZi,string& pinyin,bool upperCase)
 	{
 		string gbstr = charCodec::utf8toAnsi(hanZi);
 		vector<char> vecPinyin;
@@ -808,6 +808,11 @@ namespace str {
 		}
 
 	    pinyin = str::fromBuff(vecPinyin.data(), vecPinyin.size());
+
+		if (upperCase) {
+			transform(pinyin.begin(), pinyin.end(), pinyin.begin(), ::toupper);
+		}
+
 		return true;
 	}
 }
