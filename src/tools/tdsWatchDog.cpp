@@ -57,6 +57,32 @@ void wakeUpFeeder() {
 }
 
 
+void thread_checkMediaServer() {
+	while (1) {
+		Sleep(1000);
+		if (!watchDog.isProcessRun("MediaServer.exe")) {
+			string msPath = fs::appPath() + "/com/mediaServer/MediaServer.exe";
+			if (fs::fileExist(msPath)){
+				watchDog.runProcess(msPath);
+			}
+		}
+	}
+}
+
+void thread_checkAdp() {
+	while (1) {
+		Sleep(1000);
+		if (!watchDog.isProcessRun("node.exe")) {
+			string msPath = fs::appPath() + "/com/adp/run.bat";
+			if (fs::fileExist(msPath)) {
+				system((msPath).c_str());
+			}
+		}
+	}
+}
+
+
+
 void thread_checkFood() {
 	GetLocalTime(&watchDog.m_lastFeedTime);
 	GetLocalTime(&watchDog.m_lastUpdateCheckTime);
@@ -131,8 +157,103 @@ void tdsWatchDog::run()
 	m_foodPlate.start();
 	thread t(thread_checkFood);
 	t.detach();
+
+	thread t1(thread_checkMediaServer);
+	t1.detach();
+
+	thread t2(thread_checkAdp);
+	t2.detach();
 }
 
+
+#include<iostream>
+#include<Windows.h>
+#include<tchar.h>
+#include <tlhelp32.h>//声明快照函数的头文件
+
+
+bool tdsWatchDog::runProcess(string cmdline) {
+	STARTUPINFOW si;
+	//si.lpTitle = (LPWSTR)title.c_str();
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	// Start the child process.
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = TRUE;
+	if (!CreateProcessW(
+		NULL,   // No module name (use command line)
+		(LPWSTR)charCodec::utf8toUtf16(cmdline).c_str(),        // Command line
+		NULL,           // Process handle not inheritable
+		NULL,           // Thread handle not inheritable
+		FALSE,          // Set handle inheritance to FALSE
+		CREATE_NEW_CONSOLE,              // No creation flags
+		NULL,           // Use parent's environment block
+		NULL,           // Use parent's starting directory
+		&si,            // Pointer to STARTUPINFO structure
+		&pi)           // Pointer to PROCESS_INFORMATION structure
+		)
+	{
+		log("runProcess失败:"  + cmdline + "  " + sys::getLastError());
+		return 0;
+	}
+	else
+	{
+		string s = "runProcess成功: "  + cmdline;
+		log(s);
+	}
+
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	return pi.dwProcessId;
+}
+
+bool tdsWatchDog::isProcessRun(string name)
+{
+	HANDLE hProcessSnap;
+	HANDLE hProcess;
+	PROCESSENTRY32 pe32;
+	DWORD dwPriorityClass;
+
+	bool bFind = false;
+
+	// 获取系统中所有进程的快照。
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE)
+	{
+		return false;
+	}
+
+	// 在使用结构之前设置结构的大小。
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	// 获取第一个进程的信息
+	// 如果不成功则退出
+	if (!Process32First(hProcessSnap, &pe32))
+	{
+		CloseHandle(hProcessSnap);          // clean the snapshot object
+		return false;
+	}
+	//现在遍历进程的快照，并且依次显示每个进程的信息
+	do
+	{
+		// Retrieve the priority class.
+		dwPriorityClass = 0;
+		string exePath = pe32.szExeFile;
+
+
+		if (exePath.find(name)!=string::npos)
+		{
+			bFind = true;
+			break;
+		}
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return bFind;
+}
 
 
 
@@ -394,3 +515,5 @@ void tdsDogFeeder::sendFood()
 	string data = "yummy bone";
 	m_foodCart.SendData((char*)data.c_str(), data.length(), "127.0.0.1", FOOD_PLATE_PORT);
 }
+
+

@@ -10,6 +10,8 @@ class tdsWatchDog : public IUdpServerCallBack
 public:
 	tdsWatchDog();
 	void run();
+	bool runProcess(string path);
+	bool isProcessRun(string name);
 	string getFileVerInfo(string path);
 	string getCurTdsVer();
 	string getUpdateTdsVer();

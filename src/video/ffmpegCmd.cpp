@@ -48,3 +48,11 @@ DWORD openRtspSrc(string tag,string rtspSrc)
 	string cmdline = str::format("-i \"%s\" -vcodec h264 -codec copy -f rtsp -rtsp_transport tcp rtsp://localhost/tds/%s", rtspSrc.c_str(), tagPinyin.c_str());
 	return runProcess(fs::appPath() + "/com/ffmpeg/ffmpeg.exe", cmdline);
 }
+
+void StreamPusher::startPusher(string tag, string streamUrl)
+{
+}
+
+void StreamPusher::stopPusher(string tag)
+{
+}
