@@ -371,7 +371,7 @@ public:
 	fp_procBeforeExit m_fpProcBeforeExit;
 	fp_createLicence createLicence;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
-	virtual void callAsyn(string method, string param) = 0;
+	virtual void callAsyn(string method, string param,int delay = 0) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 

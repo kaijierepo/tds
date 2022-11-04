@@ -47,7 +47,7 @@ public:
 
 	// tds 数据服务功能
 	 bool call(string method, string param, RPC_RESP& resp) override;
-	 void callAsyn(string method, string param) override;
+	 void callAsyn(string method, string param,int delay = 0) override;
 	 void setRpcHandler(fp_rpcHandler handler);
 	 void rpcNotify(string method, string params="", string sessionId="");
 

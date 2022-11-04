@@ -527,16 +527,20 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 	return false;
 }
 
-void handleRpcCall(string method,string param) {
+void thread_handleRpcCall(string method,string param,int delay) {
+	if (delay > 0) {
+		Sleep(delay);
+	}
+
 	json j = json::parse(param);
 	RPC_SESSION session;
 	RPC_RESP resp;
 	rpcSrv.handleMethodCall(method, j, resp, session);
 }
 
-void TDS_imp::callAsyn(string method, string param)
+void TDS_imp::callAsyn(string method, string param, int delay)
 {
-	thread t(handleRpcCall, method, param);
+	thread t(thread_handleRpcCall, method, param,delay);
 	t.detach();
 }
 
