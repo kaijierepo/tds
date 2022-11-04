@@ -507,6 +507,13 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				float panSpeed = params["panSpeed"].get<float>();
 				float tiltSpeed = params["tiltSpeed"].get<float>();
 				pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
+
+				if (params.contains("time")) {
+					int time = params["time"].get<int>();
+					json paramAsynCall;
+					paramAsynCall["tag"] = tag;
+					tds->callAsyn("stopPanTilt", paramAsynCall, 1000);
+				}
 			}
 			else if (method == "stopPanTilt")
 			{
