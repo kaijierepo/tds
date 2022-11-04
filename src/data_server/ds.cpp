@@ -156,8 +156,8 @@ bool dataServer::run()
 		LOG("[子服务模式] 连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
 	}
 
-	thread t(streamPusherMng_thread);
-	t.detach();
+	//thread t(streamPusherMng_thread);
+	//t.detach();
 
 	return false;
 }

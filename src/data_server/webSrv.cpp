@@ -346,10 +346,7 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		tag = TAG::trimRoot(tag, childTdsTag);
 	}
 
-	string tagPY;
-	str::hanZi2Pinyin(tag, tagPY, true);
-
-	string 	redirectPath = "http://" + ip + ":672/tds/" + tagPY + ".live.flv";
+	string 	redirectPath = "http://" + ip + ":672/stream/" + tag + ".live.flv";
 	string sHeader = "location:" + redirectPath + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 

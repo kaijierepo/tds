@@ -24,6 +24,7 @@
 #include "ffmpegCmd.h"
 #include "masterDs.h"
 #include "ioDev/ioDev_visca.h"
+#include "httplib.h"
 
 rpcHandler rpcSrv;
 
@@ -524,7 +525,35 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "openStream") {
-			if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
+			MP* pmp = prj.GetMPByTag(tag);
+			if (!pmp) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+			}
+			else {
+				if (!pmp->m_bIsStreaming)
+				{
+					string tag = pmp->getTag();
+					//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
+					httplib::Client cli("http://127.0.0.1:672");
+					httplib::Headers headers;
+					httplib::Params params = {
+						{ "vhost", "__defaultVhost__" },
+						{"app","stream"},
+						{"stream",tag},
+						{"url",pmp->m_rtspAddr},
+						{"enable_hls","0"},
+						{"enable_ts","0"},
+						{"enable_mp4","0"}
+					};
+
+					string uri = "/index/api/addStreamProxy";
+					auto res = cli.Get(uri,params,headers);
+				}
+
+				rpcResp.result = "\"ok\"";
+			}
+
+			/*if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
 			}
 			else {
@@ -556,7 +585,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
 					}
 				}
-			}
+			}*/
 		}
 		else if (method == "keepStream") {
 			SYSTEMTIME st;
