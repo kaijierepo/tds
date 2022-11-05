@@ -508,11 +508,13 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				float tiltSpeed = params["tiltSpeed"].get<float>();
 				pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
 
+				LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
+
 				if (params.contains("time")) {
 					int time = params["time"].get<int>();
 					json paramAsynCall;
 					paramAsynCall["tag"] = tag;
-					tds->callAsyn("stopPanTilt", paramAsynCall, 1000);
+					tds->callAsyn("stopPanTilt", paramAsynCall.dump(), 1000);
 				}
 			}
 			else if (method == "stopPanTilt")
@@ -559,7 +561,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 				rpcResp.result = "\"ok\"";
 			}
-
+			LOG("打开码流,tag=" + tag);
 			/*if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
 			}

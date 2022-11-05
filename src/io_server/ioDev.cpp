@@ -171,7 +171,7 @@ void ioDev::stop()
 // opt.getStatus = false
 bool ioDev::toJson(json& conf, json opt)
 {
-	shared_lock<shared_mutex> lock(m_csThis);
+	lock_conf_shared();
 	DEV_QUERIER querier = parseQueryOpt(opt);
 
 	//配置数据 - 保存在配置文件中
@@ -193,7 +193,7 @@ bool ioDev::toJson(json& conf, json opt)
 			conf["acqMode"] = m_acqMode;
 		if (m_chanGroup != "")
 			conf["chanGroup"] = m_chanGroup;
-
+		conf["acqAlarm"] = m_acqAlarm;
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
@@ -262,6 +262,7 @@ bool ioDev::toJson(json& conf, json opt)
 		conf["channels"] = channels;
 	}
 	
+	unlock_conf_shared();
 	return true;
 }
 
@@ -272,7 +273,7 @@ bool ioDev::getStatus(json& status, string opt)
 
 bool ioDev::getChanVal(json& valList)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis);
+	lock_conf_shared();
 	for (int i = 0; i < m_channels.size(); i++)
 	{
 		ioDev* p = m_channels[i];
@@ -284,14 +285,14 @@ bool ioDev::getChanVal(json& valList)
 		ioDev* p = m_vecChildDev[i];
 		p->getChanVal(valList);
 	}
-
+	unlock_conf_shared();
 	return true;
 }
 
 
 bool ioDev::getChanStatus(json& statusList)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis);
+	lock_conf_shared();
 	for (int i = 0; i < m_channels.size(); i++)
 	{
 		ioDev* p = m_channels[i];
@@ -303,13 +304,13 @@ bool ioDev::getChanStatus(json& statusList)
 		ioDev* p = m_vecChildDev[i];
 		p->getChanStatus(statusList);
 	}
-
+	unlock_conf_shared();
 	return true;
 }
 
 bool ioDev::loadConf(json& conf)
 {
-	std::unique_lock<shared_mutex> lock(m_csThis);
+	lock_conf_unique();
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
@@ -358,6 +359,10 @@ bool ioDev::loadConf(json& conf)
 
 	if (conf["chanGroup"] != nullptr) {
 		m_chanGroup = conf["chanGroup"].get<string>();
+	}
+
+	if (conf["acqAlarm"].is_boolean()) {
+		m_acqAlarm = conf["acqAlarm"].get<bool>();
 	}
 
 	if (conf["nodeID"] != nullptr)
@@ -432,6 +437,7 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 		
+	unlock_conf_unique();
 	return true;
 }
 
@@ -489,29 +495,39 @@ DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 
 ioDev* ioDev::getIODevByNodeID(string nodeID)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	lock_conf_shared();
+	ioDev* pD = nullptr;
+
 	if (m_confNodeId == nodeID)
-		return this;
-
-
-	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
-		ioDev* p = m_vecChildDev[i];
-		if (p->m_confNodeId == nodeID)
-		{
-			return p;
-		}
-
-		ioDev* ptmp = p->getIODevByNodeID(nodeID);
-		if (ptmp)
-			return ptmp;
+		pD = this;
 	}
+	else {
+		for (int i = 0; i < m_vecChildDev.size(); i++)
+		{
+			ioDev* p = m_vecChildDev[i];
+			if (p->m_confNodeId == nodeID)
+			{
+				pD = p;
+				break;
+			}
+
+			ioDev* ptmp = p->getIODevByNodeID(nodeID);
+			if (ptmp) {
+				pD = ptmp;
+				break;
+			}
+		}
+	}
+
+	unlock_conf_shared();
 	return nullptr;
 }
 
 bool ioDev::deleteIODevByNodeID(string nodeID)
 {
-	std::unique_lock<shared_mutex> lock(m_csThis);
+	bool ret = false;
+	lock_conf_unique();
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -519,13 +535,19 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 		{
 			m_vecChildDev.erase(m_vecChildDev.begin() + i);
 			delete p;
-			return true;
+			ret = true;
+			break;
 		}
 
 		if (p->deleteIODevByNodeID(nodeID))
-			return true;
+		{
+			ret = true;
+			break;
+		}
+			
 	}
-	return false;
+	unlock_conf_unique();
+	return ret;
 }
 
 //ioDev* ioDev::getIODev(string ioAddr,bool bChn,bool ignorePort)
@@ -691,7 +713,8 @@ string ioDev::getDevAddrStr(bool ignorePort)
 
 ioDev* ioDev::getIODevByTag(string tag)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
+	ioDev* pD = nullptr;
+	lock_conf_shared();
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -702,16 +725,19 @@ ioDev* ioDev::getIODevByTag(string tag)
 			continue;
 		if (p->m_strTagBind == tag)
 		{
-			return p;
+			pD = p;
+			break;
 		}
 
 		ioDev* pTmp = p->getIODevByTag(tag);
 		if (pTmp)
 		{
-			return pTmp;
+			pD = pTmp;
+			break;
 		}
 	}
-	return nullptr;
+	unlock_conf_shared();
+	return pD;
 }
 
 bool ioDev::CommLock(int dwTimeoutMS)
@@ -1052,7 +1078,7 @@ bool ioDev::loadStatusBuff()
 
 bool ioDev::addChild(ioDev* p)
 {
-	m_csThis.lock();
+	lock_conf_unique();
 	p->m_pParent = this;
 	if (p->m_level == "channel")
 	{
@@ -1063,7 +1089,7 @@ bool ioDev::addChild(ioDev* p)
 	{
 		m_vecChildDev.push_back(p);
 	}
-	m_csThis.unlock();
+	unlock_conf_unique();
 	return true;
 }
 

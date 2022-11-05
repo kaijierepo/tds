@@ -189,6 +189,7 @@ public:
 	string m_strChanTemplate;
 	string m_acqMode; //周期采集模式，分 all group single 三种模式
 	string m_chanGroup;//在acqMode为group模式下有效
+	bool m_acqAlarm; //是否轮询报警，发送getAlarmStatus给TDSP设备
 	OBJ* m_pMO;
 	string GetCommIP();
 	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
@@ -260,6 +261,19 @@ public:
 	//动态数据在修改时，不影响配置，因此不应当影响配置的读取
 	//
 	std::shared_mutex m_csThis;  //配置-静态-数据锁
+	void lock_conf_shared() { 
+		m_csThis.lock_shared(); 
+	}
+	void unlock_conf_shared() { 
+		m_csThis.unlock_shared(); 
+	}
+	void lock_conf_unique() {
+		m_csThis.lock(); 
+	}
+	void unlock_conf_unique() { 
+		m_csThis.unlock(); 
+	}
+
 	std::recursive_timed_mutex m_csCommLock;  //运行时-动态-数据锁
 	DWORD m_dwLockThread;
 

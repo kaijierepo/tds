@@ -67,6 +67,10 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	}
 	else
 	{
+		if (m_tcpCltChildServer == pTcpSess->tcpClt) {
+			LOG("[主从服务]从主服务断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+		}
+
 		m_mutexSessions.lock();
 		std::shared_ptr<TDS_SESSION> p = m_Sessions[pTcpSess];
 		m_Sessions.erase(pTcpSess);

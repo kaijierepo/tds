@@ -24,7 +24,7 @@ void IOThread()
 	int statisUpdateInterval = 10;
 
 	//加载设备配置缓存
-	ioSrv.m_csThis.lock();
+	ioSrv.lock_conf_unique();
 	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 	{
 		ioDev* pIoDev = ioSrv.m_vecChildDev[i];
@@ -32,7 +32,7 @@ void IOThread()
 		pIoDev->loadInfoBuff();
 		pIoDev->loadStatusBuff();
 	}
-	ioSrv.m_csThis.unlock();
+	ioSrv.unlock_conf_unique();
 
 	while (1)
 	{
@@ -41,7 +41,7 @@ void IOThread()
 		if (!ioSrv.m_bRunning)
 			break;
 
-		ioSrv.m_csThis.lock();
+		ioSrv.lock_conf_unique();
 		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
@@ -56,7 +56,7 @@ void IOThread()
 			if (!ioSrv.m_bRunning)
 				break;
 		}
-		ioSrv.m_csThis.unlock();
+		ioSrv.unlock_conf_unique();
 	}
 	ioSrv.m_bWorkingThreadRunning = false;
 	ioSrv.m_signalWorkThreadExit.notify();
@@ -568,7 +568,7 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 	bool bFinded = false;
 	ioDev* p = NULL;
 
-	m_csThis.lock();
+	lock_conf_unique();
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		p = m_vecChildDev[i];
@@ -579,7 +579,7 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 			break;
 		}
 	}
-	m_csThis.unlock();
+	unlock_conf_unique();
 
 	if (bFinded)
 	{
@@ -816,15 +816,18 @@ void ioServer::rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSI
 
 ioDev* ioServer::getIODev(string ioAddr,bool bChn,bool ignorePort)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis); //读锁
-	return ioDev::getIODev(ioAddr,bChn,ignorePort);
+	ioDev* p = nullptr;
+	lock_conf_shared();
+	p= ioDev::getIODev(ioAddr,bChn,ignorePort);
+	unlock_conf_shared();
+	return p;
 }
 
 
 
 void ioServer::updateTag2IOAddrBinding()
 {
-	m_csThis.lock_shared();
+	lock_conf_shared();
 	json tagBindings = json::array();
 	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 	{
@@ -848,7 +851,7 @@ void ioServer::updateTag2IOAddrBinding()
 			}
 		}
 	}
-	m_csThis.unlock_shared();
+	unlock_conf_shared();
 	tds->callAsyn("updateTagBinding", tagBindings.dump());
 }
 
@@ -861,19 +864,21 @@ void ioServer::updateAllChanVal()
 
 void ioServer::clear()
 {
-	std::unique_lock<shared_mutex> lock(m_csThis); //写锁
+	lock_conf_unique();
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		delete m_vecChildDev[i];
 	}
 	m_vecChildDev.clear();
+	unlock_conf_unique();
 }
 
 long ioServer::getChanCount()
 {
-	std::unique_lock<shared_mutex> lock(m_csThis);
+	lock_conf_shared();
 	long count = 0;
 	ioDev::recursiveGetChanCount(this, count);
+	unlock_conf_shared();
 	return count;
 }
 
@@ -1121,7 +1126,7 @@ void ioServer::stop()
 
 bool ioServer::toJson(json& conf, json opt)
 {
-	std::shared_lock<shared_mutex> lock(m_csThis);
+	lock_conf_shared();
 	conf = json::array();//empty array
 
 	//只差找绑定位号属于某个根位号的设备。
@@ -1184,6 +1189,7 @@ bool ioServer::toJson(json& conf, json opt)
 		string s = j.dump();
 		conf.push_back(j);
 	}
+	unlock_conf_shared();
 	return true;
 }
 

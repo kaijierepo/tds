@@ -473,7 +473,8 @@ bool TDS_imp::run(string cmdline)
 	GetLocalTime(&stStartupTime);
 
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
-	m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
+	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
+	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
 	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
 
 
