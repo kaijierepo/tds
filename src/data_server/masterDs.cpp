@@ -41,6 +41,8 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	}
 	else
 	{
+		LOG("[warn]TDS子服务掉线,%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+
 		m_mutexChildTdsList.lock();
 		std::shared_ptr<TDS_SESSION> p = m_vecChildTds[pTcpSess];
 		m_vecChildTds.erase(pTcpSess);
@@ -169,7 +171,8 @@ void MasterDs::onRecvPkt(json& jResp, std::shared_ptr<TDS_SESSION> childSession)
 	catch (std::exception& e)
 	{
 		string errorType = e.what();
-		string log = "tdsp device ,json parse error. " + errorType;
+		string log = "从服务数据包异常 ,json parse error. " + errorType;
+		LOG("[error]" + log);
 	}
 
 

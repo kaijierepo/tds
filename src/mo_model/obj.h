@@ -68,7 +68,7 @@ sysTag = userRootTag + queryRootTag + queryTag
 
 namespace TAG {
 	string trimRoot(string& tag);
-	string trimRoot(string& tag,string root);
+	string trimRoot(string tag,string root);
 	string userTag2sysTag(string userTag, string userOrg);
 	string sysTag2userTag(string sysTag, string userOrg);
 	string addRoot(string& tag);

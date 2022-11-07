@@ -20,6 +20,7 @@ MP::MP()
 	m_K = 1;
 	m_B = 0;
 	m_bIsStreaming = false;
+	m_deadZone = 0;
 }
 
 MP::~MP()
@@ -92,17 +93,33 @@ bool MP::loadConf(json& conf)
 
 	if (conf["alarmLimit"] != nullptr)
 	{
-		m_alarmLimit.enableHigh = conf["alarmLimit"]["enableHigh"].get<bool>();
-		m_alarmLimit.high = conf["alarmLimit"]["high"].get<float>();
-		m_alarmLimit.enableLow = conf["alarmLimit"]["enableLow"].get<bool>();
-		m_alarmLimit.low = conf["alarmLimit"]["low"].get<float>();
+		json jAL = conf["alarmLimit"];
+		if (jAL["enableHigh"].is_boolean()){
+			m_alarmLimit.enableHigh = jAL["enableHigh"].get<bool>();
+		}
+		if (jAL["high"].is_number()) {
+			m_alarmLimit.high = jAL["high"].get<float>();
+		}
+		if (jAL["enableLow"].is_boolean()) {
+			m_alarmLimit.enableLow = jAL["enableLow"].get<bool>();
+		}
+		if (jAL["low"].is_number()) {
+			m_alarmLimit.low = jAL["low"].get<float>();
+		}
 	}
 
 	if (conf["validRange"] != nullptr)
 	{
-		m_validRange.enable = conf["validRange"]["enable"].get<bool>();
-		m_validRange.min = conf["validRange"]["min"].get<double>();
-		m_validRange.max = conf["validRange"]["max"].get<double>();
+		json j = conf["validRange"];
+		if (j["enable"].is_boolean()) {
+			m_validRange.enable = j["enable"].get<bool>();
+		}
+		if (j["min"].is_number()) {
+			m_validRange.min = j["min"].get<double>();
+		}
+		if (j["max"].is_number()) {
+			m_validRange.max = j["max"].get<double>();
+		}
 	}
 
 	if (m_valType == TDS::VAL_TYPE::json)
@@ -135,6 +152,10 @@ bool MP::loadConf(json& conf)
 	if (conf["b"] != nullptr)
 	{
 		m_B = conf["b"].get<double>();
+	}
+
+	if (conf["deadZone"].is_number()) {
+		m_deadZone = conf["deadZone"].get<double>();
 	}
 
 	if (conf["defaultVal"] != nullptr)
@@ -238,6 +259,11 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			conf["k"] = p->m_K;
 			conf["b"] = p->m_B;
 		}
+
+		if (p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange || p->m_saveMode == DATA_SAVE_MODE::onchange) {
+			conf["deadZone"] = m_deadZone;
+		}
+
 		//默认值 
 		if (p->m_defaultVal != nullptr)
 			conf["defaultVal"] = p->m_defaultVal;
@@ -296,9 +322,8 @@ bool MP::loadStatus(OBJ* pSrc, bool saveDB)
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
 	if (ptmp) {
-		m_orgVal = ptmp->m_orgVal;
+		m_lastVal = m_curVal;
 		m_curVal = ptmp->m_curVal;
-		m_lastVal = ptmp->m_lastVal;
 		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 
 		if (saveDB) {
@@ -467,7 +492,7 @@ void MP::saveToDB() {
 
 	//save to db
 	bool bNeedSave = false;
-	if (m_saveMode == "cyclic")
+	if (m_saveMode.find("cyclic") != string::npos)
 	{
 		int timespan = getSaveInterval();
 		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
@@ -475,24 +500,28 @@ void MP::saveToDB() {
 			bNeedSave = true;
 		}
 	}
-	else if (m_saveMode == "onchange")
+
+	if (m_saveMode.find("onchange")!= string::npos)
 	{
-		if (m_lastVal != m_curVal)
-			bNeedSave = true;
+		if (m_curVal.is_number() && m_lastVal.is_number()) {
+			double last = m_lastVal.get<double>();
+			double cur = m_curVal.get<double>();
+			if (fabs(last-cur) > m_deadZone) {
+				bNeedSave = true;
+			}
+		}
+		else if (m_curVal.is_boolean() && m_lastVal.is_boolean()) {
+			bool last = m_lastVal.get<bool>();
+			bool cur = m_curVal.get<bool>();
+			if (last != cur) {
+				bNeedSave = true;
+			}
+		}
 	}
-	else if (m_saveMode == "always")
+	
+	if (m_saveMode == "always")
 	{
 		bNeedSave = true;
-	}
-	else if (m_saveMode == "cyclic|onchange")
-	{
-		if (m_lastVal != m_curVal)
-			bNeedSave = true;
-		int timespan = getSaveInterval();
-		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
-		{
-			bNeedSave = true;
-		}
 	}
 
 

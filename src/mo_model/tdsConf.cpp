@@ -95,7 +95,7 @@ stopCycleAcq=0         #全局关闭主动采集
 #服务级联
 masterSrvPort = 0      #级联模式上级服务监听端口 （=0不开启）
 masterTdsIP =          #级联模式上级服务ip（为空不开启）
-masterTdsPort= 700     #级联模式上级服务端口（=0不开启）
+masterTdsPort= 661     #级联模式上级服务端口（=0不开启）
 
 #短信服务
 smsApiUrl =			   #短信平台api地址

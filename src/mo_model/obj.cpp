@@ -1168,7 +1168,7 @@ string TAG::trimRoot(string& tag)
 	return s;
 }
 
-string TAG::trimRoot(string& tag, string root)
+string TAG::trimRoot(string tag, string root)
 {
 	tag = str::trimPrefix(tag, root);
 	tag = str::trimPrefix(tag, ".");

@@ -175,6 +175,12 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	//获取需要加载数据的位号集合
 	vector<string> tagSet;
 	prj.getTags(tagSet, deSel.tag);
+	vector<string> relTagSet;
+	for (int i = 0; i < tagSet.size(); i++)
+	{
+		string relTag = TAG::trimRoot(tagSet[i], deSel.tag.m_rootTag);
+		relTagSet.push_back(relTag);
+	}
 
 
 	time_t loadTime = deSel.time.endTime;
@@ -186,7 +192,10 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	double avg = 0;
 	int count = 0;
 
+	//返回的数据元是否需要携带tag字段
 	bool withTag = tagSet.size() > 1 ? true : false;
+	if (deSel.tag.getTag)
+		withTag = true;
 
 	vector<yyjson_doc*> src_doc;
 	vector< yyjson_mut_doc*> src_mut_doc;
@@ -196,6 +205,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	for (int tagIdx = 0; tagIdx < tagSet.size(); tagIdx++)
 	{
 		string& tag = tagSet[tagIdx]; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+		string& relTag = relTagSet[tagIdx];
 
 		//准备数据文件集
 		DB_FILE_SET fSet;
@@ -281,8 +291,9 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				if (withTag)
 				{
 					//当进行多位号搜索时，需要加入tag标签
+					//relTag指向的变量在write_doc之前不能被销毁
 					yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
-					yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tag.c_str());
+					yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, relTag.c_str());
 					yyjson_mut_obj_put(jDE, tagKey, tagVal);
 				}
 
@@ -703,29 +714,28 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.time.error);
 
 	//parse tag selector
-	std::string strTag, strTagTmp;
-	if (params["tag"].is_null()) { return makeRPCError(TEC_paramMissing, "param missing:\"tag\""); }
-	try {
-		strTag = params["tag"].get<string>();
-		if (params["root"] != nullptr)
-		{
-			string strRoot = params["root"].get<string>();
-			if (strRoot != "")
-			{
-				strTag = strRoot + "." + strTag;
-			}
-		}
-	}
-	catch (...)
+	std::string strTag, strRootTag;
+	if (!params["tag"].is_string())
 	{
-		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"tag\" param should be a string");
+		return makeRPCError(TEC_paramMissing, "param tag missing or not string type");
 	}
-	if (0 == strTag.length()) {
-		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"tag\" param can not be empty");
+	else
+		strTag = params["tag"];
+		
+
+	if (params["rootTag"]!= nullptr)
+	{
+		strRootTag = params["rootTag"];
 	}
 
-	if (!deSel.tag.init(strTag))
+
+	if (!deSel.tag.init(strTag,strRootTag))
 		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSel.tag.error);
+
+	if (params["getTag"].is_boolean()) {
+		deSel.tag.getTag = params["getTag"].get<bool>();
+	}
+
 
 	//监控对象类型
 	if (params["type"] != nullptr)
@@ -769,7 +779,12 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	DE_SELECTOR deSel;
 
-	params["root"] = session.org;
+	string rootTag = "";
+	if (params.contains("rootTag")) {
+		rootTag = params["rootTag"];
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);
+	params["rootTag"] = rootTag;
 	resp.error = parseDESelector(params, deSel);
 	if (resp.error != "") return;
 
@@ -1057,11 +1072,20 @@ bool TIME_CONDITON::Match(string& deTime)
 	return false;
 }
 
-bool TAG_SELECTOR::init(string tag){
-	tagExp = tag;
+bool TAG_SELECTOR::init(string tag, string rootTag){
+	if (rootTag == "")
+		tagExp = tag;
+	else
+		tagExp = rootTag + "." + tag;
+
 	regExp = tagExp;
 	regExp = str::replace(regExp, ".", "\\.");
 	regExp = str::replace(regExp, "*", ".*");
+
+	m_tag = tagExp;
+	m_rootTag = rootTag;
+	m_relTag = tag;
+
 
 	if (tagExp.find('*') == string::npos)
 	{

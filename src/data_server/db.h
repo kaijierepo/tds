@@ -98,7 +98,7 @@ public:
 
 class TAG_SELECTOR{
 public:
-	bool init(string tag);
+	bool init(string tag,string rootTag = "");
 	bool match(string tag);//使用不带根的绝对位号
 
 	string tagExp;
@@ -106,6 +106,10 @@ public:
 	string error;
 	bool singleMode; //单位号选中模式
 	string type;
+	string m_rootTag; //查询根
+	string m_tag;     //系统位号
+	string m_relTag;  //相对位号。用户可以指定在de里面返回相对位号，方便前端显示
+	bool getTag;
 };
 
 class TIME_SELECTOR
