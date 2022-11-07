@@ -552,7 +552,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			}
 		}
 		else {
-			rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not find device of specified NodeID:" + sNodeId);
 			break;
 		}
 	}

@@ -542,8 +542,9 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				if (!pmp->m_bIsStreaming)
 				{
 					string tag = pmp->getTag();
+					string streamServerUrl = "http://127.0.0.1:672";
 					//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
-					httplib::Client cli("http://127.0.0.1:672");
+					httplib::Client cli(streamServerUrl);
 					httplib::Headers headers;
 					httplib::Params params = {
 						{ "vhost", "__defaultVhost__" },
@@ -557,6 +558,16 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 					string uri = "/index/api/addStreamProxy";
 					auto res = cli.Get(uri,params,headers);
+					LOG("Get " + streamServerUrl + uri + ",tag=" + tag);
+					if (res != nullptr) {
+						
+					}
+					else {
+						LOG("stream server 未响应");
+					}			
+				}
+				else {
+					LOG("码流已打开");
 				}
 
 				rpcResp.result = "\"ok\"";

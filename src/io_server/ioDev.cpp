@@ -107,6 +107,7 @@ ioDev::ioDev(void)
 	pIOSession = NULL;
 	m_onlineInfoQueried = false;
 	m_acqMode = "all";
+	m_acqAlarm = true;
 }
 
 ioDev::~ioDev(void)
@@ -521,7 +522,7 @@ ioDev* ioDev::getIODevByNodeID(string nodeID)
 	}
 
 	unlock_conf_shared();
-	return nullptr;
+	return pD;
 }
 
 bool ioDev::deleteIODevByNodeID(string nodeID)

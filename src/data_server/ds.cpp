@@ -152,9 +152,9 @@ bool dataServer::run()
 {
 	m_masterTdsIP = tds->conf->getStr("masterTdsIP", "");
 	m_masterTdsPort = tds->conf->getInt("masterTdsPort", 0);
-	m_tdsID = tds->conf->getStr("tdsID", "");
 
-	if (m_masterTdsIP != "" && m_masterTdsPort != 0 && m_tdsID != "") {
+
+	if (m_masterTdsIP != "" && m_masterTdsPort != 0) {
 		m_tcpCltChildServer = new tcpClt();
 		m_tcpCltChildServer->run(this, m_masterTdsIP, m_masterTdsPort);
 		LOG("[子服务模式] 连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
