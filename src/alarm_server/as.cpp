@@ -516,8 +516,8 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 
 	string error = db.parseDESelector(params, deSel);
 	if(error != "") return error;
-	TIME_SELECTOR& timeSelector = deSel.time;
-	TAG_SELECTOR& tagSelector = deSel.tag;
+	TIME_SELECTOR& timeSelector = deSel.timeSel;
+	TAG_SELECTOR& tagSelector = deSel.tagSel;
 
 	string dataSet = "[";
 	std::lock_guard<mutex> g(m_csAlarmData);

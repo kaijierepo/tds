@@ -211,9 +211,14 @@ void project::getMpTypeList(json& mpTypeList)
 
 bool project::getTags(vector<string>& tags, TAG_SELECTOR& tagSelector)
 {
-	if (tagSelector.singleMode)
+	if (tagSelector.mode == TSM_single)
 	{
-		tags.push_back(tagSelector.tagExp);
+		tags.push_back(tagSelector.singleTag);
+	}
+	else if (tagSelector.mode == TSM_multi) {
+		for (int i = 0; i < tagSelector.multiTag.size(); i++) {
+			tags.push_back(tagSelector.multiTag[i]);
+		}
 	}
 	else
 	{

@@ -174,16 +174,15 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	//获取需要加载数据的位号集合
 	vector<string> tagSet;
-	prj.getTags(tagSet, deSel.tag);
+	prj.getTags(tagSet, deSel.tagSel);
 	vector<string> relTagSet;
 	for (int i = 0; i < tagSet.size(); i++)
 	{
-		string relTag = TAG::trimRoot(tagSet[i], deSel.tag.m_rootTag);
+		string relTag = TAG::trimRoot(tagSet[i], deSel.tagSel.m_rootTag);
 		relTagSet.push_back(relTag);
 	}
 
 
-	time_t loadTime = deSel.time.endTime;
 	string strDataFmt = "";
 	string strRawDataFmt = "";
 
@@ -194,7 +193,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 	//返回的数据元是否需要携带tag字段
 	bool withTag = tagSet.size() > 1 ? true : false;
-	if (deSel.tag.getTag)
+	if (deSel.tagSel.getTag)
 		withTag = true;
 
 	vector<yyjson_doc*> src_doc;
@@ -209,7 +208,8 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 		//准备数据文件集
 		DB_FILE_SET fSet;
-		for (; loadTime >= deSel.time.startTime; loadTime -= 24 * 60 * 60)
+		time_t loadTime = deSel.timeSel.endTime;
+		for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 		{
 			DB_FILE* pdf = new DB_FILE();
 			pdf->time = timeopt::Unix2SysTime(loadTime);
@@ -279,7 +279,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				}
 				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
 				
-				if (pdf->boundaryFile && !deSel.time.Match(deTime))
+				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
 
 				if (deSel.interval.type == DST_Time) {
@@ -323,7 +323,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				mapRlt[sortFlag + deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 				count++;
 
-				if (deSel.time.AmountMatch(count))
+				if (deSel.timeSel.AmountMatch(count))
 					goto DATA_SET_LOADED;
 			}
 		}
@@ -710,17 +710,18 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	{
 		return makeRPCError(TEC_WrongParamFmt, "wrong param format:\"time\" param should be a string");
 	}
-	if (!deSel.time.init(strTime))
-		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.time.error);
+	if (!deSel.timeSel.init(strTime))
+		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.timeSel.error);
 
 	//parse tag selector
-	std::string strTag, strRootTag;
-	if (!params["tag"].is_string())
+	std::string strRootTag;
+	json jTag;
+	if (!params.contains("tag"))
 	{
 		return makeRPCError(TEC_paramMissing, "param tag missing or not string type");
 	}
 	else
-		strTag = params["tag"];
+		jTag = params["tag"];
 		
 
 	if (params["rootTag"]!= nullptr)
@@ -729,17 +730,17 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	}
 
 
-	if (!deSel.tag.init(strTag,strRootTag))
-		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSel.tag.error);
+	if (!deSel.tagSel.init(jTag,strRootTag))
+		return makeRPCError(TEC_TAG_SELECTOR_FMT_ERROR, "tag selector format error:" + deSel.tagSel.error);
 
 	if (params["getTag"].is_boolean()) {
-		deSel.tag.getTag = params["getTag"].get<bool>();
+		deSel.tagSel.getTag = params["getTag"].get<bool>();
 	}
 
 
 	//监控对象类型
 	if (params["type"] != nullptr)
-		deSel.tag.type = params["type"].get<string>();
+		deSel.tagSel.type = params["type"].get<string>();
 
 	//parse interval selector
 	json jDsi = params["interval"];
@@ -1073,40 +1074,61 @@ bool TIME_CONDITON::Match(string& deTime)
 }
 
 bool TAG_SELECTOR::init(string tag, string rootTag){
-	if (rootTag == "")
-		tagExp = tag;
-	else
-		tagExp = rootTag + "." + tag;
-
-	regExp = tagExp;
-	regExp = str::replace(regExp, ".", "\\.");
-	regExp = str::replace(regExp, "*", ".*");
-
-	m_tag = tagExp;
 	m_rootTag = rootTag;
-	m_relTag = tag;
-
-
-	if (tagExp.find('*') == string::npos)
+	if (tag.find('*') == string::npos)
 	{
-		singleMode = true;
+		mode = TSM_fuzzy_match;
+		tagExp = TAG::addRoot(tag, rootTag);
+		regExp = tagExp;
+		regExp = str::replace(regExp, ".", "\\.");
+		regExp = str::replace(regExp, "*", ".*");
 	}
 	else
 	{
-		singleMode = false;
+		mode = TSM_single;
+		tag = TAG::addRoot(tag, rootTag);
+		singleTag = tag;
 	}
 
 	return true;
 }
 
+bool TAG_SELECTOR::init(json tag, string rootTag)
+{
+	mode = TSM_invalid;
+	if (tag.is_string()) {
+		return init(tag.get<string>(), rootTag);
+	}
+	else if(tag.is_array()){
+		for (auto& i : tag) {
+			if (i.is_string()) {
+				string sTag = TAG::addRoot(i.get<string>(), rootTag);
+				multiTag.push_back(sTag);
+			}
+		}
+		mode = TSM_multi;
+		return true;
+	}
+
+	return false;
+}
+
 bool TAG_SELECTOR::match(string tag){
 		//exact match
-		if (tagExp.find('*') == string::npos)
+		if (mode == TSM_single)
 		{
-			if(tagExp == tag)
+			if(tag == singleTag)
 				return true;
 			else
 				return false;
+		}
+		else if(mode == TSM_multi)
+		{
+			for (int i = 0; i < multiTag.size(); i++) {
+				if (tag == multiTag[i])
+					return true;
+			}
+			return false;
 		}
 		//fuzzy match
 		else

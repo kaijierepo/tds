@@ -96,20 +96,37 @@ public:
 	string strEnd;
 };
 
+enum TAG_SELECT_MODE {
+	TSM_invalid,
+	TSM_single, //单选
+	TSM_multi, //多选
+	TSM_fuzzy_match //模糊匹配
+};
+
 class TAG_SELECTOR{
 public:
 	bool init(string tag,string rootTag = "");
+	bool init(json tag, string rootTag = "");
 	bool match(string tag);//使用不带根的绝对位号
 
+	TAG_SELECT_MODE mode;
+	string m_rootTag; //查询根
+
+	//模糊匹配模式
 	string tagExp;
 	string regExp;
-	string error;
-	bool singleMode; //单位号选中模式
-	string type;
-	string m_rootTag; //查询根
-	string m_tag;     //系统位号
-	string m_relTag;  //相对位号。用户可以指定在de里面返回相对位号，方便前端显示
+
+	//精确匹配模式-单选
+	string singleTag; //使用系统位号
+
+	//精确匹配模式-多选
+	vector<string> multiTag; //使用系统位号
+
+	//返回的数据元中是否需要包含tag字段
 	bool getTag;
+
+	string type;
+	string error;
 };
 
 class TIME_SELECTOR
@@ -203,12 +220,12 @@ public:
 
 };
 
-
+//数据元选择器
 struct DE_SELECTOR {
-	TIME_SELECTOR time;
-	TAG_SELECTOR tag;
-	CONDITION_SELECTOR condition;
-	INTERVAL_SELECTOR interval;
+	TIME_SELECTOR timeSel;  //时间选择器
+	TAG_SELECTOR tagSel;	//位号选择器
+	CONDITION_SELECTOR condition;	//条件选择器
+	INTERVAL_SELECTOR interval;		//降采样选择器
 	bool ascendingSort;
 	string sortKey;
 	DE_SELECTOR() {
