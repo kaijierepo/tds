@@ -1100,6 +1100,7 @@ bool TAG_SELECTOR::init(json tag, string rootTag)
 		return init(tag.get<string>(), rootTag);
 	}
 	else if(tag.is_array()){
+		m_rootTag = rootTag;
 		for (auto& i : tag) {
 			if (i.is_string()) {
 				string sTag = TAG::addRoot(i.get<string>(), rootTag);
