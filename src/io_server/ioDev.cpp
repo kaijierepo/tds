@@ -195,6 +195,12 @@ bool ioDev::toJson(json& conf, json opt)
 		if (m_chanGroup != "")
 			conf["chanGroup"] = m_chanGroup;
 		conf["acqAlarm"] = m_acqAlarm;
+		if (m_strUser != "") {
+			conf["user"] = m_strUser;
+		};
+		if (m_strPwd != "") {
+			conf["pwd"] = m_strPwd;
+		}
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
@@ -333,6 +339,14 @@ bool ioDev::loadConf(json& conf)
 				m_addrMode = DEV_ADDR_MODE::tcpClient;
 		}
 	}
+
+	if (conf["user"].is_string()) {
+		m_strUser = conf["user"].get<string>();
+	};
+
+	if (conf["pwd"].is_string()) {
+		m_strPwd = conf["pwd"].get<string>();
+	};
 
 	if (conf["acqInterval"] != nullptr)
 	{
