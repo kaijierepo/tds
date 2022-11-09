@@ -3487,7 +3487,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 	}
 
 
-	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
+	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	WebServer::sendToAllWebsock(notify);
 	ds.sendToAllSessions(notify);
