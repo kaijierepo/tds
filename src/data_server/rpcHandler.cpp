@@ -2279,10 +2279,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	SYSTEMTIME stTimeStamp;
 	string time="";
 	json dataFile;
-	json val = nullptr;
-	json tag, ioAddr;
+	json inputVal = nullptr;
+	json inputTag, inputIoAddr;
 	if (params.find("val") != params.end())
-		val = params["val"];
+		inputVal = params["val"];
 	else
 	{
 		resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
@@ -2291,10 +2291,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	if (params.find("dataFile") != params.end())
 		dataFile = params["dataFile"];
 	if (params.find("tag") != params.end())
-		tag = params["tag"];
+		inputTag = params["tag"];
 	if (params.find("ioAddr") != params.end())
-		ioAddr = params["ioAddr"];
-	if (tag == "" && ioAddr == "")
+		inputIoAddr = params["ioAddr"];
+	if (inputTag == "" && inputIoAddr == "")
 	{
 		resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
 		return;
@@ -2302,13 +2302,43 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	string rootTag = "";
 	if (params.contains("rootTag"))
 		rootTag = params["rootTag"].get<string>();
+	if (params.find("time") != params.end())
+	{
+		time = params["time"];
+		stTimeStamp = timeopt::str2st(time);
+	}
+	else
+	{
+		GetLocalTime(&stTimeStamp);
+	}
+
+
+	//单点输入模式统一转成数组处理
+	if (inputTag.is_string()) {
+		string s = inputTag.get<string>();
+		inputTag = json::array();
+		inputTag.push_back(s);
+
+		json val = inputVal;
+		inputVal = json::array();
+		inputVal.push_back(val);
+	}
+	else if (inputIoAddr.is_string()) {
+		string s = inputIoAddr.get<string>();
+		inputIoAddr = json::array();
+		inputIoAddr.push_back(s);
+
+		json val = inputVal;
+		inputVal = json::array();
+		inputVal.push_back(val);
+	}
+
 
 	//监测点组输入模式
-	if (tag.is_array() && val.is_array()) {
-
-	}
-	//单点输入
-	else {
+	vector<MP*> vecMps;
+	for (int i = 0; i < inputTag.size(); i++) {
+		string tag = inputTag[i];
+		json val = inputVal[i];
 		tag = TAG::addRoot(tag, rootTag);
 		tag = TAG::addRoot(tag, session.org);
 
@@ -2320,25 +2350,42 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
 				return;
 			}
-			if (params.find("time") != params.end())
-			{
-				time = params["time"];
-				stTimeStamp = timeopt::str2st(time);
-			}
-			else
-			{
-				GetLocalTime(&stTimeStamp);
-			}
+
 			pmp->input(val, &stTimeStamp, dataFile);
-			resp.result = "\"ok\"";
+			vecMps.push_back(pmp);
 		}
-		else if (ioAddr != "")
+	}
+
+	//监测点组中有任意一个点需要保存，则全部保存
+	//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
+	bool needSave = false;
+	for (int i = 0; i < vecMps.size(); i++) {
+		MP* pmp = vecMps[i];
+		if (pmp->needSaveToDB()) {
+			needSave = true;
+		}
+	}
+
+	if (needSave) {
+		for (int i = 0; i < vecMps.size(); i++) {
+			MP* pmp = vecMps[i];
+			pmp->saveToDB();
+		}
+	}
+
+
+	for (int i = 0; i < inputIoAddr.size(); i++) {
+		string ioAddr = inputIoAddr[i];
+		json val = inputIoAddr[i];
+
+		if (ioAddr != "")
 		{
 			ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
 			pC->input(val);
-			resp.result = "\"ok\"";
 		}
 	}
+
+	resp.result = "\"ok\"";
 }
 
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)

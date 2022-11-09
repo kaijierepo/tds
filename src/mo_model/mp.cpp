@@ -329,7 +329,7 @@ bool MP::loadStatus(OBJ* pSrc, SYSTEMTIME* dataTime , bool saveDB)
 		else
 			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 
-		if (saveDB) {
+		if (saveDB && needSaveToDB()) {
 			saveToDB();
 		}
 	}
@@ -483,33 +483,31 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	//json pt = getRTData();
 	//rtList.push_back(pt);
 	//rpcSrv.notify("getMpStatus", rtList);
-
-	saveToDB();
 }
 
-
-void MP::saveToDB() {
+bool MP::needSaveToDB()
+{
+	bool bNeedSave = false;
 	if (m_curVal == nullptr)
-		return;
+		return bNeedSave;
 
 
 	//save to db
-	bool bNeedSave = false;
 	if (m_saveMode.find("cyclic") != string::npos)
 	{
 		int timespan = getSaveInterval();
-		if (timeopt::CalcTimePassSecond(m_lastSaveTime) > timespan)
+		if (timeopt::CalcTimeDiffSecond(m_stDataLastUpdate,m_lastSaveTime) > timespan)
 		{
 			bNeedSave = true;
 		}
 	}
 
-	if (m_saveMode.find("onchange")!= string::npos)
+	if (m_saveMode.find("onchange") != string::npos)
 	{
 		if (m_curVal.is_number() && m_lastVal.is_number()) {
 			double last = m_lastVal.get<double>();
 			double cur = m_curVal.get<double>();
-			if (fabs(last-cur) > m_deadZone) {
+			if (fabs(last - cur) > m_deadZone) {
 				bNeedSave = true;
 			}
 		}
@@ -521,18 +519,19 @@ void MP::saveToDB() {
 			}
 		}
 	}
-	
+
 	if (m_saveMode == "always")
 	{
 		bNeedSave = true;
 	}
 
+	return bNeedSave;
+}
 
-	if (bNeedSave)
-	{
-		GetLocalTime(&m_lastSaveTime);
-		db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
-	}
+
+void MP::saveToDB() {
+	GetLocalTime(&m_lastSaveTime);
+	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
 }
 
 bool MP::output(json jVal, json& rlt, json& err,bool sync)

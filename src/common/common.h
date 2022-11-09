@@ -224,6 +224,7 @@ namespace timeopt {
 	string TimeToYMD(const SYSTEMTIME time);
 	int CalcTimePassSecond(SYSTEMTIME lastTime);
 	int CalcTimePassMilliSecond(SYSTEMTIME lastTime);
+	int CalcTimeDiffSecond(SYSTEMTIME newTime, SYSTEMTIME oldTime);
 	time_t getTick();
 	void setAsTimeOrg(SYSTEMTIME& st);
 	bool isValidTime(SYSTEMTIME& st);

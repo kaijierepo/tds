@@ -1054,6 +1054,14 @@ namespace timeopt {
 		return milli;
 	}
 
+	int CalcTimeDiffSecond(SYSTEMTIME newTime,SYSTEMTIME oldTime)
+	{
+		time_t newT = SysTime2Unix(newTime);
+		time_t oldT = SysTime2Unix(oldTime);
+		time_t seconds = newT - oldT;
+		return seconds;
+	}
+
 	int CalcTimePassMilliSecond(SYSTEMTIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
