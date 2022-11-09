@@ -303,3 +303,17 @@ void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_
 	if (binResp)
 		delete binResp;
 }
+
+void dataServer::sendToAllSessions(char* pData, int len)
+{
+	m_mutexSessions.lock();
+	for (auto& i : m_Sessions) {
+		i.second->send(pData, len);
+	}
+	m_mutexSessions.unlock();
+}
+
+void dataServer::sendToAllSessions(string& s)
+{
+	sendToAllSessions((char*)s.c_str(), s.length());
+}

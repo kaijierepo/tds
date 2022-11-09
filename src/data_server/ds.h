@@ -37,6 +37,9 @@ public:
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 
+
+	void sendToAllSessions(char* pData, int len);
+	void sendToAllSessions(string& s);
 	//应用层会话
 	map<void*,std::shared_ptr<TDS_SESSION>> m_Sessions;
 	mutex m_mutexSessions;

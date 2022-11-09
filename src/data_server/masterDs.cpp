@@ -128,7 +128,8 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 			OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
 			SYSTEMTIME stNow;
 			GetLocalTime(&stNow);
-			pMO->loadStatus(&prjTmp,&stNow, true);
+			//此处不再保存到数据库，第3个参数需要重构掉
+			pMO->loadStatus(&prjTmp,&stNow, false);
 		}
 	}
 	//同步实时值
@@ -142,9 +143,50 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 	return true;
 }
 
-bool MasterDs::handleNotify(json jResp, std::shared_ptr<TDS_SESSION> childSession) {
-	return true;
+bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSession) {
+	string method = jNotify["method"];
+	json params = jNotify["params"];
+	if (method == "statusUpdate") {
+		json jUpdateTags = params["tag"];
+		json jUpdateVals = params["val"];
+		string time = params["time"];
+		SYSTEMTIME stTime = timeopt::str2st(time);
 
+
+		vector<MP*> vecMps;
+		for (int i = 0; i < jUpdateTags.size(); i++) {
+			string tag = jUpdateTags[i];
+			json val = jUpdateVals[i];
+			tag = TAG::addRoot(tag, childSession->m_childTdsTag);
+			tag = TAG::addRoot(tag, childSession->m_childTdsTag);
+			MP* pmp = prj.GetMPByTag(tag);
+			if (pmp)
+			{
+				pmp->updateVal(val, &stTime);
+				vecMps.push_back(pmp);
+			}
+		}
+
+		
+		//监测点组中有任意一个点需要保存，则全部保存
+		//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
+		bool needSave = false;
+		for (int i = 0; i < vecMps.size(); i++) {
+			MP* pmp = vecMps[i];
+			if (pmp->needSaveToDB()) {
+				needSave = true;
+			}
+		}
+
+		if (needSave) {
+			for (int i = 0; i < vecMps.size(); i++) {
+				MP* pmp = vecMps[i];
+				pmp->saveToDB();
+			}
+		}
+	}
+	
+	return true;
 }
 
 void MasterDs::onRecvPkt(json& jResp, std::shared_ptr<TDS_SESSION> childSession)

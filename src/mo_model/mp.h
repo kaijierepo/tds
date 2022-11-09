@@ -63,6 +63,7 @@ public:
 	//pic表示有一个关联的图片文件
 	//当deFolder和video，pic同时存在时，pic和video放在deFolder中，否则和数据元索引文件放在同一个目录
 	void input(json jVal, SYSTEMTIME* dataTime=NULL, json dataFile = nullptr);
+	void updateVal(json& jVal,SYSTEMTIME* dataTime = NULL, json dataFile = nullptr);
 	bool needSaveToDB();
 	void saveToDB();
 	bool output(json jVal, json& rlt, json& err,bool sync = true);

@@ -387,6 +387,7 @@ void MP::calcAlarm()
 }
 
 
+
 void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 {
 	SYSTEMTIME t;
@@ -398,13 +399,13 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
 		return;
+
+
 	m_stDataLastUpdate = *dataTime;
 	if (m_pParentMO)
 		m_pParentMO->m_stDataLastUpdate = *dataTime;
 
-	//save to rt memory
-	bool bValChange = false;
-	m_lastVal = m_curVal;
+	//数字类型进行kb处理和上下限处理
 	if (jVal.is_number())
 	{
 		double dbVal = jVal.get<double>();
@@ -420,36 +421,32 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		else
 			sVal = str::format("%.10f", dbCurVal);
 		dbCurVal = atof(sVal.c_str());
-		m_curVal = dbCurVal;
-
+		jVal = dbCurVal;
 
 		if (m_validRange.enable)
 		{
 			if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
 			{
-				m_curVal = nullptr;
+				jVal = nullptr;
 			}
 		}
+	}
 
-		calcAlarm();
-	}
-	else if (jVal.is_boolean())
+	updateVal(jVal, dataTime, dataFile);
+}
+
+void MP::updateVal(json& jVal, SYSTEMTIME* dataTime, json dataFile)
+{
+	//save to rt memory
+	m_lastVal = m_curVal;
+	m_curVal = jVal;
+	calcAlarm();
+	if (this->m_valType == "json")
 	{
-		m_curVal = jVal;
+		jVal["type"] = this->m_valType;
+		jVal["mpType"] = this->m_mpType;
 	}
-	else if (jVal.is_string())
-	{
-		m_curVal = jVal;
-	}
-	else
-	{
-		m_curVal = jVal;
-		jVal["type"]= this->m_valType;
-		if (this->m_valType == "json")
-		{
-			jVal["mpType"] = this->m_mpType;
-		}
-	}
+
 
 	//特殊的属性监测点
 	if (m_name == "经度")
@@ -469,7 +466,7 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	{
 		ALARM_INFO ai;
 		ai.type = m_name;
-		if(m_curVal.get<bool>() == true)
+		if (m_curVal.get<bool>() == true)
 			ai.level = ALARM_LEVEL::alarm;
 		else
 			ai.level = ALARM_LEVEL::normal;
@@ -477,12 +474,6 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		ai.typeLabel = m_name;
 		almSrv.Update(ai);
 	}
-	
-	//notify to tds client
-	//json rtList;
-	//json pt = getRTData();
-	//rtList.push_back(pt);
-	//rpcSrv.notify("getMpStatus", rtList);
 }
 
 bool MP::needSaveToDB()

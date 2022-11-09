@@ -2374,6 +2374,22 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 
 
+	//发送状态更新通知
+	json jStatusNotify;
+	json jUpdateTags = json::array();
+	json jUpdateVals = json::array();
+	for (int i = 0; i < vecMps.size(); i++) {
+		MP* pmp = vecMps[i];
+		jUpdateTags.push_back(pmp->getTag());
+		jUpdateVals.push_back(pmp->m_curVal);
+	}
+	jStatusNotify["tag"] = jUpdateTags;
+	jStatusNotify["val"] = jUpdateVals;
+	jStatusNotify["time"] = time;
+	rpcSrv.notify("statusUpdate", jStatusNotify);
+
+
+	//使用ioAddr来input忘了哪里调用了，后续观察删掉
 	for (int i = 0; i < inputIoAddr.size(); i++) {
 		string ioAddr = inputIoAddr[i];
 		json val = inputIoAddr[i];
@@ -3474,6 +3490,7 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
 
 	WebServer::sendToAllWebsock(notify);
+	ds.sendToAllSessions(notify);
 }
 
 
