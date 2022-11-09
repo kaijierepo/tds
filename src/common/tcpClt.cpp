@@ -92,6 +92,9 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 			if (p->IsConnect())
 				continue;
 
+			if (p->m_bIsConnectting)
+				continue;
+
 			if (timeopt::CalcTimePassMilliSecond(p->lastConnTime) > 3000) {
 				GetLocalTime(&p->lastConnTime);
 				thread t(AsynConnectThread, p);
@@ -197,9 +200,12 @@ void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPo
 
 bool tcpClt::connect()
 {
+	m_bIsConnectting = true;
+	bool ret = false;
 	if(sockClient !=0)
 	{
-		return true;
+		ret = true;
+		goto CONN_END;
 	}
 
 	// initial socket library
@@ -210,7 +216,8 @@ bool tcpClt::connect()
 	err = WSAStartup(wVerisonRequested, &wsaData);
 	if (err != 0)
 	{
-		return false;
+		ret = false;
+		goto CONN_END;
 	}
 
 	//create socket
@@ -225,29 +232,34 @@ bool tcpClt::connect()
 		if(::bind(sockClient, (SOCKADDR *)&sAddTemp, sizeof(SOCKADDR))==SOCKET_ERROR)
 		{
 			m_strErrorInfo = "绑定IP失败";
-			return false;
+			ret = false;
+			goto CONN_END;
 		}
 	}
 
 
 	struct hostent* hptr = gethostbyname(m_remoteIP.c_str());
-	if (hptr == NULL || hptr->h_addr == NULL)
-		return false;
+	if (hptr == NULL || hptr->h_addr == NULL) {
+		ret = false;
+		goto CONN_END;
+	}
+		
 
 	SOCKADDR_IN addrSrv;
 	CopyMemory(&addrSrv.sin_addr.S_un.S_addr, hptr->h_addr_list[0], hptr->h_length);
 	addrSrv.sin_family=AF_INET;
 	addrSrv.sin_port=htons(m_remotePort);
-	m_bIsConnectting = true;
+	
 	int nConnect = ::connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
-	m_bIsConnectting = false;
+
 
 	if(nConnect == SOCKET_ERROR)
 	{
 		m_strErrorInfo = "连接失败:" + sys::getLastError();
 		closesocket(sockClient);
 		sockClient = 0;
-		return false;
+		ret = false;
+		goto CONN_END;
 	}
 	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
 	m_bConn = true;
@@ -256,7 +268,9 @@ bool tcpClt::connect()
 	DWORD dwThread;
 	HANDLE hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
 
-	return true;
+CONN_END:
+	m_bIsConnectting = false;
+	return ret;
 }
 
 bool tcpClt::ReConnect()
