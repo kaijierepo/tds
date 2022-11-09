@@ -200,6 +200,10 @@ void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPo
 
 bool tcpClt::connect()
 {
+	DWORD dwThread;
+	HANDLE hThread;
+	int nConnect;
+	struct hostent* hptr;
 	m_bIsConnectting = true;
 	bool ret = false;
 	if(sockClient !=0)
@@ -238,7 +242,7 @@ bool tcpClt::connect()
 	}
 
 
-	struct hostent* hptr = gethostbyname(m_remoteIP.c_str());
+	 hptr = gethostbyname(m_remoteIP.c_str());
 	if (hptr == NULL || hptr->h_addr == NULL) {
 		ret = false;
 		goto CONN_END;
@@ -250,7 +254,7 @@ bool tcpClt::connect()
 	addrSrv.sin_family=AF_INET;
 	addrSrv.sin_port=htons(m_remotePort);
 	
-	int nConnect = ::connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
+	 nConnect = ::connect(sockClient,(SOCKADDR*)&addrSrv,sizeof(SOCKADDR));
 
 
 	if(nConnect == SOCKET_ERROR)
@@ -265,8 +269,8 @@ bool tcpClt::connect()
 	m_bConn = true;
 	GetLocalTime(&lastConnTime);
 	m_strErrorInfo = "";
-	DWORD dwThread;
-	HANDLE hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
+
+	 hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
 
 CONN_END:
 	m_bIsConnectting = false;
