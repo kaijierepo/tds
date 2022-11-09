@@ -174,11 +174,14 @@ public:
 	mutex m_csIOSession;
 	//输出到设备
 	virtual bool outputVal(json jVal,string chanAddr="") { return false; };
-	
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
+
 	//输出到设备的下属通道
 	virtual bool output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) { return false; }
 	virtual bool output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { return false; };
+
+	//设备多通道批量输入
+	virtual bool input(vector<string> chanAddr, vector<json> val, SYSTEMTIME* stDataTime = nullptr);
 
 	void AutoDataLink(OBJ* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求

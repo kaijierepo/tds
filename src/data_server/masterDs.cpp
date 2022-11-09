@@ -126,7 +126,9 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 			shared_lock<shared_mutex> lock(prj.m_csPrj);
 			OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
-			pMO->loadStatus(&prjTmp, true);
+			SYSTEMTIME stNow;
+			GetLocalTime(&stNow);
+			pMO->loadStatus(&prjTmp,&stNow, true);
 		}
 	}
 	//同步实时值

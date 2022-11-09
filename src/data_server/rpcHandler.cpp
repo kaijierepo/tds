@@ -2277,9 +2277,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
 	//parse param
 	SYSTEMTIME stTimeStamp;
-	string tag = "", ioAddr = "",time="";
+	string time="";
 	json dataFile;
-	json val = "";
+	json val = nullptr;
+	json tag, ioAddr;
 	if (params.find("val") != params.end())
 		val = params["val"];
 	else
@@ -2290,46 +2291,53 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	if (params.find("dataFile") != params.end())
 		dataFile = params["dataFile"];
 	if (params.find("tag") != params.end())
-		tag = params["tag"].get<string>();
+		tag = params["tag"];
 	if (params.find("ioAddr") != params.end())
-		ioAddr = params["ioAddr"].get<string>();
+		ioAddr = params["ioAddr"];
 	if (tag == "" && ioAddr == "")
 	{
 		resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
 		return;
 	}
-
 	string rootTag = "";
 	if (params.contains("rootTag"))
 		rootTag = params["rootTag"].get<string>();
-	tag = TAG::addRoot(tag, rootTag);
-	tag = TAG::addRoot(tag, session.org);
 
-	if (tag != "")
-	{
-		MP* pmp = prj.GetMPByTag(tag);
-		if (!pmp)
-		{
-			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
-			return;
-		}
-		if (params.find("time") != params.end())
-		{
-			time = params["time"];
-			stTimeStamp = timeopt::str2st(time);
-		}
-		else
-		{
-			GetLocalTime(&stTimeStamp);
-		}
-		pmp->input(val, &stTimeStamp, dataFile);
-		resp.result = "\"ok\"";
+	//监测点组输入模式
+	if (tag.is_array() && val.is_array()) {
+
 	}
-	else if (ioAddr != "")
-	{
-		ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
-		pC->input(val);
-		resp.result = "\"ok\"";
+	//单点输入
+	else {
+		tag = TAG::addRoot(tag, rootTag);
+		tag = TAG::addRoot(tag, session.org);
+
+		if (tag != "")
+		{
+			MP* pmp = prj.GetMPByTag(tag);
+			if (!pmp)
+			{
+				resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
+				return;
+			}
+			if (params.find("time") != params.end())
+			{
+				time = params["time"];
+				stTimeStamp = timeopt::str2st(time);
+			}
+			else
+			{
+				GetLocalTime(&stTimeStamp);
+			}
+			pmp->input(val, &stTimeStamp, dataFile);
+			resp.result = "\"ok\"";
+		}
+		else if (ioAddr != "")
+		{
+			ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
+			pC->input(val);
+			resp.result = "\"ok\"";
+		}
 	}
 }
 

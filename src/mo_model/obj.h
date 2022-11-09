@@ -116,7 +116,7 @@ public:
 	virtual bool loadConf(json& conf);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier);
 	virtual bool toJson(json& conf, json serializeOption);
-	virtual bool loadStatus(OBJ* pMo,bool saveToDB = false);
+	virtual bool loadStatus(OBJ* pMo,SYSTEMTIME* dataTime = nullptr,bool saveToDB = false);
 	bool loadStatus(json& jMpList);
 
 	//配置数据

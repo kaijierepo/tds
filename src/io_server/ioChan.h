@@ -17,6 +17,7 @@ public:
 	bool match(string channelNo);
 
 	virtual void input(json jVal, SYSTEMTIME* dataTime=NULL, bool bPic=false);
+	virtual void input(json jVal,string& tagBind, SYSTEMTIME* dataTime = NULL, bool bPic = false);
 	virtual bool output(json jVal, json& rlt,json& err,bool sync = false); //sync指定为同步输出,该函数将阻塞
 
 	json m_curVal;

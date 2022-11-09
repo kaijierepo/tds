@@ -55,6 +55,46 @@ ioDev* createIODev(string type)
 }
 
 
+bool ioDev::input(vector<string> chanAddr, vector<json> val, SYSTEMTIME* stDataTime)
+{
+	SYSTEMTIME st;
+	if (stDataTime == nullptr) {
+		GetLocalTime(&st);
+	}
+	else {
+		st = *stDataTime;
+	}
+
+	json inputTags = json::array();
+	json inputVals = json::array();
+	for (int i = 0; i < chanAddr.size(); i++) {
+		string addr = chanAddr[i];
+		json& jVal = val[i];
+		if (m_mapDataChannel.find(addr) != m_mapDataChannel.end()) {
+			ioChannel* pC = m_mapDataChannel[addr];
+			string tagBind;
+			pC->input(jVal,tagBind,&st);
+
+			if (tagBind != "") {
+				inputTags.push_back(tagBind);
+				inputVals.push_back(jVal);
+			}
+		}
+	}
+
+	if (inputTags.size() > 0) {
+		//更新绑定位号值
+		json param;
+		param["tag"] = inputTags;
+		param["val"] = inputVals;
+		param["time"] = timeopt::st2str(st);
+		tds->callAsyn("input", param.dump());
+	}
+	
+
+	return false;
+}
+
 void ioDev::AutoDataLink(OBJ* mo) {
 
 }

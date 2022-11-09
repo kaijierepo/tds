@@ -53,7 +53,7 @@ public:
 	bool loadConf(json& conf);
 	bool toJson(json& conf, OBJ_QUERIER q) override;
 	bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(OBJ* pSrc, bool saveToDB = true) override;
+	bool loadStatus(OBJ* pSrc,SYSTEMTIME* dataTime = nullptr, bool saveToDB = true) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串

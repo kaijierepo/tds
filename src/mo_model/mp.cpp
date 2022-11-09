@@ -317,14 +317,17 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	return true;
 }
 
-bool MP::loadStatus(OBJ* pSrc, bool saveDB)
+bool MP::loadStatus(OBJ* pSrc, SYSTEMTIME* dataTime , bool saveDB)
 {
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
 	if (ptmp) {
 		m_lastVal = m_curVal;
 		m_curVal = ptmp->m_curVal;
-		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
+		if (dataTime != nullptr)
+			m_stDataLastUpdate = *dataTime;
+		else
+			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 
 		if (saveDB) {
 			saveToDB();
