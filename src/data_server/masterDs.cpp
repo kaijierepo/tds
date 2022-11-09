@@ -150,14 +150,15 @@ bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSess
 		json jUpdateTags = params["tag"];
 		json jUpdateVals = params["val"];
 		string time = params["time"];
-		SYSTEMTIME stTime = timeopt::str2st(time);
-
+		//SYSTEMTIME stTime = timeopt::str2st(time);
+		//为避免时钟同步问题，先使用本地时间。未来考虑时间点与子服务保持一致
+		SYSTEMTIME stTime;
+		GetLocalTime(&stTime);
 
 		vector<MP*> vecMps;
 		for (int i = 0; i < jUpdateTags.size(); i++) {
 			string tag = jUpdateTags[i];
 			json val = jUpdateVals[i];
-			tag = TAG::addRoot(tag, childSession->m_childTdsTag);
 			tag = TAG::addRoot(tag, childSession->m_childTdsTag);
 			MP* pmp = prj.GetMPByTag(tag);
 			if (pmp)
@@ -357,7 +358,7 @@ void MasterDs::workingProc()
 	int masterDataSyncInterval = tds->conf->getInt("masterDataSyncInterval", 2000);
 	LOG("[主服务]数据同步周期,%d", masterDataSyncInterval);
 	while (1) {
-		Sleep(masterDataSyncInterval);
+		Sleep(1000*60*5);
 		json jReq,jParam;
 		jReq["method"] = "getObj";
 		jParam["tag"] = "";

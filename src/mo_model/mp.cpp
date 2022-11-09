@@ -396,14 +396,9 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		GetLocalTime(&t);
 		dataTime = &t;
 	}
-		
+
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
 		return;
-
-
-	m_stDataLastUpdate = *dataTime;
-	if (m_pParentMO)
-		m_pParentMO->m_stDataLastUpdate = *dataTime;
 
 	//数字类型进行kb处理和上下限处理
 	if (jVal.is_number())
@@ -437,6 +432,20 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 
 void MP::updateVal(json& jVal, SYSTEMTIME* dataTime, json dataFile)
 {
+	SYSTEMTIME t;
+	if (dataTime == NULL)
+	{
+		GetLocalTime(&t);
+		dataTime = &t;
+	}
+
+	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
+		return;
+
+	m_stDataLastUpdate = *dataTime;
+	if (m_pParentMO)
+		m_pParentMO->m_stDataLastUpdate = *dataTime;
+
 	//save to rt memory
 	m_lastVal = m_curVal;
 	m_curVal = jVal;
