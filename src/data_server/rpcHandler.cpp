@@ -1181,15 +1181,13 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 		result = rpc_setconf(params, error);
 	}
-	else if (method == "setMOTree" || method == "setObj")
+	else if (method == "setObj")
 	{
-		if (!params.contains("tag")) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");	
-		}
-		else {
-			string tag = params["tag"];
-
-			if (tag == "") {
+		if (params.contains("children")) { //如果包含children字段，说明要修改树结构。该模式重载对象树。冷重载
+			if (!params.contains("tag")) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+			}
+			else {
 				unique_lock<shared_mutex> lock(prj.m_csPrj);
 				//加载新的树
 				project tmpPrj;
@@ -1211,9 +1209,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				ioSrv.updateAllChanVal();
 				result = "\"ok\"";
 			}
-			else {//只用于不改变mo的类型和id信息的非关键信息配置，目前暂用于gps地址。可以热更新
-				if (params.is_object()) //单个设置
-				{
+		}
+		else {//只用于不改变mo的类型和id信息的非关键信息配置，不改变children,目前暂用于gps地址。热重载
+			if (params.is_object()) //单个设置
+			{
+				if (!params.contains("tag")) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+				}
+				else {
 					json mo = params;
 					string tag = mo["tag"].get<string>();
 					string rootTag = "";
@@ -1222,19 +1225,21 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					tag = TAG::addRoot(tag, rootTag);
 					tag = TAG::addRoot(tag, session.org);
 					prj.setMo(mo, tag);
+					prj.saveConfFile();
+					result = "\"ok\"";
 				}
-				else if (params.is_array())
-				{
-					for (int i = 0; i < params.size(); i++) {
-						json& mo = params[i];
-						string tag = mo["tag"].get<string>();
-						string rootTag = "";
-						if (mo.contains("rootTag"))
-							rootTag = mo["rootTag"].get<string>();
-						tag = TAG::addRoot(tag, rootTag);
-						tag = TAG::addRoot(tag, session.org);
-						prj.setMo(mo, tag);
-					}
+			}
+			else if (params.is_array())
+			{
+				for (int i = 0; i < params.size(); i++) {
+					json& mo = params[i];
+					string tag = mo["tag"].get<string>();
+					string rootTag = "";
+					if (mo.contains("rootTag"))
+						rootTag = mo["rootTag"].get<string>();
+					tag = TAG::addRoot(tag, rootTag);
+					tag = TAG::addRoot(tag, session.org);
+					prj.setMo(mo, tag);
 				}
 				prj.saveConfFile();
 				result = "\"ok\"";
