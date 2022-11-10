@@ -3,6 +3,19 @@
 #include "base64.h"
 #include <WinSock2.h>
 #include "sha1.h"
+
+
+int IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen)
+{
+	CWSPPkt req;
+	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))
+	{
+		return req.iFrmLen;
+	}
+	return 0;
+}
+
+
 CWSPPkt::CWSPPkt()
 {
 	payloadData = NULL;

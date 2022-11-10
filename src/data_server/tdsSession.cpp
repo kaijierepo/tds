@@ -150,11 +150,22 @@ string TDS_SESSION::GetClientIp()
      {
          iSend = pTcpSessionClt->SendData(p, len);
      }
-     else
+     else 
      {
          unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
          if (pTcpSession) // means lower layer has been disconneted
-             iSend = ds.SendAppLayerData(p, len, this);
+         {
+             //远端是websocket客户端
+             if (iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
+             {
+                 CWSPPkt wsp;
+                 wsp.pack(p, len, WS_TEXT_FRAME);
+                 pTcpSession->send((char*)wsp.data, wsp.len);
+             }
+             else {
+                 pTcpSession->send((char*)p, len);
+             }
+         }
      }
 
 

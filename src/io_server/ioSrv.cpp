@@ -234,7 +234,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TD
 	{
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
-		while (tlBuf.PopPkt(APP_LAYER_PROTO::PROTOCOL_WEBSOCKET))
+		while (tlBuf.PopPkt(IsValidPkt_WEBSOCKET))
 		{
 			CWSPPkt wsPkt;
 			wsPkt.unpack(tlBuf.pkt, tlBuf.iPktLen);

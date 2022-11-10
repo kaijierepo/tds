@@ -160,3 +160,5 @@ public:
 	UINT64 payload_length_;
 	char payload_[2048];
 };
+
+extern int IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen);

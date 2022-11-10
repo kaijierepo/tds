@@ -79,14 +79,6 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	}
 }
 
-int dataServer::SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo)
-{
-	bool bRet = false;
-	TDS_SESSION* pALC = (TDS_SESSION*)pAppLayerCltInfo;
-	tcpSession* pCommLayerCltInfo = (pALC)->pTcpSession;
-	return pCommLayerCltInfo->send((char*)pData, iLen);
-}
-
 int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 {
 	return send(sock, pBuffer, iLength, 0);

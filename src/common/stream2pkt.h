@@ -60,7 +60,6 @@ public:
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
 
 	int IsValidPkt_HTTP(unsigned char* pData,int iLen);
-	int IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen);
 	int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen);
 	int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen);
 	int IsValidPkt_textEnd1LF(unsigned char* pData, int iLen);

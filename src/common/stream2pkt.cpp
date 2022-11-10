@@ -342,15 +342,6 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 	}
 }
 
-int stream2pkt::IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen)
-{
-	CWSPPkt req;
-	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))
-	{
-		return req.iFrmLen;
-	}
-	return 0;
-}
 
 int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 {

@@ -22,7 +22,6 @@ public:
 	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
-	int SendAppLayerData(char* pData, int iLen, void* pAppLayerCltInfo);
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 
 public:
