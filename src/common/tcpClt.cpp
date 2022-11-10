@@ -161,6 +161,20 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 	return connect();
 }
 
+bool tcpClt::run(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
+{
+	m_pCallBackUser = pUser;
+	size_t pos = host.find(":");
+	string ip = host.substr(0, pos);
+	string strPort = host.substr(pos + 1, host.length() - pos - 1);
+	m_remoteIP = ip;
+	m_remotePort = atoi(strPort.c_str());
+	m_strLocalIP = strLocalIp;
+	m_iLocalPort = iLocalPort;
+	m_bRun = true;
+	return true;
+}
+
 bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;

@@ -61,13 +61,13 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 		m_Sessions[pTcpSess] = p;
 		m_mutexSessions.unlock();
 
-		if (m_tcpCltChildServer == pTcpSess->tcpClt) {
+		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()) {
 			LOG("[主从服务]连接到主服务成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
 		}
 	}
 	else
 	{
-		if (m_tcpCltChildServer == pTcpSess->tcpClt) {
+		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()){
 			LOG("[主从服务]从主服务断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
 		}
 
@@ -142,18 +142,20 @@ void streamPusherMng_thread() {
 
 bool dataServer::run()
 {
-	m_masterTdsIP = tds->conf->getStr("masterTdsIP", "");
-	m_masterTdsPort = tds->conf->getInt("masterTdsPort", 0);
+	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
+
+	vector<string> vecAddrs;
+	str::split(vecAddrs, masterTdsAddrs, ",");
 
 
-	if (m_masterTdsIP != "" && m_masterTdsPort != 0) {
-		m_tcpCltChildServer = new tcpClt();
-		m_tcpCltChildServer->run(this, m_masterTdsIP, m_masterTdsPort);
-		LOG("[子服务模式] 连接到上级服务%s:%d", m_masterTdsIP.c_str(), m_masterTdsPort);
+	for (int i = 0; i < vecAddrs.size(); i++) {
+		string addr = vecAddrs[i];
+		tcpClt* p = new tcpClt();
+		p->run(this, addr);
+		m_tcpCltChildServer[p] = p;
+
+		LOG("[子服务模式] 连接到上级服务%s", addr.c_str());
 	}
-
-	//thread t(streamPusherMng_thread);
-	//t.detach();
 
 	return false;
 }

@@ -31,7 +31,7 @@ public:
 	dataServer();
 	virtual ~dataServer();
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
-	tcpClt* m_tcpCltChildServer; //作为子服务连接上级服务的客户端
+	map<tcpClt*, tcpClt*> m_tcpCltChildServer; //作为子服务连接上级服务的客户端
 
 	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
@@ -46,7 +46,6 @@ public:
 	//级联功能
 	string m_masterTdsIP;
 	int m_masterTdsPort;
-	string m_tdsID;
 
 	//zlm的码流管理
 	map<string, SYSTEMTIME> m_mapPullerActive;

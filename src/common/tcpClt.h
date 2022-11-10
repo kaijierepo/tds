@@ -59,6 +59,8 @@ public:
 	void AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
 	bool connect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
 	bool connect(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = -1);
+
+	bool run(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = -1);
 	
 	bool connect();
 	bool ReConnect();
