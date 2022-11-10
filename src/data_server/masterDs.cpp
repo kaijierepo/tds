@@ -84,13 +84,13 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 
 	if (method == "getObj") {
 		json rlt = resp["result"];
-		if (rlt.contains("lastModify") && rlt.contains("parentTag")) {
+		if (rlt.contains("parentTag")) { //响应当中包含了配置
 			//获取参数
 			string parentTag = rlt["parentTag"];
 			string tag = rlt["name"];
 			tag = TAG::addRoot(tag, parentTag);
 			childSession->m_childTdsTag = tag;
-			string strLastModify = rlt["lastModify"];
+			//string strLastModify = rlt["lastModify"];
 
 			LOG("[主从服务]获取到子服务对象树配置,子服务位号:%s", tag.c_str());
 
@@ -119,17 +119,19 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				p->m_bOnline = true;
 			}
 		}
-		else {
+		else { //响应当中仅包含实时数据
 			json rlt = resp["result"];
 			project prjTmp;
 			prjTmp.loadConf(rlt);
 			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 			shared_lock<shared_mutex> lock(prj.m_csPrj);
 			OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
-			SYSTEMTIME stNow;
-			GetLocalTime(&stNow);
-			//此处不再保存到数据库，第3个参数需要重构掉
-			pMO->loadStatus(&prjTmp,&stNow, false);
+			if (pMO) {
+				SYSTEMTIME stNow;
+				GetLocalTime(&stNow);
+				//此处不再保存到数据库，第3个参数需要重构掉
+				pMO->loadStatus(&prjTmp,&stNow, false);
+			}
 		}
 	}
 	//同步实时值

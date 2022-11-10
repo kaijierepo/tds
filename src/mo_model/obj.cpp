@@ -721,6 +721,9 @@ bool OBJ::isSelectedByType(string type)
 	else if(type == "customMo"){
 		if (m_type == "customMo")
 			return true;
+		else if (m_type == "project" && m_pParentMO != nullptr) { //选中非根节点的project节点，也就是子服务
+			return true;
+		}
 		else
 			return false;
 	}

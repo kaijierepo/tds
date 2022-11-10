@@ -1075,7 +1075,7 @@ bool TIME_CONDITON::Match(string& deTime)
 
 bool TAG_SELECTOR::init(string tag, string rootTag){
 	m_rootTag = rootTag;
-	if (tag.find('*') == string::npos)
+	if (tag.find("*") != string::npos)
 	{
 		mode = TSM_fuzzy_match;
 		tagExp = TAG::addRoot(tag, rootTag);
