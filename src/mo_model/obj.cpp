@@ -278,7 +278,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	if (q.getConf) {
 		if (m_bChildTds)
 			conf["childTds"] = true;
-		if (m_parentTag != "")
+		if (m_pParentMO == nullptr)
 			conf["parentTag"] = m_parentTag;
 		if (m_customType != "")
 			conf["customType"] = m_customType;
