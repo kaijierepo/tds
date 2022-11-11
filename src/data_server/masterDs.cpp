@@ -118,20 +118,20 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				p->m_bChildTds = true;
 				p->m_bOnline = true;
 			}
-		}
-		else { //响应当中仅包含实时数据
-			json rlt = resp["result"];
-			project prjTmp;
-			prjTmp.loadConf(rlt);
-			prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
-			shared_lock<shared_mutex> lock(prj.m_csPrj);
-			OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
-			if (pMO) {
+
+			if (p) {
+				project prjTmp;
+				prjTmp.loadConf(rlt);
+				prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
 				SYSTEMTIME stNow;
 				GetLocalTime(&stNow);
 				//此处不再保存到数据库，第3个参数需要重构掉
-				pMO->loadStatus(&prjTmp,&stNow, false);
+				p->loadStatus(&prjTmp, &stNow, false);
 			}
+		}
+		else { //响应当中仅包含实时数据
+			json rlt = resp["result"];
+			loadStatus(rlt, childSession->m_childTdsTag);
 		}
 	}
 	//同步实时值
@@ -142,6 +142,21 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 		pMO->loadStatus(rlt);
 	}
 
+	return true;
+}
+
+bool MasterDs::loadStatus(json& rlt,string rootTag) {
+	shared_lock<shared_mutex> lock(prj.m_csPrj);
+	OBJ* pMO = prj.queryObj(rootTag);
+	if (pMO) {
+		project prjTmp;
+		prjTmp.loadConf(rlt);
+		prjTmp.m_rootTag = rootTag; //使得prjTmp	返回的tag都加上rootTag
+		SYSTEMTIME stNow;
+		GetLocalTime(&stNow);
+		//此处不再保存到数据库，第3个参数需要重构掉
+		pMO->loadStatus(&prjTmp, &stNow, false);
+	}
 	return true;
 }
 
@@ -186,6 +201,22 @@ bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSess
 				MP* pmp = vecMps[i];
 				pmp->saveToDB();
 			}
+		}
+
+		//发送状态更新通知
+		{
+			json jStatusNotify;
+			json jUpdateTags = json::array();
+			json jUpdateVals = json::array();
+			for (int i = 0; i < vecMps.size(); i++) {
+				MP* pmp = vecMps[i];
+				jUpdateTags.push_back(pmp->getTag());
+				jUpdateVals.push_back(pmp->m_curVal);
+			}
+			jStatusNotify["tag"] = jUpdateTags;
+			jStatusNotify["val"] = jUpdateVals;
+			jStatusNotify["time"] = timeopt::st2str(stTime);
+			rpcSrv.notify("statusUpdate", jStatusNotify);
 		}
 	}
 	
