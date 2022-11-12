@@ -186,7 +186,7 @@ public:
 	}
 	*/
 	string rpc_getCurrent(json filter,RPC_SESSION session);//combined list of active status and unack event
-	string rpc_getStatus(json filter, RPC_SESSION session);
+	string rpc_getUnRecover(json filter, RPC_SESSION session);
 	string rpc_getUnack(json filter, RPC_SESSION session);
 	string rpc_getHistory(json params, RPC_SESSION session);
 	string rpc_addEvent(json j);

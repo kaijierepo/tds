@@ -448,7 +448,7 @@ OBJ* OBJ::createObjBranchByTag(string tag)
 	OBJ* pParent = &prj;
 	OBJ* pChild = nullptr;
 	for (int i = 0; i < nodes.size(); i++) {
-		pChild = pParent->GetMOByName(nodes[i]);
+		pChild = pParent->GetChildObjByName(nodes[i]);
 		if (!pChild) {
 			pChild = new OBJ();
 			pChild->m_name = nodes[i];
@@ -666,9 +666,21 @@ MP* OBJ::GetMPByTag(string strTag)
 	return nullptr;
 }
 
-MP* OBJ::GetMPByName(string strName)
+OBJ* OBJ::GetChildObjByName(string strName)
 {
-	OBJ* p = GetMOByName(strName);
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		OBJ* pMOChild = m_childObj.at(i);
+		if (pMOChild->m_name == strName) {
+			return pMOChild;
+		}
+	}
+	return NULL;
+}
+
+MP* OBJ::GetDescendantMPByName(string strName)
+{
+	OBJ* p = GetDescendantObjByName(strName);
 	if (p && p->m_type == "mp")
 	{
 		return (MP*)p;
@@ -676,7 +688,7 @@ MP* OBJ::GetMPByName(string strName)
 	return NULL;
 }
 
-OBJ* OBJ::GetMOByName(string strName)
+OBJ* OBJ::GetDescendantObjByName(string strName)
 {
 	if (m_name == strName)
 		return this;
@@ -685,7 +697,7 @@ OBJ* OBJ::GetMOByName(string strName)
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pMOChild = m_childObj.at(i);
-			OBJ* pFind = pMOChild->GetMOByName(strName);
+			OBJ* pFind = pMOChild->GetDescendantObjByName(strName);
 			if (pFind)
 				return pFind;
 		}
@@ -694,6 +706,11 @@ OBJ* OBJ::GetMOByName(string strName)
 	return NULL;
 }
 
+
+//父类 -> 子类
+// obj -> org -> customOrg -> project
+// obj -> mo  -> cusomtMo
+//         +---> mp
 bool OBJ::isSelectedByType(string type)
 {
 	if (type == "")
@@ -701,7 +718,7 @@ bool OBJ::isSelectedByType(string type)
 	if (type == "obj")
 		return true;
 	else if (type == "org") {
-		if (m_type == "org" || m_type == "customOrg")
+		if (m_type == "org" || m_type == "customOrg" || m_type == "project")
 			return true;
 		else
 			return false;
@@ -721,9 +738,6 @@ bool OBJ::isSelectedByType(string type)
 	else if(type == "customMo"){
 		if (m_type == "customMo")
 			return true;
-		else if (m_type == "project" && m_pParentMO != nullptr) { //选中非根节点的project节点，也就是子服务
-			return true;
-		}
 		else
 			return false;
 	}
@@ -731,6 +745,9 @@ bool OBJ::isSelectedByType(string type)
 	{
 		if (m_type == "customOrg")
 			return true;
+		else if (m_type == "project" && m_pParentMO != nullptr) { //选中非根节点的project节点，也就是子服务
+			return true;
+		}
 		else
 			return false;
 	}

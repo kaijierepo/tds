@@ -1495,19 +1495,42 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	bool bHandled = true;
 	if (method == "getAlarmCurrent")
 	{
-	json jFilter;
-	jFilter["rootTag"] = params["rootTag"];
-	result = almSrv.rpc_getCurrent(jFilter, session);
+		json jFilter;
+		jFilter["rootTag"] = params["rootTag"];
+		result = almSrv.rpc_getCurrent(jFilter, session);
+	}
+	else if (method == "getAlm")
+	{
+		if (params.contains("status")) {
+			string status = params["status"].get<string>();
+			json jFilter;
+			jFilter["rootTag"] = params["rootTag"];
+			if (status == "unRecover") {
+				result = almSrv.rpc_getUnRecover(jFilter, session);
+			}
+			else if (status == "unAck") {
+				result = almSrv.rpc_getUnack(jFilter, session);
+			}
+			else if (status == "unRecover||unAck" || status == "unAck||unRecover") {
+				result = almSrv.rpc_getCurrent(jFilter, session);
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param  status format error");
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "missing param  status");
+		}
 	}
 	else if (method == "getAlarmStatus")
 	{
-	json jFilter;
-	result = almSrv.rpc_getStatus(jFilter, session);
+		json jFilter;
+		result = almSrv.rpc_getUnRecover(jFilter, session);
 	}
 	else if (method == "getAlarmUnack")
 	{
-	json jFilter;
-	result = almSrv.rpc_getUnack(jFilter, session);
+		json jFilter;
+		result = almSrv.rpc_getUnack(jFilter, session);
 	}
 	else if (method == "getAlarmHistory")
 	{

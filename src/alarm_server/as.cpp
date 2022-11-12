@@ -279,7 +279,7 @@ void almServer::AddEvent(ALARM_INFO ai)
 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	string user = session.user;
-	string info = params["ack_info"];
+	string info = params["ackInfo"];
 	ALARM_INFO ai;
 	//用户位号转系统位号
 	string tag = params["tag"].get<string>();
@@ -481,7 +481,7 @@ string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 	return tableCurrent.toJsonStr(querier);
 }
 
-string almServer::rpc_getStatus(json params, RPC_SESSION session)
+string almServer::rpc_getUnRecover(json params, RPC_SESSION session)
 {
 	//全局报警禁用功能
 	if (!tds->conf->enableGlobalAlarm)
@@ -627,12 +627,12 @@ json ALARM_INFO::toJson(string rootTag)
 	j["time"] = info->time;
 	j["suggest"] = info->strSuggest;
 	j["isRecover"] = info->bRecover;
-	j["recover_time"] = timeopt::st2str(info->stRecoverTime);
+	j["recoverTime"] = timeopt::st2str(info->stRecoverTime);
 	j["isAck"] = info->bAck;
-	j["ack_time"] = timeopt::st2str(info->stConfirmTime);
-	j["ack_info"] = info->strConfirmInfo;
-	j["ack_user"] = info->strConfirmUser;
-	j["pic_url"] = info->pic_url;
+	j["ackTime"] = timeopt::st2str(info->stConfirmTime);
+	j["ackInfo"] = info->strConfirmInfo;
+	j["ackUser"] = info->strConfirmUser;
+	j["picUrl"] = info->pic_url;
 	return j;
 }
 

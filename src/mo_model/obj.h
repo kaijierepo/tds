@@ -155,8 +155,9 @@ public:
 	MP* GetMPByTag(string strTag);
 	void queryObj(std::vector<OBJ*>* tagVec, string strTag, string type = "obj");
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
-	MP* GetMPByName(string strName);
-	OBJ* GetMOByName(string strName);
+	OBJ* GetChildObjByName(string strName);
+	MP* GetDescendantMPByName(string strName);
+	OBJ* GetDescendantObjByName(string strName);
 	//确认自己是否被某类型选中
 	bool isSelectedByType(string type);
 	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
