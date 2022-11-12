@@ -42,13 +42,20 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	else
 	{
 		LOG("[warn]TDS子服务掉线,%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+		string childTdsTag = "";
 
 		m_mutexChildTdsList.lock();
 		std::shared_ptr<TDS_SESSION> p = m_vecChildTds[pTcpSess];
+		childTdsTag = p->m_childTdsTag;
 		m_vecChildTds.erase(pTcpSess);
 		m_mutexChildTdsList.unlock();
 		//更新该session状态。等待其他零散指针引用销毁后自动删除
 		p->onTcpDisconnect();
+
+		OBJ* pObj = prj.queryObj(childTdsTag);
+		if (pObj) {
+			pObj->m_bOnline = false;
+		}
 	}
 }
 
@@ -126,6 +133,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				SYSTEMTIME stNow;
 				GetLocalTime(&stNow);
 				//此处不再保存到数据库，第3个参数需要重构掉
+				prjTmp.m_bOnline = true;//根节点就是子服务，当前在线
 				p->loadStatus(&prjTmp, &stNow, false);
 			}
 		}

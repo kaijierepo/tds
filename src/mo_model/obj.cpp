@@ -314,7 +314,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	//运行时状态数据
 	if (q.getStatus)
 	{
-		if (m_strIoAddrBind != "" || m_type == MO_TYPE::customMo)
+		if (m_strIoAddrBind != "" || m_type == MO_TYPE::customMo || m_bChildTds)
 		{
 			conf["online"] = m_bOnline;
 		}
