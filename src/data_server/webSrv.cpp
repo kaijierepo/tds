@@ -328,7 +328,16 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	parseIpPort(sHost, ip, port);
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string tag = str::trimPrefix(uri, "/stream/");
-	tag = str::trimSuffix(tag, ".flv");
+	string proto;
+	if (tag.find(".flv") != string::npos) {
+		tag = str::trimSuffix(tag, ".flv");
+		proto = "flv";
+	}
+	else if (tag.find(".rtc") != string::npos) {
+		tag = str::trimSuffix(tag, ".rtc");
+		proto = "rtc";
+	}
+
 	tag = httplib::detail::decode_url(tag, false);
 
 
@@ -346,7 +355,15 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		tag = TAG::trimRoot(tag, childTdsTag);
 	}
 
-	string 	redirectPath = "http://" + ip + ":672/stream/" + tag + ".live.flv";
+	string 	redirectPath;
+	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
+	if (proto == "flv") {
+		redirectPath  = "http://" + ip + ":672/stream/" + tag + ".live.flv";
+	}
+	else if (proto == "rtc") {
+		redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" +tag + "&type=play";
+	}
+
 	string sHeader = "location:" + redirectPath + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 
@@ -446,6 +463,10 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
 			}
 		}
+		else if (mg_http_match_uri(hm, "/stream/*"))
+		{
+			handle_stream(hm, c);
+		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
@@ -483,10 +504,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
 			mg_http_reply(c, 301, sHeader.c_str(),"");
-		}
-		else if (mg_http_match_uri(hm, "/stream/*"))
-		{
-			handle_stream(hm,c);
 		}
 		else if (mg_http_match_uri(hm, "/apk"))
 		{
