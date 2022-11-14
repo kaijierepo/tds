@@ -194,7 +194,7 @@ public:
 
 	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表
 	void initMOAlarmStatus();
-
+	string getAlarmTypeLabel(string type);//内置报警的类型描述
 public:
 	almServer(void);
 	~almServer(void);

@@ -130,14 +130,21 @@ void almServer::Update(ALARM_INFO newStatus)
 	//忽略屏蔽报警
 	if (newStatus.typeLabel == "")
 	{
-		if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
-		{
-			ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
-			newStatus.typeLabel = at.label;
-			if (at.enable == false)
-				return;
+		//内置类型查找
+		newStatus.typeLabel = getAlarmTypeLabel(newStatus.type);
+		//自定义类型查找
+		if (newStatus.typeLabel == "") {
+			if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
+			{
+				ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
+				newStatus.typeLabel = at.label;
+				if (at.enable == false)
+					return;
+			}
 		}
-		else
+
+
+		if (newStatus.typeLabel == "")
 		{
 			LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
 		}
@@ -268,6 +275,17 @@ json almServer::getAlarmStatus(string tag)
 void almServer::initMOAlarmStatus()
 {
 
+}
+
+string almServer::getAlarmTypeLabel(string type)
+{
+	if (type == ALARM_TYPE::overHighLimit) {
+		return "超高限";
+	}
+	else if (type == ALARM_TYPE::overLowLimit) {
+		return "超低限";
+	}
+	return "";
 }
 
 void almServer::AddEvent(ALARM_INFO ai)
