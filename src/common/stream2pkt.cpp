@@ -367,7 +367,7 @@ int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
 	{
 		if (pData[i-1] == '\n' && pData[i] == '\n')
 		{
-			return i;
+			return i+1;
 		}
 	}
 	return 0;

@@ -243,7 +243,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	{
 		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 
-		if (req == "ping\n\n") {
+		if (req == "ping\n\n") { 
 			string s = "pong\n\n";
 			tdsSession->send(s.data(), s.length(), false);
 		}
