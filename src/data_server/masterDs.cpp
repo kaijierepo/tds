@@ -75,15 +75,23 @@ void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SE
 	while (tlBuf.PopPkt(IsValidPkt_TDSP,false))
 	{
 		string s = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
-		try {
-			json pkt = json::parse(s);
-			onRecvPkt(pkt, childSession);
+		if (s == "ping\n\n") {
+			string s = "pong\n\n";
+			childSession->send(s.data(), s.length(), false);
 		}
-		catch (exception& e) {
+		else if (s == "pong\n\n") {
 
+		}
+		else {
+			try {
+				json pkt = json::parse(s);
+				onRecvPkt(pkt, childSession);
+			}
+			catch (exception& e) {
+
+			}
 		}
 	}
-
 }
 
 bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSession) {
@@ -376,9 +384,10 @@ void thread_masterDsWorkProc(MasterDs* p) {
 
 bool MasterDs::run()
 {
-	m_masterTdsPort = tds->conf->getInt("masterSrvPort", 700);
+	m_masterTdsPort = tds->conf->getInt("masterSrvPort", 661);
 	if (m_masterTdsPort != 0) {
 		m_tcpSrv = new tcpSrv();
+		m_tcpSrv->keepAliveTimeout = 30;
 		m_tcpSrv->run(this, m_masterTdsPort);
 		thread t(thread_masterDsWorkProc, this);
 		t.detach();
@@ -398,21 +407,34 @@ void MasterDs::workingProc()
 {
 	int masterDataSyncInterval = tds->conf->getInt("masterDataSyncInterval", 2000);
 	LOG("[主服务]数据同步周期,%d", masterDataSyncInterval);
+	SYSTEMTIME stLastDataQuery;
+	SYSTEMTIME stLastHeartbeat;
+	GetLocalTime(&stLastDataQuery);
+	GetLocalTime(&stLastHeartbeat);
 	while (1) {
-		Sleep(1000*60*5);
-		json jReq,jParam;
-		jReq["method"] = "getObj";
-		jParam["tag"] = "";
-		jParam["getConf"] = false;
-		jParam["getStatus"] = true;
-		jParam["getMp"] = true;
-		jParam["getChild"] = true;
-		jReq["params"] = jParam;
-		jReq["id"] = m_rpcId;
-		m_rpcId++;
-		string s = jReq.dump();
-		s += "\n\n";
-		m_tcpSrv->SendData(s.data(), s.length());
+		Sleep(10 * 1000);
+		if (timeopt::CalcTimePassSecond(stLastDataQuery) > 5 * 60) {
+			json jReq,jParam;
+			jReq["method"] = "getObj";
+			jParam["tag"] = "";
+			jParam["getConf"] = false;
+			jParam["getStatus"] = true;
+			jParam["getMp"] = true;
+			jParam["getChild"] = true;
+			jReq["params"] = jParam;
+			jReq["id"] = m_rpcId;
+			m_rpcId++;
+			string s = jReq.dump();
+			s += "\n\n";
+			m_tcpSrv->SendData(s.data(), s.length());
+			GetLocalTime(&stLastDataQuery);
+		}
+
+		if (timeopt::CalcTimePassSecond(stLastHeartbeat) > 10) {
+			string s = "ping\n\n";
+			m_tcpSrv->SendData(s.data(), s.length());
+			GetLocalTime(&stLastHeartbeat);
+		}
 	}
 }
 

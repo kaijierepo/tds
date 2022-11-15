@@ -359,15 +359,15 @@ int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 }
 
 
-int stream2pkt::IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
+int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
 {
-	if (iLen < 5)
+	if (iLen < 3)
 		return 0;
 	for (int i = 1; i < iLen; i++)
 	{
-		if (pData[i] == '\n' || pData[i] == '\n')
+		if (pData[i-1] == '\n' && pData[i] == '\n')
 		{
-			return i + 1;
+			return i;
 		}
 	}
 	return 0;

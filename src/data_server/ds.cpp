@@ -239,15 +239,24 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	GetLocalTime(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);
-	while (tlBuf.PopPkt(IsValidPkt_TDSP, false))
+	while (tlBuf.PopPkt(IsValidPkt_textEnd2LF, false))
 	{
 		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
-		string resp;
-		char* binResp;
-		int binLen;
-		rpcSrv.handleRpcCall(req, resp, binResp, binLen, tdsSession,false);
 
-		tdsSession->send(resp.data(), resp.length(), false);
+		if (req == "ping\n\n") {
+			string s = "pong\n\n";
+			tdsSession->send(s.data(), s.length(), false);
+		}
+		else if (req == "pong\n\n") {
+
+		}
+		else {
+			string resp;
+			char* binResp;
+			int binLen;
+			rpcSrv.handleRpcCall(req, resp, binResp, binLen, tdsSession, false);
+			tdsSession->send(resp.data(), resp.length(), false);
+		}
 	}
 }
 

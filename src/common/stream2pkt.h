@@ -61,11 +61,10 @@ public:
 
 	int IsValidPkt_HTTP(unsigned char* pData,int iLen);
 	int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen);
-	int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen);
 	int IsValidPkt_textEnd1LF(unsigned char* pData, int iLen);
 };
 
-
+extern int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen);
 extern int IsValidPkt_IQ60(unsigned char* pData, int iLen);
 extern int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen);
 extern int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen);

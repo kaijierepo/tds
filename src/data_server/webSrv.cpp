@@ -329,6 +329,7 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string tag = str::trimPrefix(uri, "/stream/");
 	string proto;
+	bool https = false;
 	if (tag.find(".flv") != string::npos) {
 		tag = str::trimSuffix(tag, ".flv");
 		proto = "flv";
@@ -336,6 +337,10 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	else if (tag.find(".rtc") != string::npos) {
 		tag = str::trimSuffix(tag, ".rtc");
 		proto = "rtc";
+	}
+
+	if (uri.find("https") != string::npos) {
+		https = true;
 	}
 
 	tag = httplib::detail::decode_url(tag, false);
@@ -357,12 +362,23 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 
 	string 	redirectPath;
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
-	if (proto == "flv") {
-		redirectPath  = "http://" + ip + ":672/stream/" + tag + ".live.flv";
+	if (https) {
+		if (proto == "flv") {
+			redirectPath = "https://" + ip + ":671/stream/" + tag + ".live.flv";
+		}
+		else if (proto == "rtc") {
+			redirectPath = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		}
 	}
-	else if (proto == "rtc") {
-		redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" +tag + "&type=play";
+	else {
+		if (proto == "flv") {
+			redirectPath = "http://" + ip + ":672/stream/" + tag + ".live.flv";
+		}
+		else if (proto == "rtc") {
+			redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		}
 	}
+
 
 	string sHeader = "location:" + redirectPath + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";

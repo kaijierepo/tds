@@ -178,7 +178,7 @@ namespace charCodec {
 	string utf8ToAuto(string instr);
 }
 namespace str {
-	string& trimPrefix(string& s, string prefix = " ");
+	string trimPrefix(string s, string prefix = " ");
 	string trimSuffix(string s, string suffix = " ");
 	string trim(std::string s, string toTrim = " ");
 	string replace(string str, const string to_replaced, const string newchars);

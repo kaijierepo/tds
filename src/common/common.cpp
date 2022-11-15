@@ -319,7 +319,7 @@ namespace charCodec {
 }
 namespace str {
 
-	string& trimPrefix(string& s, string prefix)
+	string trimPrefix(string s, string prefix)
 	{
 		if (prefix == "")
 			return s;
