@@ -89,9 +89,16 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 			if (!p->m_bRun)
 				continue;
 
-			if (p->IsConnect())
+			if (p->IsConnect()) {
+				if (p->m_keepAliveTimeout > 0) {
+					if (timeopt::CalcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
+						p->DisConnect();
+						printf("disconnect inactive connection %s:%d", p->m_remoteIP.c_str(), p->m_remotePort);
+					}
+				}
 				continue;
-
+			}
+				
 			if (p->m_bIsConnectting)
 				continue;
 
@@ -125,6 +132,7 @@ tcpClt::tcpClt(void)
 		HANDLE hThread = CreateThread(NULL, 0, ConnectThread, (LPVOID)this, 0, &dwThread);
 	}
 	csAllTcpClt.unlock();
+	m_keepAliveTimeout = 0;
 }
 
 tcpClt::~tcpClt(void)
@@ -282,6 +290,7 @@ bool tcpClt::connect()
 	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
 	m_bConn = true;
 	GetLocalTime(&lastConnTime);
+	GetLocalTime(&m_session.stLastActive);
 	m_strErrorInfo = "";
 
 	 hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
