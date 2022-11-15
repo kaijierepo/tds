@@ -387,7 +387,7 @@ bool MasterDs::run()
 	m_masterTdsPort = tds->conf->getInt("masterSrvPort", 661);
 	if (m_masterTdsPort != 0) {
 		m_tcpSrv = new tcpSrv();
-		m_tcpSrv->keepAliveTimeout = 30;
+		m_tcpSrv->keepAliveTimeout = 10;
 		m_tcpSrv->run(this, m_masterTdsPort);
 		thread t(thread_masterDsWorkProc, this);
 		t.detach();
@@ -412,7 +412,7 @@ void MasterDs::workingProc()
 	GetLocalTime(&stLastDataQuery);
 	GetLocalTime(&stLastHeartbeat);
 	while (1) {
-		Sleep(10 * 1000);
+		Sleep(1 * 1000);
 		if (timeopt::CalcTimePassSecond(stLastDataQuery) > 5 * 60) {
 			json jReq,jParam;
 			jReq["method"] = "getObj";
@@ -430,7 +430,8 @@ void MasterDs::workingProc()
 			GetLocalTime(&stLastDataQuery);
 		}
 
-		if (timeopt::CalcTimePassSecond(stLastHeartbeat) > 10) {
+		//5秒一次心跳
+		if (timeopt::CalcTimePassSecond(stLastHeartbeat) > 5) {
 			string s = "ping\n\n";
 			m_tcpSrv->SendData(s.data(), s.length());
 			GetLocalTime(&stLastHeartbeat);
