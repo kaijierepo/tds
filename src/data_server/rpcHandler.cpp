@@ -2289,7 +2289,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 	
 	json rlt,err;
-	if (pmp->output(val, rlt,err,true))
+	pmp->output(val, rlt, err, true);
+	if(rlt!=nullptr)
 	{
 		resp.result = rlt.dump();
 	}

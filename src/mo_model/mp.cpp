@@ -534,7 +534,8 @@ void MP::saveToDB() {
 	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
 }
 
-bool MP::output(json jVal, json& rlt, json& err,bool sync)
+//该接口保证rlt或者err一定会有一个值返回
+void MP::output(json jVal, json& rlt, json& err,bool sync)
 {
 	//方案1：当前值变为nullptr,直到采集到新的数据值,才能确认当前值
 	//m_curVal = nullptr;
@@ -554,20 +555,21 @@ bool MP::output(json jVal, json& rlt, json& err,bool sync)
 			params["val"] = jVal;
 
 			json childRlt, childErr;
-			if (pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr))
-			{
-				if (childRlt != nullptr) {
-					rlt = params;
-					m_curVal = jVal;
-					GetLocalTime(&m_stDataLastUpdate);
-				}
-				if (childErr != nullptr) {
-					err = childErr;
-				}
-				return true;
+			pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr);
+			if (childRlt != nullptr) {
+				rlt = params;
+				m_curVal = jVal;
+				GetLocalTime(&m_stDataLastUpdate);
 			}
-			else
-				return false;
+			else if(childErr != nullptr) {
+				err = childErr;
+			}
+			else {
+				LOG("[error]严重错误 mp.cpp %d\n", __LINE__);
+			}
+		}
+		else {
+			err = "error: master data service is not started";
 		}
 	}
 	else {
@@ -575,12 +577,11 @@ bool MP::output(json jVal, json& rlt, json& err,bool sync)
 		if (pC)
 		{
 			LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
-			return pC->output(jVal, rlt, err, sync);
+			pC->output(jVal, rlt, err, sync);
 		}
 		else
 		{
 			err = makeRPCError(RPC_ERROR_CODE::MO_outputFail, "未找到绑定的通道");
-			return false;
 		}
 	}
 }
