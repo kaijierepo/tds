@@ -3,6 +3,23 @@
 #pragma warning(disable:4996)
 std::vector<tcpClt*> m_vecTCPIOCPClient;
 
+namespace tds_tcpClt {
+	class WinSockInit {
+	public:
+		WinSockInit() {
+			WSADATA wsaData;
+			if (WSAStartup(0x0002, &wsaData) == 0) is_valid_ = true;
+		}
+
+		~WinSockInit() {
+			if (is_valid_) WSACleanup();
+		}
+
+		bool is_valid_ = false;
+	};
+	static WinSockInit wsinit;
+}
+
 
 DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 {
@@ -53,6 +70,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		{
 		}
 
+		GetLocalTime(&pTcpClt->m_session.stLastActive);
 		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
@@ -93,7 +111,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 				if (p->m_keepAliveTimeout > 0) {
 					if (timeopt::CalcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
 						p->DisConnect();
-						printf("disconnect inactive connection %s:%d", p->m_remoteIP.c_str(), p->m_remotePort);
+						printf("disconnect inactive connection %s:%d\r\n", p->m_remoteIP.c_str(), p->m_remotePort);
 					}
 				}
 				continue;
@@ -222,27 +240,22 @@ void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPo
 
 bool tcpClt::connect()
 {
+	if (sockClient != 0)
+	{
+		return true;
+	}
+
+
 	DWORD dwThread;
 	HANDLE hThread;
 	int nConnect;
 	struct hostent* hptr;
 	m_bIsConnectting = true;
 	bool ret = false;
-	if(sockClient !=0)
-	{
-		ret = true;
-		goto CONN_END;
-	}
 
-	// initial socket library
-	WORD wVerisonRequested;
-	WSADATA wsaData;
-	int err;
-	wVerisonRequested = MAKEWORD(1, 1);
-	err = WSAStartup(wVerisonRequested, &wsaData);
-	if (err != 0)
-	{
-		ret = false;
+	//将域名解析成ip地址
+	hptr = gethostbyname(m_remoteIP.c_str());
+	if (hptr == NULL || hptr->h_addr == NULL) {
 		goto CONN_END;
 	}
 
@@ -258,17 +271,12 @@ bool tcpClt::connect()
 		if(::bind(sockClient, (SOCKADDR *)&sAddTemp, sizeof(SOCKADDR))==SOCKET_ERROR)
 		{
 			m_strErrorInfo = "绑定IP失败";
-			ret = false;
 			goto CONN_END;
 		}
 	}
 
 
-	 hptr = gethostbyname(m_remoteIP.c_str());
-	if (hptr == NULL || hptr->h_addr == NULL) {
-		ret = false;
-		goto CONN_END;
-	}
+
 		
 
 	SOCKADDR_IN addrSrv;
@@ -282,20 +290,24 @@ bool tcpClt::connect()
 	if(nConnect == SOCKET_ERROR)
 	{
 		m_strErrorInfo = "连接失败:" + sys::getLastError();
-		closesocket(sockClient);
-		sockClient = 0;
-		ret = false;
 		goto CONN_END;
 	}
 	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
 	m_bConn = true;
+	ret = true;
 	GetLocalTime(&lastConnTime);
 	GetLocalTime(&m_session.stLastActive);
 	m_strErrorInfo = "";
 
 	 hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);
 
-CONN_END:
+ CONN_END:
+	if (ret == false) {
+		if (sockClient > 0) {
+			closesocket(sockClient);
+		}
+		sockClient = 0;
+	}
 	m_bIsConnectting = false;
 	return ret;
 }
@@ -340,18 +352,16 @@ string tcpClt::GetLocalIP()
 	char name[155];
 	char *ip;
 	PHOSTENT hostinfo;
-	if ( WSAStartup( MAKEWORD(2,0), &wsaData ) == 0 )
+
+	if( gethostname ( name, sizeof(name)) == 0)
 	{
-		if( gethostname ( name, sizeof(name)) == 0)
+		if((hostinfo = gethostbyname(name)) != NULL)
 		{
-			if((hostinfo = gethostbyname(name)) != NULL)
-			{
-				ip = inet_ntoa (*(struct in_addr *)*hostinfo->h_addr_list); //得到地址字符串
-				remoteIP = ip;
-			}
+			ip = inet_ntoa (*(struct in_addr *)*hostinfo->h_addr_list); //得到地址字符串
+			remoteIP = ip;
 		}
-		WSACleanup( );
 	}
+
 	return remoteIP;
 };
 

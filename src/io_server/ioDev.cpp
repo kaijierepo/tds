@@ -130,6 +130,7 @@ ioDev::ioDev(void)
 	m_bOnline = false;
 	m_iSendDataFailCount = 0;
 	m_bUdpDev = false;
+	m_tcpClt = nullptr;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
 	memset(&m_stOnlineTime, 0, sizeof(SYSTEMTIME));
@@ -186,7 +187,9 @@ bool ioDev::run()
 			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到port配置");
 			return false;
 		}
-		m_tcpClt.run(&ioSrv, ip, port);
+		if (m_tcpClt == nullptr)
+			m_tcpClt = new tcpClt();
+		m_tcpClt->run(&ioSrv, ip, port);
 		LOG("[IO设备]连接TCP服务模式设备,设备类型:%s,设备地址:%s", m_devType.c_str(), getDevAddrStr().c_str());
 	}
 	return true;
@@ -195,7 +198,8 @@ bool ioDev::run()
 void ioDev::stop()
 {
 	m_bRunning = false;
-	m_tcpClt.stop();
+	if(m_tcpClt)
+		m_tcpClt->stop();
 
 	for (auto i : m_vecChildDev)
 	{

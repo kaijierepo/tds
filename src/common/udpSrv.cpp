@@ -6,6 +6,24 @@
 #include <string.h>
 #include <WS2tcpip.h>
 
+
+namespace tds_udpSrv {
+	class WinSockInit {
+	public:
+		WinSockInit() {
+			WSADATA wsaData;
+			if (WSAStartup(0x0002, &wsaData) == 0) is_valid_ = true;
+		}
+
+		~WinSockInit() {
+			if (is_valid_) WSACleanup();
+		}
+
+		bool is_valid_ = false;
+	};
+	static WinSockInit wsinit;
+}
+
 DWORD WINAPI RecvThread(LPVOID lpParam);
 
 
@@ -32,13 +50,6 @@ bool udpServer::run(IUdpServerCallBack* pcb, int port)
 
 void udpServer::start()
 {
-	// initial socket library
-	WORD wVerisonRequested;
-	WSADATA wsaData;
-	int err;
-	wVerisonRequested = MAKEWORD(1, 1);
-	err = WSAStartup(wVerisonRequested, &wsaData);
-
 	//创建socket套接字
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (INVALID_SOCKET == m_sock)

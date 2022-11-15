@@ -68,7 +68,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	else
 	{
 		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()){
-			LOG("[主从服务]从主服务断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+			LOG("[warn][主从服务]从主服务断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
 		}
 
 		m_mutexSessions.lock();
@@ -151,6 +151,7 @@ bool dataServer::run()
 	for (int i = 0; i < vecAddrs.size(); i++) {
 		string addr = vecAddrs[i];
 		tcpClt* p = new tcpClt();
+		p->m_keepAliveTimeout = 10;
 		p->run(this, addr);
 		m_tcpCltChildServer[p] = p;
 

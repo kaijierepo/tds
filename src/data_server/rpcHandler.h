@@ -95,9 +95,6 @@ public:
 
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
-	//upper level tds
-	tcpClt m_DataCenterClt;
-
 	json m_licenceStatus;
 	mutex m_csLicenceStatus;
 
