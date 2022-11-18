@@ -7,7 +7,6 @@
 #include "proto/wsProto.h"
 #include "httplib.h"
 #include "sha1.hpp"
-#include "common/mongoose.h"
 #include "tools/hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
@@ -321,13 +320,13 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	}
 }
 
-void handle_stream(mg_http_message* hm, struct mg_connection* c) {
+void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
 	parseIpPort(sHost, ip, port);
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-	string tag = str::trimPrefix(uri, "/stream/");
+	string tag = str::trimPrefix(uri, "/stream/"); 
 	string proto;
 	bool https = false;
 	if (tag.find(".flv") != string::npos) {
@@ -337,10 +336,6 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	else if (tag.find(".rtc") != string::npos) {
 		tag = str::trimSuffix(tag, ".rtc");
 		proto = "rtc";
-	}
-
-	if (uri.find("https") != string::npos) {
-		https = true;
 	}
 
 	tag = httplib::detail::decode_url(tag, false);
@@ -362,7 +357,7 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 
 	string 	redirectPath;
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
-	if (https) {
+	if (m_isHttps) {
 		if (proto == "flv") {
 			redirectPath = "https://" + ip + ":671/stream/" + tag + ".live.flv";
 		}
@@ -399,7 +394,7 @@ void handle_stream(mg_http_message* hm, struct mg_connection* c) {
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
-		if (pWs->enableHttps)
+		if (pWs->m_isHttps)
 		{
 			struct mg_tls_opts opts;
 			memset(&opts, 0, sizeof(opts));
@@ -481,7 +476,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (mg_http_match_uri(hm, "/stream/*"))
 		{
-			handle_stream(hm, c);
+			pWs->handle_stream(hm, c);
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
@@ -613,7 +608,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 void webThread(WebServer* pSrv,int port) {
 	setThreadName("mongoose polling thread");
 	string proto = "http:";
-	if (pSrv->enableHttps)
+	if (pSrv->m_isHttps)
 		proto = "https:";
 	string url = proto + "//0.0.0.0:" + to_string(port);
 	struct mg_mgr mgr;
@@ -639,7 +634,7 @@ void webThread(WebServer* pSrv,int port) {
 
 WebServer::WebServer()
 {
-	enableHttps = false;
+	m_isHttps = false;
 }
 
 WebServer::~WebServer()
@@ -648,7 +643,7 @@ WebServer::~WebServer()
 
 void WebServer::run(int port,bool https)
 {
-	enableHttps = https;
+	m_isHttps = https;
 	if (https)
 	{
 		string log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);

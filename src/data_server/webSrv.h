@@ -1,17 +1,18 @@
 #pragma once
 
 #include "tdsSession.h"
-
+#include "common/mongoose.h"
 
 class WebServer {
 public:
+	void handle_stream(mg_http_message* hm, mg_connection* c);
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
 	static int sendToWs(char* p, size_t len, int sockPipe);
-	bool enableHttps;
+	bool m_isHttps;
 
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
 	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);

@@ -421,7 +421,7 @@ OBJ* OBJ::getOwnerChildTds()
 	OBJ* pTmp = this;
 	while (pTmp)
 	{
-		if (pTmp->m_bChildTds)
+		if (pTmp->m_bChildTds && pTmp->m_pParentMO!=nullptr)
 			return pTmp;
 
 		pTmp = pTmp->m_pParentMO;

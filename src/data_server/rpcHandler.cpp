@@ -531,6 +531,16 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			{
 				pCam->ptz_stopZoom();
 			}
+			else if (method == "startFocus")
+			{
+				string dir = params["dir"];
+				float speed = params["speed"].get<float>();
+				pCam->ptz_startFocus(dir);
+			}
+			else if (method == "stopFocus")
+			{
+				pCam->ptz_stopFocus();
+			}
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "openStream") {
