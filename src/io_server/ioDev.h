@@ -291,11 +291,11 @@ public:
 		m_csThis.unlock_shared(); 
 	}
 	void lock_conf_unique() {
-#ifdef DEBUG
 		m_csThis.lock(); 
+#ifdef DEBUG
 		DWORD dw = GetCurrentThreadId();
-#endif
 		m_dwConfLockUniqueOwnerThread = dw;
+#endif
 	}
 	void unlock_conf_unique() { 
 #ifdef DEBUG
