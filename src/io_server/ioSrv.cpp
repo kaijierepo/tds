@@ -49,7 +49,7 @@ void IOThread()
 			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
 			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq)
 			{
-				pIoDev->DoCycleTask();
+				pIoDev->DoCycleTask(); 
 			}
 				
 

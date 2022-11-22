@@ -287,7 +287,7 @@ bool MasterDs::needLog(string method) {
 	return true;
 }
 
-bool MasterDs::callChildTds(string childTds, string method, json params, json& rlt, json& err, bool sync)
+bool MasterDs::callChildTds(string childTds, string method, json params, json& rlt, json& err, bool sync, json sessionParams)
 {
 	//找到childSession
 	m_mutexChildTdsList.lock();
@@ -305,6 +305,13 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	int iId = m_rpcId++;
 	req["id"] = iId;
 	string strReq = req.dump() + "\n\n";
+
+	//写入会话参数
+	if (sessionParams != nullptr) {
+		for (auto& [key,val] : sessionParams.items()) {
+			req[key] = val;
+		}
+	}
 
 	if(needLog(method))
 		LOG("[子服务请求]\r\n" + strReq);

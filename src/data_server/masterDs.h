@@ -34,7 +34,7 @@ public:
 
 	bool doChildTdsTransaction(string childTdsTag, json& req, RPC_RESP& rpcResp, bool sync);
 	bool needLog(string method);
-	bool callChildTds(string childTds,string method, json params, json& rlt, json& err, bool sync = true);
+	bool callChildTds(string childTds,string method, json params, json& rlt, json& err, bool sync = true, json sessionParams = nullptr);
 
 	bool rpc_childTdsDispatch(json& req, RPC_RESP& rpcResp, bool sync = true);
 

@@ -528,6 +528,56 @@ void ioDev::triggerCycleAcq()
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 }
 
+
+
+bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+{
+	ioDev* pIoDev = this;
+	if (pIoDev->pIOSession == nullptr && pIoDev->m_bUdpDev == false)
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
+		return true;
+	}
+	if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "IO设备类型错误");
+		return true;
+	}
+
+	jReq["clientId"] = "tds";
+	jReq.erase("user");
+	jReq.erase("token");
+	string method = jReq["method"].get<string>();
+	json jParams = jReq["params"];
+	json jId = jReq["id"];
+
+	json jRlt, jErr;
+	//发起同步请求，此处阻塞
+	LOG("[TDSP转发]客户端->设备\r\n");
+	bool callRet = false;
+	if (pIoDev->call(method, jParams, jRlt, jErr))
+	{
+		callRet = true;
+		if (jRlt != nullptr) {
+			rpcResp.result = jRlt.dump();
+		}
+		else if (jErr != nullptr)
+		{
+			rpcResp.error = jErr.dump();
+		}
+		else
+		{
+			LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
+		}
+		LOG("[TDSP转发]设备->客户端\r\n");
+	}
+	else
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "IO设备响应超时");
+	}
+	return true;
+}
+
 DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 {
 	DEV_QUERIER q;

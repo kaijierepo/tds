@@ -547,7 +547,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			}
 			mg_http_reply(c, 301, sHeader.c_str(), "");
 		}
-		else if (mg_http_match_uri(hm, "/apitest"))
+		else if (mg_http_match_uri(hm, "/api"))
 		{
 			string redirectPath = "/app/apitest";
 			string sHeader = "location:" + redirectPath + "\r\n";
@@ -852,8 +852,8 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	}
 	else if (strData.find("tcp") != string::npos)
 	{
-		int pos = strData.find("tcp");
-		int pos1 = strData.find(" ", pos);
+		size_t pos = strData.find("tcp");
+		size_t pos1 = strData.find(" ", pos);
 		string host = strData.substr(pos + 4, pos1 - (pos + 4));
 		tdsSession->pBridgedTcpClient = new tcpClt();
 		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpClient;

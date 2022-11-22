@@ -100,6 +100,8 @@ public:
 	virtual string getDesc();
 	void triggerCycleAcq();
 	virtual bool call(string method, json params, json& result, json& error, bool sync = true) { return false; };
+	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+
 	DEV_QUERIER parseQueryOpt(json& opt);
 	////
 	//is Gateway
@@ -267,20 +269,43 @@ public:
 	//动态数据在修改时，不影响配置，因此不应当影响配置的读取
 	//
 	std::shared_mutex m_csThis;  //配置-静态-数据锁
+	map<DWORD,DWORD> m_mapConfLockSharedOwnerThread;
+	std::shared_mutex m_csMapLock;
+	DWORD m_dwConfLockUniqueOwnerThread;
 	void lock_conf_shared() { 
+#ifdef DEBUG
+		DWORD dw = GetCurrentThreadId();
+		m_csMapLock.lock();
+		m_mapConfLockSharedOwnerThread[dw] = dw;
+		m_csMapLock.unlock();
+#endif
 		m_csThis.lock_shared(); 
 	}
 	void unlock_conf_shared() { 
+#ifdef DEBUG
+		DWORD dw = GetCurrentThreadId();
+		m_csMapLock.lock();
+		m_mapConfLockSharedOwnerThread.erase(dw);
+		m_csMapLock.unlock();
+#endif
 		m_csThis.unlock_shared(); 
 	}
 	void lock_conf_unique() {
+#ifdef DEBUG
 		m_csThis.lock(); 
+		DWORD dw = GetCurrentThreadId();
+#endif
+		m_dwConfLockUniqueOwnerThread = dw;
 	}
 	void unlock_conf_unique() { 
+#ifdef DEBUG
+		m_dwConfLockUniqueOwnerThread = 0;
+#endif
 		m_csThis.unlock(); 
 	}
 
 	std::recursive_timed_mutex m_csCommLock;  //运行时-动态-数据锁
+	DWORD m_dwCommLockOwnerThread;
 	DWORD m_dwLockThread;
 
 	json m_jAlarmStatus;

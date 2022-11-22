@@ -25,9 +25,8 @@ public:
 	bool handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 
 	//透传到io设备的命令
-	bool handleDevRpcDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
-
-	void logTDSPDispatch(string method, json& params, bool callRet, RPC_SESSION& session);
+	bool handleRpcRoute(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
+	void logTDSPDispatch(string method, json& params, RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 

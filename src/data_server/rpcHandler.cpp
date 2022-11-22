@@ -1780,7 +1780,7 @@ bool rpcHandler::handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rp
 	return false;
 }
 
-bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
 	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
@@ -1799,84 +1799,76 @@ bool rpcHandler::handleDevRpcDispatch(string& strReq,json& jReq, RPC_RESP& rpcRe
 		pDestSession->send((char*)s.c_str(), s.length());
 		return true;
 	}
-	else if (jReq.contains("ioAddr") || jReq.contains("tag"))
+	else if (jReq.contains("ioAddr"))
 	{
 		ioDev* pIoDev = nullptr;
-		if (jReq.contains("ioAddr")) {
-			string strIoAddr = jReq["ioAddr"].get<string>();
-			pSession->ioAddr = strIoAddr;
-			pIoDev  = ioSrv.getIODev(strIoAddr);
-			if (!pIoDev)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
-				return true;
+		string strIoAddr = jReq["ioAddr"].get<string>();
+		pSession->ioAddr = strIoAddr;
+		pIoDev  = ioSrv.getIODev(strIoAddr);
+		if (!pIoDev)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
+			return true;
+		}
+	
+		pIoDev->handleDevRpcCall(jReq,rpcResp,pSession);
+		logTDSPDispatch(method, jReq["params"], *pSession);
+		return true;
+	}
+	else if (jReq.contains("tag")) {
+		string tag = jReq["tag"].get<string>();
+		string tag = TAG::addRoot(tag, pSession->org);
+		OBJ* pObj = prj.queryObj(tag);
+		if (!pObj)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "未找到该位号的监控对象");
+			return true;
+		}
+
+		OBJ* pOwnerChlidTds = pObj->getOwnerChildTds();
+		if (pOwnerChlidTds) {
+			if (pMasterDs) {
+				string childTdsTag = pOwnerChlidTds->getTag();
+				tag = TAG::trimRoot(tag, childTdsTag);
+
+				json sessionParams;
+				sessionParams["tag"] = tag;
+
+				json childRlt, childErr;
+				pMasterDs->callChildTds(childTdsTag, jReq["method"], jReq["params"], childRlt, childErr,true,sessionParams);
+				if (childRlt != nullptr) {
+					rpcResp.result = childRlt.dump();
+				}
+				else if (childErr != nullptr) {
+					rpcResp.error = childErr.dump();
+				}
+				else {
+					LOG("[error]严重错误 mp.cpp %d\n", __LINE__);
+				}
+			}
+			else {
+				rpcResp.error = "\"error: master data service is not started\"";
 			}
 		}
-		else
-		{
-			string tag = jReq["tag"].get<string>();
-			pSession->tag = tag;
-			string sysTag = TAG::addRoot(tag, pSession->org);
-			pIoDev = ioSrv.getIODevByTag(sysTag);
+		else {
+			ioDev* pIoDev = ioSrv.getIODevByTag(tag);
 			if (!pIoDev)
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
 				return true;
 			}
 			pSession->ioAddr = pIoDev->getIOAddrStr();
-		}
 
-
-		if (pIoDev->pIOSession == nullptr && pIoDev->m_bUdpDev == false)
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
+			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+			logTDSPDispatch(method, jReq["params"], *pSession);
 			return true;
 		}
-		if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "IO设备类型错误");
-			return true;
-		}
-
-		jReq["clientId"] = "tds";
-		jReq.erase("user");
-		jReq.erase("token");
-		string method = jReq["method"].get<string>();
-		json jParams = jReq["params"];
-		json jId = jReq["id"];
-
-		json jRlt,jErr;
-		//发起同步请求，此处阻塞
-		LOG("[TDSP转发]客户端->设备\r\n");
-		bool callRet = false;
-		if (pIoDev->call(method, jParams, jRlt, jErr))
-		{
-			callRet = true;
-			if (jRlt != nullptr) {
-				rpcResp.result = jRlt.dump();
-			}
-			else if (jErr != nullptr)
-			{
-				rpcResp.error = jErr.dump();
-			}
-			else
-			{
-				LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
-			}
-			LOG("[TDSP转发]设备->客户端\r\n");
-		}
-		else
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout,"IO设备响应超时");
-		}
-		logTDSPDispatch(method, jParams, callRet, *pSession);
-		return true;
 	}
 
 	return false;
 }
 
-void rpcHandler::logTDSPDispatch(string method,json& params,bool callRet,RPC_SESSION& session) {
+void rpcHandler::logTDSPDispatch(string method,json& params,RPC_SESSION& session) {
 	if (method == "startRepel") {
 		json logParams;
 		logParams["object"] = "用户:" + session.user;
@@ -2066,7 +2058,7 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
 		if (!tds->conf->edge) //tds edge模式无需转发
 		{
-			if (handleDevRpcDispatch(strReq, jReq, rpcResp, pSession))
+			if (handleRpcRoute(strReq, jReq, rpcResp, pSession))
 			{
 				goto HANDLE_END;
 			}
