@@ -1817,7 +1817,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 	}
 	else if (jReq.contains("tag")) {
 		string tag = jReq["tag"].get<string>();
-		string tag = TAG::addRoot(tag, pSession->org);
+		tag = TAG::addRoot(tag, pSession->org);
 		OBJ* pObj = prj.queryObj(tag);
 		if (!pObj)
 		{
