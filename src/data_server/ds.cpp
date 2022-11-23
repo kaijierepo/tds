@@ -252,11 +252,9 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 
 		}
 		else {
-			string resp;
-			char* binResp;
-			int binLen;
-			rpcSrv.handleRpcCall(req, resp, binResp, binLen, tdsSession, false);
-			tdsSession->send(resp.data(), resp.length(), false);
+			RPC_RESP resp;
+			rpcSrv.handleRpcCall(req, resp, tdsSession, false);
+			tdsSession->send(resp.strResp.data(), resp.strResp.length(), false);
 		}
 	}
 }
@@ -284,28 +282,26 @@ bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_S
 void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	string req = str::fromBuff(pData,iLen);
-	string resp;
-	char* binResp = NULL;
-	int iBinRespLen = 0;
+	RPC_RESP resp;
 	bool bNeedLog = true;
-	rpcSrv.handleRpcCall(req, resp, binResp, iBinRespLen, tdsSession);
+	rpcSrv.handleRpcCall(req, resp, tdsSession);
 
-	if (resp != "")
+	if (resp.strResp != "")
 	{
 		tdsSession->sendContent = "text";
-		tdsSession->send((char*)resp.data(), resp.length(),bNeedLog);
+		tdsSession->send((char*)resp.strResp.data(), resp.strResp.length(),bNeedLog);
 	}
 
-	if (iBinRespLen > 0)
+	if (resp.iBinLen > 0)
 	{
 		tdsSession->sendContent = "binary";
-		tdsSession->send(binResp, iBinRespLen, bNeedLog);
+		tdsSession->send(resp.binResult, resp.iBinLen, bNeedLog);
 	}
 
 	//如果没有任何回复,可能是透传指令,不回复
 
-	if (binResp)
-		delete binResp;
+	if (resp.binResult)
+		delete resp.binResult;
 }
 
 void dataServer::sendToAllSessions(char* pData, int len)

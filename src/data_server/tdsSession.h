@@ -53,6 +53,11 @@ public:
 	string rootTag;
 	string remoteAddr;
 	string token;
+	bool isNotification; //是否是通知
+
+	RPC_SESSION() {
+		isNotification = false;
+	}
 };
 
 

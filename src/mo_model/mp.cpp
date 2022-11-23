@@ -555,17 +555,19 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 			params["val"] = jVal;
 
 			json childRlt, childErr;
-			pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr);
-			if (childRlt != nullptr) {
-				rlt = params;
-				m_curVal = jVal;
-				GetLocalTime(&m_stDataLastUpdate);
-			}
-			else if(childErr != nullptr) {
-				err = childErr;
-			}
-			else {
-				LOG("[error]严重错误 mp.cpp %d\n", __LINE__);
+			pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr, sync);
+			if (sync) {
+				if (childRlt != nullptr) {
+					rlt = params;
+					m_curVal = jVal;
+					GetLocalTime(&m_stDataLastUpdate);
+				}
+				else if(childErr != nullptr) {
+					err = childErr;
+				}
+				else {
+					LOG("[error]严重错误 mp.cpp %d\n", __LINE__);
+				}
 			}
 		}
 		else {

@@ -116,6 +116,7 @@ public:
 		result = "";
 		binResult = NULL;
 		iBinLen = 0;
+		isNotification = false;
 	}
 	~RPC_RESP()
 	{
@@ -124,11 +125,13 @@ public:
 	}
 
 	string strResp; 
+	string strRespForLog; //用于日志打印的字符串。省略一些很长的数据，保留关键数据，方便问题分析
 	string error;
 	string result;
 	string params; 
 	char* binResult;
 	int iBinLen;
+	bool isNotification; //请求是否是通知，如果是通知，不回复响应
 };
 
 

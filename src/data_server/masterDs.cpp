@@ -302,10 +302,6 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 	json req;
 	req["method"] = method;
 	req["params"] = params;
-	int iId = m_rpcId++;
-	req["id"] = iId;
-	string strReq = req.dump() + "\n\n";
-
 	//写入会话参数
 	if (sessionParams != nullptr) {
 		for (auto& [key,val] : sessionParams.items()) {
@@ -313,10 +309,23 @@ bool MasterDs::callChildTds(string childTds, string method, json params, json& r
 		}
 	}
 
-	if(needLog(method))
-		LOG("[子服务请求]\r\n" + strReq);
 
 
+	if (!sync)
+	{
+		string strReq = req.dump() + "\n\n";
+		if (needLog(method))
+			LOG("[通知子服务]\r\n" + strReq);
+		ioSession->sendStr(strReq);
+		return true;
+	}
+
+
+	int iId = m_rpcId++;
+	req["id"] = iId;
+	string strReq = req.dump() + "\n\n";
+	if (needLog(method))
+		LOG("[请求子服务]\r\n" + strReq);
 
 	//设置指定id命令的同步等待信息。
 	//[注意] 必须先设置等待信息，再发送请求。本机release模式下配合模拟器调试。

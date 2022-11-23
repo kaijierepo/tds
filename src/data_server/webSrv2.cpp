@@ -218,23 +218,20 @@ void handleRpcOverHttp(const httplib::Request& req, httplib::Response& res)
 	if (strRpc == "")
 		return;
 
-	string resp;
-	char* binResp = NULL;
-	int iBinRespLen = 0;
-	bool bNeedLog = true;
+	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	rpcSrv.handleRpcCall(strRpc, resp, binResp, iBinRespLen, bNeedLog, pSession);
+	rpcSrv.handleRpcCall(strRpc, resp, bNeedLog, pSession);
 
-	if (resp != "")
+	if (resp.strResp != "")
 	{
 		//下面两句都是必须的，不然跨域请求的前端收不到
-		res.set_content(resp, "application/json;charset=utf-8");
+		res.set_content(resp.strResp, "application/json;charset=utf-8");
 		res.set_header("Access-Control-Allow-Origin", req.get_header_value("Origin"));
 	}
 	else if (binResp)
 	{
-		res.set_content(resp, "application/octet-stream");
+		res.set_content(resp.strResp, "application/octet-stream");
 		delete binResp;
 	}
 }

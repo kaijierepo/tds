@@ -1924,10 +1924,9 @@ bool rpcHandler::isGB2312Pkt(string& req)
 
 
 
-void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,int& iBinLen, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
+void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
 	string error = "";
-	RPC_RESP rpcResp;
 	string method = "";
 	json id = nullptr;
 	json clientId = nullptr;
@@ -1964,6 +1963,12 @@ void rpcHandler::handleRpcCall(string& strReq, string& strResp,char*& binResp,in
 		if (jReq.contains("params"))
 			params = jReq["params"];
 		id = jReq["id"];
+		if (id == nullptr) {
+			rpcResp.isNotification = true;
+			pSession->isNotification = true;
+		}
+
+
 		clientId = jReq["clientId"]; //tds edge模式使用
 		pSession->lastMethodCalled = method;
 			
@@ -2131,37 +2136,37 @@ HANDLE_END:
 	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
 	if (rpcResp.error != "")
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
+		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
 		if (tds->conf->edge)
 		{
-			strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
+			rpcResp.strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
 			if (clientId != nullptr)
 			{
-				strResp += ",\"clientId\":" +  clientId.dump();
+				rpcResp.strResp += ",\"clientId\":" +  clientId.dump();
 			}
 		}
-		strResp += "}\n\n";
+		rpcResp.strResp += "}\n\n";
 	}
 	else if (rpcResp.result != "")
 	{
-		strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result;
+		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result;
 		if (tds->conf->edge)
 		{
-			strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
+			rpcResp.strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
 			if (clientId != nullptr)
 			{
-				strResp += ",\"clientId\":" + clientId.dump();
+				rpcResp.strResp += ",\"clientId\":" + clientId.dump();
 			}
 		}
 		if (pSession->ioAddr != "")
 		{
-			strResp += ",\"ioAddr\":\"" + pSession->ioAddr + "\"";
+			rpcResp.strResp += ",\"ioAddr\":\"" + pSession->ioAddr + "\"";
 		}
 		if (pSession->tag != "")
 		{
-			strResp += ",\"tag\":\"" + pSession->tag + "\"";
+			rpcResp.strResp += ",\"tag\":\"" + pSession->tag + "\"";
 		}
-		strResp += "}\n\n";
+		rpcResp.strResp += "}\n\n";
 
 
 		if (method == "fs.readFile")
@@ -2194,11 +2199,7 @@ HANDLE_END:
 	//处理二进制响应
 	if (rpcResp.iBinLen > 0)
 	{
-		binResp = rpcResp.binResult;
-		iBinLen = rpcResp.iBinLen;
-		rpcResp.binResult = NULL;
-		rpcResp.iBinLen = 0;
-		LOG("[trace]RPC响应: 二进制数据 len = " + str::fromInt(iBinLen));
+		LOG("[trace]RPC响应: 二进制数据 len = " + str::fromInt(rpcResp.iBinLen));
 	}
 }
 
@@ -2291,15 +2292,28 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 	
 	json rlt,err;
-	pmp->output(val, rlt, err, true);
-	if(rlt!=nullptr)
-	{
-		resp.result = rlt.dump();
+
+	bool syncCall = true;
+	if (session.isNotification)
+		syncCall = false;
+	if (params["waitResp"].is_boolean() && params["waitResp"].get<bool>() == false) {
+		syncCall = false;
 	}
-	else
-	{
-		resp.error = err.dump();
-		LOG("[warn]输出失败," + resp.error);
+
+	pmp->output(val, rlt, err, syncCall);
+	if (syncCall) {
+		if(rlt!=nullptr)
+		{
+			resp.result = rlt.dump();
+		}
+		else
+		{
+			resp.error = err.dump();
+			LOG("[warn]输出失败," + resp.error);
+		}
+	}
+	else {
+		resp.result = "\"output cmd sended\"";
 	}
 }
 

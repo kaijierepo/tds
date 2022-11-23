@@ -31,7 +31,7 @@ public:
 	bool isGB2312Pkt(string& req);
 
 	//json rpc implementation
-	void handleRpcCall(string& strReq, string& strResp, char*& binResp, int& iBinLen, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
+	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
