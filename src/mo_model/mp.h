@@ -95,6 +95,10 @@ public:
 	double m_K;
 	double m_B;
 	double m_deadZone;
+	//整型枚举值
+	map<int, string> mapEnumVal;
+	bool m_isEnum;
+
 
 	//视频
 	string m_videoSrcType;

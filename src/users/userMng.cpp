@@ -467,11 +467,13 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 		oneUser["org"] = org;
 
 		string name = oneUser["name"].get<string>();
+		//已存在则修改
 		if (m_mapUsers.find(name) != m_mapUsers.end())
 		{
 			json& userTmp = m_mapUsers[name];
 			userTmp = oneUser;
 		}
+		//不存在则新增
 		else
 		{
 			m_mapUsers[name] = oneUser;
@@ -480,6 +482,8 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 	m_csUserConf.unlock();
 
 	saveConf();
+
+	resp.result = "\"ok\"";
 
 	return true;
 }

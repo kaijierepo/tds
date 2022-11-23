@@ -177,6 +177,23 @@ bool MP::loadConf(json& conf)
 		}
 	}
 
+
+	if (m_valType == VAL_TYPE::integer) {
+		if (conf["isEnum"].is_boolean()) {
+			m_isEnum = conf["isEnum"].get<bool>();
+		}
+
+		if (conf["enum"].is_array()) {
+			mapEnumVal.clear();
+			json& jEnum = conf["enum"];
+			for (int i = 0; i < jEnum.size(); i++) {
+				json& jItem = jEnum[i];
+				mapEnumVal[jItem[0].get<int>()] = jItem[1].get<string>();
+			}
+		}
+	}
+
+
 	if (conf["videoSrcType"] != nullptr) {
 		m_videoSrcType = conf["videoSrcType"].get<string>();
 	}
@@ -297,6 +314,25 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			conf["videoSrcType"] = m_videoSrcType;
 			conf["rtspAddr"] = m_rtspAddr;
 		}
+		//枚举值
+		if (m_valType == VAL_TYPE::integer) {
+			if (m_isEnum) {
+				conf["isEnum"] = true;
+				if (mapEnumVal.size() > 0) {
+					json jEnum = json::array();
+					for (auto& i : mapEnumVal) {
+						json item = json::array();
+						item.push_back(i.first);
+						item.push_back(i.second);
+						jEnum.push_back(item);
+					}
+					conf["enum"] = jEnum;
+				}
+			}
+			else {
+				conf["isEnum"] = false;
+			}
+		}
 	}
 	
 
@@ -307,6 +343,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			conf["time"] = timeopt::st2str(m_stDataLastUpdate);
 		else
 			conf["time"] = "-";
+
+		if (m_isEnum) {
+			conf["enumVal"] = mapEnumVal[m_curVal.get<int>()];
+		}
 	}
 
 	if (q.getStatusDesc) {
