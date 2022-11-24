@@ -2118,7 +2118,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
 		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
 		errorType = str::encodeAscII(errorType);
-		LOG("[error]handleRpcCall异常" + errorType);
+		LOG("[error]RPC请求包处理异常:\r\n错误信息:" + errorType + "\r\n数据包:\r\n" + strReq);
 		json jError = {
 				{"code", -32700},
 				{"message" , "Parse error," + errorType}
