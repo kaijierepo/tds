@@ -108,7 +108,7 @@ void onRecvIQ60Pkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> 
 	catch (std::exception& e)
 	{
 		string errorType = e.what();
-		string log = "[error]pkt from iq60,json parse error. " + errorType;
+		string log = "[error]iq60数据包解析错误,错误信息:" + errorType + "数据包:\r\n" + pkt;
 		LOG(log);
 	}
 }
