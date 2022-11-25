@@ -313,7 +313,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 							sortFlag = yyjson_mut_get_str(yySortKey);
 						}
 						else if (yyjson_mut_is_num(yySortKey)) {
-							float f = yyjson_mut_get_real(yySortKey);
+							double f = yyjson_mut_get_real(yySortKey);
 							sortFlag = str::fromFloat(f);
 						}
 					}

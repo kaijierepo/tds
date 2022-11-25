@@ -11,6 +11,7 @@
 #include "ioSrv.h"
 #include "prj.h"
 #include "masterDs.h"
+#include "mp.h"
 
 string rootDir;
 string confDir;
@@ -329,6 +330,10 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		tag = str::trimSuffix(tag, ".rtc");
 		proto = "rtc";
 	}
+	else if (tag.find(".de") != string::npos) {
+		tag = str::trimSuffix(tag, ".de");
+		proto = "de";
+	}
 
 	tag = httplib::detail::decode_url(tag, false);
 
@@ -356,6 +361,9 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		else if (proto == "rtc") {
 			redirectPath = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
 		}
+		else if (proto == "de") {
+			redirectPath = "https://" + ip + ":666/stream/" + tag + ".de";
+		}
 	}
 	else {
 		if (proto == "flv") {
@@ -364,13 +372,16 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		else if (proto == "rtc") {
 			redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
 		}
+		else if (proto == "de") {
+			redirectPath = "http://" + ip + ":667/stream/" + tag + ".de";
+		}
 	}
 
 
 	string sHeader = "location:" + redirectPath + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 
-	LOG("[实时码流]uri=%s,重定向到 %s", uri.c_str(), redirectPath.c_str());
+	LOG("[数据流]流类型=%s,uri=%s,重定向到 %s",proto.c_str(), uri.c_str(), redirectPath.c_str());
 
 
 	sHeader += "Access-Control-Allow-Origin:*\r\n";
@@ -891,6 +902,15 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	}
 	else if (strData.find("stream") != string::npos)
 	{
+		string tag = str::trimPrefix(strData,"/stream/"); 
+		 tag = str::trimSuffix(tag, ".de"); 
+		tag = httplib::detail::decode_url(tag, false);
+		MP* pmp = prj.GetMPByTag(tag); 
+		if (pmp) {
+			pmp->m_vecDeStreamSub.push_back(tdsSession);
+		}
+
+
 		//用于 泰默检测ATExpert的Genicam
 		//int pos = strData.find("stream");
 		//map<string, string> mapParams;

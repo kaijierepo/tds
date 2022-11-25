@@ -823,11 +823,11 @@ namespace timeopt {
 		return str;
 	}
 
-	DWORD SysTime2Unix(SYSTEMTIME sDT)
+	time_t SysTime2Unix(SYSTEMTIME sDT)
 	{
 		tm temptm = { sDT.wSecond, sDT.wMinute, sDT.wHour,
 			sDT.wDay, sDT.wMonth - 1, sDT.wYear - 1900, sDT.wDayOfWeek, 0, 0 };
-		DWORD iReturn = (DWORD)mktime(&temptm);
+		time_t iReturn = mktime(&temptm);
 		return iReturn;
 	}
 
@@ -1054,7 +1054,7 @@ namespace timeopt {
 		return milli;
 	}
 
-	int CalcTimeDiffSecond(SYSTEMTIME newTime,SYSTEMTIME oldTime)
+	long CalcTimeDiffSecond(SYSTEMTIME newTime,SYSTEMTIME oldTime)
 	{
 		time_t newT = SysTime2Unix(newTime);
 		time_t oldT = SysTime2Unix(oldTime);
@@ -1062,14 +1062,14 @@ namespace timeopt {
 		return seconds;
 	}
 
-	int CalcTimePassMilliSecond(SYSTEMTIME lastTime)
+	long long CalcTimePassMilliSecond(SYSTEMTIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
 		SYSTEMTIME stNow;
 		GetLocalTime(&stNow);
 		time_t now = SysTime2Unix(stNow);
-		int second = now - last;
-		int milli = stNow.wMilliseconds - lastTime.wMilliseconds;
+		time_t second = now - last;
+		time_t milli = stNow.wMilliseconds - lastTime.wMilliseconds;
 		milli = second * 1000 + milli;
 		return milli;
 	}

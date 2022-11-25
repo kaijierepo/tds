@@ -95,6 +95,11 @@ public:
 	double m_K;
 	double m_B;
 	double m_deadZone;
+	bool m_bDownSample;
+	int m_downSampleInterval; //单位毫秒
+	SYSTEMTIME m_stLastSampleTime;
+
+
 	//整型枚举值
 	map<int, string> mapEnumVal;
 	bool m_isEnum;
@@ -111,4 +116,7 @@ public:
 	json m_curVal;
 	json m_lastVal;
 	SYSTEMTIME m_lastSaveTime;
+
+	//数据流订阅会话
+	vector<shared_ptr<TDS_SESSION>> m_vecDeStreamSub;
 };

@@ -125,13 +125,13 @@ public:
 	}
 
 	string strResp; 
-	string strRespForLog; //用于日志打印的字符串。省略一些很长的数据，保留关键数据，方便问题分析
+	string strRespForLog; //ignore some pkt data ,for log only
 	string error;
 	string result;
 	string params; 
 	char* binResult;
 	int iBinLen;
-	bool isNotification; //请求是否是通知，如果是通知，不回复响应
+	bool isNotification; //is request a notification.no response will send if request is a notification
 };
 
 

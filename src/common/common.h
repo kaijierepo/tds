@@ -211,7 +211,7 @@ namespace str {
 
 namespace timeopt {
 	string stTimeToStr(SYSTEMTIME time);
-	DWORD SysTime2Unix(SYSTEMTIME sDT);
+	time_t SysTime2Unix(SYSTEMTIME sDT);
 	SYSTEMTIME Unix2SysTime(time_t iUnix);
 	SYSTEMTIME str2st(string str);
 	int HMS2Sec(string hms);
@@ -223,8 +223,8 @@ namespace timeopt {
 	string st2strWithMilli(SYSTEMTIME t);
 	string TimeToYMD(const SYSTEMTIME time);
 	int CalcTimePassSecond(SYSTEMTIME lastTime);
-	int CalcTimePassMilliSecond(SYSTEMTIME lastTime);
-	int CalcTimeDiffSecond(SYSTEMTIME newTime, SYSTEMTIME oldTime);
+	long long CalcTimePassMilliSecond(SYSTEMTIME lastTime);
+	long CalcTimeDiffSecond(SYSTEMTIME newTime, SYSTEMTIME oldTime);
 	time_t getTick();
 	void setAsTimeOrg(SYSTEMTIME& st);
 	bool isValidTime(SYSTEMTIME& st);
