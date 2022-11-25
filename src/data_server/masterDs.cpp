@@ -138,8 +138,8 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				project prjTmp;
 				prjTmp.loadConf(rlt);
 				prjTmp.m_rootTag = childSession->m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
-				SYSTEMTIME stNow;
-				GetLocalTime(&stNow);
+				TIME stNow;
+				timeopt::now(&stNow);
 				//此处不再保存到数据库，第3个参数需要重构掉
 				prjTmp.m_bOnline = true;//根节点就是子服务，当前在线
 				p->loadStatus(&prjTmp, &stNow, false);
@@ -168,8 +168,8 @@ bool MasterDs::loadStatus(json& rlt,string rootTag) {
 		project prjTmp;
 		prjTmp.loadConf(rlt);
 		prjTmp.m_rootTag = rootTag; //使得prjTmp	返回的tag都加上rootTag
-		SYSTEMTIME stNow;
-		GetLocalTime(&stNow);
+		TIME stNow;
+		timeopt::now(&stNow);
 		//此处不再保存到数据库，第3个参数需要重构掉
 		pMO->loadStatus(&prjTmp, &stNow, false);
 	}
@@ -185,8 +185,8 @@ bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSess
 		string time = params["time"];
 		//SYSTEMTIME stTime = timeopt::str2st(time);
 		//为避免时钟同步问题，先使用本地时间。未来考虑时间点与子服务保持一致
-		SYSTEMTIME stTime;
-		GetLocalTime(&stTime);
+		TIME stTime;
+		timeopt::now(&stTime);
 
 		vector<MP*> vecMps;
 		for (int i = 0; i < jUpdateTags.size(); i++) {
@@ -423,10 +423,10 @@ void MasterDs::workingProc()
 {
 	int masterDataSyncInterval = tds->conf->getInt("masterDataSyncInterval", 2000);
 	LOG("[主服务]数据同步周期,%d", masterDataSyncInterval);
-	SYSTEMTIME stLastDataQuery;
-	SYSTEMTIME stLastHeartbeat;
-	GetLocalTime(&stLastDataQuery);
-	GetLocalTime(&stLastHeartbeat);
+	TIME stLastDataQuery;
+	TIME stLastHeartbeat;
+	timeopt::now(&stLastDataQuery);
+	timeopt::now(&stLastHeartbeat);
 	while (1) {
 		Sleep(1 * 1000);
 		if (timeopt::CalcTimePassSecond(stLastDataQuery) > 5 * 60) {
@@ -443,14 +443,14 @@ void MasterDs::workingProc()
 			string s = jReq.dump();
 			s += "\n\n";
 			m_tcpSrv->SendData(s.data(), s.length());
-			GetLocalTime(&stLastDataQuery);
+			timeopt::now(&stLastDataQuery);
 		}
 
 		//5秒一次心跳
 		if (timeopt::CalcTimePassSecond(stLastHeartbeat) > 5) {
 			string s = "ping\n\n";
 			m_tcpSrv->SendData(s.data(), s.length());
-			GetLocalTime(&stLastHeartbeat);
+			timeopt::now(&stLastHeartbeat);
 		}
 	}
 }

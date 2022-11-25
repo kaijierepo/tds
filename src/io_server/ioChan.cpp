@@ -140,7 +140,7 @@ bool ioChannel::match(string channelNo) {
 	return false;
 }
 
-void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
+void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	string tagBind;
 	input(jVal, tagBind, dataTime, bPic);
 
@@ -152,13 +152,13 @@ void ioChannel::input(json jVal, SYSTEMTIME* dataTime, bool bPic) {
 	tds->callAsyn("input", param.dump());
 }
 
-void ioChannel::input(json jVal, string& tagBind, SYSTEMTIME* dataTime, bool bPic)
+void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 {
 	//更新通道值
-	SYSTEMTIME t;
+	TIME t;
 	if (dataTime == NULL)
 	{
-		GetLocalTime(&t);
+		timeopt::now(&t);
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;

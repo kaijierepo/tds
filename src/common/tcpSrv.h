@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>
 #include <memory>
+#include "common.h"
 
 using namespace std;
 
@@ -23,11 +24,11 @@ struct tcpSession
 	SOCKET bridgeSock;
 	bool bEnableActivityCheck; //是否进行活动检测
 
-	SYSTEMTIME stLastActive;
+	TIME stLastActive;
 
 	tcpSession()
 	{
-		GetLocalTime(&stLastActive);
+		timeopt::now(&stLastActive);
 		sock = NULL;
 		pALSession = NULL;
 		pTcpServer = NULL;
@@ -214,8 +215,8 @@ public:
 	tcpSrv();
 	~tcpSrv();
 	bool StartListen(unsigned short port, string ip);
-	DWORD SysTime2Unix(SYSTEMTIME& sDT);
-	int CalcTimePassSecond(SYSTEMTIME* stLast, SYSTEMTIME* stNow = NULL);
+	DWORD SysTime2Unix(TIME& sDT);
+	int CalcTimePassSecond(TIME* stLast, TIME* stNow = NULL);
 	void ConnectionMaintain();
 	/*
 	释放3个部分步骤：

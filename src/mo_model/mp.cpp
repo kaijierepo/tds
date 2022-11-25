@@ -176,7 +176,7 @@ bool MP::loadConf(json& conf)
 		if (!m_defaultVal.empty())
 		{
 			m_curVal = m_defaultVal;
-			GetLocalTime(&m_stDataLastUpdate);
+			timeopt::now(&m_stDataLastUpdate);
 		}
 	}
 
@@ -373,7 +373,7 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	return true;
 }
 
-bool MP::loadStatus(OBJ* pSrc, SYSTEMTIME* dataTime , bool saveDB)
+bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
 {
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
@@ -444,7 +444,7 @@ void MP::calcAlarm()
 
 
 
-void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
+void MP::input(json jVal, TIME* dataTime, json dataFile)
 {
 	//如果有数据流订阅者，直接推送
 	if (m_vecDeStreamSub.size() > 0) {
@@ -463,19 +463,18 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 		long long pass = timeopt::CalcTimePassMilliSecond(m_stLastSampleTime);
 		if (pass < m_downSampleInterval)
 			return;
+		m_stLastSampleTime = timeopt::now();
 	}
 
 
-
-
-	SYSTEMTIME t;
+	TIME t;
 	if (dataTime == NULL)
 	{
-		GetLocalTime(&t);
+		timeopt::now(&t);
 		dataTime = &t;
 	}
 
-	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
+	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
 		return;
 
 	//数字类型进行kb处理和上下限处理
@@ -508,16 +507,16 @@ void MP::input(json jVal, SYSTEMTIME* dataTime, json dataFile)
 	updateVal(jVal, dataTime, dataFile);
 }
 
-void MP::updateVal(json& jVal, SYSTEMTIME* dataTime, json dataFile)
+void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 {
-	SYSTEMTIME t;
+	TIME t;
 	if (dataTime == NULL)
 	{
-		GetLocalTime(&t);
+		timeopt::now(&t);
 		dataTime = &t;
 	}
 
-	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(SYSTEMTIME)) == 0)
+	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
 		return;
 
 	m_stDataLastUpdate = *dataTime;
@@ -608,7 +607,7 @@ bool MP::needSaveToDB()
 
 
 void MP::saveToDB() {
-	GetLocalTime(&m_lastSaveTime);
+	timeopt::now(&m_lastSaveTime);
 	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
 }
 
@@ -638,7 +637,7 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 				if (childRlt != nullptr) {
 					rlt = params;
 					m_curVal = jVal;
-					GetLocalTime(&m_stDataLastUpdate);
+					timeopt::now(&m_stDataLastUpdate);
 				}
 				else if(childErr != nullptr) {
 					err = childErr;

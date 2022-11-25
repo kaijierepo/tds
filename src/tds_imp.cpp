@@ -352,7 +352,7 @@ bool TDS_imp::runAsTDB()
 	LOG("[数据库	] " + tds->conf->dbPath);
 	::db.Open(tds->conf->dbPath, prj.m_name);
 	runWebServers();
-	GetLocalTime(&stStartupTime);
+	timeopt::now(&stStartupTime);
 	m_sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
 	return true;
@@ -470,7 +470,7 @@ bool TDS_imp::run(string cmdline)
 		createChromeWnd();
 	}
 
-	GetLocalTime(&stStartupTime);
+	timeopt::now(&stStartupTime);
 
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";

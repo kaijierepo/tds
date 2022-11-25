@@ -364,7 +364,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	return true;
 }
 
-bool OBJ::loadStatus(OBJ* pSrc, SYSTEMTIME* dataTime, bool saveToDB)
+bool OBJ::loadStatus(OBJ* pSrc, TIME* dataTime, bool saveToDB)
 {
 	string tag = getTag();
 	OBJ* ptmp = pSrc->queryObj(tag);

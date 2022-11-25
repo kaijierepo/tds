@@ -85,8 +85,8 @@ void HMRServer::watchFile_process(string dir_path) {
         return;
     }
     string lastFileModify;
-    SYSTEMTIME lastFileModifyTime;
-    GetLocalTime(&lastFileModifyTime);
+    TIME lastFileModifyTime;
+    timeopt::now(&lastFileModifyTime);
 #ifdef WIN32
     HANDLE h_dir = INVALID_HANDLE_VALUE;
     BYTE lp_buffer[1024];
@@ -123,7 +123,7 @@ void HMRServer::watchFile_process(string dir_path) {
                 if (file_name != lastFileModify || timeopt::CalcTimePassMilliSecond(lastFileModifyTime) > 50)
                 {
                     lastFileModify = file_name;
-                    GetLocalTime(&lastFileModifyTime);
+                    timeopt::now(&lastFileModifyTime);
                     //LOG("[keyinfo]检测到文件改变:" + dir_path + "/" + file_name);
 
                     m_mutexSessions.lock();

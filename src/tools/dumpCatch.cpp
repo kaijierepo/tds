@@ -99,8 +99,8 @@ void CDumpCatch::createDump(struct _EXCEPTION_POINTERS* pException)
 	string strcmd = "del /s /q " + dmpfile;
 	system(strcmd.c_str());
 
-	SYSTEMTIME stNow;
-	GetLocalTime(&stNow);
+	TIME stNow;
+	timeopt::now(&stNow);
 
 	string strFile = str::format("%s %4d.%02d.%02d %02d-%02d-%02d.dmp", tds->getVersion().c_str(), stNow.wYear, stNow.wMonth, stNow.wDay, stNow.wHour, stNow.wMinute, stNow.wSecond);
 	strFile = strPath + "\\" + strFile;

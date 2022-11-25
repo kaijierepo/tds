@@ -183,7 +183,7 @@ public:
 	virtual bool output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { return false; };
 
 	//设备多通道批量输入
-	virtual bool input(vector<string> chanAddr, vector<json> val, SYSTEMTIME* stDataTime = nullptr);
+	virtual bool input(vector<string> chanAddr, vector<json> val, TIME* stDataTime = nullptr);
 
 	void AutoDataLink(OBJ* mo);
 	bool  NotNeedGateway();   //按照现在流行的技术以及常见通讯方式， 一个IP+和一个总线地址 可以满足所有物联设备的通讯需求
@@ -199,7 +199,7 @@ public:
 	bool m_acqAlarm; //是否轮询报警，发送getAlarmStatus给TDSP设备
 	OBJ* m_pMO;
 	string GetCommIP();
-	void SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
+	void SendToChild(TIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
 	ioDev* getIODevByTag(string tag);
 	//通信发送
 	virtual bool CommLock(int dwTimeoutMS = 0);
@@ -215,7 +215,7 @@ public:
 	virtual bool onRecvPkt(json jPkt);
 	virtual bool onRecvPkt(char* pData, int iLen) { return false; }; //接收到完整的协议数据包
 	virtual bool OnRecvData(char* pData, int iLen);//接受数据异步处理函数
-	virtual bool OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen);
+	virtual bool OnRecvData(TIME dataTime, char* pData, int iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
 	//命令回包超时
 	virtual bool IsAsynPacket(PKT_DATA* pd);
@@ -227,14 +227,14 @@ public:
 	virtual void checkAcqReqTimeout();
 
 	static int m_heartBeatInterval;//单位秒
-	SYSTEMTIME m_stLastHeartbeatTime;
-	SYSTEMTIME m_stLastSetClockTime;
-	SYSTEMTIME m_stLastAcqTime;  //上一次采集任务开始时间
+	TIME m_stLastHeartbeatTime;
+	TIME m_stLastSetClockTime;
+	TIME m_stLastAcqTime;  //上一次采集任务开始时间
 	bool m_bIsWaitingResp;  //表示一次通信会话正在进行中。可能是异步处理，也可能是同步处理
-	SYSTEMTIME m_stLastReqSendTime; //上一次采集请求发送时间
-	SYSTEMTIME m_stLastChanDataTime;
-	SYSTEMTIME m_stLastAlarmStatusTime;
-	SYSTEMTIME m_stLastActiveTime;
+	TIME m_stLastReqSendTime; //上一次采集请求发送时间
+	TIME m_stLastChanDataTime;
+	TIME m_stLastAlarmStatusTime;
+	TIME m_stLastActiveTime;
 	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool m_bEnableAcq;
 	void setOnline();
@@ -245,8 +245,8 @@ public:
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
 	bool m_bUdpDev;    //udp设备。udp设备没有连接
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
-	SYSTEMTIME m_stOnlineTime;//设备上线时间戳
-	SYSTEMTIME m_stOfflineTime;//设备掉线时间戳
+	TIME m_stOnlineTime;//设备上线时间戳
+	TIME m_stOfflineTime;//设备掉线时间戳
 	virtual bool isConnected();
 	virtual int GetAcqInterval();
 	static bool m_bAsynAcqMode;//是否启用异步采集模式

@@ -84,8 +84,8 @@ void thread_checkAdp() {
 
 
 void thread_checkFood() {
-	GetLocalTime(&watchDog.m_lastFeedTime);
-	GetLocalTime(&watchDog.m_lastUpdateCheckTime);
+	timeopt::now(&watchDog.m_lastFeedTime);
+	timeopt::now(&watchDog.m_lastUpdateCheckTime);
 	while (1)
 	{
 		Sleep(100);
@@ -112,7 +112,7 @@ void thread_checkFood() {
 				wakeUpFeeder();
 				Sleep(5000);
 			}
-			GetLocalTime(&watchDog.m_lastUpdateCheckTime);
+			timeopt::now(&watchDog.m_lastUpdateCheckTime);
 		}
 
 
@@ -477,13 +477,13 @@ void tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, i
 {
 	string food = recvData;
 	//LOG("food is " + food);
-	GetLocalTime(&m_lastFeedTime);
+	timeopt::now(&m_lastFeedTime);
 }
 
 void tdsWatchDog::log(string s)
 {
-	SYSTEMTIME stNow;
-	GetLocalTime(&stNow);
+	TIME stNow;
+	timeopt::now(&stNow);
 	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	s = charCodec::utf8toAnsi(s);
 	s = time + " " + s +  "\r\n";

@@ -116,7 +116,7 @@ public:
 	virtual bool loadConf(json& conf);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier);
 	virtual bool toJson(json& conf, json serializeOption);
-	virtual bool loadStatus(OBJ* pMo,SYSTEMTIME* dataTime = nullptr,bool saveToDB = false);
+	virtual bool loadStatus(OBJ* pMo,TIME* dataTime = nullptr,bool saveToDB = false);
 	bool loadStatus(json& jMpList);
 
 	//配置数据
@@ -142,7 +142,7 @@ public:
 
 	//状态数据
 	bool m_bOnline;
-	SYSTEMTIME m_stDataLastUpdate;
+	TIME m_stDataLastUpdate;
 	json m_longitudeDyn;
 	json m_latitudeDyn;
 	string m_status;

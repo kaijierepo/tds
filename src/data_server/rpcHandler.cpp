@@ -599,7 +599,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 						{
 							pmp->m_bIsStreaming = true;
 							SYSTEMTIME st;
-							GetLocalTime(&st);
+							timeopt::now(&st);
 							ds.m_mapPullerActive[tag] = st;
 						}
 					}
@@ -618,8 +618,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			}*/
 		}
 		else if (method == "keepStream") {
-			SYSTEMTIME st;
-			GetLocalTime(&st);
+			TIME st;
+			timeopt::now(&st);
 			ds.m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
 		}
@@ -2204,7 +2204,7 @@ HANDLE_END:
 }
 
 
-void rpcHandler::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix)
+void rpcHandler::saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, string suffix)
 {
 	string strTmpFile;
 	if (strUrl.find("http") != string::npos)
@@ -2224,7 +2224,7 @@ void rpcHandler::saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& str
 	string strTagTmp = strTag.c_str();
 	strTagTmp = str::replace(strTagTmp,".", "\\");
 
-	SYSTEMTIME stDateTime = stTime;
+	TIME stDateTime = stTime;
 
 	string strTargetFile;
 	strTargetFile=str::format("\\%04d%02d\\%02d\\%s\\%02d%02d%02d%s",
@@ -2321,7 +2321,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
 	//parse param
-	SYSTEMTIME stTimeStamp;
+	TIME stTimeStamp;
 	string time="";
 	json dataFile;
 	json inputVal = nullptr;
@@ -2354,7 +2354,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 	else
 	{
-		GetLocalTime(&stTimeStamp);
+		timeopt::now(&stTimeStamp);
 	}
 
 

@@ -44,7 +44,7 @@ class ACCESS_INFO {
 public:
 	string user;
 	string token;
-	SYSTEMTIME stCreate;
+	TIME stCreate;
 	bool bDynamic;
 	int age; //秒为单位，过期时间
 

@@ -22,7 +22,7 @@ TDS_SESSION::~TDS_SESSION()
 TDS_SESSION::TDS_SESSION(tcpSession* p)
 {
     Init();
-    GetLocalTime(&stCreateTime);
+    timeopt::now(&stCreateTime);
     bConnected = true;
     pTcpSession = p;
     sock = p->sock;
@@ -139,7 +139,7 @@ string TDS_SESSION::GetClientIp()
 
 
  int TDS_SESSION::send(char* p,size_t len,bool bNeedLog){
-     GetLocalTime(&lastSendTime);
+     timeopt::now(&lastSendTime);
      int iSend = 0;
 
      if (sockPipe != 0)

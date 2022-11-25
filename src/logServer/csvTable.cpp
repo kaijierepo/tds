@@ -27,7 +27,7 @@ string csvTable::getFilePath(string time){
 	if(time == "")
 		return db.m_path + filePath  + ".csv";
 
-	SYSTEMTIME st = timeopt::str2st(time);
+	TIME st = timeopt::str2st(time);
 	int y,m;
 	y = st.wYear;
 	m = st.wMonth;

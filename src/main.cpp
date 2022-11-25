@@ -107,8 +107,8 @@ int main(int argc, char** argv)
 	{
 		tds->conf->mode = "cmd";
 		LOG("正在向数据库写入" + to_string(simuRecCount) + "条数据...");
-		SYSTEMTIME stT;
-		GetLocalTime(&stT);
+		TIME stT;
+		timeopt::now(&stT);
 		json j;
 		j["time"] = timeopt::st2str(stT);
 		j["temp"] = 23.5;
@@ -117,8 +117,8 @@ int main(int argc, char** argv)
 		j["co2"] = 345.1;
 
 		json jA;
-		SYSTEMTIME ststart;
-		GetLocalTime(&ststart);
+		TIME ststart;
+		timeopt::now(&ststart);
 		for (int i = 0; i < simuRecCount; i++)
 		{
 			db.Insert("devicedata", stT, j);

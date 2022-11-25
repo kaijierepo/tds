@@ -70,7 +70,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 		{
 		}
 
-		GetLocalTime(&pTcpClt->m_session.stLastActive);
+		timeopt::now(&pTcpClt->m_session.stLastActive);
 		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
@@ -121,7 +121,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 				continue;
 
 			if (timeopt::CalcTimePassMilliSecond(p->lastConnTime) > 3000) {
-				GetLocalTime(&p->lastConnTime);
+				timeopt::now(&p->lastConnTime);
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
@@ -138,7 +138,7 @@ tcpClt::tcpClt(void)
 	m_bConn = false;
 	m_bRun = false;
 	m_bIsConnectting = false;
-	GetLocalTime(&lastConnTime);
+	timeopt::now(&lastConnTime);
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
 	m_bConnThreadRunning = false;
@@ -295,8 +295,8 @@ bool tcpClt::connect()
 	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
 	m_bConn = true;
 	ret = true;
-	GetLocalTime(&lastConnTime);
-	GetLocalTime(&m_session.stLastActive);
+	timeopt::now(&lastConnTime);
+	timeopt::now(&m_session.stLastActive);
 	m_strErrorInfo = "";
 
 	 hThread = CreateThread(NULL,0,TcpClientRecvThread,(LPVOID)this,0,&dwThread);

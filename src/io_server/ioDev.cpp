@@ -55,11 +55,11 @@ ioDev* createIODev(string type)
 }
 
 
-bool ioDev::input(vector<string> chanAddr, vector<json> val, SYSTEMTIME* stDataTime)
+bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 {
-	SYSTEMTIME st;
+	TIME st;
 	if (stDataTime == nullptr) {
-		GetLocalTime(&st);
+		timeopt::now(&st);
 	}
 	else {
 		st = *stDataTime;
@@ -131,15 +131,15 @@ ioDev::ioDev(void)
 	m_iSendDataFailCount = 0;
 	m_bUdpDev = false;
 	m_tcpClt = nullptr;
-	memset(&m_stLastHeartbeatTime, 0, sizeof(SYSTEMTIME));
-	memset(&m_stLastSetClockTime, 0, sizeof(SYSTEMTIME));
-	memset(&m_stOnlineTime, 0, sizeof(SYSTEMTIME));
-	GetLocalTime(&m_stOfflineTime);
+	memset(&m_stLastHeartbeatTime, 0, sizeof(TIME));
+	memset(&m_stLastSetClockTime, 0, sizeof(TIME));
+	memset(&m_stOnlineTime, 0, sizeof(TIME));
+	timeopt::now(&m_stOfflineTime);
 	timeopt::setAsTimeOrg(m_stLastChanDataTime);
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 	timeopt::setAsTimeOrg(m_stLastAlarmStatusTime);
 	timeopt::setAsTimeOrg(m_stLastReqSendTime);
-	GetLocalTime(&m_stLastActiveTime);
+	timeopt::now(&m_stLastActiveTime);
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
 	m_pCallbackUser = NULL;
@@ -935,7 +935,7 @@ void ioDev::setOnline()
 	if (m_bOnline == false)
 	{
 		m_bOnline = true;
-		GetLocalTime(&m_stOnlineTime);
+		timeopt::now(&m_stOnlineTime);
 		m_onlineInfoQueried = false;
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
@@ -989,7 +989,7 @@ void ioDev::DoCycleTask()
 	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0)
 	{
 		SendHeartbeatPkt();
-		GetLocalTime(&m_stLastHeartbeatTime);
+		timeopt::now(&m_stLastHeartbeatTime);
 	}
 }
 
@@ -1041,7 +1041,7 @@ bool ioDev::OnRecvData(char* pData, int iLen)
 	return false;
 }
 
-bool ioDev::OnRecvData(SYSTEMTIME dataTime, char* pData, int iLen)
+bool ioDev::OnRecvData(TIME dataTime, char* pData, int iLen)
 {
 	return true;
 }
@@ -1317,7 +1317,7 @@ string ioDev::GetCommIP()
 	return "";
 }
 
-void ioDev::SendToChild(SYSTEMTIME dataTime, char* pData, int iLen, string strID)
+void ioDev::SendToChild(TIME dataTime, char* pData, int iLen, string strID)
 {
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
@@ -1439,8 +1439,8 @@ void ioDev::statisOnRecv(char* recvData, int len, string addr)
 		return;
 
 	json j;
-	SYSTEMTIME st;
-	GetLocalTime(&st);
+	TIME st;
+	timeopt::now(&st);
 	j["time"] = timeopt::st2strWithMilli(st);
 	j["ioAddr"] = addr;
 	j["type"] = "接收";
@@ -1458,8 +1458,8 @@ void ioDev::statisOnSend(char* sendData, int len, string addr)
 		return;
 
 	json j;
-	SYSTEMTIME st;
-	GetLocalTime(&st);
+	TIME st;
+	timeopt::now(&st);
 	j["time"] = timeopt::st2strWithMilli(st);
 	j["ioAddr"] = addr;
 	j["type"] = "发送";

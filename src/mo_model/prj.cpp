@@ -54,8 +54,8 @@ bool project::loadConfFile()
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
 		m_name = "empty project";
 		conf = "";
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		m_strLastModify = timeopt::st2str(st);
 	}
 	else {
@@ -82,8 +82,8 @@ void project::saveConfFile()
 	string s = j.dump(2);
 
 	if (s != m_strMoTree) {
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
 		ini.setVal("mo", timeopt::st2str(st));

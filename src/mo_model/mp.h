@@ -53,7 +53,7 @@ public:
 	bool loadConf(json& conf);
 	bool toJson(json& conf, OBJ_QUERIER q) override;
 	bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(OBJ* pSrc,SYSTEMTIME* dataTime = nullptr, bool saveToDB = true) override;
+	bool loadStatus(OBJ* pSrc,TIME* dataTime = nullptr, bool saveToDB = true) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
@@ -62,8 +62,8 @@ public:
 	//video表示有一个关联的视频文件
 	//pic表示有一个关联的图片文件
 	//当deFolder和video，pic同时存在时，pic和video放在deFolder中，否则和数据元索引文件放在同一个目录
-	void input(json jVal, SYSTEMTIME* dataTime=NULL, json dataFile = nullptr);
-	void updateVal(json& jVal,SYSTEMTIME* dataTime = NULL, json dataFile = nullptr);
+	void input(json jVal, TIME* dataTime=NULL, json dataFile = nullptr);
+	void updateVal(json& jVal,TIME* dataTime = NULL, json dataFile = nullptr);
 	bool needSaveToDB();
 	void saveToDB();
 	void output(json jVal, json& rlt, json& err,bool sync = true);
@@ -97,7 +97,7 @@ public:
 	double m_deadZone;
 	bool m_bDownSample;
 	int m_downSampleInterval; //单位毫秒
-	SYSTEMTIME m_stLastSampleTime;
+	TIME m_stLastSampleTime;
 
 
 	//整型枚举值
@@ -115,7 +115,7 @@ public:
 	json m_orgVal;
 	json m_curVal;
 	json m_lastVal;
-	SYSTEMTIME m_lastSaveTime;
+	TIME m_lastSaveTime;
 
 	//数据流订阅会话
 	vector<shared_ptr<TDS_SESSION>> m_vecDeStreamSub;

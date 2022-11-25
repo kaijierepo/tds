@@ -19,7 +19,7 @@ database::database()
 	m_path = fs::appPath() + "/db";
 }
 
-string database::getPath_deFile(string strTag, SYSTEMTIME stTime)
+string database::getPath_deFile(string strTag, TIME stTime)
 {
 	strTag = str::replace(strTag,".", "/");
 	string strURL= str::format("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
@@ -34,7 +34,7 @@ string database::getPath_dbRoot()
 	return m_path;
 }
 
-string database::getName_deFile(string tag, SYSTEMTIME time)
+string database::getName_deFile(string tag, TIME time)
 {
 	string timeStamp = str::format("%02d%02d%02d", time.wHour, time.wMinute, time.wSecond);
 	return timeStamp;
@@ -101,7 +101,7 @@ string database::changeCharForFileName(string s) {
 	return out;
 }
 
-string database::getPath_dataFolder(string strTag, SYSTEMTIME date)
+string database::getPath_dataFolder(string strTag, TIME date)
 {
 	strTag = changeCharForFileName(strTag);
 	strTag = str::replace(strTag,".", "/");
@@ -111,7 +111,7 @@ string database::getPath_dataFolder(string strTag, SYSTEMTIME date)
 	return strURL;
 }
 
-string database::getPath_dbFile(string strTag,SYSTEMTIME date)
+string database::getPath_dbFile(string strTag,TIME date)
 {
 	string folder = getPath_dataFolder(strTag,date);
 	return folder + "/db.json";
@@ -119,7 +119,7 @@ string database::getPath_dbFile(string strTag,SYSTEMTIME date)
 
 
 
-void database::Insert(string strTag, SYSTEMTIME stTime, json& jData, json dataFile)
+void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + "db.json";
@@ -473,13 +473,13 @@ bool database::updateJsonObj(json& jOld, json& jNew)
 	return true;
 }
 
-bool database::Update(string tag, SYSTEMTIME stTime, string& sData)
+bool database::Update(string tag, TIME stTime, string& sData)
 {
 	json jData = json::parse(sData);
 	return Update(tag, stTime, jData);
 }
 
-bool database::Update(string tag, SYSTEMTIME stTime, json& jData)
+bool database::Update(string tag, TIME stTime, json& jData)
 {
 	//加载数据元列表
 	string dbFile = getPath_dbFile(tag, stTime);
@@ -516,7 +516,7 @@ bool database::Update(string tag, SYSTEMTIME stTime, json& jData)
 	return true;
 }
 
-bool database::Delete(string tag, SYSTEMTIME stTime)
+bool database::Delete(string tag, TIME stTime)
 {
 	//加载数据元列表
 	string dbFile = getPath_dbFile(tag, stTime);
@@ -557,7 +557,7 @@ bool database::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int
 	return false;
 }
 
-void database::saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl)
+void database::saveDEFile(string strTag, TIME stTime, string deFileUrl)
 {
 	deFileUrl = str::replace(deFileUrl, "\\", "/");
 	string suffix = parseSuffix(deFileUrl);
@@ -581,7 +581,7 @@ void database::saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl)
 	}
 }
 
-bool database::saveDEFile(string tag, SYSTEMTIME stTime, unsigned char* pData, int len, string suffix)
+bool database::saveDEFile(string tag, TIME stTime, unsigned char* pData, int len, string suffix)
 {
 	string path = getPath_deFile(tag, stTime);
 	path = m_path + path + "." + suffix;
@@ -703,7 +703,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	//parse time selector
 	std::string strTime = "";
 	std::string strStartDate, strEndDate;
-	SYSTEMTIME stStartDate, stEndDate;
+	TIME stStartDate, stEndDate;
 	if (params["time"].is_null()) { return makeRPCError(TEC_paramMissing, "param missing:\"time\""); }
 	try { strTime = params["time"].get<string>(); }
 	catch (...)
@@ -963,8 +963,8 @@ bool TIME_SELECTOR::init(string time)
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = _ttoi(time.c_str());
-		SYSTEMTIME sysStTime, sysEdTime;
-		GetLocalTime(&sysEdTime);
+		TIME sysStTime, sysEdTime;
+		timeopt::now(&sysEdTime);
 		TIME_CONDITON tcStartTime, tcEndTime;
 		tcStartTime.init("2020-01-01 00:00:00");
 		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", sysEdTime.wYear, sysEdTime.wMonth, sysEdTime.wDay, sysEdTime.wHour, sysEdTime.wMinute, sysEdTime.wSecond);

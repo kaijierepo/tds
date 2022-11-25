@@ -97,7 +97,7 @@ public:
 	json m_licenceStatus;
 	mutex m_csLicenceStatus;
 
-	void saveDataFromUrl(string& strUrl, SYSTEMTIME& stTime, string& strTag, string suffix);
+	void saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, string suffix);
 
 	fp_rpcHandler m_pluginHandler;
 };

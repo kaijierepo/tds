@@ -102,8 +102,8 @@ void IOLogSend(char* p, int len, bool success,string remoteAddr)
 
 
 	json j;
-	SYSTEMTIME st;
-	GetLocalTime(&st);
+	TIME st;
+	timeopt::now(&st);
 	j["time"] = timeopt::st2strWithMilli(st);
 	j["remoteAddr"] = remoteAddr;
 	if (success)
@@ -125,8 +125,8 @@ void IOLogRecv(char* p, int len,string remoteAddr)
 	
 	try {
 		json j;
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		j["time"] = timeopt::st2strWithMilli(st);
 		j["remoteAddr"] = remoteAddr;
 		j["type"] = "接收";

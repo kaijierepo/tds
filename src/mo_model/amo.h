@@ -10,7 +10,7 @@ public:
 
 	void GetRTStatusJson(json& j);
 
-	SYSTEMTIME m_enterTime;
+	TIME m_enterTime;
 	string    m_strTagName;
 	string    m_strAMOType;
 };

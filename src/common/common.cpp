@@ -817,13 +817,38 @@ namespace str {
 	}
 }
 namespace timeopt {
-	string stTimeToStr(SYSTEMTIME time)
+	TIME now() {
+		SYSTEMTIME st;
+		GetLocalTime(&st);
+		TIME t;
+		
+		t.wYear = st.wYear;
+		t.wMonth = st.wMonth;
+		t.wDay = st.wDay;
+		t.wHour = st.wHour;
+		t.wMinute = st.wMinute;
+		t.wSecond = st.wSecond;
+		t.wMilliseconds = st.wMilliseconds;
+		t.wDayOfWeek = st.wDayOfWeek;
+
+		return t;
+	}
+
+	void now(TIME& t){
+		t = now();
+	}
+
+	void now(TIME* t) {
+		*t = now();
+	}
+
+	string stTimeToStr(TIME time)
 	{
 		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);
 		return str;
 	}
 
-	time_t SysTime2Unix(SYSTEMTIME sDT)
+	time_t SysTime2Unix(TIME sDT)
 	{
 		tm temptm = { sDT.wSecond, sDT.wMinute, sDT.wHour,
 			sDT.wDay, sDT.wMonth - 1, sDT.wYear - 1900, sDT.wDayOfWeek, 0, 0 };
@@ -831,9 +856,9 @@ namespace timeopt {
 		return iReturn;
 	}
 
-	SYSTEMTIME Unix2SysTime(time_t iUnix)
+	TIME Unix2SysTime(time_t iUnix)
 	{
-		SYSTEMTIME sDT;
+		TIME sDT;
 		time_t tIn = (time_t)iUnix;
 		tm temptm;
 		localtime_s(&temptm, &tIn);
@@ -848,9 +873,9 @@ namespace timeopt {
 		return sDT;
 	}
 
-	SYSTEMTIME str2st(string str)
+	TIME str2st(string str)
 	{
-		SYSTEMTIME t;
+		TIME t;
 		int year, month, day, hour, min, sec;
 		sscanf_s(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
@@ -1009,11 +1034,11 @@ namespace timeopt {
 				time1 = time1.erase(0, pos + 1);
 				n4 = atof(strS.c_str());
 			}
-			SYSTEMTIME stNow;
-			GetLocalTime(&stNow);
+			TIME stNow;
+			timeopt::now(&stNow);
 			time_t endTime = timeopt::SysTime2Unix(stNow);
 			time_t startTime = endTime - n1 - n2 - n3 - n4;
-			SYSTEMTIME  stStart = timeopt::Unix2SysTime(startTime);
+			TIME  stStart = timeopt::Unix2SysTime(startTime);
 			string strNow = timeopt::stTimeToStr(stNow);
 			string strStart = timeopt::stTimeToStr(stStart);
 			time = strStart + "~" + strNow;
@@ -1021,7 +1046,7 @@ namespace timeopt {
 		return time;
 	}
 
-	string st2str(SYSTEMTIME t)
+	string st2str(TIME t)
 	{
 		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
 			t.wYear, t.wMonth, t.wDay,
@@ -1029,7 +1054,7 @@ namespace timeopt {
 		return str;
 	}
 
-	string st2strWithMilli(SYSTEMTIME t)
+	string st2strWithMilli(TIME t)
 	{
 		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
 			t.wYear, t.wMonth, t.wDay,
@@ -1037,7 +1062,7 @@ namespace timeopt {
 		return str;
 	}
 
-	string TimeToYMD(const SYSTEMTIME time)
+	string TimeToYMD(const TIME time)
 	{
 		string str;
 		if (time.wYear > 2000 && time.wDay > 0 && time.wDay < 40 && time.wHour >= 0 && time.wHour <= 24 && time.wMinute >= 0 && time.wMinute <= 60)
@@ -1046,7 +1071,7 @@ namespace timeopt {
 		}
 		return str;
 	}
-	int CalcTimePassSecond(SYSTEMTIME lastTime)
+	int CalcTimePassSecond(TIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
 		time_t now = time(NULL);
@@ -1054,7 +1079,7 @@ namespace timeopt {
 		return milli;
 	}
 
-	long CalcTimeDiffSecond(SYSTEMTIME newTime,SYSTEMTIME oldTime)
+	long CalcTimeDiffSecond(TIME newTime,TIME oldTime)
 	{
 		time_t newT = SysTime2Unix(newTime);
 		time_t oldT = SysTime2Unix(oldTime);
@@ -1062,11 +1087,11 @@ namespace timeopt {
 		return seconds;
 	}
 
-	long long CalcTimePassMilliSecond(SYSTEMTIME lastTime)
+	long long CalcTimePassMilliSecond(TIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
-		SYSTEMTIME stNow;
-		GetLocalTime(&stNow);
+		TIME stNow;
+		timeopt::now(&stNow);
 		time_t now = SysTime2Unix(stNow);
 		time_t second = now - last;
 		time_t milli = stNow.wMilliseconds - lastTime.wMilliseconds;
@@ -1082,15 +1107,15 @@ namespace timeopt {
 		return timestamp;
 	}
 
-	void setAsTimeOrg(SYSTEMTIME& st)
+	void setAsTimeOrg(TIME& st)
 	{
-		memset(&st, 0, sizeof(SYSTEMTIME));
+		memset(&st, 0, sizeof(TIME));
 		st.wYear = 1970;
 		st.wMonth = 1;
 		st.wDay = 1;
 	}
 
-	bool isValidTime(SYSTEMTIME& st)
+	bool isValidTime(TIME& st)
 	{
 		if (st.wYear == 0 || st.wYear == 1970)
 			return false;
@@ -1117,10 +1142,10 @@ namespace timeopt {
 		return std::string(res);
 	}
 
-	SYSTEMTIME addTime(SYSTEMTIME base, int h, int m, int s) {
+	TIME addTime(TIME base, int h, int m, int s) {
 		time_t tBase = SysTime2Unix(base);
 		tBase += h * 3600 + m * 60 + s;
-		SYSTEMTIME st = Unix2SysTime(tBase);
+		TIME st = Unix2SysTime(tBase);
 		return st;
 	}
 
@@ -1834,8 +1859,8 @@ namespace common {
 	}
 
 	float randomFloat(float min, float max) {
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		//当前毫秒作为随机数种子
 		int seed = abs(st.wMilliseconds - rand() % 1000);
 		seed = seed % 100;
@@ -1846,8 +1871,8 @@ namespace common {
 	}
 
 	int randomInt(int min, int max) {
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		//当前毫秒作为随机数种子
 		int seed = abs(st.wMilliseconds - rand() % 1000);
 		seed = seed % 100;

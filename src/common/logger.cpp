@@ -155,8 +155,8 @@ string Clogger::logInternal(string info)
 	}
 	
 
-	SYSTEMTIME stNow;
-	GetLocalTime(&stNow);
+	TIME stNow;
+	timeopt::now(&stNow);
 	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	//命令行和文件中的日志用gb2312编码
 	string logline = time + " " + info;

@@ -154,8 +154,8 @@ void almServer::Update(ALARM_INFO newStatus)
 
 	if (newStatus.time == "")
 	{
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		TIME st;
+		timeopt::now(&st);
 		newStatus.time = timeopt::stTimeToStr(st);
 	}
 
@@ -324,7 +324,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.bAck = 1;
 		ai.strConfirmUser = session.user;
 		ai.strConfirmInfo = info;
-		GetLocalTime(&ai.stConfirmTime);
+		timeopt::now(&ai.stConfirmTime);
 		tableHist.update(ai);
 	}
 
@@ -391,7 +391,7 @@ string almServer::AlarmLevelToString(ALARM_LEVEL level) {
 	return strLevel;
 }*/
 
-bool almServer::CompareTime(SYSTEMTIME& time1, SYSTEMTIME& time2) {
+bool almServer::CompareTime(TIME& time1, TIME& time2) {
 	if (time1.wYear == time2.wYear && time1.wMonth == time2.wMonth && time1.wDay == time2.wDay && time1.wHour == time2.wHour && time1.wMinute == time2.wMinute && time1.wSecond == time2.wSecond)
 	{
 		return true;
@@ -434,7 +434,7 @@ string almTable::getFilePath(string time){
 	if(time == "")
 		return db.m_path + filePath  + ".csv";
 
-	SYSTEMTIME st = timeopt::str2st(time);
+	TIME st = timeopt::str2st(time);
 	int y,m;
 	y = st.wYear;
 	m = st.wMonth;
@@ -720,14 +720,6 @@ string ALARM_INFO::toJsonStr(string rootTag)
 {
 	json j = toJson(rootTag);
 	return j.dump(2);
-}
-
-string almServer::FormatSystemTime(SYSTEMTIME time)
-{
-	string strInfo;
-	strInfo=str::format("%d,%d,%d,%d,%d,%d,%d,%d", time.wYear, time.wMonth, time.wDayOfWeek,
-		time.wDay, time.wHour, time.wMinute, time.wSecond, time.wMilliseconds);
-	return strInfo;
 }
 
 void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)

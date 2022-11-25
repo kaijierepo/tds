@@ -69,7 +69,7 @@ struct CPoint2 {
 
 
 struct DE_TIME {
-	SYSTEMTIME st;
+	TIME st;
 	time_t tt;
 	string strT;
 };
@@ -88,8 +88,8 @@ public:
 
 	int startHMS;
 	int endHMS;
-	SYSTEMTIME stStart;
-	SYSTEMTIME stEnd;
+	TIME stStart;
+	TIME stEnd;
 	time_t startTime;
 	time_t endTime;
 	string strStart;
@@ -138,8 +138,8 @@ public:
 	bool init(string time);
 	vector<TIME_CONDITON> vecCondition;
 	//多个条件组合出来的最宽的数据范围，用于数据库文件遍历
-	SYSTEMTIME stStart;
-	SYSTEMTIME stEnd;
+	TIME stStart;
+	TIME stEnd;
 	time_t startTime;
 	time_t endTime;
 	int m_dataNum;//存储传入参数的，ne,n代表获取几个数据。
@@ -171,7 +171,7 @@ struct DB_FILE {
 	string data;
 	string path;
 	string ymd;
-	SYSTEMTIME time;
+	TIME time;
 };
 
 class DB_FILE_SET {
@@ -268,28 +268,28 @@ public:
 
 //接口部分
 public:
-	void Insert(string strTag, SYSTEMTIME stTime, json& jData,json dataFile = nullptr) ;
+	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
-	bool Update(string tag, SYSTEMTIME stTime, string& sData);
-	bool Update(string tag, SYSTEMTIME stTime, json& jData);
-	bool Delete(string tag, SYSTEMTIME stTime);
+	bool Update(string tag, TIME stTime, string& sData);
+	bool Update(string tag, TIME stTime, json& jData);
+	bool Delete(string tag, TIME stTime);
 	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
 	bool updateJsonObj(json& jOld, json& jNew);
-	void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) ;
-	bool saveDEFile(string tag, SYSTEMTIME stTime, unsigned char* pData, int len,string suffix);
+	void saveDEFile(string strTag, TIME stTime, string deFileUrl) ;
+	bool saveDEFile(string tag, TIME stTime, unsigned char* pData, int len,string suffix);
 //路径管理
 public:
 	//获得数据库文件db.json的路径
-	string getPath_dbFile(string strTag, SYSTEMTIME date);
+	string getPath_dbFile(string strTag, TIME date);
 	string changeCharForFileName(string s);
 	//获得数据元文件或者数据库文件的存储文件夹目录
-	string getPath_dataFolder(string strTag, SYSTEMTIME date);
+	string getPath_dataFolder(string strTag, TIME date);
 	//获得数据元文件或者数据元文件夹的路径
-	string getPath_deFile(string strTag, SYSTEMTIME stTime);
+	string getPath_deFile(string strTag, TIME stTime);
 	string getPath_dbRoot();
-	string getName_deFile(string tag, SYSTEMTIME time);
+	string getName_deFile(string tag, TIME time);
 
 	string parseSuffix(string deFileUrl);
 	string dataSet2String(DB_DATA_SET& dataSet);

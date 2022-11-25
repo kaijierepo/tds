@@ -72,9 +72,9 @@ public:
 	string strSuggest;
 	string typeLabel;
 	bool bRecover;
-	SYSTEMTIME stRecoverTime;
+	TIME stRecoverTime;
 	bool bAck;
-	SYSTEMTIME stConfirmTime;
+	TIME stConfirmTime;
 	string strConfirmInfo;
 	string strConfirmUser;
 	string pic_url;
@@ -84,9 +84,9 @@ public:
 		strAlarmDetail = "";
 		strSuggest = "";
 		bRecover = 0;
-		memset(&stRecoverTime,0,sizeof(SYSTEMTIME));
+		memset(&stRecoverTime,0,sizeof(TIME));
 		bAck = 0;
-		memset(&stConfirmTime,0,sizeof(SYSTEMTIME));
+		memset(&stConfirmTime,0,sizeof(TIME));
 		strConfirmInfo = "";
 	}
 
@@ -204,9 +204,7 @@ public:
 	}
 	void init();
 
-	bool CompareTime(SYSTEMTIME& time1, SYSTEMTIME& time2);
-
-	string FormatSystemTime(SYSTEMTIME time);
+	bool CompareTime(TIME& time1, TIME& time2);
 
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
 	//almTable tableStatus;

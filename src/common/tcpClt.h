@@ -21,7 +21,7 @@ struct tcpSessionClt
 	int iSendFailCount;
 	int iRecvCount;
 
-	SYSTEMTIME stLastActive;
+	TIME stLastActive;
 
 	tcpSessionClt()
 	{
@@ -81,7 +81,7 @@ public:
 	bool m_bConn;
 	bool m_bRun;
 	int m_keepAliveTimeout;
-	SYSTEMTIME lastConnTime; //上一次尝试重连的时间
+	TIME lastConnTime; //上一次尝试重连的时间
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
 	ITcpClientCallBack* m_pCallBackUser;

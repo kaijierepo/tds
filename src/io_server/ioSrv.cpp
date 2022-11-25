@@ -141,7 +141,7 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 			p->m_IoDev = pIoDev;
 			p->ioDevType = pIoDev->m_devType;
 			pIoDev->setOnline();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			timeopt::now(&pIoDev->m_stLastActiveTime);
 			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
 			logger.logInternal(s);
 			pIoDev->bindIOSession(p);
@@ -173,7 +173,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		{
 			p->m_IoDev = pIoDev;
 			pIoDev->setOnline();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			timeopt::now(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->bindIOSession(p);
 		}
@@ -195,7 +195,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 
 void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> ioSession)
 {
-	GetLocalTime(&ioSession->lastRecvTime);
+	timeopt::now(&ioSession->lastRecvTime);
 
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
@@ -321,7 +321,7 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 				{
 					pIoDev->setOnline();
 					pIoDev->triggerCycleAcq();
-					GetLocalTime(&pIoDev->m_stLastActiveTime);
+					timeopt::now(&pIoDev->m_stLastActiveTime);
 					logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 				}
 			}
@@ -340,7 +340,7 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 		{
 			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			timeopt::now(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 		}
 	}
@@ -444,7 +444,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 		{
 			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
-			GetLocalTime(&pIoDev->m_stLastActiveTime);
+			timeopt::now(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 		}
 	}

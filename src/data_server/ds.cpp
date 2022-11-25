@@ -104,7 +104,7 @@ void streamPusherMng_thread() {
 		vector<string> toErase;
 		prj.m_csPrj.lock_shared();
 		for (auto i : ds.m_mapPullerActive) {
-			SYSTEMTIME st = i.second;
+			TIME st = i.second;
 			if (timeopt::CalcTimePassSecond(st) > 5) {
 				MP* pmp = prj.GetMPByTag(i.first);
 				string src = "?";
@@ -237,7 +237,7 @@ void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcp
 
 void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	GetLocalTime(&tdsSession->lastRecvTime);
+	timeopt::now(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);
 	while (tlBuf.PopPkt(IsValidPkt_textEnd2LF, false))

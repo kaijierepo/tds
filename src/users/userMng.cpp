@@ -501,7 +501,7 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 	m_csAccessToken.lock();
 	if (m_mapAccessInfo.find(session.token)!= m_mapAccessInfo.end()) {
 		ACCESS_INFO& ai = m_mapAccessInfo[session.token];
-		GetLocalTime(&ai.stCreate);
+		timeopt::now(&ai.stCreate);
 		ai.age = 5; //老的 Token 继续维护5秒的生存期。 使得客户端再收到新token前使用老token发的命令仍能被执行
 
 		ACCESS_INFO aiTmp;
@@ -509,7 +509,7 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 		aiTmp.token = common::guid();
 		aiTmp.bDynamic = true;
 		aiTmp.age = tds->conf->tokenExpireTime * 60;
-		GetLocalTime(&aiTmp.stCreate);
+		timeopt::now(&aiTmp.stCreate);
 		m_mapAccessInfo[aiTmp.token] = aiTmp;
 		json rlt;
 		rlt["token"] = aiTmp.token;
@@ -744,7 +744,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				userInfo["token"] = token;
 				ACCESS_INFO ai;
 				ai.age = tds->conf->tokenExpireTime * 60;
-				GetLocalTime(&ai.stCreate);
+				timeopt::now(&ai.stCreate);
 				ai.token = token;
 				ai.user = user;
 				ai.bDynamic = true;

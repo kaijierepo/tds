@@ -329,18 +329,18 @@ public:
 	//filter: "humidiy==55 && temperature>30"
 	//dataSet is json de array
 	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
-	virtual bool Update(string tag, SYSTEMTIME stTime, string& sData) = 0;
+	virtual bool Update(string tag, TIME stTime, string& sData) = 0;
 
 
 	
 	//deFileUrl  1.localfile 2.localfolder 3.http url
-	virtual void saveDEFile(string strTag, SYSTEMTIME stTime, string deFileUrl) = 0;
+	virtual void saveDEFile(string strTag, TIME stTime, string deFileUrl) = 0;
 
 	//get db.json path
-	virtual string getPath_dbFile(string strTag, SYSTEMTIME date) = 0;
+	virtual string getPath_dbFile(string strTag, TIME date) = 0;
 	//de folder path
-	virtual string getPath_dataFolder(string strTag, SYSTEMTIME date) = 0;
-	virtual string getPath_deFile(string strTag, SYSTEMTIME stTime) = 0;
+	virtual string getPath_dataFolder(string strTag, TIME date) = 0;
+	virtual string getPath_deFile(string strTag, TIME stTime) = 0;
 	virtual string getPath_dbRoot() = 0;
 };
 
@@ -413,7 +413,7 @@ public:
 	i_smsServer* smsServer;
 	i_tdsPlugin* shellServer;
 
-	SYSTEMTIME stStartupTime;
+	TIME stStartupTime;
 
 	HWND uiWnd;
 	string uiWndTitle;

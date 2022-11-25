@@ -75,8 +75,8 @@ public:
 	string ip;
 	string type;//session type
 	string lastMethodCalled;
-	SYSTEMTIME lastRecvTime;
-	SYSTEMTIME lastSendTime;
+	TIME lastRecvTime;
+	TIME lastSendTime;
 
 	RPC_SESSION getRpcSession();
 
@@ -136,7 +136,7 @@ public:
 	string iALProto;
 	string ioDevType;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
-	SYSTEMTIME stCreateTime;
+	TIME stCreateTime;
 	int abandonLen;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data

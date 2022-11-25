@@ -30,6 +30,23 @@
 
 using namespace std;
 
+struct TIME {
+	WORD wYear;
+	WORD wMonth;
+	WORD wDay;
+	WORD wHour;
+	WORD wMinute;
+	WORD wSecond;
+	WORD wMilliseconds;
+	WORD wDayOfWeek;
+
+	TIME() {
+		wYear = 1970;
+		wMonth = 1;
+		wDay = 1;
+	}
+};
+
 class semaphore
 {
 public:
@@ -210,26 +227,29 @@ namespace str {
 }
 
 namespace timeopt {
-	string stTimeToStr(SYSTEMTIME time);
-	time_t SysTime2Unix(SYSTEMTIME sDT);
-	SYSTEMTIME Unix2SysTime(time_t iUnix);
-	SYSTEMTIME str2st(string str);
+	TIME now();
+	void now(TIME& t);
+	void now(TIME* t);
+	string stTimeToStr(TIME time);
+	time_t SysTime2Unix(TIME sDT);
+	TIME Unix2SysTime(time_t iUnix);
+	TIME str2st(string str);
 	int HMS2Sec(string hms);
 	bool isRelative(string time);
 	DWORD duration2sec(string strTime);
 	int dhmsSpan2Seconds(string timeSpan);
 	string rel2abs(string time);
-	string st2str(SYSTEMTIME t);
-	string st2strWithMilli(SYSTEMTIME t);
-	string TimeToYMD(const SYSTEMTIME time);
-	int CalcTimePassSecond(SYSTEMTIME lastTime);
-	long long CalcTimePassMilliSecond(SYSTEMTIME lastTime);
-	long CalcTimeDiffSecond(SYSTEMTIME newTime, SYSTEMTIME oldTime);
+	string st2str(TIME t);
+	string st2strWithMilli(TIME t);
+	string TimeToYMD(const TIME time);
+	int CalcTimePassSecond(TIME lastTime);
+	long long CalcTimePassMilliSecond(TIME lastTime);
+	long CalcTimeDiffSecond(TIME newTime, TIME oldTime);
 	time_t getTick();
-	void setAsTimeOrg(SYSTEMTIME& st);
-	bool isValidTime(SYSTEMTIME& st);
+	void setAsTimeOrg(TIME& st);
+	bool isValidTime(TIME& st);
 	string nowStr(bool enableMS = false);
-	SYSTEMTIME addTime(SYSTEMTIME base, int h, int m, int s);
+	TIME addTime(TIME base, int h, int m, int s);
 	bool isValidTimeStr(string time);
 }
 
