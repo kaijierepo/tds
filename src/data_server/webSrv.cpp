@@ -323,18 +323,32 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	parseIpPort(sHost, ip, port);
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string tag = str::trimPrefix(uri, "/stream/"); 
-
-	string streamUrl = rpcSrv.rpc_getStreamUrl(tag,m_isHttps,ip,port);
-
-	if (streamUrl == "") {
-		mg_http_reply(c, 404, "", "");
-		return;
+	string proto;
+	if (tag.find(".flv") != string::npos) {
+		tag = str::trimSuffix(tag, ".flv");
+		proto = "flv";
+	}
+	else if (tag.find(".rtc") != string::npos) {
+		tag = str::trimSuffix(tag, ".rtc");
+		proto = "rtc";
+	}
+	else if (tag.find(".de") != string::npos) { //数据流只在子服务的情况下需要重定向
+		tag = str::trimSuffix(tag, ".de");
+		proto = "de";
 	}
 
-	string sHeader = "location:" + streamUrl + "\r\n";
+	json jStreamUrl = rpcSrv.rpc_getStreamUrl(tag,m_isHttps,ip,port);
+
+	if (jStreamUrl[proto] == nullptr) {
+		mg_http_reply(c, 404, "", "");
+		return true;
+	}
+
+	string url = jStreamUrl[proto];
+	string sHeader = "location:" + url + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 
-	LOG("[视频流]url=%s,重定向到 %s", uri.c_str(), streamUrl.c_str());
+	LOG("[视频流]url=%s,重定向到 %s", uri.c_str(), url.c_str());
 
 
 	sHeader += "Access-Control-Allow-Origin:*\r\n";
