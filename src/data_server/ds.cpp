@@ -20,6 +20,18 @@ dataServer::~dataServer()
 {
 }
 
+void dataServer::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
+{
+	json jReg;
+	jReg["method"] = "childTdsReg";
+	json jParams;
+	jParams["httpPort"] = tds->conf->httpPort;
+	jParams["httpsPort"] = tds->conf->httpsPort;
+	jReg["params"] = jParams;
+	string s = jReg.dump() + "\n\n";
+	p->sendStr(s);
+}
+
 void dataServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
@@ -63,6 +75,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 
 		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()) {
 			LOG("[主从服务]连接到主服务成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+			sendChildTdsRegPkt(p);
 		}
 	}
 	else

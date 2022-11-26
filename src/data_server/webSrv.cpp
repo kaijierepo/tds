@@ -351,9 +351,14 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 
 	OBJ* childTds = pObj->getOwnerChildTds();
 	//重定向到子服务
+	CHILD_TDS_INFO childTdsInfo;
 	if (childTds && pMasterDs) {
 		string childTdsTag = childTds->getTag();
-		ip = pMasterDs->getChildTdsIP(childTdsTag);
+		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
+		{
+			mg_http_reply(c, 404, "", "");
+			return true;
+		}
 		tag = TAG::trimRoot(tag, childTdsTag);
 		needRedirect = true; //如果是子服务，一定需要重定向
 	}
@@ -368,7 +373,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 			redirectPath = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
 		}
 		else if (proto == "de") {
-			redirectPath = "https://" + ip + ":666/stream/" + tag + ".de";
+			redirectPath = "https://" + ip + ":" + str::fromInt(childTdsInfo.httpsPort) + "/stream/" + tag + ".de";
 		}
 	}
 	else {
@@ -379,7 +384,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 			redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
 		}
 		else if (proto == "de") {
-			redirectPath = "http://" + ip + ":667/stream/" + tag + ".de";
+			redirectPath = "http://" + ip + ":" + str::fromInt(childTdsInfo.httpPort) + "/stream/" + tag + ".de";
 		}
 	}
 

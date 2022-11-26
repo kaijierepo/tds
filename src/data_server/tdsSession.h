@@ -87,7 +87,10 @@ public:
 	bool m_bAppDataRecved;
 	bool getTcpSession(tcpSession& ts);
 	
+	//TDS子服务信息
 	string m_childTdsTag;
+	int m_childTdsHttpPort;
+	int m_childTdsHttpsPort;
 	
 	int port;
 	map<string, string> mapTagDataSubscribe;

@@ -235,6 +235,10 @@ bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSess
 			rpcSrv.notify("statusUpdate", jStatusNotify);
 		}
 	}
+	else if (method == "childTdsReg") {
+		childSession->m_childTdsHttpPort = params["httpPort"].get<int>();
+		childSession->m_childTdsHttpsPort = params["httpsPort"].get<int>();
+	}
 	
 	return true;
 }
@@ -482,4 +486,20 @@ string MasterDs::getChildTdsIP(string childTdsTag)
 		return "";
 	}
 	return ioSession->ip;
+}
+
+bool MasterDs::getChildTdsInfo(string childTdsTag, CHILD_TDS_INFO& info)
+{
+	m_mutexChildTdsList.lock();
+	std::shared_ptr<TDS_SESSION> ioSession = getSessionByTag(childTdsTag);
+	m_mutexChildTdsList.unlock();
+	if (ioSession == nullptr) {
+		return false;
+	}
+
+	info.ip = ioSession->ip;
+	info.httpPort = ioSession->m_childTdsHttpPort;
+	info.httpsPort = ioSession->m_childTdsHttpsPort;
+
+	return  true ;
 }

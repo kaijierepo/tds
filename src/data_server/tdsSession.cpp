@@ -108,6 +108,8 @@ void TDS_SESSION::Init()
     bSubAll = false;
     bInitSegSended = false;
     m_IoDev = NULL;
+    m_childTdsHttpPort = 667;
+    m_childTdsHttpsPort = 666;
 }
 
 bool TDS_SESSION::isConnected()

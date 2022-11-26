@@ -20,6 +20,14 @@ struct RPC_SYNC_INFO {
 };
 
 
+struct CHILD_TDS_INFO {
+	string tag;
+	int httpPort;
+	int httpsPort;
+	string ip;
+};
+
+
 
 class MasterDs : public ITcpServerCallBack
 {
@@ -49,7 +57,7 @@ public:
 
 	std::shared_ptr<TDS_SESSION> getSessionByTag(string tag);
 	string getChildTdsIP(string childTdsTag);
-
+	bool getChildTdsInfo(string childTdsTag, CHILD_TDS_INFO& info);
 	map<int, RPC_SYNC_INFO*> m_mapSyncRPCInfo;
 	mutex m_csSyncRPCInfo;
 	bool getResponse;

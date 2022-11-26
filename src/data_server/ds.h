@@ -30,6 +30,10 @@ public:
 	void stop();
 	dataServer();
 	virtual ~dataServer();
+
+
+	void sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p);
+
 	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
 	map<tcpClt*, tcpClt*> m_tcpCltChildServer; //作为子服务连接上级服务的客户端
 
