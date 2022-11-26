@@ -281,11 +281,14 @@ void handlePost_gzh(string reqBody, string& resHeader,string& resBody)
 }
 
 
-void thread_handleRpcOverHttp(string rpcReqStr,int sock)
+void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port,bool isHttps)
 {
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	pSession->hostname = hostname;
+	pSession->port = port;
+	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
 	string resBody = resp.strResp;
@@ -320,82 +323,18 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	parseIpPort(sHost, ip, port);
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string tag = str::trimPrefix(uri, "/stream/"); 
-	string proto;
-	bool https = false;
-	bool needRedirect = false;
-	if (tag.find(".flv") != string::npos) {
-		tag = str::trimSuffix(tag, ".flv");
-		proto = "flv";
-		needRedirect = true; //目前码流的http端口和tds的http端口不相同。 因此码流必须重定向
-	}
-	else if (tag.find(".rtc") != string::npos) {
-		tag = str::trimSuffix(tag, ".rtc");
-		proto = "rtc";
-		needRedirect = true;
-	}
-	else if (tag.find(".de") != string::npos) { //数据流只在子服务的情况下需要重定向
-		tag = str::trimSuffix(tag, ".de");
-		proto = "de";
+
+	string streamUrl = rpcSrv.rpc_getStreamUrl(tag,m_isHttps,ip,port);
+
+	if (streamUrl == "") {
+		mg_http_reply(c, 404, "", "");
+		return;
 	}
 
-	tag = httplib::detail::decode_url(tag, false);
-
-
-	OBJ* pObj = prj.queryObj(tag);
-	if (!pObj) {
-		mg_http_reply(c, 404,"","");
-		return true;
-	}
-
-
-
-	OBJ* childTds = pObj->getOwnerChildTds();
-	//重定向到子服务
-	CHILD_TDS_INFO childTdsInfo;
-	if (childTds && pMasterDs) {
-		string childTdsTag = childTds->getTag();
-		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
-		{
-			mg_http_reply(c, 404, "", "");
-			return true;
-		}
-		tag = TAG::trimRoot(tag, childTdsTag);
-		needRedirect = true; //如果是子服务，一定需要重定向
-	}
-
-	string 	redirectPath;
-	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
-	if (m_isHttps) {
-		if (proto == "flv") {
-			redirectPath = "https://" + ip + ":671/stream/" + tag + ".live.flv";
-		}
-		else if (proto == "rtc") {
-			redirectPath = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-		}
-		else if (proto == "de") {
-			redirectPath = "https://" + ip + ":" + str::fromInt(childTdsInfo.httpsPort) + "/stream/" + tag + ".de";
-		}
-	}
-	else {
-		if (proto == "flv") {
-			redirectPath = "http://" + ip + ":672/stream/" + tag + ".live.flv";
-		}
-		else if (proto == "rtc") {
-			redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-		}
-		else if (proto == "de") {
-			redirectPath = "http://" + ip + ":" + str::fromInt(childTdsInfo.httpPort) + "/stream/" + tag + ".de";
-		}
-	}
-
-	if (!needRedirect)
-		return false;
-
-
-	string sHeader = "location:" + redirectPath + "\r\n";
+	string sHeader = "location:" + streamUrl + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 
-	LOG("[数据流]流类型=%s,uri=%s,重定向到 %s",proto.c_str(), uri.c_str(), redirectPath.c_str());
+	LOG("[视频流]url=%s,重定向到 %s", uri.c_str(), streamUrl.c_str());
 
 
 	sHeader += "Access-Control-Allow-Origin:*\r\n";
@@ -436,14 +375,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
-			if (mg_http_match_uri(hm, "/stream/*")) {
-				if (pWs->handle_stream_redirect(hm, c)) {
-					return;
-				}
-			}
-
-
-
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
@@ -508,7 +439,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		{
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
-			thread t(thread_handleRpcOverHttp, rpcReqStr, sock);
+			mg_str* mgs_host = mg_http_get_header(hm, "Host");
+			string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
+			string ip; int port;
+			parseIpPort(sHost, ip, port);
+			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,ip,port,pWs->m_isHttps);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))

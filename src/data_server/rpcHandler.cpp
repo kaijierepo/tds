@@ -646,7 +646,14 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				}
 			}
 		}
-	}
+		else if (method == "getStreamUrl") {
+			string tag = params["tag"];
+			json rlt;
+			string url = rpc_getStreamUrl(tag, session.isHttps, session.hostname, session.port);
+			rlt["url"] = url;
+			rpcResp.result = rlt.dump();
+		}
+}
 	else
 	{
 		bHandled = false;
@@ -654,6 +661,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 	return bHandled;
 }
+
 
 
 //参见核心概念，位号表示法
@@ -3200,6 +3208,70 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 		return "ok";
 	}
 	return string();
+}
+
+string rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int port)
+{
+	string ip = hostname;
+	string proto;
+	bool https = false;
+	if (tag.find(".flv") != string::npos) {
+		tag = str::trimSuffix(tag, ".flv");
+		proto = "flv";
+	}
+	else if (tag.find(".rtc") != string::npos) {
+		tag = str::trimSuffix(tag, ".rtc");
+		proto = "rtc";
+	}
+	else if (tag.find(".de") != string::npos) { //数据流只在子服务的情况下需要重定向
+		tag = str::trimSuffix(tag, ".de");
+		proto = "de";
+	}
+
+	tag = httplib::detail::decode_url(tag, false);
+
+	OBJ* pObj = prj.queryObj(tag);
+	if (!pObj) {
+
+		return "";
+	}
+
+	OBJ* childTds = pObj->getOwnerChildTds();
+	//重定向到子服务
+	CHILD_TDS_INFO childTdsInfo;
+	if (childTds && pMasterDs) {
+		string childTdsTag = childTds->getTag();
+		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
+		{
+			return "";
+		}
+		tag = TAG::trimRoot(tag, childTdsTag);
+	}
+
+	string 	redirectPath;
+	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
+	if (isHttps) {
+		if (proto == "flv") {
+			redirectPath = "https://" + ip + ":671/stream/" + tag + ".live.flv";
+		}
+		else if (proto == "rtc") {
+			redirectPath = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		}
+		else if (proto == "de") {
+			redirectPath = "https://" + ip + ":" + str::fromInt(childTdsInfo.httpsPort) + "/stream/" + tag + ".de";
+		}
+	}
+	else {
+		if (proto == "flv") {
+			redirectPath = "http://" + ip + ":672/stream/" + tag + ".live.flv";
+		}
+		else if (proto == "rtc") {
+			redirectPath = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		}
+		else if (proto == "de") {
+			redirectPath = "http://" + ip + ":" + str::fromInt(childTdsInfo.httpPort) + "/stream/" + tag + ".de";
+		}
+	}
 }
 
 string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION session)

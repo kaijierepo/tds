@@ -92,6 +92,8 @@ public:
 	string rpc_getconffile(json params, string& error);
 	string rpc_setconffile(json params, string& error);
 
+	string rpc_getStreamUrl(string tag, bool isHttps, string hostname, int port);
+
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
 	json m_licenceStatus;
