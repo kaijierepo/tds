@@ -313,7 +313,7 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	}
 }
 
-void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
+bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection* c) {
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
@@ -322,15 +322,18 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	string tag = str::trimPrefix(uri, "/stream/"); 
 	string proto;
 	bool https = false;
+	bool needRedirect = false;
 	if (tag.find(".flv") != string::npos) {
 		tag = str::trimSuffix(tag, ".flv");
 		proto = "flv";
+		needRedirect = true; //目前码流的http端口和tds的http端口不相同。 因此码流必须重定向
 	}
 	else if (tag.find(".rtc") != string::npos) {
 		tag = str::trimSuffix(tag, ".rtc");
 		proto = "rtc";
+		needRedirect = true;
 	}
-	else if (tag.find(".de") != string::npos) {
+	else if (tag.find(".de") != string::npos) { //数据流只在子服务的情况下需要重定向
 		tag = str::trimSuffix(tag, ".de");
 		proto = "de";
 	}
@@ -341,8 +344,10 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 	OBJ* pObj = prj.queryObj(tag);
 	if (!pObj) {
 		mg_http_reply(c, 404,"","");
-		return;
+		return true;
 	}
+
+
 
 	OBJ* childTds = pObj->getOwnerChildTds();
 	//重定向到子服务
@@ -350,6 +355,7 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		string childTdsTag = childTds->getTag();
 		ip = pMasterDs->getChildTdsIP(childTdsTag);
 		tag = TAG::trimRoot(tag, childTdsTag);
+		needRedirect = true; //如果是子服务，一定需要重定向
 	}
 
 	string 	redirectPath;
@@ -377,6 +383,9 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 		}
 	}
 
+	if (!needRedirect)
+		return false;
+
 
 	string sHeader = "location:" + redirectPath + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
@@ -391,6 +400,7 @@ void WebServer::handle_stream(mg_http_message* hm, struct mg_connection* c) {
 
 	//307	Temporary Redirect	方法和消息主体都不发生变化。	由于不可预见的原因该页面暂不可用。在这种情况下，搜索引擎不会更新它们的链接。当站点支持非 GET 方法的链接或操作的时候，该状态码优于 302 状态码。
 	mg_http_reply(c, 307, sHeader.c_str(), "");
+	return true;
 }
 
 
@@ -421,6 +431,14 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
+			if (mg_http_match_uri(hm, "/stream/*")) {
+				if (pWs->handle_stream_redirect(hm, c)) {
+					return;
+				}
+			}
+
+
+
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
@@ -479,7 +497,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (mg_http_match_uri(hm, "/stream/*"))
 		{
-			pWs->handle_stream(hm, c);
+			pWs->handle_stream_redirect(hm, c);
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{

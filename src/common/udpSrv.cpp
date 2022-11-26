@@ -106,7 +106,7 @@ void udpServer::stop()
 	m_sock = 0;
 }
 
-void udpServer::startMultiCast(string multiCastAddr, int port)
+void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 {
 	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
 	//sock = m_sock;
@@ -125,7 +125,8 @@ void udpServer::startMultiCast(string multiCastAddr, int port)
 	//绑定
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons((u_short)(m_port+10));
+	//组播端口和udp服务端口不能使用同一端口，待研究
+	addr.sin_port = htons((u_short)(m_port +10));
 	if (m_bindIP == "0.0.0.0")
 	{
 		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
@@ -138,7 +139,8 @@ void udpServer::startMultiCast(string multiCastAddr, int port)
 	int nBind = ::bind(sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
 	if (0 != nBind)
 	{
-		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		DWORD dwErr = GetLastError();
+		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d,错误码:%d", m_bindIP.c_str(), m_port,dwErr);
 		LOG(strData);
 		return;
 	}
@@ -152,7 +154,7 @@ void udpServer::startMultiCast(string multiCastAddr, int port)
 	}
 
 	m_multiCastSendAddr = multiCastAddr;
-	m_multiCastSendPort = port;
+	m_multiCastSendPort = multiCastPort;
 	m_multiCastSendSock = sock;
 }
 

@@ -5,7 +5,7 @@
 
 class WebServer {
 public:
-	void handle_stream(mg_http_message* hm, mg_connection* c);
+	bool handle_stream_redirect(mg_http_message* hm, mg_connection* c);
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
