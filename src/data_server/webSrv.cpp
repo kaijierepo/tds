@@ -286,8 +286,8 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->hostname = hostname;
-	pSession->port = port;
+	pSession->hostName = hostname;
+	pSession->hostPort = port;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 

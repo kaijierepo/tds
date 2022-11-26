@@ -1691,8 +1691,8 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		return true;
 	}
 	else if (method == "getStreamUrl") {
-		string tag = params["tag"];
-		json rlt = rpc_getStreamUrl(tag, session.isHttps, session.hostname, session.port);
+		string tag = params["tag"]; 
+		json rlt = rpc_getStreamUrl(tag, session.isHttps, session.hostName, session.hostPort);
 		rpcResp.result = rlt.dump();
 	}
 	
@@ -3208,9 +3208,10 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int port)
+json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int hostport)
 {
-	string ip = hostname;
+	string ip = hostname; 
+	int port = hostport;
 	bool https = false;
 
 	tag = httplib::detail::decode_url(tag, false);
@@ -3231,6 +3232,14 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 			return "";
 		}
 		tag = TAG::trimRoot(tag, childTdsTag);
+
+		ip = childTdsInfo.ip;
+		if (isHttps) {
+			port = childTdsInfo.httpsPort;
+		}
+		else {
+			port = childTdsInfo.httpPort;
+		}
 	}
 
 	json j;
@@ -3239,12 +3248,12 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 	if (isHttps) {
 		j["flv"] = "https://" + ip + ":671/stream/" + tag + ".live.flv";
 		j["rtc"] = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-		j["de"] = "https://" + ip + ":" + str::fromInt(childTdsInfo.httpsPort) + "/stream/" + tag + ".de";
+		j["de"] = "wss://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 	}
 	else {
 		j["flv"] = "http://" + ip + ":672/stream/" + tag + ".live.flv";
 		j["rtc"] = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-		j["de"] = "http://" + ip + ":" + str::fromInt(childTdsInfo.httpPort) + "/stream/" + tag + ".de";
+		j["de"] = "ws://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 	}
 
 	return j;

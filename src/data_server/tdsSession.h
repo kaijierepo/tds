@@ -55,8 +55,8 @@ public:
 	string token;
 	bool isNotification; //是否是通知
 
-	string hostname;
-	int port;
+	string hostName;
+	int hostPort;
 	bool isHttps;
 
 	RPC_SESSION() {
