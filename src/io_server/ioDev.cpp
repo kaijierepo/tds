@@ -362,11 +362,18 @@ bool ioDev::getChanStatus(json& statusList)
 bool ioDev::loadConf(json& conf)
 {
 	lock_conf_unique();
+
+	if (conf.contains("addrMode")) {
+		m_addrMode = conf["addrMode"];
+	}
+
+
 	if (conf.contains("addr"))
 	{
 		m_jDevAddr = conf["addr"];
 
-		if (m_jDevAddr.is_object())
+		//addrMode以后保存到io.json。此处兼容未保存的
+		if (m_jDevAddr.is_object() && m_addrMode == "")
 		{
 			if (m_jDevAddr["id"] != nullptr) {
 				m_addrMode = DEV_ADDR_MODE::deviceID;
@@ -377,8 +384,6 @@ bool ioDev::loadConf(json& conf)
 			}
 			else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>()!=0)
 				m_addrMode = DEV_ADDR_MODE::tcpServer;
-			else if (m_jDevAddr["udpPort"].is_number_integer() && m_jDevAddr["udpPort"].get<int>()!=0)
-				m_addrMode = DEV_ADDR_MODE::udp;
 			else
 				m_addrMode = DEV_ADDR_MODE::tcpClient;
 		}
