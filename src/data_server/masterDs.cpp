@@ -156,6 +156,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 		OBJ* pMO = prj.queryObj(childSession->m_childTdsTag);
 		json rlt = resp["result"];
 		pMO->loadStatus(rlt);
+		pMO->m_bOnline = true;
 	}
 
 	return true;
