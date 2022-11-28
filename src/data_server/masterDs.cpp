@@ -145,9 +145,9 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 				p->loadStatus(&prjTmp, &stNow, false);
 			}
 		}
-		else { //响应当中仅包含实时数据
+		else { //响应当中仅包含实时数据,周期轮询得到的响应
 			json rlt = resp["result"];
-			loadStatus(rlt, childSession->m_childTdsTag);
+			loadChildTdsStatus(rlt, childSession->m_childTdsTag);
 		}
 	}
 	//同步实时值
@@ -162,7 +162,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 	return true;
 }
 
-bool MasterDs::loadStatus(json& rlt,string rootTag) {
+bool MasterDs::loadChildTdsStatus(json& rlt,string rootTag) {
 	shared_lock<shared_mutex> lock(prj.m_csPrj);
 	OBJ* pMO = prj.queryObj(rootTag);
 	if (pMO) {
@@ -173,6 +173,7 @@ bool MasterDs::loadStatus(json& rlt,string rootTag) {
 		timeopt::now(&stNow);
 		//此处不再保存到数据库，第3个参数需要重构掉
 		pMO->loadStatus(&prjTmp, &stNow, false);
+		pMO->m_bOnline = true;//子服务根节点不携带online字段，收到数据一定online，此处直接置为online
 	}
 	return true;
 }
@@ -434,7 +435,7 @@ void MasterDs::workingProc()
 	timeopt::now(&stLastHeartbeat);
 	while (1) {
 		Sleep(1 * 1000);
-		if (timeopt::CalcTimePassSecond(stLastDataQuery) > 5 * 60) {
+		if (timeopt::CalcTimePassSecond(stLastDataQuery) > 60) {
 			json jReq,jParam;
 			jReq["method"] = "getObj";
 			jParam["tag"] = "";

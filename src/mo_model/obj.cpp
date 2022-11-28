@@ -364,26 +364,26 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	return true;
 }
 
-bool OBJ::loadStatus(OBJ* pSrc, TIME* dataTime, bool saveToDB)
+bool OBJ::loadStatus(OBJ* pSrcRoot, TIME* dataTime, bool saveToDB)
 {
 	string tag = getTag();
-	OBJ* ptmp = pSrc->queryObj(tag);
+	OBJ* ptmp = pSrcRoot->queryObj(tag);
 	if (ptmp) {
-		m_bOnline = pSrc->m_bOnline;
+		m_bOnline = ptmp->m_bOnline;
 		if (dataTime != nullptr)
 			m_stDataLastUpdate = *dataTime;
 		else
-			m_stDataLastUpdate = pSrc->m_stDataLastUpdate;
-		m_longitudeDyn = pSrc->m_longitudeDyn;
-		m_latitudeDyn = pSrc->m_latitudeDyn;
-		m_status = pSrc->m_status;
-		m_jAlarmStatus = pSrc->m_jAlarmStatus;
-		m_strIoAddrBind = pSrc->m_strIoAddrBind;
+			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
+		m_longitudeDyn = ptmp->m_longitudeDyn;
+		m_latitudeDyn = ptmp->m_latitudeDyn;
+		m_status = ptmp->m_status;
+		m_jAlarmStatus = ptmp->m_jAlarmStatus;
+		m_strIoAddrBind = ptmp->m_strIoAddrBind;
 
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pC = m_childObj[i];
-			pC->loadStatus(pSrc,dataTime,saveToDB);
+			pC->loadStatus(pSrcRoot,dataTime,saveToDB);
 		}
 	}
 	else

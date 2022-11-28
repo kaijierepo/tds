@@ -36,7 +36,7 @@ public:
 	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess);
 	void OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> childSession);
 	bool handleAsynResp(json jResp, std::shared_ptr<TDS_SESSION> childSession);
-	bool loadStatus(json& rlt, string rootTag);
+	bool loadChildTdsStatus(json& rlt, string rootTag);
 	bool handleNotify(json jResp, std::shared_ptr<TDS_SESSION> childSession);
 	void onRecvPkt(json& pkt, std::shared_ptr<TDS_SESSION> childSession);
 
