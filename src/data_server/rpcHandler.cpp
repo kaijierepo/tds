@@ -1090,6 +1090,15 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
 		}
 	}
+	else if (method == "setChanTemplate") {
+		CHAN_TEMPLATE ct;
+		ct.label = params["name"];
+		str::hanZi2Pinyin(ct.label, ct.name);
+		ct.channels = params["channels"];
+		ioSrv.m_mapChanTempalte[ct.name] = ct;
+		ioSrv.saveChanTemplate();
+		rpcResp.result = "\"ok\"";
+	}
 	else if (method == "discoverDev")
 	{
 #ifdef ENABLE_GENICAM

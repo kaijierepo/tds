@@ -149,6 +149,7 @@ ioDev::ioDev(void)
 	m_onlineInfoQueried = false;
 	m_acqMode = "all";
 	m_acqAlarm = true;
+	m_bViaAdaptor = false;
 }
 
 ioDev::~ioDev(void)
@@ -221,7 +222,11 @@ bool ioDev::toJson(json& conf, json opt)
 
 	//配置数据 - 保存在配置文件中
 	if (querier.getConf) {
+		conf["addrMode"] = m_addrMode;
 		conf["addr"] = m_jDevAddr;
+		if (m_bViaAdaptor) {
+			conf["viaAdaptor"] = true;
+		}
 		conf["type"] = m_devType;
 		conf["typeLabel"] = m_devTypeLabel;
 		conf["level"] = m_level;
@@ -367,6 +372,9 @@ bool ioDev::loadConf(json& conf)
 		m_addrMode = conf["addrMode"];
 	}
 
+	if (conf["viaAdaptor"].is_boolean()) {
+		m_bViaAdaptor = conf["viaAdaptor"].get<bool>();
+	}
 
 	if (conf.contains("addr"))
 	{
@@ -781,22 +789,51 @@ string ioDev::getDevAddrStr(bool ignorePort)
 	string devAddr;
 	if (m_jDevAddr.is_object())
 	{
-		if (m_jDevAddr["id"] != nullptr)
+		if (m_addrMode == DEV_ADDR_MODE::deviceID)
 		{
-			devAddr = m_jDevAddr["id"].get<string>();
-			if (ignorePort) {
-				devAddr = ioDev::removePortFromIoAddr(devAddr);
+			if (m_jDevAddr.contains("id")) {
+				devAddr = m_jDevAddr["id"].get<string>();
+				if (ignorePort) {
+					devAddr = ioDev::removePortFromIoAddr(devAddr);
+				}
 			}
 		}
-		else if (m_jDevAddr["ip"] != nullptr)
+		else if (m_addrMode == DEV_ADDR_MODE::tcpClient)
 		{
-			devAddr = m_jDevAddr["ip"].get<string>();
+			string ip;
+			int port = 0;
+			if(m_jDevAddr.contains("ip"))
+				ip = m_jDevAddr["ip"].get<string>();
 			if (m_jDevAddr["port"] != nullptr)
 			{
-				int remotePort = m_jDevAddr["port"].get<int>();
-				if(!ignorePort)
-					devAddr += ":" + str::fromInt(remotePort);
+				port = m_jDevAddr["port"].get<int>();
 			}
+
+			devAddr = ip;
+			if(!ignorePort)
+				devAddr += ":" + str::fromInt(port);
+		}
+		else if (m_addrMode == DEV_ADDR_MODE::tcpServer)
+		{
+			string ip;
+			if (m_jDevAddr.contains("ip"))
+				ip = m_jDevAddr["ip"].get<string>();
+			devAddr = ip;
+		}
+		else if (m_addrMode == DEV_ADDR_MODE::udp)
+		{
+			string ip;
+			int port = 0;
+			if (m_jDevAddr.contains("ip"))
+				ip = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["port"] != nullptr)
+			{
+				port = m_jDevAddr["port"].get<int>();
+			}
+
+			devAddr = "UDP-" + ip;
+			if (!ignorePort)
+				devAddr += ":" + str::fromInt(port);
 		}
 		else if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
 		{
@@ -880,27 +917,34 @@ bool ioDev::SendPkt(PKT_DATA& pkt)
 
 bool ioDev::sendData(char* pData, int iLen)
 {
-	unique_lock<mutex> lock(m_csIOSession);
-	if (pIOSession)
-	{
-		pIOSession->send(pData, iLen);
-		if (m_bEnableIoLog)
-			IOLogSend((char*)pData, iLen,true, pIOSession->getRemoteAddr());
+	if (m_pParent != nullptr && m_pParent != &ioSrv) {
+		m_pParent->sendData(pData, iLen);
 	}
 	else {
-		string ioAddr = getIOAddrStr();
-		if (ioAddr.find("adp") != string::npos) {
-			if (ioSrv.m_udpSrv_adaptor != nullptr) {
-				ioSrv.m_udpSrv_adaptor->SendData(pData, iLen, "127.0.0.1", 660);
-				if (m_bEnableIoLog)
-					IOLogSend((char*)pData, iLen,true, "UDP - 127.0.0.1:660");
+		//直接发送给设备
+		unique_lock<mutex> lock(m_csIOSession);
+		if (pIOSession)
+		{
+			pIOSession->send(pData, iLen);
+			if (m_bEnableIoLog)
+				IOLogSend((char*)pData, iLen, true, pIOSession->getRemoteAddr());
+		}
+		//通过协议适配器发送给设备
+		else {
+			if (m_bViaAdaptor) {
+				if (ioSrv.m_udpSrv != nullptr) {
+					ioSrv.m_udpSrv->SendData(pData, iLen, "127.0.0.1", 660);
+					if (m_bEnableIoLog)
+						IOLogSend((char*)pData, iLen, true, "UDP-127.0.0.1:660");
+				}
+			}
+			else
+			{
+				return false;
 			}
 		}
-		else
-		{
-			return false;
-		}
 	}
+
 	return true;
 }
 
@@ -937,6 +981,12 @@ void ioDev::setOnline()
 {
 	//[问题]观察到有pIOSession已经为空，也就是说链接已经断开。却还有缓存数据没有处理，导致处理后设置为上线的问题
 	//该问题需优化
+
+	if (m_pParent != nullptr && m_pParent != &ioSrv) {
+		m_pParent->setOnline();
+	}
+
+
 	if (m_bOnline == false)
 	{
 		m_bOnline = true;

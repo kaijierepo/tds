@@ -291,7 +291,7 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 
 void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
-	IOLogRecv(recvData, recvDataLen, "UDP - " + strIP + ":" + str::fromInt(port));
+	IOLogRecv(recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
 
 
 	if (port == 660)//来自于adaptor
@@ -304,15 +304,22 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 			string ioAddr = jPkt["ioAddr"].get<string>();
 			string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
 
+			//是否是1级设备
+			bool firstLevel = false;
+			if (ioAddr.find("/") == string::npos)
+				firstLevel = true;
+
 
 			//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
 			ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
 			//设备发现
 			if (!pIoDev)
 			{
-				json jAddr;
-				jAddr["id"] = ioAddr;
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				if (firstLevel) {
+					json jAddr;
+					jAddr["id"] = ioAddr;
+					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				}
 			}
 			//设备上线
 			else
@@ -325,23 +332,32 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 					logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 				}
 			}
-			pIoDev->onRecvPkt(jPkt);
+
+			if(pIoDev)
+				pIoDev->onRecvPkt(jPkt);
 		}
 		catch (exception& e) {
 
 		}
 	}
-	// udp设备
+	// udp设备,协议不一定是tdsp，可能是visca over udp等
 	else {
-		string ioAddr = strIP + ":" + str::fromInt(port);
+		string ioAddr = "UDP-" + strIP + ":" + str::fromInt(port);
+		string ioAddrWithoutPort = "UDP-" + strIP;
 		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
-		ioDev* pIoDev = ioSrv.getIODev(strIP, false, true);
-		if (pIoDev->m_bOnline == false)
+		ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
+		if (pIoDev)
 		{
-			pIoDev->setOnline();
-			pIoDev->triggerCycleAcq();
-			timeopt::now(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			if (pIoDev->m_bOnline == false) {
+				pIoDev->setOnline();
+				pIoDev->triggerCycleAcq();
+				timeopt::now(&pIoDev->m_stLastActiveTime);
+				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			}
+			pIoDev->OnRecvData(recvData, recvDataLen); 
+		}
+		else {
+			LOG("[warn]未知协议空闲设备上线，ioAddr=%s", ioAddr.c_str());  
 		}
 	}
 }
@@ -464,26 +480,19 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 
 	ioDev* parentDev = this;
 
-	if (type == IO_DEV_TYPE::DEV::tdsp_device)
-	{
 
-	}
-	else {
-		string parentID;
-		if (params["parentID"] != nullptr) {
-			parentID = params["parentID"].get<string>();
-			parentDev = getIODevByNodeID(parentID);
-			if (parentDev == NULL)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID, "未找到父节点，父节点ID:" + parentID);
-				return;
-			}
+	string parentID;
+	if (params["parentID"] != nullptr) {
+		parentID = params["parentID"].get<string>();
+		parentDev = getIODevByNodeID(parentID);
+		if (parentDev == NULL)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "parent device not found, nodeID:" + parentID, "未找到父节点，父节点ID:" + parentID);
+			return;
 		}
-		else
-			parentDev = this;
 	}
-
-
+	else
+		parentDev = this;
 
 
 	ioDev* pd = createIODev(type);
@@ -919,6 +928,26 @@ bool ioServer::loadChanTemplate()
 	return false;
 }
 
+void ioServer::saveChanTemplate()
+{
+	string p = tds->conf->confPath + "/template/conf.json";
+	json jConf = json::array();
+	for (auto& i : m_mapChanTempalte) {
+		json c;
+		c["name"] = i.second.name;
+		c["label"] = i.second.label;
+		jConf.push_back(c);
+	}
+	string sConf = jConf.dump(2);
+	fs::writeFile(p, sConf);
+
+	string chanPath = tds->conf->confPath + "/template/";
+	for (auto& i : m_mapChanTempalte) {
+		string s = i.second.channels.dump(2);
+		fs::writeFile(chanPath + "/" + i.second.name + ".json", s);
+	}
+}
+
 void ioServer::refreshSerialIODev()
 {
 	//从操作系统的设备管理器获得串口列表信息
@@ -1067,8 +1096,8 @@ bool ioServer::runAsCloud()
 	}
 
 	//adaptor接入服务
-	m_udpSrv_adaptor = new udpServer();
-	if (m_udpSrv_adaptor->run(this,adpPort)) {
+	m_udpSrv = new udpServer();
+	if (m_udpSrv->run(this,adpPort)) {
 
 	}
 	else {
