@@ -582,7 +582,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 						{"app","stream"},
 						{"stream",tag},
 						{"url",pmp->m_rtspAddr},
-						{"enable_hls","0"},
+						{"enable_hls","1"},
 						{"enable_ts","0"},
 						{"enable_mp4","0"}
 					};
@@ -3249,7 +3249,7 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 	OBJ* pObj = prj.queryObj(tag);
 	if (!pObj) {
 
-		return "";
+		return nullptr; 
 	}
 
 	OBJ* childTds = pObj->getOwnerChildTds();
@@ -3259,7 +3259,7 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 		string childTdsTag = childTds->getTag();
 		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
 		{
-			return "";
+			return nullptr;
 		}
 		tag = TAG::trimRoot(tag, childTdsTag);
 
