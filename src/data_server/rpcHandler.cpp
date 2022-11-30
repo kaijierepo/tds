@@ -514,7 +514,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 					int time = params["time"].get<int>();
 					json paramAsynCall;
 					paramAsynCall["tag"] = tag;
-					tds->callAsyn("stopPanTilt", paramAsynCall.dump(), 1000);
+					tds->callAsyn("stopPanTilt", paramAsynCall.dump(), time);
 				}
 			}
 			else if (method == "stopPanTilt")
@@ -524,8 +524,18 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			else if (method == "startZoom")
 			{
 				string dir = params["dir"];
-				float speed = params["speed"].get<float>();
+				float speed = 0;
+				if (params.contains("speed")) {
+					speed = params["speed"].get<float>();
+				}
 				pCam->ptz_startZoom(dir);
+
+				if (params.contains("time")) {
+					int time = params["time"].get<int>();
+					json paramAsynCall;
+					paramAsynCall["tag"] = tag;
+					tds->callAsyn("stopZoom", paramAsynCall.dump(), time);
+				}
 			}	
 			else if (method == "stopZoom")
 			{
@@ -534,8 +544,18 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			else if (method == "startFocus")
 			{
 				string dir = params["dir"];
-				float speed = params["speed"].get<float>();
+				float speed = 0;
+				if (params.contains("speed")) {
+					speed = params["speed"].get<float>();
+				}
 				pCam->ptz_startFocus(dir);
+
+				if (params.contains("time")) {
+					int time = params["time"].get<int>();
+					json paramAsynCall;
+					paramAsynCall["tag"] = tag;
+					tds->callAsyn("stopFocus", paramAsynCall.dump(), time);
+				}
 			}
 			else if (method == "stopFocus")
 			{
