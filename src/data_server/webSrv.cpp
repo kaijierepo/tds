@@ -336,6 +336,10 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 		tag = str::trimSuffix(tag, ".de");
 		proto = "de";
 	}
+	else if (tag.find(".hls") != string::npos) {
+		tag = str::trimSuffix(tag, ".hls");
+		proto = "hls";
+	}
 
 	json jStreamUrl = rpcSrv.rpc_getStreamUrl(tag,m_isHttps,ip,port);
 
