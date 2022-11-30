@@ -572,6 +572,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				if (!pmp->m_bIsStreaming)
 				{
 					string tag = pmp->getTag();
+					str::hanZi2Pinyin(tag, tag);
 					string streamServerUrl = "http://127.0.0.1:672";
 					//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
 					httplib::Client cli(streamServerUrl);
@@ -3272,6 +3273,8 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 	}
 
 	json j;
+
+	str::hanZi2Pinyin(tag, tag);
 
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
 	if (isHttps) {
