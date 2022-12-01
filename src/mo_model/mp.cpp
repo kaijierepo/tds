@@ -24,6 +24,7 @@ MP::MP()
 	m_deadZone = 0;
 	m_bDownSample = 0;
 	m_downSampleInterval = 2000;
+	m_srcStreamFetch = "ondemand";
 }
 
 MP::~MP()
@@ -224,6 +225,10 @@ bool MP::loadConf(json& conf)
 		m_downSampleInterval = conf["downSampleInterval"].get<int>();
 	}
 
+	if (conf["srcStreamFetch"].is_string()) {
+		m_srcStreamFetch = conf["srcStreamFetch"];
+	}
+
 	return false;
 }
 
@@ -349,6 +354,8 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			conf["downSample"] = m_bDownSample;
 			conf["downSampleInterval"] = m_downSampleInterval;
 		}
+		
+		conf["srcStreamFetch"] = m_srcStreamFetch;
 	}
 	
 

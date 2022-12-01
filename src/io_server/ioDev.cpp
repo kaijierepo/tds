@@ -802,9 +802,9 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		{
 			string ip;
 			int port = 0;
-			if(m_jDevAddr.contains("ip"))
+			if(m_jDevAddr["ip"].is_string())
 				ip = m_jDevAddr["ip"].get<string>();
-			if (m_jDevAddr["port"] != nullptr)
+			if (m_jDevAddr["port"].is_number_integer())
 			{
 				port = m_jDevAddr["port"].get<int>();
 			}

@@ -316,6 +316,12 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	}
 }
 
+bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
+	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
+	LOG("[error] zlm hook\r\n" + hookData);
+	return true;
+}
+
 bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection* c) {
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
@@ -452,6 +458,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/stream/*"))
 		{
 			pWs->handle_stream_redirect(hm, c);
+		}
+		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
+
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
