@@ -106,8 +106,8 @@ public:
 
 
 	//视频
-	string m_videoSrcType;
-	string m_rtspAddr;
+	string m_mediaSrcType;
+	string m_mediaUrl;
 	bool m_bIsStreaming;
 	DWORD m_srcPullingFFmpegProcID;
 

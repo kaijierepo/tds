@@ -12,6 +12,7 @@
 #include "prj.h"
 #include "masterDs.h"
 #include "mp.h"
+#include "users/userMng.h"
 
 string rootDir;
 string confDir;
@@ -318,7 +319,65 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 
 bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
-	LOG("[error] zlm hook\r\n" + hookData);
+	json j = json::parse(hookData);
+	string urlParam = j["params"];
+
+	if(mg_http_match_uri(hm, "/zlmhook/on_play"))//播放鉴权
+	{
+		json jQuery = parseParamFromQuery(urlParam);
+		//用户名密码鉴权模式
+		if (jQuery["user"] != nullptr && jQuery["pwd"] != nullptr) {
+			string user = jQuery["user"];
+			string pwd = jQuery["pwd"];
+
+			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
+		}
+
+		json resp;
+		resp["code"] = 0;
+		resp["msg"] = "success";
+
+		string resHeader, resBody;
+		resBody = resp.dump(2);
+		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+	}
+	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
+		string tagPinyin = j["stream"];
+		MP* pmp = prj.GetMPByTag(tagPinyin, true);
+		if (pmp) {
+			string tag = pmp->getTag();
+
+			//LOG("[流媒体]播放流媒体时")
+
+			rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
+			json resp;
+			resp["code"] = 0;
+			resp["msg"] = "success";
+
+			string resHeader, resBody;
+			resBody = resp.dump(2);
+			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+		}
+		else {
+			json resp;
+			resp["code"] = -1;
+			resp["msg"] = "fail";
+
+			string resHeader, resBody;
+			resBody = resp.dump(2);
+			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+		}
+	}
+	else {
+		json resp;
+		resp["code"] = 0;
+		resp["msg"] = "success";
+
+		string resHeader, resBody;
+		resBody = resp.dump(2);
+		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+	}
+
 	return true;
 }
 
@@ -346,15 +405,37 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 		tag = str::trimSuffix(tag, ".hls");
 		proto = "hls";
 	}
+	else if (tag.find(".rtsp") != string::npos) {
+		tag = str::trimSuffix(tag, ".rtsp");
+		proto = "rtsp";
+	}
 
-	json jStreamUrl = rpcSrv.rpc_getStreamUrl(tag,m_isHttps,ip,port);
+	tag = httplib::detail::decode_url(tag, false);
+	MP* pmp = prj.GetMPByTag(tag); 
+	if (!pmp) {
+		mg_http_reply(c, 404, "", "");
+		return true;
+	}
+
+	json jStreamUrl = rpcSrv.rpc_getStreamUrl(pmp,tag,m_isHttps,ip,port);
 
 	if (jStreamUrl[proto] == nullptr) {
 		mg_http_reply(c, 404, "", "");
 		return true;
 	}
 
+	//流媒体服务器为本机，连接媒体源
+	if (!jStreamUrl["isChildTds"].get<bool>()) {
+		rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
+	}
+
 	string url = jStreamUrl[proto];
+
+	string urlParam = str::fromBuff(hm->query.ptr, hm->query.len);
+	if (urlParam != "") {
+		url += "?" + urlParam;
+	}
+
 	string sHeader = "location:" + url + "\r\n";
 	sHeader += "Cache-Control:max-age=1\r\n";
 
@@ -460,7 +541,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			pWs->handle_stream_redirect(hm, c);
 		}
 		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
-
+			pWs->handle_zlmhook(hm, c);
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
@@ -945,7 +1026,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		}
 
 		map<string, string> mapParams;
-		getUrlParams(strData, mapParams);
+		parseParamFromUrl(strData, mapParams);
 		if (mapParams.find("needLog") != mapParams.end())
 		{
 			string needLog = mapParams["needLog"];
@@ -977,27 +1058,50 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	}
 }
 
-void WebServer::getUrlParams(string& url, map<string, string>& mapParams)
+void WebServer::parseParamFromUrl(string& url, map<string, string>& mapParams)
 {
 	int paramStart = url.find('?', 0);
 	if (paramStart != string::npos)//解析携带参数
 	{
 		int paramEnd = url.find(' ', paramStart);
 		string paramStr = url.substr(paramStart + 1, paramEnd - paramStart - 1);
-		vector<string> params;
-		str::split(params, paramStr, "&");
+		parseParamFromQuery(paramStr, mapParams);
+	}
+}
 
-		for (int i = 0; i < params.size(); i++)
+void WebServer::parseParamFromQuery(string& query, map<string, string>& mapParams)
+{
+	vector<string> params;
+	str::split(params, query, "&");
+
+	for (int i = 0; i < params.size(); i++)
+	{
+		string oneP = params[i];
+		vector<string> pkv;
+		str::split(pkv, oneP, "=");
+		if (pkv.size() == 2)
 		{
-			string oneP = params[i];
-			vector<string> pkv;
-			str::split(pkv, oneP, "=");
-			if (pkv.size() == 2)
-			{
-				mapParams[pkv[0]] = pkv[1];
-			}
+			mapParams[pkv[0]] = pkv[1];
 		}
 	}
+}
+
+json WebServer::parseParamFromQuery(string& query)
+{
+	vector<string> params;
+	str::split(params, query, "&");
+	json j;
+	for (int i = 0; i < params.size(); i++)
+	{
+		string oneP = params[i];
+		vector<string> pkv;
+		str::split(pkv, oneP, "=");
+		if (pkv.size() == 2)
+		{
+			j[pkv[0]] = pkv[1];
+		}
+	}
+	return j;
 }
 
 

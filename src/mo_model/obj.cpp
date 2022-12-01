@@ -559,7 +559,7 @@ string OBJ::getTagWithRoot()
 	return strTagName;
 }
 
-void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
+void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,string type)
 {
 	if (strTag.find("*") == string::npos)//精确查找
 	{
@@ -585,7 +585,11 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
 			for (int j = 0; j < childMO->size(); j++)
 			{
 				OBJ* tmp = childMO->at(j);
-				if (tmp->m_name == name)
+				string tmpName = tmp->m_name;
+				if (usePinyin) {
+					str::hanZi2Pinyin(tmpName, tmpName);
+				}
+				if (tmpName == name)
 				{
 					toQuery = tmp;
 					findNode = true;
@@ -626,7 +630,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag,string type)
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pMOChild = m_childObj.at(i);
-			pMOChild->queryObj(tagVec, strTag,type);
+			pMOChild->queryObj(tagVec, strTag,usePinyin,type);
 		}
 	}
 }
@@ -645,22 +649,22 @@ void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
 	}
 }
 
-OBJ* OBJ::queryObj(string strTag)
+OBJ* OBJ::queryObj(string strTag,bool usePinyin)
 {
 	if (strTag == "")
 		return this;
 
 	vector<OBJ*> tags;
-	queryObj(&tags, strTag);
+	queryObj(&tags, strTag,usePinyin);
 	if (tags.size() > 0)
 		return tags[0];
 	else
 		return NULL;
 }
 
-MP* OBJ::GetMPByTag(string strTag)
+MP* OBJ::GetMPByTag(string strTag, bool usePinyin)
 {
-	OBJ* pMO = queryObj(strTag);
+	OBJ* pMO = queryObj(strTag, usePinyin);
 	if (pMO && pMO->m_type == "mp")
 		return (MP*)pMO;
 	return nullptr;

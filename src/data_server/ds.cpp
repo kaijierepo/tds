@@ -136,7 +136,7 @@ void streamPusherMng_thread() {
 					else {
 						status = "已断开";
 					}
-					src = pmp->m_rtspAddr;
+					src = pmp->m_mediaUrl;
 				}
 				else {
 					status = "位号未找到";

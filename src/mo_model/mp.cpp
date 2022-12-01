@@ -198,12 +198,12 @@ bool MP::loadConf(json& conf)
 	}
 
 
-	if (conf["videoSrcType"] != nullptr) {
-		m_videoSrcType = conf["videoSrcType"].get<string>();
+	if (conf["mediaSrcType"] != nullptr) {
+		m_mediaSrcType = conf["mediaSrcType"].get<string>();
 	}
 
-	if (conf["rtspAddr"] != nullptr) {
-		m_rtspAddr = conf["rtspAddr"].get<string>();
+	if (conf["mediaUrl"] != nullptr) {
+		m_mediaUrl = conf["mediaUrl"].get<string>();
 	}
 
 
@@ -327,8 +327,8 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		if (m_decimalDigits >= 0)
 			conf["decimalDigits"] = m_decimalDigits;
 		if (p->m_valType == "video") {
-			conf["videoSrcType"] = m_videoSrcType;
-			conf["rtspAddr"] = m_rtspAddr;
+			conf["mediaSrcType"] = m_mediaSrcType;
+			conf["mediaUrl"] = m_mediaUrl;
 		}
 		//枚举值
 		if (m_valType == VAL_TYPE::integer) {

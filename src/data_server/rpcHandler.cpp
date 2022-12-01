@@ -569,74 +569,20 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 			}
 			else {
-				if (!pmp->m_bIsStreaming)
-				{
-					string tag = pmp->getTag();
-					str::hanZi2Pinyin(tag, tag);
-					string streamServerUrl = "http://127.0.0.1:672";
-					//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
-					httplib::Client cli(streamServerUrl);
-					httplib::Headers headers;
-					httplib::Params params = {
-						{ "vhost", "__defaultVhost__" },
-						{"app","stream"},
-						{"stream",tag},
-						{"url",pmp->m_rtspAddr},
-						{"enable_hls","1"},
-						{"enable_ts","0"},
-						{"enable_mp4","0"}
-					};
-
-					string uri = "/index/api/addStreamProxy";
-					auto res = cli.Get(uri,params,headers);
-					LOG("Get " + streamServerUrl + uri + ",tag=" + tag);
-					if (res != nullptr) {
-						
+				if (pmp->m_mediaSrcType != "file") {
+					if (!pmp->m_bIsStreaming)
+					{
+						string tag = pmp->getTag();
+						zlm_openStream(tag,pmp->m_mediaUrl);
 					}
 					else {
-						LOG("stream server 未响应");
-					}			
+						LOG("码流已打开");
+					}
 				}
-				else {
-					LOG("码流已打开");
-				}
-
+				
 				rpcResp.result = "\"ok\"";
 			}
 			LOG("打开码流,tag=" + tag);
-			/*if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
-			}
-			else {
-				MP* pmp = prj.GetMPByTag(tag);
-				if (!pmp) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-				}
-				else {
-					if (!pmp->m_bIsStreaming)
-					{
-						pmp->m_srcPullingFFmpegProcID = openRtspSrc(tag, pmp->m_rtspAddr);
-						if (pmp->m_srcPullingFFmpegProcID)
-						{
-							pmp->m_bIsStreaming = true;
-							SYSTEMTIME st;
-							timeopt::now(&st);
-							ds.m_mapPullerActive[tag] = st;
-						}
-					}
-					if (pmp->m_bIsStreaming)
-					{
-						json rlt;
-						string tagPY;
-						str::hanZi2Pinyin(tag, tagPY);
-						rlt["url"] = "/tds/" + tagPY + ".live.flv";
-						rpcResp.result = rlt.dump();
-					}
-					else {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "fail");
-					}
-				}
-			}*/
 		}
 		else if (method == "keepStream") {
 			TIME st;
@@ -1398,7 +1344,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//通配模式，返回一个数组
 			if (tag.find("*") != string::npos) {
 				vector<OBJ*> objList;
-				prj.queryObj(&objList, tag,type);
+				prj.queryObj(&objList, tag,false,type);
 				params["rootTag"] = rootTag;
 
 				if (mode == "array") {
@@ -1722,8 +1668,14 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 	else if (method == "getStreamUrl") {
 		string tag = params["tag"]; 
-		json rlt = rpc_getStreamUrl(tag, session.isHttps, session.hostName, session.hostPort);
-		rpcResp.result = rlt.dump();
+		MP* pmp = prj.GetMPByTag(tag);
+		if (pmp) {
+			json rlt = rpc_getStreamUrl(pmp,tag, session.isHttps, session.hostName, session.hostPort);
+			rpcResp.result = rlt.dump();
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "tag not found");
+		}
 	}
 	
 
@@ -2624,6 +2576,34 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 	return jAlmStatis;
 }
 
+void rpcHandler::zlm_openStream(string tag,string srcUrl)
+{
+	str::hanZi2Pinyin(tag, tag);
+	string streamServerUrl = "http://127.0.0.1:672";
+	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{ "vhost", "__defaultVhost__" },
+		{"app","stream"},
+		{"stream",tag},
+		{"url",srcUrl},
+		{"enable_hls","1"},
+		{"enable_ts","0"},
+		{"enable_mp4","0"}
+	};
+
+	string uri = "/index/api/addStreamProxy";
+	auto res = cli.Get(uri, params, headers);
+	LOG("打开流媒体源,Get " + streamServerUrl + uri + ",tag=" + tag);
+	if (res != nullptr) {
+
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," +uri);
+	}
+}
+
 
 void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp,RPC_SESSION session)
 {
@@ -3238,23 +3218,16 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int hostport)
+json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostname,int hostport)
 {
 	string ip = hostname; 
 	int port = hostport;
 	bool https = false;
 
-	tag = httplib::detail::decode_url(tag, false);
-
-	OBJ* pObj = prj.queryObj(tag);
-	if (!pObj) {
-
-		return nullptr; 
-	}
-
-	OBJ* childTds = pObj->getOwnerChildTds();
+	OBJ* childTds = pmp->getOwnerChildTds();
 	//重定向到子服务
 	CHILD_TDS_INFO childTdsInfo;
+	bool isChildTds = false;
 	if (childTds && pMasterDs) {
 		string childTdsTag = childTds->getTag();
 		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
@@ -3270,26 +3243,70 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 		else {
 			port = childTdsInfo.httpPort;
 		}
+		isChildTds = true;
 	}
 
 	json j;
 
 	string tagPinyin;
 	str::hanZi2Pinyin(tag, tagPinyin);
-
-	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
+	string urlProto;
+	string wsProto;
 	if (isHttps) {
-		j["flv"] = "https://" + ip + ":671/stream/" + tagPinyin + ".live.flv";
-		j["hls"] = "https://" + ip + ":671/stream/" + tagPinyin + "/hls.m3u8";
-		j["rtc"] = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
-		j["de"] = "wss://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
+		urlProto = "https://";
+		wsProto = "wss://";
+		port = 671;
 	}
 	else {
-		j["flv"] = "http://" + ip + ":672/stream/" + tagPinyin + ".live.flv";
-		j["hls"] = "http://" + ip + ":672/stream/" + tagPinyin + "/hls.m3u8";
-		j["rtc"] = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
-		j["de"] = "ws://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
+		urlProto = "http://";
+		wsProto = "ws://";
+		port = 672;
 	}
+
+	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
+	//zlmediakit的hls模式暂时不支持中文，因此此处转成拼音
+	if (!childTds) {
+		if (pmp->m_valType == VAL_TYPE::video) {
+			if (pmp->m_mediaSrcType == "file") {
+				string url = str::trimPrefix(pmp->m_mediaUrl, "/");
+				url = str::trimSuffix(url, ".mp4");
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4";
+				j["rtsp"] = "rtsp://" + ip + "/record/" + url + ".mp4";
+			}
+			else {
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tagPinyin + ".live.flv";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tagPinyin + "/hls.m3u8";
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
+				j["rtsp"] = "rtsp://" + ip + "/stream/" + tagPinyin;
+			}
+		}
+		else
+		{
+			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
+		}
+	}
+	else {
+		if (pmp->m_valType == VAL_TYPE::video) {
+			if (isHttps) {
+				port = childTdsInfo.httpsPort;
+			}
+			else {
+				port = childTdsInfo.httpPort;
+			}
+			j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
+			j["rtsp"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtsp";
+			j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtc";
+			j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
+		}
+		else
+		{
+			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
+		}
+	}
+
+
+	j["isChildTds"] = isChildTds;
 
 	return j;
 }

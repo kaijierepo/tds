@@ -85,6 +85,9 @@ public:
 
 	//alarm
 	json getAlarmStatis(string rootTag, RPC_SESSION session);
+
+	//zlm互操作
+	void zlm_openStream(string tag,string srcUrl);
 	
 	//辅助功能
 	string rpc_getconf(json params, string& error);
@@ -92,7 +95,7 @@ public:
 	string rpc_getconffile(json params, string& error);
 	string rpc_setconffile(json params, string& error);
 
-	json rpc_getStreamUrl(string tag, bool isHttps, string hostname, int port);
+	json rpc_getStreamUrl(MP* pmp, string tag, bool isHttps, string hostname, int port);
 
     string  ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession);
 
