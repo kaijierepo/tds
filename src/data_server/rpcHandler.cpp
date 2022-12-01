@@ -3274,19 +3274,20 @@ json rpcHandler::rpc_getStreamUrl(string tag, bool isHttps, string hostname,int 
 
 	json j;
 
-	str::hanZi2Pinyin(tag, tag);
+	string tagPinyin;
+	str::hanZi2Pinyin(tag, tagPinyin);
 
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
 	if (isHttps) {
-		j["flv"] = "https://" + ip + ":671/stream/" + tag + ".live.flv";
-		j["hls"] = "https://" + ip + ":671/stream/" + tag + "/hls.m3u8";
-		j["rtc"] = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		j["flv"] = "https://" + ip + ":671/stream/" + tagPinyin + ".live.flv";
+		j["hls"] = "https://" + ip + ":671/stream/" + tagPinyin + "/hls.m3u8";
+		j["rtc"] = "https://" + ip + ":671/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
 		j["de"] = "wss://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 	}
 	else {
-		j["flv"] = "http://" + ip + ":672/stream/" + tag + ".live.flv";
-		j["hls"] = "http://" + ip + ":672/stream/" + tag + "/hls.m3u8";
-		j["rtc"] = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+		j["flv"] = "http://" + ip + ":672/stream/" + tagPinyin + ".live.flv";
+		j["hls"] = "http://" + ip + ":672/stream/" + tagPinyin + "/hls.m3u8";
+		j["rtc"] = "http://" + ip + ":672/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
 		j["de"] = "ws://" + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 	}
 
