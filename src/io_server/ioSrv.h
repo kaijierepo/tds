@@ -162,7 +162,7 @@ public:
 	string getTag(string ioAddr);
 
 	//设备发现必须是某个父设备发现了子设备
-	ioDev* onChildDevDiscovered(json childDevAddr, string type, bool udpDev = false);
+	ioDev* onChildDevDiscovered(json childDevAddr, string type);
 	ioDiscoverer  ioDiscoverService;
 
 

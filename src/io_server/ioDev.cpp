@@ -129,7 +129,6 @@ ioDev::ioDev(void)
 	m_pParent = NULL;
 	m_bOnline = false;
 	m_iSendDataFailCount = 0;
-	m_bUdpDev = false;
 	m_tcpClt = nullptr;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(TIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(TIME));
@@ -385,10 +384,6 @@ bool ioDev::loadConf(json& conf)
 		{
 			if (m_jDevAddr["id"] != nullptr) {
 				m_addrMode = DEV_ADDR_MODE::deviceID;
-				string id = m_jDevAddr["id"];
-				if (id.find("adp") != string::npos) {
-					m_bUdpDev = true;
-				}
 			}
 			else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>()!=0)
 				m_addrMode = DEV_ADDR_MODE::tcpServer;
@@ -545,44 +540,50 @@ void ioDev::triggerCycleAcq()
 
 bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
 {
+	string method = jReq["method"].get<string>();
+	json jParams = jReq["params"];
+	json jId = jReq["id"];
+
+	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s\r\n",getIOAddrStr().c_str(), method.c_str());
 	ioDev* pIoDev = this;
-	if (pIoDev->pIOSession == nullptr && pIoDev->m_bUdpDev == false)
+	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrMode != DEV_ADDR_MODE::udp)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
+		LOG("[warn]" + rpcResp.error);
 		return true;
 	}
 	if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "IO设备类型错误");
+		LOG("[warn]" + rpcResp.error);
 		return true;
 	}
 
 	jReq["clientId"] = "tds";
 	jReq.erase("user");
 	jReq.erase("token");
-	string method = jReq["method"].get<string>();
-	json jParams = jReq["params"];
-	json jId = jReq["id"];
+
 
 	json jRlt, jErr;
 	//发起同步请求，此处阻塞
-	LOG("[TDSP转发]客户端->设备\r\n");
 	bool callRet = false;
 	if (pIoDev->call(method, jParams, jRlt, jErr))
 	{
 		callRet = true;
 		if (jRlt != nullptr) {
 			rpcResp.result = jRlt.dump();
+			LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());
 		}
 		else if (jErr != nullptr)
 		{
 			rpcResp.error = jErr.dump();
+			LOG("[TDSP路由转发]设备->客户端,error=%s\r\n", rpcResp.error.c_str());
 		}
 		else
 		{
 			LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
 		}
-		LOG("[TDSP转发]设备->客户端\r\n");
+		
 	}
 	else
 	{

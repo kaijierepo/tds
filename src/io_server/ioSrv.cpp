@@ -1252,10 +1252,9 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type,bool udpDev)
+ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 {
 	ioDev* p = createIODev(type);
-	p->m_bUdpDev = udpDev;
 	if (p == nullptr) return nullptr;
 
 	p->m_jDevAddr = childDevAddr;

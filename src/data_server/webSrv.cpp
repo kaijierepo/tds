@@ -543,6 +543,29 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
 			pWs->handle_zlmhook(hm, c);
 		}
+		else if (mg_http_match_uri(hm, "/api/*"))
+		{
+			string resHeader, resBody;
+			json j;
+			json data1 = json::array();
+			json de;
+			de["key1"] = "val1";
+			de["key2"] = "val2";
+			de["key3"] = "val3";
+			de["key4"] = "val4";
+			data1.push_back(de);
+			de["key1"] = "1";
+			de["key2"] = "2";
+			de["key3"] = "3";
+			de["key4"] = "4";
+			data1.push_back(de);
+			j["sheet1"] = data1;
+			j["sheet2"] = data1;
+
+			resBody = j.dump();
+
+			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
