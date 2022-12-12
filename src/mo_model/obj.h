@@ -169,6 +169,7 @@ public:
 	OBJ* createChildMO(string subTag, string moType);
 	void GetAllChildObj(std::vector<OBJ*>& aryMO, string type);
 	void GetAllChildMp(std::vector<MP*>& aryMP);
+	void GetAttriMp(std::vector<MP*>& aryMP);
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
 	map<string, json> getChildCustomMoTypeList();
 	void statisChildCustomMoType(map<string, json>& list);

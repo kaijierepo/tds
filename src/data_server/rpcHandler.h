@@ -53,9 +53,9 @@ public:
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
-	void rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session);
-	string rpc_getMoStatus(json params, string& error,RPC_SESSION session);
-	void rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION session);
+	string rename(string orgName, json& renameMap);
+	void rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session);
 	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error, RPC_SESSION session,bool bValOnly =false);
 	string rpc_heartbeat(json params, string& error, RPC_SESSION session);

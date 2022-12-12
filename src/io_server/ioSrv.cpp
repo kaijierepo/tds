@@ -556,9 +556,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			modified = true;
 
 			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
-			if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway && p->pIOSession != nullptr) {
-				p->pIOSession->disconnect();
-			}
+			//if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway && p->pIOSession != nullptr) {
+			//	p->pIOSession->disconnect();
+			//}
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not find device of specified NodeID:" + sNodeId);

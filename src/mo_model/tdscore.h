@@ -115,7 +115,7 @@ namespace MO_TYPE {
 	const string org = "org";
 	const string customOrg = "customOrg";
 	const string mp = "mp";
-	const string mpgroup = "mpgroup";
+	const string mpgroup = "mpGroup";
 	const string amo = "amo";
 }
 

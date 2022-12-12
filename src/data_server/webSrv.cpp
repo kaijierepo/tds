@@ -281,6 +281,31 @@ void handlePost_gzh(string reqBody, string& resHeader,string& resBody)
 	resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 }
 
+void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int port, bool isHttps)
+{
+	RPC_RESP resp;
+
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	pSession->hostName = hostname;
+	pSession->hostPort = port;
+	pSession->isHttps = isHttps;
+	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
+
+	string resBody = "";
+	if (resp.result.length() > 0) {
+		resBody = resp.result;
+	}
+	else if (resp.error.length() > 0) {
+		resBody = resp.error;
+	}
+	else {
+		resBody = "rpc call return null";
+	}
+
+	int isend = send(sock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
+	closesocket(sock);                      // Close the connection
+}
+
 
 void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port,bool isHttps)
 {
@@ -452,6 +477,44 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	return true;
 }
 
+bool WebServer::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
+{
+	string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
+	
+	int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
+	mg_str* mgs_host = mg_http_get_header(hm, "Host");
+	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
+	string ip; int port;
+	parseIpPort(sHost, ip, port);
+
+	thread t(thread_handleRpcRestApi, rpcReqStr, sock, ip, port, this->m_isHttps);
+	t.detach();
+	return false;
+}
+
+bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
+{
+	int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
+	mg_str* mgs_host = mg_http_get_header(hm, "Host");
+	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
+	string ip; int port;
+	parseIpPort(sHost, ip, port);
+
+	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+	string query = str::fromBuff(hm->query.ptr, hm->query.len);
+	query = httplib::detail::decode_url(query, false);
+	string method = str::trimPrefix(uri, "/rpc/");
+	json jReq;
+	jReq["method"] = method;
+	jReq["params"] = parseParamFromQuery(query);
+	jReq["id"] = m_restApiID;
+	string rpcReqStr = jReq.dump();
+
+	thread t(thread_handleRpcRestApi, rpcReqStr, sock, ip, port, this->m_isHttps);
+	t.detach();
+	return false;
+}
+
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
@@ -543,28 +606,13 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
 			pWs->handle_zlmhook(hm, c);
 		}
-		else if (mg_http_match_uri(hm, "/api/*"))
+		else if (mg_http_match_uri(hm, "/rpc/*"))
 		{
-			string resHeader, resBody;
-			json j;
-			json data1 = json::array();
-			json de;
-			de["key1"] = "val1";
-			de["key2"] = "val2";
-			de["key3"] = "val3";
-			de["key4"] = "val4";
-			data1.push_back(de);
-			de["key1"] = "1";
-			de["key2"] = "2";
-			de["key3"] = "3";
-			de["key4"] = "4";
-			data1.push_back(de);
-			j["sheet1"] = data1;
-			j["sheet2"] = data1;
-
-			resBody = j.dump();
-
-			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+			pWs->handle_rpc_rest(hm, c);
+		}
+		else if (mg_http_match_uri(hm, "/api") && memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
+		{
+			pWs->handle_rpc_rest_post(hm, c);
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
@@ -727,6 +775,7 @@ void webThread(WebServer* pSrv,int port) {
 WebServer::WebServer()
 {
 	m_isHttps = false;
+	m_restApiID = 0;
 }
 
 WebServer::~WebServer()

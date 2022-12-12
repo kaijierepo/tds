@@ -367,7 +367,7 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		else
 			conf["time"] = "-";
 
-		if (m_isEnum) {
+		if (m_isEnum && m_curVal.is_number_integer()) {
 			conf["enumVal"] = mapEnumVal[m_curVal.get<int>()];
 		}
 	}
@@ -514,6 +514,20 @@ void MP::input(json jVal, TIME* dataTime, json dataFile)
 	updateVal(jVal, dataTime, dataFile);
 }
 
+//监控点组不算
+OBJ* MP::getParentMo()
+{
+	OBJ* p = m_pParentMO;
+	while (p) {
+		if (p->m_type == MO_TYPE::mo || p->m_type == MO_TYPE::customMo) {
+			return p;
+		}
+
+		p = p->m_pParentMO;
+	}
+	return nullptr;
+}
+
 void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 {
 	TIME t;
@@ -527,8 +541,9 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 		return;
 
 	m_stDataLastUpdate = *dataTime;
-	if (m_pParentMO)
-		m_pParentMO->m_stDataLastUpdate = *dataTime;
+	OBJ* pParentMo = getParentMo();
+	if (pParentMo)
+		pParentMo->m_stDataLastUpdate = *dataTime;
 
 	//save to rt memory
 	m_lastVal = m_curVal;

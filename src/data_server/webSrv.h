@@ -7,6 +7,9 @@ class WebServer {
 public:
 	bool handle_zlmhook(mg_http_message* hm, mg_connection* c);
 	bool handle_stream_redirect(mg_http_message* hm, mg_connection* c);
+	bool handle_rpc_rest_post(mg_http_message* hm, mg_connection* c);
+	bool handle_rpc_rest(mg_http_message* hm, mg_connection* c);
+
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
@@ -24,6 +27,7 @@ public:
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	char a[10];
+	int m_restApiID;
 };
 
 extern string rootDir;

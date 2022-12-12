@@ -219,6 +219,10 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		if(leafType == "mo")
 			return true;
 	}
+	else if (m_type == "mpGroup") {
+		if (leafType == "mo")
+			return true;
+	}
 	else if (m_type == MO_TYPE::customOrg) {
 		if (leafType == "org" ||leafType == "mo") {
 			return true;
@@ -988,6 +992,20 @@ void OBJ::GetAllChildMp(std::vector<MP*>& aryMP)
 	}
 }
 
+void OBJ::GetAttriMp(std::vector<MP*>& aryMP)
+{
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		if (m_childObj[i]->m_type == "mp")
+		{
+			aryMP.push_back((MP*)m_childObj[i]);
+		}
+		if (m_childObj[i]->m_type == MO_TYPE::mpgroup) {
+			m_childObj[i]->GetAttriMp(aryMP);
+		}
+	}
+}
+
 
 map<string, json> OBJ::getChildCustomMoTypeList()
 {
@@ -1197,6 +1215,9 @@ string TAG::trimRoot(string& tag)
 
 string TAG::trimRoot(string tag, string root)
 {
+	if (root == "")
+		return tag;
+
 	tag = str::trimPrefix(tag, root);
 	tag = str::trimPrefix(tag, ".");
 	return tag;

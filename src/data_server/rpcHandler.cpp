@@ -1268,10 +1268,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			result = rpc_getMpStatus(params, error, session,true);
 		}
-		else if (method == "getMoStatus")
-		{
-			result = rpc_getMoStatus(params, error, session);
-		}
 		else if (method == "getMoOnlineStatus") //智能设备在线状态
 		{
 			result = rpc_getMoOnlineStatus(params, error);
@@ -1280,13 +1276,19 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			rpc_getMoStatis(params, rpcResp, session);
 		}
-		else if (method == "getMoStatusTable")
+		else if (method == "getMoAttri" || method == "getMoAttr")
 		{
-			rpc_getMoStatusTable(params, rpcResp,session);
-		}
-		else if (method == "getMoStatusMap")
-		{
-			rpc_getMoStatusTable(params, rpcResp, session);
+			string mode = "list";
+			if (params.contains("mode")) {
+				mode = params["mode"];
+			}
+			
+			if (mode == "table") {
+				rpc_getMoAttr_table(params, rpcResp, session);
+			}
+			else {
+				rpc_getMoAttr_list(params, rpcResp, session);
+			}
 		}
 		else if (method == "getTopoList")
 		{
@@ -2736,17 +2738,43 @@ string rpcHandler::rpc_getMoOnlineStatus(json params, string& error)
 	return list.dump(4);
 }
 
-string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION session)
+string rpcHandler::rename(string orgName, json& renameMap) {
+	string desName = orgName;
+	if (renameMap[orgName].is_string()) {
+		desName = renameMap[orgName];
+	}
+	return desName;
+}
+
+void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session)
 {
 	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
 	{
-		error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
-		return "";
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
+		return;
 	}
 	//支持中文直接输入moType
 	string moType = params["type"].get<string>();
 	str::hanZi2Pinyin(moType, moType);
+
+	//是否进行列字段重命名
+	json renameMap = nullptr;
+	if (params["rename"].is_object()) {
+		renameMap = params["rename"];
+	}
+
+	//列标签使用位号还是名称
+	string columeLabel = "tag";
+	if (params["columeLabel"].is_string()) {
+		columeLabel = params["columeLabel"];
+	}
+
+	//位号选择器
+	string tag = "*";
+	if (params["tag"].is_string()) {
+		tag = params["tag"];
+	}
 
 	string queryRootTag = session.org;
 	if (params["rootTag"] != nullptr) 
@@ -2754,6 +2782,11 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 		string userQueryRootTag = params["rootTag"].get<string>();
 		queryRootTag = TAG::addRoot(userQueryRootTag, queryRootTag);
 	}
+
+	TAG_SELECTOR tagSel;
+	tagSel.init(tag, queryRootTag);
+
+
 	string strList = "[";
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
@@ -2772,37 +2805,38 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 					continue;
 			}
 
-			//过滤根mo
-			if (queryRootTag != "")
+			//根据位号选择器过滤
+			if (!tagSel.match(sysTag))
 			{
-				if (sysTag.find(queryRootTag) == string::npos)
-				{
-					continue;
-				}
-				queryTag = str::trim(sysTag, queryRootTag + ".");
+				continue;
 			}
+			queryTag = TAG::trimRoot(sysTag, tagSel.m_rootTag);
 			
 			nlohmann::ordered_json oneData;
-			oneData["监控对象"] = queryTag;
+			oneData[rename("位号",renameMap)] = queryTag;
 
 			//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
 			ioDev* piod = ioSrv.getIODevByTag(sysTag);
 			if (piod)
 			{
-				oneData["在线"] = piod->m_bOnline;
+				oneData[rename("在线", renameMap)] = piod->m_bOnline;
 			}
 			else
 			{
-				oneData["在线"] = pMo->m_bOnline;
+				oneData[rename("在线", renameMap)] = pMo->m_bOnline;
 			}
 			
-			for (int j = 0; j < pMo->m_childObj.size(); j++)
+			vector<MP*> aryMps;
+			pMo->GetAttriMp(aryMps);
+			
+			for (int j = 0; j < aryMps.size(); j++)
 			{
-				OBJ* pChild = pMo->m_childObj[j];
-				if (pChild->m_type == MO_TYPE::mp)
-				{
-					MP* pmp = (MP*)pChild;
-					oneData[pmp->m_name] = pmp->m_curVal;
+				MP* pmp = aryMps[j];
+				if (columeLabel == "name") {
+					oneData[rename(pmp->m_name, renameMap)] = pmp->m_curVal;
+				}
+				else {
+					oneData[rename(pmp->getTag(sysTag), renameMap)] = pmp->m_curVal;
 				}
 			}
 			if(strList != "[")
@@ -2811,98 +2845,7 @@ string rpcHandler::rpc_getMoStatus(json params, string& error,RPC_SESSION sessio
 			strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 		}
 		strList += "]";
-		return strList;
-	}
-	else
-	{
-		json j = json::array();
-		return j.dump();
-	}
-}
-
-void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION session)
-{
-	//检查mo类型参数是否填写
-	if (params["type"] == nullptr)
-	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
-	}
-	//支持中文直接输入moType
-	string moType = params["type"].get<string>();
-	str::hanZi2Pinyin(moType, moType);
-	//查询根
-	string rootTag;
-	if (params["rootTag"] != nullptr) {
-		rootTag = params["rootTag"];
-	}
-	rootTag = TAG::addRoot(rootTag, session.org);
-
-
-
-	json jTable = json::array();
-	json jTableHead = json::array();
-
-	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
-	{
-		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
-		for (int i = 0; i < moList.size(); i++)
-		{
-			OBJ* pMo = moList[i];
-			string tag = pMo->getTag();
-
-			//过滤用户权限
-			if (session.user != "")
-			{
-				if (!userMng.checkTagPermission(session.user, tag))
-					continue;
-			}
-
-			//过滤根mo
-			if (rootTag != "")
-			{
-				if (tag.find(rootTag) == string::npos)
-				{
-					continue;
-				}
-				tag = str::trim(tag, rootTag + ".");
-			}
-
-			//表头
-			if (jTableHead.size() == 0)
-			{
-				jTableHead.push_back("位号");
-				for (int j = 0; j < pMo->m_childObj.size(); j++)
-				{
-					OBJ* pChild = pMo->m_childObj[j];
-					if (pChild->m_type == MO_TYPE::mp)
-					{
-						MP* pmp = (MP*)pChild;
-						jTableHead.push_back(pmp->m_name);
-					}
-				}
-				jTableHead.push_back("在线");
-				jTableHead.push_back("更新时间");
-				jTable.push_back(jTableHead);
-			}
-
-			//数据行
-			json jTableRow;
-			jTableRow.push_back(tag);
-			for (int j = 0; j < pMo->m_childObj.size(); j++)
-			{
-				OBJ* pChild = pMo->m_childObj[j];
-				if (pChild->m_type == MO_TYPE::mp)
-				{
-					MP* pmp = (MP*)pChild;
-					jTableRow.push_back(pmp->m_curVal);
-				}
-			}
-			jTableRow.push_back(pMo->m_bOnline);
-			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
-			if (jTableRow != nullptr && jTableRow.size() == jTableHead.size())
-				jTable.push_back(jTableRow);
-		}
-		resp.result = jTable.dump();
+		resp.result = strList;
 	}
 	else
 	{
@@ -2911,9 +2854,7 @@ void rpcHandler::rpc_getMoStatusMap(json params, RPC_RESP& resp, RPC_SESSION ses
 	}
 }
 
-
-
-void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	//检查mo类型参数是否填写
 	if (params["type"] == nullptr)
@@ -2964,7 +2905,7 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 
 			//下属所有监控点列表
 			vector<MP*> childMps;
-			pMo->GetAllChildMp(childMps);
+			pMo->GetAttriMp(childMps);
 	
 			//表头
 			if (jTableHead.size() == 0)
@@ -2992,6 +2933,10 @@ void rpcHandler::rpc_getMoStatusTable(json params, RPC_RESP& resp, RPC_SESSION s
 			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
 			if(jTableRow!=nullptr && jTableRow.size() == jTableHead.size())
 				jTable.push_back(jTableRow);
+			else
+			{
+				LOG("[warn]获取监控对象属性表 getMoAttr ,表头列数:%d,行列数%d", jTableHead.size(), jTableRow.size());
+			}
 		}
 		resp.result = jTable.dump();
 	}
@@ -3263,6 +3208,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		port = 672;
 	}
 
+
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
 	//zlmediakit的hls模式暂时不支持中文，因此此处转成拼音
 	if (!childTds) {
@@ -3270,8 +3216,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 			if (pmp->m_mediaSrcType == "file") {
 				string url = str::trimPrefix(pmp->m_mediaUrl, "/");
 				url = str::trimSuffix(url, ".mp4");
-				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4";
-				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4";
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/media/" + url + ".mp4.live.flv";
 				j["rtsp"] = "rtsp://" + ip + "/record/" + url + ".mp4";
 			}
 			else {
@@ -3283,9 +3228,18 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		}
 		else
 		{
+			if (isHttps) {
+				port = tds->conf->httpsPort;
+			}
+			else {
+				port = tds->conf->httpPort;
+			}
+			
 			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 		}
 	}
+	//此处先发送到子服务的数据服务端口，让子服务再做一次重定向，使得子服务再收到该请求时可以启动码流。
+	//实现url取流的时候可以触发向视频源拉流
 	else {
 		if (pmp->m_valType == VAL_TYPE::video) {
 			if (isHttps) {
@@ -3301,6 +3255,12 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		}
 		else
 		{
+			if (isHttps) {
+				port = childTdsInfo.httpsPort;
+			}
+			else {
+				port = childTdsInfo.httpPort;
+			}
 			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 		}
 	}
