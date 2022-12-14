@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "tdsWatchDog.h"
 #include <winver.h>
+#include "logger.h"
 
 
 #pragma comment(lib, "version.lib")
@@ -75,6 +76,7 @@ void thread_checkAdp() {
 		if (!watchDog.isProcessRun("node.exe")) {
 			string msPath = fs::appPath() + "/com/adp/run.bat";
 			if (fs::fileExist(msPath)) {
+				msPath = charCodec::utf8toAnsi(msPath);
 				system((msPath).c_str());
 			}
 		}

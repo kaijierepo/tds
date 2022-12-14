@@ -172,12 +172,31 @@ struct DB_FILE {
 	string path;
 	string ymd;
 	TIME time;
+	yyjson_doc* doc;
+	yyjson_val* root;
+	yyjson_mut_doc* mut_doc;
+
+	DB_FILE() {
+		doc = nullptr;
+		root = nullptr;
+		mut_doc = nullptr;
+	}
+	~DB_FILE() {
+		if(doc)
+			yyjson_doc_free(doc);
+		if(mut_doc)
+			yyjson_mut_doc_free(mut_doc);
+	}
 };
 
-class DB_FILE_SET {
+class TAG_DB_FILE_SET {
 public:
+	string tag;  //系统位号
+	string relTag;  //本次查询需要返回的相对位号
+
+
 	vector<DB_FILE*> fileList;
-	~DB_FILE_SET() {
+	~TAG_DB_FILE_SET() {
 		if (fileList.size() > 0)
 		{
 			for (int i = 0; i < fileList.size(); i++)
@@ -228,8 +247,12 @@ struct DE_SELECTOR {
 	INTERVAL_SELECTOR interval;		//降采样选择器
 	bool ascendingSort;
 	string sortKey;
+	bool tagAsColume; //将位号作为表的列返回
+	string columeLabel; //列标签使用 tag还是name
 	DE_SELECTOR() {
 		ascendingSort = true;
+		tagAsColume = false;
+		columeLabel = "tag";
 	}
 };
 
@@ -241,7 +264,7 @@ public:
 
 struct SELECT_RLT {
 	bool getDE;
-	string deList;
+	string dataList;
 	int count;
 
 	SELECT_RLT() {
@@ -269,6 +292,8 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
+	bool loadDeList(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
+	bool loadDeList_tagAsColume(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, TIME stTime, string& sData);

@@ -209,7 +209,7 @@ void project::getMpTypeList(json& mpTypeList)
 	}
 }
 
-bool project::getTags(vector<string>& tags, TAG_SELECTOR& tagSelector)
+bool project::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 {
 	if (tagSelector.mode == TSM_single)
 	{

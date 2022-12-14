@@ -28,7 +28,7 @@ public:
 	void getMpList(map<string, MP*>& MPlist, OBJ* pMO);
 	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
-	bool getTags(vector<string>& tags, TAG_SELECTOR& tagSelector);
+	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
 
 	string m_strMoTree; //字符串配置数据
