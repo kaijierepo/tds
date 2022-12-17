@@ -797,6 +797,16 @@ string OBJ::getTypeLabel(string type)
 	return "";
 }
 
+string OBJ::getUpdateTimeDesc()
+{
+	if (timeopt::isValidTime(m_stDataLastUpdate)) {
+		return timeopt::st2str(m_stDataLastUpdate);
+	}
+	else {
+		return "-";
+	}
+}
+
 string OBJ::AppendTagRoot(string& str)
 {
 	return "";

@@ -208,8 +208,9 @@ bool MP::loadConf(json& conf)
 
 
 	//状态数据
-	if(conf.contains("val"))
-		m_curVal = conf["val"];
+	// 	val应该通过 loadStatus加载，不知道为何这里有这段代码。暂时注释。观察一段时间后删除
+	//if(conf.contains("val"))
+	//	m_curVal = conf["val"];
 	if (conf.contains("time"))
 	{
 		string s = conf["time"].get<string>();
@@ -373,11 +374,56 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	}
 
 	if (q.getStatusDesc) {
-		conf["valDesc"] = m_curVal.dump() + m_strUnit;
+		conf["valDesc"] = getValDesc(q.getUnit);
 	}
 	
 
 	return true;
+}
+
+
+string MP::getValDesc(bool getUnit) {
+	string valDesc;
+	if (m_curVal.is_number_float()) {
+		if (m_decimalDigits >= 0) {
+			string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
+			valDesc = str::format(formatter.c_str(), m_curVal.get<float>());
+		}
+		else {
+			valDesc = m_curVal.dump();
+		}
+	}
+	else if (m_curVal.is_number_integer()) {
+		if (m_isEnum) {
+			valDesc = mapEnumVal[m_curVal.get<int>()];
+		}
+		else
+			valDesc = m_curVal.dump();
+	}
+	else if (m_curVal.is_boolean()) {
+		//根据监控点名称自动生成值描述
+		if (m_curVal != nullptr) {
+			if (m_name.find("开关") >= 0) {
+				valDesc = m_curVal.get<bool>() ? "开" : "关";
+			}
+			else {
+				valDesc = m_curVal.dump();
+			}
+		}
+		else {
+			valDesc = "-";
+		}
+	}
+	else if (m_curVal.is_string()) {
+		valDesc = m_curVal.get<string>();
+	}
+	else {
+		valDesc = "-";
+	}
+	if (getUnit) {
+		valDesc += m_strUnit;
+	}
+	return valDesc;
 }
 
 bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
@@ -385,15 +431,18 @@ bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
 	if (ptmp) {
-		m_lastVal = m_curVal;
-		m_curVal = ptmp->m_curVal;
-		if (dataTime != nullptr)
-			m_stDataLastUpdate = *dataTime;
-		else
-			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
+		//常量类型无需加载状态
+		if (ptmp->m_ioType != "c") {
+			m_lastVal = m_curVal;
+			m_curVal = ptmp->m_curVal;
+			if (dataTime != nullptr)
+				m_stDataLastUpdate = *dataTime;
+			else
+				m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 
-		if (saveDB && needSaveToDB()) {
-			saveToDB();
+			if (saveDB && needSaveToDB()) {
+				saveToDB();
+			}
 		}
 	}
 	else
@@ -487,26 +536,41 @@ void MP::input(json jVal, TIME* dataTime, json dataFile)
 	//数字类型进行kb处理和上下限处理
 	if (jVal.is_number())
 	{
-		double dbVal = jVal.get<double>();
-		m_orgVal = dbVal;
-		//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
-		double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
-		string sVal;
-		if (m_decimalDigits > 0)
-		{
-			string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
-			sVal = str::format(formatter.c_str(), dbCurVal);
-		}
-		else
-			sVal = str::format("%.10f", dbCurVal);
-		dbCurVal = atof(sVal.c_str());
-		jVal = dbCurVal;
-
-		if (m_validRange.enable)
-		{
-			if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
+		if (m_valType == "int") {
+			int iVal = jVal.get<int>();
+			m_orgVal = iVal;
+			int iCurVal = iVal * m_K + m_B;
+			jVal = iCurVal;
+			if (m_validRange.enable)
 			{
-				jVal = nullptr;
+				if (iCurVal < m_validRange.min || iCurVal > m_validRange.max)
+				{
+					jVal = nullptr;
+				}
+			}
+		}
+		else {
+			double dbVal = jVal.get<double>();
+			m_orgVal = dbVal;
+			//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
+			double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
+			string sVal;
+			if (m_decimalDigits >= 0)
+			{
+				string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
+				sVal = str::format(formatter.c_str(), dbCurVal);
+			}
+			else
+				sVal = str::format("%.10f", dbCurVal);
+			dbCurVal = atof(sVal.c_str());
+			jVal = dbCurVal;
+
+			if (m_validRange.enable)
+			{
+				if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
+				{
+					jVal = nullptr;
+				}
 			}
 		}
 	}
@@ -715,6 +779,8 @@ string MP::getMpTypeLabel()
 
 	return typeLabel;
 }
+
+
 
 string MP::getMpType()
 {

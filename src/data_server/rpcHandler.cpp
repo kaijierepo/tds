@@ -2776,6 +2776,11 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		tag = params["tag"];
 	}
 
+	string valFmt = "val";
+	if (params["valFmt"].is_string()) {
+		valFmt = params["valFmt"];
+	}
+
 	string queryRootTag = session.org;
 	if (params["rootTag"] != nullptr) 
 	{
@@ -2832,11 +2837,24 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 			for (int j = 0; j < aryMps.size(); j++)
 			{
 				MP* pmp = aryMps[j];
+				json jVal;
+				if (valFmt == "val") {
+					jVal = pmp->m_curVal;
+				}
+				else if (valFmt == "valStr") {
+					jVal = pmp->getValDesc(false);
+				}
+				else if (valFmt == "valStr-unit") {
+					jVal = pmp->getValDesc(true);
+				}
+
+
+
 				if (columeLabel == "name") {
-					oneData[rename(pmp->m_name, renameMap)] = pmp->m_curVal;
+					oneData[rename(pmp->m_name, renameMap)] = jVal;
 				}
 				else {
-					oneData[rename(pmp->getTag(sysTag), renameMap)] = pmp->m_curVal;
+					oneData[rename(pmp->getTag(sysTag), renameMap)] = jVal;
 				}
 			}
 			if(strList != "[")
@@ -2871,10 +2889,22 @@ void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION se
 	}
 	rootTag = TAG::addRoot(rootTag, session.org);
 
+	//列标签使用位号还是名称
+	string columeLabel = "tag";
+	if (params["columeLabel"].is_string()) {
+		columeLabel = params["columeLabel"];
+	}
+
+	string valFmt = "val";
+	if (params["valFmt"].is_string()) {
+		valFmt = params["valFmt"];
+	}
 
 
-	json jTable = json::array();
+	json jTable = json::object();
 	json jTableHead = json::array();
+	json jTableBody = json::array();
+	json jColTag = json::array();
 
 	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
 	{
@@ -2907,19 +2937,31 @@ void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION se
 			vector<MP*> childMps;
 			pMo->GetAttriMp(childMps);
 	
-			//表头
+			//表头与列位号
 			if (jTableHead.size() == 0)
 			{
 				jTableHead.push_back("位号");
+				jColTag.push_back(nullptr);
 				for (int j = 0; j < childMps.size(); j++)
 				{
 					MP* pmp = childMps[j];
-					jTableHead.push_back(pmp->getTag(moTag));
+					string tag = pmp->getTag(moTag);
+					jColTag.push_back(tag);
+					if (columeLabel == "tag") {
+						jTableHead.push_back(tag);
+					}
+					else {
+						jTableHead.push_back(pmp->m_name);
+					}
 				}
 				jTableHead.push_back("在线");
 				jTableHead.push_back("更新时间");
-				jTable.push_back(jTableHead);
+				jColTag.push_back(nullptr);
+				jColTag.push_back(nullptr);
+				jTable["header"] = jTableHead;
+				jTable["tag"] = jColTag;
 			}
+
 
 			//数据行
 			json jTableRow;
@@ -2927,17 +2969,27 @@ void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION se
 			for (int j = 0; j < childMps.size(); j++)
 			{
 				MP* pmp = childMps[j];
-				jTableRow.push_back(pmp->m_curVal);
+				if (valFmt == "val") {
+					jTableRow.push_back(pmp->m_curVal);
+				}
+				else if (valFmt == "valStr") {
+					jTableRow.push_back(pmp->getValDesc(false));
+				}
+				else if (valFmt == "valStr-unit") {
+					jTableRow.push_back(pmp->getValDesc(true));
+				}
 			}
 			jTableRow.push_back(pMo->m_bOnline);
-			jTableRow.push_back(timeopt::st2str(pMo->m_stDataLastUpdate));
+			jTableRow.push_back(pMo->getUpdateTimeDesc());
 			if(jTableRow!=nullptr && jTableRow.size() == jTableHead.size())
-				jTable.push_back(jTableRow);
+				jTableBody.push_back(jTableRow);
 			else
 			{
 				LOG("[warn]获取监控对象属性表 getMoAttr ,表头列数:%d,行列数%d", jTableHead.size(), jTableRow.size());
 			}
+			
 		}
+		jTable["body"] = jTableBody;
 		resp.result = jTable.dump();
 	}
 	else

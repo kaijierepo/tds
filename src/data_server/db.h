@@ -105,6 +105,9 @@ enum TAG_SELECT_MODE {
 
 class TAG_SELECTOR{
 public:
+	TAG_SELECTOR() {
+		getTag = false;
+	}
 	bool init(string tag,string rootTag = "");
 	bool init(json tag, string rootTag = "");
 	bool match(string tag);//使用不带根的绝对位号
@@ -174,18 +177,15 @@ struct DB_FILE {
 	TIME time;
 	yyjson_doc* doc;
 	yyjson_val* root;
-	yyjson_mut_doc* mut_doc;
+
 
 	DB_FILE() {
 		doc = nullptr;
 		root = nullptr;
-		mut_doc = nullptr;
 	}
 	~DB_FILE() {
 		if(doc)
 			yyjson_doc_free(doc);
-		if(mut_doc)
-			yyjson_mut_doc_free(mut_doc);
 	}
 };
 
@@ -193,9 +193,13 @@ class TAG_DB_FILE_SET {
 public:
 	string tag;  //系统位号
 	string relTag;  //本次查询需要返回的相对位号
-
+	string mpName;  //监控点名称
+	string colKey;
 
 	vector<DB_FILE*> fileList;
+	TAG_DB_FILE_SET() {
+		
+	}
 	~TAG_DB_FILE_SET() {
 		if (fileList.size() > 0)
 		{
@@ -204,6 +208,7 @@ public:
 				delete fileList[i];
 			}
 		}
+
 	}
 };
 
@@ -292,8 +297,8 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
-	bool loadDeList(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
-	bool loadDeList_tagAsColume(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
+	bool loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc);
+	bool loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc);
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, TIME stTime, string& sData);

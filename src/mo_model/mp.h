@@ -70,6 +70,7 @@ public:
 	void output(json jVal, json& rlt, json& err,bool sync = true);
 	bool IsCurValValid();
 	string getMpTypeLabel();
+	string getValDesc(bool getUnit);
 	string getMpType();
 	json getRTData(string root="",bool bValOnly = false);
 

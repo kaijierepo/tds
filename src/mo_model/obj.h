@@ -91,6 +91,7 @@ struct OBJ_QUERIER {
 	bool getConf;
 	bool getConfDetail;
 	bool getStatusDesc; //以文本可阅读的方式返回状态信息，方便UI显示或者可视化组态
+	bool getUnit; //值描述信息是否需要带单位
 
 	OBJ_QUERIER() {
 		 getConf = true;
@@ -100,6 +101,7 @@ struct OBJ_QUERIER {
 		 getStatusDesc = false;
 		 leafType = "mo";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
+		 getUnit = false;
 	}
 };
 
@@ -199,6 +201,7 @@ public:
 	void GetAllChildAlarmInfo(string& strSummary);
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);
+	string getUpdateTimeDesc();
 
 	static string AppendTagRoot(string& str);
 	static string ResolveTag(string strTagExp, string strTagThis); //strTagContext指位号表达式所在mp的父mo的位号

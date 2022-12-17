@@ -169,13 +169,227 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 	}
 }
 
-bool database::loadDeList(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
+bool database::loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc)
 {
+	//返回的数据元是否需要携带tag字段
+	bool withTag = tagDBFileSet.size() > 1 ? true : false;
+	if (deSel.tagSel.getTag)
+		withTag = true;
+
+	double max = -1000000000;
+	double min = 1000000000;
+	double avg = 0;
+	int count = 0;
+	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+	{
+		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+		string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+		string& relTag = fSet.relTag;
+
+		//加载每个数据文件中的数据
+		for (int i = 0; i < fSet.fileList.size(); i++)
+		{
+			//加载数据元列表
+			DB_FILE* pdf = fSet.fileList[i];
+
+			size_t idx, max;
+			yyjson_val* val;
+			int lastDeTime = 0;
+			int currDeTime = 0;
+			string deTime = pdf->ymd + " 00:00:00";
+			yyjson_arr_foreach(pdf->root, idx, max, val) {
+				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
+				//最后1个下采样间隔全部输出
+				if (deSel.interval.type == DST_Count)
+				{
+					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
+				}
+
+
+				yyjson_mut_val* jDE = yyjson_val_mut_copy(mut_doc, val);//把imutableVal拷贝成mutable，保存在mutDoc中
+				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
+				string_view szTime = yyjson_mut_get_str(yyTime);
+
+				//先生成完整时间戳，再进行match判断
+				const char* pHms = nullptr;
+				if (szTime.length() == 19)
+				{
+					pHms = szTime.data() + 11;//取出时分秒
+				}
+				else
+				{
+					pHms = szTime.data();
+				}
+				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
+
+				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+					continue;
+
+				if (deSel.interval.type == DST_Time) {
+					HMS_STR* p = (HMS_STR*)pHms;
+					currDeTime = p->getTotalSec();
+					if (currDeTime - lastDeTime < deSel.interval.dsti) continue;
+				}
+
+				if (withTag)
+				{
+					//当进行多位号搜索时，需要加入tag标签
+					//relTag指向的变量在write_doc之前不能被销毁
+					yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
+					yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, relTag.c_str());
+					yyjson_mut_obj_put(jDE, tagKey, tagVal);
+				}
+
+
+				if (deSel.condition.bEnable && !deSel.condition.match(jDE))
+				{
+					continue;
+				}
+
+				lastDeTime = currDeTime;
+				string sortFlag = "";
+				if (deSel.sortKey.length() > 0) {
+					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jDE, "val");
+					if (yyjson_mut_is_obj(yyVal)) {
+						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+						if (yyjson_mut_is_str(yySortKey)) {
+							sortFlag = yyjson_mut_get_str(yySortKey);
+						}
+						else if (yyjson_mut_is_num(yySortKey)) {
+							double f = yyjson_mut_get_real(yySortKey);
+							sortFlag = str::fromFloat(f);
+						}
+					}
+
+				}
+
+				mapRlt[sortFlag + deTime + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				count++;
+
+				if (deSel.timeSel.AmountMatch(count))
+					return true;
+			}
+		}
+	}
 	return true;
 }
 
-bool database::loadDeList_tagAsColume(vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
+bool database::loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc)
 {
+	double max = -1000000000;
+	double min = 1000000000;
+	double avg = 0;
+	int count = 0;
+	vector<yyjson_mut_val*> tagColList;
+	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+	{
+		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+		yyjson_mut_val* tagKey;
+		if (deSel.columeLabel == "tag") {
+			fSet.colKey = fSet.relTag;
+		}
+		else
+		{
+			size_t pos = fSet.relTag.rfind(".");
+			if (pos != string::npos) {
+				fSet.mpName = fSet.relTag.substr(pos + 1, fSet.relTag.size() - pos - 1);
+			}
+			else {
+				fSet.mpName = fSet.relTag;
+			}
+			fSet.colKey = fSet.mpName;
+		}
+		//tagKey = yyjson_mut_str(mut_doc, fSet.colKey.c_str());
+		//tagColList.push_back(tagKey);
+	}
+
+	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+	{
+		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+		string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+		string& relTag = fSet.relTag;
+		
+
+		//加载每个数据文件中的数据
+		for (int i = 0; i < fSet.fileList.size(); i++)
+		{
+			//加载数据元列表
+			DB_FILE* pdf = fSet.fileList[i];
+
+			size_t idx, max;
+			yyjson_val* de;
+			int lastDeTime = 0;
+			int currDeTime = 0;
+			string deTime = pdf->ymd + " 00:00:00";
+			yyjson_arr_foreach(pdf->root, idx, max, de) {
+				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
+				//最后1个下采样间隔全部输出
+				if (deSel.interval.type == DST_Count)
+				{
+					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
+				}
+
+				//先生成完整时间戳，再进行match判断
+				yyjson_val* yyTime = yyjson_obj_get(de, "time");
+				string_view szTime = yyjson_get_str(yyTime);
+				const char* pHms = nullptr;
+				if (szTime.length() == 19)
+				{
+					pHms = szTime.data() + 11;//取出时分秒
+				}
+				else
+				{
+					pHms = szTime.data();
+				}
+				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
+
+				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+					continue;
+
+				if (deSel.interval.type == DST_Time) {
+					HMS_STR* p = (HMS_STR*)pHms;
+					currDeTime = p->getTotalSec();
+					if (currDeTime - lastDeTime < deSel.interval.dsti) continue;
+				}
+
+
+				//根据时间戳新建或者记录或者取出记录
+				yyjson_mut_val* jRecord;
+				map<string, yyjson_mut_val*>::iterator itRecord = mapRlt.find(deTime);
+				if (itRecord != mapRlt.end()) {
+					jRecord = itRecord->second;
+				}
+				else {
+					jRecord = yyjson_mut_obj(mut_doc);
+					//time字段
+					yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
+					yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, szTime.data());
+					yyjson_mut_obj_put(jRecord, timeKey, timeVal);
+					//位号字段
+					for (int i = 0; i < tagDBFileSet.size(); i++) {
+						yyjson_mut_val* tagColKeyInit = yyjson_mut_str(mut_doc,tagDBFileSet[i]->colKey.c_str());
+						yyjson_mut_val* tagColValInit = yyjson_mut_null(mut_doc);
+						yyjson_mut_obj_put(jRecord, tagColKeyInit, tagColValInit);
+					}
+
+					std::pair<string, yyjson_mut_val*> recPair;
+					recPair.first = deTime;
+					recPair.second = jRecord;
+					auto insertRet = mapRlt.insert(recPair);
+					itRecord = insertRet.first;
+				}
+				
+				yyjson_mut_val* tagColKey = yyjson_mut_str(mut_doc, fSet.colKey.c_str());
+				yyjson_val* yyVal = yyjson_obj_get(de, "val");
+				yyjson_mut_val* tagColVal = yyjson_val_mut_copy(mut_doc, yyVal);
+				yyjson_mut_obj_put(jRecord, tagColKey, tagColVal);
+
+
+				mapRlt[deTime] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				count++;
+			}
+		}
+	}
 	return true;
 }
 
@@ -196,11 +410,6 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		tagDBFileSet.push_back(p);
 	}
 	
-	//返回的数据元是否需要携带tag字段
-	bool withTag = tagSet.size() > 1 ? true : false;
-	if (deSel.tagSel.getTag)
-		withTag = true;
-
 	//加载文件原始数据
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
@@ -224,9 +433,6 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 			//从数据库的原始json数据。
 			pdf->doc = yyjson_read(pdf->data.c_str(), pdf->data.length(), 0);
 			pdf->root = yyjson_doc_get_root(pdf->doc);
-
-			//输出到查询结果的json数据.转为带 mut,因为后面会修改里面的值
-			pdf->mut_doc = yyjson_mut_doc_new(NULL);
 		}
 		if (fSet.fileList.size() == 0)
 			continue;
@@ -240,108 +446,20 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	
 
-
-	double max = -1000000000;
-	double min = 1000000000;
-	double avg = 0;
-	int count = 0;
 	map<string, yyjson_mut_val*> mapRlt;
-	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-	{
-		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
-		string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
-		string& relTag = fSet.relTag;
-
-		//加载每个数据文件中的数据
-		for (int i=0;i<fSet.fileList.size();i++)
-		{
-			//加载数据元列表
-			DB_FILE* pdf = fSet.fileList[i];
-
-			size_t idx, max;
-			yyjson_val* val;
-			int lastDeTime = 0;
-			int currDeTime = 0;
-			string deTime = pdf->ymd + " 00:00:00";
-			yyjson_arr_foreach(pdf->root, idx, max, val) {
-				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
-				//最后1个下采样间隔全部输出
-				if (deSel.interval.type == DST_Count)
-				{
-					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
-				}
-
-			
-				yyjson_mut_val* jDE = yyjson_val_mut_copy(pdf->mut_doc, val);//把imutableVal拷贝成mutable，保存在mutDoc中
-				yyjson_mut_val* yyTime = yyjson_mut_obj_get(jDE, "time");
-				string_view szTime = yyjson_mut_get_str(yyTime);
-
-				//先生成完整时间戳，再进行match判断
-				const char* pHms = nullptr;
-				if (szTime.length() == 19)
-				{
-					pHms = szTime.data() + 11;//取出时分秒
-				}
-				else
-				{
-					pHms = szTime.data();
-				}
-				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
-				
-				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
-					continue;
-
-				if (deSel.interval.type == DST_Time) {
-					HMS_STR* p = (HMS_STR*)pHms;
-					currDeTime = p->getTotalSec();
-					if (currDeTime - lastDeTime < deSel.interval.dsti) continue;
-				}
-
-				if (withTag)
-				{
-					//当进行多位号搜索时，需要加入tag标签
-					//relTag指向的变量在write_doc之前不能被销毁
-					yyjson_mut_val* tagKey = yyjson_mut_str(pdf->mut_doc, "tag");
-					yyjson_mut_val* tagVal = yyjson_mut_str(pdf->mut_doc, relTag.c_str());
-					yyjson_mut_obj_put(jDE, tagKey, tagVal);
-				}
-
-
-				if (deSel.condition.bEnable && !deSel.condition.match(jDE))
-				{
-					continue;
-				}
-
-				lastDeTime = currDeTime;
-				string sortFlag = "";
-				if (deSel.sortKey.length()>0) {
-					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jDE, "val");
-					if (yyjson_mut_is_obj(yyVal)) {
-						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
-						if (yyjson_mut_is_str(yySortKey)) {
-							sortFlag = yyjson_mut_get_str(yySortKey);
-						}
-						else if (yyjson_mut_is_num(yySortKey)) {
-							double f = yyjson_mut_get_real(yySortKey);
-							sortFlag = str::fromFloat(f);
-						}
-					}
-					
-				}
-
-				mapRlt[sortFlag + deTime  + tag + std::to_string(idx)] = jDE; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
-				count++;
-
-				if (deSel.timeSel.AmountMatch(count))
-					goto DATA_SET_LOADED;
-			}
-		}
+	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
+	
+	if (deSel.tagAsColume) {
+		loadDeList_tagAsColume(deSel, tagDBFileSet, mapRlt,rlt_mut_doc);
+	}
+	else {
+		loadDeList(deSel,tagDBFileSet, mapRlt, rlt_mut_doc);
 	}
 
-DATA_SET_LOADED:
+
+
 
 	//使用新的yyjson doc对象输出结果. 将多个位号，多个时间段的原始数据合并成1个json查询结果对象
-	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
 	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); //创建一个数组
 	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 
@@ -355,9 +473,11 @@ DATA_SET_LOADED:
 	
 	size_t len = 0;
 	if (result.getDE){
-		result.dataList = yyjson_mut_write(rlt_mut_doc, 0, &len);
+		//如果此处p返回null，应该是rlt_mut_doc当中 指向的string类型可能是临时变量，已经被释放了
+		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
+		result.dataList = p;
 	}
-	result.count = count;
+	result.count = mapRlt.size();
 
 	//释放结果
 	yyjson_mut_doc_free(rlt_mut_doc);
