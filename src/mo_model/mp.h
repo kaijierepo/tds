@@ -67,6 +67,7 @@ public:
 	void updateVal(json& jVal,TIME* dataTime = NULL, json dataFile = nullptr);
 	bool needSaveToDB();
 	void saveToDB();
+	mutex m_dbFileLock;
 	void output(json jVal, json& rlt, json& err,bool sync = true);
 	bool IsCurValValid();
 	string getMpTypeLabel();

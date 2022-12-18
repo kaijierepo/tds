@@ -349,7 +349,9 @@ bool database::loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET
 				if (deSel.interval.type == DST_Time) {
 					HMS_STR* p = (HMS_STR*)pHms;
 					currDeTime = p->getTotalSec();
-					if (currDeTime - lastDeTime < deSel.interval.dsti) continue;
+					if (currDeTime - lastDeTime < deSel.interval.dsti) 
+						continue;
+					lastDeTime = currDeTime;
 				}
 
 
@@ -390,6 +392,30 @@ bool database::loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET
 			}
 		}
 	}
+
+
+
+	yyjson_mut_val* lastRec = nullptr;
+	yyjson_mut_val * curRec = nullptr;
+	for (auto& rec : mapRlt) {
+		curRec = rec.second;
+		if (curRec && lastRec) {
+			size_t idx, max;
+			yyjson_mut_val* key, * val;
+			yyjson_mut_obj_foreach(curRec, idx, max, key, val) {
+				if (yyjson_mut_is_null(val)) {
+					string_view szKey = yyjson_mut_get_str(key);
+					yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
+					yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
+					yyjson_mut_obj_put(curRec, key, curVal);
+				}
+			}
+		}
+		lastRec = curRec;
+	}
+
+
+
 	return true;
 }
 
@@ -475,6 +501,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	if (result.getDE){
 		//如果此处p返回null，应该是rlt_mut_doc当中 指向的string类型可能是临时变量，已经被释放了
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
+		size_t len = strlen(p);
 		result.dataList = p;
 	}
 	result.count = mapRlt.size();

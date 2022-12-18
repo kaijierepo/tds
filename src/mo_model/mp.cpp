@@ -147,6 +147,13 @@ bool MP::loadConf(json& conf)
 		m_saveInterval.hour = jsi["hour"].get<int>();
 		m_saveInterval.minute = jsi["minute"].get<int>();
 		m_saveInterval.second = jsi["second"].get<int>();
+
+		//周期模式但是周期设为0，相当于全部保存。此配置无效，默认修改为5分钟
+		if (m_saveMode == DATA_SAVE_MODE::cyclic || m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
+			if (getSaveInterval() == 0) {
+				m_saveInterval.minute = 5;
+			}
+		}
 	}
 
 	if (conf["k"] != nullptr)
@@ -670,7 +677,8 @@ bool MP::needSaveToDB()
 		if (m_curVal.is_number() && m_lastVal.is_number()) {
 			double last = m_lastVal.get<double>();
 			double cur = m_curVal.get<double>();
-			if (fabs(last - cur) > m_deadZone) {
+			double diff = fabs(last - cur);
+			if (diff > m_deadZone && diff >0.00001) {
 				bNeedSave = true;
 			}
 		}
@@ -693,8 +701,10 @@ bool MP::needSaveToDB()
 
 
 void MP::saveToDB() {
+	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
 	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
+	m_dbFileLock.unlock();
 }
 
 //该接口保证rlt或者err一定会有一个值返回
