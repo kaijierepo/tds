@@ -434,14 +434,22 @@ bool scriptHost::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION sess
 	{
 		jList = json::parse(sList);
 	}
+
+	bool existed = false;
 	for (int i = 0; i < jList.size(); i++)
 	{
 		json& jInfoTmp = jList[i];
 		if (jInfoTmp["name"].get<string>() == sName)
 		{
 			jInfoTmp = jInfo;
+			existed = true;
 		}
 	}
+
+	if (!existed) {
+		jList.push_back(jInfo);
+	}
+
 	sList = jList.dump(4);
 	fs::writeFile(infoPath,sList);
 
