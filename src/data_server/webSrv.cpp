@@ -1132,10 +1132,10 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 
 void WebServer::parseParamFromUrl(string& url, map<string, string>& mapParams)
 {
-	int paramStart = url.find('?', 0);
+	size_t paramStart = url.find('?', 0);
 	if (paramStart != string::npos)//解析携带参数
 	{
-		int paramEnd = url.find(' ', paramStart);
+		size_t paramEnd = url.find(' ', paramStart);
 		string paramStr = url.substr(paramStart + 1, paramEnd - paramStart - 1);
 		parseParamFromQuery(paramStr, mapParams);
 	}

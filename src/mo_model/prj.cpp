@@ -211,20 +211,13 @@ void project::getMpTypeList(json& mpTypeList)
 
 bool project::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 {
-	if (tagSelector.mode == TSM_single)
-	{
-		tags.push_back(tagSelector.singleTag);
-	}
-	else if (tagSelector.mode == TSM_multi) {
-		for (int i = 0; i < tagSelector.multiTag.size(); i++) {
-			tags.push_back(tagSelector.multiTag[i]);
-		}
-	}
-	else
-	{
+	tags = tagSelector.exactMatchExp;
+
+	for(int i=0;i<tagSelector.fuzzyMatchExp.size();i++){
+		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<MP*> tagSet;
 		vector<MP*> tagSetTmp;
-		prj.GetMPByTag(&tagSetTmp, tagSelector.tagExp);
+		prj.GetMPByTag(&tagSetTmp, exp);
 		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
 		{
 			for (auto& it : tagSetTmp)
@@ -246,6 +239,62 @@ bool project::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelect
 	}
 
 	return false;
+}
+
+void project::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
+	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
+		string& exp = tagSelector.exactMatchExp[i];
+		OBJ* p = prj.queryObj(exp);
+		if (p) {
+			objList.push_back(p);
+		}
+	}
+
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<OBJ*> tagSet;
+		prj.queryObj(&tagSet, exp,false,tagSelector.type);
+		for (auto& i : tagSet)
+		{
+			objList.push_back(i);
+		}
+	}
+}
+
+void project::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
+{
+	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
+		string& exp = tagSelector.exactMatchExp[i];
+		MP* p = prj.GetMPByTag(exp);
+		if (p) {
+			mpList.push_back(p);
+		}
+	}
+
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<MP*> tagSet;
+		vector<MP*> tagSetTmp;
+		prj.GetMPByTag(&tagSetTmp, exp);
+		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		{
+			for (auto& it : tagSetTmp)
+			{
+				if (it->getMpType() == tagSelector.type)
+				{
+					tagSet.push_back(it);
+				}
+			}
+		}
+		else
+		{
+			tagSet = tagSetTmp;
+		}
+		for (auto& i : tagSet)
+		{
+			mpList.push_back(i);
+		}
+	}
 }
 
 

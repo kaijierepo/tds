@@ -1306,27 +1306,25 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp")
 		{
-			//位号参数处理
+			//位号选择器 参数tag + rootTag
 			//用户查询时 tag默认"",rootTag默认""
 			//tag是相对于rootTag的相对位号
 			//rootTag和tag组合出用户位号。
 			//用户位号和用户组织结构组合成系统位号
-			string tag = "";//相对位号
 			if (params["tag"] == nullptr) //获取子树
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 				return true;
 			}
-			tag = params["tag"].get<string>();
 			string rootTag = "";//查询根
 			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") //获取子树
 			{
 				rootTag = params["rootTag"].get<string>();
 			}
-
-			tag = TAG::addRoot(tag, rootTag);//组合为用户位号
-			tag = TAG::addRoot(tag, session.org);//组合为系统位号
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
+			TAG_SELECTOR tagSel;
+			tagSel.init(params["tag"], rootTag);
+
 			string type = "obj";
 			if (params["type"] != nullptr)
 				type = params["type"].get<string>();
@@ -1337,18 +1335,19 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				params["getMp"] = true;
 				type = "mp";
 			}
+			tagSel.type = type;
+
 			string mode = "array";
 			if (params["mode"] != nullptr) {
 				mode = params["mode"].get<string>();
 			}
 			
+			vector<OBJ*> objList;
+			prj.getObjByTagSelector(objList, tagSel);
 
 			//通配模式，返回一个数组
-			if (tag.find("*") != string::npos) {
-				vector<OBJ*> objList;
-				prj.queryObj(&objList, tag,false,type);
+			if (objList.size()>1) {
 				params["rootTag"] = rootTag;
-
 				if (mode == "array") {
 					json jRlt = json::array();
 					for (int i = 0; i < objList.size(); i++) {
@@ -1374,20 +1373,17 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 			}
 			//精确查找模式，返回一个对象
-			else {
-				OBJ* pmo = prj.queryObj(tag);
-				if (pmo)
-				{
-					//所有位号以用户位号的方式展示。除非另外指定rootTag
-					json j;
-					params["rootTag"] = rootTag;
-					pmo->toJson(j, params);
-					result = j.dump(4);
-				}
-				else
-				{
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
-				}
+			else if(objList.size() == 1){
+				OBJ* pmo = objList[0];
+				//所有位号以用户位号的方式展示。除非另外指定rootTag
+				json j;
+				params["rootTag"] = rootTag;
+				pmo->toJson(j, params);
+				result = j.dump(4);
+			}
+			else
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
 			}
 		}
 		else if (method == "getMoConf")

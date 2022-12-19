@@ -39,9 +39,23 @@ bool scriptHost::run()
 		return false;
 
 	init();
+	updateVarExpScript();
 	thread t(scriptThread, this);
 	t.detach();
 	return false;
+}
+
+void scriptHost::updateVarExpScript()
+{
+	m_mapVarExpScripts.clear();
+	std::vector<MP*> aryMP;
+	prj.GetAllChildMp(aryMP);
+	for (int i = 0; i < aryMP.size(); i++) {
+		MP* p = aryMP[i];
+		if (p->m_ioType == "v" && p->m_expression!="") {
+			m_mapVarExpScripts[p->getTag()] = p->m_expression;
+		}
+	}
 }
 
 
@@ -140,8 +154,6 @@ static jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 			json jMpStatus = pmp->getRTData();
 			scriptHost::setScriptEngineObj(jMpStatus, obj_mo);
 			return obj_mo;
-			jerry_value_t ret = jerry_create_null();
-			return ret;
 		}
 		else
 		{
@@ -153,6 +165,21 @@ static jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 	{
 		jerry_value_t ret = jerry_create_null();
 		return ret;
+	}
+}
+
+static jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = scriptHost::engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() > 0)
+	{
+
+	}
+	else {
+
 	}
 }
 

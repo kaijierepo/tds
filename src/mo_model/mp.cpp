@@ -204,6 +204,10 @@ bool MP::loadConf(json& conf)
 		}
 	}
 
+	if (conf["expression"].is_string()) {
+		m_expression = conf["expression"];
+	}
+
 
 	if (conf["mediaSrcType"] != nullptr) {
 		m_mediaSrcType = conf["mediaSrcType"].get<string>();
@@ -255,27 +259,6 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	{
 		//确定是否请求了该类型的监测点
 		MP* p = (MP*)this;
-		//bool bIncluded = false;
-		//if (serializeOption["valType"] != nullptr)
-		//{
-		//	json& vt = serializeOption["valType"];
-		//	for (int i = 0; i < vt.size(); i++)
-		//	{
-		//		json& jType = vt[i];
-		//		if (jType.get<string>() == p->m_valType)
-		//		{
-		//			bIncluded = true;
-		//			break;
-		//		}
-		//	}
-		//}
-		//else
-		//{
-		//	bIncluded = true;
-		//}
-		//if (!bIncluded)
-		//	return false;
-
 		conf["valType"] = p->m_valType;
 		if (p->m_ioType != "")
 			conf["ioType"] = p->m_ioType;
@@ -364,6 +347,9 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		}
 		
 		conf["srcStreamFetch"] = m_srcStreamFetch;
+		if (m_expression != "") {
+			conf["expression"] = m_expression;
+		}
 	}
 	
 

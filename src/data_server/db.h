@@ -96,13 +96,6 @@ public:
 	string strEnd;
 };
 
-enum TAG_SELECT_MODE {
-	TSM_invalid,
-	TSM_single, //单选
-	TSM_multi, //多选
-	TSM_fuzzy_match //模糊匹配
-};
-
 class TAG_SELECTOR{
 public:
 	TAG_SELECTOR() {
@@ -112,23 +105,19 @@ public:
 	bool init(json tag, string rootTag = "");
 	bool match(string tag);//使用不带根的绝对位号
 
-	TAG_SELECT_MODE mode;
 	string m_rootTag; //查询根
 
-	//模糊匹配模式
-	string tagExp;
-	string regExp;
-
-	//精确匹配模式-单选
-	string singleTag; //使用系统位号
-
-	//精确匹配模式-多选
-	vector<string> multiTag; //使用系统位号
+	//模糊匹配表达式
+	vector<string> fuzzyMatchExp;
+	//模糊匹配正则表达式
+	vector<string> fuzzyMatchRegExp;
+	//精确匹配表达式
+	vector<string> exactMatchExp; 
 
 	//返回的数据元中是否需要包含tag字段
 	bool getTag;
 
-	string type;
+	string type; //object type
 	string error;
 };
 

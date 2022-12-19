@@ -102,6 +102,7 @@ public:
 	int m_downSampleInterval; //单位毫秒
 	TIME m_stLastSampleTime;
 	string m_srcStreamFetch; //ondemand按需拉流 或 always持续拉流
+	string m_expression;    //计算表达式
 
 	//整型枚举值
 	map<int, string> mapEnumVal;

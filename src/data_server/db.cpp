@@ -1243,17 +1243,17 @@ bool TAG_SELECTOR::init(string tag, string rootTag){
 	m_rootTag = rootTag;
 	if (tag.find("*") != string::npos)
 	{
-		mode = TSM_fuzzy_match;
-		tagExp = TAG::addRoot(tag, rootTag);
-		regExp = tagExp;
+		string tagExp = TAG::addRoot(tag, rootTag);
+		string regExp = tagExp;
 		regExp = str::replace(regExp, ".", "\\.");
 		regExp = str::replace(regExp, "*", ".*");
+		fuzzyMatchExp.push_back(tagExp);
+		fuzzyMatchRegExp.push_back(regExp);
 	}
 	else
 	{
-		mode = TSM_single;
 		tag = TAG::addRoot(tag, rootTag);
-		singleTag = tag;
+		exactMatchExp.push_back(tag);
 	}
 
 	return true;
@@ -1261,7 +1261,6 @@ bool TAG_SELECTOR::init(string tag, string rootTag){
 
 bool TAG_SELECTOR::init(json tag, string rootTag)
 {
-	mode = TSM_invalid;
 	if (tag.is_string()) {
 		return init(tag.get<string>(), rootTag);
 	}
@@ -1269,11 +1268,9 @@ bool TAG_SELECTOR::init(json tag, string rootTag)
 		m_rootTag = rootTag;
 		for (auto& i : tag) {
 			if (i.is_string()) {
-				string sTag = TAG::addRoot(i.get<string>(), rootTag);
-				multiTag.push_back(sTag);
+				init(i.get<string>(), rootTag);
 			}
 		}
-		mode = TSM_multi;
 		return true;
 	}
 
@@ -1281,35 +1278,22 @@ bool TAG_SELECTOR::init(json tag, string rootTag)
 }
 
 bool TAG_SELECTOR::match(string tag){
-		//exact match
-		if (mode == TSM_single)
-		{
-			if(tag == singleTag)
-				return true;
-			else
-				return false;
+	for (int i = 0; i < exactMatchExp.size(); i++) {
+		string& exp = exactMatchExp[i];
+		if (exp == tag) {
+			return true;
 		}
-		else if(mode == TSM_multi)
+	}
+
+	for (int i = 0; i < fuzzyMatchRegExp.size(); i++) {
+		string& sreg = fuzzyMatchRegExp[i];
+		std::regex reg(sreg);
+		if (std::regex_match(tag, reg))
 		{
-			for (int i = 0; i < multiTag.size(); i++) {
-				if (tag == multiTag[i])
-					return true;
-			}
-			return false;
+			return true;
 		}
-		//fuzzy match
-		else
-		{
-			std::regex reg(regExp);
-			if (std::regex_match(tag, reg))
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
-		}
+	}
+	return false;
 }
 
 CONDITION_SELECTOR::CONDITION_SELECTOR()

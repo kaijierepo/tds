@@ -13,8 +13,10 @@ class scriptHost {
 public:
 	bool init();
 	bool run();
+	void updateVarExpScript();
 
 	std::map<string, string> m_mapScripts;
+	std::map<string, string> m_mapVarExpScripts;
 #ifdef ENABLE_JERRY_SCRIPT
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool runScript(string& script);
