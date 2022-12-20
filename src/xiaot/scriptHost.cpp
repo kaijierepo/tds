@@ -35,9 +35,6 @@ bool scriptHost::init()
 
 bool scriptHost::run()
 {
-	if (!tds->conf->enableScript)
-		return false;
-
 	init();
 	updateVarExpScript();
 	thread t(scriptThread, this);
@@ -176,11 +173,70 @@ static jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() > 0)
 	{
+		json tag = jArgs[0];
+		vector<MP*> mpList;
+		TAG_SELECTOR tagSel;
+		tagSel.init(tag);
+		prj.getMpByTagSelector(mpList, tagSel);
 
+		double dbSum = 0;
+		bool success = true;
+		for (int i = 0; i < mpList.size(); i++) {
+			MP* pmp = mpList[i];
+			if (pmp->m_curVal.is_number()) {
+				double val = pmp->m_curVal.get<double>();
+				dbSum += val;
+			}
+			else {
+				success = false;
+				break;
+			}
+		}
+
+		if (success) {
+			jerry_value_t ret = jerry_create_number(dbSum);
+			return ret;
+		}
+		else {
+			jerry_value_t ret = jerry_create_null();
+			return ret;
+		}
 	}
 	else {
-
+		jerry_value_t ret = jerry_create_null();
+		return ret;
 	}
+}
+
+
+static jerry_value_t func_val(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = scriptHost::engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() > 0)
+	{
+		json tag = jArgs[0];
+		if (tag.is_string()) {
+			string sTag = tag.get<string>();
+			MP* pmp = prj.getMp(sTag);
+			if (pmp) {
+				if (pmp->m_curVal.is_number()) {
+					double val = pmp->m_curVal.get<double>();
+					jerry_value_t ret = jerry_create_number(val);
+					return ret;
+				}
+				else if (pmp->m_curVal.is_boolean()) {
+					bool val = pmp->m_curVal.get<bool>();
+					jerry_value_t ret = jerry_create_boolean(val);
+					return ret;
+				}
+			}
+		}
+	}
+	jerry_value_t ret = jerry_create_null();
+	return ret;
 }
 
 json scriptHost::engineValToJson(const jerry_value_t value)
@@ -274,46 +330,83 @@ bool scriptHost::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION sessio
 	return true;
 }
 
+bool scriptHost::initGlobalFunc()
+{
+	// getMp函数
+	property_name_getMp = jerry_create_string((const jerry_char_t*)"getMo");
+	property_func_getMp = jerry_create_external_function(func_getMp);
+	jerry_value_t set_result = jerry_set_property(global_object, property_name_getMp, property_func_getMp);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+	// log函数
+	 property_name_log = jerry_create_string((const jerry_char_t*)"log");
+	 property_func_log = jerry_create_external_function(func_log);
+	set_result = jerry_set_property(global_object, property_name_log, property_func_log);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+
+	// output函数
+	 property_name_output = jerry_create_string((const jerry_char_t*)"output");
+	 property_func_output = jerry_create_external_function(func_output);
+	set_result = jerry_set_property(global_object, property_name_output, property_func_output);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+
+	// call函数
+	 property_name_call = jerry_create_string((const jerry_char_t*)"call");
+	 property_func_call = jerry_create_external_function(func_call);
+	set_result = jerry_set_property(global_object, property_name_call, property_func_call);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+	// sum函数
+	property_name_sum = jerry_create_string((const jerry_char_t*)"sum");
+	property_func_sum = jerry_create_external_function(func_sum);
+	set_result = jerry_set_property(global_object, property_name_sum, property_func_sum);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+	// val函数
+	property_name_val = jerry_create_string((const jerry_char_t*)"val");
+	property_func_val = jerry_create_external_function(func_sum);
+	set_result = jerry_set_property(global_object, property_name_val, property_func_val);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+
+	return true;
+}
+
+void scriptHost::releaseGlobalFunc() {
+	jerry_release_value(property_name_getMp);
+	jerry_release_value(property_func_getMp);
+	jerry_release_value(property_name_log);
+	jerry_release_value(property_func_log);
+	jerry_release_value(property_name_output);
+	jerry_release_value(property_func_output);
+	jerry_release_value(property_name_call);
+	jerry_release_value(property_func_call);
+	jerry_release_value(property_name_sum);
+	jerry_release_value(property_func_sum);
+	jerry_release_value(property_name_val);
+	jerry_release_value(property_func_val);
+}
+
 bool scriptHost::runScript(string& script)
 {
 	try {
 		jerry_init(JERRY_INIT_EMPTY);
-		jerry_value_t global_object = jerry_get_global_object();
+		global_object = jerry_get_global_object();
 
-		// getMp函数
-		jerry_value_t property_name_getMp = jerry_create_string((const jerry_char_t*)"getMo");
-		jerry_value_t property_func_getMp = jerry_create_external_function(func_getMp);
-		jerry_value_t set_result = jerry_set_property(global_object, property_name_getMp, property_func_getMp);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-		// log函数
-		jerry_value_t property_name_log = jerry_create_string((const jerry_char_t*)"log");
-		jerry_value_t property_func_log = jerry_create_external_function(func_log);
-		set_result = jerry_set_property(global_object, property_name_log, property_func_log);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-
-		// output函数
-		jerry_value_t property_name_output = jerry_create_string((const jerry_char_t*)"output");
-		jerry_value_t property_func_output = jerry_create_external_function(func_output);
-		set_result = jerry_set_property(global_object, property_name_output, property_func_output);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-
-		// call函数
-		jerry_value_t property_name_call = jerry_create_string((const jerry_char_t*)"call");
-		jerry_value_t property_func_call = jerry_create_external_function(func_call);
-		set_result = jerry_set_property(global_object, property_name_call, property_func_call);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
+		initGlobalFunc();
 
 		///* Run the demo script with 'eval' */
 		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
@@ -335,14 +428,7 @@ bool scriptHost::runScript(string& script)
 		jerry_release_value(eval_ret);
 		
 
-		jerry_release_value(property_name_getMp);
-		jerry_release_value(property_func_getMp);
-		jerry_release_value(property_name_log);
-		jerry_release_value(property_func_log);
-		jerry_release_value(property_name_output);
-		jerry_release_value(property_func_output);
-		jerry_release_value(property_name_call);
-		jerry_release_value(property_func_call);
+		releaseGlobalFunc();
 		jerry_release_value(global_object);
 
 		jerry_cleanup();
@@ -488,76 +574,115 @@ json scriptHost::getScriptList(string tag)
 	return json();
 }
 
+void scriptHost::exeAllGlobalScripts()
+{
+	shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
+
+	jerry_init(JERRY_INIT_EMPTY);
+	 global_object = jerry_get_global_object();
+
+	initGlobalFunc();
+
+	for (auto& i : m_mapScripts)
+	{
+		string& script = i.second;
+
+		/* Run the demo script with 'eval' */
+		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
+			script.length(),
+			JERRY_PARSE_NO_OPTS);
+
+		/* Check if there was any error (syntax or runtime) */
+		bool run_ok = !jerry_value_is_error(eval_ret);
+		jerry_error_t error = jerry_get_error_type(eval_ret);
+
+		if (run_ok)
+		{
+			bool bRunSuccess = jerry_value_to_boolean(eval_ret);
+		}
+		else
+		{
+		}
+		jerry_release_value(error);
+		jerry_release_value(eval_ret);
+	}
+
+	releaseGlobalFunc();
+	jerry_release_value(global_object);
+
+	jerry_cleanup();
+}
+
+void scriptHost::exeAllVarExpScripts()
+{
+	shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
+
+
+	jerry_init(JERRY_INIT_EMPTY);
+	global_object = jerry_get_global_object();
+	initGlobalFunc();
+
+	for (auto& i : m_mapVarExpScripts)
+	{
+		string& script = i.second;
+
+		/* Run the demo script with 'eval' */
+		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
+			script.length(),
+			JERRY_PARSE_NO_OPTS);
+
+		if (jerry_value_is_number(eval_ret))
+		{
+			double val = jerry_get_number_value(eval_ret);
+			json jParams;
+			jParams["tag"] = i.first;
+			jParams["val"] = val;
+			tds->callAsyn("input", jParams.dump());
+		}
+
+		/* Check if there was any error (syntax or runtime) */
+		bool run_ok = !jerry_value_is_error(eval_ret);
+		jerry_error_t error = jerry_get_error_type(eval_ret);
+
+		if (run_ok)
+		{
+			bool bRunSuccess = jerry_value_to_boolean(eval_ret);
+		}
+		else
+		{
+		}
+		jerry_release_value(error);
+		jerry_release_value(eval_ret);
+	}
+
+	releaseGlobalFunc();
+	jerry_release_value(global_object);
+
+	jerry_cleanup();
+}
+
 void scriptHost::loopExe()
 {
+	TIME lastExe1 = timeopt::now();
+	TIME lastExe2 = timeopt::now();
+
 	while (1)
 	{
-		Sleep(100);
-
-		shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
-
-		jerry_init(JERRY_INIT_EMPTY);
-		jerry_value_t global_object = jerry_get_global_object();
-
-		// getMp函数
-		jerry_value_t property_name_getMp = jerry_create_string((const jerry_char_t*)"getMo");
-		jerry_value_t property_func_getMp = jerry_create_external_function(func_getMp);
-		jerry_value_t set_result = jerry_set_property(global_object, property_name_getMp, property_func_getMp);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-		// log函数
-		jerry_value_t property_name_log = jerry_create_string((const jerry_char_t*)"log");
-		jerry_value_t property_func_log = jerry_create_external_function(func_log);
-		set_result = jerry_set_property(global_object, property_name_log, property_func_log);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-
-		// output函数
-		jerry_value_t property_name_output = jerry_create_string((const jerry_char_t*)"output");
-		jerry_value_t property_func_output = jerry_create_external_function(func_output);
-		set_result = jerry_set_property(global_object, property_name_output, property_func_output);
-		if (jerry_value_is_error(set_result)) {
-		}
-		jerry_release_value(set_result);
-
-
-		for (auto& i : m_mapScripts)
-		{
-			string& script = i.second;
-
-			/* Run the demo script with 'eval' */
-			jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
-				script.length(),
-				JERRY_PARSE_NO_OPTS);
-
-			/* Check if there was any error (syntax or runtime) */
-			bool run_ok = !jerry_value_is_error(eval_ret);
-			jerry_error_t error = jerry_get_error_type(eval_ret);
+		//if (m_mapScripts.size() > 0) {
+		//	if (timeopt::CalcTimePassSecond(lastExe1) > 1) {
+		//		exeAllGlobalScripts();
+		//		lastExe1 = timeopt::now();
+		//	}
+		//}
 		
-			if (run_ok)
-			{
-				bool bRunSuccess = jerry_value_to_boolean(eval_ret);
+		if (m_mapVarExpScripts.size() > 0) {
+			if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
+				exeAllVarExpScripts();
+				lastExe2 = timeopt::now();
 			}
-			else
-			{
-			}
-			jerry_release_value(error);
-			jerry_release_value(eval_ret);
 		}
 
-		jerry_release_value(property_name_getMp);
-		jerry_release_value(property_func_getMp);
-		jerry_release_value(property_name_log);
-		jerry_release_value(property_func_log);
-		jerry_release_value(property_name_output);
-		jerry_release_value(property_func_output);
-		jerry_release_value(global_object);
-
-		jerry_cleanup();
+		Sleep(100);
 	}
 }
 

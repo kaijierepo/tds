@@ -75,27 +75,6 @@ struct DE_TIME {
 };
 
 
-class TIME_CONDITON {
-public:
-	bool init(string condition);
-	bool Match(string& deTime);
-	bool IsHMS; // only hms is specified, the timespan of each day is selected
-	TIME_CONDITON() {
-		IsHMS = false;
-		startHMS = 0;
-		endHMS = 0;
-	}
-
-	int startHMS;
-	int endHMS;
-	TIME stStart;
-	TIME stEnd;
-	time_t startTime;
-	time_t endTime;
-	string strStart;
-	string strEnd;
-};
-
 class TAG_SELECTOR{
 public:
 	TAG_SELECTOR() {
@@ -121,6 +100,24 @@ public:
 	string error;
 };
 
+enum Time_Sel_Mode {
+	TSM_TimeRange = 0,
+	TSM_First = 1,
+	TSM_Last = 2
+};
+
+
+//时间选择器先确定需要加载的数据库原始文件的时间范围
+//加载原始文件后，对边界上的两个文件的数据进行 时间范围的进一步选择
+//时间点 理解成 开始时间和结束时间相同的一个timeRange
+// 
+//简写模式 - 解析规则
+//2020-02-02  -> 2020-02-02 00:00:00~2020-02-02 23:59:59
+//2020-02  -> 2020-02-01 00:00:00~2020-02-28 23:59:59
+//
+//取头尾模式
+//head@TIME_SEL   tail@TIME_SEL
+
 class TIME_SELECTOR
 {
 public:
@@ -128,12 +125,27 @@ public:
 	bool Match(string& deTime);
 	bool AmountMatch(int amount);
 	bool init(string time);
-	vector<TIME_CONDITON> vecCondition;
-	//多个条件组合出来的最宽的数据范围，用于数据库文件遍历
+	string shortSel2StardardSel(string time);
+	bool parseTimeRange(string time);//标准格式时间范围2020-02-01 00:00:00~2020-02-28 23:59:59
+
+	//选择器字符串
+	string selector;
+	Time_Sel_Mode selMode;
+
+
+	//时间范围
+	string strStart;
+	string strEnd;
 	TIME stStart;
 	TIME stEnd;
 	time_t startTime;
 	time_t endTime;
+
+	//时分秒
+	bool enableHMSRange;
+	int startHMS;
+	int endHMS;
+
 	int m_dataNum;//存储传入参数的，ne,n代表获取几个数据。
 	string error;
 	DE_TIME deTime;
@@ -164,11 +176,16 @@ struct DB_FILE {
 	string path;
 	string ymd;
 	TIME time;
+	time_t ttTime;
+	string tag;
 	yyjson_doc* doc;
 	yyjson_val* root;
 
+	bool loadFile();
 
-	DB_FILE() {
+	DB_FILE(time_t tt,string tag_) {
+		ttTime = tt;
+		tag = tag_;
 		doc = nullptr;
 		root = nullptr;
 	}

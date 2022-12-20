@@ -1192,6 +1192,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 				tmpPrj.m_childObj.clear();
 				prj.saveConfFile();
+				sHost.updateVarExpScript();
 				ioSrv.updateTag2IOAddrBinding();
 				ioSrv.updateAllChanVal();
 				result = "\"ok\"";

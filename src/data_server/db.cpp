@@ -198,6 +198,17 @@ bool database::loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFil
 			int currDeTime = 0;
 			string deTime = pdf->ymd + " 00:00:00";
 			yyjson_arr_foreach(pdf->root, idx, max, val) {
+				//取一定时间区间的第一个和最后一个元素模式
+				if (deSel.timeSel.selMode == TSM_First) {
+					if (idx > 0)
+						break;
+				}
+				else if (deSel.timeSel.selMode == TSM_Last) {
+					if (idx < max - 1)
+						continue;
+				}
+
+
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
 				if (deSel.interval.type == DST_Count)
@@ -222,7 +233,7 @@ bool database::loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFil
 				}
 				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
 
-				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+				if (pdf->boundaryFile && deSel.timeSel.selMode == TSM_TimeRange && !deSel.timeSel.Match(deTime) )
 					continue;
 
 				if (deSel.interval.type == DST_Time) {
@@ -419,6 +430,22 @@ bool database::loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET
 	return true;
 }
 
+bool DB_FILE::loadFile()
+{
+	time = timeopt::Unix2SysTime(ttTime);
+	ymd = timeopt::TimeToYMD(time);
+	path = db.getPath_dbFile(tag, time);
+	fs::readFile(path, data);
+	if (data == "") {
+		return false;
+	}
+
+	//从数据库的原始json数据。
+	doc = yyjson_read(data.c_str(), data.length(), 0);
+	root = yyjson_doc_get_root(doc);
+	return true;
+}
+
 
 bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
@@ -441,25 +468,48 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	{
 		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
-
-		time_t loadTime = deSel.timeSel.endTime;
-		for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-		{
-			DB_FILE* pdf = new DB_FILE();
-			pdf->time = timeopt::Unix2SysTime(loadTime);
-			pdf->ymd = timeopt::TimeToYMD(pdf->time);
-			pdf->path = getPath_dbFile(fSet.tag, pdf->time);
-			fs::readFile(pdf->path, pdf->data);
-			if (pdf->data == "") {
-				delete pdf;
-				continue;
+		if (deSel.timeSel.selMode == TSM_First) {
+			time_t loadTime = deSel.timeSel.startTime;
+			for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
+			{
+				DB_FILE* pdf = new DB_FILE(loadTime,fSet.tag);
+				if (!pdf->loadFile()){
+					delete pdf;
+					continue;
+				}
+				fSet.fileList.push_back(pdf);
+				break;
 			}
-			fSet.fileList.push_back(pdf);
-
-			//从数据库的原始json数据。
-			pdf->doc = yyjson_read(pdf->data.c_str(), pdf->data.length(), 0);
-			pdf->root = yyjson_doc_get_root(pdf->doc);
 		}
+		else if (deSel.timeSel.selMode == TSM_Last) {
+			time_t loadTime = deSel.timeSel.endTime;
+			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+			{
+				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+				if (!pdf->loadFile()) {
+					delete pdf;
+					continue;
+				}
+				fSet.fileList.push_back(pdf);
+				break;
+			}
+		}
+		else {
+			time_t loadTime = deSel.timeSel.endTime;
+			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+			{
+				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+				if (!pdf->loadFile()) {
+					delete pdf;
+					continue;
+				}
+				fSet.fileList.push_back(pdf);
+			}
+		}
+
+		
+
+
 		if (fSet.fileList.size() == 0)
 			continue;
 		//头尾两个数据文件需要进行时间范围检查，中间的不需要
@@ -1092,19 +1142,14 @@ TIME_SELECTOR::TIME_SELECTOR()
 	startTime = 0;
 	endTime = 0;
 	m_dataNum = 0;
+	enableHMSRange = false;
 }
 
 bool TIME_SELECTOR::Match(string& deTime)
 {
-	//deTime.st = timeopt::str2st(timeTag);
-	//deTime.tt = timeopt::SysTime2Unix(deTime.st);
-	for (int i = 0; i < vecCondition.size(); i++)
-	{
-		TIME_CONDITON& tc = vecCondition.at(i);
-		if (!tc.Match(deTime))
-			return false;
-	}
-	return true;
+	if (deTime >= strStart && deTime <= strEnd)
+		return true;
+	return false;
 }
 
 bool TIME_SELECTOR::AmountMatch(int amount)
@@ -1123,121 +1168,143 @@ bool TIME_SELECTOR::AmountMatch(int amount)
 	}
 }
 
-bool TIME_SELECTOR::init(string time)
-{
-	if (time.find("e") != string::npos)
-	{
-		time = time.substr(0, time.length() - 1);
-		m_dataNum = _ttoi(time.c_str());
-		TIME sysStTime, sysEdTime;
-		timeopt::now(&sysEdTime);
-		TIME_CONDITON tcStartTime, tcEndTime;
-		tcStartTime.init("2020-01-01 00:00:00");
-		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", sysEdTime.wYear, sysEdTime.wMonth, sysEdTime.wDay, sysEdTime.wHour, sysEdTime.wMinute, sysEdTime.wSecond);
-		tcEndTime.init(str);
-		startTime = tcStartTime.startTime;
-		endTime = tcEndTime.endTime;
-	}
-	else
-	{
-		//获得条件列表
-		vector<string> v;
-		if (time.find("&&") != string::npos)//组合条件 仅限于绝对日期区间模式
-		{
-			str::split(v, time, "&&");
-		}
-		else
-		{
-			v.push_back(time);
-		}
+//普通年
+int monthLastDay[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
+//闰年
+int monthLastDay_leapYear[12] = { 31,29,31,30,31,30,31,31,30,31,30,31 };
 
-		//解析条件
-		for (int i = 0; i < v.size(); i++)
-		{
-			TIME_CONDITON tc;
-			tc.init(v.at(i));
-			vecCondition.push_back(tc);
-		}
-
-		//获得整体时间范围，用于数据库遍历
-		for (int i = 0; i < vecCondition.size(); i++)
-		{
-			TIME_CONDITON& tc = vecCondition.at(i);
-			if (!tc.IsHMS)
-			{
-				stStart = tc.stStart;
-				stEnd = tc.stEnd;
-				startTime = tc.startTime;
-				endTime = tc.endTime;
-				break;//实际需要多个条件组合，目前不太会遇到这个场景，以后实现
+bool isLeapYear(int year) {
+	if (year % 4 == 0) {
+		if (year % 100 == 0) {
+			if (year % 400 == 0) {
+				return true;
 			}
 		}
-	}
-	return true;
-}
-
-bool TIME_CONDITON::init(string condition)
-{
-	if (condition.find('-') != string::npos)//年月日绝对区间模式
-	{
-		size_t pos = condition.find("~");
-		strStart = condition.substr(0, pos);
-		strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
-		if (strStart.find(":") == string::npos)
-			strStart += " 00:00:00";
-		if (strEnd.find(":") == string::npos)
-			strEnd += " 23:59:59";
-		stStart = timeopt::str2st(strStart);
-		stEnd = timeopt::str2st(strEnd);
-		startTime = timeopt::SysTime2Unix(stStart);
-		endTime = timeopt::SysTime2Unix(stEnd);
-	}
-	else
-	{
-		if (condition.find(':') != string::npos)//时分秒模式
-		{
-			IsHMS = true;
-			size_t pos = condition.find("~");
-			strStart = condition.substr(0, pos);
-			strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
-			startHMS = timeopt::HMS2Sec(strStart);
-			endHMS = timeopt::HMS2Sec(strEnd);
-		}
-		else//相对时间模式
-		{
-			condition = timeopt::rel2abs(condition);
-			int pos = condition.find("~");
-			strStart = condition.substr(0, pos);
-			strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
-			if (strStart.find(":") == string::npos)
-				strStart += " 00:00:00";
-			if (strEnd.find(":") == string::npos)
-				strEnd += " 23:59:59";
-			stStart = timeopt::str2st(strStart);
-			stEnd = timeopt::str2st(strEnd);
-			startTime = timeopt::SysTime2Unix(stStart);
-			endTime = timeopt::SysTime2Unix(stEnd);
-		}
-	}
-	return true;
-}
-
-bool TIME_CONDITON::Match(string& deTime)
-{
-	if (IsHMS)
-	{
-		//int iTime = det.st.wHour*60*60 + det.st.wMinute*60 + det.st.wSecond;
-		//if (iTime >= startHMS && iTime <= endHMS)
-		//	return true;
-	}
-	else
-	{
-		//字符串直接比较应该可以获得比先转换 time_t 跟高的性能
-		if (deTime >= strStart && deTime <= strEnd)
+		else {
 			return true;
+		}
 	}
 	return false;
 }
+
+
+int getMonthLastDay(int year, int month) {
+	if (isLeapYear(year)) {
+		return monthLastDay_leapYear[month];
+	}
+	else {
+		return monthLastDay[month];
+	}
+};
+
+
+string time2DbFileDate(string& time) {
+	string dbFileDate;
+	//2020-02
+	if (time.length() == 7) {
+		string sYear = time.substr(0, 4);
+		string sMonth = time.substr(5, 2);
+		int y = atoi(sYear.c_str());
+		int m = atoi(sMonth.c_str());
+		int d = getMonthLastDay(y, m);
+		string sDay = str::format("%2d", d);
+		dbFileDate = time + "-" + sDay;
+		return dbFileDate;
+	}
+	//2020-02-03
+	else if (time.length() == 10) {
+		return time;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+bool TIME_SELECTOR::init(string time)
+{
+	selector = time;
+
+	//时间宏替换
+	if (time.find("this month") != string::npos) {
+		string t = timeopt::nowStr(false);
+		t = t.substr(0, 7);
+		time = str::replace(time, "this month", t);
+	}
+	else if (time.find("this day") != string::npos) {
+		string t = timeopt::nowStr(false);
+		t = t.substr(0, 10);
+		time = str::replace(time, "this day", t);
+	}
+
+
+	if (time.find("head@") != string::npos) {
+		selMode = TSM_First;
+		string timeRange = str::trimPrefix(time, "head@");
+		timeRange = shortSel2StardardSel(timeRange);
+		parseTimeRange(timeRange);
+	}
+	else if (time.find("tail@") != string::npos) {
+		selMode = TSM_Last;
+		string timeRange = str::trimPrefix(time, "tail@");
+		timeRange = shortSel2StardardSel(timeRange);
+		parseTimeRange(timeRange);
+	}
+	else if (time.find("e") != string::npos)
+	{
+		time = time.substr(0, time.length() - 1);
+		m_dataNum = _ttoi(time.c_str());
+		string timeRange ="2020-01-01 00:00:00~" + timeopt::nowStr();
+		parseTimeRange(timeRange);
+	}
+	else if (time.find("-") == string::npos) { // 1d2h3m 的时间区段模式
+		string timeRange = timeopt::rel2abs(time);
+		parseTimeRange(timeRange);
+	}
+	else {
+		string timeRange = shortSel2StardardSel(time);
+		parseTimeRange(timeRange);
+	}
+	return true;
+}
+
+
+string TIME_SELECTOR::shortSel2StardardSel(string time)
+{
+	//2020-02
+	if (time[4] == '-' && time.length() == 7) {
+		string sYear = time.substr(0, 4);
+		string sMonth = time.substr(5, 2);
+		int y = atoi(sYear.c_str());
+		int m = atoi(sMonth.c_str());
+		int d = getMonthLastDay(y, m);
+		string sDayEnd = str::format("%2d", d);
+		return time + "-01 00:00:00~" + time + "-" + sDayEnd + " 23:59:59";
+	}
+	//2020-02-02
+	else if (time[4] == '-' && time.length() == 10) {
+		return time + " 00:00:00~" + time + " 23:59:59";
+	}
+	return time;
+}
+
+bool TIME_SELECTOR::parseTimeRange(string condition)
+{
+	size_t pos = condition.find("~");
+	 strStart = condition.substr(0, pos);
+	 strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
+	if (strStart.find(":") == string::npos)
+		strStart += " 00:00:00";
+	if (strEnd.find(":") == string::npos)
+		strEnd += " 23:59:59";
+	stStart = timeopt::str2st(strStart);
+	stEnd = timeopt::str2st(strEnd);
+	startTime = timeopt::SysTime2Unix(stStart);
+	endTime = timeopt::SysTime2Unix(stEnd);
+	return true;
+}
+
+
 
 bool TAG_SELECTOR::init(string tag, string rootTag){
 	m_rootTag = rootTag;
@@ -1469,3 +1536,5 @@ bool CONDITION_SELECTOR::init(string filter)
 #endif
 	return true;
 }
+
+
