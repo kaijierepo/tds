@@ -10,6 +10,11 @@ using json = nlohmann::json;
 using namespace std;
 
 
+struct VAR_EXP_SCRIPT_INFO {
+	string script;
+	string tagThis;
+};
+
 class scriptHost {
 public:
 	bool init();
@@ -17,7 +22,7 @@ public:
 	void updateVarExpScript();
 
 	std::map<string, string> m_mapScripts;
-	std::map<string, string> m_mapVarExpScripts;
+	std::map<string, VAR_EXP_SCRIPT_INFO> m_mapVarExpScripts;
 #ifdef ENABLE_JERRY_SCRIPT
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool initGlobalFunc();
@@ -37,6 +42,9 @@ public:
 	static bool setScriptEngineObj(json& jObj, jerry_value_t engineObj);
 	static bool getScriptEngineObj(json& jObj, jerry_value_t engineObj);
 #endif
+
+	//当前脚本执行的环境变量
+	string m_tagThis;
 
 
 	jerry_value_t global_object;

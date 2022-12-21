@@ -50,7 +50,10 @@ void scriptHost::updateVarExpScript()
 	for (int i = 0; i < aryMP.size(); i++) {
 		MP* p = aryMP[i];
 		if (p->m_ioType == "v" && p->m_expression!="") {
-			m_mapVarExpScripts[p->getTag()] = p->m_expression;
+			VAR_EXP_SCRIPT_INFO i;
+			i.script = p->m_expression;
+			i.tagThis = p->getTag();
+			m_mapVarExpScripts[p->getTag()] = i;
 		}
 	}
 }
@@ -218,19 +221,51 @@ static jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 	if (jArgs.size() > 0)
 	{
 		json tag = jArgs[0];
-		if (tag.is_string()) {
+		if (tag.is_string()) { 
 			string sTag = tag.get<string>();
+			sTag = OBJ::ResolveTag(sTag, sHost.m_tagThis);
 			MP* pmp = prj.getMp(sTag);
 			if (pmp) {
-				if (pmp->m_curVal.is_number()) {
-					double val = pmp->m_curVal.get<double>();
-					jerry_value_t ret = jerry_create_number(val);
-					return ret;
+				//取实时值
+				if (jArgs.size() == 1) {
+					if (pmp->m_curVal.is_number()) {
+						double val = pmp->m_curVal.get<double>();
+						jerry_value_t ret = jerry_create_number(val);
+						return ret;
+					}
+					else if (pmp->m_curVal.is_boolean()) {
+						bool val = pmp->m_curVal.get<bool>();
+						jerry_value_t ret = jerry_create_boolean(val);
+						return ret;
+					}
 				}
-				else if (pmp->m_curVal.is_boolean()) {
-					bool val = pmp->m_curVal.get<bool>();
-					jerry_value_t ret = jerry_create_boolean(val);
-					return ret;
+				else if (jArgs.size() == 2) {
+					json time = jArgs[1];
+					if (time.is_string()) {
+						json jParams;
+						jParams["tag"] = sTag;
+						string sTime = time.get<string>();
+						jParams["time"] = sTime;
+						DE_SELECTOR deSel;
+						db.parseDESelector(jParams, deSel);
+						SELECT_RLT rlt;
+						db.Select_yyjson(deSel, rlt);
+						if (rlt.dataList.length() > 0) {
+							json jDeList = json::parse(rlt.dataList);
+							if (jDeList.is_array() && jDeList.size() > 0) {
+								if (pmp->m_curVal.is_number()) {
+									double val = jDeList[0]["val"].get<double>();
+									jerry_value_t ret = jerry_create_number(val);
+									return ret;
+								}
+								else if (pmp->m_curVal.is_boolean()) {
+									bool val = jDeList[0]["val"].get<bool>();
+									jerry_value_t ret = jerry_create_boolean(val);
+									return ret;
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -264,7 +299,7 @@ json scriptHost::engineArgsToJson(const jerry_value_t arguments[],const jerry_le
 		}
 		else if (jerry_value_is_string(arguments[i]))
 		{
-			jerry_value_t string_value = jerry_value_to_string(arguments[0]);
+			jerry_value_t string_value = jerry_value_to_string(arguments[i]);
 			jerry_size_t tSize = jerry_get_string_size(string_value);	
 			jerry_char_t* buffer = new jerry_char_t[tSize+1];
 			jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, tSize);
@@ -376,7 +411,7 @@ bool scriptHost::initGlobalFunc()
 
 	// val函数
 	property_name_val = jerry_create_string((const jerry_char_t*)"val");
-	property_func_val = jerry_create_external_function(func_sum);
+	property_func_val = jerry_create_external_function(func_val);
 	set_result = jerry_set_property(global_object, property_name_val, property_func_val);
 	if (jerry_value_is_error(set_result)) {
 	}
@@ -624,7 +659,9 @@ void scriptHost::exeAllVarExpScripts()
 
 	for (auto& i : m_mapVarExpScripts)
 	{
-		string& script = i.second;
+		VAR_EXP_SCRIPT_INFO& info = i.second;
+		string& script = info.script;
+		m_tagThis = info.tagThis;
 
 		/* Run the demo script with 'eval' */
 		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
