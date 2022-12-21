@@ -202,7 +202,8 @@ public:
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);
 	string getUpdateTimeDesc();
-
+	string ResolveTag(string strTagExp, string strTagThis);
+	
 	static string AppendTagRoot(string& str);
 	static string ResolveTag(string strTagExp, string strTagThis); //strTagContext指位号表达式所在mp的父mo的位号
 	static string trimProperty(string& strTagExp);

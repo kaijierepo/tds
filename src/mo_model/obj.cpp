@@ -1216,6 +1216,8 @@ void OBJ::GetAllChildAlarmInfo(string& strSummary)
 	}
 }
 
+
+
 string TAG::trimRoot(string& tag)
 {
 	string s = str::trim(tag, prj.m_name);
