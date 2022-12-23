@@ -1279,6 +1279,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMoAttri" || method == "getMoAttr")
 		{
+			if (!params.contains("tag")) //获取子树
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+				return true;
+			}
+
 			string mode = "list";
 			if (params.contains("mode")) {
 				mode = params["mode"];
@@ -2745,15 +2751,12 @@ string rpcHandler::rename(string orgName, json& renameMap) {
 
 void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session)
 {
-	//检查mo类型参数是否填写
-	if (params["type"] == nullptr)
-	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
-		return;
-	}
 	//支持中文直接输入moType
-	string moType = params["type"].get<string>();
-	str::hanZi2Pinyin(moType, moType);
+	string moType = "obj";
+	if (params["type"].is_string()) {
+		moType = params["type"].get<string>();
+		str::hanZi2Pinyin(moType, moType);
+	}
 
 	//是否进行列字段重命名
 	json renameMap = nullptr;
@@ -2765,12 +2768,6 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 	string columeLabel = "tag";
 	if (params["columeLabel"].is_string()) {
 		columeLabel = params["columeLabel"];
-	}
-
-	//位号选择器
-	string tag = "*";
-	if (params["tag"].is_string()) {
-		tag = params["tag"];
 	}
 
 	string valFmt = "val";
@@ -2785,39 +2782,53 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		queryRootTag = TAG::addRoot(userQueryRootTag, queryRootTag);
 	}
 
+	json jTag = params["tag"];
 	TAG_SELECTOR tagSel;
-	tagSel.init(tag, queryRootTag);
-
+	tagSel.init(jTag, queryRootTag);
+	tagSel.type = moType;
 
 	string strList = "[";
 
-	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
+	vector<OBJ*> moList;
+	prj.getObjByTagSelector(moList, tagSel);
+
+
+	bool bSelAttr = false;
+	TAG_SELECTOR attrSel;
+	json jAttrSel;
+	//attr相当于是指定对象内部的位号选择器
+	if (params.contains("attr")) {
+		jAttrSel = params["attr"];
+		bSelAttr = true;
+	}
+
+
+
+	for (int i = 0; i < moList.size(); i++)
 	{
-		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
-		for (int i = 0; i < moList.size(); i++)
+		OBJ* pMo = moList[i];
+		string sysTag = pMo->getTag();
+		string queryTag = sysTag;
+
+		//过滤用户权限
+		if(session.user != "")
 		{
-			OBJ* pMo = moList[i];
-			string sysTag = pMo->getTag();
-			string queryTag = sysTag;
-
-			//过滤用户权限
-			if(session.user != "")
-			{
-				if (!userMng.checkTagPermission(session.user, sysTag))
-					continue;
-			}
-
-			//根据位号选择器过滤
-			if (!tagSel.match(sysTag))
-			{
+			if (!userMng.checkTagPermission(session.user, sysTag))
 				continue;
-			}
-			queryTag = TAG::trimRoot(sysTag, tagSel.m_rootTag);
-			
-			nlohmann::ordered_json oneData;
-			oneData[rename("位号",renameMap)] = queryTag;
+		}
 
-			//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
+		//根据位号选择器过滤
+		if (!tagSel.match(sysTag))
+		{
+			continue;
+		}
+		queryTag = TAG::trimRoot(sysTag, tagSel.m_rootTag);
+			
+		nlohmann::ordered_json oneData;
+		oneData[rename("位号",renameMap)] = queryTag;
+
+		//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
+		if (pMo->m_type == MO_TYPE::customMo) {
 			ioDev* piod = ioSrv.getIODevByTag(sysTag);
 			if (piod)
 			{
@@ -2827,46 +2838,49 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 			{
 				oneData[rename("在线", renameMap)] = pMo->m_bOnline;
 			}
-			
-			vector<MP*> aryMps;
-			pMo->GetAttriMp(aryMps);
-			
-			for (int j = 0; j < aryMps.size(); j++)
-			{
-				MP* pmp = aryMps[j];
-				json jVal;
-				if (valFmt == "val") {
-					jVal = pmp->m_curVal;
-				}
-				else if (valFmt == "valStr") {
-					jVal = pmp->getValDesc(false);
-				}
-				else if (valFmt == "valStr-unit") {
-					jVal = pmp->getValDesc(true);
-				}
-
-
-
-				if (columeLabel == "name") {
-					oneData[rename(pmp->m_name, renameMap)] = jVal;
-				}
-				else {
-					oneData[rename(pmp->getTag(sysTag), renameMap)] = jVal;
-				}
-			}
-			if(strList != "[")
-				strList += ",";
-
-			strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 		}
-		strList += "]";
-		resp.result = strList;
+
+			
+		vector<MP*> aryMps;
+		if (bSelAttr) {
+			attrSel.init(jAttrSel, sysTag);
+			pMo->getMpByTagSelector(aryMps, attrSel);
+		}
+		else {
+			pMo->GetAttriMp(aryMps);
+		}
+		
+			
+		for (int j = 0; j < aryMps.size(); j++)
+		{
+			MP* pmp = aryMps[j];
+			json jVal;
+			if (valFmt == "val") {
+				jVal = pmp->m_curVal;
+			}
+			else if (valFmt == "valStr") {
+				jVal = pmp->getValDesc(false);
+			}
+			else if (valFmt == "valStr-unit") {
+				jVal = pmp->getValDesc(true);
+			}
+
+
+
+			if (columeLabel == "name") {
+				oneData[rename(pmp->m_name, renameMap)] = jVal;
+			}
+			else {
+				oneData[rename(pmp->getTag(sysTag), renameMap)] = jVal;
+			}
+		}
+		if(strList != "[")
+			strList += ",";
+
+		strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 	}
-	else
-	{
-		json j = json::array();
-		resp.result = j.dump();
-	}
+	strList += "]";
+	resp.result = strList;
 }
 
 void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION session)

@@ -29,6 +29,7 @@ SOFTWARE.
 #pragma once
 #include "json.hpp"
 #include "tdscore.h"
+#include "db.h"
 using namespace std;
 using json = nlohmann::json;
 
@@ -199,6 +200,9 @@ public:
 
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);
+	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
+	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
+	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);
 	string getUpdateTimeDesc();

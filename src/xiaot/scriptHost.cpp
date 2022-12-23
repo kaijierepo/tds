@@ -35,6 +35,9 @@ bool scriptHost::init()
 
 bool scriptHost::run()
 {
+	if (!tds->conf->enableScript)
+		return false;
+
 	init();
 	updateVarExpScript();
 	thread t(scriptThread, this);
@@ -177,6 +180,16 @@ static jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 	if (jArgs.size() > 0)
 	{
 		json tag = jArgs[0];
+
+		bool invalidAsZero = false;
+		if (jArgs.size() > 1) {
+			json jP = jArgs[1];
+			if (jP.is_boolean()) {
+				invalidAsZero = jP.get<bool>();
+			}
+		}
+
+
 		vector<MP*> mpList;
 		TAG_SELECTOR tagSel;
 		tagSel.init(tag);
@@ -191,8 +204,10 @@ static jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 				dbSum += val;
 			}
 			else {
-				success = false;
-				break;
+				if (!invalidAsZero) {
+					success = false;
+					break;
+				}
 			}
 		}
 

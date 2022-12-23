@@ -199,11 +199,11 @@ bool database::loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFil
 			string deTime = pdf->ymd + " 00:00:00";
 			yyjson_arr_foreach(pdf->root, idx, max, val) {
 				//取一定时间区间的第一个和最后一个元素模式
-				if (deSel.timeSel.selMode == TSM_First) {
+				if (deSel.timeSel.timeSetType == TSM_First) {
 					if (idx > 0)
 						break;
 				}
-				else if (deSel.timeSel.selMode == TSM_Last) {
+				else if (deSel.timeSel.timeSetType == TSM_Last) {
 					if (idx < max - 1)
 						continue;
 				}
@@ -233,7 +233,7 @@ bool database::loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFil
 				}
 				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
 
-				if (pdf->boundaryFile && deSel.timeSel.selMode == TSM_TimeRange && !deSel.timeSel.Match(deTime) )
+				if (pdf->boundaryFile && deSel.timeSel.timeSetType == TSM_All && !deSel.timeSel.Match(deTime) )
 					continue;
 
 				if (deSel.interval.type == DST_Time) {
@@ -468,7 +468,9 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	{
 		TAG_DB_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
-		if (deSel.timeSel.selMode == TSM_First) {
+
+		//无周期范围选择，且数据集为单个，跳过其他文件读取，提高性能
+		if (deSel.timeSel.timeSetType == TSM_First && deSel.timeSel.periodType == PT_None) {
 			time_t loadTime = deSel.timeSel.startTime;
 			for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 			{
@@ -481,7 +483,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				break;
 			}
 		}
-		else if (deSel.timeSel.selMode == TSM_Last) {
+		else if (deSel.timeSel.timeSetType == TSM_Last && deSel.timeSel.periodType == PT_None) {
 			time_t loadTime = deSel.timeSel.endTime;
 			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 			{
@@ -530,6 +532,34 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	else {
 		loadDeList(deSel,tagDBFileSet, mapRlt, rlt_mut_doc);
+	}
+
+	//计算
+	if (deSel.calc == "diff") {
+		int idx = 0;
+		yyjson_mut_val* lastVal;
+		yyjson_mut_val* curVal;
+		double dbLast;
+		double dbCur;
+		for (auto& i : mapRlt)
+		{
+			curVal = yyjson_mut_obj_get(i.second, "val");
+			if (!yyjson_mut_is_num(curVal)) {
+				break;
+			}
+
+
+			dbCur = yyjson_mut_get_real(curVal);
+			
+			if (idx > 0) {
+				double diff = dbCur - dbLast;
+				yyjson_mut_set_real(curVal, diff);
+			}
+			idx++;
+			dbLast = dbCur;
+			lastVal = curVal;
+		}
+		mapRlt.erase(mapRlt.begin());
 	}
 
 
@@ -1005,6 +1035,10 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 	resp.error = parseDESelector(params, deSel);
 	if (resp.error != "") return;
 
+	if (params["calc"].is_string()) {
+		deSel.calc = params["calc"];
+	}
+
 	SELECT_RLT result;
 	try
 	{
@@ -1142,7 +1176,7 @@ TIME_SELECTOR::TIME_SELECTOR()
 	startTime = 0;
 	endTime = 0;
 	m_dataNum = 0;
-	enableHMSRange = false;
+	periodType = PT_None;
 }
 
 bool TIME_SELECTOR::Match(string& deTime)
@@ -1237,20 +1271,38 @@ bool TIME_SELECTOR::init(string time)
 		time = str::replace(time, "this day", t);
 	}
 
-
+	//集合选择
 	if (time.find("head@") != string::npos) {
-		selMode = TSM_First;
-		string timeRange = str::trimPrefix(time, "head@");
-		timeRange = shortSel2StardardSel(timeRange);
-		parseTimeRange(timeRange);
+		timeSetType = TSM_First;
+		time = str::trimPrefix(time, "head@");
 	}
 	else if (time.find("tail@") != string::npos) {
-		selMode = TSM_Last;
-		string timeRange = str::trimPrefix(time, "tail@");
-		timeRange = shortSel2StardardSel(timeRange);
-		parseTimeRange(timeRange);
+		timeSetType = TSM_Last;
+		time = str::trimPrefix(time, "tail@");
 	}
-	else if (time.find("e") != string::npos)
+	else {
+		timeSetType = TSM_All;
+	}
+
+	//周期选择
+	if (time.find("day@") != string::npos) {
+		periodType = PT_Day;
+		time = str::trimPrefix(time, "day@");
+	}
+	else if (time.find("hour@") != string::npos) {
+		periodType = PT_Hour;
+		 time = str::trimPrefix(time, "hour@");
+	}
+	else if (time.find("month@") != string::npos) {
+		periodType = PT_Month;
+		time = str::trimPrefix(time, "month@");
+	}
+	else {
+		periodType = PT_None;
+	}
+
+
+	if (time.find("e") != string::npos)
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = _ttoi(time.c_str());

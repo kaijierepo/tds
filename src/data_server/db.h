@@ -100,13 +100,27 @@ public:
 	string error;
 };
 
-enum Time_Sel_Mode {
-	TSM_TimeRange = 0,
-	TSM_First = 1,
-	TSM_Last = 2
+
+//时间集合类型
+enum Time_Set_Type {
+	TSM_All = 0,
+	TSM_Range = 1,
+	TSM_First = 2,
+	TSM_Last = 3
+};
+
+enum Period_Type {
+	PT_None = 0,
+	PT_Month = 1,
+	PT_Day = 2,
+	PT_Hour = 3,
 };
 
 
+//完整的时间选择器格式[Time_Set_Type]@[period type]@[time range]
+//head@day@8d  选择8天当中每天的第一个数据
+// 
+// 
 //时间选择器先确定需要加载的数据库原始文件的时间范围
 //加载原始文件后，对边界上的两个文件的数据进行 时间范围的进一步选择
 //时间点 理解成 开始时间和结束时间相同的一个timeRange
@@ -130,7 +144,7 @@ public:
 
 	//选择器字符串
 	string selector;
-	Time_Sel_Mode selMode;
+	Time_Set_Type timeSetType;
 
 
 	//时间范围
@@ -141,8 +155,8 @@ public:
 	time_t startTime;
 	time_t endTime;
 
-	//时分秒
-	bool enableHMSRange;
+	//是否进行周期性选择
+	Period_Type periodType;
 	int startHMS;
 	int endHMS;
 
@@ -260,6 +274,7 @@ struct DE_SELECTOR {
 	string sortKey;
 	bool tagAsColume; //将位号作为表的列返回
 	string columeLabel; //列标签使用 tag还是name
+	string calc;
 	DE_SELECTOR() {
 		ascendingSort = true;
 		tagAsColume = false;

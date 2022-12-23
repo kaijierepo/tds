@@ -571,11 +571,20 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 		//使用父服务的位号，在子服务中查询对象，需要先除去rootTag
 		if (m_rootTag != "")
 			strTag = TAG::trimRoot(strTag, m_rootTag);
+
+		//判断自身位号是否是搜索位号的上级位号，如果不是一定搜索不到
+		string tagThis = getTag();
+		if (strTag.find(tagThis) == string::npos) {
+			return;
+		}
+		strTag = TAG::trimRoot(strTag, tagThis);
 		if (strTag == "")
 		{
 			tagVec->push_back(this);
 		}
 
+
+		//根据相对位号的名字节点，查找子对象的名字，获取到对象
 		vector<string> vecNames;
 		str::split(vecNames, strTag, ".");
 
@@ -1213,6 +1222,94 @@ void OBJ::GetAllChildAlarmInfo(string& strSummary)
 	{
 		OBJ* pChild = m_childObj.at(i);
 		pChild->GetAllChildAlarmInfo(strSummary);
+	}
+}
+
+bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
+{
+	tags = tagSelector.exactMatchExp;
+
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<MP*> tagSet;
+		vector<MP*> tagSetTmp;
+		prj.GetMPByTag(&tagSetTmp, exp);
+		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		{
+			for (auto& it : tagSetTmp)
+			{
+				if (it->getMpType() == tagSelector.type)
+				{
+					tagSet.push_back(it);
+				}
+			}
+		}
+		else
+		{
+			tagSet = tagSetTmp;
+		}
+		for (auto& i : tagSet)
+		{
+			tags.push_back(i->getTag());
+		}
+	}
+
+	return false;
+}
+
+void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
+	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
+		string& exp = tagSelector.exactMatchExp[i];
+		OBJ* p = prj.queryObj(exp);
+		if (p) {
+			objList.push_back(p);
+		}
+	}
+
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<OBJ*> tagSet;
+		prj.queryObj(&tagSet, exp, false, tagSelector.type);
+		for (auto& i : tagSet)
+		{
+			objList.push_back(i);
+		}
+	}
+}
+
+void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
+{
+	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
+		string& exp = tagSelector.exactMatchExp[i];
+		MP* p = GetMPByTag(exp);
+		if (p) {
+			mpList.push_back(p);
+		}
+	}
+
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<MP*> tagSet;
+		vector<MP*> tagSetTmp;
+		prj.GetMPByTag(&tagSetTmp, exp);
+		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		{
+			for (auto& it : tagSetTmp)
+			{
+				if (it->getMpType() == tagSelector.type)
+				{
+					tagSet.push_back(it);
+				}
+			}
+		}
+		else
+		{
+			tagSet = tagSetTmp;
+		}
+		for (auto& i : tagSet)
+		{
+			mpList.push_back(i);
+		}
 	}
 }
 
