@@ -135,20 +135,6 @@ bool OBJ::loadConf(json& conf)
 		m_customTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
 		m_customType = m_customTypeLabel;
 		str::hanZi2Pinyin(m_customType, m_customType);
-		
-		project* pPrj = (project*)GetRootMO();
-
-		if (pPrj->m_mapCustomMOType.find(m_customType) != pPrj->m_mapCustomMOType.end())
-		{
-			vector<OBJ*>& moList = pPrj->m_mapCustomMOType[m_customType];
-			moList.push_back(this);
-		}
-		else
-		{
-			vector<OBJ*> moList;
-			moList.push_back(this);
-			pPrj->m_mapCustomMOType[m_customType] = moList;
-		}
 	}
 
 	if (m_type == "customOrg" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)

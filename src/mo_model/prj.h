@@ -7,7 +7,11 @@ using json = nlohmann::json;
 #include "tds.h"
 #include <shared_mutex>
 
-
+struct OBJ_TEMPLATE {
+	string type;
+	string typeLabel;
+	json tplData;
+};
 
 class ioServer;
 class database;
@@ -32,7 +36,7 @@ public:
 
 	string m_strMoTree; //字符串配置数据
 	map<string, MP*> m_mapAllMP;
-	map<string, vector<OBJ*>> m_mapCustomMOType;
+
 
 public:
 	project();
@@ -40,6 +44,12 @@ public:
 
 	bool setMo(json& mo, string tag);
 	MP* createMP(string tag, string valType);
+
+	//对象模版配置
+	json getObjTemplate(string objTplType);
+	bool loadObjTemplate();
+	void saveObjTemplate(OBJ_TEMPLATE& ot);
+	map<string, OBJ_TEMPLATE> m_mapObjTempalte;
 
 private:
 	json m_jMOTree;

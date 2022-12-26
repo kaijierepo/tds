@@ -904,7 +904,7 @@ json ioServer::getDevTemplate(string devTplType)
 
 bool ioServer::loadChanTemplate()
 {
-	string p = tds->conf->confPath + "/template/conf.json";
+	string p = tds->conf->confPath + "/template/device/conf.json";
 	string tplListStr;
 	if (fs::readFile(p, tplListStr)) {
 		try {
@@ -914,7 +914,7 @@ bool ioServer::loadChanTemplate()
 				ct.name = i["name"];
 				ct.label = i["label"];
 				string tplDataStr;
-				string p1 = tds->conf->confPath + "/template/" + ct.name + ".json";
+				string p1 = tds->conf->confPath + "/template/device/" + ct.name + ".json";
 				if (fs::readFile(p1, tplDataStr)) {
 					ct.channels = json::parse(tplDataStr);
 					m_mapChanTempalte[ct.name] = ct;
@@ -922,7 +922,7 @@ bool ioServer::loadChanTemplate()
 			}
 		}
 		catch (exception& e) {
-			LOG("[error]加载/template/conf.json失败,error=%s", e.what());
+			LOG("[error]加载/template/device/conf.json失败,error=%s", e.what());
 		}
 	}
 	return false;
@@ -930,7 +930,7 @@ bool ioServer::loadChanTemplate()
 
 void ioServer::saveChanTemplate()
 {
-	string p = tds->conf->confPath + "/template/conf.json";
+	string p = tds->conf->confPath + "/template/device/conf.json";
 	json jConf = json::array();
 	for (auto& i : m_mapChanTempalte) {
 		json c;
@@ -941,7 +941,7 @@ void ioServer::saveChanTemplate()
 	string sConf = jConf.dump(2);
 	fs::writeFile(p, sConf);
 
-	string chanPath = tds->conf->confPath + "/template/";
+	string chanPath = tds->conf->confPath + "/template/device/";
 	for (auto& i : m_mapChanTempalte) {
 		string s = i.second.channels.dump(2);
 		fs::writeFile(chanPath + "/" + i.second.name + ".json", s);

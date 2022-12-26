@@ -8,6 +8,27 @@ rpc handler
 #include "tcpClt.h"
 #include "ds.h"
 #include "tdsSession.h"
+#include "obj.h"
+
+struct Mo_Attr_Params {
+	json renameMap;
+	TAG_SELECTOR tagSel;
+	json jAttrSel;
+	TAG_SELECTOR attrSel;
+	string valFmt;
+	bool bSelAttr;
+	string columeLabel; //默认使用位号作为列名
+	string moType;
+	string rootTag;
+	Mo_Attr_Params() {
+		bSelAttr = false;
+		renameMap = nullptr;
+		columeLabel = "tag";
+		valFmt = "val";
+		moType = "obj";
+	}
+
+};
 
 //一些设计考虑
 //参数使用RPC_RESP而没有使用json对象，主要为了考虑和外部集成，外部不需要json.hpp
@@ -54,8 +75,9 @@ public:
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string rename(string orgName, json& renameMap);
-	void rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_moList2Attrlist(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session);
+	void rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMpStatus(json params, string& error, RPC_SESSION session,bool bValOnly =false);
 	string rpc_heartbeat(json params, string& error, RPC_SESSION session);

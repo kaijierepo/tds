@@ -126,7 +126,6 @@ bool project::loadConf(json& jConf)
 void project::clear()
 {
 	m_mapAllMP.clear();
-	m_mapCustomMOType.clear();
 	clearChildren();
 }
 
@@ -209,5 +208,64 @@ void project::getMpTypeList(json& mpTypeList)
 	}
 }
 
+json project::getObjTemplate(string devTplType)
+{
+	for (auto& i : m_mapObjTempalte) {
+		string tplName = i.first;
+		if (devTplType.find(tplName) != string::npos) {
+			return i.second.tplData;
+		}
+	}
+	return nullptr;
+}
 
+bool project::loadObjTemplate()
+{
+	string p = tds->conf->confPath + "/template/object/conf.json";
+	string tplListStr;
+	if (fs::readFile(p, tplListStr)) {
+		try {
+			json jTplList = json::parse(tplListStr);
+			for (auto& i : jTplList) {
+				OBJ_TEMPLATE ct;
+				ct.type = i["type"];
+				ct.typeLabel = i["typeLabel"];
+				string tplDataStr;
+				string p1 = tds->conf->confPath + "/template/object/" + ct.type + ".json";
+				if (fs::readFile(p1, tplDataStr)) {
+					ct.tplData = json::parse(tplDataStr);
+					m_mapObjTempalte[ct.type] = ct;
+				}
+			}
+		}
+		catch (exception& e) {
+			LOG("[error]加载/template/object/conf.json失败,error=%s", e.what());
+		}
+	}
+	return false;
+}
+
+void project::saveObjTemplate(OBJ_TEMPLATE& ot)
+{
+	prj.m_mapObjTempalte[ot.type] = ot;
+
+
+	//保存索引信息
+	string p = tds->conf->confPath + "/template/object/conf.json";
+	json jConf = json::array();
+	for (auto& i : m_mapObjTempalte) {
+		json c;
+		c["type"] = i.second.type;
+		c["typeLabel"] = i.second.typeLabel;
+		jConf.push_back(c);
+	}
+	string sConf = jConf.dump(2);
+	fs::writeFile(p, sConf);
+
+
+
+	string chanPath = tds->conf->confPath + "/template/object/";
+	string s = ot.tplData.dump(2);
+	fs::writeFile(chanPath + "/" + ot.type + ".json", s);
+}
 

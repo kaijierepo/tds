@@ -412,6 +412,7 @@ bool TDS_imp::run(string cmdline)
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB)
 		::db.Open(tds->conf->dbPath, prj.m_name);
+	prj.loadObjTemplate();
 	prj.loadConfFile();
 	ioSrv.loadConf();
 	almSrv.init();

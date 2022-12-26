@@ -1168,6 +1168,29 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 		result = rpc_setconf(params, error);
 	}
+	else if (method == "getObjTemplate") {
+		if (params.contains("type")) {
+			string type = params["type"];
+			if (prj.m_mapObjTempalte.find(type) != prj.m_mapObjTempalte.end()) {
+				OBJ_TEMPLATE ct = prj.m_mapObjTempalte[type];
+				rpcResp.result = ct.tplData;
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::OBJ_templateNotFound, "object template not found");
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
+		}
+	}
+	else if (method == "setObjTemplate") {
+		OBJ_TEMPLATE ct;
+		ct.typeLabel = params["typeLabel"];
+		str::hanZi2Pinyin(ct.typeLabel, ct.type);
+		ct.tplData = params["tplData"];
+		prj.saveObjTemplate(ct);
+		rpcResp.result = "\"ok\"";
+	}
 	else if (method == "setObj")
 	{
 		if (params.contains("children")) { //如果包含children字段，说明要修改树结构。该模式重载对象树。冷重载
@@ -1184,7 +1207,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.m_name = tmpPrj.m_name;
 				prj.m_parentTag = tmpPrj.m_parentTag;
 				prj.m_mapAllMP = tmpPrj.m_mapAllMP;
-				prj.m_mapCustomMOType = tmpPrj.m_mapCustomMOType;
 				prj.m_childObj = tmpPrj.m_childObj;
 				for (int i = 0; i < prj.m_childObj.size(); i++) {
 					OBJ* p = prj.m_childObj[i];
@@ -1279,23 +1301,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMoAttri" || method == "getMoAttr")
 		{
-			if (!params.contains("tag")) //获取子树
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
-				return true;
-			}
-
-			string mode = "list";
-			if (params.contains("mode")) {
-				mode = params["mode"];
-			}
-			
-			if (mode == "table") {
-				rpc_getMoAttr_table(params, rpcResp, session);
-			}
-			else {
-				rpc_getMoAttr_list(params, rpcResp, session);
-			}
+			rpc_getMoAttr_list(params, rpcResp, session);
 		}
 		else if (method == "getTopoList")
 		{
@@ -2749,61 +2755,11 @@ string rpcHandler::rename(string orgName, json& renameMap) {
 	return desName;
 }
 
-void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session)
+
+
+void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,RPC_RESP& resp, RPC_SESSION session)
 {
-	//支持中文直接输入moType
-	string moType = "obj";
-	if (params["type"].is_string()) {
-		moType = params["type"].get<string>();
-		str::hanZi2Pinyin(moType, moType);
-	}
-
-	//是否进行列字段重命名
-	json renameMap = nullptr;
-	if (params["rename"].is_object()) {
-		renameMap = params["rename"];
-	}
-
-	//列标签使用位号还是名称
-	string columeLabel = "tag";
-	if (params["columeLabel"].is_string()) {
-		columeLabel = params["columeLabel"];
-	}
-
-	string valFmt = "val";
-	if (params["valFmt"].is_string()) {
-		valFmt = params["valFmt"];
-	}
-
-	string queryRootTag = session.org;
-	if (params["rootTag"] != nullptr) 
-	{
-		string userQueryRootTag = params["rootTag"].get<string>();
-		queryRootTag = TAG::addRoot(userQueryRootTag, queryRootTag);
-	}
-
-	json jTag = params["tag"];
-	TAG_SELECTOR tagSel;
-	tagSel.init(jTag, queryRootTag);
-	tagSel.type = moType;
-
 	string strList = "[";
-
-	vector<OBJ*> moList;
-	prj.getObjByTagSelector(moList, tagSel);
-
-
-	bool bSelAttr = false;
-	TAG_SELECTOR attrSel;
-	json jAttrSel;
-	//attr相当于是指定对象内部的位号选择器
-	if (params.contains("attr")) {
-		jAttrSel = params["attr"];
-		bSelAttr = true;
-	}
-
-
-
 	for (int i = 0; i < moList.size(); i++)
 	{
 		OBJ* pMo = moList[i];
@@ -2811,70 +2767,66 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		string queryTag = sysTag;
 
 		//过滤用户权限
-		if(session.user != "")
+		if (session.user != "")
 		{
 			if (!userMng.checkTagPermission(session.user, sysTag))
 				continue;
 		}
 
 		//根据位号选择器过滤
-		if (!tagSel.match(sysTag))
-		{
-			continue;
-		}
-		queryTag = TAG::trimRoot(sysTag, tagSel.m_rootTag);
-			
+		queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
+
 		nlohmann::ordered_json oneData;
-		oneData[rename("位号",renameMap)] = queryTag;
+		oneData[rename("位号", params.renameMap)] = queryTag;
 
 		//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
 		if (pMo->m_type == MO_TYPE::customMo) {
 			ioDev* piod = ioSrv.getIODevByTag(sysTag);
 			if (piod)
 			{
-				oneData[rename("在线", renameMap)] = piod->m_bOnline;
+				oneData[rename("在线", params.renameMap)] = piod->m_bOnline;
 			}
 			else
 			{
-				oneData[rename("在线", renameMap)] = pMo->m_bOnline;
+				oneData[rename("在线", params.renameMap)] = pMo->m_bOnline;
 			}
 		}
 
-			
+
 		vector<MP*> aryMps;
-		if (bSelAttr) {
-			attrSel.init(jAttrSel, sysTag);
-			pMo->getMpByTagSelector(aryMps, attrSel);
+		if (params.bSelAttr) {
+			params.attrSel.init(params.jAttrSel, sysTag);
+			pMo->getMpByTagSelector(aryMps, params.attrSel);
 		}
 		else {
 			pMo->GetAttriMp(aryMps);
 		}
-		
-			
+
+
 		for (int j = 0; j < aryMps.size(); j++)
 		{
 			MP* pmp = aryMps[j];
 			json jVal;
-			if (valFmt == "val") {
+			if (params.valFmt == "val") {
 				jVal = pmp->m_curVal;
 			}
-			else if (valFmt == "valStr") {
+			else if (params.valFmt == "valStr") {
 				jVal = pmp->getValDesc(false);
 			}
-			else if (valFmt == "valStr-unit") {
+			else if (params.valFmt == "valStr-unit") {
 				jVal = pmp->getValDesc(true);
 			}
 
 
 
-			if (columeLabel == "name") {
-				oneData[rename(pmp->m_name, renameMap)] = jVal;
+			if (params.columeLabel == "name") {
+				oneData[rename(pmp->m_name, params.renameMap)] = jVal;
 			}
 			else {
-				oneData[rename(pmp->getTag(sysTag), renameMap)] = jVal;
+				oneData[rename(pmp->getTag(sysTag), params.renameMap)] = jVal;
 			}
 		}
-		if(strList != "[")
+		if (strList != "[")
 			strList += ",";
 
 		strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
@@ -2883,131 +2835,192 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 	resp.result = strList;
 }
 
-void rpcHandler::rpc_getMoAttr_table(json params, RPC_RESP& resp, RPC_SESSION session)
+
+void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session)
 {
-	//检查mo类型参数是否填写
-	if (params["type"] == nullptr)
+	Mo_Attr_Params attrParam;
+
+	if (!params.contains("tag")) //获取子树
 	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "type is not specified");
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+		return;
 	}
-	//支持中文直接输入moType
-	string moType = params["type"].get<string>();
-	str::hanZi2Pinyin(moType, moType);
-	//查询根
-	string rootTag;
-	if (params["rootTag"] != nullptr) {
-		rootTag = params["rootTag"];
+
+	//支持中文直接输入moType;
+	if (params["type"].is_string()) {
+		attrParam.moType = params["type"].get<string>();
+		str::hanZi2Pinyin(attrParam.moType, attrParam.moType);
 	}
-	rootTag = TAG::addRoot(rootTag, session.org);
+
+	//是否进行列字段重命名
+	if (params["rename"].is_object()) {
+		attrParam.renameMap = params["rename"];
+	}
 
 	//列标签使用位号还是名称
-	string columeLabel = "tag";
 	if (params["columeLabel"].is_string()) {
-		columeLabel = params["columeLabel"];
+		attrParam.columeLabel = params["columeLabel"];
 	}
 
-	string valFmt = "val";
+	//值格式。 val, valStr, valStr-unit
 	if (params["valFmt"].is_string()) {
-		valFmt = params["valFmt"];
+		attrParam.valFmt = params["valFmt"];
+	}
+
+	//查询根
+	attrParam.rootTag = session.org;
+	if (params["rootTag"] != nullptr) 
+	{
+		string userQueryRootTag = params["rootTag"].get<string>();
+		attrParam.rootTag = TAG::addRoot(userQueryRootTag, attrParam.rootTag);
 	}
 
 
+	//根据位号选择器选择对象列表
+	json jTag = params["tag"];
+	attrParam.tagSel.init(jTag, attrParam.rootTag);
+	attrParam.tagSel.type = attrParam.moType;
+	vector<OBJ*> moList;
+	prj.getObjByTagSelector(moList, attrParam.tagSel);
+
+
+	//使用属性选择器选择列
+	//attr相当于是指定对象内部的位号选择器
+	if (params.contains("attr")) {
+		attrParam.jAttrSel = params["attr"];
+		attrParam.bSelAttr = true;
+	}
+
+
+	string mode = "list";
+	if (params.contains("mode")) {
+		mode = params["mode"];
+	}
+
+	if(mode == "list")
+		rpc_moList2Attrlist(attrParam, moList, resp, session);
+	else
+		rpc_moList2table(attrParam, moList, resp, session);
+}
+
+void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session)
+{
 	json jTable = json::object();
 	json jTableHead = json::array();
 	json jTableBody = json::array();
 	json jColTag = json::array();
 
-	if (prj.m_mapCustomMOType.find(moType) != prj.m_mapCustomMOType.end())
-	{
-		vector<OBJ*> moList = prj.m_mapCustomMOType[moType];
-		for (int i = 0; i < moList.size(); i++)
-		{
-			OBJ* pMo = moList[i];
-			string moTag = pMo->getTag();
-			string tag = moTag;
 
-			//过滤用户权限
-			if (session.user != "")
+	//根据对象模版生成列模版
+	map<string, OBJ_TEMPLATE>::iterator it = prj.m_mapObjTempalte.find(params.moType);
+	if (it != prj.m_mapObjTempalte.end()) {
+		OBJ_TEMPLATE& ot = it->second;
+		OBJ obj;
+		obj.loadConf(ot.tplData);
+		vector<MP*> mps;
+		obj.GetAttriMp(mps);
+		string parentTag = obj.getTag();
+		if (mps.size() > 0) {
+			jTableHead.push_back("位号");
+			jColTag.push_back(nullptr);
+			for (int j = 0; j < mps.size(); j++)
 			{
-				if (!userMng.checkTagPermission(session.user, tag))
-					continue;
-			}
-
-			//过滤根mo
-			if (rootTag != "")
-			{
-				if (tag.find(rootTag) == string::npos)
-				{
-					continue;
+				MP* pmp = mps[j];
+				string tag = pmp->getTag(parentTag);
+				jColTag.push_back(tag);
+				if (params.columeLabel == "tag") {
+					jTableHead.push_back(tag);
 				}
-				tag = str::trim(tag, rootTag + ".");
+				else {
+					jTableHead.push_back(pmp->m_name);
+				}
 			}
+			jTableHead.push_back("在线");
+			jTableHead.push_back("更新时间");
+			jColTag.push_back(nullptr);
+			jColTag.push_back(nullptr);
+			jTable["header"] = jTableHead;
+			jTable["tag"] = jColTag;
+		}
+	}
 
 
+	for (int i = 0; i < moList.size(); i++)
+	{
+		OBJ* pMo = moList[i];
+		string moTag = pMo->getTag();
+		string tag = moTag;
+
+		//过滤用户权限
+		if (session.user != "")
+		{
+			if (!userMng.checkTagPermission(session.user, tag))
+				continue;
+		}
+
+		tag = TAG::trimRoot(tag, params.tagSel.m_rootTag);
+
+
+		//表头与列位号，如果没有模版，根据第一个设备生成
+		if (jTableHead.size() == 0)
+		{
 			//下属所有监控点列表
 			vector<MP*> childMps;
 			pMo->GetAttriMp(childMps);
-	
-			//表头与列位号
-			if (jTableHead.size() == 0)
-			{
-				jTableHead.push_back("位号");
-				jColTag.push_back(nullptr);
-				for (int j = 0; j < childMps.size(); j++)
-				{
-					MP* pmp = childMps[j];
-					string tag = pmp->getTag(moTag);
-					jColTag.push_back(tag);
-					if (columeLabel == "tag") {
-						jTableHead.push_back(tag);
-					}
-					else {
-						jTableHead.push_back(pmp->m_name);
-					}
-				}
-				jTableHead.push_back("在线");
-				jTableHead.push_back("更新时间");
-				jColTag.push_back(nullptr);
-				jColTag.push_back(nullptr);
-				jTable["header"] = jTableHead;
-				jTable["tag"] = jColTag;
-			}
 
-
-			//数据行
-			json jTableRow;
-			jTableRow.push_back(tag);
+			jTableHead.push_back("位号");
+			jColTag.push_back(nullptr);
 			for (int j = 0; j < childMps.size(); j++)
 			{
 				MP* pmp = childMps[j];
-				if (valFmt == "val") {
-					jTableRow.push_back(pmp->m_curVal);
+				string tag = pmp->getTag(moTag);
+				jColTag.push_back(tag);
+				if (params.columeLabel == "tag") {
+					jTableHead.push_back(tag);
 				}
-				else if (valFmt == "valStr") {
+				else {
+					jTableHead.push_back(pmp->m_name);
+				}
+			}
+			jTableHead.push_back("在线");
+			jTableHead.push_back("更新时间");
+			jColTag.push_back(nullptr);
+			jColTag.push_back(nullptr);
+			jTable["header"] = jTableHead;
+			jTable["tag"] = jColTag;
+		}
+
+
+		//数据行
+		json jTableRow;
+		jTableRow.push_back(tag);
+		for (int j = 1; j < jColTag.size()-2; j++)
+		{
+			string tag = jColTag[j];
+			tag = TAG::addRoot(tag, moTag);
+			MP* pmp = pMo->GetMPByTag(tag);
+			if (pmp) {
+				if (params.valFmt == "valStr") {
 					jTableRow.push_back(pmp->getValDesc(false));
 				}
-				else if (valFmt == "valStr-unit") {
+				else if (params.valFmt == "valStr-unit") {
 					jTableRow.push_back(pmp->getValDesc(true));
 				}
+				else// (valFmt == "val") 
+				{
+					jTableRow.push_back(pmp->m_curVal);
+				}
 			}
-			jTableRow.push_back(pMo->m_bOnline);
-			jTableRow.push_back(pMo->getUpdateTimeDesc());
-			if(jTableRow!=nullptr && jTableRow.size() == jTableHead.size())
-				jTableBody.push_back(jTableRow);
-			else
-			{
-				LOG("[warn]获取监控对象属性表 getMoAttr ,表头列数:%d,行列数%d", jTableHead.size(), jTableRow.size());
+			else {
+				jTableRow.push_back("-");
 			}
-			
 		}
-		jTable["body"] = jTableBody;
-		resp.result = jTable.dump();
+		jTableRow.push_back(pMo->m_bOnline);
+		jTableRow.push_back(pMo->getUpdateTimeDesc());
+		jTableBody.push_back(jTableRow);
 	}
-	else
-	{
-		json j = json::array();
-		resp.result = j.dump();
-	}
+	jTable["body"] = jTableBody;
+	resp.result = jTable.dump();
 }
 
 string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session, bool bValOnly)
