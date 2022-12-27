@@ -209,6 +209,16 @@ struct DB_FILE {
 	}
 };
 
+struct DE_yyjson {
+	yyjson_mut_val* time;  //暂时只只是按时间聚合，聚合后该字段一定存在。
+	yyjson_mut_val* val;
+
+	DE_yyjson() {
+		time = 0;
+		val = 0;
+	}
+};
+
 class TAG_DB_FILE_SET {
 public:
 	string tag;  //系统位号
@@ -216,7 +226,19 @@ public:
 	string mpName;  //监控点名称
 	string colKey;
 
-	vector<DB_FILE*> fileList;
+	string aggregate; //聚合操作
+	bool bAggr;
+
+	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
+
+	//分组聚合前数据
+	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
+	//不分组聚合前数据
+	vector<yyjson_val*> m_beforeAggr;
+
+	//执行聚合函数后数据.或者无需聚合直接放入以下结构
+	vector<DE_yyjson> m_mapRlt;
+
 	TAG_DB_FILE_SET() {
 		
 	}
@@ -272,13 +294,29 @@ struct DE_SELECTOR {
 	INTERVAL_SELECTOR interval;		//降采样选择器
 	bool ascendingSort;
 	string sortKey;
-	bool tagAsColume; //将位号作为表的列返回
+
+	string groupby;
+	bool groupByTime; //是否是按照时间进行分组，如果是按时间分组，查询结果的time字段将被改为时间的分组值
+	bool grouped;
+
+	//聚合运算
+	string aggregate; //应用到所有聚合运算
+	vector<string> vecAggregate;
+
+	//多列模式
+	bool tagAsColume; //将位号作为表的列返回.单列模式或多列模式
 	string columeLabel; //列标签使用 tag还是name
+	vector<string> vecColumeLable; //指定列标签
+
+	//返回结果的运算
 	string calc;
+
 	DE_SELECTOR() {
 		ascendingSort = true;
 		tagAsColume = false;
 		columeLabel = "tag";
+		grouped = false;
+		groupByTime = false;
 	}
 };
 
@@ -291,10 +329,14 @@ public:
 struct SELECT_RLT {
 	bool getDE;
 	string dataList;
-	int count;
+	int rowCount;
+	int deCount;
+	map<string, yyjson_mut_val*> mapRlt;
 
 	SELECT_RLT() {
 		getDE = true;
+		rowCount = 0;
+		deCount = 0;
 	}
 };
 
@@ -318,8 +360,9 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
-	bool loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc);
-	bool loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, map<string, yyjson_mut_val*>& mapRlt, yyjson_mut_doc* mut_doc);
+	bool loadDeList(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool doAggregate(DE_SELECTOR& deSel, string& aggrType, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	bool loadDeList_tagAsColume(DE_SELECTOR& deSel, vector<TAG_DB_FILE_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, TIME stTime, string& sData);

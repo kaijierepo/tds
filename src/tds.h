@@ -129,6 +129,7 @@ public:
 	string error;
 	string result;
 	string params; 
+	string info;   //查询成功返回的额外信息变量
 	char* binResult;
 	int iBinLen;
 	bool isNotification; //is request a notification.no response will send if request is a notification

@@ -658,11 +658,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	
 	if (method.find("db.") != string::npos)
 	{
-		if (!params.contains("tag"))
-		{
-			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : tag");
-		}
-		else if (!params.contains("time"))
+		if (!params.contains("time"))
 		{
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
@@ -2164,6 +2160,9 @@ HANDLE_END:
 		if (pSession->tag != "")
 		{
 			rpcResp.strResp += ",\"tag\":\"" + pSession->tag + "\"";
+		}
+		if (rpcResp.info != "") {
+			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
 		}
 		rpcResp.strResp += "}\n\n";
 
