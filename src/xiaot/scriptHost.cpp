@@ -153,9 +153,9 @@ static jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp)
 		{
-			jerry_value_t obj_mo = jerry_create_object();
+			jerry_value_t obj_mo;
 			json jMpStatus = pmp->getRTData();
-			scriptHost::setScriptEngineObj(jMpStatus, obj_mo);
+			scriptHost::jsonVal2jerryVal(jMpStatus, obj_mo);
 			return obj_mo;
 		}
 		else
@@ -254,13 +254,19 @@ static jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 						return ret;
 					}
 				}
-				else if (jArgs.size() == 2) {
+				//取历史值
+				else if (jArgs.size() >= 2) {
 					json time = jArgs[1];
 					if (time.is_string()) {
 						json jParams;
 						jParams["tag"] = sTag;
 						string sTime = time.get<string>();
 						jParams["time"] = sTime;
+						if (jArgs.size() >= 3) {
+							json jAggr = jArgs[2];
+							jParams["aggregate"] = jAggr;
+						}
+						
 						DE_SELECTOR deSel;
 						db.parseDESelector(jParams, deSel);
 						SELECT_RLT rlt;
@@ -268,16 +274,11 @@ static jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 						if (rlt.dataList.length() > 0) {
 							json jDeList = json::parse(rlt.dataList);
 							if (jDeList.is_array() && jDeList.size() > 0) {
-								if (pmp->m_curVal.is_number()) {
-									double val = jDeList[0]["val"].get<double>();
-									jerry_value_t ret = jerry_create_number(val);
-									return ret;
-								}
-								else if (pmp->m_curVal.is_boolean()) {
-									bool val = jDeList[0]["val"].get<bool>();
-									jerry_value_t ret = jerry_create_boolean(val);
-									return ret;
-								}
+								json& jDe = jDeList[0];
+								json& jVal = jDe["val"];
+								jerry_value_t ret;
+								scriptHost::jsonVal2jerryVal(jVal, ret);
+								return ret;
 							}
 						}
 					}
@@ -738,48 +739,52 @@ void scriptHost::loopExe()
 	}
 }
 
-
-bool scriptHost::setScriptEngineObj(json& jObj, jerry_value_t engineObj)
-{
-	for (auto& [key, value] : jObj.items()) {
-		if (value.is_null())
-			continue;
-
-		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
-		jerry_value_t prop_value;
-		if (value.is_string())
-			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)value.get<string>().c_str());
-		else if (value.is_number_float())
-			prop_value = jerry_create_number(value.get<double>());
-		else if (value.is_number_integer())
-		{
-			uint64_t digits[1] = { value.get<unsigned int>() };
-			prop_value = jerry_create_bigint(digits, 1, true);
-		}
-		else if (value.is_number_unsigned())
-		{
-			uint64_t digits[1] = { value.get<int>() };
-			prop_value = jerry_create_bigint(digits, 1, false);
-		}
-		else if (value.is_boolean())
-			prop_value = jerry_create_boolean(value.get<bool>());
-		else if (value.is_object())
-		{
-			prop_value = jerry_create_object();
-			setScriptEngineObj(value, prop_value);
-		}
-
-
-		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		if (jerry_value_is_error(set_result)) {
-			jerry_error_t error = jerry_get_error_type(set_result);
-			jerry_release_value(error);
-		}
-		jerry_release_value(set_result);
-		jerry_release_value(prop_name);
-		jerry_release_value(prop_value);
+bool scriptHost::jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
+	if (jVal.is_string())
+		jerryVal = jerry_create_string_from_utf8((const jerry_char_t*)jVal.get<string>().c_str());
+	else if (jVal.is_null()) {
+		jerryVal = jerry_create_null();
 	}
+	else if (jVal.is_number_float())
+		jerryVal = jerry_create_number(jVal.get<double>());
+	else if (jVal.is_number_integer())
+	{
+		uint64_t digits[1] = { jVal.get<unsigned int>() };
+		jerryVal = jerry_create_bigint(digits, 1, true);
+	}
+	else if (jVal.is_number_unsigned())
+	{
+		uint64_t digits[1] = { jVal.get<int>() };
+		jerryVal = jerry_create_bigint(digits, 1, false);
+	}
+	else if (jVal.is_boolean())
+		jerryVal = jerry_create_boolean(jVal.get<bool>());
+	else if (jVal.is_object()) {
+		jerryVal = jerry_create_object();
+		for (auto& [key, value] : jVal.items()) {
+			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
+			jerry_value_t prop_value;
+			jsonVal2jerryVal(value, prop_value);
 
+			jerry_value_t set_result = jerry_set_property(jerryVal, prop_name, prop_value);
+			if (jerry_value_is_error(set_result)) {
+				jerry_error_t error = jerry_get_error_type(set_result);
+				jerry_release_value(error);
+			}
+			jerry_release_value(set_result);
+			jerry_release_value(prop_name);
+			jerry_release_value(prop_value);
+		}
+	}
+	else if (jVal.is_array()) {
+		jerryVal = jerry_create_array(jVal.size());
+		for (int i = 0; i < jVal.size();i++) {
+			json jItem = jVal[i];
+			jerry_value_t array_value;
+			jsonVal2jerryVal(jItem, array_value);
+			jerry_set_property_by_index(jerryVal, i, array_value);
+		}
+	}
 	return true;
 }
 

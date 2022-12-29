@@ -682,8 +682,10 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		{
 			string tag = params["tag"].get<string>();
 			string time = params["time"].get<string>();
-			db.Delete(tag, timeopt::str2st(time));
-			result = "\"ok\"";
+			if (db.Delete(tag, timeopt::str2st(time)))
+				result = "\"ok\"";
+			else
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "data element not found");
 		}
 		else if (method == "db.insert")
 		{
@@ -1643,6 +1645,24 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		sHost.rpc_setScript(params, rpcResp, session);
 	}
+	else if (method == "getReportConf") {
+		string sConf;
+		json jConf;
+		fs::readFile(tds->conf->confPath + "/report.json", sConf);
+		if (sConf != "") {
+			jConf = json::parse(sConf);
+		}
+		else {
+			jConf = json::array();
+		}
+
+		rpcResp.result = jConf.dump();
+	}
+	else if (method == "setReportConf") {
+		string sConf = params.dump(2);
+		fs::writeFile(tds->conf->confPath + "/report.json", sConf);
+		rpcResp.result = "\"ok\"";
+	}
 #endif
 	else if (method == "callDevMethod")
 	{
@@ -2144,7 +2164,13 @@ HANDLE_END:
 	}
 	else if (rpcResp.result != "")
 	{
-		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":" + rpcResp.result;
+		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump();
+
+		if (rpcResp.info != "") {
+			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
+		}
+			
+		rpcResp.strResp += ",\"result\":" + rpcResp.result;
 		if (tds->conf->edge)
 		{
 			rpcResp.strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
@@ -2160,9 +2186,6 @@ HANDLE_END:
 		if (pSession->tag != "")
 		{
 			rpcResp.strResp += ",\"tag\":\"" + pSession->tag + "\"";
-		}
-		if (rpcResp.info != "") {
-			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
 		}
 		rpcResp.strResp += "}\n\n";
 
