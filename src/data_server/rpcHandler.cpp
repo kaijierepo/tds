@@ -3315,7 +3315,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 			if (pmp->m_mediaSrcType == "file") {
 				string url = str::trimPrefix(pmp->m_mediaUrl, "/");
 				url = str::trimSuffix(url, ".mp4");
-				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/media/" + url + ".mp4.live.flv";
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4.live.flv";
 				j["rtsp"] = "rtsp://" + ip + "/record/" + url + ".mp4";
 			}
 			else {
