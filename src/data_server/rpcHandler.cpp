@@ -2611,7 +2611,8 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 
 void rpcHandler::zlm_openStream(string tag,string srcUrl)
 {
-	str::hanZi2Pinyin(tag, tag);
+	string tagPinyin;
+	str::hanZi2Pinyin(tag,tagPinyin);
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://127.0.0.1:" + sPort;
 	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
@@ -2622,7 +2623,7 @@ void rpcHandler::zlm_openStream(string tag,string srcUrl)
 		{"app","stream"},
 		{"stream",tag},
 		{"url",srcUrl},
-		{"enable_hls","1"},
+		{"enable_hls","0"},  
 		{"enable_ts","0"},
 		{"enable_mp4","0"}
 	};
@@ -3319,10 +3320,10 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 				j["rtsp"] = "rtsp://" + ip + "/record/" + url + ".mp4";
 			}
 			else {
-				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tagPinyin + ".live.flv";
-				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tagPinyin + "/hls.m3u8";
-				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tagPinyin + "&type=play";
-				j["rtsp"] = "rtsp://" + ip + "/stream/" + tagPinyin;
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".live.flv";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + "/hls.m3u8";
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+				j["rtsp"] = "rtsp://" + ip + "/stream/" + tag;
 			}
 		}
 		else
@@ -3348,7 +3349,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 				port = childTdsInfo.httpPort;
 			}
 			j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
-			j["rtsp"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtsp";
+			j["rtsp"] = urlProto + ip + "/stream/" + tag ;
 			j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtc";
 			j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
 		}
