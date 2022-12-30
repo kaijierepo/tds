@@ -2612,7 +2612,8 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 void rpcHandler::zlm_openStream(string tag,string srcUrl)
 {
 	str::hanZi2Pinyin(tag, tag);
-	string streamServerUrl = "http://127.0.0.1:672";
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string streamServerUrl = "http://127.0.0.1:" + sPort;
 	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
@@ -3298,12 +3299,12 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 	if (isHttps) {
 		urlProto = "https://";
 		wsProto = "wss://";
-		port = 671;
+		port = tds->conf->getInt("httpsMediaPort",668);
 	}
 	else {
 		urlProto = "http://";
 		wsProto = "ws://";
-		port = 672;
+		port = tds->conf->getInt("httpMediaPort",669);
 	}
 
 

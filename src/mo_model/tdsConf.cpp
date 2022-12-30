@@ -66,6 +66,8 @@ uiPath=./ui            #web根目录
 confPath=./conf        #配置路径
 httpsPort=0            #https服务端口,同时支持websocket secure
 httpPort=667           #http服务端口,同时支持websocket
+httpsMediaPort=668     #https流媒体服务端口
+httpMediaPort=669      #http流媒体服务端口
 loglevel=debug         #日志级别
 
 #安全性
