@@ -40,10 +40,15 @@ udpServer::~udpServer(void)
 {
 }
 
-bool udpServer::run(IUdpServerCallBack* pcb, int port)
+bool udpServer::run(IUdpServerCallBack* pcb, int port,string serverIP)
 {
 	m_port = port;
 	m_pCallback = pcb;
+
+	if (serverIP == "")
+		serverIP = "0.0.0.0";
+	m_bindIP = serverIP;
+
 	start();
 	return true;
 }

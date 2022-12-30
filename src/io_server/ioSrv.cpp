@@ -1007,6 +1007,8 @@ bool ioServer::runAsCloud()
 	m_bRunning = true;
 	loadChanTemplate();
 
+	string serverIP = tds->conf->getStr("serverIP", "0.0.0.0");
+
 	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
 	int tdspPort = tds->conf->getInt("tdspPort", 665);
@@ -1022,18 +1024,18 @@ bool ioServer::runAsCloud()
 	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
 
 	//启动服务端口
-	if(tdspPort)LOG("[IO服务    ] 端口:" + str::fromInt(tdspPort) + " 设备通信协议 TDSP");
-	if(mbPort)LOG("[IO服务    ] 端口:" + str::fromInt(mbPort) + " 设备通信协议 modbus RTU over TCP");
-	if(mbTcpPort)LOG("[IO服务    ] 端口:" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
-	if(iq60Port)LOG("[IO服务    ] 端口:" + str::fromInt(iq60Port) + " 设备通信协议 IQ60物云通信协议");
-	if(leakDetectPort)LOG("[IO服务    ] 端口:" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
-	if (adpPort)LOG("[IO服务    ] UDP端口:" + str::fromInt(adpPort) + " adaptor接入");
+	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + " 设备通信协议 TDSP");
+	if(mbPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbPort) + " 设备通信协议 modbus RTU over TCP");
+	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
+	if(iq60Port)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(iq60Port) + " 设备通信协议 IQ60物云通信协议");
+	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
+	if (adpPort)LOG("[IO服务    ] 监听地址:UDP-" + serverIP + ":" + str::fromInt(adpPort) + " adaptor接入");
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
 	m_tcpSrv_tdsp->m_strName = "tdsp";
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort))
+	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort, serverIP))
 	{
 		
 	}
@@ -1047,7 +1049,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_rtu = new tcpSrv();
 	m_tcpSrv_rtu->m_strName = "modbus rtu";
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort))
+	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort, serverIP))
 	{
 		
 	}
@@ -1060,7 +1062,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_mbTcp = new tcpSrv();
 	m_tcpSrv_mbTcp->m_strName = "modbus tcp";
 	m_tcpSrv_mbTcp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_mbTcp->run(this, mbTcpPort))
+	if (m_tcpSrv_mbTcp->run(this, mbTcpPort, serverIP))
 	{
 
 	}
@@ -1073,7 +1075,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_iq60 = new tcpSrv();
 	m_tcpSrv_iq60->m_strName = "iq60";
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port))
+	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port, serverIP))
 	{
 		
 	}
@@ -1086,7 +1088,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_leakDetect = new tcpSrv();
 	m_tcpSrv_leakDetect->m_strName = "leakDetect";
 	m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_leakDetect->run(this, leakDetectPort))
+	if (m_tcpSrv_leakDetect->run(this, leakDetectPort, serverIP))
 	{
 
 	}
@@ -1097,7 +1099,7 @@ bool ioServer::runAsCloud()
 
 	//adaptor接入服务
 	m_udpSrv = new udpServer();
-	if (m_udpSrv->run(this,adpPort)) {
+	if (m_udpSrv->run(this,adpPort, serverIP)) {
 
 	}
 	else {
