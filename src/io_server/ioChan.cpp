@@ -176,8 +176,8 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 
 //ioChannel的输出统一由父设备实现，因为通道的特性是由设备决定的，什么设备决定了有什么通道
 //例如Modbus设备就有以寄存器为特征的通道
-bool ioChannel::output(json jVal, json& rlt,json& err, bool sync)
+void ioChannel::output(json jVal, json& rlt,json& err, bool sync)
 {
 	ioDev* pDev = ioDev::m_pParent;
-	return pDev->output(getDevAddrStr(),jVal, rlt,err,sync);
+	pDev->output(getDevAddrStr(),jVal, rlt,err,sync);
 }

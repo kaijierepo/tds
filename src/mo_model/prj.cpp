@@ -13,7 +13,7 @@ project prj;
 project::project()
 {
 	m_name = "tds";
-	m_type = "project";
+	m_type = "org";
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
 	p->m_valType = VAL_TYPE::video;
@@ -100,7 +100,7 @@ bool project::loadConf(string& confStr)
 
 	try {
 		json moRoot = json::parse(confStr.c_str());
-		moRoot["type"] = "project";
+		moRoot["type"] = "org";
 		bool ret = loadConf(moRoot);
 		return ret;
 	}

@@ -2536,8 +2536,8 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 			json jRlt = json::array();
 			json de;
 
-			de["tag"] = "statis.project";
-			de["val"] = jStatis["project"];
+			de["tag"] = "statis.customOrg";
+			de["val"] = jStatis["customOrg"];
 			jRlt.push_back(de);
 
 			de["tag"] = "statis.smartDev.total";
@@ -3318,6 +3318,8 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 				url = str::trimSuffix(url, ".mp4");
 				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/record/" + url + ".mp4.live.flv";
 				j["rtsp"] = "rtsp://" + ip + "/record/" + url + ".mp4";
+				j["hls"] = "";
+				j["rtc"] = "";
 			}
 			else {
 				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".live.flv";

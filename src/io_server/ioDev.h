@@ -80,7 +80,7 @@ class ioDev
 {
 public:
 	ioDev(void);
-	~ioDev(void);
+	virtual ~ioDev(void);
 
 	virtual bool run(); //连接； 执行io任务； 断线重连
 	virtual void stop();
@@ -99,7 +99,7 @@ public:
 	virtual bool isCamera() { return false; };
 	virtual string getDesc();
 	void triggerCycleAcq();
-	virtual bool call(string method, json params, json& result, json& error, bool sync = true) { return false; };
+	virtual void call(string method, json params, json& result, json& error, bool sync = true) {  };
 	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 
 	DEV_QUERIER parseQueryOpt(json& opt);
@@ -180,8 +180,8 @@ public:
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 
 	//输出到设备的下属通道
-	virtual bool output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) { return false; }
-	virtual bool output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { return false; };
+	virtual void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) {  }
+	virtual void output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { };
 
 	//设备多通道批量输入
 	virtual bool input(vector<string> chanAddr, vector<json> val, TIME* stDataTime = nullptr);
@@ -248,6 +248,12 @@ public:
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	TIME m_stOnlineTime;//设备上线时间戳
 	TIME m_stOfflineTime;//设备掉线时间戳
+
+	//通信时间统计
+	int m_avgRespTime;
+	vector<int> m_vecRespTime;                   //最近5次通信使用时间
+	void doRespTimeStatis(int time);
+
 	virtual bool isConnected();
 	virtual int GetAcqInterval();
 	static bool m_bAsynAcqMode;//是否启用异步采集模式

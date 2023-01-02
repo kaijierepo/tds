@@ -207,6 +207,7 @@ public:
 	ITcpServerCallBack* m_pCallBackUser;
 
 	bool m_bStarted;
+	bool m_bReuseAddr;
 
 	void Log(char* sz);
 	void (*pLog)(char*);

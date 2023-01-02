@@ -100,6 +100,8 @@ bool OBJ::loadConf(json& conf)
 	}
 	if (conf.contains("type")) {
 		m_type = conf["type"];
+		if (m_type == "project") //不再使用project类型。兼容一段时间 2023.1.2
+			m_type = "org";
 	}
 	if (conf.contains("childTds")) {
 		m_bChildTds = conf["childTds"].get<bool>();
@@ -194,9 +196,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		return true;
 	if (m_type == "mp")
 		return true;
-	if (m_type == "project") {
-		return true;
-	}
+
 	else if (m_type == "org")
 	{
 		return true;
@@ -721,7 +721,7 @@ bool OBJ::isSelectedByType(string type)
 	if (type == "obj")
 		return true;
 	else if (type == "org") {
-		if (m_type == "org" || m_type == "customOrg" || m_type == "project")
+		if (m_type == "org" || m_type == "customOrg")
 			return true;
 		else
 			return false;
@@ -748,9 +748,6 @@ bool OBJ::isSelectedByType(string type)
 	{
 		if (m_type == "customOrg")
 			return true;
-		else if (m_type == "project" && m_pParentMO != nullptr) { //选中非根节点的project节点，也就是子服务
-			return true;
-		}
 		else
 			return false;
 	}
@@ -1039,8 +1036,8 @@ void OBJ::statisChildCustomMoType(map<string, json>& list)
 
 void OBJ::statisChildMo(json& jStatis)
 {
-	if (jStatis["project"] == nullptr) {
-		jStatis["project"] = 0;
+	if (jStatis["customOrg"] == nullptr) {
+		jStatis["customOrg"] = 0;
 	}
 
 	if (jStatis["online"] == nullptr) {
@@ -1058,7 +1055,7 @@ void OBJ::statisChildMo(json& jStatis)
 
 
 	if (m_type == MO_TYPE::customOrg) {
-		jStatis["project"] = jStatis["project"].get<int>() + 1;
+		jStatis["customOrg"] = jStatis["customOrg"].get<int>() + 1;
 	}
 	else if (m_type == MO_TYPE::customMo) {
 		jStatis["smartDev"] = jStatis["smartDev"].get<int>() + 1;

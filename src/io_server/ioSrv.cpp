@@ -473,10 +473,8 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string type = params["type"].get<string>();
-	if (!params.contains("nodeID"))
-	{
-		params["nodeID"] = common::guid();
-	}
+
+	params["nodeID"] = common::guid();
 
 	ioDev* parentDev = this;
 
@@ -548,11 +546,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 		if (p)
 		{
 			p->loadConf(devConf);
-			json opt;
-			opt["getStatus"] = true; 
-			p->toJson(devConf,opt);
+			devConf["ioAddr"] = p->getIOAddrStr(); //用于前端提示通知那台设备修改成功了
 			rpcSrv.notify("devModified", devConf); 
-			rpcResp.result = devConf.dump(2);
+			rpcResp.result = devConf.dump(2);  
 			modified = true;
 
 			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
@@ -652,16 +648,13 @@ void ioServer::rpc_stopDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
 			json jp = json::object();
 			json rlt, err;
-			if (pTdsp->call("stopUpgrade", jp, rlt, err, true)) {
-				if (rlt != nullptr) {
-					rpcResp.result = rlt.dump();
-				}
-				else {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stopUpgrade fail:" + err.dump());
-				}
+			pTdsp->call("stopUpgrade", jp, rlt, err, true);
+
+			if (rlt != nullptr) {
+				rpcResp.result = rlt.dump();
 			}
 			else {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stopUpgrade fail,request timeout");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "stopUpgrade fail:" + err.dump());
 			}
 		}
 	}
@@ -728,22 +721,20 @@ void ioServer::rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 					jp["data"] = base64Data;
 					jp["crc"] = common::N_CRC16(ui.fileData + pktNo * pktLen, pktLen);
 					json rlt, err;
-					if (pTdsp->call("uploadFirmware", jp, rlt, err)) {
-						if (rlt != nullptr) {
-							json jRlt = params;
-							jRlt["crc"] = jp["crc"];
-							jRlt["pktNum"] = pktNum;
-							jRlt["fileLen"] = ui.fileLen;
-							jRlt["data"] = base64Data;
-							rpcResp.result = jRlt.dump();
-						}
-						else {
-							rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "uploadFirmware fail:" + err.dump());
-						}
+					pTdsp->call("uploadFirmware", jp, rlt, err);
+					
+					if (rlt != nullptr) {
+						json jRlt = params;
+						jRlt["crc"] = jp["crc"];
+						jRlt["pktNum"] = pktNum;
+						jRlt["fileLen"] = ui.fileLen;
+						jRlt["data"] = base64Data;
+						rpcResp.result = jRlt.dump();
 					}
 					else {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "uploadFirmware fail,request timeout");
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "uploadFirmware fail:" + err.dump());
 					}
+
 				}
 			}
 		}
@@ -1008,6 +999,8 @@ bool ioServer::runAsCloud()
 	loadChanTemplate();
 
 	string serverIP = tds->conf->getStr("serverIP", "0.0.0.0");
+	if (serverIP == "")
+		serverIP = "0.0.0.0";
 
 	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);

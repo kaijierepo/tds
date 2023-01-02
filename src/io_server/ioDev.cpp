@@ -147,8 +147,9 @@ ioDev::ioDev(void)
 	pIOSession = NULL;
 	m_onlineInfoQueried = false;
 	m_acqMode = "all";
-	m_acqAlarm = true;
+	m_acqAlarm = false;
 	m_bViaAdaptor = false;
+	m_avgRespTime = 0;
 }
 
 ioDev::~ioDev(void)
@@ -277,6 +278,8 @@ bool ioDev::toJson(json& conf, json opt)
 		conf["ioAddr"] = getIOAddrStr();
 		conf["addrMode"] = m_addrMode;
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
+
+		conf["avgRespTime"] = m_avgRespTime;
 	} 
 
 	//升级状态信息数据
@@ -367,97 +370,152 @@ bool ioDev::loadConf(json& conf)
 {
 	lock_conf_unique();
 
-	if (conf.contains("addrMode")) {
-		m_addrMode = conf["addrMode"];
-	}
 
-	if (conf["viaAdaptor"].is_boolean()) {
-		m_bViaAdaptor = conf["viaAdaptor"].get<bool>();
-	}
-
-	if (conf.contains("addr"))
-	{
-		m_jDevAddr = conf["addr"];
-
-		//addrMode以后保存到io.json。此处兼容未保存的
-		if (m_jDevAddr.is_object() && m_addrMode == "")
-		{
-			if (m_jDevAddr["id"] != nullptr) {
-				m_addrMode = DEV_ADDR_MODE::deviceID;
-			}
-			else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>()!=0)
-				m_addrMode = DEV_ADDR_MODE::tcpServer;
-			else
-				m_addrMode = DEV_ADDR_MODE::tcpClient;
+	auto kv = conf.find("addrMode");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_addrMode = item.get<string>();
 		}
 	}
 
-	if (conf["user"].is_string()) {
-		m_strUser = conf["user"].get<string>();
-	};
-
-	if (conf["pwd"].is_string()) {
-		m_strPwd = conf["pwd"].get<string>();
-	};
-
-	if (conf["acqInterval"] != nullptr)
-	{
-		m_fAcqInterval = conf["acqInterval"].get<float>();
+	kv = conf.find("viaAdaptor");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bViaAdaptor = item.get<bool>();
+		}
 	}
 
-	if (conf["enableAcq"] != nullptr)
-	{
-		m_bEnableAcq = conf["enableAcq"].get<bool>();
+	kv = conf.find("addr");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (!item.is_null()) {
+			m_jDevAddr = item;
+
+			//addrMode以后保存到io.json。此处兼容未保存的
+			if (m_jDevAddr.is_object() && m_addrMode == "")
+			{
+				if (m_jDevAddr["id"] != nullptr) {
+					m_addrMode = DEV_ADDR_MODE::deviceID;
+				}
+				else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>() != 0)
+					m_addrMode = DEV_ADDR_MODE::tcpServer;
+				else
+					m_addrMode = DEV_ADDR_MODE::tcpClient;
+			}
+		}
 	}
 
-	if (conf["manageStatus"] != nullptr)
-	{
-		m_dispositionMode = conf["manageStatus"].get<string>();
+	kv = conf.find("user");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_strUser = item.get<string>();
+		}
 	}
 
-	if (conf["chanTemplate"] != nullptr)
-	{
-		m_strChanTemplate = conf["chanTemplate"].get<string>();
+	kv = conf.find("pwd");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_strPwd = item.get<string>();
+		}
 	}
 
-	if (conf["acqMode"] != nullptr) {
-		m_acqMode = conf["acqMode"].get<string>();
+
+	kv = conf.find("acqInterval");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_number()) {
+			m_fAcqInterval = item.get<float>();
+		}
 	}
 
-	if (conf["chanGroup"] != nullptr) {
-		m_chanGroup = conf["chanGroup"].get<string>();
+	kv = conf.find("enableAcq");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bEnableAcq = item.get<bool>();
+		}
 	}
 
-	if (conf["acqAlarm"].is_boolean()) {
-		m_acqAlarm = conf["acqAlarm"].get<bool>();
+
+	kv = conf.find("manageStatus");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_dispositionMode = item.get<string>();
+		}
 	}
 
-	if (conf["nodeID"] != nullptr)
-	{
-		m_confNodeId = conf["nodeID"].get<string>();
+
+	kv = conf.find("chanTemplate");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_strChanTemplate = item.get<string>();
+		}
+	}
+
+	kv = conf.find("acqMode");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_acqMode = item.get<string>();
+		}
+	}
+
+	kv = conf.find("chanGroup");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_chanGroup = item.get<string>();
+		}
+	}
+
+
+	kv = conf.find("acqAlarm");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_acqAlarm = item.get<bool>();
+		}
+	}
+
+
+	kv = conf.find("nodeID");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_confNodeId = item.get<string>();
+		}
 	}
 	if (m_confNodeId == "") //该操作主要用于升级没有nodeId的配置
 		m_confNodeId = common::guid();
 
-	if (conf["tagBind"] != nullptr)
-	{
-		m_strTagBind = conf["tagBind"];
-		
-		//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
-		//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
-		//配置加载完成后，统一更新
-		//if (m_dispositionMode == DEV_DISPOSITION_MODE::managed && m_strTagBind != "")
-		//{
-		//	json tagBinding = json::array();
-		//	json binding;
-		//	binding["ioAddr"] = getIOAddrStr();
-		//	binding["tag"] = m_strTagBind;
-		//	tagBinding.push_back(binding);
-		//	tds->callAsyn("updateTagBinding", tagBinding.dump());
-		//}
+	kv = conf.find("tagBind");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_strTagBind = item.get<string>();
+			//启用设备，才更新绑定的mo中的 关联io地址信息。 备用的不更新。
+			//否则备用的绑定地址和启用的相同时，可能会错误的使用备用设备的信息
+			//配置加载完成后，统一更新
+			//if (m_dispositionMode == DEV_DISPOSITION_MODE::managed && m_strTagBind != "")
+			//{
+			//	json tagBinding = json::array();
+			//	json binding;
+			//	binding["ioAddr"] = getIOAddrStr();
+			//	binding["tag"] = m_strTagBind;
+			//	tagBinding.push_back(binding);
+			//	tds->callAsyn("updateTagBinding", tagBinding.dump());
+			//}
+		}
 	}
 
-	if (conf["children"] != nullptr)
+
+	if (conf.contains("children"))
 	{
 		deleteChildren();
 		json childDev = conf["children"];
@@ -476,7 +534,7 @@ bool ioDev::loadConf(json& conf)
 	}
 
 
-	if (conf["channels"] != nullptr)
+	if (conf.contains("channels"))
 	{
 		deleteAllChannels();
 		
@@ -567,28 +625,21 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 	json jRlt, jErr;
 	//发起同步请求，此处阻塞
 	bool callRet = false;
-	if (pIoDev->call(method, jParams, jRlt, jErr))
+	pIoDev->call(method, jParams, jRlt, jErr);
+	if (jRlt != nullptr) {
+		rpcResp.result = jRlt.dump();
+		LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());
+	}
+	else if (jErr != nullptr)
 	{
-		callRet = true;
-		if (jRlt != nullptr) {
-			rpcResp.result = jRlt.dump();
-			LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());
-		}
-		else if (jErr != nullptr)
-		{
-			rpcResp.error = jErr.dump();
-			LOG("[TDSP路由转发]设备->客户端,error=%s\r\n", rpcResp.error.c_str());
-		}
-		else
-		{
-			LOG("[error][TDSP]TDSP响应数据包缺少result或者error字段");
-		}
-		
+		rpcResp.error = jErr.dump();
+		LOG("[TDSP路由转发]设备->客户端,error=%s\r\n", rpcResp.error.c_str());
 	}
 	else
 	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "IO设备响应超时");
+		assert(false);
 	}
+		
 	return true;
 }
 
@@ -1020,6 +1071,22 @@ void ioDev::setOffline()
 			jNotify["tag"] = m_strTagBind;
 		thread t(notifyDevOffline, jNotify);
 		t.detach();
+	}
+}
+
+void ioDev::doRespTimeStatis(int time)
+{
+	m_vecRespTime.push_back(time);
+	if (m_vecRespTime.size() > 5) {
+		m_vecRespTime.erase(m_vecRespTime.begin());
+	}
+
+	if (m_vecRespTime.size() > 0) {
+		int total = 0;
+		for (int i = 0; i < m_vecRespTime.size(); i++) {
+			total += m_vecRespTime[i];
+		}
+		m_avgRespTime = total / m_vecRespTime.size();
 	}
 }
 
