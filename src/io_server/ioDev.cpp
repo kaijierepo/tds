@@ -127,6 +127,7 @@ ioDev::ioDev(void)
 	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
 	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
+	m_bEnableOfflineTimeout = false;
 	m_bOnline = false;
 	m_iSendDataFailCount = 0;
 	m_tcpClt = nullptr;
@@ -249,6 +250,11 @@ bool ioDev::toJson(json& conf, json opt)
 		};
 		if (m_strPwd != "") {
 			conf["pwd"] = m_strPwd;
+		}
+
+		if (m_bEnableOfflineTimeout) {
+			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
+			conf["offlineTimeout"] = m_offlineTimeout;
 		}
 	}
 
@@ -483,6 +489,21 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+	kv = conf.find("enableOfflineTimeout");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bEnableOfflineTimeout = item.get<bool>();
+		}
+	}
+
+	kv = conf.find("offlineTimeout");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_number_integer()) {
+			m_offlineTimeout = item.get<int>();
+		}
+	}
 
 	kv = conf.find("nodeID");
 	if (kv != conf.end()) {
