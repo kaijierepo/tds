@@ -2630,7 +2630,7 @@ void rpcHandler::zlm_openStream(string tag,string srcUrl)
 
 	string uri = "/index/api/addStreamProxy";
 	auto res = cli.Get(uri, params, headers);
-	LOG("打开流媒体源,Get " + streamServerUrl + uri + ",tag=" + tag);
+	LOG("打开流媒体源,Get " + streamServerUrl + uri + ",tag=" + tag + ",媒体源=" + srcUrl);
 	if (res != nullptr) {
 
 	}
@@ -3056,8 +3056,6 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	if (params.contains("getConf"))
 	{
 		getConf = params["getConf"].get<bool>();
-		if (getConf == false)
-			bValOnly = true;
 	}
 	if (params.contains("getStatus"))
 		getStatus = params["getStatus"].get<bool>();
@@ -3085,102 +3083,70 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 
 	json rtList = json::array();
 	json rtMap = json::object();
-	//获取所有点
-	if ( jTagQuerier == nullptr || (jTagQuerier.is_string() && jTagQuerier.get<string>() == "*"))
+
+
+	if(mode=="tree")
 	{
-		if(mode=="tree")
+		json j = prj.getRT();
+		string result = j.dump(4);
+		return result;
+	}
+	else
+	{
+		TAG_SELECTOR tagSel;
+		tagSel.init(jTagQuerier, rootTag);
+		vector<MP*> mpList;
+		prj.getMpByTagSelector(mpList,tagSel);
+		for (int i=0;i<mpList.size();i++)
 		{
-			json j = prj.getRT();
-			string result = j.dump(4);
-			return result;
+			MP* pmp = mpList[i];
+			string tag = pmp->getTag();
+
+			if (session.user != "")
+			{
+				if (!userMng.checkTagPermission(session.user, tag))
+					continue;
+			}
+
+			if (rootTag != "")
+			{
+				if (tag.find(rootTag)  != 0)
+					continue;
+			}
+
+
+			OBJ_QUERIER q;
+			//以下两句是基于树结构的查询，应当是不需要的，以后重构
+			q.getChild = true;
+			q.getMp = true;
+			q.getConf = getConf;
+			q.getStatusDesc = getStatusDesc;
+			q.getStatus = getStatus;
+			q.rootTag = rootTag;
+			json j;
+			pmp->toJson(j,q);
+			rtList.push_back(j);
+		}	
+						
+		string result;
+		if (mode == "array")
+		{
+			result = rtList.dump(4);
+		}
+		else if (mode == "map")
+		{
+			for (int i = 0; i < rtList.size(); i++)
+			{
+				json& de = rtList[i];
+				rtMap[de["tag"].get<string>()] = de;
+			}
+			result = rtMap.dump(4);
 		}
 		else
 		{
-			vector<MP*> mpList;
-			prj.getMpList(mpList, &prj);
-			for (int i=0;i<mpList.size();i++)
-			{
-				MP* pmp = mpList[i];
-				string tag = pmp->getTag();
-
-				if (session.user != "")
-				{
-					if (!userMng.checkTagPermission(session.user, tag))
-						continue;
-				}
-
-				if (rootTag != "")
-				{
-					if (tag.find(rootTag)  != 0)
-						continue;
-				}
-
-
-				OBJ_QUERIER q;
-				//以下两句是基于树结构的查询，应当是不需要的，以后重构
-				q.getChild = true;
-				q.getMp = true;
-				q.getConf = getConf;
-				q.getStatusDesc = getStatusDesc;
-				q.getStatus = getStatus;
-				q.rootTag = rootTag;
-				json j;
-				pmp->toJson(j,q);
-				rtList.push_back(j);
-			}	
-						
-			string result;
-			if (mode == "array")
-			{
-				result = rtList.dump(4);
-			}
-			else if (mode == "map")
-			{
-				for (int i = 0; i < rtList.size(); i++)
-				{
-					json& de = rtList[i];
-					rtMap[de["tag"].get<string>()] = de;
-				}
-				result = rtMap.dump(4);
-			}
-			else
-			{
-				result = rtList.dump(4);
-			}
+			result = rtList.dump(4);
+		}
 			
-			return result;
-		}
-	}
-	//模糊查询模式
-	else if (jTagQuerier.is_string()) {
-		string szTag = jTagQuerier.get<string>();
-		std::vector<MP*> tagVec;
-		prj.GetMPByTag(&tagVec, szTag);
-		for (int i = 0; i < tagVec.size(); i++)
-		{
-			MP* pmp = tagVec.at(i);
-			rtList.push_back(pmp->getRTData("", bValOnly));
-		}
-		string result = rtList.dump(4);
-		return result;
-	}
-	else if(jTagQuerier.is_array())
-	{
-		for (auto& tag : jTagQuerier) {
-			string sysTag = TAG::addRoot(tag, rootTag);
-			MP* pmp = prj.getMp(sysTag);
-			if(pmp)
-				rtList.push_back(pmp->getRTData("", bValOnly));
-			else
-			{
-				json j;
-				j["tag"] = tag;
-				j["time"] = nullptr;
-				j["val"] = nullptr;
-				rtList.push_back(j);
-			}
-		}
-		string result = rtList.dump(4);
 		return result;
 	}
 }

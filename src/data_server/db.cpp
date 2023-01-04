@@ -1583,6 +1583,8 @@ bool TAG_SELECTOR::init(string tag, string rootTag){
 	m_rootTag = rootTag;
 	if (tag.find("*") != string::npos)
 	{
+		//如果tag是 * ,rootTag是杭州，那么通配选择是  杭州.*
+		//TAG::addRoot后会加上.  , 这样子可以避免 通配选择变成  杭州*, 如果是  杭州* ,会错误的选中例如  杭州(仿真).温度 这类不该选中的位号
 		string tagExp = TAG::addRoot(tag, rootTag);
 		string regExp = tagExp;
 		regExp = str::replace(regExp, ".", "\\.");
