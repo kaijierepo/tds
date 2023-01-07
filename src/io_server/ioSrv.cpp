@@ -73,6 +73,8 @@ void onRecvIQ60Pkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> 
 		if (jpkt.is_array() && jpkt.size() >= 1)
 		{
 			//转发给对应设备
+			//返回的字段0是设备id
+			//返回：["C1201020756", ["AI9", 48.8, 1540697466, 0], ["BO1", 1, 1540697466, 0], "r"]
 			string id = jpkt[0];
 
 			//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
@@ -1017,12 +1019,13 @@ bool ioServer::runAsCloud()
 	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
 
 	//启动服务端口
-	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + " 设备通信协议 TDSP");
-	if(mbPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbPort) + " 设备通信协议 modbus RTU over TCP");
-	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbTcpPort) + " 设备通信协议 modbus TCP");
-	if(iq60Port)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(iq60Port) + " 设备通信协议 IQ60物云通信协议");
-	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(leakDetectPort) + " 设备通信协议 漏点监测通信协议");
-	if (adpPort)LOG("[IO服务    ] 监听地址:UDP-" + serverIP + ":" + str::fromInt(adpPort) + " adaptor接入");
+	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
+	if(tdspPort)LOG("[IO服务    ] 监听地址:UDP-" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP, Adaptor接入");
+	if(mbPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
+	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
+	if(iq60Port)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
+	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
+
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
@@ -1092,11 +1095,11 @@ bool ioServer::runAsCloud()
 
 	//adaptor接入服务
 	m_udpSrv = new udpServer();
-	if (m_udpSrv->run(this,adpPort, serverIP)) {
+	if (m_udpSrv->run(this,tdspPort, serverIP)) {
 
 	}
 	else {
-		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(adpPort));
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tdspPort));
 	}
 
 
@@ -1339,7 +1342,12 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(IsValidPkt_IQ60) || pab->PopPkt(APP_LAYER_PROTO::terminalPrompt))
+			while (pab->PopPkt(IsValidPkt_IQ60) || 
+				pab->PopPkt(IsValidPkt_terminalPrompt) || 
+				pab->PopPkt(IsValidPkt_textEnd_LF) ||
+				pab->PopPkt(IsValidPkt_textEnd_LFLF) ||
+				pab->PopPkt(IsValidPkt_textEnd_CRLF)
+				)
 			{
 				tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
@@ -1736,30 +1744,30 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSession* pTcpSess)
 
 shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
 {
-	//lock_guard<mutex> g(m_mutexIoSessions);
-	//for (int i = 0; i < m_IoSessions.size(); i++)
-	//{
-	//	shared_ptr<TDS_SESSION> p = m_IoSessions.at(i);
-	//	std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
-	//	if (p->isConnected())
-	//	{
-	//		if (p->m_bActiveSession)
-	//		{
-	//			//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
-	//			if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
-	//			{
-	//				return p;
-	//			}
-	//		}
-	//		else
-	//		{
-	//			if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
-	//			{
-	//				return p;
-	//			}
-	//		}
-	//	}
-	//}
+	lock_guard<mutex> g(m_mutexIoSessions);
+	for (auto& i: m_IoSessions)
+	{
+		shared_ptr<TDS_SESSION> p = i.second;
+		std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
+		if (p->isConnected())
+		{
+			if (p->m_bActiveSession)
+			{
+				//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
+				if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
+				{
+					return p;
+				}
+			}
+			else
+			{
+				if (p->pTcpSession->remoteIP == remoteIP && p->pTcpSession->remotePort == remotePort)
+				{
+					return p;
+				}
+			}
+		}
+	}
 	return nullptr;
 }
 

@@ -175,7 +175,7 @@ bool stream2pkt::PopPkt(string cpt)
 		{
 			if (i > 0)
 				break;
-			ilen = IsValidPkt_textEnd2LF(stream + i, iStreamLen - i);
+			ilen = IsValidPkt_textEnd_LFLF(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{
 				m_protocolType = APP_LAYER_PROTO::textEnd2LF;
@@ -187,7 +187,7 @@ bool stream2pkt::PopPkt(string cpt)
 		{
 			if (i > 0)
 				break;
-			ilen = IsValidPkt_textEnd1LF(stream + i, iStreamLen - i);
+			ilen = IsValidPkt_textEnd_LF(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{
 				m_protocolType = APP_LAYER_PROTO::textEnd1LF;
@@ -343,7 +343,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 }
 
 
-int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
+int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 {
 	if (iLen < 5)
 		return 0;
@@ -358,8 +358,22 @@ int stream2pkt::IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 	return 0;
 }
 
+int IsValidPkt_textEnd_CRLF(unsigned char* pData, int iLen)
+{
+	if (iLen < 3)
+		return 0;
+	for (int i = 1; i < iLen; i++)
+	{
+		if (pData[i - 1] == '\r' && pData[i] == '\n')
+		{
+			return i + 1;
+		}
+	}
+	return 0;
+}
 
-int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
+
+int IsValidPkt_textEnd_LFLF(unsigned char* pData, int iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -373,7 +387,7 @@ int IsValidPkt_textEnd2LF(unsigned char* pData, int iLen)
 	return 0;
 }
 
-int stream2pkt::IsValidPkt_textEnd1LF(unsigned char* pData, int iLen)
+int IsValidPkt_textEnd_LF(unsigned char* pData, int iLen)
 {
 	for (int i = 0; i < iLen; i++)
 	{

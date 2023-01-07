@@ -167,6 +167,8 @@ public:
 	FILE_WRITER m_fileUploader;  //大文件上传控制
 	//单设备模式，只有第一个注册包的地址信息有用。后面的地址信息无效.防止地址信息错误导致的问题，以第一包的地址信息为准
 	bool m_bSingleDevMode; //单设备模式，默认可以多设备。 收到imei首发数据包则转换为单设备模式。
+
+	string webHMRPath;
 };
 
 extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;

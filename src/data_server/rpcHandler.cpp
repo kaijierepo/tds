@@ -779,9 +779,17 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
 		if (pDestSession == nullptr)
 		{
+			rpcResp.error = "\"session not found," +  tdsSession +  "\"";
 			return true;
 		}
-		pDestSession->send((char*)data.c_str(), data.length());
+		else {
+			int iSended = pDestSession->send((char*)data.c_str(), data.length());
+			if (iSended > 0)
+				rpcResp.result = "\"ok\"";
+			else
+				rpcResp.error = "\"fail\"";
+			return true;
+		}
 	}
 	else if (method == "testCrash")
 	{

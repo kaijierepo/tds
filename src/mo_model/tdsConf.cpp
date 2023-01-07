@@ -78,8 +78,10 @@ testToken=             #测试用Token
 #功能模块启用
 enableDB = 1           #启用数据库
 enableLog = 1          #启用日志记录
-authDownload = 0       #开启文件下载用户认证
 enableScript = 0       #启用脚本功能
+enableHMR = 0          #启用http服务器热更新功能
+authDownload = 0       #开启文件下载用户认证
+
 
 #IO服务功能
 tdspPort = 665         #IO服务端口 默认665  TDSP协议   

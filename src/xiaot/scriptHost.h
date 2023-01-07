@@ -20,6 +20,8 @@ public:
 	bool init();
 	bool run();
 	void updateVarExpScript();
+	vector<string> m_vecOutput;
+
 
 	std::map<string, string> m_mapScripts;
 	std::map<string, VAR_EXP_SCRIPT_INFO> m_mapVarExpScripts;

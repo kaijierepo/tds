@@ -443,7 +443,7 @@ bool TDS_imp::run(string cmdline)
 	logSrv.run();
 	sHost.run();
 	//audioPlayer.run();
-	if (conf->debugMode)
+	if (conf->getInt("enableHMR",0))
 	{
 		hmrServer.run(tds->conf->uiPath);
 	}

@@ -28,7 +28,7 @@ if ('WebSocket' in window) {
         function connectHMRSrv()
         {
             var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
-            var address = protocol + window.location.hostname + ":670" + window.location.pathname;
+            var address = protocol + window.location.host + '/hmr/' + window.location.pathname;
             var socket = new WebSocket(address);
             socket.onmessage = function (msg) {
                 if (msg.data == 'reload') window.location.reload();
@@ -129,20 +129,20 @@ void HMRServer::watchFile_process(string dir_path) {
                     m_mutexSessions.lock();
                     for (auto& i : m_mapSessions)
                     {
-                        HMR_SESSION hs = i.second;
+                        std::shared_ptr<TDS_SESSION> pSession = i.second;
                         if (file_name.find(".css") != string::npos)
                         {
-                            websocketSend("refreshcss",hs.sock);
+                            pSession->sendStr("refreshcss");
                         }
                         else if (file_name.find(".html") != string::npos) //html只有当前路径下面的才触发更新
                         {
                             file_name = "/" + file_name;
-                            if (file_name.find(hs.webHMRPath) != string::npos)
-                                websocketSend("reload",hs.sock);
+                            if (file_name.find(pSession->webHMRPath) != string::npos)
+                                pSession->sendStr("reload");
                         }
                         else
                         {
-                            websocketSend("reload",hs.sock);
+                            pSession->sendStr("reload");
                         }
                     }
                     m_mutexSessions.unlock();
@@ -202,26 +202,27 @@ void HMRServer::run(const std::string dir_path)
     thread t(watchFile_thread, this,dir_path);
     t.detach();
 
+    //改为使用 666,667端口
     //http热更新服务 670
-    if (tds->conf->debugMode)
-    {
-        m_httpHotUpdateSrv = new tcpSrv();
-        m_httpHotUpdateSrv->m_strName = "hmr service";
-        int hmrPort = 670;
-        if (!m_httpHotUpdateSrv->run(this, hmrPort))
-        {
-            if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
-            {
-                LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
-            }
-            else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
-            {
-                LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
-            }
-            LOG("[error]HTTP热更新服务websocket服务端口" + str::fromInt(hmrPort) + "668启动失败！");
-        }
-        LOG("[Web热更新 ] 端口:" + str::fromInt(hmrPort));
-    }
+    //if (tds->conf->debugMode)
+    //{
+    //    m_httpHotUpdateSrv = new tcpSrv();
+    //    m_httpHotUpdateSrv->m_strName = "hmr service";
+    //    int hmrPort = 670;
+    //    if (!m_httpHotUpdateSrv->run(this, hmrPort))
+    //    {
+    //        if (m_httpHotUpdateSrv->m_lastError == WSAEADDRINUSE)//10048)
+    //        {
+    //            LOG("ERROR:10048,Only one usage of each socket address (protocol/network address/port) is normally permitted.");
+    //        }
+    //        else if (m_httpHotUpdateSrv->m_lastError == WSAEACCES)//10013)
+    //        {
+    //            LOG("ERROR:10013,An attempt was made to access a socket in a way forbidden by its access permissions.");
+    //        }
+    //        LOG("[error]HTTP热更新服务websocket服务端口" + str::fromInt(hmrPort) + "668启动失败！");
+    //    }
+    //    LOG("[Web热更新 ] 端口:" + str::fromInt(hmrPort));
+    //}
 }
 
 
@@ -235,46 +236,46 @@ void HMRServer::websocketSend(string s, int sock)
 
 void HMRServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
 {
-    if (bIsConn)
-    {
-        HMR_SESSION s;
-        s.sock = pTcpSession->sock;
-        m_mutexSessions.lock();
-        m_mapSessions[pTcpSession] = s;
-        m_mutexSessions.unlock();
-    }
-    else
-    {
-        if (pTcpSession->pALSession)
-        {
-            m_mutexSessions.lock();
-            delete pTcpSession->pALSession;
-            m_mapSessions.erase(pTcpSession);
-            m_mutexSessions.unlock();
-        }
-    }
+    //if (bIsConn)
+    //{
+    //    HMR_SESSION s;
+    //    s.sock = pTcpSession->sock;
+    //    m_mutexSessions.lock();
+    //    m_mapSessions[pTcpSession] = s;
+    //    m_mutexSessions.unlock();
+    //}
+    //else
+    //{
+    //    if (pTcpSession->pALSession)
+    //    {
+    //        m_mutexSessions.lock();
+    //        delete pTcpSession->pALSession;
+    //        m_mapSessions.erase(pTcpSession);
+    //        m_mutexSessions.unlock();
+    //    }
+    //}
 }
 
 void HMRServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 {
-    m_mutexSessions.lock();
-    HMR_SESSION hs = m_mapSessions[pTcpSess];
-    m_mutexSessions.unlock();
+    //m_mutexSessions.lock();
+    //HMR_SESSION hs = m_mapSessions[pTcpSess];
+    //m_mutexSessions.unlock();
 
-    string strData = str::fromBuff(pData, iLen);
-    if (CWSPPkt::isHandShake(strData)) {
-        httplib::Request httpReq;
-        httplib::Server srv;
-        srv.parse_request_line(strData.c_str(), httpReq);
-        string path = str::trimSuffix(httpReq.target, "index.html");
-        path = str::trimSuffix(path, "/");
-        hs.webHMRPath = path; //当前链接关联的web热更新目录
+    //string strData = str::fromBuff(pData, iLen);
+    //if (CWSPPkt::isHandShake(strData)) {
+    //    httplib::Request httpReq;
+    //    httplib::Server srv;
+    //    srv.parse_request_line(strData.c_str(), httpReq);
+    //    string path = str::trimSuffix(httpReq.target, "index.html");
+    //    path = str::trimSuffix(path, "/");
+    //    hs.webHMRPath = path; //当前链接关联的web热更新目录
 
-        //回复websocket握手
-        CWSPPkt req;
-        std::string handshakeString = req.GetHandshakeString(strData);
-        //http协议回复
-        ::send(pTcpSess->sock,handshakeString.c_str(), handshakeString.length(),0);
-    }
+    //    //回复websocket握手
+    //    CWSPPkt req;
+    //    std::string handshakeString = req.GetHandshakeString(strData);
+    //    //http协议回复
+    //    ::send(pTcpSess->sock,handshakeString.c_str(), handshakeString.length(),0);
+    //}
 }
 

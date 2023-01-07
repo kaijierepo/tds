@@ -72,7 +72,7 @@ void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SE
 {
 	stream2pkt& tlBuf = childSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);
-	while (tlBuf.PopPkt(IsValidPkt_textEnd2LF,false))
+	while (tlBuf.PopPkt(IsValidPkt_textEnd_LFLF,false))
 	{
 		string s = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 		if (s == "ping\n\n") {

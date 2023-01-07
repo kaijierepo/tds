@@ -88,6 +88,7 @@ static jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 		string log = (const char*)buffer;
 
 		LOG("[脚本日志]" + log);
+		sHost.m_vecOutput.push_back(log);
 	}
 
 	return jerry_create_undefined();
@@ -349,34 +350,50 @@ void scriptThread1(scriptHost* p)
 
 bool scriptHost::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
-	string scriptName = params["name"].get<string>();
-	string scriptPath = getScriptPath(params,session) + "/" + scriptName + ".js";
-	session.queryRootTag = "";
-	if(params["tag"]!=nullptr)
-		session.queryRootTag = params["tag"].get<string>();
-	
-	session.rootTag = TAG::addRoot(session.queryRootTag, session.org);
-	string script;
-	fs::readFile(scriptPath, script);
-	if (script.length() > 0)
-	{
-		currentSession = session;
-		if (runScript(script))
+	//直接执行脚本
+	if (params["script"] != nullptr) {
+		string s = params["script"];
+
+		runScript(s);
+		string sOutput;
+		json jOutput = json::array();
+		for (int i = 0; i < sHost.m_vecOutput.size(); i++) {
+			string sline = sHost.m_vecOutput[i];
+			jOutput.push_back(sline);
+		}
+		
+		rpcResp.result = jOutput.dump();
+	}
+	//执行保存的脚本文件
+	else {
+		string scriptName = params["name"].get<string>();
+		string scriptPath = getScriptPath(params, session) + "/" + scriptName + ".js";
+		session.queryRootTag = "";
+		if (params["tag"] != nullptr)
+			session.queryRootTag = params["tag"].get<string>();
+
+		session.rootTag = TAG::addRoot(session.queryRootTag, session.org);
+		string script;
+		fs::readFile(scriptPath, script);
+		if (script.length() > 0)
 		{
-			rpcResp.result = "\"ok\"";
+			currentSession = session;
+			if (runScript(script))
+			{
+				rpcResp.result = "\"ok\"";
+			}
+			else
+			{
+				json jError = "run fail";
+				rpcResp.error = jError.dump();
+			}
 		}
 		else
 		{
-			json jError = "run fail";
+			json jError = "script not found";
 			rpcResp.error = jError.dump();
 		}
 	}
-	else
-	{
-		json jError = "script not found";
-		rpcResp.error = jError.dump();
-	}
-
 
 	return true;
 }
@@ -453,6 +470,7 @@ void scriptHost::releaseGlobalFunc() {
 
 bool scriptHost::runScript(string& script)
 {
+	m_vecOutput.clear();
 	try {
 		jerry_init(JERRY_INIT_EMPTY);
 		global_object = jerry_get_global_object();
@@ -486,6 +504,8 @@ bool scriptHost::runScript(string& script)
 	}
 	catch (std::exception& e)
 	{
+		string s = e.what();
+		m_vecOutput.push_back(s);
 		return false;
 	}
 	return true;

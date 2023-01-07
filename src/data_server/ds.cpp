@@ -253,7 +253,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 	timeopt::now(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);
-	while (tlBuf.PopPkt(IsValidPkt_textEnd2LF, false))
+	while (tlBuf.PopPkt(IsValidPkt_textEnd_LFLF, false))
 	{
 		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 

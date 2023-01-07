@@ -13,6 +13,7 @@
 #include "masterDs.h"
 #include "mp.h"
 #include "users/userMng.h"
+#include "tools/hmrSrv.h"
 
 string rootDir;
 string confDir;
@@ -878,7 +879,7 @@ bool runWebServers()
 	filesDir = "./files";
 
 	initHMRConf();
-	if (tds->conf->debugMode)
+	if (tds->conf->getInt("enableHMR",0))
 	{
 		hmr_conf.code = (char*)hmrCodeStr.c_str();
 		hmr_conf.len = hmrCodeStr.length();
@@ -961,6 +962,13 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 			closesocket(tdsSession->sock);
 			return;
 		}
+	}
+	else if (strData.find("/hmr") != string::npos) {
+		string hmrPath = str::trimPrefix(strData, "/hmr");
+		tdsSession->webHMRPath = hmrPath;
+		tdsSession->type = TDS_SESSION_TYPE::webHMR;
+		hmrServer.m_mapSessions[hmrPath] = tdsSession;
+		tdsSession->setActivityCheck(false);
 	}
 	else if (strData.find("/COM") != string::npos)
 	{
