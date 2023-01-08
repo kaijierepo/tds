@@ -18,7 +18,7 @@
 #include "streamServer.h"
 #include "users/userMng.h"
 #include "logServer/logServer.h"
-#include "xiaot/scriptHost.h"
+#include "xiaot/scriptManager.h"
 #include "audioPlayer.h"
 #include "base64.h"
 #include "ffmpegCmd.h"
@@ -1220,7 +1220,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 				tmpPrj.m_childObj.clear();
 				prj.saveConfFile();
-				sHost.updateVarExpScript();
+				scriptManager.updateVarExpScript();
 				ioSrv.updateTag2IOAddrBinding();
 				ioSrv.updateAllChanVal();
 				result = "\"ok\"";
@@ -1639,19 +1639,22 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 #ifdef ENABLE_JERRY_SCRIPT
 	else if (method == "runScript")
 	{
-		sHost.rpc_runScript(params, rpcResp, session);
+		scriptManager.rpc_runScript(params, rpcResp, session);
 	}
 	else if (method == "getScriptList")
 	{
-		sHost.rpc_getScriptList(params, rpcResp, session);
+		scriptManager.rpc_getScriptList(params, rpcResp, session);
 	}
 	else if (method == "getScriptFile")
 	{
-		sHost.rpc_getScript(params, rpcResp, session);
+		scriptManager.rpc_getScript(params, rpcResp, session);
+	}
+	else if (method == "deleteScriptFile") {
+		scriptManager.rpc_deleteScript(params, rpcResp, session);
 	}
 	else if (method == "setScriptFile")
 	{
-		sHost.rpc_setScript(params, rpcResp, session);
+		scriptManager.rpc_setScript(params, rpcResp, session);
 	}
 	else if (method == "getReportConf") {
 		string sConf;

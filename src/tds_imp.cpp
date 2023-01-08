@@ -41,11 +41,10 @@ SOFTWARE.
 #include "streamServer.h"
 #include "alarm_server/as.h"
 #include "logServer/logServer.h"
-#include "xiaot/scriptHost.h"
+#include "xiaot/scriptManager.h"
 #include "version.h"
 #include "data_server/db.h"
 #include "tools/tdsWatchDog.h"
-//#include "video/audioPlayer.h"
 #include <filesystem>
 #include "tools/dumpCatch.h"
 #include "tools/hmrSrv.h"
@@ -441,7 +440,7 @@ bool TDS_imp::run(string cmdline)
 	ds.run();
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
-	sHost.run();
+	scriptManager.run();
 	//audioPlayer.run();
 	if (conf->getInt("enableHMR",0))
 	{

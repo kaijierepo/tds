@@ -6,7 +6,7 @@
 #include <filesystem>
 #include "logger.h"
 #include "yyjson.h"
-#include "xiaot/scriptHost.h"
+#include "xiaot/scriptManager.h"
 #include "prj.h"
 #include "tdsSession.h"
 
@@ -1761,7 +1761,7 @@ bool CONDITION_SELECTOR::match(string& de)
 	if (jDe["val"].is_object())
 	{
 		json& jVal = jDe["val"];
-		scriptHost::jsonVal2jerryVal(jVal, global_object);
+		jsonVal2jerryVal(jVal, global_object);
 	}
 	else
 	{
