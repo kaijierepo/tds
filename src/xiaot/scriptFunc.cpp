@@ -1,10 +1,7 @@
 #include "pch.h"
 #include "scriptEngine.h"
-#include "prj.h"
 #include "logger.h"
-#include "mp.h"
-#include "obj.h"
-#include "rpcHandler.h"
+#include "tds.h"
 
 
 #ifdef ENABLE_JERRY_SCRIPT
@@ -189,7 +186,7 @@ jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 
 		string log = (const char*)buffer;
 
-		LOG("[脚本日志]" + log);
+		//LOG("[脚本日志]" + log);
 		pEngine->m_vecOutput.push_back(log);
 	}
 
@@ -205,14 +202,13 @@ jerry_value_t func_input(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() == 2)
 	{
-		string tag = jArgs[0].get<string>();
-		json jVal = jArgs[1];
-		MP* pmp = prj.GetMPByTag(tag);
-		if (pmp)
-		{
-			json jResp,jErr;
-			pmp->input(jVal);
-		}
+		json jParams;
+		jParams["tag"] = jArgs[0];
+		jParams["val"] = jArgs[1];
+
+		RPC_SESSION session;
+		json err, rlt;
+		tds->call("input", jParams, err, rlt, session);
 	}
 
 	jerry_value_t ret = jerry_create_undefined();
@@ -227,14 +223,13 @@ jerry_value_t func_output(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() == 2)
 	{
-		string tag = jArgs[0].get<string>();
-		json jVal = jArgs[1];
-		MP* pmp = prj.GetMPByTag(tag);
-		if (pmp)
-		{
-			json jResp, jErr;
-			pmp->output(jVal, jResp, jErr);
-		}
+		json jParams;
+		jParams["tag"] = jArgs[0];
+		jParams["val"] = jArgs[1];
+
+		json err, rlt;
+		RPC_SESSION session;
+		tds->call("output",jParams, err,rlt, session);
 	}
 
 	jerry_value_t ret = jerry_create_undefined();
@@ -252,8 +247,8 @@ jerry_value_t func_call(const jerry_call_info_t* call_info_p,
 		string method = jArgs[0].get<string>();
 		json params = jArgs[1];
 
-		RPC_RESP resp;
-		rpcSrv.handleMethodCall(method, params, resp, pEngine->currentSession);
+		json err, rlt;
+		tds->call(method, params, err,rlt, pEngine->currentSession);
 	}
 
 	jerry_value_t ret = jerry_create_undefined();
@@ -270,7 +265,7 @@ jerry_value_t func_sleep(const jerry_call_info_t* call_info_p,
 	if (jArgs.size() > 0)
 	{
 		int milli = jArgs[0].get<int>();
-		sleep(milli);
+		Sleep(milli);
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -281,7 +276,7 @@ jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
-	json jArgs = engineArgsToJson(arguments, argument_count);
+	/*json jArgs = engineArgsToJson(arguments, argument_count);
 
 	if(jArgs.size()>0)
 	{
@@ -304,7 +299,10 @@ jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 	{
 		jerry_value_t ret = jerry_create_null();
 		return ret;
-	}
+	}*/
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
 }
 
 jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
@@ -315,51 +313,26 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() > 0)
 	{
-		json tag = jArgs[0];
-
-		bool invalidAsZero = false;
+		json params;
+		params["tag"] = jArgs[0];
 		if (jArgs.size() > 1) {
-			json jP = jArgs[1];
-			if (jP.is_boolean()) {
-				invalidAsZero = jP.get<bool>();
-			}
+			params["invalidAsZero"] = jArgs[1];
 		}
 
+		json err, rlt;
+		tds->call("sum", params, err, rlt, pEngine->currentSession);
 
-		vector<MP*> mpList;
-		TAG_SELECTOR tagSel;
-		tagSel.init(tag);
-		prj.getMpByTagSelector(mpList, tagSel);
 
-		double dbSum = 0;
-		bool success = true;
-		for (int i = 0; i < mpList.size(); i++) {
-			MP* pmp = mpList[i];
-			if (pmp->m_curVal.is_number()) {
-				double val = pmp->m_curVal.get<double>();
-				dbSum += val;
-			}
-			else {
-				if (!invalidAsZero) {
-					success = false;
-					break;
-				}
-			}
-		}
-
-		if (success) {
-			jerry_value_t ret = jerry_create_number(dbSum);
-			return ret;
-		}
-		else {
-			jerry_value_t ret = jerry_create_null();
+		if (rlt!=nullptr) {
+			jerry_value_t ret;
+			jsonVal2jerryVal(rlt,ret);
 			return ret;
 		}
 	}
-	else {
-		jerry_value_t ret = jerry_create_null();
-		return ret;
-	}
+
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
 }
 
 
@@ -374,49 +347,44 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 		json tag = jArgs[0];
 		if (tag.is_string()) { 
 			string sTag = tag.get<string>();
-			sTag = OBJ::ResolveTag(sTag, pEngine->m_tagThis);
-			MP* pmp = prj.getMp(sTag);
-			if (pmp) {
-				//取实时值
-				if (jArgs.size() == 1) {
-					if (pmp->m_curVal.is_number()) {
-						double val = pmp->m_curVal.get<double>();
-						jerry_value_t ret = jerry_create_number(val);
-						return ret;
-					}
-					else if (pmp->m_curVal.is_boolean()) {
-						bool val = pmp->m_curVal.get<bool>();
-						jerry_value_t ret = jerry_create_boolean(val);
-						return ret;
-					}
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
+			if (jArgs.size() == 1) {
+				string tag = jArgs[0].get<string>();
+				json params;
+				params["tag"] = tag;
+				params["getStatus"] = true;
+				params["getConf"] = false;
+				json err, rlt;
+				tds->call("getMp", params, err, rlt, pEngine->currentSession);
+				if (rlt != nullptr && rlt.contains("val")) {
+					json jVal = rlt["val"];
+					jerry_value_t jerryVal;
+					jsonVal2jerryVal(jVal,jerryVal);
+					return jerryVal;
 				}
-				//取历史值
-				else if (jArgs.size() >= 2) {
-					json time = jArgs[1];
-					if (time.is_string()) {
-						json jParams;
-						jParams["tag"] = sTag;
-						string sTime = time.get<string>();
-						jParams["time"] = sTime;
-						if (jArgs.size() >= 3) {
-							json jAggr = jArgs[2];
-							jParams["aggregate"] = jAggr;
-						}
+			}
+			//取历史值
+			else if (jArgs.size() >= 2) {
+				json time = jArgs[1];
+				if (time.is_string()) {
+					json jParams;
+					jParams["tag"] = sTag;
+					string sTime = time.get<string>();
+					jParams["time"] = sTime;
+					if (jArgs.size() >= 3) {
+						json jAggr = jArgs[2];
+						jParams["aggregate"] = jAggr;
+					}
+
+					json err, rlt;
+					tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
 						
-						DE_SELECTOR deSel;
-						db.parseDESelector(jParams, deSel);
-						SELECT_RLT rlt;
-						db.Select_yyjson(deSel, rlt);
-						if (rlt.dataList.length() > 0) {
-							json jDeList = json::parse(rlt.dataList);
-							if (jDeList.is_array() && jDeList.size() > 0) {
-								json& jDe = jDeList[0];
-								json& jVal = jDe["val"];
-								jerry_value_t ret;
-								jsonVal2jerryVal(jVal, ret);
-								return ret;
-							}
-						}
+					if (rlt.is_array() && rlt.size() > 0) {
+						json& jDe = rlt[0];
+						json& jVal = jDe["val"];
+						jerry_value_t ret;
+						jsonVal2jerryVal(jVal, ret);
+						return ret;
 					}
 				}
 			}

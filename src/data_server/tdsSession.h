@@ -39,31 +39,6 @@ public:
 	string filePath;
 };
 
-//无状态会话信息
-class RPC_SESSION {
-public:
-	string name; //name is defined by tds client
-	string user;
-	string org; //用户所在组织。根位号
-	string ioAddr;
-	string tag;    //tdsp设备的位号
-	string queryRootTag;
-	//当前会话中的所有tag表示 都是绝对位号减去rootTag;  rootTag = org + queryRootTag;
-	//如果该字段不为空。 可以不使用org和queryRootTag重新组合rootTag;
-	string rootTag;
-	string remoteAddr;
-	string token;
-	bool isNotification; //是否是通知
-
-	string hostName;
-	int hostPort;
-	bool isHttps;
-
-	RPC_SESSION() {
-		isNotification = false;
-	}
-};
-
 
 //有状态会话信息，包含通信链路信息
 class TDS_SESSION : public RPC_SESSION{

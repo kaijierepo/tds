@@ -64,6 +64,7 @@ public:
 	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
 	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
 	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
 
 	//参数处理

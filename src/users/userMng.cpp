@@ -313,11 +313,9 @@ bool userManager::checkTagPermission(string user, string tag)
 {
 	json jUser = userMng.getUser(user);
 	if (jUser.is_null())return false; 
-	tag = TAG::addRoot(tag);
 
 	//用户所属组织
 	string org = jUser["org"].get<string>();
-	org = TAG::addRoot(org);
 
 	//位号是否在用户所属的组织结构中，不在则一定没有权限
 	if (tag.find(org) == string::npos)

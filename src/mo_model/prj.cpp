@@ -269,3 +269,20 @@ void project::saveObjTemplate(OBJ_TEMPLATE& ot)
 	fs::writeFile(chanPath + "/" + ot.type + ".json", s);
 }
 
+void project::getAllVarExpScript()
+{
+	std::map<string, SCRIPT_INFO> expScripts;
+	expScripts.clear();
+	std::vector<MP*> aryMP;
+	prj.GetAllChildMp(aryMP);
+	for (int i = 0; i < aryMP.size(); i++) {
+		MP* p = aryMP[i];
+		if (p->m_ioType == "v" && p->m_expression != "") {
+			SCRIPT_INFO i;
+			i.script = p->m_expression;
+			i.tagThis = p->getTag();
+			expScripts[p->getTag()] = i;
+		}
+	}
+	scriptManager.updateVarExpScript(expScripts);
+}

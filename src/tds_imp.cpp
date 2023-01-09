@@ -343,21 +343,6 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }
 
-bool TDS_imp::runAsTDB()
-{
-	tds->db = &::db;
-	logger.setLogLevel(tdsConf.logLevel);
-	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
-	LOG("[数据库	] " + tds->conf->dbPath);
-	::db.Open(tds->conf->dbPath, prj.m_name);
-	runWebServers();
-	timeopt::now(&stStartupTime);
-	m_sTitle = "TDB " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
-	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
-	return true;
-}
-
-
 bool TDS_imp::run(string cmdline)
 {
 	dogFeeder.run();
@@ -413,6 +398,7 @@ bool TDS_imp::run(string cmdline)
 		::db.Open(tds->conf->dbPath, prj.m_name);
 	prj.loadObjTemplate();
 	prj.loadConfFile();
+	prj.getAllVarExpScript();
 	ioSrv.loadConf();
 	almSrv.init();
 	userMng.init();
@@ -470,22 +456,12 @@ bool TDS_imp::run(string cmdline)
 		createChromeWnd();
 	}
 
-	timeopt::now(&stStartupTime);
+	//timeopt::now(&stStartupTime);
 
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
 	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
-
-
-	//启动微服务组件
-	//string ms_mediaServer = fs::appPath() + "/com/mediaServer/MediaServer.exe";
-	//if (fs::fileExist(ms_mediaServer)) {
-	//	startMicroService(ms_mediaServer);
-	//	LOG("[微服务] 启动MediaServer成功");
-	//}
-
-
 
 	return true;
 }
@@ -500,6 +476,29 @@ bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
 {
 	m_fpProcBeforeExit = callback;
 	return true;
+}
+
+void TDS_imp::call(string method, json& param, json& err, json& rlt, RPC_SESSION session)
+{
+	try {
+		RPC_RESP resp;
+		rpcSrv.handleMethodCall(method, param, resp, session);
+		if (resp.error != "")
+		{
+			err = json::parse(resp.error);
+		}
+		else{
+			rlt = json::parse(resp.result);
+		}
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		json jException;
+		jException["exception"] = errorType;
+		err = jException;
+		true;
+	}
 }
 
 bool TDS_imp::call(string method, string param , RPC_RESP& resp)

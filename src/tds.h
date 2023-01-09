@@ -33,9 +33,23 @@ SOFTWARE.
 #include <vector>
 #include <map>
 #include <Windows.h>
+#include "json.hpp"
 using namespace std;
+using json = nlohmann::json;	
 
+namespace TAG {
+	string resolveTag(string strTagExp, string rootTag);
+	string trimRoot(string tag, string root);
+	string userTag2sysTag(string userTag, string userOrg);
+	string sysTag2userTag(string sysTag, string userOrg);
+	string addRoot(string tag, string root);
 
+	bool hasTag(json& tree, string tag); 
+	int getMoLevel(string tag);
+	json mapTree2List(json mapTree);
+}
+
+struct TIME;
 
 namespace TDS {
 	namespace VAL_TYPE {
@@ -107,6 +121,38 @@ struct MODULE_BUS_MSG {
 	char* bin; 
 };
 
+//stateless rpc session
+class RPC_SESSION {
+public:
+	//authentification
+	string name; //name is defined by tds client
+	string user;
+	string token;
+
+	//tag expression in current user; multi-tenant
+	//rootTag = org + queryRootTag
+	//sysTag = org + queryRootTag + tag used in this session   rootTag = org + queryRootTag;
+	string org; //user's org
+
+
+	bool isNotification; //是否是通知
+
+	//session params for rpc route
+	string ioAddr;  //route to io device
+	string tag;     //route to io device or childTds
+
+	//ip params
+	string remoteAddr;
+	string hostName;
+	int hostPort;
+	bool isHttps;
+
+	RPC_SESSION() {
+		isNotification = false;
+	}
+};
+
+#define RPC_OK "\"ok\""
 
 class RPC_RESP {
 public:
@@ -376,6 +422,7 @@ public:
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 	fp_procBeforeExit m_fpProcBeforeExit;
 	fp_createLicence createLicence;
+	virtual void call(string method, json& param, json& err,json& rlt,RPC_SESSION session) = 0;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
 	virtual void callAsyn(string method, string param,int delay = 0) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
@@ -415,8 +462,6 @@ public:
 	i_gzhServer* gzhServer;
 	i_smsServer* smsServer;
 	i_tdsPlugin* shellServer;
-
-	TIME stStartupTime;
 
 	HWND uiWnd;
 	string uiWndTitle;

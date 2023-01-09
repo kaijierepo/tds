@@ -29,7 +29,6 @@
 #endif
 
 using namespace std;
-
 struct TIME {
 	WORD wYear;
 	WORD wMonth;
@@ -46,7 +45,6 @@ struct TIME {
 		wDay = 1;
 	}
 };
-
 class semaphore
 {
 public:
@@ -288,10 +286,14 @@ namespace fs {
 		string createTime;
 		size_t len;
 		string accessTime;
+		string name;
+		string path;
+		string folderPath;
 	};
 
 	bool getFileInfo(string path, FILE_INFO& fi);
 	void getFolderList(vector<string>& list, string strFolder);
+	void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder = false, bool recursive = false,string suffix="*");
 	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
 	vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter = NULL, char* title = NULL, char* fileName = NULL, char* defExt = NULL, char* initDirectory = NULL);
 }

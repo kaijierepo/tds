@@ -1220,7 +1220,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 				tmpPrj.m_childObj.clear();
 				prj.saveConfFile();
-				scriptManager.updateVarExpScript();
+				std::map<string, SCRIPT_INFO> expScripts;
+				prj.getAllVarExpScript();
 				ioSrv.updateTag2IOAddrBinding();
 				ioSrv.updateAllChanVal();
 				result = "\"ok\"";
@@ -1272,6 +1273,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else
 	{
+		//对象关联的命令都必须有参数tag
+		if (params["tag"] == nullptr) //获取子树
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+			return true;
+		}
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
@@ -1309,10 +1316,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			rpc_getMoAttr_list(params, rpcResp, session);
 		}
-		else if (method == "getTopoList")
-		{
-			result = rpc_getTopoList(params, error,session);
-		}
 		else if (method == "getconf")
 		{
 			result = rpc_getconf(params, error);
@@ -1330,11 +1333,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//tag是相对于rootTag的相对位号
 			//rootTag和tag组合出用户位号。
 			//用户位号和用户组织结构组合成系统位号
-			if (params["tag"] == nullptr) //获取子树
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
-				return true;
-			}
 			string rootTag = "";//查询根
 			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") //获取子树
 			{
@@ -1484,6 +1482,37 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpList(list);
 			result = list.dump(2);
 		}
+		else if (method == "sum") {
+			string tag = params["tag"];
+			bool invalidAsZero = false;
+			if(params.contains("invalidAsZero"))
+				invalidAsZero = params["invalidAsZero"].get<bool>();
+			vector<MP*> mpList;
+			TAG_SELECTOR tagSel;
+			tagSel.init(tag);
+			prj.getMpByTagSelector(mpList, tagSel);
+
+			json rlt = nullptr;
+			double dbSum = 0;
+			bool success = true;
+			for (int i = 0; i < mpList.size(); i++) {
+				MP* pmp = mpList[i];
+				if (pmp->m_curVal.is_number()) {
+					double val = pmp->m_curVal.get<double>();
+					dbSum += val;
+				}
+				else {
+					if (!invalidAsZero) {
+						success = false;
+						break;
+					}
+				}
+			}
+			if (success) {
+				rlt = dbSum;
+			}
+			rpcResp.result = rlt.dump();
+		}
 		else
 		{
 			bHandled = false;
@@ -1614,14 +1643,13 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string& result = rpcResp.result;
-	string& error = rpcResp.error;
+	bool bHandled = true;
 	//可完全并发的命令
 	if (method == "xiaot")
 	{
-		result = tds->xiaoT->getReply(params);
+		rpcResp.result = tds->xiaoT->getReply(params);
 	}
 	else if (method == "addLog")
 	{
@@ -1629,12 +1657,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		{
 			params["host"] = session.remoteAddr + ";" + params["host"].get<string>();
 		}
-		logSrv.rpc_addLog(params,session);
-		result = "\"ok\"";
+		logSrv.rpc_addLog(params, session);
+		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "queryLog")
 	{
-		result = logSrv.rpc_queryLog(params,session);
+		rpcResp.result = logSrv.rpc_queryLog(params, session);
 	}
 #ifdef ENABLE_JERRY_SCRIPT
 	else if (method == "runScript")
@@ -1675,25 +1703,6 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		rpcResp.result = "\"ok\"";
 	}
 #endif
-	else if (method == "callDevMethod")
-	{
-		string tag = params["tag"].get<string>();
-		tag = TAG::addRoot(tag, session.rootTag);
-		ioDev* pd = ioSrv.getIODevByTag(tag);
-		if(pd && pd->pIOSession)
-		{	
-			json jReq;
-			jReq["jsonrpc"] = "2.0";
-			jReq["method"] = params["method"];
-			jReq["params"] = params["params"];
-			jReq["id"] = 0;
-			jReq["ioAddr"] = pd->getIOAddrStr();
-			jReq["clientId"] = "tds";
-			string sReq = jReq.dump() + "\n\n";
-
-			pd->pIOSession->send((char*)sReq.c_str(), sReq.length());
-		}
-	}
 	else if (method == "getLicenceStatus") {
 		m_csLicenceStatus.lock();
 		if (m_licenceStatus == nullptr) {
@@ -1705,18 +1714,32 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		return true;
 	}
 	else if (method == "getStreamUrl") {
-		string tag = params["tag"]; 
+		string tag = params["tag"];
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp) {
-			json rlt = rpc_getStreamUrl(pmp,tag, session.isHttps, session.hostName, session.hostPort);
+			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.hostName, session.hostPort);
 			rpcResp.result = rlt.dump();
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "tag not found");
 		}
 	}
-	
+	else if (method == "getTopoList")
+	{
+		rpcResp.result = rpc_getTopoList(params, rpcResp.error, session);
+	}
+	else {
+		bHandled = false;
+	}
+	return bHandled;
+}
 
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	if (handleMethodCall_unclassified(method, params, rpcResp, session))
+	{
+		return true;
+	}
 	if (handleMethodCall_edgeDev(method, params, rpcResp, session))
 	{
 		return true;
@@ -1762,8 +1785,17 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	}
 
 	
-	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || error!="")
+	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || rpcResp.error!="")
 		return true;
+	else {
+		json jError = {
+			{"code", -32601},
+			{"message" , "Method not found"},
+			{"method", method}
+		};
+		rpcResp.error = jError.dump();
+	}
+
 	return false;
 }
 
@@ -2126,17 +2158,8 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		
 
 		//tds自身受理
-		bool bHandled = handleMethodCall(method, params, rpcResp,pSession->getRpcSession());
-		if(!bHandled)
-		{
-			json jError = {
-				{"code", -32601},
-				{"message" , "Method not found"},
-				{"method", method}
-			};
-			rpcResp.error = jError.dump();
-			goto HANDLE_END;
-		}
+		handleMethodCall(method, params, rpcResp,pSession->getRpcSession());
+
 	}
 	catch (std::exception& e)
 	{
@@ -2678,9 +2701,6 @@ void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp,RPC_SESSION sessio
 		if (rootTag != "")
 		{
 			string tagBind = i->m_strTagBind;
-			tagBind = TAG::trimRoot(tagBind);
-			rootTag = TAG::trimRoot(rootTag);
-
 			if (tagBind.find(rootTag) == string::npos)
 				continue;
 		}

@@ -309,10 +309,6 @@ int main(int argc, char** argv)
 		//}
 		//return 0;
 	}
-	else if (mode == "tdb") {
-		logger.m_bSaveToFile = true;
-		tdsImp.runAsTDB();
-	}
 	else
 	{
 		//run tds

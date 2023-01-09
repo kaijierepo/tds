@@ -1,3 +1,4 @@
+#pragma once
 #include <string>
 #include <map>
 #include "json.hpp"
@@ -11,9 +12,20 @@ using json = nlohmann::json;
 using namespace std;
 
 
-struct VAR_EXP_SCRIPT_INFO {
+struct SCRIPT_INFO {
 	string script;
 	string tagThis;
+	string mode;
+	int interval;
+	TIME lastExe;
+	string org;
+	string lastModifyTime;
+	string lastModifyUser;
+	string name;
+	string desc;
+
+	void toJson(json& j);
+	void fromJson(json& j);
 };
 
 
@@ -22,8 +34,12 @@ public:
 	bool init();
 	bool run();
 	
-	std::map<string, string> m_mapScripts;
-	std::map<string, VAR_EXP_SCRIPT_INFO> m_mapVarExpScripts;
+	//第一个key是组织结构，第二个key是脚本文件的name
+	std::map<string, std::map<string,SCRIPT_INFO>> m_mapScripts;
+	std::mutex m_csScripts;
+
+	std::map<string, SCRIPT_INFO> m_mapVarExpScripts;
+	std::mutex m_csExpScripts;
 
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -31,7 +47,10 @@ public:
 	bool rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	void updateVarExpScript();
+	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j);
+	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
+
+	void updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScripts);
 	string getScriptPath(json& params, RPC_SESSION session);
 	json getScriptList(string tag);
 	void exeAllGlobalScripts();

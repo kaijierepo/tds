@@ -1,11 +1,7 @@
 #include "pch.h"
 #include "scriptManager.h"
 #include "scriptEngine.h"
-#include "prj.h"
 #include "logger.h"
-#include "mp.h"
-#include "obj.h"
-#include "rpcHandler.h"
 #include "jerryscript-port.h"
 
 ScriptManager scriptManager;
@@ -20,16 +16,41 @@ void scriptThread(ScriptManager* p)
 bool ScriptManager::init()
 {
 	string conf;
-	vector<string> sList;
-	fs::getFileList(sList, tds->conf->confPath + "/scripts");
+	vector<fs::FILE_INFO> sIndexFiles;
+	fs::getFileList(sIndexFiles, tds->conf->confPath + "/scripts",true,true,".json");
 
-	for (int i = 0; i < sList.size(); i++)
+	unique_lock<mutex> lock(m_csScripts);
+	for (int i = 0; i < sIndexFiles.size(); i++)
 	{
-		string name = sList[i];
-		string script;
-		if (fs::readFile(tds->conf->confPath + "/scripts/" + name, script))
+		fs::FILE_INFO fi = sIndexFiles[i];
+		string sScriptList;
+		if (fs::readFile(fi.path, sScriptList))
 		{
-			m_mapScripts[name] = script;
+			//根据路径获取组织结构
+			string org = str::trimPrefix(fi.path,tds->conf->confPath + "/scripts/");
+			org = str::trimSuffix(org, "list.json");
+			org = str::trimSuffix(org, "/");
+			//加载一个组织结构下的所有脚本文件
+			json jSL = json::parse(sScriptList);
+			map<string, SCRIPT_INFO> mapScriptList;
+			for (int i = 0; i < jSL.size(); i++) {
+				json jInfo = jSL[i];
+				SCRIPT_INFO si;
+				si.lastExe = timeopt::now();
+				si.fromJson(jInfo);
+				string scriptFilePath = fi.folderPath + "/" + si.name +".js";
+				string scriptData;
+				if (fs::readFile(scriptFilePath, scriptData)) {
+					si.script = scriptData;
+					mapScriptList[si.name] = si;
+				}
+				else {
+					continue;
+					LOG("[error]加载脚本文件失败," + scriptFilePath);
+				}
+	
+			}
+			m_mapScripts[org] = mapScriptList;
 		}
 	}
 	return true;
@@ -41,26 +62,16 @@ bool ScriptManager::run()
 		return false;
 
 	init();
-	updateVarExpScript();
 	thread t(scriptThread, this);
 	t.detach();
 	return false;
 }
 
-void ScriptManager::updateVarExpScript()
+void ScriptManager::updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScripts)
 {
+	unique_lock<mutex> lock(m_csExpScripts);
 	m_mapVarExpScripts.clear();
-	std::vector<MP*> aryMP;
-	prj.GetAllChildMp(aryMP);
-	for (int i = 0; i < aryMP.size(); i++) {
-		MP* p = aryMP[i];
-		if (p->m_ioType == "v" && p->m_expression!="") {
-			VAR_EXP_SCRIPT_INFO i;
-			i.script = p->m_expression;
-			i.tagThis = p->getTag();
-			m_mapVarExpScripts[p->getTag()] = i;
-		}
-	}
+	m_mapVarExpScripts = varExpScripts;
 }
 
 
@@ -94,11 +105,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	else {
 		string scriptName = params["name"].get<string>();
 		string scriptPath = getScriptPath(params, session) + "/" + scriptName + ".js";
-		session.queryRootTag = "";
-		if (params["tag"] != nullptr)
-			session.queryRootTag = params["tag"].get<string>();
 
-		session.rootTag = TAG::addRoot(session.queryRootTag, session.org);
 		string script;
 		fs::readFile(scriptPath, script);
 		if (script.length() > 0)
@@ -127,53 +134,33 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string path = getScriptPath(params, session);
-
-	//有信息文件
+	unique_lock<mutex> lock(m_csScripts);
+	string orgKey = str::replace(session.org, ".", "/");
 	json j = json::array();
-	if (fs::fileExist(path + "/list.json"))
-	{
-		string s;
-		fs::readFile(path + "/list.json", s);
-		if (s.length() > 0)
-		{
-			j = json::parse(s);
-		}
+	std::map<string, std::map<string, SCRIPT_INFO>>::iterator iter = m_mapScripts.find(orgKey);
+	if (iter != m_mapScripts.end()) {
+		std::map<string, SCRIPT_INFO>& sl = iter->second;
 
+		scriptList2Json(session.org, sl, j);
 	}
-	rpcResp.result = j.dump(4);
+	rpcResp.result = j.dump(2);
 	return true;
 }
 
 bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string path = getScriptPath(params, session);
-	int idx = params["index"].get<int>();
-
-	//有信息文件
-	if (fs::fileExist(path + "/list.json"))
-	{
-		string s;
-		fs::readFile(path + "/list.json", s);
-		if (s.length() > 0)
-		{
-			json j = json::parse(s);
-			
-			if (j.size() - 1 >= idx) {
-				json jInfo = j[idx];
-				string fileName = jInfo["name"].get<string>();
-				fs::deleteFile(path + "/" + fileName + ".js");
-				j.erase(idx);
-
-				string s = j.dump(2);
-				fs::writeFile(path + "/list.json", s);
-			}
-		}
-
+	unique_lock<mutex> lock(m_csScripts);
+	string orgKey = str::replace(session.org, ".", "/");
+	json j = json::array();
+	std::map<string, std::map<string, SCRIPT_INFO>>::iterator iter = m_mapScripts.find(orgKey);
+	if (iter != m_mapScripts.end()) {
+		std::map<string, SCRIPT_INFO>& sl = iter->second;
+		string name = params["name"].get<string>();
+		sl.erase(name);
+		saveScriptList(session.org, sl);
+		fs::deleteFile(tds->conf->confPath + "/scripts/" + orgKey + "/" + name + ".js");
 	}
-
 	rpcResp.result = "\"ok\"";
-
 	return true;
 }
 
@@ -196,6 +183,7 @@ string ScriptManager::getScriptPath(json& params, RPC_SESSION session)
 
 bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
+	unique_lock<mutex> lock(m_csScripts);
 	string path = getScriptPath(params,session);
 	string fileName = params["name"].get<string>();
 	path += "/" + fileName + ".js";
@@ -217,52 +205,65 @@ bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	string path = getScriptPath(params, session);
-	json jInfo = params["info"];
-	string sDesc = params["info"]["desc"].get<string>();
-	string sName = params["info"]["name"].get<string>();
+	unique_lock<mutex> lock(m_csScripts);
+	string orgKey = str::replace(session.org, ".", "/");
+
+	if (m_mapScripts.find(orgKey) == m_mapScripts.end()) {
+		std::map<string, SCRIPT_INFO> ls;
+		m_mapScripts[orgKey] = ls;
+	}
+
+	std::map<string, SCRIPT_INFO>& ls = m_mapScripts[orgKey];
+
+	string name = params["info"]["name"];
+
+	if (ls.find(name) == ls.end()) {
+		SCRIPT_INFO si;
+		ls[name] = si;
+	}
+
+	SCRIPT_INFO& si = ls[name];
+
+	//支持局部更新，info当中可以只包含1，2个需要修改的字段
+	si.fromJson(params["info"]);
 
 	//保存脚本代码
-	string codePath = path + "/" + sName + ".js";
-	string s = params["code"].get<string>();
-	if (fs::writeFile(codePath, s))
-	{
-		rpcResp.result = "\"ok\"";
-	}
-	else
-	{
-		rpcResp.error = "\"save fail\"";
+	if (params.contains("code")) {
+		string codePath = tds->conf->confPath + "/scripts/" + orgKey + "/" + si.name + ".js";
+		string s = params["code"].get<string>();
+		fs::writeFile(codePath, s);
+		si.script = s;
 	}
 
-	//保存脚本信息
-	json jList = json::array();
-	string infoPath = path + "/list.json";
-	string sList;
-	fs::readFile(infoPath, sList);
-	if (sList != "")
-	{
-		jList = json::parse(sList);
-	}
+	saveScriptList(session.org, ls);
 
-	bool existed = false;
-	for (int i = 0; i < jList.size(); i++)
-	{
-		json& jInfoTmp = jList[i];
-		if (jInfoTmp["name"].get<string>() == sName)
-		{
-			jInfoTmp = jInfo;
-			existed = true;
-		}
-	}
-
-	if (!existed) {
-		jList.push_back(jInfo);
-	}
-
-	sList = jList.dump(4);
-	fs::writeFile(infoPath,sList);
+	rpcResp.result = RPC_OK;
 
 	return true;
+}
+
+void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j)
+{
+	org = str::replace(org, ".", "/");
+
+	j = json::array();
+	for (auto& i : sl) {
+		SCRIPT_INFO& si = i.second;
+		json jSi;
+		si.toJson(jSi);
+		j.push_back(jSi);
+	}
+	
+}
+
+void ScriptManager::saveScriptList(string org,std::map<string, SCRIPT_INFO>& sl, bool saveScriptData)
+{
+	json j;
+	scriptList2Json(org, sl, j);
+
+	string path = tds->conf->confPath + "/scripts/" + org + "/list.json";
+	string s = j.dump(2);
+	fs::writeFile(path,s);
 }
 
 json ScriptManager::getScriptList(string tag)
@@ -272,23 +273,27 @@ json ScriptManager::getScriptList(string tag)
 
 void ScriptManager::exeAllGlobalScripts()
 {
-	shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
-
-	for (auto& i : m_mapScripts)
-	{
-		string& script = i.second;
-		ScriptEngine se;
-		se.runScript(script);
+	unique_lock<mutex> lock(m_csScripts);
+	for (auto& i : m_mapScripts) {
+		map<string,SCRIPT_INFO>& mapSL = i.second;
+		for (auto& j : mapSL) {
+			SCRIPT_INFO& si = j.second;
+			if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
+				ScriptEngine se;
+				se.m_tagThis = si.tagThis;
+				se.runScript(si.script);
+				si.lastExe = timeopt::now();
+			}
+		}
 	}
 }
 
 void ScriptManager::exeAllVarExpScripts()
 {
-	shared_lock<shared_mutex> lock(prj.m_csPrj);//moTree的读写锁. 读方式锁
-
+	unique_lock<mutex> lock(m_csExpScripts);
 	for (auto& i : m_mapVarExpScripts)
 	{
-		VAR_EXP_SCRIPT_INFO& info = i.second;
+		SCRIPT_INFO& info = i.second;
 		string& script = info.script;
 
 		ScriptEngine se;
@@ -313,13 +318,8 @@ void ScriptManager::loopExe()
 
 	while (1)
 	{
-		//if (m_mapScripts.size() > 0) {
-		//	if (timeopt::CalcTimePassSecond(lastExe1) > 1) {
-		//		exeAllGlobalScripts();
-		//		lastExe1 = timeopt::now();
-		//	}
-		//}
-		
+		exeAllGlobalScripts();
+
 		if (m_mapVarExpScripts.size() > 0) {
 			if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
 				exeAllVarExpScripts();
@@ -327,9 +327,48 @@ void ScriptManager::loopExe()
 			}
 		}
 
-		Sleep(100);
+		Sleep(50);
 	}
 }
 
 
 #endif
+
+void SCRIPT_INFO::toJson(json& j)
+{
+	j["mode"] = mode;
+	j["name"] = name;
+	j["desc"] = desc;
+	j["lastModifyTime"] = lastModifyTime;
+	j["lastModifyUser"] = lastModifyUser;
+	int min = interval / (60 * 1000);
+	int time = interval % (60 * 1000);
+	int sec = time / 1000;
+	int milli = time % 1000;
+	json jIter;
+	jIter["min"] = min;
+	jIter["sec"] = sec;
+	jIter["milli"] = milli;
+	j["interval"] = jIter;
+}
+
+void SCRIPT_INFO::fromJson(json& j)
+{
+	if(j.contains("mode"))
+		mode = j["mode"];
+
+	if (j.contains("name")) {
+		name = j["name"];
+	}
+
+	if(j.contains("desc"))
+		desc = j["desc"];
+
+	if (j.contains("interval")) {
+		json jInter = j["interval"];
+		int min = jInter["min"].get<int>();
+		int sec = jInter["sec"].get<int>();
+		int milli = jInter["milli"].get<int>();
+		interval = min * 60 * 1000 + sec * 1000 + milli;
+	}
+}

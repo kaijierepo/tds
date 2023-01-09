@@ -6,6 +6,7 @@ using json = nlohmann::json;
 #include "tdsSession.h"
 #include "tds.h"
 #include <shared_mutex>
+#include "xiaot/scriptManager.h"
 
 struct OBJ_TEMPLATE {
 	string type;
@@ -49,6 +50,7 @@ public:
 	json getObjTemplate(string objTplType);
 	bool loadObjTemplate();
 	void saveObjTemplate(OBJ_TEMPLATE& ot);
+	void getAllVarExpScript();
 	map<string, OBJ_TEMPLATE> m_mapObjTempalte;
 
 private:

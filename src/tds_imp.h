@@ -37,7 +37,7 @@ public:
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
 	bool setWorkingDir();
-	bool runAsTDB();
+
 	bool run(string cmdline = "");
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
 	//此时用户以为程序已经退出，再次打开程序。新打开的程序由于666端口被占用而没有启动服务。
@@ -46,6 +46,7 @@ public:
 	bool setProcBeforeExit(fp_procBeforeExit callback);
 
 	// tds 数据服务功能
+	 void call(string method, json& param, json& err, json& rlt ,RPC_SESSION session) override;
 	 bool call(string method, string param, RPC_RESP& resp) override;
 	 void callAsyn(string method, string param,int delay = 0) override;
 	 void setRpcHandler(fp_rpcHandler handler);

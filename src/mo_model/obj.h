@@ -33,30 +33,7 @@ SOFTWARE.
 using namespace std;
 using json = nlohmann::json;
 
-/* 位号相关的核心概念
-| 位号名称                 | 父位号     | 例子                           | 类型     |
-| ------------------------ | ---------- | ------------------------------ | -------- |
-| 系统位号   sysTag        | -          | 杭州.科技大楼.一楼.开水间.温度 | 绝对位号 |
-| 用户根位号   userRootTag | -          | 杭州.科技大楼                  | 绝对位号 |
-| 用户位号 userTag         | 用户根位号 | 一楼.开水间.温度               | 相对位号 |
-| 查询根位号 queryRootTag  | 用户根位号 | 一楼                           | 相对位号 |
-| 查询位号 queryTag        | 查询根位号 | 开水间.温度                    | 相对位号 |
 
-sysTag = userRootTag + queryRootTag + queryTag
-
-杭州.科技大楼.一楼.开水间.温度 = 杭州.科技大楼 + 一楼 + 开水间.温度
-
-应用场景：
-
-例如张三是科技大楼的管理员，那么张三的 userRootTag = 杭州.科技大楼
-
-对于他来说，一楼.开水间.温度 是张三的视角下查询该数据点的位号
-
-某一次数据观察，张三希望统一观察一楼所有的数据点，因此，张三指定了queryRootTag = 一楼
-
-因此，张三得到了 开水间.温度、开水间.湿度等 queryTag
-
-*/
 
 /* 对象数据类型族 
 									obj 对象  
@@ -67,18 +44,7 @@ sysTag = userRootTag + queryRootTag + queryTag
 			   customMO    mo     mp     org         customOrg       project    type取值可以为该5种
 */
 
-namespace TAG {
-	string trimRoot(string& tag);
-	string trimRoot(string tag,string root);
-	string userTag2sysTag(string userTag, string userOrg);
-	string sysTag2userTag(string sysTag, string userOrg);
-	string addRoot(string& tag);
-	string addRoot(string tag, string root);
 
-	bool hasTag(json& tree, string tag); //moTree中是否包含某个tag.该tag不包含前面树的根节点
-	int getMoLevel(string tag); //根节点level 为0，依次增加
-	json mapTree2List(json mapTree);
-}
 
 struct OBJ_QUERIER {
 	//指定子对象的返回结构
@@ -194,7 +160,6 @@ public:
 	vector<string> GetAlias();
 	vector<string> GetAllTagNamePlus();
 	virtual string getTagWithRoot();
-	string TranslateRelateTag(string rtag);
 	json m_mapConf;
 
 
@@ -206,10 +171,6 @@ public:
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);
 	string getUpdateTimeDesc();
-
-	static string AppendTagRoot(string& str);
-	static string ResolveTag(string strTagExp, string strTagThis); //strTagContext指位号表达式所在mp的父mo的位号
-	static string trimProperty(string& strTagExp);
 };
 
 OBJ* createMO(string type);

@@ -1616,9 +1616,7 @@ namespace fs {
 		_findclose(handle);    // 关闭搜索句柄
 	}
 
-
-	 void getFileList(vector<string>& list,string strFolder,bool includeFolder,bool recursive)
-	{
+	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
 		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
 		wstring dirNew;
 		dirNew = wstrFolder;
@@ -1645,20 +1643,74 @@ namespace fs {
 				dirNew += L"\\";
 				dirNew += findData.name;
 
-				if (includeFolder)
-					list.push_back(charCodec::utf16ToAuto(findData.name));
+				if (includeFolder) {
+					//list.push_back(charCodec::utf16ToAuto(findData.name));
+				}
+					
 
 				if(recursive)
-					getFileList(list,charCodec::utf16ToAuto(dirNew));
+					getFileList(list,charCodec::utf16ToAuto(dirNew),includeFolder,recursive,suffix);
 			}
 			else
 			{
-				list.push_back(charCodec::utf16ToAuto(findData.name));
+				
+				FILE_INFO fi;
+				fi.name = charCodec::utf16ToAuto(findData.name);
+				if (fi.name.find(suffix) == string::npos)
+					continue;
+				fi.path = strFolder + "/" + fi.name;
+				fi.folderPath = strFolder;
+				fi.len = findData.size;
+				list.push_back(fi);
 			}
 		} while (_wfindnext(handle, &findData) == 0);
 
 		_findclose(handle);    // 关闭搜索句柄
 	}
+
+
+	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
+	 {
+		 wstring wstrFolder = charCodec::autoToUtf16(strFolder);
+		 wstring dirNew;
+		 dirNew = wstrFolder;
+		 dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
+
+		 intptr_t handle;
+		 _wfinddata64i32_t findData;
+
+		 handle = _wfindfirst(dirNew.c_str(), &findData);
+		 if (handle == -1)        // 检查是否成功
+			 return;
+
+		 do
+		 {
+			 if (findData.attrib & _A_SUBDIR)
+			 {
+				 if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
+					 continue;
+
+				 //list.push_back(charCodec::utf16toUtf8(findData.name));
+
+				 // 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
+				 dirNew = wstrFolder.c_str();
+				 dirNew += L"\\";
+				 dirNew += findData.name;
+
+				 if (includeFolder)
+					 list.push_back(charCodec::utf16ToAuto(findData.name));
+
+				 if (recursive)
+					 getFileList(list, charCodec::utf16ToAuto(dirNew));
+			 }
+			 else
+			 {
+				 list.push_back(charCodec::utf16ToAuto(findData.name));
+			 }
+		 } while (_wfindnext(handle, &findData) == 0);
+
+		 _findclose(handle);    // 关闭搜索句柄
+	 }
 
 	
 	vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter, char* title, char* fileName,char* defExt,char* initDirectory)
