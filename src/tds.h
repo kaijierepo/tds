@@ -135,7 +135,7 @@ public:
 	string org; //user's org
 
 
-	bool isNotification; //是否是通知
+	bool isNotification; 
 
 	//session params for rpc route
 	string ioAddr;  //route to io device
@@ -175,7 +175,7 @@ public:
 	string error;
 	string result;
 	string params; 
-	string info;   //查询成功返回的额外信息变量
+	string info;   //rpc excution log
 	char* binResult;
 	int iBinLen;
 	bool isNotification; //is request a notification.no response will send if request is a notification

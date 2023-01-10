@@ -1273,12 +1273,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else
 	{
-		//对象关联的命令都必须有参数tag
-		if (params["tag"] == nullptr) //获取子树
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
-			return true;
-		}
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
@@ -1483,6 +1477,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			result = list.dump(2);
 		}
 		else if (method == "sum") {
+			if (params["tag"] == nullptr) //获取子树
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+				return true;
+			}
 			string tag = params["tag"];
 			bool invalidAsZero = false;
 			if(params.contains("invalidAsZero"))
@@ -1736,7 +1735,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	if (handleMethodCall_unclassified(method, params, rpcResp, session))
+	if (handleMethodCall_unclassified(method, params, rpcResp, session)) 
 	{
 		return true;
 	}

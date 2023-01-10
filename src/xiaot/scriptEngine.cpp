@@ -82,6 +82,16 @@ bool ScriptEngine::initGlobalFunc()
 	}
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
+
+	// backtrace
+	property_name = jerry_create_string((const jerry_char_t*)"backtrace");
+	property_func = jerry_create_external_function(backtrace_handler);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
 	return true;
 }
 
@@ -144,8 +154,9 @@ jerry_context_t* jerry_port_get_current_context(void)
 bool ScriptEngine::runScript(string& script)
 {
 	vector<string> lines;
-	script = str::replace(script, "\r\n", "\n");
-	str::split(lines, script, "\n");
+	//script = str::replace(script, "\r\n", "\n");
+	//str::split(lines, script, "\n");
+	lines.push_back(script);
 	m_vecOutput.clear();
 	try {
 		pEngine = this;
@@ -179,7 +190,8 @@ bool ScriptEngine::runScript(string& script)
 			{
 				jerry_error_t error = jerry_get_error_type(eval_ret);
 				string sErr = getErrorDesc(error);
-				m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
+				//m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
+				m_vecOutput.push_back("脚本执行错误,错误类型:" + sErr);
 				jerry_release_value(eval_ret);
 				break;
 			}

@@ -394,4 +394,41 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+
+jerry_value_t
+backtrace_handler(const jerry_call_info_t* call_info_p,
+	const jerry_value_t args_p[],
+	const jerry_length_t args_count)
+{
+	if (!jerry_is_feature_enabled(JERRY_FEATURE_LINE_INFO))
+	{
+		printf("Line info disabled, no backtrace will be printed\n");
+		return jerry_create_undefined();
+	}
+
+	/* If the line info feature is disabled an empty array will be returned. */
+	jerry_value_t backtrace_array = jerry_get_backtrace(5);
+	uint32_t array_length = jerry_get_array_length(backtrace_array);
+
+	for (uint32_t idx = 0; idx < array_length; idx++)
+	{
+		jerry_value_t property = jerry_get_property_by_index(backtrace_array, idx);
+
+		jerry_char_t string_buffer[64];
+		jerry_size_t copied_bytes = jerry_substring_to_char_buffer(property,
+			0,
+			63,
+			string_buffer,
+			63);
+		string_buffer[copied_bytes] = '\0';
+		printf(" %d: %s\n", idx, string_buffer);
+
+		jerry_release_value(property);
+	}
+
+	jerry_release_value(backtrace_array);
+
+	return jerry_create_undefined();
+} /* backtrace_handler */
+
 #endif

@@ -576,7 +576,7 @@ bool ioDev::loadConf(json& conf)
 			}
 			addChannel(pdc);
 
-			if (m_strTagBind != "") {
+			if (m_strTagBind != "") { 
 				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, m_strTagBind);
 				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, ".");
 			}

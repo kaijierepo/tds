@@ -12,13 +12,13 @@ struct HMR_SESSION {
 };
 
 
-//ʹ��mongoose��websocket������һ���˿�ռ��
-//��ʱ�Ȳ���ȫɾ������tcpServer�Ĵ��룬�Ƿ�ĳЩ�������ΪҪ����http���������ö�����hmr��tcpServer��Ϊ���ʣ���Ҫʵ������һ��ʱ��
+//使用mongoose的websocket，减少一个端口占用
+//暂时先不完全删除独立tcpServer的代码，是否某些情况下因为要调试http服务器，用独立的hmr的tcpServer更为合适，需要实践试用一段时间
 
-//hmrServer������Ҫhmr��ҳ��� websocket���Ӽ��������Ŀ¼
-//��Ŀ¼�ļ������仯ʱ������֪ͨ������ı�
-//��ʱû�н������������ָ��Ļ���
-//���������رոù��ܣ���Ϊ�ļ��Ķ������Ҫ�ķ����ܣ���ǰ�˿���ʱʹ��
+//hmrServer保存需要hmr的页面的 websocket连接及其关联的目录
+//当目录文件发生变化时，主动通知浏览器改变
+//暂时没有接受浏览器请求指令的机制
+//生产环境关闭该功能，因为文件改动监测需要耗费性能，在前端开发时使用
 class HMRServer : public ITcpServerCallBack {
 public:
 	HMRServer();

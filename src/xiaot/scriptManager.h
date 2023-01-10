@@ -34,7 +34,7 @@ public:
 	bool init();
 	bool run();
 	
-	//第一个key是组织结构，第二个key是脚本文件的name
+	//绗竴涓猭ey鏄粍缁囩粨鏋勶紝绗簩涓猭ey鏄剼鏈枃浠剁殑name
 	std::map<string, std::map<string,SCRIPT_INFO>> m_mapScripts;
 	std::mutex m_csScripts;
 
