@@ -1342,16 +1342,25 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(IsValidPkt_IQ60) || 
-				pab->PopPkt(IsValidPkt_terminalPrompt) || 
-				pab->PopPkt(IsValidPkt_textEnd_LF) ||
-				pab->PopPkt(IsValidPkt_textEnd_LFLF) ||
-				pab->PopPkt(IsValidPkt_textEnd_CRLF)
-				)
+			while (1)
 			{
-				tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
-				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
-				LOG("[IO设备透传]dev->client " + s);
+				//每一个数据包都先检测是否是iq60数据包。因为iq60也属于 textEnd_LF 类型
+				if(pab->PopPkt(IsValidPkt_IQ60)) {
+					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+					continue;
+				}
+
+				if (pab->PopPkt(IsValidPkt_terminalPrompt) ||
+					pab->PopPkt(IsValidPkt_textEnd_LF) ||
+					pab->PopPkt(IsValidPkt_textEnd_LFLF) ||
+					pab->PopPkt(IsValidPkt_textEnd_CRLF)) {
+					tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+					string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
+					LOG("[IO设备透传]dev->client " + s);
+					continue;
+				}
+
+				break;
 			}
 		}
 	}
