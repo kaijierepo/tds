@@ -877,7 +877,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 	bool bHandled = true;
-	if (method == "ioTree" || method == "iotree" || method == "getIOTree" || method == "getDev")
+	if (method == "getDev")
 	{
 		rpc_getDev(params, rpcResp,session);
 	}
@@ -943,7 +943,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		ioSrv.rpc_deleteDev(params, rpcResp, session);
 	}
-	else if (method == "modifyDev")
+	else if (method == "setDev")
 	{
 		ioSrv.rpc_modifyDev(params, rpcResp, session);
 	}
@@ -2090,6 +2090,25 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				pSession->user = "admin";
 			}
 		}
+
+		//test账户具有所有功能模块的浏览权限，但没有控制权限，用户功能演示。可以认为是一个只能浏览的管理员账号
+		if (pSession->user == "test") {
+			if (method.find("set") != string::npos ||
+				method.find("add") != string::npos ||
+				method.find("delete") != string::npos ||
+				method.find("write") != string::npos ||
+				method.find("start") != string::npos ||
+				method.find("stop") != string::npos ||
+				method.find("run") != string::npos ||
+				method.find("db.delete") != string::npos ||
+				method.find("db.delete") != string::npos ||
+				method.find("db.update") != string::npos ||
+				method == "output" ||
+				method == "input") {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noPermission, "no permission","没有权限");
+				goto HANDLE_END;
+			}
+		}
 			
 		//验证token
 		if (bAccessCtrl) {
@@ -2099,13 +2118,10 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				goto HANDLE_END;
 			}
 
+			//即使服务端没有打开鉴权，如果用户指定了token或者user中的
 			if (jReq["token"] != nullptr)
 			{
 				pSession->token = jReq["token"].get<string>();
-			}
-			//即使服务端没有打开鉴权，如果用户指定了token或者user中的
-			if (pSession->token != "")
-			{
 				string token = pSession->token;
 				string user = pSession->user;
 				if (!userMng.checkToken(user, token))

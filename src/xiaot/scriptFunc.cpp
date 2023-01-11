@@ -349,9 +349,8 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 			string sTag = tag.get<string>();
 			sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
 			if (jArgs.size() == 1) {
-				string tag = jArgs[0].get<string>();
 				json params;
-				params["tag"] = tag;
+				params["tag"] = sTag;
 				params["getStatus"] = true;
 				params["getConf"] = false;
 				json err, rlt;
@@ -361,6 +360,9 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					jerry_value_t jerryVal;
 					jsonVal2jerryVal(jVal,jerryVal);
 					return jerryVal;
+				}
+				else {
+					LOG("[脚本引擎] 函数 val 执行错误,getMp返回结果为null或者不包含val字段");
 				}
 			}
 			//取历史值
