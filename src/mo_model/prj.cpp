@@ -14,6 +14,7 @@ project::project()
 {
 	m_name = "tds";
 	m_type = "org";
+	m_enableEzviz = false;
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
 	p->m_valType = VAL_TYPE::video;
@@ -116,8 +117,6 @@ bool project::loadConf(string& confStr)
 bool project::loadConf(json& jConf)
 {
 	bool ret = OBJ::loadConf(jConf);
-	if (ret)
-		updateMPTable();
 	return ret;
 }
 
@@ -127,40 +126,6 @@ void project::clear()
 {
 	m_mapAllMP.clear();
 	clearChildren();
-}
-
-void project::getMpList(vector<MP*>& MPlist, OBJ* pMO)
-{
-	for (int i = 0; i < pMO->m_childObj.size(); i++)
-	{
-		OBJ* p = pMO->m_childObj.at(i);
-		if (p->m_type == "mp")
-		{
-			MPlist.push_back((MP*)p);
-		}
-		getMpList(MPlist, p);
-	}
-}
-
-
-void project::getMpList(map<string, MP*>& MPlist, OBJ* pMO)
-{
-	for (int i = 0; i < pMO->m_childObj.size(); i++)
-	{
-		OBJ* p = pMO->m_childObj.at(i);
-		if (p->m_type == "mp")
-		{
-			MPlist[p->getTag().c_str()] = (MP*)p;
-		}
-		getMpList(MPlist, p);
-	}
-}
-
-
-void project::updateMPTable()
-{
-	m_mapAllMP.clear();
-	getMpList(m_mapAllMP, this);
 }
 
 
@@ -174,13 +139,6 @@ MP* project::getMp(string strSysTag)
 	return NULL;
 }
 
-void project::getMpList(json& mpList)
-{
-	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
-		string strKey = it->first;
-		mpList.push_back(it->second->getTag());
-	}
-}
 
 void project::getMpTypeList(json& mpTypeList)
 {

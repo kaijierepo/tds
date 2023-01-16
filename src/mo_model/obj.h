@@ -120,10 +120,12 @@ public:
 
 	//查询接口
 	virtual json getRT();
+	void getMpList(map<string, MP*>& MPlist);
 	OBJ* queryObj(string strTag,bool usePinyin = false);//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
 	MP* GetMPByTag(string strTag,bool usePinyin = false);
 	void queryObj(std::vector<OBJ*>* tagVec, string strTag,bool usePinyin = false, string type = "obj");
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
+	void getMpList(vector<MP*>& MPlist);
 	OBJ* GetChildObjByName(string strName);
 	MP* GetDescendantMPByName(string strName);
 	OBJ* GetDescendantObjByName(string strName);

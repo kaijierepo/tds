@@ -1470,12 +1470,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "未找到指定位号");
 			}
 		}
-		else if (method == "getmplist")//or getMpList or get_mp_list
-		{
-			json list;
-			prj.getMpList(list);
-			result = list.dump(2);
-		}
 		else if (method == "sum") {
 			if (params["tag"] == nullptr) //获取子树
 			{
@@ -3285,6 +3279,20 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 
 json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostname,int hostport)
 {
+	json j;
+	//没有进行码流中转，直接返回播放即可
+	if (!pmp->m_bServeStream) {
+		if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
+			EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
+			j["flv"] = info.flvUrl;
+		}
+		else {
+			j["flv"] = "";
+		}
+		return j;
+	}
+
+
 	string ip = hostname; 
 	int port = hostport;
 	bool https = false;
@@ -3311,7 +3319,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		isChildTds = true;
 	}
 
-	json j;
+
 
 	string tagPinyin;
 	str::hanZi2Pinyin(tag, tagPinyin);
@@ -3331,6 +3339,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
 	//zlmediakit的hls模式暂时不支持中文，因此此处转成拼音
+	//本地的转发，将tds的请求转发到zlmediakit
 	if (!childTds) {
 		if (pmp->m_valType == VAL_TYPE::video) {
 			if (pmp->m_mediaSrcType == "file") {

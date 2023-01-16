@@ -113,7 +113,11 @@ public:
 	string m_mediaSrcType;
 	string m_mediaUrl;
 	bool m_bIsStreaming;
+	bool m_bServeStream;  //从视频源拉流，向外提供流媒体服务
 	DWORD m_srcPullingFFmpegProcID;
+	string m_serialNo; //设备序列号
+	string m_appKey;
+	string m_secret;
 
 	//状态
 	json m_orgVal;

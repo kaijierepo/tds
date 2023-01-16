@@ -25,6 +25,7 @@ MP::MP()
 	m_bDownSample = 0;
 	m_downSampleInterval = 2000;
 	m_srcStreamFetch = "ondemand";
+	m_bServeStream = false;
 }
 
 MP::~MP()
@@ -217,6 +218,43 @@ bool MP::loadConf(json& conf)
 		m_mediaUrl = conf["mediaUrl"].get<string>();
 	}
 
+	if (m_mediaSrcType == "ezviz") {
+		prj.m_enableEzviz = true;
+	}
+
+
+	auto kv = conf.find("serialNo");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_serialNo = item.get<string>();
+		}
+	}
+
+	 kv = conf.find("appKey");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_appKey = item.get<string>();
+		}
+	}
+
+	 kv = conf.find("secret");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_secret = item.get<string>();
+		}
+	}
+
+	kv = conf.find("serveStream");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bServeStream = item.get<bool>();
+		}
+	}
+
 
 	//状态数据
 	// 	val应该通过 loadStatus加载，不知道为何这里有这段代码。暂时注释。观察一段时间后删除
@@ -320,6 +358,12 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		if (p->m_valType == "video") {
 			conf["mediaSrcType"] = m_mediaSrcType;
 			conf["mediaUrl"] = m_mediaUrl;
+
+			if (m_mediaSrcType == "ezviz") {
+				conf["serialNo"] = m_serialNo;
+				conf["appKey"] = m_appKey;
+				conf["secret"] = m_secret;
+			}
 		}
 		//枚举值
 		if (m_valType == VAL_TYPE::integer) {
@@ -349,6 +393,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		conf["srcStreamFetch"] = m_srcStreamFetch;
 		if (m_expression != "") {
 			conf["expression"] = m_expression;
+		}
+
+		if (m_bServeStream) {
+			conf["serveStream"] = m_bServeStream;
 		}
 	}
 	

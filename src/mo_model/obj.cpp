@@ -648,6 +648,35 @@ void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
 	}
 }
 
+void OBJ::getMpList(vector<MP*>& MPlist)
+{
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		OBJ* p = m_childObj.at(i);
+		if (p->m_type == "mp")
+		{
+			MPlist.push_back((MP*)p);
+		}
+		else
+			p->getMpList(MPlist);
+	}
+}
+
+
+void OBJ::getMpList(map<string, MP*>& MPlist)
+{
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		OBJ* p = m_childObj.at(i);
+		if (p->m_type == "mp")
+		{
+			MPlist[p->getTag().c_str()] = (MP*)p;
+		}
+		else
+			p->getMpList(MPlist);
+	}
+}
+
 OBJ* OBJ::queryObj(string strTag,bool usePinyin)
 {
 	if (strTag == "")

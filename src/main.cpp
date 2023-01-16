@@ -42,6 +42,65 @@ SOFTWARE.
 #include "tools/tools.hpp"
 #include "base64.h"
 #include "base85.h"
+#include "prj.h"
+
+
+void updateEzvizAccessInfo() {
+	try {
+		for (auto& i : prj.m_mapEzvizAccess) {
+			EZVIZ_ACCESS_INFO& info = i.second;
+
+			//半天更新一次
+			if (timeopt::CalcTimePassSecond(info.lastUpdate) < 12 * 60 * 60) {
+				continue;
+			}
+
+			string addr = "https://open.ys7.com";
+			httplib::Client cli(addr);
+
+			//更新token。 token默认过期时间7天
+			httplib::Params params = {
+				{"appKey",info.appKey},
+				{"appSecret",info.secret}
+			};
+
+			auto resp = cli.Post("/api/lapp/token/get", params);
+			if (resp != nullptr) {
+				json jResp = json::parse(resp->body);
+				json jData = jResp["data"];
+				if (jData != nullptr) {
+					json jAccessToken = jData["accessToken"];
+					if (jAccessToken != nullptr) {
+						info.token = jAccessToken.get<string>();
+					}
+				}
+			}
+
+			//获取新的flvurl。 url默认过期时间 1天
+			params = {
+				{"accessToken",info.token},
+				{"deviceSerial",info.serialNo},
+				{"protocol","4"}
+			};
+
+			resp = cli.Post("/api/lapp/v2/live/address/get", params);
+			if (resp != nullptr) {
+				json jResp = json::parse(resp->body);
+				json jData = jResp["data"];
+				if (jData != nullptr) {
+					json jUrl = jData["url"];
+					if (jUrl != nullptr) {
+						info.flvUrl = jUrl.get<string>();
+						info.lastUpdate = timeopt::now();
+					}
+				}
+			}
+		}
+	}
+	catch (exception& e) {
+
+	}
+}
 
 /*
 notes:
@@ -319,16 +378,56 @@ int main(int argc, char** argv)
 		tds->run();
 	}
 
-
-	// 消息循环  
-	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0))
+  
+	while (1)
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		sleep(1000);
+
+		if (prj.m_enableEzviz) {
+			prj.m_csPrj.lock_shared();
+			vector<MP*> mps;
+			prj.getMpList(mps);
+
+			for (int i = 0; i < mps.size(); i++) {
+				MP* pmp = mps[i];
+				if (pmp->m_serialNo == "" ||
+					pmp->m_appKey == "" ||
+					pmp->m_secret == "")
+					continue;
+
+				if (pmp->m_valType == "video" && pmp->m_mediaSrcType == "ezviz") {
+					if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
+						EZVIZ_ACCESS_INFO  info;
+						info.serialNo = pmp->m_serialNo;
+						info.appKey = pmp->m_appKey;
+						info.secret = pmp->m_secret;
+						info.token = "";
+						timeopt::setAsTimeOrg(info.lastUpdate);
+						prj.m_mapEzvizAccess[info.serialNo] = info;
+					}
+				}
+			}
+			prj.m_csPrj.unlock_shared();
+
+			updateEzvizAccessInfo();
+		}
+
+		
 	}
 	return 0;
 }
+
+
+
+
+
+
+
+
+
+
+
+
 #else
 #endif // !_WINDLL
 

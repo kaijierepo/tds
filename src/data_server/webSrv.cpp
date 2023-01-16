@@ -443,6 +443,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 		return true;
 	}
 
+	//获得该url视频地址的源地址
 	json jStreamUrl = rpcSrv.rpc_getStreamUrl(pmp,tag,m_isHttps,ip,port);
 
 	if (jStreamUrl[proto] == nullptr) {
@@ -451,7 +452,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	}
 
 	//流媒体服务器为本机，连接媒体源
-	if (!jStreamUrl["isChildTds"].get<bool>()) {
+	if (pmp->m_bServeStream && !jStreamUrl["isChildTds"].get<bool>()) {
 		rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
 	}
 

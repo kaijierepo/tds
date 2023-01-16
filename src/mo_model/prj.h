@@ -20,6 +20,18 @@ class ioDev;
 class amo;
 class MP;
 class TAG_SELECTOR;
+
+struct EZVIZ_ACCESS_INFO {
+	string serialNo;
+	string appKey;
+	string secret;
+	string token;
+	string flvUrl;
+	TIME lastUpdate;
+};
+
+
+
 class project : public OBJ  
 {
 public:
@@ -29,15 +41,14 @@ public:
 	void saveConfFile();
 	void clear();
 	MP* getMp(string strTagname);
-	void getMpList(vector<MP*>& MPlist, OBJ* pMO);
-	void getMpList(map<string, MP*>& MPlist, OBJ* pMO);
-	void getMpList(json& mpList);
 	void getMpTypeList(json& mpTypeList);
 
 
 	string m_strMoTree; //字符串配置数据
 	map<string, MP*> m_mapAllMP;
 
+	bool m_enableEzviz;
+	map<string, EZVIZ_ACCESS_INFO> m_mapEzvizAccess;
 
 public:
 	project();
@@ -55,7 +66,6 @@ public:
 
 private:
 	json m_jMOTree;
-	void updateMPTable();
 	map<string, string> m_mapDataLink;
 
 public:
