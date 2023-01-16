@@ -7,6 +7,8 @@ ioChannel::ioChannel()
 {
 	m_level = "channel";
 	m_ioType = CHAN_IO_TYPE::I;
+	m_k = 1;
+	m_b = 0;
 }
 
 
@@ -14,6 +16,21 @@ ioChannel::~ioChannel()
 {
 }
 
+string ioChannel::storageFmt2valType(string fmt) {
+	if (m_k < 1) {
+		return VAL_TYPE::Float;
+	}
+	else {
+		if (fmt.find("16") != string::npos)return VAL_TYPE::integer;
+		else if (fmt.find("32") != string::npos)return VAL_TYPE::integer;
+		else if (fmt.find("64") != string::npos)return VAL_TYPE::integer;
+		else if (fmt.find("float") != string::npos || fmt.find("Float") != string::npos)return VAL_TYPE::Float;
+		else if (fmt.find("Double") != string::npos || fmt.find("Double") != string::npos)return VAL_TYPE::Float;
+		else {
+			return "";
+		}
+	}
+}
 
 bool ioChannel::loadConf(json& conf)
 {
@@ -26,10 +43,17 @@ bool ioChannel::loadConf(json& conf)
 			m_regType = conf["addr"]["regType"].get<string>();
 		if (conf["addr"]["regOffset"] != nullptr)
 			m_regOffset = conf["addr"]["regOffset"].get<int>();
-		if (conf["addr"]["storageFmt"] != nullptr)
-			m_storageFmt = conf["addr"]["storageFmt"].get<string>();
 	}
 
+
+	if (conf["fmt"] != nullptr) {
+		m_fmt = conf["fmt"].get<string>();
+	}
+
+	if (conf["byteOrder"] != nullptr) {
+		m_byteOrder = conf["byteOrder"].get<string>();
+	}
+		
 	
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
@@ -37,8 +61,11 @@ bool ioChannel::loadConf(json& conf)
 	if(m_ioType!="")
 		m_ioTypeLabel = getIOTypeLabel(m_ioType);
 
-	if (conf["valType"] != nullptr)
-		m_valType = conf["valType"];
+	//先加载k再计算valType,转换函数内部会利用k设置来判断
+	if (conf["k"] != nullptr)
+		m_k = conf["k"].get<double>();
+	m_valType = storageFmt2valType(m_fmt);
+
 	if (m_valType != "")
 		m_valTypeLabel = getValTypeLabel(m_valType);
 
@@ -55,7 +82,13 @@ bool ioChannel::toJson(json& conf, json opt)
 {
 	DEV_QUERIER querier = parseQueryOpt(opt);
 
-	conf["addr"] = m_jDevAddr;
+	json jDevAddr;
+	for (auto& i : m_jDevAddr.items()) {
+		if (i.value() != nullptr) {
+			jDevAddr[i.key()] = i.value();
+		}
+	}
+	conf["addr"] = jDevAddr;
 
 	if (querier.getConf) {
 		conf["nodeID"] = m_confNodeId;
@@ -64,9 +97,14 @@ bool ioChannel::toJson(json& conf, json opt)
 		conf["valType"] = m_valType;
 		conf["name"] = m_name;
 
+		conf["k"] = m_k;
+
 		//optional fields
-		if (m_storageFmt != "")
-			conf["storageFmt"] = m_storageFmt;
+		if (m_fmt != "")
+			conf["fmt"] = m_fmt;
+
+		if (m_byteOrder != "")
+			conf["byteOrder"] = m_byteOrder;
 
 		if (m_channelType != "")
 		{
@@ -144,6 +182,7 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	string tagBind;
 	input(jVal, tagBind, dataTime, bPic);
 
+
 	//更新绑定位号值
 	json param;
 	param["tag"] = tagBind;
@@ -162,7 +201,16 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 		dataTime = &t;
 	}
 	m_stLastUpdateTime = *dataTime;
-	m_curVal = jVal;
+	m_curOrgVal = jVal;
+	if (m_curOrgVal.is_number()) {
+		double val = 0;
+		double valOrg = m_curOrgVal.get<float>();
+		val = valOrg * m_k + m_b;
+		m_curVal = val;
+	}
+	else {
+		m_curVal = m_curOrgVal;
+	}
 
 	//获得绑定的位号。如果父节点有关联位号。并且位号没有包含父节点位号，拼接父节点位号
 	tagBind = m_strTagBind;

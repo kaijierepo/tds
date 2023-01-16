@@ -1491,6 +1491,11 @@ bool TIME_SELECTOR::init(string time)
 		t = t.substr(0, 10);
 		time = str::replace(time, "this day", t);
 	}
+	else if (time.find("today") != string::npos) {
+		string t = timeopt::nowStr(false);
+		t = t.substr(0, 10);
+		time = str::replace(time, "today", t);
+	}
 
 	//集合选择
 	if (time.find("head@") != string::npos) {

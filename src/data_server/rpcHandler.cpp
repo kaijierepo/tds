@@ -2450,6 +2450,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 
 	//监测点组输入模式
+	json jTagNotExist = json::array();
 	vector<MP*> vecMps;
 	for (int i = 0; i < inputTag.size(); i++) {
 		string tag = inputTag[i];
@@ -2460,63 +2461,70 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		if (tag != "")
 		{
 			MP* pmp = prj.GetMPByTag(tag);
-			if (!pmp)
+			if (pmp)
 			{
-				resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
-				return;
+				pmp->input(val, &stTimeStamp, dataFile);
+				vecMps.push_back(pmp);
 			}
-
-			pmp->input(val, &stTimeStamp, dataFile);
-			vecMps.push_back(pmp);
+			else {
+				jTagNotExist.push_back(tag);
+			}
 		}
 	}
 
-	//监测点组中有任意一个点需要保存，则全部保存
+
+	if (vecMps.size() > 0) {
+		//监测点组中有任意一个点需要保存，则全部保存
 	//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
-	bool needSave = false;
-	for (int i = 0; i < vecMps.size(); i++) {
-		MP* pmp = vecMps[i];
-		if (pmp->needSaveToDB()) {
-			needSave = true;
-		}
-	}
-
-	if (needSave) {
+		bool needSave = false;
 		for (int i = 0; i < vecMps.size(); i++) {
 			MP* pmp = vecMps[i];
-			pmp->saveToDB();
+			if (pmp->needSaveToDB()) {
+				needSave = true;
+			}
 		}
-	}
 
-
-	//发送状态更新通知
-	json jStatusNotify;
-	json jUpdateTags = json::array();
-	json jUpdateVals = json::array();
-	for (int i = 0; i < vecMps.size(); i++) {
-		MP* pmp = vecMps[i];
-		jUpdateTags.push_back(pmp->getTag());
-		jUpdateVals.push_back(pmp->m_curVal);
-	}
-	jStatusNotify["tag"] = jUpdateTags;
-	jStatusNotify["val"] = jUpdateVals;
-	jStatusNotify["time"] = time;
-	rpcSrv.notify("statusUpdate", jStatusNotify);
-
-
-	//使用ioAddr来input忘了哪里调用了，后续观察删掉
-	for (int i = 0; i < inputIoAddr.size(); i++) {
-		string ioAddr = inputIoAddr[i];
-		json val = inputIoAddr[i];
-
-		if (ioAddr != "")
-		{
-			ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
-			pC->input(val);
+		if (needSave) {
+			for (int i = 0; i < vecMps.size(); i++) {
+				MP* pmp = vecMps[i];
+				pmp->saveToDB();
+			}
 		}
-	}
 
-	resp.result = "\"ok\"";
+
+		//发送状态更新通知
+		json jStatusNotify;
+		json jUpdateTags = json::array();
+		json jUpdateVals = json::array();
+		for (int i = 0; i < vecMps.size(); i++) {
+			MP* pmp = vecMps[i];
+			jUpdateTags.push_back(pmp->getTag());
+			jUpdateVals.push_back(pmp->m_curVal);
+		}
+		jStatusNotify["tag"] = jUpdateTags;
+		jStatusNotify["val"] = jUpdateVals;
+		jStatusNotify["time"] = time;
+		rpcSrv.notify("statusUpdate", jStatusNotify);
+
+
+		//使用ioAddr来input忘了哪里调用了，后续观察删掉
+		for (int i = 0; i < inputIoAddr.size(); i++) {
+			string ioAddr = inputIoAddr[i];
+			json val = inputIoAddr[i];
+
+			if (ioAddr != "")
+			{
+				ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
+				pC->input(val);
+			}
+		}
+
+		resp.result = "\"ok\"";
+	}
+	else {
+		resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
+		return;
+	}
 }
 
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)

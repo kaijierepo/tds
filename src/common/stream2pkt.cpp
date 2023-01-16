@@ -224,7 +224,7 @@ bool stream2pkt::PopPkt(string cpt)
 
 			memcpy_s(stream, iStreaBuffSize, stream + i + ilen, iStreamLen - i - ilen);
 			iStreamLen -= i + ilen;
-			iAbandonBytes = i;
+			iAbandonLen = i;
 
 			ResizeStreamBuff(iStreamLen);
 
@@ -240,31 +240,54 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
 	for (int i = 0; i < iStreamLen; i++)
 	{
-		int ilen = 0;
+		int iPopPktLen = 0;
 
+		//是否容错，允许正确包之间出现异常数据。如果一定不会出现可以减少检测次数提高性能
 		if (!faultTolerant && i > 0)
 			break;
 
-		ilen = pktCheckFn(stream + i, iStreamLen - i);
+		//检查前缀
+		if (m_prefix.size() > 0) {
+			if (iStreamLen - i < m_prefix.size())
+				return false;
 
-		if (ilen)
+			if (0!=memcmp(m_prefix.data(), stream + i, m_prefix.size())) {
+				continue;
+			}
+		}
+
+		//从前缀的后面1个字节开始检查数据包
+		iPopPktLen = pktCheckFn(stream + i + m_prefix.size(), iStreamLen - i - m_prefix.size());
+
+		if (iPopPktLen)
 		{
-			if (ilen > iPktBuffSize)
-				ResizePopPktBuff(ilen);
-
+			//记录丢弃数据
+			iAbandonLen = i;
 			if (i > 0)
-				abandonData = str::bytesToHexStr(stream, i);
+				abandonData = str::bytesToHexStr(stream, iAbandonLen);
 			else
 				abandonData = "";
 
-			memcpy_s(pkt, iPktBuffSize, stream + i, ilen);
-			iPktLen = ilen;
+			//拷贝出pkt
+			if (iPopPktLen > iPktBuffSize)
+				ResizePopPktBuff(iPopPktLen);
+			if(m_prefix.size()>0)
+				memcpy_s(pkt, iPktBuffSize, stream + iAbandonLen + m_prefix.size(), iPopPktLen);
+			else
+				memcpy_s(pkt, iPktBuffSize, stream + iAbandonLen, iPopPktLen);
+			iPktLen = iPopPktLen;
 
-			memcpy_s(stream, iStreaBuffSize, stream + i + ilen, iStreamLen - i - ilen);
-			iStreamLen -= i + ilen;
-			iAbandonBytes = i;
-
+			//从stream中删除
+			if (m_prefix.size() > 0) {
+				memcpy_s(stream, iStreaBuffSize, stream + iAbandonLen + iPopPktLen + m_prefix.size(), iStreamLen - iAbandonLen - iPopPktLen - m_prefix.size());
+				iStreamLen -= iAbandonLen + iPopPktLen + m_prefix.size();
+			}
+			else {
+				memcpy_s(stream, iStreaBuffSize, stream + iAbandonLen + iPopPktLen, iStreamLen - iAbandonLen - iPopPktLen);
+				iStreamLen -= iAbandonLen + iPopPktLen;
+			}
 			ResizeStreamBuff(iStreamLen);
+
 
 			return true;
 		}

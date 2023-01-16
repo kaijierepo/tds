@@ -74,6 +74,9 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
+	float a = 0.1;
+
+
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {
 		string s = argv[i];

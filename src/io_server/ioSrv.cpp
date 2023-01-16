@@ -515,6 +515,9 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 	}
 }
 
+
+//该函数，对于实现热组态是非常关键的函数
+//内存对象正在使用中，并且可能被多线程占用，但要支持删除修改
 void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string sNodeId = params["nodeID"].get<string>();
@@ -523,7 +526,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 	if (bDeleted)
 	{
 		saveConf();
-		rpcResp.result = "\"ok\"";
+		rpcResp.result = RPC_OK;
 		rpcSrv.notify("devDeleted", params);
 	}
 	else {
@@ -547,10 +550,10 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 		if (p)
 		{
+			//保留设备内的实时数据，如果修改设备和对象的绑定关系，可以让新绑定的对象立即有实时数据
 			p->loadConf(devConf);
 			devConf["ioAddr"] = p->getIOAddrStr(); //用于前端提示通知那台设备修改成功了
-			rpcSrv.notify("devModified", devConf); 
-			rpcResp.result = devConf.dump(2);  
+			rpcSrv.notify("devModified", devConf);  
 			modified = true;
 
 			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
@@ -566,6 +569,9 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 	if(modified)
 		saveConf();
+
+	if(rpcResp.error == "")
+		rpcResp.result = RPC_OK;
 }
 
 void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
@@ -1307,8 +1313,11 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 	}
 }
 
-void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
+//onRecvData需要组包
+bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
+	IOLogRecv((char*)pData, iLen, tdsSession->getRemoteAddr());
+
 	//协议检测
 	if (tdsSession->ioDevType == "")//应用层协议类型检测
 	{
@@ -1422,8 +1431,8 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 					if (pab->abandonData != "")
 					{
 						string remoteAddr = tdsSession->getRemoteAddr();
-						LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-						tdsSession->abandonLen += pab->iAbandonBytes;
+						LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+						tdsSession->abandonLen += pab->iAbandonLen;
 					}
 					tdsSession->iALProto = pab->m_protocolType;
 					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
@@ -1448,25 +1457,47 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 		}
 		else
 		{
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pData, iLen);
-			bool bRegPkt = false;
-			if (!tdsSession->m_bAppDataRecved)//如果是第一包，尝试检查是不是rpc注册包
-			{
-				if (pab->PopPkt(IsValidPkt_TDSP))
-				{
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession, true);
-					LOG("Modbus网关注册数据包:" + str::bytesToHexStr(pData, iLen));
+			unsigned char* pGwData = pData;
+			int gwLen = iLen;
+			//485网关启用前缀，前缀就是注册包
+			/*if (tds->conf->getInt("485GwPrefix", 0)) {
+				if (tdsSession->regPkt.size() > 0) {
+					if (tdsSession->regPkt.size() < iLen) {
+						if (memcmp(tdsSession->regPkt.data(), pData, tdsSession->regPkt.size()) == 0) {
+							pGwData = pData + tdsSession->regPkt.size();
+							gwLen = iLen - tdsSession->regPkt.size();
+						}
+						else {
+							string s1 = str::bytesToHexStr(tdsSession->regPkt);
+							string s2 = str::bytesToHexStr(pData, iLen);
+							LOG("[error][485网关] 前缀与注册包不一致,注册包:" + s1 + ",收到数据:" + s2);
+							return;
+						}
+					}
+					else {
+						string s1 = str::bytesToHexStr(tdsSession->regPkt);
+						string s2 = str::bytesToHexStr(pData, iLen);
+						LOG("[error][485网关] 启用了数据包前缀，数据包的长度没有大于注册包前缀,注册包:" + s1 + ",收到数据:" + s2);
+					}
 				}
-			}
+				else {
+					LOG("[error][485网关] 启用了数据包前缀，但是没有收到注册包");
+					return;
+				}
+			}*/
+			
+
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pGwData, gwLen);
+
 
 			while (pab->PopPkt(IsValidPkt_ModbusRTU))
 			{
 				if (pab->abandonData != "")
 				{
 					string remoteAddr = tdsSession->getRemoteAddr();
-					LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-					tdsSession->abandonLen += pab->iAbandonBytes;
+					LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+					tdsSession->abandonLen += pab->iAbandonLen;
 				}
 				tdsSession->iALProto = pab->m_protocolType;
 				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
@@ -1481,12 +1512,15 @@ void ioServer::handleAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			if (pab->abandonData != "")
 			{
 				string remoteAddr = tdsSession->getRemoteAddr();
-				LOG("[error]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-				tdsSession->abandonLen += pab->iAbandonBytes;
+				LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+				tdsSession->abandonLen += pab->iAbandonLen;
 			}
 			onRecvPkt_ioDev((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
+
+	tdsSession->m_bAppDataRecved = true; //放在上方处理的后面
+	return true;
 }
 
 void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
@@ -1644,6 +1678,13 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr
 			string reg = str::fromBuff((char*)pData, iLen);
 			LOG("收到首发注册包," + reg);
 			ioSrv.handleDevOnline(reg, tdsSession);
+
+			//如果开启了前缀功能，记录注册包作为前缀
+			if (tds->conf->getInt("485GwPrefix", 0)) {
+				tdsSession->regPkt.resize(iLen);
+				memcpy(tdsSession->regPkt.data(), pData, iLen);
+				tdsSession->m_alBuf.m_prefix = tdsSession->regPkt;
+			}
 			return true;
 		}
 	}
@@ -1651,19 +1692,7 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr
 	return false;
 }
 
-//onRecvData需要组包
-bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
-{
-	IOLogRecv((char*)pData, iLen,tdsSession->getRemoteAddr());
 
-	DWORD dwDataLen = iLen;
-
-	//处理来自于io设备的数据
-	handleAppLayerData(pData, iLen, tdsSession, isPkt);
-
-	tdsSession->m_bAppDataRecved = true;
-	return true;
-}
 
 
 void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {

@@ -135,7 +135,6 @@ public:
 	void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port);
 
 	//传输层处理
-	void handleAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 	void onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
 	void onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);

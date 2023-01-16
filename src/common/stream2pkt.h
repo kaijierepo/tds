@@ -7,7 +7,7 @@ typedef int (*fp_validPktCheck)(unsigned char* pData, int iLen);
 class stream2pkt{
 public:
 	void Init() {
-		iAbandonBytes = 0;
+		iAbandonLen = 0;
 		iPktLen = 0;
 		iStreamLen = 0;
 		m_protocolType = APP_LAYER_PROTO::UNKNOWN;
@@ -43,6 +43,8 @@ public:
 		Init();
 	}
 
+	vector<byte> m_prefix;
+
 	//流数据
 	unsigned char* stream;
 	int iStreaBuffSize;
@@ -54,7 +56,7 @@ public:
 	int iPktLen;
 	string m_protocolType;
 
-	int iAbandonBytes;
+	int iAbandonLen;
 	string abandonData;
 
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;

@@ -18,15 +18,18 @@ public:
 	tcpClt cLeft;
 	tcpClt cRight;
 
+	bool enable_pkt_log;
+
 
 	int left_s_port;
 	int left_c_port;
 	string left_c_ip;
-
+	string left_reg_pkt;
 
 	int right_s_port;
 	int right_c_port;
 	string right_c_ip;
+	string right_reg_pkt;
 
 	bool logInText;
 

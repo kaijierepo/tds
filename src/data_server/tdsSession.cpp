@@ -162,10 +162,10 @@ string TDS_SESSION::GetClientIp()
              {
                  CWSPPkt wsp;
                  wsp.pack(p, len, WS_TEXT_FRAME);
-                 pTcpSession->send((char*)wsp.data, wsp.len);
+                 iSend = pTcpSession->send((char*)wsp.data, wsp.len);
              }
              else {
-                 pTcpSession->send((char*)p, len);
+                 iSend = pTcpSession->send((char*)p, len);
              }
          }
      }

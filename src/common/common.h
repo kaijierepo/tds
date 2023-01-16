@@ -55,6 +55,11 @@ public:
 		count++;
 		cv.notify_one();
 	}
+
+	void reset() {
+		count = 0;
+	}
+
 	void wait()
 	{
 		std::unique_lock<std::mutex> lock(mtx);

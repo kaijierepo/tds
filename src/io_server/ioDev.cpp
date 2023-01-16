@@ -77,7 +77,7 @@ bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 
 			if (tagBind != "") {
 				inputTags.push_back(tagBind);
-				inputVals.push_back(jVal);
+				inputVals.push_back(pC->m_curVal);
 			}
 		}
 	}
@@ -729,6 +729,9 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 		if (p->m_confNodeId == nodeID)
 		{
 			m_vecChildDev.erase(m_vecChildDev.begin() + i);
+
+			//热组态关键机制，stop必须解除所有的设备占用
+			p->stop();
 			delete p;
 			ret = true;
 			break;
@@ -862,7 +865,23 @@ string ioDev::getDevAddrStr(bool ignorePort)
 	string devAddr;
 	if (m_jDevAddr.is_object())
 	{
-		if (m_addrMode == DEV_ADDR_MODE::deviceID)
+		//通道模式下m_addrMode无效
+		if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
+		{
+			string regTypeAddr;
+			string regType = m_jDevAddr["regType"].get<string>();
+			if (regType == MODBUS_REG_TYPE::coil)
+				regTypeAddr = "C";
+			else if (regType == MODBUS_REG_TYPE::discreteInput)
+				regTypeAddr = "DI";
+			else if (regType == MODBUS_REG_TYPE::holdingRegister)
+				regTypeAddr = "HR";
+			else if (regType == MODBUS_REG_TYPE::inputRegister)
+				regTypeAddr = "IR";
+
+			devAddr = regTypeAddr + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
+		}
+		else if (m_addrMode == DEV_ADDR_MODE::deviceID)
 		{
 			if (m_jDevAddr.contains("id")) {
 				devAddr = m_jDevAddr["id"].get<string>();
@@ -875,7 +894,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		{
 			string ip;
 			int port = 0;
-			if(m_jDevAddr["ip"].is_string())
+			if (m_jDevAddr["ip"].is_string())
 				ip = m_jDevAddr["ip"].get<string>();
 			if (m_jDevAddr["port"].is_number_integer())
 			{
@@ -883,7 +902,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			}
 
 			devAddr = ip;
-			if(!ignorePort)
+			if (!ignorePort)
 				devAddr += ":" + str::fromInt(port);
 		}
 		else if (m_addrMode == DEV_ADDR_MODE::tcpServer)
@@ -907,21 +926,6 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			devAddr = "UDP-" + ip;
 			if (!ignorePort)
 				devAddr += ":" + str::fromInt(port);
-		}
-		else if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
-		{
-			string regTypeAddr;
-			string regType = m_jDevAddr["regType"].get<string>();
-			if (regType == MODBUS_REG_TYPE::coil)
-				regTypeAddr = "C";
-			else if (regType == MODBUS_REG_TYPE::discreteInput)
-				regTypeAddr = "DI";
-			else if (regType == MODBUS_REG_TYPE::holdingRegister)
-				regTypeAddr = "HR";
-			else if (regType == MODBUS_REG_TYPE::inputRegister)
-				regTypeAddr = "IR";
-
-			devAddr = regTypeAddr + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
 		}
 	}
 	else if(m_jDevAddr.is_string()){
@@ -999,8 +1003,6 @@ bool ioDev::sendData(char* pData, int iLen)
 		if (pIOSession)
 		{
 			pIOSession->send(pData, iLen);
-			if (m_bEnableIoLog)
-				IOLogSend((char*)pData, iLen, true, pIOSession->getRemoteAddr());
 		}
 		//通过协议适配器发送给设备
 		else {
