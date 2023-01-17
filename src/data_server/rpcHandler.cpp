@@ -545,6 +545,23 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	{
 		//result = rpc_getStreamInfo(params, error);
 	}
+	else if (method == "getYsToken") {
+		string tag = params["tag"];
+		MP* pmp = prj.GetMPByTag(tag);
+		if (pmp) {
+			map<string, EZVIZ_ACCESS_INFO>::iterator iter = prj.m_mapEzvizAccess.find(pmp->m_serialNo);
+			if (iter != prj.m_mapEzvizAccess.end()) {
+				EZVIZ_ACCESS_INFO& info = iter->second;
+				json jrlt;
+				jrlt["token"] = info.token;
+				rpcResp.result = jrlt.dump();
+			}
+		}
+
+		if (rpcResp.result == "") {
+			rpcResp.error = RPC_FAIL;
+		}
+	}
 #ifdef ENABLE_GENICAM
 	else if (method == "setStream")
 	{

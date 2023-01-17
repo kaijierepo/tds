@@ -153,6 +153,7 @@ public:
 };
 
 #define RPC_OK "\"ok\""
+#define RPC_FAIL "\"fail\""
 
 class RPC_RESP {
 public:
