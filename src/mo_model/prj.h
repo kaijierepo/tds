@@ -27,6 +27,7 @@ struct EZVIZ_ACCESS_INFO {
 	string secret;
 	string token;
 	string flvUrl;
+	string ezopenUrl;
 	TIME lastUpdate;
 };
 

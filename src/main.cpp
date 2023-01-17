@@ -80,7 +80,7 @@ void updateEzvizAccessInfo() {
 			params = {
 				{"accessToken",info.token},
 				{"deviceSerial",info.serialNo},
-				{"protocol","4"}
+				{"protocol","4"} //flv协议
 			};
 
 			resp = cli.Post("/api/lapp/v2/live/address/get", params);
@@ -91,6 +91,25 @@ void updateEzvizAccessInfo() {
 					json jUrl = jData["url"];
 					if (jUrl != nullptr) {
 						info.flvUrl = jUrl.get<string>();
+					}
+				}
+			}
+
+
+			params = {
+				{"accessToken",info.token},
+				{"deviceSerial",info.serialNo},
+				{"protocol","1"} //ezopen协议
+			};
+
+			resp = cli.Post("/api/lapp/v2/live/address/get", params);
+			if (resp != nullptr) {
+				json jResp = json::parse(resp->body);
+				json jData = jResp["data"];
+				if (jData != nullptr) {
+					json jUrl = jData["url"];
+					if (jUrl != nullptr) {
+						info.ezopenUrl = jUrl.get<string>();
 						info.lastUpdate = timeopt::now();
 					}
 				}

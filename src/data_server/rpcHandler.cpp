@@ -396,6 +396,145 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	return bHandled;
 }
 
+//此处有两种可能的设计，萤石云设计成ioDev，通过ioDev中转
+//但这样子服务的控制还要先发给子服务，子服务再发给萤石云，有点多余
+//目前采用主服务获取到子服务的萤石云配置后，直接发给萤石云
+bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
+		string addr = "https://open.ys7.com";
+		httplib::Client cli(addr);
+		EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
+		//操作命令：0 - 上，1 - 下，2 - 左，3 - 右，4 - 左上，5 - 左下，6 - 右上，7 - 右下，8 - 放大，9 - 缩小，10 - 近焦距，11 - 远焦距
+		string ezvizDir;
+		if (method.find("start") != string::npos) {
+			string dir = params["dir"];
+			if (method == "startPanTilt")
+			{
+				if (dir == "up") ezvizDir = "0";
+				else if (dir == "down") ezvizDir = "1";
+				else if (dir == "left") ezvizDir = "2";
+				else if (dir == "right") ezvizDir = "3";
+			}
+			else if (method == "startZoom") {
+				if (dir == "in") ezvizDir = "8";
+				else if (dir == "out") ezvizDir = "9";
+			}
+			else if (method == "startFocus") {
+				if (dir == "near") ezvizDir = "10";
+				else if (dir == "far") ezvizDir = "11";
+			}
+
+			params = {
+				{"accessToken",info.token},
+				{"deviceSerial",info.serialNo},
+				{"channelNo","1"},
+				{"direction",ezvizDir},
+				{"speed","1"}
+			};
+
+			auto resp = cli.Post("/api/lapp/device/ptz/start", params);
+		}
+		else {
+			params = {
+				{"accessToken",info.token},
+				{"deviceSerial",info.serialNo},
+				{"channelNo","1"}
+			};
+
+			auto resp = cli.Post("/api/lapp/device/ptz/stop", params);
+		}
+		rpcResp.result = "\"ok\"";
+	}
+	else {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "Ezviz access info not foud");
+	}
+
+	return true;
+}
+
+//通过ioDev进行
+bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	ioDev* p = ioSrv.getIODevByTag(tag);
+	if (!p) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "no io device bind to specified tag");
+		return true;
+	}
+
+	if (!p->isCamera()) {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "io device binded is not a camera");
+		return true;
+	}
+
+	ioDev_camera* pCam = (ioDev_camera*)p;
+	if (method == "startPanTilt")
+	{
+		string dir = params["dir"];
+		float panSpeed = params["panSpeed"].get<float>();
+		float tiltSpeed = params["tiltSpeed"].get<float>();
+		pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
+
+		LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
+
+		if (params.contains("time")) {
+			int time = params["time"].get<int>();
+			json paramAsynCall;
+			paramAsynCall["tag"] = tag;
+			tds->callAsyn("stopPanTilt", paramAsynCall.dump(), time);
+		}
+	}
+	else if (method == "stopPanTilt")
+	{
+		pCam->ptz_stopMove();
+	}
+	else if (method == "startZoom")
+	{
+		string dir = params["dir"];
+		float speed = 0;
+		if (params.contains("speed")) {
+			speed = params["speed"].get<float>();
+		}
+		pCam->ptz_startZoom(dir);
+
+		if (params.contains("time")) {
+			int time = params["time"].get<int>();
+			json paramAsynCall;
+			paramAsynCall["tag"] = tag;
+			tds->callAsyn("stopZoom", paramAsynCall.dump(), time);
+		}
+	}
+	else if (method == "stopZoom")
+	{
+		pCam->ptz_stopZoom();
+	}
+	else if (method == "startFocus")
+	{
+		string dir = params["dir"];
+		float speed = 0;
+		if (params.contains("speed")) {
+			speed = params["speed"].get<float>();
+		}
+		pCam->ptz_startFocus(dir);
+
+		if (params.contains("time")) {
+			int time = params["time"].get<int>();
+			json paramAsynCall;
+			paramAsynCall["tag"] = tag;
+			tds->callAsyn("stopFocus", paramAsynCall.dump(), time);
+		}
+	}
+	else if (method == "stopFocus")
+	{
+		pCam->ptz_stopFocus();
+	}
+	rpcResp.result = "\"ok\"";
+
+	return true;
+}
+
+
+
 bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -488,80 +627,20 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			method == "startZoom" ||
 			method == "stopZoom" ||
 			method == "startFocus" ||
-			method == "stopFocus") {
-			ioDev* p = ioSrv.getIODevByTag(tag);
-			if (!p) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "no io device bind to specified tag");
-				return true;
+			method == "stopFocus") 
+		{
+			MP* pmp = prj.GetMPByTag(tag);
+			if (!pmp) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 			}
-
-			if (!p->isCamera()) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "io device binded is not a camera");
-				return true;
-			}
-
-			ioDev_camera* pCam = (ioDev_camera*)p;
-			if (method == "startPanTilt")
-			{
-				string dir = params["dir"];
-				float panSpeed = params["panSpeed"].get<float>();
-				float tiltSpeed = params["tiltSpeed"].get<float>();
-				pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
-
-				LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
-
-				if (params.contains("time")) {
-					int time = params["time"].get<int>();
-					json paramAsynCall;
-					paramAsynCall["tag"] = tag;
-					tds->callAsyn("stopPanTilt", paramAsynCall.dump(), time);
+			else {
+				if (pmp->m_mediaSrcType == "ezviz") {
+					handleMethodCall_ptz_cloud(method, pmp, params, rpcResp, session);
 				}
+				else
+					handleMethodCall_ptz_ioDev(method, tag, params, rpcResp, session);
 			}
-			else if (method == "stopPanTilt")
-			{
-				pCam->ptz_stopMove();
-			}
-			else if (method == "startZoom")
-			{
-				string dir = params["dir"];
-				float speed = 0;
-				if (params.contains("speed")) {
-					speed = params["speed"].get<float>();
-				}
-				pCam->ptz_startZoom(dir);
-
-				if (params.contains("time")) {
-					int time = params["time"].get<int>();
-					json paramAsynCall;
-					paramAsynCall["tag"] = tag;
-					tds->callAsyn("stopZoom", paramAsynCall.dump(), time);
-				}
-			}	
-			else if (method == "stopZoom")
-			{
-				pCam->ptz_stopZoom();
-			}
-			else if (method == "startFocus")
-			{
-				string dir = params["dir"];
-				float speed = 0;
-				if (params.contains("speed")) {
-					speed = params["speed"].get<float>();
-				}
-				pCam->ptz_startFocus(dir);
-
-				if (params.contains("time")) {
-					int time = params["time"].get<int>();
-					json paramAsynCall;
-					paramAsynCall["tag"] = tag;
-					tds->callAsyn("stopFocus", paramAsynCall.dump(), time);
-				}
-			}
-			else if (method == "stopFocus")
-			{
-				pCam->ptz_stopFocus();
-			}
-			rpcResp.result = "\"ok\"";
+			return true;
 		}
 		else if (method == "openStream") {
 			MP* pmp = prj.GetMPByTag(tag);
@@ -3285,9 +3364,11 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
 			EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
 			j["flv"] = info.flvUrl;
+			j["ezopen"] = info.ezopenUrl;
 		}
 		else {
 			j["flv"] = "";
+			j["ezopen"] = "";
 		}
 		return j;
 	}
