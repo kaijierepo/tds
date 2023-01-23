@@ -57,6 +57,7 @@ void updateEzvizAccessInfo() {
 
 			string addr = "https://open.ys7.com";
 			httplib::Client cli(addr);
+			cli.enable_server_certificate_verification(false);
 
 			//更新token。 token默认过期时间7天
 			httplib::Params params = {
@@ -111,8 +112,14 @@ void updateEzvizAccessInfo() {
 					if (jUrl != nullptr) {
 						info.ezopenUrl = jUrl.get<string>();
 						info.lastUpdate = timeopt::now();
+
+						LOG("[萤石云] 接入信息更新tag=%s,serialNo=%s,token=%s,ezopenUrl=%s", info.tag.c_str(), info.serialNo.c_str(), info.token.c_str(), info.ezopenUrl.c_str());
 					}
 				}
+			}
+			else {
+				auto err = resp.error();
+				LOG("[warn][萤石云] 请求错误:%s", httplib::to_string(err).c_str());
 			}
 		}
 	}
@@ -417,6 +424,7 @@ int main(int argc, char** argv)
 				if (pmp->m_valType == "video" && pmp->m_mediaSrcType == "ezviz") {
 					if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
 						EZVIZ_ACCESS_INFO  info;
+						info.tag = pmp->getTag();
 						info.serialNo = pmp->m_serialNo;
 						info.appKey = pmp->m_appKey;
 						info.secret = pmp->m_secret;

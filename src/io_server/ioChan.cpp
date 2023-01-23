@@ -83,11 +83,17 @@ bool ioChannel::toJson(json& conf, json opt)
 	DEV_QUERIER querier = parseQueryOpt(opt);
 
 	json jDevAddr;
-	for (auto& i : m_jDevAddr.items()) {
-		if (i.value() != nullptr) {
-			jDevAddr[i.key()] = i.value();
+	if (m_jDevAddr.is_object()) {
+		for (auto& i : m_jDevAddr.items()) {
+			if (i.value() != nullptr) {
+				jDevAddr[i.key()] = i.value();
+			}
 		}
 	}
+	else {
+		jDevAddr = m_jDevAddr;
+	}
+
 	conf["addr"] = jDevAddr;
 
 	if (querier.getConf) {

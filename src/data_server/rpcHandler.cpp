@@ -404,6 +404,7 @@ bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params
 	if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
 		string addr = "https://open.ys7.com";
 		httplib::Client cli(addr);
+		cli.enable_server_certificate_verification(false); //这句不加上可能返回 serverSSLVerification错误
 		EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
 		//操作命令：0 - 上，1 - 下，2 - 左，3 - 右，4 - 左上，5 - 左下，6 - 右上，7 - 右下，8 - 放大，9 - 缩小，10 - 近焦距，11 - 远焦距
 		string ezvizDir;
@@ -434,6 +435,8 @@ bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params
 			};
 
 			auto resp = cli.Post("/api/lapp/device/ptz/start", params);
+			if (resp != nullptr) {
+			}
 		}
 		else {
 			params = {
@@ -545,7 +548,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	{
 		//result = rpc_getStreamInfo(params, error);
 	}
-	else if (method == "getYsToken") {
+	else if (method == "getYsAccessInfo") {
 		string tag = params["tag"];
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp) {
@@ -554,6 +557,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				EZVIZ_ACCESS_INFO& info = iter->second;
 				json jrlt;
 				jrlt["token"] = info.token;
+				jrlt["serialNo"] = info.serialNo;
 				rpcResp.result = jrlt.dump();
 			}
 		}
@@ -613,13 +617,35 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
 			return true; 
 
-		OBJ* pObj = prj.queryObj(tag);
+		MP* pObj =(MP*) prj.queryObj(tag);
 		if (!pObj) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "object of specified tag not found");
 			return true;
 		}
 
+
+		//通过第三方云平台进行控制。如萤石云。该模式无需转发到子服务
+		if (pObj->m_mediaSrcType == "ezviz") {
+			if (method == "startPanTilt" ||
+				method == "stopPanTilt" ||
+				method == "startZoom" ||
+				method == "stopZoom" ||
+				method == "startFocus" ||
+				method == "stopFocus")
+			{
+				handleMethodCall_ptz_cloud(method, pObj, params, rpcResp, session);
+				return true;
+			}
+			else if (method == "openStream") {
+				rpcResp.result = RPC_OK;
+				return true;
+			}
+		}
+
+
+		//TDS系统内控制。 有转发给子服务和直接处理两种情况
 		OBJ* childTds = pObj->getOwnerChildTds();
+		//转发给子服务
 		if (childTds) {
 			if (pMasterDs) {
 				string childTdsTag = childTds->getTag();
@@ -639,6 +665,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				}
 			}
 		}
+		//直接处理
 		else if (method == "startPanTilt" ||
 			method == "stopPanTilt" ||
 			method == "startZoom" ||
@@ -646,21 +673,17 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			method == "startFocus" ||
 			method == "stopFocus") 
 		{
-			MP* pmp = prj.GetMPByTag(tag);
+			MP* pmp = pObj;
 			if (!pmp) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 			}
 			else {
-				if (pmp->m_mediaSrcType == "ezviz") {
-					handleMethodCall_ptz_cloud(method, pmp, params, rpcResp, session);
-				}
-				else
 					handleMethodCall_ptz_ioDev(method, tag, params, rpcResp, session);
 			}
 			return true;
 		}
 		else if (method == "openStream") {
-			MP* pmp = prj.GetMPByTag(tag);
+			MP* pmp = pObj;
 			if (!pmp) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 			}
@@ -691,7 +714,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
 			}
 			else {
-				MP* pmp = prj.GetMPByTag(tag);
+				MP* pmp = pObj;
 				if (!pmp) {
 					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 				}

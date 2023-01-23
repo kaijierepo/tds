@@ -22,6 +22,7 @@ class MP;
 class TAG_SELECTOR;
 
 struct EZVIZ_ACCESS_INFO {
+	string tag;
 	string serialNo;
 	string appKey;
 	string secret;

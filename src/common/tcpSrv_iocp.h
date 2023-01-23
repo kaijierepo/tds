@@ -202,19 +202,12 @@ public:
 	bool run(ITcpServerCallBack* pUser, int port, string strLocalIP = "");
 	void stop();
 
-	void disconnect(string remoteAddr);
-
 	bool SendData(char* pData, size_t iLen, string remoteIP);
 	bool SendData(char* pData, size_t iLen);
 	ITcpServerCallBack* m_pCallBackUser;
 
-	std::map<tcpSession*, tcpSession*> m_mapTcpSessions;
-	std::mutex m_csClientVectorLock;
-
 	bool m_bStarted;
 	bool m_bReuseAddr;
-
-	string m_strName;
 
 	void Log(char* sz);
 	void (*pLog)(char*);
@@ -222,8 +215,53 @@ public:
 public:
 	tcpSrv();
 	~tcpSrv();
-	
+	bool StartListen(unsigned short port, string ip);
+	DWORD SysTime2Unix(TIME& sDT);
+	int CalcTimePassSecond(TIME* stLast, TIME* stNow = NULL);
+	void ConnectionMaintain();
+	/*
+	释放3个部分步骤：
+	1. 清空IOCP线程队列，退出线程
+	2. 清空等待accept套接字m_vecAcps
+	3. 清空已连接套接字m_vecContInfo并清空缓存
+	*/
+	void CloseServer();
+	//启动CPU*2个线程，返回已启动的线程个数
+	int StartWorkThreadPool();
+	std::string formatStr(const char* pszFmt, ...);
+	//处理accept请求，NumberOfBytes=0表示没有收到第一帧数据， >0时表示收到了第一帧数据
+	bool DoAccept(SOCKET sockAccept, SOCKADDR_IN* ClientAddr);
+	bool PostRecv(COverlappedIOInfo* info);
+	bool DoRecv(COverlappedIOInfo* info);
+	bool DeleteLink(SOCKET s);
+	void disconnect(string remoteAddr);
+
+	bool IsIPOnline(string remoteIP);
+	inline string GetIOCPName() {
+		return m_strName;
+	}
+	inline void SettIOCPName(string strName) {
+		m_strName = strName;
+	}
+	inline void SetMonitoring(string value) {
+		m_strMonitoringIP = value;
+	}
+
+	void ClearConnHistoryInfo();
+
+	WSAData m_wsaData;
+	SOCKET m_sListen;
+	std::vector<COverlappedIOInfo*> m_vecContInfo;
+	std::mutex m_csClientVectorLock;
+	CIOCP m_iocp;
+	string m_strMonitoringIP;
+
+	static void ListenThread_IOCPServer(LPVOID lpParam);
 	string m_strServerIP;
 	int m_iServerPort;
 	int keepAliveTimeout;
+
+	string m_strName;
+	bool m_bStopRecv;//该功能用于通信调试分析诊断问题，本地停止从Tcp缓冲接收数据，导致对端Tcp缓冲区满，测试对端程序处理缓冲区满时候的健壮性
+	DWORD m_lastError;
 };
