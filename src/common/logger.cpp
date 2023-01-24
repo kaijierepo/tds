@@ -78,7 +78,7 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
-	strLogDirUtf16 = charCodec::utf8toUtf16(fs::appPath() + "\\log");
+	strLogDirUtf16 = charCodec::utf8_to_utf16(fs::appPath() + "\\log");
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
@@ -190,7 +190,7 @@ string Clogger::logInternal(string info)
 	if (ll < logLevel)
 		return logline;
 
-	info = charCodec::utf8toAnsi(logline);
+	info = charCodec::utf8_to_gb(logline);
 	setConsoleTextColor(ll);
 	cout << info;
 	printf("\r\n");

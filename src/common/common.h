@@ -2,8 +2,6 @@
 #define TDS_COMMON
 
 #include <time.h>
-#include <io.h>
-#include <tchar.h>
 #include <queue>
 #include <string>
 #include <map>
@@ -11,11 +9,8 @@
 #include <thread>
 #include <iostream>
 #include <exception>
-
-#include <devguid.h>
 #include <mutex>
 #include <condition_variable>
-#pragma comment (lib, "Setupapi.lib")
 #include <vector>
 #include <map>
 #include <regex>
@@ -26,18 +21,25 @@
 #include <Commdlg.h>
 #include <ShlObj_core.h>
 #include <SetupAPI.h>
+#include <devguid.h>
+#pragma comment (lib, "Setupapi.lib")
+#elif LINUX
+#include <uuid/uuid.h>
+#include <unistd.h>
+#include <iconv.h>
+#include <stdarg.h>
 #endif
 
 using namespace std;
 struct TIME {
-	WORD wYear;
-	WORD wMonth;
-	WORD wDay;
-	WORD wHour;
-	WORD wMinute;
-	WORD wSecond;
-	WORD wMilliseconds;
-	WORD wDayOfWeek;
+	unsigned short wYear;
+	unsigned short wMonth;
+	unsigned short wDay;
+	unsigned short wHour;
+	unsigned short wMinute;
+	unsigned short wSecond;
+	unsigned short wMilliseconds;
+	unsigned short wDayOfWeek;
 
 	TIME() {
 		wYear = 1970;
@@ -217,7 +219,7 @@ namespace timeopt {
 	TIME str2st(string str);
 	int HMS2Sec(string hms);
 	bool isRelative(string time);
-	DWORD duration2sec(string strTime);
+	unsigned long duration2sec(string strTime);
 	int dhmsSpan2Seconds(string timeSpan);
 	string rel2abs(string time);
 	string st2str(TIME t);
@@ -278,7 +280,6 @@ namespace fs {
 	void getFolderList(vector<string>& list, string strFolder);
 	void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder = false, bool recursive = false,string suffix="*");
 	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
-	vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter = NULL, char* title = NULL, char* fileName = NULL, char* defExt = NULL, char* initDirectory = NULL);
 }
 namespace path {
 	string normalization(string& s);

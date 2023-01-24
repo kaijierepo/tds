@@ -1,7 +1,5 @@
-﻿#include "pch.h"
-#include "common.h"
-
-
+﻿#include "common.h"
+#include <filesystem>
 
 using namespace std;
 
@@ -42,6 +40,16 @@ namespace common {
 	}
 }
 
+
+int _vscprintf_cross(const char* format, va_list pargs) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, pargs);
+	retval = vsnprintf(NULL, 0, format, argcopy);
+	va_end(argcopy);
+	return retval;
+}
+
 namespace str {
 	std::string format(const char* pszFmt, ...)
 	{
@@ -49,10 +57,10 @@ namespace str {
 		va_list args;
 		va_start(args, pszFmt);
 		{
-			int nLength = _vscprintf(pszFmt, args);
+			int nLength = _vscprintf_cross(pszFmt, args);
 			nLength += 1;  //上面返回的长度是包含\0，这里加上
 			std::vector<char> vectorChars(nLength);
-			_vsnprintf_s(vectorChars.data(), nLength, nLength, pszFmt, args);
+			vsnprintf(vectorChars.data(), nLength, pszFmt, args);
 			str.assign(vectorChars.data());
 		}
 		va_end(args);
@@ -64,6 +72,7 @@ namespace charCodec {
 
 	string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
@@ -71,9 +80,14 @@ namespace charCodec {
 		string str = charstr;
 		delete charstr;
 		return str;
+#endif
+#ifdef LINUX
+		return "";
+#endif
 	}
 	string utf16_to_gb(wstring instr)
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
@@ -81,9 +95,14 @@ namespace charCodec {
 		string str = charstr;
 		delete charstr;
 		return str;
+#endif
+#ifdef LINUX
+		return "";
+#endif
 	}
 	wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -91,9 +110,14 @@ namespace charCodec {
 		wstring str = wcharstr;
 		delete wcharstr;
 		return str;
+#endif
+#ifdef LINUX
+		return "";
+#endif
 	}
 	wstring gb_to_utf16(string instr)
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -101,10 +125,15 @@ namespace charCodec {
 		wstring str = wcharstr;
 		delete wcharstr;
 		return str;
+#endif
+#ifdef LINUX
+		return "";
+#endif
 	}
 	
 	string utf8_to_gb(string instr) //utf-8-->ansi
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -116,9 +145,38 @@ namespace charCodec {
 		delete wcharstr;
 		delete charstr;
 		return charstrtemp;
+#endif
+#ifdef LINUX
+		int ret = 0;
+		size_t inlen = instr.size() + 1;
+		size_t outlen = 2*inlen;
+
+		// duanqn: The iconv function in Linux requires non-const char *
+		// So we need to copy the source string
+		char* inbuf = (char*)malloc(len);
+		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+									// so we use another pointer to keep the address
+		memcpy(inbuf, src, len);
+
+		char* outbuf =(char*)malloc(outlen);
+		memset(outbuf, 0, outlen);
+		iconv_t cd;
+		cd = iconv_open("GBK", "UTF-8");
+		if (cd != (iconv_t)-1) {
+			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+			if (ret != 0) {
+				printf("iconv failed err: %s\n", strerror(errno));
+			}
+
+			iconv_close(cd);
+		}
+		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		return outbuf;
+#endif
 	}
 	string gb_to_utf8(string instr) //ansi-->utf-8
 	{
+#ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -130,6 +188,33 @@ namespace charCodec {
 		delete wcharstr;
 		delete charstr;
 		return charstrtemp;
+#endif
+#ifdef LINUX
+		int ret = 0;
+		size_t inlen = strlen(src) + 1;
+		size_t outlen = 2*inlen;
+
+		// duanqn: The iconv function in Linux requires non-const char *
+		// So we need to copy the source string
+		char* inbuf = (char*)malloc(len);
+		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+									// so we use another pointer to keep the address
+		memcpy(inbuf, src, len);
+
+		char* outbuf = (char*)malloc(outlen);
+		memset(outbuf, 0, outlen);
+		iconv_t cd;
+
+		cd = iconv_open("UTF-8", "GBK");
+		if (cd != (iconv_t)-1) {
+			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+			if (ret != 0)
+				printf("iconv failed err: %s\n", strerror(errno));
+			iconv_close(cd);
+		}
+		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		return outbuf;
+#endif
 	}
 
 	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
@@ -784,18 +869,22 @@ namespace str {
 }
 namespace timeopt {
 	TIME now() {
-		SYSTEMTIME st;
-		GetLocalTime(&st);
+		auto now = std::chrono::system_clock::now();
+		//通过不同精度获取相差的毫秒数
+		uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+		time_t tt = std::chrono::system_clock::to_time_t(now);
+		auto time_tm = localtime(&tt);
+
 		TIME t;
-		
-		t.wYear = st.wYear;
-		t.wMonth = st.wMonth;
-		t.wDay = st.wDay;
-		t.wHour = st.wHour;
-		t.wMinute = st.wMinute;
-		t.wSecond = st.wSecond;
-		t.wMilliseconds = st.wMilliseconds;
-		t.wDayOfWeek = st.wDayOfWeek;
+		t.wYear = time_tm->tm_year + 1900;
+		t.wMonth = time_tm->tm_mon + 1;
+		t.wDay = time_tm->tm_mday;
+		t.wHour = time_tm->tm_hour;
+		t.wMinute = time_tm->tm_min;
+		t.wSecond = time_tm->tm_sec;
+		t.wMilliseconds = dis_millseconds;
+		t.wDayOfWeek = time_tm->tm_wday;
 
 		return t;
 	}
@@ -880,9 +969,9 @@ namespace timeopt {
 		return false;
 	}
 
-	DWORD duration2sec(string strTime)
+	unsigned long duration2sec(string strTime)
 	{
-		DWORD dwSecond = 0;
+		unsigned long dwSecond = 0;
 
 		std::smatch m;
 		std::regex e("([0-9]*)([d,h,m,s])");
@@ -1131,6 +1220,7 @@ namespace sys {
 	vector<string> getCOMList()
 	{
 		vector<string> list;
+#ifdef ENABLE_SERIAL
 		HKEY hkey;
 		int result;
 		int i = 0;
@@ -1169,11 +1259,13 @@ namespace sys {
 			} while (1);
 			RegCloseKey(hkey);
 		}
+#endif
 		return list;
 	}
 
 	vector<COM_INFO> getCOMInfoList() {
 		vector<COM_INFO> ary;
+#ifdef ENABLE_SERIAL
 		HDEVINFO hDevInfo;
 		SP_DEVINFO_DATA DeviceInfoData;
 		DWORD i = 0;
@@ -1271,10 +1363,13 @@ namespace sys {
 
 		// Cleanup   
 		SetupDiDestroyDeviceInfoList(hDevInfo);
+#endif
 		return ary;
 	}
 	string getLastError(string szReason)
 	{
+		string szErrMsg = "";
+#ifdef WINDOWS
 		DWORD dwErrCode = GetLastError(); //之前的错误代码
 
 		LPVOID lpMsgBuf = NULL;
@@ -1290,7 +1385,7 @@ namespace sys {
 			NULL
 		);
 
-		string szErrMsg = "";
+		
 
 		if (dwLen == 0)
 		{
@@ -1311,6 +1406,7 @@ namespace sys {
 			LocalFree(lpMsgBuf);
 			lpMsgBuf = NULL;
 		}
+#endif
 
 		return szErrMsg;
 	}
@@ -1358,29 +1454,6 @@ namespace fs {
 		}
 	}
 
-	string appName()
-	{
-#ifdef WINDOWS
-		//windows获取到的是反斜杠，tds内统一使用斜杠
-		TCHAR p[MAX_PATH] = { 0 };
-		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
-		string strPath = (char*)p;
-		int nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
-		strPath = strPath.substr(nEnd+1, strPath.length() - nEnd - 1);
-		if (common::getCharCodec() == "gb2312")
-			strPath = strPath;
-		else
-			strPath = charCodec::gb_to_utf8(strPath);
-		strPath = str::trimSuffix(strPath, ".exe");
-		return strPath;
-#elif LINUX
-		return "";
-#else
-		return "";
-#endif
-	}
-
-
 	string appPath()
 	{
 #ifdef WINDOWS
@@ -1396,12 +1469,32 @@ namespace fs {
 			strPath = charCodec::gb_to_utf8(strPath);
 		strPath = str::replace(strPath, "\\", "/");
 		return strPath;
-#elif LINUX
-		return "";
-#else
-		return "";
+#endif 
+#ifdef LINUX
+		char* p = NULL;
+		const int len = 256;
+		/// to keep the absolute path of executable's path
+		char arr_tmp[len] = { 0 };
+		int n = readlink("/proc/self/exe", arr_tmp, len);
+		if (NULL != (p = strrchr(arr_tmp, '/')))
+			*p = '\0';
+		else
+		{
+			return std::string("");
+		}
+		return std::string(arr_tmp);
 #endif
 	}
+
+	string appName()
+	{
+		string appPath = fs::appPath();
+		int nEnd = appPath.rfind('\\');//取最后的"\"号之前地址
+		string appName = appPath.substr(nEnd+1, appPath.length() - nEnd - 1);
+		appName = str::trimSuffix(appName, ".exe");
+		return appName;
+	}
+
 	string toAbsolutePath(string str)
 	{
 		str = charCodec::tds_to_gb(str);
@@ -1548,307 +1641,48 @@ namespace fs {
 
 	 void getFolderList(vector<string>& list, string strFolder)
 	{
-		wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		wstring dirNew;
-		dirNew = wstrFolder;
-		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
-
-		intptr_t handle;
-		_wfinddata64i32_t findData;
-
-		handle = _wfindfirst(dirNew.c_str(), &findData);
-		if (handle == -1)        // 检查是否成功
-			return;
-
-		do
-		{
-			if (findData.attrib & _A_SUBDIR)
-			{
-				if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
-					continue;
-
-				//list.push_back(charCodec::utf16toUtf8(findData.name));
-
-				// 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
-				dirNew = wstrFolder.c_str();
-				dirNew += L"\\";
-				dirNew += findData.name;
-
-
-				list.push_back(charCodec::utf16_to_tds(findData.name));
-			}
-		} while (_wfindnext(handle, &findData) == 0);
-
-		_findclose(handle);    // 关闭搜索句柄
+		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
+		 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+			 if (i.is_directory()) {
+				 string s = i.path().string();
+				 s = str::replace(s, "\\", "/");
+				 s = charCodec::gb_to_utf8(s);
+				 list.push_back(s);
+			 }
+		 }
 	}
 
 	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
-		wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		wstring dirNew;
-		dirNew = wstrFolder;
-		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
-
-		intptr_t handle;
-		_wfinddata64i32_t findData;
-
-		handle = _wfindfirst(dirNew.c_str(), &findData);
-		if (handle == -1)        // 检查是否成功
-			return;
-
-		do
-		{
-			if (findData.attrib & _A_SUBDIR)
-			{
-				if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
-					continue;
-
-				//list.push_back(charCodec::utf16toUtf8(findData.name));
-
-				// 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
-				dirNew = wstrFolder.c_str();
-				dirNew += L"\\";
-				dirNew += findData.name;
-
-				if (includeFolder) {
-					//list.push_back(charCodec::utf16ToAuto(findData.name));
-				}
-					
-
-				if(recursive)
-					getFileList(list,charCodec::utf16_to_tds(dirNew),includeFolder,recursive,suffix);
-			}
-			else
-			{
-				
+		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
+		 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+			 if (i.is_directory() && recursive) {
+				 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
+			 }
+			 else {
 				FILE_INFO fi;
-				fi.name = charCodec::utf16_to_tds(findData.name);
-				if (fi.name.find(suffix) == string::npos)
-					continue;
-				fi.path = strFolder + "/" + fi.name;
-				fi.folderPath = strFolder;
-				fi.len = findData.size;
+				fi.path = charCodec::gb_to_tds(i.path().string());
+				fi.path = str::replace(fi.path, "\\", "/");
+				if (suffix!="*" && fi.path.find(suffix) == string::npos)
+				 	continue;
+				size_t pos = fi.path.rfind("/");
+				fi.folderPath = fi.path.substr(0,pos);
+				fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+				fi.len = i.file_size();
 				list.push_back(fi);
-			}
-		} while (_wfindnext(handle, &findData) == 0);
-
-		_findclose(handle);    // 关闭搜索句柄
+			 }
+		 }
 	}
 
 
 	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
 	 {
-		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		 wstring dirNew;
-		 dirNew = wstrFolder;
-		 dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
-
-		 intptr_t handle;
-		 _wfinddata64i32_t findData;
-
-		 handle = _wfindfirst(dirNew.c_str(), &findData);
-		 if (handle == -1)        // 检查是否成功
-			 return;
-
-		 do
-		 {
-			 if (findData.attrib & _A_SUBDIR)
-			 {
-				 if (wcscmp(findData.name, L".") == 0 || wcscmp(findData.name, L"..") == 0)
-					 continue;
-
-				 //list.push_back(charCodec::utf16toUtf8(findData.name));
-
-				 // 在目录后面加上"\\"和搜索到的目录名进行下一次搜索
-				 dirNew = wstrFolder.c_str();
-				 dirNew += L"\\";
-				 dirNew += findData.name;
-
-				 if (includeFolder)
-					 list.push_back(charCodec::utf16_to_tds(findData.name));
-
-				 if (recursive)
-					 getFileList(list, charCodec::utf16_to_tds(dirNew));
-			 }
-			 else
-			 {
-				 list.push_back(charCodec::utf16_to_tds(findData.name));
-			 }
-		 } while (_wfindnext(handle, &findData) == 0);
-
-		 _findclose(handle);    // 关闭搜索句柄
+		 vector<FILE_INFO> filist;
+		 getFileList(list, strFolder, includeFolder, recursive);
+		 for (int i = 0; i < filist.size(); i++) {
+			 FILE_INFO& fi = filist[i];
+			 list.push_back(fi.path);
+		 }
 	 }
-
-	
-	vector<string> fileDlg(bool isMultiSelect, bool IsOpen, bool IsPickFolder, char* filter, char* title, char* fileName,char* defExt,char* initDirectory)
-	{
-		vector<string> vecPath;
-		//文件名
-		wstring filename;
-		wstring wFilter;
-		vector<wstring> vecWFilter;
-		if (filter)
-		{
-			string sFilter = filter;
-			vector<string> vecFilter;
-			str::split(vecFilter, filter, "|");
-			for (int i = 0; i < vecFilter.size(); i++)
-			{
-				string s = vecFilter[i];
-				vecWFilter.push_back(charCodec::tds_to_utf16(s));
-			}
-		}
-		std::wstring wDir;
-		if (initDirectory)
-			wDir = charCodec::tds_to_utf16(initDirectory).c_str();//初始目录为默认
-		std::wstring wTitle;
-		if (title)
-			wTitle = charCodec::tds_to_utf16(title).c_str();
-		std::wstring wDefExt;
-		if (defExt)
-			wDefExt = charCodec::tds_to_utf16(defExt).c_str();
-		std::wstring wFileName;
-		if (fileName)
-			wFileName = charCodec::tds_to_utf16(fileName).c_str();
-
-
-		CoInitialize(nullptr);
-		if (!isMultiSelect)
-		{
-			IFileDialog* pfd = NULL;
-			HRESULT hr = NULL;
-			if (IsOpen)
-				hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-			else
-				hr = CoCreateInstance(CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-			if (SUCCEEDED(hr))
-			{
-				DWORD dwFlags;
-				hr = pfd->GetOptions(&dwFlags);
-				if (IsPickFolder)
-					hr = pfd->SetOptions(dwFlags | FOS_PICKFOLDERS);
-				else
-					hr = pfd->SetOptions(dwFlags | FOS_FORCEFILESYSTEM);
-
-				COMDLG_FILTERSPEC* fileType = new COMDLG_FILTERSPEC[vecWFilter.size()/2];
-				for (int i = 0; i < vecWFilter.size() / 2; i++)
-				{
-					COMDLG_FILTERSPEC& fs = fileType[i];
-					fs.pszName = vecWFilter[i * 2].c_str();
-					fs.pszSpec = vecWFilter[i * 2 + 1].c_str();
-				}
-				hr = pfd->SetFileTypes((UINT)vecWFilter.size()/2, fileType);
-				hr = pfd->SetFileTypeIndex(1);
-				
-
-				if (!IsOpen)
-				{
-					hr = pfd->SetFileName(wFileName.c_str());
-					hr = pfd->SetDefaultExtension(wDefExt.c_str());
-				}
-				
-
-				hr = pfd->Show(GetForegroundWindow()); //Show dialog
-					//if (SUCCEEDED(hr))
-					//{
-					//	if (!IsOpen)       //Capture user change when select differen file extension.
-					//	{
-					//		if (nType == 2)
-					//		{
-					//			UINT  unFileIndex(1);
-					//			hr = pfd->GetFileTypeIndex(&unFileIndex);
-					//			switch (unFileIndex)
-					//			{
-					//			case 0:
-					//				hr = pfd->SetDefaultExtension(L"txt");
-					//				break;
-					//			case 1:
-					//				hr = pfd->SetDefaultExtension(L"csv");
-					//				break;
-					//			case 2:
-					//				hr = pfd->SetDefaultExtension(L"ini");
-					//				break;
-					//			default:
-					//				hr = pfd->SetDefaultExtension(L"txt");
-					//				break;
-					//			}
-					//		}
-					//	}
-					//}
-					if (SUCCEEDED(hr))
-					{
-						IShellItem* pSelItem;
-						hr = pfd->GetResult(&pSelItem);
-						if (SUCCEEDED(hr))
-						{
-							LPWSTR pszFilePath = NULL;
-							hr = pSelItem->GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, &pszFilePath);
-							string sutf8 = charCodec::utf16_to_utf8(pszFilePath);
-							sutf8 = str::replace(sutf8, "\\", "/");
-							vecPath.push_back(sutf8);
-							CoTaskMemFree(pszFilePath);
-						}
-						pSelItem->Release();
-					}
-				}
-				pfd->Release();
-			}
-		else  //Open dialog with multi select allowed;
-		{
-			IFileOpenDialog* pfd = NULL;
-			HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd));
-			if (SUCCEEDED(hr))
-			{
-				DWORD dwFlags;
-				hr = pfd->GetOptions(&dwFlags);
-				hr = pfd->SetOptions(dwFlags | FOS_FORCEFILESYSTEM | FOS_ALLOWMULTISELECT);
-					
-				COMDLG_FILTERSPEC* fileType = new COMDLG_FILTERSPEC[vecWFilter.size()];
-				for (int i = 0; i < vecWFilter.size(); i++)
-				{
-					COMDLG_FILTERSPEC& fs = fileType[i];
-					fs.pszName = vecWFilter[i * 2].c_str();
-					fs.pszSpec = vecWFilter[i * 2 + 1].c_str();
-				}
-				hr = pfd->SetFileTypes(vecWFilter.size(), fileType);
-				hr = pfd->SetFileTypeIndex(1);
-
-				hr = pfd->Show(NULL);
-				if (SUCCEEDED(hr))
-				{
-					IShellItemArray* pSelResultArray;
-					hr = pfd->GetResults(&pSelResultArray);
-					if (SUCCEEDED(hr))
-					{
-						DWORD dwNumItems = 0; // number of items in multiple selection
-						hr = pSelResultArray->GetCount(&dwNumItems);  // get number of selected items
-						for (DWORD i = 0; i < dwNumItems; i++)
-						{
-							IShellItem* pSelOneItem = NULL;
-							PWSTR pszFilePath = NULL; // hold file paths of selected items
-							hr = pSelResultArray->GetItemAt(i, &pSelOneItem); // get a selected item from the IShellItemArray
-							if (SUCCEEDED(hr))
-							{
-								hr = pSelOneItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-								vecPath.push_back(charCodec::utf16_to_utf8(pszFilePath));
-								if (SUCCEEDED(hr))
-								{
-									/*szSelected += pszFilePath;
-									if (i < (dwNumItems - 1))
-										szSelected += L"\n";*/
-									CoTaskMemFree(pszFilePath);
-								}
-								pSelOneItem->Release();
-							}
-						}
-						pSelResultArray->Release();
-					}
-				}
-			}
-			pfd->Release();
-		}
-
-		return vecPath;
-	}
 }
 namespace path {
 	string normalization(string& s)
@@ -1860,20 +1694,44 @@ namespace path {
 	}
 }
 
+#define GUID_LEN 64
 namespace common {
 	string guid() {
-		GUID   m_guid;
-		string   strGUID;
-		if (S_OK == ::CoCreateGuid(&m_guid))
+#ifdef WINDOWS
+		char buf[GUID_LEN] = { 0 };
+		GUID guid;
+
+		if (CoCreateGuid(&guid))
 		{
-			strGUID = str::format("%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X",
-				m_guid.Data1, m_guid.Data2, m_guid.Data3,
-				m_guid.Data4[0], m_guid.Data4[1],
-				m_guid.Data4[2], m_guid.Data4[3],
-				m_guid.Data4[4], m_guid.Data4[5],
-				m_guid.Data4[6], m_guid.Data4[7]);
+			return std::move(std::string(""));
 		}
-		return strGUID;
+		sprintf(buf,
+			"%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X",
+			guid.Data1, guid.Data2, guid.Data3,
+			guid.Data4[0], guid.Data4[1], guid.Data4[2],
+			guid.Data4[3], guid.Data4[4], guid.Data4[5],
+			guid.Data4[6], guid.Data4[7]);
+
+		return std::move(std::string(buf));
+#elif LINUX
+		char buf[GUID_LEN] = { 0 };
+
+		uuid_t uu;
+		uuid_generate(uu);
+
+		int32_t index = 0;
+		for (int32_t i = 0; i < 16; i++)
+		{
+			int32_t len = i < 15 ?
+				sprintf(buf + index, "%02X-", uu[i]) :
+				sprintf(buf + index, "%02X", uu[i]);
+			if (len < 0)
+				return std::move(std::string(""));
+			index += len;
+		}
+
+		return std::move(std::string(buf));
+#endif // WIN32
 	}
 
 	float randomFloat(float min, float max) {
