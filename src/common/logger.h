@@ -23,6 +23,7 @@ public:
 	LOG_LEVEL str2logLevel(string level);
 	void setLogLevel(string level);
 	LOG_LEVEL getLogLevel(string& info);
+	void setConsoleTextColor(LOG_LEVEL ll);
 	string logInternal(string info); //bForceWrite为true,忽略级别过滤，直接输出
 	string appPath();
 	void log(string info);

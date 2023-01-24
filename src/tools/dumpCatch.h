@@ -1,6 +1,6 @@
 #pragma once
 
-
+#ifdef WINDOWS
 class CDumpCatch
 {
 public:
@@ -28,3 +28,5 @@ private:
 };
 
 extern CDumpCatch dumpCatch;
+
+#endif

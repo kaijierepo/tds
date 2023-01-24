@@ -93,37 +93,10 @@ private:
 };
 
 
-typedef struct tagTHREADNAME_INFO
-{
-	DWORD dwType; // must be 0x1000
-	LPCSTR szName; // pointer to name (in user addr space)
-	DWORD dwThreadID; // thread ID (-1=caller thread)
-	DWORD dwFlags; // reserved for future use, must be zero
-} THREADNAME_INFO;
-
-
 namespace common {
 	string& getCharCodec();
 
 	void setCharCodec(string codec);
-
-	
-	//void setThreadName1(string name)
-	//{
-		//THREADNAME_INFO info;
-		//info.dwType = 0x1000;
-		//info.szName = name.c_str();
-		//info.dwThreadID = GetCurrentThreadId();
-		//info.dwFlags = 0;
-
-		//__try
-		//{
-		//	RaiseException(0x406D1388, 0, sizeof(info) / sizeof(DWORD), (DWORD*)&info);
-		//}
-		//__except (EXCEPTION_CONTINUE_EXECUTION)
-		//{
-		//}
-	//}
 
 	const unsigned char auchCRCHi[] =
 	{
@@ -179,23 +152,28 @@ namespace str {
 }
 
 namespace charCodec {
-	string utf16toUtf8(wstring instr);
-	string utf16toAnsi(wstring instr);
-	string utf8toAnsi(string instr);
-	wstring utf8toUtf16(string instr);
-	wstring ansiToUtf16(string instr);
-	string utf16ToAuto(wstring instr);
-	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
-	string ansi2Utf8(string instr);
+	//gbk,utf8 <-> unicode
+	string utf16_to_utf8(wstring instr);
+	string utf16_to_gb(wstring instr);
+	wstring utf8_to_utf16(string instr);
+	wstring gb_to_utf16(string instr);
+
+	//gbk <-> utf8
+	string utf8_to_gb(string instr);
+	string gb_to_utf8(string instr);
+
+	//gbk checks   GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	bool hasGB2312(string s);
 	bool isValidGB2312(string s, int& errorPos, string& errorChar);
 	bool isValidGB2312(string s);
-	string ToUtf8(LPCTSTR wstr);
-	wstring autoToUtf16(string instr);
-	string autoToUtf8(string instr);
-	string autoToAnsi(string instr);
-	string ansiToAuto(string instr);
-	string utf8ToAuto(string instr);
+
+	//tds local codec can  be utf8 or gbk.
+	string utf16_to_tds(wstring instr);
+	wstring tds_to_utf16(string instr);
+	string tds_to_utf8(string instr);
+	string tds_to_gb(string instr);
+	string gb_to_tds(string instr);
+	string utf8_to_tds(string instr);
 }
 namespace str {
 	string trimPrefix(string s, string prefix = " ");
@@ -323,6 +301,6 @@ string getbuilddate();
 void setThreadName2(string name);
 void setThreadName(string name);
 
-#define _GB(s) charCodec::utf8toAnsi(s).c_str()
+#define _GB(s) charCodec::utf8_to_gb(s).c_str()
 
 #endif

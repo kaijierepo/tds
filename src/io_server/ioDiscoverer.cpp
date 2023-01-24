@@ -22,6 +22,7 @@ Only upon port and volume change.
 top-level window is a window without WM_CHILD attribute
 */
 
+#ifdef WINDOWS
 // 消息处理函数的实现
 LRESULT CALLBACK WindowProc_hwDetect(
     _In_  HWND hwnd,
@@ -107,10 +108,11 @@ LRESULT CALLBACK WindowProc_hwDetect(
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
     }
 }
-
+#endif
 
 void serialDetectThread()
 {
+#ifdef WINDOWS
     setThreadName("serial detection thread");
     /*未来如需要检测除串口外的其他设备， 使用
   * https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerdevicenotificationa
@@ -163,6 +165,7 @@ void serialDetectThread()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+#endif
 }
 
 

@@ -146,6 +146,31 @@ LOG_LEVEL Clogger::getLogLevel(string& info)
 	return ll;
 }
 
+void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
+#ifdef WINDOWS
+	//使用cout输出，不要使用printf输出，printf会将某些格式进行解析，例如下面字符串
+	//R"([IO设备透传]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
+	//使用printf输出会导致奔溃 ，应该print将 %N% 作为某种特殊字符处理了
+	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (ll == LOG_LEVEL::LL_ERROR)
+	{
+		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_RED);
+	}
+	else if (ll == LOG_LEVEL::LL_WARN)
+	{
+		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | 0x06);
+	}
+	else if (ll == LOG_LEVEL::LL_KEYINFO)
+	{
+		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+	}
+	else
+	{
+		SetConsoleTextAttribute(handle, 0x07);
+	}
+#endif
+}
+
 string Clogger::logInternal(string info)
 {
 	LOG_LEVEL ll = getLogLevel(info);
@@ -166,31 +191,8 @@ string Clogger::logInternal(string info)
 		return logline;
 
 	info = charCodec::utf8toAnsi(logline);
-
-	//使用cout输出，不要使用printf输出，printf会将某些格式进行解析，例如下面字符串
-	//R"([IO设备透传]client->dev q 11 i0;c0;x63;n0;r0;q1;p0;w0;s0;m0;a5;tbodazl/624378949537178/lastdp;u{""""data"""":[{""""name"""":""""%N%"""",""""value"""":%V%}]};dupdata)";
-	//使用printf输出会导致奔溃 ，应该print将 %N% 作为某种特殊字符处理了
-	HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
-	if (ll == LOG_LEVEL::LL_ERROR)
-	{
-		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_RED);
-		cout << info;
-	}
-	else if (ll == LOG_LEVEL::LL_WARN)
-	{
-		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | 0x06);
-		cout << info;
-	}
-	else if (ll == LOG_LEVEL::LL_KEYINFO)
-	{
-		SetConsoleTextAttribute(handle, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
-		cout << info;
-	}
-	else
-	{
-		SetConsoleTextAttribute(handle, 0x07);
-		cout << info;
-	}
+	setConsoleTextColor(ll);
+	cout << info;
 	printf("\r\n");
 	//std::cout << info << std::endl; 这句话在 AllocConsole 生成的命令行中不输出了
 
@@ -216,17 +218,17 @@ string Clogger::logInternal(string info)
 	fs::appendFile(strFile, info + "\r\n");
 
 #ifdef _TDS
-	if (ll == LOG_LEVEL::LL_ERROR)
-	{
-		if (tds->conf->bCreateDumpWhenLogError)
-		{
-			int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
-			if (iRet = IDOK)
-			{
-				CDumpCatch::createDump(NULL);
-			}
-		}
-	}
+	//if (ll == LOG_LEVEL::LL_ERROR)
+	//{
+	//	if (tds->conf->bCreateDumpWhenLogError)
+	//	{
+	//		int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
+	//		if (iRet = IDOK)
+	//		{
+	//			CDumpCatch::createDump(NULL);
+	//		}
+	//	}
+	//}
 #endif
 
 	return logline;

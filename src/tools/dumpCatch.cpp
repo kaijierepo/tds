@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "dumpCatch.h"
 
+#ifdef WINDOWS
+
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 
@@ -158,3 +160,5 @@ BOOL CDumpCatch::PreventSetUnhandledExceptionFilter()
 	::VirtualProtect(pOrgEntry, 5, dwOldFlag, &dwTempFlag);
 	return bRet;
 }
+
+#endif

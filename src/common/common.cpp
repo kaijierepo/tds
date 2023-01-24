@@ -62,7 +62,7 @@ namespace str {
 
 namespace charCodec {
 
-	string utf16toUtf8(wstring instr) //utf-8-->ansi
+	string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
 		int MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
@@ -72,8 +72,7 @@ namespace charCodec {
 		delete charstr;
 		return str;
 	}
-
-	string utf16toAnsi(wstring instr)
+	string utf16_to_gb(wstring instr)
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
@@ -83,8 +82,28 @@ namespace charCodec {
 		delete charstr;
 		return str;
 	}
-
-	string utf8toAnsi(string instr) //utf-8-->ansi
+	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
+		return str;
+	}
+	wstring gb_to_utf16(string instr)
+	{
+		int MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		wstring str = wcharstr;
+		delete wcharstr;
+		return str;
+	}
+	
+	string utf8_to_gb(string instr) //utf-8-->ansi
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -98,47 +117,7 @@ namespace charCodec {
 		delete charstr;
 		return charstrtemp;
 	}
-
-	wstring utf8toUtf16(string instr) //utf-8-->ansi
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
-		delete wcharstr;
-		return str;
-	}
-
-	wstring ansiToUtf16(string instr)
-	{
-		int MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
-		delete wcharstr;
-		return str;
-	}
-
-	
-
-	string utf16ToAuto(wstring instr)
-	{
-		string s;
-		if (common::getCharCodec() == "gb2312")
-		{
-			s = charCodec::utf16toAnsi(instr);
-		}
-		else
-		{
-			s = charCodec::utf16toUtf8(instr);
-		}
-		return s;
-	}
-
-	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
-	string ansi2Utf8(string instr) //ansi-->utf-8
+	string gb_to_utf8(string instr) //ansi-->utf-8
 	{
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -153,6 +132,7 @@ namespace charCodec {
 		return charstrtemp;
 	}
 
+	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	bool hasGB2312(string s)
 	{
 		for (int i = 0; i < s.length(); i++)
@@ -173,8 +153,6 @@ namespace charCodec {
 
 		return false;
 	}
-
-	
 	bool isValidGB2312(string s, int& errorPos, string& errorChar)
 	{
 		for (int i = 0; i < s.length();)
@@ -222,7 +200,6 @@ namespace charCodec {
 
 		return true;
 	}
-
 	bool isValidGB2312(string s)
 	{
 		int pos = 0;
@@ -230,46 +207,38 @@ namespace charCodec {
 		return isValidGB2312(s, pos, errorChar);
 	}
 
-	string ToUtf8(LPCTSTR wstr) //-->utf-8
-	{
-#ifdef UNICODE
-		int srcLen = lstrlen(wstr);
-		string str = "";
-		int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
-		if (len > 0)
-		{
-			char* des = new char[len + 1];
-			memset(des, 0, len + 1);
-			WideCharToMultiByte(CP_UTF8, 0, wstr, -1, des, len, NULL, NULL);
-			str = des;
-		}
-		return str;
-#else
-		string str = wstr;
-		return str;
-#endif
-	}
-
-	wstring autoToUtf16(string instr)
-	{
-		wstring w;
-		if (common::getCharCodec() == "gb2312")
-		{
-			w = charCodec::ansiToUtf16(instr);
-		}
-		else
-		{
-			w = charCodec::utf8toUtf16(instr);
-		}
-		return w;
-	}
-
-	string autoToUtf8(string instr)
+	string utf16_to_tds(wstring instr)
 	{
 		string s;
 		if (common::getCharCodec() == "gb2312")
 		{
-			s = charCodec::ansi2Utf8(instr);
+			s = charCodec::utf16_to_gb(instr);
+		}
+		else
+		{
+			s = charCodec::utf16_to_utf8(instr);
+		}
+		return s;
+	}
+	wstring tds_to_utf16(string instr)
+	{
+		wstring w;
+		if (common::getCharCodec() == "gb2312")
+		{
+			w = charCodec::gb_to_utf16(instr);
+		}
+		else
+		{
+			w = charCodec::utf8_to_utf16(instr);
+		}
+		return w;
+	}
+	string tds_to_utf8(string instr)
+	{
+		string s;
+		if (common::getCharCodec() == "gb2312")
+		{
+			s = charCodec::gb_to_utf8(instr);
 			return s;
 		}
 		else
@@ -277,8 +246,7 @@ namespace charCodec {
 			return instr;
 		}
 	}
-
-	string autoToAnsi(string instr)
+	string tds_to_gb(string instr)
 	{
 		string s;
 		if (common::getCharCodec() == "gb2312")
@@ -287,11 +255,10 @@ namespace charCodec {
 		}
 		else
 		{
-			return charCodec::utf8toAnsi(instr);
+			return charCodec::utf8_to_gb(instr);
 		}
 	}
-
-	string ansiToAuto(string instr)
+	string gb_to_tds(string instr)
 	{
 		string s;
 		if (common::getCharCodec() == "gb2312")
@@ -300,16 +267,15 @@ namespace charCodec {
 		}
 		else
 		{
-			return charCodec::ansi2Utf8(instr);
+			return charCodec::gb_to_utf8(instr);
 		}
 	}
-
-	string utf8ToAuto(string instr)
+	string utf8_to_tds(string instr)
 	{
 		string s;
 		if (common::getCharCodec() == "gb2312")
 		{
-			return charCodec::utf8toAnsi(instr);
+			return charCodec::utf8_to_gb(instr);
 		}
 		else
 		{
@@ -764,7 +730,7 @@ namespace str {
 
 	bool hanZi2Pinyin(string hanZi,string& pinyin,bool upperCase)
 	{
-		string gbstr = charCodec::utf8toAnsi(hanZi);
+		string gbstr = charCodec::utf8_to_gb(hanZi);
 		vector<char> vecPinyin;
 		for (int i = 0; i < gbstr.length();)
 		{
@@ -1189,8 +1155,8 @@ namespace sys {
 					//   枚举串口   
 					break;   //   commName就是串口名字"COM2"   
 				}
-				strComName = charCodec::utf16ToAuto(commName);
-				strDrName = charCodec::utf16ToAuto(portName);
+				strComName = charCodec::utf16_to_tds(commName);
+				strDrName = charCodec::utf16_to_tds(portName);
 				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
 				size_t len = strDrName.rfind('\\');
 				// 获取'\\'左边的字符串   
@@ -1269,7 +1235,7 @@ namespace sys {
 			}
 
 			wstring utf16str = buffer;
-			string comInfo = charCodec::utf16ToAuto(utf16str);
+			string comInfo = charCodec::utf16_to_tds(utf16str);
 
 			int iLeftBracket = comInfo.find("(");
 			if (iLeftBracket == string::npos)
@@ -1335,7 +1301,7 @@ namespace sys {
 		if (lpMsgBuf)
 		{
 			wstring utf16msg = (LPWSTR)lpMsgBuf;
-			string utf8Msg = charCodec::utf16ToAuto(utf16msg);
+			string utf8Msg = charCodec::utf16_to_tds(utf16msg);
 			szErrMsg = str::format("%s\n Code = %u, Mean = %s", szReason.c_str(), dwErrCode, utf8Msg.c_str());
 		}
 
@@ -1378,7 +1344,7 @@ namespace fs {
 			{
 				size_t iDot = strFile.find('.', iStartPos);
 				if (iDot == string::npos)
-					CreateDirectoryW(charCodec::autoToUtf16(strFile).c_str(), NULL);
+					CreateDirectoryW(charCodec::tds_to_utf16(strFile).c_str(), NULL);
 				break;
 			}
 
@@ -1386,7 +1352,7 @@ namespace fs {
 				break;
 
 			string strFolder = strFile.substr(0, iSlash);
-			wstring wstrFolder = charCodec::autoToUtf16(strFolder).c_str();
+			wstring wstrFolder = charCodec::tds_to_utf16(strFolder).c_str();
 			CreateDirectoryW(wstrFolder.c_str(), NULL);
 			iStartPos = iSlash + 1;
 		}
@@ -1404,7 +1370,7 @@ namespace fs {
 		if (common::getCharCodec() == "gb2312")
 			strPath = strPath;
 		else
-			strPath = charCodec::ansi2Utf8(strPath);
+			strPath = charCodec::gb_to_utf8(strPath);
 		strPath = str::trimSuffix(strPath, ".exe");
 		return strPath;
 #elif LINUX
@@ -1427,7 +1393,7 @@ namespace fs {
 		if (common::getCharCodec() == "gb2312")
 			strPath = strPath;
 		else
-			strPath = charCodec::ansi2Utf8(strPath);
+			strPath = charCodec::gb_to_utf8(strPath);
 		strPath = str::replace(strPath, "\\", "/");
 		return strPath;
 #elif LINUX
@@ -1438,12 +1404,12 @@ namespace fs {
 	}
 	string toAbsolutePath(string str)
 	{
-		str = charCodec::autoToAnsi(str);
+		str = charCodec::tds_to_gb(str);
 		char absPath[1024] = { 0 };
 		_fullpath(absPath, str.c_str(), 1024);
 		str = absPath;
 		str = str::replace(str, "\\", "/");
-		str = charCodec::ansiToAuto(str);
+		str = charCodec::gb_to_tds(str);
 		return str;
 	}
 	string getExt(string strFilePath)
@@ -1459,7 +1425,7 @@ namespace fs {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
-		_wfopen_s(&fp,charCodec::autoToUtf16(path).c_str(), L"rb");
+		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -1482,7 +1448,7 @@ namespace fs {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
-		_wfopen_s(&fp,charCodec::autoToUtf16(path).c_str(), L"rb");
+		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -1501,7 +1467,7 @@ namespace fs {
 	bool writeFile(string path, char* data, size_t len)
 	{
 		fs::createFolderOfPath(path);
-		wstring wpath = charCodec::autoToUtf16(path);
+		wstring wpath = charCodec::tds_to_utf16(path);
 
 		FILE* fp = nullptr;
 		_wfopen_s(&fp,wpath.c_str(), L"wb");
@@ -1521,7 +1487,7 @@ namespace fs {
 
 	bool appendFile(string path, char* data, size_t len)
 	{
-		wstring wpath = charCodec::autoToUtf16(path);
+		wstring wpath = charCodec::tds_to_utf16(path);
 		FILE* fp = nullptr;
 		_wfopen_s(&fp,wpath.c_str(), L"ab");
 		if (fp)
@@ -1546,7 +1512,7 @@ namespace fs {
 		WIN32_FIND_DATAW FindFileData;
 		HANDLE hFind;
 
-		hFind = FindFirstFileW(charCodec::autoToUtf16(pszFileName).c_str(), &FindFileData);
+		hFind = FindFirstFileW(charCodec::tds_to_utf16(pszFileName).c_str(), &FindFileData);
 
 		if (hFind == INVALID_HANDLE_VALUE)
 			return false;
@@ -1559,14 +1525,14 @@ namespace fs {
 	}
 
 	bool deleteFile(string path) {
-		wstring wpath = charCodec::autoToUtf16(path);
+		wstring wpath = charCodec::tds_to_utf16(path);
 		int iret = _wremove(wpath.c_str());
 		return iret == 0;
 	}
 
 	bool getFileInfo(string path, FILE_INFO& fi)
 	{
-		wstring wpath = charCodec::utf8toUtf16(path);
+		wstring wpath = charCodec::utf8_to_utf16(path);
 		struct _stat64 tmpInfo;
 		if (_wstat64(wpath.c_str(), &tmpInfo) != 0)
 		{
@@ -1582,7 +1548,7 @@ namespace fs {
 
 	 void getFolderList(vector<string>& list, string strFolder)
 	{
-		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
+		wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 		wstring dirNew;
 		dirNew = wstrFolder;
 		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
@@ -1609,7 +1575,7 @@ namespace fs {
 				dirNew += findData.name;
 
 
-				list.push_back(charCodec::utf16ToAuto(findData.name));
+				list.push_back(charCodec::utf16_to_tds(findData.name));
 			}
 		} while (_wfindnext(handle, &findData) == 0);
 
@@ -1617,7 +1583,7 @@ namespace fs {
 	}
 
 	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
-		wstring wstrFolder = charCodec::autoToUtf16(strFolder);
+		wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 		wstring dirNew;
 		dirNew = wstrFolder;
 		dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
@@ -1649,13 +1615,13 @@ namespace fs {
 					
 
 				if(recursive)
-					getFileList(list,charCodec::utf16ToAuto(dirNew),includeFolder,recursive,suffix);
+					getFileList(list,charCodec::utf16_to_tds(dirNew),includeFolder,recursive,suffix);
 			}
 			else
 			{
 				
 				FILE_INFO fi;
-				fi.name = charCodec::utf16ToAuto(findData.name);
+				fi.name = charCodec::utf16_to_tds(findData.name);
 				if (fi.name.find(suffix) == string::npos)
 					continue;
 				fi.path = strFolder + "/" + fi.name;
@@ -1671,7 +1637,7 @@ namespace fs {
 
 	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
 	 {
-		 wstring wstrFolder = charCodec::autoToUtf16(strFolder);
+		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 		 wstring dirNew;
 		 dirNew = wstrFolder;
 		 dirNew += L"\\*.*";    // 在目录后面加上"\\*.*"进行第一次搜索
@@ -1698,14 +1664,14 @@ namespace fs {
 				 dirNew += findData.name;
 
 				 if (includeFolder)
-					 list.push_back(charCodec::utf16ToAuto(findData.name));
+					 list.push_back(charCodec::utf16_to_tds(findData.name));
 
 				 if (recursive)
-					 getFileList(list, charCodec::utf16ToAuto(dirNew));
+					 getFileList(list, charCodec::utf16_to_tds(dirNew));
 			 }
 			 else
 			 {
-				 list.push_back(charCodec::utf16ToAuto(findData.name));
+				 list.push_back(charCodec::utf16_to_tds(findData.name));
 			 }
 		 } while (_wfindnext(handle, &findData) == 0);
 
@@ -1728,21 +1694,21 @@ namespace fs {
 			for (int i = 0; i < vecFilter.size(); i++)
 			{
 				string s = vecFilter[i];
-				vecWFilter.push_back(charCodec::autoToUtf16(s));
+				vecWFilter.push_back(charCodec::tds_to_utf16(s));
 			}
 		}
 		std::wstring wDir;
 		if (initDirectory)
-			wDir = charCodec::autoToUtf16(initDirectory).c_str();//初始目录为默认
+			wDir = charCodec::tds_to_utf16(initDirectory).c_str();//初始目录为默认
 		std::wstring wTitle;
 		if (title)
-			wTitle = charCodec::autoToUtf16(title).c_str();
+			wTitle = charCodec::tds_to_utf16(title).c_str();
 		std::wstring wDefExt;
 		if (defExt)
-			wDefExt = charCodec::autoToUtf16(defExt).c_str();
+			wDefExt = charCodec::tds_to_utf16(defExt).c_str();
 		std::wstring wFileName;
 		if (fileName)
-			wFileName = charCodec::autoToUtf16(fileName).c_str();
+			wFileName = charCodec::tds_to_utf16(fileName).c_str();
 
 
 		CoInitialize(nullptr);
@@ -1816,7 +1782,7 @@ namespace fs {
 						{
 							LPWSTR pszFilePath = NULL;
 							hr = pSelItem->GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, &pszFilePath);
-							string sutf8 = charCodec::utf16toUtf8(pszFilePath);
+							string sutf8 = charCodec::utf16_to_utf8(pszFilePath);
 							sutf8 = str::replace(sutf8, "\\", "/");
 							vecPath.push_back(sutf8);
 							CoTaskMemFree(pszFilePath);
@@ -1863,7 +1829,7 @@ namespace fs {
 							if (SUCCEEDED(hr))
 							{
 								hr = pSelOneItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-								vecPath.push_back(charCodec::utf16toUtf8(pszFilePath));
+								vecPath.push_back(charCodec::utf16_to_utf8(pszFilePath));
 								if (SUCCEEDED(hr))
 								{
 									/*szSelected += pszFilePath;
