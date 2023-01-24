@@ -112,7 +112,7 @@ namespace charCodec {
 		return str;
 #endif
 #ifdef LINUX
-		return "";
+		return L"";
 #endif
 	}
 	wstring gb_to_utf16(string instr)
@@ -127,7 +127,7 @@ namespace charCodec {
 		return str;
 #endif
 #ifdef LINUX
-		return "";
+		return L"";
 #endif
 	}
 	
@@ -153,10 +153,11 @@ namespace charCodec {
 
 		// duanqn: The iconv function in Linux requires non-const char *
 		// So we need to copy the source string
-		char* inbuf = (char*)malloc(len);
+		char* inbuf = (char*)malloc(inlen);
+		memset(inbuf,0,inlen);
 		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
 									// so we use another pointer to keep the address
-		memcpy(inbuf, src, len);
+		memcpy(inbuf, instr.data(), instr.length());
 
 		char* outbuf =(char*)malloc(outlen);
 		memset(outbuf, 0, outlen);
@@ -191,15 +192,15 @@ namespace charCodec {
 #endif
 #ifdef LINUX
 		int ret = 0;
-		size_t inlen = strlen(src) + 1;
+		size_t inlen = instr.length() + 1;
 		size_t outlen = 2*inlen;
 
 		// duanqn: The iconv function in Linux requires non-const char *
 		// So we need to copy the source string
-		char* inbuf = (char*)malloc(len);
+		char* inbuf = (char*)malloc(inlen);
 		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
 									// so we use another pointer to keep the address
-		memcpy(inbuf, src, len);
+		memcpy(inbuf, instr.data(), instr.length());
 
 		char* outbuf = (char*)malloc(outlen);
 		memset(outbuf, 0, outlen);
@@ -222,12 +223,12 @@ namespace charCodec {
 	{
 		for (int i = 0; i < s.length(); i++)
 		{
-			byte b = s.at(i);
+			int b = (int)(unsigned char)s.at(i);
 			if (b >= 0xA1 && b <= 0xFE) //gb2312
 			{
 				if (i + 1 < s.length())
 				{
-					byte bNext = s.at(i + 1);
+					int bNext = (int)(unsigned char)s.at(i + 1);
 					if (bNext >= 0xA1 && bNext <= 0xFE)
 					{
 						return true;
@@ -242,7 +243,7 @@ namespace charCodec {
 	{
 		for (int i = 0; i < s.length();)
 		{
-			byte b = s.at(i);
+			int b = (int)(unsigned char)s.at(i);
 			if (b > 0 && b < 127) //ascii
 			{
 				i++;
@@ -254,7 +255,7 @@ namespace charCodec {
 				{
 					if (i + 1 < s.length())
 					{
-						byte bNext = s.at(i + 1);
+						int bNext = (int)(unsigned char)s.at(i + 1);
 						if (bNext >= 0xA1 && bNext <= 0xFE)
 						{
 							i += 2;
@@ -819,7 +820,7 @@ namespace str {
 		vector<char> vecPinyin;
 		for (int i = 0; i < gbstr.length();)
 		{
-			byte b = gbstr.at(i);
+			int b = (int)(unsigned char)gbstr.at(i);
 			if (b > 0 && b < 127) //ascii
 			{
 				vecPinyin.push_back((char)b);
@@ -832,7 +833,7 @@ namespace str {
 				{
 					if (i + 1 < gbstr.length())
 					{
-						byte bNext = gbstr.at(i + 1);
+						int bNext = (int)(unsigned char)gbstr.at(i + 1);
 						if (bNext >= 0xA1 && bNext <= 0xFE)
 						{
 							wchar_t gbChar = b*256 + bNext;
@@ -915,15 +916,14 @@ namespace timeopt {
 	{
 		TIME sDT;
 		time_t tIn = (time_t)iUnix;
-		tm temptm;
-		localtime_s(&temptm, &tIn);
-		sDT.wYear = 1900 + temptm.tm_year;
-		sDT.wMonth = 1 + temptm.tm_mon;
-		sDT.wDay = temptm.tm_mday;
-		sDT.wDayOfWeek = temptm.tm_wday;
-		sDT.wHour = temptm.tm_hour;
-		sDT.wMinute = temptm.tm_min;
-		sDT.wSecond = temptm.tm_sec;
+		tm* temptm=localtime(&tIn);
+		sDT.wYear = 1900 + temptm->tm_year;
+		sDT.wMonth = 1 + temptm->tm_mon;
+		sDT.wDay = temptm->tm_mday;
+		sDT.wDayOfWeek = temptm->tm_wday;
+		sDT.wHour = temptm->tm_hour;
+		sDT.wMinute = temptm->tm_min;
+		sDT.wSecond = temptm->tm_sec;
 		sDT.wMilliseconds = 0;
 		return sDT;
 	}
@@ -932,7 +932,7 @@ namespace timeopt {
 	{
 		TIME t;
 		int year, month, day, hour, min, sec;
-		sscanf_s(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
 			&month,
 			&day,
@@ -1101,12 +1101,20 @@ namespace timeopt {
 		return time;
 	}
 
-	string st2str(TIME t)
+	string st2str(TIME t,bool enableMS)
 	{
-		string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
+		if(enableMS){
+			string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
 			t.wYear, t.wMonth, t.wDay,
-			t.wHour, t.wMinute, t.wSecond);
-		return str;
+			t.wHour, t.wMinute, t.wSecond,t.wMilliseconds);
+			return str;
+		}
+		else{
+			string str = str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
+				t.wYear, t.wMonth, t.wDay,
+				t.wHour, t.wMinute, t.wSecond);
+			return str;
+		}
 	}
 
 	string st2strWithMilli(TIME t)
@@ -1179,22 +1187,9 @@ namespace timeopt {
 
 	string nowStr(bool enableMS)
 	{
-		time_t timestamp = getTick();
-		__int64 milli = timestamp + (__int64)8 * 60 * 60 * 1000;
-		auto mTime = std::chrono::milliseconds(milli);
-		auto tp = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>(mTime);
-		auto tt = std::chrono::system_clock::to_time_t(tp);
-		std::tm now;
-		::gmtime_s(&now, &tt);
-		char res[64] = { 0 };
-		if (enableMS)
-			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d.%03d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec, static_cast<int>(milli % 1000));
-		else
-		{
-			sprintf_s(res, _countof(res), "%4d-%02d-%02d %02d:%02d:%02d", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec);
-		}
+		TIME t = now();
 
-		return std::string(res);
+		return st2str(t,enableMS);
 	}
 
 	TIME addTime(TIME base, int h, int m, int s) {

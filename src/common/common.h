@@ -222,7 +222,7 @@ namespace timeopt {
 	unsigned long duration2sec(string strTime);
 	int dhmsSpan2Seconds(string timeSpan);
 	string rel2abs(string time);
-	string st2str(TIME t);
+	string st2str(TIME t,bool enableMS=false);
 	string st2strWithMilli(TIME t);
 	string TimeToYMD(const TIME time);
 	int CalcTimePassSecond(TIME lastTime);
