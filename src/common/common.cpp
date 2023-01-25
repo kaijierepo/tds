@@ -584,10 +584,10 @@ namespace str {
 		return bytes;
 	}
 	
-	vector<byte> toBytes(string str)
+	vector<unsigned char> toBytes(string str)
 	{
 		vector<char> vec = toChars(str);
-		vector<byte> vecB;
+		vector<unsigned char> vecB;
 		for (int i = 0; i < vec.size(); i++)
 		{
 			byte& b = *((byte*)(&vec[i]));
@@ -608,7 +608,7 @@ namespace str {
 		return str;
 	}
 
-	string bytesToHexStr(vector<byte>& bytes)
+	string bytesToHexStr(vector<unsigned char>& bytes)
 	{
 		string str;
 		for (int i = 0; i < bytes.size(); i++)
@@ -620,9 +620,9 @@ namespace str {
 		return str;
 	}
 
-	vector<byte> hexStrToBytes(string hexStr)
+	vector<unsigned char> hexStrToBytes(string hexStr)
 	{
-		vector<byte> ary;
+		vector<unsigned char> ary;
 		hexStr = str::removeChar(hexStr, ' ');
 		if (0 != hexStr.length() % 2)
 		{
@@ -1832,18 +1832,12 @@ __TIME__ 程序被编译的时间, 以"hh:mm:ss"格式的字符串标注, 该时
 
 string getbuildtime()
 {
-	static char buildtime[256] = { 0 };
-	sprintf_s(buildtime, 256,"%d-%02d-%02d %s", YEAR, MONTH + 1, DAY, __TIME__);
-	string s = buildtime;
-	return s;
+	return str::format("%d-%02d-%02d %s", YEAR, MONTH + 1, DAY, __TIME__);
 }
 
 string getbuilddate()
 {
-	static char buildtime[256] = { 0 };
-	sprintf_s(buildtime,256, "%d-%02d-%02d", YEAR, MONTH + 1, DAY);
-	string s = buildtime;
-	return s;
+	return str::format("%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 }
 
 void setThreadName2(string name)

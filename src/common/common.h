@@ -153,7 +153,8 @@ namespace common {
 }
 
 namespace str {
-	std::string format(const char* pszFmt, ...);
+	template<typename ... Args>
+	std::string format(const char* pszFmt, Args ... args);
 }
 
 namespace charCodec {
@@ -193,12 +194,12 @@ namespace str {
 	string trimFloat(string str);
 	string fromFloat(float f);
 	vector<char> toChars(string str);
-	vector<byte> toBytes(string str);
+	vector<unsigned char> toBytes(string str);
 	string bytesToHexStr(vector<char>& bytes);
-	string bytesToHexStr(vector<byte>& bytes);
-	vector<byte> hexStrToBytes(string hexStr);
+	string bytesToHexStr(vector<unsigned char>& bytes);
+	vector<unsigned char> hexStrToBytes(string hexStr);
 	string bytesToHexStr(char* p, int len, string splitter = " ");
-	string bytesToHexStr(byte* p, int len, string splitter = " ");
+	string bytesToHexStr(unsigned char* p, int len, string splitter = " ");
 	string fromInt(int v);
 	string fromInt(size_t v);
 	string fromBuff(const char* p, int len);
