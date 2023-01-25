@@ -35,7 +35,7 @@ void wakeUpFeeder() {
 	//si.dwFlags = STARTF_USESHOWWINDOW;
 	//si.wShowWindow = SW_SHOW;
 	if (!CreateProcessW(NULL,   // No module name (use command line)
-		(LPWSTR)charCodec::utf8toUtf16("tds.exe").c_str(),        // Command line
+		(LPWSTR)charCodec::utf8_to_utf16("tds.exe").c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inheritable
 		FALSE,          // Set handle inheritance to FALSE
@@ -76,7 +76,7 @@ void thread_checkAdp() {
 		if (!watchDog.isProcessRun("node.exe")) {
 			string msPath = fs::appPath() + "/com/adp/run.bat";
 			if (fs::fileExist(msPath)) {
-				msPath = charCodec::utf8toAnsi(msPath);
+				msPath = charCodec::utf8_to_gb(msPath);
 				system((msPath).c_str());
 			}
 		}
@@ -103,7 +103,7 @@ void thread_checkFood() {
 				WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
 				Sleep(200);
 				try {
-					filesystem::copy(charCodec::utf8toUtf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8toUtf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
+					filesystem::copy(charCodec::utf8_to_utf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8_to_utf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
 				}
 				catch (std::exception& e)
 				{
@@ -187,7 +187,7 @@ bool tdsWatchDog::runProcess(string cmdline) {
 	si.wShowWindow = TRUE;
 	if (!CreateProcessW(
 		NULL,   // No module name (use command line)
-		(LPWSTR)charCodec::utf8toUtf16(cmdline).c_str(),        // Command line
+		(LPWSTR)charCodec::utf8_to_utf16(cmdline).c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inheritable
 		FALSE,          // Set handle inheritance to FALSE
@@ -265,7 +265,7 @@ string tdsWatchDog::getFileVerInfo(string path)
 	if (!fs::fileExist(path))
 		return "";
 
-	path = charCodec::utf8toAnsi(path);
+	path = charCodec::utf8_to_gb(path);
 
 	DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
 	LPVOID pBlock = malloc(dwSize);
@@ -285,7 +285,7 @@ string tdsWatchDog::getFileVerInfo(string path)
 	strSubBlock = str::format("\\StringFileInfo\\%s\\FileDescription", strTranslation.c_str());
 	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
 	strTemp = str::format(_GB("文件描述: %s"), pVerValue);
-	strTemp = charCodec::ansi2Utf8(strTemp);
+	strTemp = charCodec::gb_to_utf8(strTemp);
 	//文件版本
 	strSubBlock = str::format("\\StringFileInfo\\%s\\FileVersion", strTranslation.c_str());
 	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
@@ -312,7 +312,7 @@ string tdsWatchDog::getFileVerInfo(string path)
 	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
 	strTemp = str::format("产品版本: %s", pVerValue);
 	string str =str::format("%s", pVerValue);
-	str = charCodec::ansi2Utf8(str);
+	str = charCodec::gb_to_utf8(str);
 	free(pBlock);
 	return str;
 }
@@ -431,7 +431,7 @@ BOOL Reg_LocalMachine(char* lpszFileName, char* lpszValueName)
 bool tdsWatchDog::regSelfStart()
 {
 	string path = fs::appPath() + "/tdsd.exe";
-	path = charCodec::utf8toAnsi(path);
+	path = charCodec::utf8_to_gb(path);
 	if (Reg_LocalMachine((char*)path.c_str(), (char*)"tdsd"))
 	{
 		printf(_GB("开机启动添加成功!"));
@@ -487,7 +487,7 @@ void tdsWatchDog::log(string s)
 	TIME stNow;
 	timeopt::now(&stNow);
 	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
-	s = charCodec::utf8toAnsi(s);
+	s = charCodec::utf8_to_gb(s);
 	s = time + " " + s +  "\r\n";
 	printf(s.c_str());
 	fs::appendFile(fs::appPath() + "/tdsd.log.txt", s);

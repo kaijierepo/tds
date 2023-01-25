@@ -1618,31 +1618,20 @@ namespace fs {
 		return iret == 0;
 	}
 
-	bool getFileInfo(string path, FILE_INFO& fi)
-	{
-		wstring wpath = charCodec::utf8_to_utf16(path);
-		struct _stat64 tmpInfo;
-		if (_wstat64(wpath.c_str(), &tmpInfo) != 0)
-		{
-			return false;
-		}
-		fi.modifyTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_mtime)));
-		fi.accessTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_atime)));
-		fi.createTime = timeopt::st2str(timeopt::Unix2SysTime(static_cast<int>(tmpInfo.st_ctime)));
-		fi.len = tmpInfo.st_size;
-		return true;
-	}
 
-
-	 void getFolderList(vector<string>& list, string strFolder)
+	 void getFolderList(vector<FILE_INFO>& list, string strFolder)
 	{
 		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 		 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 			 if (i.is_directory()) {
-				 string s = i.path().string();
-				 s = str::replace(s, "\\", "/");
-				 s = charCodec::gb_to_utf8(s);
-				 list.push_back(s);
+				 FILE_INFO fi;
+				 fi.path = charCodec::gb_to_tds(i.path().string());
+				 fi.path = str::replace(fi.path, "\\", "/");
+				 size_t pos = fi.path.rfind("/");
+				 fi.folderPath = fi.path.substr(0, pos);
+				 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+				 fi.len = i.file_size();
+				 list.push_back(fi);
 			 }
 		 }
 	}

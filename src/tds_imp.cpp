@@ -180,7 +180,7 @@ void chromeThread()
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;
-		wstring title = charCodec::utf8toUtf16("123456");
+		wstring title = charCodec::utf8_to_utf16("123456");
 		STARTUPINFOW si;
 		si.lpTitle = (LPWSTR)title.c_str();
 		PROCESS_INFORMATION pi;
@@ -192,7 +192,7 @@ void chromeThread()
 		si.dwFlags = STARTF_USESHOWWINDOW;
 		si.wShowWindow = SW_HIDE;
 		if (!CreateProcessW(NULL,   // No module name (use command line)
-			(LPWSTR)charCodec::utf8toUtf16(chromePath).c_str(),        // Command line
+			(LPWSTR)charCodec::utf8_to_utf16(chromePath).c_str(),        // Command line
 			NULL,           // Process handle not inheritable
 			NULL,           // Thread handle not inheritable
 			FALSE,          // Set handle inheritance to FALSE
@@ -215,7 +215,7 @@ void chromeThread()
 			int idx = 0;
 			while (windowFindTime > 0)
 			{
-				HWND hWnd = FindWindowW(NULL, charCodec::utf8toUtf16(tdsImp.uiWndTitle).c_str());
+				HWND hWnd = FindWindowW(NULL, charCodec::utf8_to_utf16(tdsImp.uiWndTitle).c_str());
 				if (tdsImp.uiWnd != hWnd)
 				{
 					tdsImp.uiWnd = hWnd;
@@ -228,7 +228,7 @@ void chromeThread()
 			}	
 
 			HICON hIcon = NULL;
-			wstring ws = charCodec::ansiToUtf16(fs::appPath() + "\\favicon.ico");
+			wstring ws = charCodec::gb_to_utf16(fs::appPath() + "\\favicon.ico");
 			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 
 			Sleep(3000); //此处要sleep一下,不然任务栏图标替换不掉
@@ -263,7 +263,7 @@ void startMicroService(string path)
 {
 	if (fs::fileExist(path))
 	{
-		wstring title = charCodec::utf8toUtf16("123456");
+		wstring title = charCodec::utf8_to_utf16("123456");
 		STARTUPINFOW si;
 		si.lpTitle = (LPWSTR)title.c_str();
 		PROCESS_INFORMATION pi;
@@ -276,7 +276,7 @@ void startMicroService(string path)
 		si.wShowWindow = TRUE; // 此成员设为TRUE的话则显示新建进程的主窗口
 
 		if (!CreateProcessW(NULL,   // No module name (use command line)
-			(LPWSTR)charCodec::utf8toUtf16(path).c_str(),        // Command line
+			(LPWSTR)charCodec::utf8_to_utf16(path).c_str(),        // Command line
 			NULL,           // Process handle not inheritable
 			NULL,           // Thread handle not inheritable
 			FALSE,          // Set handle inheritance to FALSE
@@ -337,7 +337,7 @@ string TDS_imp::getUIMode()
 bool TDS_imp::setWorkingDir()
 {
 	string cwd = fs::appPath();
-	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8toUtf16(cwd).c_str());
+	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8_to_utf16(cwd).c_str());
 	string s = bRet ? "成功" : "失败";
 	//LOG("[keyinfo][工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
 	return true;
@@ -461,7 +461,7 @@ bool TDS_imp::run(string cmdline)
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
-	SetConsoleTitleW(charCodec::utf8toUtf16(m_sTitle).c_str());
+	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
 
 	return true;
 }
@@ -696,7 +696,7 @@ void TDS_imp::log(const char* text)
 {
 	if (InterfaceEncoding == "gb2312")
 	{
-		string strUtf8 = charCodec::ansi2Utf8(text);
+		string strUtf8 = charCodec::gb_to_utf8(text);
 		LOG(strUtf8);
 	}
 	else
@@ -711,17 +711,17 @@ void TDS_imp::createDefaultCompanyInfo() {
 	{
 		if (!fs::fileExist(confPath + "/info.json"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/info.json"), charCodec::utf8toUtf16(confPath + "/info.json"));
+			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/info.json"), charCodec::utf8_to_utf16(confPath + "/info.json"));
 		}
 
 		if (!fs::fileExist(confPath + "/banner.svg"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/banner.svg"), charCodec::utf8toUtf16(confPath + "/banner.svg"));
+			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/banner.svg"), charCodec::utf8_to_utf16(confPath + "/banner.svg"));
 		}
 
 		if (!fs::fileExist(confPath + "/logo.svg"))
 		{
-			copy(charCodec::utf8toUtf16(fs::appPath() + "/ui/app/assets/logo.svg"), charCodec::utf8toUtf16(confPath + "/logo.svg"));
+			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/logo.svg"), charCodec::utf8_to_utf16(confPath + "/logo.svg"));
 		}
 	}
 	catch(exception& e)
@@ -735,17 +735,17 @@ void TDS_imp::createDefaultCompanyInfo() {
 	{
 		if (fs::fileExist(confPath + "/info.json"))
 		{
-			std::filesystem::copy( charCodec::utf8toUtf16(confPath + "/info.json"), charCodec::utf8toUtf16(fs::appPath() + "/ui/info.json"), std::filesystem::copy_options::overwrite_existing);
+			std::filesystem::copy( charCodec::utf8_to_utf16(confPath + "/info.json"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/info.json"), std::filesystem::copy_options::overwrite_existing);
 		}
 
 		if (fs::fileExist(confPath + "/banner.svg"))
 		{
-			std::filesystem::copy(charCodec::utf8toUtf16(confPath + "/banner.svg"), charCodec::utf8toUtf16(fs::appPath() + "/ui/banner.svg"), std::filesystem::copy_options::overwrite_existing);
+			std::filesystem::copy(charCodec::utf8_to_utf16(confPath + "/banner.svg"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/banner.svg"), std::filesystem::copy_options::overwrite_existing);
 		}
 
 		if (fs::fileExist(confPath + "/logo.svg"))
 		{
-			std::filesystem::copy(charCodec::utf8toUtf16(confPath + "/logo.svg"), charCodec::utf8toUtf16(fs::appPath() + "/ui/logo.svg"), std::filesystem::copy_options::overwrite_existing);
+			std::filesystem::copy(charCodec::utf8_to_utf16(confPath + "/logo.svg"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/logo.svg"), std::filesystem::copy_options::overwrite_existing);
 		}
 	}
 	catch (exception& e)

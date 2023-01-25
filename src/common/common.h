@@ -276,8 +276,8 @@ namespace fs {
 		string folderPath;
 	};
 
-	bool getFileInfo(string path, FILE_INFO& fi);
-	void getFolderList(vector<string>& list, string strFolder);
+
+	void getFolderList(vector<FILE_INFO>& list, string strFolder);
 	void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder = false, bool recursive = false,string suffix="*");
 	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
 }

@@ -48,7 +48,7 @@ size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 
 bool DownloadHTTPFile(std::string url, std::string file_save_path)//待下载文件的URL, 存放到本地的路径
 {
-	url = charCodec::ansi2Utf8(url);
+	url = charCodec::gb_to_utf8(url);
 	//HRESULT hr = URLDownloadToFile(NULL, url.c_str(), file_save_path.c_str(), 0, NULL);
 	//return hr == S_OK;
 	return false;
@@ -92,102 +92,6 @@ string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION
 	str = str::replace(str, "$confPath$", tds->conf->confPath);
 
 	return str;
-}
-
-
-void selectFolderDlgThread(json params)
-{
-	vector<string> paths = fs::fileDlg(false,true,true);
-	if (paths.size() > 0)
-	{
-		json jn = json::object();
-
-		if (paths.size() > 1)
-		{
-			json jPs = json::array();
-			for (int i = 0; i < paths.size(); i++)
-			{
-				string p = paths[i];
-				jPs.push_back(p);
-			}
-			jn["path"] = jPs;
-			rpcSrv.notify("fs.selectFolderDlg", jn);
-		}
-		else if (paths.size() == 1)
-		{
-			jn["path"] = paths[0];
-			rpcSrv.notify("fs.selectFolderDlg", jn);
-		}
-	}
-}
-
-
-void openFileDlgThread(json params)
-{
-	string filter;
-	if (params["filter"] != nullptr)
-		filter = params["filter"].get<string>();
-	string title;
-	if (params["title"] != nullptr)
-		title = params["title"].get<string>();
-	//filter = filter
-	vector<string> paths  = fs::fileDlg(false,true,false,(char*)filter.c_str(), (char*)title.c_str());
-	if (paths.size()>0)
-	{
-		json jn = json::object();
-
-		if (paths.size() > 1)
-		{
-			json jPs = json::array();
-			for (int i = 0; i < paths.size(); i++)
-			{
-				string p = paths[i];
-				jPs.push_back(p);
-			}
-			jn["path"] = jPs;
-			rpcSrv.notify("fs.openFileDlg", jn);
-		}
-		else if(paths.size() == 1)
-		{
-			jn["path"] = paths[0];
-			rpcSrv.notify("fs.openFileDlg", jn);
-		}
-	}
-}
-
-void saveFileDlgThread(json params)
-{
-	string filter;
-	if (params["filter"] != nullptr)
-		filter = params["filter"].get<string>();
-	string title;
-	if(params["title"]!=nullptr)
-		title = params["title"].get<string>();
-	string fileName;
-	if (params["fileName"] != nullptr)
-		fileName = params["fileName"].get<string>();
-	vector<string> paths = fs::fileDlg(false,false, false, (char*)filter.c_str(), (char*)title.c_str(),(char*)fileName.c_str());
-	if (paths.size() > 0)
-	{
-		json jn = json::object();
-
-		if (paths.size() > 1)
-		{
-			json jPs = json::array();
-			for (int i = 0; i < paths.size(); i++)
-			{
-				string p = paths[i];
-				jPs.push_back(p);
-			}
-			jn["path"] = jPs;
-			rpcSrv.notify("fs.saveFileDlg", jn);
-		}
-		else if (paths.size() == 1)
-		{
-			jn["path"] = paths[0];
-			rpcSrv.notify("fs.saveFileDlg", jn);
-		}
-	}
 }
 
 
@@ -274,7 +178,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		WCHAR buff[300] = { 0 };
 		GetCurrentDirectoryW(300, buff);
 		wstring s = buff;
-		json j = charCodec::utf16toUtf8(s);
+		json j = charCodec::utf16_to_utf8(s);
 		result = j.dump();
 	}
 	else if (method == "fs.getFileList")
@@ -294,27 +198,24 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	else if (method == "fs.exploreFolder")
 	{
 		string path = params["path"];
-		vector<string> fileList,folderList;
+		vector<fs::FILE_INFO> fileList;
+		vector<fs::FILE_INFO> folderList;
 		fs::getFileList(fileList, path);
 		fs::getFolderList(folderList, path);
 		json infoList = json::array();
 		for (int i = 0; i < folderList.size(); i++) {
-			string sFolder = folderList[i];
-			fs::FILE_INFO fi;
-			fs::getFileInfo(path + "/" + sFolder, fi);
+			fs::FILE_INFO& fi = folderList[i];
 			json j;
-			j["name"] = sFolder;
+			j["name"] = fi.name;
 			j["size"] = fi.len;
 			j["modifyTime"] = fi.modifyTime;
 			j["isFolder"] = true;
 			infoList.push_back(j);
 		}
 		for (int i = 0; i < fileList.size(); i++) {
-			string sFile = fileList[i];
-			fs::FILE_INFO fi;
-			fs::getFileInfo(path + "/" + sFile, fi);
+			fs::FILE_INFO& fi = fileList[i];
 			json j;
-			j["name"] = sFile;
+			j["name"] = fi.name;
 			j["size"] = fi.len;
 			j["modifyTime"] = fi.modifyTime;
 			j["isFolder"] = false;
@@ -336,27 +237,27 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.openFileDlg")
 	{
-		std::thread t(openFileDlgThread, params);
-		t.detach();
+		//std::thread t(openFileDlgThread, params);
+		//t.detach();
 		result = "\"ok\"";
 	}
 	else if (method == "fs.saveFileDlg")
 	{
-		std::thread t(saveFileDlgThread, params);
-		t.detach();
+		//std::thread t(saveFileDlgThread, params);
+		//t.detach();
 		result = "\"ok\"";
 	}
 	else if (method == "fs.selectFolderDlg")
 	{
-		std::thread t(selectFolderDlgThread, params);
-		t.detach();
+		//std::thread t(selectFolderDlgThread, params);
+		//t.detach();
 		result = "\"ok\"";
 	}
 	else if (method == "fs.openFolder")
 	{
 		string s = params["path"];
 		s = str::replace(s, "/", "\\");
-		wstring ws = charCodec::utf8toUtf16(s);
+		wstring ws = charCodec::utf8_to_utf16(s);
 		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
 		result = "\"ok\"";
 	}
@@ -367,7 +268,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		string path = db.m_path + db.getPath_deFile(tag, timeopt::str2st(time));
 
 		path = str::replace(path, "/", "\\");
-		wstring ws = charCodec::utf8toUtf16(path);
+		wstring ws = charCodec::utf8_to_utf16(path);
 		ShellExecuteW(NULL, L"open", L"explorer.exe", ws.c_str(), NULL, SW_SHOWNORMAL);
 		result = "\"ok\"";
 	}
@@ -2113,7 +2014,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	
 	bGB2312 = isGB2312Pkt(strReq);
 	if(bGB2312)
-		strReq = charCodec::ansi2Utf8(strReq);
+		strReq = charCodec::gb_to_utf8(strReq);
 
 	strReq = ResolveTdsRpcEvnVar(strReq, pSession);
 

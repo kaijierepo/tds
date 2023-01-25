@@ -27,10 +27,8 @@ SOFTWARE.
 
 #include "pch.h"
 #include "tdsConf.h"
-#include "video/remoteDesktopServer.h"
 #include "logger.h"
 #include "tds_imp.h"
-#include "wke.h"
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
@@ -159,8 +157,7 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 int main(int argc, char** argv)
 {
-	float a = 0.1;
-
+	string s = str::format("%s,%d,%x", "abcde", 1, 0xff);
 
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {
@@ -326,7 +323,7 @@ int main(int argc, char** argv)
 				fs::readFile(p, gbData);
 				if (charCodec::hasGB2312(gbData))
 				{
-					string u8Data = charCodec::ansi2Utf8(gbData);
+					string u8Data = charCodec::gb_to_utf8(gbData);
 					fs::writeFile(p, u8Data);
 					LOG("已转换:" + p);
 				}

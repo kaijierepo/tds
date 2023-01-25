@@ -301,7 +301,7 @@ string TDS_SESSION::GetClientIp()
      totalLen = len;
      filePath = path;
      fs::createFolderOfPath(path);
-     wstring wpath = charCodec::autoToUtf16(path);
+     wstring wpath = charCodec::tds_to_utf16(path);
 
      fp = _wfopen(wpath.c_str(), L"wb");
      if (fp)

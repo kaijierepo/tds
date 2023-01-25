@@ -142,7 +142,7 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 	}
 	else
 	{
-		FILE* fp = _wfopen(charCodec::utf8toUtf16(dlPath).c_str(), L"rb+");
+		FILE* fp = _wfopen(charCodec::utf8_to_utf16(dlPath).c_str(), L"rb+");
 		if (fp)
 		{
 			fseek(fp, 0L, SEEK_END);
@@ -963,7 +963,7 @@ void database::saveDEFile(string strTag, TIME stTime, string deFileUrl)
 	try
 	{
 		fs::createFolderOfPath(path);
-		copy(charCodec::utf8toUtf16(deFileUrl),charCodec::utf8toUtf16(path));
+		copy(charCodec::utf8_to_utf16(deFileUrl),charCodec::utf8_to_utf16(path));
 	}
 	catch (std::exception& e)
 	{

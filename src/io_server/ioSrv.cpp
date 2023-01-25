@@ -1542,7 +1542,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 					return;
 				}
 
-				sResp = charCodec::ansi2Utf8(sResp);
+				sResp = charCodec::gb_to_utf8(sResp);
 			}
 
 			//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善

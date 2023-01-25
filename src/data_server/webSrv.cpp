@@ -661,24 +661,23 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/apk"))
 		{
 			string localPath = fs::appPath() + "/files/apk";
-			vector<string> fl;
+			vector<fs::FILE_INFO> fl;
 			fs::getFileList(fl, localPath);
+			//重定向到最新的apk文件并下载
 			string redirectPath = "/files/apk/";
 
-			map<string, string> fil;
-
+			map<string,fs::FILE_INFO> fl2;
 			for (auto& i : fl)
 			{
-				fs::FILE_INFO fi;
-				string p = localPath + "/" + i;
-				fs::getFileInfo(p, fi);
-				fil[fi.modifyTime] = i;
+				fl2[i.modifyTime] = i;
 			}
 
 			string sHeader;
-			if (fil.size() > 0) //默认按照时间的升序排列
+			if (fl2.size() > 0) //默认按照时间的升序排列
 			{
-				redirectPath += fil.rbegin()->second;
+				string newestApkPath = fl2.rbegin()->second.path;
+				string rPath = str::trimPrefix(newestApkPath, localPath);
+				redirectPath += rPath;
 				sHeader = "location:" + redirectPath + "\r\n";
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}
