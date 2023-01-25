@@ -28,6 +28,9 @@
 #include <unistd.h>
 #include <iconv.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <wchar.h>
+#include <stdlib.h>
 #endif
 
 using namespace std;
@@ -275,7 +278,6 @@ namespace fs {
 		string path;
 		string folderPath;
 	};
-
 
 	void getFolderList(vector<FILE_INFO>& list, string strFolder);
 	void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder = false, bool recursive = false,string suffix="*");

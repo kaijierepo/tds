@@ -1426,27 +1426,29 @@ namespace fs {
 			strFile = strFile.substr(0, iSlashPos);
 		}
 
-		size_t iStartPos = 0;
-		while (1)
-		{
-			size_t iSlash = strFile.find('/', iStartPos);
+		filesystem::create_directories(charCodec::utf8_to_gb(strFile));
 
-			if (iSlash == string::npos)//路径为文件夹的情况
-			{
-				size_t iDot = strFile.find('.', iStartPos);
-				if (iDot == string::npos)
-					CreateDirectoryW(charCodec::tds_to_utf16(strFile).c_str(), NULL);
-				break;
-			}
+		//size_t iStartPos = 0;
+		//while (1)
+		//{
+		//	size_t iSlash = strFile.find('/', iStartPos);
 
-			if (iSlash + 1 == strFile.length())//最后字符为 \\ 的情况
-				break;
+		//	if (iSlash == string::npos)//路径为文件夹的情况
+		//	{
+		//		size_t iDot = strFile.find('.', iStartPos);
+		//		if (iDot == string::npos)
+		//			CreateDirectoryW(charCodec::tds_to_utf16(strFile).c_str(), NULL);
+		//		break;
+		//	}
 
-			string strFolder = strFile.substr(0, iSlash);
-			wstring wstrFolder = charCodec::tds_to_utf16(strFolder).c_str();
-			CreateDirectoryW(wstrFolder.c_str(), NULL);
-			iStartPos = iSlash + 1;
-		}
+		//	if (iSlash + 1 == strFile.length())//最后字符为 \\ 的情况
+		//		break;
+
+		//	string strFolder = strFile.substr(0, iSlash);
+		//	wstring wstrFolder = charCodec::tds_to_utf16(strFolder).c_str();
+		//	CreateDirectoryW(wstrFolder.c_str(), NULL);
+		//	iStartPos = iSlash + 1;
+		//}
 	}
 
 	string appPath()
@@ -1494,7 +1496,12 @@ namespace fs {
 	{
 		str = charCodec::tds_to_gb(str);
 		char absPath[1024] = { 0 };
+#ifdef WINDOWS
 		_fullpath(absPath, str.c_str(), 1024);
+#endif
+#ifdef LINUX
+		realpath((char*)str.data(),absPath);
+#endif
 		str = absPath;
 		str = str::replace(str, "\\", "/");
 		str = charCodec::gb_to_tds(str);
@@ -1513,7 +1520,12 @@ namespace fs {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
+#ifdef WINDOWS
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
+#endif
+#ifdef LINUX
+		fp = fopen(charCodec::tds_to_gb(path).c_str(), "rb");
+#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -1536,7 +1548,12 @@ namespace fs {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
+#ifdef WINDOWS
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
+#endif
+#ifdef LINUX
+		fp = fopen(charCodec::tds_to_gb(path).c_str(), "rb");
+#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -1558,7 +1575,12 @@ namespace fs {
 		wstring wpath = charCodec::tds_to_utf16(path);
 
 		FILE* fp = nullptr;
-		_wfopen_s(&fp,wpath.c_str(), L"wb");
+#ifdef WINDOWS
+		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"wb");
+#endif
+#ifdef LINUX
+		fp = fopen(charCodec::tds_to_gb(path).c_str(), "wb");
+#endif
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -1575,9 +1597,13 @@ namespace fs {
 
 	bool appendFile(string path, char* data, size_t len)
 	{
-		wstring wpath = charCodec::tds_to_utf16(path);
 		FILE* fp = nullptr;
-		_wfopen_s(&fp,wpath.c_str(), L"ab");
+#ifdef WINDOWS
+		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"ab");
+#endif
+#ifdef LINUX
+		fp = fopen(charCodec::tds_to_gb(path).c_str(), "ab");
+#endif
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -1597,25 +1623,40 @@ namespace fs {
 	}
 	bool fileExist(string pszFileName)
 	{
-		WIN32_FIND_DATAW FindFileData;
-		HANDLE hFind;
-
-		hFind = FindFirstFileW(charCodec::tds_to_utf16(pszFileName).c_str(), &FindFileData);
-
-		if (hFind == INVALID_HANDLE_VALUE)
+		std::error_code error;
+		auto file_status = std::filesystem::status(charCodec::tds_to_gb(pszFileName), error);
+		if (error) {
 			return false;
-		else
-		{
-			FindClose(hFind);
+		}
+ 
+		if (std::filesystem::exists(file_status)) {
 			return true;
 		}
-		return false;
+		else if(std::filesystem::is_directory(file_status)){
+			return true;
+		}
+		return  false;
+
+		//WIN32_FIND_DATAW FindFileData;
+		//HANDLE hFind;
+
+		//hFind = FindFirstFileW(charCodec::tds_to_utf16(pszFileName).c_str(), &FindFileData);
+
+		//if (hFind == INVALID_HANDLE_VALUE)
+		//	return false;
+		//else
+		//{
+		//	FindClose(hFind);
+		//	return true;
+		//}
+		//return false;
 	}
 
 	bool deleteFile(string path) {
-		wstring wpath = charCodec::tds_to_utf16(path);
-		int iret = _wremove(wpath.c_str());
-		return iret == 0;
+		return filesystem::remove(charCodec::tds_to_gb(path));
+		//wstring wpath = charCodec::tds_to_utf16(path);
+		//int iret = _wremove(wpath.c_str());
+		//return iret == 0;
 	}
 
 
