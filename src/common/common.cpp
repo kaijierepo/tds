@@ -1,6 +1,6 @@
 ﻿#include "common.h"
 #include <filesystem>
-
+#include <stdarg.h>
 using namespace std;
 
 namespace common {
@@ -72,67 +72,73 @@ namespace charCodec {
 
 	string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
+		string str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
+		str = charstr;
 		delete charstr;
-		return str;
 #endif
 #ifdef LINUX
-		return "";
+		
 #endif
+		return str;
 	}
 	string utf16_to_gb(wstring instr)
 	{
+		string str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
+		str = charstr;
 		delete charstr;
-		return str;
 #endif
 #ifdef LINUX
-		return "";
+		
 #endif
+		return str;
 	}
 	wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	{
+		wstring str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
 		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
+		str = wcharstr;
 		delete wcharstr;
-		return str;
+		
 #endif
 #ifdef LINUX
-		return L"";
+		
 #endif
+		return str;
 	}
 	wstring gb_to_utf16(string instr)
 	{
+		wstring str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
 		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-		wstring str = wcharstr;
+		str = wcharstr;
 		delete wcharstr;
-		return str;
 #endif
 #ifdef LINUX
-		return L"";
+		
 #endif
+		return str;
 	}
 	
 	string utf8_to_gb(string instr) //utf-8-->ansi
 	{
+		string str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -141,10 +147,9 @@ namespace charCodec {
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string charstrtemp(charstr);
+		str = charstr;
 		delete wcharstr;
 		delete charstr;
-		return charstrtemp;
 #endif
 #ifdef LINUX
 		int ret = 0;
@@ -172,11 +177,14 @@ namespace charCodec {
 			iconv_close(cd);
 		}
 		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		return outbuf;
+		str = outbuf;
+		free(outbuf);
 #endif
+		return str;
 	}
 	string gb_to_utf8(string instr) //ansi-->utf-8
 	{
+		string str;
 #ifdef WINDOWS
 		int MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
@@ -185,10 +193,9 @@ namespace charCodec {
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string charstrtemp(charstr);
+		string str = charstr;
 		delete wcharstr;
 		delete charstr;
-		return charstrtemp;
 #endif
 #ifdef LINUX
 		int ret = 0;
@@ -214,8 +221,10 @@ namespace charCodec {
 			iconv_close(cd);
 		}
 		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		return outbuf;
+		str = outbuf;
+		free(outbuf);
 #endif
+		return str;
 	}
 
 	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
@@ -590,7 +599,7 @@ namespace str {
 		vector<unsigned char> vecB;
 		for (int i = 0; i < vec.size(); i++)
 		{
-			byte& b = *((byte*)(&vec[i]));
+			unsigned char& b = *((unsigned char*)(&vec[i]));
 			vecB.push_back(b);
 		}
 		return vecB;
@@ -657,7 +666,7 @@ namespace str {
 
 			int val = (bHigh * 16 + bLow);
 			unsigned char b = (unsigned char)val;
-			ary.push_back((byte)b);
+			ary.push_back((unsigned char)b);
 		}
 		return ary;
 	}
@@ -1453,6 +1462,7 @@ namespace fs {
 
 	string appPath()
 	{
+		string str;
 #ifdef WINDOWS
 		//windows获取到的是反斜杠，tds内统一使用斜杠
 		TCHAR p[MAX_PATH] = { 0 };
@@ -1464,8 +1474,7 @@ namespace fs {
 			strPath = strPath;
 		else
 			strPath = charCodec::gb_to_utf8(strPath);
-		strPath = str::replace(strPath, "\\", "/");
-		return strPath;
+		str = str::replace(strPath, "\\", "/");
 #endif 
 #ifdef LINUX
 		char* p = NULL;
@@ -1479,8 +1488,9 @@ namespace fs {
 		{
 			return std::string("");
 		}
-		return std::string(arr_tmp);
+		str = arr_tmp;
 #endif
+		return str;
 	}
 
 	string appName()
@@ -1722,6 +1732,7 @@ namespace path {
 #define GUID_LEN 64
 namespace common {
 	string guid() {
+		string str;
 #ifdef WINDOWS
 		char buf[GUID_LEN] = { 0 };
 		GUID guid;
@@ -1737,7 +1748,7 @@ namespace common {
 			guid.Data4[3], guid.Data4[4], guid.Data4[5],
 			guid.Data4[6], guid.Data4[7]);
 
-		return std::move(std::string(buf));
+		str = buf;
 #elif LINUX
 		char buf[GUID_LEN] = { 0 };
 
@@ -1755,8 +1766,9 @@ namespace common {
 			index += len;
 		}
 
-		return std::move(std::string(buf));
+		str = buf;
 #endif // WIN32
+		return str;
 	}
 
 	float randomFloat(float min, float max) {

@@ -153,8 +153,7 @@ namespace common {
 }
 
 namespace str {
-	template<typename ... Args>
-	std::string format(const char* pszFmt, Args ... args);
+	std::string format(const char* pszFmt,... );
 }
 
 namespace charCodec {
