@@ -630,24 +630,22 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/release"))
 		{
 			string localPath = fs::appPath() + "/files/release";
-			vector<string> fl;
+			vector<fs::FILE_INFO> fl;
 			fs::getFileList(fl, localPath);
 			string redirectPath = "/files/release/";
 
-			map<string, string> fil;
+			map<string, fs::FILE_INFO> fl2;
 
 			for (auto& i : fl)
 			{
-				fs::FILE_INFO fi;
-				string p = localPath + "/" + i;
-				fs::getFileInfo(p, fi);
-				fil[fi.modifyTime] = i;
+				fl2[i.modifyTime] = i;
 			}
 
 			string sHeader;
-			if (fil.size() > 0) //默认按照时间的升序排列
+			if (fl2.size() > 0) //默认按照时间的升序排列
 			{
-				redirectPath += fil.rbegin()->second;
+				string newestPath = fl2.rbegin()->second.path;
+				redirectPath += str::trimPrefix(newestPath, localPath);
 				sHeader = "location:" + redirectPath + "\r\n";
 				sHeader += "Cache-Control:max-age=1\r\n";
 			}

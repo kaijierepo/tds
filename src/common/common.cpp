@@ -193,7 +193,7 @@ namespace charCodec {
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-		string str = charstr;
+		str = charstr;
 		delete wcharstr;
 		delete charstr;
 #endif

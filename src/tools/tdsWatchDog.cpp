@@ -262,59 +262,60 @@ bool tdsWatchDog::isProcessRun(string name)
 
 string tdsWatchDog::getFileVerInfo(string path)
 {
-	if (!fs::fileExist(path))
-		return "";
+	return "";
+	//if (!fs::fileExist(path))
+	//	return "";
 
-	path = charCodec::utf8_to_gb(path);
+	//path = charCodec::utf8_to_gb(path);
 
-	DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
-	LPVOID pBlock = malloc(dwSize);
-	GetFileVersionInfo(path.c_str(), 0, dwSize, pBlock);
-	char* pVerValue = NULL;
-	UINT nSize = 0;
-	VerQueryValue(pBlock, TEXT("\\VarFileInfo\\Translation"), (LPVOID*)&pVerValue, &nSize);
-	if (pVerValue == NULL)
-		return "";
-	string strSubBlock, strTranslation, strTemp;
-	strTemp = str::format("000%x", *((unsigned short int*)pVerValue));
-	strTranslation = strTemp.substr(strTemp.length()-4,4);
-	strTemp = str::format("000%x", *((unsigned short int*) & pVerValue[2]));
-	strTranslation += strTemp.substr(strTemp.length() - 4, 4);
-	//080404b0为中文，040904E4为英文
-	//文件描述
-	strSubBlock = str::format("\\StringFileInfo\\%s\\FileDescription", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format(_GB("文件描述: %s"), pVerValue);
-	strTemp = charCodec::gb_to_utf8(strTemp);
-	//文件版本
-	strSubBlock = str::format("\\StringFileInfo\\%s\\FileVersion", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp =str::format("%s", pVerValue);
-	string strFileVersion = strTemp;
-	//内部名称
-	strSubBlock = str::format("\\StringFileInfo\\%s\\InternalName", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format("内部名称: %s", pVerValue);
-	//合法版权
-	strSubBlock = str::format("\\StringFileInfo\\%s\\LegalTradeMarks", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format("合法版权: %s", pVerValue);
-	//原始文件名
-	strSubBlock = str::format("\\StringFileInfo\\%s\\OriginalFileName", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format("原始文件名: %s", pVerValue);
-	//产品名称
-	strSubBlock = str::format("\\StringFileInfo\\%s\\ProductName", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format("产品名称: %s", pVerValue);
-	//产品版本
-	strSubBlock = str::format("\\StringFileInfo\\%s\\ProductVersion", strTranslation.c_str());
-	VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
-	strTemp = str::format("产品版本: %s", pVerValue);
-	string str =str::format("%s", pVerValue);
-	str = charCodec::gb_to_utf8(str);
-	free(pBlock);
-	return str;
+	//DWORD dwSize = GetFileVersionInfoSize(path.c_str(), NULL);
+	//LPVOID pBlock = malloc(dwSize);
+	//GetFileVersionInfo(path.c_str(), 0, dwSize, pBlock);
+	//char* pVerValue = NULL;
+	//UINT nSize = 0;
+	//VerQueryValue(pBlock, TEXT("\\VarFileInfo\\Translation"), (LPVOID*)&pVerValue, &nSize);
+	//if (pVerValue == NULL)
+	//	return "";
+	//string strSubBlock, strTranslation, strTemp;
+	//strTemp = str::format("000%x", *((unsigned short*)pVerValue));
+	//strTranslation = strTemp.substr(strTemp.length()-4,4);
+	//strTemp = str::format("000%x", *((unsigned short*) & pVerValue[2]));
+	//strTranslation += strTemp.substr(strTemp.length() - 4, 4);
+	////080404b0为中文，040904E4为英文
+	////文件描述
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\FileDescription", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format(_GB("文件描述: %s"), pVerValue);
+	//strTemp = charCodec::gb_to_utf8(strTemp);
+	////文件版本
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\FileVersion", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp =str::format("%s", pVerValue);
+	//string strFileVersion = strTemp;
+	////内部名称
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\InternalName", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format("内部名称: %s", pVerValue);
+	////合法版权
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\LegalTradeMarks", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format("合法版权: %s", pVerValue);
+	////原始文件名
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\OriginalFileName", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format("原始文件名: %s", pVerValue);
+	////产品名称
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\ProductName", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format("产品名称: %s", pVerValue);
+	////产品版本
+	//strSubBlock = str::format("\\StringFileInfo\\%s\\ProductVersion", strTranslation.c_str());
+	//VerQueryValue(pBlock, strSubBlock.c_str(), (LPVOID*)&pVerValue, &nSize);
+	//strTemp = str::format("产品版本: %s", pVerValue);
+	//string str =str::format("%s", pVerValue);
+	//str = charCodec::gb_to_utf8(str);
+	//free(pBlock);
+	//return str;
 }
 
 string tdsWatchDog::getCurTdsVer()
