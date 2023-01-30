@@ -1421,6 +1421,7 @@ namespace sys {
 namespace fs {
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
+	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
 	void createFolderOfPath(string strFile)
 	{
 		strFile = str::replace(strFile, "\\", "/");
@@ -1435,29 +1436,7 @@ namespace fs {
 			strFile = strFile.substr(0, iSlashPos);
 		}
 
-		filesystem::create_directories(charCodec::utf8_to_gb(strFile));
-
-		//size_t iStartPos = 0;
-		//while (1)
-		//{
-		//	size_t iSlash = strFile.find('/', iStartPos);
-
-		//	if (iSlash == string::npos)//路径为文件夹的情况
-		//	{
-		//		size_t iDot = strFile.find('.', iStartPos);
-		//		if (iDot == string::npos)
-		//			CreateDirectoryW(charCodec::tds_to_utf16(strFile).c_str(), NULL);
-		//		break;
-		//	}
-
-		//	if (iSlash + 1 == strFile.length())//最后字符为 \\ 的情况
-		//		break;
-
-		//	string strFolder = strFile.substr(0, iSlash);
-		//	wstring wstrFolder = charCodec::tds_to_utf16(strFolder).c_str();
-		//	CreateDirectoryW(wstrFolder.c_str(), NULL);
-		//	iStartPos = iSlash + 1;
-		//}
+		filesystem::create_directories(charCodec::tds_to_utf16(strFile));
 	}
 
 	string appPath()
@@ -1470,10 +1449,7 @@ namespace fs {
 		string strPath = (char*)p;
 		size_t nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
 		strPath = strPath.substr(0, nEnd);
-		if (common::getCharCodec() == "gb2312")
-			strPath = strPath;
-		else
-			strPath = charCodec::gb_to_utf8(strPath);
+		strPath = charCodec::gb_to_tds(strPath);
 		str = str::replace(strPath, "\\", "/");
 #endif 
 #ifdef LINUX
@@ -1495,11 +1471,32 @@ namespace fs {
 
 	string appName()
 	{
-		string appPath = fs::appPath();
-		int nEnd = appPath.rfind('\\');//取最后的"\"号之前地址
-		string appName = appPath.substr(nEnd+1, appPath.length() - nEnd - 1);
-		appName = str::trimSuffix(appName, ".exe");
-		return appName;
+		string str;
+#ifdef WINDOWS
+		//windows获取到的是反斜杠，tds内统一使用斜杠
+		TCHAR p[MAX_PATH] = { 0 };
+		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+		string strPath = (char*)p;
+		size_t nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+		str = strPath.substr(nEnd+1,strPath.length() - nEnd - 1 );
+		str = charCodec::gb_to_tds(str);
+		str = str::trimSuffix(str,".exe");
+#endif 
+#ifdef LINUX
+		char* p = NULL;
+		const int len = 256;
+		/// to keep the absolute path of executable's path
+		char arr_tmp[len] = { 0 };
+		int n = readlink("/proc/self/exe", arr_tmp, len);
+		if (NULL != (p = strrchr(arr_tmp, '/')))
+			*p = '\0';
+		else
+		{
+			return std::string("");
+		}
+		str = arr_tmp;
+#endif
+		return str;
 	}
 
 	string toAbsolutePath(string str)
@@ -1534,7 +1531,7 @@ namespace fs {
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
 #endif
 #ifdef LINUX
-		fp = fopen(charCodec::tds_to_gb(path).c_str(), "rb");
+		fp = fopen(charCodec::tds_to_utf8(path).c_str(), "rb");
 #endif
 		if (fp)
 		{
@@ -1582,7 +1579,6 @@ namespace fs {
 	bool writeFile(string path, char* data, size_t len)
 	{
 		fs::createFolderOfPath(path);
-		wstring wpath = charCodec::tds_to_utf16(path);
 
 		FILE* fp = nullptr;
 #ifdef WINDOWS
@@ -1634,7 +1630,7 @@ namespace fs {
 	bool fileExist(string pszFileName)
 	{
 		std::error_code error;
-		auto file_status = std::filesystem::status(charCodec::tds_to_gb(pszFileName), error);
+		auto file_status = std::filesystem::status(charCodec::tds_to_utf16(pszFileName), error);
 		if (error) {
 			return false;
 		}
@@ -1646,27 +1642,10 @@ namespace fs {
 			return true;
 		}
 		return  false;
-
-		//WIN32_FIND_DATAW FindFileData;
-		//HANDLE hFind;
-
-		//hFind = FindFirstFileW(charCodec::tds_to_utf16(pszFileName).c_str(), &FindFileData);
-
-		//if (hFind == INVALID_HANDLE_VALUE)
-		//	return false;
-		//else
-		//{
-		//	FindClose(hFind);
-		//	return true;
-		//}
-		//return false;
 	}
 
 	bool deleteFile(string path) {
-		return filesystem::remove(charCodec::tds_to_gb(path));
-		//wstring wpath = charCodec::tds_to_utf16(path);
-		//int iret = _wremove(wpath.c_str());
-		//return iret == 0;
+		return filesystem::remove(charCodec::tds_to_utf16(path));
 	}
 
 
@@ -1688,31 +1667,40 @@ namespace fs {
 	}
 
 	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
-		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
-			 if (i.is_directory() && recursive) {
-				 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
-			 }
-			 else {
-				FILE_INFO fi;
-				fi.path = charCodec::gb_to_tds(i.path().string());
-				fi.path = str::replace(fi.path, "\\", "/");
-				if (suffix!="*" && fi.path.find(suffix) == string::npos)
-				 	continue;
-				size_t pos = fi.path.rfind("/");
-				fi.folderPath = fi.path.substr(0,pos);
-				fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
-				fi.len = i.file_size();
-				list.push_back(fi);
+		 try
+		 {
+			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
+			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+				 if (i.is_directory() && recursive) {
+					 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
+				 }
+				 else {
+					 FILE_INFO fi;
+					 fi.path = charCodec::gb_to_tds(i.path().string());
+					 fi.path = str::replace(fi.path, "\\", "/");
+					 if (suffix != "*" && fi.path.find(suffix) == string::npos)
+						 continue;
+					 size_t pos = fi.path.rfind("/");
+					 fi.folderPath = fi.path.substr(0, pos);
+					 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+					 fi.len = i.file_size();
+					 list.push_back(fi);
+				 }
 			 }
 		 }
+		 catch (const std::exception& e)
+		 {
+			 //找不到指定路径进入到此处
+			 //string s = e.what();
+			 //printf(s.c_str());
+		 }		 
 	}
 
 
 	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
 	 {
 		 vector<FILE_INFO> filist;
-		 getFileList(list, strFolder, includeFolder, recursive);
+		 getFileList(filist, strFolder, includeFolder, recursive);
 		 for (int i = 0; i < filist.size(); i++) {
 			 FILE_INFO& fi = filist[i];
 			 list.push_back(fi.path);
