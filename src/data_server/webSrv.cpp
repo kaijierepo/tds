@@ -14,6 +14,8 @@
 #include "mp.h"
 #include "users/userMng.h"
 #include "tools/hmrSrv.h"
+#include "ioChan.h"
+
 
 string rootDir;
 string confDir;
@@ -1049,9 +1051,9 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		string tag = str::trimPrefix(strData,"/stream/"); 
 		 tag = str::trimSuffix(tag, ".de"); 
 		tag = httplib::detail::decode_url(tag, false);
-		MP* pmp = prj.GetMPByTag(tag); 
-		if (pmp) {
-			pmp->m_vecDeStreamSub.push_back(tdsSession);
+		ioChannel* pChan = ioSrv.getChanByTag(tag);
+		if (pChan) {
+			pChan->m_vecDeStreamSub.push_back(tdsSession);
 		}
 
 

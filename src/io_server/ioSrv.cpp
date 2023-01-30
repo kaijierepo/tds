@@ -295,73 +295,77 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 {
 	IOLogRecv(recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
 
+	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
+	try {
+		string s = str::fromBuff(recvData, recvDataLen);
 
-	if (port == 660)//来自于adaptor
-	{
-		try {
-			string s = str::fromBuff(recvData, recvDataLen);
+		json jPkt = json::parse(s);
 
-			json jPkt = json::parse(s);
-
-			string ioAddr = jPkt["ioAddr"].get<string>();
-			string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
-
-			//是否是1级设备
-			bool firstLevel = false;
-			if (ioAddr.find("/") == string::npos)
-				firstLevel = true;
-
-
-			//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
-			ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
-			//设备发现
-			if (!pIoDev)
-			{
-				if (firstLevel) {
-					json jAddr;
-					jAddr["id"] = ioAddr;
-					pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
-				}
-			}
-			//设备上线
-			else
-			{
-				if (pIoDev->m_bOnline == false)
-				{
-					pIoDev->setOnline();
-					pIoDev->triggerCycleAcq();
-					timeopt::now(&pIoDev->m_stLastActiveTime);
-					logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
-				}
-			}
-
-			if(pIoDev)
-				pIoDev->onRecvPkt(jPkt);
+		if (jPkt["method"] == "regAdaptor") {
+			m_strAdpIp = strIP;
+			m_iAdpPort = port;
+			return;
 		}
-		catch (exception& e) {
 
-		}
-	}
-	// udp设备,协议不一定是tdsp，可能是visca over udp等
-	else {
-		string ioAddr = "UDP-" + strIP + ":" + str::fromInt(port);
-		string ioAddrWithoutPort = "UDP-" + strIP;
+		string ioAddr = jPkt["ioAddr"].get<string>();
+		string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
+
+		//是否是1级设备
+		bool firstLevel = false;
+		if (ioAddr.find("/") == string::npos)
+			firstLevel = true;
+
+
 		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
 		ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
-		if (pIoDev)
+		//设备发现
+		if (!pIoDev)
 		{
-			if (pIoDev->m_bOnline == false) {
+			if (firstLevel) {
+				json jAddr;
+				jAddr["id"] = ioAddr;
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+			}
+		}
+		//设备上线
+		else
+		{
+			if (pIoDev->m_bOnline == false)
+			{
 				pIoDev->setOnline();
 				pIoDev->triggerCycleAcq();
 				timeopt::now(&pIoDev->m_stLastActiveTime);
 				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 			}
-			pIoDev->OnRecvData(recvData, recvDataLen); 
 		}
-		else {
-			LOG("[warn]未知协议空闲设备上线，ioAddr=%s", ioAddr.c_str());  
-		}
+
+		if(pIoDev)
+			pIoDev->onRecvPkt(jPkt);
 	}
+	catch (exception& e) {
+
+	}
+	
+	// udp设备,协议不一定是tdsp，可能是visca over udp等
+	//else {
+	//	string ioAddr = "UDP-" + strIP + ":" + str::fromInt(port);
+	//	string ioAddrWithoutPort = "UDP-" + strIP;
+	//	//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
+	//	ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
+	//	if (pIoDev)
+	//	{
+	//		if (pIoDev->m_bOnline == false) {
+	//			pIoDev->setOnline();
+	//			pIoDev->triggerCycleAcq();
+	//			timeopt::now(&pIoDev->m_stLastActiveTime);
+	//			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+	//		}
+	//		pIoDev->OnRecvData(recvData, recvDataLen); 
+	//	}
+	//	else {
+	//		LOG("[warn]未知协议空闲设备上线，ioAddr=%s", ioAddr.c_str());  
+	//	}
+	//}
 }
 
 bool ioServer::loadConf()
@@ -1100,8 +1104,8 @@ bool ioServer::runAsCloud()
 	}
 
 	//adaptor接入服务
-	m_udpSrv = new udpServer();
-	if (m_udpSrv->run(this,tdspPort, serverIP)) {
+	m_udpSrv_tdsp = new udpServer();
+	if (m_udpSrv_tdsp->run(this,tdspPort, serverIP)) {
 
 	}
 	else {

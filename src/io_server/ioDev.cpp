@@ -1017,10 +1017,10 @@ bool ioDev::sendData(char* pData, int iLen)
 		//通过协议适配器发送给设备
 		else {
 			if (m_bViaAdaptor) {
-				if (ioSrv.m_udpSrv != nullptr) {
-					ioSrv.m_udpSrv->SendData(pData, iLen, "127.0.0.1", 660);
+				if (ioSrv.m_udpSrv_tdsp != nullptr) {
+					int iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog)
-						IOLogSend((char*)pData, iLen, true, "UDP-127.0.0.1:660");
+						IOLogSend((char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(660));
 				}
 			}
 			else

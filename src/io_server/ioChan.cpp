@@ -36,6 +36,21 @@ bool ioChannel::loadConf(json& conf)
 {
 	m_level = "channel";
 
+	auto kv = conf.find("downSample");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bDownSample = item.get<bool>();
+		}
+	}
+
+	kv = conf.find("downSampleInterval");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_number_integer()) {
+			m_iDownSampleInterval = item.get<int>();
+		}
+	}
 
 	if (conf["addr"] != nullptr && conf["addr"].is_object())
 	{
@@ -117,6 +132,12 @@ bool ioChannel::toJson(json& conf, json opt)
 			conf["channelType"] = m_channelType;
 			conf["channelTypeLabel"] = m_channelTypeLabel;
 		}
+
+		if (m_bDownSample)
+		{
+			conf["downSample"] = true;
+			conf["downSampleInterval"] = m_iDownSampleInterval;
+		}
 	}
 
 
@@ -185,6 +206,32 @@ bool ioChannel::match(string channelNo) {
 }
 
 void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
+	//如果有数据流订阅者，直接推送
+	if (m_vecDeStreamSub.size() > 0) {
+		json jDe;
+		jDe["val"] = jVal;
+		string s = jDe.dump();
+
+		for (int i = 0; i < m_vecDeStreamSub.size(); i++) {
+			shared_ptr<TDS_SESSION> p = m_vecDeStreamSub[i];
+			p->send(s.data(), s.length());
+		}
+	}
+
+	//是否启动降采样，如果启用了降采样
+	//降采样功能放在ioChan而不放在mp中的设计原因
+	//1.降采样属于采集功能范畴，io设备管理就是采集的配置
+	//2.降采样应该尽可能早的处理，减少性能消耗
+	//3.一般在配置设备，了解设备参数属性的时候，才知道该设备是否高频监控点，是否需要降采样。
+	//  而在监控点配置时，并不知道什么设备的什么通道会来绑定，因此并不知道是否需要配置降采样
+	if (m_bDownSample) {
+		long long pass = timeopt::CalcTimePassMilliSecond(m_lastDownSampleTime);
+		if (pass < m_iDownSampleInterval)
+			return;
+		m_lastDownSampleTime = timeopt::now();
+	}
+
+
 	string tagBind;
 	input(jVal, tagBind, dataTime, bPic);
 

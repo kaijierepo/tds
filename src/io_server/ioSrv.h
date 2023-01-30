@@ -126,7 +126,9 @@ public:
 	tcpSrv* m_tcpSrv_mbTcp; //502 modbus tcp协议
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
-	udpServer* m_udpSrv; //请求响应式设备的udp统一出口
+	udpServer* m_udpSrv_tdsp;   //665 tdsp ，adaptor
+	string m_strAdpIp;
+	int m_iAdpPort;
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 	void OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);

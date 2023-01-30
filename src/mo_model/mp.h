@@ -98,9 +98,9 @@ public:
 	double m_K;
 	double m_B;
 	double m_deadZone;
-	bool m_bDownSample;
-	int m_downSampleInterval; //单位毫秒
-	TIME m_stLastSampleTime;
+	//bool m_bDownSample;
+	//int m_downSampleInterval; //单位毫秒
+	//TIME m_stLastSampleTime;
 	string m_srcStreamFetch; //ondemand按需拉流 或 always持续拉流
 	string m_expression;    //计算表达式
 
@@ -124,7 +124,4 @@ public:
 	json m_curVal;
 	json m_lastVal;
 	TIME m_lastSaveTime;
-
-	//数据流订阅会话
-	vector<shared_ptr<TDS_SESSION>> m_vecDeStreamSub;
 };

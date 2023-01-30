@@ -3300,8 +3300,8 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostname,int hostport)
 {
 	json j;
-	//没有进行码流中转，直接返回播放即可
-	if (!pmp->m_bServeStream) {
+	//视频外部播放地址模式。没有进行码流中转，直接返回播放即可
+	if (pmp->m_valType == VAL_TYPE::video && !pmp->m_bServeStream) {
 		if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
 			EZVIZ_ACCESS_INFO& info = prj.m_mapEzvizAccess[pmp->m_serialNo];
 			j["flv"] = info.flvUrl;

@@ -17,13 +17,13 @@ MP::MP()
 	m_type = "mp";
 	timeopt::setAsTimeOrg(m_stDataLastUpdate);
 	timeopt::setAsTimeOrg(m_lastSaveTime);
-	timeopt::setAsTimeOrg(m_stLastSampleTime);
+	//timeopt::setAsTimeOrg(m_stLastSampleTime);
 	m_K = 1;
 	m_B = 0;
 	m_bIsStreaming = false;
 	m_deadZone = 0;
-	m_bDownSample = 0;
-	m_downSampleInterval = 2000;
+	//m_bDownSample = 0;
+	//m_downSampleInterval = 2000;
 	m_srcStreamFetch = "ondemand";
 	m_bServeStream = false;
 }
@@ -267,13 +267,13 @@ bool MP::loadConf(json& conf)
 			m_stDataLastUpdate = timeopt::str2st(s);
 	}
 
-	if (conf["downSample"].is_boolean()) {
-		m_bDownSample = conf["downSample"].get<bool>();
-	}
+	//if (conf["downSample"].is_boolean()) {
+	//	m_bDownSample = conf["downSample"].get<bool>();
+	//}
 
-	if (conf["downSampleInterval"].is_number_integer()) {
-		m_downSampleInterval = conf["downSampleInterval"].get<int>();
-	}
+	//if (conf["downSampleInterval"].is_number_integer()) {
+	//	m_downSampleInterval = conf["downSampleInterval"].get<int>();
+	//}
 
 	if (conf["srcStreamFetch"].is_string()) {
 		m_srcStreamFetch = conf["srcStreamFetch"];
@@ -385,10 +385,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			}
 		}
 		//降采样
-		if (m_bDownSample) {
-			conf["downSample"] = m_bDownSample;
-			conf["downSampleInterval"] = m_downSampleInterval;
-		}
+		//if (m_bDownSample) {
+		//	conf["downSample"] = m_bDownSample;
+		//	conf["downSampleInterval"] = m_downSampleInterval;
+		//}
 		
 		conf["srcStreamFetch"] = m_srcStreamFetch;
 		if (m_expression != "") {
@@ -543,27 +543,6 @@ void MP::calcAlarm()
 
 void MP::input(json jVal, TIME* dataTime, json dataFile)
 {
-	//如果有数据流订阅者，直接推送
-	if (m_vecDeStreamSub.size() > 0) {
-		json jDe;
-		jDe["val"] = jVal;
-		string s = jDe.dump();
-
-		for (int i = 0; i < m_vecDeStreamSub.size(); i++) {
-			shared_ptr<TDS_SESSION> p = m_vecDeStreamSub[i];
-			p->send(s.data(), s.length());
-		}
-	}
-
-	//是否启动降采样，如果启用了降采样
-	if (m_bDownSample) {
-		long long pass = timeopt::CalcTimePassMilliSecond(m_stLastSampleTime);
-		if (pass < m_downSampleInterval)
-			return;
-		m_stLastSampleTime = timeopt::now();
-	}
-
-
 	TIME t;
 	if (dataTime == NULL)
 	{

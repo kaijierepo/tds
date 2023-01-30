@@ -175,8 +175,12 @@ public:
 	static string removePortFromDevAddr(string devAddr);
 
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
-	tcpClt* m_tcpClt;
-	udpServer* m_udpClt;
+	//设备是tcpServer
+	tcpClt* m_tcpClt; 
+	//设备是udpServer
+	udpServer* m_udpClt; 
+
+
 	shared_ptr<TDS_SESSION> pIOSession;
 	mutex m_csIOSession;
 	//输出到设备

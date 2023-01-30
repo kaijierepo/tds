@@ -70,4 +70,11 @@ public:
 	string m_valTypeLabel;
 
 	TIME m_stLastUpdateTime;
+
+
+	bool m_bDownSample;
+	int m_iDownSampleInterval;
+	TIME m_lastDownSampleTime;
+	//数据流订阅会话
+	vector<shared_ptr<TDS_SESSION>> m_vecDeStreamSub;
 };
