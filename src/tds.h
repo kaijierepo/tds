@@ -68,7 +68,8 @@ namespace TDS {
 	namespace DEV_ADDR_MODE {
 		const string tcpClient = "tcpClient";
 		const string tcpServer = "tcpServer";
-		const string udp = "udp";
+		const string udpServer = "udpServer";
+		const string udpClient = "udpClient";
 		const string deviceID = "deviceID";
 	}
 

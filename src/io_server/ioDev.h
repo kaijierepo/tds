@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "pch.h"
 #include "tdsSession.h"
+#include "udpSrv.h"
 
 class ioDev;
 class OBJ;
@@ -76,7 +77,7 @@ public:
 	bool loadFirmwareFile(string fileName, int pl = 4000);
 };
 
-class ioDev
+class ioDev : public IUdpServerCallBack
 {
 public:
 	ioDev(void);
@@ -175,6 +176,7 @@ public:
 
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	tcpClt* m_tcpClt;
+	udpServer* m_udpClt;
 	shared_ptr<TDS_SESSION> pIOSession;
 	mutex m_csIOSession;
 	//输出到设备
@@ -332,6 +334,8 @@ public:
 	bool loadStatusBuff();
 
 	string m_strErrorInfo;
+
+	virtual void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port);
 };
 
 ioDev* createIODev(string type);

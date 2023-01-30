@@ -222,7 +222,7 @@ string Clogger::logInternal(string info)
 	//{
 	//	if (tds->conf->bCreateDumpWhenLogError)
 	//	{
-	//		int iRet = ::MessageBox(NULL, charCodec::utf8toAnsi("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
+	//		int iRet = ::MessageBox(NULL, charCodec::utf8_to_gb("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
 	//		if (iRet = IDOK)
 	//		{
 	//			CDumpCatch::createDump(NULL);

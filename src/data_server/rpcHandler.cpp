@@ -3308,8 +3308,13 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 			j["ezopen"] = info.ezopenUrl;
 		}
 		else {
-			j["flv"] = "";
-			j["ezopen"] = "";
+			if (pmp->m_mediaSrcType.find("flv") != string::npos) {
+				j["flv"] = pmp->m_mediaSrcType;
+			}
+			if (pmp->m_mediaSrcType.find("rtsp") != string::npos) {
+				j["rtsp"] = pmp->m_mediaSrcType;
+			}
+
 		}
 		return j;
 	}

@@ -188,24 +188,19 @@ int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int por
 	return 0;
 }
 
-int udpServer::SendData(char* pData, int iLen, string strIP, int port)
+int udpServer::SendData(char* pData, int iLen, string remoteIP, int remotePort)
 {
 	if (m_sock)
 	{
 		SOCKADDR_IN addrCli;
 		ZeroMemory(&addrCli, sizeof(addrCli));
 		addrCli.sin_family = AF_INET;
-		addrCli.sin_addr.s_addr = inet_addr(strIP.c_str());
-		addrCli.sin_port = htons((u_short)port);
+		addrCli.sin_addr.s_addr = inet_addr(remoteIP.c_str());
+		addrCli.sin_port = htons((u_short)remotePort);
 
 		int nSent = sendto(m_sock, pData, iLen, 0, (sockaddr*)&addrCli, sizeof(addrCli));
 
-		if (0 == nSent)
-		{
-		}
-		else
-		{
-		}
+		return nSent;
 	}
 	return 0;
 }

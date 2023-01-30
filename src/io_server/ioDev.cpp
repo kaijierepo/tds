@@ -131,6 +131,7 @@ ioDev::ioDev(void)
 	m_bOnline = false;
 	m_iSendDataFailCount = 0;
 	m_tcpClt = nullptr;
+	m_udpClt = nullptr;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(TIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(TIME));
 	memset(&m_stOnlineTime, 0, sizeof(TIME));
@@ -165,7 +166,7 @@ ioDev::~ioDev(void)
 bool ioDev::run()
 {
 	m_bRunning = true;
-	if (m_addrMode == DEV_ADDR_MODE::tcpServer)
+	if (m_addrMode == DEV_ADDR_MODE::tcpServer || m_addrMode == DEV_ADDR_MODE::udpServer)
 	{
 		string ip;
 		if (m_jDevAddr.contains("ip"))
@@ -174,7 +175,7 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到ip配置");
+			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到ip配置",m_addrMode.c_str());
 			return false;
 		}
 
@@ -186,13 +187,22 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=tcpServer,没有找到port配置");
+			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到port配置",m_addrMode.c_str());
 			return false;
 		}
-		if (m_tcpClt == nullptr)
-			m_tcpClt = new tcpClt();
-		m_tcpClt->run(&ioSrv, ip, port);
-		LOG("[IO设备]连接TCP服务模式设备,设备类型:%s,设备地址:%s", m_devType.c_str(), getDevAddrStr().c_str());
+
+		if (m_addrMode == DEV_ADDR_MODE::tcpServer) {
+			if (m_tcpClt == nullptr)
+				m_tcpClt = new tcpClt();
+			m_tcpClt->run(&ioSrv, ip, port);
+		}
+		else {
+			if (m_udpClt == nullptr)
+				m_udpClt = new udpServer();
+			m_udpClt->run(this);
+		}
+
+		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s", m_addrMode.c_str(),m_devType.c_str(), getDevAddrStr().c_str());
 	}
 	return true;
 }
@@ -625,7 +635,7 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 
 	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s\r\n",getIOAddrStr().c_str(), method.c_str());
 	ioDev* pIoDev = this;
-	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrMode != DEV_ADDR_MODE::udp)
+	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrMode != DEV_ADDR_MODE::udpServer)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
 		LOG("[warn]" + rpcResp.error);
@@ -912,7 +922,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 				ip = m_jDevAddr["ip"].get<string>();
 			devAddr = ip;
 		}
-		else if (m_addrMode == DEV_ADDR_MODE::udp)
+		else if (m_addrMode == DEV_ADDR_MODE::udpServer)
 		{
 			string ip;
 			int port = 0;
@@ -1329,6 +1339,12 @@ bool ioDev::loadStatusBuff()
 	}
 
 	return true;
+}
+
+void ioDev::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+{
+	IOLogRecv(recvData, recvDataLen, strIP + ":" + str::fromInt(port));
+	OnRecvData(recvData, recvDataLen);
 }
 
 bool ioDev::addChild(ioDev* p)
