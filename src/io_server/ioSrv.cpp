@@ -1345,7 +1345,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			pab->PushStream(pData, iLen);
 			while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
 			{
-				tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+				int iSend = tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}

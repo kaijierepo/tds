@@ -302,6 +302,29 @@ namespace charCodec {
 		return isValidGB2312(s, pos, errorChar);
 	}
 
+	string utf16Str_to_utf8(string s) {
+		string u8Str;
+		for (size_t i = 0; i < s.length() - 5; i++) {
+			char c = s[i];
+			if (c == '\\' && s[i + 1] == 'u') {
+				string strCode = s.substr(i + 2, 4);
+				wchar_t wchar;
+				vector<byte> vec = str::hexStrToBytes(strCode);
+				wchar = vec[0] * 256 + vec[1];
+				wstring wStr;
+				wStr.push_back(wchar);
+				string u8Char = charCodec::utf16_to_utf8(wStr);
+				u8Str += u8Char;
+				i += 5;
+			}
+			else {
+				u8Str.push_back(c);
+			}
+		}
+
+		return u8Str;
+	}
+
 	string utf16_to_tds(wstring instr)
 	{
 		string s;

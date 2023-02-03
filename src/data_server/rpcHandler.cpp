@@ -592,8 +592,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				if (pmp->m_mediaSrcType != "file") {
 					if (!pmp->m_bIsStreaming)
 					{
-						string tag = pmp->getTag();
-						zlm_openStream(tag,pmp->m_mediaUrl);
+						//string tag = pmp->getTag();
+						//zlm_openStream(tag,pmp->m_mediaUrl);
 					}
 					else {
 						LOG("码流已打开");
@@ -2680,35 +2680,6 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 	return jAlmStatis;
 }
 
-void rpcHandler::zlm_openStream(string tag,string srcUrl)
-{
-	string tagPinyin;
-	str::hanZi2Pinyin(tag,tagPinyin);
-	string sPort = tds->conf->getStr("httpMediaPort", "669");
-	string streamServerUrl = "http://127.0.0.1:" + sPort;
-	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{ "vhost", "__defaultVhost__" },
-		{"app","stream"},
-		{"stream",tag},
-		{"url",srcUrl},
-		{"enable_hls","0"},  
-		{"enable_ts","0"},
-		{"enable_mp4","0"}
-	};
-
-	string uri = "/index/api/addStreamProxy";
-	auto res = cli.Get(uri, params, headers);
-	LOG("打开流媒体源,Get " + streamServerUrl + uri + ",tag=" + tag + ",媒体源=" + srcUrl);
-	if (res != nullptr) {
-
-	}
-	else {
-		LOG("[error]zlm stream server 未响应," +uri);
-	}
-}
 
 
 void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp,RPC_SESSION session)
@@ -3378,10 +3349,10 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 				j["rtc"] = "";
 			}
 			else {
-				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".live.flv";
-				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + "/hls.m3u8";
-				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-				j["rtsp"] = "rtsp://" + ip + "/stream/" + tag;
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream_"+ prj.getTdsId() +"/" + tag + ".live.flv";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream_"+ prj.getTdsId() + "/" + tag + "/hls.m3u8";
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream_"+ prj.getTdsId() + "&stream=" + tag + "&type=play";
+				j["rtsp"] = "rtsp://" + ip + "/stream_" + prj.getTdsId() + "/" + tag;
 			}
 		}
 		else

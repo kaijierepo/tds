@@ -75,7 +75,7 @@ vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 shared_mutex csIoPktMonitorClient;
 void sendToPktMonitorClient(char* p, int len)
 {
-	csIoPktMonitorClient.lock();
+	/*csIoPktMonitorClient.lock();
 	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
@@ -86,13 +86,18 @@ void sendToPktMonitorClient(char* p, int len)
 			continue;
 		}
 	}
-	csIoPktMonitorClient.unlock();
+	csIoPktMonitorClient.unlock();*/
 
 	csIoPktMonitorClient.lock_shared();
 	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
-		session->send(p, len, false);
+		int iSend = session->send(p, len, false);
+		if (iSend <= 0) {//发不成功删除
+			ioPktMonitorClient.erase(ioPktMonitorClient.begin() + i);
+			i--;
+			continue;
+		}
 	}
 	csIoPktMonitorClient.unlock_shared();
 }
@@ -346,9 +351,16 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 }
 
 bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
+	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
+	
+	//zlm中的中文被编码成url格式
+	hookData = httplib::detail::decode_url(hookData,false);
+
 	json j = json::parse(hookData);
 	string urlParam = j["params"];
+
+	LOG("[ZLMediaKit] webhook,uri=%s,\r\n%s", uri.c_str(), hookData.c_str());
 
 	if(mg_http_match_uri(hm, "/zlmhook/on_play"))//播放鉴权
 	{
@@ -361,6 +373,20 @@ bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
 		}
 
+
+		string tag = j["stream"];
+		MP* pmp = prj.GetMPByTag(tag);
+		if (pmp) {
+			if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
+				LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
+				pmp->zlm_closeStreamSrc(tag);
+			}
+			pmp->zlm_openStreamSrc(); 
+		}
+		else {
+			LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
+		}
+
 		json resp;
 		resp["code"] = 0;
 		resp["msg"] = "success";
@@ -370,14 +396,14 @@ bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
 	}
 	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
-		string tagPinyin = j["stream"];
-		MP* pmp = prj.GetMPByTag(tagPinyin, true);
+		string tag = j["stream"];
+		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp) {
 			string tag = pmp->getTag();
 
 			//LOG("[流媒体]播放流媒体时")
 
-			rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
+			//rpcSrv.zlm_openStreamSrc(tag, pmp->m_mediaUrl);
 			json resp;
 			resp["code"] = 0;
 			resp["msg"] = "success";
@@ -454,9 +480,9 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	}
 
 	//流媒体服务器为本机，连接媒体源
-	if (pmp->m_bServeStream && !jStreamUrl["isChildTds"].get<bool>()) {
-		rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
-	}
+	//if (pmp->m_bServeStream && !jStreamUrl["isChildTds"].get<bool>()) {
+	//	rpcSrv.zlm_openStream(tag, pmp->m_mediaUrl);
+	//}
 
 	string url = jStreamUrl[proto];
 
@@ -558,9 +584,12 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			//记录管道发送sock口
 			p->sockPipe = (SOCKET)sPipe;
 			//加入websocket连接列表
-			pWs->m_csWsSessions.lock();
-			pWs->m_wsSessions[c] = p;
-			pWs->m_csWsSessions.unlock();
+			//该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
+			if (p->type == TDS_SESSION_TYPE::tdsClient) {
+				pWs->m_csWsSessions.lock();
+				pWs->m_wsSessions[c] = p;
+				pWs->m_csWsSessions.unlock();
+			}
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -1027,18 +1056,18 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		logger.logOutput = logToWebsock;
 		tdsSession->setActivityCheck(false);
 	}
-	else if (strData.find("/iopkt") != string::npos)
+	else if (strData.find("/iopkt") != string::npos) //在debugio中使用
 	{
 		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
 		ioPktMonitorClient.push_back(tdsSession);
 		tdsSession->setActivityCheck(false);
 	}
-	else if (strData.find("/commpkt") != string::npos)
-	{
-		tdsSession->type = TDS_SESSION_TYPE::commpkt;
-		commpktSessions.push_back(tdsSession);
-		tdsSession->setActivityCheck(false);
-	}
+	//else if (strData.find("/commpkt") != string::npos)
+	//{
+	//	tdsSession->type = TDS_SESSION_TYPE::commpkt;
+	//	commpktSessions.push_back(tdsSession);
+	//	tdsSession->setActivityCheck(false);
+	//}
 	else if (strData.find("desktop") != string::npos)
 	{
 		tdsSession->type = TDS_SESSION_TYPE::video;

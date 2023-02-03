@@ -167,6 +167,8 @@ namespace charCodec {
 	string utf8_to_gb(string instr);
 	string gb_to_utf8(string instr);
 
+	string utf16Str_to_utf8(string s);
+
 	//gbk checks   GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	bool hasGB2312(string s);
 	bool isValidGB2312(string s, int& errorPos, string& errorChar);

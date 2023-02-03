@@ -42,6 +42,12 @@ struct VALID_RANGE {
 
 using namespace std;
 class OBJ;
+
+struct MP_STATUS {
+	string m_pullingSrcUrl; //当前正在拉流的地址
+};
+
+
 class MP : public OBJ
 {
 public:
@@ -74,6 +80,14 @@ public:
 	string getValDesc(bool getUnit);
 	string getMpType();
 	json getRTData(string root="",bool bValOnly = false);
+
+	void zlm_closeStreamSrc(string zlmProxyKey);
+
+	void zlm_openStreamSrc();
+
+
+
+	MP_STATUS m_mpStatus;
 
 	//配置
 	json m_defaultVal; //默认值，软件刚启动时加载的值

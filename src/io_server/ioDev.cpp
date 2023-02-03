@@ -876,7 +876,10 @@ string ioDev::getDevAddrStr(bool ignorePort)
 	if (m_jDevAddr.is_object())
 	{
 		//通道模式下m_addrMode无效
-		if (m_jDevAddr.contains("regOffset") && m_jDevAddr.contains("regType"))
+		auto kvRegType = m_jDevAddr.find("regType");
+		auto kvRegOffset = m_jDevAddr.find("regOffset");
+		if (kvRegType != m_jDevAddr.end() && kvRegOffset != m_jDevAddr.end() &&
+			kvRegType.value().is_string() && kvRegOffset.value().is_number())
 		{
 			string regTypeAddr;
 			string regType = m_jDevAddr["regType"].get<string>();

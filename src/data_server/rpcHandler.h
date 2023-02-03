@@ -111,9 +111,6 @@ public:
 	//alarm
 	json getAlarmStatis(string rootTag, RPC_SESSION session);
 
-	//zlm互操作
-	void zlm_openStream(string tag,string srcUrl);
-	
 	//辅助功能
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);

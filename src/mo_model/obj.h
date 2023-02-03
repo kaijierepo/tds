@@ -68,7 +68,7 @@ struct OBJ_QUERIER {
 		 getStatusDesc = false;
 		 leafType = "mo";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
-		 getUnit = false;
+		 getUnit = true;
 	}
 };
 
@@ -123,6 +123,7 @@ public:
 	void getMpList(map<string, MP*>& MPlist);
 	OBJ* queryObj(string strTag,bool usePinyin = false);//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
 	MP* GetMPByTag(string strTag,bool usePinyin = false);
+	MP* GetMPByTagPinyin(string strTag);
 	void queryObj(std::vector<OBJ*>* tagVec, string strTag,bool usePinyin = false, string type = "obj");
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	void getMpList(vector<MP*>& MPlist);

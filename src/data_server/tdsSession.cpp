@@ -173,7 +173,7 @@ string TDS_SESSION::GetClientIp()
 
      if (bNeedLog && type == TDS_SESSION_TYPE::iodev)
          IOLogSend(p, len,iSend>0,getRemoteAddr());
-     return 0;
+     return iSend;
  }
 
  int TDS_SESSION::sendStr(string str, bool bNeedLog)

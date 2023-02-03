@@ -79,7 +79,12 @@ bool ioChannel::loadConf(json& conf)
 	//先加载k再计算valType,转换函数内部会利用k设置来判断
 	if (conf["k"] != nullptr)
 		m_k = conf["k"].get<double>();
-	m_valType = storageFmt2valType(m_fmt);
+
+	if(m_fmt!="") 
+		m_valType = storageFmt2valType(m_fmt);
+	else if (conf["valType"] != nullptr)
+		m_valType = conf["valType"];
+
 
 	if (m_valType != "")
 		m_valTypeLabel = getValTypeLabel(m_valType);

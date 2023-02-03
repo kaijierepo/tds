@@ -56,6 +56,8 @@ public:
 	project();
 	virtual ~project();
 
+	string getTdsId();
+
 	bool setMo(json& mo, string tag);
 	MP* createMP(string tag, string valType);
 

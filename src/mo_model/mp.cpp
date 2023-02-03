@@ -10,6 +10,7 @@
 #include "ioSrv.h"
 #include "ioChan.h"
 #include "masterDs.h"
+#include "httplib.h"
 
 
 MP::MP()
@@ -481,6 +482,8 @@ bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
 			else
 				m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
 
+			m_mpStatus = ptmp->m_mpStatus;
+
 			if (saveDB && needSaveToDB()) {
 				saveToDB();
 			}
@@ -870,4 +873,66 @@ json MP::getRTData(string root, bool bValOnly)
 	}
 
 	return j;
+}
+
+void MP::zlm_closeStreamSrc(string tag)
+{
+	string key = "__defaultVhost__/stream_" + prj.getTdsId() + "/" + tag;
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string streamServerUrl = "http://127.0.0.1:" + sPort;
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{ "key", key }
+	};
+
+	string uri = "/index/api/delStreamProxy";
+	auto res = cli.Get(uri, params, headers);
+	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",proxyKey=" + key);
+	if (res != nullptr) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," + uri);
+	}
+}
+
+
+void MP::zlm_openStreamSrc()
+{
+	string tag = getTag();
+	//string tagPinyin;
+	//str::hanZi2Pinyin(tag,tagPinyin);
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string streamServerUrl = "http://127.0.0.1:" + sPort;
+	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
+	//码流的app字段加入tdsID的原因
+	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
+	string app = "stream_" + prj.getTdsId();
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{ "vhost", "__defaultVhost__" },
+		{"app",app},
+		{"stream",tag},
+		{"url",m_mediaUrl},
+		{"enable_hls","0"},
+		{"enable_ts","0"},
+		{"enable_mp4","0"}
+	};
+
+	string uri = "/index/api/addStreamProxy";
+	auto res = cli.Get(uri, params, headers);
+	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",app=" + app + ",stream=" + tag + ",媒体源=" + m_mediaUrl);
+	if (res != nullptr) {
+		json jResp = json::parse(res->body);
+		json jData = jResp["data"];
+		if (jData != nullptr && jData["key"] != nullptr) {
+			m_mpStatus.m_pullingSrcUrl = m_mediaUrl;
+		}
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," + uri);
+	}
 }

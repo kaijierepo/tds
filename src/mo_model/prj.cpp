@@ -28,6 +28,11 @@ project::~project()
 
 }
 
+string project::getTdsId()
+{
+	return m_name;
+}
+
 bool project::setMo(json& mo, string tag)
 {
 	OBJ* pmo = queryObj(tag);

@@ -389,6 +389,7 @@ bool OBJ::loadStatus(json& jMpList)
 	return false;
 }
 
+
 void OBJ::removeMp(json& mo)
 {
 	if (mo["children"] != nullptr)
@@ -698,6 +699,11 @@ MP* OBJ::GetMPByTag(string strTag, bool usePinyin)
 	return nullptr;
 }
 
+MP* OBJ::GetMPByTagPinyin(string strTag)
+{
+	return GetMPByTag(strTag, true);
+}
+
 OBJ* OBJ::GetChildObjByName(string strName)
 {
 	for (int i = 0; i < m_childObj.size(); i++)
@@ -989,6 +995,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	}
 	if (opt["getStatusDesc"] != nullptr) {
 		q.getStatusDesc = opt["getStatusDesc"].get<bool>();
+	}
+	if (opt["getUnit"] != nullptr) {
+		q.getUnit = opt["getUnit"].get<bool>();
 	}
 	return q;
 }

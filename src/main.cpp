@@ -155,6 +155,8 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //命令行参数调用 ，js解释器等模式需要默认控制台，因此默认控制台不隐藏
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
+
+
 int main(int argc, char** argv)
 {
 	//取出命令行命令
