@@ -25,23 +25,20 @@ public:
 	int Send(SOCKET sock, char* pBuffer, int iLength);
 
 public:
-	bool runAsEdge();
 	bool run();
 	void stop();
 	dataServer();
 	virtual ~dataServer();
 
+	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
 
 	void sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p);
+	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 
-	tcpClt* m_tcpCltEdge; //作为边缘网关时候的客户端
-	map<tcpClt*, tcpClt*> m_tcpCltChildServer; //作为子服务连接上级服务的客户端
+	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //作为子服务连接上级服务的客户端
+	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher; //推流
 
-	bool OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
-	void onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-
-
-	void sendToAllSessions(char* pData, int len);
+	void sendToAllSessions(unsigned char* pData, int len);
 	void sendToAllSessions(string& s);
 	//应用层会话
 	map<void*,std::shared_ptr<TDS_SESSION>> m_Sessions;

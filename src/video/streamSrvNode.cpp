@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#ifdef ENABLE_GENICAM
 #include "streamSrvNode.h"
 #include "json.hpp"
 #include "logger.h"
@@ -453,4 +452,3 @@ bool STREAM_PUSHER::pushStream(STREAM_DATA& sd)
 
 	return false;
 }
-#endif

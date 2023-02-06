@@ -163,6 +163,9 @@ public:
 	ioChannel* getChanByTag(string tag);
 	static void recursiveGetChanCount(ioDev* p, long& count);
 
+
+	std::shared_ptr<TDS_SESSION>  getStreamPusher(string tag);
+
 	//// data io
 	//directly bridge ioDev to tds websocket session
 	std::shared_ptr<TDS_SESSION> pSessionClientBridge;

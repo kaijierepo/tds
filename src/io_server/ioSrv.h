@@ -150,6 +150,7 @@ public:
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteIP, int remotePort);
 	shared_ptr<TDS_SESSION> getTDSSession(string remoteAddr);
 	shared_ptr<TDS_SESSION> getTDSSession(tcpSessionClt* pTcpSess);
+	std::shared_ptr<TDS_SESSION> getStreamPusher(string tag);
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;
 	mutex m_mutexIoSessions;
 

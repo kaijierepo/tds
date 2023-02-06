@@ -212,16 +212,22 @@ bool ioChannel::match(string channelNo) {
 
 void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	//如果有数据流订阅者，直接推送
-	if (m_vecDeStreamSub.size() > 0) {
+	m_csStreamPuller.lock();
+	if (m_vecStreamPuller.size() > 0) {
 		json jDe;
 		jDe["val"] = jVal;
 		string s = jDe.dump();
 
-		for (int i = 0; i < m_vecDeStreamSub.size(); i++) {
-			shared_ptr<TDS_SESSION> p = m_vecDeStreamSub[i];
-			p->send(s.data(), s.length());
+		for (int i = 0; i < m_vecStreamPuller.size(); i++) {
+			shared_ptr<TDS_SESSION> p = m_vecStreamPuller[i];
+			if (p->send((unsigned char*)s.data(), s.length()) <= 0) {
+				m_vecStreamPuller.erase(m_vecStreamPuller.begin() + i);
+				i--;
+				continue;
+			}
 		}
 	}
+	m_csStreamPuller.unlock();
 
 	//是否启动降采样，如果启用了降采样
 	//降采样功能放在ioChan而不放在mp中的设计原因

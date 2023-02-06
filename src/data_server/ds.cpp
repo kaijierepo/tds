@@ -9,6 +9,7 @@
 #include "tdsConf.h"
 #include "tds.h"
 #include "users/userMng.h"
+#include "ioChan.h"
 
 dataServer ds;
 
@@ -20,13 +21,64 @@ dataServer::~dataServer()
 {
 }
 
+void dataServer::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	if (params["tag"] == nullptr) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param tag missing");
+		return;
+	}
+	if (!params["port"].is_number_integer()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param port error");
+		return;
+	}
+	string tag = params["tag"];
+	int port = params["port"].get<int>();
+
+	ioChannel* pChan = ioSrv.getChanByTag(tag);
+	if (pChan == nullptr) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "channel bind specified tag not found");
+		return;
+	}
+
+	tcpClt* pClt = new tcpClt();
+	if (pClt->connect(this, session.hostName, port)) {
+
+		tcpSessionClt* pTcpSess = &pClt->m_session;
+		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
+		pChan->m_csStreamPuller.lock();
+		pChan->m_vecStreamPuller.push_back(p);
+		pChan->m_csStreamPuller.unlock();
+
+		LOG("[数据流   ]  推流客户端连接成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+		sendStreamPusherRegPkt(p,tag);
+
+		resp.result = RPC_OK;
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "connect fail");
+	}
+}
+
 void dataServer::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
 {
 	json jReg;
-	jReg["method"] = "childTdsReg";
+	jReg["method"] = "devRegister";
 	json jParams;
+	jParams["devType"] = "childTds";
 	jParams["httpPort"] = tds->conf->httpPort;
 	jParams["httpsPort"] = tds->conf->httpsPort;
+	jReg["params"] = jParams;
+	string s = jReg.dump() + "\n\n";
+	p->sendStr(s);
+}
+
+void dataServer::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p,string tag)
+{
+	json jReg;
+	jReg["method"] = "devRegister";
+	json jParams;
+	jParams["devType"] = "streamPusher";
+	jParams["tag"] = tag;
 	jReg["params"] = jParams;
 	string s = jReg.dump() + "\n\n";
 	p->sendStr(s);
@@ -68,46 +120,33 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
 	{
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
-		m_mutexSessions.lock();
-		m_Sessions[pTcpSess] = p;
-		m_mutexSessions.unlock();
+		if (m_tcpClt_ParentTds.find( pTcpSess->tcpClt)!= m_tcpClt_ParentTds.end()) {
+			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
+			m_mutexSessions.lock();
+			m_Sessions[pTcpSess] = p;
+			m_mutexSessions.unlock();
 
-		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()) {
 			LOG("[主从服务]连接到主服务成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
 			sendChildTdsRegPkt(p);
 		}
 	}
 	else
 	{
-		if (m_tcpCltChildServer.find( pTcpSess->tcpClt)!= m_tcpCltChildServer.end()){
+		if (m_tcpClt_ParentTds.find( pTcpSess->tcpClt)!= m_tcpClt_ParentTds.end()){
 			LOG("[warn][主从服务]从主服务断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
-		}
 
-		m_mutexSessions.lock();
-		std::shared_ptr<TDS_SESSION> p = m_Sessions[pTcpSess];
-		m_Sessions.erase(pTcpSess);
-		m_mutexSessions.unlock();
-		p->onTcpDisconnect();
+			m_mutexSessions.lock();
+			std::shared_ptr<TDS_SESSION> p = m_Sessions[pTcpSess];
+			m_Sessions.erase(pTcpSess);
+			m_mutexSessions.unlock();
+			p->onTcpDisconnect();
+		}
 	}
 }
 
 int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
 {
 	return send(sock, pBuffer, iLength, 0);
-}
-
-
-bool dataServer::runAsEdge()
-{
-	//tdsEdge连接
-	if (tds->conf->edge)
-	{
-		m_tcpCltEdge = new tcpClt();
-		m_tcpCltEdge->run(this, tds->conf->cloudIP, tds->conf->cloudPort);
-		LOG("[keyinfo][边缘网关模式] 云服务器地址:%s:%d", tds->conf->cloudIP.c_str(), tds->conf->cloudPort);
-	}
-	return false;
 }
 
 
@@ -123,20 +162,7 @@ void streamPusherMng_thread() {
 				string src = "?";
 				string status = "";
 				if (pmp) {
-					if (pmp->m_srcPullingFFmpegProcID)
-					{
-						HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
-						if (hProcess) {
-							TerminateProcess(hProcess, 0);
-						}
-						pmp->m_bIsStreaming = false;
-						pmp->m_srcPullingFFmpegProcID = 0;
-						status = "正常断开";
-					}
-					else {
-						status = "已断开";
-					}
-					src = pmp->m_mediaUrl;
+
 				}
 				else {
 					status = "位号未找到";
@@ -166,7 +192,7 @@ bool dataServer::run()
 		tcpClt* p = new tcpClt();
 		p->m_keepAliveTimeout = 10;
 		p->run(this, addr);
-		m_tcpCltChildServer[p] = p;
+		m_tcpClt_ParentTds[p] = p;
 
 		LOG("[子服务模式] 连接到上级服务%s", addr.c_str());
 	}
@@ -184,6 +210,8 @@ void dataServer::stop()
 
 /*
 生产者-临时消费者模式  
+该机制主要为了避免 处理接收数据时间过长，影响数据接收的实时性
+
 tdsSessionProcessThread  为消费者，临时线程
 OnRecvData_TCPServer 为生产者，常驻线程
 tdsSession->dataBuff 为任务队列
@@ -259,7 +287,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 
 		if (req == "ping\n\n") { 
 			string s = "pong\n\n";
-			tdsSession->send(s.data(), s.length(), false);
+			tdsSession->send((unsigned char*)s.data(), s.length(), false);
 		}
 		else if (req == "pong\n\n") {
 
@@ -267,57 +295,14 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 		else {
 			RPC_RESP resp;
 			rpcSrv.handleRpcCall(req, resp, tdsSession, false);
-			tdsSession->send(resp.strResp.data(), resp.strResp.length(), false);
+			tdsSession->send((unsigned char*)resp.strResp.data(), resp.strResp.length(), false);
 		}
 	}
 }
 
 
 
-
-
-//onRecvData需要组包
-bool dataServer::OnRecvAppLayerData(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession,bool isPkt)
-{
-	DWORD dwDataLen = iLen;
-
-	//tds rpc over tcp
-	if (tdsSession->type == TDS_SESSION_TYPE::tdsClient && isPkt)
-	{
-		onRecvPkt_tdsClient(pData, iLen, tdsSession);
-	}
-	
-	tdsSession->m_bAppDataRecved = true;
-	return true;
-}
-
-
-void dataServer::onRecvPkt_tdsClient(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
-{
-	string req = str::fromBuff(pData,iLen);
-	RPC_RESP resp;
-	bool bNeedLog = true;
-	rpcSrv.handleRpcCall(req, resp, tdsSession);
-
-	if (resp.strResp != "")
-	{
-		tdsSession->sendContent = "text";
-		tdsSession->send((char*)resp.strResp.data(), resp.strResp.length(),bNeedLog);
-	}
-
-	if (resp.iBinLen > 0)
-	{
-		tdsSession->sendContent = "binary";
-		tdsSession->send(resp.binResult, resp.iBinLen, bNeedLog);
-	}
-
-	//如果没有任何回复,可能是透传指令,不回复
-
-	if (resp.binResult)
-		delete resp.binResult;
-}
-
-void dataServer::sendToAllSessions(char* pData, int len)
+void dataServer::sendToAllSessions(unsigned char* pData, int len)
 {
 	m_mutexSessions.lock();
 	for (auto& i : m_Sessions) {
@@ -328,5 +313,5 @@ void dataServer::sendToAllSessions(char* pData, int len)
 
 void dataServer::sendToAllSessions(string& s)
 {
-	sendToAllSessions((char*)s.c_str(), s.length());
+	sendToAllSessions((unsigned char*)s.c_str(), s.length());
 }

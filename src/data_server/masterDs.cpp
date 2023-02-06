@@ -77,7 +77,7 @@ void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SE
 		string s = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 		if (s == "ping\n\n") {
 			string s = "pong\n\n";
-			childSession->send(s.data(), s.length(), false);
+			childSession->send((unsigned char*)s.data(), s.length(), false);
 		}
 		else if (s == "pong\n\n") {
 
@@ -237,7 +237,7 @@ bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSess
 			rpcSrv.notify("statusUpdate", jStatusNotify);
 		}
 	}
-	else if (method == "childTdsReg") {
+	else if (method == "devRegister") {
 		childSession->m_childTdsHttpPort = params["httpPort"].get<int>();
 		childSession->m_childTdsHttpsPort = params["httpsPort"].get<int>();
 	}
@@ -487,7 +487,7 @@ string MasterDs::getChildTdsIP(string childTdsTag)
 	if (ioSession == nullptr) {
 		return "";
 	}
-	return ioSession->ip;
+	return ioSession->remoteIP;
 }
 
 bool MasterDs::getChildTdsInfo(string childTdsTag, CHILD_TDS_INFO& info)
@@ -499,7 +499,7 @@ bool MasterDs::getChildTdsInfo(string childTdsTag, CHILD_TDS_INFO& info)
 		return false;
 	}
 
-	info.ip = ioSession->ip;
+	info.ip = ioSession->remoteIP;
 	info.httpPort = ioSession->m_childTdsHttpPort;
 	info.httpsPort = ioSession->m_childTdsHttpsPort;
 

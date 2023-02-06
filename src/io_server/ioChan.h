@@ -76,5 +76,6 @@ public:
 	int m_iDownSampleInterval;
 	TIME m_lastDownSampleTime;
 	//数据流订阅会话
-	vector<shared_ptr<TDS_SESSION>> m_vecDeStreamSub;
+	mutex m_csStreamPuller;
+	vector<shared_ptr<TDS_SESSION>> m_vecStreamPuller;
 };

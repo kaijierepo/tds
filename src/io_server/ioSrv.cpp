@@ -170,7 +170,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
 		}
 
-		ioDev* pIoDev = ioSrv.getIODev(p->ip);
+		ioDev* pIoDev = ioSrv.getIODev(p->remoteIP);
 		if (pIoDev)
 		{
 			p->m_IoDev = pIoDev;
@@ -246,7 +246,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TD
 
 		if (tlBuf.iStreamLen > 1 * 1024 * 1024)
 		{
-			string str = str::format("%s", ioSession->ip.c_str());
+			string str = str::format("%s", ioSession->remoteIP.c_str());
 			LOG("[error]websocket parse error,can not get a pkt when length exceeded 10Mb,Addr=" + str);
 			tlBuf.Init();
 		}
@@ -293,7 +293,7 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 
 void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
-	IOLogRecv(recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
+	IOLogRecv((unsigned char*)recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
 
 	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
 	try {
@@ -1320,7 +1320,7 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
-	IOLogRecv((char*)pData, iLen, tdsSession->getRemoteAddr());
+	IOLogRecv((unsigned char*)pData, iLen, tdsSession->getRemoteAddr());
 
 	//协议检测
 	if (tdsSession->ioDevType == "")//应用层协议类型检测
@@ -1345,7 +1345,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 			pab->PushStream(pData, iLen);
 			while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
 			{
-				int iSend = tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+				int iSend = tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}
@@ -1367,7 +1367,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 					pab->PopPkt(IsValidPkt_textEnd_LF) ||
 					pab->PopPkt(IsValidPkt_textEnd_LFLF) ||
 					pab->PopPkt(IsValidPkt_textEnd_CRLF)) {
-					tdsSession->bridgedIoSessionClient->send((char*)pab->pkt, pab->iPktLen);
+					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
 					string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 					LOG("[IO设备透传]dev->client " + s);
 					continue;
@@ -1533,62 +1533,97 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 	{
 		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
 		{
-			string sResp = str::fromBuff((char*)pData, iLen);
+			if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
+				for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
+					std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
+					p->send(pData, iLen);
+				}
+			}
+			else if (tdsSession->tdspSubType == TDSP_SUB_TYPE::childTds) {
 
-			//编解码转换
-			if (rpcSrv.isGB2312Pkt(sResp))
-			{
-				tdsSession->m_charset = "gb2312";
-				int ipos = 0; string errChar;
-				if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
+			}
+			else {
+				string sResp = str::fromBuff((char*)pData, iLen);
+				//编解码转换
+				if (rpcSrv.isGB2312Pkt(sResp))
 				{
-					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
-					return;
+					tdsSession->m_charset = "gb2312";
+					int ipos = 0; string errChar;
+					if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
+					{
+						LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
+						return;
+					}
+
+					sResp = charCodec::gb_to_utf8(sResp);
 				}
 
-				sResp = charCodec::gb_to_utf8(sResp);
-			}
-
-			//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
-			sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
-			json jResp = json::parse(sResp);
-			if (!jResp.contains("method"))
-			{
-				LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
-				return;
-			}
-			string method = jResp["method"].get<string>();
-			json params;
-			if (jResp.contains("params"))
-				params = jResp["params"];
-			json id = jResp["id"];
-			json clientId = jResp["clientId"]; //tds edge模式使用
-			tdsSession->lastMethodCalled = method;
-			string charset = "utf8";
-			if (jResp.contains("charset"))
-			{
-				charset = jResp["charset"].get<string>();
-			}
-
-			//多设备模式或者还没有设备在该session上上线，处理设备上线
-			//获取当前session关联的设备
-			ioDev* pIoDev = tdsSession->m_IoDev;
-			//如果无关联设备或者是多关联模式
-			if (!tdsSession->m_bSingleDevMode || tdsSession->m_IoDev == nullptr)
-			{
-				//获得该io地址的设备对象
-				string strIoAddr = jResp["addr"].get<string>();
-				if (strIoAddr == "")
+				//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
+				sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
+				json jResp = json::parse(sResp);
+				if (!jResp.contains("method"))
 				{
-					LOG("[error]注册包devRegister中的ioAddr为空，无效");
+					LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
 					return;
 				}
+				string method = jResp["method"].get<string>();
+				json params;
+				if (jResp.contains("params"))
+					params = jResp["params"];
+				json id = jResp["id"];
+				json clientId = jResp["clientId"]; //tds edge模式使用
+				tdsSession->lastMethodCalled = method;
+				string charset = "utf8";
+				if (jResp.contains("charset"))
+				{
+					charset = jResp["charset"].get<string>();
+				}
 
-				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
+				if (method == "devRegister") {
+					if (params["devType"] != nullptr) {
+						string devType = params["devType"];
+						if (devType != "") {
+							tdsSession->tdspSubType == devType;
+							if (devType == TDSP_SUB_TYPE::streamPusher) {
+								string rootTag, tag;
+								if (params["rootTag"] != nullptr)
+								{
+									rootTag = params["rootTag"];
+								}
+								else if(params["tag"] !=nullptr){
+									tag = params["tag"];
+								}
+								tag = TAG::addRoot(tag, rootTag);
+								tdsSession->streamId = tag;
+								return;
+							}
+							else if (devType == TDSP_SUB_TYPE::childTds) {
+								return;
+							}
+						}
+					}
+				}
+
+				//多设备模式或者还没有设备在该session上上线，处理设备上线
+				//获取当前session关联的设备
+				ioDev* pIoDev = tdsSession->m_IoDev;
+				//如果无关联设备或者是多关联模式
+				if (!tdsSession->m_bSingleDevMode || tdsSession->m_IoDev == nullptr)
+				{
+					//获得该io地址的设备对象
+					string strIoAddr = jResp["addr"].get<string>();
+					if (strIoAddr == "")
+					{
+						LOG("[error]注册包devRegister中的ioAddr为空，无效");
+						return;
+					}
+
+					pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
+				}
+
+				pIoDev->m_charset = charset;
+				pIoDev->onRecvPkt(jResp);
 			}
-
-			pIoDev->m_charset = charset;
-			pIoDev->onRecvPkt(jResp);
 		}
 		else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
 		{
@@ -1626,7 +1661,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 	}
 	catch (std::exception& e)
 	{
-		string errorType = e.what();
+		string errorType = e.what(); 
 		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
 		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
 		errorType = str::encodeAscII(errorType);
@@ -1718,8 +1753,8 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 
 		json jSession;
 		jSession["type"] = p->type;
-		jSession["ip"] = p->ip;
-		jSession["port"] = p->port;
+		jSession["ip"] = p->remoteIP;
+		jSession["port"] = p->remotePort;
 		jSession["name"] = p->name;
 		jSession["transLayer"] = p->iTLProto;
 		jSession["createTime"] = timeopt::st2str(p->stCreateTime);
@@ -1793,7 +1828,7 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
 		std::unique_lock<recursive_mutex> lock(p->m_mutexTcpLink);
 		if (p->isConnected())
 		{
-			if (p->m_bActiveSession)
+			if (p->pTcpSessionClt)
 			{
 				//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
 				if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
@@ -1837,5 +1872,20 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(tcpSessionClt* pTcpSess)
 			return p;
 		}
 	}*/
+	return nullptr;
+}
+
+
+std::shared_ptr<TDS_SESSION> ioServer::getStreamPusher(string tag)
+{
+	for (auto& i: m_IoSessions) 
+	{
+		std::shared_ptr<TDS_SESSION> p =  i.second;
+		if (p->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
+			if (p->streamId == tag) {
+				return p;
+			}
+		}
+	}
 	return nullptr;
 }

@@ -64,7 +64,7 @@ void sendToCommLog(string s)
 		}
 
 
-		session->send((char*)s.c_str(), s.length());
+		session->send((unsigned char*)s.c_str(), s.length());
 	}
 }
 
@@ -101,7 +101,7 @@ void sendToPktMonitorClient(char* p, int len)
 	}
 	csIoPktMonitorClient.unlock_shared();
 }
-void IOLogSend(char* p, int len, bool success,string remoteAddr)
+void IOLogSend(unsigned char* p, int len, bool success,string remoteAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -124,7 +124,7 @@ void IOLogSend(char* p, int len, bool success,string remoteAddr)
 	string s = j.dump(4);
 	sendToPktMonitorClient((char*)s.c_str(), s.length());
 }
-void IOLogRecv(char* p, int len,string remoteAddr)
+void IOLogRecv(unsigned char* p, int len,string remoteAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -343,7 +343,7 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 		RPC_RESP resp;
 		rpcSrv.handleRpcCall(rpcReqStr,resp , pSession);
 		string ctLen = to_string(resp.strResp.length());
-		WebServer::sendToWs((char*)resp.strResp.c_str(), resp.strResp.length(), pipeSock);
+		WebServer::sendToWs((unsigned char*)resp.strResp.c_str(), resp.strResp.length(), pipeSock);
 	}
 	else if (p->type == TDS_SESSION_TYPE::terminal) {
 
@@ -843,7 +843,7 @@ void WebServer::sendToAllWs(string& s)
 		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
 			continue;
 
-		WebServer::sendToWs((char*)s.c_str(), s.length(), i->second->sockPipe);
+		WebServer::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->sockPipe);
 	}
 	m_csWsSessions.unlock();
 }
@@ -866,7 +866,7 @@ int WebServer::sendToAllWebsock(string& s)
 //同一个websocket上存在多个rpc请求重叠调用时
 //例如再等待一个设备响应，时间比较长。 同时在读取服务器缓存
 //因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
-int WebServer::sendToWs(char* p, size_t len, int sockPipe)
+int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
 {
 	//assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 	if (len + sizeof(len) > MG_IO_SIZE) {
@@ -1082,50 +1082,14 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		tag = httplib::detail::decode_url(tag, false);
 		ioChannel* pChan = ioSrv.getChanByTag(tag);
 		if (pChan) {
-			pChan->m_vecDeStreamSub.push_back(tdsSession);
+			pChan->m_vecStreamPuller.push_back(tdsSession);
 		}
-
-
-		//用于 泰默检测ATExpert的Genicam
-		//int pos = strData.find("stream");
-		//map<string, string> mapParams;
-		//getUrlParams(strData, mapParams);
-		//string streamId; //支持码流的tag
-		//string fmt = ""; //为空，则图像不进行任何转换直接发送
-		//int frameRate = 0;
-		//if (mapParams.size() > 0)
-		//{
-		//	if (mapParams.find("streamId") != mapParams.end())
-		//	{
-		//		streamId = mapParams["streamId"];
-		//	}
-		//	if (mapParams.find("fmt") != mapParams.end())//fmt is not specified
-		//	{
-		//		fmt = mapParams["fmt"];
-		//	}
-		//	if (mapParams.find("frameRate") != mapParams.end())//fmt is not specified
-		//	{
-		//		frameRate = str::toInt(mapParams["frameRate"]);
-		//	}
-		//	streamId = httplib::detail::decode_url(streamId, false);
-
-
-		//	if (streamId != "")
-		//	{
-		//		streamSrvNode* pVsn = streamSrv.getSrvNode(streamId);
-		//		if (pVsn)
-		//		{
-		//			tdsSession->videoServiceNode = pVsn;
-		//			tdsSession->type = TDS_SESSION_TYPE::video;
-		//			STREAM_INFO si;
-		//			si.pixelFmt = fmt;
-		//			si.frameRate = frameRate;
-		//			pVsn->addPuller(tdsSession, &si);
-		//			string szLog = "[Session会话][开始] 类型:" + tdsSession->type + " 码流ID:" + streamId + " 格式:" + fmt + ",客户端地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
-		//			LOG(szLog);
-		//		}
-		//	}
-		//}
+		else {
+			std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
+			p->m_csPuller.lock();
+			p->m_vecPuller.push_back(p);
+			p->m_csPuller.unlock();
+		}
 	}
 	else //连接根地址 默认为rpc连接
 	{
@@ -1156,13 +1120,13 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 							"id": null
 						}
 					)";
-			tdsSession->send((char*)s.data(), s.length());
+			tdsSession->send((unsigned char*)s.data(), s.length());
 		}
 		if (tdsSession->type == "")
 			tdsSession->type = TDS_SESSION_TYPE::tdsClient;
 		tdsSession->iALProto = "tdsRPC";
 
-		string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->ip + ":" + str::fromInt(tdsSession->port);
+		string szLog = "[websocket会话][开始] 类型:" + tdsSession->type + ",地址:" + tdsSession->remoteIP + ":" + str::fromInt(tdsSession->remotePort);
 		LOG(szLog);
 	}
 }
@@ -1236,7 +1200,7 @@ bool WebServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr
 	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpClient)
 	{
 		if (tdsSession->pBridgedTcpClient)
-			tdsSession->pBridgedTcpClient->SendData(pData, iLen);
+			tdsSession->pBridgedTcpClient->SendData((unsigned char*)pData, iLen);
 	}
 	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToiodev)
 	{

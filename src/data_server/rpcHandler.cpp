@@ -74,25 +74,25 @@ bool rpcHandler::init()
 
 
 
-string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
-{
-	//使用正则搜寻 ${XXX}
-	//"${src_ip}" 替换成 pSession->ip
-	string str = strIn;
-	if (str.find("$srcIp$") != str.npos) {
-		string ip = pSession->ip;
-		string::size_type pos = pSession->ip.find(":");
-		if (std::string::npos != pos) {
-			ip = pSession->ip.substr(0, pos);
-		}
-		str = str::replace(str, "$src_ip$", ip);
-		}
-
-	str = str::replace(str, "$dbPath$", db.m_path);
-	str = str::replace(str, "$confPath$", tds->conf->confPath);
-
-	return str;
-}
+//string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
+//{
+//	//使用正则搜寻 ${XXX}
+//	//"${src_ip}" 替换成 pSession->ip
+//	string str = strIn;
+//	if (str.find("$srcIp$") != str.npos) {
+//		string ip = pSession->ip;
+//		string::size_type pos = pSession->ip.find(":");
+//		if (std::string::npos != pos) {
+//			ip = pSession->ip.substr(0, pos);
+//		}
+//		str = str::replace(str, "$src_ip$", ip);
+//		}
+//
+//	str = str::replace(str, "$dbPath$", db.m_path);
+//	str = str::replace(str, "$confPath$", tds->conf->confPath);
+//
+//	return str;
+//}
 
 
 bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp)
@@ -620,15 +620,6 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 				}
 				else {
-					if (pmp->m_srcPullingFFmpegProcID)
-					{
-						HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pmp->m_srcPullingFFmpegProcID);
-						if (hProcess) {
-							TerminateProcess(hProcess, 0);
-						}
-						pmp->m_bIsStreaming = false;
-						pmp->m_srcPullingFFmpegProcID = 0;
-					}
 					rpcResp.result = "\"ok\"";
 				}
 			}
@@ -1741,6 +1732,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	{
 		rpcResp.result = rpc_getTopoList(params, rpcResp.error, session);
 	}
+	else if (method == "startStreamPush" || method == "startPushStream") {
+		ds.rpc_startStreamPush(params, rpcResp, session);
+	}
 	else {
 		bHandled = false;
 	}
@@ -2016,7 +2010,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	if(bGB2312)
 		strReq = charCodec::gb_to_utf8(strReq);
 
-	strReq = ResolveTdsRpcEvnVar(strReq, pSession);
+	//strReq = ResolveTdsRpcEvnVar(strReq, pSession);
 
 
 	try
@@ -2187,8 +2181,9 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		
 
 		//tds自身受理
-		handleMethodCall(method, params, rpcResp,pSession->getRpcSession());
-
+		if (!handleMethodCall(method, params, rpcResp, pSession->getRpcSession())) {
+			LOG("[warn]调用不存在的rpc方法\r\n" + strReq);
+		}
 	}
 	catch (std::exception& e)
 	{

@@ -7,7 +7,6 @@
 
 
 class MP;
-class streamSrvNode;
 class ioDev;
 
 struct TCP_DATA_BUFF {
@@ -15,29 +14,10 @@ struct TCP_DATA_BUFF {
 	int iLen;
 };
 
-
-class FILE_WRITER {
-public:
-	FILE_WRITER() {
-		fp = nullptr;
-		totalLen = 0;
-		writedLen = 0;
-	}
-	~FILE_WRITER() {
-		if (fp)
-		{
-			fclose(fp);
-		}
-	}
-
-	bool startWrite(string path,long len);
-	void stopWrite();
-	long write(char* pData, long iLen);
-	FILE* fp;
-	long totalLen;
-	long writedLen;
-	string filePath;
-};
+namespace TDSP_SUB_TYPE{
+	const string streamPusher = "streamPusher";
+	const string childTds = "childTds";
+}
 
 
 //有状态会话信息，包含通信链路信息
@@ -48,51 +28,59 @@ public:
 
 	TDS_SESSION(tcpSession* p);
 	TDS_SESSION(tcpSessionClt* p);
-	string role;
-	string loginTime;
-	string encode;
-	string ip;
+
+
+	void Init();
+	bool isConnected();
+	bool disconnect();
+	string GetClientIp();
+	int send(char* p, size_t len, bool bNeedLog = true);
+	int send(unsigned char* p, size_t len, bool bNeedLog = true);
+	int sendStr(string str, bool bNeedLog = true);
+	int getSendedBytes();
+	int getRecvedBytes();
+	RPC_SESSION getRpcSession();
+	void onTcpDisconnect();
+	void setActivityCheck(bool bEnable);
+
+	//地址信息与通信数据结构
+	string remoteIP;
+	int remotePort;
+	SOCKET sock;
+	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
+	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
+	SOCKET sockPipe;         //socket管道。
+	string getRemoteAddr();
+	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
+
+	//基本属性
 	string type;//session type
-	string lastMethodCalled;
+	bool m_bNeedLog; //该session是否要记录日志。调试类的一般不需记录日志
+	string m_charset; //如果链接上走的是文本协议。文本协议的编码
+	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
+	string iALProto;
+
+	//通信状态
+	TIME stCreateTime;
 	TIME lastRecvTime;
 	TIME lastSendTime;
-
-	RPC_SESSION getRpcSession();
-
-	bool m_bStateLessSession; //http协议发起的rpc请求都是无状态会话
-
-	string getId();
-	string getRemoteAddr();
+	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
 	bool m_bAppDataRecved;
-	bool getTcpSession(tcpSession& ts);
-	
-	//TDS子服务信息
-	string m_childTdsTag;
-	int m_childTdsHttpPort;
-	int m_childTdsHttpsPort;
-	
-	int port;
-	map<string, string> mapTagDataSubscribe;
-	bool bSubAll;//订阅所有
-	string streamFmt;// vp9/bmp/fmp4
-    bool bInitSegSended;
-	streamSrvNode* videoServiceNode; //tds拉流的源
-	SOCKET sock;
-	bool bMainWnd; //为true时，该连接断开就退出程序
+	string lastMethodCalled;
+	int abandonLen;
 
-	string m_charset; //如果链接上走的是文本协议。文本协议的编码
-	bool m_bNeedLog; //该session是否要记录日志
-	//会话通信数据处理控制
+
+	//tcp数据缓存处理 
 	queue<TCP_DATA_BUFF> dataBuff;
 	std::mutex m_mutexTcpBuff;
 	bool m_bSessionProcessing;
 
-	void* dsCltStream; //转发给httplib的流
-	string sendContent; //text or binary
-	bool m_bActiveSession; //是否是主动式连接会话
-	void onTcpDisconnect();
-	void setActivityCheck(bool bEnable);
-	class CBridgedTcpClientHandler:public ITcpClientCallBack {
+
+	//bridge session
+	string bridgedLocalCom; //和本地串口桥接
+	string bridgedTcpServer; //和tcp服务器的一个连接桥接
+	tcpClt* pBridgedTcpClient;
+	class CBridgedTcpClientHandler :public ITcpClientCallBack {
 	public:
 		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
 		virtual void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
@@ -100,31 +88,11 @@ public:
 	} bridgedTcpCltHandler;
 
 
-	//session使用的通信方式
-	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
-	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
-	SOCKET sockPipe;         //socket管道。
-
-    void Init();
-	bool isConnected();
-	bool disconnect();
-    string GetClientIp();
-	int send(char* p,size_t len,bool bNeedLog = true);
-	int sendStr(string str, bool bNeedLog = true);
-	int getSendedBytes();
-	int getRecvedBytes();
-    std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
-	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
-	string iALProto;
+	//io device session
 	string ioDevType;
-	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
-	TIME stCreateTime;
-	int abandonLen;
+	string tdspSubType;
 	stream2pkt m_alBuf; //stream buff for app layer data
 	stream2pkt m_tlBuf; //stream buff for transport layer data
-	string bridgedLocalCom; //和本地串口桥接
-	string bridgedTcpServer; //和tcp服务器的一个连接桥接
-	tcpClt* pBridgedTcpClient;
 	std::shared_ptr<TDS_SESSION> bridgedIoSession; //this是界面session,保留ioSession指针
 	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
 	ioDev* getIODev(string ioAddr);
@@ -139,13 +107,24 @@ public:
 	vector<string> m_vecHistIoBindTag;
 	string m_ioAddr;     //当1个io设备对应一个tcp连接时，该ioAddr为设备io地址
 	ioDev* m_IoDev;      //建立了tcp直连的io设备。 当1个io设备对应一个tcp连接时。该指针指向该io设备
-	FILE_WRITER m_fileUploader;  //大文件上传控制
 	//单设备模式，只有第一个注册包的地址信息有用。后面的地址信息无效.防止地址信息错误导致的问题，以第一包的地址信息为准
 	bool m_bSingleDevMode; //单设备模式，默认可以多设备。 收到imei首发数据包则转换为单设备模式。
-
 	vector<byte> regPkt; //透传网关常用的注册包机制，此数据为第一包注册包
 
+
+	//hmr session
 	string webHMRPath;
+
+
+	//child tds session
+	string m_childTdsTag;
+	int m_childTdsHttpPort;
+	int m_childTdsHttpsPort;
+
+	//stream pusher session
+	string streamId;
+	vector<std::shared_ptr<TDS_SESSION>> m_vecPuller;
+	mutex m_csPuller;
 };
 
 extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;

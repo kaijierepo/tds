@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#ifdef ENABLE_GENICAM
 #include "streamServer.h"
 
 streamServer streamSrv;
@@ -41,4 +40,3 @@ bool streamServer::startStream(string streamId, STREAM_INFO* si)
 		return false;
 	}
 }
-#endif

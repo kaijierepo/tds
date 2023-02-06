@@ -1023,7 +1023,7 @@ bool ioDev::sendData(char* pData, int iLen)
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					int iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog)
-						IOLogSend((char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(660));
+						IOLogSend((unsigned char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(660));
 				}
 			}
 			else
@@ -1346,7 +1346,7 @@ bool ioDev::loadStatusBuff()
 
 void ioDev::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
 {
-	IOLogRecv(recvData, recvDataLen, strIP + ":" + str::fromInt(port));
+	IOLogRecv((unsigned char*)recvData, recvDataLen, strIP + ":" + str::fromInt(port));
 	OnRecvData(recvData, recvDataLen);
 }
 
@@ -1523,6 +1523,8 @@ void ioDev::recursiveGetChanCount(ioDev* p, long& count) {
 		recursiveGetChanCount(c, count);
 	}
 }
+
+
 
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {

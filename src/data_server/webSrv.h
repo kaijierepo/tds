@@ -15,7 +15,7 @@ public:
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
-	static int sendToWs(char* p, size_t len, int sockPipe);
+	static int sendToWs(unsigned char* p, size_t len, int sockPipe);
 	bool m_isHttps;
 
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
@@ -46,8 +46,8 @@ extern void sendToCommLog(string s);
 extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 extern shared_mutex csIoPktMonitorClient;
 extern void sendToPktMonitorClient(char* p, int len);
-extern void IOLogSend(char* p, int len, bool success, string remoteAddr);
-extern void IOLogRecv(char* p, int len, string remoteAddr);
+extern void IOLogSend(unsigned char* p, int len, bool success, string remoteAddr);
+extern void IOLogRecv(unsigned char* p, int len, string remoteAddr);
 
 extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);

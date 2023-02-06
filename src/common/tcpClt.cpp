@@ -30,7 +30,6 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	pTcpClt->m_session.srvIP = pTcpClt->m_remoteIP;
 	pTcpClt->m_session.srvPort = pTcpClt->m_remotePort;
 	pTcpClt->m_session.sock = sock;
-	pTcpClt->m_session.tcpClt = pTcpClt;
 
 	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
 
@@ -133,6 +132,7 @@ DWORD WINAPI ConnectThread(LPVOID lpParam)
 tcpClt::tcpClt(void)
 {
 	sockClient = 0;
+	m_session.tcpClt = this;
 	m_remoteIP = "127.0.0.1";
 	m_remotePort = 0;
 	m_bConn = false;
@@ -319,6 +319,11 @@ bool tcpClt::ReConnect()
 }
 
 int tcpClt::SendData(char* pData, size_t iLen)
+{
+	return SendData((unsigned char*)pData,iLen);
+}
+
+int tcpClt::SendData(unsigned char* pData, size_t iLen)
 {
 	if(iLen==0)
 	{
