@@ -14,7 +14,7 @@ public:
 	~udpServer(void);
 
 	int OnRecvData(char* recvData, int recvDataLen, string strIP, int port);
-	int SendData(char* pData, int iLen, string strIP, int port);
+	int SendData(char* pData, size_t iLen, string strIP, int port);
 
 	bool run(IUdpServerCallBack* pcb,int localPort = 0, string localIP = "");
 	void start();

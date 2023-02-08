@@ -10,7 +10,7 @@ rpc服务的tcp服务接口
 #include <condition_variable>
 #include "tdsSession.h"
 #include <memory>
-#include "tdscore.h"
+
 #include "webSrv.h"
 
 
@@ -36,6 +36,8 @@ public:
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 
 	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //作为子服务连接上级服务的客户端
+
+	mutex m_csTcpClt_streamPusher;
 	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher; //推流
 
 	void sendToAllSessions(unsigned char* pData, int len);

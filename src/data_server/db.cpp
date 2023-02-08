@@ -1531,7 +1531,7 @@ bool TIME_SELECTOR::init(string time)
 	if (time.find("e") != string::npos)
 	{
 		time = time.substr(0, time.length() - 1);
-		m_dataNum = _ttoi(time.c_str());
+		m_dataNum = atoi(time.c_str());
 		string timeRange ="2020-01-01 00:00:00~" + timeopt::nowStr();
 		parseTimeRange(timeRange);
 	}

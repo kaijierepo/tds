@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "tdscore.h"
+
 #include "json.hpp"
 #include "ioDev.h"
 using json = nlohmann::json;

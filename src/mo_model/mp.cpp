@@ -11,7 +11,7 @@
 #include "ioChan.h"
 #include "masterDs.h"
 #include "httplib.h"
-
+#include "json.hpp"
 
 MP::MP()
 {
@@ -128,7 +128,7 @@ bool MP::loadConf(json& conf)
 		}
 	}
 
-	if (m_valType == TDS::VAL_TYPE::json)
+	if (m_valType == VAL_TYPE::json)
 	{
 		if(conf["mpType"]!=nullptr)
 		m_mpType = conf["mpType"].get<string>();
@@ -786,21 +786,21 @@ bool MP::IsCurValValid()
 string MP::getMpTypeLabel()
 {
 	string typeLabel;
-	if (m_valType == TDS::VAL_TYPE::boolean)
+	if (m_valType == VAL_TYPE::boolean)
 	{
 		typeLabel = m_name;
 	}
-	else if (m_valType == TDS::VAL_TYPE::Float)
+	else if (m_valType == VAL_TYPE::Float)
 	{
 		typeLabel = m_name;
 	}
-	else if (m_valType == TDS::VAL_TYPE::json)
+	else if (m_valType == VAL_TYPE::json)
 	{
 		typeLabel = m_mpType;
 	}
 	else
 	{
-		typeLabel = TDS::getValTypeLabel(m_valType);
+		typeLabel = getValTypeLabel(m_valType);
 	}
 
 	return typeLabel;
@@ -812,19 +812,19 @@ string MP::getMpType()
 {
 	string mpType;
 	// as a convention , a real type MP's name is named by data type.
-	if (m_valType == TDS::VAL_TYPE::boolean)
+	if (m_valType == VAL_TYPE::boolean)
 	{
 		mpType = m_name;
 	}
-	else if (m_valType == TDS::VAL_TYPE::Float)
+	else if (m_valType == VAL_TYPE::Float)
 	{
 		mpType = m_name;
 	}
-	else if (m_valType == TDS::VAL_TYPE::video)
+	else if (m_valType == VAL_TYPE::video)
 	{
 		mpType = "视频";
 	}
-	else if (m_valType == TDS::VAL_TYPE::json)
+	else if (m_valType == VAL_TYPE::json)
 	{
 		mpType = m_mpType;
 	}

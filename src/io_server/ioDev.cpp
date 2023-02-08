@@ -1005,7 +1005,7 @@ bool ioDev::SendPkt(PKT_DATA& pkt)
 	return sendData((char*)pkt.data, pkt.len);
 }
 
-bool ioDev::sendData(char* pData, int iLen)
+bool ioDev::sendData(char* pData, size_t iLen)
 {
 	if (m_pParent != nullptr && m_pParent != &ioSrv) {
 		m_pParent->sendData(pData, iLen);
@@ -1118,11 +1118,11 @@ void ioDev::doRespTimeStatis(int time)
 	}
 
 	if (m_vecRespTime.size() > 0) {
-		int total = 0;
+		size_t total = 0;
 		for (int i = 0; i < m_vecRespTime.size(); i++) {
 			total += m_vecRespTime[i];
 		}
-		m_avgRespTime = total / m_vecRespTime.size();
+		m_avgRespTime =(int) (total / m_vecRespTime.size());
 	}
 }
 
@@ -1281,6 +1281,8 @@ bool ioDev::loadConfBuff()
 	}
 	catch (std::exception& e)
 	{
+		string s = e.what();
+		LOG("[warn]loadConfBuff fail," + s + ",ioAddr=" + getIOAddrStr());
 		return false;
 	}
 	
@@ -1307,6 +1309,8 @@ bool ioDev::loadInfoBuff()
 	}
 	catch (std::exception& e)
 	{
+		string s = e.what();
+		LOG("[warn]loadInfoBuff fail," + s + ",ioAddr=" + getIOAddrStr());
 		return false;
 	}
 
@@ -1338,6 +1342,8 @@ bool ioDev::loadStatusBuff()
 	}
 	catch (std::exception& e)
 	{
+		string s = e.what();
+		LOG("[warn]loadStatusBuff fail," + s +",ioAddr=" + getIOAddrStr());
 		return false;
 	}
 
@@ -1515,7 +1521,7 @@ ioChannel* ioDev::getChanByTag(string tag)
 	return nullptr;
 }
 
-void ioDev::recursiveGetChanCount(ioDev* p, long& count) {
+void ioDev::recursiveGetChanCount(ioDev* p, size_t& count) {
 	count += p->m_channels.size();
 	for (int i = 0; i < p->m_vecChildDev.size(); i++)//网络直连设备
 	{
@@ -1638,36 +1644,7 @@ void ioDev::statisOnSend(char* sendData, int len, string addr)
 }
 
 
-int UPGRADE_INFO::calcPktNum(int pl)
-{
-	int pn = fileLen / pl;
-	if (fileLen % pl)
-		pn++;
-	return pn;
-}
 
-bool UPGRADE_INFO::loadFirmwareFile(string fn, int pl)
-{
-	if (fileData) delete fileData;
-	fileLen = 0;
-	fileName = fn;
-	binPath = fs::appPath() + "/files/firmware/" + fileName;
-	if (fs::readFile(binPath, fileData, fileLen)) {
-		pktLen = pl;
-		pktNum = calcPktNum(pktLen);
-		currentPktNo = 0;
-		fileCrc = common::N_CRC16(fileData, fileLen);
-		vector<string> infoList;
-		str::split(infoList, fileName, "_");
-		if (infoList.size() < 2) {
-			return false;
-		}
-		version = infoList[1];
-		devType = infoList[0];
-		return true;
-	}
-	return false;
-}
 
 
 string ioDev::removePortFromIoAddr(string ioAddr) {
@@ -1696,7 +1673,7 @@ string ioDev::removePortFromIoAddr(string ioAddr) {
 
 string ioDev::removePortFromDevAddr(string devAddr) {
 	//除去端口号
-	int pos = devAddr.find(":");
+	size_t pos = devAddr.find(":");
 	if (pos > 0) {
 		devAddr = devAddr.substr(0, pos);
 	}

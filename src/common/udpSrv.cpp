@@ -30,7 +30,7 @@ DWORD WINAPI RecvThread(LPVOID lpParam);
 udpServer::udpServer(void)
 {
 	m_sock = 0;
-	m_bindIP = _T("0.0.0.0");
+	m_bindIP = "0.0.0.0";
 	m_port = 660;
 	m_pCallback = NULL;
 }
@@ -188,7 +188,7 @@ int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int por
 	return 0;
 }
 
-int udpServer::SendData(char* pData, int iLen, string remoteIP, int remotePort)
+int udpServer::SendData(char* pData, size_t iLen, string remoteIP, int remotePort)
 {
 	if (m_sock)
 	{

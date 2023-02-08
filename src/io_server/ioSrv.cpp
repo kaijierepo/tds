@@ -826,6 +826,42 @@ void ioServer::rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSI
 	}
 }
 
+json CHAN_TEMPLATE::toJson() {
+	json j;
+	j["name"] = name;
+	j["label"] = label;
+	j["channels"] = channels;
+	return j;
+}
+
+void ioServer::rpc_getChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	if (params.contains("name")) {
+		string name = params["name"];
+		if (ioSrv.m_mapChanTempalte.find(name) != ioSrv.m_mapChanTempalte.end()) {
+			CHAN_TEMPLATE ct = ioSrv.m_mapChanTempalte[name];
+			rpcResp.result = ct.channels.dump();
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_chanTemplateNotFound, "chan template not found");
+		}
+	}
+	else {
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
+	}
+}
+
+void ioServer::rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	CHAN_TEMPLATE ct;
+	ct.label = params["name"];
+	str::hanZi2Pinyin(ct.label, ct.name);
+	ct.channels = params["channels"];
+	ioSrv.m_mapChanTempalte[ct.name] = ct;
+	ioSrv.saveChanTemplate();
+	rpcResp.result = "\"ok\"";
+}
+
 ioDev* ioServer::getIODev(string ioAddr,bool bChn,bool ignorePort)
 {
 	ioDev* p = nullptr;
@@ -994,14 +1030,7 @@ void ioServer::refreshSerialIODev()
 
 bool ioServer::run()
 {
-	if (tds->conf->edge)
-	{
-		runAsEdge();
-	}
-	else
-	{
-		runAsCloud();
-	}
+	runAsCloud();
 	return false;
 }
 
@@ -1124,28 +1153,13 @@ bool ioServer::runAsCloud()
 	io.detach();
 
 	//启动设备发现线程
-	ioDiscoverService.run();
+	//ioDiscoverService.run();
 	refreshSerialIODev();
 
 	
 	return true;
 }
 
-bool ioServer::runAsEdge()
-{
-	m_bRunning = true;
-
-	for (auto i : m_vecChildDev)
-	{
-		i->run();
-	}
-	std::thread io(IOThread);
-	io.detach();
-	
-	ioDiscoverService.run();
-	refreshSerialIODev();
-	return false;
-}
 
 void ioServer::stop()
 {
@@ -1343,7 +1357,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(APP_LAYER_PROTO::textEnd2LF))
+			while (pab->PopPkt(IsValidPkt_textEnd_LFLF))
 			{
 				int iSend = tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
@@ -1534,10 +1548,15 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
 		{
 			if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
+				tdsSession->m_csPuller.lock();
 				for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
 					std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
-					p->send(pData, iLen);
+					if (p->send(pData, iLen) <= 0) {
+						tdsSession->m_vecPuller.erase(tdsSession->m_vecPuller.begin() + i);
+						i--;
+					}
 				}
+				tdsSession->m_csPuller.unlock();
 			}
 			else if (tdsSession->tdspSubType == TDSP_SUB_TYPE::childTds) {
 
@@ -1583,18 +1602,38 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 					if (params["devType"] != nullptr) {
 						string devType = params["devType"];
 						if (devType != "") {
-							tdsSession->tdspSubType == devType;
+							tdsSession->tdspSubType = devType; 
 							if (devType == TDSP_SUB_TYPE::streamPusher) {
 								string rootTag, tag;
 								if (params["rootTag"] != nullptr)
 								{
 									rootTag = params["rootTag"];
 								}
-								else if(params["tag"] !=nullptr){
+								if(params["tag"] !=nullptr){
 									tag = params["tag"];
 								}
-								tag = TAG::addRoot(tag, rootTag);
+								tag = TAG::addRoot(tag, rootTag); 
 								tdsSession->streamId = tag;
+
+								MP* pmp = prj.GetMPByTag(tag);
+								if (pmp) {
+									vector< std::shared_ptr<TDS_SESSION>>   puller;
+									pmp->m_csPuller.lock();
+									puller = pmp->m_vecPuller;
+									pmp->m_csPuller.unlock();
+
+									int pullerCount = 0;
+									tdsSession->m_csPuller.lock();
+									tdsSession->m_vecPuller = puller;
+									pullerCount = tdsSession->m_vecPuller.size();
+									tdsSession->m_csPuller.unlock();
+
+									LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d",tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
+								}
+								else {
+									LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
+								}
+
 								return;
 							}
 							else if (devType == TDSP_SUB_TYPE::childTds) {

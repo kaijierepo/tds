@@ -1,5 +1,5 @@
 #pragma once
-#include "tdscore.h"
+
 
 
 typedef int (*fp_validPktCheck)(unsigned char* pData, int iLen);

@@ -6,7 +6,7 @@ masterDs
 
 */
 #pragma once
-#include "tdscore.h"
+
 #include "tcpSrv.h"
 #include "tdsSession.h"
 

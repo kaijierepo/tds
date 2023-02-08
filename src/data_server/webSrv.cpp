@@ -101,7 +101,7 @@ void sendToPktMonitorClient(char* p, int len)
 	}
 	csIoPktMonitorClient.unlock_shared();
 }
-void IOLogSend(unsigned char* p, int len, bool success,string remoteAddr)
+void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -124,7 +124,7 @@ void IOLogSend(unsigned char* p, int len, bool success,string remoteAddr)
 	string s = j.dump(4);
 	sendToPktMonitorClient((char*)s.c_str(), s.length());
 }
-void IOLogRecv(unsigned char* p, int len,string remoteAddr)
+void IOLogRecv(unsigned char* p, size_t len,string remoteAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -1081,14 +1081,70 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		 tag = str::trimSuffix(tag, ".de"); 
 		tag = httplib::detail::decode_url(tag, false);
 		ioChannel* pChan = ioSrv.getChanByTag(tag);
+		//本地端
 		if (pChan) {
 			pChan->m_vecStreamPuller.push_back(tdsSession);
 		}
+		//云端
 		else {
-			std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
-			p->m_csPuller.lock();
-			p->m_vecPuller.push_back(p);
-			p->m_csPuller.unlock();
+			MP* pmp = prj.GetMPByTag(tag);
+			if (pmp) {
+				OBJ* pOwnerChlidTds = pmp->getOwnerChildTds();
+
+				//启动下级服务器推流
+				bool pusherStarted = false;
+				if (pOwnerChlidTds) {
+					if (pMasterDs) {
+						string childTdsTag = pOwnerChlidTds->getTag();
+						string tag = pmp->getTag();
+
+						string srcTag = TAG::trimRoot(tag, childTdsTag);
+						json params;
+						params["srcTag"] = srcTag;
+						params["destTag"] = tag;
+						params["port"] = tds->conf->tdspPort;
+						params["socketType"] = "tcp";
+
+						json childRlt, childErr;
+						pMasterDs->callChildTds(childTdsTag, "startPushStream", params, childRlt, childErr, true);
+						if (childRlt != nullptr) {
+							pusherStarted = true;
+						}
+						else if (childErr != nullptr) {
+							LOG("[warn]启动下级服务推流失败，位号:%s,错误信息:%s",tag.c_str(), childErr.dump().c_str());
+						}
+					}
+					else {
+						LOG("[warn]启动下级服务推流失败，位号:%s,master data service is not started", tag.c_str());
+					}
+				}
+
+				if (pusherStarted) {
+					int iPullerCount = 0;
+					pmp->m_csPuller.lock();
+					pmp->m_vecPuller.push_back(tdsSession);
+					iPullerCount = pmp->m_vecPuller.size();
+					pmp->m_csPuller.unlock();
+
+					std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
+					if (p) {
+						vector< std::shared_ptr<TDS_SESSION>>   puller;
+						pmp->m_csPuller.lock();
+						puller = pmp->m_vecPuller;
+						pmp->m_csPuller.unlock();
+
+						p->m_csPuller.lock();
+						p->m_vecPuller = puller;
+						p->m_csPuller.unlock();
+					}
+
+					LOG("[数据流   ]开始拉流,位号:%s,推流启动:%d,拉流客户端数目:%d", tag.c_str(), p ? 1 : 0, iPullerCount);
+				}
+
+			}
+			else {
+				LOG("[数据流   ]开始拉流，位号不存在,位号:%s", tag.c_str());
+			}
 		}
 	}
 	else //连接根地址 默认为rpc连接

@@ -70,105 +70,6 @@ void createConsole()
 }
 
 
-int w;
-int h;
-
-
-// 消息处理函数的实现
-LRESULT CALLBACK WindowProc_tdsUI(
-	_In_  HWND hwnd,
-	_In_  UINT uMsg,
-	_In_  WPARAM wParam,
-	_In_  LPARAM lParam
-)
-{
-	if (uMsg == WM_SIZE)
-	{
-
-	}
-	else if (uMsg == WM_SHOWWINDOW)
-	{
-		
-	}
-	else if (uMsg == WM_CLOSE)
-	{
-		exit(0);
-	}
-	else if(uMsg == WM_KEYDOWN)
-	{
-		//switch (wParam)
-		//{
-		//	case VK_F12:
-		//	string path = fs::appPath() + "\\front_end\\inspector.html";
-		//	if (!fs::fileExist(path))
-		//	{
-		//		::MessageBox(NULL, charCodec::utf8toAnsi("没有找到./front_end/inspector.html,请将调试工具包放在程序运行目录下").c_str(), NULL, NULL);
-		//	}
-		//	wkeShowDevtools(m_hUI, charCodec::utf8toUtf16(path).c_str(), showDevToolCallback, NULL);
-		//	break;
-		//}
-	}
-
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-
-//
-//void createMiniblinkWnd()
-//{
-//	//注册窗口类
-//	HINSTANCE hInstance;
-//	hInstance = GetModuleHandle(NULL);
-//	WNDCLASS tdsUIWnd;
-//	tdsUIWnd.cbClsExtra = 0;
-//	tdsUIWnd.cbWndExtra = 0;
-//	tdsUIWnd.hCursor = LoadCursor(hInstance, IDC_ARROW);
-//	tdsUIWnd.hIcon = ::LoadIcon(hInstance, (LPCTSTR)(IDI_LOGO));
-//	tdsUIWnd.lpszMenuName = NULL;
-//	tdsUIWnd.style = CS_HREDRAW | CS_VREDRAW;
-//	tdsUIWnd.hbrBackground = (HBRUSH)COLOR_WINDOW;
-//	tdsUIWnd.lpfnWndProc = WindowProc_tdsUI;
-//	tdsUIWnd.lpszClassName = _T("tdsUI");
-//	tdsUIWnd.hInstance = hInstance;
-//	RegisterClass(&tdsUIWnd);
-//
-//
-//	int x = 200;
-//	int y = 200;
-//	 w = 960;
-//	 h = 720;
-//
-//	//创建窗口
-//	string title = tds->conf->title;
-//
-//	RECT rc;
-//	SetRect(&rc, 0, 0, w, h);
-//	AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-//
-//	wkeEnableHighDPISupport();//这句话要放在createWindow之前，否则会导致标题栏的图标不显示。原因不知
-//
-//	HWND hwnd = CreateWindow(
-//		"tdsUI",           //上面注册的类名，要完全一致  
-//		title.c_str(),                     //窗口标题文字  
-//		WS_OVERLAPPEDWINDOW, //窗口外观样式  
-//		x,             //窗口相对于父级的X坐标  
-//		y,             //窗口相对于父级的Y坐标  
-//		rc.right - rc.left,                //窗口的宽度  
-//		rc.bottom - rc.top,                //窗口的高度  
-//		NULL,               //没有父窗口，为NULL  
-//		NULL,               //没有菜单，为NULL  
-//		hInstance,          //当前应用程序的实例句柄  
-//		NULL);              //没有附加数据，为NULL 
-//
-//
-//	m_hUI = wkeCreateWebWindow(WKE_WINDOW_TYPE_CONTROL, hwnd, 0, 0, w, h);
-//	wkeSetZoomFactor(m_hUI, 1.5);
-//	wkeLoadURL(m_hUI, tds->conf->homepage.c_str());
-//	wkeShowWindow(m_hUI, TRUE);
-//	ShowWindow(hwnd, SW_SHOW);
-//}
-
-
 void chromeThread()
 {
 	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
@@ -259,45 +160,45 @@ void createChromeWnd()
 }
 
 
-void startMicroService(string path)
-{
-	if (fs::fileExist(path))
-	{
-		wstring title = charCodec::utf8_to_utf16("123456");
-		STARTUPINFOW si;
-		si.lpTitle = (LPWSTR)title.c_str();
-		PROCESS_INFORMATION pi;
-		ZeroMemory(&si, sizeof(si));
-		si.cb = sizeof(si);
-		ZeroMemory(&pi, sizeof(pi));
-
-		// Start the child process.
-		si.dwFlags = STARTF_USESHOWWINDOW; // 指定wShowWindow成员有效
-		si.wShowWindow = TRUE; // 此成员设为TRUE的话则显示新建进程的主窗口
-
-		if (!CreateProcessW(NULL,   // No module name (use command line)
-			(LPWSTR)charCodec::utf8_to_utf16(path).c_str(),        // Command line
-			NULL,           // Process handle not inheritable
-			NULL,           // Thread handle not inheritable
-			FALSE,          // Set handle inheritance to FALSE
-			CREATE_NEW_CONSOLE,              // No creation flags
-			NULL,           // Use parent's environment block
-			NULL,           // Use parent's starting directory
-			&si,            // Pointer to STARTUPINFO structure
-			&pi)           // Pointer to PROCESS_INFORMATION structure
-			)
-		{
-			LOG("启动失败" + path + sys::getLastError());
-		}
-		else
-		{
-
-		}
-
-		CloseHandle(pi.hProcess);
-		CloseHandle(pi.hThread);
-	}
-}
+//void startMicroService(string path)
+//{
+//	if (fs::fileExist(path))
+//	{
+//		wstring title = charCodec::utf8_to_utf16("123456");
+//		STARTUPINFOW si;
+//		si.lpTitle = (LPWSTR)title.c_str();
+//		PROCESS_INFORMATION pi;
+//		ZeroMemory(&si, sizeof(si));
+//		si.cb = sizeof(si);
+//		ZeroMemory(&pi, sizeof(pi));
+//
+//		// Start the child process.
+//		si.dwFlags = STARTF_USESHOWWINDOW; // 指定wShowWindow成员有效
+//		si.wShowWindow = TRUE; // 此成员设为TRUE的话则显示新建进程的主窗口
+//
+//		if (!CreateProcessW(NULL,   // No module name (use command line)
+//			(LPWSTR)charCodec::utf8_to_utf16(path).c_str(),        // Command line
+//			NULL,           // Process handle not inheritable
+//			NULL,           // Thread handle not inheritable
+//			FALSE,          // Set handle inheritance to FALSE
+//			CREATE_NEW_CONSOLE,              // No creation flags
+//			NULL,           // Use parent's environment block
+//			NULL,           // Use parent's starting directory
+//			&si,            // Pointer to STARTUPINFO structure
+//			&pi)           // Pointer to PROCESS_INFORMATION structure
+//			)
+//		{
+//			LOG("启动失败" + path + sys::getLastError());
+//		}
+//		else
+//		{
+//
+//		}
+//
+//		CloseHandle(pi.hProcess);
+//		CloseHandle(pi.hThread);
+//	}
+//}
 
 
 TDS_imp::TDS_imp()
@@ -694,57 +595,6 @@ void TDS_imp::log(const char* text)
 	}
 	else
 		LOG(text);
-}
-using namespace std::filesystem;
-void TDS_imp::createDefaultCompanyInfo() {
-	string confPath = tds->conf->confPath;
-
-	//生成默认配置
-	try
-	{
-		if (!fs::fileExist(confPath + "/info.json"))
-		{
-			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/info.json"), charCodec::utf8_to_utf16(confPath + "/info.json"));
-		}
-
-		if (!fs::fileExist(confPath + "/banner.svg"))
-		{
-			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/banner.svg"), charCodec::utf8_to_utf16(confPath + "/banner.svg"));
-		}
-
-		if (!fs::fileExist(confPath + "/logo.svg"))
-		{
-			copy(charCodec::utf8_to_utf16(fs::appPath() + "/ui/app/assets/logo.svg"), charCodec::utf8_to_utf16(confPath + "/logo.svg"));
-		}
-	}
-	catch(exception& e)
-	{
-
-	}
-
-
-	//拷贝到ui目录
-	try
-	{
-		if (fs::fileExist(confPath + "/info.json"))
-		{
-			std::filesystem::copy( charCodec::utf8_to_utf16(confPath + "/info.json"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/info.json"), std::filesystem::copy_options::overwrite_existing);
-		}
-
-		if (fs::fileExist(confPath + "/banner.svg"))
-		{
-			std::filesystem::copy(charCodec::utf8_to_utf16(confPath + "/banner.svg"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/banner.svg"), std::filesystem::copy_options::overwrite_existing);
-		}
-
-		if (fs::fileExist(confPath + "/logo.svg"))
-		{
-			std::filesystem::copy(charCodec::utf8_to_utf16(confPath + "/logo.svg"), charCodec::utf8_to_utf16(fs::appPath() + "/ui/logo.svg"), std::filesystem::copy_options::overwrite_existing);
-		}
-	}
-	catch (exception& e)
-	{
-
-	}
 }
 
 void TDS_imp::registerMsgSinker(fp_msgSinker sinker)

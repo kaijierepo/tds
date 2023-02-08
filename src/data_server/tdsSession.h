@@ -1,5 +1,5 @@
 #pragma once
-#include "tdscore.h"
+
 #include "tcpClt.h"
 #include "tcpSrv.h"
 #include <mutex>
@@ -46,10 +46,10 @@ public:
 	//地址信息与通信数据结构
 	string remoteIP;
 	int remotePort;
-	SOCKET sock;
+	int sock;
 	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
 	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
-	SOCKET sockPipe;         //socket管道。
+	int sockPipe;         //socket管道。
 	string getRemoteAddr();
 	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 

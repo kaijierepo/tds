@@ -216,7 +216,7 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	if (m_vecStreamPuller.size() > 0) {
 		json jDe;
 		jDe["val"] = jVal;
-		string s = jDe.dump();
+		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
 
 		for (int i = 0; i < m_vecStreamPuller.size(); i++) {
 			shared_ptr<TDS_SESSION> p = m_vecStreamPuller[i];

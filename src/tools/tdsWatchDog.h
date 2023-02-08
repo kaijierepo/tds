@@ -15,9 +15,9 @@ public:
 	string getFileVerInfo(string path);
 	string getCurTdsVer();
 	string getUpdateTdsVer();
-	bool installService();
-	bool uninstallService();
-	bool isServiceInstalled();
+	//bool installService();
+	//bool uninstallService();
+	//bool isServiceInstalled();
 	bool regSelfStart();
 	bool unregSelfStart();
 	bool isSelfStartReg();

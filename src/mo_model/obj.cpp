@@ -30,7 +30,6 @@ SOFTWARE.
 #include "common.h"
 #include "prj.h"
 #include "mp.h"
-#include "amo.h"
 #include "ioDev.h"
 #include "as.h"
 #include <algorithm>
@@ -58,10 +57,6 @@ OBJ* createMO(string type)
 	else if (type == MO_TYPE::mpgroup)
 	{
 		p = new OBJ();
-	}
-	else if (type == MO_TYPE::amo)
-	{
-		p = new amo();
 	}
 	else
 	{

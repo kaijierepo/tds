@@ -2,13 +2,7 @@
 rpc handler
 */
 #pragma once
-
-#include "tdscore.h"
 #include "db.h"
-#include "tcpClt.h"
-#include "ds.h"
-#include "tdsSession.h"
-#include "obj.h"
 
 struct Mo_Attr_Params {
 	json renameMap;
@@ -22,7 +16,6 @@ struct Mo_Attr_Params {
 	string rootTag;
 	Mo_Attr_Params() {
 		bSelAttr = false;
-		renameMap = nullptr;
 		columeLabel = "tag";
 		valFmt = "val";
 		moType = "obj";

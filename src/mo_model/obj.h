@@ -28,7 +28,7 @@ SOFTWARE.
 
 #pragma once
 #include "json.hpp"
-#include "tdscore.h"
+
 #include "db.h"
 using namespace std;
 using json = nlohmann::json;
@@ -73,7 +73,6 @@ struct OBJ_QUERIER {
 };
 
 
-class amo;
 class MP;
 class database;
 class OBJ

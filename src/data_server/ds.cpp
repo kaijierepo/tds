@@ -23,18 +23,23 @@ dataServer::~dataServer()
 
 void dataServer::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	if (params["tag"] == nullptr) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param tag missing");
+	if (params["srcTag"] == nullptr) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param srcTag missing");
+		return;
+	}
+	if (params["destTag"] == nullptr) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param destTag missing");
 		return;
 	}
 	if (!params["port"].is_number_integer()) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param port error");
 		return;
 	}
-	string tag = params["tag"];
+	string srcTag = params["srcTag"];
+	string destTag = params["destTag"];
 	int port = params["port"].get<int>();
 
-	ioChannel* pChan = ioSrv.getChanByTag(tag);
+	ioChannel* pChan = ioSrv.getChanByTag(srcTag);
 	if (pChan == nullptr) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "channel bind specified tag not found");
 		return;
@@ -49,13 +54,15 @@ void dataServer::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION se
 		pChan->m_vecStreamPuller.push_back(p);
 		pChan->m_csStreamPuller.unlock();
 
-		LOG("[数据流   ]  推流客户端连接成功,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
-		sendStreamPusherRegPkt(p,tag);
+		LOG("[数据流   ]  推流服务连接成功,服务地址:%s:%d,源位号:%s,目标位号:%s", pTcpSess->srvIP.c_str(), pTcpSess->srvPort,srcTag.c_str(),destTag.c_str());
+		sendStreamPusherRegPkt(p, destTag);
 
 		resp.result = RPC_OK;
+		m_tcpClt_streamPusher[pClt] = pClt;
 	}
 	else {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "connect fail");
+		delete pClt;
 	}
 }
 
@@ -116,6 +123,11 @@ void tdsEdgeRegisterThread(std::shared_ptr<TDS_SESSION> p)
 	p->send((char*)s.c_str(), s.length());
 }
 
+
+void deleteTcpClt(tcpClt* p) {
+	delete p;
+}
+
 void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
@@ -141,6 +153,18 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 			m_mutexSessions.unlock();
 			p->onTcpDisconnect();
 		}
+
+		if (m_tcpClt_streamPusher.find(pTcpSess->tcpClt) != m_tcpClt_streamPusher.end()) {
+			LOG("[warn][数据流  ]推流客户端断开,%s:%d", pTcpSess->srvIP.c_str(), pTcpSess->srvPort);
+
+			m_csTcpClt_streamPusher.lock();
+			m_tcpClt_streamPusher.erase(pTcpSess->tcpClt);
+			m_csTcpClt_streamPusher.unlock();
+
+			thread t(deleteTcpClt, pTcpSess->tcpClt);
+			t.detach();
+		}
+
 	}
 }
 

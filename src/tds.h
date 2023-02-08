@@ -25,7 +25,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-
+/*name patern
+functions variable              camel mode    getIODevices
+enum string			            short dash     gw-local-serial
+*/
 
 
 #pragma once
@@ -51,68 +54,193 @@ namespace TAG {
 
 struct TIME;
 
-namespace TDS {
-	namespace VAL_TYPE {
-		const string json = "json";	
-		const string Float = "float"; 
-		const string integer = "int";
-		const string boolean = "bool";
-		const string video = "video";
-		const string str = "string";
-		const string car_strobe = "car_strobe";
-		const string man_strobe = "man_strobe";
-	};
+
+namespace MO_TYPE {
+	const string mo = "mo";
+	const string customMo = "customMo";
+	const string org = "org";
+	const string customOrg = "customOrg";
+	const string mp = "mp";
+	const string mpgroup = "mpGroup";
+};
+
+namespace VAL_TYPE {
+	const string json = "json";	
+	const string Float = "float"; 
+	const string integer = "int";
+	const string boolean = "bool";
+	const string video = "video";
+	const string str = "string";
+	const string car_strobe = "car_strobe";
+	const string man_strobe = "man_strobe";
+};
 	
+inline string getValTypeLabel(string valType)
+{
+	if (valType == "json") return "JSON";
+	else if (valType == "float") return "浮点型";
+	else if (valType == "int") return "整型";
+	else if (valType == "bool") return "布尔型";
+	else if (valType == "video") return "视频";
+	else if (valType == "string") return "字符串型";
+	else return "未知值类型";
+};
 
+namespace CHAN_IO_TYPE {
+	const string I = "i";
+	const string O = "o";
+	const string IO = "io";
+};
 
-	namespace DEV_ADDR_MODE {
-		const string tcpClient = "tcpClient";
-		const string tcpServer = "tcpServer";
-		const string udpServer = "udpServer";
-		const string udpClient = "udpClient";
-		const string deviceID = "deviceID";
-	}
-
-	namespace CHAN_IO_TYPE {
-		const string I = "i";
-		const string O = "o";
-		const string IO = "io";
-	}
-
-	namespace IO_DEV_LEVEL {
-		const string server = "server";
-		const string gateway = "gateway";
-		const string device = "device";
-		const string channel = "channel";
-	}
+inline string getIOTypeLabel(string valType)
+{
+	if (valType == "i") return "输入";
+	else if (valType == "o") return "输出";
+	else if (valType == "io") return "输入/输出";
+	else return "未知IO类型";
 };
 
 
-#define STREAM_TYPE_ENUM string
-namespace STREAM_TYPE {
-	const string bmp = "bmp"; 
-	const string h264 = "h264"; 
-	const string rgba = "rgba"; 
-	const string mono8 = "mono8";
-	const string mono16 = "mono16";
-}
+
+//应用层协议类型
+namespace APP_LAYER_PROTO {
+	const string UNKNOWN = "unknown";
+	const string HTTP = "http";
+	const string PROTOCOL_WEBSOCKET = "websocket";
+	const string PROTOCOL_FRAMING_PROTOCOL = "alp_framing_protocol";
+	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
+	const string terminalPrompt = "->";  //以 -> 结尾的字符串 
+	const string textEnd1LF = "textEnd1LF";
+	const string textEnd2LF = "textEnd2LF";
+};
+
+//the protocol used as a transportation layer (no command specified in this layer,only for data transfer)
+namespace TRANSFER_LAYER_PROTO_TYPE
+{
+	const string TLT_UNKNOWN = "tlp_unknonw";
+	const string TLT_NONE = "tlp_none"; //no transportation layer
+	const string TLT_CAN_V1 = "tlp_can_v1"; //payload is self framing protocol
+	const string TLT_CAN_V2 = "tlp_can_v2"; //payload use can head subpkt info for framing
+	const string TLT_WEB_SOCKET = "tlp_websocket";
+	const string TLT_HTTP = "tlp_http";
+};
 
 
-struct STREAM_INFO {
-	int w;
-	int h;
-	int pixelSize;
-	string pixelFmt;
-	float frameRate;
-	STREAM_INFO()
+//设备管理状态
+namespace DEV_DISPOSITION_MODE {
+	const string managed = "managed"; //后续重构为 inService 表示启用
+	const string spare = "spare";
+};
+
+
+enum IO_PKT_TYPE {
+	IO_Unknown,
+	IO_Request,
+	IO_Response,
+	IO_Notify
+};
+
+class PKT_DATA {
+public:
+	unsigned char* data;
+	int len;
+	unsigned char* cmd_data;
+	int cmd_data_len;
+	string proto;
+	IO_PKT_TYPE type;
+
+	string m_strCmdName; //命令名称
+	string m_strCmdContent;  //命令内容概要
+	string m_strPktDetail; //命令包详细解析信息
+
+	virtual bool pack() { return false; };
+	virtual bool pack(char* cmdData, int len) { return false; };
+	virtual bool unpack()
 	{
-		w = 0;
-		h = 0;
-		pixelSize = 0;
-		pixelFmt = "";
-		frameRate = 0;
+		return false;
+	};
+	virtual bool unpack(unsigned char* p, int len, bool withDetail = false) { return 0; };
+
+	virtual string GetCmdID() { return ""; };
+	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
+	virtual string GetPktDesc() { return ""; }; //包详细描述信息
+	virtual string GetCmdName() { return ""; };
+
+	void setData(unsigned char* p, int l)
+	{
+		if (data)delete data;
+		data = new unsigned char[l];
+		memcpy(data, p, l);
+		len = l;
+	}
+	PKT_DATA(unsigned char* p, int l)
+	{
+		data = NULL;
+		setData(p, l);
+	}
+	PKT_DATA()
+	{
+		data = NULL;
+		len = 0;
+		cmd_data = nullptr;
+		cmd_data_len = 0;
+		type = IO_PKT_TYPE::IO_Unknown;
+	}
+
+	~PKT_DATA()
+	{
+		if (data)
+			delete data;
+		if (cmd_data)
+			delete cmd_data;
+	}
+
+	void copy(const PKT_DATA& r) {
+		this->len = r.len;
+		this->cmd_data_len = r.cmd_data_len;
+		this->proto = r.proto;
+		this->type = r.type;
+		this->m_strCmdName = r.m_strCmdName;
+		this->m_strCmdContent = r.m_strCmdContent;
+		this->m_strPktDetail = r.m_strPktDetail;
+
+		if (r.len > 0)
+		{
+			if (this->data)
+				delete this->data;
+			this->data = new unsigned char[r.len];
+			memcpy(this->data, r.data, r.len);
+		}
+		else
+		{
+			this->data = NULL;
+		}
+
+		if (r.cmd_data_len > 0)
+		{
+			if (this->cmd_data)delete this->cmd_data;
+			this->cmd_data = new unsigned char[r.cmd_data_len];
+			memcpy(cmd_data, r.cmd_data, r.cmd_data_len);
+		}
+		else
+		{
+			this->cmd_data = NULL;
+		}
+	}
+
+	PKT_DATA(const PKT_DATA& r)
+	{
+		copy(r);
+	}
+
+
+	PKT_DATA& operator=(const PKT_DATA& pd)
+	{
+		copy(pd);
+		return *this;
 	}
 };
+
 
 
 struct MODULE_BUS_MSG {
@@ -188,7 +316,9 @@ typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
 typedef void (*fp_createLicence)();
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
+#ifdef ENABLE_GENICAM
 typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
+#endif
 typedef void (*fp_procBeforeExit)();
 
 namespace TDS_SESSION_TYPE {

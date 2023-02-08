@@ -1,23 +1,15 @@
 #pragma once
 #include "ioDev.h"
 #include <string>
-#include "tdscore.h"
-#include "ioDiscoverer.h"
 #include "udpSrv.h"
-
+#include "json.hpp"
 
 class CHAN_TEMPLATE {
 public:
 	string name;
 	string label;
 	json channels;
-	json toJson() {
-		json j;
-		j["name"] = name;
-		j["label"] = label;
-		j["channels"] = channels;
-		return j;
-	}
+	json toJson();
 };
 
 namespace IO_PROTO {
@@ -70,7 +62,7 @@ inline string getDevTypeLabel(string devType) {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
-class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack ,public IUdpServerCallBack
+class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
 {
 public:
 	ioServer();
@@ -79,7 +71,6 @@ public:
 	//主开关
 	bool run() override;
 	bool runAsCloud();
-	bool runAsEdge();
 	void stop() override;
 
 	//组态信息
@@ -114,6 +105,8 @@ public:
 	void rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_startDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_getChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 
 	//设备上下线
 	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);
@@ -165,7 +158,7 @@ public:
 
 	//设备发现必须是某个父设备发现了子设备
 	ioDev* onChildDevDiscovered(json childDevAddr, string type);
-	ioDiscoverer  ioDiscoverService;
+	//ioDiscoverer  ioDiscoverService;
 
 
 	bool m_stopCycleAcq; //全局周期采集开关，调试时使用，调试时全局关闭周期采集。方便手工发送数据并观察

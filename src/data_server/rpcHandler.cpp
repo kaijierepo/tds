@@ -9,19 +9,14 @@
 #include <json.hpp>
 #include "amo.h"
 #include "ioSrv.h"
-#include "tcpClt.h"
 #include "db.h"
-#include <UrlMon.h>
 #include "logger.h"
 #include "ioChan.h"
 #include "ioDev_genicam.h"
-#include "streamServer.h"
 #include "users/userMng.h"
 #include "logServer/logServer.h"
 #include "xiaot/scriptManager.h"
-#include "audioPlayer.h"
 #include "base64.h"
-#include "ffmpegCmd.h"
 #include "masterDs.h"
 #include "ioDev/ioDev_visca.h"
 #include "httplib.h"
@@ -1060,28 +1055,10 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		ioSrv.rpc_uploadDevFirmware(params, rpcResp, session);
 	}
 	else if(method == "getChanTemplate"){
-		if (params.contains("name")) {
-			string name = params["name"];
-			if (ioSrv.m_mapChanTempalte.find(name) != ioSrv.m_mapChanTempalte.end()) {
-				CHAN_TEMPLATE ct = ioSrv.m_mapChanTempalte[name];
-				rpcResp.result = ct.channels.dump();
-			}
-			else {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_chanTemplateNotFound, "chan template not found");
-			}
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
-		}
+		ioSrv.rpc_getChanTemplate(params, rpcResp, session);
 	}
 	else if (method == "setChanTemplate") {
-		CHAN_TEMPLATE ct;
-		ct.label = params["name"];
-		str::hanZi2Pinyin(ct.label, ct.name);
-		ct.channels = params["channels"];
-		ioSrv.m_mapChanTempalte[ct.name] = ct;
-		ioSrv.saveChanTemplate();
-		rpcResp.result = "\"ok\"";
+		ioSrv.rpc_setChanTemplate(params, rpcResp, session);
 	}
 	else if (method == "discoverDev")
 	{

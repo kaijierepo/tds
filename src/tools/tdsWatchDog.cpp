@@ -87,35 +87,36 @@ void thread_checkAdp() {
 
 void thread_checkFood() {
 	timeopt::now(&watchDog.m_lastFeedTime);
-	timeopt::now(&watchDog.m_lastUpdateCheckTime);
+	//timeopt::now(&watchDog.m_lastUpdateCheckTime);
 	while (1)
 	{
 		Sleep(100);
 		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
-		int updateCheckPass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastUpdateCheckTime);
 
-		if (updateCheckPass > 1000) {
-			string newRev = watchDog.getUpdateTdsVer();
-			if (newRev != "" && newRev > watchDog.m_curVer) {
-				watchDog.log("发现新版本:" + newRev + ",当前版本:" + watchDog.m_curVer);
 
-				WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
-				WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
-				Sleep(200);
-				try {
-					filesystem::copy(charCodec::utf8_to_utf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8_to_utf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
-				}
-				catch (std::exception& e)
-				{
-					string err = e.what();
-					watchDog.log(err);
-				}
-				
-				wakeUpFeeder();
-				Sleep(5000);
-			}
-			timeopt::now(&watchDog.m_lastUpdateCheckTime);
-		}
+		//int updateCheckPass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastUpdateCheckTime);
+		//if (updateCheckPass > 1000) {
+		//	string newRev = watchDog.getUpdateTdsVer();
+		//	if (newRev != "" && newRev > watchDog.m_curVer) {
+		//		watchDog.log("发现新版本:" + newRev + ",当前版本:" + watchDog.m_curVer);
+
+		//		WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
+		//		WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
+		//		Sleep(200);
+		//		try {
+		//			filesystem::copy(charCodec::utf8_to_utf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8_to_utf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
+		//		}
+		//		catch (std::exception& e)
+		//		{
+		//			string err = e.what();
+		//			watchDog.log(err);
+		//		}
+		//		
+		//		wakeUpFeeder();
+		//		Sleep(5000);
+		//	}
+		//	timeopt::now(&watchDog.m_lastUpdateCheckTime);
+		//}
 
 
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
@@ -135,24 +136,6 @@ void thread_checkFood() {
 
 void tdsWatchDog::run()
 {
-	//if (!isServiceInstalled()) {
-	//	string info = _GB("是否安装tdsd服务?");
-	//	string title = _GB("安装服务");
-	//	if (MB_OK == ::MessageBox(NULL, info.c_str(), title.c_str(), MB_OKCANCEL)) {
-	//		if (installService()) {
-	//		    info = _GB("tdsd服务安装成功!");
-	//			title = _GB("服务安装");
-	//			::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-	//		}
-	//		else {
-	//			info = _GB("tdsd服务安装失败!");
-	//			title = _GB("服务安装");
-	//			::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-	//		}
-	//	}
-	//	exit(0);
-	//}
-
 	watchDog.log("TDS Daemon 服务启动");
 	m_foodPlate.m_pCallback = this;
 	m_foodPlate.m_port = FOOD_PLATE_PORT;
@@ -328,84 +311,84 @@ string tdsWatchDog::getUpdateTdsVer()
 	return getFileVerInfo(fs::appPath() + "/update/tds.exe");
 }
 
-bool tdsWatchDog::installService()
-{
-	string path = fs::appPath() + "/tdsd.exe";
-	SC_HANDLE schSCManager, schService;
-	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-
-	if (schSCManager == NULL)
-		return false;
-
-	schService = CreateService(schSCManager, "tdsd", "tdsd",
-		SERVICE_ALL_ACCESS,
-		SERVICE_WIN32_OWN_PROCESS | SERVICE_INTERACTIVE_PROCESS,
-		SERVICE_AUTO_START,
-		SERVICE_ERROR_NORMAL,
-		path.c_str(),
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL);
-
-	if (schService == NULL)
-		return false;
-
-	CloseServiceHandle(schService);
-	return true;
-}
-
-bool tdsWatchDog::uninstallService()
-{
-	SC_HANDLE schSCManager, schService;
-	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-
-	if (schSCManager == NULL)
-		return false;
-
-	// 打开www服务。
-	SC_HANDLE hSvc = ::OpenService(schSCManager, "tdsd",SERVICE_ALL_ACCESS);
-	if (hSvc == NULL)
-	{
-		string info = _GB("没有找到服务tdsd");
-		string title = _GB("错误");
-		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-		return false;
-	}
-
-	if (::DeleteService(hSvc)) {
-		string info = _GB("服务tdsd卸载成功");
-		string title = _GB("卸载服务");
-		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-	}
-	else
-	{
-		string info = _GB("服务tdsd卸载失败");
-		string title = _GB("卸载服务");
-		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-	}
-
-	CloseServiceHandle(hSvc);
-	return true;
-}
-
-bool tdsWatchDog::isServiceInstalled()
-{
-	SC_HANDLE hSC = ::OpenSCManager(NULL,
-		NULL, GENERIC_EXECUTE);
-	if (hSC == NULL)
-	{
-		return false;
-	}
-	SC_HANDLE hSvc = ::OpenService(hSC, "tdsd",
-		SERVICE_START | SERVICE_QUERY_STATUS | SERVICE_STOP);
-	if (hSvc == NULL)
-	{
-		return false;
-	}
-	return true;
-}
+//bool tdsWatchDog::installService()
+//{
+//	string path = fs::appPath() + "/tdsd.exe";
+//	SC_HANDLE schSCManager, schService;
+//	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+//
+//	if (schSCManager == NULL)
+//		return false;
+//
+//	schService = CreateService(schSCManager, "tdsd", "tdsd",
+//		SERVICE_ALL_ACCESS,
+//		SERVICE_WIN32_OWN_PROCESS | SERVICE_INTERACTIVE_PROCESS,
+//		SERVICE_AUTO_START,
+//		SERVICE_ERROR_NORMAL,
+//		path.c_str(),
+//		NULL,
+//		NULL,
+//		NULL,
+//		NULL,
+//		NULL);
+//
+//	if (schService == NULL)
+//		return false;
+//
+//	CloseServiceHandle(schService);
+//	return true;
+//}
+//
+//bool tdsWatchDog::uninstallService()
+//{
+//	SC_HANDLE schSCManager, schService;
+//	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+//
+//	if (schSCManager == NULL)
+//		return false;
+//
+//	// 打开www服务。
+//	SC_HANDLE hSvc = ::OpenService(schSCManager, "tdsd",SERVICE_ALL_ACCESS);
+//	if (hSvc == NULL)
+//	{
+//		string info = _GB("没有找到服务tdsd");
+//		string title = _GB("错误");
+//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+//		return false;
+//	}
+//
+//	if (::DeleteService(hSvc)) {
+//		string info = _GB("服务tdsd卸载成功");
+//		string title = _GB("卸载服务");
+//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+//	}
+//	else
+//	{
+//		string info = _GB("服务tdsd卸载失败");
+//		string title = _GB("卸载服务");
+//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
+//	}
+//
+//	CloseServiceHandle(hSvc);
+//	return true;
+//}
+//
+//bool tdsWatchDog::isServiceInstalled()
+//{
+//	SC_HANDLE hSC = ::OpenSCManager(NULL,
+//		NULL, GENERIC_EXECUTE);
+//	if (hSC == NULL)
+//	{
+//		return false;
+//	}
+//	SC_HANDLE hSvc = ::OpenService(hSC, "tdsd",
+//		SERVICE_START | SERVICE_QUERY_STATUS | SERVICE_STOP);
+//	if (hSvc == NULL)
+//	{
+//		return false;
+//	}
+//	return true;
+//}
 
 BOOL Reg_LocalMachine(char* lpszFileName, char* lpszValueName)
 {

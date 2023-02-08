@@ -4,7 +4,7 @@
 1.解析websocket连接请求中的sec，并生成对应的accept码，（通过sha1与base64编码）
 2.解析来自客户端的websocket格式数据
 3.封装数据成为websocket格式，用于发送到客户端*/
-#include "tdscore.h"
+
 #include <stdint.h>
 
 

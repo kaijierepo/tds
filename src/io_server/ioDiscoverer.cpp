@@ -139,7 +139,7 @@ void serialDetectThread()
     hwDetect.style = CS_HREDRAW | CS_VREDRAW;
     hwDetect.hbrBackground = (HBRUSH)COLOR_WINDOW;
     hwDetect.lpfnWndProc = WindowProc_hwDetect;
-    hwDetect.lpszClassName = _T("hwDetect");
+    hwDetect.lpszClassName = "hwDetect";
     hwDetect.hInstance = hInstance;
     RegisterClass(&hwDetect);
 

@@ -1,11 +1,8 @@
 ﻿#pragma once 
-#include "tdscore.h"
+
 #include "obj.h"
-#include "json.hpp"
 #include "tdsSession.h"
 #include "tds.h"
-#include "videoCodec.h"
-#include <memory>
 
 
 struct TIME_SPAN {
@@ -46,6 +43,14 @@ class OBJ;
 struct MP_STATUS {
 	string m_pullingSrcUrl; //当前正在拉流的地址
 };
+
+namespace DATA_SAVE_MODE {
+	const string always = "always";
+	const string onchange = "onchange";
+	const string cyclic = "cyclic";
+	const string never = "never";
+	const string cyclic_onchange = "cyclic|onchange";
+}
 
 
 class MP : public OBJ
@@ -137,4 +142,8 @@ public:
 	json m_curVal;
 	json m_lastVal;
 	TIME m_lastSaveTime;
+
+	//推拉流
+	vector<std::shared_ptr<TDS_SESSION>> m_vecPuller;
+	mutex m_csPuller;
 };

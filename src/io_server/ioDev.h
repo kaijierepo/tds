@@ -2,34 +2,8 @@
 #include "pch.h"
 #include "tdsSession.h"
 #include "udpSrv.h"
+#include "json.hpp"
 
-class ioDev;
-class OBJ;
-class MP;
-class ioAddrSession;
-class ioChannel;
-//asyn pkt received is not processed from DMS_UNCONF ioDev
-//no DoCycleTask for DMS_UNCONF ioDev
-//do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
-typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
-typedef ioDev* (*fp_createDev)();
-
-struct DEV_QUERIER {
-	bool getStatus;
-	bool getConf;
-	bool getChild;
-	bool getChan;
-	bool getDetail;
-	bool getUpgradeInfo;
-	DEV_QUERIER() {
-		getStatus = false;
-		getConf = true;
-		getChild = true;
-		getChan = true;
-		getDetail = true;
-		getUpgradeInfo = false;
-	}
-};
 
 class UPGRADE_INFO {
 public:
@@ -76,6 +50,51 @@ public:
 	int calcPktNum(int pl);
 	bool loadFirmwareFile(string fileName, int pl = 4000);
 };
+
+namespace DEV_ADDR_MODE {
+	const string tcpClient = "tcpClient";
+	const string tcpServer = "tcpServer";
+	const string udpServer = "udpServer";
+	const string udpClient = "udpClient";
+	const string deviceID = "deviceID";
+}
+
+namespace IO_DEV_LEVEL {
+	const string server = "server";
+	const string gateway = "gateway";
+	const string device = "device";
+	const string channel = "channel";
+}
+
+class ioDev;
+class OBJ;
+class MP;
+class ioAddrSession;
+class ioChannel;
+//asyn pkt received is not processed from DMS_UNCONF ioDev
+//no DoCycleTask for DMS_UNCONF ioDev
+//do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
+typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
+typedef ioDev* (*fp_createDev)();
+
+struct DEV_QUERIER {
+	bool getStatus;
+	bool getConf;
+	bool getChild;
+	bool getChan;
+	bool getDetail;
+	bool getUpgradeInfo;
+	DEV_QUERIER() {
+		getStatus = false;
+		getConf = true;
+		getChild = true;
+		getChan = true;
+		getDetail = true;
+		getUpgradeInfo = false;
+	}
+};
+
+
 
 class ioDev : public IUdpServerCallBack
 {
@@ -161,7 +180,7 @@ public:
 	ioChannel* getChanByDevAddr(string addr);
 	ioChannel* getChanByIOAddr(string addr);
 	ioChannel* getChanByTag(string tag);
-	static void recursiveGetChanCount(ioDev* p, long& count);
+	static void recursiveGetChanCount(ioDev* p, size_t& count);
 
 
 	std::shared_ptr<TDS_SESSION>  getStreamPusher(string tag);
@@ -217,7 +236,7 @@ public:
 	virtual bool CommLock(int dwTimeoutMS = 0);
 	virtual void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
-	virtual bool sendData(char* pData, int iLen);
+	virtual bool sendData(char* pData, size_t iLen);
 	virtual bool sendStr(string& str);
 	bool CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen);//发送并阻塞等待回包
 	bool CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount = 0, string strLogMsgWhenSend = "");//=0表示使用全局配置

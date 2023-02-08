@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "tdscore.h"
+
 #include <mutex>
 #include "db.h"
 #include "json.hpp"
