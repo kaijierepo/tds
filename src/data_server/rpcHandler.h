@@ -3,6 +3,8 @@ rpc handler
 */
 #pragma once
 #include "db.h"
+#include "tdsSession.h"
+#include "obj.h"
 
 struct Mo_Attr_Params {
 	json renameMap;

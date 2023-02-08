@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "common.h"
 #include "data_server/ds.h"
+#include "proto/wsProto.h"
 
 string hmrCodeStr = R"(
 <!--code injected by TDS for hot module replacement-->
@@ -62,10 +63,10 @@ else {
 string wstring2string(wstring wstr) {
     string result;
     //获取缓冲区大小，并申请空间，缓冲区大小事按字节计算的  
-    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), NULL, 0, NULL, NULL);
+    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
     char* buffer = new char[len + 1];
     //宽字节编码转换成多字节编码  
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), wstr.size(), buffer, len, NULL, NULL);
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), buffer, len, NULL, NULL);
     buffer[len] = '\0';
     //删除缓冲区并返回值  
     result.append(buffer);
@@ -100,7 +101,7 @@ void HMRServer::watchFile_process(string dir_path) {
         FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
     if (INVALID_HANDLE_VALUE == h_dir) {
-        printf("error %s", GetLastError());
+        printf("error %d", GetLastError());
         return;
     }
     WCHAR* ws_file_name = new wchar_t[_MAX_FNAME];
@@ -256,7 +257,7 @@ void HMRServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
     //}
 }
 
-void HMRServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
+void HMRServer::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
 {
     //m_mutexSessions.lock();
     //HMR_SESSION hs = m_mapSessions[pTcpSess];

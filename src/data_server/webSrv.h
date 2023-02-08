@@ -23,7 +23,7 @@ public:
 	void parseParamFromUrl(string& url, map<string, string>& mapParams);
 	void parseParamFromQuery(string& query, map<string, string>& mapParams);
 	json parseParamFromQuery(string& query);
-	static bool handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	static bool handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	char a[10];
@@ -45,7 +45,7 @@ extern void sendToCommLog(string s);
 
 extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 extern shared_mutex csIoPktMonitorClient;
-extern void sendToPktMonitorClient(char* p, int len);
+extern void sendToPktMonitorClient(char* p, size_t len);
 extern void IOLogSend(unsigned char* p, size_t len, bool success, string remoteAddr);
 extern void IOLogRecv(unsigned char* p, size_t len, string remoteAddr);
 

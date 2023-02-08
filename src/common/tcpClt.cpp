@@ -334,7 +334,7 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 		return 0;
 	}
 
-	int iRet = send(sockClient, (char*)pData, iLen,0);
+	size_t iRet = send(sockClient, (char*)pData, iLen,0);
 	if(iRet <= 0)
 	{
 		closesocket(sockClient);

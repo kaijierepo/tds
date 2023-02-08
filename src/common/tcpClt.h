@@ -10,12 +10,12 @@ using namespace std;
 class tcpClt;
 struct tcpSessionClt
 {
-	SOCKET sock;
+	int sock;
 	std::string srvIP;//对端ip
 	int srvPort;//对端端口
 	void* pALSession;
 	tcpClt* tcpClt;
-	SOCKET bridgeSock;
+	int bridgeSock;
 
 	int iSendSucCount;
 	int iSendFailCount;
@@ -40,7 +40,7 @@ struct tcpSessionClt
 class ITcpClientCallBack {
 public:
 	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo) = 0;
+	virtual void OnRecvData_TCPClient(char* pData, size_t len, tcpSessionClt* connInfo) = 0;
 };
 
 class tcpClt

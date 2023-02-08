@@ -5,7 +5,7 @@
 #include "sha1.h"
 
 
-int IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen)
+int IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
 {
 	CWSPPkt req;
 	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))
@@ -133,7 +133,7 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 	return ret;
 }
 
-int CWSPPkt::pack(const char * inMessage, int messageLen,  enum WS_FrameType frameType, bool bFin, bool bOpt)
+int CWSPPkt::pack(const char * inMessage, size_t messageLen,  enum WS_FrameType frameType, bool bFin, bool bOpt)
 {
 	int ret = WS_ERROR_FRAME;
 	const uint32_t messageLength = messageLen;
@@ -243,7 +243,7 @@ std::string CWSPPkt::getKey(std::string strKey)
 std::string CWSPPkt::GetHandshakeString(std::string request)
 {
 	std::string response;
-	int pos = request.find("Sec-WebSocket-Key: ");
+	size_t pos = request.find("Sec-WebSocket-Key: ");
 	response += "HTTP/1.1 101 Switching Protocols\r\n";
 	response += "Connection: upgrade\r\n";
 	response += "Access-Control-Allow-Credentials:true\r\n";

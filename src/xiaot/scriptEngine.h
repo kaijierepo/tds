@@ -26,14 +26,14 @@ public:
 	void releaseGlobalFunc();
 	string getErrorDesc(jerry_error_t error);
 
-	//µ±Ç°½Å±¾Ö´ĞĞµÄ»·¾³±äÁ¿
+	//å½“å‰è„šæœ¬æ‰§è¡Œçš„ç¯å¢ƒå˜é‡
 	string m_tagThis;
 
 	jerry_value_t global_object;
 	vector<GLOBAL_FUNC> m_vecGlobalFunc;
 
 	RPC_SESSION currentSession;
-	//½Å±¾Ö´ĞĞ½á¹û
+	//è„šæœ¬æ‰§è¡Œç»“æœ
 	json m_jEvalRet;
 };
 

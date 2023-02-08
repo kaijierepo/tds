@@ -50,7 +50,7 @@ SOFTWARE.
 #include "tools/hmrSrv.h"
 #include "users/userMng.h"
 #include "masterDs.h"
-
+#include "webSrv.h"
 
 
 string InterfaceEncoding = "utf8";
@@ -549,11 +549,11 @@ bool TDS_imp::unlockIoAddr(string ioAddr)
 
 bool TDS_imp::setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback)
 {
-	ioDev* d = ioSrv.getIODev(ioAddr);
-	if (d)
-	{
-		d->setRecvCallback(user, recvCallback);
-	}
+	//ioDev* d = ioSrv.getIODev(ioAddr);
+	//if (d)
+	//{
+	//	d->setRecvCallback(user, recvCallback);
+	//}
 	return true;
 }
 

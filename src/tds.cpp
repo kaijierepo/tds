@@ -129,7 +129,7 @@ string TAG::resolveTag(string strTagExp, string rootTag)
 	else if (strTagExp.find(".") == string::npos && strTagExp.find("*") == string::npos && rootTag != "")
 	{
 		string strTagContext; //父监测对象的tag
-		int iPos = rootTag.rfind('.');
+		size_t iPos = rootTag.rfind('.');
 		if (iPos <= 0)return "";
 		strTagContext = rootTag.substr(0, iPos);
 		tagName = strTagContext + "." + strTagExp;
@@ -139,7 +139,7 @@ string TAG::resolveTag(string strTagExp, string rootTag)
 	{
 		//替换../   ../必须也只能写前边
 		string strTagContext; //父监测对象的tag
-		int iPos = rootTag.rfind('.');
+		size_t iPos = rootTag.rfind('.');
 		if (iPos <= 0)return "";
 		strTagContext = rootTag.substr(0, iPos);
 		string tag = strTagContext;

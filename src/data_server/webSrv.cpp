@@ -73,7 +73,7 @@ void sendToCommLog(string s)
 //rpc的实时数据轮询时。 响应线程多线程处理。 会并发调用此发送接口。
 vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 shared_mutex csIoPktMonitorClient;
-void sendToPktMonitorClient(char* p, int len)
+void sendToPktMonitorClient(char* p, size_t len)
 {
 	/*csIoPktMonitorClient.lock();
 	for (int i = 0; i < ioPktMonitorClient.size(); i++)
@@ -242,7 +242,7 @@ void handleGet_gzh(mg_http_message* hm, string& resHeader,string& respBody)
 	str::split(vecParams, query, "&");
 	for (auto& i : vecParams)
 	{
-		int pos = i.find("=");
+		size_t pos = i.find("=");
 		string key = i.substr(0, pos);
 		string val = i.substr(pos + 1, i.length() - pos - 1);
 		mapParams[key] = val;
@@ -1001,7 +1001,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	}
 	else if (strData.find("/COM") != string::npos)
 	{
-		int pos = strData.find("COM");
+		size_t pos = strData.find("COM");
 		int pos1 = strData.find(" ", pos);
 		string portNum = strData.substr(pos, pos1 - pos);
 		ioDev* p = ioSrv.getIODev(portNum);
@@ -1120,7 +1120,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 				}
 
 				if (pusherStarted) {
-					int iPullerCount = 0;
+					size_t iPullerCount = 0;
 					pmp->m_csPuller.lock();
 					pmp->m_vecPuller.push_back(tdsSession);
 					iPullerCount = pmp->m_vecPuller.size();
@@ -1235,7 +1235,7 @@ json WebServer::parseParamFromQuery(string& query)
 
 
 //应用层数据桥接
-bool WebServer::handleAppLayerData_Bridge(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+bool WebServer::handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	bool bHandled = true;
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)

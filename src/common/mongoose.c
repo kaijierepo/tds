@@ -1371,7 +1371,7 @@ static void static_cb(struct mg_connection *c, int ev, void *ev_data,
     if (c->is_hmr > 0 && file_len > 7)
     {
         //find </body>
-        int pos = -1;
+        size_t pos = -1;
         for (int i = 0; i < file_len - 7; i++)
         {
             char c = p_file[i];

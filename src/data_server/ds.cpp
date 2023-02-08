@@ -168,7 +168,7 @@ void dataServer::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	}
 }
 
-int dataServer::Send(SOCKET sock, char* pBuffer, int iLength)
+int dataServer::Send(SOCKET sock, char* pBuffer, size_t iLength)
 {
 	return send(sock, pBuffer, iLength, 0);
 }
@@ -280,7 +280,7 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	}
 }
 
-void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
+void dataServer::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<TDS_SESSION> tdsSession = m_Sessions[pTcpSess];
@@ -288,7 +288,7 @@ void dataServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSes
 	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
-void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSess)
+void dataServer::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<TDS_SESSION> tdsSession = m_Sessions[pTcpSess];
@@ -300,7 +300,7 @@ void dataServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcp
 
 
 
-void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void dataServer::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	timeopt::now(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
@@ -326,7 +326,7 @@ void dataServer::OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSI
 
 
 
-void dataServer::sendToAllSessions(unsigned char* pData, int len)
+void dataServer::sendToAllSessions(unsigned char* pData, size_t len)
 {
 	m_mutexSessions.lock();
 	for (auto& i : m_Sessions) {

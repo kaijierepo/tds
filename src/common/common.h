@@ -171,7 +171,7 @@ namespace charCodec {
 
 	//gbk checks   GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	bool hasGB2312(string s);
-	bool isValidGB2312(string s, int& errorPos, string& errorChar);
+	bool isValidGB2312(string s, size_t& errorPos, string& errorChar);
 	bool isValidGB2312(string s);
 
 	//tds local codec can  be utf8 or gbk.
@@ -193,7 +193,7 @@ namespace str {
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 	string removeChar(string str, char c);
 	string trimFloat(string str);
-	string fromFloat(float f);
+	string fromFloat(double f);
 	vector<char> toChars(string str);
 	vector<unsigned char> toBytes(string str);
 	string bytesToHexStr(vector<char>& bytes);
@@ -203,7 +203,7 @@ namespace str {
 	string bytesToHexStr(unsigned char* p, int len, string splitter = " ");
 	string fromInt(int v);
 	string fromInt(size_t v);
-	string fromBuff(const char* p, int len);
+	string fromBuff(const char* p, size_t len);
 	int toInt(string s);
 	string encodeAscII(string s);
 	bool isInteger(string s);

@@ -137,7 +137,7 @@ class TIME_SELECTOR
 public:
 	TIME_SELECTOR();
 	bool Match(string& deTime);
-	bool AmountMatch(int amount);
+	bool AmountMatch(size_t amount);
 	bool init(string time);
 	string shortSel2StardardSel(string time);
 	bool parseTimeRange(string time);//标准格式时间范围2020-02-01 00:00:00~2020-02-28 23:59:59
@@ -334,9 +334,9 @@ public:
 struct SELECT_RLT {
 	bool getDE;
 	string dataList;
-	int rowCount;
-	int deCount;
-	int fileCount;
+	size_t rowCount;
+	size_t deCount;
+	size_t fileCount;
 	map<string, yyjson_mut_val*> mapRlt;
 
 	SELECT_RLT() {

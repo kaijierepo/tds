@@ -10,7 +10,7 @@ using namespace std;
 
 struct tcpSession
 {
-	SOCKET sock;
+	unsigned int sock;
 	SOCKADDR_IN clientAddr;
 	string remoteIP;
 	int remotePort;
@@ -58,143 +58,8 @@ struct tcpSession
 class ITcpServerCallBack {
 public:
 	virtual void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess) = 0;
+	virtual void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
 };
-
-
-class CIOCP
-{
-public:
-	CIOCP(int nMaxConcurrent = -1)
-	{
-		m_hIOCP = NULL;
-		if (nMaxConcurrent != -1)
-		{
-			Create(nMaxConcurrent);
-		}
-	}
-	~CIOCP()
-	{
-		if (m_hIOCP != NULL)
-		{
-			CloseHandle(m_hIOCP);
-		}
-	}
-
-	bool Close()
-	{
-		bool bResult = CloseHandle(m_hIOCP);
-		m_hIOCP = NULL;
-		return bResult;
-	}
-
-	//创建IOCP， nMaxConcurrency指定最大线程并发数量， 0 默认为CPU核数
-	bool Create(int nMaxConcurrency = 0)
-	{
-		m_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, nMaxConcurrency);
-		//ASSERT(m_hIOCP != NULL);
-		return (m_hIOCP != NULL);
-	}
-
-	//为设备（文件，socket,邮件槽，管道等）关联一个IOCP
-	bool AssociateDevice(HANDLE hDevice, ULONG_PTR Compkey)
-	{
-		bool fOk = (CreateIoCompletionPort(hDevice, m_hIOCP, Compkey, 0) == m_hIOCP);
-		return fOk;
-	}
-
-	bool AssociateSocket(SOCKET hSocket, ULONG_PTR CompKey)
-	{
-		return AssociateDevice((HANDLE)hSocket, CompKey);
-	}
-
-	bool PostStatus(ULONG_PTR CompKey, DWORD dwNumBytes = 0, OVERLAPPED* po = NULL)
-	{
-		bool fOk = PostQueuedCompletionStatus(m_hIOCP, dwNumBytes, CompKey, po);
-		return fOk;
-	}
-	bool GetStatus(ULONG_PTR* pCompKey, PDWORD pdwNumBytes, OVERLAPPED** ppo, DWORD dwMillseconds = INFINITE)
-	{
-		return GetQueuedCompletionStatus(m_hIOCP, pdwNumBytes, pCompKey, ppo, dwMillseconds);
-	}
-	const HANDLE GetIOCP()
-	{
-		return m_hIOCP;
-	}
-
-private:
-	HANDLE m_hIOCP; 
-};
-
-/*
-在IOCP编程模型中，需要用到GetQueuedCompletionStatus()函数获取已完成的事件
-但是该函数的返回参数无 Socket或者buffer的描述信息
-
-一个简单的方法是：创建一个新的结构，该结构第一个参数是OVERLAPPED
-由于AcceptEx, WSASend 等重叠IO操作传入的是Overlapped结构体的地址，调用AcceptEx等重叠IO操作，在Overlapped结构体后面开辟新的空间
-写入socket或者buffer的信息，即可将socket或者buffer的信息由GetQueuedComletionStatus带回
-*/
-#define MAXBUF 8*1024
-enum IOOperType
-{
-	TYPE_ACP,					//accept事件到达，有新的连接请求
-	TYPE_RECV,				   //数据接收事件
-	TYPE_SEND,               //数据发送事件
-	TYPE_CLOSE_SOCK,			//服务端主动关闭socket
-	TYPE_CLOSE,             //关闭事件
-	TYPE_NO_OPER
-};
-
-class COverlappedIOInfo : public OVERLAPPED
-{
-public:
-	COverlappedIOInfo(void)
-	{
-		m_socket = INVALID_SOCKET;
-		ResetOverlapped();
-		ResetRecvBuffer();
-		ResetSendBuffer();
-	}
-	~COverlappedIOInfo(void)
-	{
-		if (m_socket != INVALID_SOCKET)
-		{
-			closesocket(m_socket);
-			m_socket = INVALID_SOCKET;
-		}
-	}
-
-	void ResetOverlapped()
-	{
-		Internal = InternalHigh = 0;
-		Offset = OffsetHigh = 0;
-		hEvent = NULL;
-	}
-	void ResetRecvBuffer()
-	{
-		ZeroMemory(m_crecvBuf, MAXBUF);
-		m_recvBuf.buf = m_crecvBuf;
-		m_recvBuf.len = MAXBUF;
-	}
-	void ResetSendBuffer()
-	{
-		ZeroMemory(m_csendBuf, MAXBUF);
-		m_sendBuf.buf = m_csendBuf;
-		m_sendBuf.len = MAXBUF;
-	}
-
-
-public:
-	SOCKET m_socket;		
-	WSABUF m_recvBuf;
-	char m_crecvBuf[MAXBUF];
-	WSABUF m_sendBuf;
-	char m_csendBuf[MAXBUF];
-	sockaddr_in m_addr;
-	tcpSession m_cltInfo;
-};
-
-#define HISTORY_CONN_STATIC_COUNT 500
 
 
 class tcpSrv  {

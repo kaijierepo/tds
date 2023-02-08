@@ -122,7 +122,7 @@ void updateEzvizAccessInfo() {
 		}
 	}
 	catch (exception& e) {
-
+		LOG("[warn] updateEzvizAccessInfo  exception:%s", e.what());
 	}
 }
 
@@ -473,7 +473,7 @@ void forLink() {
 	memset(a, 0, 100);
 	string b = "abc";
 	a = _strdup(b.c_str());
-	int pos = strspn(a, "b");
+	size_t pos = strspn(a, "b");
 }
 
 

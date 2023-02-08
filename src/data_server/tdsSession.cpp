@@ -110,13 +110,13 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
-int TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
+size_t TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
 {
     return send((unsigned char*)p, len, bNeedLog);
 }
 
 
- int TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
+size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      timeopt::now(&lastSendTime);
      int iSend = 0;
 
@@ -152,12 +152,12 @@ int TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
      return iSend;
  }
 
- int TDS_SESSION::sendStr(string str, bool bNeedLog)
+ size_t TDS_SESSION::sendStr(string str, bool bNeedLog)
  {
      return send((unsigned char*)str.c_str(),str.length(),bNeedLog);
  }
 
- int TDS_SESSION::getSendedBytes()
+ size_t TDS_SESSION::getSendedBytes()
  {
      std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      if (pTcpSession)
@@ -171,7 +171,7 @@ int TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
      return 0;
  }
 
- int TDS_SESSION::getRecvedBytes()
+ size_t TDS_SESSION::getRecvedBytes()
  {
      std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
      if (pTcpSession)
@@ -202,7 +202,7 @@ int TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
  {
  }
 
- void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+ void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo)
  {
      pTdsSession->send((unsigned char*)pData, iLen);
  }

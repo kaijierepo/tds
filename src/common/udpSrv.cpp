@@ -188,7 +188,7 @@ int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int por
 	return 0;
 }
 
-int udpServer::SendData(char* pData, size_t iLen, string remoteIP, int remotePort)
+size_t udpServer::SendData(char* pData, size_t iLen, string remoteIP, int remotePort)
 {
 	if (m_sock)
 	{
@@ -198,7 +198,7 @@ int udpServer::SendData(char* pData, size_t iLen, string remoteIP, int remotePor
 		addrCli.sin_addr.s_addr = inet_addr(remoteIP.c_str());
 		addrCli.sin_port = htons((u_short)remotePort);
 
-		int nSent = sendto(m_sock, pData, iLen, 0, (sockaddr*)&addrCli, sizeof(addrCli));
+		size_t nSent = sendto(m_sock, pData, iLen, 0, (sockaddr*)&addrCli, sizeof(addrCli));
 
 		return nSent;
 	}

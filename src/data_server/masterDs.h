@@ -33,8 +33,8 @@ class MasterDs : public ITcpServerCallBack
 {
 public:
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
-	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess);
-	void OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> childSession);
+	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess);
+	void OnRecvData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> childSession);
 	bool handleAsynResp(json jResp, std::shared_ptr<TDS_SESSION> childSession);
 	bool loadChildTdsStatus(json& rlt, string rootTag);
 	bool handleNotify(json jResp, std::shared_ptr<TDS_SESSION> childSession);

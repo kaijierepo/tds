@@ -2,7 +2,7 @@
 
 
 
-typedef int (*fp_validPktCheck)(unsigned char* pData, int iLen);
+typedef int (*fp_validPktCheck)(unsigned char* pData, size_t iLen);
 
 class stream2pkt{
 public:
@@ -25,11 +25,11 @@ public:
 			pkt = NULL;
 		}
 	}
-	void Resize(unsigned char*& pData, int& iLen, int iNewSize);
-	void ResizeStreamBuff(int iNewSize);
-	void ResizePopPktBuff(int iNewSize);
-	void PushStream(unsigned char* pData, int iLen);
-	void PushStream(char* pData, int iLen);
+	void Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize);
+	void ResizeStreamBuff(size_t iNewSize);
+	void ResizePopPktBuff(size_t iNewSize);
+	void PushStream(unsigned char* pData, size_t iLen);
+	void PushStream(char* pData, size_t iLen);
 	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
 	//faultTolerant是否容错，允许数据包之间有异常数据出现
 	//打开容错会降低性能
@@ -47,33 +47,33 @@ public:
 
 	//流数据
 	unsigned char* stream;
-	int iStreaBuffSize;
-	int iStreamLen;
+	size_t iStreaBuffSize;
+	size_t iStreamLen;
 
 	//组包成功的数据
 	unsigned char* pkt;
-	int iPktBuffSize;
-	int iPktLen;
+	size_t iPktBuffSize;
+	size_t iPktLen;
 	string m_protocolType;
 
-	int iAbandonLen;
+	size_t iAbandonLen;
 	string abandonData;
 
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
 
-	int IsValidPkt_HTTP(unsigned char* pData,int iLen);
+	int IsValidPkt_HTTP(unsigned char* pData,size_t iLen);
 
 
 };
 
 
 //LF == line feed == 0x0A  CR == carriage return == 0x0D
-extern int IsValidPkt_textEnd_LF(unsigned char* pData, int iLen); // 1个换行符结尾
-extern int IsValidPkt_textEnd_LFLF(unsigned char* pData, int iLen); // 2个换行符结尾
-extern int IsValidPkt_textEnd_CRLF(unsigned char* pData, int iLen); // 2个换行符结尾
-extern int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen);
-extern int IsValidPkt_IQ60(unsigned char* pData, int iLen);
-extern int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen);
-extern int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen);
-extern int IsValidPkt_TDSP(unsigned char* pData, int iLen);
-extern int IsValidPkt_LeakDetect(unsigned char* pData, int iLen);
+extern int IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen); // 1个换行符结尾
+extern int IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen); // 2个换行符结尾
+extern int IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen); // 2个换行符结尾
+extern int IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen);
+extern int IsValidPkt_IQ60(unsigned char* pData, size_t iLen);
+extern int IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen);
+extern int IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen);
+extern int IsValidPkt_TDSP(unsigned char* pData, size_t iLen);
+extern int IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen);

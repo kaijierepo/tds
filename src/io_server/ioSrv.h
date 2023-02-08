@@ -124,16 +124,16 @@ public:
 	int m_iAdpPort;
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
-	void OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
-	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
-	void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port);
+	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo);
+	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
+	void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port);
 
 	//传输层处理
-	void onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
-	void onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	bool handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	bool OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+	void onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
+	void onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	bool handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	bool OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
 
 	//tdsRPC服务
 	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);

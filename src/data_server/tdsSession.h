@@ -11,7 +11,7 @@ class ioDev;
 
 struct TCP_DATA_BUFF {
 	char* pData;
-	int iLen;
+	size_t iLen;
 };
 
 namespace TDSP_SUB_TYPE{
@@ -34,11 +34,11 @@ public:
 	bool isConnected();
 	bool disconnect();
 	string GetClientIp();
-	int send(char* p, size_t len, bool bNeedLog = true);
-	int send(unsigned char* p, size_t len, bool bNeedLog = true);
-	int sendStr(string str, bool bNeedLog = true);
-	int getSendedBytes();
-	int getRecvedBytes();
+	size_t send(char* p, size_t len, bool bNeedLog = true);
+	size_t send(unsigned char* p, size_t len, bool bNeedLog = true);
+	size_t sendStr(string str, bool bNeedLog = true);
+	size_t getSendedBytes();
+	size_t getRecvedBytes();
 	RPC_SESSION getRpcSession();
 	void onTcpDisconnect();
 	void setActivityCheck(bool bEnable);
@@ -83,7 +83,7 @@ public:
 	class CBridgedTcpClientHandler :public ITcpClientCallBack {
 	public:
 		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
-		virtual void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
+		virtual void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
 		TDS_SESSION* pTdsSession;
 	} bridgedTcpCltHandler;
 

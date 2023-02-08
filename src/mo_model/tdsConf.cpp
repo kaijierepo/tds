@@ -399,7 +399,7 @@ void tdsConfig::loadConf()
 	for (int i = 0; i < confItems.size(); i++)
 	{
 		string& ci = confItems[i];
-		int pos = ci.find("#");
+		size_t pos = ci.find("#");
 		if (pos != string::npos)
 		{
 			ci = ci.substr(0, pos);
@@ -411,7 +411,7 @@ void tdsConfig::loadConf()
 	{
 		string& ci = confItems[i];
 		KV_CONF_ITEM tci;
-		int pos = ci.find("=");
+		size_t pos = ci.find("=");
 		if (pos != string::npos)
 		{
 			tci.key = ci.substr(0, pos);

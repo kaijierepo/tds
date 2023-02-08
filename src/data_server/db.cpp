@@ -1407,7 +1407,7 @@ bool TIME_SELECTOR::Match(string& deTime)
 	return false;
 }
 
-bool TIME_SELECTOR::AmountMatch(int amount)
+bool TIME_SELECTOR::AmountMatch(size_t amount)
 {
 	if (m_dataNum != 0)//次数过滤启用
 	{

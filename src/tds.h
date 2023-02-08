@@ -25,9 +25,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/*name patern
-functions variable              camel mode    getIODevices
-enum string			            short dash     gw-local-serial
+/*TDS Coding Standard
+> name pattern
+functions variable
+use camel mode, like  getIODevices
+enum string			            
+short dash,like gw-local-serial
+
+>use double instead of float anywhere, cause json.hpp uses double,if float is used,it will cause loss of precision when format to json
 */
 
 
@@ -143,9 +148,9 @@ enum IO_PKT_TYPE {
 class PKT_DATA {
 public:
 	unsigned char* data;
-	int len;
+	size_t len;
 	unsigned char* cmd_data;
-	int cmd_data_len;
+	size_t cmd_data_len;
 	string proto;
 	IO_PKT_TYPE type;
 
@@ -312,7 +317,7 @@ public:
 };
 
 
-typedef void (*fp_ioAddrRecv)(void* user, char* pData, int iLen);
+typedef void (*fp_ioAddrRecv)(void* user, char* pData, size_t iLen);
 typedef void (*fp_createLicence)();
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
 typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);

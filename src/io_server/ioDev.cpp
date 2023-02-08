@@ -1188,7 +1188,7 @@ bool ioDev::CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount, strin
 	return false;
 }
 
-bool ioDev::OnRecvData(char* pData, int iLen)
+bool ioDev::OnRecvData(char* pData, size_t iLen)
 {
 	PKT_DATA pkt;
 	if (!pkt.UnPack(pData, iLen))
@@ -1200,7 +1200,7 @@ bool ioDev::OnRecvData(char* pData, int iLen)
 	return false;
 }
 
-bool ioDev::OnRecvData(TIME dataTime, char* pData, int iLen)
+bool ioDev::OnRecvData(TIME dataTime, char* pData, size_t iLen)
 {
 	return true;
 }
@@ -1488,7 +1488,7 @@ string ioDev::GetCommIP()
 	return "";
 }
 
-void ioDev::SendToChild(TIME dataTime, char* pData, int iLen, string strID)
+void ioDev::SendToChild(TIME dataTime, char* pData, size_t iLen, string strID)
 {
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
@@ -1606,7 +1606,7 @@ CCanTransparentGateway::CCanTransparentGateway()
 }
 
 
-void ioDev::statisOnRecv(char* recvData, int len, string addr)
+void ioDev::statisOnRecv(char* recvData, size_t len, string addr)
 {
 	if (commpktSessions.size() == 0)
 		return;
@@ -1625,7 +1625,7 @@ void ioDev::statisOnRecv(char* recvData, int len, string addr)
 }
 
 
-void ioDev::statisOnSend(char* sendData, int len, string addr)
+void ioDev::statisOnSend(char* sendData, size_t len, string addr)
 {
 	if (commpktSessions.size() == 0)
 		return;

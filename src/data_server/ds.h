@@ -5,13 +5,7 @@ rpc服务的tcp服务接口
 
 */
 #pragma once
-#include "wspSrv.h"
-#include "proto/wsProto.h"
-#include <condition_variable>
 #include "tdsSession.h"
-#include <memory>
-
-#include "webSrv.h"
 
 
 class dataServer : public ITcpServerCallBack,public ITcpClientCallBack
@@ -19,10 +13,10 @@ class dataServer : public ITcpServerCallBack,public ITcpClientCallBack
 public:
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
-	void OnRecvData_TCP(char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	void OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo);
-	void OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo);
-	int Send(SOCKET sock, char* pBuffer, int iLength);
+	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	int Send(SOCKET sock, char* pBuffer, size_t iLength);
 
 public:
 	bool run();
@@ -40,7 +34,7 @@ public:
 	mutex m_csTcpClt_streamPusher;
 	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher; //推流
 
-	void sendToAllSessions(unsigned char* pData, int len);
+	void sendToAllSessions(unsigned char* pData, size_t len);
 	void sendToAllSessions(string& s);
 	//应用层会话
 	map<void*,std::shared_ptr<TDS_SESSION>> m_Sessions;

@@ -248,7 +248,7 @@ namespace charCodec {
 
 		return false;
 	}
-	bool isValidGB2312(string s, int& errorPos, string& errorChar)
+	bool isValidGB2312(string s, size_t& errorPos, string& errorChar)
 	{
 		for (int i = 0; i < s.length();)
 		{
@@ -297,7 +297,7 @@ namespace charCodec {
 	}
 	bool isValidGB2312(string s)
 	{
-		int pos = 0;
+		size_t pos = 0;
 		string errorChar;
 		return isValidGB2312(s, pos, errorChar);
 	}
@@ -560,7 +560,7 @@ namespace str {
 		}
 		return str;
 	}
-	string fromFloat(float f)
+	string fromFloat(double f)
 	{
 		string s;
 		s = str::format("%f", f);
@@ -724,7 +724,7 @@ namespace str {
 		return s;
 	}
 
-	string fromBuff(const char* p, int len)
+	string fromBuff(const char* p, size_t len)
 	{
 		char* tmp = new char[len + 1];
 		memcpy(tmp, p, len);
@@ -1044,7 +1044,7 @@ namespace timeopt {
 		string time1 = timeSpan;
 		string strDay = "", strH = "", strM = "", strS = "";
 		int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-		int pos = time1.find("d");
+		size_t pos = time1.find("d");
 		if (pos == string::npos)
 			pos = time1.find("D");
 		if (pos != string::npos) {
@@ -1089,7 +1089,7 @@ namespace timeopt {
 			string time1 = strTime1;
 			string strDay = "", strH = "", strM = "", strS = "";
 			int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-			int pos = time1.find("d");
+			size_t pos = time1.find("d");
 			if (pos == string::npos)
 				pos = time1.find("D");
 			if (pos != string::npos) {

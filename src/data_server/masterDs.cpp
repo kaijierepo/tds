@@ -59,7 +59,7 @@ void MasterDs::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	}
 }
 
-void MasterDs::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
+void MasterDs::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexChildTdsList.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_vecChildTds[pTcpSess];
@@ -68,7 +68,7 @@ void MasterDs::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 	OnRecvData((unsigned char*)pData, iLen, ioSession);
 }
 
-void MasterDs::OnRecvData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> childSession)
+void MasterDs::OnRecvData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> childSession)
 {
 	stream2pkt& tlBuf = childSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);

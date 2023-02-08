@@ -74,7 +74,7 @@ class ioChannel;
 //asyn pkt received is not processed from DMS_UNCONF ioDev
 //no DoCycleTask for DMS_UNCONF ioDev
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
-typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, int iLen);
+typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, size_t iLen);
 typedef ioDev* (*fp_createDev)();
 
 struct DEV_QUERIER {
@@ -190,8 +190,8 @@ public:
 	std::shared_ptr<TDS_SESSION> pSessionClientBridge;
 
 	void bindIOSession(shared_ptr<TDS_SESSION> ioSession);
-	void statisOnRecv(char* recvData, int len, string addr);
-	void statisOnSend(char* sendData, int len, string addr);
+	void statisOnRecv(char* recvData, size_t len, string addr);
+	void statisOnSend(char* sendData, size_t len, string addr);
 
 	static string removePortFromIoAddr(string ioAddr);
 	static string removePortFromDevAddr(string devAddr);
@@ -230,7 +230,7 @@ public:
 	bool m_acqAlarm; //是否轮询报警，发送getAlarmStatus给TDSP设备
 	OBJ* m_pMO;
 	string GetCommIP();
-	void SendToChild(TIME dataTime, char* pData, int iLen, string strID);//网关类型使用，转发给下层子设备
+	void SendToChild(TIME dataTime, char* pData, size_t iLen, string strID);//网关类型使用，转发给下层子设备
 	ioDev* getIODevByTag(string tag);
 	//通信发送
 	virtual bool CommLock(int dwTimeoutMS = 0);
@@ -244,9 +244,9 @@ public:
 	//通信接收
 	virtual bool SendHeartbeatPkt();
 	virtual bool onRecvPkt(json jPkt);
-	virtual bool onRecvPkt(char* pData, int iLen) { return false; }; //接收到完整的协议数据包
-	virtual bool OnRecvData(char* pData, int iLen);//接受数据异步处理函数
-	virtual bool OnRecvData(TIME dataTime, char* pData, int iLen);
+	virtual bool onRecvPkt(char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
+	virtual bool OnRecvData(char* pData, size_t iLen);//接受数据异步处理函数
+	virtual bool OnRecvData(TIME dataTime, char* pData, size_t iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
 	//命令回包超时
 	virtual bool IsAsynPacket(PKT_DATA* pd);

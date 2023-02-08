@@ -20,6 +20,7 @@
 #include "masterDs.h"
 #include "ioDev/ioDev_visca.h"
 #include "httplib.h"
+#include "webSrv.h"
 
 rpcHandler rpcSrv;
 
@@ -146,7 +147,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			string encode = params["encode"].get<string>();
 			if (encode == "base64") {
 				unsigned char* out = new unsigned char[d.length()];
-				int len = base64_decode(d.c_str(), d.length(), out);
+				int len = base64_decode(d.c_str(),(int) d.length(), out);
 				if (fs::writeFile(p,(char*)out, len))
 				{
 					result = "\"ok\"";
@@ -789,7 +790,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			return true;
 		}
 		else {
-			int iSended = pDestSession->send((char*)data.c_str(), data.length());
+			size_t iSended = pDestSession->send((char*)data.c_str(), data.length());
 			if (iSended > 0)
 				rpcResp.result = "\"ok\"";
 			else
@@ -803,7 +804,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 
 
 		//程序崩溃
-		int i = 13; int j = 0; int m = i / j;
+		int i = 13; int j = 0; int m = i /(1-1+ j*20);
 		LOG("[debug]tds.Crash" + str::fromInt(m));
 	}
 	else if (method == "testCrash1")
@@ -2265,7 +2266,7 @@ void rpcHandler::saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, s
 	string strTmpFile;
 	if (strUrl.find("http") != string::npos)
 	{
-		int pos = strUrl.rfind('.');
+		size_t pos = strUrl.rfind('.');
 		string strSuffix = strUrl.substr(pos);
 		strTmpFile += fs::appPath();
 		string id = str::replace(strUrl, "/", "_");
@@ -3661,7 +3662,7 @@ string rpcHandler::rpc_com_list(json params, string& error)
 		jComInfo["online"] = pls->m_bOnline;
 		jComInfo["connected"] = pls->isConnected();
 		jComInfo["inUse"] = pls->m_bInUse;
-		jComInfo["callbackUser"] = (DWORD)pls->m_pCallbackUser;
+		//jComInfo["callbackUser"] = (DWORD)pls->m_pCallbackUser;
 		result.push_back(jComInfo);
 	}
 	return result.dump();

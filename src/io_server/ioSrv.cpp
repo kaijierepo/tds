@@ -13,6 +13,7 @@
 #include "ioDev/ioDev_tdsp.h"
 #include "base64.h"
 #include "webSrv.h"
+#include "proto/wsProto.h"
 
 
 ioServer ioSrv;
@@ -63,7 +64,7 @@ void IOThread()
 }
 
 
-void onRecvIQ60Pkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void onRecvIQ60Pkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	string pkt = str::fromBuff((char*)pData, iLen);
 
@@ -195,7 +196,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	}
 }
 
-void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> ioSession)
+void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> ioSession)
 {
 	timeopt::now(&ioSession->lastRecvTime);
 
@@ -272,7 +273,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, int iLen, std::shared_ptr<TD
 	}
 }
 
-void ioServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
+void ioServer::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
@@ -281,7 +282,7 @@ void ioServer::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pTcpSess)
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
-void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSessClt)
+void ioServer::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
 {
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
@@ -291,7 +292,7 @@ void ioServer::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* pTcpSe
 }
 
 
-void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	IOLogRecv((unsigned char*)recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
 
@@ -343,7 +344,7 @@ void ioServer::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int 
 			pIoDev->onRecvPkt(jPkt);
 	}
 	catch (exception& e) {
-
+		LOG("[warn] handle udp recv data error,%s", e.what());
 	}
 	
 	// udp设备,协议不一定是tdsp，可能是visca over udp等
@@ -924,7 +925,7 @@ void ioServer::clear()
 long ioServer::getChanCount()
 {
 	lock_conf_shared();
-	long count = 0;
+	size_t count = 0;
 	ioDev::recursiveGetChanCount(this, count);
 	unlock_conf_shared();
 	return count;
@@ -1332,7 +1333,7 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 }
 
 //onRecvData需要组包
-bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
+bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
 	IOLogRecv((unsigned char*)pData, iLen, tdsSession->getRemoteAddr());
 
@@ -1541,7 +1542,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, int iLen, std::shared_pt
 	return true;
 }
 
-void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
+void ioServer::onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
 {
 	try
 	{
@@ -1567,7 +1568,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 				if (rpcSrv.isGB2312Pkt(sResp))
 				{
 					tdsSession->m_charset = "gb2312";
-					int ipos = 0; string errChar;
+					size_t ipos = 0; string errChar;
 					if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
 					{
 						LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
@@ -1622,7 +1623,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 									puller = pmp->m_vecPuller;
 									pmp->m_csPuller.unlock();
 
-									int pullerCount = 0;
+									size_t pullerCount = 0;
 									tdsSession->m_csPuller.lock();
 									tdsSession->m_vecPuller = puller;
 									pullerCount = tdsSession->m_vecPuller.size();
@@ -1708,7 +1709,7 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, int iLen, std::shared_ptr<T
 	}
 }
 
-void ioServer::onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void ioServer::onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	int id = pData[6];
 	string sId = str::fromInt(id);
@@ -1730,7 +1731,7 @@ void ioServer::onRecvPkt_leakDetect(unsigned char* pData, int iLen, std::shared_
 }
 
 
-bool ioServer::handleFirstRegPkt(unsigned char* pData, int iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	if (!tdsSession->m_bAppDataRecved)
 	{
@@ -1889,7 +1890,7 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
 
 shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteAddr)
 {
-	int pos = remoteAddr.find(":");
+	size_t pos = remoteAddr.find(":");
 	if (pos < 0)
 		return nullptr;
 	string ip = remoteAddr.substr(0, pos);

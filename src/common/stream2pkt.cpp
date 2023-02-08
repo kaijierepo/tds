@@ -2,7 +2,7 @@
 #include "proto/wsProto.h"
 #include "stream2pkt.h"
 
-int IsValidPkt_IQ60(unsigned char* pData, int iLen)
+int IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -20,7 +20,7 @@ int IsValidPkt_IQ60(unsigned char* pData, int iLen)
 }
 
 
-int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen)
+int IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 7)
 		return 0;
@@ -33,7 +33,7 @@ int IsValidPkt_ModbusTcp(unsigned char* pData, int iLen)
 }
 
 
-int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen)
+int IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 4)
 		return 0;
@@ -47,7 +47,7 @@ int IsValidPkt_ModbusRTU(unsigned char* pData, int iLen)
 		return 0;
 }
 
-int IsValidPkt_TDSP(unsigned char* pData, int iLen)
+int IsValidPkt_TDSP(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 15)
 		return 0;
@@ -86,7 +86,7 @@ unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
 	return crc;
 }
 
-int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
+int IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 12)
 		return 0;
@@ -121,7 +121,7 @@ int IsValidPkt_LeakDetect(unsigned char* pData, int iLen)
 	return 0;
 }
 
-void stream2pkt::Resize(unsigned char*& pData, int& iLen, int iNewSize)
+void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 {
 	unsigned char* pNewData = new unsigned char[iNewSize];
 
@@ -139,17 +139,17 @@ void stream2pkt::Resize(unsigned char*& pData, int& iLen, int iNewSize)
 	iLen = iNewSize;
 }
 
-void stream2pkt::ResizeStreamBuff(int iNewSize)
+void stream2pkt::ResizeStreamBuff(size_t iNewSize)
 {
 	Resize(stream, iStreaBuffSize, iNewSize);
 }
 
-void stream2pkt::ResizePopPktBuff(int iNewSize)
+void stream2pkt::ResizePopPktBuff(size_t iNewSize)
 {
 	Resize(pkt, iPktBuffSize, iNewSize);
 }
 
-void stream2pkt::PushStream(unsigned char* pData, int iLen)
+void stream2pkt::PushStream(unsigned char* pData, size_t iLen)
 {
 	if (iStreamLen + iLen > iStreaBuffSize)
 		ResizeStreamBuff(iStreamLen + iLen);
@@ -158,7 +158,7 @@ void stream2pkt::PushStream(unsigned char* pData, int iLen)
 	iStreamLen += iLen;
 }
 
-void stream2pkt::PushStream(char* pData, int iLen)
+void stream2pkt::PushStream(char* pData, size_t iLen)
 {
 	PushStream((unsigned char*)pData, iLen);
 }
@@ -240,7 +240,7 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
 	for (int i = 0; i < iStreamLen; i++)
 	{
-		int iPopPktLen = 0;
+		size_t iPopPktLen = 0;
 
 		//是否容错，允许正确包之间出现异常数据。如果一定不会出现可以减少检测次数提高性能
 		if (!faultTolerant && i > 0)
@@ -314,7 +314,7 @@ bool stream2pkt::PopAllAs(string cpt)
 }
 
 
-int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
+int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 {
 	unsigned char* ptmp = new unsigned char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);
@@ -366,7 +366,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,int iLen )
 }
 
 
-int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
+int IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 5)
 		return 0;
@@ -381,7 +381,7 @@ int IsValidPkt_terminalPrompt(unsigned char* pData, int iLen)
 	return 0;
 }
 
-int IsValidPkt_textEnd_CRLF(unsigned char* pData, int iLen)
+int IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -396,7 +396,7 @@ int IsValidPkt_textEnd_CRLF(unsigned char* pData, int iLen)
 }
 
 
-int IsValidPkt_textEnd_LFLF(unsigned char* pData, int iLen)
+int IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -410,7 +410,7 @@ int IsValidPkt_textEnd_LFLF(unsigned char* pData, int iLen)
 	return 0;
 }
 
-int IsValidPkt_textEnd_LF(unsigned char* pData, int iLen)
+int IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen)
 {
 	for (int i = 0; i < iLen; i++)
 	{

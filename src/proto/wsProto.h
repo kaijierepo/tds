@@ -137,7 +137,7 @@ public:
 	WS_FrameType frmType;
 
 	WS_FrameType unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false);
-	int pack(const char* inMessage, int len, enum WS_FrameType frameType, bool bFin=1, bool bOpt=1);
+	int pack(const char* inMessage, size_t len, enum WS_FrameType frameType, bool bFin=1, bool bOpt=1);
 
 	bool isDataFrame();
 	static bool isHandShake(string& request);  ////判断是否为客户端发送的升级WS握手请求，"Upgrade: websocket"
@@ -161,4 +161,4 @@ public:
 	char payload_[2048];
 };
 
-extern int IsValidPkt_WEBSOCKET(unsigned char* pData, int iLen);
+extern int IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen);
