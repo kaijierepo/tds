@@ -328,6 +328,8 @@ typedef void (*fp_procBeforeExit)();
 
 namespace TDS_SESSION_TYPE {
 	const string none = "none";
+
+	//client connections
 	const string tdsClient = "tdsClient";  
 	const string video = "video";
 	const string iodev = "ioDev"; 

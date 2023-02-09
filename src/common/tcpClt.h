@@ -15,6 +15,8 @@ struct tcpSessionClt
 	std::string srvIP;//对端ip
 	int srvPort;//对端端口
 	std::shared_ptr<TDS_SESSION> pALSession;
+	string tdsSessionName;
+	string tdsSessionType;
 	tcpClt* tcpClt;
 	int bridgeSock;
 

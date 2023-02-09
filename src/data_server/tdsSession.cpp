@@ -40,7 +40,8 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
     sock = p->sock;
     remotePort = p->srvPort;
     remoteIP = p->srvIP;
-    type = TDS_SESSION_TYPE::iodev;
+    type = p->tdsSessionType;
+    name = p->tdsSessionName;
 }
 
 RPC_SESSION TDS_SESSION::getRpcSession()
