@@ -3,7 +3,7 @@
 #include "prj.h"
 #include "as.h"
 #include "mp.h"
-#include "ds.h"
+#include  "reverseInterface.h"
 #include "logger.h"
 #include "db.h"
 #include <json.hpp>
@@ -603,7 +603,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		else if (method == "keepStream") {
 			TIME st;
 			timeopt::now(&st);
-			ds.m_mapPullerActive[tag] = st;
+			reverseInterface.m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "closeStream") {
@@ -1699,7 +1699,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		string tag = params["tag"];
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp) {
-			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.hostName, session.hostPort);
+			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.remoteIP, session.remotePort);
 			rpcResp.result = rlt.dump();
 		}
 		else {
@@ -1711,7 +1711,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = rpc_getTopoList(params, rpcResp.error, session);
 	}
 	else if (method == "startStreamPush" || method == "startPushStream") {
-		ds.rpc_startStreamPush(params, rpcResp, session);
+		reverseInterface.rpc_startStreamPush(params, rpcResp, session);
 	}
 	else {
 		bHandled = false;
@@ -3705,8 +3705,8 @@ void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION>
 
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
-	WebServer::sendToAllWebsock(notify);
-	ds.sendToAllSessions(notify);
+	ServiceInterface::sendToAllWebsock(notify);
+	reverseInterface.sendToAllSessions(notify);
 }
 
 

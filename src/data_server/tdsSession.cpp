@@ -40,7 +40,6 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
     sock = p->sock;
     remotePort = p->srvPort;
     remoteIP = p->srvIP;
-    p->pALSession = this;
     type = TDS_SESSION_TYPE::iodev;
 }
 
@@ -122,7 +121,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
 
      if (sockPipe != 0)
      {
-         iSend = WebServer::sendToWs(p, len, sockPipe);
+         iSend = ServiceInterface::sendToWs(p, len, sockPipe);
      }
      else if (pTcpSessionClt)
      {

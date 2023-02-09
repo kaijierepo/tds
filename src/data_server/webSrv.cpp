@@ -25,10 +25,10 @@ string filesDir;
 int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 
-WebServer* webSrv = new WebServer();
-WebServer* webSrvS = new WebServer();
-WebServer* webSrv2 = new WebServer();
-WebServer* webSrvS2 = new WebServer();
+ServiceInterface* webSrv = new ServiceInterface();
+ServiceInterface* webSrvS = new ServiceInterface();
+ServiceInterface* webSrv2 = new ServiceInterface();
+ServiceInterface* webSrvS2 = new ServiceInterface();
 
 //日志监视会话
 vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
@@ -294,8 +294,8 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->hostName = hostname;
-	pSession->hostPort = port;
+	pSession->remoteIP = hostname;
+	pSession->remotePort = port;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
@@ -320,8 +320,8 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->hostName = hostname;
-	pSession->hostPort = port;
+	pSession->remoteIP = hostname;
+	pSession->remotePort = port;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
@@ -334,7 +334,7 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port
 
 void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
 {
-	if (WebServer::handleAppLayerData_Bridge(pData, len, p)) {
+	if (ServiceInterface::handleAppLayerData_Bridge(pData, len, p)) {
 
 	}
 	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
@@ -343,14 +343,14 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 		RPC_RESP resp;
 		rpcSrv.handleRpcCall(rpcReqStr,resp , pSession);
 		string ctLen = to_string(resp.strResp.length());
-		WebServer::sendToWs((unsigned char*)resp.strResp.c_str(), resp.strResp.length(), pipeSock);
+		ServiceInterface::sendToWs((unsigned char*)resp.strResp.c_str(), resp.strResp.length(), pipeSock);
 	}
 	else if (p->type == TDS_SESSION_TYPE::terminal) {
 
 	}
 }
 
-bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
+bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
 	
@@ -435,7 +435,7 @@ bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	return true;
 }
 
-bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection* c) {
+bool ServiceInterface::handle_stream_redirect(mg_http_message* hm, struct mg_connection* c) {
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
@@ -507,11 +507,11 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	return true;
 }
 
-bool WebServer::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
+bool ServiceInterface::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
 {
 	string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 	
-	int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
+	int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
@@ -522,9 +522,9 @@ bool WebServer::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
 	return false;
 }
 
-bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
+bool ServiceInterface::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
 {
-	int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
+	int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
@@ -547,7 +547,7 @@ bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
 
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
-	WebServer* pWs = (WebServer*)c->mgr->userdata;
+	ServiceInterface* pWs = (ServiceInterface*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->m_isHttps)
 		{
@@ -577,9 +577,8 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
 			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-			pWs->initWsSessionInfo(uri, p);
 			//建立一个发往实际sock的管道
-			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c);
+			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
 			c->pipeSock = sPipe;
 			//记录管道发送sock口
 			p->sockPipe = (SOCKET)sPipe;
@@ -590,6 +589,10 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				pWs->m_wsSessions[c] = p;
 				pWs->m_csWsSessions.unlock();
 			}
+
+			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
+			//例如pipesock可能会马上用来发送数据。一次先初始化
+			pWs->initWsSessionInfo(uri, p);
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -649,7 +652,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
-			int sock = mg_mkpipe(c->mgr, pipeCallback, c);                   // Create pipe
+			int sock = mg_mkpipe(c->mgr, pipeCallback, c,false);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			mg_str* mgs_host = mg_http_get_header(hm, "Host");
 			string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
@@ -775,7 +778,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 }
 
 
-void webThread(WebServer* pSrv,int port) {
+void webThread(ServiceInterface* pSrv,int port) {
 	setThreadName("mongoose polling thread");
 	string proto = "http:";
 	if (pSrv->m_isHttps)
@@ -802,17 +805,17 @@ void webThread(WebServer* pSrv,int port) {
 }
 
 
-WebServer::WebServer()
+ServiceInterface::ServiceInterface()
 {
 	m_isHttps = false;
 	m_restApiID = 0;
 }
 
-WebServer::~WebServer()
+ServiceInterface::~ServiceInterface()
 {
 }
 
-void WebServer::run(int port,bool https)
+void ServiceInterface::run(int port,bool https)
 {
 	m_isHttps = https;
 	if (https)
@@ -834,7 +837,7 @@ void WebServer::run(int port,bool https)
 //websocket通过pipe发送的原因是为了使用moogoose的websocket secure功能
 //所以不选择直接组装websocket pkt通过socket发送
 //但是通过pipe发送会导致粘连包问题
-void WebServer::sendToAllWs(string& s)
+void ServiceInterface::sendToAllWs(string& s)
 {
 	m_csWsSessions.lock();
 	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
@@ -843,12 +846,12 @@ void WebServer::sendToAllWs(string& s)
 		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
 			continue;
 
-		WebServer::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->sockPipe);
+		ServiceInterface::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->sockPipe);
 	}
 	m_csWsSessions.unlock();
 }
 
-int WebServer::sendToAllWebsock(string& s)
+int ServiceInterface::sendToAllWebsock(string& s)
 {
 	if(webSrvS)
 		webSrvS->sendToAllWs(s);
@@ -866,7 +869,7 @@ int WebServer::sendToAllWebsock(string& s)
 //同一个websocket上存在多个rpc请求重叠调用时
 //例如再等待一个设备响应，时间比较长。 同时在读取服务器缓存
 //因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
-int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
+int ServiceInterface::sendToWs(unsigned char* p, size_t len, int sockPipe)
 {
 	//assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
 	if (len + sizeof(len) > MG_IO_SIZE) {
@@ -876,12 +879,19 @@ int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
 	char* pData = new char[sizeof(len) + len];
 	memcpy(pData, &len, sizeof(len));
 	memcpy(pData + sizeof(len), p, len);
+	int iStart = GetTickCount();
 	int iSend = send(sockPipe, pData, len + sizeof(len), MSG_DONTROUTE);
+	int iEnd = GetTickCount();
+
+	if (iEnd - iStart > 500) {
+		LOG("[warn]sendToWs 阻塞，时间:%d", iEnd - iStart);
+	}
+
 	delete pData;
 	return iSend;
 }
 
-std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)
+std::shared_ptr<TDS_SESSION> ServiceInterface::getWsSession(void* conn)
 {
 	m_csWsSessions.lock();
 	std::shared_ptr<TDS_SESSION> p = m_wsSessions[conn];
@@ -900,20 +910,20 @@ bool runWebServers()
 		3 - Log errors, intoand debug messages
 		4 - Log everything
 */
-	mg_log_set("0");//禁用mongoose日志
+	mg_log_set(0);//禁用mongoose日志
 
 	rootDir = tds->conf->uiPath;
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
 	filesDir = "./files";
 
-	initHMRConf();
-	if (tds->conf->getInt("enableHMR",0))
-	{
-		hmr_conf.code = (char*)hmrCodeStr.c_str();
-		hmr_conf.len = hmrCodeStr.length();
-		hmr_conf.enable = 1;
-	}
+	//initHMRConf();
+	//if (tds->conf->getInt("enableHMR",0))
+	//{
+	//	hmr_conf.code = (char*)hmrCodeStr.c_str();
+	//	hmr_conf.len = hmrCodeStr.length();
+	//	hmr_conf.enable = 1;
+	//}
 
 	LOG("[Web目录	] /       <--> " + rootDir);
 
@@ -961,7 +971,7 @@ bool runWebServers()
 }
 
 
-void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
+void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	//terminal可以用来打开与某一接口的透传桥接，并发送指令
 	if (strData.find("/terminal") != string::npos)
@@ -1089,9 +1099,30 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		else {
 			MP* pmp = prj.GetMPByTag(tag);
 			if (pmp) {
-				OBJ* pOwnerChlidTds = pmp->getOwnerChildTds();
+				//注册websocket拉流客户端
+				size_t iPullerCount = 0;
+				pmp->m_csPuller.lock();
+				pmp->m_vecPuller.push_back(tdsSession);
+				iPullerCount = pmp->m_vecPuller.size();
+				pmp->m_csPuller.unlock();
+
+				std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
+				if (p) {
+					vector< std::shared_ptr<TDS_SESSION>>   puller;
+					pmp->m_csPuller.lock();
+					puller = pmp->m_vecPuller;
+					pmp->m_csPuller.unlock();
+
+					p->m_csPuller.lock();
+					p->m_vecPuller = puller;
+					p->m_csPuller.unlock();
+				}
+
+				LOG("[数据流   ]websocket拉流客户端连接成功,位号:%s,拉流客户端数目:%d", tag.c_str(), iPullerCount);
+
 
 				//启动下级服务器推流
+				OBJ* pOwnerChlidTds = pmp->getOwnerChildTds();
 				bool pusherStarted = false;
 				if (pOwnerChlidTds) {
 					if (pMasterDs) {
@@ -1118,29 +1149,9 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 						LOG("[warn]启动下级服务推流失败，位号:%s,master data service is not started", tag.c_str());
 					}
 				}
-
-				if (pusherStarted) {
-					size_t iPullerCount = 0;
-					pmp->m_csPuller.lock();
-					pmp->m_vecPuller.push_back(tdsSession);
-					iPullerCount = pmp->m_vecPuller.size();
-					pmp->m_csPuller.unlock();
-
-					std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
-					if (p) {
-						vector< std::shared_ptr<TDS_SESSION>>   puller;
-						pmp->m_csPuller.lock();
-						puller = pmp->m_vecPuller;
-						pmp->m_csPuller.unlock();
-
-						p->m_csPuller.lock();
-						p->m_vecPuller = puller;
-						p->m_csPuller.unlock();
-					}
-
-					LOG("[数据流   ]开始拉流,位号:%s,推流启动:%d,拉流客户端数目:%d", tag.c_str(), p ? 1 : 0, iPullerCount);
+				else {
+					LOG("[warn]启动下级服务推流失败，位号:%s,没有找到可以获得流的下级服务", tag.c_str());
 				}
-
 			}
 			else {
 				LOG("[数据流   ]开始拉流，位号不存在,位号:%s", tag.c_str());
@@ -1187,7 +1198,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	}
 }
 
-void WebServer::parseParamFromUrl(string& url, map<string, string>& mapParams)
+void ServiceInterface::parseParamFromUrl(string& url, map<string, string>& mapParams)
 {
 	size_t paramStart = url.find('?', 0);
 	if (paramStart != string::npos)//解析携带参数
@@ -1198,7 +1209,7 @@ void WebServer::parseParamFromUrl(string& url, map<string, string>& mapParams)
 	}
 }
 
-void WebServer::parseParamFromQuery(string& query, map<string, string>& mapParams)
+void ServiceInterface::parseParamFromQuery(string& query, map<string, string>& mapParams)
 {
 	vector<string> params;
 	str::split(params, query, "&");
@@ -1215,7 +1226,7 @@ void WebServer::parseParamFromQuery(string& query, map<string, string>& mapParam
 	}
 }
 
-json WebServer::parseParamFromQuery(string& query)
+json ServiceInterface::parseParamFromQuery(string& query)
 {
 	vector<string> params;
 	str::split(params, query, "&");
@@ -1235,7 +1246,7 @@ json WebServer::parseParamFromQuery(string& query)
 
 
 //应用层数据桥接
-bool WebServer::handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+bool ServiceInterface::handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	bool bHandled = true;
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)

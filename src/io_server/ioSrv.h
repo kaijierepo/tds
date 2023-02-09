@@ -127,7 +127,7 @@ public:
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
-	void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port);
+	void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port) override;
 
 	//传输层处理
 	void onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);

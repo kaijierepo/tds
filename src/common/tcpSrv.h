@@ -25,13 +25,14 @@ struct tcpSession
 	bool bEnableActivityCheck; //是否进行活动检测
 
 	TIME stLastActive;
+	void* pData1;
 
 	tcpSession()
 	{
 		timeopt::now(&stLastActive);
-		sock = NULL;
-		pALSession = NULL;
-		pTcpServer = NULL;
+		sock = 0;
+		pALSession = nullptr;
+		pTcpServer = nullptr;
 		bIsTransmit = false;
 		iSendSucCount = 0;
 		iSendFailCount = 0;
@@ -40,6 +41,7 @@ struct tcpSession
 		bEnableActivityCheck = true;
 		remotePort = 0;
 		bridgeSock = 0;
+		pData1 = nullptr;
 	}
 
 	tcpSession* GenerateClienInfo() {

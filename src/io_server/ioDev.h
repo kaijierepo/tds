@@ -361,7 +361,7 @@ public:
 
 	string m_strErrorInfo;
 
-	virtual void OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port);
+	virtual void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port) override;
 };
 
 ioDev* createIODev(string type);

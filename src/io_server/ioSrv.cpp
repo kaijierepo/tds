@@ -8,7 +8,7 @@
 #include "ioChan.h"
 #include "ioDev_genicam.h"
 #include "rpcHandler.h"
-#include "ds.h"
+#include  "reverseInterface.h"
 #include "httplib.h"
 #include "ioDev/ioDev_tdsp.h"
 #include "base64.h"
@@ -1550,14 +1550,22 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_pt
 		{
 			if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
 				tdsSession->m_csPuller.lock();
+				int sizeLast = tdsSession->m_vecPuller.size();
 				for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
 					std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
-					if (p->send(pData, iLen) <= 0) {
+					int iSent = p->send(pData, iLen);
+					if (iSent <= 0) {
 						tdsSession->m_vecPuller.erase(tdsSession->m_vecPuller.begin() + i);
 						i--;
 					}
 				}
+				int sizeNow = tdsSession->m_vecPuller.size();
 				tdsSession->m_csPuller.unlock();
+
+				if (sizeLast > 0 && sizeNow == 0) {
+					LOG("[warn]拉流端全部断开，关闭推流,tag=%s,断开客户端数:%d",tdsSession->streamId.c_str(),sizeLast);
+					tdsSession->disconnect();
+				}
 			}
 			else if (tdsSession->tdspSubType == TDSP_SUB_TYPE::childTds) {
 

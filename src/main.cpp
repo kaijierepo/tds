@@ -474,6 +474,7 @@ void forLink() {
 	string b = "abc";
 	a = _strdup(b.c_str());
 	size_t pos = strspn(a, "b");
+	_strerror_s(a,100, "abcd");
 }
 
 

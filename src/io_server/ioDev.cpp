@@ -1350,7 +1350,7 @@ bool ioDev::loadStatusBuff()
 	return true;
 }
 
-void ioDev::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+void ioDev::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	IOLogRecv((unsigned char*)recvData, recvDataLen, strIP + ":" + str::fromInt(port));
 	OnRecvData(recvData, recvDataLen);

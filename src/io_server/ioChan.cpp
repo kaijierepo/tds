@@ -220,7 +220,8 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 
 		for (int i = 0; i < m_vecStreamPuller.size(); i++) {
 			shared_ptr<TDS_SESSION> p = m_vecStreamPuller[i];
-			if (p->send((unsigned char*)s.data(), s.length()) <= 0) {
+			int iSend = p->send((unsigned char*)s.data(), s.length());
+			if (iSend <= 0) {
 				m_vecStreamPuller.erase(m_vecStreamPuller.begin() + i);
 				i--;
 				continue;

@@ -277,8 +277,8 @@ public:
 
 	//ip params
 	string remoteAddr;
-	string hostName;
-	int hostPort;
+	string remoteIP;
+	int remotePort;
 	bool isHttps;
 
 	RPC_SESSION() {

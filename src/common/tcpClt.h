@@ -8,12 +8,13 @@ using namespace std;
 
 //连接信息
 class tcpClt;
+class TDS_SESSION;
 struct tcpSessionClt
 {
 	int sock;
 	std::string srvIP;//对端ip
 	int srvPort;//对端端口
-	void* pALSession;
+	std::shared_ptr<TDS_SESSION> pALSession;
 	tcpClt* tcpClt;
 	int bridgeSock;
 
@@ -27,8 +28,8 @@ struct tcpSessionClt
 	{
 		sock = 0;
 		bridgeSock = 0;
-		pALSession = NULL;
-		tcpClt = NULL;
+		pALSession = nullptr;
+		tcpClt = nullptr;
 		iSendSucCount = 0;
 		iSendFailCount = 0;
 		iRecvCount = 0;

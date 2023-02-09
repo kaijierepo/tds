@@ -179,7 +179,7 @@ void udpServer::addToMultiCast(string multiCastAddr, int port)
 
 }
 
-int udpServer::OnRecvData(char* recvData, int recvDataLen, string strIP, int port)
+size_t udpServer::OnRecvData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	if (m_pCallback)
 	{

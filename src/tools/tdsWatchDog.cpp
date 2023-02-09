@@ -459,7 +459,7 @@ bool tdsWatchDog::isSelfStartReg()
 	return false;
 }
 
-void tdsWatchDog::OnRecvUdpData(char* recvData, int recvDataLen, string strIP, int port)
+void tdsWatchDog::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	string food = recvData;
 	//LOG("food is " + food);

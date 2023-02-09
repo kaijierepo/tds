@@ -30,7 +30,7 @@ SOFTWARE.
 #include "rpcHandler.h"
 #include "logger.h"
 #include "prj.h"
-#include "ds.h"
+#include  "reverseInterface.h"
 #include "ioSrv.h"
 #include "io_server/ioDev.h"
 #include "tdsConf.h"
@@ -317,7 +317,7 @@ bool TDS_imp::run(string cmdline)
 
 	//开始运行，与外部建立通讯并进行数据io
 	runWebServers();
-	ds.run();
+	reverseInterface.run();
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
 	scriptManager.run();
@@ -362,7 +362,7 @@ bool TDS_imp::run(string cmdline)
 
 void TDS_imp::stop()
 {
-	ds.stop();
+	reverseInterface.stop();
 	ioSrv.stop();
 }
 

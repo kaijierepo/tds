@@ -44,8 +44,7 @@ public:
 	void setActivityCheck(bool bEnable);
 
 	//地址信息与通信数据结构
-	string remoteIP;
-	int remotePort;
+
 	int sock;
 	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
 	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
