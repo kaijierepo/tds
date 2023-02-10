@@ -1061,7 +1061,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			return;
 		}
 	}
-	else if (strData.find("/log") != string::npos)
+	else if (strData.find("/log") != string::npos) 
 	{
 		tdsSession->type = TDS_SESSION_TYPE::log;
 		logTdsSessions.push_back(tdsSession);
