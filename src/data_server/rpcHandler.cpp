@@ -2518,14 +2518,16 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 {
 	string path = tds->conf->confPath + "/topo";
 	path::normalization(path);
-	vector<string> fl;
-	fs::getFileList(fl,path);
+
+	vector<fs::FILE_INFO> filist;
+	fs::getFileList(filist, path, true, true);
+
 	map<string, string> mapTopo; //按照层级排序
 	vector<string> topoList;
-	for (int i = 0; i < fl.size(); i++)
+	for (int i = 0; i < filist.size(); i++)
 	{
-		string topoName = str::trimSuffix(fl[i], ".svg");
-		mapTopo[str::fromInt(TAG::getMoLevel(fl[i])) + topoName] = topoName;
+		string topoName = str::trimSuffix(filist[i].name, ".svg");
+		mapTopo[str::fromInt(TAG::getMoLevel(topoName)) + topoName] = topoName;
 	}
 	for (auto& i : mapTopo)
 	{
