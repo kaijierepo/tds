@@ -1622,26 +1622,41 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_pt
 									tag = params["tag"];
 								}
 								tag = TAG::addRoot(tag, rootTag); 
-								tdsSession->streamId = tag;
+								
 
-								MP* pmp = prj.GetMPByTag(tag);
-								if (pmp) {
-									vector< std::shared_ptr<TDS_SESSION>>   puller;
-									pmp->m_csPuller.lock();
-									puller = pmp->m_vecPuller;
-									pmp->m_csPuller.unlock();
-
-									size_t pullerCount = 0;
-									tdsSession->m_csPuller.lock();
-									tdsSession->m_vecPuller = puller;
-									pullerCount = tdsSession->m_vecPuller.size();
-									tdsSession->m_csPuller.unlock();
-
-									LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d",tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
+								std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
+								//该位号推流已经存在
+								if (pusherSession != nullptr) {
+									LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
+									tdsSession->disconnect();
 								}
+								//没有推流端，获取可能在等待的拉流端
 								else {
-									LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
+									//以下复制相当于创建了一个流节点
+									tdsSession->streamId = tag;
+									MP* pmp = prj.GetMPByTag(tag);
+									if (pmp) {
+										vector< std::shared_ptr<TDS_SESSION>>   puller;
+										pmp->m_csPuller.lock();
+										puller = pmp->m_vecPuller; 
+										pmp->m_vecPuller.clear();
+										pmp->m_csPuller.unlock();
+
+										size_t pullerCount = 0;
+										tdsSession->m_csPuller.lock();
+										tdsSession->m_vecPuller = puller;
+										pullerCount = tdsSession->m_vecPuller.size();
+										tdsSession->m_csPuller.unlock();
+
+										LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d", tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
+									}
+									else {
+										LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
+									}
 								}
+
+
+	
 
 								return;
 							}
@@ -1936,4 +1951,19 @@ std::shared_ptr<TDS_SESSION> ioServer::getStreamPusher(string tag)
 		}
 	}
 	return nullptr;
+}
+
+vector<std::shared_ptr<TDS_SESSION>> ioServer::getStreamPushers(string tag)
+{
+	vector<std::shared_ptr<TDS_SESSION>> vec;
+	for (auto& i : m_IoSessions)
+	{
+		std::shared_ptr<TDS_SESSION> p = i.second;
+		if (p->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
+			if (p->streamId == tag) {
+				vec.push_back(p);
+			}
+		}
+	}
+	return vec;
 }

@@ -582,17 +582,19 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			c->pipeSock = sPipe;
 			//记录管道发送sock口
 			p->sockPipe = (SOCKET)sPipe;
-			//加入websocket连接列表
+
+
+			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
+			//例如pipesock可能会马上用来发送数据。一次先初始化
+			pWs->initWsSessionInfo(uri, p);
+
+			//加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
 			//该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
 			if (p->type == TDS_SESSION_TYPE::tdsClient) {
 				pWs->m_csWsSessions.lock();
 				pWs->m_wsSessions[c] = p;
 				pWs->m_csWsSessions.unlock();
 			}
-
-			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
-			//例如pipesock可能会马上用来发送数据。一次先初始化
-			pWs->initWsSessionInfo(uri, p);
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -1087,6 +1089,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 	}
 	else if (strData.find("stream") != string::npos)
 	{
+		tdsSession->type = TDS_SESSION_TYPE::dataStream;
 		string tag = str::trimPrefix(strData,"/stream/"); 
 		 tag = str::trimSuffix(tag, ".de"); 
 		tag = httplib::detail::decode_url(tag, false);
@@ -1100,25 +1103,25 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			MP* pmp = prj.GetMPByTag(tag);
 			if (pmp) {
 				//注册websocket拉流客户端
-				size_t iPullerCount = 0;
-				pmp->m_csPuller.lock();
-				pmp->m_vecPuller.push_back(tdsSession);
-				iPullerCount = pmp->m_vecPuller.size();
-				pmp->m_csPuller.unlock();
-
+				//从io会话中找到推流会话，找到则加入拉流端
 				std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
-				if (p) {
-					vector< std::shared_ptr<TDS_SESSION>>   puller;
-					pmp->m_csPuller.lock();
-					puller = pmp->m_vecPuller;
-					pmp->m_csPuller.unlock();
-
+				int pullerCount = 0;
+				if (p != nullptr) {
 					p->m_csPuller.lock();
-					p->m_vecPuller = puller;
+					p->m_vecPuller.push_back(tdsSession);
+					pullerCount = p->m_vecPuller.size();
 					p->m_csPuller.unlock();
 				}
+				else {
+					//没找到则在pmp中暂存,当推流端上线时，拷贝到推流会话。如果一直没有推流端上线，考虑增加一个超时主动断开机制。后续考虑
+					pmp->m_csPuller.lock();
+					pmp->m_vecPuller.push_back(tdsSession);
+					pullerCount = pmp->m_vecPuller.size();
+					pmp->m_csPuller.unlock();
+				}
 
-				LOG("[数据流   ]websocket拉流客户端连接成功,位号:%s,拉流客户端数目:%d", tag.c_str(), iPullerCount);
+
+				LOG("[数据流   ]websocket拉流客户端连接成功,位号:%s,拉流客户端数目:%d", tag.c_str(), pullerCount);
 
 
 				//启动下级服务器推流

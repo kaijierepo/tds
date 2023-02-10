@@ -46,7 +46,7 @@ void dataServer::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION se
 	}
 
 	tcpClt* pClt = new tcpClt();
-	if (pClt->connect(this, session.hostName, port)) {
+	if (pClt->connect(this, session.remoteIP, port)) {
 
 		tcpSessionClt* pTcpSess = &pClt->m_session;
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));

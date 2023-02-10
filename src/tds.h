@@ -332,6 +332,7 @@ namespace TDS_SESSION_TYPE {
 	//client connections
 	const string tdsClient = "tdsClient";  
 	const string video = "video";
+	const string dataStream = "dataStream";
 	const string iodev = "ioDev"; 
 	const string webHMR = "webHMR"; //web hot module replacement
 

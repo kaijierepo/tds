@@ -94,7 +94,9 @@ bool TDS_SESSION::disconnect()
     std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
     if (pTcpSession)
     {
-        closesocket(pTcpSession->sock);
+        //目前tcpServer统一使用mongoose的 poll模型。poll模型closesocket不会触发响应,使用shutdown
+        //closesocket(pTcpSession->sock);
+        shutdown(pTcpSession->sock, SD_BOTH);
     }
     else if (pTcpSessionClt)
     {
