@@ -7,7 +7,6 @@
 #ifdef _TDS
 #include "tools/dumpCatch.h"
 #endif
-#include "tds.h"
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \

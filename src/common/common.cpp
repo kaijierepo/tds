@@ -1,6 +1,7 @@
 ﻿#include "common.h"
 #include <filesystem>
 #include <stdarg.h>
+#include "logger.h"
 using namespace std;
 
 namespace common {

@@ -1966,6 +1966,18 @@ bool rpcHandler::isGB2312Pkt(string& req)
 }
 
 
+void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
+	RPC_RESP resp;
+	rpcSrv.handleRpcCall(str, resp, pSession, bAccessCtrl);
+	pSession->send((unsigned char*)resp.strResp.data(), resp.strResp.length(), false);
+}
+
+
+void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
+{
+	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl);
+	t.detach();
+}
 
 void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
@@ -2319,6 +2331,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	if (!pmp)
 	{
 		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found:" + tag);
+		LOG("[warn]output请求错误," + resp.error);
 		return;
 	}
 
@@ -2366,7 +2379,6 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 		else
 		{
 			resp.error = err.dump();
-			LOG("[warn]输出失败," + resp.error);
 		}
 	}
 	else {

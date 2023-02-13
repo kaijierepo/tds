@@ -767,8 +767,18 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 		ioChannel* pC = ioSrv.getChanByTag(getTag());
 		if (pC)
 		{
-			LOG("[控制输出]发送请求;位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
+			LOG("[warn][数据输出  ]发送请求;位号:%s,值:%s,通道:%s,等待响应:%d", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str(),sync?1:0);
 			pC->output(jVal, rlt, err, sync);
+			ASSERT(rlt != nullptr && err != nullptr);
+			if (sync) {
+				if (rlt != nullptr) {
+					LOG("[warn][数据输出  ]输出成功,位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());
+				}
+				if(err!=nullptr)
+				{
+					LOG("[warn][数据输出  ]输出失败,位号:%s,值:%s,通道:%s,失败信息:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str(),err.dump().c_str());
+				}
+			}
 		}
 		else
 		{

@@ -152,6 +152,8 @@ namespace common {
 	void endianSwap(char* pData, int len);
 }
 
+#define ASSERT(exp) if(exp == false){LOG("[error][Assert  ] fail, file:%s,line:%d", __FILE__, __LINE__);};
+
 namespace str {
 	std::string format(const char* pszFmt,... );
 }

@@ -41,6 +41,7 @@ SOFTWARE.
 #include "base64.h"
 #include "base85.h"
 #include "prj.h"
+#include "common.h"
 
 
 void updateEzvizAccessInfo() {
