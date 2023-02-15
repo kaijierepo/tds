@@ -435,8 +435,8 @@ bool DB_FILE::loadFile()
 bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	//获取需要加载数据的位号集合
-	vector<string> tagSet;
-	prj.getTagsByTagSelector(tagSet, deSel.tagSel);
+	vector<string> tagSet = deSel.tagSel.tagSet;
+
 
 	//初始化单个位号的 数据内存对象和查询参数
 	vector<TAG_DB_DATA*> tagDBFileSet;  //数据库原始文件数据
@@ -1259,19 +1259,28 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 		deSel.calc = params["calc"];
 	}
 
-	SELECT_RLT result;
-	try
-	{
-		db.Select_yyjson(deSel, result);
-	}
-	catch (std::exception& e)
-	{
-		json jerror = e.what();
-		resp.error = jerror.dump();
-	} 
+	//选出位号
+	prj.getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
 
-	resp.result = result.dataList;
-	resp.info = "files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
+	SELECT_RLT result;
+	if (deSel.tagSel.tagSet.size() == 0) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+	}
+	else {
+		try
+		{
+			db.Select_yyjson(deSel, result);
+			resp.result = result.dataList;
+		}
+		catch (std::exception& e)
+		{
+			json jerror = e.what();
+			resp.error = jerror.dump();
+		}
+	}
+
+
+	resp.info = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
 }
 
 void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)

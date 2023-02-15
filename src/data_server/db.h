@@ -98,6 +98,9 @@ public:
 
 	string type; //object type
 	string error;
+
+	//选出的位号列表
+	vector<string> tagSet;
 };
 
 

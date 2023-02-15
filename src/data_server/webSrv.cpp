@@ -311,7 +311,8 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 	}
 
 	int isend = send(sock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
-	closesocket(sock);                      // Close the connection
+	//closesocket(sock);                      // Close the connection
+	shutdown(sock, SD_BOTH);
 }
 
 
@@ -329,7 +330,8 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port
 	string ctLen = to_string(resBody.length());
 
 	int isend = send(sock,resBody.c_str(), resBody.length(),MSG_DONTROUTE);         
-	closesocket(sock);                      // Close the connection
+	//closesocket(sock);                      // Close the connection
+	shutdown(sock, SD_BOTH);
 }
 
 void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
@@ -347,6 +349,20 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 	}
 	else if (p->type == TDS_SESSION_TYPE::terminal) {
 
+	}
+}
+
+void thread_asynOpenStream(string tag) {
+	MP* pmp = prj.GetMPByTag(tag);
+	if (pmp) {
+		if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
+			LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
+			pmp->zlm_closeStreamSrc(tag);
+		}
+		pmp->zlm_openStreamSrc();
+	}
+	else {
+		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
 	}
 }
 
@@ -373,20 +389,6 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
 		}
 
-
-		string tag = j["stream"];
-		MP* pmp = prj.GetMPByTag(tag);
-		if (pmp) {
-			if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
-				LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-				pmp->zlm_closeStreamSrc(tag);
-			}
-			pmp->zlm_openStreamSrc(); 
-		}
-		else {
-			LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
-		}
-
 		json resp;
 		resp["code"] = 0;
 		resp["msg"] = "success";
@@ -394,6 +396,11 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 		string resHeader, resBody;
 		resBody = resp.dump(2);
 		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+
+
+		string tag = j["stream"];
+		thread t(thread_asynOpenStream, tag);
+		t.detach();
 	}
 	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
 		string tag = j["stream"];
@@ -763,7 +770,8 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
-				closesocket(p->sockPipe);
+				//closesocket(p->sockPipe);
+				shutdown(p->sockPipe, SD_BOTH);
 				p->sockPipe = 0;
 				p->bConnected = false;
 				pWs->m_wsSessions.erase(c);
@@ -1000,7 +1008,8 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 		}
 		else
 		{
-			closesocket(tdsSession->sock);
+			//closesocket(tdsSession->sock);
+			shutdown(tdsSession->sock, SD_BOTH);
 			return;
 		}
 	}
@@ -1036,7 +1045,8 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 
 			//string resp = header + html;
 			//send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
-			closesocket(tdsSession->sock);
+			//closesocket(tdsSession->sock);
+			shutdown(tdsSession->sock, SD_BOTH);
 			return;
 		}
 	}
@@ -1057,7 +1067,8 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			LOG("bridge websocket to tcp %s fail", host.c_str());
 			delete tdsSession->pBridgedTcpClient;
 			tdsSession->pBridgedTcpClient = NULL;
-			closesocket(tdsSession->sock);
+			//closesocket(tdsSession->sock);
+			shutdown(tdsSession->sock, SD_BOTH);
 			return;
 		}
 	}

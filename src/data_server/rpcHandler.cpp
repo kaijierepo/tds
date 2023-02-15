@@ -2320,13 +2320,13 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 
 
+	//查找需要输出的位号
 	string tag, rootTag;
 	if (params["tag"] != nullptr)
 		tag = params["tag"].get<string>();
 	if (params["rootTag"] != nullptr && params["rootTag"] != "")
 		tag = params["rootTag"].get<string>() + "." + tag;
 	tag = TAG::addRoot(tag, session.org);
-
 	MP* pmp = prj.GetMPByTag(tag);
 	if (!pmp)
 	{
@@ -2335,6 +2335,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 		return;
 	}
 
+
+	//值类型校验
 	if (pmp->m_valType == VAL_TYPE::boolean)
 	{
 		if (!val.is_boolean())
@@ -2345,22 +2347,36 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 					val = !pmp->m_curVal.get<bool>();
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
+					LOG("[warn]output请求错误," + resp.error);
 					return;
 				}
 			}
 			else
 			{
 				resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeBool, "output val should be bool type");
+				LOG("[warn]output请求错误," + resp.error);
 				return;
 			}
 		}
 	}
-	else if (!val.is_number() && pmp->m_valType == VAL_TYPE::Float)
+	else if (pmp->m_valType == VAL_TYPE::Float)
 	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be number type");
-		return;
+		if (!val.is_number()) {
+			resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be number type");
+			LOG("[warn]output请求错误," + resp.error);
+			return;
+		}
 	}
-	
+	else if (pmp->m_valType == VAL_TYPE::integer)
+	{
+		if (!val.is_number_integer()) {
+			resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be integer type");
+			LOG("[warn]output请求错误," + resp.error);
+			return;
+		}
+	}
+
+
 	json rlt,err;
 
 	bool syncCall = true;
@@ -3267,10 +3283,10 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 		}
 		else {
 			if (pmp->m_mediaSrcType.find("flv") != string::npos) {
-				j["flv"] = pmp->m_mediaSrcType;
+				j["flv"] = pmp->m_mediaUrl;
 			}
 			if (pmp->m_mediaSrcType.find("rtsp") != string::npos) {
-				j["rtsp"] = pmp->m_mediaSrcType;
+				j["rtsp"] = pmp->m_mediaUrl;
 			}
 
 		}
