@@ -1720,7 +1720,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		string tag = params["tag"];
 		MP* pmp = prj.GetMPByTag(tag);
 		if (pmp) {
-			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.remoteIP, session.remotePort);
+			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.localIP, session.localPort);
 			rpcResp.result = rlt.dump();
 		}
 		else {
@@ -3273,7 +3273,7 @@ string rpcHandler::rpc_setconffile(json params, string& error)
 	return string();
 }
 
-json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostname,int hostport)
+json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string localIP,int LocalPort)
 {
 	json j;
 	//视频外部播放地址模式。没有进行码流中转，直接返回播放即可
@@ -3296,8 +3296,8 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 	}
 
 
-	string ip = hostname; 
-	int port = hostport;
+	string ip = localIP;
+	int port = LocalPort;
 	bool https = false;
 
 
@@ -3325,7 +3325,8 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 	//本地的转发，将tds的请求转发到zlmediakit
 	if (!isChildTds) {
 		if (pmp->m_valType == VAL_TYPE::video) {
-			ip = "127.0.0.1";
+			//localIP是本次连接暴露给对方的ip地址。如果服务在内网中，那么此处是公网地址，需要在路由器做好端口映射
+			ip = localIP;
 			if (isHttps) {
 				port = tds->conf->getInt("httpsMediaPort", 668);
 			}

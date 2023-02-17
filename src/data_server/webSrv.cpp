@@ -294,8 +294,8 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->remoteIP = hostname;
-	pSession->remotePort = port;
+	pSession->localIP = hostname;
+	pSession->localPort = port;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
@@ -321,8 +321,8 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->remoteIP = hostname;
-	pSession->remotePort = port;
+	pSession->localIP = hostname;
+	pSession->localPort = port;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 

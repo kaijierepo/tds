@@ -280,6 +280,8 @@ public:
 	string remoteAddr;
 	string remoteIP;
 	int remotePort;
+	string localIP;
+	int localPort;
 	bool isHttps;
 
 	RPC_SESSION() {

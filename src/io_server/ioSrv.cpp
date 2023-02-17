@@ -925,6 +925,12 @@ void ioServer::updateAllChanVal()
 	json valList;
 	getChanVal(valList);
 	tds->callAsyn("input", valList.dump());
+
+	for (auto& i : m_vecChildDev) {
+		if (i->m_devSubType == TDSP_SUB_TYPE::childTds) {
+			i->syncDataToBindTag();
+		}
+	}
 }
 
 void ioServer::clear()
