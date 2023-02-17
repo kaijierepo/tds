@@ -1208,7 +1208,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
 				prj.clear();
 				prj.m_name = tmpPrj.m_name;
-				prj.m_parentTag = tmpPrj.m_parentTag;
 				prj.m_mapAllMP = tmpPrj.m_mapAllMP;
 				prj.m_childObj = tmpPrj.m_childObj;
 				for (int i = 0; i < prj.m_childObj.size(); i++) {

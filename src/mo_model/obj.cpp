@@ -90,9 +90,7 @@ bool OBJ::loadConf(json& conf)
 	if (conf.contains("name")) {
 		m_name = conf["name"];
 	}
-	if (conf.contains("parentTag")) {
-		m_parentTag = conf["parentTag"];
-	}
+
 	if (conf.contains("type")) {
 		m_type = conf["type"];
 		if (m_type == "project") //不再使用project类型。兼容一段时间 2023.1.2
@@ -248,8 +246,6 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	if (q.getConf) {
 		if (m_bChildTds)
 			conf["childTds"] = true;
-		if (m_pParentMO == nullptr)
-			conf["parentTag"] = m_parentTag;
 		if (m_customType != "")
 			conf["customType"] = m_customType;
 		if (m_customTypeLabel != "")
