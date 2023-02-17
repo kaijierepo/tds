@@ -1,6 +1,8 @@
 #pragma once
-
-
+#include <vector>
+#include <string>
+#include <map>
+using namespace std;
 
 typedef int (*fp_validPktCheck)(unsigned char* pData, size_t iLen);
 
@@ -10,7 +12,7 @@ public:
 		iAbandonLen = 0;
 		iPktLen = 0;
 		iStreamLen = 0;
-		m_protocolType = APP_LAYER_PROTO::UNKNOWN;
+		m_protocolType = "unknown";
 
 		iPktBuffSize = 0;
 		iStreaBuffSize = 0;
@@ -30,7 +32,7 @@ public:
 	void ResizePopPktBuff(size_t iNewSize);
 	void PushStream(unsigned char* pData, size_t iLen);
 	void PushStream(char* pData, size_t iLen);
-	bool PopPkt(string cpt = APP_LAYER_PROTO::UNKNOWN);
+	bool PopPkt(string cpt = "");
 	//faultTolerant是否容错，允许数据包之间有异常数据出现
 	//打开容错会降低性能
 	bool PopPkt(fp_validPktCheck pktCheckFn,bool faultTolerant = true);
@@ -43,7 +45,7 @@ public:
 		Init();
 	}
 
-	vector<byte> m_prefix;
+	std::vector<byte> m_prefix;
 
 	//流数据
 	unsigned char* stream;

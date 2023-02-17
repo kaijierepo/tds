@@ -49,7 +49,6 @@ SOFTWARE.
 #include "tools/dumpCatch.h"
 #include "tools/hmrSrv.h"
 #include "users/userMng.h"
-#include "masterDs.h"
 #include "webSrv.h"
 
 
@@ -327,10 +326,7 @@ bool TDS_imp::run(string cmdline)
 		hmrServer.run(tds->conf->uiPath);
 	}
 	userMng.run();
-	if (tds->conf->getInt("masterSrvPort", 0) > 0) {
-		pMasterDs = new MasterDs();
-		pMasterDs->run();
-	}
+
 
 	//运行tds插件
 	if (tds->xiaoT)
@@ -429,7 +425,7 @@ void thread_handleRpcCall(string method,string param,int delay) {
 	json j = json::parse(param);
 	RPC_SESSION session;
 	RPC_RESP resp;
-	rpcSrv.handleMethodCall(method, j, resp, session);
+	rpcSrv.handleMethodCall(method, j, resp, session); 
 }
 
 void TDS_imp::callAsyn(string method, string param, int delay)

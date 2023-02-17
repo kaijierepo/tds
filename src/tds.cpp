@@ -149,9 +149,9 @@ string TAG::resolveTag(string strTagExp, string rootTag)
 		rtag = str::replace(rtag, "\\\\", "/");
 
 		while (1) {
-			int ipos = rtag.find("../");
+			size_t ipos = rtag.find("../");
 			if (ipos != string::npos) {
-				int dotPos = tag.rfind(".");
+				size_t dotPos = tag.rfind(".");
 				if (dotPos != string::npos) {
 					tag = tag.substr(0, dotPos);
 				}

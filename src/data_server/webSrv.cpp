@@ -10,7 +10,7 @@
 #include "tools/hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
-#include "masterDs.h"
+
 #include "mp.h"
 #include "users/userMng.h"
 #include "tools/hmrSrv.h"
@@ -92,7 +92,7 @@ void sendToPktMonitorClient(char* p, size_t len)
 	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
 		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
-		int iSend = session->send(p, len, false);
+		size_t iSend = session->send(p, len, false);
 		if (iSend <= 0) {//发不成功删除
 			ioPktMonitorClient.erase(ioPktMonitorClient.begin() + i);
 			i--;
@@ -1023,7 +1023,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 	else if (strData.find("/COM") != string::npos)
 	{
 		size_t pos = strData.find("COM");
-		int pos1 = strData.find(" ", pos);
+		size_t pos1 = strData.find(" ", pos);
 		string portNum = strData.substr(pos, pos1 - pos);
 		ioDev* p = ioSrv.getIODev(portNum);
 		tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
@@ -1116,7 +1116,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 				//注册websocket拉流客户端
 				//从io会话中找到推流会话，找到则加入拉流端
 				std::shared_ptr<TDS_SESSION> p = ioSrv.getStreamPusher(tag);
-				int pullerCount = 0;
+				size_t pullerCount = 0;
 				if (p != nullptr) {
 					p->m_csPuller.lock();
 					p->m_vecPuller.push_back(tdsSession);
@@ -1136,31 +1136,26 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 
 
 				//启动下级服务器推流
-				OBJ* pOwnerChlidTds = pmp->getOwnerChildTds();
+				ioDev* pChlidTdsDev = ioSrv.getOwnerChildTdsDev(tag);
 				bool pusherStarted = false;
-				if (pOwnerChlidTds) {
-					if (pMasterDs) {
-						string childTdsTag = pOwnerChlidTds->getTag();
-						string tag = pmp->getTag();
+				if (pChlidTdsDev) {
+					string childTdsTag = pChlidTdsDev->m_strTagBind;
+					string tag = pmp->getTag();
 
-						string srcTag = TAG::trimRoot(tag, childTdsTag);
-						json params;
-						params["srcTag"] = srcTag;
-						params["destTag"] = tag;
-						params["port"] = tds->conf->tdspPort;
-						params["socketType"] = "tcp";
+					string srcTag = TAG::trimRoot(tag, childTdsTag);
+					json params;
+					params["srcTag"] = srcTag;
+					params["destTag"] = tag;
+					params["port"] = tds->conf->tdspPort;
+					params["socketType"] = "tcp";
 
-						json childRlt, childErr;
-						pMasterDs->callChildTds(childTdsTag, "startPushStream", params, childRlt, childErr, true);
-						if (childRlt != nullptr) {
-							pusherStarted = true;
-						}
-						else if (childErr != nullptr) {
-							LOG("[warn]启动下级服务推流失败，位号:%s,错误信息:%s",tag.c_str(), childErr.dump().c_str());
-						}
+					json childRlt, childErr;
+					pChlidTdsDev->call("startPushStream", params, childRlt, childErr, true);
+					if (childRlt != nullptr) {
+						pusherStarted = true;
 					}
-					else {
-						LOG("[warn]启动下级服务推流失败，位号:%s,master data service is not started", tag.c_str());
+					else if (childErr != nullptr) {
+						LOG("[warn]启动下级服务推流失败，位号:%s,错误信息:%s",tag.c_str(), childErr.dump().c_str());
 					}
 				}
 				else {

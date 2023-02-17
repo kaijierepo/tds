@@ -61,7 +61,8 @@ public:
 
 	json strVal2Val(string s);
 
-	bool loadConf(json& conf);
+	bool loadConf(json& conf) override;
+	bool loadStatus(json& status) override;
 	bool toJson(json& conf, OBJ_QUERIER q) override;
 	bool toJson(json& conf, json serializeOption) override;
 	bool loadStatus(OBJ* pSrc,TIME* dataTime = nullptr, bool saveToDB = true) override;

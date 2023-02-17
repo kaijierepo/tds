@@ -125,7 +125,6 @@ ioDev::ioDev(void)
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
 	m_bEnableAcq = true;
 	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
-	m_pCommAddrInfo = NULL;
 	m_pParent = NULL;
 	m_bEnableOfflineTimeout = false;
 	m_bOnline = false;
@@ -240,6 +239,10 @@ bool ioDev::toJson(json& conf, json opt)
 		}
 		conf["type"] = m_devType;
 		conf["typeLabel"] = m_devTypeLabel;
+		if (m_devSubType != "") {
+			conf["subType"] = m_devSubType;
+		}
+
 		conf["level"] = m_level;
 		conf["manageStatus"] = m_dispositionMode;
 		if (m_fAcqInterval != 0)
@@ -392,6 +395,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_addrMode = item.get<string>();
+		}
+	}
+
+	kv = conf.find("subType");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_devSubType = item.get<string>();
 		}
 	}
 
@@ -1157,35 +1168,6 @@ void ioDev::checkAcqReqTimeout()
 	if (timeopt::CalcTimePassSecond(m_stLastReqSendTime) > 5)
 	{
 	}	
-}
-
-bool ioDev::CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen)
-{
-	PKT_DATA req((unsigned char*)pReqData,iReqLen), resp;
-
-	if (!CmdRequestSync(req, resp))
-	{
-		return false;
-	}
-
-	memcpy(pRespData, resp.data, resp.len);
-	iRespLen = resp.len;
-	return true;
-}
-
-bool ioDev::CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount, string strLogMsgWhenSend)
-{
-	//REQ_PARAM reqParam;
-	//if (iRetryCount > 0)
-	//	reqParam.iRetryCount = iRetryCount;
-
-	//bool bRet = commSrv.RequestAndWaitResponse(&req, &resp, getIOAddr(), &reqParam);
-
-	//if (bRet)
-	//	resp.UnPack();
-
-	//return bRet;
-	return false;
 }
 
 bool ioDev::OnRecvData(char* pData, size_t iLen)

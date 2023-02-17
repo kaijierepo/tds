@@ -122,6 +122,8 @@ public:
 	virtual void call(string method, json params, json& result, json& error, bool sync = true) {  };
 	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 
+	//将io设备内缓存的实时数据全部同步到绑定的位号
+	virtual void syncDataToBindTag() {};
 	DEV_QUERIER parseQueryOpt(json& opt);
 	////
 	//is Gateway
@@ -141,6 +143,7 @@ public:
 	string getDevAddrStr(bool ignorePort = false);
 	string m_dispositionMode;
 	string m_devType;
+	string m_devSubType; //设备子类型
 	string m_devTypeLabel;
 	string m_parentDevType;
 	string m_level;
@@ -238,8 +241,6 @@ public:
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
 	virtual bool sendData(char* pData, size_t iLen);
 	virtual bool sendStr(string& str);
-	bool CmdRequestSync(char* pReqData, int iReqLen, char* pRespData, int& iRespLen);//发送并阻塞等待回包
-	bool CmdRequestSync(PKT_DATA& req, PKT_DATA& resp, int iRetryCount = 0, string strLogMsgWhenSend = "");//=0表示使用全局配置
 
 	//通信接收
 	virtual bool SendHeartbeatPkt();
@@ -248,6 +249,10 @@ public:
 	virtual bool OnRecvData(char* pData, size_t iLen);//接受数据异步处理函数
 	virtual bool OnRecvData(TIME dataTime, char* pData, size_t iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
+
+
+	virtual void onEvent_online() {};
+
 	//命令回包超时
 	virtual bool IsAsynPacket(PKT_DATA* pd);
 
@@ -266,7 +271,6 @@ public:
 	TIME m_stLastChanDataTime;
 	TIME m_stLastAlarmStatusTime;
 	TIME m_stLastActiveTime;
-	ioAddrSession* m_pCommAddrInfo;//该设备地址的通讯信息
 	bool m_bEnableAcq;
 	void setOnline();
 	void setOffline();

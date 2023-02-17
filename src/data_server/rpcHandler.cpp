@@ -17,7 +17,6 @@
 #include "logServer/logServer.h"
 #include "xiaot/scriptManager.h"
 #include "base64.h"
-#include "masterDs.h"
 #include "ioDev/ioDev_visca.h"
 #include "httplib.h"
 #include "webSrv.h"
@@ -541,25 +540,24 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 
 		//TDS系统内控制。 有转发给子服务和直接处理两种情况
-		OBJ* childTds = pObj->getOwnerChildTds();
+		ioDev* childTds = ioSrv.getOwnerChildTdsDev(tag);
 		//转发给子服务
 		if (childTds) {
-			if (pMasterDs) {
-				string childTdsTag = childTds->getTag();
-				tag = TAG::trimRoot(tag, childTdsTag);
-				json paramsChild = params;
-				paramsChild["tag"] = tag;
-				json childRlt, childErr;
-				pMasterDs->callChildTds(childTdsTag, method, paramsChild, childRlt, childErr);
-				
-				if (childRlt != nullptr) {
-					json jRlt;
-					jRlt["ip"] = pMasterDs->getChildTdsIP(childTdsTag);
-					rpcResp.result = jRlt.dump();
+			string childTdsTag = childTds->m_strTagBind;
+			tag = TAG::trimRoot(tag, childTdsTag);
+			json paramsChild = params;
+			paramsChild["tag"] = tag;
+			json childRlt, childErr;
+			childTds->call(method, paramsChild, childRlt, childErr);
+			if (childRlt != nullptr) {
+				json jRlt;
+				if (childTds->pIOSession) {
+					jRlt["ip"] = childTds->pIOSession->getRemoteIP();
 				}
-				else{
-					rpcResp.error = childErr.dump();
-				}
+				rpcResp.result = jRlt.dump();
+			}
+			else{
+				rpcResp.error = childErr.dump();
 			}
 		}
 		//直接处理
@@ -1123,9 +1121,19 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		p["softVer"] = tds->getVersion();
 		p["hardVer"] = "v1.0";
 		p["deviceId"] = tds->conf->deviceID;
-		p["deviceType"] = "TDS-Edge智能边缘网关";
+		p["deviceType"] = "TDS-Edge";
 
 		result = p.dump();
+	}
+	else if (method == "acq") {
+		json j;
+		OBJ_QUERIER query;
+		query.getConf = false;
+		query.getStatus = true;
+		query.getChild = true;
+		query.getMp = true;
+		prj.toJson(j, query);
+		result = j.dump(4);
 	}
 	else
 	{
@@ -1272,8 +1280,22 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					rpc_input(params, rpcResp, session);
 				}
 			}
-			else
-				rpc_input(params, rpcResp,session);
+			else if (params.contains("name")) {
+				string rootTag;
+				if (params.contains("rootTag")) { 
+					rootTag = params["rootTag"];
+				}
+				OBJ* pMO = prj.queryObj(rootTag);
+				if (pMO) {
+					pMO->loadStatus(params);
+				}
+			}
+			else {
+				rpc_input(params, rpcResp, session);
+			}
+		}
+		else if (method == "statusUpdate") {
+
 		}
 		else if (method == "output")
 		{
@@ -1805,24 +1827,6 @@ bool rpcHandler::needLog(string method)
 	return true;
 }
 
-bool rpcHandler::handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
-{
-	if (pMasterDs == nullptr)
-		return false;
-
-	string method = jReq["method"].get<string>();
-	if (jReq.contains("childTds"))
-	{
-		jReq.erase("user");
-		jReq.erase("token");
-		pMasterDs->rpc_childTdsDispatch(jReq, rpcResp);
-		return true;
-	}
-
-
-	return false;
-}
-
 bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
@@ -1846,7 +1850,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 	{
 		ioDev* pIoDev = nullptr;
 		string strIoAddr = jReq["ioAddr"].get<string>();
-		pSession->ioAddr = strIoAddr;
+		pSession->route_ioAddr = strIoAddr;
 		pIoDev  = ioSrv.getIODev(strIoAddr);
 		if (!pIoDev)
 		{
@@ -1855,11 +1859,25 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 		}
 	
 		pIoDev->handleDevRpcCall(jReq,rpcResp,pSession);
-		logTDSPDispatch(method, jReq["params"], *pSession);
+		logRPCRoute(method, jReq["params"], *pSession);
 		return true;
 	}
 	else if (jReq.contains("tag")) {
 		string tag = jReq["tag"].get<string>();
+		tag = TAG::addRoot(tag, pSession->org);
+		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
+		if (!pIoDev)
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
+			return true;
+		}
+		pSession->route_ioAddr = pIoDev->getIOAddrStr();
+
+		pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+		logRPCRoute(method, jReq["params"], *pSession);
+		return true;
+
+		/*string tag = jReq["tag"].get<string>();
 		tag = TAG::addRoot(tag, pSession->org);
 		OBJ* pObj = prj.queryObj(tag);
 		if (!pObj)
@@ -1903,22 +1921,36 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 			pSession->ioAddr = pIoDev->getIOAddrStr();
 
 			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
-			logTDSPDispatch(method, jReq["params"], *pSession);
+			logRPCRoute(method, jReq["params"], *pSession);
 			return true;
-		}
+		}*/
 	}
-
+	else if (jReq.contains("childTds"))
+	{
+		jReq.erase("user");
+		jReq.erase("token");
+		pSession->route_childTds = jReq["childTds"];
+		ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
+		if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
+		{
+			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的 TDS下级服务 设备");
+		}
+		return true;
+	}
 	return false;
 }
 
-void rpcHandler::logTDSPDispatch(string method,json& params,RPC_SESSION& session) {
+void rpcHandler::logRPCRoute(string method,json& params,RPC_SESSION& session) {
 	if (method == "startRepel") {
 		json logParams;
 		logParams["object"] = "用户:" + session.user;
 		logParams["event"] = "探驱联动开始";
 		logParams["org"] = session.org;
 		logParams["host"] = session.remoteAddr;
-		logParams["detail"] = "设备名称:" + session.tag + ",设备地址:" + session.ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
+		logParams["detail"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
 		logSrv.rpc_addLog(logParams, session);
 	}	
 	else if (method == "stopRepel") {
@@ -1927,7 +1959,7 @@ void rpcHandler::logTDSPDispatch(string method,json& params,RPC_SESSION& session
 		logParams["event"] = "探驱联动结束";
 		logParams["org"] = session.org;
 		logParams["host"] = session.remoteAddr;
-		logParams["detail"] = "设备名称:" + session.tag + ",设备地址:" + session.ioAddr;
+		logParams["detail"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr;
 		logSrv.rpc_addLog(logParams, session);
 	}
 }
@@ -1966,20 +1998,20 @@ bool rpcHandler::isGB2312Pkt(string& req)
 }
 
 
-void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
+void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode) {
 	RPC_RESP resp;
-	rpcSrv.handleRpcCall(str, resp, pSession, bAccessCtrl);
+	rpcSrv.handleRpcCall(str, resp, pSession, bAccessCtrl,bEdgeDevMode);
 	pSession->send((unsigned char*)resp.strResp.data(), resp.strResp.length(), false);
 }
 
 
-void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
+void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode)
 {
-	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl);
+	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl, bEdgeDevMode);
 	t.detach();
 }
 
-void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
+void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl,bool bEdgeDevMode)
 {
 	string error = "";
 	string method = "";
@@ -2023,8 +2055,6 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			pSession->isNotification = true;
 		}
 
-
-		clientId = jReq["clientId"]; //tds edge模式使用
 		pSession->lastMethodCalled = method;
 			
 		//对部分命令日志记录
@@ -2037,22 +2067,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		//心跳最先处理
 		if (method == "heartbeat")
 		{
-			if (params.is_object())
-			{
-				if (params["clientName"] != nullptr)
-					pSession->name = params["clientName"];
-				else if (params["name"] != nullptr)
-					pSession->name = params["name"];
-
-				if (params["echo"] != nullptr)
-				{
-					if (params["echo"].get<bool>() == false)
-					{
-						return;
-					}
-				}
-			}
-			rpcResp.result = "\"pong\"";
+			rpcResp.result = RPC_OK;
 			goto HANDLE_END;
 		}
 
@@ -2131,14 +2146,10 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 		}
 
-		//设备类命令中继转发处理.返回true表示是设备中继命令.放在用户认证前面处理.
-		if (!tds->conf->edge) //tds edge模式无需转发
+		//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
+		if (!bEdgeDevMode) 
 		{
 			if (handleRpcRoute(strReq, jReq, rpcResp, pSession))
-			{
-				goto HANDLE_END;
-			}
-			if (handleChildTdsDispatch(strReq, jReq, rpcResp, pSession))
 			{
 				goto HANDLE_END;
 			}
@@ -2196,68 +2207,56 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	}
 
 HANDLE_END:
-	string strRespForLog = "";//对于某些内容特别长的数据包，省略一些内容进行日志记录
+	//组装jsonRPC
 	if (rpcResp.error != "")
 	{
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
-		if (tds->conf->edge)
-		{
-			rpcResp.strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
-			if (clientId != nullptr)
-			{
-				rpcResp.strResp += ",\"clientId\":" +  clientId.dump();
-			}
-		}
-		rpcResp.strResp += "}\n\n";
 	}
 	else if (rpcResp.result != "")
 	{
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump();
 
+		//info放在result前面打印，因为result可能比较长，info短，放前面测试观察方便
 		if (rpcResp.info != "") {
 			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
 		}
 			
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
-		if (tds->conf->edge)
-		{
-			rpcResp.strResp += ",\"ioAddr\":\"" + tds->conf->deviceID + "\"";
-			if (clientId != nullptr)
-			{
-				rpcResp.strResp += ",\"clientId\":" + clientId.dump();
-			}
-		}
-		if (pSession->ioAddr != "")
-		{
-			rpcResp.strResp += ",\"ioAddr\":\"" + pSession->ioAddr + "\"";
-		}
-		if (pSession->tag != "")
-		{
-			rpcResp.strResp += ",\"tag\":\"" + pSession->tag + "\"";
-		}
-		rpcResp.strResp += "}\n\n";
-
-
-		if (method == "fs.readFile")
-		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$fileLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
-		}
-		else if (method == "getMoTree" || method == "getMo")
-		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
-		}
-		else if (method == "getMoTree" || method == "getMo")
-		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$MoTreeJsonLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
-		}
-		else if (method == "db.select")
-		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$dataSetLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
-		}
 	}
 
+	//当作为edgeDev时，提供本机地址。 注意此处为addr而非ioAddr，设备只知道自己的addr， ioAddr是io服务才知道的
+	if (bEdgeDevMode)
+	{
+		rpcResp.strResp += ",\"addr\":\"" + prj.getTdsId() + "\"";
+	}
+
+	//route参数，路由请求的回包包含请求中的路由参数
+	if (pSession->route_ioAddr != "")
+	{
+		rpcResp.strResp += ",\"ioAddr\":\"" + pSession->route_ioAddr + "\"";
+	}
+	if (pSession->route_tag != "")
+	{
+		rpcResp.strResp += ",\"tag\":\"" + pSession->route_tag + "\"";
+	}
+	if (pSession->route_childTds != "")
+	{
+		rpcResp.strResp += ",\"childTds\":\"" + pSession->route_childTds + "\"";
+	}
+
+
+	rpcResp.strResp += "}\n\n";
+
+
+	//数据过长或者频率过高的命令不记录日志
 	if (rpcResp.result != "")
 	{
+		string strRespForLog = "";
+		if (method == "db.select" || method == "getObj")
+		{
+			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump() + ",\"result\":\"$resultLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
+		}
+
 		if (strRespForLog != "")
 			LOG("[trace]RPC响应:\r\n" + strRespForLog + "\r\n");
 		else if (bNeedLog)
@@ -2321,7 +2320,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 
 
 	//查找需要输出的位号
-	string tag, rootTag;
+	string tag, rootTag; 
 	if (params["tag"] != nullptr)
 		tag = params["tag"].get<string>();
 	if (params["rootTag"] != nullptr && params["rootTag"] != "")
@@ -2405,12 +2404,13 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
-	//parse param
+	//输入 位号，值，时间三元组
 	TIME stTimeStamp;
 	string time="";
 	json dataFile;
 	json inputVal = nullptr;
 	json inputTag, inputIoAddr;
+	//值
 	if (params.find("val") != params.end())
 		inputVal = params["val"];
 	else
@@ -2420,6 +2420,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 	if (params.find("dataFile") != params.end())
 		dataFile = params["dataFile"];
+	//位号
 	if (params.find("tag") != params.end())
 		inputTag = params["tag"];
 	if (params.find("ioAddr") != params.end())
@@ -2432,6 +2433,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	string rootTag = "";
 	if (params.contains("rootTag"))
 		rootTag = params["rootTag"].get<string>();
+	//时间
 	if (params.find("time") != params.end())
 	{
 		time = params["time"];
@@ -2489,8 +2491,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 
 	if (vecMps.size() > 0) {
+
 		//监测点组中有任意一个点需要保存，则全部保存
-	//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
+		//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
 		bool needSave = false;
 		for (int i = 0; i < vecMps.size(); i++) {
 			MP* pmp = vecMps[i];
@@ -3298,51 +3301,39 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 	int port = hostport;
 	bool https = false;
 
-	OBJ* childTds = pmp->getOwnerChildTds();
+
 	//重定向到子服务
 	CHILD_TDS_INFO childTdsInfo;
-	bool isChildTds = false;
-	if (childTds && pMasterDs) {
-		string childTdsTag = childTds->getTag();
-		if (!pMasterDs->getChildTdsInfo(childTdsTag, childTdsInfo))
-		{
-			return nullptr;
-		}
-		tag = TAG::trimRoot(tag, childTdsTag);
-
-		ip = childTdsInfo.ip;
-		if (isHttps) {
-			port = childTdsInfo.httpsPort;
-		}
-		else {
-			port = childTdsInfo.httpPort;
-		}
-		isChildTds = true;
-	}
+	bool isChildTds = ioSrv.getOwnerChildTdsInfo(tag,childTdsInfo);
 
 
-
-	string tagPinyin;
-	str::hanZi2Pinyin(tag, tagPinyin);
+	//string tagPinyin;
+	//str::hanZi2Pinyin(tag, tagPinyin);
 	string urlProto;
 	string wsProto;
 	if (isHttps) {
 		urlProto = "https://";
 		wsProto = "wss://";
-		port = tds->conf->getInt("httpsMediaPort",668);
 	}
 	else {
 		urlProto = "http://";
 		wsProto = "ws://";
-		port = tds->conf->getInt("httpMediaPort",669);
 	}
 
 
 	//https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
 	//zlmediakit的hls模式暂时不支持中文，因此此处转成拼音
 	//本地的转发，将tds的请求转发到zlmediakit
-	if (!childTds) {
+	if (!isChildTds) {
 		if (pmp->m_valType == VAL_TYPE::video) {
+			ip = "127.0.0.1";
+			if (isHttps) {
+				port = tds->conf->getInt("httpsMediaPort", 668);
+			}
+			else {
+				port = tds->conf->getInt("httpMediaPort", 669);
+			}
+
 			if (pmp->m_mediaSrcType == "file") {
 				string url = str::trimPrefix(pmp->m_mediaUrl, "/");
 				url = str::trimSuffix(url, ".mp4");
@@ -3373,6 +3364,8 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 	//此处先发送到子服务的数据服务端口，让子服务再做一次重定向，使得子服务再收到该请求时可以启动码流。
 	//实现url取流的时候可以触发向视频源拉流
 	else {
+		tag = TAG::trimRoot(tag, childTdsInfo.tag);
+		ip = childTdsInfo.ip;
 		if (pmp->m_valType == VAL_TYPE::video) {
 			if (isHttps) {
 				port = childTdsInfo.httpsPort;
@@ -3396,7 +3389,6 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string hostn
 			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 		}
 	}
-
 
 	j["isChildTds"] = isChildTds;
 

@@ -144,21 +144,6 @@ bool OBJ::loadConf(json& conf)
 	if (conf.contains("ioAddrBind"))
 		m_strIoAddrBind = conf["ioAddrBind"];
 
-
-	//载入状态
-	if (conf.contains("lastModify")) {
-		m_strLastModify = conf["lastModify"];
-	}
-	if(conf.contains("online"))
-		m_bOnline = conf["online"].get<bool>();
-	if (conf.contains("longitudeDyn"))
-		m_longitudeDyn = conf["longitudeDyn"];
-	if (conf.contains("latitudeDyn"))
-		m_latitudeDyn = conf["latitudeDyn"];
-	if (conf.contains("alarmStatus"))
-		m_jAlarmStatus = conf["alarmStatus"];
-
-	
 	if (conf.contains("children")) {
 		auto children = conf["children"];
 		for (auto& child : children)
@@ -375,12 +360,40 @@ bool OBJ::loadStatus(OBJ* pSrcRoot, TIME* dataTime, bool saveToDB)
 		return false;
 }
 
-bool OBJ::loadStatus(json& jMpList)
+bool OBJ::loadStatus(json& status)
 {
-	for (auto& i : jMpList) {
-		string tag = i["tag"].get<string>();
-		//MP* pmp = 
+	if (status.is_object()) {
+		//载入状态
+		if (status.contains("lastModify")) {
+			m_strLastModify = status["lastModify"];
+		}
+		if (status.contains("online"))
+			m_bOnline = status["online"].get<bool>();
+		if (status.contains("longitudeDyn"))
+			m_longitudeDyn = status["longitudeDyn"];
+		if (status.contains("latitudeDyn"))
+			m_latitudeDyn = status["latitudeDyn"];
+		if (status.contains("alarmStatus"))
+			m_jAlarmStatus = status["alarmStatus"];
+
+		json jChildren = status["children"];
+		if (jChildren != nullptr) {
+			for (auto& childStatus : jChildren) {
+				string name = childStatus["name"];
+				OBJ* pChildObj = GetChildObjByName(name);
+				if (pChildObj) {
+					pChildObj->loadStatus(childStatus);
+				}
+			}
+		}
 	}
+	else if (status.is_array()) {
+		for (auto& i : status) {
+			string tag = i["tag"].get<string>();
+			//MP* pmp = 
+		}
+	}
+
 	return false;
 }
 
@@ -402,19 +415,19 @@ void OBJ::clearChildren()
 	m_childObj.clear();
 }
 
-OBJ* OBJ::getOwnerChildTds()
-{
-	OBJ* pTmp = this;
-	while (pTmp)
-	{
-		if (pTmp->m_bChildTds && pTmp->m_pParentMO!=nullptr)
-			return pTmp;
-
-		pTmp = pTmp->m_pParentMO;
-	}
-
-	return nullptr;
-}
+//OBJ* OBJ::getOwnerChildTds()
+//{
+//	OBJ* pTmp = this;
+//	while (pTmp)
+//	{
+//		if (pTmp->m_bChildTds && pTmp->m_pParentMO!=nullptr)
+//			return pTmp;
+//
+//		pTmp = pTmp->m_pParentMO;
+//	}
+//
+//	return nullptr;
+//}
 
 
 OBJ* OBJ::GetProjectMO()

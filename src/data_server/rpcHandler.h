@@ -38,17 +38,16 @@ public:
 
 	bool needLog(string method);
 
-	bool handleChildTdsDispatch(string& strReq, json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 
-	//透传到io设备的命令
+	//rpc路由的命令  可以路由到tdsp设备，或者childTds
 	bool handleRpcRoute(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
-	void logTDSPDispatch(string method, json& params, RPC_SESSION& session);
+	void logRPCRoute(string method, json& params, RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 
 	//json rpc implementation
-	void handleRpcCallAsyn(string& strReq,std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl = true);
-	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
+	void handleRpcCallAsyn(string& strReq,std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl = true, bool bEdgeDevMode = false);
+	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true,bool bEdgeDevMode = false);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_ptz_ioDev(string method, string tag, json& params, RPC_RESP& rpcResp, RPC_SESSION session);

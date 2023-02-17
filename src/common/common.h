@@ -49,6 +49,10 @@ struct TIME {
 		wMonth = 1;
 		wDay = 1;
 	}
+
+	bool operator==(TIME& right){
+		return 0 == memcmp(this, &right, sizeof(TIME));
+	}
 };
 class semaphore
 {
@@ -152,7 +156,7 @@ namespace common {
 	void endianSwap(char* pData, int len);
 }
 
-#define ASSERT(exp) if(exp == false){LOG("[error][Assert  ] fail, file:%s,line:%d", __FILE__, __LINE__);};
+#define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__FUNCTION__);};
 
 namespace str {
 	std::string format(const char* pszFmt,... );
@@ -201,9 +205,10 @@ namespace str {
 	string bytesToHexStr(vector<char>& bytes);
 	string bytesToHexStr(vector<unsigned char>& bytes);
 	vector<unsigned char> hexStrToBytes(string hexStr);
-	string bytesToHexStr(char* p, int len, string splitter = " ");
-	string bytesToHexStr(unsigned char* p, int len, string splitter = " ");
+	string bytesToHexStr(char* p, size_t len, string splitter = " ");
+	string bytesToHexStr(unsigned char* p, size_t len, string splitter = " ");
 	string fromInt(int v);
+	string fromInt(long long v);
 	string fromInt(size_t v);
 	string fromBuff(const char* p, size_t len);
 	int toInt(string s);
@@ -293,7 +298,7 @@ namespace path {
 
 namespace common {
 	string guid();
-	float randomFloat(float min, float max);
+	double randomFloat(double min, double max);
 	int randomInt(int min, int max);
 }
 

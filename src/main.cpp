@@ -211,7 +211,7 @@ int main(int argc, char** argv)
 			db.Insert("devicedata", stT, j);
 		}
 
-		int tt = timeopt::CalcTimePassMilliSecond(ststart);
+		long long tt = timeopt::CalcTimePassMilliSecond(ststart);
 		LOG("写入" + to_string(simuRecCount) + "条仿真数据, 位号:devicedata, 耗时" + str::fromInt(tt) + "ms");
 		return 0;
 	}

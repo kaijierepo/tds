@@ -9,7 +9,7 @@
 #include "logger.h"
 #include "ioSrv.h"
 #include "ioChan.h"
-#include "masterDs.h"
+
 #include "httplib.h"
 #include "json.hpp"
 
@@ -281,6 +281,40 @@ bool MP::loadConf(json& conf)
 	}
 
 	return false;
+}
+
+bool MP::loadStatus(json& status)
+{
+	//常量无需加载
+	if (m_ioType == "c") {
+		return true;
+	} 
+	
+	string sTime;
+	json jTime = status["time"];
+	if (jTime == nullptr) {
+		return true;
+	}
+	sTime = jTime.get<string>();
+	if (!timeopt::isValidTimeStr(sTime)) {
+		return true;
+	}
+	
+	TIME t = timeopt::str2st(sTime);
+	if (t == m_stDataLastUpdate) {
+		return true;
+	}
+	
+	
+	m_lastVal = m_curVal;
+	m_curVal = status["val"];
+	m_stDataLastUpdate = t;
+
+
+	if (needSaveToDB()) {
+		saveToDB();
+	}
+	return true;
 }
 
 bool MP::toJson(json& conf, json serializeOption)
@@ -562,7 +596,7 @@ void MP::input(json jVal, TIME* dataTime, json dataFile)
 		if (m_valType == "int") {
 			int iVal = jVal.get<int>();
 			m_orgVal = iVal;
-			int iCurVal = iVal * m_K + m_B;
+			int iCurVal = (int) (iVal * m_K + m_B);
 			jVal = iCurVal;
 			if (m_validRange.enable)
 			{
@@ -730,46 +764,41 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 	//m_curVal = nullptr;
 	//方案2. 值不变。采集到新的数据值或者收到输出反馈，才变成新的值
 	//do nothing
+	string tag = getTag();
 
-	OBJ* pOwnerChlidTds = getOwnerChildTds();
 
-	if (pOwnerChlidTds) {
-		if (pMasterDs) {
-			string childTdsTag = pOwnerChlidTds->getTag();
-			string tag = getTag();
+	ioDev* pDev = ioSrv.getOwnerChildTdsDev(tag);
 
-			tag = TAG::trimRoot(tag, childTdsTag);
-			json params;
-			params["tag"] = tag;
-			params["val"] = jVal;
+	if (pDev) {
+		//转换为在子服务中的位号
+		string childTdsTag = pDev->m_strTagBind;
+		tag = TAG::trimRoot(tag, childTdsTag);
 
-			json childRlt, childErr;
-			pMasterDs->callChildTds(childTdsTag, "output", params, childRlt, childErr, sync);
-			if (sync) {
-				if (childRlt != nullptr) {
-					rlt = params;
-					m_curVal = jVal;
-					timeopt::now(&m_stDataLastUpdate);
-				}
-				else if(childErr != nullptr) {
-					err = childErr;
-				}
-				else {
-					LOG("[error]严重错误 mp.cpp %d\n", __LINE__);
-				}
-			}
+
+		json params;
+		params["tag"] = tag;
+		params["val"] = jVal;
+		json childRlt, childErr;
+		LOG("[warn][数据输出  ]请求子服务，tag=%s,子服务名称:%s", tag.c_str(), childTdsTag.c_str());
+		pDev->call("output", params, childRlt, childErr, sync);
+		if (childRlt != nullptr) {
+			rlt = params;
+			m_curVal = jVal;
+			timeopt::now(&m_stDataLastUpdate);
+			LOG("[warn][数据输出  ]请求子服务 成功，tag=%s,子服务名称:%s,返回:%s", tag.c_str(), childTdsTag.c_str(),rlt.dump().c_str());
 		}
-		else {
-			err = "error: master data service is not started";
+		if(childErr != nullptr) {
+			err = childErr;
+			LOG("[warn][数据输出  ]请求子服务 失败，tag=%s,子服务名称:%s,返回:%s", tag.c_str(), childTdsTag.c_str(), err.dump().c_str());
 		}
 	}
 	else {
-		ioChannel* pC = ioSrv.getChanByTag(getTag());
+		ioChannel* pC = ioSrv.getChanByTag(tag);
 		if (pC)
 		{
 			LOG("[warn][数据输出  ]发送请求;位号:%s,值:%s,通道:%s,等待响应:%d", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str(),sync?1:0);
 			pC->output(jVal, rlt, err, sync);
-			ASSERT(rlt != nullptr && err != nullptr);
+			ASSERT(rlt != nullptr || err != nullptr);
 			if (sync) {
 				if (rlt != nullptr) {
 					LOG("[warn][数据输出  ]输出成功,位号:%s,值:%s,通道:%s", getTag().c_str(), jVal.dump().c_str(), pC->getIOAddrStr().c_str());

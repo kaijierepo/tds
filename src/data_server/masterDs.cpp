@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "masterDs.h"
+
 #include "logger.h"
 #include "prj.h"
 #include "mp.h"
@@ -147,7 +147,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 		}
 		else { //响应当中仅包含实时数据,周期轮询得到的响应
 			json rlt = resp["result"];
-			loadChildTdsStatus(rlt, childSession->m_childTdsTag);
+			prj.loadObjTreeStatus(rlt, childSession->m_childTdsTag);
 		}
 	}
 	//同步实时值
@@ -162,21 +162,7 @@ bool MasterDs::handleAsynResp(json resp, std::shared_ptr<TDS_SESSION> childSessi
 	return true;
 }
 
-bool MasterDs::loadChildTdsStatus(json& rlt,string rootTag) {
-	shared_lock<shared_mutex> lock(prj.m_csPrj);
-	OBJ* pMO = prj.queryObj(rootTag);
-	if (pMO) {
-		project prjTmp;
-		prjTmp.loadConf(rlt);
-		prjTmp.m_rootTag = rootTag; //使得prjTmp	返回的tag都加上rootTag
-		TIME stNow;
-		timeopt::now(&stNow);
-		//此处不再保存到数据库，第3个参数需要重构掉
-		pMO->loadStatus(&prjTmp, &stNow, false);
-		pMO->m_bOnline = true;//子服务根节点不携带online字段，收到数据一定online，此处直接置为online
-	}
-	return true;
-}
+
 
 bool MasterDs::handleNotify(json jNotify, std::shared_ptr<TDS_SESSION> childSession) {
 	string method = jNotify["method"];

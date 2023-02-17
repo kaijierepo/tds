@@ -82,10 +82,10 @@ public:
 	virtual ~OBJ();
 
 	virtual bool loadConf(json& conf);
+	virtual bool loadStatus(json& status);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier);
 	virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(OBJ* pMo,TIME* dataTime = nullptr,bool saveToDB = false);
-	bool loadStatus(json& jMpList);
 
 	//配置数据
 	string m_type;
@@ -147,7 +147,7 @@ public:
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
-	OBJ* getOwnerChildTds();
+	//OBJ* getOwnerChildTds();
 
 	OBJ_QUERIER parseQuerier(json& opt);
 	OBJ* GetRootMO();

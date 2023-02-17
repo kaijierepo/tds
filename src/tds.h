@@ -272,8 +272,9 @@ public:
 	bool isNotification; 
 
 	//session params for rpc route
-	string ioAddr;  //route to io device
-	string tag;     //route to io device or childTds
+	string route_ioAddr;  //route to io device
+	string route_tag;     //route to io device or childTds
+	string route_childTds;
 
 	//ip params
 	string remoteAddr;
@@ -287,6 +288,7 @@ public:
 };
 
 #define RPC_OK "\"ok\""
+#define RPC_TIMEOUT "\"timeout\""
 #define RPC_FAIL "\"fail\""
 
 class RPC_RESP {
@@ -469,6 +471,7 @@ enum RPC_ERROR_CODE {
 	IO_ioAddrNotSpecified = -40305,
 	IO_chanTemplateNotFound = -40306,
 	IO_devBusy = -40307,
+	IO_devStopped = -40308,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40401,

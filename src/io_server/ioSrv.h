@@ -58,6 +58,13 @@ inline string getDevTypeLabel(string devType) {
 	else return "未知类型";
 }
 
+struct CHILD_TDS_INFO {
+	string tag;
+	int httpPort;
+	int httpsPort;
+	string ip;
+};
+
 
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
@@ -94,6 +101,8 @@ public:
 	//查询与管理
 	void getAllSmartDev(vector<ioDev*>& aryDev);
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
+	ioDev* getOwnerChildTdsDev(string tag);
+	bool getOwnerChildTdsInfo(string tag,CHILD_TDS_INFO& info);
 
 	//在线组态
 	void rpc_addDev(json& params, RPC_RESP& rpcResp,RPC_SESSION sesion);
@@ -124,16 +133,26 @@ public:
 	int m_iAdpPort;
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
+
+
+
+	//通信分层处理
+	//传输层处理
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo);
 	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
 	void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port) override;
 
-	//传输层处理
-	void onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt = false);
-	void onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	//应用层字节流组包 与 首发包处理
 	bool handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+
+	//应用层数据包处理
+	void onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void onRecvPkt_mbRtu(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	void onRecvPkt_mbTcp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 
 	//tdsRPC服务
 	void rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);

@@ -36,12 +36,10 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
 {
     Init();
     bConnected = true;
-    pTcpSessionClt = p->tcpClt;
+    pTcpSessionClt = &p->tcpClt->m_session;
     sock = p->sock;
-    remotePort = p->srvPort;
-    remoteIP = p->srvIP;
-    type = p->tdsSessionType;
-    name = p->tdsSessionName;
+    remotePort = p->remotePort;
+    remoteIP = p->remoteIP;
 }
 
 RPC_SESSION TDS_SESSION::getRpcSession()
@@ -58,12 +56,28 @@ string TDS_SESSION::getRemoteAddr()
     {
        return pTcpSession->remoteIP + ":" + str::fromInt(pTcpSession->remotePort);
     }
+    else if (pTcpSessionClt) {
+        return pTcpSessionClt->remoteIP + ":" + str::fromInt(pTcpSessionClt->remotePort);
+    }
+    return "";
+}
+
+string TDS_SESSION::getRemoteIP()
+{
+    unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
+    if (pTcpSession)
+    {
+        return pTcpSession->remoteIP;
+    }
+    else if (pTcpSessionClt) {
+        return pTcpSessionClt->remoteIP;
+    }
     return "";
 }
 
 void TDS_SESSION::Init()
 {
-    m_bSingleDevMode = false;
+    m_bSingleDevMode = true;
     m_bAppDataRecved = false;
     abandonLen = 0;
     m_bNeedLog = true;
@@ -100,7 +114,7 @@ bool TDS_SESSION::disconnect()
     }
     else if (pTcpSessionClt)
     {
-        closesocket(pTcpSessionClt->m_session.sock);
+        closesocket(pTcpSessionClt->sock);
     }
     return true;
 }
@@ -108,7 +122,7 @@ bool TDS_SESSION::disconnect()
 string TDS_SESSION::GetClientIp()
 {
     if (pTcpSessionClt)
-        return pTcpSessionClt->m_remoteIP;
+        return pTcpSessionClt->remoteIP;
     return "";
 }
 
@@ -128,7 +142,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
      else if (pTcpSessionClt)
      {
-         iSend = pTcpSessionClt->SendData(p, len);
+         iSend = pTcpSessionClt->tcpClt->SendData(p, len);
      }
      else 
      {
@@ -168,7 +182,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
      else if (pTcpSessionClt)
      {
-         return pTcpSessionClt->m_session.iSendSucCount;
+         return pTcpSessionClt->iSendSucCount;
      }
      return 0;
  }
@@ -182,7 +196,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
      else if (pTcpSessionClt)
      {
-         return  pTcpSessionClt->m_session.iRecvCount;
+         return  pTcpSessionClt->iRecvCount;
      }
      return 0;
  }

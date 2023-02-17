@@ -66,6 +66,7 @@ public:
 	bool loadObjTemplate();
 	void saveObjTemplate(OBJ_TEMPLATE& ot);
 	void getAllVarExpScript();
+	bool loadObjTreeStatus(json& rlt, string rootTag);
 	map<string, OBJ_TEMPLATE> m_mapObjTempalte;
 
 private:

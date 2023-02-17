@@ -64,7 +64,7 @@ void IOThread()
 }
 
 
-void onRecvIQ60Pkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	string pkt = str::fromBuff((char*)pData, iLen);
 
@@ -137,7 +137,7 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		m_mutexIoSessions.unlock();
 
 		//io服务主动连上TcpServer模式的设备
-		string ioAddr = str::format("%s:%d", pTcpSessClt->srvIP.c_str(), pTcpSessClt->srvPort);
+		string ioAddr = str::format("%s:%d", pTcpSessClt->remoteIP.c_str(), pTcpSessClt->remotePort);
 		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
 		if (pIoDev)
 		{
@@ -449,6 +449,7 @@ void ioServer::handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> t
 
 //io设备在一个tdsSession上线
 //该函数必须返回非空值
+//只在tdsSession上收到首发包或者 注册包，第一次确定该session对应的设备地址的时候触发一次
 ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	tdsSession->m_ioAddr = ioAddr;
@@ -459,6 +460,11 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 		json jAddr;
 		jAddr["id"] = ioAddr;
 		pIoDev = ioSrv.onChildDevDiscovered(jAddr, tdsSession->ioDevType);
+		pIoDev->m_devSubType = tdsSession->tdspSubType;
+
+		if (pIoDev->m_devSubType != "") {
+			pIoDev->m_bEnableAcq = false;
+		}
 	}
 	//设备上线
 	else
@@ -468,12 +474,19 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
 			timeopt::now(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+			string log = str::format("[ioDev   ]设备上线，ioAddr=%s,type=%s,subType=%s", pIoDev->getIOAddrStr().c_str(), pIoDev->m_devType.c_str(), pIoDev->m_devSubType.c_str());
+			logger.logInternal(log);
 		}
 	}
 
-	if(pIoDev)
+	if (pIoDev) {
 		pIoDev->bindIOSession(tdsSession);
+		pIoDev->onEvent_online();
+	}
+	else {
+		ASSERT(false);
+	}
+		
 	return pIoDev;
 }
 
@@ -555,16 +568,19 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 		if (p)
 		{
+			string lastTagBind = p->m_strTagBind;
+
 			//保留设备内的实时数据，如果修改设备和对象的绑定关系，可以让新绑定的对象立即有实时数据
 			p->loadConf(devConf);
 			devConf["ioAddr"] = p->getIOAddrStr(); //用于前端提示通知那台设备修改成功了
 			rpcSrv.notify("devModified", devConf);  
 			modified = true;
 
-			//修改设备后实时数据会丢失，如果是iq60，触发一次重连重新获取一次所有通道数据
-			//if (p->m_devType == IO_DEV_TYPE::DEV::iq60_gateway && p->pIOSession != nullptr) {
-			//	p->pIOSession->disconnect();
-			//}
+			//如果绑定对象改变，将缓存在io设备中的实时值同步到当前新绑定的对象，免去向设备请求一次
+			string currentTagBind = p->m_strTagBind;
+			if (currentTagBind != lastTagBind) {
+
+			}
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not find device of specified NodeID:" + sNodeId);
@@ -1332,6 +1348,37 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 	}
 }
 
+
+//如果1个位号是某个TDS下级服务绑定位号的子位号，那么该位号来自于该tds下级服务
+//根据某个位号找所属的TDS下级服务
+ioDev* ioServer::getOwnerChildTdsDev(string tag)
+{
+	for (auto& it : m_vecChildDev)
+	{
+		if (it->m_devSubType == TDSP_SUB_TYPE::childTds && tag.find(it->m_strTagBind) == 0)
+		{
+			return it;
+		}
+	}
+	return nullptr;
+}
+
+bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
+{
+	ioDev_tdsp* childTds =(ioDev_tdsp*) getOwnerChildTdsDev(tag);
+	if (childTds == nullptr)
+		return false;
+
+	info.tag = childTds->m_strTagBind;
+	info.httpPort = childTds->m_childTdsHttpPort;
+	info.httpsPort = childTds->m_childTdsHttpsPort;
+
+	if (childTds->pIOSession != nullptr) {
+		info.ip = childTds->pIOSession->getRemoteIP();
+	}
+}
+
+
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
@@ -1374,7 +1421,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			{
 				//每一个数据包都先检测是否是iq60数据包。因为iq60也属于 textEnd_LF 类型
 				if(pab->PopPkt(IsValidPkt_IQ60)) {
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+					onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
 					continue;
 				}
 
@@ -1413,7 +1460,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 					pab->PushStream(pData + 16, iLen - 16);
 					while (pab->PopPkt(IsValidPkt_IQ60))
 					{
-						onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+						onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
 					}
 				}
 			}
@@ -1425,7 +1472,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			pab->PushStream(pData, iLen);
 			while (pab->PopPkt(IsValidPkt_IQ60))
 			{
-				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+				onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 	}
@@ -1439,7 +1486,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		{
 			if (isPkt)
 			{
-				onRecvPkt_ioDev(pData, iLen, tdsSession);
+				onRecvPkt_tdsp(pData, iLen, tdsSession);
 			}
 			else
 			{
@@ -1454,7 +1501,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 						tdsSession->abandonLen += pab->iAbandonLen;
 					}
 					tdsSession->iALProto = pab->m_protocolType;
-					onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+					onRecvPkt_tdsp(pab->pkt, pab->iPktLen, tdsSession);
 				}
 			}
 		}
@@ -1465,7 +1512,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		pab->PushStream(pData, iLen);
 		while (pab->PopPkt(IsValidPkt_ModbusTcp,false))
 		{
-			onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+			onRecvPkt_mbTcp(pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
 	else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
@@ -1477,7 +1524,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		else
 		{
 			unsigned char* pGwData = pData;
-			int gwLen = iLen;
+			size_t gwLen = iLen;
 			//485网关启用前缀，前缀就是注册包
 			/*if (tds->conf->getInt("485GwPrefix", 0)) {
 				if (tdsSession->regPkt.size() > 0) {
@@ -1519,7 +1566,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 					tdsSession->abandonLen += pab->iAbandonLen;
 				}
 				tdsSession->iALProto = pab->m_protocolType;
-				onRecvPkt_ioDev(pab->pkt, pab->iPktLen, tdsSession);
+				onRecvPkt_mbRtu(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 	}
@@ -1534,7 +1581,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 				LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
 				tdsSession->abandonLen += pab->iAbandonLen;
 			}
-			onRecvPkt_ioDev((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
+			onRecvPkt_leakDetect((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
 
@@ -1542,36 +1589,36 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 	return true;
 }
 
-void ioServer::onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool registerPkt)
+
+void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	try
 	{
-		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
-		{
-			if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
-				tdsSession->m_csPuller.lock();
-				int sizeLast = tdsSession->m_vecPuller.size();
-				for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
-					std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
-					int iSent = p->send(pData, iLen);
-					if (iSent <= 0) {
-						tdsSession->m_vecPuller.erase(tdsSession->m_vecPuller.begin() + i);
-						i--;
-					}
-				}
-				int sizeNow = tdsSession->m_vecPuller.size();
-				tdsSession->m_csPuller.unlock();
-
-				if (sizeLast > 0 && sizeNow == 0) {
-					LOG("[warn]拉流端全部断开，关闭推流,tag=%s,断开客户端数:%d",tdsSession->streamId.c_str(),sizeLast);
-					tdsSession->disconnect();
+		if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
+			tdsSession->m_csPuller.lock();
+			int sizeLast = tdsSession->m_vecPuller.size();
+			for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
+				std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
+				int iSent = p->send(pData, iLen);
+				if (iSent <= 0) {
+					tdsSession->m_vecPuller.erase(tdsSession->m_vecPuller.begin() + i);
+					i--;
 				}
 			}
-			else if (tdsSession->tdspSubType == TDSP_SUB_TYPE::childTds) {
+			int sizeNow = tdsSession->m_vecPuller.size();
+			tdsSession->m_csPuller.unlock();
 
+			if (sizeLast > 0 && sizeNow == 0) {
+				LOG("[warn]拉流端全部断开，关闭推流,tag=%s,断开客户端数:%d", tdsSession->streamId.c_str(), sizeLast);
+				tdsSession->disconnect();
 			}
-			else {
-				string sResp = str::fromBuff((char*)pData, iLen);
+		}
+		else {
+			string sResp = str::fromBuff((char*)pData, iLen);
+
+
+			//数据包预处理
+			if (tdsSession->tdspSubType == "") {
 				//编解码转换
 				if (rpcSrv.isGB2312Pkt(sResp))
 				{
@@ -1582,153 +1629,138 @@ void ioServer::onRecvPkt_ioDev(unsigned char* pData, size_t iLen, std::shared_pt
 						LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
 						return;
 					}
-
 					sResp = charCodec::gb_to_utf8(sResp);
 				}
 
 				//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
 				sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
-				json jResp = json::parse(sResp);
-				if (!jResp.contains("method"))
-				{
-					LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
-					return;
-				}
-				string method = jResp["method"].get<string>();
-				json params;
-				if (jResp.contains("params"))
-					params = jResp["params"];
-				json id = jResp["id"];
-				json clientId = jResp["clientId"]; //tds edge模式使用
-				tdsSession->lastMethodCalled = method;
-				string charset = "utf8";
-				if (jResp.contains("charset"))
-				{
-					charset = jResp["charset"].get<string>();
-				}
+			}
 
-				if (method == "devRegister") {
-					if (params["devType"] != nullptr) {
-						string devType = params["devType"];
-						if (devType != "") {
-							tdsSession->tdspSubType = devType; 
-							if (devType == TDSP_SUB_TYPE::streamPusher) {
-								string rootTag, tag;
-								if (params["rootTag"] != nullptr)
-								{
-									rootTag = params["rootTag"];
-								}
-								if(params["tag"] !=nullptr){
-									tag = params["tag"];
-								}
-								tag = TAG::addRoot(tag, rootTag); 
-								
 
-								std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
-								//该位号推流已经存在
-								if (pusherSession != nullptr) {
-									LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
-									tdsSession->disconnect();
+			json jResp = json::parse(sResp);
+			if (!jResp.contains("method"))
+			{
+				LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
+				return;
+			}
+			string method = jResp["method"].get<string>();
+			json params;
+			if (jResp.contains("params"))
+				params = jResp["params"];
+			json id = jResp["id"];
+			tdsSession->lastMethodCalled = method;
+			string charset = "utf8";
+			if (jResp.contains("charset"))
+			{
+				charset = jResp["charset"].get<string>();
+			}
+
+
+			//设备或者子服务注册
+			if (method == "devRegister") {
+				if (params["devType"] != nullptr) {
+					string devType = params["devType"];
+					if (devType != "") {
+						tdsSession->tdspSubType = devType;
+						if (devType == TDSP_SUB_TYPE::streamPusher) {
+							string rootTag, tag;
+							if (params["rootTag"] != nullptr)
+							{
+								rootTag = params["rootTag"];
+							}
+							if (params["tag"] != nullptr) {
+								tag = params["tag"];
+							}
+							tag = TAG::addRoot(tag, rootTag);
+
+
+							std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
+							//该位号推流已经存在
+							if (pusherSession != nullptr) {
+								LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
+								tdsSession->disconnect();
+							}
+							//没有推流端，获取可能在等待的拉流端
+							else {
+								//以下复制相当于创建了一个流节点
+								tdsSession->streamId = tag;
+								MP* pmp = prj.GetMPByTag(tag);
+								if (pmp) {
+									vector< std::shared_ptr<TDS_SESSION>>   puller;
+									pmp->m_csPuller.lock();
+									puller = pmp->m_vecPuller;
+									pmp->m_vecPuller.clear();
+									pmp->m_csPuller.unlock();
+
+									size_t pullerCount = 0;
+									tdsSession->m_csPuller.lock();
+									tdsSession->m_vecPuller = puller;
+									pullerCount = tdsSession->m_vecPuller.size();
+									tdsSession->m_csPuller.unlock();
+
+									LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d", tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
 								}
-								//没有推流端，获取可能在等待的拉流端
 								else {
-									//以下复制相当于创建了一个流节点
-									tdsSession->streamId = tag;
-									MP* pmp = prj.GetMPByTag(tag);
-									if (pmp) {
-										vector< std::shared_ptr<TDS_SESSION>>   puller;
-										pmp->m_csPuller.lock();
-										puller = pmp->m_vecPuller; 
-										pmp->m_vecPuller.clear();
-										pmp->m_csPuller.unlock();
-
-										size_t pullerCount = 0;
-										tdsSession->m_csPuller.lock();
-										tdsSession->m_vecPuller = puller;
-										pullerCount = tdsSession->m_vecPuller.size();
-										tdsSession->m_csPuller.unlock();
-
-										LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d", tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
-									}
-									else {
-										LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
-									}
+									LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
 								}
-
-
-	
-
-								return;
 							}
-							else if (devType == TDSP_SUB_TYPE::childTds) {
-								return;
-							}
+
+
+
+
+							return;
 						}
 					}
 				}
+			}
 
-				//多设备模式或者还没有设备在该session上上线，处理设备上线
-				//获取当前session关联的设备
-				ioDev* pIoDev = tdsSession->m_IoDev;
-				//如果无关联设备或者是多关联模式
-				if (!tdsSession->m_bSingleDevMode || tdsSession->m_IoDev == nullptr)
+			//多设备模式或者还没有设备在该session上上线，处理设备上线
+			//获取当前session关联的设备
+			ioDev* pIoDev = tdsSession->m_IoDev;
+			//如果无关联设备或者是多关联模式
+			if (tdsSession->m_IoDev == nullptr)
+			{
+				//获得该io地址的设备对象
+				string strIoAddr;
+				if (jResp.contains("addr")) {
+					strIoAddr = jResp["addr"].get<string>();
+				}
+				if (strIoAddr == "")
 				{
-					//获得该io地址的设备对象
-					string strIoAddr = jResp["addr"].get<string>();
-					if (strIoAddr == "")
-					{
-						LOG("[error]注册包devRegister中的ioAddr为空，无效");
-						return;
-					}
-
-					pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
+					LOG("[error]注册包devRegister中的ioAddr为空，无效");
+					return;
 				}
 
-				pIoDev->m_charset = charset;
-				pIoDev->onRecvPkt(jResp);
+				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
-		}
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
-		{
-			//4g模式下的modbus RTU over tcp 第一包必须发送注册包
-			if (registerPkt)
-			{
-				string sResp = str::fromBuff((char*)pData, iLen);
-				json jResp = json::parse(sResp);
-				string method = jResp["method"].get<string>();
-				string strIoAddr = jResp["ioAddr"].get<string>();
-				if (method == "devRegister")
-					ioSrv.handleDevOnline(strIoAddr, tdsSession);
-			}
-			else
-			{
-				if (tdsSession->m_IoDev)
-				{
-					tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
-				}
-			}
-		}
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_tcp_slave)
-		{
-			if (tdsSession->m_IoDev)
-			{
-				tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
-			}
-		}
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway) {
-			onRecvIQ60Pkt(pData, iLen, tdsSession);
-		}
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::leakDetect) {
-			onRecvPkt_leakDetect(pData, iLen, tdsSession);
+
+			pIoDev->m_charset = charset;
+			pIoDev->onRecvPkt(jResp);
 		}
 	}
-	catch (std::exception& e)
+	catch (const std::exception& e)
 	{
-		string errorType = e.what(); 
+		string errorType = e.what();
 		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
 		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
 		errorType = str::encodeAscII(errorType);
-		LOG("onRecvPkt_ioDev 处理异常" + errorType);
+		LOG("onRecvPkt_tdsp 处理异常" + errorType);
+	}
+}
+
+void ioServer::onRecvPkt_mbRtu(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	if (tdsSession->m_IoDev)
+	{
+		tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
+	}
+}
+
+void ioServer::onRecvPkt_mbTcp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	if (tdsSession->m_IoDev)
+	{
+		tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
 	}
 }
 
@@ -1894,7 +1926,7 @@ shared_ptr<TDS_SESSION> ioServer::getTDSSession(string remoteIP, int remotePort)
 			if (p->pTcpSessionClt)
 			{
 				//客户端模式remoteAddr 只有1个，但本地有可以有多个连接，因此使用本地端口+ip作为id
-				if (p->pTcpSessionClt->m_strLocalIP == remoteIP && p->pTcpSessionClt->m_iLocalPort == remotePort)
+				if (p->pTcpSessionClt->remoteIP== remoteIP && p->pTcpSessionClt->remotePort == remotePort)
 				{
 					return p;
 				}

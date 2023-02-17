@@ -12,11 +12,9 @@ class TDS_SESSION;
 struct tcpSessionClt
 {
 	int sock;
-	std::string srvIP;//对端ip
-	int srvPort;//对端端口
+	std::string remoteIP;//对端ip
+	int remotePort;//对端端口
 	std::shared_ptr<TDS_SESSION> pALSession;
-	string tdsSessionName;
-	string tdsSessionType;
 	tcpClt* tcpClt;
 	int bridgeSock;
 
@@ -35,7 +33,7 @@ struct tcpSessionClt
 		iSendSucCount = 0;
 		iSendFailCount = 0;
 		iRecvCount = 0;
-		srvPort = 0;
+		remotePort = 0;
 	}
 };
 

@@ -47,9 +47,10 @@ public:
 
 	int sock;
 	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
-	tcpClt* pTcpSessionClt;  //tds作为客户端主动连接远端
+	tcpSessionClt* pTcpSessionClt;  //tds作为客户端主动连接远端
 	int sockPipe;         //socket管道。
 	string getRemoteAddr();
+	string getRemoteIP();
 	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 
 	//基本属性
@@ -58,6 +59,7 @@ public:
 	string m_charset; //如果链接上走的是文本协议。文本协议的编码
 	string iTLProto; //应用层的传输层协议 可以是websocket  websocket相对于 tcpServer 属于应用层数据。相对于tdsrpc，属于传输层协议
 	string iALProto;
+	bool m_bParentTds;
 
 	//通信状态
 	TIME stCreateTime;
@@ -66,7 +68,7 @@ public:
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
 	bool m_bAppDataRecved;
 	string lastMethodCalled;
-	int abandonLen;
+	size_t abandonLen;
 
 
 	//tcp数据缓存处理 

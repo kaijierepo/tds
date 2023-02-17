@@ -27,8 +27,8 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 	pTcpClt->m_bRecvThreadRunning = true;
 	SOCKET sock = pTcpClt->sockClient;
 
-	pTcpClt->m_session.srvIP = pTcpClt->m_remoteIP;
-	pTcpClt->m_session.srvPort = pTcpClt->m_remotePort;
+	pTcpClt->m_session.remoteIP = pTcpClt->m_remoteIP;
+	pTcpClt->m_session.remotePort = pTcpClt->m_remotePort;
 	pTcpClt->m_session.sock = sock;
 
 	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);

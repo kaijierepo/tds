@@ -91,7 +91,7 @@ namespace charCodec {
 	{
 		string str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
@@ -112,7 +112,7 @@ namespace charCodec {
 		memset(wcharstr, 0, MAX_STRSIZE);
 		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
 		str = wcharstr;
-		delete wcharstr;
+		delete[] wcharstr;
 		
 #endif
 #ifdef LINUX
@@ -582,10 +582,10 @@ namespace str {
 			str += "0";
 		}
 
-		int strLen = 0;
+		size_t strLen = 0;
 		strLen = str.length();
 
-		for (int i = 0; i < strLen / 2; i++)
+		for (size_t i = 0; i < strLen / 2; i++)
 		{
 			char cByteHigh = str.at(i * 2);
 			char cByteLow = str.at(i * 2 + 1);
@@ -621,7 +621,7 @@ namespace str {
 	{
 		vector<char> vec = toChars(str);
 		vector<unsigned char> vecB;
-		for (int i = 0; i < vec.size(); i++)
+		for (size_t i = 0; i < vec.size(); i++)
 		{
 			unsigned char& b = *((unsigned char*)(&vec[i]));
 			vecB.push_back(b);
@@ -632,7 +632,7 @@ namespace str {
 	string bytesToHexStr(vector<char>& bytes)
 	{
 		string str;
-		for (int i = 0; i < bytes.size(); i++)
+		for (size_t i = 0; i < bytes.size(); i++)
 		{
 			string b = format("%02X", (unsigned char)bytes[i]);
 			str += b;
@@ -695,7 +695,7 @@ namespace str {
 		return ary;
 	}
 
-	string bytesToHexStr(char* p, int len, string splitter)
+	string bytesToHexStr(char* p, size_t len, string splitter)
 	{
 		string str;
 		for (int i = 0; i < len; i++)
@@ -708,12 +708,18 @@ namespace str {
 		return str;
 	}
 
-	string bytesToHexStr(byte* p, int len, string splitter)
+	string bytesToHexStr(byte* p, size_t len, string splitter)
 	{
 		return bytesToHexStr((char*)p, len, splitter);
 	}
 
 	string fromInt(int v)
+	{
+		string s = str::format("%d", v);
+		return s;
+	}
+
+	string fromInt(long long v)
 	{
 		string s = str::format("%d", v);
 		return s;
@@ -731,7 +737,7 @@ namespace str {
 		memcpy(tmp, p, len);
 		tmp[len] = 0;
 		string s = tmp;
-		delete tmp;
+		delete[] tmp;
 		return s;
 	}
 
@@ -789,7 +795,7 @@ namespace str {
 
 	bool parseIpPort(string s, string& ip, int& port)
 	{
-		int ipos = s.find(":");
+		size_t ipos = s.find(":");
 		if (ipos == string::npos)
 			return false;
 
@@ -904,8 +910,8 @@ namespace str {
 namespace timeopt {
 	TIME now() {
 		auto now = std::chrono::system_clock::now();
-		//通过不同精度获取相差的毫秒数
-		uint64_t dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+		//通过不同精度获取相差的毫秒数 <1000毫秒值
+		unsigned short dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
 			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 		time_t tt = std::chrono::system_clock::to_time_t(now);
 		auto time_tm = localtime(&tt);
@@ -1051,7 +1057,7 @@ namespace timeopt {
 		if (pos != string::npos) {
 			strDay = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
-			n1 = atof(strDay.c_str()) * 24 * 3600;
+			n1 = (int) (atof(strDay.c_str()) * 24 * 3600);
 		}
 		pos = time1.find("h");
 		if (pos == string::npos)
@@ -1059,7 +1065,7 @@ namespace timeopt {
 		if (pos != string::npos) {
 			strH = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
-			n2 = atof(strH.c_str()) * 3600;
+			n2 = (int)(atof(strH.c_str()) * 3600);
 		}
 		pos = time1.find("m");
 		if (pos == string::npos)
@@ -1067,7 +1073,7 @@ namespace timeopt {
 		if (pos != string::npos) {
 			strM = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
-			n3 = atof(strM.c_str()) * 60;
+			n3 = (int)(atof(strM.c_str()) * 60);
 		}
 		pos = time1.find("s");
 		if (pos == string::npos)
@@ -1075,7 +1081,7 @@ namespace timeopt {
 		if (pos != string::npos) {
 			strS = time1.substr(0, pos);
 			time1 = time1.erase(0, pos + 1);
-			n4 = atof(strS.c_str());
+			n4 = (int)atof(strS.c_str());
 		}
 
 		return n1 + n2 + n3 + n4;
@@ -1595,7 +1601,7 @@ namespace fs {
 			fread(pdata, 1, len, fp);
 			data = pdata;
 			fclose(fp);
-			delete pdata;
+			delete[] pdata;
 			return true;
 		}
 		return false;
@@ -1783,15 +1789,15 @@ namespace common {
 		return str;
 	}
 
-	float randomFloat(float min, float max) {
+	double randomFloat(double min, double max) {
 		TIME st;
 		timeopt::now(&st);
 		//当前毫秒作为随机数种子
 		int seed = abs(st.wMilliseconds - rand() % 1000);
 		seed = seed % 100;
-		float diffRate = float(seed) / 100.0;
-		float diff = (max - min)*diffRate;
-		float v = min + diff;
+		double diffRate = double(seed) / 100.0;
+		double diff = (max - min)*diffRate;
+		double v = min + diff;
 		return v;
 	}
 
@@ -1801,10 +1807,10 @@ namespace common {
 		//当前毫秒作为随机数种子
 		int seed = abs(st.wMilliseconds - rand() % 1000);
 		seed = seed % 100;
-		float diffRate = float(seed) / 100.0;
-		float diff = (max - min) * diffRate;
-		float v = min + diff;
-		return v;
+		double diffRate = double(seed) / 100.0;
+		double diff = (max - min) * diffRate;
+		double v = min + diff;
+		return (int)v;
 	}
 }
 
