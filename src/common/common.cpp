@@ -777,6 +777,10 @@ namespace str {
 
 	bool isIp(string s)
 	{
+		if (s == "localhost")
+			return true;
+
+
 		vector<string> v;
 		str::split(v, s, ".");
 		if (v.size() != 4)return false;
@@ -802,8 +806,8 @@ namespace str {
 		string sip = s.substr(0, ipos);
 		string sport = s.substr(ipos + 1, s.length() - ipos - 1);
 
-		if (!isIp(sip))
-			return false;
+		//if (!isIp(sip))
+		//	return false;
 
 		ip = sip;
 

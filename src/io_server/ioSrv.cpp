@@ -459,7 +459,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	{
 		json jAddr;
 		jAddr["id"] = ioAddr;
-		pIoDev = ioSrv.onChildDevDiscovered(jAddr, tdsSession->ioDevType);
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr, tdsSession->ioDevType, tdsSession->tdspSubType);
 		pIoDev->m_devSubType = tdsSession->tdspSubType;
 
 		if (pIoDev->m_devSubType != "") {
@@ -1297,7 +1297,7 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
+ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type,string subType)
 {
 	ioDev* p = createIODev(type);
 	if (p == nullptr) return nullptr;
@@ -1317,7 +1317,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type)
 
 	//通知设备上线
 	p->setOnline();
-	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,设备类型=%s",p->getIOAddrStr().c_str(),type.c_str()));
+	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,设备类型=%s,子类型=%s",p->getIOAddrStr().c_str(),type.c_str(), subType.c_str()));
 
 	//通知设备发现
 	json j;

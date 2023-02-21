@@ -932,9 +932,17 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		else if (m_addrMode == DEV_ADDR_MODE::tcpServer)
 		{
 			string ip;
-			if (m_jDevAddr.contains("ip"))
+			int port = 0;
+			if (m_jDevAddr["ip"].is_string())
 				ip = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["port"].is_number_integer())
+			{
+				port = m_jDevAddr["port"].get<int>();
+			}
+
 			devAddr = ip;
+			if (!ignorePort)
+				devAddr += ":" + str::fromInt(port);
 		}
 		else if (m_addrMode == DEV_ADDR_MODE::udpServer)
 		{

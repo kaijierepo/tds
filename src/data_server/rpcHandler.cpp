@@ -394,7 +394,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 		if (params.contains("speed")) {
 			speed = params["speed"].get<float>();
 		}
-		pCam->ptz_startZoom(dir);
+		pCam->ptz_startZoom(dir,speed);
 
 		if (params.contains("time")) {
 			int time = params["time"].get<int>();

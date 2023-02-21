@@ -42,6 +42,7 @@ SOFTWARE.
 #include "base85.h"
 #include "prj.h"
 #include "common.h"
+#include "tools/demoTools.h"
 
 
 void updateEzvizAccessInfo() {
@@ -189,33 +190,6 @@ int main(int argc, char** argv)
 	tdsImp.tdsConf.mode = mode;
 	tdsImp.tdsConf.loadConf();
 
-	int simuRecCount = 0;
-	if (simuRecCount > 0)
-	{
-		tds->conf->mode = "cmd";
-		LOG("正在向数据库写入" + to_string(simuRecCount) + "条数据...");
-		TIME stT;
-		timeopt::now(&stT);
-		json j;
-		j["time"] = timeopt::st2str(stT);
-		j["temp"] = 23.5;
-		j["humidity"] = 65.1;
-		j["pm25"] = 45.5;
-		j["co2"] = 345.1;
-
-		json jA;
-		TIME ststart;
-		timeopt::now(&ststart);
-		for (int i = 0; i < simuRecCount; i++)
-		{
-			db.Insert("devicedata", stT, j);
-		}
-
-		long long tt = timeopt::CalcTimePassMilliSecond(ststart);
-		LOG("写入" + to_string(simuRecCount) + "条仿真数据, 位号:devicedata, 耗时" + str::fromInt(tt) + "ms");
-		return 0;
-	}
-
 	//专业版创建授权文件
 	if (tds->createLicence)
 	{
@@ -258,6 +232,15 @@ int main(int argc, char** argv)
 				printf(_GB("tdsd已添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
 		}*/
 		watchDog.run();
+	}
+	else if (mode == "testconf") {
+		gen_testMoConf();
+		gen_testIoConf();
+		return 0;
+	}
+	else if (mode == "testdb") {
+		gen_testdb();
+		return 0;
 	}
 #ifdef ENABLE_TOOLS
 	else if (mode == "js")
