@@ -183,7 +183,9 @@ public:
 	ioChannel* getChanByDevAddr(string addr);
 	ioChannel* getChanByIOAddr(string addr);
 	ioChannel* getChanByTag(string tag);
-	static void recursiveGetChanCount(ioDev* p, size_t& count);
+	static void recursiveGetBindedChanCount(ioDev* p, size_t& count);
+
+	void recursiveGetChanCount(ioDev* p, size_t& count);
 
 
 	std::shared_ptr<TDS_SESSION>  getStreamPusher(string tag);

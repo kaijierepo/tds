@@ -944,6 +944,15 @@ void ioServer::clear()
 	unlock_conf_unique();
 }
 
+long ioServer::getBindedChanCount()
+{
+	lock_conf_shared();
+	size_t count = 0;
+	ioDev::recursiveGetBindedChanCount(this, count);
+	unlock_conf_shared();
+	return count;
+}
+
 long ioServer::getChanCount()
 {
 	lock_conf_shared();
@@ -1201,68 +1210,142 @@ void ioServer::stop()
 bool ioServer::toJson(json& conf, json opt)
 {
 	lock_conf_shared();
-	conf = json::array();//empty array
 
 	//只差找绑定位号属于某个根位号的设备。
 	string rootTag = "";
 	string interfaceType = "net"; //默认没有串口，指定接口类型为*所有才发串口
+	bool paging = false;
+	int pageNo = 0;
+	int pageSize = 0;
+	bool getStatis = false;
+	string tagBind = "*";  
 	if (opt != nullptr)
 	{
 		if(opt.contains("rootTag"))
 			rootTag = opt["rootTag"].get<string>();
 		if (opt.contains("interface"))
 			interfaceType = opt["interface"].get<string>();
+		if (opt.contains("tagBind"))
+			 tagBind = opt["tagBind"].get<string>();
+		if (opt.contains("getStatis"))
+			getStatis = opt["getStatis"].get<bool>();
+
+		//分页参数
+		if (opt.contains("pageNo") && opt.contains("pageSize")) {
+			paging = true;
+			pageNo = opt["pageNo"].get<int>();
+			pageNo -= 1;
+			if (pageNo < 0)
+				pageNo = 0;
+			pageSize = opt["pageSize"].get<int>();
+		}
 	}
 
 	
+	vector<ioDev*>  filterRlt;
+	json jStatis;
+	size_t iOnline = 0;
+	size_t iOffline = 0;
+	size_t iTotal = 0;
+	size_t iInservice = 0;
+	size_t iSpare = 0;
+	size_t iChan = 0;
+
+
 
 	for (auto& i : m_vecChildDev)
 	{
-		json j;
-
 		//为指定所有忽略串口
-		if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
-		{
-			continue;
-		}
+		//if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
+		//{
+		//	continue;
+		//}
 		
-		if (opt != nullptr)
-		{
-			if (opt.contains("tagBind"))
-			{
-				string tagBind = opt["tagBind"].get<string>();
 
-				//指定查找智能设备。但是是非智能设备
-				if (i->m_strTagBind == "")
-				{
-					if(tagBind != "")
-						continue;
-				}
-				else
-				{
-					if (tagBind != "*" && tagBind != i->m_strTagBind)
-						continue;
-				}
+		////指定查找智能设备。但是是非智能设备
+		//if (i->m_strTagBind == "")
+		//{
+		//	if(tagBind != "")
+		//		continue;
+		//}
+		//else
+		//{
+		//	if (tagBind != "*" && tagBind != i->m_strTagBind)
+		//		continue;
+		//}
+
+		//根据指定的rootTag进行过滤；
+		if (i->m_strTagBind != "" && rootTag != "")
+		{
+			if (i->m_strTagBind.find(rootTag) == string::npos)
+			{
+				continue;
 			}
 		}
 
-		//启用设备，绑定了监控对象的，根据指定的rootTag进行过滤；
-		if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed)
-		{
-			if (i->m_strTagBind != "" && rootTag != "")
-			{
-				if (i->m_strTagBind.find(rootTag) == string::npos)
-				{
-					continue;
-				}
+		if (getStatis) {
+			i->recursiveGetChanCount(i,iChan);
+			if (i->m_bOnline) {
+				iOnline++;
 			}
+			else {
+				iOffline++;
+			}
+
+			if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
+				iInservice++;
+			}
+			else {
+				iSpare++;
+			}
+			iTotal++;
 		}
 
 
-		i->toJson(j, opt);
-		string s = j.dump();
-		conf.push_back(j);
+		filterRlt.push_back(i);
 	}
+
+	if (paging && pageSize>0) {
+		conf = json::object();
+		int recCount = filterRlt.size();
+		int pageCount = recCount / pageSize;
+
+		int startIdx = pageNo * pageSize;
+		int endIdx = pageNo * pageSize + pageSize;
+		if (endIdx > recCount) {
+			endIdx = recCount;
+		}
+
+		json jDevices;
+		for (int i = startIdx; i < endIdx; i++) {
+			json j;
+			filterRlt[i]->toJson(j, opt);
+			jDevices.push_back(j);
+		}
+
+		conf["pageNo"] = pageNo;
+		conf["pageCount"] = pageCount;
+		conf["pageSize"] = pageSize;
+		conf["devList"] = jDevices;
+		if (getStatis) {
+			jStatis["online"] = iOnline;
+			jStatis["offline"] = iOffline;
+			jStatis["inService"] = iInservice;
+			jStatis["spare"] = iSpare;
+			jStatis["channel"] = iChan;
+			conf["statis"] = jStatis;
+		}
+	}
+	else {
+		conf = json::array();
+		for (int i = 0; i < filterRlt.size(); i++) {
+			json j;
+			filterRlt[i]->toJson(j, opt);
+			conf.push_back(j);
+		}
+	}
+	
+
 	unlock_conf_shared();
 	return true;
 }

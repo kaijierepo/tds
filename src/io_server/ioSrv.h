@@ -87,6 +87,8 @@ public:
 	bool loadConfAppend(json& j);
 	void saveConf();
 	void clear(); //清空所有ioDev对象及其相关的工作线程
+	long getBindedChanCount();
+
 	long getChanCount();
 
 	//统计信息

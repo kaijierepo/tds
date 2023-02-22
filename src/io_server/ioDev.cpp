@@ -1511,7 +1511,7 @@ ioChannel* ioDev::getChanByTag(string tag)
 	return nullptr;
 }
 
-void ioDev::recursiveGetChanCount(ioDev* p, size_t& count) {
+void ioDev::recursiveGetBindedChanCount(ioDev* p, size_t& count) {
 	for (int i = 0; i < p->m_channels.size(); i++) {
 		ioChannel* pC = p->m_channels[i];
 		if (pC->m_strTagBind != "") {
@@ -1523,10 +1523,20 @@ void ioDev::recursiveGetChanCount(ioDev* p, size_t& count) {
 	for (int i = 0; i < p->m_vecChildDev.size(); i++)//网络直连设备
 	{
 		ioDev* c = p->m_vecChildDev[i];
-		recursiveGetChanCount(c, count);
+		recursiveGetBindedChanCount(c, count);
 	}
 }
 
+
+void ioDev::recursiveGetChanCount(ioDev* p, size_t& count) {
+	count += p->m_channels.size();
+
+	for (int i = 0; i < p->m_vecChildDev.size(); i++)//网络直连设备
+	{
+		ioDev* c = p->m_vecChildDev[i];
+		recursiveGetChanCount(c, count);
+	}
+}
 
 
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)

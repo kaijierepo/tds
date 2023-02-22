@@ -2441,6 +2441,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	else
 	{
 		timeopt::now(&stTimeStamp);
+		time = timeopt::st2str(stTimeStamp);
 	}
 
 
