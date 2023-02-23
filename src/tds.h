@@ -539,6 +539,15 @@ public:
 	virtual string getPath_dbRoot() = 0;
 };
 
+class i_ioServer {
+public:
+	virtual size_t getBindedChanCount() = 0;
+};
+
+class i_rpcServer {
+public:
+	virtual void setLicenceStatus(json j) = 0;
+};
 
 class i_xiaoT : public i_tdsPlugin {
 public:
@@ -608,31 +617,17 @@ public:
 	i_gzhServer* gzhServer;
 	i_smsServer* smsServer;
 	i_tdsPlugin* shellServer;
+	i_ioServer* ioServer;
+	i_rpcServer* rpcServer;
 
 	HWND uiWnd;
 	string uiWndTitle;
-
+	string m_sTitle;
 	map<string, fp_toolRun> tools;
 };
 
 
-#ifndef _TDS
 
 typedef i_tds* (*fp_getTds)();
-
-i_tds* getITDS() {
-	HMODULE hMod = LoadLibrary("tds.dll");
-	if (hMod)
-	{
-		fp_getTds pGetTds = (fp_getTds)GetProcAddress(hMod, "getTds");
-		if (pGetTds)
-		{
-			return pGetTds();
-		}
-	}
-	return NULL;
-}
-
-#endif
-
+i_tds* getITDS();
 extern i_tds* tds;

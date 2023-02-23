@@ -69,7 +69,7 @@ struct CHILD_TDS_INFO {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
-class ioServer : public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
+class ioServer : public i_ioServer, public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
 {
 public:
 	ioServer();
@@ -87,7 +87,7 @@ public:
 	bool loadConfAppend(json& j);
 	void saveConf();
 	void clear(); //清空所有ioDev对象及其相关的工作线程
-	long getBindedChanCount();
+	size_t getBindedChanCount() override;
 
 	long getChanCount();
 

@@ -29,6 +29,8 @@ SOFTWARE.
 #include "tds.h"
 #include "common.h"
 
+i_tds* tds = nullptr;
+
 string TAG::trimRoot(string tag, string root)
 {
 	if (root == "")
@@ -183,4 +185,17 @@ string TAG::resolveTag(string strTagExp, string rootTag)
 	}
 
 	return tagName;
+}
+
+i_tds* getITDS() {
+	HMODULE hMod = LoadLibrary("tds.dll");
+	if (hMod)
+	{
+		fp_getTds pGetTds = (fp_getTds)GetProcAddress(hMod, "getTds");
+		if (pGetTds)
+		{
+			return pGetTds();
+		}
+	}
+	return NULL;
 }

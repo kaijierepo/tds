@@ -207,6 +207,7 @@ TDS_imp::TDS_imp()
 	xiaoT = nullptr;
 	gzhServer = nullptr;
 	smsServer = nullptr;
+	tds = &tdsImp;
 }
 
 bool TDS_imp::setEncodeing(string encoding)

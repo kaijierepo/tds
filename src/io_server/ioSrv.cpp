@@ -122,9 +122,11 @@ ioServer::ioServer()
 	m_stopCycleAcq = false;
 	m_devType = IO_DEV_TYPE::SERVER::tds;
 	m_totalPtCount = 0;
+	tds->ioServer = this;
 }
 ioServer::~ioServer()
 {
+	stop();
 }
 
 void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
@@ -944,7 +946,7 @@ void ioServer::clear()
 	unlock_conf_unique();
 }
 
-long ioServer::getBindedChanCount()
+size_t ioServer::getBindedChanCount()
 {
 	lock_conf_shared();
 	size_t count = 0;

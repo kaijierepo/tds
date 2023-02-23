@@ -52,6 +52,7 @@ bool DownloadHTTPFile(std::string url, std::string file_save_path)//待下载文
 rpcHandler::rpcHandler()
 {
 	m_pluginHandler = NULL;
+	tds->rpcServer = this;
 }
 
 rpcHandler::~rpcHandler()
@@ -1824,6 +1825,13 @@ bool rpcHandler::needLog(string method)
 		method == "updateToken")
 		return false;
 	return true;
+}
+
+void rpcHandler::setLicenceStatus(json j)
+{
+	m_csLicenceStatus.lock();
+	m_licenceStatus = j;
+	m_csLicenceStatus.unlock();
 }
 
 bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)

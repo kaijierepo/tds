@@ -310,7 +310,7 @@ namespace charCodec {
 			if (c == '\\' && s[i + 1] == 'u') {
 				string strCode = s.substr(i + 2, 4);
 				wchar_t wchar;
-				vector<byte> vec = str::hexStrToBytes(strCode);
+				vector<unsigned char> vec = str::hexStrToBytes(strCode);
 				wchar = vec[0] * 256 + vec[1];
 				wstring wStr;
 				wStr.push_back(wchar);
@@ -708,7 +708,7 @@ namespace str {
 		return str;
 	}
 
-	string bytesToHexStr(byte* p, size_t len, string splitter)
+	string bytesToHexStr(unsigned char* p, size_t len, string splitter)
 	{
 		return bytesToHexStr((char*)p, len, splitter);
 	}
@@ -918,17 +918,18 @@ namespace timeopt {
 		unsigned short dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
 			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 		time_t tt = std::chrono::system_clock::to_time_t(now);
-		auto time_tm = localtime(&tt);
+		tm time_tm;
+		localtime_s(&time_tm,&tt);
 
 		TIME t;
-		t.wYear = time_tm->tm_year + 1900;
-		t.wMonth = time_tm->tm_mon + 1;
-		t.wDay = time_tm->tm_mday;
-		t.wHour = time_tm->tm_hour;
-		t.wMinute = time_tm->tm_min;
-		t.wSecond = time_tm->tm_sec;
+		t.wYear = time_tm.tm_year + 1900;
+		t.wMonth = time_tm.tm_mon + 1;
+		t.wDay = time_tm.tm_mday;
+		t.wHour = time_tm.tm_hour;
+		t.wMinute = time_tm.tm_min;
+		t.wSecond = time_tm.tm_sec;
 		t.wMilliseconds = dis_millseconds;
-		t.wDayOfWeek = time_tm->tm_wday;
+		t.wDayOfWeek = time_tm.tm_wday;
 
 		return t;
 	}
@@ -959,14 +960,15 @@ namespace timeopt {
 	{
 		TIME sDT;
 		time_t tIn = (time_t)iUnix;
-		tm* temptm=localtime(&tIn);
-		sDT.wYear = 1900 + temptm->tm_year;
-		sDT.wMonth = 1 + temptm->tm_mon;
-		sDT.wDay = temptm->tm_mday;
-		sDT.wDayOfWeek = temptm->tm_wday;
-		sDT.wHour = temptm->tm_hour;
-		sDT.wMinute = temptm->tm_min;
-		sDT.wSecond = temptm->tm_sec;
+		tm temptm;
+		localtime_s(&temptm,&tIn);
+		sDT.wYear = 1900 + temptm.tm_year;
+		sDT.wMonth = 1 + temptm.tm_mon;
+		sDT.wDay = temptm.tm_mday;
+		sDT.wDayOfWeek = temptm.tm_wday;
+		sDT.wHour = temptm.tm_hour;
+		sDT.wMinute = temptm.tm_min;
+		sDT.wSecond = temptm.tm_sec;
 		sDT.wMilliseconds = 0;
 		return sDT;
 	}
@@ -975,7 +977,7 @@ namespace timeopt {
 	{
 		TIME t;
 		int year, month, day, hour, min, sec;
-		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+		sscanf_s(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
 			&month,
 			&day,
@@ -1679,14 +1681,14 @@ namespace fs {
 	}
 
 	bool deleteFile(string path) {
-		return filesystem::remove(charCodec::tds_to_utf16(path));
+		return std::filesystem::remove(charCodec::tds_to_utf16(path));
 	}
 
 
 	 void getFolderList(vector<FILE_INFO>& list, string strFolder)
 	{
 		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+		 for (auto& i : std::filesystem::directory_iterator(wstrFolder)) {
 			 if (i.is_directory()) {
 				 FILE_INFO fi;
 				 fi.path = charCodec::gb_to_tds(i.path().string());
@@ -1757,18 +1759,18 @@ namespace common {
 		string str;
 #ifdef WINDOWS
 		char buf[GUID_LEN] = { 0 };
-		GUID guid;
+		_GUID id;
 
-		if (CoCreateGuid(&guid))
+		if (CoCreateGuid(&id))
 		{
 			return std::move(std::string(""));
 		}
-		sprintf(buf,
+		sprintf_s(buf,
 			"%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X",
-			guid.Data1, guid.Data2, guid.Data3,
-			guid.Data4[0], guid.Data4[1], guid.Data4[2],
-			guid.Data4[3], guid.Data4[4], guid.Data4[5],
-			guid.Data4[6], guid.Data4[7]);
+			id.Data1, id.Data2, id.Data3,
+			id.Data4[0], id.Data4[1], id.Data4[2],
+			id.Data4[3], id.Data4[4], id.Data4[5],
+			id.Data4[6], id.Data4[7]);
 
 		str = buf;
 #elif LINUX
