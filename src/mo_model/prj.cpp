@@ -265,3 +265,33 @@ bool project::loadObjTreeStatus(json& rlt, string rootTag) {
 	}
 	return true;
 }
+
+bool project::openStream(string tag, string pushTo)
+{
+	MP* pmp = prj.GetMPByTag(tag);
+	if (pmp) {
+		if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
+			LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
+			pmp->zlm_closeStreamSrc(tag);
+		}
+		bool ret = pmp->startStreamPull(); 
+		bool pushRet = false;
+		if (pushTo != "") {
+			if (ret) {
+				pushRet = pmp->startStreamPush(pushTo);
+				LOG("[流媒体  ]向上级服务推流，url=%s", pushTo.c_str());
+				if (pushRet) {
+					return true;
+				}
+			}
+		}
+		else
+		{
+			return ret;
+		}
+	}
+	else {
+		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
+	}
+	return false;
+}

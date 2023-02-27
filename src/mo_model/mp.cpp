@@ -937,7 +937,7 @@ void MP::zlm_closeStreamSrc(string tag)
 }
 
 
-void MP::zlm_openStreamSrc()
+bool MP::startStreamPull()
 {
 	string tag = getTag();
 	//string tagPinyin;
@@ -964,14 +964,58 @@ void MP::zlm_openStreamSrc()
 	auto res = cli.Get(uri, params, headers);
 	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",app=" + app + ",stream=" + tag + ",媒体源=" + m_mediaUrl);
 	if (res != nullptr) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
 		json jResp = json::parse(res->body);
 		json jData = jResp["data"];
 		if (jData != nullptr && jData["key"] != nullptr) {
 			m_mpStatus.m_pullingSrcUrl = m_mediaUrl;
+			return true;
+		}
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," + uri);
+	}
+
+	return false;
+}
+
+bool MP::startStreamPush(string desUrl)
+{
+	string tag = getTag();
+	//string tagPinyin;
+	//str::hanZi2Pinyin(tag,tagPinyin);
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
+	string streamServerUrl = "http://127.0.0.1:" + sPort;
+	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
+	//码流的app字段加入tdsID的原因
+	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
+	string app = "stream_" + prj.getTdsId();
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{ "vhost", "__defaultVhost__" },
+		{"app",app},
+		{"stream",tag},
+		{"dst_url",desUrl},
+		{"schema","rtsp"},
+		{"secret",zlmSecret}
+	};
+
+	string uri = "/index/api/addStreamPusherProxy";
+	auto res = cli.Get(uri, params, headers);
+	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",app=" + app + ",stream=" + tag + ",推流目标=" + desUrl);
+	if (res != nullptr) {
+		json jResp = json::parse(res->body);
+		json jData = jResp["data"];
+		if (jData != nullptr && jData["key"] != nullptr) {
+			return true;
 		}
 		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
 	}
 	else {
 		LOG("[error]zlm stream server 未响应," + uri);
 	}
+
+	return false;
 }

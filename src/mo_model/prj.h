@@ -69,6 +69,8 @@ public:
 	bool loadObjTreeStatus(json& rlt, string rootTag);
 	map<string, OBJ_TEMPLATE> m_mapObjTempalte;
 
+	bool openStream(string tag,string pushTo = "");
+
 private:
 	json m_jMOTree;
 	map<string, string> m_mapDataLink;

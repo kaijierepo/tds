@@ -582,22 +582,26 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			MP* pmp = pObj;
 			if (!pmp) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+				return true;
 			}
-			else {
-				if (pmp->m_mediaSrcType != "file") {
-					if (!pmp->m_bIsStreaming)
-					{
-						//string tag = pmp->getTag();
-						//zlm_openStream(tag,pmp->m_mediaUrl);
-					}
-					else {
-						LOG("码流已打开");
-					}
-				}
-				
-				rpcResp.result = "\"ok\"";
+			
+			string pushTo;
+			if (params.contains("pushTo")) {
+				string tag = params["pushTo"];
+
+				pushTo = "rtsp://" + session.remoteIP + "/stream/" + tag;
 			}
-			LOG("打开码流,tag=" + tag);
+			bool opend = prj.openStream(tag, pushTo);
+
+			if (opend)
+				rpcResp.result = RPC_OK;
+			else
+				rpcResp.error = RPC_FAIL;
+			return true;
+		}
+		else if (method == "pushStream") {
+			
+			return true;
 		}
 		else if (method == "keepStream") {
 			TIME st;
@@ -2062,7 +2066,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			pSession->isNotification = true;
 		}
 
-		pSession->lastMethodCalled = method;
+		//pSession->lastMethodCalled = method;
 			
 		//对部分命令日志记录
 		bNeedLog = needLog(method);

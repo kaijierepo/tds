@@ -316,13 +316,15 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 }
 
 
-void thread_handleRpcOverHttp(string rpcReqStr,int sock,string hostname,int port,bool isHttps)
+void thread_handleRpcOverHttp(string rpcReqStr,int sock,string localIP,int localPort,string remoteIP,int remotePort,bool isHttps)
 {
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->localIP = hostname;
-	pSession->localPort = port;
+	pSession->localIP = localIP;
+	pSession->localPort = localPort;
+	pSession->remoteIP = remoteIP;
+	pSession->remotePort = remotePort;
 	pSession->isHttps = isHttps;
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
@@ -353,25 +355,18 @@ void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shar
 }
 
 void thread_asynOpenStream(string tag) {
-	MP* pmp = prj.GetMPByTag(tag);
-	if (pmp) {
-		if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
-			LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-			pmp->zlm_closeStreamSrc(tag);
-		}
-		pmp->zlm_openStreamSrc();
-	}
-	else {
-		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
-	}
+	prj.openStream(tag);
 }
 
 bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
 	
-	//zlm中的中文被编码成url格式
+	//zlm中的中文被编码成url格式.格式如%E8%89%AF%E9%80%94%E8%BD
 	hookData = httplib::detail::decode_url(hookData,false);
+
+	//解析部分unicode编码。webRTC的hook会出现unicode编码
+	//hookData = charCodec::utf16Str_to_utf8(hookData); 
 
 	json j = json::parse(hookData);
 	string urlParam = j["params"];
@@ -389,6 +384,44 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
 		}
 
+		string tag;
+		if (jQuery.contains("stream")) {
+			tag = jQuery["stream"];
+		}
+		else {
+			tag = j["stream"];
+		}
+		
+		ioDev* pChildTds = ioSrv.getOwnerChildTdsDev(tag); 
+
+		LOG("[流媒体   ]播放监控点:%s", tag.c_str());
+
+		//如果是子服务的位号，通知子服务中转流（先拉流，后推流）
+		if (pChildTds) {
+			string childTdsTag = pChildTds->m_strTagBind;
+			LOG("[流媒体   ]该监控点属于子服务:%s,启动子服务流中转", childTdsTag.c_str());
+			string tagInChild = TAG::trimRoot(tag, childTdsTag);
+			json params;
+			params["tag"] = tagInChild;
+			params["pushTo"] = tag;
+			json err, rlt;
+			pChildTds->call("openStream", params, rlt, err);
+			if (rlt != nullptr) {
+				LOG("[流媒体   ]启动子服务流中转成功，位号:" + tag);
+			}
+
+			if (err != nullptr) {
+				LOG("[流媒体   ]启动子服务流中转失败，位号:%s,错误信息:%s", tag.c_str(),err.dump().c_str());
+			}
+			
+		}
+		//本地
+		else {
+			LOG("[流媒体   ]该监控点属于本地服务，打开媒体源");
+			thread t(thread_asynOpenStream, tag);
+			t.detach();
+		}
+
 		json resp;
 		resp["code"] = 0;
 		resp["msg"] = "success";
@@ -396,11 +429,6 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 		string resHeader, resBody;
 		resBody = resp.dump(2);
 		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
-
-
-		string tag = j["stream"];
-		thread t(thread_asynOpenStream, tag);
-		t.detach();
 	}
 	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
 		string tag = j["stream"];
@@ -664,10 +692,13 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c,false);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			mg_str* mgs_host = mg_http_get_header(hm, "Host");
-			string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
+			string sLocalAddr = str::fromBuff(mgs_host->ptr, mgs_host->len);
 			string ip; int port;
-			parseIpPort(sHost, ip, port);
-			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,ip,port,pWs->m_isHttps);
+			parseIpPort(sLocalAddr, ip, port);
+			unsigned char* pIP = (unsigned char*) &c->rem.ip;
+			string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
+			int remotePort = c->rem.port;
+			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,ip,port,remoteIP,remotePort,pWs->m_isHttps);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))

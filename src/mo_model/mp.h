@@ -89,7 +89,9 @@ public:
 
 	void zlm_closeStreamSrc(string zlmProxyKey);
 
-	void zlm_openStreamSrc();
+	bool startStreamPull();
+
+	bool startStreamPush(string desUrl);
 
 
 

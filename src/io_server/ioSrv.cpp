@@ -296,7 +296,8 @@ void ioServer::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTc
 
 void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
-	IOLogRecv((unsigned char*)recvData, recvDataLen, "UDP-" + strIP + ":" + str::fromInt(port));
+	string ioSessionAddr = "UDP-" + strIP + ":" + str::fromInt(port);
+	IOLogRecv((unsigned char*)recvData, recvDataLen, ioSessionAddr);
 
 	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
 	try {
@@ -327,7 +328,7 @@ void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, i
 			if (firstLevel) {
 				json jAddr;
 				jAddr["id"] = ioAddr;
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, IO_DEV_TYPE::DEV::tdsp_device);
 			}
 		}
 		//设备上线
@@ -461,7 +462,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	{
 		json jAddr;
 		jAddr["id"] = ioAddr;
-		pIoDev = ioSrv.onChildDevDiscovered(jAddr, tdsSession->ioDevType, tdsSession->tdspSubType);
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr,tdsSession->getRemoteAddr(), tdsSession->ioDevType, tdsSession->tdspSubType);
 		pIoDev->m_devSubType = tdsSession->tdspSubType;
 
 		if (pIoDev->m_devSubType != "") {
@@ -476,7 +477,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
 			timeopt::now(&pIoDev->m_stLastActiveTime);
-			string log = str::format("[ioDev   ]设备上线，ioAddr=%s,type=%s,subType=%s", pIoDev->getIOAddrStr().c_str(), pIoDev->m_devType.c_str(), pIoDev->m_devSubType.c_str());
+			string log = str::format("[ioDev   ]设备上线，ioAddr=%s,ioSessionAddr=%s,type=%s,subType=%s", pIoDev->getIOAddrStr().c_str(), tdsSession->getRemoteAddr().c_str(), pIoDev->m_devType.c_str(), pIoDev->m_devSubType.c_str());
 			logger.logInternal(log);
 		}
 	}
@@ -1035,7 +1036,7 @@ void ioServer::refreshSerialIODev()
 		ioDev* ls = getIODev(ci.portNum);
 		if (!ls)
 		{
-			ls = onChildDevDiscovered(ci.portNum, IO_DEV_TYPE::GW::local_serial);
+			ls = onChildDevDiscovered(ci.portNum,ci.portNum, IO_DEV_TYPE::GW::local_serial);
 			if(ls)
 				ls->m_devTypeLabel = ci.desc;
 		}
@@ -1382,7 +1383,7 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
-ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type,string subType)
+ioDev* ioServer::onChildDevDiscovered(json childDevAddr,string ioSessionAddr, string type,string subType)
 {
 	ioDev* p = createIODev(type);
 	if (p == nullptr) return nullptr;
@@ -1402,7 +1403,7 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr, string type,string subT
 
 	//通知设备上线
 	p->setOnline();
-	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,设备类型=%s,子类型=%s",p->getIOAddrStr().c_str(),type.c_str(), subType.c_str()));
+	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,ioSessionAddr=%s,设备类型=%s,子类型=%s",p->getIOAddrStr().c_str(), ioSessionAddr.c_str(), type.c_str(), subType.c_str()));
 
 	//通知设备发现
 	json j;
@@ -1729,17 +1730,17 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 
 
 			json jResp = json::parse(sResp);
-			if (!jResp.contains("method"))
+			string method;
+			if (jResp.contains("method"))
 			{
-				LOG("[error][TDSP]tdsp设备的协议数据包必须包含method字段\n" + sResp);
-				return;
+				method = jResp["method"].get<string>();
 			}
-			string method = jResp["method"].get<string>();
+			 
 			json params;
 			if (jResp.contains("params"))
 				params = jResp["params"];
 			json id = jResp["id"];
-			tdsSession->lastMethodCalled = method;
+
 			string charset = "utf8";
 			if (jResp.contains("charset"))
 			{
