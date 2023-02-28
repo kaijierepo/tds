@@ -1,5 +1,4 @@
-﻿#ifndef TDS_COMMON
-#define TDS_COMMON
+﻿#pragma once
 
 #include <time.h>
 #include <queue>
@@ -314,5 +313,3 @@ void setThreadName2(string name);
 void setThreadName(string name);
 
 #define _GB(s) charCodec::utf8_to_gb(s).c_str()
-
-#endif

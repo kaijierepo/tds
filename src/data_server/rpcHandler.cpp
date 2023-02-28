@@ -3378,7 +3378,32 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	//此处先发送到子服务的数据服务端口，让子服务再做一次重定向，使得子服务再收到该请求时可以启动码流。
 	//实现url取流的时候可以触发向视频源拉流
 	else {
-		tag = TAG::trimRoot(tag, childTdsInfo.tag);
+		//上级平台部署流媒体服务模式
+		if (pmp->m_valType == VAL_TYPE::video) {
+			if (isHttps) {
+				port = 668;
+			}
+			else {
+				port = 669;
+			}
+			j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
+			j["rtsp"] = urlProto + ip + "/stream/" + tag;
+			j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+			j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
+		}
+		else
+		{
+			if (isHttps) {
+				port = childTdsInfo.httpsPort;
+			}
+			else {
+				port = childTdsInfo.httpPort;
+			}
+			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
+		}
+
+		//子服务直接端口映射访问模式
+		/*tag = TAG::trimRoot(tag, childTdsInfo.tag);
 		ip = childTdsInfo.ip;
 		if (pmp->m_valType == VAL_TYPE::video) {
 			if (isHttps) {
@@ -3401,7 +3426,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 				port = childTdsInfo.httpPort;
 			}
 			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
-		}
+		}*/
 	}
 
 	j["isChildTds"] = isChildTds;
