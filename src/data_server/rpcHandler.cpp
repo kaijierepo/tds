@@ -550,6 +550,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			paramsChild["tag"] = tag;
 			json childRlt, childErr;
 			childTds->call(method, paramsChild, childRlt, childErr);
+			LOG("[warn][服务级联   ]转发摄像头控制指令\r\n" + session.req);
 			if (childRlt != nullptr) {
 				json jRlt;
 				if (childTds->pIOSession) {
@@ -2045,7 +2046,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 
 	//strReq = ResolveTdsRpcEvnVar(strReq, pSession);
 
-
+	pSession->req = strReq;
 	try
 	{
 		//解析请求基本信息

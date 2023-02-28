@@ -258,6 +258,8 @@ struct MODULE_BUS_MSG {
 //stateless rpc session
 class RPC_SESSION {
 public:
+	string req;
+
 	//authentification
 	string name; //name is defined by tds client
 	string user;
