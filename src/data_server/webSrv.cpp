@@ -384,6 +384,16 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
 		}
 
+		json resp;
+		resp["code"] = 0;
+		resp["msg"] = "success";
+
+		string resHeader, resBody;
+		resBody = resp.dump(2);
+		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+	}
+	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
+		json jQuery = parseParamFromQuery(urlParam); 
 		string tag;
 		if (jQuery.contains("stream")) {
 			tag = jQuery["stream"];
@@ -391,8 +401,8 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 		else {
 			tag = j["stream"];
 		}
-		
-		ioDev* pChildTds = ioSrv.getOwnerChildTdsDev(tag); 
+
+		ioDev* pChildTds = ioSrv.getOwnerChildTdsDev(tag);
 
 		LOG("[流媒体   ]播放监控点:%s", tag.c_str());
 
@@ -411,9 +421,9 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			}
 
 			if (err != nullptr) {
-				LOG("[流媒体   ]启动子服务流中转失败，位号:%s,错误信息:%s", tag.c_str(),err.dump().c_str());
+				LOG("[流媒体   ]启动子服务流中转失败，位号:%s,错误信息:%s", tag.c_str(), err.dump().c_str());
 			}
-			
+
 		}
 		//本地
 		else {
@@ -429,33 +439,6 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 		string resHeader, resBody;
 		resBody = resp.dump(2);
 		mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
-	}
-	else if(mg_http_match_uri(hm, "/zlmhook/on_stream_not_found")) {
-		string tag = j["stream"];
-		MP* pmp = prj.GetMPByTag(tag);
-		if (pmp) {
-			string tag = pmp->getTag();
-
-			//LOG("[流媒体]播放流媒体时")
-
-			//rpcSrv.zlm_openStreamSrc(tag, pmp->m_mediaUrl);
-			json resp;
-			resp["code"] = 0;
-			resp["msg"] = "success";
-
-			string resHeader, resBody;
-			resBody = resp.dump(2);
-			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
-		}
-		else {
-			json resp;
-			resp["code"] = -1;
-			resp["msg"] = "fail";
-
-			string resHeader, resBody;
-			resBody = resp.dump(2);
-			mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
-		}
 	}
 	else {
 		json resp;
