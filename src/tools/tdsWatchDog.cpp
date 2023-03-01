@@ -2,12 +2,13 @@
 #include "tdsWatchDog.h"
 #include <winver.h>
 #include "logger.h"
+#include "httplib.h"
+#include "tools/dumpCatch.h"
 
 
 #pragma comment(lib, "version.lib")
 
 tdsWatchDog watchDog;
-tdsDogFeeder dogFeeder;
 
 tdsWatchDog::tdsWatchDog()
 {
@@ -86,12 +87,12 @@ void thread_checkAdp() {
 
 
 void thread_checkFood() {
-	timeopt::now(&watchDog.m_lastFeedTime);
+	//timeopt::now(&watchDog.m_lastFeedTime);
 	//timeopt::now(&watchDog.m_lastUpdateCheckTime);
 	while (1)
 	{
-		Sleep(100);
-		int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
+		Sleep(2000);
+		//int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
 
 
 		//int updateCheckPass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastUpdateCheckTime);
@@ -120,9 +121,29 @@ void thread_checkFood() {
 
 
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
-		if (pass > 1000)
-		{
-			watchDog.log("没有检测到活动的服务，重启服务");
+
+		string addr = "http://127.0.0.1:" + str::fromInt(tds->conf->httpPort);
+
+		httplib::Client cli(addr);
+		cli.set_connection_timeout(2);
+		cli.set_read_timeout(3);
+		httplib::Params params;
+		json jReq;
+		jReq["method"] = "getDevInfo";
+		jReq["id"] = "tdsd";
+		jReq["params"] = json::object();
+		TIME start = timeopt::now();
+		auto res = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
+		int pass = timeopt::CalcTimePassMilliSecond(start);
+		//watchDog.log("get food,take millisecond:" + str::fromInt(pass));
+		if (res == nullptr) {
+			watchDog.log("没有检测到活动的服务,重启服务,rpc请求超时返回毫秒数:" + str::fromInt(pass));
+			if (watchDog.isProcessRun("tds.exe")) {
+				string path = "./dump_Ver_" + watchDog.m_curVer + "_Catch_" + timeopt::nowStrForFile() + ".dmp";
+				CDumpCatch::createDump("tds", path);
+				watchDog.log("tds运行中，但不响应请求，截取dump:" + path);
+			}
+
 			//watchDog.log("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
@@ -131,15 +152,22 @@ void thread_checkFood() {
 			wakeUpFeeder();
 			Sleep(5000);
 		}
+		else {
+			json j = json::parse(res->body);
+			if (j.contains("result")) {
+				json rlt = j["result"];
+				if (rlt.contains("softVer")) {
+					watchDog.m_curVer = rlt["softVer"];
+				}
+			}
+		}
 	}
 }
 
 void tdsWatchDog::run()
 {
 	watchDog.log("TDS Daemon 服务启动");
-	m_foodPlate.m_pCallback = this;
-	m_foodPlate.m_port = FOOD_PLATE_PORT;
-	m_foodPlate.start();
+
 	thread t(thread_checkFood);
 	t.detach();
 
@@ -477,29 +505,5 @@ void tdsWatchDog::log(string s)
 	fs::appendFile(fs::appPath() + "/tdsd.log.txt", s);
 }
 
-
-void thread_feedDog() {
-	setThreadName("feed dog thread");
-	while (1)
-	{
-		dogFeeder.sendFood();
-		Sleep(100);
-	}	
-}
-
-
-void tdsDogFeeder::run()
-{
-	m_foodCart.m_port = FOOD_FEEDER_PORT;
-	m_foodCart.start();
-	thread t(thread_feedDog);
-	t.detach();
-}
-
-void tdsDogFeeder::sendFood()
-{
-	string data = "yummy bone";
-	m_foodCart.SendData((char*)data.c_str(), data.length(), "127.0.0.1", FOOD_PLATE_PORT);
-}
 
 

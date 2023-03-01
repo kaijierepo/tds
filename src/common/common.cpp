@@ -1146,6 +1146,22 @@ namespace timeopt {
 		return time;
 	}
 
+	string st2strForFile(TIME t, bool enableMS)
+	{
+		if (enableMS) {
+			string str = str::format("%.4d_%.2d_%.2d %.2d_%.2d_%.2d.%.3d",
+				t.wYear, t.wMonth, t.wDay,
+				t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+			return str;
+		}
+		else {
+			string str = str::format("%.4d_%.2d_%.2d %.2d_%.2d_%.2d",
+				t.wYear, t.wMonth, t.wDay,
+				t.wHour, t.wMinute, t.wSecond);
+			return str;
+		}
+	}
+
 	string st2str(TIME t,bool enableMS)
 	{
 		if(enableMS){
@@ -1235,6 +1251,12 @@ namespace timeopt {
 		TIME t = now();
 
 		return st2str(t,enableMS);
+	}
+
+	string nowStrForFile(bool enableMS)
+	{
+		TIME t = now();
+		return st2strForFile(t, enableMS);
 	}
 
 	TIME addTime(TIME base, int h, int m, int s) {

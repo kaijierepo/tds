@@ -72,6 +72,64 @@ CDumpCatch::~CDumpCatch()
 	//RemoveExceptionHandle();
 }
 
+#include <windows.h>  
+#include <TlHelp32.h> 
+
+struct PROC_INFO {
+	HANDLE hProcess;
+	DWORD ProcessId;
+};
+
+bool GetProcessIdFromName(string name, PROC_INFO& pi)
+{
+	bool ret = false;
+	HANDLE  hsnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hsnapshot == INVALID_HANDLE_VALUE)
+	{
+		printf("CreateToolhelp32Snapshot Error!\n");
+		return false;
+	}
+
+	PROCESSENTRY32 pe;
+	pe.dwSize = sizeof(PROCESSENTRY32);
+
+	int flag = Process32First(hsnapshot, &pe);
+
+	while (flag != 0)
+	{
+		if (strcmp(pe.szExeFile, name.c_str()) == 0)
+		{
+			pi.ProcessId = pe.th32ProcessID;
+			pi.hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
+			ret = true;
+			break;
+		}
+		flag = Process32Next(hsnapshot, &pe);
+	}
+
+	CloseHandle(hsnapshot);
+
+	return ret;
+}
+
+
+void CDumpCatch::createDump(string processName, string dumpFilePath)
+{
+	PROC_INFO pi;
+	if (!GetProcessIdFromName(processName + ".exe", pi)) {
+		return;
+	}
+	HANDLE hDumpFile = ::CreateFile(dumpFilePath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hDumpFile == INVALID_HANDLE_VALUE)
+	{
+		return;
+	}
+	BOOL bRet = ::MiniDumpWriteDump(pi.hProcess, pi.ProcessId, hDumpFile, MiniDumpWithFullMemory,nullptr, NULL, NULL);
+	DWORD dwErr = GetLastError();
+	::CloseHandle(hDumpFile);
+	::CloseHandle(pi.hProcess);
+}
+
 BOOL CDumpCatch::ReleaseDumpFile(const std::string& strPath, EXCEPTION_POINTERS* pException)
 {
 	HANDLE hDumpFile = ::CreateFile(strPath.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);

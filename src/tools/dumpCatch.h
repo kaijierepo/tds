@@ -7,6 +7,7 @@ public:
 	CDumpCatch();
 	~CDumpCatch();
 
+	static void createDump(string processName,string dumpFilePath);
 
 	static LPTOP_LEVEL_EXCEPTION_FILTER WINAPI TempSetUnhandledExceptionFilter(LPTOP_LEVEL_EXCEPTION_FILTER lpTopLevelExceptionFilter);
 	static BOOL ReleaseDumpFile(const std::string& strPath, EXCEPTION_POINTERS* pException);

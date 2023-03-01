@@ -1127,7 +1127,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		p["softVer"] = tds->getVersion();
 		p["hardVer"] = "v1.0";
 		p["deviceId"] = tds->conf->deviceID;
-		p["deviceType"] = "TDS-Edge";
+		p["deviceType"] = "TDS-Server";
 
 		result = p.dump();
 	}

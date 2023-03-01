@@ -246,8 +246,6 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
-	dogFeeder.run();
-
 	//load tds.json
 	logger.m_bEnable = tdsConf.enableLog;
 

@@ -43,6 +43,7 @@ SOFTWARE.
 #include "prj.h"
 #include "common.h"
 #include "tools/demoTools.h"
+#include "tools/dumpCatch.h"
 
 
 void updateEzvizAccessInfo() {
@@ -240,6 +241,14 @@ int main(int argc, char** argv)
 	}
 	else if (mode == "testdb") {
 		gen_testdb();
+		return 0;
+	}
+	else if (mode == "dump") {
+		if (args.size() >= 3) {
+			string name = args[1];
+			string path = args[2];
+			CDumpCatch::createDump(name, path);
+		}
 		return 0;
 	}
 #ifdef ENABLE_TOOLS
