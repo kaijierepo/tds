@@ -88,7 +88,7 @@ bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 		param["tag"] = inputTags;
 		param["val"] = inputVals;
 		param["time"] = timeopt::st2str(st);
-		tds->callAsyn("input", param.dump());
+		tds->callAsyn("input", param);
 	}
 	
 
@@ -1072,16 +1072,25 @@ bool ioDev::onRecvPkt(json jPkt)
 
 void notifyDevOnline(json jNotify)
 {
-	setThreadName("notify dev online thread");
+	//发给客户端,tds不接受devOnline事件
 	string ioAddr = jNotify["ioAddr"];
 	rpcSrv.notify("devOnline", jNotify);
+
+	//发给数据服务
+	if (jNotify.contains("tag")) {
+		tds->callAsyn("objOnline", jNotify);
+	}
 }
 
 void notifyDevOffline(json jNotify)
 {
-	setThreadName("notify dev offline thread");
 	string ioAddr = jNotify["ioAddr"];
 	rpcSrv.notify("devOffline", jNotify);
+
+	//发给数据服务
+	if (jNotify.contains("tag")) {
+		tds->callAsyn("objOffline", jNotify);
+	}
 }
 
 void ioDev::setOnline()

@@ -306,7 +306,7 @@ void ScriptManager::exeAllVarExpScripts()
 			json jParams;
 			jParams["tag"] = i.first;
 			jParams["val"] = val;
-			tds->callAsyn("input", jParams.dump());
+			tds->callAsyn("input", jParams);
 		}
 	}
 }

@@ -416,20 +416,47 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 	return false;
 }
 
-void thread_handleRpcCall(string method,string param,int delay) {
+void thread_handleRpcCall(string method,json param,int delay) {
 	if (delay > 0) {
 		Sleep(delay);
 	}
 
-	json j = json::parse(param);
 	RPC_SESSION session;
 	RPC_RESP resp;
-	rpcSrv.handleMethodCall(method, j, resp, session); 
+	rpcSrv.handleMethodCall(method, param, resp, session);
 }
 
-void TDS_imp::callAsyn(string method, string param, int delay)
+void TDS_imp::callAsyn(string method, json& param, int delay)
 {
-	thread t(thread_handleRpcCall, method, param,delay);
+	thread t(thread_handleRpcCall, method, param, delay);
+	t.detach();
+}
+
+
+void TDS_imp::callAsyn(string method, string& param, int delay)
+{
+	json j = json::parse(param);
+	thread t(thread_handleRpcCall, method, j,delay);
+	t.detach();
+}
+
+void thread_handleBatchRpcCall(vector<json> calls, int delay) {
+	if (delay > 0) {
+		Sleep(delay);
+	}
+
+	for (int i = 0; i < calls.size(); i++) {
+		json& call = calls[i];
+
+		RPC_SESSION session;
+		RPC_RESP resp;
+		rpcSrv.handleMethodCall(call["method"], call["params"], resp, session);
+	}
+}
+
+void TDS_imp::batchCallAsyn(vector<json> calls,int delay)
+{
+	thread t(thread_handleBatchRpcCall, calls, delay);
 	t.detach();
 }
 

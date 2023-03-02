@@ -176,7 +176,7 @@ bool ioChannel::getChanVal(json& valList)
 {
 	json j;
 	string tag = m_strTagBind;
-	if (tag != "" && timeopt::isValidTime(m_stLastUpdateTime)) {
+	if (tag != "" && timeopt::isValidTime(m_stLastUpdateTime) && m_curVal!=nullptr) {
 		if (m_pParent->m_strTagBind != "") {
 			tag = m_pParent->m_strTagBind + "." + tag;
 		}
@@ -253,7 +253,7 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	param["tag"] = tagBind;
 	param["val"] = m_curVal;
 	param["time"] = timeopt::st2str(m_stLastUpdateTime);
-	tds->callAsyn("input", param.dump());
+	tds->callAsyn("input", param);
 }
 
 void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)

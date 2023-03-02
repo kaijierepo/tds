@@ -381,7 +381,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			int time = params["time"].get<int>();
 			json paramAsynCall;
 			paramAsynCall["tag"] = tag;
-			tds->callAsyn("stopPanTilt", paramAsynCall.dump(), time);
+			tds->callAsyn("stopPanTilt", paramAsynCall, time);
 		}
 	}
 	else if (method == "stopPanTilt")
@@ -401,7 +401,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			int time = params["time"].get<int>();
 			json paramAsynCall;
 			paramAsynCall["tag"] = tag;
-			tds->callAsyn("stopZoom", paramAsynCall.dump(), time);
+			tds->callAsyn("stopZoom", paramAsynCall, time);
 		}
 	}
 	else if (method == "stopZoom")
@@ -421,7 +421,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			int time = params["time"].get<int>();
 			json paramAsynCall;
 			paramAsynCall["tag"] = tag;
-			tds->callAsyn("stopFocus", paramAsynCall.dump(), time);
+			tds->callAsyn("stopFocus", paramAsynCall, time);
 		}
 	}
 	else if (method == "stopFocus")
@@ -1269,9 +1269,28 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		for (auto& binding : params) {
 			string tag = binding["tag"];
 			OBJ* p = prj.queryObj(tag);
-			if (p)
+			if (p) {
 				p->m_strIoAddrBind = binding["ioAddr"];
+			}
 		}
+	}
+	else if (method == "objOnline") {
+		string tag = params["tag"];
+		OBJ* p = prj.queryObj(tag);
+		if (p) {
+			p->m_bOnline = true;
+		}
+		LOG("[对象上线  ]位号:%s", tag.c_str());
+		rpcSrv.notify("objOnline", params);
+	}
+	else if (method == "objOffline") {
+		string tag = params["tag"];
+		OBJ* p = prj.queryObj(tag);
+		if (p) {
+			p->m_bOnline = false;
+		}
+		LOG("[对象掉线  ]位号:%s", tag.c_str());
+		rpcSrv.notify("objOffline", params);
 	}
 	else
 	{
@@ -3748,22 +3767,6 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 
 void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
 {
-	if (method == "devOnline" || method == "devOffline") {
-		if (params.contains("tag")) {
-			string tag = params["tag"];
-			OBJ* p = prj.queryObj(tag);
-			if (p) {
-				if (method == "devOnline")
-					p->m_bOnline = true;
-				else
-					p->m_bOnline = false;
-			}
-			else {
-			}
-		}
-	}
-
-
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	ServiceInterface::sendToAllWebsock(notify);

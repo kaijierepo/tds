@@ -581,7 +581,9 @@ public:
 	fp_createLicence createLicence;
 	virtual void call(string method, json& param, json& err,json& rlt,RPC_SESSION session) = 0;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
-	virtual void callAsyn(string method, string param,int delay = 0) = 0;
+	virtual void callAsyn(string method, json& param, int delay = 0) = 0;
+	virtual void callAsyn(string method, string& param,int delay = 0) = 0;
+	virtual void batchCallAsyn(vector<json> calls, int delay = 0) = 0;
 	virtual void rpcNotify(string method, string params = "", string sessionId = "") = 0;
 
 

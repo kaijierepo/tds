@@ -555,6 +555,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 	}
 }
 
+
 void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	json devList = json::array(); 
@@ -582,7 +583,48 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			//如果绑定对象改变，将缓存在io设备中的实时值同步到当前新绑定的对象，免去向设备请求一次
 			string currentTagBind = p->m_strTagBind;
 			if (currentTagBind != lastTagBind) {
+				json calls;
+				json call;
 
+				//绑定关系更新
+				//原来绑定的设备置为离线
+				json tagBindings = json::array();
+				json binding;
+				binding["ioAddr"] = "";
+				binding["tag"] = lastTagBind;
+				tagBindings.push_back(binding);
+				//新绑定设备置为当前设备状态
+				binding["ioAddr"] = p->getIOAddrStr();
+				binding["tag"] = currentTagBind;
+				tagBindings.push_back(binding);
+				call["method"] = "updateTagBinding";
+				call["params"] = tagBindings;
+				calls.push_back(call);
+
+				//离在线状态更新
+				if (p->m_bOnline) {
+					call["method"] = "objOnline";
+				}
+				else {
+					call["method"] = "objOffline";
+				}
+				call["params"] = {
+					{"tag",currentTagBind}
+				};
+				calls.push_back(call);
+				call["method"] = "objOffline";
+				call["params"] = {
+					{"tag",lastTagBind}
+				};
+
+				//值更新
+				json valList;
+				p->getChanVal(valList);
+				call["method"] = "input";
+				call["params"] = valList;
+
+		
+				tds->batchCallAsyn(calls);
 			}
 		}
 		else {
@@ -905,6 +947,7 @@ void ioServer::updateTag2IOAddrBinding()
 			json binding;
 			binding["ioAddr"] = p->getIOAddrStr();
 			binding["tag"] = p->m_strTagBind;
+			binding["online"] = p->m_bOnline;
 			tagBindings.push_back(binding);
 		}
 		for (int i = 0; i < p->m_vecChildDev.size(); i++)
@@ -915,19 +958,20 @@ void ioServer::updateTag2IOAddrBinding()
 				json binding;
 				binding["ioAddr"] = pp->getIOAddrStr();
 				binding["tag"] = pp->m_strTagBind;
+				binding["online"] = p->m_bOnline;
 				tagBindings.push_back(binding);
 			}
 		}
 	}
 	unlock_conf_shared();
-	tds->callAsyn("updateTagBinding", tagBindings.dump());
+	tds->callAsyn("updateTagBinding", tagBindings);
 }
 
 void ioServer::updateAllChanVal()
 {
 	json valList;
 	getChanVal(valList);
-	tds->callAsyn("input", valList.dump());
+	tds->callAsyn("input", valList);
 
 	for (auto& i : m_vecChildDev) {
 		if (i->m_devSubType == TDSP_SUB_TYPE::childTds) {
