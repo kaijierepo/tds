@@ -1901,6 +1901,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
 		if (pIoDev)
 		{
+			jReq.erase("tag");
 			pSession->route_ioAddr = pIoDev->getIOAddrStr();
 			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
 			logRPCRoute(method, jReq["params"], *pSession);
