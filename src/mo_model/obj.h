@@ -102,6 +102,7 @@ public:
 	double m_dbLongitudeCalib;
 	double m_dbLatitudeCalib;
 	bool m_bChildTds; //是否是下级服务
+	string m_streamAccess;
 	string m_strLastModify;  //上一次配置修改时间
 
 	//动态创建
@@ -146,7 +147,7 @@ public:
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
-	//OBJ* getOwnerChildTds();
+	OBJ* getOwnerChildTds();
 
 	OBJ_QUERIER parseQuerier(json& opt);
 	OBJ* GetRootMO();

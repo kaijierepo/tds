@@ -1,6 +1,7 @@
 #pragma once
 #include "tcpClt.h"
 #include "udpSrv.h"
+#include "kvIni.h"
 
 #define FOOD_PLATE_PORT 651
 #define FOOD_FEEDER_PORT  652
@@ -25,7 +26,10 @@ public:
 	TIME m_lastFeedTime;
 	TIME m_lastUpdateCheckTime;
 	string m_curVer;
+	string m_tdsAddr;
 	void log(string s);
+
+	KV_INI m_conf;
 };
 
 

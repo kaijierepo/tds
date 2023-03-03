@@ -722,7 +722,7 @@ void ioServer::rpc_stopDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 			ioDev_tdsp* pTdsp = (ioDev_tdsp*)pD;
 			json jp = json::object();
 			json rlt, err;
-			pTdsp->call("stopUpgrade", jp, rlt, err, true);
+			pTdsp->call("stopUpgrade", jp, nullptr, rlt, err, true);
 
 			if (rlt != nullptr) {
 				rpcResp.result = rlt.dump();
@@ -795,7 +795,7 @@ void ioServer::rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 					jp["data"] = base64Data;
 					jp["crc"] = common::N_CRC16(ui.fileData + pktNo * pktLen, pktLen);
 					json rlt, err;
-					pTdsp->call("uploadFirmware", jp, rlt, err);
+					pTdsp->call("uploadFirmware", jp, nullptr, rlt, err);
 					
 					if (rlt != nullptr) {
 						json jRlt = params;

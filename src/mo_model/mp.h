@@ -64,6 +64,7 @@ public:
 	bool loadConf(json& conf) override;
 	bool loadStatus(json& status) override;
 	bool toJson(json& conf, OBJ_QUERIER q) override;
+	string getValDesc(json& jVal, bool getUnit = true);
 	bool toJson(json& conf, json serializeOption) override;
 	bool loadStatus(OBJ* pSrc,TIME* dataTime = nullptr, bool saveToDB = true) override;
 	void calcAlarm();

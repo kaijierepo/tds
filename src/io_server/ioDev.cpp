@@ -663,11 +663,16 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 	jReq.erase("user");
 	jReq.erase("token");
 
+	json jSessionParams; 
+	if (jReq.contains("tag")) {
+		jSessionParams["tag"] = jReq["tag"];
+	}
+
 
 	json jRlt, jErr;
 	//发起同步请求，此处阻塞
 	bool callRet = false;
-	pIoDev->call(method, jParams, jRlt, jErr);
+	pIoDev->call(method, jParams, jSessionParams, jRlt, jErr);
 	if (jRlt != nullptr) {
 		rpcResp.result = jRlt.dump();
 		LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());

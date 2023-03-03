@@ -118,7 +118,7 @@ public:
 	virtual bool isCamera() { return false; };
 	virtual string getDesc();
 	void triggerCycleAcq();
-	virtual void call(string method, json params, json& result, json& error, bool sync = true) {  };
+	virtual void call(string method, json params, json sessionParams, json& result, json& error, bool sync = true) {  };
 	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 
 	//将io设备内缓存的实时数据全部同步到绑定的位号

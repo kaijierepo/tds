@@ -415,7 +415,7 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			params["tag"] = tagInChild;
 			params["pushTo"] = tag;
 			json err, rlt;
-			pChildTds->call("openStream", params, rlt, err);
+			pChildTds->call("openStream", params, nullptr, rlt, err);
 			if (rlt != nullptr) {
 				LOG("[流媒体   ]启动子服务流中转成功，位号:" + tag);
 			}
@@ -1164,7 +1164,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 					params["socketType"] = "tcp";
 
 					json childRlt, childErr;
-					pChlidTdsDev->call("startPushStream", params, childRlt, childErr, true);
+					pChlidTdsDev->call("startPushStream", params, nullptr, childRlt, childErr, true);
 					if (childRlt != nullptr) {
 						pusherStarted = true;
 					}

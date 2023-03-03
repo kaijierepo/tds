@@ -3,7 +3,7 @@ subwcrev.exe ../ "../src/version.temp.h" "../src/version.h"
 copy "..\src\res\tds.temp.rc" "..\src\res\tds.rc"
 
 cd ..\
-svn up
+%svn up%
 for /F %%i in ('svn info --show-item  revision') do set svnVersion=%%i
 echo %svnVersion%
 set buildDate=%date:~0,4%%date:~5,2%%date:~8,2%

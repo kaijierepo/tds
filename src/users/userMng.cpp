@@ -5,6 +5,7 @@
 #include "logger.h"
 #define PBKDF2_SHA256_IMPLEMENTATION
 #include "pbkdf2_sha256.h"
+#include "logServer/logServer.h"
 
 userManager userMng;
 
@@ -750,6 +751,15 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				m_csAccessToken.unlock();
 				saveTokens();
 				resp.result = userInfo.dump(4);
+
+				json logParams;
+				logParams["src"] = "用户:" + user;
+				logParams["object"] = "系统";
+				logParams["type"] = "登录";
+				logParams["org"] = session.org;
+				logParams["host"] = session.remoteAddr;
+				logParams["info"] = "";
+				logSrv.rpc_addLog(logParams, session);
 			}
 			else {
 

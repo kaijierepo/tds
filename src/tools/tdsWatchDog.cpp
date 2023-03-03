@@ -6,6 +6,7 @@
 #include "tools/dumpCatch.h"
 
 
+
 #pragma comment(lib, "version.lib")
 
 tdsWatchDog watchDog;
@@ -122,7 +123,7 @@ void thread_checkFood() {
 
 		//LOG("[keyinfo]wait food for " + str::fromInt(pass));
 
-		string addr = "http://127.0.0.1:" + str::fromInt(tds->conf->httpPort);
+		string addr = watchDog.m_tdsAddr;
 
 		httplib::Client cli(addr);
 		cli.set_connection_timeout(2);
@@ -167,6 +168,11 @@ void thread_checkFood() {
 void tdsWatchDog::run()
 {
 	watchDog.log("TDS Daemon 服务启动");
+
+	m_conf.load("./tds.ini");
+
+	watchDog.m_tdsAddr = "http://127.0.0.1:" + m_conf.getValStr("httpPort","667");
+	LOG("TDS服务地址: " + watchDog.m_tdsAddr);
 
 	thread t(thread_checkFood);
 	t.detach();

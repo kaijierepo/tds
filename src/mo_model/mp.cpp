@@ -457,41 +457,43 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	return true;
 }
 
-
-string MP::getValDesc(bool getUnit) {
+string MP::getValDesc(json& jVal,bool getUnit) {
 	string valDesc;
-	if (m_curVal.is_number_float()) {
+	if (jVal.is_number_float()) {
 		if (m_decimalDigits >= 0) {
 			string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
-			valDesc = str::format(formatter.c_str(), m_curVal.get<float>());
+			valDesc = str::format(formatter.c_str(), jVal.get<float>());
 		}
 		else {
-			valDesc = m_curVal.dump();
+			valDesc = jVal.dump();
 		}
 	}
-	else if (m_curVal.is_number_integer()) {
+	else if (jVal.is_number_integer()) {
 		if (m_isEnum) {
-			valDesc = mapEnumVal[m_curVal.get<int>()];
+			valDesc = mapEnumVal[jVal.get<int>()];
 		}
 		else
-			valDesc = m_curVal.dump();
+			valDesc = jVal.dump();
 	}
-	else if (m_curVal.is_boolean()) {
+	else if (jVal.is_boolean()) {
 		//根据监控点名称自动生成值描述
-		if (m_curVal != nullptr) {
-			if (m_name.find("开关") >= 0) {
-				valDesc = m_curVal.get<bool>() ? "开" : "关";
+		if (jVal != nullptr) {
+			if (m_name.find("开关") != string::npos) {
+				valDesc = jVal.get<bool>() ? "开" : "关";
+			}
+			else if (m_name.find("静音") != string::npos) {
+				valDesc = jVal.get<bool>() ? "是" : "否";
 			}
 			else {
-				valDesc = m_curVal.dump();
+				valDesc = jVal.get<bool>() ? "开" : "关";
 			}
 		}
 		else {
 			valDesc = "-";
 		}
 	}
-	else if (m_curVal.is_string()) {
-		valDesc = m_curVal.get<string>();
+	else if (jVal.is_string()) {
+		valDesc = jVal.get<string>();
 	}
 	else {
 		valDesc = "-";
@@ -500,6 +502,11 @@ string MP::getValDesc(bool getUnit) {
 		valDesc += m_strUnit;
 	}
 	return valDesc;
+}
+
+
+string MP::getValDesc(bool getUnit) {
+	return getValDesc(m_curVal, getUnit);
 }
 
 bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
@@ -780,7 +787,7 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 		params["val"] = jVal;
 		json childRlt, childErr;
 		LOG("[warn][数据输出  ]请求子服务，tag=%s,子服务名称:%s", tag.c_str(), childTdsTag.c_str());
-		pDev->call("output", params, childRlt, childErr, sync);
+		pDev->call("output", params, nullptr, childRlt, childErr, sync);
 		if (childRlt != nullptr) {
 			rlt = params;
 			m_curVal = jVal;

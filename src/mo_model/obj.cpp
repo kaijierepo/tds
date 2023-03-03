@@ -99,6 +99,9 @@ bool OBJ::loadConf(json& conf)
 	if (conf.contains("childTds")) {
 		m_bChildTds = conf["childTds"].get<bool>();
 	}
+	if (conf.contains("streamAccess")) {
+		m_streamAccess = conf["streamAccess"].get<string>();
+	}
 	if (conf.contains("group")) {
 		m_groupName = conf["group"].get<string>();
 	}
@@ -244,8 +247,11 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 
 
 	if (q.getConf) {
-		if (m_bChildTds)
+		if (m_bChildTds) {
 			conf["childTds"] = true;
+			conf["streamAccess"] = m_streamAccess;
+		}
+			
 		if (m_customType != "")
 			conf["customType"] = m_customType;
 		if (m_customTypeLabel != "")
@@ -411,19 +417,19 @@ void OBJ::clearChildren()
 	m_childObj.clear();
 }
 
-//OBJ* OBJ::getOwnerChildTds()
-//{
-//	OBJ* pTmp = this;
-//	while (pTmp)
-//	{
-//		if (pTmp->m_bChildTds && pTmp->m_pParentMO!=nullptr)
-//			return pTmp;
-//
-//		pTmp = pTmp->m_pParentMO;
-//	}
-//
-//	return nullptr;
-//}
+OBJ* OBJ::getOwnerChildTds()
+{
+	OBJ* pTmp = this;
+	while (pTmp)
+	{
+		if (pTmp->m_bChildTds && pTmp->m_pParentMO!=nullptr)
+			return pTmp;
+
+		pTmp = pTmp->m_pParentMO;
+	}
+
+	return nullptr;
+}
 
 
 OBJ* OBJ::GetProjectMO()

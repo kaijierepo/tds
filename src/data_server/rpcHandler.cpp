@@ -549,7 +549,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			json paramsChild = params;
 			paramsChild["tag"] = tag;
 			json childRlt, childErr;
-			childTds->call(method, paramsChild, childRlt, childErr);
+			childTds->call(method, paramsChild, nullptr, childRlt, childErr);
 			LOG("[warn][服务级联   ]转发摄像头控制指令\r\n" + session.req);
 			if (childRlt != nullptr) {
 				json jRlt;
@@ -1688,7 +1688,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		logSrv.rpc_addLog(params, session);
 		rpcResp.result = "\"ok\"";
 	}
-	else if (method == "queryLog")
+	else if (method == "queryLog" || method == "getLog")
 	{
 		rpcResp.result = logSrv.rpc_queryLog(params, session);
 	}
@@ -1896,16 +1896,29 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 	else if (jReq.contains("tag")) {
 		string tag = jReq["tag"].get<string>();
 		tag = TAG::addRoot(tag, pSession->org);
+
+		//查找是否有直接绑定的设备
 		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
-		if (!pIoDev)
+		if (pIoDev)
 		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
+			pSession->route_ioAddr = pIoDev->getIOAddrStr();
+			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+			logRPCRoute(method, jReq["params"], *pSession);
 			return true;
 		}
-		pSession->route_ioAddr = pIoDev->getIOAddrStr();
 
-		pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
-		logRPCRoute(method, jReq["params"], *pSession);
+		//查看是否属于子服务.转变为对子服务的路由请求
+		ioDev* pChildTds = ioSrv.getOwnerChildTdsDev(tag);
+		if (pChildTds) {
+			string childTdsTag = pChildTds->m_strTagBind;
+			string tagInChild = TAG::trimRoot(tag, childTdsTag);
+			jReq["tag"] = tagInChild;
+			pChildTds->handleDevRpcCall(jReq, rpcResp, pSession);
+			return true;
+		}
+
+
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
 		return true;
 
 		/*string tag = jReq["tag"].get<string>();
@@ -1956,41 +1969,41 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 			return true;
 		}*/
 	}
-	else if (jReq.contains("childTds"))
-	{
-		jReq.erase("user");
-		jReq.erase("token");
-		pSession->route_childTds = jReq["childTds"];
-		ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
-		if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
-		{
-			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的 TDS下级服务 设备");
-		}
-		return true;
-	}
+	//else if (jReq.contains("childTds"))
+	//{
+	//	jReq.erase("user");
+	//	jReq.erase("token");
+	//	pSession->route_childTds = jReq["childTds"];
+	//	ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
+	//	if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
+	//	{
+	//		pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+	//	}
+	//	else {
+	//		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的 TDS下级服务 设备");
+	//	}
+	//	return true;
+	//}
 	return false;
 }
 
 void rpcHandler::logRPCRoute(string method,json& params,RPC_SESSION& session) {
 	if (method == "startRepel") {
 		json logParams;
-		logParams["object"] = "用户:" + session.user;
-		logParams["event"] = "探驱联动开始";
+		logParams["src"] = "用户:" + session.user;
+		logParams["type"] = "探驱联动开始";
 		logParams["org"] = session.org;
 		logParams["host"] = session.remoteAddr;
-		logParams["detail"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
+		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
 		logSrv.rpc_addLog(logParams, session);
 	}	
 	else if (method == "stopRepel") {
 		json logParams;
-		logParams["object"] = "用户:" + session.user;
-		logParams["event"] = "探驱联动结束";
+		logParams["src"] = "用户:" + session.user;
+		logParams["type"] = "探驱联动结束";
 		logParams["org"] = session.org;
 		logParams["host"] = session.remoteAddr;
-		logParams["detail"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr;
+		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr;
 		logSrv.rpc_addLog(logParams, session);
 	}
 }
@@ -2178,13 +2191,13 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		}
 
 		//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
-		if (!bEdgeDevMode) 
-		{
+		//if (!bEdgeDevMode) 
+		//{
 			if (handleRpcRoute(strReq, jReq, rpcResp, pSession))
 			{
 				goto HANDLE_END;
 			}
-		}
+		//}
 		
 		//通知消息，无需生成响应，转发后直接返回
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
@@ -2430,6 +2443,17 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	else {
 		resp.result = "\"output cmd sended\"";
 	}
+
+	string valDesc = pmp->getValDesc(val);
+
+	json logParams;
+	logParams["src"] = "用户:" + session.user;
+	logParams["object"] = tag;
+	logParams["type"] = "控制输出";
+	logParams["org"] = session.org;
+	logParams["host"] = session.remoteAddr;
+	logParams["info"] = "设置为:" + valDesc;;
+	logSrv.rpc_addLog(logParams, session);
 }
 
 
@@ -3337,7 +3361,10 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	//重定向到子服务
 	CHILD_TDS_INFO childTdsInfo;
 	bool isChildTds = ioSrv.getOwnerChildTdsInfo(tag,childTdsInfo);
-
+	OBJ* pObjChildTds = pmp->getOwnerChildTds();
+	if (!pObjChildTds) {
+		isChildTds = false;
+	}
 
 	//string tagPinyin;
 	//str::hanZi2Pinyin(tag, tagPinyin);
@@ -3394,58 +3421,63 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 		}
 	}
-	//此处先发送到子服务的数据服务端口，让子服务再做一次重定向，使得子服务再收到该请求时可以启动码流。
-	//实现url取流的时候可以触发向视频源拉流
+	//访问子服务数据流
 	else {
-		//上级平台部署流媒体服务模式
-		if (pmp->m_valType == VAL_TYPE::video) {
-			if (isHttps) {
-				port = 668;
+		//直连子服务
+		if (pObjChildTds->m_streamAccess == "direct") {
+			//子服务直接端口映射访问模式
+			//此处先发送到子服务的数据服务端口，让子服务再做一次重定向，使得子服务再收到该请求时可以启动码流。
+			tag = TAG::trimRoot(tag, childTdsInfo.tag);
+			ip = childTdsInfo.ip;
+			if (pmp->m_valType == VAL_TYPE::video) {
+				if (isHttps) {
+					port = childTdsInfo.httpsPort;
+				}
+				else {
+					port = childTdsInfo.httpPort;
+				}
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
+				j["rtsp"] = urlProto + ip + "/stream/" + tag ;
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtc";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
 			}
-			else {
-				port = 669;
+			else
+			{
+				if (isHttps) {
+					port = childTdsInfo.httpsPort;
+				}
+				else {
+					port = childTdsInfo.httpPort;
+				}
+				j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 			}
-			j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
-			j["rtsp"] = urlProto + ip + "/stream/" + tag;
-			j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
-			j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
 		}
-		else
+		//码流从上级服务中转
+		else// (pmp->m_streamAccess == "relay") 
 		{
-			if (isHttps) {
-				port = childTdsInfo.httpsPort;
+			if (pmp->m_valType == VAL_TYPE::video) {
+				if (isHttps) {
+					port = 668;
+				}
+				else {
+					port = 669;
+				}
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
+				j["rtsp"] = urlProto + ip + "/stream/" + tag;
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
 			}
-			else {
-				port = childTdsInfo.httpPort;
+			else
+			{
+				if (isHttps) {
+					port = childTdsInfo.httpsPort;
+				}
+				else {
+					port = childTdsInfo.httpPort;
+				}
+				j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 			}
-			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
 		}
-
-		//子服务直接端口映射访问模式
-		/*tag = TAG::trimRoot(tag, childTdsInfo.tag);
-		ip = childTdsInfo.ip;
-		if (pmp->m_valType == VAL_TYPE::video) {
-			if (isHttps) {
-				port = childTdsInfo.httpsPort;
-			}
-			else {
-				port = childTdsInfo.httpPort;
-			}
-			j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
-			j["rtsp"] = urlProto + ip + "/stream/" + tag ;
-			j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".rtc";
-			j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".hls";
-		}
-		else
-		{
-			if (isHttps) {
-				port = childTdsInfo.httpsPort;
-			}
-			else {
-				port = childTdsInfo.httpPort;
-			}
-			j["de"] = wsProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".de";
-		}*/
 	}
 
 	j["isChildTds"] = isChildTds;
