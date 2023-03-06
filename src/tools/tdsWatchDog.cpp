@@ -232,7 +232,7 @@ bool tdsWatchDog::runProcess(string cmdline) {
 bool tdsWatchDog::isProcessRun(string name)
 {
 	HANDLE hProcessSnap;
-	HANDLE hProcess;
+	//HANDLE hProcess;
 	PROCESSENTRY32 pe32;
 	DWORD dwPriorityClass;
 

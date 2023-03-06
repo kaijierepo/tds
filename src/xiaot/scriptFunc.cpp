@@ -119,12 +119,12 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 		}
 	}
 	else if (jVal.is_array()) {
-		jerryVal = jerry_create_array(jVal.size());
+		jerryVal = jerry_create_array((uint32_t)jVal.size());
 		for (size_t i = 0; i < jVal.size(); i++) {
 			json jItem = jVal[i];
 			jerry_value_t array_value;
 			jsonVal2jerryVal(jItem, array_value);
-			jerry_set_property_by_index(jerryVal, i, array_value);
+			jerry_set_property_by_index(jerryVal, (uint32_t)i, array_value);
 		}
 	}
 }
