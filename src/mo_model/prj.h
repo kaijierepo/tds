@@ -12,6 +12,17 @@ struct OBJ_TEMPLATE {
 	string type;
 	string typeLabel;
 	json tplData;
+	OBJ* obj;
+
+	OBJ_TEMPLATE() {
+		obj = nullptr;
+	}
+
+	~OBJ_TEMPLATE() {
+		if (obj) {
+			delete obj;
+		}
+	}
 };
 
 class ioServer;

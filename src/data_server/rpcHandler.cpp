@@ -3029,6 +3029,9 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		rpc_moList2table(attrParam, moList, resp, session);
 }
 
+
+//返回1个具有 header,body,tag3个字段的结果
+//header根据对象模版生成，位号为所有的mp，递归平铺
 void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session)
 {
 	json jTable = json::object();
@@ -3041,11 +3044,9 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 	map<string, OBJ_TEMPLATE>::iterator it = prj.m_mapObjTempalte.find(params.moType);
 	if (it != prj.m_mapObjTempalte.end()) {
 		OBJ_TEMPLATE& ot = it->second;
-		OBJ obj;
-		obj.loadConf(ot.tplData);
 		vector<MP*> mps;
-		obj.GetAttriMp(mps);
-		string parentTag = obj.getTag();
+		ot.obj->GetAttriMp(mps);
+		string parentTag = ot.obj->getTag();
 		if (mps.size() > 0) {
 			jTableHead.push_back("位号");
 			jColTag.push_back(nullptr);

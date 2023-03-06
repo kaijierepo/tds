@@ -196,6 +196,8 @@ bool project::loadObjTemplate()
 				string p1 = tds->conf->confPath + "/template/object/" + ct.type + ".json";
 				if (fs::readFile(p1, tplDataStr)) {
 					ct.tplData = json::parse(tplDataStr);
+					ct.obj = new OBJ();
+					ct.obj->loadConf(ct.tplData);
 					m_mapObjTempalte[ct.type] = ct;
 				}
 			}
@@ -209,6 +211,7 @@ bool project::loadObjTemplate()
 
 void project::saveObjTemplate(OBJ_TEMPLATE& ot)
 {
+	prj.m_mapObjTempalte.erase(ot.type);
 	prj.m_mapObjTempalte[ot.type] = ot;
 
 
