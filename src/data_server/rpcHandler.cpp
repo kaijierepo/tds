@@ -1181,8 +1181,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		if (params.contains("type")) {
 			string type = params["type"];
 			if (prj.m_mapObjTempalte.find(type) != prj.m_mapObjTempalte.end()) {
-				OBJ_TEMPLATE ct = prj.m_mapObjTempalte[type];
-				rpcResp.result = ct.tplData;
+				OBJ_TEMPLATE* ct = prj.m_mapObjTempalte[type];
+				rpcResp.result = ct->tplData;
 			}
 			else {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::OBJ_templateNotFound, "object template not found");
@@ -1193,11 +1193,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 	}
 	else if (method == "setObjTemplate") {
-		OBJ_TEMPLATE ct;
-		ct.typeLabel = params["typeLabel"];
-		str::hanZi2Pinyin(ct.typeLabel, ct.type);
-		ct.tplData = params["tplData"];
-		prj.saveObjTemplate(ct);
+		prj.setObjTemplate(params);
 		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "setObj")
@@ -3041,12 +3037,12 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 
 
 	//根据对象模版生成列模版
-	map<string, OBJ_TEMPLATE>::iterator it = prj.m_mapObjTempalte.find(params.moType);
+	map<string, OBJ_TEMPLATE*>::iterator it = prj.m_mapObjTempalte.find(params.moType);
 	if (it != prj.m_mapObjTempalte.end()) {
-		OBJ_TEMPLATE& ot = it->second;
+		OBJ_TEMPLATE* ot = it->second;
 		vector<MP*> mps;
-		ot.obj->GetAttriMp(mps);
-		string parentTag = ot.obj->getTag();
+		ot->obj.GetAttriMp(mps);
+		string parentTag = ot->obj.getTag();
 		if (mps.size() > 0) {
 			jTableHead.push_back("位号");
 			jColTag.push_back(nullptr);

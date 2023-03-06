@@ -12,16 +12,14 @@ struct OBJ_TEMPLATE {
 	string type;
 	string typeLabel;
 	json tplData;
-	OBJ* obj;
+	OBJ obj;
 
 	OBJ_TEMPLATE() {
-		obj = nullptr;
+
 	}
 
 	~OBJ_TEMPLATE() {
-		if (obj) {
-			delete obj;
-		}
+
 	}
 };
 
@@ -75,10 +73,10 @@ public:
 	//对象模版配置
 	json getObjTemplate(string objTplType);
 	bool loadObjTemplate();
-	void saveObjTemplate(OBJ_TEMPLATE& ot);
+	void setObjTemplate(json& params);
 	void getAllVarExpScript();
 	bool loadObjTreeStatus(json& rlt, string rootTag);
-	map<string, OBJ_TEMPLATE> m_mapObjTempalte;
+	map<string, OBJ_TEMPLATE*> m_mapObjTempalte;
 
 	bool openStream(string tag,string pushTo = "");
 

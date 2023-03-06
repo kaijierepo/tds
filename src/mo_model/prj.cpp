@@ -175,7 +175,7 @@ json project::getObjTemplate(string devTplType)
 	for (auto& i : m_mapObjTempalte) {
 		string tplName = i.first;
 		if (devTplType.find(tplName) != string::npos) {
-			return i.second.tplData;
+			return i.second->tplData;
 		}
 	}
 	return nullptr;
@@ -189,16 +189,19 @@ bool project::loadObjTemplate()
 		try {
 			json jTplList = json::parse(tplListStr);
 			for (auto& i : jTplList) {
-				OBJ_TEMPLATE ct;
+				OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
+				OBJ_TEMPLATE& ct = *pct;
 				ct.type = i["type"];
 				ct.typeLabel = i["typeLabel"];
 				string tplDataStr;
 				string p1 = tds->conf->confPath + "/template/object/" + ct.type + ".json";
 				if (fs::readFile(p1, tplDataStr)) {
 					ct.tplData = json::parse(tplDataStr);
-					ct.obj = new OBJ();
-					ct.obj->loadConf(ct.tplData);
-					m_mapObjTempalte[ct.type] = ct;
+					ct.obj.loadConf(ct.tplData);
+					m_mapObjTempalte[ct.type] = pct;
+				}
+				else {
+					delete pct;
 				}
 			}
 		}
@@ -209,10 +212,19 @@ bool project::loadObjTemplate()
 	return false;
 }
 
-void project::saveObjTemplate(OBJ_TEMPLATE& ot)
+void project::setObjTemplate(json& params)
 {
-	prj.m_mapObjTempalte.erase(ot.type);
-	prj.m_mapObjTempalte[ot.type] = ot;
+	OBJ_TEMPLATE* ct  = new OBJ_TEMPLATE();
+	ct->typeLabel = params["typeLabel"];
+	str::hanZi2Pinyin(ct->typeLabel, ct->type);
+	ct->tplData = params["tplData"];
+	ct->obj.loadConf(ct->tplData);
+
+	auto pOld = m_mapObjTempalte.find(ct->type);
+	if (pOld != m_mapObjTempalte.end()) {
+		delete pOld->second;
+	}
+	prj.m_mapObjTempalte[ct->type] = ct;
 
 
 	//保存索引信息
@@ -220,8 +232,8 @@ void project::saveObjTemplate(OBJ_TEMPLATE& ot)
 	json jConf = json::array();
 	for (auto& i : m_mapObjTempalte) {
 		json c;
-		c["type"] = i.second.type;
-		c["typeLabel"] = i.second.typeLabel;
+		c["type"] = i.second->type;
+		c["typeLabel"] = i.second->typeLabel;
 		jConf.push_back(c);
 	}
 	string sConf = jConf.dump(2);
@@ -230,8 +242,8 @@ void project::saveObjTemplate(OBJ_TEMPLATE& ot)
 
 
 	string chanPath = tds->conf->confPath + "/template/object/";
-	string s = ot.tplData.dump(2);
-	fs::writeFile(chanPath + "/" + ot.type + ".json", s);
+	string s = ct->tplData.dump(2);
+	fs::writeFile(chanPath + "/" + ct->type + ".json", s);
 }
 
 void project::getAllVarExpScript()
