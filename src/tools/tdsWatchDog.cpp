@@ -135,7 +135,7 @@ void thread_checkFood() {
 		jReq["params"] = json::object();
 		TIME start = timeopt::now();
 		auto res = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
-		int pass = timeopt::CalcTimePassMilliSecond(start);
+		time_t pass = timeopt::CalcTimePassMilliSecond(start);
 		//watchDog.log("get food,take millisecond:" + str::fromInt(pass));
 		if (res == nullptr) {
 			watchDog.log("没有检测到活动的服务,重启服务,rpc请求超时返回毫秒数:" + str::fromInt(pass));

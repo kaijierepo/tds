@@ -532,6 +532,7 @@ bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
 	}
 	else
 		return false;
+	return true;
 }
 
 void MP::calcAlarm()

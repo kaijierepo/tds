@@ -205,7 +205,7 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 				//发送1包
 				mg_ws_send(parent, (const char*)c->recv.buf + WS_PKT_HEADER_LEN, pktLen - WS_PKT_HEADER_LEN, WEBSOCKET_OP_TEXT);
 				//删除已发送数据
-				long leftLen = c->recv.len - pktLen;
+				size_t leftLen = c->recv.len - pktLen;
 				memcpy(c->recv.buf, c->recv.buf + pktLen, leftLen);
 				c->recv.len = leftLen;
 			}
@@ -331,7 +331,7 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string localIP,int local
 	string resBody = resp.strResp;
 	string ctLen = to_string(resBody.length());
 
-	int isend = send(sock,resBody.c_str(), resBody.length(),MSG_DONTROUTE);   
+	int isend = send(sock,resBody.c_str(), (int)resBody.length(),MSG_DONTROUTE);   
 	//closesocket(sock);                      // Close the connection
 	shutdown(sock, SD_BOTH);
 }
@@ -903,9 +903,9 @@ int ServiceInterface::sendToWs(unsigned char* p, size_t len, int sockPipe)
 	char* pData = new char[sizeof(len) + len];
 	memcpy(pData, &len, sizeof(len));
 	memcpy(pData + sizeof(len), p, len);
-	int iStart = GetTickCount();
-	int iSend = send(sockPipe, pData, len + sizeof(len), MSG_DONTROUTE);
-	int iEnd = GetTickCount();
+	DWORD iStart = GetTickCount();
+	int iSend = send(sockPipe, pData, len + (int)sizeof(len), MSG_DONTROUTE);
+	DWORD iEnd = GetTickCount();
 
 	if (iEnd - iStart > 500) {
 		LOG("[warn]sendToWs 阻塞，时间:%d", iEnd - iStart);

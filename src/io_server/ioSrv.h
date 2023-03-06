@@ -89,7 +89,7 @@ public:
 	void clear(); //清空所有ioDev对象及其相关的工作线程
 	size_t getBindedChanCount() override;
 
-	long getChanCount();
+	size_t getChanCount();
 
 	//统计信息
 	int m_totalPtCount;

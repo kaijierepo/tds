@@ -75,10 +75,10 @@ namespace charCodec {
 	{
 		string str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 4 + 2;
+		size_t MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete charstr;
 #endif
@@ -94,7 +94,7 @@ namespace charCodec {
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, MAX_STRSIZE, NULL, NULL);
+		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr,(int) MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete charstr;
 #endif
@@ -107,10 +107,10 @@ namespace charCodec {
 	{
 		wstring str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
 		str = wcharstr;
 		delete[] wcharstr;
 		
@@ -124,10 +124,10 @@ namespace charCodec {
 	{
 		wstring str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr,(int)MAX_STRSIZE);
 		str = wcharstr;
 		delete wcharstr;
 #endif
@@ -141,13 +141,13 @@ namespace charCodec {
 	{
 		string str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr,(int) MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete wcharstr;
 		delete charstr;
@@ -187,13 +187,13 @@ namespace charCodec {
 	{
 		string str;
 #ifdef WINDOWS
-		int MAX_STRSIZE = instr.length() * 2 + 2;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr,(int) MAX_STRSIZE);
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete wcharstr;
 		delete charstr;
@@ -231,7 +231,7 @@ namespace charCodec {
 	//GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
 	bool hasGB2312(string s)
 	{
-		for (int i = 0; i < s.length(); i++)
+		for (size_t i = 0; i < s.length(); i++)
 		{
 			int b = (int)(unsigned char)s.at(i);
 			if (b >= 0xA1 && b <= 0xFE) //gb2312
@@ -251,7 +251,7 @@ namespace charCodec {
 	}
 	bool isValidGB2312(string s, size_t& errorPos, string& errorChar)
 	{
-		for (int i = 0; i < s.length();)
+		for (size_t i = 0; i < s.length();)
 		{
 			int b = (int)(unsigned char)s.at(i);
 			if (b > 0 && b < 127) //ascii
@@ -431,7 +431,7 @@ namespace str {
 
 		while (1)
 		{
-			int ipos = s.rfind(suffix);
+			size_t ipos = s.rfind(suffix);
 			if (ipos != string::npos && ipos + suffix.length() == s.length())
 			{
 				s = s.substr(0, ipos);
@@ -661,11 +661,11 @@ namespace str {
 		{
 			hexStr += "0";
 		}
-		int strLen = 0;
+		size_t strLen = 0;
 		strLen = hexStr.length();
 		transform(hexStr.begin(), hexStr.end(), hexStr.begin(), ::toupper);
 
-		for (int i = 0; i < strLen / 2; i++)
+		for (size_t i = 0; i < strLen / 2; i++)
 		{
 			char cByteHigh = hexStr.at(i * 2);
 			char cByteLow = hexStr.at(i * 2 + 1);
@@ -861,7 +861,7 @@ namespace str {
 	{
 		string gbstr = charCodec::utf8_to_gb(hanZi);
 		vector<char> vecPinyin;
-		for (int i = 0; i < gbstr.length();)
+		for (size_t i = 0; i < gbstr.length();)
 		{
 			int b = (int)(unsigned char)gbstr.at(i);
 			if (b > 0 && b < 127) //ascii
@@ -915,7 +915,7 @@ namespace timeopt {
 	TIME now() {
 		auto now = std::chrono::system_clock::now();
 		//通过不同精度获取相差的毫秒数 <1000毫秒值
-		unsigned short dis_millseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+		unsigned short dis_millseconds = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
 			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 		time_t tt = std::chrono::system_clock::to_time_t(now);
 		tm time_tm;

@@ -9,7 +9,7 @@
 json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argument_count)
 {
 	json jArguments = json::array();
-	for (int i = 0; i < argument_count; i++)
+	for (size_t i = 0; i < argument_count; i++)
 	{
 		json j;
 		if (jerry_value_is_boolean(arguments[i]))
@@ -120,7 +120,7 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 	}
 	else if (jVal.is_array()) {
 		jerryVal = jerry_create_array(jVal.size());
-		for (int i = 0; i < jVal.size(); i++) {
+		for (size_t i = 0; i < jVal.size(); i++) {
 			json jItem = jVal[i];
 			jerry_value_t array_value;
 			jsonVal2jerryVal(jItem, array_value);

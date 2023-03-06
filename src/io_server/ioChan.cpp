@@ -218,9 +218,9 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 		jDe["val"] = jVal;
 		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
 
-		for (int i = 0; i < m_vecStreamPuller.size(); i++) {
+		for (size_t i = 0; i < m_vecStreamPuller.size(); i++) {
 			shared_ptr<TDS_SESSION> p = m_vecStreamPuller[i];
-			int iSend = p->send((unsigned char*)s.data(), s.length());
+			size_t iSend = p->send((unsigned char*)s.data(), s.length());
 			if (iSend <= 0) {
 				m_vecStreamPuller.erase(m_vecStreamPuller.begin() + i);
 				i--;

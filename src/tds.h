@@ -53,7 +53,7 @@ namespace TAG {
 	string addRoot(string tag, string root);
 
 	bool hasTag(json& tree, string tag); 
-	int getMoLevel(string tag);
+	size_t getMoLevel(string tag);
 	json mapTree2List(json mapTree);
 }
 
@@ -138,7 +138,7 @@ namespace DEV_DISPOSITION_MODE {
 };
 
 
-enum IO_PKT_TYPE {
+enum class IO_PKT_TYPE {
 	IO_Unknown,
 	IO_Request,
 	IO_Response,
@@ -171,14 +171,14 @@ public:
 	virtual string GetPktDesc() { return ""; }; //包详细描述信息
 	virtual string GetCmdName() { return ""; };
 
-	void setData(unsigned char* p, int l)
+	void setData(unsigned char* p, size_t l)
 	{
 		if (data)delete data;
 		data = new unsigned char[l];
 		memcpy(data, p, l);
 		len = l;
 	}
-	PKT_DATA(unsigned char* p, int l)
+	PKT_DATA(unsigned char* p, size_t l)
 	{
 		data = NULL;
 		setData(p, l);
@@ -288,6 +288,8 @@ public:
 
 	RPC_SESSION() {
 		isNotification = false;
+		remotePort = 0;
+		localPort = 0;
 	}
 };
 

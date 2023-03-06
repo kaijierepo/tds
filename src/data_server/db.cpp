@@ -623,7 +623,7 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& ta
 
 		//数据只有1天的，不进行下采样
 		if (fSet.fileList.size() <= 1)
-			deSel.interval.type = DST_None;
+			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
 
 		result.fileCount += fSet.fileList.size();
 	}
@@ -654,7 +654,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 			yyjson_arr_foreach(pdf->root, idx, max, de) {
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
-				if (deSel.interval.type == DST_Count)
+				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
 				{
 					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
 				}
@@ -676,7 +676,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
 
-				if (deSel.interval.type == DST_Time) {
+				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Time) {
 					HMS_STR* p = (HMS_STR*)pHms;
 					currDeTime = p->getTotalSec();
 					if (currDeTime - lastDeTime < deSel.interval.dsti)
@@ -1157,7 +1157,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	json jDsi = params["interval"];
 	if (jDsi.is_number())
 	{
-		deSel.interval.type = DST_Count;
+		deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Count;
 		deSel.interval.dsi = jDsi.get<int>();
 	}
 	else if (jDsi.is_string())
@@ -1165,7 +1165,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 		string sDsti = params["interval"].get<string>();
 		deSel.interval.dsti = timeopt::dhmsSpan2Seconds(sDsti);
 		if (deSel.interval.dsti > 0)
-			deSel.interval.type = DST_Time;
+			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Time;
 	}
 
 	//parse condition selector

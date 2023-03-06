@@ -11,7 +11,7 @@ public:
 	int pktNum;
 	int pktLen;
 	int currentPktNo;
-	unsigned fileCrc;
+	unsigned short fileCrc;
 	string fileName;
 	string binPath;
 	bool isUpgrading;
@@ -30,6 +30,7 @@ public:
 		isUpgrading = false;
 		stopUpgradeSignal = false;
 		isUpgrading = false;
+		fileCrc = 0;
 	}
 
 	json toJson() {

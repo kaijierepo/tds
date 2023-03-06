@@ -229,7 +229,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 			//回复websocket握手
 			CWSPPkt req;
 			std::string handshakeString = req.GetHandshakeString(strData);
-			send(ioSession->sock, handshakeString.c_str(), handshakeString.size(), 0);
+			send(ioSession->sock, handshakeString.c_str(), (int)handshakeString.size(), 0);
 			return;
 		}
 	}
@@ -1000,7 +1000,7 @@ size_t ioServer::getBindedChanCount()
 	return count;
 }
 
-long ioServer::getChanCount()
+size_t ioServer::getChanCount()
 {
 	lock_conf_shared();
 	size_t count = 0;
@@ -1364,7 +1364,7 @@ bool ioServer::toJson(json& conf, json opt)
 		}
 
 		json jDevices;
-		for (int i = startIdx; i < endIdx; i++) {
+		for (size_t i = startIdx; i < endIdx; i++) {
 			json j;
 			filterRlt[i]->toJson(j, opt);
 			jDevices.push_back(j);
@@ -1512,6 +1512,8 @@ bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 	if (childTds->pIOSession != nullptr) {
 		info.ip = childTds->pIOSession->getRemoteIP();
 	}
+
+	return true;
 }
 
 
@@ -1732,8 +1734,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 	{
 		if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
 			tdsSession->m_csPuller.lock();
-			int sizeLast = tdsSession->m_vecPuller.size();
-			for (int i = 0; i < tdsSession->m_vecPuller.size(); i++) {
+			size_t sizeLast = tdsSession->m_vecPuller.size();
+			for (size_t i = 0; i < tdsSession->m_vecPuller.size(); i++) {
 				std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
 				int iSent = p->send(pData, iLen);
 				if (iSent <= 0) {
@@ -1741,7 +1743,7 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 					i--;
 				}
 			}
-			int sizeNow = tdsSession->m_vecPuller.size();
+			size_t sizeNow = tdsSession->m_vecPuller.size();
 			tdsSession->m_csPuller.unlock();
 
 			if (sizeLast > 0 && sizeNow == 0) {

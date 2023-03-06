@@ -152,7 +152,6 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //exe模式下，都会有命令行窗口，通过设置 ui = chrome 或者 miniblink打开 浏览器窗口
 //dll模式下，默认没有命名行窗口，通过设置 ui = console 来打开命令行窗口
 
-#include "../tdspro/ioDev/ioDev_modbusSlave.h""
 
 #ifndef _WINDLL
 //命令行参数调用 ，js解释器等模式需要默认控制台，因此默认控制台不隐藏

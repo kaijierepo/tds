@@ -166,9 +166,9 @@ void stream2pkt::PushStream(char* pData, size_t iLen)
 bool stream2pkt::PopPkt(string cpt)
 {
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
-	for (int i = 0; i < iStreamLen; i++)
+	for (size_t i = 0; i < iStreamLen; i++)
 	{
-		int ilen = 0;
+		size_t ilen = 0;
 
 		if (ilen == 0 &&
 			(cpt == APP_LAYER_PROTO::textEnd2LF))
@@ -339,9 +339,9 @@ size_t stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 			return 0;
 
 		string strLen = strData.substr(iPos_contentLengthLineStart + 15, iPos_contentLengthLineEnd - (iPos_contentLengthLineStart + 15));
-		int iContentLen = atoi(strLen.c_str());
+		size_t iContentLen = atoi(strLen.c_str());
 
-		int iBodyStart = 0;
+		size_t iBodyStart = 0;
 		for (size_t i = iPos_contentLengthLineEnd; i + 3 < iLen; i++)
 		{
 			if (pData[i] == '\r' &&

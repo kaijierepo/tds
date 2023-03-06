@@ -168,7 +168,7 @@ public:
 	DE_TIME deTime;
 };
 
-enum DOWN_SAMPLING_TYPE {
+enum class DOWN_SAMPLING_TYPE {
 	DST_None,
 	DST_Count,
 	DST_Time
@@ -180,7 +180,7 @@ struct INTERVAL_SELECTOR {
 	int dsti;  //降采样的时间间隔 单位秒
 
 	INTERVAL_SELECTOR() {
-		type = DST_None;
+		type = DOWN_SAMPLING_TYPE::DST_None;
 		dsi = 0;
 		dsti = 0;
 	}
@@ -244,7 +244,7 @@ public:
 	vector<DE_yyjson> m_mapRlt;
 
 	TAG_DB_DATA() {
-		
+		bAggr = false;
 	}
 	~TAG_DB_DATA() {
 		if (fileList.size() > 0)

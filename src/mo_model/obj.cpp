@@ -363,6 +363,7 @@ bool OBJ::loadStatus(OBJ* pSrcRoot, TIME* dataTime, bool saveToDB)
 	}
 	else
 		return false;
+	return true;
 }
 
 bool OBJ::loadStatus(json& status)

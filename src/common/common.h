@@ -44,9 +44,7 @@ struct TIME {
 	unsigned short wDayOfWeek;
 
 	TIME() {
-		wYear = 1970;
-		wMonth = 1;
-		wDay = 1;
+		memset(this, 0, sizeof(this));
 	}
 
 	bool operator==(TIME& right){

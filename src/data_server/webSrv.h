@@ -32,7 +32,6 @@ public:
 	static bool handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
-	char a[10];
 	int m_restApiID;
 };
 

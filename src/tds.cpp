@@ -102,7 +102,7 @@ bool TAG::hasTag(json& tree, string tag)
 	return true;
 }
 
-int TAG::getMoLevel(string tag)
+size_t TAG::getMoLevel(string tag)
 {
 	tag = TAG::addRoot(tag, "root");
 	return std::count(tag.begin(), tag.end(), '.');

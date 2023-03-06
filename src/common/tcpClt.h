@@ -18,9 +18,9 @@ struct tcpSessionClt
 	tcpClt* tcpClt;
 	int bridgeSock;
 
-	int iSendSucCount;
-	int iSendFailCount;
-	int iRecvCount;
+	size_t iSendSucCount;
+	size_t iSendFailCount;
+	size_t iRecvCount;
 
 	TIME stLastActive;
 

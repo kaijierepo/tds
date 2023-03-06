@@ -802,6 +802,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			return true;
 		}
 	}
+#ifdef TEST
 	else if (method == "testCrash")
 	{
 		rpcResp.result = "\"ok\"";
@@ -865,6 +866,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			string sError = jError.dump();
 		}
 	}
+#endif
 	else if (method == "testCall")
 	{
 	    int timeCost = 5;
