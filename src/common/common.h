@@ -155,7 +155,8 @@ namespace common {
 	void endianSwap(char* pData, int len);
 }
 
-#define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__FUNCTION__);};
+#define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__func__);};
+#define EXCEPTION(e) LOG("[warn]Exception raised, info:%s,file:%s,line:%d,function:%s",e.what(), __FILE__, __LINE__,__func__)
 
 namespace str {
 	std::string format(const char* pszFmt,... );
@@ -237,9 +238,9 @@ namespace timeopt {
 
 	string st2strWithMilli(TIME t);
 	string TimeToYMD(const TIME time);
-	int CalcTimePassSecond(TIME lastTime);
+	time_t CalcTimePassSecond(TIME lastTime);
 	long long CalcTimePassMilliSecond(TIME lastTime);
-	long CalcTimeDiffSecond(TIME newTime, TIME oldTime);
+	time_t CalcTimeDiffSecond(TIME newTime, TIME oldTime);
 	time_t getTick();
 	void setAsTimeOrg(TIME& st);
 	bool isValidTime(TIME& st);

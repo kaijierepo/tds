@@ -161,4 +161,4 @@ public:
 	char payload_[2048];
 };
 
-extern int IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen);
+extern size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen);

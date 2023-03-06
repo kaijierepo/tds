@@ -353,7 +353,6 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 string tcpClt::GetLocalIP()
 {
 	string remoteIP;
-	WSADATA wsaData;
 	char name[155];
 	char *ip;
 	PHOSTENT hostinfo;

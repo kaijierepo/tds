@@ -1108,7 +1108,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strDay = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n1 = atof(strDay.c_str()) * 24 * 3600;
+				n1 = (int)atof(strDay.c_str()) * 24 * 3600;
 			}
 			pos = time1.find("h");
 			if (pos == string::npos)
@@ -1116,7 +1116,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strH = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n2 = atof(strH.c_str()) * 3600;
+				n2 = (int)atof(strH.c_str()) * 3600;
 			}
 			pos = time1.find("m");
 			if (pos == string::npos)
@@ -1124,7 +1124,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strM = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n3 = atof(strM.c_str()) * 60;
+				n3 = (int)atof(strM.c_str()) * 60;
 			}
 			pos = time1.find("s");
 			if (pos == string::npos)
@@ -1132,7 +1132,7 @@ namespace timeopt {
 			if (pos != string::npos) {
 				strS = time1.substr(0, pos);
 				time1 = time1.erase(0, pos + 1);
-				n4 = atof(strS.c_str());
+				n4 = (int)atof(strS.c_str());
 			}
 			TIME stNow;
 			timeopt::now(&stNow);
@@ -1195,7 +1195,7 @@ namespace timeopt {
 		}
 		return str;
 	}
-	int CalcTimePassSecond(TIME lastTime)
+	time_t CalcTimePassSecond(TIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);
 		time_t now = time(NULL);
@@ -1203,7 +1203,7 @@ namespace timeopt {
 		return milli;
 	}
 
-	long CalcTimeDiffSecond(TIME newTime,TIME oldTime)
+	time_t CalcTimeDiffSecond(TIME newTime,TIME oldTime)
 	{
 		time_t newT = SysTime2Unix(newTime);
 		time_t oldT = SysTime2Unix(oldTime);
@@ -1745,13 +1745,9 @@ namespace fs {
 					 list.push_back(fi);
 				 }
 			 }
+		 }	
+		 catch (exception&) {
 		 }
-		 catch (const std::exception& e)
-		 {
-			 //找不到指定路径进入到此处
-			 //string s = e.what();
-			 //printf(s.c_str());
-		 }		 
 	}
 
 

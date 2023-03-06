@@ -5,7 +5,7 @@
 #include "sha1.h"
 
 
-int IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
 {
 	CWSPPkt req;
 	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))

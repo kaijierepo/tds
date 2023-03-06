@@ -1045,7 +1045,7 @@ bool ioDev::sendData(char* pData, size_t iLen)
 		else {
 			if (m_bViaAdaptor) {
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
-					int iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
+					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog)
 						IOLogSend((unsigned char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(660));
 				}

@@ -1354,11 +1354,11 @@ bool ioServer::toJson(json& conf, json opt)
 
 	if (paging && pageSize>0) {
 		conf = json::object();
-		int recCount = filterRlt.size();
-		int pageCount = recCount / pageSize;
+		size_t recCount = filterRlt.size();
+		size_t pageCount = recCount / pageSize;
 
-		int startIdx = pageNo * pageSize;
-		int endIdx = pageNo * pageSize + pageSize;
+		size_t startIdx = pageNo * pageSize;
+		size_t endIdx = pageNo * pageSize + pageSize;
 		if (endIdx > recCount) {
 			endIdx = recCount;
 		}
@@ -1543,7 +1543,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			pab->PushStream(pData, iLen);
 			while (pab->PopPkt(IsValidPkt_textEnd_LFLF))
 			{
-				int iSend = tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+				size_t iSend = tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}

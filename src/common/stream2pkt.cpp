@@ -2,7 +2,7 @@
 #include "proto/wsProto.h"
 #include "stream2pkt.h"
 
-int IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -20,12 +20,12 @@ int IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
 }
 
 
-int IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 7)
 		return 0;
 
-	int len = pData[4] * 256 + pData[5];
+	size_t len = pData[4] * 256 + pData[5];
 	if (iLen == len + 6) {
 		return iLen;
 	}
@@ -33,7 +33,7 @@ int IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen)
 }
 
 
-int IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 4)
 		return 0;
@@ -47,7 +47,7 @@ int IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 		return 0;
 }
 
-int IsValidPkt_TDSP(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_TDSP(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 15)
 		return 0;
@@ -86,7 +86,7 @@ unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
 	return crc;
 }
 
-int IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 12)
 		return 0;
@@ -130,7 +130,7 @@ void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 	}
 	else
 	{
-		int iCopySize = iLen < iNewSize ? iLen : iNewSize;
+		size_t iCopySize = iLen < iNewSize ? iLen : iNewSize;
 		memcpy_s(pNewData, iNewSize, pData, iCopySize);
 		delete pData;
 	}
@@ -314,7 +314,7 @@ bool stream2pkt::PopAllAs(string cpt)
 }
 
 
-int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
+size_t stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 {
 	unsigned char* ptmp = new unsigned char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);
@@ -366,7 +366,7 @@ int stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 }
 
 
-int IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 5)
 		return 0;
@@ -381,7 +381,7 @@ int IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen)
 	return 0;
 }
 
-int IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -396,7 +396,7 @@ int IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen)
 }
 
 
-int IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 3)
 		return 0;
@@ -410,7 +410,7 @@ int IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen)
 	return 0;
 }
 
-int IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen)
+size_t IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen)
 {
 	for (int i = 0; i < iLen; i++)
 	{
