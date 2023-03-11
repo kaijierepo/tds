@@ -143,6 +143,19 @@ void thread_checkFood() {
 				string path = "./dump_Ver_" + watchDog.m_curVer + "_Catch_" + timeopt::nowStrForFile() + ".dmp";
 				CDumpCatch::createDump("tds", path);
 				watchDog.log("tds运行中，但不响应请求，截取dump:" + path);
+
+				//名称是时间，从老到新排列
+				vector<fs::FILE_INFO> fileList;
+				fs::getFileList(fileList, fs::appPath(), false, false, ".dmp");
+				std::map<string, fs::FILE_INFO> mapList;
+				for (int i = 0; i < fileList.size(); i++) {
+					mapList[fileList[i].name] = fileList[i];
+				}
+
+				while (mapList.size() > 2) {
+					fs::deleteFile(mapList.begin()->second.path);
+					mapList.erase(mapList.begin());
+				}
 			}
 
 			//watchDog.log("准备启动tds,执行 taskkill /f /im tds.exe /t 关闭现有实例");

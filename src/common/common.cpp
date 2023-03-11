@@ -1733,6 +1733,8 @@ namespace fs {
 					 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
 				 }
 				 else {
+					 //std::filesystem::file_time_type ft = i.last_write_time();
+					 //std::time_t tt = decltype(ft)::clock::to_time_t();
 					 FILE_INFO fi;
 					 fi.path = charCodec::gb_to_tds(i.path().string());
 					 fi.path = str::replace(fi.path, "\\", "/");
