@@ -1729,8 +1729,10 @@ namespace fs {
 		 {
 			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
-				 if (i.is_directory() && recursive) {
-					 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
+				 if (i.is_directory()) {
+					 if (recursive) {
+						 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
+					 } 
 				 }
 				 else {
 					 //std::filesystem::file_time_type ft = i.last_write_time();
