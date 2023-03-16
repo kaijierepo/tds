@@ -193,9 +193,15 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.exploreFolder")
 	{
-		string path = params["path"];
 		vector<fs::FILE_INFO> fileList;
 		vector<fs::FILE_INFO> folderList;
+
+		string path = tds->conf->getStr("fsRoot", fs::appPath() + "/files");
+		if (params.contains("path")) {
+			string subPath = params["path"];
+			path = path + "/" + subPath;
+		}
+
 		fs::getFileList(fileList, path);
 		fs::getFolderList(folderList, path);
 		json infoList = json::array();
