@@ -20,6 +20,7 @@
 string rootDir;
 string confDir;
 string filesDir;
+string fsRootDir;
 
 
 int WS_PKT_HEADER_LEN = sizeof(size_t);
@@ -686,6 +687,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (mg_http_match_uri(hm, "/release"))
 		{
+		}
+		else if (mg_http_match_uri(hm, "/release"))
+		{
 			string localPath = fs::appPath() + "/files/release";
 			vector<fs::FILE_INFO> fl;
 			fs::getFileList(fl, localPath);
@@ -754,7 +758,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
 			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir;
-			//string dir = "/=" + rootDir;
+			if (fsRootDir != "") {
+				dir += ",/fsRoot/=" + fsRootDir;
+			}
 			opts.root_dir = dir.c_str();   // Serve local dir
 			mg_http_serve_dir(c, (mg_http_message*)ev_data, &opts);
 		}
@@ -940,6 +946,7 @@ bool runWebServers()
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
 	filesDir = "./files";
+	fsRootDir = tds->conf->getStr("fsRoot", "");
 
 	//initHMRConf();
 	//if (tds->conf->getInt("enableHMR",0))
@@ -954,6 +961,10 @@ bool runWebServers()
 	if (fs::appName() == "tds") { //tdb模式不需要
 		LOG("[Web目录	] /config <--> " + confDir);
 		LOG("[Web目录	] /files  <--> " + filesDir);
+
+		if (fsRootDir != "") {
+			LOG("[HTTP文件服务] /fsRoot  <--> " + fsRootDir);
+		}
 	}
 
 	//LOG("webSrv init %lx", webSrv);
