@@ -84,6 +84,7 @@ public:
 
 	bool checkLogin(string user, string pwd, json& userInfo);
 	bool checkToken(string user,string token);
+	bool checkTagWritePermission(string user, string tag);
 	bool checkTagPermission(string user, string tag); //检查用户对某一个位号是否有权限
 
 	bool isChildMo(string parent, string child);

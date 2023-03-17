@@ -310,6 +310,29 @@ bool userManager::checkToken(string user, string token)
 	return true;
 }
 
+bool userManager::checkTagWritePermission(string user, string tag)
+{
+	json jUser = userMng.getUser(user);
+	if (jUser.is_null())return false;
+
+	//用户所属组织
+	string org = jUser["org"].get<string>();
+
+	//位号是否在用户所属的组织结构中，不在则一定没有权限
+	if (tag.find(org) == string::npos)
+		return false;
+
+	//管理员级别默认拥有所有权限。简化操作，无需去设置管理员的权限
+	string role = jUser["role"].get<string>();
+	if (role == "管理员")
+		return true;
+
+	if (role == "操作员")
+		return true;
+
+	return false;
+}
+
 bool userManager::checkTagPermission(string user, string tag)
 {
 	json jUser = userMng.getUser(user);

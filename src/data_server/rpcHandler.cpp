@@ -2383,6 +2383,12 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 		return;
 	}
 
+	//用户权限校验
+	if (!userMng.checkTagWritePermission(session.user, tag)) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noWritePermission, "no write permission");
+		return;
+	}
+
 
 	//值类型校验
 	if (pmp->m_valType == VAL_TYPE::boolean)

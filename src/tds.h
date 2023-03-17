@@ -457,6 +457,7 @@ enum RPC_ERROR_CODE {
 	AUTH_signatureInvalid = -40106,
 	AUTH_signatureMissing = -40107,
 	AUTH_noPermission = -40108,
+	AUTH_noWritePermission = -40109,
 
 	//mo
 	MO_specifiedTagNotFound = -40201,
