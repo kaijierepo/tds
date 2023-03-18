@@ -44,6 +44,7 @@ SOFTWARE.
 #include "common.h"
 #include "tools/demoTools.h"
 #include "tools/dumpCatch.h"
+#include "tools/aliDDNS.h"
 
 
 void updateEzvizAccessInfo() {
@@ -161,6 +162,9 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 
 int main(int argc, char** argv)
 {
+
+
+
 	//取出命令行命令
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {

@@ -50,6 +50,7 @@ SOFTWARE.
 #include "tools/hmrSrv.h"
 #include "users/userMng.h"
 #include "webSrv.h"
+#include "tools/aliDDNS.h"
 
 
 string InterfaceEncoding = "utf8";
@@ -246,6 +247,8 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
+	aliDDNS.getSubdomainRecords();
+
 	//load tds.json
 	logger.m_bEnable = tdsConf.enableLog;
 

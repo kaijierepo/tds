@@ -1253,6 +1253,12 @@ namespace timeopt {
 		return st2str(t,enableMS);
 	}
 
+	string nowStrIso() {
+		TIME t = now();
+		string s = str::format("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+		return s;
+	}
+
 	string nowStrForFile(bool enableMS)
 	{
 		TIME t = now();

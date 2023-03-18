@@ -243,6 +243,7 @@ namespace timeopt {
 	void setAsTimeOrg(TIME& st);
 	bool isValidTime(TIME& st);
 	string nowStr(bool enableMS = false);
+	string nowStrIso();
 	string nowStrForFile(bool enableMS = false);
 	TIME addTime(TIME base, int h, int m, int s);
 	bool isValidTimeStr(string time);
