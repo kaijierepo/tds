@@ -221,6 +221,7 @@ namespace str {
 
 namespace timeopt {
 	TIME now();
+	TIME nowUTC();
 	void now(TIME& t);
 	void now(TIME* t);
 	string stTimeToStr(TIME time);

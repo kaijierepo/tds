@@ -934,6 +934,28 @@ namespace timeopt {
 		return t;
 	}
 
+	TIME nowUTC() {
+		auto now = std::chrono::system_clock::now();
+		//通过不同精度获取相差的毫秒数 <1000毫秒值
+		unsigned short dis_millseconds = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+		time_t tt = std::chrono::system_clock::to_time_t(now);
+		tm time_tm;
+		gmtime_s(&time_tm, &tt);
+
+		TIME t;
+		t.wYear = time_tm.tm_year + 1900;
+		t.wMonth = time_tm.tm_mon + 1;
+		t.wDay = time_tm.tm_mday;
+		t.wHour = time_tm.tm_hour;
+		t.wMinute = time_tm.tm_min;
+		t.wSecond = time_tm.tm_sec;
+		t.wMilliseconds = dis_millseconds;
+		t.wDayOfWeek = time_tm.tm_wday;
+
+		return t;
+	}
+
 	void now(TIME& t){
 		t = now();
 	}
@@ -1254,7 +1276,7 @@ namespace timeopt {
 	}
 
 	string nowStrIso() {
-		TIME t = now();
+		TIME t = nowUTC();
 		string s = str::format("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
 		return s;
 	}
