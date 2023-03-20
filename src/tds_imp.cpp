@@ -247,8 +247,6 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
-	aliDDNS.getSubdomainRecords();
-
 	//load tds.json
 	logger.m_bEnable = tdsConf.enableLog;
 

@@ -196,7 +196,13 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		vector<fs::FILE_INFO> fileList;
 		vector<fs::FILE_INFO> folderList;
 
-		string path = tds->conf->getStr("fsRoot", fs::appPath() + "/files");
+		string path = tds->conf->getStr("fsRoot", "");
+		if (path == "") {
+			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "file service is not started,config fsRoot param in tds.ini");
+			return true;
+		}
+
+
 		if (params.contains("path")) {
 			string subPath = params["path"];
 			path = path + "/" + subPath;

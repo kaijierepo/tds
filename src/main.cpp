@@ -400,7 +400,9 @@ int main(int argc, char** argv)
 		tds->run();
 	}
 
-  
+
+	aliDDNS.init();
+
 	while (1)
 	{
 		sleep(1000);
@@ -435,7 +437,7 @@ int main(int argc, char** argv)
 			updateEzvizAccessInfo();
 		}
 
-		
+		aliDDNS.doCycleTask();
 	}
 	return 0;
 }

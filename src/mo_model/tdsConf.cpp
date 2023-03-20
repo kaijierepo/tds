@@ -64,7 +64,7 @@ string tdsConfig::defaultConf_tds()
 #系统配置
 uiPath=./ui            #web根目录
 confPath=./conf        #配置路径
-loglevel=debug         #日志级别
+loglevel=debug         #日志级别 可选 error,warn,debug,trace
 
 #数据服务
 httpsPort=0            #https服务端口,同时支持websocket secure
@@ -87,9 +87,11 @@ enableAccessCtrl = 0   #开启用户认证
 tokenExpireTime = 60   #token失效时间，单位分钟
 testToken=             #测试用Token
 
-#服务级联
-masterSrvPort = 0      #级联模式上级服务监听端口 （=0不开启）
-masterTds =            #主服务地址，多个主服务使用逗号分隔 例如：cloud1.liangtusoft.com:661,cloud2.liangtusoft.com:661
+#服务级联 (主服务端口在主服务的tdspPort配置，默认665)
+masterTds=            #主服务地址，多个主服务使用逗号分隔 例如：cloud1.liangtusoft.com:665,cloud2.liangtusoft.com:665
+
+#文件服务
+fsRoot=                #文件服务的根目录。留空不启动文件服务
 
 #短信服务(飞鸽)
 smsApiUrl =			   #短信平台api地址
