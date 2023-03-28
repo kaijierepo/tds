@@ -1401,8 +1401,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			vector<OBJ*> objList;
 			prj.getObjByTagSelector(objList, tagSel);
 
-			//通配模式，返回一个数组
-			if (objList.size()>1) {
+			//多选模式
+			if (!tagSel.singleSelMode()) {
 				params["rootTag"] = rootTag;
 				if (mode == "array") {
 					json jRlt = json::array();

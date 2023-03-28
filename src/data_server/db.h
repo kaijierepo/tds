@@ -83,6 +83,7 @@ public:
 	bool init(string tag,string rootTag = "");
 	bool init(json tag, string rootTag = "");
 	bool match(string tag);//使用不带根的绝对位号
+	bool singleSelMode();
 
 	string m_rootTag; //查询根
 
@@ -101,6 +102,8 @@ public:
 
 	//选出的位号列表
 	vector<string> tagSet;
+
+
 };
 
 

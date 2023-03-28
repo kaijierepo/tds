@@ -1363,7 +1363,7 @@ bool ioServer::toJson(json& conf, json opt)
 			endIdx = recCount;
 		}
 
-		json jDevices;
+		json jDevices = json::array();
 		for (size_t i = startIdx; i < endIdx; i++) {
 			json j;
 			filterRlt[i]->toJson(j, opt);
@@ -1646,11 +1646,17 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 	}
 	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_tcp_slave)
 	{
-		stream2pkt* pab = &tdsSession->m_alBuf;
-		pab->PushStream(pData, iLen);
-		while (pab->PopPkt(IsValidPkt_ModbusTcp,false))
+		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
-			onRecvPkt_mbTcp(pab->pkt, pab->iPktLen, tdsSession);
+
+		}
+		else {
+			stream2pkt* pab = &tdsSession->m_alBuf;
+			pab->PushStream(pData, iLen);
+			while (pab->PopPkt(IsValidPkt_ModbusTcp, false))
+			{
+				onRecvPkt_mbTcp(pab->pkt, pab->iPktLen, tdsSession);
+			}
 		}
 	}
 	else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
@@ -1923,6 +1929,20 @@ void ioServer::onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shar
 	}
 }
 
+bool isCommonRegPkt(unsigned char* pData, size_t iLen) {
+	for (size_t i = 0; i < iLen; i++) {
+		unsigned char uc = pData[i];
+		if (uc >= 32 && uc <= 126 && uc !='{' && uc !='}') //从数字0到字母z,不包含 { }符号
+		{
+
+		}
+		else {
+			return false;
+		}
+	}
+	return true;
+}
+
 
 bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
@@ -1957,6 +1977,14 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_
 				memcpy(tdsSession->regPkt.data(), pData, iLen);
 				tdsSession->m_alBuf.m_prefix = tdsSession->regPkt;
 			}
+			return true;
+		}
+		//通用注册包，全部都是ASII字符，并且没有 { } 符号，不是json
+		else if (isCommonRegPkt(pData, iLen)) {
+			string reg = str::fromBuff((char*)pData, iLen);
+			LOG("收到首发注册包," + reg);
+			ioSrv.handleDevOnline(reg, tdsSession);
+
 			return true;
 		}
 	}

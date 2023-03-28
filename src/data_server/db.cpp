@@ -1652,6 +1652,14 @@ bool TAG_SELECTOR::match(string tag){
 	return false;
 }
 
+bool TAG_SELECTOR::singleSelMode()
+{
+	if (fuzzyMatchExp.size() == 0 && exactMatchExp.size() == 1) {
+		return true;
+	}
+	return false;
+}
+
 CONDITION_SELECTOR::CONDITION_SELECTOR()
 {
 	bEnable = false;
