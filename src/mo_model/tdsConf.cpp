@@ -64,7 +64,7 @@ string tdsConfig::defaultConf_tds()
 #系统配置
 uiPath=./ui            #web根目录
 confPath=./conf        #配置路径
-loglevel=debug         #日志级别 可选 error,warn,debug,trace
+loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
 
 #数据服务
 httpsPort=0            #https服务端口,同时支持websocket secure
@@ -105,9 +105,6 @@ ddnsInterval=600       #ddns更新周期
 ddnsDomainName=        #ddns更新域名。多个域名使用逗号分隔
 
 #功能模块启用
-enableDB = 1           #启用数据库
-enableLog = 1          #启用日志记录
-enableScript = 0       #启用脚本功能
 enableHMR = 0          #启用http服务器热更新功能
 authDownload = 0       #开启文件下载用户认证
 )";

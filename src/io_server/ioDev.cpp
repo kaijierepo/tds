@@ -245,8 +245,7 @@ bool ioDev::toJson(json& conf, json opt)
 
 		conf["level"] = m_level;
 		conf["manageStatus"] = m_dispositionMode;
-		if (m_fAcqInterval != 0)
-			conf["acqInterval"] = m_fAcqInterval;
+		conf["acqInterval"] = m_fAcqInterval;
 		conf["enableAcq"] = m_bEnableAcq;
 		if (m_strTagBind != "")
 			conf["tagBind"] = m_strTagBind;

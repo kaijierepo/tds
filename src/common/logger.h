@@ -11,6 +11,7 @@ enum LOG_LEVEL {
 	LL_WARN = 1,
 	LL_ERROR = 2,
 	LL_KEYINFO = 3,
+	LL_NONE = 4
 };
 
 typedef void (*fp_logOutputCallback)(string text);

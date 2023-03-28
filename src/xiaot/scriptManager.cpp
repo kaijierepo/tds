@@ -13,6 +13,11 @@ void scriptThread(ScriptManager* p)
 #endif
 }
 
+ScriptManager::ScriptManager()
+{
+	loopRunning = false;
+}
+
 bool ScriptManager::init()
 {
 	string conf;
@@ -58,12 +63,23 @@ bool ScriptManager::init()
 
 bool ScriptManager::run()
 {
-	if (!tds->conf->enableScript)
-		return false;
-
-	init();
 	thread t(scriptThread, this);
 	t.detach();
+	return false;
+}
+
+bool ScriptManager::hasScripts()
+{
+	{
+		unique_lock<mutex> lock(m_csScripts);
+		if (m_mapScripts.size() > 0)
+			return true;
+	}
+	{
+		unique_lock<mutex> lock(m_csExpScripts);
+		if (m_mapVarExpScripts.size() > 0)
+			return true;
+	}
 	return false;
 }
 
@@ -91,7 +107,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		string s = params["script"];
 
 		ScriptEngine se;
-		se.runScript(s);
+		se.runScript(s,session.user);
 		string sOutput;
 		json jOutput = json::array();
 		for (int i = 0; i < se.m_vecOutput.size(); i++) {
@@ -112,7 +128,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		{
 			ScriptEngine se;
 			se.currentSession = session;
-			if (se.runScript(script))
+			if (se.runScript(script,session.user))
 			{
 				rpcResp.result = "\"ok\"";
 			}
@@ -226,6 +242,7 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 	//支持局部更新，info当中可以只包含1，2个需要修改的字段
 	si.fromJson(params["info"]);
+	si.lastModifyUser = session.user;
 
 	//保存脚本代码
 	if (params.contains("code")) {
@@ -238,6 +255,9 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	saveScriptList(session.org, ls);
 
 	rpcResp.result = RPC_OK;
+
+	//触发脚本循环。如果已经在循环中，此句无效果
+	run();
 
 	return true;
 }
@@ -281,7 +301,7 @@ void ScriptManager::exeAllGlobalScripts()
 			if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
 				ScriptEngine se;
 				se.m_tagThis = si.tagThis;
-				se.runScript(si.script);
+				se.runScript(si.script,si.lastModifyUser);
 				si.lastExe = timeopt::now();
 			}
 		}
@@ -298,7 +318,7 @@ void ScriptManager::exeAllVarExpScripts()
 
 		ScriptEngine se;
 		se.m_tagThis = info.tagThis;
-		se.runScript(script);
+		se.runScript(script,info.lastModifyUser);
 
 		if (se.m_jEvalRet.is_number())
 		{
@@ -313,11 +333,16 @@ void ScriptManager::exeAllVarExpScripts()
 
 void ScriptManager::loopExe()
 {
+	loopRunning = true;
 	TIME lastExe1 = timeopt::now();
 	TIME lastExe2 = timeopt::now();
 
 	while (1)
 	{
+		if (!hasScripts()) {
+			break;
+		}
+
 		exeAllGlobalScripts();
 
 		if (m_mapVarExpScripts.size() > 0) {
@@ -329,6 +354,7 @@ void ScriptManager::loopExe()
 
 		Sleep(50);
 	}
+	loopRunning = false;
 }
 
 
@@ -359,6 +385,10 @@ void SCRIPT_INFO::fromJson(json& j)
 
 	if (j.contains("name")) {
 		name = j["name"];
+	}
+
+	if (j.contains("lastModifyUser")) {
+		lastModifyUser = j["lastModifyUser"];
 	}
 
 	if(j.contains("desc"))

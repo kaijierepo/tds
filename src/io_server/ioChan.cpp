@@ -211,11 +211,44 @@ bool ioChannel::match(string channelNo) {
 }
 
 void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
+	string tagBind;
+	input(jVal, tagBind, dataTime, bPic);
+
+
+	//更新绑定位号值
+	json param;
+	param["tag"] = tagBind;
+	param["val"] = m_curVal;
+	param["time"] = timeopt::st2str(m_stLastUpdateTime);
+	tds->callAsyn("input", param);
+}
+
+void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
+{
+	//更新通道值. 经过一次kb转换，推送的数据流应当是经过转换后的值
+	TIME t;
+	if (dataTime == NULL)
+	{
+		timeopt::now(&t);
+		dataTime = &t;
+	}
+	m_stLastUpdateTime = *dataTime;
+	m_curOrgVal = jVal;
+	if (m_curOrgVal.is_number()) {
+		double val = 0;
+		double valOrg = m_curOrgVal.get<float>();
+		val = valOrg * m_k + m_b;
+		m_curVal = val;
+	}
+	else {
+		m_curVal = m_curOrgVal;
+	}
+
 	//如果有数据流订阅者，直接推送
 	m_csStreamPuller.lock();
 	if (m_vecStreamPuller.size() > 0) {
 		json jDe;
-		jDe["val"] = jVal;
+		jDe["val"] = m_curVal;
 		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
 
 		for (size_t i = 0; i < m_vecStreamPuller.size(); i++) {
@@ -241,40 +274,6 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 		if (pass < m_iDownSampleInterval)
 			return;
 		m_lastDownSampleTime = timeopt::now();
-	}
-
-
-	string tagBind;
-	input(jVal, tagBind, dataTime, bPic);
-
-
-	//更新绑定位号值
-	json param;
-	param["tag"] = tagBind;
-	param["val"] = m_curVal;
-	param["time"] = timeopt::st2str(m_stLastUpdateTime);
-	tds->callAsyn("input", param);
-}
-
-void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
-{
-	//更新通道值
-	TIME t;
-	if (dataTime == NULL)
-	{
-		timeopt::now(&t);
-		dataTime = &t;
-	}
-	m_stLastUpdateTime = *dataTime;
-	m_curOrgVal = jVal;
-	if (m_curOrgVal.is_number()) {
-		double val = 0;
-		double valOrg = m_curOrgVal.get<float>();
-		val = valOrg * m_k + m_b;
-		m_curVal = val;
-	}
-	else {
-		m_curVal = m_curOrgVal;
 	}
 
 	//获得绑定的位号。如果父节点有关联位号。并且位号没有包含父节点位号，拼接父节点位号

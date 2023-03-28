@@ -247,9 +247,6 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
-	//load tds.json
-	logger.m_bEnable = tdsConf.enableLog;
-
 	//funcMongooseLogCb = LOG3;
 	#ifndef DEBUG
 	 // mg_log_set("0");
@@ -302,6 +299,7 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.loadConf();
 	almSrv.init();
 	userMng.init();
+	scriptManager.init();
 
 	//初始化tds插件
 	if (tds->xiaoT)

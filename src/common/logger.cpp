@@ -115,6 +115,8 @@ LOG_LEVEL Clogger::str2logLevel(string level)
 		ll = LL_ERROR;
 	else if (level == "keyinfo")
 		ll = LL_KEYINFO;
+	else if (level == "none")
+		ll = LL_NONE;
 	else
 		ll = LL_DEBUG;
 	return ll;
@@ -235,7 +237,7 @@ string Clogger::logInternal(string info)
 
 void Clogger::log(string info)
 {
-	if (!m_bEnable)
+	if (LL_NONE == logLevel)
 		return;
 	//logInternal only log to file and cmdline
 	//log will log to some user specified place, the code must not trigger log again

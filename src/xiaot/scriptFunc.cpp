@@ -229,6 +229,7 @@ jerry_value_t func_output(const jerry_call_info_t* call_info_p,
 
 		json err, rlt;
 		RPC_SESSION session;
+		session.user = pEngine->m_user;
 		tds->call("output",jParams, err,rlt, session);
 	}
 

@@ -764,6 +764,10 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 		ioSrv.rpc_getSessionStatus(params,rpcResp,session);
 	}
+	else if (method == "getApiSessions")
+	{
+		//webSrv.(params, rpcResp, session);
+	}
 	else if (method == "captureFrame")
 	{
 
@@ -2392,6 +2396,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	//用户权限校验
 	if (!userMng.checkTagWritePermission(session.user, tag)) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noWritePermission, "no write permission");
+		LOG("[error][控制输出]ouput，没有权限,tag=%s,user=%s", tag.c_str(), session.user.c_str());
 		return;
 	}
 

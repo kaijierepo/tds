@@ -151,8 +151,9 @@ jerry_context_t* jerry_port_get_current_context(void)
 	return tls_context;
 }
 
-bool ScriptEngine::runScript(string& script)
+bool ScriptEngine::runScript(string& script, string user)
 {
+	m_user = user;
 	vector<string> lines;
 	//script = str::replace(script, "\r\n", "\n");
 	//str::split(lines, script, "\n");
