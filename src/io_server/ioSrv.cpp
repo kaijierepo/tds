@@ -530,6 +530,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		opt["getStatus"] = true;
 		pd->toJson(params,opt);
 		rpcSrv.notify("devAdded", params);
+		pd->run();
 	}
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "device type not supported, type:" + type, "不支持的设备类型:" + type);

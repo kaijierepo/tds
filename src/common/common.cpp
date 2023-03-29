@@ -1317,7 +1317,7 @@ namespace sys {
 		string strComName;//串口名称   
 		string strDrName;//串口详细名称   
 		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			_T("Hardware\\DeviceMap\\SerialComm"),
+			"Hardware\\DeviceMap\\SerialComm",
 			NULL,
 			KEY_READ,
 			&hkey);
