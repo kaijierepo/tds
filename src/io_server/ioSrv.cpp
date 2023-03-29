@@ -523,12 +523,12 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		parentDev->addChild(pd);
 		saveConf();
 		rpcResp.result = "\"ok\"";
-		json opt;
-		opt["getConf"] = true;
-		opt["getChild"] = true;
-		opt["getChan"] = true;
-		opt["getStatus"] = true;
-		pd->toJson(params,opt);
+		DEV_QUERIER devQuery;
+		devQuery.getConf = true;
+		devQuery.getChild = true;
+		devQuery.getChan = true;
+		devQuery.getStatus = true;
+		pd->toJson(params, devQuery);
 		rpcSrv.notify("devAdded", params);
 		pd->run();
 	}
@@ -574,6 +574,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 		if (p)
 		{
 			string lastTagBind = p->m_strTagBind;
+			string lastConnInfo = p->getConnInfo();
 
 			//保留设备内的实时数据，如果修改设备和对象的绑定关系，可以让新绑定的对象立即有实时数据
 			p->loadConf(devConf);
@@ -626,6 +627,11 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 		
 				tds->batchCallAsyn(calls);
+			}
+
+			string currentConnInfo = p->getConnInfo();
+			if (currentConnInfo != lastConnInfo) {
+				p->disconnect();//等待其自动重连
 			}
 		}
 		else {
@@ -1367,7 +1373,8 @@ bool ioServer::toJson(json& conf, json opt)
 		json jDevices = json::array();
 		for (size_t i = startIdx; i < endIdx; i++) {
 			json j;
-			filterRlt[i]->toJson(j, opt);
+			DEV_QUERIER query = filterRlt[i]->parseQueryOpt(opt);
+			filterRlt[i]->toJson(j, query);
 			jDevices.push_back(j);
 		}
 
@@ -1388,7 +1395,8 @@ bool ioServer::toJson(json& conf, json opt)
 		conf = json::array();
 		for (int i = 0; i < filterRlt.size(); i++) {
 			json j;
-			filterRlt[i]->toJson(j, opt);
+			DEV_QUERIER query = filterRlt[i]->parseQueryOpt(opt);
+			filterRlt[i]->toJson(j, query);
 			conf.push_back(j);
 		}
 	}
@@ -1452,12 +1460,13 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr,string ioSessionAddr, st
 
 	//通知设备发现
 	json j;
-	json opt;
-	opt["getConf"] = true;
-	opt["getChan"] = true;
-	opt["getChild"] = true;
-	opt["getStatus"] = true;
-	p->toJson(j,opt);
+
+	DEV_QUERIER devQuery;
+	devQuery.getConf = true;
+	devQuery.getChan = true;
+	devQuery.getChild = true;
+	devQuery.getStatus = true;
+	p->toJson(j, devQuery);
 	rpcSrv.notify("devDiscovered", j);
 
 	return p;
@@ -2059,6 +2068,30 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 			jSession["sendBytes"] = p->pTcpSession->iSendSucCount;
 			jSession["sendFailBytes"] = p->pTcpSession->iSendFailCount;
 		}
+		jList.push_back(jSession);
+	}
+
+	//串口会话
+	for (auto i : m_vecChildDev)
+	{
+		ioDev* p = i;
+		json jSession;
+		jSession["type"] = "";
+		jSession["ip"] = p->getIOAddrStr();
+		jSession["port"] = 0;
+		jSession["name"] = "";
+		jSession["transLayer"] = "";
+		jSession["createTime"] = "";
+		jSession["lastRecvTime"] = timeopt::st2str(p->lastRecvTime);
+		jSession["lastSendTime"] = timeopt::st2str(p->lastSendTime);
+		jSession["sendBytes"] = p->m_sendBytes;
+		jSession["recvBytes"] = p->m_recvBytes;
+		jSession["buffLen"] = p->m_pab.iStreamLen;
+		jSession["abandonLen"] = p->m_pab.iAbandonLen;
+		jSession["lastMethod"] = "";
+
+		jSession["ioAddr"] = "";
+		jSession["ioAddrHist"] = "";
 		jList.push_back(jSession);
 	}
 

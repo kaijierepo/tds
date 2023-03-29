@@ -98,10 +98,8 @@ bool ioChannel::loadConf(json& conf)
 	return true;
 }
 
-bool ioChannel::toJson(json& conf, json opt)
+bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 {
-	DEV_QUERIER querier = parseQueryOpt(opt);
-
 	json jDevAddr;
 	if (m_jDevAddr.is_object()) {
 		for (auto& i : m_jDevAddr.items()) {
@@ -146,7 +144,7 @@ bool ioChannel::toJson(json& conf, json opt)
 	}
 
 
-	if(querier.getStatus)
+	if (querier.getStatus)
 	{
 		conf["ioTypeLabel"] = m_ioTypeLabel;
 		conf["valTypeLabel"] = m_valTypeLabel;
@@ -159,7 +157,8 @@ bool ioChannel::toJson(json& conf, json opt)
 bool ioChannel::getChanStatus(json& statusList)
 {
 	json j;
-	toJson(j);
+	DEV_QUERIER query;
+	toJson(j, query);
 	j["val"] = m_curVal;
 	if (timeopt::isValidTime(m_stLastUpdateTime))
 	{

@@ -107,12 +107,15 @@ public:
 	bool m_bRunning;
 	semaphore m_evtIO;
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
-	virtual bool toJson(json& conf, json opt = nullptr);
+	virtual bool toJson(json& conf, DEV_QUERIER querier);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanVal(json& valList);
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
 	virtual bool loadConf(json& conf);
 	void addChannel(ioChannel* pC);
+	//连接信息， 设备地址+协议组合成连接信息，如果连接信息修改，设备需要重连
+	//例如串口波特率（协议），ip地址修改，都需要重连
+	virtual string getConnInfo(); 
 	virtual bool connect();
 	virtual bool connect(json params) { return false; };
 	virtual bool disconnect();
@@ -248,8 +251,8 @@ public:
 	virtual bool SendHeartbeatPkt();
 	virtual bool onRecvPkt(json jPkt);
 	virtual bool onRecvPkt(char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
-	virtual bool OnRecvData(char* pData, size_t iLen);//接受数据异步处理函数
-	virtual bool OnRecvData(TIME dataTime, char* pData, size_t iLen);
+	virtual bool onRecvData(char* pData, size_t iLen);//接受数据异步处理函数
+	virtual bool onRecvData(TIME dataTime, char* pData, size_t iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
 
 
@@ -269,7 +272,10 @@ public:
 	TIME m_stLastSetClockTime;
 	TIME m_stLastAcqTime;  //上一次采集任务开始时间
 	bool m_bIsWaitingResp;  //表示一次通信会话正在进行中。可能是异步处理，也可能是同步处理
-	TIME m_stLastReqSendTime; //上一次采集请求发送时间
+	TIME lastSendTime; //上一次采集请求发送时间
+	TIME lastRecvTime;
+	size_t m_sendBytes;
+	size_t m_recvBytes;
 	TIME m_stLastChanDataTime;
 	TIME m_stLastAlarmStatusTime;
 	TIME m_stLastActiveTime;
@@ -284,6 +290,8 @@ public:
 	int m_iSendDataFailCount;//记录设备通信失败次数.达到三次判定离线,重试1次就判定离线太频繁
 	TIME m_stOnlineTime;//设备上线时间戳
 	TIME m_stOfflineTime;//设备掉线时间戳
+	size_t m_abandonLen;
+	stream2pkt m_pab;
 
 	//通信时间统计
 	int m_avgRespTime;

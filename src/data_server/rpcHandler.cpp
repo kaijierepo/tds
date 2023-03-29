@@ -3560,8 +3560,10 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 	if (params.contains("ioAddr")) {
 		string ioAddr = params["ioAddr"];
 		p = ioSrv.getIODev(ioAddr);
-		if (p)
-			p->toJson(j, params);
+		if (p) {
+			DEV_QUERIER query = p->parseQueryOpt(params);
+			p->toJson(j, query);
+		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified ioAddr not found");
 		}
@@ -3570,8 +3572,10 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 		string tag = params["tag"];
 		tag = TAG::addRoot(tag, session.org);
 		p = ioSrv.getIODevByTag(tag);
-		if (p)
-			p->toJson(j, params);
+		if (p) {
+			DEV_QUERIER query = p->parseQueryOpt(params);
+			p->toJson(j, query);
+		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified bindTag not found");
 		}

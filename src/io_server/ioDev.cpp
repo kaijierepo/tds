@@ -138,7 +138,8 @@ ioDev::ioDev(void)
 	timeopt::setAsTimeOrg(m_stLastChanDataTime);
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 	timeopt::setAsTimeOrg(m_stLastAlarmStatusTime);
-	timeopt::setAsTimeOrg(m_stLastReqSendTime);
+	timeopt::setAsTimeOrg(lastSendTime);
+	timeopt::setAsTimeOrg(lastRecvTime);
 	timeopt::now(&m_stLastActiveTime);
 	m_pMO = NULL;
 	m_pRecvCallback = NULL;
@@ -151,6 +152,9 @@ ioDev::ioDev(void)
 	m_acqAlarm = false;
 	m_bViaAdaptor = false;
 	m_avgRespTime = 0;
+	m_sendBytes = 0;
+	m_recvBytes = 0;
+	m_abandonLen = 0;
 }
 
 ioDev::~ioDev(void)
@@ -222,13 +226,9 @@ void ioDev::stop()
 	}
 }
 
-// 默认选项
-// opt.getChan = true
-// opt.getStatus = false
-bool ioDev::toJson(json& conf, json opt)
+bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 {
 	lock_conf_shared();
-	DEV_QUERIER querier = parseQueryOpt(opt);
 
 	//配置数据 - 保存在配置文件中
 	if (querier.getConf) {
@@ -271,11 +271,11 @@ bool ioDev::toJson(json& conf, json opt)
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
-	if(querier.getStatus)
+	if (querier.getStatus)
 	{
 		if (m_charset != "")
 			conf["charset"] = m_charset;
-		
+
 		conf["online"] = m_bOnline;
 		conf["connected"] = m_bConnected;
 		if (pIOSession != nullptr)
@@ -298,7 +298,7 @@ bool ioDev::toJson(json& conf, json opt)
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 
 		conf["avgRespTime"] = m_avgRespTime;
-	} 
+	}
 
 	//升级状态信息数据
 	if (querier.getUpgradeInfo) {
@@ -307,7 +307,7 @@ bool ioDev::toJson(json& conf, json opt)
 		conf["upgradeInfo"] = jui;
 	}
 
-	if(querier.getChild)
+	if (querier.getChild)
 	{
 		if (m_vecChildDev.size() > 0)
 		{
@@ -315,7 +315,7 @@ bool ioDev::toJson(json& conf, json opt)
 			for (auto& i : m_vecChildDev)
 			{
 				json j;
-				i->toJson(j, opt);
+				i->toJson(j, querier);
 				children.push_back(j);
 			}
 			conf["children"] = children;
@@ -332,12 +332,12 @@ bool ioDev::toJson(json& conf, json opt)
 				continue;
 			}
 			json j;
-			i->toJson(j, opt);
+			i->toJson(j, querier);
 			channels.push_back(j);
 		}
 		conf["channels"] = channels;
 	}
-	
+
 	unlock_conf_shared();
 	return true;
 }
@@ -614,6 +614,11 @@ void ioDev::addChannel(ioChannel* pdc)
 	m_mapDataChannel[pdc->getDevAddrStr()] = pdc;
 }
 
+string ioDev::getConnInfo()
+{
+	return getDevAddrStr();
+}
+
 bool ioDev::connect()
 {
 	return false;
@@ -692,6 +697,8 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 {
 	DEV_QUERIER q;
+
+
 	if (opt.contains("getStatus")) {
 		q.getStatus = opt["getStatus"].get<bool>();
 	};
@@ -1186,7 +1193,7 @@ void ioDev::DoCycleTask()
 
 void ioDev::checkAcqReqTimeout()
 {
-	if (timeopt::CalcTimePassSecond(m_stLastReqSendTime) > 5)
+	if (timeopt::CalcTimePassSecond(lastSendTime) > 5)
 	{
 	}	
 }

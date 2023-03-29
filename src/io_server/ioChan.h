@@ -44,7 +44,7 @@ public:
 	string storageFmt2valType(string sFmt);
 
 	bool loadConf(json& conf) override;
-	bool toJson(json& conf, json opt = nullptr) override;
+	bool toJson(json& conf, DEV_QUERIER querier) override;
 	bool getChanStatus(json& statusList) override;
 	bool getChanVal(json& valList) override;
 	bool match(string channelNo);
