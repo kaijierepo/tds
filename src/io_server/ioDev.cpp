@@ -151,10 +151,12 @@ ioDev::ioDev(void)
 	m_acqMode = "all";
 	m_acqAlarm = false;
 	m_bViaAdaptor = false;
-	m_avgRespTime = 0;
+	m_avgTransactionTime = 0;
 	m_sendBytes = 0;
 	m_recvBytes = 0;
 	m_abandonLen = 0;
+	m_transactionSuccessCount = 0;
+	m_transactionFailCount = 0;
 }
 
 ioDev::~ioDev(void)
@@ -297,7 +299,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		conf["addrMode"] = m_addrMode;
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 
-		conf["avgRespTime"] = m_avgRespTime;
+		conf["avgRespTime"] = m_avgTransactionTime;
 	}
 
 	//升级状态信息数据
@@ -1161,7 +1163,7 @@ void ioDev::doRespTimeStatis(int time)
 		for (int i = 0; i < m_vecRespTime.size(); i++) {
 			total += m_vecRespTime[i];
 		}
-		m_avgRespTime =(int) (total / m_vecRespTime.size());
+		m_avgTransactionTime =(int) (total / m_vecRespTime.size());
 	}
 }
 
@@ -1198,7 +1200,7 @@ void ioDev::checkAcqReqTimeout()
 	}	
 }
 
-bool ioDev::OnRecvData(char* pData, size_t iLen)
+bool ioDev::onRecvData(char* pData, size_t iLen)
 {
 	PKT_DATA pkt;
 	if (!pkt.UnPack(pData, iLen))
@@ -1210,7 +1212,7 @@ bool ioDev::OnRecvData(char* pData, size_t iLen)
 	return false;
 }
 
-bool ioDev::OnRecvData(TIME dataTime, char* pData, size_t iLen)
+bool ioDev::onRecvData(TIME dataTime, char* pData, size_t iLen)
 {
 	return true;
 }
@@ -1363,7 +1365,7 @@ bool ioDev::loadStatusBuff()
 void ioDev::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	IOLogRecv((unsigned char*)recvData, recvDataLen, strIP + ":" + str::fromInt(port));
-	OnRecvData(recvData, recvDataLen);
+	onRecvData(recvData, recvDataLen);
 }
 
 bool ioDev::addChild(ioDev* p)
@@ -1504,7 +1506,7 @@ void ioDev::SendToChild(TIME dataTime, char* pData, size_t iLen, string strID)
 	{
 		if (m_vecChildDev.at(i)->m_devAddr == strID)
 		{
-			m_vecChildDev.at(i)->OnRecvData(dataTime, pData, iLen);
+			m_vecChildDev.at(i)->onRecvData(dataTime, pData, iLen);
 		}
 	}
 }

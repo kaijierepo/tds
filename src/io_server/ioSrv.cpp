@@ -364,7 +364,7 @@ void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, i
 	//			timeopt::now(&pIoDev->m_stLastActiveTime);
 	//			logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
 	//		}
-	//		pIoDev->OnRecvData(recvData, recvDataLen); 
+	//		pIoDev->onRecvData(recvData, recvDataLen); 
 	//	}
 	//	else {
 	//		LOG("[warn]未知协议空闲设备上线，ioAddr=%s", ioAddr.c_str());  
@@ -2040,6 +2040,9 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["buffLen"] = p->m_alBuf.iStreamLen;
 		jSession["abandonLen"] = p->abandonLen;
 		jSession["lastMethod"] = p->lastMethodCalled;
+		jSession["transactionSuccessCount"] = 0;
+		jSession["transactionFailCount"] = 0;
+		jSession["avgTransactionTime"] = 0;
 
 		string ioAddrInSession = "";
 		for (int i = 0; i < p->m_vecIoDev.size(); i++)
@@ -2089,9 +2092,11 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["buffLen"] = p->m_pab.iStreamLen;
 		jSession["abandonLen"] = p->m_pab.iAbandonLen;
 		jSession["lastMethod"] = "";
-
+		jSession["transactionSuccessCount"] = p->m_transactionSuccessCount;
+		jSession["transactionFailCount"] = p->m_transactionFailCount;
 		jSession["ioAddr"] = "";
 		jSession["ioAddrHist"] = "";
+		jSession["avgTransactionTime"] =p->m_avgTransactionTime;
 		jList.push_back(jSession);
 	}
 

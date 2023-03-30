@@ -13,7 +13,7 @@ public:
 	udpServer(void);
 	~udpServer(void);
 
-	size_t OnRecvData(char* recvData, size_t recvDataLen, string strIP, int port);
+	size_t onRecvData(char* recvData, size_t recvDataLen, string strIP, int port);
 	size_t SendData(char* pData, size_t iLen, string strIP, int port);
 
 	bool run(IUdpServerCallBack* pcb,int localPort = 0, string localIP = "");

@@ -292,9 +292,11 @@ public:
 	TIME m_stOfflineTime;//设备掉线时间戳
 	size_t m_abandonLen;
 	stream2pkt m_pab;
+	size_t m_transactionSuccessCount;
+	size_t m_transactionFailCount;
 
 	//通信时间统计
-	int m_avgRespTime;
+	int m_avgTransactionTime;
 	vector<int> m_vecRespTime;                   //最近5次通信使用时间
 	void doRespTimeStatis(int time);
 

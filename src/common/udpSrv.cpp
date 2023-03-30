@@ -179,7 +179,7 @@ void udpServer::addToMultiCast(string multiCastAddr, int port)
 
 }
 
-size_t udpServer::OnRecvData(char* recvData, size_t recvDataLen, string strIP, int port)
+size_t udpServer::onRecvData(char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	if (m_pCallback)
 	{
@@ -227,7 +227,7 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 		else
 		{
 			szBuff[recvlen] = 0;
-			pServ->OnRecvData(szBuff, recvlen, inet_ntoa(addrCli.sin_addr), ntohs(addrCli.sin_port));
+			pServ->onRecvData(szBuff, recvlen, inet_ntoa(addrCli.sin_addr), ntohs(addrCli.sin_port));
 		}
 	}
 
