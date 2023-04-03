@@ -87,6 +87,8 @@ public:
 	virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(OBJ* pMo,TIME* dataTime = nullptr,bool saveToDB = false);
 
+	void toAttrInfo(nlohmann::ordered_json& attrInfo);
+
 	//配置数据
 	string m_type;
 	string m_customType;  //如果用中文命名，此处转为中文首字母

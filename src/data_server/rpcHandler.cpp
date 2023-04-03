@@ -2902,7 +2902,60 @@ string rpcHandler::rename(string orgName, json& renameMap) {
 	return desName;
 }
 
+void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo) {
+	string sysTag = pMo->getTag();
+	string queryTag = sysTag;
+	queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
+	attrInfo[rename("位号", params.renameMap)] = queryTag;
 
+	//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
+	if (pMo->m_type == MO_TYPE::customMo) {
+		ioDev* piod = ioSrv.getIODevByTag(sysTag);
+		if (piod)
+		{
+			attrInfo[rename("在线", params.renameMap)] = piod->m_bOnline;
+		}
+		else
+		{
+			attrInfo[rename("在线", params.renameMap)] = pMo->m_bOnline;
+		}
+	}
+
+
+	vector<MP*> aryMps;
+	if (params.bSelAttr) {
+		params.attrSel.init(params.jAttrSel, sysTag);
+		pMo->getMpByTagSelector(aryMps, params.attrSel);
+	}
+	else {
+		pMo->GetAttriMp(aryMps);
+	}
+
+
+	for (int j = 0; j < aryMps.size(); j++)
+	{
+		MP* pmp = aryMps[j];
+		json jVal;
+		if (params.valFmt == "val") {
+			jVal = pmp->m_curVal;
+		}
+		else if (params.valFmt == "valStr") {
+			jVal = pmp->getValDesc(false);
+		}
+		else if (params.valFmt == "valStr-unit") {
+			jVal = pmp->getValDesc(true);
+		}
+
+
+
+		if (params.columeLabel == "name") {
+			attrInfo[rename(pmp->m_name, params.renameMap)] = jVal;
+		}
+		else {
+			attrInfo[rename(pmp->getTag(sysTag), params.renameMap)] = jVal;
+		}
+	}
+}
 
 void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,RPC_RESP& resp, RPC_SESSION session)
 {
@@ -2910,72 +2963,10 @@ void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,
 	for (int i = 0; i < moList.size(); i++)
 	{
 		OBJ* pMo = moList[i];
-		string sysTag = pMo->getTag();
-		string queryTag = sysTag;
-
-		//过滤用户权限
-		if (session.user != "")
-		{
-			if (!userMng.checkTagPermission(session.user, sysTag))
-				continue;
-		}
-
-		//根据位号选择器过滤
-		queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
-
 		nlohmann::ordered_json oneData;
-		oneData[rename("位号", params.renameMap)] = queryTag;
-
-		//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
-		if (pMo->m_type == MO_TYPE::customMo) {
-			ioDev* piod = ioSrv.getIODevByTag(sysTag);
-			if (piod)
-			{
-				oneData[rename("在线", params.renameMap)] = piod->m_bOnline;
-			}
-			else
-			{
-				oneData[rename("在线", params.renameMap)] = pMo->m_bOnline;
-			}
-		}
-
-
-		vector<MP*> aryMps;
-		if (params.bSelAttr) {
-			params.attrSel.init(params.jAttrSel, sysTag);
-			pMo->getMpByTagSelector(aryMps, params.attrSel);
-		}
-		else {
-			pMo->GetAttriMp(aryMps);
-		}
-
-
-		for (int j = 0; j < aryMps.size(); j++)
-		{
-			MP* pmp = aryMps[j];
-			json jVal;
-			if (params.valFmt == "val") {
-				jVal = pmp->m_curVal;
-			}
-			else if (params.valFmt == "valStr") {
-				jVal = pmp->getValDesc(false);
-			}
-			else if (params.valFmt == "valStr-unit") {
-				jVal = pmp->getValDesc(true);
-			}
-
-
-
-			if (params.columeLabel == "name") {
-				oneData[rename(pmp->m_name, params.renameMap)] = jVal;
-			}
-			else {
-				oneData[rename(pmp->getTag(sysTag), params.renameMap)] = jVal;
-			}
-		}
+		toMoAttr(params,pMo,oneData);
 		if (strList != "[")
 			strList += ",";
-
 		strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
 	}
 	strList += "]";
@@ -3044,8 +3035,18 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		mode = params["mode"];
 	}
 
-	if(mode == "list")
-		rpc_moList2Attrlist(attrParam, moList, resp, session);
+	if (mode == "list") {
+		if (attrParam.tagSel.singleSelMode()) {
+			nlohmann::ordered_json moAttr;
+			if (moList.size() == 1) {
+				toMoAttr(attrParam, moList[0], moAttr);
+			}
+			resp.result = moAttr.dump();
+		}
+		else {
+			rpc_moList2Attrlist(attrParam, moList, resp, session);
+		}
+	}
 	else
 		rpc_moList2table(attrParam, moList, resp, session);
 }

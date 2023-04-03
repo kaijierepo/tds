@@ -224,6 +224,7 @@ namespace timeopt {
 	TIME nowUTC();
 	void now(TIME& t);
 	void now(TIME* t);
+	string toFmt(string time, string fmt);
 	string stTimeToStr(TIME time);
 	time_t SysTime2Unix(TIME sDT);
 	TIME Unix2SysTime(time_t iUnix);

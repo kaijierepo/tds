@@ -193,7 +193,16 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 
 			//time字段
 			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
-			yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, szTime.data());
+			yyjson_mut_val* timeVal;
+			if (deSel.timeSel.timeFmt == "") {
+				timeVal = yyjson_mut_str(mut_doc, szTime.data());
+			}
+			else {
+				deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
+				timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
+			}
+	
+
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
 			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
@@ -1103,6 +1112,10 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	}
 	if (!deSel.timeSel.init(strTime))
 		return makeRPCError(TEC_TIME_SELECTOR_FMT_ERROR, "time selector format error:" + deSel.timeSel.error);
+
+	if (params["timeFmt"].is_string()) {
+		deSel.timeSel.timeFmt = params["timeFmt"];
+	}
 
 	//parse tag selector
 	std::string strRootTag;

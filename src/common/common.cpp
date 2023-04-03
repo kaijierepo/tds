@@ -964,6 +964,30 @@ namespace timeopt {
 		*t = now();
 	}
 
+	string toFmt(string time, string fmt)
+	{
+		//YYYY-MM-DD hh:mm:ss
+		if (time.length() != 19) {
+			return "";
+		}
+		string YYYY = time.substr(0, 4);
+		string MM = time.substr(5, 2);
+		string DD = time.substr(8, 2);
+		string hh = time.substr(11, 2);
+		string mm = time.substr(14, 2);
+		string ss = time.substr(17, 2);
+
+		string s = fmt;
+		 s = str::replace(s, "YYYY", YYYY);
+		 s = str::replace(s, "MM", MM);
+		 s = str::replace(s, "DD", DD);
+		 s = str::replace(s, "hh", hh);
+		 s = str::replace(s, "mm", mm);
+		 s = str::replace(s, "ss", ss);
+
+		return s;
+	}
+
 	string stTimeToStr(TIME time)
 	{
 		string str = str::format("%4d-%02d-%02d %02d:%02d:%02d", time.wYear, time.wMonth, time.wDay, time.wHour, time.wMinute, time.wSecond);

@@ -366,6 +366,10 @@ bool OBJ::loadStatus(OBJ* pSrcRoot, TIME* dataTime, bool saveToDB)
 	return true;
 }
 
+void OBJ::toAttrInfo(nlohmann::ordered_json& attrInfo)
+{
+}
+
 bool OBJ::loadStatus(json& status)
 {
 	if (status.is_object()) {

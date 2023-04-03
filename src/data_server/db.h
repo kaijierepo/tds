@@ -151,6 +151,7 @@ public:
 	//选择器字符串
 	string selector;
 	Time_Set_Type timeSetType;
+	string timeFmt; //指定返回的时间格式,采用如下语法 YYYY-MM-DD hh:mm:ss
 
 
 	//时间范围
@@ -218,6 +219,7 @@ struct DB_FILE {
 struct DE_yyjson {
 	yyjson_mut_val* time;  //暂时只只是按时间聚合，聚合后该字段一定存在。
 	yyjson_mut_val* val;
+	string fmtTime; //根据请求格式格式化后的时间
 
 	DE_yyjson() {
 		time = 0;

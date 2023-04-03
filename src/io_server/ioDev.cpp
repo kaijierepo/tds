@@ -240,7 +240,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["viaAdaptor"] = true;
 		}
 		conf["type"] = m_devType;
-		conf["typeLabel"] = m_devTypeLabel;
+		conf["typeLabel"] = getDevTypeLabel(m_devType);
 		if (m_devSubType != "") {
 			conf["subType"] = m_devSubType;
 		}
