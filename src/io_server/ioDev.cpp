@@ -658,7 +658,7 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 		LOG("[warn]" + rpcResp.error);
 		return true;
 	}
-	if (pIoDev->m_devType != IO_DEV_TYPE::DEV::tdsp_device)
+	if (pIoDev->m_devType != DEV_TYPE::DEV::tdsp_device)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devTypeError, "IO设备类型错误");
 		LOG("[warn]" + rpcResp.error);
@@ -885,7 +885,7 @@ string ioDev::getIOAddrStr(bool ignorePort)
 {
 	string devAddr = getDevAddrStr(ignorePort);
 	ioDev* pParent = m_pParent;
-	while (pParent && pParent->m_devType != IO_DEV_TYPE::SERVER::tds)
+	while (pParent && pParent->m_devType != DEV_TYPE::SERVER::tds)
 	{
 		devAddr = pParent->getDevAddrStr(ignorePort) + "/" + devAddr;
 		pParent = pParent->m_pParent;

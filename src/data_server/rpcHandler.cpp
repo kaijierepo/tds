@@ -3791,7 +3791,7 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {
-	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = ioSrv.getChildren(DEV_TYPE::GW::local_serial);
 	json result;
 	for (auto& i : ary)
 	{

@@ -87,7 +87,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 
 			if (pIoDev)
 			{
-				if (pIoDev->m_devType == IO_DEV_TYPE::DEV::iq60_gateway)
+				if (pIoDev->m_devType == DEV_TYPE::DEV::iq60_gateway)
 				{
 					ioDev* p = pIoDev;
 					if (p->m_bEnableIoLog)
@@ -120,7 +120,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 ioServer::ioServer()
 {
 	m_stopCycleAcq = false;
-	m_devType = IO_DEV_TYPE::SERVER::tds;
+	m_devType = DEV_TYPE::SERVER::tds;
 	m_totalPtCount = 0;
 	tds->ioServer = this;
 }
@@ -134,6 +134,7 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSessClt));
+		p->type = TDS_SESSION_TYPE::iodev;
 		m_mutexIoSessions.lock();
 		m_IoSessions[pTcpSessClt] = p;
 		m_mutexIoSessions.unlock();
@@ -167,7 +168,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
-
+		p->type = TDS_SESSION_TYPE::iodev;
 		tcpSrv* pts = (tcpSrv*)pTcpSess->pTcpServer;
 		if (m_mapPort2DevType.find(pts->m_iServerPort) != m_mapPort2DevType.end()) {
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
@@ -328,7 +329,7 @@ void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, i
 			if (firstLevel) {
 				json jAddr;
 				jAddr["id"] = ioAddr;
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, IO_DEV_TYPE::DEV::tdsp_device);
+				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, DEV_TYPE::DEV::tdsp_device);
 			}
 		}
 		//设备上线
@@ -698,7 +699,7 @@ void ioServer::rpc_startDevUpgrade(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 		if (pD == nullptr) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
 		}
-		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
+		else if (pD->m_devType != DEV_TYPE::DEV::tdsp_device) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
 		}
 		else if (pD->isCommBusy())
@@ -765,7 +766,7 @@ void ioServer::rpc_uploadDevFirmware(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 		if (pD == nullptr) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
 		}
-		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
+		else if (pD->m_devType != DEV_TYPE::DEV::tdsp_device) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
 		}
 		else if (pD->isCommBusy())
@@ -842,7 +843,7 @@ void ioServer::rpc_startDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESS
 		if (pD == nullptr) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "ioDev with specified ioAddr not found");
 		}
-		else if (pD->m_devType != IO_DEV_TYPE::DEV::tdsp_device) {
+		else if (pD->m_devType != DEV_TYPE::DEV::tdsp_device) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "device type does not support firmware upgrade");
 		}
 		else
@@ -1087,14 +1088,14 @@ void ioServer::refreshSerialIODev()
 		ioDev* ls = getIODev(ci.portNum);
 		if (!ls)
 		{
-			ls = onChildDevDiscovered(ci.portNum,ci.portNum, IO_DEV_TYPE::GW::local_serial);
+			ls = onChildDevDiscovered(ci.portNum,ci.portNum, DEV_TYPE::GW::local_serial);
 			if(ls)
 				ls->m_devTypeLabel = ci.desc;
 		}
 	}
 
 	//当前列表里有，新列表没有。 表示离线。 离线的空闲设备，从io设备列表中删除。已配置设备保留
-	vector<ioDev*> ary = ioSrv.getChildren(IO_DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = ioSrv.getChildren(DEV_TYPE::GW::local_serial);
 	for (auto& i : ary)
 	{
 		bool bOnline = false;
@@ -1137,11 +1138,11 @@ bool ioServer::runAsCloud()
 	//adaptor接入端口
 	int adpPort = tds->conf->getInt("adpPort", 662);
 
-	m_mapPort2DevType[tdspPort] = IO_DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[mbPort] = IO_DEV_TYPE::GW::rs485_gateway;
-	m_mapPort2DevType[iq60Port] = IO_DEV_TYPE::DEV::iq60_gateway;
-	m_mapPort2DevType[leakDetectPort] = IO_DEV_TYPE::DEV::leakDetect;
-	m_mapPort2DevType[mbTcpPort] = IO_DEV_TYPE::DEV::modbus_tcp_slave;
+	m_mapPort2DevType[tdspPort] = DEV_TYPE::DEV::tdsp_device;
+	m_mapPort2DevType[mbPort] = DEV_TYPE::GW::rs485_gateway;
+	m_mapPort2DevType[iq60Port] = DEV_TYPE::DEV::iq60_gateway;
+	m_mapPort2DevType[leakDetectPort] = DEV_TYPE::DEV::leakDetect;
+	m_mapPort2DevType[mbTcpPort] = DEV_TYPE::DEV::modbus_tcp_slave;
 
 	//启动服务端口
 	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
@@ -1487,7 +1488,7 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 {
 	for (auto& it : m_vecChildDev)
 	{
-		if (it->m_devType == IO_DEV_TYPE::DEV::tdsp_device)
+		if (it->m_devType == DEV_TYPE::DEV::tdsp_device)
 		{
 			aryDev.push_back(it);
 		}
@@ -1542,14 +1543,14 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			)
 		{
 			tdsSession->iALProto = IO_PROTO::IQ60;
-			tdsSession->type = TDS_SESSION_TYPE::iodev + ".IQ60";
+			tdsSession->type = TDS_SESSION_TYPE::iodev;
 		}
 	}
 
 	//应用层协议处理
 	if (tdsSession->bridgedIoSessionClient != NULL)
 	{
-		if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
+		if (tdsSession->ioDevType == DEV_TYPE::DEV::tdsp_device)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1561,7 +1562,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 		//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-		else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway)
+		else if (tdsSession->ioDevType == DEV_TYPE::DEV::iq60_gateway)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1587,7 +1588,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::iq60_gateway)
+	else if (tdsSession->ioDevType == DEV_TYPE::DEV::iq60_gateway)
 	{
 		bool regPkt = false;
 		if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
@@ -1624,7 +1625,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::tdsp_device)
+	else if (tdsSession->ioDevType == DEV_TYPE::DEV::tdsp_device)
 	{
 		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
@@ -1654,7 +1655,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::modbus_tcp_slave)
+	else if (tdsSession->ioDevType == DEV_TYPE::DEV::modbus_tcp_slave)
 	{
 		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
@@ -1669,7 +1670,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::GW::rs485_gateway)
+	else if (tdsSession->ioDevType == DEV_TYPE::GW::rs485_gateway)
 	{
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
 		if (handleFirstRegPkt(pData, iLen, tdsSession))//首包数据,按照tdsp注册包处理
@@ -1724,7 +1725,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == IO_DEV_TYPE::DEV::leakDetect) {
+	else if (tdsSession->ioDevType == DEV_TYPE::DEV::leakDetect) {
 		stream2pkt* pab = &tdsSession->m_alBuf;
 		pab->PushStream((unsigned char*)pData, iLen);
 		while (pab->PopPkt(IsValidPkt_LeakDetect))
@@ -2040,8 +2041,10 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["buffLen"] = p->m_alBuf.iStreamLen;
 		jSession["abandonLen"] = p->abandonLen;
 		jSession["lastMethod"] = p->lastMethodCalled;
-		jSession["transactionSuccessCount"] = 0;
-		jSession["transactionFailCount"] = 0;
+		if (p->m_IoDev != nullptr) {
+			jSession["transactionSuccessCount"] = p->m_IoDev->m_transactionSuccessCount;
+			jSession["transactionFailCount"] = p->m_IoDev->m_transactionFailCount;
+		}
 		jSession["avgTransactionTime"] = 0;
 
 		string ioAddrInSession = "";
@@ -2078,6 +2081,9 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 	for (auto i : m_vecChildDev)
 	{
 		ioDev* p = i;
+		if (p->m_devType != DEV_TYPE::GW::local_serial)
+			continue;
+
 		json jSession;
 		jSession["type"] = "";
 		jSession["ip"] = p->getIOAddrStr();

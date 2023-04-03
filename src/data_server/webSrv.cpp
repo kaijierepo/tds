@@ -1024,7 +1024,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			tdsSession->setActivityCheck(false);
 			tdsSession->bridgedIoSession->setActivityCheck(false);
 		}
-		else if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
+		else if (p && p->m_devType == DEV_TYPE::GW::local_serial)
 		{
 			tdsSession->setActivityCheck(false);
 			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
@@ -1286,7 +1286,7 @@ bool ServiceInterface::handleAppLayerData_Bridge(char* pData, size_t iLen, std::
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
 	{
 		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
-		if (p && p->m_devType == IO_DEV_TYPE::GW::local_serial)
+		if (p && p->m_devType == DEV_TYPE::GW::local_serial)
 		{
 			if (!p->sendData(pData, iLen))
 			{
