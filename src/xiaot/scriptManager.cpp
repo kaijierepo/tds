@@ -307,7 +307,13 @@ void ScriptManager::exeAllGlobalScripts()
 		}
 	}
 }
-
+/*
+表达式脚本中如果使用了val函数，该函数返回null时，将不会生成计算结果。
+例如，需要计算今天的用电量 val("总电量") - val("总电量","today","first")，使用当前值减去今天的第一个值，
+如果今天没有采集到过任何数据，后面那个val函数返回null
+前面的val函数返回最新值，可能是昨天采集的
+那么该二次计算表达式将不返回计算结果
+*/
 void ScriptManager::exeAllVarExpScripts()
 {
 	unique_lock<mutex> lock(m_csExpScripts);
@@ -318,7 +324,13 @@ void ScriptManager::exeAllVarExpScripts()
 
 		ScriptEngine se;
 		se.m_tagThis = info.tagThis;
+		se.m_bValNullInCalc = false;
 		se.runScript(script,info.lastModifyUser);
+
+		if (se.m_bValNullInCalc) {
+			//如果val函数返回null并且参与了计算，本次计算无效
+			continue;
+		}
 
 		if (se.m_jEvalRet.is_number())
 		{

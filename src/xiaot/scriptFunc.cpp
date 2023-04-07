@@ -394,6 +394,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 		}
 	}
 	jerry_value_t ret = jerry_create_null();
+	pEngine->m_bValNullInCalc = true;
 	return ret;
 }
 
