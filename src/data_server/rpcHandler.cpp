@@ -681,7 +681,34 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	
 	if (method.find("db.") != string::npos)
 	{
-		if (!params.contains("time"))
+		//insert不进行 time参数校验
+		if (method == "db.insert")
+		{
+			if (!params.contains("val"))
+			{
+				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : val");
+			}
+			else
+			{
+				string tag = params["tag"].get<string>();
+				TIME tNow;
+				if (params.contains("time")) {
+					string time = params["time"].get<string>();
+					if (!timeopt::isValidTimeStr(time)) {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
+						return true;
+					}
+					tNow = timeopt::str2st(time);
+				}
+				else {
+					tNow = timeopt::now();
+				}
+		
+				db.Insert(tag, tNow, params["val"]);
+				rpcResp.result = "\"ok\"";
+			}
+		}
+		else if (!params.contains("time"))
 		{
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
@@ -709,25 +736,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				result = "\"ok\"";
 			else
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "data element not found");
-		}
-		else if (method == "db.insert")
-		{
-			if (!params.contains("val"))
-			{
-				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : val");
-			}
-			else
-			{
-				string tag = params["tag"].get<string>();
-				string time = params["time"].get<string>();
-				if (!timeopt::isValidTimeStr(time)) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
-				}
-				else {
-					db.Insert(tag, timeopt::str2st(time), params["val"]);
-					rpcResp.result = "\"ok\"";
-				}
-			}
 		}
 	}
 	else
@@ -1773,6 +1781,23 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	else if (method == "startStreamPush" || method == "startPushStream") {
 		reverseInterface.rpc_startStreamPush(params, rpcResp, session);
 	}
+	else if (method == "getVerifyCode") {
+		string phoneNum = params["phoneNum"];
+		tds->smsServer->sendVerificationCode(phoneNum);
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "checkVerifyCode") {
+		string phoneNum = params["phoneNum"];
+		string code = params["verifyCode"];
+		tds->smsServer->checkVerificationCode(phoneNum,code);
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "sendShortMsg") {
+		string phoneNum = params["phoneNum"];
+		string msg = params["msg"];
+		tds->smsServer->send(phoneNum, msg);
+		rpcResp.result = RPC_OK;
+	}
 	else {
 		bHandled = false;
 	}
@@ -2648,7 +2673,11 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		//删除没有权限的拓扑图
 		for (int i = 0; i < topoList.size(); i++)
 		{
-			string& s = topoList[i];
+			string s = topoList[i];
+			if (s == "root")
+				s = "";
+
+
 			if (!userMng.checkTagPermission(session.user, s))
 			{
 				topoList.erase(topoList.begin() + i);

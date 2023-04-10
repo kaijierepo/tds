@@ -567,6 +567,8 @@ public:
 class i_smsServer : public i_tdsPlugin {
 public:
 	virtual bool send(string& msg,string& phoneNum) = 0;
+	virtual bool sendVerificationCode(string phoneNum) = 0;
+	virtual bool checkVerificationCode(string phoneNum, string code) = 0;
 };
 
 

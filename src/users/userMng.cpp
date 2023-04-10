@@ -310,6 +310,56 @@ bool userManager::checkToken(string user, string token)
 	return true;
 }
 
+void getPermission(json& tree, string tag, bool& read, bool& write)
+{
+	read = false;
+	write = false;
+	vector<string> nodeNames;
+	str::split(nodeNames, tag, ".");
+	json* node = &tree;
+	for (int i = 0; i < nodeNames.size(); i++)
+	{
+		string name = nodeNames[i];
+
+
+		//查找子节点中有没有是 指定name的节点。如果有node指向该节点，继续查找node的子节点中是否有下一个name
+		if ((*node)["children"] == nullptr)
+			return;
+		json& jChildren = (*node)["children"];
+		bool bHaveChild = false;
+		if (jChildren.is_array())//具体指定
+		{
+			for (int j = 0; j < jChildren.size(); j++)
+			{
+				json& child = jChildren[j];
+				if (child["name"].get<string>() == name)
+				{
+					bHaveChild = true;
+					node = &child;
+				}
+			}
+		}
+		else if (jChildren.is_string() && jChildren.get<string>() == "*") //通配符指定，所有子节点
+		{
+			//如果子节点全部通配，使用父节点的读写权限
+			read = true;
+			if (node->contains("writable")) {
+				write = (*node)["writable"].get<bool>();
+			}
+			return;
+		}
+
+		if (!bHaveChild)return;
+	}
+
+	//此时node为找到的节点.如果tag=="",则node此时指向根节点
+	read = true;
+	if (node->contains("writable")) {
+		write = (*node)["writable"].get<bool>();
+	}
+	return;
+}
+
 bool userManager::checkTagWritePermission(string user, string tag)
 {
 	json jUser = userMng.getUser(user);
@@ -324,14 +374,25 @@ bool userManager::checkTagWritePermission(string user, string tag)
 
 	//管理员级别默认拥有所有权限。简化操作，无需去设置管理员的权限
 	string role = jUser["role"].get<string>();
+
+	//管理员默认有写权限
 	if (role == "管理员")
 		return true;
 
-	if (role == "操作员")
-		return true;
+	//观察员默认没有
+	if (role == "观察员")
+		return false;
 
-	return false;
+	json moPermission = userMng.getMoPermission(user);
+	if (moPermission.is_null())return false;
+	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
+	tag = TAG::trimRoot(tag, org);
+	bool read, write;
+	getPermission(moPermission, tag, read, write);
+	return write;
 }
+
+
 
 bool userManager::checkTagPermission(string user, string tag)
 {
@@ -352,11 +413,8 @@ bool userManager::checkTagPermission(string user, string tag)
 	json moPermission = userMng.getMoPermission(user);
 	if(moPermission.is_null())return false;
 	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
-	tag = str::trimPrefix(tag,org);
-	tag = str::trimPrefix(tag, ".");
-	if (tag == "")
-		return true;
-	
+	tag = TAG::trimRoot(tag, org);
+
 	//检查权限树中是否有该位号
 	return TAG::hasTag(moPermission, tag);
 }
