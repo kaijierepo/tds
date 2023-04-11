@@ -1794,8 +1794,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	}
 	else if (method == "sendShortMsg") {
 		string phoneNum = params["phoneNum"];
-		string msg = params["msg"];
-		tds->smsServer->send(phoneNum, msg);
+		tds->smsServer->send(params, phoneNum);
 		rpcResp.result = RPC_OK;
 	}
 	else {

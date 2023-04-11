@@ -10,6 +10,7 @@
 #include "tools/hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
+#include "httplib.h"
 
 #include "mp.h"
 #include "users/userMng.h"
@@ -687,13 +688,16 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (mg_http_match_uri(hm, "/release"))
 		{
-		}
-		else if (mg_http_match_uri(hm, "/release"))
-		{
 			string localPath = fs::appPath() + "/files/release";
+			string redirectPath = "/files/release/";
+			if (!fs::fileExist(localPath)) {
+				localPath = fs::appPath() + "/files/发布版本";
+				redirectPath = "/files/发布版本/";
+			}
+
 			vector<fs::FILE_INFO> fl;
 			fs::getFileList(fl, localPath);
-			string redirectPath = "/files/release/";
+			
 
 			map<string, fs::FILE_INFO> fl2;
 
