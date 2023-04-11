@@ -180,6 +180,23 @@ struct DE_TEMP {
 
 };
 
+
+//yyjson调试查看不方便，必要时使用此类函数打印出json进行调试
+//mut_val 必须拷贝后再put到新的 mut_obj里面，没有拷贝直接put原来get到的 mut_val，会把原来的值给改掉
+string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
+	LOG("********time section dump*********");
+	if (timeSection == nullptr)
+		LOG("null");
+	else {
+		for (auto& i : *timeSection) {
+			LOG(i.first);
+			char* sz = yyjson_mut_val_write(i.second, 0, nullptr);
+			LOG(sz);
+		}
+	}
+	return "";
+}
+
 bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
@@ -258,50 +275,61 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 
 
 	//时间截面位号补齐。 并设置补全de的时间
-	int addDeCount = 0;
-	map<string, yyjson_mut_val*>* lastSection = nullptr;
-	for (auto& iter : timeSectionSeries) {
-		map<string, yyjson_mut_val*>& timeSection = iter.second;
-		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-		{
-			TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
-			string& tag = fSet.tag;
+	if (deSel.timeFill) {
+		int addDeCount = 0;
+		map<string, yyjson_mut_val*>* lastSection = nullptr;
+		for (auto& iter : timeSectionSeries) {
+			map<string, yyjson_mut_val*>& timeSection = iter.second;
+			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+			{
+				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+				string& tag = fSet.tag;
 
-			map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
-			if (j == timeSection.end()) { //该时间截面没有该位号的数据，需要进行补齐
-				if (lastSection != nullptr) {
-					map<string, yyjson_mut_val*>::iterator k = lastSection->find(tag);
-					if (k != lastSection->end()) {
-						//创建一个输出de
-						yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
+				map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
+				if (j == timeSection.end()) { //该时间截面没有该位号的数据，需要进行补齐
+					if (lastSection != nullptr) {
+						map<string, yyjson_mut_val*>::iterator k = lastSection->find(tag);
+						if (k != lastSection->end()) {
+							//创建一个输出de
+							yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
 
-						//从当前截面的de拷贝时间。一定有1个数据，使用第一个
-						yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
-						yyjson_mut_val* yyTimeRef = yyjson_mut_obj_get(jTimeRefRec, "time");
-						yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
-						yyjson_mut_obj_put(jRecord, timeKey, yyTimeRef);
 
-						//从上一个截面的de拷贝位号名称和数值
-						yyjson_mut_val* jValRefRec = k->second;
-						yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, "val");
-						yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //此处一定要copy一次，不可以把yyValSrc直接put到obj里面去，否则序列化的时候数据会错乱，可能指针指向的对象是链表的一个节点，如果同时在两个obj中，yyjson使用链表输出就会错乱
-						yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
-						yyjson_mut_obj_put(jRecord, valKey, yyVal);
+							if (addDeCount == 0) {
+								LOG("前前");
+								printfTimeSection(&timeSection);
+							}
 
-						yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
-						yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
-						yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
-						yyjson_mut_obj_put(jRecord, tagKey, yyTag);
+							//从当前截面的de拷贝时间。一定有1个数据，使用第一个
+							yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
+							yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
+							yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
+							yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
+							yyjson_mut_obj_put(jRecord, timeKey, yyTime);
 
-						timeSection[tag] = jRecord;
-						addDeCount++;
+
+							yyjson_mut_val* jValRefRec = k->second;
+							yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, "val");
+							yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //此处一定要copy一次，不可以把yyValSrc直接put到obj里面去，否则序列化的时候数据会错乱，可能指针指向的对象是链表的一个节点，如果同时在两个obj中，yyjson使用链表输出就会错乱
+							yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
+							yyjson_mut_obj_put(jRecord, valKey, yyVal);
+
+							yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
+							yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
+							yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
+							yyjson_mut_obj_put(jRecord, tagKey, yyTag);
+
+
+							timeSection[tag] = jRecord;
+							addDeCount++;
+						}
 					}
 				}
 			}
+			lastSection = &timeSection;
 		}
-		lastSection = &timeSection;
+		
 	}
-
+	
 
 	//排序输出de并输出
 	for (auto& i : timeSectionSeries) {
@@ -668,11 +696,11 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result,rlt_mut_doc);
 	}
 	else {
-		if (deSel.timeFill) {
+		//if (deSel.timeFill) {
 			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
-		}
-		else
-			Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
+		//}
+		//else
+		//	Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
 	}
 
 	//结果行二次计算
