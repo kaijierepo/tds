@@ -303,6 +303,7 @@ struct DE_SELECTOR {
 	INTERVAL_SELECTOR interval;		//降采样选择器
 	bool ascendingSort;
 	string sortKey;
+	bool timeFill;   //时间截面位号补全。多个位号，可能在某个时间点只有部分位号有数据，如果该选项为true,将自动为每个时间点补全所有位号的数据，数据值选用上一个时间点的该位号值
 
 	//位号重命名
 	string tagLabel; //重命名为 tag还是name
@@ -330,6 +331,7 @@ struct DE_SELECTOR {
 		grouped = false;
 		groupByTime = false;
 		bAggr = false;
+		timeFill = false;
 	}
 };
 
@@ -355,6 +357,13 @@ struct SELECT_RLT {
 	}
 };
 
+namespace CONST_STR {
+	const string tds = "tds";
+	const string val = "val";
+	const string time = "time";
+	const string tag = "tag";
+};
+
 
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
 class database : public i_database{
@@ -375,6 +384,8 @@ public:
 //接口部分
 public:
 	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
+
+	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	
 	//select
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);

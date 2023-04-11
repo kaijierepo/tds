@@ -169,6 +169,168 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 	}
 }
 
+//位号集合的时间截面
+struct TAG_SET_TIME_SECTION {
+	
+};
+
+struct DE_TEMP {
+	yyjson_mut_val* de;
+	string sortVal;  //用于本次排序的字段的数值
+
+};
+
+bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+{
+	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
+	//返回的数据元是否需要携带tag字段
+	bool withTag = tagDBFileSet.size() > 1 ? true : false;
+	if (deSel.tagSel.getTag)
+		withTag = true;
+
+	map<string, map<string, yyjson_mut_val*>> timeSectionSeries; //时间截面序列，每个时间界面都要补齐各个位号的值
+
+
+	//生成输出de
+	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+	{
+		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+		string& tagAlias = fSet.colKey;
+		string& tag = fSet.tag;
+
+		for (int j = 0; j < fSet.m_mapRlt.size(); j++) {
+			DE_yyjson& deyy = fSet.m_mapRlt[j];
+
+			//创建一个输出de
+			yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);;
+
+			//填入time字段
+			string_view szTime = yyjson_mut_get_str(deyy.time);
+			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
+			yyjson_mut_val* timeVal;
+			if (deSel.timeSel.timeFmt == "") {
+				timeVal = yyjson_mut_str(mut_doc, szTime.data());
+			}
+			else {
+				deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
+				timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
+			}
+			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
+
+			//填入val字段
+			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
+			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
+
+
+			if (deSel.condition.bEnable && !deSel.condition.match(jRecord))
+			{
+				continue;
+			}
+
+			//填入tag字段
+			if (withTag)
+			{
+				//当进行多位号搜索时，需要加入tag标签
+				//relTag指向的变量在write_doc之前不能被销毁
+				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
+				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
+				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
+			}
+
+		
+			map<string, map<string, yyjson_mut_val*>>::iterator iter = timeSectionSeries.find(szTime.data());
+			if (iter == timeSectionSeries.end()) {
+				map<string, yyjson_mut_val*> timeSection;
+				timeSection[tag] = jRecord;
+				timeSectionSeries[szTime.data()] = timeSection;
+			}
+			else {
+				map<string, yyjson_mut_val*>& timeSection = iter->second;
+				timeSection[tag] = jRecord;
+			}
+
+			result.rowCount++;
+
+			if (deSel.timeSel.AmountMatch(result.rowCount))
+				break;
+		}
+	}
+
+
+	//时间截面位号补齐。 并设置补全de的时间
+	int addDeCount = 0;
+	map<string, yyjson_mut_val*>* lastSection = nullptr;
+	for (auto& iter : timeSectionSeries) {
+		map<string, yyjson_mut_val*>& timeSection = iter.second;
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		{
+			TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+			string& tag = fSet.tag;
+
+			map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
+			if (j == timeSection.end()) { //该时间截面没有该位号的数据，需要进行补齐
+				if (lastSection != nullptr) {
+					map<string, yyjson_mut_val*>::iterator k = lastSection->find(tag);
+					if (k != lastSection->end()) {
+						//创建一个输出de
+						yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
+
+						//从当前截面的de拷贝时间。一定有1个数据，使用第一个
+						yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
+						yyjson_mut_val* yyTimeRef = yyjson_mut_obj_get(jTimeRefRec, "time");
+						yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
+						yyjson_mut_obj_put(jRecord, timeKey, yyTimeRef);
+
+						//从上一个截面的de拷贝位号名称和数值
+						yyjson_mut_val* jValRefRec = k->second;
+						yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, "val");
+						yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //此处一定要copy一次，不可以把yyValSrc直接put到obj里面去，否则序列化的时候数据会错乱，可能指针指向的对象是链表的一个节点，如果同时在两个obj中，yyjson使用链表输出就会错乱
+						yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
+						yyjson_mut_obj_put(jRecord, valKey, yyVal);
+
+						yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
+						yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
+						yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
+						yyjson_mut_obj_put(jRecord, tagKey, yyTag);
+
+						timeSection[tag] = jRecord;
+						addDeCount++;
+					}
+				}
+			}
+		}
+		lastSection = &timeSection;
+	}
+
+
+	//排序输出de并输出
+	for (auto& i : timeSectionSeries) {
+		map<string, yyjson_mut_val*>& timeSection = i.second;
+		for (auto& j : timeSection) {
+			yyjson_mut_val* jRec = j.second;
+
+			string sortFlag = "";
+			if (deSel.sortKey.length() > 0) {
+				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, "val");
+				if (yyjson_mut_is_obj(yyVal)) {
+					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+					if (yyjson_mut_is_str(yySortKey)) {
+						sortFlag = yyjson_mut_get_str(yySortKey);
+					}
+					else if (yyjson_mut_is_num(yySortKey)) {
+						double f = yyjson_mut_get_real(yySortKey);
+						sortFlag = str::fromFloat(f);
+					}
+				}
+			}
+
+			mapRlt[sortFlag + i.first + j.first + std::to_string(result.rowCount)] = jRec; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+		}
+	}
+	
+	return true;
+}
+
 bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
@@ -506,7 +668,11 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result,rlt_mut_doc);
 	}
 	else {
-		Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
+		if (deSel.timeFill) {
+			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
+		}
+		else
+			Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
 	}
 
 	//结果行二次计算
@@ -1270,6 +1436,10 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 
 	if (params["calc"].is_string()) {
 		deSel.calc = params["calc"];
+	}
+
+	if (params["timeFill"].is_boolean()) {
+		deSel.timeFill = params["timeFill"].get<bool>();
 	}
 
 	//选出位号
