@@ -294,11 +294,6 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 							yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
 
 
-							if (addDeCount == 0) {
-								LOG("前前");
-								printfTimeSection(&timeSection);
-							}
-
 							//从当前截面的de拷贝时间。一定有1个数据，使用第一个
 							yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
 							yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");

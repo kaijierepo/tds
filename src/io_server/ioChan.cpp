@@ -130,12 +130,6 @@ bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 		if (m_byteOrder != "")
 			conf["byteOrder"] = m_byteOrder;
 
-		if (m_channelType != "")
-		{
-			conf["channelType"] = m_channelType;
-			conf["channelTypeLabel"] = m_channelTypeLabel;
-		}
-
 		if (m_bDownSample)
 		{
 			conf["downSample"] = true;

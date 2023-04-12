@@ -148,7 +148,6 @@ public:
 	string m_devType;
 	string m_devSubType; //设备子类型
 	string m_devTypeLabel;
-	string m_parentDevType;
 	string m_level;
 	string m_name; //可以理解为在硬件中配置的 mo名称
 	bool IsGateway();

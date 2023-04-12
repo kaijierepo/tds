@@ -25,6 +25,9 @@ namespace DEV_TYPE {
 		const string modbus_rtu_slave = "modbus-rtu-slave";
 		const string modbus_tcp_slave = "modbus-tcp-slave";
 		const string iq60_gateway = "iq60-gateway";
+		const string dlt645_2007 = "dlt645-2007";
+		const string ethernetIp = "ethernet-ip";
+		const string opcUa = "opc-ua";
 		const string leakDetect = "leak-detect";
 		const string genicam = "genicam";
 		const string mqttBroker = "mqtt-broker";
@@ -55,6 +58,9 @@ inline string getDevTypeLabel(string devType) {
 	else if (devType == DEV_TYPE::CHAN::io_channel)return "IO通道";
 	else if (devType == DEV_TYPE::DEV::iq60_gateway)return "IQ60";
 	else if (devType == DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";
+	else if (devType == DEV_TYPE::DEV::dlt645_2007)return "DLT645-2007电表";
+	else if (devType == DEV_TYPE::DEV::ethernetIp)return "EtherNet/IP";
+	else if (devType == DEV_TYPE::DEV::opcUa)return "OPC UA";
 	else if (devType == "onvif")return "Onvif摄像头";
 	else if (devType == "visca")return "Visca摄像头";
 	else if (devType == "tuya") return "涂鸦设备";
