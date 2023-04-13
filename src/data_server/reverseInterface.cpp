@@ -334,7 +334,7 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 
 		if (req == "ping\n\n") { 
 			string s = "pong\n\n";
-			tdsSession->send((unsigned char*)s.pkt(), s.length(), false);
+			tdsSession->send((unsigned char*)s.data(), s.length(), false);
 		}
 		else if (req == "pong\n\n") {
 
