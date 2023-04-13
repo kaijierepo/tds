@@ -29,6 +29,7 @@ tdsConfig::tdsConfig()
 	iotimeoutTdsp = 7000;
 	iotimeoutModbusRtu = 5000;
 	iotimeoutIQ60 = 5000;
+	iotimeoutDLT645 = 8000;
 	mode = "tds";
 	bStopCycleAcq = false;
 }
@@ -81,6 +82,7 @@ leakDetectPort = 8085  #IO服务端口 默认8085 漏点监测设备
 iotimeoutTdsp=7000
 iotimeoutModbusRtu=5000
 iotimeoutIQ60=5000
+iotimeoutDLT645=8000
 
 #安全性
 enableAccessCtrl = 0   #开启用户认证

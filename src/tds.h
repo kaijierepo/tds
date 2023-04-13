@@ -401,6 +401,7 @@ struct iTDSConf {
 	int iotimeoutTdsp; //tdsp comm timeout in milliseconds
 	int iotimeoutModbusRtu;
 	int iotimeoutIQ60;
+	int iotimeoutDLT645;
 	bool enableDevCommReboot;
 	bool enableDevReboot;
 	int devRebootTime; //seconds

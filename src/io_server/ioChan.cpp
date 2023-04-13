@@ -229,7 +229,7 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 	m_curOrgVal = jVal;
 	if (m_curOrgVal.is_number()) {
 		double val = 0;
-		double valOrg = m_curOrgVal.get<float>();
+		double valOrg = m_curOrgVal.get<double>();
 		val = valOrg * m_k + m_b;
 		m_curVal = val;
 	}

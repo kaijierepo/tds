@@ -86,6 +86,45 @@ unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
 	return crc;
 }
 
+size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen)
+{
+	int D07_FRAME_MIN_LEN = 12;
+
+	if (iLen < 4 + D07_FRAME_MIN_LEN)
+		return 0;
+
+	if (!(p[0] == 0xFE && p[1] == 0xFE && p[2] == 0xFE && p[3] == 0xFE))
+		return 0;
+
+	unsigned char* pkt = p + 4;
+
+	if (pkt[0] != 0x68)
+		return 0;
+
+	if (pkt[7] != 0x68)
+		return 0;
+
+	int dlen = pkt[9];
+
+	if (iLen < 12 + dlen + 4)
+		return 0;
+
+	unsigned char cs = pkt[10 + dlen];
+	unsigned char rcs = 0;
+	for (int i = 0; i < 10 + dlen; i++) {
+		rcs += pkt[i];
+	}
+
+	if (cs != rcs)
+		return 0;
+
+	if (pkt[10 + dlen + 1] != 0x16)
+		return 0;
+
+	// preamble + head + payload + tail
+	return 4 + 10 + dlen + 2;
+}
+
 size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 12)
