@@ -1034,10 +1034,10 @@ void ioDev::CommUnlock()
 
 bool ioDev::SendPkt(PKT_DATA& pkt)
 {
-	return sendData((char*)pkt.data, pkt.len);
+	return sendData(pkt.data, pkt.len);
 }
 
-bool ioDev::sendData(char* pData, size_t iLen)
+bool ioDev::sendData(unsigned char* pData, size_t iLen)
 {
 	if (m_pParent != nullptr && m_pParent != &ioSrv) {
 		m_pParent->sendData(pData, iLen);
@@ -1070,7 +1070,7 @@ bool ioDev::sendData(char* pData, size_t iLen)
 
 bool ioDev::sendStr(string& str)
 {
-	return sendData((char*)str.c_str(), str.length());
+	return sendData((unsigned char*)str.c_str(), str.length());
 }
 
 bool ioDev::SendHeartbeatPkt()

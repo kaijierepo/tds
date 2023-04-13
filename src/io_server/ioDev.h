@@ -243,7 +243,7 @@ public:
 	virtual bool CommLock(int dwTimeoutMS = 0);
 	virtual void CommUnlock();
 	bool SendPkt(PKT_DATA& pkt);//发送不等待
-	virtual bool sendData(char* pData, size_t iLen);
+	virtual bool sendData(unsigned char* pData, size_t iLen);
 	virtual bool sendStr(string& str);
 
 	//通信接收

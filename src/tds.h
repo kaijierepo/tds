@@ -32,7 +32,13 @@ use camel mode, like  getIODevices
 enum string			            
 short dash,like gw-local-serial
 
->use double instead of float anywhere, cause json.hpp uses double,if float is used,it will cause loss of precision when format to json
+>use double instead of float anywhere, 
+cause json.hpp uses double,if float is used,it will cause loss of precision when format to json
+
+>use unsigned char* instead of char* when pointed to device protocol buffer
+most of time you want to get value 0-255 when you use expression int a = p[i]
+it will be easier to deal with a Hex packet in debuging or coding when you think a 0-255 value instead of a -127 or 127value
+in most protocol specificatin,0-255 will be used to define a value of one byte
 */
 
 

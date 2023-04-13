@@ -84,10 +84,10 @@ string logServer::rpc_queryLog(json params, RPC_SESSION session)
 		if (iYear == endYear) iEndMonth = endMonth;
 
 
-		for (int iMonth = iEndMonth; iMonth >= iStartMonth; iMonth--)
+		for (size_t iMonth = iEndMonth; iMonth >= iStartMonth; iMonth--)
 		{
 			tableLog.loadFile(tableLog.getFilePath(iYear, iMonth));
-			for (int i=tableLog.buffData.size()-1 ;i >=0; i--)
+			for (size_t i=tableLog.buffData.size()-1 ;i >=0; i--)
 			{
 				json j = *tableLog.buffData[i];
 				string time = j["time"].get<string>();

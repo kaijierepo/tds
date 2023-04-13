@@ -338,14 +338,14 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock,string localIP,int local
 	shutdown(sock, SD_BOTH);
 }
 
-void thread_handleDataOverWebsocket(char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
+void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
 {
 	if (ServiceInterface::handleAppLayerData_Bridge(pData, len, p)) {
 
 	}
 	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
 		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-		string rpcReqStr = pData;
+		string rpcReqStr = (char*)pData;
 		RPC_RESP resp;
 		rpcSrv.handleRpcCall(rpcReqStr,resp , pSession);
 		string ctLen = to_string(resp.strResp.length());
@@ -779,7 +779,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			std::shared_ptr<TDS_SESSION> p = pWs->getWsSession(c);
 			struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
 			int len = wm->data.len;
-			char* pData = new char[len+1];
+			unsigned char* pData = new unsigned char[len+1];
 			pData[len] = 0;
 			memcpy(pData, wm->data.ptr, wm->data.len);
 			thread t(thread_handleDataOverWebsocket, pData,len, c->pipeSock, p);
@@ -1284,7 +1284,7 @@ json ServiceInterface::parseParamFromQuery(string& query)
 
 
 //应用层数据桥接
-bool ServiceInterface::handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+bool ServiceInterface::handleAppLayerData_Bridge(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	bool bHandled = true;
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
@@ -1305,13 +1305,13 @@ bool ServiceInterface::handleAppLayerData_Bridge(char* pData, size_t iLen, std::
 	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpClient)
 	{
 		if (tdsSession->pBridgedTcpClient)
-			tdsSession->pBridgedTcpClient->SendData((unsigned char*)pData, iLen);
+			tdsSession->pBridgedTcpClient->SendData(pData, iLen);
 	}
 	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToiodev)
 	{
 		if (tdsSession->bridgedIoSession)
 			tdsSession->bridgedIoSession->send(pData, iLen);
-		string s = str::fromBuff(pData, iLen);
+		string s = str::fromBuff((char*)pData, iLen);
 		LOG("[IO设备透传]client->dev " + s);
 	}
 	else

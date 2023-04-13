@@ -496,7 +496,7 @@ bool TDS_imp::sendToIoAddr(string ioAddr,const char* p, int l)
 	ioDev* d = ioSrv.getIODev(ioAddr);
 	if (d)
 	{
-		return d->sendData((char*)p, l);
+		return d->sendData((unsigned char*)p, l);
 	}
 	return false;
 }

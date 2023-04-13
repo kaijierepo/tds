@@ -29,7 +29,7 @@ public:
 	void parseParamFromUrl(string& url, map<string, string>& mapParams);
 	void parseParamFromQuery(string& query, map<string, string>& mapParams);
 	json parseParamFromQuery(string& query);
-	static bool handleAppLayerData_Bridge(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
+	static bool handleAppLayerData_Bridge(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
 	std::mutex m_csWsSessions;
 	int m_restApiID;
