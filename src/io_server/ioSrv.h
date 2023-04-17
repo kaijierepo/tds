@@ -54,7 +54,7 @@ inline string getDevTypeLabel(string devType) {
 	else if (devType == DEV_TYPE::DEV::modbus_tcp_slave)return "ModbusTCP";
 	else if (devType == DEV_TYPE::DEV::tdsp_device)return "TDSP";
 	else if (devType == DEV_TYPE::GW::rs485_gateway)return "RS485转网络";
-	else if (devType == DEV_TYPE::GW::local_serial)return "485转本地串口";
+	else if (devType == DEV_TYPE::GW::local_serial)return "本地串口";
 	else if (devType == DEV_TYPE::CHAN::io_channel)return "IO通道";
 	else if (devType == DEV_TYPE::DEV::iq60_gateway)return "IQ60";
 	else if (devType == DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";

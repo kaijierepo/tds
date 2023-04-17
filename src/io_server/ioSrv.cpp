@@ -663,6 +663,14 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 		{
 			bFinded = true;
 			p->m_dispositionMode = mode;
+			//置为启用
+			if (mode == DEV_DISPOSITION_MODE::managed) {
+				p->run();
+			}
+			//置为备用
+			if (mode == DEV_DISPOSITION_MODE::spare) {
+				p->stop();
+			}
 			break;
 		}
 	}
