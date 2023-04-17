@@ -151,7 +151,7 @@ enum class IO_PKT_TYPE {
 	IO_Notify
 };
 
-class PKT_DATA {
+class DEV_PKT {
 public:
 	unsigned char* data;
 	size_t len;
@@ -184,12 +184,12 @@ public:
 		memcpy(data, p, l);
 		len = l;
 	}
-	PKT_DATA(unsigned char* p, size_t l)
+	DEV_PKT(unsigned char* p, size_t l)
 	{
 		data = NULL;
 		setData(p, l);
 	}
-	PKT_DATA()
+	DEV_PKT()
 	{
 		data = NULL;
 		len = 0;
@@ -198,7 +198,7 @@ public:
 		type = IO_PKT_TYPE::IO_Unknown;
 	}
 
-	~PKT_DATA()
+	~DEV_PKT()
 	{
 		if (data)
 			delete data;
@@ -206,7 +206,7 @@ public:
 			delete cmd_data;
 	}
 
-	void copy(const PKT_DATA& r) {
+	void copy(const DEV_PKT& r) {
 		this->len = r.len;
 		this->cmd_data_len = r.cmd_data_len;
 		this->proto = r.proto;
@@ -239,13 +239,13 @@ public:
 		}
 	}
 
-	PKT_DATA(const PKT_DATA& r)
+	DEV_PKT(const DEV_PKT& r)
 	{
 		copy(r);
 	}
 
 
-	PKT_DATA& operator=(const PKT_DATA& pd)
+	DEV_PKT& operator=(const DEV_PKT& pd)
 	{
 		copy(pd);
 		return *this;

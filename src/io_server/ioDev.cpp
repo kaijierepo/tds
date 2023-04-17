@@ -1032,7 +1032,7 @@ void ioDev::CommUnlock()
 	m_csCommLock.unlock();
 }
 
-bool ioDev::SendPkt(PKT_DATA& pkt)
+bool ioDev::SendPkt(DEV_PKT& pkt)
 {
 	return sendData(pkt.data, pkt.len);
 }
@@ -1185,7 +1185,7 @@ void ioDev::OnRequestTimeout(int cmd1, int cmd2)
 
 void ioDev::DoCycleTask()
 {
-	PKT_DATA req, resp;
+	DEV_PKT req, resp;
 	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0)
 	{
 		SendHeartbeatPkt();
@@ -1202,7 +1202,7 @@ void ioDev::checkAcqReqTimeout()
 
 bool ioDev::onRecvData(char* pData, size_t iLen)
 {
-	PKT_DATA pkt;
+	DEV_PKT pkt;
 	if (!pkt.UnPack(pData, iLen))
 		return false;
 
@@ -1443,7 +1443,7 @@ ioDev* ioDev::getChild(string devAddr)
 	return nullptr;
 }
 
-bool ioDev::IsAsynPacket(PKT_DATA* pd)
+bool ioDev::IsAsynPacket(DEV_PKT* pd)
 {
 	////除了当前正在同步请求的命令，其他都做异步处理
 	//if (m_pCommAddrInfo->strInSyncCmdID == pd->GetCmdID()) //这条命令正在进行同步通讯，不能异步处理

@@ -242,7 +242,7 @@ public:
 	//通信发送
 	virtual bool CommLock(int dwTimeoutMS = 0);
 	virtual void CommUnlock();
-	bool SendPkt(PKT_DATA& pkt);//发送不等待
+	bool SendPkt(DEV_PKT& pkt);//发送不等待
 	virtual bool sendData(unsigned char* pData, size_t iLen);
 	virtual bool sendStr(string& str);
 
@@ -258,7 +258,7 @@ public:
 	virtual void onEvent_online() {};
 
 	//命令回包超时
-	virtual bool IsAsynPacket(PKT_DATA* pd);
+	virtual bool IsAsynPacket(DEV_PKT* pd);
 
 	virtual bool startUploadFirmware(string firmwareFileName);
 	virtual bool stopUpgrade() { return false; };

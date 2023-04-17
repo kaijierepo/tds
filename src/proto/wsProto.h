@@ -125,7 +125,7 @@ enum WS_FrameType
 
 
 //一般调试情况下websocket包包头是6字节，2字节头+4字节maskingKey
-class CWSPPkt : public PKT_DATA
+class CWSPPkt : public DEV_PKT
 {
 public:
 	CWSPPkt();
