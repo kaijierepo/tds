@@ -4,7 +4,7 @@
 #include "tcpSrv.h"
 #include <mutex>
 #include "stream2pkt.h"
-
+#include "tds.h"
 
 class MP;
 class ioDev;

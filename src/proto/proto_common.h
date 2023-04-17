@@ -17,9 +17,9 @@ public:
 	string proto;
 	IO_PKT_TYPE type;
 
-	string m_strCmdName; //ÃüÁîÃû³Æ
-	string m_strCmdContent;  //ÃüÁîÄÚÈİ¸ÅÒª
-	string m_strPktDetail; //ÃüÁî°üÏêÏ¸½âÎöĞÅÏ¢
+	string m_strCmdName; //å‘½ä»¤åç§°
+	string m_strCmdContent;  //å‘½ä»¤å†…å®¹æ¦‚è¦
+	string m_strPktDetail; //å‘½ä»¤åŒ…è¯¦ç»†è§£æä¿¡æ¯
 
 	virtual bool pack() { return false; };
 	virtual bool pack(char* cmdData, int len) { return false; };
@@ -31,7 +31,7 @@ public:
 
 	virtual string GetCmdID() { return ""; };
 	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
-	virtual string GetPktDesc() { return ""; }; //°üÏêÏ¸ÃèÊöĞÅÏ¢
+	virtual string GetPktDesc() { return ""; }; //åŒ…è¯¦ç»†æè¿°ä¿¡æ¯
 	virtual string GetCmdName() { return ""; };
 
 	void setData(unsigned char* p, size_t l)
