@@ -12,6 +12,9 @@ class DEV_PKT {
 public:
 	unsigned char* data;
 	size_t len;
+	virtual bool pack() { return false; };
+	virtual bool unpack() { return false; };
+
 	unsigned char* cmd_data;
 	size_t cmd_data_len;
 	string proto;
@@ -21,12 +24,9 @@ public:
 	string m_strCmdContent;  //命令内容概要
 	string m_strPktDetail; //命令包详细解析信息
 
-	virtual bool pack() { return false; };
+
 	virtual bool pack(char* cmdData, int len) { return false; };
-	virtual bool unpack()
-	{
-		return false;
-	};
+
 	virtual bool unpack(unsigned char* p, int len, bool withDetail = false) { return 0; };
 
 	virtual string GetCmdID() { return ""; };
