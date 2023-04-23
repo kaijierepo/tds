@@ -236,6 +236,9 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 }
 
 //https://blog.csdn.net/weixin_34242509/article/details/86260104
+//微信公众号在配置服务器时，填写了服务器地址与token后，点确定会进入此步验证
+//如果验证不通过，记得检查地址是否是  /gzh
+//token填写是否正确
 void handleGet_gzh(mg_http_message* hm, string& resHeader,string& respBody)
 {
 	map<string, string> mapParams;
@@ -313,6 +316,19 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 	}
 
 	int isend = send(sock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
+	//closesocket(sock);                      // Close the connection
+	shutdown(sock, SD_BOTH);
+}
+
+
+void thread_handleGzhReq(string req,int sock)
+{
+	string resHeader;
+	string resBody;
+	handlePost_gzh(req, resHeader, resBody);
+
+	//send 到 pair sock 在pair sock的回调中 发送http 响应
+	int isend = send(sock, resBody.c_str(), (int)resBody.length(), MSG_DONTROUTE);
 	//closesocket(sock);                      // Close the connection
 	shutdown(sock, SD_BOTH);
 }
@@ -648,8 +664,10 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			httplib::Server srv;
 			if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 			{
-				handlePost_gzh(hm->body.ptr, resHeader, resBody);
-				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());  
+				int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
+				string req = str::fromBuff(hm->body.ptr, hm->body.len);
+				thread t(thread_handleGzhReq, req,sock);
+				t.detach();
 			}
 			else
 			{
