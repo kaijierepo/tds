@@ -187,6 +187,22 @@ void tdsWatchDog::run()
 	watchDog.m_tdsAddr = "http://127.0.0.1:" + m_conf.getValStr("httpPort","667");
 	LOG("TDS服务地址: " + watchDog.m_tdsAddr);
 
+	string msPath = fs::appPath() + "/com/mediaServer/MediaServer.exe";
+	if (fs::fileExist(msPath)) {
+		LOG("[微服务组件] 流媒体服务  /com/mediaServer/MediaServer.exe 已安装");
+	}
+	else {
+		LOG("[微服务组件] 流媒体服务  /com/mediaServer/MediaServer.exe 未安装");
+	}
+
+	 msPath = fs::appPath() + "/com/adp/run.bat";
+	if (fs::fileExist(msPath)) {
+		LOG("[微服务组件] 设备接入适配器   /com/adp/run.bat 已安装");
+	}
+	else {
+		LOG("[微服务组件] 设备接入适配器   /com/adp/run.bat 未安装");
+	}
+
 	thread t(thread_checkFood);
 	t.detach();
 
