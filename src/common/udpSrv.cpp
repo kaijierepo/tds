@@ -179,7 +179,7 @@ void udpServer::addToMultiCast(string multiCastAddr, int port)
 
 }
 
-size_t udpServer::onRecvData(char* recvData, size_t recvDataLen, string strIP, int port)
+size_t udpServer::onRecvData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	if (m_pCallback)
 	{
@@ -211,14 +211,14 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 
 
 	//等待并接收数据
-	char szBuff[10025];
+	unsigned char szBuff[10025];
 	while (true)
 	{
 		SOCKADDR_IN addrCli;
 		ZeroMemory(&addrCli, sizeof(addrCli));
 		int fromlen = sizeof(addrCli);
 
-		int recvlen = recvfrom(pServ->m_sock, szBuff, 1024, 0, (sockaddr*)&addrCli, &fromlen);
+		int recvlen = recvfrom(pServ->m_sock, (char*)szBuff, 1024, 0, (sockaddr*)&addrCli, &fromlen);
 		if (recvlen < 0)
 		{
 			int iErr = GetLastError();

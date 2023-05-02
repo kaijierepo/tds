@@ -33,7 +33,7 @@ DWORD WINAPI TcpClientRecvThread(LPVOID lpParam)
 
 	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
 
-	vector<char> recvBuff;
+	vector<unsigned char> recvBuff;
 	int iRecvBuffLen = 0;
 	int ret;
 	while(1)

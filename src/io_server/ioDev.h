@@ -77,7 +77,7 @@ class ioChannel;
 //asyn pkt received is not processed from DMS_UNCONF ioDev
 //no DoCycleTask for DMS_UNCONF ioDev
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
-typedef void (*fp_ioAddrRecvCallback)(void* user, char* pData, size_t iLen);
+typedef void (*fp_ioAddrRecvCallback)(void* user, unsigned char* pData, size_t iLen);
 typedef ioDev* (*fp_createDev)();
 
 struct DEV_QUERIER {
@@ -99,7 +99,7 @@ struct DEV_QUERIER {
 
 
 
-class ioDev : public IUdpServerCallBack
+class ioDev : public IUdpServerCallBack,public ITcpClientCallBack
 {
 public:
 	ioDev(void);
@@ -200,11 +200,14 @@ public:
 	std::shared_ptr<TDS_SESSION> pSessionClientBridge;
 
 	void bindIOSession(shared_ptr<TDS_SESSION> ioSession);
-	void statisOnRecv(char* recvData, size_t len, string addr);
-	void statisOnSend(char* sendData, size_t len, string addr);
+	void statisOnRecv(unsigned char* recvData, size_t len, string addr);
+	void statisOnSend(unsigned char* sendData, size_t len, string addr);
 
 	static string removePortFromIoAddr(string ioAddr);
 	static string removePortFromDevAddr(string devAddr);
+
+	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn) override;
+	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	//设备是tcpServer
@@ -240,7 +243,7 @@ public:
 	bool m_acqAlarm; //是否轮询报警，发送getAlarmStatus给TDSP设备
 	OBJ* m_pMO;
 	string GetCommIP();
-	void SendToChild(TIME dataTime, char* pData, size_t iLen, string strID);//网关类型使用，转发给下层子设备
+	void SendToChild(TIME dataTime, unsigned char* pData, size_t iLen, string strID);//网关类型使用，转发给下层子设备
 	ioDev* getIODevByTag(string tag);
 	//通信发送
 	virtual bool CommLock(int dwTimeoutMS = 0);
@@ -252,9 +255,9 @@ public:
 	//通信接收
 	virtual bool SendHeartbeatPkt();
 	virtual bool onRecvPkt(json jPkt);
-	virtual bool onRecvPkt(char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
-	virtual bool onRecvData(char* pData, size_t iLen);//接受数据异步处理函数
-	virtual bool onRecvData(TIME dataTime, char* pData, size_t iLen);
+	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
+	virtual bool onRecvData(unsigned char* pData, size_t iLen);//接受数据异步处理函数
+	virtual bool onRecvData(TIME dataTime, unsigned char* pData, size_t iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
 
 
@@ -379,7 +382,7 @@ public:
 
 	string m_strErrorInfo;
 
-	virtual void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port) override;
+	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
 };
 
 ioDev* createIODev(string type);

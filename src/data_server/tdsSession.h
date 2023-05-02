@@ -84,7 +84,7 @@ public:
 	class CBridgedTcpClientHandler :public ITcpClientCallBack {
 	public:
 		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
-		virtual void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
+		virtual void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo);
 		TDS_SESSION* pTdsSession;
 	} bridgedTcpCltHandler;
 

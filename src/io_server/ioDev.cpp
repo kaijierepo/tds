@@ -243,6 +243,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		conf["typeLabel"] = getDevTypeLabel(m_devType);
 		if (m_devSubType != "") {
 			conf["subType"] = m_devSubType;
+			conf["subTypeLabel"] = getDevSubTypeLabel(m_devSubType);
 		}
 
 		conf["level"] = m_level;
@@ -1200,7 +1201,7 @@ void ioDev::checkAcqReqTimeout()
 	}	
 }
 
-bool ioDev::onRecvData(char* pData, size_t iLen)
+bool ioDev::onRecvData(unsigned char* pData, size_t iLen)
 {
 	DEV_PKT pkt;
 	if (!pkt.UnPack(pData, iLen))
@@ -1212,7 +1213,7 @@ bool ioDev::onRecvData(char* pData, size_t iLen)
 	return false;
 }
 
-bool ioDev::onRecvData(TIME dataTime, char* pData, size_t iLen)
+bool ioDev::onRecvData(TIME dataTime, unsigned char* pData, size_t iLen)
 {
 	return true;
 }
@@ -1362,7 +1363,7 @@ bool ioDev::loadStatusBuff()
 	return true;
 }
 
-void ioDev::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
+void ioDev::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	IOLogRecv((unsigned char*)recvData, recvDataLen, strIP + ":" + str::fromInt(port));
 	onRecvData(recvData, recvDataLen);
@@ -1500,7 +1501,7 @@ string ioDev::GetCommIP()
 	return "";
 }
 
-void ioDev::SendToChild(TIME dataTime, char* pData, size_t iLen, string strID)
+void ioDev::SendToChild(TIME dataTime, unsigned char* pData, size_t iLen, string strID)
 {
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
@@ -1573,7 +1574,7 @@ void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 	if(ioSession!=nullptr)
 		ioSession->m_IoDev = this;
 
-	if (pIOSession != ioSession && ioSession != nullptr && isConnected())
+	if (pIOSession != nullptr && pIOSession != ioSession && ioSession != nullptr && isConnected())
 	{
 		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
@@ -1635,7 +1636,7 @@ CCanTransparentGateway::CCanTransparentGateway()
 }
 
 
-void ioDev::statisOnRecv(char* recvData, size_t len, string addr)
+void ioDev::statisOnRecv(unsigned char* recvData, size_t len, string addr)
 {
 	if (commpktSessions.size() == 0)
 		return;
@@ -1654,7 +1655,7 @@ void ioDev::statisOnRecv(char* recvData, size_t len, string addr)
 }
 
 
-void ioDev::statisOnSend(char* sendData, size_t len, string addr)
+void ioDev::statisOnSend(unsigned char* sendData, size_t len, string addr)
 {
 	if (commpktSessions.size() == 0)
 		return;
@@ -1708,4 +1709,39 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 	}
 
 	return devAddr;
+}
+
+void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
+{
+	if (bIsConn)
+	{
+		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSessClt));
+		p->type = TDS_SESSION_TYPE::iodev;
+		ioSrv.m_mutexIoSessions.lock();
+		ioSrv.m_IoSessions[pTcpSessClt] = p;
+		ioSrv.m_mutexIoSessions.unlock();
+
+
+		ioDev* pIoDev = this;
+		p->m_IoDev = pIoDev;
+		p->ioDevType = pIoDev->m_devType;
+		pIoDev->bindIOSession(p);
+		pIoDev->setOnline();
+		timeopt::now(&pIoDev->m_stLastActiveTime);
+		string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
+		logger.logInternal(s);
+		pIoDev->onEvent_online();
+	}
+	else
+	{
+		ioSrv.m_mutexIoSessions.lock();
+		std::shared_ptr<TDS_SESSION> p = ioSrv.m_IoSessions[pTcpSessClt];
+		ioSrv.m_IoSessions.erase(pTcpSessClt);
+		ioSrv.m_mutexIoSessions.unlock();
+		p->onTcpDisconnect();
+	}
+}
+
+void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+{
 }

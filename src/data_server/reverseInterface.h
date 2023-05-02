@@ -17,7 +17,7 @@ public:
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
 	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo) override;
-	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	int Send(SOCKET sock, char* pBuffer, size_t iLength);
 
 public:

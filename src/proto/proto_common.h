@@ -14,6 +14,14 @@ public:
 	size_t len;
 	virtual bool pack() { return false; };
 	virtual bool unpack() { return false; };
+	void clear() {
+		if (data != nullptr)
+		{
+			delete data;
+			data = nullptr;
+		}
+		len = 0;
+	}
 
 	unsigned char* cmd_data;
 	size_t cmd_data_len;
@@ -24,7 +32,10 @@ public:
 	string m_strCmdContent;  //命令内容概要
 	string m_strPktDetail; //命令包详细解析信息
 
-
+	void* pushData(string s);
+	void* pushData(void* p, int l);
+	unsigned char* pushData(unsigned char v);
+	unsigned short* pushData(unsigned short v);
 	virtual bool pack(char* cmdData, int len) { return false; };
 
 	virtual bool unpack(unsigned char* p, int len, bool withDetail = false) { return 0; };
@@ -43,12 +54,12 @@ public:
 	}
 	DEV_PKT(unsigned char* p, size_t l)
 	{
-		data = NULL;
+		data = nullptr;
 		setData(p, l);
 	}
 	DEV_PKT()
 	{
-		data = NULL;
+		data = nullptr;
 		len = 0;
 		cmd_data = nullptr;
 		cmd_data_len = 0;
@@ -81,7 +92,7 @@ public:
 		}
 		else
 		{
-			this->data = NULL;
+			this->data = nullptr;
 		}
 
 		if (r.cmd_data_len > 0)
@@ -92,7 +103,7 @@ public:
 		}
 		else
 		{
-			this->cmd_data = NULL;
+			this->cmd_data = nullptr;
 		}
 	}
 

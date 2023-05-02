@@ -25,6 +25,11 @@ struct tcpSessionClt
 
 	TIME stLastActive;
 
+	string getRemoteAddr() {
+		string s = str::format("%s:%d", remoteIP.c_str(), remotePort);
+		return s;
+	}
+
 	tcpSessionClt()
 	{
 		sock = 0;
@@ -42,7 +47,7 @@ struct tcpSessionClt
 class ITcpClientCallBack {
 public:
 	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPClient(char* pData, size_t len, tcpSessionClt* connInfo) = 0;
+	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) = 0;
 };
 
 class tcpClt

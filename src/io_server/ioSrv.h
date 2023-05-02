@@ -49,6 +49,25 @@ namespace DEV_TYPE {
 	}
 };
 
+
+namespace DEV_SUB_TYPE {
+	namespace ethernetIP {
+		const string control_logix = "control-logix";
+	}
+}
+
+inline string getDevSubTypeLabel(string devSubType) {
+	if (devSubType == "childTds") {
+		return "TDS子服务";
+	}
+	else if (devSubType == "control-logix") {
+		return "ControlLogix PLC";
+	}
+	else {
+		return "";
+	}
+}
+
 inline string getDevTypeLabel(string devType) {
 	if (devType == DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
 	else if (devType == DEV_TYPE::DEV::modbus_tcp_slave)return "ModbusTCP";
@@ -151,8 +170,8 @@ public:
 	//传输层处理
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo);
-	void OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo);
-	void OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
 
 	//应用层字节流组包 与 首发包处理
 	bool handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);

@@ -731,6 +731,11 @@ namespace str {
 		return s;
 	}
 
+	string fromBuff(unsigned char* p, size_t len)
+	{
+		return fromBuff((char*)p, len);
+	}
+
 	string fromBuff(const char* p, size_t len)
 	{
 		char* tmp = new char[len + 1];

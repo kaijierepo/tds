@@ -311,11 +311,11 @@ void ReverseInterface::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession
 	OnRecvData_TCP(pData, iLen, tdsSession);
 }
 
-void ReverseInterface::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTcpSess)
+void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)
 {
 	if (pTcpSess->pALSession) {
 		std::shared_ptr<TDS_SESSION> p = pTcpSess->pALSession;
-		OnRecvData_TCP(pData, iLen, p);
+		OnRecvData_TCP((char*)pData, iLen, p);
 	}
 }
 

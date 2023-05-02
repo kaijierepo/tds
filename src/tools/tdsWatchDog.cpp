@@ -522,9 +522,9 @@ bool tdsWatchDog::isSelfStartReg()
 	return false;
 }
 
-void tdsWatchDog::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
+void tdsWatchDog::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
-	string food = recvData;
+	string food = str::fromBuff(recvData,recvDataLen);
 	//LOG("food is " + food);
 	timeopt::now(&m_lastFeedTime);
 }

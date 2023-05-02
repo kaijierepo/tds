@@ -208,6 +208,7 @@ namespace str {
 	string fromInt(int v);
 	string fromInt(long long v);
 	string fromInt(size_t v);
+	string fromBuff(unsigned char* p, size_t len);
 	string fromBuff(const char* p, size_t len);
 	int toInt(string s);
 	string encodeAscII(string s);

@@ -91,7 +91,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 				{
 					ioDev* p = pIoDev;
 					if (p->m_bEnableIoLog)
-						p->statisOnRecv((char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
+						p->statisOnRecv((unsigned char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
 					p->bindIOSession(tdsSession);
 					p->setOnline();
@@ -146,11 +146,12 @@ void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		{
 			p->m_IoDev = pIoDev;
 			p->ioDevType = pIoDev->m_devType;
+			pIoDev->bindIOSession(p);
 			pIoDev->setOnline();
 			timeopt::now(&pIoDev->m_stLastActiveTime);
 			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
 			logger.logInternal(s);
-			pIoDev->bindIOSession(p);
+
 		}
 	}
 	else
@@ -285,7 +286,7 @@ void ioServer::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSe
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
-void ioServer::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
+void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
 {
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
@@ -295,14 +296,14 @@ void ioServer::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* pTc
 }
 
 
-void ioServer::OnRecvUdpData(char* recvData, size_t recvDataLen, string strIP, int port)
+void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
 	string ioSessionAddr = "UDP-" + strIP + ":" + str::fromInt(port);
-	IOLogRecv((unsigned char*)recvData, recvDataLen, ioSessionAddr);
+	IOLogRecv(recvData, recvDataLen, ioSessionAddr);
 
 	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
 	try {
-		string s = str::fromBuff(recvData, recvDataLen);
+		string s = str::fromBuff((char*)recvData, recvDataLen);
 
 		json jPkt = json::parse(s);
 
@@ -497,6 +498,10 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	string type = params["type"].get<string>();
+	string subType;
+	if (params.contains("subType")) {
+		subType = params["subType"];
+	}
 
 	params["nodeID"] = common::guid();
 
@@ -521,6 +526,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 	if (pd)
 	{
 		pd->loadConf(params);
+		pd->m_devSubType = subType;
 		parentDev->addChild(pd);
 		saveConf();
 		rpcResp.result = "\"ok\"";
@@ -1539,7 +1545,7 @@ bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
-	IOLogRecv((unsigned char*)pData, iLen, tdsSession->getRemoteAddr());
+	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr());
 
 	//协议检测
 	if (tdsSession->ioDevType == "")//应用层协议类型检测
@@ -1915,7 +1921,7 @@ void ioServer::onRecvPkt_mbRtu(unsigned char* pData, size_t iLen, std::shared_pt
 {
 	if (tdsSession->m_IoDev)
 	{
-		tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
+		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
 	}
 }
 
@@ -1923,7 +1929,7 @@ void ioServer::onRecvPkt_mbTcp(unsigned char* pData, size_t iLen, std::shared_pt
 {
 	if (tdsSession->m_IoDev)
 	{
-		tdsSession->m_IoDev->onRecvPkt((char*)pData, iLen);
+		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
 	}
 }
 
@@ -1944,7 +1950,7 @@ void ioServer::onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shar
 		ioDev* p = pIoDev;
 		p->bindIOSession(tdsSession);
 		p->setOnline();
-		p->onRecvPkt((char*)pData,iLen);
+		p->onRecvPkt(pData,iLen);
 	}
 }
 

@@ -51,28 +51,12 @@ RPC_SESSION TDS_SESSION::getRpcSession()
 
 string TDS_SESSION::getRemoteAddr()
 {
-    unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
-    if (pTcpSession)
-    {
-       return pTcpSession->remoteIP + ":" + str::fromInt(pTcpSession->remotePort);
-    }
-    else if (pTcpSessionClt) {
-        return pTcpSessionClt->remoteIP + ":" + str::fromInt(pTcpSessionClt->remotePort);
-    }
-    return "";
+    return str::format("%s:%d", remoteIP.c_str(), remotePort);
 }
 
 string TDS_SESSION::getRemoteIP()
 {
-    unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
-    if (pTcpSession)
-    {
-        return pTcpSession->remoteIP;
-    }
-    else if (pTcpSessionClt) {
-        return pTcpSessionClt->remoteIP;
-    }
-    return "";
+    return remoteIP;
 }
 
 void TDS_SESSION::Init()
@@ -218,9 +202,9 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
  {
  }
 
- void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(char* pData, size_t iLen, tcpSessionClt* connInfo)
+ void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
  {
-     pTdsSession->send((unsigned char*)pData, iLen);
+     pTdsSession->send(pData, iLen);
  }
 
  
