@@ -74,6 +74,7 @@ public:
 extern size_t IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen); // 1个换行符结尾
 extern size_t IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen); // 2个换行符结尾
 extern size_t IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen); // 2个换行符结尾
+extern size_t IsValidPkt_textEnd_CRLFCRLF(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_terminalPrompt(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_IQ60(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen);

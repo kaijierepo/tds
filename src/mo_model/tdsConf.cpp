@@ -68,10 +68,11 @@ confPath=./conf        #配置路径
 loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
 
 #数据服务
-httpsPort=0            #https服务端口,同时支持websocket secure
-httpPort=667           #http服务端口,同时支持websocket
-httpsMediaPort=668     #https流媒体服务端口
-httpMediaPort=669      #http流媒体服务端口
+httpsPort=0            #https服务端口666,同时支持websocket secure
+httpPort=667           #http服务端口667,同时支持websocket
+httpsMediaPort=668     #https流媒体服务端口668
+httpMediaPort=669      #http流媒体服务端口669
+tcpPort=670            #tcp服务端口
 
 #IO服务
 tdspPort = 665         #IO服务端口 默认665  TDSP协议   

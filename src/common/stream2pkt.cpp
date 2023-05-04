@@ -434,6 +434,20 @@ size_t IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen)
 	return 0;
 }
 
+size_t IsValidPkt_textEnd_CRLFCRLF(unsigned char* pData, size_t iLen)
+{
+	if (iLen < 4)
+		return 0;
+	for (int i = 0; i < iLen; i++)
+	{
+		if (pData[i] == '\r' && pData[i+1] == '\n' &&
+			pData[i+2] == '\r' && pData[i+3] == '\n')
+		{
+			return i + 3;
+		}
+	}
+	return 0;
+}
 
 size_t IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen)
 {

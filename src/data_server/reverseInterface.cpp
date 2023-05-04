@@ -244,6 +244,12 @@ bool ReverseInterface::run()
 		m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
 	}
 
+	int tcpPort = tds->conf->getInt("tcpPort", 670);
+	if (tcpPort > 0) {
+		LOG("[TCP数据服务] 端口%d", tcpPort);
+		m_tcpSrv.run(this, tcpPort);
+	}
+
 	return false;
 }
 
@@ -328,7 +334,7 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 	timeopt::now(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
 	tlBuf.PushStream((unsigned char*)pData, iLen);
-	while (tlBuf.PopPkt(IsValidPkt_textEnd_LFLF, false))
+	while (tlBuf.PopPkt(IsValidPkt_textEnd_LFLF, false) || tlBuf.PopPkt(IsValidPkt_textEnd_CRLFCRLF, false))
 	{
 		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 
@@ -342,7 +348,11 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 		else {
 			//rpc命令统一启动线程处理，调用异步接口，因为很多rpc处理是阻塞等待的
 			//不路由，不认证
-			rpcSrv.handleRpcCallAsyn(req, tdsSession, false,true);
+			bool bEdgeDevMode = true;
+			if (tdsSession->pTcpSession != nullptr) {
+				bEdgeDevMode = false;
+			}
+			rpcSrv.handleRpcCallAsyn(req, tdsSession, false, bEdgeDevMode);
 		}
 	}
 }
