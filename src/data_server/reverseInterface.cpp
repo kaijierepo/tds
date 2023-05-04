@@ -359,18 +359,25 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 
 
 
-void ReverseInterface::sendToAllSessions(unsigned char* pData, size_t len)
+void ReverseInterface::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify)
 {
 	m_mutexSessions.lock();
 	for (auto& i : m_reverseTdsSessions) {
-		if (i.second->type == TDS_SESSION_TYPE::tdsClient) {
+		if(specialNotify)
 			i.second->send(pData, len);
+		else {
+			if (i.second->pTcpSessionClt) {
+				i.second->send(pData, len);
+			}
+			else {
+				//tcp客户端模式直接访问的暂时不通知数据变化
+			}
 		}
 	}
 	m_mutexSessions.unlock();
 }
 
-void ReverseInterface::sendToAllSessions(string& s)
+void ReverseInterface::sendToAllSessions(string& s, bool specialNotify)
 {
-	sendToAllSessions((unsigned char*)s.c_str(), s.length());
+	sendToAllSessions((unsigned char*)s.c_str(), s.length(), specialNotify);
 }

@@ -2235,14 +2235,14 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		//通知消息，无需生成响应，转发后直接返回
 		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
 		{
-			notify("notify", params, pSession);
+			notify("notify", params, false,pSession);
 			return;
 		}
 		//后端总线，实现一种微前端模块之间可以相互调用函数的机制
 		//前端总线，可以在前端的app之间实现相互调用，相比于后端总线，只能调用本机浏览器上的app
 		else if (method.find("app.") != string::npos) 
 		{
-			notify(method, params, pSession);
+			notify(method, params, false, pSession);
 			return;
 		}
 
@@ -3847,12 +3847,12 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 }
 
 
-void rpcHandler::notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession)
+void rpcHandler::notify(string method, json params, bool specialNotify,std::shared_ptr<TDS_SESSION> orgSession)
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	ServiceInterface::sendToAllWebsock(notify);
-	reverseInterface.sendToAllSessions(notify);
+	reverseInterface.sendToAllSessions(notify, specialNotify);
 }
 
 

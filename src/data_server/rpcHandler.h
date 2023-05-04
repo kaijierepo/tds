@@ -102,7 +102,12 @@ public:
 
 	//notification
 	//orgSession不为null表示来自于tds客户端，为null表示来自tds服务
-	void notify(string method, json params, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
+	//notify为一般通知，没有订阅则不通知。订阅机制以后做
+	//特殊通知，所有客户端都通知
+	//普通通知，数值变化这些，数据量很多，订阅才通知
+	void notify(string method, json params,bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
+	
+
 
 	//alarm
 	json getAlarmStatis(string rootTag, RPC_SESSION session);

@@ -37,8 +37,8 @@ public:
 	mutex m_csTcpClt_streamPusher;
 	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher; //推流
 
-	void sendToAllSessions(unsigned char* pData, size_t len);
-	void sendToAllSessions(string& s);
+	void sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify = false);
+	void sendToAllSessions(string& s,bool specialNotify = false);
 	//应用层会话
 	map<void*,std::shared_ptr<TDS_SESSION>> m_reverseTdsSessions;
 	mutex m_mutexSessions;

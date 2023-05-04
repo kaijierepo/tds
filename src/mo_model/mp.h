@@ -126,6 +126,7 @@ public:
 	//TIME m_stLastSampleTime;
 	string m_srcStreamFetch; //ondemand按需拉流 或 always持续拉流
 	string m_expression;    //计算表达式
+	string m_onChange; //值改变时执行脚本
 
 	//整型枚举值
 	map<int, string> mapEnumVal;

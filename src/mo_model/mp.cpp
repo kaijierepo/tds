@@ -280,6 +280,11 @@ bool MP::loadConf(json& conf)
 		m_srcStreamFetch = conf["srcStreamFetch"];
 	}
 
+
+	if (conf["onChange"].is_string()) {
+		m_onChange = conf["onChange"];
+	}
+
 	return false;
 }
 
@@ -432,6 +437,11 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 
 		if (m_bServeStream) {
 			conf["serveStream"] = m_bServeStream;
+		}
+
+
+		if (m_onChange != "") {
+			conf["onChange"] = m_onChange;
 		}
 	}
 	
@@ -682,6 +692,15 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 	{
 		jVal["type"] = this->m_valType;
 		jVal["mpType"] = this->m_mpType;
+	}
+
+	//值改变事件脚本调用
+	if (m_onChange != "") {
+		if (m_lastVal.is_boolean() && m_lastVal.get<bool>() == false &&
+			m_curVal.is_boolean() && m_curVal.get<bool>() == true)
+		{
+			scriptManager.runScriptFileAsyn(m_onChange);
+		}
 	}
 
 

@@ -2,6 +2,7 @@
 #include "scriptEngine.h"
 #include "logger.h"
 #include "tds.h"
+#include "rpcHandler.h"
 
 
 #ifdef ENABLE_JERRY_SCRIPT
@@ -191,6 +192,27 @@ jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 	}
 
 	return jerry_create_undefined();
+}
+
+jerry_value_t func_notify(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 2)
+	{
+		json jParams= jArgs[1];
+
+		string method = jArgs[0].get<string>();
+
+		RPC_SESSION session;
+		json err, rlt;
+		rpcSrv.notify(method, jParams,true);
+	}
+
+	jerry_value_t ret = jerry_create_undefined();
+	return ret;
 }
 
 

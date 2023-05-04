@@ -98,7 +98,31 @@ void scriptThread1(ScriptManager* p)
 	p->loopExe();
 }
 
+void scriptThreadTmp(string scriptName)
+{
+	unique_lock<mutex> lock(scriptManager.m_csScripts);
+	for (auto& i : scriptManager.m_mapScripts) {
+		map<string, SCRIPT_INFO>& mapSL = i.second;
+		for (auto& j : mapSL) {
+			SCRIPT_INFO& si = j.second;
+			if (si.name == scriptName) {
+				ScriptEngine se;
+				se.m_tagThis = si.tagThis;
+				se.runScript(si.script, si.lastModifyUser);
+				si.lastExe = timeopt::now();
+			}
+		}
+	}
+}
 
+
+bool ScriptManager::runScriptFileAsyn(string scriptName)
+{
+	thread t(scriptThreadTmp, scriptName);
+	t.detach();
+
+	return false;
+}
 
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
@@ -108,7 +132,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 		ScriptEngine se;
 		se.runScript(s,session.user);
-		string sOutput;
+
 		json jOutput = json::array();
 		for (int i = 0; i < se.m_vecOutput.size(); i++) {
 			string sline = se.m_vecOutput[i];

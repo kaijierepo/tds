@@ -92,6 +92,15 @@ bool ScriptEngine::initGlobalFunc()
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 
+	//notify
+	property_name = jerry_create_string((const jerry_char_t*)"notify");
+	property_func = jerry_create_external_function(func_notify);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
 	return true;
 }
 
