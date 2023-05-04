@@ -1,0 +1,4 @@
+1.加入hmr
+2.mg_connection 加入 int pipeSock成员
+3.文件服务器 自动目录 ssi 改个名称
+4.#define MG_IO_SIZE 1024*300  加大缓存，提升速度

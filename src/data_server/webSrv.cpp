@@ -962,7 +962,7 @@ bool runWebServers()
 		3 - Log errors, intoand debug messages
 		4 - Log everything
 */
-	mg_log_set(0);//禁用mongoose日志
+	mg_log_set(1);//禁用mongoose日志
 
 	rootDir = tds->conf->uiPath;
 	confDir = tds->conf->confPath;
