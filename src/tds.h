@@ -52,7 +52,7 @@ using namespace std;
 using json = nlohmann::json;	
 
 namespace TAG {
-	string resolveTag(string strTagExp, string rootTag);
+	string resolveTag(string strTagExp, string tagThis);
 	string trimRoot(string tag, string root);
 	string userTag2sysTag(string userTag, string userOrg);
 	string sysTag2userTag(string sysTag, string userOrg);

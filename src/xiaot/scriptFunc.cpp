@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "tds.h"
 #include "rpcHandler.h"
+#include "prj.h"
 
 
 #ifdef ENABLE_JERRY_SCRIPT
@@ -92,13 +93,8 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 		jerryVal = jerry_create_number(jVal.get<double>());
 	else if (jVal.is_number_integer())
 	{
-		uint64_t digits[1] = { jVal.get<unsigned int>() };
-		jerryVal = jerry_create_bigint(digits, 1, true);
-	}
-	else if (jVal.is_number_unsigned())
-	{
-		uint64_t digits[1] = { jVal.get<int>() };
-		jerryVal = jerry_create_bigint(digits, 1, false);
+		int val =  jVal.get<int>();
+		jerryVal = jerry_create_number(val);
 	}
 	else if (jVal.is_boolean())
 		jerryVal = jerry_create_boolean(jVal.get<bool>());
@@ -294,6 +290,40 @@ jerry_value_t func_sleep(const jerry_call_info_t* call_info_p,
 	jerry_value_t ret = jerry_create_null();
 	return ret;
 }
+
+jerry_value_t func_getObj(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() > 0)
+	{
+		json tag = jArgs[0];
+		if (tag.is_string()) {
+			string sTag = tag.get<string>();
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
+			OBJ* pObj = prj.queryObj(sTag);
+			if (pObj) {
+				json j;
+				OBJ_QUERIER query;
+				query.getConf = true;
+				query.getStatus = true;
+				query.getChild = false;
+				query.getMp = false;
+				pObj->toJson(j, query);
+				jerry_value_t obj;
+				jsonVal2jerryVal(j, obj);
+				return obj;
+			}
+		}
+	}
+
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 
 jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],

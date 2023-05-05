@@ -98,7 +98,7 @@ void scriptThread1(ScriptManager* p)
 	p->loopExe();
 }
 
-void scriptThreadTmp(string scriptName)
+void scriptThreadTmp(string scriptName, string tagThis)
 {
 	unique_lock<mutex> lock(scriptManager.m_csScripts);
 	for (auto& i : scriptManager.m_mapScripts) {
@@ -107,7 +107,7 @@ void scriptThreadTmp(string scriptName)
 			SCRIPT_INFO& si = j.second;
 			if (si.name == scriptName) {
 				ScriptEngine se;
-				se.m_tagThis = si.tagThis;
+				se.m_tagThis = tagThis;
 				se.runScript(si.script, si.lastModifyUser);
 				si.lastExe = timeopt::now();
 			}
@@ -116,9 +116,9 @@ void scriptThreadTmp(string scriptName)
 }
 
 
-bool ScriptManager::runScriptFileAsyn(string scriptName)
+bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
 {
-	thread t(scriptThreadTmp, scriptName);
+	thread t(scriptThreadTmp, scriptName,tagThis);
 	t.detach();
 
 	return false;

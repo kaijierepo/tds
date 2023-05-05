@@ -699,7 +699,7 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 		if (m_lastVal.is_boolean() && m_lastVal.get<bool>() == false &&
 			m_curVal.is_boolean() && m_curVal.get<bool>() == true)
 		{
-			scriptManager.runScriptFileAsyn(m_onChange);
+			scriptManager.runScriptFileAsyn(m_onChange,getTag());
 		}
 	}
 

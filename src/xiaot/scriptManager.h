@@ -43,7 +43,7 @@ public:
 	std::map<string, SCRIPT_INFO> m_mapVarExpScripts;
 	std::mutex m_csExpScripts;
 
-	bool runScriptFileAsyn(string scriptName);
+	bool runScriptFileAsyn(string scriptName,string tagThis);
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);

@@ -567,13 +567,10 @@ bool ioDev::loadConf(json& conf)
 		for (auto i : childDev)
 		{
 			ioDev* pChild = nullptr;
-			if (i["level"] == "device")
-			{
-				pChild = createIODev(i["type"].get<string>());
-				pChild->loadConf(i);
-				pChild->m_pParent = this;
-				m_vecChildDev.push_back(pChild);
-			}
+			pChild = createIODev(i["type"].get<string>());
+			pChild->loadConf(i);
+			pChild->m_pParent = this;
+			m_vecChildDev.push_back(pChild);
 		}
 	}
 
