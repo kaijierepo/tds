@@ -1246,6 +1246,16 @@ namespace timeopt {
 		}
 		return str;
 	}
+
+	time_t calcTimePassSecond(string lastTime)
+	{
+		TIME t = timeopt::str2st(lastTime);
+		time_t last = SysTime2Unix(t);
+		time_t now = time(NULL);
+		time_t milli = now - last;
+		return milli;
+	}
+
 	time_t CalcTimePassSecond(TIME lastTime)
 	{
 		time_t last = SysTime2Unix(lastTime);

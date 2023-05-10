@@ -669,11 +669,6 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	else if (ev == MG_EV_HTTP_MSG)
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
-		unsigned char* pIP = (unsigned char*)&c->rem.ip;
-		string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
-		int remotePort = c->rem.port;
-		string remoteAddr = str::format("%s:%d", remoteIP.c_str(), remotePort);
-		RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, remoteAddr);
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
@@ -760,6 +755,21 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
+			bool isDebug = false;
+			if (mg_http_match_uri(hm, "/debug")) {
+				isDebug = true;
+			}
+
+
+			unsigned char* pIP = (unsigned char*)&c->rem.ip;
+			string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
+			int remotePort = c->rem.port;
+			string remoteAddr = str::format("%s:%d", remoteIP.c_str(), remotePort);
+
+			//调试类命令不打印
+			if(!isDebug)
+				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, remoteAddr);
+
 			int sock = mg_mkpipe(c->mgr, pipeCallback, c,false);                   // Create pipe
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			mg_str* mgs_host = mg_http_get_header(hm, "Host");
@@ -772,7 +782,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			pSession->remoteIP = remoteIP;
 			pSession->remotePort = remotePort;
 			pSession->isHttps = pWs->m_isHttps;
+			pSession->remoteAddr = str::format("%s:%d", pSession->remoteIP.c_str(), pSession->remotePort);
+			pSession->isDebug = isDebug;
+
 			c->app_layer_data = pSession;
+
 
 			//根据cookie解析用户名
 			mg_str* mgs_cookie = mg_http_get_header(hm, "Cookie");

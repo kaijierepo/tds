@@ -68,7 +68,6 @@ public:
 	TIME lastSendTime;
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
 	bool m_bAppDataRecved;
-	string lastMethodCalled;
 	size_t abandonLen;
 
 

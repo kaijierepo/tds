@@ -239,6 +239,7 @@ namespace timeopt {
 
 	string st2strWithMilli(TIME t);
 	string TimeToYMD(const TIME time);
+	time_t calcTimePassSecond(string lastTime);
 	time_t CalcTimePassSecond(TIME lastTime);
 	long long CalcTimePassMilliSecond(TIME lastTime);
 	time_t CalcTimeDiffSecond(TIME newTime, TIME oldTime);

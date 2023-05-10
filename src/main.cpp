@@ -45,6 +45,7 @@ SOFTWARE.
 #include "tools/demoTools.h"
 #include "tools/dumpCatch.h"
 #include "tools/aliDDNS.h"
+#include "rpcHandler.h"
 
 
 void updateEzvizAccessInfo() {
@@ -438,6 +439,8 @@ int main(int argc, char** argv)
 		}
 
 		aliDDNS.doCycleTask();
+
+		rpcSrv.cleanRpcSession();
 	}
 	return 0;
 }

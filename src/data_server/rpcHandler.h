@@ -53,6 +53,7 @@ public:
 	bool handleMethodCall_ptz_ioDev(string method, string tag, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	void rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -128,5 +129,11 @@ public:
 	void saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, string suffix);
 
 	fp_rpcHandler m_pluginHandler;
+
+
+	void cleanRpcSession();
+	TIME m_lastCleanTime;
+	std::mutex m_csRpcSessions;
+	std::map<string, RPC_SESSION> m_mapRpcSessions; //无连接会话，根据remoteAddr来区分，失效时间1个小时
 };
 extern rpcHandler rpcSrv;

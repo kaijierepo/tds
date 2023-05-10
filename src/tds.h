@@ -183,10 +183,16 @@ public:
 	int localPort;
 	bool isHttps;
 
+	string sLastRecvTime;
+	string lastMethodCalled;
+
+	bool isDebug; //调试调用不计入session统计
+
 	RPC_SESSION() {
 		isNotification = false;
 		remotePort = 0;
 		localPort = 0;
+		isDebug = false;
 	}
 };
 

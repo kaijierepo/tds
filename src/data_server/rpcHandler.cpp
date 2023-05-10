@@ -796,6 +796,24 @@ void threadErase() {
 	}
 }
 
+
+void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+	lock_guard<mutex> g(m_csRpcSessions);
+	json jList = json::array();
+	for (auto i : m_mapRpcSessions)
+	{
+		RPC_SESSION& p = i.second;
+		json jSession;
+		jSession["ip"] = p.remoteIP;
+		jSession["port"] = p.remotePort;
+		jSession["lastRecvTime"] = p.sLastRecvTime;
+		jSession["lastMethodCalled"] = p.lastMethodCalled;
+		jList.push_back(jSession);
+	}
+
+	rpcResp.result = jList.dump(2);
+}
+
 bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -807,7 +825,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	}
 	else if (method == "getApiSessions")
 	{
-		//webSrv.(params, rpcResp, session);
+		rpc_getApiSessionStatus(params, rpcResp, session);
 	}
 	else if (method == "captureFrame")
 	{
@@ -2129,6 +2147,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	json clientId = nullptr;
 	bool bGB2312 = false;
 	bool bNeedLog = true;
+	std::map<string, RPC_SESSION>::iterator iter;
 
 	strReq = str::trim(strReq);
 	if (strReq.length() == 0) 
@@ -2142,9 +2161,10 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	if(bGB2312)
 		strReq = charCodec::gb_to_utf8(strReq);
 
-	//strReq = ResolveTdsRpcEvnVar(strReq, pSession);
 
 	pSession->req = strReq;
+
+
 	try
 	{
 		//解析请求基本信息
@@ -2156,6 +2176,29 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		}
 
 		method = jReq["method"].get<string>();
+
+		//调试命令会话不纳入统计
+		if (!pSession->isDebug) {
+			m_csRpcSessions.lock();
+			iter = m_mapRpcSessions.find(pSession->remoteAddr);
+			if (iter != m_mapRpcSessions.end()) {
+				RPC_SESSION& sess = iter->second;
+				sess.sLastRecvTime = timeopt::nowStr();
+				sess.lastMethodCalled = method;
+			}
+			else {
+				RPC_SESSION sess;
+				sess.remoteAddr = pSession->remoteAddr;
+				sess.remoteIP = pSession->remoteIP;
+				sess.remotePort = pSession->remotePort;
+				sess.sLastRecvTime = timeopt::nowStr();
+				sess.lastMethodCalled = method;
+				m_mapRpcSessions[pSession->remoteAddr] = sess;
+			}
+			m_csRpcSessions.unlock();
+		}
+
+
 		json params;
 		if (jReq.contains("params"))
 			params = jReq["params"];
@@ -2165,7 +2208,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			pSession->isNotification = true;
 		}
 
-		//pSession->lastMethodCalled = method;
+		
 			
 		//对部分命令日志记录
 		bNeedLog = needLog(method);
@@ -2416,6 +2459,25 @@ void rpcHandler::saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, s
 	strTargetFile = allDBPath + strTargetFile;
 	fs::createFolderOfPath(strTargetFile);
 	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
+}
+
+void rpcHandler::cleanRpcSession()
+{
+	if (timeopt::CalcTimePassSecond(m_lastCleanTime) > 180) {
+		m_csRpcSessions.lock();
+		vector<string> toErase;
+		for (auto& i : m_mapRpcSessions) {
+			if (timeopt::calcTimePassSecond(i.second.sLastRecvTime) > 180) {
+				toErase.push_back(i.first);
+			}
+		}
+		for (int i = 0; i < toErase.size(); i++) {
+			string& s = toErase[i];
+			m_mapRpcSessions.erase(s);
+		}
+		m_csRpcSessions.unlock();
+		m_lastCleanTime = timeopt::now();
+	}
 }
 
 void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
