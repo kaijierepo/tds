@@ -77,19 +77,6 @@ vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 shared_mutex csIoPktMonitorClient;
 void sendToPktMonitorClient(char* p, size_t len)
 {
-	/*csIoPktMonitorClient.lock();
-	for (int i = 0; i < ioPktMonitorClient.size(); i++)
-	{
-		std::shared_ptr<TDS_SESSION> session = ioPktMonitorClient[i];
-		if (!session->isConnected())
-		{
-			ioPktMonitorClient.erase(ioPktMonitorClient.begin() + i);
-			i--;
-			continue;
-		}
-	}
-	csIoPktMonitorClient.unlock();*/
-
 	csIoPktMonitorClient.lock_shared();
 	for (int i = 0; i < ioPktMonitorClient.size(); i++)
 	{
@@ -151,6 +138,62 @@ void IOLogRecv(unsigned char* p, size_t len,string remoteAddr)
 	{
 		LOG("[error]接收到非utf8字符串,ioSession=%s,%s", remoteAddr.c_str(), e.what());
 	}
+}
+vector<std::shared_ptr<TDS_SESSION>> rpcPktMonitorClient;
+shared_mutex csRpcPktMonitorClient;
+void sendToRpcPktMonitorClient(char* p, size_t len)
+{
+	csRpcPktMonitorClient.lock_shared();
+	for (int i = 0; i < rpcPktMonitorClient.size(); i++)
+	{
+		std::shared_ptr<TDS_SESSION> session = rpcPktMonitorClient[i];
+		size_t iSend = session->send(p, len, false);
+		if (iSend <= 0) {//发不成功删除
+			rpcPktMonitorClient.erase(rpcPktMonitorClient.begin() + i);
+			i--;
+			continue;
+		}
+	}
+	csRpcPktMonitorClient.unlock_shared();
+}
+void RpcLogSend(unsigned char* p, size_t len, bool success, string remoteAddr) {
+	{
+		shared_lock<shared_mutex> lock(csRpcPktMonitorClient);
+		if (rpcPktMonitorClient.size() == 0)
+			return;
+	}
+
+
+	string resp = str::fromBuff(p, len);
+
+	json j;
+	TIME st;
+	timeopt::now(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["remoteAddr"] = remoteAddr;
+	j["len"] = len;
+	j["data"] = resp;
+	string s = j.dump(4);
+	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
+}
+void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
+	{
+		shared_lock<shared_mutex> lock(csRpcPktMonitorClient);
+		if (rpcPktMonitorClient.size() == 0)
+			return;
+	}
+
+	string req = str::fromBuff(p, len);
+
+	json j;
+	TIME st;
+	timeopt::now(&st);
+	j["time"] = timeopt::st2strWithMilli(st);
+	j["remoteAddr"] = remoteAddr;
+	j["len"] = len;
+	j["data"] = req;
+	string s = j.dump(4);
+	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
 }
 
 bool parseIpPort(string host, string& ip, int& port)
@@ -226,10 +269,18 @@ static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* f
 		}
 		else
 		{
+			
 			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 			resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
 			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+
+			RPC_SESSION* pRpc = (RPC_SESSION*)parent->app_layer_data; 
+			if (pRpc!=nullptr && pRpc->method == "login") {
+				resHeader += "Set-Cookie: user=" + pRpc->user + "\r\n";
+			}
+			
 			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
+			delete pRpc;
 		}
 		unlink_conns(c, parent);
 	}
@@ -334,16 +385,13 @@ void thread_handleGzhReq(string req,int sock)
 }
 
 
-void thread_handleRpcOverHttp(string rpcReqStr,int sock,string localIP,int localPort,string remoteIP,int remotePort,bool isHttps)
+void thread_handleRpcOverHttp(string rpcReqStr,int sock, RPC_SESSION* pRpcSession)
 {
 	RPC_RESP resp;
 
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->localIP = localIP;
-	pSession->localPort = localPort;
-	pSession->remoteIP = remoteIP;
-	pSession->remotePort = remotePort;
-	pSession->isHttps = isHttps;
+	pSession->setRpcSession(pRpcSession);
+
 	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
 
 	string resBody = resp.strResp;
@@ -582,6 +630,21 @@ bool ServiceInterface::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
 }
 
 
+void parseCookie(string& cookie, map<string, string>& mapParams)
+{
+	vector<string> kv;
+	str::split(kv, cookie, ";");
+	for (int i = 0; i < kv.size(); i++) {
+		string pair = kv[i];
+		vector<string> vecKv;
+		str::split(vecKv, pair, "=");
+		if (vecKv.size() == 2) {
+			mapParams[vecKv[0]] = vecKv[1];
+		}
+	}
+}
+
+
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	ServiceInterface* pWs = (ServiceInterface*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
@@ -606,6 +669,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	else if (ev == MG_EV_HTTP_MSG)
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+		unsigned char* pIP = (unsigned char*)&c->rem.ip;
+		string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
+		int remotePort = c->rem.port;
+		string remoteAddr = str::format("%s:%d", remoteIP.c_str(), remotePort);
+		RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, remoteAddr);
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
@@ -698,10 +766,26 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			string sLocalAddr = str::fromBuff(mgs_host->ptr, mgs_host->len);
 			string ip; int port;
 			parseIpPort(sLocalAddr, ip, port);
-			unsigned char* pIP = (unsigned char*) &c->rem.ip;
-			string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
-			int remotePort = c->rem.port;
-			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,ip,port,remoteIP,remotePort,pWs->m_isHttps);
+			RPC_SESSION* pSession = new RPC_SESSION;
+			pSession->localIP = ip;
+			pSession->localPort = port;
+			pSession->remoteIP = remoteIP;
+			pSession->remotePort = remotePort;
+			pSession->isHttps = pWs->m_isHttps;
+			c->app_layer_data = pSession;
+
+			//根据cookie解析用户名
+			mg_str* mgs_cookie = mg_http_get_header(hm, "Cookie");
+			if (mgs_cookie != nullptr) {
+				string sCookie = str::fromBuff(mgs_cookie->ptr, mgs_cookie->len);
+				map<string, string> mapParams;
+				parseCookie(sCookie, mapParams);
+				if (mapParams.find("user") != mapParams.end()) {
+					pSession->user = mapParams["user"];
+				}
+			}
+
+			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,pSession);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))
@@ -1128,16 +1212,16 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 	}
 	else if (strData.find("/iopkt") != string::npos) //在debugio中使用
 	{
-		tdsSession->type = TDS_SESSION_TYPE::sessionPkt;
+		tdsSession->type = TDS_SESSION_TYPE::iopkt;
 		ioPktMonitorClient.push_back(tdsSession);
 		tdsSession->setActivityCheck(false);
 	}
-	//else if (strData.find("/commpkt") != string::npos)
-	//{
-	//	tdsSession->type = TDS_SESSION_TYPE::commpkt;
-	//	commpktSessions.push_back(tdsSession);
-	//	tdsSession->setActivityCheck(false);
-	//}
+	else if (strData.find("/apipkt") != string::npos)
+	{
+		tdsSession->type = TDS_SESSION_TYPE::apipkt;
+		rpcPktMonitorClient.push_back(tdsSession);
+		tdsSession->setActivityCheck(false);
+	}
 	else if (strData.find("desktop") != string::npos)
 	{
 		tdsSession->type = TDS_SESSION_TYPE::video;

@@ -1201,6 +1201,7 @@ struct mg_connection {
   unsigned is_readable : 1;    // Connection is ready to read
   unsigned is_writable : 1;    // Connection is ready to write
   int pipeSock;
+  void* app_layer_data;
 };
 
 void mg_mgr_poll(struct mg_mgr *, int ms);

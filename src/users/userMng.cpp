@@ -756,8 +756,15 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 		string user = params["user"].get<string>();
 		string pwd = "";
 		string sign = "";
-		if(params.contains("pwd"))
-			pwd = params["pwd"].get<string>();
+		if (params.contains("pwd")) {
+			if (params["pwd"].is_string()) {
+				pwd = params["pwd"].get<string>();
+			}
+			else {
+				resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "param pwd must be a string");
+				goto LOGIN_END;
+			}
+		}
 		if (params.contains("sign"))
 			sign = params["sign"].get<string>();
 
@@ -818,6 +825,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				userInfo.erase(keyPwd);
 				userInfo.erase("createTime");
 				userInfo.erase("enable");
+				string org = userInfo["org"];
 				//生成token
 				string token = common::guid();
 				userInfo["token"] = token;
@@ -838,7 +846,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				logParams["src"] = "用户:" + user;
 				logParams["object"] = "系统";
 				logParams["type"] = "登录";
-				logParams["org"] = session.org;
+				logParams["org"] = org;
 				logParams["host"] = session.remoteAddr;
 				logParams["info"] = "";
 				logSrv.rpc_addLog(logParams, session);

@@ -160,6 +160,7 @@ public:
 	string name; //name is defined by tds client
 	string user;
 	string token;
+	string method;
 
 	//tag expression in current user; multi-tenant
 	//rootTag = org + queryRootTag
@@ -248,8 +249,8 @@ namespace TDS_SESSION_TYPE {
 	//debug tools
 	const string terminal = "terminal";
 	const string log = "log";
-	const string commpkt = "commpkt"; 
-	const string sessionPkt = "sessionPkt";
+	const string apipkt = "apipkt"; 
+	const string iopkt = "sessionPkt";
 }
 
 struct ACTIVE_TDS_SESSION {

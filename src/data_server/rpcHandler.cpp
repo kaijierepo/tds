@@ -533,6 +533,39 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		}
 
 
+		if (method.find("start") != string::npos) {
+			string dir = params["dir"];
+			string info;
+			if (dir == "up")
+				info = "上移";
+			else if (dir == "down")
+				info = "下移";
+			else if (dir == "left")
+				info = "左移";
+			else if (dir == "right")
+				info = "右移";
+			else if (dir == "in")
+				info = "放大";
+			else if (dir == "out")
+				info = "缩小";
+			else if (dir == "near")
+				info = "聚焦拉近";
+			else if (dir == "far")
+				info = "聚焦拉远";
+
+			//操控日志记录
+			json logParams;
+			logParams["src"] = "用户:" + session.user;
+			logParams["object"] = tag;
+			logParams["type"] = "云台控制";
+			logParams["org"] = session.org;
+			logParams["host"] = session.remoteAddr;
+			logParams["info"] = info;
+			logSrv.rpc_addLog(logParams, session);
+		}
+		
+
+
 		//通过第三方云平台进行控制。如萤石云。该模式无需转发到子服务
 		if (pObj->m_mediaSrcType == "ezviz") {
 			if (method == "startPanTilt" ||
@@ -2168,6 +2201,11 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			pSession->user = jReq["user"].get<string>();
 			jUser = userMng.getUser(pSession->user);
 			if(jUser!=nullptr)
+				pSession->org = jUser["org"].get<string>();
+		}
+		else if (pSession->user != "") { //使用cookie设置的用户名
+			jUser = userMng.getUser(pSession->user);
+			if (jUser != nullptr)
 				pSession->org = jUser["org"].get<string>();
 		}
 		else

@@ -29,6 +29,7 @@ public:
 	TDS_SESSION(tcpSession* p);
 	TDS_SESSION(tcpSessionClt* p);
 
+	void setRpcSession(RPC_SESSION* pRpc);
 
 	void Init();
 	bool isConnected();

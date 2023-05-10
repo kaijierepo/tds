@@ -42,6 +42,12 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
     remoteIP = p->remoteIP;
 }
 
+void TDS_SESSION::setRpcSession(RPC_SESSION* pRpc)
+{
+    RPC_SESSION* pThis = (RPC_SESSION*)this;
+    *pThis = *pRpc;
+}
+
 RPC_SESSION TDS_SESSION::getRpcSession()
 {
     RPC_SESSION s = *this;

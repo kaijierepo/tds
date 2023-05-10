@@ -54,6 +54,12 @@ extern void sendToPktMonitorClient(char* p, size_t len);
 extern void IOLogSend(unsigned char* p, size_t len, bool success, string remoteAddr);
 extern void IOLogRecv(unsigned char* p, size_t len, string remoteAddr);
 
+extern vector<std::shared_ptr<TDS_SESSION>> rpcPktMonitorClient;
+extern shared_mutex csRpcPktMonitorClient;
+extern void sendToRpcPktMonitorClient(char* p, size_t len);
+extern void RpcLogSend(unsigned char* p, size_t len, bool success, string remoteAddr);
+extern void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr);
+
 extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);
 
