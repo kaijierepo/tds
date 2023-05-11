@@ -134,7 +134,7 @@ void thread_checkFood() {
 		jReq["id"] = "tdsd";
 		jReq["params"] = json::object();
 		TIME start = timeopt::now();
-		auto res = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
+		auto res = cli.Post("/debug", jReq.dump().c_str(), "application/json; charset=utf-8");
 		time_t pass = timeopt::CalcTimePassMilliSecond(start);
 		//watchDog.log("get food,take millisecond:" + str::fromInt(pass));
 		if (res == nullptr) {
