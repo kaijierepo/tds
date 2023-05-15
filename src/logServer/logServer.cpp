@@ -58,14 +58,10 @@ string logServer::rpc_queryLog(json params, RPC_SESSION session)
 
 	//组织结构过滤器
 	string rootTag = "";
-	if (session.user != "")
-	{
-		json jUser = userMng.getUser(session.user);
-		if (jUser != nullptr)//指定用户模式下，tag是相对位号，必须有根的位号。 报警的数据当中，存储的都是完整位号
-		{
-			rootTag = jUser["org"];
-		}
+	if (params.contains("rootTag")) {
+		rootTag = params["rootTag"];
 	}
+	rootTag = TAG::addRoot(rootTag, session.org);
 
 	string dataSet = "[";
 	std::lock_guard<mutex> g(m_csLogData);
@@ -91,21 +87,26 @@ string logServer::rpc_queryLog(json params, RPC_SESSION session)
 			{
 				json j = *tableLog.buffData[i];
 				string time = j["time"].get<string>();
-				string org;
+				string org,object;
 				if(j["org"]!=nullptr)
 					org = j["org"].get<string>();
+				if (j.contains("object")) {
+					object = j["object"];
+				}
+
 				if (!timeSelector.Match(time))
 				{
 					continue;
 				}
 
+				
 				if (rootTag != "")
 				{
-					if (org.find(rootTag) == string::npos)
+					if (object.find(rootTag) == string::npos)
 						continue;
 
 					//历史记录中的org是绝对位号，删去用户rootTag，转换成用户会话的相对位号。
-					j["org"] = TAG::trimRoot(org, rootTag);
+					j["object"] = TAG::trimRoot(object, rootTag);
 				}
 
 				if (dataSet != "[")

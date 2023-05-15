@@ -1293,6 +1293,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.getAllVarExpScript();
 				ioSrv.updateTag2IOAddrBinding();
 				ioSrv.updateAllChanVal();
+
+				rpcSrv.notify("objTreeUpdated", nullptr);
 				result = "\"ok\"";
 			}
 		}
