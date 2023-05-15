@@ -146,7 +146,7 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
-void tcpHub::OnRecvData_TCPServer(char* pData, int iLen, tcpSession* pCltInfo)
+void tcpHub::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo)
 {
 	if (pCltInfo->pTcpServer == &sLeft)
 	{
@@ -197,11 +197,11 @@ void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	}
 }
 
-void tcpHub::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo)
+void tcpHub::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
 {
 	if (connInfo->tcpClt == &cLeft)
 	{
-		sRight.SendData(pData, iLen);
+		sRight.SendData((char*)pData, iLen);
 		cRight.SendData(pData, iLen);
 		if (enable_pkt_log) {
 			string sData = str::bytesToHexStr(pData, iLen);
@@ -210,7 +210,7 @@ void tcpHub::OnRecvData_TCPClient(char* pData, int iLen, tcpSessionClt* connInfo
 	}
 	else if (connInfo->tcpClt == &cRight)
 	{
-		sLeft.SendData(pData, iLen);
+		sLeft.SendData((char*)pData, iLen);
 		cLeft.SendData(pData, iLen);
 		if (enable_pkt_log) {
 			string sData = str::bytesToHexStr(pData, iLen);

@@ -255,6 +255,11 @@ int main(int argc, char** argv)
 		}
 		return 0;
 	}
+	else if (mode == "tcpHub")
+	{
+		tcpHub* tr = new tcpHub();
+		tr->run();
+	}
 #ifdef ENABLE_TOOLS
 	else if (mode == "js")
 	{
@@ -265,11 +270,6 @@ int main(int argc, char** argv)
 		HttpServer* hs = new HttpServer();
 		hs->m_ProcName = mode;
 		hs->run();
-	}
-	else if (mode == "tcpHub")
-	{
-		tcpHub* tr = new tcpHub();
-		tr->run();
 	}
 	else if (mode == "switch")
 	{
