@@ -23,6 +23,8 @@ bool isBatchLink(string addr)
 
 
 std::map<string, fp_createDev> mapDevCreateFunc;
+std::map<string, fp_searchDev> mapDevSearchFunc;
+std::map<string, string> mapDevTypeLabel;
 ioDev* createIODev(string type)
 {
 	if (type == "")

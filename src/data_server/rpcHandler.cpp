@@ -1021,6 +1021,10 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		ioSrv.rpc_addDev(params,rpcResp,session);
 	}
+	else if (method == "searchDev")
+	{
+		ioSrv.rpc_searchDev(params, rpcResp, session);
+	}
 	else if (method == "deleteDev")
 	{
 		ioSrv.rpc_deleteDev(params, rpcResp, session);

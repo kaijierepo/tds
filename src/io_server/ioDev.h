@@ -79,6 +79,7 @@ class ioChannel;
 //do not use pIODev->m_pMO for DMS_UNCONF ioDev，it's empty
 typedef void (*fp_ioAddrRecvCallback)(void* user, unsigned char* pData, size_t iLen);
 typedef ioDev* (*fp_createDev)();
+typedef void (*fp_searchDev)();
 
 struct DEV_QUERIER {
 	bool getStatus;
@@ -387,6 +388,8 @@ public:
 
 ioDev* createIODev(string type);
 extern std::map<string, fp_createDev> mapDevCreateFunc;
+extern std::map<string, fp_searchDev> mapDevSearchFunc;
+extern std::map<string, string> mapDevTypeLabel;
 
 class TransparentGateway : public ioDev {
 public:

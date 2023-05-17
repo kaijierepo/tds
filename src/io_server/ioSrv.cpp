@@ -544,6 +544,21 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 	}
 }
 
+void ioServer::rpc_searchDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	string type;
+	if (params.contains("type")) {
+		type = params["type"];
+	}
+
+	if (mapDevSearchFunc.find(type)!= mapDevSearchFunc.end()){
+		fp_searchDev search = mapDevSearchFunc[type];
+		search();
+	}
+
+	rpcResp.result = RPC_OK;
+}
+
 
 //该函数，对于实现热组态是非常关键的函数
 //内存对象正在使用中，并且可能被多线程占用，但要支持删除修改
@@ -1088,47 +1103,6 @@ void ioServer::saveChanTemplate()
 	}
 }
 
-void ioServer::refreshSerialIODev()
-{
-	//从操作系统的设备管理器获得串口列表信息
-	vector<sys::COM_INFO> aryNew;
-	aryNew = sys::getCOMInfoList();
-
-
-	//新列表里有，当前列表没有。  为新上线的串口创建对应的ioDev.置为在线
-	for (auto& i : aryNew)
-	{
-		sys::COM_INFO ci = i;
-		ioDev* ls = getIODev(ci.portNum);
-		if (!ls)
-		{
-			ls = onChildDevDiscovered(ci.portNum,ci.portNum, DEV_TYPE::GW::local_serial);
-			if(ls)
-				ls->m_devTypeLabel = ci.desc;
-		}
-	}
-
-	//当前列表里有，新列表没有。 表示离线。 离线的空闲设备，从io设备列表中删除。已配置设备保留
-	vector<ioDev*> ary = ioSrv.getChildren(DEV_TYPE::GW::local_serial);
-	for (auto& i : ary)
-	{
-		bool bOnline = false;
-		//在新列表里面找的到才在线
-		for (auto& newStatus : aryNew)
-		{
-			if (newStatus.portNum == i->getIOAddrStr())
-			{
-				bOnline = true;
-			}
-		}
-
-		if (bOnline == false && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare)
-		{
-			ioSrv.deleteDescendant(i);
-		}
-	}
-}
-
 bool ioServer::run()
 {
 	runAsCloud();
@@ -1253,11 +1227,7 @@ bool ioServer::runAsCloud()
 	std::thread io(IOThread);
 	io.detach();
 
-	//启动设备发现线程
-	//ioDiscoverService.run();
-	refreshSerialIODev();
 
-	
 	return true;
 }
 

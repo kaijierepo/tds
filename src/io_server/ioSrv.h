@@ -34,6 +34,7 @@ namespace DEV_TYPE {
 		const string tuya = "tuya";
 		const string visca = "visca";
 		const string onvif = "onvif";
+		const string bacnet_ip = "bacnet-ip";
 	}
 	namespace GW {
 		const string local_serial = "local-serial";
@@ -69,21 +70,12 @@ inline string getDevSubTypeLabel(string devSubType) {
 }
 
 inline string getDevTypeLabel(string devType) {
-	if (devType == DEV_TYPE::DEV::modbus_rtu_slave)return "ModbusRTU";
-	else if (devType == DEV_TYPE::DEV::modbus_tcp_slave)return "ModbusTCP";
-	else if (devType == DEV_TYPE::DEV::tdsp_device)return "TDSP";
-	else if (devType == DEV_TYPE::GW::rs485_gateway)return "RS485转网络";
-	else if (devType == DEV_TYPE::GW::local_serial)return "本地串口";
-	else if (devType == DEV_TYPE::CHAN::io_channel)return "IO通道";
-	else if (devType == DEV_TYPE::DEV::iq60_gateway)return "IQ60";
-	else if (devType == DEV_TYPE::GW::tuya_iot_project)return "涂鸦项目";
-	else if (devType == DEV_TYPE::DEV::dlt645_2007)return "DLT645-2007电表";
-	else if (devType == DEV_TYPE::DEV::ethernetIp)return "EtherNet/IP";
-	else if (devType == DEV_TYPE::DEV::opcUa)return "OPC UA";
-	else if (devType == "onvif")return "Onvif摄像头";
-	else if (devType == "visca")return "Visca摄像头";
-	else if (devType == "tuya") return "涂鸦设备";
-	else return "未知类型";
+	if (mapDevTypeLabel.find(devType) != mapDevTypeLabel.end()) {
+		return mapDevTypeLabel[devType];
+	}
+	else {
+		return "未知类型";
+	}
 }
 
 struct CHILD_TDS_INFO {
@@ -136,6 +128,7 @@ public:
 
 	//在线组态
 	void rpc_addDev(json& params, RPC_RESP& rpcResp,RPC_SESSION sesion);
+	void rpc_searchDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion); //设置设备的管理状态
@@ -201,15 +194,12 @@ public:
 	
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
 	void updateAllChanVal();
-	void refreshSerialIODev();
 
 	bool getStatus(json& conf, string opt = "");
 	string getTag(string ioAddr);
 
 	//设备发现必须是某个父设备发现了子设备
 	ioDev* onChildDevDiscovered(json childDevAddr, string ioSessionAddr,string type, string subType = "");
-	//ioDiscoverer  ioDiscoverService;
-
 
 	bool m_stopCycleAcq; //全局周期采集开关，调试时使用，调试时全局关闭周期采集。方便手工发送数据并观察
 };
