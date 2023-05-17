@@ -173,7 +173,7 @@ ioDev::~ioDev(void)
 bool ioDev::run()
 {
 	m_bRunning = true;
-	if (m_addrMode == DEV_ADDR_MODE::tcpServer || m_addrMode == DEV_ADDR_MODE::udpServer)
+	if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer)
 	{
 		string ip;
 		if (m_jDevAddr.contains("ip"))
@@ -182,7 +182,7 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到ip配置",m_addrMode.c_str());
+			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到ip配置",m_addrType.c_str());
 			return false;
 		}
 
@@ -194,11 +194,11 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到port配置",m_addrMode.c_str());
+			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到port配置",m_addrType.c_str());
 			return false;
 		}
 
-		if (m_addrMode == DEV_ADDR_MODE::tcpServer) {
+		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
 				m_tcpClt = new tcpClt();
 			m_tcpClt->run(&ioSrv, ip, port);
@@ -209,7 +209,7 @@ bool ioDev::run()
 			m_udpClt->run(this);
 		}
 
-		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s", m_addrMode.c_str(),m_devType.c_str(), getDevAddrStr().c_str());
+		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s", m_addrType.c_str(),m_devType.c_str(), getDevAddrStr().c_str());
 	}
 	return true;
 }
@@ -236,7 +236,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 
 	//配置数据 - 保存在配置文件中
 	if (querier.getConf) {
-		conf["addrMode"] = m_addrMode;
+		conf["addrMode"] = m_addrType;
 		conf["addr"] = m_jDevAddr;
 		if (m_bViaAdaptor) {
 			conf["viaAdaptor"] = true;
@@ -299,7 +299,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 
 		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
 		conf["ioAddr"] = getIOAddrStr();
-		conf["addrMode"] = m_addrMode;
+		conf["addrMode"] = m_addrType;
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 
 		conf["avgRespTime"] = m_avgTransactionTime;
@@ -398,7 +398,7 @@ bool ioDev::loadConf(json& conf)
 	if (kv != conf.end()) {
 		json& item = kv.value();
 		if (item.is_string()) {
-			m_addrMode = item.get<string>();
+			m_addrType = item.get<string>();
 		}
 	}
 
@@ -425,15 +425,15 @@ bool ioDev::loadConf(json& conf)
 			m_jDevAddr = item;
 
 			//addrMode以后保存到io.json。此处兼容未保存的
-			if (m_jDevAddr.is_object() && m_addrMode == "")
+			if (m_jDevAddr.is_object() && m_addrType == "")
 			{
 				if (m_jDevAddr["id"] != nullptr) {
-					m_addrMode = DEV_ADDR_MODE::deviceID;
+					m_addrType = DEV_ADDR_MODE::deviceID;
 				}
 				else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>() != 0)
-					m_addrMode = DEV_ADDR_MODE::tcpServer;
+					m_addrType = DEV_ADDR_MODE::tcpServer;
 				else
-					m_addrMode = DEV_ADDR_MODE::tcpClient;
+					m_addrType = DEV_ADDR_MODE::tcpClient;
 			}
 		}
 	}
@@ -652,7 +652,7 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 
 	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s\r\n",getIOAddrStr().c_str(), method.c_str());
 	ioDev* pIoDev = this;
-	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrMode != DEV_ADDR_MODE::udpServer)
+	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrType != DEV_ADDR_MODE::udpServer)
 	{
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devOffline, "设备离线");
 		LOG("[warn]" + rpcResp.error);
@@ -918,7 +918,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 
 			devAddr = regTypeAddr + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
 		}
-		else if (m_addrMode == DEV_ADDR_MODE::deviceID)
+		else if (m_addrType == DEV_ADDR_MODE::deviceID)
 		{
 			if (m_jDevAddr.contains("id")) {
 				devAddr = m_jDevAddr["id"].get<string>();
@@ -927,7 +927,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 				}
 			}
 		}
-		else if (m_addrMode == DEV_ADDR_MODE::tcpClient)
+		else if (m_addrType == DEV_ADDR_MODE::tcpClient)
 		{
 			string ip;
 			int port = 0;
@@ -942,7 +942,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			if (!ignorePort)
 				devAddr += ":" + str::fromInt(port);
 		}
-		else if (m_addrMode == DEV_ADDR_MODE::tcpServer)
+		else if (m_addrType == DEV_ADDR_MODE::tcpServer)
 		{
 			string ip;
 			int port = 0;
@@ -957,7 +957,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			if (!ignorePort)
 				devAddr += ":" + str::fromInt(port);
 		}
-		else if (m_addrMode == DEV_ADDR_MODE::udpServer)
+		else if (m_addrType == DEV_ADDR_MODE::udpServer)
 		{
 			string ip;
 			int port = 0;

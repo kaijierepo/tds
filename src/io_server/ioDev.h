@@ -141,7 +141,7 @@ public:
 	// can be 1. mqtt topic 2.tuya device id
 	//device addr in string format
 	string m_devAddr;  // 多个devAddr 使用 / 连接组合成 ioAddr 
-	string m_addrMode; 
+	string m_addrType; 
 	json m_jDevAddr;  //json格式的设备地址   内部的数据结构按实际类型。例如地址如果是int，就用int类型，而不用string
 	//device addr in json format
 	virtual json getAddr(); 

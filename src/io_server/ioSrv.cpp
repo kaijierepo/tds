@@ -313,6 +313,7 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 			return;
 		}
 
+		//适配器上送的地址格式 UDP-192.168.1.100:9009
 		string ioAddr = jPkt["ioAddr"].get<string>();
 		string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
 
@@ -329,7 +330,9 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		{
 			if (firstLevel) {
 				json jAddr;
-				jAddr["id"] = ioAddr;
+				jAddr["type"] = DEV_ADDR_MODE::udpServer;
+				jAddr["ip"] = strIP;
+				jAddr["port"] = port;
 				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, DEV_TYPE::DEV::tdsp_device);
 			}
 		}
@@ -464,6 +467,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 	{
 		json jAddr;
 		jAddr["id"] = ioAddr;
+		jAddr["type"] = DEV_ADDR_MODE::deviceID;
 		pIoDev = ioSrv.onChildDevDiscovered(jAddr,tdsSession->getRemoteAddr(), tdsSession->ioDevType, tdsSession->tdspSubType);
 		pIoDev->m_devSubType = tdsSession->tdspSubType;
 
@@ -1421,21 +1425,22 @@ string ioServer::getTag(string strDataChannelID)
 	return "";
 }
 
+
+//childDevAddr 需要包含AddrType
 ioDev* ioServer::onChildDevDiscovered(json childDevAddr,string ioSessionAddr, string type,string subType)
 {
 	ioDev* p = createIODev(type);
 	if (p == nullptr) return nullptr;
 
 	p->m_jDevAddr = childDevAddr;
-	if (childDevAddr.is_string())
+	if (childDevAddr.is_string()) {
 		p->m_devAddr = p->m_jDevAddr.get<string>();
-	else if (childDevAddr.is_object())
-	{
-		if (childDevAddr.contains("id"))
-		{
-			p->m_addrMode = DEV_ADDR_MODE::deviceID;
-		}
+		p->m_addrType = DEV_ADDR_MODE::deviceID;
 	}
+	else {
+		p->m_addrType = childDevAddr["type"];
+	}
+		
 	p->m_dispositionMode = DEV_DISPOSITION_MODE::spare;
 	ioSrv.addChild(p);
 
