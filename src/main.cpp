@@ -160,12 +160,10 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 
+#include "ioProto/proto_bacnet.hpp"
 
 int main(int argc, char** argv)
 {
-
-
-
 	//取出命令行命令
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {

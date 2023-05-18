@@ -36,4 +36,12 @@ public:
 	IUdpServerCallBack*  m_pCallback;
 };
 
+class UdpClt : public udpServer {
+public:
+	string m_remoteIP;
+	int m_remotePort;
+
+	size_t sendData(unsigned char* pData, size_t iLen);
+};
+
 

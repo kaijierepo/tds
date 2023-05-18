@@ -205,7 +205,7 @@ bool ioDev::run()
 		}
 		else {
 			if (m_udpClt == nullptr)
-				m_udpClt = new udpServer();
+				m_udpClt = new UdpClt();
 			m_udpClt->run(this);
 		}
 
@@ -1041,6 +1041,9 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 {
 	if (m_pParent != nullptr && m_pParent != &ioSrv) {
 		m_pParent->sendData(pData, iLen);
+	}
+	else if (m_udpClt != nullptr) {
+		m_udpClt->sendData(pData, iLen);
 	}
 	else {
 		//直接发送给设备

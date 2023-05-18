@@ -214,7 +214,7 @@ public:
 	//设备是tcpServer
 	tcpClt* m_tcpClt; 
 	//设备是udpServer
-	udpServer* m_udpClt; 
+	UdpClt* m_udpClt;
 
 
 	shared_ptr<TDS_SESSION> pIOSession;

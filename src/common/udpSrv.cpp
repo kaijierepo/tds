@@ -234,3 +234,8 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 	pServ->stop();
 	return 0;
 }
+
+size_t UdpClt::sendData(unsigned char* pData, size_t iLen)
+{
+	return udpServer::SendData(pData, iLen, m_remoteIP, m_remotePort);
+}
