@@ -50,7 +50,7 @@ ioDev* createIODev(string type)
 
 	if (p)
 	{
-		p->m_confNodeId = common::guid();
+		p->m_confNodeId = common::uuid();
 	}
 
 	return p;
@@ -538,7 +538,7 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 	if (m_confNodeId == "") //该操作主要用于升级没有nodeId的配置
-		m_confNodeId = common::guid();
+		m_confNodeId = common::uuid();
 
 	kv = conf.find("tagBind");
 	if (kv != conf.end()) {

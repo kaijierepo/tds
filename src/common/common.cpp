@@ -1,7 +1,7 @@
 ﻿#include "common.h"
 #include <filesystem>
 #include <stdarg.h>
-#include "logger.h"
+#include <random>
 using namespace std;
 
 namespace common {
@@ -1842,46 +1842,23 @@ namespace path {
 	}
 }
 
-#define GUID_LEN 64
+
 namespace common {
-	string guid() {
-		string str;
-#ifdef WINDOWS
-		char buf[GUID_LEN] = { 0 };
-		_GUID id;
-
-		if (CoCreateGuid(&id))
-		{
-			return std::move(std::string(""));
+	string uuid() {
+		std::random_device rd;
+		std::mt19937 gen(rd());
+		std::uniform_int_distribution<> dis(0, 15);
+		std::string uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
+		int pos = 0;
+		for (char& c : uuid) {
+			if (c == 'x' || c == 'y') {
+				int n = dis(gen);
+				int r = (n & 0x3) | 0x8;
+				c = (c == 'x') ? "0123456789abcdef"[n] : "89ab"[r];
+			}
+			++pos;
 		}
-		sprintf_s(buf,
-			"%08X-%04X-%04x-%02X%02X-%02X%02X%02X%02X%02X%02X",
-			id.Data1, id.Data2, id.Data3,
-			id.Data4[0], id.Data4[1], id.Data4[2],
-			id.Data4[3], id.Data4[4], id.Data4[5],
-			id.Data4[6], id.Data4[7]);
-
-		str = buf;
-#elif LINUX
-		char buf[GUID_LEN] = { 0 };
-
-		uuid_t uu;
-		uuid_generate(uu);
-
-		int32_t index = 0;
-		for (int32_t i = 0; i < 16; i++)
-		{
-			int32_t len = i < 15 ?
-				sprintf(buf + index, "%02X-", uu[i]) :
-				sprintf(buf + index, "%02X", uu[i]);
-			if (len < 0)
-				return std::move(std::string(""));
-			index += len;
-		}
-
-		str = buf;
-#endif // WIN32
-		return str;
+		return uuid;
 	}
 
 	double randomFloat(double min, double max) {

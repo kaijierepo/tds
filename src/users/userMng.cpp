@@ -584,7 +584,7 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 
 		ACCESS_INFO aiTmp;
 		aiTmp.user = ai.user;
-		aiTmp.token = common::guid();
+		aiTmp.token = common::uuid();
 		aiTmp.bDynamic = true;
 		aiTmp.age = tds->conf->tokenExpireTime * 60;
 		timeopt::now(&aiTmp.stCreate);
@@ -827,7 +827,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				userInfo.erase("enable");
 				string org = userInfo["org"];
 				//生成token
-				string token = common::guid();
+				string token = common::uuid();
 				userInfo["token"] = token;
 				ACCESS_INFO ai;
 				ai.age = tds->conf->tokenExpireTime * 60;

@@ -115,12 +115,12 @@ void gen_testIoConf() {
 		for (int j = 0; j < 30; j++) {
 			string sMpNo = "监控点" + str::fromInt(j);
 			jChan["addr"]["regOffset"] = j;
-			jChan["nodeID"] = common::guid();
+			jChan["nodeID"] = common::uuid();
 			jDev_children.push_back(jChan);
 			jChan["tagBind"] = sMpNo;
 		}
 		jDev["tagBind"] = sWsNo + "." + sDevNo;
-		jDev["nodeID"] = common::guid();
+		jDev["nodeID"] = common::uuid();
 		jDev["channels"] = jDev_children;
 		jConf.push_back(jDev);
 	}

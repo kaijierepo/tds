@@ -302,7 +302,7 @@ namespace path {
 }
 
 namespace common {
-	string guid();
+	string uuid();
 	double randomFloat(double min, double max);
 	int randomInt(int min, int max);
 }
