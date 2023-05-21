@@ -23,7 +23,6 @@
 #include <devguid.h>
 #pragma comment (lib, "Setupapi.lib")
 #elif LINUX
-#include <uuid/uuid.h>
 #include <unistd.h>
 #include <iconv.h>
 #include <stdarg.h>
@@ -228,7 +227,7 @@ namespace timeopt {
 	string toFmt(string time, string fmt);
 	string stTimeToStr(TIME time);
 	time_t SysTime2Unix(TIME sDT);
-	TIME Unix2SysTime(time_t iUnix);
+	TIME Unix2SysTime(time_t iUnix, int milli=0);
 	TIME str2st(string str);
 	int HMS2Sec(string hms);
 	bool isRelative(string time);

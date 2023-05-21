@@ -917,14 +917,12 @@ namespace str {
 	}
 }
 namespace timeopt {
-	TIME now() {
-		auto now = std::chrono::system_clock::now();
-		//通过不同精度获取相差的毫秒数 <1000毫秒值
-		unsigned short dis_millseconds = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
-			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
-		time_t tt = std::chrono::system_clock::to_time_t(now);
-		tm time_tm;
-		localtime_s(&time_tm,&tt);
+	TIME Unix2SysTime(time_t iUnix,int milli)
+	{
+		static std::mutex mtx;
+		mtx.lock();
+		tm time_tm = *localtime(&iUnix);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+		mtx.unlock();
 
 		TIME t;
 		t.wYear = time_tm.tm_year + 1900;
@@ -933,10 +931,20 @@ namespace timeopt {
 		t.wHour = time_tm.tm_hour;
 		t.wMinute = time_tm.tm_min;
 		t.wSecond = time_tm.tm_sec;
-		t.wMilliseconds = dis_millseconds;
+		t.wMilliseconds = milli;
 		t.wDayOfWeek = time_tm.tm_wday;
-
 		return t;
+	}
+
+
+	TIME now() {
+		auto now = std::chrono::system_clock::now();
+		//通过不同精度获取相差的毫秒数 <1000毫秒值
+		unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+		time_t tt = std::chrono::system_clock::to_time_t(now);
+		
+		return Unix2SysTime(tt, milli);
 	}
 
 	TIME nowUTC() {
@@ -945,8 +953,11 @@ namespace timeopt {
 		unsigned short dis_millseconds = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
 			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 		time_t tt = std::chrono::system_clock::to_time_t(now);
-		tm time_tm;
-		gmtime_s(&time_tm, &tt);
+
+		static mutex lock;
+		lock.lock();
+		tm time_tm = *gmtime(&tt);
+		lock.unlock();
 
 		TIME t;
 		t.wYear = time_tm.tm_year + 1900;
@@ -1007,28 +1018,12 @@ namespace timeopt {
 		return iReturn;
 	}
 
-	TIME Unix2SysTime(time_t iUnix)
-	{
-		TIME sDT;
-		time_t tIn = (time_t)iUnix;
-		tm temptm;
-		localtime_s(&temptm,&tIn);
-		sDT.wYear = 1900 + temptm.tm_year;
-		sDT.wMonth = 1 + temptm.tm_mon;
-		sDT.wDay = temptm.tm_mday;
-		sDT.wDayOfWeek = temptm.tm_wday;
-		sDT.wHour = temptm.tm_hour;
-		sDT.wMinute = temptm.tm_min;
-		sDT.wSecond = temptm.tm_sec;
-		sDT.wMilliseconds = 0;
-		return sDT;
-	}
 
 	TIME str2st(string str)
 	{
 		TIME t;
 		int year, month, day, hour, min, sec;
-		sscanf_s(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 			&year,
 			&month,
 			&day,
