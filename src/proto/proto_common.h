@@ -12,6 +12,7 @@ class DEV_PKT {
 public:
 	unsigned char* data;
 	size_t len;
+	int transactionId;
 	virtual bool pack() { return false; };
 	virtual bool unpack() { return false; };
 	void clear() {
@@ -64,6 +65,7 @@ public:
 		cmd_data = nullptr;
 		cmd_data_len = 0;
 		type = IO_PKT_TYPE::IO_Unknown;
+		transactionId = -1;
 	}
 
 	~DEV_PKT()

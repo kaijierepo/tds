@@ -383,6 +383,7 @@ enum RPC_ERROR_CODE {
 	IO_chanTemplateNotFound = -40306,
 	IO_devBusy = -40307,
 	IO_devStopped = -40308,
+	IO_devAddrFmtError = -40309,
 
 	//video
 	TEC_VIDEO_PARAM_NOT_VALID = -40401,

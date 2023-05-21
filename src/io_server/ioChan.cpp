@@ -284,5 +284,5 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 void ioChannel::output(json jVal, json& rlt,json& err, bool sync)
 {
 	ioDev* pDev = ioDev::m_pParent;
-	pDev->output(getDevAddrStr(),jVal, rlt,err,sync);
+	pDev->output(this,jVal, rlt,err,sync);
 }
