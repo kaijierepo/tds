@@ -1,5 +1,5 @@
-#include "pch.h"
 #include "kvIni.h"
+#include "common.h"
 
 bool KV_INI::load(string path)
 {

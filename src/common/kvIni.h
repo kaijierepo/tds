@@ -17,6 +17,7 @@ key value Ini配置文件
 
 #pragma once
 #include <string>
+#include <map>
 using namespace std;
 
 

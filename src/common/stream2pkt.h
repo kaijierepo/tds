@@ -45,7 +45,7 @@ public:
 		Init();
 	}
 
-	std::vector<byte> m_prefix;
+	std::vector<unsigned char> m_prefix;
 
 	//流数据
 	unsigned char* stream;

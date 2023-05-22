@@ -1206,7 +1206,7 @@ void ioDev::checkAcqReqTimeout()
 bool ioDev::onRecvData(unsigned char* pData, size_t iLen)
 {
 	DEV_PKT pkt;
-	if (!pkt.UnPack(pData, iLen))
+	if (!pkt.unpack(pData, iLen))
 		return false;
 
 	bool bRetu = false;

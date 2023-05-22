@@ -135,8 +135,9 @@ public:
 	int iPayloadLen;
 	int iFrmLen;
 	WS_FrameType frmType;
+	WS_FrameType frmTypeParsed;
 
-	WS_FrameType unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false);
+	bool unpack(unsigned char* pBuf, int iBufLen, bool withDetail = false) override;
 	int pack(const char* inMessage, size_t len, enum WS_FrameType frameType, bool bFin=1, bool bOpt=1);
 
 	bool isDataFrame();
@@ -153,11 +154,11 @@ public:
 	int fetch_payload_length(char *msg, int &pos);
 	int fetch_payload(char *msg, int &pos);
 
-	uint8_t fin_;
-	uint8_t opcode_;
-	uint8_t mask_;
-	uint8_t masking_key_[4];
-	UINT64 payload_length_;
+	unsigned char fin_;
+	unsigned char opcode_;
+	unsigned char mask_;
+	unsigned char masking_key_[4];
+	unsigned __int64 payload_length_;
 	char payload_[2048];
 };
 

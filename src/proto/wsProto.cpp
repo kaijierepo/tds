@@ -8,7 +8,8 @@
 size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
 {
 	CWSPPkt req;
-	if (WS_ERROR_FRAME != req.unpack((unsigned char*)pData, iLen))
+	req.unpack((unsigned char*)pData, iLen);
+	if (WS_ERROR_FRAME != req.frmTypeParsed)
 	{
 		return req.iFrmLen;
 	}
@@ -28,7 +29,7 @@ CWSPPkt::~CWSPPkt()
 		delete payloadData;
 }
 
-WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
+bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 {
 	BYTE* frameData = (BYTE*)pBuf;
 	int len = iBufLen;
@@ -130,7 +131,8 @@ WS_FrameType CWSPPkt::unpack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo)
 
 
 	frmType = GetFrameType((char*)pBuf,iBufLen);
-	return ret;
+	frmTypeParsed = ret;
+	return true;
 }
 
 int CWSPPkt::pack(const char * inMessage, size_t messageLen,  enum WS_FrameType frameType, bool bFin, bool bOpt)

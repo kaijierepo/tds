@@ -39,7 +39,6 @@ SOFTWARE.
 #include "db.h"
 #include "tools/tools.hpp"
 #include "base64.h"
-#include "base85.h"
 #include "prj.h"
 #include "common.h"
 #include "tools/demoTools.h"

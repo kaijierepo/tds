@@ -37,7 +37,6 @@
  *
  */
 
-#include "pch.h"
 #include "sha1.h"
 
  /*

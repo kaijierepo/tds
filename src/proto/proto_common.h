@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string.h>
+using namespace std;
+
 #pragma pack(1)
 enum class IO_PKT_TYPE {
 	IO_Unknown,
@@ -13,8 +16,13 @@ public:
 	unsigned char* data;
 	size_t len;
 	int transactionId;
+
 	virtual bool pack() { return false; };
 	virtual bool unpack() { return false; };
+	virtual bool pack(char* cmdData, int len) { return false; };
+	virtual bool unpack(unsigned char* p, int len, bool withDetail = false) { return 0; };
+
+
 	void clear() {
 		if (data != nullptr)
 		{
@@ -37,12 +45,9 @@ public:
 	void* pushData(void* p, int l);
 	unsigned char* pushData(unsigned char v);
 	unsigned short* pushData(unsigned short v);
-	virtual bool pack(char* cmdData, int len) { return false; };
 
-	virtual bool unpack(unsigned char* p, int len, bool withDetail = false) { return 0; };
 
 	virtual string GetCmdID() { return ""; };
-	virtual bool UnPack(LPVOID pBuf, int iBufLen, bool bGetCmdInfo = false) { return true; };
 	virtual string GetPktDesc() { return ""; }; //包详细描述信息
 	virtual string GetCmdName() { return ""; };
 

@@ -1,12 +1,9 @@
-#include "pch.h"
 #include "logger.h"
 #include <vector>
 #include <stdio.h>
 #include <stdarg.h>
 #include "common.h"
-#ifdef _TDS
 #include "tools/dumpCatch.h"
-#endif
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \

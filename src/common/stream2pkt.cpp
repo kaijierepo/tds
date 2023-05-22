@@ -1,6 +1,6 @@
-#include "pch.h"
 #include "proto/wsProto.h"
 #include "stream2pkt.h"
+#include "common.h"
 
 size_t IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
 {
@@ -38,9 +38,9 @@ size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 	if (iLen < 4)
 		return 0;
 
-	WORD crc1 = *(WORD*)(pData + iLen - 2);
+	unsigned short crc1 = *(unsigned short*)(pData + iLen - 2);
 	common::endianSwap((char*)&crc1, 2);
-	WORD crc2 = common::N_CRC16((unsigned char*)pData, iLen - 2);
+	unsigned short crc2 = common::N_CRC16((unsigned char*)pData, iLen - 2);
 	if (crc1 == crc2)
 		return iLen;
 	else
@@ -210,38 +210,38 @@ bool stream2pkt::PopPkt(string cpt)
 		size_t ilen = 0;
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::textEnd2LF))
+			(cpt == "textEnd2LF"))
 		{
 			if (i > 0)
 				break;
 			ilen = IsValidPkt_textEnd_LFLF(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{
-				m_protocolType = APP_LAYER_PROTO::textEnd2LF;
+				m_protocolType = "textEnd2LF";
 			}
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::textEnd1LF))
+			(cpt == "textEnd1LF"))
 		{
 			if (i > 0)
 				break;
 			ilen = IsValidPkt_textEnd_LF(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{
-				m_protocolType = APP_LAYER_PROTO::textEnd1LF;
+				m_protocolType = "textEnd1LF";
 			}
 		}
 
 		if (ilen == 0 &&
-			(cpt == APP_LAYER_PROTO::terminalPrompt))
+			(cpt == "->"  ))//APP_LAYER_PROTO::terminalPrompt //用于iq60
 		{
 			if (i > 0)
 				break;
 			ilen = IsValidPkt_terminalPrompt(stream + i, iStreamLen - i);
 			if (ilen > 0)
 			{
-				m_protocolType = APP_LAYER_PROTO::terminalPrompt;
+				m_protocolType = "->";
 			}
 		}
 
