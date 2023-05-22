@@ -1,6 +1,5 @@
 #pragma once 
 #include <map>
-#include <winsock2.h>
 #include <vector>
 #include <mutex>
 #include <memory>
@@ -8,10 +7,18 @@
 
 using namespace std;
 
+//为了方便linux和win兼容，sock句柄win下SOCKET类型，linux下为int类型，统一使用 int 来存放 
+//64位win下SOCKET是8字节，但是是安全的
+/*
+ * Even though sizeof(SOCKET) is 8, it's safe to cast it to int, because
+ * the value constitutes an index in per-process table of limited size
+ * and not a real pointer.
+ */
+
+
 struct tcpSession
 {
-	unsigned int sock;
-	SOCKADDR_IN clientAddr;
+	int sock;
 	string remoteIP;
 	int remotePort;
 	bool bIsTransmit;
@@ -21,7 +28,7 @@ struct tcpSession
 	int iKeepAliveTimeout;
 	void* pTcpServer;  
 	void* pALSession; 
-	SOCKET bridgeSock;
+	int bridgeSock;  
 	bool bEnableActivityCheck; //是否进行活动检测
 
 	TIME stLastActive;
