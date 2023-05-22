@@ -3,7 +3,7 @@
 #include "mongoose.h"
 #include "logger.h"
 
-
+#define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
 static void cb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	tcpSrv* pSrv = (tcpSrv*) c->mgr->userdata;
@@ -82,7 +82,7 @@ void tcpSrv::disconnect(string remoteAddr)
 		for (auto& i : m_mapTcpSessions)
 		{
 			//目前tcpServer统一使用mongoose的 poll模型。poll模型closesocket不会触发响应,使用shutdown
-			shutdown(i.second->sock,SD_BOTH);
+			shutdown(i.second->sock,SHUT_DOWN_BOTH);
 			i.second->sock = 0;
 		}
 	}
@@ -93,7 +93,7 @@ void tcpSrv::disconnect(string remoteAddr)
 			string tmp = str::format("%s:%d", i.second->remoteIP.c_str(), i.second->remotePort);
 			if (tmp == remoteAddr)
 			{
-				shutdown(i.second->sock,SD_BOTH);
+				shutdown(i.second->sock,SHUT_DOWN_BOTH);
 				i.second->sock = 0;
 			}
 		}
@@ -119,6 +119,7 @@ bool tcpSession::send(char* pData, size_t iLen)
 
 	if (iRet <=0)
 	{
+		/*
 		int iErr = GetLastError();
 		string strError;
 		if (iErr == WSAETIMEDOUT)
@@ -131,15 +132,16 @@ bool tcpSession::send(char* pData, size_t iLen)
 		}
 		else
 		{
-			shutdown(sock,SD_BOTH);
+			shutdown(sock,SHUT_DOWN_BOTH); 
 		}
 		strError = sys::getLastError();
 		string str = str::format("[tcpSrv][error]send data fail，error=%s,%s:%d", strError.c_str(),remoteIP.c_str(),remotePort);
 		logger.logInternal(str);
+		*/
 
 		if (sock != 0)
 		{
-			shutdown(sock, SD_BOTH);
+			shutdown(sock, SHUT_DOWN_BOTH);
 			sock = 0;
 		}
 	}

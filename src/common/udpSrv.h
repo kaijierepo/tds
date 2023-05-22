@@ -1,5 +1,4 @@
 #pragma once
-#include <WINSOCK.H>
 
 class IUdpServerCallBack {
 public:
@@ -25,12 +24,12 @@ public:
 
 	void addToMultiCast(string multiCastAddr, int port);
 
-	SOCKET m_sock;
-	SOCKET m_multiCastSendSock;
+	int m_sock;
+	int m_multiCastSendSock;
 	string m_multiCastSendAddr;
 	int m_multiCastSendPort;
 
-	SOCKET m_multiCastRecvSock;
+	int m_multiCastRecvSock;
 	string m_bindIP;
 	int m_port;
 	IUdpServerCallBack*  m_pCallback;
