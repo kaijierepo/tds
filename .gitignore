@@ -14,6 +14,7 @@ publish/
 front_end/
 temp/
 
+*.o
 *.obj
 *.aps
 *.ipch

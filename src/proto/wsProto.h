@@ -158,7 +158,7 @@ public:
 	unsigned char opcode_;
 	unsigned char mask_;
 	unsigned char masking_key_[4];
-	unsigned __int64 payload_length_;
+	size_t payload_length_;
 	char payload_[2048];
 };
 

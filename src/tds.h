@@ -46,7 +46,6 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #include <string>
 #include <vector>
 #include <map>
-#include <Windows.h>
 #include "json.hpp"
 using namespace std;
 using json = nlohmann::json;	
@@ -535,7 +534,7 @@ public:
 	i_ioServer* ioServer;
 	i_rpcServer* rpcServer;
 
-	HWND uiWnd;
+	void* uiWnd;
 	string uiWndTitle;
 	string m_sTitle;
 	map<string, fp_toolRun> tools;

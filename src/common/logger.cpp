@@ -40,7 +40,14 @@
 #define UWHITE(msg)  COLOR_(msg, 37, 4)
 
 
-
+int _vscprintf_cross_log(const char* format, va_list pargs) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, pargs);
+	retval = vsnprintf(NULL, 0, format, argcopy);
+	va_end(argcopy);
+	return retval;
+}
 
 Clogger logger;
 void LOG(const char* pszFmt, ...)
@@ -49,10 +56,10 @@ void LOG(const char* pszFmt, ...)
 	va_list args;
 	va_start(args, pszFmt);
 	{
-		int nLength = _vscprintf(pszFmt, args);
-		nLength += 1;
+		int nLength = _vscprintf_cross_log(pszFmt, args);
+		nLength += 1;  //上面返回的长度是包含\0，这里加上
 		std::vector<char> vectorChars(nLength);
-		_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
 		str.assign(vectorChars.data());
 	}
 	va_end(args);
@@ -62,11 +69,7 @@ void LOG(string info)
 {
 	logger.log(info);
 }
-void LOG3(char* p, int len)
-{
-	//string s = str::fromBuff(p, len);
-	//LOG(s);
-}
+
 void loggingCB(char* info)
 {
 	logger.log(info);
@@ -74,27 +77,11 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
-	strLogDirUtf16 = charCodec::utf8_to_utf16(fs::appPath() + "\\log");
+	m_strLogDir = fs::appPath() + "\\log";
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
 	m_bEnable = true;
-}
-
-std::string Clogger::formatStr(const char* pszFmt, ...)
-{
-	std::string str;
-	va_list args;
-	va_start(args, pszFmt);
-	{
-		int nLength = _vscprintf(pszFmt, args);
-		nLength += 1;  
-		std::vector<char> vectorChars(nLength);
-		_vsnprintf(vectorChars.data(), nLength, pszFmt, args);
-		str.assign(vectorChars.data());
-	}
-	va_end(args);
-	return str;
 }
 
 LOG_LEVEL Clogger::str2logLevel(string level)
@@ -180,7 +167,7 @@ string Clogger::logInternal(string info)
 
 	TIME stNow;
 	timeopt::now(&stNow);
-	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	//命令行和文件中的日志用gb2312编码
 	string logline = time + " " + info;
 
@@ -207,7 +194,7 @@ string Clogger::logInternal(string info)
 	//	dirCreated = true;
 	//}
 	//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
-	::CreateDirectoryW(strLogDirUtf16.c_str(), NULL);
+	fs::createFolderOfPath(m_strLogDir);
 	
 
 	//save to log file

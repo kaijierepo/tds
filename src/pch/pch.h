@@ -12,7 +12,6 @@
 #include <thread>
 #include <iostream>
 #include <exception>
-#include <WinSock2.h>
 #include "common.h"
 
 #include "json.hpp"

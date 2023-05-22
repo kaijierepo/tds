@@ -73,13 +73,13 @@ size_t IsValidPkt_TDSP(unsigned char* pData, size_t iLen)
 }
 
 unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
-	byte crc = 0;
+	unsigned char crc = 0;
 	for (int j = 0; j < len; j++)
 	{
 		crc ^= pData[j];
 		for (int i = 0; i < 8; i++)
 		{
-			if ((byte)(crc & 0x01) > 0) crc = (byte)((byte)(crc >> 1) ^ 0x8C);
+			if ((unsigned char)(crc & 0x01) > 0) crc = (unsigned char)((unsigned char)(crc >> 1) ^ 0x8C);
 			else crc >>= 1;
 		}
 	}
@@ -170,7 +170,7 @@ void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 	else
 	{
 		size_t iCopySize = iLen < iNewSize ? iLen : iNewSize;
-		memcpy_s(pNewData, iNewSize, pData, iCopySize);
+		memcpy(pNewData, pData, iCopySize);
 		delete pData;
 	}
 
@@ -193,7 +193,7 @@ void stream2pkt::PushStream(unsigned char* pData, size_t iLen)
 	if (iStreamLen + iLen > iStreaBuffSize)
 		ResizeStreamBuff(iStreamLen + iLen);
 
-	memcpy_s(stream + iStreamLen, iStreaBuffSize , pData, iLen);
+	memcpy(stream + iStreamLen , pData, iLen);
 	iStreamLen += iLen;
 }
 
@@ -258,10 +258,10 @@ bool stream2pkt::PopPkt(string cpt)
 			else
 				abandonData = "";
 			
-			memcpy_s(pkt, iPktBuffSize, stream + i, ilen);
+			memcpy(pkt, stream + i, ilen);
 			iPktLen = ilen;
 
-			memcpy_s(stream, iStreaBuffSize, stream + i + ilen, iStreamLen - i - ilen);
+			memcpy(stream, stream + i + ilen, iStreamLen - i - ilen);
 			iStreamLen -= i + ilen;
 			iAbandonLen = i;
 
@@ -311,18 +311,18 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 			if (iPopPktLen > iPktBuffSize)
 				ResizePopPktBuff(iPopPktLen);
 			if(m_prefix.size()>0)
-				memcpy_s(pkt, iPktBuffSize, stream + iAbandonLen + m_prefix.size(), iPopPktLen);
+				memcpy(pkt, stream + iAbandonLen + m_prefix.size(), iPopPktLen);
 			else
-				memcpy_s(pkt, iPktBuffSize, stream + iAbandonLen, iPopPktLen);
+				memcpy(pkt, stream + iAbandonLen, iPopPktLen);
 			iPktLen = iPopPktLen;
 
 			//从stream中删除
 			if (m_prefix.size() > 0) {
-				memcpy_s(stream, iStreaBuffSize, stream + iAbandonLen + iPopPktLen + m_prefix.size(), iStreamLen - iAbandonLen - iPopPktLen - m_prefix.size());
+				memcpy(stream, stream + iAbandonLen + iPopPktLen + m_prefix.size(), iStreamLen - iAbandonLen - iPopPktLen - m_prefix.size());
 				iStreamLen -= iAbandonLen + iPopPktLen + m_prefix.size();
 			}
 			else {
-				memcpy_s(stream, iStreaBuffSize, stream + iAbandonLen + iPopPktLen, iStreamLen - iAbandonLen - iPopPktLen);
+				memcpy(stream, stream + iAbandonLen + iPopPktLen, iStreamLen - iAbandonLen - iPopPktLen);
 				iStreamLen -= iAbandonLen + iPopPktLen;
 			}
 			ResizeStreamBuff(iStreamLen);
@@ -340,7 +340,7 @@ bool stream2pkt::PopAllAs(string cpt)
 	if(iStreamLen > iPktBuffSize)
 		ResizePopPktBuff(iStreamLen);
 
-	memcpy_s(pkt, iStreamLen, stream, iStreamLen);
+	memcpy(pkt, stream, iStreamLen);
 	iPktLen = iStreamLen;
 	iStreamLen = 0;
 	ResizeStreamBuff(iStreamLen);

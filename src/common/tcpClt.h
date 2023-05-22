@@ -1,9 +1,8 @@
 #pragma once
-#include <WinSock2.h>
 #include <string>
 #include <vector>
 #include <mutex>
-#include "common.h"
+#include <memory>
 
 using namespace std;
 
@@ -25,10 +24,7 @@ struct tcpSessionClt
 
 	TIME stLastActive;
 
-	string getRemoteAddr() {
-		string s = str::format("%s:%d", remoteIP.c_str(), remotePort);
-		return s;
-	}
+	string getRemoteAddr();
 
 	tcpSessionClt()
 	{
@@ -80,9 +76,8 @@ public:
 
 	int SendData( char* pData, size_t iLen);
 	int SendData(unsigned char* pData, size_t iLen);
-	static string GetLocalIP();
 
-	SOCKET sockClient;
+	int sockClient;
 	string m_remoteIP;
 	int m_remotePort;
 	string m_strLocalIP;
