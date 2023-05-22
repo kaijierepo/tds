@@ -3,7 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <WS2tcpip.h>
+#include <common.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
 
 
 namespace tds_udpSrv {
@@ -23,7 +32,7 @@ namespace tds_udpSrv {
 	static WinSockInit wsinit;
 }
 
-DWORD WINAPI RecvThread(LPVOID lpParam);
+void udpRecvThread(LPVOID lpParam);
 
 
 udpServer::udpServer(void)
@@ -92,16 +101,8 @@ void udpServer::start()
 	getsockname(m_sock, (sockaddr*)&addr, &nLen);
 
 
-	DWORD dwThread = 0;
-	HANDLE hThread = CreateThread(NULL, 0, RecvThread, (LPVOID)this, 0, &dwThread);
-	if (hThread == NULL)
-	{
-		
-	}
-	else
-	{
-		CloseHandle(hThread);
-	}
+	thread t(udpRecvThread, this);
+	t.detach();
 }
 
 void udpServer::stop()
@@ -151,7 +152,7 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 
 
 	int ttl = 255;
-	int iRet = setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (char*)&ttl, sizeof(ttl));
+	int iRet = setsockopt(sock, IPPROTO_IP, 10, (char*)&ttl, sizeof(ttl));//IP_MULTICAST_TTL 10
 	if (iRet != 0) {
 		printf("setsockopt fail:%d", WSAGetLastError());
 		return;
@@ -204,7 +205,7 @@ size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, i
 	return 0;
 }
 
-DWORD WINAPI RecvThread(LPVOID lpParam)
+void udpRecvThread(LPVOID lpParam)
 {
 	udpServer* pServ = (udpServer*)lpParam;
 
@@ -231,7 +232,6 @@ DWORD WINAPI RecvThread(LPVOID lpParam)
 	}
 
 	pServ->stop();
-	return 0;
 }
 
 size_t UdpClt::sendData(unsigned char* pData, size_t iLen)

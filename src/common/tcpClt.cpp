@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "tcpClt.h"
 #pragma warning(disable:4996)
 std::vector<tcpClt*> m_vecTCPIOCPClient;

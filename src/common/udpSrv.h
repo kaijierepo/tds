@@ -1,8 +1,10 @@
 #pragma once
+#include <string>
+using namespace std;
 
 class IUdpServerCallBack {
 public:
-	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) = 0;
+	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) = 0;
 };
 
 
