@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <common.h>
+#include "common.h"
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -16,6 +16,7 @@
 
 
 namespace tds_udpSrv {
+#ifdef _WIN32
 	class WinSockInit {
 	public:
 		WinSockInit() {
@@ -30,9 +31,10 @@ namespace tds_udpSrv {
 		bool is_valid_ = false;
 	};
 	static WinSockInit wsinit;
+#endif
 }
 
-void udpRecvThread(LPVOID lpParam);
+void udpRecvThread(void* lpParam);
 
 
 udpServer::udpServer(void)
@@ -65,10 +67,10 @@ void udpServer::start()
 {
 	//创建socket套接字
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (INVALID_SOCKET == m_sock)
+	if (-1 == m_sock)
 	{
-		int iErr = GetLastError();
-		LOG("create udp sock error,%d", iErr);
+		//int iErr = GetLastError();
+		//LOG("create udp sock error,%d", iErr);
 		return;
 	}
 	else {
@@ -81,7 +83,7 @@ void udpServer::start()
 	addr.sin_port = htons((u_short)(m_port));
 	if (m_bindIP == "0.0.0.0")
 	{
-		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	}
 	else
 	{
@@ -97,8 +99,8 @@ void udpServer::start()
 	}
 
 	//获得已经绑定的端口号
-	int nLen = sizeof(addr);
-	getsockname(m_sock, (sockaddr*)&addr, &nLen);
+	//int nLen = sizeof(addr);
+	//getsockname(m_sock, (sockaddr*)&addr, &nLen);
 
 
 	thread t(udpRecvThread, this);
@@ -107,13 +109,17 @@ void udpServer::start()
 
 void udpServer::stop()
 {
+#ifdef _WIN32
 	closesocket(m_sock);//关闭套接字
+#else
+	close(m_sock);
+#endif
 	m_sock = 0;
 }
 
 void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 {
-	SOCKET sock = socket(AF_INET, SOCK_DGRAM, 0);
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	//sock = m_sock;
 
 	//绑定
@@ -134,7 +140,7 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 	addr.sin_port = htons((u_short)(m_port +10));
 	if (m_bindIP == "0.0.0.0")
 	{
-		addr.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	}
 	else
 	{
@@ -144,8 +150,8 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 	int nBind = ::bind(sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
 	if (0 != nBind)
 	{
-		DWORD dwErr = GetLastError();
-		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d,错误码:%d", m_bindIP.c_str(), m_port,dwErr);
+		//DWORD dwErr = GetLastError();
+		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d,错误码:%d", m_bindIP.c_str(), m_port,0);
 		LOG(strData);
 		return;
 	}
@@ -154,7 +160,7 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 	int ttl = 255;
 	int iRet = setsockopt(sock, IPPROTO_IP, 10, (char*)&ttl, sizeof(ttl));//IP_MULTICAST_TTL 10
 	if (iRet != 0) {
-		printf("setsockopt fail:%d", WSAGetLastError());
+		//printf("setsockopt fail:%d", WSAGetLastError());
 		return;
 	}
 
@@ -166,7 +172,7 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 void udpServer::multiCast(char* pData, int len)
 {
 	sockaddr_in addr;
-	addr.sin_addr.S_un.S_addr = inet_addr(m_multiCastSendAddr.c_str());
+	addr.sin_addr.s_addr = inet_addr(m_multiCastSendAddr.c_str());
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(m_multiCastSendPort);
 
@@ -192,8 +198,8 @@ size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, i
 {
 	if (m_sock)
 	{
-		SOCKADDR_IN addrCli;
-		ZeroMemory(&addrCli, sizeof(addrCli));
+		sockaddr_in addrCli;
+		memset(&addrCli,0, sizeof(addrCli));
 		addrCli.sin_family = AF_INET;
 		addrCli.sin_addr.s_addr = inet_addr(remoteIP.c_str());
 		addrCli.sin_port = htons((u_short)remotePort);
@@ -205,7 +211,7 @@ size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, i
 	return 0;
 }
 
-void udpRecvThread(LPVOID lpParam)
+void udpRecvThread(void* lpParam)
 {
 	udpServer* pServ = (udpServer*)lpParam;
 
@@ -214,14 +220,14 @@ void udpRecvThread(LPVOID lpParam)
 	unsigned char szBuff[10025];
 	while (true)
 	{
-		SOCKADDR_IN addrCli;
-		ZeroMemory(&addrCli, sizeof(addrCli));
+		sockaddr_in addrCli;
+		memset(&addrCli,0, sizeof(addrCli));
 		int fromlen = sizeof(addrCli);
 
 		int recvlen = recvfrom(pServ->m_sock, (char*)szBuff, 1024, 0, (sockaddr*)&addrCli, &fromlen);
 		if (recvlen < 0)
 		{
-			int iErr = GetLastError();
+			//int iErr = GetLastError();
 			continue;
 		}
 		else
