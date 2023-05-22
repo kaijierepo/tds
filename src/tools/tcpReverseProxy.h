@@ -7,7 +7,7 @@ class tcpReverseProxy : public  ITcpServerCallBack ,public ITcpClientCallBack{
 public:
 	tcpReverseProxy();
 
-	map<SOCKET, shared_ptr<tcpClt>> sessionReal;
+	map<int, shared_ptr<tcpClt>> sessionReal;
 	tcpSrv proxyServer;
 
 	string realHost;

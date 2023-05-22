@@ -72,6 +72,7 @@ void createConsole()
 
 void chromeThread()
 {
+#ifdef _WIN32
 	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
 	//--kiosk为全屏参数，并且鼠标移到屏幕上边缘不会出现退出全屏的 ×
 	string chromeParam = "";
@@ -134,8 +135,8 @@ void chromeThread()
 
 			Sleep(3000); //此处要sleep一下,不然任务栏图标替换不掉
 
-			SendMessage(tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-			SendMessage(tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 			
 			WaitForSingleObject(pi.hProcess, INFINITE);//用户从任务栏右键关闭chrome浏览器，此处阻塞解除，程序从此处退出
 		}
@@ -151,6 +152,7 @@ void chromeThread()
 		tdsImp.stop();
 		exit(0);
 	}
+#endif
 }
 
 void createChromeWnd()

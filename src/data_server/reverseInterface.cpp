@@ -177,11 +177,6 @@ void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn
 	}
 }
 
-int ReverseInterface::Send(SOCKET sock, char* pBuffer, size_t iLength)
-{
-	return send(sock, pBuffer, (int)iLength, 0);
-}
-
 
 void streamPusherMng_thread() {
 	while (1) {

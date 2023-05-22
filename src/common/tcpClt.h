@@ -22,7 +22,7 @@ struct tcpSessionClt
 	size_t iSendFailCount;
 	size_t iRecvCount;
 
-	TIME stLastActive;
+	string stLastActive;
 
 	string getRemoteAddr();
 
@@ -85,7 +85,7 @@ public:
 	bool m_bConn;
 	bool m_bRun;
 	int m_keepAliveTimeout;
-	TIME lastConnTime; //上一次尝试重连的时间
+	string lastConnTime; //上一次尝试重连的时间
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
 	ITcpClientCallBack* m_pCallBackUser;

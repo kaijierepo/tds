@@ -198,7 +198,7 @@ string Clogger::logInternal(string info)
 	
 
 	//save to log file
-	string strFile = formatStr("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
+	string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
 	strFile = fs::appPath() + "\\log\\" + strFile + ".txt";
 	fs::appendFile(strFile, info + "\r\n");
 

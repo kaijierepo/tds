@@ -92,7 +92,7 @@ void TcpClientRecvThread(void* lpParam)
 		}
 #endif
 
-		timeopt::now(&pTcpClt->m_session.stLastActive);
+		pTcpClt->m_session.stLastActive = timeopt::nowStr();
 		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
@@ -134,7 +134,7 @@ void ConnectThread(void* lpParam)
 
 			if (p->IsConnect()) {
 				if (p->m_keepAliveTimeout > 0) {
-					if (timeopt::CalcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
+					if (timeopt::calcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
 						p->DisConnect();
 						printf("disconnect inactive connection %s:%d\r\n", p->m_remoteIP.c_str(), p->m_remotePort);
 					}
@@ -145,8 +145,8 @@ void ConnectThread(void* lpParam)
 			if (p->m_bIsConnectting)
 				continue;
 
-			if (timeopt::CalcTimePassMilliSecond(p->lastConnTime) > 3000) {
-				timeopt::now(&p->lastConnTime);
+			if (timeopt::calcTimePassMilliSecond(p->lastConnTime) > 3000) {
+				p->lastConnTime = timeopt::nowStr();
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
@@ -163,7 +163,7 @@ tcpClt::tcpClt(void)
 	m_bConn = false;
 	m_bRun = false;
 	m_bIsConnectting = false;
-	timeopt::now(&lastConnTime);
+	lastConnTime = timeopt::nowStr();
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
 	m_bConnThreadRunning = false;
@@ -322,8 +322,8 @@ bool tcpClt::connect()
 	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
 	m_bConn = true;
 	ret = true;
-	timeopt::now(&lastConnTime);
-	timeopt::now(&m_session.stLastActive);
+	lastConnTime = timeopt::nowStr();
+	m_session.stLastActive = timeopt::nowStr();
 	m_strErrorInfo = "";
 
 	thread t(TcpClientRecvThread,this);

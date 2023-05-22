@@ -1022,21 +1022,28 @@ namespace timeopt {
 	TIME str2st(string str)
 	{
 		TIME t;
-		int year, month, day, hour, min, sec;
-		sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
-			&year,
-			&month,
-			&day,
-			&hour,
-			&min,
-			&sec);
-		t.wYear = year;
-		t.wMonth = month;
-		t.wDay = day;
-		t.wHour = hour;
-		t.wMinute = min;
-		t.wSecond = sec;
-		t.wMilliseconds = 0;
+		//2022-02-22 11:11:11.123   23bytes
+		//2022-02-22 11:11:11   19bytes
+		if (str.length() == 23) {
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
+				&t.wYear,
+				&t.wMonth,
+				&t.wDay,
+				&t.wHour,
+				&t.wMinute,
+				&t.wSecond,
+				&t.wMilliseconds);
+		}
+		else if(str.length() == 19)
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+				&t.wYear,
+				&t.wMonth,
+				&t.wDay,
+				&t.wHour,
+				&t.wMinute,
+				&t.wSecond);
+		}
 		return t;
 	}
 
@@ -1277,6 +1284,12 @@ namespace timeopt {
 		time_t milli = stNow.wMilliseconds - lastTime.wMilliseconds;
 		milli = second * 1000 + milli;
 		return milli;
+	}
+
+	long long calcTimePassMilliSecond(string lastTime)
+	{
+		TIME last = str2st(lastTime);
+		return CalcTimePassMilliSecond(last);
 	}
 
 	time_t getTick() {

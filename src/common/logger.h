@@ -20,7 +20,6 @@ class  Clogger
 {
 public:
 	Clogger();
-	std::string formatStr(const char* pszFmt, ...);
 	LOG_LEVEL str2logLevel(string level);
 	void setLogLevel(string level);
 	LOG_LEVEL getLogLevel(string& info);
