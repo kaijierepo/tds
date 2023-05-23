@@ -8,7 +8,7 @@
 #include "tcpClt.h"
 #include "tdsConf.h"
 #include "tds.h"
-#include "users/userMng.h"
+#include "userMng.h"
 #include "ioChan.h"
 
 ReverseInterface reverseInterface;

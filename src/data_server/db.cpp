@@ -1,17 +1,15 @@
 ﻿#include "pch.h"
 #include "db.h"
-//#include "../common/simdjson.h"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
 #include "logger.h"
 #include "yyjson.h"
-#include "xiaot/scriptManager.h"
+#include "scriptManager.h"
 #include "prj.h"
 #include "tdsSession.h"
 
 using namespace std::filesystem;
-//using namespace simdjson;
 database db;
 
 database::database()

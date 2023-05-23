@@ -32,25 +32,20 @@ SOFTWARE.
 #include "prj.h"
 #include  "reverseInterface.h"
 #include "ioSrv.h"
-#include "io_server/ioDev.h"
+#include "ioDev.h"
 #include "tdsConf.h"
 #include "mp.h"
-#include "videoCodec.h"
 #include "res/resource.h"
-#include "ioDev_genicam.h"
-#include "streamServer.h"
-#include "alarm_server/as.h"
-#include "logServer/logServer.h"
-#include "xiaot/scriptManager.h"
+#include "as.h"
+#include "logServer.h"
+#include "scriptManager.h"
 #include "version.h"
-#include "data_server/db.h"
-#include "tools/tdsWatchDog.h"
+#include "db.h"
+#include "tdsWatchDog.h"
 #include <filesystem>
-#include "tools/dumpCatch.h"
-#include "tools/hmrSrv.h"
-#include "users/userMng.h"
+#include "userMng.h"
 #include "webSrv.h"
-#include "tools/aliDDNS.h"
+#include "aliDDNS.h"
 
 
 string InterfaceEncoding = "utf8";
@@ -321,10 +316,6 @@ bool TDS_imp::run(string cmdline)
 	logSrv.run();
 	scriptManager.run();
 	//audioPlayer.run();
-	if (conf->getInt("enableHMR",0))
-	{
-		hmrServer.run(tds->conf->uiPath);
-	}
 	userMng.run();
 
 

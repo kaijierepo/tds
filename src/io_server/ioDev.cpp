@@ -1,8 +1,6 @@
 ﻿#include "pch.h"
 #include "ioDev.h"
 #include "ioChan.h"
-#include "ioDev_genicam.h"
-#include "ioProto/proto_rtu.hpp"
 #include "logger.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
@@ -913,18 +911,8 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		if (kvRegType != m_jDevAddr.end() && kvRegOffset != m_jDevAddr.end() &&
 			kvRegType.value().is_string() && kvRegOffset.value().is_number())
 		{
-			string regTypeAddr;
 			string regType = m_jDevAddr["regType"].get<string>();
-			if (regType == MODBUS_REG_TYPE::coil)
-				regTypeAddr = "C";
-			else if (regType == MODBUS_REG_TYPE::discreteInput)
-				regTypeAddr = "DI";
-			else if (regType == MODBUS_REG_TYPE::holdingRegister)
-				regTypeAddr = "HR";
-			else if (regType == MODBUS_REG_TYPE::inputRegister)
-				regTypeAddr = "IR";
-
-			devAddr = regTypeAddr + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
+			devAddr = regType + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
 		}
 		else if (m_addrType == DEV_ADDR_MODE::deviceID)
 		{

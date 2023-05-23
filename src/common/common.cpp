@@ -980,6 +980,11 @@ namespace timeopt {
 		*t = now();
 	}
 
+	void sleep(int milliSec)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(milliSec));
+	}
+
 	string toFmt(string time, string fmt)
 	{
 		//YYYY-MM-DD hh:mm:ss

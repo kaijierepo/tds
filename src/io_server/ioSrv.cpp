@@ -6,14 +6,13 @@
 #include "prj.h"
 #include "logger.h"
 #include "ioChan.h"
-#include "ioDev_genicam.h"
 #include "rpcHandler.h"
 #include  "reverseInterface.h"
 #include "httplib.h"
 #include "ioDev/ioDev_tdsp.h"
 #include "base64.h"
 #include "webSrv.h"
-#include "proto/wsProto.h"
+#include "wsProto.h"
 
 
 ioServer ioSrv;

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "common.h"
-#include "tools/dumpCatch.h"
+#include "dumpCatch.h"
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \

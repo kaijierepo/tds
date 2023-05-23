@@ -6,7 +6,7 @@
 #include "rpcHandler.h"
 #include "db.h"
 #include "tds.h"
-#include "users/userMng.h"
+#include "userMng.h"
 #include "logger.h"
 #include "tds.h"
 

@@ -2,19 +2,17 @@
 #include "webSrv.h"
 #include "tdsSession.h"
 #include "rpcHandler.h"
-#include "common/common.h"
+#include "common.h"
 #include "logger.h"
-#include "proto/wsProto.h"
 #include "httplib.h"
 #include "sha1.hpp"
-#include "tools/hmrSrv.h"
+#include "hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
 #include "httplib.h"
-
 #include "mp.h"
-#include "users/userMng.h"
-#include "tools/hmrSrv.h"
+#include "userMng.h"
+#include "hmrSrv.h"
 #include "ioChan.h"
 
 
@@ -1121,6 +1119,10 @@ bool runWebServers()
 	}
 #endif
 
+	if (tds->conf->getInt("enableHMR", 0))
+	{
+		hmrServer.run(tds->conf->uiPath);
+	}
 
 	return true;
 }

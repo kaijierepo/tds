@@ -29,22 +29,27 @@ SOFTWARE.
 #include "tdsConf.h"
 #include "logger.h"
 #include "tds_imp.h"
+#include "tdsWatchDog.h"
+#include "db.h"
+
+#ifdef ENABLE_TOOLS
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
-#include "tools/tdsWatchDog.h"
 #include "tools/rproxy.h"
 #include "tools/tcp2wsRproxy.h"
 #include "tools/httpServer.h"
-#include "db.h"
 #include "tools/tools.hpp"
+#include "tools/demoTools.h"
+#include "tools/dumpCatch.h"
+#endif
+
+#include "aliDDNS.h"
 #include "base64.h"
 #include "prj.h"
 #include "common.h"
-#include "tools/demoTools.h"
-#include "tools/dumpCatch.h"
-#include "tools/aliDDNS.h"
 #include "rpcHandler.h"
+#include "httplib.h"
 
 
 void updateEzvizAccessInfo() {
@@ -235,6 +240,12 @@ int main(int argc, char** argv)
 		}*/
 		watchDog.run();
 	}
+#ifdef ENABLE_TOOLS
+	else if (mode == "tcpHub")
+	{
+		tcpHub* tr = new tcpHub();
+		tr->run();
+	}
 	else if (mode == "testconf") {
 		gen_testMoConf();
 		gen_testIoConf();
@@ -252,12 +263,6 @@ int main(int argc, char** argv)
 		}
 		return 0;
 	}
-	else if (mode == "tcpHub")
-	{
-		tcpHub* tr = new tcpHub();
-		tr->run();
-	}
-#ifdef ENABLE_TOOLS
 	else if (mode == "js")
 	{
 		//doShell();
@@ -403,7 +408,7 @@ int main(int argc, char** argv)
 
 	while (1)
 	{
-		sleep(1000);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 		if (prj.m_enableEzviz) {
 			prj.m_csPrj.lock_shared();

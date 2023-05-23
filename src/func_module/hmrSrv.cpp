@@ -2,8 +2,7 @@
 #include "hmrSrv.h"
 #include "logger.h"
 #include "common.h"
-#include "data_server/ds.h"
-#include "proto/wsProto.h"
+#include "wsProto.h"
  
 string hmrCodeStr = R"(
 <!--code injected by TDS for hot module replacement-->
