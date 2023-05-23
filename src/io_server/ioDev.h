@@ -2,7 +2,7 @@
 #include "tdsSession.h"
 #include "udpSrv.h"
 #include "json.hpp"
-#include "proto/proto_common.h"
+#include "proto_common.h"
 #include <shared_mutex>
 
 

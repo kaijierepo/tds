@@ -5,7 +5,7 @@
 #include "logger.h"
 #define PBKDF2_SHA256_IMPLEMENTATION
 #include "pbkdf2_sha256.h"
-#include "logServer/logServer.h"
+#include "logServer.h"
 
 userManager userMng;
 

@@ -6,8 +6,8 @@
 #include "rpcHandler.h"
 #include "db.h"
 #include "tds.h"
-#include "logServer/logServer.h"
-#include "users/userMng.h"
+#include "logServer.h"
+#include "userMng.h"
 
 logServer logSrv;
 

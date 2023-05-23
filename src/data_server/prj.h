@@ -6,7 +6,7 @@ using json = nlohmann::json;
 #include "tdsSession.h"
 #include "tds.h"
 #include <shared_mutex>
-#include "xiaot/scriptManager.h"
+#include "scriptManager.h"
 
 struct OBJ_TEMPLATE {
 	string type;

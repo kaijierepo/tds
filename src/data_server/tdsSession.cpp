@@ -7,7 +7,7 @@
 #include "ioSrv.h"
 #include "webSrv.h"
 #include "httplib.h"
-#include "./proto/wsProto.h"
+#include "wsProto.h"
 
 
 TDS_SESSION::TDS_SESSION()

@@ -7,19 +7,21 @@
 #include "logger.h"
 #include "db.h"
 #include <json.hpp>
-#include "amo.h"
 #include "ioSrv.h"
 #include "db.h"
 #include "logger.h"
 #include "ioChan.h"
-#include "ioDev_genicam.h"
-#include "users/userMng.h"
-#include "logServer/logServer.h"
-#include "xiaot/scriptManager.h"
+#include "userMng.h"
+#include "logServer.h"
+#include "scriptManager.h"
 #include "base64.h"
-#include "ioDev/ioDev_visca.h"
 #include "httplib.h"
 #include "webSrv.h"
+#include "ioDev_camera.h"
+
+#ifdef _WIN32
+	#include <shellapi.h>
+#endif
 
 rpcHandler rpcSrv;
 
@@ -261,6 +263,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		//t.detach();
 		result = "\"ok\"";
 	}
+#ifdef _WIN32
 	else if (method == "fs.openFolder")
 	{
 		string s = params["path"];
@@ -282,21 +285,22 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "ui.maximize")
 	{
-		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
+		SendMessage((HWND)tds->uiWnd, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
 		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "ui.minimize")
 	{
-		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
+		SendMessage((HWND)tds->uiWnd, WM_SYSCOMMAND, SC_MINIMIZE, NULL);
 		rpcResp.result = "\"ok\"";
 		LOG("[debug]ui.minimize");
 	}
 	else if (method == "ui.close")
 	{
-		SendMessage(tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
+		SendMessage((HWND)tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
 		rpcResp.result = "\"ok\"";
 		LOG("[debug]ui.close");
 	}
+#endif
 	else
 	{
 		bHandled = false;
