@@ -299,7 +299,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 
 		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
 		conf["ioAddr"] = getIOAddrStr();
-		conf["addrMode"] = m_addrType;
+		conf["addrType"] = m_addrType;
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 
 		conf["avgRespTime"] = m_avgTransactionTime;
@@ -395,6 +395,14 @@ bool ioDev::loadConf(json& conf)
 
 
 	auto kv = conf.find("addrMode");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_addrType = item.get<string>();
+		}
+	}
+
+	kv = conf.find("addrType");
 	if (kv != conf.end()) {
 		json& item = kv.value();
 		if (item.is_string()) {
