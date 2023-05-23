@@ -2753,11 +2753,11 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
 {
-	string path = tds->conf->confPath + "/topo";
-	path::normalization(path);
+	string topopath = tds->conf->confPath + "/topo";
+	fs::normalizationPath(topopath);
 
 	vector<fs::FILE_INFO> filist;
-	fs::getFileList(filist, path, true, true);
+	fs::getFileList(filist, topopath, true, true);
 
 	map<string, string> mapTopo; //按照层级排序
 	vector<string> topoList;
@@ -3421,16 +3421,16 @@ string rpcHandler::rpc_getconf(json params, string& error)
 	}
 	else if (type == "file-list")
 	{
-		string path = "";
+		string p = "";
 		if (params.find("path") != params.end())
-			path = params["path"].get<string>();
-		if (path != "")
+			p = params["path"].get<string>();
+		if (p != "")
 		{
 			string conf = "";
-			path = tds->conf->confPath + "/" + path;
-			path::normalization(path);
+			p = tds->conf->confPath + "/" + p;
+			fs::normalizationPath(p);
 			vector<string> fl;
-			fs::getFileList(fl,path);
+			fs::getFileList(fl,p);
 			json j = fl;
 			return j.dump();
 		}
@@ -3455,15 +3455,15 @@ string rpcHandler::rpc_setconf(json params, string& error)
 
 string rpcHandler::rpc_getconffile(json params, string& error)
 {
-	string path = "";
+	string p = "";
 	if (params.find("path") != params.end())
-		path = params["path"].get<string>();
-	if (path != "")
+		p = params["path"].get<string>();
+	if (p != "")
 	{
 		string conf = "";
-		path = tds->conf->confPath + "/" + path;
-		path::normalization(path);
-		fs::readFile(path, conf);
+		p = tds->conf->confPath + "/" + p;
+		fs::normalizationPath(p);
+		fs::readFile(p, conf);
 		json j = conf;
 		return j.dump();
 	}

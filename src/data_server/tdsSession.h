@@ -110,7 +110,7 @@ public:
 	ioDev* m_IoDev;      //建立了tcp直连的io设备。 当1个io设备对应一个tcp连接时。该指针指向该io设备
 	//单设备模式，只有第一个注册包的地址信息有用。后面的地址信息无效.防止地址信息错误导致的问题，以第一包的地址信息为准
 	bool m_bSingleDevMode; //单设备模式，默认可以多设备。 收到imei首发数据包则转换为单设备模式。
-	vector<byte> regPkt; //透传网关常用的注册包机制，此数据为第一包注册包
+	vector<unsigned char> regPkt; //透传网关常用的注册包机制，此数据为第一包注册包
 
 
 	//hmr session

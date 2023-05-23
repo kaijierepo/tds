@@ -4,6 +4,8 @@ var rootPath = path.resolve('./src');
 console.log(rootPath);
 var allCpp = [];
 getAllCpp(rootPath);
+rootPath = path.resolve("./tdspro");
+getAllCpp(rootPath);
 function getAllCpp(filePath){
     var files = fs.readdirSync(filePath);
     for(var i=0;i<files.length;i++)
@@ -27,10 +29,19 @@ function getAllCpp(filePath){
             continue;
             if(cppPath.indexOf("tools") > 0)
             continue;
+            if(cppPath.indexOf("tdsLicensing") > 0)
+            continue;
+            if(cppPath.indexOf("x64") > 0)
+            continue;
+            if(cppPath.indexOf("out") > 0)
+            continue;
             if(cppPath.indexOf(".cpp") > 0)
             {
                 allCpp.push(cppPath);
-                console.log(cppPath);
+            }  
+            else if(cppPath.indexOf(".c") > 0)
+            {
+                allCpp.push(cppPath);
             }  
         }
         if(stats.isDirectory()){
@@ -52,4 +63,5 @@ for(var i=0;i<allCpp.length;i++)
     outText += oneLine;
 }
 
+console.log("file num:" + allCpp.length);
 fs.writeFileSync("./build/unityBuild.cpp",outText,"utf8");

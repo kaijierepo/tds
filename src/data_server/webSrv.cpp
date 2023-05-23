@@ -322,10 +322,10 @@ void handleGet_gzh(mg_http_message* hm, string& resHeader,string& respBody)
 
 	string s = vec[0] + vec[1] + vec[2];
 
-	nsSHA1::SHA1 checksum;
-	checksum.update(s);
-	string hash = checksum.final();
-	LOG("signature calc  " + hash + "\n");
+	//nsSHA1::SHA1 checksum;
+	//checksum.update(s);
+	//string hash = checksum.final();
+	//LOG("signature calc  " + hash + "\n");
 
 	resHeader = "Content-Type:text/plain;charset=UTF-8\r\n";
 	respBody = echostr;

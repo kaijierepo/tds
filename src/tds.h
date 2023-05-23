@@ -548,7 +548,9 @@ public:
 };
 
 
-
+#ifdef TDSDLL
 typedef i_tds* (*fp_getTds)();
 i_tds* getITDS();
+#endif
+
 extern i_tds* tds;

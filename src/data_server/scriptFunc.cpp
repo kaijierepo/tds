@@ -1,12 +1,10 @@
+#ifdef ENABLE_JERRY_SCRIPT
 #include "pch.h"
 #include "scriptEngine.h"
 #include "logger.h"
 #include "tds.h"
 #include "rpcHandler.h"
 #include "prj.h"
-
-
-#ifdef ENABLE_JERRY_SCRIPT
 
 json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argument_count)
 {

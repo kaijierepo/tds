@@ -2,7 +2,7 @@
 #include "wsProto.h"
 #include "base64.h"
 #include <WinSock2.h>
-#include "sha1.h"
+#include <openssl/sha.h>
 
 
 size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
@@ -222,23 +222,23 @@ bool CWSPPkt::isHandShake(string& request)
 
 const std::string MAGIstring = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
+void sha1(const std::string& input, unsigned char* output) {
+	SHA_CTX sha_ctx;
+	SHA1_Init(&sha_ctx);
+	SHA1_Update(&sha_ctx, input.c_str(), input.size());
+	SHA1_Final(output, &sha_ctx);
+}
+
 std::string CWSPPkt::getKey(std::string strKey)
 {
-	SHA_1 sha;
 	strKey += MAGIstring;
-	//strcat(strKey, MAGIstring);
-	unsigned int iDigSet[5];
-	sha.Reset();
-	sha << strKey.c_str();
-	sha.Result(iDigSet);
-
-	for (int i = 0; i < 5; i++)iDigSet[i] = htonl(iDigSet[i]);			//将字节转换成网络字节顺序
+	unsigned char output[SHA_DIGEST_LENGTH];
+	sha1(strKey, output);
 
 	//进行base64编码
-	//strcpy(strKey , base64code.base64_encode(reinterpret_cast<const unsigned char*>(iDigSet), 20).c_str() );
-	char out[100] = { 0 };
-	base64_encode(reinterpret_cast<const unsigned char*>(iDigSet), 20,out);
-	strKey = out;
+	char output2[100] = { 0 };
+	base64_encode(output, SHA_DIGEST_LENGTH,output2);
+	strKey = output2;
 	return strKey;
 }
 

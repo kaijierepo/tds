@@ -1,4 +1,4 @@
-
+#pragma once
 #include "json.hpp"
 #include "tdsSession.h"
 

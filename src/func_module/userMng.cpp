@@ -3,9 +3,10 @@
 #include "common/common.h"
 #include "obj.h"
 #include "logger.h"
-#define PBKDF2_SHA256_IMPLEMENTATION
-#include "pbkdf2_sha256.h"
 #include "logServer.h"
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
+#include "base64.h"
 
 userManager userMng;
 
@@ -750,6 +751,28 @@ void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION sessio
 }
 
 
+//HMAC = Hash-based Message Authentication Code
+//hmac_sha256的长度与SHA-256哈希值的长度相同，即32字节（256位）
+//hmac計算需要提供一個key
+string createHMAC_SHA256_Base64(string data, string key) {  
+	unsigned char result[SHA256_DIGEST_LENGTH];
+	HMAC_CTX* hctx = HMAC_CTX_new();
+	HMAC_CTX_reset(hctx);
+	unsigned int len = SHA256_DIGEST_LENGTH;
+
+	// Using sha1 hash engine here.
+	// You may use other hash engines. e.g EVP_md5(), EVP_sha224, EVP_sha512, etc
+	HMAC_Init_ex(hctx, key.data(), key.length(), EVP_sha256(), NULL);
+	HMAC_Update(hctx, (unsigned char*)data.data(), data.length());
+	HMAC_Final(hctx, result, &len);
+	HMAC_CTX_free(hctx);
+
+	char out[80] = { 0 };
+	base64_encode(result, SHA256_DIGEST_LENGTH, out);
+	string hmac = out;
+	return hmac;
+}
+
 void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	try {
@@ -804,9 +827,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				}
 
 				string msg = user + time;
-				uint8_t out[SHA256_DIGESTLEN] = { 0 };
-				hmac_sha256_calc(out, (uint8_t*)msg.data(), msg.length(), (uint8_t*)truePwd.data(), truePwd.length());
-				string trueSign = str::bytesToHexStr((char*)out, SHA256_DIGESTLEN, "");
+				string trueSign = createHMAC_SHA256_Base64(msg, truePwd);
 
 				if (trueSign == sign)
 				{

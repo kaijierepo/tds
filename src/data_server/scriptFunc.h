@@ -1,9 +1,8 @@
+#ifdef ENABLE_JERRY_SCRIPT
 #include <string>
 #include <map>
 #include "json.hpp"
-#ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
-#endif
 #include "tdsSession.h"
 
 using json = nlohmann::json;
@@ -29,3 +28,4 @@ extern jerry_value_t func_sleep(const jerry_call_info_t* call_info_p, const jerr
 extern jerry_value_t backtrace_handler(const jerry_call_info_t* call_info_p, const jerry_value_t args_p[], const jerry_length_t args_count);
 extern jerry_value_t func_notify(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_getObj(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
+#endif

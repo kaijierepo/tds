@@ -188,6 +188,7 @@ string TAG::resolveTag(string strTagExp, string tagThis)
 	return tagName;
 }
 
+#ifdef TDSDLL
 i_tds* getITDS() {
 	HMODULE hMod = LoadLibrary("tds.dll");
 	if (hMod)
@@ -200,3 +201,4 @@ i_tds* getITDS() {
 	}
 	return NULL;
 }
+#endif

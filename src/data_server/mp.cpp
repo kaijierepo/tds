@@ -699,7 +699,9 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 		if (m_lastVal.is_boolean() && m_lastVal.get<bool>() == false &&
 			m_curVal.is_boolean() && m_curVal.get<bool>() == true)
 		{
+#ifdef ENABLE_JERRY_SCRIPT
 			scriptManager.runScriptFileAsyn(m_onChange,getTag());
+#endif
 		}
 	}
 

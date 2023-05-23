@@ -1,3 +1,4 @@
+#ifdef ENABLE_JERRY_SCRIPT
 #include "pch.h"
 #include "ScriptEngine.h"
 #include "prj.h"
@@ -5,10 +6,6 @@
 #include "mp.h"
 #include "obj.h"
 #include "jerryscript-port.h"
-
-
-
-#ifdef ENABLE_JERRY_SCRIPT
 
 bool ScriptEngine::initGlobalFunc()
 {

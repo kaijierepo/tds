@@ -1,9 +1,8 @@
+#ifdef ENABLE_JERRY_SCRIPT
 #include <string>
 #include <map>
 #include "json.hpp"
-#ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
-#endif
 #include "tdsSession.h"
 
 using json = nlohmann::json;
@@ -25,7 +24,6 @@ public:
 
 	std::map<string, string> m_mapScripts;
 	std::map<string, VAR_EXP_SCRIPT_INFO> m_mapVarExpScripts;
-#ifdef ENABLE_JERRY_SCRIPT
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool initGlobalFunc();
 	void releaseGlobalFunc();
@@ -46,9 +44,7 @@ public:
 	static json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argument_count);
 
 	static bool getScriptEngineObj(json& jObj, jerry_value_t engineObj);
-#endif
 
-	//当前脚本执行的环境变量
 	string m_tagThis;
 
 
@@ -68,3 +64,4 @@ public:
 };
 
 extern scriptHost sHost;
+#endif

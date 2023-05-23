@@ -1,9 +1,8 @@
+#ifdef ENABLE_JERRY_SCRIPT
 #include <string>
 #include <map>
 #include "json.hpp"
-#ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
-#endif
 #include "scriptFunc.h"
 
 using json = nlohmann::json;
@@ -40,3 +39,4 @@ public:
 };
 
 extern thread_local ScriptEngine* pEngine;
+#endif
