@@ -1557,6 +1557,13 @@ namespace sys {
 
 
 namespace fs {
+	string normalizationPath(string& s)
+	{
+		s = str::replace(s, "\\\\", "/");
+		s = str::replace(s, "\\", "/");
+		s = str::replace(s, "//", "/");
+		return s;
+	}
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
@@ -1845,16 +1852,6 @@ namespace fs {
 		 }
 	 }
 }
-namespace path {
-	string normalization(string& s)
-	{
-		s = str::replace(s, "\\\\", "/");
-		s = str::replace(s, "\\", "/");
-		s = str::replace(s, "//", "/");
-		return s;
-	}
-}
-
 
 namespace common {
 	string uuid() {

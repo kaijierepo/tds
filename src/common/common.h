@@ -267,6 +267,7 @@ namespace sys {
 
 
 namespace fs {
+	string normalizationPath(string& s);
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	void createFolderOfPath(string strFile);
@@ -297,9 +298,6 @@ namespace fs {
 	void getFolderList(vector<FILE_INFO>& list, string strFolder);
 	void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder = false, bool recursive = false,string suffix="*");
 	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
-}
-namespace path {
-	string normalization(string& s);
 }
 
 namespace common {
