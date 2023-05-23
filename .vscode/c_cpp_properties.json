@@ -3,8 +3,13 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/src/common"
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/common",
+                "${workspaceFolder}/src/data_server",
+                "${workspaceFolder}/src/io_server",
+                "${workspaceFolder}/src/func_module",
+                "${workspaceFolder}/src/3rdparty/jerryscript/include/",
+                "${workspaceFolder}/src/3rdparty/openssl/include/"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

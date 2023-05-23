@@ -74,11 +74,8 @@ public:
 #endif
 	 void log(const char* text);
 
-	 void createDefaultCompanyInfo();
 
 	 tdsConfig tdsConf;
-
-
 	 void registerMsgSinker(fp_msgSinker sinker);
 	 void publishMsg(MODULE_BUS_MSG& msg);
 	 vector<fp_msgSinker> m_msgSinkers;

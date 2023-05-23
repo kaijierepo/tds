@@ -42,10 +42,8 @@ SOFTWARE.
 #include "version.h"
 #include "db.h"
 #include "tdsWatchDog.h"
-#include <filesystem>
 #include "userMng.h"
 #include "webSrv.h"
-#include "aliDDNS.h"
 
 
 string InterfaceEncoding = "utf8";
@@ -307,6 +305,10 @@ bool TDS_imp::run(string cmdline)
 		tds->shellServer->init();
 	if (tds->gzhServer)
 		tds->gzhServer->init();
+	for(auto& i:tds->plugins)
+	{
+		i.second->init();
+	}
 
 
 	//开始运行，与外部建立通讯并进行数据io
@@ -328,6 +330,10 @@ bool TDS_imp::run(string cmdline)
 		tds->shellServer->run();
 	if (tds->gzhServer)
 		tds->gzhServer->run();
+	for (auto& i : tds->plugins) 
+	{
+		i.second->run();
+	}
 
 	ioSrv.updateTag2IOAddrBinding();
 

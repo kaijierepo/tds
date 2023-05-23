@@ -479,6 +479,11 @@ public:
 
 typedef void (*fp_toolRun)();
 
+
+struct PLUGIN_INFO {
+	string name;
+};
+
 //interface of TDS
 class i_tds {
 public:
@@ -533,6 +538,8 @@ public:
 	i_tdsPlugin* shellServer;
 	i_ioServer* ioServer;
 	i_rpcServer* rpcServer;
+
+	map<string,i_tdsPlugin*> plugins;
 
 	void* uiWnd;
 	string uiWndTitle;

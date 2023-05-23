@@ -71,7 +71,7 @@ BEGIN
             VALUE "LegalCopyright", "Copyright (C) 杭州良途软件科技有限公司 2022"
             VALUE "OriginalFilename", "tds.exe"
             VALUE "ProductName", "TDS物联网数据服务 (www.liangtusoft.com)"
-            VALUE "ProductVersion", "TDS_V1.0.908_20230523"
+            VALUE "ProductVersion", "TDS_V1.0.912_20230523"
         END
     END
     BLOCK "VarFileInfo"

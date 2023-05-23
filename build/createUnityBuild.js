@@ -19,6 +19,14 @@ function getAllCpp(filePath){
             continue;
             if(cppPath.indexOf("main.cpp") > 0)
             continue;
+            if(cppPath.indexOf("video") > 0)
+            continue;
+            if(cppPath.indexOf("not_used") > 0)
+            continue;
+            if(cppPath.indexOf("res") > 0)
+            continue;
+            if(cppPath.indexOf("tools") > 0)
+            continue;
             if(cppPath.indexOf(".cpp") > 0)
             {
                 allCpp.push(cppPath);
