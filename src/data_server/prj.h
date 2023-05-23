@@ -26,7 +26,6 @@ struct OBJ_TEMPLATE {
 class ioServer;
 class database;
 class ioDev;
-class amo;
 class MP;
 class TAG_SELECTOR;
 
