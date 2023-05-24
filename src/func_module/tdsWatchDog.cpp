@@ -455,21 +455,21 @@ string tdsWatchDog::getUpdateTdsVer()
 
 BOOL Reg_LocalMachine(char* lpszFileName, char* lpszValueName)
 {
-	// 管理员权限
-	HKEY hKey;
-	// 打开注册表键
-	if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey))
-	{
-		return FALSE;
-	}
-	// 修改注册表值，实现开机自启
-	if (ERROR_SUCCESS != ::RegSetValueEx(hKey, lpszValueName, 0, REG_SZ, (BYTE*)lpszFileName, (1 + ::lstrlen(lpszFileName))))
-	{
-		::RegCloseKey(hKey);
-		return FALSE;
-	}
-	// 关闭注册表键
-	::RegCloseKey(hKey);
+	//// 管理员权限
+	//HKEY hKey;
+	//// 打开注册表键
+	//if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey))
+	//{
+	//	return FALSE;
+	//}
+	//// 修改注册表值，实现开机自启
+	//if (ERROR_SUCCESS != ::RegSetValueEx(hKey, lpszValueName, 0, REG_SZ, (BYTE*)lpszFileName, (1 + ::lstrlen(lpszFileName))))
+	//{
+	//	::RegCloseKey(hKey);
+	//	return FALSE;
+	//}
+	//// 关闭注册表键
+	//::RegCloseKey(hKey);
 
 	return TRUE;
 }
@@ -492,7 +492,7 @@ bool tdsWatchDog::regSelfStart()
 
 bool tdsWatchDog::unregSelfStart()
 {
-	HKEY hkey;
+	/*HKEY hkey;
 	if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hkey))
 	{
 		if (ERROR_SUCCESS == ::RegDeleteValue(hkey, "tdsd"))
@@ -501,24 +501,24 @@ bool tdsWatchDog::unregSelfStart()
 			return true;
 		}
 	}
-	printf(_GB("开机启动删除失败!"));
+	printf(_GB("开机启动删除失败!"));*/
 	return false;
 }
 
 bool tdsWatchDog::isSelfStartReg()
 {
-	HKEY hkey;
-	if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hkey))
-	{
-		//hKEY是上面打开时得到的指针
-		LPBYTE getValue = new BYTE[80];//得到的键值
-		DWORD keyType = REG_SZ;//定义数据类型
-		DWORD DataLen = 80;//定义数据长度
-		if (ERROR_SUCCESS == ::RegQueryValueEx(hkey, "tdsd", NULL, &keyType, getValue, &DataLen))
-		{
-			return true;
-		}
-	}
+	//HKEY hkey;
+	//if (ERROR_SUCCESS == ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_ALL_ACCESS, &hkey))
+	//{
+	//	//hKEY是上面打开时得到的指针
+	//	LPBYTE getValue = new BYTE[80];//得到的键值
+	//	DWORD keyType = REG_SZ;//定义数据类型
+	//	DWORD DataLen = 80;//定义数据长度
+	//	if (ERROR_SUCCESS == ::RegQueryValueEx(hkey, "tdsd", NULL, &keyType, getValue, &DataLen))
+	//	{
+	//		return true;
+	//	}
+	//}
 	return false;
 }
 

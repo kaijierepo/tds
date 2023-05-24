@@ -19,10 +19,22 @@ bool isBatchLink(string addr)
 	}
 }
 
+//使用函数返回，避免全局变量构造顺序问题导致还没构造就被调用
+std::map<string, fp_createDev>& getMapDevCreateFunc() {
+	static std::map<string, fp_createDev> inst;
+	return inst;
+}
 
-std::map<string, fp_createDev> mapDevCreateFunc;
-std::map<string, fp_searchDev> mapDevSearchFunc;
-std::map<string, string> mapDevTypeLabel;
+std::map<string, fp_searchDev>& getMapDevSearchFunc() {
+	static std::map<string, fp_searchDev> inst;
+	return inst;
+}
+
+std::map<string, string>& getMapDevTypeLabel() {
+	static std::map<string, string> inst;
+	return inst;
+}
+
 ioDev* createIODev(string type)
 {
 	if (type == "")
@@ -891,7 +903,7 @@ string ioDev::getIOAddrStr(bool ignorePort)
 {
 	string devAddr = getDevAddrStr(ignorePort);
 	ioDev* pParent = m_pParent;
-	while (pParent && pParent->m_devType != DEV_TYPE::SERVER::tds)
+	while (pParent && pParent->m_devType != "tds")
 	{
 		devAddr = pParent->getDevAddrStr(ignorePort) + "/" + devAddr;
 		pParent = pParent->m_pParent;

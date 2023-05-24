@@ -314,6 +314,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 //目前采用主服务获取到子服务的萤石云配置后，直接发给萤石云
 bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
+#ifdef ENABLE_OPENSSL
 	if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
 		string addr = "https://open.ys7.com";
 		httplib::Client cli(addr);
@@ -365,7 +366,7 @@ bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params
 	else {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "Ezviz access info not foud");
 	}
-
+#endif
 	return true;
 }
 
@@ -3923,7 +3924,7 @@ string rpcHandler::rpc_getStreamInfo(json params,string& error)
 
 string rpcHandler::rpc_com_list(json params, string& error)
 {
-	vector<ioDev*> ary = ioSrv.getChildren(DEV_TYPE::GW::local_serial);
+	vector<ioDev*> ary = ioSrv.getChildren(DEV_TYPE_local_serial);
 	json result;
 	for (auto& i : ary)
 	{

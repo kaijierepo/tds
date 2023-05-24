@@ -387,9 +387,13 @@ public:
 };
 
 ioDev* createIODev(string type);
-extern std::map<string, fp_createDev> mapDevCreateFunc;
-extern std::map<string, fp_searchDev> mapDevSearchFunc;
-extern std::map<string, string> mapDevTypeLabel;
+extern std::map<string, fp_createDev>& getMapDevCreateFunc();
+extern std::map<string, fp_searchDev>& getMapDevSearchFunc();
+extern std::map<string, string>& getMapDevTypeLabel();
+
+#define mapDevCreateFunc getMapDevCreateFunc()
+#define mapDevSearchFunc getMapDevSearchFunc()
+#define mapDevTypeLabel  getMapDevTypeLabel()
 
 class TransparentGateway : public ioDev {
 public:

@@ -108,7 +108,7 @@ bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 	}
 
 	if (2 + 4 + payloadLength + payloadFieldExtraBytes > iBufLen)
-		return WS_ERROR_FRAME;
+		return false;
 
 
 	//unmask
@@ -222,23 +222,23 @@ bool CWSPPkt::isHandShake(string& request)
 
 const std::string MAGIstring = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-void sha1(const std::string& input, unsigned char* output) {
-	SHA_CTX sha_ctx;
-	SHA1_Init(&sha_ctx);
-	SHA1_Update(&sha_ctx, input.c_str(), input.size());
-	SHA1_Final(output, &sha_ctx);
-}
+//void sha1(const std::string& input, unsigned char* output) {
+//	SHA_CTX sha_ctx;
+//	SHA1_Init(&sha_ctx);
+//	SHA1_Update(&sha_ctx, input.c_str(), input.size());
+//	SHA1_Final(output, &sha_ctx);
+//}
 
 std::string CWSPPkt::getKey(std::string strKey)
 {
-	strKey += MAGIstring;
-	unsigned char output[SHA_DIGEST_LENGTH];
-	sha1(strKey, output);
+	//strKey += MAGIstring;
+	//unsigned char output[SHA_DIGEST_LENGTH];
+	//sha1(strKey, output);
 
-	//进行base64编码
-	char output2[100] = { 0 };
-	base64_encode(output, SHA_DIGEST_LENGTH,output2);
-	strKey = output2;
+	////进行base64编码
+	//char output2[100] = { 0 };
+	//base64_encode(output, SHA_DIGEST_LENGTH,output2);
+	//strKey = output2;
 	return strKey;
 }
 

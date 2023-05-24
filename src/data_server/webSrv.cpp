@@ -5,7 +5,6 @@
 #include "common.h"
 #include "logger.h"
 #include "httplib.h"
-#include "sha1.hpp"
 #include "hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
@@ -1146,7 +1145,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			tdsSession->setActivityCheck(false);
 			tdsSession->bridgedIoSession->setActivityCheck(false);
 		}
-		else if (p && p->m_devType == DEV_TYPE::GW::local_serial)
+		else if (p && p->m_devType == DEV_TYPE_local_serial)
 		{
 			tdsSession->setActivityCheck(false);
 			tdsSession->type = TDS_SESSION_TYPE::bridgeToLocalCom;
@@ -1408,7 +1407,7 @@ bool ServiceInterface::handleAppLayerData_Bridge(unsigned char* pData, size_t iL
 	if (tdsSession->type == TDS_SESSION_TYPE::bridgeToLocalCom)
 	{
 		ioDev* p = ioSrv.getIODev(tdsSession->bridgedLocalCom);
-		if (p && p->m_devType == DEV_TYPE::GW::local_serial)
+		if (p && p->m_devType == DEV_TYPE_local_serial)
 		{
 			if (!p->sendData(pData, iLen))
 			{

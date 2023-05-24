@@ -22,33 +22,15 @@ namespace IO_PROTO {
 namespace DEV_TYPE {
 	namespace DEV {
 		const string tdsp_device = "tdsp-device";
-		const string modbus_rtu_slave = "modbus-rtu-slave";
-		const string modbus_tcp_slave = "modbus-tcp-slave";
-		const string iq60_gateway = "iq60-gateway";
-		const string dlt645_2007 = "dlt645-2007";
-		const string ethernetIp = "ethernet-ip";
-		const string opcUa = "opc-ua";
-		const string leakDetect = "leak-detect";
-		const string genicam = "genicam";
-		const string mqttBroker = "mqtt-broker";
-		const string tuya = "tuya";
-		const string visca = "visca";
-		const string onvif = "onvif";
-		const string bacnet_ip = "bacnet-ip";
-	}
-	namespace GW {
-		const string local_serial = "local-serial";
-		const string can_gateway = "can-gateway";
-		const string rs485_gateway = "rs485-gateway";
-		const string tuya_iot_project = "tuya-iot-project";
-	}
-	namespace CHAN {
-		const string io_channel = "io-channel";
-	}
-	namespace SERVER {
-		const string tds = "tds";
 	}
 };
+
+#define DEV_TYPE_iq60 "iq60-gateway"
+#define DEV_TYPE_tdsp "tdsp-device"
+#define DEV_TYPE_modbus_tcp_slave "modbus-tcp-slave"
+#define DEV_TYPE_rs485_gateway "rs485-gateway"
+#define DEV_TYPE_local_serial "local-serial"
+#define DEV_TYPE_leak_detect "leak-detect"
 
 
 namespace DEV_SUB_TYPE {
@@ -89,7 +71,7 @@ struct CHILD_TDS_INFO {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
-class ioServer : public i_ioServer, public ioDev, public ITcpServerCallBack, public ITcpClientCallBack
+class ioServer : public i_ioServer, public ioDev, public ITcpServerCallBack
 {
 public:
 	ioServer();

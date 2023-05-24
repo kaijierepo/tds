@@ -86,7 +86,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 
 			if (pIoDev)
 			{
-				if (pIoDev->m_devType == DEV_TYPE::DEV::iq60_gateway)
+				if (pIoDev->m_devType == DEV_TYPE_iq60)
 				{
 					ioDev* p = pIoDev;
 					if (p->m_bEnableIoLog)
@@ -119,7 +119,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 ioServer::ioServer()
 {
 	m_stopCycleAcq = false;
-	m_devType = DEV_TYPE::SERVER::tds;
+	m_devType = "tds";
 	m_totalPtCount = 0;
 	tds->ioServer = this;
 }
@@ -1129,11 +1129,11 @@ bool ioServer::runAsCloud()
 	//adaptor接入端口
 	int adpPort = tds->conf->getInt("adpPort", 662);
 
-	m_mapPort2DevType[tdspPort] = DEV_TYPE::DEV::tdsp_device;
-	m_mapPort2DevType[mbPort] = DEV_TYPE::GW::rs485_gateway;
-	m_mapPort2DevType[iq60Port] = DEV_TYPE::DEV::iq60_gateway;
-	m_mapPort2DevType[leakDetectPort] = DEV_TYPE::DEV::leakDetect;
-	m_mapPort2DevType[mbTcpPort] = DEV_TYPE::DEV::modbus_tcp_slave;
+	m_mapPort2DevType[tdspPort] = DEV_TYPE_tdsp;
+	m_mapPort2DevType[mbPort] = DEV_TYPE_rs485_gateway;
+	m_mapPort2DevType[iq60Port] = DEV_TYPE_iq60;
+	m_mapPort2DevType[leakDetectPort] = DEV_TYPE_leak_detect;
+	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
 
 	//启动服务端口
 	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
@@ -1538,7 +1538,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 	//应用层协议处理
 	if (tdsSession->bridgedIoSessionClient != NULL)
 	{
-		if (tdsSession->ioDevType == DEV_TYPE::DEV::tdsp_device)
+		if (tdsSession->ioDevType == DEV_TYPE_tdsp)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1550,7 +1550,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 		//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-		else if (tdsSession->ioDevType == DEV_TYPE::DEV::iq60_gateway)
+		else if (tdsSession->ioDevType == DEV_TYPE_iq60)
 		{
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
@@ -1576,7 +1576,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE::DEV::iq60_gateway)
+	else if (tdsSession->ioDevType == DEV_TYPE_iq60)
 	{
 		bool regPkt = false;
 		if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
@@ -1613,7 +1613,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE::DEV::tdsp_device)
+	else if (tdsSession->ioDevType == DEV_TYPE_tdsp)
 	{
 		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
@@ -1643,7 +1643,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE::DEV::modbus_tcp_slave)
+	else if (tdsSession->ioDevType == DEV_TYPE_modbus_tcp_slave)
 	{
 		if (handleFirstRegPkt(pData, iLen, tdsSession))
 		{
@@ -1658,7 +1658,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE::GW::rs485_gateway)
+	else if (tdsSession->ioDevType == DEV_TYPE_rs485_gateway)
 	{
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
 		if (handleFirstRegPkt(pData, iLen, tdsSession))//首包数据,按照tdsp注册包处理
@@ -1713,7 +1713,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE::DEV::leakDetect) {
+	else if (tdsSession->ioDevType == DEV_TYPE_leak_detect) {
 		stream2pkt* pab = &tdsSession->m_alBuf;
 		pab->PushStream((unsigned char*)pData, iLen);
 		while (pab->PopPkt(IsValidPkt_LeakDetect))
@@ -2069,7 +2069,7 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 	for (auto i : m_vecChildDev)
 	{
 		ioDev* p = i;
-		if (p->m_devType != DEV_TYPE::GW::local_serial)
+		if (p->m_devType != DEV_TYPE_local_serial)
 			continue;
 
 		json jSession;

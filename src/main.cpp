@@ -52,6 +52,7 @@ SOFTWARE.
 
 
 void updateEzvizAccessInfo() {
+#ifdef ENABLE_OPENSSL
 	try {
 		for (auto& i : prj.m_mapEzvizAccess) {
 			EZVIZ_ACCESS_INFO& info = i.second;
@@ -132,6 +133,7 @@ void updateEzvizAccessInfo() {
 	catch (exception& e) {
 		LOG("[warn] updateEzvizAccessInfo  exception:%s", e.what());
 	}
+#endif
 }
 
 /*

@@ -4,7 +4,7 @@
 
 void* DEV_PKT::pushData(string s)
 {
-	vector<byte> vb = str::toBytes(s);
+	vector<unsigned char> vb = str::toBytes(s);
 
 	return pushData(vb.data(),vb.size());
 }
