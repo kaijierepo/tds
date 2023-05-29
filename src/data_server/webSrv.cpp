@@ -19,6 +19,7 @@ string rootDir;
 string confDir;
 string filesDir;
 string fsRootDir;
+string topoDir;
 
 
 int WS_PKT_HEADER_LEN = sizeof(size_t);
@@ -874,7 +875,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
-			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir;
+			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir;
 			if (fsRootDir != "") {
 				dir += ",/fsRoot/=" + fsRootDir;
 			}
@@ -1063,6 +1064,7 @@ bool runWebServers()
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
 	filesDir = "./files";
+	topoDir = tds->conf->confPath + "/topo/res";
 	fsRootDir = tds->conf->getStr("fsRoot", "");
 
 	//initHMRConf();

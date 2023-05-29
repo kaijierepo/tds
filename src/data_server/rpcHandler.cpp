@@ -1321,13 +1321,21 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						rootTag = mo["rootTag"].get<string>();
 					tag = TAG::addRoot(tag, rootTag);
 					tag = TAG::addRoot(tag, session.org);
-					prj.setMo(mo, tag);
-					prj.saveConfFile();
-					result = "\"ok\"";
+					OBJ* pmo = prj.queryObj(tag);
+					if (pmo)
+					{
+						pmo->loadConf(mo);
+						prj.saveConfFile();
+						result = "\"ok\"";
+					}
+					else {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+					}
 				}
 			}
 			else if (params.is_array())
 			{
+				bool ok = true;
 				for (int i = 0; i < params.size(); i++) {
 					json& mo = params[i];
 					string tag = mo["tag"].get<string>();
@@ -1335,11 +1343,23 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					if (mo.contains("rootTag"))
 						rootTag = mo["rootTag"].get<string>();
 					tag = TAG::addRoot(tag, rootTag);
-					tag = TAG::addRoot(tag, session.org);
-					prj.setMo(mo, tag);
+					tag = TAG::addRoot(tag, session.org); 
+					OBJ* pmo = prj.queryObj(tag);
+					if (pmo)
+					{
+						pmo->loadConf(mo);
+					}
+					else {
+						ok = false;
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+						break;
+					}
 				}
-				prj.saveConfFile();
-				result = "\"ok\"";
+
+				if (ok) {
+					prj.saveConfFile();
+					result = "\"ok\"";
+				}
 			}
 		}
 	}
@@ -1433,7 +1453,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
-		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp")
+		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo")
 		{
 			//位号选择器 参数tag + rootTag
 			//用户查询时 tag默认"",rootTag默认""
@@ -1446,19 +1466,33 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rootTag = params["rootTag"].get<string>();
 			}
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
-			TAG_SELECTOR tagSel;
-			tagSel.init(params["tag"], rootTag);
-
+			string sTagSel = "*";
+			if (params["tag"].is_string()) {
+				sTagSel = params["tag"];
+			}
 			string type = "obj";
 			if (params["type"] != nullptr)
 				type = params["type"].get<string>();
 			//将getOrg,getMp,getMo统一转化为getObj
-			else if (method == "getOrg") type = "org";
-			else if (method == "getMo") type = "mo";
+			else if (method == "getOrg") {
+				type = "org";
+			}
+			else if (method == "getCustomOrg") {
+				type = "customOrg";
+			}
+			else if (method == "getMo") {
+				type = "mo";
+			}
+			else if (method == "getCustomMo") {
+				type = "customMo";
+			}
 			else if (method == "getMp") {
 				params["getMp"] = true;
 				type = "mp";
 			}
+
+			TAG_SELECTOR tagSel;
+			tagSel.init(sTagSel, rootTag);
 			tagSel.type = type;
 
 			string mode = "array";
@@ -1861,6 +1895,14 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
+	if (method.find("set") == 0) {
+		if (params == nullptr) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "rpc params cannot be null when setXXX method is called");
+			return true;
+		}
+	}
+
+
 	if (handleMethodCall_unclassified(method, params, rpcResp, session)) 
 	{
 		return true;
@@ -2301,7 +2343,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 
 			//即使服务端没有打开鉴权，如果用户指定了token或者user中的
-			if (jReq["token"] != nullptr)
+			if (jReq["token"] != nullptr && jReq["token"] != "")
 			{
 				pSession->token = jReq["token"].get<string>();
 				string token = pSession->token;
@@ -2764,6 +2806,13 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 	vector<string> topoList;
 	for (int i = 0; i < filist.size(); i++)
 	{
+		if (filist[i].path.find("/res") != string::npos) {
+			continue;
+		}
+		else if (filist[i].path.find("/asset") != string::npos) {
+			continue;
+		}
+
 		string topoName = str::trimSuffix(filist[i].name, ".svg");
 		mapTopo[str::fromInt(TAG::getMoLevel(topoName)) + topoName] = topoName;
 	}

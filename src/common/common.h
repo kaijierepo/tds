@@ -49,6 +49,9 @@ struct TIME {
 	bool operator==(TIME& right){
 		return 0 == memcmp(this, &right, sizeof(TIME));
 	}
+
+	string toDateStr();
+	string toTimeStr();
 };
 class semaphore
 {

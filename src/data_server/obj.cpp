@@ -87,6 +87,15 @@ OBJ::~OBJ()
 	m_childObj.clear();
 }
 
+void OBJ::loadTask(json& jTask) {
+	m_scheduleTasks.clear();
+	for (auto& t : jTask) {
+		SCHEDULE_TASK st;
+		st.fromJson(t);
+		m_scheduleTasks.push_back(st);
+	}
+}
+
 bool OBJ::loadConf(json& conf)
 {
 	//载入配置
@@ -130,6 +139,10 @@ bool OBJ::loadConf(json& conf)
 		m_latitude = conf["latitude"];
 	if(conf.contains("map"))
 		m_mapConf = conf["map"];
+
+	if (conf.contains("tasks")) {
+		loadTask(conf["tasks"]);
+	}
 
 	if (m_type == "customMo" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
@@ -181,7 +194,14 @@ bool OBJ::isSelectedByLeafType(string leafType)
 	if (m_type == "mp")
 		return true;
 
-	else if (m_type == "org")
+	size_t pos = leafType.find(".");
+	string leafCustomType;
+	if (pos > 0) {
+		leafCustomType = leafType.substr(pos + 1, leafType.size() - pos - 1);
+		leafType = leafType.substr(0, pos);
+	}
+
+	if (m_type == "org")
 	{
 		return true;
 	}
@@ -194,18 +214,25 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			return true;
 	}
 	else if (m_type == MO_TYPE::customOrg) {
-		if (leafType == "org" ||leafType == "mo") {
+		if (leafType == "org" ||leafType == "mo" || leafType == "customMo") {
 			return true;
 		}
-		else if (leafType == m_customType || leafType == m_customTypeLabel)
-			return true;
+		else if (leafType == "customOrg") {
+			if (leafCustomType == "" || leafCustomType == m_customType || leafCustomType == m_customTypeLabel) {
+				return true;
+			}
+		}
 	}
 	else if (m_type == MO_TYPE::customMo) {
 		if (leafType == "mo") {
 			return true;
 		}
-		else if(leafType == m_customType || leafType == m_customTypeLabel)
-			return true;
+		else if (leafType == "customMo")
+		{
+			if (leafCustomType == "" || leafCustomType == m_customType || leafCustomType == m_customTypeLabel) {
+				return true;
+			}
+		} 
 	}
 	
 	return false;
@@ -241,6 +268,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 		if (q.rootTag !=  "")
 		{
 			tag = TAG::trimRoot(tag, q.rootTag);
+			conf["rootTag"] = q.rootTag;
 		}
 		if(tag!="")
 			conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
@@ -282,6 +310,17 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 			conf["latitude"] = m_latitude;
 		if (m_strLastModify != "") {
 			conf["lastModify"] = m_strLastModify;
+		}
+
+		if (m_scheduleTasks.size() > 0) {
+			json jTasks = json::array();
+			json jT;
+			for (int i = 0; i < m_scheduleTasks.size(); i++) {
+				SCHEDULE_TASK& st = m_scheduleTasks[i];
+				st.toJson(jT);
+				jTasks.push_back(jT);
+			}
+			conf["tasks"] = jTasks;
 		}
 	}
 	

@@ -640,6 +640,9 @@ void MP::input(json jVal, TIME* dataTime, json dataFile)
 			dbCurVal = atof(sVal.c_str());
 			jVal = dbCurVal;
 
+			//关键机制。当采集到的数据是错误的（不在有效范围内），将当前值置为fasle
+			//否则如果将错误值进行二次计算或者统计分析，会得到很多错误的结果
+			//程序应当允许在某些值为null时，依然能够输出一些二次计算或者统计分析的结果
 			if (m_validRange.enable)
 			{
 				if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
@@ -720,7 +723,7 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 	m_pParentMO->m_bOnline = true;
 
 
-	if (m_alarmMp) //是一个报警监控点，更新报警
+	if (m_alarmMp && m_curVal.is_boolean()) //是一个报警监控点，更新报警
 	{
 		ALARM_INFO ai;
 		ai.type = m_name;

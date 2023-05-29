@@ -1039,12 +1039,26 @@ namespace timeopt {
 				&t.wSecond,
 				&t.wMilliseconds);
 		}
-		else if(str.length() == 19)
+		else if (str.length() == 19)
 		{
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
 				&t.wYear,
 				&t.wMonth,
 				&t.wDay,
+				&t.wHour,
+				&t.wMinute,
+				&t.wSecond);
+		}
+		else if (str.length() == 10) //2022-02-02
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d",
+				&t.wYear,
+				&t.wMonth,
+				&t.wDay);
+		}
+		else if (str.length() == 8) //12:11:11
+		{
+			sscanf(str.c_str(), "%2d:%2d:%2d",
 				&t.wHour,
 				&t.wMinute,
 				&t.wSecond);
@@ -1964,3 +1978,14 @@ void setThreadName(string name)
 	setThreadName2(name);
 }
 
+string TIME::toDateStr()
+{
+	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	return s;
+}
+
+string TIME::toTimeStr()
+{
+	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	return s;
+}

@@ -41,7 +41,7 @@ using json = nlohmann::json;
 						   mo 监控对象          org 组织结构                大类，用大类可以一起查询其子类             
 					_______|______         _____|______________________
 				   |       |      |       |             |              |
-			   customMO    mo     mp     org         customOrg       project    type取值可以为该5种
+			   customMo    mo     mp     org         customOrg       project    type取值可以为该5种
 */
 
 
@@ -73,6 +73,65 @@ struct OBJ_QUERIER {
 };
 
 
+struct SCHEDULE_TASK {
+	string name;
+	TIME dateStart;
+	TIME dateEnd;
+	bool cyclic; 
+	TIME time;
+	bool week[7];
+	string script;
+
+	SCHEDULE_TASK() {
+		memset(week, 0, sizeof(week));
+	}
+
+	void fromJson(json& j) {
+		if (j["name"].is_string()) {
+			name = j["name"];
+		}
+		if (j["dateStart"].is_string()) {
+			string s = j["dateStart"];
+			dateStart = timeopt::str2st(s); 
+		}
+		if (j["dateEnd"].is_string()) {
+			string s = j["dateEnd"];
+			dateEnd = timeopt::str2st(s);
+		}
+		if (j["time"].is_string()) {
+			string s = j["time"];
+			time = timeopt::str2st(s);
+		}
+		if (j["week"].is_array()) {
+			json& jWeek = j["week"];
+			for (int i = 0; i < jWeek.size();i++) {
+				week[i] = jWeek[i].get<bool>();
+			}
+		}
+		if (j["script"].is_string()) {
+			script = j["script"];
+		}
+		if (j["cyclic"].is_boolean()) {
+			cyclic = j["cyclic"].get<bool>();
+		}
+	}
+
+	void toJson(json& j) {
+		j["name"] = name;
+		j["dateStart"] = dateStart.toDateStr();
+		j["dateEnd"] = dateEnd.toDateStr();
+		j["time"] = time.toTimeStr();
+		json jWeek = json::array();
+		for (int i = 0; i < 7; i++) {
+			jWeek.push_back(week[i]);
+		}
+		j["week"] = jWeek;
+		j["script"] = script;
+		j["cyclic"] = cyclic;
+	}
+};
+
+
 class MP;
 class database;
 class OBJ
@@ -80,6 +139,8 @@ class OBJ
 public:
 	OBJ();
 	virtual ~OBJ();
+
+	void loadTask(json& jTask);
 
 	virtual bool loadConf(json& conf);
 	virtual bool loadStatus(json& status);
@@ -106,6 +167,7 @@ public:
 	bool m_bChildTds; //是否是下级服务
 	string m_streamAccess;
 	string m_strLastModify;  //上一次配置修改时间
+	vector<SCHEDULE_TASK> m_scheduleTasks;
 
 	//动态创建
 	OBJ* createObjBranchByTag(string tag);

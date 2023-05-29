@@ -72,17 +72,18 @@ void TDS_SESSION::Init()
     abandonLen = 0;
     m_bNeedLog = true;
     bConnected = false;
-    pTcpSession = NULL;
-    pTcpSessionClt = NULL;
+    pTcpSession = nullptr;
+    pTcpSessionClt = nullptr;
+    pBridgedTcpClient = nullptr;
     type = "";
     name = "";
     bridgedTcpCltHandler.pTdsSession = this;
     sock = 0;
     iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
     iALProto = APP_LAYER_PROTO::UNKNOWN;
-    pTcpSession = NULL;
+    pTcpSession = nullptr;
     m_alBuf.Init();
-    m_IoDev = NULL;
+    m_IoDev = nullptr;
     m_childTdsHttpPort = 667;
     m_childTdsHttpsPort = 666;
 }
