@@ -1978,6 +1978,27 @@ void setThreadName(string name)
 	setThreadName2(name);
 }
 
+void TIME::setDate(Date t)
+{
+	wYear = t.wYear;
+	wMonth = t.wMonth;
+	wDay = t.wDay;
+	wDayOfWeek = t.wDayOfWeek;
+}
+
+void TIME::setHMS(HMS t)
+{
+	wHour = t.wHour;
+	wMinute = t.wMinute;
+	wSecond = t.wSecond;
+	wMilliseconds = t.wMilliseconds;
+}
+
+string TIME::toStr()
+{
+	return timeopt::st2str(*this);
+}
+
 string TIME::toDateStr()
 {
 	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
@@ -1988,4 +2009,26 @@ string TIME::toTimeStr()
 {
 	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
 	return s;
+}
+
+string Date::toStr()
+{
+	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	return s;
+}
+
+void Date::fromStr(string s)
+{
+	sscanf(s.c_str(), "%4d-%2d-%2d",&wYear,&wMonth,&wDay);
+}
+
+string HMS::toStr()
+{
+	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
+void HMS::fromStr(string s)
+{
+	sscanf(s.c_str(), "%2d:%2d:%2d",&wHour,&wMinute,&wSecond);
 }

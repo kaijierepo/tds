@@ -1256,8 +1256,17 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 	}
 }
 
-
-
-
-
-
+TIME SCHEDULE_TASK::getExeTime()
+{
+	if (cyclic) {
+		TIME exeTime = timeopt::now();
+		exeTime.setHMS(time);
+		return exeTime;
+	}
+	else {
+		TIME exeTime;
+		exeTime.setDate(dateStart);
+		exeTime.setHMS(time);
+		return exeTime;
+	}
+}

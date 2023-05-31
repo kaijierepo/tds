@@ -75,10 +75,10 @@ struct OBJ_QUERIER {
 
 struct SCHEDULE_TASK {
 	string name;
-	TIME dateStart;
-	TIME dateEnd;
+	Date dateStart;
+	Date dateEnd;
 	bool cyclic; 
-	TIME time;
+	HMS time;
 	bool week[7];
 	string script;
 
@@ -86,21 +86,23 @@ struct SCHEDULE_TASK {
 		memset(week, 0, sizeof(week));
 	}
 
+	TIME getExeTime();
+
 	void fromJson(json& j) {
 		if (j["name"].is_string()) {
 			name = j["name"];
 		}
 		if (j["dateStart"].is_string()) {
 			string s = j["dateStart"];
-			dateStart = timeopt::str2st(s); 
+			dateStart.fromStr(s); 
 		}
 		if (j["dateEnd"].is_string()) {
 			string s = j["dateEnd"];
-			dateEnd = timeopt::str2st(s);
+			dateEnd.fromStr(s);
 		}
 		if (j["time"].is_string()) {
 			string s = j["time"];
-			time = timeopt::str2st(s);
+			time.fromStr(s);
 		}
 		if (j["week"].is_array()) {
 			json& jWeek = j["week"];
@@ -118,9 +120,9 @@ struct SCHEDULE_TASK {
 
 	void toJson(json& j) {
 		j["name"] = name;
-		j["dateStart"] = dateStart.toDateStr();
-		j["dateEnd"] = dateEnd.toDateStr();
-		j["time"] = time.toTimeStr();
+		j["dateStart"] = dateStart.toStr();
+		j["dateEnd"] = dateEnd.toStr();
+		j["time"] = time.toStr();
 		json jWeek = json::array();
 		for (int i = 0; i < 7; i++) {
 			jWeek.push_back(week[i]);

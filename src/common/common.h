@@ -32,6 +32,32 @@
 #endif
 
 using namespace std;
+
+struct Date {
+	unsigned short wYear;
+	unsigned short wMonth;
+	unsigned short wDay;
+	unsigned short wDayOfWeek;
+	Date() {
+		memset(this, 0, sizeof(this));
+	}
+	string toStr();
+	void fromStr(string s);
+};
+
+struct HMS {
+	unsigned short wHour;
+	unsigned short wMinute;
+	unsigned short wSecond;
+	unsigned short wMilliseconds;
+	HMS() {
+		memset(this, 0, sizeof(this));
+	}
+	string toStr();
+	void fromStr(string s);
+};
+
+
 struct TIME {
 	unsigned short wYear;
 	unsigned short wMonth;
@@ -46,10 +72,54 @@ struct TIME {
 		memset(this, 0, sizeof(this));
 	}
 
+	void setDate(Date t);
+	void setHMS(HMS t);
+
 	bool operator==(TIME& right){
 		return 0 == memcmp(this, &right, sizeof(TIME));
 	}
 
+	bool operator>(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl > sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator>=(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl >= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl < sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<=(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl <= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	string toStr();
 	string toDateStr();
 	string toTimeStr();
 };
