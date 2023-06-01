@@ -44,6 +44,7 @@ SOFTWARE.
 #include "tdsWatchDog.h"
 #include "userMng.h"
 #include "webSrv.h"
+#include "taskServer.h"
 
 
 string InterfaceEncoding = "utf8";
@@ -336,6 +337,7 @@ bool TDS_imp::run(string cmdline)
 	}
 
 	ioSrv.updateTag2IOAddrBinding();
+	taskSrv.run();
 
 	//create browser window
 	if (conf->uiMode == "chrome")

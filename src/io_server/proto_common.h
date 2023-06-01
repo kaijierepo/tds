@@ -51,7 +51,7 @@ public:
 	virtual string GetPktDesc() { return ""; }; //包详细描述信息
 	virtual string GetCmdName() { return ""; };
 
-	void setDate(unsigned char* p, size_t l)
+	void setData(unsigned char* p, size_t l)
 	{
 		if (data)delete data;
 		data = new unsigned char[l];
@@ -61,7 +61,7 @@ public:
 	DEV_PKT(unsigned char* p, size_t l)
 	{
 		data = nullptr;
-		setDate(p, l);
+		setData(p, l);
 	}
 	DEV_PKT()
 	{

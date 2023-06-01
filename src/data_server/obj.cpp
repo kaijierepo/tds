@@ -1056,6 +1056,12 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	if (opt["getUnit"] != nullptr) {
 		q.getUnit = opt["getUnit"].get<bool>();
 	}
+	if (opt["getVal"] != nullptr) {
+		q.getVal = opt["getVal"].get<bool>();
+	}
+	if (opt["getValDesc"] != nullptr) {
+		q.getValDesc = opt["getValDesc"].get<bool>();
+	}
 	return q;
 }
 

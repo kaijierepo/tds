@@ -446,20 +446,16 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 	}
 	
 
-	if (q.getStatus)
+	if (q.getStatus || q.getVal)
 	{
 		conf["val"] = m_curVal;
 		if (timeopt::isValidTime(m_stDataLastUpdate))
 			conf["time"] = timeopt::st2str(m_stDataLastUpdate);
 		else
 			conf["time"] = "-";
-
-		if (m_isEnum && m_curVal.is_number_integer()) {
-			conf["enumVal"] = mapEnumVal[m_curVal.get<int>()];
-		}
 	}
 
-	if (q.getStatusDesc) {
+	if (q.getStatusDesc || q.getValDesc) {
 		conf["valDesc"] = getValDesc(q.getUnit);
 	}
 	
@@ -480,7 +476,13 @@ string MP::getValDesc(json& jVal,bool getUnit) {
 	}
 	else if (jVal.is_number_integer()) {
 		if (m_isEnum) {
-			valDesc = mapEnumVal[jVal.get<int>()];
+			int iVal = jVal.get<int>();
+			if (mapEnumVal.find(iVal) != mapEnumVal.end()) {
+				valDesc = mapEnumVal[iVal];
+			}
+			else {
+				valDesc = jVal.dump();
+			}
 		}
 		else
 			valDesc = jVal.dump();

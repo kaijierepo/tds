@@ -240,10 +240,10 @@ jerry_value_t func_output(const jerry_call_info_t* call_info_p,
 	if (jArgs.size() == 2)
 	{
 		string sTag = jArgs[0].get<string>();
-		sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
+		sTag = TAG::resolveTag(sTag, pEngine->m_tagContext); 
 
 		json jParams;
-		jParams["tag"] = 
+		jParams["tag"] = sTag;
 		jParams["val"] = jArgs[1];
 
 		json err, rlt;
@@ -303,7 +303,7 @@ jerry_value_t func_getObj(const jerry_call_info_t* call_info_p,
 		json tag = jArgs[0];
 		if (tag.is_string()) {
 			string sTag = tag.get<string>();
-			sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
 			OBJ* pObj = prj.queryObj(sTag);
 			if (pObj) {
 				json j;
@@ -401,7 +401,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 		json tag = jArgs[0];
 		if (tag.is_string()) { 
 			string sTag = tag.get<string>();
-			sTag = TAG::resolveTag(sTag, pEngine->m_tagThis);
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
 			if (jArgs.size() == 1) {
 				json params;
 				params["tag"] = sTag;

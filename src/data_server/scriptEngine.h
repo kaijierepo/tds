@@ -26,7 +26,7 @@ public:
 	string getErrorDesc(jerry_error_t error);
 
 	//当前脚本执行的环境变量
-	string m_tagThis;
+	string m_tagContext;
 	string m_user; //执行脚本的用户，根据该用户权限控制该脚本的权限
 	jerry_value_t global_object;
 	vector<GLOBAL_FUNC> m_vecGlobalFunc;

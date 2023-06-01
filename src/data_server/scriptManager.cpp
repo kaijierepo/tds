@@ -107,7 +107,7 @@ void scriptThreadTmp(string scriptName, string tagThis)
 			SCRIPT_INFO& si = j.second;
 			if (si.name == scriptName) {
 				ScriptEngine se;
-				se.m_tagThis = tagThis;
+				se.m_tagContext = tagThis;
 				se.runScript(si.script, si.lastModifyUser);
 				si.lastExe = timeopt::now();
 			}
@@ -324,7 +324,7 @@ void ScriptManager::exeAllGlobalScripts()
 			SCRIPT_INFO& si = j.second;
 			if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
 				ScriptEngine se;
-				se.m_tagThis = si.tagThis;
+				se.m_tagContext = si.tagThis;
 				se.runScript(si.script,si.lastModifyUser);
 				si.lastExe = timeopt::now();
 			}
@@ -347,7 +347,13 @@ void ScriptManager::exeAllVarExpScripts()
 		string& script = info.script;
 
 		ScriptEngine se;
-		se.m_tagThis = info.tagThis;
+		size_t pos = info.tagThis.rfind(".");
+		if (pos == string::npos)
+			continue;
+
+
+
+		se.m_tagContext = info.tagThis.substr(0,pos); //tagThis的父位号作为context位号
 		se.m_bValNullInCalc = false;
 		se.runScript(script,info.lastModifyUser);
 

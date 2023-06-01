@@ -2730,7 +2730,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			if (pmp)
 			{
 				pmp->input(val, &stTimeStamp, dataFile);
-				vecMps.push_back(pmp);
+				vecMps.push_back(pmp); 
 			}
 			else {
 				jTagNotExist.push_back(tag);

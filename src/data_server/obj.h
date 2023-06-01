@@ -54,18 +54,22 @@ struct OBJ_QUERIER {
 	string leafType;
 
 	//指定对象中返回的数据
-	bool getStatus;
+	bool getVal; 
+	bool getValDesc;
+	bool getStatus;  //status = val + alarm + 其他运行时数据
+	bool getStatusDesc; //以文本可阅读的方式返回状态信息，方便UI显示或者可视化组态
 	bool getConf;
 	bool getConfDetail;
-	bool getStatusDesc; //以文本可阅读的方式返回状态信息，方便UI显示或者可视化组态
 	bool getUnit; //值描述信息是否需要带单位
 
 	OBJ_QUERIER() {
 		 getConf = true;
 		 getMp = false;
 		 getStatus = false;
+		 getVal = false;
 		 getChild = false;
 		 getStatusDesc = false;
+		 getValDesc = false;
 		 leafType = "mo";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
 		 getUnit = true;
@@ -86,6 +90,27 @@ struct SCHEDULE_TASK {
 		memset(week, 0, sizeof(week));
 	}
 
+	string toDescStr() {
+		if (cyclic) {
+			string s = str::format("%s,%s~%s,%s,%d%d%d%d%d%d%d,%s",
+				name.c_str(),
+				dateStart.toStr().c_str(),
+				dateEnd.toStr().c_str(),
+				time.toStr().c_str(),
+				week[0], week[1], week[2], week[3], week[4], week[5], week[6],
+				script.c_str());
+			return s;
+		}
+		else {
+			string s = str::format("%s,%s %s,%d%d%d%d%d%d%d,%s",
+				name.c_str(),
+				dateStart.toStr().c_str(),
+				time.toStr().c_str(),
+				week[0], week[1], week[2], week[3], week[4], week[5], week[6],
+				script.c_str());
+			return s;
+		}
+	};
 	TIME getExeTime();
 
 	void fromJson(json& j) {

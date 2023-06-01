@@ -120,31 +120,27 @@ json TAG::mapTree2List(json mapTree)
 
 //tagThis当前位号
 //strTagExp相对与当前位号的相对位号表达式
-string TAG::resolveTag(string strTagExp, string tagThis)
+string TAG::resolveTag(string strTagExp, string tagContext)
 {
 	string tagName = strTagExp;
 	//this的解析，this后面可能带 .std 等后缀
 	if (strTagExp.find("this") != string::npos)
 	{
-		tagName = str::replace(tagName, "this", tagThis);
+		tagName = str::replace(tagName, "this", tagContext);
 	}
 	//解析仅名字的情况，等效于 ./XXX（使用当前监测点的父监测对象组成完整名字）
-	else if (strTagExp.find(".") == string::npos && strTagExp.find("*") == string::npos && tagThis != "")
+	else if (strTagExp.find(".") == string::npos && strTagExp.find("*") == string::npos && tagContext != "")
 	{
-		string strTagContext; //父监测对象的tag
-		size_t iPos = tagThis.rfind('.');
-		if (iPos <= 0)return "";
-		strTagContext = tagThis.substr(0, iPos);
-		tagName = strTagContext + "." + strTagExp;
+		tagName = tagContext + "." + strTagExp;
 	}
 	//使用相对位号的格式 ./或者../ ,./表示环境位号（父mo的位号）,../表示环境位号向上一级
 	else if (strTagExp.find("./") != string::npos || strTagExp.find(".\\") != string::npos || strTagExp.find("..") != string::npos)
 	{
 		//替换../   ../必须也只能写前边
 		string strTagContext; //父监测对象的tag
-		size_t iPos = tagThis.rfind('.');
+		size_t iPos = strTagContext.rfind('.');
 		if (iPos <= 0)return "";
-		strTagContext = tagThis.substr(0, iPos);
+		strTagContext = strTagContext.substr(0, iPos);
 		string tag = strTagContext;
 		string rtag = strTagExp;
 		//先规范化 替换\为/  替换\\为/  
@@ -179,7 +175,7 @@ string TAG::resolveTag(string strTagExp, string tagThis)
 	{
 		if (strTagExp.find(".") == string::npos)//仅指定name
 		{
-			tagName = TAG::addRoot(tagName, tagThis);
+			tagName = TAG::addRoot(tagName, tagContext);
 		}
 		else
 			tagName = strTagExp;
