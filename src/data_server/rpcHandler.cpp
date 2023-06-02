@@ -2635,6 +2635,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	if (syncCall) {
 		if(rlt!=nullptr)
 		{
+			json jDe = params; //返回输出成功的结果
+			jDe["val"] = val;
 			resp.result = rlt.dump();
 		}
 		else
