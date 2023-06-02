@@ -297,7 +297,7 @@ namespace timeopt {
 	TIME nowUTC();
 	void now(TIME& t);
 	void now(TIME* t);
-	void sleep(int milliSec);
+	void sleepMilli(int milliSec);
 	string toFmt(string time, string fmt);
 	string stTimeToStr(TIME time);
 	time_t SysTime2Unix(TIME sDT);

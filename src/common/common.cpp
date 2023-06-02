@@ -980,7 +980,7 @@ namespace timeopt {
 		*t = now();
 	}
 
-	void sleep(int milliSec)
+	void sleepMilli(int milliSec)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(milliSec));
 	}
