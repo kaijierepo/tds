@@ -90,6 +90,14 @@ void ScriptManager::updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScri
 	m_mapVarExpScripts = varExpScripts;
 }
 
+bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	thread t(scriptThreadTmp, scriptName,tagThis);
+	t.detach();
+#endif
+	return false;
+}
 
 #ifdef ENABLE_JERRY_SCRIPT
 
@@ -113,15 +121,6 @@ void scriptThreadTmp(string scriptName, string tagThis)
 			}
 		}
 	}
-}
-
-
-bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
-{
-	thread t(scriptThreadTmp, scriptName,tagThis);
-	t.detach();
-
-	return false;
 }
 
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
