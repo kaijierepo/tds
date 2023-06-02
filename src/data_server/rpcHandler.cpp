@@ -2545,7 +2545,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 	else
 	{
-		val = params;
+		val = params; 
 	}
 
 
@@ -2577,7 +2577,16 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	{
 		if (!val.is_boolean())
 		{
-			if (val.is_null()) //开关量输出值省略 表示输出当前值取反
+			if (val.is_string() && val.get<string>() == "取反") {
+				if (pmp->m_curVal.is_boolean())
+					val = !pmp->m_curVal.get<bool>();
+				else {
+					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
+					LOG("[warn]output请求错误," + resp.error);
+					return;
+				}
+			}
+			else if (val.is_null()) //开关量输出值省略 表示输出当前值取反
 			{
 				if(pmp->m_curVal.is_boolean())
 					val = !pmp->m_curVal.get<bool>();
