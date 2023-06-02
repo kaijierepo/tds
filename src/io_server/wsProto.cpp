@@ -1,8 +1,7 @@
 #include "pch.h"
 #include "wsProto.h"
 #include "base64.h"
-#include <WinSock2.h>
-#include <openssl/sha.h>
+#include "common.h"
 
 
 size_t IsValidPkt_WEBSOCKET(unsigned char* pData, size_t iLen)
@@ -80,7 +79,9 @@ bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 			uint16_t payloadLength16b = 0;
 			payloadFieldExtraBytes = 2;
 			memcpy(&payloadLength16b, &frameData[2], payloadFieldExtraBytes);
-			payloadLength = ntohs(payloadLength16b);
+
+			common::endianSwap(&payloadLength16b, 2);
+			payloadLength = payloadLength16b;
 		}
 		else if (payloadLength == 0x7f)
 		{
@@ -138,7 +139,7 @@ bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 int CWSPPkt::pack(const char * inMessage, size_t messageLen,  enum WS_FrameType frameType, bool bFin, bool bOpt)
 {
 	int ret = WS_ERROR_FRAME;
-	const uint32_t messageLength = messageLen;
+	 uint32_t messageLength = messageLen;
 
 	//uint8_t payloadFieldExtraBytes = (messageLength <= 0x7d) ? 0 : 2; //0x7d =125
 	uint8_t payloadFieldExtraBytes = 0;
@@ -172,12 +173,14 @@ int CWSPPkt::pack(const char * inMessage, size_t messageLen,  enum WS_FrameType 
 	else if(0x7d < messageLength && messageLength <= 0xFFFF)
 	{
 		frameHeader[1] = 0x7e;
-		uint16_t len = htons(messageLength);
+		common::endianSwap(&messageLength, 4);
+		uint16_t len = messageLength;
 		memcpy(&frameHeader[2], &len, payloadFieldExtraBytes);
 	}
 	else {
 		frameHeader[1] = 0x7f;
-		uint32_t len = htonl(static_cast<uint32_t>(messageLength)); //uint32_t htonl(uint32_t hostlong); 所以这里其实有隐患
+		common::endianSwap(&messageLength, 4);
+		uint32_t len = messageLength; 
 		memcpy(&frameHeader[2+4], &len, payloadFieldExtraBytes-4);//网络字节序是大端
 	}
 
@@ -349,13 +352,15 @@ int CWSPPkt::fetch_payload_length(char * msg, int & pos)
 		uint16_t length = 0;
 		memcpy(&length, msg + pos, 2);
 		pos += 2;
-		payload_length_ = ntohs(length);
+		common::endianSwap(&length, 2);
+		payload_length_ = length;
 	}
 	else if (payload_length_ == 127) {
 		uint32_t length = 0;
 		memcpy(&length, msg + pos, 4);
 		pos += 4;
-		payload_length_ = ntohl(length);
+		common::endianSwap(&length, 2);
+		payload_length_ = length;
 	}
 	return 0;
 }

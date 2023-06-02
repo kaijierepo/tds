@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "tdsWatchDog.h"
-#include <winver.h>
 #include "logger.h"
 #include "httplib.h"
 #include "dumpCatch.h"

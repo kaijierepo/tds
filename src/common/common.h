@@ -222,7 +222,7 @@ namespace common {
 	};
 
 	unsigned short N_CRC16(unsigned char* updata, long long len);
-	void endianSwap(char* pData, int len);
+	void endianSwap(void* pData, int len);
 }
 
 #define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__func__);};

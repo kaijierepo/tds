@@ -29,12 +29,12 @@ namespace common {
 		return (uchCRCHi << 8 | uchCRCLo);
 	}
 
-	void endianSwap(char* pData, int len)
+	void endianSwap(void* pData, int len)
 	{
 		char* pNew = new char[len];
 		for (int i = 0;i<len;i++)
 		{
-			pNew[i] = pData[len - 1 - i];
+			pNew[i] = ((char*)pData)[len - 1 - i];
 		}
 		memcpy(pData, pNew, len);
 		delete pNew;
