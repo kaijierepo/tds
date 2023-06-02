@@ -2618,7 +2618,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 			resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be integer type");
 			LOG("[warn]output请求错误," + resp.error);
 			return;
-		}
+		} 
 	} 
 
 
