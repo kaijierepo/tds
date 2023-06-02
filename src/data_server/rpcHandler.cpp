@@ -2619,7 +2619,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 			LOG("[warn]output请求错误," + resp.error);
 			return;
 		}
-	}
+	} 
 
 
 	json rlt,err;
