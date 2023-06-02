@@ -52,6 +52,7 @@ string InterfaceEncoding = "utf8";
 string version = "v1.0";
 
 
+#ifdef _WIN32
 #include <stdio.h>
 #include <io.h>
 #include <FCNTL.H>
@@ -62,6 +63,7 @@ void createConsole()
 	freopen("CONOUT$", "w+t", stdout);
 	freopen("CONIN$", "r+t", stdin);
 }
+#endif
 
 
 void chromeThread()
