@@ -28,6 +28,7 @@
 #include ".\func_module\dumpCatch.cpp"
 #include ".\func_module\hmrSrv.cpp"
 #include ".\func_module\logServer.cpp"
+#include ".\func_module\taskServer.cpp"
 #include ".\func_module\tdsConf.cpp"
 #include ".\func_module\tdsWatchDog.cpp"
 #include ".\func_module\userMng.cpp"
