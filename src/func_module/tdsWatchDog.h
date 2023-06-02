@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #pragma once
 #include "tcpClt.h"
 #include "udpSrv.h"
@@ -34,5 +35,7 @@ public:
 
 
 extern tdsWatchDog watchDog;
+
+#endif
 
 

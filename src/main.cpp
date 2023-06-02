@@ -237,7 +237,9 @@ int main(int argc, char** argv)
 			else
 				printf(_GB("tdsd已添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
 		}*/
+#ifdef _WIN32
 		watchDog.run();
+#endif
 	}
 #ifdef ENABLE_TOOLS
 	else if (mode == "tcpHub")

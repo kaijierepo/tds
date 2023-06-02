@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "pch.h"
 #include "tdsWatchDog.h"
 #include "logger.h"
@@ -540,4 +541,4 @@ void tdsWatchDog::log(string s)
 }
 
 
-
+#endif
