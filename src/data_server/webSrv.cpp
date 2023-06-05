@@ -14,6 +14,8 @@
 #include "hmrSrv.h"
 #include "ioChan.h"
 
+#define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
+
 
 string rootDir;
 string confDir;
@@ -366,7 +368,7 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 
 	int isend = send(sock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
 	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SD_BOTH);
+	shutdown(sock, SHUT_DOWN_BOTH);
 }
 
 
@@ -379,7 +381,7 @@ void thread_handleGzhReq(string req,int sock)
 	//send 到 pair sock 在pair sock的回调中 发送http 响应
 	int isend = send(sock, resBody.c_str(), (int)resBody.length(), MSG_DONTROUTE);
 	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SD_BOTH);
+	shutdown(sock, SHUT_DOWN_BOTH);
 }
 
 
@@ -397,7 +399,7 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock, RPC_SESSION* pRpcSessio
 
 	int isend = send(sock,resBody.c_str(), (int)resBody.length(),MSG_DONTROUTE);   
 	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SD_BOTH);
+	shutdown(sock, SHUT_DOWN_BOTH);
 }
 
 void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
@@ -678,7 +680,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
 			c->pipeSock = sPipe;
 			//记录管道发送sock口
-			p->sockPipe = (SOCKET)sPipe;
+			p->sockPipe = sPipe;
 
 
 			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
@@ -909,7 +911,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
 				//closesocket(p->sockPipe);
-				shutdown(p->sockPipe, SD_BOTH);
+				shutdown(p->sockPipe, SHUT_DOWN_BOTH);
 				p->sockPipe = 0;
 				p->bConnected = false;
 				pWs->m_wsSessions.erase(c);
@@ -1027,12 +1029,12 @@ int ServiceInterface::sendToWs(unsigned char* p, size_t len, int sockPipe)
 	char* pData = new char[sizeof(len) + len];
 	memcpy(pData, &len, sizeof(len));
 	memcpy(pData + sizeof(len), p, len);
-	DWORD iStart = GetTickCount();
+	TIME t = timeopt::now();
 	int iSend = send(sockPipe, pData, len + (int)sizeof(len), MSG_DONTROUTE);
-	DWORD iEnd = GetTickCount();
 
-	if (iEnd - iStart > 500) {
-		LOG("[warn]sendToWs 阻塞，时间:%d", iEnd - iStart);
+	int pass = timeopt::CalcTimePassMilliSecond(t);
+	if (pass > 500) {
+		LOG("[warn]sendToWs 阻塞，时间:%d", pass);
 	}
 
 	delete pData;
@@ -1157,7 +1159,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 		else
 		{
 			//closesocket(tdsSession->sock);
-			shutdown(tdsSession->sock, SD_BOTH);
+			shutdown(tdsSession->sock, SHUT_DOWN_BOTH);
 			return;
 		}
 	}
@@ -1194,7 +1196,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			//string resp = header + html;
 			//send(tdsSession->sock, (char*)resp.data(), resp.length(), 0);
 			//closesocket(tdsSession->sock);
-			shutdown(tdsSession->sock, SD_BOTH);
+			shutdown(tdsSession->sock, SHUT_DOWN_BOTH);
 			return;
 		}
 	}
@@ -1216,7 +1218,7 @@ void ServiceInterface::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SE
 			delete tdsSession->pBridgedTcpClient;
 			tdsSession->pBridgedTcpClient = NULL;
 			//closesocket(tdsSession->sock);
-			shutdown(tdsSession->sock, SD_BOTH);
+			shutdown(tdsSession->sock, SHUT_DOWN_BOTH);
 			return;
 		}
 	}

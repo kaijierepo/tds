@@ -265,6 +265,7 @@ struct ACTIVE_TDS_SESSION {
 };
 
 struct iTDSConf {
+	virtual void loadConf() = 0;
 	//software conf
 	string mode;
 	bool debugMode;
@@ -547,10 +548,11 @@ public:
 	map<string, fp_toolRun> tools;
 };
 
+i_tds* getTds();
 
 #ifdef TDSDLL
 typedef i_tds* (*fp_getTds)();
 i_tds* getITDS();
 #endif
 
-extern i_tds* tds;
+#define tds getTds()

@@ -285,7 +285,7 @@ jerry_value_t func_sleep(const jerry_call_info_t* call_info_p,
 	if (jArgs.size() > 0)
 	{
 		int milli = jArgs[0].get<int>();
-		Sleep(milli);
+		timeopt::sleepMilli(milli);
 	}
 
 	jerry_value_t ret = jerry_create_null();

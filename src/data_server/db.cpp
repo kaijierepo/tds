@@ -140,7 +140,12 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 	}
 	else
 	{
+#ifdef _WIN32
 		FILE* fp = _wfopen(charCodec::utf8_to_utf16(dlPath).c_str(), L"rb+");
+#else
+		FILE* fp = fopen(dlPath.c_str(), "rb+");
+#endif
+		
 		if (fp)
 		{
 			fseek(fp, 0L, SEEK_END);
@@ -1183,70 +1188,6 @@ bool database::saveDEFile(string tag, TIME stTime, unsigned char* pData, int len
 }
 
 
-void database::LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName, bool bIncludeChild)
-{
-	strPath += "/";
-	char szFind[260];
-	char szFile[1000] = { 0 };
-	WIN32_FIND_DATA FindFileData;
-	strcpy_s(szFind, strPath.c_str());
-	strcat_s(szFind, "*.*");
-	HANDLE hFind = ::FindFirstFile(szFind, &FindFileData);
-	if (INVALID_HANDLE_VALUE == hFind)
-		return;
-
-	while (true)
-	{
-		if (FindFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			if (FindFileData.cFileName[0] != '.')
-			{
-				if (bIncludeChild)
-				{
-					string strSubName = FindFileData.cFileName;
-					string strSubPath = strPath + "/" + strSubName;
-					LoadAllFile_FromPath(strSubPath, strExtType, vecFiles, bOnlyName, bIncludeChild);
-				}
-			}
-		}
-		else
-		{
-			string strTmp = FindFileData.cFileName;//保存文件名，包括后缀名
-			string strFilePath = strPath + "/" + strTmp;
-
-			bool bFindFile = false;
-
-			if (strExtType.length() > 0)//指定后缀
-			{
-				size_t iPos = strTmp.find(strExtType);
-				if (iPos >= 0 && strTmp.length() == iPos + strExtType.length())
-				{
-					bFindFile = true;
-				}
-			}
-			else
-			{
-				bFindFile = true;
-			}
-
-			if (bFindFile)
-			{
-				if (bOnlyName)
-				{
-					vecFiles.push_back(strTmp);
-				}
-				else
-				{
-					vecFiles.push_back(strFilePath);
-				}
-			}
-		}
-		if (!FindNextFile(hFind, &FindFileData))
-			break;
-	}
-	FindClose(hFind);
-}
-
 bool database::create(string strDBUrl,string name)
 {
 	strDBUrl = str::replace(strDBUrl, "\\", "/");
@@ -1558,6 +1499,7 @@ string database::dataSet2String(DB_DATA_SET& dataSet)
 
 void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 {
+#ifdef _WIN32
 	size_t iPos = strPath.rfind('/');
 	pfi->strName = strPath.substr(iPos+1,strPath.length() - 1 - iPos);
 
@@ -1602,6 +1544,7 @@ void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 			break;
 	}
 	FindClose(hFind);
+#endif
 }
 
 

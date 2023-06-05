@@ -122,7 +122,7 @@ void ConnectThread(void* lpParam)
 	while (1)
 	{
 #ifdef _WIN32
-		Sleep(500);
+		timeopt::sleepMilli(500);
 #else
 		sleep(500);
 #endif
@@ -157,7 +157,7 @@ void ConnectThread(void* lpParam)
 tcpClt::tcpClt(void)
 {
 	sockClient = 0;
-	m_session.tcpClt = this;
+	m_session.pTcpClt = this;
 	m_remoteIP = "127.0.0.1";
 	m_remotePort = 0;
 	m_bConn = false;
@@ -243,7 +243,7 @@ void tcpClt::stop()
 	DisConnect();   //触发接收线程退出。
 	while (1) {
 #ifdef _WIN32
-		Sleep(1);
+		timeopt::sleepMilli(1);
 #else
 		sleep(1);
 #endif

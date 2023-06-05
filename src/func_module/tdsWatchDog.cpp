@@ -62,7 +62,7 @@ void wakeUpFeeder() {
 
 void thread_checkMediaServer() {
 	while (1) {
-		Sleep(1000);
+		timeopt::sleepMilli(1000);
 		if (!watchDog.isProcessRun("MediaServer.exe")) {
 			string msPath = fs::appPath() + "/com/mediaServer/MediaServer.exe";
 			if (fs::fileExist(msPath)){
@@ -74,7 +74,7 @@ void thread_checkMediaServer() {
 
 void thread_checkAdp() {
 	while (1) {
-		Sleep(1000);
+		timeopt::sleepMilli(1000);
 		if (!watchDog.isProcessRun("node.exe")) {
 			string msPath = fs::appPath() + "/com/adp/run.bat";
 			if (fs::fileExist(msPath)) {
@@ -92,7 +92,7 @@ void thread_checkFood() {
 	//timeopt::now(&watchDog.m_lastUpdateCheckTime);
 	while (1)
 	{
-		Sleep(2000);
+		timeopt::sleepMilli(2000);
 		//int pass = timeopt::CalcTimePassMilliSecond(watchDog.m_lastFeedTime);
 
 
@@ -104,7 +104,7 @@ void thread_checkFood() {
 
 		//		WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 		//		WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
-		//		Sleep(200);
+		//		timeopt::sleepMilli(200);
 		//		try {
 		//			filesystem::copy(charCodec::utf8_to_utf16(fs::appPath() + "/update/tds.exe"), charCodec::utf8_to_utf16(fs::appPath() + "/tds.exe"), std::filesystem::copy_options::overwrite_existing);
 		//		}
@@ -115,7 +115,7 @@ void thread_checkFood() {
 		//		}
 		//		
 		//		wakeUpFeeder();
-		//		Sleep(5000);
+		//		timeopt::sleepMilli(5000);
 		//	}
 		//	timeopt::now(&watchDog.m_lastUpdateCheckTime);
 		//}
@@ -162,9 +162,9 @@ void thread_checkFood() {
 			WinExec("taskkill /f /im tds.exe /t", SW_SHOW);//关闭可能处于卡死状态的程序。如果启动了多个实例，该命令可以同时关闭多个。
 			WinExec("taskkill /f /im WerFault.exe /t", SW_SHOW);//某些操作系统如windows server 2008 R2 enterprize 会出现该程序，
 			//就是一个对话框显示 tds.exe 已停止工作。联机检查解决方案并关闭程序  按钮  和  关闭程序 按钮
-			Sleep(200);
+			timeopt::sleepMilli(200);
 			wakeUpFeeder();
-			Sleep(5000);
+			timeopt::sleepMilli(5000);
 		}
 		else {
 			json j = json::parse(res->body);

@@ -74,15 +74,14 @@ namespace charCodec {
 	string utf16_to_utf8(wstring instr) //utf-8-->ansi
 	{
 		string str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 4 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete charstr;
-#endif
-#ifdef LINUX
+#else
 		
 #endif
 		return str;
@@ -90,15 +89,14 @@ namespace charCodec {
 	string utf16_to_gb(wstring instr)
 	{
 		string str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		char* charstr = new char[MAX_STRSIZE];
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr,(int) MAX_STRSIZE, NULL, NULL);
 		str = charstr;
 		delete charstr;
-#endif
-#ifdef LINUX
+#else
 		
 #endif
 		return str;
@@ -106,7 +104,7 @@ namespace charCodec {
 	wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	{
 		wstring str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -114,8 +112,7 @@ namespace charCodec {
 		str = wcharstr;
 		delete[] wcharstr;
 		
-#endif
-#ifdef LINUX
+#else
 		
 #endif
 		return str;
@@ -123,15 +120,14 @@ namespace charCodec {
 	wstring gb_to_utf16(string instr)
 	{
 		wstring str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
 		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr,(int)MAX_STRSIZE);
 		str = wcharstr;
 		delete wcharstr;
-#endif
-#ifdef LINUX
+#else
 		
 #endif
 		return str;
@@ -140,7 +136,7 @@ namespace charCodec {
 	string utf8_to_gb(string instr) //utf-8-->ansi
 	{
 		string str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -151,8 +147,7 @@ namespace charCodec {
 		str = charstr;
 		delete wcharstr;
 		delete charstr;
-#endif
-#ifdef LINUX
+#else
 		int ret = 0;
 		size_t inlen = instr.size() + 1;
 		size_t outlen = 2*inlen;
@@ -178,15 +173,18 @@ namespace charCodec {
 			iconv_close(cd);
 		}
 		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		str = outbuf;
-		free(outbuf);
+
+		if(outbuf!=nullptr){
+			str = outbuf;
+			free(outbuf);
+		}
 #endif
 		return str;
 	}
 	string gb_to_utf8(string instr) //ansi-->utf-8
 	{
 		string str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		size_t MAX_STRSIZE = instr.length() * 2 + 2;
 		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
 		memset(wcharstr, 0, MAX_STRSIZE);
@@ -197,8 +195,7 @@ namespace charCodec {
 		str = charstr;
 		delete wcharstr;
 		delete charstr;
-#endif
-#ifdef LINUX
+#else
 		int ret = 0;
 		size_t inlen = instr.length() + 1;
 		size_t outlen = 2*inlen;
@@ -1029,39 +1026,44 @@ namespace timeopt {
 		TIME t;
 		//2022-02-22 11:11:11.123   23bytes
 		//2022-02-22 11:11:11   19bytes
+		int y, m, d, h, min, s, milli;
 		if (str.length() == 23) {
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
-				&t.wYear,
-				&t.wMonth,
-				&t.wDay,
-				&t.wHour,
-				&t.wMinute,
-				&t.wSecond,
-				&t.wMilliseconds);
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s,
+				&milli);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
 		}
 		else if (str.length() == 19)
 		{
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
-				&t.wYear,
-				&t.wMonth,
-				&t.wDay,
-				&t.wHour,
-				&t.wMinute,
-				&t.wSecond);
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
 		}
 		else if (str.length() == 10) //2022-02-02
 		{
 			sscanf(str.c_str(), "%4d-%2d-%2d",
-				&t.wYear,
-				&t.wMonth,
-				&t.wDay);
+				&y,
+				&m,
+				&d);
+			t.wYear = y; t.wMonth = m; t.wDay = d;
 		}
 		else if (str.length() == 8) //12:11:11
 		{
 			sscanf(str.c_str(), "%2d:%2d:%2d",
-				&t.wHour,
-				&t.wMinute,
-				&t.wSecond);
+				&h,
+				&min,
+				&s);
+			t.wHour = h; t.wMinute = min; t.wSecond = s;
 		}
 		return t;
 	}
@@ -1590,18 +1592,22 @@ namespace fs {
 
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
-		if (iDotPos > iSlashPos)//是一个文件
+		if (iDotPos!= string::npos && iDotPos > iSlashPos)//是一个文件
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
-
+#ifdef _WIN32
 		filesystem::create_directories(charCodec::tds_to_utf16(strFile));
+#else
+		filesystem::create_directories(strFile);
+#endif
 	}
 
 	string appPath()
 	{
 		string str;
-#ifdef WINDOWS
+		//不要使用std::filesystem::current_path(),这个是当前运行目录，和程序目录可能不一致
+#ifdef _WIN32
 		//windows获取到的是反斜杠，tds内统一使用斜杠
 		TCHAR p[MAX_PATH] = { 0 };
 		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
@@ -1610,8 +1616,7 @@ namespace fs {
 		strPath = strPath.substr(0, nEnd);
 		strPath = charCodec::gb_to_tds(strPath);
 		str = str::replace(strPath, "\\", "/");
-#endif 
-#ifdef LINUX
+#else 
 		char* p = NULL;
 		const int len = 256;
 		/// to keep the absolute path of executable's path
@@ -1631,7 +1636,7 @@ namespace fs {
 	string appName()
 	{
 		string str;
-#ifdef WINDOWS
+#ifdef _WIN32
 		//windows获取到的是反斜杠，tds内统一使用斜杠
 		TCHAR p[MAX_PATH] = { 0 };
 		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
@@ -1640,37 +1645,36 @@ namespace fs {
 		str = strPath.substr(nEnd+1,strPath.length() - nEnd - 1 );
 		str = charCodec::gb_to_tds(str);
 		str = str::trimSuffix(str,".exe");
-#endif 
-#ifdef LINUX
+#else
 		char* p = NULL;
 		const int len = 256;
 		/// to keep the absolute path of executable's path
 		char arr_tmp[len] = { 0 };
 		int n = readlink("/proc/self/exe", arr_tmp, len);
 		if (NULL != (p = strrchr(arr_tmp, '/')))
-			*p = '\0';
+		{
+			str = p+1;
+		}
 		else
 		{
 			return std::string("");
 		}
-		str = arr_tmp;
 #endif
 		return str;
 	}
 
 	string toAbsolutePath(string str)
 	{
-		str = charCodec::tds_to_gb(str);
 		char absPath[1024] = { 0 };
-#ifdef WINDOWS
+#ifdef _WIN32
+		str = charCodec::tds_to_gb(str);
 		_fullpath(absPath, str.c_str(), 1024);
-#endif
-#ifdef LINUX
-		realpath((char*)str.data(),absPath);
-#endif
 		str = absPath;
 		str = str::replace(str, "\\", "/");
 		str = charCodec::gb_to_tds(str);
+#else
+		realpath((char*)str.data(),absPath);
+#endif
 		return str;
 	}
 	string getExt(string strFilePath)
@@ -1686,11 +1690,10 @@ namespace fs {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
-#ifdef WINDOWS
+#ifdef _WIN32
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
-#endif
-#ifdef LINUX
-		fp = fopen(charCodec::tds_to_utf8(path).c_str(), "rb");
+#else
+		fp = fopen(path.c_str(), "rb");
 #endif
 		if (fp)
 		{
@@ -1714,11 +1717,10 @@ namespace fs {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
-#ifdef WINDOWS
+#ifdef _WIN32
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"rb");
-#endif
-#ifdef LINUX
-		fp = fopen(charCodec::tds_to_gb(path).c_str(), "rb");
+#else
+		fp = fopen(path.c_str(), "rb");
 #endif
 		if (fp)
 		{
@@ -1740,11 +1742,10 @@ namespace fs {
 		fs::createFolderOfPath(path);
 
 		FILE* fp = nullptr;
-#ifdef WINDOWS
+#ifdef _WIN32
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"wb");
-#endif
-#ifdef LINUX
-		fp = fopen(charCodec::tds_to_gb(path).c_str(), "wb");
+#else
+		fp = fopen(path.c_str(), "wb");
 #endif
 		if (fp)
 		{
@@ -1763,11 +1764,10 @@ namespace fs {
 	bool appendFile(string path, char* data, size_t len)
 	{
 		FILE* fp = nullptr;
-#ifdef WINDOWS
+#ifdef _WIN32
 		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"ab");
-#endif
-#ifdef LINUX
-		fp = fopen(charCodec::tds_to_gb(path).c_str(), "ab");
+#else
+		fp = fopen(path.c_str(), "ab");
 #endif
 		if (fp)
 		{
@@ -1828,7 +1828,7 @@ namespace fs {
 	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
 		 try
 		 {
-			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
+			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder); 
 			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 				 if (i.is_directory()) {
 					 if (recursive) {
@@ -2019,7 +2019,11 @@ string Date::toStr()
 
 void Date::fromStr(string s)
 {
-	sscanf(s.c_str(), "%4d-%2d-%2d",&wYear,&wMonth,&wDay);
+	int y, m, d;
+	sscanf(s.c_str(), "%4d-%2d-%2d",&y,&m,&d);
+	wYear = y;
+	wMonth = m;
+	wDay = d;
 }
 
 string HMS::toStr()
@@ -2028,7 +2032,11 @@ string HMS::toStr()
 	return s;
 }
 
-void HMS::fromStr(string s)
+void HMS::fromStr(string str)
 {
-	sscanf(s.c_str(), "%2d:%2d:%2d",&wHour,&wMinute,&wSecond);
+	int h, m, s;
+	sscanf(str.c_str(), "%2d:%2d:%2d",&h,&m,&s);
+	wHour = h;
+	wMinute = m;
+	wSecond = s;
 }

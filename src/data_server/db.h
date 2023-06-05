@@ -358,7 +358,6 @@ struct SELECT_RLT {
 };
 
 namespace CONST_STR {
-	const string tds = "tds";
 	const string val = "val";
 	const string time = "time";
 	const string tag = "tag";
@@ -419,7 +418,6 @@ public:
 
 	string parseSuffix(string deFileUrl);
 	string dataSet2String(DB_DATA_SET& dataSet);
-	void LoadAllFile_FromPath(string strPath, string strExtType, vector<string>& vecFiles, bool bOnlyName = false, bool bIncludeChild = true);
 	void GetFileTreeOfPath(FILE_ITEM* pfi, string strPath);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path

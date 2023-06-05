@@ -28,8 +28,13 @@ SOFTWARE.
 
 #include "tds.h"
 #include "common.h"
+#include "tds_imp.h"
 
-i_tds* tds = nullptr;
+
+i_tds* getTds() {
+	static TDS_imp inst;
+	return &inst;
+}
 
 string TAG::trimRoot(string tag, string root)
 {

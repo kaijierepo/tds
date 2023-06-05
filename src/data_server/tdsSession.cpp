@@ -36,7 +36,7 @@ TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
 {
     Init();
     bConnected = true;
-    pTcpSessionClt = &p->tcpClt->m_session;
+    pTcpSessionClt = &p->pTcpClt->m_session;
     sock = p->sock;
     remotePort = p->remotePort;
     remoteIP = p->remoteIP;
@@ -101,7 +101,8 @@ bool TDS_SESSION::disconnect()
     {
         //目前tcpServer统一使用mongoose的 poll模型。poll模型closesocket不会触发响应,使用shutdown
         //closesocket(pTcpSession->sock);
-        shutdown(pTcpSession->sock, SD_BOTH);
+        int shutDownBoth = 2;
+        shutdown(pTcpSession->sock, shutDownBoth);
     }
     else if (pTcpSessionClt)
     {
@@ -133,7 +134,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
      else if (pTcpSessionClt)
      {
-         iSend = pTcpSessionClt->tcpClt->SendData(p, len);
+         iSend = pTcpSessionClt->pTcpClt->SendData(p, len);
      }
      else 
      {

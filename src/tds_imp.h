@@ -36,7 +36,6 @@ public:
 	TDS_imp();
 	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
 	string getUIMode();
-	bool setWorkingDir();
 
 	bool run(string cmdline = "");
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
@@ -74,13 +73,9 @@ public:
 #endif
 	 void log(const char* text);
 
-
-	 tdsConfig tdsConf;
 	 void registerMsgSinker(fp_msgSinker sinker);
 	 void publishMsg(MODULE_BUS_MSG& msg);
 	 vector<fp_msgSinker> m_msgSinkers;
 };
 
 extern void createConsole();
-extern TDS_imp tdsImp; //tds instance;
-extern i_tds* tds;

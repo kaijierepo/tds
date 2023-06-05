@@ -77,7 +77,7 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
-	m_strLogDir = fs::appPath() + "\\log";
+	m_strLogDir = fs::appPath() + "/log";
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
@@ -175,7 +175,11 @@ string Clogger::logInternal(string info)
 	if (ll < logLevel)
 		return logline;
 
+#ifdef _WIN32
 	info = charCodec::utf8_to_gb(logline);
+#else
+	info = logline;
+#endif
 	setConsoleTextColor(ll);
 	cout << info;
 	printf("\r\n");
@@ -199,7 +203,7 @@ string Clogger::logInternal(string info)
 
 	//save to log file
 	string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
-	strFile = fs::appPath() + "\\log\\" + strFile + ".txt";
+	strFile = fs::appPath() + "/log/" + strFile + ".txt";
 	fs::appendFile(strFile, info + "\r\n");
 
 #ifdef _TDS

@@ -261,7 +261,7 @@ bool userManager::init()
 
 void tokenExpire_thread(userManager* p) {
 	while (1) {
-		Sleep(10000);
+		timeopt::sleepMilli(10000);
 		p->m_csAccessToken.lock();
 		vector<ACCESS_INFO> tokenList;
 		for (auto& i : p->m_mapAccessInfo) {

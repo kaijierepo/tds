@@ -36,7 +36,7 @@ void IOThread()
 
 	while (1)
 	{
-		Sleep(5);
+		timeopt::sleepMilli(5);
 
 		if (!ioSrv.m_bRunning)
 			break;

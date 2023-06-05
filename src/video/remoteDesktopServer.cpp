@@ -187,12 +187,12 @@ int remoteDesktopServer::captureThread()
 	{
 		if(!rds.m_bStart)
 		{
-			Sleep(100);
+			timeopt::sleepMilli(100);
 			continue;
 		}
 		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpSession == nullptr)
 		{
-			Sleep(100);
+			timeopt::sleepMilli(100);
 			continue;
 		}
 
@@ -242,12 +242,12 @@ int remoteDesktopServer::encodeThread()
 		bool bInitSigment =false;
 		if(!rds.m_bStart)
 		{
-			Sleep(100);
+			timeopt::sleepMilli(100);
 			continue;
 		}
 		if(rds.m_tdsSession == nullptr || rds.m_tdsSession->pTcpSession == nullptr)
 		{
-			Sleep(100);
+			timeopt::sleepMilli(100);
 			continue;
 		}
 

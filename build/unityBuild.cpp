@@ -38,6 +38,7 @@
 #include "../src/io_server/ioSrv.cpp"
 #include "../src/io_server/proto_common.cpp"
 #include "../src/io_server/wsProto.cpp"
+#include "../src/main.cpp"
 #include "../src/pch.cpp"
 #include "../src/tds.cpp"
 #include "../src/tds_imp.cpp"

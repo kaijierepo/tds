@@ -74,7 +74,7 @@ void chromeThread()
 	string chromeParam = "";
 	if (tds->conf->fullscreen)
 		chromeParam += " --kiosk";
-	chromeParam += " --app=\"" + tds->conf->homepage + "\"";
+	chromeParam += " --app=\"" + getTds()->conf->homepage + "\"";
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;
@@ -113,15 +113,15 @@ void chromeThread()
 			int idx = 0;
 			while (windowFindTime > 0)
 			{
-				HWND hWnd = FindWindowW(NULL, charCodec::utf8_to_utf16(tdsImp.uiWndTitle).c_str());
-				if (tdsImp.uiWnd != hWnd)
+				HWND hWnd = FindWindowW(NULL, charCodec::utf8_to_utf16(tds->uiWndTitle).c_str());
+				if (tds->uiWnd != hWnd)
 				{
-					tdsImp.uiWnd = hWnd;
-					string s = "chrome窗口句柄: " + str::format("[%d]0x%x,%d",idx, tdsImp.uiWnd, tdsImp.uiWnd);
+					tds->uiWnd = hWnd;
+					string s = "chrome窗口句柄: " + str::format("[%d]0x%x,%d",idx, tds->uiWnd, tds->uiWnd);
 					LOG(s);
 					idx++;
 				}
-				Sleep(50);
+				timeopt::sleepMilli(50);
 				windowFindTime -= 50;
 			}	
 
@@ -129,7 +129,7 @@ void chromeThread()
 			wstring ws = charCodec::gb_to_utf16(fs::appPath() + "\\favicon.ico");
 			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 
-			Sleep(3000); //此处要sleep一下,不然任务栏图标替换不掉
+			timeopt::sleepMilli(3000); //此处要sleep一下,不然任务栏图标替换不掉
 
 			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
@@ -140,12 +140,12 @@ void chromeThread()
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 
-		if (tdsImp.m_fpProcBeforeExit!=NULL)
+		if (tds->m_fpProcBeforeExit!=NULL)
 		{
-			tdsImp.m_fpProcBeforeExit();	
+			tds->m_fpProcBeforeExit();
 		}
 
-		tdsImp.stop();
+		tds->stop();
 		exit(0);
 	}
 #endif
@@ -206,7 +206,6 @@ TDS_imp::TDS_imp()
 	xiaoT = nullptr;
 	gzhServer = nullptr;
 	smsServer = nullptr;
-	tds = &tdsImp;
 }
 
 bool TDS_imp::setEncodeing(string encoding)
@@ -234,6 +233,7 @@ string TDS_imp::getUIMode()
 	return uimode;
 }
 
+/*
 bool TDS_imp::setWorkingDir()
 {
 	string cwd = fs::appPath();
@@ -241,7 +241,7 @@ bool TDS_imp::setWorkingDir()
 	string s = bRet ? "成功" : "失败";
 	//LOG("[keyinfo][工作目录   ]" + cwd + "设置" + s + ",工作目录用于RPC命令中的相对路径");
 	return true;
-}
+}*/
 
 bool TDS_imp::run(string cmdline)
 {
@@ -352,7 +352,10 @@ bool TDS_imp::run(string cmdline)
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
+
+#ifdef _WIN32
 	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
+#endif
 
 	return true;
 }
@@ -420,7 +423,7 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 
 void thread_handleRpcCall(string method,json param,int delay) {
 	if (delay > 0) {
-		Sleep(delay);
+		timeopt::sleepMilli(delay);
 	}
 
 	RPC_SESSION session;
@@ -444,7 +447,7 @@ void TDS_imp::callAsyn(string method, string& param, int delay)
 
 void thread_handleBatchRpcCall(vector<json> calls, int delay) {
 	if (delay > 0) {
-		Sleep(delay);
+		timeopt::sleepMilli(delay);
 	}
 
 	for (int i = 0; i < calls.size(); i++) {

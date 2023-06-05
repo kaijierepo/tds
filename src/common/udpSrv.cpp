@@ -222,7 +222,12 @@ void udpRecvThread(void* lpParam)
 	{
 		sockaddr_in addrCli;
 		memset(&addrCli,0, sizeof(addrCli));
+#ifdef _WIN32
 		int fromlen = sizeof(addrCli);
+#else
+		unsigned int fromlen = sizeof(addrCli);
+#endif
+		
 
 		int recvlen = recvfrom(pServ->m_sock, (char*)szBuff, 1024, 0, (sockaddr*)&addrCli, &fromlen);
 		if (recvlen < 0)

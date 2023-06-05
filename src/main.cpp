@@ -175,7 +175,6 @@ int main(int argc, char** argv)
 	}
 
 	setThreadName("main thread");
-	tds->conf = &tdsImp.tdsConf;
 	
 	//确认程序运行模式
 	string appName = fs::appName();
@@ -190,11 +189,11 @@ int main(int argc, char** argv)
 	}
 	
 	//设置当前路径为程序运行目录 tdsConf.loadConf();中的相对路径解析会用到当前路径
-	tdsImp.setWorkingDir();
+	//tdsImp.setWorkingDir();
 
 	//根据模式差异化加载配置
-	tdsImp.tdsConf.mode = mode;
-	tdsImp.tdsConf.loadConf();
+	tds->conf->mode = mode;
+	tds->conf->loadConf();
 
 	//专业版创建授权文件
 	if (tds->createLicence)
@@ -460,16 +459,19 @@ int main(int argc, char** argv)
 #else
 #endif // !_WINDLL
 
+/*
 #define DllExport   extern "C" __declspec( dllexport )
 DllExport i_tds* getTds() {
-	return &tdsImp;
+	return tds;
 }
+*/
 
 
 //勿删除！！
 //如果tds主程序中不使用_strdup ， strspn 这两个函数
 // /MT 编译的openssl的crypto.lib会出现   这两个函数unresolved错误
 //可能openssl编译的时候没有指定需要链接的lib. 主程序使用则产生了lib链接。原因不明。后续研究
+#ifdef _WIN32
 void forLink() {
 	char* a = new char[100];
 	memset(a, 0, 100);
@@ -478,6 +480,7 @@ void forLink() {
 	size_t pos = strspn(a, "b");
 	_strerror_s(a,100, "abcd");
 }
+#endif
 
 
 

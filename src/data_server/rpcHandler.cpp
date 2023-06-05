@@ -171,6 +171,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			}
 		}
 	}
+#ifdef _WIN32
 	else if (method == "fs.getCurDir")
 	{
 		WCHAR buff[300] = { 0 };
@@ -179,6 +180,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		json j = charCodec::utf16_to_utf8(s);
 		result = j.dump();
 	}
+#endif
 	else if (method == "fs.getFileList")
 	{
 		string path = params["path"];
@@ -203,6 +205,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "file service is not started,config fsRoot param in tds.ini");
 			return true;
 		}
+		path = fs::toAbsolutePath(path);
 
 
 		if (params.contains("path")) {
@@ -954,7 +957,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 		{
 			timeCost = params["time"].get<int>();
 		}
-		Sleep(1000 * timeCost);
+		timeopt::sleepMilli(1000 * timeCost);
 		rpcResp.result =  params.dump();
 	}
 	else
@@ -2511,7 +2514,7 @@ void rpcHandler::saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, s
 	string allDBPath = tds->conf->dbPath;
 	strTargetFile = allDBPath + strTargetFile;
 	fs::createFolderOfPath(strTargetFile);
-	MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
+	//MoveFile(strTmpFile.c_str(), strTargetFile.c_str());
 }
 
 void rpcHandler::cleanRpcSession()

@@ -15,14 +15,14 @@
 #include <regex>
 #include <queue>
 #define WIN32_LEAN_AND_MEAN
-#ifdef WINDOWS
+#ifdef _WIN32
 #include <windows.h>
 #include <Commdlg.h>
 #include <ShlObj_core.h>
 #include <SetupAPI.h>
 #include <devguid.h>
 #pragma comment (lib, "Setupapi.lib")
-#elif LINUX
+#else
 #include <unistd.h>
 #include <iconv.h>
 #include <stdarg.h>

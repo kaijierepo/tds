@@ -76,7 +76,7 @@ void ioDev_tdsp::stop()
 	//停止周期采集的常驻线程
 	while (m_bAcqThreadRunning)
 	{
-		Sleep(1);
+		timeopt::sleepMilli(1);
 	}
 }
 

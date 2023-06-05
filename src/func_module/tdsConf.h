@@ -19,7 +19,7 @@ public:
 	void loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf_tds(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf);
-	void loadConf();
+	void loadConf() override;
 	json toJson();
 	
 	bool checkKey(string toCheck, string key);
@@ -34,3 +34,4 @@ public:
 	string m_confFileName;
 };
 
+extern tdsConfig tdsConf;

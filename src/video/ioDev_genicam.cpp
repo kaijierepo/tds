@@ -21,7 +21,7 @@ void thread_doStream(ioDev_genicam* p)
         }
         if (!p->m_bConnected) //用户没有停止码流，但是设备连接断开了。等待重连后继续获取码流
         {
-            Sleep(50);
+            timeopt::sleepMilli(50);
             continue;
         }
         try
@@ -33,7 +33,7 @@ void thread_doStream(ioDev_genicam* p)
         catch (std::exception& e)
         {
             p->disconnect();
-            Sleep(1000);
+            timeopt::sleepMilli(1000);
         }
     }
 }
@@ -376,7 +376,7 @@ string ioDev_genicam::getDesc()
 void thread_genicamKeepConnected(ioDev_genicam* p) {
     //while (1)
     //{
-    //   Sleep(2000);
+    //   timeopt::sleepMilli(2000);
     //   
     //   if (p->m_bConnected == false)
     //   {

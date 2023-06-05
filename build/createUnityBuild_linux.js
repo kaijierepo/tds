@@ -19,8 +19,8 @@ function getAllCpp(filePath){
             continue;
             if(cppPath.indexOf("unityBuild.cpp") >0)
             continue;
-            if(cppPath.indexOf("main.cpp") > 0)
-            continue;
+            //if(cppPath.indexOf("main.cpp") > 0)
+            //continue;
             if(cppPath.indexOf("video") > 0)
             continue;
             if(cppPath.indexOf("not_used") > 0)

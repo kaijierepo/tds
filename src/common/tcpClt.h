@@ -15,7 +15,7 @@ struct tcpSessionClt
 	std::string remoteIP;//对端ip
 	int remotePort;//对端端口
 	std::shared_ptr<TDS_SESSION> pALSession;
-	tcpClt* tcpClt;
+	tcpClt* pTcpClt;
 	int bridgeSock;
 
 	size_t iSendSucCount;
@@ -31,7 +31,7 @@ struct tcpSessionClt
 		sock = 0;
 		bridgeSock = 0;
 		pALSession = nullptr;
-		tcpClt = nullptr;
+		pTcpClt = nullptr;
 		iSendSucCount = 0;
 		iSendFailCount = 0;
 		iRecvCount = 0;

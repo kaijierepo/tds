@@ -2,6 +2,8 @@
 #include "tdsConf.h"
 #include  "common.h"
 
+tdsConfig tdsConf;
+
 tdsConfig::tdsConfig()
 {
 	httpsPort = 666;
@@ -32,6 +34,8 @@ tdsConfig::tdsConfig()
 	iotimeoutDLT645 = 8000;
 	mode = "tds";
 	bStopCycleAcq = false;
+
+	tds->conf = this;
 }
 
 
@@ -464,19 +468,9 @@ json tdsConfig::toJson()
 
 bool tdsConfig::checkKey(string toCheck, string key)
 {
-	toCheck = normalizationKey(toCheck);
-	key = normalizationKey(key);
 	if (toCheck == key)
 		return true;
 	return false;
-}
-
-string tdsConfig::normalizationKey(string key)
-{
-	str::removeChar(key, '_');
-	str::removeChar(key, '-');
-	key = _strlwr((char*)key.c_str());
-	return key;
 }
 
 int tdsConfig::getInt(string key, int iDef)

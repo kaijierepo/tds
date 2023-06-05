@@ -293,7 +293,7 @@ bool project::openStream(string tag, string pushTo)
 		bool pushRet = false;
 		if (pushTo != "") {
 			if (ret) {
-				Sleep(500);
+				timeopt::sleepMilli(500);
 				pushRet = pmp->startStreamPush(pushTo);
 				LOG("[流媒体  ]向上级服务推流，url=%s", pushTo.c_str());
 				if (pushRet) {

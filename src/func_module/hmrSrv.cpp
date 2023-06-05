@@ -59,20 +59,6 @@ else {
 )";
 
 
-string wstring2string(wstring wstr) {
-    string result;
-    //获取缓冲区大小，并申请空间，缓冲区大小事按字节计算的  
-    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), NULL, 0, NULL, NULL);
-    char* buffer = new char[len + 1];
-    //宽字节编码转换成多字节编码  
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), (int)wstr.size(), buffer, len, NULL, NULL);
-    buffer[len] = '\0';
-    //删除缓冲区并返回值  
-    result.append(buffer);
-    delete[] buffer;
-    return result;
-}
-
 HMRServer hmrServer;
 
 HMRServer::HMRServer()
@@ -116,7 +102,7 @@ void HMRServer::watchFile_process(string dir_path) {
             }
 
             if (tmp->Action == FILE_ACTION_MODIFIED) {//判断文件发生变化具体的事件
-                string file_name = wstring2string(ws_file_name);//得到发生变化的文件名
+                string file_name = charCodec::utf16_to_utf8(ws_file_name);//得到发生变化的文件名
                 file_name = str::replace(file_name, "\\", "/");
 
 
@@ -161,6 +147,7 @@ void HMRServer::watchFile_process(string dir_path) {
     }
     CloseHandle(h_dir);
 #else
+/*
     int inotify_fd, wd;
     char buf[BUF_LEN];
     ssize_t num_read;
@@ -188,7 +175,7 @@ void HMRServer::watchFile_process(string dir_path) {
         p += sizeof(struct inotify_event) + event->len;
     }
 }
-close(inotify_fd);
+close(inotify_fd);*/
 #endif
 }
 

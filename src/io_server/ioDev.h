@@ -328,12 +328,12 @@ public:
 	//动态数据在修改时，不影响配置，因此不应当影响配置的读取
 	//
 	std::shared_mutex m_csThis;  //配置-静态-数据锁
-	map<DWORD,DWORD> m_mapConfLockSharedOwnerThread;
+	map<unsigned int,unsigned int> m_mapConfLockSharedOwnerThread;
 	std::shared_mutex m_csMapLock;
-	DWORD m_dwConfLockUniqueOwnerThread;
+	unsigned int m_dwConfLockUniqueOwnerThread;
 	void lock_conf_shared() { 
 #ifdef DEBUG
-		DWORD dw = GetCurrentThreadId();
+		unsigned int dw = GetCurrentThreadId();
 		m_csMapLock.lock();
 		m_mapConfLockSharedOwnerThread[dw] = dw;
 		m_csMapLock.unlock();
@@ -342,7 +342,7 @@ public:
 	}
 	void unlock_conf_shared() { 
 #ifdef DEBUG
-		DWORD dw = GetCurrentThreadId();
+		unsigned int dw = GetCurrentThreadId();
 		m_csMapLock.lock();
 		m_mapConfLockSharedOwnerThread.erase(dw);
 		m_csMapLock.unlock();
@@ -352,7 +352,7 @@ public:
 	void lock_conf_unique() {
 		m_csThis.lock(); 
 #ifdef DEBUG
-		DWORD dw = GetCurrentThreadId();
+		unsigned int dw = GetCurrentThreadId();
 		m_dwConfLockUniqueOwnerThread = dw;
 #endif
 	}
@@ -364,8 +364,8 @@ public:
 	}
 
 	std::recursive_timed_mutex m_csCommLock;  //运行时-动态-数据锁
-	DWORD m_dwCommLockOwnerThread;
-	DWORD m_dwLockThread;
+	uint32_t m_dwCommLockOwnerThread;
+	uint32_t m_dwLockThread;
 
 	json m_jAlarmStatus;
 	json m_jAcq;

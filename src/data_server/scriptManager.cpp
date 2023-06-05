@@ -90,6 +90,25 @@ void ScriptManager::updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScri
 	m_mapVarExpScripts = varExpScripts;
 }
 
+void scriptThreadTmp(string scriptName, string tagThis)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	unique_lock<mutex> lock(scriptManager.m_csScripts);
+	for (auto& i : scriptManager.m_mapScripts) {
+		map<string, SCRIPT_INFO>& mapSL = i.second;
+		for (auto& j : mapSL) {
+			SCRIPT_INFO& si = j.second;
+			if (si.name == scriptName) {
+				ScriptEngine se;
+				se.m_tagContext = tagThis;
+				se.runScript(si.script, si.lastModifyUser);
+				si.lastExe = timeopt::now();
+			}
+		}
+	}
+#endif
+}
+
 bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
 {
 #ifdef ENABLE_JERRY_SCRIPT
@@ -106,22 +125,7 @@ void scriptThread1(ScriptManager* p)
 	p->loopExe();
 }
 
-void scriptThreadTmp(string scriptName, string tagThis)
-{
-	unique_lock<mutex> lock(scriptManager.m_csScripts);
-	for (auto& i : scriptManager.m_mapScripts) {
-		map<string, SCRIPT_INFO>& mapSL = i.second;
-		for (auto& j : mapSL) {
-			SCRIPT_INFO& si = j.second;
-			if (si.name == scriptName) {
-				ScriptEngine se;
-				se.m_tagContext = tagThis;
-				se.runScript(si.script, si.lastModifyUser);
-				si.lastExe = timeopt::now();
-			}
-		}
-	}
-}
+
 
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
@@ -393,7 +397,7 @@ void ScriptManager::loopExe()
 			}
 		}
 
-		Sleep(50);
+		timeopt::sleepMilli(50);
 	}
 	loopRunning = false;
 }

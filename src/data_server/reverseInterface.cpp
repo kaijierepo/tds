@@ -122,7 +122,7 @@ void ReverseInterface::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 
 void tdsEdgeRegisterThread(std::shared_ptr<TDS_SESSION> p)
 {
-	Sleep(1000);
+	timeopt::sleepMilli(1000);
 	//向服务器发送注册包
 	json j;
 	j["method"] = "devRegister";
@@ -166,9 +166,9 @@ void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn
 
 		//删除推流客户端对象
 		m_csTcpClt_streamPusher.lock();
-		if (m_tcpClt_streamPusher.find(pTcpSess->tcpClt) != m_tcpClt_streamPusher.end()) {
-			m_tcpClt_streamPusher.erase(pTcpSess->tcpClt);
-			thread t(deleteTcpClt, pTcpSess->tcpClt);
+		if (m_tcpClt_streamPusher.find(pTcpSess->pTcpClt) != m_tcpClt_streamPusher.end()) {
+			m_tcpClt_streamPusher.erase(pTcpSess->pTcpClt);
+			thread t(deleteTcpClt, pTcpSess->pTcpClt);
 			t.detach();
 		}
 		m_csTcpClt_streamPusher.unlock();
@@ -180,7 +180,7 @@ void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn
 
 void streamPusherMng_thread() {
 	while (1) {
-		Sleep(2000);
+		timeopt::sleepMilli(2000);
 		vector<string> toErase;
 		prj.m_csPrj.lock_shared();
 		for (auto i : reverseInterface.m_mapPullerActive) {

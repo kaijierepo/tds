@@ -30,7 +30,7 @@ CWSPPkt::~CWSPPkt()
 
 bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 {
-	BYTE* frameData = (BYTE*)pBuf;
+	unsigned char* frameData = (unsigned char*)pBuf;
 	int len = iBufLen;
 	WS_FrameType ret = WS_ERROR_FRAME;
 
@@ -85,10 +85,10 @@ bool CWSPPkt::unpack(unsigned char* pBuf, int iBufLen, bool bGetCmdInfo)
 		}
 		else if (payloadLength == 0x7f)
 		{
-			UINT64 payloadLength64b = 0;
+			uint64_t payloadLength64b = 0;
 			payloadFieldExtraBytes = 8;
-			BYTE* pDest = (BYTE*)&payloadLength;
-			BYTE* pSrc = &frameData[2];
+			unsigned char* pDest = (unsigned char*)&payloadLength;
+			unsigned char* pSrc = &frameData[2];
 			for(int i=0;i<8;i++)
 			{
 				pDest[7-i]=pSrc[i];
