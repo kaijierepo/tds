@@ -4,7 +4,7 @@
 #include "ioDev.h"
 using json = nlohmann::json;
 
-namespace BYTE_ORDER {
+namespace MB_BYTE_ORDER {
 	const string bigEndian = "be";
 	const string littleEndian = "le";
 	const string bigEndianByteSwap = "bebs";
