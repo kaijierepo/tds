@@ -1663,8 +1663,56 @@ namespace fs {
 		return str;
 	}
 
+	string toAbsolutePath(string path, string currentPath) {
+		if (path.empty()) {
+			return currentPath;
+		}
+		if (currentPath.empty()) {
+			return path;
+		}
+		if (path[0] == '/') { //linux 
+			return path;
+		}
+		if (path.size() >= 2 && path[1] == ':') { //windows
+			return path;
+		}
+		string absPath = currentPath;
+		if (absPath.back() != '/') {
+			absPath += '/';
+		}
+		int i = 0;
+		while (i < path.size()) {
+			if (path[i] == '.') {
+				if (i + 1 == path.size() || path[i + 1] == '/') {
+					i += 2;
+					continue;
+				}
+				if (i + 2 == path.size() || (path[i + 1] == '.' && path[i + 2] == '/')) {
+					i += 3;
+					int j = absPath.size() - 2;
+					while (j >= 0 && absPath[j] != '/') {
+						--j;
+					}
+					absPath.erase(j + 1);
+					continue;
+				}
+			}
+			int j = i + 1;
+			while (j < path.size() && path[j] != '/') {
+				++j;
+			}
+			absPath += path.substr(i, j - i) + '/';
+			i = j + 1;
+		}
+		if (!absPath.empty() && absPath.back() == '/') {
+			absPath.pop_back();
+		}
+		return absPath;
+	}
+
 	string toAbsolutePath(string str)
 	{
+/*
 		char absPath[1024] = { 0 };
 #ifdef _WIN32
 		str = charCodec::tds_to_gb(str);
@@ -1676,6 +1724,9 @@ namespace fs {
 		realpath((char*)str.data(),absPath);
 #endif
 		return str;
+*/
+		string cP = fs::appPath();
+		return toAbsolutePath(str, cP);
 	}
 	string getExt(string strFilePath)
 	{

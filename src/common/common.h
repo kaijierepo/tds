@@ -346,6 +346,7 @@ namespace fs {
 	void createFolderOfPath(string strFile);
 	string appName();
 	string appPath();
+	string toAbsolutePath(string path, string currentPath);
 	string toAbsolutePath(string str);
 	string getExt(string strFilePath);
 	bool readFile(string path, char*& pData, int& len);

@@ -156,17 +156,17 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 	for (int i = 0; i < vecConf.size(); i++)
 	{
 		KV_CONF_ITEM& tci = vecConf[i];
-		if (checkKey(tci.key, "confpath"))
+		if (checkKey(tci.key, "confPath"))
 		{
 			confPath = tci.val;
 			confPath = fs::toAbsolutePath(confPath);
 		}
-		else if (checkKey(tci.key, "uipath"))
+		else if (checkKey(tci.key, "uiPath"))
 		{
 			uiPath = tci.val;
-			uiPath = fs::toAbsolutePath(uiPath);
+			uiPath = fs::toAbsolutePath(uiPath); 
 		}
-		else if (checkKey(tci.key, "dbpath")) {
+		else if (checkKey(tci.key, "dbPath")) {
 			dbPath = tci.val.c_str();
 			dbPath = fs::toAbsolutePath(dbPath);
 		}
@@ -174,10 +174,6 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			testToken = tci.val.c_str();
 		else if (checkKey(tci.key, "tokenExpireTime"))
 			tokenExpireTime = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "tcpkeepaliveio"))
-			tcpKeepAliveIO = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "tcpkeepaliveds"))
-			tcpKeepAliveDS = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutTdsp"))
 			iotimeoutTdsp = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutModbusRtu"))
@@ -198,21 +194,21 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			mbPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iq60Port"))
 			iq60Port = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "devreboottime"))
+		else if (checkKey(tci.key, "devRebootTime"))
 			devRebootTime = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "devcommreboottime"))
+		else if (checkKey(tci.key, "devCommRebootTime"))
 			devCommRebootTime = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "ui") && uiMode == "")
 			uiMode = tci.val;
-		else if ((checkKey(tci.key, "loglevel")) && logLevel == "")
+		else if ((checkKey(tci.key, "logLevel")) && logLevel == "")
 			logLevel = tci.val;
 		else if (checkKey(tci.key, "title") && title == "")
 			title = tci.val;
-		else if (checkKey(tci.key, "homepage") && homepage == "")
+		else if (checkKey(tci.key, "homePage") && homepage == "")
 			homepage = tci.val;
-		else if (checkKey(tci.key, "singlegenicamhost"))
+		else if (checkKey(tci.key, "singleGenicamHost"))
 			singleGenicamHost = tci.val == "1" ? true : false;
-		else if (checkKey(tci.key, "authdownload"))
+		else if (checkKey(tci.key, "authDownload"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				authDownload = true;
@@ -240,61 +236,54 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			else if (tci.val == "false" || tci.val == "0")
 				bCreateDumpWhenLogError = false;
 		}
-		else if (checkKey(tci.key, "enablelog"))
+		else if (checkKey(tci.key, "enableLog"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableLog = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableLog = false;
 		}
-		else if (checkKey(tci.key, "enabledevreboot"))
+		else if (checkKey(tci.key, "enableDevReboot"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDevReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevReboot = false;
 		}
-		else if (checkKey(tci.key, "enabledevcommreboot"))
+		else if (checkKey(tci.key, "enableDevCommReboot"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDevCommReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevCommReboot = false;
 		}
-		else if (checkKey(tci.key, "enabledb"))
+		else if (checkKey(tci.key, "enableDB"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableDB = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDB = false;
 		}
-		else if (checkKey(tci.key, "enableaccessctrl"))
+		else if (checkKey(tci.key, "enableAccessCtrl"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableAccessCtrl = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableAccessCtrl = false;
 		}
-		else if (checkKey(tci.key, "enablescript"))
+		else if (checkKey(tci.key, "enableScript"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableScript = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableScript = false;
 		}
-		else if (checkKey(tci.key, "enableglobalalarm"))
+		else if (checkKey(tci.key, "enableGlobalAlarm"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				enableGlobalAlarm = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableGlobalAlarm = false;
-		}
-		else if (checkKey(tci.key, "edge"))
-		{
-			if (tci.val == "true" || tci.val == "1")
-				edge = true;
-			else if (tci.val == "false" || tci.val == "0")
-				edge = false;
 		}
 		else if (checkKey(tci.key, "cloudIP"))
 		{
@@ -308,7 +297,7 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		{
 			cloudPort = atoi(tci.val.c_str());
 		}
-		else if (checkKey(tci.key, "fullscreen"))
+		else if (checkKey(tci.key, "fullScreen"))
 		{
 			if (tci.val == "true" || tci.val == "1")
 				fullscreen = true;
