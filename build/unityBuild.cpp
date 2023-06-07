@@ -1,3 +1,4 @@
+#include "../src/tds.cpp"
 #include "../src/common/base64.c"
 #include "../src/common/common.cpp"
 #include "../src/common/kvIni.cpp"
@@ -40,7 +41,6 @@
 #include "../src/io_server/wsProto.cpp"
 #include "../src/main.cpp"
 #include "../src/pch.cpp"
-#include "../src/tds.cpp"
 #include "../src/tds_imp.cpp"
 #include "../src/test.cpp"
 #include "../tdspro/func_module/aliDDNS.cpp"

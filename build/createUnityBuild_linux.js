@@ -35,7 +35,11 @@ function getAllCpp(filePath){
             continue;
             if(cppPath.indexOf("out") > 0)
             continue;
-            if(cppPath.indexOf(".cpp") > 0)
+
+            if(cppPath.indexOf("pch.cpp")){ //pch放在最前面编译，里面的 tds 全局指针变量先初始化
+                allCpp.unshift(cppPath);
+            }
+            else if(cppPath.indexOf(".cpp") > 0)
             {
                 allCpp.push(cppPath);
             }  

@@ -74,7 +74,7 @@ void chromeThread()
 	string chromeParam = "";
 	if (tds->conf->fullscreen)
 		chromeParam += " --kiosk";
-	chromeParam += " --app=\"" + getTds()->conf->homepage + "\"";
+	chromeParam += " --app=\"" + tds->conf->homepage + "\"";
 	if (fs::fileExist(chromePath))
 	{
 		chromePath += chromeParam;

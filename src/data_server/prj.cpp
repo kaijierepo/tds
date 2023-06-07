@@ -54,7 +54,7 @@ MP* project::createMP(string tag,string valType)
 bool project::loadConfFile()
 {
 	string& conf = m_strMoTree;
-	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf))
+	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf)) 
 	{
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
 		m_name = "empty project";

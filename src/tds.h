@@ -548,11 +548,9 @@ public:
 	map<string, fp_toolRun> tools;
 };
 
-i_tds* getTds();
-
 #ifdef TDSDLL
 typedef i_tds* (*fp_getTds)();
 i_tds* getITDS();
 #endif
 
-#define tds getTds()
+extern i_tds* tds;
