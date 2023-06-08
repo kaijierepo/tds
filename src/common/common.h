@@ -72,6 +72,15 @@ struct TIME {
 		memset(this, 0, sizeof(this));
 	}
 
+	void initAsInvalid() {
+		memset(this, 0, sizeof(this));
+	}
+
+	bool isValid() {
+		if (wYear > 0)
+			return true;
+	}
+
 	void setDate(Date t);
 	void setHMS(HMS t);
 

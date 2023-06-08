@@ -74,7 +74,6 @@ public:
 	bool loadObjTemplate();
 	void setObjTemplate(json& params);
 	void getAllVarExpScript();
-	bool loadObjTreeStatus(json& rlt, string rootTag);
 	map<string, OBJ_TEMPLATE*> m_mapObjTempalte;
 
 	bool openStream(string tag,string pushTo = "");

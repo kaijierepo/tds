@@ -220,6 +220,7 @@ bool ioDev_tdsp::handle_AcqOrInput(json chanData) {
 		unlock_conf_unique();
 	}
 	//树形输入.设备本身也通过 树状位号模式来管理通道，直接转发到数据服务
+	//子服务首次连接发送 acq命令，子服务 首次返回树形全部实时值
 	else if (chanData.contains("name")) {
 		syncDataToBindTag();
 	}
@@ -1011,6 +1012,15 @@ void ioDev_tdsp::onEvent_online()
 	}*/
 
 	if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+		/*
+			等效于如下查询，首次返回树形全部实时值
+			OBJ_QUERIER query;
+			query.getConf = false;
+			query.getStatus = true;
+			query.getChild = true;
+			query.getMp = true;
+			prj.toJson(j, query);
+		*/
 		json jReq, jParam;
 		jReq["method"] = "acq";
 		jReq["params"] = jParam;

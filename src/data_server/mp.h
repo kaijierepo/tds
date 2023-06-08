@@ -66,7 +66,7 @@ public:
 	bool toJson(json& conf, OBJ_QUERIER q) override;
 	string getValDesc(json& jVal, bool getUnit = true);
 	bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(OBJ* pSrc,TIME* dataTime = nullptr, bool saveToDB = true) override;
+	bool loadStatus(OBJ* pSrc) override;
 	void calcAlarm();
 public:
 	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
@@ -143,10 +143,15 @@ public:
 	string m_secret;
 
 	//状态
+	// hasValue = true 表示有一个值被写入,lastUpdateTime有效,m_curVal可以为null。(当数据超出有效范围时，curVal将等于null，并且这是一个有意义的null值，该值应当被记录入数据库,同时可以将orgVal记录到数据库)
+	// hasValue = false 表示从没有收到过数据。lastUpdateTime为无效。
+	// curValValid = true 表示 m_curVal!=null
+	// curValValid = false 表示 m_curVal==null
 	json m_orgVal;
-	json m_curVal;
+	json m_curVal;   
 	json m_lastVal;
 	TIME m_lastSaveTime;
+	bool hasValue();
 
 	//推拉流
 	vector<std::shared_ptr<TDS_SESSION>> m_vecPuller;

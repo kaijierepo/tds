@@ -92,21 +92,13 @@ void ScriptManager::updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScri
 
 void scriptThreadTmp(string scriptName, string tagThis)
 {
-#ifdef ENABLE_JERRY_SCRIPT
-	unique_lock<mutex> lock(scriptManager.m_csScripts);
-	for (auto& i : scriptManager.m_mapScripts) {
-		map<string, SCRIPT_INFO>& mapSL = i.second;
-		for (auto& j : mapSL) {
-			SCRIPT_INFO& si = j.second;
-			if (si.name == scriptName) {
-				ScriptEngine se;
-				se.m_tagContext = tagThis;
-				se.runScript(si.script, si.lastModifyUser);
-				si.lastExe = timeopt::now();
-			}
-		}
+	SCRIPT_INFO si;
+	if (scriptManager.getScript(scriptName, si)) {
+		ScriptEngine se;
+		se.m_tagContext = TAG::addRoot(si.rootTag,tagThis);
+		se.runScript(si.script, si.lastModifyUser);
+		si.lastExe = timeopt::now();
 	}
-#endif
 }
 
 bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
@@ -125,6 +117,23 @@ void scriptThread1(ScriptManager* p)
 	p->loopExe();
 }
 
+
+bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
+#ifdef ENABLE_JERRY_SCRIPT
+	unique_lock<mutex> lock(scriptManager.m_csScripts);
+	for (auto& i : scriptManager.m_mapScripts) {
+		map<string, SCRIPT_INFO>& mapSL = i.second;
+		for (auto& j : mapSL) {
+			SCRIPT_INFO& si = j.second;
+			if (si.name == name) {
+				sInfo = si;
+				return true;
+			}
+		}
+	}
+	return false;
+#endif
+}
 
 
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
@@ -147,27 +156,21 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	//执行保存的脚本文件
 	else {
 		string scriptName = params["name"].get<string>();
-		string scriptPath = getScriptPath(params, session) + "/" + scriptName + ".js";
-
-		string script;
-		fs::readFile(scriptPath, script);
-		if (script.length() > 0)
-		{
+		SCRIPT_INFO si;
+		if (getScript(scriptName, si)) {
 			ScriptEngine se;
-			se.currentSession = session;
-			if (se.runScript(script,session.user))
-			{
+			se.m_tagContext = si.rootTag;
+			if (se.runScript(si.script, si.lastModifyUser)) {
 				rpcResp.result = "\"ok\"";
 			}
-			else
-			{
+			else {
 				json jError = "run fail";
 				rpcResp.error = jError.dump();
 			}
+			si.lastExe = timeopt::now();
 		}
-		else
-		{
-			json jError = "script not found";
+		else {
+			json jError = "specified script not found";
 			rpcResp.error = jError.dump();
 		}
 	}
@@ -421,6 +424,7 @@ void SCRIPT_INFO::toJson(json& j)
 	jIter["sec"] = sec;
 	jIter["milli"] = milli;
 	j["interval"] = jIter;
+	j["rootTag"] = rootTag;
 }
 
 void SCRIPT_INFO::fromJson(json& j)
@@ -438,6 +442,9 @@ void SCRIPT_INFO::fromJson(json& j)
 
 	if(j.contains("desc"))
 		desc = j["desc"];
+
+	if (j.contains("rootTag"))
+		rootTag = j["rootTag"];
 
 	if (j.contains("interval")) {
 		json jInter = j["interval"];

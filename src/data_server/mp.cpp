@@ -16,7 +16,7 @@
 MP::MP()
 {
 	m_type = "mp";
-	timeopt::setAsTimeOrg(m_stDataLastUpdate);
+	m_stDataLastUpdate.initAsInvalid();
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	//timeopt::setAsTimeOrg(m_stLastSampleTime);
 	m_K = 1;
@@ -183,10 +183,8 @@ bool MP::loadConf(json& conf)
 			m_defaultVal = strVal2Val(conf["defaultVal"].dump());
 		}
 
-		if (!m_defaultVal.empty())
-		{
+		if (m_defaultVal != nullptr && m_curVal == nullptr) {
 			m_curVal = m_defaultVal;
-			timeopt::now(&m_stDataLastUpdate);
 		}
 	}
 
@@ -521,25 +519,19 @@ string MP::getValDesc(bool getUnit) {
 	return getValDesc(m_curVal, getUnit);
 }
 
-bool MP::loadStatus(OBJ* pSrc, TIME* dataTime , bool saveDB)
+bool MP::loadStatus(OBJ* pSrc)
 {
 	string tag = getTag();
 	MP* ptmp = pSrc->GetMPByTag(tag);
 	if (ptmp) {
 		//常量类型无需加载状态
 		if (ptmp->m_ioType != "c") {
-			m_lastVal = m_curVal;
-			m_curVal = ptmp->m_curVal;
-			if (dataTime != nullptr)
-				m_stDataLastUpdate = *dataTime;
-			else
-				m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
-
-			m_mpStatus = ptmp->m_mpStatus;
-
-			if (saveDB && needSaveToDB()) {
-				saveToDB();
+			m_lastVal = ptmp->m_lastVal;
+			if (ptmp->hasValue()) {
+				m_curVal = ptmp->m_curVal;
 			}
+			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
+			m_mpStatus = ptmp->m_mpStatus;
 		}
 	}
 	else
@@ -913,6 +905,11 @@ int MP::getSaveInterval()
 {
 	int si = m_saveInterval.hour * 60 * 3600 + m_saveInterval.minute * 60 + m_saveInterval.second;
 	return si;
+}
+
+bool MP::hasValue()
+{
+	return m_stDataLastUpdate.isValid();
 }
 
 json MP::getRTData(string root, bool bValOnly)

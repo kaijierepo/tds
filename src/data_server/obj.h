@@ -173,7 +173,7 @@ public:
 	virtual bool loadStatus(json& status);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier);
 	virtual bool toJson(json& conf, json serializeOption);
-	virtual bool loadStatus(OBJ* pMo,TIME* dataTime = nullptr,bool saveToDB = false);
+	virtual bool loadStatus(OBJ* pMo);
 
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
 

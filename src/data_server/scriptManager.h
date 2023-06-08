@@ -14,7 +14,9 @@ using namespace std;
 
 struct SCRIPT_INFO {
 	string script;
-	string tagThis;
+	string tagThis;  // tagThis = envTag + rootTag
+	string envTag;   //当计划任务中的对象执行某个脚本时，对象的位号变成为环境位号
+	string rootTag;  //脚本配置时指定的根位号
 	string mode;
 	int interval;
 	TIME lastExe;
@@ -44,6 +46,7 @@ public:
 	std::mutex m_csExpScripts;
 
 	bool runScriptFileAsyn(string scriptName,string tagThis);
+	bool getScript(string name, SCRIPT_INFO& si);
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);

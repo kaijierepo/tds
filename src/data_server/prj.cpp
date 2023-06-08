@@ -265,22 +265,6 @@ void project::getAllVarExpScript()
 }
 
 
-bool project::loadObjTreeStatus(json& rlt, string rootTag) {
-	shared_lock<shared_mutex> lock(m_csPrj);
-	OBJ* pMO = prj.queryObj(rootTag);
-	if (pMO) {
-		project prjTmp;
-		prjTmp.loadConf(rlt);
-		prjTmp.m_rootTag = rootTag; //使得prjTmp	返回的tag都加上rootTag
-		TIME stNow;
-		timeopt::now(&stNow);
-		//此处不再保存到数据库，第3个参数需要重构掉
-		pMO->loadStatus(&prjTmp, &stNow, false);
-		pMO->m_bOnline = true;//子服务根节点不携带online字段，收到数据一定online，此处直接置为online
-	}
-	return true;
-}
-
 bool project::openStream(string tag, string pushTo)
 {
 	MP* pmp = prj.GetMPByTag(tag);
