@@ -108,6 +108,14 @@ bool ScriptEngine::initGlobalFunc()
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 	
+	//getObj
+	property_name = jerry_create_string((const jerry_char_t*)"parseTag");
+	property_func = jerry_create_external_function(func_parseTag);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
 
 	return true;
 }
@@ -170,6 +178,7 @@ jerry_context_t* jerry_port_get_current_context(void)
 
 bool ScriptEngine::runScript(string& script, string user)
 {
+	m_script = script;
 	m_user = user;
 	vector<string> lines;
 	//script = str::replace(script, "\r\n", "\n");

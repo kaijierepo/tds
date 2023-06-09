@@ -218,8 +218,11 @@ jerry_value_t func_input(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() == 2)
 	{
+		string sTag = jArgs[0].get<string>();
+		sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+
 		json jParams;
-		jParams["tag"] = jArgs[0];
+		jParams["tag"] = sTag;
 		jParams["val"] = jArgs[1];
 
 		RPC_SESSION session;
@@ -286,6 +289,26 @@ jerry_value_t func_sleep(const jerry_call_info_t* call_info_p,
 	{
 		int milli = jArgs[0].get<int>();
 		timeopt::sleepMilli(milli);
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+jerry_value_t func_parseTag(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() > 0)
+	{
+		string tag = jArgs[0].get<string>();
+		string sTag = TAG::resolveTag(tag, pEngine->m_tagContext);
+		json jTag = sTag;
+		jerry_value_t obj;
+		jsonVal2jerryVal(jTag, obj);
+		return obj;
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -401,7 +424,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 		json tag = jArgs[0];
 		if (tag.is_string()) { 
 			string sTag = tag.get<string>();
-			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);  
 			if (jArgs.size() == 1) {
 				json params;
 				params["tag"] = sTag;
@@ -416,7 +439,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					return jerryVal;
 				}
 				else {
-					LOG("[脚本引擎] 函数 val 执行错误,getMp返回结果为null或者不包含val字段");
+					LOG("[脚本引擎] 函数 val 执行错误,getMp返回结果为null或者不包含val字段.\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", pEngine->m_tagContext.c_str(),pEngine->m_user.c_str(), pEngine->m_script.c_str());
 				}
 			}
 			//取历史值

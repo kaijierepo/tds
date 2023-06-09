@@ -591,6 +591,7 @@ bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION sessi
 		json rlt;
 		rlt["token"] = aiTmp.token;
 		rlt["tokenExpire"] = aiTmp.age;
+		rlt["tokenCreateTime"] = timeopt::st2str(aiTmp.stCreate);
 		resp.result = rlt.dump();
 		changed = true;
 	}

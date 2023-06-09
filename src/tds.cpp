@@ -46,6 +46,15 @@ string TAG::trimRoot(string tag, string root)
 	return tag;
 }
 
+string TAG::getParentTag(string tag)
+{
+	size_t pos = tag.rfind(".");
+	if (pos >= 0) {
+		tag = tag.substr(0, pos);
+	}
+	return tag;
+}
+
 string TAG::userTag2sysTag(string userTag, string userOrg)
 {
 	return TAG::addRoot(userTag, userOrg);
@@ -128,62 +137,28 @@ json TAG::mapTree2List(json mapTree)
 string TAG::resolveTag(string strTagExp, string tagContext)
 {
 	string tagName = strTagExp;
-	//this的解析，this后面可能带 .std 等后缀
-	if (strTagExp.find("this") != string::npos)
-	{
-		tagName = str::replace(tagName, "this", tagContext);
-	}
-	//解析仅名字的情况，等效于 ./XXX（使用当前监测点的父监测对象组成完整名字）
-	else if (strTagExp.find(".") == string::npos && strTagExp.find("*") == string::npos && tagContext != "")
-	{
-		tagName = tagContext + "." + strTagExp;
-	}
-	//使用相对位号的格式 ./或者../ ,./表示环境位号（父mo的位号）,../表示环境位号向上一级
-	else if (strTagExp.find("./") != string::npos || strTagExp.find(".\\") != string::npos || strTagExp.find("..") != string::npos)
-	{
-		//替换../   ../必须也只能写前边
-		string strTagContext; //父监测对象的tag
-		size_t iPos = strTagContext.rfind('.');
-		if (iPos <= 0)return "";
-		strTagContext = strTagContext.substr(0, iPos);
-		string tag = strTagContext;
-		string rtag = strTagExp;
-		//先规范化 替换\为/  替换\\为/  
-		rtag = str::replace(rtag, "\\", "/");
-		rtag = str::replace(rtag, "\\\\", "/");
 
-		while (1) {
-			size_t ipos = rtag.find("../");
-			if (ipos != string::npos) {
-				size_t dotPos = tag.rfind(".");
-				if (dotPos != string::npos) {
-					tag = tag.substr(0, dotPos);
-				}
-				else {
-					return "";
-				}
-				rtag = rtag.substr(ipos + 3);
-			}
-			else {
-				break;
-			}
-		}
-		//替换./
-		rtag = str::replace(rtag, "./", "");
 
-		if (rtag.length() > 0)
-			tag = tag + "." + rtag;
-		tagName = tag;
-	}
-	//位号全名
-	else
-	{
-		if (strTagExp.find(".") == string::npos)//仅指定name
-		{
-			tagName = TAG::addRoot(tagName, tagContext);
+	if (strTagExp.find("..") == 0) { //上一级位号
+		string tagContextParent;
+		size_t pos = tagContext.rfind(".");
+		if (pos >= 0) {
+			tagContextParent = tagContext.substr(0, pos);
 		}
-		else
-			tagName = strTagExp;
+
+
+		tagName = str::trimPrefix(strTagExp, "..");
+
+		if (tagContextParent != "") {
+			tagName = tagContextParent + "." + tagName;
+		}
+	}
+	else if (strTagExp.find(".") == 0) //绝对位号
+	{
+		tagName = str::trimPrefix(strTagExp, ".");
+	}
+	else {//相对于环境位号的位号
+		tagName = TAG::addRoot(strTagExp, tagContext);
 	}
 
 	return tagName;

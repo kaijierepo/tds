@@ -20,42 +20,28 @@ ScriptManager::ScriptManager()
 
 bool ScriptManager::init()
 {
-	string conf;
-	vector<fs::FILE_INFO> sIndexFiles;
-	fs::getFileList(sIndexFiles, tds->conf->confPath + "/scripts",true,true,".json");
-
 	unique_lock<mutex> lock(m_csScripts);
-	for (int i = 0; i < sIndexFiles.size(); i++)
+
+	string sScriptList;
+	if (fs::readFile(tds->conf->confPath + "/scripts/list.json", sScriptList))
 	{
-		fs::FILE_INFO fi = sIndexFiles[i];
-		string sScriptList;
-		if (fs::readFile(fi.path, sScriptList))
-		{
-			//根据路径获取组织结构
-			string org = str::trimPrefix(fi.path,tds->conf->confPath + "/scripts/");
-			org = str::trimSuffix(org, "list.json");
-			org = str::trimSuffix(org, "/");
-			//加载一个组织结构下的所有脚本文件
-			json jSL = json::parse(sScriptList);
-			map<string, SCRIPT_INFO> mapScriptList;
-			for (int i = 0; i < jSL.size(); i++) {
-				json jInfo = jSL[i];
-				SCRIPT_INFO si;
-				si.lastExe = timeopt::now();
-				si.fromJson(jInfo);
-				string scriptFilePath = fi.folderPath + "/" + si.name +".js";
-				string scriptData;
-				if (fs::readFile(scriptFilePath, scriptData)) {
-					si.script = scriptData;
-					mapScriptList[si.name] = si;
-				}
-				else {
-					continue;
-					LOG("[error]加载脚本文件失败," + scriptFilePath);
-				}
-	
+		json jSL = json::parse(sScriptList);
+		for (int i = 0; i < jSL.size(); i++) {
+			json jInfo = jSL[i];
+			SCRIPT_INFO si;
+			si.lastExe = timeopt::now();
+			si.fromJson(jInfo);
+			string scriptFilePath = tds->conf->confPath + "/scripts/" + si.name +".js";
+			string scriptData;
+			if (fs::readFile(scriptFilePath, scriptData)) {
+				si.script = scriptData;
+				m_mapScripts[si.name] = si;
 			}
-			m_mapScripts[org] = mapScriptList;
+			else {
+				continue;
+				LOG("[error]加载脚本文件失败," + scriptFilePath);
+			}
+	
 		}
 	}
 	return true;
@@ -77,25 +63,27 @@ bool ScriptManager::hasScripts()
 	}
 	{
 		unique_lock<mutex> lock(m_csExpScripts);
-		if (m_mapVarExpScripts.size() > 0)
+		if (m_vecVarExpScripts.size() > 0)
 			return true;
 	}
 	return false;
 }
 
-void ScriptManager::updateVarExpScript(std::map<string, SCRIPT_INFO>& varExpScripts)
+void ScriptManager::updateVarExpScript(vector<SCRIPT_INFO>& varExpScripts)
 {
 	unique_lock<mutex> lock(m_csExpScripts);
-	m_mapVarExpScripts.clear();
-	m_mapVarExpScripts = varExpScripts;
+	m_vecVarExpScripts.clear();
+	m_vecVarExpScripts = varExpScripts;
 }
 
-void scriptThreadTmp(string scriptName, string tagThis)
+void scriptThreadTmp(string scriptName, string callerObjTag)
 {
 	SCRIPT_INFO si;
 	if (scriptManager.getScript(scriptName, si)) {
+		si.callerObjTag = callerObjTag;
+
 		ScriptEngine se;
-		se.m_tagContext = TAG::addRoot(si.rootTag,tagThis);
+		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 		si.lastExe = timeopt::now();
 	}
@@ -122,13 +110,10 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 #ifdef ENABLE_JERRY_SCRIPT
 	unique_lock<mutex> lock(scriptManager.m_csScripts);
 	for (auto& i : scriptManager.m_mapScripts) {
-		map<string, SCRIPT_INFO>& mapSL = i.second;
-		for (auto& j : mapSL) {
-			SCRIPT_INFO& si = j.second;
-			if (si.name == name) {
-				sInfo = si;
-				return true;
-			}
+		SCRIPT_INFO& si = i.second;
+		if (si.name == name) {
+			sInfo = si;
+			return true;
 		}
 	}
 	return false;
@@ -142,7 +127,13 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	if (params["script"] != nullptr) {
 		string s = params["script"];
 
+		SCRIPT_INFO si;
+		si.org = session.org;
+		if (params.contains("rootTag"))
+			si.rootTag = params["rootTag"];
+
 		ScriptEngine se;
+		se.m_tagContext = si.getContextTag();
 		se.runScript(s,session.user);
 
 		json jOutput = json::array();
@@ -159,7 +150,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
 			ScriptEngine se;
-			se.m_tagContext = si.rootTag;
+			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {
 				rpcResp.result = "\"ok\"";
 			}
@@ -181,13 +172,14 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	unique_lock<mutex> lock(m_csScripts);
-	string orgKey = str::replace(session.org, ".", "/");
 	json j = json::array();
-	std::map<string, std::map<string, SCRIPT_INFO>>::iterator iter = m_mapScripts.find(orgKey);
-	if (iter != m_mapScripts.end()) {
-		std::map<string, SCRIPT_INFO>& sl = iter->second;
-
-		scriptList2Json(session.org, sl, j);
+	for (auto& i : m_mapScripts) {
+		SCRIPT_INFO& si = i.second;
+		if (si.org.find(session.org) != 0)
+			continue;
+		json jSi;
+		si.toJson(jSi);
+		j.push_back(jSi);
 	}
 	rpcResp.result = j.dump(2);
 	return true;
@@ -196,16 +188,10 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	unique_lock<mutex> lock(m_csScripts);
-	string orgKey = str::replace(session.org, ".", "/");
-	json j = json::array();
-	std::map<string, std::map<string, SCRIPT_INFO>>::iterator iter = m_mapScripts.find(orgKey);
-	if (iter != m_mapScripts.end()) {
-		std::map<string, SCRIPT_INFO>& sl = iter->second;
-		string name = params["name"].get<string>();
-		sl.erase(name);
-		saveScriptList(session.org, sl);
-		fs::deleteFile(tds->conf->confPath + "/scripts/" + orgKey + "/" + name + ".js");
-	}
+	string name = params["name"].get<string>();
+	m_mapScripts.erase(name);
+	saveScriptList("", m_mapScripts);
+	fs::deleteFile(tds->conf->confPath + "/scripts/" + name + ".js");
 	rpcResp.result = "\"ok\"";
 	return true;
 }
@@ -252,23 +238,15 @@ bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	unique_lock<mutex> lock(m_csScripts);
-	string orgKey = str::replace(session.org, ".", "/");
-
-	if (m_mapScripts.find(orgKey) == m_mapScripts.end()) {
-		std::map<string, SCRIPT_INFO> ls;
-		m_mapScripts[orgKey] = ls;
-	}
-
-	std::map<string, SCRIPT_INFO>& ls = m_mapScripts[orgKey];
 
 	string name = params["info"]["name"];
 
-	if (ls.find(name) == ls.end()) {
+	if (m_mapScripts.find(name) == m_mapScripts.end()) {
 		SCRIPT_INFO si;
-		ls[name] = si;
+		m_mapScripts[name] = si;
 	}
 
-	SCRIPT_INFO& si = ls[name];
+	SCRIPT_INFO& si = m_mapScripts[name];
 
 	//支持局部更新，info当中可以只包含1，2个需要修改的字段
 	si.fromJson(params["info"]);
@@ -276,13 +254,13 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 	//保存脚本代码
 	if (params.contains("code")) {
-		string codePath = tds->conf->confPath + "/scripts/" + orgKey + "/" + si.name + ".js";
+		string codePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
 		string s = params["code"].get<string>();
 		fs::writeFile(codePath, s);
 		si.script = s;
 	}
 
-	saveScriptList(session.org, ls);
+	saveScriptList("", m_mapScripts);
 
 	rpcResp.result = RPC_OK;
 
@@ -323,18 +301,24 @@ json ScriptManager::getScriptList(string tag)
 
 void ScriptManager::exeAllGlobalScripts()
 {
-	unique_lock<mutex> lock(m_csScripts);
+	//获取所有需要执行的脚本
+	vector<SCRIPT_INFO> toExeScripts;
+	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
-		map<string,SCRIPT_INFO>& mapSL = i.second;
-		for (auto& j : mapSL) {
-			SCRIPT_INFO& si = j.second;
-			if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
-				ScriptEngine se;
-				se.m_tagContext = si.tagThis;
-				se.runScript(si.script,si.lastModifyUser);
-				si.lastExe = timeopt::now();
-			}
+		SCRIPT_INFO& si = i.second;
+		if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
+			toExeScripts.push_back(si);
+			si.lastExe = timeopt::now();
 		}
+	}
+	m_csScripts.unlock();
+
+	//执行脚本(执行脚本时，不要占用 m_csScripts锁)
+	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
+	for (auto& si : toExeScripts) {
+		ScriptEngine se;
+		se.m_tagContext = si.getContextTag();
+		se.runScript(si.script, si.lastModifyUser);
 	}
 }
 /*
@@ -346,22 +330,21 @@ void ScriptManager::exeAllGlobalScripts()
 */
 void ScriptManager::exeAllVarExpScripts()
 {
-	unique_lock<mutex> lock(m_csExpScripts);
-	for (auto& i : m_mapVarExpScripts)
-	{
-		SCRIPT_INFO& info = i.second;
+	//获取所有需要执行的脚本
+	//计算表达式脚本都是立即执行的，里面一定没有sleep或者output一类的延时函数，因此以下脚本的执行时间可以认为一致
+	vector<SCRIPT_INFO> toExeScripts;
+	m_csExpScripts.lock();
+	toExeScripts = m_vecVarExpScripts;
+	m_csExpScripts.unlock();
+
+	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
+	for (auto& info : toExeScripts) {
 		string& script = info.script;
 
 		ScriptEngine se;
-		size_t pos = info.tagThis.rfind(".");
-		if (pos == string::npos)
-			continue;
-
-
-
-		se.m_tagContext = info.tagThis.substr(0,pos); //tagThis的父位号作为context位号
+		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
-		se.runScript(script,info.lastModifyUser);
+		se.runScript(script, info.lastModifyUser);
 
 		if (se.m_bValNullInCalc) {
 			//如果val函数返回null并且参与了计算，本次计算无效
@@ -372,7 +355,7 @@ void ScriptManager::exeAllVarExpScripts()
 		{
 			double val = se.m_jEvalRet.get<double>();
 			json jParams;
-			jParams["tag"] = i.first;
+			jParams["tag"] = info.calcMpTag;
 			jParams["val"] = val;
 			tds->callAsyn("input", jParams);
 		}
@@ -393,7 +376,7 @@ void ScriptManager::loopExe()
 
 		exeAllGlobalScripts();
 
-		if (m_mapVarExpScripts.size() > 0) {
+		if (m_vecVarExpScripts.size() > 0) {
 			if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
 				exeAllVarExpScripts();
 				lastExe2 = timeopt::now();
@@ -407,6 +390,14 @@ void ScriptManager::loopExe()
 
 
 #endif
+
+string SCRIPT_INFO::getContextTag()
+{
+	string envTag = rootTag;
+	envTag = TAG::addRoot(envTag, callerObjTag);
+	envTag = TAG::addRoot(envTag, org);
+	return envTag;
+}
 
 void SCRIPT_INFO::toJson(json& j)
 {

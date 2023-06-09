@@ -79,6 +79,7 @@ struct TIME {
 	bool isValid() {
 		if (wYear > 0)
 			return true;
+		return false;
 	}
 
 	void setDate(Date t);

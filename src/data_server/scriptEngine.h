@@ -30,6 +30,7 @@ public:
 	string m_user; //执行脚本的用户，根据该用户权限控制该脚本的权限
 	jerry_value_t global_object;
 	vector<GLOBAL_FUNC> m_vecGlobalFunc;
+	string m_script;
 
 	RPC_SESSION currentSession;
 	//脚本执行结果

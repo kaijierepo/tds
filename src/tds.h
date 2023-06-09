@@ -53,6 +53,7 @@ using json = nlohmann::json;
 namespace TAG {
 	string resolveTag(string strTagExp, string tagThis);
 	string trimRoot(string tag, string root);
+	string getParentTag(string tag); //获取当前位号的父节点的位号
 	string userTag2sysTag(string userTag, string userOrg);
 	string sysTag2userTag(string sysTag, string userOrg);
 	string addRoot(string tag, string root);

@@ -248,7 +248,7 @@ void project::setObjTemplate(json& params)
 
 void project::getAllVarExpScript()
 {
-	std::map<string, SCRIPT_INFO> expScripts;
+	vector<SCRIPT_INFO> expScripts;
 	expScripts.clear();
 	std::vector<MP*> aryMP;
 	prj.GetAllChildMp(aryMP);
@@ -257,8 +257,8 @@ void project::getAllVarExpScript()
 		if (p->m_ioType == "v" && p->m_expression != "") {
 			SCRIPT_INFO i;
 			i.script = p->m_expression;
-			i.tagThis = p->getTag();
-			expScripts[p->getTag()] = i;
+			i.callerObjTag = TAG::getParentTag(p->getTag()); //计算表达式的脚本，相当于该监控点的父节点作为callerObj调用该脚本
+			expScripts.push_back(i);
 		}
 	}
 	scriptManager.updateVarExpScript(expScripts);

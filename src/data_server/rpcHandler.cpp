@@ -2777,13 +2777,16 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		json jStatusNotify;
 		json jUpdateTags = json::array();
 		json jUpdateVals = json::array();
+		json jUpdateValDescs = json::array();
 		for (int i = 0; i < vecMps.size(); i++) {
 			MP* pmp = vecMps[i];
 			jUpdateTags.push_back(pmp->getTag());
 			jUpdateVals.push_back(pmp->m_curVal);
+			jUpdateValDescs.push_back(pmp->getValDesc(true));
 		}
 		jStatusNotify["tag"] = jUpdateTags;
 		jStatusNotify["val"] = jUpdateVals;
+		jStatusNotify["valDesc"] = jUpdateValDescs;
 		jStatusNotify["time"] = time;
 		rpcSrv.notify("statusUpdate", jStatusNotify);
 
