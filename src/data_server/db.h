@@ -103,7 +103,6 @@ public:
 	//选出的位号列表
 	vector<string> tagSet;
 
-
 };
 
 

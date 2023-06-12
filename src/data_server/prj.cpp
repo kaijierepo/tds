@@ -257,7 +257,8 @@ void project::getAllVarExpScript()
 		if (p->m_ioType == "v" && p->m_expression != "") {
 			SCRIPT_INFO i;
 			i.script = p->m_expression;
-			i.callerObjTag = TAG::getParentTag(p->getTag()); //计算表达式的脚本，相当于该监控点的父节点作为callerObj调用该脚本
+			i.calcMpTag = p->getTag();
+			i.callerObjTag = TAG::getParentTag(i.calcMpTag); //计算表达式的脚本，相当于该监控点的父节点作为callerObj调用该脚本
 			expScripts.push_back(i);
 		}
 	}

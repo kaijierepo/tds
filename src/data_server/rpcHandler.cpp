@@ -2339,9 +2339,9 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			
 		//验证token
 		if (bAccessCtrl) {
-			if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr)
+			if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr && jReq["pwd"] == nullptr)
 			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token.");
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
 				goto HANDLE_END;
 			}
 
@@ -2355,6 +2355,18 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				{
 					//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
 					rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
+					goto HANDLE_END;
+				}
+			}
+
+			//允许直接输入密码访问，主要是方便api接口测试的场景。生产环境不应当使用该字段
+			if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
+			{
+				string pwd = jReq["pwd"].get<string>();
+				string user = pSession->user;
+				if (!userMng.checkPwd(user, pwd))
+				{
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid password");
 					goto HANDLE_END;
 				}
 			}
@@ -2811,6 +2823,25 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 }
 
+json map2array(json& j) {
+	json jArray = json::array();
+	for (auto& item : j.items()) {
+		json jNode = json::object();
+		jNode["name"] = item.key();
+
+		json jChildObj = item.value();
+		json jChildArray = map2array(jChildObj);
+
+		if(jChildArray.size() > 0)
+			jNode["children"] = jChildArray;
+
+		jArray.push_back(jNode);
+	}
+
+	return jArray;
+}
+
+
 string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
 {
 	string topopath = tds->conf->confPath + "/topo";
@@ -2856,7 +2887,34 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		}
 	}
 
-	json j = topoList;
+	string mode = "list";
+	if (params.contains("mode")) {
+		mode = params["mode"];
+	}
+
+	json j;
+	if (mode == "list") {
+		j = topoList;
+	}
+	else {
+		json jTree = json::object();
+		for (int i = 0; i < topoList.size(); i++) {
+			string name = topoList[i];
+			vector<string> nodes;
+			str::split(nodes, name, ".");
+
+			json* jNode = &jTree;
+			for (int j = 0; j < nodes.size(); j++) {
+				string node = nodes[j];
+				if (!(*jNode).contains(node)) {
+					(*jNode)[node] = json::object();
+				}
+				jNode = &(*jNode)[node];
+			}
+		}
+
+		j = map2array(jTree);
+	}
 	return j.dump();
 }
 

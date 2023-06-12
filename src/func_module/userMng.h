@@ -75,6 +75,7 @@ public:
 
 	//rpc service
 	void rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION session);
+	bool checkPwd(string user, string pwd);
 	void rpc_login(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session);

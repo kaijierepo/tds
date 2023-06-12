@@ -120,6 +120,7 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 			jerry_value_t array_value;
 			jsonVal2jerryVal(jItem, array_value);
 			jerry_set_property_by_index(jerryVal, (uint32_t)i, array_value);
+			jerry_release_value(array_value);
 		}
 	}
 }
@@ -305,10 +306,27 @@ jerry_value_t func_parseTag(const jerry_call_info_t* call_info_p,
 	{
 		string tag = jArgs[0].get<string>();
 		string sTag = TAG::resolveTag(tag, pEngine->m_tagContext);
-		json jTag = sTag;
-		jerry_value_t obj;
-		jsonVal2jerryVal(jTag, obj);
-		return obj;
+
+		if (tag.find("*") == string::npos) {
+			json jTag = sTag;
+			jerry_value_t obj;
+			jsonVal2jerryVal(jTag, obj);
+			return obj;
+		}
+		else {
+			vector<string> vecTags;
+			TAG_SELECTOR ts;
+			ts.init(sTag);
+			prj.getTagsByTagSelector(vecTags, ts);
+			json jTags = json::array();
+			for (int i = 0; i < vecTags.size(); i++) {
+				jTags.push_back(vecTags[i]);
+			}
+			jerry_value_t obj;
+			jsonVal2jerryVal(jTags, obj);
+			return obj;
+		}
+
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -390,23 +408,27 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() > 0)
 	{
-		json params;
-		params["tag"] = jArgs[0];
-		if (jArgs.size() > 1) {
-			params["invalidAsZero"] = jArgs[1];
-		}
+		json tag = jArgs[0];
+		if (tag.is_string()) {
+			string sTag = tag.get<string>();
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+			json params;
+			params["tag"] = sTag;
+			if (jArgs.size() > 1) {
+				params["invalidAsZero"] = jArgs[1];
+			}
 
-		json err, rlt;
-		tds->call("sum", params, err, rlt, pEngine->currentSession);
+			json err, rlt;
+			tds->call("sum", params, err, rlt, pEngine->currentSession);
 
 
-		if (rlt!=nullptr) {
-			jerry_value_t ret;
-			jsonVal2jerryVal(rlt,ret);
-			return ret;
+			if (rlt != nullptr) {
+				jerry_value_t ret;
+				jsonVal2jerryVal(rlt, ret);
+				return ret;
+			}
 		}
 	}
-
 
 	jerry_value_t ret = jerry_create_null();
 	return ret;

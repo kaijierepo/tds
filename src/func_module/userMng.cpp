@@ -749,7 +749,20 @@ void userManager::rpc_deleteUser(json params, RPC_RESP& resp, RPC_SESSION sessio
 	resp.result = "\"ok\"";
 }
 
-
+bool userManager::checkPwd(string user,string pwd) {
+	json userInfo;
+	std::shared_lock<shared_mutex> lock(m_csUserConf);
+	if (m_mapUsers.find(user) != m_mapUsers.end())
+	{
+		json& jUser = m_mapUsers[user];
+		string truePwd = jUser["pwd"].get<string>();
+		if (pwd == truePwd)
+		{
+			return true;
+		}
+	}
+	return false;
+}
 
 
 void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)

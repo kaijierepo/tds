@@ -171,17 +171,42 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
-	unique_lock<mutex> lock(m_csScripts);
-	json j = json::array();
-	for (auto& i : m_mapScripts) {
-		SCRIPT_INFO& si = i.second;
-		if (si.org.find(session.org) != 0)
-			continue;
-		json jSi;
-		si.toJson(jSi);
-		j.push_back(jSi);
+	string type = "global";
+	if (params.contains("type")) {
+		type = params["type"];
 	}
-	rpcResp.result = j.dump(2);
+	bool getStatus = false;
+	if (params.contains("getStatus")) {
+		getStatus = params["getStatus"].get<bool>();
+	}
+
+	if (type == "global") {
+		unique_lock<mutex> lock(m_csScripts);
+		json j = json::array();
+		for (auto& i : m_mapScripts) {
+			SCRIPT_INFO& si = i.second;
+			if (si.org.find(session.org) != 0)
+				continue;
+			json jSi;
+			si.toJson(jSi,getStatus);
+			j.push_back(jSi);
+		}
+		rpcResp.result = j.dump(2);
+	}
+	else if (type == "exp") {
+		unique_lock<mutex> lock(m_csExpScripts);
+		json j = json::array();
+		for (auto& i : m_vecVarExpScripts) {
+			SCRIPT_INFO& si = i;
+			if (si.org.find(session.org) != 0)
+				continue;
+			json jSi;
+			si.toJson(jSi,getStatus);
+			j.push_back(jSi);
+		}
+		rpcResp.result = j.dump(2);
+	}
+
 	return true;
 }
 
@@ -335,12 +360,17 @@ void ScriptManager::exeAllVarExpScripts()
 	vector<SCRIPT_INFO> toExeScripts;
 	m_csExpScripts.lock();
 	toExeScripts = m_vecVarExpScripts;
+	TIME exeTime = timeopt::now();
+	for (int i = 0; i < m_vecVarExpScripts.size(); i++) {
+		SCRIPT_INFO& si = m_vecVarExpScripts[i];
+		si.lastExe = exeTime;
+	}
 	m_csExpScripts.unlock();
 
 	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
-	for (auto& info : toExeScripts) {
+	for (int i = 0; i < toExeScripts.size();i++) {
+		SCRIPT_INFO& info = toExeScripts[i];
 		string& script = info.script;
-
 		ScriptEngine se;
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
@@ -358,8 +388,18 @@ void ScriptManager::exeAllVarExpScripts()
 			jParams["tag"] = info.calcMpTag;
 			jParams["val"] = val;
 			tds->callAsyn("input", jParams);
+			info.lastCalcVal = val;
 		}
 	}
+
+	//保存执行结果。主要用于问题诊断分析
+	m_csExpScripts.lock();
+	for (int i = 0; i < m_vecVarExpScripts.size(); i++) {
+		SCRIPT_INFO& si = m_vecVarExpScripts[i];
+		SCRIPT_INFO& si1 = toExeScripts[i];
+		si.lastCalcVal = si1.lastCalcVal;
+	}
+	m_csExpScripts.unlock();
 }
 
 void ScriptManager::loopExe()
@@ -399,7 +439,7 @@ string SCRIPT_INFO::getContextTag()
 	return envTag;
 }
 
-void SCRIPT_INFO::toJson(json& j)
+void SCRIPT_INFO::toJson(json& j,bool getStatus)
 {
 	j["mode"] = mode;
 	j["name"] = name;
@@ -416,6 +456,13 @@ void SCRIPT_INFO::toJson(json& j)
 	jIter["milli"] = milli;
 	j["interval"] = jIter;
 	j["rootTag"] = rootTag;
+	j["calcMpTag"] = calcMpTag;
+	j["callerObjTag"] = callerObjTag;
+
+	if (getStatus) {
+		j["lastExeTime"] = lastExe.toStr();
+		j["lastCalcVal"] = lastCalcVal;
+	}
 }
 
 void SCRIPT_INFO::fromJson(json& j)
