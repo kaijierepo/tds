@@ -2914,6 +2914,17 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		}
 
 		j = map2array(jTree);
+
+		json jMain;
+		for (int i = 0; i < j.size(); i++) {
+			json jtmp = j[i];
+			string name = jtmp["name"].get<string>();
+			if (name == "root" || name == "主视图") {
+				jMain = jtmp;
+				j.erase(j.begin() + i);
+			}
+		}
+		j.insert(j.begin(), jMain);
 	}
 	return j.dump();
 }
