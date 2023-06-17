@@ -2860,7 +2860,9 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		else if (filist[i].path.find("/asset") != string::npos) {
 			continue;
 		}
-
+		else if (filist[i].path.find("/template") != string::npos) {
+			continue;
+		}
 		string topoName = str::trimSuffix(filist[i].name, ".svg");
 		mapTopo[str::fromInt(TAG::getMoLevel(topoName)) + topoName] = topoName;
 	}
