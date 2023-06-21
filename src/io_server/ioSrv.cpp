@@ -316,6 +316,11 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		string ioAddr = jPkt["ioAddr"].get<string>();
 		string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
 
+		bool isLan = false; //tds服务和适配器下的设备是否在同一个局域网
+		if (ioAddr.find(":") != string::npos) { //如果适配器上送的地址是局域网ip地址，认为设备是在同一个局域网
+			isLan = true;
+		}
+
 		//是否是1级设备
 		bool firstLevel = false;
 		if (ioAddr.find("/") == string::npos)
@@ -329,9 +334,16 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		{
 			if (firstLevel) {
 				json jAddr;
-				jAddr["type"] = DEV_ADDR_MODE::udpServer;
-				jAddr["ip"] = strIP;
-				jAddr["port"] = port;
+				if (isLan) {
+					jAddr["type"] = DEV_ADDR_MODE::udpServer;
+					jAddr["ip"] = strIP;
+					jAddr["port"] = port;
+				}
+				else {
+					jAddr["type"] = DEV_ADDR_MODE::deviceID;
+					jAddr["id"] = ioAddr;
+				}
+
 				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, DEV_TYPE::DEV::tdsp_device);
 			}
 		}
