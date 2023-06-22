@@ -507,7 +507,8 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 
 	if (m_addrType == DEV_ADDR_MODE::tcpClient || 
 		m_addrType == DEV_ADDR_MODE::tcpServer ||
-		m_devSubType == TDSP_SUB_TYPE::childTds) {
+		m_devSubType == TDSP_SUB_TYPE::childTds ||
+		!m_bViaAdaptor ) {
 		if (pIOSession == nullptr) {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "device offline"));
 			return;

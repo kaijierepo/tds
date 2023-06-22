@@ -146,7 +146,10 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		if (params["data"] != nullptr)
 		{
 			string d = params["data"].get<string>();
-			string encode = params["encode"].get<string>();
+			string encode = "";
+			if (params.contains("encode")) {
+				encode = params["encode"].get<string>();
+			}
 			if (encode == "base64") {
 				unsigned char* out = new unsigned char[d.length()];
 				int len = base64_decode(d.c_str(),(int) d.length(), out);
@@ -160,7 +163,8 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 				}
 			}
 			else {
-				if (fs::writeFile(p, d))
+				string ap = fs::toAbsolutePath(p);
+				if (fs::writeFile(ap, d))
 				{
 					result = "\"ok\"";
 				}
@@ -2630,9 +2634,23 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	else if (pmp->m_valType == VAL_TYPE::integer)
 	{
 		if (!val.is_number_integer()) {
-			resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be integer type");
-			LOG("[warn]output请求错误," + resp.error);
-			return;
+			if (pmp->m_isEnum && val.is_string()) {
+				string enumVal = val.get<string>();
+				int iVal = 0;
+				if (pmp->getValByEnumVal(enumVal, iVal)) {
+					val = iVal;
+				}
+				else {
+					resp.error = makeRPCError(RPC_ERROR_CODE::OBJ_enumValNotFound, "enum val not found," + enumVal);
+					LOG("[warn]output请求错误," + resp.error);
+					return;
+				}
+			}
+			else {
+				resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be integer type");
+				LOG("[warn]output请求错误," + resp.error);
+				return;
+			}
 		} 
 	} 
 

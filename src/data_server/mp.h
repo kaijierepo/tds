@@ -129,6 +129,7 @@ public:
 	string m_onChange; //值改变时执行脚本
 
 	//整型枚举值
+	bool getValByEnumVal(string enumVal, int& val);
 	map<int, string> mapEnumVal;
 	bool m_isEnum;
 

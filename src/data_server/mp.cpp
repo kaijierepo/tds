@@ -907,6 +907,17 @@ int MP::getSaveInterval()
 	return si;
 }
 
+bool MP::getValByEnumVal(string enumVal,int& val)
+{
+	for (auto& i : mapEnumVal) {
+		if (i.second == enumVal) {
+			val = i.first;
+			return true;
+		}
+	}
+	return false;
+}
+
 bool MP::hasValue()
 {
 	return m_stDataLastUpdate.isValid();

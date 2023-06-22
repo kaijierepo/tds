@@ -374,6 +374,7 @@ enum RPC_ERROR_CODE {
 	MO_outputTimeout = -40207,
 	TEC_VAL_TYPE_ERROR = -40208,
 	OBJ_templateNotFound = -40209,
+	OBJ_enumValNotFound = -40210,
 
 	//io
 	IO_devNotFound = -40301,

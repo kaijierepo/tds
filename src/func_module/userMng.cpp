@@ -273,7 +273,7 @@ void tokenExpire_thread(userManager* p) {
 		for (int i = 0; i < tokenList.size(); i++) {
 			ACCESS_INFO ai = tokenList[i];
 			p->m_mapAccessInfo.erase(ai.token);
-			LOG("[warn]Token过期,token=%s,user=%s,过期时间=%d秒", ai.token.c_str(), ai.user.c_str(),ai.age);
+			//LOG("[warn]Token过期,token=%s,user=%s,过期时间=%d秒", ai.token.c_str(), ai.user.c_str(),ai.age);
 		}
 		p->m_csAccessToken.unlock();
 		p->saveTokens();
