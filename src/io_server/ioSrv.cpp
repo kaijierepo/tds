@@ -112,6 +112,8 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 		string errorType = e.what();
 		string log = "[error]iq60数据包解析错误,错误信息:" + errorType + "\r\n数据包:\r\n" + pkt;
 		LOG(log);
+		log = "[warn]iq60数据包如果是包不完整，可能是数据包长超出以太网帧长度被截断。使用命令 ip 1 n1000 设置最大包长1000字节，使数据包分包发送";
+		LOG(log);
 	}
 }
 

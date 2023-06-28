@@ -2866,7 +2866,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 	fs::normalizationPath(topopath);
 
 	vector<fs::FILE_INFO> filist;
-	fs::getFileList(filist, topopath, true, true);
+	fs::getFileList(filist, topopath, true, true,".svg");
 
 	map<string, string> mapTopo; //按照层级排序
 	vector<string> topoList;
@@ -2917,34 +2917,50 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		j = topoList;
 	}
 	else {
-		json jTree = json::object();
-		for (int i = 0; i < topoList.size(); i++) {
-			string name = topoList[i];
-			vector<string> nodes;
-			str::split(nodes, name, ".");
+		string topoTreeFile = topopath + "/topoTree.json";
+		if (fs::fileExist(topoTreeFile)) {
+			string s;
+			fs::readFile(topoTreeFile,s);
+			try
+			{
+				j = json::parse(s);
+			}
+			catch (const std::exception& e)
+			{
+				string s = e.what();
+				LOG("[error]解析拓扑树配置错误," + s);
+			}
+		}
+		else {
+			json jTree = json::object();
+			for (int i = 0; i < topoList.size(); i++) {
+				string name = topoList[i];
+				vector<string> nodes;
+				str::split(nodes, name, ".");
 
-			json* jNode = &jTree;
-			for (int j = 0; j < nodes.size(); j++) {
-				string node = nodes[j];
-				if (!(*jNode).contains(node)) {
-					(*jNode)[node] = json::object();
+				json* jNode = &jTree;
+				for (int j = 0; j < nodes.size(); j++) {
+					string node = nodes[j];
+					if (!(*jNode).contains(node)) {
+						(*jNode)[node] = json::object();
+					}
+					jNode = &(*jNode)[node];
 				}
-				jNode = &(*jNode)[node];
 			}
-		}
 
-		j = map2array(jTree);
+			j = map2array(jTree);
 
-		json jMain;
-		for (int i = 0; i < j.size(); i++) {
-			json jtmp = j[i];
-			string name = jtmp["name"].get<string>();
-			if (name == "root" || name == "主视图") {
-				jMain = jtmp;
-				j.erase(j.begin() + i);
+			json jMain;
+			for (int i = 0; i < j.size(); i++) {
+				json jtmp = j[i];
+				string name = jtmp["name"].get<string>();
+				if (name == "root" || name == "主视图") {
+					jMain = jtmp;
+					j.erase(j.begin() + i);
+				}
 			}
+			j.insert(j.begin(), jMain);
 		}
-		j.insert(j.begin(), jMain);
 	}
 	return j.dump();
 }
