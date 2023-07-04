@@ -112,7 +112,7 @@ string database::getPath_dataFolder(string strTag, TIME date)
 string database::getPath_dbFile(string strTag,TIME date)
 {
 	string folder = getPath_dataFolder(strTag,date);
-	return folder + "/db.json";
+	return folder + "/" + m_dbFmt.deListName;
 }
 
 
@@ -120,12 +120,12 @@ string database::getPath_dbFile(string strTag,TIME date)
 void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
-	string dlPath = folderPath + "/" + "db.json";
+	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if(!fs::fileExist(folderPath))
 		fs::createFolderOfPath(folderPath.c_str());
 	json jDE;
 	jDE["time"] = timeopt::st2str(stTime);
-	jDE["val"] = jData;
+	jDE[m_dbFmt.deItemKey_value.c_str()] = jData;
 	if(dataFile != nullptr)
 	jDE["dataFile"] = dataFile;
 	if (!fs::fileExist(dlPath.c_str()))
@@ -306,7 +306,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 
 
 							yyjson_mut_val* jValRefRec = k->second;
-							yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, "val");
+							yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
 							yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //此处一定要copy一次，不可以把yyValSrc直接put到obj里面去，否则序列化的时候数据会错乱，可能指针指向的对象是链表的一个节点，如果同时在两个obj中，yyjson使用链表输出就会错乱
 							yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
 							yyjson_mut_obj_put(jRecord, valKey, yyVal);
@@ -337,7 +337,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 
 			string sortFlag = "";
 			if (deSel.sortKey.length() > 0) {
-				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, "val");
+				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
 				if (yyjson_mut_is_obj(yyVal)) {
 					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
 					if (yyjson_mut_is_str(yySortKey)) {
@@ -393,7 +393,7 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
-			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
+			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
 			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
 
 
@@ -413,14 +413,14 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 
 			string sortFlag = "";
 			if (deSel.sortKey.length() > 0) {
-				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRecord, "val");
+				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRecord, m_dbFmt.deItemKey_value.c_str());
 				if (yyjson_mut_is_obj(yyVal)) {
 					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
 					if (yyjson_mut_is_str(yySortKey)) {
 						sortFlag = yyjson_mut_get_str(yySortKey);
 					}
 					else if (yyjson_mut_is_num(yySortKey)) {
-						double f = yyjson_mut_get_real(yySortKey);
+						double f = yyjson_mut_get_num(yySortKey);
 						sortFlag = str::fromFloat(f);
 					}
 				}
@@ -443,16 +443,33 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 	if (aggrType == "first") {
 		yyjson_val* pDeSrc = src.at(0);
 		yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-		yyjson_mut_val* pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+
+		yyjson_mut_val* pAggrVal = nullptr;
+		if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+		{
+			string_view valStr = yyjson_get_str(pDeSrcVal);
+			pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+		}
+		else {
+			pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+		}
 		des.val = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 	}
 	else if (aggrType == "last") {
 		yyjson_val* pDeSrc = src.at(src.size() - 1);
 		yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-		yyjson_mut_val* pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+		yyjson_mut_val* pAggrVal = nullptr;
+		if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+		{
+			string_view valStr = yyjson_get_str(pDeSrcVal);
+			pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+		}
+		else {
+			pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+		}
 		des.val = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 	}
@@ -461,8 +478,17 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 		long long count = 0;
 		for (int j = 0; j < src.size(); j++) {
 			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-			double db = yyjson_get_real(pDeSrcVal);
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+			yyjson_mut_val* pAggrVal = nullptr;
+			double db = 0;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				db = atof(valStr.data());
+			}
+			else {
+				db = yyjson_get_num(pDeSrcVal);
+			}
 			dbTotal += db;
 			count++;
 		}
@@ -478,8 +504,16 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 		yyjson_val* pSelRowDeSrc = nullptr;
 		for (int j = 0; j < src.size(); j++) {
 			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-			double db = yyjson_get_real(pDeSrcVal);
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+			double db = 0;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				db = atof(valStr.data());
+			}
+			else {
+				db = yyjson_get_num(pDeSrcVal);
+			}
 			if (db > dbMax) {
 				pSelRowDeSrc = pDeSrc;
 				dbMax = db;
@@ -495,8 +529,16 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 		yyjson_val* pSelRowDeSrc = nullptr;
 		for (int j = 0; j < src.size(); j++) {
 			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-			double db = yyjson_get_real(pDeSrcVal);
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+			double db = 0;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				db = atof(valStr.data());
+			}
+			else {
+				db = yyjson_get_num(pDeSrcVal);
+			}
 			if (db < dbMin) {
 				pSelRowDeSrc = pDeSrc;
 				dbMin = db;
@@ -511,8 +553,16 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 		double dbSum = 0;
 		for (int j = 0; j < src.size(); j++) {
 			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-			double db = yyjson_get_real(pDeSrcVal);
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+			double db = 0;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				db = atof(valStr.data());
+			}
+			else {
+				db = yyjson_get_num(pDeSrcVal);
+			}
 			dbSum += db;
 		}
 		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbSum);
@@ -523,8 +573,16 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<
 		double dbMin = DBL_MAX;
 		for (int j = 0; j < src.size(); j++) {
 			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, "val");
-			double db = yyjson_get_real(pDeSrcVal);
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+			double db = 0;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				db = atof(valStr.data());
+			}
+			else {
+				db = yyjson_get_num(pDeSrcVal);
+			}
 			if (db > dbMax)
 				dbMax = db;
 			if (db < dbMin)
@@ -710,7 +768,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		double dbCur;
 		for (auto& i : mapRlt)
 		{
-			curVal = yyjson_mut_obj_get(i.second, "val");
+			curVal = yyjson_mut_obj_get(i.second, m_dbFmt.deItemKey_value.c_str());
 			if (!yyjson_mut_is_num(curVal)) {
 				break;
 			}
@@ -852,7 +910,21 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 			int currDeTime = 0;
 			string deTime = pdf->ymd + " 00:00:00";
 			string groupKeyVal;
-			yyjson_arr_foreach(pdf->root, idx, max, de) {
+
+			yyjson_val* deList = nullptr;
+			yyjson_type type = yyjson_get_type(pdf->root);
+			if (type == YYJSON_TYPE_OBJ) { //带描述信息的文件
+				deList = yyjson_obj_get(pdf->root, "data");
+			}
+			else if (type == YYJSON_TYPE_ARR) {
+				deList = pdf->root;
+			}
+			else {
+				continue;
+			}
+
+
+			yyjson_arr_foreach(deList, idx, max, de) {
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
@@ -905,8 +977,16 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 				else {
 					DE_yyjson deyy;
 					deyy.time = yyjson_mut_str(rlt_mut_doc, szTime.data());
-					yyjson_val* yyVal = yyjson_obj_get(de, "val");
+					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
+
+					if (deSel.valType == "float") //指定了输出类型
+					{
+						if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
+							string_view valStr = yyjson_mut_get_str(deyy.val);
+							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
+						}
+					}
 					fSet.m_mapRlt.push_back(deyy);
 				}
 
@@ -1094,7 +1174,7 @@ bool database::Update(string tag, TIME stTime, json& jData)
 		string specifyHMS = specifyTime.substr(specifyTime.length() - 8, 8);
 		if (sHMS == specifyHMS)
 		{
-			json& jOld = jDE["val"];
+			json& jOld = jDE[m_dbFmt.deItemKey_value.c_str()];
 			json& jNew = jData;
 			findDE = true;
 			updateJsonObj(jOld, jNew);
@@ -1198,7 +1278,7 @@ bool database::create(string strDBUrl,string name)
 	string createTime = timeopt::nowStr();
 	dbInfo["create_time"] = createTime;
 	string s = dbInfo.dump(2);
-	fs::writeFile(m_path + "/db.json",s);
+	fs::writeFile(m_path + "/" + m_dbFmt.deListName,s);
 	return true;
 }
 
@@ -1208,16 +1288,19 @@ bool database::Open(string strDBUrl,string name)
 		return false;
 
 	m_path = strDBUrl; 
+	m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
+	m_dbFmt.idxListName = tds->conf->getStr("idxListName", "curve_list.jdb");
+	m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.jdb");
+	m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 
-	if(!fs::fileExist(m_path + "/db.json"))
+	if(!fs::fileExist(m_path + "/" + m_dbFmt.deListName))
 		create(strDBUrl,name);
 
 	string s;
-	fs::readFile(m_path + "/db.json",s);
+	fs::readFile(m_path + "/" + m_dbFmt.deListName,s);
 	json j = json::parse(s);
 
 	m_name = j["name"];
-	
 	return true;
 }
 
@@ -1328,6 +1411,10 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 
 	if (params["tagAsColume"].is_boolean()) {
 		deSel.tagAsColume = params["tagAsColume"].get<bool>();
+	}
+
+	if (params["valType"].is_string()) {
+		deSel.valType = params["valType"];
 	}
 
 
@@ -1876,7 +1963,7 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 
 	if (yyjson_mut_is_obj(de))
 	{
-		yyjson_mut_val* jVal = yyjson_mut_obj_get(de, "val");
+		yyjson_mut_val* jVal = yyjson_mut_obj_get(de, db.m_dbFmt.deItemKey_value.c_str());
 		setScriptEngineObj(jVal, global_object);
 	}
 	else
@@ -1927,9 +2014,9 @@ bool CONDITION_SELECTOR::match(string& de)
 	bool bMatch = true;
 	json jDe = json::parse(de);
 	//将数据元的属性
-	if (jDe["val"].is_object())
+	if (jDe[db.m_dbFmt.deItemKey_value.c_str()].is_object())
 	{
-		json& jVal = jDe["val"];
+		json& jVal = jDe[db.m_dbFmt.deItemKey_value.c_str()];
 		jsonVal2jerryVal(jVal, global_object);
 	}
 	else

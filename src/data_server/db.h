@@ -304,6 +304,8 @@ struct DE_SELECTOR {
 	string sortKey;
 	bool timeFill;   //时间截面位号补全。多个位号，可能在某个时间点只有部分位号有数据，如果该选项为true,将自动为每个时间点补全所有位号的数据，数据值选用上一个时间点的该位号值
 
+	string valType;  //不为空表示将数据库值类型强转成指定类型
+
 	//位号重命名
 	string tagLabel; //重命名为 tag还是name
 	vector<string> vecTagLable; //指定别名
@@ -362,6 +364,14 @@ namespace CONST_STR {
 	const string tag = "tag";
 };
 
+struct  DB_FMT
+{
+	string deListName;
+	string idxListName;
+	string curveDeNameSuffix;
+	string deItemKey_value;
+};
+
 
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
 class database : public i_database{
@@ -372,6 +382,9 @@ public:
 	void Close();
 
 	string parseDESelector(json params, DE_SELECTOR& deSelector);
+
+//数据库存储规范
+	DB_FMT m_dbFmt;
 
 
 //rpc接口

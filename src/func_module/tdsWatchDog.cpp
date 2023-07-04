@@ -4,6 +4,56 @@
 #include "logger.h"
 #include "httplib.h"
 #include "dumpCatch.h"
+#include "common.h"
+#include <psapi.h>
+#include <TlHelp32.h>
+#include <Windows.h>
+#include <shellapi.h>
+
+#include <Winternl.h>
+
+typedef NTSTATUS(NTAPI* _NtQueryInformationProcess)(
+	HANDLE ProcessHandle,
+	DWORD ProcessInformationClass,
+	PVOID ProcessInformation,
+	DWORD ProcessInformationLength,
+	PDWORD ReturnLength
+	);
+
+/*
+写成一个函数，来获得所有的PEB结构体信息
+*/
+TCHAR* GetProcessCommandLine(HANDLE hProcess)
+{
+	UNICODE_STRING commandLine;
+	TCHAR* commandLineContents = NULL;
+	_NtQueryInformationProcess NtQuery = (_NtQueryInformationProcess)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtQueryInformationProcess");
+	if (NtQuery)
+	{
+		PROCESS_BASIC_INFORMATION pbi;
+		NTSTATUS isok = NtQuery(hProcess, ProcessBasicInformation, &pbi, sizeof(PROCESS_BASIC_INFORMATION), NULL);
+		if (NT_SUCCESS(isok))
+		{
+			PEB peb;
+			RTL_USER_PROCESS_PARAMETERS upps;
+			PVOID rtlUserProcParamsAddress;
+			if (ReadProcessMemory(hProcess, &(((_PEB*)pbi.PebBaseAddress)->ProcessParameters), &rtlUserProcParamsAddress, sizeof(PVOID), NULL))
+			{
+				if (ReadProcessMemory(hProcess,
+					&(((_RTL_USER_PROCESS_PARAMETERS*)rtlUserProcParamsAddress)->CommandLine),
+					&commandLine, sizeof(commandLine), NULL))
+				{
+					commandLineContents = (TCHAR*)malloc(commandLine.Length + sizeof(TCHAR));
+					memset(commandLineContents, 0, commandLine.Length + sizeof(TCHAR));
+					ReadProcessMemory(hProcess, commandLine.Buffer,
+						commandLineContents, commandLine.Length, NULL);
+				}
+			}
+		}
+	}
+
+	return commandLineContents;
+}
 
 
 
@@ -72,14 +122,81 @@ void thread_checkMediaServer() {
 	}
 }
 
+
+bool IsNodeRunningWithArg(const std::string& arg) {
+
+	//string arg = str::replace(argSrc, "/", "\\");
+
+	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE) {
+		std::cerr << "CreateToolhelp32Snapshot failed, " << GetLastError() << std::endl;
+		return false;
+	}
+
+	PROCESSENTRY32 pe32;
+	pe32.dwSize = sizeof(pe32);
+	if (!Process32First(hSnapshot, &pe32)) {
+		std::cerr << "Process32First failed, " << GetLastError() << std::endl;
+		CloseHandle(hSnapshot);
+		return false;
+	}
+
+	do {
+		if (strcmp(pe32.szExeFile, "node.exe") == 0) {
+			HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pe32.th32ProcessID);
+			if (hProcess != NULL) {
+				TCHAR* pszProcessCmd = GetProcessCommandLine(hProcess);
+
+				//连续遇到两个0,则停止，存储格式是每个字符后面有个0
+				int i = 0;
+				string cmdline;
+				char lastChar = ' ';
+				while (1) {
+					char c = pszProcessCmd[i];
+					if (c == 0 && lastChar == 0) {
+						break;
+					}
+					if(c!=0)
+						cmdline.push_back(c);
+					lastChar = c;
+					i++;
+				}
+
+				string s = charCodec::gb_to_utf8(cmdline);
+
+				if (s.find(arg) != string::npos) {
+					return true;
+				}
+			}
+		}
+	} while (Process32Next(hSnapshot, &pe32));
+
+	CloseHandle(hSnapshot);
+	return false;
+}
+
 void thread_checkAdp() {
+	vector<fs::FILE_INFO> adpList;
+	string adpRoot = fs::appPath() + "/com/adp/";
+	string adpDevicePath = fs::appPath() + "/com/adp/adp-device";
+	string adpGatewayPath = fs::appPath() + "/com/adp/adp-gateway";
+
+	fs::getFolderList(adpList, adpDevicePath);
+	fs::getFolderList(adpList, adpGatewayPath);
+
+
+
+
 	while (1) {
 		timeopt::sleepMilli(1000);
-		if (!watchDog.isProcessRun("node.exe")) {
-			string msPath = fs::appPath() + "/com/adp/run.bat";
-			if (fs::fileExist(msPath)) {
-				msPath = charCodec::utf8_to_gb(msPath);
-				system((msPath).c_str());
+		for (int i = 0; i < adpList.size(); i++) {
+			string adpExe =  adpList[i].path + "/main.js";
+			//程序存在且没有运行
+			if (fs::fileExist(adpExe) &&  !IsNodeRunningWithArg(adpExe))
+			{
+				string cmdline = fs::appPath() + "/com/adp/node.exe " + adpExe;
+				ShellExecute(NULL, "open", "cmd.exe" , ("/C " + charCodec::utf8_to_gb(cmdline)).c_str(), NULL, SW_SHOW);
+				LOG("接入适配器启动:" + cmdline);
 			}
 		}
 	}
@@ -193,14 +310,6 @@ void tdsWatchDog::run()
 	}
 	else {
 		LOG("[微服务组件] 流媒体服务  /com/mediaServer/MediaServer.exe 未安装");
-	}
-
-	 msPath = fs::appPath() + "/com/adp/run.bat";
-	if (fs::fileExist(msPath)) {
-		LOG("[微服务组件] 设备接入适配器   /com/adp/run.bat 已安装");
-	}
-	else {
-		LOG("[微服务组件] 设备接入适配器   /com/adp/run.bat 未安装");
 	}
 
 	thread t(thread_checkFood);

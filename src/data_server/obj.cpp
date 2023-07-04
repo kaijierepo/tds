@@ -1168,10 +1168,11 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 	//精确匹配也先确定该位号是否存在
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		MP* pmp = prj.GetMPByTag(exp);
-		if (pmp) {
+		//精确匹配不需要监控对象组态
+		//MP* pmp = prj.GetMPByTag(exp);
+		//if (pmp) {
 			tags.push_back(exp);
-		}
+		//}
 	}
 
 

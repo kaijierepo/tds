@@ -246,16 +246,16 @@ bool TDS_imp::setWorkingDir()
 bool TDS_imp::run(string cmdline)
 {
 	//funcMongooseLogCb = LOG3;
-	#ifndef DEBUG
-	 // mg_log_set("0");
-	#endif
-	 
+#ifndef DEBUG
+ // mg_log_set("0");
+#endif
 
-	//初始化接口
+
+//初始化接口
 	tds->db = &::db;
 
 	//check mode
-	if(conf->uiMode == "")
+	if (conf->uiMode == "")
 		conf->uiMode = getUIMode();
 
 #ifdef _WINDLL // dll模式下需要创建命令行
@@ -289,8 +289,10 @@ bool TDS_imp::run(string cmdline)
 	//if db folder is not exist. open will create an empty folder
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
-	if (tds->conf->enableDB)
+	if (tds->conf->enableDB) {
 		::db.Open(tds->conf->dbPath, prj.m_name);
+	}
+		
 	prj.loadObjTemplate();
 	prj.loadConfFile();
 	prj.getAllVarExpScript();
@@ -356,6 +358,12 @@ bool TDS_imp::run(string cmdline)
 #ifdef _WIN32
 	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
 #endif
+
+
+	float fVal = 1.12345;
+	json j = fVal;
+	TIME t = timeopt::now();
+	::db.Insert("测试位号", t, j);
 
 	return true;
 }
