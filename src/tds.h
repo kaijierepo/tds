@@ -555,4 +555,6 @@ typedef i_tds* (*fp_getTds)();
 i_tds* getITDS();
 #endif
 
+#ifdef TDS
 extern i_tds* tds;
+#endif

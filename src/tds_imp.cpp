@@ -359,12 +359,6 @@ bool TDS_imp::run(string cmdline)
 	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
 #endif
 
-
-	float fVal = 1.12345;
-	json j = fVal;
-	TIME t = timeopt::now();
-	::db.Insert("测试位号", t, j);
-
 	return true;
 }
 

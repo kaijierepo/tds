@@ -35,7 +35,9 @@ tdsConfig::tdsConfig()
 	mode = "tds";
 	bStopCycleAcq = false;
 
+#ifdef TDS
 	tds->conf = this;
+#endif
 }
 
 

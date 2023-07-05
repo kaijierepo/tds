@@ -183,7 +183,10 @@ ioDev::~ioDev(void)
 bool ioDev::run()
 {
 	m_bRunning = true;
-	if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer)
+	if (m_bViaAdaptor) {
+		//通过适配器无需进行通信模块初始化
+	}
+	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer)
 	{
 		string ip;
 		if (m_jDevAddr.contains("ip"))
