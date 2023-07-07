@@ -505,10 +505,15 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		return;
 	}
 
+
+	//通过连接是否存在来判断是否离线
+	// tcp类型直连设备支持
+	// adaptor下设备不支持
+	//rs485下的tdsp设备不进行离线判断。 通过 isViaAdaptor过滤
 	if (m_addrType == DEV_ADDR_MODE::tcpClient || 
 		m_addrType == DEV_ADDR_MODE::tcpServer ||
 		m_devSubType == TDSP_SUB_TYPE::childTds ||
-		!m_bViaAdaptor ) {
+		!isViaAdaptor() ) {
 		if (pIOSession == nullptr) {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "device offline"));
 			return;

@@ -1313,6 +1313,16 @@ namespace timeopt {
 		return CalcTimePassMilliSecond(last);
 	}
 
+	long long calcTimePassMilliSecond(TIME lastTime, TIME nowTime)
+	{
+		time_t now = SysTime2Unix(nowTime);
+		time_t last = SysTime2Unix(lastTime);
+		time_t second = now - last;
+		time_t milli = nowTime.wMilliseconds - lastTime.wMilliseconds;
+		milli = second * 1000 + milli;
+		return milli;
+	}
+
 	time_t getTick() {
 		std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> tp =
 			std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());

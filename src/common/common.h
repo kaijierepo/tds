@@ -326,6 +326,7 @@ namespace timeopt {
 	time_t CalcTimePassSecond(TIME lastTime);
 	long long CalcTimePassMilliSecond(TIME lastTime);
 	long long calcTimePassMilliSecond(string lastTime);
+	long long calcTimePassMilliSecond(TIME lastTime,TIME nowTime);
 	time_t CalcTimeDiffSecond(TIME newTime, TIME oldTime);
 	time_t getTick();
 	void setAsTimeOrg(TIME& st);

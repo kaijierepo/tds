@@ -181,14 +181,13 @@ void thread_checkAdp() {
 	string adpDevicePath = fs::appPath() + "/com/adp/adp-device";
 	string adpGatewayPath = fs::appPath() + "/com/adp/adp-gateway";
 
-	fs::getFolderList(adpList, adpDevicePath);
-	fs::getFolderList(adpList, adpGatewayPath);
-
-
-
 
 	while (1) {
 		timeopt::sleepMilli(1000);
+		adpList.clear();
+		fs::getFolderList(adpList, adpDevicePath);
+		fs::getFolderList(adpList, adpGatewayPath);
+
 		for (int i = 0; i < adpList.size(); i++) {
 			string adpExe =  adpList[i].path + "/main.js";
 			//程序存在且没有运行

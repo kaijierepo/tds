@@ -78,6 +78,7 @@ void ScriptManager::updateVarExpScript(vector<SCRIPT_INFO>& varExpScripts)
 
 void scriptThreadTmp(string scriptName, string callerObjTag)
 {
+#ifdef ENABLE_JERRY_SCRIPT
 	SCRIPT_INFO si;
 	if (scriptManager.getScript(scriptName, si)) {
 		si.callerObjTag = callerObjTag;
@@ -87,6 +88,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 		se.runScript(si.script, si.lastModifyUser);
 		si.lastExe = timeopt::now();
 	}
+#endif
 }
 
 bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
