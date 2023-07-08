@@ -185,6 +185,7 @@ public:
 	string m_groupName; //设备编组。1个自定义的字符串
 	string m_name;
 	string m_alias;
+	string m_objID;  //name可能在系统中有重名，ID不会
 	bool m_bShow;
 	json m_longitude;
 	json m_latitude;
@@ -195,6 +196,7 @@ public:
 	bool m_bChildTds; //是否是下级服务
 	string m_streamAccess;
 	string m_strLastModify;  //上一次配置修改时间
+	string m_comment;
 	vector<SCHEDULE_TASK> m_scheduleTasks;
 
 	//动态创建
@@ -261,6 +263,7 @@ public:
 	void GetAllChildAlarmInfo(string& strSummary);
 	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
 	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
+	OBJ* getObjByID(string id);
 	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
 	vector<string> getTagPartials(string strTag);
 	string getTypeLabel(string type);

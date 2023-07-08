@@ -2702,29 +2702,62 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	json dataFile;
 	json inputVal = nullptr;
 	json inputTag, inputIoAddr;
-	//值
-	if (params.find("val") != params.end())
-		inputVal = params["val"];
-	else
-	{
-		resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
-		return;
-	}
-	if (params.find("dataFile") != params.end())
-		dataFile = params["dataFile"];
-	//位号
-	if (params.find("tag") != params.end())
-		inputTag = params["tag"];
-	if (params.find("ioAddr") != params.end())
-		inputIoAddr = params["ioAddr"];
-	if (inputTag == "" && inputIoAddr == "")
-	{
-		resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
-		return;
-	}
 	string rootTag = "";
-	if (params.contains("rootTag"))
-		rootTag = params["rootTag"].get<string>();
+
+	if (params.find("data") != params.end()) {//对象属性模式输入
+		json deList = params["data"];
+
+		if (params.find("tag") != params.end()) {
+			rootTag = params["tag"];
+		}
+		if (params.find("objID") != params.end()) {
+			string objID = params["objID"];
+			OBJ* pO = prj.getObjByID(objID);
+			if (pO) {
+				rootTag = pO->getTag();
+			}
+			else {
+				resp.error = makeRPCError(OBJ_specifiedObjIDNotFound, "specified object id not found");
+				return;
+			}
+		}
+
+		//对象属性模式转数组处理
+		if (deList.size() > 0) {
+			inputTag = json::array();
+			inputVal = json::array();
+			for (int i = 0; i < deList.size(); i++) {
+				json& j = deList[i];
+				inputTag.push_back(j["tag"]);
+				inputVal.push_back(j["val"]);
+			}
+		}
+	}
+	else {
+		//值
+		if (params.find("val") != params.end())
+			inputVal = params["val"];
+		else
+		{
+			resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
+			return;
+		}
+		//位号
+		if (params.find("tag") != params.end())
+			inputTag = params["tag"];
+		else if (params.find("ioAddr") != params.end())
+			inputIoAddr = params["ioAddr"];
+		if (inputTag == "" && inputIoAddr == "")
+		{
+			resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
+			return;
+		}
+		//根位号
+		if (params.contains("rootTag"))
+			rootTag = params["rootTag"].get<string>();
+	}
+
+
 	//时间
 	if (params.find("time") != params.end())
 	{

@@ -158,6 +158,18 @@ bool OBJ::loadConf(json& conf)
 		str::hanZi2Pinyin(m_customType, m_customType);
 	}
 
+	if (conf["comment"].is_string()) {
+		m_comment = conf["comment"];
+	}
+
+	if (conf["objID"].is_string()) {
+		m_objID = conf["objID"];
+	}
+
+	if (conf["alias"].is_string()) {
+		m_comment = conf["alias"];
+	}
+
 	if (conf.contains("ioAddrBind"))
 		m_strIoAddrBind = conf["ioAddrBind"];
 
@@ -310,6 +322,16 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 			conf["latitude"] = m_latitude;
 		if (m_strLastModify != "") {
 			conf["lastModify"] = m_strLastModify;
+		}
+		if (m_comment != "") {
+			conf["comment"] = m_comment;
+		}
+		if (m_alias != "") {
+			conf["alias"] = m_alias;
+		}
+
+		if (m_objID != "") {
+			conf["objID"] = m_objID;
 		}
 
 		if (m_scheduleTasks.size() > 0) {
@@ -1222,6 +1244,21 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 			objList.push_back(i);
 		}
 	}
+}
+
+OBJ* OBJ::getObjByID(string id)
+{
+	if (m_objID == id)
+		return this;
+
+	for (int i = 0; i < m_childObj.size(); i++) {
+		OBJ* pC = m_childObj[i];
+		OBJ* pFind = pC->getObjByID(id);
+		if (pFind) {
+			return pFind;
+		}
+	}
+	return nullptr;
 }
 
 void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)

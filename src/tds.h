@@ -375,6 +375,7 @@ enum RPC_ERROR_CODE {
 	TEC_VAL_TYPE_ERROR = -40208,
 	OBJ_templateNotFound = -40209,
 	OBJ_enumValNotFound = -40210,
+	OBJ_specifiedObjIDNotFound = -40211,
 
 	//io
 	IO_devNotFound = -40301,
