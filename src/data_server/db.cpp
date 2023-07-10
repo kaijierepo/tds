@@ -109,10 +109,20 @@ string database::getPath_dataFolder(string strTag, TIME date)
 	return strURL;
 }
 
-string database::getPath_dbFile(string strTag,TIME date)
+string database::getPath_dbFile(string strTag,TIME date,string deType)
 {
 	string folder = getPath_dataFolder(strTag,date);
-	return folder + "/" + m_dbFmt.deListName;
+	if(deType == "")
+		return folder + "/" + m_dbFmt.deListName;
+	else if (deType == "curveIdx") {
+		return folder + "/" + m_dbFmt.curveIdxListName;
+	}
+	else if (deType == "curve") {
+		return folder + "/" + date.toStampHMS()  + m_dbFmt.curveDeNameSuffix;
+	}
+	else {
+		return folder + "/" + m_dbFmt.deListName;
+	}
 }
 
 
@@ -222,7 +232,14 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 			DE_yyjson& deyy = fSet.m_mapRlt[j];
 
 			//创建一个输出de
-			yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);;
+			yyjson_mut_val* jRecord;
+			if (deyy.val != nullptr) {
+				jRecord = yyjson_mut_obj(mut_doc);
+			}
+			else {
+				jRecord = deyy.de;
+			}
+			
 
 			//填入time字段
 			string_view szTime = yyjson_mut_get_str(deyy.time);
@@ -237,9 +254,12 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 			}
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
+
 			//填入val字段
-			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
-			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
+			if (deyy.val != nullptr) {
+				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
+				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
+			}
 
 
 			if (deSel.condition.bEnable && !deSel.condition.match(jRecord))
@@ -674,7 +694,7 @@ bool DB_FILE::loadFile()
 {
 	time = timeopt::Unix2SysTime(ttTime);
 	ymd = timeopt::TimeToYMD(time);
-	path = db.getPath_dbFile(tag, time);
+	path = db.getPath_dbFile(tag, time,deType);
 	fs::readFile(path, data);
 	if (data == "") {
 		return false;
@@ -686,6 +706,10 @@ bool DB_FILE::loadFile()
 	return true;
 }
 
+bool database::Select_yyjson_deFile(string& s)
+{
+	return true;
+}
 
 bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
@@ -739,56 +763,77 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	//加载文件原始数据
 	Select_Step_loadFile(deSel, tagDBFileSet,result);
 
-	//获得选中的数据元.并进行分组
-	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
-	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
-	Select_Step_loadDataElem(deSel, tagDBFileSet,result,rlt_mut_doc);
-
-	//执行聚合
-	Select_Step_doAggregate(deSel, tagDBFileSet, result, rlt_mut_doc);
 	
-	//输出结果行
-	if (deSel.tagAsColume) {
-		Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result,rlt_mut_doc);
+	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
+	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
+
+	if (deSel.deType == "curve") {
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		{
+			TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+			string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+			string& relTag = fSet.relTag;
+
+
+			//加载每个数据文件中的数据
+			for (int i = 0; i < fSet.fileList.size(); i++)
+			{
+				//加载数据元列表
+				DB_FILE* pdf = fSet.fileList[i];
+				string s = str::format("%d%d", tagIdx, i);
+				yyjson_mut_val* p = yyjson_val_mut_copy(rlt_mut_doc, pdf->root);
+				mapRlt[s] = p;
+			}
+		}
 	}
 	else {
-		//if (deSel.timeFill) {
-			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
-		//}
-		//else
-		//	Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
-	}
+		//获得选中的数据元.并进行分组
+		Select_Step_loadDataElem(deSel, tagDBFileSet, result, rlt_mut_doc);
 
-	//结果行二次计算
-	if (deSel.calc == "diff") {
-		int idx = 0;
-		yyjson_mut_val* lastVal;
-		yyjson_mut_val* curVal;
-		double dbLast;
-		double dbCur;
-		for (auto& i : mapRlt)
-		{
-			curVal = yyjson_mut_obj_get(i.second, m_dbFmt.deItemKey_value.c_str());
-			if (!yyjson_mut_is_num(curVal)) {
-				break;
-			}
+		//执行聚合
+		Select_Step_doAggregate(deSel, tagDBFileSet, result, rlt_mut_doc);
 
-
-			dbCur = yyjson_mut_get_real(curVal);
-			
-			if (idx > 0) {
-				double diff = dbCur - dbLast;
-				yyjson_mut_set_real(curVal, diff);
-			}
-			idx++;
-			dbLast = dbCur;
-			lastVal = curVal;
+		//输出结果行
+		if (deSel.tagAsColume) {
+			Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result, rlt_mut_doc);
 		}
-		mapRlt.erase(mapRlt.begin());
+		else {
+			//if (deSel.timeFill) {
+			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
+			//}
+			//else
+			//	Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
+		}
+
+		//结果行二次计算
+		if (deSel.calc == "diff") {
+			int idx = 0;
+			yyjson_mut_val* lastVal;
+			yyjson_mut_val* curVal;
+			double dbLast;
+			double dbCur;
+			for (auto& i : mapRlt)
+			{
+				curVal = yyjson_mut_obj_get(i.second, m_dbFmt.deItemKey_value.c_str());
+				if (!yyjson_mut_is_num(curVal)) {
+					break;
+				}
+
+
+				dbCur = yyjson_mut_get_real(curVal);
+
+				if (idx > 0) {
+					double diff = dbCur - dbLast;
+					yyjson_mut_set_real(curVal, diff);
+				}
+				idx++;
+				dbLast = dbCur;
+				lastVal = curVal;
+			}
+			mapRlt.erase(mapRlt.begin());
+		}
 	}
-
-
-
+	
 
 	//使用新的yyjson doc对象输出结果. 将多个位号，多个时间段的原始数据合并成1个json查询结果对象
 	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); //创建一个数组
@@ -837,6 +882,7 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& ta
 			for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 			{
 				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+				pdf->deType = deSel.deType;
 				if (!pdf->loadFile()) {
 					delete pdf;
 					continue;
@@ -850,6 +896,7 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& ta
 			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 			{
 				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+				pdf->deType = deSel.deType;
 				if (!pdf->loadFile()) {
 					delete pdf;
 					continue;
@@ -858,11 +905,12 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& ta
 				break;
 			}
 		}
-		else {
+		else { //选择单个数据元 TSM_ALL && PT_NONE
 			time_t loadTime = deSel.timeSel.endTime;
 			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 			{
-				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag); 
+				pdf->deType = deSel.deType;
 				if (!pdf->loadFile()) {
 					delete pdf;
 					continue;
@@ -978,7 +1026,10 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					DE_yyjson deyy;
 					deyy.time = yyjson_mut_str(rlt_mut_doc, szTime.data());
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
-					deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
+					if (yyVal)
+						deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
+					else //某些数据元没有val字段
+						deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
 
 					if (deSel.valType == "float") //指定了输出类型
 					{
@@ -1289,7 +1340,7 @@ bool database::Open(string strDBUrl,string name)
 
 	m_path = strDBUrl; 
 	m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
-	m_dbFmt.idxListName = tds->conf->getStr("idxListName", "curve_list.jdb");
+	m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "curve_list.jdb");
 	m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.jdb");
 	m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 
@@ -1374,8 +1425,12 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 
 
 	//监控对象类型
-	if (params["type"] != nullptr)
+	if (params["type"].is_string())
 		deSel.tagSel.type = params["type"].get<string>();
+
+
+	if (params["deType"].is_string())
+		deSel.deType = params["deType"];
 
 	//parse interval selector
 	json jDsi = params["interval"];

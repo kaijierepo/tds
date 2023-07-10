@@ -445,7 +445,7 @@ public:
 	virtual void saveDEFile(string strTag, TIME stTime, string deFileUrl) = 0;
 
 	//get db.json path
-	virtual string getPath_dbFile(string strTag, TIME date) = 0;
+	virtual string getPath_dbFile(string strTag, TIME date,string deType="") = 0;
 	//de folder path
 	virtual string getPath_dataFolder(string strTag, TIME date) = 0;
 	virtual string getPath_deFile(string strTag, TIME stTime) = 0;

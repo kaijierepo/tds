@@ -200,6 +200,7 @@ struct DB_FILE {
 	string tag;
 	yyjson_doc* doc;
 	yyjson_val* root;
+	string deType;
 
 	bool loadFile();
 
@@ -218,6 +219,7 @@ struct DB_FILE {
 struct DE_yyjson {
 	yyjson_mut_val* time;  //暂时只只是按时间聚合，聚合后该字段一定存在。
 	yyjson_mut_val* val;
+	yyjson_mut_val* de;
 	string fmtTime; //根据请求格式格式化后的时间
 
 	DE_yyjson() {
@@ -305,6 +307,7 @@ struct DE_SELECTOR {
 	bool timeFill;   //时间截面位号补全。多个位号，可能在某个时间点只有部分位号有数据，如果该选项为true,将自动为每个时间点补全所有位号的数据，数据值选用上一个时间点的该位号值
 
 	string valType;  //不为空表示将数据库值类型强转成指定类型
+	string deType;   //数据元类型，默认为原始数据，可以取 curveIdx 曲线索引; deType不一样，对应的数据文件不一样
 
 	//位号重命名
 	string tagLabel; //重命名为 tag还是name
@@ -367,7 +370,7 @@ namespace CONST_STR {
 struct  DB_FMT
 {
 	string deListName;
-	string idxListName;
+	string curveIdxListName;
 	string curveDeNameSuffix;
 	string deItemKey_value;
 };
@@ -400,6 +403,7 @@ public:
 	
 	//select
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
+	bool Select_yyjson_deFile(string& s);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
@@ -419,7 +423,7 @@ public:
 //路径管理
 public:
 	//获得数据库文件db.json的路径
-	string getPath_dbFile(string strTag, TIME date);
+	string getPath_dbFile(string strTag, TIME date, string deType = "");
 	string changeCharForFileName(string s);
 	//获得数据元文件或者数据库文件的存储文件夹目录
 	string getPath_dataFolder(string strTag, TIME date);

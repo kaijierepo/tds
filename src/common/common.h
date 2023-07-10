@@ -131,6 +131,7 @@ struct TIME {
 	}
 	string toStr();
 	string toDateStr();
+	string toStampHMS();
 	string toTimeStr();
 };
 class semaphore

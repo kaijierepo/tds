@@ -2072,6 +2072,12 @@ string TIME::toTimeStr()
 	return s;
 }
 
+string TIME::toStampHMS()
+{
+	string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
 string Date::toStr()
 {
 	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
