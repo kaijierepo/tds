@@ -144,7 +144,7 @@ public:
 	//通信分层处理
 	//传输层处理
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo);
+	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
 
@@ -184,6 +184,8 @@ public:
 	ioDev* onChildDevDiscovered(json childDevAddr, string ioSessionAddr,string type, string subType = "");
 
 	bool m_stopCycleAcq; //全局周期采集开关，调试时使用，调试时全局关闭周期采集。方便手工发送数据并观察
+	bool m_tdspOnlineReq;
+	bool m_tdspSingleTransaction; //tdsp设备同一时刻只能发起一个请求
 };
 
 extern ioServer ioSrv;

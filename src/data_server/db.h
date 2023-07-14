@@ -216,15 +216,21 @@ struct DB_FILE {
 	}
 };
 
+//作为聚合后数据时，只有 time 和 items是有值的
+//聚合前数据items是空的
 struct DE_yyjson {
 	yyjson_mut_val* time;  //暂时只只是按时间聚合，聚合后该字段一定存在。
 	yyjson_mut_val* val;
-	yyjson_mut_val* de;
 	string fmtTime; //根据请求格式格式化后的时间
+	string deTime;
+
+	yyjson_mut_val* de;    //为了提升性能，非聚合模式下，输出前输出存在这儿
+	map<string, yyjson_mut_val*> items; //非val格式下的通用de
 
 	DE_yyjson() {
 		time = 0;
 		val = 0;
+		de = 0;
 	}
 };
 
@@ -236,18 +242,19 @@ public:
 	string mpName;  //监控点名称
 	string colKey;
 
-	string aggregate; //聚合操作
+
+	map<string, string> aggregate; //聚合操作，key是需要聚合的字段，val是聚合方式
 	bool bAggr;
 
 	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
 
-	//分组聚合前数据
+	//分组聚合前数据.key是时间戳，数组是de的数组
 	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
 	//不分组聚合前数据
 	vector<yyjson_val*> m_beforeAggr;
 
 	//执行聚合函数后数据.或者无需聚合直接放入以下结构
-	vector<DE_yyjson> m_mapRlt;
+	vector<DE_yyjson*> m_afterAggr;
 
 	TAG_DB_DATA() {
 		bAggr = false;
@@ -261,6 +268,12 @@ public:
 			}
 		}
 
+		if (m_afterAggr.size() > 0) {
+			for (int i = 0; i < m_afterAggr.size(); i++)
+			{
+				delete m_afterAggr[i];
+			}
+		}
 	}
 };
 
@@ -319,8 +332,8 @@ struct DE_SELECTOR {
 
 	//聚合运算
 	bool bAggr; //是否进行数据聚合
-	string aggregate; //应用到所有聚合运算
-	vector<string> vecAggregate;
+	map<string,string> aggregate; //应用到所有聚合运算.key为需要聚合的key，val为需要聚合的方式
+	vector<map<string, string>> vecAggregate;
 
 	//多列模式
 	bool tagAsColume; //将位号作为表的列返回.单列模式或多列模式
@@ -376,6 +389,7 @@ struct  DB_FMT
 };
 
 
+
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
 class database : public i_database{
 public:
@@ -383,6 +397,8 @@ public:
 	bool create(string strDBUrl,string name);
 	bool Open(string strDBUrl,string name="");
 	void Close();
+
+	map<string, string> getAggrOpt(json& jAggr);
 
 	string parseDESelector(json params, DE_SELECTOR& deSelector);
 
@@ -394,6 +410,7 @@ public:
 public:
 	void rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_db_getFile(json params, RPC_RESP& resp, RPC_SESSION session);
 
 //接口部分
 public:
@@ -409,7 +426,7 @@ public:
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	bool doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, TIME stTime, string& sData);
@@ -423,6 +440,7 @@ public:
 //路径管理
 public:
 	//获得数据库文件db.json的路径
+	bool getDBFile(TIME t, string tag, string fileName);
 	string getPath_dbFile(string strTag, TIME date, string deType = "");
 	string changeCharForFileName(string s);
 	//获得数据元文件或者数据库文件的存储文件夹目录

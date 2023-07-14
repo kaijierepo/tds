@@ -145,24 +145,20 @@ bool IsNodeRunningWithArg(const std::string& arg) {
 		if (strcmp(pe32.szExeFile, "node.exe") == 0) {
 			HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pe32.th32ProcessID);
 			if (hProcess != NULL) {
-				TCHAR* pszProcessCmd = GetProcessCommandLine(hProcess);
+				
+				WCHAR* pszProcessCmd = (WCHAR*) GetProcessCommandLine(hProcess);
+				char* pCmd = (char*)pszProcessCmd;
 
-				//连续遇到两个0,则停止，存储格式是每个字符后面有个0
-				int i = 0;
-				string cmdline;
-				char lastChar = ' ';
-				while (1) {
-					char c = pszProcessCmd[i];
-					if (c == 0 && lastChar == 0) {
-						break;
-					}
-					if(c!=0)
-						cmdline.push_back(c);
-					lastChar = c;
-					i++;
+				wstring utf16Str;
+				int iWchar = 0;
+				int iChar = 0;
+				while (pCmd[iChar] != 0) {//此处内存数据是utf16编码，但是结束字符是1个0，直接赋值给 wstring 会有乱码。
+					utf16Str.push_back(pszProcessCmd[iWchar]);
+					iWchar++;
+					iChar += 2;
 				}
 
-				string s = charCodec::gb_to_utf8(cmdline);
+				string s = charCodec::utf16_to_utf8(utf16Str);
 
 				if (s.find(arg) != string::npos) {
 					return true;
@@ -175,9 +171,41 @@ bool IsNodeRunningWithArg(const std::string& arg) {
 	return false;
 }
 
+void thread_checkTcp2com() {
+	while (1) {
+		timeopt::sleepMilli(1000);
+		if (!watchDog.isProcessRun("tcp2com.exe")) {
+			string msPath = fs::appPath() + "/tcp2com.exe";
+			if (fs::fileExist(msPath)) {
+				watchDog.runProcess(msPath);
+			}
+		}
+	}
+}
+
+void thread_checkSrcMain() {
+	string srcMain = fs::appPath() + "/src/main.js";
+
+	while (1) {
+		timeopt::sleepMilli(1000);
+
+		if (fs::fileExist(srcMain) && !IsNodeRunningWithArg(srcMain))
+		{
+			string cmdline = fs::appPath() + "/node.exe " + srcMain;
+			ShellExecute(NULL, "open", "cmd.exe", ("/C " + charCodec::utf8_to_gb(cmdline)).c_str(), NULL, SW_SHOW);
+			LOG("启动Nodejs服务:" + cmdline);
+			Sleep(2000);
+		}
+	}
+}
+
 void thread_checkAdp() {
 	vector<fs::FILE_INFO> adpList;
 	string adpRoot = fs::appPath() + "/com/adp/";
+	if (!fs::fileExist(adpRoot)) {
+		return;
+	}
+
 	string adpDevicePath = fs::appPath() + "/com/adp/adp-device";
 	string adpGatewayPath = fs::appPath() + "/com/adp/adp-gateway";
 
@@ -206,6 +234,16 @@ void thread_checkAdp() {
 void thread_checkFood() {
 	//timeopt::now(&watchDog.m_lastFeedTime);
 	//timeopt::now(&watchDog.m_lastUpdateCheckTime);
+
+	string tdsPath = fs::appPath() + "/tds.exe";
+	if (!fs::fileExist(tdsPath)) {
+		return;
+	}
+
+	watchDog.m_conf.load("./tds.ini");
+	watchDog.m_tdsAddr = "http://127.0.0.1:" + watchDog.m_conf.getValStr("httpPort", "667");
+	LOG("TDS服务地址: " + watchDog.m_tdsAddr);
+
 	while (1)
 	{
 		timeopt::sleepMilli(2000);
@@ -294,22 +332,17 @@ void thread_checkFood() {
 	}
 }
 
+
+void addAutoStart() {
+
+}
+
 void tdsWatchDog::run()
 {
-	watchDog.log("TDS Daemon 服务启动");
+	string appName = fs::appName();
+	watchDog.log(appName + " 服务守护程序启动");
 
-	m_conf.load("./tds.ini");
-
-	watchDog.m_tdsAddr = "http://127.0.0.1:" + m_conf.getValStr("httpPort","667");
-	LOG("TDS服务地址: " + watchDog.m_tdsAddr);
-
-	string msPath = fs::appPath() + "/com/mediaServer/MediaServer.exe";
-	if (fs::fileExist(msPath)) {
-		LOG("[微服务组件] 流媒体服务  /com/mediaServer/MediaServer.exe 已安装");
-	}
-	else {
-		LOG("[微服务组件] 流媒体服务  /com/mediaServer/MediaServer.exe 未安装");
-	}
+	regSelfStart();
 
 	thread t(thread_checkFood);
 	t.detach();
@@ -319,6 +352,12 @@ void tdsWatchDog::run()
 
 	thread t2(thread_checkAdp);
 	t2.detach();
+
+	thread t3(thread_checkTcp2com);
+	t3.detach();
+
+	thread t4(thread_checkSrcMain);
+	t4.detach();
 }
 
 
@@ -482,118 +521,42 @@ string tdsWatchDog::getUpdateTdsVer()
 	return getFileVerInfo(fs::appPath() + "/update/tds.exe");
 }
 
-//bool tdsWatchDog::installService()
-//{
-//	string path = fs::appPath() + "/tdsd.exe";
-//	SC_HANDLE schSCManager, schService;
-//	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-//
-//	if (schSCManager == NULL)
-//		return false;
-//
-//	schService = CreateService(schSCManager, "tdsd", "tdsd",
-//		SERVICE_ALL_ACCESS,
-//		SERVICE_WIN32_OWN_PROCESS | SERVICE_INTERACTIVE_PROCESS,
-//		SERVICE_AUTO_START,
-//		SERVICE_ERROR_NORMAL,
-//		path.c_str(),
-//		NULL,
-//		NULL,
-//		NULL,
-//		NULL,
-//		NULL);
-//
-//	if (schService == NULL)
-//		return false;
-//
-//	CloseServiceHandle(schService);
-//	return true;
-//}
-//
-//bool tdsWatchDog::uninstallService()
-//{
-//	SC_HANDLE schSCManager, schService;
-//	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-//
-//	if (schSCManager == NULL)
-//		return false;
-//
-//	// 打开www服务。
-//	SC_HANDLE hSvc = ::OpenService(schSCManager, "tdsd",SERVICE_ALL_ACCESS);
-//	if (hSvc == NULL)
-//	{
-//		string info = _GB("没有找到服务tdsd");
-//		string title = _GB("错误");
-//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-//		return false;
-//	}
-//
-//	if (::DeleteService(hSvc)) {
-//		string info = _GB("服务tdsd卸载成功");
-//		string title = _GB("卸载服务");
-//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-//	}
-//	else
-//	{
-//		string info = _GB("服务tdsd卸载失败");
-//		string title = _GB("卸载服务");
-//		::MessageBox(NULL, info.c_str(), title.c_str(), MB_OK);
-//	}
-//
-//	CloseServiceHandle(hSvc);
-//	return true;
-//}
-//
-//bool tdsWatchDog::isServiceInstalled()
-//{
-//	SC_HANDLE hSC = ::OpenSCManager(NULL,
-//		NULL, GENERIC_EXECUTE);
-//	if (hSC == NULL)
-//	{
-//		return false;
-//	}
-//	SC_HANDLE hSvc = ::OpenService(hSC, "tdsd",
-//		SERVICE_START | SERVICE_QUERY_STATUS | SERVICE_STOP);
-//	if (hSvc == NULL)
-//	{
-//		return false;
-//	}
-//	return true;
-//}
-
-BOOL Reg_LocalMachine(char* lpszFileName, char* lpszValueName)
-{
-	//// 管理员权限
-	//HKEY hKey;
-	//// 打开注册表键
-	//if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_WRITE, &hKey))
-	//{
-	//	return FALSE;
-	//}
-	//// 修改注册表值，实现开机自启
-	//if (ERROR_SUCCESS != ::RegSetValueEx(hKey, lpszValueName, 0, REG_SZ, (BYTE*)lpszFileName, (1 + ::lstrlen(lpszFileName))))
-	//{
-	//	::RegCloseKey(hKey);
-	//	return FALSE;
-	//}
-	//// 关闭注册表键
-	//::RegCloseKey(hKey);
-
-	return TRUE;
-}
-
-
 bool tdsWatchDog::regSelfStart()
 {
-	string path = fs::appPath() + "/tdsd.exe";
-	path = charCodec::utf8_to_gb(path);
-	if (Reg_LocalMachine((char*)path.c_str(), (char*)"tdsd"))
+	string appName = fs::appName();
+	char exePath[MAX_PATH];
+	GetModuleFileName(NULL, exePath, MAX_PATH);
+	// 检查注册表中是否已经添加过开机自启动项
+	HKEY hKey;
+	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &hKey) == ERROR_SUCCESS)
 	{
-		printf(_GB("开机启动添加成功!"));
-		return true;
+		// 检查注册表中是否已经存在当前程序的开机自启动项
+		DWORD dataSize = MAX_PATH;
+		char regValue[MAX_PATH];
+		if (RegQueryValueEx(hKey, appName.c_str(), NULL, NULL, (BYTE*)regValue, &dataSize) == ERROR_SUCCESS)
+		{
+			// 如果已经存在开机自启动项，则不弹出提示
+			RegCloseKey(hKey);
+			return 0;
+		}
 	}
-	else {
-		printf(_GB("开机启动添加失败!"));
+
+	// 弹出确认对话框
+	int result = MessageBox(NULL, charCodec::utf8_to_gb("是否将当前程序添加到开机自启动？").c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
+
+	if (result == IDYES)
+	{
+		// 打开注册表项
+		HKEY hKey;
+		RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+
+		// 将当前程序的路径添加到开机自启动项
+		RegSetValueEx(hKey, appName.c_str(), 0, REG_SZ, (BYTE*)exePath, strlen(exePath));
+
+		// 关闭注册表项
+		RegCloseKey(hKey);
+
+		::MessageBox(NULL, charCodec::utf8_to_gb("开机启动添加成功!").c_str(), "", MB_OK);
 	}
 	return false;
 }

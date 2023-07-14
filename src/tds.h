@@ -304,6 +304,7 @@ struct iTDSConf {
 	bool enableDevReboot;
 	int devRebootTime; //seconds
 	int devCommRebootTime;
+	bool tdspSingleTransaction;
 
 	//3rd party services integration
 	string smsApiUser;

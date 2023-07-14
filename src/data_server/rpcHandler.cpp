@@ -757,6 +757,10 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		{
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
+		else if (method == "db.getFile")
+		{
+			db.rpc_db_getFile(params, rpcResp, session);
+		}
 		else if (method == "db.select")
 		{
 			db.rpc_db_select(params, rpcResp, session);

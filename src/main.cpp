@@ -201,41 +201,14 @@ int main(int argc, char** argv)
 		tds->createLicence();
 	}
 
+	//从注册的工具当中寻找工具
+	fp_toolRun ptr = nullptr;
+	if (tds->tools.find(mode) != tds->tools.end()) {
+		ptr = tds->tools[mode];
+	}
 
-
-	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd")
+	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd" || mode[mode.length()-1] == 'd') //自定义守护进程
 	{
-		/*if (args.size() > 1) {
-			if (args[1] == "unreg") {
-				printf(_GB("是否从开机启动项删除? (y/n)"));
-				char c = getchar();
-				if (c == 'y' || c == 'Y') {
-					watchDog.unregSelfStart();
-				}
-				return 0;
-			}
-			else if (args[1] == "reg") {
-				printf(_GB("是否添加到开机启动? (y/n)"));
-				char c = getchar();
-				if (c == 'y' || c == 'Y') {
-					watchDog.regSelfStart();
-					return 0;
-				}
-			}
-		}
-		else {
-			if (!watchDog.isSelfStartReg()) {
-				printf(_GB("是否添加到开机启动? (y/n)"));
-				char c = getchar();
-				if (c == 'y' || c == 'Y') {
-					watchDog.regSelfStart();
-					return 0;
-				}
-				printf(_GB("tdsd未添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
-			}
-			else
-				printf(_GB("tdsd已添加到开机自启动\r\n使用 tdsd reg/unreg 命令行添加或删除自启动\r\n"));
-		}*/
 #ifdef _WIN32
 		watchDog.run();
 #endif
@@ -292,11 +265,6 @@ int main(int argc, char** argv)
 	{
 		Tcp2wsRproxy* tr = new Tcp2wsRproxy();
 		tr->run();
-	}
-	else if (mode == "tcp2com")
-	{
-		fp_toolRun ptr = tds->tools["tcp2com"];
-		if (ptr) ptr();
 	}
 	else if (mode == "replace") {
 		//.rc文件为gb2312编码
@@ -396,6 +364,10 @@ int main(int argc, char** argv)
 		//return 0;
 	}
 #endif
+	else if (ptr != nullptr) //工具模式启动
+	{
+		ptr();
+	}
 	else
 	{
 		//run tds

@@ -304,12 +304,12 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 	}
 }
 
-void ReverseInterface::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
+void ReverseInterface::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<TDS_SESSION> tdsSession = m_reverseTdsSessions[pTcpSess];
 	m_mutexSessions.unlock();
-	OnRecvData_TCP(pData, iLen, tdsSession);
+	OnRecvData_TCP((char*)pData, iLen, tdsSession);
 }
 
 void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)

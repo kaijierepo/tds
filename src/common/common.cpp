@@ -1024,6 +1024,7 @@ namespace timeopt {
 	TIME str2st(string str)
 	{
 		TIME t;
+		memset(&t, 0, sizeof(t));
 		//2022-02-22 11:11:11.123   23bytes
 		//2022-02-22 11:11:11   19bytes
 		int y, m, d, h, min, s, milli;

@@ -109,6 +109,18 @@ string database::getPath_dataFolder(string strTag, TIME date)
 	return strURL;
 }
 
+bool database::getDBFile(TIME t, string tag, string fileName)
+{
+	string folder = str::format("/%04d%02d", t.wYear, t.wMonth);
+	if (t.wDay != 0) {
+		folder += str::format("/%02d", t.wDay);
+	}
+
+
+	
+	return false;
+}
+
 string database::getPath_dbFile(string strTag,TIME date,string deType)
 {
 	string folder = getPath_dataFolder(strTag,date);
@@ -228,15 +240,15 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 		string& tagAlias = fSet.colKey;
 		string& tag = fSet.tag;
 
-		for (int j = 0; j < fSet.m_mapRlt.size(); j++) {
-			DE_yyjson& deyy = fSet.m_mapRlt[j];
+		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
 			//创建一个输出de
 			yyjson_mut_val* jRecord;
-			if (deyy.val != nullptr) {
+			if (deSel.bAggr) { //聚合查询重新生成yyjson对象
 				jRecord = yyjson_mut_obj(mut_doc);
 			}
-			else {
+			else { //非聚合查询直接拷贝，提高速度
 				jRecord = deyy.de;
 			}
 			
@@ -255,7 +267,15 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
 
-			//填入val字段
+			//填入time以外的字段
+			if (deyy.items.size()>0) {
+				for (auto& i : deyy.items) {
+					yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, i.first.c_str());
+					yyjson_mut_obj_put(jRecord, valKey, i.second);
+				}
+			}
+
+			//填入val
 			if (deyy.val != nullptr) {
 				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
 				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
@@ -392,8 +412,8 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 		string& tagAlias = fSet.colKey;
 		string& tag = fSet.tag;
 
-		for (int j = 0; j < fSet.m_mapRlt.size(); j++) {
-			DE_yyjson& deyy = fSet.m_mapRlt[j];
+		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 
@@ -458,162 +478,165 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 	return true;
 }
 
-bool database::doAggregateSingleTag(DE_SELECTOR& deSel, string& aggrType,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
+bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
 {
-	if (aggrType == "first") {
-		yyjson_val* pDeSrc = src.at(0);
-		yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
+	for (auto& i : aggrOpt) {
+		string aggrType = i.second;
+		string aggrKey = i.first;
+		if (aggrType == "first") {
+			yyjson_val* pDeSrc = src.at(0);
+			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
-		yyjson_mut_val* pAggrVal = nullptr;
-		if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-		{
-			string_view valStr = yyjson_get_str(pDeSrcVal);
-			pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
-		}
-		else {
-			pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
-		}
-		des.val = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
-		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-	}
-	else if (aggrType == "last") {
-		yyjson_val* pDeSrc = src.at(src.size() - 1);
-		yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-		yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
-		yyjson_mut_val* pAggrVal = nullptr;
-		if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-		{
-			string_view valStr = yyjson_get_str(pDeSrcVal);
-			pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
-		}
-		else {
-			pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
-		}
-		des.val = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
-		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-	}
-	else if (aggrType == "avg") {
-		double dbTotal = 0;
-		long long count = 0;
-		for (int j = 0; j < src.size(); j++) {
-			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
 			yyjson_mut_val* pAggrVal = nullptr;
-			double db = 0;
 			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
-				db = atof(valStr.data());
+				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
 			}
 			else {
-				db = yyjson_get_num(pDeSrcVal);
+				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			dbTotal += db;
-			count++;
+			des.items[aggrKey] = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
-		double avg = dbTotal / count;
+		else if (aggrType == "last") {
+			yyjson_val* pDeSrc = src.at(src.size() - 1);
+			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+			yyjson_mut_val* pAggrVal = nullptr;
+			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcVal);
+				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+			}
+			else {
+				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+			}
+			des.items[aggrKey] = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+		}
+		else if (aggrType == "avg") {
+			double dbTotal = 0;
+			long long count = 0;
+			for (int j = 0; j < src.size(); j++) {
+				yyjson_val* pDeSrc = src.at(j);
+				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				yyjson_mut_val* pAggrVal = nullptr;
+				double db = 0;
+				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				{
+					string_view valStr = yyjson_get_str(pDeSrcVal);
+					db = atof(valStr.data());
+				}
+				else {
+					db = yyjson_get_num(pDeSrcVal);
+				}
+				dbTotal += db;
+				count++;
+			}
+			double avg = dbTotal / count;
 
-		yyjson_val* pDeSrc = src.at(0);
-		yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, avg);
-		des.val = pAggrVal;
-	}
-	else if (aggrType == "max") {
-		double dbMax = -DBL_MAX;
-		yyjson_val* pSelRowDeSrc = nullptr;
-		for (int j = 0; j < src.size(); j++) {
-			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
-			double db = 0;
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
-				db = atof(valStr.data());
-			}
-			else {
-				db = yyjson_get_num(pDeSrcVal);
-			}
-			if (db > dbMax) {
-				pSelRowDeSrc = pDeSrc;
-				dbMax = db;
-			}	
+			yyjson_val* pDeSrc = src.at(0);
+			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, avg);
+			des.items[aggrKey] = pAggrVal;
 		}
-		yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMax);
-		des.val = pAggrVal;
-	}
-	else if (aggrType == "min") {
-		double dbMin = DBL_MAX;
-		yyjson_val* pSelRowDeSrc = nullptr;
-		for (int j = 0; j < src.size(); j++) {
-			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
-			double db = 0;
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
-				db = atof(valStr.data());
+		else if (aggrType == "max") {
+			double dbMax = -DBL_MAX;
+			yyjson_val* pSelRowDeSrc = nullptr;
+			for (int j = 0; j < src.size(); j++) {
+				yyjson_val* pDeSrc = src.at(j);
+				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				double db = 0;
+				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				{
+					string_view valStr = yyjson_get_str(pDeSrcVal);
+					db = atof(valStr.data());
+				}
+				else {
+					db = yyjson_get_num(pDeSrcVal);
+				}
+				if (db > dbMax) {
+					pSelRowDeSrc = pDeSrc;
+					dbMax = db;
+				}
 			}
-			else {
-				db = yyjson_get_num(pDeSrcVal);
-			}
-			if (db < dbMin) {
-				pSelRowDeSrc = pDeSrc;
-				dbMin = db;
-			}
+			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
+			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMax);
+			des.items[aggrKey] = pAggrVal;
 		}
-		yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-		des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMin);
-		des.val = pAggrVal;
-	}
-	else if (aggrType == "sum") {
-		double dbSum = 0;
-		for (int j = 0; j < src.size(); j++) {
-			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
-			double db = 0;
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
-				db = atof(valStr.data());
+		else if (aggrType == "min") {
+			double dbMin = DBL_MAX;
+			yyjson_val* pSelRowDeSrc = nullptr;
+			for (int j = 0; j < src.size(); j++) {
+				yyjson_val* pDeSrc = src.at(j);
+				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				double db = 0;
+				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				{
+					string_view valStr = yyjson_get_str(pDeSrcVal);
+					db = atof(valStr.data());
+				}
+				else {
+					db = yyjson_get_num(pDeSrcVal);
+				}
+				if (db < dbMin) {
+					pSelRowDeSrc = pDeSrc;
+					dbMin = db;
+				}
 			}
-			else {
-				db = yyjson_get_num(pDeSrcVal);
-			}
-			dbSum += db;
+			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
+			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMin);
+			des.items[aggrKey] = pAggrVal;
 		}
-		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbSum);
-		des.val = pAggrVal;
-	}
-	else if (aggrType == "diff") {
-		double dbMax = -DBL_MAX;
-		double dbMin = DBL_MAX;
-		for (int j = 0; j < src.size(); j++) {
-			yyjson_val* pDeSrc = src.at(j);
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, m_dbFmt.deItemKey_value.c_str());
-			double db = 0;
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
-				db = atof(valStr.data());
+		else if (aggrType == "sum") {
+			double dbSum = 0;
+			for (int j = 0; j < src.size(); j++) {
+				yyjson_val* pDeSrc = src.at(j);
+				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				double db = 0;
+				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				{
+					string_view valStr = yyjson_get_str(pDeSrcVal);
+					db = atof(valStr.data());
+				}
+				else {
+					db = yyjson_get_num(pDeSrcVal);
+				}
+				dbSum += db;
 			}
-			else {
-				db = yyjson_get_num(pDeSrcVal);
-			}
-			if (db > dbMax)
-				dbMax = db;
-			if (db < dbMin)
-				dbMin = db;
+			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbSum);
+			des.items[aggrKey] = pAggrVal;
 		}
-		double dbDiff = dbMax - dbMin;
-		yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-		des.val = pAggrVal;
+		else if (aggrType == "diff") {
+			double dbMax = -DBL_MAX;
+			double dbMin = DBL_MAX;
+			for (int j = 0; j < src.size(); j++) {
+				yyjson_val* pDeSrc = src.at(j);
+				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				double db = 0;
+				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				{
+					string_view valStr = yyjson_get_str(pDeSrcVal);
+					db = atof(valStr.data());
+				}
+				else {
+					db = yyjson_get_num(pDeSrcVal);
+				}
+				if (db > dbMax)
+					dbMax = db;
+				if (db < dbMin)
+					dbMin = db;
+			}
+			double dbDiff = dbMax - dbMin;
+			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+			des.items[aggrKey] = pAggrVal;
+		}
 	}
-
-
+	
 	return true;
 }
 
@@ -627,8 +650,8 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 	{
 		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
 
-		for (int j = 0; j < fSet.m_mapRlt.size(); j++) {
-			DE_yyjson& deyy = fSet.m_mapRlt[j];
+		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 
@@ -748,11 +771,11 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 
 		//本位号查询参数
-		if (deSel.vecAggregate.size() == tagSet.size()) {
+		if (deSel.vecAggregate.size() == tagSet.size()) { //多位号聚合模式
 			fSet.aggregate = deSel.vecAggregate[i];
 			fSet.bAggr = true;
 		}
-		else if (deSel.aggregate != "") {
+		else if (deSel.aggregate.size() > 0) {//单位号聚合
 			fSet.aggregate = deSel.aggregate;
 			fSet.bAggr = true;
 		}
@@ -1022,14 +1045,20 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 						fSet.m_beforeAggr.push_back(de);
 					}
 				}
-				else {
-					DE_yyjson deyy;
-					deyy.time = yyjson_mut_str(rlt_mut_doc, szTime.data());
+				else { 
+					DE_yyjson& deyy  = *(new DE_yyjson());
+					deyy.deTime = deTime;
+
+					//放入time
+					deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
+
+					//放入val
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					if (yyVal)
 						deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
-					else //某些数据元没有val字段
-						deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
+					
+					//放入time,val以外的所有字段
+					deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
 
 					if (deSel.valType == "float") //指定了输出类型
 					{
@@ -1038,7 +1067,8 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
 						}
 					}
-					fSet.m_mapRlt.push_back(deyy);
+
+					fSet.m_afterAggr.push_back(&deyy);
 				}
 
 				result.deCount++;
@@ -1055,13 +1085,14 @@ bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>&
 			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 			{
 				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
-				DE_yyjson de; //聚合结果
+				//每个group生成一个聚合后 de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
+					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
 					doAggregateSingleTag(deSel, fSet.aggregate, i.second, de, rlt_mut_doc);
 					if (deSel.groupByTime)
 						de.time = yyjson_mut_str(rlt_mut_doc, i.first.data());
 
-					fSet.m_mapRlt.push_back(de);
+					fSet.m_afterAggr.push_back(&de);
 				}
 			}
 		}
@@ -1070,14 +1101,14 @@ bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>&
 			{
 				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
-					DE_yyjson de; //聚合结果
+					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
 					doAggregateSingleTag(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
 
 					if (tagDBFileSet.size() > 1 || de.time == nullptr) {
 						de.time = yyjson_mut_str(rlt_mut_doc, deSel.timeSel.selector.c_str());
 					}
 
-					fSet.m_mapRlt.push_back(de);
+					fSet.m_afterAggr.push_back(&de);
 				}
 			}
 		}
@@ -1360,6 +1391,27 @@ void database::Close()
 
 }
 
+//解析聚合操作
+//参数1： "aggregate":"max"
+//参数2 
+// "aggregate":{
+//	    "max":"max",
+//      "min":"min",
+//      "avg":"avg"
+// }
+map<string, string> database::getAggrOpt(json& jAggr) {
+	map<string, string> aggrOpt;
+	if (jAggr.is_string()) { //单位号的val字段聚合
+		aggrOpt[db.m_dbFmt.deItemKey_value] = jAggr.get<string>();
+	}
+	else if (jAggr.is_object()) { //单位号的指定字段聚合,可指定多个字段聚合
+		for (auto i : jAggr.items()) {
+			aggrOpt[i.key()] = i.value();
+		}
+	}
+	return aggrOpt;
+}
+
 string database::parseDESelector(json params, DE_SELECTOR& deSel)
 {
 	//parse time selector
@@ -1397,7 +1449,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 		jTag = json::array();
 		for (auto& jCol : jColList) {
 			jTag.push_back(jCol["tag"]);
-			deSel.vecAggregate.push_back(jCol["aggregate"].get<string>());
+			deSel.vecAggregate.push_back(getAggrOpt(jCol["aggregate"]));
 			deSel.bAggr = true;
 			deSel.vecTagLable.push_back(jCol["label"].get<string>());
 		}
@@ -1511,14 +1563,14 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	if (jAggr == nullptr)
 		jAggr = params["aggr"];
 
-	if (jAggr.is_array()) {
+	if (jAggr.is_array()) { //多位号聚合
 		for (auto& i : jAggr) {
-			deSel.vecAggregate.push_back(i.get<string>());
+			deSel.vecAggregate.push_back(getAggrOpt(i));
 		}
 		deSel.bAggr = true;
 	}
-	else if (jAggr.is_string()) {
-		deSel.aggregate = jAggr.get<string>();
+	else if(jAggr.is_object() || jAggr.is_string()){
+		deSel.aggregate = getAggrOpt(jAggr);
 		deSel.bAggr = true;
 	}
 		
@@ -1592,6 +1644,41 @@ void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)
 
 	json jRlt = result.rowCount;
 	resp.result = jRlt.dump();
+}
+
+void database::rpc_db_getFile(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	DE_SELECTOR deSel;
+
+	string rootTag = "";
+	if (params.contains("rootTag")) {
+		rootTag = params["rootTag"];
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);
+	params["rootTag"] = rootTag;
+	resp.error = parseDESelector(params, deSel);
+	if (resp.error != "") return;
+
+	//选出位号
+	prj.getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
+
+	SELECT_RLT result;
+	if (deSel.tagSel.tagSet.size() == 0) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+	}
+	else {
+		try
+		{
+			db.Select_yyjson(deSel, result);
+			resp.result = result.dataList;
+		}
+		catch (std::exception& e)
+		{
+			json jerror = e.what();
+			resp.error = jerror.dump();
+		}
+	}
+
 }
 
 string database::parseSuffix(string deFileUrl)

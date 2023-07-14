@@ -11,7 +11,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		if (ev_data) {
 			tcpSession* ptcp = (tcpSession*)fn_data;
 			ptcp->iRecvCount += c->recv.len;
-			pSrv->m_pCallBackUser->OnRecvData_TCPServer((char*)c->recv.buf, c->recv.len, ptcp);
+			pSrv->m_pCallBackUser->OnRecvData_TCPServer(c->recv.buf, c->recv.len, ptcp);
 		}
 		mg_iobuf_del(&c->recv, 0, c->recv.len);   // And discard it
 	}

@@ -204,18 +204,36 @@ bool ioDev_tdsp::handle_AcqOrInput(json chanData) {
 		for (int i = 0; i < chanData.size(); i++)
 		{
 			json jDE = chanData[i];
-			string addr = jDE["addr"].get<string>();
-			ioChannel* pC = getChanByDevAddr(addr);
-			json jVal = jDE["val"];
+			//格式为 [{"ioAddr":"voltage","val":25.1},{"ioAddr":"current","val":35.1}]
+			//通道地址通过ioAddr来指定
+			if (jDE.is_object()) {
+				string addr = jDE["addr"].get<string>();
+				ioChannel* pC = getChanByDevAddr(addr);
+				json jVal = jDE["val"];
 
-			if (pC == nullptr)
-			{
-				pC = createChan(jVal, addr);
-				addChannel(pC);
+				if (pC == nullptr)
+				{
+					pC = createChan(jVal, addr);
+					addChannel(pC);
+				}
+
+				if (pC)
+					pC->input(jVal);
 			}
+			//格式为 [1.3,1.2,2,3,true] ,数组序号就是通道号
+			else if (jDE.is_boolean() || jDE.is_number()) {
+				string addr = str::format("%d", i);
+				ioChannel* pC = getChanByDevAddr(addr);
+				json jVal = jDE;
+				if (pC == nullptr)
+				{
+					pC = createChan(jVal, addr);
+					addChannel(pC);
+				}
 
-			if (pC)
-				pC->input(jDE["val"]);
+				if (pC)
+					pC->input(jVal);
+			}
 		}
 		unlock_conf_unique();
 	}
@@ -360,22 +378,43 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
 	timeopt::now(&m_stLastActiveTime);
 	try {
-		if (jResp["id"] == nullptr) //主动上送命令
-		{
-			handleNotify(jResp);
+		if (ioSrv.m_tdspSingleTransaction) {
+			string method = jResp["method"];
+			if (method == "input") {
+				handleNotify(jResp);
+			}
+			else {
+				auto iter = m_mapSyncRPCInfo.begin();
+				if (iter != m_mapSyncRPCInfo.end())
+				{
+					TDSP_SYNC_INFO* p = iter->second;
+					p->jResp = jResp;
+					p->respSignal.notify();
+				}
+				else
+				{
+					handleAsynResp(jResp);
+				}
+			}
 		}
-		else
-		{
-			int id = jResp["id"].get<int>();
-			if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
+		else {
+			if (jResp["id"] == nullptr) //主动上送命令
 			{
-				TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
-				p->jResp = jResp;
-				p->respSignal.notify();
+				handleNotify(jResp);
 			}
 			else
 			{
-				handleAsynResp(jResp);
+				int id = jResp["id"].get<int>();
+				if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
+				{
+					TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
+					p->jResp = jResp;
+					p->respSignal.notify();
+				}
+				else
+				{
+					handleAsynResp(jResp);
+				}
 			}
 		}
 	}
@@ -437,7 +476,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 
 		triggerCycleAcq();
 	}
-	else if (method == "input")
+	else if (method == "input" || method == "acq")
 	{
 		handle_AcqOrInput(jParams);
 	}
@@ -524,6 +563,9 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		pIOSession->lastMethodCalled = method;
 	}
 
+	if (ioSrv.m_tdspSingleTransaction) {
+		CommLock();
+	}
 
 	json req;
 	req["jsonrpc"] = "2.0";
@@ -556,7 +598,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	{
 		sendStr(strReq);
 		result = "\"ok,asyn sended\"";
-		return;
+		goto TRANSACTION_END;
 	}
 	else
 	{
@@ -668,14 +710,20 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 			{
 				error = resp["error"];
 			}
-			return;
+			goto TRANSACTION_END;
 		}
 		else {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "request time out"));
 			setOffline();
-			return;
+			goto TRANSACTION_END;
 		}
 	}
+
+TRANSACTION_END:
+	if (ioSrv.m_tdspSingleTransaction) {
+		CommUnlock();
+	}
+	return;
 }
 
 void upgradeProcessThread(ioDev_tdsp* pDev, string firmwareFileName) {
@@ -932,7 +980,7 @@ void ioDev_tdsp::DoCycleTask()
 		return;
 
 	//适配器模式下的TDSP不获取设备信息，一般适配器不实现该功能。
-	if (m_bOnline && !isViaAdaptor() && !m_onlineInfoQueried && timeopt::CalcTimePassMilliSecond(m_stOnlineTime) > 1000) {
+	if (ioSrv.m_tdspOnlineReq && m_bOnline && !isViaAdaptor() && !m_onlineInfoQueried && timeopt::CalcTimePassMilliSecond(m_stOnlineTime) > 1000) {
 		json jRlt, jErr;
 		call("getDevInfo", nullptr, nullptr, jRlt, jErr, false);
 		m_onlineInfoQueried = true;

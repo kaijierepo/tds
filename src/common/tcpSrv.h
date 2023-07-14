@@ -67,7 +67,7 @@ struct tcpSession
 class ITcpServerCallBack {
 public:
 	virtual void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
+	virtual void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
 };
 
 

@@ -124,6 +124,7 @@ ioServer::ioServer()
 	m_devType = "tds";
 	m_totalPtCount = 0;
 	tds->ioServer = this;
+	m_tdspOnlineReq = false;
 }
 ioServer::~ioServer()
 {
@@ -176,7 +177,8 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
 		}
 
-		ioDev* pIoDev = ioSrv.getIODev(p->remoteIP);
+		//tcp客户端类型的设备连接，不支持中文地址，忽略端口号，允许设备使用任意端口
+		ioDev* pIoDev = ioSrv.getIODev(p->remoteIP,false,true);
 		if (pIoDev)
 		{
 			p->m_IoDev = pIoDev;
@@ -278,7 +280,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 	}
 }
 
-void ioServer::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess)
+void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
@@ -294,6 +296,37 @@ void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessio
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
+}
+
+
+struct IP_ADDR {
+	string type; //tcp or udp
+	string ip;
+	int port;
+};
+
+ bool parseIPFromIoAddr(string s, IP_ADDR& ep) {
+	vector<string> vec;
+	str::split(vec, s, "/");
+	string sIpEp = vec[0];
+	if (sIpEp.find("UDP-") == 0) {
+		ep.type = "udp";
+		sIpEp = sIpEp.substr(4,sIpEp.length() - 4);
+	}
+	else {
+		ep.type = "tcp";
+	}
+
+	vector<string> ipPort;
+	str::split(ipPort, sIpEp, ":");
+	if (ipPort.size() == 2) {
+		ep.ip = ipPort[0];
+		ep.port = atoi(ipPort[1].c_str());
+		return true;
+	}
+	else {
+		return false;
+	}
 }
 
 
@@ -316,11 +349,16 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 
 		//适配器上送的地址格式 UDP-192.168.1.100:9009
 		string ioAddr = jPkt["ioAddr"].get<string>();
+		IP_ADDR ipAddr;
 		string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
 
 		bool isLan = false; //tds服务和适配器下的设备是否在同一个局域网
 		if (ioAddr.find(":") != string::npos) { //如果适配器上送的地址是局域网ip地址，认为设备是在同一个局域网
 			isLan = true;
+			if (!parseIPFromIoAddr(ioAddr, ipAddr)) {
+				LOG("[warn]tdsp的ioAddr中使用了错误的IP地址格式:" + ioAddr);
+				return;
+			}
 		}
 
 		//是否是1级设备
@@ -336,10 +374,10 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		{
 			if (firstLevel) {
 				json jAddr;
-				if (isLan) {
+				if (isLan) {//目前udp模式，所有的设备都是udpServer. 如果要引入udpClient需要再设计下
 					jAddr["type"] = DEV_ADDR_MODE::udpServer;
-					jAddr["ip"] = strIP;
-					jAddr["port"] = port;
+					jAddr["ip"] = ipAddr.ip;
+					jAddr["port"] = ipAddr.port;
 				}
 				else {
 					jAddr["type"] = DEV_ADDR_MODE::deviceID;
@@ -978,6 +1016,7 @@ void ioServer::rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	rpcResp.result = "\"ok\"";
 }
 
+//中文ioAddr查找模式bChn
 ioDev* ioServer::getIODev(string ioAddr,bool bChn,bool ignorePort)
 {
 	ioDev* p = nullptr;
@@ -1131,7 +1170,9 @@ bool ioServer::runAsCloud()
 	m_bRunning = true;
 	loadChanTemplate();
 
-	string serverIP = tds->conf->getStr("serverIP", "0.0.0.0");
+	m_tdspSingleTransaction = tds->conf->getInt("tdspSingleTransaction", 0);
+
+	string serverIP = tds->conf->getStr("ioSrvIP", "0.0.0.0");
 	if (serverIP == "")
 		serverIP = "0.0.0.0";
 

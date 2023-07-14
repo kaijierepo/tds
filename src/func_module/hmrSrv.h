@@ -26,7 +26,7 @@ public:
 	void run(const std::string dir_path);
 	void websocketSend(string s, int sock);
 	void statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn) override;
-	void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pTcpSess) override;
+	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) override;
 
 	tcpSrv* m_httpHotUpdateSrv;
 	json m_jConf;
