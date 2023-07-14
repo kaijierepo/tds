@@ -9,7 +9,6 @@
 #include "prj.h"
 #include "tdsSession.h"
 
-using namespace std::filesystem;
 database db;
 
 database::database()
@@ -1326,7 +1325,7 @@ void database::saveDEFile(string strTag, TIME stTime, string deFileUrl)
 	try
 	{
 		fs::createFolderOfPath(path);
-		copy(charCodec::utf8_to_utf16(deFileUrl),charCodec::utf8_to_utf16(path));
+		//copy(charCodec::utf8_to_utf16(deFileUrl),charCodec::utf8_to_utf16(path));
 	}
 	catch (std::exception& e)
 	{

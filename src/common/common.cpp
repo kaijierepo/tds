@@ -1608,10 +1608,16 @@ namespace fs {
 			strFile = strFile.substr(0, iSlashPos);
 		}
 #ifdef _WIN32
+	#ifndef _WINXP
 		filesystem::create_directories(charCodec::tds_to_utf16(strFile));
+	#endif
 #else
 		filesystem::create_directories(strFile);
 #endif
+	}
+
+	bool copy(string src,string dest) {
+		return true;
 	}
 
 	string appPath()
@@ -1850,6 +1856,7 @@ namespace fs {
 	}
 	bool fileExist(string pszFileName)
 	{
+#ifndef _WINXP
 		std::error_code error;
 		auto file_status = std::filesystem::status(charCodec::tds_to_utf16(pszFileName), error);
 		if (error) {
@@ -1863,15 +1870,32 @@ namespace fs {
 			return true;
 		}
 		return  false;
+#else
+		wstring filePath = charCodec::tds_to_utf16(pszFileName);
+		DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#endif
 	}
 
 	bool deleteFile(string path) {
+#ifndef _WINXP
 		return std::filesystem::remove(charCodec::tds_to_utf16(path));
+#else
+		std::wstring filePath = charCodec::tds_to_utf16(path);
+
+		if (DeleteFileW(filePath.c_str())) {
+			return true;
+		}
+		else {
+			return false;
+		}
+#endif
 	}
 
 
-	 void getFolderList(vector<FILE_INFO>& list, string strFolder)
+	 void getFolderList(vector<fs::FILE_INFO>& list, string strFolder)
 	{
+#ifndef _WINXP
 		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
 		 for (auto& i : std::filesystem::directory_iterator(wstrFolder)) {
 			 if (i.is_directory()) {
@@ -1885,9 +1909,13 @@ namespace fs {
 				 list.push_back(fi);
 			 }
 		 }
+#else
+
+#endif
 	}
 
-	 void getFileList(vector<FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
+	 void getFileList(vector<fs::FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
+#ifndef _WINXP
 		 try
 		 {
 			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder); 
@@ -1915,15 +1943,17 @@ namespace fs {
 		 }	
 		 catch (exception&) {
 		 }
+#else
+#endif
 	}
 
 
 	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
 	 {
-		 vector<FILE_INFO> filist;
+		 vector<fs::FILE_INFO> filist;
 		 getFileList(filist, strFolder, includeFolder, recursive);
 		 for (int i = 0; i < filist.size(); i++) {
-			 FILE_INFO& fi = filist[i];
+			 fs::FILE_INFO& fi = filist[i];
 			 list.push_back(fi.path);
 		 }
 	 }
