@@ -526,8 +526,11 @@ bool tdsWatchDog::regSelfStart()
 	string appName = fs::appName();
 	char exePath[MAX_PATH];
 	GetModuleFileName(NULL, exePath, MAX_PATH);
+	string currentFilePath = exePath;
+	string regFilePath;
 	// 检查注册表中是否已经添加过开机自启动项
 	HKEY hKey;
+	bool isModify = false;
 	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &hKey) == ERROR_SUCCESS)
 	{
 		// 检查注册表中是否已经存在当前程序的开机自启动项
@@ -535,14 +538,29 @@ bool tdsWatchDog::regSelfStart()
 		char regValue[MAX_PATH];
 		if (RegQueryValueEx(hKey, appName.c_str(), NULL, NULL, (BYTE*)regValue, &dataSize) == ERROR_SUCCESS)
 		{
-			// 如果已经存在开机自启动项，则不弹出提示
-			RegCloseKey(hKey);
-			return 0;
+			regFilePath = regValue;
+
+			// 如果已经存在开机自启动项，且程序路径一致，不弹出界面。 为适应现场可能移动目录，如果路径不一致，提示重新注册
+			if (regFilePath == currentFilePath) {
+				RegCloseKey(hKey);
+				return 0;
+			}
+			else
+			{
+				isModify = true;
+			}
 		}
 	}
 
 	// 弹出确认对话框
-	int result = MessageBox(NULL, charCodec::utf8_to_gb("是否将当前程序添加到开机自启动？").c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
+	int result = 0;
+	if (isModify) {
+		string msg = charCodec::utf8_to_gb("当前自动启动路径为:\r\n") + regFilePath;
+		msg += charCodec::utf8_to_gb("\r\n是否修改为:\r\n") + currentFilePath;
+		result = MessageBox(NULL, msg.c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
+	}
+	else
+		result = MessageBox(NULL, charCodec::utf8_to_gb("是否将当前程序添加到开机自启动？").c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
 
 	if (result == IDYES)
 	{
