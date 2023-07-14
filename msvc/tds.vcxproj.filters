@@ -1,0 +1,294 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="common">
+      <UniqueIdentifier>{61f8ed5b-3995-4b52-98af-21ad15ab804f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="data_server">
+      <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io_server">
+      <UniqueIdentifier>{bb3caff4-0780-48ec-9125-75891b23875a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="func_module">
+      <UniqueIdentifier>{2ceef404-76b7-46d3-825a-f27e496c0dda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{71bb2987-59a1-4354-b2ab-cdcc697f1816}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\common\logger.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\tcpClt.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\tcpSrv.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\tds_imp.cpp" />
+    <ClCompile Include="..\src\common\yyjson.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\udpSrv.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\stream2pkt.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\mongoose.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\test.cpp" />
+    <ClCompile Include="..\src\common\base64.c">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\common.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\kvIni.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tds.cpp" />
+    <ClCompile Include="..\src\data_server\as.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\db.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\mp.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\obj.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\prj.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\reverseInterface.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\rpcHandler.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptEngine.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptFunc.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptManager.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\tdsSession.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\webSrv.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioChan.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioSrv.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\proto_common.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\wsProto.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\csvTable.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\dumpCatch.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\hmrSrv.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\logServer.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\tdsConf.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\tdsWatchDog.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\userMng.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\secure.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\sha1.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\sha256.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\common\md5.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\taskServer.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pch.cpp" />
+    <ClCompile Include="..\src\tools\tcp2com.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\common\httplib.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\json.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\logger.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\tcpClt.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\tcpSrv.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tds.h" />
+    <ClInclude Include="..\src\tds_imp.h" />
+    <ClInclude Include="..\src\res\resource.h" />
+    <ClInclude Include="..\src\common\yyjson.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\udpSrv.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\stream2pkt.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\mongoose.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\base64.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\common.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\kvIni.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\as.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\db.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\mp.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\obj.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\prj.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\reverseInterface.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\rpcHandler.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptEngine.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptFunc.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptManager.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\tdsSession.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\webSrv.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioChan.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioSrv.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_common.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\wsProto.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\csvTable.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\dumpCatch.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\hmrSrv.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\logServer.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\tdsConf.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\tdsWatchDog.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\userMng.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pch.h" />
+    <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\secure.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\hmac.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\sha1.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\sha256.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\md5.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\taskServer.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\tcp2com.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\src\res\tds.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\src\res\logo.ico" />
+  </ItemGroup>
+</Project>
