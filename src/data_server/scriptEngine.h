@@ -39,5 +39,9 @@ public:
 	bool m_bValNullInCalc;  //val函数返回了null，当使用计算表达式时，例如 val(tag1) -val(tag2)，某一个val函数返回null，null会被作为0，但该次计算无效
 };
 
+
+void* context_alloc_fn(size_t size, void* cb_data);
+extern thread_local jerry_context_t* tls_context;
 extern thread_local ScriptEngine* pEngine;
+jerry_context_t* jerry_port_get_current_context(void);
 #endif

@@ -210,11 +210,12 @@ void streamPusherMng_thread() {
 bool ReverseInterface::run()
 {
 	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
+	string childTdsIP = tds->conf->getStr("childTdsIP", "");
 
 	vector<string> vecAddrs;
 	str::split(vecAddrs, masterTdsAddrs, ",");
 
-	LOG("[服务级联  ] 连接到上级服务 %s", masterTdsAddrs.c_str());
+	LOG("[服务级联  ] 连接到上级服务 %s,绑定本地地址:%s", masterTdsAddrs.c_str(), childTdsIP.c_str());
 
 	for (int i = 0; i < vecAddrs.size(); i++) {
 		string addr = vecAddrs[i];
@@ -235,7 +236,7 @@ bool ReverseInterface::run()
 		p->remotePort = port;
 
 		pTcpClt->m_keepAliveTimeout = 10;
-		pTcpClt->run(this, addr);
+		pTcpClt->run(this, addr, childTdsIP);
 		m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
 	}
 

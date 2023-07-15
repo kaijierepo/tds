@@ -8,6 +8,7 @@
 #include "scriptManager.h"
 #include "prj.h"
 #include "tdsSession.h"
+#include "scriptEngine.h"
 
 database db;
 
@@ -278,12 +279,6 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 			if (deyy.val != nullptr) {
 				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
 				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
-			}
-
-
-			if (deSel.condition.bEnable && !deSel.condition.match(jRecord))
-			{
-				continue;
 			}
 
 			//填入tag字段
@@ -1025,6 +1020,12 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					if (currDeTime - lastDeTime < deSel.interval.dsti)
 						continue;
 					lastDeTime = currDeTime;
+				}
+
+				//条件过滤器，javascript脚本过滤
+				if (deSel.condition.bEnable && !deSel.condition.match(de))
+				{
+					continue;
 				}
 
 				if (fSet.bAggr) {
@@ -2052,6 +2053,48 @@ CONDITION_SELECTOR::~CONDITION_SELECTOR()
 }
 
 #ifdef ENABLE_JERRY_SCRIPT
+bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj)
+{
+	size_t idx, maxIdx;
+	yyjson_val* key, * value;
+	yyjson_obj_foreach(jObj, idx, maxIdx, key, value) {
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_get_str(key));
+		jerry_value_t prop_value;
+		if (yyjson_is_str(value))
+			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_get_str(value));
+		else if (yyjson_is_uint(value)) //此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+		{
+			uint64_t digits[1] = { yyjson_get_uint(value) };
+			prop_value = jerry_create_bigint(digits, 1, false);
+		}
+		else if (yyjson_is_sint(value))
+		{
+			uint64_t digits[1] = { yyjson_get_sint(value) };
+			prop_value = jerry_create_bigint(digits, 1, true);
+		}
+		else if (yyjson_is_real(value))
+			prop_value = jerry_create_number(yyjson_get_real(value));
+		else if (yyjson_is_bool(value))
+			prop_value = jerry_create_boolean(yyjson_get_bool(value));
+		else if (yyjson_is_obj(value))
+		{
+			prop_value = jerry_create_object();
+			setScriptEngineObj(value, prop_value);
+		}
+
+
+		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
+		if (jerry_value_is_error(set_result)) {
+			jerry_error_t error = jerry_get_error_type(set_result);
+		}
+		jerry_release_value(set_result);
+		jerry_release_value(prop_name);
+		jerry_release_value(prop_value);
+	}
+	return true;
+}
+
+
 bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
 {
 	size_t idx, maxIdx;
@@ -2195,12 +2238,64 @@ bool CONDITION_SELECTOR::match(string& de)
 	return true;
 }
 
+bool CONDITION_SELECTOR::match(yyjson_val* de)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	if (!bEnable)
+		return true;
+
+	bool bMatch = true;
+
+	if (yyjson_is_obj(de))
+	{
+		setScriptEngineObj(de, global_object);
+	}
+	else
+	{
+
+	}
+
+	/* Run the demo script with 'eval' */
+	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
+		filterExp.length(),
+		JERRY_PARSE_NO_OPTS);
+
+	/* Check if there was any error (syntax or runtime) */
+	bool run_ok = !jerry_value_is_error(eval_ret);
+	jerry_error_t error = jerry_get_error_type(eval_ret);
+	jerry_release_value(eval_ret);
+
+	if (run_ok)
+	{
+		bMatch = jerry_value_to_boolean(eval_ret);
+		return bMatch;
+	}
+	else
+	{
+		db_exception e;
+		if (error == JERRY_ERROR_REFERENCE)
+			e.m_error = "db exception: error when execute filter script,reference not found!";
+		else if (error == JERRY_ERROR_TYPE)
+		{
+			// A.str1.indexOf("xxx") 如果A不存在 str1成员，会抛出此错误
+			e.m_error = "db exception: error when execute filter script,error type!";
+		}
+		else
+			e.m_error = "db exception: error when execute filter script";
+		throw e;
+	}
+	//过滤器执行出错，统一不过滤
+#endif
+	return true;
+}
+
 bool CONDITION_SELECTOR::init(string filter)
 {
 #ifdef ENABLE_JERRY_SCRIPT
 	if (filter.length() > 0)
 	{
 		filterExp = filter;
+		tls_context = jerry_create_context(1024, context_alloc_fn, NULL);;
 		jerry_init(JERRY_INIT_EMPTY);
 		bEnable = true;
 		global_object = jerry_get_global_object();

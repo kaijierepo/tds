@@ -298,10 +298,12 @@ public:
 	CONDITION_SELECTOR();
 	~CONDITION_SELECTOR();
 #ifdef ENABLE_JERRY_SCRIPT
+	bool setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj);
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 	jerry_value_t global_object;
 #endif
 	bool match(string& de); //检查一个de是否满足条件
+	bool match(yyjson_val* de);
 	bool match(yyjson_mut_val* de);
 	bool init(string filter);
 	string filterExp;
