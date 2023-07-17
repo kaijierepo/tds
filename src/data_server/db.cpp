@@ -105,7 +105,7 @@ string database::getPath_dataFolder(string strTag, TIME date)
 	strTag = str::replace(strTag,".", "/");
 	string strURL= str::format("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
 	strURL += strTag;
-	strURL = m_path + "/" + strURL;
+	strURL = m_path  + strURL;
 	return strURL;
 }
 
@@ -431,11 +431,6 @@ bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_D
 			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
 
 
-			if (deSel.condition.bEnable && !deSel.condition.match(jRecord))
-			{
-				continue;
-			}
-
 			if (withTag)
 			{
 				//当进行多位号搜索时，需要加入tag标签
@@ -477,12 +472,13 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 	for (auto& i : aggrOpt) {
 		string aggrType = i.second;
 		string aggrKey = i.first;
+		yyjson_mut_val* pAggrVal = nullptr; //聚合后的值
+
 		if (aggrType == "first") {
 			yyjson_val* pDeSrc = src.at(0);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
-			yyjson_mut_val* pAggrVal = nullptr;
 			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
@@ -491,14 +487,14 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			des.items[aggrKey] = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+			des.items[aggrKey] = pAggrVal;
 			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
 		else if (aggrType == "last") {
 			yyjson_val* pDeSrc = src.at(src.size() - 1);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-			yyjson_mut_val* pAggrVal = nullptr;
+
 			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
@@ -507,7 +503,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			des.items[aggrKey] = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+			des.items[aggrKey] = pAggrVal;
 			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
 		else if (aggrType == "avg") {
@@ -533,7 +529,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 
 			yyjson_val* pDeSrc = src.at(0);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, avg);
+			pAggrVal = yyjson_mut_real(mut_doc, avg);
 			des.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "max") {
@@ -558,7 +554,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			}
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
 			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMax);
+			pAggrVal = yyjson_mut_real(mut_doc, dbMax);
 			des.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "min") {
@@ -583,7 +579,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			}
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
 			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbMin);
+			pAggrVal = yyjson_mut_real(mut_doc, dbMin);
 			des.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "sum") {
@@ -602,7 +598,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				}
 				dbSum += db;
 			}
-			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbSum);
+			pAggrVal = yyjson_mut_real(mut_doc, dbSum);
 			des.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "diff") {
@@ -626,11 +622,15 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 					dbMin = db;
 			}
 			double dbDiff = dbMax - dbMin;
-			yyjson_mut_val* pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
 			des.items[aggrKey] = pAggrVal;
 		}
+
+		if (aggrKey == "val") {
+			des.val = pAggrVal;
+		}
 	}
-	
+
 	return true;
 }
 
@@ -644,17 +644,19 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 	{
 		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
 
+		//某个位号的所有聚合结果，比如共30天按天聚合，那就是30天的结果
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 
+			//检查该时间的行对象是否已经存在
 			yyjson_mut_val* jRecord;
 			map<string, yyjson_mut_val*>::iterator itRecord = mapRlt.find(szTime.data());
-			if (itRecord != mapRlt.end()) {
+			if (itRecord != mapRlt.end()) { //已存在获得该行
 				jRecord = itRecord->second;
 			}
-			else {
+			else { //不存在则新创建一行
 				jRecord = yyjson_mut_obj(mut_doc);
 				//time字段
 				yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
@@ -664,7 +666,11 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 				for (int i = 0; i < tagDBFileSet.size(); i++) {
 					yyjson_mut_val* tagColKeyInit = yyjson_mut_str(mut_doc, tagDBFileSet[i]->colKey.c_str());
 					yyjson_mut_val* tagColValInit = yyjson_mut_null(mut_doc);
-					yyjson_mut_obj_put(jRecord, tagColKeyInit, tagColValInit);
+					bool putted = yyjson_mut_obj_put(jRecord, tagColKeyInit, tagColValInit);
+					if (!putted)
+					{
+						LOG("无法插入字段");
+					}
 				}
 
 				std::pair<string, yyjson_mut_val*> recPair;
@@ -672,12 +678,14 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 				recPair.second = jRecord;
 				auto insertRet = mapRlt.insert(recPair);
 				itRecord = insertRet.first;
+				mapRlt[szTime.data()] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 			}
 
+			//给当前行添加 当前位号数据作为一列
 			yyjson_mut_val* tagColKey = yyjson_mut_str(mut_doc, fSet.colKey.c_str());
 			yyjson_mut_obj_put(jRecord, tagColKey, deyy.val);
 
-			mapRlt[szTime.data()] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+			
 			result.rowCount++;
 		}
 	}
@@ -1369,7 +1377,7 @@ bool database::Open(string strDBUrl,string name)
 	if (strDBUrl == "")
 		return false;
 
-	m_path = strDBUrl; 
+	m_path = str::replace(strDBUrl,"\\","/");
 	m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
 	m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "curve_list.jdb");
 	m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.jdb");
@@ -1962,7 +1970,7 @@ bool TIME_SELECTOR::parseTimeRange(string condition)
 		strEnd += " 23:59:59";
 	stStart = timeopt::str2st(strStart);
 	stEnd = timeopt::str2st(strEnd);
-	startTime = timeopt::SysTime2Unix(stStart);
+	startTime = timeopt::SysTime2Unix(stStart); 
 	endTime = timeopt::SysTime2Unix(stEnd);
 	return true;
 }

@@ -1026,7 +1026,6 @@ namespace timeopt {
 		TIME t;
 		memset(&t, 0, sizeof(t));
 		//2022-02-22 11:11:11.123   23bytes
-		//2022-02-22 11:11:11   19bytes
 		int y, m, d, h, min, s, milli;
 		if (str.length() == 23) {
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
@@ -1039,6 +1038,7 @@ namespace timeopt {
 				&milli);
 			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
 		}
+		//2022-02-22 11:11:11   19bytes
 		else if (str.length() == 19)
 		{
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
@@ -1049,6 +1049,17 @@ namespace timeopt {
 				&min,
 				&s);
 			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
+		}
+		//2022-02-22 11:11   16bytes
+		else if (str.length() == 16)
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min;
 		}
 		else if (str.length() == 10) //2022-02-02
 		{

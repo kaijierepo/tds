@@ -49,6 +49,11 @@ bool ScriptManager::init()
 
 bool ScriptManager::run()
 {
+	//该配置一般用于临时关闭脚本调用，方便调试打断点
+	if (tds->conf->getInt("enableScript", 1) == 0) {
+		return true;
+	}
+
 	thread t(scriptThread, this);
 	t.detach();
 	return false;
