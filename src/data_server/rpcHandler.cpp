@@ -2969,6 +2969,11 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 			}
 		}
 		else {
+			j = nullptr;
+		}
+
+		//根据拓扑图的命名自动生成树结构，暂时废弃
+		/*else {
 			json jTree = json::object();
 			for (int i = 0; i < topoList.size(); i++) {
 				string name = topoList[i];
@@ -2997,7 +3002,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 				}
 			}
 			j.insert(j.begin(), jMain);
-		}
+		}*/
 	}
 	return j.dump();
 }
