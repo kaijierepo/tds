@@ -443,6 +443,8 @@ DllExport i_tds* getTds() {
 //如果tds主程序中不使用_strdup ， strspn 这两个函数
 // /MT 编译的openssl的crypto.lib会出现   这两个函数unresolved错误
 //可能openssl编译的时候没有指定需要链接的lib. 主程序使用则产生了lib链接。原因不明。后续研究
+// fgets ferror feof这几个函数代码里有，才能编译通过
+// 不然会报 libcrypto-1_1-static.lib(bss_file.obj) : error LNK2001: 无法解析的外部符号 __imp_ferror
 #ifdef _WIN32
 void forLink() {
 	char* a = new char[100];
@@ -451,6 +453,13 @@ void forLink() {
 	a = _strdup(b.c_str());
 	size_t pos = strspn(a, "b");
 	_strerror_s(a,100, "abcd");
+
+	char aa[100];
+	char* bb = fgets(a, 100, nullptr);
+
+	ferror(nullptr);
+
+	feof(nullptr);
 }
 #endif
 
