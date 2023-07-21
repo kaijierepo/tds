@@ -1027,56 +1027,63 @@ namespace timeopt {
 		memset(&t, 0, sizeof(t));
 		//2022-02-22 11:11:11.123   23bytes
 		int y, m, d, h, min, s, milli;
-		if (str.length() == 23) {
-			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
-				&y,
-				&m,
-				&d,
-				&h,
-				&min,
-				&s,
-				&milli);
-			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+		if (str[2] != '-' && str[2] != ':') {
+			if (str.length() == 23) {
+				sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
+					&y,
+					&m,
+					&d,
+					&h,
+					&min,
+					&s,
+					&milli);
+				t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+			}
+			//2022-02-22 11:11:11   19bytes
+			else if (str.length() == 19)
+			{
+				sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+					&y,
+					&m,
+					&d,
+					&h,
+					&min,
+					&s);
+				t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
+			}
+			//2022-02-22 11:11   16bytes
+			else if (str.length() == 16)
+			{
+				sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d",
+					&y,
+					&m,
+					&d,
+					&h,
+					&min);
+				t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min;
+			}
+			else if (str.length() == 10) //2022-02-02
+			{
+				sscanf(str.c_str(), "%4d-%2d-%2d",
+					&y,
+					&m,
+					&d);
+				t.wYear = y; t.wMonth = m; t.wDay = d;
+			}
+			else if (str.length() == 8) //12:11:11
+			{
+				sscanf(str.c_str(), "%2d:%2d:%2d",
+					&h,
+					&min,
+					&s);
+				t.wHour = h; t.wMinute = min; t.wSecond = s;
+			}
 		}
-		//2022-02-22 11:11:11   19bytes
-		else if (str.length() == 19)
-		{
-			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
-				&y,
-				&m,
-				&d,
-				&h,
-				&min,
-				&s);
-			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
+		else {
+			time_t tt = atoi(str.c_str());
+			t = Unix2SysTime(tt);
 		}
-		//2022-02-22 11:11   16bytes
-		else if (str.length() == 16)
-		{
-			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d",
-				&y,
-				&m,
-				&d,
-				&h,
-				&min);
-			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min;
-		}
-		else if (str.length() == 10) //2022-02-02
-		{
-			sscanf(str.c_str(), "%4d-%2d-%2d",
-				&y,
-				&m,
-				&d);
-			t.wYear = y; t.wMonth = m; t.wDay = d;
-		}
-		else if (str.length() == 8) //12:11:11
-		{
-			sscanf(str.c_str(), "%2d:%2d:%2d",
-				&h,
-				&min,
-				&s);
-			t.wHour = h; t.wMinute = min; t.wSecond = s;
-		}
+		
 		return t;
 	}
 
