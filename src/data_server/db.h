@@ -323,6 +323,12 @@ struct DE_SELECTOR {
 
 	string valType;  //不为空表示将数据库值类型强转成指定类型
 	string deType;   //数据元类型，默认为原始数据，可以取 curveIdx 曲线索引; deType不一样，对应的数据文件不一样
+	bool isValTypeNumber() {
+		if (valType == "float" || valType == "number") {
+			return true;
+		}
+		return false;
+	}
 
 	//位号重命名
 	string tagLabel; //重命名为 tag还是name
@@ -367,6 +373,8 @@ struct SELECT_RLT {
 	size_t deCount;
 	size_t fileCount;
 	map<string, yyjson_mut_val*> mapRlt;
+	string error;
+	string info;
 
 	SELECT_RLT() {
 		getDE = true;

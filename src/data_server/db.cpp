@@ -479,7 +479,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
 				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
@@ -495,7 +495,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
-			if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
 				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
@@ -514,7 +514,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				yyjson_mut_val* pAggrVal = nullptr;
 				double db = 0;
-				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -539,7 +539,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -564,7 +564,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -588,7 +588,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -608,7 +608,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.valType == "float" && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -621,7 +621,9 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 				if (db < dbMin)
 					dbMin = db;
 			}
-			double dbDiff = dbMax - dbMin;
+			double dbDiff = dbMax - dbMin; //double的减法会造成精度丢失，通过格式化字符串转换一次解决精度丢失问题
+			string sDbDiff = str::format("%lf", dbDiff); 
+			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
 			des.items[aggrKey] = pAggrVal;
 		}
@@ -738,6 +740,7 @@ bool database::Select_yyjson_deFile(string& s)
 
 bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
+	bool bRet = true;
 	//获取需要加载数据的位号集合
 	vector<string> tagSet = deSel.tagSel.tagSet;
 
@@ -813,7 +816,9 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	else {
 		//获得选中的数据元.并进行分组
-		Select_Step_loadDataElem(deSel, tagDBFileSet, result, rlt_mut_doc);
+		bRet = Select_Step_loadDataElem(deSel, tagDBFileSet, result, rlt_mut_doc);
+		if (!bRet)
+			return false;
 
 		//执行聚合
 		Select_Step_doAggregate(deSel, tagDBFileSet, result, rlt_mut_doc);
@@ -998,6 +1003,29 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 
 
 			yyjson_arr_foreach(deList, idx, max, de) {
+				//兼容将数字存储成字符串的问题，当有聚合请求时，自动转换字符串为数字类型，返回提示信息
+				if (idx == 0 && deSel.bAggr)
+				{
+					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+					if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "") 
+					{
+						for (auto& aggrParam : fSet.aggregate) {
+							string aggrType = aggrParam.second;
+							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min") {
+								//string err = "data element type is: string, does not support aggregate type:" + aggrType;
+								//err += ",use valType=number to cast string value to number value";
+								//json jErr = err;
+								//result.error = jErr.dump();
+								//return false;
+								deSel.valType = "number";
+								result.info = "aggregate type is " + aggrType + ",auto cast value type string to number";
+								break;
+							}
+						}
+					}
+				}
+
+
 				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
 				//最后1个下采样间隔全部输出
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
@@ -1068,9 +1096,10 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					//放入time,val以外的所有字段
 					deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
 
-					if (deSel.valType == "float") //指定了输出类型
-					{
-						if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
+
+					if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
+						if (deSel.isValTypeNumber()) //指定了输出类型
+						{
 							string_view valStr = yyjson_mut_get_str(deyy.val);
 							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
 						}
@@ -1617,7 +1646,12 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 		try
 		{
 			db.Select_yyjson(deSel, result);
-			resp.result = result.dataList;
+			if (result.error != "") {
+				resp.error = result.error;
+			}
+			else {
+				resp.result = result.dataList;
+			}
 		}
 		catch (std::exception& e)
 		{
@@ -1626,8 +1660,8 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 		}
 	}
 
-
-	resp.info = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
+	resp.info = result.info;
+	resp.dbQueryInfo = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
 }
 
 void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)

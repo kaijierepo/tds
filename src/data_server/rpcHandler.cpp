@@ -2454,6 +2454,10 @@ HANDLE_END:
 		if (rpcResp.info != "") {
 			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
 		}
+
+		if (rpcResp.dbQueryInfo != "") {
+			rpcResp.strResp += ",\"dbLog\":\"" + rpcResp.dbQueryInfo + "\"";
+		}
 			
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
 	}

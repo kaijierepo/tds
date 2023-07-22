@@ -222,6 +222,7 @@ public:
 	string result;
 	string params; 
 	string info;   //rpc excution log
+	string dbQueryInfo;
 	char* binResult;
 	int iBinLen;
 	bool isNotification; //is request a notification.no response will send if request is a notification
