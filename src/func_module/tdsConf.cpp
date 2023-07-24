@@ -477,3 +477,13 @@ string tdsConfig::getStr(string key, string sDef)
 	return tdsIni.getValStr(key, sDef);
 }
 
+bool tdsConfig::setStr(string key, string val)
+{
+	return false;
+}
+
+bool tdsConfig::setInt(string key, string val)
+{
+	return false;
+}
+

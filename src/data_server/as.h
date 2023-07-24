@@ -45,9 +45,10 @@ public:
 	string tag;
 	string time;
 	string type;
+	string id;  //用户自定义的alarmid，当某些报警应用，时空+type都一样时，可以使用id进一步区分
 	
 	string getKey(){
-		return tag + ","+ time + "," + type;
+		return tag + ","+ time + "," + type + id;
 	}
 };
 
@@ -189,7 +190,8 @@ public:
 	string rpc_getUnRecover(json filter, RPC_SESSION session);
 	string rpc_getUnack(json filter, RPC_SESSION session);
 	string rpc_getHistory(json params, RPC_SESSION session);
-	string rpc_addEvent(json j);
+	string rpc_alarmOccurEvent(json j, RPC_RESP& resp);
+	void rpc_alarmClearEvent(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
 
 	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表

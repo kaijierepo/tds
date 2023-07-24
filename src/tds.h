@@ -340,6 +340,8 @@ struct iTDSConf {
 
 	virtual int getInt(string key, int iDef) = 0;
 	virtual string getStr(string key, string sDef) = 0;
+	virtual bool setStr(string key, string val) = 0;
+	virtual bool setInt(string key, string val) = 0;
 };
 
 

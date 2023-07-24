@@ -1718,11 +1718,14 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	}
 	else if (method == "getAlarmHistory")
 	{
-	result = almSrv.rpc_getHistory(params, session);
+		result = almSrv.rpc_getHistory(params, session);
 	}
-	else if (method == "addAlarmEvent")
+	else if (method == "addAlarmEvent" || method == "alarmOccurEvent")
 	{
-	result = almSrv.rpc_addEvent(params);
+		result = almSrv.rpc_alarmOccurEvent(params, rpcResp);
+	}
+	else if (method == "alarmClearEvent") {
+		almSrv.rpc_alarmClearEvent(params, rpcResp);
 	}
 	else if (method == "updateAlarmStatus")
 	{
@@ -1897,6 +1900,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		string phoneNum = params["phoneNum"];
 		tds->smsServer->send(params, phoneNum);
 		rpcResp.result = RPC_OK;
+	}
+	else if (method == "setSrvConf") {
+		
 	}
 	else {
 		bHandled = false;

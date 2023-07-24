@@ -218,13 +218,20 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	mapAlarm.clear();
 }
 
-string almServer::rpc_addEvent(json j)
+string almServer::rpc_alarmOccurEvent(json j, RPC_RESP& resp)
 {
 	ALARM_INFO ai;
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
 	AddEvent(ai);
 	return "\"success\"";
+}
+
+void almServer::rpc_alarmClearEvent(json j, RPC_RESP& resp)
+{
+	j["level"] = "normal";
+	rpc_updateStatus(j, resp);
+	return;
 }
 
 void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
@@ -589,7 +596,7 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	ai.tag = j["tag"];
 	ai.type = j["type"];
 
-	if (j["desc"] != nullptr)
+	if (j["level"] != nullptr)
 		ai.level = j["level"];
 	else
 		ai.level = ALARM_LEVEL::alarm;

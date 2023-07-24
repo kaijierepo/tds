@@ -29,6 +29,9 @@ public:
 
 	int getInt(string key, int iDef) override;
 	string getStr(string key, string sDef) override;
+	bool setStr(string key, string val) override;
+	bool setInt(string key, string val) override;
+
 
 	json jsonConf;
 	string m_confFileName;
