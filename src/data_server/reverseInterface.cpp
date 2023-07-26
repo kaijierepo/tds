@@ -212,33 +212,38 @@ bool ReverseInterface::run()
 	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
 	string childTdsIP = tds->conf->getStr("childTdsIP", "");
 
-	vector<string> vecAddrs;
-	str::split(vecAddrs, masterTdsAddrs, ",");
+	if (masterTdsAddrs != "") {
+		vector<string> vecAddrs;
+		str::split(vecAddrs, masterTdsAddrs, ",");
 
-	LOG("[服务级联  ] 连接到上级服务 %s,绑定本地地址:%s", masterTdsAddrs.c_str(), childTdsIP.c_str());
+		LOG("[服务级联  ] 连接到上级服务 %s,绑定本地地址:%s", masterTdsAddrs.c_str(), childTdsIP.c_str());
 
-	for (int i = 0; i < vecAddrs.size(); i++) {
-		string addr = vecAddrs[i];
-		tcpClt* pTcpClt = new tcpClt();
+		for (int i = 0; i < vecAddrs.size(); i++) {
+			string addr = vecAddrs[i];
+			tcpClt* pTcpClt = new tcpClt();
 
-		string ip;
-		int port;
-		str::parseIpPort(addr, ip, port);
+			string ip;
+			int port;
+			str::parseIpPort(addr, ip, port);
 
-		//创建TDS Session
-		tcpSessionClt* pTcpSess = &pTcpClt->m_session;
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
-		pTcpSess->pALSession = p;
-		p->type = TDS_SESSION_TYPE::tdsClient;
-		p->name = "上级服务";
-		p->m_bParentTds = true;
-		p->remoteIP = ip;
-		p->remotePort = port;
+			//创建TDS Session
+			tcpSessionClt* pTcpSess = &pTcpClt->m_session;
+			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
+			pTcpSess->pALSession = p;
+			p->type = TDS_SESSION_TYPE::tdsClient;
+			p->name = "上级服务";
+			p->m_bParentTds = true;
+			p->remoteIP = ip;
+			p->remotePort = port;
 
-		pTcpClt->m_keepAliveTimeout = 10;
-		pTcpClt->run(this, addr, childTdsIP);
-		m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
+			pTcpClt->m_keepAliveTimeout = 10;
+			pTcpClt->run(this, addr, childTdsIP);
+			m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
+		}
 	}
+
+
+	
 
 	int tcpPort = tds->conf->getInt("tcpPort", 670);
 	if (tcpPort > 0) {

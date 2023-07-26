@@ -622,7 +622,7 @@ void tdsWatchDog::log(string s)
 {
 	TIME stNow;
 	timeopt::now(&stNow);
-	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	string time = timeopt::nowStr(true);
 	s = charCodec::utf8_to_gb(s);
 	s = time + " " + s +  "\r\n";
 	printf(s.c_str());
