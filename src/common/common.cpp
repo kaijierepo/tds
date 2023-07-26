@@ -1911,26 +1911,34 @@ namespace fs {
 	}
 
 
-	 void getFolderList(vector<fs::FILE_INFO>& list, string strFolder)
-	{
+	 void getFolderList(vector<fs::FILE_INFO>& list, string strFolder, bool recursive) {
 #ifndef _WINXP
-		 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
-		 for (auto& i : std::filesystem::directory_iterator(wstrFolder)) {
-			 if (i.is_directory()) {
-				 FILE_INFO fi;
-				 fi.path = charCodec::gb_to_tds(i.path().string());
-				 fi.path = str::replace(fi.path, "\\", "/");
-				 size_t pos = fi.path.rfind("/");
-				 fi.folderPath = fi.path.substr(0, pos);
-				 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
-				 fi.len = i.file_size();
-				 list.push_back(fi);
+		 try
+		 {
+			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder);
+			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+				 if (i.is_directory()) {
+					 FILE_INFO fi;
+					 fi.path = charCodec::gb_to_tds(i.path().string());
+					 fi.path = str::replace(fi.path, "\\", "/");
+					 size_t pos = fi.path.rfind("/");
+					 fi.folderPath = fi.path.substr(0, pos);
+					 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+					 fi.len = i.file_size();
+					 list.push_back(fi);
+
+					 if (recursive) {
+						 getFolderList(list, charCodec::gb_to_tds(i.path().string()), recursive);
+					 }
+				 }
 			 }
 		 }
+		 catch (exception&) {
+		 }
 #else
-
 #endif
-	}
+	 }
+
 
 	 void getFileList(vector<fs::FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
 #ifndef _WINXP

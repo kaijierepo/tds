@@ -753,6 +753,31 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				rpcResp.result = "\"ok\"";
 			}
 		}
+		else if (method == "db.renameFolder") {
+			string oldName = params["old"].get<string>();
+			string newName = params["new"].get<string>();
+
+			vector<fs::FILE_INFO> vec;
+			fs::getFolderList(vec, db.m_path,true);
+			try
+			{
+				for (int i = 0; i < vec.size(); i++) {
+					fs::FILE_INFO& fi = vec[i];
+					if (fi.name.find(oldName) != string::npos) {
+						string newPath = str::replace(fi.path, oldName, newName);
+						wstring wop = charCodec::utf8_to_utf16(fi.path);
+						wstring wnp = charCodec::utf8_to_utf16(newPath);
+						filesystem::rename(wop, wnp);
+					}
+				}
+				rpcResp.result = RPC_OK;
+			}
+			catch (const std::exception& e)
+			{
+				json jErr = e.what();
+				rpcResp.error = jErr.dump();
+			}
+		}
 		else if (!params.contains("time"))
 		{
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
@@ -3250,7 +3275,7 @@ string rpcHandler::rpc_getMoOnlineStatus(json params, string& error)
 	return list.dump(4);
 }
 
-string rpcHandler::rename(string orgName, json& renameMap) {
+string rpcHandler::renameItem(string orgName, json& renameMap) {
 	string desName = orgName;
 	if (renameMap[orgName].is_string()) {
 		desName = renameMap[orgName];
@@ -3262,18 +3287,18 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 	string sysTag = pMo->getTag();
 	string queryTag = sysTag;
 	queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
-	attrInfo[rename("位号", params.renameMap)] = queryTag;
+	attrInfo[renameItem("位号", params.renameMap)] = queryTag;
 
 	//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
 	if (pMo->m_type == MO_TYPE::customMo) {
 		ioDev* piod = ioSrv.getIODevByTag(sysTag);
 		if (piod)
 		{
-			attrInfo[rename("在线", params.renameMap)] = piod->m_bOnline;
+			attrInfo[renameItem("在线", params.renameMap)] = piod->m_bOnline;
 		}
 		else
 		{
-			attrInfo[rename("在线", params.renameMap)] = pMo->m_bOnline;
+			attrInfo[renameItem("在线", params.renameMap)] = pMo->m_bOnline;
 		}
 	}
 
@@ -3305,10 +3330,10 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 
 
 		if (params.columeLabel == "name") {
-			attrInfo[rename(pmp->m_name, params.renameMap)] = jVal;
+			attrInfo[renameItem(pmp->m_name, params.renameMap)] = jVal;
 		}
 		else {
-			attrInfo[rename(pmp->getTag(sysTag), params.renameMap)] = jVal;
+			attrInfo[renameItem(pmp->getTag(sysTag), params.renameMap)] = jVal;
 		}
 	}
 }
