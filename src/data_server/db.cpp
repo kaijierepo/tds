@@ -1412,14 +1412,7 @@ bool database::Open(string strDBUrl,string name)
 	m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.jdb");
 	m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 
-	if(!fs::fileExist(m_path + "/" + m_dbFmt.deListName))
-		create(strDBUrl,name);
-
-	string s;
-	fs::readFile(m_path + "/" + m_dbFmt.deListName,s);
-	json j = json::parse(s);
-
-	m_name = j["name"];
+	m_name = name;
 	return true;
 }
 
