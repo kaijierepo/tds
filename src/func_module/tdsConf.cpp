@@ -71,6 +71,7 @@ string tdsConfig::defaultConf_tds()
 #系统配置
 uiPath=./ui            #web根目录
 confPath=./conf        #配置路径
+dbPath=./Data          #数据库路径
 loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
 
 #数据服务
@@ -479,11 +480,13 @@ string tdsConfig::getStr(string key, string sDef)
 
 bool tdsConfig::setStr(string key, string val)
 {
-	return false;
+	tdsIni.setVal(key, val);
+	return true;
 }
 
-bool tdsConfig::setInt(string key, string val)
+bool tdsConfig::setInt(string key, int val)
 {
-	return false;
+	tdsIni.setVal(key, val);
+	return true;
 }
 

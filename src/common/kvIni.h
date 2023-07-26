@@ -37,6 +37,7 @@ public:
 	int getValInt(string key, int defaultVal);
 	string getValStr(string key, string defaultVal);
 	map<string, string> mapConf;
-	string m_path;
+	string m_path;//ini路径
+	string m_strConf;//ini所有内容
 };
 
