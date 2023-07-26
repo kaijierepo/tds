@@ -267,14 +267,18 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>tdsd</TargetName>
-    <OutDir>D:\HuiJing\JHD-Internal-Tools\DAS\HHCsmDAS\输出</OutDir>
+    <TargetName>tds</TargetName>
+    <OutDir>../out</OutDir>
+    <IncludePath>E:\tds\src\3rdparty\jerryscript\include;E:\tds\src\3rdparty\jerryscript\include\jerryscript-ext;$(IncludePath)</IncludePath>
+    <ReferencePath>E:\tds\src\3rdparty\jerryscript\lib_x86\MTd;$(ReferencePath)</ReferencePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='edge -D|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D video|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -288,12 +292,15 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R video|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -302,7 +309,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='edge -D|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../out-edge</OutDir>
+    <OutDir>../out</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D video|x64'">
@@ -327,17 +334,17 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../atexpert/out</OutDir>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../../atexpert/out</OutDir>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
-    <OutDir>../../atexpert/out</OutDir>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">
-    <OutDir>../../atexpert/out</OutDir>
+    <OutDir>../out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
     <OutDir>../out</OutDir>
@@ -349,15 +356,18 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\tds\src\3rdparty\jerryscript;E:\tds\src\3rdparty\jerryscript\include;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>E:\tds\src\3rdparty\ffmpeg\lib;E:\tds\src\3rdparty\mqtt\lib;E:\tds\src\3rdparty\openssl\lib;E:\tds\src\3rdparty\x86\jerryscript\lib\MTd;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>zlib.lib;mqtt.lib;libssl-1_1-static.lib;libcrypto-1_1-static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='edge -D|Win32'">
@@ -482,7 +492,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
