@@ -2971,7 +2971,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		for (int i = 0; i < topoList.size(); i++)
 		{
 			string s = topoList[i];
-			if (s == "root")
+			if (s == "root" || s == "主视图")
 				s = "";
 
 
