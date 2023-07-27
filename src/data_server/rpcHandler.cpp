@@ -1927,9 +1927,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = RPC_OK;
 	}
 	else if (method == "setSrvConf") {
-		string confPath = params["dbPath"];
+		string dbPath = params["dbPath"];
 		//ini配置修改
-		tds->conf->setStr("dbPath", confPath);
+		tds->conf->setStr("dbPath", dbPath);
 		rpcResp.result = RPC_OK;//返回ok
 		
 	}

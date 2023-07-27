@@ -420,6 +420,8 @@ void tdsConfig::loadConf()
 			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
 			tci.val = str::trim(tci.val, "\r");
+			tci.key = str::trim(tci.key, "\t");//去除键值对中间的tab,如果路径内存在tab这个会被读为\t,然后导致创建文件夹失败.
+			tci.val = str::trim(tci.val, "\t");
 			tci.key = str::trim(tci.key, " ");
 			tci.val = str::trim(tci.val, " ");
 

@@ -33,6 +33,8 @@ bool KV_INI::load(string path)
 			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
 			tci.val = str::trim(tci.val, "\r");
+			tci.key = str::trim(tci.key, "\t");//去除键值对中间的tab,如果路径内存在tab这个会被读为\t,然后导致创建文件夹失败.
+			tci.val = str::trim(tci.val, "\t");
 			tci.key = str::trim(tci.key, " ");
 			tci.val = str::trim(tci.val, " ");
 
@@ -53,18 +55,29 @@ void KV_INI::setVal(string key, int val)
 	string s = str::fromInt(val);
 	mapConf[key] = s;
 
-	// 使用正则表达式以"key"和"="作为关键词匹配其等号后的值，并避免匹配到"#"或回车符号之后的内容
-	std::regex pattern((key + "\\s*=\\s*([^\\s#\\n]+)"));
+	std::regex pattern_1((key + "\\s*=\\s*\\n"));				//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，此种情况为没有值,直接匹配到换行符的情况
+	std::regex pattern_2((key + "\\s*=\\s*\\s#"));				//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，此种情况为没有值,直接匹配到"#"的情况
+	std::regex pattern_3((key + "\\s*=\\s*([^\\s#\\n]+)"));		//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，并避免匹配到"#"或回车符号之后的内容
 	std::smatch matches;
-	//适配到就更改
-	if (std::regex_search(m_strConf, matches, pattern)) {
-		std::string matchedString = matches[1].str();
-		std::string result = std::regex_replace(m_strConf, std::regex(matchedString), s);
+	if (std::regex_search(m_strConf, matches, pattern_1) || std::regex_search(m_strConf, matches, pattern_2))
+	{
+		string str = matches[0].str();
+		string matchedString = "=" + s;
+		std::string result_1 = str::replace(str, "=", matchedString);
+		std::string result = str::replace(m_strConf, str, result_1);
 		m_strConf = result;
 	}
-	else//找不到就加上
+	else if (std::regex_search(m_strConf, matches, pattern_3))
 	{
-		m_strConf = "\n" + m_strConf + key + "=" + s + "\n";
+		string str = matches[0].str();
+		std::string matchedString = matches[1].str();
+		std::string result_1 = str::replace(str, matchedString, s);
+		std::string result = str::replace(m_strConf, str, result_1);
+		m_strConf = result;
+	}
+	else
+	{
+		m_strConf = "\n" + m_strConf + key + "=" + s;
 	}
 
 	save(m_path);
@@ -74,19 +87,29 @@ void KV_INI::setVal(string key, string val)
 {
 	mapConf[key] = val;
 
-	// 使用正则表达式以"key"和"="作为关键词匹配其等号后的值，并避免匹配到"#"或回车符号之后的内容
-	std::regex pattern((key + "\\s*=\\s*([^\\s#\\n]+)"));
+	std::regex pattern_1((key + "\\s*=\\s*\\n"));				//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，此种情况为没有值,直接匹配到换行符的情况
+	std::regex pattern_2((key + "\\s*=\\s*\\s#"));				//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，此种情况为没有值,直接匹配到"#"的情况
+	std::regex pattern_3((key + "\\s*=\\s*([^\\s#\\n]+)"));		//使用正则表达式以"key"和"="作为关键词匹配其等号后的值，并避免匹配到"#"或回车符号之后的内容
 	std::smatch matches;
-	if (std::regex_search(m_strConf, matches, pattern)) {
-		string str= matches[0].str();
+	if (std::regex_search(m_strConf, matches, pattern_1)  || std::regex_search(m_strConf, matches, pattern_2))
+	{
+		string str = matches[0].str();
+		string matchedString = "=" + val;
+		std::string result_1 = str::replace(str, "=", matchedString);
+		std::string result = str::replace(m_strConf, str, result_1);
+		m_strConf = result;
+	}
+	else if (std::regex_search(m_strConf, matches, pattern_3))
+	{
+		string str = matches[0].str();
 		std::string matchedString = matches[1].str();
 		std::string result_1 = str::replace(str, matchedString, val);
 		std::string result = str::replace(m_strConf, str, result_1);
 		m_strConf = result;
-	}
+	}	
 	else
 	{
-		m_strConf = "\n" +m_strConf + key + "=" + val;
+		m_strConf = "\n" + m_strConf + key + "=" + val;
 	}
 
 	save(m_path);
