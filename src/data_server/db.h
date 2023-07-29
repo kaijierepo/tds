@@ -424,7 +424,7 @@ public:
 
 //接口部分
 public:
-	void Insert(string strTag, TIME stTime, json& jData,json dataFile = nullptr) ;
+	void Insert(string strTag, TIME stTime, json& jData,json& dataFile) ;
 
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	

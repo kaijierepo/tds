@@ -1823,6 +1823,10 @@ namespace fs {
 		}
 		return false;
 	}
+	bool writeFile(string path, unsigned char* data, size_t len)
+	{
+		return writeFile(path, (char*)data, len);
+	}
 	bool writeFile(string path, char* data, size_t len)
 	{
 		fs::createFolderOfPath(path);

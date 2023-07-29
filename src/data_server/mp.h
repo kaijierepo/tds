@@ -69,15 +69,12 @@ public:
 	bool loadStatus(OBJ* pSrc) override;
 	void calcAlarm();
 public:
-	//deData表示是否有独立的数据元文件数据，使用一个json数组字符串
-	//例如 deData = "[deFolder,video,pic]"
-	//deFolder表示数据元数据统一放在一个文件夹中，用于一些特别复杂的数据
-	//video表示有一个关联的视频文件
-	//pic表示有一个关联的图片文件
-	//当deFolder和video，pic同时存在时，pic和video放在deFolder中，否则和数据元索引文件放在同一个目录
-	void input(json jVal, TIME* dataTime=NULL, json dataFile = nullptr);
+	//fileData为数据元携带的文件数据
+	//这个函数为最频繁调用的函数，使用引用提高性能
+	void input(json& jVal,  json& fileData, TIME* dataTime = NULL);
+	void updateVal(json& jVal, json& fileData, TIME* dataTime);
 	OBJ* getParentMo();
-	void updateVal(json& jVal,TIME* dataTime = NULL, json dataFile = nullptr);
+
 	bool needSaveToDB();
 	void saveToDB();
 	mutex m_dbFileLock;
@@ -150,6 +147,7 @@ public:
 	// curValValid = false 表示 m_curVal==null
 	json m_orgVal;
 	json m_curVal;   
+	json m_curFileData;
 	json m_lastVal;
 	TIME m_lastSaveTime;
 	bool hasValue();

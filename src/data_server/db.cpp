@@ -9,6 +9,7 @@
 #include "prj.h"
 #include "tdsSession.h"
 #include "scriptEngine.h"
+#include "base64.h"
 
 database db;
 
@@ -139,7 +140,7 @@ string database::getPath_dbFile(string strTag,TIME date,string deType)
 
 
 
-void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
+void database::Insert(string strTag, TIME stTime, json& jData, json& dataFile)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
@@ -148,8 +149,20 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 	json jDE;
 	jDE["time"] = timeopt::st2str(stTime);
 	jDE[m_dbFmt.deItemKey_value.c_str()] = jData;
-	if(dataFile != nullptr)
-	jDE["dataFile"] = dataFile;
+	if (dataFile != nullptr)
+	{
+		json fdList = json::array();
+		for (int i = 0; i < dataFile.size(); i++) {
+			json& j = dataFile[i];
+			json fd = json::object();
+			fd["name"] = j["name"];
+			fd["type"] = j["type"];
+			fdList.push_back(fd);
+		}
+		jDE["fileData"] = fdList;
+	}
+
+	//写入数据元
 	if (!fs::fileExist(dlPath.c_str()))
 	{
 		json jDataList;
@@ -190,6 +203,42 @@ void database::Insert(string strTag, TIME stTime, json& jData, json dataFile)
 			}
 			
 			fclose(fp);
+		}
+	}
+
+	//写入数据元附带的文件数据
+	if (dataFile != nullptr)
+	{
+		string fileDataPath = folderPath + "/" + stTime.toStampHMS();
+		if (!fs::fileExist(fileDataPath))
+			fs::createFolderOfPath(fileDataPath.c_str());
+
+		for (int i = 0; i < dataFile.size(); i++) {
+			json& j = dataFile[i];
+			string name = j["name"];
+			string type = j["type"];
+			string data = j["data"];
+			if (type == "jpg") {
+				//兼容DATA URI Scheme 形如 data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 的资源链接
+				size_t startPos = 0;
+				if (data.find("data:") == 0) {
+					startPos = data.find(",");
+					if (startPos == string::npos) {
+						return;
+					}
+
+					startPos += 1;
+				}
+
+				size_t buffLen = data.length() * 2;
+				unsigned char* out = new unsigned char[buffLen];
+				memset(out, 0, buffLen);
+				int outLen = base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+				fs::writeFile(fileDataPath + "/" + name + ".jpg", out,outLen);
+			}
+			else if (type == "text") {
+				fs::writeFile(fileDataPath + "/" + name + ".txt", data);
+			}
 		}
 	}
 }

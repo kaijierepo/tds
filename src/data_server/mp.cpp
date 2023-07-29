@@ -590,7 +590,7 @@ void MP::calcAlarm()
 
 
 
-void MP::input(json jVal, TIME* dataTime, json dataFile)
+void MP::input(json& jVal, json& dataFile, TIME* dataTime)
 {
 	TIME t;
 	if (dataTime == NULL)
@@ -647,7 +647,7 @@ void MP::input(json jVal, TIME* dataTime, json dataFile)
 		}
 	}
 
-	updateVal(jVal, dataTime, dataFile);
+	updateVal(jVal, dataFile,dataTime);
 }
 
 //监控点组不算
@@ -664,7 +664,7 @@ OBJ* MP::getParentMo()
 	return nullptr;
 }
 
-void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
+void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
 {
 	TIME t;
 	if (dataTime == NULL)
@@ -684,6 +684,7 @@ void MP::updateVal(json& jVal, TIME* dataTime, json dataFile)
 	//save to rt memory
 	m_lastVal = m_curVal;
 	m_curVal = jVal;
+	m_curFileData = fileData;
 	calcAlarm();
 	if (this->m_valType == "json")
 	{
@@ -779,7 +780,7 @@ bool MP::needSaveToDB()
 void MP::saveToDB() {
 	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
-	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal);
+	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal,m_curFileData);
 	m_dbFileLock.unlock();
 }
 

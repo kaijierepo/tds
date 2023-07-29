@@ -749,7 +749,8 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 					tNow = timeopt::now();
 				}
 		
-				db.Insert(tag, tNow, params["val"]);
+				json fileData;
+				db.Insert(tag, tNow, params["val"], fileData);
 				rpcResp.result = "\"ok\"";
 			}
 		}
@@ -2742,8 +2743,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	//输入 位号，值，时间三元组
 	TIME stTimeStamp;
 	string time="";
-	json dataFile;
+	json fileData;
 	json inputVal = nullptr;
+	json inputFileData;
 	json inputTag, inputIoAddr;
 	string rootTag = "";
 
@@ -2778,8 +2780,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 	else {
 		//值
-		if (params.find("val") != params.end())
+		if (params.find("val") != params.end()) {
 			inputVal = params["val"];
+			fileData = params["fileData"];
+		}
 		else
 		{
 			resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
@@ -2849,7 +2853,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			MP* pmp = prj.GetMPByTag(tag);
 			if (pmp)
 			{
-				pmp->input(val, &stTimeStamp, dataFile);
+				pmp->input(val, fileData, &stTimeStamp);
 				vecMps.push_back(pmp); 
 			}
 			else {

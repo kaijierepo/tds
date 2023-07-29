@@ -364,6 +364,7 @@ namespace fs {
 	bool readFile(string path, char*& pData, int& len);
 	bool readFile(string path, unsigned char*& pData, int& len);
 	bool readFile(string path, string& data);
+	bool writeFile(string path, unsigned char* data, size_t len);
 	bool writeFile(string path, char* data, size_t len);
 	bool appendFile(string path, char* data, size_t len);
 	bool appendFile(string path, string data);
