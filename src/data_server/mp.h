@@ -103,7 +103,7 @@ public:
 	string m_ioTypeLabel;
 	//监测点类型，按应用方式来区分，例如温度、湿度、车闸、人闸等。
 	//当使用者说 我想看一下温度的数据，我想看一下车闸的数据，这个XXX的数据就是监测点类型
-	//json的值类型必须要指定物理量类型
+	//json的值类型必须要指定mpType，相当于json数据的数据字典
 	//其他类型可以不指定，将mp的name当做物理量类型。 也可以指定
 	string m_mpType;
 	//string m_physicalType;

@@ -22,6 +22,7 @@ string confDir;
 string filesDir;
 string fsRootDir;
 string topoDir;
+string dbDir;
 
 
 int WS_PKT_HEADER_LEN = sizeof(size_t);
@@ -877,7 +878,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else {
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
-			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir;
+			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir + ",/db/=" + dbDir;
 			if (fsRootDir != "") {
 				dir += ",/fsRoot/=" + fsRootDir;
 			}
@@ -1065,6 +1066,8 @@ bool runWebServers()
 	rootDir = tds->conf->uiPath; 
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
+	dbDir = tds->conf->dbPath;
+	dbDir = fs::toAbsolutePath(dbDir);
 	filesDir = "./files";
 	topoDir = tds->conf->confPath + "/topo/res";
 	fsRootDir = tds->conf->getStr("fsRoot", "");
@@ -1082,6 +1085,7 @@ bool runWebServers()
 	if (fs::appName() == "tds") { //tdb模式不需要
 		LOG("[Web目录	] /config <--> " + confDir);
 		LOG("[Web目录	] /files  <--> " + filesDir);
+		LOG("[Web目录	] /db  <--> " + dbDir);
 
 		if (fsRootDir != "") {
 			LOG("[HTTP文件服务] /fsRoot  <--> " + fsRootDir);
