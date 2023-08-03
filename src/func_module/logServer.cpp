@@ -86,13 +86,19 @@ string logServer::rpc_queryLog(json params, RPC_SESSION session)
 			for (int i=tableLog.buffData.size()-1 ;i >=0; i--)
 			{
 				json j = *tableLog.buffData[i];
-				string time = j["time"].get<string>();
-				string org,object;
-				if(j["org"]!=nullptr)
-					org = j["org"].get<string>();
-				if (j.contains("object")) {
-					object = j["object"];
-				}
+
+
+				if (j["time"].is_string() == false)
+					continue;
+				if (j["org"].is_string() == false)
+					continue;
+				if (j["object"].is_string() == false)
+					continue;
+
+				string time,org,object;
+				time = j["time"];
+				org = j["org"];
+				object = j["object"];
 
 				if (!timeSelector.Match(time))
 				{

@@ -767,6 +767,7 @@ bool userManager::checkPwd(string user,string pwd) {
 
 void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	string trueSign;
 	try {
 		string user = params["user"].get<string>();
 		string pwd = "";
@@ -819,7 +820,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				}
 
 				string msg = user + time;
-				string trueSign = create_HMAC_SHA256_Base64(msg, truePwd);
+				trueSign = create_HMAC_SHA256_Base64(msg, truePwd);
 
 				if (trueSign == sign)
 				{
@@ -869,7 +870,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 			}
 		}
 		else {
-			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "user not found","用户不存在");
+			resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_passwordError, "user not found", "用户不存在");
 		}
 	}
 	catch (std::exception& e)
@@ -883,9 +884,11 @@ LOGIN_END:
 	if (resp.error != "")
 	{
 		LOG("[warn]login fail,info:%s,error:%s", params.dump().c_str(), resp.error.c_str());
+		LOG("[warn]true signature:" + trueSign);
 	}
 	else {
 		LOG("[keyinfo]login success,info:%s,result:%s", params.dump().c_str(), resp.result.c_str());
+		LOG("[warn]true signature:" + trueSign);
 	}
 }
 

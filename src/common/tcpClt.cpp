@@ -157,6 +157,7 @@ void ConnectThread(void* lpParam)
 tcpClt::tcpClt(void)
 {
 	sockClient = 0;
+	m_iLocalPort = 0;
 	m_session.pTcpClt = this;
 	m_remoteIP = "127.0.0.1";
 	m_remotePort = 0;
@@ -283,28 +284,30 @@ bool tcpClt::connect()
 	//将域名解析成ip地址
 	hptr = gethostbyname(m_remoteIP.c_str());
 	if (hptr == NULL || hptr->h_addr == NULL) {
-		m_bIsConnectting = false;
-		return false;
+		m_strErrorInfo = "无法解析该域名的解析" + m_remoteIP;
+		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+		goto CONN_END;
 	}
 
-	//create socket
-	sockaddr_in sAddTemp;
-	sAddTemp.sin_family = AF_INET;
-	sAddTemp.sin_addr.s_addr=inet_addr(m_strLocalIP.c_str());
-	sAddTemp.sin_port = htons(0);
 
 	sockClient=socket(AF_INET,SOCK_STREAM,0);
-	if(m_strLocalIP.length() > 0 && m_iLocalPort != -1)
+
+	//如果设置了本地地址端口，绑定本地地址端口
+	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0)
 	{
+		sockaddr_in sAddTemp;
+		sAddTemp.sin_family = AF_INET;
+		sAddTemp.sin_addr.s_addr = inet_addr(m_strLocalIP.c_str());
+		sAddTemp.sin_port = htons(m_iLocalPort);
 		if(-1 == ::bind(sockClient, (sockaddr*)&sAddTemp,sizeof(sockaddr)))
 		{
 			m_strErrorInfo = "绑定IP失败";
-			m_bIsConnectting = false;
-			return false;
+			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+			goto CONN_END;
 		}
 	}
 
-
+	//连接远端服务器
 	sockaddr_in addrSrv;
 	memcpy(&addrSrv.sin_addr.s_addr, hptr->h_addr_list[0], hptr->h_length);
 	addrSrv.sin_family=AF_INET;
@@ -317,17 +320,20 @@ bool tcpClt::connect()
 	{
 		m_strErrorInfo = "连接失败:" + sys::getLastError();
 		m_bIsConnectting = false;
-		return false;
+		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 	}
-	//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
-	m_bConn = true;
-	ret = true;
-	lastConnTime = timeopt::nowStr();
-	m_session.stLastActive = timeopt::nowStr();
-	m_strErrorInfo = "";
+	else {
+		//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
+		m_bConn = true;
+		ret = true;
+		lastConnTime = timeopt::nowStr();
+		m_session.stLastActive = timeopt::nowStr();
+		m_strErrorInfo = "";
 
-	thread t(TcpClientRecvThread,this);
-	t.detach();
+		thread t(TcpClientRecvThread, this);
+		t.detach();
+	}
+
 
  CONN_END:
 	if (ret == false) {
@@ -370,7 +376,7 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 	if(iRet <= 0)
 	{
 #ifdef _WIN32
-	closesocket(sockClient);
+	closesocket(sockClient); //没有连接成功也需要closesocket，释放资源
 #else
 	close(sockClient);
 #endif

@@ -13,8 +13,9 @@ ReverseInterface
 class ReverseInterface : public ITcpServerCallBack,public ITcpClientCallBack
 {
 public:
-	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
-	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
+	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
+	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
 	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;

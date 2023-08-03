@@ -234,10 +234,10 @@ void database::Insert(string strTag, TIME stTime, json& jData, json& dataFile)
 				unsigned char* out = new unsigned char[buffLen];
 				memset(out, 0, buffLen);
 				int outLen = base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-				fs::writeFile(fileDataPath + "/" + name + ".jpg", out,outLen);
+				fs::writeFile(fileDataPath + "/" + name, out,outLen);
 			}
 			else if (type == "text") {
-				fs::writeFile(fileDataPath + "/" + name + ".txt", data);
+				fs::writeFile(fileDataPath + "/" + name, data);
 			}
 		}
 	}

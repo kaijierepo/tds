@@ -177,6 +177,11 @@ void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn
 	}
 }
 
+void ReverseInterface::onTcpCltEvent_error(tcpClt* pClt, string error)
+{
+	LOG("[warn]Tcp客户端,remoteAddr=%s:%d,错误事件,%s",pClt->m_remoteIP.c_str(),pClt->m_remotePort,error.c_str());
+}
+
 
 void streamPusherMng_thread() {
 	while (1) {

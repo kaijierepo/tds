@@ -43,6 +43,7 @@ struct tcpSessionClt
 class ITcpClientCallBack {
 public:
 	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) = 0;
+	virtual void onTcpCltEvent_error(tcpClt* pClt,string error) {};
 	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) = 0;
 };
 
@@ -55,17 +56,17 @@ public:
 	~tcpClt(void);
 
 	//指定服务器运行，断线自动重连
-	bool run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
+	bool run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
 	void stop();
 
 	tcpSessionClt m_session;
 	vector<char> heartbeat;
 
-	void AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
-	bool connect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = -1);
-	bool connect(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = -1);
+	void AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
+	bool connect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
+	bool connect(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
 
-	bool run(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = -1);
+	bool run(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
 	
 	bool connect();
 	bool ReConnect();
