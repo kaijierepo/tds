@@ -1779,7 +1779,12 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	bool bHandled = true;
 	json jRlt;
 	json jErr;
-	if (method == "getUsers")
+
+	if (method == "addUser")
+	{
+		userMng.rpc_addUser(params, rpcResp, session);
+	}
+	else if (method == "getUsers")
 	{
 		json j = userMng.rpc_getUsers(params,rpcResp,session);
 		result = j.dump(4);
