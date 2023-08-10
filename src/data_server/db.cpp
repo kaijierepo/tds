@@ -2125,6 +2125,25 @@ CONDITION_SELECTOR::CONDITION_SELECTOR()
 	bEnable = false;
 }
 
+bool CONDITION_SELECTOR::init(string filter)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	if (filter.length() > 0)
+	{
+		filterExp = filter;
+		//此处的缓存设置过小会崩溃.1024测试会奔溃。
+		//考虑是否在每一次执行match操作的时候，释放global_object
+		//看上去globalObject的字段只占用一份内存，因为setObject之后就会release prop_value
+		//因此此处的缓存应该是能保证一个de的大小执行控件就够了
+		tls_context = jerry_create_context(500*1024, context_alloc_fn, NULL);;
+		jerry_init(JERRY_INIT_EMPTY);
+		global_object = jerry_get_global_object();
+		bEnable = true;
+	}
+#endif
+	return true;
+}
+
 CONDITION_SELECTOR::~CONDITION_SELECTOR()
 {
 #ifdef ENABLE_JERRY_SCRIPT
@@ -2132,11 +2151,136 @@ CONDITION_SELECTOR::~CONDITION_SELECTOR()
 	{
 		jerry_release_value(global_object);
 		jerry_cleanup();
+		free(tls_context);
 	}
 #endif
 }
 
 #ifdef ENABLE_JERRY_SCRIPT
+void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryVal)
+{
+	if (yyjson_is_str(yyVal))
+		jerryVal = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_get_str(yyVal));
+	else if (yyjson_is_null(yyVal)) {
+		jerryVal = jerry_create_null();
+	}
+	else if (yyjson_is_real(yyVal)) {
+		double val = yyjson_get_real(yyVal);
+		jerryVal = jerry_create_number(val);
+	}
+	else if (yyjson_is_int(yyVal))//此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+	{
+		int val = yyjson_get_int(yyVal);
+		jerryVal = jerry_create_number(val);
+	}
+	/*else if (yyjson_is_uint(yyVal)) 
+	{
+		uint64_t digits[1] = { yyjson_get_uint(yyVal) };
+		jerryVal = jerry_create_bigint(digits, 1, false);
+	}
+	else if (yyjson_is_sint(yyVal))
+	{
+		uint64_t digits[1] = { yyjson_get_sint(yyVal) };
+		jerryVal = jerry_create_bigint(digits, 1, true);
+	}*/
+	else if (yyjson_is_bool(yyVal))
+		jerryVal = jerry_create_boolean(yyjson_get_bool(yyVal));
+	else if (yyjson_is_obj(yyVal))
+	{
+		jerryVal = jerry_create_object();
+		size_t idx, maxIdx;
+		yyjson_val* key, * value;
+		yyjson_obj_foreach(yyVal, idx, maxIdx, key, value) {
+			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_get_str(key));
+			jerry_value_t prop_value;
+			yyVal2jerryVal(value, prop_value);
+
+			jerry_value_t set_result = jerry_set_property(jerryVal, prop_name, prop_value);
+			if (jerry_value_is_error(set_result)) {
+				jerry_error_t error = jerry_get_error_type(set_result);
+				jerry_release_value(error);
+			}
+			jerry_release_value(set_result);
+			jerry_release_value(prop_name); //这2句release必须要要有，否则在jerry_cleanup的时候会崩溃
+			jerry_release_value(prop_value);
+		}
+	}
+	else if (yyjson_is_arr(yyVal))
+	{
+		jerryVal = jerry_create_array((uint32_t)yyjson_arr_size(yyVal));
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		yyjson_arr_foreach(yyVal, idx, max, item) {
+			jerry_value_t engineItem;
+			yyVal2jerryVal(item, engineItem);
+			jerry_value_t set_result_arr = jerry_set_property_by_index(jerryVal, (uint32_t)idx, engineItem);
+			jerry_release_value(engineItem);
+		}
+	}
+	else {
+		assert(false);
+	}
+}
+
+void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& jerryVal)
+{
+	if (yyjson_mut_is_str(yyVal))
+		jerryVal = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_mut_get_str(yyVal));
+	else if (yyjson_mut_is_null(yyVal)) {
+		jerryVal = jerry_create_null();
+	}
+	else if (yyjson_mut_is_real(yyVal)) {
+		double val = yyjson_mut_get_real(yyVal);
+		jerryVal = jerry_create_number(val);
+	}
+	else if (yyjson_mut_is_int(yyVal))//此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+	{
+		int val = yyjson_mut_get_int(yyVal);
+		jerryVal = jerry_create_number(val);
+	}
+	else if (yyjson_mut_is_bool(yyVal))
+		jerryVal = jerry_create_boolean(yyjson_mut_get_bool(yyVal));
+	else if (yyjson_mut_is_obj(yyVal))
+	{
+		jerryVal = jerry_create_object();
+		size_t idx, maxIdx;
+		yyjson_mut_val* key, * value;
+		yyjson_mut_obj_foreach(yyVal, idx, maxIdx, key, value) {
+			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_mut_get_str(key));
+			jerry_value_t prop_value;
+			yyVal2jerryVal(value, prop_value);
+
+			jerry_value_t set_result = jerry_set_property(jerryVal, prop_name, prop_value);
+			//if (jerry_value_is_error(set_result)) {
+			//	jerry_error_t error = jerry_get_error_type(set_result);
+			//	jerry_release_value(error);
+			//}
+			jerry_release_value(set_result);
+			jerry_release_value(prop_name);
+			jerry_release_value(prop_value);
+		}
+	}
+	else if (yyjson_mut_is_arr(yyVal))
+	{
+		jerryVal = jerry_create_array(yyjson_mut_arr_size(yyVal));
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_mut_val* item;
+		yyjson_mut_arr_foreach(yyVal, idx, max, item) {
+			jerry_value_t engineItem;
+			yyVal2jerryVal(item, engineItem);
+			jerry_value_t set_result_arr = jerry_set_property_by_index(jerryVal, idx, engineItem);
+			//if (jerry_value_is_error(set_result_arr)) {
+			//	jerry_error_t error = jerry_get_error_type(set_result_arr);
+			//	jerry_release_value(error);
+			//}
+			jerry_release_value(set_result_arr);
+			jerry_release_value(engineItem);
+		}
+	}
+}
+
 bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj)
 {
 	size_t idx, maxIdx;
@@ -2144,33 +2288,12 @@ bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_val* jObj, jerry_value_t engi
 	yyjson_obj_foreach(jObj, idx, maxIdx, key, value) {
 		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_get_str(key));
 		jerry_value_t prop_value;
-		if (yyjson_is_str(value))
-			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_get_str(value));
-		else if (yyjson_is_uint(value)) //此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
-		{
-			uint64_t digits[1] = { yyjson_get_uint(value) };
-			prop_value = jerry_create_bigint(digits, 1, false);
-		}
-		else if (yyjson_is_sint(value))
-		{
-			uint64_t digits[1] = { yyjson_get_sint(value) };
-			prop_value = jerry_create_bigint(digits, 1, true);
-		}
-		else if (yyjson_is_real(value))
-			prop_value = jerry_create_number(yyjson_get_real(value));
-		else if (yyjson_is_bool(value))
-			prop_value = jerry_create_boolean(yyjson_get_bool(value));
-		else if (yyjson_is_obj(value))
-		{
-			prop_value = jerry_create_object();
-			setScriptEngineObj(value, prop_value);
-		}
-
+		yyVal2jerryVal(value, prop_value);
 
 		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		if (jerry_value_is_error(set_result)) {
-			jerry_error_t error = jerry_get_error_type(set_result);
-		}
+		//if (jerry_value_is_error(set_result)) {
+		//	jerry_error_t error = jerry_get_error_type(set_result);
+		//}
 		jerry_release_value(set_result);
 		jerry_release_value(prop_name);
 		jerry_release_value(prop_value);
@@ -2186,33 +2309,13 @@ bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t 
 	yyjson_mut_obj_foreach(jObj, idx, maxIdx, key, value) {
 		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_mut_get_str(key));
 		jerry_value_t prop_value;
-		if (yyjson_mut_is_str(value))
-			prop_value = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_mut_get_str(value));
-		else if (yyjson_mut_is_uint(value)) //此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
-		{
-			uint64_t digits[1] = {yyjson_mut_get_uint(value)};
-			prop_value = jerry_create_bigint(digits,1,false);
-		}
-		else if (yyjson_mut_is_sint(value))
-		{
-			uint64_t digits[1] = { yyjson_mut_get_sint(value) };
-			prop_value = jerry_create_bigint(digits, 1, true);
-		}
-		else if (yyjson_mut_is_real(value))
-			prop_value = jerry_create_number(yyjson_mut_get_real(value));
-		else if (yyjson_mut_is_bool(value))
-			prop_value = jerry_create_boolean(yyjson_mut_get_bool(value));
-		else if (yyjson_mut_is_obj(value))
-		{
-			prop_value = jerry_create_object();
-			setScriptEngineObj(value, prop_value);
-		}
+		yyVal2jerryVal(value, prop_value);
 
 
 		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		if (jerry_value_is_error(set_result)) {
-			jerry_error_t error = jerry_get_error_type(set_result);
-		}
+		//if (jerry_value_is_error(set_result)) {
+		//	jerry_error_t error = jerry_get_error_type(set_result);
+		//}
 		jerry_release_value(set_result);
 		jerry_release_value(prop_name);
 		jerry_release_value(prop_value);
@@ -2228,7 +2331,6 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 		return true;
 
 	bool bMatch = true;
-
 	if (yyjson_mut_is_obj(de))
 	{
 		yyjson_mut_val* jVal = yyjson_mut_obj_get(de, db.m_dbFmt.deItemKey_value.c_str());
@@ -2248,7 +2350,6 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 	bool run_ok = !jerry_value_is_error(eval_ret);
 	jerry_error_t error = jerry_get_error_type(eval_ret);
 	jerry_release_value(eval_ret);
-
 	if (run_ok)
 	{
 		bMatch = jerry_value_to_boolean(eval_ret);
@@ -2278,7 +2379,6 @@ bool CONDITION_SELECTOR::match(string& de)
 #ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
 		return true;
-
 	bool bMatch = true;
 	json jDe = json::parse(de);
 	//将数据元的属性
@@ -2302,7 +2402,6 @@ bool CONDITION_SELECTOR::match(string& de)
 	bool run_ok = !jerry_value_is_error(eval_ret);
 	jerry_error_t error = jerry_get_error_type(eval_ret);
 	jerry_release_value(eval_ret);
-
 	if (run_ok)
 	{
 		bMatch = jerry_value_to_boolean(eval_ret);
@@ -2328,8 +2427,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	if (!bEnable)
 		return true;
 
-	bool bMatch = true;
-
+	bool bMatch = false;
 	if (yyjson_is_obj(de))
 	{
 		setScriptEngineObj(de, global_object);
@@ -2352,9 +2450,9 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	if (run_ok)
 	{
 		bMatch = jerry_value_to_boolean(eval_ret);
-		return bMatch;
 	}
-	else
+
+	if (!run_ok)
 	{
 		db_exception e;
 		if (error == JERRY_ERROR_REFERENCE)
@@ -2370,22 +2468,9 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	}
 	//过滤器执行出错，统一不过滤
 #endif
-	return true;
+	return bMatch;
 }
 
-bool CONDITION_SELECTOR::init(string filter)
-{
-#ifdef ENABLE_JERRY_SCRIPT
-	if (filter.length() > 0)
-	{
-		filterExp = filter;
-		tls_context = jerry_create_context(1024, context_alloc_fn, NULL);;
-		jerry_init(JERRY_INIT_EMPTY);
-		bEnable = true;
-		global_object = jerry_get_global_object();
-	}
-#endif
-	return true;
-}
+
 
 
