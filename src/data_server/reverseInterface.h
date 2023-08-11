@@ -8,9 +8,10 @@ ReverseInterface
 */
 #pragma once
 #include "tdsSession.h"
+#include "udpSrv.h"
 
 
-class ReverseInterface : public ITcpServerCallBack,public ITcpClientCallBack
+class ReverseInterface : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
 {
 public:
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
@@ -19,7 +20,7 @@ public:
 	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
-
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) override;
 public:
 	bool run();
 	void stop();
@@ -31,6 +32,7 @@ public:
 	void sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p);
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 
+	udpServer m_udpSrv;
 	tcpSrv m_tcpSrv;
 	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //作为子服务连接上级服务的客户端
 

@@ -645,6 +645,77 @@ void parseCookie(string& cookie, map<string, string>& mapParams)
 	}
 }
 
+#ifdef ENABLE_OPENSSL
+#include <openssl/rsa.h>
+#include <openssl/pem.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
+void createTestCert() {
+	// 初始化OpenSSL库
+	OpenSSL_add_all_algorithms();
+	ERR_load_crypto_strings();
+
+	// 生成RSA密钥对
+	RSA* rsa = RSA_generate_key(2048, RSA_F4, nullptr, nullptr);
+	if (rsa == nullptr) {
+		fprintf(stderr, "生成RSA密钥对失败\n");
+		return;
+	}
+
+	// 创建X509证书对象
+	X509* x509 = X509_new();
+	if (x509 == nullptr) {
+		fprintf(stderr, "创建X509证书对象失败\n");
+		return;
+	}
+
+	// 设置证书版本号
+	X509_set_version(x509, 2);
+
+	// 设置证书序列号
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+
+	// 设置证书有效期
+	X509_gmtime_adj(X509_get_notBefore(x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(x509), 31536000L); // 有效期为1年
+
+	// 设置证书公钥
+	EVP_PKEY* pkey = EVP_PKEY_new();
+	EVP_PKEY_assign_RSA(pkey, rsa);
+	X509_set_pubkey(x509, pkey);
+
+	// 设置证书自签名
+	X509_sign(x509, pkey, EVP_sha256());
+
+	// 将证书保存到文件
+	FILE* certFile = fopen("cert.pem", "wb");
+	if (certFile == nullptr) {
+		fprintf(stderr, "无法打开证书文件\n");
+		return;
+	}
+	PEM_write_X509(certFile, x509);
+	fclose(certFile);
+
+	// 将私钥保存到文件
+	FILE* keyFile = fopen("key.pem", "wb");
+	if (keyFile == nullptr) {
+		fprintf(stderr, "无法打开私钥文件\n");
+		return;
+	}
+	PEM_write_RSAPrivateKey(keyFile, rsa, nullptr, nullptr, 0, nullptr, nullptr);
+	fclose(keyFile);
+
+	// 释放资源
+	X509_free(x509);
+	EVP_PKEY_free(pkey);
+	RSA_free(rsa);
+	ERR_free_strings();
+	EVP_cleanup();
+
+	printf("测试证书已成功生成！\n");
+}
+#endif
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	ServiceInterface* pWs = (ServiceInterface*)c->mgr->userdata;
@@ -661,6 +732,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			//string keyPath = fs::appPath() + "/key.pem";
 			//keyPath = _GB(keyPath);
 			//opts.certkey = keyPath.c_str();
+
+			//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
+			//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
 
 			opts.cert = "cert.pem";
 			opts.certkey = "key.pem";

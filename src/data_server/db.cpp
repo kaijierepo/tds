@@ -777,7 +777,16 @@ bool DB_FILE::loadFile()
 	}
 
 	//从数据库的原始json数据。
-	doc = yyjson_read(data.c_str(), data.length(), 0);
+	yyjson_read_err err = { 0 };
+	doc = yyjson_read_opts((char*)data.c_str(), data.length(),0,nullptr,&err);
+	if (err.code != YYJSON_READ_SUCCESS) {
+		// 处理错误
+		string sErr = err.msg;
+		sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + str::fromInt(err.pos) + ",errInfo:" + sErr;
+		db_exception e;
+		e.m_error = sErr;
+		throw e;
+	}
 	root = yyjson_doc_get_root(doc);
 	return true;
 }

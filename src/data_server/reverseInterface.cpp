@@ -256,6 +256,12 @@ bool ReverseInterface::run()
 		m_tcpSrv.run(this, tcpPort);
 	}
 
+	int udpPort = tds->conf->getInt("udpPort", 666);
+	if (udpPort > 0) {
+		LOG("[UDP数据服务] 端口%d", udpPort);
+		m_udpSrv.run(this, udpPort);
+	}
+
 	return false;
 }
 
@@ -329,6 +335,17 @@ void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, t
 		std::shared_ptr<TDS_SESSION> p = pTcpSess->pALSession;
 		OnRecvData_TCP((char*)pData, iLen, p);
 	}
+}
+
+void ReverseInterface::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port)
+{
+	string req = str::fromBuff((char*)recvData, recvDataLen);
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	RPC_SESSION rpcSess;
+	rpcSess.remoteAddr = strIP;
+	rpcSess.remotePort = port;
+	pSession->setRpcSession(&rpcSess);
+	rpcSrv.handleRpcCallAsyn(req, pSession,false);
 }
 
 
