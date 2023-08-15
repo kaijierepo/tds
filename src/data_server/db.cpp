@@ -147,7 +147,7 @@ void database::Insert(string strTag, TIME stTime, json& jData, json& dataFile)
 	if(!fs::fileExist(folderPath))
 		fs::createFolderOfPath(folderPath.c_str());
 	json jDE;
-	jDE["time"] = timeopt::st2str(stTime);
+	jDE["time"] = timeopt::st2str(stTime,true);
 	jDE[m_dbFmt.deItemKey_value.c_str()] = jData;
 	if (dataFile != nullptr)
 	{
@@ -1044,7 +1044,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 			yyjson_val* de;
 			int lastDeTime = 0;
 			int currDeTime = 0;
-			string deTime = pdf->ymd + " 00:00:00";
+			string deTime = pdf->ymd + " 00:00:00.000";
 			string groupKeyVal;
 
 			yyjson_val* deList = nullptr;
@@ -1095,15 +1095,22 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 				yyjson_val* yyTime = yyjson_obj_get(de, "time");
 				string_view szTime = yyjson_get_str(yyTime);
 				const char* pHms = nullptr;
-				if (szTime.length() == 19)
+				int hmsLen = 0;
+				if (szTime.length() == 19) //2020-02-02 02:02:02格式
 				{
 					pHms = szTime.data() + 11;//取出时分秒
+					hmsLen = 8;
+				}
+				else if (szTime.length() == 23) {//2020-02-02 02:02:02.222 格式
+					pHms = szTime.data() + 11;
+					hmsLen = 12;
 				}
 				else
 				{
 					pHms = szTime.data();
+					hmsLen = 8;
 				}
-				memcpy(deTime.data() + 11, pHms, 8);//取出时分秒
+				memcpy(deTime.data() + 11, pHms, hmsLen);//取出时分秒
 
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
