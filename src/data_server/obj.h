@@ -71,7 +71,7 @@ struct OBJ_QUERIER {
 		 getChild = false;
 		 getStatusDesc = false;
 		 getValDesc = false;
-		 leafType = "mo";
+		 leafType = "mp";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
 		 getUnit = true;
 	}
@@ -179,6 +179,8 @@ public:
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
 
 	//配置数据
+	bool isCustomMo();
+	bool isCustomOrg();
 	string m_type;
 	string m_customType;  //如果用中文命名，此处转为中文首字母
 	string m_customTypeLabel;
@@ -236,7 +238,7 @@ public:
 	void GetAllChildMp(std::vector<MP*>& aryMP);
 	void GetAttriMp(std::vector<MP*>& aryMP);
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
-	map<string, json> getChildCustomMoTypeList();
+	map<string, json> getChildCustomTypeList(string level = "*");
 	void statisChildCustomMoType(map<string, json>& list);
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);

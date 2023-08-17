@@ -655,7 +655,7 @@ OBJ* MP::getParentMo()
 {
 	OBJ* p = m_pParentMO;
 	while (p) {
-		if (p->m_type == MO_TYPE::mo || p->m_type == MO_TYPE::customMo) {
+		if (p->m_type == MO_TYPE::mo || p->isCustomMo()) {
 			return p;
 		}
 

@@ -1543,6 +1543,16 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//多选模式
 			if (!tagSel.singleSelMode()) {
 				params["rootTag"] = rootTag;
+
+				//方便api使用，通配模式下，默认获取子节点和mp
+				//非通配模式下，默认关闭
+				if (!params.contains("getMp")) {
+					params["getMp"] = true;
+				}
+				if (!params.contains("getChild")) {
+					params["getChild"] = true;
+				}
+
 				if (mode == "array") {
 					json jRlt = json::array();
 					for (int i = 0; i < objList.size(); i++) {
@@ -1609,7 +1619,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "没有找到位号");
 			}
 		}
-		else if (method == "getMoCustomType" || method == "getMoTypes")
+		else if ( method == "getCustomTypes")
 		{
 			OBJ* pmo = nullptr;
 			if (params != nullptr && params.contains("tag"))
@@ -1629,24 +1639,18 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			if (pmo != nullptr)
 			{
-				map<string, json> list = pmo->getChildCustomMoTypeList();
+				string type = "*";
+				if (params["type"].is_string()) {
+					type = params["type"];
+				}
+				map<string, json> list = pmo->getChildCustomTypeList(type);
 				json jList = json::array();
 
-				if (method == "getMoTypes")
+				for (auto& i : list)
 				{
-					for (auto& i : list)
-					{
-						jList.push_back(i.second);
-					}
+					jList.push_back(i.second);
 				}
-				else
-				{
-					for (auto& i : list)
-					{
-						jList.push_back(i.second["label"].get<string>());
-					}
-				}
-				
+
 				result = jList.dump();
 			}
 			else
@@ -3303,7 +3307,7 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 	attrInfo[renameItem("位号", params.renameMap)] = queryTag;
 
 	//自定义监测对象类型，都判断一下是否是智能设备，也就是和ioDev绑定
-	if (pMo->m_type == MO_TYPE::customMo) {
+	if (pMo->isCustomMo()) {
 		ioDev* piod = ioSrv.getIODevByTag(sysTag);
 		if (piod)
 		{

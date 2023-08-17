@@ -144,14 +144,7 @@ bool OBJ::loadConf(json& conf)
 		loadTask(conf["tasks"]);
 	}
 
-	if (m_type == "customMo" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
-	{
-		m_customTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
-		m_customType = m_customTypeLabel;
-		str::hanZi2Pinyin(m_customType, m_customType);
-	}
-
-	if (m_type == "customOrg" && conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
+	if (conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
 	{
 		m_customTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
 		m_customType = m_customTypeLabel;
@@ -225,8 +218,8 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		if (leafType == "mo")
 			return true;
 	}
-	else if (m_type == MO_TYPE::customOrg) {
-		if (leafType == "org" ||leafType == "mo" || leafType == "customMo") {
+	else if (isCustomOrg()) {
+		if (leafType == "org" ||leafType == "mo" || leafType == "customMo" || leafType == "mp") {
 			return true;
 		}
 		else if (leafType == "customOrg") {
@@ -235,8 +228,8 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			}
 		}
 	}
-	else if (m_type == MO_TYPE::customMo) {
-		if (leafType == "mo") {
+	else if (isCustomMo()) {
+		if (leafType == "mo" || leafType == "mp") {
 			return true;
 		}
 		else if (leafType == "customMo")
@@ -350,7 +343,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	//运行时状态数据
 	if (q.getStatus)
 	{
-		if (m_strIoAddrBind != "" || m_type == MO_TYPE::customMo || m_bChildTds)
+		if (m_strIoAddrBind != "" || isCustomMo() || m_bChildTds)
 		{
 			conf["online"] = m_bOnline;
 		}
@@ -365,7 +358,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	}
 
 	if (q.getStatusDesc) {
-		if (m_strIoAddrBind != "" || m_type == MO_TYPE::customMo)
+		if (m_strIoAddrBind != "" || isCustomMo())
 		{
 			if (q.getStatusDesc) {
 				conf["onlineDesc"] = m_bOnline?"在线":"离线";
@@ -426,6 +419,24 @@ bool OBJ::loadStatus(OBJ* pSrcRoot)
 
 void OBJ::toAttrInfo(nlohmann::ordered_json& attrInfo)
 {
+}
+
+bool OBJ::isCustomMo()
+{
+	if (m_type == MO_TYPE::customMo)
+		return true;
+	if (m_type == MO_TYPE::mo && m_customType != "")
+		return true;
+	return false;
+}
+
+bool OBJ::isCustomOrg()
+{
+	if (m_type == MO_TYPE::customOrg)
+		return true;
+	if (m_type == MO_TYPE::org && m_customType != "")
+		return true;
+	return false;
 }
 
 bool OBJ::loadStatus(json& status)
@@ -832,13 +843,13 @@ bool OBJ::isSelectedByType(string type)
 	if (type == "obj")
 		return true;
 	else if (type == "org") {
-		if (m_type == "org" || m_type == "customOrg")
+		if (m_type == "org" || isCustomOrg())
 			return true;
 		else
 			return false;
 	}							
 	else if (type == "mo") {
-		if (m_type == "mo" || m_type == "customMo")
+		if (m_type == "mo" || isCustomMo())
 			return true;
 		else
 			return false;
@@ -850,14 +861,14 @@ bool OBJ::isSelectedByType(string type)
 			return false;
 	}
 	else if(type == "customMo"){
-		if (m_type == "customMo")
+		if (isCustomMo())
 			return true;
 		else
 			return false;
 	}
 	else if (type == "customOrg")
 	{
-		if (m_type == "customOrg")
+		if (isCustomOrg())
 			return true;
 		else
 			return false;
@@ -977,30 +988,61 @@ void OBJ::GetAttriMp(std::vector<MP*>& aryMP)
 }
 
 
-map<string, json> OBJ::getChildCustomMoTypeList()
+map<string, json> OBJ::getChildCustomTypeList(string level)
 {
-	if (m_childCustomMoTypeList.size() > 0)
-		return m_childCustomMoTypeList;
+	if (m_childCustomMoTypeList.size() == 0)
+		statisChildCustomMoType(m_childCustomMoTypeList);
 
-	statisChildCustomMoType(m_childCustomMoTypeList);
-	return m_childCustomMoTypeList;
+	
+	if(level == "*")
+		return m_childCustomMoTypeList;
+	else {
+		map<string, json> retMap;
+		for (auto& i: m_childCustomMoTypeList)
+		{
+			json& j = i.second;
+			if (j["type"] == level) {
+				retMap[i.first] = i.second;
+			}
+		}
+		return retMap;
+	}
 }
 
 void OBJ::statisChildCustomMoType(map<string, json>& list)
 {
 	for (auto& i : m_childObj)
 	{
-		if (i->m_type == MO_TYPE::customMo)
+		if (i->m_customType!="")
 		{
-			json jType;
-			jType["type"] = i->m_customType;
-			jType["label"] = i->m_customTypeLabel;
-			list[i->m_customType] = jType;
+			string type = i->m_customType;
+			map<string, json>::iterator iter = list.find(type);
+			if (iter != list.end()) {
+				json& j = iter->second;
+				int count = j["count"].get<int>();
+				count++;
+				j["count"] = count;
+			}
+			else {
+				json jType;
+				jType["customType"] = type;
+				jType["customTypeLabel"] = i->m_customTypeLabel;
+				jType["count"] = 1;
+				if (i->isCustomOrg())
+					jType["type"] = "org";
+				else if(i->isCustomMo())
+					jType["type"] = "mo";
+				else if (i->m_type == "mp")
+					jType["type"] = "mp";
+
+				list[type] = jType;
+			}
 		}
 
 		i->statisChildCustomMoType(list);
 	}
 }
+
 
 void OBJ::statisChildMo(json& jStatis)
 {
@@ -1022,10 +1064,10 @@ void OBJ::statisChildMo(json& jStatis)
 
 
 
-	if (m_type == MO_TYPE::customOrg) {
+	if (isCustomOrg()) {
 		jStatis["customOrg"] = jStatis["customOrg"].get<int>() + 1;
 	}
-	else if (m_type == MO_TYPE::customMo) {
+	else if (isCustomMo()) {
 		jStatis["smartDev"] = jStatis["smartDev"].get<int>() + 1;
 
 		if (m_bOnline)
