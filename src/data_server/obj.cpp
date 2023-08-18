@@ -192,9 +192,15 @@ bool OBJ::loadConf(json& conf)
 
 
 //根据leafType选择器，该节点是否要返回
+//典型查询
+//整颗树  leafType = mp
+//部分对象类型  leafType = 风管机 + getMp:false
+//部分对象类型加其监控点 leafType = 风管机 + getMp:true
 bool OBJ::isSelectedByLeafType(string leafType)
 {
 	if (leafType == "")
+		return true;
+	if (leafType == "mp")
 		return true;
 	if (m_type == "mp")
 		return true;
@@ -219,7 +225,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			return true;
 	}
 	else if (isCustomOrg()) {
-		if (leafType == "org" ||leafType == "mo" || leafType == "customMo" || leafType == "mp") {
+		if (leafType == "org" ||leafType == "mo" || leafType == "customMo") {
 			return true;
 		}
 		else if (leafType == "customOrg") {
@@ -229,7 +235,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		}
 	}
 	else if (isCustomMo()) {
-		if (leafType == "mo" || leafType == "mp") {
+		if (leafType == "mo") {
 			return true;
 		}
 		else if (leafType == "customMo")
@@ -1041,6 +1047,23 @@ void OBJ::statisChildCustomMoType(map<string, json>& list)
 
 		i->statisChildCustomMoType(list);
 	}
+}
+
+string OBJ::getChildObjStatis()
+{
+	map<string,json> mapCustomObj;
+	statisChildCustomMoType(mapCustomObj);
+
+	vector<MP*> mpList;
+	getMpList(mpList);
+
+	string s = str::format("监控点:%d", mpList.size());
+	for (auto& iter : mapCustomObj) {
+		string cs = str::format(",%s:%d", iter.first, iter.second["count"].get<int>());
+		s += cs;
+	}
+
+	return s;
 }
 
 

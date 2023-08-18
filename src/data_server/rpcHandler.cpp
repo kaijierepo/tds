@@ -3462,7 +3462,11 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 
 	//根据对象模版生成列模版
 	map<string, OBJ_TEMPLATE*>::iterator it = prj.m_mapObjTempalte.find(params.moType);
+
+	bool bStandardObj = false;
+	//标准化对象，显示模板列
 	if (it != prj.m_mapObjTempalte.end()) {
+		bStandardObj = true;
 		OBJ_TEMPLATE* ot = it->second;
 		vector<MP*> mps;
 		ot->obj.GetAttriMp(mps);
@@ -3489,84 +3493,113 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			jTable["header"] = jTableHead;
 			jTable["tag"] = jColTag;
 		}
-	}
 
-
-	for (int i = 0; i < moList.size(); i++)
-	{
-		OBJ* pMo = moList[i];
-		string moTag = pMo->getTag();
-		string tag = moTag;
-
-		//过滤用户权限
-		if (session.user != "")
+		for (int i = 0; i < moList.size(); i++)
 		{
-			if (!userMng.checkTagPermission(session.user, tag))
-				continue;
-		}
+			OBJ* pMo = moList[i];
+			string moTag = pMo->getTag();
+			string tag = moTag;
 
-		tag = TAG::trimRoot(tag, params.tagSel.m_rootTag);
-
-
-		//表头与列位号，如果没有模版，根据第一个设备生成
-		if (jTableHead.size() == 0)
-		{
-			//下属所有监控点列表
-			vector<MP*> childMps;
-			pMo->GetAttriMp(childMps);
-
-			jTableHead.push_back("位号");
-			jColTag.push_back(nullptr);
-			for (int j = 0; j < childMps.size(); j++)
+			//过滤用户权限
+			if (session.user != "")
 			{
-				MP* pmp = childMps[j];
-				string tag = pmp->getTag(moTag);
-				jColTag.push_back(tag);
-				if (params.columeLabel == "tag") {
-					jTableHead.push_back(tag);
+				if (!userMng.checkTagPermission(session.user, tag))
+					continue;
+			}
+
+			tag = TAG::trimRoot(tag, params.tagSel.m_rootTag);
+
+
+			//表头与列位号，如果没有模版，根据第一个设备生成
+			if (jTableHead.size() == 0)
+			{
+				//下属所有监控点列表
+				vector<MP*> childMps;
+				pMo->GetAttriMp(childMps);
+
+				jTableHead.push_back("位号");
+				jColTag.push_back(nullptr);
+				for (int j = 0; j < childMps.size(); j++)
+				{
+					MP* pmp = childMps[j];
+					string tag = pmp->getTag(moTag);
+					jColTag.push_back(tag);
+					if (params.columeLabel == "tag") {
+						jTableHead.push_back(tag);
+					}
+					else {
+						jTableHead.push_back(pmp->m_name);
+					}
+				}
+				jTableHead.push_back("在线");
+				jTableHead.push_back("更新时间");
+				jColTag.push_back(nullptr);
+				jColTag.push_back(nullptr);
+				jTable["header"] = jTableHead;
+				jTable["tag"] = jColTag;
+			}
+
+
+			//数据行
+			json jTableRow;
+			jTableRow.push_back(tag);
+			for (int j = 1; j < jColTag.size() - 2; j++)
+			{
+				string tag = jColTag[j];
+				tag = TAG::addRoot(tag, moTag);
+				MP* pmp = pMo->GetMPByTag(tag);
+				if (pmp) {
+					if (params.valFmt == "valStr") {
+						jTableRow.push_back(pmp->getValDesc(false));
+					}
+					else if (params.valFmt == "valStr-unit") {
+						jTableRow.push_back(pmp->getValDesc(true));
+					}
+					else// (valFmt == "val") 
+					{
+						jTableRow.push_back(pmp->m_curVal);
+					}
 				}
 				else {
-					jTableHead.push_back(pmp->m_name);
+					jTableRow.push_back("-");
 				}
 			}
-			jTableHead.push_back("在线");
-			jTableHead.push_back("更新时间");
-			jColTag.push_back(nullptr);
-			jColTag.push_back(nullptr);
-			jTable["header"] = jTableHead;
-			jTable["tag"] = jColTag;
+			jTableRow.push_back(pMo->m_bOnline);
+			jTableRow.push_back(pMo->getUpdateTimeDesc());
+			jTableBody.push_back(jTableRow);
 		}
-
-
-		//数据行
-		json jTableRow;
-		jTableRow.push_back(tag);
-		for (int j = 1; j < jColTag.size()-2; j++)
-		{
-			string tag = jColTag[j];
-			tag = TAG::addRoot(tag, moTag);
-			MP* pmp = pMo->GetMPByTag(tag);
-			if (pmp) {
-				if (params.valFmt == "valStr") {
-					jTableRow.push_back(pmp->getValDesc(false));
-				}
-				else if (params.valFmt == "valStr-unit") {
-					jTableRow.push_back(pmp->getValDesc(true));
-				}
-				else// (valFmt == "val") 
-				{
-					jTableRow.push_back(pmp->m_curVal);
-				}
-			}
-			else {
-				jTableRow.push_back("-");
-			}
-		}
-		jTableRow.push_back(pMo->m_bOnline);
-		jTableRow.push_back(pMo->getUpdateTimeDesc());
-		jTableBody.push_back(jTableRow);
+		jTable["body"] = jTableBody;
+		jTable["standardObj"] = bStandardObj;
 	}
-	jTable["body"] = jTableBody;
+	else {
+		jTableHead.push_back("位号");
+		jTableHead.push_back("点位信息");
+		jTable["header"] = jTableHead;
+		for (int i = 0; i < moList.size(); i++)
+		{
+			OBJ* pMo = moList[i];
+			string moTag = pMo->getTag();
+			string tag = moTag;
+
+			//过滤用户权限
+			if (session.user != "")
+			{
+				if (!userMng.checkTagPermission(session.user, tag))
+					continue;
+			}
+
+			tag = TAG::trimRoot(tag, params.tagSel.m_rootTag);
+
+			//数据行
+			json jTableRow;
+			jTableRow.push_back(tag);
+			jTableRow.push_back(pMo->getChildObjStatis());
+			jTableBody.push_back(jTableRow);
+		}
+		jTable["body"] = jTableBody;
+		jTable["standardObj"] = bStandardObj;
+	}
+
 	resp.result = jTable.dump();
 }
 

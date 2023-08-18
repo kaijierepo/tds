@@ -240,6 +240,7 @@ public:
 	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
 	map<string, json> getChildCustomTypeList(string level = "*");
 	void statisChildCustomMoType(map<string, json>& list);
+	string getChildObjStatis();
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
