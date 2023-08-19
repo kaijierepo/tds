@@ -427,8 +427,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 		//	conf["downSample"] = m_bDownSample;
 		//	conf["downSampleInterval"] = m_downSampleInterval;
 		//}
-		
-		conf["srcStreamFetch"] = m_srcStreamFetch;
+		if (m_valType == VAL_TYPE::video) {
+			conf["srcStreamFetch"] = m_srcStreamFetch;
+		}
+
 		if (m_expression != "") {
 			conf["expression"] = m_expression;
 		}

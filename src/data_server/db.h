@@ -80,8 +80,8 @@ public:
 	TAG_SELECTOR() {
 		getTag = false;
 	}
-	bool init(string tag,string rootTag = "");
-	bool init(json tag, string rootTag = "");
+	bool init(string tag,string rootTag = "",string objtype="*");
+	bool init(json tag, string rootTag = "", string objtype = "*");
 	bool match(string tag);//使用不带根的绝对位号
 	bool singleSelMode();
 
@@ -97,6 +97,8 @@ public:
 	//返回的数据元中是否需要包含tag字段
 	bool getTag;
 
+	void setType(string objType);
+	bool specifyType();
 	string type; //object type
 	string error;
 

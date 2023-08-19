@@ -2069,7 +2069,7 @@ bool TIME_SELECTOR::parseTimeRange(string condition)
 
 
 
-bool TAG_SELECTOR::init(string tag, string rootTag){
+bool TAG_SELECTOR::init(string tag, string rootTag, string objtype){
 	m_rootTag = rootTag;
 	if (tag.find("*") != string::npos)
 	{
@@ -2088,10 +2088,11 @@ bool TAG_SELECTOR::init(string tag, string rootTag){
 		exactMatchExp.push_back(tag);
 	}
 
+	setType(objtype);
 	return true;
 }
 
-bool TAG_SELECTOR::init(json tag, string rootTag)
+bool TAG_SELECTOR::init(json tag, string rootTag, string objtype)
 {
 	if (tag.is_string()) {
 		return init(tag.get<string>(), rootTag);
@@ -2106,7 +2107,27 @@ bool TAG_SELECTOR::init(json tag, string rootTag)
 		return true;
 	}
 
+	setType(objtype);
 	return false;
+}
+
+void TAG_SELECTOR::setType(string objType)
+{
+	if (objType == "所有类型") {
+		type = "*";
+	}
+	else {
+		type = objType;
+	}
+}
+
+bool TAG_SELECTOR::specifyType()
+{
+	if (type == "")
+		return false;
+	if (type == "*")
+		return false;
+	return true;
 }
 
 bool TAG_SELECTOR::match(string tag){
@@ -2135,6 +2156,8 @@ bool TAG_SELECTOR::singleSelMode()
 	}
 	return false;
 }
+
+
 
 CONDITION_SELECTOR::CONDITION_SELECTOR()
 {

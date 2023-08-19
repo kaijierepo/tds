@@ -844,7 +844,7 @@ OBJ* OBJ::GetDescendantObjByName(string strName)
 //         +---> mp
 bool OBJ::isSelectedByType(string type)
 {
-	if (type == "")
+	if (type == "" || type == "*")
 		return true;
 	if (type == "obj")
 		return true;
@@ -1268,7 +1268,7 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 		vector<MP*> tagSet;
 		vector<MP*> tagSetTmp;
 		prj.GetMPByTag(&tagSetTmp, exp);
-		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		if (tagSelector.specifyType())//has type filter //load from database 监测点类型过滤
 		{
 			for (auto& it : tagSetTmp)
 			{
@@ -1341,7 +1341,7 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 		vector<MP*> tagSet;
 		vector<MP*> tagSetTmp;
 		prj.GetMPByTag(&tagSetTmp, exp);
-		if (tagSelector.type != "")//has type filter //load from database 监测点类型过滤
+		if (tagSelector.specifyType())//has type filter //load from database 监测点类型过滤
 		{
 			for (auto& it : tagSetTmp)
 			{

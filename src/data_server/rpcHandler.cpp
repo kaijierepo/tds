@@ -1529,8 +1529,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 
 			TAG_SELECTOR tagSel;
-			tagSel.init(sTagSel, rootTag);
-			tagSel.type = type;
+			tagSel.init(sTagSel, rootTag,type);
 
 			string mode = "array";
 			if (params["mode"] != nullptr) {
