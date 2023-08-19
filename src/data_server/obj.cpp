@@ -1059,7 +1059,7 @@ string OBJ::getChildObjStatis()
 
 	string s = str::format("监控点:%d", mpList.size());
 	for (auto& iter : mapCustomObj) {
-		string cs = str::format(",%s:%d", iter.first, iter.second["count"].get<int>());
+		string cs = str::format(",%s:%d", iter.second["customTypeLabel"].get<string>().c_str(), iter.second["count"].get<int>());
 		s += cs;
 	}
 

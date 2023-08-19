@@ -2323,7 +2323,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		bNeedLog = needLog(method);
 		if (bNeedLog)
 			LOG("[trace]RPC请求:\r\n" + strReq + "\r\n");
-		if(method == "output")
+		if(method == "output" || method == "openStream")
 			LOG("[warn]RPC请求:\r\n" + strReq + "\r\n");
 
 		//心跳最先处理

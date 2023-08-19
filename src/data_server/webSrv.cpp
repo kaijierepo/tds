@@ -483,6 +483,8 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 			params["pushTo"] = tag;
 			json err, rlt;
 			pChildTds->call("openStream", params, nullptr, rlt, err);
+			LOG("[流媒体   ]子服务API请求 openStream,params=" + params.dump());
+
 			if (rlt != nullptr) {
 				LOG("[流媒体   ]启动子服务流中转成功，位号:" + tag);
 			}
