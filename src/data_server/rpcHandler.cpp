@@ -452,6 +452,20 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	{
 		pCam->ptz_stopFocus();
 	}
+	else if (method == "gotoPreset")
+	{
+		int idx = params["presetIndex"].get<int>();
+		pCam->ptz_gotoPreset(idx);
+	}
+	else if (method == "addPreset")
+	{
+		pCam->ptz_addPreset();
+	}
+	else if (method == "deletePreset")
+	{
+		int idx = params["presetIndex"].get<int>();
+		pCam->ptz_deletePreset(idx);
+	}
 	rpcResp.result = "\"ok\"";
 
 	return true;
@@ -530,9 +544,12 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				method == "stopZoom" ||
 				method == "startFocus" ||
 				method == "stopFocus" ||
+				method == "gotoPreset" ||
+				method == "addPreset" ||
+				method == "deletePreset" ||
 				method == "openStream" ||
 				method == "keepStream" ||
-				method == "closeStream")
+				method == "closeStream" )
 	{
 		string tag, rootTag;
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
@@ -575,8 +592,43 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			logParams["info"] = info;
 			logSrv.rpc_addLog(logParams, session);
 		}
-		
+		else if(method.find("Preset") != string::npos) {
+			
+			string info;
+			if (method == "gotoPreset") {
+				if (!params["presetIndex"].is_number_integer()) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "param presetIndex must be specified,and must be int type");
+					return true;
+				}
 
+				string presetIndex = params["presetIndex"].dump();
+				info = "调用预置位:" + presetIndex;
+			}
+			else if (method == "deletePreset") {
+				if (!params["presetIndex"].is_number_integer()) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "param presetIndex must be specified,and must be int type");
+					return true;
+				}
+
+				string presetIndex = params["presetIndex"].dump();
+				info = "删除预置位:" + presetIndex;
+			}
+			else {
+				info = "添加预置位";
+			}
+				
+
+			//操控日志记录
+			json logParams;
+			logParams["src"] = "用户:" + session.user;
+			logParams["object"] = tag;
+			logParams["type"] = "云台控制";
+			logParams["org"] = session.org;
+			logParams["host"] = session.remoteAddr;
+			logParams["info"] = info;
+			logSrv.rpc_addLog(logParams, session);
+		}
+		
 
 		//通过第三方云平台进行控制。如萤石云。该模式无需转发到子服务
 		if (pObj->m_mediaSrcType == "ezviz") {
@@ -585,7 +637,10 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				method == "startZoom" ||
 				method == "stopZoom" ||
 				method == "startFocus" ||
-				method == "stopFocus")
+				method == "stopFocus" ||
+				method == "gotoPreset" ||
+				method == "addPreset" ||
+				method == "deletePreset"  )
 			{
 				handleMethodCall_ptz_cloud(method, pObj, params, rpcResp, session);
 				return true;
@@ -625,7 +680,10 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			method == "startZoom" ||
 			method == "stopZoom" ||
 			method == "startFocus" ||
-			method == "stopFocus") 
+			method == "stopFocus" ||
+			method == "gotoPreset" ||
+			method == "addPreset" ||
+			method == "deletePreset")
 		{
 			MP* pmp = pObj;
 			if (!pmp) {
