@@ -410,6 +410,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	}
 	else if (method == "stopPanTilt")
 	{
+		timeopt::sleepMilli(100);  //解决前端点击按钮快速发送一个开始停止云台命令的情况，startPanTilt的代码处理逻辑多，会导致发送出去在 stopMove的后面
 		pCam->ptz_stopMove();
 	}
 	else if (method == "startZoom")
