@@ -140,15 +140,13 @@ string database::getPath_dbFile(string strTag,TIME date,string deType)
 
 
 
-void database::Insert(string strTag, TIME stTime, json& jData, json& dataFile)
+void database::Insert(string strTag, TIME stTime, json& jDE, json& dataFile)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if(!fs::fileExist(folderPath))
 		fs::createFolderOfPath(folderPath.c_str());
-	json jDE;
-	jDE["time"] = timeopt::st2str(stTime,true);
-	jDE[m_dbFmt.deItemKey_value.c_str()] = jData;
+
 	if (dataFile != nullptr)
 	{
 		json fdList = json::array();

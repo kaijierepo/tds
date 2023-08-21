@@ -782,7 +782,10 @@ bool MP::needSaveToDB()
 void MP::saveToDB() {
 	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
-	db.Insert(getTag().c_str(), m_stDataLastUpdate, m_curVal,m_curFileData);
+	json jDE;
+	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
+	jDE["val"] = m_curVal;
+	db.Insert(getTag().c_str(), m_stDataLastUpdate,jDE ,m_curFileData);
 	m_dbFileLock.unlock();
 }
 

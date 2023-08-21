@@ -401,6 +401,9 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 
 		LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
 
+		pCam->isMoving = true;
+		pCam->startMoveTime = timeopt::now();
+
 		if (params.contains("time")) {
 			int time = params["time"].get<int>();
 			json paramAsynCall;
@@ -410,8 +413,10 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	}
 	else if (method == "stopPanTilt")
 	{
-		timeopt::sleepMilli(100);  //解决前端点击按钮快速发送一个开始停止云台命令的情况，startPanTilt的代码处理逻辑多，会导致发送出去在 stopMove的后面
+		if(!pCam->isMoving)
+			timeopt::sleepMilli(400);  //解决前端点击按钮快速发送一个开始停止云台命令的情况，startPanTilt的代码处理逻辑多，会导致发送出去在 stopMove的后面
 		pCam->ptz_stopMove();
+		pCam->isMoving = false;
 	}
 	else if (method == "startZoom")
 	{
@@ -809,7 +814,10 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				}
 		
 				json fileData;
-				db.Insert(tag, tNow, params["val"], fileData);
+				json jDE;
+				jDE["time"] = timeopt::st2str(tNow, true);
+				jDE.erase("tag");
+				db.Insert(tag, tNow, jDE, fileData);
 				rpcResp.result = "\"ok\"";
 			}
 		}

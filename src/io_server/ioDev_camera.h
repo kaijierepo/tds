@@ -14,4 +14,6 @@ public:
 	virtual void ptz_addPreset() {};
 	virtual void ptz_deletePreset(int presetIdx) {};
 	bool isCamera() override { return true; };
+	bool isMoving;
+	TIME startMoveTime;
 };
