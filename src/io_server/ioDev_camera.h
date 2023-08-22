@@ -11,7 +11,7 @@ public:
 	virtual void ptz_startFocus(string dir, float focusSpeed = 0) {};
 	virtual void ptz_stopFocus() {};
 	virtual void ptz_gotoPreset(int presetIdx) {};
-	virtual void ptz_addPreset() {};
+	virtual void ptz_addPreset(int presetIdx) {};
 	virtual void ptz_deletePreset(int presetIdx) {};
 	bool isCamera() override { return true; };
 	bool isMoving;

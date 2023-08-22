@@ -458,19 +458,25 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	{
 		pCam->ptz_stopFocus();
 	}
-	else if (method == "gotoPreset")
-	{
+	else if (method.find("Preset") != string::npos) {
+		if (!params["presetIndex"].is_number_integer()) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "int param presetIndex must be specified");
+			return true;
+		}
 		int idx = params["presetIndex"].get<int>();
-		pCam->ptz_gotoPreset(idx);
-	}
-	else if (method == "addPreset")
-	{
-		pCam->ptz_addPreset();
-	}
-	else if (method == "deletePreset")
-	{
-		int idx = params["presetIndex"].get<int>();
-		pCam->ptz_deletePreset(idx);
+
+		if (method == "gotoPreset")
+		{
+			pCam->ptz_gotoPreset(idx);
+		}
+		else if (method == "addPreset")
+		{
+			pCam->ptz_addPreset(idx);
+		}
+		else if (method == "deletePreset")
+		{
+			pCam->ptz_deletePreset(idx);
+		}
 	}
 	rpcResp.result = "\"ok\"";
 
