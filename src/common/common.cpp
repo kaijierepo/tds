@@ -1392,12 +1392,15 @@ namespace timeopt {
 	}
 
 	bool isValidTimeStr(string time) {
-		if (time.length() != 19)
+		if (time.length() != 19 && time.length() != 23)
 			return false;
 		if (time.at(4) != '-' || time.at(7) != '-')
 			return false;
 		if (time.at(13) != ':' || time.at(16) != ':')
 			return false;
+		if (time.length() == 23 && time.at(19) != '.')
+			return false;
+
 		return true;
 	}
 }
