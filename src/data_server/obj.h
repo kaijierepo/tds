@@ -167,6 +167,15 @@ struct OBJ_STATIS {
 	int alarm;
 	int fault;
 	int normal;
+
+	OBJ_STATIS() {
+		count = 0;
+		online = 0;
+		offline = 0;
+		alarm = 0;
+		fault = 0;
+		normal = 0;
+	}
 };
 
 
@@ -190,6 +199,7 @@ public:
 
 	//配置数据
 	bool isCustomMo();
+	bool isCustomMp();
 	bool isCustomOrg();
 	string m_type;
 	string m_customType;  //如果用中文命名，此处转为中文首字母
@@ -251,7 +261,7 @@ public:
 	map<string, json> getChildCustomTypeList(string level = "*");
 	void statisChildCustomMoType(map<string, json>& list);
 	string getChildObjStatis();
-	void statisChildObj(map<string, OBJ_STATIS> rlt);
+	void statisChildObj(map<string, OBJ_STATIS>& rlt);
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();

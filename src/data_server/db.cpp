@@ -271,7 +271,7 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 
 bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
-	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
+	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 	//返回的数据元是否需要携带tag字段
 	bool withTag = tagDBFileSet.size() > 1 ? true : false;
 	if (deSel.tagSel.getTag)
@@ -416,103 +416,111 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 		for (auto& j : timeSection) {
 			yyjson_mut_val* jRec = j.second;
 
-			string sortFlag = "";
+			SORT_FLAG sortFlag;
 			if (deSel.sortKey.length() > 0) {
 				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
-				if (yyjson_mut_is_obj(yyVal)) {
+				if (deSel.sortKey == "val") {
+					if (yyjson_mut_is_str(yyVal)) {
+						sortFlag.sFlag = yyjson_mut_get_str(yyVal);
+					}
+					else if (yyjson_mut_is_num(yyVal)) {
+						sortFlag.dbFlag = yyjson_mut_get_real(yyVal);
+					}
+				}
+				else if (yyjson_mut_is_obj(yyVal)) {
 					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
 					if (yyjson_mut_is_str(yySortKey)) {
-						sortFlag = yyjson_mut_get_str(yySortKey);
+						sortFlag.sFlag = yyjson_mut_get_str(yySortKey);
 					}
 					else if (yyjson_mut_is_num(yySortKey)) {
-						double f = yyjson_mut_get_real(yySortKey);
-						sortFlag = str::fromFloat(f);
+						sortFlag.dbFlag = yyjson_mut_get_real(yySortKey);
 					}
 				}
 			}
 
-			mapRlt[sortFlag + i.first + j.first + std::to_string(result.rowCount)] = jRec; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+			sortFlag.sFlag += i.first + j.first + std::to_string(result.rowCount);
+			mapRlt[sortFlag] = jRec; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 		}
 	}
 	
 	return true;
 }
 
-bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
-{
-	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
-	//返回的数据元是否需要携带tag字段
-	bool withTag = tagDBFileSet.size() > 1 ? true : false;
-	if (deSel.tagSel.getTag)
-		withTag = true;
-
-
-	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-	{
-		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
-		string& tagAlias = fSet.colKey;
-		string& tag = fSet.tag;
-
-		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
-			DE_yyjson& deyy = *fSet.m_afterAggr[j];
-
-			string_view szTime = yyjson_mut_get_str(deyy.time);
-
-			yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);;
-
-			//time字段
-			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
-			yyjson_mut_val* timeVal;
-			if (deSel.timeSel.timeFmt == "") {
-				timeVal = yyjson_mut_str(mut_doc, szTime.data());
-			}
-			else {
-				deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
-				timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
-			}
-	
-
-			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
-
-			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
-			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
-
-
-			if (withTag)
-			{
-				//当进行多位号搜索时，需要加入tag标签
-				//relTag指向的变量在write_doc之前不能被销毁
-				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
-				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
-				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
-			}
-
-			string sortFlag = "";
-			if (deSel.sortKey.length() > 0) {
-				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRecord, m_dbFmt.deItemKey_value.c_str());
-				if (yyjson_mut_is_obj(yyVal)) {
-					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
-					if (yyjson_mut_is_str(yySortKey)) {
-						sortFlag = yyjson_mut_get_str(yySortKey);
-					}
-					else if (yyjson_mut_is_num(yySortKey)) {
-						double f = yyjson_mut_get_num(yySortKey);
-						sortFlag = str::fromFloat(f);
-					}
-				}
-
-			}
-
-			mapRlt[sortFlag + szTime.data() + tag + std::to_string(result.rowCount)] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
-			result.rowCount++;
-
-			if (deSel.timeSel.AmountMatch(result.rowCount))
-				return true;
-		}
-	}
-
-	return true;
-}
+//bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+//{
+//	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
+//	//返回的数据元是否需要携带tag字段
+//	bool withTag = tagDBFileSet.size() > 1 ? true : false;
+//	if (deSel.tagSel.getTag)
+//		withTag = true;
+//
+//
+//	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+//	{
+//		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+//		string& tagAlias = fSet.colKey;
+//		string& tag = fSet.tag;
+//
+//		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
+//			DE_yyjson& deyy = *fSet.m_afterAggr[j];
+//
+//			string_view szTime = yyjson_mut_get_str(deyy.time);
+//
+//			yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);;
+//
+//			//time字段
+//			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
+//			yyjson_mut_val* timeVal;
+//			if (deSel.timeSel.timeFmt == "") {
+//				timeVal = yyjson_mut_str(mut_doc, szTime.data());
+//			}
+//			else {
+//				deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
+//				timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
+//			}
+//	
+//
+//			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
+//
+//			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
+//			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
+//
+//
+//			if (withTag)
+//			{
+//				//当进行多位号搜索时，需要加入tag标签
+//				//relTag指向的变量在write_doc之前不能被销毁
+//				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
+//				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
+//				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
+//			}
+//
+//			string sortFlag = "";
+//			if (deSel.sortKey.length() > 0) {
+//				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRecord, m_dbFmt.deItemKey_value.c_str());
+//				if (yyjson_mut_is_obj(yyVal)) {
+//					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+//					if (yyjson_mut_is_str(yySortKey)) {
+//						sortFlag = yyjson_mut_get_str(yySortKey);
+//					}
+//					else if (yyjson_mut_is_num(yySortKey)) {
+//						double f = yyjson_mut_get_num(yySortKey);
+//						sortFlag = str::fromFloat(f);
+//					}
+//				}
+//
+//			}
+//
+//			mapRlt[sortFlag + szTime.data() + tag + std::to_string(result.rowCount)] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+//			result.rowCount++;
+//
+//			if (deSel.timeSel.AmountMatch(result.rowCount))
+//				return true;
+//		}
+//	}
+//
+//	return true;
+//}
 
 bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
 {
@@ -685,7 +693,7 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 
 bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
-	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt;
+	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 
 	
 	//组合成数据行
@@ -701,7 +709,9 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 
 			//检查该时间的行对象是否已经存在
 			yyjson_mut_val* jRecord;
-			map<string, yyjson_mut_val*>::iterator itRecord = mapRlt.find(szTime.data());
+			SORT_FLAG sf;
+			sf.sFlag = szTime.data();
+			map<SORT_FLAG, yyjson_mut_val*>::iterator itRecord = mapRlt.find(sf);
 			if (itRecord != mapRlt.end()) { //已存在获得该行
 				jRecord = itRecord->second;
 			}
@@ -722,12 +732,14 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 					}
 				}
 
-				std::pair<string, yyjson_mut_val*> recPair;
-				recPair.first = szTime;
+				std::pair<SORT_FLAG, yyjson_mut_val*> recPair;
+				SORT_FLAG sftmp;
+				sftmp.sFlag = szTime;
+				recPair.first = sftmp;
 				recPair.second = jRecord;
 				auto insertRet = mapRlt.insert(recPair);
 				itRecord = insertRet.first;
-				mapRlt[szTime.data()] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				mapRlt[sftmp] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
 			}
 
 			//给当前行添加 当前位号数据作为一列
@@ -848,7 +860,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	Select_Step_loadFile(deSel, tagDBFileSet,result);
 
 	
-	map<string, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
+	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
 
 	if (deSel.deType == "curve") {
@@ -864,9 +876,10 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 			{
 				//加载数据元列表
 				DB_FILE* pdf = fSet.fileList[i];
-				string s = str::format("%d%d", tagIdx, i);
+				SORT_FLAG sf;
+				sf.sFlag = str::format("%d%d", tagIdx, i);
 				yyjson_mut_val* p = yyjson_val_mut_copy(rlt_mut_doc, pdf->root);
-				mapRlt[s] = p;
+				mapRlt[sf] = p;
 			}
 		}
 	}

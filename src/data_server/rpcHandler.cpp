@@ -2609,6 +2609,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	}
 
 HANDLE_END:
+
 	//组装jsonRPC
 	if (rpcResp.error != "")
 	{
@@ -3184,67 +3185,96 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 
 void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	string rootTag = "";
-	if (params.contains("rootTag"))
+	vector<string> rootTagListOrg;
+	vector<string> rootTagList;
+	if (params["rootTag"].is_string())
 	{
-		rootTag = params["rootTag"].get<string>();
+		string rootTag = params["rootTag"].get<string>();
+		rootTagListOrg.push_back(rootTag);
+		rootTag = TAG::addRoot(rootTag, session.org);
+		rootTagList.push_back(rootTag);
 	}
-	rootTag = TAG::addRoot(rootTag, session.org);
-
-	string fmt = "";
-	if (params.contains("fmt")) {
-		fmt = params["fmt"];
+	else if(params["rootTag"].is_array()){
+		json jRootTagList = params["rootTag"];
+		for (int i = 0; i < jRootTagList.size(); i++) {
+			string rootTag = jRootTagList[i].get<string>();
+			rootTagListOrg.push_back(rootTag);
+			rootTag = TAG::addRoot(rootTag, session.org);
+			rootTagList.push_back(rootTag);
+		}
 	}
 
-	OBJ* pMo = prj.queryObj(rootTag);
-	json jStatis;
-	if (pMo)
-	{
-		pMo->statisChildMo(jStatis);
-		json almStatis = getAlarmStatis(rootTag, session);
-		jStatis["alarm"] = almStatis["alarm"];
-		jStatis["warn"] = almStatis["warn"];
-		jStatis["tag"] = params["rootTag"];
+	string mode = "groupByType";
+	if (params.contains("mode")) {
+		mode = params["mode"];
+	}
 
-		//该模式暂时只给topo用，后续还要优化
-		if (fmt == "mplist") {
-			json jRlt = json::array();
-			json de;
+	json jStatisRlt = json::object();
+	for (int i = 0; i < rootTagList.size(); i++) {
+		string tag = rootTagList[i];
+		string tagOrg = rootTagListOrg[i];
+		OBJ* pMo = prj.queryObj(tag);
+		map<string, OBJ_STATIS> rlt;
+		if (pMo)
+		{
+			pMo->statisChildObj(rlt);
 
-			de["tag"] = "statis.customOrg";
-			de["val"] = jStatis["customOrg"];
-			jRlt.push_back(de);
+			if (mode == "groupByType") {
+				json jList = json::array();
+				for (auto& iter : rlt) {
+					json j;
+					j["customType"] = iter.second.customType;
+					j["count"] = iter.second.count;
+					j["online"] = iter.second.online;
+					j["offline"] = iter.second.offline;
+					j["alarm"] = iter.second.alarm;
+					j["fault"] = iter.second.fault;
+					j["normal"] = iter.second.normal;
+					jList.push_back(j);
+				}
 
-			de["tag"] = "statis.smartDev.total";
-			de["val"] = jStatis["smartDev"];
-			jRlt.push_back(de);
+				if (rootTagList.size() == 1) {
+					jStatisRlt = jList;
+				}
+				else {
+					jStatisRlt[tagOrg] = jList;
+				}
+			}
+			else if (mode == "total") {
+				OBJ_STATIS total;
+				total.customType = "*";
+				for (auto& iter : rlt) {
+					total.count += iter.second.count;
+					total.online += iter.second.online;
+					total.offline += iter.second.offline;
+					total.alarm += iter.second.alarm;
+					total.fault += iter.second.fault;
+					total.normal += iter.second.normal;
+				}
+				json j;
+				j["customType"] = "*";
+				j["count"] = total.count;
+				j["online"] = total.online;
+				j["offline"] = total.offline;
+				j["alarm"] = total.alarm;
+				j["fault"] = total.fault;
+				j["normal"] = total.normal;
 
-			de["tag"] = "statis.smartDev.online";
-			de["val"] = jStatis["online"];
-			jRlt.push_back(de);
+				if (rootTagList.size() == 1) {
+					jStatisRlt = j;
+				}
+				else
+					jStatisRlt[tagOrg] = j;
+			}
 
-			de["tag"] = "statis.smartDev.offline";
-			de["val"] = jStatis["offline"];
-			jRlt.push_back(de);
-
-			de["tag"] = "statis.alarms.alarmCount";
-			de["val"] = jStatis["alarm"];
-			jRlt.push_back(de);
-
-			de["tag"] = "statis.alarms.warnCount";
-			de["val"] = jStatis["warn"];
-			jRlt.push_back(de);
-
-			resp.result = jRlt.dump(4);
-			resp.params = params.dump(4);
 		}
 		else {
-			resp.result = jStatis.dump(2);
+			resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "没有找到需要统计的根对象" + tag);
+			return;
 		}
 	}
-	else {
-		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
-	}
+
+	resp.result = jStatisRlt.dump();
 }
 
 

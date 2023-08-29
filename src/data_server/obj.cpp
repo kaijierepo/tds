@@ -436,6 +436,13 @@ bool OBJ::isCustomMo()
 	return false;
 }
 
+bool OBJ::isCustomMp()
+{
+	if (m_type == MO_TYPE::mp && m_customType != "")
+		return true;
+	return false;
+}
+
 bool OBJ::isCustomOrg()
 {
 	if (m_type == MO_TYPE::customOrg)
@@ -1066,8 +1073,67 @@ string OBJ::getChildObjStatis()
 	return s;
 }
 
-void OBJ::statisChildObj(map<string, OBJ_STATIS> rlt) {
+void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
+	if (isCustomMo() || isCustomMp()) {
+		OBJ_STATIS os;
+		if (rlt.find(m_customTypeLabel) != rlt.end()) {
+			os = rlt[m_customTypeLabel];
+		}
+		else {
+			os.customType = m_customTypeLabel;
+		}
 
+		os.count++;
+
+		//监控点暂时全做在线处理
+		if (m_type == "mp") {
+			os.online++;
+		}
+		else {
+			if (m_bOnline) {
+				os.online++;
+			}
+			else {
+				os.offline++;
+			}
+		}
+
+
+		if (m_type == "mp") {
+			MP* pmp = (MP*)this;
+			if (pmp->m_curVal.is_string()) {
+				string sCur = pmp->m_curVal.get<string>();
+				if (sCur == "报警") {
+					os.alarm++;
+				}
+				else if(sCur == "故障") {
+					os.fault++;
+				}
+				else {
+					os.normal++;
+				}
+			}
+			else {
+				os.normal++;
+			}
+		}
+		else {
+			if (m_jAlarmStatus != nullptr) {
+				os.alarm++;
+			}
+			else {
+				os.normal++;
+			}
+		}
+
+		rlt[m_customTypeLabel] = os;
+	}
+
+	for (int i = 0; i < m_childObj.size(); i++)
+	{
+		OBJ* pC = m_childObj[i];
+		pC->statisChildObj(rlt);
+	}
 }
 
 void OBJ::statisChildMo(json& jStatis)

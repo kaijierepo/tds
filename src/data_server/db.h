@@ -371,13 +371,56 @@ public:
 	string m_error;
 };
 
+struct SORT_FLAG {
+	double dbFlag;
+	string sFlag;
+
+	SORT_FLAG() {
+		dbFlag = 0;
+		sFlag = "";
+	}
+
+	bool operator>(const SORT_FLAG& other) const {
+		if (dbFlag > other.dbFlag) {
+			return true;
+		}
+		else if (dbFlag == other.dbFlag) {
+			return sFlag > other.sFlag;
+		}
+		else {
+			return false;
+		}
+	}
+
+	bool operator<(const SORT_FLAG& other) const {
+		if (dbFlag < other.dbFlag) {
+			return true;
+		}
+		else if (dbFlag == other.dbFlag) {
+			return sFlag < other.sFlag;
+		}
+		else {
+			return false;
+		}
+	}
+
+	bool operator==(const SORT_FLAG& other) const {
+		if (dbFlag == other.dbFlag && sFlag == other.sFlag) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+};
+
 struct SELECT_RLT {
 	bool getDE;
 	string dataList;
 	size_t rowCount;
 	size_t deCount;
 	size_t fileCount;
-	map<string, yyjson_mut_val*> mapRlt;
+	map<SORT_FLAG, yyjson_mut_val*> mapRlt;
 	string error;
 	string info;
 
@@ -402,6 +445,8 @@ struct  DB_FMT
 	string curveDeNameSuffix;
 	string deItemKey_value;
 };
+
+
 
 
 
@@ -440,7 +485,7 @@ public:
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
