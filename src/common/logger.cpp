@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include "common.h"
 #include "dumpCatch.h"
+#include "tds.h"
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
@@ -77,11 +78,15 @@ void loggingCB(char* info)
 
 Clogger::Clogger()
 {
-	m_strLogDir = fs::appPath() + "/log";
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
 	m_bEnable = true;
+}
+
+void Clogger::init()
+{
+	m_strLogDir = tds->conf->logPath;
 }
 
 LOG_LEVEL Clogger::str2logLevel(string level)

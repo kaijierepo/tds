@@ -549,10 +549,8 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	// tcp类型直连设备支持
 	// adaptor下设备不支持
 	//rs485下的tdsp设备不进行离线判断。 通过 isViaAdaptor过滤
-	if (m_addrType == DEV_ADDR_MODE::tcpClient || 
-		m_addrType == DEV_ADDR_MODE::tcpServer ||
-		m_devSubType == TDSP_SUB_TYPE::childTds ||
-		!isViaAdaptor() ) {
+	//其他情况统一认为 通过tcp连接
+	if (viaTcpConn()) {
 		if (pIOSession == nullptr) {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "device offline"));
 			return;
@@ -572,7 +570,10 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	req["method"] = method;
 	req["params"] = params;
 	int iId = getRpcId();
-	req["id"] = iId;
+	if (sync) {
+		req["id"] = iId;
+	}
+
 	req["clientId"] = "tds";
 	string ioAddr = getIOAddrStr();
 
@@ -950,18 +951,7 @@ void ioDev_tdsp::DoAcq()
 	}
 }
 
-bool ioDev_tdsp::isViaAdaptor() {
-	if (m_bViaAdaptor) {
-		return true;
-	}
-	//如果父设备是网关类设备
-	else if (m_pParent != nullptr && m_pParent->m_pParent != nullptr) {
-		if (m_pParent->m_bViaAdaptor) {
-			return true;
-		}
-	}
-	return false;
-}
+
 
 void ioDev_tdsp::DoCycleTask()
 {

@@ -283,6 +283,7 @@ struct iTDSConf {
 	string confPath;   //config data path
 	string dbPath;     //database folder path
 	string uiPath;     //ui web files path
+	string logPath;
 
 	//tds service conf
 	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure

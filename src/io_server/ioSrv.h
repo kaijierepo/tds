@@ -186,6 +186,8 @@ public:
 	bool m_stopCycleAcq; //全局周期采集开关，调试时使用，调试时全局关闭周期采集。方便手工发送数据并观察
 	bool m_tdspOnlineReq;
 	bool m_tdspSingleTransaction; //tdsp设备同一时刻只能发起一个请求
+	string m_ioSrvIP; 
+	string m_ioSrvIPAsClient;//ioSrv作为客户端跟设备通信时绑定的本地ip
 };
 
 extern ioServer ioSrv;

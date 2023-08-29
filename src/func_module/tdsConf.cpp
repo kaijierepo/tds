@@ -70,8 +70,9 @@ string tdsConfig::defaultConf_tds()
 	string s = R"(#TDS 配置文件
 #系统配置
 uiPath=./ui            #web根目录
-confPath=./conf        #配置路径
-dbPath=./db            #数据库路径
+confPath=../conf       #配置路径
+dbPath=../db           #数据库路径
+logPath=../log         #日志目录
 loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
 
 #数据服务
@@ -175,6 +176,10 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		else if (checkKey(tci.key, "dbPath")) {
 			dbPath = tci.val.c_str();
 			dbPath = fs::toAbsolutePath(dbPath);
+		}
+		else if (checkKey(tci.key, "logPath")) {
+			logPath = tci.val.c_str();
+			logPath = fs::toAbsolutePath(logPath);
 		}
 		else if (checkKey(tci.key, "testToken"))
 			testToken = tci.val.c_str();
@@ -341,11 +346,14 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 
 //默认值
 	if (confPath == "")
-		confPath = fs::appPath() + "/conf";
+		confPath = fs::toAbsolutePath("../conf");
 	if(uiPath == "")
-		uiPath = fs::appPath() + "/ui";
+		uiPath = fs::toAbsolutePath("./ui");
 	if (dbPath == "")
-		dbPath = fs::appPath() + "/db";
+		dbPath = fs::toAbsolutePath("../db");
+	if (logPath == "")
+		logPath = fs::toAbsolutePath("../log");
+
 	if (title == "")
 		title = "TDS";
 	if (homepage == "")

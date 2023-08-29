@@ -219,10 +219,11 @@ bool ioDev::run()
 		else {
 			if (m_udpClt == nullptr)
 				m_udpClt = new UdpClt();
-			m_udpClt->run(this);
+
+			m_udpClt->run(this,0,ioSrv.m_ioSrvIPAsClient);
 		}
 
-		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s", m_addrType.c_str(),m_devType.c_str(), getDevAddrStr().c_str());
+		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s,绑定本地IP:%s", m_addrType.c_str(),m_devType.c_str(), getDevAddrStr().c_str(),ioSrv.m_ioSrvIP.c_str());
 	}
 	return true;
 }
@@ -665,13 +666,15 @@ void ioDev::triggerCycleAcq()
 
 
 
-bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession)
+bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 {
 	string method = jReq["method"].get<string>();
 	json jParams = jReq["params"];
 	json jId = jReq["id"];
 
-	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s\r\n",getIOAddrStr().c_str(), method.c_str());
+	bool sync = jId != nullptr ? true : false;
+
+	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s,sync=%d\r\n",getIOAddrStr().c_str(), method.c_str(),sync?1:0);
 	ioDev* pIoDev = this;
 	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrType != DEV_ADDR_MODE::udpServer)
 	{
@@ -699,7 +702,7 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_
 	json jRlt, jErr;
 	//发起同步请求，此处阻塞
 	bool callRet = false;
-	pIoDev->call(method, jParams, jSessionParams, jRlt, jErr);
+	pIoDev->call(method, jParams, jSessionParams, jRlt, jErr,sync);
 	if (jRlt != nullptr) {
 		rpcResp.result = jRlt.dump();
 		LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());
@@ -852,6 +855,40 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 //
 //	return nullptr;
 //}
+
+bool ioDev::viaTcpConn()
+{
+	if (m_addrType == DEV_ADDR_MODE::tcpClient || m_addrType == DEV_ADDR_MODE::tcpServer){
+		return true;
+	}
+	else if (m_addrType == DEV_ADDR_MODE::udpClient || m_addrType == DEV_ADDR_MODE::udpServer) {
+		return false;
+	}
+	else {
+		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+			return true;
+		}
+		else if (isViaAdaptor()) { // 485网关下的设备
+			return false;
+		}
+		else {
+			return true;
+		}
+	}
+}
+
+bool ioDev::isViaAdaptor() {
+	if (m_bViaAdaptor) {
+		return true;
+	}
+	//如果父设备是网关类设备
+	else if (m_pParent != nullptr && m_pParent->m_pParent != nullptr) {
+		if (m_pParent->m_bViaAdaptor) {
+			return true;
+		}
+	}
+	return false;
+}
 
 ioDev* ioDev::getIODev(string ioAddr,bool bChn, bool ignorePort)
 {
@@ -1054,7 +1091,15 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		m_pParent->sendData(pData, iLen);
 	}
 	else if (m_udpClt != nullptr) {
-		m_udpClt->sendData(pData, iLen);
+		string ip = "";
+		int port = 0;
+		if (m_jDevAddr["ip"].is_string())
+			ip = m_jDevAddr["ip"].get<string>();
+		if (m_jDevAddr["port"].is_number_integer())
+		{
+			port = m_jDevAddr["port"].get<int>();
+		}
+		m_udpClt->SendData(pData, iLen,ip,port);
 	}
 	else {
 		//直接发送给设备
@@ -1069,7 +1114,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog)
-						IOLogSend((unsigned char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(660));
+						IOLogSend((unsigned char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(ioSrv.m_iAdpPort));
 				}
 			}
 			else

@@ -1066,6 +1066,9 @@ string OBJ::getChildObjStatis()
 	return s;
 }
 
+void OBJ::statisChildObj(map<string, OBJ_STATIS> rlt) {
+
+}
 
 void OBJ::statisChildMo(json& jStatis)
 {

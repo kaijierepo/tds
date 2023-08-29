@@ -650,6 +650,19 @@ namespace str {
 		return str;
 	}
 
+	bool isValidHexString(const std::string& str) {
+		// 去除空格
+		std::string hexStr = std::regex_replace(str, std::regex("\\s+"), "");
+
+		// 检查字符数量是否为偶数
+		if (hexStr.length() % 2 != 0) {
+			return false;
+		}
+
+		// 检查是否只包含有效的16进制字符
+		return std::regex_match(hexStr, std::regex("^[0-9a-fA-F]+$"));
+	}
+
 	vector<unsigned char> hexStrToBytes(string hexStr)
 	{
 		vector<unsigned char> ary;

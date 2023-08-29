@@ -20,6 +20,7 @@ class  Clogger
 {
 public:
 	Clogger();
+	void init();
 	LOG_LEVEL str2logLevel(string level);
 	void setLogLevel(string level);
 	LOG_LEVEL getLogLevel(string& info);

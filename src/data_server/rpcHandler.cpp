@@ -478,6 +478,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			pCam->ptz_deletePreset(idx);
 		}
 	}
+	
 	rpcResp.result = "\"ok\"";
 
 	return true;
@@ -1265,6 +1266,52 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		}
 #endif
 	}
+	else if (method == "hexSend") {
+		LOG("[warn][hexSend] %s", params.dump().c_str());
+		string spkt = params["data"];
+		if (!str::isValidHexString(spkt)) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "invalid hex string");
+			return true;
+		}
+
+		if (!params["tag"].is_string()) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "tag params must be specifed and be string type");
+			return true;
+		}
+
+		string tag = params["tag"];
+		//查看是否属于子服务.
+		ioDev* pChildTds = ioSrv.getOwnerChildTdsDev(tag);
+		if (pChildTds) {
+			string childTdsTag = pChildTds->m_strTagBind;
+			string tagInChild = TAG::trimRoot(tag, childTdsTag);
+			json childParams = params;
+			childParams["tag"] = tagInChild;
+			json childRlt, childErr;
+			LOG("[warn][数据输出  ]请求子服务，tag=%s,子服务名称:%s", tag.c_str(), childTdsTag.c_str());
+			pChildTds->call(method, childParams, nullptr, childRlt, childErr);
+			if (childRlt != nullptr) {
+				LOG("[warn][数据输出  ]请求子服务 成功，tag=%s,子服务名称:%s,返回:%s", tag.c_str(), childTdsTag.c_str(), childRlt.dump().c_str());
+				rpcResp.result = childRlt.dump();
+			}
+			if (childErr != nullptr) {
+				LOG("[warn][数据输出  ]请求子服务 失败，tag=%s,子服务名称:%s,返回:%s", tag.c_str(), childTdsTag.c_str(), childErr.dump().c_str());
+				rpcResp.error = childErr.dump();
+			}
+		}
+		else {
+			ioDev* p = ioSrv.getIODevByTag(tag);
+			if (p == nullptr) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "io device bind to specified tag not found");
+				return true;
+			}
+
+			LOG("[warn][hexSend] 发送到设备:%s,数据:%s", p->getIOAddrStr().c_str(),spkt.c_str());
+			vector<unsigned char> pkt = str::hexStrToBytes(spkt);
+			p->sendData(pkt.data(), pkt.size());
+			rpcResp.result = RPC_OK;
+		}
+	}
 	else
 	{
 		bHandled = false;
@@ -1548,6 +1595,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		else if (method == "getMoStatis")
 		{
 			rpc_getMoStatis(params, rpcResp, session);
+		}
+		else if (method == "getObjStatis")
+		{
+			rpc_getObjStatis(params, rpcResp, session);
 		}
 		else if (method == "getMoAttri" || method == "getMoAttr")
 		{
@@ -2153,7 +2204,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 			return true;
 		}
 	
-		pIoDev->handleDevRpcCall(jReq,rpcResp,pSession);
+		pIoDev->handleDevRpcCall(jReq,rpcResp);
 		logRPCRoute(method, jReq["params"], *pSession);
 		return true;
 	}
@@ -2167,7 +2218,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 		{
 			jReq.erase("tag");
 			pSession->route_ioAddr = pIoDev->getIOAddrStr();
-			pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
+			pIoDev->handleDevRpcCall(jReq, rpcResp);
 			logRPCRoute(method, jReq["params"], *pSession);
 			return true;
 		}
@@ -2178,7 +2229,7 @@ bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std
 			string childTdsTag = pChildTds->m_strTagBind;
 			string tagInChild = TAG::trimRoot(tag, childTdsTag);
 			jReq["tag"] = tagInChild;
-			pChildTds->handleDevRpcCall(jReq, rpcResp, pSession);
+			pChildTds->handleDevRpcCall(jReq, rpcResp);
 			return true;
 		}
 
@@ -3129,6 +3180,71 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		}*/
 	}
 	return j.dump();
+}
+
+void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	string rootTag = "";
+	if (params.contains("rootTag"))
+	{
+		rootTag = params["rootTag"].get<string>();
+	}
+	rootTag = TAG::addRoot(rootTag, session.org);
+
+	string fmt = "";
+	if (params.contains("fmt")) {
+		fmt = params["fmt"];
+	}
+
+	OBJ* pMo = prj.queryObj(rootTag);
+	json jStatis;
+	if (pMo)
+	{
+		pMo->statisChildMo(jStatis);
+		json almStatis = getAlarmStatis(rootTag, session);
+		jStatis["alarm"] = almStatis["alarm"];
+		jStatis["warn"] = almStatis["warn"];
+		jStatis["tag"] = params["rootTag"];
+
+		//该模式暂时只给topo用，后续还要优化
+		if (fmt == "mplist") {
+			json jRlt = json::array();
+			json de;
+
+			de["tag"] = "statis.customOrg";
+			de["val"] = jStatis["customOrg"];
+			jRlt.push_back(de);
+
+			de["tag"] = "statis.smartDev.total";
+			de["val"] = jStatis["smartDev"];
+			jRlt.push_back(de);
+
+			de["tag"] = "statis.smartDev.online";
+			de["val"] = jStatis["online"];
+			jRlt.push_back(de);
+
+			de["tag"] = "statis.smartDev.offline";
+			de["val"] = jStatis["offline"];
+			jRlt.push_back(de);
+
+			de["tag"] = "statis.alarms.alarmCount";
+			de["val"] = jStatis["alarm"];
+			jRlt.push_back(de);
+
+			de["tag"] = "statis.alarms.warnCount";
+			de["val"] = jStatis["warn"];
+			jRlt.push_back(de);
+
+			resp.result = jRlt.dump(4);
+			resp.params = params.dump(4);
+		}
+		else {
+			resp.result = jStatis.dump(2);
+		}
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "没有找到需要统计的根对象");
+	}
 }
 
 

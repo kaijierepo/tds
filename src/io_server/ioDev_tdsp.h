@@ -41,7 +41,6 @@ public:
 
 	json getAddr() override;
 	void DoAcq();
-	bool isViaAdaptor();
 	void DoCycleTask() override;
 	void onEvent_online() override;
 

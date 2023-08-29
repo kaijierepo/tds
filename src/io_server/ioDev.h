@@ -127,7 +127,7 @@ public:
 	virtual string getDesc();
 	void triggerCycleAcq();
 	virtual void call(string method, json params, json sessionParams, json& result, json& error, bool sync = true) {  };
-	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp);
 
 	//将io设备内缓存的实时数据全部同步到绑定的位号
 	virtual void syncDataToBindTag() {};
@@ -166,6 +166,10 @@ public:
 	bool m_bViaAdaptor;
 	bool m_bEnableOfflineTimeout;
 	int m_offlineTimeout;
+
+	bool viaTcpConn(); //通过tcp与tds建立连接
+
+	bool isViaAdaptor();
 
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示全速采样

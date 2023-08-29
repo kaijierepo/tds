@@ -125,6 +125,7 @@ ioServer::ioServer()
 	m_totalPtCount = 0;
 	tds->ioServer = this;
 	m_tdspOnlineReq = false;
+	m_ioSrvIP = "0.0.0.0";
 }
 ioServer::~ioServer()
 {
@@ -342,6 +343,9 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		json jPkt = json::parse(s);
 
 		if (jPkt["method"] == "regAdaptor") {
+			if (m_strAdpIp != strIP) {
+				LOG("[适配器] 适配器上线,IP=%s,port=%d", strIP.c_str(), port);
+			}
 			m_strAdpIp = strIP;
 			m_iAdpPort = port;
 			return;
@@ -1172,9 +1176,9 @@ bool ioServer::runAsCloud()
 
 	m_tdspSingleTransaction = tds->conf->getInt("tdspSingleTransaction", 0);
 
-	string serverIP = tds->conf->getStr("ioSrvIP", "0.0.0.0");
-	if (serverIP == "")
-		serverIP = "0.0.0.0";
+	m_ioSrvIPAsClient = tds->conf->getStr("ioSrvIP", "0.0.0.0");
+	m_ioSrvIP = "0.0.0.0";
+
 
 	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
@@ -1191,19 +1195,19 @@ bool ioServer::runAsCloud()
 	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
 
 	//启动服务端口
-	if(tdspPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
-	if(tdspPort)LOG("[IO服务    ] 监听地址:UDP-" + serverIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP, Adaptor接入");
-	if(mbPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
-	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
-	if(iq60Port)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
-	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + serverIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
+	if(tdspPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
+	if(tdspPort)LOG("[IO服务    ] 监听地址:UDP-" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP, Adaptor接入");
+	if(mbPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
+	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
+	if(iq60Port)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
+	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
 
 
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
 	m_tcpSrv_tdsp->m_strName = "tdsp";
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort, serverIP))
+	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort, m_ioSrvIP))
 	{
 		
 	}
@@ -1217,7 +1221,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_rtu = new tcpSrv();
 	m_tcpSrv_rtu->m_strName = "modbus rtu";
 	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort, serverIP))
+	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort, m_ioSrvIP))
 	{
 		
 	}
@@ -1230,7 +1234,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_mbTcp = new tcpSrv();
 	m_tcpSrv_mbTcp->m_strName = "modbus tcp";
 	m_tcpSrv_mbTcp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_mbTcp->run(this, mbTcpPort, serverIP))
+	if (m_tcpSrv_mbTcp->run(this, mbTcpPort, m_ioSrvIP))
 	{
 
 	}
@@ -1243,7 +1247,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_iq60 = new tcpSrv();
 	m_tcpSrv_iq60->m_strName = "iq60";
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port, serverIP))
+	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port, m_ioSrvIP))
 	{
 		
 	}
@@ -1256,7 +1260,7 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_leakDetect = new tcpSrv();
 	m_tcpSrv_leakDetect->m_strName = "leakDetect";
 	m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_leakDetect->run(this, leakDetectPort, serverIP))
+	if (m_tcpSrv_leakDetect->run(this, leakDetectPort, m_ioSrvIP))
 	{
 
 	}
@@ -1267,7 +1271,7 @@ bool ioServer::runAsCloud()
 
 	//adaptor接入服务
 	m_udpSrv_tdsp = new udpServer();
-	if (m_udpSrv_tdsp->run(this,tdspPort, serverIP)) {
+	if (m_udpSrv_tdsp->run(this,tdspPort, m_ioSrvIP)) {
 
 	}
 	else {

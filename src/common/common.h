@@ -285,6 +285,7 @@ namespace str {
 	vector<unsigned char> toBytes(string str);
 	string bytesToHexStr(vector<char>& bytes);
 	string bytesToHexStr(vector<unsigned char>& bytes);
+	bool isValidHexString(const std::string& str);
 	vector<unsigned char> hexStrToBytes(string hexStr);
 	string bytesToHexStr(char* p, size_t len, string splitter = " ");
 	string bytesToHexStr(unsigned char* p, size_t len, string splitter = " ");

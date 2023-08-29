@@ -265,9 +265,9 @@ bool TDS_imp::run(string cmdline)
 	}
 #endif
 
-
+	logger.init();
 	logger.setLogLevel(tdsConf.logLevel);
-	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + fs::appPath() + "\\log");
+	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
 
 	//指定配置路径没有配置文件夹，则新建

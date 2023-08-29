@@ -159,6 +159,16 @@ struct SCHEDULE_TASK {
 	}
 };
 
+struct OBJ_STATIS {
+	string customType;
+	int count;
+	int online;
+	int offline;
+	int alarm;
+	int fault;
+	int normal;
+};
+
 
 class MP;
 class database;
@@ -241,6 +251,7 @@ public:
 	map<string, json> getChildCustomTypeList(string level = "*");
 	void statisChildCustomMoType(map<string, json>& list);
 	string getChildObjStatis();
+	void statisChildObj(map<string, OBJ_STATIS> rlt);
 	void statisChildMo(json& jStatis);
 	void removeMp(json& mo);
 	void clearChildren();
