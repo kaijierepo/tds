@@ -522,6 +522,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 //	return true;
 //}
 
+//此处 src 是整个数据元，是一个对象
 bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
 {
 	for (auto& i : aggrOpt) {
@@ -560,6 +561,45 @@ bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> 
 			}
 			des.items[aggrKey] = pAggrVal;
 			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+		}
+		else if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+			yyjson_val* pDeSrcFirst = src.at(0);
+			yyjson_val* pDeSrcTimeFisrt = yyjson_obj_get(pDeSrcFirst, "time");
+			yyjson_val* pDeSrcValFirst = yyjson_obj_get(pDeSrcFirst, aggrKey.c_str());
+			yyjson_val* pDeSrcLast = src.at(src.size()-1);
+			yyjson_val* pDeSrcTimeLast = yyjson_obj_get(pDeSrcLast, "time");
+			yyjson_val* pDeSrcValLast = yyjson_obj_get(pDeSrcLast, aggrKey.c_str());
+
+			double dbFirst,dbLast = 0;
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcValFirst);
+				dbFirst = atof(valStr.data());
+			}
+			else {
+				dbFirst = yyjson_get_num(pDeSrcValFirst);
+			}
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR) //指定了输出类型
+			{
+				string_view valStr = yyjson_get_str(pDeSrcValLast);
+				dbLast = atof(valStr.data());
+			}
+			else {
+				dbLast = yyjson_get_num(pDeSrcValLast);
+			}
+
+			double dbDiff = 0;
+			if (aggrType == "diff.first-last") {
+				dbDiff = dbFirst - dbLast;
+			}
+			else if (aggrType == "diff.last-first") {
+				dbDiff = dbLast - dbFirst;
+			}
+			//double的减法会造成精度丢失，通过格式化字符串转换一次解决精度丢失问题
+			string sDbDiff = str::format("%lf", dbDiff);
+			dbDiff = atof(sDbDiff.c_str());
+			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+			des.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "avg") {
 			double dbTotal = 0;
@@ -897,11 +937,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 			Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result, rlt_mut_doc);
 		}
 		else {
-			//if (deSel.timeFill) {
 			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
-			//}
-			//else
-			//	Select_Step_outputRows_SingleCol(deSel,tagDBFileSet, result, rlt_mut_doc);
 		}
 
 		//结果行二次计算
@@ -1080,7 +1116,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					{
 						for (auto& aggrParam : fSet.aggregate) {
 							string aggrType = aggrParam.second;
-							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min") {
+							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType=="diff.first-last" || aggrType=="diff.last-first") {
 								//string err = "data element type is: string, does not support aggregate type:" + aggrType;
 								//err += ",use valType=number to cast string value to number value";
 								//json jErr = err;
@@ -1730,6 +1766,9 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 
 	resp.info = result.info;
+
+	params["timeParsed"] = deSel.timeSel.getParsedSelector();
+	resp.params = params.dump();
 	resp.dbQueryInfo = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
 }
 
@@ -1977,20 +2016,65 @@ bool TIME_SELECTOR::init(string time)
 	selector = time;
 
 	//时间宏替换
-	if (time.find("this month") != string::npos) {
-		string t = timeopt::nowStr(false);
-		t = t.substr(0, 7);
-		time = str::replace(time, "this month", t);
+	if (time.find("this-month") != string::npos) {
+		TIME t = timeopt::now();
+		TIME tStart = t;
+		tStart.wDay = 1; tStart.wHour = 0; tStart.wMinute = 0; tStart.wSecond = 0; tStart.wMilliseconds = 0;
+		TIME tEnd = tStart;
+		tEnd.wMonth += 1;
+		if (tEnd.wMonth == 13) {
+			tEnd.wMonth = 1;
+			tEnd.wYear += 1;
+		}
+		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
-	else if (time.find("this day") != string::npos) {
+	else if (time.find("last-month") != string::npos) {
+		TIME t = timeopt::now();
+		TIME tStart = t;
+		tStart.wDay = 1; tStart.wHour = 0; tStart.wMinute = 0; tStart.wSecond = 0; tStart.wMilliseconds = 0;
+		tStart.wMonth -= 1;
+		if (tStart.wMonth == 0) {
+			tStart.wMonth = 12;
+			tStart.wYear -= 1;
+		}
+		TIME tEnd = tStart;
+		tEnd.wMonth += 1;
+		if (tEnd.wMonth == 13) {
+			tEnd.wMonth = 1;
+			tEnd.wYear += 1;
+		}
+		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		time = tStart.toStr() + "~" + tEnd.toStr();
+	}
+	else if (time.find("this-year") != string::npos) {
+		TIME t = timeopt::now();
+		TIME tStart = t;
+		tStart.wDay = 1; tStart.wMonth = 1; tStart.wHour = 0; tStart.wMinute = 0; tStart.wSecond = 0; tStart.wMilliseconds = 0;
+		TIME tEnd = tStart;
+		tEnd.wYear += 1;
+		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		time = tStart.toStr() + "~" + tEnd.toStr();
+	}
+	else if (time.find("this-day") != string::npos) {
 		string t = timeopt::nowStr(false);
 		t = t.substr(0, 10);
-		time = str::replace(time, "this day", t);
+		time = str::replace(time, "this-day", t);
 	}
 	else if (time.find("today") != string::npos) {
 		string t = timeopt::nowStr(false);
 		t = t.substr(0, 10);
 		time = str::replace(time, "today", t);
+	}
+	else if (time.find("yesterday") != string::npos) {
+		TIME t = timeopt::now();
+		t = timeopt::addTime(t, -24, 0, 0);
+		t.wMilliseconds = 0;
+		TIME tStart = t;
+		TIME tEnd = t;
+		tStart.wHour = 0; tStart.wMinute = 0; tStart.wSecond = 0;
+		tEnd.wHour = 23; tEnd.wMinute = 59; tEnd.wSecond = 59;
+		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 
 	//集合选择
@@ -2076,6 +2160,11 @@ bool TIME_SELECTOR::parseTimeRange(string condition)
 	startTime = timeopt::SysTime2Unix(stStart); 
 	endTime = timeopt::SysTime2Unix(stEnd);
 	return true;
+}
+
+string TIME_SELECTOR::getParsedSelector()
+{
+	return strStart + "~" + strEnd;
 }
 
 
@@ -2521,6 +2610,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	return bMatch;
 }
 
-
-
-
+string DE_SELECTOR::getSelectorDesc()
+{
+	return "";
+}

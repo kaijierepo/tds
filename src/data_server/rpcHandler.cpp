@@ -2620,6 +2620,10 @@ HANDLE_END:
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + id.dump();
 
 		//info放在result前面打印，因为result可能比较长，info短，放前面测试观察方便
+		if (rpcResp.params != "") {
+			rpcResp.strResp += ",\"params\":" + rpcResp.params;
+		}
+
 		if (rpcResp.info != "") {
 			rpcResp.strResp += ",\"info\":\"" + rpcResp.info + "\"";
 		}
@@ -2631,11 +2635,6 @@ HANDLE_END:
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
 	}
 
-	//当作为edgeDev时，提供本机地址。 注意此处为addr而非ioAddr，设备只知道自己的addr， ioAddr是io服务才知道的
-	if (bEdgeDevMode)
-	{
-		rpcResp.strResp += ",\"addr\":\"" + prj.getTdsId() + "\"";
-	}
 
 	//route参数，路由请求的回包包含请求中的路由参数
 	if (pSession->route_ioAddr != "")

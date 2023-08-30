@@ -148,6 +148,7 @@ public:
 	bool init(string time);
 	string shortSel2StardardSel(string time);
 	bool parseTimeRange(string time);//标准格式时间范围2020-02-01 00:00:00~2020-02-28 23:59:59
+	string getParsedSelector();
 
 	//选择器字符串
 	string selector;
@@ -354,6 +355,8 @@ struct DE_SELECTOR {
 	//返回结果的运算
 	string calc;
 
+	string getSelectorDesc();
+
 	DE_SELECTOR() {
 		ascendingSort = true;
 		tagAsColume = false;
@@ -423,6 +426,7 @@ struct SELECT_RLT {
 	map<SORT_FLAG, yyjson_mut_val*> mapRlt;
 	string error;
 	string info;
+	string query;
 
 	SELECT_RLT() {
 		getDE = true;
