@@ -228,7 +228,7 @@ struct DE_yyjson {
 	string deTime;
 
 	yyjson_mut_val* de;    //为了提升性能，非聚合模式下，输出前输出存在这儿
-	map<string, yyjson_mut_val*> items; //非val格式下的通用de
+	map<string, yyjson_mut_val*> items; //非val格式下的通用de   只支持1级json结构。key存储字段名称，val存储聚合后的值
 
 	DE_yyjson() {
 		time = 0;
@@ -237,8 +237,25 @@ struct DE_yyjson {
 	}
 };
 
-//单个位号的数据和查询参数
-class TAG_DB_DATA {
+class TAG_FILE_SET {
+public:
+	string tag;
+	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
+
+	~TAG_FILE_SET(){
+		if (fileList.size() > 0)
+		{
+			for (int i = 0; i < fileList.size(); i++)
+			{
+				delete fileList[i];
+			}
+		}
+	}
+};
+
+//使用位号和时间标注的一个数据集
+//位号可以是单个位号，或者是模糊匹配位号，表示多个位号
+class DATA_SET {
 public:
 	string tag;  //系统位号
 	string relTag;  //本次查询需要返回的相对位号
@@ -247,10 +264,6 @@ public:
 
 
 	map<string, string> aggregate; //聚合操作，key是需要聚合的字段，val是聚合方式
-	bool bGroupByTime;
-
-	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
-
 	//分组聚合前数据.key是时间戳，数组是de的数组
 	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
 	//不分组聚合前数据
@@ -259,18 +272,10 @@ public:
 	//执行聚合函数后数据.或者无需聚合直接放入以下结构
 	vector<DE_yyjson*> m_afterAggr;
 
-	TAG_DB_DATA() {
-		bGroupByTime = false;
-	}
-	~TAG_DB_DATA() {
-		if (fileList.size() > 0)
-		{
-			for (int i = 0; i < fileList.size(); i++)
-			{
-				delete fileList[i];
-			}
-		}
+	DATA_SET() {
 
+	}
+	~DATA_SET() {
 		if (m_afterAggr.size() > 0) {
 			for (int i = 0; i < m_afterAggr.size(); i++)
 			{
@@ -481,15 +486,15 @@ public:
 public:
 	void Insert(string strTag, TIME stTime, json& jData,json& dataFile) ;
 
-	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	
 	//select
 	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	bool Select_yyjson_deFile(string& s);
-	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result);
-	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
-	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
-	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
+	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
+	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
+	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 

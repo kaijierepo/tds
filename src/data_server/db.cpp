@@ -269,7 +269,7 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 	return "";
 }
 
-bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 	//返回的数据元是否需要携带tag字段
@@ -283,7 +283,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 	//生成输出de
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
-		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+		DATA_SET& fSet = *tagDBFileSet[tagIdx];
 		string& tagAlias = fSet.colKey;
 		string& tag = fSet.tag;
 
@@ -366,7 +366,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 			map<string, yyjson_mut_val*>& timeSection = iter.second;
 			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 			{
-				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+				DATA_SET& fSet = *tagDBFileSet[tagIdx];
 				string& tag = fSet.tag;
 
 				map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
@@ -731,7 +731,7 @@ bool database::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> a
 	return true;
 }
 
-bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
+bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 
@@ -739,7 +739,7 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB
 	//组合成数据行
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
-		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+		DATA_SET& fSet = *tagDBFileSet[tagIdx];
 
 		//某个位号的所有聚合结果，比如共30天按天聚合，那就是30天的结果
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
@@ -853,65 +853,29 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	vector<string> tagSet = deSel.tagSel.tagSet;
 
 
-	//初始化单个位号的 数据内存对象和查询参数
-	vector<TAG_DB_DATA*> tagDBFileSet;  //数据库原始文件数据
-	vector<TAG_DB_DATA*> tagDBFileSetTagMerge;    //不进行位号分组的数据
+	//加载原始文件数据。每个位号，都对应一些文件，加载这些文件数据
+	vector<TAG_FILE_SET*> tagFileSet;
 	for (int i = 0; i < tagSet.size(); i++)
 	{
-		//生成相对位号
-		TAG_DB_DATA& fSet  = *(new TAG_DB_DATA());
+		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
 		fSet.tag = tagSet[i];
-		fSet.relTag = TAG::trimRoot(tagSet[i], deSel.tagSel.m_rootTag);
-
-		//生成位号名称
-		if (deSel.vecTagLable.size() == tagSet.size()) {
-			fSet.colKey = deSel.vecTagLable[i];
-		}
-		else {
-			if (deSel.tagLabel == "tag") {
-				fSet.colKey = fSet.relTag;
-			}
-			else
-			{
-				size_t pos = fSet.relTag.rfind(".");
-				if (pos != string::npos) {
-					fSet.mpName = fSet.relTag.substr(pos + 1, fSet.relTag.size() - pos - 1);
-				}
-				else {
-					fSet.mpName = fSet.relTag;
-				}
-				fSet.colKey = fSet.mpName;
-			}
-		}
-
-		//本位号查询参数
-		if (deSel.vecAggregate.size() == tagSet.size()) { //多位号聚合模式
-			fSet.aggregate = deSel.vecAggregate[i];
-			fSet.bGroupByTime = deSel.groupByTime;
-		}
-		else if (deSel.aggregate.size() > 0) {//单位号聚合
-			fSet.aggregate = deSel.aggregate;
-			fSet.bGroupByTime = deSel.groupByTime;
-		}
-
-		tagDBFileSet.push_back(&fSet);
+		tagFileSet.push_back(&fSet);
 	}
-	
-	//加载文件原始数据
-	Select_Step_loadFile(deSel, tagDBFileSet,result);
+	Select_Step_loadFile(deSel, tagFileSet, result);
+
+	//中间处理阶段的数据集，最后需要全部释放
+	vector<vector<DATA_SET*>*>  dataSetBuff;
 
 	
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
 
 	if (deSel.deType == "curve") {
-		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
-			TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
 			string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
-			string& relTag = fSet.relTag;
-
-
+;
 			//加载每个数据文件中的数据
 			for (int i = 0; i < fSet.fileList.size(); i++)
 			{
@@ -925,21 +889,65 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 	}
 	else {
-		//获得选中的数据元.并进行分组
-		bRet = Select_Step_loadDataElem(deSel, tagDBFileSet, result, rlt_mut_doc);
+		vector<DATA_SET*>* dataSet;  //数据集,永远存储当前处理后的最新的数据集
+
+		//初始加载数据集。 dataSet1 初始化单个位号的 数据内存对象和查询参数
+		vector<DATA_SET*>* dataSet1 = new vector<DATA_SET*>;
+		dataSet = dataSet1;
+		dataSetBuff.push_back(dataSet1);//新增一个数据集，立即放到缓存里，后面需要释放
+		for (int i = 0; i < tagSet.size(); i++)
+		{
+			//生成相对位号
+			DATA_SET& fSet = *(new DATA_SET());
+			fSet.tag = tagSet[i];
+			fSet.relTag = TAG::trimRoot(tagSet[i], deSel.tagSel.m_rootTag);
+
+			//生成位号名称
+			if (deSel.vecTagLable.size() == tagSet.size()) {
+				fSet.colKey = deSel.vecTagLable[i];
+			}
+			else {
+				if (deSel.tagLabel == "tag") {
+					fSet.colKey = fSet.relTag;
+				}
+				else
+				{
+					size_t pos = fSet.relTag.rfind(".");
+					if (pos != string::npos) {
+						fSet.mpName = fSet.relTag.substr(pos + 1, fSet.relTag.size() - pos - 1);
+					}
+					else {
+						fSet.mpName = fSet.relTag;
+					}
+					fSet.colKey = fSet.mpName;
+				}
+			}
+
+			//本位号查询参数
+			if (deSel.vecAggregate.size() == tagSet.size()) { //多位号聚合模式
+				fSet.aggregate = deSel.vecAggregate[i];
+			}
+			else if (deSel.aggregate.size() > 0) {//单位号聚合
+				fSet.aggregate = deSel.aggregate;
+			}
+
+			dataSet->push_back(&fSet);
+		}
+
+		//获得选中的数据元. 从文件数据加载到数据集
+		bRet = Select_Step_loadDataElem(deSel, tagFileSet,*dataSet, result, rlt_mut_doc);
 		if (!bRet)
 			return false;
 
 		//如果不进行位号分组，合并（默认都进行位号分组）
 		if (!deSel.groupByTag) {
-			TAG_DB_DATA& fSet = *(new TAG_DB_DATA());
+			DATA_SET& fSet = *(new DATA_SET());
 			fSet.tag = "*";
 			fSet.aggregate = deSel.aggregate;  //不进行位号分组一定是单位号聚合，把所有的位号看成1个位号
-			fSet.bGroupByTime = deSel.groupByTime;
 
 			if (deSel.groupByTime) {
-				for (int i = 0; i < tagDBFileSet.size(); i++) {
-					TAG_DB_DATA& fs = *tagDBFileSet[i];
+				for (int i = 0; i < dataSet->size(); i++) {
+					DATA_SET& fs = *dataSet->at(i);
 					//找出各个位号的时间分组，并进行合并
 					for (auto& g : fs.m_groupedBeforeAggr) {
 						if (fSet.m_groupedBeforeAggr.find(g.first) != fSet.m_groupedBeforeAggr.end()) {
@@ -953,32 +961,27 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				}
 			}
 			else {
-				for (int i = 0; i < tagDBFileSet.size(); i++) {
-					TAG_DB_DATA& fs = *tagDBFileSet[i];
+				for (int i = 0; i < dataSet->size(); i++) {
+					DATA_SET& fs = *dataSet->at(i);
 					fSet.m_beforeAggr.insert(fSet.m_beforeAggr.end(),fs.m_beforeAggr.begin(), fs.m_beforeAggr.end());
 				}
 			}
-			tagDBFileSetTagMerge.push_back(&fSet);
+			vector<DATA_SET*>* dataSet2 = new vector<DATA_SET*>;
+			dataSet2->push_back(&fSet);
+			dataSetBuff.push_back(dataSet2);
+			dataSet = dataSet2;
 		}
 
-
-		vector<TAG_DB_DATA*> selectedDataSet;
-		if (deSel.groupByTag) {
-			selectedDataSet = tagDBFileSet;
-		}
-		else {
-			selectedDataSet = tagDBFileSetTagMerge;
-		}
 
 		//执行聚合
-		Select_Step_doAggregate(deSel, selectedDataSet, result, rlt_mut_doc);
+		Select_Step_doAggregate(deSel, *dataSet, rlt_mut_doc);
 
 		//输出结果行
 		if (deSel.tagAsColume) {
-			Select_Step_outputRows_MultiCol(deSel, selectedDataSet, result, rlt_mut_doc);
+			Select_Step_outputRows_MultiCol(deSel, *dataSet, result, rlt_mut_doc);
 		}
 		else {
-			Select_Step_outputRows_SingleCol_timeFill(deSel, selectedDataSet, result, rlt_mut_doc);
+			Select_Step_outputRows_SingleCol_timeFill(deSel, *dataSet, result, rlt_mut_doc);
 		}
 
 		//结果行二次计算
@@ -1035,25 +1038,24 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	//释放结果
 	yyjson_mut_doc_free(rlt_mut_doc);
 	//释放源
-	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+	for (int i = 0; i < dataSetBuff.size(); i++)
 	{
-		TAG_DB_DATA* fSet = tagDBFileSet[tagIdx];
-		delete fSet;
-	}
-	for (int tagIdx = 0; tagIdx < tagDBFileSetTagMerge.size(); tagIdx++)
-	{
-		TAG_DB_DATA* fSet = tagDBFileSetTagMerge[tagIdx];
-		delete fSet;
+		vector<DATA_SET*>& p = *dataSetBuff[i];
+		for (int j = 0; j < p.size(); j++)
+		{
+			DATA_SET* fSet = p[j];
+			delete fSet;
+		}
 	}
 
 	return true;
 }
 
-bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result)
+bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
 {
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
-		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
 
 		//无周期范围选择，且数据集为单个，跳过其他文件读取，提高性能
@@ -1117,13 +1119,14 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& ta
 	return true;
 }
 
-bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
+bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
 {
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
-		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+		DATA_SET& fSetOut = *outputDataSet[tagIdx];
 		string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
-		string& relTag = fSet.relTag;
+		string& relTag = fSetOut.relTag;
 
 
 		//加载每个数据文件中的数据
@@ -1159,7 +1162,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "") 
 					{
-						for (auto& aggrParam : fSet.aggregate) {
+						for (auto& aggrParam : fSetOut.aggregate) {
 							string aggrType = aggrParam.second;
 							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType=="diff.first-last" || aggrType=="diff.last-first") {
 								//string err = "data element type is: string, does not support aggregate type:" + aggrType;
@@ -1224,18 +1227,18 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 				if (deSel.bAggr) {
 					if (deSel.timeGroupBy == "day") {
 						groupKeyVal = deTime.substr(0, 10);
-						map<string, vector<yyjson_val*>>::iterator it = fSet.m_groupedBeforeAggr.find(groupKeyVal);
-						if (it != fSet.m_groupedBeforeAggr.end()) {
+						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_groupedBeforeAggr.find(groupKeyVal);
+						if (it != fSetOut.m_groupedBeforeAggr.end()) {
 							it->second.push_back(de);
 						}
 						else {
 							vector<yyjson_val*> newVec;
 							newVec.push_back(de);
-							fSet.m_groupedBeforeAggr[groupKeyVal] = newVec;
+							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
 						}
 					}
 					else {
-						fSet.m_beforeAggr.push_back(de);
+						fSetOut.m_beforeAggr.push_back(de);
 					}
 				}
 				else { 
@@ -1262,7 +1265,7 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 						}
 					}
 
-					fSet.m_afterAggr.push_back(&deyy);
+					fSetOut.m_afterAggr.push_back(&deyy);
 				}
 
 				result.deCount++;
@@ -1272,13 +1275,13 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 	return true;
 }
 
-bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
+bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
 {
 	if (deSel.bAggr) {
 		if (deSel.groupByTime) {
-			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+			for (int tagIdx = 0; tagIdx < inputData.size(); tagIdx++)
 			{
-				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+				DATA_SET& fSet = *inputData[tagIdx];
 				//每个group生成一个聚合后 de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
 					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
@@ -1289,14 +1292,14 @@ bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>&
 			}
 		}
 		else {//所有数据聚合的 时间字段填时间范围 
-			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+			for (int tagIdx = 0; tagIdx < inputData.size(); tagIdx++)
 			{
-				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
+				DATA_SET& fSet = *inputData[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
 					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
 					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
 
-					if (tagDBFileSet.size() > 1 || de.time == nullptr) {
+					if (inputData.size() > 1 || de.time == nullptr) {
 						de.time = yyjson_mut_str(rlt_mut_doc, deSel.timeSel.selector.c_str());
 					}
 
