@@ -247,7 +247,7 @@ public:
 
 
 	map<string, string> aggregate; //聚合操作，key是需要聚合的字段，val是聚合方式
-	bool bAggr;
+	bool bGroupByTime;
 
 	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
 
@@ -260,7 +260,7 @@ public:
 	vector<DE_yyjson*> m_afterAggr;
 
 	TAG_DB_DATA() {
-		bAggr = false;
+		bGroupByTime = false;
 	}
 	~TAG_DB_DATA() {
 		if (fileList.size() > 0)
@@ -341,8 +341,9 @@ struct DE_SELECTOR {
 	vector<string> vecTagLable; //指定别名
 
 	string groupby;
+	string timeGroupBy;
 	bool groupByTime; //是否是按照时间进行分组，如果是按时间分组，查询结果的time字段将被改为时间的分组值
-	bool grouped;
+	bool groupByTag;  //是否按照位号进行分组
 
 	//聚合运算
 	bool bAggr; //是否进行数据聚合
@@ -361,8 +362,8 @@ struct DE_SELECTOR {
 		ascendingSort = true;
 		tagAsColume = false;
 		tagLabel = "tag";
-		grouped = false;
 		groupByTime = false;
+		groupByTag = true;
 		bAggr = false;
 		timeFill = false;
 	}
@@ -490,7 +491,7 @@ public:
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	bool Update(string tag, TIME stTime, string& sData);

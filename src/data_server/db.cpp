@@ -523,7 +523,7 @@ bool database::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vec
 //}
 
 //此处 src 是整个数据元，是一个对象
-bool database::doAggregateSingleTag(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
+bool database::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
 {
 	for (auto& i : aggrOpt) {
 		string aggrType = i.second;
@@ -855,6 +855,7 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 	//初始化单个位号的 数据内存对象和查询参数
 	vector<TAG_DB_DATA*> tagDBFileSet;  //数据库原始文件数据
+	vector<TAG_DB_DATA*> tagDBFileSetTagMerge;    //不进行位号分组的数据
 	for (int i = 0; i < tagSet.size(); i++)
 	{
 		//生成相对位号
@@ -886,11 +887,11 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		//本位号查询参数
 		if (deSel.vecAggregate.size() == tagSet.size()) { //多位号聚合模式
 			fSet.aggregate = deSel.vecAggregate[i];
-			fSet.bAggr = true;
+			fSet.bGroupByTime = deSel.groupByTime;
 		}
 		else if (deSel.aggregate.size() > 0) {//单位号聚合
 			fSet.aggregate = deSel.aggregate;
-			fSet.bAggr = true;
+			fSet.bGroupByTime = deSel.groupByTime;
 		}
 
 		tagDBFileSet.push_back(&fSet);
@@ -929,15 +930,55 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		if (!bRet)
 			return false;
 
+		//如果不进行位号分组，合并（默认都进行位号分组）
+		if (!deSel.groupByTag) {
+			TAG_DB_DATA& fSet = *(new TAG_DB_DATA());
+			fSet.tag = "*";
+			fSet.aggregate = deSel.aggregate;  //不进行位号分组一定是单位号聚合，把所有的位号看成1个位号
+			fSet.bGroupByTime = deSel.groupByTime;
+
+			if (deSel.groupByTime) {
+				for (int i = 0; i < tagDBFileSet.size(); i++) {
+					TAG_DB_DATA& fs = *tagDBFileSet[i];
+					//找出各个位号的时间分组，并进行合并
+					for (auto& g : fs.m_groupedBeforeAggr) {
+						if (fSet.m_groupedBeforeAggr.find(g.first) != fSet.m_groupedBeforeAggr.end()) {
+							vector<yyjson_val*>& vec = fSet.m_groupedBeforeAggr[g.first];
+							vec.insert(vec.begin(), g.second.begin(),g.second.end());
+						}
+						else {
+							fSet.m_groupedBeforeAggr[g.first] = g.second;
+						}
+					}
+				}
+			}
+			else {
+				for (int i = 0; i < tagDBFileSet.size(); i++) {
+					TAG_DB_DATA& fs = *tagDBFileSet[i];
+					fSet.m_beforeAggr.insert(fSet.m_beforeAggr.end(),fs.m_beforeAggr.begin(), fs.m_beforeAggr.end());
+				}
+			}
+			tagDBFileSetTagMerge.push_back(&fSet);
+		}
+
+
+		vector<TAG_DB_DATA*> selectedDataSet;
+		if (deSel.groupByTag) {
+			selectedDataSet = tagDBFileSet;
+		}
+		else {
+			selectedDataSet = tagDBFileSetTagMerge;
+		}
+
 		//执行聚合
-		Select_Step_doAggregate(deSel, tagDBFileSet, result, rlt_mut_doc);
+		Select_Step_doAggregate(deSel, selectedDataSet, result, rlt_mut_doc);
 
 		//输出结果行
 		if (deSel.tagAsColume) {
-			Select_Step_outputRows_MultiCol(deSel, tagDBFileSet, result, rlt_mut_doc);
+			Select_Step_outputRows_MultiCol(deSel, selectedDataSet, result, rlt_mut_doc);
 		}
 		else {
-			Select_Step_outputRows_SingleCol_timeFill(deSel, tagDBFileSet, result, rlt_mut_doc);
+			Select_Step_outputRows_SingleCol_timeFill(deSel, selectedDataSet, result, rlt_mut_doc);
 		}
 
 		//结果行二次计算
@@ -999,7 +1040,11 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		TAG_DB_DATA* fSet = tagDBFileSet[tagIdx];
 		delete fSet;
 	}
-
+	for (int tagIdx = 0; tagIdx < tagDBFileSetTagMerge.size(); tagIdx++)
+	{
+		TAG_DB_DATA* fSet = tagDBFileSetTagMerge[tagIdx];
+		delete fSet;
+	}
 
 	return true;
 }
@@ -1176,8 +1221,8 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 					continue;
 				}
 
-				if (fSet.bAggr) {
-					if (deSel.groupby == "day") {
+				if (deSel.bAggr) {
+					if (deSel.timeGroupBy == "day") {
 						groupKeyVal = deTime.substr(0, 10);
 						map<string, vector<yyjson_val*>>::iterator it = fSet.m_groupedBeforeAggr.find(groupKeyVal);
 						if (it != fSet.m_groupedBeforeAggr.end()) {
@@ -1230,17 +1275,15 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>
 bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
 {
 	if (deSel.bAggr) {
-		if (deSel.grouped) {
+		if (deSel.groupByTime) {
 			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 			{
 				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
 				//每个group生成一个聚合后 de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
 					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
-					doAggregateSingleTag(deSel, fSet.aggregate, i.second, de, rlt_mut_doc);
-					if (deSel.groupByTime)
-						de.time = yyjson_mut_str(rlt_mut_doc, i.first.data());
-
+					doAggregateOneGroup(deSel, fSet.aggregate, i.second, de, rlt_mut_doc);
+					de.time = yyjson_mut_str(rlt_mut_doc, i.first.data());
 					fSet.m_afterAggr.push_back(&de);
 				}
 			}
@@ -1251,7 +1294,7 @@ bool database::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>&
 				TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
 					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
-					doAggregateSingleTag(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
+					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
 
 					if (tagDBFileSet.size() > 1 || de.time == nullptr) {
 						de.time = yyjson_mut_str(rlt_mut_doc, deSel.timeSel.selector.c_str());
@@ -1687,16 +1730,30 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 
 	if (params["groupby"].is_string()) {
 		deSel.groupby = params["groupby"].get<string>();
-		deSel.grouped = true;
 
-		if (deSel.groupby == "day") {
+		//是否时间聚合
+		if (deSel.groupby.find("day") != string::npos) {
 			deSel.groupByTime = true;
+			deSel.timeGroupBy = "day";
 		}
-		else if (deSel.groupby == "month") {
+		else if (deSel.groupby.find("month") != string::npos) {
 			deSel.groupByTime = true;
+			deSel.timeGroupBy = "month";
 		}
-		else if (deSel.groupby == "hour") {
+		else if (deSel.groupby.find("hour")!=string::npos) {
 			deSel.groupByTime = true;
+			deSel.timeGroupBy = "hour";
+		}
+		else {
+			deSel.groupByTime = false;
+		}
+
+		//是否空间聚合
+		if (deSel.groupby.find("tag") != string::npos) {
+			deSel.groupByTag = true;
+		}
+		else {
+			deSel.groupByTag = false;
 		}
 	}
 
