@@ -165,7 +165,8 @@ void RpcLogSend(unsigned char* p, size_t len, bool success, string remoteAddr) {
 	}
 
 
-	string resp = str::fromBuff(p, len);
+	string resp;
+	str::fromBuff(p, len, resp);
 
 	json j;
 	TIME st;
@@ -184,7 +185,8 @@ void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
 			return;
 	}
 
-	string req = str::fromBuff(p, len);
+	string req;
+	str::fromBuff(p, len,req);
 
 	json j;
 	TIME st;

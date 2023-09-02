@@ -746,13 +746,23 @@ namespace str {
 		return fromBuff((char*)p, len);
 	}
 
+	void fromBuff(unsigned char* p, size_t len,string& s)
+	{
+		s.resize(len);
+		memcpy(&s[0], p, len);
+	}
+
+	void fromBuff(char* p, size_t len, string& s)
+	{
+		s.resize(len);
+		memcpy(&s[0], p, len);
+	}
+
 	string fromBuff(const char* p, size_t len)
 	{
-		char* tmp = new char[len + 1];
-		memcpy(tmp, p, len);
-		tmp[len] = 0;
-		string s = tmp;
-		delete[] tmp;
+		string s;
+		s.resize(len);
+		memcpy(&s[0], p, len);
 		return s;
 	}
 

@@ -1770,6 +1770,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 			deSel.vecAggregate.push_back(getAggrOpt(i));
 		}
 		deSel.bAggr = true;
+		deSel.groupByTag = true; //多位号聚合模式，默认按照位号分组，相当于每列单独聚合
 	}
 	else if(jAggr.is_object() || jAggr.is_string()){
 		deSel.aggregate = getAggrOpt(jAggr);

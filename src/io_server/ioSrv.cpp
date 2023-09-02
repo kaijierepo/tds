@@ -65,7 +65,8 @@ void IOThread()
 
 void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	string pkt = str::fromBuff((char*)pData, iLen);
+	string pkt;
+	str::fromBuff((char*)pData, iLen,pkt);
 
 	try {
 		json jpkt = json::parse(pkt);
@@ -214,7 +215,8 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 	//首次从该链接收到数据时的处理。
 	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
 	{
-		string strData = str::fromBuff((char*)pData, iLen);
+		string strData;
+		str::fromBuff((char*)pData, iLen,strData);
 		//parse transfer layer protocol
 		if (strData.find("HTTP") != string::npos)
 		{
@@ -338,7 +340,8 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 
 	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
 	try {
-		string s = str::fromBuff((char*)recvData, recvDataLen);
+		string s;
+		str::fromBuff((char*)recvData, recvDataLen,s);
 
 		json jPkt = json::parse(s);
 
@@ -1816,7 +1819,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			}
 		}
 		else {
-			string sResp = str::fromBuff((char*)pData, iLen);
+			string sResp;
+			str::fromBuff((char*)pData, iLen,sResp);
 
 
 			//数据包预处理

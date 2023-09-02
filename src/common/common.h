@@ -294,6 +294,8 @@ namespace str {
 	string fromInt(size_t v);
 	string fromBuff(unsigned char* p, size_t len);
 	string fromBuff(const char* p, size_t len);
+	void fromBuff(unsigned char* p, size_t len, string& s);
+	void fromBuff(char* p, size_t len, string& s);
 	int toInt(string s);
 	string encodeAscII(string s);
 	bool isInteger(string s);

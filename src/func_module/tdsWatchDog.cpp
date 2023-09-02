@@ -613,7 +613,8 @@ bool tdsWatchDog::isSelfStartReg()
 
 void tdsWatchDog::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
-	string food = str::fromBuff(recvData,recvDataLen);
+	string food;
+	str::fromBuff(recvData, recvDataLen,food);
 	//LOG("food is " + food);
 	timeopt::now(&m_lastFeedTime);
 }

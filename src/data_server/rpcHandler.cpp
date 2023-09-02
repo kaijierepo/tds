@@ -1614,6 +1614,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			prj.getMpTypeList(list);
 			result = list.dump();
 		}
+		else if (method == "getObjTree") {
+			result = prj.m_strMoTree;
+		}
 		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo")
 		{
 			//位号选择器 参数tag + rootTag
@@ -2400,6 +2403,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	try
 	{
 		//解析请求基本信息
+		//调试用 fs::writeFile(fs::appPath() + "/req.json", strReq);
 		json jReq = json::parse(strReq);
 		if (!jReq.contains("method"))
 		{
@@ -3791,6 +3795,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 	else {
 		jTableHead.push_back("位号");
 		jTableHead.push_back("点位信息");
+		jTableHead.push_back("报警状态");
 		jTable["header"] = jTableHead;
 		for (int i = 0; i < moList.size(); i++)
 		{
@@ -3811,6 +3816,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			json jTableRow;
 			jTableRow.push_back(tag);
 			jTableRow.push_back(pMo->getChildObjStatis());
+			jTableRow.push_back(pMo->m_jAlarmStatus);
 			jTableBody.push_back(jTableRow);
 		}
 		jTable["body"] = jTableBody;
