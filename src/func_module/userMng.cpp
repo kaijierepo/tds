@@ -282,8 +282,10 @@ void tokenExpire_thread(userManager* p) {
 
 bool userManager::run()
 {
-	thread t(tokenExpire_thread, this);
-	t.detach();
+	if (tds->conf->enableAccessCtrl) {
+		thread t(tokenExpire_thread, this);
+		t.detach();
+	}
 	return true;
 }
 
