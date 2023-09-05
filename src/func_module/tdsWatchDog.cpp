@@ -1,7 +1,6 @@
 #ifdef _WIN32
 #include "pch.h"
 #include "tdsWatchDog.h"
-#include "logger.h"
 #include "httplib.h"
 #include "dumpCatch.h"
 #include "common.h"
@@ -87,7 +86,7 @@ void wakeUpFeeder() {
 	//si.dwFlags = STARTF_USESHOWWINDOW;
 	//si.wShowWindow = SW_SHOW;
 	if (!CreateProcessW(NULL,   // No module name (use command line)
-		(LPWSTR)charCodec::utf8_to_utf16("tds.exe").c_str(),        // Command line
+		(LPWSTR)charCodec::utf8_to_utf16( fs::appPath() + "/tds/tds.exe").c_str(),        // Command line
 		NULL,           // Process handle not inheritable
 		NULL,           // Thread handle not inheritable
 		FALSE,          // Set handle inheritance to FALSE
@@ -109,18 +108,6 @@ void wakeUpFeeder() {
 	CloseHandle(pi.hThread);
 }
 
-
-void thread_checkMediaServer() {
-	while (1) {
-		timeopt::sleepMilli(1000);
-		if (!watchDog.isProcessRun("MediaServer.exe")) {
-			string msPath = fs::appPath() + "/com/mediaServer/MediaServer.exe";
-			if (fs::fileExist(msPath)){
-				watchDog.runProcess(msPath);
-			}
-		}
-	}
-}
 
 
 bool IsNodeRunningWithArg(const std::string& arg) {
@@ -193,37 +180,62 @@ void thread_checkSrcMain() {
 		{
 			string cmdline = fs::appPath() + "/node.exe " + srcMain;
 			ShellExecute(NULL, "open", "cmd.exe", ("/C " + charCodec::utf8_to_gb(cmdline)).c_str(), NULL, SW_SHOW);
-			LOG("启动Nodejs服务:" + cmdline);
+			watchDog.log("启动Nodejs服务:" + cmdline);
 			Sleep(2000);
 		}
 	}
 }
 
-void thread_checkAdp() {
-	vector<fs::FILE_INFO> adpList;
-	string adpRoot = fs::appPath() + "/com/adp/";
-	if (!fs::fileExist(adpRoot)) {
-		return;
-	}
-
-	string adpDevicePath = fs::appPath() + "/com/adp/adp-device";
-	string adpGatewayPath = fs::appPath() + "/com/adp/adp-gateway";
-
+void thread_checkMicroService() {
+	vector<fs::FILE_INFO> servcieList;
+	vector<string> exclude;
+	exclude.push_back(".svn");
+	exclude.push_back("ui");
+	exclude.push_back("node_modules");
+	exclude.push_back("log");
+	exclude.push_back("db");
 
 	while (1) {
 		timeopt::sleepMilli(1000);
-		adpList.clear();
-		fs::getFolderList(adpList, adpDevicePath);
-		fs::getFolderList(adpList, adpGatewayPath);
+		servcieList.clear();
+		fs::getFileList(servcieList,fs::appPath(),true, "main.js",&exclude);
 
-		for (int i = 0; i < adpList.size(); i++) {
-			string adpExe =  adpList[i].path + "/main.js";
-			//程序存在且没有运行
-			if (fs::fileExist(adpExe) &&  !IsNodeRunningWithArg(adpExe))
+		for (int i = 0; i < servcieList.size(); i++) {
+			string serviceExe =  servcieList[i].path;
+
+			if (!IsNodeRunningWithArg(serviceExe))
 			{
-				string cmdline = fs::appPath() + "/com/adp/node.exe " + adpExe;
+				string cmdline = fs::appPath() + "/node.exe " + serviceExe;
 				ShellExecute(NULL, "open", "cmd.exe" , ("/C " + charCodec::utf8_to_gb(cmdline)).c_str(), NULL, SW_SHOW);
-				LOG("接入适配器启动:" + cmdline);
+				watchDog.log("微服务启动:" + cmdline);
+			}
+		}
+
+		servcieList.clear();
+		fs::getFileList(servcieList,fs::appPath(),true, "MediaServer.exe", &exclude);
+
+		for (int i = 0; i < servcieList.size(); i++) {
+			string serviceExe = servcieList[i].path;
+
+			if (!watchDog.isProcessRun("MediaServer.exe")) {
+				if (fs::fileExist(serviceExe)) {
+					watchDog.runProcess(serviceExe);
+					watchDog.log("微服务启动:" + serviceExe);
+				}
+			}
+		}
+
+		servcieList.clear();
+		fs::getFileList(servcieList, fs::appPath(), true, "tcp2com.exe", &exclude);
+
+		for (int i = 0; i < servcieList.size(); i++) {
+			string serviceExe = servcieList[i].path;
+
+			if (!watchDog.isProcessRun("tcp2com.exe")) {
+				if (fs::fileExist(serviceExe)) {
+					watchDog.runProcess(serviceExe);
+					watchDog.log("微服务启动:" + serviceExe);
+				}
 			}
 		}
 	}
@@ -231,18 +243,18 @@ void thread_checkAdp() {
 
 
 
-void thread_checkFood() {
+void thread_checkTds() {
 	//timeopt::now(&watchDog.m_lastFeedTime);
 	//timeopt::now(&watchDog.m_lastUpdateCheckTime);
 
-	string tdsPath = fs::appPath() + "/tds.exe";
+	string tdsPath = fs::appPath() + "/tds/tds.exe";
 	if (!fs::fileExist(tdsPath)) {
 		return;
 	}
 
-	watchDog.m_conf.load("./tds.ini");
+	watchDog.m_conf.load(fs::appPath() + "/tds/tds.ini");
 	watchDog.m_tdsAddr = "http://127.0.0.1:" + watchDog.m_conf.getValStr("httpPort", "667");
-	LOG("TDS服务地址: " + watchDog.m_tdsAddr);
+	watchDog.log("TDS服务地址: " + watchDog.m_tdsAddr);
 
 	while (1)
 	{
@@ -300,7 +312,7 @@ void thread_checkFood() {
 
 				//名称是时间，从老到新排列
 				vector<fs::FILE_INFO> fileList;
-				fs::getFileList(fileList, fs::appPath(), false, false, ".dmp");
+				fs::getFileList(fileList, fs::appPath(), false, ".dmp");
 				std::map<string, fs::FILE_INFO> mapList;
 				for (int i = 0; i < fileList.size(); i++) {
 					mapList[fileList[i].name] = fileList[i];
@@ -344,20 +356,12 @@ void tdsWatchDog::run()
 
 	regSelfStart();
 
-	thread t(thread_checkFood);
+	thread t(thread_checkTds);
 	t.detach();
 
-	thread t1(thread_checkMediaServer);
-	t1.detach();
 
-	thread t2(thread_checkAdp);
+	thread t2(thread_checkMicroService);
 	t2.detach();
-
-	thread t3(thread_checkTcp2com);
-	t3.detach();
-
-	thread t4(thread_checkSrcMain);
-	t4.detach();
 }
 
 

@@ -27,6 +27,7 @@ MP::MP()
 	//m_downSampleInterval = 2000;
 	m_srcStreamFetch = "ondemand";
 	m_bServeStream = false;
+	m_isOpenningStream = false;
 }
 
 MP::~MP()

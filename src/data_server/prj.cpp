@@ -268,31 +268,39 @@ void project::getAllVarExpScript()
 
 bool project::openStream(string tag, string pushTo)
 {
+	bool ret = false;
 	MP* pmp = prj.GetMPByTag(tag);
 	if (pmp) {
+		if (pmp->m_isOpenningStream) {
+			LOG("[流媒体  ]当前正在打开媒体源，收到重复打开请求，忽略,位号:%s,当前配置地址:%s",tag.c_str(), pmp->m_mediaUrl.c_str());
+			return false;
+		}
+
+		pmp->m_isOpenningStream = true;
 		if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
 			LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
 			pmp->zlm_closeStreamSrc(tag);
 		}
-		bool ret = pmp->startStreamPull(); 
+		bool retPull = pmp->startStreamPull(); 
 		bool pushRet = false;
 		if (pushTo != "") {
-			if (ret) {
+			if (retPull) {
 				timeopt::sleepMilli(500);
 				pushRet = pmp->startStreamPush(pushTo);
 				LOG("[流媒体  ]向上级服务推流，url=%s", pushTo.c_str());
 				if (pushRet) {
-					return true;
+					ret = true;
 				}
 			}
 		}
 		else
 		{
-			return ret;
+			ret = retPull;
 		}
+		pmp->m_isOpenningStream = false;
 	}
 	else {
 		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
 	}
-	return false;
+	return ret;
 }

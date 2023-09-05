@@ -427,6 +427,26 @@ void thread_asynOpenStream(string tag) {
 	prj.openStream(tag);
 }
 
+void thread_asynOpenChildTdsStream(ioDev* pChildTds,string tag) {
+	string childTdsTag = pChildTds->m_strTagBind;
+	LOG("[流媒体   ]该监控点属于子服务:%s,启动子服务流中转", childTdsTag.c_str());
+	string tagInChild = TAG::trimRoot(tag, childTdsTag);
+	json params;
+	params["tag"] = tagInChild;
+	params["pushTo"] = tag;
+	json err, rlt;
+	pChildTds->call("openStream", params, nullptr, rlt, err);
+	LOG("[流媒体   ]子服务API请求 openStream,params=" + params.dump());
+
+	if (rlt != nullptr) {
+		LOG("[流媒体   ]启动子服务流中转成功，位号:" + tag);
+	}
+
+	if (err != nullptr) {
+		LOG("[流媒体   ]启动子服务流中转失败，位号:%s,错误信息:%s", tag.c_str(), err.dump().c_str());
+	}
+}
+
 bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
@@ -477,24 +497,8 @@ bool ServiceInterface::handle_zlmhook(mg_http_message* hm, struct mg_connection*
 
 		//如果是子服务的位号，通知子服务中转流（先拉流，后推流）
 		if (pChildTds) {
-			string childTdsTag = pChildTds->m_strTagBind;
-			LOG("[流媒体   ]该监控点属于子服务:%s,启动子服务流中转", childTdsTag.c_str());
-			string tagInChild = TAG::trimRoot(tag, childTdsTag);
-			json params;
-			params["tag"] = tagInChild;
-			params["pushTo"] = tag;
-			json err, rlt;
-			pChildTds->call("openStream", params, nullptr, rlt, err);
-			LOG("[流媒体   ]子服务API请求 openStream,params=" + params.dump());
-
-			if (rlt != nullptr) {
-				LOG("[流媒体   ]启动子服务流中转成功，位号:" + tag);
-			}
-
-			if (err != nullptr) {
-				LOG("[流媒体   ]启动子服务流中转失败，位号:%s,错误信息:%s", tag.c_str(), err.dump().c_str());
-			}
-
+			thread t(thread_asynOpenChildTdsStream, pChildTds,tag);
+			t.detach();
 		}
 		//本地
 		else {

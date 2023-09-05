@@ -139,6 +139,7 @@ public:
 	string m_serialNo; //设备序列号
 	string m_appKey;
 	string m_secret;
+	bool m_isOpenningStream; //当前是否正在打开媒体源。如果连续发送多个打开媒体源的请求，忽略后面的请求
 
 	//状态
 	// hasValue = true 表示有一个值被写入,lastUpdateTime有效,m_curVal可以为null。(当数据超出有效范围时，curVal将等于null，并且这是一个有意义的null值，该值应当被记录入数据库,同时可以将orgVal记录到数据库)

@@ -1970,22 +1970,37 @@ namespace fs {
 	 }
 
 
-	 void getFileList(vector<fs::FILE_INFO>& list, string strFolder, bool includeFolder, bool recursive, string suffix){
+	 void getFileList(vector<fs::FILE_INFO>& list, string strFolder, bool recursive, string suffix, vector<string>* exclude){
 #ifndef _WINXP
 		 try
 		 {
 			 wstring wstrFolder = charCodec::tds_to_utf16(strFolder); 
 			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+				 FILE_INFO fi;
+				 fi.path = charCodec::gb_to_tds(i.path().string());
+				 if (exclude != nullptr) {
+					 bool excluded = false;
+					 for (int i = 0; i < exclude->size(); i++) {
+						 string ep = exclude->at(i);
+						 if (fi.path.find(ep) != string::npos) {
+							 excluded = true;
+							 break;
+						 }
+					 }
+
+					 if (excluded) {
+						 continue;
+					 }
+				 }
+
 				 if (i.is_directory()) {
 					 if (recursive) {
-						 getFileList(list, charCodec::gb_to_tds(i.path().string()), includeFolder, recursive, suffix);
+						 getFileList(list, charCodec::gb_to_tds(i.path().string()), recursive, suffix,exclude);
 					 } 
 				 }
 				 else {
 					 //std::filesystem::file_time_type ft = i.last_write_time();
 					 //std::time_t tt = decltype(ft)::clock::to_time_t();
-					 FILE_INFO fi;
-					 fi.path = charCodec::gb_to_tds(i.path().string());
 					 fi.path = str::replace(fi.path, "\\", "/");
 					 if (suffix != "*" && fi.path.find(suffix) == string::npos)
 						 continue;
@@ -2007,7 +2022,7 @@ namespace fs {
 	 void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
 	 {
 		 vector<fs::FILE_INFO> filist;
-		 getFileList(filist, strFolder, includeFolder, recursive);
+		 getFileList(filist, strFolder, recursive);
 		 for (int i = 0; i < filist.size(); i++) {
 			 fs::FILE_INFO& fi = filist[i];
 			 list.push_back(fi.path);

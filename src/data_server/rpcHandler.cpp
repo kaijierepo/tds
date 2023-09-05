@@ -3082,7 +3082,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 	fs::normalizationPath(topopath);
 
 	vector<fs::FILE_INFO> filist;
-	fs::getFileList(filist, topopath, true, true,".svg");
+	fs::getFileList(filist, topopath, true,".svg");
 
 	map<string, string> mapTopo; //按照层级排序
 	vector<string> topoList;
