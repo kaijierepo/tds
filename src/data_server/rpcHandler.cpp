@@ -739,18 +739,12 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "closeStream") {
-			if (!fs::fileExist(fs::appPath() + "/com/ffmpeg/ffmpeg.exe")) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "component ffmpeg not found");
-			}
-			else {
-				MP* pmp = pObj;
-				if (!pmp) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-				}
-				else {
-					rpcResp.result = "\"ok\"";
-				}
-			}
+			bool opend = prj.closeStream(tag);
+
+			if (opend)
+				rpcResp.result = RPC_OK;
+			else
+				rpcResp.error = RPC_FAIL;
 		}
 	}
 	else

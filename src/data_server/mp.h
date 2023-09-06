@@ -85,11 +85,13 @@ public:
 	string getMpType();
 	json getRTData(string root="",bool bValOnly = false);
 
-	void zlm_closeStreamSrc(string zlmProxyKey);
+	void stopStreamPull(string zlmProxyKey);
 
 	bool startStreamPull();
-
+	bool stopStreamPush();
 	bool startStreamPush(string desUrl);
+	string m_strPusherProxyKey;
+	string m_strPullProxyKey;
 
 
 

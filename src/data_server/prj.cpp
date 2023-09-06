@@ -279,7 +279,7 @@ bool project::openStream(string tag, string pushTo)
 		pmp->m_isOpenningStream = true;
 		if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
 			LOG("[流媒体  ]监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s,当前配置地址:%s", pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-			pmp->zlm_closeStreamSrc(tag);
+			pmp->stopStreamPull(tag);
 		}
 		bool retPull = pmp->startStreamPull(); 
 		bool pushRet = false;
@@ -298,6 +298,21 @@ bool project::openStream(string tag, string pushTo)
 			ret = retPull;
 		}
 		pmp->m_isOpenningStream = false;
+	}
+	else {
+		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
+	}
+	return ret;
+}
+
+
+bool project::closeStream(string tag)
+{
+	bool ret = false;
+	MP* pmp = prj.GetMPByTag(tag);
+	if (pmp) {
+		pmp->stopStreamPush();
+		pmp->stopStreamPull(tag);
 	}
 	else {
 		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);

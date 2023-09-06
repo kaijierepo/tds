@@ -50,6 +50,54 @@ SOFTWARE.
 #include "rpcHandler.h"
 #include "httplib.h"
 
+void clearZlmNoReaderPusher() {
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	//string streamServerUrl = "http://127.0.0.1:" + sPort;
+	string streamServerUrl = "http://cloud.liangtusoft.com:669";
+
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{"secret","Tds-666666"}
+	};
+
+	string uri = "/index/api/getMediaList";
+	auto res = cli.Get(uri, params, headers);
+	if (res != nullptr && res->body.size() > 0) {
+		json j = json::parse(res->body);
+		if (j["code"] != nullptr && j["code"].get<int>() == 0) {
+			json jMediaList = j["data"];
+			for (int i = 0; i < jMediaList.size(); i++) {
+				json jM = jMediaList[i];
+				if (jM["totalReaderCount"].is_number()) {
+					if (jM["totalReaderCount"].get<int>() == 0) {
+						if (jM["originTypeStr"] == "rtsp_push") {
+							string tag = jM["stream"];
+							LOG("[流媒体  ]位号:%s 无人观看，关闭推流",tag.c_str());
+							std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+							RPC_SESSION rpcSess;
+							rpcSess.remoteAddr = "127.0.0.1";
+							rpcSess.remotePort = 0;
+							pSession->setRpcSession(&rpcSess);
+							json jReq;
+							jReq["method"] = "closeStream";
+							json jParams;
+							jParams["tag"] = tag;
+							jReq["id"] = timeopt::nowStr();
+							jReq["params"] = jParams;
+							string sReq = jReq.dump();
+							rpcSrv.handleRpcCallAsyn(sReq, pSession, false);
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," + uri);
+	}
+}
+
 
 void updateEzvizAccessInfo() {
 #ifdef ENABLE_OPENSSL
@@ -376,7 +424,7 @@ int main(int argc, char** argv)
 	}
 
 
-
+	TIME zlmLastClearPusherTime = timeopt::now();
 
 	while (1)
 	{
@@ -413,9 +461,16 @@ int main(int argc, char** argv)
 		}
 
 		rpcSrv.cleanRpcSession();
+
+		if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 10) {
+			clearZlmNoReaderPusher();
+			zlmLastClearPusherTime = timeopt::now();
+		}
 	}
 	return 0;
 }
+
+
 
 
 

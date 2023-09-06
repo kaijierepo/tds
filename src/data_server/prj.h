@@ -77,6 +77,8 @@ public:
 
 	bool openStream(string tag,string pushTo = "");
 
+	bool closeStream(string tag);
+
 private:
 	json m_jMOTree;
 	map<string, string> m_mapDataLink;

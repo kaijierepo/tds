@@ -963,7 +963,7 @@ json MP::getRTData(string root, bool bValOnly)
 	return j;
 }
 
-void MP::zlm_closeStreamSrc(string tag)
+void MP::stopStreamPull(string tag)
 {
 	string key = "__defaultVhost__/stream_" + prj.getTdsId() + "/" + tag;
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
@@ -1029,6 +1029,37 @@ bool MP::startStreamPull()
 	return false;
 }
 
+bool MP::stopStreamPush()
+{
+	string tag = getTag();
+	//string tagPinyin;
+	//str::hanZi2Pinyin(tag,tagPinyin);
+	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
+	string streamServerUrl = sIP + ":" + sPort;
+
+	httplib::Client cli(streamServerUrl);
+	httplib::Headers headers;
+	httplib::Params params = {
+		{"key",m_strPusherProxyKey},
+		{"secret",zlmSecret}
+	};
+
+	string uri = "/index/api/delStreamPusherProxy";
+	auto res = cli.Get(uri, params, headers);
+	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",key=" + m_strPusherProxyKey);
+	if (res != nullptr) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
+		return true;
+	}
+	else {
+		LOG("[error]zlm stream server 未响应," + uri);
+	}
+
+	return false;
+}
+
 bool MP::startStreamPush(string desUrl)
 {
 	string tag = getTag();
@@ -1061,6 +1092,7 @@ bool MP::startStreamPush(string desUrl)
 		json jResp = json::parse(res->body);
 		json jData = jResp["data"];
 		if (jData != nullptr && jData["key"] != nullptr) {
+			m_strPusherProxyKey = jData["key"];
 			return true;
 		}
 	}
