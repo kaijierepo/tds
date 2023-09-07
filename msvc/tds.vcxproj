@@ -135,7 +135,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -415,7 +415,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>E:\tds\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -464,15 +464,19 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TDSDLL;ENABLE_JERRY_SCRIPT;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\MTd;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|Win32'">
