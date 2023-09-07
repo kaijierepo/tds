@@ -486,12 +486,13 @@ int main(int argc, char** argv)
 #else
 #endif // !_WINDLL
 
-/*
+#ifdef TDSDLL
 #define DllExport   extern "C" __declspec( dllexport )
 DllExport i_tds* getTds() {
 	return tds;
 }
-*/
+#endif
+
 
 
 //勿删除！！

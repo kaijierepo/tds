@@ -1237,6 +1237,18 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*
 							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
 						}
 					}
+					else if (deSel.timeGroupBy == "month") {
+						groupKeyVal = deTime.substr(0, 7);
+						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_groupedBeforeAggr.find(groupKeyVal);
+						if (it != fSetOut.m_groupedBeforeAggr.end()) {
+							it->second.push_back(de);
+						}
+						else {
+							vector<yyjson_val*> newVec;
+							newVec.push_back(de);
+							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
+						}
+					}
 					else {
 						fSetOut.m_beforeAggr.push_back(de);
 					}

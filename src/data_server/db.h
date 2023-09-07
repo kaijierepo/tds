@@ -195,6 +195,7 @@ struct INTERVAL_SELECTOR {
 
 struct DB_FILE {
 	bool boundaryFile;
+	bool monthBoundaryFile;
 	string data;
 	string path;
 	string ymd;
@@ -208,6 +209,8 @@ struct DB_FILE {
 	bool loadFile();
 
 	DB_FILE(time_t tt,string tag_) {
+		monthBoundaryFile = false;
+		boundaryFile = false;
 		ttTime = tt;
 		tag = tag_;
 		doc = nullptr;

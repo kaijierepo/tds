@@ -2948,8 +2948,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	}
 
 
-	//单点输入模式统一转成数组处理
+	
 	if (inputTag.is_string()) {
+		//单点输入模式统一转成数组处理
 		string s = inputTag.get<string>();
 		inputTag = json::array();
 		inputTag.push_back(s);
@@ -2958,7 +2959,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		inputVal = json::array();
 		inputVal.push_back(val);
 	}
-	else if (inputIoAddr.is_string()) {
+	if (inputIoAddr.is_string()) {
 		string s = inputIoAddr.get<string>();
 		inputIoAddr = json::array();
 		inputIoAddr.push_back(s);
@@ -2968,86 +2969,103 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		inputVal.push_back(val);
 	}
 
+	//使用位号输入
+	if(inputTag.size() > 0){
+		//监测点组输入模式
+		json jTagNotExist = json::array();
+		vector<MP*> vecMps;
+		for (int i = 0; i < inputTag.size(); i++) {
+			string tag = inputTag[i];
+			json val = inputVal[i];
+			tag = TAG::addRoot(tag, rootTag);
+			tag = TAG::addRoot(tag, session.org);
 
-	//监测点组输入模式
-	json jTagNotExist = json::array();
-	vector<MP*> vecMps;
-	for (int i = 0; i < inputTag.size(); i++) {
-		string tag = inputTag[i];
-		json val = inputVal[i];
-		tag = TAG::addRoot(tag, rootTag);
-		tag = TAG::addRoot(tag, session.org);
-
-		if (tag != "")
-		{
-			MP* pmp = prj.GetMPByTag(tag);
-			if (pmp)
+			if (tag != "")
 			{
-				pmp->input(val, fileData, &stTimeStamp);
-				vecMps.push_back(pmp); 
-			}
-			else {
-				jTagNotExist.push_back(tag);
-			}
-		}
-	}
-
-
-	if (vecMps.size() > 0) {
-
-		//监测点组中有任意一个点需要保存，则全部保存
-		//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
-		bool needSave = false;
-		for (int i = 0; i < vecMps.size(); i++) {
-			MP* pmp = vecMps[i];
-			if (pmp->needSaveToDB()) {
-				needSave = true;
+				MP* pmp = prj.GetMPByTag(tag);
+				if (pmp)
+				{
+					pmp->input(val, fileData, &stTimeStamp);
+					vecMps.push_back(pmp);
+				}
+				else {
+					jTagNotExist.push_back(tag);
+				}
 			}
 		}
 
-		if (needSave) {
+
+		if (vecMps.size() > 0) {
+
+			//监测点组中有任意一个点需要保存，则全部保存
+			//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
+			bool needSave = false;
 			for (int i = 0; i < vecMps.size(); i++) {
 				MP* pmp = vecMps[i];
-				pmp->saveToDB();
+				if (pmp->needSaveToDB()) {
+					needSave = true;
+				}
 			}
+
+			if (needSave) {
+				for (int i = 0; i < vecMps.size(); i++) {
+					MP* pmp = vecMps[i];
+					pmp->saveToDB();
+				}
+			}
+
+
+			//发送状态更新通知
+			json jStatusNotify;
+			json jUpdateTags = json::array();
+			json jUpdateVals = json::array();
+			json jUpdateValDescs = json::array();
+			for (int i = 0; i < vecMps.size(); i++) {
+				MP* pmp = vecMps[i];
+				jUpdateTags.push_back(pmp->getTag());
+				jUpdateVals.push_back(pmp->m_curVal);
+				jUpdateValDescs.push_back(pmp->getValDesc(true));
+			}
+			jStatusNotify["tag"] = jUpdateTags;
+			jStatusNotify["val"] = jUpdateVals;
+			jStatusNotify["valDesc"] = jUpdateValDescs;
+			jStatusNotify["time"] = time;
+			rpcSrv.notify("statusUpdate", jStatusNotify);
+
+
+			resp.result = "\"ok\"";
 		}
-
-
-		//发送状态更新通知
-		json jStatusNotify;
-		json jUpdateTags = json::array();
-		json jUpdateVals = json::array();
-		json jUpdateValDescs = json::array();
-		for (int i = 0; i < vecMps.size(); i++) {
-			MP* pmp = vecMps[i];
-			jUpdateTags.push_back(pmp->getTag());
-			jUpdateVals.push_back(pmp->m_curVal);
-			jUpdateValDescs.push_back(pmp->getValDesc(true));
+		else {
+			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
+			return;
 		}
-		jStatusNotify["tag"] = jUpdateTags;
-		jStatusNotify["val"] = jUpdateVals;
-		jStatusNotify["valDesc"] = jUpdateValDescs;
-		jStatusNotify["time"] = time;
-		rpcSrv.notify("statusUpdate", jStatusNotify);
+	}
+	//使用IO地址输入
+	
+	
 
-
-		//使用ioAddr来input忘了哪里调用了，后续观察删掉
+	if(inputIoAddr.size()>0){
+		/*vector<ioDev*> vecDev;
 		for (int i = 0; i < inputIoAddr.size(); i++) {
 			string ioAddr = inputIoAddr[i];
-			json val = inputIoAddr[i];
-
-			if (ioAddr != "")
-			{
-				ioChannel* pC = ioSrv.getChanByIOAddr(ioAddr);
-				pC->input(val);
+			ioDev* pD = ioSrv.getIODev(ioAddr);
+			if (pD) {
+				vecDev.push_back(pD);
 			}
 		}
 
-		resp.result = "\"ok\"";
-	}
-	else {
-		resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
-		return;
+		if (vecDev.size() > 0) {
+			for (int i = 0; i < vecDev.size(); i++) {
+				ioDev* pD = vecDev[i];
+				json val = inputVal[i];
+				ioDev->input()
+			}
+			resp.result = "\"ok\"";
+		}
+		else {
+			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
+			return;
+		}*/
 	}
 }
 

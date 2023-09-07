@@ -334,7 +334,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>D:\HuiJing\jhd20\out</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll -R genicam|x64'">
     <LinkIncremental>false</LinkIncremental>

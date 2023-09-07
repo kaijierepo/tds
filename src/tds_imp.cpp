@@ -355,8 +355,10 @@ bool TDS_imp::run(string cmdline)
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
 
+#ifndef _WINDLL
 #ifdef _WIN32
 	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
+#endif
 #endif
 
 	return true;
