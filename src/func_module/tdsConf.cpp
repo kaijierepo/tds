@@ -437,17 +437,17 @@ void tdsConfig::loadConf()
 		}
 	}
 
-	if (mode == "tds" || mode=="tdb")
-	{
-		loadConf_tds(vecConf);
-	}
-	else if (mode == "hs" || mode == "httpServer")
+
+	if (mode == "hs" || mode == "httpServer")
 	{
 		loadConf_httpServer(vecConf);
 	}
 	else if (mode == "rphttp")
 	{
 		loadConf_rphttp(vecConf);
+	}
+	else {
+		loadConf_tds(vecConf);
 	}
 }
 
