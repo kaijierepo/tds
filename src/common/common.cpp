@@ -1978,11 +1978,12 @@ namespace fs {
 			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 				 FILE_INFO fi;
 				 fi.path = charCodec::gb_to_tds(i.path().string());
+				 fi.name = i.path().filename().string();
 				 if (exclude != nullptr) {
 					 bool excluded = false;
 					 for (int i = 0; i < exclude->size(); i++) {
 						 string ep = exclude->at(i);
-						 if (fi.path.find(ep) != string::npos) {
+						 if (fi.name == ep) {
 							 excluded = true;
 							 break;
 						 }
@@ -2006,7 +2007,6 @@ namespace fs {
 						 continue;
 					 size_t pos = fi.path.rfind("/");
 					 fi.folderPath = fi.path.substr(0, pos);
-					 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
 					 fi.len = i.file_size();
 					 list.push_back(fi);
 				 }

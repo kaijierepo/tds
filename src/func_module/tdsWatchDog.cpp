@@ -194,6 +194,9 @@ void thread_checkMicroService() {
 	exclude.push_back("node_modules");
 	exclude.push_back("log");
 	exclude.push_back("db");
+	exclude.push_back("web");
+	exclude.push_back("Web");
+	exclude.push_back("ui-custom");
 
 	while (1) {
 		timeopt::sleepMilli(1000);
@@ -428,6 +431,7 @@ bool tdsWatchDog::isProcessRun(string name)
 	// 在使用结构之前设置结构的大小。
 	pe32.dwSize = sizeof(PROCESSENTRY32);
 
+	vector<string> procList;
 	// 获取第一个进程的信息
 	// 如果不成功则退出
 	if (!Process32First(hProcessSnap, &pe32))
@@ -441,7 +445,7 @@ bool tdsWatchDog::isProcessRun(string name)
 		// Retrieve the priority class.
 		dwPriorityClass = 0;
 		string exePath = pe32.szExeFile;
-
+		procList.push_back(exePath);
 
 		if (exePath.find(name)!=string::npos)
 		{
@@ -557,29 +561,29 @@ bool tdsWatchDog::regSelfStart()
 	}
 
 	// 弹出确认对话框
-	int result = 0;
-	if (isModify) {
-		string msg = charCodec::utf8_to_gb("当前自动启动路径为:\r\n") + regFilePath;
-		msg += charCodec::utf8_to_gb("\r\n是否修改为:\r\n") + currentFilePath;
-		result = MessageBox(NULL, msg.c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
-	}
-	else
-		result = MessageBox(NULL, charCodec::utf8_to_gb("是否将当前程序添加到开机自启动？").c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
+	//int result = 0;
+	//if (isModify) {
+	//	string msg = charCodec::utf8_to_gb("当前自动启动路径为:\r\n") + regFilePath;
+	//	msg += charCodec::utf8_to_gb("\r\n是否修改为:\r\n") + currentFilePath;
+	//	result = MessageBox(NULL, msg.c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
+	//}
+	//else
+	//	result = MessageBox(NULL, charCodec::utf8_to_gb("是否将当前程序添加到开机自启动？").c_str(), charCodec::utf8_to_gb("确认对话框").c_str(), MB_YESNO | MB_ICONQUESTION);
 
-	if (result == IDYES)
-	{
-		// 打开注册表项
-		HKEY hKey;
-		RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
+	//if (result == IDYES)
+	//{
+	//	// 打开注册表项
+	//	HKEY hKey;
+	//	RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey);
 
-		// 将当前程序的路径添加到开机自启动项
-		RegSetValueEx(hKey, appName.c_str(), 0, REG_SZ, (BYTE*)exePath, strlen(exePath));
+	//	// 将当前程序的路径添加到开机自启动项
+	//	RegSetValueEx(hKey, appName.c_str(), 0, REG_SZ, (BYTE*)exePath, strlen(exePath));
 
-		// 关闭注册表项
-		RegCloseKey(hKey);
+	//	// 关闭注册表项
+	//	RegCloseKey(hKey);
 
-		::MessageBox(NULL, charCodec::utf8_to_gb("开机启动添加成功!").c_str(), "", MB_OK);
-	}
+	//	::MessageBox(NULL, charCodec::utf8_to_gb("开机启动添加成功!").c_str(), "", MB_OK);
+	//}
 	return false;
 }
 
