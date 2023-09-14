@@ -380,16 +380,10 @@ void tdsConfig::loadConf()
 {
 	string confPath;
 	string confFileName;
-	if (m_confFileName != "")
-	{
-		confPath = fs::appPath() + "/" + m_confFileName + ".ini";
-		confFileName = m_confFileName;
-	}
-	else
-	{
-		confPath = fs::appPath() + "/" + mode + ".ini";
-		confFileName = mode;
-	}
+
+	confFileName = fs::appName();
+	confPath = fs::appPath() + "/" + confFileName + ".ini";
+	
 	
 	
 	if (!fs::fileExist(confPath))
@@ -437,18 +431,7 @@ void tdsConfig::loadConf()
 		}
 	}
 
-
-	if (mode == "hs" || mode == "httpServer")
-	{
-		loadConf_httpServer(vecConf);
-	}
-	else if (mode == "rphttp")
-	{
-		loadConf_rphttp(vecConf);
-	}
-	else {
-		loadConf_tds(vecConf);
-	}
+	loadConf_tds(vecConf);
 }
 
 json tdsConfig::toJson()
