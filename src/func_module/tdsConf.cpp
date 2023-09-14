@@ -44,17 +44,7 @@ tdsConfig::tdsConfig()
 void tdsConfig::generateDefaultConfFile(string m)
 {
 	string s;
-	if (m == "tds")
-	{
-		s = defaultConf_tds();
-	}
-	else if (m == "tdb") {
-		s = defaultConf_tdb();
-	}
-	else if (m == "rphttp")
-	{
-		s = defaultConf_rphttp();
-	}
+	s = defaultConf_tds();
 
 	if (s != "")
 	{
