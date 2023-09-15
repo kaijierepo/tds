@@ -791,6 +791,7 @@
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
     <ClCompile Include="..\src\func_module\hmrSrv.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
+    <ClCompile Include="..\src\func_module\statusServer.cpp" />
     <ClCompile Include="..\src\func_module\taskServer.cpp" />
     <ClCompile Include="..\src\func_module\tdsConf.cpp" />
     <ClCompile Include="..\src\func_module\tdsWatchDog.cpp" />
@@ -842,6 +843,7 @@
     <ClInclude Include="..\src\func_module\dumpCatch.h" />
     <ClInclude Include="..\src\func_module\hmrSrv.h" />
     <ClInclude Include="..\src\func_module\logServer.h" />
+    <ClInclude Include="..\src\func_module\statusServer.h" />
     <ClInclude Include="..\src\func_module\taskServer.h" />
     <ClInclude Include="..\src\func_module\tdsConf.h" />
     <ClInclude Include="..\src\func_module\tdsWatchDog.h" />
