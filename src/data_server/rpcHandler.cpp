@@ -18,6 +18,7 @@
 #include "httplib.h"
 #include "webSrv.h"
 #include "ioDev_camera.h"
+#include "statusServer.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -306,6 +307,14 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		SendMessage((HWND)tds->uiWnd, WM_SYSCOMMAND, SC_CLOSE, NULL);
 		rpcResp.result = "\"ok\"";
 		LOG("[debug]ui.close");
+	}
+	else if (method == "getServerStatus") {
+		json j;
+		j["cpu"] = statusSrv.m_srvStatus.cpu;
+		j["mem"] = statusSrv.m_srvStatus.mem;
+		j["thread"] = statusSrv.m_srvStatus.thread;
+		j["handle"] = statusSrv.m_srvStatus.handle;
+		rpcResp.result = j.dump();
 	}
 #endif
 	else

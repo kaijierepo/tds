@@ -2635,11 +2635,11 @@ bool CONDITION_SELECTOR::match(string& de)
 
 bool CONDITION_SELECTOR::match(yyjson_val* de)
 {
+	bool bMatch = false;
 #ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
 		return true;
 
-	bool bMatch = false;
 	if (yyjson_is_obj(de))
 	{
 		setScriptEngineObj(de, global_object);
