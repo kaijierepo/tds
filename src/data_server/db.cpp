@@ -866,7 +866,8 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	//中间处理阶段的数据集，最后需要全部释放
 	vector<vector<DATA_SET*>*>  dataSetBuff;
 
-	
+	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr; //数据集计算结果以数据集的方式返回
+	string sCalcResult; //数据集计算结果以简单字符串方式返回
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
 
@@ -1010,6 +1011,22 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				lastVal = curVal;
 			}
 			mapRlt.erase(mapRlt.begin());
+			pCalcResult = &mapRlt;
+		}
+		else if (deSel.calc == "sum") {
+			yyjson_mut_val* curVal;
+			double dbSum = 0;
+			double dbCur;
+			for (auto& i : mapRlt)
+			{
+				curVal = yyjson_mut_obj_get(i.second, m_dbFmt.deItemKey_value.c_str());
+				if (!yyjson_mut_is_num(curVal)) {
+					break;
+				}
+				dbCur = yyjson_mut_get_real(curVal);
+				dbSum += dbCur;
+			}
+			sCalcResult = str::format("%f", dbSum);
 		}
 	}
 	
@@ -1027,10 +1044,23 @@ bool database::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	
 	size_t len = 0;
-	if (result.getDE){
+	if (deSel.calc != ""){//返回数据集计算结果
+		if (pCalcResult != nullptr) {
+			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
+			//size_t len = strlen(p);
+			result.calcResult = p;
+		}
+		else if (sCalcResult != "") {
+			result.calcResult = sCalcResult;
+		}
+		else {
+			result.calcResult = "";
+		}
+	}
+	else { //返回数据集
 		//如果此处p返回null，应该是rlt_mut_doc当中 指向的string类型可能是临时变量，已经被释放了
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
-		size_t len = strlen(p);
+		//size_t len = strlen(p);
 		result.dataList = p;
 	}
 	result.rowCount = mapRlt.size();
@@ -1088,16 +1118,56 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& t
 			}
 		}
 		else { //选择单个数据元 TSM_ALL && PT_NONE
-			time_t loadTime = deSel.timeSel.endTime;
-			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-			{
-				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag); 
-				pdf->deType = deSel.deType;
-				if (!pdf->loadFile()) {
-					delete pdf;
-					continue;
+			
+			bool bFirstLastAggr = false;
+			if (deSel.aggregate.size() > 0){
+				map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
+				string& aggrType = aggrOpt->second;
+				if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+					bFirstLastAggr = true;
 				}
-				fSet.fileList.insert(fSet.fileList.begin(), pdf);
+			}
+
+			if (bFirstLastAggr) {
+				//读取第一个文件
+				time_t loadTime = deSel.timeSel.startTime;
+				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
+				{
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+					pdf->deType = deSel.deType;
+					if (!pdf->loadFile()) {
+						delete pdf;
+						continue;
+					}
+					fSet.fileList.push_back(pdf);
+					break;
+				}
+				//读取最后一个文件
+				loadTime = deSel.timeSel.endTime;
+				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+				{
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+					pdf->deType = deSel.deType;
+					if (!pdf->loadFile()) {
+						delete pdf;
+						continue;
+					}
+					fSet.fileList.push_back(pdf);
+					break;
+				}
+			}
+			else {
+				time_t loadTime = deSel.timeSel.endTime;
+				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+				{
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+					pdf->deType = deSel.deType;
+					if (!pdf->loadFile()) {
+						delete pdf;
+						continue;
+					}
+					fSet.fileList.insert(fSet.fileList.begin(), pdf);
+				}
 			}
 		}
 
@@ -1828,7 +1898,12 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 				resp.error = result.error;
 			}
 			else {
-				resp.result = result.dataList;
+				if (deSel.calc != "") {
+					resp.result = result.calcResult;
+				}
+				else {
+					resp.result = result.dataList;
+				}
 			}
 		}
 		catch (std::exception& e)

@@ -358,8 +358,8 @@ struct DE_SELECTOR {
 
 	//聚合运算
 	bool bAggr; //是否进行数据聚合
-	map<string,string> aggregate; //应用到所有聚合运算.key为需要聚合的key，val为需要聚合的方式
-	vector<map<string, string>> vecAggregate;
+	map<string,string> aggregate; //应用到所有聚合运算.单个位号聚合或者多个位号统一聚合。key为需要聚合的key，val为需要聚合的方式
+	vector<map<string, string>> vecAggregate; //多位号独立聚合模式，每个位号指定独立的聚合方式
 
 	//多列模式
 	bool tagAsColume; //将位号作为表的列返回.单列模式或多列模式
@@ -439,6 +439,7 @@ struct SELECT_RLT {
 	string error;
 	string info;
 	string query;
+	string calcResult; //数据集计算结果
 
 	SELECT_RLT() {
 		getDE = true;
