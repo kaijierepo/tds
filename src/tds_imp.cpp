@@ -199,9 +199,57 @@ void createChromeWnd()
 //	}
 //}
 
+#include <iostream>
+#include <sys/types.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
+
+bool isTdsRunning() {
+#ifdef _WIN32
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		return true;
+	}
+#endif
+
+	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if (sockfd < 0) {
+		return true;
+	}
+
+	struct sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(6666); // 指定要绑定的端口号
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 绑定到本地回环地址
+
+	int bindResult = ::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
+	if (bindResult < 0) {
+		std::cout << "tds is already running" << std::endl;
+#ifdef _WIN32
+		closesocket(sockfd);
+		WSACleanup();
+#else
+		close(sockfd);
+#endif
+		return true;
+	}
+
+	return false;
+}
 
 TDS_imp::TDS_imp()
 {
+	if (isTdsRunning())
+		exit(0);
+
 	conf = nullptr;
 	db = nullptr;
 	xiaoT = nullptr;

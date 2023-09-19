@@ -213,6 +213,7 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 
+bool isTdsRunning();
 int main(int argc, char** argv)
 {
 	//取出命令行命令
@@ -518,6 +519,11 @@ void forLink() {
 	feof(nullptr);
 }
 #endif
+
+
+
+
+
 
 
 
