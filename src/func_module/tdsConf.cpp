@@ -71,6 +71,7 @@ httpPort=667           #http服务端口667,同时支持websocket
 httpsMediaPort=668     #https流媒体服务端口668
 httpMediaPort=669      #http流媒体服务端口669
 tcpPort=670            #tcp服务端口
+mediaSrvIP=            #流媒体服务地址,留空为本机
 
 #IO服务
 ioSrvIP =                 #IO服务绑定的本地地址。在多网卡服务器上，需要指定与设备通信的那个IP地址。留空为默认0.0.0.0
@@ -171,6 +172,8 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			logPath = tci.val.c_str();
 			logPath = fs::toAbsolutePath(logPath);
 		}
+		else if (checkKey(tci.key, "mediaSrvIP"))
+			mediaSrvIP = tci.val.c_str();
 		else if (checkKey(tci.key, "testToken"))
 			testToken = tci.val.c_str();
 		else if (checkKey(tci.key, "tokenExpireTime"))
@@ -343,6 +346,7 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		dbPath = fs::toAbsolutePath("../db");
 	if (logPath == "")
 		logPath = fs::toAbsolutePath("../log");
+
 
 	if (title == "")
 		title = "TDS";

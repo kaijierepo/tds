@@ -4052,7 +4052,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	}
 
 
-	string ip = localIP;
+	string ip;
 	int port = LocalPort;
 	bool https = false;
 
@@ -4085,7 +4085,12 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	if (!isChildTds) {
 		if (pmp->m_valType == VAL_TYPE::video) {
 			//localIP是本次连接暴露给对方的ip地址。如果服务在内网中，那么此处是公网地址，需要在路由器做好端口映射
-			ip = localIP;
+			if (tds->conf->mediaSrvIP != "") {
+				ip = tds->conf->mediaSrvIP;
+			}
+			else {
+				ip = localIP;
+			}
 			if (isHttps) {
 				port = tds->conf->getInt("httpsMediaPort", 668);
 			}
@@ -4155,11 +4160,18 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 		else// (pmp->m_streamAccess == "relay") 
 		{
 			if (pmp->m_valType == VAL_TYPE::video) {
-				if (isHttps) {
-					port = 668;
+				//localIP是本次连接暴露给对方的ip地址。如果服务在内网中，那么此处是公网地址，需要在路由器做好端口映射
+				if (tds->conf->mediaSrvIP != "") {
+					ip = tds->conf->mediaSrvIP;
 				}
 				else {
-					port = 669;
+					ip = localIP;
+				}
+				if (isHttps) {
+					port = tds->conf->getInt("httpsMediaPort", 668);
+				}
+				else {
+					port = tds->conf->getInt("httpMediaPort", 669);
 				}
 				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".flv";
 				j["rtsp"] = urlProto + ip + "/stream/" + tag;

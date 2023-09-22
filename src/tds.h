@@ -292,6 +292,7 @@ struct iTDSConf {
 	int httpPort2; //default 0 not enable; another httpport
 	bool authDownload;
 	int tcpKeepAliveDS;
+	string mediaSrvIP;
 
 	//io service conf
 	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 

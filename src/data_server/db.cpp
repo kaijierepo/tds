@@ -1123,8 +1123,11 @@ bool database::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& t
 			if (deSel.aggregate.size() > 0){
 				map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
 				string& aggrType = aggrOpt->second;
-				if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-					bFirstLastAggr = true;
+				if (deSel.groupByTime == false) //不按时间分组，取全部时间头尾，此种查询进行一次性能优化
+				{
+					if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+						bFirstLastAggr = true;
+					}
 				}
 			}
 
