@@ -1836,12 +1836,24 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 {
 	string& result = rpcResp.result;
 	bool bHandled = true;
+	//** 数据查询系列
 	if (method == "getAlarmCurrent")
 	{
 		json jFilter;
 		jFilter["rootTag"] = params["rootTag"];
 		result = almSrv.rpc_getCurrent(jFilter, session);
 	}
+	else if (method == "getAlarmUnRecover")
+	{
+		json jFilter;
+		result = almSrv.rpc_getUnRecover(jFilter, session);
+	}
+	else if (method == "getAlarmUnack")
+	{
+		json jFilter;
+		result = almSrv.rpc_getUnack(jFilter, session);
+	}
+	//getAlm为上面3个接口的合并接口
 	else if (method == "getAlm")
 	{
 		if (params.contains("status")) {
@@ -1865,32 +1877,24 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "missing param  status");
 		}
 	}
-	else if (method == "getAlarmStatus")
-	{
-		json jFilter;
-		result = almSrv.rpc_getUnRecover(jFilter, session);
-	}
-	else if (method == "getAlarmUnack")
-	{
-		json jFilter;
-		result = almSrv.rpc_getUnack(jFilter, session);
-	}
+
 	else if (method == "getAlarmHistory")
 	{
 		result = almSrv.rpc_getHistory(params, session);
 	}
-	else if (method == "addAlarmEvent" || method == "alarmOccurEvent")
+	//** 数据生成系列 以下接口都会修改报警数据
+	else if (method == "addAlarm")
 	{
-		result = almSrv.rpc_alarmOccurEvent(params, rpcResp);
+		result = almSrv.rpc_addAlarm(params, rpcResp);
 	}
-	else if (method == "alarmClearEvent") {
-		almSrv.rpc_alarmClearEvent(params, rpcResp);
+	else if (method == "recoverAlarm") {
+		almSrv.rpc_recoverAlarm(params, rpcResp);
 	}
-	else if (method == "updateAlarmStatus")
+	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
 	{
 		almSrv.rpc_updateStatus(params, rpcResp);
 	}
-	else if (method == "ackAlarmEvent")
+	else if (method == "ackAlarm")
 	{
 		almSrv.rpc_acknowledge(params,rpcResp, session);
 	}

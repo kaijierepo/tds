@@ -170,7 +170,7 @@ public:
 //alarm generation
 	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
-	void OccurAlarm(ALARM_INFO ai);
+	void addAlarm(ALARM_INFO ai);
 //报警恢复和报警确认接口
 	void recover(ALARM_KEY& key);
 	void rpc_acknowledge(json& params, RPC_RESP& resp,RPC_SESSION session);
@@ -190,8 +190,8 @@ public:
 	string rpc_getUnRecover(json filter, RPC_SESSION session);
 	string rpc_getUnack(json filter, RPC_SESSION session);
 	string rpc_getHistory(json params, RPC_SESSION session);
-	string rpc_alarmOccurEvent(json j, RPC_RESP& resp);
-	void rpc_alarmClearEvent(json j, RPC_RESP& resp);
+	string rpc_addAlarm(json j, RPC_RESP& resp);
+	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
 
 	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表

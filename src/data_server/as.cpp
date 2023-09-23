@@ -89,10 +89,13 @@ void almServer::recover(ALARM_KEY& key)
 		ai.bRecover = 1;
 		tableHist.update(ai);
 	}
+
+	json j = ai.toJson();
+	rpcSrv.notify("alarmRecover", j);
 }
 
 
-void almServer::OccurAlarm(ALARM_INFO ai)
+void almServer::addAlarm(ALARM_INFO ai)
 {
 	tableCurrent.add(ai);
 	tableHist.add(ai);
@@ -122,6 +125,10 @@ void almServer::OccurAlarm(ALARM_INFO ai)
 	{
 		LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
 	}
+
+	//通知给TDS客户端
+	json j = ai.toJson();
+	rpcSrv.notify("alarmAdd", j);
 }
 
 
@@ -178,7 +185,7 @@ void almServer::Update(ALARM_INFO newStatus)
 			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 			{
 				//再产生新的报警
-				OccurAlarm(newStatus);
+				addAlarm(newStatus);
 			}
 			bTagAlarmStatusChanged = true;
 		}
@@ -191,7 +198,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	{
 		if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 		{
-			OccurAlarm(newStatus);
+			addAlarm(newStatus);
 			bTagAlarmStatusChanged = true;
 		}
 	}
@@ -218,16 +225,16 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	mapAlarm.clear();
 }
 
-string almServer::rpc_alarmOccurEvent(json j, RPC_RESP& resp)
+string almServer::rpc_addAlarm(json j, RPC_RESP& resp)
 {
 	ALARM_INFO ai;
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
-	AddEvent(ai);
+	addAlarm(ai);
 	return "\"success\"";
 }
 
-void almServer::rpc_alarmClearEvent(json j, RPC_RESP& resp)
+void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 {
 	j["level"] = "normal";
 	rpc_updateStatus(j, resp);
@@ -334,6 +341,9 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		timeopt::now(&ai.stConfirmTime);
 		tableHist.update(ai);
 	}
+
+	json j = ai.toJson();
+	rpcSrv.notify("alarmAck", j);
 
 	resp.result = "\"ok\"";
 }
