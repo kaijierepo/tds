@@ -722,6 +722,11 @@ bool database::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> a
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
 			des.items[aggrKey] = pAggrVal;
 		}
+		else if (aggrType == "count") {
+			int count = src.size();
+			pAggrVal = yyjson_mut_int(mut_doc, count);
+			des.items["count"] = pAggrVal;
+		}
 
 		if (aggrKey == "val") {
 			des.val = pAggrVal;
@@ -1312,6 +1317,18 @@ bool database::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*
 					}
 					else if (deSel.timeGroupBy == "month") {
 						groupKeyVal = deTime.substr(0, 7);
+						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_groupedBeforeAggr.find(groupKeyVal);
+						if (it != fSetOut.m_groupedBeforeAggr.end()) {
+							it->second.push_back(de);
+						}
+						else {
+							vector<yyjson_val*> newVec;
+							newVec.push_back(de);
+							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
+						}
+					}
+					else if (deSel.timeGroupBy == "hour") {
+						groupKeyVal = deTime.substr(0, 13);
 						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_groupedBeforeAggr.find(groupKeyVal);
 						if (it != fSetOut.m_groupedBeforeAggr.end()) {
 							it->second.push_back(de);

@@ -227,11 +227,12 @@ bool isTdsRunning() {
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(6666); // 指定要绑定的端口号
+	addr.sin_port = htons(60006); // 指定要绑定的端口号
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // 绑定到本地回环地址
 
 	int bindResult = ::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
 	if (bindResult < 0) {
+		DWORD iErr = GetLastError();
 		std::cout << "tds is already running" << std::endl;
 #ifdef _WIN32
 		closesocket(sockfd);
