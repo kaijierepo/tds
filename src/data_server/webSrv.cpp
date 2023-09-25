@@ -434,6 +434,9 @@ void thread_asynOpenChildTdsStream(ioDev* pChildTds,string tag) {
 	json params;
 	params["tag"] = tagInChild;
 	params["pushTo"] = tag;
+
+	if(tds->conf->mediaSrvIP != "")
+		params["pushToIP"] = tds->conf->mediaSrvIP;
 	json err, rlt;
 	pChildTds->call("openStream", params, nullptr, rlt, err);
 	LOG("[流媒体   ]子服务API请求 openStream,params=" + params.dump());

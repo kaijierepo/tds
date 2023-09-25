@@ -726,8 +726,12 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			string pushTo;
 			if (params.contains("pushTo")) {
 				string tag = params["pushTo"];
+				string pushToIP = session.remoteIP;
+				if (params["pushToIP"].is_string()) {
+					pushToIP = params["pushToIP"];
+				}
 
-				pushTo = "rtsp://" + session.remoteIP + "/stream/" + tag;
+				pushTo = "rtsp://" + pushToIP + "/stream/" + tag;
 			}
 			bool opend = prj.openStream(tag, pushTo);
 
