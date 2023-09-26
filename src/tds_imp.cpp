@@ -248,9 +248,6 @@ bool isTdsRunning() {
 
 TDS_imp::TDS_imp()
 {
-	if (isTdsRunning())
-		exit(0);
-
 	conf = nullptr;
 	xiaoT = nullptr;
 	gzhServer = nullptr;
@@ -312,6 +309,10 @@ bool TDS_imp::run(string cmdline)
 
 	logger.init();
 	logger.setLogLevel(tdsConf.logLevel);
+	if (isTdsRunning()) {
+		LOG("tds已经运行，退出程序");
+		exit(0);
+	}
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
 
