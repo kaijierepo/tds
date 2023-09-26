@@ -252,7 +252,6 @@ TDS_imp::TDS_imp()
 		exit(0);
 
 	conf = nullptr;
-	db = nullptr;
 	xiaoT = nullptr;
 	gzhServer = nullptr;
 	smsServer = nullptr;
@@ -295,14 +294,10 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
-	//funcMongooseLogCb = LOG3;
 #ifndef DEBUG
  // mg_log_set("0");
 #endif
 
-
-//初始化接口
-	tds->db = &::db;
 
 	//check mode
 	if (conf->uiMode == "")

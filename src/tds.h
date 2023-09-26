@@ -47,6 +47,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #include <vector>
 #include <map>
 #include "json.hpp"
+#include "tds.h"
 using namespace std;
 using json = nlohmann::json;	
 
@@ -431,33 +432,6 @@ public:
 	virtual bool run() = 0;
 };
 
-
-//interface of tds.db
-//key is timestamp as 2020-01-01 11:11:11,value is a json string of one data element
-#define DB_DATA_SET std::map<string,string>
-class i_database {
-public:
-	//crud options
-	//virtual void INSERT(string strTag, SYSTEMTIME stTime, json& jData, json dataFile = nullptr) = 0;
-	//time: "2020-02-14~2020-02-15" or "1d1h1m30s"
-	//filter: "humidiy==55 && temperature>30"
-	//dataSet is json de array
-	//virtual bool SELECT(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result) = 0;
-	virtual bool Update(string tag, TIME stTime, string& sData) = 0;
-
-
-	
-	//deFileUrl  1.localfile 2.localfolder 3.http url
-	virtual void saveDEFile(string strTag, TIME stTime, string deFileUrl) = 0;
-
-	//get db.json path
-	virtual string getPath_dbFile(string strTag, TIME date,string deType="") = 0;
-	//de folder path
-	virtual string getPath_dataFolder(string strTag, TIME date) = 0;
-	virtual string getPath_deFile(string strTag, TIME stTime) = 0;
-	virtual string getPath_dbRoot() = 0;
-};
-
 class i_ioServer {
 public:
 	virtual size_t getBindedChanCount() = 0;
@@ -541,7 +515,6 @@ public:
 
 	
 	iTDSConf* conf;
-	i_database* db;
 	i_xiaoT* xiaoT;
 	i_gzhServer* gzhServer;
 	i_smsServer* smsServer;

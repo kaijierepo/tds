@@ -5,6 +5,7 @@
 #include "ioSrv.h"
 #include "rpcHandler.h"
 #include "webSrv.h"
+#include "db.h"
 
 
 bool isBatchLink(string addr)
@@ -1334,7 +1335,7 @@ ioChannel* ioDev::GetDataChannelByMPTag(string strMPTag)
 
 void ioDev::saveConfBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
 	fs::createFolderOfPath(path);
 	string data = m_jConf.dump(4);
 	fs::writeFile(path, data);
@@ -1342,7 +1343,7 @@ void ioDev::saveConfBuff()
 
 bool ioDev::loadConfBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/conf.json";
 	string s;
 	if (!fs::readFile(path, s))
 		return false;
@@ -1362,7 +1363,7 @@ bool ioDev::loadConfBuff()
 
 void ioDev::saveInfoBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
 	fs::createFolderOfPath(path);
 	string data = m_jInfo.dump(4);
 	fs::writeFile(path, data);
@@ -1370,7 +1371,7 @@ void ioDev::saveInfoBuff()
 
 bool ioDev::loadInfoBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/info.json";
 	string s;
 	if (!fs::readFile(path, s))
 		return false;
@@ -1390,7 +1391,7 @@ bool ioDev::loadInfoBuff()
 
 void ioDev::saveStatusBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
 	fs::createFolderOfPath(path);
 	json status;
 	status["alarms"] = m_jAlarmStatus;
@@ -1401,7 +1402,7 @@ void ioDev::saveStatusBuff()
 
 bool ioDev::loadStatusBuff()
 {
-	string path = tds->db->getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
+	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
 	string s;
 	if (!fs::readFile(path, s))
 		return false;

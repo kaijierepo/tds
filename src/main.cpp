@@ -52,8 +52,12 @@ SOFTWARE.
 
 void clearZlmNoReaderPusher() {
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
-	//string streamServerUrl = "http://127.0.0.1:" + sPort;
-	string streamServerUrl = "http://cloud.liangtusoft.com:669";
+	string streamServerUrl = "http://localhost:" + sPort;
+	string mediaSrvIP = tds->conf->mediaSrvIP;
+	if (mediaSrvIP != "") {
+		streamServerUrl = "http://" + mediaSrvIP + ":" + sPort;
+	}
+
 
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;

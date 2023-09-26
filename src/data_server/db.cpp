@@ -1,9 +1,7 @@
-﻿#include "pch.h"
-#include "db.h"
+﻿#include "db.h"
 #include <iostream>
 #include <sstream>
 #include <filesystem>
-#include "logger.h"
 #include "yyjson.h"
 #include "scriptManager.h"
 #include "prj.h"
@@ -168,7 +166,7 @@ void database::Insert(string strTag, TIME stTime, json& jDE, json& dataFile)
 		string str = jDataList.dump(2);
 		if (!fs::writeFile(dlPath, str))
 		{
-			LOG("[error]写入数据库文件失败,路径:%s,数据:%s", dlPath.c_str(), str.c_str());
+			printf("[error]写入数据库文件失败,路径:%s,数据:%s", dlPath.c_str(), str.c_str());
 		}
 	}
 	else
@@ -256,14 +254,14 @@ struct DE_TEMP {
 //yyjson调试查看不方便，必要时使用此类函数打印出json进行调试
 //mut_val 必须拷贝后再put到新的 mut_obj里面，没有拷贝直接put原来get到的 mut_val，会把原来的值给改掉
 string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
-	LOG("********time section dump*********");
+	printf("********time section dump*********");
 	if (timeSection == nullptr)
-		LOG("null");
+		printf("null");
 	else {
 		for (auto& i : *timeSection) {
-			LOG(i.first);
+			printf(i.first.c_str());
 			char* sz = yyjson_mut_val_write(i.second, 0, nullptr);
-			LOG(sz);
+			printf(sz);
 		}
 	}
 	return "";
@@ -773,7 +771,7 @@ bool database::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_S
 					bool putted = yyjson_mut_obj_put(jRecord, tagColKeyInit, tagColValInit);
 					if (!putted)
 					{
-						LOG("无法插入字段");
+						printf("无法插入字段");
 					}
 				}
 
@@ -1526,44 +1524,45 @@ bool database::updateJsonObj(json& jOld, json& jNew)
 
 bool database::Update(string tag, TIME stTime, string& sData)
 {
-	json jData = json::parse(sData);
-	return Update(tag, stTime, jData);
+	//json jData = json::parse(sData);
+	//return Update(tag, stTime, jData);
+	return true;
 }
 
 bool database::Update(string tag, TIME stTime, json& jData)
 {
-	//加载数据元列表
-	string dbFile = getPath_dbFile(tag, stTime);
-	string dbData;
-	fs::readFile(dbFile, dbData);
-	if (dbData == "")
-		return false;
+	////加载数据元列表
+	//string dbFile = getPath_dbFile(tag, stTime);
+	//string dbData;
+	//fs::readFile(dbFile, dbData);
+	//if (dbData == "")
+	//	return false;
 
-	json jDEList = json::parse(dbData);
-	string specifyTime = timeopt::st2str(stTime);
-	bool findDE = false;
-	for (int i = 0; i < jDEList.size(); i++)
-	{
-		json& jDE = jDEList[i];
-		string sHMS = jDE["time"].get<string>();
-		if (sHMS.length() > 8)
-		{
-			sHMS = sHMS.substr(sHMS.length() - 8, 8);
-		}
-		string specifyHMS = specifyTime.substr(specifyTime.length() - 8, 8);
-		if (sHMS == specifyHMS)
-		{
-			json& jOld = jDE[m_dbFmt.deItemKey_value.c_str()];
-			json& jNew = jData;
-			findDE = true;
-			updateJsonObj(jOld, jNew);
-		}
-	}
-	if (!findDE)
-		return false;
+	//json jDEList = json::parse(dbData);
+	//string specifyTime = timeopt::st2str(stTime);
+	//bool findDE = false;
+	//for (int i = 0; i < jDEList.size(); i++)
+	//{
+	//	json& jDE = jDEList[i];
+	//	string sHMS = jDE["time"].get<string>();
+	//	if (sHMS.length() > 8)
+	//	{
+	//		sHMS = sHMS.substr(sHMS.length() - 8, 8);
+	//	}
+	//	string specifyHMS = specifyTime.substr(specifyTime.length() - 8, 8);
+	//	if (sHMS == specifyHMS)
+	//	{
+	//		json& jOld = jDE[m_dbFmt.deItemKey_value.c_str()];
+	//		json& jNew = jData;
+	//		findDE = true;
+	//		updateJsonObj(jOld, jNew);
+	//	}
+	//}
+	//if (!findDE)
+	//	return false;
 
-	dbData = jDEList.dump(2);
-	fs::writeFile(dbFile, dbData);
+	//dbData = jDEList.dump(2);
+	//fs::writeFile(dbFile, dbData);
 	return true;
 }
 
@@ -1628,7 +1627,7 @@ void database::saveDEFile(string strTag, TIME stTime, string deFileUrl)
 	catch (std::exception& e)
 	{
 		string log = "saveDEFile fail src=" + deFileUrl + ",des=" + path + "error=" + e.what();
-		LOG(log);
+		printf(log.c_str());
 	}
 }
 
@@ -1882,7 +1881,7 @@ string database::parseDESelector(json params, DE_SELECTOR& deSel)
 	return "";
 }
 
-void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
+void database::rpc_db_select(json params, string& rlt, string& err, string& queryInfo, string org)
 {
 	DE_SELECTOR deSel;
 
@@ -1890,10 +1889,10 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 	if (params.contains("rootTag")) {
 		rootTag = params["rootTag"];
 	}
-	rootTag = TAG::addRoot(rootTag, session.org);
+	rootTag = TAG::addRoot(rootTag, org);
 	params["rootTag"] = rootTag;
-	resp.error = parseDESelector(params, deSel);
-	if (resp.error != "") return;
+	err = parseDESelector(params, deSel);
+	if (err != "") return;
 
 	if (params["calc"].is_string()) {
 		deSel.calc = params["calc"];
@@ -1908,95 +1907,36 @@ void database::rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session)
 
 	SELECT_RLT result;
 	if (deSel.tagSel.tagSet.size() == 0) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
+		err = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 	}
 	else {
 		try
 		{
 			db.Select_yyjson(deSel, result);
 			if (result.error != "") {
-				resp.error = result.error;
+				err = result.error;
 			}
 			else {
 				if (deSel.calc != "") {
-					resp.result = result.calcResult;
+					rlt = result.calcResult;
 				}
 				else {
-					resp.result = result.dataList;
+					rlt = result.dataList;
 				}
 			}
 		}
 		catch (std::exception& e)
 		{
 			json jerror = e.what();
-			resp.error = jerror.dump();
+			err = jerror.dump();
 		}
 	}
 
-	resp.info = result.info;
+	queryInfo = result.info;
 
 	params["timeParsed"] = deSel.timeSel.getParsedSelector();
-	resp.params = params.dump();
-	resp.dbQueryInfo = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
-}
-
-void database::rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session)
-{
-	DE_SELECTOR deSel;
-
-	params["root"] = session.org;
-	resp.error = parseDESelector(params, deSel);
-	if (resp.error != "") return;
-
-	SELECT_RLT result;
-	result.getDE = false;
-	try
-	{
-		db.Select_yyjson(deSel, result);
-	}
-	catch (std::exception& e)
-	{
-		json jerror = e.what();
-		resp.error = jerror.dump();
-	}
-
-	json jRlt = result.rowCount;
-	resp.result = jRlt.dump();
-}
-
-void database::rpc_db_getFile(json params, RPC_RESP& resp, RPC_SESSION session)
-{
-	DE_SELECTOR deSel;
-
-	string rootTag = "";
-	if (params.contains("rootTag")) {
-		rootTag = params["rootTag"];
-	}
-	rootTag = TAG::addRoot(rootTag, session.org);
-	params["rootTag"] = rootTag;
-	resp.error = parseDESelector(params, deSel);
-	if (resp.error != "") return;
-
-	//选出位号
-	prj.getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-
-	SELECT_RLT result;
-	if (deSel.tagSel.tagSet.size() == 0) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
-	}
-	else {
-		try
-		{
-			db.Select_yyjson(deSel, result);
-			resp.result = result.dataList;
-		}
-		catch (std::exception& e)
-		{
-			json jerror = e.what();
-			resp.error = jerror.dump();
-		}
-	}
-
+	//resp.params = params.dump();
+	//resp.dbQueryInfo = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
 }
 
 string database::parseSuffix(string deFileUrl)
@@ -2021,28 +1961,6 @@ string database::parseSuffix(string deFileUrl)
 
 	return suffix;
 }
-
-string database::dataSet2String(DB_DATA_SET& dataSet)
-{
-	string result = "]";
-	bool first = true;
-	//desending
-	for(auto i:dataSet)
-	{
-		if(first)
-			result = i.second + result;
-		else
-		{
-			result = i.second + "," + result;
-		}
-		
-		first = false;
-	}
-
-	result = "[" + result;
-	return result;
-}
-
 
 void database::GetFileTreeOfPath(FILE_ITEM* pfi, string strPath)
 {
@@ -2672,53 +2590,6 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 			// A.str1.indexOf("xxx") 如果A不存在 str1成员，会抛出此错误
 			e.m_error = "db exception: error when execute filter script,error type!";
 		}
-		else
-			e.m_error = "db exception: error when execute filter script";
-		throw e;
-	}
-	//过滤器执行出错，统一不过滤
-#endif
-	return true;
-}
-
-bool CONDITION_SELECTOR::match(string& de)
-{
-#ifdef ENABLE_JERRY_SCRIPT
-	if (!bEnable)
-		return true;
-	bool bMatch = true;
-	json jDe = json::parse(de);
-	//将数据元的属性
-	if (jDe[db.m_dbFmt.deItemKey_value.c_str()].is_object())
-	{
-		json& jVal = jDe[db.m_dbFmt.deItemKey_value.c_str()];
-		jsonVal2jerryVal(jVal, global_object);
-	}
-	else
-	{
-
-	}
-
-
-	/* Run the demo script with 'eval' */
-	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
-		filterExp.length(),
-		JERRY_PARSE_NO_OPTS);
-
-	/* Check if there was any error (syntax or runtime) */
-	bool run_ok = !jerry_value_is_error(eval_ret);
-	jerry_error_t error = jerry_get_error_type(eval_ret);
-	jerry_release_value(eval_ret);
-	if (run_ok)
-	{
-		bMatch = jerry_value_to_boolean(eval_ret);
-		return bMatch;
-	}
-	else
-	{
-		db_exception e;
-		if(error == JERRY_ERROR_REFERENCE)
-			e.m_error = "db exception: error when execute filter script,reference not found!";
 		else
 			e.m_error = "db exception: error when execute filter script";
 		throw e;

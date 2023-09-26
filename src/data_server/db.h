@@ -1,14 +1,13 @@
 ﻿#pragma once
 #include "common.h"
 #include <map>
-#include "json.hpp"
-#include "tds.h"
 #ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
 #endif
 #include "yyjson.h"
-
+#include "json.hpp"
 using json = nlohmann::json;
+
 
 /*
 functions：
@@ -316,7 +315,7 @@ public:
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 	jerry_value_t global_object;
 #endif
-	bool match(string& de); //检查一个de是否满足条件
+
 	bool match(yyjson_val* de);
 	bool match(yyjson_mut_val* de);
 	bool init(string filter);
@@ -468,7 +467,7 @@ struct  DB_FMT
 
 
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
-class database : public i_database{
+class database{
 public:
 	database();
 	bool create(string strDBUrl,string name);
@@ -485,9 +484,7 @@ public:
 
 //rpc接口
 public:
-	void rpc_db_select(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_db_count(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_db_getFile(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_db_select(json params, string& rlt,string& err,string& queryInfo, string org);
 
 //接口部分
 public:
@@ -528,7 +525,6 @@ public:
 	string getName_deFile(string tag, TIME time);
 
 	string parseSuffix(string deFileUrl);
-	string dataSet2String(DB_DATA_SET& dataSet);
 	void GetFileTreeOfPath(FILE_ITEM* pfi, string strPath);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
