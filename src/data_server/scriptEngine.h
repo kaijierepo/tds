@@ -1,13 +1,14 @@
 #ifdef ENABLE_JERRY_SCRIPT
+#pragma once
 #include <string>
 #include <map>
 #include "json.hpp"
+#include "jerry.h"
 #include "jerryscript.h"
-#include "scriptFunc.h"
+#include  "tdsSession.h"
 
 using json = nlohmann::json;
 using namespace std;
-
 
 
 
@@ -16,14 +17,18 @@ struct GLOBAL_FUNC {
 	jerry_value_t property_func;
 };
 
+typedef bool (*fp_initGlobalFunc)(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
+
+
 class ScriptEngine {
 public:
+	ScriptEngine();
 	bool runScript(string& script,string user);
 
 	vector<string> m_vecOutput;
-	bool initGlobalFunc();
 	void releaseGlobalFunc();
 	string getErrorDesc(jerry_error_t error);
+	fp_initGlobalFunc m_initGlobalFunc;
 
 	//当前脚本执行的环境变量
 	string m_tagContext;
@@ -34,14 +39,10 @@ public:
 
 	RPC_SESSION currentSession;
 	//脚本执行结果
-	json m_jEvalRet;
+	string m_sEvalRet;
 
 	bool m_bValNullInCalc;  //val函数返回了null，当使用计算表达式时，例如 val(tag1) -val(tag2)，某一个val函数返回null，null会被作为0，但该次计算无效
 };
 
-
-void* context_alloc_fn(size_t size, void* cb_data);
-extern thread_local jerry_context_t* tls_context;
 extern thread_local ScriptEngine* pEngine;
-jerry_context_t* jerry_port_get_current_context(void);
 #endif

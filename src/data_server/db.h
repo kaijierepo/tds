@@ -1,12 +1,11 @@
 ﻿#pragma once
-#include "common.h"
 #include <map>
 #ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
+#include "jerry.h"
 #endif
 #include "yyjson.h"
-#include "json.hpp"
-using json = nlohmann::json;
+using namespace std;
 
 
 /*
@@ -79,11 +78,14 @@ public:
 	TAG_SELECTOR() {
 		getTag = false;
 	}
-	bool init(string tag,string rootTag = "",string objtype="*");
-	bool init(json tag, string rootTag = "", string objtype = "*");
+
+	bool init(string tag, string rootTag="", string objtype="*");
+
+	bool init(vector<string>& tag, string rootTag = "", string objtype = "*");
 	bool match(string tag);//使用不带根的绝对位号
 	bool singleSelMode();
 
+	string m_org;  //组织结构
 	string m_rootTag; //查询根
 
 	//模糊匹配表达式
@@ -462,8 +464,7 @@ struct  DB_FMT
 	string deItemKey_value;
 };
 
-
-
+typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
 
 //路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
@@ -471,24 +472,25 @@ class database{
 public:
 	database();
 	bool create(string strDBUrl,string name);
-	bool Open(string strDBUrl,string name="");
+	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	void Close();
 
-	map<string, string> getAggrOpt(json& jAggr);
-
-	string parseDESelector(json params, DE_SELECTOR& deSelector);
-
+	map<string, string> getAggrOpt(yyjson_val* jAggr);
+	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector,string& err);
+	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
 //数据库存储规范
 	DB_FMT m_dbFmt;
 
+	fp_getTagsByTagSelector m_getTagsByTagSelector;
 
 //rpc接口
 public:
-	void rpc_db_select(json params, string& rlt,string& err,string& queryInfo, string org);
+	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org);
+	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org);
 
 //接口部分
 public:
-	void Insert(string strTag, TIME stTime, json& jData,json& dataFile) ;
+	void Insert(string strTag, TIME stTime, string& sDe);
 
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	
@@ -503,12 +505,12 @@ public:
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
-	bool Update(string tag, TIME stTime, string& sData);
-	bool Update(string tag, TIME stTime, json& jData);
+	//bool Update(string tag, TIME stTime, string& sData);
+	//bool Update(string tag, TIME stTime, json& jData);
 	bool Delete(string tag, TIME stTime);
 	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
-	bool updateJsonObj(json& jOld, json& jNew);
+	//bool updateJsonObj(json& jOld, json& jNew);
 	void saveDEFile(string strTag, TIME stTime, string deFileUrl) ;
 	bool saveDEFile(string tag, TIME stTime, unsigned char* pData, int len,string suffix);
 //路径管理

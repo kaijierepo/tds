@@ -9,6 +9,10 @@
 
 project prj;
 
+void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector) {
+	prj.getTagsByTagSelector(tags, tagSelector);
+}
+
 project::project()
 {
 	m_name = "tds";

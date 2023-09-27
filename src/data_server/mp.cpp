@@ -786,7 +786,10 @@ void MP::saveToDB() {
 	json jDE;
 	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
 	jDE["val"] = m_curVal;
-	db.Insert(getTag().c_str(), m_stDataLastUpdate,jDE ,m_curFileData);
+	if(m_curFileData != nullptr)
+		jDE["fileData"] = m_curFileData;
+	string sDe = jDE.dump();
+	db.Insert(getTag().c_str(), m_stDataLastUpdate,sDe);
 	m_dbFileLock.unlock();
 }
 

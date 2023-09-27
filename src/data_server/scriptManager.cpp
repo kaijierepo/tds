@@ -89,6 +89,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 		si.callerObjTag = callerObjTag;
 
 		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 		si.lastExe = timeopt::now();
@@ -140,6 +141,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 			si.rootTag = params["rootTag"];
 
 		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(s,session.user);
 
@@ -157,6 +159,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
 			ScriptEngine se;
+			se.m_initGlobalFunc = initGlobalFunc;
 			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {
 				rpcResp.result = "\"ok\"";
@@ -349,6 +352,7 @@ void ScriptManager::exeAllGlobalScripts()
 	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
 	for (auto& si : toExeScripts) {
 		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 	}
@@ -379,6 +383,7 @@ void ScriptManager::exeAllVarExpScripts()
 		SCRIPT_INFO& info = toExeScripts[i];
 		string& script = info.script;
 		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
 		se.runScript(script, info.lastModifyUser);
@@ -388,9 +393,10 @@ void ScriptManager::exeAllVarExpScripts()
 			continue;
 		}
 
-		if (se.m_jEvalRet.is_number())
+		json j = json::parse(se.m_sEvalRet);
+		if (j.is_number())
 		{
-			double val = se.m_jEvalRet.get<double>();
+			double val = j.get<double>();
 			json jParams;
 			jParams["tag"] = info.calcMpTag;
 			jParams["val"] = val;

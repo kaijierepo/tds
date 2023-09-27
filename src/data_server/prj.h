@@ -87,4 +87,5 @@ public:
 	shared_mutex m_csPrj;
 };
 
+extern void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
 extern project prj;

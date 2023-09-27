@@ -1,124 +1,7 @@
 #ifdef ENABLE_JERRY_SCRIPT
-#include "pch.h"
 #include "ScriptEngine.h"
-#include "prj.h"
-#include "logger.h"
-#include "mp.h"
-#include "obj.h"
 #include "jerryscript-port.h"
 
-bool ScriptEngine::initGlobalFunc()
-{
-	GLOBAL_FUNC gf;
-	jerry_value_t& property_name = gf.property_name;
-	jerry_value_t& property_func = gf.property_func;
-	// getMp函数
-	property_name = jerry_create_string((const jerry_char_t*)"getMo");
-	property_func = jerry_create_external_function(func_getMp);
-	jerry_value_t set_result = jerry_set_property(global_object, property_name,property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	// log函数
-	property_name = jerry_create_string((const jerry_char_t*)"log");
-	property_func = jerry_create_external_function(func_log);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	// output函数
-	property_name = jerry_create_string((const jerry_char_t*)"output");
-	property_func = jerry_create_external_function(func_output);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	// call函数
-	property_name = jerry_create_string((const jerry_char_t*)"call");
-	property_func = jerry_create_external_function(func_call);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-	// sum函数
-	property_name = jerry_create_string((const jerry_char_t*)"sum");
-	property_func = jerry_create_external_function(func_sum);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-	// val函数
-	property_name = jerry_create_string((const jerry_char_t*)"val");
-	property_func = jerry_create_external_function(func_val);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-	// input函数
-	property_name = jerry_create_string((const jerry_char_t*)"input");
-	property_func = jerry_create_external_function(func_input);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-	// sleep函数
-	property_name = jerry_create_string((const jerry_char_t*)"sleep");
-	property_func = jerry_create_external_function(func_sleep);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	// backtrace
-	property_name = jerry_create_string((const jerry_char_t*)"backtrace");
-	property_func = jerry_create_external_function(backtrace_handler);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	//notify
-	property_name = jerry_create_string((const jerry_char_t*)"notify");
-	property_func = jerry_create_external_function(func_notify);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-
-	//getObj
-	property_name = jerry_create_string((const jerry_char_t*)"getObj");
-	property_func = jerry_create_external_function(func_getObj);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-	
-	//getObj
-	property_name = jerry_create_string((const jerry_char_t*)"parseTag");
-	property_func = jerry_create_external_function(func_parseTag);
-	set_result = jerry_set_property(global_object, property_name, property_func);
-	if (jerry_value_is_error(set_result)) {
-	}
-	jerry_release_value(set_result);
-	m_vecGlobalFunc.push_back(gf);
-
-	return true;
-}
 
 void ScriptEngine::releaseGlobalFunc() {
 	for (int i = 0; i < m_vecGlobalFunc.size(); i++) {
@@ -162,18 +45,23 @@ string ScriptEngine::getErrorDesc(jerry_error_t err) {
 	}
 }
 
-void* context_alloc_fn(size_t size, void* cb_data)
+thread_local ScriptEngine* pEngine;
+
+ScriptEngine::ScriptEngine()
 {
-	(void)cb_data;
-	return malloc(size);
+	m_initGlobalFunc = nullptr;
 }
 
-thread_local jerry_context_t* tls_context;
-thread_local ScriptEngine* pEngine;
-jerry_context_t* jerry_port_get_current_context(void)
-{
-	/* Returns the context assigned to the thread. */
-	return tls_context;
+string jerryVal2Str(jerry_value_t jerryVal) {
+	jerry_value_t string_value = jerry_json_stringify(jerryVal);
+	jerry_size_t tSize = jerry_get_string_size(string_value);
+	jerry_char_t* buffer = new jerry_char_t[tSize + 1];
+	jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, tSize);
+	buffer[copied_bytes] = '\0';
+	jerry_release_value(string_value);
+	string s = (const char*)buffer;
+	delete buffer;
+	return s;
 }
 
 bool ScriptEngine::runScript(string& script, string user)
@@ -191,12 +79,20 @@ bool ScriptEngine::runScript(string& script, string user)
 		jerry_init(JERRY_INIT_EMPTY);
 		global_object = jerry_get_global_object();
 
-		initGlobalFunc();
-
+		if(m_initGlobalFunc)
+			m_initGlobalFunc(global_object,m_vecGlobalFunc);
 
 		for (int i = 0; i < lines.size(); i++) {
 			string line = lines[i];
-			line = str::trim(line);
+			while (1) {
+				size_t pos = line.find(" ");
+				if (pos == 0) {
+					line.erase(0);
+				}
+				else {
+					break;
+				}
+			}
 			if (line == "")
 				continue;
 			///* Run the demo script with 'eval' */
@@ -209,8 +105,7 @@ bool ScriptEngine::runScript(string& script, string user)
 
 			if (run_ok)
 			{
-				m_jEvalRet = json::object();
-				jerryVal2jsonVal(eval_ret, m_jEvalRet);
+				m_sEvalRet = jerryVal2Str(eval_ret);
 				jerry_release_value(eval_ret);
 			}
 			else
@@ -240,4 +135,7 @@ bool ScriptEngine::runScript(string& script, string user)
 	}
 	return true;
 }
+
+
+
 #endif

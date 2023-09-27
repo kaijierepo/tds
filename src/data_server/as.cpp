@@ -549,7 +549,9 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	rootTag = TAG::addRoot(rootTag, session.org);
 	params["tag"] = rootTag + "*"; //此处采用历史数据的搜索语法
 
-	string error = db.parseDESelector(params, deSel);
+	string error;
+	string sParams = params.dump();
+	db.parseDESelector(sParams, deSel,error );
 	if(error != "") return error;
 	TIME_SELECTOR& timeSelector = deSel.timeSel;
 	TAG_SELECTOR& tagSelector = deSel.tagSel;

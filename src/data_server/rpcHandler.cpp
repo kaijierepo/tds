@@ -827,11 +827,12 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 					tNow = timeopt::now();
 				}
 		
-				json fileData;
+	
 				json jDE;
 				jDE["time"] = timeopt::st2str(tNow, true);
 				jDE.erase("tag");
-				db.Insert(tag, tNow, jDE, fileData);
+				string sDe = jDE.dump();
+				db.Insert(tag, tNow, sDe);
 				rpcResp.result = "\"ok\"";
 			}
 		}
@@ -866,14 +867,15 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.select")
 		{
-			db.rpc_db_select(params, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
+			string s = params.dump();
+			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
 		}
 		else if (method == "db.update")
 		{
-			string tag = params["tag"].get<string>();
-			string time = params["time"].get<string>();
-			json val = params["val"];
-			db.Update(tag, timeopt::str2st(time), val);
+			//string tag = params["tag"].get<string>();
+			//string time = params["time"].get<string>();
+			//json val = params["val"];
+			//db.Update(tag, timeopt::str2st(time), val);
 			result = "\"ok\"";
 		}
 		else if (method == "db.delete")
