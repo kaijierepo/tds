@@ -1,6 +1,6 @@
 ﻿/*
-  TDB a time series database based on json files
-  version 1.0.0
+  TDB version 1.0.0
+  a minimal time series database based on json files for iot
   https://gitee.com/liangtuSoft/tds.git
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
@@ -35,8 +35,24 @@ SOFTWARE.
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 TDB db;
+
+string replaceStr(string str, const string to_replaced, const string newchars)
+{
+	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+	{
+		pos = str.find(to_replaced, pos);
+		if (pos != string::npos)
+			str.replace(pos, to_replaced.length(), newchars);
+		else
+			break;
+	}
+	return   str;
+}
 
 namespace TIME_OPT {
 	bool isRelative(string time)
@@ -173,6 +189,83 @@ namespace DB_TAG {
 		return root + "." + tag;
 	}
 }
+namespace DB_FS {
+	bool readFile(string path, string& data)
+	{
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"rb");
+#else
+		fp = fopen(path.c_str(), "rb");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			long len = ftell(fp);
+			char* pdata = new char[len + 2];
+			memset(pdata, 0, len + 2);
+			fseek(fp, 0, SEEK_SET);
+			fread(pdata, 1, len, fp);
+			data = pdata;
+			fclose(fp);
+			delete[] pdata;
+			return true;
+		}
+		return false;
+	}
+
+	//带后缀 .XXX 作为文件路径
+	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
+	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
+	void createFolderOfPath(string strFile)
+	{
+		strFile = replaceStr(strFile, "\\", "/");
+		strFile = replaceStr(strFile, "////", "/");
+		strFile = replaceStr(strFile, "///", "/");
+		strFile = replaceStr(strFile, "//", "/");
+
+		size_t iDotPos = strFile.rfind('.');
+		size_t iSlashPos = strFile.rfind('/');
+		if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
+		{
+			strFile = strFile.substr(0, iSlashPos);
+		}
+#ifdef _WIN32
+#ifndef _WINXP
+		filesystem::create_directories(utf8_to_utf16(strFile));
+#endif
+#else
+		filesystem::create_directories(strFile);
+#endif
+	}
+	bool writeFile(string path, char* data, size_t len)
+	{
+		createFolderOfPath(path);
+
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"wb");
+#else
+		fp = fopen(path.c_str(), "wb");
+#endif
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		else
+		{
+
+		}
+		return false;
+	}
+	bool writeFile(string path, unsigned char* data, size_t len)
+	{
+		return writeFile(path, (char*)data, len);
+	}
+	
+}
 
 int _db_vscprintf_cross(const char* format, va_list pargs) {
 	int retval;
@@ -196,19 +289,6 @@ std::string formatStr(const char* pszFmt, ...)
 	}
 	va_end(args);
 	return str;
-}
-
-string replaceStr(string str, const string to_replaced, const string newchars)
-{
-	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
-	{
-		pos = str.find(to_replaced, pos);
-		if (pos != string::npos)
-			str.replace(pos, to_replaced.length(), newchars);
-		else
-			break;
-	}
-	return   str;
 }
 
 TDB::TDB()
@@ -308,17 +388,6 @@ string TDB::getPath_dataFolder(string strTag, DB_TIME date)
 	return strURL;
 }
 
-bool TDB::getDBFile(DB_TIME t, string tag, string fileName)
-{
-	string folder = formatStr("/%04d%02d", t.wYear, t.wMonth);
-	if (t.wDay != 0) {
-		folder += formatStr("/%02d", t.wDay);
-	}
-
-
-	
-	return false;
-}
 
 string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 {
@@ -337,40 +406,12 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 }
 
 
-bool TDB::writeFile(string path, unsigned char* data, size_t len)
-{
-	return writeFile(path, (char*)data, len);
-}
-bool TDB::writeFile(string path, char* data, size_t len)
-{
-	createFolderOfPath(path);
-
-	FILE* fp = nullptr;
-#ifdef _WIN32
-	_wfopen_s(&fp, charCodec::tds_to_utf16(path).c_str(), L"wb");
-#else
-	fp = fopen(path.c_str(), "wb");
-#endif
-	if (fp)
-	{
-		fwrite(data, 1, len, fp);
-		fclose(fp);
-		return true;
-	}
-	else
-	{
-
-	}
-	return false;
-}
-
-
 void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if(!fileExist(folderPath))
-		createFolderOfPath(folderPath.c_str());
+		DB_FS::createFolderOfPath(folderPath.c_str());
 
 	yyjson_doc* doc = yyjson_read(sDe.c_str(), sDe.length(), 0);
 	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
@@ -384,7 +425,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	{
 		string fileDataPath = folderPath + "/" + stTime.toStampHMS();
 		if (!fileExist(fileDataPath))
-			createFolderOfPath(fileDataPath.c_str());
+			DB_FS::createFolderOfPath(fileDataPath.c_str());
 
 		size_t idx = 0;
 		size_t max = 0;
@@ -412,10 +453,10 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 				unsigned char* out = new unsigned char[buffLen];
 				memset(out, 0, buffLen);
 				int outLen = base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-				writeFile(fileDataPath + "/" + name, out, outLen);
+				DB_FS::writeFile(fileDataPath + "/" + name, out, outLen);
 			}
 			else if (type == "text") {
-				writeFile(fileDataPath + "/" + name, data);
+				DB_FS::writeFile(fileDataPath + "/" + name, (char*)data.c_str(),data.length());
 			}
 		}
 	}
@@ -440,7 +481,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 		yyjson_mut_arr_append(yymv_datalist, yymDe);
 		size_t len = 0;
 		const char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-		if (!writeFile(dlPath,(unsigned char*) s,len))
+		if (!DB_FS::writeFile(dlPath,(unsigned char*) s,len))
 		{
 			printf("[error]写入数据库文件失败,路径:%s,数据:%s", dlPath.c_str(), s);
 		}
@@ -448,7 +489,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	else
 	{
 #ifdef _WIN32
-		FILE* fp = _wfopen(charCodec::utf8_to_utf16(dlPath).c_str(), L"rb+");
+		FILE* fp = _wfopen(utf8_to_utf16(dlPath).c_str(), L"rb+");
 #else
 		FILE* fp = fopen(dlPath.c_str(), "rb+");
 #endif
@@ -548,13 +589,12 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
 			yyjson_mut_val* timeVal;
-			if (deSel.timeSel.timeFmt == "") {
-				timeVal = yyjson_mut_str(mut_doc, szTime.data());
-			}
-			else {
+			 
+			timeVal = yyjson_mut_str(mut_doc, szTime.data());
+			//if (deSel.timeSel.timeFmt != "")
 				//deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
 				//timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
-			}
+			//}
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
 
@@ -1070,7 +1110,7 @@ bool DB_FILE::loadFile()
 	time.fromUnixTime(ttTime);
 	ymd = time.toYMD();
 	path = db.getPath_dbFile(tag, time,deType);
-	fs::readFile(path, data);
+	DB_FS::readFile(path, data);
 	if (data == "") {
 		return false;
 	}
@@ -1081,7 +1121,7 @@ bool DB_FILE::loadFile()
 	if (err.code != YYJSON_READ_SUCCESS) {
 		// 处理错误
 		string sErr = err.msg;
-		sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + str::fromInt(err.pos) + ",errInfo:" + sErr;
+		sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + formatStr("%d",err.pos) + ",errInfo:" + sErr;
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -1090,29 +1130,7 @@ bool DB_FILE::loadFile()
 	return true;
 }
 
-bool TDB::readFile(string path, string& data)
-{
-	FILE* fp = nullptr;
-#ifdef _WIN32
-	_wfopen_s(&fp, charCodec::tds_to_utf16(path).c_str(), L"rb");
-#else
-	fp = fopen(path.c_str(), "rb");
-#endif
-	if (fp)
-	{
-		fseek(fp, 0, SEEK_END);
-		long len = ftell(fp);
-		char* pdata = new char[len + 2];
-		memset(pdata, 0, len + 2);
-		fseek(fp, 0, SEEK_SET);
-		fread(pdata, 1, len, fp);
-		data = pdata;
-		fclose(fp);
-		delete[] pdata;
-		return true;
-	}
-	return false;
-}
+
 
 bool TDB::Select_yyjson_deFile(string& s)
 {
@@ -1895,8 +1913,7 @@ void TDB::saveDEFile(string strTag, DB_TIME stTime, string deFileUrl)
 	path = m_path + path;
 	try
 	{
-		fs::createFolderOfPath(path);
-		//copy(charCodec::utf8_to_utf16(deFileUrl),charCodec::utf8_to_utf16(path));
+		DB_FS::createFolderOfPath(path);
 	}
 	catch (std::exception& e)
 	{
@@ -1909,7 +1926,7 @@ bool TDB::saveDEFile(string tag, DB_TIME stTime, unsigned char* pData, int len, 
 {
 	string path = getPath_deFile(tag, stTime);
 	path = m_path + path + "." + suffix;
-	if (fs::writeFile(path,(char*) pData, len))
+	if (DB_FS::writeFile(path,(char*) pData, len))
 	{
 		return true;
 	}
@@ -2334,7 +2351,7 @@ bool TDB::fileExist(string pszFileName)
 {
 #ifndef _WINXP
 	std::error_code error;
-	auto file_status = std::filesystem::status(charCodec::tds_to_utf16(pszFileName), error);
+	auto file_status = std::filesystem::status(utf8_to_utf16(pszFileName), error);
 	if (error) {
 		return false;
 	}
@@ -2347,36 +2364,13 @@ bool TDB::fileExist(string pszFileName)
 	}
 	return  false;
 #else
-	wstring filePath = charCodec::tds_to_utf16(pszFileName);
+	wstring filePath = utf8_to_utf16(pszFileName);
 	DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
 	return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 #endif
 }
 
-//带后缀 .XXX 作为文件路径
-	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
-void TDB::createFolderOfPath(string strFile)
-{
-	strFile = replaceStr(strFile, "\\", "/");
-	strFile = replaceStr(strFile, "////", "/");
-	strFile = replaceStr(strFile, "///", "/");
-	strFile = replaceStr(strFile, "//", "/");
 
-	size_t iDotPos = strFile.rfind('.');
-	size_t iSlashPos = strFile.rfind('/');
-	if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
-	{
-		strFile = strFile.substr(0, iSlashPos);
-	}
-#ifdef _WIN32
-#ifndef _WINXP
-	filesystem::create_directories(charCodec::tds_to_utf16(strFile));
-#endif
-#else
-	filesystem::create_directories(strFile);
-#endif
-}
 
 TIME_SELECTOR::TIME_SELECTOR()
 {
@@ -2478,7 +2472,7 @@ bool TIME_SELECTOR::init(string time)
 			tEnd.wMonth = 1;
 			tEnd.wYear += 1;
 		}
-		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 	else if (time.find("last-month") != string::npos) {
@@ -2497,7 +2491,7 @@ bool TIME_SELECTOR::init(string time)
 			tEnd.wMonth = 1;
 			tEnd.wYear += 1;
 		}
-		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 	else if (time.find("this-year") != string::npos) {
@@ -2507,7 +2501,7 @@ bool TIME_SELECTOR::init(string time)
 		tStart.wDay = 1; tStart.wMonth = 1; tStart.wHour = 0; tStart.wMinute = 0; tStart.wSecond = 0; tStart.wMilliseconds = 0;
 		DB_TIME tEnd = tStart;
 		tEnd.wYear += 1;
-		tEnd = timeopt::addTime(tEnd, 0, 0, -1);
+		tEnd = TIME_OPT::addTime(tEnd, 0, 0, -1);
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 	else if (time.find("this-day") != string::npos) {
@@ -2523,7 +2517,7 @@ bool TIME_SELECTOR::init(string time)
 	else if (time.find("yesterday") != string::npos) {
 		DB_TIME t;
 		t.setNow();
-		t = timeopt::addTime(t, -24, 0, 0);
+		t = TIME_OPT::addTime(t, -24, 0, 0);
 		t.wMilliseconds = 0;
 		DB_TIME tStart = t;
 		DB_TIME tEnd = t;

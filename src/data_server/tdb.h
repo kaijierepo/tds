@@ -1,4 +1,32 @@
-﻿#pragma once
+﻿/*
+  TDB version 1.0.0
+  a minimal time series database based on json files for iot
+  https://gitee.com/liangtuSoft/tds.git
+
+Licensed under the MIT License <http://opensource.org/licenses/MIT>.
+SPDX-License-Identifier: MIT
+Copyright (c) 2020-present Tao Lu
+
+Permission is hereby  granted, free of charge, to any  person obtaining a copy
+of this software and associated  documentation files (the "Software"), to deal
+in the Software  without restriction, including without  limitation the rights
+to  use, copy,  modify, merge,  publish, distribute,  sublicense, and/or  sell
+copies  of  the Software,  and  to  permit persons  to  whom  the Software  is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE  IS PROVIDED "AS  IS", WITHOUT WARRANTY  OF ANY KIND,  EXPRESS OR
+IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  THE  WARRANTIES OF  MERCHANTABILITY,
+FITNESS FOR  A PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO EVENT  SHALL THE
+AUTHORS  OR COPYRIGHT  HOLDERS  BE  LIABLE FOR  ANY  CLAIM,  DAMAGES OR  OTHER
+LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+#pragma once
 #include <map>
 #ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
@@ -38,7 +66,7 @@ struct DB_TIME {
 	void setNow();
 	string toStampHMS();
 	string toYMD();
-	string toStr(bool enableMS);
+	string toStr(bool enableMS = true);
 	void fromStr(string str);
 	static string nowStr();
 	static string nowStrWithMilli();
@@ -55,38 +83,11 @@ struct FILE_ITEM {
 	}
 };
 
-struct CCurveStatisItem {
-	float sum;
-	float cnt;
-	float avg;
-	float max;
-	float min;
-
-	CCurveStatisItem()
-	{
-		sum = 0.0;
-		cnt = 0;
-		avg = 0.0;
-		max = 0.0;
-		min = 0.0;
-	}
-};
-
-struct CPoint2 {
-	float x;
-	float y;
-	CPoint2() :x(0.0), y(0.0)
-	{
-	}
-};
-
-
 struct DE_TIME {
 	DB_TIME st;
 	time_t tt;
 	string strT;
 };
-
 
 class TAG_SELECTOR{
 public:
@@ -97,34 +98,27 @@ public:
 	bool init(string tag, string rootTag="", string objtype="*");
 
 	bool init(vector<string>& tag, string rootTag = "", string objtype = "*");
-	bool match(string tag);//使用不带根的绝对位号
+	bool match(string tag);//use absolute tag 
 	bool singleSelMode();
 
-	string m_org;  //组织结构
-	string m_rootTag; //查询根
+	string m_org;  
+	string m_rootTag; 
 
-	//模糊匹配表达式
 	vector<string> fuzzyMatchExp;
-	//模糊匹配正则表达式
 	vector<string> fuzzyMatchRegExp;
-	//精确匹配表达式
 	vector<string> exactMatchExp; 
 
-	//返回的数据元中是否需要包含tag字段
-	bool getTag;
+	bool getTag; //whether contains key "tag" in de returned
 
 	void setType(string objType);
 	bool specifyType();
 	string type; //object type
 	string error;
 
-	//选出的位号列表
 	vector<string> tagSet;
-
 };
 
 
-//时间集合类型
 enum Time_Set_Type {
 	TSM_All = 0,
 	TSM_Range = 1,
@@ -140,19 +134,13 @@ enum Period_Type {
 };
 
 
-//完整的时间选择器格式[Time_Set_Type]@[period type]@[time range]
-//head@day@8d  选择8天当中每天的第一个数据
+//time selector format is [Time_Set_Type]@[period type]@[time range]
+//head@day@8d  select the first de in each day of 8 days
 // 
-// 
-//时间选择器先确定需要加载的数据库原始文件的时间范围
-//加载原始文件后，对边界上的两个文件的数据进行 时间范围的进一步选择
-//时间点 理解成 开始时间和结束时间相同的一个timeRange
-// 
-//简写模式 - 解析规则
+//short mode - how short mode is parsed
 //2020-02-02  -> 2020-02-02 00:00:00~2020-02-02 23:59:59
 //2020-02  -> 2020-02-01 00:00:00~2020-02-28 23:59:59
 //
-//取头尾模式
 //head@TIME_SEL   tail@TIME_SEL
 
 class TIME_SELECTOR
@@ -163,16 +151,13 @@ public:
 	bool AmountMatch(size_t amount);
 	bool init(string time);
 	string shortSel2StardardSel(string time);
-	bool parseTimeRange(string time);//标准格式时间范围2020-02-01 00:00:00~2020-02-28 23:59:59
+	bool parseTimeRange(string time);//use standard time selector as 2020-02-01 00:00:00~2020-02-28 23:59:59
 	string getParsedSelector();
 
-	//选择器字符串
 	string selector;
 	Time_Set_Type timeSetType;
-	string timeFmt; //指定返回的时间格式,采用如下语法 YYYY-MM-DD hh:mm:ss
+	string timeFmt; //specified time format to return,such as YYYY-MM-DD hh:mm:ss
 
-
-	//时间范围
 	string strStart;
 	string strEnd;
 	DB_TIME stStart;
@@ -180,12 +165,11 @@ public:
 	time_t startTime;
 	time_t endTime;
 
-	//是否进行周期性选择
 	Period_Type periodType;
 	int startHMS;
 	int endHMS;
 
-	int m_dataNum;//存储传入参数的，ne,n代表获取几个数据。
+	int m_dataNum;//how many de to get
 	string error;
 	DE_TIME deTime;
 };
@@ -198,8 +182,8 @@ enum class DOWN_SAMPLING_TYPE {
 
 struct INTERVAL_SELECTOR {
 	DOWN_SAMPLING_TYPE type;
-	int dsi;   //降采样元素个数间隔
-	int dsti;  //降采样的时间间隔 单位秒
+	int dsi;   //down sampling de count interval
+	int dsti;  //down sampling time length interval in seconds
 
 	INTERVAL_SELECTOR() {
 		type = DOWN_SAMPLING_TYPE::DST_None;
@@ -238,16 +222,16 @@ struct DB_FILE {
 	}
 };
 
-//作为聚合后数据时，只有 time 和 items是有值的
-//聚合前数据items是空的
+//as the data after aggregate, only time and items are valid
+//items is empty before aggregate
 struct DE_yyjson {
-	yyjson_mut_val* time;  //暂时只只是按时间聚合，聚合后该字段一定存在。
+	yyjson_mut_val* time;  //aggregate by time, is valid after aggregate
 	yyjson_mut_val* val;
-	string fmtTime; //根据请求格式格式化后的时间
+	string fmtTime; 
 	string deTime;
 
-	yyjson_mut_val* de;    //为了提升性能，非聚合模式下，输出前输出存在这儿
-	map<string, yyjson_mut_val*> items; //非val格式下的通用de   只支持1级json结构。key存储字段名称，val存储聚合后的值
+	yyjson_mut_val* de;   
+	map<string, yyjson_mut_val*> items; //custom de,when val is not used; only one level json structrue is supported. key store json key,val stores val after aggregate
 
 	DE_yyjson() {
 		time = 0;
@@ -259,7 +243,7 @@ struct DE_yyjson {
 class TAG_FILE_SET {
 public:
 	string tag;
-	vector<DB_FILE*> fileList; //按照时间顺序从前往后排序
+	vector<DB_FILE*> fileList; //sort by time asending
 
 	~TAG_FILE_SET(){
 		if (fileList.size() > 0)
@@ -272,13 +256,13 @@ public:
 	}
 };
 
-//使用位号和时间标注的一个数据集
-//位号可以是单个位号，或者是模糊匹配位号，表示多个位号
+//a data set specified by time and tag
+//key tag can be exact tag, or fuzzy tag with * to represent multi tags
 class DATA_SET {
 public:
-	string tag;  //系统位号
-	string relTag;  //本次查询需要返回的相对位号
-	string mpName;  //监控点名称
+	string tag;  // system tag
+	string relTag;  //rel tag to return in the query
+	string mpName;  
 	string colKey;
 
 
@@ -534,24 +518,18 @@ public:
 	//bool updateJsonObj(json& jOld, json& jNew);
 	void saveDEFile(string strTag, DB_TIME stTime, string deFileUrl) ;
 	bool saveDEFile(string tag, DB_TIME stTime, unsigned char* pData, int len,string suffix);
-//路径管理
+
+	//path management
 public:
-	//获得数据库文件db.json的路径
-	bool getDBFile(DB_TIME t, string tag, string fileName);
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
-	bool writeFile(string path, unsigned char* data, size_t len);
-	bool writeFile(string path, char* data, size_t len);
 	string changeCharForFileName(string s);
-	//获得数据元文件或者数据库文件的存储文件夹目录
 	string getPath_dataFolder(string strTag, DB_TIME date);
-	//获得数据元文件或者数据元文件夹的路径
 	string getPath_deFile(string strTag, DB_TIME stTime);
 	string getPath_dbRoot();
 	string getName_deFile(string tag, DB_TIME time);
 
 	string parseSuffix(string deFileUrl);
 	bool fileExist(string pszFileName);
-	void createFolderOfPath(string strFile);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 };
