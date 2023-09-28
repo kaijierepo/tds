@@ -129,7 +129,7 @@ struct TIME {
 			return false;
 		}
 	}
-	string toStr();
+	string toStr(bool enableMilli = true);
 	string toDateStr();
 	string toStampHMS();
 	string toTimeStr();

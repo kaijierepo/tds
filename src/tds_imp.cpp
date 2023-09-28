@@ -40,7 +40,7 @@ SOFTWARE.
 #include "logServer.h"
 #include "scriptManager.h"
 #include "version.h"
-#include "db.h"
+#include "tdb.h"
 #include "tdsWatchDog.h"
 #include "userMng.h"
 #include "webSrv.h"
@@ -336,6 +336,10 @@ bool TDS_imp::run(string cmdline)
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
+		::db.m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
+		::db.m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "curve_list.jdb");
+		::db.m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.jdb");
+		::db.m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 	}
 		

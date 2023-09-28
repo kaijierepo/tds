@@ -1118,17 +1118,7 @@ namespace timeopt {
 		return sec;
 	}
 
-	bool isRelative(string time)
-	{
-		if (time.find("d") != string::npos || time.find("h") != string::npos
-			|| time.find("m") != string::npos || time.find("s") != string::npos ||
-			time.find("D") != string::npos || time.find("H") != string::npos
-			|| time.find("M") != string::npos || time.find("S") != string::npos)
-		{
-			return true;
-		}
-		return false;
-	}
+
 
 	unsigned long duration2sec(string strTime)
 	{
@@ -1169,98 +1159,8 @@ namespace timeopt {
 		return dwSecond;
 	}
 
-	int dhmsSpan2Seconds(string timeSpan) {
-		string time1 = timeSpan;
-		string strDay = "", strH = "", strM = "", strS = "";
-		int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-		size_t pos = time1.find("d");
-		if (pos == string::npos)
-			pos = time1.find("D");
-		if (pos != string::npos) {
-			strDay = time1.substr(0, pos);
-			time1 = time1.erase(0, pos + 1);
-			n1 = (int) (atof(strDay.c_str()) * 24 * 3600);
-		}
-		pos = time1.find("h");
-		if (pos == string::npos)
-			pos = time1.find("H");
-		if (pos != string::npos) {
-			strH = time1.substr(0, pos);
-			time1 = time1.erase(0, pos + 1);
-			n2 = (int)(atof(strH.c_str()) * 3600);
-		}
-		pos = time1.find("m");
-		if (pos == string::npos)
-			pos = time1.find("M");
-		if (pos != string::npos) {
-			strM = time1.substr(0, pos);
-			time1 = time1.erase(0, pos + 1);
-			n3 = (int)(atof(strM.c_str()) * 60);
-		}
-		pos = time1.find("s");
-		if (pos == string::npos)
-			pos = time1.find("S");
-		if (pos != string::npos) {
-			strS = time1.substr(0, pos);
-			time1 = time1.erase(0, pos + 1);
-			n4 = (int)atof(strS.c_str());
-		}
 
-		return n1 + n2 + n3 + n4;
-	}
-
-
-	string rel2abs(string time)
-	{
-		string strTime1 = time;
-		if (isRelative(time)) {
-			//相对时间区间模式
-			string time1 = strTime1;
-			string strDay = "", strH = "", strM = "", strS = "";
-			int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-			size_t pos = time1.find("d");
-			if (pos == string::npos)
-				pos = time1.find("D");
-			if (pos != string::npos) {
-				strDay = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n1 = (int)atof(strDay.c_str()) * 24 * 3600;
-			}
-			pos = time1.find("h");
-			if (pos == string::npos)
-				pos = time1.find("H");
-			if (pos != string::npos) {
-				strH = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n2 = (int)atof(strH.c_str()) * 3600;
-			}
-			pos = time1.find("m");
-			if (pos == string::npos)
-				pos = time1.find("M");
-			if (pos != string::npos) {
-				strM = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n3 = (int)atof(strM.c_str()) * 60;
-			}
-			pos = time1.find("s");
-			if (pos == string::npos)
-				pos = time1.find("S");
-			if (pos != string::npos) {
-				strS = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n4 = (int)atof(strS.c_str());
-			}
-			TIME stNow;
-			timeopt::now(&stNow);
-			time_t endTime = timeopt::SysTime2Unix(stNow);
-			time_t startTime = endTime - n1 - n2 - n3 - n4;
-			TIME  stStart = timeopt::Unix2SysTime(startTime);
-			string strNow = timeopt::stTimeToStr(stNow);
-			string strStart = timeopt::stTimeToStr(stStart);
-			time = strStart + "~" + strNow;
-		}
-		return time;
-	}
+	
 
 	string st2strForFile(TIME t, bool enableMS)
 	{
@@ -2157,9 +2057,9 @@ void TIME::setHMS(HMS t)
 	wMilliseconds = t.wMilliseconds;
 }
 
-string TIME::toStr()
+string TIME::toStr(bool enableMilli)
 {
-	return timeopt::st2str(*this);
+	return timeopt::st2str(*this,enableMilli);
 }
 
 string TIME::toDateStr()

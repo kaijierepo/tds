@@ -5,10 +5,10 @@
 #include "mp.h"
 #include  "reverseInterface.h"
 #include "logger.h"
-#include "db.h"
+#include "tdb.h"
 #include <json.hpp>
 #include "ioSrv.h"
-#include "db.h"
+#include "tdb.h"
 #include "logger.h"
 #include "ioChan.h"
 #include "userMng.h"
@@ -284,7 +284,9 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	{
 		string tag = params["tag"];
 		string time = params["time"];
-		string path = db.m_path + db.getPath_deFile(tag, timeopt::str2st(time));
+		DB_TIME dbt;
+		dbt.fromStr(time);
+		string path = db.m_path + db.getPath_deFile(tag, dbt);
 
 		path = str::replace(path, "/", "\\");
 		wstring ws = charCodec::utf8_to_utf16(path);
@@ -814,22 +816,22 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			else
 			{
 				string tag = params["tag"].get<string>();
-				TIME tNow;
+				DB_TIME tNow;
 				if (params.contains("time")) {
 					string time = params["time"].get<string>();
 					if (!timeopt::isValidTimeStr(time)) {
 						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
 						return true;
 					}
-					tNow = timeopt::str2st(time);
+					tNow.fromStr(time);
 				}
 				else {
-					tNow = timeopt::now();
+					tNow.setNow();
 				}
 		
 	
 				json jDE;
-				jDE["time"] = timeopt::st2str(tNow, true);
+				jDE["time"] = tNow.toStr(true);
 				jDE.erase("tag");
 				string sDe = jDE.dump();
 				db.Insert(tag, tNow, sDe);
@@ -882,7 +884,9 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		{
 			string tag = params["tag"].get<string>();
 			string time = params["time"].get<string>();
-			if (db.Delete(tag, timeopt::str2st(time)))
+			DB_TIME dbt;
+			dbt.fromStr(time);
+			if (db.Delete(tag,dbt))
 				result = "\"ok\"";
 			else
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "data element not found");

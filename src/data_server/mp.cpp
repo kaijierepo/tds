@@ -5,7 +5,7 @@
 #include "prj.h"
 #include "as.h"
 #include "rpcHandler.h"
-#include "db.h"
+#include "tdb.h"
 #include "logger.h"
 #include "ioSrv.h"
 #include "ioChan.h"
@@ -789,7 +789,10 @@ void MP::saveToDB() {
 	if(m_curFileData != nullptr)
 		jDE["fileData"] = m_curFileData;
 	string sDe = jDE.dump();
-	db.Insert(getTag().c_str(), m_stDataLastUpdate,sDe);
+
+	DB_TIME dbt;
+	dbt.fromStr(m_stDataLastUpdate.toStr(true));
+	db.Insert(getTag().c_str(), dbt,sDe);
 	m_dbFileLock.unlock();
 }
 

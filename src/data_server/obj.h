@@ -29,7 +29,7 @@ SOFTWARE.
 #pragma once
 #include "json.hpp"
 
-#include "db.h"
+#include "tdb.h"
 using namespace std;
 using json = nlohmann::json;
 
@@ -180,7 +180,7 @@ struct OBJ_STATIS {
 
 
 class MP;
-class database;
+class TDB;
 class OBJ
 {
 public:

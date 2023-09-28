@@ -30,7 +30,7 @@ SOFTWARE.
 #include "logger.h"
 #include "tds_imp.h"
 #include "tdsWatchDog.h"
-#include "db.h"
+#include "tdb.h"
 
 #ifdef ENABLE_TOOLS
 #include "tools/tcpHub.h"
@@ -77,20 +77,32 @@ void clearZlmNoReaderPusher() {
 					if (jM["totalReaderCount"].get<int>() == 0) {
 						if (jM["originTypeStr"] == "rtsp_push") {
 							string tag = jM["stream"];
-							LOG("[流媒体  ]位号:%s 无人观看，关闭推流",tag.c_str());
-							std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-							RPC_SESSION rpcSess;
-							rpcSess.remoteAddr = "127.0.0.1";
-							rpcSess.remotePort = 0;
-							pSession->setRpcSession(&rpcSess);
-							json jReq;
-							jReq["method"] = "closeStream";
-							json jParams;
-							jParams["tag"] = tag;
-							jReq["id"] = timeopt::nowStr();
-							jReq["params"] = jParams;
-							string sReq = jReq.dump();
-							rpcSrv.handleRpcCallAsyn(sReq, pSession, false);
+							MP* pmp = prj.GetMPByTag(tag);
+
+							if (pmp) {
+								if (pmp->m_srcStreamFetch == "ondemand") {
+									std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+									RPC_SESSION rpcSess;
+									rpcSess.remoteAddr = "127.0.0.1";
+									rpcSess.remotePort = 0;
+									pSession->setRpcSession(&rpcSess);
+									json jReq;
+									jReq["method"] = "closeStream";
+									json jParams;
+									jParams["tag"] = tag;
+									jReq["id"] = timeopt::nowStr();
+									jReq["params"] = jParams;
+									string sReq = jReq.dump();
+									rpcSrv.handleRpcCallAsyn(sReq, pSession, false);
+									LOG("[流媒体  ]位号:%s 无人观看，取流模式为:按需取流,关闭推流", tag.c_str());
+								}
+								else {
+									LOG("[流媒体  ]位号:%s 无人观看，取流模式为:持续取流,保持媒体源连接", tag.c_str());
+								}
+							}
+							else {
+								LOG("[流媒体  ]位号:%s 无人观看，没有找到对应的监控点", tag.c_str());
+							}
 						}
 					}
 				}
@@ -467,7 +479,7 @@ int main(int argc, char** argv)
 
 		rpcSrv.cleanRpcSession();
 
-		if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 10) {
+		if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 30) {
 			clearZlmNoReaderPusher();
 			zlmLastClearPusherTime = timeopt::now();
 		}

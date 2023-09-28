@@ -5,7 +5,7 @@
 #include "ioSrv.h"
 #include "rpcHandler.h"
 #include "webSrv.h"
-#include "db.h"
+#include "tdb.h"
 
 
 bool isBatchLink(string addr)
