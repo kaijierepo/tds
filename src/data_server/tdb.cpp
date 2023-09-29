@@ -580,7 +580,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			
 
 			//set time
-			string_view szTime = yyjson_mut_get_str(deyy.time);
+			string szTime = yyjson_mut_get_str(deyy.time);
 			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
 			yyjson_mut_val* timeVal;
 			 
@@ -736,7 +736,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 
 			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
 			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
+				string valStr = yyjson_get_str(pDeSrcVal);
 				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
 			}
 			else {
@@ -752,7 +752,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 
 			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) 
 			{
-				string_view valStr = yyjson_get_str(pDeSrcVal);
+				string valStr = yyjson_get_str(pDeSrcVal);
 				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
 			}
 			else {
@@ -772,7 +772,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			double dbFirst,dbLast = 0;
 			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR)
 			{
-				string_view valStr = yyjson_get_str(pDeSrcValFirst);
+				string valStr = yyjson_get_str(pDeSrcValFirst);
 				dbFirst = atof(valStr.data());
 			}
 			else {
@@ -780,7 +780,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			}
 			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR)
 			{
-				string_view valStr = yyjson_get_str(pDeSrcValLast);
+				string valStr = yyjson_get_str(pDeSrcValLast);
 				dbLast = atof(valStr.data());
 			}
 			else {
@@ -810,7 +810,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string_view valStr = yyjson_get_str(pDeSrcVal);
+					string valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
 				}
 				else {
@@ -835,7 +835,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string_view valStr = yyjson_get_str(pDeSrcVal);
+					string valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
 				}
 				else {
@@ -860,7 +860,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string_view valStr = yyjson_get_str(pDeSrcVal);
+					string valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
 				}
 				else {
@@ -884,7 +884,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string_view valStr = yyjson_get_str(pDeSrcVal);
+					string valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
 				}
 				else {
@@ -904,7 +904,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
-					string_view valStr = yyjson_get_str(pDeSrcVal);
+					string valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
 				}
 				else {
@@ -948,7 +948,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
-			string_view szTime = yyjson_mut_get_str(deyy.time);
+			string szTime = yyjson_mut_get_str(deyy.time);
 
 			//check if data row of this time is already exist
 			yyjson_mut_val* jRecord;
@@ -1006,7 +1006,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 			yyjson_mut_val* key, * val;
 			yyjson_mut_obj_foreach(curRec, idx, max, key, val) {
 				if (yyjson_mut_is_null(val)) {
-					string_view szKey = yyjson_mut_get_str(key);
+					string szKey = yyjson_mut_get_str(key);
 					yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
 					yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
 					yyjson_mut_obj_put(curRec, key, curVal);
@@ -1457,7 +1457,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 				//generate standard time stamp, then do match
 				yyjson_val* yyTime = yyjson_obj_get(de, "time");
-				string_view szTime = yyjson_get_str(yyTime);
+				string szTime = yyjson_get_str(yyTime);
 				const char* pHms = nullptr;
 				int hmsLen = 0;
 				if (szTime.length() == 19) //2020-02-02 02:02:02
@@ -1553,7 +1553,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
 						if (deSel.isValTypeNumber()) 
 						{
-							string_view valStr = yyjson_mut_get_str(deyy.val);
+							string valStr = yyjson_mut_get_str(deyy.val);
 							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
 						}
 					}
