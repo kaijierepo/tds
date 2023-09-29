@@ -182,7 +182,7 @@ namespace DB_TAG {
 		if (root == "")
 			return tag;
 
-		//tag是相对于root的相对位号
+		//tag is a relative tag to root
 		if (tag == "")
 			return root;
 
@@ -214,9 +214,9 @@ namespace DB_FS {
 		return false;
 	}
 
-	//带后缀 .XXX 作为文件路径
-	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
+
+	//do not use a file path without a suffix
+	//filesystem::path use wstring utf16 ,compatible with windows and linux
 	void createFolderOfPath(string strFile)
 	{
 		strFile = replaceStr(strFile, "\\", "/");
@@ -226,7 +226,7 @@ namespace DB_FS {
 
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
-		if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
+		if (iDotPos != string::npos && iDotPos > iSlashPos)//is a file
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
@@ -282,7 +282,7 @@ std::string formatStr(const char* pszFmt, ...)
 	va_start(args, pszFmt);
 	{
 		int nLength = _db_vscprintf_cross(pszFmt, args);
-		nLength += 1;  //上面返回的长度是包含\0，这里加上
+		nLength += 1;  //length return contains \0 in the end
 		std::vector<char> vectorChars(nLength);
 		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
 		str.assign(vectorChars.data());
@@ -317,7 +317,7 @@ string TDB::getName_deFile(string tag, DB_TIME time)
 	return timeStamp;
 }
 
-//8个不能做文件名的非法字符
+//8 illigal filename char
 string ic1 = formatStr("[%02X]", '\\');
 string ic2 = formatStr("[%02X]", ':');
 string ic3 = formatStr("[%02X]", '*');
@@ -328,7 +328,7 @@ string ic7 = formatStr("[%02X]", '>');
 string ic8 = formatStr("[%02X]", '|');
 string ic9 = formatStr("[%02X]", '/');
 
-//对9个文件名非法字符进行转义  / \ : * ? " < > |
+//escple illigal filename char  / \ : * ? " < > |
 string TDB::changeCharForFileName(string s) {
 	string out;
 	for (int i = 0; i < s.length(); i++)
@@ -419,7 +419,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
 
 
-	//写入数据元附带的文件数据
+	//write file data
 	yyjson_val* yyv_dataFile = yyjson_obj_get(yyDe, "dataFile");
 	if (yyv_dataFile)
 	{
@@ -438,7 +438,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 			string type = yyjson_get_str(yyv_type);
 			string data = yyjson_get_str(yyv_data);
 			if (type == "jpg") {
-				//兼容DATA URI Scheme 形如 data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 的资源链接
+				//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 				size_t startPos = 0;
 				if (data.find("data:") == 0) {
 					startPos = data.find(",");
@@ -462,8 +462,8 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	}
 
 
-	//写入数据元
-	//删除文件的数据域，只留下索引
+	//write de
+	//delete file data,only file index
 	yyjson_mut_val* yymv_dataFile = yyjson_mut_obj_get(yymDe, "dataFile");
 	if (yymv_dataFile) {
 		size_t idx = 0;
@@ -483,7 +483,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 		const char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 		if (!DB_FS::writeFile(dlPath,(unsigned char*) s,len))
 		{
-			printf("[error]写入数据库文件失败,路径:%s,数据:%s", dlPath.c_str(), s);
+			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
 		}
 	}
 	else
@@ -526,20 +526,15 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	yyjson_mut_doc_free(mdoc);
 }
 
-//位号集合的时间截面
-struct TAG_SET_TIME_SECTION {
-	
-};
-
 struct DE_TEMP {
 	yyjson_mut_val* de;
-	string sortVal;  //用于本次排序的字段的数值
+	string sortVal; 
 
 };
 
 
-//yyjson调试查看不方便，必要时使用此类函数打印出json进行调试
-//mut_val 必须拷贝后再put到新的 mut_obj里面，没有拷贝直接put原来get到的 mut_val，会把原来的值给改掉
+//for yyjson debug, dump json string to debug
+//copy mut_val before put in to a new mut_obj , otherwise the origin val will be changed
 string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 	printf("********time section dump*********");
 	if (timeSection == nullptr)
@@ -557,15 +552,14 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
-	//返回的数据元是否需要携带tag字段
 	bool withTag = tagDBFileSet.size() > 1 ? true : false;
 	if (deSel.tagSel.getTag)
 		withTag = true;
 
-	map<string, map<string, yyjson_mut_val*>> timeSectionSeries; //时间截面序列，每个时间界面都要补齐各个位号的值
+	map<string, map<string, yyjson_mut_val*>> timeSectionSeries; 
 
 
-	//生成输出de
+	//generate output de
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
 		DATA_SET& fSet = *tagDBFileSet[tagIdx];
@@ -575,17 +569,17 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
-			//创建一个输出de
+			//create a output de
 			yyjson_mut_val* jRecord;
-			if (deSel.bAggr) { //聚合查询重新生成yyjson对象
+			if (deSel.bAggr) { //create a mut obj in a aggr select mode
 				jRecord = yyjson_mut_obj(mut_doc);
 			}
-			else { //非聚合查询直接拷贝，提高速度
+			else { //copy directly for speed in a none aggr select mode
 				jRecord = deyy.de;
 			}
 			
 
-			//填入time字段
+			//set time
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
 			yyjson_mut_val* timeVal;
@@ -598,7 +592,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 
 
-			//填入time以外的字段
+			//set keys except time
 			if (deyy.items.size()>0) {
 				for (auto& i : deyy.items) {
 					yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, i.first.c_str());
@@ -606,17 +600,17 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 				}
 			}
 
-			//填入val
+			//set val
 			if (deyy.val != nullptr) {
 				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
 				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
 			}
 
-			//填入tag字段
+			//set tag
 			if (withTag)
 			{
-				//当进行多位号搜索时，需要加入tag标签
-				//relTag指向的变量在write_doc之前不能被销毁
+				//in a multi tag selection ,tag must be set
+				//tagAlias memory can not release before write_doc,otherwise causes crash
 				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
 				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
 				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
@@ -642,7 +636,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	}
 
 
-	//时间截面位号补齐。 并设置补全de的时间
+	//time section fill,set time of the filled de
 	if (deSel.timeFill) {
 		int addDeCount = 0;
 		map<string, yyjson_mut_val*>* lastSection = nullptr;
@@ -654,15 +648,13 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 				string& tag = fSet.tag;
 
 				map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
-				if (j == timeSection.end()) { //该时间截面没有该位号的数据，需要进行补齐
+				if (j == timeSection.end()) { //tag does not have data in this time section,need to be filled
 					if (lastSection != nullptr) {
 						map<string, yyjson_mut_val*>::iterator k = lastSection->find(tag);
 						if (k != lastSection->end()) {
-							//创建一个输出de
 							yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
 
-
-							//从当前截面的de拷贝时间。一定有1个数据，使用第一个
+							//a de must exist in this time section,use the first de to get the time of this time section
 							yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
 							yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
 							yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
@@ -672,7 +664,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 							yyjson_mut_val* jValRefRec = k->second;
 							yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
-							yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //此处一定要copy一次，不可以把yyValSrc直接put到obj里面去，否则序列化的时候数据会错乱，可能指针指向的对象是链表的一个节点，如果同时在两个obj中，yyjson使用链表输出就会错乱
+							yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
 							yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
 							yyjson_mut_obj_put(jRecord, valKey, yyVal);
 
@@ -694,7 +686,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	}
 	
 
-	//排序输出de并输出
+	//sort de and output
 	for (auto& i : timeSectionSeries) {
 		map<string, yyjson_mut_val*>& timeSection = i.second;
 		for (auto& j : timeSection) {
@@ -723,90 +715,13 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			}
 
 			sortFlag.sFlag += i.first + j.first + std::to_string(result.rowCount);
-			mapRlt[sortFlag] = jRec; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+			mapRlt[sortFlag] = jRec; 
 		}
 	}
 	
 	return true;
 }
 
-//bool database::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
-//{
-//	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
-//	//返回的数据元是否需要携带tag字段
-//	bool withTag = tagDBFileSet.size() > 1 ? true : false;
-//	if (deSel.tagSel.getTag)
-//		withTag = true;
-//
-//
-//	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-//	{
-//		TAG_DB_DATA& fSet = *tagDBFileSet[tagIdx];
-//		string& tagAlias = fSet.colKey;
-//		string& tag = fSet.tag;
-//
-//		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
-//			DE_yyjson& deyy = *fSet.m_afterAggr[j];
-//
-//			string_view szTime = yyjson_mut_get_str(deyy.time);
-//
-//			yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);;
-//
-//			//time字段
-//			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
-//			yyjson_mut_val* timeVal;
-//			if (deSel.timeSel.timeFmt == "") {
-//				timeVal = yyjson_mut_str(mut_doc, szTime.data());
-//			}
-//			else {
-//				deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
-//				timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
-//			}
-//	
-//
-//			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
-//
-//			yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
-//			yyjson_mut_obj_put(jRecord, valKey, deyy.val);
-//
-//
-//			if (withTag)
-//			{
-//				//当进行多位号搜索时，需要加入tag标签
-//				//relTag指向的变量在write_doc之前不能被销毁
-//				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
-//				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
-//				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
-//			}
-//
-//			string sortFlag = "";
-//			if (deSel.sortKey.length() > 0) {
-//				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRecord, m_dbFmt.deItemKey_value.c_str());
-//				if (yyjson_mut_is_obj(yyVal)) {
-//					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
-//					if (yyjson_mut_is_str(yySortKey)) {
-//						sortFlag = yyjson_mut_get_str(yySortKey);
-//					}
-//					else if (yyjson_mut_is_num(yySortKey)) {
-//						double f = yyjson_mut_get_num(yySortKey);
-//						sortFlag = str::fromFloat(f);
-//					}
-//				}
-//
-//			}
-//
-//			mapRlt[sortFlag + szTime.data() + tag + std::to_string(result.rowCount)] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
-//			result.rowCount++;
-//
-//			if (deSel.timeSel.AmountMatch(result.rowCount))
-//				return true;
-//		}
-//	}
-//
-//	return true;
-//}
-
-//此处 src 是整个数据元，是一个对象
 bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
 {
 	for (auto& i : aggrOpt) {
@@ -835,7 +750,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) 
 			{
 				string_view valStr = yyjson_get_str(pDeSrcVal);
 				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
@@ -855,7 +770,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			yyjson_val* pDeSrcValLast = yyjson_obj_get(pDeSrcLast, aggrKey.c_str());
 
 			double dbFirst,dbLast = 0;
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR) //指定了输出类型
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR)
 			{
 				string_view valStr = yyjson_get_str(pDeSrcValFirst);
 				dbFirst = atof(valStr.data());
@@ -863,7 +778,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else {
 				dbFirst = yyjson_get_num(pDeSrcValFirst);
 			}
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR) //指定了输出类型
+			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR)
 			{
 				string_view valStr = yyjson_get_str(pDeSrcValLast);
 				dbLast = atof(valStr.data());
@@ -879,7 +794,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else if (aggrType == "diff.last-first") {
 				dbDiff = dbLast - dbFirst;
 			}
-			//double的减法会造成精度丢失，通过格式化字符串转换一次解决精度丢失问题
+			//double substraction caused loss of accuracy,use formatStr to fix this problem
 			string sDbDiff = formatStr("%lf", dbDiff);
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
@@ -893,7 +808,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				yyjson_mut_val* pAggrVal = nullptr;
 				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -918,7 +833,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -943,7 +858,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -967,7 +882,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -987,7 +902,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				yyjson_val* pDeSrc = src.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
 				{
 					string_view valStr = yyjson_get_str(pDeSrcVal);
 					db = atof(valStr.data());
@@ -1000,7 +915,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				if (db < dbMin)
 					dbMin = db;
 			}
-			double dbDiff = dbMax - dbMin; //double的减法会造成精度丢失，通过格式化字符串转换一次解决精度丢失问题
+			double dbDiff = dbMax - dbMin; 
 			string sDbDiff = formatStr("%lf", dbDiff); 
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
@@ -1025,39 +940,39 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 
 	
-	//组合成数据行
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 	{
 		DATA_SET& fSet = *tagDBFileSet[tagIdx];
 
-		//某个位号的所有聚合结果，比如共30天按天聚合，那就是30天的结果
+		//aggr result of one tag. 
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
 			string_view szTime = yyjson_mut_get_str(deyy.time);
 
-			//检查该时间的行对象是否已经存在
+			//check if data row of this time is already exist
 			yyjson_mut_val* jRecord;
 			SORT_FLAG sf;
 			sf.sFlag = szTime.data();
 			map<SORT_FLAG, yyjson_mut_val*>::iterator itRecord = mapRlt.find(sf);
-			if (itRecord != mapRlt.end()) { //已存在获得该行
+			if (itRecord != mapRlt.end()) { //get this row if exist
 				jRecord = itRecord->second;
 			}
-			else { //不存在则新创建一行
+			else  //create row if not exist
+			{
 				jRecord = yyjson_mut_obj(mut_doc);
-				//time字段
+				//time
 				yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
 				yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, szTime.data());
 				yyjson_mut_obj_put(jRecord, timeKey, timeVal);
-				//位号字段
+				//tag
 				for (int i = 0; i < tagDBFileSet.size(); i++) {
 					yyjson_mut_val* tagColKeyInit = yyjson_mut_str(mut_doc, tagDBFileSet[i]->colKey.c_str());
 					yyjson_mut_val* tagColValInit = yyjson_mut_null(mut_doc);
 					bool putted = yyjson_mut_obj_put(jRecord, tagColKeyInit, tagColValInit);
 					if (!putted)
 					{
-						printf("无法插入字段");
+						printf("can not insert key to yyjson obj");
 					}
 				}
 
@@ -1068,10 +983,10 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 				recPair.second = jRecord;
 				auto insertRet = mapRlt.insert(recPair);
 				itRecord = insertRet.first;
-				mapRlt[sftmp] = jRecord; //不同位号的数据按照时间顺序排序.允许 同一个位号多个数据源时间点相同
+				mapRlt[sftmp] = jRecord; 
 			}
 
-			//给当前行添加 当前位号数据作为一列
+			//set colume data of this row, colume name is fSet.colKey,colume data is de value
 			yyjson_mut_val* tagColKey = yyjson_mut_str(mut_doc, fSet.colKey.c_str());
 			yyjson_mut_obj_put(jRecord, tagColKey, deyy.val);
 
@@ -1081,7 +996,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	}
 
 
-	//数据补齐
+	//time section Fill
 	yyjson_mut_val* lastRec = nullptr;
 	yyjson_mut_val * curRec = nullptr;
 	for (auto& rec : mapRlt) {
@@ -1115,7 +1030,6 @@ bool DB_FILE::loadFile()
 		return false;
 	}
 
-	//从数据库的原始json数据。
 	yyjson_read_err err = { 0 };
 	doc = yyjson_read_opts((char*)data.c_str(), data.length(),0,nullptr,&err);
 	if (err.code != YYJSON_READ_SUCCESS) {
@@ -1140,11 +1054,9 @@ bool TDB::Select_yyjson_deFile(string& s)
 bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	bool bRet = true;
-	//获取需要加载数据的位号集合
 	vector<string> tagSet = deSel.tagSel.tagSet;
 
-
-	//加载原始文件数据。每个位号，都对应一些文件，加载这些文件数据
+	//load file data
 	vector<TAG_FILE_SET*> tagFileSet;
 	for (int i = 0; i < tagSet.size(); i++)
 	{
@@ -1154,24 +1066,22 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	Select_Step_loadFile(deSel, tagFileSet, result);
 
-	//中间处理阶段的数据集，最后需要全部释放
+	//data buff in processing steps, all will be released in the end
 	vector<vector<DATA_SET*>*>  dataSetBuff;
 
-	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr; //数据集计算结果以数据集的方式返回
-	string sCalcResult; //数据集计算结果以简单字符串方式返回
-	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; //key是排序标记，一般由sortFlag和时间等组合而成
+	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr; 
+	string sCalcResult; //calc result dumped to string
+	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; 
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
 
 	if (deSel.deType == "curve") {
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
-			string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+			string& tag = fSet.tag; // yyjson do not copy string,src string can not be release,use string& instead of a local variant
 ;
-			//加载每个数据文件中的数据
 			for (int i = 0; i < fSet.fileList.size(); i++)
 			{
-				//加载数据元列表
 				DB_FILE* pdf = fSet.fileList[i];
 				SORT_FLAG sf;
 				sf.sFlag = formatStr("%d%d", tagIdx, i);
@@ -1181,20 +1091,20 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 	}
 	else {
-		vector<DATA_SET*>* dataSet;  //数据集,永远存储当前处理后的最新的数据集
+		vector<DATA_SET*>* dataSet;  //current processing dataset ,stores current processed result
 
-		//初始加载数据集。 dataSet1 初始化单个位号的 数据内存对象和查询参数
+		//orgin data set    dataSet1 
 		vector<DATA_SET*>* dataSet1 = new vector<DATA_SET*>;
 		dataSet = dataSet1;
-		dataSetBuff.push_back(dataSet1);//新增一个数据集，立即放到缓存里，后面需要释放
+		dataSetBuff.push_back(dataSet1);//add to buff list when create a new dataset,will be released in the end
 		for (int i = 0; i < tagSet.size(); i++)
 		{
-			//生成相对位号
+			//get relTag
 			DATA_SET& fSet = *(new DATA_SET());
 			fSet.tag = tagSet[i];
 			fSet.relTag = DB_TAG::trimRoot(tagSet[i], deSel.tagSel.m_rootTag);
 
-			//生成位号名称
+			//generate tag name
 			if (deSel.vecTagLable.size() == tagSet.size()) {
 				fSet.colKey = deSel.vecTagLable[i];
 			}
@@ -1215,32 +1125,32 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 				}
 			}
 
-			//本位号查询参数
-			if (deSel.vecAggregate.size() == tagSet.size()) { //多位号聚合模式
+			//query param of this tag
+			if (deSel.vecAggregate.size() == tagSet.size()) { //muti tag aggr mode
 				fSet.aggregate = deSel.vecAggregate[i];
 			}
-			else if (deSel.aggregate.size() > 0) {//单位号聚合
+			else if (deSel.aggregate.size() > 0) {//single tag aggr mode
 				fSet.aggregate = deSel.aggregate;
 			}
 
 			dataSet->push_back(&fSet);
 		}
 
-		//获得选中的数据元. 从文件数据加载到数据集
+		//get seleted de, parse files in to de dataset
 		bRet = Select_Step_loadDataElem(deSel, tagFileSet,*dataSet, result, rlt_mut_doc);
 		if (!bRet)
 			return false;
 
-		//如果不进行位号分组，合并（默认都进行位号分组）
+		//if not groupby tag, merge dataset  (groupby tag is the default behavior)
 		if (!deSel.groupByTag) {
 			DATA_SET& fSet = *(new DATA_SET());
 			fSet.tag = "*";
-			fSet.aggregate = deSel.aggregate;  //不进行位号分组一定是单位号聚合，把所有的位号看成1个位号
+			fSet.aggregate = deSel.aggregate;  //not groupby tag is like single tag aggr,treat all tag as one tag
 
 			if (deSel.groupByTime) {
 				for (int i = 0; i < dataSet->size(); i++) {
 					DATA_SET& fs = *dataSet->at(i);
-					//找出各个位号的时间分组，并进行合并
+					//find out time group of all tag,and merge them
 					for (auto& g : fs.m_groupedBeforeAggr) {
 						if (fSet.m_groupedBeforeAggr.find(g.first) != fSet.m_groupedBeforeAggr.end()) {
 							vector<yyjson_val*>& vec = fSet.m_groupedBeforeAggr[g.first];
@@ -1265,10 +1175,10 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 
 
-		//执行聚合
+		//do aggr
 		Select_Step_doAggregate(deSel, *dataSet, rlt_mut_doc);
 
-		//输出结果行
+		//output result rows
 		if (deSel.tagAsColume) {
 			Select_Step_outputRows_MultiCol(deSel, *dataSet, result, rlt_mut_doc);
 		}
@@ -1276,7 +1186,7 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 			Select_Step_outputRows_SingleCol_timeFill(deSel, *dataSet, result, rlt_mut_doc);
 		}
 
-		//结果行二次计算
+		//calc
 		if (deSel.calc == "diff") {
 			int idx = 0;
 			yyjson_mut_val* lastVal;
@@ -1322,8 +1232,8 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	
 
-	//使用新的yyjson doc对象输出结果. 将多个位号，多个时间段的原始数据合并成1个json查询结果对象
-	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); //创建一个数组
+	//use new yyjson doc to output. merge data of multi tag,multi time range into a json result
+	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); 
 	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 
 	for (auto& i : mapRlt)
@@ -1335,7 +1245,7 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	
 	size_t len = 0;
-	if (deSel.calc != ""){//返回数据集计算结果
+	if (deSel.calc != ""){
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 			//size_t len = strlen(p);
@@ -1348,17 +1258,17 @@ bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
 			result.calcResult = "";
 		}
 	}
-	else { //返回数据集
-		//如果此处p返回null，应该是rlt_mut_doc当中 指向的string类型可能是临时变量，已经被释放了
+	else {
+		//if p==null，maybe int rlt_mut_doc,some string type pointed to local variable and is already released
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 		//size_t len = strlen(p);
 		result.dataList = p;
 	}
 	result.rowCount = mapRlt.size();
 
-	//释放结果
+	//release result
 	yyjson_mut_doc_free(rlt_mut_doc);
-	//释放源
+	//release src
 	for (int i = 0; i < dataSetBuff.size(); i++)
 	{
 		vector<DATA_SET*>& p = *dataSetBuff[i];
@@ -1378,8 +1288,6 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 	{
 		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
-
-		//无周期范围选择，且数据集为单个，跳过其他文件读取，提高性能
 		if (deSel.timeSel.timeSetType == TSM_First && deSel.timeSel.periodType == PT_None) {
 			time_t loadTime = deSel.timeSel.startTime;
 			for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
@@ -1408,13 +1316,13 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				break;
 			}
 		}
-		else { //选择单个数据元 TSM_ALL && PT_NONE
+		else { 
 			
 			bool bFirstLastAggr = false;
 			if (deSel.aggregate.size() > 0){
 				map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
 				string& aggrType = aggrOpt->second;
-				if (deSel.groupByTime == false) //不按时间分组，取全部时间头尾，此种查询进行一次性能优化
+				if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
 				{
 					if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
 						bFirstLastAggr = true;
@@ -1423,7 +1331,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 			}
 
 			if (bFirstLastAggr) {
-				//读取第一个文件
+				//read first file
 				time_t loadTime = deSel.timeSel.startTime;
 				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 				{
@@ -1436,7 +1344,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					fSet.fileList.push_back(pdf);
 					break;
 				}
-				//读取最后一个文件
+				//read last file
 				loadTime = deSel.timeSel.endTime;
 				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 				{
@@ -1470,11 +1378,11 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 		if (fSet.fileList.size() == 0)
 			continue;
-		//头尾两个数据文件需要进行时间范围检查，中间的不需要
+		//the first and last file need time range check when load de,the middles do not need
 		fSet.fileList[0]->boundaryFile = true;
 		fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
 
-		//数据只有1天的，不进行下采样
+		//do not down sample when time is short than one day 
 		if (fSet.fileList.size() <= 1)
 			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
 
@@ -1489,14 +1397,12 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 	{
 		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 		DATA_SET& fSetOut = *outputDataSet[tagIdx];
-		string& tag = fSet.tag; // yyjson 在创建字符串对象的时候，不复制字符串，源字符串内存不能释放.因此使用string&.
+		string& tag = fSet.tag; // string& instead of local var. yyjson do not copy
 		string& relTag = fSetOut.relTag;
 
 
-		//加载每个数据文件中的数据
 		for (int i = 0; i < fSet.fileList.size(); i++)
 		{
-			//加载数据元列表
 			DB_FILE* pdf = fSet.fileList[i];
 
 			size_t idx, max;
@@ -1508,7 +1414,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
-			if (type == YYJSON_TYPE_OBJ) { //带描述信息的文件
+			if (type == YYJSON_TYPE_OBJ) { //file with desc
 				deList = yyjson_obj_get(pdf->root, "data");
 			}
 			else if (type == YYJSON_TYPE_ARR) {
@@ -1520,7 +1426,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 
 			yyjson_arr_foreach(deList, idx, max, de) {
-				//兼容将数字存储成字符串的问题，当有聚合请求时，自动转换字符串为数字类型，返回提示信息
+				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
 				if (idx == 0 && deSel.bAggr)
 				{
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
@@ -1543,24 +1449,23 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 
-				//下采样机制。每downsampling interval 输出1个数据点;例如dsi=3,则输出第0个，第3个，第6个。。。
-				//最后1个下采样间隔全部输出
+				//every downsampling interval output one de; dsi=3,output 0 3 6...
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
 				{
 					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
 				}
 
-				//先生成完整时间戳，再进行match判断
+				//generate standard time stamp, then do match
 				yyjson_val* yyTime = yyjson_obj_get(de, "time");
 				string_view szTime = yyjson_get_str(yyTime);
 				const char* pHms = nullptr;
 				int hmsLen = 0;
-				if (szTime.length() == 19) //2020-02-02 02:02:02格式
+				if (szTime.length() == 19) //2020-02-02 02:02:02
 				{
-					pHms = szTime.data() + 11;//取出时分秒
+					pHms = szTime.data() + 11;//get hour min sec
 					hmsLen = 8;
 				}
-				else if (szTime.length() == 23) {//2020-02-02 02:02:02.222 格式
+				else if (szTime.length() == 23) {//2020-02-02 02:02:02.222
 					pHms = szTime.data() + 11;
 					hmsLen = 12;
 				}
@@ -1569,7 +1474,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					pHms = szTime.data();
 					hmsLen = 8;
 				}
-				memcpy(deTime.data() + 11, pHms, hmsLen);//取出时分秒
+				memcpy(deTime.data() + 11, pHms, hmsLen);//get hour min sec
 
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
@@ -1582,7 +1487,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					lastDeTime = currDeTime;
 				}
 
-				//条件过滤器，javascript脚本过滤
+				//use javascript to filter
 				if (deSel.condition.bEnable && !deSel.condition.match(de))
 				{
 					continue;
@@ -1633,20 +1538,20 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					DE_yyjson& deyy  = *(new DE_yyjson());
 					deyy.deTime = deTime;
 
-					//放入time
+					//set time
 					deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
 
-					//放入val
+					//set val
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					if (yyVal)
 						deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
 					
-					//放入time,val以外的所有字段
+					//set all fields except time,val
 					deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
 
 
 					if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
-						if (deSel.isValTypeNumber()) //指定了输出类型
+						if (deSel.isValTypeNumber()) 
 						{
 							string_view valStr = yyjson_mut_get_str(deyy.val);
 							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
@@ -1670,21 +1575,21 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 			for (int tagIdx = 0; tagIdx < inputData.size(); tagIdx++)
 			{
 				DATA_SET& fSet = *inputData[tagIdx];
-				//每个group生成一个聚合后 de
+				//every group aggr into a de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
-					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
+					DE_yyjson& de = *(new DE_yyjson()); //aggr result
 					doAggregateOneGroup(deSel, fSet.aggregate, i.second, de, rlt_mut_doc);
 					de.time = yyjson_mut_str(rlt_mut_doc, i.first.data());
 					fSet.m_afterAggr.push_back(&de);
 				}
 			}
 		}
-		else {//所有数据聚合的 时间字段填时间范围 
+		else {//time in a aggr de set as time range 
 			for (int tagIdx = 0; tagIdx < inputData.size(); tagIdx++)
 			{
 				DATA_SET& fSet = *inputData[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
-					DE_yyjson& de = *(new DE_yyjson()); //聚合结果
+					DE_yyjson& de = *(new DE_yyjson()); //aggr result
 					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
 
 					if (inputData.size() > 1 || de.time == nullptr) {
@@ -1700,99 +1605,10 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 }
 
 
-/*
-//2021.10.21 此时simdjson还不支持使用数组下标访问数组元素
-bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result)
-{
-	TIME_SELECTOR& tf = timeSelector;
-	time_t loadTime = tf.endTime;
-	string strDataFmt = "";
-	string strRawDataFmt = "";
-	SYSTEMTIME stTemp;
 
-	CONDITION_SELECTOR af;
-	af.init(filter);
-
-	double max = -1000000000;
-	double min = 1000000000;
-	double avg = 0;
-	int count = 0;
-
-	for (; loadTime >= tf.startTime; loadTime -= 24 * 60 * 60)
-	{
-		//加载数据元列表
-		stTemp = timeopt::Unix2SysTime(loadTime);
-		string dbFile = getPath_dbFile(tag, stTemp);
-		string dbData;
-		fs::readFile(dbFile, dbData);
-		if (dbData == "")
-			continue;
-
-		std::unique_ptr<char[]> padded_json_copy{ new char[dbData.length() + SIMDJSON_PADDING] };
-		memcpy(padded_json_copy.get(), dbData.c_str(), dbData.length());
-		memset(padded_json_copy.get() + dbData.length(), 0, SIMDJSON_PADDING);
-		simdjson::dom::parser parser;
-		simdjson::dom::element dataList = parser.parse(padded_json_copy.get(), dbData.length(), false);
-
-		if (dataList.is_null())
-			continue;
-
-		for (dom::object de : dataList)
-		{
-			string_view szTime = de["time"];
-
-			//先生成完整时间戳，再进行match判断
-			if (szTime.length() == 19)
-			{
-				szTime = szTime.substr(11, 8); //取出时分秒
-			}
-			string strTime = timeopt::TimeToYMD(stTemp) + " " + string(szTime);
-			if (!tf.Match(strTime))
-				continue;
-
-			stringstream ssDe;
-			ssDe << de;
-			string sDe = ssDe.str();
-			sDe = sDe.substr(0, sDe.length() - 1);// remove the last char "}" ,and append additional attributes
-			sDe += ",\"tag\":\"" + tag + "\"";
-
-			bool bHavePic = false;
-			simdjson::error_code error;
-			error = de["pic"].get(bHavePic);
-			if (bHavePic)
-			{
-				sDe += ",\"pic_url\":\"/db" + getPath_deFile(tag, timeopt::str2st(strTime)) + ".jpg\"";
-			}
-
-			bool bHaveVideo = false;
-			error = de["video"].get(bHaveVideo);
-			if (bHaveVideo)
-			{
-				sDe += ",\"video_url\":\"/db" + getPath_deFile(tag, timeopt::str2st(strTime)) + ".mp4\"";
-			}
-
-			sDe += "}";
-
-			if (af.bEnable && !af.match(sDe))
-			{
-				continue;
-			}
-
-			result[strTime + "+" + tag] = sDe;
-			count++;
-			if (tf.AmountMatch(count))
-				return true;
-		}
-
-	}
-	return true;
-}
-*/
 
 //bool database::updateJsonObj(json& jOld, json& jNew)
 //{
-//	//已经存在的key，用新value更新
-//	//不存在key，增加
 //	for (auto& [key, value] : jNew.items()) {
 //		json& jOldVal = jOld[key];
 //		json& jNewVal = jNew[key];
@@ -1819,7 +1635,6 @@ bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string f
 
 //bool database::Update(string tag, DB_TIME stTime, json& jData)
 //{
-//	//加载数据元列表
 //	string dbFile = getPath_dbFile(tag, stTime);
 //	string dbData;
 //	fs::readFile(dbFile, dbData);
@@ -1856,7 +1671,6 @@ bool database::Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string f
 
 bool TDB::Delete(string tag, DB_TIME stTime)
 {
-	//加载数据元列表
 	/*string dbFile = getPath_dbFile(tag, stTime);
 	string dbData;
 	fs::readFile(dbFile, dbData);
@@ -1896,16 +1710,13 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 }
 
 
-
-
-
 void TDB::saveDEFile(string strTag, DB_TIME stTime, string deFileUrl)
 {
 	deFileUrl = replaceStr(deFileUrl, "\\", "/");
 	string suffix = parseSuffix(deFileUrl);
 	string path = getPath_deFile(strTag, stTime);
 
-	if (suffix != "") //文件
+	if (suffix != "")
 	{
 		path += "." + suffix;
 	}
@@ -1961,9 +1772,9 @@ void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
 	yyjson_doc_free(doc);
 }
 
-//解析聚合操作
-//参数1： "aggregate":"max"
-//参数2 
+
+// "aggregate":"max"
+// 
 // "aggregate":{
 //	    "max":"max",
 //      "min":"min",
@@ -1971,10 +1782,10 @@ void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
 // }
 map<string, string> TDB::getAggrOpt(yyjson_val* jAggr) {
 	map<string, string> aggrOpt;
-	if (yyjson_is_str(jAggr)) { //单位号的val字段聚合
+	if (yyjson_is_str(jAggr)) { //aggr val in a single tag
 		aggrOpt[db.m_dbFmt.deItemKey_value] = yyjson_get_str(jAggr);
 	}
-	else if (yyjson_is_obj(jAggr)) { //单位号的指定字段聚合,可指定多个字段聚合
+	else if (yyjson_is_obj(jAggr)) { //aggr by each field
 		size_t idx, maxIdx;
 		yyjson_val* key, * value;
 		yyjson_obj_foreach(jAggr, idx, maxIdx, key, value) {
@@ -2075,7 +1886,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 			tagList.push_back(tag);
 		}
 	}
-	else if (yyv_colume) {//colume模式暂时只支持 精确指定位号模式，不支持通配
+	else if (yyv_colume) {//colume only support exact tag , fuzzy tag not supported
 		deSel.tagAsColume = true;
 		yyjson_val* yyv_colList = yyv_colume;
 		size_t idx = 0;
@@ -2103,7 +1914,6 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 		strRootTag = yyjson_get_str(yyv_rootTag);
 	}
 
-	//位号选择器，支持数组和字符串2种模式，字符串中支持通配符*
 	if (!deSel.tagSel.init(tagList, strRootTag)) {
 		err = "tag selector format error:" + deSel.tagSel.error;
 		return;
@@ -2115,7 +1925,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	}
 
 
-	//监控对象类型
+	//obj type
 	yyjson_val* yyv_type = yyjson_obj_get(yyParams, "type");
 	if (yyv_type && yyjson_is_str(yyv_type)) {
 		deSel.tagSel.type = yyjson_get_str(yyv_type);
@@ -2172,17 +1982,17 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	}
 
 
-	//name模式或者 tag模式的 colLabel
+	//name mode or  tag mode  colLabel
 	yyjson_val* yyv_colLabel = yyjson_obj_get(yyParams, "columeLabel");
 	if (yyv_colLabel && yyjson_is_str(yyv_colLabel)) {
 		deSel.tagLabel = yyjson_get_str(yyv_colLabel);
 
-		//name 与 tag 是关键字，表示使用什么做label,否则认为这是一个 指定的label，仅在只有一个位号时有效
+		//use name or tag as label,or specified label ,only supported when only one tag
 		if (deSel.tagLabel != "name" && deSel.tagLabel != "tag") {
 			deSel.vecTagLable.push_back(deSel.tagLabel);
 		}
 	}
-	//自定义columeLabel
+	//custom columeLabel
 	else if (yyv_colLabel && yyjson_is_arr(yyv_colLabel)) {
 		size_t idx = 0;
 		size_t max = 0;
@@ -2196,7 +2006,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	if (yyv_groupby && yyjson_is_str(yyv_groupby)) {
 		deSel.groupby = yyjson_get_str(yyv_groupby);
 
-		//是否时间聚合
+		//if aggr by time
 		if (deSel.groupby.find("day") != string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "day";
@@ -2213,7 +2023,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 			deSel.groupByTime = false;
 		}
 
-		//是否空间聚合
+		//if aggr by tag
 		if (deSel.groupby.find("tag") != string::npos) {
 			deSel.groupByTag = true;
 		}
@@ -2227,7 +2037,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 		yyv_aggr = yyjson_obj_get(yyParams, "aggr");
 	}
 		
-	if (yyjson_is_arr(yyv_aggr)) { //多位号聚合
+	if (yyjson_is_arr(yyv_aggr)) { //muti tag aggr
 		size_t idx = 0;
 		size_t max = 0;
 		yyjson_val* item;
@@ -2235,7 +2045,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 			deSel.vecAggregate.push_back(getAggrOpt(item));
 		}
 		deSel.bAggr = true;
-		deSel.groupByTag = true; //多位号聚合模式，默认按照位号分组，相当于每列单独聚合
+		deSel.groupByTag = true; //group by tag by defaut,equals to aggr by each column
 	}
 	else if(yyjson_is_obj(yyv_aggr) || yyjson_is_str(yyv_aggr)){
 		deSel.aggregate = getAggrOpt(yyv_aggr);
@@ -2277,11 +2087,10 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
 	}
 
-	//选出位号
-	//外部设置的位号选择函数,需要与工程项目配置关联
+	//tag select set by tdb user
 	if(m_getTagsByTagSelector != nullptr)
 		m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-	//内部只支持精确匹配模式
+	//by default ,tdb only support exact tag
 	else {
 		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
 			string& exp = deSel.tagSel.exactMatchExp[i];
@@ -2389,7 +2198,7 @@ bool TIME_SELECTOR::Match(string& deTime)
 
 bool TIME_SELECTOR::AmountMatch(size_t amount)
 {
-	if (m_dataNum != 0)//次数过滤启用
+	if (m_dataNum != 0)
 	{
 		if (amount < m_dataNum)
 		{
@@ -2397,15 +2206,15 @@ bool TIME_SELECTOR::AmountMatch(size_t amount)
 		}
 		return true;
 	}
-	else//次数过滤未启用
+	else
 	{
 		return false;
 	}
 }
 
-//普通年
+//common year
 int monthLastDay[12] = {31,28,31,30,31,30,31,31,30,31,30,31};
-//闰年
+//leap year
 int monthLastDay_leapYear[12] = { 31,29,31,30,31,30,31,31,30,31,30,31 };
 
 bool isLeapYear(int year) {
@@ -2460,7 +2269,6 @@ bool TIME_SELECTOR::init(string time)
 {
 	selector = time;
 
-	//时间宏替换
 	if (time.find("this-month") != string::npos) {
 		DB_TIME t;
 		t.setNow();
@@ -2526,7 +2334,6 @@ bool TIME_SELECTOR::init(string time)
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 
-	//集合选择
 	if (time.find("head@") != string::npos) {
 		timeSetType = TSM_First;
 		time = DB_TAG::trimPrefix(time, "head@");
@@ -2539,7 +2346,6 @@ bool TIME_SELECTOR::init(string time)
 		timeSetType = TSM_All;
 	}
 
-	//周期选择
 	if (time.find("day@") != string::npos) {
 		periodType = PT_Day;
 		time = DB_TAG::trimPrefix(time, "day@");
@@ -2564,7 +2370,7 @@ bool TIME_SELECTOR::init(string time)
 		string timeRange ="2020-01-01 00:00:00~" + DB_TIME::nowStr();
 		parseTimeRange(timeRange);
 	}
-	else if (time.find("-") == string::npos) { // 1d2h3m 的时间区段模式
+	else if (time.find("-") == string::npos) { // 1d2h3m mode
 		string timeRange = TIME_OPT::rel2abs(time);
 		parseTimeRange(timeRange);
 	}
@@ -2623,8 +2429,8 @@ bool TAG_SELECTOR::init(string tag, string rootTag, string objtype){
 	m_rootTag = rootTag;
 	if (tag.find("*") != string::npos)
 	{
-		//如果tag是 * ,rootTag是杭州，那么通配选择是  杭州.*
-		//TAG::addRoot后会加上.  , 这样子可以避免 通配选择变成  杭州*, 如果是  杭州* ,会错误的选中例如  杭州(仿真).温度 这类不该选中的位号
+		//if tag is * ,rootTag is HangZhou, so selector is  HangZhou.*
+		//TAG::addRoot will add .  , so selector won't be  HangZhou*, if HangZhou* ,HangZhou(Test).temprature will be selected uncorrectly
 		string tagExp = DB_TAG::addRoot(tag, rootTag);
 		string regExp = tagExp;
 		regExp = replaceStr(regExp, ".", "\\.");
@@ -2652,7 +2458,7 @@ bool TAG_SELECTOR::init(vector<string>& tag, string rootTag, string objtype)
 
 void TAG_SELECTOR::setType(string objType)
 {
-	if (objType == "所有类型") {
+	if (objType == "all") {
 		type = "*";
 	}
 	else {
@@ -2710,10 +2516,10 @@ bool CONDITION_SELECTOR::init(string filter)
 	if (filter.length() > 0)
 	{
 		filterExp = filter;
-		//此处的缓存设置过小会崩溃.1024测试会奔溃。
-		//考虑是否在每一次执行match操作的时候，释放global_object
-		//看上去globalObject的字段只占用一份内存，因为setObject之后就会release prop_value
-		//因此此处的缓存应该是能保证一个de的大小执行控件就够了
+		//1024 will crash
+		//should global_object be released when do match
+		//seems globalObject only has one buffer,release prop_value will exe after setObject
+		//buffer here is enough when one de is executed
 		tls_context = jerry_create_context(500*1024, context_alloc_fn, NULL);;
 		jerry_init(JERRY_INIT_EMPTY);
 		global_object = jerry_get_global_object();
@@ -2747,7 +2553,7 @@ void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryV
 		double val = yyjson_get_real(yyVal);
 		jerryVal = jerry_create_number(val);
 	}
-	else if (yyjson_is_int(yyVal))//此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+	else if (yyjson_is_int(yyVal))//handle int and float seprately, because the accracy problem of float,if cast int to float,eval == in a script will fail
 	{
 		int val = yyjson_get_int(yyVal);
 		jerryVal = jerry_create_number(val);
@@ -2780,7 +2586,7 @@ void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryV
 				jerry_release_value(error);
 			}
 			jerry_release_value(set_result);
-			jerry_release_value(prop_name); //这2句release必须要要有，否则在jerry_cleanup的时候会崩溃
+			jerry_release_value(prop_name); //this 2 release must be done or jerry_cleanup will crash
 			jerry_release_value(prop_value);
 		}
 	}
@@ -2813,7 +2619,7 @@ void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& je
 		double val = yyjson_mut_get_real(yyVal);
 		jerryVal = jerry_create_number(val);
 	}
-	else if (yyjson_mut_is_int(yyVal))//此处 int类型和float类型要分开处理，由于float的精度问题，如果int转float，在脚本中判断 == 的时候可能会失败
+	else if (yyjson_mut_is_int(yyVal))
 	{
 		int val = yyjson_mut_get_int(yyVal);
 		jerryVal = jerry_create_number(val);
@@ -2941,14 +2747,14 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 			e.m_error = "db exception: error when execute filter script,reference not found!";
 		else if (error == JERRY_ERROR_TYPE)
 		{
-			// A.str1.indexOf("xxx") 如果A不存在 str1成员，会抛出此错误
+			// A.str1.indexOf("xxx") if A don't have a str1 key,this error will throw
 			e.m_error = "db exception: error when execute filter script,error type!";
 		}
 		else
 			e.m_error = "db exception: error when execute filter script";
 		throw e;
 	}
-	//过滤器执行出错，统一不过滤
+	//do not filter when filter fails
 #endif
 	return true;
 }
@@ -2991,14 +2797,12 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 			e.m_error = "db exception: error when execute filter script,reference not found!";
 		else if (error == JERRY_ERROR_TYPE)
 		{
-			// A.str1.indexOf("xxx") 如果A不存在 str1成员，会抛出此错误
 			e.m_error = "db exception: error when execute filter script,error type!";
 		}
 		else
 			e.m_error = "db exception: error when execute filter script";
 		throw e;
 	}
-	//过滤器执行出错，统一不过滤
 #endif
 	return bMatch;
 }
@@ -3012,7 +2816,7 @@ void DB_TIME::fromUnixTime(time_t iUnix, int milli)
 {
 	static std::mutex mtx;
 	mtx.lock();
-	tm time_tm = *localtime(&iUnix);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+	tm time_tm = *localtime(&iUnix);  //for thread safty linux recommends localtime_r,windows recommends localtime_s,use a lock to unify the code
 	mtx.unlock();
 
 	wYear = time_tm.tm_year + 1900;
@@ -3035,7 +2839,6 @@ time_t DB_TIME::toUnixTime()
 void DB_TIME::setNow()
 {
 	auto now = std::chrono::system_clock::now();
-	//通过不同精度获取相差的毫秒数 <1000毫秒值
 	unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
 		- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
 	time_t tt = std::chrono::system_clock::to_time_t(now);

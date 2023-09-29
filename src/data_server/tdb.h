@@ -266,13 +266,13 @@ public:
 	string colKey;
 
 
-	map<string, string> aggregate; //聚合操作，key是需要聚合的字段，val是聚合方式
-	//分组聚合前数据.key是时间戳，数组是de的数组
+	map<string, string> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
+	//grouped data before aggregate key is time stamp ,val is de vector
 	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
-	//不分组聚合前数据
+	//ungrouped data before aggregate
 	vector<yyjson_val*> m_beforeAggr;
 
-	//执行聚合函数后数据.或者无需聚合直接放入以下结构
+	//data after aggregate or without aggr option
 	vector<DE_yyjson*> m_afterAggr;
 
 	DATA_SET() {
@@ -330,16 +330,16 @@ public:
 
 //数据元选择器
 struct DE_SELECTOR {
-	TIME_SELECTOR timeSel;  //时间选择器
-	TAG_SELECTOR tagSel;	//位号选择器
-	CONDITION_SELECTOR condition;	//条件选择器
-	INTERVAL_SELECTOR interval;		//降采样选择器
+	TIME_SELECTOR timeSel;  
+	TAG_SELECTOR tagSel;	
+	CONDITION_SELECTOR condition;	
+	INTERVAL_SELECTOR interval;		
 	bool ascendingSort;
 	string sortKey;
-	bool timeFill;   //时间截面位号补全。多个位号，可能在某个时间点只有部分位号有数据，如果该选项为true,将自动为每个时间点补全所有位号的数据，数据值选用上一个时间点的该位号值
+	bool timeFill;   //in a time section ,data is not exist in some tag. use value before this time section to fill in this time section
 
-	string valType;  //不为空表示将数据库值类型强转成指定类型
-	string deType;   //数据元类型，默认为原始数据，可以取 curveIdx 曲线索引; deType不一样，对应的数据文件不一样
+	string valType;  //transform de val to specified value
+	string deType;   //get de by default;  curveIdx to get curveIdx in curveList file
 	bool isValTypeNumber() {
 		if (valType == "float" || valType == "number") {
 			return true;
@@ -347,24 +347,21 @@ struct DE_SELECTOR {
 		return false;
 	}
 
-	//位号重命名
-	string tagLabel; //重命名为 tag还是name
-	vector<string> vecTagLable; //指定别名
+	string tagLabel; //rename tag
+	vector<string> vecTagLable; //muti rename
 
 	string groupby;
 	string timeGroupBy;
-	bool groupByTime; //是否是按照时间进行分组，如果是按时间分组，查询结果的time字段将被改为时间的分组值
-	bool groupByTag;  //是否按照位号进行分组
+	bool groupByTime; //time in selected de is set a time group key such as "2023-09-01 11" when groupby "hour"
+	bool groupByTag;  
 
-	//聚合运算
-	bool bAggr; //是否进行数据聚合
-	map<string,string> aggregate; //应用到所有聚合运算.单个位号聚合或者多个位号统一聚合。key为需要聚合的key，val为需要聚合的方式
-	vector<map<string, string>> vecAggregate; //多位号独立聚合模式，每个位号指定独立的聚合方式
+	bool bAggr; 
+	map<string,string> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
+	vector<map<string, string>> vecAggregate; //specified each tag in its own aggregate type
 
-	//多列模式
-	bool tagAsColume; //将位号作为表的列返回.单列模式或多列模式
+	bool tagAsColume; //return data set as a table.each tag as a columne
 
-	//返回结果的运算
+	//use function to calc the selected dataset
 	string calc;
 
 	string getSelectorDesc();
@@ -439,7 +436,7 @@ struct SELECT_RLT {
 	string error;
 	string info;
 	string query;
-	string calcResult; //数据集计算结果
+	string calcResult; 
 
 	SELECT_RLT() {
 		getDE = true;
@@ -466,7 +463,7 @@ struct  DB_FMT
 typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
 
-//路径中全部使用斜杠  "/" 不要使用反斜杠 "\\"
+//use  "/"  but not "\\" in a path
 class TDB{
 public:
 	TDB();
@@ -478,17 +475,16 @@ public:
 	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector,string& err);
 	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
 	int dhmsSpan2Seconds(string timeSpan);
-//数据库存储规范
+
 	DB_FMT m_dbFmt;
 
 	fp_getTagsByTagSelector m_getTagsByTagSelector;
 
-//rpc接口
+
 public:
 	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org);
 	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org);
 
-//接口部分
 public:
 	void Insert(string strTag, DB_TIME stTime, string& sDe);
 
