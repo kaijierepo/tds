@@ -49,8 +49,6 @@ URL begins with \
 use dbRoot + URL to compose an absolute path of a db file
 */
 
-using namespace std;
-
 struct DB_TIME {
 	unsigned short wYear;
 	unsigned short wMonth;
@@ -70,17 +68,6 @@ struct DB_TIME {
 	void fromStr(string str);
 	static string nowStr();
 	static string nowStrWithMilli();
-};
-
-struct FILE_ITEM {
-	string strName;
-	vector<FILE_ITEM*> childItem;
-	FILE_ITEM* parentItem;
-
-	FILE_ITEM()
-	{
-		parentItem = NULL;
-	}
 };
 
 struct DE_TIME {
@@ -228,7 +215,7 @@ struct DE_yyjson {
 	yyjson_mut_val* time;  //aggregate by time, is valid after aggregate
 	yyjson_mut_val* val;
 	string fmtTime; 
-	string deTime;
+	string deTime; //standard time format with millisecond    2023-10-01 12:00:00.001
 
 	yyjson_mut_val* de;   
 	map<string, yyjson_mut_val*> items; //custom de,when val is not used; only one level json structrue is supported. key store json key,val stores val after aggregate
@@ -462,36 +449,39 @@ struct  DB_FMT
 
 typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
+namespace DB_STR {
+	wstring utf8_to_utf16(string instr);
+	string gb_to_utf8(string instr);
+}
 
 //use  "/"  but not "\\" in a path
 class TDB{
 public:
 	TDB();
 
+//interface
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
-	void Close();
-
-	map<string, string> getAggrOpt(yyjson_val* jAggr);
-	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector,string& err);
-	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
-	int dhmsSpan2Seconds(string timeSpan);
-
+	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
 	DB_FMT m_dbFmt;
 
-	fp_getTagsByTagSelector m_getTagsByTagSelector;
 
+	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
 
-public:
-	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org);
-	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org);
-
-public:
+	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 	void Insert(string strTag, DB_TIME stTime, string& sDe);
+	bool Delete(string tag, DB_TIME stTime);
+
+//private func
+public:
+	map<string, string> getAggrOpt(yyjson_val* jAggr);
+	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);
+	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
+	int dhmsSpan2Seconds(string timeSpan);
 
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	
 	//select
-	bool Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result);
 	bool readFile(string path, string& data);
 	bool Select_yyjson_deFile(string& s);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
@@ -504,7 +494,7 @@ public:
 	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
 	//bool Update(string tag, TIME stTime, string& sData);
 	//bool Update(string tag, TIME stTime, json& jData);
-	bool Delete(string tag, DB_TIME stTime);
+
 	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
 	bool isRelative(string time);
@@ -516,7 +506,6 @@ public:
 	bool saveDEFile(string tag, DB_TIME stTime, unsigned char* pData, int len,string suffix);
 
 	//path management
-public:
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
 	string changeCharForFileName(string s);
 	string getPath_dataFolder(string strTag, DB_TIME date);
@@ -528,6 +517,8 @@ public:
 	bool fileExist(string pszFileName);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
+	fp_getTagsByTagSelector m_getTagsByTagSelector;
+	bool m_isGbk;
 };
 
 extern TDB db;

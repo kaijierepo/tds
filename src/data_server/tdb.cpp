@@ -31,7 +31,6 @@ SOFTWARE.
 #include <sstream>
 #include <filesystem>
 #include "yyjson.h"
-#include "base64.h"
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
@@ -128,22 +127,66 @@ namespace TIME_OPT {
 		return st;
 	}
 }
-
-wstring utf8_to_utf16(string instr) //utf-8-->ansi
-{
-	wstring str;
+namespace DB_STR {
+	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	{
+		wstring str;
 #ifdef _WIN32
-	size_t MAX_STRSIZE = instr.length() * 2 + 2;
-	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-	memset(wcharstr, 0, MAX_STRSIZE);
-	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-	str = wcharstr;
-	delete[] wcharstr;
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete[] wcharstr;
 
 #else
 
 #endif
-	return str;
+		return str;
+	}
+	string gb_to_utf8(string instr) //ansi-->utf-8
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		int ret = 0;
+		size_t inlen = instr.length() + 1;
+		size_t outlen = 2 * inlen;
+
+		// duanqn: The iconv function in Linux requires non-const char *
+		// So we need to copy the source string
+		char* inbuf = (char*)malloc(inlen);
+		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+									// so we use another pointer to keep the address
+		memcpy(inbuf, instr.data(), instr.length());
+
+		char* outbuf = (char*)malloc(outlen);
+		memset(outbuf, 0, outlen);
+		iconv_t cd;
+
+		cd = iconv_open("UTF-8", "GBK");
+		if (cd != (iconv_t)-1) {
+			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+			if (ret != 0)
+				printf("iconv failed err: %s\n", strerror(errno));
+			iconv_close(cd);
+		}
+		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		str = outbuf;
+		free(outbuf);
+#endif
+		return str;
+	}
 }
 
 namespace DB_TAG {
@@ -193,8 +236,9 @@ namespace DB_FS {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
+		wstring wPath = DB_STR::utf8_to_utf16(path);
 #ifdef _WIN32
-		_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"rb");
+		_wfopen_s(&fp, wPath.c_str(), L"rb");
 #else
 		fp = fopen(path.c_str(), "rb");
 #endif
@@ -231,9 +275,20 @@ namespace DB_FS {
 			strFile = strFile.substr(0, iSlashPos);
 		}
 #ifdef _WIN32
-#ifndef _WINXP
-		filesystem::create_directories(utf8_to_utf16(strFile));
-#endif
+		//filesystem::create_directories(utf8_to_utf16(strFile));
+		int iStartPos = 0;
+		while (1)
+		{
+			int iSlash = strFile.find('/', iStartPos);
+			if (iSlash == string::npos){break;}
+
+			string strFolder = strFile.substr(0,iSlash);
+			CreateDirectoryW(DB_STR::utf8_to_utf16(strFolder).c_str(), NULL);
+
+			if (iSlash + 1 == strFile.length())//last char is /
+				break;
+			iStartPos = iSlash + 1;
+		}
 #else
 		filesystem::create_directories(strFile);
 #endif
@@ -244,7 +299,7 @@ namespace DB_FS {
 
 		FILE* fp = nullptr;
 #ifdef _WIN32
-		_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"wb");
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"wb");
 #else
 		fp = fopen(path.c_str(), "wb");
 #endif
@@ -266,6 +321,168 @@ namespace DB_FS {
 	}
 	
 }
+
+
+#define TDB_BASE64_PAD '='
+#define TDB_BASE64DE_FIRST '+'
+#define TDB_BASE64DE_LAST 'z'
+
+/* BASE 64 encode table */
+static const char tdb_base64en[] = {
+	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+	'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+	'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+	'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+	'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+	'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+	'w', 'x', 'y', 'z', '0', '1', '2', '3',
+	'4', '5', '6', '7', '8', '9', '+', '/',
+};
+
+/* ASCII order for BASE 64 decode, 255 in unused character */
+static const unsigned char tdb_base64de[] = {
+	/* nul, soh, stx, etx, eot, enq, ack, bel, */
+	   255, 255, 255, 255, 255, 255, 255, 255,
+
+	/*  bs,  ht,  nl,  vt,  np,  cr,  so,  si, */
+	   255, 255, 255, 255, 255, 255, 255, 255,
+
+	/* dle, dc1, dc2, dc3, dc4, nak, syn, etb, */
+	   255, 255, 255, 255, 255, 255, 255, 255,
+
+	/* can,  em, sub, esc,  fs,  gs,  rs,  us, */
+	   255, 255, 255, 255, 255, 255, 255, 255,
+
+	/*  sp, '!', '"', '#', '$', '%', '&', ''', */
+	   255, 255, 255, 255, 255, 255, 255, 255,
+
+	/* '(', ')', '*', '+', ',', '-', '.', '/', */
+	   255, 255, 255,  62, 255, 255, 255,  63,
+
+	/* '0', '1', '2', '3', '4', '5', '6', '7', */
+	    52,  53,  54,  55,  56,  57,  58,  59,
+
+	/* '8', '9', ':', ';', '<', '=', '>', '?', */
+	    60,  61, 255, 255, 255, 255, 255, 255,
+
+	/* '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', */
+	   255,   0,   1,  2,   3,   4,   5,    6,
+
+	/* 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', */
+	     7,   8,   9,  10,  11,  12,  13,  14,
+
+	/* 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', */
+	    15,  16,  17,  18,  19,  20,  21,  22,
+
+	/* 'X', 'Y', 'Z', '[', '\', ']', '^', '_', */
+	    23,  24,  25, 255, 255, 255, 255, 255,
+
+	/* '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', */
+	   255,  26,  27,  28,  29,  30,  31,  32,
+
+	/* 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', */
+	    33,  34,  35,  36,  37,  38,  39,  40,
+
+	/* 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', */
+	    41,  42,  43,  44,  45,  46,  47,  48,
+
+	/* 'x', 'y', 'z', '{', '|', '}', '~', del, */
+	    49,  50,  51, 255, 255, 255, 255, 255
+};
+
+unsigned int
+tdb_base64_encode(const unsigned char* in, unsigned int inlen, char* out)
+{
+	int s;
+	unsigned int i;
+	unsigned int j;
+	unsigned char c;
+	unsigned char l;
+
+	s = 0;
+	l = 0;
+	for (i = j = 0; i < inlen; i++) {
+		c = in[i];
+
+		switch (s) {
+		case 0:
+			s = 1;
+			out[j++] = tdb_base64en[(c >> 2) & 0x3F];
+			break;
+		case 1:
+			s = 2;
+			out[j++] = tdb_base64en[((l & 0x3) << 4) | ((c >> 4) & 0xF)];
+			break;
+		case 2:
+			s = 0;
+			out[j++] = tdb_base64en[((l & 0xF) << 2) | ((c >> 6) & 0x3)];
+			out[j++] = tdb_base64en[c & 0x3F];
+			break;
+		}
+		l = c;
+	}
+
+	switch (s) {
+	case 1:
+		out[j++] = tdb_base64en[(l & 0x3) << 4];
+		out[j++] = TDB_BASE64_PAD;
+		out[j++] = TDB_BASE64_PAD;
+		break;
+	case 2:
+		out[j++] = tdb_base64en[(l & 0xF) << 2];
+		out[j++] = TDB_BASE64_PAD;
+		break;
+	}
+
+	out[j] = 0;
+
+	return j;
+}
+
+unsigned int tdb_base64_decode(const char* in, unsigned int inlen, unsigned char* out)
+{
+	unsigned int i;
+	unsigned int j;
+	unsigned char c;
+
+	if (inlen & 0x3) {
+		return 0;
+	}
+
+	for (i = j = 0; i < inlen; i++) {
+		if (in[i] == TDB_BASE64_PAD) {
+			break;
+		}
+		if (in[i] < TDB_BASE64DE_FIRST || in[i] > TDB_BASE64DE_LAST) {
+			return 0;
+		}
+
+		c = tdb_base64de[(unsigned char)in[i]];
+		if (c == 255) {
+			return 0;
+		}
+
+		switch (i & 0x3) {
+		case 0:
+			out[j] = (c << 2) & 0xFF;
+			break;
+		case 1:
+			out[j++] |= (c >> 4) & 0x3;
+			out[j] = (c & 0xF) << 4;
+			break;
+		case 2:
+			out[j++] |= (c >> 2) & 0xF;
+			out[j] = (c & 0x3) << 6;
+			break;
+		case 3:
+			out[j++] |= c;
+			break;
+		}
+	}
+
+	return j;
+}
+
 
 int _db_vscprintf_cross(const char* format, va_list pargs) {
 	int retval;
@@ -294,6 +511,7 @@ std::string formatStr(const char* pszFmt, ...)
 TDB::TDB()
 {
 	m_getTagsByTagSelector = nullptr;
+	m_isGbk = false;
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -452,7 +670,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 				size_t buffLen = data.length() * 2;
 				unsigned char* out = new unsigned char[buffLen];
 				memset(out, 0, buffLen);
-				int outLen = base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+				int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 				DB_FS::writeFile(fileDataPath + "/" + name, out, outLen);
 			}
 			else if (type == "text") {
@@ -489,7 +707,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	else
 	{
 #ifdef _WIN32
-		FILE* fp = _wfopen(utf8_to_utf16(dlPath).c_str(), L"rb+");
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
 #else
 		FILE* fp = fopen(dlPath.c_str(), "rb+");
 #endif
@@ -580,11 +798,9 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			
 
 			//set time
-			string szTime = yyjson_mut_get_str(deyy.time);
-			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
-			yyjson_mut_val* timeVal;
-			 
-			timeVal = yyjson_mut_str(mut_doc, szTime.data());
+			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
+			yyjson_mut_val* timeVal; 
+			timeVal = yyjson_mut_str(mut_doc, deyy.deTime.data());
 			//if (deSel.timeSel.timeFmt != "")
 				//deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
 				//timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
@@ -602,7 +818,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 			//set val
 			if (deyy.val != nullptr) {
-				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, "val");
+				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
 				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
 			}
 
@@ -617,11 +833,11 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			}
 
 		
-			map<string, map<string, yyjson_mut_val*>>::iterator iter = timeSectionSeries.find(szTime.data());
+			map<string, map<string, yyjson_mut_val*>>::iterator iter = timeSectionSeries.find(deyy.deTime.data());
 			if (iter == timeSectionSeries.end()) {
 				map<string, yyjson_mut_val*> timeSection;
 				timeSection[tag] = jRecord;
-				timeSectionSeries[szTime.data()] = timeSection;
+				timeSectionSeries[deyy.deTime.data()] = timeSection;
 			}
 			else {
 				map<string, yyjson_mut_val*>& timeSection = iter->second;
@@ -948,12 +1164,10 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
 			DE_yyjson& deyy = *fSet.m_afterAggr[j];
 
-			string szTime = yyjson_mut_get_str(deyy.time);
-
 			//check if data row of this time is already exist
 			yyjson_mut_val* jRecord;
 			SORT_FLAG sf;
-			sf.sFlag = szTime.data();
+			sf.sFlag = deyy.deTime.data();
 			map<SORT_FLAG, yyjson_mut_val*>::iterator itRecord = mapRlt.find(sf);
 			if (itRecord != mapRlt.end()) { //get this row if exist
 				jRecord = itRecord->second;
@@ -962,8 +1176,8 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 			{
 				jRecord = yyjson_mut_obj(mut_doc);
 				//time
-				yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, "time");
-				yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, szTime.data());
+				yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
+				yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, deyy.deTime.data());
 				yyjson_mut_obj_put(jRecord, timeKey, timeVal);
 				//tag
 				for (int i = 0; i < tagDBFileSet.size(); i++) {
@@ -978,7 +1192,7 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 
 				std::pair<SORT_FLAG, yyjson_mut_val*> recPair;
 				SORT_FLAG sftmp;
-				sftmp.sFlag = szTime;
+				sftmp.sFlag = deyy.deTime;
 				recPair.first = sftmp;
 				recPair.second = jRecord;
 				auto insertRet = mapRlt.insert(recPair);
@@ -1008,8 +1222,9 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 				if (yyjson_mut_is_null(val)) {
 					string szKey = yyjson_mut_get_str(key);
 					yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
+					yyjson_mut_val* curKey = yyjson_mut_val_mut_copy(mut_doc, key);
 					yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
-					yyjson_mut_obj_put(curRec, key, curVal);
+					yyjson_mut_obj_put(curRec, curKey, curVal);
 				}
 			}
 		}
@@ -1051,7 +1266,7 @@ bool TDB::Select_yyjson_deFile(string& s)
 	return true;
 }
 
-bool TDB::Select_yyjson(DE_SELECTOR& deSel, SELECT_RLT& result)
+bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	bool bRet = true;
 	vector<string> tagSet = deSel.tagSel.tagSet;
@@ -1474,7 +1689,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					pHms = szTime.data();
 					hmsLen = 8;
 				}
-				memcpy(deTime.data() + 11, pHms, hmsLen);//get hour min sec
+				memcpy((char*)deTime.data() + 11, pHms, hmsLen);//get hour min sec
 
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
@@ -1759,9 +1974,11 @@ bool TDB::Open(string strDBUrl,fp_getTagsByTagSelector f,string name)
 	return true;
 }
 
-void TDB::Close()
+bool TDB::Open_gbk(string strDBUrl, fp_getTagsByTagSelector f, string name)
 {
-
+	strDBUrl = DB_STR::gb_to_utf8(strDBUrl);
+	m_isGbk = true;
+	return Open(strDBUrl, f, name);
 }
 
 void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
@@ -1871,6 +2088,9 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	if(yyv_tag && yyjson_is_str(yyv_tag))
 	{
 		string tag = yyjson_get_str(yyv_tag);
+		if (m_isGbk) {
+			tag = DB_STR::gb_to_utf8(tag);
+		}
 		tagList.push_back(tag);
 	}
 	else if (yyv_tag && yyjson_is_arr(yyv_tag)) {
@@ -2069,6 +2289,9 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
 	if (yyv_rootTag) {
 		rootTag = yyjson_get_str(yyv_rootTag);
+		if (m_isGbk) {
+			rootTag = DB_STR::gb_to_utf8(rootTag);
+		}
 	}
 	deSel.tagSel.m_org = org;
 	parseDESelector(params, deSel,err);
@@ -2105,7 +2328,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	else {
 		try
 		{
-			db.Select_yyjson(deSel, result);
+			db.Select(deSel, result);
 			if (result.error != "") {
 				err = result.error;
 			}
@@ -2158,7 +2381,11 @@ string TDB::parseSuffix(string deFileUrl)
 
 bool TDB::fileExist(string pszFileName)
 {
-#ifndef _WINXP
+#ifdef _WIN32
+	wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
+	DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+	return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#else
 	std::error_code error;
 	auto file_status = std::filesystem::status(utf8_to_utf16(pszFileName), error);
 	if (error) {
@@ -2172,10 +2399,6 @@ bool TDB::fileExist(string pszFileName)
 		return true;
 	}
 	return  false;
-#else
-	wstring filePath = utf8_to_utf16(pszFileName);
-	DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
-	return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 #endif
 }
 
