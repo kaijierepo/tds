@@ -46,7 +46,7 @@ public:
 
 	SYSTEMTIME m_stLastAcqTime;  
 	float m_fAcqInterval; 
-
+	bool m_bLogStatus;
 	bool m_bLastCpuInfoValid;
 	bool m_bCurCpuInfoValid;
 	CPU_USE_INFO m_lastCpuUseInfo;

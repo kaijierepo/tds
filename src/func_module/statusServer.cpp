@@ -7,6 +7,7 @@
 #include <tchar.h>
 #include <chrono>
 #include "statusServer.h"
+#include "tdb.h"
 
 #pragma comment(lib, "Pdh.lib")
 
@@ -26,6 +27,7 @@ StatusServer::StatusServer(void)
 	m_bCurCpuInfoValid = false;
 	processHandle = INVALID_HANDLE_VALUE;
 	memset(&m_stLastAcqTime, 0, sizeof(m_stLastAcqTime));
+	m_bLogStatus = false;
 }
 
 
@@ -142,6 +144,18 @@ void StatusServer::cycleAcq_srvStatus() {
 			m_srvStatus.thread = get_thread_amount();
 
 			GetLocalTime(&m_stLastAcqTime);
+
+			
+			if (m_bLogStatus) {
+				DB_TIME dbt; dbt.setNow();
+				if (m_bCurCpuInfoValid && m_bLastCpuInfoValid) {
+					db.Insert("serverStatus.cpu", dbt, m_srvStatus.cpu);
+				}
+				db.Insert("serverStatus.mem", dbt, m_srvStatus.mem);
+				//db.Insert("serverStatus.net", dbt, m_srvStatus.net);
+				//db.Insert("serverStatus.disk", dbt, m_srvStatus.disk);
+				db.Insert("serverStatus.handle", dbt, m_srvStatus.handle);
+			}
 		}
 	}
 }

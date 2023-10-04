@@ -392,6 +392,7 @@ bool TDS_imp::run(string cmdline)
 
 	ioSrv.updateTag2IOAddrBinding();
 	taskSrv.run();
+	statusSrv.m_bLogStatus = tds->conf->getInt("logSrvStatus", 1);
 	statusSrv.run();
 
 	//create browser window

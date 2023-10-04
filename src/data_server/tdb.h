@@ -469,37 +469,35 @@ public:
 	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
+	void Insert(string strTag, DB_TIME stTime, double& dbVal);
+	void Insert(string strTag, DB_TIME stTime, int& iVal);
 	void Insert(string strTag, DB_TIME stTime, string& sDe);
 	bool Delete(string tag, DB_TIME stTime);
 
 //private func
 public:
+	//param parse
 	map<string, string> getAggrOpt(yyjson_val* jAggr);
 	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);
 	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
 	int dhmsSpan2Seconds(string timeSpan);
-
-	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	
+	//insert
+	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
 	//select
-	bool readFile(string path, string& data);
 	bool Select_yyjson_deFile(string& s);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
-
-	//bool Select_simdjson(string tag, TIME_SELECTOR& timeSelector, string filter, DB_DATA_SET& result);
+	//update
 	//bool Update(string tag, TIME stTime, string& sData);
 	//bool Update(string tag, TIME stTime, json& jData);
-
 	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
-	bool isRelative(string time);
 
-	string rel2abs(string time);
 
 	//bool updateJsonObj(json& jOld, json& jNew);
 	void saveDEFile(string strTag, DB_TIME stTime, string deFileUrl) ;

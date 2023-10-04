@@ -289,6 +289,7 @@ namespace DB_FS {
 				break;
 			iStartPos = iSlash + 1;
 		}
+		CreateDirectoryW(DB_STR::utf8_to_utf16(strFile).c_str(), NULL);
 #else
 		filesystem::create_directories(strFile);
 #endif
@@ -622,7 +623,6 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 		return folder + "/" + m_dbFmt.deListName;
 	}
 }
-
 
 void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 {
@@ -1495,6 +1495,61 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 
 	return true;
+}
+
+void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+{
+	string folderPath = getPath_dataFolder(strTag, stTime);
+	string dlPath = folderPath + "/" + m_dbFmt.deListName;
+	if (!fileExist(folderPath))
+		DB_FS::createFolderOfPath(folderPath.c_str());
+
+	bool bAppend = false;
+	if (fileExist(dlPath))
+	{
+#ifdef _WIN32
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
+#else
+		FILE* fp = fopen(dlPath.c_str(), "rb+");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0L, SEEK_END);
+			long len = ftell(fp);
+			if (len > 0)
+			{
+				fseek(fp, len - 1, SEEK_SET);
+				std::string d = ",";
+				size_t len = 0;
+				string s = "{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"val\":" + sVal + "\n}";
+				d += s;
+				d += "]";
+				fwrite(d.c_str(), 1, d.length(), fp);
+				bAppend = true;
+			}
+			fclose(fp);
+		}
+	}
+
+	if (!bAppend) {
+		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"val\":" + sVal + "\n}\n]";
+		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
+		{
+			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
+		}
+	}
+}
+
+void TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
+{
+	string s = formatStr("%d", iVal);
+	InsertValJsonStr(strTag, stTime, s);
+}
+
+void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
+{
+	string s = formatStr("%f", dbVal);
+	InsertValJsonStr(strTag, stTime, s);
 }
 
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
