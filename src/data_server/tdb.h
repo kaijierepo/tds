@@ -212,16 +212,16 @@ struct DB_FILE {
 //as the data after aggregate, only time and items are valid
 //items is empty before aggregate
 struct DE_yyjson {
-	yyjson_mut_val* time;  //aggregate by time, is valid after aggregate
+	//when as an orignal de, deTime is standard time format with millisecond like 2023-10-01 12:00:00.001
+	//when as an aggr result de, deTime is time group key; groupby day -> 2023-10-01  groupby hour ->2023-10-01 12 
+	string deTime; 
 	yyjson_mut_val* val;
 	string fmtTime; 
-	string deTime; //standard time format with millisecond    2023-10-01 12:00:00.001
-
+	
 	yyjson_mut_val* de;   
 	map<string, yyjson_mut_val*> items; //custom de,when val is not used; only one level json structrue is supported. key store json key,val stores val after aggregate
 
 	DE_yyjson() {
-		time = 0;
 		val = 0;
 		de = 0;
 	}
@@ -484,7 +484,6 @@ public:
 	//insert
 	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
 	//select
-	bool Select_yyjson_deFile(string& s);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);

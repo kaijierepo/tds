@@ -3662,7 +3662,21 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 
 	//根据位号选择器选择对象列表
 	json jTag = params["tag"];
-	attrParam.tagSel.init(jTag, attrParam.rootTag);
+	vector<string> tags;
+	if (jTag.is_string()) {
+		tags.push_back(jTag.get<string>());
+	}
+	else if (jTag.is_array()) {
+		for (auto& i : jTag) {
+			tags.push_back(i.get<string>());
+		}
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param tag format error");
+		return;
+	}
+
+	attrParam.tagSel.init(tags, attrParam.rootTag);
 	attrParam.tagSel.type = attrParam.moType;
 	vector<OBJ*> moList;
 	prj.getObjByTagSelector(moList, attrParam.tagSel);

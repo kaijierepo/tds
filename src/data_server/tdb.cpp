@@ -938,7 +938,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	return true;
 }
 
-bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc)
+bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
 {
 	for (auto& i : aggrOpt) {
 		string aggrType = i.second;
@@ -946,7 +946,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 		yyjson_mut_val* pAggrVal = nullptr; //聚合后的值
 
 		if (aggrType == "first") {
-			yyjson_val* pDeSrc = src.at(0);
+			yyjson_val* pDeSrc = deGroup.at(0);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
@@ -958,11 +958,12 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			des.items[aggrKey] = pAggrVal;
-			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			aggrRlt.items[aggrKey] = pAggrVal;
+			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
 		else if (aggrType == "last") {
-			yyjson_val* pDeSrc = src.at(src.size() - 1);
+			yyjson_val* pDeSrc = deGroup.at(deGroup.size() - 1);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 
@@ -974,14 +975,15 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			des.items[aggrKey] = pAggrVal;
-			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			aggrRlt.items[aggrKey] = pAggrVal;
+			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
 		else if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-			yyjson_val* pDeSrcFirst = src.at(0);
+			yyjson_val* pDeSrcFirst = deGroup.at(0);
 			yyjson_val* pDeSrcTimeFisrt = yyjson_obj_get(pDeSrcFirst, "time");
 			yyjson_val* pDeSrcValFirst = yyjson_obj_get(pDeSrcFirst, aggrKey.c_str());
-			yyjson_val* pDeSrcLast = src.at(src.size()-1);
+			yyjson_val* pDeSrcLast = deGroup.at(deGroup.size()-1);
 			yyjson_val* pDeSrcTimeLast = yyjson_obj_get(pDeSrcLast, "time");
 			yyjson_val* pDeSrcValLast = yyjson_obj_get(pDeSrcLast, aggrKey.c_str());
 
@@ -1014,13 +1016,13 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			string sDbDiff = formatStr("%lf", dbDiff);
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "avg") {
 			double dbTotal = 0;
 			long long count = 0;
-			for (int j = 0; j < src.size(); j++) {
-				yyjson_val* pDeSrc = src.at(j);
+			for (int j = 0; j < deGroup.size(); j++) {
+				yyjson_val* pDeSrc = deGroup.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				yyjson_mut_val* pAggrVal = nullptr;
 				double db = 0;
@@ -1037,16 +1039,16 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			}
 			double avg = dbTotal / count;
 
-			yyjson_val* pDeSrc = src.at(0);
+			yyjson_val* pDeSrc = deGroup.at(0);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			pAggrVal = yyjson_mut_real(mut_doc, avg);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "max") {
 			double dbMax = -DBL_MAX;
 			yyjson_val* pSelRowDeSrc = nullptr;
-			for (int j = 0; j < src.size(); j++) {
-				yyjson_val* pDeSrc = src.at(j);
+			for (int j = 0; j < deGroup.size(); j++) {
+				yyjson_val* pDeSrc = deGroup.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
@@ -1063,15 +1065,16 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				}
 			}
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			pAggrVal = yyjson_mut_real(mut_doc, dbMax);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "min") {
 			double dbMin = DBL_MAX;
 			yyjson_val* pSelRowDeSrc = nullptr;
-			for (int j = 0; j < src.size(); j++) {
-				yyjson_val* pDeSrc = src.at(j);
+			for (int j = 0; j < deGroup.size(); j++) {
+				yyjson_val* pDeSrc = deGroup.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
@@ -1088,14 +1091,15 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				}
 			}
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-			des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			pAggrVal = yyjson_mut_real(mut_doc, dbMin);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "sum") {
 			double dbSum = 0;
-			for (int j = 0; j < src.size(); j++) {
-				yyjson_val* pDeSrc = src.at(j);
+			for (int j = 0; j < deGroup.size(); j++) {
+				yyjson_val* pDeSrc = deGroup.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
@@ -1109,13 +1113,13 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				dbSum += db;
 			}
 			pAggrVal = yyjson_mut_real(mut_doc, dbSum);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "diff") {
 			double dbMax = -DBL_MAX;
 			double dbMin = DBL_MAX;
-			for (int j = 0; j < src.size(); j++) {
-				yyjson_val* pDeSrc = src.at(j);
+			for (int j = 0; j < deGroup.size(); j++) {
+				yyjson_val* pDeSrc = deGroup.at(j);
 				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
 				double db = 0;
 				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
@@ -1135,16 +1139,16 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			string sDbDiff = formatStr("%lf", dbDiff); 
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-			des.items[aggrKey] = pAggrVal;
+			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "count") {
-			int count = src.size();
+			int count = deGroup.size();
 			pAggrVal = yyjson_mut_int(mut_doc, count);
-			des.items["count"] = pAggrVal;
+			aggrRlt.items["count"] = pAggrVal;
 		}
 
 		if (aggrKey == "val") {
-			des.val = pAggrVal;
+			aggrRlt.val = pAggrVal;
 		}
 	}
 
@@ -1259,12 +1263,6 @@ bool DB_FILE::loadFile()
 	return true;
 }
 
-
-
-bool TDB::Select_yyjson_deFile(string& s)
-{
-	return true;
-}
 
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
@@ -1809,7 +1807,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					deyy.deTime = deTime;
 
 					//set time
-					deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
+					//deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
 
 					//set val
 					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
@@ -1847,26 +1845,22 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				DATA_SET& fSet = *inputData[tagIdx];
 				//every group aggr into a de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
-					DE_yyjson& de = *(new DE_yyjson()); //aggr result
-					doAggregateOneGroup(deSel, fSet.aggregate, i.second, de, rlt_mut_doc);
-					de.time = yyjson_mut_str(rlt_mut_doc, i.first.data());
-					fSet.m_afterAggr.push_back(&de);
+					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
+					doAggregateOneGroup(deSel, fSet.aggregate, i.second, aggrRltDe, rlt_mut_doc);
+					aggrRltDe.deTime = i.first.data(); //set as time group key
+					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
 			}
 		}
-		else {//time in a aggr de set as time range 
+		else {//aggr in entire time selector.time in aggr result set as time selector 
 			for (int tagIdx = 0; tagIdx < inputData.size(); tagIdx++)
 			{
 				DATA_SET& fSet = *inputData[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
-					DE_yyjson& de = *(new DE_yyjson()); //aggr result
-					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, de, rlt_mut_doc);
-
-					if (inputData.size() > 1 || de.time == nullptr) {
-						de.time = yyjson_mut_str(rlt_mut_doc, deSel.timeSel.selector.c_str());
-					}
-
-					fSet.m_afterAggr.push_back(&de);
+					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
+					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
+					aggrRltDe.deTime = deSel.timeSel.selector;
+					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
 			}
 		}
