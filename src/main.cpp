@@ -57,6 +57,9 @@ void clearZlmNoReaderPusher() {
 	if (mediaSrvIP != "") {
 		streamServerUrl = "http://" + mediaSrvIP + ":" + sPort;
 	}
+	else {
+		return;
+	}
 
 
 	httplib::Client cli(streamServerUrl);
@@ -110,7 +113,7 @@ void clearZlmNoReaderPusher() {
 		}
 	}
 	else {
-		LOG("[error]zlm stream server 未响应," + uri);
+		LOG("[error]zlm stream server 未响应,url=%s,path=%s", streamServerUrl.c_str(), uri.c_str());
 	}
 }
 
