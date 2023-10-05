@@ -7,7 +7,7 @@ public:
 	Tcp2wsRproxy();
 	string defaultConf();
 	void run();
-	ServiceInterface m_webSrv;
+	WebServer m_webSrv;
 	map<DWORD, tcpClt*> m_connMap;
 
 

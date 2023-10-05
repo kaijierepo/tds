@@ -347,30 +347,7 @@ void handlePost_gzh(string reqBody, string& resHeader,string& resBody)
 	resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 }
 
-void thread_handleRpc_respBodyOnlyRltOrErr(string rpcReqStr, int pipeSock, string hostname, int port, bool isHttps)
-{
-	RPC_RESP resp;
 
-	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->localIP = hostname;
-	pSession->localPort = port;
-	pSession->isHttps = isHttps;
-	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
-
-	string resBody = "";
-	if (resp.result.length() > 0) {
-		resBody = resp.result;
-	}
-	else if (resp.error.length() > 0) {
-		resBody = resp.error;
-	}
-	else {
-		resBody = "rpc call return null";
-	}
-
-	int isend = send(pipeSock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
-	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
-}
 
 
 void thread_handleGzhReq(string req,int pipeSock)
@@ -385,21 +362,38 @@ void thread_handleGzhReq(string req,int pipeSock)
 }
 
 
-void thread_handleRpcOverHttp(string rpcReqStr,int pipeSock, RPC_SESSION* pRpcSession)
+void thread_handleRpcOverHttp(RPC_SESSION* pRpcSession,int pipeSock)
 {
 	RPC_RESP resp;
-
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
 	pSession->setRpcSession(pRpcSession);
+	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
 
-	rpcSrv.handleRpcCall(rpcReqStr, resp, pSession);
-
-	string resBody = resp.strResp;
-	string ctLen = to_string(resBody.length());
-
-	int isend = send(pipeSock,resBody.c_str(), (int)resBody.length(),MSG_DONTROUTE);
+	int isend = send(pipeSock, resp.strResp.c_str(), (int)resp.strResp.length(),MSG_DONTROUTE);
 	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
 	//shutdown(sock, SHUT_DOWN_BOTH);
+}
+
+void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSock)
+{
+	RPC_RESP resp;
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	pSession->setRpcSession(pRpcSession);
+	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
+
+	string resBody = "";
+	if (resp.result.length() > 0) {
+		resBody = resp.result;
+	}
+	else if (resp.error.length() > 0) {
+		resBody = resp.error;
+	}
+	else {
+		resBody = "rpc call return null";
+	}
+
+	int isend = send(pipeSock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
+	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
 }
 
 void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
@@ -600,44 +594,6 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	return true;
 }
 
-bool WebServer::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
-{
-	string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
-	
-	int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
-	mg_str* mgs_host = mg_http_get_header(hm, "Host");
-	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
-	string ip; int port;
-	parseIpPort(sHost, ip, port);
-
-	thread t(thread_handleRpc_respBodyOnlyRltOrErr, rpcReqStr, pipeSock, ip, port, this->m_isHttps);
-	t.detach();
-	return false;
-}
-
-bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
-{
-	int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
-	mg_str* mgs_host = mg_http_get_header(hm, "Host");
-	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
-	string ip; int port;
-	parseIpPort(sHost, ip, port);
-
-	string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-	string query = str::fromBuff(hm->query.ptr, hm->query.len);
-	query = httplib::detail::decode_url(query, false);
-	string method = str::trimPrefix(uri, "/rpc/");
-	json jReq;
-	jReq["method"] = method;
-	jReq["params"] = parseParamFromQuery(query);
-	jReq["id"] = m_restApiID;
-	string rpcReqStr = jReq.dump();
-
-	thread t(thread_handleRpc_respBodyOnlyRltOrErr, rpcReqStr, pipeSock, ip, port, this->m_isHttps);
-	t.detach();
-	return false;
-}
-
 
 void parseCookie(string& cookie, map<string, string>& mapParams)
 {
@@ -724,6 +680,43 @@ void createTestCert() {
 	printf("测试证书已成功生成！\n");
 }
 #endif
+
+void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm, WebServer* pWs) {
+	//basic info
+	pSession->req = str::fromBuff(hm->body.ptr, hm->body.len);
+	pSession->isHttps = pWs->m_isHttps;
+
+	//local addr info
+	mg_str* mgs_host = mg_http_get_header(hm, "Host");
+	string sLocalAddr = str::fromBuff(mgs_host->ptr, mgs_host->len);
+	string ip; int port;
+	parseIpPort(sLocalAddr, ip, port);
+	pSession->localIP = ip;
+	pSession->localPort = port;
+
+	//remote addr info
+	unsigned char* pIP = (unsigned char*)&c->rem.ip;
+	pSession->remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
+	pSession->remotePort = c->rem.port;;
+	pSession->remoteAddr = str::format("%s:%d", pSession->remoteIP.c_str(), pSession->remotePort);
+
+
+	//is debug request. do not need log
+	if (mg_http_match_uri(hm, "/debug")) {
+		pSession->isDebug = true;
+	}
+
+	//parse user info by cookie
+	mg_str* mgs_cookie = mg_http_get_header(hm, "Cookie");
+	if (mgs_cookie != nullptr) {
+		string sCookie = str::fromBuff(mgs_cookie->ptr, mgs_cookie->len);
+		map<string, string> mapParams;
+		parseCookie(sCookie, mapParams);
+		if (mapParams.find("user") != mapParams.end()) {
+			pSession->user = mapParams["user"];
+		}
+	}
+}
 
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
@@ -828,63 +821,53 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		else if (mg_http_match_uri(hm, "/zlmhook/*")) {
 			pWs->handle_zlmhook(hm, c);
 		}
-		else if (mg_http_match_uri(hm, "/rpc/*"))
+		else if (mg_http_match_uri(hm, "/rpc/*"))  // path after rpc is method name,use url param to hold rpc params
 		{
-			pWs->handle_rpc_rest(hm, c);
+			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			string query = str::fromBuff(hm->query.ptr, hm->query.len);
+			query = httplib::detail::decode_url(query, false);
+			string method = str::trimPrefix(uri, "/rpc/");
+			json jReq;
+			jReq["method"] = method;
+			jReq["params"] = pWs->parseParamFromQuery(query);
+			jReq["id"] = pWs->m_restApiID++;
+
+			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
+			RPC_SESSION* pSession = new RPC_SESSION;
+			getSessionInfo(pSession, c, hm, pWs);
+			pSession->req = jReq.dump();
+			c->app_layer_data = pSession;
+			if (!pSession->isDebug)
+				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+			thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
+			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/api") && memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 		{
-			pWs->handle_rpc_rest_post(hm, c);
+			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
+			RPC_SESSION* pSession = new RPC_SESSION; 
+			getSessionInfo(pSession, c, hm, pWs);
+			c->app_layer_data = pSession;
+			if (!pSession->isDebug)
+				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+			thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
+			t.detach();
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
-			bool isDebug = false;
-			if (mg_http_match_uri(hm, "/debug")) {
-				isDebug = true;
-			}
-
-
-			unsigned char* pIP = (unsigned char*)&c->rem.ip;
-			string remoteIP = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);
-			int remotePort = c->rem.port;
-			string remoteAddr = str::format("%s:%d", remoteIP.c_str(), remotePort);
-
-			//调试类命令不打印
-			if(!isDebug)
-				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, remoteAddr);
-
 			//a pair of sock created   sock1 is add to mg_mgr_poll.  sock0 is returned for data sending
 			//sock1 is closed by mg_mgr_poll. sock0 should be closed outside mongoose,otherwise causes handle leak
 			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c,false);
-			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
-			mg_str* mgs_host = mg_http_get_header(hm, "Host");
-			string sLocalAddr = str::fromBuff(mgs_host->ptr, mgs_host->len);
-			string ip; int port;
-			parseIpPort(sLocalAddr, ip, port);
-			RPC_SESSION* pSession = new RPC_SESSION;
-			pSession->localIP = ip;
-			pSession->localPort = port;
-			pSession->remoteIP = remoteIP;
-			pSession->remotePort = remotePort;
-			pSession->isHttps = pWs->m_isHttps;
-			pSession->remoteAddr = str::format("%s:%d", pSession->remoteIP.c_str(), pSession->remotePort);
-			pSession->isDebug = isDebug;
 
+			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
+			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
 
 
-			//根据cookie解析用户名
-			mg_str* mgs_cookie = mg_http_get_header(hm, "Cookie");
-			if (mgs_cookie != nullptr) {
-				string sCookie = str::fromBuff(mgs_cookie->ptr, mgs_cookie->len);
-				map<string, string> mapParams;
-				parseCookie(sCookie, mapParams);
-				if (mapParams.find("user") != mapParams.end()) {
-					pSession->user = mapParams["user"];
-				}
-			}
+			if (!pSession->isDebug)
+				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
 
-			thread t(thread_handleRpcOverHttp, rpcReqStr, pipeSock,pSession);
+			thread t(thread_handleRpcOverHttp, pSession, pipeSock);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))
