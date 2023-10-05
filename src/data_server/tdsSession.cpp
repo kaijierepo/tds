@@ -128,9 +128,9 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      timeopt::now(&lastSendTime);
      int iSend = 0;
 
-     if (sockPipe != 0)
+     if (pipeSock != 0)
      {
-         iSend = ServiceInterface::sendToWs(p, len, sockPipe);
+         iSend = WebServer::sendToWs(p, len, pipeSock);
      }
      else if (pTcpSessionClt)
      {

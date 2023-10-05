@@ -4536,7 +4536,7 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
-	ServiceInterface::sendToAllWebsock(notify);
+	WebServer::sendToAllWebsock(notify);
 	reverseInterface.sendToAllSessions(notify, specialNotify);
 }
 

@@ -347,7 +347,7 @@ void handlePost_gzh(string reqBody, string& resHeader,string& resBody)
 	resHeader = "Content-Type:application/json;charset=utf-8\r\n";
 }
 
-void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int port, bool isHttps)
+void thread_handleRpc_respBodyOnlyRltOrErr(string rpcReqStr, int pipeSock, string hostname, int port, bool isHttps)
 {
 	RPC_RESP resp;
 
@@ -368,26 +368,24 @@ void thread_handleRpcRestApi(string rpcReqStr, int sock, string hostname, int po
 		resBody = "rpc call return null";
 	}
 
-	int isend = send(sock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
-	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SHUT_DOWN_BOTH);
+	int isend = send(pipeSock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
+	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
 }
 
 
-void thread_handleGzhReq(string req,int sock)
+void thread_handleGzhReq(string req,int pipeSock)
 {
 	string resHeader;
 	string resBody;
 	handlePost_gzh(req, resHeader, resBody);
 
 	//send 到 pair sock 在pair sock的回调中 发送http 响应
-	int isend = send(sock, resBody.c_str(), (int)resBody.length(), MSG_DONTROUTE);
-	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SHUT_DOWN_BOTH);
+	int isend = send(pipeSock, resBody.c_str(), (int)resBody.length(), MSG_DONTROUTE);
+	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
 }
 
 
-void thread_handleRpcOverHttp(string rpcReqStr,int sock, RPC_SESSION* pRpcSession)
+void thread_handleRpcOverHttp(string rpcReqStr,int pipeSock, RPC_SESSION* pRpcSession)
 {
 	RPC_RESP resp;
 
@@ -399,9 +397,9 @@ void thread_handleRpcOverHttp(string rpcReqStr,int sock, RPC_SESSION* pRpcSessio
 	string resBody = resp.strResp;
 	string ctLen = to_string(resBody.length());
 
-	int isend = send(sock,resBody.c_str(), (int)resBody.length(),MSG_DONTROUTE);   
-	//closesocket(sock);                      // Close the connection
-	shutdown(sock, SHUT_DOWN_BOTH);
+	int isend = send(pipeSock,resBody.c_str(), (int)resBody.length(),MSG_DONTROUTE);
+	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+	//shutdown(sock, SHUT_DOWN_BOTH);
 }
 
 void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
@@ -606,20 +604,20 @@ bool WebServer::handle_rpc_rest_post(mg_http_message* hm, mg_connection* c)
 {
 	string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 	
-	int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
+	int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
 	parseIpPort(sHost, ip, port);
 
-	thread t(thread_handleRpcRestApi, rpcReqStr, sock, ip, port, this->m_isHttps);
+	thread t(thread_handleRpc_respBodyOnlyRltOrErr, rpcReqStr, pipeSock, ip, port, this->m_isHttps);
 	t.detach();
 	return false;
 }
 
 bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
 {
-	int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
+	int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
 	mg_str* mgs_host = mg_http_get_header(hm, "Host");
 	string sHost = str::fromBuff(mgs_host->ptr, mgs_host->len);
 	string ip; int port;
@@ -635,7 +633,7 @@ bool WebServer::handle_rpc_rest(mg_http_message* hm, mg_connection* c)
 	jReq["id"] = m_restApiID;
 	string rpcReqStr = jReq.dump();
 
-	thread t(thread_handleRpcRestApi, rpcReqStr, sock, ip, port, this->m_isHttps);
+	thread t(thread_handleRpc_respBodyOnlyRltOrErr, rpcReqStr, pipeSock, ip, port, this->m_isHttps);
 	t.detach();
 	return false;
 }
@@ -765,7 +763,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
 			c->pipeSock = sPipe;
 			//记录管道发送sock口
-			p->sockPipe = sPipe;
+			p->pipeSock = sPipe;
 
 
 			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
@@ -812,9 +810,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			httplib::Server srv;
 			if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 			{
-				int sock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
+				int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
 				string req = str::fromBuff(hm->body.ptr, hm->body.len);
-				thread t(thread_handleGzhReq, req,sock);
+				thread t(thread_handleGzhReq, req, pipeSock);
 				t.detach();
 			}
 			else
@@ -855,7 +853,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			if(!isDebug)
 				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, remoteAddr);
 
-			int sock = mg_mkpipe(c->mgr, pipeCallback, c,false);                   // Create pipe
+			//a pair of sock created   sock1 is add to mg_mgr_poll.  sock0 is returned for data sending
+			//sock1 is closed by mg_mgr_poll. sock0 should be closed outside mongoose,otherwise causes handle leak
+			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c,false);
 			string rpcReqStr = str::fromBuff(hm->body.ptr, hm->body.len);
 			mg_str* mgs_host = mg_http_get_header(hm, "Host");
 			string sLocalAddr = str::fromBuff(mgs_host->ptr, mgs_host->len);
@@ -884,7 +884,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				}
 			}
 
-			thread t(thread_handleRpcOverHttp, rpcReqStr, sock,pSession);
+			thread t(thread_handleRpcOverHttp, rpcReqStr, pipeSock,pSession);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))
@@ -995,9 +995,9 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
-				//closesocket(p->sockPipe);
-				shutdown(p->sockPipe, SHUT_DOWN_BOTH);
-				p->sockPipe = 0;
+				closesocket(p->pipeSock);
+				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
+				p->pipeSock = 0;
 				p->bConnected = false;
 				pWs->m_wsSessions.erase(c);
 			}
@@ -1081,7 +1081,7 @@ void WebServer::sendToAllWs(string& s)
 		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
 			continue;
 
-		WebServer::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->sockPipe);
+		WebServer::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->pipeSock);
 	}
 	m_csWsSessions.unlock();
 }
