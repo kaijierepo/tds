@@ -1,23 +1,22 @@
 #pragma once
 
 /*
-服务对外接口，接收外部客户端的主动连接与请求
-并将服务转发给rpcServer进行处理
-
+web server of tds
+dispatch http request to rpcHandler
 */
 
 #include "tdsSession.h"
 #include "common/mongoose.h"
 
-class ServiceInterface {
+class WebServer {
 public:
 	bool handle_zlmhook(mg_http_message* hm, mg_connection* c);
 	bool handle_stream_redirect(mg_http_message* hm, mg_connection* c);
 	bool handle_rpc_rest_post(mg_http_message* hm, mg_connection* c);
 	bool handle_rpc_rest(mg_http_message* hm, mg_connection* c);
 
-	ServiceInterface();
-	~ServiceInterface();
+	WebServer();
+	~WebServer();
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
@@ -40,10 +39,10 @@ extern string confDir;
 extern string filesDir;
 
 
-extern ServiceInterface* webSrv;
-extern ServiceInterface* webSrvS;
-extern ServiceInterface* webSrv2;
-extern ServiceInterface* webSrvS2;
+extern WebServer* webSrv;
+extern WebServer* webSrvS;
+extern WebServer* webSrv2;
+extern WebServer* webSrvS2;
 
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern void sendToCommLog(string s);
