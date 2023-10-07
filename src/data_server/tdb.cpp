@@ -2705,8 +2705,34 @@ bool TAG_SELECTOR::init(string tag, string rootTag, string objtype){
 		//TAG::addRoot will add .  , so selector won't be  HangZhou*, if HangZhou* ,HangZhou(Test).temprature will be selected uncorrectly
 		string tagExp = DB_TAG::addRoot(tag, rootTag);
 		string regExp = tagExp;
+
+/*
+		The special characters in regular expressions are :
+
+		-. : Matches any character except a newline.
+		- *: Matches the preceding element zero or more times.
+		- +: Matches the preceding element one or more times.
+		- ? : Matches the preceding element zero or one time.
+		- ^ : Matches the beginning of the input string.
+		- $ : Matches the end of the input string.
+		- [] : Defines a character class, matches any one character within the brackets.
+		- () : Marks the start and end of a subexpression.
+		- | : Specifies a choice between two or more patterns.
+		- \ : Escape character, used to escape special characters.
+*/
+
 		regExp = replaceStr(regExp, ".", "\\.");
 		regExp = replaceStr(regExp, "*", ".*");
+		regExp = replaceStr(regExp, "+", "\\+");
+		regExp = replaceStr(regExp, "?", "\\?");
+		regExp = replaceStr(regExp, "^", "\\^");
+		regExp = replaceStr(regExp, "$", "\\$");
+		regExp = replaceStr(regExp, "[", "\\[");
+		regExp = replaceStr(regExp, "]", "\\]");
+		regExp = replaceStr(regExp, "(", "\\(");
+		regExp = replaceStr(regExp, ")", "\\)");
+		regExp = replaceStr(regExp, "|", "\\|");
+
 		fuzzyMatchExp.push_back(tagExp);
 		fuzzyMatchRegExp.push_back(regExp);
 	}
