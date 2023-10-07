@@ -776,7 +776,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll -D genicam|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\data_server\as.cpp" />
-    <ClCompile Include="..\src\data_server\db.cpp" />
+    <ClCompile Include="..\src\data_server\jerry.cpp" />
     <ClCompile Include="..\src\data_server\mp.cpp" />
     <ClCompile Include="..\src\data_server\obj.cpp" />
     <ClCompile Include="..\src\data_server\prj.cpp" />
@@ -785,6 +785,7 @@
     <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
     <ClCompile Include="..\src\data_server\scriptManager.cpp" />
+    <ClCompile Include="..\src\data_server\tdb.cpp" />
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
     <ClCompile Include="..\src\data_server\webSrv.cpp" />
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
@@ -828,7 +829,7 @@
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\data_server\as.h" />
-    <ClInclude Include="..\src\data_server\db.h" />
+    <ClInclude Include="..\src\data_server\jerry.h" />
     <ClInclude Include="..\src\data_server\mp.h" />
     <ClInclude Include="..\src\data_server\obj.h" />
     <ClInclude Include="..\src\data_server\prj.h" />
@@ -837,6 +838,7 @@
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\scriptManager.h" />
+    <ClInclude Include="..\src\data_server\tdb.h" />
     <ClInclude Include="..\src\data_server\tdsSession.h" />
     <ClInclude Include="..\src\data_server\webSrv.h" />
     <ClInclude Include="..\src\func_module\csvTable.h" />

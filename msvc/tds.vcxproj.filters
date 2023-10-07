@@ -16,6 +16,9 @@
     <Filter Include="tools">
       <UniqueIdentifier>{71bb2987-59a1-4354-b2ab-cdcc697f1816}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tdb">
+      <UniqueIdentifier>{08a3c5fa-8a94-4243-8f11-d7baf813a75c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\common\logger.cpp">
@@ -53,9 +56,6 @@
     </ClCompile>
     <ClCompile Include="..\src\tds.cpp" />
     <ClCompile Include="..\src\data_server\as.cpp">
-      <Filter>data_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\data_server\db.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\mp.cpp">
@@ -149,6 +149,12 @@
     <ClCompile Include="..\src\func_module\statusServer.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\data_server\tdb.cpp">
+      <Filter>tdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\jerry.cpp">
+      <Filter>tdb</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -191,9 +197,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\as.h">
-      <Filter>data_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\db.h">
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\mp.h">
@@ -289,6 +292,12 @@
     </ClInclude>
     <ClInclude Include="..\src\func_module\statusServer.h">
       <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\tdb.h">
+      <Filter>tdb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\jerry.h">
+      <Filter>tdb</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
