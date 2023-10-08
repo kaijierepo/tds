@@ -2526,15 +2526,16 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 		}
 			
-		//验证token
-		if (bAccessCtrl) {
-			if (tds->conf->enableAccessCtrl && jReq["token"] == nullptr && jReq["pwd"] == nullptr)
+		//如果启用鉴权
+		if (bAccessCtrl && tds->conf->enableAccessCtrl) {
+			//必须要有token或者pwd
+			if (jReq["token"] == nullptr && jReq["pwd"] == nullptr)
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
 				goto HANDLE_END;
 			}
 
-			//即使服务端没有打开鉴权，如果用户指定了token或者user中的
+			//有token校验token
 			if (jReq["token"] != nullptr && jReq["token"] != "")
 			{
 				pSession->token = jReq["token"].get<string>();
@@ -2548,7 +2549,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				}
 			}
 
-			//允许直接输入密码访问，主要是方便api接口测试的场景。生产环境不应当使用该字段
+			//有密码校验密码，主要是方便api接口测试的场景。生产环境不应当使用该字段
 			if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
 			{
 				string pwd = jReq["pwd"].get<string>();
