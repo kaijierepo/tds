@@ -2526,7 +2526,6 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 		}
 			
-		//验证token
 		if (bAccessCtrl && tds->conf->enableAccessCtrl) {
 			if ( jReq["token"] == nullptr && jReq["pwd"] == nullptr)
 			{
