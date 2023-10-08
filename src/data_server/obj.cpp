@@ -383,16 +383,32 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	if (m_type != MO_TYPE::mp)
 	{
 		json jChildren = json::array();
-		for (auto& pmochild : m_childObj)
-		{
-			if (pmochild->m_type == "mp" && !q.getMp)
-				continue;
+		if (!q.flatten) {
+			for (auto& pmochild : m_childObj)
+			{
+				if (pmochild->m_type == "mp" && !q.getMp)
+					continue;
 
-			json jChild;
-			if (pmochild->toJson(jChild, q))
-				jChildren.push_back(jChild);
+				json jChild;
+				if (pmochild->toJson(jChild, q))
+					jChildren.push_back(jChild);
+			}
 		}
-		if(jChildren.size() > 0)
+		else {
+			vector<MP*> mpList;
+			GetAllChildMp(mpList);
+			for (auto& mp : mpList) {
+				json jMp;
+				if (mp->toJson(jMp, q)) {
+					string flattenName = mp->getTag();
+					flattenName = TAG::trimRoot(flattenName,getTag());
+					jMp["name"] = flattenName;
+					jChildren.push_back(jMp);
+				}
+			}
+		}
+
+		if (jChildren.size() > 0)
 			conf["children"] = jChildren;
 	}
 	
@@ -1212,8 +1228,11 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	if (opt["getVal"] != nullptr) {
 		q.getVal = opt["getVal"].get<bool>();
 	}
-	if (opt["getValDesc"] != nullptr) {
+	if (opt["getValDesc"].is_boolean()) {
 		q.getValDesc = opt["getValDesc"].get<bool>();
+	}
+	if (opt["flatten"].is_boolean()) {
+		q.flatten = opt["flatten"].get<bool>();
 	}
 	return q;
 }

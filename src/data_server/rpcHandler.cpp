@@ -1896,11 +1896,11 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		almSrv.rpc_updateStatus(params, rpcResp);
 	}
-	else if (method == "ackAlarm")
+	else if (method == "ackAlarm" || method == "ackAlarmEvent")
 	{
 		almSrv.rpc_acknowledge(params,rpcResp, session);
 	}
-	else if (method == "ackAllAlarmEvent")
+	else if (method == "ackAllAlarm" || method == "ackAllAlarmEvent")
 	{
 		almSrv.rpc_acknowledge(params, rpcResp, session);
 	}
@@ -2526,16 +2526,15 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 		}
 			
-		//如果启用鉴权
+		//验证token
 		if (bAccessCtrl && tds->conf->enableAccessCtrl) {
-			//必须要有token或者pwd
-			if (jReq["token"] == nullptr && jReq["pwd"] == nullptr)
+			if ( jReq["token"] == nullptr && jReq["pwd"] == nullptr)
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
 				goto HANDLE_END;
 			}
 
-			//有token校验token
+			//user token to access
 			if (jReq["token"] != nullptr && jReq["token"] != "")
 			{
 				pSession->token = jReq["token"].get<string>();
@@ -2549,7 +2548,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				}
 			}
 
-			//有密码校验密码，主要是方便api接口测试的场景。生产环境不应当使用该字段
+			//use password to access, for api testing, do not use in a productin enviroment
 			if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
 			{
 				string pwd = jReq["pwd"].get<string>();
@@ -4106,7 +4105,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	if (!isChildTds) {
 		if (pmp->m_valType == VAL_TYPE::video) {
 			//localIP是本次连接暴露给对方的ip地址。如果服务在内网中，那么此处是公网地址，需要在路由器做好端口映射
-			if (tds->conf->mediaSrvIP != "") {
+			if (tds->conf->mediaSrvIP != "" && tds->conf->mediaSrvIP != "localhost" && tds->conf->mediaSrvIP != "127.0.0.1") {
 				ip = tds->conf->mediaSrvIP;
 			}
 			else {
@@ -4182,7 +4181,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 		{
 			if (pmp->m_valType == VAL_TYPE::video) {
 				//localIP是本次连接暴露给对方的ip地址。如果服务在内网中，那么此处是公网地址，需要在路由器做好端口映射
-				if (tds->conf->mediaSrvIP != "") {
+				if (tds->conf->mediaSrvIP != "" && tds->conf->mediaSrvIP != "localhost" && tds->conf->mediaSrvIP != "127.0.0.1") {
 					ip = tds->conf->mediaSrvIP;
 				}
 				else {

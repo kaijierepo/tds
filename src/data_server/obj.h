@@ -53,6 +53,7 @@ struct OBJ_QUERIER {
 	bool getMp;
 	string rootTag;  //查询该根位号下的位号，并且返回的位号除去该根位号
 	string leafType;
+	bool flatten;  //是否将多层级的树形子节点压缩为只有一个层级的列表。
 
 	//指定对象中返回的数据
 	bool getVal; 
@@ -74,6 +75,7 @@ struct OBJ_QUERIER {
 		 leafType = "mp";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
 		 getUnit = true;
+		 flatten = false;
 	}
 };
 

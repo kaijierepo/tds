@@ -576,37 +576,31 @@ bool userManager::rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session)
 
 bool userManager::rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	bool changed = false;
 	m_csAccessToken.lock();
-	if (m_mapAccessInfo.find(session.token)!= m_mapAccessInfo.end()) {
+	//let old token expire.老的 Token 继续维护5秒的生存期。 使得客户端再收到新token前使用老token发的命令仍能被执行
+	if (m_mapAccessInfo.find(session.token) != m_mapAccessInfo.end()) {
 		ACCESS_INFO& ai = m_mapAccessInfo[session.token];
 		timeopt::now(&ai.stCreate);
-		ai.age = 5; //老的 Token 继续维护5秒的生存期。 使得客户端再收到新token前使用老token发的命令仍能被执行
+		ai.age = 5; 
+	}
 
-		ACCESS_INFO aiTmp;
-		aiTmp.user = ai.user;
-		aiTmp.token = common::uuid();
-		aiTmp.bDynamic = true;
-		aiTmp.age = tds->conf->tokenExpireTime * 60;
-		timeopt::now(&aiTmp.stCreate);
-		m_mapAccessInfo[aiTmp.token] = aiTmp;
-		json rlt;
-		rlt["token"] = aiTmp.token;
-		rlt["tokenExpire"] = aiTmp.age;
-		rlt["tokenCreateTime"] = timeopt::st2str(aiTmp.stCreate);
-		resp.result = rlt.dump();
-		changed = true;
-	}
-	else
-	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "invalid token");
-	}
+	//create a new token
+	ACCESS_INFO aiTmp;
+	aiTmp.user = session.user;
+	aiTmp.token = common::uuid();
+	aiTmp.bDynamic = true;
+	aiTmp.age = tds->conf->tokenExpireTime * 60;
+	timeopt::now(&aiTmp.stCreate);
+	m_mapAccessInfo[aiTmp.token] = aiTmp;
+	json rlt;
+	rlt["token"] = aiTmp.token;
+	rlt["tokenExpire"] = aiTmp.age;
+	rlt["tokenCreateTime"] = timeopt::st2str(aiTmp.stCreate);
+	resp.result = rlt.dump();
 	m_csAccessToken.unlock();
 
-	if (changed)
-	{
-		saveTokens();
-	}
+
+	saveTokens();
 	return true;
 }
 
@@ -851,6 +845,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 				ai.token = token;
 				ai.user = user;
 				ai.bDynamic = true;
+				userInfo["tokenCreateTime"] = ai.stCreate.toStr(true);
 				userInfo["tokenExpire"] = ai.age;
 				m_csAccessToken.lock();
 				m_mapAccessInfo[token] = ai;
