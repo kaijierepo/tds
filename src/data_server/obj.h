@@ -252,6 +252,9 @@ public:
 	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
 	bool isSelectedByLeafType(string leafType);
 
+	//修改接口
+	void recursiveSetOffline();
+
 	//树管理
 	std::vector<OBJ*> m_childObj;
 	OBJ* m_pParentMO;

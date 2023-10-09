@@ -249,6 +249,15 @@ bool OBJ::isSelectedByLeafType(string leafType)
 	return false;
 }
 
+void OBJ::recursiveSetOffline()
+{
+	m_bOnline = false;
+	for (int i = 0; i < m_childObj.size(); i++) {
+		OBJ* pC = m_childObj[i];
+		pC->recursiveSetOffline();
+	}
+}
+
 //serializeOption
 //root 返回位号的相对根
 //type mo类型
