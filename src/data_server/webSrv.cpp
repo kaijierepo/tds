@@ -426,7 +426,8 @@ void thread_asynOpenChildTdsStream(ioDev* pChildTds,string tag) {
 	params["tag"] = tagInChild;
 	params["pushTo"] = tag;
 
-	if(tds->conf->mediaSrvIP != "")
+	//如果配置了非本机的流媒体服务地址，通知子服务推流到该地址。如果为本机，子服务根据tcp连接获得主服务的ip地址
+	if(tds->conf->mediaSrvIP != "" && tds->conf->mediaSrvIP !="localhost" && tds->conf->mediaSrvIP !="127.0.0.1")
 		params["pushToIP"] = tds->conf->mediaSrvIP;
 	json err, rlt;
 	pChildTds->call("openStream", params, nullptr, rlt, err);

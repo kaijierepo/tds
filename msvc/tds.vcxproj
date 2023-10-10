@@ -319,7 +319,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'">

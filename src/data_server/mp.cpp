@@ -787,7 +787,7 @@ void MP::saveToDB() {
 	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
 	jDE["val"] = m_curVal;
 	if(m_curFileData != nullptr)
-		jDE["fileData"] = m_curFileData;
+		jDE["file"] = m_curFileData;
 	string sDe = jDE.dump();
 
 	DB_TIME dbt;

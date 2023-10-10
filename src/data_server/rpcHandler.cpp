@@ -2929,7 +2929,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		//值
 		if (params.find("val") != params.end()) {
 			inputVal = params["val"];
-			fileData = params["fileData"];
+			fileData = params["file"];
 		}
 		else
 		{

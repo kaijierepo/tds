@@ -638,8 +638,8 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 
 
 	//write file data
-	yyjson_val* yyv_dataFile = yyjson_obj_get(yyDe, "dataFile");
-	if (yyv_dataFile)
+	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
+	if (yyv_file && yyjson_is_arr(yyv_file))
 	{
 		string fileDataPath = folderPath + "/" + stTime.toStampHMS();
 		if (!fileExist(fileDataPath))
@@ -648,13 +648,15 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 		size_t idx = 0;
 		size_t max = 0;
 		yyjson_val* item;
-		yyjson_arr_foreach(yyv_dataFile, idx, max, item) {
-			yyjson_val* yyv_name = yyjson_obj_get(yyDe, "name");
-			yyjson_val* yyv_type = yyjson_obj_get(yyDe, "type");
-			yyjson_val* yyv_data = yyjson_obj_get(yyDe, "data");
+		yyjson_arr_foreach(yyv_file, idx, max, item) {
+			yyjson_val* yyv_name = yyjson_obj_get(item, "name");
+			yyjson_val* yyv_type = yyjson_obj_get(item, "type");
+			yyjson_val* yyv_data = yyjson_obj_get(item, "data");
 			string name = yyjson_get_str(yyv_name);
 			string type = yyjson_get_str(yyv_type);
-			string data = yyjson_get_str(yyv_data);
+			const char* pData = yyjson_get_str(yyv_data);
+			int ilen = strlen(pData);
+			string data = pData;
 			if (type == "jpg") {
 				//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 				size_t startPos = 0;
@@ -682,7 +684,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 
 	//write de
 	//delete file data,only file index
-	yyjson_mut_val* yymv_dataFile = yyjson_mut_obj_get(yymDe, "dataFile");
+	yyjson_mut_val* yymv_dataFile = yyjson_mut_obj_get(yymDe, "file");
 	if (yymv_dataFile) {
 		size_t idx = 0;
 		size_t max = 0;
