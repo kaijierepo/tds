@@ -19,9 +19,9 @@ struct TIME_SPAN {
 
 struct ALARM_LIMIT {
 	bool enableHigh;
-	float high;
+	double high;
 	bool enableLow;
-	float low;
+	double low;
 	ALARM_LIMIT()
 	{
 		enableHigh = false;

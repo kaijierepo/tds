@@ -544,7 +544,7 @@ bool MP::loadStatus(OBJ* pSrc)
 
 void MP::calcAlarm()
 {
-	if (m_curVal.is_number_float())
+	if (m_curVal.is_number())
 	{
 		double dbCurVal = m_curVal.get<double>();
 		//计算报警
