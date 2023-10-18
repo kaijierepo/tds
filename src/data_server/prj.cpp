@@ -16,7 +16,7 @@ void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector) {
 project::project()
 {
 	m_name = "tds";
-	m_type = "org";
+	m_level = "org";
 	m_enableEzviz = false;
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
@@ -195,10 +195,14 @@ bool project::loadObjTemplate()
 			for (auto& i : jTplList) {
 				OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
 				OBJ_TEMPLATE& ct = *pct;
-				ct.type = i["type"];
-				ct.typeLabel = i["typeLabel"];
+				if(i.contains("typeLabel"))
+					ct.type = i["typeLabel"];
+				else
+					ct.type = i["type"];
 				string tplDataStr;
-				string p1 = tds->conf->confPath + "/template/object/" + ct.type + ".json";
+				string typePY;
+				str::hanZi2Pinyin(ct.type, typePY);
+				string p1 = tds->conf->confPath + "/template/object/" + typePY + ".json";
 				if (fs::readFile(p1, tplDataStr)) {
 					ct.tplData = json::parse(tplDataStr);
 					ct.obj.loadConf(ct.tplData);
@@ -219,8 +223,12 @@ bool project::loadObjTemplate()
 void project::setObjTemplate(json& params)
 {
 	OBJ_TEMPLATE* ct  = new OBJ_TEMPLATE();
-	ct->typeLabel = params["typeLabel"];
-	str::hanZi2Pinyin(ct->typeLabel, ct->type);
+	if(params.contains("typeLabel"))
+		ct->type = params["typeLabel"];
+	else
+		ct->type = params["type"];
+	
+	//str::hanZi2Pinyin(ct->typeLabel, ct->type);
 	ct->tplData = params["tplData"];
 	ct->obj.loadConf(ct->tplData);
 
@@ -237,13 +245,10 @@ void project::setObjTemplate(json& params)
 	for (auto& i : m_mapObjTempalte) {
 		json c;
 		c["type"] = i.second->type;
-		c["typeLabel"] = i.second->typeLabel;
 		jConf.push_back(c);
 	}
 	string sConf = jConf.dump(2);
 	fs::writeFile(p, sConf);
-
-
 
 	string chanPath = tds->conf->confPath + "/template/object/";
 	string s = ct->tplData.dump(2);

@@ -2698,7 +2698,7 @@ string TIME_SELECTOR::getParsedSelector()
 
 
 
-bool TAG_SELECTOR::init(string tag, string rootTag, string objtype){
+bool TAG_SELECTOR::init(string tag, string rootTag, string objtype,string objlevel){
 	rootTag = DB_TAG::addRoot(rootTag, m_org);
 	m_rootTag = rootTag;
 	if (tag.find("*") != string::npos)
@@ -2745,13 +2745,14 @@ bool TAG_SELECTOR::init(string tag, string rootTag, string objtype){
 	}
 
 	setType(objtype);
+	level = objlevel;
 	return true;
 }
 
-bool TAG_SELECTOR::init(vector<string>& tag, string rootTag, string objtype)
+bool TAG_SELECTOR::init(vector<string>& tag, string rootTag, string objtype, string objlevel)
 {
 	for (auto& i : tag) {
-		init(i, rootTag,objtype);
+		init(i, rootTag,objtype,objlevel);
 	}
 	return true;
 }

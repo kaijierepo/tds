@@ -10,7 +10,6 @@ using json = nlohmann::json;
 
 struct OBJ_TEMPLATE {
 	string type;
-	string typeLabel;
 	json tplData;
 	OBJ obj;
 

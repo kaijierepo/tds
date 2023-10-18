@@ -203,9 +203,8 @@ public:
 	bool isCustomMo();
 	bool isCustomMp();
 	bool isCustomOrg();
-	string m_type;
-	string m_customType;  //如果用中文命名，此处转为中文首字母
-	string m_customTypeLabel;
+	string m_level;
+	string m_type;  
 	string m_groupName; //设备编组。1个自定义的字符串
 	string m_name;
 	string m_alias;

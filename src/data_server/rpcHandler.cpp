@@ -1642,29 +1642,34 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			if (params["tag"].is_string()) {
 				sTagSel = params["tag"];
 			}
-			string type = "obj";
-			if (params["type"] != nullptr)
-				type = params["type"].get<string>();
+			string level = "*";
+			if (params["level"] != nullptr)
+				level = params["level"].get<string>();
 			//将getOrg,getMp,getMo统一转化为getObj
 			else if (method == "getOrg") {
-				type = "org";
+				level = "org";
 			}
 			else if (method == "getCustomOrg") {
-				type = "customOrg";
+				level = "org";
 			}
 			else if (method == "getMo") {
-				type = "mo";
+				level = "mo";
 			}
 			else if (method == "getCustomMo") {
-				type = "customMo";
+				level = "mo";
 			}
 			else if (method == "getMp") {
 				params["getMp"] = true;
-				type = "mp";
+				level = "mp";
+			}
+
+			string type = "*";
+			if (params["type"] != nullptr) {
+				type = params["type"].get<string>();
 			}
 
 			TAG_SELECTOR tagSel;
-			tagSel.init(sTagSel, rootTag,type);
+			tagSel.init(sTagSel, rootTag, type,level);
 
 			string mode = "array";
 			if (params["mode"] != nullptr) {
@@ -1680,12 +1685,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				//方便api使用，通配模式下，默认获取子节点和mp
 				//非通配模式下，默认关闭
-				if (!params.contains("getMp")) {
-					params["getMp"] = true;
-				}
-				if (!params.contains("getChild")) {
-					params["getChild"] = true;
-				}
+				//if (!params.contains("getMp")) {
+				//	params["getMp"] = true;
+				//}
+				//if (!params.contains("getChild")) {
+				//	params["getChild"] = true;
+				//}
 
 				if (mode == "array") {
 					json jRlt = json::array();
@@ -1773,11 +1778,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			if (pmo != nullptr)
 			{
-				string type = "*";
-				if (params["type"].is_string()) {
-					type = params["type"];
+				string level = "*";
+				if (params["level"].is_string()) {
+					level = params["level"];
 				}
-				map<string, json> list = pmo->getChildCustomTypeList(type);
+				map<string, json> list = pmo->getChildCustomTypeList(level);
 				json jList = json::array();
 
 				for (auto& i : list)
@@ -3635,7 +3640,7 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 	//支持中文直接输入moType;
 	if (params["type"].is_string()) {
 		attrParam.moType = params["type"].get<string>();
-		str::hanZi2Pinyin(attrParam.moType, attrParam.moType);
+		//str::hanZi2Pinyin(attrParam.moType, attrParam.moType);
 	}
 
 	//是否进行列字段重命名

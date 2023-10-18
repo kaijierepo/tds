@@ -82,9 +82,9 @@ public:
 		getTag = false;
 	}
 
-	bool init(string tag, string rootTag="", string objtype="*");
+	bool init(string tag, string rootTag="", string objtype="*",string level="*");
 
-	bool init(vector<string>& tag, string rootTag = "", string objtype = "*");
+	bool init(vector<string>& tag, string rootTag = "", string objtype = "*", string level = "*");
 	bool match(string tag);//use absolute tag 
 	bool singleSelMode();
 
@@ -100,6 +100,7 @@ public:
 	void setType(string objType);
 	bool specifyType();
 	string type; //object type
+	string level;
 	string error;
 
 	vector<string> tagSet;

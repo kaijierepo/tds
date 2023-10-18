@@ -69,7 +69,7 @@ OBJ* createMO(string type)
 OBJ::OBJ()
 {
 	m_pParentMO = NULL;
-	m_type = MO_TYPE::mo;
+	m_level = MO_TYPE::mo;
 	m_bOnline = false;
 	m_bShow = true;
 	m_bDynLocation = false;
@@ -103,11 +103,27 @@ bool OBJ::loadConf(json& conf)
 		m_name = conf["name"];
 	}
 
-	if (conf.contains("type")) {
-		m_type = conf["type"];
-		if (m_type == "project") //不再使用project类型。兼容一段时间 2023.1.2
-			m_type = "org";
+
+	if(conf.contains("level")) {
+		if (conf.contains("level")) {
+			m_level = conf["level"];
+		}
+		if (conf.contains("type")) {
+			m_type = conf["type"];
+		}
 	}
+	else { //兼容一段时间老格式
+		if(conf.contains("customTypeLabel"))
+			m_type = conf["customTypeLabel"];
+		m_level = conf["type"];
+		if (m_level == "customMo") {
+			m_level = "mo";
+		}
+		else if (m_level == "customOrg") {
+			m_level = "org";
+		}
+	}
+
 	if (conf.contains("childTds")) {
 		m_bChildTds = conf["childTds"].get<bool>();
 	}
@@ -144,13 +160,6 @@ bool OBJ::loadConf(json& conf)
 		loadTask(conf["tasks"]);
 	}
 
-	if (conf.contains("customTypeLabel") && conf["customTypeLabel"].get<string>().length() > 0)
-	{
-		m_customTypeLabel = conf["customTypeLabel"];//以中文配置为准，转拼音主要为方便内部不支持中文的地方使用。每一次修改了label都要更新type，通过转拼音
-		m_customType = m_customTypeLabel;
-		str::hanZi2Pinyin(m_customType, m_customType);
-	}
-
 	if (conf["comment"].is_string()) {
 		m_comment = conf["comment"];
 	}
@@ -171,7 +180,8 @@ bool OBJ::loadConf(json& conf)
 		for (auto& child : children)
 		{
 			OBJ* pmo;
-			if (child.contains("type") && child["type"] == "mp") {
+			if ((child.contains("level") && child["level"] == "mp")||
+				(child.contains("type") && child["type"] == "mp") ) {  //保持一段时间兼容，后面删除
 				pmo = new MP();
 			}
 			else
@@ -202,7 +212,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		return true;
 	if (leafType == "mp")
 		return true;
-	if (m_type == "mp")
+	if (m_level == "mp")
 		return true;
 
 	size_t pos = leafType.find(".");
@@ -212,15 +222,15 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		leafType = leafType.substr(0, pos);
 	}
 
-	if (m_type == "org")
+	if (m_level == "org")
 	{
 		return true;
 	}
-	else if (m_type == "mo") {
+	else if (m_level == "mo") {
 		if(leafType == "mo")
 			return true;
 	}
-	else if (m_type == "mpGroup") {
+	else if (m_level == "mpGroup") {
 		if (leafType == "mo")
 			return true;
 	}
@@ -229,7 +239,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			return true;
 		}
 		else if (leafType == "customOrg") {
-			if (leafCustomType == "" || leafCustomType == m_customType || leafCustomType == m_customTypeLabel) {
+			if (leafCustomType == "" || leafCustomType == m_type) {
 				return true;
 			}
 		}
@@ -240,7 +250,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		}
 		else if (leafType == "customMo")
 		{
-			if (leafCustomType == "" || leafCustomType == m_customType || leafCustomType == m_customTypeLabel) {
+			if (leafCustomType == "" || leafCustomType == m_type) {
 				return true;
 			}
 		} 
@@ -273,7 +283,7 @@ bool OBJ::toJson(json& conf, json serializeOption)
 
 bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 {
-	if (m_type == "mp" && !q.getMp)
+	if (m_level == "mp" && !q.getMp)
 		return false;
 
 	//根据请求的moType判断是否需要返回当前节点。
@@ -281,7 +291,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 		return false;
 
 	conf["name"] = m_name;
-	conf["type"] = m_type;
+	conf["level"] = m_level;
 
 	if (q.getConfDetail) {
 		string tag = getTag();
@@ -303,10 +313,8 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 			conf["streamAccess"] = m_streamAccess;
 		}
 			
-		if (m_customType != "")
-			conf["customType"] = m_customType;
-		if (m_customTypeLabel != "")
-			conf["customTypeLabel"] = m_customTypeLabel;
+		if (m_type != "")
+			conf["type"] = m_type;
 		if (m_groupName != "") {
 			conf["group"] = m_groupName;
 		}
@@ -389,13 +397,13 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 		return true;
 	}
 
-	if (m_type != MO_TYPE::mp)
+	if (m_level != MO_TYPE::mp)
 	{
 		json jChildren = json::array();
 		if (!q.flatten) {
 			for (auto& pmochild : m_childObj)
 			{
-				if (pmochild->m_type == "mp" && !q.getMp)
+				if (pmochild->m_level == "mp" && !q.getMp)
 					continue;
 
 				json jChild;
@@ -454,25 +462,25 @@ void OBJ::toAttrInfo(nlohmann::ordered_json& attrInfo)
 
 bool OBJ::isCustomMo()
 {
-	if (m_type == MO_TYPE::customMo)
+	if (m_level == MO_TYPE::customMo)
 		return true;
-	if (m_type == MO_TYPE::mo && m_customType != "")
+	if (m_level == MO_TYPE::mo && m_type != "")
 		return true;
 	return false;
 }
 
 bool OBJ::isCustomMp()
 {
-	if (m_type == MO_TYPE::mp && m_customType != "")
+	if (m_level == MO_TYPE::mp && m_type != "")
 		return true;
 	return false;
 }
 
 bool OBJ::isCustomOrg()
 {
-	if (m_type == MO_TYPE::customOrg)
+	if (m_level == MO_TYPE::customOrg)
 		return true;
-	if (m_type == MO_TYPE::org && m_customType != "")
+	if (m_level == MO_TYPE::org && m_type != "")
 		return true;
 	return false;
 }
@@ -579,7 +587,7 @@ json OBJ::getRT()
 {
 	json j;
 	j["name"] = m_name;
-	j["type"] = m_type;
+	j["type"] = m_level;
 	json jChildren;
 	for(int i=0;i<m_childObj.size();i++)
 	{
@@ -767,7 +775,7 @@ void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
 	for (int i = 0; i < vec.size(); i++)
 	{
 		OBJ* p = vec.at(i);
-		if (p->m_type == "mp")
+		if (p->m_level == "mp")
 		{
 			tagVec->push_back((MP*)p);
 		}
@@ -779,7 +787,7 @@ void OBJ::getMpList(vector<MP*>& MPlist)
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
 		OBJ* p = m_childObj.at(i);
-		if (p->m_type == "mp")
+		if (p->m_level == "mp")
 		{
 			MPlist.push_back((MP*)p);
 		}
@@ -794,7 +802,7 @@ void OBJ::getMpList(map<string, MP*>& MPlist)
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
 		OBJ* p = m_childObj.at(i);
-		if (p->m_type == "mp")
+		if (p->m_level == "mp")
 		{
 			MPlist[p->getTag().c_str()] = (MP*)p;
 		}
@@ -819,7 +827,7 @@ OBJ* OBJ::queryObj(string strTag,bool usePinyin)
 MP* OBJ::GetMPByTag(string strTag, bool usePinyin)
 {
 	OBJ* pMO = queryObj(strTag, usePinyin);
-	if (pMO && pMO->m_type == "mp")
+	if (pMO && pMO->m_level == "mp")
 		return (MP*)pMO;
 	return nullptr;
 }
@@ -844,7 +852,7 @@ OBJ* OBJ::GetChildObjByName(string strName)
 MP* OBJ::GetDescendantMPByName(string strName)
 {
 	OBJ* p = GetDescendantObjByName(strName);
-	if (p && p->m_type == "mp")
+	if (p && p->m_level == "mp")
 	{
 		return (MP*)p;
 	}
@@ -881,19 +889,19 @@ bool OBJ::isSelectedByType(string type)
 	if (type == "obj")
 		return true;
 	else if (type == "org") {
-		if (m_type == "org" || isCustomOrg())
+		if (m_level == "org" || isCustomOrg())
 			return true;
 		else
 			return false;
 	}							
 	else if (type == "mo") {
-		if (m_type == "mo" || isCustomMo())
+		if (m_level == "mo" || isCustomMo())
 			return true;
 		else
 			return false;
 	}
 	else if (type == "mp") {
-		if (m_type == "mp")
+		if (m_level == "mp")
 			return true;
 		else
 			return false;
@@ -912,7 +920,7 @@ bool OBJ::isSelectedByType(string type)
 			return false;
 	}
 	else {
-		if (m_customType == type || m_customTypeLabel == type)
+		if (m_type == type)
 			return true;
 		else
 			return false;
@@ -991,7 +999,7 @@ void OBJ::GetAllChildObj(std::vector<OBJ*>& aryMO, string type)
 {
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		if (m_childObj[i]->m_type == type)
+		if (m_childObj[i]->m_level == type)
 		{
 			aryMO.push_back(m_childObj[i]);
 		}
@@ -1003,7 +1011,7 @@ void OBJ::GetAllChildMp(std::vector<MP*>& aryMP)
 {
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		if (m_childObj[i]->m_type == "mp")
+		if (m_childObj[i]->m_level == "mp")
 		{
 			aryMP.push_back((MP*)m_childObj[i]);
 		}
@@ -1015,11 +1023,11 @@ void OBJ::GetAttriMp(std::vector<MP*>& aryMP)
 {
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
-		if (m_childObj[i]->m_type == "mp")
+		if (m_childObj[i]->m_level == "mp")
 		{
 			aryMP.push_back((MP*)m_childObj[i]);
 		}
-		if (m_childObj[i]->m_type == MO_TYPE::mpgroup) {
+		if (m_childObj[i]->m_level == MO_TYPE::mpgroup) {
 			m_childObj[i]->GetAttriMp(aryMP);
 		}
 	}
@@ -1039,7 +1047,7 @@ map<string, json> OBJ::getChildCustomTypeList(string level)
 		for (auto& i: m_childCustomMoTypeList)
 		{
 			json& j = i.second;
-			if (j["type"] == level) {
+			if (j["level"] == level) {
 				retMap[i.first] = i.second;
 			}
 		}
@@ -1051,9 +1059,9 @@ void OBJ::statisChildCustomMoType(map<string, json>& list)
 {
 	for (auto& i : m_childObj)
 	{
-		if (i->m_customType!="")
+		if (i->m_type!="")
 		{
-			string type = i->m_customType;
+			string type = i->m_type;
 			map<string, json>::iterator iter = list.find(type);
 			if (iter != list.end()) {
 				json& j = iter->second;
@@ -1063,15 +1071,14 @@ void OBJ::statisChildCustomMoType(map<string, json>& list)
 			}
 			else {
 				json jType;
-				jType["customType"] = type;
-				jType["customTypeLabel"] = i->m_customTypeLabel;
+				jType["type"] = type;
 				jType["count"] = 1;
 				if (i->isCustomOrg())
-					jType["type"] = "org";
+					jType["level"] = "org";
 				else if(i->isCustomMo())
-					jType["type"] = "mo";
-				else if (i->m_type == "mp")
-					jType["type"] = "mp";
+					jType["level"] = "mo";
+				else if (i->m_level == "mp")
+					jType["level"] = "mp";
 
 				list[type] = jType;
 			}
@@ -1101,17 +1108,17 @@ string OBJ::getChildObjStatis()
 void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
 	if (isCustomMo() || isCustomMp()) {
 		OBJ_STATIS os;
-		if (rlt.find(m_customTypeLabel) != rlt.end()) {
-			os = rlt[m_customTypeLabel];
+		if (rlt.find(m_type) != rlt.end()) {
+			os = rlt[m_type];
 		}
 		else {
-			os.customType = m_customTypeLabel;
+			os.customType = m_type;
 		}
 
 		os.count++;
 
 		//监控点暂时全做在线处理
-		if (m_type == "mp") {
+		if (m_level == "mp") {
 			os.online++;
 		}
 		else {
@@ -1124,7 +1131,7 @@ void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
 		}
 
 
-		if (m_type == "mp") {
+		if (m_level == "mp") {
 			MP* pmp = (MP*)this;
 			if (pmp->m_curVal.is_string()) {
 				string sCur = pmp->m_curVal.get<string>();
@@ -1151,7 +1158,7 @@ void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
 			}
 		}
 
-		rlt[m_customTypeLabel] = os;
+		rlt[m_type] = os;
 	}
 
 	for (int i = 0; i < m_childObj.size(); i++)
@@ -1268,7 +1275,7 @@ OBJ* OBJ::GetFatherMO(string type)
 
 	while (p)
 	{
-		if (p->m_type == type)
+		if (p->m_level == type)
 		{
 			return p;
 		}
@@ -1284,7 +1291,7 @@ OBJ* OBJ::GetChildMO(string type)
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
 		OBJ* pMO = m_childObj.at(i);
-		if (pMO->m_type == type)
+		if (pMO->m_level == type)
 			return pMO;
 
 		OBJ* pChild = pMO->GetChildMO(type);
@@ -1298,7 +1305,7 @@ OBJ* OBJ::GetChildMO(string type)
 OBJ* OBJ::CopyMO()
 {
 	OBJ* pMO = NULL;
-	if (m_type == "mp")pMO = new MP();
+	if (m_level == "mp")pMO = new MP();
 	else pMO = new OBJ();
 
 	*pMO = *this;
@@ -1314,7 +1321,7 @@ OBJ* OBJ::CopyMO()
 
 OBJ& OBJ::operator=(OBJ& right)
 {
-	m_type = right.m_type;
+	m_level = right.m_level;
 	m_name = right.m_name;
 
 	//if (right.m_moType == "mp" && m_moType == "mp")

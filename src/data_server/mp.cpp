@@ -15,7 +15,7 @@
 
 MP::MP()
 {
-	m_type = "mp";
+	m_level = "mp";
 	m_stDataLastUpdate.initAsInvalid();
 	timeopt::setAsTimeOrg(m_lastSaveTime);
 	//timeopt::setAsTimeOrg(m_stLastSampleTime);
@@ -658,7 +658,7 @@ OBJ* MP::getParentMo()
 {
 	OBJ* p = m_pParentMO;
 	while (p) {
-		if (p->m_type == MO_TYPE::mo || p->isCustomMo()) {
+		if (p->m_level == MO_TYPE::mo || p->isCustomMo()) {
 			return p;
 		}
 
