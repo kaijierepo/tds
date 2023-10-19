@@ -240,13 +240,14 @@ public:
 	OBJ* queryObj(string strTag,bool usePinyin = false);//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
 	MP* GetMPByTag(string strTag,bool usePinyin = false);
 	MP* GetMPByTagPinyin(string strTag);
-	void queryObj(std::vector<OBJ*>* tagVec, string strTag,bool usePinyin = false, string type = "obj");
+	void queryObj(std::vector<OBJ*>* tagVec, string strTag,bool usePinyin = false, string type = "*",string level = "*");
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	void getMpList(vector<MP*>& MPlist);
 	OBJ* GetChildObjByName(string strName);
 	MP* GetDescendantMPByName(string strName);
 	OBJ* GetDescendantObjByName(string strName);
 	//确认自己是否被某类型选中
+	bool isSelectedByLevel(string level);
 	bool isSelectedByType(string type);
 	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
 	bool isSelectedByLeafType(string leafType);

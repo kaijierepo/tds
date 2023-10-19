@@ -683,7 +683,7 @@ string OBJ::getTagWithRoot()
 	return strTagName;
 }
 
-void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,string type)
+void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,string type, string level)
 {
 	if (strTag.find("*") == string::npos)//精确查找
 	{
@@ -745,14 +745,14 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 		}
 
 		if (findMO) {
-			if (toQuery->isSelectedByType(type)) {
+			if (toQuery->isSelectedByLevel(level) && toQuery->isSelectedByType(type)) {
 				tagVec->push_back(toQuery);
 			}
 		}
 	}
 	else //通配符匹配
 	{
-		if (isSelectedByType(type)) {
+		if (isSelectedByLevel(level) && isSelectedByType(type)) {
 			string tagCandidate = getTag();
 			TAG_SELECTOR ts;
 			ts.init(strTag);
@@ -763,7 +763,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pMOChild = m_childObj.at(i);
-			pMOChild->queryObj(tagVec, strTag,usePinyin,type);
+			pMOChild->queryObj(tagVec, strTag,usePinyin,type, level);
 		}
 	}
 }
@@ -878,52 +878,40 @@ OBJ* OBJ::GetDescendantObjByName(string strName)
 }
 
 
-//父类 -> 子类
-// obj -> org -> customOrg -> project
-// obj -> mo  -> cusomtMo
-//         +---> mp
-bool OBJ::isSelectedByType(string type)
+bool OBJ::isSelectedByLevel(string level)
 {
-	if (type == "" || type == "*")
+	if (level == "" || level == "*")
 		return true;
-	if (type == "obj")
-		return true;
-	else if (type == "org") {
-		if (m_level == "org" || isCustomOrg())
+
+	if (level == "org") {
+		if (m_level == "org")
 			return true;
 		else
 			return false;
 	}							
-	else if (type == "mo") {
-		if (m_level == "mo" || isCustomMo())
+	else if (level == "mo") {
+		if (m_level == "mo")
 			return true;
 		else
 			return false;
 	}
-	else if (type == "mp") {
+	else if (level == "mp") {
 		if (m_level == "mp")
 			return true;
 		else
 			return false;
 	}
-	else if(type == "customMo"){
-		if (isCustomMo())
-			return true;
-		else
-			return false;
-	}
-	else if (type == "customOrg")
-	{
-		if (isCustomOrg())
-			return true;
-		else
-			return false;
-	}
 	else {
-		if (m_type == type)
-			return true;
-		else
-			return false;
+		return false;
+	}
+}
+
+bool OBJ::isSelectedByType(string type)
+{
+	if (type == "*" || type == "")
+		return true;
+	else if (type == m_type) {
+		return true;
 	}
 	return false;
 }
@@ -1403,7 +1391,7 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, false, tagSelector.type);
+		prj.queryObj(&tagSet, exp, false, tagSelector.type,tagSelector.level);
 		for (auto& i : tagSet)
 		{
 			objList.push_back(i);
