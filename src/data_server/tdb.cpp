@@ -1493,6 +1493,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			delete fSet;
 		}
 	}
+	//release file data
+	for (int i = 0; i < tagFileSet.size(); i++)
+	{
+		delete tagFileSet[i];
+	}
 
 	return true;
 }

@@ -2086,6 +2086,25 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = RPC_OK;//返回ok
 		
 	}
+	else if (method == "enableMemDiag") {
+		//g_enableMemDiag = true;
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "disableMemDiag") {
+		//g_enableMemDiag = false;
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "logMemSnapShot") {
+		string path = fs::appPath() + "/memDiag/" + timeopt::nowStrForFile() + ".json";
+		fs::createFolderOfPath(path);
+		json j;
+		//for (auto& i : g_memAlloc) {
+			//j["stack"] = i.second->stack;
+			//j["stackID"] = i.second->stackID;
+			//j["size"] = i.second->allocSize;
+			//j["count"] = i.second->allocCount;
+		//}
+	}
 	else {
 		bHandled = false;
 	}
