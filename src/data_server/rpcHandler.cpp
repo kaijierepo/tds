@@ -3151,6 +3151,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 			continue;
 		}
 		string topoName = str::trimSuffix(filist[i].name, ".svg");
+		topoName = charCodec::gb_to_utf8(topoName);
 		mapTopo[str::fromInt(TAG::getMoLevel(topoName)) + topoName] = topoName;
 	}
 	for (auto& i : mapTopo)
