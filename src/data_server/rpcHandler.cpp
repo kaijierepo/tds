@@ -832,7 +832,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	
 				params.erase("tag");
 				string sDe = params.dump();
-				db.Insert(tag, tNow, sDe);
+				db.Insert(tag, sDe, &tNow);
 				rpcResp.result = "\"ok\"";
 			}
 		}
@@ -3041,6 +3041,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 					vecMps.push_back(pmp);
 				}
 				else {
+					//params.erase("tag");
+					//string sDe = params.dump();
+					//db.Insert(tag, sDe);
 					jTagNotExist.push_back(tag);
 				}
 			}
@@ -3071,16 +3074,19 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			json jStatusNotify;
 			json jUpdateTags = json::array();
 			json jUpdateVals = json::array();
+			json jUpdateFiles = json::array();
 			json jUpdateValDescs = json::array();
 			for (int i = 0; i < vecMps.size(); i++) {
 				MP* pmp = vecMps[i];
 				jUpdateTags.push_back(pmp->getTag());
 				jUpdateVals.push_back(pmp->m_curVal);
+				jUpdateFiles.push_back(pmp->m_curFileData);
 				jUpdateValDescs.push_back(pmp->getValDesc(true));
 			}
 			jStatusNotify["tag"] = jUpdateTags;
 			jStatusNotify["val"] = jUpdateVals;
 			jStatusNotify["valDesc"] = jUpdateValDescs;
+			jStatusNotify["file"] = jUpdateFiles;
 			jStatusNotify["time"] = time;
 			rpcSrv.notify("statusUpdate", jStatusNotify);
 

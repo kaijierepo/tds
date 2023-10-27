@@ -704,8 +704,16 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 }
 
 
-void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
+void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 {
+	DB_TIME stTime;
+	if (time) {
+		stTime = *time;
+	}
+	else {
+		stTime = TIME_OPT::now();
+	}
+
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	if(!fileExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());

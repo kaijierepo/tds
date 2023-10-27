@@ -795,7 +795,7 @@ void MP::saveToDB() {
 
 	DB_TIME dbt;
 	dbt.fromStr(m_stDataLastUpdate.toStr(true));
-	db.Insert(getTag().c_str(), dbt,sDe);
+	db.Insert(getTag().c_str(), sDe, &dbt);
 	m_dbFileLock.unlock();
 }
 
