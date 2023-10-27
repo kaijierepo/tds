@@ -738,40 +738,42 @@ void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
 bool MP::needSaveToDB()
 {
 	bool bNeedSave = false;
-	if (m_curVal == nullptr)
-		return bNeedSave;
-
-
-	//save to db
-	if (m_saveMode.find("cyclic") != string::npos)
+	if (m_curVal != nullptr)
 	{
-		int timespan = getSaveInterval();
-		if (timeopt::CalcTimeDiffSecond(m_stDataLastUpdate,m_lastSaveTime) > timespan)
+		//save to db
+		if (m_saveMode.find("cyclic") != string::npos)
+		{
+			int timespan = getSaveInterval();
+			if (timeopt::CalcTimeDiffSecond(m_stDataLastUpdate, m_lastSaveTime) > timespan)
+			{
+				bNeedSave = true;
+			}
+		}
+		else if (m_saveMode.find("onchange") != string::npos)
+		{
+			if (m_curVal.is_number() && m_lastVal.is_number()) {
+				double last = m_lastVal.get<double>();
+				double cur = m_curVal.get<double>();
+				double diff = fabs(last - cur);
+				if (diff > m_deadZone && diff > 0.00001) {
+					bNeedSave = true;
+				}
+			}
+			else if (m_curVal.is_boolean() && m_lastVal.is_boolean()) {
+				bool last = m_lastVal.get<bool>();
+				bool cur = m_curVal.get<bool>();
+				if (last != cur) {
+					bNeedSave = true;
+				}
+			}
+		}
+		else if (m_saveMode == "always")
 		{
 			bNeedSave = true;
 		}
 	}
 
-	if (m_saveMode.find("onchange") != string::npos)
-	{
-		if (m_curVal.is_number() && m_lastVal.is_number()) {
-			double last = m_lastVal.get<double>();
-			double cur = m_curVal.get<double>();
-			double diff = fabs(last - cur);
-			if (diff > m_deadZone && diff >0.00001) {
-				bNeedSave = true;
-			}
-		}
-		else if (m_curVal.is_boolean() && m_lastVal.is_boolean()) {
-			bool last = m_lastVal.get<bool>();
-			bool cur = m_curVal.get<bool>();
-			if (last != cur) {
-				bNeedSave = true;
-			}
-		}
-	}
-
-	if (m_saveMode == "always")
+	if (m_curFileData != nullptr)
 	{
 		bNeedSave = true;
 	}
@@ -785,7 +787,8 @@ void MP::saveToDB() {
 	timeopt::now(&m_lastSaveTime);
 	json jDE;
 	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
-	jDE["val"] = m_curVal;
+	if(m_curVal != nullptr)
+		jDE["val"] = m_curVal;
 	if(m_curFileData != nullptr)
 		jDE["file"] = m_curFileData;
 	string sDe = jDE.dump();

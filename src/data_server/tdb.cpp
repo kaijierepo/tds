@@ -53,7 +53,125 @@ string replaceStr(string str, const string to_replaced, const string newchars)
 	return   str;
 }
 
+namespace DB_STR {
+	int _vscprintf_cross_db(const char* format, va_list pargs) {
+		int retval;
+		va_list argcopy;
+		va_copy(argcopy, pargs);
+		retval = vsnprintf(NULL, 0, format, argcopy);
+		va_end(argcopy);
+		return retval;
+	}
+
+	std::string format(const char* pszFmt, ...)
+	{
+		std::string str;
+		va_list args;
+		va_start(args, pszFmt);
+		{
+			int nLength = _vscprintf_cross_db(pszFmt, args);
+			nLength += 1;  //上面返回的长度是包含\0，这里加上
+			std::vector<char> vectorChars(nLength);
+			vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+			str.assign(vectorChars.data());
+		}
+		va_end(args);
+		return str;
+	}
+
+	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	{
+		wstring str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete[] wcharstr;
+
+#else
+
+#endif
+		return str;
+	}
+	string gb_to_utf8(string instr) //ansi-->utf-8
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		int ret = 0;
+		size_t inlen = instr.length() + 1;
+		size_t outlen = 2 * inlen;
+
+		// duanqn: The iconv function in Linux requires non-const char *
+		// So we need to copy the source string
+		char* inbuf = (char*)malloc(inlen);
+		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+									// so we use another pointer to keep the address
+		memcpy(inbuf, instr.data(), instr.length());
+
+		char* outbuf = (char*)malloc(outlen);
+		memset(outbuf, 0, outlen);
+		iconv_t cd;
+
+		cd = iconv_open("UTF-8", "GBK");
+		if (cd != (iconv_t)-1) {
+			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+			if (ret != 0)
+				printf("iconv failed err: %s\n", strerror(errno));
+			iconv_close(cd);
+		}
+		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		str = outbuf;
+		free(outbuf);
+#endif
+		return str;
+	}
+}
+
+
 namespace TIME_OPT {
+
+	DB_TIME Unix2DBTime(time_t iUnix, int milli)
+	{
+		static std::mutex mtx;
+		mtx.lock();
+		tm time_tm = *localtime(&iUnix);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+		mtx.unlock();
+
+		DB_TIME t;
+		t.wYear = time_tm.tm_year + 1900;
+		t.wMonth = time_tm.tm_mon + 1;
+		t.wDay = time_tm.tm_mday;
+		t.wHour = time_tm.tm_hour;
+		t.wMinute = time_tm.tm_min;
+		t.wSecond = time_tm.tm_sec;
+		t.wMilliseconds = milli;
+		t.wDayOfWeek = time_tm.tm_wday;
+		return t;
+	}
+
+	DB_TIME now() {
+		auto now = std::chrono::system_clock::now();
+		//通过不同精度获取相差的毫秒数 <1000毫秒值
+		unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+			- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+		time_t tt = std::chrono::system_clock::to_time_t(now);
+
+		return Unix2DBTime(tt, milli);
+	}
+
 	bool isRelative(string time)
 	{
 		if (time.find("d") != string::npos || time.find("h") != string::npos
@@ -126,66 +244,27 @@ namespace TIME_OPT {
 		st.fromUnixTime(tBase);
 		return st;
 	}
-}
-namespace DB_STR {
-	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+
+	string st2str(DB_TIME t, bool enableMS)
 	{
-		wstring str;
-#ifdef _WIN32
-		size_t MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-		str = wcharstr;
-		delete[] wcharstr;
-
-#else
-
-#endif
-		return str;
-	}
-	string gb_to_utf8(string instr) //ansi-->utf-8
-	{
-		string str;
-#ifdef _WIN32
-		size_t MAX_STRSIZE = instr.length() * 2 + 2;
-		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-		memset(wcharstr, 0, MAX_STRSIZE);
-		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-		char* charstr = new char[MAX_STRSIZE];
-		memset(charstr, 0, MAX_STRSIZE);
-		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
-		str = charstr;
-		delete wcharstr;
-		delete charstr;
-#else
-		int ret = 0;
-		size_t inlen = instr.length() + 1;
-		size_t outlen = 2 * inlen;
-
-		// duanqn: The iconv function in Linux requires non-const char *
-		// So we need to copy the source string
-		char* inbuf = (char*)malloc(inlen);
-		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
-									// so we use another pointer to keep the address
-		memcpy(inbuf, instr.data(), instr.length());
-
-		char* outbuf = (char*)malloc(outlen);
-		memset(outbuf, 0, outlen);
-		iconv_t cd;
-
-		cd = iconv_open("UTF-8", "GBK");
-		if (cd != (iconv_t)-1) {
-			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
-			if (ret != 0)
-				printf("iconv failed err: %s\n", strerror(errno));
-			iconv_close(cd);
+		if (enableMS) {
+			string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+				t.wYear, t.wMonth, t.wDay,
+				t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+			return str;
 		}
-		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		str = outbuf;
-		free(outbuf);
-#endif
-		return str;
+		else {
+			string str = DB_STR::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",
+				t.wYear, t.wMonth, t.wDay,
+				t.wHour, t.wMinute, t.wSecond);
+			return str;
+		}
+	}
+
+	string nowStr(bool enableMS)
+	{
+		DB_TIME t = now();
+		return st2str(t, enableMS);
 	}
 }
 
@@ -624,6 +703,7 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 	}
 }
 
+
 void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
@@ -635,49 +715,35 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
 	yyjson_val* yyDe = yyjson_doc_get_root(doc);
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
+	if (yyjson_obj_get(yyDe, "time") == nullptr) {
+		yyjson_mut_val* timeKey = yyjson_mut_str(mdoc, CONST_STR::time.c_str());
+		yyjson_mut_val* timeVal;
+		string sTime = stTime.toStr(true);
+		timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
+		yyjson_mut_obj_put(yymDe, timeKey, timeVal);
+	}
 
 
 	//write file data
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
-	if (yyv_file && yyjson_is_arr(yyv_file))
+	if (yyv_file)
 	{
-		string fileDataPath = folderPath + "/" + stTime.toStampHMS();
-		if (!fileExist(fileDataPath))
-			DB_FS::createFolderOfPath(fileDataPath.c_str());
+		//save to a directory name as timestamp
+		if (yyjson_is_arr(yyv_file)) {
+			string fileDataPath = folderPath + "/" + stTime.toStampHMS();
+			if (!fileExist(fileDataPath))
+				DB_FS::createFolderOfPath(fileDataPath.c_str());
 
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyv_file, idx, max, item) {
-			yyjson_val* yyv_name = yyjson_obj_get(item, "name");
-			yyjson_val* yyv_type = yyjson_obj_get(item, "type");
-			yyjson_val* yyv_data = yyjson_obj_get(item, "data");
-			string name = yyjson_get_str(yyv_name);
-			string type = yyjson_get_str(yyv_type);
-			const char* pData = yyjson_get_str(yyv_data);
-			int ilen = strlen(pData);
-			string data = pData;
-			if (type == "jpg") {
-				//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
-				size_t startPos = 0;
-				if (data.find("data:") == 0) {
-					startPos = data.find(",");
-					if (startPos == string::npos) {
-						return;
-					}
-
-					startPos += 1;
-				}
-
-				size_t buffLen = data.length() * 2;
-				unsigned char* out = new unsigned char[buffLen];
-				memset(out, 0, buffLen);
-				int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-				DB_FS::writeFile(fileDataPath + "/" + name, out, outLen);
+			size_t idx = 0;
+			size_t max = 0;
+			yyjson_val* item;
+			yyjson_arr_foreach(yyv_file, idx, max, item) {
+				saveDEFile(item, fileDataPath, stTime);
 			}
-			else if (type == "text") {
-				DB_FS::writeFile(fileDataPath + "/" + name, (char*)data.c_str(),data.length());
-			}
+		}
+		//save to a de file in the same folder as deList file
+		else if (yyjson_is_obj(yyv_file)) {
+			saveDEFile(yyv_file, folderPath, stTime);
 		}
 	}
 
@@ -686,11 +752,16 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	//delete file data,only file index
 	yyjson_mut_val* yymv_dataFile = yyjson_mut_obj_get(yymDe, "file");
 	if (yymv_dataFile) {
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_mut_val* item;
-		yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
-			yyjson_mut_obj_remove_key(item, "data");
+		if (yyjson_mut_is_arr(yymv_dataFile)) {
+			size_t idx = 0;
+			size_t max = 0;
+			yyjson_mut_val* item;
+			yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
+				yyjson_mut_obj_remove_key(item, "data");
+			}
+		}
+		else if (yyjson_mut_is_obj(yymv_dataFile)) {
+			yyjson_mut_obj_remove_key(yymv_dataFile, "data");
 		}
 	}
 	
@@ -1981,40 +2052,57 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 }
 
 
-void TDB::saveDEFile(string strTag, DB_TIME stTime, string deFileUrl)
+void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime)
 {
-	deFileUrl = replaceStr(deFileUrl, "\\", "/");
-	string suffix = parseSuffix(deFileUrl);
-	string path = getPath_deFile(strTag, stTime);
+	yyjson_val* yyv_name = yyjson_obj_get(yyvFileInfo, "name");
+	yyjson_val* yyv_type = yyjson_obj_get(yyvFileInfo, "type");
+	yyjson_val* yyv_data = yyjson_obj_get(yyvFileInfo, "data");
+	if (!yyv_type)return;
+	if (!yyv_data)return;
 
-	if (suffix != "")
-	{
-		path += "." + suffix;
+	string name, type;
+	if(yyv_name)name = yyjson_get_str(yyv_name);
+	
+	type = yyjson_get_str(yyv_type);
+
+	if (type == "curve") {
+		name = dbTime.toStampHMS() + ".curve.json";
+	}
+
+
+	string data;
+	if (yyjson_is_str(yyv_data)) {
+		const char* pData = yyjson_get_str(yyv_data);
+		int ilen = strlen(pData);
+		data = pData;
+	}
+	else {
+		data = yyjson_val_write(yyv_data, 0,nullptr);
 	}
 	
-	path = m_path + path;
-	try
-	{
-		DB_FS::createFolderOfPath(path);
-	}
-	catch (std::exception& e)
-	{
-		string log = "saveDEFile fail src=" + deFileUrl + ",des=" + path + "error=" + e.what();
-		printf(log.c_str());
-	}
-}
+	if (type == "jpg") {
+		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
+		size_t startPos = 0;
+		if (data.find("data:") == 0) {
+			startPos = data.find(",");
+			if (startPos == string::npos) {
+				return;
+			}
 
-bool TDB::saveDEFile(string tag, DB_TIME stTime, unsigned char* pData, int len, string suffix)
-{
-	string path = getPath_deFile(tag, stTime);
-	path = m_path + path + "." + suffix;
-	if (DB_FS::writeFile(path,(char*) pData, len))
-	{
-		return true;
+			startPos += 1;
+		}
+
+		size_t buffLen = data.length() * 2;
+		unsigned char* out = new unsigned char[buffLen];
+		memset(out, 0, buffLen);
+		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+		DB_FS::writeFile(path + "/" + name, out, outLen);
 	}
-	else
-	{
-		return false;
+	else if (type == "text") {
+		DB_FS::writeFile(path + "/" + name, (char*)data.c_str(), data.length());
+	}
+	else {
+		DB_FS::writeFile(path + "/" + name, (char*)data.c_str(), data.length());
 	}
 }
 

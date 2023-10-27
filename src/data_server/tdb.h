@@ -500,8 +500,7 @@ public:
 
 
 	//bool updateJsonObj(json& jOld, json& jNew);
-	void saveDEFile(string strTag, DB_TIME stTime, string deFileUrl) ;
-	bool saveDEFile(string tag, DB_TIME stTime, unsigned char* pData, int len,string suffix);
+	void saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime);
 
 	//path management
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");

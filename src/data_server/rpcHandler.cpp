@@ -809,9 +809,9 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		//insert不进行 time参数校验
 		if (method == "db.insert")
 		{
-			if (!params.contains("val"))
+			if (!params.contains("val") && !params.contains("file"))
 			{
-				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : val");
+				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "one of param val or file must be specified");
 			}
 			else
 			{
@@ -830,10 +830,8 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				}
 		
 	
-				json jDE;
-				jDE["time"] = tNow.toStr(true);
-				jDE.erase("tag");
-				string sDe = jDE.dump();
+				params.erase("tag");
+				string sDe = params.dump();
 				db.Insert(tag, tNow, sDe);
 				rpcResp.result = "\"ok\"";
 			}
@@ -2911,12 +2909,11 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
-	//输入 位号，值，时间三元组
+	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
 	TIME stTimeStamp;
 	string time="";
-	json fileData;
 	json inputVal = nullptr;
-	json inputFileData;
+	json inputFile = nullptr;
 	json inputTag, inputIoAddr;
 	string rootTag = "";
 
@@ -2942,10 +2939,12 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		if (deList.size() > 0) {
 			inputTag = json::array();
 			inputVal = json::array();
+			inputFile = json::array();
 			for (int i = 0; i < deList.size(); i++) {
 				json& j = deList[i];
 				inputTag.push_back(j["tag"]);
 				inputVal.push_back(j["val"]);
+				inputFile.push_back(j["file"]);
 			}
 		}
 	}
@@ -2953,7 +2952,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		//值
 		if (params.find("val") != params.end()) {
 			inputVal = params["val"];
-			fileData = params["file"];
+			inputFile = params["file"];
+		}
+		else if(params.find("file") != params.end()) {
+			inputFile = params["file"];
 		}
 		else
 		{
@@ -2999,6 +3001,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		json val = inputVal;
 		inputVal = json::array();
 		inputVal.push_back(val);
+
+		json file = inputFile;
+		inputFile = json::array();
+		inputFile.push_back(file);
 	}
 	if (inputIoAddr.is_string()) {
 		string s = inputIoAddr.get<string>();
@@ -3008,6 +3014,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		json val = inputVal;
 		inputVal = json::array();
 		inputVal.push_back(val);
+
+		json file = inputFile;
+		inputFile = json::array();
+		inputFile.push_back(file);
 	}
 
 	//使用位号输入
@@ -3018,6 +3028,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		for (int i = 0; i < inputTag.size(); i++) {
 			string tag = inputTag[i];
 			json val = inputVal[i];
+			json& file = inputFile[i];
 			tag = TAG::addRoot(tag, rootTag);
 			tag = TAG::addRoot(tag, session.org);
 
@@ -3026,7 +3037,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				MP* pmp = prj.GetMPByTag(tag);
 				if (pmp)
 				{
-					pmp->input(val, fileData, &stTimeStamp);
+					pmp->input(val, file, &stTimeStamp);
 					vecMps.push_back(pmp);
 				}
 				else {
