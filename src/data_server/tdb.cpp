@@ -707,7 +707,6 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
-	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if(!fileExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());
 
@@ -725,6 +724,7 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 
 
 	//write file data
+	bool bisCurve = false;
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
 	if (yyv_file)
 	{
@@ -738,14 +738,26 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
-				saveDEFile(item, fileDataPath, stTime);
+				string type;
+				saveDEFile(item, fileDataPath, stTime,type);
+				if (type == "curve")
+					bisCurve = true;
 			}
 		}
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
-			saveDEFile(yyv_file, folderPath, stTime);
+			string type;
+			saveDEFile(yyv_file, folderPath, stTime,type);
+			if (type == "curve")
+				bisCurve = true;
 		}
 	}
+
+	string dataListPath;
+	if(!bisCurve)
+		dataListPath = folderPath + "/" + m_dbFmt.deListName;
+	else
+		dataListPath = folderPath + "/" + m_dbFmt.curveIdxListName;
 
 
 	//write de
@@ -766,21 +778,21 @@ void TDB::Insert(string strTag, DB_TIME stTime, string& sDe)
 	}
 	
 
-	if (!fileExist(dlPath.c_str()))
+	if (!fileExist(dataListPath.c_str()))
 	{
 		yyjson_mut_val* yymv_datalist = yyjson_mut_arr(mdoc);
 		yyjson_mut_arr_append(yymv_datalist, yymDe);
 		size_t len = 0;
 		const char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-		if (!DB_FS::writeFile(dlPath,(unsigned char*) s,len))
+		if (!DB_FS::writeFile(dataListPath,(unsigned char*) s,len))
 		{
-			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
+			printf("[error]save to db file fail,path:%s,data:%s", dataListPath.c_str(), s);
 		}
 	}
 	else
 	{
 #ifdef _WIN32
-		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dataListPath).c_str(), L"rb+");
 #else
 		FILE* fp = fopen(dlPath.c_str(), "rb+");
 #endif
@@ -2052,7 +2064,7 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 }
 
 
-void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime)
+void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string& type)
 {
 	yyjson_val* yyv_name = yyjson_obj_get(yyvFileInfo, "name");
 	yyjson_val* yyv_type = yyjson_obj_get(yyvFileInfo, "type");
@@ -2060,7 +2072,7 @@ void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime)
 	if (!yyv_type)return;
 	if (!yyv_data)return;
 
-	string name, type;
+	string name;
 	if(yyv_name)name = yyjson_get_str(yyv_name);
 	
 	type = yyjson_get_str(yyv_type);
