@@ -1088,6 +1088,10 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getDev(params, rpcResp,session);
 	}
+	else if (method == "getDevStatis")
+	{
+		rpc_getDevStatis(params, rpcResp, session);
+	}
 	else if (method == "setIOTree")
 	{
 		//io tree 热更新
@@ -3456,7 +3460,7 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 
 
 
-void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp,RPC_SESSION session)
+void rpcHandler::rpc_getDevStatis_old(json params, RPC_RESP& resp,RPC_SESSION session)
 {
 	string rootTag = session.org; //absolute queryRoot
 	if (params.contains("rootTag"))
@@ -4295,6 +4299,14 @@ string rpcHandler::rpc_openCom(json params, string& error)
 		error = jError.dump();
 	}
 	return "";
+}
+
+void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	string rootTag;
+	vector<ioDev*> filterRlt;
+	DEV_STATIS ds = ioSrv.getDevStatis(rootTag, filterRlt);
+	resp.result = ds.toJson().dump();
 }
 
 void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)

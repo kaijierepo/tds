@@ -73,6 +73,7 @@ public:
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
 	void rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getDevStatis_old(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string renameItem(string orgName, json& renameMap);
 	void toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo);

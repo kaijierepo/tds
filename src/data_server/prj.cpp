@@ -109,7 +109,7 @@ bool project::loadConf(string& confStr)
 
 	try {
 		json moRoot = json::parse(confStr.c_str());
-		moRoot["type"] = "org";
+		moRoot["level"] = "org";
 		bool ret = loadConf(moRoot);
 		return ret;
 	}

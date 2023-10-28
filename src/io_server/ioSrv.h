@@ -68,6 +68,37 @@ struct CHILD_TDS_INFO {
 };
 
 
+struct DEV_STATIS {
+	string rootTag;
+	size_t iOnline;
+	size_t iOffline;
+	size_t iTotal;
+	size_t iInservice;
+	size_t iSpare;
+	size_t iChan;
+
+	DEV_STATIS() {
+		 iOnline =0;
+		 iOffline = 0;
+		 iTotal = 0;
+		 iInservice = 0;
+		 iSpare = 0;
+		 iChan = 0;
+	}
+
+	json toJson() {
+		json jStatis;
+		jStatis["online"] = iOnline;
+		jStatis["offline"] = iOffline;
+		jStatis["inService"] = iInservice;
+		jStatis["spare"] = iSpare;
+		jStatis["channel"] = iChan;
+		jStatis["total"] = iTotal;
+		return jStatis;
+	}
+};
+
+
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
@@ -103,6 +134,7 @@ public:
 	map<string, CHAN_TEMPLATE> m_mapChanTempalte;
 
 	//查询与管理
+	DEV_STATIS getDevStatis(string rootTag, vector<ioDev*>& filterRlt);
 	void getAllSmartDev(vector<ioDev*>& aryDev);
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
 	ioDev* getOwnerChildTdsDev(string tag);

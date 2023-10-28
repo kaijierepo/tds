@@ -908,7 +908,9 @@ bool OBJ::isSelectedByLevel(string level)
 
 bool OBJ::isSelectedByType(string type)
 {
-	if (type == "*" || type == "")
+	if (type == "") //全选
+		return true;
+	else if (type == "*" && m_type != "")//选中所有自定义类型
 		return true;
 	else if (type == m_type) {
 		return true;

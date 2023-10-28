@@ -1312,6 +1312,61 @@ void ioServer::stop()
 	LOG("ioServer stopped");
 }
 
+DEV_STATIS ioServer::getDevStatis(string rootTag, vector<ioDev*>& filterRlt) {
+	DEV_STATIS devStatis;
+	devStatis.rootTag = rootTag;
+	for (auto& i : m_vecChildDev)
+	{
+		//为指定所有忽略串口
+		//if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
+		//{
+		//	continue;
+		//}
+
+
+		////指定查找智能设备。但是是非智能设备
+		//if (i->m_strTagBind == "")
+		//{
+		//	if(tagBind != "")
+		//		continue;
+		//}
+		//else
+		//{
+		//	if (tagBind != "*" && tagBind != i->m_strTagBind)
+		//		continue;
+		//}
+
+		//根据指定的rootTag进行过滤；
+		if (i->m_strTagBind != "" && rootTag != "")
+		{
+			if (i->m_strTagBind.find(rootTag) == string::npos)
+			{
+				continue;
+			}
+		}
+
+
+		i->recursiveGetChanCount(i, devStatis.iChan);
+		if (i->m_bOnline) {
+			devStatis.iOnline++;
+		}
+		else {
+			devStatis.iOffline++;
+		}
+
+		if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
+			devStatis.iInservice++;
+		}
+		else {
+			devStatis.iSpare++;
+		}
+		devStatis.iTotal++;
+
+		filterRlt.push_back(i);
+	}
+	return devStatis;
+}
+
 bool ioServer::toJson(json& conf, json opt)
 {
 	lock_conf_shared();
@@ -1347,73 +1402,16 @@ bool ioServer::toJson(json& conf, json opt)
 	}
 
 	
-	vector<ioDev*>  filterRlt;
-	json jStatis;
-	size_t iOnline = 0;
-	size_t iOffline = 0;
-	size_t iTotal = 0;
-	size_t iInservice = 0;
-	size_t iSpare = 0;
-	size_t iChan = 0;
-
-
-
-	for (auto& i : m_vecChildDev)
-	{
-		//为指定所有忽略串口
-		//if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
-		//{
-		//	continue;
-		//}
-		
-
-		////指定查找智能设备。但是是非智能设备
-		//if (i->m_strTagBind == "")
-		//{
-		//	if(tagBind != "")
-		//		continue;
-		//}
-		//else
-		//{
-		//	if (tagBind != "*" && tagBind != i->m_strTagBind)
-		//		continue;
-		//}
-
-		//根据指定的rootTag进行过滤；
-		if (i->m_strTagBind != "" && rootTag != "")
-		{
-			if (i->m_strTagBind.find(rootTag) == string::npos)
-			{
-				continue;
-			}
-		}
-
-		if (getStatis) {
-			i->recursiveGetChanCount(i,iChan);
-			if (i->m_bOnline) {
-				iOnline++;
-			}
-			else {
-				iOffline++;
-			}
-
-			if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
-				iInservice++;
-			}
-			else {
-				iSpare++;
-			}
-			iTotal++;
-		}
-
-
-		filterRlt.push_back(i);
-	}
+	vector<ioDev*> filterRlt;
+	DEV_STATIS devStatis = getDevStatis(rootTag, filterRlt);
+	
 
 	if (paging && pageSize>0) {
 		conf = json::object();
 		size_t recCount = filterRlt.size();
 		size_t pageCount = recCount / pageSize;
+		if (recCount % pageSize > 0)
+			pageCount++;
 
 		size_t startIdx = pageNo * pageSize;
 		size_t endIdx = pageNo * pageSize + pageSize;
@@ -1434,12 +1432,7 @@ bool ioServer::toJson(json& conf, json opt)
 		conf["pageSize"] = pageSize;
 		conf["devList"] = jDevices;
 		if (getStatis) {
-			jStatis["online"] = iOnline;
-			jStatis["offline"] = iOffline;
-			jStatis["inService"] = iInservice;
-			jStatis["spare"] = iSpare;
-			jStatis["channel"] = iChan;
-			conf["statis"] = jStatis;
+			conf["statis"] = devStatis.toJson();
 		}
 	}
 	else {
