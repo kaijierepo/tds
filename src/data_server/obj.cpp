@@ -283,9 +283,6 @@ bool OBJ::toJson(json& conf, json serializeOption)
 
 bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 {
-	if (m_level == "mp" && !q.getMp)
-		return false;
-
 	//根据请求的moType判断是否需要返回当前节点。
 	if (!isSelectedByLeafType(q.leafType))
 		return false;
@@ -391,20 +388,19 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 	}
 
 
-	//是否需要递归序列化子对象
-	if (!q.getChild)
-	{
-		return true;
-	}
-
 	if (m_level != MO_TYPE::mp)
 	{
 		json jChildren = json::array();
 		if (!q.flatten) {
 			for (auto& pmochild : m_childObj)
 			{
-				if (pmochild->m_level == "mp" && !q.getMp)
-					continue;
+				//可以出现 getMp=true ,getChild=false的组合，因此getChild不代表getMp，虽然Mp也是child
+				if (pmochild->m_level == "mp") {
+					if (!q.getMp) continue;
+				}
+				else {
+					if (!q.getChild) continue;
+				}
 
 				json jChild;
 				if (pmochild->toJson(jChild, q))
