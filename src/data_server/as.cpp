@@ -11,6 +11,7 @@
 #include "tds.h"
 
 almServer almSrv;
+almServer almSrv2;
 
 almServer::almServer(void)
 {
@@ -45,9 +46,18 @@ void almServer::init()
 	
 	//tableStatus.init("\\alarms\\status");
 	//tableUnack.init("\\alarms\\unack");
-	tableCurrent.init("\\alarms\\current");
-	tableHist.init("\\alarms\\history");
+
+}
+
+void almServer::init(const string& aCurPath, const string& aHisPath)
+{
+	init();
+
+	tableCurrent.init(aCurPath);
+	tableHist.init(aHisPath);
 	tableHist.bOneFilePerMonth = true;
+	tableCurrent.SetAlarmSrv(this);
+	tableHist.SetAlarmSrv(this);
 
 	initMOAlarmStatus();
 }
@@ -90,7 +100,7 @@ void almServer::recover(ALARM_KEY& key)
 		tableHist.update(ai);
 	}
 
-	json j = ai.toJson();
+	json j = ai.toJson(this);
 	rpcSrv.notify("alarmRecover", j);
 }
 
@@ -127,7 +137,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 	}
 
 	//通知给TDS客户端
-	json j = ai.toJson();
+	json j = ai.toJson(this);
 	rpcSrv.notify("alarmAdd", j);
 }
 
@@ -141,9 +151,9 @@ void almServer::Update(ALARM_INFO newStatus)
 		newStatus.typeLabel = getAlarmTypeLabel(newStatus.type);
 		//自定义类型查找
 		if (newStatus.typeLabel == "") {
-			if (almSrv.m_mapCustomAlarmDesc.find(newStatus.type) != almSrv.m_mapCustomAlarmDesc.end())
+			if (m_mapCustomAlarmDesc.find(newStatus.type) != m_mapCustomAlarmDesc.end())
 			{
-				ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[newStatus.type];
+				ALARM_TEMPLATE at = m_mapCustomAlarmDesc[newStatus.type];
 				newStatus.typeLabel = at.label;
 				if (at.enable == false)
 					return;
@@ -274,13 +284,13 @@ json almServer::getAlarmStatus(string tag)
 	json querier;
 	querier["tag"] = tag;
 	querier["isRecover"] = false;
-	vector<ALARM_INFO*> statusList = almSrv.tableCurrent.query(querier);
+	vector<ALARM_INFO*> statusList = tableCurrent.query(querier);
 	json list = json::array();
 
 	for (int i = 0; i < statusList.size(); i++)
 	{
 		ALARM_INFO* p = statusList[i];
-		json j = p->toJson();
+		json j = p->toJson(this);
 		list.push_back(j);
 	}
 	return list;
@@ -342,7 +352,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		tableHist.update(ai);
 	}
 
-	json j = ai.toJson();
+	json j = ai.toJson(this);
 	rpcSrv.notify("alarmAck", j);
 
 	resp.result = "\"ok\"";
@@ -591,9 +601,9 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				
 
 				if(dataSet !="[")
-					dataSet += "," + it->second->toJsonStr(rootTag);
+					dataSet += "," + it->second->toJsonStr(this, rootTag);
 				else
-					dataSet += it->second->toJsonStr(rootTag);
+					dataSet += it->second->toJsonStr(this, rootTag);
 			}
 		}
 	}
@@ -620,7 +630,7 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	return ai;
 }
 
-json ALARM_INFO::toJson(string rootTag)
+json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 {
 	ALARM_INFO* info = this;
 	json j;
@@ -638,9 +648,9 @@ json ALARM_INFO::toJson(string rootTag)
 	j["type"] = info->type;
 
 
-	if (almSrv.m_mapCustomAlarmDesc.find(info->type) != almSrv.m_mapCustomAlarmDesc.end())
+	if (almSrv->m_mapCustomAlarmDesc.find(info->type) != almSrv->m_mapCustomAlarmDesc.end())
 	{
-		ALARM_TEMPLATE at = almSrv.m_mapCustomAlarmDesc[info->type];
+		ALARM_TEMPLATE at = almSrv->m_mapCustomAlarmDesc[info->type];
 		j["typeLabel"] = at.label;
 	}
 	else
@@ -735,9 +745,9 @@ string almTable::toCSV(ALARM_INFO& info)
 	return str;
 }
 
-string ALARM_INFO::toJsonStr(string rootTag)
+string ALARM_INFO::toJsonStr(almServer* almSrv, string rootTag)
 {
-	json j = toJson(rootTag);
+	json j = toJson(almSrv, rootTag);
 	return j.dump(2);
 }
 
@@ -894,12 +904,17 @@ string almTable::toJsonStr(json querier) {
 	string dataSet = "[";
 	for (auto& it :vec) {
 		if(dataSet !="[")
-			dataSet += "," + it->toJsonStr(rootTag);
+			dataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
 		else
-			dataSet +=  it->toJsonStr(rootTag);
+			dataSet +=  it->toJsonStr(m_pAlmSrv, rootTag);
 	}
 	dataSet += "]";
 	return dataSet;
+}
+
+void almTable::SetAlarmSrv(almServer* pSrv)
+{
+	m_pAlmSrv = pSrv;
 }
 
 

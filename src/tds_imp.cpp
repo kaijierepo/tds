@@ -347,7 +347,13 @@ bool TDS_imp::run(string cmdline)
 	prj.loadConfFile();
 	prj.getAllVarExpScript();
 	ioSrv.loadConf();
-	almSrv.init();
+	string sCurAlarmFile = "\\alarms\\current";
+	string sHisAlarmFile = "\\alarms\\history";
+	almSrv.init(sCurAlarmFile, sHisAlarmFile);
+	sCurAlarmFile = "\\alarms2\\current";
+	sHisAlarmFile = "\\alarms2\\history";
+	almSrv2.init(sCurAlarmFile, sHisAlarmFile);
+
 	userMng.init();
 	scriptManager.init();
 

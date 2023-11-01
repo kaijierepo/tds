@@ -162,6 +162,7 @@ public:
 	string user;
 	string token;
 	string method;
+	string dbpath;
 
 	//tag expression in current user; multi-tenant
 	//rootTag = org + queryRootTag

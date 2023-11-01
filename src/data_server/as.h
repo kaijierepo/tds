@@ -64,6 +64,7 @@ public:
 	string name;
 };
 
+class almServer;
 
 class ALARM_INFO : public ALARM_KEY{
 public:
@@ -97,9 +98,9 @@ public:
 		return false;
 	}
 
-	string toJsonStr(string rootTag = "");
+	string toJsonStr(almServer* almSrv, string rootTag = "");
 	ALARM_INFO fromJson(json j);
-	json toJson(string rootTag = "");
+	json toJson(almServer* almSrv, string rootTag = "");
 };
 
 //manage 3 data tables
@@ -142,11 +143,14 @@ public:
 	vector<ALARM_INFO*> query(json filter);
 	string toJsonStr(json filter);
 
+	void SetAlarmSrv(almServer* pSrv);
+
 public:
 	
 
 	almTable(){
 		bOneFilePerMonth = false;
+		m_pAlmSrv = nullptr;
 	}
 	string getFilePath(string time = "");
 	string getFilePath(int y,int m);
@@ -160,6 +164,9 @@ public:
 	string buffFilePath;
 	bool bOneFilePerMonth;
 	shared_mutex m_csTable;
+
+protected:
+	almServer* m_pAlmSrv;
 };
 
 
@@ -205,6 +212,7 @@ public:
 		return inst;
 	}
 	void init();
+	void init(const string& aCurPath, const string& aHisPath);
 
 	bool CompareTime(TIME& time1, TIME& time2);
 
@@ -218,3 +226,4 @@ public:
 };
 
 extern almServer almSrv;
+extern almServer almSrv2;

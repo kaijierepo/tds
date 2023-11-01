@@ -1846,6 +1846,16 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
+	almServer* pAlmSrv = nullptr;
+	if (session.dbpath == "alarms2")
+	{
+		pAlmSrv = &almSrv2;
+	}
+	else
+	{
+		pAlmSrv = &almSrv;
+	}
+
 	string& result = rpcResp.result;
 	bool bHandled = true;
 	//** 数据查询系列
@@ -1853,17 +1863,17 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		json jFilter;
 		jFilter["rootTag"] = params["rootTag"];
-		result = almSrv.rpc_getCurrent(jFilter, session);
+		result = pAlmSrv->rpc_getCurrent(jFilter, session);
 	}
 	else if (method == "getAlarmUnRecover")
 	{
 		json jFilter;
-		result = almSrv.rpc_getUnRecover(jFilter, session);
+		result = pAlmSrv->rpc_getUnRecover(jFilter, session);
 	}
 	else if (method == "getAlarmUnack")
 	{
 		json jFilter;
-		result = almSrv.rpc_getUnack(jFilter, session);
+		result = pAlmSrv->rpc_getUnack(jFilter, session);
 	}
 	//getAlm为上面3个接口的合并接口
 	else if (method == "getAlm")
@@ -1873,13 +1883,13 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 			json jFilter;
 			jFilter["rootTag"] = params["rootTag"];
 			if (status == "unRecover") {
-				result = almSrv.rpc_getUnRecover(jFilter, session);
+				result = pAlmSrv->rpc_getUnRecover(jFilter, session);
 			}
 			else if (status == "unAck") {
-				result = almSrv.rpc_getUnack(jFilter, session);
+				result = pAlmSrv->rpc_getUnack(jFilter, session);
 			}
 			else if (status == "unRecover||unAck" || status == "unAck||unRecover") {
-				result = almSrv.rpc_getCurrent(jFilter, session);
+				result = pAlmSrv->rpc_getCurrent(jFilter, session);
 			}
 			else {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param  status format error");
@@ -1892,27 +1902,34 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 
 	else if (method == "getAlarmHistory")
 	{
-		result = almSrv.rpc_getHistory(params, session);
+		result = pAlmSrv->rpc_getHistory(params, session);
 	}
 	//** 数据生成系列 以下接口都会修改报警数据
 	else if (method == "addAlarm")
 	{
-		result = almSrv.rpc_addAlarm(params, rpcResp);
+		if (session.dbpath == "alarms2")
+		{
+			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
+		}
+		else
+		{
+			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
+		}
 	}
 	else if (method == "recoverAlarm") {
-		almSrv.rpc_recoverAlarm(params, rpcResp);
+		pAlmSrv->rpc_recoverAlarm(params, rpcResp);
 	}
 	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
 	{
-		almSrv.rpc_updateStatus(params, rpcResp);
+		pAlmSrv->rpc_updateStatus(params, rpcResp);
 	}
 	else if (method == "ackAlarm" || method == "ackAlarmEvent")
 	{
-		almSrv.rpc_acknowledge(params,rpcResp, session);
+		pAlmSrv->rpc_acknowledge(params,rpcResp, session);
 	}
 	else if (method == "ackAllAlarm" || method == "ackAllAlarmEvent")
 	{
-		almSrv.rpc_acknowledge(params, rpcResp, session);
+		pAlmSrv->rpc_acknowledge(params, rpcResp, session);
 	}
 	else
 	{
@@ -2416,6 +2433,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 {
 	string error = "";
 	string method = "";
+	string dbPath = "";
 	json id = nullptr;
 	json clientId = nullptr;
 	bool bGB2312 = false;
@@ -2450,6 +2468,13 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		}
 
 		method = jReq["method"].get<string>();
+
+		if (jReq.contains("dbPath"))
+		{
+			dbPath = jReq["dbPath"].get<string>();
+			pSession->dbpath = dbPath;
+		}
+		
 
 		//调试命令会话不纳入统计
 		if (!pSession->isDebug) {
