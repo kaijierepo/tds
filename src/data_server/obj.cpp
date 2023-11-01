@@ -210,52 +210,22 @@ bool OBJ::isSelectedByLeafType(string leafType)
 {
 	if (leafType == "")
 		return true;
-	if (leafType == "mp")
+	if (leafType == "*" && m_type != "")
+		return true;
+	if (leafType == m_type)
+		return true;
+	return false;
+}
+
+bool OBJ::isSelectedByLeafLevel(string leafLevel)
+{
+	if (m_level == "")
+		return true;
+	if (m_level == "*")
 		return true;
 	if (m_level == "mp")
 		return true;
 
-	size_t pos = leafType.find(".");
-	string leafCustomType;
-	if (pos > 0) {
-		leafCustomType = leafType.substr(pos + 1, leafType.size() - pos - 1);
-		leafType = leafType.substr(0, pos);
-	}
-
-	if (m_level == "org")
-	{
-		return true;
-	}
-	else if (m_level == "mo") {
-		if(leafType == "mo")
-			return true;
-	}
-	else if (m_level == "mpGroup") {
-		if (leafType == "mo")
-			return true;
-	}
-	else if (isCustomOrg()) {
-		if (leafType == "org" ||leafType == "mo" || leafType == "customMo") {
-			return true;
-		}
-		else if (leafType == "customOrg") {
-			if (leafCustomType == "" || leafCustomType == m_type) {
-				return true;
-			}
-		}
-	}
-	else if (isCustomMo()) {
-		if (leafType == "mo") {
-			return true;
-		}
-		else if (leafType == "customMo")
-		{
-			if (leafCustomType == "" || leafCustomType == m_type) {
-				return true;
-			}
-		} 
-	}
-	
 	return false;
 }
 

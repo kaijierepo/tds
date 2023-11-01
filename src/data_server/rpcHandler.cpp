@@ -1273,8 +1273,8 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		}
 #endif
 	}
-	else if (method == "hexSend") {
-		LOG("[warn][hexSend] %s", params.dump().c_str());
+	else if (method == "hexSend" || method == "sendToDev") {
+		LOG("[warn][sendToDev] %s", params.dump().c_str());
 		string spkt = params["data"];
 		if (!str::isValidHexString(spkt)) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "invalid hex string");
