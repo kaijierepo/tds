@@ -472,16 +472,9 @@
     <ClInclude Include="..\src\io_server\proto_common.h" />
     <ClInclude Include="..\src\io_server\wsProto.h" />
     <ClInclude Include="..\src\pch.h" />
-    <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\tcp2com.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="..\src\res\tds.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="..\src\res\logo.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
