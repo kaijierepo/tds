@@ -72,7 +72,7 @@ struct OBJ_QUERIER {
 		 getChild = false;
 		 getStatusDesc = false;
 		 getValDesc = false;
-		 leafType = "mp";
+		 leafType = "";
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
 		 getUnit = true;
 		 flatten = false;

@@ -214,6 +214,15 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		return true;
 	if (leafType == m_type)
 		return true;
+	if (leafType == "org")
+		return true;
+	if (leafType == "伤损指数")
+	{
+		if (m_level == "org" || m_name == "伤损指数" || (m_level == "mo" && m_name.find("子段") == string::npos))
+		{
+			return true;
+		}
+	}
 	return false;
 }
 
