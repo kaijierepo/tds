@@ -412,8 +412,13 @@ bool TDS_imp::run(string cmdline)
 	//timeopt::now(&stStartupTime);
 
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+
+#ifdef USE_SVN_REV
 	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
-	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "   ";
+#else
+	m_sTitle = "TDS " + version +  "(" + getbuildtime() + ")";
+#endif
+
 
 #ifndef _WINDLL
 #ifdef _WIN32
@@ -582,7 +587,11 @@ bool TDS_imp::connectDev(string ioAddr)
 }
 
 string TDS_imp::getVersion() {
+#ifdef USE_SVN_REV
 	string s = version + "." + SVN_VERSION;
+#else
+	string s = version;
+#endif
 	return s;
 }
 
