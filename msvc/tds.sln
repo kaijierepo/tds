@@ -1,58 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31025.194
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds", "tds.vcxproj", "{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		dll - D|x64 = dll - D|x64
-		dll - D|x86 = dll - D|x86
-		dll - R|x64 = dll - R|x64
-		dll - R|x86 = dll - R|x86
-		dll -D genicam|x64 = dll -D genicam|x64
-		dll -D genicam|x86 = dll -D genicam|x86
-		dll -R genicam|x64 = dll -R genicam|x64
-		dll -R genicam|x86 = dll -R genicam|x86
-		edge -D|x64 = edge -D|x64
-		edge -D|x86 = edge -D|x86
-		exe - D video|x64 = exe - D video|x64
-		exe - D video|x86 = exe - D video|x86
 		exe - D|x64 = exe - D|x64
 		exe - D|x86 = exe - D|x86
 		exe - R|x64 = exe - R|x64
 		exe - R|x86 = exe - R|x86
-		exe -R video|x64 = exe -R video|x64
-		exe -R video|x86 = exe -R video|x86
+		exe -R svnRev|x64 = exe -R svnRev|x64
+		exe -R svnRev|x86 = exe -R svnRev|x86
 		exe -R xp|x64 = exe -R xp|x64
 		exe -R xp|x86 = exe -R xp|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x64.ActiveCfg = dll - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x64.Build.0 = dll - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x86.ActiveCfg = dll - D|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x86.Build.0 = dll - D|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R|x64.ActiveCfg = dll - R|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R|x64.Build.0 = dll - R|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R|x86.ActiveCfg = dll - R|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R|x86.Build.0 = dll - R|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -D genicam|x64.ActiveCfg = dll -D genicam|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -D genicam|x64.Build.0 = dll -D genicam|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -D genicam|x86.ActiveCfg = dll -D genicam|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -D genicam|x86.Build.0 = dll -D genicam|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -R genicam|x64.ActiveCfg = dll -R genicam|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -R genicam|x64.Build.0 = dll -R genicam|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -R genicam|x86.ActiveCfg = dll -R genicam|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll -R genicam|x86.Build.0 = dll -R genicam|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.edge -D|x64.ActiveCfg = edge -D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.edge -D|x64.Build.0 = edge -D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.edge -D|x86.ActiveCfg = edge -D|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.edge -D|x86.Build.0 = edge -D|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D video|x64.ActiveCfg = exe - D video|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D video|x64.Build.0 = exe - D video|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D video|x86.ActiveCfg = exe - D video|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D video|x86.Build.0 = exe - D video|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.ActiveCfg = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.Build.0 = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.ActiveCfg = exe - D|Win32
@@ -61,12 +25,12 @@ Global
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.Build.0 = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.ActiveCfg = exe - R|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.Build.0 = exe - R|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x64.ActiveCfg = exe -R video|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x64.Build.0 = exe -R video|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x86.ActiveCfg = exe -R video|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x86.Build.0 = exe -R video|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.ActiveCfg = exe -R xp|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.Build.0 = exe -R xp|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x64.ActiveCfg = exe -R svnRev|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x64.Build.0 = exe -R svnRev|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x86.ActiveCfg = exe -R svnRev|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x86.Build.0 = exe -R svnRev|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.ActiveCfg = exe - D|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.Build.0 = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x86.ActiveCfg = exe -R xp|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x86.Build.0 = exe -R xp|Win32
 	EndGlobalSection
