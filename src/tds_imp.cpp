@@ -39,7 +39,6 @@ SOFTWARE.
 #include "as.h"
 #include "logServer.h"
 #include "scriptManager.h"
-#include "version.h"
 #include "tdb.h"
 #include "tdsWatchDog.h"
 #include "userMng.h"
@@ -47,6 +46,9 @@ SOFTWARE.
 #include "taskServer.h"
 #include "statusServer.h"
 
+#ifdef USE_SVN_REV  //把svn版本号编译到目标文件中
+#include "version.h"
+#endif
 
 string InterfaceEncoding = "utf8";
 

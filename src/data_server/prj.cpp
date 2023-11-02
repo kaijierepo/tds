@@ -223,10 +223,8 @@ bool project::loadObjTemplate()
 void project::setObjTemplate(json& params)
 {
 	OBJ_TEMPLATE* ct  = new OBJ_TEMPLATE();
-	if(params.contains("typeLabel"))
-		ct->type = params["typeLabel"];
-	else
-		ct->type = params["type"];
+
+	ct->type = params["type"];
 	
 	//str::hanZi2Pinyin(ct->typeLabel, ct->type);
 	ct->tplData = params["tplData"];
