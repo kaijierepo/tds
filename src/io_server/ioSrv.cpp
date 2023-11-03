@@ -1836,7 +1836,6 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
 			}
 
-
 			json jResp = json::parse(sResp);
 			string method;
 			if (jResp.contains("method"))

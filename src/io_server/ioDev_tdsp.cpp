@@ -279,7 +279,6 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 		return false;
 	}
 
-
 	bool handled = true;
 	if (method == "acq")
 	{
@@ -398,6 +397,7 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 			}
 		}
 		else {
+
 			if (jResp["id"] == nullptr) //主动上送命令
 			{
 				handleNotify(jResp);
@@ -490,6 +490,28 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			RPC_RESP resp;
 			RPC_SESSION session;
 			rpcSrv.rpc_input(jParams, resp, session);
+		}
+	}
+	else if (method == "alarmAdd")
+	{
+		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+			string sTag = jParams["tag"];
+			sTag = TAG::addRoot(sTag, m_strTagBind);
+			jParams["tag"] = sTag;
+			string sDbPath;
+			if (jParams.contains("dbPath"))
+			{
+				sDbPath = jParams["dbPath"];
+			}
+
+			RPC_RESP resp;
+			RPC_SESSION session;
+
+			if (sDbPath.find("alarms2") != string::npos)
+			{
+				session.dbpath = "alarms2";
+			}
+			rpcSrv.handleMethodCall_alarmMng("addAlarm", jParams, resp, session);
 		}
 	}
 	else if (method == "objOnline") {

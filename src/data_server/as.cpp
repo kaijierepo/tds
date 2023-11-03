@@ -680,6 +680,7 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	j["ackInfo"] = info->strConfirmInfo;
 	j["ackUser"] = info->strConfirmUser;
 	j["picUrl"] = info->pic_url;
+	j["dbPath"] = almSrv->tableCurrent.filePath;
 	return j;
 }
 
