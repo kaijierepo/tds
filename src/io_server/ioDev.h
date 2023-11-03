@@ -409,3 +409,6 @@ class CCanTransparentGateway : public ioDev {
 public:
 	CCanTransparentGateway();
 };
+
+
+string generateDevId();

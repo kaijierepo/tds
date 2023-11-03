@@ -8,6 +8,16 @@
 #include "tdb.h"
 
 
+int devIdIdx = 0;
+mutex g_csDevId;
+
+string generateDevId() {
+	g_csDevId.lock();
+	string s = timeopt::nowStr(true) + "_" + str::format("%d", devIdIdx++);
+	g_csDevId.unlock();
+	return s;
+}
+
 bool isBatchLink(string addr)
 {
 	if (addr.find("#") != string::npos)
@@ -61,7 +71,7 @@ ioDev* createIODev(string type)
 
 	if (p)
 	{
-		p->m_confNodeId = common::uuid();
+		p->m_confNodeId = generateDevId();
 	}
 
 	return p;
@@ -561,7 +571,7 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 	if (m_confNodeId == "") //该操作主要用于升级没有nodeId的配置
-		m_confNodeId = common::uuid();
+		m_confNodeId = generateDevId();
 
 	kv = conf.find("tagBind");
 	if (kv != conf.end()) {

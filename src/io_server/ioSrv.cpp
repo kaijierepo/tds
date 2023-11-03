@@ -566,7 +566,7 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		subType = params["subType"];
 	}
 
-	params["nodeID"] = common::uuid();
+	params["nodeID"] = generateDevId();
 
 	ioDev* parentDev = this;
 
