@@ -528,11 +528,16 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 		jAddr["id"] = ioAddr;
 		jAddr["type"] = DEV_ADDR_MODE::deviceID;
 		pIoDev = ioSrv.onChildDevDiscovered(jAddr,tdsSession->getRemoteAddr(), tdsSession->ioDevType, tdsSession->tdspSubType);
-		pIoDev->m_devSubType = tdsSession->tdspSubType;
 
-		if (pIoDev->m_devSubType != "") {
-			pIoDev->m_bEnableAcq = false;
+		if (pIoDev)
+		{
+			pIoDev->m_devSubType = tdsSession->tdspSubType;
+
+			if (pIoDev->m_devSubType != "") {
+				pIoDev->m_bEnableAcq = false;
+			}
 		}
+
 	}
 	//设备上线
 	else
@@ -1933,8 +1938,12 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
 
-			pIoDev->m_charset = charset;
-			pIoDev->onRecvPkt(jResp);
+			if (pIoDev)
+			{
+				pIoDev->m_charset = charset;
+				pIoDev->onRecvPkt(jResp);
+			}
+
 		}
 	}
 	catch (const std::exception& e)
