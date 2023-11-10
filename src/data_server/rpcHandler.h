@@ -69,7 +69,7 @@ public:
 	bool parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session,string& tag,string& rootTag);
 
 	//object manage
-	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);
+	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL bUpdate = TRUE);
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
 	void rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);

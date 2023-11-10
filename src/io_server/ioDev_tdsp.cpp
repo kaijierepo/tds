@@ -10,6 +10,7 @@
 #include "base64.h"
 #include "mp.h"
 #include "rpcHandler.h"
+#include "as.h"
 
 using namespace httplib;
 
@@ -489,7 +490,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			jParams["rootTag"] = m_strTagBind;
 			RPC_RESP resp;
 			RPC_SESSION session;
-			rpcSrv.rpc_input(jParams, resp, session);
+			rpcSrv.rpc_input(jParams, resp, session, FALSE);
 		}
 	}
 	else if (method == "alarmAdd")
@@ -505,13 +506,19 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			}
 
 			RPC_RESP resp;
-			RPC_SESSION session;
+
+			almServer* pAlmSrv = nullptr;
 
 			if (sDbPath.find("alarms2") != string::npos)
 			{
-				session.dbpath = "alarms2";
+				pAlmSrv = &almSrv2;
 			}
-			rpcSrv.handleMethodCall_alarmMng("addAlarm", jParams, resp, session);
+			else
+			{
+				pAlmSrv = &almSrv;
+			}
+
+			pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
 		}
 	}
 	else if (method == "objOnline") {

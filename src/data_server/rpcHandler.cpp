@@ -2936,7 +2936,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 }
 
 
-void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL bUpdate)
 {
 	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
 	TIME stTimeStamp;
@@ -3100,25 +3100,27 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 
 			//发送状态更新通知
-			json jStatusNotify;
-			json jUpdateTags = json::array();
-			json jUpdateVals = json::array();
-			json jUpdateFiles = json::array();
-			json jUpdateValDescs = json::array();
-			for (int i = 0; i < vecMps.size(); i++) {
-				MP* pmp = vecMps[i];
-				jUpdateTags.push_back(pmp->getTag());
-				jUpdateVals.push_back(pmp->m_curVal);
-				jUpdateFiles.push_back(pmp->m_curFileData);
-				jUpdateValDescs.push_back(pmp->getValDesc(true));
+			if (bUpdate)
+			{
+				json jStatusNotify;
+				json jUpdateTags = json::array();
+				json jUpdateVals = json::array();
+				json jUpdateFiles = json::array();
+				json jUpdateValDescs = json::array();
+				for (int i = 0; i < vecMps.size(); i++) {
+					MP* pmp = vecMps[i];
+					jUpdateTags.push_back(pmp->getTag());
+					jUpdateVals.push_back(pmp->m_curVal);
+					jUpdateFiles.push_back(pmp->m_curFileData);
+					jUpdateValDescs.push_back(pmp->getValDesc(true));
+				}
+				jStatusNotify["tag"] = jUpdateTags;
+				jStatusNotify["val"] = jUpdateVals;
+				jStatusNotify["valDesc"] = jUpdateValDescs;
+				jStatusNotify["file"] = jUpdateFiles;
+				jStatusNotify["time"] = time;
+				rpcSrv.notify("statusUpdate", jStatusNotify);
 			}
-			jStatusNotify["tag"] = jUpdateTags;
-			jStatusNotify["val"] = jUpdateVals;
-			jStatusNotify["valDesc"] = jUpdateValDescs;
-			jStatusNotify["file"] = jUpdateFiles;
-			jStatusNotify["time"] = time;
-			rpcSrv.notify("statusUpdate", jStatusNotify);
-
 
 			resp.result = "\"ok\"";
 		}

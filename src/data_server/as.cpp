@@ -105,7 +105,7 @@ void almServer::recover(ALARM_KEY& key)
 }
 
 
-void almServer::addAlarm(ALARM_INFO ai)
+void almServer::addAlarm(ALARM_INFO ai, BOOL bUpdate)
 {
 	tableCurrent.add(ai);
 	tableHist.add(ai);
@@ -137,8 +137,12 @@ void almServer::addAlarm(ALARM_INFO ai)
 	}
 
 	//通知给TDS客户端
-	json j = ai.toJson(this);
-	rpcSrv.notify("alarmAdd", j);
+	if (bUpdate)
+	{
+		json j = ai.toJson(this);
+		rpcSrv.notify("alarmAdd", j);
+	}
+
 }
 
 
@@ -235,12 +239,12 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	mapAlarm.clear();
 }
 
-string almServer::rpc_addAlarm(json j, RPC_RESP& resp)
+string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 {
 	ALARM_INFO ai;
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
-	addAlarm(ai);
+	addAlarm(ai, bUpdate);
 	return "\"success\"";
 }
 
