@@ -1099,6 +1099,9 @@ int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
 	memcpy(pData, &len, sizeof(len));
 	memcpy(pData + sizeof(len), p, len);
 	TIME t = timeopt::now();
+
+	int nNetTimeout = 3000;
+	setsockopt(sockPipe, SOL_SOCKET, SO_SNDTIMEO, (char*)&nNetTimeout, sizeof(int));
 	int iSend = send(sockPipe, pData, len + (int)sizeof(len), MSG_DONTROUTE);
 
 	int pass = timeopt::CalcTimePassMilliSecond(t);
