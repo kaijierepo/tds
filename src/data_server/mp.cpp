@@ -309,11 +309,9 @@ bool MP::loadStatus(json& status)
 		return true;
 	}
 	
-	
 	m_lastVal = m_curVal;
 	m_curVal = status["val"];
 	m_stDataLastUpdate = t;
-
 
 	if (needSaveToDB()) {
 		saveToDB();
@@ -679,6 +677,8 @@ void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
 		return;
 
+	m_dbFileLock.lock();
+
 	m_stDataLastUpdate = *dataTime;
 	OBJ* pParentMo = getParentMo();
 	if (pParentMo)
@@ -688,6 +688,9 @@ void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
 	m_lastVal = m_curVal;
 	m_curVal = jVal;
 	m_curFileData = fileData;
+
+	m_dbFileLock.unlock();
+
 	calcAlarm();
 	if (this->m_valType == "json")
 	{
@@ -787,10 +790,15 @@ void MP::saveToDB() {
 	timeopt::now(&m_lastSaveTime);
 	json jDE;
 	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
+
+	string sFileData;
 	if(m_curVal != nullptr)
 		jDE["val"] = m_curVal;
-	if(m_curFileData != nullptr)
+	if (m_curFileData != nullptr)
+	{
+		sFileData = m_curFileData.dump();
 		jDE["file"] = m_curFileData;
+	}
 	string sDe = jDE.dump();
 
 	DB_TIME dbt;
