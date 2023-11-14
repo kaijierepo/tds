@@ -200,25 +200,25 @@ bool ioDev::run()
 	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer)
 	{
 		string ip;
-		if (m_jDevAddr.contains("ip"))
+		if (m_jDevAddr["ip"].is_string())
 		{
 			ip = m_jDevAddr["ip"].get<string>();
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到ip配置",m_addrType.c_str());
+			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
 			return false;
 		}
 
 
 		int port;
-		if (m_jDevAddr.contains("port"))
+		if (m_jDevAddr["port"].is_number_integer())
 		{
 			port = m_jDevAddr["port"].get<int>();
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,设备地址模式=%s,没有找到port配置",m_addrType.c_str());
+			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s",m_addrType.c_str(),m_jDevAddr.dump().c_str());
 			return false;
 		}
 
@@ -979,7 +979,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		}
 		else if (m_addrType == DEV_ADDR_MODE::deviceID)
 		{
-			if (m_jDevAddr.contains("id")) {
+			if (m_jDevAddr["id"].is_string()) {
 				devAddr = m_jDevAddr["id"].get<string>();
 				if (ignorePort) {
 					devAddr = ioDev::removePortFromIoAddr(devAddr);
@@ -1020,9 +1020,9 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		{
 			string ip;
 			int port = 0;
-			if (m_jDevAddr.contains("ip"))
+			if (m_jDevAddr["ip"].is_string())
 				ip = m_jDevAddr["ip"].get<string>();
-			if (m_jDevAddr["port"] != nullptr)
+			if (m_jDevAddr["port"].is_number_integer())
 			{
 				port = m_jDevAddr["port"].get<int>();
 			}
