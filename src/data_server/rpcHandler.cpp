@@ -1550,10 +1550,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		OBJ* p = prj.queryObj(tag);
 		if (p) {
 			p->m_bOnline = false;
+			if (p->m_bChildTds) { //设置所有子对象掉线
+				p->recursiveSetOffline();
+			}
 		}
-		if (p->m_bChildTds) { //设置所有子对象掉线
-			p->recursiveSetOffline();
-		}
+
 		LOG("[对象掉线  ]位号:%s", tag.c_str());
 		rpcSrv.notify("objOffline", params);
 	}

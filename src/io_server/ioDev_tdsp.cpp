@@ -668,7 +668,6 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		//处理响应
 		if (bGetResp) 
 		{
-			ASSERT(resp["result"] != nullptr || resp["error"] != nullptr);
 			//LOG("[io设备同步响应]\n" + resp.dump());
 			if (resp["result"] != nullptr)
 			{
@@ -736,9 +735,12 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 					}
 				}
 			}
-			if (resp["error"] != nullptr)
+			else if (resp["error"] != nullptr)
 			{
 				error = resp["error"];
+			}
+			else {
+				error = "device response has no error and result field";
 			}
 			goto TRANSACTION_END;
 		}
