@@ -32,6 +32,10 @@ SOFTWARE.
 #include "tdsWatchDog.h"
 #include "tdb.h"
 
+//#define _CRTDBG_MAP_ALLOC
+//#include <stdlib.h>
+//#include <crtdbg.h>
+
 #ifdef ENABLE_TOOLS
 #include "tools/tcpHub.h"
 #include "tools/tcpSwitch.h"
@@ -49,6 +53,7 @@ SOFTWARE.
 #include "common.h"
 #include "rpcHandler.h"
 #include "httplib.h"
+
 
 void clearZlmNoReaderPusher() {
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
@@ -235,6 +240,11 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 bool isTdsRunning();
 int main(int argc, char** argv)
 {
+
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
+	//_CrtSetBreakAlloc(124823298);
+
 	//取出命令行命令
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {
@@ -487,6 +497,7 @@ int main(int argc, char** argv)
 			zlmLastClearPusherTime = timeopt::now();
 		}
 	}
+
 	return 0;
 }
 
