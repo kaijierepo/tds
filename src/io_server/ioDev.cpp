@@ -1114,10 +1114,11 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 	}
 	else {
 		//直接发送给设备
-		unique_lock<mutex> lock(m_csIOSession);
-		if (pIOSession)
+		//此处不要先锁 pIOSession再 send，否则和 tcpLinkLock会锁套锁
+		shared_ptr<TDS_SESSION> pIOSessTmp = getIOSession();
+		if (pIOSessTmp)
 		{
-			pIOSession->send(pData, iLen);
+			pIOSessTmp->send(pData, iLen);
 		}
 		//通过协议适配器发送给设备
 		else {

@@ -222,9 +222,14 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
-     unique_lock<recursive_mutex> lock(m_mutexTcpLink);//修改tcplink
+
+     //clear tcp link
+     m_mutexTcpLink.lock();
      pTcpSession = nullptr;
      pTcpSessionClt = nullptr;
+     m_mutexTcpLink.unlock();
+
+
      if (pBridgedTcpClient)
      {
          delete pBridgedTcpClient;

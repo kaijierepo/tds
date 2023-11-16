@@ -220,7 +220,13 @@ public:
 	//设备是udpServer
 	UdpClt* m_udpClt;
 
-
+	shared_ptr<TDS_SESSION> getIOSession(){
+		shared_ptr<TDS_SESSION> p = nullptr;
+		m_csIOSession.lock();
+		p = pIOSession;
+		m_csIOSession.unlock();
+		return p;
+	}
 	shared_ptr<TDS_SESSION> pIOSession;
 	mutex m_csIOSession;
 	//输出到设备
