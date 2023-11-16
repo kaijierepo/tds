@@ -791,11 +791,13 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		yyjson_mut_val* yymv_datalist = yyjson_mut_arr(mdoc);
 		yyjson_mut_arr_append(yymv_datalist, yymDe);
 		size_t len = 0;
-		const char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+		char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 		if (!DB_FS::writeFile(dataListPath,(unsigned char*) s,len))
 		{
 			printf("[error]save to db file fail,path:%s,data:%s", dataListPath.c_str(), s);
 		}
+		if (s)
+			free(s);
 	}
 	else
 	{
@@ -815,18 +817,22 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 				fseek(fp, len - 1, SEEK_SET);
 				std::string d = ",";
 				size_t len = 0;
-				const char* s = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+				char* s = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 				d += s;
 				d += "]";
 				fwrite(d.c_str(), 1, d.length(), fp);
+				if (s)
+					free(s);
 			}
 			else
 			{
 				yyjson_mut_val* yymv_datalist = yyjson_mut_arr(mdoc);
 				yyjson_mut_arr_append(yymv_datalist, yymDe);
 				size_t len = 0;
-				const char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+				char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 				fwrite(s, 1, len, fp);
+				if (s)
+					free(s);
 			}
 			
 			fclose(fp);
@@ -855,6 +861,8 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 			printf(i.first.c_str());
 			char* sz = yyjson_mut_val_write(i.second, 0, nullptr);
 			printf(sz);
+			if (sz)
+				free(sz);
 		}
 	}
 	return "";
@@ -2097,7 +2105,9 @@ void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string&
 		data = pData;
 	}
 	else {
-		data = yyjson_val_write(yyv_data, 0,nullptr);
+		char* p = yyjson_val_write(yyv_data, 0, nullptr);
+		data = p;
+		free(p);
 	}
 	
 	if (type == "jpg") {
