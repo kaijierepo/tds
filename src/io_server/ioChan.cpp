@@ -283,6 +283,21 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 //例如Modbus设备就有以寄存器为特征的通道
 void ioChannel::output(json jVal, json& rlt,json& err, bool sync)
 {
+	//输出时乘上反向倍率
+	if (jVal.is_number_integer()) {
+		int iVal = jVal.get<int>();
+		double dbK_reverse = 1 / m_k;
+		iVal = iVal * dbK_reverse;
+		jVal = iVal;
+	}
+	else if (jVal.is_number()) {
+		double dbVal = jVal.get<double>();
+		double dbK_reverse = 1 / m_k;
+		dbVal = dbVal * dbK_reverse;
+		jVal = dbVal;
+	}
+
+
 	ioDev* pDev = ioDev::m_pParent;
 	pDev->output(this,jVal, rlt,err,sync);
 }
