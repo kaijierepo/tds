@@ -1666,7 +1666,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				level = "mp";
 			}
 
-			string type = "*";
+			string type = ""; //为空表示选中所有，为*表示选中所有自定义类型
 			if (params["type"] != nullptr) {
 				type = params["type"].get<string>();
 			}
