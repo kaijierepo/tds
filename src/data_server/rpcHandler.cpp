@@ -2914,6 +2914,9 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 			json jDe = params; //返回输出成功的结果
 			jDe["val"] = val;
 			resp.result = rlt.dump();
+
+			pmp->input(val);
+			pmp->saveToDB();
 		}
 		else
 		{
@@ -3067,7 +3070,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 				MP* pmp = prj.GetMPByTag(tag);
 				if (pmp)
 				{
-					pmp->input(val, file, &stTimeStamp);
+					pmp->input(val, &file, &stTimeStamp);
 					vecMps.push_back(pmp);
 				}
 				else {

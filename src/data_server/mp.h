@@ -71,8 +71,8 @@ public:
 public:
 	//fileData为数据元携带的文件数据
 	//这个函数为最频繁调用的函数，使用引用提高性能
-	void input(json& jVal,  json& fileData, TIME* dataTime = NULL);
-	void updateVal(json& jVal, json& fileData, TIME* dataTime);
+	void input(json& jVal,  json* fileData = NULL, TIME* dataTime = NULL);
+	void updateVal(json& jVal, json* fileData = NULL, TIME* dataTime = NULL);
 	OBJ* getParentMo();
 
 	bool needSaveToDB();

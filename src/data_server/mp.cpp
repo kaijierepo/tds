@@ -591,7 +591,7 @@ void MP::calcAlarm()
 
 
 
-void MP::input(json& jVal, json& dataFile, TIME* dataTime)
+void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 {
 	TIME t;
 	if (dataTime == NULL)
@@ -665,7 +665,7 @@ OBJ* MP::getParentMo()
 	return nullptr;
 }
 
-void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
+void MP::updateVal(json& jVal, json* fileData, TIME* dataTime)
 {
 	TIME t;
 	if (dataTime == NULL)
@@ -687,7 +687,9 @@ void MP::updateVal(json& jVal, json& fileData, TIME* dataTime)
 	//save to rt memory
 	m_lastVal = m_curVal;
 	m_curVal = jVal;
-	m_curFileData = fileData;
+
+	if(fileData != nullptr)
+		m_curFileData = *fileData;
 
 	m_dbFileLock.unlock();
 
@@ -744,6 +746,7 @@ bool MP::needSaveToDB()
 	if (m_curVal != nullptr)
 	{
 		//save to db
+		//这里不要使用 elseif 如果是 cyclic|onchange的存储模式， 是否周期到和是否值变化都要判断
 		if (m_saveMode.find("cyclic") != string::npos)
 		{
 			int timespan = getSaveInterval();
@@ -752,7 +755,8 @@ bool MP::needSaveToDB()
 				bNeedSave = true;
 			}
 		}
-		else if (m_saveMode.find("onchange") != string::npos)
+		
+		if (m_saveMode.find("onchange") != string::npos)
 		{
 			if (m_curVal.is_number() && m_lastVal.is_number()) {
 				double last = m_lastVal.get<double>();
@@ -770,7 +774,8 @@ bool MP::needSaveToDB()
 				}
 			}
 		}
-		else if (m_saveMode == "always")
+		
+		if (m_saveMode == "always")
 		{
 			bNeedSave = true;
 		}
