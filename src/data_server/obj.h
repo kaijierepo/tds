@@ -189,6 +189,8 @@ public:
 	OBJ();
 	virtual ~OBJ();
 
+	static bool m_bDefaultOnline;
+
 	void loadTask(json& jTask);
 
 	virtual bool loadConf(json& conf);

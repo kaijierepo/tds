@@ -34,6 +34,8 @@ SOFTWARE.
 #include "as.h"
 #include <algorithm>
 
+bool OBJ::m_bDefaultOnline = false;
+
 
 OBJ* createMO(string type)
 {
@@ -70,7 +72,7 @@ OBJ::OBJ()
 {
 	m_pParentMO = NULL;
 	m_level = MO_TYPE::mo;
-	m_bOnline = false;
+	m_bOnline = OBJ::m_bDefaultOnline;
 	m_bShow = true;
 	m_bDynLocation = false;
 	m_dbLongitudeCalib = 0;

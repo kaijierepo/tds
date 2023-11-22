@@ -57,6 +57,9 @@ MP* project::createMP(string tag,string valType)
 
 bool project::loadConfFile()
 {
+	OBJ::m_bDefaultOnline = tds->conf->getInt("objDefaultOnline", 0) > 0 ? true:false;
+
+
 	string& conf = m_strMoTree;
 	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf)) 
 	{

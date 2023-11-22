@@ -106,6 +106,8 @@ public:
 	ioDev(void);
 	virtual ~ioDev(void);
 
+	static bool m_defaultOnline;
+
 	virtual bool run(); //连接； 执行io任务； 断线重连
 	virtual void stop();
 	bool m_bRunning;

@@ -136,7 +136,7 @@ bool ioDev::IsGateway()
 
 bool ioDev::m_bAsynAcqMode = false;
 int ioDev::m_heartBeatInterval = 3;
-
+bool ioDev::m_defaultOnline = false;
 
 
 ioDev::ioDev(void)
@@ -150,7 +150,7 @@ ioDev::ioDev(void)
 	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
 	m_pParent = NULL;
 	m_bEnableOfflineTimeout = false;
-	m_bOnline = false;
+	m_bOnline = ioDev::m_defaultOnline;
 	m_iSendDataFailCount = 0;
 	m_tcpClt = nullptr;
 	m_udpClt = nullptr;
