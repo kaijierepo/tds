@@ -411,12 +411,14 @@ bool TDS_imp::run(string cmdline)
 
 	//timeopt::now(&stStartupTime);
 
+	string appName = fs::appName();
+
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 
 #ifdef USE_SVN_REV
-	m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
+	m_sTitle = appName + " " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
 #else
-	m_sTitle = "TDS " + version +  "(" + getbuildtime() + ")";
+	m_sTitle = appName + " " + version +  "(" + getbuildtime() + ")";
 #endif
 
 
