@@ -454,6 +454,12 @@ bool MP::toJson(json& conf, OBJ_QUERIER q)
 			conf["time"] = "-";
 	}
 
+	if (q.getStatus) {
+		if (m_valType == VAL_TYPE::video) {
+			conf["online"] = m_bOnline;
+		}
+	}
+
 	if (q.getStatusDesc || q.getValDesc) {
 		conf["valDesc"] = getValDesc(q.getUnit);
 	}

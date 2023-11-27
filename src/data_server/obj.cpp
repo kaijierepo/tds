@@ -439,8 +439,6 @@ void OBJ::toAttrInfo(nlohmann::ordered_json& attrInfo)
 
 bool OBJ::isCustomMo()
 {
-	if (m_level == MO_TYPE::customMo)
-		return true;
 	if (m_level == MO_TYPE::mo && m_type != "")
 		return true;
 	return false;
