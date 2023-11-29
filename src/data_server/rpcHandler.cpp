@@ -2842,6 +2842,15 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 			if (val.is_string() && val.get<string>() == "取反") {
 				if (pmp->m_curVal.is_boolean())
 					val = !pmp->m_curVal.get<bool>();
+				else if (pmp->m_curVal.is_number_integer()) {  //modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
+					int iVal = pmp->m_curVal.get<int>();
+					if (iVal != 0) {
+						val = 0;
+					}
+					else {
+						val = 1;
+					}
+				}
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
@@ -3116,7 +3125,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 					jUpdateTags.push_back(pmp->getTag());
 					jUpdateVals.push_back(pmp->m_curVal);
 					jUpdateFiles.push_back(pmp->m_curFileData);
-					jUpdateValDescs.push_back(pmp->getValDesc(true));
+					jUpdateValDescs.push_back(pmp->getValDesc(false));  
 				}
 				jStatusNotify["tag"] = jUpdateTags;
 				jStatusNotify["val"] = jUpdateVals;
@@ -3951,6 +3960,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	bool getStatus = true;
 	bool getConf = true;
 	bool getStatusDesc = false;
+	bool getUnit = true;
 
 	if (params.contains("getConf"))
 	{
@@ -3958,6 +3968,8 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 	}
 	if (params.contains("getStatus"))
 		getStatus = params["getStatus"].get<bool>();
+	if (params.contains("getUnit"))
+		getUnit = params["getUnit"].get<bool>();
 
 
 	//获取位号查询参数
@@ -4022,6 +4034,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			q.getStatusDesc = getStatusDesc;
 			q.getStatus = getStatus;
 			q.rootTag = rootTag;
+			q.getUnit = getUnit;
 			json j;
 			pmp->toJson(j,q);
 			rtList.push_back(j);
