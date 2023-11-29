@@ -225,6 +225,8 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			return true;
 		}
 	}
+	if (leafType == "mo")
+		return true;
 	return false;
 }
 
