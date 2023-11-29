@@ -131,9 +131,13 @@ void almServer::addAlarm(ALARM_INFO ai, BOOL bUpdate)
 		}
 	}
 
-	if (pl != "" && tds->smsServer->send(msg, pl))
+	if (pl != "" && tds->smsServer)
 	{
-		LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
+		if (tds->smsServer->send(msg, pl))
+		{
+			LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
+		}
+		
 	}
 
 	//通知给TDS客户端
