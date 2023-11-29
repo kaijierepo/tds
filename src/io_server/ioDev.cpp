@@ -603,9 +603,12 @@ bool ioDev::loadConf(json& conf)
 		{
 			ioDev* pChild = nullptr;
 			pChild = createIODev(i["type"].get<string>());
-			pChild->loadConf(i);
-			pChild->m_pParent = this;
-			m_vecChildDev.push_back(pChild);
+
+			if (pChild) {
+				pChild->loadConf(i);
+				pChild->m_pParent = this;
+				m_vecChildDev.push_back(pChild);
+			}
 		}
 	}
 
