@@ -41,7 +41,7 @@ namespace DEV_SUB_TYPE {
 
 inline string getDevSubTypeLabel(string devSubType) {
 	if (devSubType == "childTds") {
-		return "TDS子服务";
+		return "子服务";
 	}
 	else if (devSubType == "control-logix") {
 		return "ControlLogix PLC";
