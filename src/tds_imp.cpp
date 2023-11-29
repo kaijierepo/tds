@@ -309,7 +309,7 @@ bool TDS_imp::run(string cmdline)
 	}
 #endif
 
-	logger.init();
+	logger.m_strLogDir = tds->conf->logPath;
 	logger.setLogLevel(tdsConf.logLevel);
 	if (isTdsRunning()) {
 		LOG("tds已经运行，退出程序");

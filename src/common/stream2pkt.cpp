@@ -1,4 +1,3 @@
-#include "wsProto.h"
 #include "stream2pkt.h"
 #include "common.h"
 

@@ -76,6 +76,11 @@ void ioGW_rs485ToNet::DoCycleTask()
 
 bool ioGW_rs485ToNet::isConnected()
 {
+	//udp为无连接模式，默认认为已经连接
+	if (m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient) {
+		return true;
+	}
+
 	if (pIOSession)
 		return true;
 	return false;

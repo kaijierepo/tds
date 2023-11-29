@@ -50,6 +50,7 @@ public:
 	bool match(string channelNo);
 
 	virtual void input(json jVal, TIME* dataTime=NULL, bool bPic=false);
+	string getTagBind();
 	virtual void input(json jVal,string& tagBind, TIME* dataTime = NULL, bool bPic = false);
 	virtual void output(json jVal, json& rlt,json& err,bool sync = false); //sync指定为同步输出,该函数将阻塞
 
