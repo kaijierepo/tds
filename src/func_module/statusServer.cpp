@@ -6,6 +6,7 @@
 #include <thread>
 
 #pragma comment(lib, "Pdh.lib")
+#pragma comment(lib, "Psapi.lib")
 
 long long  StatusServer::getTimestamp_ns() {
 	std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
