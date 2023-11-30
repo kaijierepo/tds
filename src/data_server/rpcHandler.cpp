@@ -2842,15 +2842,6 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 			if (val.is_string() && val.get<string>() == "取反") {
 				if (pmp->m_curVal.is_boolean())
 					val = !pmp->m_curVal.get<bool>();
-				else if (pmp->m_curVal.is_number_integer()) {  //modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
-					int iVal = pmp->m_curVal.get<int>();
-					if (iVal != 0) {
-						val = 0;
-					}
-					else {
-						val = 1;
-					}
-				}
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
@@ -2896,6 +2887,16 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 					resp.error = makeRPCError(RPC_ERROR_CODE::OBJ_enumValNotFound, "enum val not found," + enumVal);
 					LOG("[warn]output请求错误," + resp.error);
 					return;
+				}
+			}
+			else if (val.is_string() && val.get<string>() == "取反" && pmp->m_curVal.is_number_integer()) {
+                //modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
+				int iVal = pmp->m_curVal.get<int>();
+				if (iVal != 0) {
+					val = 0;
+				}
+				else {
+					val = 1;
 				}
 			}
 			else {
