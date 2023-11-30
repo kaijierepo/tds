@@ -29,7 +29,6 @@ SOFTWARE.
 #include "tdb.h"
 #include <iostream>
 #include <sstream>
-#include <filesystem>
 #include "yyjson.h"
 #include <stdarg.h>
 #include <mutex>
