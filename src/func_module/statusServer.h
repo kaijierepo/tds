@@ -1,6 +1,8 @@
 #pragma once
-#include "ioDev.h"
-
+#include <windows.h>
+#include <tlhelp32.h>
+#include <Psapi.h>
+#include <Pdh.h>
 
 struct SRV_STATUS {
 	double cpu; //%

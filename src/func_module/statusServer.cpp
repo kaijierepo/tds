@@ -1,13 +1,9 @@
-#include "pch.h"
 #include "StatusServer.h"
-#include <windows.h>
-#include <tlhelp32.h>
-#include <Psapi.h>
-#include <Pdh.h>
 #include <tchar.h>
 #include <chrono>
 #include "statusServer.h"
 #include "tdb.h"
+#include <thread>
 
 #pragma comment(lib, "Pdh.lib")
 
@@ -75,7 +71,7 @@ void StatusServer::openProc() {
 	string strPath = (char*)p;
 	size_t nEnd = strPath.rfind('\\');
 	str = strPath.substr(nEnd + 1, strPath.length() - nEnd - 1);
-	str = charCodec::gb_to_tds(str);
+	//str = charCodec::gb_to_tds(str);
 	string procName = str;
 	processHandle = OpenProcessByName(procName.c_str());
 }
