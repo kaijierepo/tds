@@ -155,6 +155,9 @@
     <ClCompile Include="..\src\data_server\jerry.cpp">
       <Filter>tdb</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -297,6 +300,9 @@
     </ClInclude>
     <ClInclude Include="..\src\data_server\jerry.h">
       <Filter>tdb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h">
+      <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
