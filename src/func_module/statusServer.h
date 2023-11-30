@@ -27,12 +27,13 @@ public:
 	StatusServer(void);
 	~StatusServer(void);
 
+	bool run();
+	bool m_bLogStatus;
+	int m_logInterval;
+
 
 	unsigned char sessionHandle[4];
-
 	HANDLE OpenProcessByName(const char* processName);
-
-	bool run();
 	void openProc();
 	void stop();
 	time_t SysTime2Unix(SYSTEMTIME sDT);
@@ -48,7 +49,6 @@ public:
 
 	SYSTEMTIME m_stLastAcqTime;  
 	float m_fAcqInterval; 
-	bool m_bLogStatus;
 	bool m_bLastCpuInfoValid;
 	bool m_bCurCpuInfoValid;
 	CPU_USE_INFO m_lastCpuUseInfo;

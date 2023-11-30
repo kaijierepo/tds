@@ -25,6 +25,7 @@ StatusServer::StatusServer(void)
 	processHandle = INVALID_HANDLE_VALUE;
 	memset(&m_stLastAcqTime, 0, sizeof(m_stLastAcqTime));
 	m_bLogStatus = false;
+	m_logInterval = 60;
 }
 
 
@@ -103,7 +104,7 @@ void StatusServer::cycleAcq_srvStatus() {
 	while (1) {
 		Sleep(300);
 
-		if (CalcTimePassSecond(m_stLastAcqTime) > 60){
+		if (CalcTimePassSecond(m_stLastAcqTime) > m_logInterval){
 			if (processHandle == INVALID_HANDLE_VALUE){
 				openProc();
 			}
