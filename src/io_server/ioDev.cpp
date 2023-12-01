@@ -1590,7 +1590,7 @@ ioChannel* ioDev::getChanByTag(string tag)
 	for (auto& child : m_channels)
 	{
 		ioChannel* pC = (ioChannel*)child;
-		if (pC->m_strTagBind == tag || tag == pC->m_pParent->m_strTagBind + "." + pC->m_strTagBind)
+		if (pC->m_strTagBind == tag || tag == pC->getTagBind())
 		{
 			return pC;
 		}

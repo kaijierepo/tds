@@ -1,7 +1,6 @@
 #include "tcpSrv.h"
 #include "common.h"
 #include "mongoose.h"
-#include "logger.h"
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
