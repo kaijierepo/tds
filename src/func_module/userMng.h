@@ -94,7 +94,7 @@ public:
 	json getRoles(string user);
 	
 	json getMoPermission(string user); //获得可以管理的MO树
-	json getUser(string user);
+	json& getUser(string user);
 	json getUserByOpenID(string openID); //公众号的openID
 
 	bool saveTokens();

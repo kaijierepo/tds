@@ -689,16 +689,16 @@ json userManager::getMoPermission(string user)
 	}
 }
 
-json userManager::getUser(string user)
+json& userManager::getUser(string user)
 {
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
 	if (m_mapUsers.find(user) != m_mapUsers.end())
 	{
-		json& jUser = m_mapUsers[user];
-		return jUser;
+		return m_mapUsers[user];
 	}
 
-	return nullptr;
+	json j = nullptr;
+	return j;
 }
 
 json userManager::getUserByOpenID(string openID)
