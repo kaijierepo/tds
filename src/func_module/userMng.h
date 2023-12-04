@@ -128,3 +128,4 @@ public:
 };
 
 extern userManager userMng;
+extern json jsNull;

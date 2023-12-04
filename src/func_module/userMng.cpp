@@ -7,6 +7,7 @@
 #include "secure.h"
 
 userManager userMng;
+json jsNull = nullptr;
 
 string getDefaultRoleConf() {
 	return R"(
@@ -397,7 +398,7 @@ bool userManager::checkTagWritePermission(string user, string tag)
 
 bool userManager::checkTagPermission(string user, string tag)
 {
-	json jUser = userMng.getUser(user);
+	json& jUser = userMng.getUser(user);
 	if (jUser.is_null())return false; 
 
 	//用户所属组织
@@ -411,7 +412,7 @@ bool userManager::checkTagPermission(string user, string tag)
 	if (jUser["role"].get<string>() == "管理员")
 		return true;
 
-	json moPermission = userMng.getMoPermission(user);
+	json& moPermission = jUser["permission"]["mo"];
 	if(moPermission.is_null())return false;
 	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
 	tag = TAG::trimRoot(tag, org);
@@ -692,13 +693,13 @@ json userManager::getMoPermission(string user)
 json& userManager::getUser(string user)
 {
 	std::shared_lock<shared_mutex> lock(m_csUserConf);
-	if (m_mapUsers.find(user) != m_mapUsers.end())
+	std::map<string, json>::iterator iter = m_mapUsers.find(user);
+	if (iter != m_mapUsers.end())
 	{
-		return m_mapUsers[user];
+		return iter->second;
 	}
 
-	json j = nullptr;
-	return j;
+	return jsNull;
 }
 
 json userManager::getUserByOpenID(string openID)
