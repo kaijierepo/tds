@@ -1421,6 +1421,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		unique_lock<shared_mutex> lock(prj.m_csPrj);
 		result = rpc_setconf(params, error);
 	}
+	else if (method == "setConfFile") {
+		rpc_setconffile(params, rpcResp,session);
+	}
+	else if (method == "getConfFile") {
+		rpc_getconffile(params, rpcResp, session);
+	}
 	else if (method == "getObjTemplate") {
 		if (params.contains("type")) {
 			string type = params["type"];
@@ -4073,7 +4079,7 @@ string rpcHandler::rpc_getconf(json params, string& error)
 
 	if (type == "file")
 	{
-		return rpc_getconffile(params,error);
+		return "";
 	}
 	else if (type == "file-list")
 	{
@@ -4097,49 +4103,68 @@ string rpcHandler::rpc_getconf(json params, string& error)
 
 string rpcHandler::rpc_setconf(json params, string& error)
 {
-	//按照类型配置
-	string type = "";
-	if (params.find("type") != params.end())
-		type = params["type"].get<string>();
-	if (type == "file")
-	{
-		return rpc_setconffile(params,error);
-	}
-
 	return "";
 }
 
-string rpcHandler::rpc_getconffile(json params, string& error)
+void rpcHandler::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	string p = "";
-	if (params.find("path") != params.end())
-		p = params["path"].get<string>();
+	if (!params["path"].is_string())
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
+		return;
+	}
+
+	if (!params["data"].is_string())
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param data error");
+		return;
+	}
+
+	p = params["path"].get<string>();
 	if (p != "")
 	{
 		string conf = "";
 		p = tds->conf->confPath + "/" + p;
 		fs::normalizationPath(p);
 		fs::readFile(p, conf);
-		json j = conf;
-		return j.dump();
+		json j;
+		j["path"] = p;
+		j["data"] = conf;
+		resp.result = j.dump();
 	}
-	return string();
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "path not specified");
+	}
 }
 
-string rpcHandler::rpc_setconffile(json params, string& error)
+void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	string path = "";
-	if (params.find("path") != params.end())
-		path = params["path"].get<string>();
+	if (!params["path"].is_string())
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
+		return;
+	}
+
+	if (!params["data"].is_string())
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param data error");
+		return;
+	}
+
+	path = params["path"].get<string>();
 	if (path != "")
 	{
-		string conf = params["conf"].get<string>();
+		string conf = params["data"].get<string>();
 		path = tds->conf->confPath + "/" + path;
 		fs::createFolderOfPath(path);
 		fs::writeFile(path, conf);
-		return "ok";
+		resp.result = RPC_OK;
 	}
-	return string();
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "path not specified");
+	}
 }
 
 json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string localIP,int LocalPort)
