@@ -195,8 +195,8 @@ public:
 
 	virtual bool loadConf(json& conf);
 	virtual bool loadStatus(json& status);
-	virtual bool toJson(json& conf, OBJ_QUERIER querier);
-	virtual bool toJson(json& conf, json serializeOption);
+	virtual bool toJson(json& conf, OBJ_QUERIER querier, const string& user = "admin");
+	//virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(OBJ* pMo);
 
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
@@ -276,7 +276,7 @@ public:
 	void clearChildren();
 	OBJ* getOwnerChildTds();
 
-	OBJ_QUERIER parseQuerier(json& opt);
+	static OBJ_QUERIER parseQuerier(json& opt);
 	OBJ* GetRootMO();
 	OBJ* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
 	OBJ* GetChildMO(string type);

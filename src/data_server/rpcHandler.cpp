@@ -1382,7 +1382,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		query.getStatus = true;
 		query.getChild = true;
 		query.getMp = true;
-		prj.toJson(j, query);
+		prj.toJson(j, query, session.user);
 		result = j.dump(4);
 	}
 	else
@@ -1701,12 +1701,23 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				//	params["getChild"] = true;
 				//}
 
+				OBJ_QUERIER q = OBJ::parseQuerier(params);
+
 				if (mode == "array") {
 					json jRlt = json::array();
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
+
+						string sTag = pObj->getTag();
+
+						if (session.user != "")
+						{
+							if (!userMng.checkTagPermission(session.user, sTag))
+								continue;
+						}
+
 						json jObj;
-						pObj->toJson(jObj, params);
+						pObj->toJson(jObj, q, session.user);
 						jRlt.push_back(jObj);
 					}
 					result = jRlt.dump(2);
@@ -1717,7 +1728,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 						json jObj;
-						pObj->toJson(jObj, params);
+						pObj->toJson(jObj, q, session.user);
 						string tag = jObj["tag"].get<string>();
 						tag = str::replace(tag, ".", "_");
 						jRlt[tag] = jObj;
@@ -1729,42 +1740,18 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			else if(objList.size() == 1){
 				OBJ* pmo = objList[0];
 				//所有位号以用户位号的方式展示。除非另外指定rootTag
+
 				json j;
 				params["rootTag"] = rootTag;
-				pmo->toJson(j, params);
+
+				OBJ_QUERIER q = OBJ::parseQuerier(params);
+
+				pmo->toJson(j, q, session.user);
 				result = j.dump(4);
 			}
 			else
 			{
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
-			}
-		}
-		else if (method == "getMoConf")
-		{
-			if (params["tag"] == nullptr)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "请求中缺少tag字段");
-				return true;
-			}
-
-			string tag = params["tag"].get<string>();
-			if (session.org != "")
-			{
-				tag = TAG::addRoot(tag, session.org);
-			}
-
-			OBJ* pmo = prj.queryObj(tag);
-			if (pmo)
-			{
-				json j;
-				json jOpt;
-				jOpt["recursive"] = false;
-				pmo->toJson(j, jOpt);
-				rpcResp.result = j.dump(4);
-			}
-			else
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "没有找到位号");
 			}
 		}
 		else if ( method == "getCustomTypes")
@@ -4020,11 +4007,11 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			MP* pmp = mpList[i];
 			string tag = pmp->getTag();
 
-			if (session.user != "")
-			{
-				if (!userMng.checkTagPermission(session.user, tag))
-					continue;
-			}
+			//if (session.user != "")
+			//{
+			//	if (!userMng.checkTagPermission(session.user, tag))
+			//		continue;
+			//}
 
 			if (rootTag != "")
 			{
@@ -4043,7 +4030,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			q.rootTag = rootTag;
 			q.getUnit = getUnit;
 			json j;
-			pmp->toJson(j,q);
+			pmp->toJson(j,q, session.user);
 			rtList.push_back(j);
 		}	
 						

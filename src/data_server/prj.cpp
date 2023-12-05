@@ -83,14 +83,21 @@ bool project::loadConfFile()
 void project::saveConfFile()
 {
 	json j;
-	json opt;
-	opt["getConf"] = true;
-	opt["getChild"] = true;
-	opt["getMp"] = true;
-	opt["getStatus"] = false;
-	opt["getDetailConf"] = false;
+	//json opt;
+	//opt["getConf"] = true;
+	//opt["getChild"] = true;
+	//opt["getMp"] = true;
+	//opt["getStatus"] = false;
+	//opt["getDetailConf"] = false;
 
-	toJson(j, opt);
+	OBJ_QUERIER q;
+	q.getConf = true;
+	q.getChild = true;
+	q.getMp = true;
+	q.getStatus = false;
+	q.getConfDetail = false;
+
+	toJson(j, q);
 	string s = j.dump(2);
 
 	if (s != m_strMoTree) {

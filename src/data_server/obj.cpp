@@ -33,6 +33,7 @@ SOFTWARE.
 #include "ioDev.h"
 #include "as.h"
 #include <algorithm>
+#include "userMng.h"
 
 bool OBJ::m_bDefaultOnline = false;
 
@@ -216,7 +217,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 		return true;
 	if (leafType == m_type)
 		return true;
-	if (leafType == "org")
+	if (leafType == "org" && m_name.find("子段") == string::npos)
 		return true;
 	if (leafType == "伤损指数")
 	{
@@ -225,7 +226,7 @@ bool OBJ::isSelectedByLeafType(string leafType)
 			return true;
 		}
 	}
-	if (leafType == "mo")
+	if (leafType == "mo" && m_name.find("子段") == string::npos)
 		return true;
 	return false;
 }
@@ -258,17 +259,25 @@ void OBJ::recursiveSetOffline()
 //getStatus 是否包含状态信息
 //getMp 是否获取mp。缺省获取
 
-bool OBJ::toJson(json& conf, json serializeOption)
-{
-	OBJ_QUERIER q = parseQuerier(serializeOption);
-	return toJson(conf, q);
-}
+//bool OBJ::toJson(json& conf, json serializeOption)
+//{
+//	OBJ_QUERIER q = parseQuerier(serializeOption);
+//	return toJson(conf, q);
+//}
 
-bool OBJ::toJson(json& conf, OBJ_QUERIER q)
+bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 {
 	//根据请求的moType判断是否需要返回当前节点。
 	if (!isSelectedByLeafType(q.leafType))
 		return false;
+
+	string sTag = getTag();
+
+	if (user != "admin")
+	{
+		if (!userMng.checkTagPermission(user, sTag))
+			return false;
+	}
 
 	conf["name"] = m_name;
 	conf["level"] = m_level;
@@ -386,7 +395,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 				}
 
 				json jChild;
-				if (pmochild->toJson(jChild, q))
+				if (pmochild->toJson(jChild, q, user))
 					jChildren.push_back(jChild);
 			}
 		}
@@ -395,7 +404,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q)
 			GetAllChildMp(mpList);
 			for (auto& mp : mpList) {
 				json jMp;
-				if (mp->toJson(jMp, q)) {
+				if (mp->toJson(jMp, q, user)) {
 					string flattenName = mp->getTag();
 					flattenName = TAG::trimRoot(flattenName,getTag());
 					jMp["name"] = flattenName;

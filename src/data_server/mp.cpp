@@ -319,15 +319,15 @@ bool MP::loadStatus(json& status)
 	return true;
 }
 
-bool MP::toJson(json& conf, json serializeOption)
-{	
-	OBJ_QUERIER q = parseQuerier(serializeOption);
-	return toJson(conf, q);
-}
+//bool MP::toJson(json& conf, json serializeOption)
+//{	
+//	OBJ_QUERIER q = parseQuerier(serializeOption);
+//	return toJson(conf, q);
+//}
 
-bool MP::toJson(json& conf, OBJ_QUERIER q)
+bool MP::toJson(json& conf, OBJ_QUERIER q, const string& user)
 {
-	if (!OBJ::toJson(conf, q))
+	if (!OBJ::toJson(conf, q, user))
 		return false;
 
 	if (q.getConf)
