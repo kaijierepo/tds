@@ -1708,17 +1708,17 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 
-						string sTag = pObj->getTag();
+						//string sTag = pObj->getTag();
 
-						if (session.user != "")
-						{
-							if (!userMng.checkTagPermission(session.user, sTag))
-								continue;
-						}
+						//if (session.user != "")
+						//{
+						//	if (!userMng.checkTagPermission(session.user, sTag))
+						//		continue;
+						//}
 
 						json jObj;
-						pObj->toJson(jObj, q, session.user);
-						jRlt.push_back(jObj);
+						if (pObj->toJson(jObj, q, session.user))
+							jRlt.push_back(jObj);
 					}
 					result = jRlt.dump(2);
 				}
@@ -1728,10 +1728,13 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 						json jObj;
-						pObj->toJson(jObj, q, session.user);
-						string tag = jObj["tag"].get<string>();
-						tag = str::replace(tag, ".", "_");
-						jRlt[tag] = jObj;
+						if (pObj->toJson(jObj, q, session.user)) {
+
+							string tag = jObj["tag"].get<string>();
+							tag = str::replace(tag, ".", "_");
+							jRlt[tag] = jObj;
+						}
+
 					}
 					result = jRlt.dump(2);
 				}
@@ -1746,8 +1749,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 
-				pmo->toJson(j, q, session.user);
-				result = j.dump(4);
+				if (pmo->toJson(j, q, session.user))
+					result = j.dump(4);
 			}
 			else
 			{
@@ -4030,8 +4033,8 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			q.rootTag = rootTag;
 			q.getUnit = getUnit;
 			json j;
-			pmp->toJson(j,q, session.user);
-			rtList.push_back(j);
+			if (pmp->toJson(j, q, session.user))
+				rtList.push_back(j);
 		}	
 						
 		string result;
