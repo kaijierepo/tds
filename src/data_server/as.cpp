@@ -189,6 +189,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	json filter;
 	filter["tag"] = newStatus.tag;
 	filter["type"] = newStatus.type;
+	filter["isAck"] = false;
 	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
 	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
