@@ -223,6 +223,8 @@ public:
 	almTable tableHist;
 	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
+
+	bool m_bTestSrv;	//	是否测试报警
 };
 
 extern almServer almSrv;

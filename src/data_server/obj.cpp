@@ -80,6 +80,7 @@ OBJ::OBJ()
 	m_dbLatitudeCalib = 0;
 	m_bLocationCalib = false;
 	m_bChildTds = false;
+	m_bEnableAlarm = true;
 }
 
 OBJ::~OBJ()
@@ -177,6 +178,11 @@ bool OBJ::loadConf(json& conf)
 
 	if (conf.contains("ioAddrBind"))
 		m_strIoAddrBind = conf["ioAddrBind"];
+
+	if (conf.contains("enableAlarm"))
+	{
+		m_bEnableAlarm = conf["enableAlarm"].get<bool>();
+	}
 
 	if (conf.contains("children")) {
 		auto children = conf["children"];
@@ -281,6 +287,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 
 	conf["name"] = m_name;
 	conf["level"] = m_level;
+	conf["enableAlarm"] = m_bEnableAlarm;
 
 	if (q.getConfDetail) {
 		string tag = getTag();

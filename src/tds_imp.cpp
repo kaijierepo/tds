@@ -355,6 +355,7 @@ bool TDS_imp::run(string cmdline)
 	sCurAlarmFile = "\\alarms2\\current";
 	sHisAlarmFile = "\\alarms2\\history";
 	almSrv2.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv2.m_bTestSrv = true;
 
 	userMng.init();
 	scriptManager.init();

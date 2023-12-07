@@ -15,7 +15,7 @@ almServer almSrv2;
 
 almServer::almServer(void)
 {
-	
+	m_bTestSrv = false;
 }
 
 
@@ -249,6 +249,16 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 	ALARM_INFO ai;
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
+
+	if (m_bTestSrv == false)
+	{
+		OBJ* pObj = prj.queryObj(ai.tag);
+		if (pObj && !pObj->m_bEnableAlarm)
+		{
+			return "\"success\"";
+		}
+	}
+
 	addAlarm(ai, bUpdate);
 	return "\"success\"";
 }
@@ -278,6 +288,17 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		ALARM_INFO ai;
 		ai.fromJson(j);
 		ai.time = timeopt::nowStr();
+		
+		if (m_bTestSrv == false)
+		{
+			OBJ* pObj = prj.queryObj(ai.tag);
+			if (pObj && !pObj->m_bEnableAlarm)
+			{
+				resp.result = "ok";
+				return;
+			}
+		}
+	
 		Update(ai);
 		resp.result = "ok";
 	}
