@@ -1913,7 +1913,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
 		}
 	}
-	else if (method == "recoverAlarm") {
+	else if (method == "recoverAlarm" || method == "clearAlarm") {
 		pAlmSrv->rpc_recoverAlarm(params, rpcResp);
 	}
 	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
