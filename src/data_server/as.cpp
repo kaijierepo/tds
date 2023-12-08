@@ -86,7 +86,6 @@ void almServer::recover(ALARM_KEY& key)
 	params["tag"] = key.tag;
 	if (tableCurrent.query(params, ai))
 	{
-		ai.bAck = 1;
 		ai.bRecover = 1;
 		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		{
@@ -304,7 +303,7 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 			OBJ* pObj = prj.queryObj(ai.tag);
 			if (pObj && !pObj->m_bEnableAlarm)
 			{
-				resp.result = "ok";
+				resp.result = RPC_OK;
 				return;
 			}
 		}
