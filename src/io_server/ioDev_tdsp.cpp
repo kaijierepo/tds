@@ -493,6 +493,34 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			rpcSrv.rpc_input(jParams, resp, session, FALSE);
 		}
 	}
+	else if (method == "onUpdateAlarmStatus")
+	{
+		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+			string sTag = jParams["tag"];
+			sTag = TAG::addRoot(sTag, m_strTagBind);
+			jParams["tag"] = sTag;
+			string sDbPath;
+			if (jParams.contains("dbPath"))
+			{
+				sDbPath = jParams["dbPath"];
+			}
+
+			RPC_RESP resp;
+
+			almServer* pAlmSrv = nullptr;
+
+			if (sDbPath.find("alarms2") != string::npos)
+			{
+				pAlmSrv = &almSrv2;
+			}
+			else
+			{
+				pAlmSrv = &almSrv;
+			}
+
+			pAlmSrv->rpc_updateStatus(jParams, resp);
+		}
+	}
 	else if (method == "alarmAdd")
 	{
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {

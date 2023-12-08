@@ -222,7 +222,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	{
 		if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 		{
-			addAlarm(newStatus);
+			addAlarm(newStatus, FALSE);
 			bTagAlarmStatusChanged = true;
 		}
 	}
