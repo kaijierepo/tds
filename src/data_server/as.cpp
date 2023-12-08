@@ -107,6 +107,15 @@ void almServer::recover(ALARM_KEY& key)
 
 void almServer::addAlarm(ALARM_INFO ai)
 {
+	if (m_bTestSrv == false)
+	{
+		OBJ* pObj = prj.queryObj(ai.tag);
+		if (pObj && !pObj->m_bEnableAlarm)
+		{
+			return;
+		}
+	}
+
 	tableCurrent.add(ai);
 	tableHist.add(ai);
 
@@ -288,17 +297,6 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		ALARM_INFO ai;
 		ai.fromJson(j);
 		ai.time = timeopt::nowStr();
-		
-		if (m_bTestSrv == false)
-		{
-			OBJ* pObj = prj.queryObj(ai.tag);
-			if (pObj && !pObj->m_bEnableAlarm && ai.level != "normal") //报警产生才需要过滤。消除不需要过滤
-			{
-				resp.result = RPC_OK;
-				return;
-			}
-		}
-	
 		Update(ai);
 		resp.result = RPC_OK;
 	}
