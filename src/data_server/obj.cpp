@@ -186,7 +186,7 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 				if (pmo)
 				{
 					pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-					pmo->loadConf(child);
+					pmo->loadConf(child, bCreate);
 					m_childObj.push_back(pmo);
 				}
 			}
@@ -195,7 +195,7 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 					string childName = child["name"];
 					OBJ* pmo = GetChildObjByName(childName);
 					if(pmo)
-						pmo->loadConf(child);
+						pmo->loadConf(child, bCreate);
 				}
 			}
 		}
