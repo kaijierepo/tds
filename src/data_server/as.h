@@ -177,7 +177,7 @@ public:
 //alarm generation
 	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
-	void addAlarm(ALARM_INFO ai, BOOL bUpdate = TRUE);
+	void addAlarm(ALARM_INFO ai);
 //报警恢复和报警确认接口
 	void recover(ALARM_KEY& key);
 	void rpc_acknowledge(json& params, RPC_RESP& resp,RPC_SESSION session);

@@ -105,7 +105,7 @@ void almServer::recover(ALARM_KEY& key)
 }
 
 
-void almServer::addAlarm(ALARM_INFO ai, BOOL bUpdate)
+void almServer::addAlarm(ALARM_INFO ai)
 {
 	tableCurrent.add(ai);
 	tableHist.add(ai);
@@ -141,12 +141,8 @@ void almServer::addAlarm(ALARM_INFO ai, BOOL bUpdate)
 	}
 
 	//通知给TDS客户端
-	if (bUpdate)
-	{
-		json j = ai.toJson(this);
-		rpcSrv.notify("alarmAdd", j);
-	}
-
+	json j = ai.toJson(this);
+	rpcSrv.notify("alarmAdd", j);
 }
 
 
@@ -221,7 +217,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	{
 		if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
 		{
-			addAlarm(newStatus, FALSE);
+			addAlarm(newStatus);
 			bTagAlarmStatusChanged = true;
 		}
 	}
@@ -237,8 +233,8 @@ void almServer::Update(ALARM_INFO newStatus)
 		}
 	//}
 
-	json j = newStatus.toJson(this);
-	rpcSrv.notify("onUpdateAlarmStatus", j);
+	//json j = newStatus.toJson(this);
+	//rpcSrv.notify("onUpdateAlarmStatus", j);
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
@@ -266,7 +262,7 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 		}
 	}
 
-	addAlarm(ai, bUpdate);
+	addAlarm(ai);
 	return "\"success\"";
 }
 
