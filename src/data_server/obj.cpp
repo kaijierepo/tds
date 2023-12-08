@@ -107,27 +107,13 @@ bool OBJ::loadConf(json& conf)
 		m_name = conf["name"];
 	}
 
-
-	if(conf.contains("level")) {
-		if (conf.contains("level")) {
-			m_level = conf["level"];
-		}
-		if (conf.contains("type")) {
-			m_type = conf["type"];
-		}
+	if (conf.contains("level")) {
+		m_level = conf["level"];
 	}
-	else { //兼容一段时间老格式
-		if(conf.contains("customTypeLabel"))
-			m_type = conf["customTypeLabel"];
-		m_level = conf["type"];
-		if (m_level == "customMo") {
-			m_level = "mo";
-		}
-		else if (m_level == "customOrg") {
-			m_level = "org";
-		}
+	if (conf.contains("type")) {
+		m_type = conf["type"];
 	}
-
+	
 	if (conf.contains("childTds")) {
 		m_bChildTds = conf["childTds"].get<bool>();
 	}
