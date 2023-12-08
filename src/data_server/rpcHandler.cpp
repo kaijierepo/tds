@@ -4105,12 +4105,6 @@ void rpcHandler::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION sessio
 		return;
 	}
 
-	if (!params["data"].is_string())
-	{
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param data error");
-		return;
-	}
-
 	p = params["path"].get<string>();
 	if (p != "")
 	{
