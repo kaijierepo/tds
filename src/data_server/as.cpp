@@ -237,6 +237,9 @@ void almServer::Update(ALARM_INFO newStatus)
 			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
 		}
 	//}
+
+	json j = newStatus.toJson(this);
+	rpcSrv.notify("onUpdateAlarmStatus", j);
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
