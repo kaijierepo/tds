@@ -86,6 +86,7 @@ void almServer::recover(ALARM_KEY& key)
 	params["tag"] = key.tag;
 	if (tableCurrent.query(params, ai))
 	{
+		ai.bAck = 1;
 		ai.bRecover = 1;
 		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		{
@@ -189,7 +190,11 @@ void almServer::Update(ALARM_INFO newStatus)
 	json filter;
 	filter["tag"] = newStatus.tag;
 	filter["type"] = newStatus.type;
-	filter["isAck"] = false;
+	if (newStatus.level != "normal")
+	{
+		filter["isAck"] = false;
+	}
+	
 	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
 	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
