@@ -1535,6 +1535,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "setObjAttr") {
 		prj.loadConf(params, false);
+		prj.saveConfFile();
 		rpcResp.result = RPC_OK;
 	}
 	else if (method == "updateTagBinding") {
