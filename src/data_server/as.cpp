@@ -274,12 +274,14 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 {
 	if (j["tag"] == nullptr && j["ioAddr"] == nullptr)
 	{
-		resp.error = "必须指定 tag 或者 ioAddr 字段";
+		json jErr = "必须指定 tag 或者 ioAddr 字段";
+		resp.error = jErr.dump();
 		return;
 	}
 	if (j["type"] == nullptr)
 	{
-		resp.error = "必须指定 type 字段";
+		json jErr = "必须指定 type 字段";
+		resp.error = jErr.dump();
 		return;
 	}
 
@@ -300,11 +302,12 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		}
 	
 		Update(ai);
-		resp.result = "ok";
+		resp.result = RPC_OK;
 	}
 	catch (std::exception& e)
 	{
-		resp.error = e.what();
+		json jErr = e.what();
+		resp.error = jErr.dump();
 	}
 	
 }
