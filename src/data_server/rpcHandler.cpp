@@ -1533,6 +1533,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 	}
+	else if (method == "setObjAttr") {
+		prj.loadConf(params, false);
+		rpcResp.result = RPC_OK;
+	}
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
 			string tag = binding["tag"];

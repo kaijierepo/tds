@@ -100,7 +100,7 @@ void OBJ::loadTask(json& jTask) {
 	}
 }
 
-bool OBJ::loadConf(json& conf)
+bool OBJ::loadConf(json& conf, bool bCreate)
 {
 	//载入配置
 	if (conf.contains("name")) {
@@ -174,19 +174,29 @@ bool OBJ::loadConf(json& conf)
 		auto children = conf["children"];
 		for (auto& child : children)
 		{
-			OBJ* pmo;
-			if ((child.contains("level") && child["level"] == "mp")||
-				(child.contains("type") && child["type"] == "mp") ) {  //保持一段时间兼容，后面删除
-				pmo = new MP();
-			}
-			else
-				pmo = new OBJ();
+			if (bCreate) {
+				OBJ* pmo;
+				if ((child.contains("level") && child["level"] == "mp") ||
+					(child.contains("type") && child["type"] == "mp")) {  //保持一段时间兼容，后面删除
+					pmo = new MP();
+				}
+				else
+					pmo = new OBJ();
 
-			if (pmo)			
-			{
-				pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-				pmo->loadConf(child);
-				m_childObj.push_back(pmo);
+				if (pmo)
+				{
+					pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+					pmo->loadConf(child);
+					m_childObj.push_back(pmo);
+				}
+			}
+			else {
+				if (child.contains("name")) {
+					string childName = child["name"];
+					OBJ* pmo = GetChildObjByName(childName);
+					if(pmo)
+						pmo->loadConf(child);
+				}
 			}
 		}
 	}

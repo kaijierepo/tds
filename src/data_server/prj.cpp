@@ -132,9 +132,9 @@ bool project::loadConf(string& confStr)
 	return false;
 }
 
-bool project::loadConf(json& jConf)
+bool project::loadConf(json& jConf,bool bCreate)
 {
-	bool ret = OBJ::loadConf(jConf);
+	bool ret = OBJ::loadConf(jConf, bCreate);
 	return ret;
 }
 

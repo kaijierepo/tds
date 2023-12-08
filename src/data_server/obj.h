@@ -193,7 +193,7 @@ public:
 
 	void loadTask(json& jTask);
 
-	virtual bool loadConf(json& conf);
+	virtual bool loadConf(json& conf,bool bCreate = true);
 	virtual bool loadStatus(json& status);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);

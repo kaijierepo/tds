@@ -46,7 +46,7 @@ class project : public OBJ
 public:
 	bool loadConfFile();
 	bool loadConf(string& confStr);
-	bool loadConf(json& jConf);
+	bool loadConf(json& jConf,bool bCreate=true);
 	void saveConfFile();
 	void clear();
 	MP* getMp(string strTagname);

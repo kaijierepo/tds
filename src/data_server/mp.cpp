@@ -70,7 +70,7 @@ json MP::strVal2Val(string sdv)
 }
 
 
-bool MP::loadConf(json& conf)
+bool MP::loadConf(json& conf,bool bCreate)
 {
 	OBJ::loadConf(conf);
 	if(conf["valType"]!=nullptr)
