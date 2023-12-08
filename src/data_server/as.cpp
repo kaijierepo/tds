@@ -292,7 +292,7 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		if (m_bTestSrv == false)
 		{
 			OBJ* pObj = prj.queryObj(ai.tag);
-			if (pObj && !pObj->m_bEnableAlarm)
+			if (pObj && !pObj->m_bEnableAlarm && ai.level != "normal") //报警产生才需要过滤。消除不需要过滤
 			{
 				resp.result = RPC_OK;
 				return;
