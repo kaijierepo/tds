@@ -1878,7 +1878,7 @@ namespace fs {
 			 for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 				 FILE_INFO fi;
 				 fi.path = charCodec::gb_to_tds(i.path().string());
-				 fi.name = i.path().filename().string();
+				 fi.name = charCodec::gb_to_tds(i.path().filename().string());
 				 if (exclude != nullptr) {
 					 bool excluded = false;
 					 for (int i = 0; i < exclude->size(); i++) {

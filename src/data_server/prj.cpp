@@ -197,34 +197,25 @@ json project::getObjTemplate(string devTplType)
 
 bool project::loadObjTemplate()
 {
-	string p = tds->conf->confPath + "/template/object/conf.json";
-	string tplListStr;
-	if (fs::readFile(p, tplListStr)) {
-		try {
-			json jTplList = json::parse(tplListStr);
-			for (auto& i : jTplList) {
-				OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
-				OBJ_TEMPLATE& ct = *pct;
-				if(i.contains("typeLabel"))
-					ct.type = i["typeLabel"];
-				else
-					ct.type = i["type"];
-				string tplDataStr;
-				string typePY;
-				str::hanZi2Pinyin(ct.type, typePY);
-				string p1 = tds->conf->confPath + "/template/object/" + typePY + ".json";
-				if (fs::readFile(p1, tplDataStr)) {
-					ct.tplData = json::parse(tplDataStr);
-					ct.obj.loadConf(ct.tplData);
-					m_mapObjTempalte[ct.type] = pct;
-				}
-				else {
-					delete pct;
-				}
-			}
+	string p = tds->conf->confPath + "/template/object";
+
+	vector<fs::FILE_INFO> fileList;
+	fs::getFileList(fileList, p);
+
+
+	for (auto& fi : fileList) {
+		string path = tds->conf->confPath + "/template/object/" + fi.name;
+		if (fi.name == "conf.json") {
+			continue;
 		}
-		catch (exception& e) {
-			LOG("[error]加载/template/object/conf.json失败,error=%s", e.what());
+
+		string s;
+		if (fs::readFile(path, s)) {
+			OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
+			pct->tplData = json::parse(s);
+			pct->obj.loadConf(pct->tplData);
+			string type = str::trimSuffix(fi.name, ".json");
+			m_mapObjTempalte[type] = pct;
 		}
 	}
 	return false;
