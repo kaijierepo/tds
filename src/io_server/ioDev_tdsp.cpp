@@ -525,7 +525,29 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	{
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			string sTag = jParams["tag"];
-			sTag = TAG::addRoot(sTag, m_strTagBind);
+			string::size_type pos_s = sTag.find("(");
+			if (pos_s != string::npos)
+			{
+				string::size_type pos_e = sTag.find(")");
+
+				if (pos_e != string::npos)
+				{
+					string sIp = sTag.substr(0, pos_s);
+					sTag = sTag.substr(pos_s + 1, pos_e - (pos_s + 1));
+					sTag = TAG::addRoot(sTag, m_strTagBind);
+
+					sTag = str::format("%s(%s)", sIp, sTag);
+				}
+				else
+				{
+					sTag = TAG::addRoot(sTag, m_strTagBind);
+				}
+			}
+			else
+			{
+				sTag = TAG::addRoot(sTag, m_strTagBind);
+			}
+			
 			jParams["tag"] = sTag;
 			string sDbPath;
 			if (jParams.contains("dbPath"))
