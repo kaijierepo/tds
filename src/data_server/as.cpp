@@ -109,7 +109,19 @@ void almServer::addAlarm(ALARM_INFO ai)
 {
 	if (m_bTestSrv == false)
 	{
-		OBJ* pObj = prj.queryObj(ai.tag);
+		string sTag = ai.tag;
+		string::size_type pos_s = ai.tag.find("(");
+		if (pos_s != string::npos)
+		{
+			string::size_type pos_e = ai.tag.find(")");
+
+			if (pos_e != string::npos)
+			{
+				sTag = ai.tag.substr(pos_s+1, pos_e-(pos_s+1));
+			}
+		}
+	
+		OBJ* pObj = prj.queryObj(sTag);
 		if (pObj && !pObj->m_bEnableAlarm)
 		{
 			return;
