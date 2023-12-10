@@ -275,7 +275,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 
 	string sTag = getTag();
 
-	if (user != "admin")
+	if (user != "admin" && user != "") //内部脚本调用时，user == ""
 	{
 		if (!userMng.checkTagPermission(user, sTag))
 			return false;

@@ -55,9 +55,19 @@ void project::loadRtDB() {
 	string path = tds->conf->dbPath + "/rtStatus.json";
 	string s;
 	fs::readFile(path, s);
-	json j = json::parse(s);
-
-	loadStatus(j);
+	if (s != "") {
+		try
+		{
+			json j = json::parse(s);
+			loadStatus(j);
+		}
+		catch (const std::exception& e)
+		{
+			string sErr = e.what();
+			sErr = "加载" + path + "失败,错误信息:" + sErr;
+			LOG(sErr);
+		}
+	}
 }
 
 void project::runRtDB()
