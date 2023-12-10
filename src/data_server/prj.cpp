@@ -5,6 +5,7 @@
 #include "obj.h"
 #include "mp.h"
 #include "logger.h"
+#include "yyjson.h"
 
 
 project prj;
@@ -29,6 +30,40 @@ project::project()
 project::~project()
 {
 
+}
+
+void thread_rt_data_save() {
+	int interval = tds->conf->getInt("rtDBSaveInterval", 15);
+	string path = tds->conf->dbPath + "/rtStatus.json";
+	while (1) {
+		Sleep(interval*1000);
+
+		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		json j;
+		prj.saveStatus(j);
+
+		string s = j.dump(1);
+		fs::writeFile(path, s);
+	}
+}
+
+void project::saveRtStatus()
+{
+}
+
+void project::loadRtDB() {
+	string path = tds->conf->dbPath + "/rtStatus.json";
+	string s;
+	fs::readFile(path, s);
+	json j = json::parse(s);
+
+	loadStatus(j);
+}
+
+void project::runRtDB()
+{
+	thread t(thread_rt_data_save);
+	t.detach();
 }
 
 string project::getTdsId()

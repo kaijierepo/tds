@@ -291,6 +291,7 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }*/
 
+
 bool TDS_imp::run(string cmdline)
 {
 #ifndef DEBUG
@@ -403,6 +404,9 @@ bool TDS_imp::run(string cmdline)
 	taskSrv.run();
 	statusSrv.m_bLogStatus = tds->conf->getInt("logSrvStatus", 1);
 	statusSrv.run();
+
+	prj.loadRtDB();
+	prj.runRtDB();
 
 	//create browser window
 	if (conf->uiMode == "chrome")

@@ -195,16 +195,22 @@ public:
 
 	virtual bool loadConf(json& conf,bool bCreate = true);
 	virtual bool loadStatus(json& status);
+	virtual bool saveStatus(json& statusNode);
+	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(OBJ* pMo);
 
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
 
+	void getVal(yyjson_mut_val*& val, yyjson_mut_doc* doc);
+
 	//配置数据
 	bool isCustomMo();
 	bool isCustomMp();
 	bool isCustomOrg();
+
+
 	string m_level;
 	string m_type;  
 	string m_groupName; //设备编组。1个自定义的字符串
@@ -236,6 +242,8 @@ public:
 	string m_status;
 	json m_jAlarmStatus;
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
+
+	static void treeStatus2ListStatus(json& tree, json& list,string parentTag);
 
 	//查询接口
 	virtual json getRT();

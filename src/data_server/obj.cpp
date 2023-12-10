@@ -451,6 +451,11 @@ void OBJ::toAttrInfo(nlohmann::ordered_json& attrInfo)
 {
 }
 
+void OBJ::getVal(yyjson_mut_val*& val, yyjson_mut_doc* doc)
+{
+
+}
+
 bool OBJ::isCustomMo()
 {
 	if (m_level == MO_TYPE::mo && m_type != "")
@@ -474,13 +479,12 @@ bool OBJ::isCustomOrg()
 	return false;
 }
 
+
+// 有一个MP::loadStatus重载
 bool OBJ::loadStatus(json& status)
 {
 	if (status.is_object()) {
 		//载入状态
-		if (status.contains("lastModify")) {
-			m_strLastModify = status["lastModify"];
-		}
 		if (status.contains("online"))
 			m_bOnline = status["online"].get<bool>();
 		if (status.contains("longitudeDyn"))
@@ -508,6 +512,47 @@ bool OBJ::loadStatus(json& status)
 		}
 	}
 
+	return false;
+}
+
+bool OBJ::saveStatus(json& statusNode)
+{
+	statusNode["name"] = m_name;
+	statusNode["level"] = m_level;
+	if (m_level == "mp") {
+		MP* pmp = (MP*)this;
+		statusNode["val"] = pmp->m_curVal;
+		statusNode["time"] = pmp->m_stDataLastUpdate.toStr();
+	}
+
+	if (m_childObj.size() > 0) {
+		json jChildren = json::array();
+		for (int i = 0; i < m_childObj.size(); i++) {
+			json j;
+			OBJ* p = m_childObj[i];
+			p->saveStatus(j);
+			jChildren.push_back(j);
+		}
+		statusNode["children"] = jChildren;
+	}
+
+	return true;
+}
+
+bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
+{
+	//yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
+	//yyjson_mut_obj_put(statusNode, key, yyjson_mut_strcpy(doc, m_name.c_str()));
+	//if (m_level == "mp") {
+	//	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "val");
+	//}
+
+	//if (m_childObj.size() > 0) {
+	//	json jChildren = json::array();
+	//	for (int i = 0; i < m_childObj.size(); i++) {
+	//		OBJ* p = m_childObj[i];
+	//	}
+	//}
 	return false;
 }
 
@@ -571,6 +616,26 @@ OBJ* OBJ::createObjBranchByTag(string tag)
 		pParent = pChild;
 	}
 	return pChild;
+}
+void OBJ::treeStatus2ListStatus(json& tree, json& list, string parentTag)
+{
+	string name = tree["name"];
+	string tag = TAG::addRoot(name, parentTag);
+	if (tree["level"] == "mp") {
+		json jDe;
+		jDe["tag"] = tag;
+		jDe["time"] = tree["time"];
+		jDe["val"] = tree["val"];
+		list.push_back(jDe);
+	}
+
+	if (tree["children"].is_array()) {
+		json& jChildren = tree["children"];
+		for (int i = 0; i < jChildren.size(); i++) {
+			json& jC = jChildren[i];
+			treeStatus2ListStatus(jC, list, tag);
+		}
+	}
 }
 json OBJ::getRT()
 {

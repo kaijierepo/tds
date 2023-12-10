@@ -295,27 +295,28 @@ bool MP::loadStatus(json& status)
 	} 
 	
 	string sTime;
+	TIME t;
+
+	//如果 status 内部不携带时间，使用当前时间，使用在使用树形结构进行input的时候
 	json jTime = status["time"];
 	if (jTime == nullptr) {
-		return true;
+		t = timeopt::now();
 	}
-	sTime = jTime.get<string>();
-	if (!timeopt::isValidTimeStr(sTime)) {
-		return true;
+	else {
+		sTime = jTime.get<string>();
+		if (!timeopt::isValidTimeStr(sTime)) {
+			return true;
+		}
+		t = timeopt::str2st(sTime);
+		if (t == m_stDataLastUpdate) {
+			return true;
+		}
 	}
-	
-	TIME t = timeopt::str2st(sTime);
-	if (t == m_stDataLastUpdate) {
-		return true;
-	}
-	
+
 	m_lastVal = m_curVal;
 	m_curVal = status["val"];
 	m_stDataLastUpdate = t;
 
-	if (needSaveToDB()) {
-		saveToDB();
-	}
 	return true;
 }
 

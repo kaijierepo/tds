@@ -1581,15 +1581,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					rpc_input(params, rpcResp, session);
 				}
 			}
-			else if (params.contains("name")) {
+			else if (params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 				string rootTag;
 				if (params.contains("rootTag")) { 
 					rootTag = params["rootTag"];
 				}
-				OBJ* pMO = prj.queryObj(rootTag);
-				if (pMO) {
-					pMO->loadStatus(params);
-				}
+				json jDeList = json::array();
+				OBJ::treeStatus2ListStatus(params, jDeList, rootTag);
+				rpc_input(jDeList, rpcResp, session);
 			}
 			else {
 				rpc_input(params, rpcResp, session);
@@ -2950,129 +2949,172 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	logSrv.rpc_addLog(logParams, session);
 }
 
+struct INPUT_DE {
+	string tag;
+	json val;
+	json file;
+	json ioAddr;
+	string sTime;
+	TIME time;
+};
+
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL bUpdate)
 {
 	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
-	TIME stTimeStamp;
-	string time="";
-	json inputVal = nullptr;
-	json inputFile = nullptr;
-	json inputTag, inputIoAddr;
 	string rootTag = "";
+	vector<INPUT_DE> inputDEList;
+	if (params.is_object()) {
+		//对象属性模式输入
+		if (params.find("data") != params.end()) {
+			json deList = params["data"];
 
-	if (params.find("data") != params.end()) {//对象属性模式输入
-		json deList = params["data"];
+			if (params.find("tag") != params.end()) {
+				rootTag = params["tag"];
+			}
+			if (params.find("objID") != params.end()) {
+				string objID = params["objID"];
+				OBJ* pO = prj.getObjByID(objID);
+				if (pO) {
+					rootTag = pO->getTag();
+				}
+				else {
+					resp.error = makeRPCError(OBJ_specifiedObjIDNotFound, "specified object id not found");
+					return;
+				}
+			}
 
-		if (params.find("tag") != params.end()) {
-			rootTag = params["tag"];
+			//对象属性模式转数组处理
+			if (deList.size() > 0) {
+				for (int i = 0; i < deList.size(); i++) {
+					json& j = deList[i];
+					INPUT_DE de;
+					de.tag = j["tag"];
+					de.val = j["val"];
+					de.file = j["file"];
+					inputDEList.push_back(de);
+				}
+			}
 		}
-		if (params.find("objID") != params.end()) {
-			string objID = params["objID"];
-			OBJ* pO = prj.getObjByID(objID);
-			if (pO) {
-				rootTag = pO->getTag();
+		else{
+			if (params["val"] == nullptr) {
+				resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
+				return;
+			}
+			if (params["tag"] == nullptr && params["ioAddr"] == nullptr) {
+				resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
+				return;
+			}
+
+			json tag = params["tag"];
+			json val = params["val"];
+			json file = params["file"];
+			json time = params["time"];
+			if (params.contains("rootTag"))
+				rootTag = params["rootTag"].get<string>();
+			//单位号模式输入
+			/*
+				"params": {
+				"tag": "客厅.温度",
+				"time": "2020-02-14 20:20:20",
+				"val": 35
+			}
+			*/
+			if (tag.is_string()) {
+				INPUT_DE de;
+				de.tag = tag;
+				de.val = val;
+				if (time.is_string()) {
+					de.sTime = time;
+					de.time = timeopt::str2st(de.sTime);
+				}
+				else {
+					de.time = timeopt::now();
+					de.sTime = de.time.toStr();
+				}
+				inputDEList.push_back(de);
+			}
+			//多位号模式 （采集时间相同）
+			/*
+			"params": {
+				"tag": ["客厅.温度","客厅.湿度"],
+				"time": "2020-02-14 20:20:20",
+				"val": [26.5,65.1]
+			}
+			*/
+			else if (tag.is_array()) {
+				for (int i = 0; i < tag.size(); i++) {
+					INPUT_DE de;
+					de.tag = tag[i];
+					de.val = val[i];
+
+					if (time.is_string()) {
+						de.sTime = time;
+						de.time = timeopt::str2st(de.sTime);
+					}
+					else {
+						de.time = timeopt::now();
+						de.sTime = de.time.toStr();
+					}
+
+					inputDEList.push_back(de);
+				}
 			}
 			else {
-				resp.error = makeRPCError(OBJ_specifiedObjIDNotFound, "specified object id not found");
+				resp.error = makeRPCError(TEC_FAIL, "param tag format error");
 				return;
 			}
 		}
-
-		//对象属性模式转数组处理
-		if (deList.size() > 0) {
-			inputTag = json::array();
-			inputVal = json::array();
-			inputFile = json::array();
-			for (int i = 0; i < deList.size(); i++) {
-				json& j = deList[i];
-				inputTag.push_back(j["tag"]);
-				inputVal.push_back(j["val"]);
-				inputFile.push_back(j["file"]);
+	}
+	//多位号模式输入
+	/*
+	"params": {
+        "tag":"客厅",
+        "data":[
+            {
+                "tag":"温度",
+                "val":26.5
+            },{
+                "tag":"湿度",
+                "val":23.5
+            }
+        ]
+    }
+	*/
+	else if (params.is_array()) { 
+		for (auto& jDe : params) {
+			INPUT_DE de;
+			de.tag = jDe["tag"];
+			if (jDe["time"].is_string()) {
+				de.sTime = jDe["time"];
+				de.time = timeopt::str2st(de.sTime);
 			}
+			else {
+				de.time = timeopt::now();
+				de.sTime = de.time.toStr();
+			}
+			de.val = jDe["val"];
+			de.file = jDe["file"];
+
+			inputDEList.push_back(de);
 		}
 	}
 	else {
-		//值
-		if (params.find("val") != params.end()) {
-			inputVal = params["val"];
-			inputFile = params["file"];
-		}
-		else if(params.find("file") != params.end()) {
-			inputFile = params["file"];
-		}
-		else
-		{
-			resp.error = makeRPCError(TEC_paramMissing, "param val must be specified");
-			return;
-		}
-		//位号
-		if (params.find("tag") != params.end())
-			inputTag = params["tag"];
-		else if (params.find("ioAddr") != params.end())
-			inputIoAddr = params["ioAddr"];
-		if (inputTag == "" && inputIoAddr == "")
-		{
-			resp.error = makeRPCError(TEC_paramMissing, "param ioAddr or tag must be specified");
-			return;
-		}
-		//根位号
-		if (params.contains("rootTag"))
-			rootTag = params["rootTag"].get<string>();
+		resp.error = makeRPCError(TEC_FAIL, "param should be array or object");
+		return;
 	}
 
-
-	//时间
-	if (params.find("time") != params.end())
-	{
-		time = params["time"];
-		stTimeStamp = timeopt::str2st(time);
-	}
-	else
-	{
-		timeopt::now(&stTimeStamp);
-		time = timeopt::st2str(stTimeStamp,true);
-	}
-
-
-	
-	if (inputTag.is_string()) {
-		//单点输入模式统一转成数组处理
-		string s = inputTag.get<string>();
-		inputTag = json::array();
-		inputTag.push_back(s);
-
-		json val = inputVal;
-		inputVal = json::array();
-		inputVal.push_back(val);
-
-		json file = inputFile;
-		inputFile = json::array();
-		inputFile.push_back(file);
-	}
-	if (inputIoAddr.is_string()) {
-		string s = inputIoAddr.get<string>();
-		inputIoAddr = json::array();
-		inputIoAddr.push_back(s);
-
-		json val = inputVal;
-		inputVal = json::array();
-		inputVal.push_back(val);
-
-		json file = inputFile;
-		inputFile = json::array();
-		inputFile.push_back(file);
-	}
 
 	//使用位号输入
-	if(inputTag.size() > 0){
+	if (inputDEList.size() > 0) {
 		//监测点组输入模式
 		json jTagNotExist = json::array();
 		vector<MP*> vecMps;
-		for (int i = 0; i < inputTag.size(); i++) {
-			string tag = inputTag[i];
-			json val = inputVal[i];
-			json& file = inputFile[i];
+		for (int i = 0; i < inputDEList.size(); i++) {
+			INPUT_DE& de = inputDEList[i];
+			string tag = de.tag;
+			json& val = de.val;
+			json& file = de.file;
 			tag = TAG::addRoot(tag, rootTag);
 			tag = TAG::addRoot(tag, session.org);
 
@@ -3081,7 +3123,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 				MP* pmp = prj.GetMPByTag(tag);
 				if (pmp)
 				{
-					pmp->input(val, &file, &stTimeStamp);
+					pmp->input(val, &file, &de.time);
 					vecMps.push_back(pmp);
 				}
 				else {
@@ -3117,23 +3159,17 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 			//发送状态更新通知
 			if (bUpdate)
 			{
-				json jStatusNotify;
-				json jUpdateTags = json::array();
-				json jUpdateVals = json::array();
-				json jUpdateFiles = json::array();
-				json jUpdateValDescs = json::array();
+				json jStatusNotify = json::array();
 				for (int i = 0; i < vecMps.size(); i++) {
 					MP* pmp = vecMps[i];
-					jUpdateTags.push_back(pmp->getTag());
-					jUpdateVals.push_back(pmp->m_curVal);
-					jUpdateFiles.push_back(pmp->m_curFileData);
-					jUpdateValDescs.push_back(pmp->getValDesc(false));  
+					json jDe;
+					jDe["tag"] = pmp->getTag();
+					jDe["val"] = pmp->m_curVal;
+					jDe["file"] = pmp->m_curFileData;
+					jDe["time"] = pmp->m_stDataLastUpdate.toStr();
+					jDe["valDesc"] = pmp->getValDesc(false);
+					jStatusNotify.push_back(jDe);
 				}
-				jStatusNotify["tag"] = jUpdateTags;
-				jStatusNotify["val"] = jUpdateVals;
-				jStatusNotify["valDesc"] = jUpdateValDescs;
-				jStatusNotify["file"] = jUpdateFiles;
-				jStatusNotify["time"] = time;
 				rpcSrv.notify("statusUpdate", jStatusNotify);
 			}
 
@@ -3143,33 +3179,6 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
 			return;
 		}
-	}
-	//使用IO地址输入
-	
-	
-
-	if(inputIoAddr.size()>0){
-		/*vector<ioDev*> vecDev;
-		for (int i = 0; i < inputIoAddr.size(); i++) {
-			string ioAddr = inputIoAddr[i];
-			ioDev* pD = ioSrv.getIODev(ioAddr);
-			if (pD) {
-				vecDev.push_back(pD);
-			}
-		}
-
-		if (vecDev.size() > 0) {
-			for (int i = 0; i < vecDev.size(); i++) {
-				ioDev* pD = vecDev[i];
-				json val = inputVal[i];
-				ioDev->input()
-			}
-			resp.result = "\"ok\"";
-		}
-		else {
-			resp.error = makeRPCError(MO_specifiedTagNotFound, "tag not exist");
-			return;
-		}*/
 	}
 }
 
