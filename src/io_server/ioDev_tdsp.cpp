@@ -487,17 +487,16 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	}
 	else if (method == "statusUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-			if (jParams.is_array())
-			{
-				for (auto& i : jParams)
-				{
-					string sTest = i.dump();
-					i["rootTag"] = m_strTagBind;
-					RPC_RESP resp;
-					RPC_SESSION session;
-					rpcSrv.rpc_input(i, resp, session);
-				}
+			//位号增加上该子服务绑定的位号。
+			for (auto& de : jParams) {
+				string tag = de["tag"];
+				tag = TAG::addRoot(tag, m_strTagBind);
+				de["tag"] = tag;
 			}
+
+			RPC_RESP resp;
+			RPC_SESSION session;
+			rpcSrv.rpc_input(jParams, resp, session);
 		}
 	}
 	else if (method == "onUpdateAlarmStatus")

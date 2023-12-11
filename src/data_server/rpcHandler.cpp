@@ -2959,7 +2959,7 @@ struct INPUT_DE {
 };
 
 
-void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL bUpdate)
+void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
 	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
 	string rootTag = "";
@@ -3157,22 +3157,19 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session, BOOL
 
 
 			//发送状态更新通知
-			if (bUpdate)
-			{
-				json jStatusNotify = json::array();
-				for (int i = 0; i < vecMps.size(); i++) {
-					MP* pmp = vecMps[i];
-					json jDe;
-					jDe["tag"] = pmp->getTag();
-					jDe["val"] = pmp->m_curVal;
-					jDe["file"] = pmp->m_curFileData;
-					jDe["time"] = pmp->m_stDataLastUpdate.toStr();
-					jDe["valDesc"] = pmp->getValDesc(false);
-					jStatusNotify.push_back(jDe);
-				}
-				rpcSrv.notify("statusUpdate", jStatusNotify);
+			json jStatusNotify = json::array();
+			for (int i = 0; i < vecMps.size(); i++) {
+				MP* pmp = vecMps[i];
+				json jDe;
+				jDe["tag"] = pmp->getTag();
+				jDe["val"] = pmp->m_curVal;
+				jDe["file"] = pmp->m_curFileData;
+				jDe["time"] = pmp->m_stDataLastUpdate.toStr();
+				jDe["valDesc"] = pmp->getValDesc(false);
+				jStatusNotify.push_back(jDe);
 			}
-
+			rpcSrv.notify("statusUpdate", jStatusNotify);
+			
 			resp.result = "\"ok\"";
 		}
 		else {
