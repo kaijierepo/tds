@@ -536,7 +536,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 					sTag = sTag.substr(pos_s + 1, pos_e - (pos_s + 1));
 					sTag = TAG::addRoot(sTag, m_strTagBind);
 
-					sTag = str::format("%s(%s)", sIp, sTag);
+					sTag = str::format("%s(%s)", sIp.c_str(), sTag.c_str());
 				}
 				else
 				{

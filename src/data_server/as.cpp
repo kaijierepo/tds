@@ -269,15 +269,6 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
 
-	if (m_bTestSrv == false)
-	{
-		OBJ* pObj = prj.queryObj(ai.tag);
-		if (pObj && !pObj->m_bEnableAlarm)
-		{
-			return "\"success\"";
-		}
-	}
-
 	addAlarm(ai);
 	return "\"success\"";
 }
