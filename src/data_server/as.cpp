@@ -162,8 +162,10 @@ void almServer::addAlarm(ALARM_INFO ai)
 	}
 
 	//通知给TDS客户端
-	json j = ai.toJson(this);
-	rpcSrv.notify("alarmAdd", j);
+	if (!m_bTestSrv) {
+		json j = ai.toJson(this);
+		rpcSrv.notify("alarmAdd", j);
+	}
 }
 
 
