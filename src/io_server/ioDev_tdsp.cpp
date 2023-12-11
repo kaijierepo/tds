@@ -487,10 +487,17 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	}
 	else if (method == "statusUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-			jParams["rootTag"] = m_strTagBind;
-			RPC_RESP resp;
-			RPC_SESSION session;
-			rpcSrv.rpc_input(jParams, resp, session, FALSE);
+			if (jParams.is_array())
+			{
+				for (auto& i : jParams)
+				{
+					string sTest = i.dump();
+					i["rootTag"] = m_strTagBind;
+					RPC_RESP resp;
+					RPC_SESSION session;
+					rpcSrv.rpc_input(i, resp, session);
+				}
+			}
 		}
 	}
 	else if (method == "onUpdateAlarmStatus")
