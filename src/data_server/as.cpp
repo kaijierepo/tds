@@ -293,6 +293,12 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 
 void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 {
+	if (j.contains("rootTag")) {
+		string rootTag = j["rootTag"];
+		string tag = j["tag"];
+		j["tag"] = TAG::addRoot(tag, rootTag);
+	}
+
 	j["level"] = "normal";
 	rpc_updateStatus(j, resp);
 	return;
@@ -379,6 +385,14 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	string user = session.user;
 	string info = params["ackInfo"];
 	ALARM_INFO ai;
+
+
+	if (params.contains("rootTag")) {
+		string rootTag = params["rootTag"];
+		string tag = params["tag"];
+		params["tag"] = TAG::addRoot(tag, rootTag);
+	}
+
 	//用户位号转系统位号
 	string tag = params["tag"].get<string>();
 	tag = TAG::addRoot(tag, session.org);
