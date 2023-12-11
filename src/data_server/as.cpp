@@ -242,7 +242,19 @@ void almServer::Update(ALARM_INFO newStatus)
 	//更新mo对象中的缓存
 	//if (bTagAlarmStatusChanged)
 	//{
-		OBJ* pmo = prj.queryObj(newStatus.tag);
+		string sTag = newStatus.tag;
+		string::size_type pos_s = newStatus.tag.find("(");
+		if (pos_s != string::npos)
+		{
+			string::size_type pos_e = newStatus.tag.find(")");
+
+			if (pos_e != string::npos)
+			{
+				sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
+			}
+		}
+
+		OBJ* pmo = prj.queryObj(sTag);
 		if (pmo)
 		{
 			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
