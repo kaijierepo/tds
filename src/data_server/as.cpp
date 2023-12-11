@@ -277,6 +277,12 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 
 string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 {
+	if (j.contains("rootTag")) {
+		string rootTag = j["rootTag"];
+		string tag = j["tag"];
+		j["tag"] = TAG::addRoot(tag, rootTag);
+	}
+
 	ALARM_INFO ai;
 	ai.fromJson(j);
 	ai.time = timeopt::nowStr();
@@ -305,6 +311,12 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 		json jErr = "必须指定 type 字段";
 		resp.error = jErr.dump();
 		return;
+	}
+
+	if (j.contains("rootTag")) {
+		string rootTag = j["rootTag"];
+		string tag = j["tag"];
+		j["tag"] = TAG::addRoot(tag, rootTag);
 	}
 
 	try
