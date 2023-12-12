@@ -10,7 +10,7 @@
 #include "base64.h"
 #include "mp.h"
 #include "rpcHandler.h"
-#include "as.h"
+
 
 using namespace httplib;
 
@@ -50,11 +50,35 @@ void ioDev_custom::DoAcq()
 
 }
 
+void thread_do_http_heartbeat(ioDev_custom* pDev) {
+	pDev->doHttpHeartbeat();
+}
 
+void ioDev_custom::doHttpHeartbeat()
+{
+	string ip = m_jDevAddr["ip"];
+	int port = m_jDevAddr["port"].get<int>();
+	string addr = "http://" + ip + ":" + str::fromInt(port);
+	httplib::Client cli(addr);
+	auto res = cli.Get(m_httpHeartbeatUrl);
+
+	if (res != nullptr) {
+		setOnline();
+	}
+	else {
+		setOffline();
+	}
+}
 
 void ioDev_custom::DoCycleTask()
 {
-	
+	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > m_heartBeatInterval) {
+		m_stLastHeartbeatTime = timeopt::now();
+		if (m_bEnableHttpHeartbeat) {
+			thread t(thread_do_http_heartbeat, this);
+			t.detach();
+		}
+	}
 }
 
 void ioDev_custom::onEvent_online()

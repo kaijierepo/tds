@@ -298,6 +298,11 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
 			conf["offlineTimeout"] = m_offlineTimeout;
 		}
+
+		if (m_bEnableHttpHeartbeat) {
+			conf["enableHttpHeartbeat"] = m_bEnableHttpHeartbeat;
+			conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
+		}
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
@@ -560,6 +565,22 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_number_integer()) {
 			m_offlineTimeout = item.get<int>();
+		}
+	}
+
+	kv = conf.find("enableHttpHeartbeat");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bEnableHttpHeartbeat = item.get<bool>();
+		}
+	}
+
+	kv = conf.find("httpHeartbeatUrl");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_httpHeartbeatUrl = item.get<string>();
 		}
 	}
 

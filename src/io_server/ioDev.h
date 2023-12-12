@@ -167,6 +167,8 @@ public:
 	string m_strPwd;
 	bool m_bViaAdaptor;
 	bool m_bEnableOfflineTimeout;
+	bool m_bEnableHttpHeartbeat;
+	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
 
 	bool viaTcpConn(); //通过tcp与tds建立连接

@@ -20,6 +20,7 @@ public:
 	~ioDev_custom();
 
 	void DoAcq();
+	void doHttpHeartbeat();
 	void DoCycleTask() override;
 	void onEvent_online() override;
 
