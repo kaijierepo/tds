@@ -122,8 +122,14 @@ void almServer::addAlarm(ALARM_INFO ai)
 		}
 	
 		OBJ* pObj = prj.queryObj(sTag);
-		if (pObj && !pObj->m_bEnableAlarm)
+		if (!pObj) {
+			LOG("[报警服务]新报警,未找到对应位号,%s,%s",sTag.c_str(), ai.toJson(this).dump().c_str());
+			return;
+		}
+
+		if (!pObj->m_bEnableAlarm)
 		{
+			LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
 			return;
 		}
 	}
