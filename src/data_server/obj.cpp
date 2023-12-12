@@ -328,9 +328,6 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 			conf["longitude"] = m_longitude;
 		if (m_latitude != nullptr)
 			conf["latitude"] = m_latitude;
-		if (m_strLastModify != "") {
-			conf["lastModify"] = m_strLastModify;
-		}
 		if (m_comment != "") {
 			conf["comment"] = m_comment;
 		}

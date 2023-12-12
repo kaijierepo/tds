@@ -1462,6 +1462,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.m_name = tmpPrj.m_name;
 				prj.m_mapAllMP = tmpPrj.m_mapAllMP;
 				prj.m_childObj = tmpPrj.m_childObj;
+				prj.m_type = tmpPrj.m_type;
 				for (int i = 0; i < prj.m_childObj.size(); i++) {
 					OBJ* p = prj.m_childObj[i];
 					p->m_pParentMO = &prj;
@@ -3832,6 +3833,19 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		if (mps.size() > 0) {
 			jTableHead.push_back("位号");
 			jColTag.push_back(nullptr);
+
+			bool mpNameTheSame = false;  //所有监控点的名称全部相同，则取父节点作为列名称。一般在编辑对象树时，会有这种用法，例如 1楼.温度  2楼.温度  3楼.温度
+			map<string, string> mpNames;
+			for (int j = 0; j < mps.size(); j++)
+			{
+				MP* pmp = mps[j];
+				mpNames[pmp->m_name] = pmp->m_name;
+			}
+			if (mpNames.size() == 1) {
+				mpNameTheSame = true;
+			}
+
+
 			for (int j = 0; j < mps.size(); j++)
 			{
 				MP* pmp = mps[j];
@@ -3841,7 +3855,13 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 					jTableHead.push_back(tag);
 				}
 				else {
-					jTableHead.push_back(pmp->m_name);
+					if (!mpNameTheSame) {
+						jTableHead.push_back(pmp->m_name);
+					}
+					else {
+						if(pmp->m_pParentMO)
+							jTableHead.push_back(pmp->m_pParentMO->m_name);
+					}
 				}
 			}
 			jTableHead.push_back("在线");

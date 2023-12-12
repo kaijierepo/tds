@@ -191,7 +191,15 @@ namespace TIME_OPT {
 			string time1 = strTime1;
 			string strDay = "", strH = "", strM = "", strS = "";
 			int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-			size_t pos = time1.find("d");
+			size_t pos = time1.find("y");
+			if (pos == string::npos)
+				pos = time1.find("Y");
+			if (pos != string::npos) {
+				string strYear = time1.substr(0, pos);
+				time1 = time1.erase(0, pos + 1);
+				n1 = (int)atof(strYear.c_str())* 365 * 24 * 3600;
+			}
+			pos = time1.find("d");
 			if (pos == string::npos)
 				pos = time1.find("D");
 			if (pos != string::npos) {
