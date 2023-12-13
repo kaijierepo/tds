@@ -1248,6 +1248,7 @@ void ioDev::setOffline()
 
 void ioDev::doRespTimeStatis(int time)
 {
+	m_csRespTime.lock();
 	m_vecRespTime.push_back(time);
 	if (m_vecRespTime.size() > 5) {
 		m_vecRespTime.erase(m_vecRespTime.begin());
@@ -1260,6 +1261,7 @@ void ioDev::doRespTimeStatis(int time)
 		}
 		m_avgTransactionTime =(int) (total / m_vecRespTime.size());
 	}
+	m_csRespTime.unlock();
 }
 
 bool ioDev::isConnected()

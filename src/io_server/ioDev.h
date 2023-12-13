@@ -318,6 +318,7 @@ public:
 	//通信时间统计
 	int m_avgTransactionTime;
 	vector<int> m_vecRespTime;                   //最近5次通信使用时间
+	mutex m_csRespTime;
 	void doRespTimeStatis(int time);
 
 	virtual bool isConnected();
