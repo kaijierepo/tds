@@ -1416,12 +1416,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
-	if (method == "setconf")
-	{
-		unique_lock<shared_mutex> lock(prj.m_csPrj);
-		result = rpc_setconf(params, error);
-	}
-	else if (method == "setConfFile") {
+	if (method == "setConfFile") {
 		rpc_setconffile(params, rpcResp,session);
 	}
 	else if (method == "getConfFile") {
@@ -1454,6 +1449,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			else {
 				unique_lock<shared_mutex> lock(prj.m_csPrj);
+				LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
+
 				//加载新的树
 				project tmpPrj;
 				tmpPrj.loadConf(params);
@@ -1471,8 +1468,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				prj.saveConfFile();
 				std::map<string, SCRIPT_INFO> expScripts;
 				prj.getAllVarExpScript();
-				ioSrv.updateTag2IOAddrBinding();
-				ioSrv.updateAllChanVal();
+
+				//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
+				//ioSrv.updateTag2IOAddrBinding();
+				//ioSrv.updateAllChanVal();
 
 				rpcSrv.notify("objTreeUpdated", nullptr);
 				result = "\"ok\"";
@@ -1576,13 +1575,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
 		{
-			if (params.is_array()) {
-				for (int i = 0; i < params.size(); i++) {
-					json de = params[i];
-					rpc_input(params, rpcResp, session);
-				}
-			}
-			else if (params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
+			if (params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 				string rootTag;
 				if (params.contains("rootTag")) { 
 					rootTag = params["rootTag"];

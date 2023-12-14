@@ -40,6 +40,21 @@ struct EZVIZ_ACCESS_INFO {
 };
 
 
+struct LOCK_THREAD_RECORDER {
+	LOCK_THREAD_RECORDER(unsigned long* recorder, unsigned long id) {
+		*recorder = id;
+		pid = recorder;
+	}
+
+	~LOCK_THREAD_RECORDER() {
+		if (pid) {
+			*pid = 0;
+		}
+	}
+
+	unsigned long* pid;
+};
+
 
 class project : public OBJ  
 {
@@ -90,6 +105,7 @@ private:
 
 public:
 	shared_mutex m_csPrj;
+	unsigned long m_prjWriteLockThread;
 };
 
 extern void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);

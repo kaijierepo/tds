@@ -38,7 +38,7 @@ void thread_rt_data_save() {
 	while (1) {
 		Sleep(interval*1000);
 
-		unique_lock<shared_mutex> lock(prj.m_csPrj);
+		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		json j;
 		prj.saveStatus(j);
 
