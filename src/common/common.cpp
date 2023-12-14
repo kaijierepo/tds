@@ -1523,6 +1523,10 @@ namespace sys {
 
 		return szErrMsg;
 	}
+
+	unsigned long getThreadId() {
+		return GetCurrentThreadId();
+	}
 }
 
 

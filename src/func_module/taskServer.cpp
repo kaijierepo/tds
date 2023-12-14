@@ -52,9 +52,9 @@ void taskSrv_workThread(taskServer* p) {
 	while (1) {
 		timeopt::sleepMilli(5000);
 
-		prj.m_csPrj.lock();
+		prj.m_csPrj.lock_shared();
 		p->recursiveExeTask(&prj);
-		prj.m_csPrj.unlock();
+		prj.m_csPrj.unlock_shared();
 	}
 }
 

@@ -509,18 +509,26 @@ void thread_handleRpcCall(string method,json param,int delay) {
 	rpcSrv.handleMethodCall(method, param, resp, session);
 }
 
+
+ThreadPool g_asynCallDealThreadPool(8);
+
 void TDS_imp::callAsyn(string method, json& param, int delay)
 {
-	thread t(thread_handleRpcCall, method, param, delay);
-	t.detach();
+	if (method == "input") {
+		g_asynCallDealThreadPool.enqueue([method, param, delay] {
+			thread_handleRpcCall(method, param, delay);
+			});
+	}
+	else {
+		thread t(thread_handleRpcCall, method, param, delay);
+		t.detach();
+	}
 }
-
 
 void TDS_imp::callAsyn(string method, string& param, int delay)
 {
 	json j = json::parse(param);
-	thread t(thread_handleRpcCall, method, j,delay);
-	t.detach();
+	callAsyn(method, j, delay);
 }
 
 void thread_handleBatchRpcCall(vector<json> calls, int delay) {
