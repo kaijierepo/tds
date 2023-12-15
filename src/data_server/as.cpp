@@ -134,6 +134,8 @@ void almServer::addAlarm(ALARM_INFO ai)
 		}
 	}
 
+	LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
+
 	tableCurrent.add(ai);
 	tableHist.add(ai);
 
