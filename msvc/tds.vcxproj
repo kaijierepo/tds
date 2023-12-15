@@ -341,7 +341,8 @@
       <Command>../build/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>../build/publish.bat</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'">
