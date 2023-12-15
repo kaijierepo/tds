@@ -4,14 +4,6 @@
 #include "tdsSession.h"
 #include "json.hpp"
 
-struct TDSP_SYNC_INFO {
-	json jReq;
-	json jResp;
-	string strReq;
-	semaphore respSignal;
-	string strResp;
-};
-
 
 class ioDev_dcqk : public ioDev
 {

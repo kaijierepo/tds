@@ -283,7 +283,9 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 
 	conf["name"] = m_name;
 	conf["level"] = m_level;
-	conf["enableAlarm"] = m_bEnableAlarm;
+
+	if(m_bEnableAlarm == false)
+		conf["enableAlarm"] = m_bEnableAlarm;
 
 	if (q.getConfDetail) {
 		string tag = getTag();
