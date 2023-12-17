@@ -233,6 +233,17 @@ public:
 };
 
 
+struct FLAG_GUARD {
+	FLAG_GUARD(bool* pFlag) {
+		m_pFlag = pFlag;
+	}
+	~FLAG_GUARD() {
+		if (m_pFlag)
+			*m_pFlag = false;
+	}
+	bool* m_pFlag;
+};
+
 namespace common {
 	string& getCharCodec();
 
