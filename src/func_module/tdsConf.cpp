@@ -34,6 +34,7 @@ tdsConfig::tdsConfig()
 	iotimeoutDLT645 = 8000;
 	mode = "tds";
 	bStopCycleAcq = false;
+	showObjOnline = true;
 
 #ifdef TDS
 	tds->conf = this;
@@ -319,6 +320,13 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		else if (checkKey(tci.key, "smsApiKey"))
 		{
 			smsApiKey = tci.val;
+		}
+		else if (checkKey(tci.key, "showObjOnline"))
+		{
+			if (tci.val == "true" || tci.val == "1")
+				showObjOnline = true;
+			else if (tci.val == "false" || tci.val == "0")
+				showObjOnline = false;
 		}
 	}
 

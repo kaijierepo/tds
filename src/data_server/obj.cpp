@@ -357,10 +357,14 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 	//运行时状态数据
 	if (q.getStatus)
 	{
-		if (m_strIoAddrBind != "" || isCustomMo() || m_bChildTds)
+		if (tds->conf->showObjOnline == true)
 		{
-			conf["online"] = m_bOnline;
+			if (m_strIoAddrBind != "" || isCustomMo() || m_bChildTds)
+			{
+				conf["online"] = m_bOnline;
+			}
 		}
+
 			
 		if (m_longitudeDyn != nullptr)
 			conf["longitudeDyn"] = m_longitudeDyn;
