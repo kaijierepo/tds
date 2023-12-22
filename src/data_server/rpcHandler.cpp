@@ -1645,10 +1645,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rootTag = params["rootTag"].get<string>();
 			}
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
-			string sTagSel = "*";
-			if (params["tag"].is_string()) {
-				sTagSel = params["tag"];
+
+			//类型选择
+			string type = ""; //为空表示选中所有，为*表示选中所有自定义类型
+			if (params["type"] != nullptr) {
+				type = params["type"].get<string>();
 			}
+	
+			//层级选择
 			string level = "*";
 			if (params["level"] != nullptr)
 				level = params["level"].get<string>();
@@ -1670,13 +1674,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				level = "mp";
 			}
 
-			string type = ""; //为空表示选中所有，为*表示选中所有自定义类型
-			if (params["type"] != nullptr) {
-				type = params["type"].get<string>();
-			}
-
+			//位号选择
+			vector<string> vecTagSel = parseTagSel(params["tag"],type);
 			TAG_SELECTOR tagSel;
-			tagSel.init(sTagSel, rootTag, type,level);
+			tagSel.init(vecTagSel, rootTag, type,level);
 
 			string mode = "array";
 			if (params["mode"] != nullptr) {
@@ -1837,6 +1838,31 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 
 	return bHandled;
+}
+
+vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
+	vector<string> vec;
+	if (tagSel.is_null()) { //位号未指定
+		if (type == "")  //type未指定
+		{
+			vec.push_back(""); //选中根位号
+		}
+		else { //指定了某种自定义对象，认为是一种批量查找
+			vec.push_back("*");
+		}
+	}
+	else if (tagSel.is_string()) {
+		vec.push_back(tagSel.get<string>());
+	}
+	else if (tagSel.is_array()) {
+		for (auto& t : tagSel) {
+			if (t.is_string()) {
+				vec.push_back(t.get<string>());
+			}
+		}
+	}
+
+	return vec;
 }
 
 bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)

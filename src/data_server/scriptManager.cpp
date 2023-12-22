@@ -16,6 +16,7 @@ void scriptThread(ScriptManager* p)
 ScriptManager::ScriptManager()
 {
 	loopRunning = false;
+	m_bRun = false;
 }
 
 bool ScriptManager::init()
@@ -54,6 +55,7 @@ bool ScriptManager::run()
 		return true;
 	}
 
+	m_bRun = true;
 	thread t(scriptThread, this);
 	t.detach();
 	return false;
@@ -426,6 +428,9 @@ void ScriptManager::loopExe()
 		if (!hasScripts()) {
 			break;
 		}
+
+		if (!m_bRun)
+			break;
 
 		exeAllGlobalScripts();
 

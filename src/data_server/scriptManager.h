@@ -47,6 +47,8 @@ public:
 	bool init();
 	bool run();
 
+	bool m_bRun;
+
 	bool hasScripts();
 	//第一个key是组织结构，第二个key是脚本文件的name
 	std::map<string,SCRIPT_INFO> m_mapScripts;

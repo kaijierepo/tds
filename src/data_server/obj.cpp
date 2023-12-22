@@ -143,8 +143,10 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 		m_longitude = conf["longitude"];
 	if(conf.contains("latitude"))
 		m_latitude = conf["latitude"];
-	if(conf.contains("map"))
-		m_mapConf = conf["map"];
+	if (conf.contains("map")) {
+		m_mapConf.merge_patch(conf["map"]);
+	}
+		
 
 	if (conf.contains("tasks")) {
 		loadTask(conf["tasks"]);
@@ -160,6 +162,10 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 
 	if (conf["alias"].is_string()) {
 		m_comment = conf["alias"];
+	}
+
+	if (conf.contains("customConf")) {
+		m_customConf = conf["customConf"];
 	}
 
 	if (conf.contains("ioAddrBind"))
@@ -350,6 +356,10 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 				jTasks.push_back(jT);
 			}
 			conf["tasks"] = jTasks;
+		}
+
+		if (m_customConf != nullptr) {
+			conf["customConf"] = m_customConf;
 		}
 	}
 	

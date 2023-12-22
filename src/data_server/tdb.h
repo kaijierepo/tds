@@ -83,7 +83,6 @@ public:
 	}
 
 	bool init(string tag, string rootTag="", string objtype="*",string level="*");
-
 	bool init(vector<string>& tag, string rootTag = "", string objtype = "*", string level = "*");
 	bool match(string tag);//use absolute tag 
 	bool singleSelMode();

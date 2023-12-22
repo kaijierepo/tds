@@ -243,6 +243,8 @@ public:
 	json m_jAlarmStatus;
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
 
+	json m_customConf;
+
 	static void treeStatus2ListStatus(json& tree, json& list,string parentTag);
 
 	//查询接口
