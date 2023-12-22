@@ -161,6 +161,9 @@
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\Parse315Protocol.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -308,6 +311,9 @@
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_custom.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\Parse315Protocol.h">
       <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
