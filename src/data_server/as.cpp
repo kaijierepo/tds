@@ -122,16 +122,16 @@ void almServer::addAlarm(ALARM_INFO ai)
 		}
 	
 		OBJ* pObj = prj.queryObj(sTag);
-		if (!pObj) {
-			LOG("[报警服务]新报警,未找到对应位号,%s,%s",sTag.c_str(), ai.toJson(this).dump().c_str());
-			return;
+
+		if (pObj) {
+			if (!pObj->m_bEnableAlarm)
+			{
+				LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+				return;
+			}
 		}
 
-		if (!pObj->m_bEnableAlarm)
-		{
-			LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			return;
-		}
+		//如果没有位号，报警默认不禁用
 	}
 
 	LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
@@ -635,7 +635,10 @@ string almServer::rpc_getUnack(json params, RPC_SESSION session)
 string almServer::rpc_getHistory(json params, RPC_SESSION session)
 {
 	DE_SELECTOR deSel;
-	string rootTag = params["rootTag"].get<string>();
+	string rootTag = "";
+	if (params["rootTag"].is_string()) {
+		rootTag = params["rootTag"].get<string>();
+	}
 	rootTag = TAG::addRoot(rootTag, session.org);
 	params["tag"] = rootTag + "*"; //此处采用历史数据的搜索语法
 

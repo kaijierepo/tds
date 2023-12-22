@@ -2310,7 +2310,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	}
 
 	yyjson_val* yyv_rootTag = yyjson_obj_get(yyParams, "rootTag");
-	if(yyv_rootTag)
+	if(yyv_rootTag && yyjson_is_str(yyv_rootTag))
 	{
 		strRootTag = yyjson_get_str(yyv_rootTag);
 	}
