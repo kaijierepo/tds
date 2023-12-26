@@ -24,7 +24,7 @@ namespace ns_ioDev_dcqk {
 	public:
 		createReg() {
 			mapDevCreateFunc["dcqk-sys-device"] = createDev;
-			mapDevTypeLabel["dcqk-sys-device"] = "自定义设备";
+			mapDevTypeLabel["dcqk-sys-device"] = "道岔缺口站机";
 		};
 	};
 	createReg reg;
@@ -35,8 +35,8 @@ namespace ns_ioDev_dcqk {
 
 ioDev_dcqk::ioDev_dcqk()
 {
-	m_devType = "custom-device";
-	m_devTypeLabel = "自定义设备";
+	m_devType = "dcqk-sys-device";
+	m_devTypeLabel = "道岔缺口站机";
 	m_level = "devcie";
 }
 

@@ -295,7 +295,13 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
 
 	ALARM_INFO ai;
 	ai.fromJson(j);
-	ai.time = timeopt::nowStr();
+
+
+	if (j["time"].is_string()) {
+		ai.time = j["time"];
+	}
+	else
+		ai.time = timeopt::nowStr();
 
 	addAlarm(ai);
 	return "\"success\"";
