@@ -1465,7 +1465,12 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					p->m_pParentMO = &prj;
 				}
 				tmpPrj.m_childObj.clear();
-				prj.saveConfFile();
+				bool bSaved = prj.saveConfFile();
+				if (!bSaved) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
+					LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
+					return true;
+				}
 				std::map<string, SCRIPT_INFO> expScripts;
 				prj.getAllVarExpScript();
 
@@ -1630,7 +1635,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			result = list.dump();
 		}
 		else if (method == "getObjTree") {
-			result = prj.m_strMoTree;
+			result = prj.m_moConfFileDump;
 		}
 		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo")
 		{

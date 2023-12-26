@@ -105,7 +105,7 @@ bool project::loadConfFile()
 	OBJ::m_bDefaultOnline = tds->conf->getInt("objDefaultOnline", 0) > 0 ? true:false;
 
 
-	string& conf = m_strMoTree;
+	string& conf = m_moConfFileDump;
 	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf)) 
 	{
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
@@ -125,7 +125,7 @@ bool project::loadConfFile()
 	return loadConf(conf);
 }
 
-void project::saveConfFile()
+bool project::saveConfFile()
 {
 	json j;
 	//json opt;
@@ -145,15 +145,19 @@ void project::saveConfFile()
 	toJson(j, q);
 	string s = j.dump(2);
 
-	if (s != m_strMoTree) {
+	if (s != m_moConfFileDump) {
 		TIME st;
 		timeopt::now(&st);
 		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
 		ini.setVal("mo", timeopt::st2str(st));
-		m_strMoTree = s;
-		fs::writeFile(tds->conf->confPath + "/mo.json", s);
+
+		bool bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", s);
+		if(bSaved)
+			m_moConfFileDump = s;
+		return bSaved;
 	}
+	return true;
 }
 
 bool project::loadConf(string& confStr)

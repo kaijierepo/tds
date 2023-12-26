@@ -641,12 +641,23 @@ string almServer::rpc_getUnack(json params, RPC_SESSION session)
 string almServer::rpc_getHistory(json params, RPC_SESSION session)
 {
 	DE_SELECTOR deSel;
+
+	//root tag 转 系统位号
 	string rootTag = "";
 	if (params["rootTag"].is_string()) {
 		rootTag = params["rootTag"].get<string>();
 	}
 	rootTag = TAG::addRoot(rootTag, session.org);
-	params["tag"] = rootTag + "*"; //此处采用历史数据的搜索语法
+	params["rootTag"] = rootTag;
+
+	if (!params.contains("tag")) {
+		params["tag"] = "*";
+	}
+
+	bool getTypeTag = false;
+	if (params["getTypeTag"].is_boolean()) {
+		getTypeTag = true;
+	}
 
 	string error;
 	string sParams = params.dump();
@@ -655,7 +666,6 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	TIME_SELECTOR& timeSelector = deSel.timeSel;
 	TAG_SELECTOR& tagSelector = deSel.tagSel;
 
-	string dataSet = "[";
 	std::lock_guard<mutex> g(m_csAlarmData);
 	int startYear = timeSelector.stStart.wYear;
 	int startMonth = timeSelector.stStart.wMonth;
@@ -663,6 +673,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int endMonth = timeSelector.stEnd.wMonth;
 	int iMonth = 0;
 	int iEndMonth = 0;
+	json jDataSet = json::array();
 	for(int iYear = startYear;iYear<=endYear;iYear++)
 	{
 		if(iYear == startYear) iMonth = startMonth;
@@ -687,16 +698,26 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				{
 					continue;
 				}
-				
 
-				if(dataSet !="[")
-					dataSet += "," + it->second->toJsonStr(this, rootTag);
-				else
-					dataSet += it->second->toJsonStr(this, rootTag);
+
+				json j = it->second->toJson(this, rootTag);
+
+				if (getTypeTag) {
+					OBJ* pObj = prj.queryObj(it->second->tag);
+					if (pObj) {
+						json jTypeTag = pObj->getTypeTag();
+						if (jTypeTag != nullptr) {
+							j["typeTag"] = jTypeTag;
+						}
+					}
+				}
+
+				jDataSet.push_back(j);
 			}
 		}
 	}
-	dataSet += "]";
+
+	string dataSet = jDataSet.dump(2);
 	return dataSet;
 }
 

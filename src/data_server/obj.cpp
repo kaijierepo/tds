@@ -688,6 +688,19 @@ string OBJ::getTag(string root)
 	return strTagName;
 }
 
+json OBJ::getTypeTag()
+{
+	OBJ* p = this;
+	json j;
+	while(p){
+		if (p->m_type != "") {
+			j[p->m_type] = p->m_name;
+		}
+		p = p->m_pParentMO;
+	}
+	return j;
+}
+
 vector<string> OBJ::GetAlias()
 {
 	vector<string> vecAlias;
