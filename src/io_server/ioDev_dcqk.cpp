@@ -63,8 +63,13 @@ void ioDev_dcqk::DoCycleTask()
 
 void ioDev_dcqk::onEvent_online()
 {
-	
+	if (m_mapSIDToName.empty())
+	{
+		//	获取缺口配置
+		GetGapCfg();
+	}
 }
+
 
 bool ioDev_dcqk::onRecvPkt(json jPkt)
 {
@@ -153,6 +158,21 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		{
 			StGapCfgRes* lpsubdata = (StGapCfgRes*)pData->lpdata;
 
+			for (int k = 0; k < lpsubdata->cfgcnt; k++) {
+
+				StSwitchCfg& ZZJConf = ((StSwitchCfg*)lpsubdata->lpcfg)[k];
+
+				char zzjName[256];
+				memcpy(zzjName, ZZJConf.lpname, ZZJConf.nlen);
+				zzjName[ZZJConf.nlen] = '\0';
+
+				map<int, string>::iterator iter = m_mapSIDToName.find(ZZJConf.sid);
+				if (iter == m_mapSIDToName.end())
+				{
+					m_mapSIDToName[ZZJConf.sid] = zzjName;
+				}
+			}
+
 			break;
 		}
 		case CMD_CODE_GAPVAL:
@@ -162,9 +182,41 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			break;
 		}
 		case CMD_CODE_ALARM_AND_IMG:
+		case CMD_CODE_ALARM:	//0x97
 		{
 			StAlarmAndImgInfo* lpsubdata = (StAlarmAndImgInfo*)pData->lpdata;
-			//SendCallBack0x27(lpsubdata);
+			SendCallBack0x27(lpsubdata);
+
+			map<int, string>::iterator iter = m_mapSIDToName.find(lpsubdata->sid);
+			if (iter == m_mapSIDToName.end())
+				return 0;
+
+			string sZZJName = iter->second;
+
+			//size_t iPos = sZZJName.find("#");
+			//string sTmp = ".";
+			//if (iPos == string::npos) {
+			//	iPos = sZZJName.find("J");
+			//	sTmp = "#.";
+			//}
+			size_t iPos = 0;
+			string sTmp = ".";
+			if (iPos = sZZJName.find("#") != string::npos) {
+			}
+			else if (iPos = sZZJName.find("J") != string::npos) {
+				sTmp = "#.";
+			}
+			else if (iPos = sZZJName.find("X") != string::npos) {
+				sTmp = "#.";
+			}
+			else if (iPos = sZZJName.find("P") != string::npos) {
+				sTmp = "#.";
+			}
+			else if (iPos = sZZJName.find("W") != string::npos) {
+				sTmp = "#.";
+			}
+			
+			sZZJName.insert(iPos, sTmp.c_str());
 
 			TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
 			string sTime = timeopt::stTimeToStr(tm);
@@ -172,15 +224,27 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			json jParams;
 			jParams["time"] = sTime.c_str();
 			jParams["desc"] = "";
-			jParams["level"] = "";
-			jParams["tag"] = m_strTagBind;
-			jParams["type"] = "";
+			jParams["level"] = GetAlmType(lpsubdata->alarmtype);
+			jParams["tag"] = m_strTagBind + "." + sZZJName;
+			jParams["type"] = GetAlarmDesc(lpsubdata->alarmtype);
 			jParams["id"] = "";
 
 
 			almServer* pAlmSrv = &almSrv;
 			RPC_RESP resp;
-			pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
+			
+
+			//"time":"2023-08-08 11:12:23",
+			//	"tag" : "1幢B6区3层",
+			//	"type" : "感烟探测器",
+			//	"id" : "69001"
+			if (IsRecover(lpsubdata->alarmtype)){
+				pAlmSrv->rpc_recoverAlarm(jParams, resp);
+			}
+			else{
+				pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
+			}
+
 			break;
 		}
 		case CMD_CODE_ACTION_INFO:
@@ -326,16 +390,20 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 
 string ioDev_dcqk::GetAlmType(BYTE type)
 {
-	if (type == 1) return "预警";
-	else if (type == 2 || type == 7 || type == 8) return "报警";
-	else if (type == 101 || type == 102 || type == 107 || type == 108) return "恢复";
+	if (type == 1 || type == 9 || type == 11 || type == 16 
+		|| type == 101 || type == 109 || type == 111 || type == 116)
+		return "预警";
+	else if (type == 2 || type == 7 || type == 8 || type == 10 || type == 12 || type == 15 || type == 17 
+		|| type == 102 || type == 107 || type == 108 || type == 110 || type == 112 || type == 115 || type == 117)
+		return "告警";
+	
 	return "";
 }
 
-int ioDev_dcqk::GetAlmLevel(BYTE type)
+string ioDev_dcqk::GetAlmLevel(BYTE type)
 {
-	if (type == 1) return 2;
-	else return 3;
+	if (type == 1) return "二级";
+	else return "三级";
 }
 
 string ioDev_dcqk::GetAlarmDesc(BYTE type)
@@ -343,10 +411,10 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type)
 	string strDesc = "";
 	switch (type) {
 	case 1:
-		strDesc = "缺口预警及预警图像";
+		strDesc = "转换后缺口预警";
 		break;
 	case 2:
-		strDesc = "缺口报警及报警图像";
+		strDesc = "转换后缺口报警";
 		break;
 	case 7:
 		strDesc = "温度报警";
@@ -354,11 +422,32 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type)
 	case 8:
 		strDesc = "湿度报警";
 		break;
+	case 9:
+		strDesc = "油位预警";
+		break;
+	case 10:
+		strDesc = "油位报警";
+		break;
+	case 11:
+		strDesc = "油压预警";
+		break;
+	case 12:
+		strDesc = "油压报警";
+		break;
+	case 15:
+		strDesc = "过车时缺口报警";
+		break;
+	case 16:
+		strDesc = "静态缺口预警";
+		break;
+	case 17:
+		strDesc = "静态缺口报警";
+		break;
 	case 101:
-		strDesc = "缺口预警恢复及图像";
+		strDesc = "转换后缺口预警恢复";
 		break;
 	case 102:
-		strDesc = "缺口报警恢复及图像";
+		strDesc = "转换后缺口报警恢复";
 		break;
 	case 107:
 		strDesc = "温度报警恢复";
@@ -366,14 +455,39 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type)
 	case 108:
 		strDesc = "湿度报警恢复";
 		break;
+	case 109:
+		strDesc = "油位预警恢复";
+		break;
+	case 110:
+		strDesc = "油位报警恢复";
+		break;
+	case 111:
+		strDesc = "油压预警恢复";
+		break;
+	case 112:
+		strDesc = "油压报警恢复";
+		break;
+	case 115:
+		strDesc = "过车时缺口报警恢复";
+		break;
+	case 116:
+		strDesc = "静态缺口预警恢复";
+		break;
+	case 117:
+		strDesc = "静态缺口报警恢复";
+		break;
 	}
 	return strDesc;
 }
 
 BOOL ioDev_dcqk::IsRecover(BYTE type)
 {
-	if (type == 1 || type == 2 || type == 7 || type == 8) return FALSE;
-	else return FALSE;
+	if (type == 1 || type == 2 || type == 7 || type == 8 
+		|| type == 9 || type == 10 || type == 11 || type == 12
+		|| type == 15 || type == 16 || type == 17)
+		return FALSE;
+	else
+		return TRUE;
 }
 
 void ioDev_dcqk::SendCallBackHeart(StHeartBeat315* pData)
@@ -942,6 +1056,36 @@ void ioDev_dcqk::SendCallBack0x27(StAlarmAndImgInfo* lpsubdata)
 	Parse315Protocol::Unparse(data, buf, len);
 
 	sendData((unsigned char*)buf, len);
+}
+
+void ioDev_dcqk::ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc)
+{
+	size_t iPos = 0;
+	bool bFind = false;
+	if (iPos = sZZJName.find("#") != string::npos) {
+		bFind = true;
+	}
+	else if (iPos = sZZJName.find("J") != string::npos){
+		bFind = true;
+	}
+	else if (iPos = sZZJName.find("X") != string::npos){
+		bFind = true;
+	}
+	else if (iPos = sZZJName.find("P") != string::npos){
+		bFind = true;
+	}
+	else if (iPos = sZZJName.find("W") != string::npos){
+		bFind = true;
+	}
+
+	if (bFind) {
+		if (iPos - 1 == 0) {
+			sDc = sZZJName.substr(0, 1);
+		}
+		else if (iPos - 1 > 0) {
+			sDc = sZZJName.substr(iPos - 2, 2);
+		}
+	}
 }
 
 

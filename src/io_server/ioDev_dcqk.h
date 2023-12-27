@@ -24,7 +24,7 @@ public:
 
 	string GetAlmType(BYTE type);
 
-	int GetAlmLevel(BYTE type);
+	string GetAlmLevel(BYTE type);
 
 	string GetAlarmDesc(BYTE type);
 
@@ -68,4 +68,9 @@ public:
 	void SendCallBack0x41(StElecCurve* lpsubdata);
 	void SendCallBack0x25(StOilPreCurve* lpsubdata);
 	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
+
+	void ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc);
+
+
+	std::map<int, string> m_mapSIDToName;
 };
