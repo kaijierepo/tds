@@ -71,8 +71,42 @@ bool ioDev_dcqk::onRecvPkt(json jPkt)
 	return false;
 }
 
+size_t IsValidPkt_315(BYTE* pData, size_t iLen)
+{
+	if (iLen < 16) return 0;//315协议数据包最短长度
+
+	if (pData[0] != 0x71 || pData[1] != 0x6B || pData[2] != 0x6E || pData[3] != 0x65 || pData[4] != 0x74) return 0;//帧头校验
+
+	if (pData[5] != 0x02 && pData[5] != 0x80) return 0;
+
+	auto a = pData[7];
+	if (a != FRAME_TYPE_JSON && a != FRAME_TYPE_DATA && a != FRAME_TYPE_HEARTBEAT) return 0;
+
+	DWORD frameLen = *(DWORD*)(pData + 8);
+	if (frameLen + 16 > iLen) return 0;
+
+	BYTE* pFrameEnd = pData + frameLen + 12;
+	if (pFrameEnd[0] != 0xFF || pFrameEnd[1] != 0xFF || pFrameEnd[2] != 0xFF || pFrameEnd[3] != 0xFF)
+		return 0;
+
+	return frameLen + 16;
+}
+
 bool ioDev_dcqk::onRecvData(unsigned char* pData, size_t iLen) {
-	return onRecvPkt(pData, iLen);
+	stream2pkt* pab = &m_pab;
+	pab->PushStream(pData, iLen);
+
+	while (pab->PopPkt(IsValidPkt_315))
+	{
+		if (pab->abandonData != "")
+		{
+			string remoteAddr = getDevAddrStr();
+			LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+			m_abandonLen += pab->iAbandonLen;
+		}
+		onRecvPkt(pab->pkt, pab->iPktLen);
+	}
+	return false;
 }
 
 bool ioDev_dcqk::onRecvPkt(unsigned char* pData, size_t iLen)
