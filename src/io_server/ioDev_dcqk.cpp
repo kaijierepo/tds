@@ -202,6 +202,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			size_t iPos = 0;
 			string sTmp = ".";
 			if (iPos = sZZJName.find("#") != string::npos) {
+				iPos += 1;
 			}
 			else if (iPos = sZZJName.find("J") != string::npos) {
 				sTmp = "#.";
@@ -1060,31 +1061,12 @@ void ioDev_dcqk::SendCallBack0x27(StAlarmAndImgInfo* lpsubdata)
 
 void ioDev_dcqk::ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc)
 {
-	size_t iPos = 0;
-	bool bFind = false;
-	if (iPos = sZZJName.find("#") != string::npos) {
-		bFind = true;
-	}
-	else if (iPos = sZZJName.find("J") != string::npos){
-		bFind = true;
-	}
-	else if (iPos = sZZJName.find("X") != string::npos){
-		bFind = true;
-	}
-	else if (iPos = sZZJName.find("P") != string::npos){
-		bFind = true;
-	}
-	else if (iPos = sZZJName.find("W") != string::npos){
-		bFind = true;
-	}
-
-	if (bFind) {
-		if (iPos - 1 == 0) {
-			sDc = sZZJName.substr(0, 1);
-		}
-		else if (iPos - 1 > 0) {
-			sDc = sZZJName.substr(iPos - 2, 2);
-		}
+	std::regex reg("\\d{1,2}\\D");
+	std::smatch matches;
+	if (std::regex_search(sZZJName, matches, reg))
+	{
+		string str = matches[0].str();
+		sDc = str.substr(0, str.length() - 1);
 	}
 }
 
