@@ -124,6 +124,28 @@ size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen)
 	return 4 + 10 + dlen + 2;
 }
 
+size_t IsValidPkt_315(unsigned char* pData, int iLen)
+{
+	if (iLen < 16) return 0;//315协议数据包最短长度
+
+	if (pData[0] != 0x71 || pData[1] != 0x6B || pData[2] != 0x6E || pData[3] != 0x65 || pData[4] != 0x74) return 0;//帧头校验
+
+	if (pData[5] != 0x02 && pData[5] != 0x80) return 0;
+
+	auto a = pData[7];
+	if (a != 0x3F && a != 0x8F && a != 0x0F) return 0; //2023.5.18 新增JSON数据帧 scz
+
+	DWORD frameLen = *(DWORD*)(pData + 8);
+	if (frameLen + 16 > iLen) return 0;
+
+	BYTE* pFrameEnd = pData + frameLen + 12;
+	if (pFrameEnd[0] != 0xFF || pFrameEnd[1] != 0xFF || pFrameEnd[2] != 0xFF || pFrameEnd[3] != 0xFF)
+		return 0;
+
+
+	return (size_t)frameLen + 16;
+}
+
 size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 12)
@@ -158,6 +180,7 @@ size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen)
 
 	return 0;
 }
+
 
 void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 {

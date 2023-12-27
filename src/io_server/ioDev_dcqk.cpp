@@ -55,7 +55,10 @@ void ioDev_dcqk::DoAcq()
 
 void ioDev_dcqk::DoCycleTask()
 {
-	SendHeartbeat();
+	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval) {
+		//SendHeartbeat();
+		m_stLastHeartbeatTime = timeopt::now();
+	}
 }
 
 void ioDev_dcqk::onEvent_online()
@@ -66,6 +69,10 @@ void ioDev_dcqk::onEvent_online()
 bool ioDev_dcqk::onRecvPkt(json jPkt)
 {
 	return false;
+}
+
+bool ioDev_dcqk::onRecvData(unsigned char* pData, size_t iLen) {
+	return onRecvPkt(pData, iLen);
 }
 
 bool ioDev_dcqk::onRecvPkt(unsigned char* pData, size_t iLen)
@@ -99,6 +106,8 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 	{
 	case FRAME_TYPE_HEARTBEAT:
 	{
+		StHeartBeat315* basic = (StHeartBeat315*)pData->lpdata;
+		SendCallBackHeart(basic);
 		break;
 	}
 	case FRAME_TYPE_DATA:
@@ -121,7 +130,23 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_ALARM_AND_IMG:
 		{
 			StAlarmAndImgInfo* lpsubdata = (StAlarmAndImgInfo*)pData->lpdata;
-			SendCallBack0x27(lpsubdata);
+			//SendCallBack0x27(lpsubdata);
+
+			TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
+			string sTime = timeopt::stTimeToStr(tm);
+
+			json jParams;
+			jParams["time"] = sTime.c_str();
+			jParams["desc"] = "";
+			jParams["level"] = "";
+			jParams["tag"] = m_strTagBind;
+			jParams["type"] = "";
+			jParams["id"] = "";
+
+
+			almServer* pAlmSrv = &almSrv;
+			RPC_RESP resp;
+			pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
 			break;
 		}
 		case CMD_CODE_ACTION_INFO:
@@ -265,6 +290,86 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 	return 0;
 }
 
+string ioDev_dcqk::GetAlmType(BYTE type)
+{
+	if (type == 1) return "预警";
+	else if (type == 2 || type == 7 || type == 8) return "报警";
+	else if (type == 101 || type == 102 || type == 107 || type == 108) return "恢复";
+	return "";
+}
+
+int ioDev_dcqk::GetAlmLevel(BYTE type)
+{
+	if (type == 1) return 2;
+	else return 3;
+}
+
+string ioDev_dcqk::GetAlarmDesc(BYTE type)
+{
+	string strDesc = "";
+	switch (type) {
+	case 1:
+		strDesc = "缺口预警及预警图像";
+		break;
+	case 2:
+		strDesc = "缺口报警及报警图像";
+		break;
+	case 7:
+		strDesc = "温度报警";
+		break;
+	case 8:
+		strDesc = "湿度报警";
+		break;
+	case 101:
+		strDesc = "缺口预警恢复及图像";
+		break;
+	case 102:
+		strDesc = "缺口报警恢复及图像";
+		break;
+	case 107:
+		strDesc = "温度报警恢复";
+		break;
+	case 108:
+		strDesc = "湿度报警恢复";
+		break;
+	}
+	return strDesc;
+}
+
+BOOL ioDev_dcqk::IsRecover(BYTE type)
+{
+	if (type == 1 || type == 2 || type == 7 || type == 8) return FALSE;
+	else return FALSE;
+}
+
+void ioDev_dcqk::SendCallBackHeart(StHeartBeat315* pData)
+{
+	StFrame data;
+	ZeroMemory(&data, sizeof(StFrame));
+
+	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
+	data.protocode = PROTOCAL_CODE;
+	data.dataversion = PROTOCAL_DATAVERSION;
+	data.ftype = FRAME_TYPE_HEARTBEAT;
+	data.ftail = FRAME_TAIL_315;
+
+	StHeartBeat315 subdata;
+	subdata = *pData;
+
+	TIME tm = timeopt::now();
+	subdata.hbtime = timeopt::SysTime2Unix(tm);
+
+	data.datalen = sizeof(StHeartBeat315);
+	data.lpdata = &subdata;
+
+	LPVOID buf = NULL;
+	int len = 0;
+
+	Parse315Protocol::Unparse(data, buf, len);
+
+	sendData((unsigned char*)buf, len);
+}
+
 int ioDev_dcqk::SendHeartbeat()
 {
 	StFrame data;
@@ -290,8 +395,16 @@ int ioDev_dcqk::SendHeartbeat()
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	bool bOk = sendData((unsigned char*)buf, len);
 
+	if (bOk)
+	{
+		setOnline();
+	}
+	else
+	{
+		setOffline();
+	}
 	return 0;
 }
 
@@ -720,6 +833,7 @@ void ioDev_dcqk::GetOilBoxVolume(int nSID)
 
 	sendData((unsigned char*)buf, len);
 }
+
 
 void ioDev_dcqk::SendCallBack0x41(StElecCurve* lpsubdata)
 {

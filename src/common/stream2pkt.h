@@ -27,6 +27,7 @@ public:
 			pkt = NULL;
 		}
 	}
+	
 	void Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize);
 	void ResizeStreamBuff(size_t iNewSize);
 	void ResizePopPktBuff(size_t iNewSize);
@@ -82,3 +83,4 @@ extern size_t IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_TDSP(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_LeakDetect(unsigned char* pData, size_t iLen);
 extern size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen);
+extern size_t IsValidPkt_315(unsigned char* pData, int iLen);

@@ -1788,6 +1788,11 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			onRecvPkt_leakDetect((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
+	else {
+		string ioAddr = tdsSession->remoteIP + ":" + str::fromInt(tdsSession->remotePort);
+		ioDev* pDev = getIODev(ioAddr);
+		pDev->onRecvData(pData, iLen);
+	}
 
 	tdsSession->m_bAppDataRecved = true; //放在上方处理的后面
 	return true;

@@ -18,8 +18,17 @@ public:
 
 	virtual bool onRecvPkt(json jPkt) override;
 	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) override;
+	virtual bool onRecvData(unsigned char* pData, size_t iLen) override;
 
 	int DealJHDData(LPVOID lpParam);
+
+	string GetAlmType(BYTE type);
+
+	int GetAlmLevel(BYTE type);
+
+	string GetAlarmDesc(BYTE type);
+
+	BOOL IsRecover(BYTE type);
 
 	int SendHeartbeat();
 	///	°â¶¯²Ù×÷
@@ -55,6 +64,7 @@ public:
 
 
 	///	»ØÖ´
+	void SendCallBackHeart(StHeartBeat315* pData);
 	void SendCallBack0x41(StElecCurve* lpsubdata);
 	void SendCallBack0x25(StOilPreCurve* lpsubdata);
 	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
