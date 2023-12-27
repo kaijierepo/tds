@@ -1836,6 +1836,43 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			rpcResp.result = rlt.dump();
 		}
+		else if (method == "avg") {
+			if (params["tag"] == nullptr) //获取子树
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+				return true;
+			}
+			string tag = params["tag"];
+			bool invalidAsZero = false;
+			if (params.contains("invalidAsZero"))
+				invalidAsZero = params["invalidAsZero"].get<bool>();
+			vector<MP*> mpList;
+			TAG_SELECTOR tagSel;
+			tagSel.init(tag);
+			prj.getMpByTagSelector(mpList, tagSel);
+
+			json rlt = nullptr;
+			double dbAvg = 0;
+			double dbSum = 0;
+			int calcCount = 0;
+			bool success = true;
+			for (int i = 0; i < mpList.size(); i++) {
+				MP* pmp = mpList[i];
+				if (pmp->m_curVal.is_number()) {
+					double val = pmp->m_curVal.get<double>();
+					dbSum += val;
+					calcCount++;
+				}
+				else {
+
+				}
+			}
+			if (success) {
+				dbAvg = dbSum / calcCount;
+				rlt = dbAvg;
+			}
+			rpcResp.result = rlt.dump();
+		}
 		else
 		{
 			bHandled = false;
@@ -3335,7 +3372,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 
 void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	vector<string> rootTagListOrg;
+	vector<string> rootTagListOrg; //用于返回统计分组时作为分组的key
 	vector<string> rootTagList;
 	if (params["rootTag"].is_string())
 	{
@@ -3352,6 +3389,10 @@ void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION sessi
 			rootTag = TAG::addRoot(rootTag, session.org);
 			rootTagList.push_back(rootTag);
 		}
+	}
+	else {
+		rootTagList.push_back("");
+		rootTagListOrg.push_back("");
 	}
 
 	string mode = "groupByType";

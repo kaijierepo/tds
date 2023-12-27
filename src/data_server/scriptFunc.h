@@ -16,6 +16,7 @@ extern jerry_value_t func_output(const jerry_call_info_t* call_info_p, const jer
 extern jerry_value_t func_input(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_call(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_sum(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
+extern jerry_value_t func_avg(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_val(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_getMp(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_sleep(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);

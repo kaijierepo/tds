@@ -437,6 +437,42 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 }
 
 
+jerry_value_t func_avg(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() > 0)
+	{
+		json tag = jArgs[0];
+		if (tag.is_string()) {
+			string sTag = tag.get<string>();
+			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+			json params;
+			params["tag"] = sTag;
+			if (jArgs.size() > 1) {
+				params["invalidAsZero"] = jArgs[1];
+			}
+
+			json err, rlt;
+			tds->call("avg", params, err, rlt, pEngine->currentSession);
+
+
+			if (rlt != nullptr) {
+				jerry_value_t ret;
+				jsonVal2jerryVal(rlt, ret);
+				return ret;
+			}
+		}
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
+
 jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -583,6 +619,16 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	}
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
+
+	// avg函数
+	property_name = jerry_create_string((const jerry_char_t*)"avg");
+	property_func = jerry_create_external_function(func_avg);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
 	// val函数
 	property_name = jerry_create_string((const jerry_char_t*)"val");
 	property_func = jerry_create_external_function(func_val);

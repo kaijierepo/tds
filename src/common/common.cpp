@@ -1763,7 +1763,8 @@ namespace fs {
 
 		FILE* fp = nullptr;
 #ifdef _WIN32
-		_wfopen_s(&fp,charCodec::tds_to_utf16(path).c_str(), L"wb");
+		wstring wpath = charCodec::tds_to_utf16(path);
+		_wfopen_s(&fp,wpath.c_str(), L"wb");
 #else
 		fp = fopen(path.c_str(), "wb");
 #endif
@@ -1776,6 +1777,7 @@ namespace fs {
 		else
 		{
 			string err = sys::getLastError();
+			err = charCodec::tds_to_gb(err);
 			printf("[error]%s", err.c_str());
 		}
 		return false;
