@@ -599,16 +599,41 @@ TDB::TDB()
 {
 	m_getTagsByTagSelector = nullptr;
 	m_isGbk = false;
+	m_timeUnit = BY_DAY;
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 {
-	strTag = replaceStr(strTag,".", "/");
-	string strURL= formatStr("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
-	strURL += strTag;
-	string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
-	strURL += "/" + timeStamp;
-	return strURL;
+	if (m_timeUnit == BY_DAY) {
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
+		strURL += strTag;
+		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
+		strURL += "/" + timeStamp;
+		return strURL;
+	}
+	else if (m_timeUnit == NONE) {
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = m_path + "/" + strTag;
+		return strURL;
+	}
+}
+
+string TDB::getPath_dataFolder(string strTag, DB_TIME date)
+{
+	if (m_timeUnit == BY_DAY) {
+		strTag = changeCharForFileName(strTag);
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		strURL += strTag;
+		strURL = m_path + strURL;
+		return strURL;
+	}
+	else if (m_timeUnit == NONE) {
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = m_path + "/" + strTag;
+		return strURL;
+	}
 }
 
 string TDB::getPath_dbRoot()
@@ -681,16 +706,6 @@ string TDB::changeCharForFileName(string s) {
 		}
 	}
 	return out;
-}
-
-string TDB::getPath_dataFolder(string strTag, DB_TIME date)
-{
-	strTag = changeCharForFileName(strTag);
-	strTag = replaceStr(strTag,".", "/");
-	string strURL= formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
-	strURL += strTag;
-	strURL = m_path  + strURL;
-	return strURL;
 }
 
 
@@ -1351,7 +1366,7 @@ bool DB_FILE::loadFile()
 {
 	time.fromUnixTime(ttTime);
 	ymd = time.toYMD();
-	path = db.getPath_dbFile(tag, time,deType);
+	path = pOwnerDB->getPath_dbFile(tag, time,deType);
 	DB_FS::readFile(path, data);
 	if (data == "") {
 		return false;
@@ -1665,58 +1680,16 @@ void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
 {
-	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-	{
-		TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+	if (m_timeUnit == BY_DAY) {
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		{
+			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
-		if (deSel.timeSel.timeSetType == TSM_First && deSel.timeSel.periodType == PT_None) {
-			time_t loadTime = deSel.timeSel.startTime;
-			for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
-			{
-				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
-				pdf->deType = deSel.deType;
-				if (!pdf->loadFile()) {
-					delete pdf;
-					continue;
-				}
-				fSet.fileList.push_back(pdf);
-				break;
-			}
-		}
-		else if (deSel.timeSel.timeSetType == TSM_Last && deSel.timeSel.periodType == PT_None) {
-			time_t loadTime = deSel.timeSel.endTime;
-			for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-			{
-				DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
-				pdf->deType = deSel.deType;
-				if (!pdf->loadFile()) {
-					delete pdf;
-					continue;
-				}
-				fSet.fileList.push_back(pdf);
-				break;
-			}
-		}
-		else { 
-			
-			bool bFirstLastAggr = false;
-			if (deSel.aggregate.size() > 0){
-				map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
-				string& aggrType = aggrOpt->second;
-				if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
-				{
-					if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-						bFirstLastAggr = true;
-					}
-				}
-			}
-
-			if (bFirstLastAggr) {
-				//read first file
+			if (deSel.timeSel.timeSetType == TSM_First && deSel.timeSel.periodType == PT_None) {
 				time_t loadTime = deSel.timeSel.startTime;
 				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -1725,11 +1698,12 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					fSet.fileList.push_back(pdf);
 					break;
 				}
-				//read last file
-				loadTime = deSel.timeSel.endTime;
+			}
+			else if (deSel.timeSel.timeSetType == TSM_Last && deSel.timeSel.periodType == PT_None) {
+				time_t loadTime = deSel.timeSel.endTime;
 				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -1740,35 +1714,93 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				}
 			}
 			else {
-				time_t loadTime = deSel.timeSel.endTime;
-				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag);
-					pdf->deType = deSel.deType;
-					if (!pdf->loadFile()) {
-						delete pdf;
-						continue;
+
+				bool bFirstLastAggr = false;
+				if (deSel.aggregate.size() > 0) {
+					map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
+					string& aggrType = aggrOpt->second;
+					if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
+					{
+						if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+							bFirstLastAggr = true;
+						}
 					}
-					fSet.fileList.insert(fSet.fileList.begin(), pdf);
+				}
+
+				if (bFirstLastAggr) {
+					//read first file
+					time_t loadTime = deSel.timeSel.startTime;
+					for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
+					{
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						pdf->deType = deSel.deType;
+						if (!pdf->loadFile()) {
+							delete pdf;
+							continue;
+						}
+						fSet.fileList.push_back(pdf);
+						break;
+					}
+					//read last file
+					loadTime = deSel.timeSel.endTime;
+					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+					{
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						pdf->deType = deSel.deType;
+						if (!pdf->loadFile()) {
+							delete pdf;
+							continue;
+						}
+						fSet.fileList.push_back(pdf);
+						break;
+					}
+				}
+				else {
+					time_t loadTime = deSel.timeSel.endTime;
+					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+					{
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						pdf->deType = deSel.deType;
+						if (!pdf->loadFile()) {
+							delete pdf;
+							continue;
+						}
+						fSet.fileList.insert(fSet.fileList.begin(), pdf);
+					}
 				}
 			}
+
+
+
+
+			if (fSet.fileList.size() == 0)
+				continue;
+			//the first and last file need time range check when load de,the middles do not need
+			fSet.fileList[0]->boundaryFile = true;
+			fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
+
+			//do not down sample when time is short than one day 
+			if (fSet.fileList.size() <= 1)
+				deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
+
+			result.fileCount += fSet.fileList.size();
 		}
-
-
-
-
-		if (fSet.fileList.size() == 0)
-			continue;
-		//the first and last file need time range check when load de,the middles do not need
-		fSet.fileList[0]->boundaryFile = true;
-		fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
-
-		//do not down sample when time is short than one day 
-		if (fSet.fileList.size() <= 1)
-			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
-
-		result.fileCount += fSet.fileList.size();
 	}
+	else if (m_timeUnit == NONE) {
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		{
+			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+			time_t t = 0;
+			DB_FILE* pdf = new DB_FILE(t, fSet.tag,this);
+			pdf->deType = deSel.deType;
+			if (!pdf->loadFile()) {
+				delete pdf;
+				continue;
+			}
+			fSet.fileList.push_back(pdf);
+		}
+	}
+
 	return true;
 }
 
@@ -1838,35 +1870,46 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 				//generate standard time stamp, then do match
 				yyjson_val* yyTime = yyjson_obj_get(de, "time");
-				string szTime = yyjson_get_str(yyTime);
-				const char* pHms = nullptr;
-				int hmsLen = 0;
-				if (szTime.length() == 19) //2020-02-02 02:02:02
-				{
-					pHms = szTime.data() + 11;//get hour min sec
-					hmsLen = 8;
+
+				if (m_timeUnit == BY_DAY) {
+					string szTime = yyjson_get_str(yyTime);
+					const char* pHms = nullptr;
+					int hmsLen = 0;
+					if (szTime.length() == 19) //2020-02-02 02:02:02
+					{
+						pHms = szTime.data() + 11;//get hour min sec
+						hmsLen = 8;
+					}
+					else if (szTime.length() == 23) {//2020-02-02 02:02:02.222
+						pHms = szTime.data() + 11;
+						hmsLen = 12;
+					}
+					else
+					{
+						pHms = szTime.data();
+						hmsLen = 8;
+					}
+					memcpy((char*)deTime.data() + 11, pHms, hmsLen);//get hour min sec
+
+					if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Time) {
+						HMS_STR* p = (HMS_STR*)pHms;
+						currDeTime = p->getTotalSec();
+						if (currDeTime - lastDeTime < deSel.interval.dsti)
+							continue;
+						lastDeTime = currDeTime;
+					}
 				}
-				else if (szTime.length() == 23) {//2020-02-02 02:02:02.222
-					pHms = szTime.data() + 11;
-					hmsLen = 12;
+				else if (m_timeUnit == NONE) {
+					deTime = yyjson_get_str(yyTime);
 				}
-				else
-				{
-					pHms = szTime.data();
-					hmsLen = 8;
+				else {
+					//assert(false);
 				}
-				memcpy((char*)deTime.data() + 11, pHms, hmsLen);//get hour min sec
+				
 
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
 
-				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Time) {
-					HMS_STR* p = (HMS_STR*)pHms;
-					currDeTime = p->getTotalSec();
-					if (currDeTime - lastDeTime < deSel.interval.dsti)
-						continue;
-					lastDeTime = currDeTime;
-				}
 
 				//use javascript to filter
 				if (deSel.condition.bEnable && !deSel.condition.match(de))
@@ -2181,7 +2224,7 @@ void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
 map<string, string> TDB::getAggrOpt(yyjson_val* jAggr) {
 	map<string, string> aggrOpt;
 	if (yyjson_is_str(jAggr)) { //aggr val in a single tag
-		aggrOpt[db.m_dbFmt.deItemKey_value] = yyjson_get_str(jAggr);
+		aggrOpt[m_dbFmt.deItemKey_value] = yyjson_get_str(jAggr);
 	}
 	else if (yyjson_is_obj(jAggr)) { //aggr by each field
 		size_t idx, maxIdx;
@@ -2454,6 +2497,22 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 	}
 }
 
+TDB* TDB::getChildDB(string dbName) {
+	map<string, TDB*>::iterator iter = m_childDB.find(dbName);
+	if (iter != m_childDB.end()) {
+		return iter->second;
+	}
+	else {
+		TDB* p = new TDB();
+		p->m_dbFmt = m_dbFmt;
+		p->m_timeUnit = m_timeUnit;
+		p->m_path = m_path + "/" + dbName;
+		p->m_getTagsByTagSelector = m_getTagsByTagSelector;
+		m_childDB[dbName] = p;
+		return p;
+	}
+}
+
 void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
@@ -2509,7 +2568,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	else {
 		try
 		{
-			db.Select(deSel, result);
+			Select(deSel, result);
 			if (result.error != "") {
 				err = result.error;
 			}

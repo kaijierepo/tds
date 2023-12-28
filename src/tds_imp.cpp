@@ -248,6 +248,9 @@ bool isTdsRunning() {
 	return false;
 }
 
+
+KV_INI g_prjConf;
+
 TDS_imp::TDS_imp()
 {
 	conf = nullptr;
@@ -334,6 +337,8 @@ bool TDS_imp::run(string cmdline)
 	LOG("[组态路径	] " + tds->conf->confPath);
 	LOG("[数据库	] " + tds->conf->dbPath);
 
+	g_prjConf.load(tds->conf->confPath + "/prj.ini");
+
 	//初始化系统组件，完成静态结构建立。loadConf和init类函数。在调用run之前，要先完成.否则在结构建立之前就进行数据io，可能会出现一些不必要的错误。
 
 	//startup tds modules
@@ -341,6 +346,7 @@ bool TDS_imp::run(string cmdline)
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
+		::db.m_timeUnit = (DB_TIME_UNIT)g_prjConf.getValInt("dbTimeUnit", 1);
 		::db.m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
 		::db.m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "db.curve.json");
 		::db.m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.json");

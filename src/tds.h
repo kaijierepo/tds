@@ -270,6 +270,7 @@ struct ACTIVE_TDS_SESSION {
 	string type;
 };
 
+
 struct iTDSConf {
 	virtual void loadConf() = 0;
 	//software conf

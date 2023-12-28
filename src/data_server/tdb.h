@@ -37,7 +37,7 @@ SOFTWARE.
 #include <string>
 using namespace std;
 
-
+class TDB;
 /*
 functions：
 1.manage the file system of database，use tag and time as data reference
@@ -192,16 +192,18 @@ struct DB_FILE {
 	yyjson_doc* doc;
 	yyjson_val* root;
 	string deType;
+	TDB* pOwnerDB;
 
 	bool loadFile();
 
-	DB_FILE(time_t tt,string tag_) {
+	DB_FILE(time_t tt,string tag_,TDB* pOwner) {
 		monthBoundaryFile = false;
 		boundaryFile = false;
 		ttTime = tt;
 		tag = tag_;
 		doc = nullptr;
 		root = nullptr;
+		pOwnerDB = pOwner;
 	}
 	~DB_FILE() {
 		if(doc)
@@ -447,6 +449,13 @@ struct  DB_FMT
 	string deItemKey_value;
 };
 
+enum DB_TIME_UNIT {
+	NONE = 0,
+	BY_DAY,
+	BY_MONTH,
+	BY_YEAR
+};
+
 typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagSelector);
 
 namespace DB_STR {
@@ -463,7 +472,7 @@ public:
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
 	DB_FMT m_dbFmt;
-
+	DB_TIME_UNIT m_timeUnit;
 
 	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
 	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
@@ -474,6 +483,8 @@ public:
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	bool Delete(string tag, DB_TIME stTime);
 
+	TDB* getChildDB(string dbName);
+	map<string, TDB*> m_childDB;
 //private func
 public:
 	//param parse

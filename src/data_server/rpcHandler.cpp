@@ -832,7 +832,12 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	
 				params.erase("tag");
 				string sDe = params.dump();
-				db.Insert(tag, sDe, &tNow);
+				if (params["db"].is_string()) { //db参数引入，实现使用相同的位号，存储不同的数据
+					TDB* tdb = db.getChildDB(params["db"].get<string>());
+					tdb->Insert(tag, sDe, &tNow);
+				}
+				else
+					db.Insert(tag, sDe, &tNow);
 				rpcResp.result = "\"ok\"";
 			}
 		}
@@ -868,7 +873,12 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		else if (method == "db.select")
 		{
 			string s = params.dump();
-			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
+			if (params["db"].is_string()) {
+				TDB* tdb = db.getChildDB(params["db"].get<string>());
+				tdb->rpc_db_select(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			}
+			else
+				db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
 		}
 		else if (method == "db.update")
 		{
@@ -3402,6 +3412,7 @@ void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 
 	json j;
+	j["total"] = allMp.size();
 	j["AI"] = mpStatis.AI;
 	j["AO"] = mpStatis.AO;
 	j["DI"] = mpStatis.DI;

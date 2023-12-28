@@ -61,6 +61,8 @@ void cycleAcq_thread_srvStatus(StatusServer* pss) {
 
 bool StatusServer::run()
 {
+	if (db.m_timeUnit != BY_DAY)
+		return false;
 	thread t(cycleAcq_thread_srvStatus, this);
 	t.detach();
 	return true;

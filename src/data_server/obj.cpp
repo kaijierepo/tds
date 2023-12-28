@@ -1426,39 +1426,20 @@ void OBJ::GetAllChildAlarmInfo(string& strSummary)
 
 bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 {
-	//精确匹配也先确定该位号是否存在
+	//精确匹配直接返回
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-			tags.push_back(exp);
+		tags.push_back(exp);
 	}
 
 
-	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
-		string& exp = tagSelector.fuzzyMatchExp[i];
-		vector<MP*> tagSet;
-		vector<MP*> tagSetTmp;
-		prj.GetMPByTag(&tagSetTmp, exp);
-		if (tagSelector.specifyType())//has type filter //load from database 监测点类型过滤
-		{
-			for (auto& it : tagSetTmp)
-			{
-				if (it->getMpType() == tagSelector.type)
-				{
-					tagSet.push_back(it);
-				}
-			}
-		}
-		else
-		{
-			tagSet = tagSetTmp;
-		}
-		for (auto& i : tagSet)
-		{
-			tags.push_back(i->getTag());
-		}
+	vector<OBJ*> tagSet;
+	prj.getObjByTagSelector(tagSet, tagSelector);
+	for (auto& i : tagSet)
+	{
+		tags.push_back(i->getTag());
 	}
-
-	return false;
+	return true;
 }
 
 void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
