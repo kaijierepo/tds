@@ -32,6 +32,52 @@ project::~project()
 
 }
 
+json project::getTypeTagByTag(string tag)
+{
+	json typeTag;
+	//根据相对位号的名字节点，查找子对象的名字，获取到对象
+	vector<string> vecNames;
+	str::split(vecNames, tag, ".");
+
+	OBJ* toQuery = NULL;
+	std::vector<OBJ*>* childMO = &m_childObj;
+	bool findMO = false;
+	for (int i = 0; i < vecNames.size(); i++)
+	{
+		string name = vecNames[i];
+		bool findNode = false;
+		for (int j = 0; j < childMO->size(); j++)
+		{
+			OBJ* tmp = childMO->at(j);
+			string tmpName = tmp->m_name;
+			if (tmpName == name)
+			{
+				toQuery = tmp;
+				findNode = true;
+				if (i == vecNames.size() - 1)
+				{
+					findMO = true;
+				}
+				break;
+			}
+		}
+
+		if (findNode)
+		{
+			if (toQuery->m_type != "") {
+				typeTag[toQuery->m_type] = name;
+			}
+			childMO = &toQuery->m_childObj;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return typeTag;
+}
+
 void thread_rt_data_save() {
 	int interval = tds->conf->getInt("rtDBSaveInterval", 15);
 	string path = tds->conf->dbPath + "/rtStatus.json";

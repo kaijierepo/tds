@@ -109,6 +109,8 @@ inline string getIOTypeLabel(string valType)
 	if (valType == "i") return "输入";
 	else if (valType == "o") return "输出";
 	else if (valType == "io") return "输入/输出";
+	else if (valType == "v") return "内部变量";
+	else if (valType == "c") return "常量";
 	else return "未知IO类型";
 };
 

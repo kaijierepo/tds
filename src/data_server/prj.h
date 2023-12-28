@@ -77,6 +77,8 @@ public:
 	project();
 	virtual ~project();
 
+	json getTypeTagByTag(string tag); //tag可以比当前对象树的配置更深
+
 	void saveRtStatus();
 
 	void loadRtDB();

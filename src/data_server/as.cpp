@@ -703,12 +703,9 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				json j = it->second->toJson(this, rootTag);
 
 				if (getTypeTag) {
-					OBJ* pObj = prj.queryObj(it->second->tag);
-					if (pObj) {
-						json jTypeTag = pObj->getTypeTag();
-						if (jTypeTag != nullptr) {
-							j["typeTag"] = jTypeTag;
-						}
+					json jTypeTag = prj.getTypeTagByTag(it->second->tag);
+					if (jTypeTag != nullptr) {
+						j["typeTag"] = jTypeTag;
 					}
 				}
 

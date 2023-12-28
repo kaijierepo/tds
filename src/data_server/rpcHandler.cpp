@@ -1620,6 +1620,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		{
 			rpc_getObjStatis(params, rpcResp, session);
 		}
+		else if (method == "getMpStatis")
+		{
+			rpc_getMpStatis(params, rpcResp, session);
+		}
 		else if (method == "getMoAttri" || method == "getMoAttr")
 		{
 			rpc_getMoAttr_list(params, rpcResp, session);
@@ -3368,6 +3372,43 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 		}*/
 	}
 	return j.dump();
+}
+
+void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION session) {
+	MP_STATIS mpStatis;
+	vector<MP*> allMp;
+	prj.GetAllChildMp(allMp);
+	for (int i = 0; i < allMp.size(); i++){
+		MP* pmp = allMp[i];
+		if (pmp->m_ioType == "v") {
+			mpStatis.Var++;
+		}
+		else if (pmp->m_valType == VAL_TYPE::Float || pmp->m_valType == VAL_TYPE::integer) {
+			if (pmp->m_ioType == "i") {
+				mpStatis.AI++;
+			}
+			else if (pmp->m_ioType == "io" || pmp->m_ioType == "o") {
+				mpStatis.AO++;
+			}
+		}
+		else if (pmp->m_valType == VAL_TYPE::boolean) {
+			if (pmp->m_ioType == "i") {
+				mpStatis.DI++;
+			}
+			else if (pmp->m_ioType == "io" || pmp->m_ioType == "o") {
+				mpStatis.DO++;
+			}
+		}
+	}
+
+	json j;
+	j["AI"] = mpStatis.AI;
+	j["AO"] = mpStatis.AO;
+	j["DI"] = mpStatis.DI;
+	j["DO"] = mpStatis.DO;
+	j["Var"] = mpStatis.Var;
+
+	resp.result = j.dump();
 }
 
 void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session)

@@ -430,6 +430,31 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 				return ret;
 			}
 		}
+		else if (tag.is_array()) {
+			json jResolvedTag = json::array();
+			for (auto& t : tag) {
+				if (t.is_string()) {
+					string s = t.get<string>();
+					s = TAG::resolveTag(s, pEngine->m_tagContext);
+					jResolvedTag.push_back(s);
+				}
+			}
+
+			json params;
+			params["tag"] = jResolvedTag;
+			if (jArgs.size() > 1) {
+				params["invalidAsZero"] = jArgs[1];
+			}
+
+			json err, rlt;
+			tds->call("sum", params, err, rlt, pEngine->currentSession);
+
+			if (rlt != nullptr) {
+				jerry_value_t ret;
+				jsonVal2jerryVal(rlt, ret);
+				return ret;
+			}
+		}
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -451,13 +476,30 @@ jerry_value_t func_avg(const jerry_call_info_t* call_info_p,
 			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
 			json params;
 			params["tag"] = sTag;
-			if (jArgs.size() > 1) {
-				params["invalidAsZero"] = jArgs[1];
-			}
 
 			json err, rlt;
 			tds->call("avg", params, err, rlt, pEngine->currentSession);
 
+			if (rlt != nullptr) {
+				jerry_value_t ret;
+				jsonVal2jerryVal(rlt, ret);
+				return ret;
+			}
+		}
+		else if (tag.is_array()) {
+			json jResolvedTag = json::array();
+			for (auto& t : tag) {
+				if (t.is_string()) {
+					string s = t.get<string>();
+					s = TAG::resolveTag(s, pEngine->m_tagContext);
+					jResolvedTag.push_back(s);
+				}
+			}
+
+			json params;
+			params["tag"] = jResolvedTag;
+			json err, rlt;
+			tds->call("avg", params, err, rlt, pEngine->currentSession);
 
 			if (rlt != nullptr) {
 				jerry_value_t ret;

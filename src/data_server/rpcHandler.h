@@ -72,6 +72,7 @@ public:
 	//object manage
 	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
+	void rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getDevStatis_old(json params, RPC_RESP& resp, RPC_SESSION session);

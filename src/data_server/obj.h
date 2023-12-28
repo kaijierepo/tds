@@ -181,6 +181,20 @@ struct OBJ_STATIS {
 };
 
 
+struct MP_STATIS {
+	int AI;
+	int AO;
+	int DI;
+	int DO;
+	int Var;
+	int Video;
+
+	MP_STATIS() {
+		memset(this, 0, sizeof(MP_STATIS));
+	}
+};
+
+
 class MP;
 class TDB;
 class OBJ
