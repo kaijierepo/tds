@@ -222,12 +222,14 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
 			string sTime = timeopt::stTimeToStr(tm);
 
+			BYTE* cbFill = ((BYTE*)&lpsubdata->filldata);
+
 			json jParams;
 			jParams["time"] = sTime.c_str();
 			jParams["desc"] = "";
 			jParams["level"] = GetAlmType(lpsubdata->alarmtype);
 			jParams["tag"] = m_strTagBind + "." + sZZJName;
-			jParams["type"] = GetAlarmDesc(lpsubdata->alarmtype);
+			jParams["type"] = GetAlarmDesc(lpsubdata->alarmtype, cbFill[0]);
 			jParams["id"] = "";
 
 
@@ -407,15 +409,29 @@ string ioDev_dcqk::GetAlmLevel(BYTE type)
 	else return "三级";
 }
 
-string ioDev_dcqk::GetAlarmDesc(BYTE type)
+string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 {
 	string strDesc = "";
 	switch (type) {
 	case 1:
-		strDesc = "转换后缺口预警";
+		{
+			if (type1 == 2)
+				strDesc = "扳动采集缺口预警";
+			else if (type1 == 3)
+				strDesc = "过车采集缺口预警";
+			else
+				strDesc = "周期采集缺口预警";
+		}
 		break;
 	case 2:
-		strDesc = "转换后缺口报警";
+		{
+			if (type1 == 2)
+				strDesc = "扳动采集缺口报警";
+			else if (type1 == 3)
+				strDesc = "过车采集缺口报警";
+			else
+				strDesc = "周期采集缺口报警";
+		}
 		break;
 	case 7:
 		strDesc = "温度报警";
@@ -445,10 +461,24 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type)
 		strDesc = "静态缺口报警";
 		break;
 	case 101:
-		strDesc = "转换后缺口预警恢复";
+		{
+			if (type1 == 2)
+				strDesc = "扳动采集缺口预警恢复";
+			else if (type1 == 3)
+				strDesc = "过车采集缺口预警恢复";
+			else
+				strDesc = "周期采集缺口预警恢复";
+		}
 		break;
 	case 102:
-		strDesc = "转换后缺口报警恢复";
+		{
+			if (type1 == 2)
+				strDesc = "扳动采集缺口报警恢复";
+			else if (type1 == 3)
+				strDesc = "过车采集缺口报警恢复";
+			else
+				strDesc = "周期采集缺口报警恢复";
+		}
 		break;
 	case 107:
 		strDesc = "温度报警恢复";

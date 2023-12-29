@@ -26,7 +26,7 @@ public:
 
 	string GetAlmLevel(BYTE type);
 
-	string GetAlarmDesc(BYTE type);
+	string GetAlarmDesc(BYTE type, BYTE type1);
 
 	BOOL IsRecover(BYTE type);
 
