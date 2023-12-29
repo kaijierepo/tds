@@ -1299,6 +1299,9 @@ void ioDev::checkAcqReqTimeout()
 
 bool ioDev::onRecvData(unsigned char* pData, size_t iLen)
 {
+	if (!m_bRunning)
+		return false;
+
 	DEV_PKT pkt;
 	if (!pkt.unpack(pData, iLen))
 		return false;

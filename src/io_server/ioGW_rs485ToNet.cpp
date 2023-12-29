@@ -34,6 +34,15 @@ ioGW_rs485ToNet::~ioGW_rs485ToNet(void)
 	stop();
 }
 
+void ioGW_rs485ToNet::stop()
+{
+	m_bRunning = false;
+	if (m_tcpClt)
+		m_tcpClt->stop();
+
+
+}
+
 string ioGW_rs485ToNet::getConnInfo()
 {
 	return string();
@@ -88,6 +97,9 @@ bool ioGW_rs485ToNet::isConnected()
 
 bool ioGW_rs485ToNet::onRecvData(unsigned char* pData, size_t iLen )
 {
+	if (!m_bRunning)
+		return false;
+
 	for(int i = 0;i<m_vecChildDev.size();i++)
 	{
 		m_vecChildDev.at(i)->onRecvData(pData,iLen);

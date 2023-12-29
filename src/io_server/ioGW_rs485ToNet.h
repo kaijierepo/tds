@@ -9,6 +9,8 @@ public:
 	ioGW_rs485ToNet(void);
 	~ioGW_rs485ToNet(void);
 
+	void stop() override;
+
 	string getConnInfo() override;
 
 	bool isCommBusy() override;
