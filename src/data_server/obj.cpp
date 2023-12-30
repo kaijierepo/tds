@@ -105,6 +105,7 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	//载入配置
 	if (conf.contains("name")) {
 		m_name = conf["name"];
+		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
 	}
 
 	if (conf.contains("level")) {

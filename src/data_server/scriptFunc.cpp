@@ -733,6 +733,25 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 
+
+	//以下全局对象
+	//console对象
+	{
+		jerry_value_t obj = jerry_create_object();
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"console");
+
+		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"log");
+		jerry_value_t obj_prop_func = jerry_create_external_function(func_log);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
+		jerry_release_value(prop_name);
+		jerry_release_value(obj);
+	}
+
+
 	return true;
 }
 
