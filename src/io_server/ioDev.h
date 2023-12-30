@@ -288,6 +288,9 @@ public:
 	virtual void DoCycleTask();
 	virtual void checkAcqReqTimeout();
 
+	bool m_bCycleAcqThreadRunning;
+	bool m_bOutputting;
+	bool m_bRecvProcessing;
 	static int m_heartBeatInterval;//单位秒
 	TIME m_stLastHeartbeatTime;
 	TIME m_stLastSetClockTime;

@@ -29,8 +29,10 @@ public:
 	void parseParamFromQuery(string& query, map<string, string>& mapParams);
 	json parseParamFromQuery(string& query);
 	static bool handleAppLayerData_Bridge(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions;
+	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions; //这些session接受rpc通知
 	std::mutex m_csWsSessions;
+	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsBridgeSessions;
+	std::mutex m_csWsBridgeSessions;
 	int m_restApiID;
 };
 

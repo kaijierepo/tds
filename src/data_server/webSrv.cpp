@@ -771,6 +771,11 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				pWs->m_wsSessions[c] = p;
 				pWs->m_csWsSessions.unlock();
 			}
+			else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
+				pWs->m_csWsBridgeSessions.lock();
+				pWs->m_wsBridgeSessions[c] = p;
+				pWs->m_csWsBridgeSessions.unlock();
+			}
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -990,6 +995,25 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 				LOG("[warn]websocket连接断开，但是在连接列表中未找到");
 			}
 			pWs->m_csWsSessions.unlock();
+
+			pWs->m_csWsBridgeSessions.lock();
+			if (pWs->m_wsBridgeSessions.find(c) != pWs->m_wsBridgeSessions.end())
+			{
+				std::shared_ptr < TDS_SESSION > p = pWs->m_wsBridgeSessions[c];
+				closesocket(p->pipeSock);
+				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
+				p->pipeSock = 0;
+				p->bConnected = false;
+				pWs->m_wsBridgeSessions.erase(c);
+				if (p->bridgedIoSession) {
+					p->bridgedIoSession->bridgedIoSessionClient = nullptr;
+				}
+			}
+			else
+			{
+				LOG("[warn]websocket连接断开，但是在连接列表中未找到");
+			}
+			pWs->m_csWsBridgeSessions.unlock();
 		}
 
 		if (c->fn_data != NULL) unlink_conns(c, (mg_connection*)c->fn_data);
@@ -1115,9 +1139,20 @@ int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
 
 std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)
 {
+	std::shared_ptr<TDS_SESSION> p = nullptr;
 	m_csWsSessions.lock();
-	std::shared_ptr<TDS_SESSION> p = m_wsSessions[conn];
+	std::map<void*, std::shared_ptr<TDS_SESSION>>::iterator iter = m_wsSessions.find(conn);
+	if(iter!=m_wsSessions.end())
+		p = iter->second;
 	m_csWsSessions.unlock();
+
+	if (p == nullptr) {
+		m_csWsBridgeSessions.lock();
+		std::map<void*, std::shared_ptr<TDS_SESSION>>::iterator iter2 = m_wsBridgeSessions.find(conn);
+		if (iter2 != m_wsBridgeSessions.end())
+			p = iter2->second;
+		m_csWsBridgeSessions.unlock();
+	}
 	return p;
 }
 

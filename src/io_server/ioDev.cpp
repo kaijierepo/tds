@@ -180,6 +180,9 @@ ioDev::ioDev(void)
 	m_abandonLen = 0;
 	m_transactionSuccessCount = 0;
 	m_transactionFailCount = 0;
+	m_bCycleAcqThreadRunning = false;
+	m_bRecvProcessing = false;
+	m_bOutputting = false;
 }
 
 ioDev::~ioDev(void)
@@ -249,9 +252,8 @@ void ioDev::stop()
 	{
 		i->stop();
 	}
-	if (m_bWorkingThreadRunning)
-	{
-		m_signalWorkThreadExit.wait();
+	while (m_bCycleAcqThreadRunning || m_bRecvProcessing || m_bOutputting) {
+		Sleep(1);
 	}
 }
 
