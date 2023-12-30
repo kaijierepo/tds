@@ -1115,6 +1115,14 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		ioSrv.run();
 		result = "\"ok\"";
 	}
+	else if (method == "closeAllCycleAcq") {
+		ioSrv.closeAllCycleAcq();
+		result = RPC_OK;
+	}
+	else if (method == "openAllCycleAcq") {
+		ioSrv.openAllCycleAcq();
+		result = RPC_OK;
+	}
 	else if (method == "closeIOSession")
 	{
 		string remoteAddr = "";

@@ -1660,6 +1660,26 @@ void ioDev::recursiveGetChanCount(ioDev* p, size_t& count) {
 	}
 }
 
+void ioDev::closeAllCycleAcq()
+{
+	m_bEnableAcq = false;
+
+	for (int i = 0; i < m_vecChildDev.size(); i++) {
+		ioDev* p = m_vecChildDev[i];
+		p->closeAllCycleAcq();
+	}
+}
+
+void ioDev::openAllCycleAcq()
+{
+	m_bEnableAcq = true;
+
+	for (int i = 0; i < m_vecChildDev.size(); i++) {
+		ioDev* p = m_vecChildDev[i];
+		p->openAllCycleAcq();
+	}
+}
+
 
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {

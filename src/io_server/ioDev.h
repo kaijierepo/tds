@@ -200,7 +200,8 @@ public:
 	static void recursiveGetBindedChanCount(ioDev* p, size_t& count);
 
 	void recursiveGetChanCount(ioDev* p, size_t& count);
-
+	void closeAllCycleAcq();
+	void openAllCycleAcq();
 
 	std::shared_ptr<TDS_SESSION>  getStreamPusher(string tag);
 

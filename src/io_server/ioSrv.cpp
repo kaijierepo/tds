@@ -667,10 +667,10 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			string lastConnInfo = p->getConnInfo();
 
 			//保留设备内的实时数据，如果修改设备和对象的绑定关系，可以让新绑定的对象立即有实时数据
-			p->loadConf(devConf);
+			//修改设备不修改设备的子设备（一般是rs485网关的场景）
 			devConf.erase("children");
-			devConf.erase("channels");
-
+			p->loadConf(devConf);
+	
 			devConf["ioAddr"] = p->getIOAddrStr(); //用于前端提示通知那台设备修改成功了
 			rpcSrv.notify("devModified", devConf);  
 			modified = true;
