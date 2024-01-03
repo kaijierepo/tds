@@ -137,7 +137,7 @@ bool ioDev::IsGateway()
 bool ioDev::m_bAsynAcqMode = false;
 int ioDev::m_heartBeatInterval = 3;
 bool ioDev::m_defaultOnline = false;
-
+int ioDev::m_offlineConfirmCount = 1;
 
 ioDev::ioDev(void)
 {
@@ -183,6 +183,7 @@ ioDev::ioDev(void)
 	m_bCycleAcqThreadRunning = false;
 	m_bRecvProcessing = false;
 	m_bOutputting = false;
+	m_offlineCount = 0;
 }
 
 ioDev::~ioDev(void)
@@ -1215,6 +1216,7 @@ void ioDev::setOnline()
 
 	if (m_bOnline == false)
 	{
+		m_offlineCount = 0;
 		m_bOnline = true;
 		timeopt::now(&m_stOnlineTime);
 		m_onlineInfoQueried = false;
@@ -1237,14 +1239,19 @@ void ioDev::setOffline()
 {
 	if (m_bOnline)
 	{
-		m_bOnline = false;
-		json jNotify;
-		jNotify["ioAddr"] = getIOAddrStr();
-		jNotify["nodeID"] = m_confNodeId;
-		if (m_strTagBind != "")
-			jNotify["tag"] = m_strTagBind;
-		thread t(notifyDevOffline, jNotify);
-		t.detach();
+		m_offlineCount++;
+		LOG("[warn]设备掉线次数累计,%d/%d,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str());
+
+		if (m_offlineCount >= m_offlineConfirmCount) {
+			m_bOnline = false;
+			json jNotify;
+			jNotify["ioAddr"] = getIOAddrStr();
+			jNotify["nodeID"] = m_confNodeId;
+			if (m_strTagBind != "")
+				jNotify["tag"] = m_strTagBind;
+			thread t(notifyDevOffline, jNotify);
+			t.detach();
+		}
 	}
 }
 

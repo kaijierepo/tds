@@ -107,6 +107,7 @@ public:
 	virtual ~ioDev(void);
 
 	static bool m_defaultOnline;
+	static int m_offlineConfirmCount;
 
 	virtual bool run(); //连接； 执行io任务； 断线重连
 	virtual void stop();
@@ -308,6 +309,7 @@ public:
 	void setOffline();
 	virtual bool isOnline() { return m_bOnline; };
 	bool m_bOnline;    //设备发现后，处于在线状态
+	int m_offlineCount;   //检测到掉线的次数。达到一定次数才认为掉线
 	bool m_bConnected; //建立通信链路.串口打开后，处于connect状态。tcp连接，处于connect状态
 	bool m_bInUse;     //连接的设备，某个程序功能正在使用该ioAddr。例如周期轮询任务等。用于功能互斥。
 	bool m_bUdpDev;    //udp设备。udp设备没有连接

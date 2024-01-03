@@ -328,6 +328,10 @@ bool MP::loadStatus(json& status)
 
 bool MP::toJson(json& conf, OBJ_QUERIER q, const string& user)
 {
+	if (q.dataSaveMp && m_saveMode == DATA_SAVE_MODE::never) {
+		return false;
+	}
+
 	if (!OBJ::toJson(conf, q, user))
 		return false;
 

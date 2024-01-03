@@ -1321,6 +1321,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	if (opt["flatten"].is_boolean()) {
 		q.flatten = opt["flatten"].get<bool>();
 	}
+	if (opt["dataSaveMp"].is_boolean()) {
+		q.dataSaveMp = opt["dataSaveMp"].get<bool>();
+	}
 	return q;
 }
 
