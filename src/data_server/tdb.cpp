@@ -2833,7 +2833,13 @@ bool TIME_SELECTOR::init(string time)
 		string timeRange ="2020-01-01 00:00:00~" + DB_TIME::nowStr();
 		parseTimeRange(timeRange);
 	}
-	else if (time.find("-") == string::npos) { // 1d2h3m mode
+	else if (
+		time.find("y") != string::npos ||
+		time.find("M") != string::npos ||
+		time.find("d") != string::npos||
+		time.find("h") != string::npos ||
+		time.find("m") != string::npos 
+	) { // 1d2h3m mode
 		string timeRange = TIME_OPT::rel2abs(time);
 		parseTimeRange(timeRange);
 	}
@@ -2860,6 +2866,12 @@ string TIME_SELECTOR::shortSel2StardardSel(string time)
 	//2020-02-02
 	else if (time[4] == '-' && time.length() == 10) {
 		return time + " 00:00:00~" + time + " 23:59:59";
+	}
+	//2021~2022
+	else if (time.length() == 9 && time[4] == '~'); {
+		string startYear = time.substr(0, 4);
+		string endYear = time.substr(5, 4);
+		return startYear + "-01-01 00:00:00~" + endYear + "-12-31 23:59:59"; //12月份固定是31天
 	}
 	return time;
 }
