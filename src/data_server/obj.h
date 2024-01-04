@@ -32,7 +32,7 @@ SOFTWARE.
 #include "tdb.h"
 using namespace std;
 using json = nlohmann::json;
-
+class OBJ;
 
 
 /* 对象数据类型族 
@@ -65,6 +65,8 @@ struct OBJ_QUERIER {
 	bool getConfDetail;
 	bool getUnit; //值描述信息是否需要带单位
 
+	OBJ* pRoot;
+
 	OBJ_QUERIER() {
 		 dataSaveMp = false;
 		 getConf = true;
@@ -78,6 +80,7 @@ struct OBJ_QUERIER {
 		 getConfDetail = true; //配置文件中不保存。内部使用，不开放给接口api
 		 getUnit = true;
 		 flatten = false;
+		 pRoot = nullptr;
 	}
 };
 

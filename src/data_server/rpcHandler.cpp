@@ -1778,7 +1778,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				params["rootTag"] = rootTag;
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
-
+				q.pRoot = pmo;
 				if (pmo->toJson(j, q, session.user))
 					result = j.dump(4);
 			}

@@ -277,8 +277,14 @@ void OBJ::recursiveSetOffline()
 bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 {
 	//根据请求的moType判断是否需要返回当前节点。
-	if (!isSelectedByLeafType(q.leafType))
-		return false;
+	if (q.pRoot && q.pRoot == this) {
+		//如果是本次查询获取的树的根节点,根节点不进行leafType判断
+	}
+	else {
+		if (!isSelectedByLeafType(q.leafType))
+			return false;
+	}
+
 
 	string sTag = getTag();
 

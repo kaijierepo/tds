@@ -201,23 +201,28 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			//}
 			size_t iPos = 0;
 			string sTmp = ".";
-			if (iPos = sZZJName.find("#") != string::npos) {
+			if (sZZJName.find("#") != string::npos) {
+				iPos = sZZJName.find("#");
 				iPos += 1;
 			}
-			else if (iPos = sZZJName.find("J") != string::npos) {
+			else if (sZZJName.find("J") != string::npos) {
+				iPos = sZZJName.find("J");
 				sTmp = "#.";
 			}
 			else if (iPos = sZZJName.find("X") != string::npos) {
+				iPos = sZZJName.find("X");
 				sTmp = "#.";
 			}
 			else if (iPos = sZZJName.find("P") != string::npos) {
+				iPos = sZZJName.find("P");
 				sTmp = "#.";
 			}
 			else if (iPos = sZZJName.find("W") != string::npos) {
+				iPos = sZZJName.find("W");
 				sTmp = "#.";
 			}
 			
-			sZZJName.insert(iPos, sTmp.c_str());
+			string sDaoChaName = sZZJName.substr(0, iPos)+ sTmp;
 
 			TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
 			string sTime = timeopt::stTimeToStr(tm);
@@ -228,7 +233,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			jParams["time"] = sTime.c_str();
 			jParams["desc"] = "";
 			jParams["level"] = GetAlmType(lpsubdata->alarmtype);
-			jParams["tag"] = m_strTagBind + "." + sZZJName;
+			jParams["tag"] = m_strTagBind + "." + sDaoChaName+sZZJName;
 			jParams["type"] = GetAlarmDesc(lpsubdata->alarmtype, cbFill[0]);
 			jParams["id"] = "";
 
@@ -396,8 +401,8 @@ string ioDev_dcqk::GetAlmType(BYTE type)
 	if (type == 1 || type == 9 || type == 11 || type == 16 
 		|| type == 101 || type == 109 || type == 111 || type == 116)
 		return "预警";
-	else if (type == 2 || type == 7 || type == 8 || type == 10 || type == 12 || type == 15 || type == 17 
-		|| type == 102 || type == 107 || type == 108 || type == 110 || type == 112 || type == 115 || type == 117)
+	else if (type == 2 || type == 7 || type == 8 || type == 10 || type == 12 || type == 15 || type == 17 ||type == 65
+		|| type == 102 || type == 107 || type == 108 || type == 110 || type == 112 || type == 115 || type == 117 || type == 165)
 		return "告警";
 	
 	return "";
@@ -460,6 +465,9 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 	case 17:
 		strDesc = "静态缺口报警";
 		break;
+	case 65:
+		strDesc = "锁舌锁块报警";
+		break;
 	case 101:
 		{
 			if (type1 == 2)
@@ -507,6 +515,9 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 	case 117:
 		strDesc = "静态缺口报警恢复";
 		break;
+	case 165:
+		strDesc = "锁舌锁块报警恢复";
+		break;
 	}
 	return strDesc;
 }
@@ -515,7 +526,7 @@ BOOL ioDev_dcqk::IsRecover(BYTE type)
 {
 	if (type == 1 || type == 2 || type == 7 || type == 8 
 		|| type == 9 || type == 10 || type == 11 || type == 12
-		|| type == 15 || type == 16 || type == 17)
+		|| type == 15 || type == 16 || type == 17 || type == 65)
 		return FALSE;
 	else
 		return TRUE;
