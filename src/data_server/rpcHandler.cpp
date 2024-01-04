@@ -1404,7 +1404,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		query.getStatus = true;
 		query.getChild = true;
 		query.getMp = true;
-		prj.toJson(j, query, session.user);
+		prj.toJson(j, query, nullptr,session.user);
 		result = j.dump(4);
 	}
 	else
@@ -1747,7 +1747,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						//}
 
 						json jObj;
-						if (pObj->toJson(jObj, q, session.user))
+						bool selectedByLeafType = false;
+						if (pObj->toJson(jObj, q,&selectedByLeafType, session.user))
 							jRlt.push_back(jObj);
 					}
 					result = jRlt.dump(2);
@@ -1758,7 +1759,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 						json jObj;
-						if (pObj->toJson(jObj, q, session.user)) {
+						bool selectedByLeafType = false;
+						if (pObj->toJson(jObj, q,&selectedByLeafType, session.user)) {
 
 							string tag = jObj["tag"].get<string>();
 							tag = str::replace(tag, ".", "_");
@@ -1779,7 +1781,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.pRoot = pmo;
-				if (pmo->toJson(j, q, session.user))
+				bool selectedByLeafType = false;
+				if (pmo->toJson(j, q,&selectedByLeafType, session.user))
 					result = j.dump(4);
 			}
 			else
@@ -4192,7 +4195,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 			q.rootTag = rootTag;
 			q.getUnit = getUnit;
 			json j;
-			if (pmp->toJson(j, q, session.user))
+			if (pmp->toJson(j, q, nullptr,session.user))
 				rtList.push_back(j);
 		}	
 						

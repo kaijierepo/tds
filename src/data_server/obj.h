@@ -216,7 +216,7 @@ public:
 	virtual bool loadStatus(json& status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
-	virtual bool toJson(json& conf, OBJ_QUERIER querier, const string& user = "admin");
+	virtual bool toJson(json& conf, OBJ_QUERIER querier,bool* isSelectedByLeafType = nullptr, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	virtual bool loadStatus(OBJ* pMo);
 

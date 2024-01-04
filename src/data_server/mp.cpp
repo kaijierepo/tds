@@ -326,13 +326,13 @@ bool MP::loadStatus(json& status)
 //	return toJson(conf, q);
 //}
 
-bool MP::toJson(json& conf, OBJ_QUERIER q, const string& user)
+bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , const string& user)
 {
 	if (q.dataSaveMp && m_saveMode == DATA_SAVE_MODE::never) {
 		return false;
 	}
 
-	if (!OBJ::toJson(conf, q, user))
+	if (!OBJ::toJson(conf, q, parentSelectedByLeafType, user))
 		return false;
 
 	if (q.getConf)

@@ -63,7 +63,7 @@ public:
 
 	bool loadConf(json& conf,bool bCreate = true) override;
 	bool loadStatus(json& status) override;
-	bool toJson(json& conf, OBJ_QUERIER q, const string& user = "admin") override;
+	bool toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
 	string getValDesc(json& jVal, bool getUnit = true);
 	//bool toJson(json& conf, json serializeOption) override;
 	bool loadStatus(OBJ* pSrc) override;

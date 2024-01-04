@@ -274,25 +274,79 @@ void OBJ::recursiveSetOffline()
 //	return toJson(conf, q);
 //}
 
-bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
+bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user)
 {
-	//根据请求的moType判断是否需要返回当前节点。
-	if (q.pRoot && q.pRoot == this) {
-		//如果是本次查询获取的树的根节点,根节点不进行leafType判断
-	}
-	else {
-		if (!isSelectedByLeafType(q.leafType))
-			return false;
-	}
-
-
-	string sTag = getTag();
-
+	//先进行权限判断
 	if (user != "admin" && user != "") //内部脚本调用时，user == ""
 	{
+		string sTag = getTag();
 		if (!userMng.checkTagPermission(user, sTag))
 			return false;
 	}
+
+
+	bool selectedByLeafType = false;
+
+	//leafType开关算法逻辑
+	//如果指定了叶子节点选择,向该路径上的上级节点返回parentSelectedByLeafType=true,表示该路径被选中
+	//路径代表 不同层级节点连成的一条链路
+
+	//1.判断自己是否被leafType选择器选中
+	//1.1 自己就是叶子节点
+	if (q.leafType != "" && q.leafType == m_type) {
+		selectedByLeafType = true;
+	}
+	//1.2 自己不是叶子节点,根据子节点判断是否被选中
+	else {
+		if (m_level != MO_TYPE::mp)
+		{
+			json jChildren = json::array();
+			if (!q.flatten) {
+				for (auto& pmochild : m_childObj)
+				{
+					//可以出现 getMp=true ,getChild=false的组合，因此getChild不代表getMp，虽然Mp也是child
+					if (pmochild->m_level == "mp") {
+						if (!q.getMp) continue;
+					}
+					else {
+						if (!q.getChild) continue;
+					}
+
+					json jChild;
+					if (pmochild->toJson(jChild, q, &selectedByLeafType, user))
+						jChildren.push_back(jChild);
+				}
+			}
+			else {
+				vector<MP*> mpList;
+				GetAllChildMp(mpList);
+				for (auto& mp : mpList) {
+					json jMp;
+					if (mp->toJson(jMp, q, nullptr,user)) {
+						string flattenName = mp->getTag();
+						flattenName = TAG::trimRoot(flattenName, getTag());
+						jMp["name"] = flattenName;
+						jChildren.push_back(jMp);
+					}
+				}
+			}
+
+			if (jChildren.size() > 0)
+				conf["children"] = jChildren;
+		}
+	}
+
+	//2.将判断结果传递给父节点
+	if (parentSelectedByLeafType && selectedByLeafType) {
+		*parentSelectedByLeafType = selectedByLeafType;
+	}
+	
+	//3.根据自己是否被选中,进行响应的操作
+	//子节点遍历后,本节点下面没有找到该leafType类型
+	if (q.leafType != "" && !selectedByLeafType) {
+		return false;
+	}
+	
 
 	conf["name"] = m_name;
 	conf["level"] = m_level;
@@ -400,44 +454,6 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, const string& user)
 			}
 		}
 
-	}
-
-
-	if (m_level != MO_TYPE::mp)
-	{
-		json jChildren = json::array();
-		if (!q.flatten) {
-			for (auto& pmochild : m_childObj)
-			{
-				//可以出现 getMp=true ,getChild=false的组合，因此getChild不代表getMp，虽然Mp也是child
-				if (pmochild->m_level == "mp") {
-					if (!q.getMp) continue;
-				}
-				else {
-					if (!q.getChild) continue;
-				}
-
-				json jChild;
-				if (pmochild->toJson(jChild, q, user))
-					jChildren.push_back(jChild);
-			}
-		}
-		else {
-			vector<MP*> mpList;
-			GetAllChildMp(mpList);
-			for (auto& mp : mpList) {
-				json jMp;
-				if (mp->toJson(jMp, q, user)) {
-					string flattenName = mp->getTag();
-					flattenName = TAG::trimRoot(flattenName,getTag());
-					jMp["name"] = flattenName;
-					jChildren.push_back(jMp);
-				}
-			}
-		}
-
-		if (jChildren.size() > 0)
-			conf["children"] = jChildren;
 	}
 	
 	return true;
