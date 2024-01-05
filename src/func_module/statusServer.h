@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #pragma once
 #include <windows.h>
 #include <tlhelp32.h>
@@ -63,3 +64,4 @@ public:
 };
 
 extern StatusServer statusSrv;
+#endif

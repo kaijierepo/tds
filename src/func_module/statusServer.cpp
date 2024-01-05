@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "StatusServer.h"
 #include <tchar.h>
 #include <chrono>
@@ -234,4 +235,6 @@ double StatusServer::calcCpuUse()
 	double cpuUsed = (msUsed / msPassed) * 100;
 	return cpuUsed;
 }
+
+#endif
 

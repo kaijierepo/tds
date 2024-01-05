@@ -411,8 +411,11 @@ bool TDS_imp::run(string cmdline)
 
 	ioSrv.updateTag2IOAddrBinding();
 	taskSrv.run();
+
+#ifdef _WIN32
 	statusSrv.m_bLogStatus = tds->conf->getInt("logSrvStatus", 1);
 	statusSrv.run();
+#endif
 
 	prj.loadRtDB();
 	prj.runRtDB();
