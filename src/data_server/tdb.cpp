@@ -2868,7 +2868,7 @@ string TIME_SELECTOR::shortSel2StardardSel(string time)
 		return time + " 00:00:00~" + time + " 23:59:59";
 	}
 	//2021~2022
-	else if (time.length() == 9 && time[4] == '~'); {
+	else if (time.length() == 9 && time[4] == '~'){
 		string startYear = time.substr(0, 4);
 		string endYear = time.substr(5, 4);
 		return startYear + "-01-01 00:00:00~" + endYear + "-12-31 23:59:59"; //12月份固定是31天
