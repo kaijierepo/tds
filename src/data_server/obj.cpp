@@ -244,10 +244,27 @@ bool OBJ::isSelectedByLeafLevel(string leafLevel)
 {
 	if (m_level == "")
 		return true;
-	if (m_level == "*")
+
+	if (leafLevel == "")
 		return true;
-	if (m_level == "mp")
+	if (leafLevel == "*")
 		return true;
+
+
+	if (leafLevel == "mp")
+		return true;
+	else if (leafLevel == "mpGroup") {
+		if (m_level == "mo" || m_level == "org" || m_level == "mpGroup")
+			return true;
+	}
+	else if (leafLevel == "mo") {
+		if (m_level == "mo" || m_level == "org")
+			return true;
+	}
+	else if (leafLevel == "org") {
+		if (m_level == "org")
+			return true;
+	}
 
 	return false;
 }
@@ -284,6 +301,8 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 			return false;
 	}
 
+	if (q.leafLevel != "" && !isSelectedByLeafLevel(q.leafLevel))
+		return false;
 
 	bool selectedByLeafType = false;
 
@@ -1321,6 +1340,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	if (opt["leafType"] != nullptr)
 	{
 		q.leafType = opt["leafType"].get<string>();
+	}
+	if (opt["leafLevel"] != nullptr) {
+		q.leafLevel = opt["leafLevel"].get<string>();
 	}
 	if (opt["getDetailConf"] != nullptr) {
 		q.getConfDetail = opt["getDetailConf"].get<bool>();
