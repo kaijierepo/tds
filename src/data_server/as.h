@@ -197,7 +197,7 @@ public:
 	string rpc_getUnRecover(json filter, RPC_SESSION session);
 	string rpc_getUnack(json filter, RPC_SESSION session);
 	string rpc_getHistory(json params, RPC_SESSION session);
-	string rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate = TRUE);
+	string rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
 

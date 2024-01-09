@@ -135,10 +135,10 @@ size_t IsValidPkt_315(unsigned char* pData, int iLen)
 	auto a = pData[7];
 	if (a != 0x3F && a != 0x8F && a != 0x0F) return 0; //2023.5.18 新增JSON数据帧 scz
 
-	DWORD frameLen = *(DWORD*)(pData + 8);
+	unsigned long frameLen = *(unsigned long*)(pData + 8);
 	if (frameLen + 16 > iLen) return 0;
 
-	BYTE* pFrameEnd = pData + frameLen + 12;
+	unsigned char* pFrameEnd = pData + frameLen + 12;
 	if (pFrameEnd[0] != 0xFF || pFrameEnd[1] != 0xFF || pFrameEnd[2] != 0xFF || pFrameEnd[3] != 0xFF)
 		return 0;
 

@@ -106,7 +106,11 @@ bool TDS_SESSION::disconnect()
     }
     else if (pTcpSessionClt)
     {
+#ifdef _WIN32
         closesocket(pTcpSessionClt->sock);
+#else
+        // TODO: linux
+#endif
     }
     return true;
 }

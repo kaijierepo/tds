@@ -1525,7 +1525,12 @@ namespace sys {
 	}
 
 	unsigned long getThreadId() {
-		return GetCurrentThreadId();
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	// TODO: linux
+	return 0;
+#endif
 	}
 }
 

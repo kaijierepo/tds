@@ -358,7 +358,12 @@ void thread_handleGzhReq(string req,int pipeSock)
 
 	//send 到 pair sock 在pair sock的回调中 发送http 响应
 	int isend = send(pipeSock, resBody.c_str(), (int)resBody.length(), MSG_DONTROUTE);
-	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+	//closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+#ifdef _WIN32
+	closesocket(pipeSock);   
+#else
+// todo_linux
+#endif
 }
 
 
@@ -370,7 +375,12 @@ void thread_handleRpcOverHttp(RPC_SESSION* pRpcSession,int pipeSock)
 	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
 
 	int isend = send(pipeSock, resp.strResp.c_str(), (int)resp.strResp.length(),MSG_DONTROUTE);
-	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+	//closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+#ifdef _WIN32
+	closesocket(pipeSock);
+#else
+	// TODO: linux
+#endif
 	//shutdown(sock, SHUT_DOWN_BOTH);
 }
 
@@ -393,7 +403,12 @@ void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSoc
 	}
 
 	int isend = send(pipeSock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
-	closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+	//closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
+#ifdef _WIN32
+        closesocket(pipeSock);
+#else
+        // TODO: linux
+#endif
 }
 
 void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
@@ -984,7 +999,12 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
-				closesocket(p->pipeSock);
+				//closesocket(p->pipeSock);
+#ifdef _WIN32
+        		closesocket(p->pipeSock);
+#else
+        		// TODO: linux
+#endif
 				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
 				p->pipeSock = 0;
 				p->bConnected = false;
@@ -1000,7 +1020,12 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			if (pWs->m_wsBridgeSessions.find(c) != pWs->m_wsBridgeSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsBridgeSessions[c];
-				closesocket(p->pipeSock);
+				//closesocket(p->pipeSock);
+#ifdef _WIN32
+        		closesocket(p->pipeSock);
+#else
+        		// TODO: linux
+#endif
 				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
 				p->pipeSock = 0;
 				p->bConnected = false;

@@ -45,6 +45,7 @@ SOFTWARE.
 #include "webSrv.h"
 #include "taskServer.h"
 #include "statusServer.h"
+#include "common.h"
 
 #ifdef USE_SVN_REV  //把svn版本号编译到目标文件中
 #include "version.h"
@@ -234,7 +235,12 @@ bool isTdsRunning() {
 
 	int bindResult = ::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
 	if (bindResult < 0) {
-		DWORD iErr = GetLastError();
+#ifdef _WIN32
+		unsigned long iErr = GetLastError();
+#else
+		// todo_linux
+		//iErr = errno;
+#endif
 		std::cout << "tds is already running" << std::endl;
 #ifdef _WIN32
 		closesocket(sockfd);
@@ -318,7 +324,8 @@ bool TDS_imp::run(string cmdline)
 	if (isTdsRunning()) {
 		printf(charCodec::tds_to_gb("tds已经运行，程序将于5秒后自动退出\r\n").c_str());
 		LOG("tds已经运行，退出程序");
-		Sleep(5000);
+		//Sleep(5000);
+		std::this_thread::sleep_for(std::chrono::seconds(5));
 		exit(0);
 	}
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
@@ -520,7 +527,8 @@ void thread_handleRpcCall(string method,json param,int delay) {
 }
 
 
-ThreadPool g_asynCallDealThreadPool(8);
+COMMON::ThreadPool g_asynCallDealThreadPool(8);
+//ThreadPool g_asynCallDealThreadPool(8);
 
 void TDS_imp::callAsyn(string method, json& param, int delay)
 {

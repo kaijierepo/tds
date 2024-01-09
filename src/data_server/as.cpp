@@ -8,7 +8,7 @@
 #include "tds.h"
 #include "userMng.h"
 #include "logger.h"
-#include "tds.h"
+
 
 almServer almSrv;
 almServer almSrv2;
@@ -285,7 +285,7 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 	mapAlarm.clear();
 }
 
-string almServer::rpc_addAlarm(json j, RPC_RESP& resp, BOOL bUpdate)
+string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 {
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];

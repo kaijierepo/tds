@@ -35,6 +35,8 @@ SOFTWARE.
 #include <regex>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include "iconv.h"
 #endif
 
 TDB db;
@@ -826,7 +828,8 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dataListPath).c_str(), L"rb+");
 #else
-		FILE* fp = fopen(dlPath.c_str(), "rb+");
+		//FILE* fp = fopen(dlPath.c_str(), "rb+");
+		FILE* fp = fopen(dataListPath.c_str(), "rb+");
 #endif
 		
 		if (fp)
@@ -2627,7 +2630,7 @@ bool TDB::fileExist(string pszFileName)
 	return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 #else
 	std::error_code error;
-	auto file_status = std::filesystem::status(utf8_to_utf16(pszFileName), error);
+	auto file_status = std::filesystem::status(DB_STR::utf8_to_utf16(pszFileName), error);
 	if (error) {
 		return false;
 	}

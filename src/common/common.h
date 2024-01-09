@@ -183,6 +183,7 @@ private:
 };
 
 
+namespace COMMON{
 class ThreadPool {
 public:
 	ThreadPool(size_t numThreads) : stop(false) {
@@ -231,7 +232,7 @@ public:
 	std::condition_variable condition;
 	bool stop;
 };
-
+}
 
 struct FLAG_GUARD {
 	FLAG_GUARD(bool* pFlag) {

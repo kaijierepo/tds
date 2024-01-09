@@ -82,7 +82,8 @@ void thread_rt_data_save() {
 	int interval = tds->conf->getInt("rtDBSaveInterval", 15);
 	string path = tds->conf->dbPath + "/rtStatus.json";
 	while (1) {
-		Sleep(interval*1000);
+		//Sleep(interval*1000);
+		std::this_thread::sleep_for(std::chrono::seconds(interval));
 
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		json j;
