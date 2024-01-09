@@ -431,42 +431,42 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 	case 2:
 		{
 			if (type1 == 2)
-				strDesc = "扳动采集缺口报警";
+				strDesc = "扳动采集缺口告警";
 			else if (type1 == 3)
-				strDesc = "过车采集缺口报警";
+				strDesc = "过车采集缺口告警";
 			else
-				strDesc = "周期采集缺口报警";
+				strDesc = "周期采集缺口告警";
 		}
 		break;
 	case 7:
-		strDesc = "温度报警";
+		strDesc = "温度告警";
 		break;
 	case 8:
-		strDesc = "湿度报警";
+		strDesc = "湿度告警";
 		break;
 	case 9:
 		strDesc = "油位预警";
 		break;
 	case 10:
-		strDesc = "油位报警";
+		strDesc = "油位告警";
 		break;
 	case 11:
 		strDesc = "油压预警";
 		break;
 	case 12:
-		strDesc = "油压报警";
+		strDesc = "油压告警";
 		break;
 	case 15:
-		strDesc = "过车时缺口报警";
+		strDesc = "过车时缺口告警";
 		break;
 	case 16:
 		strDesc = "静态缺口预警";
 		break;
 	case 17:
-		strDesc = "静态缺口报警";
+		strDesc = "静态缺口告警";
 		break;
 	case 65:
-		strDesc = "锁舌锁块报警";
+		strDesc = "锁舌锁块告警";
 		break;
 	case 101:
 		{
@@ -481,42 +481,42 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 	case 102:
 		{
 			if (type1 == 2)
-				strDesc = "扳动采集缺口报警恢复";
+				strDesc = "扳动采集缺口告警恢复";
 			else if (type1 == 3)
-				strDesc = "过车采集缺口报警恢复";
+				strDesc = "过车采集缺口告警恢复";
 			else
-				strDesc = "周期采集缺口报警恢复";
+				strDesc = "周期采集缺口告警恢复";
 		}
 		break;
 	case 107:
-		strDesc = "温度报警恢复";
+		strDesc = "温度告警恢复";
 		break;
 	case 108:
-		strDesc = "湿度报警恢复";
+		strDesc = "湿度告警恢复";
 		break;
 	case 109:
 		strDesc = "油位预警恢复";
 		break;
 	case 110:
-		strDesc = "油位报警恢复";
+		strDesc = "油位告警恢复";
 		break;
 	case 111:
 		strDesc = "油压预警恢复";
 		break;
 	case 112:
-		strDesc = "油压报警恢复";
+		strDesc = "油压告警恢复";
 		break;
 	case 115:
-		strDesc = "过车时缺口报警恢复";
+		strDesc = "过车时缺口告警恢复";
 		break;
 	case 116:
 		strDesc = "静态缺口预警恢复";
 		break;
 	case 117:
-		strDesc = "静态缺口报警恢复";
+		strDesc = "静态缺口告警恢复";
 		break;
 	case 165:
-		strDesc = "锁舌锁块报警恢复";
+		strDesc = "锁舌锁块告警恢复";
 		break;
 	}
 	return strDesc;
