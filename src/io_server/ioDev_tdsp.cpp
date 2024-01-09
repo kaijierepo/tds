@@ -574,7 +574,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 				pAlmSrv = &almSrv;
 			}
 
-			pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
+			pAlmSrv->rpc_addAlarm(jParams, resp, false);
 		}
 	}
 	else if (method == "objOnline") {
