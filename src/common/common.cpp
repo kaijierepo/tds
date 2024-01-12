@@ -2050,6 +2050,12 @@ string TIME::toTimeStr()
 	return s;
 }
 
+string TIME::toStampFull()
+{
+	string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
+	return s;
+}
+
 string TIME::toStampHMS()
 {
 	string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);

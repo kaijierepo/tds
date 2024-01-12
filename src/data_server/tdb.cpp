@@ -727,6 +727,26 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 	}
 }
 
+string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
+	string s;
+	if (m_timeUnit == DB_TIME_UNIT::BY_DAY) {
+		s = deListFolder + "/" + time.toStampHMS();
+	}
+	else if (m_timeUnit == DB_TIME_UNIT::BY_MONTH) {
+
+	}
+	else if(m_timeUnit == DB_TIME_UNIT::BY_MONTH) {
+
+	}
+	else if (m_timeUnit == DB_TIME_UNIT::NONE) {
+		s = deListFolder + "/" + time.toStampFull();
+	}
+	else {
+		s = deListFolder + "/" + time.toStampHMS();
+	}
+	return s;
+}
+
 
 void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 {
@@ -738,9 +758,9 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		stTime = TIME_OPT::now();
 	}
 
-	string folderPath = getPath_dataFolder(strTag, stTime);
-	if(!fileExist(folderPath))
-		DB_FS::createFolderOfPath(folderPath.c_str());
+	string deListFolderPath = getPath_dataFolder(strTag, stTime);
+	if(!fileExist(deListFolderPath))
+		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 
 	yyjson_doc* doc = yyjson_read(sDe.c_str(), sDe.length(), 0);
 	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
@@ -756,22 +776,25 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 
 
 	//write file data
+	vector<string> fileUrl;
 	bool bisCurve = false;
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
 	if (yyv_file)
 	{
 		//save to a directory name as timestamp
 		if (yyjson_is_arr(yyv_file)) {
-			string fileDataPath = folderPath + "/" + stTime.toStampHMS();
-			if (!fileExist(fileDataPath))
-				DB_FS::createFolderOfPath(fileDataPath.c_str());
+			string deFilesFolder = getDeFilesFolder(deListFolderPath, stTime);
+			if (!fileExist(deFilesFolder))
+				DB_FS::createFolderOfPath(deFilesFolder.c_str());
 
 			size_t idx = 0;
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
 				string type;
-				saveDEFile(item, fileDataPath, stTime,type);
+				string url = saveDEFile(item, deFilesFolder, stTime,type);
+				url = url.substr(m_path.length(), url.length() - m_path.length());
+				fileUrl.push_back(url);
 				if (type == "curve")
 					bisCurve = true;
 			}
@@ -779,7 +802,7 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
 			string type;
-			saveDEFile(yyv_file, folderPath, stTime,type);
+			saveDEFile(yyv_file, deListFolderPath, stTime,type);
 			if (type == "curve")
 				bisCurve = true;
 		}
@@ -787,9 +810,9 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 
 	string dataListPath;
 	if(!bisCurve)
-		dataListPath = folderPath + "/" + m_dbFmt.deListName;
+		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 	else
-		dataListPath = folderPath + "/" + m_dbFmt.curveIdxListName;
+		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
 
 
 	//write de
@@ -802,6 +825,16 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 			yyjson_mut_val* item;
 			yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
 				yyjson_mut_obj_remove_key(item, "data");
+				//generate url when insert data,better performance than generate when select data
+				string url = fileUrl[idx];
+				string urlAbs = "/db";
+				if (m_name != "")
+					urlAbs += "/" + m_name;
+				urlAbs += url;
+			
+				yyjson_mut_val* urlKey = yyjson_mut_strcpy(mdoc,"url");
+				yyjson_mut_val* urlVal = yyjson_mut_strcpy(mdoc, urlAbs.c_str());
+				yyjson_mut_obj_put(item, urlKey, urlVal);
 			}
 		}
 		else if (yyjson_mut_is_obj(yymv_dataFile)) {
@@ -939,6 +972,24 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 				for (auto& i : deyy.items) {
 					yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, i.first.c_str());
 					yyjson_mut_obj_put(jRecord, valKey, i.second);
+
+					//generate url when selected ,will reduce performance
+					//if (i.first == "file") {
+					//	yyjson_mut_val* yymv_dataFile = i.second;
+					//	if (yymv_dataFile) {
+					//		if (yyjson_mut_is_arr(yymv_dataFile)) {
+					//			size_t idx = 0;
+					//			size_t max = 0;
+					//			yyjson_mut_val* item;
+					//			yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
+
+					//			}
+					//		}
+					//		else if (yyjson_mut_is_obj(yymv_dataFile)) {
+					//			yyjson_mut_obj_remove_key(yymv_dataFile, "data");
+					//		}
+					//	}
+					//}
 				}
 			}
 
@@ -2133,13 +2184,15 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 }
 
 
-void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string& type)
+string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string& type)
 {
+	string deFilePath = "";
+
 	yyjson_val* yyv_name = yyjson_obj_get(yyvFileInfo, "name");
 	yyjson_val* yyv_type = yyjson_obj_get(yyvFileInfo, "type");
 	yyjson_val* yyv_data = yyjson_obj_get(yyvFileInfo, "data");
-	if (!yyv_type)return;
-	if (!yyv_data)return;
+	if (!yyv_type)return "";
+	if (!yyv_data)return "";
 
 	string name;
 	if(yyv_name)name = yyjson_get_str(yyv_name);
@@ -2163,13 +2216,18 @@ void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string&
 		free(p);
 	}
 	
-	if (type == "jpg") {
+
+	deFilePath = path + "/" + name;
+	//encoded to base64 by default
+	if (type.find("jpg")!=string::npos ||
+		type.find("png")!=string::npos ||
+		type.find("svg")!=string::npos){
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
 			startPos = data.find(",");
 			if (startPos == string::npos) {
-				return;
+				return "";
 			}
 
 			startPos += 1;
@@ -2179,14 +2237,23 @@ void TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string&
 		unsigned char* out = new unsigned char[buffLen];
 		memset(out, 0, buffLen);
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-		DB_FS::writeFile(path + "/" + name, out, outLen);
+
+		DB_FS::writeFile(deFilePath, out, outLen);
+		delete out;
 	}
-	else if (type == "text") {
-		DB_FS::writeFile(path + "/" + name, (char*)data.c_str(), data.length());
+	else if (type == "text") {  //text file is not encoded 
+		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else {
-		DB_FS::writeFile(path + "/" + name, (char*)data.c_str(), data.length());
+		size_t buffLen = data.length() * 2;
+		unsigned char* out = new unsigned char[buffLen];
+		memset(out, 0, buffLen);
+		int outLen = tdb_base64_decode(data.c_str(), data.length(), out);
+		DB_FS::writeFile(deFilePath, out, outLen);
+		delete out;
 	}
+
+	return deFilePath;
 }
 
 
@@ -2509,6 +2576,7 @@ TDB* TDB::getChildDB(string dbName) {
 		TDB* p = new TDB();
 		p->m_dbFmt = m_dbFmt;
 		p->m_timeUnit = m_timeUnit;
+		p->m_name = dbName;
 		p->m_path = m_path + "/" + dbName;
 		p->m_getTagsByTagSelector = m_getTagsByTagSelector;
 		m_childDB[dbName] = p;
@@ -3353,6 +3421,12 @@ void DB_TIME::setNow()
 string DB_TIME::toStampHMS()
 {
 	string s = formatStr("%02d%02d%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
+string DB_TIME::toStampFull()
+{
+	string s = formatStr("%04d-%02d-%02d %02d%02d%02d", wYear,wMonth,wDay,wHour, wMinute, wSecond);
 	return s;
 }
 

@@ -63,6 +63,7 @@ struct DB_TIME {
 	time_t toUnixTime();
 	void setNow();
 	string toStampHMS();
+	string toStampFull();
 	string toYMD();
 	string toStr(bool enableMS = true);
 	void fromStr(string str);
@@ -439,6 +440,7 @@ namespace CONST_STR {
 	const string val = "val";
 	const string time = "time";
 	const string tag = "tag";
+	const string url = "url";
 };
 
 struct  DB_FMT
@@ -500,6 +502,7 @@ public:
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 	//update
@@ -510,7 +513,7 @@ public:
 
 
 	//bool updateJsonObj(json& jOld, json& jNew);
-	void saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
+	string saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
 
 	//path management
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
