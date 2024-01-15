@@ -30,7 +30,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		pts->pData1 = c;
 		unsigned char* ip = (unsigned char*)&c->rem.ip;
 		pts->remoteIP = str::format("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
-		pts->sock = *(int*) c->fd;  
+		pts->sock = (int) c->fd;  
 		pts->remotePort = ntohs(c->rem.port); 
 		pSrv->m_csClientVectorLock.lock();
 		pSrv->m_mapTcpSessions[pts] = pts;
