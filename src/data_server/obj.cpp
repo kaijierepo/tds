@@ -1481,11 +1481,14 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 	}
 
 
-	vector<OBJ*> tagSet;
-	prj.getObjByTagSelector(tagSet, tagSelector);
-	for (auto& i : tagSet)
-	{
-		tags.push_back(i->getTag());
+	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
+		string& exp = tagSelector.fuzzyMatchExp[i];
+		vector<OBJ*> tagSet;
+		prj.queryObj(&tagSet, exp, false, tagSelector.type, tagSelector.level);
+		for (auto& i : tagSet)
+		{
+			tags.push_back(i->getTag());
+		}
 	}
 	return true;
 }

@@ -2414,7 +2414,12 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 			deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
 			deSel.bAggr = true;
 			yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
-			deSel.vecTagLable.push_back(yyjson_get_str(yyv_tagLabel));
+			string tagLabel = yyjson_get_str(yyv_tagLabel);
+			if(tagLabel!="")
+				deSel.vecTagLable.push_back(tagLabel);
+			else {
+				deSel.vecTagLable.push_back(tag);
+			}
 		}
 	}
 	else {
