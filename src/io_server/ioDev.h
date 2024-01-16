@@ -267,6 +267,8 @@ public:
 	virtual void CommUnlock();
 	bool SendPkt(DEV_PKT& pkt);//发送不等待
 	virtual bool sendData(unsigned char* pData, size_t iLen);
+	virtual bool sendStr(const char* str);
+	virtual bool sendStr(char* str);
 	virtual bool sendStr(string& str);
 
 	//通信接收

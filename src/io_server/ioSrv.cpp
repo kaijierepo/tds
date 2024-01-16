@@ -188,6 +188,10 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			timeopt::now(&pIoDev->m_stLastActiveTime);
 			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
 			pIoDev->bindIOSession(p);
+
+			if (pIoDev->m_devType == DEV_TYPE_iq60) {
+				pIoDev->sendStr("[]");
+			}
 		}
 
 		m_mutexIoSessions.lock();

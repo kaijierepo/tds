@@ -1167,6 +1167,18 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 	return true;
 }
 
+bool ioDev::sendStr(const char* str)
+{
+	string s = str;
+	return sendStr(s);
+}
+
+bool ioDev::sendStr(char* str)
+{
+	string s = str;
+	return sendStr(s);
+}
+
 bool ioDev::sendStr(string& str)
 {
 	return sendData((unsigned char*)str.c_str(), str.length());
