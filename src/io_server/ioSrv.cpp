@@ -190,7 +190,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			pIoDev->bindIOSession(p);
 
 			if (pIoDev->m_devType == DEV_TYPE_iq60) {
-				pIoDev->sendStr("[]");
+				pIoDev->sendStr("[]\n");
 			}
 		}
 
