@@ -658,6 +658,11 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	if (params["getTypeTag"].is_boolean()) {
 		getTypeTag = true;
 	}
+	string strType;
+	if (params.contains("type")) {
+		strType = params["type"].get<string>();
+	}
+
 
 	string error;
 	string sParams = params.dump();
@@ -699,6 +704,16 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					continue;
 				}
 
+				vector<string> v; str::split(v, strType, ",");
+				bool bTypeMatch = false;
+				for (int i = 0; i < v.size(); i++){
+					if (it->second->type.find(v[i]) != string::npos) {
+						bTypeMatch = true;
+						break;
+					}
+				}
+				if(!bTypeMatch)
+					continue;
 
 				json j = it->second->toJson(this, rootTag);
 
