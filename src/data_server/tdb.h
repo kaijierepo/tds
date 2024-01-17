@@ -83,8 +83,10 @@ public:
 		getTag = false;
 	}
 
-	bool init(string tag, string rootTag="", string objtype="*",string level="*");
-	bool init(vector<string>& tag, string rootTag = "", string objtype = "*", string level = "*");
+	//objType==* select all obj who's type is set.
+	//objType=="" select all obj
+	bool init(string tag, string rootTag="", string objtype="",string level="*");
+	bool init(vector<string>& tag, string rootTag = "", string objtype = "", string level = "*");
 	bool match(string tag);//use absolute tag 
 	bool singleSelMode();
 

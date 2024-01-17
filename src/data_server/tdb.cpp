@@ -1135,7 +1135,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			aggrRlt.items[aggrKey] = pAggrVal;
+
 			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
@@ -1152,7 +1152,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			else {
 				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
 			}
-			aggrRlt.items[aggrKey] = pAggrVal;
 			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 		}
@@ -1193,7 +1192,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			string sDbDiff = formatStr("%lf", dbDiff);
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "avg") {
 			double dbTotal = 0;
@@ -1219,7 +1217,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			yyjson_val* pDeSrc = deGroup.at(0);
 			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
 			pAggrVal = yyjson_mut_real(mut_doc, avg);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "max") {
 			double dbMax = -DBL_MAX;
@@ -1245,7 +1242,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			pAggrVal = yyjson_mut_real(mut_doc, dbMax);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "min") {
 			double dbMin = DBL_MAX;
@@ -1271,7 +1267,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
 			pAggrVal = yyjson_mut_real(mut_doc, dbMin);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "sum") {
 			double dbSum = 0;
@@ -1290,7 +1285,6 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 				dbSum += db;
 			}
 			pAggrVal = yyjson_mut_real(mut_doc, dbSum);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "diff") {
 			double dbMax = -DBL_MAX;
@@ -1316,12 +1310,21 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOp
 			string sDbDiff = formatStr("%lf", dbDiff); 
 			dbDiff = atof(sDbDiff.c_str());
 			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-			aggrRlt.items[aggrKey] = pAggrVal;
 		}
 		else if (aggrType == "count") {
 			int count = deGroup.size();
 			pAggrVal = yyjson_mut_int(mut_doc, count);
+		}
+
+
+		if (aggrType == "count") {
 			aggrRlt.items["count"] = pAggrVal;
+		}
+		if (aggrOpt.size() == 0) { //do aggr with multiple items
+			aggrRlt.items[aggrKey] = pAggrVal;
+		}
+		else { //do multiple aggr with one item, put aggrType as key in result de,aggrResult as val 
+			aggrRlt.items[aggrType] = pAggrVal;
 		}
 
 		if (aggrKey == "val") {
@@ -2560,7 +2563,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 		size_t idx = 0;
 		size_t max = 0;
 		yyjson_val* item;
-		yyjson_arr_foreach(yyv_colLabel, idx, max, item) {
+		yyjson_arr_foreach(yyv_aggr, idx, max, item) {
 			deSel.vecAggregate.push_back(getAggrOpt(item));
 		}
 		deSel.bAggr = true;
