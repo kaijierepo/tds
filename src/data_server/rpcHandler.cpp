@@ -886,22 +886,25 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.update")
 		{
-			//string tag = params["tag"].get<string>();
-			//string time = params["time"].get<string>();
-			//json val = params["val"];
-			//db.Update(tag, timeopt::str2st(time), val);
+			string s = params.dump();
+			if (params["db"].is_string()) {
+				TDB* tdb = db.getChildDB(params["db"].get<string>());
+				tdb->rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			}
+			else
+				db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
 			result = "\"ok\"";
 		}
 		else if (method == "db.delete")
 		{
-			string tag = params["tag"].get<string>();
-			string time = params["time"].get<string>();
-			DB_TIME dbt;
-			dbt.fromStr(time);
-			if (db.Delete(tag,dbt))
-				result = "\"ok\"";
+			string s = params.dump();
+			if (params["db"].is_string()) {
+				TDB* tdb = db.getChildDB(params["db"].get<string>());
+				tdb->rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			}
 			else
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "data element not found");
+				db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			result = "\"ok\"";
 		}
 	}
 	else

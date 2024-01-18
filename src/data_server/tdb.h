@@ -481,11 +481,20 @@ public:
 	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
 	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
 
+	void rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+
+	bool Update(string tag, DB_TIME stTime, yyjson_val& jData);
+
+	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);
 	void Insert(string strTag, DB_TIME stTime, int& iVal);
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	bool Delete(string tag, DB_TIME stTime);
+	bool Update(string tag, DB_TIME stTime, yyjson_val* yyVal);
 
 	TDB* getChildDB(string dbName);
 	map<string, TDB*> m_childDB;
@@ -512,7 +521,7 @@ public:
 	//bool Update(string tag, TIME stTime, json& jData);
 	bool Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCount);
 
-
+	void getDeTime(yyjson_mut_val* yyTime, string& deTime);
 
 	//bool updateJsonObj(json& jOld, json& jNew);
 	string saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
