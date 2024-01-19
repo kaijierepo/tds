@@ -408,7 +408,21 @@ namespace DB_FS {
 	{
 		return writeFile(path, (char*)data, len);
 	}
-	
+	bool deleteFile(string path) {
+#ifdef _WIN32
+		std::wstring filePath = DB_STR::utf8_to_utf16(path);
+
+		if (DeleteFileW(filePath.c_str())) {
+			return true;
+		}
+		else {
+			return false;
+		}
+#else
+		return std::filesystem::remove(DB_STR::tds_to_utf16(path));
+#endif
+
+	}
 }
 
 
@@ -2268,10 +2282,16 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	if (!findDE)
 		return false;
 
-	yyjson_mut_arr_remove(deList, toDeleteIdx);
-	size_t len = 0;
-	char* p = yyjson_mut_write(mut_doc, 0, &len);
-	DB_FS::writeFile(dbFile, p, len);
+
+	if (max == 1) { //only one de in list and is deleted ,remove file.when left [] in db.json, db.insert will execulte as insert mode,a period will inserted after [,this causes error json file
+		DB_FS::deleteFile(dbFile);
+	}
+	else {
+		yyjson_mut_arr_remove(deList, toDeleteIdx);
+		size_t len = 0;
+		char* p = yyjson_mut_write(mut_doc, 0, &len);
+		DB_FS::writeFile(dbFile, p, len);
+	}
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);
 	return true;
