@@ -1884,6 +1884,9 @@ void TDB::getDeTime(yyjson_mut_val* yyTime, string& deTime) {
 	}
 	else if (m_timeUnit == NONE) {
 		deTime = yyjson_mut_get_str(yyTime);
+		if (deTime.length() == 19) {
+			deTime += ".000";
+		}
 	}
 	else {
 		//assert(false);
