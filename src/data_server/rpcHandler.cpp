@@ -1618,9 +1618,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rpc_input(params, rpcResp, session);
 			}
 		}
-		else if (method == "statusUpdate") {
-
-		}
 		else if (method == "output")
 		{
 			rpc_output(params, rpcResp,session);
@@ -3262,7 +3259,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				jDe["valDesc"] = pmp->getValDesc(false);
 				jStatusNotify.push_back(jDe);
 			}
-			rpcSrv.notify("statusUpdate", jStatusNotify);
+			rpcSrv.notify("onDataUpdate", jStatusNotify);
 			
 			resp.result = "\"ok\"";
 		}

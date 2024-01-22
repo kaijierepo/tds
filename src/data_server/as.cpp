@@ -101,7 +101,7 @@ void almServer::recover(ALARM_KEY& key)
 	}
 
 	json j = ai.toJson(this);
-	rpcSrv.notify("alarmRecover", j);
+	rpcSrv.notify("onAlarmRecover", j);
 }
 
 
@@ -172,7 +172,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 	//通知给TDS客户端
 	if (!m_bTestSrv) {
 		json j = ai.toJson(this);
-		rpcSrv.notify("alarmAdd", j);
+		rpcSrv.notify("onAlarmAdd", j);
 	}
 }
 
@@ -439,7 +439,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 
 	json j = ai.toJson(this);
-	rpcSrv.notify("alarmAck", j);
+	rpcSrv.notify("onAlarmAck", j);
 
 	resp.result = "\"ok\"";
 }

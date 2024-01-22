@@ -485,7 +485,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	{
 		handleAlarmStatusData(jParams);
 	}
-	else if (method == "statusUpdate") {
+	else if (method == "onDataUpdate" || method=="statusUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			//位号增加上该子服务绑定的位号。
 			for (auto& de : jParams) {
