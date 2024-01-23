@@ -151,7 +151,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
@@ -404,24 +404,40 @@
     <ClCompile Include="..\src\data_server\tdb.cpp" />
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
     <ClCompile Include="..\src\data_server\webSrv.cpp" />
+    <ClCompile Include="..\src\func_module\aliDDNS.cpp" />
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
+    <ClCompile Include="..\src\func_module\gzhServer.cpp" />
     <ClCompile Include="..\src\func_module\hmrSrv.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
+    <ClCompile Include="..\src\func_module\smsServer.cpp" />
     <ClCompile Include="..\src\func_module\statusServer.cpp" />
     <ClCompile Include="..\src\func_module\taskServer.cpp" />
     <ClCompile Include="..\src\func_module\tdsConf.cpp" />
     <ClCompile Include="..\src\func_module\tdsWatchDog.cpp" />
     <ClCompile Include="..\src\func_module\userMng.cpp" />
+    <ClCompile Include="..\src\func_module\xiaot.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_bacnet.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_dlt645_2007.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_eip.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_modbusRtu.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_modbusTcp.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_onvif.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_visca.cpp" />
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
     <ClCompile Include="..\src\io_server\Parse315Protocol.cpp" />
     <ClCompile Include="..\src\io_server\proto_common.cpp" />
+    <ClCompile Include="..\src\io_server\proto_eip.cpp" />
     <ClCompile Include="..\src\io_server\wsProto.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\pch.cpp" />
@@ -461,24 +477,47 @@
     <ClInclude Include="..\src\data_server\tdb.h" />
     <ClInclude Include="..\src\data_server\tdsSession.h" />
     <ClInclude Include="..\src\data_server\webSrv.h" />
+    <ClInclude Include="..\src\func_module\aliDDNS.h" />
     <ClInclude Include="..\src\func_module\csvTable.h" />
     <ClInclude Include="..\src\func_module\dumpCatch.h" />
+    <ClInclude Include="..\src\func_module\gzhServer.h" />
     <ClInclude Include="..\src\func_module\hmrSrv.h" />
     <ClInclude Include="..\src\func_module\logServer.h" />
+    <ClInclude Include="..\src\func_module\smsServer.h" />
     <ClInclude Include="..\src\func_module\statusServer.h" />
     <ClInclude Include="..\src\func_module\taskServer.h" />
     <ClInclude Include="..\src\func_module\tdsConf.h" />
     <ClInclude Include="..\src\func_module\tdsWatchDog.h" />
     <ClInclude Include="..\src\func_module\userMng.h" />
+    <ClInclude Include="..\src\func_module\xiaot.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
+    <ClInclude Include="..\src\io_server\ioDev_bacnet.h" />
     <ClInclude Include="..\src\io_server\ioDev_custom.h" />
     <ClInclude Include="..\src\io_server\ioDev_dcqk.h" />
+    <ClInclude Include="..\src\io_server\ioDev_dlt645_2007.h" />
+    <ClInclude Include="..\src\io_server\ioDev_eip.h" />
+    <ClInclude Include="..\src\io_server\ioDev_iq60.h" />
+    <ClInclude Include="..\src\io_server\ioDev_modbusRtu.h" />
+    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />
+    <ClInclude Include="..\src\io_server\ioDev_modbusTcp.h" />
+    <ClInclude Include="..\src\io_server\ioDev_onvif.h" />
+    <ClInclude Include="..\src\io_server\ioDev_srvStatus.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
+    <ClInclude Include="..\src\io_server\ioDev_visca.h" />
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
     <ClInclude Include="..\src\io_server\Parse315Protocol.h" />
+    <ClInclude Include="..\src\io_server\proto_bacnet.hpp" />
+    <ClInclude Include="..\src\io_server\proto_can.hpp" />
+    <ClInclude Include="..\src\io_server\proto_cip.hpp" />
     <ClInclude Include="..\src\io_server\proto_common.h" />
+    <ClInclude Include="..\src\io_server\proto_dlt645_2007.hpp" />
+    <ClInclude Include="..\src\io_server\proto_eip.hpp" />
+    <ClInclude Include="..\src\io_server\proto_logix_plc.hpp" />
+    <ClInclude Include="..\src\io_server\proto_rtu.hpp" />
+    <ClInclude Include="..\src\io_server\proto_visca.hpp" />
     <ClInclude Include="..\src\io_server\wsProto.h" />
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\tds.h" />
