@@ -81,6 +81,7 @@ OBJ::OBJ()
 	m_bLocationCalib = false;
 	m_bChildTds = false;
 	m_bEnableAlarm = true;
+	m_bEnableIO = true;
 }
 
 OBJ::~OBJ()
@@ -175,6 +176,11 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	if (conf.contains("enableAlarm"))
 	{
 		m_bEnableAlarm = conf["enableAlarm"].get<bool>();
+	}
+
+	if (conf.contains("enableIO"))
+	{
+		m_bEnableIO = conf["enableIO"].get<bool>();
 	}
 
 	if (conf.contains("children")) {
@@ -372,6 +378,9 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 
 	if(m_bEnableAlarm == false)
 		conf["enableAlarm"] = m_bEnableAlarm;
+
+	if (m_bEnableIO == false)
+		conf["enableIO"] = m_bEnableIO;
 
 	if (q.getConfDetail) {
 		string tag = getTag();

@@ -249,6 +249,7 @@ public:
 	string m_strLastModify;  //上一次配置修改时间
 	string m_comment;
 	bool m_bEnableAlarm;	//	是否报警
+	bool m_bEnableIO;
 	vector<SCHEDULE_TASK> m_scheduleTasks;
 
 	//动态创建

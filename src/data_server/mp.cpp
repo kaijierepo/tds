@@ -604,6 +604,9 @@ void MP::calcAlarm()
 
 void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 {
+	if (!m_bEnableIO)
+		return;
+
 	TIME t;
 	if (dataTime == NULL)
 	{
