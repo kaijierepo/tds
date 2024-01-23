@@ -2135,13 +2135,13 @@ void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& query
 void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
-		err = "specify tag in string format";
+		err = JSON_STR_VAL("specify tag in string format");
 		return;
 	}
 
 	yyjson_val* yyTime = yyjson_obj_get(params, "time");
 	if (!yyjson_is_str(yyTime)) {
-		err = "specify time in string format";
+		err = JSON_STR_VAL("specify time in string format");
 		return;
 	}
 
@@ -2149,13 +2149,19 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 
 	string tag = yyjson_get_str(yyTag);
 	string time = yyjson_get_str(yyTime);
+
+	if (time.length() != 19 && time.length() != 23) {
+		err = JSON_STR_VAL("wrong time format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX");
+		return;
+	}
+
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
 	if (Update(tag, dbTime, updateVal)) {
-		rlt = "ok";
+		rlt = JSON_STR_VAL("ok");
 	}
 	else {
-		err = "update fail";
+		err = JSON_STR_VAL("update fail");
 	}
 }
 
@@ -2218,13 +2224,13 @@ void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& query
 void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
-		err = "specify tag in string format";
+		err = JSON_STR_VAL("specify tag in string format");
 		return;
 	}
 
 	yyjson_val* yyTime = yyjson_obj_get(params, "time");
 	if (!yyjson_is_str(yyTime)) {
-		err = "specify time in string format";
+		err = JSON_STR_VAL("specify time in string format");
 		return;
 	}
 
@@ -2233,10 +2239,10 @@ void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& qu
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
 	if (Delete(tag, dbTime)) {
-		rlt = "ok";
+		rlt = JSON_STR_VAL("ok");
 	}
 	else {
-		err = "delete fail";
+		err = JSON_STR_VAL("delete fail");
 	}
 }
 

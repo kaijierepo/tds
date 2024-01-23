@@ -467,6 +467,10 @@ namespace DB_STR {
 	string gb_to_utf8(string instr);
 }
 
+inline string JSON_STR_VAL(string s) {
+	return "\"" + s + "\"";
+}
+
 //use  "/"  but not "\\" in a path
 class TDB{
 public:

@@ -893,7 +893,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			}
 			else
 				db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
-			result = "\"ok\"";
 		}
 		else if (method == "db.delete")
 		{
@@ -904,7 +903,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			}
 			else
 				db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
-			result = "\"ok\"";
 		}
 	}
 	else
