@@ -90,7 +90,6 @@ namespace DB_STR {
 		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
 		str = wcharstr;
 		delete[] wcharstr;
-
 #else
 
 #endif
@@ -419,7 +418,7 @@ namespace DB_FS {
 			return false;
 		}
 #else
-		return std::filesystem::remove(DB_STR::tds_to_utf16(path));
+		return std::filesystem::remove(DB_STR::utf8_to_utf16(path));
 #endif
 
 	}
