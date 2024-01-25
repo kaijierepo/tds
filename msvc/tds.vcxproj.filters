@@ -179,40 +179,10 @@
     <ClCompile Include="..\src\func_module\xiaot.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_bacnet.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_dlt645_2007.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_eip.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_modbusRtu.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_modbusTcp.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_onvif.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_visca.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\proto_eip.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
   </ItemGroup>
@@ -382,61 +352,13 @@
     <ClInclude Include="..\src\func_module\xiaot.h">
       <Filter>func_module</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_bacnet.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_dlt645_2007.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_eip.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_iq60.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_modbusRtu.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_modbusTcp.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_onvif.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_visca.h">
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
       <Filter>io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_bacnet.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\proto_can.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_cip.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_dlt645_2007.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_eip.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_logix_plc.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_rtu.hpp">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_visca.hpp">
       <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
