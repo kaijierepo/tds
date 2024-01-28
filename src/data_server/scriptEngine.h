@@ -25,7 +25,7 @@ public:
 	ScriptEngine();
 	bool runScript(string& script,string user);
 
-	vector<string> m_vecOutput;
+	vector<string> m_vecOutput; //执行一次脚本的输出信息，包含错误信息，脚本中的log
 	void releaseGlobalFunc();
 	string getErrorDesc(jerry_error_t error);
 	fp_initGlobalFunc m_initGlobalFunc;

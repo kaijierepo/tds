@@ -17,7 +17,7 @@ void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector) {
 project::project()
 {
 	m_name = "tds";
-	m_level = "org";
+	m_level = "root"; //level = root/ org/ mo/ mpgroup/ mp
 	m_enableEzviz = false;
 #ifdef ENABLE_GENICAM
 	MP* p = new MP();
@@ -215,7 +215,7 @@ bool project::loadConf(string& confStr)
 
 	try {
 		json moRoot = json::parse(confStr.c_str());
-		moRoot["level"] = "org";
+		moRoot["level"] = "root";
 		bool ret = loadConf(moRoot);
 		return ret;
 	}

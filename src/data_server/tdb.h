@@ -258,7 +258,7 @@ public:
 	string colKey;
 
 
-	map<string, string> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
+	map<string, vector<string>> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
 	//grouped data before aggregate key is time stamp ,val is de vector
 	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
 	//ungrouped data before aggregate
@@ -348,8 +348,8 @@ struct DE_SELECTOR {
 	bool groupByTag;  
 
 	bool bAggr; 
-	map<string,string> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
-	vector<map<string, string>> vecAggregate; //specified each tag in its own aggregate type
+	map<string,vector<string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
+	vector<map<string, vector<string>>> vecAggregate; //specified each tag in its own aggregate type
 
 	bool tagAsColume; //return data set as a table.each tag as a columne
 
@@ -505,7 +505,7 @@ public:
 //private func
 public:
 	//param parse
-	map<string, string> getAggrOpt(yyjson_val* jAggr);
+	map<string, vector<string>> getAggrOpt(yyjson_val* jAggr);
 	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);
 	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
 	int dhmsSpan2Seconds(string timeSpan);
@@ -519,7 +519,7 @@ public:
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
-	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, string> aggrOpt, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
 	//update
 	//bool Update(string tag, TIME stTime, string& sData);
 	//bool Update(string tag, TIME stTime, json& jData);

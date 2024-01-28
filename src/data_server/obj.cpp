@@ -250,6 +250,8 @@ bool OBJ::isSelectedByLeafLevel(string leafLevel)
 {
 	if (m_level == "")
 		return true;
+	if (m_level == "root") //根节点的level==root
+		return true;
 
 	if (leafLevel == "")
 		return true;

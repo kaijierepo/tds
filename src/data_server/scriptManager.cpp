@@ -388,7 +388,11 @@ void ScriptManager::exeAllVarExpScripts()
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
-		se.runScript(script, info.lastModifyUser);
+		bool runOk = se.runScript(script, info.lastModifyUser);
+
+		if (!runOk) {
+			continue;
+		}
 
 		if (se.m_bValNullInCalc) {
 			//如果val函数返回null并且参与了计算，本次计算无效

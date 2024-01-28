@@ -73,6 +73,7 @@ bool ScriptEngine::runScript(string& script, string user)
 	//str::split(lines, script, "\n");
 	lines.push_back(script);
 	m_vecOutput.clear();
+	bool runOk = false;
 	try {
 		pEngine = this;
 		tls_context = jerry_create_context(512 * 1024,context_alloc_fn,NULL);;
@@ -107,6 +108,7 @@ bool ScriptEngine::runScript(string& script, string user)
 			{
 				m_sEvalRet = jerryVal2Str(eval_ret);
 				jerry_release_value(eval_ret);
+				runOk = true;
 			}
 			else
 			{
@@ -133,7 +135,7 @@ bool ScriptEngine::runScript(string& script, string user)
 		m_vecOutput.push_back(s);
 		return false;
 	}
-	return true;
+	return runOk;
 }
 
 

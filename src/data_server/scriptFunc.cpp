@@ -534,14 +534,18 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 				params["getConf"] = false;
 				json err, rlt;
 				tds->call("getMp", params, err, rlt, pEngine->currentSession);
-				if (rlt != nullptr && rlt.contains("val")) {
+				if (rlt != nullptr) {
 					json jVal = rlt["val"];
 					jerry_value_t jerryVal;
 					jsonVal2jerryVal(jVal,jerryVal);
 					return jerryVal;
 				}
 				else {
-					LOG("[脚本引擎] 函数 val 执行错误,getMp返回结果为null或者不包含val字段.\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", pEngine->m_tagContext.c_str(),pEngine->m_user.c_str(), pEngine->m_script.c_str());
+					int errCode = err["code"].get<int>();
+					string errMsg = err["message"].get<string>();
+					string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+					pEngine->m_vecOutput.push_back(errInfo);
+					LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(),pEngine->m_user.c_str(), pEngine->m_script.c_str());
 				}
 			}
 			//取历史值

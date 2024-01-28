@@ -138,6 +138,42 @@ namespace DB_STR {
 #endif
 		return str;
 	}
+
+	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
+	{
+		if (src.empty() || separator.empty())
+			return 0;
+
+		int nCount = 0;
+		std::string temp;
+		size_t pos = 0, offset = 0;
+
+		// 分割第1~n-1个
+		while ((pos = src.find(separator, offset)) != std::string::npos)
+		{
+			temp = src.substr(offset, pos - offset);
+			if (temp.length() > 0) {
+				dst.push_back(temp);
+				nCount++;
+			}
+			else
+			{
+				dst.push_back("");
+				nCount++;
+			}
+			offset = pos + separator.size();
+		}
+
+		// 分割第n个
+		temp = src.substr(offset, src.length() - offset);
+		if (temp.length() > 0) {
+			dst.push_back(temp);
+			nCount++;
+		}
+
+		return nCount;
+	}
+
 }
 
 
@@ -1128,220 +1164,334 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	return true;
 }
 
-bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,string> aggrOpt,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
+yyjson_val* yyjson_obj_get_recursive(yyjson_val* obj, const char* key) {
+	string recurKey = key;
+	vector<string> keyLink;
+	DB_STR::split(keyLink, key, ".");
+	yyjson_val* ret = nullptr;
+	for (auto& key : keyLink) {
+		ret = yyjson_obj_get(obj, key.c_str());
+		if (ret == nullptr)
+			return ret;
+		obj = ret;
+	}
+
+	return ret;
+}
+
+bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>> aggrKeyType,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
 {
-	for (auto& i : aggrOpt) {
-		string aggrType = i.second;
+	//aggrKeyType supports 2 modes.   multi keys multi aggr types mode is not supported
+	//1:  single key single aggr type
+	//2:  multi keys single aggr type
+	//3:  single key multi aggr types
+
+
+	//which key to aggr
+	//if val type is basic types,aggrKeyType.size()==1, aggr "val" key
+	//if val type is json,  aggrKeyType has multiple items,each key corresponding to key of the json object. only support one level of json keys 
+	for (auto& i : aggrKeyType) {
 		string aggrKey = i.first;
-		yyjson_mut_val* pAggrVal = nullptr; //聚合后的值
+		// aggr type for this key,
+		// if only one aggr type is specified, "val" key holds the aggr result val
+		// if multiple aggr type is specified ,use aggr type as key to hold the aggr result val
+		vector<string>& aggrTypes = i.second;
+		for (string& aggrType : aggrTypes) {
+			yyjson_mut_val* pAggrVal = nullptr; //val after aggr
+			if (aggrType == "first") {
+				yyjson_val* pDeSrc = deGroup.at(0);
+				yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+				yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
 
-		if (aggrType == "first") {
-			yyjson_val* pDeSrc = deGroup.at(0);
-			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //output val is specified
+				{
+					string valStr = yyjson_get_str(pDeSrcVal);
+					pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+				}
+				else {
+					pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+				}
 
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) //指定了输出类型
-			{
-				string valStr = yyjson_get_str(pDeSrcVal);
-				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+				aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+				//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
 			}
+			else if (aggrType == "last") {
+				yyjson_val* pDeSrc = deGroup.at(deGroup.size() - 1);
+				yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+				yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+				{
+					string valStr = yyjson_get_str(pDeSrcVal);
+					pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
+				}
+				else {
+					pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+				}
+				aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+				//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+			}
+			else if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+				yyjson_val* pDeSrcFirst = deGroup.at(0);
+				yyjson_val* pDeSrcTimeFisrt = yyjson_obj_get(pDeSrcFirst, "time");
+				yyjson_val* pDeSrcValFirst = yyjson_obj_get_recursive(pDeSrcFirst, aggrKey.c_str());
+				yyjson_val* pDeSrcLast = deGroup.at(deGroup.size() - 1);
+				yyjson_val* pDeSrcTimeLast = yyjson_obj_get(pDeSrcLast, "time");
+				yyjson_val* pDeSrcValLast = yyjson_obj_get_recursive(pDeSrcLast, aggrKey.c_str());
+
+				double dbFirst, dbLast = 0;
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR)
+				{
+					string valStr = yyjson_get_str(pDeSrcValFirst);
+					dbFirst = atof(valStr.data());
+				}
+				else {
+					dbFirst = yyjson_get_num(pDeSrcValFirst);
+				}
+				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR)
+				{
+					string valStr = yyjson_get_str(pDeSrcValLast);
+					dbLast = atof(valStr.data());
+				}
+				else {
+					dbLast = yyjson_get_num(pDeSrcValLast);
+				}
+
+				double dbDiff = 0;
+				if (aggrType == "diff.first-last") {
+					dbDiff = dbFirst - dbLast;
+				}
+				else if (aggrType == "diff.last-first") {
+					dbDiff = dbLast - dbFirst;
+				}
+				//double substraction caused loss of accuracy,use formatStr to fix this problem
+				string sDbDiff = formatStr("%lf", dbDiff);
+				dbDiff = atof(sDbDiff.c_str());
+				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+			}
+			else if (aggrType == "avg") {
+				double dbTotal = 0;
+				long long count = 0;
+
+				bool aggrKeyUndefined = true;
+				for (int j = 0; j < deGroup.size(); j++) {
+					yyjson_val* pDeSrc = deGroup.at(j);
+					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+					if (pDeSrcVal == nullptr) {
+						continue;
+					}
+					aggrKeyUndefined = false;
+					yyjson_mut_val* pAggrVal = nullptr;
+					double db = 0;
+					if (yyjson_is_num(pDeSrcVal)) {
+						db = yyjson_get_num(pDeSrcVal);
+					}
+					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+					{
+						string valStr = yyjson_get_str(pDeSrcVal);
+						db = atof(valStr.data());
+					}
+					else {
+						continue;
+					}
+
+					dbTotal += db;
+					count++;
+				}
+				if (aggrKeyUndefined) {
+					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					db_exception e;
+					e.m_error = sErr;
+					throw e;
+				}
+
+				double avg = dbTotal / count;
+				yyjson_val* pDeSrc = deGroup.at(0);
+				yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+				pAggrVal = yyjson_mut_real(mut_doc, avg);
+			}
+			else if (aggrType == "max") {
+				double dbMax = -DBL_MAX;
+				yyjson_val* pSelRowDeSrc = nullptr;
+
+				bool aggrKeyUndefined = true;
+				for (int j = 0; j < deGroup.size(); j++) {
+					yyjson_val* pDeSrc = deGroup.at(j);
+					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+					if (pDeSrcVal == nullptr) {
+						continue;
+					}
+					aggrKeyUndefined = false;
+					double db = 0;
+
+					if(yyjson_is_num(pDeSrcVal)){
+						db = yyjson_get_num(pDeSrcVal);
+					}
+					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+					{
+						string valStr = yyjson_get_str(pDeSrcVal);
+						db = atof(valStr.data());
+					}
+					else {
+						continue;
+					}
+					if (db > dbMax) {
+						pSelRowDeSrc = pDeSrc;
+						dbMax = db;
+					}
+				}
+				if (aggrKeyUndefined) {
+					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					db_exception e;
+					e.m_error = sErr;
+					throw e;
+				}
+				yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
+				//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+				aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+				pAggrVal = yyjson_mut_real(mut_doc, dbMax);
+			}
+			else if (aggrType == "min") {
+				double dbMin = DBL_MAX;
+				yyjson_val* pSelRowDeSrc = nullptr;
+				bool aggrKeyUndefined = true;
+				for (int j = 0; j < deGroup.size(); j++) {
+					yyjson_val* pDeSrc = deGroup.at(j);
+					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+					if (pDeSrcVal == nullptr) {
+						continue;
+					}
+					aggrKeyUndefined = false;
+					double db = 0;
+
+					if (yyjson_is_num(pDeSrcVal)) {
+						db = yyjson_get_num(pDeSrcVal);
+					}
+					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+					{
+						string valStr = yyjson_get_str(pDeSrcVal);
+						db = atof(valStr.data());
+					}
+					else {
+						continue;
+					}
+
+					if (db < dbMin) {
+						pSelRowDeSrc = pDeSrc;
+						dbMin = db;
+					}
+				}
+				if (aggrKeyUndefined) {
+					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					db_exception e;
+					e.m_error = sErr;
+					throw e;
+				}
+				yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
+				//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
+				aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
+				pAggrVal = yyjson_mut_real(mut_doc, dbMin);
+			}
+			else if (aggrType == "sum") {
+				double dbSum = 0;
+				bool aggrKeyUndefined = true;
+				for (int j = 0; j < deGroup.size(); j++) {
+					yyjson_val* pDeSrc = deGroup.at(j);
+					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+					if (pDeSrcVal == nullptr) {
+						continue;
+					}
+					aggrKeyUndefined = false;
+					double db = 0;
+
+					if (yyjson_is_num(pDeSrcVal)) {
+						db = yyjson_get_num(pDeSrcVal);
+					}
+					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+					{
+						string valStr = yyjson_get_str(pDeSrcVal);
+						db = atof(valStr.data());
+					}
+					else {
+						continue;
+					}
+					dbSum += db;
+				}
+
+				if (aggrKeyUndefined) {
+					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					db_exception e;
+					e.m_error = sErr;
+					throw e;
+				}
+				pAggrVal = yyjson_mut_real(mut_doc, dbSum);
+			}
+			else if (aggrType == "diff") {
+				double dbMax = -DBL_MAX;
+				double dbMin = DBL_MAX;
+				bool aggrKeyUndefined = true;
+				for (int j = 0; j < deGroup.size(); j++) {
+					yyjson_val* pDeSrc = deGroup.at(j);
+					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+					if (pDeSrcVal == nullptr) {
+						continue;
+					}
+					aggrKeyUndefined = false;
+					double db = 0;
+					if (yyjson_is_num(pDeSrcVal)) {
+						db = yyjson_get_num(pDeSrcVal);
+					}
+					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+					{
+						string valStr = yyjson_get_str(pDeSrcVal);
+						db = atof(valStr.data());
+					}
+					else {
+						continue;
+					}
+					if (db > dbMax)
+						dbMax = db;
+					if (db < dbMin)
+						dbMin = db;
+				}
+
+				if (aggrKeyUndefined) {
+					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+					db_exception e;
+					e.m_error = sErr;
+					throw e;
+				}
+				double dbDiff = dbMax - dbMin;
+				string sDbDiff = formatStr("%lf", dbDiff);
+				dbDiff = atof(sDbDiff.c_str());
+				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+			}
+			else if (aggrType == "count") {
+				int count = deGroup.size();
+				pAggrVal = yyjson_mut_int(mut_doc, count);
+			}
+
+
+			if (aggrType == "count") {
+				aggrRlt.items["count"] = pAggrVal;
+			}
+
+			
+			if (aggrKeyType.size() == 1 && aggrKey == "val") {
+				// single key single type mode
+				if (aggrTypes.size() == 1) {
+					aggrRlt.val = pAggrVal;
+					aggrRlt.items[aggrKey] = pAggrVal;
+				}
+				//single key multi type mode
+				else {
+					aggrRlt.items[aggrType] = pAggrVal;
+				}
+			}
+			//multi key single type mode
 			else {
-				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
+				aggrRlt.items[aggrKey] = pAggrVal;
 			}
-
-			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
-			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-		}
-		else if (aggrType == "last") {
-			yyjson_val* pDeSrc = deGroup.at(deGroup.size() - 1);
-			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-			yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR) 
-			{
-				string valStr = yyjson_get_str(pDeSrcVal);
-				pAggrVal = yyjson_mut_real(mut_doc, atof(valStr.data()));
-			}
-			else {
-				pAggrVal = yyjson_val_mut_copy(mut_doc, pDeSrcVal);
-			}
-			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
-			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-		}
-		else if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-			yyjson_val* pDeSrcFirst = deGroup.at(0);
-			yyjson_val* pDeSrcTimeFisrt = yyjson_obj_get(pDeSrcFirst, "time");
-			yyjson_val* pDeSrcValFirst = yyjson_obj_get(pDeSrcFirst, aggrKey.c_str());
-			yyjson_val* pDeSrcLast = deGroup.at(deGroup.size()-1);
-			yyjson_val* pDeSrcTimeLast = yyjson_obj_get(pDeSrcLast, "time");
-			yyjson_val* pDeSrcValLast = yyjson_obj_get(pDeSrcLast, aggrKey.c_str());
-
-			double dbFirst,dbLast = 0;
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValFirst) == YYJSON_TYPE_STR)
-			{
-				string valStr = yyjson_get_str(pDeSrcValFirst);
-				dbFirst = atof(valStr.data());
-			}
-			else {
-				dbFirst = yyjson_get_num(pDeSrcValFirst);
-			}
-			if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcValLast) == YYJSON_TYPE_STR)
-			{
-				string valStr = yyjson_get_str(pDeSrcValLast);
-				dbLast = atof(valStr.data());
-			}
-			else {
-				dbLast = yyjson_get_num(pDeSrcValLast);
-			}
-
-			double dbDiff = 0;
-			if (aggrType == "diff.first-last") {
-				dbDiff = dbFirst - dbLast;
-			}
-			else if (aggrType == "diff.last-first") {
-				dbDiff = dbLast - dbFirst;
-			}
-			//double substraction caused loss of accuracy,use formatStr to fix this problem
-			string sDbDiff = formatStr("%lf", dbDiff);
-			dbDiff = atof(sDbDiff.c_str());
-			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-		}
-		else if (aggrType == "avg") {
-			double dbTotal = 0;
-			long long count = 0;
-			for (int j = 0; j < deGroup.size(); j++) {
-				yyjson_val* pDeSrc = deGroup.at(j);
-				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-				yyjson_mut_val* pAggrVal = nullptr;
-				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-				{
-					string valStr = yyjson_get_str(pDeSrcVal);
-					db = atof(valStr.data());
-				}
-				else {
-					db = yyjson_get_num(pDeSrcVal);
-				}
-				dbTotal += db;
-				count++;
-			}
-			double avg = dbTotal / count;
-
-			yyjson_val* pDeSrc = deGroup.at(0);
-			yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
-			pAggrVal = yyjson_mut_real(mut_doc, avg);
-		}
-		else if (aggrType == "max") {
-			double dbMax = -DBL_MAX;
-			yyjson_val* pSelRowDeSrc = nullptr;
-			for (int j = 0; j < deGroup.size(); j++) {
-				yyjson_val* pDeSrc = deGroup.at(j);
-				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-				{
-					string valStr = yyjson_get_str(pDeSrcVal);
-					db = atof(valStr.data());
-				}
-				else {
-					db = yyjson_get_num(pDeSrcVal);
-				}
-				if (db > dbMax) {
-					pSelRowDeSrc = pDeSrc;
-					dbMax = db;
-				}
-			}
-			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
-			pAggrVal = yyjson_mut_real(mut_doc, dbMax);
-		}
-		else if (aggrType == "min") {
-			double dbMin = DBL_MAX;
-			yyjson_val* pSelRowDeSrc = nullptr;
-			for (int j = 0; j < deGroup.size(); j++) {
-				yyjson_val* pDeSrc = deGroup.at(j);
-				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-				{
-					string valStr = yyjson_get_str(pDeSrcVal);
-					db = atof(valStr.data());
-				}
-				else {
-					db = yyjson_get_num(pDeSrcVal);
-				}
-				if (db < dbMin) {
-					pSelRowDeSrc = pDeSrc;
-					dbMin = db;
-				}
-			}
-			yyjson_val* pDeSrcTime = yyjson_obj_get(pSelRowDeSrc, "time");
-			//des.time = yyjson_val_mut_copy(mut_doc, pDeSrcTime);
-			aggrRlt.deTime = yyjson_get_str(pDeSrcTime);
-			pAggrVal = yyjson_mut_real(mut_doc, dbMin);
-		}
-		else if (aggrType == "sum") {
-			double dbSum = 0;
-			for (int j = 0; j < deGroup.size(); j++) {
-				yyjson_val* pDeSrc = deGroup.at(j);
-				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-				{
-					string valStr = yyjson_get_str(pDeSrcVal);
-					db = atof(valStr.data());
-				}
-				else {
-					db = yyjson_get_num(pDeSrcVal);
-				}
-				dbSum += db;
-			}
-			pAggrVal = yyjson_mut_real(mut_doc, dbSum);
-		}
-		else if (aggrType == "diff") {
-			double dbMax = -DBL_MAX;
-			double dbMin = DBL_MAX;
-			for (int j = 0; j < deGroup.size(); j++) {
-				yyjson_val* pDeSrc = deGroup.at(j);
-				yyjson_val* pDeSrcVal = yyjson_obj_get(pDeSrc, aggrKey.c_str());
-				double db = 0;
-				if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-				{
-					string valStr = yyjson_get_str(pDeSrcVal);
-					db = atof(valStr.data());
-				}
-				else {
-					db = yyjson_get_num(pDeSrcVal);
-				}
-				if (db > dbMax)
-					dbMax = db;
-				if (db < dbMin)
-					dbMin = db;
-			}
-			double dbDiff = dbMax - dbMin; 
-			string sDbDiff = formatStr("%lf", dbDiff); 
-			dbDiff = atof(sDbDiff.c_str());
-			pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
-		}
-		else if (aggrType == "count") {
-			int count = deGroup.size();
-			pAggrVal = yyjson_mut_int(mut_doc, count);
-		}
-
-
-		if (aggrType == "count") {
-			aggrRlt.items["count"] = pAggrVal;
-		}
-		if (aggrOpt.size() == 0) { //do aggr with multiple items
-			aggrRlt.items[aggrKey] = pAggrVal;
-		}
-		else { //do multiple aggr with one item, put aggrType as key in result de,aggrResult as val 
-			aggrRlt.items[aggrType] = pAggrVal;
-		}
-
-		if (aggrKey == "val") {
-			aggrRlt.val = pAggrVal;
 		}
 	}
 
@@ -1787,12 +1937,15 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 				bool bFirstLastAggr = false;
 				if (deSel.aggregate.size() > 0) {
-					map<string, string>::iterator aggrOpt = deSel.aggregate.begin();
-					string& aggrType = aggrOpt->second;
+					map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
+					vector<string>& aggrTypes = aggrOpt->second;
 					if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
 					{
-						if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-							bFirstLastAggr = true;
+						if (aggrTypes.size() == 1) {
+							string& aggrType = aggrTypes[0];
+							if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+								bFirstLastAggr = true;
+							}
 						}
 					}
 				}
@@ -1948,7 +2101,8 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "") 
 					{
 						for (auto& aggrParam : fSetOut.aggregate) {
-							string aggrType = aggrParam.second;
+							vector<string>& aggrTypes = aggrParam.second;
+							string aggrType = aggrTypes[0];
 							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType=="diff.first-last" || aggrType=="diff.last-first") {
 								//string err = "data element type is: string, does not support aggregate type:" + aggrType;
 								//err += ",use valType=number to cast string value to number value";
@@ -2417,10 +2571,13 @@ void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
 //      "min":"min",
 //      "avg":"avg"
 // }
-map<string, string> TDB::getAggrOpt(yyjson_val* jAggr) {
-	map<string, string> aggrOpt;
+map<string, vector<string>> TDB::getAggrOpt(yyjson_val* jAggr) {
+	map<string, vector<string>> aggrOpt;
 	if (yyjson_is_str(jAggr)) { //aggr val in a single tag
-		aggrOpt[m_dbFmt.deItemKey_value] = yyjson_get_str(jAggr);
+		vector<string> aggrTypes;
+		string sAggr = yyjson_get_str(jAggr);
+		DB_STR::split(aggrTypes, sAggr, ",");
+		aggrOpt[m_dbFmt.deItemKey_value] = aggrTypes;
 	}
 	else if (yyjson_is_obj(jAggr)) { //aggr by each field
 		size_t idx, maxIdx;
@@ -2428,7 +2585,9 @@ map<string, string> TDB::getAggrOpt(yyjson_val* jAggr) {
 		yyjson_obj_foreach(jAggr, idx, maxIdx, key, value) {
 			string sKey = yyjson_get_str(key);
 			string sVal = yyjson_get_str(value);
-			aggrOpt[sKey] = sVal;
+			vector<string> aggrTypes;
+			aggrTypes.push_back(sVal);
+			aggrOpt[sKey] = aggrTypes;
 		}
 	}
 	return aggrOpt;
