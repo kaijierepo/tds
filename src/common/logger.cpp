@@ -65,6 +65,7 @@ void LOG(const char* pszFmt, ...)
 	va_end(args);
 	LOG(str);
 }
+
 void LOG(string info)
 {
 	logger.log(info);

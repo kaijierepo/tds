@@ -1818,6 +1818,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		//if p==null，maybe int rlt_mut_doc,some string type pointed to local variable and is already released
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 		//size_t len = strlen(p);
+		if (p == 0) {
+			printf("[严重错误]%s,%d,yyjson_mut_write返回空", __FILE__, __LINE__);
+			return false;
+		}
+
 		result.dataList = p;
 	}
 	result.rowCount = mapRlt.size();

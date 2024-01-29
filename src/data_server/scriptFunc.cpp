@@ -536,6 +536,10 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 				tds->call("getMp", params, err, rlt, pEngine->currentSession);
 				if (rlt != nullptr) {
 					json jVal = rlt["val"];
+	
+					string info = "val(" + sTag + ") = " + jVal.dump();
+					pEngine->m_vecOutput.push_back(info);
+			
 					jerry_value_t jerryVal;
 					jsonVal2jerryVal(jVal,jerryVal);
 					return jerryVal;
@@ -564,12 +568,19 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					json err, rlt;
 					tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
 						
+					string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
 					if (rlt.is_array() && rlt.size() > 0) {
 						json& jDe = rlt[0];
 						json& jVal = jDe["val"];
 						jerry_value_t ret;
 						jsonVal2jerryVal(jVal, ret);
+						info += jVal.dump();
+						pEngine->m_vecOutput.push_back(info);
 						return ret;
+					}
+					else {
+						info += "null";
+						pEngine->m_vecOutput.push_back(info);
 					}
 				}
 			}

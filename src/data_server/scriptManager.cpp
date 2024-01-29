@@ -142,12 +142,21 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		if (params.contains("rootTag"))
 			si.rootTag = params["rootTag"];
 
+		bool getExpRet = false; //是否获取表达式的返回值。测试表达式时使用
+		if (params.contains("getExpRet")) {
+			getExpRet = params["getExpRet"].get<bool>();
+		}
+
 		ScriptEngine se;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(s,session.user);
 
 		json jOutput = json::array();
+
+		if(getExpRet)
+		jOutput.push_back("计算结果=" + se.m_sEvalRet);
+
 		for (int i = 0; i < se.m_vecOutput.size(); i++) {
 			string sline = se.m_vecOutput[i];
 			jOutput.push_back(sline);

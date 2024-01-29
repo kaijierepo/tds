@@ -469,14 +469,23 @@ bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
 
 void TDS_imp::call(string method, json& param, json& err, json& rlt, RPC_SESSION session)
 {
+#ifdef _DEBUG
+	printf("tds call,method=%s,params=%s", method.c_str() , param.dump().c_str());
+#endif
 	try {
 		RPC_RESP resp;
 		rpcSrv.handleMethodCall(method, param, resp, session);
 		if (resp.error != "")
 		{
+#ifdef _DEBUG
+			printf("error=%s",resp.error.c_str());
+#endif
 			err = json::parse(resp.error);
 		}
 		else{
+#ifdef _DEBUG
+			printf("result=%s",resp.result.c_str());
+#endif
 			rlt = json::parse(resp.result);
 		}
 	}
