@@ -416,8 +416,12 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
 			json params;
 			params["tag"] = sTag;
-			if (jArgs.size() > 1) {
+			if (jArgs.size() == 2) {
 				params["invalidAsZero"] = jArgs[1];
+			}
+			else if (jArgs.size() == 3) {
+				params["time"] = jArgs[1];
+				params["invalidAsZero"] = jArgs[2];
 			}
 
 			json err, rlt;

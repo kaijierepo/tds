@@ -1179,6 +1179,44 @@ yyjson_val* yyjson_obj_get_recursive(yyjson_val* obj, const char* key) {
 	return ret;
 }
 
+double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey,vector<yyjson_val*>& deGroup) {
+	double dbTotal = 0;
+	long long count = 0;
+
+	bool aggrKeyUndefined = true;
+	for (int j = 0; j < deGroup.size(); j++) {
+		yyjson_val* pDeSrc = deGroup.at(j);
+		yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+		if (pDeSrcVal == nullptr) {
+			continue;
+		}
+		aggrKeyUndefined = false;
+		yyjson_mut_val* pAggrVal = nullptr;
+		double db = 0;
+		if (yyjson_is_num(pDeSrcVal)) {
+			db = yyjson_get_num(pDeSrcVal);
+		}
+		else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
+		{
+			string valStr = yyjson_get_str(pDeSrcVal);
+			db = atof(valStr.data());
+		}
+		else {
+			continue;
+		}
+
+		dbTotal += db;
+		count++;
+	}
+	if (aggrKeyUndefined) {
+		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		db_exception e;
+		e.m_error = sErr;
+		throw e;
+	}
+	double avg = dbTotal / count;
+}
+
 bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>> aggrKeyType,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
 {
 	//aggrKeyType supports 2 modes.   multi keys multi aggr types mode is not supported
@@ -1270,44 +1308,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
 			}
 			else if (aggrType == "avg") {
-				double dbTotal = 0;
-				long long count = 0;
-
-				bool aggrKeyUndefined = true;
-				for (int j = 0; j < deGroup.size(); j++) {
-					yyjson_val* pDeSrc = deGroup.at(j);
-					yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
-					if (pDeSrcVal == nullptr) {
-						continue;
-					}
-					aggrKeyUndefined = false;
-					yyjson_mut_val* pAggrVal = nullptr;
-					double db = 0;
-					if (yyjson_is_num(pDeSrcVal)) {
-						db = yyjson_get_num(pDeSrcVal);
-					}
-					else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-					{
-						string valStr = yyjson_get_str(pDeSrcVal);
-						db = atof(valStr.data());
-					}
-					else {
-						continue;
-					}
-
-					dbTotal += db;
-					count++;
-				}
-				if (aggrKeyUndefined) {
-					string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
-					db_exception e;
-					e.m_error = sErr;
-					throw e;
-				}
-
-				double avg = dbTotal / count;
-				yyjson_val* pDeSrc = deGroup.at(0);
-				yyjson_val* pDeSrcTime = yyjson_obj_get(pDeSrc, "time");
+				double avg = doAggrOneGroup_avg(deSel,aggrKey,deGroup);
 				pAggrVal = yyjson_mut_real(mut_doc, avg);
 			}
 			else if (aggrType == "max") {
@@ -1469,6 +1470,9 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 			else if (aggrType == "count") {
 				int count = deGroup.size();
 				pAggrVal = yyjson_mut_int(mut_doc, count);
+			}
+			else if (aggrType == "increase") {
+
 			}
 
 
@@ -2860,6 +2864,8 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 		deSel.aggregate = getAggrOpt(yyv_aggr);
 		deSel.bAggr = true;
 	}
+
+	yyjson_val* yyv_timeSlots = yyjson_obj_get(yyParams, "timeSlot");
 }
 
 TDB* TDB::getChildDB(string dbName) {

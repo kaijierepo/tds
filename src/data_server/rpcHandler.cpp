@@ -1845,19 +1845,37 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			json rlt = nullptr;
 			double dbSum = 0;
 			bool success = true;
-			for (int i = 0; i < mpList.size(); i++) {
-				MP* pmp = mpList[i];
-				if (pmp->m_curVal.is_number()) {
-					double val = pmp->m_curVal.get<double>();
-					dbSum += val;
+
+			//对时间段内的求和
+			if (params.contains("time")) {
+				
+				params["aggr"] = "sum";
+				string err, rlt, queryInfo;
+				string sParams = params.dump();
+				db.rpc_db_select(sParams, err, rlt, queryInfo);
+
+				if (rlt != "") {
+					json j = json::parse(rlt);
+					dbSum = j["val"].get<double>();
 				}
-				else {
-					if (!invalidAsZero) {
-						success = false;
-						break;
+			}
+			//对所有位号的当前值聚合,相当于 time=last
+			else {
+				for (int i = 0; i < mpList.size(); i++) {
+					MP* pmp = mpList[i];
+					if (pmp->m_curVal.is_number()) {
+						double val = pmp->m_curVal.get<double>();
+						dbSum += val;
+					}
+					else {
+						if (!invalidAsZero) {
+							success = false;
+							break;
+						}
 					}
 				}
 			}
+
 			if (success) {
 				rlt = dbSum;
 			}
