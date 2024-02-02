@@ -350,7 +350,7 @@ struct DE_SELECTOR {
 	bool bAggr; 
 	map<string,vector<string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
 	vector<map<string, vector<string>>> vecAggregate; //specified each tag in its own aggregate type
-	//vector<string, vector<string>> vecTimeSlots;  //named time slots,used in "increase" aggr mode
+	map<string, vector<DB_TIME>> mapTimeSlots;  //named time slots,used in "increase" aggr mode
 	bool tagAsColume; //return data set as a table.each tag as a columne
 
 	//use function to calc the selected dataset
@@ -520,6 +520,8 @@ public:
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	double doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
+	double doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	//update
 	//bool Update(string tag, TIME stTime, string& sData);
