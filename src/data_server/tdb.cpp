@@ -1217,55 +1217,55 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 
 
 	//get first and last de in each range
-	//yyjson_val* pDe = nullptr;
-	//yyjson_val* pPreviousDe = nullptr;
-	//for (int deIdx = 0; deIdx < deGroup.size(); deIdx++) {
-	//	if (deIdx > 0) {
-	//		pPreviousDe = pDe;
-	//	}
+	yyjson_val* pDe = nullptr;
+	yyjson_val* pPreviousDe = nullptr;
+	for (int deIdx = 0; deIdx < deGroup.size(); deIdx++) {
+		if (deIdx > 0) {
+			pPreviousDe = pDe;
+		}
 
-	//	pDe = deGroup.at(deIdx);
-	//	yyjson_val* yyTime = yyjson_obj_get(pDe, "time");
-	//	DB_TIME t;
-	//	t.fromStr(yyjson_get_str(yyTime));
+		pDe = deGroup.at(deIdx);
+		yyjson_val* yyTime = yyjson_obj_get(pDe, "time");
+		DB_TIME t;
+		t.fromStr(yyjson_get_str(yyTime));
 
-	//	RANGE_INCREASE& ri = iterTimeRange->second;
-	//	//find range start de
-	//	if (ri.firstDe == nullptr) {
-	//		if (t > ri.pTimeRange->start) {
-	//			if (t < ri.pTimeRange->end) {
-	//				ri.firstDe = pDe;
-	//				continue;
-	//			}
-	//			else {
-	//				//check next range by the same de
-	//				iterTimeRange++;
-	//				if (iterTimeRange == listTimeRange.end())
-	//					break;
-	//				deIdx--;
-	//				continue;
-	//			}
-	//		}
-	//		else {
-	//			continue;
-	//		}
-	//	}
-	//	
-	//	if (ri.lastDe == nullptr) {
-	//		if (t > ri.pTimeRange->end) {
-	//			ri.lastDe = pPreviousDe;
-	//			//check next range by the same de
-	//			iterTimeRange++;
-	//			if (iterTimeRange == listTimeRange.end())
-	//				break;
-	//			deIdx--;
-	//			continue;
-	//		}
-	//	}
-	//	else {
-	//		//
-	//	}
-	//}
+		RANGE_INCREASE& ri = iterTimeRange->second;
+		//find range start de
+		if (ri.firstDe == nullptr) {
+			if (t > ri.pTimeRange->start) {
+				if (t < ri.pTimeRange->end) {
+					ri.firstDe = pDe;
+					continue;
+				}
+				else {
+					//check next range by the same de
+					iterTimeRange++;
+					if (iterTimeRange == listTimeRange.end())
+						break;
+					deIdx--;
+					continue;
+				}
+			}
+			else {
+				continue;
+			}
+		}
+		
+		if (ri.lastDe == nullptr) {
+			if (t > ri.pTimeRange->end) {
+				ri.lastDe = pPreviousDe;
+				//check next range by the same de
+				iterTimeRange++;
+				if (iterTimeRange == listTimeRange.end())
+					break;
+				deIdx--;
+				continue;
+			}
+		}
+		else {
+			//
+		}
+	}
 
 	if (aggrKeyUndefined) {
 		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
@@ -1276,7 +1276,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 
 	//sum each range incease
 	map<string, double> slotIncrease;
-	/*for (auto& slotIter : mapTimeSlots) {
+	for (auto& slotIter : mapTimeSlots) {
 		double dbIncrease = 0;
 		for (DB_TIME_RANGE& iter : slotIter.second) {
 			RANGE_INCREASE* pri = (RANGE_INCREASE*)iter.p;
@@ -1319,7 +1319,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			dbIncrease = dbLast - dbFirst;
 		}
 		slotIncrease[slotIter.first] = dbIncrease;
-	}*/
+	}
 
 	return slotIncrease;
 }
