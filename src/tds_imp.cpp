@@ -216,6 +216,10 @@ void createChromeWnd()
 #endif
 
 bool isTdsRunning() {
+#ifdef _DEBUG
+	return false;
+#endif // !_DEBUG
+
 #ifdef _WIN32
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {

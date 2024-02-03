@@ -69,12 +69,55 @@ struct DB_TIME {
 	void fromStr(string str);
 	static string nowStr();
 	static string nowStrWithMilli();
+
+	bool operator==(const DB_TIME& right) const {
+		return 0 == memcmp(this, &right,sizeof(DB_TIME));
+	}
+
+	bool operator>(const DB_TIME& right) const {
+		if (wYear > right.wYear)return true;
+		if (wMonth > right.wMonth)return true;
+		if (wDay > right.wDay)return true;
+		if (wHour > right.wHour)return true;
+		if (wMinute > right.wMinute) return true;
+		if (wSecond > right.wSecond)return true;
+		if (wMilliseconds > right.wMilliseconds)return true;
+		return false;
+	}
+	bool operator>=(const DB_TIME& right) const {
+		if (*this > right || *this == right) {
+			return true;
+		}
+		return false;
+	}
+	bool operator<(const DB_TIME& right) const {
+		if (wYear < right.wYear)return true;
+		if (wMonth < right.wMonth)return true;
+		if (wDay < right.wDay)return true;
+		if (wHour < right.wHour)return true;
+		if (wMinute < right.wMinute) return true;
+		if (wSecond < right.wSecond)return true;
+		if (wMilliseconds < right.wMilliseconds)return true;
+		return false;
+	}
+	bool operator<=(const DB_TIME& right)const {
+		if (*this < right || *this == right) {
+			return true;
+		}
+		return false;
+	}
 };
 
 struct DE_TIME {
 	DB_TIME st;
 	time_t tt;
 	string strT;
+};
+
+struct DB_TIME_RANGE {
+	DB_TIME start;
+	DB_TIME end;
+	void* p;
 };
 
 class TAG_SELECTOR{
@@ -163,6 +206,7 @@ public:
 	string error;
 	DE_TIME deTime;
 };
+DB_TIME_RANGE parseTimeRange(string timeExp);
 
 enum class DOWN_SAMPLING_TYPE {
 	DST_None,
@@ -350,7 +394,7 @@ struct DE_SELECTOR {
 	bool bAggr; 
 	map<string,vector<string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type
 	vector<map<string, vector<string>>> vecAggregate; //specified each tag in its own aggregate type
-	map<string, vector<DB_TIME>> mapTimeSlots;  //named time slots,used in "increase" aggr mode
+	map<string, vector<DB_TIME_RANGE>> mapTimeSlots;  //named time slots,used in "increase" aggr mode
 	bool tagAsColume; //return data set as a table.each tag as a columne
 
 	//use function to calc the selected dataset
@@ -520,6 +564,8 @@ public:
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
+	//double doAggrOneGroup_increase(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
+	map<string, double> doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);

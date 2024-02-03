@@ -1179,31 +1179,93 @@ yyjson_val* yyjson_obj_get_recursive(yyjson_val* obj, const char* key) {
 	return ret;
 }
 
-double TDB::doAggrOneGroup_increase(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
-	double dbIncreased = 0;
-	bool aggrKeyUndefined = true;
-	for (int j = 0; j < deGroup.size(); j++) {
-		yyjson_val* pDeSrc = deGroup.at(j);
-		yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
-		if (pDeSrcVal == nullptr) {
-			continue;
-		}
-		aggrKeyUndefined = false;
-		double db = 0;
+struct RANGE_INCREASE {
+	yyjson_val* firstDe;
+	yyjson_val* lastDe;
+	double increase;
+	DB_TIME_RANGE* pTimeRange;
 
-		if (yyjson_is_num(pDeSrcVal)) {
-			db = yyjson_get_num(pDeSrcVal);
-		}
-		else if (deSel.isValTypeNumber() && yyjson_get_type(pDeSrcVal) == YYJSON_TYPE_STR)
-		{
-			string valStr = yyjson_get_str(pDeSrcVal);
-			db = atof(valStr.data());
-		}
-		else {
-			continue;
-		}
-		dbIncreased += db;
+	RANGE_INCREASE() {
+		memset(this, 0, sizeof(RANGE_INCREASE));
 	}
+
+	void clear() {
+		firstDe = nullptr;
+		lastDe = nullptr;
+		pTimeRange = nullptr;
+		increase = 0;
+	}
+};
+
+//at least 2 points in one range
+map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
+	bool aggrKeyUndefined = true;
+	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
+	
+	//order by time
+	map<DB_TIME, RANGE_INCREASE> listTimeRange;
+	for (auto& slotIter : mapTimeSlots) {
+		for (DB_TIME_RANGE& range : slotIter.second) {
+			RANGE_INCREASE ri;
+			ri.pTimeRange = &range;
+			listTimeRange[range.start] = ri;
+
+			range.p = &ri;
+		}
+	}
+	map<DB_TIME, RANGE_INCREASE>::iterator iterTimeRange = listTimeRange.begin();
+
+
+	//get first and last de in each range
+	//yyjson_val* pDe = nullptr;
+	//yyjson_val* pPreviousDe = nullptr;
+	//for (int deIdx = 0; deIdx < deGroup.size(); deIdx++) {
+	//	if (deIdx > 0) {
+	//		pPreviousDe = pDe;
+	//	}
+
+	//	pDe = deGroup.at(deIdx);
+	//	yyjson_val* yyTime = yyjson_obj_get(pDe, "time");
+	//	DB_TIME t;
+	//	t.fromStr(yyjson_get_str(yyTime));
+
+	//	RANGE_INCREASE& ri = iterTimeRange->second;
+	//	//find range start de
+	//	if (ri.firstDe == nullptr) {
+	//		if (t > ri.pTimeRange->start) {
+	//			if (t < ri.pTimeRange->end) {
+	//				ri.firstDe = pDe;
+	//				continue;
+	//			}
+	//			else {
+	//				//check next range by the same de
+	//				iterTimeRange++;
+	//				if (iterTimeRange == listTimeRange.end())
+	//					break;
+	//				deIdx--;
+	//				continue;
+	//			}
+	//		}
+	//		else {
+	//			continue;
+	//		}
+	//	}
+	//	
+	//	if (ri.lastDe == nullptr) {
+	//		if (t > ri.pTimeRange->end) {
+	//			ri.lastDe = pPreviousDe;
+	//			//check next range by the same de
+	//			iterTimeRange++;
+	//			if (iterTimeRange == listTimeRange.end())
+	//				break;
+	//			deIdx--;
+	//			continue;
+	//		}
+	//	}
+	//	else {
+	//		//
+	//	}
+	//}
 
 	if (aggrKeyUndefined) {
 		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
@@ -1212,7 +1274,54 @@ double TDB::doAggrOneGroup_increase(DE_SELECTOR& deSel, string& aggrKey, vector<
 		throw e;
 	}
 
-	return dbIncreased;
+	//sum each range incease
+	map<string, double> slotIncrease;
+	/*for (auto& slotIter : mapTimeSlots) {
+		double dbIncrease = 0;
+		for (DB_TIME_RANGE& iter : slotIter.second) {
+			RANGE_INCREASE* pri = (RANGE_INCREASE*)iter.p;
+			yyjson_val* pValFirst = yyjson_obj_get_recursive(pri->firstDe, aggrKey.c_str());
+			if (pValFirst == nullptr) {
+				continue;
+			}
+			yyjson_val* pValLast = yyjson_obj_get_recursive(pri->lastDe, aggrKey.c_str());
+			if (pValLast == nullptr) {
+				continue;
+			}
+
+			aggrKeyUndefined = false;
+			double dbFirst = 0;
+			double dbLast = 0;
+
+			if (yyjson_is_num(pValFirst)) {
+				dbFirst = yyjson_get_num(pValFirst);
+			}
+			else if (deSel.isValTypeNumber() && yyjson_get_type(pValFirst) == YYJSON_TYPE_STR)
+			{
+				string valStr = yyjson_get_str(pValFirst);
+				dbFirst = atof(valStr.data());
+			}
+			else {
+				continue;
+			}
+
+			if (yyjson_is_num(pValLast)) {
+				dbLast = yyjson_get_num(pValLast);
+			}
+			else if (deSel.isValTypeNumber() && yyjson_get_type(pValLast) == YYJSON_TYPE_STR)
+			{
+				string valStr = yyjson_get_str(pValLast);
+				dbLast = atof(valStr.data());
+			}
+			else {
+				continue;
+			}
+			dbIncrease = dbLast - dbFirst;
+		}
+		slotIncrease[slotIter.first] = dbIncrease;
+	}*/
+
+	return slotIncrease;
 }
 
 double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
@@ -1522,7 +1631,13 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 				pAggrVal = yyjson_mut_int(mut_doc, count);
 			}
 			else if (aggrType == "increase") {
-				
+				map<string, double> aggrRlt = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey, deGroup);
+				pAggrVal = yyjson_mut_obj(mut_doc);
+				for (auto& iter : aggrRlt) {
+					yyjson_mut_val* yySlotName = yyjson_mut_strcpy(mut_doc, iter.first.c_str());
+					yyjson_mut_val* yySlotIncrease = yyjson_mut_real(mut_doc, iter.second);
+					yyjson_mut_obj_put(pAggrVal, yySlotName, yySlotIncrease);
+				}
 			}
 
 
@@ -2918,15 +3033,14 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 		yyjson_val* val;
 		yyjson_obj_foreach(yyv_timeSlots, idx, maxIdx,key,val) {
 			string slotName = yyjson_get_str(key);
-			vector<DB_TIME> rangeSeries;
+			vector<DB_TIME_RANGE> rangeSeries;
 
 			size_t timeIdx = 0;
 			size_t maxTimeIdx = 0;
 			yyjson_val* yyTimeRange;
 			yyjson_arr_foreach(yyv_timeSlots, timeIdx, maxTimeIdx, yyTimeRange) {
 				string timeRange = yyjson_get_str(yyTimeRange);
-				DB_TIME t;
-				t.fromStr(timeRange);
+				DB_TIME_RANGE t = parseTimeRange(timeRange);
 				rangeSeries.push_back(t);
 			}
 
@@ -3313,6 +3427,20 @@ string TIME_SELECTOR::shortSel2StardardSel(string time)
 		return startYear + "-01-01 00:00:00~" + endYear + "-12-31 23:59:59"; //12月份固定是31天
 	}
 	return time;
+}
+
+DB_TIME_RANGE parseTimeRange(string timeExp) {
+	DB_TIME_RANGE tr;
+	size_t pos = timeExp.find("~");
+	string strStart = timeExp.substr(0, pos);
+	string strEnd = timeExp.substr(pos + 1, timeExp.length() - pos - 1);
+	if (strStart.find(":") == string::npos)
+		strStart += " 00:00:00";
+	if (strEnd.find(":") == string::npos)
+		strEnd += " 23:59:59";
+	tr.start.fromStr(strStart);
+	tr.end.fromStr(strEnd);
+	return tr;
 }
 
 bool TIME_SELECTOR::parseTimeRange(string condition)
