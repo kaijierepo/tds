@@ -815,13 +815,13 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
 	yyjson_val* yyDe = yyjson_doc_get_root(doc);
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
-	if (yyjson_obj_get(yyDe, "time") == nullptr) {
+	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
 		yyjson_mut_val* timeKey = yyjson_mut_str(mdoc, CONST_STR::time.c_str());
 		yyjson_mut_val* timeVal;
 		string sTime = stTime.toStr(true);
 		timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
 		yyjson_mut_obj_put(yymDe, timeKey, timeVal);
-	}
+	//}
 
 
 	//write file data
@@ -3949,14 +3949,27 @@ string  DB_TIME::toStr(bool enableMS)
 	}
 }
 
-void DB_TIME::fromStr(string str)
+bool DB_TIME::fromStr(string str)
 {
 	DB_TIME& t = *this;
 	memset(&t, 0, sizeof(t));
-	//2022-02-22 11:11:11.123   23bytes
 	int y, m, d, h, min, s, milli;
-	if (str[2] != '-' && str[2] != ':') {
-		if (str.length() == 23) {
+	if (str[4] == '-') {
+		//2023-12-31T16:00:00.000Z
+		if (str.length() == 24) { 
+			sscanf(str.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d.%dZ",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s,
+				&milli);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+			return true;
+		}
+		//2022-02-22 11:11:11.123   23bytes
+		else if (str.length() == 23) {
 			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
 				&y,
 				&m,
@@ -3966,6 +3979,7 @@ void DB_TIME::fromStr(string str)
 				&s,
 				&milli);
 			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+			return true;
 		}
 		//2022-02-22 11:11:11   19bytes
 		else if (str.length() == 19)
@@ -3978,6 +3992,7 @@ void DB_TIME::fromStr(string str)
 				&min,
 				&s);
 			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
+			return true;
 		}
 		//2022-02-22 11:11   16bytes
 		else if (str.length() == 16)
@@ -3989,6 +4004,7 @@ void DB_TIME::fromStr(string str)
 				&h,
 				&min);
 			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min;
+			return true;
 		}
 		else if (str.length() == 10) //2022-02-02
 		{
@@ -3997,20 +4013,27 @@ void DB_TIME::fromStr(string str)
 				&m,
 				&d);
 			t.wYear = y; t.wMonth = m; t.wDay = d;
+			return true;
 		}
-		else if (str.length() == 8) //12:11:11
+	}
+	else if (str[2] == ':') {
+		if (str.length() == 8) //12:11:11
 		{
 			sscanf(str.c_str(), "%2d:%2d:%2d",
 				&h,
 				&min,
 				&s);
 			t.wHour = h; t.wMinute = min; t.wSecond = s;
+			return true;
 		}
 	}
 	else {
 		time_t tt = atoi(str.c_str());
 		fromUnixTime(tt);
+		return true;
 	}
+
+	return false;
 }
 
 string DB_TIME::nowStr()

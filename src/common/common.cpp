@@ -1048,10 +1048,22 @@ namespace timeopt {
 	{
 		TIME t;
 		memset(&t, 0, sizeof(t));
-		//2022-02-22 11:11:11.123   23bytes
 		int y, m, d, h, min, s, milli;
 		if (str[2] != '-' && str[2] != ':') {
-			if (str.length() == 23) {
+			//2023-12-31T16:00:00.000Z
+			if (str.length() == 24) {
+				sscanf(str.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d.%dZ",
+					&y,
+					&m,
+					&d,
+					&h,
+					&min,
+					&s,
+					&milli);
+				t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+			}
+			//2022-02-22 11:11:11.123   23bytes
+			else if (str.length() == 23) {
 				sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
 					&y,
 					&m,

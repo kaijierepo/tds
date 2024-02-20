@@ -43,13 +43,20 @@ json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argu
 		{
 			j = jerry_value_to_boolean(arguments[i]);
 		}
-		else if (jerry_value_is_bigint(arguments[i]))
-		{
-			j = jerry_value_as_integer(arguments[i]);
-		}
+		//else if (jerry_value_is_bigint(arguments[i]))
+		//{
+		//	j = jerry_value_as_integer(arguments[i]);
+		//}
 		else if (jerry_value_is_number(arguments[i]))
 		{
-			j = jerry_get_number_value(arguments[i]);
+			double number = jerry_get_number_value(arguments[i]);
+			double fmodnum = fmod(number, 1.0);
+			if (number == (int)number) {
+				j = (int)number;
+			}
+			else {
+				j = number;
+			}
 		}
 		else if (jerry_value_is_string(arguments[i]))
 		{
@@ -632,6 +639,57 @@ backtrace_handler(const jerry_call_info_t* call_info_p,
 	return jerry_create_undefined();
 } /* backtrace_handler */
 
+
+jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		if (params.is_object()) {
+			json err, rlt;
+			tds->call("db.insert", params, err, rlt, pEngine->currentSession);
+			if (rlt != nullptr) {
+				jerry_value_t jerryVal;
+				jsonVal2jerryVal(rlt, jerryVal);
+				return jerryVal;
+			}
+			else {
+				int errCode = err["code"].get<int>();
+				string errMsg = err["message"].get<string>();
+				string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+				pEngine->m_vecOutput.push_back(errInfo);
+				LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+			}
+		}
+	}
+	else if (jArgs.size() == 3) {
+		json params;
+		params["tag"] = jArgs[0];
+		params["time"] = jArgs[1];
+		params["val"] = jArgs[2];
+		json err, rlt;
+		tds->call("db.insert", params, err, rlt, pEngine->currentSession);
+		if (rlt != nullptr) {
+			jerry_value_t jerryVal;
+			jsonVal2jerryVal(rlt, jerryVal);
+			return jerryVal;
+		}
+		else {
+			int errCode = err["code"].get<int>();
+			string errMsg = err["message"].get<string>();
+			string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+			pEngine->m_vecOutput.push_back(errInfo);
+			LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+		}
+	}
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
 {
 	GLOBAL_FUNC gf;
@@ -770,6 +828,22 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 		jerry_release_value(obj);
 	}
 
+
+	//db对象
+	{
+		jerry_value_t obj = jerry_create_object();
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"db");
+
+		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"insert");
+		jerry_value_t obj_prop_func = jerry_create_external_function(func_db_insert);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
+		jerry_release_value(prop_name);
+		jerry_release_value(obj);
+	}
 
 	return true;
 }

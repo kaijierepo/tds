@@ -66,7 +66,7 @@ struct DB_TIME {
 	string toStampFull();
 	string toYMD();
 	string toStr(bool enableMS = true);
-	void fromStr(string str);
+	bool fromStr(string str);
 	static string nowStr();
 	static string nowStrWithMilli();
 

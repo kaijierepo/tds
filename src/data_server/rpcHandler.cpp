@@ -822,12 +822,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 					if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
 						time += " 00:00:00";
 					}
-
-					if (!timeopt::isValidTimeStr(time)) {
+					 
+					if (!tNow.fromStr(time)) {
 						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
 						return true;
 					}
-					tNow.fromStr(time);
 				}
 				else {
 					tNow.setNow();
