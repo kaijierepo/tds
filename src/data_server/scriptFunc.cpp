@@ -93,7 +93,13 @@ void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 	}
 	else if (jerry_value_is_bigint(jerryVal))
 	{
-		jVal = jerry_value_as_integer(jerryVal);
+		uint64_t digits[1];
+		bool sign;
+		jerry_get_bigint_digits(jerryVal, digits, 1, &sign);
+		int intValue = (int)digits[0]; // Assuming it fits within an int
+		if (sign)
+			intValue = -intValue;
+		jVal = intValue;
 	}
 	else if (jerry_value_is_number(jerryVal))
 	{
@@ -690,6 +696,112 @@ jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_toStr(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	jerry_value_t time = call_info_p->this_value;
+	
+	json jTime;
+	jerryVal2jsonVal(time, jTime);
+	TIME t;
+	t.wYear = jTime["year"].get<int>();
+	t.wMonth = jTime["month"].get<int>();
+	t.wDay = jTime["day"].get<int>();
+	t.wHour = jTime["hour"].get<int>();
+	t.wMinute = jTime["minute"].get<int>();
+	t.wSecond = jTime["second"].get<int>();
+	t.wMilliseconds = jTime["millisecond"].get<int>();
+	string sTime = t.toStr();
+	jerry_value_t jv_str_time = jerry_create_string((const jerry_char_t*)sTime.c_str());
+
+	return jv_str_time;
+}
+
+
+jerry_value_t func_time(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	TIME t = timeopt::now();
+
+	uint64_t intVal = 0;
+	jerry_value_t timeObj = jerry_create_object();
+	jerry_value_t prop_name, prop_value, set_result;
+
+	prop_name = jerry_create_string((const jerry_char_t*)"year");
+	intVal = t.wYear;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"month");
+	intVal = t.wMonth;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+	
+	prop_name = jerry_create_string((const jerry_char_t*)"day");
+	intVal = t.wDay;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"hour");
+	intVal = t.wHour;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+
+	prop_name = jerry_create_string((const jerry_char_t*)"minute");
+	intVal = t.wMinute;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+
+	prop_name = jerry_create_string((const jerry_char_t*)"second");
+	intVal = t.wSecond;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"millisecond");
+	intVal = t.wMilliseconds;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+
+	prop_name = jerry_create_string((const jerry_char_t*)"toStr");
+	prop_value = jerry_create_external_function(func_toStr);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	return timeObj;
+}
+
+
+
 bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
 {
 	GLOBAL_FUNC gf;
@@ -807,6 +919,13 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	set_result = jerry_set_property(global_object, property_name, property_func);
 	if (jerry_value_is_error(set_result)) {
 	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
+
+	property_name = jerry_create_string((const jerry_char_t*)"time");
+	property_func = jerry_create_external_function(func_time);
+	set_result = jerry_set_property(global_object, property_name, property_func);
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 
