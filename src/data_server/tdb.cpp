@@ -1646,7 +1646,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 			}
 
 			
-			if (aggrKeyType.size() == 1 && aggrKey == "val") {
+			if (aggrKeyType.size() == 1 && aggrKey == m_dbFmt.deItemKey_value) {
 				// single key single type mode
 				if (aggrTypes.size() == 1) {
 					aggrRlt.val = pAggrVal;
@@ -3366,10 +3366,10 @@ bool isLeapYear(int year) {
 
 int getMonthLastDay(int year, int month) {
 	if (isLeapYear(year)) {
-		return monthLastDay_leapYear[month];
+		return monthLastDay_leapYear[month-1];
 	}
 	else {
-		return monthLastDay[month];
+		return monthLastDay[month-1];
 	}
 };
 
