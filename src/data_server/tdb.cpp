@@ -1797,7 +1797,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr; 
 	string sCalcResult; //calc result dumped to string
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; 
-	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(NULL);
+	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 
 	if (deSel.deType == "curve") {
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
@@ -2456,6 +2456,18 @@ void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& query
 	yyjson_doc_free(doc);
 }
 void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+	string dbName;
+	TDB* tdb = nullptr;
+	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+	if (yyjson_is_str(yyv_db)) {
+		dbName = yyjson_get_str(yyv_db);
+		tdb = db.getChildDB(dbName);
+		if (tdb == nullptr) {
+			err = "specified db not found";
+			return;
+		}
+	}
+
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
 		err = JSON_STR_VAL("specify tag in string format");
@@ -2480,7 +2492,16 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
-	if (Update(tag, dbTime, updateVal)) {
+	bool updateRet = false;
+
+	if (tdb) {
+		tdb->Update(tag, dbTime, updateVal);
+	}
+	else {
+		Update(tag, dbTime, updateVal);
+	}
+
+	if (updateRet) {
 		rlt = JSON_STR_VAL("ok");
 	}
 	else {
@@ -2545,6 +2566,18 @@ void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& query
 	yyjson_doc_free(doc);
 }
 void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+	string dbName;
+	TDB* tdb = nullptr;
+	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+	if (yyjson_is_str(yyv_db)) { 
+		dbName = yyjson_get_str(yyv_db);
+		tdb = db.getChildDB(dbName);
+		if (tdb == nullptr) {
+			err = "specified db not found";
+			return;
+		}
+	}
+
 	yyjson_val* yyTag = yyjson_obj_get(params, "tag");
 	if (!yyjson_is_str(yyTag)) {
 		err = JSON_STR_VAL("specify tag in string format");
@@ -2561,7 +2594,16 @@ void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& qu
 	string time = yyjson_get_str(yyTime);
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
-	if (Delete(tag, dbTime)) {
+	bool ret = false;
+
+	if (tdb) {
+		ret = tdb->Delete(tag, dbTime);
+	}
+	else {
+		Delete(tag, dbTime);
+	}
+
+	if (ret) {
 		rlt = JSON_STR_VAL("ok");
 	}
 	else {
@@ -3066,6 +3108,61 @@ TDB* TDB::getChildDB(string dbName) {
 	}
 }
 
+void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	rpc_db_insert(yyv_params, rlt, err, queryInfo, org);
+	yyjson_doc_free(doc);
+}
+
+void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+	yyjson_val* yyv_val = yyjson_obj_get(params, "val");
+	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
+	if (yyv_val==nullptr && yyv_file==nullptr)
+	{
+		err = "one of param val or file must be specified";
+	}
+	else
+	{
+		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
+		string tag = yyjson_get_str(yyv_tag);
+		DB_TIME tNow;
+		yyjson_val* yyv_time = yyjson_obj_get(params, "time");
+		if (yyv_time) {
+			string time = yyjson_get_str(yyv_time);
+			if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
+				time += " 00:00:00";
+			}
+
+			if (!tNow.fromStr(time)) {
+				err = "param time invalid format.";
+				return;
+			}
+		}
+		else {
+			tNow.setNow();
+		}
+
+		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
+		yyjson_mut_obj_remove_key(yymv_params, "tag");
+		size_t len = 0;
+		string sDe = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		yyjson_mut_doc_free(mut_doc);
+
+		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+
+		if (yyjson_is_str(yyv_db)) {
+			string dbName = yyjson_get_str(yyv_db);
+			TDB* tdb = db.getChildDB(dbName);
+			tdb->Insert(tag, sDe, &tNow);
+		}
+		else
+			Insert(tag, sDe, &tNow);
+		rlt = "\"ok\"";
+	}
+}
+
 void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
@@ -3077,6 +3174,18 @@ void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& query
 void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org)
 {
 	DE_SELECTOR deSel;
+
+	string dbName;
+	TDB* tdb = nullptr;
+	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+	if (yyjson_is_str(yyv_db)) {
+		dbName = yyjson_get_str(yyv_db);
+		tdb = db.getChildDB(dbName);
+		if (tdb == nullptr) {
+			err = "specified db not found";
+			return;
+		}
+	}
 
 	string rootTag = "";
 	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
@@ -3121,7 +3230,14 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	else {
 		try
 		{
-			Select(deSel, result);
+			yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+
+			if (dbName!="") {
+				tdb->Select(deSel, result);
+			}
+			else
+				Select(deSel, result);
+
 			if (result.error != "") {
 				err = result.error;
 			}

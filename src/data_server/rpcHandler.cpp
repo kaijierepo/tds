@@ -809,40 +809,8 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		//insert不进行 time参数校验
 		if (method == "db.insert")
 		{
-			if (!params.contains("val") && !params.contains("file"))
-			{
-				error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "one of param val or file must be specified");
-			}
-			else
-			{
-				string tag = params["tag"].get<string>();
-				DB_TIME tNow;
-				if (params.contains("time")) {
-					string time = params["time"].get<string>(); 
-					if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
-						time += " 00:00:00";
-					}
-					 
-					if (!tNow.fromStr(time)) {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_TIME_SELECTOR_FMT_ERROR, "param time invalid format.");
-						return true;
-					}
-				}
-				else {
-					tNow.setNow();
-				}
-		
-	
-				params.erase("tag");
-				string sDe = params.dump();
-				if (params["db"].is_string()) { //db参数引入，实现使用相同的位号，存储不同的数据
-					TDB* tdb = db.getChildDB(params["db"].get<string>());
-					tdb->Insert(tag, sDe, &tNow);
-				}
-				else
-					db.Insert(tag, sDe, &tNow);
-				rpcResp.result = "\"ok\"";
-			}
+			string s = params.dump();
+			db.rpc_db_insert(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
 		}
 		else if (method == "db.renameFolder") {
 			string oldName = params["old"].get<string>();
@@ -876,32 +844,17 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		else if (method == "db.select")
 		{
 			string s = params.dump();
-			if (params["db"].is_string()) {
-				TDB* tdb = db.getChildDB(params["db"].get<string>());
-				tdb->rpc_db_select(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
-			}
-			else
-				db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
+			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
 		}
 		else if (method == "db.update")
 		{
 			string s = params.dump();
-			if (params["db"].is_string()) {
-				TDB* tdb = db.getChildDB(params["db"].get<string>());
-				tdb->rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
-			}
-			else
-				db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
 		}
 		else if (method == "db.delete")
 		{
 			string s = params.dump();
-			if (params["db"].is_string()) {
-				TDB* tdb = db.getChildDB(params["db"].get<string>());
-				tdb->rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
-			}
-			else
-				db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
 		}
 	}
 	else

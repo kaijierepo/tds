@@ -526,6 +526,9 @@ public:
 	DB_FMT m_dbFmt;
 	DB_TIME_UNIT m_timeUnit;
 
+	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+
 	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
 	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
 
