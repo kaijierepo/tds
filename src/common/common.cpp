@@ -1267,6 +1267,17 @@ namespace timeopt {
 		return CalcTimePassMilliSecond(last);
 	}
 
+	long long calcTimePassMilliSecond(TIME lastTime)
+	{
+		TIME nowTime = now();
+		time_t now = SysTime2Unix(nowTime);
+		time_t last = SysTime2Unix(lastTime);
+		time_t second = now - last;
+		time_t milli = nowTime.wMilliseconds - lastTime.wMilliseconds;
+		milli = second * 1000 + milli;
+		return milli;
+	}
+
 	long long calcTimePassMilliSecond(TIME lastTime, TIME nowTime)
 	{
 		time_t now = SysTime2Unix(nowTime);
@@ -2050,6 +2061,10 @@ string TIME::toStr(bool enableMilli)
 	return timeopt::st2str(*this,enableMilli);
 }
 
+void TIME::fromStr(string s) {
+	*this = timeopt::str2st(s);
+}
+
 string TIME::toDateStr()
 {
 	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
@@ -2066,6 +2081,27 @@ string TIME::toStampFull()
 {
 	string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
 	return s;
+}
+
+time_t  TIME::toUnixTimeStamp() {
+	tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
+	time_t unixTime = mktime(&temptm);
+	return unixTime;
+}
+
+void  TIME::fromUnixTimeStamp(time_t unixTime) {
+	static std::mutex mtx;
+	mtx.lock();
+	tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+	mtx.unlock();
+
+	wYear = time_tm.tm_year + 1900;
+	wMonth = time_tm.tm_mon + 1;
+	wDay = time_tm.tm_mday;
+	wHour = time_tm.tm_hour;
+	wMinute = time_tm.tm_min;
+	wSecond = time_tm.tm_sec;
+	wDayOfWeek = time_tm.tm_wday;
 }
 
 string TIME::toStampHMS()

@@ -696,6 +696,93 @@ jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+void TIMEToJerryTime(TIME& t, jerry_value_t& time) {
+	jerry_value_t prop_name, prop_value, set_result;
+	uint64_t intVal;
+
+	prop_name = jerry_create_string((const jerry_char_t*)"year");
+	intVal = t.wYear;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"month");
+	intVal = t.wMonth;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"day");
+	intVal = t.wDay;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"hour");
+	intVal = t.wHour;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"minute");
+	intVal = t.wMinute;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"second");
+	intVal = t.wSecond;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"millisecond");
+	intVal = t.wMilliseconds;
+	prop_value = jerry_create_bigint(&intVal, 1, false);
+	set_result = jerry_set_property(time, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+}
+
+
+jerry_value_t func_fromStr(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+	if (!jArgs[0].is_string()){
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+	jerry_value_t time = call_info_p->this_value;
+	string strTime = jArgs[0].get<string>();
+	TIME t;
+	t.fromStr(strTime);
+	TIMEToJerryTime(t, time);
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
 jerry_value_t func_toStr(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -716,6 +803,41 @@ jerry_value_t func_toStr(const jerry_call_info_t* call_info_p,
 	jerry_value_t jv_str_time = jerry_create_string((const jerry_char_t*)sTime.c_str());
 
 	return jv_str_time;
+}
+
+jerry_value_t func_increaseSeconds(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+	if (!jArgs[0].is_number_integer()) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+
+	jerry_value_t time = call_info_p->this_value;
+	json jTime;
+	jerryVal2jsonVal(time, jTime);
+	TIME t;
+	t.wYear = jTime["year"].get<int>();
+	t.wMonth = jTime["month"].get<int>();
+	t.wDay = jTime["day"].get<int>();
+	t.wHour = jTime["hour"].get<int>();
+	t.wMinute = jTime["minute"].get<int>();
+	t.wSecond = jTime["second"].get<int>();
+	t.wMilliseconds = jTime["millisecond"].get<int>();
+	time_t unixTime = t.toUnixTimeStamp();
+	unixTime += jArgs[0].get<int>();
+	t.fromUnixTimeStamp(unixTime);
+	TIMEToJerryTime(t, time);
+	
+	jerry_value_t ret = jerry_create_null();
+	return ret;
 }
 
 
@@ -792,6 +914,21 @@ jerry_value_t func_time(const jerry_call_info_t* call_info_p,
 
 	prop_name = jerry_create_string((const jerry_char_t*)"toStr");
 	prop_value = jerry_create_external_function(func_toStr);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"fromStr");
+	prop_value = jerry_create_external_function(func_fromStr);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+
+	prop_name = jerry_create_string((const jerry_char_t*)"increaseSeconds");
+	prop_value = jerry_create_external_function(func_increaseSeconds);
 	set_result = jerry_set_property(timeObj, prop_name, prop_value);
 	jerry_release_value(set_result);
 	jerry_release_value(prop_name);

@@ -75,6 +75,7 @@ bool ScriptEngine::runScript(string& script, string user)
 	m_vecOutput.clear();
 	bool runOk = false;
 	try {
+		TIME tStart = timeopt::now();
 		pEngine = this;
 		tls_context = jerry_create_context(512 * 1024,context_alloc_fn,NULL);;
 		jerry_init(JERRY_INIT_EMPTY);
@@ -128,6 +129,9 @@ bool ScriptEngine::runScript(string& script, string user)
 
 		jerry_cleanup();
 		free(tls_context);
+
+		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
+		m_vecOutput.push_back("执行耗时:" + str::fromInt(costMilli) + "ms");
 	}
 	catch (std::exception& e)
 	{
