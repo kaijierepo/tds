@@ -76,12 +76,19 @@ struct DB_TIME {
 
 	bool operator>(const DB_TIME& right) const {
 		if (wYear > right.wYear)return true;
+		if (wYear < right.wYear)return false;
 		if (wMonth > right.wMonth)return true;
+		if (wMonth < right.wMonth)return false;
 		if (wDay > right.wDay)return true;
+		if (wDay < right.wDay)return false;
 		if (wHour > right.wHour)return true;
+		if (wHour < right.wHour)return false;
 		if (wMinute > right.wMinute) return true;
+		if (wMinute < right.wMinute) return false;
 		if (wSecond > right.wSecond)return true;
+		if (wSecond < right.wSecond)return false;
 		if (wMilliseconds > right.wMilliseconds)return true;
+		if (wMilliseconds < right.wMilliseconds)return false;
 		return false;
 	}
 	bool operator>=(const DB_TIME& right) const {
@@ -92,12 +99,19 @@ struct DB_TIME {
 	}
 	bool operator<(const DB_TIME& right) const {
 		if (wYear < right.wYear)return true;
+		if (wYear > right.wYear)return false;
 		if (wMonth < right.wMonth)return true;
+		if (wMonth > right.wMonth)return false;
 		if (wDay < right.wDay)return true;
+		if (wDay > right.wDay)return false;
 		if (wHour < right.wHour)return true;
+		if (wHour > right.wHour)return false;
 		if (wMinute < right.wMinute) return true;
+		if (wMinute > right.wMinute) return false;
 		if (wSecond < right.wSecond)return true;
+		if (wSecond > right.wSecond)return false;
 		if (wMilliseconds < right.wMilliseconds)return true;
+		if (wMilliseconds > right.wMilliseconds)return false;
 		return false;
 	}
 	bool operator<=(const DB_TIME& right)const {

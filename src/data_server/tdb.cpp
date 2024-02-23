@@ -1202,18 +1202,18 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	bool aggrKeyUndefined = true;
 	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
 	
-	//order by time
-	map<DB_TIME, RANGE_INCREASE> listTimeRange;
+	//order by range start time
+	map<DB_TIME, RANGE_INCREASE*> listTimeRange;
 	for (auto& slotIter : mapTimeSlots) {
 		for (DB_TIME_RANGE& range : slotIter.second) {
-			RANGE_INCREASE ri;
-			ri.pTimeRange = &range;
+			RANGE_INCREASE* ri = new RANGE_INCREASE();
+			ri->pTimeRange = &range;
 			listTimeRange[range.start] = ri;
 
-			range.p = &ri;
+			range.p = ri;
 		}
 	}
-	map<DB_TIME, RANGE_INCREASE>::iterator iterTimeRange = listTimeRange.begin();
+	map<DB_TIME, RANGE_INCREASE*>::iterator iterTimeRange = listTimeRange.begin();
 
 
 	//get first and last de in each range
@@ -1229,7 +1229,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 		DB_TIME t;
 		t.fromStr(yyjson_get_str(yyTime));
 
-		RANGE_INCREASE& ri = iterTimeRange->second;
+		RANGE_INCREASE& ri = *iterTimeRange->second;
 		//find range start de
 		if (ri.firstDe == nullptr) {
 			if (t > ri.pTimeRange->start) {
@@ -1265,13 +1265,6 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 		else {
 			//
 		}
-	}
-
-	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
-		db_exception e;
-		e.m_error = sErr;
-		throw e;
 	}
 
 	//sum each range incease
@@ -1319,6 +1312,17 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			dbIncrease = dbLast - dbFirst;
 		}
 		slotIncrease[slotIter.first] = dbIncrease;
+	}
+
+	for (auto& iter : listTimeRange) {
+		delete iter.second;
+	}
+
+	if (aggrKeyUndefined) {
+		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		db_exception e;
+		e.m_error = sErr;
+		throw e;
 	}
 
 	return slotIncrease;
@@ -3080,7 +3084,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
 			size_t timeIdx = 0;
 			size_t maxTimeIdx = 0;
 			yyjson_val* yyTimeRange;
-			yyjson_arr_foreach(yyv_timeSlots, timeIdx, maxTimeIdx, yyTimeRange) {
+			yyjson_arr_foreach(val, timeIdx, maxTimeIdx, yyTimeRange) {
 				string timeRange = yyjson_get_str(yyTimeRange);
 				DB_TIME_RANGE t = parseTimeRange(timeRange);
 				rangeSeries.push_back(t);
@@ -3261,7 +3265,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 	//params["timeParsed"] = deSel.timeSel.getParsedSelector();
 	//resp.params = params.dump();
-	//resp.dbQueryInfo = "tags:" + str::fromInt(deSel.tagSel.tagSet.size()) + ",files:" + str::fromInt(result.fileCount) +  ",data elements:" + str::fromInt(result.deCount) + ",rows:" + str::fromInt(result.rowCount);
+	queryInfo = "tags:" + DB_STR::format("%d",deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
 string TDB::parseSuffix(string deFileUrl)
