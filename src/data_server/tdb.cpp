@@ -2036,7 +2036,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 				fseek(fp, len - 1, SEEK_SET);
 				std::string d = ",";
 				size_t len = 0;
-				string s = "{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"val\":" + sVal + "\n}";
+				string s = "{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
 				d += s;
 				d += "]";
 				fwrite(d.c_str(), 1, d.length(), fp);
@@ -2047,7 +2047,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	}
 
 	if (!bAppend) {
-		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"val\":" + sVal + "\n}\n]";
+		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
 		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
 		{
 			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
