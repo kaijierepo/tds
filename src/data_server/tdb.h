@@ -584,6 +584,7 @@ public:
 	//double doAggrOneGroup_increase(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	map<string, double> doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
+	void doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup, yyjson_mut_val*& pAggrRlt, yyjson_mut_doc* yydoc);
 	double doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	double doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup);
 	//update

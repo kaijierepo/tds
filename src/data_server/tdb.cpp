@@ -1364,6 +1364,191 @@ double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 	return dbSum;
 }
 
+enum DB_VAL_TYPE {
+	DVT_UNKNOWN,
+	DVT_BOOL,
+	DVT_INT,
+	DVT_FLOAT
+};
+
+struct DURATION_INFO {
+	time_t duration;
+	int percentage;
+	DURATION_INFO() {
+		duration = 0;
+		percentage = 0;
+	}
+};
+
+struct DURATION_CALC {
+	bool calcBoolVal;
+	int calcIntVal;
+	map<bool, DURATION_INFO> boolDurations;
+	map<int, DURATION_INFO> intDurations;
+	DB_TIME startTime;
+	bool startCalc;
+
+	DURATION_CALC() {
+		startCalc = false;
+	}
+};
+
+void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup,yyjson_mut_val*& pAggrRlt,yyjson_mut_doc* yydoc) {
+	bool aggrKeyUndefined = true;
+
+	DURATION_CALC calc;
+	for (int j = 0; j < deGroup.size(); j++) {
+		yyjson_val* pDeSrc = deGroup.at(j);
+		yyjson_val* pDeSrcVal = yyjson_obj_get_recursive(pDeSrc, aggrKey.c_str());
+		if (pDeSrcVal == nullptr) {
+			continue;
+		}
+		aggrKeyUndefined = false;
+
+		if (yyjson_is_int(pDeSrcVal)) {
+			int iVal = yyjson_get_int(pDeSrcVal);
+
+			if (!calc.startCalc) {
+				calc.startCalc = true;
+				yyjson_val* yyTime = yyjson_obj_get(pDeSrc, "time");
+				calc.startTime.fromStr(yyjson_get_str(yyTime));
+				calc.calcIntVal = iVal;
+				DURATION_INFO di;
+				calc.intDurations[iVal] = di;
+			}
+			else {
+				if (iVal != calc.calcIntVal || j == deGroup.size() - 1) //last val or val changed , sum up 
+				{
+					//get duration time len
+					yyjson_val* yyTime = yyjson_obj_get(pDeSrc, "time");
+					DB_TIME endTime;
+					endTime.fromStr(yyjson_get_str(yyTime));
+					time_t utEnd,utStart;
+					utEnd = endTime.toUnixTime();
+					utStart = calc.startTime.toUnixTime();
+					time_t durationInSeconds = utEnd - utStart;
+
+					//sum up to corresponding int val duration statis
+					DURATION_INFO& durInfo = calc.intDurations[calc.calcIntVal];
+					durInfo.duration += durationInSeconds;
+
+					//start a new val statis
+					if (calc.intDurations.find(iVal) == calc.intDurations.end()) {
+						DURATION_INFO di;
+						calc.intDurations[iVal] = di;
+					}
+					calc.calcIntVal = iVal;
+					calc.startTime = endTime;
+				}
+				else {
+					continue;
+				}
+			}
+		}
+		else if(yyjson_is_bool(pDeSrcVal)) {
+			int bVal = yyjson_get_bool(pDeSrcVal);
+
+			if (!calc.startCalc) {
+				calc.startCalc = true;
+				yyjson_val* yyTime = yyjson_obj_get(pDeSrc, "time");
+				calc.startTime.fromStr(yyjson_get_str(yyTime));
+				calc.calcBoolVal = bVal;
+				DURATION_INFO di;
+				calc.intDurations[bVal] = di;
+			}
+			else {
+				if (bVal != calc.calcBoolVal || j == deGroup.size() - 1) //last val or val changed , sum up 
+				{
+					//get duration time len
+					yyjson_val* yyTime = yyjson_obj_get(pDeSrc, "time");
+					DB_TIME endTime;
+					endTime.fromStr(yyjson_get_str(yyTime));
+					time_t utEnd, utStart;
+					utEnd = endTime.toUnixTime();
+					utStart = calc.startTime.toUnixTime();
+					time_t durationInSeconds = utEnd - utStart;
+
+					//sum up to corresponding int val duration statis
+					DURATION_INFO& durInfo = calc.boolDurations[calc.calcBoolVal];
+					durInfo.duration += durationInSeconds;
+
+					//start a new val statis
+					if (calc.boolDurations.find(bVal) == calc.boolDurations.end()) {
+						DURATION_INFO di;
+						calc.boolDurations[bVal] = di;
+					}
+					calc.calcBoolVal = bVal;
+					calc.startTime = endTime;
+				}
+				else {
+					continue;
+				}
+			}
+		}
+		else {
+			break;
+		}
+	}
+
+	pAggrRlt = yyjson_mut_arr(yydoc);
+	if (calc.intDurations.size() > 0) {
+		time_t totalRangeTime = 0;
+		for (auto& di : calc.intDurations) {
+			totalRangeTime += di.second.duration;
+		}
+		for (auto& di : calc.intDurations) {
+			yyjson_mut_val* oneSlot = yyjson_mut_obj(yydoc);
+
+			yyjson_mut_val* yyKey = yyjson_mut_strcpy(yydoc, "slot");
+			yyjson_mut_val* yyVal = yyjson_mut_int(yydoc, di.first);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyKey = yyjson_mut_strcpy(yydoc, "duration");
+			yyVal = yyjson_mut_int(yydoc, di.second.duration);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyKey = yyjson_mut_strcpy(yydoc, "percentage");
+			yyVal = yyjson_mut_real(yydoc,(double)di.second.duration/(double)totalRangeTime);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyjson_mut_arr_append(pAggrRlt, oneSlot);
+		}
+	}
+
+	if (calc.boolDurations.size() > 0) {
+		time_t totalRangeTime = 0;
+		for (auto& di : calc.intDurations) {
+			totalRangeTime += di.second.duration;
+		}
+		for (auto& di : calc.boolDurations) {
+			yyjson_mut_val* oneSlot = yyjson_mut_obj(yydoc);
+
+			yyjson_mut_val* yyKey = yyjson_mut_strcpy(yydoc, "slot");
+			yyjson_mut_val* yyVal = yyjson_mut_bool(yydoc, di.first);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyKey = yyjson_mut_strcpy(yydoc, "duration");
+			yyVal = yyjson_mut_int(yydoc, di.second.duration);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyKey = yyjson_mut_strcpy(yydoc, "percentage");
+			yyVal = yyjson_mut_real(yydoc, (double)di.second.duration / (double)totalRangeTime);
+			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
+
+			yyjson_mut_arr_append(pAggrRlt, oneSlot);
+		}
+	}
+
+	if (aggrKeyUndefined) {
+		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		db_exception e;
+		e.m_error = sErr;
+		throw e;
+	}
+
+	return;
+}
+
 double TDB::doAggrOneGroup_diff(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
 	double dbMax = -DBL_MAX;
 	double dbMin = DBL_MAX;
@@ -1642,6 +1827,9 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 					yyjson_mut_val* yySlotIncrease = yyjson_mut_real(mut_doc, iter.second);
 					yyjson_mut_obj_put(pAggrVal, yySlotName, yySlotIncrease);
 				}
+			}
+			else if (aggrType == "duration") {
+				doAggrOneGroup_duration(deSel, aggrKey, deGroup, pAggrVal, mut_doc);
 			}
 
 
