@@ -507,7 +507,7 @@ struct  DB_FMT
 {
 	string deListName;
 	string curveIdxListName;
-	string curveDeNameSuffix;
+	string curveDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;
 };
 

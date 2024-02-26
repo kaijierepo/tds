@@ -2881,7 +2881,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 	type = yyjson_get_str(yyv_type);
 
 	if (type == "curve") {
-		name = dbTime.toStampHMS() + "." + m_dbFmt.curveDeNameSuffix;
+		name = dbTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 	}
 
 
@@ -2923,6 +2923,9 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 		delete out;
 	}
 	else if (type == "text") {  //text file is not encoded 
+		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
+	}
+	else if (type == "curve") {  //curve file is not encoded 
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else {
