@@ -28,7 +28,8 @@ void ioDev_ModbusSlave::stop()
 
 	while (m_bCycleAcqThreadRunning || m_bRecvProcessing || m_bOutputting) {
 		m_transaction.m_respSignal.notify(); //中断所有等待中的调用
-		Sleep(1);
+		//Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 }
 
