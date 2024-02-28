@@ -109,6 +109,12 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
 	}
 
+	if (conf.contains("nameTranslate")) {
+		for (auto& i : conf["nameTranslate"].items()) {
+			m_mapNameTranslate[i.key()] = i.value();
+		}
+	}
+
 	if (conf.contains("level")) {
 		m_level = conf["level"];
 	}
@@ -376,6 +382,15 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	
 
 	conf["name"] = m_name;
+
+	if (m_mapNameTranslate.size() > 0) {
+		json j;
+		for (auto& i : m_mapNameTranslate) {
+			j[i.first] = i.second;
+		}
+		conf["nameTranslate"] = j;
+	}
+
 	conf["level"] = m_level;
 
 	if(m_bEnableAlarm == false)
@@ -385,7 +400,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 		conf["enableIO"] = m_bEnableIO;
 
 	if (q.getConfDetail) {
-		string tag = getTag();
+		string tag = getTag("", q.language);
 		if (q.rootTag !=  "")
 		{
 			tag = TAG::trimRoot(tag, q.rootTag);
@@ -718,17 +733,31 @@ json OBJ::getRT()
 	return j;
 }
 
-string OBJ::getTag(string root)
+string& OBJ::getName(string language)
+{
+	if (language == "")
+		return m_name;
+	map<string, string>::iterator iter = m_mapNameTranslate.find(language);
+	if (iter != m_mapNameTranslate.end())
+		return iter->second;
+	if (language == "pinyin") {
+		str::hanZi2Pinyin(m_name, m_namePinyin);
+		return m_namePinyin;
+	}
+	return m_name;
+}
+
+string OBJ::getTag(string root,string language)
 {
 	if (m_pParentMO == nullptr)
 		return "";
 
 	OBJ* pTmpParent = m_pParentMO;
-	string strTagName = m_name;
+	string strTagName = getName(language);
 
 	while (pTmpParent && pTmpParent->m_pParentMO)//第一级位号工程名称默认不显示
 	{
-		strTagName = pTmpParent->m_name + "." + strTagName;
+		strTagName = pTmpParent->getName(language) + "." + strTagName;
 		pTmpParent = pTmpParent->m_pParentMO;
 	}
 
@@ -816,7 +845,7 @@ string OBJ::getTagWithRoot()
 	return strTagName;
 }
 
-void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,string type, string level)
+void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,string type, string level)
 {
 	if (strTag.find("*") == string::npos)//精确查找
 	{
@@ -826,7 +855,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 			strTag = TAG::trimRoot(strTag, m_rootTag);
 
 		//判断自身位号是否是搜索位号的上级位号，如果不是一定搜索不到
-		string tagThis = getTag();
+		string tagThis = getTag(language);
 		if (strTag.find(tagThis) == string::npos) {
 			return;
 		}
@@ -851,10 +880,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 			for (int j = 0; j < childMO->size(); j++)
 			{
 				OBJ* tmp = childMO->at(j);
-				string tmpName = tmp->m_name;
-				if (usePinyin) {
-					str::hanZi2Pinyin(tmpName, tmpName);
-				}
+				string tmpName = tmp->getName(language);
 				if (tmpName == name)
 				{
 					toQuery = tmp;
@@ -886,9 +912,10 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 	else //通配符匹配
 	{
 		if (isSelectedByLevel(level) && isSelectedByType(type)) {
-			string tagCandidate = getTag();
+			string tagCandidate = getTag("",language);
 			TAG_SELECTOR ts;
 			ts.init(strTag);
+			ts.language = language;
 			if (ts.match(tagCandidate))
 				tagVec->push_back(this);
 		}
@@ -896,7 +923,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, bool usePinyin,stri
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pMOChild = m_childObj.at(i);
-			pMOChild->queryObj(tagVec, strTag,usePinyin,type, level);
+			pMOChild->queryObj(tagVec, strTag, language,type, level);
 		}
 	}
 }
@@ -944,22 +971,22 @@ void OBJ::getMpList(map<string, MP*>& MPlist)
 	}
 }
 
-OBJ* OBJ::queryObj(string strTag,bool usePinyin)
+OBJ* OBJ::queryObj(string strTag,string language)
 {
 	if (strTag == "")
 		return this;
 
 	vector<OBJ*> tags;
-	queryObj(&tags, strTag,usePinyin);
+	queryObj(&tags, strTag, language);
 	if (tags.size() > 0)
 		return tags[0];
 	else
 		return NULL;
 }
 
-MP* OBJ::GetMPByTag(string strTag, bool usePinyin)
+MP* OBJ::GetMPByTag(string strTag, string language)
 {
-	OBJ* pMO = queryObj(strTag, usePinyin);
+	OBJ* pMO = queryObj(strTag, language);
 	if (pMO && pMO->m_level == "mp")
 		return (MP*)pMO;
 	return nullptr;
@@ -967,7 +994,7 @@ MP* OBJ::GetMPByTag(string strTag, bool usePinyin)
 
 MP* OBJ::GetMPByTagPinyin(string strTag)
 {
-	return GetMPByTag(strTag, true);
+	return GetMPByTag(strTag, "pinyin");
 }
 
 OBJ* OBJ::GetChildObjByName(string strName)
@@ -1495,7 +1522,7 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, false, tagSelector.type, tagSelector.level);
+		prj.queryObj(&tagSet, exp, tagSelector.language, tagSelector.type, tagSelector.level);
 		for (auto& i : tagSet)
 		{
 			tags.push_back(i->getTag());
@@ -1507,7 +1534,7 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		OBJ* p = prj.queryObj(exp);
+		OBJ* p = prj.queryObj(exp, tagSelector.language);
 		if (p) {
 			objList.push_back(p);
 		}
@@ -1516,7 +1543,7 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, false, tagSelector.type,tagSelector.level);
+		prj.queryObj(&tagSet, exp, tagSelector.language, tagSelector.type,tagSelector.level);
 		for (auto& i : tagSet)
 		{
 			objList.push_back(i);

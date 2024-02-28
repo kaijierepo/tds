@@ -161,6 +161,7 @@ public:
 	string type; //object type
 	string level;
 	string error;
+	string language;
 
 	vector<string> tagSet;
 };

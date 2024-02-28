@@ -1658,6 +1658,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//位号选择
 			vector<string> vecTagSel = parseTagSel(params["tag"],type);
 			TAG_SELECTOR tagSel;
+			tagSel.language = session.language;
 			tagSel.init(vecTagSel, rootTag, type,level);
 
 			string mode = "array";
@@ -1682,6 +1683,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				//}
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
+				q.language = session.language;
 
 				if (mode == "array") {
 					json jRlt = json::array();
@@ -1731,6 +1733,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.pRoot = pmo;
+				q.language = session.language;
 				bool selectedByLeafType = false;
 				if (pmo->toJson(j, q,&selectedByLeafType, session.user))
 					result = j.dump(4);
@@ -2493,7 +2496,6 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 {
 	string error = "";
 	string method = "";
-	string dbPath = "";
 	json id = nullptr;
 	json clientId = nullptr;
 	bool bGB2312 = false;
@@ -2529,10 +2531,11 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 
 		method = jReq["method"].get<string>();
 
-		if (jReq.contains("dbPath"))
-		{
-			dbPath = jReq["dbPath"].get<string>();
-			pSession->dbpath = dbPath;
+		if (jReq.contains("dbPath")){
+			pSession->dbpath = jReq["dbPath"].get<string>();
+		}
+		if (jReq.contains("language")) {
+			pSession->language = jReq["language"].get<string>();
 		}
 		
 

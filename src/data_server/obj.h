@@ -66,6 +66,8 @@ struct OBJ_QUERIER {
 	bool getConfDetail;
 	bool getUnit; //值描述信息是否需要带单位
 
+	string language;
+
 	OBJ* pRoot;
 
 	OBJ_QUERIER() {
@@ -233,8 +235,11 @@ public:
 
 	string m_level;
 	string m_type;  
+	map<string, string> m_mapTypeTranslate;
 	string m_groupName; //设备编组。1个自定义的字符串
 	string m_name;
+	string m_namePinyin;
+	map<string,string> m_mapNameTranslate;
 	string m_alias;
 	string m_objID;  //name可能在系统中有重名，ID不会
 	bool m_bShow;
@@ -271,10 +276,10 @@ public:
 	//查询接口
 	virtual json getRT();
 	void getMpList(map<string, MP*>& MPlist);
-	OBJ* queryObj(string strTag,bool usePinyin = false);//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
-	MP* GetMPByTag(string strTag,bool usePinyin = false);
+	OBJ* queryObj(string strTag, string language = "");//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
+	MP* GetMPByTag(string strTag,string language = "");
 	MP* GetMPByTagPinyin(string strTag);
-	void queryObj(std::vector<OBJ*>* tagVec, string strTag,bool usePinyin = false, string type = "",string level = "*");
+	void queryObj(std::vector<OBJ*>* tagVec, string strTag,string language = "", string type = "", string level = "*");
 	void GetMPByTag(std::vector<MP*>* tagVec, string strTag);
 	void getMpList(vector<MP*>& MPlist);
 	OBJ* GetChildObjByName(string strName);
@@ -317,7 +322,8 @@ public:
 	OBJ* GetProjectMO();//获得当前设备所属的Project节点，MO树根节点
 	string m_rootTag; //仅当当前对象为根节点时有效，将影响getTag的返回，getTag前面都会加上rootTag
 
-	virtual string getTag(string root = ""); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
+	string& getName(string language = "");
+	virtual string getTag(string root = "",string language = ""); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
 	json getTypeTag();
 	vector<string> GetAlias();
 	vector<string> GetAllTagNamePlus();
