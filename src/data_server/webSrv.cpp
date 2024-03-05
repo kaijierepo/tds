@@ -734,21 +734,57 @@ void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm
 	}
 }
 
+
+bool isNamingStyle_1(vector<fs::FILE_INFO>& list,string& certPath,string& keyPath) {
+	for (int i = 0; i < list.size(); i++) {
+		fs::FILE_INFO& fi = list[i];
+		if (fi.name == "key.pem") {
+			certPath = tds->conf->confPath + "/cert.pem";
+			keyPath = tds->conf->confPath + "/key.pem";
+			return true;
+		}
+	}
+	return false;
+}
+
+bool isNamingStyle_2(vector<fs::FILE_INFO>& list,string& certPath, string& keyPath) {
+	for (int i = 0; i < list.size(); i++) {
+		fs::FILE_INFO& fi = list[i];
+		if (fi.name.find(".key") != string::npos) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool getSSLCertPath(string& certPath, string& keyPath) {
+	vector<fs::FILE_INFO> list;
+	fs::getFileList(list, tds->conf->confPath,false,".pem,.cert,.key");
+
+	if (isNamingStyle_1(list,certPath,keyPath)) {
+
+	}
+	else if (isNamingStyle_2(list, certPath, keyPath)) {
+
+	}
+}
+
 static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->m_isHttps)
 		{
+#ifdef ENABLE_OPENSSL
 			struct mg_tls_opts opts;
 			memset(&opts, 0, sizeof(opts));
 
-			//string certPath = fs::appPath() + "/cert.pem";
-			//certPath = _GB(certPath);
-			//opts.cert = certPath.c_str();
+			string certPath = tds->conf->confPath + "/cert.pem";
+			certPath = _GB(certPath);
+			opts.cert = certPath.c_str();
 
-			//string keyPath = fs::appPath() + "/key.pem";
-			//keyPath = _GB(keyPath);
-			//opts.certkey = keyPath.c_str();
+			string keyPath = tds->conf->confPath + "/key.pem";
+			keyPath = _GB(keyPath);
+			opts.certkey = keyPath.c_str();
 
 			//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
 			//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
@@ -756,6 +792,7 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			opts.cert = "cert.pem";
 			opts.certkey = "key.pem";
 			mg_tls_init(c, &opts);
+#endif
 		}
 	}
 	else if (ev == MG_EV_HTTP_MSG)
