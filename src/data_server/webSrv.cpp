@@ -32,11 +32,7 @@ struct thread_data {
 
 int WS_PKT_HEADER_LEN = sizeof(size_t);
 
-
-WebServer* webSrv = new WebServer();
-WebServer* webSrvS = new WebServer();
-WebServer* webSrv2 = new WebServer();
-WebServer* webSrvS2 = new WebServer();
+vector<WebServer*> g_WebServerList;
 
 //日志监视会话
 vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
@@ -838,19 +834,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			memset(&opts, 0, sizeof(opts));
 
 			string certPath, keyPath;
-			if (getSSLCertPath(certPath, keyPath)) {
-				LOG("加载证书文件:" + certPath);
-				LOG("加载私钥文件:" + keyPath);
-				string certData, keyData;
-				fs::readFile(certPath, certData);
-				fs::readFile(keyPath, keyData);
-
-				//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
-				//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
-
-				opts.cert =  mg_str(certData.c_str()),
-				opts.key = mg_str(keyData.c_str());
-
+			if (pWs->m_certData != "" && pWs->m_keyData!="") {
+				opts.cert =  mg_str(pWs->m_certData.c_str()),
+				opts.key = mg_str(pWs->m_keyData.c_str());
 				mg_tls_init(c, &opts);
 			}
 #endif
@@ -1187,7 +1173,8 @@ void WebServer::run(int port,bool https)
 		LOG(log);
 	}
 
-	thread t(webThread,this,port);
+
+	thread t(webThread, this, port);
 	t.detach();
 }
 
@@ -1211,14 +1198,9 @@ void WebServer::sendToAllWs(string& s)
 
 int WebServer::sendToAllWebsock(string& s)
 {
-	if(webSrvS)
-		webSrvS->sendToAllWs(s);
-	if(webSrv)
-		webSrv->sendToAllWs(s);
-	if (webSrvS2)
-		webSrvS2->sendToAllWs(s);
-	if (webSrv2)
-		webSrv2->sendToAllWs(s);
+	for (auto& iter : g_WebServerList) {
+		iter->sendToAllWs(s);
+	}
 	return 0;
 }
 
@@ -1290,21 +1272,28 @@ bool runWebServers()
 		}
 	}
 
-	//LOG("webSrv init %lx", webSrv);
-	//LOG("webSrvS init %lx", webSrvS);
-
 	if (tds->conf->httpPort != 0)
 	{
-		webSrv->run(tds->conf->httpPort);
+		WebServer* pws = new WebServer();
+		pws->run(tds->conf->httpPort);
+		g_WebServerList.push_back(pws);
+		if (tds->conf->httpPort != 667) {
+			WebServer* pws667 = new WebServer();
+			pws667->run(667);
+			g_WebServerList.push_back(pws667);
+		}
 	}
 	if (tds->conf->httpPort2 != 0)
 	{
-		webSrv2->run(tds->conf->httpPort2);
+		WebServer* pws = new WebServer();
+		pws->run(tds->conf->httpPort2);
+		g_WebServerList.push_back(pws);
 	}
 
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 	if (tds->conf->httpsPort != 0)
 	{
+		WebServer* pws = new WebServer();
 		string cert, key;
 		if (!getSSLCertPath(cert, key)) {
 			if (cert == "") {
@@ -1314,13 +1303,25 @@ bool runWebServers()
 				LOG("[error]没有找到私钥文件");
 			}
 		}
+		else {
+			LOG("加载证书文件:" + cert);
+			LOG("加载私钥文件:" + key);
+			fs::readFile(cert, pws->m_certData);
+			fs::readFile(key, pws->m_keyData);
 
-		webSrvS->run(tds->conf->httpsPort, true);
+			//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
+			//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
+		}
+
+		pws->run(tds->conf->httpsPort, true);
+		g_WebServerList.push_back(pws);
 	}
-	if (tds->conf->httpsPort2 != 0)
-	{
-		webSrvS2->run(tds->conf->httpsPort2, true);
-	}
+	//if (tds->conf->httpsPort2 != 0)
+	//{
+	//	WebServer* pws = new WebServer();
+	//	pws->run(tds->conf->httpsPort2, true);
+	//	g_WebServerList.push_back(pws);
+	//}
 #endif
 
 	if (tds->conf->getInt("enableHMR", 0))

@@ -36,17 +36,15 @@ public:
 	std::mutex m_csWsBridgeSessions;
 	int m_restApiID;
 	struct mg_mgr m_mgr;
+	string m_certData;
+	string m_keyData;
 };
 
 extern string rootDir;
 extern string confDir;
 extern string filesDir;
 
-
-extern WebServer* webSrv;
-extern WebServer* webSrvS;
-extern WebServer* webSrv2;
-extern WebServer* webSrvS2;
+extern vector<WebServer*> g_WebServerList;
 
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern void sendToCommLog(string s);
