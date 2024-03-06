@@ -2187,6 +2187,29 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			//j["count"] = i.second->allocCount;
 		//}
 	}
+	else if (method == "getProjcetConf") {
+		json jsconf;
+		map<string, string>& maps = tdsConf.tdsIni.mapConf;
+		for (auto itm : maps)
+		{
+			jsconf[itm.first] = itm.second;
+		}
+		rpcResp.params = jsconf.dump();
+	}
+	else if (method == "setProjcetConf") {	 
+		for (auto itm: params.items())
+		{
+			if (itm.value().is_string())
+			{
+				tds->conf->setStr(itm.key(), itm.value());
+			}
+			else
+			{
+				tds->conf->setInt(itm.key(), itm.value());
+			}
+			rpcResp.result = RPC_OK;
+		}
+	}
 	else {
 		bHandled = false;
 	}
