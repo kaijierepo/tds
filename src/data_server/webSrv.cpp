@@ -24,6 +24,12 @@ string topoDir;
 string dbDir;
 
 
+struct thread_data {
+	struct mg_mgr* mgr;
+	unsigned long conn_id;  // Parent connection ID
+	struct mg_str message;  // Original HTTP request
+};
+
 int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 
@@ -367,29 +373,6 @@ void thread_handleGzhReq(string req,int pipeSock)
 }
 
 
-void thread_handleRpcOverHttp(RPC_SESSION* pRpcSession,int pipeSock)
-{
-	RPC_RESP resp;
-	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->setRpcSession(pRpcSession);
-	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
-
-	int isend = send(pipeSock, resp.strResp.c_str(), (int)resp.strResp.length(),MSG_DONTROUTE);
-	//closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
-#ifdef _WIN32
-	closesocket(pipeSock);
-#else
-	// TODO: linux
-#endif
-	//shutdown(sock, SHUT_DOWN_BOTH);
-}
-
-struct thread_data {
-	struct mg_mgr* mgr;
-	unsigned long conn_id;  // Parent connection ID
-	struct mg_str message;  // Original HTTP request
-};
-
 static void* thread_handleRpcOverHttp2(void* param,RPC_SESSION* pRpcSession) {
 	struct thread_data* p = (struct thread_data*)param;
 	RPC_RESP resp;
@@ -429,18 +412,23 @@ void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSoc
 #endif
 }
 
-void thread_handleDataOverWebsocket(unsigned char* pData,int len, int pipeSock, std::shared_ptr<TDS_SESSION> p)
+
+
+void thread_handleDataOverWebsocket(thread_data* data, std::shared_ptr<TDS_SESSION> p)
 {
-	if (WebServer::handleAppLayerData_Bridge(pData, len, p)) {
+	if (WebServer::handleAppLayerData_Bridge((unsigned char*)data->message.ptr, data->message.len, p)) {
 
 	}
 	else if (p->type == TDS_SESSION_TYPE::tdsClient) {
 		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-		string rpcReqStr = (char*)pData;
+		string rpcReqStr = (char*)data->message.ptr;
 		RPC_RESP resp;
 		rpcSrv.handleRpcCall(rpcReqStr,resp , pSession);
 		string ctLen = to_string(resp.strResp.length());
-		WebServer::sendToWs((unsigned char*)resp.strResp.c_str(), resp.strResp.length(), pipeSock);
+		
+		mg_wakeup(data->mgr, data->conn_id, resp.strResp.c_str(), (int)resp.strResp.length());  // Respond to parent
+		free((void*)data->message.ptr);            // Free all resources that were
+		free(data);
 	}
 	else if (p->type == TDS_SESSION_TYPE::terminal) {
 
@@ -765,6 +753,23 @@ bool isNamingStyle_1(vector<fs::FILE_INFO>& list,string& certPath,string& keyPat
 	return false;
 }
 
+bool isNamingStyle_3(vector<fs::FILE_INFO>& list, string& certPath, string& keyPath) {
+	for (int i = 0; i < list.size(); i++) {
+		fs::FILE_INFO& fi = list[i];
+		if (fi.name.find("key") != string::npos) {
+			keyPath = tds->conf->confPath + "/" + fi.name;
+		}
+		if (fi.name.find("cert") != string::npos) {
+			certPath = tds->conf->confPath + "/" + fi.name;
+		}
+	}
+
+	if (certPath != "" && keyPath != "")
+		return true;
+
+	return false;
+}
+
 bool isNamingStyle_2(vector<fs::FILE_INFO>& list,string& certPath, string& keyPath) {
 	for (int i = 0; i < list.size(); i++) {
 		fs::FILE_INFO& fi = list[i];
@@ -815,6 +820,9 @@ bool getSSLCertPath(string& certPath, string& keyPath) {
 	else if (isNamingStyle_2(list, certPath, keyPath)) {
 		return true;
 	}
+	else if (isNamingStyle_3(list, certPath, keyPath)) {
+		return true;
+	}
 	return false;
 }
 
@@ -833,19 +841,15 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			if (getSSLCertPath(certPath, keyPath)) {
 				LOG("加载证书文件:" + certPath);
 				LOG("加载私钥文件:" + keyPath);
-				certPath = _GB(certPath);
-				//opts.cert = certPath.c_str();
-				keyPath = _GB(keyPath);
-				//opts.certkey = keyPath.c_str();
+				string certData, keyData;
+				fs::readFile(certPath, certData);
+				fs::readFile(keyPath, keyData);
 
 				//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
 				//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
 
-				//opts.cert = "cert.pem";
-				//opts.certkey = "key.pem";
-
-				opts.cert =  mg_str( certPath.c_str()),
-				opts.key = mg_str(keyPath.c_str());
+				opts.cert =  mg_str(certData.c_str()),
+				opts.key = mg_str(keyData.c_str());
 
 				mg_tls_init(c, &opts);
 			}
@@ -858,33 +862,28 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
-			//mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
-			//std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-			//p->bConnected = true;
-			//string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-			////建立一个发往实际sock的管道
-			//int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
-			//c->pipeSock = sPipe;
-			////记录管道发送sock口
-			//p->pipeSock = sPipe;
+			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
+			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+			p->bConnected = true;
+			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			p->conn_id = c->id;
+			p->webServer = pWs;
+			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
+			//例如conn_id可能会马上用来发送数据。因此先初始化
+			pWs->initWsSessionInfo(uri, p);
 
-
-			////先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
-			////例如pipesock可能会马上用来发送数据。一次先初始化
-			//pWs->initWsSessionInfo(uri, p);
-
-			////加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
-			////该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
-			//if (p->type == TDS_SESSION_TYPE::tdsClient) {
-			//	pWs->m_csWsSessions.lock();
-			//	pWs->m_wsSessions[c] = p;
-			//	pWs->m_csWsSessions.unlock();
-			//}
-			//else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
-			//	pWs->m_csWsBridgeSessions.lock();
-			//	pWs->m_wsBridgeSessions[c] = p;
-			//	pWs->m_csWsBridgeSessions.unlock();
-			//}
+			//加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
+			//该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
+			if (p->type == TDS_SESSION_TYPE::tdsClient) {
+				pWs->m_csWsSessions.lock();
+				pWs->m_wsSessions[c] = p;
+				pWs->m_csWsSessions.unlock();
+			}
+			else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
+				pWs->m_csWsBridgeSessions.lock();
+				pWs->m_wsBridgeSessions[c] = p;
+				pWs->m_csWsBridgeSessions.unlock();
+			}
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -973,11 +972,6 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
-
-
-			//a pair of sock created   sock1 is add to mg_mgr_poll.  sock0 is returned for data sending
-			//sock1 is closed by mg_mgr_poll. sock0 should be closed outside mongoose,otherwise causes handle leak
-			//int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c,false);
 
 			if (!pSession->isDebug)
 				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
@@ -1074,24 +1068,33 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	}
 	else if (ev == MG_EV_WAKEUP) {
 		struct mg_str* data = (struct mg_str*)ev_data;
-		mg_http_reply(c, 200, "", data->ptr);
+		if (c->is_websocket) {
+			mg_ws_send(c, data->ptr, data->len, WEBSOCKET_OP_TEXT);
+		}
+		else {
+			//data->ptr最后一个字符不是字符串结束标志
+			char* p = new char[data->len+1];
+			p[data->len] = 0;
+			memcpy(p, data->ptr, data->len);
+			mg_http_reply(c, 200, "", p);
+			delete p;
+		}
 	}
 	else if (ev == MG_EV_WS_MSG) {
 		//websocket通道一般不用于请求，仅用于通知。
 		//但如果需要启动6个以上的阻塞请求通信时，例如和设备通信的命令
 		//由于浏览器有6个以上http连接限制，为提高并发量，此时会使用websockt 
 		//目前仅用于设备面板多开的批量配置的场景
-		if (c->pipeSock != 0)
-		{
-			std::shared_ptr<TDS_SESSION> p = pWs->getWsSession(c);
-			struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
-			int len = wm->data.len;
-			unsigned char* pData = new unsigned char[len+1];
-			pData[len] = 0;
-			memcpy(pData, wm->data.ptr, wm->data.len);
-			thread t(thread_handleDataOverWebsocket, pData,len, c->pipeSock, p);
-			t.detach();
-		}
+
+		std::shared_ptr<TDS_SESSION> p = pWs->getWsSession(c);
+		struct mg_ws_message* wm = (struct mg_ws_message*)ev_data;
+		struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
+		data->message = mg_strdup(wm->data);               // Pass message
+		data->conn_id = c->id;
+		data->mgr = c->mgr;
+
+		thread t(thread_handleDataOverWebsocket, data, p);
+		t.detach();
 	}
 	else if (ev == MG_EV_CLOSE) {
 		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
@@ -1101,14 +1104,6 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
-				//closesocket(p->pipeSock);
-#ifdef _WIN32
-        		closesocket(p->pipeSock);
-#else
-        		// TODO: linux
-#endif
-				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
-				p->pipeSock = 0;
 				p->bConnected = false;
 				pWs->m_wsSessions.erase(c);
 			}
@@ -1122,14 +1117,6 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			if (pWs->m_wsBridgeSessions.find(c) != pWs->m_wsBridgeSessions.end())
 			{
 				std::shared_ptr < TDS_SESSION > p = pWs->m_wsBridgeSessions[c];
-				//closesocket(p->pipeSock);
-#ifdef _WIN32
-        		closesocket(p->pipeSock);
-#else
-        		// TODO: linux
-#endif
-				//shutdown(p->sockPipe, SHUT_DOWN_BOTH);
-				p->pipeSock = 0;
 				p->bConnected = false;
 				pWs->m_wsBridgeSessions.erase(c);
 				if (p->bridgedIoSession) {
@@ -1154,8 +1141,8 @@ void webThread(WebServer* pSrv,int port) {
 	if (pSrv->m_isHttps)
 		proto = "https:";
 	string url = proto + "//0.0.0.0:" + to_string(port);
-	struct mg_mgr mgr;
 	//pSrv->pMgr = &mgr;
+	struct mg_mgr& mgr = pSrv->m_mgr;
 	mg_mgr_init(&mgr);                                        // Init manager
 	// !!!!!非常重要。 mg_http_listen最后一个参数不要传入pSrv等其他外部线程会操作的指针
 	//传入pSrv后。由于WebServer::sendToWs会被其他线程调用。可能和mongoose内部发生多线程读写pSrv指针冲突。会导致奔溃
@@ -1217,7 +1204,7 @@ void WebServer::sendToAllWs(string& s)
 		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
 			continue;
 
-		WebServer::sendToWs((unsigned char*)s.c_str(), s.length(), i->second->pipeSock);
+		WebServer::sendToWebSock((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
 	}
 	m_csWsSessions.unlock();
 }
@@ -1236,33 +1223,10 @@ int WebServer::sendToAllWebsock(string& s)
 }
 
 
-
-//同一个websocket上存在多个rpc请求重叠调用时
-//例如再等待一个设备响应，时间比较长。 同时在读取服务器缓存
-//因此长度头和数据发送必须原子操作。否则会因为多线程并发导致数据错乱.不能调用2次send函数分两次发送
-int WebServer::sendToWs(unsigned char* p, size_t len, int sockPipe)
+int WebServer::sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id)
 {
-	//assert(len + sizeof(len) < MG_IO_SIZE); //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-	if (len + sizeof(len) > MG_IO_SIZE) {
-		LOG("[error]websocket发送数据大小超限，丢弃数据。当前发送长度:%d", len);
-		return 0;
-	}
-	char* pData = new char[sizeof(len) + len];
-	memcpy(pData, &len, sizeof(len));
-	memcpy(pData + sizeof(len), p, len);
-	TIME t = timeopt::now();
-
-	int nNetTimeout = 3000;
-	setsockopt(sockPipe, SOL_SOCKET, SO_SNDTIMEO, (char*)&nNetTimeout, sizeof(int));
-	int iSend = send(sockPipe, pData, len + (int)sizeof(len), MSG_DONTROUTE);
-
-	int pass = timeopt::CalcTimePassMilliSecond(t);
-	if (pass > 500) {
-		LOG("[warn]sendToWs 阻塞，时间:%d", pass);
-	}
-
-	delete pData;
-	return iSend;
+	mg_wakeup(&m_mgr, conn_id, p, len);
+	return 0;
 }
 
 std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)

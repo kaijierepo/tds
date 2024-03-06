@@ -86,6 +86,8 @@ void TDS_SESSION::Init()
     m_IoDev = nullptr;
     m_childTdsHttpPort = 667;
     m_childTdsHttpsPort = 666;
+    conn_id = 0;
+    webServer = nullptr;
 }
 
 bool TDS_SESSION::isConnected()
@@ -132,9 +134,9 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      timeopt::now(&lastSendTime);
      int iSend = 0;
 
-     if (pipeSock != 0)
+     if (conn_id != 0)
      {
-         iSend = WebServer::sendToWs(p, len, pipeSock);
+         iSend = ((WebServer*)webServer)->sendToWebSock(p, len, conn_id);
      }
      else if (pTcpSessionClt)
      {

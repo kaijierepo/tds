@@ -756,7 +756,7 @@ struct timeval {
 #endif
 
 #ifndef MG_IO_SIZE
-#define MG_IO_SIZE 2048  // Granularity of the send/recv IO buffer growth
+#define MG_IO_SIZE 1024*300  // Granularity of the send/recv IO buffer growth
 #endif
 
 #ifndef MG_MAX_RECV_SIZE
@@ -2308,7 +2308,7 @@ void mg_http_serve_ssi(struct mg_connection *c, const char *root,
 #define MG_TLS_CUSTOM 4   // Custom implementation
 
 #ifndef MG_TLS
-#define MG_TLS MG_TLS_BUILTIN
+#define MG_TLS MG_TLS_OPENSSL
 #endif
 
 

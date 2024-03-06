@@ -1196,7 +1196,7 @@ bool ioServer::runAsCloud()
 	m_ioSrvIP = "0.0.0.0";
 
 
-	int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
+	//int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
 	int tdspPort = tds->conf->getInt("tdspPort", 665);
 	int mbPort = tds->conf->getInt("mbPort", 664);
@@ -1207,7 +1207,7 @@ bool ioServer::runAsCloud()
 	m_mapPort2DevType[tdspPort] = DEV_TYPE_tdsp;
 	m_mapPort2DevType[mbPort] = DEV_TYPE_rs485_gateway;
 	m_mapPort2DevType[iq60Port] = DEV_TYPE_iq60;
-	m_mapPort2DevType[leakDetectPort] = DEV_TYPE_leak_detect;
+	//m_mapPort2DevType[leakDetectPort] = DEV_TYPE_leak_detect;
 	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
 
 	//启动服务端口
@@ -1216,7 +1216,7 @@ bool ioServer::runAsCloud()
 	if(mbPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
 	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
 	if(iq60Port)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
-	if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
+	//if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
 
 
 	//io服务 665 TDSP
@@ -1273,17 +1273,17 @@ bool ioServer::runAsCloud()
 	}
 
 	//io服务 663 IQ60
-	m_tcpSrv_leakDetect = new tcpSrv();
-	m_tcpSrv_leakDetect->m_strName = "leakDetect";
-	m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_leakDetect->run(this, leakDetectPort, m_ioSrvIP))
-	{
+	//m_tcpSrv_leakDetect = new tcpSrv();
+	//m_tcpSrv_leakDetect->m_strName = "leakDetect";
+	//m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	//if (m_tcpSrv_leakDetect->run(this, leakDetectPort, m_ioSrvIP))
+	//{
 
-	}
-	else
-	{
-		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(leakDetectPort));
-	}
+	//}
+	//else
+	//{
+	//	LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(leakDetectPort));
+	//}
 
 	//adaptor接入服务
 	m_udpSrv_tdsp = new udpServer();

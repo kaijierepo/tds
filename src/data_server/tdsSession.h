@@ -49,7 +49,8 @@ public:
 	int sock;
 	tcpSession* pTcpSession; //服务端被动连接的 session 代码中仅有两处设置。1是tdssession创建时 2.是tcp连接断开回调时,断开时设为null
 	tcpSessionClt* pTcpSessionClt;  //tds作为客户端主动连接远端
-	int pipeSock;         //socket管道。
+	void* webServer;
+	unsigned long conn_id; //mongoose conn id
 	string getRemoteAddr();
 	string getRemoteIP();
 	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题

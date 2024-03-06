@@ -22,9 +22,8 @@ public:
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
-	static int sendToWs(unsigned char* p, size_t len, int sockPipe);
 	bool m_isHttps;
-
+	int sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id);
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
 	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
 	void parseParamFromUrl(string& url, map<string, string>& mapParams);
@@ -36,6 +35,7 @@ public:
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsBridgeSessions;
 	std::mutex m_csWsBridgeSessions;
 	int m_restApiID;
+	struct mg_mgr m_mgr;
 };
 
 extern string rootDir;
