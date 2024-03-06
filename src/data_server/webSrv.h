@@ -5,6 +5,8 @@ web server of tds
 dispatch http request to rpcHandler
 */
 
+#define MG_TLS MG_TLS_BUILTIN  // Enable built-in TLS 1.3 stack
+
 #include "tdsSession.h"
 #include "common/mongoose.h"
 

@@ -4,11 +4,11 @@
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
-static void cb(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
+static void cb(struct mg_connection* c, int ev, void* ev_data) {
 	tcpSrv* pSrv = (tcpSrv*) c->mgr->userdata;
 	if (ev == MG_EV_READ) {
 		if (ev_data) {
-			tcpSession* ptcp = (tcpSession*)fn_data;
+			tcpSession* ptcp = (tcpSession*)c->fn_data;
 			ptcp->iRecvCount += c->recv.len;
 			pSrv->m_pCallBackUser->OnRecvData_TCPServer(c->recv.buf, c->recv.len, ptcp);
 		}

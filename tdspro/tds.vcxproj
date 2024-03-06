@@ -422,7 +422,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>TDS;-DMG_TLS=MG_TLS_BUILTIN;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>

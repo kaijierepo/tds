@@ -384,6 +384,24 @@ void thread_handleRpcOverHttp(RPC_SESSION* pRpcSession,int pipeSock)
 	//shutdown(sock, SHUT_DOWN_BOTH);
 }
 
+struct thread_data {
+	struct mg_mgr* mgr;
+	unsigned long conn_id;  // Parent connection ID
+	struct mg_str message;  // Original HTTP request
+};
+
+static void* thread_handleRpcOverHttp2(void* param,RPC_SESSION* pRpcSession) {
+	struct thread_data* p = (struct thread_data*)param;
+	RPC_RESP resp;
+	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
+
+	mg_wakeup(p->mgr, p->conn_id, resp.strResp.c_str(), (int)resp.strResp.length());  // Respond to parent
+	free((void*)p->message.ptr);            // Free all resources that were
+	free(p);                                  // passed to us
+	return NULL;
+}
+
 void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSock)
 {
 	RPC_RESP resp;
@@ -751,25 +769,58 @@ bool isNamingStyle_2(vector<fs::FILE_INFO>& list,string& certPath, string& keyPa
 	for (int i = 0; i < list.size(); i++) {
 		fs::FILE_INFO& fi = list[i];
 		if (fi.name.find(".key") != string::npos) {
-			return true;
+			keyPath = tds->conf->confPath + "/" + fi.name;
+		}
+
+		if (fi.name.find(".cert") != string::npos) {
+			certPath = tds->conf->confPath + "/" + fi.name;
 		}
 	}
+
+	if (certPath != "" && keyPath != "")
+		return true;
+
+	//一个文件通过后缀区分，另外一个文件则根据.pem后缀判断
+	if (certPath != "" && keyPath == "") {
+		for (int i = 0; i < list.size(); i++) {
+			fs::FILE_INFO& fi = list[i];
+			if (fi.name.find(".pem") != string::npos) {
+				keyPath = tds->conf->confPath + "/" + fi.name;
+				return true;
+			}
+		}
+	}
+
+	if (certPath == "" && keyPath != "") {
+		for (int i = 0; i < list.size(); i++) {
+			fs::FILE_INFO& fi = list[i];
+			if (fi.name.find(".pem") != string::npos) {
+				certPath = tds->conf->confPath + "/" + fi.name;
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 
 bool getSSLCertPath(string& certPath, string& keyPath) {
 	vector<fs::FILE_INFO> list;
-	fs::getFileList(list, tds->conf->confPath,false,".pem,.cert,.key");
-
+	fs::getFileList(list, tds->conf->confPath,false,".pem");
+	fs::getFileList(list, tds->conf->confPath, false, ".key");
+	fs::getFileList(list, tds->conf->confPath, false, ".cert");
 	if (isNamingStyle_1(list,certPath,keyPath)) {
-
+		return true;
 	}
 	else if (isNamingStyle_2(list, certPath, keyPath)) {
-
+		return true;
 	}
+	return false;
 }
 
-static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
+//static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) 
+static void fn(struct mg_connection* c, int ev,void* ev_data)
+{
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->m_isHttps)
@@ -778,20 +829,26 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			struct mg_tls_opts opts;
 			memset(&opts, 0, sizeof(opts));
 
-			string certPath = tds->conf->confPath + "/cert.pem";
-			certPath = _GB(certPath);
-			opts.cert = certPath.c_str();
+			string certPath, keyPath;
+			if (getSSLCertPath(certPath, keyPath)) {
+				LOG("加载证书文件:" + certPath);
+				LOG("加载私钥文件:" + keyPath);
+				certPath = _GB(certPath);
+				//opts.cert = certPath.c_str();
+				keyPath = _GB(keyPath);
+				//opts.certkey = keyPath.c_str();
 
-			string keyPath = tds->conf->confPath + "/key.pem";
-			keyPath = _GB(keyPath);
-			opts.certkey = keyPath.c_str();
+				//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
+				//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
 
-			//cert.pem文件通常包含公钥证书，也称为X.509证书。公钥证书用于验证服务器的身份，并用于加密通信中的密钥交换。它包含了服务器的公钥、证书颁发机构（CA）的签名以及其他相关信息。客户端可以使用公钥证书来验证服务器的身份，并确保与服务器之间的通信是安全的。
-			//key.pem文件通常包含私钥，也称为密钥。私钥用于对通信进行解密和签名。私钥应该始终保密，并且只有服务器才能访问它。私钥与公钥证书配对使用，以确保通信的机密性和完整性。
+				//opts.cert = "cert.pem";
+				//opts.certkey = "key.pem";
 
-			opts.cert = "cert.pem";
-			opts.certkey = "key.pem";
-			mg_tls_init(c, &opts);
+				opts.cert =  mg_str( certPath.c_str()),
+				opts.key = mg_str(keyPath.c_str());
+
+				mg_tls_init(c, &opts);
+			}
 #endif
 		}
 	}
@@ -801,33 +858,33 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
-			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
-			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-			p->bConnected = true;
-			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-			//建立一个发往实际sock的管道
-			int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
-			c->pipeSock = sPipe;
-			//记录管道发送sock口
-			p->pipeSock = sPipe;
+			//mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
+			//std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+			//p->bConnected = true;
+			//string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			////建立一个发往实际sock的管道
+			//int sPipe = mg_mkpipe(c->mgr, pipeCallback, c, false);
+			//c->pipeSock = sPipe;
+			////记录管道发送sock口
+			//p->pipeSock = sPipe;
 
 
-			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
-			//例如pipesock可能会马上用来发送数据。一次先初始化
-			pWs->initWsSessionInfo(uri, p);
+			////先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
+			////例如pipesock可能会马上用来发送数据。一次先初始化
+			//pWs->initWsSessionInfo(uri, p);
 
-			//加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
-			//该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
-			if (p->type == TDS_SESSION_TYPE::tdsClient) {
-				pWs->m_csWsSessions.lock();
-				pWs->m_wsSessions[c] = p;
-				pWs->m_csWsSessions.unlock();
-			}
-			else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
-				pWs->m_csWsBridgeSessions.lock();
-				pWs->m_wsBridgeSessions[c] = p;
-				pWs->m_csWsBridgeSessions.unlock();
-			}
+			////加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
+			////该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
+			//if (p->type == TDS_SESSION_TYPE::tdsClient) {
+			//	pWs->m_csWsSessions.lock();
+			//	pWs->m_wsSessions[c] = p;
+			//	pWs->m_csWsSessions.unlock();
+			//}
+			//else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
+			//	pWs->m_csWsBridgeSessions.lock();
+			//	pWs->m_wsBridgeSessions[c] = p;
+			//	pWs->m_csWsBridgeSessions.unlock();
+			//}
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
 		//向互联网请求最新网页代码，向局域网发起rpc请求
@@ -856,21 +913,21 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			}
 		}
 		else if (mg_http_match_uri(hm, "/gzh/*") || mg_http_match_uri(hm, "/gzh*")) {
-			string httpReqStr = str::fromBuff(hm->message.ptr, hm->message.len);
-			string resHeader, resBody;
-			httplib::Server srv;
-			if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
-			{
-				int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
-				string req = str::fromBuff(hm->body.ptr, hm->body.len);
-				thread t(thread_handleGzhReq, req, pipeSock);
-				t.detach();
-			}
-			else
-			{
-				handleGet_gzh(hm, resHeader, resBody);
-				mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
-			}
+			//string httpReqStr = str::fromBuff(hm->message.ptr, hm->message.len);
+			//string resHeader, resBody;
+			//httplib::Server srv;
+			//if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
+			//{
+			//	int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);                   // Create pipe
+			//	string req = str::fromBuff(hm->body.ptr, hm->body.len);
+			//	thread t(thread_handleGzhReq, req, pipeSock);
+			//	t.detach();
+			//}
+			//else
+			//{
+			//	handleGet_gzh(hm, resHeader, resBody);
+			//	mg_http_reply(c, 200, resHeader.c_str(), resBody.c_str());
+			//}
 		}
 		else if (mg_http_match_uri(hm, "/stream/*"))
 		{
@@ -881,51 +938,55 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 		}
 		else if (mg_http_match_uri(hm, "/rpc/*"))  // path after rpc is method name,use url param to hold rpc params
 		{
-			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
-			string query = str::fromBuff(hm->query.ptr, hm->query.len);
-			query = httplib::detail::decode_url(query, false);
-			string method = str::trimPrefix(uri, "/rpc/");
-			json jReq;
-			jReq["method"] = method;
-			jReq["params"] = pWs->parseParamFromQuery(query);
-			jReq["id"] = pWs->m_restApiID++;
+			//string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			//string query = str::fromBuff(hm->query.ptr, hm->query.len);
+			//query = httplib::detail::decode_url(query, false);
+			//string method = str::trimPrefix(uri, "/rpc/");
+			//json jReq;
+			//jReq["method"] = method;
+			//jReq["params"] = pWs->parseParamFromQuery(query);
+			//jReq["id"] = pWs->m_restApiID++;
 
-			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
-			RPC_SESSION* pSession = new RPC_SESSION;
-			getSessionInfo(pSession, c, hm, pWs);
-			pSession->req = jReq.dump();
-			c->app_layer_data = pSession;
-			if (!pSession->isDebug)
-				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-			thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
-			t.detach();
+			//int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
+			//RPC_SESSION* pSession = new RPC_SESSION;
+			//getSessionInfo(pSession, c, hm, pWs);
+			//pSession->req = jReq.dump();
+			//c->app_layer_data = pSession;
+			//if (!pSession->isDebug)
+			//	RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+			//thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
+			//t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/api") && memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 		{
-			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
-			RPC_SESSION* pSession = new RPC_SESSION; 
-			getSessionInfo(pSession, c, hm, pWs);
-			c->app_layer_data = pSession;
-			if (!pSession->isDebug)
-				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-			thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
-			t.detach();
+			//int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
+			//RPC_SESSION* pSession = new RPC_SESSION; 
+			//getSessionInfo(pSession, c, hm, pWs);
+			//c->app_layer_data = pSession;
+			//if (!pSession->isDebug)
+			//	RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+			//thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
+			//t.detach();
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
-			//a pair of sock created   sock1 is add to mg_mgr_poll.  sock0 is returned for data sending
-			//sock1 is closed by mg_mgr_poll. sock0 should be closed outside mongoose,otherwise causes handle leak
-			int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c,false);
-
 			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
 
 
+			//a pair of sock created   sock1 is add to mg_mgr_poll.  sock0 is returned for data sending
+			//sock1 is closed by mg_mgr_poll. sock0 should be closed outside mongoose,otherwise causes handle leak
+			//int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c,false);
+
 			if (!pSession->isDebug)
 				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
 
-			thread t(thread_handleRpcOverHttp, pSession, pipeSock);
+			struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
+			data->message = mg_strdup(hm->message);               // Pass message
+			data->conn_id = c->id;
+			data->mgr = c->mgr;
+			thread t(thread_handleRpcOverHttp2,data, pSession);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))
@@ -1010,6 +1071,10 @@ static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
 			opts.root_dir = dir.c_str();   // Serve local dir
 			mg_http_serve_dir(c, (mg_http_message*)ev_data, &opts);
 		}
+	}
+	else if (ev == MG_EV_WAKEUP) {
+		struct mg_str* data = (struct mg_str*)ev_data;
+		mg_http_reply(c, 200, "", data->ptr);
 	}
 	else if (ev == MG_EV_WS_MSG) {
 		//websocket通道一般不用于请求，仅用于通知。
@@ -1104,6 +1169,7 @@ void webThread(WebServer* pSrv,int port) {
 	//mongoose唯一能拿到这个pSrv指针的地方就是mg_http_listen和userdata。 
 	//测试发现usrdata无影响，mg_http_listen传入后就会导致偶先的奔溃
 	mg_http_listen(&mgr, url.c_str() , fn , NULL);  // Setup listener 
+	mg_wakeup_init(&mgr);  // Initialise wakeup socket pair
 	mgr.userdata = pSrv;
 	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
 	mg_mgr_free(&mgr);                                        // Cleanup
@@ -1275,15 +1341,14 @@ bool runWebServers()
 #ifdef CPPHTTPLIB_OPENSSL_SUPPORT
 	if (tds->conf->httpsPort != 0)
 	{
-		string certFile = fs::appPath() + "/cert.pem";
-		if (!fs::fileExist(certFile))
-		{
-			LOG("[error]HTTPS服务缺少证书文件 ./cert.pem");
-		}
-		string keyFile = fs::appPath() + "/key.pem";
-		if (!fs::fileExist(keyFile))
-		{
-			LOG("[error]HTTPS服务缺少私钥文件 ./key.pem");
+		string cert, key;
+		if (!getSSLCertPath(cert, key)) {
+			if (cert == "") {
+				LOG("[error]没有找到证书文件");
+			}
+			if (key == "") {
+				LOG("[error]没有找到私钥文件");
+			}
 		}
 
 		webSrvS->run(tds->conf->httpsPort, true);
