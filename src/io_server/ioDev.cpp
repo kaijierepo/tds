@@ -307,6 +307,10 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["enableHttpHeartbeat"] = m_bEnableHttpHeartbeat;
 			conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
 		}
+
+		if (m_bEnablePingHeartbeat) {
+			conf["enablePingHeartbeat"] = m_bEnablePingHeartbeat;
+		}
 	}
 
 	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
@@ -585,6 +589,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_httpHeartbeatUrl = item.get<string>();
+		}
+	}
+
+	kv = conf.find("enablePingHeartbeat");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bEnablePingHeartbeat = item.get<bool>();
 		}
 	}
 

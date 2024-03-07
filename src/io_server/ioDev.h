@@ -169,6 +169,7 @@ public:
 	bool m_bViaAdaptor;
 	bool m_bEnableOfflineTimeout;
 	bool m_bEnableHttpHeartbeat;
+	bool m_bEnablePingHeartbeat;
 	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
 

@@ -12,6 +12,7 @@ public:
 
 	void DoAcq();
 	void doHttpHeartbeat();
+	void doPingHeartbeat();
 	void DoCycleTask() override;
 	void onEvent_online() override;
 
