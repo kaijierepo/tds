@@ -7579,7 +7579,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
       n++;
     }
   }
-
+  mgr->conn_count = n;
   // MG_INFO(("poll n=%d ms=%d", (int) n, ms));
   if (poll(fds, n, ms) < 0) {
 #if MG_ARCH == MG_ARCH_WIN32
@@ -7678,6 +7678,48 @@ static bool mg_socketpair(MG_SOCKET_TYPE sp[2], union usa usa[2]) {
   return success;
 }
 
+static bool mg_socketpair_old(MG_SOCKET_TYPE sp[2], union usa usa[2], bool udp) {
+    MG_SOCKET_TYPE sock;
+    socklen_t n = sizeof(usa[0].sin);
+    bool success = false;
+
+    sock = sp[0] = sp[1] = MG_INVALID_SOCKET;
+    (void)memset(&usa[0], 0, sizeof(usa[0]));
+    usa[0].sin.sin_family = AF_INET;
+    *(uint32_t*)&usa->sin.sin_addr = mg_htonl(0x7f000001U);  // 127.0.0.1
+    usa[1] = usa[0];
+
+    if (udp && (sp[0] = socket(AF_INET, SOCK_DGRAM, 0)) != MG_INVALID_SOCKET &&
+        (sp[1] = socket(AF_INET, SOCK_DGRAM, 0)) != MG_INVALID_SOCKET &&
+        bind(sp[0], &usa[0].sa, n) == 0 && bind(sp[1], &usa[1].sa, n) == 0 &&
+        getsockname(sp[0], &usa[0].sa, &n) == 0 &&
+        getsockname(sp[1], &usa[1].sa, &n) == 0 &&
+        connect(sp[0], &usa[1].sa, n) == 0 &&
+        connect(sp[1], &usa[0].sa, n) == 0) {
+        success = true;
+    }
+    else if (!udp &&
+        (sock = socket(AF_INET, SOCK_STREAM, 0)) != MG_INVALID_SOCKET &&
+        bind(sock, &usa[0].sa, n) == 0 &&
+        listen(sock, MG_SOCK_LISTEN_BACKLOG_SIZE) == 0 &&
+        getsockname(sock, &usa[0].sa, &n) == 0 &&
+        (sp[0] = socket(AF_INET, SOCK_STREAM, 0)) != MG_INVALID_SOCKET &&
+        connect(sp[0], &usa[0].sa, n) == 0 &&
+        (sp[1] = raccept(sock, &usa[1], &n)) != MG_INVALID_SOCKET) {
+        success = true;
+    }
+    if (success) {
+        mg_set_non_blocking_mode(sp[1]);
+    }
+    else {
+        if (sp[0] != MG_INVALID_SOCKET) closesocket(sp[0]);
+        if (sp[1] != MG_INVALID_SOCKET) closesocket(sp[1]);
+        sp[0] = sp[1] = MG_INVALID_SOCKET;
+    }
+    if (sock != MG_INVALID_SOCKET) closesocket(sock);
+    return success;
+}
+
 // mg_wakeup() event handler
 static void wufn(struct mg_connection *c, int ev, void *ev_data) {
   if (ev == MG_EV_READ) {
@@ -7708,7 +7750,7 @@ bool mg_wakeup_init(struct mg_mgr *mgr) {
     union usa usa[2];
     MG_SOCKET_TYPE sp[2] = {MG_INVALID_SOCKET, MG_INVALID_SOCKET};
     struct mg_connection *c = NULL;
-    if (!mg_socketpair(sp, usa)) {
+    if (!mg_socketpair_old(sp, usa,false)) {
       MG_ERROR(("Cannot create socket pair"));
     } else if ((c = mg_wrapfd(mgr, (int) sp[1], wufn, NULL)) == NULL) {
       closesocket(sp[0]);
@@ -7718,6 +7760,7 @@ bool mg_wakeup_init(struct mg_mgr *mgr) {
       tomgaddr(&usa[0], &c->rem, false);
       MG_DEBUG(("%lu %p pipe %lu", c->id, c->fd, (unsigned long) sp[0]));
       mgr->pipe = sp[0];
+      mgr->pipeRecv = sp[1];
       ok = true;
     }
   }
@@ -7730,7 +7773,7 @@ bool mg_wakeup(struct mg_mgr *mgr, unsigned long conn_id, const void *buf,
     char *extended_buf = (char *) alloca(len + sizeof(conn_id));
     memcpy(extended_buf, &conn_id, sizeof(conn_id));
     memcpy(extended_buf + sizeof(conn_id), buf, len);
-    send(mgr->pipe, extended_buf, len + sizeof(conn_id), MSG_NONBLOCKING);
+    send(mgr->pipe, extended_buf, len + sizeof(conn_id), MSG_DONTROUTE);
     return true;
   }
   return false;

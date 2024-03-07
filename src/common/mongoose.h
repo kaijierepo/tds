@@ -2143,6 +2143,7 @@ struct mg_addr {
 
 struct mg_mgr {
   struct mg_connection *conns;  // List of active connections
+  int conn_count;
   struct mg_dns dns4;           // DNS for IPv4
   struct mg_dns dns6;           // DNS for IPv6
   int dnstimeout;               // DNS resolve timeout in milliseconds
@@ -2158,6 +2159,7 @@ struct mg_mgr {
   void *priv;                   // Used by the MIP stack
   size_t extraconnsize;         // Used by the MIP stack
   MG_SOCKET_TYPE pipe;          // Socketpair end for mg_wakeup()
+  MG_SOCKET_TYPE pipeRecv;
 #if MG_ENABLE_FREERTOS_TCP
   SocketSet_t ss;  // NOTE(lsm): referenced from socket struct
 #endif

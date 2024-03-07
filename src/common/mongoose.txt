@@ -1,4 +1,3 @@
-1.加入hmr
-2.mg_connection 加入 int pipeSock成员
-3.文件服务器 自动目录 ssi 改个名称
-4.#define MG_IO_SIZE 1024*300  加大缓存，提升速度
+1.#define MG_IO_SIZE 1024*300  加大缓存，提升速度
+2.mg_socketpair使用老版本的，创建tcp的socket pair，当前版本只有udp的pair，300kb以上数据发送时， pair中的recvSock不能poll到event。
+使用老版本创建tcp的pair
