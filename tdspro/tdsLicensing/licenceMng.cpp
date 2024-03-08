@@ -87,8 +87,12 @@ bool LicenceMng::checkLicence()
 		
 
 	json j = json::parse(s);
-	string licenceNo = j["证书编号"];
-	j.erase("证书编号");
+	//企业版授权没有证书编号，不和机器绑定
+	string licenceNo;
+	if (j.contains("证书编号")) {
+		licenceNo = j["证书编号"];
+		j.erase("证书编号");
+	}
 
 	string codeToCheck;
 	if (j.contains("激活码"))
@@ -146,9 +150,10 @@ bool LicenceMng::checkLicence()
 			m_validLicence = true;
 			return true;
 		}
+
+		cout << charCodec::utf8_to_gb("证书编号:") << licenceNo << charCodec::utf8_to_gb(",激活码无效") << endl;
 	}
 
-	cout << charCodec::utf8_to_gb("证书编号:") << licenceNo << charCodec::utf8_to_gb(",激活码无效") << endl;
 	m_validLicence = false;
 	return false;
 }

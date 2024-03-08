@@ -423,6 +423,8 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 	{
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
+		string errPkt = jResp.dump();
+		LOG("[warn]" + log + ",Pkt: " + errPkt);
 	}
 	return true;
 }				
@@ -488,11 +490,15 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	else if (method == "onDataUpdate" || method=="statusUpdate" || method=="onStatusUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			//位号增加上该子服务绑定的位号。
-			for (auto& de : jParams) {
-				string tag = de["tag"];
-				tag = TAG::addRoot(tag, m_strTagBind);
-				de["tag"] = tag;
+			if (jParams.is_array()) {
+				for (auto& de : jParams) {
+					de["rootTag"] = m_strTagBind;
+				}
 			}
+			else if (jParams.is_object()) {
+				jParams["rootTag"] = m_strTagBind;
+			}
+
 
 			RPC_RESP resp;
 			RPC_SESSION session;

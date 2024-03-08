@@ -3170,6 +3170,12 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		for (auto& jDe : params) {
 			INPUT_DE de;
 			de.tag = jDe["tag"];
+			if (jDe.contains("rootTag")) {
+				string rootTagTmp = jDe["rootTag"].get<string>();
+				de.tag = TAG::addRoot(de.tag, rootTagTmp);
+			}
+				
+
 			if (jDe["time"].is_string()) {
 				de.sTime = jDe["time"];
 				de.time = timeopt::str2st(de.sTime);
