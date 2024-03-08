@@ -1049,7 +1049,7 @@ namespace timeopt {
 		TIME t;
 		memset(&t, 0, sizeof(t));
 		int y, m, d, h, min, s, milli;
-		if (str[2] != '-' && str[2] != ':') {
+		if (str.length()>3 && str[2] != '-' && str[2] != ':') {
 			//2023-12-31T16:00:00.000Z
 			if (str.length() == 24) {
 				sscanf(str.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d.%dZ",
@@ -1114,7 +1114,7 @@ namespace timeopt {
 				t.wHour = h; t.wMinute = min; t.wSecond = s;
 			}
 		}
-		else {
+		else if(str::isDigits(str)){
 			time_t tt = atoi(str.c_str());
 			t = Unix2SysTime(tt);
 		}

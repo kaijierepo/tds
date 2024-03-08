@@ -1055,6 +1055,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	else if (ev == MG_EV_WAKEUP) {
 		struct mg_str* data = (struct mg_str*)ev_data;
 		if (c->is_websocket) {
+			string s = str::fromBuff(data->ptr, data->len);
 			mg_ws_send(c, data->ptr, data->len, WEBSOCKET_OP_TEXT);
 		}
 		else {
@@ -1083,43 +1084,44 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		t.detach();
 	}
 	else if (ev == MG_EV_CLOSE) {
-		if (c->is_websocket && c->fn_data != NULL) //如果是websocket，关闭关联的sock
+		if (c->is_websocket) //如果是websocket，关闭关联的sock
 		{
-			//从连接的websocket列表中删除
-			pWs->m_csWsSessions.lock();
-			if (pWs->m_wsSessions.find(c)!= pWs->m_wsSessions.end())
-			{
-				std::shared_ptr < TDS_SESSION > p = pWs->m_wsSessions[c];
-				p->bConnected = false;
-				pWs->m_wsSessions.erase(c);
-			}
-			else
-			{
-				LOG("[warn]websocket连接断开，但是在连接列表中未找到");
-			}
-			pWs->m_csWsSessions.unlock();
-
-			pWs->m_csWsBridgeSessions.lock();
-			if (pWs->m_wsBridgeSessions.find(c) != pWs->m_wsBridgeSessions.end())
-			{
-				std::shared_ptr < TDS_SESSION > p = pWs->m_wsBridgeSessions[c];
-				p->bConnected = false;
-				pWs->m_wsBridgeSessions.erase(c);
-				if (p->bridgedIoSession) {
-					p->bridgedIoSession->bridgedIoSessionClient = nullptr;
-				}
-			}
-			else
-			{
-				LOG("[warn]websocket连接断开，但是在连接列表中未找到");
-			}
-			pWs->m_csWsBridgeSessions.unlock();
+			pWs->removeWsSession(c);
 		}
-
-		if (c->fn_data != NULL) unlink_conns(c, (mg_connection*)c->fn_data);
 	}
 }
 
+void WebServer::removeWsSession(mg_connection* c) {
+	bool removed = false;
+	//从连接的websocket列表中删除
+	m_csWsSessions.lock();
+	if (m_wsSessions.find(c) != m_wsSessions.end())
+	{
+		std::shared_ptr < TDS_SESSION > p = m_wsSessions[c];
+		p->bConnected = false;
+		m_wsSessions.erase(c);
+		removed = true;
+	}
+	m_csWsSessions.unlock();
+
+	m_csWsBridgeSessions.lock();
+	if (m_wsBridgeSessions.find(c) != m_wsBridgeSessions.end())
+	{
+		std::shared_ptr < TDS_SESSION > p = m_wsBridgeSessions[c];
+		p->bConnected = false;
+		m_wsBridgeSessions.erase(c);
+		removed = true;
+		if (p->bridgedIoSession) {
+			p->bridgedIoSession->bridgedIoSessionClient = nullptr;
+		}
+	}
+	m_csWsBridgeSessions.unlock();
+
+	if(!removed)
+	{
+		LOG("[warn]websocket连接断开，但是在连接列表中未找到");
+	}
+}
 
 void webThread(WebServer* pSrv,int port) {
 	setThreadName("mongoose polling thread");
@@ -1208,7 +1210,7 @@ int WebServer::sendToAllWebsock(string& s)
 int WebServer::sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id)
 {
 	mg_wakeup(&m_mgr, conn_id, p, len);
-	return 0;
+	return len;
 }
 
 std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)

@@ -3173,6 +3173,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			if (jDe["time"].is_string()) {
 				de.sTime = jDe["time"];
 				de.time = timeopt::str2st(de.sTime);
+				if (!de.time.isValid()) {
+					continue;
+				}
 			}
 			else {
 				de.time = timeopt::now();
