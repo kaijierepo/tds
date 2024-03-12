@@ -308,8 +308,8 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
 		}
 
-		if (m_bEnablePingHeartbeat) {
-			conf["enablePingHeartbeat"] = m_bEnablePingHeartbeat;
+		if (m_bEnablePingOnlineCheck) {
+			conf["enablePingOnlineCheck"] = m_bEnablePingOnlineCheck;
 		}
 	}
 
@@ -592,11 +592,11 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
-	kv = conf.find("enablePingHeartbeat");
+	kv = conf.find("enablePingOnlineCheck");
 	if (kv != conf.end()) {
 		json& item = kv.value();
 		if (item.is_boolean()) {
-			m_bEnablePingHeartbeat = item.get<bool>();
+			m_bEnablePingOnlineCheck = item.get<bool>();
 		}
 	}
 

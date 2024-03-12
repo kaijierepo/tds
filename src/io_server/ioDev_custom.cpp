@@ -98,7 +98,7 @@ void ioDev_custom::DoCycleTask()
 			t.detach();
 		}
 		
-		if (m_bEnablePingHeartbeat) {
+		if (m_bEnablePingOnlineCheck) {
 			thread t(thread_do_ping_heartbeat, this);
 			t.detach();
 		}
