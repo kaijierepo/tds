@@ -1198,7 +1198,7 @@ struct RANGE_INCREASE {
 };
 
 //at least 2 points in one range
-map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, vector<yyjson_val*>& deGroup) {
+map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, string groupKey,vector<yyjson_val*>& deGroup) {
 	bool aggrKeyUndefined = true;
 	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
 	
@@ -1232,7 +1232,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 		RANGE_INCREASE& ri = *iterTimeRange->second;
 		//find range start de
 		if (ri.firstDe == nullptr) {
-			if (t > ri.pTimeRange->start) {
+			if (t >= ri.pTimeRange->start) { //set as start de if de time is equal to range start time
 				if (t < ri.pTimeRange->end) {
 					ri.firstDe = pDe;
 					continue;
@@ -1319,7 +1319,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	}
 
 	if (aggrKeyUndefined) {
-		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group size is " + DB_STR::format("%d", deGroup.size());
+		string sErr = "aggr key " + aggrKey + " is undefined in every data element of aggr group,group key is " + groupKey + ",group size is " + DB_STR::format(" % d", deGroup.size());
 		db_exception e;
 		e.m_error = sErr;
 		throw e;
@@ -1631,7 +1631,7 @@ double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey,vector<yyjson
 	return avg;
 }
 
-bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>> aggrKeyType,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
+bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>> aggrKeyType,string groupKey,vector<yyjson_val*>& deGroup, DE_yyjson& aggrRlt, yyjson_mut_doc* mut_doc)
 {
 	//aggrKeyType supports 2 modes.   multi keys multi aggr types mode is not supported
 	//1:  single key single aggr type
@@ -1820,7 +1820,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 				pAggrVal = yyjson_mut_int(mut_doc, count);
 			}
 			else if (aggrType == "increase") {
-				map<string, double> aggrRlt = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey, deGroup);
+				map<string, double> aggrRlt = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey,groupKey, deGroup);
 				pAggrVal = yyjson_mut_obj(mut_doc);
 				for (auto& iter : aggrRlt) {
 					yyjson_mut_val* yySlotName = yyjson_mut_strcpy(mut_doc, iter.first.c_str());
@@ -2619,7 +2619,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				//every group aggr into a de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
 					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
-					doAggregateOneGroup(deSel, fSet.aggregate, i.second, aggrRltDe, rlt_mut_doc);
+					doAggregateOneGroup(deSel, fSet.aggregate,i.first, i.second, aggrRltDe, rlt_mut_doc);
 					aggrRltDe.deTime = i.first.data(); //set as time group key
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
@@ -2631,7 +2631,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				DATA_SET& fSet = *inputData[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
 					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
-					doAggregateOneGroup(deSel, fSet.aggregate, fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
+					doAggregateOneGroup(deSel, fSet.aggregate,"all-time-range", fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
 					aggrRltDe.deTime = deSel.timeSel.selector;
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
