@@ -2167,8 +2167,6 @@ struct mg_mgr {
   //wakeup后tcp接收时的组包. 所有链接共用。
   char* m_streamBuf;
   int m_streamLen;
-  char m_pktBuf;
-  char m_pktLen;
 };
 
 struct mg_connection {

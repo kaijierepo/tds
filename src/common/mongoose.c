@@ -7802,7 +7802,6 @@ bool mg_wakeup_init(struct mg_mgr *mgr) {
 bool mg_wakeup(struct mg_mgr *mgr, unsigned long conn_id, const void *buf,
                size_t len) {
   if (mgr->pipe != MG_INVALID_SOCKET && conn_id > 0) {
-    //char *extended_buf = (char *) alloca(len + sizeof(conn_id));
     char* extended_buf = (char*)malloc(len + sizeof(conn_id) + sizeof(len));
     memcpy(extended_buf, &conn_id, sizeof(conn_id));
     memcpy(extended_buf + sizeof(conn_id), &len, sizeof(len));
