@@ -7720,28 +7720,60 @@ static bool mg_socketpair_old(MG_SOCKET_TYPE sp[2], union usa usa[2], bool udp) 
     return success;
 }
 
+bool pushToStream(struct mg_connection* c) {
+    //扩大
+    char* buf0 = (char*)malloc(c->mgr->m_streamLen + c->recv.len); //效率低  最好用realloc
+    memcpy(buf0, c->mgr->m_streamBuf, c->mgr->m_streamLen);
+    if (c->mgr->m_streamBuf)
+        free(c->mgr->m_streamBuf);
+    c->mgr->m_streamBuf = buf0;
+    //丢进去
+    memcpy(c->mgr->m_streamBuf + c->mgr->m_streamLen, c->recv.buf, c->recv.len);
+    c->mgr->m_streamLen += c->recv.len;
+
+    c->recv.len = 0;
+    return true;
+}
+
+bool getWakeUpRecvPkt(struct mg_connection* c, unsigned long* id, struct mg_str * pPkt) {
+    if(! c->mgr->m_streamBuf)
+        return false;
+    size_t pktDataLen = *(size_t*)(c->mgr->m_streamBuf + sizeof(*id));
+    int len0 = sizeof(pktDataLen) + sizeof(*id);
+    if (c->mgr->m_streamLen >= len0 + pktDataLen) {
+        *id = *((unsigned long*)c->mgr->m_streamBuf);
+        *pPkt = mg_str_n((char*)c->mgr->m_streamBuf + len0, pktDataLen);
+        c->mgr->m_streamBuf += len0 + pktDataLen;
+        c->mgr->m_streamLen -= len0 + pktDataLen;
+
+        if (0 == c->mgr->m_streamLen) {
+            c->mgr->m_streamBuf = NULL;
+        }
+        return true;
+    }
+    return false;
+}
+
 // mg_wakeup() event handler
 static void wufn(struct mg_connection *c, int ev, void *ev_data) {
-  if (ev == MG_EV_READ) {
-    unsigned long *id = (unsigned long *) c->recv.buf;
-    // MG_INFO(("Got data"));
-    // mg_hexdump(c->recv.buf, c->recv.len);
-    if (c->recv.len >= sizeof(*id)) {
-      struct mg_connection *t;
-      for (t = c->mgr->conns; t != NULL; t = t->next) {
-        if (t->id == *id) {
-          struct mg_str data = mg_str_n((char *) c->recv.buf + sizeof(*id),
-                                        c->recv.len - sizeof(*id));
-          mg_call(t, MG_EV_WAKEUP, &data);
-        }
+      if (ev == MG_EV_READ) {
+          pushToStream(c);
+          
+          unsigned long id=0;   struct mg_str data;
+          while (getWakeUpRecvPkt(c,&id, &data)) {
+              struct mg_connection* t;
+              for (t = c->mgr->conns; t != NULL; t = t->next) {
+                  if (t->id == id) {
+                      mg_call(t, MG_EV_WAKEUP, &data);
+                      break;
+                  }
+              }
+          }
+      } else if (ev == MG_EV_CLOSE) {
+            closesocket(c->mgr->pipe);         // When we're closing, close the other
+            c->mgr->pipe = MG_INVALID_SOCKET;  // side of the socketpair, too
       }
-    }
-    c->recv.len = 0;  // Consume received data
-  } else if (ev == MG_EV_CLOSE) {
-    closesocket(c->mgr->pipe);         // When we're closing, close the other
-    c->mgr->pipe = MG_INVALID_SOCKET;  // side of the socketpair, too
-  }
-  (void) ev_data;
+      (void) ev_data;
 }
 
 bool mg_wakeup_init(struct mg_mgr *mgr) {
@@ -7770,10 +7802,13 @@ bool mg_wakeup_init(struct mg_mgr *mgr) {
 bool mg_wakeup(struct mg_mgr *mgr, unsigned long conn_id, const void *buf,
                size_t len) {
   if (mgr->pipe != MG_INVALID_SOCKET && conn_id > 0) {
-    char *extended_buf = (char *) alloca(len + sizeof(conn_id));
+    //char *extended_buf = (char *) alloca(len + sizeof(conn_id));
+    char* extended_buf = (char*)malloc(len + sizeof(conn_id) + sizeof(len));
     memcpy(extended_buf, &conn_id, sizeof(conn_id));
-    memcpy(extended_buf + sizeof(conn_id), buf, len);
-    send(mgr->pipe, extended_buf, len + sizeof(conn_id), MSG_DONTROUTE);
+    memcpy(extended_buf + sizeof(conn_id), &len, sizeof(len));
+    memcpy(extended_buf + sizeof(conn_id) + sizeof(len), buf, len);
+    send(mgr->pipe, extended_buf, len + sizeof(conn_id) + sizeof(len), MSG_DONTROUTE);
+    free(extended_buf);
     return true;
   }
   return false;

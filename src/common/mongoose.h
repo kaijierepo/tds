@@ -760,7 +760,7 @@ struct timeval {
 #endif
 
 #ifndef MG_MAX_RECV_SIZE
-#define MG_MAX_RECV_SIZE (3UL * 1024UL * 1024UL)  // Maximum recv IO buffer size
+#define MG_MAX_RECV_SIZE (10UL * 1024UL * 1024UL)  // Maximum recv IO buffer size
 #endif
 
 #ifndef MG_DATA_SIZE
@@ -2163,6 +2163,12 @@ struct mg_mgr {
 #if MG_ENABLE_FREERTOS_TCP
   SocketSet_t ss;  // NOTE(lsm): referenced from socket struct
 #endif
+
+  //wakeup后tcp接收时的组包. 所有链接共用。
+  char* m_streamBuf;
+  int m_streamLen;
+  char m_pktBuf;
+  char m_pktLen;
 };
 
 struct mg_connection {
