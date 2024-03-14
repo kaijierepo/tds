@@ -1182,6 +1182,8 @@ yyjson_val* yyjson_obj_get_recursive(yyjson_val* obj, const char* key) {
 struct RANGE_INCREASE {
 	yyjson_val* firstDe;
 	yyjson_val* lastDe;
+	DB_TIME lastDeTime;
+	DB_TIME firstDeTime;
 	double increase;
 	DB_TIME_RANGE* pTimeRange;
 
@@ -1219,14 +1221,16 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	//get first and last de in each range
 	yyjson_val* pDe = nullptr;
 	yyjson_val* pPreviousDe = nullptr;
+	DB_TIME t;
+	DB_TIME previousDeTime;
 	for (int deIdx = 0; deIdx < deGroup.size(); deIdx++) {
 		if (deIdx > 0) {
 			pPreviousDe = pDe;
+			previousDeTime = t;
 		}
 
 		pDe = deGroup.at(deIdx);
 		yyjson_val* yyTime = yyjson_obj_get(pDe, "time");
-		DB_TIME t;
 		t.fromStr(yyjson_get_str(yyTime));
 
 		RANGE_INCREASE& ri = *iterTimeRange->second;
@@ -1235,6 +1239,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			if (t >= ri.pTimeRange->start) { //set as start de if de time is equal to range start time
 				if (t < ri.pTimeRange->end) {
 					ri.firstDe = pDe;
+					ri.firstDeTime = t;
 					continue;
 				}
 				else {
@@ -1252,8 +1257,24 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 		}
 		
 		if (ri.lastDe == nullptr) {
-			if (t > ri.pTimeRange->end) {
+			if (deIdx == deGroup.size() - 1) { //last de
+				ri.lastDe = pDe;
+				ri.lastDeTime = t;
+				break;
+			}
+			else if (t == ri.pTimeRange->end) {
+				ri.lastDe = pDe;
+				ri.lastDeTime = t;
+				//check next range by the same de
+				iterTimeRange++;
+				if (iterTimeRange == listTimeRange.end())
+					break;
+				deIdx--;
+				continue;
+			}
+			else if (t > ri.pTimeRange->end) {
 				ri.lastDe = pPreviousDe;
+				ri.lastDeTime = previousDeTime;
 				//check next range by the same de
 				iterTimeRange++;
 				if (iterTimeRange == listTimeRange.end())
@@ -1309,7 +1330,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			else {
 				continue;
 			}
-			dbIncrease = dbLast - dbFirst;
+			dbIncrease += dbLast - dbFirst;
 		}
 		slotIncrease[slotIter.first] = dbIncrease;
 	}
