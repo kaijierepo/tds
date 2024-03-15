@@ -132,6 +132,9 @@ public:
 	virtual void call(string method, json params, json sessionParams, json& result, json& error, bool sync = true) {  };
 	virtual bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp);
 
+	// 支持绑定了ip地址的设备，通过ping来检测上下线
+	virtual void doPingHeartbeat();
+
 	//将io设备内缓存的实时数据全部同步到绑定的位号
 	virtual void syncDataToBindTag() {};
 	DEV_QUERIER parseQueryOpt(json& opt);
@@ -296,6 +299,7 @@ public:
 	bool m_bOutputting;
 	bool m_bRecvProcessing;
 	static int m_heartBeatInterval;//单位秒
+	static int m_pingInterval;//单位秒
 	TIME m_stLastHeartbeatTime;
 	TIME m_stLastSetClockTime;
 	TIME m_stLastAcqTime;  //上一次采集任务开始时间

@@ -17,6 +17,10 @@
 
 ioServer ioSrv;
 
+void thread_do_ping_heartbeat(ioDev* pDev) {
+	pDev->doPingHeartbeat();
+}
+
 void IOThread()
 {
 	setThreadName("ioSrv io thread");
@@ -50,8 +54,19 @@ void IOThread()
 			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq)
 			{
 				pIoDev->DoCycleTask(); 
+
+				////添加ping thread
+				if (timeopt::CalcTimePassSecond(pIoDev->m_stLastHeartbeatTime) > pIoDev->m_pingInterval)
+				{
+					pIoDev->m_stLastHeartbeatTime = timeopt::now();
+					if (pIoDev->m_bEnablePingOnlineCheck) 
+					{
+						thread t(thread_do_ping_heartbeat, pIoDev);
+						t.detach();
+					}
+				}
+
 			}
-				
 
 			if (!ioSrv.m_bRunning)
 				break;

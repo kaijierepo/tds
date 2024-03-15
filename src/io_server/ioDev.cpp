@@ -136,6 +136,7 @@ bool ioDev::IsGateway()
 
 bool ioDev::m_bAsynAcqMode = false;
 int ioDev::m_heartBeatInterval = 3;
+int ioDev::m_pingInterval = 60;
 bool ioDev::m_defaultOnline = false;
 int ioDev::m_offlineConfirmCount = 1;
 
@@ -715,7 +716,23 @@ void ioDev::triggerCycleAcq()
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 }
 
+void ioDev::doPingHeartbeat()
+{
+	string ip;
+	if (m_jDevAddr["ip"].is_string())
+		ip = m_jDevAddr["ip"].get<string>();
+	string strcmd = "ping -n 1 > null " + ip;
+	int isatus = system(strcmd.c_str());  
 
+	if (isatus == 0)
+	{
+		setOnline();
+	}
+	else
+	{
+		setOffline();
+	}
+}
 
 bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 {

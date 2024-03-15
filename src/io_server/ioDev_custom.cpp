@@ -54,10 +54,6 @@ void thread_do_http_heartbeat(ioDev_custom* pDev) {
 	pDev->doHttpHeartbeat();
 }
 
-void thread_do_ping_heartbeat(ioDev_custom* pDev) {
-	pDev->doPingHeartbeat();
-}
-
 void ioDev_custom::doHttpHeartbeat()
 {
 	string ip = m_jDevAddr["ip"];
@@ -74,32 +70,12 @@ void ioDev_custom::doHttpHeartbeat()
 	}
 }
 
-void ioDev_custom::doPingHeartbeat()
-{
-	string strcmd = "ping -n 1 > null " + m_jDevAddr["ip"];
-	int isatus = system(strcmd.c_str());
-
-	if (isatus == 0)
-	{
-		setOnline();
-	}
-	else
-	{
-		setOffline();
-	}
-}
-
 void ioDev_custom::DoCycleTask()
 {
 	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > m_heartBeatInterval) {
 		m_stLastHeartbeatTime = timeopt::now();
 		if (m_bEnableHttpHeartbeat) {
 			thread t(thread_do_http_heartbeat, this);
-			t.detach();
-		}
-		
-		if (m_bEnablePingOnlineCheck) {
-			thread t(thread_do_ping_heartbeat, this);
 			t.detach();
 		}
 	}
