@@ -136,7 +136,7 @@ bool ioDev::IsGateway()
 
 bool ioDev::m_bAsynAcqMode = false;
 int ioDev::m_heartBeatInterval = 3;
-int ioDev::m_pingInterval = 60;
+int ioDev::m_pingInterval = 30;
 bool ioDev::m_defaultOnline = false;
 int ioDev::m_offlineConfirmCount = 1;
 
@@ -156,6 +156,7 @@ ioDev::ioDev(void)
 	m_tcpClt = nullptr;
 	m_udpClt = nullptr;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(TIME));
+	memset(&m_stLastPingTime, 0, sizeof(TIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(TIME));
 	memset(&m_stOnlineTime, 0, sizeof(TIME));
 	timeopt::now(&m_stOfflineTime);
@@ -716,20 +717,19 @@ void ioDev::triggerCycleAcq()
 	timeopt::setAsTimeOrg(m_stLastAcqTime);
 }
 
-void ioDev::doPingHeartbeat()
+void ioDev::doPingHeartbeat(string ip)
 {
-	string ip;
-	if (m_jDevAddr["ip"].is_string())
-		ip = m_jDevAddr["ip"].get<string>();
+	//string strcmd = "start cmd /c ping -n 1 > null " + ip;
 	string strcmd = "ping -n 1 > null " + ip;
 	int isatus = system(strcmd.c_str());  
-
 	if (isatus == 0)
 	{
+		LOG("888888 doPingHeartbeat " + ip + " ok");
 		setOnline();
 	}
 	else
 	{
+		LOG("888888 doPingHeartbeat " + ip + " ng");
 		setOffline();
 	}
 }

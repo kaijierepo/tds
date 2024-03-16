@@ -17,8 +17,12 @@
 
 ioServer ioSrv;
 
-void thread_do_ping_heartbeat(ioDev* pDev) {
-	pDev->doPingHeartbeat();
+void thread_do_ping_heartbeat(map<string, ioDev*> mapDev) {
+	for (auto itm: mapDev)
+	{
+		ioDev* pDev = itm.second;
+		pDev->doPingHeartbeat(itm.first);
+	}
 }
 
 void IOThread()
@@ -46,6 +50,7 @@ void IOThread()
 			break;
 
 		ioSrv.lock_conf_unique();
+		map<string, ioDev*> mapPing;
 		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
@@ -56,21 +61,30 @@ void IOThread()
 				pIoDev->DoCycleTask(); 
 
 				////添加ping thread
-				if (timeopt::CalcTimePassSecond(pIoDev->m_stLastHeartbeatTime) > pIoDev->m_pingInterval)
+				if (timeopt::CalcTimePassSecond(pIoDev->m_stLastPingTime) > pIoDev->m_pingInterval)
 				{
-					pIoDev->m_stLastHeartbeatTime = timeopt::now();
+					pIoDev->m_stLastPingTime = timeopt::now();
 					if (pIoDev->m_bEnablePingOnlineCheck) 
 					{
-						thread t(thread_do_ping_heartbeat, pIoDev);
-						t.detach();
+						string ip;
+						if (pIoDev->m_jDevAddr["ip"].is_string())
+							ip = pIoDev->m_jDevAddr["ip"].get<string>();
+						mapPing[ip] = pIoDev;
 					}
 				}
-
 			}
 
 			if (!ioSrv.m_bRunning)
 				break;
 		}
+
+		// 开启设备ping检测
+		if (mapPing.size())
+		{
+			thread t(thread_do_ping_heartbeat, mapPing);
+			t.detach();
+		}
+
 		ioSrv.unlock_conf_unique();
 	}
 	ioSrv.m_bWorkingThreadRunning = false;
