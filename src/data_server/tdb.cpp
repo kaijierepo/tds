@@ -1201,7 +1201,6 @@ struct RANGE_INCREASE {
 
 //at least 2 points in one range
 map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSel, string& aggrKey, string groupKey,vector<yyjson_val*>& deGroup) {
-	bool aggrKeyUndefined = true;
 	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
 	
 	//order by range start time
@@ -1289,21 +1288,27 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	}
 
 	//sum each range incease
+	bool aggrKeyUndefined = false;
 	map<string, double> slotIncrease;
 	for (auto& slotIter : mapTimeSlots) {
 		double dbIncrease = 0;
 		for (DB_TIME_RANGE& iter : slotIter.second) {
 			RANGE_INCREASE* pri = (RANGE_INCREASE*)iter.p;
-			yyjson_val* pValFirst = yyjson_obj_get_recursive(pri->firstDe, aggrKey.c_str());
-			if (pValFirst == nullptr) {
-				continue;
-			}
-			yyjson_val* pValLast = yyjson_obj_get_recursive(pri->lastDe, aggrKey.c_str());
-			if (pValLast == nullptr) {
+			if (!pri->firstDe || !pri->lastDe) { //no de in this time range
 				continue;
 			}
 
-			aggrKeyUndefined = false;
+			yyjson_val* pValFirst = yyjson_obj_get_recursive(pri->firstDe, aggrKey.c_str());
+			if (pValFirst == nullptr) {
+				aggrKeyUndefined = true;
+				break;
+			}
+			yyjson_val* pValLast = yyjson_obj_get_recursive(pri->lastDe, aggrKey.c_str());
+			if (pValLast == nullptr) {
+				aggrKeyUndefined = true;
+				break;
+			}
+
 			double dbFirst = 0;
 			double dbLast = 0;
 
@@ -1332,6 +1337,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			}
 			dbIncrease += dbLast - dbFirst;
 		}
+
 		slotIncrease[slotIter.first] = dbIncrease;
 	}
 
@@ -1345,6 +1351,7 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 		e.m_error = sErr;
 		throw e;
 	}
+
 
 	return slotIncrease;
 }
