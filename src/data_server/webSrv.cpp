@@ -34,6 +34,15 @@ int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 vector<WebServer*> g_WebServerList;
 
+WebServer* getWebServer(int port, bool isHttps) {
+	for (int i = 0; i < g_WebServerList.size(); i++) {
+		if (g_WebServerList[i]->m_port == port) {
+			return g_WebServerList[i];
+		}
+	}
+	return nullptr;
+}
+
 //日志监视会话
 vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 void logToWebsock(string text)
@@ -1170,6 +1179,7 @@ WebServer::~WebServer()
 void WebServer::run(int port,bool https)
 {
 	m_isHttps = https;
+	m_port = port;
 	if (https)
 	{
 		string log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);

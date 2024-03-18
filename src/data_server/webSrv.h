@@ -22,6 +22,7 @@ public:
 	void run(int port, bool https = false);
 	void sendToAllWs(string& s);
 	static int sendToAllWebsock(string& s);
+	int m_port;
 	bool m_isHttps;
 	int sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id);
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
@@ -46,6 +47,7 @@ extern string confDir;
 extern string filesDir;
 
 extern vector<WebServer*> g_WebServerList;
+WebServer* getWebServer(int port, bool isHttps);
 
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern void sendToCommLog(string s);

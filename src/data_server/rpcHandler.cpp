@@ -884,29 +884,25 @@ void threadErase() {
 
 
 void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
-
-	if (!session.isHttps) {
+	WebServer* pWs = getWebServer(session.localPort, session.isHttps);
+	if (pWs) {
 		pWs->m_csWsSessions.lock();
-		pWs->m_wsSessions[c] = p;
+		json jList = json::array();
+		for (auto i : pWs->m_wsSessions) {
+			RPC_SESSION p = i.second->getRpcSession();
+			json jSession;
+			jSession["ip"] = p.remoteIP;
+			jSession["port"] = p.remotePort;
+			jSession["language"] = p.language;
+			jSession["lastRecvTime"] = p.sLastRecvTime;
+			jSession["lastMethodCalled"] = p.lastMethodCalled;
+			jSession["lastSendTime"] = p.sLastSendTime;
+			jSession["lastMethodNotified"] = p.lastMethodNotified;
+			jList.push_back(jSession);
+		}
+		rpcResp.result = jList.dump(2);
 		pWs->m_csWsSessions.unlock();
 	}
-	lock_guard<mutex> g(m_csRpcSessions);
-	json jList = json::array();
-	for (auto i : m_mapRpcSessions)
-	{
-		RPC_SESSION& p = i.second;
-		json jSession;
-		jSession["ip"] = p.remoteIP;
-		jSession["port"] = p.remotePort;
-		jSession["language"] = p.language;
-		jSession["lastRecvTime"] = p.sLastRecvTime;
-		jSession["lastMethodCalled"] = p.lastMethodCalled;
-		jSession["lastSendTime"] = p.sLastSendTime;
-		jSession["lastMethodNotified"] = p.lastMethodNotified;
-		jList.push_back(jSession);
-	}
-
-	rpcResp.result = jList.dump(2);
 }
 
 bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
