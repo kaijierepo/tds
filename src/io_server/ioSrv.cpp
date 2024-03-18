@@ -1929,7 +1929,7 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 							else {
 								//以下复制相当于创建了一个流节点
 								tdsSession->streamId = tag;
-								MP* pmp = prj.GetMPByTag(tag);
+								MP* pmp = prj.GetMPByTag(tag, "zh");
 								if (pmp) {
 									vector< std::shared_ptr<TDS_SESSION>>   puller;
 									pmp->m_csPuller.lock();

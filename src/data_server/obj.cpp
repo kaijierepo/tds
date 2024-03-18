@@ -381,7 +381,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	}
 	
 
-	conf["name"] = m_name;
+	conf["name"] = getName(q.language);
 
 	if (m_mapNameTranslate.size() > 0) {
 		json j;
@@ -507,7 +507,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 bool OBJ::loadStatus(OBJ* pSrcRoot)
 {
 	string tag = getTag();
-	OBJ* ptmp = pSrcRoot->queryObj(tag);
+	OBJ* ptmp = pSrcRoot->queryObj(tag,"zh");
 	if (ptmp) {
 		m_bOnline = ptmp->m_bOnline;
 		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
@@ -928,10 +928,10 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,str
 	}
 }
 
-void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag)
+void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag, string language)
 {
 	std::vector<OBJ*> vec;
-	queryObj(&vec, strTag);
+	queryObj(&vec, strTag, language);
 	for (int i = 0; i < vec.size(); i++)
 	{
 		OBJ* p = vec.at(i);
@@ -1570,7 +1570,7 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 {
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		MP* p = GetMPByTag(exp);
+		MP* p = GetMPByTag(exp,tagSelector.language);
 		if (p) {
 			mpList.push_back(p);
 		}
@@ -1580,7 +1580,7 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<MP*> tagSet;
 		vector<MP*> tagSetTmp;
-		prj.GetMPByTag(&tagSetTmp, exp);
+		prj.GetMPByTag(&tagSetTmp, exp, tagSelector.language);
 		if (tagSelector.specifyType())//has type filter //load from database 监测点类型过滤
 		{
 			for (auto& it : tagSetTmp)

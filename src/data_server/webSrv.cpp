@@ -571,7 +571,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 	}
 
 	tag = httplib::detail::decode_url(tag, false);
-	MP* pmp = prj.GetMPByTag(tag); 
+	MP* pmp = prj.GetMPByTag(tag,"zh");
 	if (!pmp) {
 		mg_http_reply(c, 404, "", "");
 		return true;
@@ -1471,7 +1471,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		}
 		//云端
 		else {
-			MP* pmp = prj.GetMPByTag(tag);
+			MP* pmp = prj.GetMPByTag(tag,"zh");
 			if (pmp) {
 				//注册websocket拉流客户端
 				//从io会话中找到推流会话，找到则加入拉流端

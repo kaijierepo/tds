@@ -87,7 +87,6 @@ public:
 
 	string getTdsId();
 
-	bool setMo(json& mo, string tag);
 	MP* createMP(string tag, string valType);
 
 	//对象模版配置

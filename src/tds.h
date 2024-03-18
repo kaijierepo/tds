@@ -190,6 +190,8 @@ public:
 
 	string sLastRecvTime;
 	string lastMethodCalled;
+	string sLastSendTime;
+	string lastMethodNotified;
 
 	bool isDebug; //调试调用不计入session统计
 

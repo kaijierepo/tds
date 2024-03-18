@@ -191,7 +191,7 @@ void streamPusherMng_thread() {
 		for (auto i : reverseInterface.m_mapPullerActive) {
 			TIME st = i.second;
 			if (timeopt::CalcTimePassSecond(st) > 5) {
-				MP* pmp = prj.GetMPByTag(i.first);
+				MP* pmp = prj.GetMPByTag(i.first,"zh");
 				string src = "?";
 				string status = "";
 				if (pmp) {

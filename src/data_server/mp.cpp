@@ -534,7 +534,7 @@ string MP::getValDesc(bool getUnit) {
 bool MP::loadStatus(OBJ* pSrc)
 {
 	string tag = getTag();
-	MP* ptmp = pSrc->GetMPByTag(tag);
+	MP* ptmp = pSrc->GetMPByTag(tag,"zh");
 	if (ptmp) {
 		//常量类型无需加载状态
 		if (ptmp->m_ioType != "c") {

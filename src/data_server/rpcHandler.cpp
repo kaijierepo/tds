@@ -509,7 +509,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "getYsAccessInfo") {
 		string tag = params["tag"];
-		MP* pmp = prj.GetMPByTag(tag);
+		MP* pmp = prj.GetMPByTag(tag, session.language);
 		if (pmp) {
 			map<string, EZVIZ_ACCESS_INFO>::iterator iter = prj.m_mapEzvizAccess.find(pmp->m_serialNo);
 			if (iter != prj.m_mapEzvizAccess.end()) {
@@ -579,7 +579,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
 			return true; 
 
-		MP* pObj =(MP*) prj.queryObj(tag);
+		MP* pObj =(MP*) prj.queryObj(tag,session.language);
 		if (!pObj) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "object of specified tag not found");
 			return true;
@@ -884,6 +884,12 @@ void threadErase() {
 
 
 void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+
+	if (!session.isHttps) {
+		pWs->m_csWsSessions.lock();
+		pWs->m_wsSessions[c] = p;
+		pWs->m_csWsSessions.unlock();
+	}
 	lock_guard<mutex> g(m_csRpcSessions);
 	json jList = json::array();
 	for (auto i : m_mapRpcSessions)
@@ -892,8 +898,11 @@ void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SE
 		json jSession;
 		jSession["ip"] = p.remoteIP;
 		jSession["port"] = p.remotePort;
+		jSession["language"] = p.language;
 		jSession["lastRecvTime"] = p.sLastRecvTime;
 		jSession["lastMethodCalled"] = p.lastMethodCalled;
+		jSession["lastSendTime"] = p.sLastSendTime;
+		jSession["lastMethodNotified"] = p.lastMethodNotified;
 		jList.push_back(jSession);
 	}
 
@@ -1471,7 +1480,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						rootTag = mo["rootTag"].get<string>();
 					tag = TAG::addRoot(tag, rootTag);
 					tag = TAG::addRoot(tag, session.org);
-					OBJ* pmo = prj.queryObj(tag);
+					OBJ* pmo = prj.queryObj(tag,session.language);
 					if (pmo)
 					{
 						pmo->loadConf(mo);
@@ -1494,7 +1503,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						rootTag = mo["rootTag"].get<string>();
 					tag = TAG::addRoot(tag, rootTag);
 					tag = TAG::addRoot(tag, session.org); 
-					OBJ* pmo = prj.queryObj(tag);
+					OBJ* pmo = prj.queryObj(tag, session.language);
 					if (pmo)
 					{
 						pmo->loadConf(mo);
@@ -1521,7 +1530,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "updateTagBinding") {
 		for (auto& binding : params) {
 			string tag = binding["tag"];
-			OBJ* p = prj.queryObj(tag);
+			OBJ* p = prj.queryObj(tag, session.language);
 			if (p) {
 				p->m_strIoAddrBind = binding["ioAddr"];
 			}
@@ -1529,7 +1538,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "objOnline") {
 		string tag = params["tag"];
-		OBJ* p = prj.queryObj(tag);
+		OBJ* p = prj.queryObj(tag, session.language);
 		if (p) {
 			p->m_bOnline = true;
 		}
@@ -1538,7 +1547,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "objOffline") {
 		string tag = params["tag"];
-		OBJ* p = prj.queryObj(tag);
+		OBJ* p = prj.queryObj(tag, session.language);
 		if (p) {
 			p->m_bOnline = false;
 			if (p->m_bChildTds) { //设置所有子对象掉线
@@ -1754,7 +1763,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					pmo = &prj;
 				}
 				else
-					pmo = prj.queryObj(tag);
+					pmo = prj.queryObj(tag, session.language);
 			}
 			else
 			{
@@ -2129,7 +2138,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	}
 	else if (method == "getStreamUrl") {
 		string tag = params["tag"];
-		MP* pmp = prj.GetMPByTag(tag);
+		MP* pmp = prj.GetMPByTag(tag, session.language);
 		if (pmp) {
 			json rlt = rpc_getStreamUrl(pmp, tag, session.isHttps, session.localIP, session.localPort);
 			rpcResp.result = rlt.dump();
@@ -2903,7 +2912,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 	if (params["rootTag"] != nullptr && params["rootTag"] != "")
 		tag = params["rootTag"].get<string>() + "." + tag;
 	tag = TAG::addRoot(tag, session.org);
-	MP* pmp = prj.GetMPByTag(tag);
+	MP* pmp = prj.GetMPByTag(tag, session.language);
 	if (!pmp)
 	{
 		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found:" + tag);
@@ -3214,7 +3223,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 			if (tag != "")
 			{
-				MP* pmp = prj.GetMPByTag(tag);
+				MP* pmp = prj.GetMPByTag(tag, session.language);
 				if (pmp)
 				{
 					pmp->input(val, &file, &de.time);
@@ -3474,7 +3483,7 @@ void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION sessi
 	for (int i = 0; i < rootTagList.size(); i++) {
 		string tag = rootTagList[i];
 		string tagOrg = rootTagListOrg[i];
-		OBJ* pMo = prj.queryObj(tag);
+		OBJ* pMo = prj.queryObj(tag, session.language);
 		map<string, OBJ_STATIS> rlt;
 		if (pMo)
 		{
@@ -3553,7 +3562,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 		fmt = params["fmt"];
 	}
 
-	OBJ* pMo = prj.queryObj(rootTag);
+	OBJ* pMo = prj.queryObj(rootTag, session.language);
 	json jStatis;
 	if (pMo)
 	{
@@ -4059,7 +4068,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			{
 				string tag = jColTag[j];
 				tag = TAG::addRoot(tag, moTag);
-				MP* pmp = pMo->GetMPByTag(tag);
+				MP* pmp = pMo->GetMPByTag(tag, session.language);
 				if (pmp) {
 					if (params.valFmt == "valStr") {
 						jTableRow.push_back(pmp->getValDesc(false));

@@ -360,7 +360,7 @@ jerry_value_t func_getObj(const jerry_call_info_t* call_info_p,
 		if (tag.is_string()) {
 			string sTag = tag.get<string>();
 			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-			OBJ* pObj = prj.queryObj(sTag);
+			OBJ* pObj = prj.queryObj(sTag,"zh");
 			if (pObj) {
 				json j;
 				OBJ_QUERIER query;

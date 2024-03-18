@@ -121,7 +121,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 			}
 		}
 	
-		OBJ* pObj = prj.queryObj(sTag);
+		OBJ* pObj = prj.queryObj(sTag,"zh");
 
 		if (pObj) {
 			if (!pObj->m_bEnableAlarm)
@@ -264,7 +264,7 @@ void almServer::Update(ALARM_INFO newStatus)
 			}
 		}
 
-		OBJ* pmo = prj.queryObj(sTag);
+		OBJ* pmo = prj.queryObj(sTag,"zh");
 		if (pmo)
 		{
 			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);

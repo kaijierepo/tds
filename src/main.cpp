@@ -85,7 +85,7 @@ void clearZlmNoReaderPusher() {
 					if (jM["totalReaderCount"].get<int>() == 0) {
 						if (jM["originTypeStr"] == "rtsp_push") {
 							string tag = jM["stream"];
-							MP* pmp = prj.GetMPByTag(tag);
+							MP* pmp = prj.GetMPByTag(tag,"zh");
 
 							if (pmp) {
 								if (pmp->m_srcStreamFetch == "ondemand") {

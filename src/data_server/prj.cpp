@@ -128,17 +128,6 @@ string project::getTdsId()
 	return m_name;
 }
 
-bool project::setMo(json& mo, string tag)
-{
-	OBJ* pmo = queryObj(tag);
-	if (pmo)
-	{
-		pmo->loadConf(mo);
-		return true;
-	}
-	return false;
-}
-
 MP* project::createMP(string tag,string valType)
 {
 	MP* pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
@@ -373,7 +362,7 @@ void project::getAllVarExpScript()
 bool project::openStream(string tag, string pushTo)
 {
 	bool ret = false;
-	MP* pmp = prj.GetMPByTag(tag);
+	MP* pmp = prj.GetMPByTag(tag,"zh");
 	if (pmp) {
 		if (pmp->m_isOpenningStream) {
 			LOG("[流媒体  ]当前正在打开媒体源，收到重复打开请求，忽略,位号:%s,当前配置地址:%s",tag.c_str(), pmp->m_mediaUrl.c_str());
@@ -413,7 +402,7 @@ bool project::openStream(string tag, string pushTo)
 bool project::closeStream(string tag)
 {
 	bool ret = false;
-	MP* pmp = prj.GetMPByTag(tag);
+	MP* pmp = prj.GetMPByTag(tag,"zh");
 	if (pmp) {
 		pmp->stopStreamPush();
 		pmp->stopStreamPull(tag);
