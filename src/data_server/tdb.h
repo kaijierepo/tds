@@ -509,6 +509,8 @@ struct  DB_FMT
 	string deListName;
 	string curveIdxListName;
 	string curveDeNameSuffix;  //The suffix contains "."
+	string jsonIdxListName;
+	string jsonDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;
 };
 
@@ -560,7 +562,7 @@ public:
 	void Insert(string strTag, DB_TIME stTime, int& iVal);
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	bool Delete(string tag, DB_TIME stTime);
-	bool Update(string tag, DB_TIME stTime, yyjson_val* yyVal);
+	bool Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
 
 	TDB* getChildDB(string dbName);
 	map<string, TDB*> m_childDB;

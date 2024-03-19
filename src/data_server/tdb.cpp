@@ -759,17 +759,38 @@ string TDB::changeCharForFileName(string s) {
 	return out;
 }
 
-
+//generate  or get the existted
 string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 {
 	string folder = getPath_dataFolder(strTag,date);
-	if(deType == "")
-		return folder + "/" + m_dbFmt.deListName;
+	if (deType == "") {
+		//auto judge
+		if (fileExist((folder + "/" + m_dbFmt.deListName).c_str()))
+			return folder + "/" + m_dbFmt.deListName;
+
+		else if (fileExist((folder + "/" + m_dbFmt.curveIdxListName).c_str()))
+			return folder + "/" + m_dbFmt.curveIdxListName;
+		else if (fileExist((folder + "/" + date.toStampHMS() + m_dbFmt.curveDeNameSuffix).c_str()))
+			return folder + "/" + date.toStampHMS() + m_dbFmt.curveDeNameSuffix;
+
+		else if (fileExist((folder + "/" + m_dbFmt.jsonIdxListName).c_str()))
+			return folder + "/" + m_dbFmt.jsonIdxListName;
+		else if (fileExist((folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix).c_str()))
+			return folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
+		else
+			return folder + "/" + m_dbFmt.deListName;
+	}
 	else if (deType == "curveIdx") {
 		return folder + "/" + m_dbFmt.curveIdxListName;
 	}
 	else if (deType == "curve") {
 		return folder + "/" + date.toStampHMS()  + m_dbFmt.curveDeNameSuffix;
+	}
+	else if (deType == "jsonIdx") {
+		return folder + "/" + m_dbFmt.jsonIdxListName;
+	}
+	else if (deType == "json") {
+		return folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
 	}
 	else {
 		return folder + "/" + m_dbFmt.deListName;
@@ -826,7 +847,7 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 
 	//write file data
 	vector<string> fileUrl;
-	bool bisCurve = false;
+	string fileType;
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
 	if (yyv_file)
 	{
@@ -840,28 +861,24 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 			size_t max = 0;
 			yyjson_val* item;
 			yyjson_arr_foreach(yyv_file, idx, max, item) {
-				string type;
-				string url = saveDEFile(item, deFilesFolder, stTime,type);
+				string url = saveDEFile(item, deFilesFolder, stTime, fileType);
 				url = url.substr(m_path.length(), url.length() - m_path.length());
 				fileUrl.push_back(url);
-				if (type == "curve")
-					bisCurve = true;
 			}
 		}
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
-			string type;
-			saveDEFile(yyv_file, deListFolderPath, stTime,type);
-			if (type == "curve")
-				bisCurve = true;
+			saveDEFile(yyv_file, deListFolderPath, stTime, fileType);
 		}
 	}
 
 	string dataListPath;
-	if(!bisCurve)
+	if(fileType == "")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-	else
+	else if(fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+	else if (fileType == "json")
+		dataListPath = deListFolderPath + "/" + m_dbFmt.jsonIdxListName;
 
 
 	//write de
@@ -2710,15 +2727,17 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 		return;
 	}
 
+	yyjson_val* updateFile = yyjson_obj_get(params, "file");
+
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
 	bool updateRet = false;
 
 	if (tdb) {
-		tdb->Update(tag, dbTime, updateVal);
+		updateRet =tdb->Update(tag, dbTime, updateVal, updateFile);
 	}
 	else {
-		Update(tag, dbTime, updateVal);
+		updateRet =Update(tag, dbTime, updateVal, updateFile);
 	}
 
 	if (updateRet) {
@@ -2729,7 +2748,7 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 }
 
-bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal)
+bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile)
 {
 	string dbFile = getPath_dbFile(tag, stTime);
 	string dbData;
@@ -2758,14 +2777,41 @@ bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal)
 	string updateTime = stTime.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de;
+	yyjson_val* yyFileToUpdate = NULL;  string dbFile1;
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
 		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
 		getDeTime(yyTime, deTime);
 		if (updateTime == deTime) {
-			findDE = true;
 			yyjson_mut_val* yyValKey = yyjson_mut_strcpy(mut_doc, "val");
 			yyjson_mut_val* yyToUpdate = yyjson_val_mut_copy(mut_doc, yyVal);
 			yyjson_mut_obj_put(de, yyValKey, yyToUpdate);
+
+			if (updateFile&& !findDE) { //only once
+				if (yyjson_is_arr(updateFile)) {
+					//just for jpg file,   not supported!
+					break;
+				}
+				else if (yyjson_is_obj(updateFile)) {
+					yyFileToUpdate = yyjson_obj_get(updateFile, "data");
+					int pos =dbFile.rfind("/");
+					string folder;
+					if (pos > 0) {
+						folder = dbFile.substr(0, pos+1);
+					} else{
+						break;
+					}
+					if ((int)dbFile.rfind(m_dbFmt.curveIdxListName)>0) {
+						dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
+					} 
+					else if ((int)dbFile.rfind(m_dbFmt.jsonIdxListName)>0) {
+						dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
+					}
+					else {
+						break;
+					}
+				} 
+			}
+			findDE = true;
 		}
 	}
 	if (!findDE)
@@ -2776,6 +2822,11 @@ bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal)
 	DB_FS::writeFile(dbFile,p,len);
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);
+
+	if (yyFileToUpdate && dbFile1!="") {
+		p = yyjson_val_write(yyFileToUpdate, 0, &len);
+		DB_FS::writeFile(dbFile1, p, len);
+	}
 	return true;
 }
 
@@ -2911,7 +2962,9 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 	if (type == "curve") {
 		name = dbTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 	}
-
+	else if (type == "json") {
+		name = dbTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
+	}
 
 	string data;
 	if (yyjson_is_str(yyv_data)) {
@@ -2954,6 +3007,9 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else if (type == "curve") {  //curve file is not encoded 
+		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
+	}
+	else if (type == "json") {  //curve file is not encoded 
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else {
