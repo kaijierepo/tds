@@ -2036,7 +2036,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; 
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 
-	if (deSel.deType == "curve") {
+	if (deSel.deType == "curve"  || deSel.deType == "json") {
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
