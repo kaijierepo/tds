@@ -2229,67 +2229,70 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			}
 		}
 		string res0;
-		if (theIp != "") {
-			std::function<bool(string&, json*, string, string, json&)> funcMakeData = [](string& strJsonArr, json* in_pArr, string tagPrefix, string tagSuffix, json& out_list)-> bool
-			{
-				map<string, string> tableFieldsDescAndKey{
-					{"道岔","dc"},
-					{"直尖轨段1","zhijian1"},{"直尖轨段2","zhijian2"},{"导曲轨段1","daoqu1"},{"曲尖轨段1","qujian1"},{"曲尖轨段2","qujian2"},{"导曲轨段3","daoqu3"},
-					{"导曲轨段2","daoqu2"},{"导曲轨段4","daoqu4"},{"翼轨段1","yi1"},{"翼轨段2","yi2"},{"心轨段1","xin1"},{"心轨段2","xin2"},{"心轨段3","xin3"}
-				};
-				json* pJsIn = NULL; json sIn;
-				if (in_pArr) {
-					pJsIn = in_pArr;
-				}
-				else if ("" != strJsonArr) {
-					sIn = json::parse(strJsonArr);
-					pJsIn = &sIn;
-				}
-
-				json& jsIn = *pJsIn;
-				map<string, map<string, string>> tmpMap; // 1#: 段1->100,段2->100,..., 2#: 段1->100,段2->100,...,
-				vector<string> tmpVec;
-				for (int i = 0; i < jsIn.size(); i++) {
-					json& jOne = jsIn[i];
-					string ta0 = jOne["tag"];  ta0 = tagPrefix + ta0 + tagSuffix;
-					int cnt = jOne["count"].get<int>();
-
-					auto pMp = prj.GetMPByTag(ta0, "zh");
-					string rail = pMp->m_pParentMO->m_name;
-					string daocha = pMp->m_pParentMO->m_pParentMO->m_name;
-
-					rail = charCodec::utf16_to_gb(charCodec::utf8_to_utf16(rail));
-
-					if (tmpMap.find(daocha) != tmpMap.end()) {
-						map<string, string>& theDcData = tmpMap[daocha];
-						theDcData[rail] = to_string(cnt);
-					}
-					else {
-						map<string, string> theDcData;
-						theDcData[rail] = to_string(cnt);
-						tmpMap[daocha] = theDcData;
-
-						tmpVec.push_back(daocha);
-					}
-				}
-				json& list = out_list;
-				for (int i = 0; i < tmpVec.size(); i++) {
-					string& dc = tmpVec[i];
-					json jRow; jRow["dc"] = dc;
-
-					map<string, string>& theDcData = tmpMap[dc];
-					auto it = theDcData.begin();
-					for (; it != theDcData.end(); it++) {
-						string desc = charCodec::gb_to_utf8(it->first);
-						jRow[tableFieldsDescAndKey[desc]] = it->second;
-					}
-					list.push_back(jRow);
-				}
-				return true;
+		std::function<bool(string&, json*, string, string, json&)> funcMakeData = [](string& strJsonArr, json* in_pArr, string tagPrefix, string tagSuffix, json& out_list)-> bool
+		{
+			map<string, string> tableFieldsDescAndKey{
+				{"道岔","dc"},
+				{"直尖轨段1","zhijian1"},{"直尖轨段2","zhijian2"},{"导曲轨段1","daoqu1"},{"曲尖轨段1","qujian1"},{"曲尖轨段2","qujian2"},{"导曲轨段3","daoqu3"},
+				{"导曲轨段2","daoqu2"},{"导曲轨段4","daoqu4"},{"翼轨段1","yi1"},{"翼轨段2","yi2"},{"心轨段1","xin1"},{"心轨段2","xin2"},{"心轨段3","xin3"}
 			};
+			json* pJsIn = NULL; json sIn;
+			if (in_pArr) {
+				pJsIn = in_pArr;
+			}
+			else if ("" != strJsonArr) {
+				sIn = json::parse(strJsonArr);
+				pJsIn = &sIn;
+			}
 
-			//1.
-			json listSend = json::array();
+			json& jsIn = *pJsIn;
+			map<string, map<string, string>> tmpMap; // 1#: 段1->100,段2->100,..., 2#: 段1->100,段2->100,...,
+			vector<string> tmpVec;
+			for (int i = 0; i < jsIn.size(); i++) {
+				json& jOne = jsIn[i];
+				string ta0 = jOne["tag"];  ta0 = tagPrefix + ta0 + tagSuffix;
+				int cnt = jOne["count"].get<int>();
+
+				auto pMp = prj.GetMPByTag(ta0, "zh");
+				string rail = pMp->m_pParentMO->m_name;
+				string daocha = pMp->m_pParentMO->m_pParentMO->m_name;
+
+				rail = charCodec::utf16_to_gb(charCodec::utf8_to_utf16(rail));
+
+				if (tmpMap.find(daocha) != tmpMap.end()) {
+					map<string, string>& theDcData = tmpMap[daocha];
+					theDcData[rail] = to_string(cnt);
+				}
+				else {
+					map<string, string> theDcData;
+					theDcData[rail] = to_string(cnt);
+					tmpMap[daocha] = theDcData;
+
+					tmpVec.push_back(daocha);
+				}
+			}
+			json& list = out_list;
+			for (int i = 0; i < tmpVec.size(); i++) {
+				string& dc = tmpVec[i];
+				json jRow; jRow["dc"] = dc;
+
+				map<string, string>& theDcData = tmpMap[dc];
+				auto it = theDcData.begin();
+				for (; it != theDcData.end(); it++) {
+					string desc = charCodec::gb_to_utf8(it->first);
+					jRow[tableFieldsDescAndKey[desc]] = it->second;
+				}
+				list.push_back(jRow);
+			}
+			return true;
+		};
+		
+		//各种异常情况：
+		//没配置ip或类似问题则 界面send这部分显示空白
+		//没有指数数据 对应的区段显示0 
+		//1.
+		json listSend = json::array();
+		if (theIp != "") {  
 			json jsSend, jsParam;
 			jsSend["jsonrpc"] = "2.0";   jsSend["method"] = "GetDamageDataSendSummary"; jsSend["id"] = "1";
 			jsParam["time"] = time;
@@ -2310,34 +2313,34 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			else {
 				//LOG
 			}
+		}
+		//2.
+		json listRecv = json::array();
+		vector<string> vecTagSel; vecTagSel.push_back(tag + ".*"); //验证tag必须是站点
+		TAG_SELECTOR tagSel;
+		tagSel.init(vecTagSel, "", "道岔", "mo");
+		vector<OBJ*> objList;
+		prj.getObjByTagSelector(objList, tagSel);//该站的全部道岔
 
-			//2.
-			json listRecv = json::array();
-			vector<string> vecTagSel; vecTagSel.push_back(tag + ".*"); //验证tag必须是站点
-			TAG_SELECTOR tagSel;
-			tagSel.init(vecTagSel, "", "道岔", "mo");
-			vector<OBJ*> objList;
-			prj.getObjByTagSelector(objList, tagSel);//该站的全部道岔
+		json jParam;
+		jParam["tag"] = tag + ".*.伤损指数";//该车站全部道岔全部铁轨的指数
+		jParam["time"] = time;
+		jParam["aggr"] = "count";
+		string strPara = jParam.dump();
+		string strRet, strErr, strQry;
+		db.rpc_db_select(strPara, strRet, strErr, strQry);
+		json jRet = json::parse(strRet);
+		funcMakeData(strRet, NULL, "", "", listRecv);
 
-			json jParam;
-			jParam["tag"] = tag + ".*.伤损指数";//该车站全部道岔全部铁轨的指数
-			jParam["time"] = time;
-			jParam["aggr"] = "count";
-			string strPara = jParam.dump();
-			string strRet, strErr, strQry;
-			db.rpc_db_select(strPara, strRet, strErr, strQry);
-			json jRet = json::parse(strRet);
-			funcMakeData(strRet, NULL, "", "", listRecv);
-
-			//3. 发送-接收
-			json listLost = json::array();
-			//先把recv的每个数组元素 加上 道岔的索引.
-			map<string, json*> mapRecv;
-			for (int i = 0; i < listRecv.size(); i++) {
-				string dc = listRecv[i]["dc"];
-				mapRecv[dc] = &listRecv[i];
-			}
-			for (int i = 0; i < listSend.size(); i++) {
+		//3. 发送-接收
+		json listLost = json::array();
+		//先把recv的每个数组元素 加上 道岔的索引.
+		map<string, json*> mapRecv;
+		for (int i = 0; i < listRecv.size(); i++) {
+			string dc = listRecv[i]["dc"];
+			mapRecv[dc] = &listRecv[i];
+		}
+		for (int i = 0; i < listSend.size(); i++) {
 				json& sendOne = listSend[i];
 				string dc = sendOne["dc"];
 				if (mapRecv.find(dc) == mapRecv.end()) {
@@ -2360,14 +2363,13 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 					}
 				}
 				listLost.push_back(one);
-			}
-
-			json jRecv;
-			jRecv["recv"] = listRecv;
-			jRecv["send"] = listSend;
-			jRecv["lost"] = listLost;
-			res0 = jRecv.dump();
 		}
+
+		json jRecv;
+		jRecv["recv"] = listRecv;
+		jRecv["send"] = listSend;
+		jRecv["lost"] = listLost;
+		res0 = jRecv.dump();
 
 		rpcResp.result = res0;
 	}
