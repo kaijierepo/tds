@@ -8,6 +8,7 @@
 struct SRV_STATUS {
 	double cpu; //%
 	double mem; //mb
+	double pageFile;
 	double disk; //mb/s
 	double net; //Mbps
 	int handle;

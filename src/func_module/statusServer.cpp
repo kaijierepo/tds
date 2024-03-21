@@ -136,6 +136,7 @@ void StatusServer::cycleAcq_srvStatus() {
 			PROCESS_MEMORY_COUNTERS_EX pmc;
 			if (GetProcessMemoryInfo(processHandle, (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc))) {
 				m_srvStatus.mem = (double)pmc.PrivateUsage / (double)(1024 * 1024); // unit MB
+				m_srvStatus.pageFile = (double)pmc.PagefileUsage / (double)(1024 * 1024); // unit MB;
 			}
 
 			//get handle count
@@ -153,6 +154,7 @@ void StatusServer::cycleAcq_srvStatus() {
 					db.Insert("serverStatus.cpu", dbt, m_srvStatus.cpu);
 				}
 				db.Insert("serverStatus.mem", dbt, m_srvStatus.mem);
+				db.Insert("serverStatus.pageFile", dbt, m_srvStatus.pageFile);
 				//db.Insert("serverStatus.net", dbt, m_srvStatus.net);
 				//db.Insert("serverStatus.disk", dbt, m_srvStatus.disk);
 				db.Insert("serverStatus.handle", dbt, m_srvStatus.handle);
@@ -204,16 +206,10 @@ DWORD StatusServer::GetProcHandleCount(HANDLE hProcess)
 	DWORD handleCount;
 	if (!GetProcessHandleCount(hProcess, &handleCount))
 	{
-		// 处理错误情况
 		return -1;
 	}
 	return handleCount;
 }
-
-
-
-
-
 
 
 CPU_USE_INFO StatusServer::getCpuUseInfo()
