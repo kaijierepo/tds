@@ -2192,7 +2192,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			//j["count"] = i.second->allocCount;
 		//}
 	}
-	else if (method == "getProjcetConf") {
+	else if (method == "getProjectConf") {
 		json jsconf;
 		map<string, string>& maps = tdsConf.tdsIni.mapConf;
 		for (auto itm : maps)
@@ -2200,8 +2200,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			jsconf[itm.first] = itm.second;
 		}
 		rpcResp.params = jsconf.dump();
+		rpcResp.result = RPC_OK;
 	}
-	else if (method == "setProjcetConf") {	 
+	else if (method == "setProjectConf") {	 
 		for (auto itm: params.items())
 		{
 			if (itm.value().is_string())

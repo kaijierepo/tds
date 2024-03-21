@@ -724,12 +724,10 @@ void ioDev::doPingHeartbeat(string ip)
 	int isatus = system(strcmd.c_str());  
 	if (isatus == 0)
 	{
-		LOG("888888 doPingHeartbeat " + ip + " ok");
 		setOnline();
 	}
 	else
 	{
-		LOG("888888 doPingHeartbeat " + ip + " ng");
 		setOffline();
 	}
 }
