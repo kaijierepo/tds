@@ -113,6 +113,9 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 		for (auto& i : conf["nameTranslate"].items()) {
 			m_mapNameTranslate[i.key()] = i.value();
 		}
+		if (m_mapNameTranslate["zh"] == "") {
+			m_mapNameTranslate["zh"] = m_name;
+		}
 	}
 
 	if (conf.contains("level")) {
