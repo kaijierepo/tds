@@ -2199,8 +2199,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		{
 			jsconf[itm.first] = itm.second;
 		}
-		rpcResp.params = jsconf.dump();
-		rpcResp.result = RPC_OK;
+		rpcResp.result = jsconf.dump();
 	}
 	else if (method == "setProjectConf") {	 
 		for (auto itm: params.items())
@@ -2213,8 +2212,8 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			{
 				tds->conf->setInt(itm.key(), itm.value());
 			}
-			rpcResp.result = RPC_OK;
 		}
+		rpcResp.result = RPC_OK;
 	}
 	else if (method == "GetDamageDataSummary") {
 		string tag = params["tag"]; //车站的tag
@@ -4073,6 +4072,7 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 
 	attrParam.tagSel.init(tags, attrParam.rootTag);
 	attrParam.tagSel.type = attrParam.moType;
+	attrParam.tagSel.language = session.language;
 	vector<OBJ*> moList;
 	prj.getObjByTagSelector(moList, attrParam.tagSel);
 
