@@ -46,6 +46,7 @@ SOFTWARE.
 #include "taskServer.h"
 #include "statusServer.h"
 #include "common.h"
+#include "memDiag.h"
 
 #ifdef USE_SVN_REV  //把svn版本号编译到目标文件中
 #include "version.h"
@@ -461,6 +462,8 @@ bool TDS_imp::run(string cmdline)
 #endif
 #endif
 
+	memDiag.initMemDiag();
+	memDiag.runMemTrace();
 	return true;
 }
 

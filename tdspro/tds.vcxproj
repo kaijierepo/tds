@@ -644,6 +644,7 @@
     <ClCompile Include="..\src\common\kvIni.cpp" />
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\md5.cpp" />
+    <ClCompile Include="..\src\common\memDiag.cpp" />
     <ClCompile Include="..\src\common\mongoose.c" />
     <ClCompile Include="..\src\common\secure.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
@@ -720,6 +721,7 @@
     <ClInclude Include="..\src\common\kvIni.h" />
     <ClInclude Include="..\src\common\logger.h" />
     <ClInclude Include="..\src\common\md5.h" />
+    <ClInclude Include="..\src\common\memDiag.h" />
     <ClInclude Include="..\src\common\mongoose.h" />
     <ClInclude Include="..\src\common\secure.h" />
     <ClInclude Include="..\src\common\sha1.h" />

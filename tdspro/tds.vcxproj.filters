@@ -227,6 +227,9 @@
     <ClCompile Include="tdsLicensing\licence.cpp">
       <Filter>tdsPro\licence</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\common\memDiag.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -451,6 +454,9 @@
     </ClInclude>
     <ClInclude Include="tdsLicensing\licence.h">
       <Filter>tdsPro\licence</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\memDiag.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -19,6 +19,7 @@
 #include "webSrv.h"
 #include "ioDev_camera.h"
 #include "statusServer.h"
+#include "memDiag.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -2173,24 +2174,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = RPC_OK;//返回ok
 		
 	}
-	else if (method == "enableMemDiag") {
-		//g_enableMemDiag = true;
-		rpcResp.result = RPC_OK;
-	}
-	else if (method == "disableMemDiag") {
-		//g_enableMemDiag = false;
-		rpcResp.result = RPC_OK;
-	}
-	else if (method == "logMemSnapShot") {
-		string path = fs::appPath() + "/memDiag/" + timeopt::nowStrForFile() + ".json";
-		fs::createFolderOfPath(path);
-		json j;
-		//for (auto& i : g_memAlloc) {
-			//j["stack"] = i.second->stack;
-			//j["stackID"] = i.second->stackID;
-			//j["size"] = i.second->allocSize;
-			//j["count"] = i.second->allocCount;
-		//}
+	else if (method.find("memDiag") != string::npos) {
+		string para = params.dump();
+		return memDiag.handleRpcCall_memDiag(method, para, rpcResp.result, rpcResp.error);
 	}
 	else if (method == "getProjectConf") {
 		json jsconf;

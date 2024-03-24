@@ -1,106 +1,75 @@
 #pragma once
 #define STACK_INFO_SIZE 4096
 #include "Windows.h"
+#include <atomic>
+#include <string>
+#include <map>
+#include "yyjson.h"
+#include <vector>
 
-class tArray {
-private:
-    struct Node {
-        void* data;
-        Node* next;
-    };
-
-    Node* head;
-    Node* tail; 
-    int size;
-
-public:
-    tArray() {
-        head = nullptr;
-        size = 0;
-    }
-
-    ~tArray() {
-        clear();
-    }
-
-    void push(void* value) {
-        Node* newNode = (Node*)malloc(sizeof(Node));
-        newNode->data = value;
-        newNode->next = nullptr;
-
-        if (head == nullptr) {
-            head = newNode;
-            tail = newNode; // 如果链表为空，头尾指针都指向新节点
-        }
-        else {
-            tail->next = newNode; // 将新节点插入到尾节点之后
-            tail = newNode; // 更新尾指针为新节点
-        }
-
-        size++;
-    }
-
-    void erase(void* value) {
-        Node* current = head;
-        Node* prev = nullptr;
-
-        while (current != nullptr) {
-            if (current->data == value) {
-                if (prev == nullptr) {
-                    head = current->next;
-                }
-                else {
-                    prev->next = current->next;
-                }
-                free(current);
-                size--;
-                return;
-            }
-            prev = current;
-            current = current->next;
-        }
-    }
-
-    void clear() {
-        Node* current = head;
-        while (current != nullptr) {
-            Node* temp = current;
-            current = current->next;
-            free(temp);
-        }
-        head = nullptr;
-        size = 0;
-    }
-
-    int getSize() {
-        return size;
-    }
-};
+using namespace std;
 
 struct MEM_ALLOC_INFO {
+	std::atomic<bool> used;
+	std::atomic<bool> dataSetted;
     void* stack[10];
     void* ptr;
     size_t size;
-    MEM_ALLOC_INFO();
+	MEM_ALLOC_INFO() {
+		used = false;
+		dataSetted = false;
+		memset(stack, 0, 10);
+		ptr = 0;
+		size = 0;
+	};
 };
 
 
 struct MEM_ALLOC_STATIS {
-	int stackID;
 	void* stack[10];
 	size_t allocCount;
 	size_t allocSize;
-    tArray buffList;
-	MEM_ALLOC_STATIS();
+	vector<string> funcStack;
+	MEM_ALLOC_STATIS() {
+		memset(stack, 0, 10);
+	};
 };
-extern bool g_enableMemDiag;
-#define MAX_STACK_COUNT 1000
-extern MEM_ALLOC_STATIS* g_memAlloc[MAX_STACK_COUNT];
-extern void* operator new(size_t size);
-extern void operator delete(void* ptr);
 
+#define MAX_STACK_COUNT 1000
+#define MAX_ALLOC_LOG_COUNT 50000
+#define MAX_SYS_FUNC_COUNT 200
 
 class MemDiag {
 public:
-    MemDiag();
+	MemDiag();
+
+	bool handleRpcCall_memDiag(string method, string& sParams, string& rlt, string& err);
+
+	void rpc_memDiag_logTrace(yyjson_val* params, string& rlt, string& err);
+	void rpc_memDiag_getStatis(yyjson_val* params, string& rlt, string& err);
+
+	std::atomic<bool> enableMemDiag;
+
+	void allocMemTest();
+	vector<void*> m_allocTest;
+	void initMemDiag();
+	void parseStd(int parseTime = 5);
+	void clearTrace();
+	void runMemTrace();
+	string getStackId(void** stack);
+
+	std::atomic<bool> g_enableStdCallFitler;
+	std::map<void*, std::string> g_stdFuncList;
+	MEM_ALLOC_INFO g_memAllocInfo[MAX_ALLOC_LOG_COUNT];
+	std::atomic<int> g_memAllocLogSize;
+	MEM_ALLOC_STATIS g_memAlloc[MAX_STACK_COUNT];
+	std::atomic<int> g_memAllocSize;
+	std::atomic<int> g_newCount;
+	std::atomic<int> g_deleteCount;
 };
+
+extern MemDiag memDiag;
+
+extern void* operator new(size_t size);
+extern void operator delete(void* ptr);
+
