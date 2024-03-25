@@ -322,8 +322,9 @@ public:
 	OBJ* GetProjectMO();//获得当前设备所属的Project节点，MO树根节点
 	string m_rootTag; //仅当当前对象为根节点时有效，将影响getTag的返回，getTag前面都会加上rootTag
 
-	string& getName(string language = "");
-	virtual string getTag(string root = "",string language = ""); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
+	string& getName(string language);
+	string getTag();
+	virtual string getTag(string root,string language); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
 	json getTypeTag();
 	vector<string> GetAlias();
 	vector<string> GetAllTagNamePlus();

@@ -750,6 +750,11 @@ string& OBJ::getName(string language)
 	return m_name;
 }
 
+string OBJ::getTag()
+{
+	return getTag("", "");
+}
+
 string OBJ::getTag(string root,string language)
 {
 	if (m_pParentMO == nullptr)
@@ -858,7 +863,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,str
 			strTag = TAG::trimRoot(strTag, m_rootTag);
 
 		//判断自身位号是否是搜索位号的上级位号，如果不是一定搜索不到
-		string tagThis = getTag(language);
+		string tagThis = getTag("",language);
 		if (strTag.find(tagThis) == string::npos) {
 			return;
 		}

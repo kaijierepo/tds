@@ -83,7 +83,6 @@ public:
 	string getMpTypeLabel();
 	string getValDesc(bool getUnit);
 	string getMpType();
-	json getRTData(string root="",bool bValOnly = false);
 
 	void stopStreamPull(string zlmProxyKey);
 

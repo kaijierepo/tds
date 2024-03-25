@@ -3210,7 +3210,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				string objID = params["objID"];
 				OBJ* pO = prj.getObjByID(objID);
 				if (pO) {
-					rootTag = pO->getTag();
+					rootTag = pO->getTag("",session.language);
 				}
 				else {
 					resp.error = makeRPCError(OBJ_specifiedObjIDNotFound, "specified object id not found");
@@ -3404,7 +3404,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			for (int i = 0; i < vecMps.size(); i++) {
 				MP* pmp = vecMps[i];
 				json jDe;
-				jDe["tag"] = pmp->getTag();
+				jDe["tag"] = pmp->getTag("",session.language);
 				jDe["val"] = pmp->m_curVal;
 				jDe["file"] = pmp->m_curFileData;
 				jDe["time"] = pmp->m_stDataLastUpdate.toStr();
@@ -3928,8 +3928,8 @@ string rpcHandler::renameItem(string orgName, json& renameMap) {
 	return desName;
 }
 
-void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo) {
-	string sysTag = pMo->getTag();
+void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo,RPC_SESSION session) {
+	string sysTag = pMo->getTag("",session.language);
 	string queryTag = sysTag;
 	queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
 	attrInfo[renameItem("位号", params.renameMap)] = queryTag;
@@ -3978,7 +3978,7 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 			attrInfo[renameItem(pmp->m_name, params.renameMap)] = jVal;
 		}
 		else {
-			attrInfo[renameItem(pmp->getTag(sysTag), params.renameMap)] = jVal;
+			attrInfo[renameItem(pmp->getTag(sysTag,session.language), params.renameMap)] = jVal;
 		}
 	}
 }
@@ -3990,7 +3990,7 @@ void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,
 	{
 		OBJ* pMo = moList[i];
 		nlohmann::ordered_json oneData;
-		toMoAttr(params,pMo,oneData);
+		toMoAttr(params,pMo,oneData,session);
 		if (strList != "[")
 			strList += ",";
 		strList += oneData.dump(); //此处json对象内的字段顺序按照监测点配置的顺序来排列，因此先序列化再拼接字符串
@@ -4080,7 +4080,7 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 		if (attrParam.tagSel.singleSelMode()) {
 			nlohmann::ordered_json moAttr;
 			if (moList.size() == 1) {
-				toMoAttr(attrParam, moList[0], moAttr);
+				toMoAttr(attrParam, moList[0], moAttr,session);
 			}
 			resp.result = moAttr.dump();
 		}
@@ -4113,9 +4113,13 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		OBJ_TEMPLATE* ot = it->second;
 		vector<MP*> mps;
 		ot->obj.GetAttriMp(mps);
-		string parentTag = ot->obj.getTag();
+		string parentTag = ot->obj.getTag("",session.language);
 		if (mps.size() > 0) {
-			jTableHead.push_back("位号");
+			if (session.language == "en") {
+				jTableHead.push_back("Tag");
+			}
+			else
+				jTableHead.push_back("位号");
 			jColTag.push_back(nullptr);
 
 			bool mpNameTheSame = false;  //所有监控点的名称全部相同，则取父节点作为列名称。一般在编辑对象树时，会有这种用法，例如 1楼.温度  2楼.温度  3楼.温度
@@ -4123,7 +4127,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			for (int j = 0; j < mps.size(); j++)
 			{
 				MP* pmp = mps[j];
-				mpNames[pmp->m_name] = pmp->m_name;
+				mpNames[pmp->getName(session.language)] = pmp->getName(session.language);
 			}
 			if (mpNames.size() == 1) {
 				mpNameTheSame = true;
@@ -4133,23 +4137,31 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			for (int j = 0; j < mps.size(); j++)
 			{
 				MP* pmp = mps[j];
-				string tag = pmp->getTag(parentTag);
+				string tag = pmp->getTag(parentTag,session.language);
 				jColTag.push_back(tag);
 				if (params.columeLabel == "tag") {
 					jTableHead.push_back(tag);
 				}
 				else {
 					if (!mpNameTheSame) {
-						jTableHead.push_back(pmp->m_name);
+						jTableHead.push_back(pmp->getName(session.language));
 					}
 					else {
 						if(pmp->m_pParentMO)
-							jTableHead.push_back(pmp->m_pParentMO->m_name);
+							jTableHead.push_back(pmp->m_pParentMO->getName(session.language));
 					}
 				}
 			}
-			jTableHead.push_back("在线");
-			jTableHead.push_back("更新时间");
+			if (session.language == "en") {
+				jTableHead.push_back("Online");
+			}
+			else
+				jTableHead.push_back("在线");
+
+			if (session.language == "en")
+				jTableHead.push_back("UpdateTime");
+			else
+				jTableHead.push_back("更新时间");
 			jColTag.push_back(nullptr);
 			jColTag.push_back(nullptr);
 			jTable["header"] = jTableHead;
@@ -4159,7 +4171,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		for (int i = 0; i < moList.size(); i++)
 		{
 			OBJ* pMo = moList[i];
-			string moTag = pMo->getTag();
+			string moTag = pMo->getTag("",session.language);
 			string tag = moTag;
 
 			//过滤用户权限
@@ -4179,22 +4191,31 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 				vector<MP*> childMps;
 				pMo->GetAttriMp(childMps);
 
-				jTableHead.push_back("位号");
+				if (session.language == "en")
+					jTableHead.push_back("Tag");
+				else
+					jTableHead.push_back("位号");
 				jColTag.push_back(nullptr);
 				for (int j = 0; j < childMps.size(); j++)
 				{
 					MP* pmp = childMps[j];
-					string tag = pmp->getTag(moTag);
+					string tag = pmp->getTag(moTag,session.language);
 					jColTag.push_back(tag);
 					if (params.columeLabel == "tag") {
 						jTableHead.push_back(tag);
 					}
 					else {
-						jTableHead.push_back(pmp->m_name);
+						jTableHead.push_back(pmp->getName(session.language));
 					}
 				}
-				jTableHead.push_back("在线");
-				jTableHead.push_back("更新时间");
+				if (session.language == "en")
+					jTableHead.push_back("Online");
+				else
+					jTableHead.push_back("在线");
+				if (session.language == "en")
+					jTableHead.push_back("UpdateTime");
+				else
+					jTableHead.push_back("更新时间");
 				jColTag.push_back(nullptr);
 				jColTag.push_back(nullptr);
 				jTable["header"] = jTableHead;
@@ -4241,7 +4262,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		for (int i = 0; i < moList.size(); i++)
 		{
 			OBJ* pMo = moList[i];
-			string moTag = pMo->getTag();
+			string moTag = pMo->getTag("",session.language);
 			string tag = moTag;
 
 			//过滤用户权限
@@ -4323,7 +4344,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION sessi
 		for (int i=0;i<mpList.size();i++)
 		{
 			MP* pmp = mpList[i];
-			string tag = pmp->getTag();
+			string tag = pmp->getTag("",session.language);
 
 			//if (session.user != "")
 			//{

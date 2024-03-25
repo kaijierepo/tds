@@ -78,7 +78,7 @@ public:
 	void rpc_getDevStatis_old(json params, RPC_RESP& resp, RPC_SESSION session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string renameItem(string orgName, json& renameMap);
-	void toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo);
+	void toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo, RPC_SESSION session);
 	void rpc_moList2Attrlist(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session);
 	void rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);

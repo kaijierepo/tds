@@ -966,39 +966,6 @@ bool MP::hasValue()
 	return m_stDataLastUpdate.isValid();
 }
 
-json MP::getRTData(string root, bool bValOnly)
-{
-	json j;
-	if(m_stDataLastUpdate.wYear == 0 || m_stDataLastUpdate.wYear == 1970)
-		j["time"] = "?";
-	else
-		j["time"] = timeopt::st2str(m_stDataLastUpdate);
-	j["tag"] = getTag(root);
-	if(m_curVal.empty())
-		j["val"] = "?";
-	else
-		j["val"] = m_curVal;
-
-	if (!bValOnly)
-	{
-		j["unit"] = m_strUnit;
-		j["valType"] = m_valType;
-		j["valTypeLabel"] = m_valTypeLabel;
-		j["ioType"] = m_ioType;
-		j["ioTypeLabel"] = m_ioTypeLabel;
-		if (m_decimalDigits >= 0)
-			j["decimalDigits"] = m_decimalDigits;
-
-		if (m_validRange.enable)
-		{
-			j["min"] = m_validRange.min;
-			j["max"] = m_validRange.max;
-		}
-	}
-
-	return j;
-}
-
 void MP::stopStreamPull(string tag)
 {
 	string key = "__defaultVhost__/stream_" + prj.getTdsId() + "/" + tag;
