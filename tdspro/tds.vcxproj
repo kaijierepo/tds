@@ -709,8 +709,6 @@
     <ClCompile Include="io_server\ioDev_visca.cpp" />
     <ClCompile Include="io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="io_server\proto_eip.cpp" />
-    <ClCompile Include="tdsLicensing\licence.cpp" />
-    <ClCompile Include="tdsLicensing\licenceMng.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\base64.h" />
@@ -789,8 +787,6 @@
     <ClInclude Include="io_server\proto_logix_plc.hpp" />
     <ClInclude Include="io_server\proto_rtu.hpp" />
     <ClInclude Include="io_server\proto_visca.hpp" />
-    <ClInclude Include="tdsLicensing\licence.h" />
-    <ClInclude Include="tdsLicensing\licenceMng.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

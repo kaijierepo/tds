@@ -53,9 +53,6 @@
     <ClCompile Include="..\src\common\stream2pkt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="tdsLicensing\licenceMng.cpp">
-      <Filter>tdsPro\licence</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\mongoose.c">
       <Filter>common</Filter>
     </ClCompile>
@@ -224,9 +221,6 @@
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="tdsLicensing\licence.cpp">
-      <Filter>tdsPro\licence</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\memDiag.cpp">
       <Filter>common</Filter>
     </ClCompile>
@@ -258,9 +252,6 @@
     </ClInclude>
     <ClInclude Include="..\src\common\stream2pkt.h">
       <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="tdsLicensing\licenceMng.h">
-      <Filter>tdsPro\licence</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\mongoose.h">
       <Filter>common</Filter>
@@ -451,9 +442,6 @@
     </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_custom.h">
       <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="tdsLicensing\licence.h">
-      <Filter>tdsPro\licence</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\memDiag.h">
       <Filter>common</Filter>
