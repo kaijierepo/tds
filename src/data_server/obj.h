@@ -271,7 +271,7 @@ public:
 
 	json m_customConf;
 
-	static void treeStatus2ListStatus(json& tree, json& list,string parentTag);
+	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus,string tag);
 
 	//查询接口
 	virtual json getRT();

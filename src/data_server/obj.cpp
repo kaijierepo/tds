@@ -34,6 +34,7 @@ SOFTWARE.
 #include "as.h"
 #include <algorithm>
 #include "userMng.h"
+#include "logger.h"
 
 bool OBJ::m_bDefaultOnline = false;
 
@@ -288,7 +289,9 @@ bool OBJ::isSelectedByLeafLevel(string leafLevel)
 
 void OBJ::recursiveSetOffline()
 {
-	m_bOnline = false;
+	if (m_bOnline) {
+		m_bOnline = false;
+	}
 	for (int i = 0; i < m_childObj.size(); i++) {
 		OBJ* pC = m_childObj[i];
 		pC->recursiveSetOffline();
@@ -701,10 +704,8 @@ OBJ* OBJ::createObjBranchByTag(string tag)
 	}
 	return pChild;
 }
-void OBJ::treeStatus2ListStatus(json& tree, json& list, string parentTag)
+void OBJ::treeStatus2ListStatus(json& tree, json& list,json& onlineStatus, string tag)
 {
-	string name = tree["name"];
-	string tag = TAG::addRoot(name, parentTag);
 	if (tree["level"] == "mp") {
 		json jDe;
 		jDe["tag"] = tag;
@@ -713,11 +714,23 @@ void OBJ::treeStatus2ListStatus(json& tree, json& list, string parentTag)
 		list.push_back(jDe);
 	}
 
+	//自定义对象同步在线状态
+	if (tree["type"] != "" && tree["online"].is_boolean()) {
+		json jos;
+		jos["tag"] = tag;
+		jos["online"] = tree["online"];
+		onlineStatus.push_back(jos);
+		//LOG("同步对象在线状态,位号:%s,状态;%d", tag.c_str(), jos["online"].get<bool>() ? 1 : 0);
+	}
+
+	string name = tree["name"];
 	if (tree["children"].is_array()) {
 		json& jChildren = tree["children"];
 		for (int i = 0; i < jChildren.size(); i++) {
 			json& jC = jChildren[i];
-			treeStatus2ListStatus(jC, list, tag);
+			string cName = jC["name"];
+			string cTag = TAG::addRoot(cName, tag);
+			treeStatus2ListStatus(jC, list, onlineStatus, cTag);
 		}
 	}
 }
@@ -952,6 +965,10 @@ void OBJ::GetMPByTag(std::vector<MP*>* tagVec, string strTag, string language)
 
 void OBJ::getMpList(vector<MP*>& MPlist)
 {
+	if (m_level == "mp") {
+		MPlist.push_back((MP*)this);
+	}
+
 	for (int i = 0; i < m_childObj.size(); i++)
 	{
 		OBJ* p = m_childObj.at(i);
@@ -1205,7 +1222,9 @@ map<string, json> OBJ::getChildCustomTypeList(string level)
 		for (auto& i: m_childCustomMoTypeList)
 		{
 			json& j = i.second;
-			if (j["level"] == level) {
+			string sLevel = j["level"];
+			//支持 mp,mo 逗号分隔的多选模式
+			if (level.find(sLevel)!=string::npos) {
 				retMap[i.first] = i.second;
 			}
 		}

@@ -1365,6 +1365,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		query.getMp = true;
 		prj.toJson(j, query, nullptr,session.user);
 		result = j.dump(4);
+		LOG("88888: " + result);
 	}
 	else
 	{
@@ -1534,26 +1535,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 	}
 	else if (method == "objOnline") {
-		string tag = params["tag"];
-		OBJ* p = prj.queryObj(tag, session.language);
-		if (p) {
-			p->m_bOnline = true;
-		}
-		LOG("[对象上线  ]位号:%s", tag.c_str());
-		rpcSrv.notify("objOnline", params);
+		rpc_onObjOnline(params,session);
 	}
 	else if (method == "objOffline") {
-		string tag = params["tag"];
-		OBJ* p = prj.queryObj(tag, session.language);
-		if (p) {
-			p->m_bOnline = false;
-			if (p->m_bChildTds) { //设置所有子对象掉线
-				p->recursiveSetOffline();
-			}
-		}
-
-		LOG("[对象掉线  ]位号:%s", tag.c_str());
-		rpcSrv.notify("objOffline", params);
+		rpc_onObjOffline(params, session);
 	}
 	else
 	{
@@ -1567,7 +1552,24 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					rootTag = params["rootTag"];
 				}
 				json jDeList = json::array();
-				OBJ::treeStatus2ListStatus(params, jDeList, rootTag);
+				json jOnlineStatusList = json::array();
+
+				//params为子服务上送的对象树，rootTag为子服务在上级服务中的位号
+				//数据值和在线状态都来自于io设备采集，因此统一用input接口输入
+				OBJ::treeStatus2ListStatus(params, jDeList, jOnlineStatusList, rootTag);
+
+				for (int i = 0; i < jOnlineStatusList.size();i++) {
+					json& os = jOnlineStatusList[i];
+					if (os["online"].is_boolean()) {
+						if (os["online"].get<bool>() == true) {
+							rpc_onObjOnline(os, session);
+						}
+						else if (os["online"].get<bool>() == false) {
+							rpc_onObjOffline(os, session);
+						}
+					}
+				}
+
 				rpc_input(jDeList, rpcResp, session);
 			}
 			else {
@@ -4255,6 +4257,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		jTable["standardObj"] = bStandardObj;
 	}
 	else {
+		jTableHead.push_back("在线");
 		jTableHead.push_back("位号");
 		jTableHead.push_back("点位信息");
 		jTableHead.push_back("报警状态");
@@ -4276,6 +4279,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 
 			//数据行
 			json jTableRow;
+			jTableRow.push_back(pMo->m_bOnline);
 			jTableRow.push_back(tag);
 			jTableRow.push_back(pMo->getChildObjStatis());
 			jTableRow.push_back(pMo->m_jAlarmStatus);
@@ -4975,6 +4979,34 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 	
 	json j = "portNum " + portNum + " is not opened";
 	return j.dump();
+}
+
+void rpcHandler::rpc_onObjOnline(json params,RPC_SESSION session) {
+	string tag = params["tag"];
+	OBJ* p = prj.queryObj(tag, session.language);
+	if (p) {
+		if (p->m_bOnline == false) {
+			p->m_bOnline = true;
+			LOG("[对象上线  ]位号:%s", tag.c_str());
+			rpcSrv.notify("objOnline", params);
+		}
+	}
+}
+
+void rpcHandler::rpc_onObjOffline(json params, RPC_SESSION session) {
+	string tag = params["tag"];
+	OBJ* p = prj.queryObj(tag, session.language);
+	if (p) {
+		if (p->m_bOnline) {
+			p->m_bOnline = false;
+			LOG("[对象掉线  ]位号:%s", tag.c_str());
+			rpcSrv.notify("objOffline", params);
+		}
+	
+		if (p->m_bChildTds) { //设置所有子对象掉线
+			p->recursiveSetOffline();
+		}
+	}
 }
 
 

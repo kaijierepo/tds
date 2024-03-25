@@ -99,6 +99,8 @@ public:
 	string rpc_com_list(json params, string& error);
 	string rpc_closeCom(json params, string& error);
 
+	void rpc_onObjOnline(json params, RPC_SESSION session);
+	void rpc_onObjOffline(json params, RPC_SESSION session);
 	//genicam steam function
 #ifdef ENABLE_GENICAM
 	string rpc_getStreamInfo(json params, string& error);
