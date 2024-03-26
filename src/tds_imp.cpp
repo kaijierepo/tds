@@ -462,8 +462,6 @@ bool TDS_imp::run(string cmdline)
 #endif
 #endif
 
-	memDiag.initMemDiag();
-	memDiag.runMemTrace();
 	return true;
 }
 

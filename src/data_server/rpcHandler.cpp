@@ -1102,6 +1102,12 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getChanVal(params, rpcResp);
 	}
+	else if (method == "reboot")
+	{
+		rpcResp.result = RPC_OK;
+		timeopt::sleepMilli(200);
+		exit(0);
+	}
 	else if (method == "rebootAllDev")
 	{
 		string req = R"s({

@@ -43,6 +43,8 @@ class MemDiag {
 public:
 	MemDiag();
 
+	void run();
+
 	bool handleRpcCall_memDiag(string method, string& sParams, string& rlt, string& err);
 
 	void rpc_memDiag_logTrace(yyjson_val* params, string& rlt, string& err);

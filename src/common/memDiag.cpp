@@ -78,6 +78,12 @@ MemDiag::MemDiag()
 	g_deleteCount =0;
 }
 
+void MemDiag::run()
+{
+	memDiag.initMemDiag();
+	memDiag.runMemTrace();
+}
+
 void MemDiag::initMemDiag() {
 	g_process = OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId());
 }
@@ -172,6 +178,9 @@ bool MemDiag::handleRpcCall_memDiag(string method,string& sParams, string& rlt, 
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 
 	bool handled = true;
+	if (method == "memDiag.run") {
+		run();
+	}
 	if (method == "memDiag.log") {
 		rpc_memDiag_logTrace(yyv_params, rlt, err);
 	}
