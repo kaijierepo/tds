@@ -7720,47 +7720,29 @@ static bool mg_socketpair_old(MG_SOCKET_TYPE sp[2], union usa usa[2], bool udp) 
     return success;
 }
 
-bool pushToStream(struct mg_connection* c) {
-    //扩大
-    char* buf0 = (char*)malloc(c->mgr->m_streamLen + c->recv.len); //效率低  最好用realloc
-    memcpy(buf0, c->mgr->m_streamBuf, c->mgr->m_streamLen);
-    if (c->mgr->m_streamBuf)
-        free(c->mgr->m_streamBuf);
-    c->mgr->m_streamBuf = buf0;
-    //丢进去
-    memcpy(c->mgr->m_streamBuf + c->mgr->m_streamLen, c->recv.buf, c->recv.len);
-    c->mgr->m_streamLen += c->recv.len;
-
-    c->recv.len = 0;
-    return true;
-}
-
-bool getWakeUpRecvPkt(struct mg_connection* c, unsigned long* id, struct mg_str * pPkt) {
-    if(! c->mgr->m_streamBuf)
+bool popWakeUpRecvPkt(struct mg_connection* c, unsigned long* id, struct mg_str * pPkt) {
+    char* p = c->recv.buf;
+    size_t len = c->recv.len;
+    int headerLen = sizeof(size_t) + sizeof(unsigned long);
+    if (len < headerLen)
         return false;
-    size_t pktDataLen = *(size_t*)(c->mgr->m_streamBuf + sizeof(*id));
-    int len0 = sizeof(pktDataLen) + sizeof(*id);
-    if (c->mgr->m_streamLen >= len0 + pktDataLen) {
-        *id = *((unsigned long*)c->mgr->m_streamBuf);
-        *pPkt = mg_str_n((char*)c->mgr->m_streamBuf + len0, pktDataLen);
-        c->mgr->m_streamBuf += len0 + pktDataLen;
-        c->mgr->m_streamLen -= len0 + pktDataLen;
 
-        if (0 == c->mgr->m_streamLen) {
-            c->mgr->m_streamBuf = NULL;
-        }
-        return true;
-    }
-    return false;
+    size_t payloadLen = *(size_t*)(p + sizeof(*id));
+    if (len < headerLen + payloadLen)
+        return false;
+
+    *id = *((unsigned long*)p);
+    *pPkt = mg_str_n((char*)p + headerLen, payloadLen);
+    memmove(p, p + headerLen + payloadLen, len - headerLen - payloadLen);
+    c->recv.len = len - headerLen - payloadLen;
+    return true;
 }
 
 // mg_wakeup() event handler
 static void wufn(struct mg_connection *c, int ev, void *ev_data) {
       if (ev == MG_EV_READ) {
-          pushToStream(c);
-          
           unsigned long id=0;   struct mg_str data;
-          while (getWakeUpRecvPkt(c,&id, &data)) {
+          while (popWakeUpRecvPkt(c,&id, &data)) {
               struct mg_connection* t;
               for (t = c->mgr->conns; t != NULL; t = t->next) {
                   if (t->id == id) {
