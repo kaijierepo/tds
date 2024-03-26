@@ -7720,7 +7720,7 @@ static bool mg_socketpair_old(MG_SOCKET_TYPE sp[2], union usa usa[2], bool udp) 
     return success;
 }
 
-bool popWakeUpRecvPkt(struct mg_connection* c, unsigned long* id, struct mg_str * pPkt) {
+bool hasWakeUpPkt(struct mg_connection* c, unsigned long* id, struct mg_str * pPkt) {
     char* p = c->recv.buf;
     size_t len = c->recv.len;
     int headerLen = sizeof(size_t) + sizeof(unsigned long);
@@ -7733,16 +7733,21 @@ bool popWakeUpRecvPkt(struct mg_connection* c, unsigned long* id, struct mg_str 
 
     *id = *((unsigned long*)p);
     *pPkt = mg_str_n((char*)p + headerLen, payloadLen);
-    memmove(p, p + headerLen + payloadLen, len - headerLen - payloadLen);
-    c->recv.len = len - headerLen - payloadLen;
+
     return true;
+}
+
+void popWakeUpPkt(struct mg_connection* c, size_t payloadLen) {
+    int pktLen = sizeof(size_t) + sizeof(unsigned long) + payloadLen;
+    memmove(c->recv.buf, c->recv.buf + pktLen, c->recv.len - pktLen);
+    c->recv.len = c->recv.len - pktLen;
 }
 
 // mg_wakeup() event handler
 static void wufn(struct mg_connection *c, int ev, void *ev_data) {
       if (ev == MG_EV_READ) {
           unsigned long id=0;   struct mg_str data;
-          while (popWakeUpRecvPkt(c,&id, &data)) {
+          while (hasWakeUpPkt(c,&id, &data)) {
               struct mg_connection* t;
               for (t = c->mgr->conns; t != NULL; t = t->next) {
                   if (t->id == id) {
@@ -7750,6 +7755,8 @@ static void wufn(struct mg_connection *c, int ev, void *ev_data) {
                       break;
                   }
               }
+              //mg_str does not copy src data,use then delete
+              popWakeUpPkt(c, data.len);
           }
       } else if (ev == MG_EV_CLOSE) {
             closesocket(c->mgr->pipe);         // When we're closing, close the other
