@@ -18,11 +18,17 @@
 ioServer ioSrv;
 
 void thread_do_ping_heartbeat(map<string, ioDev*> mapDev) {
+	if (ioSrv.m_bPingThreadStart)
+		return;
+
+	ioSrv.m_bPingThreadStart = true;
+	LOG("88888888 - currrent loop count: %d, ips:", mapDev.size());
 	for (auto itm: mapDev)
 	{
 		ioDev* pDev = itm.second;
 		pDev->doPingHeartbeat(itm.first);
 	}
+	ioSrv.m_bPingThreadStart = false;
 }
 
 void IOThread()
@@ -156,6 +162,7 @@ ioServer::ioServer()
 	tds->ioServer = this;
 	m_tdspOnlineReq = false;
 	m_ioSrvIP = "0.0.0.0";
+	m_bPingThreadStart = false;
 }
 ioServer::~ioServer()
 {

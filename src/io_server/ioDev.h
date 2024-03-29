@@ -313,8 +313,9 @@ public:
 	TIME m_stLastAlarmStatusTime;
 	TIME m_stLastActiveTime;
 	bool m_bEnableAcq;
-	void setOnline();
-	void setOffline();
+	// ping在线检测优先级最高
+	void setOnline(bool setByPing = false);
+	void setOffline(bool setByPing = false);
 	virtual bool isOnline() { return m_bOnline; };
 	bool m_bOnline;    //设备发现后，处于在线状态
 	int m_offlineCount;   //检测到掉线的次数。达到一定次数才认为掉线

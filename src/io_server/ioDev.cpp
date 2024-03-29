@@ -720,15 +720,17 @@ void ioDev::triggerCycleAcq()
 void ioDev::doPingHeartbeat(string ip)
 {
 	//string strcmd = "start cmd /c ping -n 1 > null " + ip;
-	string strcmd = "ping -n 1 > null " + ip;
+	string strcmd = "ping -n 2 -w 500 > null " + ip;
+	LOG("88888888 - ping ip start %s : ", ip.c_str());
 	int isatus = system(strcmd.c_str());  
+	LOG("88888888 - ping ip end : %d", isatus);
 	if (isatus == 0)
 	{
-		setOnline();
+		setOnline(true);
 	}
 	else
 	{
-		setOffline();
+		setOffline(true);
 	}
 }
 
@@ -1244,8 +1246,12 @@ void notifyDevOffline(json jNotify)
 	}
 }
 
-void ioDev::setOnline()
+void ioDev::setOnline(bool setByPing /*= false*/)
 {
+	// 在线状态当有ping检测时，忽略其他
+	if (m_bEnablePingOnlineCheck && !setByPing)
+		return;
+
 	//[问题]观察到有pIOSession已经为空，也就是说链接已经断开。却还有缓存数据没有处理，导致处理后设置为上线的问题
 	//该问题需优化
 
@@ -1275,8 +1281,12 @@ void ioDev::setOnline()
 	//}
 }
 
-void ioDev::setOffline()
+void ioDev::setOffline(bool setByPing/* = false*/)
 {
+	// 掉线状态当有ping检测时，忽略其他
+	if (m_bEnablePingOnlineCheck && !setByPing)
+		return;
+
 	if (m_bOnline)
 	{
 		m_offlineCount++;
