@@ -721,9 +721,9 @@ void ioDev::doPingHeartbeat(string ip)
 {
 	//string strcmd = "start cmd /c ping -n 1 > null " + ip;
 	string strcmd = "ping -n 2 -w 500 > null " + ip;
-	LOG("88888888 - ping ip start %s : ", ip.c_str());
+	//LOG("[trace] ping ip start %s : ", ip.c_str());
 	int isatus = system(strcmd.c_str());  
-	LOG("88888888 - ping ip end : %d", isatus);
+	//LOG("[trace] ping ip end : %d", isatus);
 	if (isatus == 0)
 	{
 		setOnline(true);

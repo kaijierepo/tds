@@ -221,7 +221,10 @@ public:
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier,bool* isSelectedByLeafType = nullptr, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
-	virtual bool loadStatus(OBJ* pMo);
+	//从srcTree找到与自身对应的对象，并拷贝以该对象为根节点的子树的状态
+	virtual bool loadTreeStatus(OBJ* pSrcTree);
+	//从srcObj拷贝对象状态，不含子对象的状态
+	virtual bool loadObjStatus(OBJ* pSrcObj);
 
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
 
