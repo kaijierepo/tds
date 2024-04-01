@@ -46,7 +46,9 @@ SOFTWARE.
 #include "taskServer.h"
 #include "statusServer.h"
 #include "common.h"
+#ifdef _WIN32
 #include "memDiag.h"
+#endif
 
 #ifdef USE_SVN_REV  //把svn版本号编译到目标文件中
 #include "version.h"

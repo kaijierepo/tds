@@ -19,10 +19,10 @@
 #include "webSrv.h"
 #include "ioDev_camera.h"
 #include "statusServer.h"
-#include "memDiag.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
+	#include "memDiag.h"
 #endif
 
 rpcHandler rpcSrv;
@@ -2182,10 +2182,12 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = RPC_OK;//返回ok
 		
 	}
+#ifdef _WIN32
 	else if (method.find("memDiag") != string::npos) {
 		string para = params.dump();
 		return memDiag.handleRpcCall_memDiag(method, para, rpcResp.result, rpcResp.error);
 	}
+#endif
 	else if (method == "getProjectConf") {
 		json jsconf;
 		map<string, string>& maps = tdsConf.tdsIni.mapConf;
