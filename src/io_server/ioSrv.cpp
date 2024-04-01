@@ -22,7 +22,7 @@ void thread_do_ping_heartbeat(map<string, ioDev*> mapDev) {
 		return;
 
 	ioSrv.m_bPingThreadStart = true;
-	LOG("88888888 - currrent loop count: %d, ips:", mapDev.size());
+	//LOG("[trace] - ping currrent loop count: %d, ips:", mapDev.size());
 	for (auto itm: mapDev)
 	{
 		ioDev* pDev = itm.second;

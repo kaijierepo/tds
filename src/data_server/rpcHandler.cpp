@@ -1442,7 +1442,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				//加载新的树
 				project tmpPrj;
 				tmpPrj.loadConf(params);
-				tmpPrj.loadStatus(&prj);//保留原有的实时数据状态
+				tmpPrj.loadTreeStatus(&prj);//保留原有的实时数据状态
 				prj.clear();
 				prj.m_name = tmpPrj.m_name;
 				prj.m_mapAllMP = tmpPrj.m_mapAllMP;

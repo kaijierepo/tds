@@ -66,7 +66,8 @@ public:
 	bool toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
 	string getValDesc(json& jVal, bool getUnit = true);
 	//bool toJson(json& conf, json serializeOption) override;
-	bool loadStatus(OBJ* pSrc) override;
+	bool loadTreeStatus(OBJ* pSrcTree) override;
+	bool loadObjStatus(OBJ* pSrcObj) override;
 	void calcAlarm();
 public:
 	//fileData为数据元携带的文件数据

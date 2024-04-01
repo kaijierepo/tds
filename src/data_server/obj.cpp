@@ -510,27 +510,32 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	return true;
 }
 
-bool OBJ::loadStatus(OBJ* pSrcRoot)
+bool OBJ::loadTreeStatus(OBJ* pSrcTree)
 {
 	string tag = getTag();
-	OBJ* ptmp = pSrcRoot->queryObj(tag,"zh");
-	if (ptmp) {
-		m_bOnline = ptmp->m_bOnline;
-		m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
-		m_longitudeDyn = ptmp->m_longitudeDyn;
-		m_latitudeDyn = ptmp->m_latitudeDyn;
-		m_status = ptmp->m_status;
-		m_jAlarmStatus = ptmp->m_jAlarmStatus;
-		m_strIoAddrBind = ptmp->m_strIoAddrBind;
-
+	OBJ* pSrcObj = pSrcTree->queryObj(tag,"zh");
+	if (pSrcObj) {
+		loadObjStatus(pSrcObj);
 		for (int i = 0; i < m_childObj.size(); i++)
 		{
 			OBJ* pC = m_childObj[i];
-			pC->loadStatus(pSrcRoot);
+			pC->loadTreeStatus(pSrcTree);
 		}
 	}
 	else
 		return false;
+	return true;
+}
+
+bool OBJ::loadObjStatus(OBJ* pSrcObj)
+{
+	m_bOnline = pSrcObj->m_bOnline;
+	m_stDataLastUpdate = pSrcObj->m_stDataLastUpdate;
+	m_longitudeDyn = pSrcObj->m_longitudeDyn;
+	m_latitudeDyn = pSrcObj->m_latitudeDyn;
+	m_status = pSrcObj->m_status;
+	m_jAlarmStatus = pSrcObj->m_jAlarmStatus;
+	m_strIoAddrBind = pSrcObj->m_strIoAddrBind;
 	return true;
 }
 

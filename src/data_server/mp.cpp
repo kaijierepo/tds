@@ -531,23 +531,31 @@ string MP::getValDesc(bool getUnit) {
 	return getValDesc(m_curVal, getUnit);
 }
 
-bool MP::loadStatus(OBJ* pSrc)
+bool MP::loadTreeStatus(OBJ* pSrc)
 {
 	string tag = getTag();
-	MP* ptmp = pSrc->GetMPByTag(tag,"zh");
-	if (ptmp) {
+	MP* pSrcMp = pSrc->GetMPByTag(tag,"zh");
+	if (pSrcMp) {
 		//常量类型无需加载状态
-		if (ptmp->m_ioType != "c") {
-			m_lastVal = ptmp->m_lastVal;
-			if (ptmp->hasValue()) {
-				m_curVal = ptmp->m_curVal;
-			}
-			m_stDataLastUpdate = ptmp->m_stDataLastUpdate;
-			m_mpStatus = ptmp->m_mpStatus;
+		if (pSrcMp->m_ioType != "c") {
+			loadObjStatus(pSrcMp);
 		}
 	}
 	else
 		return false;
+	return true;
+}
+
+bool MP::loadObjStatus(OBJ* pSrcObj)
+{
+	OBJ::loadObjStatus(pSrcObj);
+
+	MP* pSrcMp = (MP*)pSrcObj;
+	m_lastVal = pSrcMp->m_lastVal;
+	if (pSrcMp->hasValue()) {
+		m_curVal = pSrcMp->m_curVal;
+	}
+	m_mpStatus = pSrcMp->m_mpStatus;
 	return true;
 }
 
