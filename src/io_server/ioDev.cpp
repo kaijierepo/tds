@@ -720,7 +720,13 @@ void ioDev::triggerCycleAcq()
 void ioDev::doPingHeartbeat(string ip)
 {
 	//string strcmd = "start cmd /c ping -n 1 > null " + ip;
-	string strcmd = "ping -n 2 -w 500 > null " + ip;
+	string strcmd;
+#ifdef _WIN32
+	strcmd = "ping -n 2 -w 500 > null " + ip;
+#else
+	strcmd = "ping -c 2 -w 500 > null " + ip;
+#endif
+
 	//LOG("[trace] ping ip start %s : ", ip.c_str());
 	int isatus = system(strcmd.c_str());  
 	//LOG("[trace] ping ip end : %d", isatus);
