@@ -1140,29 +1140,8 @@ void WebServer::removeWsSession(mg_connection* c) {
 
 void webThread(WebServer* pSrv,int port) {
 	setThreadName("mongoose polling thread");
-	string proto = "http:";
-	if (pSrv->m_isHttps)
-		proto = "https:";
-	string url = proto + "//0.0.0.0:" + to_string(port);
-	//pSrv->pMgr = &mgr;
-	struct mg_mgr& mgr = pSrv->m_mgr;
-	mg_mgr_init(&mgr);                                        // Init manager
-	// !!!!!非常重要。 mg_http_listen最后一个参数不要传入pSrv等其他外部线程会操作的指针
-	//传入pSrv后。由于WebServer::sendToWs会被其他线程调用。可能和mongoose内部发生多线程读写pSrv指针冲突。会导致奔溃
-	//问题描述如下：
-	//WebServer::sendToWs执行时 ，出现如下错误
-	//Exception thrown: read access violation.
-	//std::_Tree<std::_Tmap_traits<void*, std::shared_ptr<TDS_SESSION>, std::less<void*>, std::allocator<std::pair<void* const, std::shared_ptr<TDS_SESSION> > >, 0> >::_Get_scary(...)->** _Myhead** was nullptr.
-	// map::begin()变成了NULL原因不明。
-	// 错误出现在webSrvS中，但是实际测试的时候只用了webSrv
-	//测试发现mongoose必须工作过，产生过http交互后，才会出现该问题。因此怀疑是mongoose的代码影响
-	//mongoose唯一能拿到这个pSrv指针的地方就是mg_http_listen和userdata。 
-	//测试发现usrdata无影响，mg_http_listen传入后就会导致偶先的奔溃
-	mg_http_listen(&mgr, url.c_str() , fn , NULL);  // Setup listener 
-	mg_wakeup_init(&mgr);  // Initialise wakeup socket pair
-	mgr.userdata = pSrv;
-	for (;;) mg_mgr_poll(&mgr, 1000);                         // Event loop
-	mg_mgr_free(&mgr);                                        // Cleanup
+	for (;;) mg_mgr_poll(&pSrv->m_mgr, 1000);                         // Event loop
+	mg_mgr_free(&pSrv->m_mgr);                                        // Cleanup
 }
 
 
@@ -1180,20 +1159,51 @@ void WebServer::run(int port,bool https)
 {
 	m_isHttps = https;
 	m_port = port;
+
+	string proto = "http:";
+	if (m_isHttps)
+		proto = "https:";
+	string url = proto + "//0.0.0.0:" + to_string(port);
+	//pSrv->pMgr = &mgr;
+	struct mg_mgr& mgr = m_mgr;
+	mg_mgr_init(&mgr);                                        // Init manager
+	// !!!!!非常重要。 mg_http_listen最后一个参数不要传入pSrv等其他外部线程会操作的指针
+	//传入pSrv后。由于WebServer::sendToWs会被其他线程调用。可能和mongoose内部发生多线程读写pSrv指针冲突。会导致奔溃
+	//问题描述如下：
+	//WebServer::sendToWs执行时 ，出现如下错误
+	//Exception thrown: read access violation.
+	//std::_Tree<std::_Tmap_traits<void*, std::shared_ptr<TDS_SESSION>, std::less<void*>, std::allocator<std::pair<void* const, std::shared_ptr<TDS_SESSION> > >, 0> >::_Get_scary(...)->** _Myhead** was nullptr.
+	// map::begin()变成了NULL原因不明。
+	// 错误出现在webSrvS中，但是实际测试的时候只用了webSrv
+	//测试发现mongoose必须工作过，产生过http交互后，才会出现该问题。因此怀疑是mongoose的代码影响
+	//mongoose唯一能拿到这个pSrv指针的地方就是mg_http_listen和userdata。 
+	//测试发现usrdata无影响，mg_http_listen传入后就会导致偶先的奔溃
+	mg_connection* c = mg_http_listen(&mgr, url.c_str() , fn , NULL);  // Setup listener 
+	mg_wakeup_init(&mgr);  // Initialise wakeup socket pair
+	mgr.userdata = this;
+
+
+	string log;
 	if (https)
 	{
-		string log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);
-		LOG(log);
+		log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);
 	}
 	else
 	{
-		string log = str::format("[HTTP服务	] 端口:%d,支持websocket, http://localhost:%d 访问用户界面",port,port);
-		LOG(log);
+		log = str::format("[HTTP服务	] 端口:%d,支持websocket, http://localhost:%d 访问用户界面",port,port);
 	}
+	if(c){
+		log += ",启动成功";
+	}
+	else{
+		log ="[error]" + log + ",启动失败";
+	}
+	LOG(log);
 
-
-	thread t(webThread, this, port);
-	t.detach();
+	if(c){
+		thread t(webThread, this, port);
+		t.detach();
+	}
 }
 
 

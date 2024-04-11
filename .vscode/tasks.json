@@ -2,113 +2,15 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "cppbuild",
-			"label": "Linux: g++ build active file",
-			"command": "/usr/bin/g++",
-			"args": [
-				"-fdiagnostics-color=always",
-				"-I",
-				"${workspaceFolder}/src",
-				"-I",
-				"${workspaceFolder}/src/common",
-				"-I",
-				"${workspaceFolder}/src/data_server",
-				"-I",
-				"${workspaceFolder}/src/io_server",
-				"-I",
-				"${workspaceFolder}/src/func_module",
-				"-I",
-				"${workspaceFolder}/tdspro",
-				"-I",
-				"${workspaceFolder}/tdspro/common",
-				"-I",
-				"${workspaceFolder}/tdspro/data_server",
-				"-I",
-				"${workspaceFolder}/tdspro/io_server",
-				"-I",
-				"${workspaceFolder}/tdspro/func_module",
-				"-c", //仅编译，不链接
-				"-g",
-				"${file}",
-				"-o",
-				"${file}.o",
-				"-fpermissive",
-				"-DLINUX"
-			],
-			"options": {
-				"cwd": "${fileDirname}"
-			},
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"detail": "compiler: /usr/bin/g++"
-		},
-		{
-			"label": "vcvarinit",
-			"command": "${workspaceFolder}/build/vcvarinit.bat"
-		},
-		{
-			"type": "cppbuild",
-			"label": "Windows: cl.exe build active file",
-			"dependsOn":["vcvarinit"],
-			"command": "cl.exe",
-			//编译选项官方文档
-			//https://learn.microsoft.com/zh-cn/cpp/build/reference/compiler-options-listed-alphabetically?view=msvc-170
-			"args": [
-				"/c", //编译但不链接
-				"/I",
-				"${workspaceFolder}/src",
-				"/I",
-				"${workspaceFolder}/src/common",
-				"/I",
-				"${workspaceFolder}/src/data_server",
-				"/I",
-				"${workspaceFolder}/src/io_server",
-				"/I",
-				"${workspaceFolder}/src/func_module",
-				"/I",
-				"${workspaceFolder}/tdspro",
-				"/I",
-				"${workspaceFolder}/tdspro/common",
-				"/I",
-				"${workspaceFolder}/tdspro/data_server",
-				"/I",
-				"${workspaceFolder}/tdspro/io_server",
-				"/I",
-				"${workspaceFolder}/tdspro/func_module",
-				"/I",
-				"${workspaceFolder}/src/3rdparty/openssl/include",
-				"/I",
-				"${workspaceFolder}/src/3rdparty/jerryscript/include",
-				"/D",
-				"MG_ENABLE_OPENSSL", //mongoose库启用 openssl
-				"/D",
-				"CPPHTTPLIB_OPENSSL_SUPPORT", //httplib库启用  openssl
-				"/Zi", //生成完整的调试信息
-				"/EHsc",
-				"/nologo",
-				"/utf-8",
-				"/FC", //在诊断文本中显示传递给 cl.exe 的源代码文件的完整路径
-				"/std:c++17",
-				"/Fo${workspaceFolder}\\build\\OBJ\\${fileBasenameNoExtension}.obj", // /Fo 创建对象文件
-				// "/Fe${fileDirname}\\${fileBasenameNoExtension}.obj"  //重命名可执行文件
-				"${file}"
-			],
-			"options": {
-				"cwd": "${fileDirname}"
-			},
-			"problemMatcher": [
-				"$msCompile"
-			],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
-			"detail": "compiler: cl.exe"
-		}
+            "label": "Build Tds",
+            "type": "shell",
+            "command": "bash",
+            "args": ["build/build.sh"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
 	]
 }

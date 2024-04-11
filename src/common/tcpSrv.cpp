@@ -1,6 +1,6 @@
 #include "tcpSrv.h"
 #include "common.h"
-#include "mongoose.h"
+
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -47,13 +47,8 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 }
 
 void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
-	struct mg_mgr mgr;
-	mg_mgr_init(&mgr);  // Init manager
-	string url = "tcp://0.0.0.0:" + str::fromInt(port);
-	mg_listen(&mgr, url.c_str() , cb, &mgr);  // Setup listener
-	mgr.userdata = pSrv;
-	for (;;) mg_mgr_poll(&mgr, 1000);                 // Event loop
-	mg_mgr_free(&mgr);                                // Cleanup
+	for (;;) mg_mgr_poll(&pSrv->mgr, 1000);                 // Event loop
+	mg_mgr_free(&pSrv->mgr);                                // Cleanup
 }
 
 bool tcpSrv::run(ITcpServerCallBack* pUser, int port, string strLocalIP /*= ""*/)
@@ -62,10 +57,19 @@ bool tcpSrv::run(ITcpServerCallBack* pUser, int port, string strLocalIP /*= ""*/
 	m_iServerPort = port;
 	m_pCallBackUser = pUser;
 
-	thread t(mongoose_tcp_listen_thread, port,this);
-	t.detach();
+	mg_mgr_init(&mgr);  // Init manager
+	string url = "tcp://0.0.0.0:" + str::fromInt(port);
+	mg_connection* c = mg_listen(&mgr, url.c_str() , cb, &mgr);  // Setup listener
+	mgr.userdata = this;
 
-	return true;
+	if(c){
+		thread t(mongoose_tcp_listen_thread, port,this);
+		t.detach();
+		return true;
+	}
+	else{
+		return false;
+	}
 }
 
 void tcpSrv::stop()

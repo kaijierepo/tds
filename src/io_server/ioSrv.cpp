@@ -1265,6 +1265,10 @@ bool ioServer::runAsCloud()
 	}
 	else
 	{
+#ifndef _WIN32
+		LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
+#endif
+
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
 	}
 

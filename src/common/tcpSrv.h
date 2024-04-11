@@ -4,6 +4,7 @@
 #include <mutex>
 #include <memory>
 #include "common.h"
+#include "mongoose.h"
 
 using namespace std;
 
@@ -89,6 +90,8 @@ public:
 	bool m_bReuseAddr;
 
 	string m_strName;
+
+	struct mg_mgr mgr;
 
 	void Log(char* sz);
 	void (*pLog)(char*);

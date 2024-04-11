@@ -37,6 +37,7 @@ SOFTWARE.
 #include <windows.h>
 #else
 #include "iconv.h"
+#include <filesystem>
 #endif
 
 TDB db;
@@ -414,7 +415,7 @@ namespace DB_FS {
 		}
 		CreateDirectoryW(DB_STR::utf8_to_utf16(strFile).c_str(), NULL);
 #else
-		filesystem::create_directories(strFile);
+		std::filesystem::create_directories(strFile);
 #endif
 	}
 	bool writeFile(string path, char* data, size_t len)

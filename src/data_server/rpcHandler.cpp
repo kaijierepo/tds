@@ -1371,7 +1371,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		query.getMp = true;
 		prj.toJson(j, query, nullptr,session.user);
 		result = j.dump(4);
-		LOG("88888: " + result);
+		//LOG("88888: " + result);
 	}
 	else
 	{

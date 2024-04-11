@@ -161,7 +161,7 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #endif
 }
 
-string Clogger::logInternal(string info)
+string Clogger::logInternal(string info, bool writeToFile)
 {
 	LOG_LEVEL ll = getLogLevel(info);
 	if (ll == LOG_LEVEL::LL_KEYINFO)
@@ -190,26 +190,28 @@ string Clogger::logInternal(string info)
 	printf("\r\n");
 	//std::cout << info << std::endl; 这句话在 AllocConsole 生成的命令行中不输出了
 
-	//create log path
-	std::lock_guard<mutex> lockGuard(m_lock);
-	//if (!dirCreated)
-	//{
-	//	wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
-	//	DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
-	//	if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
-	//	{
-	//		::CreateDirectoryW(strLogDir.c_str(), NULL);
-	//	}
-	//	dirCreated = true;
-	//}
-	//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
-	fs::createFolderOfPath(m_strLogDir);
-	
+	if (writeToFile) {
+		//create log path
+		std::lock_guard<mutex> lockGuard(m_lock);
+		//if (!dirCreated)
+		//{
+		//	wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
+		//	DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
+		//	if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
+		//	{
+		//		::CreateDirectoryW(strLogDir.c_str(), NULL);
+		//	}
+		//	dirCreated = true;
+		//}
+		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
+		fs::createFolderOfPath(m_strLogDir);
 
-	//save to log file
-	string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
-	strFile = m_strLogDir + "/" + strFile + ".log";
-	fs::appendFile(strFile, info + "\r\n");
+
+		//save to log file
+		string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
+		strFile = m_strLogDir + "/" + strFile + ".log";
+		fs::appendFile(strFile, info + "\r\n");
+	}
 
 #ifdef _TDS
 	//if (ll == LOG_LEVEL::LL_ERROR)
@@ -228,7 +230,7 @@ string Clogger::logInternal(string info)
 	return logline;
 }
 
-void Clogger::log(string info)
+void Clogger::log(string info, bool writeToFile)
 {
 	if (LL_NONE == logLevel)
 		return;

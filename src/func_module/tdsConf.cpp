@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "tdsConf.h"
 #include  "common.h"
+#include "logger.h"
 
 tdsConfig tdsConf;
 
@@ -390,6 +391,8 @@ void tdsConfig::loadConf()
 	
 	if (!fs::fileExist(confPath))
 	{
+		string s = str::format("[warn]配置文件%s不存在，创建默认配置", confPath.c_str());
+		logger.logInternal(s,false);
 		generateDefaultConfFile(confFileName);
 	}
 

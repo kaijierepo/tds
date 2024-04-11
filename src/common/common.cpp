@@ -1588,7 +1588,8 @@ namespace fs {
 		filesystem::create_directories(charCodec::tds_to_utf16(strFile));
 	#endif
 #else
-		filesystem::create_directories(strFile);
+		filesystem::path p = strFile;
+		filesystem::create_directories(p);
 #endif
 	}
 
@@ -1804,9 +1805,11 @@ namespace fs {
 		}
 		else
 		{
+#ifdef _WIN32
 			string err = sys::getLastError();
 			err = charCodec::tds_to_gb(err);
 			printf("[error]%s", err.c_str());
+#endif
 		}
 		return false;
 	}
@@ -1839,16 +1842,16 @@ namespace fs {
 	bool fileExist(string pszFileName)
 	{
 #ifndef _WINXP
-		std::error_code error;
-		auto file_status = std::filesystem::status(charCodec::tds_to_utf16(pszFileName), error);
-		if (error) {
-			return false;
-		}
- 
-		if (std::filesystem::exists(file_status)) {
+#ifdef _WIN32
+		std::filesystem::path filePath = charCodec::tds_to_utf16(pszFileName);
+#else
+		std::filesystem::path filePath = pszFileName;
+#endif
+
+		if (std::filesystem::exists(filePath)) {
 			return true;
 		}
-		else if(std::filesystem::is_directory(file_status)){
+		else if(std::filesystem::is_directory(filePath)){
 			return true;
 		}
 		return  false;
