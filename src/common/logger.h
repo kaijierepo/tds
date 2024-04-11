@@ -25,9 +25,9 @@ public:
 	void setLogLevel(string level);
 	LOG_LEVEL getLogLevel(string& info);
 	void setConsoleTextColor(LOG_LEVEL ll);
-	string logInternal(string info); //bForceWrite为true,忽略级别过滤，直接输出
+	string logInternal(string info, bool writeToFile = true); //bForceWrite为true,忽略级别过滤，直接输出
 	string appPath();
-	void log(string info);
+	void log(string info,bool writeToFile = true);
 	bool dirCreated;
 	LOG_LEVEL logLevel;
 	mutex m_lock;

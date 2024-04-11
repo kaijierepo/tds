@@ -1173,7 +1173,9 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		{
 			port = m_jDevAddr["port"].get<int>();
 		}
-		m_udpClt->SendData(pData, iLen,ip,port);
+		size_t iSent = m_udpClt->SendData(pData, iLen,ip,port);
+		if (m_bEnableIoLog)
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0, "UDP-" + ip + ":" + str::fromInt(port));
 	}
 	else {
 		//直接发送给设备
