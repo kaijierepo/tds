@@ -1,1 +1,0 @@
-https://www.radixdlt.com/post/json-rpc-vs-rest/
