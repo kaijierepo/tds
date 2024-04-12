@@ -74,7 +74,7 @@ public:
 
 
 	bool m_bDownSample;
-	int m_iDownSampleInterval;
+	int m_iDownSampleInterval; //in milliSecond
 	TIME m_lastDownSampleTime;
 	//数据流订阅会话
 	mutex m_csStreamPuller;

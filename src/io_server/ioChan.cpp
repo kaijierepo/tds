@@ -9,6 +9,8 @@ ioChannel::ioChannel()
 	m_ioType = CHAN_IO_TYPE::I;
 	m_k = 1;
 	m_b = 0;
+	m_bDownSample = false;
+	m_iDownSampleInterval = 1000;
 }
 
 

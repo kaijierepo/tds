@@ -541,7 +541,8 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 	return false;
 }
 
-void thread_handleRpcCall(string method,json param,int delay) {
+void thread_handleRpcCall(string method,string sParam,int delay) {
+	json param = json::parse(sParam);
 	if (delay > 0) {
 		timeopt::sleepMilli(delay);
 	}
@@ -559,11 +560,11 @@ void TDS_imp::callAsyn(string method, json& param, int delay)
 {
 	if (method == "input") {
 		g_asynCallDealThreadPool.enqueue([method, param, delay] {
-			thread_handleRpcCall(method, param, delay);
+			thread_handleRpcCall(method, param.dump(), delay);
 			});
 	}
 	else {
-		thread t(thread_handleRpcCall, method, param, delay);
+		thread t(thread_handleRpcCall, method, param.dump(), delay);
 		t.detach();
 	}
 }

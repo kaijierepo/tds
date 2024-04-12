@@ -1257,8 +1257,9 @@ void notifyDevOffline(json jNotify)
 void ioDev::setOnline(bool setByPing /*= false*/)
 {
 	// 在线状态当有ping检测时，忽略其他
-	if (m_bEnablePingOnlineCheck && !setByPing)
-		return;
+	// if ping is enabled ,ioDev can be setonline by other check method.
+	//if (m_bEnablePingOnlineCheck && !setByPing)
+	//	return;
 
 	//[问题]观察到有pIOSession已经为空，也就是说链接已经断开。却还有缓存数据没有处理，导致处理后设置为上线的问题
 	//该问题需优化
