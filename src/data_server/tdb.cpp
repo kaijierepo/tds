@@ -3570,24 +3570,21 @@ string TDB::parseSuffix(string deFileUrl)
 
 bool TDB::fileExist(string pszFileName)
 {
-#ifndef _WINXP
 #ifdef _WIN32
-		std::filesystem::path filePath = charCodec::tds_to_utf16(pszFileName);
-#else
-		std::filesystem::path filePath = pszFileName;
-#endif
-
-		if (std::filesystem::exists(filePath)) {
-			return true;
-		}
-		else if(std::filesystem::is_directory(filePath)){
-			return true;
-		}
-		return  false;
-#else
-		wstring filePath = charCodec::tds_to_utf16(pszFileName);
+		wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
 		DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
 		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#else
+	//std::filesystem::path filePath = charCodec::tds_to_utf16(pszFileName); //for windows
+	std::filesystem::path filePath = pszFileName;
+
+	if (std::filesystem::exists(filePath)) {
+		return true;
+	}
+	else if (std::filesystem::is_directory(filePath)) {
+		return true;
+	}
+	return  false;
 #endif
 }
 
