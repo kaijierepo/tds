@@ -3377,7 +3377,8 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				if (pmp)
 				{
 					pmp->input(val, &file, &de.time);
-					vecMps.push_back(pmp);
+					if(pmp->m_bEnableIO)
+						vecMps.push_back(pmp);
 				}
 				else {
 					//params.erase("tag");
