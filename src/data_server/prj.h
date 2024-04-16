@@ -85,8 +85,6 @@ public:
 
 	void runRtDB();
 
-	string getTdsId();
-
 	MP* createMP(string tag, string valType);
 
 	//对象模版配置

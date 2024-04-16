@@ -18,6 +18,8 @@
 using json = nlohmann::json;
 #include "md5.h"
 
+#define STD_FUN_CHECK_IDX 1
+
 MemDiag memDiag;
 
 string g_strSourceDir = "\\sourcecode";
@@ -30,7 +32,7 @@ void *newImp(size_t size)
 		void *callStack[10] = { 0 };
 		USHORT frameCount = CaptureStackBackTrace(0, 10, callStack, NULL);
 
-		if (memDiag.g_stdFuncList.find(callStack[2]) != memDiag.g_stdFuncList.end()) {
+		if (memDiag.g_stdFuncList.find(callStack[STD_FUN_CHECK_IDX]) != memDiag.g_stdFuncList.end()) {
 			return ptr;
 		}
 
@@ -192,7 +194,7 @@ void MemDiag::parseStdFromTraceRec(int parseTime) {
 		if (!g_memTrace[i].used)
 			continue;
 
-		void* func = g_memTrace[i].stack[2];
+		void* func = g_memTrace[i].stack[STD_FUN_CHECK_IDX];
 
 		bool bLibFun = true;		//库函数，非用户函数
 		if(!g_strSourceDir.empty())
@@ -254,7 +256,7 @@ void MemDiag::parseStdFromStatisRec() {
 		if (!statisInfo.dataSetted)
 			continue;
 
-		void* func = statisInfo.stack[2];
+		void* func = statisInfo.stack[STD_FUN_CHECK_IDX];
 
 		bool bLibFun = true;		//库函数，非用户函数
 		if (!g_strSourceDir.empty())
@@ -539,7 +541,7 @@ void MemDiag::rpc_memDiag_getStatis_fromStatis(yyjson_val* params, string& rlt, 
 				std::string s = symbol->Name;
 				if (SymGetLineFromAddr(g_process, (DWORD64)(func), &displacement, &line))
 				{
-					s += str::format("(%s:%s)", line.FileName, line.LineNumber);
+					s += str::format("(%s:%d)", line.FileName, line.LineNumber);
 				}
 				statisInfo.funcStack.push_back(s);
 			}
@@ -631,7 +633,7 @@ void MemDiag::rpc_memDiag_getStatis_fromTrace(yyjson_val* params, string& rlt, s
 				std::string s = symbol->Name;
 				if (SymGetLineFromAddr(g_process, (DWORD64)(func), &displacement, &line))
 				{
-					s += str::format("(%s:%s)", line.FileName, line.LineNumber);
+					s += str::format("(%s:%d)", line.FileName, line.LineNumber);
 				}
 				
 

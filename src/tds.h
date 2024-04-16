@@ -203,9 +203,11 @@ public:
 	}
 };
 
+#define RPC_NULL "null"
 #define RPC_OK "\"ok\""
 #define RPC_TIMEOUT "\"timeout\""
 #define RPC_FAIL "\"fail\""
+#define RPC_STR(s) "\""+s+"\""
 
 class RPC_RESP {
 public:
@@ -373,11 +375,12 @@ enum RPC_ERROR_CODE {
 	AUTH_tokenMissing = -40102,
 	AUTH_userNotFound = -40103,
 	AUTH_userMissing = -40104,
-	AUTH_passwordError = -40105,
-	AUTH_signatureInvalid = -40106,
-	AUTH_signatureMissing = -40107,
-	AUTH_noPermission = -40108,
-	AUTH_noWritePermission = -40109,
+	AUTH_userExisted = -40105,
+	AUTH_passwordError = -40106,
+	AUTH_signatureInvalid = -40107,
+	AUTH_signatureMissing = -40108,
+	AUTH_noPermission = -40109,
+	AUTH_noWritePermission = -40110,
 
 	//mo
 	MO_specifiedTagNotFound = -40201,

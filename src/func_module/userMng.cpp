@@ -570,6 +570,14 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 
 bool userManager::rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session)
 {
+	string name = params["name"].get<string>();
+	//已存在则修改
+	if (m_mapUsers.find(name) != m_mapUsers.end())
+	{
+		resp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userExisted, "user already existed");
+		return true;
+	}
+
 	json users = json::array();
 	users.push_back(params);
 	return rpc_setUsers(users,resp,session);

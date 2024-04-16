@@ -123,11 +123,6 @@ void project::runRtDB()
 	t.detach();
 }
 
-string project::getTdsId()
-{
-	return m_name;
-}
-
 MP* project::createMP(string tag,string valType)
 {
 	MP* pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);

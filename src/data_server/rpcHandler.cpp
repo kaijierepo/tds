@@ -2189,13 +2189,47 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	}
 #endif
 	else if (method == "getProjectConf") {
-		json jsconf;
-		map<string, string>& maps = tdsConf.tdsIni.mapConf;
-		for (auto itm : maps)
-		{
-			jsconf[itm.first] = itm.second;
+
+		if (params.is_string()) {
+			string confName = params.get<string>();
+			if (confName == "*" || confName == "") {
+				json jsconf;
+				map<string, string>& maps = tdsConf.tdsIni.mapConf;
+				for (auto itm : maps)
+				{
+					jsconf[itm.first] = itm.second;
+				}
+				rpcResp.result = jsconf.dump();
+			}
+			else {
+				if (tdsConf.tdsIni.mapConf.find(confName) != tdsConf.tdsIni.mapConf.end()){
+					string sVal = tdsConf.tdsIni.mapConf[confName];
+					json jRlt;
+					if (sVal == "") {
+						jRlt[confName] = sVal;
+					}
+					else if (str::isInteger(sVal)) {
+						jRlt[confName] = atoi(sVal.c_str());
+					}
+					else {
+						jRlt[confName] = sVal;
+					}
+					rpcResp.result = jRlt.dump();
+				}
+				else {
+					rpcResp.result = RPC_NULL;
+				}
+			}
 		}
-		rpcResp.result = jsconf.dump();
+		else {
+			json jsconf;
+			map<string, string>& maps = tdsConf.tdsIni.mapConf;
+			for (auto itm : maps)
+			{
+				jsconf[itm.first] = itm.second;
+			}
+			rpcResp.result = jsconf.dump();
+		}
 	}
 	else if (method == "setProjectConf") {	 
 		for (auto itm: params.items())
@@ -4578,10 +4612,10 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 				j["rtc"] = "";
 			}
 			else {
-				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream_"+ prj.getTdsId() +"/" + tag + ".live.flv";
-				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream_"+ prj.getTdsId() + "/" + tag + "/hls.m3u8";
-				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream_"+ prj.getTdsId() + "&stream=" + tag + "&type=play";
-				j["rtsp"] = "rtsp://" + ip + "/stream_" + prj.getTdsId() + "/" + tag;
+				j["flv"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + ".live.flv";
+				j["hls"] = urlProto + ip + ":" + str::fromInt(port) + "/stream/" + tag + "/hls.m3u8";
+				j["rtc"] = urlProto + ip + ":" + str::fromInt(port) + "/index/api/webrtc?app=stream&stream=" + tag + "&type=play";
+				j["rtsp"] = "rtsp://" + ip + "/stream/" + tag;
 			}
 		}
 		else

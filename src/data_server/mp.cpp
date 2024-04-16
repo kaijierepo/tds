@@ -976,7 +976,7 @@ bool MP::hasValue()
 
 void MP::stopStreamPull(string tag)
 {
-	string key = "__defaultVhost__/stream_" + prj.getTdsId() + "/" + tag;
+	string key = "__defaultVhost__/stream/" + tag;
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://127.0.0.1:" + sPort;
 	httplib::Client cli(streamServerUrl);
@@ -1008,7 +1008,9 @@ bool MP::startStreamPull()
 	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
 	//码流的app字段加入tdsID的原因
 	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
-	string app = "stream_" + prj.getTdsId();
+	//frp转发机制配置繁琐，部署过于复杂，废弃。此出暂保留做个记录，作为技术方案对比参考
+	//string app = "stream_" + prj.getTdsId();
+	string app = "stream";
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
 	httplib::Params params = {
@@ -1083,7 +1085,7 @@ bool MP::startStreamPush(string desUrl)
 	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
 	//码流的app字段加入tdsID的原因
 	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
-	string app = "stream_" + prj.getTdsId();
+	string app = "stream";
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
 	httplib::Params params = {
