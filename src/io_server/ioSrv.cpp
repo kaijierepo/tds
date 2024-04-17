@@ -1603,7 +1603,7 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag)
 			size_t pos = tag.find(it->m_strTagBind);
 			//指定位号前半段是子服务位号，并且后面跟的是 . 符号
 			//避免混淆 浙江.杭州.办公室   和 浙江.杭州.办公室Linux  两种位号。必须判断 . 符号
-			if (pos>=0 && tag.length() > it->m_strTagBind.length()) {
+			if (pos==0 && tag.length() > it->m_strTagBind.length()) {
 				if (tag.at(it->m_strTagBind.length()) == '.') {
 					return it;
 				}
