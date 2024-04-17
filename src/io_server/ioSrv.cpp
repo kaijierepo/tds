@@ -1598,9 +1598,16 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag)
 {
 	for (auto& it : m_vecChildDev)
 	{
-		if (it->m_devSubType == TDSP_SUB_TYPE::childTds && tag.find(it->m_strTagBind) == 0)
+		if (it->m_devSubType == TDSP_SUB_TYPE::childTds)
 		{
-			return it;
+			size_t pos = tag.find(it->m_strTagBind);
+			//指定位号前半段是子服务位号，并且后面跟的是 . 符号
+			//避免混淆 浙江.杭州.办公室   和 浙江.杭州.办公室Linux  两种位号。必须判断 . 符号
+			if (pos>=0 && tag.length() > it->m_strTagBind.length()) {
+				if (tag.at(it->m_strTagBind.length()) == '.') {
+					return it;
+				}
+			}
 		}
 	}
 	return nullptr;
