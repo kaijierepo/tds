@@ -979,10 +979,12 @@ void MP::stopStreamPull(string tag)
 	string key = "__defaultVhost__/stream/" + tag;
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://127.0.0.1:" + sPort;
+	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
 	httplib::Params params = {
-		{ "key", key }
+		{ "key", key },
+		{"secret",zlmSecret}
 	};
 
 	string uri = "/index/api/delStreamProxy";
@@ -1011,6 +1013,7 @@ bool MP::startStreamPull()
 	//frp转发机制配置繁琐，部署过于复杂，废弃。此出暂保留做个记录，作为技术方案对比参考
 	//string app = "stream_" + prj.getTdsId();
 	string app = "stream";
+	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
 	httplib::Params params = {
@@ -1018,6 +1021,7 @@ bool MP::startStreamPull()
 		{"app",app},
 		{"stream",tag},
 		{"url",m_mediaUrl},
+		{"secret",zlmSecret},
 		{"enable_hls","0"},
 		{"enable_ts","0"},
 		{"enable_mp4","0"}
