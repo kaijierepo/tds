@@ -495,6 +495,45 @@ namespace str {
 		return true;
 	}
 
+	bool isASCII(const std::string& str) {
+		for (char c : str) {
+			if (c < 0 || c > 127) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool isUTF8(const string& str) {
+		for (size_t i = 0; i < str.size(); ) {
+			if ((str[i] & 0b10000000) == 0b00000000) {
+				i++;
+			}
+			else if ((str[i] & 0b11100000) == 0b11000000) {
+				if (i + 1 >= str.size() || (str[i + 1] & 0b11000000) != 0b10000000) {
+					return false;
+				}
+				i += 2;
+			}
+			else if ((str[i] & 0b11110000) == 0b11100000) {
+				if (i + 2 >= str.size() || (str[i + 1] & 0b11000000) != 0b10000000 || (str[i + 2] & 0b11000000) != 0b10000000) {
+					return false;
+				}
+				i += 3;
+			}
+			else if ((str[i] & 0b11111000) == 0b11110000) {
+				if (i + 3 >= str.size() || (str[i + 1] & 0b11000000) != 0b10000000 || (str[i + 2] & 0b11000000) != 0b10000000 || (str[i + 3] & 0b11000000) != 0b10000000) {
+					return false;
+				}
+				i += 4;
+			}
+			else {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	std::string parseEscapeChar(string s)
 	{
 		s = str::replace(s, "\\n", "\n");
@@ -771,7 +810,7 @@ namespace str {
 		return atoi(s.c_str());
 	}
 
-	string encodeAscII(string s)
+	string encodeAscII(const string& s)
 	{
 		string sDest = "";
 		char c[2] = { 0 };

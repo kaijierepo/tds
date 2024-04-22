@@ -9,6 +9,7 @@
 #include <iomanip>
 #include "tdb.h"
 #include "common.h"
+#include "logger.h"
 
 #include "json.hpp"
 
@@ -523,6 +524,8 @@ void MemDiag::rpc_memDiag_getStatis_fromStatis(yyjson_val* params, string& rlt, 
 			continue;
 		if (statisInfo.dataSetted == false)
 			continue;
+		if (statisInfo.valid == false)
+			continue;
 
 		
 		if (statisInfo.id == "") {
@@ -538,11 +541,17 @@ void MemDiag::rpc_memDiag_getStatis_fromStatis(yyjson_val* params, string& rlt, 
 				IMAGEHLP_LINE line;
 				line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
 
-				std::string s = symbol->Name;
+				std::string s = symbol->Name; //nolm::json has a too long stack contains non acsii string 
 				if (SymGetLineFromAddr(g_process, (DWORD64)(func), &displacement, &line))
 				{
 					s += str::format("(%s:%d)", line.FileName, line.LineNumber);
 				}
+				if (!str::isASCII(s)) {
+					statisInfo.valid = false;
+					LOG("[warn]%s %d,invalid ascii string: %s",__FILE__,__LINE__, str::encodeAscII(s.c_str()).c_str());
+					break;
+				}
+
 				statisInfo.funcStack.push_back(s);
 			}
 		}

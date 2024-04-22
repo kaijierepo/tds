@@ -343,6 +343,8 @@ namespace str {
 	string replace(string str, const string to_replaced, const string newchars);
 	bool isDigits(char* pData, int len);
 	bool isDigits(string s);
+	bool isASCII(const std::string& str);
+	bool isUTF8(const string& s);
 	std::string parseEscapeChar(string s);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 	string removeChar(string str, char c);
@@ -364,7 +366,7 @@ namespace str {
 	void fromBuff(unsigned char* p, size_t len, string& s);
 	void fromBuff(char* p, size_t len, string& s);
 	int toInt(string s);
-	string encodeAscII(string s);
+	string encodeAscII(const string& s);
 	bool isInteger(string s);
 	bool isIp(string s);
 	bool parseIpPort(string s, string& ip, int& port);

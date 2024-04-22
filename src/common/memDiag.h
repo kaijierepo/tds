@@ -44,12 +44,14 @@ struct MEM_ALLOC_STATIS {
 	vector<string> funcStack;
 	MEM_ALLOC_STATIS* next;
 	string id;
+	bool valid;
 
 	MEM_ALLOC_STATIS() {
 		memset(stack, 0, 10);
 		next = nullptr;
 		allocCount = 0;
 		allocSize = 0;
+		valid = true;
 	};
 };
 
