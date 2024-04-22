@@ -178,7 +178,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_GAPVAL:
 		{
 			StGapValue* lpsubdata = (StGapValue*)pData->lpdata;
-
+			Do_CMD_CODE_GAPVAL(lpsubdata);
 			break;
 		}
 		case CMD_CODE_ALARM_AND_IMG:
@@ -297,6 +297,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_YYQX:
 		{
 			StOilPreCurve* lpsubdata = (StOilPreCurve*)pData->lpdata;
+			Do_CMD_CODE_YYQX(lpsubdata);
 
 			SendCallBack0x25(lpsubdata); //0X25命令需要回执信息
 			break;
@@ -1111,4 +1112,69 @@ void ioDev_dcqk::ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc)
 	}
 }
 
+void ioDev_dcqk::Do_CMD_CODE_YYQX(LPVOID pData)
+{
+	StOilPreCurve* lpsubdata = (StOilPreCurve*)pData;
+	OBJ* pMo = prj.getObjByID(to_string(lpsubdata->sid));
+	if (pMo && pMo->m_type == "转辙机") {
+		for (int k = 0; k < lpsubdata->cnt;k++) {
+			StCurve* pCurveAry = (StCurve*)lpsubdata->lpdata;
+			StCurve* pCurve = &(pCurveAry[k]);
+			//tb3386: 当曲线类型为 0x03、0x04 时,一个数据点用 2 个字节,低字节在前, 倍率为 1, 数值为无符号数, 范围 0 ~65535。 目前阻力用的0x0a
 
+			if (pCurve->type == 0x0a) { //阻力
+				int pointNum = pCurve->len / 2;
+				//WORD power = *(WORD*)(pCurve->lpdata);  //0x7FFF:32767,  0x8000: -32768, 0x8001: -32767, 0xFFFF:-1  
+				//bool bNega = power & 0x8000;
+				//short da = (power & 0x7FFF) * (bNega ? -1 : 1) ;
+				//按协议,若负数 jhd发送其补码，直接强转即可
+				json jPt = json::array();
+				int i = 0; while (i < pointNum) {
+					short* pointBuf = (short*)(pCurve->lpdata);
+					short sData = pointBuf[i];
+					jPt.push_back(sData);
+					i++;
+				}
+				byte interval = 1000 / lpsubdata->collectfreq;
+				byte dir = lpsubdata->direct;//0　定到反， 1 反到定
+				byte dzg_dir = lpsubdata->filldata & 0x0000ff00;//动作杆伸缩方向
+				byte curveAlm = lpsubdata->filldata & 0x0000ff00;//曲线报警状态
+
+				json jParamsArry = json::array();
+				json jOne, jFile;
+				//std::ifstream file("C:\\Users\\lenove\\Desktop\\11111zzzzz\\145831.curve.json");    file >> jFile;
+				jFile["powtype"] = 2;//协议没明确 过车阻力和摩擦阻力 这里默认取扳动阻力 2。
+				jFile["bFrictionCurve"] = FALSE;
+				jFile["fmt"] = "curve";
+				jFile["interval"] = interval;
+				jFile["move_direct"] = dir;
+				jFile["data"] = jPt;
+
+				TIME ti; ti.fromUnixTimeStamp(lpsubdata->time);
+				string startTi = timeopt::stTimeToStr(ti);
+				jFile["start_time"] = startTi;
+				//jFile["end_time"] = "";
+				json j0;  j0["type"] = "curve";  j0["data"] = jFile;
+
+				jOne["file"] = j0;
+				string tag = pMo->getTag() + ".转换阻力";
+				jOne["tag"] = tag;
+				jOne["time"] = startTi;
+				string ss1 = jOne.dump();
+				jParamsArry.push_back(jOne);
+
+				RPC_RESP resp;
+				RPC_SESSION session;
+				rpcSrv.rpc_input(jParamsArry, resp, session);
+			}
+			else {
+			}
+		}
+	}
+
+}
+
+void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
+{
+
+}

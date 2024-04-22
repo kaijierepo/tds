@@ -71,6 +71,9 @@ public:
 
 	void ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc);
 
+	//
+	void Do_CMD_CODE_YYQX(LPVOID pData);
+	void Do_CMD_CODE_GAPVAL(LPVOID pData);
 
 	std::map<int, string> m_mapSIDToName;
 };

@@ -224,6 +224,18 @@
     <ClCompile Include="..\src\common\memDiag.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\Parse315Protocol.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -445,6 +457,24 @@
     </ClInclude>
     <ClInclude Include="..\src\common\memDiag.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_camera.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_dcqk.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\Parse315Protocol.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_can.hpp">
+      <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
