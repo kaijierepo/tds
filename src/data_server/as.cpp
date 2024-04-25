@@ -655,7 +655,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	}
 
 	bool getTypeTag = false;
-	if (params["getTypeTag"].is_boolean()) {
+	if (params.contains("getTypeTag") &&params["getTypeTag"].is_boolean()) {
 		getTypeTag = true;
 	}
 	string strType;
@@ -704,12 +704,17 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					continue;
 				}
 
-				vector<string> v; str::split(v, strType, ",");
+				
 				bool bTypeMatch = false;
-				for (int i = 0; i < v.size(); i++){
-					if (it->second->type.find(v[i]) != string::npos) {
-						bTypeMatch = true;
-						break;
+				if (strType == "*" || strType == "")
+					bTypeMatch = true;
+				else {
+					vector<string> v; str::split(v, strType, ",");
+					for (int i = 0; i < v.size(); i++) {
+						if (it->second->type.find(v[i]) != string::npos) {
+							bTypeMatch = true;
+							break;
+						}
 					}
 				}
 				if(!bTypeMatch)
