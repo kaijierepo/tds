@@ -3302,6 +3302,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				INPUT_DE de;
 				de.tag = tag;
 				de.val = val;
+				de.file = file;
 				if (time.is_string()) {
 					de.sTime = time;
 					de.time = timeopt::str2st(de.sTime);
