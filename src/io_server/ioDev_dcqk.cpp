@@ -30,7 +30,7 @@ namespace ns_ioDev_dcqk {
 	createReg reg;
 }
 
-
+void ThreadSaveGapAndPic(void* lpParam);
 
 
 ioDev_dcqk::ioDev_dcqk()
@@ -305,7 +305,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_YWINFO:
 		{
 			StOilLevelInfo* lpsubdata = (StOilLevelInfo*)pData->lpdata;
-
+			Do_CMD_CODE_YWINFO(lpsubdata);
 			break;
 		}
 		case CMD_CODE_REALCTRL:
@@ -1120,61 +1120,220 @@ void ioDev_dcqk::Do_CMD_CODE_YYQX(LPVOID pData)
 		for (int k = 0; k < lpsubdata->cnt;k++) {
 			StCurve* pCurveAry = (StCurve*)lpsubdata->lpdata;
 			StCurve* pCurve = &(pCurveAry[k]);
-			//tb3386: 当曲线类型为 0x03、0x04 时,一个数据点用 2 个字节,低字节在前, 倍率为 1, 数值为无符号数, 范围 0 ~65535。 目前阻力用的0x0a
+			//tb3386: 当曲线类型为 0x00、0x01、0x02 时,一个数据点用 2 个字节,低字节在前, 倍率 0. 01。
+			//	当曲线类型为 0x03、0x04 时,一个数据点用 2 个字节,低字节在前, 倍率为 1, 数值为无符号数, 范围 0 ~65535。 目前阻力用的0x0a
+			string metricName;//度量
+			float ratio = 1.0;
+			int pointNum = pCurve->len / 2;
 
-			if (pCurve->type == 0x0a) { //阻力
-				int pointNum = pCurve->len / 2;
-				//WORD power = *(WORD*)(pCurve->lpdata);  //0x7FFF:32767,  0x8000: -32768, 0x8001: -32767, 0xFFFF:-1  
-				//bool bNega = power & 0x8000;
-				//short da = (power & 0x7FFF) * (bNega ? -1 : 1) ;
-				//按协议,若负数 jhd发送其补码，直接强转即可
-				json jPt = json::array();
+			json jPt = json::array();
+			if (pCurve->type == 0x0) { 
+				metricName = "左油压";
+				char buf[9] = {0};
+				int i = 0; while (i < pointNum) {
+					short* pointBuf = (short*)(pCurve->lpdata);
+					float fData = pointBuf[i] * 0.01;
+					sprintf_s(buf, 9, "%.1f", fData);
+					jPt.push_back(buf);
+					i++;
+				}
+			}
+			else if (pCurve->type == 0x1) {
+				metricName = "右油压";
+				char buf[9] = { 0 };
+				int i = 0; while (i < pointNum) {
+					short* pointBuf = (short*)(pCurve->lpdata);
+					float fData = pointBuf[i] * 0.01;
+					sprintf_s(buf, 9, "%.1f", fData);
+					jPt.push_back(buf);
+					i++;
+				}
+			}
+			else if (pCurve->type == 0x0a) {
+				/*
+				WORD power = *(WORD*)(pCurve->lpdata);  //0x7FFF:32767,  0x8000: -32768, 0x8001: -32767, 0xFFFF:-1  
+				bool bNega = power & 0x8000;
+				short da = (power & 0x7FFF) * (bNega ? -1 : 1) ;
+				按协议,若负数 jhd发送其补码，直接强转即可
+				*/
+				metricName = "阻力";
 				int i = 0; while (i < pointNum) {
 					short* pointBuf = (short*)(pCurve->lpdata);
 					short sData = pointBuf[i];
 					jPt.push_back(sData);
 					i++;
 				}
+			}
+			string tag = pMo->getTag() + "."+ metricName;
 				byte interval = 1000 / lpsubdata->collectfreq;
 				byte dir = lpsubdata->direct;//0　定到反， 1 反到定
 				byte dzg_dir = lpsubdata->filldata & 0x0000ff00;//动作杆伸缩方向
 				byte curveAlm = lpsubdata->filldata & 0x0000ff00;//曲线报警状态
+				TIME ti; ti.fromUnixTimeStamp(lpsubdata->time);
+				string startTi = timeopt::stTimeToStr(ti);
 
 				json jParamsArry = json::array();
 				json jOne, jFile;
-				//std::ifstream file("C:\\Users\\lenove\\Desktop\\11111zzzzz\\145831.curve.json");    file >> jFile;
-				jFile["powtype"] = 2;//协议没明确 过车阻力和摩擦阻力 这里默认取扳动阻力 2。
-				jFile["bFrictionCurve"] = FALSE;
-				jFile["fmt"] = "curve";
-				jFile["interval"] = interval;
-				jFile["move_direct"] = dir;
-				jFile["data"] = jPt;
+				if (pCurve->type == 0x0) {
+					jFile["start_time"] = startTi;
+					//jFile["end_time"] = "";
+					jFile["interval"] = interval;
+					jFile["point_count"] = pointNum;
+					jFile["move_direct"] = dir;
+					jFile["data"] = jPt;
+					jFile["acq_type"] = 1;
+					jFile["unit"] = "mpa";
+				}
+				else if (pCurve->type == 0x1) {
+					jFile["start_time"] = startTi;
+					//jFile["end_time"] = "";
+					jFile["interval"] = interval;
+					jFile["point_count"] = pointNum;
+					jFile["move_direct"] = dir;
+					jFile["data"] = jPt;
+					jFile["acq_type"] = 1;
+					jFile["unit"] = "mpa";
+				}
+				else if (pCurve->type == 0x0a) { //阻力
+					jFile["powtype"] = 2;//协议没明确 过车阻力和摩擦阻力 这里默认取扳动阻力 2。
+					jFile["bFrictionCurve"] = FALSE;
+					jFile["fmt"] = "curve";
+					jFile["interval"] = interval;
+					jFile["move_direct"] = dir;
+					jFile["data"] = jPt;
+					jFile["start_time"] = startTi;
+					//jFile["end_time"] = "";
+				}
+			json j0;  j0["type"] = "curve";  j0["data"] = jFile;
+			jOne["file"] = j0;  jOne["tag"] = tag; jOne["time"] = startTi;
+			string ss1 = jOne.dump();
+			jParamsArry.push_back(jOne);
 
-				TIME ti; ti.fromUnixTimeStamp(lpsubdata->time);
-				string startTi = timeopt::stTimeToStr(ti);
-				jFile["start_time"] = startTi;
-				//jFile["end_time"] = "";
-				json j0;  j0["type"] = "curve";  j0["data"] = jFile;
+			LOG("[ioDev]dcqk新曲线,%s,%s", tag.c_str(), ss1.c_str());
 
-				jOne["file"] = j0;
-				string tag = pMo->getTag() + ".转换阻力";
-				jOne["tag"] = tag;
-				jOne["time"] = startTi;
-				string ss1 = jOne.dump();
-				jParamsArry.push_back(jOne);
-
-				RPC_RESP resp;
-				RPC_SESSION session;
-				rpcSrv.rpc_input(jParamsArry, resp, session);
-			}
-			else {
-			}
+			RPC_RESP resp;
+			RPC_SESSION session;
+			rpcSrv.rpc_input(jParamsArry, resp, session);
+			
 		}
 	}
-
 }
 
+typedef struct _GapValPicParam {
+	string tag;
+	string fullTime;
+	string justTime;
+	float fVal;
+	string zzj;
+	string zzj315;
+	BYTE location;
+	BYTE acqreason;
+} GapValPicParam;
 void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 {
+	StGapValue* pInfo = (StGapValue*)pData;
+	for (int i = 0; i < pInfo->cnt; i++) {
+		auto list = (StGapRecord*)(pInfo->lpdata);
+		StGapRecord* pRecord = &(list[i]);
 
+		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
+		//m_mapSIDToName;
+		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));
+		if (!zzjMo) {
+			//log
+			continue;
+		}
+		string zzj =zzjMo->getName("");
+		string zzj315 = m_mapSIDToName[pRecord->sid];
+		BYTE location = pRecord->fixorinvert;
+		BYTE acqreason = pRecord->gaptype;
+		string theTag = zzjMo->getTag()+  ".缺口";
+
+		TIME ti; ti.fromUnixTimeStamp(pRecord->time);
+		string  strTi = timeopt::st2str(ti);
+		string  strJustTime = ti.toTimeStr();
+		string val;
+
+		float fVal = pRecord->gap * 1.0 / 100;
+
+		GapValPicParam *param = new GapValPicParam();
+		param->tag = theTag;
+		param->fullTime = strTi;
+		param->justTime = strJustTime;
+		param->fVal = fVal;
+		param->zzj = zzj;
+		param->zzj315 = zzj315;
+		param->location = location;
+		param->acqreason = acqreason;
+		thread t(ThreadSaveGapAndPic, param);
+		t.detach();
+
+	}
+}
+
+void ThreadSaveGapAndPic(void* lpParam)
+{
+	GapValPicParam* param = (GapValPicParam*)lpParam;
+
+	httplib::Client client("http://127.0.0.1");
+	string nianyue = param->fullTime.substr(0,4)+ param->fullTime.substr(5, 2);
+	string day = param->fullTime.substr(8, 2);
+	string ti = param->justTime.substr(0, 2) + param->justTime.substr(3, 2) + param->justTime.substr(6, 2);
+	string url = "/db/" + nianyue + "/" + day + "/" + param->zzj315 + "/" + ti + ".grh";
+	httplib::Result res = client.Get(url);
+	if (res) {
+		int len = res->body.size();
+		char* out = new char[len * 2 + 1];   memset(out, 0, len * 2 + 1);
+		base64_encode((const unsigned char*)res->body.data(), len, out);
+
+		json jParam, jVal;
+		jParam["tag"] = param->tag;
+		jParam["time"] = param->fullTime;
+		jVal["val"] = param->fVal;
+		jVal["location"] = param->location;
+		jVal["acqreason"] = param->acqreason;
+		jParam["val"] = jVal;
+		json jFile;
+		jFile["name"] = ti + ".grh";
+		jFile["type"] = "grh";
+		jFile["data"] = string(out);
+		jParam["file"] = jFile;
+		delete[] out;
+		string s = jParam.dump();
+
+		RPC_RESP resp;
+		RPC_SESSION session;
+		rpcSrv.rpc_input(jParam, resp, session);
+	}
+	delete param;
+}
+
+void ioDev_dcqk::Do_CMD_CODE_YWINFO(LPVOID pData)
+{
+	StOilLevelInfo* pInfo = (StOilLevelInfo*)pData;
+	for (int i = 0; i < pInfo->cnt; i++) {
+		auto list = (StSdataRecord*)(pInfo->lpdata);
+		StSdataRecord* pRecord = &(list[i]);
+
+		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));
+		if (!zzjMo) {
+			//log
+			continue;
+		}
+		if (pRecord->oiltime==0xffff || pRecord->oillevel==0xffff) {
+			continue;
+		}
+		json jParam, jVal;
+		jParam["tag"] = zzjMo->getTag() + ".油位";
+		jParam["time"] = pRecord->oiltime;
+		jVal["val"] = pRecord->oillevel;
+		//jVal["location"] = 0;
+		jVal["acq_type"] = 2;// 1 扳， 2 周， 5 过车
+		jParam["val"] = jVal;
+		string s = jParam.dump();
+
+		RPC_RESP resp;
+		RPC_SESSION session;
+		rpcSrv.rpc_input(jParam, resp, session);
+	}
 }

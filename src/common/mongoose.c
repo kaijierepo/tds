@@ -2830,6 +2830,8 @@ void mg_http_serve_file(struct mg_connection *c, struct mg_http_message *hm,
               "Content-Type: %.*s\r\n"
               "Etag: %s\r\n"
               "Content-Length: %llu\r\n"
+              "Access-Control-Allow-Origin: *\r\n"
+              "Access-Control-Allow-Private-Network: true\r\n"
               "%s%s%s\r\n",
               status, mg_http_status_code_str(status), (int) mime.len, mime.ptr,
               etag, (uint64_t) cl, gzip ? "Content-Encoding: gzip\r\n" : "",

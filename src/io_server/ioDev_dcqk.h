@@ -74,6 +74,6 @@ public:
 	//
 	void Do_CMD_CODE_YYQX(LPVOID pData);
 	void Do_CMD_CODE_GAPVAL(LPVOID pData);
-
+	void Do_CMD_CODE_YWINFO(LPVOID pData);
 	std::map<int, string> m_mapSIDToName;
 };

@@ -622,7 +622,6 @@ unsigned int tdb_base64_decode(const char* in, unsigned int inlen, unsigned char
 	return j;
 }
 
-
 int _db_vscprintf_cross(const char* format, va_list pargs) {
 	int retval;
 	va_list argcopy;
@@ -817,8 +816,8 @@ string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
 	}
 	return s;
 }
-
-
+//1. Store data element files (curves, JSON) or data element related files (images) 2. Store data element index files or data element list files
+//1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
 void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 {
 	DB_TIME stTime;
@@ -869,12 +868,16 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		}
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
+			//Data element files: curves, various custom JSON (such as inspection records), data element related files: images
+			//数据元文件：曲线、各种自定义json(如巡检记录)，数据元相关文件：图片
 			saveDEFile(yyv_file, deListFolderPath, stTime, fileType);
 		}
 	}
 
 	string dataListPath;
 	if(fileType == "")
+		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
+	else if (fileType == "jpg" || fileType == "grh")//数据元相关文件 对应数据元列表文件
 		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 	else if(fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
@@ -2982,7 +2985,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 
 	deFilePath = path + "/" + name;
 	//encoded to base64 by default
-	if (type.find("jpg")!=string::npos ||
+	if (type.find("jpg")!=string::npos || type.find("grh") != string::npos ||
 		type.find("png")!=string::npos ||
 		type.find("svg")!=string::npos){
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
