@@ -1224,6 +1224,9 @@ typedef struct _GapValPicParam {
 	string fullTime;
 	string justTime;
 	float fVal;
+	float std;
+	float offset;
+	BYTE lrsign; //0 无效，1 左偏， 2 右偏
 	string zzj;
 	string zzj315;
 	BYTE location;
@@ -1261,6 +1264,9 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		param->fullTime = strTi;
 		param->justTime = strJustTime;
 		param->fVal = fVal;
+		param->std = pRecord->std * 1.0 / 100;
+		param->offset = pRecord->offset * 1.0 / 100;
+		param->lrsign = pRecord->lrsign;
 		param->zzj = zzj;
 		param->zzj315 = zzj315;
 		param->location = location;
@@ -1289,7 +1295,10 @@ void ThreadSaveGapAndPic(void* lpParam)
 		json jParam, jVal;
 		jParam["tag"] = param->tag;
 		jParam["time"] = param->fullTime;
-		jVal["val"] = param->fVal;
+		jVal["val"] = str::format("%.2f", param->fVal);
+		jVal["std"] = str::format("%.2f", param->std);
+		jVal["offset"] = str::format("%.2f", param->offset);
+		jVal["lrsign"] = param->lrsign==0 ? "left" :  (param->lrsign == 1 ? "right" :  "invalid");
 		jVal["location"] = param->location;
 		jVal["acqreason"] = param->acqreason;
 		jParam["val"] = jVal;
@@ -1299,7 +1308,7 @@ void ThreadSaveGapAndPic(void* lpParam)
 		jFile["data"] = string(out);
 		jParam["file"] = jFile;
 		delete[] out;
-		string s = jParam.dump();
+		//string s = jParam.dump();
 
 		RPC_RESP resp;
 		RPC_SESSION session;
