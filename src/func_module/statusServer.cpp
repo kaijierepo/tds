@@ -150,14 +150,16 @@ void StatusServer::cycleAcq_srvStatus() {
 			
 			if (m_bLogStatus) {
 				DB_TIME dbt; dbt.setNow();
+				TDB* ssdb = db.getChildDB("serverStatus");
+
 				if (m_bCurCpuInfoValid && m_bLastCpuInfoValid) {
-					db.Insert("serverStatus.cpu", dbt, m_srvStatus.cpu);
+					ssdb->Insert("cpu", dbt, m_srvStatus.cpu);
 				}
-				db.Insert("serverStatus.mem", dbt, m_srvStatus.mem);
-				db.Insert("serverStatus.pageFile", dbt, m_srvStatus.pageFile);
-				//db.Insert("serverStatus.net", dbt, m_srvStatus.net);
-				//db.Insert("serverStatus.disk", dbt, m_srvStatus.disk);
-				db.Insert("serverStatus.handle", dbt, m_srvStatus.handle);
+				ssdb->Insert("mem", dbt, m_srvStatus.mem);
+				ssdb->Insert("pageFile", dbt, m_srvStatus.pageFile);
+				//ssdb->Insert("net", dbt, m_srvStatus.net);
+				//ssdb->Insert("disk", dbt, m_srvStatus.disk);
+				ssdb->Insert("handle", dbt, m_srvStatus.handle);
 			}
 		}
 	}
