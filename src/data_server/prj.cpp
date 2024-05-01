@@ -264,6 +264,29 @@ void project::getMpTypeList(json& mpTypeList)
 	}
 }
 
+vector<MP*> project::getAllEzvizMp()
+{
+	vector<MP*> ezvizMps;
+	prj.m_csPrj.lock_shared();
+	vector<MP*> mps;
+	prj.getMpList(mps);
+
+	for (int i = 0; i < mps.size(); i++) {
+		MP* pmp = mps[i];
+		if (pmp->m_serialNo == "" ||
+			pmp->m_appKey == "" ||
+			pmp->m_secret == "")
+			continue;
+
+		if (pmp->m_valType == "video" && pmp->m_mediaSrcType == "ezviz") {
+			ezvizMps.push_back(pmp);
+		}
+	}
+	prj.m_csPrj.unlock_shared();
+
+	return ezvizMps;
+}
+
 json project::getObjTemplate(string devTplType)
 {
 	for (auto& i : m_mapObjTempalte) {

@@ -378,7 +378,7 @@ void thread_handleGzhReq(string req,int pipeSock)
 }
 
 
-static void* thread_handleRpcOverHttp2(void* param,RPC_SESSION* pRpcSession) {
+static void* thread_handleRpcOverHttp(void* param,RPC_SESSION* pRpcSession) {
 	struct thread_data* p = (struct thread_data*)param;
 	RPC_RESP resp;
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
@@ -391,8 +391,9 @@ static void* thread_handleRpcOverHttp2(void* param,RPC_SESSION* pRpcSession) {
 	return NULL;
 }
 
-void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSock)
+void thread_handleRpc_respBodyOnlyRltOrErr(void* param, RPC_SESSION* pRpcSession)
 {
+	struct thread_data* p = (struct thread_data*)param;
 	RPC_RESP resp;
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
 	pSession->setRpcSession(pRpcSession);
@@ -409,13 +410,10 @@ void thread_handleRpc_respBodyOnlyRltOrErr(RPC_SESSION* pRpcSession, int pipeSoc
 		resBody = "rpc call return null";
 	}
 
-	int isend = send(pipeSock, resBody.c_str(), resBody.length(), MSG_DONTROUTE);
-	//closesocket(pipeSock);                      // this sock is a paired pipe sock,should be closed outside mongoose,otherwise causes handle leak
-#ifdef _WIN32
-        closesocket(pipeSock);
-#else
-        // TODO: linux
-#endif
+
+	mg_wakeup(p->mgr, p->conn_id, resBody.c_str(), (int)resBody.length());  // Respond to parent
+	free((void*)p->message.ptr);            // Free all resources that were
+	free(p);                                  // passed to us
 }
 
 
@@ -954,14 +952,19 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 		else if (mg_http_match_uri(hm, "/api") && memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 		{
-			//int pipeSock = mg_mkpipe(c->mgr, pipeCallback, c, false);
-			//RPC_SESSION* pSession = new RPC_SESSION; 
-			//getSessionInfo(pSession, c, hm, pWs);
-			//c->app_layer_data = pSession;
-			//if (!pSession->isDebug)
-			//	RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-			//thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
-			//t.detach();
+			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
+			getSessionInfo(pSession, c, hm, pWs);
+			c->app_layer_data = pSession;
+
+			if (!pSession->isDebug)
+				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+
+			struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
+			data->message = mg_strdup(hm->message);               // Pass message
+			data->conn_id = c->id;
+			data->mgr = c->mgr;
+			thread t(thread_handleRpc_respBodyOnlyRltOrErr, data, pSession);
+			t.detach();
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
@@ -976,7 +979,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			data->message = mg_strdup(hm->message);               // Pass message
 			data->conn_id = c->id;
 			data->mgr = c->mgr;
-			thread t(thread_handleRpcOverHttp2,data, pSession);
+			thread t(thread_handleRpcOverHttp,data, pSession);
 			t.detach();
 		}
 		else if (mg_http_match_uri(hm, "/release"))

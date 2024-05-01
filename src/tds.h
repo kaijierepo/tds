@@ -275,6 +275,15 @@ struct ACTIVE_TDS_SESSION {
 	string type;
 };
 
+struct LOG_ENABLE {
+	bool innerRPCCall;
+	bool scriptEngine;
+	LOG_ENABLE() {
+		innerRPCCall = false;
+		scriptEngine = false;
+	}
+};
+
 
 struct iTDSConf {
 	virtual void loadConf() = 0;
@@ -350,6 +359,8 @@ struct iTDSConf {
 	//debug
 	bool bCreateDumpWhenLogError;
 	bool bStopCycleAcq;
+
+	LOG_ENABLE logEnable;
 
 	virtual int getInt(string key, int iDef) = 0;
 	virtual string getStr(string key, string sDef) = 0;

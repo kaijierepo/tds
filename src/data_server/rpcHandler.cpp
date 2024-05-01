@@ -520,10 +520,12 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				jrlt["serialNo"] = info.serialNo;
 				rpcResp.result = jrlt.dump();
 			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not found access info of specified tag");
+			}
 		}
-
-		if (rpcResp.result == "") {
-			rpcResp.error = RPC_FAIL;
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound,"specified tag not found");
 		}
 	}
 #ifdef ENABLE_GENICAM

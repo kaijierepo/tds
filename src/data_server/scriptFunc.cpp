@@ -566,7 +566,9 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					string errMsg = err["message"].get<string>();
 					string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
 					pEngine->m_vecOutput.push_back(errInfo);
-					LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(),pEngine->m_user.c_str(), pEngine->m_script.c_str());
+					if (tds->conf->logEnable.scriptEngine) {
+						LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+					}
 				}
 			}
 			//取历史值

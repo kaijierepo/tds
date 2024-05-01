@@ -504,6 +504,31 @@ namespace str {
 		return true;
 	}
 
+	bool isGB2312(const std::string& str) {
+		size_t len = str.length();
+		for (size_t i = 0; i < len; ++i) {
+			unsigned char c = static_cast<unsigned char>(str[i]);
+			// 检查是否为ASCII字符
+			if (c <= 0x7F) {
+				continue; // ASCII字符，继续检查下一个字符
+			}
+			else {
+				if (c >= 0xA1 && c <= 0xFE) //gb2312
+				{
+					if (i + 1 < str.length())
+					{
+						int bNext = (int)(unsigned char)str.at(i + 1);
+						if (bNext >= 0xA1 && bNext <= 0xFE)
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	bool isUTF8(const string& str) {
 		for (size_t i = 0; i < str.size(); ) {
 			if ((str[i] & 0b10000000) == 0b00000000) {

@@ -344,6 +344,7 @@ namespace str {
 	bool isDigits(char* pData, int len);
 	bool isDigits(string s);
 	bool isASCII(const std::string& str);
+	bool isGB2312(const std::string& str);
 	bool isUTF8(const string& s);
 	std::string parseEscapeChar(string s);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);

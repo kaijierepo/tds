@@ -344,6 +344,17 @@ bool TDS_imp::run(string cmdline)
 
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
+	string navIniPath = tds->conf->confPath + "/nav.ini";
+	if (fs::fileExist(navIniPath)) {
+		string s;
+		fs::readFile(navIniPath, s);
+		if (!str::isUTF8(s)) {
+			string u8s = charCodec::gb_to_utf8(s);
+			fs::writeFile(navIniPath, u8s);
+			LOG("[warn]nav.ini非utf8编码，进行gb2312->utf8转换");
+		}
+	}
+
 
 	//指定配置路径没有配置文件夹，则新建
 	if (tds->conf->confPath == fs::appPath() + "/conf")
@@ -485,23 +496,23 @@ bool TDS_imp::setProcBeforeExit(fp_procBeforeExit callback)
 
 void TDS_imp::call(string method, json& param, json& err, json& rlt, RPC_SESSION session)
 {
-#ifdef _DEBUG
-	printf("tds call,method=%s,params=%s", method.c_str() , param.dump().c_str());
-#endif
+	if (tds->conf->logEnable.innerRPCCall) {
+		printf("tds call,method=%s,params=%s", method.c_str(), param.dump().c_str());
+	}
 	try {
 		RPC_RESP resp;
 		rpcSrv.handleMethodCall(method, param, resp, session);
 		if (resp.error != "")
 		{
-#ifdef _DEBUG
-			printf("error=%s",resp.error.c_str());
-#endif
+			if (tds->conf->logEnable.innerRPCCall) {
+				printf("error=%s", resp.error.c_str());
+			}
 			err = json::parse(resp.error);
 		}
 		else{
-#ifdef _DEBUG
-			printf("result=%s",resp.result.c_str());
-#endif
+			if (tds->conf->logEnable.innerRPCCall) {
+				printf("result=%s", resp.result.c_str());
+			}
 			rlt = json::parse(resp.result);
 		}
 	}

@@ -195,6 +195,9 @@ void updateEzvizAccessInfo() {
 						LOG("[萤石云] 接入信息更新tag=%s,serialNo=%s,token=%s,ezopenUrl=%s", info.tag.c_str(), info.serialNo.c_str(), info.token.c_str(), info.ezopenUrl.c_str());
 					}
 				}
+				else {
+					LOG("[warn][萤石云] 获取接入信息错误 tag=%s,serialNo=%s,token=%s,response=%s", info.tag.c_str(), info.serialNo.c_str(), info.token.c_str(), resp->body.c_str());
+				}
 			}
 			else {
 				auto err = resp.error();
@@ -455,37 +458,32 @@ int main(int argc, char** argv)
 
 
 	TIME zlmLastClearPusherTime = timeopt::now();
+	vector<MP*> ezvizMp = prj.getAllEzvizMp();
+
+	if (ezvizMp.size() > 0) {
+		LOG("共有%d个萤石云视频监控点", ezvizMp.size());
+	}
 
 	while (1)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
 		if (prj.m_enableEzviz) {
-			prj.m_csPrj.lock_shared();
-			vector<MP*> mps;
-			prj.getMpList(mps);
-
-			for (int i = 0; i < mps.size(); i++) {
-				MP* pmp = mps[i];
-				if (pmp->m_serialNo == "" ||
-					pmp->m_appKey == "" ||
-					pmp->m_secret == "")
-					continue;
-
-				if (pmp->m_valType == "video" && pmp->m_mediaSrcType == "ezviz") {
-					if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
-						EZVIZ_ACCESS_INFO  info;
-						info.tag = pmp->getTag();
-						info.serialNo = pmp->m_serialNo;
-						info.appKey = pmp->m_appKey;
-						info.secret = pmp->m_secret;
-						info.token = "";
-						timeopt::setAsTimeOrg(info.lastUpdate);
-						prj.m_mapEzvizAccess[info.serialNo] = info;
-					}
+			ezvizMp = prj.getAllEzvizMp();
+			
+			for (int i = 0; i < ezvizMp.size(); i++) {
+				MP* pmp = ezvizMp[i];		
+				if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
+					EZVIZ_ACCESS_INFO  info;
+					info.tag = pmp->getTag();
+					info.serialNo = pmp->m_serialNo;
+					info.appKey = pmp->m_appKey;
+					info.secret = pmp->m_secret;
+					info.token = "";
+					timeopt::setAsTimeOrg(info.lastUpdate);
+					prj.m_mapEzvizAccess[info.serialNo] = info;
 				}
 			}
-			prj.m_csPrj.unlock_shared();
 
 			updateEzvizAccessInfo();
 		}

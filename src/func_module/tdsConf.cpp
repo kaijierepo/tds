@@ -329,6 +329,18 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			else if (tci.val == "false" || tci.val == "0")
 				showObjOnline = false;
 		}
+		else if (checkKey(tci.key, "logEnable_innerRPCCall")) {
+			if (tci.val == "true" || tci.val == "1")
+				logEnable.innerRPCCall = true;
+			else if (tci.val == "false" || tci.val == "0")
+				logEnable.innerRPCCall = false;
+		}
+		else if (checkKey(tci.key, "logEnable_scriptEngine")) {
+			if (tci.val == "true" || tci.val == "1")
+				logEnable.scriptEngine = true;
+			else if (tci.val == "false" || tci.val == "0")
+				logEnable.scriptEngine = false;
+		}
 	}
 
 	//j = jsonConf["active_session"];

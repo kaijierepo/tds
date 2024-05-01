@@ -67,6 +67,8 @@ public:
 	MP* getMp(string strTagname);
 	void getMpTypeList(json& mpTypeList);
 
+	vector<MP*> getAllEzvizMp();
+
 	string m_moConfFileDump; //字符串配置数据//最近一次保存的缓存，如果前端获取整颗树，直接获取此处加快速度
 	map<string, MP*> m_mapAllMP;
 
