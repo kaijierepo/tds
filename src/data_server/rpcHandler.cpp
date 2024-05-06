@@ -2823,13 +2823,17 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		{
 			pSession->user = jReq["user"].get<string>();
 			jUser = userMng.getUser(pSession->user);
-			if(jUser!=nullptr)
+			if (jUser != nullptr) {
 				pSession->org = jUser["org"].get<string>();
+				pSession->role = jUser["role"].get<string>();
+			}
 		}
 		else if (pSession->user != "") { //使用cookie设置的用户名
 			jUser = userMng.getUser(pSession->user);
-			if (jUser != nullptr)
+			if (jUser != nullptr) {
 				pSession->org = jUser["org"].get<string>();
+				pSession->role = jUser["role"].get<string>();
+			}
 		}
 		else
 		{
@@ -2839,11 +2843,12 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 			else {//没开权限控制，且没有设置用户，默认用户都是admin
 				pSession->user = "admin";
+				pSession->role = "管理员";
 			}
 		}
 
 		//非管理员账户必须预先分配对象树管理权限
-		if (jUser["role"].get<string>() != "管理员") {
+		if (pSession->role != "管理员") {
 			bool isPermissionAssigned = true;
 			if (jUser["permission"].is_null()) {
 				isPermissionAssigned = false;
