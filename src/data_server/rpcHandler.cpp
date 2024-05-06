@@ -2842,6 +2842,21 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			}
 		}
 
+		//非管理员账户必须预先分配对象树管理权限
+		if (jUser["role"].get<string>() != "管理员") {
+			bool isPermissionAssigned = true;
+			if (jUser["permission"].is_null()) {
+				isPermissionAssigned = false;
+				if (jUser["permission"]["mo"].is_null()) {
+					isPermissionAssigned = false;
+				}
+			}
+			if (!isPermissionAssigned) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noObjTreePermission, "permission denied,a non admin user must be assigned permissions first");
+				goto HANDLE_END;
+			}
+		}
+
 		//test账户具有所有功能模块的浏览权限，但没有控制权限，用户功能演示。可以认为是一个只能浏览的管理员账号
 		if (pSession->user == "test") {
 			if (method.find("set") != string::npos ||

@@ -412,7 +412,11 @@ bool userManager::checkTagPermission(string user, string tag)
 	if (jUser["role"].get<string>() == "管理员")
 		return true;
 
-	json& moPermission = jUser["permission"]["mo"];
+	json& permission = jUser["permission"];
+	if (permission.is_null())
+		return false;
+
+	json& moPermission = permission["mo"];
 	if(moPermission.is_null())return false;
 	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
 	tag = TAG::trimRoot(tag, org);
