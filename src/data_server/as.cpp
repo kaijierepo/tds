@@ -579,6 +579,7 @@ void almTable::loadFile(string strFile)
 	}
 }
 
+//构造 querier {K1:V1,...} 基础key： rootTag、user，记录key：记录任意字段 如tag、time、type等  字符串型的val可模糊匹配
 json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 {
 	json querier;
@@ -596,6 +597,15 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 	}
 	querier["rootTag"] = rootTag;
 	querier["user"] = session.user;
+
+	//每个字段都需要
+	if(params.contains("tag")) querier["tag"] = params["tag"];//string or array
+	if (params.contains("type")) querier["type"] = params["type"];//string or array
+	if (params.contains("level")) querier["level"] = params["level"];//string or array
+	if (params.contains("time")) querier["time"] = params["time"].get<string>();
+	if (params.contains("isRecover")) querier["isRecover"] = params["isRecover"].get<bool>();
+	if (params.contains("isAck")) querier["isAck"] = params["isAck"].get<bool>();
+	//....
 	return querier;
 }
 
@@ -606,7 +616,6 @@ string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 	{
 		return "[]";
 	}
-
 
 	json querier = rpcReqParams2Querier(params, session);
 	return tableCurrent.toJsonStr(querier);
@@ -667,7 +676,8 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	string error;
 	string sParams = params.dump();
 	db.parseDESelector(sParams, deSel,error );
-	if(error != "") return error;
+	if(error != "") 
+		return error;
 	TIME_SELECTOR& timeSelector = deSel.timeSel;
 	TAG_SELECTOR& tagSelector = deSel.tagSel;
 
@@ -966,10 +976,26 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		aq.filter_rootTag = true;
 		aq.rootTag = querier["rootTag"].get<string>();
 	}
+
 	if (querier.contains("tag"))
 	{
 		aq.filter_tag = true;
 		aq.tag = querier["tag"].get<string>();
+	}
+	if (querier.contains("time"))
+	{
+		aq.filter_time = true;
+		aq.time = querier["time"].get<string>();
+	}
+	if (querier.contains("type"))
+	{
+		aq.filter_type = true;
+		aq.type = querier["type"].get<string>();
+	}
+	if (querier.contains("level"))
+	{
+		aq.filter_level = true;
+		aq.level = querier["level"].get<string>();
 	}
 	if (querier.contains("isAck"))
 	{
@@ -998,6 +1024,10 @@ vector<ALARM_INFO*> almTable::query(json querier)
 			continue;
 		
 		ALARM_INFO* pAi = it->second;
+
+		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
+			continue;
+
 		if (aq.filter_isAck)
 		{
 			if (aq.isAck != pAi->bAck)
@@ -1010,24 +1040,52 @@ vector<ALARM_INFO*> almTable::query(json querier)
 				continue;
 		}
 
+		//记录里存的绝对tag。 单独的tag是相对于roottag的。
 		if (aq.filter_tag)
 		{
-			if (aq.tag != pAi->tag)
-				continue;
+			if (aq.tag.find("*") == string::npos) {
+				if (aq.tag != pAi->tag)
+					continue;
+			}
+			else {
+				string zong_tag = aq.tag;
+				if(aq.rootTag!=""){
+					zong_tag = aq.rootTag + "." + aq.tag;
+				}
+				string& strReg = zong_tag;
+				strReg = str::replace(strReg, ".", "\\.");
+				strReg = str::replace(strReg, "*", ".*");
+				std::regex reg(strReg);
+				if (std::regex_match(pAi->tag, reg)==false) {
+					continue;
+				}
+			}
 		}
 
-		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
-			continue;
-
+		if (aq.filter_time)
+		{
+			if (aq.time != pAi->time)
+				continue;
+		}
+		if (aq.filter_type)
+		{
+			if (aq.time != pAi->time)
+				continue;
+		}
+		if (aq.filter_time)
+		{
+			if (aq.time != pAi->time)
+				continue;
+		}
 		dataSet.push_back(it->second);
 	}
 	return dataSet;
 }
 
-string almTable::toJsonStr(json querier) {
+string almTable::toJsonStr(const json& querier) {
 	string rootTag = "";
 	if(querier.contains("rootTag"))
-		rootTag = querier["rootTag"].get<string>();
+		rootTag = querier["rootTag"].get<string>(); //org  or org + rootTag
 	vector<ALARM_INFO*> vec = query(querier);
 	string dataSet = "[";
 	for (auto& it :vec) {

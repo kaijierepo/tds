@@ -1940,18 +1940,18 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	//** 数据查询系列
 	if (method == "getAlarmCurrent")
 	{
-		json jFilter;
-		jFilter["rootTag"] = params["rootTag"];
+		json jFilter= params;
+		//jFilter["rootTag"] = params["rootTag"];
 		result = pAlmSrv->rpc_getCurrent(jFilter, session);
 	}
 	else if (method == "getAlarmUnRecover")
 	{
-		json jFilter;
+		json jFilter= params;
 		result = pAlmSrv->rpc_getUnRecover(jFilter, session);
 	}
 	else if (method == "getAlarmUnack")
 	{
-		json jFilter;
+		json jFilter= params;
 		result = pAlmSrv->rpc_getUnack(jFilter, session);
 	}
 	//getAlm为上面3个接口的合并接口

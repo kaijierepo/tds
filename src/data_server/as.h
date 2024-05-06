@@ -114,6 +114,12 @@ struct ALARM_QUERY {
 	string rootTag;
 	bool filter_tag;
 	string tag;
+	bool filter_time;
+	string time;
+	bool filter_type;
+	string type;
+	bool filter_level;
+	string level;
 	bool filter_isAck;
 	bool isAck;
 	bool filter_isRecover;
@@ -141,7 +147,7 @@ public:
 	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
 	vector<ALARM_INFO*> query(json filter);
-	string toJsonStr(json filter);
+	string toJsonStr(const json& filter);
 
 	void SetAlarmSrv(almServer* pSrv);
 
