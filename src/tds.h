@@ -162,6 +162,7 @@ public:
 	//authentification
 	string name; //name is defined by tds client
 	string user;
+	string role;
 	string token;
 	string method;
 	string dbpath;
