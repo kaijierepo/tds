@@ -36,7 +36,7 @@ SOFTWARE.
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include "iconv.h"
+//#include "iconv.h"
 #include <filesystem>
 #endif
 
@@ -111,31 +111,32 @@ namespace DB_STR {
 		delete wcharstr;
 		delete charstr;
 #else
-		int ret = 0;
-		size_t inlen = instr.length() + 1;
-		size_t outlen = 2 * inlen;
+		//int ret = 0;
+		//size_t inlen = instr.length() + 1;
+		//size_t outlen = 2 * inlen;
 
-		// duanqn: The iconv function in Linux requires non-const char *
-		// So we need to copy the source string
-		char* inbuf = (char*)malloc(inlen);
-		char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
-									// so we use another pointer to keep the address
-		memcpy(inbuf, instr.data(), instr.length());
+		//// duanqn: The iconv function in Linux requires non-const char *
+		//// So we need to copy the source string
+		//char* inbuf = (char*)malloc(inlen);
+		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+		//							// so we use another pointer to keep the address
+		//memcpy(inbuf, instr.data(), instr.length());
 
-		char* outbuf = (char*)malloc(outlen);
-		memset(outbuf, 0, outlen);
-		iconv_t cd;
+		//char* outbuf = (char*)malloc(outlen);
+		//memset(outbuf, 0, outlen);
+		//iconv_t cd;
 
-		cd = iconv_open("UTF-8", "GBK");
-		if (cd != (iconv_t)-1) {
-			ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
-			if (ret != 0)
-				printf("iconv failed err: %s\n", strerror(errno));
-			iconv_close(cd);
-		}
-		free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		str = outbuf;
-		free(outbuf);
+		//cd = iconv_open("UTF-8", "GBK");
+		//if (cd != (iconv_t)-1) {
+		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+		//	if (ret != 0)
+		//		printf("iconv failed err: %s\n", strerror(errno));
+		//	iconv_close(cd);
+		//}
+		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		//str = outbuf;
+		//free(outbuf);
+		str = instr;
 #endif
 		return str;
 	}

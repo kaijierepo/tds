@@ -25,7 +25,7 @@
 #pragma comment (lib, "Setupapi.lib")
 #else
 #include <unistd.h>
-#include <iconv.h>
+//#include <iconv.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <wchar.h>
