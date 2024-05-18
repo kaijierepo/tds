@@ -536,7 +536,7 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 	else
 		users = params;
 
-	m_csUserConf.lock();
+	std::lock_guard<std::shared_mutex> guard(m_csUserConf);
 	for (int i = 0; i < users.size(); i++)
 	{
 		json& oneUser = users[i];
@@ -563,7 +563,6 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 			m_mapUsers[name] = oneUser;
 		}
 	}
-	m_csUserConf.unlock();
 
 	saveConf();
 
