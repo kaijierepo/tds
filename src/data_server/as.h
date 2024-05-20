@@ -136,7 +136,10 @@ struct ALARM_QUERY {
 		filter_isRecover = false;
 	}
 };
-
+namespace as {
+	bool matchTag(string pattern, const string& src);
+	bool generalMatch(string pattern, const string& src);
+};
 
 class almTable{
 public:
@@ -167,9 +170,6 @@ public:
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 	ALARM_INFO fromCSV(const string& line);
-
-	bool matchTag(string pattern, const string& src);
-	bool matchType(string pattern, const string& src);
 
 	string toCSV(ALARM_INFO& info);
 	string filePath;

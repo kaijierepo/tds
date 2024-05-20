@@ -666,11 +666,48 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	if (params.contains("getTypeTag") &&params["getTypeTag"].is_boolean()) {
 		getTypeTag = true;
 	}
-	string strType;
+
+	vector<string> vecType;
 	if (params.contains("type")) {
-		strType = params["type"].get<string>();
+		if (params["type"].is_array()) {
+			for (int i = 0; i < params["type"].size(); i++) {
+				if (params["type"][i].is_string()) {
+					vecType.push_back(params["type"][i].get<string>());
+				}
+			}
+		}
+		else if (params["type"].is_string()) {
+			str::split(vecType,  params["type"].get<string>(),  ",");
+		}
 	}
 
+	vector<string> vecLevel;
+	if (params.contains("level")) {
+		if (params["level"].is_array()) {
+			for (int i = 0; i < params["level"].size(); i++) {
+				if (params["level"][i].is_string()) {
+					vecLevel.push_back(params["level"][i].get<string>());
+				}
+			}
+		}
+		else if (params["level"].is_string()) {
+			str::split(vecLevel, params["level"].get<string>(), ",");
+		}
+	}
+
+	bool filter_isRecover = false;
+	bool isRecover=false;
+	if (params.contains("isRecover")) {
+		filter_isRecover = true;
+		isRecover = params["isRecover"].get<bool>();
+	}
+
+	bool filter_isAck = false;
+	bool isAck = false;
+	if (params.contains("isAck") ){
+		filter_isAck = true;
+		isAck = params["isAck"].get<bool>();
+	}
 
 	string error;
 	string sParams = params.dump();
@@ -688,49 +725,66 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int iMonth = 0;
 	int iEndMonth = 0;
 	json jDataSet = json::array();
-	for(int iYear = startYear;iYear<=endYear;iYear++)
-	{
+	for(int iYear = startYear;iYear<=endYear;iYear++) {
 		if(iYear == startYear) iMonth = startMonth;
 		else iMonth=1;
 		if(iYear == endYear) iEndMonth = endMonth;
 		else iEndMonth = 12;
-		for(;iMonth<=iEndMonth;iMonth++)
-		{
+		for(;iMonth<=iEndMonth;iMonth++) {
 			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth));
-			for (map<string, ALARM_INFO*>::iterator it = tableHist.buff.begin(); it != tableHist.buff.end(); it++)
-			{
-				if (session.user != "")
-				{
+			for (map<string, ALARM_INFO*>::iterator it = tableHist.buff.begin(); it != tableHist.buff.end(); it++) {
+				if (session.user != "") {
 					if (!userMng.checkTagPermission(session.user, it->second->tag))
 						continue;
 				}
-				if(!tagSelector.match(it->second->tag))
-				{
+				if(!tagSelector.match(it->second->tag)) {
 					continue;
 				}
-				if (!timeSelector.Match(it->second->time))
-				{
+				if (!timeSelector.Match(it->second->time)) {
 					continue;
 				}
 
-				
 				bool bTypeMatch = false;
-				if (strType == "*" || strType == "")
+				if(vecType.size()==0)
 					bTypeMatch = true;
 				else {
-					vector<string> v; str::split(v, strType, ",");
-					for (int i = 0; i < v.size(); i++) {
-						if (it->second->type.find(v[i]) != string::npos) {
+					for (auto & one: vecType) {
+						if (as::generalMatch(one, it->second->type)) {
 							bTypeMatch = true;
 							break;
 						}
 					}
 				}
-				if(!bTypeMatch)
+				if (!bTypeMatch)
 					continue;
 
-				json j = it->second->toJson(this, rootTag);
+				bool bLevelMatch = false;
+				if (vecLevel.size() == 0)
+					bLevelMatch = true;
+				else {
+					for (auto& one : vecLevel) {
+						if (as::generalMatch(one, it->second->level)) {
+							bLevelMatch = true;
+							break;
+						}
+					}
+				}
+				if (!bLevelMatch)
+					continue;
 
+				if (filter_isRecover) {
+					if (isRecover != it->second->bRecover) {
+						continue;
+					}
+				}
+
+				if (filter_isAck) {
+					if (isAck != it->second->bAck) {
+						continue;
+					}
+				}
+
+				json j = it->second->toJson(this, rootTag);
 				if (getTypeTag) {
 					json jTypeTag = prj.getTypeTagByTag(it->second->tag);
 					if (jTypeTag != nullptr) {
@@ -770,12 +824,10 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 {
 	ALARM_INFO* info = this;
 	json j;
-	if (rootTag == "")
-	{
+	if (rootTag == ""){
 		j["tag"] = info->tag;
 	}
-	else
-	{
+	else{
 		string tag = info->tag;
 		tag = str::trimPrefix(tag, rootTag + ".");
 		j["tag"] = tag;
@@ -1015,7 +1067,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 			}
 		}
 		else if (querier["type"].is_string()) {
-			aq.vecType.push_back(querier["type"].get<string>());
+			str::split(aq.vecType, querier["type"].get<string>(), ",");
 		}
 		else {
 			assert(false);
@@ -1060,7 +1112,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	return aq;
 }
 
-bool almTable::matchTag(string pattern, const string& src)
+bool as::matchTag(string pattern, const string& src)
 {
 	if (pattern.find("*") == string::npos) {
 		if (pattern == src)
@@ -1077,7 +1129,9 @@ bool almTable::matchTag(string pattern, const string& src)
 	}
 	return false;
 }
-bool almTable::matchType(string pattern, const string& src)
+
+//src和pattern相等 或 *匹配
+bool as::generalMatch(string pattern, const string& src)
 {
 	if (pattern.find("*") == string::npos) {
 		if (pattern == src)
@@ -1122,7 +1176,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 				if (aq.rootTag != "") {
 					zong_tag = aq.rootTag + "." + oneTag;
 				}
-				if (matchTag(zong_tag, pAi->tag)) {
+				if (as::matchTag(zong_tag, pAi->tag)) {
 					bMatch = true;
 					break;
 				}
@@ -1138,7 +1192,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 		if (aq.filter_type) {
 			bool bMatch = false;
 			for (const auto& one : aq.vecType) {
-				if (matchType(one, pAi->type)) {
+				if (as::generalMatch(one, pAi->type)) {
 					bMatch = true;
 					break;
 				}
