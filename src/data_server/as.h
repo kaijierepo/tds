@@ -113,13 +113,13 @@ struct ALARM_QUERY {
 	bool filter_rootTag;
 	string rootTag;
 	bool filter_tag;
-	string tag;
+	vector<string> vecTag;
 	bool filter_time;
 	string time;
 	bool filter_type;
-	string type;
+	vector<string> vecType;
 	bool filter_level;
-	string level;
+	vector<string> vecLevel;
 	bool filter_isAck;
 	bool isAck;
 	bool filter_isRecover;
@@ -129,6 +129,9 @@ struct ALARM_QUERY {
 		filter_user = false;
 		filter_rootTag = false;
 		filter_tag = false;
+		filter_time = false;
+		filter_type = false;
+		filter_level = false;
 		filter_isAck = false;
 		filter_isRecover = false;
 	}
@@ -164,6 +167,10 @@ public:
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 	ALARM_INFO fromCSV(const string& line);
+
+	bool matchTag(string pattern, const string& src);
+	bool matchType(string pattern, const string& src);
+
 	string toCSV(ALARM_INFO& info);
 	string filePath;
 	map<string, ALARM_INFO*> buff;

@@ -598,11 +598,10 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 	querier["rootTag"] = rootTag;
 	querier["user"] = session.user;
 
-	//每个字段都需要
 	if(params.contains("tag")) querier["tag"] = params["tag"];//string or array
 	if (params.contains("type")) querier["type"] = params["type"];//string or array
-	if (params.contains("level")) querier["level"] = params["level"];//string or array
 	if (params.contains("time")) querier["time"] = params["time"].get<string>();
+	if (params.contains("level")) querier["level"] = params["level"];//string or array
 	if (params.contains("isRecover")) querier["isRecover"] = params["isRecover"].get<bool>();
 	if (params.contains("isAck")) querier["isAck"] = params["isAck"].get<bool>();
 	//....
@@ -977,40 +976,123 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		aq.rootTag = querier["rootTag"].get<string>();
 	}
 
-	if (querier.contains("tag"))
-	{
+	if (querier.contains("tag")){
 		aq.filter_tag = true;
-		aq.tag = querier["tag"].get<string>();
+		if (querier["tag"].is_array()) {
+			for (int i = 0; i < querier["tag"].size(); i++) {
+				if (querier["tag"][i].is_string()) {
+					aq.vecTag.push_back(querier["tag"][i].get<string>());
+				}
+				else
+					assert(false);
+			}
+		}
+		else if (querier["tag"].is_string()) {
+			aq.vecTag.push_back(querier["tag"].get<string>());
+		}
+		else {
+			assert(false);
+		}
 	}
 	if (querier.contains("time"))
 	{
 		aq.filter_time = true;
-		aq.time = querier["time"].get<string>();
+		if (querier["time"].is_string())
+			aq.time = querier["time"].get<string>();
+		else
+			assert(false);
 	}
 	if (querier.contains("type"))
 	{
 		aq.filter_type = true;
-		aq.type = querier["type"].get<string>();
+		if (querier["type"].is_array()) {
+			for (int i = 0; i < querier["type"].size(); i++) {
+				if (querier["type"][i].is_string()) {
+					aq.vecType.push_back(querier["type"][i].get<string>());
+				}
+				else
+					assert(false);
+			}
+		}
+		else if (querier["type"].is_string()) {
+			aq.vecType.push_back(querier["type"].get<string>());
+		}
+		else {
+			assert(false);
+		}
 	}
 	if (querier.contains("level"))
 	{
 		aq.filter_level = true;
-		aq.level = querier["level"].get<string>();
+		if (querier["level"].is_array()) {
+			for (int i = 0; i < querier["level"].size(); i++) {
+				if (querier["level"][i].is_string()) {
+					aq.vecLevel.push_back(querier["level"][i].get<string>());
+				}
+				else
+					assert(false);
+			}
+		}
+		else if (querier["level"].is_string()) {
+			aq.vecLevel.push_back(querier["level"].get<string>());
+		}
+		else {
+			assert(false);
+		}
 	}
 	if (querier.contains("isAck"))
 	{
 		aq.filter_isAck = true;
-		aq.isAck = querier["isAck"].get<bool>();
+		if(querier["isAck"].is_boolean())
+			aq.isAck = querier["isAck"].get<bool>();
+		else
+			assert(false);
 	}
 	if (querier.contains("isRecover"))
 	{
 		aq.filter_isRecover = true;
-		aq.isRecover = querier["isRecover"].get<bool>();
+		if (querier["isRecover"].is_boolean())
+			aq.isRecover = querier["isRecover"].get<bool>();
+		else
+			assert(false);
 	}
 
 	return aq;
 }
 
+bool almTable::matchTag(string pattern, const string& src)
+{
+	if (pattern.find("*") == string::npos) {
+		if (pattern == src)
+			return true;
+	}
+	else {
+		string& strReg = pattern;
+		strReg = str::replace(strReg, ".", "\\.");
+		strReg = str::replace(strReg, "*", ".*");
+		std::regex reg(strReg);
+		if (std::regex_match(src, reg) == true) {
+			return true;
+		}
+	}
+	return false;
+}
+bool almTable::matchType(string pattern, const string& src)
+{
+	if (pattern.find("*") == string::npos) {
+		if (pattern == src)
+			return true;
+	}
+	else {
+		string& strReg = pattern;
+		strReg = str::replace(strReg, "*", ".*");
+		std::regex reg(strReg);
+		if (std::regex_match(src, reg) == true) {
+			return true;
+		}
+	}
+	return false;
+}
 vector<ALARM_INFO*> almTable::query(json querier)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
@@ -1018,7 +1100,11 @@ vector<ALARM_INFO*> almTable::query(json querier)
 	loadFile(getFilePath());
 	ALARM_QUERY aq = parseQuerier(querier);
 
-	
+	TIME_SELECTOR ts;
+	if (aq.filter_time) {
+		ts.init(aq.time);
+	}
+
 	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
 		if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
 			continue;
@@ -1028,55 +1114,59 @@ vector<ALARM_INFO*> almTable::query(json querier)
 		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
 			continue;
 
-		if (aq.filter_isAck)
-		{
+		//记录里存的绝对tag。 单独的tag是相对于roottag的。
+		if (aq.filter_tag) {
+			bool bMatch = false;
+			for (const auto& oneTag : aq.vecTag) {
+				string zong_tag = oneTag;
+				if (aq.rootTag != "") {
+					zong_tag = aq.rootTag + "." + oneTag;
+				}
+				if (matchTag(zong_tag, pAi->tag)) {
+					bMatch = true;
+					break;
+				}
+			}
+			if(!bMatch)
+				continue;
+		}
+
+		if (aq.filter_time) {
+			if (false ==ts.Match(pAi->time))
+				continue;
+		}
+		if (aq.filter_type) {
+			bool bMatch = false;
+			for (const auto& one : aq.vecType) {
+				if (matchType(one, pAi->type)) {
+					bMatch = true;
+					break;
+				}
+			}
+			if (!bMatch)
+				continue;
+		}
+		if (aq.filter_level) {
+			bool bMatch = false;
+			for (const auto& one : aq.vecLevel) {
+				if (one == pAi->level) {
+					bMatch = true;
+					break;
+				}
+			}
+			if (!bMatch)
+				continue;
+		}
+		if (aq.filter_isAck){
 			if (aq.isAck != pAi->bAck)
 				continue;
 		}
 
-		if (aq.filter_isRecover)
-		{
+		if (aq.filter_isRecover){
 			if (aq.isRecover != pAi->bRecover)
 				continue;
 		}
 
-		//记录里存的绝对tag。 单独的tag是相对于roottag的。
-		if (aq.filter_tag)
-		{
-			if (aq.tag.find("*") == string::npos) {
-				if (aq.tag != pAi->tag)
-					continue;
-			}
-			else {
-				string zong_tag = aq.tag;
-				if(aq.rootTag!=""){
-					zong_tag = aq.rootTag + "." + aq.tag;
-				}
-				string& strReg = zong_tag;
-				strReg = str::replace(strReg, ".", "\\.");
-				strReg = str::replace(strReg, "*", ".*");
-				std::regex reg(strReg);
-				if (std::regex_match(pAi->tag, reg)==false) {
-					continue;
-				}
-			}
-		}
-
-		if (aq.filter_time)
-		{
-			if (aq.time != pAi->time)
-				continue;
-		}
-		if (aq.filter_type)
-		{
-			if (aq.time != pAi->time)
-				continue;
-		}
-		if (aq.filter_time)
-		{
-			if (aq.time != pAi->time)
-				continue;
-		}
 		dataSet.push_back(it->second);
 	}
 	return dataSet;
