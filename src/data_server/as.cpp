@@ -991,21 +991,39 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	cols.push_back(el);
 
 	ALARM_INFO ai;
-	if(cols.size()!=14)return ai;
-	ai.uuid = cols[0];
-	ai.tag = cols[1];
-	ai.time = cols[2].c_str();
-	ai.type = cols[3].c_str();
-	ai.level = cols[4].c_str();
-	ai.strAlarmDesc = cols[5].c_str();
-	ai.strAlarmDetail = cols[6].c_str();
-	ai.bRecover = atoi(cols[7].c_str());
-	ai.stRecoverTime = timeopt::str2st(cols[8].c_str());
-	ai.bAck = atoi(cols[9].c_str());
-	ai.stConfirmTime = timeopt::str2st(cols[10].c_str());
-	ai.strConfirmInfo = cols[11].c_str();
-	ai.strConfirmUser = cols[12].c_str();
-	ai.pic_url = cols[13].c_str();
+	//兼容老版本的数据
+	if(cols.size()!=13 && cols.size() != 14)return ai;
+	if (cols.size() == 13) {
+		ai.tag = cols[0];
+		ai.time = cols[1].c_str();
+		ai.type = cols[2].c_str();
+		ai.level = cols[3].c_str();
+		ai.strAlarmDesc = cols[4].c_str();
+		ai.strAlarmDetail = cols[5].c_str();
+		ai.bRecover = atoi(cols[6].c_str());
+		ai.stRecoverTime = timeopt::str2st(cols[7].c_str());
+		ai.bAck = atoi(cols[8].c_str());
+		ai.stConfirmTime = timeopt::str2st(cols[9].c_str());
+		ai.strConfirmInfo = cols[10].c_str();
+		ai.strConfirmUser = cols[11].c_str();
+		ai.pic_url = cols[12].c_str();
+	}
+	else {
+		ai.uuid = cols[0];
+		ai.tag = cols[1];
+		ai.time = cols[2].c_str();
+		ai.type = cols[3].c_str();
+		ai.level = cols[4].c_str();
+		ai.strAlarmDesc = cols[5].c_str();
+		ai.strAlarmDetail = cols[6].c_str();
+		ai.bRecover = atoi(cols[7].c_str());
+		ai.stRecoverTime = timeopt::str2st(cols[8].c_str());
+		ai.bAck = atoi(cols[9].c_str());
+		ai.stConfirmTime = timeopt::str2st(cols[10].c_str());
+		ai.strConfirmInfo = cols[11].c_str();
+		ai.strConfirmUser = cols[12].c_str();
+		ai.pic_url = cols[13].c_str();
+	}
 	return ai;
 }
 
