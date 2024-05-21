@@ -13,6 +13,72 @@
 almServer almSrv;
 almServer almSrv2;
 
+#include <chrono>
+#include <sstream>
+string as::getUUID()
+{
+	//线程id（8B）+纳妙时间戳(16B) +  同线程ID的递增数(4B)  //允许同个线程同个纳秒时间点执行65536次 cpu主频65536 GHz以上才出错
+	static map<uint32_t, int> mapCnt; //重启后重新从0计数
+	
+	std::thread::id this_id = std::this_thread::get_id();
+	std::hash<std::thread::id> hasher;
+	uint32_t thdId = static_cast<uint32_t>(hasher(this_id));
+
+	std::chrono::system_clock::duration d = std::chrono::system_clock::now().time_since_epoch();
+	std::chrono::nanoseconds nan = std::chrono::duration_cast<std::chrono::nanoseconds>(d);
+	uint64_t nanTime = nan.count();
+
+	int cnt = 0;
+	if (mapCnt.find(thdId) == mapCnt.end()) {
+		mapCnt[thdId] = 0;
+	}
+	else {
+		mapCnt[thdId]++;
+		cnt = mapCnt[thdId];
+	}
+	
+	std::stringstream stream0;  stream0 << std::setfill('0') << std::setw(8) << std::hex << thdId;
+	std::stringstream stream1;  stream1 << std::setfill('0') << std::setw(16) << std::hex << nanTime;
+	std::stringstream stream2;  stream2 << std::setfill('0') << std::setw(4) << std::hex << cnt;
+	return stream0.str()+ stream1.str() + stream2.str();
+}
+
+bool as::matchTag(string pattern, const string& src)
+{
+	if (pattern.find("*") == string::npos) {
+		if (pattern == src)
+			return true;
+	}
+	else {
+		string& strReg = pattern;
+		strReg = str::replace(strReg, ".", "\\.");
+		strReg = str::replace(strReg, "*", ".*");
+		std::regex reg(strReg);
+		if (std::regex_match(src, reg) == true) {
+			return true;
+		}
+	}
+	return false;
+}
+
+//src和pattern相等 或 *匹配
+bool as::generalMatch(string pattern, const string& src)
+{
+	if (pattern.find("*") == string::npos) {
+		if (pattern == src)
+			return true;
+	}
+	else {
+		string& strReg = pattern;
+		strReg = str::replace(strReg, "*", ".*");
+		std::regex reg(strReg);
+		if (std::regex_match(src, reg) == true) {
+			return true;
+		}
+	}
+	return false;
+}
+
 almServer::almServer(void)
 {
 	m_bTestSrv = false;
@@ -136,6 +202,8 @@ void almServer::addAlarm(ALARM_INFO ai)
 
 	LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 
+	ai.uuid = as::getUUID();
+	 
 	tableCurrent.add(ai);
 	tableHist.add(ai);
 
@@ -296,7 +364,6 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 	ALARM_INFO ai;
 	ai.fromJson(j);
 
-
 	if (j["time"].is_string()) {
 		ai.time = j["time"];
 	}
@@ -393,29 +460,44 @@ string almServer::getAlarmTypeLabel(string type)
 void almServer::AddEvent(ALARM_INFO ai)
 {
 	std::lock_guard<mutex>  g(m_csAlarmData);
+	ai.uuid = as::getUUID();
 	tableCurrent.add(ai);
 	tableHist.add(ai);
 }
 
+//基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
-	string user = session.user;
-	string info = params["ackInfo"];
-	ALARM_INFO ai;
-
-
-	if (params.contains("rootTag")) {
-		string rootTag = params["rootTag"];
-		string tag = params["tag"];
-		params["tag"] = TAG::addRoot(tag, rootTag);
+	if (params.contains("uuid")==false  && (params.contains("tag") == false)) {
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+		resp.error = error;
+		return;
 	}
 
-	//用户位号转系统位号
-	string tag = params["tag"].get<string>();
-	tag = TAG::addRoot(tag, session.org);
-	params["tag"] = tag;
+	if (params.contains("tag")) {
+		string rootTag;
+		if (params.contains("rootTag")) {
+			rootTag = params["rootTag"];
+		}
+		string tag = params["tag"];
+		tag = TAG::addRoot(tag, rootTag);
+
+		//用户位号转系统位号
+		tag = TAG::addRoot(tag, session.org);
+		params["tag"] = tag;
+	}
+
+	ALARM_INFO ai;
 	if(tableCurrent.query(params,ai))
 	{
+		string user = session.user;
+		string info;
+		if (params.contains("ackInfo"))
+			info = params["ackInfo"];
+
 		ai.bAck = 1;
+		ai.strConfirmUser = session.user;
+		ai.strConfirmInfo = info;
+		timeopt::now(&ai.stConfirmTime);
 		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		{
 			tableCurrent.remove(ai);
@@ -429,8 +511,16 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		resp.error = error;
 		return;
 	}
+
+	if (params.contains("time")==false)//用时间对应历史表文件  时间来自未确定文件.
+		params["time"] = ai.time;
 	if(tableHist.query(params,ai))
 	{
+		string user = session.user;
+		string info;
+		if (params.contains("ackInfo"))
+			info = params["ackInfo"];
+
 		ai.bAck = 1;
 		ai.strConfirmUser = session.user;
 		ai.strConfirmInfo = info;
@@ -517,7 +607,7 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 
 void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
-	string data = "位号,报警时间,报警类型,报警等级,报警信息,报警详情,恢复状态,恢复时间,确认状态,确认时间,确认信息,确认用户\r\n";
+	string data = "uuid,位号,报警时间,报警类型,报警等级,报警信息,报警详情,恢复状态,恢复时间,确认状态,确认时间,确认信息,确认用户\r\n";
 	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
@@ -526,6 +616,7 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		data += str;
 	}
 	fs::createFolderOfPath(strFile);
+	
 	fs::writeFile(strFile,data);
 }
 
@@ -544,9 +635,9 @@ string almTable::getFilePath(int y,int m){
 }
 
 string almTable::getFilePath(string time){
-	if(time == "")
+	if (time == "")
 		return db.m_path + filePath  + ".csv";
-
+	
 	TIME st = timeopt::str2st(time);
 	int y,m;
 	y = st.wYear;
@@ -804,6 +895,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 ALARM_INFO ALARM_INFO::fromJson(json j)
 {
 	ALARM_INFO& ai = *this;
+	
 	//必填字段
 	ai.tag = j["tag"];
 	ai.type = j["type"];
@@ -824,6 +916,8 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 {
 	ALARM_INFO* info = this;
 	json j;
+	j["uuid"] = info->uuid;
+
 	if (rootTag == ""){
 		j["tag"] = info->tag;
 	}
@@ -897,26 +991,28 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	cols.push_back(el);
 
 	ALARM_INFO ai;
-	if(cols.size()!=13)return ai;
-	ai.tag = cols[0];
-	ai.time = cols[1].c_str();
-	ai.type = cols[2].c_str();
-	ai.level = cols[3].c_str();
-	ai.strAlarmDesc = cols[4].c_str();
-	ai.strAlarmDetail = cols[5].c_str();
-	ai.bRecover = atoi(cols[6].c_str());
-	ai.stRecoverTime = timeopt::str2st(cols[7].c_str());
-	ai.bAck = atoi(cols[8].c_str());
-	ai.stConfirmTime = timeopt::str2st(cols[9].c_str());
-	ai.strConfirmInfo = cols[10].c_str();
-	ai.strConfirmUser = cols[11].c_str();
-	ai.pic_url = cols[12].c_str();
+	if(cols.size()!=14)return ai;
+	ai.uuid = cols[0];
+	ai.tag = cols[1];
+	ai.time = cols[2].c_str();
+	ai.type = cols[3].c_str();
+	ai.level = cols[4].c_str();
+	ai.strAlarmDesc = cols[5].c_str();
+	ai.strAlarmDetail = cols[6].c_str();
+	ai.bRecover = atoi(cols[7].c_str());
+	ai.stRecoverTime = timeopt::str2st(cols[8].c_str());
+	ai.bAck = atoi(cols[9].c_str());
+	ai.stConfirmTime = timeopt::str2st(cols[10].c_str());
+	ai.strConfirmInfo = cols[11].c_str();
+	ai.strConfirmUser = cols[12].c_str();
+	ai.pic_url = cols[13].c_str();
 	return ai;
 }
 
 string almTable::toCSV(ALARM_INFO& info)
 {
 	string str;
+	str += info.uuid; str += ",";
 	/*0*/str += info.tag; str += ",";
 	/*1*/str += info.time; str += ",";
 	/*2*/str += info.type; str += ",";
@@ -963,6 +1059,8 @@ void almTable::add(ALARM_INFO ai)
 	saveFile(getFilePath(ai.time),buff);
 }
 
+
+//找基于uuid匹配的唯一一个 或 其他字段的组合匹配到的最后一个
 bool almTable::query(json params, ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
@@ -975,19 +1073,28 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	for(auto& i:buff)
 	{
 		ALARM_INFO& it = *i.second;
-		if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
-			continue;
-		if (params["time"] != nullptr && it.time != params["time"].get<string>())
-			continue;
-		if (params["type"] != nullptr && it.type != params["type"].get<string>())
-			continue;
-		if (params["isAck"] != nullptr && it.bAck != params["isAck"].get<bool>())
-			continue;
-		if (params["isRecover"] != nullptr && it.bRecover != params["isRecover"].get<bool>())
-			continue;
+		if (params["uuid"] != nullptr) {
+			if (it.uuid == params["uuid"].get<string>()) {
+				ai = it;
+				bFind = true;
+				break;
+			}
+		}
+		else {
+			if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
+				continue;
+			if (params["time"] != nullptr && it.time != params["time"].get<string>())
+				continue;
+			if (params["type"] != nullptr && it.type != params["type"].get<string>())
+				continue;
+			if (params["isAck"] != nullptr && it.bAck != params["isAck"].get<bool>())
+				continue;
+			if (params["isRecover"] != nullptr && it.bRecover != params["isRecover"].get<bool>())
+				continue;
 
-		ai = it;
-		bFind = true;
+			ai = it;
+			bFind = true;
+		}
 	}
 	if(bFind)
 	{
@@ -1112,41 +1219,6 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	return aq;
 }
 
-bool as::matchTag(string pattern, const string& src)
-{
-	if (pattern.find("*") == string::npos) {
-		if (pattern == src)
-			return true;
-	}
-	else {
-		string& strReg = pattern;
-		strReg = str::replace(strReg, ".", "\\.");
-		strReg = str::replace(strReg, "*", ".*");
-		std::regex reg(strReg);
-		if (std::regex_match(src, reg) == true) {
-			return true;
-		}
-	}
-	return false;
-}
-
-//src和pattern相等 或 *匹配
-bool as::generalMatch(string pattern, const string& src)
-{
-	if (pattern.find("*") == string::npos) {
-		if (pattern == src)
-			return true;
-	}
-	else {
-		string& strReg = pattern;
-		strReg = str::replace(strReg, "*", ".*");
-		std::regex reg(strReg);
-		if (std::regex_match(src, reg) == true) {
-			return true;
-		}
-	}
-	return false;
-}
 vector<ALARM_INFO*> almTable::query(json querier)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);

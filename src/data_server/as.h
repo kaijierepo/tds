@@ -42,6 +42,8 @@ inline string getAlarmLevelLabel(string level)
 
 class ALARM_KEY{
 public:
+	string uuid;//系统生成的唯一id
+
 	string tag;
 	string time;
 	string type;
@@ -139,6 +141,7 @@ struct ALARM_QUERY {
 namespace as {
 	bool matchTag(string pattern, const string& src);
 	bool generalMatch(string pattern, const string& src);
+	string getUUID();
 };
 
 class almTable{
@@ -158,7 +161,6 @@ public:
 	void SetAlarmSrv(almServer* pSrv);
 
 public:
-	
 
 	almTable(){
 		bOneFilePerMonth = false;
@@ -232,13 +234,15 @@ public:
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
 	//almTable tableStatus;
 	//almTable tableUnack;
-	almTable tableCurrent;
+	almTable tableCurrent; //未确认或未恢复的
 	almTable tableHist;
 	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
 
 	bool m_bTestSrv;	//	是否测试报警
 };
+
+
 
 extern almServer almSrv;
 extern almServer almSrv2;
