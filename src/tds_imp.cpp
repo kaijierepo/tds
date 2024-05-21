@@ -393,11 +393,11 @@ bool TDS_imp::run(string cmdline)
 	prj.getAllVarExpScript();
 	ioSrv.loadConf();
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
-	string sCurAlarmFile = "\\alarms\\current";
-	string sHisAlarmFile = "\\alarms\\history";
+	string sCurAlarmFile = "/alarms/current";
+	string sHisAlarmFile = "/alarms/history";
 	almSrv.init(sCurAlarmFile, sHisAlarmFile);
-	sCurAlarmFile = "\\alarms2\\current";
-	sHisAlarmFile = "\\alarms2\\history";
+	sCurAlarmFile = "/alarms2/current";
+	sHisAlarmFile = "/alarms2/history";
 	almSrv2.init(sCurAlarmFile, sHisAlarmFile);
 	almSrv2.m_bTestSrv = true;
 
