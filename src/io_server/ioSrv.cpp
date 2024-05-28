@@ -17,16 +17,18 @@
 
 ioServer ioSrv;
 
-void thread_do_ping_heartbeat(map<string, ioDev*> mapDev) {
+void thread_do_ping_heartbeat(std::list<ioDev*> listDev) {
 	if (ioSrv.m_bPingThreadStart)
 		return;
 
 	ioSrv.m_bPingThreadStart = true;
-	//LOG("[trace] - ping currrent loop count: %d, ips:", mapDev.size());
-	for (auto itm: mapDev)
-	{
-		ioDev* pDev = itm.second;
-		pDev->doPingHeartbeat(itm.first);
+	//LOG("[trace] - ping currrent loop count: %d, ips:", listDev.size());
+	for (auto itm: listDev){
+		if (itm->m_jDevAddr["ip"].is_string()) {
+
+			string ip = itm->m_jDevAddr["ip"].get<string>();
+			itm->doPingHeartbeat(ip);
+		}
 	}
 	ioSrv.m_bPingThreadStart = false;
 }
@@ -56,7 +58,7 @@ void IOThread()
 			break;
 
 		ioSrv.lock_conf_unique();
-		map<string, ioDev*> mapPing;
+		std::list<ioDev*> listPing;
 		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
@@ -72,10 +74,7 @@ void IOThread()
 					pIoDev->m_stLastPingTime = timeopt::now();
 					if (pIoDev->m_bEnablePingOnlineCheck) 
 					{
-						string ip;
-						if (pIoDev->m_jDevAddr["ip"].is_string())
-							ip = pIoDev->m_jDevAddr["ip"].get<string>();
-						mapPing[ip] = pIoDev;
+						listPing.push_back(pIoDev);
 					}
 				}
 			}
@@ -85,9 +84,9 @@ void IOThread()
 		}
 
 		// 开启设备ping检测
-		if (mapPing.size())
+		if (listPing.size())
 		{
-			thread t(thread_do_ping_heartbeat, mapPing);
+			thread t(thread_do_ping_heartbeat, listPing);
 			t.detach();
 		}
 
