@@ -2178,7 +2178,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 				dbLast = dbCur;
 				lastVal = curVal;
 			}
-			mapRlt.erase(mapRlt.begin());
+			if(mapRlt.size() > 0)
+				mapRlt.erase(mapRlt.begin());
 			pCalcResult = &mapRlt;
 		}
 		else if (deSel.calc == "sum") {

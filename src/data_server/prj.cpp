@@ -315,10 +315,17 @@ bool project::loadObjTemplate()
 		string s;
 		if (fs::readFile(path, s)) {
 			OBJ_TEMPLATE* pct = new OBJ_TEMPLATE;
-			pct->tplData = json::parse(s);
-			pct->obj.loadConf(pct->tplData);
-			string type = str::trimSuffix(fi.name, ".json");
-			m_mapObjTempalte[type] = pct;
+			try
+			{
+				pct->tplData = json::parse(s);
+				pct->obj.loadConf(pct->tplData);
+				string type = str::trimSuffix(fi.name, ".json");
+				m_mapObjTempalte[type] = pct;
+			}
+			catch (const std::exception&)
+			{
+
+			}
 		}
 	}
 	return false;
