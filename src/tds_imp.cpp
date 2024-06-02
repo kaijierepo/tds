@@ -270,6 +270,7 @@ TDS_imp::TDS_imp()
 	xiaoT = nullptr;
 	gzhServer = nullptr;
 	smsServer = nullptr;
+	shellServer = nullptr;
 }
 
 bool TDS_imp::setEncodeing(string encoding)
@@ -314,6 +315,11 @@ bool TDS_imp::run(string cmdline)
  // mg_log_set("0");
 #endif
 
+#ifdef _WINDLL // dll模式下需要创建命令行
+	tds->conf->mode = "tds";
+#endif
+	logger.m_bSaveToFile = true;
+	tds->conf->loadConf();
 
 	//check mode
 	if (conf->uiMode == "")
@@ -434,8 +440,8 @@ bool TDS_imp::run(string cmdline)
 		tds->xiaoT->run();
 	if (tds->smsServer)
 		tds->smsServer->run();
-	if (tds->shellServer)
-		tds->shellServer->run();
+	//if (tds->shellServer)
+	//	tds->shellServer->run();
 	if (tds->gzhServer)
 		tds->gzhServer->run();
 	for (auto& i : tds->plugins) 

@@ -4,12 +4,6 @@
 web server of tds
 dispatch http request to rpcHandler
 */
-#ifdef _WIN32
-#define MG_TLS MG_TLS_BUILTIN  // Enable built-in TLS 1.3 stack
-#else
-#define MG_TLS MG_TLS_NONE
-#endif
-
 #include "tdsSession.h"
 #include "common/mongoose.h"
 

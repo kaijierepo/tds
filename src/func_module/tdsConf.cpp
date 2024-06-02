@@ -395,8 +395,7 @@ void tdsConfig::loadConf()
 {
 	string confPath;
 	string confFileName;
-
-	confFileName = fs::appName();
+	confFileName = mode;
 	confPath = fs::appPath() + "/" + confFileName + ".ini";
 	
 	

@@ -22,3 +22,11 @@ using namespace std;
 
 #define _HAS_STD_BYTE 0 //windows sdk有byte类型， c++17有std::byte，解决定义冲突问题
 #define GENICAM_MAIN_COMPILER VC141
+
+#ifdef TDSDLL
+#define MG_TLS MG_TLS_NONE// Enable built-in TLS 1.3 stack
+#elif defined(_WIN32)
+#define MG_TLS MG_TLS_BUILTIN
+#else
+#define MG_TLS MG_TLS_NONE
+#endif

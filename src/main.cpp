@@ -274,7 +274,6 @@ int main(int argc, char** argv)
 
 	//根据模式差异化加载配置
 	tds->conf->mode = mode;
-	tds->conf->loadConf();
 
 	//专业版创建授权文件
 	if (tds->createLicence)
@@ -452,7 +451,6 @@ int main(int argc, char** argv)
 	else
 	{
 		//run tds
-		logger.m_bSaveToFile = true;
 		tds->run();
 	}
 
