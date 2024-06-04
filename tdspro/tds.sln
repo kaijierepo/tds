@@ -1,12 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31025.194
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34031.279
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds", "tds.vcxproj", "{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds Pro", "tds.vcxproj", "{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		dll - D|x64 = dll - D|x64
 		dll - D|x86 = dll - D|x86
 		dll - R|x64 = dll - R|x64
@@ -25,8 +27,14 @@ Global
 		exe - R|x86 = exe - R|x86
 		exe -R video|x64 = exe -R video|x64
 		exe -R video|x86 = exe -R video|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Debug|x64.ActiveCfg = dll -R genicam|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Debug|x64.Build.0 = dll -R genicam|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Debug|x86.ActiveCfg = dll -R genicam|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Debug|x86.Build.0 = dll -R genicam|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x64.ActiveCfg = dll - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x64.Build.0 = dll - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - D|x86.ActiveCfg = dll - D|Win32
@@ -63,6 +71,10 @@ Global
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x64.Build.0 = exe -R video|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x86.ActiveCfg = exe -R video|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R video|x86.Build.0 = exe -R video|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Release|x64.ActiveCfg = exe -R video|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Release|x64.Build.0 = exe -R video|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Release|x86.ActiveCfg = exe -R video|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.Release|x86.Build.0 = exe -R video|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

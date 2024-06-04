@@ -269,7 +269,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../out/tds</OutDir>
-    <TargetName>tds</TargetName>
+    <TargetName>net2com</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='edge -D|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -284,7 +284,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../out/tds</OutDir>
-    <TargetName>tds</TargetName>
+    <TargetName>net2com</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R video|x64'">
     <LinkIncremental>false</LinkIncremental>

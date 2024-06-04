@@ -447,50 +447,53 @@ int main(int argc, char** argv)
 	else if (ptr != nullptr) //工具模式启动
 	{
 		ptr();
+
+		while (1) {
+			timeopt::sleepMilli(1000);
+		}
 	}
 	else
 	{
 		//run tds
 		tds->run();
-	}
 
+		TIME zlmLastClearPusherTime = timeopt::now();
+		vector<MP*> ezvizMp = prj.getAllEzvizMp();
 
-	TIME zlmLastClearPusherTime = timeopt::now();
-	vector<MP*> ezvizMp = prj.getAllEzvizMp();
-
-	if (ezvizMp.size() > 0) {
-		LOG("共有%d个萤石云视频监控点", ezvizMp.size());
-	}
-
-	while (1)
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
-		if (prj.m_enableEzviz) {
-			ezvizMp = prj.getAllEzvizMp();
-			
-			for (int i = 0; i < ezvizMp.size(); i++) {
-				MP* pmp = ezvizMp[i];		
-				if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
-					EZVIZ_ACCESS_INFO  info;
-					info.tag = pmp->getTag();
-					info.serialNo = pmp->m_serialNo;
-					info.appKey = pmp->m_appKey;
-					info.secret = pmp->m_secret;
-					info.token = "";
-					timeopt::setAsTimeOrg(info.lastUpdate);
-					prj.m_mapEzvizAccess[info.serialNo] = info;
-				}
-			}
-
-			updateEzvizAccessInfo();
+		if (ezvizMp.size() > 0) {
+			LOG("共有%d个萤石云视频监控点", ezvizMp.size());
 		}
 
-		rpcSrv.cleanRpcSession();
+		while (1)
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-		if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 30) {
-			clearZlmNoReaderPusher();
-			zlmLastClearPusherTime = timeopt::now();
+			if (prj.m_enableEzviz) {
+				ezvizMp = prj.getAllEzvizMp();
+
+				for (int i = 0; i < ezvizMp.size(); i++) {
+					MP* pmp = ezvizMp[i];
+					if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
+						EZVIZ_ACCESS_INFO  info;
+						info.tag = pmp->getTag();
+						info.serialNo = pmp->m_serialNo;
+						info.appKey = pmp->m_appKey;
+						info.secret = pmp->m_secret;
+						info.token = "";
+						timeopt::setAsTimeOrg(info.lastUpdate);
+						prj.m_mapEzvizAccess[info.serialNo] = info;
+					}
+				}
+
+				updateEzvizAccessInfo();
+			}
+
+			rpcSrv.cleanRpcSession();
+
+			if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 30) {
+				clearZlmNoReaderPusher();
+				zlmLastClearPusherTime = timeopt::now();
+			}
 		}
 	}
 

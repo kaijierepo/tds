@@ -18,7 +18,7 @@ namespace ns_tcp2com {
 	class Reg {
 	public:
 		Reg() {
-			tds->tools["tcp2com"] = ns_tcp2com::run;
+			tds->tools["net2com"] = ns_tcp2com::run;
 		}
 	};
 
@@ -29,12 +29,14 @@ namespace ns_tcp2com {
 
 tcp2com::tcp2com()
 {
+	m_bLogToFile = true;
 	m_iDestPort = 0;
 	serial = createIODev(DEV_TYPE_local_serial);
 }
 
 void  serialRecvCallback(void* user, unsigned char* pData, size_t iLen)
 {
+	string netAddr;
 	tcp2com* pt2c = (tcp2com*)user;
 	if (pt2c->m_mode == "tcpClient") {
 		pt2c->tcpClt.SendData(pData, iLen);
@@ -42,14 +44,18 @@ void  serialRecvCallback(void* user, unsigned char* pData, size_t iLen)
 	else if (pt2c->m_mode == "tcpServer") {
 		pt2c->tcpServer.SendData((char*)pData, iLen);
 	}
-     
+	else if (pt2c->m_mode == "udpServer") {
+		netAddr = str::format("UDP-%s:%d(%d)", pt2c->m_strDestIp, pt2c->m_iDestPort,iLen);
+		pt2c->udpServer.SendData(pData, iLen, pt2c->m_strDestIp, pt2c->m_iDestPort);
+	}
+
 	string log = str::bytesToHexStr(pData, iLen);
-	LOG(pt2c->serial->getIOAddrStr() + " --> " + pt2c->getTcpAddr() + "  " + log);
+	LOG(pt2c->serial->getIOAddrStr() + " --> " + netAddr + "  " + log);
 }
 
 string tcp2com::defaultConf()
 {
-	string s = R"(#tcp2com 串口转tcp透传网关配置
+	string s = R"(#net2com 串口转网络透传网关配置
 #串口参数
 com=COM1
 baudRate=19200
@@ -88,7 +94,7 @@ string tcp2com::getTcpAddr()
 
 void tcp2com::run()
 {
-	string confPath = fs::appPath() + "/tcp2com.ini"; 
+	string confPath = fs::appPath() + "/net2com.ini"; 
 	if (!fs::fileExist(confPath))
 	{
 		string s = defaultConf();
@@ -103,6 +109,8 @@ void tcp2com::run()
 	jConf["parity"] = tdsIni.getValStr("parity","None");
 	jConf["byteSize"] = tdsIni.getValInt("byteSize",8);
 	jConf["stopBits"] = tdsIni.getValStr("stopBits","1");
+	m_bLogToFile = tdsIni.getValInt("logToFile", 1);
+	m_bLogToConsole = tdsIni.getValInt("logToConsole", 1);
 	m_mode = tdsIni.getValStr("mode", "");
 	m_strDestIp = tdsIni.getValStr("remoteIP","127.0.0.1");
 	m_iDestPort = tdsIni.getValInt("remotePort", 664);
@@ -127,6 +135,15 @@ void tcp2com::run()
 		}
 		else {
 			LOG("tcp服务端参数错误");
+		}
+	}
+	else if (m_mode == "udpServer") {
+		if (m_localPort != 0) {
+			udpServer.run(this, m_localPort, m_localIP);
+			LOG("启动udp服务端，服务器地址:%s:%d", m_localIP.c_str(), m_localPort);
+		}
+		else {
+			LOG("udp服务端参数错误");
 		}
 	}
 	else {
@@ -197,4 +214,12 @@ void tcp2com::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSession
 	serial->sendData(pData, iLen);
 	string log = str::bytesToHexStr(pData, iLen);
 	LOG(serial->getIOAddrStr() + " <-- " + getTcpAddr() + "  " + log);
+}
+
+void tcp2com::OnRecvUdpData(unsigned char* pData, size_t iLen, std::string strIP, int port)
+{
+	serial->sendData(pData, iLen);
+	string log = str::bytesToHexStr(pData, iLen);
+	string s = str::format("UDP-%s:%d(%d)", strIP.c_str(), port,iLen);
+	LOG(serial->getIOAddrStr() + " <-- " +  s + "  " + log);
 }

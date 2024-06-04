@@ -190,7 +190,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 	printf("\r\n");
 	//std::cout << info << std::endl; 这句话在 AllocConsole 生成的命令行中不输出了
 
-	if (writeToFile) {
+	if (writeToFile && m_strLogDir!="") {
 		//create log path
 		std::lock_guard<mutex> lockGuard(m_lock);
 		//if (!dirCreated)

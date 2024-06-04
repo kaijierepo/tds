@@ -1,6 +1,7 @@
 #pragma once
 #include "tcpSrv.h"
 #include "tcpClt.h"
+#include "udpSrv.h"
 #include <memory>
 #include "ioDev.h"
 
@@ -18,14 +19,18 @@ struct tcp2com_Conf {
 
 };
 
-class tcp2com : public  ITcpServerCallBack ,public ITcpClientCallBack{
+class tcp2com : public  ITcpServerCallBack ,public ITcpClientCallBack,public IUdpServerCallBack{
 public:
 	tcp2com();
 
 	tcpSrv tcpServer;
 	tcpClt tcpClt;
+	udpServer udpServer;
+
 	ioDev* serial;
 
+	bool m_bLogToFile;
+	bool m_bLogToConsole;
 	string m_mode;
 	string m_localIP;
 	int m_localPort;
@@ -43,6 +48,8 @@ public:
 
 	 void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
 	 void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+
+	 void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) override;
 
 	 string registerPktStr;
 	 string registerPktHexStr;
