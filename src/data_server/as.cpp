@@ -170,23 +170,41 @@ void almServer::recover(ALARM_KEY& key)
 	rpcSrv.notify("onAlarmRecover", j);
 }
 
-
+/*
+2类as：  正式 和 非正式
+对于正式as 
+1）tag支持 小括号和 中括号
+真正tag可放小括号里外面的表示备注或额外说明，或   中括号表示备注 外面的表示备注
+即： 真正tag、xxx(真正tag)、真正tag[xxx]
+2）支持基于真正tag的报警过滤
+*/
 void almServer::addAlarm(ALARM_INFO ai)
 {
 	if (m_bTestSrv == false)
 	{
 		string sTag = ai.tag;
+		if ( (ai.tag.find("(") != string::npos || ai.tag.find(")") != string::npos)
+			&& (ai.tag.find("[") != string::npos || ai.tag.find("]") != string::npos) ) {
+			LOG("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+			return;
+		}
 		string::size_type pos_s = ai.tag.find("(");
-		if (pos_s != string::npos)
-		{
+		if (pos_s != string::npos){
 			string::size_type pos_e = ai.tag.find(")");
-
-			if (pos_e != string::npos)
-			{
+			if (pos_e != string::npos){
 				sTag = ai.tag.substr(pos_s+1, pos_e-(pos_s+1));
 			}
 		}
-	
+		else {
+			string::size_type pos_s = ai.tag.find("[");
+			if (pos_s != string::npos){
+				string::size_type pos_e = ai.tag.find("]");
+				if (pos_e != string::npos){
+					sTag = ai.tag.erase(pos_s, pos_e - pos_s + 1);
+				}
+			}
+		}
+
 		OBJ* pObj = prj.queryObj(sTag,"zh");
 
 		if (pObj) {
