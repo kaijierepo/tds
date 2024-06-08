@@ -13,6 +13,7 @@
 #include "userMng.h"
 #include "hmrSrv.h"
 #include "ioChan.h"
+#include "statusServer.h"
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -834,6 +835,7 @@ bool getSSLCertPath(string& certPath, string& keyPath) {
 static void fn(struct mg_connection* c, int ev,void* ev_data)
 {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
+
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->m_isHttps)
 		{
@@ -853,6 +855,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	else if (ev == MG_EV_HTTP_MSG)
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+		statusSrv.statisRecv(pWs->m_port, hm->message.len);
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {

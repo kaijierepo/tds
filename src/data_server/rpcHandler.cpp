@@ -2094,6 +2094,15 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	{
 		rpcResp.result = logSrv.rpc_queryLog(params, session);
 	}
+	else if (method == "rpcCallStatis") {
+		m_csCallStatis.lock();
+		json j = json::object();
+		for (auto& i : m_mapCallStatis) {
+			j[i.first] = i.second;
+		}
+		rpcResp.result = j.dump();
+		m_csCallStatis.unlock();
+	}
 #ifdef ENABLE_JERRY_SCRIPT
 	else if (method == "runScript")
 	{
@@ -2748,6 +2757,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		}
 
 		method = jReq["method"].get<string>();
+		statisCall(method);
 
 		if (jReq.contains("dbPath")){
 			pSession->dbpath = jReq["dbPath"].get<string>();
@@ -5082,6 +5092,19 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 
 	WebServer::sendToAllWebsock(notify);
 	reverseInterface.sendToAllSessions(notify, specialNotify);
+}
+
+
+void rpcHandler::statisCall(string method) {
+	m_csCallStatis.lock();
+	std::map<string, int>::iterator iter = m_mapCallStatis.find(method);
+	if (iter == m_mapCallStatis.end()) {
+		m_mapCallStatis[method] = 1;
+	}
+	else {
+		iter->second++;
+	}
+	m_csCallStatis.unlock();
 }
 
 

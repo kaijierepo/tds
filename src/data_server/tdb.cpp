@@ -2304,6 +2304,12 @@ void TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
 	InsertValJsonStr(strTag, stTime, s);
 }
 
+void TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
+{
+	string s = formatStr("%d", iVal);
+	InsertValJsonStr(strTag, stTime, s);
+}
+
 void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 {
 	string s = formatStr("%f", dbVal);

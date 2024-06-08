@@ -13,6 +13,7 @@
 #include "base64.h"
 #include "webSrv.h"
 #include "wsProto.h"
+#include "statusServer.h"
 
 
 ioServer ioSrv;
@@ -329,6 +330,9 @@ void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
+
+	statusSrv.statisRecv(ioSession->localPort, iLen);
+
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 

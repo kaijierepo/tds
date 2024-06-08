@@ -5,6 +5,7 @@
 #include "statusServer.h"
 #include "tdb.h"
 #include <thread>
+#include "common.h"
 
 #pragma comment(lib, "Pdh.lib")
 #pragma comment(lib, "Psapi.lib")
@@ -160,6 +161,15 @@ void StatusServer::cycleAcq_srvStatus() {
 				//ssdb->Insert("net", dbt, m_srvStatus.net);
 				//ssdb->Insert("disk", dbt, m_srvStatus.disk);
 				ssdb->Insert("handle", dbt, m_srvStatus.handle);
+
+				for (auto& iter : m_netStatus) {
+					string portId = str::format("port_%d_send", iter.first);
+					ssdb->Insert(portId, dbt, iter.second->send);
+					iter.second->send = 0;
+					portId = str::format("port_%d_recv", iter.first);
+					ssdb->Insert(portId, dbt, iter.second->recv);
+					iter.second->recv = 0;
+				}
 			}
 		}
 	}
@@ -232,6 +242,31 @@ double StatusServer::calcCpuUse()
 	double msPassed = m_currentAcqTime - m_lastAcqTime;
 	double cpuUsed = (msUsed / msPassed) * 100;
 	return cpuUsed;
+}
+
+void StatusServer::statisSend(int port, size_t len) {
+	map<int, NET_TRAFFIC*>::iterator iter = m_netStatus.find(port);
+	if (iter == m_netStatus.end()) {
+		NET_TRAFFIC* nt = new NET_TRAFFIC();
+		nt->send += len;
+		m_netStatus[port] = nt;
+	}
+	else {
+		NET_TRAFFIC* nt = iter->second;
+		nt->send += len;
+	}
+}
+void StatusServer::statisRecv(int port, size_t len) {
+	map<int, NET_TRAFFIC*>::iterator iter = m_netStatus.find(port);
+	if (iter == m_netStatus.end()) {
+		NET_TRAFFIC* nt = new NET_TRAFFIC();
+		nt->recv += len;
+		m_netStatus[port] = nt;
+	}
+	else {
+		NET_TRAFFIC* nt = iter->second;
+		nt->recv += len;
+	}
 }
 
 #endif

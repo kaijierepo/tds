@@ -4,6 +4,8 @@
 #include <tlhelp32.h>
 #include <Psapi.h>
 #include <Pdh.h>
+#include <atomic>
+#include <map>
 
 struct SRV_STATUS {
 	double cpu; //%
@@ -13,6 +15,17 @@ struct SRV_STATUS {
 	double net; //Mbps
 	int handle;
 	int thread;
+};
+
+
+struct NET_TRAFFIC {
+	std::atomic<long long> send;
+	std::atomic<long long> recv;
+
+	NET_TRAFFIC() {
+		send = 0;
+		recv = 0;
+	}
 };
 
 
@@ -62,6 +75,10 @@ public:
 	double m_dbCpuUse;
 
 	SRV_STATUS m_srvStatus;
+	std::map<int, NET_TRAFFIC*> m_netStatus;
+
+	void statisSend(int port, size_t len);
+	void statisRecv(int port, size_t len);
 };
 
 extern StatusServer statusSrv;

@@ -141,5 +141,8 @@ public:
 	TIME m_lastCleanTime;
 	std::mutex m_csRpcSessions;
 	std::map<string, RPC_SESSION> m_mapRpcSessions; //无连接会话，根据remoteAddr来区分，失效时间1个小时
+	std::mutex m_csCallStatis;
+	std::map<string, int> m_mapCallStatis;
+	void statisCall(string method);
 };
 extern rpcHandler rpcSrv;

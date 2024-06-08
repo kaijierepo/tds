@@ -560,6 +560,7 @@ public:
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);
 	void Insert(string strTag, DB_TIME stTime, int& iVal);
+	void Insert(string strTag, DB_TIME stTime, long long iVal);
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	bool Delete(string tag, DB_TIME stTime);
 	bool Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);

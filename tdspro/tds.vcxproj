@@ -284,7 +284,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../out/tds</OutDir>
-    <TargetName>net2com</TargetName>
+    <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R video|x64'">
     <LinkIncremental>false</LinkIncremental>
