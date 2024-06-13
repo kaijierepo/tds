@@ -18,6 +18,7 @@ public:
 
 	TIME m_lastUpdateTime;
 
+	bool m_bEnable;
 	vector<string> m_pubIpService;
 	string key;
 	string secret;

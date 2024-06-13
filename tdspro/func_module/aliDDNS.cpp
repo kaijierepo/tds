@@ -77,7 +77,7 @@ AliDDNS::AliDDNS()
     m_pubIpService.push_back("api.ipify.org");
     m_pubIpService.push_back("whatismyip.akamai.com");
     m_pubIpService.push_back("myip.dnsomatic.com");
-
+    m_bEnable = true;
     PLUGIN_INFO pi;
     string name = "aliDDNS";
     tds->plugins[name] = this;
@@ -88,9 +88,11 @@ bool AliDDNS::init()
      key = tds->conf->getStr("aliKeyID", "");
      secret = tds->conf->getStr("aliKeySecret", "");
      interval = tds->conf->getInt("ddnsInterval", 600);
+     m_bEnable = tds->conf->getInt("enableDDNS", 1) == 1;
      string strDdnsDomainNameList = tds->conf->getStr("ddnsDomainName", "");
      str::split(ddnsDomainNameList, strDdnsDomainNameList, ",");
      addr = "http://alidns.aliyuncs.com";
+
     return true;
 }
 
@@ -103,6 +105,9 @@ void ddnsWorkThread(AliDDNS* p) {
 
 bool AliDDNS::run()
 {
+    if (!m_bEnable)
+        return false;
+
     thread t(ddnsWorkThread, this);
     t.detach();
     return true;

@@ -60,6 +60,10 @@ void taskSrv_workThread(taskServer* p) {
 
 void taskServer::run()
 {
+	bool enable = tds->conf->getInt("enableTaskServer", 1) == 1;
+	if (!enable)
+		return;
+
 	thread t(taskSrv_workThread,this);
 	t.detach();
 }
