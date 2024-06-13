@@ -342,8 +342,7 @@ bool TDS_imp::run(string cmdline)
 			printf("tds已经运行，程序将于5秒后自动退出\r\n");
 #endif
 			LOG("tds已经运行，退出程序");
-			//Sleep(5000);
-			std::this_thread::sleep_for(std::chrono::seconds(5));
+			timeopt::sleepMilli(5 * 1000);
 			exit(0);
 		}
 	}

@@ -256,8 +256,7 @@ void ioDev::stop()
 		i->stop();
 	}
 	while (m_bCycleAcqThreadRunning || m_bRecvProcessing || m_bOutputting) {
-		//Sleep(1);
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		timeopt::sleepMilli(1);
 	}
 }
 

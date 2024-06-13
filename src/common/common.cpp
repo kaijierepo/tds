@@ -1068,7 +1068,12 @@ namespace timeopt {
 
 	void sleepMilli(int milliSec)
 	{
+#ifdef _WIN32
+		Sleep(milliSec);
+#else
+		//怀疑该函数在阿里云服务器会造成高cpu占用，win版本暂时改用Sleep
 		std::this_thread::sleep_for(std::chrono::milliseconds(milliSec));
+#endif
 	}
 
 	string toFmt(string time, string fmt)

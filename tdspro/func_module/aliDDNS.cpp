@@ -96,7 +96,7 @@ bool AliDDNS::init()
 
 void ddnsWorkThread(AliDDNS* p) {
     while (1) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        timeopt::sleepMilli(1000);
         aliDDNS.doCycleTask();
     }
 }
