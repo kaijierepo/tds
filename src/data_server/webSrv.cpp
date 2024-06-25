@@ -855,7 +855,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	else if (ev == MG_EV_HTTP_MSG)
 	{
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+#ifdef _WIN32
 		statusSrv.statisRecv(pWs->m_port, hm->message.len);
+#endif
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {

@@ -330,9 +330,9 @@ void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
-
+#ifdef _WIN32
 	statusSrv.statisRecv(ioSession->localPort, iLen);
-
+#endif
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
