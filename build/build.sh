@@ -8,7 +8,7 @@ compilerflags="-g -DMG_TLS=0 -std=c++17 -fpermissive -I ./ -I ./common -I ./func
 
 linkerflags="-l iconv"
 
-g++ -DTDS $compilerflags ../build/unityBuild.cpp -o ../out/tds $linkerflags
+g++ -DTDS $compilerflags ../build/unityBuild.cpp -lpthread -o ../out/tds $linkerflags
 
 
 
