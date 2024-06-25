@@ -870,20 +870,17 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		//save to a de file in the same folder as deList file
 		else if (yyjson_is_obj(yyv_file)) {
 			//Data element files: curves, various custom JSON (such as inspection records), data element related files: images
-			//数据元文件：曲线、各种自定义json(如巡检记录)，数据元相关文件：图片
 			saveDEFile(yyv_file, deListFolderPath, stTime, fileType);
 		}
 	}
 
 	string dataListPath;
-	if(fileType == "")
-		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-	else if (fileType == "jpg" || fileType == "grh")//数据元相关文件 对应数据元列表文件
-		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
-	else if(fileType == "curve")
+	if(fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
 	else if (fileType == "json")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.jsonIdxListName;
+	else
+		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 
 
 	//write de
@@ -922,7 +919,7 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 		char* s = yyjson_mut_val_write(yymv_datalist, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 		if (!DB_FS::writeFile(dataListPath,(unsigned char*) s,len))
 		{
-			printf("[error]save to db file fail,path:%s,data:%s", dataListPath.c_str(), s);
+			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), s);
 		}
 		if (s)
 			free(s);
