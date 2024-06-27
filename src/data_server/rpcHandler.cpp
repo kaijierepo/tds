@@ -2414,6 +2414,53 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		rpcResp.result = res0;
 	}
+	else if (method == "updateDeList")
+	{
+		string tag = params["tag"];
+		string time = params["time"];
+		DB_TIME dbTime;
+		if (dbTime.fromStr(time))
+		{
+			string curveIdxPath = db.getPath_dbFile(tag, dbTime, "curveIdx");
+			string curveIdxPath_gbk = charCodec::utf8_to_gb(curveIdxPath);
+			yyjson_read_err err_r;
+			yyjson_doc* doc = yyjson_read_file(curveIdxPath_gbk.c_str(), 0, 0, &err_r);
+			yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
+			yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
+
+			if (yyjson_mut_is_arr(mut_root))
+			{
+				size_t idx = 0;
+				size_t max = 0;
+				yyjson_mut_val* item;
+				yyjson_mut_arr_foreach(mut_root, idx, max, item) {
+
+					string oneCurveTime = yyjson_mut_get_str(yyjson_mut_obj_get(item, "time"));
+					DB_TIME curveTime;
+					if (curveTime.fromStr(oneCurveTime))
+					{
+						string oneCurvePath = db.getPath_dbFile(tag, curveTime, "curve");
+						string oneCurvePath_gbk= charCodec::utf8_to_gb(oneCurvePath);
+						yyjson_doc* oneCurveDoc = yyjson_read_file(oneCurvePath_gbk.c_str(), 0, 0, &err_r);
+						yyjson_val* oneCurveRoot = yyjson_doc_get_root(oneCurveDoc);
+						if (yyjson_is_obj(oneCurveRoot))
+						{
+							if (yyjson_obj_get(oneCurveRoot, "endTime") && !yyjson_mut_obj_get(item,"endTime"))
+								yyjson_mut_obj_add_val(mut_doc, item, "endTime", yyjson_val_mut_copy(mut_doc, yyjson_obj_get(oneCurveRoot, "endTime")));
+							if (yyjson_obj_get(oneCurveRoot, "startTime") && !yyjson_mut_obj_get(item, "startTime"))
+								yyjson_mut_obj_add_val(mut_doc, item, "startTime", yyjson_val_mut_copy(mut_doc, yyjson_obj_get(oneCurveRoot, "startTime")));
+						}
+						yyjson_doc_free(oneCurveDoc);
+					}
+				}
+			}
+			size_t len = 0;
+			yyjson_write_err err;
+			yyjson_mut_write_file(curveIdxPath_gbk.c_str(),mut_doc, YYJSON_WRITE_PRETTY,0,&err);
+			yyjson_mut_doc_free(mut_doc);
+			yyjson_doc_free(doc);
+		}
+	}
 	else {
 		bHandled = false;
 	}
