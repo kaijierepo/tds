@@ -1926,15 +1926,27 @@ vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
 bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	almServer* pAlmSrv = nullptr;
-	if (session.dbpath == "alarms2")
+
+	if (session.dbpath == "alarmsDevelop")
 	{
-		pAlmSrv = &almSrv2;
+		pAlmSrv = &almSrv_dev;
+	}
+	else if(session.dbpath == "alarms")
+	{
+		pAlmSrv = &almSrv;
+	}
+	else if (session.dbpath == "faultsDevelop")
+	{
+		pAlmSrv = &almSrv_fauDev;
+	}
+	else if (session.dbpath == "faults")
+	{
+		pAlmSrv = &almSrv_fau;
 	}
 	else
 	{
 		pAlmSrv = &almSrv;
 	}
-
 	string& result = rpcResp.result;
 	bool bHandled = true;
 	//** 数据查询系列
@@ -3885,7 +3897,9 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 	if (rootTag != "")
 		querier["rootTag"] = rootTag;
 
-	vector<ALARM_INFO*> vecAlarms = almSrv.tableCurrent.query(querier);
+	almServer* pAlmSrv = &almSrv;
+
+	vector<ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
 	int iAlarmCount = 0;
 	int iWarnCount = 0;
 	for (int i = 0; i < vecAlarms.size(); i++)

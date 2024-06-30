@@ -8,10 +8,12 @@
 #include "tds.h"
 #include "userMng.h"
 #include "logger.h"
-
+#include <fstream>
 
 almServer almSrv;
-almServer almSrv2;
+almServer almSrv_dev;
+almServer almSrv_fau;
+almServer almSrv_fauDev;
 
 #include <chrono>
 #include <sstream>
@@ -200,7 +202,8 @@ void almServer::addAlarm(ALARM_INFO ai)
 			if (pos_s != string::npos){
 				string::size_type pos_e = ai.tag.find("]");
 				if (pos_e != string::npos){
-					sTag = ai.tag.erase(pos_s, pos_e - pos_s + 1);
+					
+					sTag = ai.tag.substr(0, pos_s) + ai.tag.substr(pos_e + 1);
 				}
 			}
 		}
@@ -1088,11 +1091,12 @@ void almTable::init(string file)
 void almTable::add(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	loadFile(getFilePath(ai.time));
+	string  pa = getFilePath(ai.time);
+	loadFile(pa);
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
 	buff[ai.getKey()] = pNew;
-	saveFile(getFilePath(ai.time),buff);
+	saveFile(pa,buff);
 }
 
 
@@ -1105,7 +1109,8 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	string time;
 	if (params["time"] != nullptr)
 		time = params["time"].get<string>();
-	loadFile(getFilePath(time));
+	string  pa=getFilePath(time);
+	loadFile(pa);
 	for(auto& i:buff)
 	{
 		ALARM_INFO& it = *i.second;
@@ -1141,20 +1146,22 @@ bool almTable::query(json params, ALARM_INFO& ai)
 void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	loadFile(getFilePath(ai.time)); //获取报警对应的数据文件
+	string  pa = getFilePath(ai.time);
+	loadFile(pa); //获取报警对应的数据文件
 	ALARM_INFO* p = buff.at(ai.getKey());
 	if(p)
 	{
 		*p = ai;
-		saveFile(getFilePath(ai.time),buff);
+		saveFile(pa,buff);
 	}
 }
 void almTable::remove(ALARM_KEY& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	loadFile(getFilePath(ai.time));
+	string  pa = getFilePath(ai.time);
+	loadFile(pa);
 	buff.erase(ai.getKey());
-	saveFile(getFilePath(ai.time),buff);
+	saveFile(pa,buff);
 }
 
 ALARM_QUERY almTable::parseQuerier(json& querier)

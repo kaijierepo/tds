@@ -243,6 +243,8 @@ public:
 };
 
 
-
 extern almServer almSrv;
-extern almServer almSrv2;
+extern almServer almSrv_dev;
+extern almServer almSrv_fau;
+extern almServer almSrv_fauDev;
+

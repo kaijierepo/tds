@@ -398,13 +398,24 @@ bool TDS_imp::run(string cmdline)
 	prj.getAllVarExpScript();
 	ioSrv.loadConf();
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
+
+	//报警
 	string sCurAlarmFile = "/alarms/current";
 	string sHisAlarmFile = "/alarms/history";
 	almSrv.init(sCurAlarmFile, sHisAlarmFile);
-	sCurAlarmFile = "/alarms2/current";
-	sHisAlarmFile = "/alarms2/history";
-	almSrv2.init(sCurAlarmFile, sHisAlarmFile);
-	almSrv2.m_bTestSrv = true;
+	sCurAlarmFile = "/alarmsDevelop/current";
+	sHisAlarmFile = "/alarmsDevelop/history";
+	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv_dev.m_bTestSrv = true;
+	//故障
+	sCurAlarmFile = "/faults/current";
+	sHisAlarmFile = "/faults/history";
+	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile);
+	sCurAlarmFile = "/faultsDevelop/current";
+	sHisAlarmFile = "/faultsDevelop/history";
+	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv_fauDev.m_bTestSrv = true;
+	
 
 	userMng.init();
 	scriptManager.init();
