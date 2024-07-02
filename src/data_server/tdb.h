@@ -563,7 +563,7 @@ public:
 	void Insert(string strTag, DB_TIME stTime, long long iVal);
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
 	bool Delete(string tag, DB_TIME stTime);
-	bool Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
+	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
 
 	TDB* getChildDB(string dbName);
 	map<string, TDB*> m_childDB;
@@ -605,6 +605,7 @@ public:
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
 	string changeCharForFileName(string s);
 	string getPath_dataFolder(string strTag, DB_TIME date);
+	string getPath_dataFolder_NO_DB(string strTag, DB_TIME date);
 	string getPath_deFile(string strTag, DB_TIME stTime);
 	string getPath_dbRoot();
 	string getName_deFile(string tag, DB_TIME time);

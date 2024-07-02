@@ -141,6 +141,56 @@ namespace DB_STR {
 		return str;
 	}
 
+	string utf8_to_gb(string instr) //utf-8-->ansi
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		//int ret = 0;
+		//size_t inlen = instr.size() + 1;
+		//size_t outlen = 2*inlen;
+
+		//// duanqn: The iconv function in Linux requires non-const char *
+		//// So we need to copy the source string
+		//char* inbuf = (char*)malloc(inlen);
+		//memset(inbuf,0,inlen);
+		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+		//							// so we use another pointer to keep the address
+		//memcpy(inbuf, instr.data(), instr.length());
+
+		//char* outbuf =(char*)malloc(outlen);
+		//memset(outbuf, 0, outlen);
+		//iconv_t cd;
+		//cd = iconv_open("GBK", "UTF-8");
+		//if (cd != (iconv_t)-1) {
+		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+		//	if (ret != 0) {
+		//		printf("iconv failed err: %s\n", strerror(errno));
+		//	}
+
+		//	iconv_close(cd);
+		//}
+		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+
+		//if(outbuf!=nullptr){
+		//	str = outbuf;
+		//	free(outbuf);
+		//}
+		str = instr;
+#endif
+		return str;
+	}
+
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
 	{
 		if (src.empty() || separator.empty())
@@ -357,6 +407,17 @@ namespace DB_TAG {
 		return root + "." + tag;
 	}
 }
+
+
+#include <filesystem>
+/*
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
+#else
+#include <unistd.h>
+#endif*/
 namespace DB_FS {
 	bool readFile(string path, string& data)
 	{
@@ -460,6 +521,26 @@ namespace DB_FS {
 #endif
 
 	}
+
+	//delete dir and files
+	void deleteDirectory(const filesystem::path& dir_path) {
+		if (filesystem::exists(dir_path) && filesystem::is_directory(dir_path)) {
+			for (auto& p : filesystem::recursive_directory_iterator(dir_path)) {
+				if (filesystem::is_directory(p.status())) {
+					filesystem::remove(p);
+				}
+				else if (filesystem::is_regular_file(p.status())) {
+					filesystem::remove(p);
+				}
+				else {
+					std::cerr << "Unexpected file type: " << p << std::endl;
+				}
+			}
+			filesystem::remove(dir_path);
+		}
+	}
+
+
 }
 
 
@@ -684,6 +765,22 @@ string TDB::getPath_dataFolder(string strTag, DB_TIME date)
 	else if (m_timeUnit == NONE) {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = m_path + "/" + strTag;
+		return strURL;
+	}
+}
+// no '/' in bengin ,and in end
+string TDB::getPath_dataFolder_NO_DB(string strTag, DB_TIME date)
+{
+	if (m_timeUnit == BY_DAY) {
+		strTag = changeCharForFileName(strTag);
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		strURL += strTag;
+		return strURL;
+	}
+	else if (m_timeUnit == NONE) {
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL =  strTag;
 		return strURL;
 	}
 }
@@ -2740,30 +2837,30 @@ void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& qu
 
 	DB_TIME dbTime;
 	dbTime.fromStr(time);
-	bool updateRet = false;
+	int updateRet = 0;
 
 	if (tdb) {
 		updateRet =tdb->Update(tag, dbTime, updateVal, updateFile);
 	}
 	else {
-		updateRet =Update(tag, dbTime, updateVal, updateFile);
+		updateRet = Update(tag, dbTime, updateVal, updateFile);
 	}
 
-	if (updateRet) {
+	if (updateRet==0) {
 		rlt = JSON_STR_VAL("ok");
 	}
 	else {
-		err = JSON_STR_VAL("update fail");
+		err = JSON_STR_VAL("update fail,code: "+to_string(updateRet));
 	}
 }
 
-bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile)
+int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFileParam)
 {
 	string dbFile = getPath_dbFile(tag, stTime);
 	string dbData;
 	DB_FS::readFile(dbFile, dbData);
 	if (dbData == "")
-		return false;
+		return -1;
 
 	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
 	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc,nullptr);
@@ -2778,7 +2875,7 @@ bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* upda
 		deList = mut_root;
 	}
 	else {
-		return false;
+		return -2;
 	}
 
 	bool findDE = false;
@@ -2786,45 +2883,123 @@ bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* upda
 	string updateTime = stTime.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de;
-	yyjson_val* yyFileToUpdate = NULL;  string dbFile1;
+	//the file contont and url to be updated
+	//yyjson_val* yyFileToUpdate = NULL;  string dbFile1;
+	struct SToBeUpdatedFile { yyjson_val* yyFileToUpdate = NULL;  string dbFile1; };
+	vector<SToBeUpdatedFile > vecToBeUpdatedFile; string theDir;
+	int nSomeWrong = 0;
+	bool bEmptyAry = false;
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
 		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
 		getDeTime(yyTime, deTime);
 		if (updateTime == deTime) {
+			//replace the "val", update the file urls, refresh the file dir
 			yyjson_mut_val* yyValKey = yyjson_mut_strcpy(mut_doc, "val");
-			yyjson_mut_val* yyToUpdate = yyjson_val_mut_copy(mut_doc, yyVal);
-			yyjson_mut_obj_put(de, yyValKey, yyToUpdate);
+			yyjson_mut_val* yyToUpdateValNew = yyjson_val_mut_copy(mut_doc, yyVal);
+			yyjson_mut_val* yyFileKey = yyjson_mut_strcpy(mut_doc, "file");
+			yyjson_mut_val* yyToUpdateFiNew = yyjson_mut_obj_get(de, "file");
 
-			if (updateFile&& !findDE) { //only once
-				if (yyjson_is_arr(updateFile)) {
-					//just for jpg file,   not supported!
-					break;
+			
+			if (updateFileParam && !findDE) { //only once
+				if (yyjson_is_arr(updateFileParam)) { //jpg or other files 
+					
+					int pos = dbFile.rfind("/");
+					string folder;
+					if (pos > 0) {
+						if (m_timeUnit== BY_DAY) { //db.json path
+							folder = dbFile.substr(0, pos + 1) + stTime.toStampHMS() + "/";
+						}
+						else {
+							folder = dbFile.substr(0, pos + 1) + stTime.toStampFull() + "/";
+						}
+						theDir = folder;
+					}
+					else {
+						nSomeWrong = -10;
+						break;
+					}
+
+					size_t size = yyjson_arr_size(updateFileParam);
+					if (size > 0) {
+						yyjson_mut_arr_clear(yyToUpdateFiNew);
+						size_t idx1, max1;
+						yyjson_val* val1;
+						yyjson_arr_foreach(updateFileParam, idx1, max1, val1) {
+							SToBeUpdatedFile one;
+							one.yyFileToUpdate = yyjson_obj_get(val1, "data");
+							string name = yyjson_get_str(yyjson_obj_get(val1, "name"));
+							string type = yyjson_get_str(yyjson_obj_get(val1, "type"));
+							one.dbFile1 = folder + name;
+							vecToBeUpdatedFile.push_back(one);
+
+							string strURL = getPath_dataFolder_NO_DB(tag, stTime);
+							if (m_timeUnit == BY_DAY) { //db.json path
+								strURL = "/" + strURL + "/" + stTime.toStampHMS() + "/" + name;
+							}
+							else {
+								strURL = "/" + strURL + "/" + stTime.toStampFull() + "/" + name;
+							}
+
+							auto jOne = yyjson_mut_obj(mut_doc);
+							yyjson_mut_obj_add_strcpy(mut_doc, jOne, "name", name.c_str());
+							yyjson_mut_obj_add_strcpy(mut_doc, jOne, "type", type.c_str());
+							string urlAbs = "/db";
+							if (m_name != "")
+								urlAbs += "/" + m_name;
+							urlAbs += strURL;
+							yyjson_mut_val* urlKey = yyjson_mut_strcpy(mut_doc, "url");
+							yyjson_mut_val* urlVal = yyjson_mut_strcpy(mut_doc, urlAbs.c_str());
+							yyjson_mut_obj_put(jOne, urlKey, urlVal);
+
+							yyjson_mut_arr_add_val(yyToUpdateFiNew, jOne);
+						}
+						yyjson_mut_obj_put(de, yyFileKey, yyToUpdateFiNew);
+					}
+					else {
+						bEmptyAry = true;
+						yyjson_mut_arr_clear(yyToUpdateFiNew);
+						yyjson_mut_obj_put(de, yyFileKey, yyToUpdateFiNew);
+					}
 				}
-				else if (yyjson_is_obj(updateFile)) {
-					yyFileToUpdate = yyjson_obj_get(updateFile, "data");
-					int pos =dbFile.rfind("/");
+				else if (yyjson_is_obj(updateFileParam)) {
+					SToBeUpdatedFile one;
+					one.yyFileToUpdate = yyjson_obj_get(updateFileParam, "data");
+					int pos =dbFile.rfind("/"); //the "db.json" url
 					string folder;
 					if (pos > 0) {
 						folder = dbFile.substr(0, pos+1);
 					} else{
+						nSomeWrong = -10;
 						break;
 					}
 					if ((int)dbFile.rfind(m_dbFmt.curveIdxListName)>0) {
-						dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
+						one.dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 					} 
 					else if ((int)dbFile.rfind(m_dbFmt.jsonIdxListName)>0) {
-						dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
+						one.dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
 					}
 					else {
+						nSomeWrong = -11;
 						break;
 					}
+					vecToBeUpdatedFile.push_back(one);
+
+					yyjson_mut_val* yymv_dataFile = yyjson_mut_obj_get(de, "file");
+					yyjson_mut_obj_remove_key(yymv_dataFile, "data");
+					
 				} 
+				else {
+					nSomeWrong = -12;
+				}
 			}
+			yyjson_mut_obj_put(de, yyValKey, yyToUpdateValNew);
 			findDE = true;
 		}
 	}
 	if (!findDE)
-		return false;
+		return -3;
+	else if(nSomeWrong != 0)
+		return nSomeWrong;
 
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
@@ -2832,12 +3007,38 @@ bool TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* upda
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);
 
-	if (yyFileToUpdate && dbFile1!="") {
-		p = yyjson_val_write(yyFileToUpdate, 0, &len);
-		DB_FS::writeFile(dbFile1, p, len);
+	if (vecToBeUpdatedFile.size()>0) {
+		//refresh the entire files dir  or one file ,  update the file urls
+		if (theDir != "") {
+			theDir = DB_STR::utf8_to_gb(theDir);
+			DB_FS::deleteDirectory(theDir);
+			for (auto one : vecToBeUpdatedFile) {
+				string p;
+				if (yyjson_is_str(one.yyFileToUpdate))
+					p = yyjson_get_str(one.yyFileToUpdate);
+				else continue;
+				//p = yyjson_val_write(one.yyFileToUpdate, 0, &len);
+				size_t buffLen = p.length() * 2;
+				unsigned char* out = new unsigned char[buffLen];
+				memset(out, 0, buffLen);
+				int outLen = tdb_base64_decode(p.c_str(), p.length(), out);
+				DB_FS::writeFile(one.dbFile1, out, outLen);
+			}
+		}
+		else {
+			p = yyjson_val_write(vecToBeUpdatedFile[0].yyFileToUpdate, 0, &len);
+			DB_FS::writeFile(vecToBeUpdatedFile[0].dbFile1, p, len);
+		}
 	}
-	return true;
+	else {
+		if (bEmptyAry) {
+			theDir = DB_STR::utf8_to_gb(theDir);
+			DB_FS::deleteDirectory(theDir);
+		}
+	}
+	return 0;
 }
+
 
 void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
@@ -2920,7 +3121,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	string deTime = stTime.toYMD() + " 00:00:00.000";
 	string updateTime = stTime.toStr();
 	size_t idx, max;
-	yyjson_mut_val* de;
+	yyjson_mut_val* de=NULL;
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
 		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
 		getDeTime(yyTime, deTime);
@@ -2932,6 +3133,23 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	if (!findDE)
 		return false;
 
+	//if match, must only match one 
+	//delete the attachments
+	if (de) {
+		yyjson_mut_val* pFile = yyjson_mut_obj_get(de, "file");
+		if (pFile && yyjson_mut_is_arr(pFile)) {
+			string strPath = getPath_dataFolder(tag, stTime);
+			if (m_timeUnit == BY_DAY) { //db.json path
+				strPath =  strPath + "/" + stTime.toStampHMS() + "/";
+			}
+			else {
+				strPath =  strPath + "/" + stTime.toStampFull() + "/";
+			}
+
+			strPath = DB_STR::utf8_to_gb(strPath);
+			DB_FS::deleteDirectory(strPath);
+		}
+	}
 
 	if (max == 1) { //only one de in list and is deleted ,remove file.when left [] in db.json, db.insert will execulte as insert mode,a period will inserted after [,this causes error json file
 		DB_FS::deleteFile(dbFile);
