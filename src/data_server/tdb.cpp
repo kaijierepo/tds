@@ -3004,8 +3004,6 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
 	DB_FS::writeFile(dbFile,p,len);
-	yyjson_mut_doc_free(mut_doc);
-	yyjson_doc_free(doc);
 
 	if (vecToBeUpdatedFile.size()>0) {
 		//refresh the entire files dir  or one file ,  update the file urls
@@ -3017,7 +3015,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 				if (yyjson_is_str(one.yyFileToUpdate))
 					p = yyjson_get_str(one.yyFileToUpdate);
 				else continue;
-				//p = yyjson_val_write(one.yyFileToUpdate, 0, &len);
+
 				size_t buffLen = p.length() * 2;
 				unsigned char* out = new unsigned char[buffLen];
 				memset(out, 0, buffLen);
@@ -3036,6 +3034,9 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 			DB_FS::deleteDirectory(theDir);
 		}
 	}
+
+	yyjson_mut_doc_free(mut_doc);
+	yyjson_doc_free(doc);
 	return 0;
 }
 
