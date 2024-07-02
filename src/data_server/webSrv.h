@@ -7,6 +7,22 @@ dispatch http request to rpcHandler
 #include "tdsSession.h"
 #include "common/mongoose.h"
 
+struct SESSION_STATIS {
+	string remoteIP;
+	int remotePort;
+	string lastMethod;
+	size_t recv;
+	size_t send;
+	size_t reqCount;
+	TIME lastRecvTime;
+
+	SESSION_STATIS() {
+		recv = 0;
+		send = 0;
+		reqCount = 0;
+	}
+};
+
 class WebServer {
 public:
 	bool handle_zlmhook(mg_http_message* hm, mg_connection* c);
@@ -32,6 +48,7 @@ public:
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions; //这些session接受rpc通知
 	std::mutex m_csWsSessions;
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsBridgeSessions;
+	std::map<string, std::shared_ptr<SESSION_STATIS>>  m_httpSessions;
 	std::mutex m_csWsBridgeSessions;
 	int m_restApiID;
 	struct mg_mgr m_mgr;

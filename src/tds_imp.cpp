@@ -585,21 +585,21 @@ COMMON::ThreadPool g_asynCallDealThreadPool(8);
 
 void TDS_imp::callAsyn(string method, json& param, int delay)
 {
-	if (method == "input") {
-		g_asynCallDealThreadPool.enqueue([method, param, delay] {
-			thread_handleRpcCall(method, param.dump(), delay);
-			});
-	}
-	else {
-		thread t(thread_handleRpcCall, method, param.dump(), delay);
-		t.detach();
-	}
+	string sp = param.dump();
+	callAsyn(method, sp, delay);
 }
 
 void TDS_imp::callAsyn(string method, string& param, int delay)
 {
-	json j = json::parse(param);
-	callAsyn(method, j, delay);
+	if (method == "input") {
+		g_asynCallDealThreadPool.enqueue([method, param, delay] {
+			thread_handleRpcCall(method, param, delay);
+			});
+	}
+	else {
+		thread t(thread_handleRpcCall, method, param, delay);
+		t.detach();
+	}
 }
 
 void thread_handleBatchRpcCall(vector<json> calls, int delay) {

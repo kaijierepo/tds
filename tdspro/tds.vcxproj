@@ -269,7 +269,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../out/tds</OutDir>
-    <TargetName>net2com</TargetName>
+    <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='edge -D|x64'">
     <LinkIncremental>true</LinkIncremental>

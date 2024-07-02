@@ -14,6 +14,7 @@
 #include "webSrv.h"
 #include "wsProto.h"
 #include "statusServer.h"
+#include "yyjson.h"
 
 
 ioServer ioSrv;
@@ -163,6 +164,7 @@ ioServer::ioServer()
 	m_tdspOnlineReq = false;
 	m_ioSrvIP = "0.0.0.0";
 	m_bPingThreadStart = false;
+	m_bDisableIOHandle = false;
 }
 ioServer::~ioServer()
 {
@@ -210,6 +212,8 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	{
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
 		p->type = TDS_SESSION_TYPE::iodev;
+		p->localPort = pTcpSess->localPort;
+		p->localIP = pTcpSess->localIP;
 		tcpSrv* pts = (tcpSrv*)pTcpSess->pTcpServer;
 		if (m_mapPort2DevType.find(pts->m_iServerPort) != m_mapPort2DevType.end()) {
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
@@ -1639,6 +1643,9 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 {
 	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr());
 
+	if (m_bDisableIOHandle)
+		return true;
+
 	//协议检测
 	if (tdsSession->ioDevType == "")//应用层协议类型检测
 	{
@@ -1880,102 +1887,100 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			}
 		}
 		else {
-			string sResp;
-			str::fromBuff((char*)pData, iLen,sResp);
+			//string sResp;
+			//str::fromBuff((char*)pData, iLen,sResp);
+
+			////数据包预处理
+			//if (tdsSession->tdspSubType == "") {
+			//	//编解码转换
+			//	if (rpcSrv.isGB2312Pkt(sResp))
+			//	{
+			//		tdsSession->m_charset = "gb2312";
+			//		size_t ipos = 0; string errChar;
+			//		if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
+			//		{
+			//			LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
+			//			return;
+			//		}
+			//		sResp = charCodec::gb_to_utf8(sResp);
+			//	}
+
+			//	//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
+			//	sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
+			//}
+
+			//json jResp = json::parse(sResp);
 
 
-			//数据包预处理
-			if (tdsSession->tdspSubType == "") {
-				//编解码转换
-				if (rpcSrv.isGB2312Pkt(sResp))
-				{
-					tdsSession->m_charset = "gb2312";
-					size_t ipos = 0; string errChar;
-					if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
-					{
-						LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
-						return;
-					}
-					sResp = charCodec::gb_to_utf8(sResp);
-				}
-
-				//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
-				sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
+			yyjson_doc* doc = yyjson_read((const char*)pData, iLen, 0);
+			if (!doc) {
+				LOG("[error]解析tdsp数据包失败,不是正确的json格式");
+				return;
 			}
+			yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 
-			json jResp = json::parse(sResp);
-			string method;
-			if (jResp.contains("method"))
-			{
-				method = jResp["method"].get<string>();
+			yyjson_val* yyv_method = yyjson_obj_get(yyv_resp, "method");
+			string method = yyjson_get_str(yyv_method);
+			if (method == "") {
+				LOG("[error]解析tdsp数据包失败,没有包含method字段");
+				return;
 			}
 			 
-			json params;
-			if (jResp.contains("params"))
-				params = jResp["params"];
-			json id = jResp["id"];
-
-			string charset = "utf8";
-			if (jResp.contains("charset"))
-			{
-				charset = jResp["charset"].get<string>();
-			}
-
+			//string charset = "utf8";
+			//if (jResp.contains("charset"))
+			//{
+			//	charset = jResp["charset"].get<string>();
+			//}
 
 			//设备或者子服务注册
 			if (method == "devRegister") {
-				if (params["devType"] != nullptr) {
-					string devType = params["devType"];
-					if (devType != "") {
-						tdsSession->tdspSubType = devType;
-						if (devType == TDSP_SUB_TYPE::streamPusher) {
-							string rootTag, tag;
-							if (params["rootTag"] != nullptr)
-							{
-								rootTag = params["rootTag"];
-							}
-							if (params["tag"] != nullptr) {
-								tag = params["tag"];
-							}
-							tag = TAG::addRoot(tag, rootTag);
+				yyjson_val* yyv_params = yyjson_obj_get(yyv_resp, "params");
+				yyjson_val* yyv_devType = yyjson_obj_get(yyv_params,"devType");
+				string devType;
+				if(yyv_devType) devType = yyjson_get_str(yyv_devType);
+				if (devType != "") {
+					tdsSession->tdspSubType = devType;
+					if (devType == TDSP_SUB_TYPE::streamPusher) {
+						string rootTag, tag;
+						yyjson_val* yyv_rootTag = yyjson_obj_get(yyv_params, "rootTag");
+						if(yyv_rootTag)
+							rootTag = yyjson_get_str(yyv_rootTag);
+						yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+						if(yyv_tag)
+							tag = yyjson_get_str(yyv_tag);
+						tag = TAG::addRoot(tag, rootTag);
 
-
-							std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
-							//该位号推流已经存在
-							if (pusherSession != nullptr) {
-								LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
-								tdsSession->disconnect();
-							}
-							//没有推流端，获取可能在等待的拉流端
-							else {
-								//以下复制相当于创建了一个流节点
-								tdsSession->streamId = tag;
-								MP* pmp = prj.GetMPByTag(tag, "zh");
-								if (pmp) {
-									vector< std::shared_ptr<TDS_SESSION>>   puller;
-									pmp->m_csPuller.lock();
-									puller = pmp->m_vecPuller;
-									pmp->m_vecPuller.clear();
-									pmp->m_csPuller.unlock();
-
-									size_t pullerCount = 0;
-									tdsSession->m_csPuller.lock();
-									tdsSession->m_vecPuller = puller;
-									pullerCount = tdsSession->m_vecPuller.size();
-									tdsSession->m_csPuller.unlock();
-
-									LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d", tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
-								}
-								else {
-									LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
-								}
-							}
-
-
-
-
-							return;
+						std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
+						//该位号推流已经存在
+						if (pusherSession != nullptr) {
+							LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
+							tdsSession->disconnect();
 						}
+						//没有推流端，获取可能在等待的拉流端
+						else {
+							//以下复制相当于创建了一个流节点
+							tdsSession->streamId = tag;
+							MP* pmp = prj.GetMPByTag(tag, "zh");
+							if (pmp) {
+								vector< std::shared_ptr<TDS_SESSION>>   puller;
+								pmp->m_csPuller.lock();
+								puller = pmp->m_vecPuller;
+								pmp->m_vecPuller.clear();
+								pmp->m_csPuller.unlock();
+
+								size_t pullerCount = 0;
+								tdsSession->m_csPuller.lock();
+								tdsSession->m_vecPuller = puller;
+								pullerCount = tdsSession->m_vecPuller.size();
+								tdsSession->m_csPuller.unlock();
+
+								LOG("[数据流   ]收到推流请求,开始接收。推流端地址:%s,位号:%s,拉流客户端数:%d", tdsSession->getRemoteAddr().c_str(), tag.c_str(), pullerCount);
+							}
+							else {
+								LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
+							}
+						}
+						return;
 					}
 				}
 			}
@@ -1987,25 +1992,26 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			if (tdsSession->m_IoDev == nullptr)
 			{
 				//获得该io地址的设备对象
+				yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
+				if(yyv_ioAddr == nullptr)
+					yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
 				string strIoAddr;
-				if (jResp.contains("addr")) {
-					strIoAddr = jResp["addr"].get<string>();
-				}
+				if(yyv_ioAddr)
+					strIoAddr = yyjson_get_str(yyv_ioAddr);
 				if (strIoAddr == "")
 				{
-					LOG("[error]注册包devRegister中的ioAddr为空，无效");
+					LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
 					return;
 				}
-
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
 
 			if (pIoDev)
 			{
-				pIoDev->m_charset = charset;
-				pIoDev->onRecvPkt(jResp);
+				//pIoDev->m_charset = charset;
+				pIoDev->onRecvPkt(yyv_resp, doc);
 			}
-
+			yyjson_doc_free(doc);
 		}
 	}
 	catch (const std::exception& e)

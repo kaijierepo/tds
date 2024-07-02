@@ -6,6 +6,7 @@
 #include "rpcHandler.h"
 #include "webSrv.h"
 #include "tdb.h"
+#include "yyjson.h"
 
 
 int devIdIdx = 0;
@@ -1226,6 +1227,11 @@ bool ioDev::SendHeartbeatPkt()
 }
 
 bool ioDev::onRecvPkt(json jPkt)
+{
+	return false;
+}
+
+bool ioDev::onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc)
 {
 	return false;
 }

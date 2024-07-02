@@ -896,15 +896,31 @@ void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SE
 			json jSession;
 			jSession["ip"] = p.remoteIP;
 			jSession["port"] = p.remotePort;
-			jSession["language"] = p.language;
+			jSession["protocol"] = "ws";
+			jSession["reqCount"] = "";
 			jSession["lastRecvTime"] = p.sLastRecvTime;
 			jSession["lastMethodCalled"] = p.lastMethodCalled;
 			jSession["lastSendTime"] = p.sLastSendTime;
 			jSession["lastMethodNotified"] = p.lastMethodNotified;
 			jList.push_back(jSession);
 		}
-		rpcResp.result = jList.dump(2);
 		pWs->m_csWsSessions.unlock();
+
+		for (auto i : pWs->m_httpSessions) {
+			std::shared_ptr<SESSION_STATIS> p = i.second;
+			json jSession;
+			jSession["ip"] = p->remoteIP;
+			jSession["port"] = p->remotePort;
+			jSession["protocol"] = "http";
+			jSession["reqCount"] = p->reqCount;
+			jSession["lastRecvTime"] = p->lastRecvTime.toStr();
+			jSession["lastMethodCalled"] = "";
+			jSession["lastSendTime"] = "";
+			jSession["lastMethodNotified"] = "";
+			jList.push_back(jSession);
+		}
+
+		rpcResp.result = jList.dump(2);
 	}
 }
 
@@ -2102,6 +2118,27 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		logSrv.rpc_addLog(params, session);
 		rpcResp.result = "\"ok\"";
 	}
+	//该函数用于分析性能问题，性能调用可能是由于某个rpc接口调用过于频繁，禁用该接口观察性能状态
+	else if (method == "disableMethod") {
+		string method = params["method"];
+		m_mapDisableMethod[method] = method;
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "enableMethod") {
+		string method = params["method"];
+		m_mapDisableMethod.erase(method);
+		if (method == "*")
+			m_mapDisableMethod.clear();
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "enableIOHandle") {
+		ioSrv.m_bDisableIOHandle = false;
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "disableIOHandle") {
+		ioSrv.m_bDisableIOHandle = true;
+		rpcResp.result = "\"ok\"";
+	}
 	else if (method == "queryLog" || method == "getLog")
 	{
 		rpcResp.result = logSrv.rpc_queryLog(params, session);
@@ -2817,6 +2854,11 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 
 		method = jReq["method"].get<string>();
 		statisCall(method);
+
+		if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"method disabled");
+			goto HANDLE_END;
+		}
 
 		if (jReq.contains("dbPath")){
 			pSession->dbpath = jReq["dbPath"].get<string>();

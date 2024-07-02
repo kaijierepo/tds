@@ -221,6 +221,7 @@ public:
 	bool m_bPingThreadStart;
 	string m_ioSrvIP; 
 	string m_ioSrvIPAsClient;//ioSrv作为客户端跟设备通信时绑定的本地ip
+	bool m_bDisableIOHandle;  //用于测试性能，检查是否io处理对性能消耗比较大
 };
 
 extern ioServer ioSrv;

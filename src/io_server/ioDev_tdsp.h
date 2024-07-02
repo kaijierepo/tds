@@ -5,8 +5,6 @@
 #include "json.hpp"
 
 struct TDSP_SYNC_INFO {
-	json jReq;
-	json jResp;
 	string strReq;
 	semaphore respSignal;
 	string strResp;
@@ -25,12 +23,14 @@ public:
 	void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) override;
 	void output(ioChannel* pC, json jVal, json& rlt, json& err, bool sync = true) override;
 	void handleAlarmStatusData(json& alarmStatus);
-	ioChannel* createChan(json& jVal, string addr);
-	bool handle_AcqOrInput(json jResp);
-	bool handleAsynResp(json jResp);
-	bool onRecvPkt(json jPkt);
+	ioChannel* createChan(yyjson_val* jVal, string addr);
+	bool handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc);
+	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
+	//bool onRecvPkt(json jPkt);
+	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc);
 	bool getCurrentVal();
 	bool sendData(unsigned char* pData, size_t iLen) override;
+	bool handleNotify(yyjson_val* jNotify, yyjson_doc* doc);
 	bool handleNotify(json& jNotify);
 	int getRpcId();
 	void call(string method, json params, json sessionParams, json& result,json& error,  bool sync = true) override;

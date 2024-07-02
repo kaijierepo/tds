@@ -157,6 +157,20 @@ string getValTypeByJsonVal(json& jVal) {
 	return "";
 }
 
+string getValTypeByJsonVal(yyjson_val* jVal) {
+	if (yyjson_is_bool(jVal)) {
+		return VAL_TYPE::boolean;
+	}
+	else if (yyjson_is_int(jVal)){
+		return VAL_TYPE::integer;
+	}
+	else if (yyjson_is_real(jVal)){
+		return VAL_TYPE::Float;
+	}
+
+	return "";
+}
+
 //猜测，不一定对
 string getIOTypeByChanAddr(string addr) {
 	if (addr.find("静音") != string::npos) {
@@ -179,7 +193,7 @@ string getIOTypeByChanAddr(string addr) {
 	}
 }
 
-ioChannel* ioDev_tdsp::createChan(json& jVal, string addr) {
+ioChannel* ioDev_tdsp::createChan(yyjson_val* jVal, string addr) {
 	ioChannel* pC = new ioChannel();
 	pC->m_valType = getValTypeByJsonVal(jVal);
 	pC->m_ioType = getIOTypeByChanAddr(addr);
@@ -189,89 +203,101 @@ ioChannel* ioDev_tdsp::createChan(json& jVal, string addr) {
 	return pC;
 }
 
-bool ioDev_tdsp::handle_AcqOrInput(json chanData) {
+bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 	//缓存数据，但不一定是所有通道。后续优化
 	lock_conf_unique();
-	m_jAcq = chanData;
+	//m_jAcq = chanData;
 	unlock_conf_unique();
 	timeopt::now(&m_stLastChanDataTime);
 
-
 	//更新数据到通道。并更新到绑定对象
 	//列表输入
-	if (chanData.is_array())
+	if (yyjson_is_arr(chanData))
 	{
 		lock_conf_unique();
-		for (int i = 0; i < chanData.size(); i++)
+		size_t i, iMax;
+		yyjson_val* yyvDe;
+		yyjson_arr_foreach(chanData,i,iMax, yyvDe)
 		{
-			json jDE = chanData[i];
 			//格式为 [{"ioAddr":"voltage","val":25.1},{"ioAddr":"current","val":35.1}]
 			//通道地址通过ioAddr来指定
-			if (jDE.is_object()) {
-				string addr = jDE["addr"].get<string>();
+			if (yyjson_is_obj(yyvDe)) {
+				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "addr");
+				if (yyv_addr == nullptr)
+					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式，ioAddr语义不合理，应该使用addr语义才准确
+				string addr = yyjson_get_str(yyv_addr);
 				ioChannel* pC = getChanByDevAddr(addr);
-				json jVal = jDE["val"];
+				yyjson_val* yyv_val = yyjson_obj_get(yyvDe, "val");
 
 				if (pC == nullptr)
 				{
-					pC = createChan(jVal, addr);
+					pC = createChan(yyv_val, addr);
 					addChannel(pC);
 				}
 
 				if (pC)
-					pC->input(jVal);
+					pC->input(yyv_val);
 			}
 			//格式为 [1.3,1.2,2,3,true] ,数组序号就是通道号
-			else if (jDE.is_boolean() || jDE.is_number()) {
+			else if (yyjson_is_bool(yyvDe) || yyjson_is_num(yyvDe)) {
 				string addr = str::format("%d", i);
 				ioChannel* pC = getChanByDevAddr(addr);
-				json jVal = jDE;
 				if (pC == nullptr)
 				{
-					pC = createChan(jVal, addr);
+					pC = createChan(yyvDe, addr);
 					addChannel(pC);
 				}
 
 				if (pC)
-					pC->input(jVal);
+					pC->input(yyvDe);
 			}
 		}
 		unlock_conf_unique();
 	}
 	//树形输入.设备本身也通过 树状位号模式来管理通道，直接转发到数据服务
 	//子服务首次连接发送 acq命令，子服务 首次返回树形全部实时值
-	else if (chanData.contains("name")) {
-		syncDataToBindTag();
-	}
-	//通道key,val模式输入
-	else {
-		lock_conf_unique();
-		for (auto& [chanAddr, val] : chanData.items()) {
-			
-			ioChannel* pC = getChanByDevAddr(chanAddr);
-
-			if (pC == nullptr)
-			{
-				pC = createChan(val, chanAddr);
-				addChannel(pC);
-			}
-
-			if (pC)
-				pC->input(val);
+	else if (yyjson_is_obj(chanData)) {
+		yyjson_val* yyv_name = yyjson_obj_get(chanData, "name");
+		if (yyv_name != nullptr) {
+			syncDataToBindTag();
 		}
-		unlock_conf_unique();
+		//通道key,val模式输入
+		else {
+			lock_conf_unique();
+			size_t i,iMax;
+			yyjson_val* key;
+			yyjson_val* val;
+			yyjson_obj_foreach(chanData,i,iMax,key,val){
+				string chanAddr = yyjson_get_str(key);
+				ioChannel* pC = getChanByDevAddr(chanAddr);
+
+				if (pC == nullptr)
+				{
+					pC = createChan(val, chanAddr);
+					addChannel(pC);
+				}
+
+				if (pC)
+					pC->input(val);
+			}
+			unlock_conf_unique();
+		}
 	}
+	
 	return true;
 }
 
-bool ioDev_tdsp::handleAsynResp(json jResp)
+bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 {
-	json rlt = jResp["result"];
-	json err = jResp["error"];
-	string method = jResp["method"].get<string>();
+	yyjson_val* rlt = yyjson_obj_get(jResp,"result");
+	yyjson_val* err = yyjson_obj_get(jResp,"error");
+	yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
+	string method = yyjson_get_str(yyv_method);
 	if (err != nullptr)
 	{
-		LOG("[warn]TDSP设备,返回error\r\n" + jResp.dump());
+		size_t len = 0;
+		string s = yyjson_val_write(jResp, YYJSON_WRITE_NOFLAG, &len);
+		LOG("[warn]TDSP设备,返回error\r\n" + s);
 		return false;
 	}
 	
@@ -283,43 +309,43 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 	bool handled = true;
 	if (method == "acq")
 	{
-		handle_AcqOrInput(rlt);
+		handle_AcqOrInput(rlt,doc);
 	}
 	else if (method == "getAlarmStatus")
 	{
-		handleAlarmStatusData(rlt);
+		//handleAlarmStatusData(rlt,doc);
 	}
 	else if (method == "getDevConf")
 	{
 		LOG("[warn]收到异步getDevConf");
 	}
-	else if (method == "getDevInfo") {
-		string sOld = m_jInfo.dump();
-		string sNew = rlt.dump();
-		lock_conf_unique();
-		m_jInfo = rlt;
-		saveInfoBuff();
-		unlock_conf_unique();
+	//else if (method == "getDevInfo") {
+	//	string sOld = m_jInfo.dump();
+	//	string sNew = rlt.dump();
+	//	lock_conf_unique();
+	//	m_jInfo = rlt;
+	//	saveInfoBuff();
+	//	unlock_conf_unique();
 
-		if ( (sOld != sNew) && m_jInfo.contains("deviceType")) {
-			string devType = m_jInfo["deviceType"];
-			json tplData = ioSrv.getDevTemplate(devType);
-			if (tplData != nullptr) {
-				m_strChanTemplate = tplData["name"];
-				json conf;
-				conf["channels"] = tplData["channels"];
-				loadConf(conf);
-				json jDev;
-				DEV_QUERIER query;
-				toJson(jDev, query);
-				rpcSrv.notify("devModified",jDev);
-			}
-		}
+	//	if ( (sOld != sNew) && m_jInfo.contains("deviceType")) {
+	//		string devType = m_jInfo["deviceType"];
+	//		json tplData = ioSrv.getDevTemplate(devType);
+	//		if (tplData != nullptr) {
+	//			m_strChanTemplate = tplData["name"];
+	//			json conf;
+	//			conf["channels"] = tplData["channels"];
+	//			loadConf(conf);
+	//			json jDev;
+	//			DEV_QUERIER query;
+	//			toJson(jDev, query);
+	//			rpcSrv.notify("devModified",jDev);
+	//		}
+	//	}
 
-		if (m_strTagBind == "" && m_jInfo.contains("tagBind")) {
-			m_strTagBind = m_jInfo["tagBind"];
-		}
-	}
+	//	if (m_strTagBind == "" && m_jInfo.contains("tagBind")) {
+	//		m_strTagBind = m_jInfo["tagBind"];
+	//	}
+	//}
 	//else if (method == "getObj") {
 	//	if (rlt.contains("parentTag")) { //响应当中包含了配置
 	//		//获取参数
@@ -372,49 +398,53 @@ bool ioDev_tdsp::handleAsynResp(json jResp)
 	return handled;
 }
 
-bool ioDev_tdsp::onRecvPkt(json jResp)
-{
+bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 	setOnline();
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
 	timeopt::now(&m_stLastActiveTime);
 	try {
 		if (ioSrv.m_tdspSingleTransaction) {
-			string method = jResp["method"];
+			yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
+			string method = yyjson_get_str(yyv_method);
 			if (method == "input") {
-				handleNotify(jResp);
+				handleNotify(jResp,doc);
 			}
-			else {
+			else{
+				//m_tdspSingleTransaction模式时m_mapSyncRPCInfo只有一个缓存会话
 				auto iter = m_mapSyncRPCInfo.begin();
 				if (iter != m_mapSyncRPCInfo.end())
 				{
 					TDSP_SYNC_INFO* p = iter->second;
-					p->jResp = jResp;
+					size_t len;
+					p->strResp = yyjson_val_write(jResp,0,&len);
 					p->respSignal.notify();
 				}
 				else
 				{
-					handleAsynResp(jResp);
+					handleAsynResp(jResp,doc);
 				}
 			}
 		}
 		else {
-
-			if (jResp["id"] == nullptr) //主动上送命令
+			yyjson_val* yyv_id = yyjson_obj_get(jResp, "id");
+			if (yyv_id == nullptr) //主动上送命令
 			{
-				handleNotify(jResp);
+				handleNotify(jResp,doc);
 			}
 			else
 			{
-				int id = jResp["id"].get<int>();
+				//有多个缓存会话，用id来区分
+				int id = yyjson_get_int(yyv_id);
 				if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
 				{
 					TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
-					p->jResp = jResp;
+					size_t len;
+					p->strResp = yyjson_val_write(jResp, 0, &len);
 					p->respSignal.notify();
 				}
 				else
 				{
-					handleAsynResp(jResp);
+					handleAsynResp(jResp,doc);
 				}
 			}
 		}
@@ -423,11 +453,12 @@ bool ioDev_tdsp::onRecvPkt(json jResp)
 	{
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
-		string errPkt = jResp.dump();
+		size_t len;
+		string errPkt = yyjson_val_write(jResp,0,&len);
 		LOG("[warn]" + log + ",Pkt: " + errPkt);
 	}
 	return true;
-}				
+}
 
 bool ioDev_tdsp::getCurrentVal()
 {
@@ -440,40 +471,47 @@ bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 	return ioDev::sendData(pData, iLen);
 }
 
-bool ioDev_tdsp::handleNotify(json& jNotify)
+
+bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 {
-	string method = jNotify["method"].get<string>();
-	json jParams = jNotify["params"];
+	yyjson_val* yyv_method = yyjson_obj_get(jNotify, "method");
+	string method = yyjson_get_str(yyv_method);
+	yyjson_val* yyv_params = yyjson_obj_get(jNotify, "params");
 	
 	if (method == "devRegister")
 	{
-		if (jParams != nullptr)
+		if (yyv_params != nullptr)
 		{
-			json jInfo = jParams["info"];
-			if (jInfo["softVer"] != nullptr)
+			yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
+			yyjson_val* yyv_softVer = yyjson_obj_get(yyv_info, "softVer");
+			if (yyv_softVer != nullptr)
 			{
-				m_softVer = jInfo["softVer"].get<string>();
+				m_softVer = yyjson_get_str(yyv_softVer);
 			}
-			if (jInfo["hardVer"] != nullptr)
+			yyjson_val* yyv_hardVer = yyjson_obj_get(yyv_info, "hardVer"); 
+			if (yyv_hardVer != nullptr)
 			{
-				m_hardVer = jInfo["softVer"].get<string>();
+				m_hardVer = yyjson_get_str(yyv_hardVer);
 			}
-			if (jInfo["mfrDate"] != nullptr)
+			yyjson_val* yyv_mfrDate = yyjson_obj_get(yyv_info, "mfrDate");
+			if (yyv_mfrDate != nullptr)
 			{
-				m_mfrDate = jInfo["mfrDate"].get<string>();
+				m_mfrDate = yyjson_get_str(yyv_mfrDate);
 			}
-			if (jInfo["IMEI"] != nullptr)
+			yyjson_val* yyv_imei = yyjson_obj_get(yyv_info, "IMEI");
+			if (yyv_imei != nullptr)
 			{
-				m_IMEI = jInfo["IMEI"].get<string>();
+				m_IMEI = yyjson_get_str(yyv_imei);
 			}
-
-			if (jParams["httpPort"] != nullptr)
+			yyjson_val* yyv_httpPort = yyjson_obj_get(yyv_params, "httpPort");
+			if (yyv_httpPort != nullptr)
 			{
-				m_childTdsHttpPort = jParams["httpPort"].get<int>();
+				m_childTdsHttpPort = yyjson_get_int(yyv_httpPort);
 			}
-			if (jParams["httpsPort"] != nullptr)
+			yyjson_val* yyv_httpsPort = yyjson_obj_get(yyv_params, "httpsPort");
+			if (yyv_httpsPort != nullptr)
 			{
-				m_childTdsHttpsPort = jParams["httpsPort"].get<int>();
+				m_childTdsHttpsPort = yyjson_get_int(yyv_httpsPort);
 			}
 		}
 
@@ -481,15 +519,18 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	}
 	else if (method == "input" || method == "acq")
 	{
-		handle_AcqOrInput(jParams);
+		handle_AcqOrInput(yyv_params,doc);
 	}
 	else if (method == "notifyAlarmStatus")
 	{
-		handleAlarmStatusData(jParams);
+		//handleAlarmStatusData(jParams);
 	}
 	else if (method == "onDataUpdate" || method=="statusUpdate" || method=="onStatusUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			//位号增加上该子服务绑定的位号。
+			size_t len;
+			string sParams = yyjson_val_write(yyv_params, 0, &len);
+			json jParams = json::parse(sParams);
 			if (jParams.is_array()) {
 				for (auto& de : jParams) {
 					de["rootTag"] = m_strTagBind;
@@ -499,7 +540,6 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 				jParams["rootTag"] = m_strTagBind;
 			}
 
-
 			RPC_RESP resp;
 			RPC_SESSION session;
 			rpcSrv.rpc_input(jParams, resp, session);
@@ -507,7 +547,7 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 	}
 	else if (method == "onUpdateAlarmStatus")
 	{
-		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+		/*if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			string sTag = jParams["tag"];
 			sTag = TAG::addRoot(sTag, m_strTagBind);
 			jParams["tag"] = sTag;
@@ -542,11 +582,11 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 				pAlmSrv = &almSrv;
 			}
 			pAlmSrv->rpc_updateStatus(jParams, resp);
-		}
+		}*/
 	}
 	else if (method == "alarmAdd")
 	{
-		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+		/*if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			string sTag = jParams["tag"];
 			string::size_type pos_s = sTag.find("(");
 			if (pos_s != string::npos)
@@ -592,25 +632,27 @@ bool ioDev_tdsp::handleNotify(json& jNotify)
 			}
 
 			pAlmSrv->rpc_addAlarm(jParams, resp, false);
-		}
+		}*/
 	}
 	else if (method == "objOnline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-			if (jParams.contains("tag") && m_strTagBind!= "") {
-				string tagChild = jParams["tag"];
+			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+			string tagChild = yyjson_get_str(yyv_tag);
+			if (tagChild != "" && m_strTagBind != "") {
 				string tag = m_strTagBind + "." + tagChild;
-				jParams["tag"] = tag;
-				tds->callAsyn("objOnline", jParams);
+				string sParams = str::format("{\"tag\":\"%s\"}", tag);
+				tds->callAsyn("objOnline", sParams);
 			}
 		}
 	}
 	else if (method == "objOffline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-			if (jParams.contains("tag") && m_strTagBind != "") {
-				string tagChild = jParams["tag"];
+			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+			string tagChild = yyjson_get_str(yyv_tag);
+			if (tagChild != "" && m_strTagBind != "") {
 				string tag = m_strTagBind + "." + tagChild;
-				jParams["tag"] = tag;
-				tds->callAsyn("objOffline", jParams);
+				string sParams = str::format("{\"tag\":\"%s\"}", tag);
+				tds->callAsyn("objOffline", sParams);
 			}
 		}
 	}
@@ -729,8 +771,9 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		bool bGetResp = tsi->respSignal.wait_for(tds->conf->iotimeoutTdsp);  
 
 		//删除同步信息
+		string sResp;
 		m_csSyncRPCInfo.lock();
-		json resp = tsi->jResp;
+		sResp = tsi->strResp;
 		delete tsi;
 		m_mapSyncRPCInfo.erase(iId);
 		m_csSyncRPCInfo.unlock();
@@ -739,8 +782,9 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		doRespTimeStatis(timeCost);
 
 		//处理响应
-		if (bGetResp) 
+		if (bGetResp && sResp != "")
 		{
+			json resp = json::parse(sResp);
 			//LOG("[io设备同步响应]\n" + resp.dump());
 			if (resp["result"] != nullptr)
 			{
@@ -758,7 +802,10 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 				//手工发起的请求也更新数据
 				else if (method == "acq" || method == "getAlarmStatus")
 				{
-					handleAsynResp(resp);
+					yyjson_doc* resp_doc = yyjson_read(sResp.c_str(), sResp.length(),0);
+					yyjson_val* yyv_resp = yyjson_doc_get_root(resp_doc);
+					handleAsynResp(yyv_resp,resp_doc);
+					yyjson_doc_free(resp_doc);
 				}
 				else if (method == "setDevConf") //设置成功，更新到当前配置信息缓存
 				{
@@ -773,39 +820,49 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 					jParams["ioAddr"] = getIOAddrStr();
 					rpcSrv.notify("devConfBuffUpdated", jParams);
 				}
-				else if (method == "getDevInfo")
-				{
-					lock_conf_unique();
-					m_jInfo = result;
-					saveInfoBuff();
-					unlock_conf_unique();
-				}
+				//else if (method == "getDevInfo")
+				//{
+				//	lock_conf_unique();
+				//	m_jInfo = result;
+				//	saveInfoBuff();
+				//	unlock_conf_unique();
+				//}
 				else if (method == "output")
 				{
-					if (params.is_object())
+					string sParams = params.dump();
+					yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+					yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+					if (yyjson_is_obj(yyv_params))
 					{
-						for (auto& i : params.items())
+						size_t i, imax;
+						yyjson_val* key, * val;
+						yyjson_obj_foreach(yyv_params,i,imax,key,val)
 						{
-							string ioAddr = i.key();
+							string ioAddr = yyjson_get_str(key);
 							ioChannel* pC = getChanByDevAddr(ioAddr);
 							if (pC)
 							{
-								pC->input(i.value());
+								pC->input(val);
 							}
 						}
 					}
 					else if (params.is_array())
 					{
-						for (auto& i : params)
+						size_t i, imax;
+						yyjson_val* de;
+						yyjson_arr_foreach(yyv_params, i, imax,de)
 						{
-							string ioAddr = i["ioAddr"].get<string>();
+							yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_params, "ioAddr");
+							string ioAddr = yyjson_get_str(yyv_ioAddr);
 							ioChannel* pC = getChanByDevAddr(ioAddr);
 							if (pC)
 							{
-								pC->input(i["val"]);
+								yyjson_val* yyv_val = yyjson_obj_get(yyv_params, "val");
+								pC->input(yyv_val);
 							}
 						}
 					}
+					yyjson_doc_free(doc);
 				}
 			}
 			else if (resp["error"] != nullptr)

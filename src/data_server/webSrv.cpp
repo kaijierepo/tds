@@ -858,6 +858,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 #ifdef _WIN32
 		statusSrv.statisRecv(pWs->m_port, hm->message.len);
 #endif
+
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
@@ -977,8 +978,24 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
 
-			if (!pSession->isDebug)
+			//
+			if (!pSession->isDebug) {
 				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
+				std::map<string, std::shared_ptr<SESSION_STATIS>>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
+				std::shared_ptr<SESSION_STATIS> pSs;
+				if (iter == pWs->m_httpSessions.end()) {
+					pSs = std::shared_ptr<SESSION_STATIS >(new SESSION_STATIS);
+					pWs->m_httpSessions[pSession->remoteIP] = pSs;
+					pSs->remoteIP = pSession->remoteIP;
+					pSs->remotePort = pSession->remotePort;
+				}
+				else {
+					pSs = iter->second;
+				}
+				pSs->reqCount++;
+				pSs->lastRecvTime = timeopt::now();
+			}
+				
 
 			struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
 			data->message = mg_strdup(hm->message);               // Pass message
@@ -1089,6 +1106,10 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			mg_http_reply(c, 200, resHeader.c_str(), p);
 			delete p;
 		}
+
+#ifdef _WIN32
+		statusSrv.statisSend(pWs->m_port, data->len);
+#endif
 	}
 	else if (ev == MG_EV_WS_MSG) {
 		//websocket通道一般不用于请求，仅用于通知。
@@ -1102,6 +1123,10 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		data->message = mg_strdup(wm->data);               // Pass message
 		data->conn_id = c->id;
 		data->mgr = c->mgr;
+
+#ifdef _WIN32
+		statusSrv.statisRecv(pWs->m_port, wm->data.len);
+#endif
 
 		thread t(thread_handleDataOverWebsocket, data, p);
 		t.detach();
@@ -1226,6 +1251,10 @@ void WebServer::sendToAllWs(string& s)
 	{
 		if (i->second->type != TDS_SESSION_TYPE::tdsClient)
 			continue;
+
+#ifdef _WIN32
+		statusSrv.statisSend(i->second->localPort, s.length());
+#endif
 
 		WebServer::sendToWebSock((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
 	}

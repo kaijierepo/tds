@@ -2,6 +2,7 @@
 #include "tdsSession.h"
 #include "udpSrv.h"
 #include "json.hpp"
+#include "yyjson.h"
 #include "proto_common.h"
 #include <shared_mutex>
 
@@ -278,6 +279,7 @@ public:
 	//通信接收
 	virtual bool SendHeartbeatPkt();
 	virtual bool onRecvPkt(json jPkt);
+	virtual bool onRecvPkt(yyjson_val* jPkt,yyjson_doc* doc);
 	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
 	virtual bool onRecvData(unsigned char* pData, size_t iLen);//接受数据异步处理函数
 	virtual bool onRecvData(TIME dataTime, unsigned char* pData, size_t iLen);
@@ -397,6 +399,7 @@ public:
 	uint32_t m_dwCommLockOwnerThread;
 	uint32_t m_dwLockThread;
 
+	yyjson_doc* m_pDocBuff;
 	json m_jAlarmStatus;
 	json m_jAcq;
 	json m_jConf;

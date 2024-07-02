@@ -1,5 +1,6 @@
 #include "tcpSrv.h"
 #include "common.h"
+#include "statusServer.h"
 
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
@@ -32,6 +33,8 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		pts->remoteIP = str::format("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
 		pts->sock = (int) c->fd;  
 		pts->remotePort = ntohs(c->rem.port); 
+		pts->localIP = pSrv->m_strServerIP;
+		pts->localPort = pSrv->m_iServerPort;
 		pSrv->m_csClientVectorLock.lock();
 		pSrv->m_mapTcpSessions[pts] = pts;
 		pSrv->m_csClientVectorLock.unlock();
@@ -154,6 +157,9 @@ bool tcpSession::send(char* pData, size_t iLen)
 	else
 		iSendFailCount += iLen;
 
+#ifdef _WIN32
+	statusSrv.statisSend(((tcpSrv*)pTcpServer)->m_iServerPort, iLen);
+#endif
 
 	return iRet > 0;
 }

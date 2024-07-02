@@ -22,6 +22,8 @@ struct tcpSession
 	int sock;
 	string remoteIP;
 	int remotePort;
+	string localIP;
+	int localPort;
 	bool bIsTransmit;
 	size_t iSendSucCount;
 	size_t iSendFailCount;
@@ -48,6 +50,7 @@ struct tcpSession
 		iKeepAliveTimeout = 0;
 		bEnableActivityCheck = true;
 		remotePort = 0;
+		localPort = 0;
 		bridgeSock = 0;
 		pData1 = nullptr;
 	}

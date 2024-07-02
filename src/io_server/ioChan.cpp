@@ -205,10 +205,9 @@ bool ioChannel::match(string channelNo) {
 	return false;
 }
 
-void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
+void ioChannel::input(yyjson_val* jVal, TIME* dataTime, bool bPic) {
 	string tagBind;
 	input(jVal, tagBind, dataTime, bPic);
-
 
 	//更新绑定位号值
 	json param;
@@ -218,6 +217,17 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	tds->callAsyn("input", param);
 }
 
+void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
+	string tagBind;
+	input(jVal, tagBind, dataTime, bPic);
+
+	//更新绑定位号值
+	json param;
+	param["tag"] = tagBind;
+	param["val"] = m_curVal;
+	param["time"] = timeopt::st2str(m_stLastUpdateTime);
+	tds->callAsyn("input", param);
+}
 
 //网关，设备，通道  三级设备可以进行三级绑定，并将3级绑定的位号组合成1个最终绑定的位号
 string ioChannel::getTagBind() {
@@ -251,6 +261,69 @@ void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 	}
 	else {
 		m_curVal = m_curOrgVal;
+	}
+
+	//如果有数据流订阅者，直接推送
+	m_csStreamPuller.lock();
+	if (m_vecStreamPuller.size() > 0) {
+		json jDe;
+		jDe["val"] = m_curVal;
+		string s = jDe.dump() + "\n\n"; //数据流都要加，便于分帧
+
+		for (size_t i = 0; i < m_vecStreamPuller.size(); i++) {
+			shared_ptr<TDS_SESSION> p = m_vecStreamPuller[i];
+			size_t iSend = p->send((unsigned char*)s.data(), s.length());
+			if (iSend <= 0) {
+				m_vecStreamPuller.erase(m_vecStreamPuller.begin() + i);
+				i--;
+				continue;
+			}
+		}
+	}
+	m_csStreamPuller.unlock();
+
+	//是否启动降采样，如果启用了降采样
+	//降采样功能放在ioChan而不放在mp中的设计原因
+	//1.降采样属于采集功能范畴，io设备管理就是采集的配置
+	//2.降采样应该尽可能早的处理，减少性能消耗
+	//3.一般在配置设备，了解设备参数属性的时候，才知道该设备是否高频监控点，是否需要降采样。
+	//  而在监控点配置时，并不知道什么设备的什么通道会来绑定，因此并不知道是否需要配置降采样
+	if (m_bDownSample) {
+		long long pass = timeopt::CalcTimePassMilliSecond(m_lastDownSampleTime);
+		if (pass < m_iDownSampleInterval)
+			return;
+		m_lastDownSampleTime = timeopt::now();
+	}
+
+	tagBind = getTagBind();
+}
+
+void ioChannel::input(yyjson_val* jVal, string& tagBind, TIME* dataTime, bool bPic)
+{
+	//更新通道值. 经过一次kb转换，推送的数据流应当是经过转换后的值
+	TIME t;
+	if (dataTime == NULL)
+	{
+		timeopt::now(&t);
+		dataTime = &t;
+	}
+	m_stLastUpdateTime = *dataTime;
+	if (yyjson_is_real(jVal)) {
+		double valOrg = yyjson_get_real(jVal);
+		m_curOrgVal = valOrg;
+		double val = valOrg * m_k + m_b;
+		m_curVal = val;
+	}
+	else if (yyjson_is_int(jVal)){
+		int valOrg = yyjson_get_int(jVal);
+		m_curOrgVal = valOrg;
+		int val = valOrg * m_k + m_b;
+		m_curVal = val;
+	}
+	else if (yyjson_is_bool(jVal)) {
+		bool valOrg = yyjson_get_bool(jVal);
+		m_curOrgVal = valOrg;
+		m_curVal = valOrg;
 	}
 
 	//如果有数据流订阅者，直接推送

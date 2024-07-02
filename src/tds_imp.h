@@ -47,7 +47,7 @@ public:
 	// tds 数据服务功能
 	 void call(string method, json& param, json& err, json& rlt ,RPC_SESSION session) override;
 	 bool call(string method, string param, RPC_RESP& resp) override;
-	 void callAsyn(string method, json& param, int delay) override;
+	 void callAsyn(string method, json& param, int delay = 0) override;
 	 void callAsyn(string method, string& param,int delay = 0) override;
 	 void batchCallAsyn(vector<json> calls, int delay) override;
 	 void setRpcHandler(fp_rpcHandler handler);

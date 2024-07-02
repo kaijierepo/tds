@@ -144,5 +144,7 @@ public:
 	std::mutex m_csCallStatis;
 	std::map<string, int> m_mapCallStatis;
 	void statisCall(string method);
+
+	std::map<string, string> m_mapDisableMethod;
 };
 extern rpcHandler rpcSrv;
