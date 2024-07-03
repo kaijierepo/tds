@@ -533,36 +533,56 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 	json users = json::array();
 	if (params.is_object())
 		users.push_back(params);
-	else
+	else if(params.is_array())
 		users = params;
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt,"params should be a userInfo object or a userInfo array");
+		return true;
+	}
 
-	std::lock_guard<std::shared_mutex> guard(m_csUserConf);
-	for (int i = 0; i < users.size(); i++)
+	//以下代码在单独的作用域内执行，saveConf有锁操作，避免锁2次
 	{
-		json& oneUser = users[i];
-
-		//组织结构的用户位号转为系统位号
-		//浙江省.杭州市.拱墅区
-		//所属杭州市的管理员用户配置一个拱墅区的用户时，指定的用户组织结构为用户位号  “拱墅区”
-		//管理员用户组织结构为 浙江省.杭州市
-		//因此指定用户的组织结构的系统位号为   “浙江省.杭州市.拱墅区”
-		string org = oneUser["org"].get<string>();
-		org = TAG::addRoot(org, session.org);
-		oneUser["org"] = org;
-
-		string name = oneUser["name"].get<string>();
-		//已存在则修改
-		if (m_mapUsers.find(name) != m_mapUsers.end())
+		std::lock_guard<std::shared_mutex> guard(m_csUserConf);
+		for (int i = 0; i < users.size(); i++)
 		{
-			json& userTmp = m_mapUsers[name];
-			userTmp = oneUser;
-		}
-		//不存在则新增
-		else
-		{
-			m_mapUsers[name] = oneUser;
+			json& oneUser = users[i];
+
+			//组织结构的用户位号转为系统位号
+			//浙江省.杭州市.拱墅区
+			//所属杭州市的管理员用户配置一个拱墅区的用户时，指定的用户组织结构为用户位号  “拱墅区”
+			//管理员用户组织结构为 浙江省.杭州市
+			//因此指定用户的组织结构的系统位号为   “浙江省.杭州市.拱墅区”
+			json jOrg = oneUser["org"];
+			if (jOrg.is_null()) {
+				resp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "org must be set to a user");
+				return true;
+			}
+			string org = jOrg.get<string>();
+			org = TAG::addRoot(org, session.org);
+			oneUser["org"] = org;
+
+			json jName = oneUser["name"];
+			if (jName.is_null()) {
+				resp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "name must be set to a user");
+				return true;
+			}
+			string name = jName.get<string>();
+
+
+			//已存在则修改
+			if (m_mapUsers.find(name) != m_mapUsers.end())
+			{
+				json& userTmp = m_mapUsers[name];
+				userTmp = oneUser;
+			}
+			//不存在则新增
+			else
+			{
+				m_mapUsers[name] = oneUser;
+			}
 		}
 	}
+
 
 	saveConf();
 
