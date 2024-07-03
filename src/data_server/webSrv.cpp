@@ -857,6 +857,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
 #ifdef _WIN32
 		statusSrv.statisRecv(pWs->m_port, hm->message.len);
+		statusSrv.m_srvStatus.webReqCount++;
 #endif
 
 		struct mg_str* s = mg_http_get_header(hm, "Connection");
@@ -1126,6 +1127,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 
 #ifdef _WIN32
 		statusSrv.statisRecv(pWs->m_port, wm->data.len);
+		statusSrv.m_srvStatus.webReqCount++;
 #endif
 
 		thread t(thread_handleDataOverWebsocket, data, p);

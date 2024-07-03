@@ -1920,11 +1920,11 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 
 			yyjson_val* yyv_method = yyjson_obj_get(yyv_resp, "method");
-			string method = yyjson_get_str(yyv_method);
-			if (method == "") {
+			if (yyv_method == nullptr) {
 				LOG("[error]解析tdsp数据包失败,没有包含method字段");
 				return;
 			}
+			string method = yyjson_get_str(yyv_method);
 			 
 			//string charset = "utf8";
 			//if (jResp.contains("charset"))
@@ -1937,7 +1937,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				yyjson_val* yyv_params = yyjson_obj_get(yyv_resp, "params");
 				yyjson_val* yyv_devType = yyjson_obj_get(yyv_params,"devType");
 				string devType;
-				if(yyv_devType) devType = yyjson_get_str(yyv_devType);
+				if(yyv_devType) 
+					devType = yyjson_get_str(yyv_devType);
 				if (devType != "") {
 					tdsSession->tdspSubType = devType;
 					if (devType == TDSP_SUB_TYPE::streamPusher) {

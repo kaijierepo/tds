@@ -225,18 +225,20 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "addr");
 				if (yyv_addr == nullptr)
 					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式，ioAddr语义不合理，应该使用addr语义才准确
-				string addr = yyjson_get_str(yyv_addr);
-				ioChannel* pC = getChanByDevAddr(addr);
-				yyjson_val* yyv_val = yyjson_obj_get(yyvDe, "val");
+				if (yyv_addr) {
+					string addr = yyjson_get_str(yyv_addr);
+					ioChannel* pC = getChanByDevAddr(addr);
+					yyjson_val* yyv_val = yyjson_obj_get(yyvDe, "val");
 
-				if (pC == nullptr)
-				{
-					pC = createChan(yyv_val, addr);
-					addChannel(pC);
+					if (pC == nullptr)
+					{
+						pC = createChan(yyv_val, addr);
+						addChannel(pC);
+					}
+
+					if (pC)
+						pC->input(yyv_val);
 				}
-
-				if (pC)
-					pC->input(yyv_val);
 			}
 			//格式为 [1.3,1.2,2,3,true] ,数组序号就是通道号
 			else if (yyjson_is_bool(yyvDe) || yyjson_is_num(yyvDe)) {
@@ -292,7 +294,9 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	yyjson_val* rlt = yyjson_obj_get(jResp,"result");
 	yyjson_val* err = yyjson_obj_get(jResp,"error");
 	yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
-	string method = yyjson_get_str(yyv_method);
+	string method;
+	if(yyv_method)
+		method = yyjson_get_str(yyv_method);
 	if (err != nullptr)
 	{
 		size_t len = 0;
@@ -405,7 +409,9 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 	try {
 		if (ioSrv.m_tdspSingleTransaction) {
 			yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
-			string method = yyjson_get_str(yyv_method);
+			string method;
+			if(yyv_method)
+				method = yyjson_get_str(yyv_method);
 			if (method == "input") {
 				handleNotify(jResp,doc);
 			}
@@ -475,7 +481,8 @@ bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 {
 	yyjson_val* yyv_method = yyjson_obj_get(jNotify, "method");
-	string method = yyjson_get_str(yyv_method);
+	string method;
+	if(yyv_method)yyjson_get_str(yyv_method);
 	yyjson_val* yyv_params = yyjson_obj_get(jNotify, "params");
 	
 	if (method == "devRegister")
@@ -637,8 +644,8 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 	else if (method == "objOnline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
-			string tagChild = yyjson_get_str(yyv_tag);
-			if (tagChild != "" && m_strTagBind != "") {
+			if (yyv_tag && m_strTagBind != "") {
+				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
 				string sParams = str::format("{\"tag\":\"%s\"}", tag);
 				tds->callAsyn("objOnline", sParams);
@@ -648,8 +655,8 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 	else if (method == "objOffline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
-			string tagChild = yyjson_get_str(yyv_tag);
-			if (tagChild != "" && m_strTagBind != "") {
+			if (yyv_tag && m_strTagBind != "") {
+				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
 				string sParams = str::format("{\"tag\":\"%s\"}", tag);
 				tds->callAsyn("objOffline", sParams);

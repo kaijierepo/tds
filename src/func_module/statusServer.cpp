@@ -158,10 +158,9 @@ void StatusServer::cycleAcq_srvStatus() {
 				}
 				ssdb->Insert("mem", dbt, m_srvStatus.mem);
 				ssdb->Insert("pageFile", dbt, m_srvStatus.pageFile);
-				//ssdb->Insert("net", dbt, m_srvStatus.net);
 				//ssdb->Insert("disk", dbt, m_srvStatus.disk);
 				ssdb->Insert("handle", dbt, m_srvStatus.handle);
-
+				
 				for (auto& iter : m_netStatus) {
 					string portId = str::format("port_%d_send", iter.first);
 					ssdb->Insert(portId, dbt, iter.second->send);
@@ -170,6 +169,9 @@ void StatusServer::cycleAcq_srvStatus() {
 					ssdb->Insert(portId, dbt, iter.second->recv);
 					iter.second->recv = 0;
 				}
+
+				ssdb->Insert("webReqCount", dbt, m_srvStatus.webReqCount);
+				m_srvStatus.webReqCount = 0;
 			}
 		}
 	}

@@ -15,6 +15,7 @@ struct SRV_STATUS {
 	double net; //Mbps
 	int handle;
 	int thread;
+	std::atomic<long long> webReqCount;
 };
 
 
