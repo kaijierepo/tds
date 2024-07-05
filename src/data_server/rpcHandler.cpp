@@ -2038,6 +2038,16 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		pAlmSrv->rpc_acknowledge(params, rpcResp, session);
 	}
+	else if (method == "approveAlarm" ) //审核报警  审核通过则更新到正式报警
+	{
+		if (pAlmSrv == &almSrv_dev) {
+			string dd = params.dump();
+
+			int nRet = pAlmSrv->rpc_approve(params, rpcResp, session);
+			if(1 == nRet )
+				almSrv.rpc_addAlarm(params, rpcResp);
+		}
+	}
 	else
 	{
 		bHandled = false;

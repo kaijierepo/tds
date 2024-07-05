@@ -560,6 +560,85 @@ void almServer::rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION ses
 	
 }
 
+//params ：对应ai那个结构
+//返回负数  失败, 非负数 成功：0 未通过，1通过
+//按原理，会马上恢复掉，仅恢复掉的允许审核 前端保证
+int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
+	int nRet = -1;
+	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+		resp.error = error;
+		return nRet;
+	}
+	if (false == params["isRecover"].get<bool>()) {
+		resp.error = "尚未恢复";
+		nRet = -2;
+		return nRet;
+	}
+	if (params.contains("tag")) {
+		string rootTag;
+		if (params.contains("rootTag")) {
+			rootTag = params["rootTag"];
+		}
+		string tag = params["tag"];
+		tag = TAG::addRoot(tag, rootTag);
+
+		//用户位号转系统位号
+		tag = TAG::addRoot(tag, session.org);
+		params["tag"] = tag;
+	}
+
+	ALARM_INFO ai;
+	if (tableCurrent.query(params, ai))
+	{
+		string user = session.user;
+		string info;
+		if (params.contains("ackInfo"))
+			info = params["ackInfo"];
+		if (info == "通过") {
+			nRet = 1;
+		}
+		ai.bAck = 1;
+		ai.strConfirmUser = session.user;
+		ai.strConfirmInfo = info;
+		timeopt::now(&ai.stConfirmTime);
+		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		{
+			tableCurrent.remove(ai);
+		}
+		else
+			tableCurrent.update(ai);
+	}
+	else
+	{
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+		resp.error = error;
+		return nRet;
+	}
+
+	if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
+		params["time"] = ai.time;
+	if (tableHist.query(params, ai))
+	{
+		string user = session.user;
+		string info;
+		if (params.contains("ackInfo"))
+			info = params["ackInfo"];
+
+		ai.bAck = 1;
+		ai.strConfirmUser = session.user;
+		ai.strConfirmInfo = info;
+		timeopt::now(&ai.stConfirmTime);
+		tableHist.update(ai);
+	}
+
+	json j = ai.toJson(this);
+	rpcSrv.notify("onAlarmAck", j);
+
+	resp.result = "\"ok\"";
+	return nRet;
+}
+
 /*
 ALARM_LEVEL almServer::StringToAlarmLevel(string level)
 {
@@ -921,6 +1000,9 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	ai.tag = j["tag"];
 	ai.type = j["type"];
 
+	if (j["time"] != nullptr)
+		ai.time = j["time"];
+
 	if (j["level"] != nullptr)
 		ai.level = j["level"];
 	else
@@ -929,7 +1011,10 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	//可选字段
 	if(j["desc"] != nullptr)
 		ai.strAlarmDesc = j["desc"];
-	
+	if (j["isRecover"] != nullptr)
+		ai.bRecover = j["isRecover"].get<bool>();
+	if (j["recoverTime"] != nullptr)
+		ai.stRecoverTime.fromStr(j["recoverTime"]);
 	return ai;
 }
 

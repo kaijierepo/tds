@@ -194,9 +194,10 @@ public:
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
 	void addAlarm(ALARM_INFO ai);
 //报警恢复和报警确认接口
-	void recover(ALARM_KEY& key);
+	void recover(ALARM_KEY& key); 
 	void rpc_acknowledge(json& params, RPC_RESP& resp,RPC_SESSION session);
 	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
+	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
 	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
 	//过滤器参数
