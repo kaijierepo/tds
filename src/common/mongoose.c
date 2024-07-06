@@ -7597,7 +7597,7 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
       c->is_readable = 1;
     } else {
       if (fds[n].revents & POLLERR) {
-        //mg_error(c, "socket error");
+        mg_error(c, "socket error");
       } else {
         c->is_readable =
             (unsigned) (fds[n].revents & (POLLIN | POLLHUP) ? 1 : 0);

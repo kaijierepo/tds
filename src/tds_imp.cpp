@@ -311,6 +311,7 @@ bool TDS_imp::setWorkingDir()
 
 bool TDS_imp::run(string cmdline)
 {
+	mg_log_set(MG_LL_NONE);
 #ifndef DEBUG
  // mg_log_set("0");
 #endif
