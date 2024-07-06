@@ -1160,7 +1160,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 	}
 	else if (ev != MG_EV_POLL) {
-		LOG("[warn]web server unexpected event %d", ev);
+		pWs->m_fnCount++;
 	}
 }
 
@@ -1207,6 +1207,7 @@ WebServer::WebServer()
 {
 	m_isHttps = false;
 	m_restApiID = 0;
+	m_fnCount = 0;
 }
 
 WebServer::~WebServer()
