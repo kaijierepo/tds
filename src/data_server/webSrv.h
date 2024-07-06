@@ -33,11 +33,11 @@ public:
 	WebServer();
 	~WebServer();
 	void run(int port, bool https = false);
-	void sendToAllWs(string& s);
-	static int sendToAllWebsock(string& s);
+	int notifyWs(unsigned char* p, size_t len, unsigned long conn_id);
+	void notifyAllWs(string& s);
+	static int notifyAllSrvAllWs(string& s);
 	int m_port;
 	bool m_isHttps;
-	int sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id);
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
 	void initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> tdsSession);
 	void parseParamFromUrl(string& url, map<string, string>& mapParams);
@@ -48,7 +48,7 @@ public:
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions; //这些session接受rpc通知
 	std::mutex m_csWsSessions;
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsBridgeSessions;
-	std::map<string, std::shared_ptr<SESSION_STATIS>>  m_httpSessions;
+	std::map<string, SESSION_STATIS*>  m_httpSessions;
 	std::mutex m_csWsBridgeSessions;
 	int m_restApiID;
 	struct mg_mgr m_mgr;
@@ -63,6 +63,7 @@ extern string filesDir;
 extern vector<WebServer*> g_WebServerList;
 WebServer* getWebServer(int port, bool isHttps);
 
+extern bool g_enableWsNotify;
 extern vector<std::shared_ptr<TDS_SESSION>> commpktSessions;
 extern void sendToCommLog(string s);
 

@@ -6,6 +6,7 @@
 #include "tdb.h"
 #include <thread>
 #include "common.h"
+#include "winternl.h"
 
 #pragma comment(lib, "Pdh.lib")
 #pragma comment(lib, "Psapi.lib")
@@ -61,10 +62,33 @@ void cycleAcq_thread_srvStatus(StatusServer* pss) {
 	pss->cycleAcq_srvStatus();
 }
 
+
+int GetPhysicalCoreCount() {
+	DWORD length = 0;
+	GetLogicalProcessorInformation(nullptr, &length);
+	std::vector<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> buffer(length / sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION));
+	if (!GetLogicalProcessorInformation(buffer.data(), &length)) {
+		std::cerr << "Failed to get logical processor information." << std::endl;
+		return -1;
+	}
+
+	int physicalCoreCount = 0;
+	for (const auto& info : buffer) {
+		if (info.Relationship == RelationProcessorCore) {
+			physicalCoreCount++;
+		}
+	}
+
+	return physicalCoreCount;
+}
+
 bool StatusServer::run()
 {
 	if (db.m_timeUnit != BY_DAY)
 		return false;
+
+	m_physicalCoreCount = GetPhysicalCoreCount();
+
 	thread t(cycleAcq_thread_srvStatus, this);
 	t.detach();
 	return true;
@@ -122,10 +146,8 @@ void StatusServer::cycleAcq_srvStatus() {
 			//last cpu used time
 			m_lastCpuUseInfo = m_currentCpuUseInfo;
 			m_bLastCpuInfoValid = m_bCurCpuInfoValid;
-			m_lastAcqTime = m_currentAcqTime;
 			//current cpu used time
 			m_currentCpuUseInfo = getCpuUseInfo();
-			m_currentAcqTime = getTimestamp_ns();
 			m_bCurCpuInfoValid = true;
 		
 			if (m_bCurCpuInfoValid && m_bLastCpuInfoValid) { 
@@ -226,23 +248,52 @@ DWORD StatusServer::GetProcHandleCount(HANDLE hProcess)
 }
 
 
+typedef NTSTATUS(WINAPI* NtQuerySystemInformationPtr)(ULONG SystemInformationClass, PVOID SystemInformation, ULONG SystemInformationLength, PULONG ReturnLength);
+
 CPU_USE_INFO StatusServer::getCpuUseInfo()
 {
 	CPU_USE_INFO cui;
-	FILETIME createTime, exitTime, kernelTime, userTime;
-	GetProcessTimes(processHandle, &createTime, &exitTime, &kernelTime, &userTime);
-	cui.KernelTime.LowPart = kernelTime.dwLowDateTime;
-	cui.KernelTime.HighPart = kernelTime.dwHighDateTime;
-	cui.UserTime.LowPart = userTime.dwLowDateTime;
-	cui.UserTime.HighPart = userTime.dwHighDateTime;
+
+	//获取程序执行时间
+	FILETIME ftCreation, ftExit, ftKernel, ftUser;
+	ULARGE_INTEGER ulKernel, ulUser;
+	GetProcessTimes(processHandle, &ftCreation, &ftExit, &ftKernel, &ftUser);
+	ulKernel.LowPart = ftKernel.dwLowDateTime;
+	ulKernel.HighPart = ftKernel.dwHighDateTime;
+	ulUser.LowPart = ftUser.dwLowDateTime;
+	ulUser.HighPart = ftUser.dwHighDateTime;
+	cui.processTime = ulKernel.QuadPart + ulUser.QuadPart; //单位100纳秒
+
+	//获取cpu总执行时间
+	HMODULE hNtDll = GetModuleHandle("ntdll.dll");
+	NtQuerySystemInformationPtr NtQuerySystemInformation = (NtQuerySystemInformationPtr)GetProcAddress(hNtDll, "NtQuerySystemInformation");
+	SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION cpuInfo[64]; // 最多支持64个CPU核心
+	ULONG returnLength;
+	NTSTATUS status = NtQuerySystemInformation(SYSTEM_INFORMATION_CLASS::SystemProcessorPerformanceInformation, cpuInfo, sizeof(cpuInfo), &returnLength); // 8表示SystemProcessorPerformanceInformation
+	if (status == 0) {
+		ULONGLONG totalIdleTime = 0;
+		ULONGLONG totalKernelTime = 0;
+		ULONGLONG totalUserTime = 0;
+
+		int numCores = returnLength / sizeof(SYSTEM_PROCESSOR_PERFORMANCE_INFORMATION);
+
+		for (int i = 0; i < numCores; i++) {
+			totalIdleTime += cpuInfo[i].IdleTime.QuadPart;
+			totalKernelTime += cpuInfo[i].KernelTime.QuadPart;
+			totalUserTime += cpuInfo[i].UserTime.QuadPart;
+		}
+
+		cui.totalTime = totalIdleTime + totalKernelTime + totalUserTime; //单位100纳秒
+		cui.totalTime = cui.totalTime / (numCores / m_physicalCoreCount);
+	}
+
+
 	return cui;
 }
 
 double StatusServer::calcCpuUse()
 {
-	double msUsed = 100*((m_currentCpuUseInfo.KernelTime.QuadPart - m_lastCpuUseInfo.KernelTime.QuadPart) + (m_currentCpuUseInfo.UserTime.QuadPart - m_lastCpuUseInfo.UserTime.QuadPart));
-	double msPassed = m_currentAcqTime - m_lastAcqTime;
-	double cpuUsed = (msUsed / msPassed) * 100;
+	double cpuUsed = 100* (m_currentCpuUseInfo.processTime - m_lastCpuUseInfo.processTime) / (m_currentCpuUseInfo.totalTime - m_lastCpuUseInfo.totalTime);
 	return cpuUsed;
 }
 

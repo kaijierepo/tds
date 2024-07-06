@@ -2206,6 +2206,7 @@ struct mg_connection {
   unsigned is_writable : 1;    // Connection is ready to write
   int pipeSock;
   void* app_layer_data;
+  void* sessionInfo;
 };
 
 void mg_mgr_poll(struct mg_mgr *, int ms);

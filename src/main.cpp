@@ -240,10 +240,19 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 
+void thread_cpu_test() {
+	int ii = 0;
+	while (1) {
+		ii++;
+	}
+}
+
 bool isTdsRunning();
 int main(int argc, char** argv)
 {
-
+	//cpu占用测试
+	//thread t(thread_cpu_test);
+	//t.detach();
 	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	//_CrtSetBreakAlloc(124823298);

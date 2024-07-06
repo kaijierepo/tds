@@ -892,31 +892,32 @@ void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SE
 		pWs->m_csWsSessions.lock();
 		json jList = json::array();
 		for (auto i : pWs->m_wsSessions) {
-			RPC_SESSION p = i.second->getRpcSession();
+			std::shared_ptr<TDS_SESSION> p = i.second;
 			json jSession;
-			jSession["ip"] = p.remoteIP;
-			jSession["port"] = p.remotePort;
+			jSession["ip"] = p->remoteIP;
+			jSession["port"] = p->remotePort;
 			jSession["protocol"] = "ws";
 			jSession["reqCount"] = "";
-			jSession["lastRecvTime"] = p.sLastRecvTime;
-			jSession["lastMethodCalled"] = p.lastMethodCalled;
-			jSession["lastSendTime"] = p.sLastSendTime;
-			jSession["lastMethodNotified"] = p.lastMethodNotified;
+			jSession["lastRecvTime"] = p->sLastRecvTime;
+			jSession["recved"] = p->recvedLen.load();
+			jSession["lastSendTime"] = p->sLastSendTime;
+			jSession["sended"] = p->sendedLen.load();
 			jList.push_back(jSession);
 		}
 		pWs->m_csWsSessions.unlock();
 
+		//http是短连接，按照ip地址统计，目前该数组不删除
 		for (auto i : pWs->m_httpSessions) {
-			std::shared_ptr<SESSION_STATIS> p = i.second;
+			SESSION_STATIS* p = i.second;
 			json jSession;
 			jSession["ip"] = p->remoteIP;
 			jSession["port"] = p->remotePort;
 			jSession["protocol"] = "http";
 			jSession["reqCount"] = p->reqCount;
 			jSession["lastRecvTime"] = p->lastRecvTime.toStr();
-			jSession["lastMethodCalled"] = "";
+			jSession["recved"] = p->recv;
 			jSession["lastSendTime"] = "";
-			jSession["lastMethodNotified"] = "";
+			jSession["sended"] = p->send;
 			jList.push_back(jSession);
 		}
 
@@ -2147,6 +2148,14 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	}
 	else if (method == "disableIOHandle") {
 		ioSrv.m_bDisableIOHandle = true;
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "enableWsNotify") {
+		g_enableWsNotify = true;
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "disableWsNotify") {
+		g_enableWsNotify = false;
 		rpcResp.result = "\"ok\"";
 	}
 	else if (method == "queryLog" || method == "getLog")
@@ -5203,7 +5212,7 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
-	WebServer::sendToAllWebsock(notify);
+	WebServer::notifyAllSrvAllWs(notify);
 	reverseInterface.sendToAllSessions(notify, specialNotify);
 }
 

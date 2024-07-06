@@ -211,23 +211,23 @@ long long getTimestamp_ns() {
 
 void ioDev_srvStatus::getCpuUseInfo()
 {
-	FILETIME createTime, exitTime, kernelTime, userTime;
-	m_currentAcqTime = getTimestamp_ns();
-	GetProcessTimes(processHandle, &createTime, &exitTime, &kernelTime, &userTime);
-	m_currentCpuUseInfo.KernelTime.LowPart = kernelTime.dwLowDateTime;
-	m_currentCpuUseInfo.KernelTime.HighPart = kernelTime.dwHighDateTime;
-	m_currentCpuUseInfo.UserTime.LowPart = userTime.dwLowDateTime;
-	m_currentCpuUseInfo.UserTime.HighPart = userTime.dwHighDateTime;
+	//FILETIME createTime, exitTime, kernelTime, userTime;
+	//m_currentAcqTime = getTimestamp_ns();
+	//GetProcessTimes(processHandle, &createTime, &exitTime, &kernelTime, &userTime);
+	//m_currentCpuUseInfo.KernelTime.LowPart = kernelTime.dwLowDateTime;
+	//m_currentCpuUseInfo.KernelTime.HighPart = kernelTime.dwHighDateTime;
+	//m_currentCpuUseInfo.UserTime.LowPart = userTime.dwLowDateTime;
+	//m_currentCpuUseInfo.UserTime.HighPart = userTime.dwHighDateTime;
 }
 
 bool ioDev_srvStatus::calcCpuUse()
 {
-	if (m_bLastCpuInfoValid) {
-		double msUsed = 100*((m_currentCpuUseInfo.KernelTime.QuadPart - m_lastCpuUseInfo.KernelTime.QuadPart) + (m_currentCpuUseInfo.UserTime.QuadPart - m_lastCpuUseInfo.UserTime.QuadPart));
-		double msPassed = m_currentAcqTime - m_lastAcqTime;
-		m_dbCpuUse = (msUsed / msPassed) * 100;
-		return true;
-	}
+	//if (m_bLastCpuInfoValid) {
+	//	double msUsed = 100*((m_currentCpuUseInfo.KernelTime.QuadPart - m_lastCpuUseInfo.KernelTime.QuadPart) + (m_currentCpuUseInfo.UserTime.QuadPart - m_lastCpuUseInfo.UserTime.QuadPart));
+	//	double msPassed = m_currentAcqTime - m_lastAcqTime;
+	//	m_dbCpuUse = (msUsed / msPassed) * 100;
+	//	return true;
+	//}
 	return false;
 }
 

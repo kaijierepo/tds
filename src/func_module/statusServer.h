@@ -31,8 +31,8 @@ struct NET_TRAFFIC {
 
 
 struct CPU_USE_INFO {
-	ULARGE_INTEGER KernelTime;
-	ULARGE_INTEGER UserTime;
+	ULONGLONG processTime;
+	ULONGLONG totalTime;
 };
 
 
@@ -46,7 +46,7 @@ public:
 	bool run();
 	bool m_bLogStatus;
 	int m_logInterval;
-
+	int m_physicalCoreCount;
 
 	unsigned char sessionHandle[4];
 	HANDLE OpenProcessByName(const char* processName);
@@ -77,6 +77,7 @@ public:
 
 	SRV_STATUS m_srvStatus;
 	std::map<int, NET_TRAFFIC*> m_netStatus;
+	NET_TRAFFIC m_wsNetStatus;
 
 	void statisSend(int port, size_t len);
 	void statisRecv(int port, size_t len);

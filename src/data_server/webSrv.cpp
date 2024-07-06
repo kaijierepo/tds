@@ -34,6 +34,7 @@ struct thread_data {
 int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 vector<WebServer*> g_WebServerList;
+bool g_enableWsNotify = true;
 
 WebServer* getWebServer(int port, bool isHttps) {
 	for (int i = 0; i < g_WebServerList.size(); i++) {
@@ -864,11 +865,17 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		//websocket请求
 		if (s!= NULL && memcmp(s->ptr,"Upgrade",7) == 0) {
 			mg_ws_upgrade(c, hm, NULL);  // Upgrade HTTP to WS
+
+			//init session connection info
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
 			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
 			p->conn_id = c->id;
 			p->webServer = pWs;
+			getSessionInfo(p.get(), c, hm, pWs);
+			c->app_layer_data = p.get();
+
+			//init session app type info
 			//先执行上面代码完成TdsSession的初始化，然后执行下一句。下一句中，tdsSession可能马上会被使用
 			//例如conn_id可能会马上用来发送数据。因此先初始化
 			pWs->initWsSessionInfo(uri, p);
@@ -978,14 +985,14 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
-
+			c->sessionInfo = nullptr;
 			//
 			if (!pSession->isDebug) {
 				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-				std::map<string, std::shared_ptr<SESSION_STATIS>>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
-				std::shared_ptr<SESSION_STATIS> pSs;
+				std::map<string, SESSION_STATIS*>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
+				SESSION_STATIS* pSs;
 				if (iter == pWs->m_httpSessions.end()) {
-					pSs = std::shared_ptr<SESSION_STATIS >(new SESSION_STATIS);
+					pSs = new SESSION_STATIS;
 					pWs->m_httpSessions[pSession->remoteIP] = pSs;
 					pSs->remoteIP = pSession->remoteIP;
 					pSs->remotePort = pSession->remotePort;
@@ -994,7 +1001,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 					pSs = iter->second;
 				}
 				pSs->reqCount++;
+				pSs->recv += hm->message.len;
 				pSs->lastRecvTime = timeopt::now();
+				c->sessionInfo = pSs;
 			}
 				
 
@@ -1090,11 +1099,22 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	}
 	else if (ev == MG_EV_WAKEUP) {
 		struct mg_str* data = (struct mg_str*)ev_data;
+
 		if (c->is_websocket) {
 			string s = str::fromBuff(data->ptr, data->len);
 			mg_ws_send(c, data->ptr, data->len, WEBSOCKET_OP_TEXT);
+			TDS_SESSION* p = (TDS_SESSION*)c->app_layer_data;
+			p->sendedLen += data->len;
+#ifdef _WIN32
+			statusSrv.m_wsNetStatus.send += data->len;
+#endif
 		}
 		else {
+			if (c->sessionInfo) {
+				SESSION_STATIS* pss = (SESSION_STATIS*)c->sessionInfo;
+				pss->send += data->len;
+			}
+
 			//data->ptr最后一个字符不是字符串结束标志
 			char* p = new char[data->len+1];
 			p[data->len] = 0;
@@ -1106,11 +1126,10 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 
 			mg_http_reply(c, 200, resHeader.c_str(), p);
 			delete p;
-		}
-
 #ifdef _WIN32
-		statusSrv.statisSend(pWs->m_port, data->len);
+			statusSrv.statisSend(pWs->m_port, data->len);
 #endif
+		}
 	}
 	else if (ev == MG_EV_WS_MSG) {
 		//websocket通道一般不用于请求，仅用于通知。
@@ -1124,9 +1143,10 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		data->message = mg_strdup(wm->data);               // Pass message
 		data->conn_id = c->id;
 		data->mgr = c->mgr;
+		p->recvedLen += wm->data.len;
 
 #ifdef _WIN32
-		statusSrv.statisRecv(pWs->m_port, wm->data.len);
+		statusSrv.m_wsNetStatus.recv += wm->data.len;
 		statusSrv.m_srvStatus.webReqCount++;
 #endif
 
@@ -1138,6 +1158,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		{
 			pWs->removeWsSession(c);
 		}
+	}
+	else if (ev != MG_EV_POLL) {
+		LOG("[warn]web server unexpected event %d", ev);
 	}
 }
 
@@ -1245,8 +1268,12 @@ void WebServer::run(int port,bool https)
 //websocket通过pipe发送的原因是为了使用moogoose的websocket secure功能
 //所以不选择直接组装websocket pkt通过socket发送
 //但是通过pipe发送会导致粘连包问题
-void WebServer::sendToAllWs(string& s)
+void WebServer::notifyAllWs(string& s)
 {
+	if (!g_enableWsNotify) {
+		return;
+	}
+
 	m_csWsSessions.lock();
 	std::map<void*,std::shared_ptr<TDS_SESSION>>::iterator i = m_wsSessions.begin();
 	for (;i!=m_wsSessions.end();i++)
@@ -1258,22 +1285,28 @@ void WebServer::sendToAllWs(string& s)
 		statusSrv.statisSend(i->second->localPort, s.length());
 #endif
 
-		WebServer::sendToWebSock((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
+		notifyWs((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
 	}
 	m_csWsSessions.unlock();
 }
 
-int WebServer::sendToAllWebsock(string& s)
+int WebServer::notifyAllSrvAllWs(string& s)
 {
+	if (!g_enableWsNotify) {
+		return 0;
+	}
 	for (auto& iter : g_WebServerList) {
-		iter->sendToAllWs(s);
+		iter->notifyAllWs(s);
 	}
 	return 0;
 }
 
 
-int WebServer::sendToWebSock(unsigned char* p, size_t len, unsigned long conn_id)
+int WebServer::notifyWs(unsigned char* p, size_t len, unsigned long conn_id)
 {
+	if (!g_enableWsNotify) {
+		return 0;
+	}
 	mg_wakeup(&m_mgr, conn_id, p, len);
 	return len;
 }

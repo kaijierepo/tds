@@ -70,7 +70,8 @@ public:
 	bool bConnected; //指针的使用者检测到该变量为false后，应该弃用并释放该session对象
 	bool m_bAppDataRecved;
 	size_t abandonLen;
-
+	std::atomic<size_t> sendedLen;
+	std::atomic<size_t> recvedLen;
 
 	//tcp数据缓存处理 
 	queue<TCP_DATA_BUFF> dataBuff;
