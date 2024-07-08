@@ -186,6 +186,7 @@ public:
 	//// iodev hierachy tree management
 	virtual ioDev* getIODev(string ioAddr, bool bChn = false, bool ignorePort = false); //是否启用中文地址拼音模式查找
 	ioDev* getIODevByNodeID(string nodeID);
+	ioDev* getIODevByTag(string tag);
 	bool deleteIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChildDev;
@@ -266,7 +267,7 @@ public:
 	OBJ* m_pMO;
 	string GetCommIP();
 	void SendToChild(TIME dataTime, unsigned char* pData, size_t iLen, string strID);//网关类型使用，转发给下层子设备
-	ioDev* getIODevByTag(string tag);
+	
 	//通信发送
 	virtual bool CommLock(int dwTimeoutMS = 0);
 	virtual void CommUnlock();

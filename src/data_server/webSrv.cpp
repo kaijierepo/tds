@@ -836,7 +836,8 @@ bool getSSLCertPath(string& certPath, string& keyPath) {
 static void fn(struct mg_connection* c, int ev,void* ev_data)
 {
 	WebServer* pWs = (WebServer*)c->mgr->userdata;
-
+	if (!pWs) 
+		return; //刚启动runWebServers有时会出现NULL
 	if (ev == MG_EV_ACCEPT) {
 		if (pWs->m_isHttps)
 		{
