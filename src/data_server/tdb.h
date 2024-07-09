@@ -530,6 +530,11 @@ inline string JSON_STR_VAL(string s) {
 	return "\"" + s + "\"";
 }
 
+enum DE_JSON_TYPE {
+	DE_J_ARR,
+	DE_J_OBJ
+};
+
 //use  "/"  but not "\\" in a path
 class TDB{
 public:

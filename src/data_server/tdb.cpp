@@ -1103,8 +1103,11 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			if (deSel.bAggr) { //create a mut obj in a aggr select mode
 				jRecord = yyjson_mut_obj(mut_doc);
 			}
-			else { //copy directly for speed in a none aggr select mode
+			else if(deyy.de != nullptr) { //copy directly for speed in a none aggr select mode
 				jRecord = deyy.de;
+			}
+			else {
+				jRecord = yyjson_mut_obj(mut_doc);
 			}
 			
 
@@ -2579,10 +2582,20 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			string deTime = pdf->ymd + " 00:00:00.000";
 			string groupKeyVal;
 
+
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
 			if (type == YYJSON_TYPE_OBJ) { //file with desc
 				deList = yyjson_obj_get(pdf->root, "data");
+				if (deList == nullptr) { //copatible with sap  data_list[0].data mode
+					deList = yyjson_obj_get(pdf->root, "data_list");
+					if (yyjson_is_arr(deList) && yyjson_arr_size(deList)>0){
+						deList = yyjson_arr_get(deList, 0);
+						if (yyjson_is_obj(deList)) {
+							deList = yyjson_obj_get(deList, "data");
+						}
+					}
+				}
 			}
 			else if (type == YYJSON_TYPE_ARR) {
 				deList = pdf->root;
@@ -2591,26 +2604,46 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				continue;
 			}
 
+			DE_JSON_TYPE deJsonType = DE_J_OBJ;
 
 			yyjson_arr_foreach(deList, idx, max, de) {
 				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
-				if (idx == 0 && deSel.bAggr)
+				if (idx == 0)
 				{
-					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
-					if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "") 
-					{
-						for (auto& aggrParam : fSetOut.aggregate) {
-							vector<string>& aggrTypes = aggrParam.second;
-							string aggrType = aggrTypes[0];
-							if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType=="diff.first-last" || aggrType=="diff.lao") {
-								//string err = "data element type is: string, does not support aggregate type:" + aggrType;
-								//err += ",use valType=number to cast string value to number value";
-								//json jErr = err;
-								//result.error = jErr.dump();
-								//return false;
-								deSel.valType = "number";
-								result.info = "aggregate type is " + aggrType + ",auto cast value type string to number";
-								break;
+					if (yyjson_is_arr(de)) {
+						deJsonType = DE_J_ARR;
+						if (yyjson_arr_size(de) != 2) {
+							db_exception e;
+							e.m_error = "tds now only support 2 element array de type";
+							throw e;
+						}
+					}
+
+					if (deSel.bAggr) {
+						yyjson_val* yyVal = nullptr;
+						if (deJsonType == DE_J_OBJ) {
+							yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+						}
+						else {
+							yyVal = yyjson_arr_get(de, 1);
+						}
+
+
+						if (yyVal && yyjson_is_str(yyVal) && deSel.valType == "")
+						{
+							for (auto& aggrParam : fSetOut.aggregate) {
+								vector<string>& aggrTypes = aggrParam.second;
+								string aggrType = aggrTypes[0];
+								if (aggrType == "diff" || aggrType == "avg" || aggrType == "sum" || aggrType == "max" || aggrType == "min" || aggrType == "diff.first-last" || aggrType == "diff.lao") {
+									//string err = "data element type is: string, does not support aggregate type:" + aggrType;
+									//err += ",use valType=number to cast string value to number value";
+									//json jErr = err;
+									//result.error = jErr.dump();
+									//return false;
+									deSel.valType = "number";
+									result.info = "aggregate type is " + aggrType + ",auto cast value type string to number";
+									break;
+								}
 							}
 						}
 					}
@@ -2624,10 +2657,26 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				//generate standard time stamp, then do match
-				yyjson_val* yyTime = yyjson_obj_get(de, "time");
+				yyjson_val* yyTime = nullptr;
+				if (deJsonType == DE_J_OBJ) {
+					yyTime = yyjson_obj_get(de, "time");
+				}
+				else {
+					yyTime = yyjson_arr_get(de, 0);
+				}
+				string szTime;
+				if (yyjson_is_int(yyTime)) {
+					time_t t = yyjson_get_uint(yyTime);
+					DB_TIME dbT;
+					dbT.fromUnixTime(t);
+					szTime = dbT.toStr();
+				}
+				else {
+					szTime = yyjson_get_str(yyTime);
+				}
 
 				if (m_timeUnit == BY_DAY) {
-					string szTime = yyjson_get_str(yyTime);
+					
 					const char* pHms = nullptr;
 					int hmsLen = 0;
 					if (szTime.length() == 19) //2020-02-02 02:02:02
@@ -2721,13 +2770,20 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					//deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
 
 					//set val
-					yyjson_val* yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+					yyjson_val* yyVal = nullptr;	
+					if (deJsonType == DE_JSON_TYPE::DE_J_OBJ) {
+						yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+					}
+					else {
+						yyVal = yyjson_arr_get(de, 1);
+					}
 					if (yyVal)
 						deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
 					
 					//set all fields except time,val
-					deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
-
+					if (deJsonType == DE_JSON_TYPE::DE_J_OBJ) {
+						deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
+					}
 
 					if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
 						if (deSel.isValTypeNumber()) 
@@ -4481,10 +4537,17 @@ string DE_SELECTOR::getSelectorDesc()
 
 void DB_TIME::fromUnixTime(time_t iUnix, int milli)
 {
-	static std::mutex mtx;
-	mtx.lock();
-	tm time_tm = *localtime(&iUnix);  //for thread safty linux recommends localtime_r,windows recommends localtime_s,use a lock to unify the code
-	mtx.unlock();
+	if (iUnix > 100000000000) { //unix timestamp with milli
+		iUnix = iUnix / 1000;
+		milli = iUnix % 1000;
+	}
+
+	tm time_tm;
+#ifdef _WIN32
+	localtime_s(&time_tm, &iUnix);
+#else
+	localtime_r(&iUnix,&time_tm);  //for thread safty linux recommends localtime_r,windows recommends localtime_s
+#endif
 
 	wYear = time_tm.tm_year + 1900;
 	wMonth = time_tm.tm_mon + 1;
