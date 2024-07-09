@@ -870,11 +870,6 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 			return folder + "/" + m_dbFmt.curveIdxListName;
 		else if (fileExist((folder + "/" + date.toStampHMS() + m_dbFmt.curveDeNameSuffix).c_str()))
 			return folder + "/" + date.toStampHMS() + m_dbFmt.curveDeNameSuffix;
-
-		else if (fileExist((folder + "/" + m_dbFmt.jsonIdxListName).c_str()))
-			return folder + "/" + m_dbFmt.jsonIdxListName;
-		else if (fileExist((folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix).c_str()))
-			return folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
 		else
 			return folder + "/" + m_dbFmt.deListName;
 	}
@@ -883,12 +878,6 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 	}
 	else if (deType == "curve") {
 		return folder + "/" + date.toStampHMS()  + m_dbFmt.curveDeNameSuffix;
-	}
-	else if (deType == "jsonIdx") {
-		return folder + "/" + m_dbFmt.jsonIdxListName;
-	}
-	else if (deType == "json") {
-		return folder + "/" + date.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
 	}
 	else {
 		return folder + "/" + m_dbFmt.deListName;
@@ -974,8 +963,6 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 	string dataListPath;
 	if(fileType == "curve")
 		dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
-	else if (fileType == "json")
-		dataListPath = deListFolderPath + "/" + m_dbFmt.jsonIdxListName;
 	else
 		dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 
@@ -2135,7 +2122,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; 
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 
-	if (deSel.deType == "curve"  || deSel.deType == "json") {
+	if (deSel.deType == "curve" ) {
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
@@ -2975,9 +2962,6 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 					if ((int)dbFile.rfind(m_dbFmt.curveIdxListName)>0) {
 						one.dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 					} 
-					else if ((int)dbFile.rfind(m_dbFmt.jsonIdxListName)>0) {
-						one.dbFile1 = folder + stTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
-					}
 					else {
 						nSomeWrong = -11;
 						break;
@@ -3190,9 +3174,6 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 	if (type == "curve") {
 		name = dbTime.toStampHMS() + m_dbFmt.curveDeNameSuffix;
 	}
-	else if (type == "json") {
-		name = dbTime.toStampHMS() + m_dbFmt.jsonDeNameSuffix;
-	}
 
 	string data;
 	if (yyjson_is_str(yyv_data)) {
@@ -3235,9 +3216,6 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else if (type == "curve") {  //curve file is not encoded 
-		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
-	}
-	else if (type == "json") {  //curve file is not encoded 
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
 	}
 	else {

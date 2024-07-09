@@ -388,8 +388,6 @@ bool TDS_imp::run(string cmdline)
 		::db.m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
 		::db.m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "db.curve.json");
 		::db.m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.json");
-		::db.m_dbFmt.jsonIdxListName = tds->conf->getStr("jsonIdxListName", "db.js.json");
-		::db.m_dbFmt.jsonDeNameSuffix = tds->conf->getStr("jsonDeNameSuffix", ".js.json");
 		::db.m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 	}

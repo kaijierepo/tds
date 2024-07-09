@@ -509,8 +509,6 @@ struct  DB_FMT
 	string deListName;
 	string curveIdxListName;
 	string curveDeNameSuffix;  //The suffix contains "."
-	string jsonIdxListName;
-	string jsonDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;
 };
 
