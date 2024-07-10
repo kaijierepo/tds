@@ -2530,30 +2530,6 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			yyjson_doc_free(doc);
 		}
 	}
-	else if (method == "setAsZeroPos"|| method == "moveToPos" || method == "moveStep")
-	{
-		//string strParams = params.dump();
-		string tag = params["tag"];
-		ioDev_tdsp*  pDev = (ioDev_tdsp*)ioSrv.getIODevByTag(tag);
-		if (!pDev) {
-			rpcResp.result = "err! tag wrong!";
-		}
-		else {
-			ioChannel* pC = pDev->getChanByTag("位置");
-			params["chnl"]= pC->m_devAddr;
-			json rlt, err;
-			pDev->call(method, params, nullptr, rlt, err);
-			if (rlt != nullptr)
-			{
-				string strOut = rlt.dump();
-				LOG(+"%s成功,设备地址:%s", method.c_str(), pDev->getIOAddrStr().c_str());
-				rpcResp.result = strOut;
-			}
-			else {
-				rpcResp.result = "err! comm over time!";
-			}
-		}
-	}
 	else {
 		bHandled = false;
 	}
