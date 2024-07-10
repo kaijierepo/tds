@@ -2518,6 +2518,79 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 								yyjson_mut_obj_add_val(mut_doc, item, "endTime", yyjson_val_mut_copy(mut_doc, yyjson_obj_get(oneCurveRoot, "endTime")));
 							if (yyjson_obj_get(oneCurveRoot, "startTime") && !yyjson_mut_obj_get(item, "startTime"))
 								yyjson_mut_obj_add_val(mut_doc, item, "startTime", yyjson_val_mut_copy(mut_doc, yyjson_obj_get(oneCurveRoot, "startTime")));
+							if (!yyjson_mut_obj_get(item, "dcPos"))
+								yyjson_mut_obj_add_strcpy(mut_doc, item, "dcPos", "fix");
+							if (!yyjson_mut_obj_get(item, "absMax") || !yyjson_mut_obj_get(item, "PRX") || !yyjson_mut_obj_get(item, "PRY") || !yyjson_mut_obj_get(item, "PRZ"))
+							{
+								auto pt_arr = yyjson_obj_get(oneCurveRoot, "pt");
+								if (pt_arr&&yyjson_is_arr(pt_arr))
+								{
+									size_t pt_idx = 0;
+									size_t pt_max = 0;
+									yyjson_val* pt_item;
+									const char* params_string[12] = { "AX","AY","AZ","VX","VY","VZ","DX","DY","DZ","HZX","HZY","HZZ" };
+									float absMaxValue[12];
+									float squareSumDx = 0;
+									float squareSumDy = 0;
+									float squareSumDz = 0;
+									float squareSumDxDyDz = 0;
+									yyjson_arr_foreach(pt_arr, pt_idx, pt_max, pt_item)
+									{
+										for (int i=0;i<12;i++)
+										{
+											float itemValue;
+											if (yyjson_is_real(yyjson_arr_get(pt_item, i)))
+											{
+												itemValue = yyjson_get_real(yyjson_arr_get(pt_item, i));
+											}
+											else
+											{
+												itemValue = yyjson_get_int(yyjson_arr_get(pt_item, i)) * 1.0;
+											}
+											if (pt_idx == 0)
+											{
+												absMaxValue[i]= abs(itemValue);
+											}
+											else
+											{
+												absMaxValue[i] = abs(itemValue) > absMaxValue[i] ? abs(itemValue) : absMaxValue[i];
+											}
+
+											if (i==6)
+											{
+												squareSumDx += (itemValue * itemValue);
+												squareSumDxDyDz += (itemValue * itemValue);
+											}
+											if (i == 7)
+											{
+												squareSumDy += (itemValue * itemValue);
+												squareSumDxDyDz += (itemValue * itemValue);
+											}
+											if (i == 8)
+											{
+												squareSumDz += (itemValue * itemValue);
+												squareSumDxDyDz += (itemValue * itemValue);
+											}
+										}
+									}
+									
+									if (!yyjson_mut_obj_get(item, "absMax"))
+									{
+										auto absMax_obj = yyjson_mut_obj(mut_doc);
+										for (int i = 0; i < 12; i++) {
+											yyjson_mut_obj_add_real(mut_doc, absMax_obj, params_string[i], absMaxValue[i]);
+										}
+										yyjson_mut_obj_add_val(mut_doc, item, "absMax", absMax_obj);
+									}
+
+									if (!yyjson_mut_obj_get(item, "PRX") && squareSumDxDyDz != 0)
+										yyjson_mut_obj_add_real(mut_doc, item, "PRX", squareSumDx / squareSumDxDyDz);
+									if (!yyjson_mut_obj_get(item, "PRY") && squareSumDxDyDz != 0)
+										yyjson_mut_obj_add_real(mut_doc, item, "PRY", squareSumDy / squareSumDxDyDz);
+									if (!yyjson_mut_obj_get(item, "PRZ") && squareSumDxDyDz != 0)
+										yyjson_mut_obj_add_real(mut_doc, item, "PRZ", squareSumDz / squareSumDxDyDz);
+								}
+							}
 						}
 						yyjson_doc_free(oneCurveDoc);
 					}
@@ -2528,6 +2601,11 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			yyjson_mut_write_file(curveIdxPath_gbk.c_str(),mut_doc, YYJSON_WRITE_PRETTY,0,&err);
 			yyjson_mut_doc_free(mut_doc);
 			yyjson_doc_free(doc);
+
+			json jRecv;
+			jRecv["result"] = "ok";
+			rpcResp.result = jRecv.dump();
+
 		}
 	}
 	else {

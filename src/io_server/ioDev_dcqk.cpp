@@ -1165,10 +1165,10 @@ void ioDev_dcqk::Do_CMD_CODE_YYQX(LPVOID pData)
 				}
 			}
 			string tag = pMo->getTag() + "."+ metricName;
-				byte interval = 1000 / lpsubdata->collectfreq;
-				byte dir = lpsubdata->direct;//0　定到反， 1 反到定
-				byte dzg_dir = lpsubdata->filldata & 0x0000ff00;//动作杆伸缩方向
-				byte curveAlm = lpsubdata->filldata & 0x0000ff00;//曲线报警状态
+			unsigned char interval = 1000 / lpsubdata->collectfreq;
+			unsigned char dir = lpsubdata->direct;//0　定到反， 1 反到定
+			unsigned char dzg_dir = lpsubdata->filldata & 0x0000ff00;//动作杆伸缩方向
+			unsigned char curveAlm = lpsubdata->filldata & 0x0000ff00;//曲线报警状态
 				TIME ti; ti.fromUnixTimeStamp(lpsubdata->time);
 				string startTi = timeopt::stTimeToStr(ti);
 
