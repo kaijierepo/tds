@@ -84,3 +84,17 @@ extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);
 
 extern bool runWebServers();
+
+// http请求黑名单： apiserver和ioserver
+extern std::map<string, string> apiBlackList; // apiIP des
+extern std::map<string, string> ioBlackList; // ioIP des
+extern bool loadApiBlackList();
+extern bool saveApiBlackList();
+extern bool loadIoBlackList();
+extern bool saveIoBlackList();
+
+extern bool addBlackList(string type, json paramVal);
+extern bool delBlackList(string type, string ip);
+extern bool setBlackList(string type, json listVal);
+extern bool getBlackList(string type, json& listVal);
+

@@ -2608,6 +2608,26 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		}
 	}
+	else if (method == "getBlackList") {
+		json res;
+		json list = json::array();
+		getBlackList(params["type"], list);
+		res["type"] = params["type"];
+		res["list"] = list;
+		rpcResp.result = res.dump();
+	}
+	else if (method == "setBlackList") {
+		setBlackList(params["type"], params["list"]);
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "deleteBlackList") {
+		delBlackList(params["type"], params["ip"]);
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "addBlackList") {
+		addBlackList(params["type"], params["val"]);
+		rpcResp.result = RPC_OK;
+	}
 	else {
 		bHandled = false;
 	}

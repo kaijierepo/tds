@@ -24,6 +24,9 @@ string fsRootDir;
 string topoDir;
 string dbDir;
 
+// http请求黑名单： apiserver和ioserver
+std::map<string, string> apiBlackList; // apiIP des
+std::map<string, string> ioBlackList; // ioIP des
 
 struct thread_data {
 	struct mg_mgr* mgr;
@@ -839,6 +842,8 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	if (!pWs) 
 		return; //刚启动runWebServers有时会出现NULL
 	if (ev == MG_EV_ACCEPT) {
+		// 黑名单判断
+
 		if (pWs->m_isHttps)
 		{
 #ifdef ENABLE_OPENSSL
@@ -1345,6 +1350,9 @@ bool runWebServers()
 */
 	mg_log_set(1);//禁用mongoose日志
 
+	// 读取黑名单
+	loadApiBlackList();
+
 	rootDir = tds->conf->uiPath; 
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
@@ -1431,6 +1439,176 @@ bool runWebServers()
 		hmrServer.run(tds->conf->uiPath);
 	}
 
+	return true;
+}
+
+bool loadApiBlackList()
+{
+	apiBlackList.clear();
+
+	// tds->conf->confPath
+	string apiJsonPath = fs::appPath() + "/blacklist.api.json";
+	string apiStr;
+	if (fs::readFile(apiJsonPath, apiStr))
+	{
+		LOG("[keyinfo]加载API黑名单blacklist.api.json");
+		try {
+			json apiJson = json::parse(apiStr.c_str());
+			for (auto it : apiJson)
+			{
+				apiBlackList[it["ip"].get<string>()] = it["desc"].get<string>();
+			}
+		}
+		catch (std::exception& e)
+		{
+			string error = e.what();
+			LOG("[error]解析API黑名单blacklist.api.json失败," + error);
+			return false;
+		}
+
+	}
+	return true;
+}
+
+bool saveApiBlackList()
+{
+	json apiJson = json::array();
+	for (auto itm : apiBlackList)
+	{
+		json apiObj;		
+		apiObj["ip"] = itm.first;
+		apiObj["desc"] = itm.second;
+		apiJson.push_back(apiObj);
+	}
+
+	if (apiJson.size())
+	{
+		string str = apiJson.dump(4);
+		if (!fs::writeFile(fs::appPath() + "/blacklist.api.json", str))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool loadIoBlackList()
+{
+	// tds->conf->confPath
+	string ioJsonPath = fs::appPath() + "/blacklist.io.json";
+	string ioStr;
+	if (fs::readFile(ioJsonPath, ioStr))
+	{
+		LOG("[keyinfo]加载IO黑名单blacklist.io.json");
+		try {
+			json ioJson = json::parse(ioStr.c_str());
+			for (auto it : ioJson)
+			{
+				ioBlackList[it["ip"].get<string>()] = it["desc"].get<string>();
+			}
+		}
+		catch (std::exception& e)
+		{
+			string error = e.what();
+			LOG("[error]解析IO黑名单blacklist.io.json失败," + error);
+			return false;
+		}
+
+	}
+	return true;
+}
+
+bool saveIoBlackList()
+{
+	json ioJson = json::array();
+	for (auto itm : ioBlackList)
+	{
+		json apiObj;
+		apiObj["ip"] = itm.first;
+		apiObj["desc"] = itm.second;
+		ioJson.push_back(apiObj);
+	}
+
+	if (ioJson.size())
+	{
+		string str = ioJson.dump(4);
+		if (!fs::writeFile(fs::appPath() + "/blacklist.io.json", str))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+bool addBlackList(string type, json paramVal)
+{
+	string ip = paramVal["ip"].get<string>();
+	string desc = paramVal["desc"].get<string>();
+
+	if (type == "apiServer") {
+		apiBlackList[ip] = desc;
+	}
+	else if (type == "ioServer") {
+		ioBlackList[ip] = desc;
+	}
+	return true;
+}
+
+bool delBlackList(string type, string ip)
+{
+	if (type == "apiServer") {
+		apiBlackList.erase(ip);
+	}
+	else if (type == "ioServer") {
+		ioBlackList.erase(ip);
+	}	
+	return true;
+}
+
+bool setBlackList(string type, json listVal)
+{
+	if (type == "apiServer") {
+		apiBlackList.clear();
+		for (auto it : listVal)
+		{
+			apiBlackList[it["ip"].get<string>()] = it["desc"].get<string>();
+		}
+
+		saveApiBlackList();
+	}
+	else if (type == "ioServer") {
+		ioBlackList.clear();
+		for (auto it : listVal)
+		{
+			ioBlackList[it["ip"].get<string>()] = it["desc"].get<string>();
+		}
+
+		saveIoBlackList();
+	}
+
+	return true;
+}
+
+bool getBlackList(string type, json& listVal)
+{
+	if (type == "apiServer") {
+		for (auto itm : apiBlackList)
+		{
+			json apiObj;
+			apiObj["ip"] = itm.first;
+			apiObj["desc"] = itm.second;
+			listVal.push_back(apiObj);
+		}
+	}
+	else if (type == "ioServer") {
+		for (auto itm : ioBlackList)
+		{
+			json apiObj;
+			apiObj["ip"] = itm.first;
+			apiObj["desc"] = itm.second;
+			listVal.push_back(apiObj);
+		}
+	}
 	return true;
 }
 
