@@ -849,13 +849,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		// api找到在黑名单，返回
 		if (apiBlackList.find(wsip) != apiBlackList.end())
 		{
-			mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nserver forbid access from your ip address");
-			//string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-			//resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
-			//resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
-			//mg_http_reply(c, 200, "server forbid access from your ip address", "");
-
-			mg_close_conn(c);
+			string resHeader = "Connection: close\r\n";
+			string body = "";
+			mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
 			return;
 		}
 
