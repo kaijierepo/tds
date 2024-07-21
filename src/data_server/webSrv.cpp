@@ -26,7 +26,9 @@ string dbDir;
 
 // http请求黑名单： apiserver和ioserver
 std::map<string, string> apiBlackList; // apiIP des
+std::shared_mutex g_csApiBlackList;  //注意避免共享锁可能锁两次的问题
 std::map<string, string> ioBlackList; // ioIP des
+int g_bl_timeStamp=0; //ip黑名单的最新时间戳 重启恢复0  仅用来区分是否检测过
 
 struct thread_data {
 	struct mg_mgr* mgr;
@@ -847,14 +849,23 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		string wsip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
 
 		// api找到在黑名单，返回
-		if (apiBlackList.find(wsip) != apiBlackList.end())
 		{
-			string resHeader = "Connection: close\r\n";
-			string body = "";
-			mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
-			return;
+			std::shared_lock<shared_mutex> lock(g_csApiBlackList);
+			if (apiBlackList.find(wsip) != apiBlackList.end())
+			{
+				string resHeader = "Connection: close\r\n";
+				string body = "";
+				mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
+				c->is_closing = 1;
+				c->isBlackIp = true;
+				c->bl_timeStamp = g_bl_timeStamp;
+				return;
+			}
+			else {
+				c->isBlackIp = false;
+				c->bl_timeStamp = g_bl_timeStamp;
+			}
 		}
-
 		if (pWs->m_isHttps)
 		{
 #ifdef ENABLE_OPENSSL
@@ -999,6 +1010,32 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
 		{
+			if (c->bl_timeStamp != g_bl_timeStamp) {
+				unsigned char* pIP = (unsigned char*)&c->rem.ip;
+				string sip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
+				std::shared_lock<shared_mutex> lock(g_csApiBlackList);
+				if (apiBlackList.find(sip) != apiBlackList.end())
+				{
+					string resHeader = "Connection: close\r\n";
+					string body = "";
+					mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
+					c->is_closing = 1;
+					c->isBlackIp = true;
+					return;
+				}
+				else {
+					c->isBlackIp = false;
+				}
+				c->bl_timeStamp = g_bl_timeStamp;
+			}
+			else {
+				if (c->isBlackIp) {
+					string resHeader = "Connection: close\r\n";
+					mg_http_reply(c, 403, resHeader.c_str(), "");
+					c->is_closing = 1;
+					return;
+				}
+			}
 			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
@@ -1455,6 +1492,7 @@ bool runWebServers()
 
 bool loadApiBlackList()
 {
+	std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 	apiBlackList.clear();
 
 	// tds->conf->confPath
@@ -1557,8 +1595,10 @@ bool addBlackList(string type, json paramVal)
 	string desc = paramVal["desc"].get<string>();
 
 	if (type == "apiServer") {
+		std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 		apiBlackList[ip] = desc;
 		saveApiBlackList();
+		g_bl_timeStamp = time(NULL);
 	}
 	else if (type == "ioServer") {
 		ioBlackList[ip] = desc;
@@ -1569,9 +1609,12 @@ bool addBlackList(string type, json paramVal)
 
 bool delBlackList(string type, string ip)
 {
+
 	if (type == "apiServer") {
+		std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 		apiBlackList.erase(ip);
 		saveApiBlackList();
+		g_bl_timeStamp = time(NULL);
 	}
 	else if (type == "ioServer") {
 		ioBlackList.erase(ip);
@@ -1583,13 +1626,14 @@ bool delBlackList(string type, string ip)
 bool setBlackList(string type, json listVal)
 {
 	if (type == "apiServer") {
+		std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 		apiBlackList.clear();
 		for (auto it : listVal)
 		{
 			apiBlackList[it["ip"].get<string>()] = it["desc"].get<string>();
 		}
-
 		saveApiBlackList();
+		g_bl_timeStamp = time(NULL);
 	}
 	else if (type == "ioServer") {
 		ioBlackList.clear();
@@ -1607,6 +1651,7 @@ bool setBlackList(string type, json listVal)
 bool getBlackList(string type, json& listVal)
 {
 	if (type == "apiServer") {
+		std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 		for (auto itm : apiBlackList)
 		{
 			json apiObj;

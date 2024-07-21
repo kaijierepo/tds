@@ -2207,6 +2207,9 @@ struct mg_connection {
   int pipeSock;
   void* app_layer_data;
   void* sessionInfo;
+
+  int bl_timeStamp; //ip blacklist timestamp
+  bool isBlackIp; // ip in the blacklist identified by the "timeStamp"
 };
 
 void mg_mgr_poll(struct mg_mgr *, int ms);
