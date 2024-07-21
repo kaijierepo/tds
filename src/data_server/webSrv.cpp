@@ -842,7 +842,22 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 	if (!pWs) 
 		return; //刚启动runWebServers有时会出现NULL
 	if (ev == MG_EV_ACCEPT) {
-		// 黑名单判断
+		// 黑名单判断		
+		unsigned char* pIP = (unsigned char*)&c->rem.ip;
+		string wsip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
+
+		// api找到在黑名单，返回
+		if (apiBlackList.find(wsip) != apiBlackList.end())
+		{
+			mg_printf(c, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nserver forbid access from your ip address");
+			//string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+			//resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
+			//resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+			//mg_http_reply(c, 200, "server forbid access from your ip address", "");
+
+			mg_close_conn(c);
+			return;
+		}
 
 		if (pWs->m_isHttps)
 		{
@@ -1451,7 +1466,7 @@ bool loadApiBlackList()
 	string apiStr;
 	if (fs::readFile(apiJsonPath, apiStr))
 	{
-		LOG("[keyinfo]加载API黑名单blacklist.api.json");
+		//LOG("[keyinfo]加载API黑名单blacklist.api.json");
 		try {
 			json apiJson = json::parse(apiStr.c_str());
 			for (auto it : apiJson)
@@ -1547,9 +1562,11 @@ bool addBlackList(string type, json paramVal)
 
 	if (type == "apiServer") {
 		apiBlackList[ip] = desc;
+		saveApiBlackList();
 	}
 	else if (type == "ioServer") {
 		ioBlackList[ip] = desc;
+		saveIoBlackList();
 	}
 	return true;
 }
@@ -1558,9 +1575,11 @@ bool delBlackList(string type, string ip)
 {
 	if (type == "apiServer") {
 		apiBlackList.erase(ip);
+		saveApiBlackList();
 	}
 	else if (type == "ioServer") {
 		ioBlackList.erase(ip);
+		saveIoBlackList();
 	}	
 	return true;
 }
@@ -1603,10 +1622,10 @@ bool getBlackList(string type, json& listVal)
 	else if (type == "ioServer") {
 		for (auto itm : ioBlackList)
 		{
-			json apiObj;
-			apiObj["ip"] = itm.first;
-			apiObj["desc"] = itm.second;
-			listVal.push_back(apiObj);
+			json ioObj;
+			ioObj["ip"] = itm.first;
+			ioObj["desc"] = itm.second;
+			listVal.push_back(ioObj);
 		}
 	}
 	return true;
