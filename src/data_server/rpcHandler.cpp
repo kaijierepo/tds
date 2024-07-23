@@ -1437,8 +1437,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		rpc_getconffile(params, rpcResp, session);
 	}
 	else if (method == "getObjTemplate") {
-		if (params.contains("type")) {
-			string type = params["type"];
+		if (params.contains("name")) {
+			string type = params["name"];
 			if (prj.m_mapObjTempalte.find(type) != prj.m_mapObjTempalte.end()) {
 				OBJ_TEMPLATE* ct = prj.m_mapObjTempalte[type];
 				rpcResp.result = ct->tplData;
@@ -1448,7 +1448,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "param name is not specified");
+			json j = json::array();
+			for (auto& iter : prj.m_mapObjTempalte) {
+				json jItem = json::object();
+				jItem["name"] = iter.first;
+				jItem["data"] = iter.second->tplData;
+				j.push_back(jItem);
+			}
+			rpcResp.result = j.dump();
 		}
 	}
 	else if (method == "setObjTemplate") {
@@ -2613,6 +2620,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			rpcResp.result = jRecv.dump();
 
 		}
+		rpcResp.result = RPC_OK;
 	}
 	else if (method == "getBlackList") {
 		json res;

@@ -317,7 +317,7 @@ struct iTDSConf {
 
 	//io service conf
 	int tdspPort;  //tdsp protocol port of ioServer;  default value 665 
-	int mbPort;    //modbus protocol port of ioServer; default value 664
+	vector<int> mbPort;    //modbus protocol port of ioServer; default value 664
 	int iq60Port;  //iq60 protocol port of ioServer; default value 663
 	int tcpKeepAliveIO;
 	int iotimeoutTdsp; //tdsp comm timeout in milliseconds

@@ -1280,18 +1280,34 @@ bool ioServer::runAsCloud()
 	}
 
 
-	//io服务 664 Modbus over TCP
-	m_tcpSrv_rtu = new tcpSrv();
-	m_tcpSrv_rtu->m_strName = "modbus rtu";
-	m_tcpSrv_rtu->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_rtu->run(this, tds->conf->mbPort, m_ioSrvIP))
-	{
-		
+
+	for (int i = 0; i < tds->conf->mbPort.size(); i++) {
+		//io服务 664 Modbus over TCP
+		int mbPort = tds->conf->mbPort[i];
+		tcpSrv* ts = new tcpSrv();
+		ts->m_strName = "modbus rtu";
+		ts->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+		if (ts->run(this,mbPort, m_ioSrvIP))
+		{
+
+		}
+		else
+		{
+			LOG("[error][IO服务    ] 启动失败 TCP端口:" + str::fromInt(mbPort));
+		}
+
+		//io服务 664 Modbus over UDP
+		udpServer* us = new udpServer();
+		if (us->run(&this->ioHandler_mbRtu_udp, mbPort, m_ioSrvIP))
+		{
+
+		}
+		else
+		{
+			LOG("[error][IO服务    ] 启动失败 UDP端口:" + str::fromInt(mbPort));
+		}
 	}
-	else
-	{
-		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->mbPort));
-	}
+
 
 	//io服务 502 Modbus over TCP
 	m_tcpSrv_mbTcp = new tcpSrv();
@@ -1361,8 +1377,12 @@ void ioServer::stop()
 {
 	if (m_tcpSrv_iq60)
 		m_tcpSrv_iq60->stop();
-	if (m_tcpSrv_rtu)
-		m_tcpSrv_rtu->stop();
+	for (int i = 0; i < m_udpSrv_rtu.size(); i++) {
+		m_udpSrv_rtu[i]->stop();
+	}
+	for (int i = 0; i < m_tcpSrv_rtu.size(); i++) {
+		m_tcpSrv_rtu[i]->stop();
+	}
 	if (m_tcpSrv_tdsp)
 		m_tcpSrv_tdsp->stop();
 
@@ -2331,4 +2351,20 @@ vector<std::shared_ptr<TDS_SESSION>> ioServer::getStreamPushers(string tag)
 		}
 	}
 	return vec;
+}
+
+void ioHandler_mbRtu::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
+{
+}
+
+void ioHandler_mbRtu::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
+{
+}
+
+void ioHandler_mbRtu::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+{
+	ioDev* p = ioSrv.getIODev("UDP-" + strIP, false, true);
+	if (p) {
+		p->onRecvData(recvData, recvDataLen);
+	}
 }

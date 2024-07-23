@@ -12,7 +12,7 @@ tdsConfig::tdsConfig()
 	httpsPort2 = 0;
 	httpPort2 = 0;
 	tdspPort = 665;
-	mbPort = 664;
+	mbPort.push_back(664);
 	iq60Port = 663;
 	debugMode = false;
 	bConcurrentGateway = true;
@@ -196,8 +196,17 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 			httpPort2 = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "tdspPort"))
 			tdspPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "mbPort"))
-			mbPort = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "mbPort")) {
+			mbPort.clear();
+			string s = str::replace(tci.val,"，", ",");
+			vector<string> sPorts;
+			str::split(sPorts,s, ",");
+			for (int i = 0; i < sPorts.size(); i++) {
+				string sp = sPorts[i];
+				int p = atoi(sp.c_str());
+				mbPort.push_back(p);
+			}
+		}
 		else if (checkKey(tci.key, "iq60Port"))
 			iq60Port = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "devRebootTime"))

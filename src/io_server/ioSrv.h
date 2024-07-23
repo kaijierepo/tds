@@ -98,6 +98,12 @@ struct DEV_STATIS {
 	}
 };
 
+class ioHandler_mbRtu : public ITcpServerCallBack, public IUdpServerCallBack {
+	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+};
+
 
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
@@ -161,7 +167,8 @@ public:
 	//Tcp通信
 	map<int, string> m_mapPort2DevType;
 	tcpSrv* m_tcpSrv_tdsp; //665 tdsp协议
-	tcpSrv* m_tcpSrv_rtu; //664 modbus RTU over tcp协议
+	vector<tcpSrv*> m_tcpSrv_rtu; //664 modbus RTU over tcp协议
+	vector<udpServer*> m_udpSrv_rtu; //664 modbus RTU over udp协议
 	tcpSrv* m_tcpSrv_mbTcp; //502 modbus tcp协议
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
@@ -171,6 +178,8 @@ public:
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 
+
+	ioHandler_mbRtu ioHandler_mbRtu_udp;
 
 
 	//通信分层处理
