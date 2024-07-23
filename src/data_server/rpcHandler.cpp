@@ -1226,7 +1226,13 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	else if (method == "getDevFirmware")
 	{
 		vector<string> list;
-		fs::getFileList(list,fs::appPath() +"/files/firmware",false);
+		//fs::getFileList(list,fs::appPath() +"/files/firmware",false);
+		vector<fs::FILE_INFO> filist;
+		fs::getFileList(filist, fs::appPath() + "/files/firmware", false);
+		for (int i = 0; i < filist.size(); i++) {
+			fs::FILE_INFO& fi = filist[i];
+			list.push_back(fi.name);
+		}
 		json j = json::array();
 		for (int i = 0; i < list.size(); i++) {
 			j.push_back(list[i]);
