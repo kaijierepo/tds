@@ -2749,7 +2749,7 @@ void rpcHandler::setLicenceStatus(json j)
 	m_csLicenceStatus.unlock();
 }
 
-bool rpcHandler::handleRpcRoute(string& strReq,json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
+bool rpcHandler::handleRpcRoute(json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession)
 {
 	string method = jReq["method"].get<string>();
 	if (jReq.contains("tdsSession")) //使用tdsSession进行io透传
@@ -2947,120 +2947,89 @@ void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> 
 	t.detach();
 }
 
-void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl,bool bEdgeDevMode)
+void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode)
 {
-	string error = "";
-	string method = "";
-	json id = nullptr;
-	json clientId = nullptr;
-	bool bGB2312 = false;
-	bool bNeedLog = true;
-	std::map<string, RPC_SESSION>::iterator iter;
-
-	strReq = str::trim(strReq);
-	if (strReq.length() == 0) 
+	if (!jReq.contains("method"))
 	{
-		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_InvalidReqFmt, "invalid request format. request length is 0.");
+		LOG("[error][TDS-RPC]协议数据包必须包含method字段\n" + jReq.dump());
+		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"missing field method", "id" : null})";
+		return;
+	}
+	string method = jReq["method"].get<string>();
+	json params;
+	if (jReq.contains("params"))
+		params = jReq["params"];
+	json id = jReq["id"];
+	if (id == nullptr) {
+		rpcResp.isNotification = true;
+		pSession->isNotification = true;
+	}
+
+
+	statisCall(method);
+	if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {
+		rpcResp.strResp = str::format(R"({"jsonrpc":"2.0","error":"method disabled", "id" : %s})",id.dump().c_str());
+		return;
+	}
+
+	if (jReq.contains("dbPath")) {
+		pSession->dbpath = jReq["dbPath"].get<string>();
+	}
+	if (jReq.contains("language")) {
+		pSession->language = jReq["language"].get<string>();
+	}
+
+	//调试命令会话不纳入统计
+	if (!pSession->isDebug) {
+		m_csRpcSessions.lock();
+		std::map<string, RPC_SESSION>::iterator iter = m_mapRpcSessions.find(pSession->remoteAddr);
+		if (iter != m_mapRpcSessions.end()) {
+			RPC_SESSION& sess = iter->second;
+			sess.sLastRecvTime = timeopt::nowStr();
+			sess.lastMethodCalled = method;
+		}
+		else {
+			RPC_SESSION sess;
+			sess.remoteAddr = pSession->remoteAddr;
+			sess.remoteIP = pSession->remoteIP;
+			sess.remotePort = pSession->remotePort;
+			sess.sLastRecvTime = timeopt::nowStr();
+			sess.lastMethodCalled = method;
+			m_mapRpcSessions[pSession->remoteAddr] = sess;
+		}
+		m_csRpcSessions.unlock();
+	}
+
+
+
+	//对部分命令日志记录
+	bool bNeedLog = needLog(method);
+	if (bNeedLog)
+		LOG("[trace]RPC请求:\r\n" + jReq.dump() + "\r\n");
+	if (method == "output" || method == "openStream")
+		LOG("[warn]RPC请求:\r\n" + jReq.dump() + "\r\n");
+
+	//心跳最先处理
+	if (method == "heartbeat")
+	{
+		rpcResp.result = RPC_OK;
 		goto HANDLE_END;
 	}
 
-	
-	bGB2312 = isGB2312Pkt(strReq);
-	if(bGB2312)
-		strReq = charCodec::gb_to_utf8(strReq);
-
-
-	pSession->req = strReq;
-
-
-	try
+	//访问控制
+	if (method == "login")
 	{
-		//解析请求基本信息
-		//调试用 fs::writeFile(fs::appPath() + "/req.json", strReq);
-		json jReq = json::parse(strReq);
-		if (!jReq.contains("method"))
-		{
-			LOG("[error][TDS-RPC]协议数据包必须包含method字段\n" + strReq);
-			return;
-		}
+		userMng.rpc_login(params, rpcResp, pSession->getRpcSession());
+		goto HANDLE_END;
+	}
+	else if (method == "logout")
+	{
+		userMng.rpc_logout(params, rpcResp, pSession->getRpcSession());
+		goto HANDLE_END;
+	}
 
-		method = jReq["method"].get<string>();
-		statisCall(method);
-
-		if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"method disabled");
-			goto HANDLE_END;
-		}
-
-		if (jReq.contains("dbPath")){
-			pSession->dbpath = jReq["dbPath"].get<string>();
-		}
-		if (jReq.contains("language")) {
-			pSession->language = jReq["language"].get<string>();
-		}
-		
-
-		//调试命令会话不纳入统计
-		if (!pSession->isDebug) {
-			m_csRpcSessions.lock();
-			iter = m_mapRpcSessions.find(pSession->remoteAddr);
-			if (iter != m_mapRpcSessions.end()) {
-				RPC_SESSION& sess = iter->second;
-				sess.sLastRecvTime = timeopt::nowStr();
-				sess.lastMethodCalled = method;
-			}
-			else {
-				RPC_SESSION sess;
-				sess.remoteAddr = pSession->remoteAddr;
-				sess.remoteIP = pSession->remoteIP;
-				sess.remotePort = pSession->remotePort;
-				sess.sLastRecvTime = timeopt::nowStr();
-				sess.lastMethodCalled = method;
-				m_mapRpcSessions[pSession->remoteAddr] = sess;
-			}
-			m_csRpcSessions.unlock();
-		}
-
-
-		json params;
-		if (jReq.contains("params"))
-			params = jReq["params"];
-		id = jReq["id"];
-		if (id == nullptr) {
-			rpcResp.isNotification = true;
-			pSession->isNotification = true;
-		}
-
-		
-			
-		//对部分命令日志记录
-		bNeedLog = needLog(method);
-		if (bNeedLog)
-			LOG("[trace]RPC请求:\r\n" + strReq + "\r\n");
-		if(method == "output" || method == "openStream")
-			LOG("[warn]RPC请求:\r\n" + strReq + "\r\n");
-
-		//心跳最先处理
-		if (method == "heartbeat")
-		{
-			rpcResp.result = RPC_OK;
-			goto HANDLE_END;
-		}
-
-
-		//访问控制
-		if (method == "login")
-		{
-			userMng.rpc_login(params, rpcResp, pSession->getRpcSession());
-			goto HANDLE_END;
-		}
-		else if (method == "logout")
-		{
-			userMng.rpc_logout(params, rpcResp, pSession->getRpcSession());
-			goto HANDLE_END;
-		}
-
-		//验证user;    没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
+	//验证user;    没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
+	{
 		json jUser;
 		if (jReq["user"] != nullptr)
 		{
@@ -3104,118 +3073,98 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				goto HANDLE_END;
 			}
 		}
+	}
 
-		//test账户具有所有功能模块的浏览权限，但没有控制权限，用户功能演示。可以认为是一个只能浏览的管理员账号
-		if (pSession->user == "test") {
-			if (method.find("set") != string::npos ||
-				method.find("add") != string::npos ||
-				method.find("delete") != string::npos ||
-				method.find("write") != string::npos ||
-				method.find("start") != string::npos ||
-				method.find("stop") != string::npos ||
-				method.find("run") != string::npos ||
-				method.find("db.delete") != string::npos ||
-				method.find("db.delete") != string::npos ||
-				method.find("db.update") != string::npos ||
-				method == "output" ||
-				method == "input") {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noPermission, "no permission","没有权限");
-				goto HANDLE_END;
-			}
-		}
-			
-		if (bAccessCtrl && tds->conf->enableAccessCtrl) {
-			if ( jReq["token"] == nullptr && jReq["pwd"] == nullptr)
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
-				goto HANDLE_END;
-			}
-
-			//user token to access
-			if (jReq["token"] != nullptr && jReq["token"] != "")
-			{
-				pSession->token = jReq["token"].get<string>();
-				string token = pSession->token;
-				string user = pSession->user;
-				if (!userMng.checkToken(user, token))
-				{
-					//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
-					goto HANDLE_END;
-				}
-			}
-
-			//use password to access, for api testing, do not use in a productin enviroment
-			if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
-			{
-				string pwd = jReq["pwd"].get<string>();
-				string user = pSession->user;
-				if (!userMng.checkPwd(user, pwd))
-				{
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid password");
-					goto HANDLE_END;
-				}
-			}
-		}
-
-		//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
-		//if (!bEdgeDevMode) 
-		//{
-			if (handleRpcRoute(strReq, jReq, rpcResp, pSession))
-			{
-				goto HANDLE_END;
-			}
-		//}
-		
-		//通知消息，无需生成响应，转发后直接返回
-		if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
-		{
-			notify("notify", params, false,pSession);
-			return;
-		}
-		//后端总线，实现一种微前端模块之间可以相互调用函数的机制
-		//前端总线，可以在前端的app之间实现相互调用，相比于后端总线，只能调用本机浏览器上的app
-		else if (method.find("app.") != string::npos) 
-		{
-			notify(method, params, false, pSession);
-			return;
-		}
-
-		
-		//先使用外部注册的handler受理请求
-		if (m_pluginHandler)
-		{
-			bool bHandled = m_pluginHandler(strReq, rpcResp, error);
-			if (bHandled)
-			{
-				goto HANDLE_END;
-			}
-		}
-		
-
-		//tds自身受理
-		if (!handleMethodCall(method, params, rpcResp, pSession->getRpcSession())) {
-			LOG("[warn]调用不存在的rpc方法\r\n" + strReq);
+	//test账户具有所有功能模块的浏览权限，但没有控制权限，用户功能演示。可以认为是一个只能浏览的管理员账号
+	if (pSession->user == "test") {
+		if (method.find("set") != string::npos ||
+			method.find("add") != string::npos ||
+			method.find("delete") != string::npos ||
+			method.find("write") != string::npos ||
+			method.find("start") != string::npos ||
+			method.find("stop") != string::npos ||
+			method.find("run") != string::npos ||
+			method.find("db.delete") != string::npos ||
+			method.find("db.delete") != string::npos ||
+			method.find("db.update") != string::npos ||
+			method == "output" ||
+			method == "input") {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noPermission, "no permission", "没有权限");
+			goto HANDLE_END;
 		}
 	}
-	catch (std::exception& e)
-	{
-		string errorType = e.what();
-		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
-		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
-		errorType = str::encodeAscII(errorType);
-		LOG("[error]RPC请求包处理异常:\r\n错误信息:" + errorType + "\r\n数据包:\r\n" + strReq);
-		json jError = {
-				{"code", -32700},
-				{"message" , "Parse error," + errorType}
-		};
 
-		//TDSP设备协议。不发送回包。
-		if (pSession->type.find("ioDev") == string::npos)
+	if (bAccessCtrl && tds->conf->enableAccessCtrl) {
+		if (jReq["token"] == nullptr && jReq["pwd"] == nullptr)
 		{
-			rpcResp.error = jError.dump();
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
+			goto HANDLE_END;
 		}
+
+		//user token to access
+		if (jReq["token"] != nullptr && jReq["token"] != "")
+		{
+			pSession->token = jReq["token"].get<string>();
+			string token = pSession->token;
+			string user = pSession->user;
+			if (!userMng.checkToken(user, token))
+			{
+				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
+				goto HANDLE_END;
+			}
+		}
+
+		//use password to access, for api testing, do not use in a productin enviroment
+		if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
+		{
+			string pwd = jReq["pwd"].get<string>();
+			string user = pSession->user;
+			if (!userMng.checkPwd(user, pwd))
+			{
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid password");
+				goto HANDLE_END;
+			}
+		}
+	}
+
+	//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
+	if (handleRpcRoute(jReq, rpcResp, pSession))
+	{
 		goto HANDLE_END;
+	}
+
+	//通知消息，无需生成响应，转发后直接返回
+	if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
+	{
+		notify("notify", params, false, pSession);
+		return;
+	}
+	//后端总线，实现一种微前端模块之间可以相互调用函数的机制(过于复杂的机制，考虑丢弃)
+	//前端总线，可以在前端的app之间实现相互调用，相比于后端总线，只能调用本机浏览器上的app
+	//else if (method.find("app.") != string::npos)
+	//{
+	//	notify(method, params, false, pSession);
+	//	return;
+	//}
+
+	//先使用外部注册的handler受理请求
+	if (m_pluginHandler)
+	{
+		string sReq = jReq.dump();
+		string error;
+		bool bHandled = m_pluginHandler(sReq, rpcResp, error);
+		if (bHandled)
+		{
+			goto HANDLE_END;
+		}
+	}
+
+	//tds自身受理
+	if (!handleMethodCall(method, params, rpcResp, pSession->getRpcSession())) {
+		LOG("[warn]调用不存在的rpc方法\r\n" + jReq.dump());
+		rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": %s})",id.dump().c_str());
+		return;
 	}
 
 HANDLE_END:
@@ -3241,7 +3190,7 @@ HANDLE_END:
 		if (rpcResp.dbQueryInfo != "") {
 			rpcResp.strResp += ",\"dbLog\":\"" + rpcResp.dbQueryInfo + "\"";
 		}
-			
+
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
 	}
 
@@ -3284,6 +3233,55 @@ HANDLE_END:
 	if (rpcResp.iBinLen > 0)
 	{
 		LOG("[trace]RPC响应: 二进制数据 len = " + str::fromInt(rpcResp.iBinLen));
+	}
+}
+
+
+void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl,bool bEdgeDevMode)
+{
+	string error = "";
+	string method = "";
+	json id = nullptr;
+	bool bGB2312 = false;
+	bool bNeedLog = true;
+	std::map<string, RPC_SESSION>::iterator iter;
+
+	if (strReq.length() == 0) 
+	{
+		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"invalid request format. request length is 0", "id" : null})";
+		return;
+	}
+
+	pSession->req = strReq;
+	json jReq;
+	try
+	{
+		jReq = json::parse(strReq);
+		if (jReq.is_array()) {
+			rpcResp.strResp = "[";
+			for (int i = 0; i < jReq.size();i++){
+				json& singleReq = jReq[i];
+				RPC_RESP singleResp;
+				handleRpcCall_single(singleReq, singleResp, pSession, bAccessCtrl, bEdgeDevMode);
+				rpcResp.strResp += singleResp.strResp;
+				if (i != jReq.size() - 1) {
+					rpcResp.strResp += ",";
+				}
+			}
+			rpcResp.strResp += "]";
+		}
+		else {
+			handleRpcCall_single(jReq, rpcResp, pSession, bAccessCtrl, bEdgeDevMode);
+		}
+	}
+	catch (std::exception& e)
+	{
+		string errorType = e.what();
+		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
+		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
+		errorType = str::encodeAscII(errorType);
+		LOG("[error]RPC请求包处理异常:\r\n错误信息:" + errorType + "\r\n数据包:\r\n" + strReq);
+		rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error" : {"code": -32700, "message" : "%s"}, "id" : null})",errorType.c_str());
 	}
 }
 

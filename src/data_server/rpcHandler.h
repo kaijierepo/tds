@@ -40,13 +40,14 @@ public:
 
 	void setLicenceStatus(json j) override;
 	//rpc路由的命令  可以路由到tdsp设备，或者childTds
-	bool handleRpcRoute(string& strReq, json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
+	bool handleRpcRoute(json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 	void logRPCRoute(string method, json& params, RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 
 	//json rpc implementation
 	void handleRpcCallAsyn(string& strReq,std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl = true, bool bEdgeDevMode = false);
+	void handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode);
 	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true,bool bEdgeDevMode = false);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
