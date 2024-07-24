@@ -736,7 +736,7 @@ void ioDev::doPingHeartbeat(string ip)
 	}
 	else
 	{
-		setOffline(true);
+		setOffline(true,"ping失败");
 	}
 }
 
@@ -1295,7 +1295,7 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 	//}
 }
 
-void ioDev::setOffline(bool setByPing/* = false*/)
+void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 {
 	// 掉线状态当有ping检测时，忽略其他
 	if (m_bEnablePingOnlineCheck && !setByPing)
@@ -1304,7 +1304,7 @@ void ioDev::setOffline(bool setByPing/* = false*/)
 	if (m_bOnline)
 	{
 		m_offlineCount++;
-		LOG("[warn]设备掉线次数累计,%d/%d,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str());
+		LOG("[warn]设备掉线次数累计,%d/%d,%s,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
 
 		if (m_offlineCount >= m_offlineConfirmCount) {
 			m_bOnline = false;

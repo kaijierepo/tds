@@ -192,6 +192,7 @@ public:
 	//应用层字节流组包 与 首发包处理
 	bool handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	bool OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt = false);
+	void handleUDPTdspPkt(yyjson_val* pkt, yyjson_doc* doc, string strIP, int port, string ioSessionAddr);
 
 	//应用层数据包处理
 	void onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);

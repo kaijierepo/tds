@@ -482,7 +482,8 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 {
 	yyjson_val* yyv_method = yyjson_obj_get(jNotify, "method");
 	string method;
-	if(yyv_method)yyjson_get_str(yyv_method);
+	if(yyv_method)
+		method = yyjson_get_str(yyv_method);
 	yyjson_val* yyv_params = yyjson_obj_get(jNotify, "params");
 	
 	if (method == "devRegister")
@@ -883,7 +884,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		}
 		else {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "request time out"));
-			setOffline();
+			setOffline(false,"请求未响应:" + req.dump());
 			goto TRANSACTION_END;
 		}
 	}
@@ -1126,7 +1127,8 @@ void ioDev_tdsp::DoCycleTask()
 	if (m_bEnableOfflineTimeout && m_offlineTimeout >0) {
 		long long inactiveTime = timeopt::CalcTimePassMilliSecond(m_stLastActiveTime);
 		if (inactiveTime > m_offlineTimeout) {
-			setOffline();
+			string s = str::format("%dms未收到数据,超时时间%dms", inactiveTime, m_offlineTimeout);
+			setOffline(false,s);
 		}
 	}
 

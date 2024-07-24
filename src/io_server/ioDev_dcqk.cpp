@@ -71,11 +71,6 @@ void ioDev_dcqk::onEvent_online()
 }
 
 
-bool ioDev_dcqk::onRecvPkt(json jPkt)
-{
-	return false;
-}
-
 size_t IsValidPkt_315(BYTE* pData, size_t iLen)
 {
 	if (iLen < 16) return 0;//315协议数据包最短长度

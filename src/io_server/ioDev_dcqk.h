@@ -16,7 +16,6 @@ public:
 	void DoCycleTask() override;
 	void onEvent_online() override;
 
-	virtual bool onRecvPkt(json jPkt) override;
 	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) override;
 	virtual bool onRecvData(unsigned char* pData, size_t iLen) override;
 

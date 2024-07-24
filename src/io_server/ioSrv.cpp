@@ -380,6 +380,84 @@ struct IP_ADDR {
 	}
 }
 
+ void ioServer::handleUDPTdspPkt(yyjson_val* yyv_pkt, yyjson_doc* doc,string strIP, int port, string ioSessionAddr) {
+	 yyjson_val* yyv_method = yyjson_obj_get(yyv_pkt, "method");
+	 if (yyv_method == nullptr) {
+		 LOG("[error]解析tdsp数据包失败,没有包含method字段");
+		 return;
+	 }
+	 string method = yyjson_get_str(yyv_method);
+
+	 if (method == "regAdaptor") {
+		 if (m_strAdpIp != strIP) {
+			 LOG("[适配器] 适配器上线,IP=%s,port=%d", strIP.c_str(), port);
+		 }
+		 m_strAdpIp = strIP;
+		 m_iAdpPort = port;
+		 return;
+	 }
+
+	 //适配器上送的地址格式 UDP-192.168.1.100:9009
+	 yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_pkt, "ioAddr");
+	 if (yyv_ioAddr == nullptr) {
+		 LOG("[error]解析tdsp数据包失败,没有包含ioAddr字段");
+		 return;
+	 }
+	 string ioAddr = yyjson_get_str(yyv_ioAddr);
+	 IP_ADDR ipAddr;
+	 string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
+
+	 bool isLan = false; //tds服务和适配器下的设备是否在同一个局域网
+	 if (ioAddr.find(":") != string::npos) { //如果适配器上送的地址是局域网ip地址，认为设备是在同一个局域网
+		 isLan = true;
+		 if (!parseIPFromIoAddr(ioAddr, ipAddr)) {
+			 LOG("[warn]tdsp的ioAddr中使用了错误的IP地址格式:" + ioAddr);
+			 return;
+		 }
+	 }
+
+	 //是否是1级设备
+	 bool firstLevel = false;
+	 if (ioAddr.find("/") == string::npos)
+		 firstLevel = true;
+
+
+	 //获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
+	 ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
+	 //设备发现
+	 if (!pIoDev)
+	 {
+		 if (firstLevel) {
+			 json jAddr;
+			 if (isLan) {//目前udp模式，所有的设备都是udpServer. 如果要引入udpClient需要再设计下
+				 jAddr["type"] = DEV_ADDR_MODE::udpServer;
+				 jAddr["ip"] = ipAddr.ip;
+				 jAddr["port"] = ipAddr.port;
+			 }
+			 else {
+				 jAddr["type"] = DEV_ADDR_MODE::deviceID;
+				 jAddr["id"] = ioAddr;
+			 }
+
+			 pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, DEV_TYPE::DEV::tdsp_device);
+		 }
+	 }
+	 //设备上线
+	 else
+	 {
+		 if (pIoDev->m_bOnline == false)
+		 {
+			 pIoDev->setOnline();
+			 pIoDev->triggerCycleAcq();
+			 timeopt::now(&pIoDev->m_stLastActiveTime);
+			 logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
+		 }
+	 }
+
+	 if (pIoDev)
+		 pIoDev->onRecvPkt(yyv_pkt, doc);
+ }
+
 
 void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
 {
@@ -391,71 +469,14 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 		string s;
 		str::fromBuff((char*)recvData, recvDataLen,s);
 
-		json jPkt = json::parse(s);
-
-		if (jPkt["method"] == "regAdaptor") {
-			if (m_strAdpIp != strIP) {
-				LOG("[适配器] 适配器上线,IP=%s,port=%d", strIP.c_str(), port);
-			}
-			m_strAdpIp = strIP;
-			m_iAdpPort = port;
+		yyjson_doc* doc = yyjson_read((const char*)recvData, recvDataLen, 0);
+		if (!doc) {
+			LOG("[error]解析tdsp数据包失败,不是正确的json格式");
 			return;
 		}
-
-		//适配器上送的地址格式 UDP-192.168.1.100:9009
-		string ioAddr = jPkt["ioAddr"].get<string>();
-		IP_ADDR ipAddr;
-		string ioAddrWithoutPort = removePortFromIoAddr(ioAddr);
-
-		bool isLan = false; //tds服务和适配器下的设备是否在同一个局域网
-		if (ioAddr.find(":") != string::npos) { //如果适配器上送的地址是局域网ip地址，认为设备是在同一个局域网
-			isLan = true;
-			if (!parseIPFromIoAddr(ioAddr, ipAddr)) {
-				LOG("[warn]tdsp的ioAddr中使用了错误的IP地址格式:" + ioAddr);
-				return;
-			}
-		}
-
-		//是否是1级设备
-		bool firstLevel = false;
-		if (ioAddr.find("/") == string::npos)
-			firstLevel = true;
-
-
-		//获取地址时忽略端口号，设备在进行udp发送时可能使用随机端口。 
-		ioDev* pIoDev = ioSrv.getIODev(ioAddrWithoutPort, false, true);
-		//设备发现
-		if (!pIoDev)
-		{
-			if (firstLevel) {
-				json jAddr;
-				if (isLan) {//目前udp模式，所有的设备都是udpServer. 如果要引入udpClient需要再设计下
-					jAddr["type"] = DEV_ADDR_MODE::udpServer;
-					jAddr["ip"] = ipAddr.ip;
-					jAddr["port"] = ipAddr.port;
-				}
-				else {
-					jAddr["type"] = DEV_ADDR_MODE::deviceID;
-					jAddr["id"] = ioAddr;
-				}
-
-				pIoDev = ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, DEV_TYPE::DEV::tdsp_device);
-			}
-		}
-		//设备上线
-		else
-		{
-			if (pIoDev->m_bOnline == false)
-			{
-				pIoDev->setOnline();
-				pIoDev->triggerCycleAcq();
-				timeopt::now(&pIoDev->m_stLastActiveTime);
-				logger.logInternal("[ioDev]设备上线，ioAddr=" + pIoDev->getIOAddrStr());
-			}
-		}
-
-		if(pIoDev)
-			pIoDev->onRecvPkt(jPkt);
+		yyjson_val* yyv_pkt = yyjson_doc_get_root(doc);
+		handleUDPTdspPkt(yyv_pkt, doc, strIP, port, ioSessionAddr);
+		yyjson_doc_free(doc);
 	}
 	catch (exception& e) {
 		LOG("[warn] handle udp recv data error,%s", e.what());
