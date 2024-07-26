@@ -48,14 +48,19 @@ ioDev_tdsp::~ioDev_tdsp()
 	stop();
 }
 
-void ioDev_tdsp::syncDataToBindTag()
+void ioDev_tdsp::syncDataToMasterTds(yyjson_val* objTree, yyjson_doc* doc)
 {
 	if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-		if (m_jAcq != nullptr && m_strTagBind != "") {
-			json params;
-			params = m_jAcq;
-			params["rootTag"] = m_strTagBind;
-			tds->callAsyn("input", params);
+		if (m_strTagBind != "") {
+			yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* yyv_objTree = yyjson_val_mut_copy(mdoc, objTree);
+			yyjson_mut_val* yyv_rootTag_key = yyjson_mut_strcpy(mdoc, "rootTag");
+			yyjson_mut_val* yyv_rootTag_val = yyjson_mut_strcpy(mdoc, m_strTagBind.c_str());
+			yyjson_mut_obj_put(yyv_objTree, yyv_rootTag_key, yyv_rootTag_val);//子服务绑定到的主服务树节点
+			size_t len;
+			string s = yyjson_mut_val_write(yyv_objTree, 0, &len);
+			tds->callAsyn("input", s);
+			yyjson_mut_doc_free(mdoc);
 		}
 	}
 	else {
@@ -261,7 +266,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 	else if (yyjson_is_obj(chanData)) {
 		yyjson_val* yyv_name = yyjson_obj_get(chanData, "name");
 		if (yyv_name != nullptr) {
-			syncDataToBindTag();
+			syncDataToMasterTds(chanData,doc);
 		}
 		//通道key,val模式输入
 		else {

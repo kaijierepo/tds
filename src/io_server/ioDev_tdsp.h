@@ -17,7 +17,7 @@ public:
 	ioDev_tdsp();
 	~ioDev_tdsp();
 
-	void syncDataToBindTag() override;
+	void syncDataToMasterTds(yyjson_val* val,yyjson_doc* doc);
 
 	void stop();
 	void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) override;

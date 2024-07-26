@@ -241,7 +241,7 @@ bool ReverseInterface::run()
 			p->remoteIP = ip;
 			p->remotePort = port;
 
-			pTcpClt->m_keepAliveTimeout = 10;
+			pTcpClt->m_keepAliveTimeout = tds->conf->tcpKeepAliveDS;
 			pTcpClt->run(this, addr, childTdsIP);
 			m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
 		}
