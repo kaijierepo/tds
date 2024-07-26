@@ -648,7 +648,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
-				string sParams = str::format("{\"tag\":\"%s\"}", tag);
+				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
 				tds->callAsyn("objOnline", sParams);
 			}
 		}
@@ -659,7 +659,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
-				string sParams = str::format("{\"tag\":\"%s\"}", tag);
+				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
 				tds->callAsyn("objOffline", sParams);
 			}
 		}

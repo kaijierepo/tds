@@ -322,6 +322,8 @@ bool TDS_imp::run(string cmdline)
 	logger.m_bSaveToFile = true;
 	tds->conf->loadConf();
 
+	tds->conf->bCallAsyn = tds->conf->getInt("callAsyn", 1);
+
 	//check mode
 	if (conf->uiMode == "")
 		conf->uiMode = getUIMode();
@@ -568,14 +570,25 @@ bool TDS_imp::call(string method, string param , RPC_RESP& resp)
 }
 
 void thread_handleRpcCall(string method,string sParam,int delay) {
-	json param = json::parse(sParam);
-	if (delay > 0) {
-		timeopt::sleepMilli(delay);
-	}
+	try
+	{
+		json param = json::parse(sParam);
+		if (delay > 0) {
+			timeopt::sleepMilli(delay);
+		}
 
-	RPC_SESSION session;
-	RPC_RESP resp;
-	rpcSrv.handleMethodCall(method, param, resp, session);
+		RPC_SESSION session;
+		RPC_RESP resp;
+		rpcSrv.handleMethodCall(method, param, resp, session);
+	}
+	catch (const std::exception& e)
+	{
+		string errorType = e.what();
+		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
+		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
+		errorType = str::encodeAscII(errorType);
+		LOG("[error]thread_handleRpcCall处理异常:\r\n错误信息:" + errorType + "\r\n数据包:\r\n" + sParam);
+	}
 }
 
 
@@ -590,14 +603,19 @@ void TDS_imp::callAsyn(string method, json& param, int delay)
 
 void TDS_imp::callAsyn(string method, string& param, int delay)
 {
-	if (method == "input") {
-		g_asynCallDealThreadPool.enqueue([method, param, delay] {
-			thread_handleRpcCall(method, param, delay);
-			});
+	if (tds->conf->bCallAsyn) {
+		if (method == "input") {
+			g_asynCallDealThreadPool.enqueue([method, param, delay] {
+				thread_handleRpcCall(method, param, delay);
+				});
+		}
+		else {
+			thread t(thread_handleRpcCall, method, param, delay);
+			t.detach();
+		}
 	}
-	else {
-		thread t(thread_handleRpcCall, method, param, delay);
-		t.detach();
+	else { //方便调试时观察堆栈
+		thread_handleRpcCall(method, param, delay);
 	}
 }
 

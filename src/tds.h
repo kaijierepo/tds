@@ -361,6 +361,7 @@ struct iTDSConf {
 	//debug
 	bool bCreateDumpWhenLogError;
 	bool bStopCycleAcq;
+	bool bCallAsyn;
 
 	LOG_ENABLE logEnable;
 
