@@ -54,7 +54,6 @@ public:
 	struct mg_mgr m_mgr;
 	string m_certData;
 	string m_keyData;
-	int m_fnCount;
 };
 
 extern string rootDir;

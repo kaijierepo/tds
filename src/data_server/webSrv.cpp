@@ -40,6 +40,7 @@ int WS_PKT_HEADER_LEN = sizeof(size_t);
 
 vector<WebServer*> g_WebServerList;
 bool g_enableWsNotify = true;
+int g_fnCount = 0;
 
 WebServer* getWebServer(int port, bool isHttps) {
 	for (int i = 0; i < g_WebServerList.size(); i++) {
@@ -1214,7 +1215,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 	}
 	else if (ev != MG_EV_POLL) {
-		pWs->m_fnCount++;
+		g_fnCount++;
 	}
 }
 
@@ -1261,7 +1262,6 @@ WebServer::WebServer()
 {
 	m_isHttps = false;
 	m_restApiID = 0;
-	m_fnCount = 0;
 }
 
 WebServer::~WebServer()
