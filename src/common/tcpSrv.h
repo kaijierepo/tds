@@ -34,6 +34,8 @@ struct tcpSession
 	int bridgeSock;  
 	bool bEnableActivityCheck; //是否进行活动检测
 
+	bool bEnable;
+
 	TIME stLastActive;
 	void* pData1;
 
@@ -53,6 +55,7 @@ struct tcpSession
 		localPort = 0;
 		bridgeSock = 0;
 		pData1 = nullptr;
+		bEnable = true;
 	}
 
 	tcpSession* GenerateClienInfo() {

@@ -2164,6 +2164,32 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		ioSrv.m_bDisableIOHandle = true;
 		rpcResp.result = "\"ok\"";
 	}
+	else if (method == "enableIOSession") {
+		string ip = params["ip"];
+		int port = params["port"].get<int>();
+		shared_ptr<TDS_SESSION> p = ioSrv.getTDSSession(ip,port);
+		p->m_bEnableIO = true;
+		if (p->pTcpSession) {
+			p->pTcpSession->bEnable = true;
+		}
+		if (p->pTcpSessionClt) {
+			p->pTcpSessionClt->bEnable = true;
+		}
+		rpcResp.result = "\"ok\"";
+	}
+	else if (method == "disableIOSession") {
+		string ip = params["ip"];
+		int port = params["port"].get<int>();
+		shared_ptr<TDS_SESSION> p = ioSrv.getTDSSession(ip, port);
+		p->m_bEnableIO = false;
+		if (p->pTcpSession) {
+			p->pTcpSession->bEnable = false;
+		}
+		if (p->pTcpSessionClt) {
+			p->pTcpSessionClt->bEnable = false;
+		}
+		rpcResp.result = "\"ok\"";
+	}
 	else if (method == "enableWsNotify") {
 		g_enableWsNotify = true;
 		rpcResp.result = "\"ok\"";

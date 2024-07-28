@@ -21,7 +21,7 @@ struct tcpSessionClt
 	size_t iSendSucCount;
 	size_t iSendFailCount;
 	size_t iRecvCount;
-
+	bool bEnable;
 	string stLastActive;
 
 	string getRemoteAddr();
@@ -36,6 +36,7 @@ struct tcpSessionClt
 		iSendFailCount = 0;
 		iRecvCount = 0;
 		remotePort = 0;
+		bEnable = true;
 	}
 };
 

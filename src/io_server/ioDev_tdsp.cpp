@@ -1192,22 +1192,9 @@ void ioDev_tdsp::DoCycleTask()
 	}*/
 
 
-
-
-	//如果从来没有收到过采集数据，加快采集频率
-	if (m_jAcq == nullptr)
-	{
-		if (timeopt::CalcTimePassSecond(m_stLastAcqTime) < 15)
-			return;
-		else
-			DoAcq();
-	}
-	else
-	{
-		if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
-			return;
-		DoAcq();
-	}
+	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
+		return;
+	DoAcq();
 }
 
 void ioDev_tdsp::onEvent_online()

@@ -90,6 +90,7 @@ void TDS_SESSION::Init()
     m_childTdsHttpsPort = 666;
     conn_id = 0;
     webServer = nullptr;
+    m_bEnableIO = true;
 }
 
 bool TDS_SESSION::isConnected()
@@ -133,6 +134,10 @@ size_t TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
 
 
 size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
+    if (m_bEnableIO == false) {
+        return 0;
+    }
+
      timeopt::now(&lastSendTime);
      int iSend = 0;
 

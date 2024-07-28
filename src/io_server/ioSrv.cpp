@@ -330,10 +330,15 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 
 void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
+	if (pTcpSess->bEnable == false) {
+		return;
+	}
+
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSess];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
+
 #ifdef _WIN32
 	statusSrv.statisRecv(ioSession->localPort, iLen);
 #endif
@@ -342,10 +347,15 @@ void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 
 void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
 {
+	if (pTcpSessClt->bEnable == false) {
+		return;
+	}
+
 	m_mutexIoSessions.lock();
 	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
 	assert(ioSession != nullptr);
 	m_mutexIoSessions.unlock();
+
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
@@ -2190,6 +2200,7 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["type"] = p->type;
 		jSession["ip"] = p->remoteIP;
 		jSession["port"] = p->remotePort;
+		jSession["enable"] = p->m_bEnableIO;
 		jSession["name"] = p->name;
 		jSession["transLayer"] = p->iTLProto;
 		jSession["createTime"] = timeopt::st2str(p->stCreateTime);
