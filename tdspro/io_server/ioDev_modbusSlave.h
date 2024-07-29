@@ -91,6 +91,7 @@ public:
 	bool isCommBusy() override;
 	bool isConnected() override;
 	void DoCycleTask();
+	void DoCycleTaskSync() override;
     unsigned char getFCode(string regType);
 
 	json getChanValFromRegBuff(ioChannel* pC, size_t regOffsetOfData, char* pData, size_t len);

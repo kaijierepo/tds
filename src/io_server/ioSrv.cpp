@@ -1264,6 +1264,7 @@ bool ioServer::runAsCloud()
 	loadChanTemplate();
 
 	m_tdspSingleTransaction = tds->conf->getInt("tdspSingleTransaction", 0);
+	m_serialSendDelayAfterRecv = tds->conf->getInt("serialSendDelayAfterRecv", 0);
 
 	m_ioSrvIPAsClient = tds->conf->getStr("ioSrvIP", "0.0.0.0");
 	m_ioSrvIP = "0.0.0.0";

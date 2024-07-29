@@ -221,8 +221,6 @@ bool ioDev_ModbusSlave::isConnected()
 
 void cycleAcq_thread_mbSlave(ioDev_ModbusSlave* pDev) {
 	setThreadName("modbus transaction thread");
-
-	pDev->m_bCycleAcqThreadRunning = true;
 	FLAG_GUARD g(&pDev->m_bCycleAcqThreadRunning);
 
 	//采样周期为0进入全速采集模式，不退出线程
@@ -269,6 +267,15 @@ void cycleAcq_thread_mbSlave(ioDev_ModbusSlave* pDev) {
 }
 
 
+
+void ioDev_ModbusSlave::DoCycleTaskSync() {
+	if (!m_bEnableAcq)return;
+	if (!m_bRunning)return;
+	if (!isConnected())return;
+
+	cycleAcq_thread_mbSlave(this);
+}
+
 void ioDev_ModbusSlave::DoCycleTask()
 {
 	if (!m_bEnableAcq)return;
@@ -276,10 +283,17 @@ void ioDev_ModbusSlave::DoCycleTask()
 	if (!isConnected())return;
 	if (isCommBusy())return;
 
+	if (m_pParent != nullptr && m_pParent != &ioSrv) {
+		if (m_pParent->isBusBusy()) {
+			return;
+		}
+	}
+
 	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
 	{
 		if (!m_bCycleAcqThreadRunning)
 		{
+			m_bCycleAcqThreadRunning = true;
 			thread t(cycleAcq_thread_mbSlave, this);
 			t.detach();
 			timeopt::now(&m_stLastAcqTime);

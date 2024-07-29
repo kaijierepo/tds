@@ -54,7 +54,7 @@ bool ioGW_rs485ToNet::isCommBusy()
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
-		if (p->m_bIsWaitingResp)
+		if (p->m_bIsWaitingResp || p->m_bCycleAcqThreadRunning)
 		{
 			return true;
 		}
@@ -72,13 +72,51 @@ void ioGW_rs485ToNet::checkAcqReqTimeout()
 	}
 }
 
+
+void thread_485toNetCycleTask(ioGW_rs485ToNet* p) {
+	for (int i = 0; i <p->m_vecChildDev.size(); i++)
+	{
+		ioDev* pChild = p->m_vecChildDev[i];
+		pChild->DoCycleTaskSync();
+
+		while (1) {
+			if (!p->isBusBusy())
+				break;
+			Sleep(300);
+		}
+	}
+	p->m_bCycleAcqThreadRunning = false;
+}
+
+
+
 void ioGW_rs485ToNet::DoCycleTask()
 {
-	for (int i = 0; i < m_vecChildDev.size(); i++)
+	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
 	{
-		ioDev* pChild = m_vecChildDev[i];
-		pChild->DoCycleTask();
+		if (!m_bCycleAcqThreadRunning) {
+			m_bCycleAcqThreadRunning = true;
+			thread t(thread_485toNetCycleTask, this);
+			t.detach();
+			m_stLastAcqTime = timeopt::now();
+		}
 	}
+}
+
+
+bool ioGW_rs485ToNet::isBusBusy() {
+	if (ioSrv.m_serialSendDelayAfterRecv > 0) {
+		if (timeopt::calcTimePassMilliSecond(m_lastBusRecvTime) < ioSrv.m_serialSendDelayAfterRecv) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ioGW_rs485ToNet::sendData(unsigned char* pData, size_t iLen)
+{
+	m_lastBusSendTime = timeopt::now();
+	return ioDev::sendData(pData, iLen);
 }
 
 
@@ -97,6 +135,8 @@ bool ioGW_rs485ToNet::isConnected()
 
 bool ioGW_rs485ToNet::onRecvData(unsigned char* pData, size_t iLen )
 {
+	m_lastBusRecvTime = timeopt::now();
+
 	if (!m_bRunning)
 		return false;
 

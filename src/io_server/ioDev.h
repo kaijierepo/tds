@@ -114,6 +114,7 @@ public:
 	virtual void stop();
 	bool m_bRunning;
 	semaphore m_evtIO;
+	virtual bool isBusBusy() { return false; };
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, DEV_QUERIER querier);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
@@ -296,6 +297,7 @@ public:
 	virtual bool stopUpgrade() { return false; };
 	//周期性采集任务执行
 	virtual void DoCycleTask();
+	virtual void DoCycleTaskSync() {};
 	virtual void checkAcqReqTimeout();
 
 	bool m_bCycleAcqThreadRunning;
