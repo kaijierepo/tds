@@ -62,6 +62,10 @@ string TDS_SESSION::getRemoteAddr()
     return str::format("%s:%d", remoteIP.c_str(), remotePort);
 }
 
+string TDS_SESSION::getLocalAddr() {
+    return str::format("%s:%d", localIP.c_str(), localPort);
+}
+
 string TDS_SESSION::getRemoteIP()
 {
     return remoteIP;
@@ -169,7 +173,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
 
 
      if (bNeedLog && type == TDS_SESSION_TYPE::iodev)
-         IOLogSend(p, len,iSend>0,getRemoteAddr());
+         IOLogSend(p, len, iSend > 0, getRemoteAddr(), getLocalAddr());
      return iSend;
  }
 

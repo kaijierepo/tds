@@ -469,10 +469,9 @@ struct IP_ADDR {
  }
 
 
-void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	string ioSessionAddr = "UDP-" + strIP + ":" + str::fromInt(port);
-	IOLogRecv(recvData, recvDataLen, ioSessionAddr);
+	IOLogRecv(recvData, recvDataLen, udpSession);
 
 	//暂时udp服务只有tdsp协议，后续加入其他协议再重构
 	try {
@@ -485,7 +484,7 @@ void ioServer::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string
 			return;
 		}
 		yyjson_val* yyv_pkt = yyjson_doc_get_root(doc);
-		handleUDPTdspPkt(yyv_pkt, doc, strIP, port, ioSessionAddr);
+		handleUDPTdspPkt(yyv_pkt, doc, udpSession.remoteIP, udpSession.remotePort,udpSession.getRemoteIOAddr());
 		yyjson_doc_free(doc);
 	}
 	catch (exception& e) {
@@ -1692,7 +1691,7 @@ bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
 {
-	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr());
+	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr(),tdsSession->getLocalAddr());
 
 	if (m_bDisableIOHandle)
 		return true;
@@ -2393,9 +2392,11 @@ void ioHandler_mbRtu::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 {
 }
 
-void ioHandler_mbRtu::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void ioHandler_mbRtu::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	ioDev* p = ioSrv.getIODev("UDP-" + strIP, false, true);
+	IOLogRecv(recvData, recvDataLen, udpSession);
+
+	ioDev* p = ioSrv.getIODev("UDP-" + udpSession.remoteIP, false, true);
 	if (p) {
 		p->onRecvData(recvData, recvDataLen);
 	}

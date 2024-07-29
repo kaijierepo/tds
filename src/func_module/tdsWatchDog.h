@@ -23,7 +23,7 @@ public:
 	bool regSelfStart();
 	bool unregSelfStart();
 	bool isSelfStartReg();
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 	TIME m_lastFeedTime;
 	TIME m_lastUpdateCheckTime;
 	string m_curVer;

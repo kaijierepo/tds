@@ -167,7 +167,7 @@ void ioGW_LocalSerial::stop()
 bool ioGW_LocalSerial::sendData(unsigned char* pData, size_t iLen)
 {
 	bool ret = WriteCom(pData,iLen);
-	IOLogSend((unsigned char*)pData, iLen, ret,getIOAddrStr());
+	IOLogSend((unsigned char*)pData, iLen, ret,getIOAddrStr(),"host");
 	lastSendTime = timeopt::now();
 	m_sendBytes += iLen;
 	return ret;
@@ -279,7 +279,7 @@ bool ioGW_LocalSerial::onRecvData(unsigned char* pData, size_t iLen )
 {
 	string s;
 	str::fromBuff(pData, iLen,s);
-	IOLogRecv((unsigned char*)pData, iLen, getIOAddrStr());
+	IOLogRecv((unsigned char*)pData, iLen, getIOAddrStr(),"host");
 	lastRecvTime = timeopt::now();
 	m_recvBytes += iLen;
 

@@ -413,7 +413,7 @@ bool ioDev_eip::onRecvData(unsigned char* pData, size_t iLen)
 
 void ioDev_eip::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	IOLogRecv(pData, len, connInfo->getRemoteAddr());
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(),"host");
 	onRecvData(pData, len);
 }
 

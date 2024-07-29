@@ -6,6 +6,7 @@ dispatch http request to rpcHandler
 */
 #include "tdsSession.h"
 #include "common/mongoose.h"
+#include "udpSrv.h"
 
 struct SESSION_STATIS {
 	string remoteIP;
@@ -70,9 +71,9 @@ extern void sendToCommLog(string s);
 extern vector<std::shared_ptr<TDS_SESSION>> ioPktMonitorClient;
 extern shared_mutex csIoPktMonitorClient;
 extern void sendToPktMonitorClient(char* p, size_t len);
-extern void IOLogSend(unsigned char* p, size_t len, bool success, string remoteAddr);
-extern void IOLogRecv(unsigned char* p, size_t len, string remoteAddr);
-
+extern void IOLogSend(unsigned char* p, size_t len, bool success, string remoteAddr, string localAddr);
+extern void IOLogRecv(unsigned char* p, size_t len, string remoteAddr, string localAddr);
+extern void IOLogRecv(unsigned char* p, size_t len, UDP_SESSION udpSession);
 extern vector<std::shared_ptr<TDS_SESSION>> rpcPktMonitorClient;
 extern shared_mutex csRpcPktMonitorClient;
 extern void sendToRpcPktMonitorClient(char* p, size_t len);

@@ -20,7 +20,7 @@ public:
 	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 public:
 	bool run();
 	void stop();

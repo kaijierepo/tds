@@ -619,7 +619,7 @@ bool tdsWatchDog::isSelfStartReg()
 	return false;
 }
 
-void tdsWatchDog::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void tdsWatchDog::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
 	string food;
 	str::fromBuff(recvData, recvDataLen,food);

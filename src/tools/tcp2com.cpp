@@ -216,10 +216,10 @@ void tcp2com::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSession
 	LOG(serial->getIOAddrStr() + " <-- " + getTcpAddr() + "  " + log);
 }
 
-void tcp2com::OnRecvUdpData(unsigned char* pData, size_t iLen, std::string strIP, int port)
+void tcp2com::OnRecvUdpData(unsigned char* pData, size_t iLen, UDP_SESSION udpSession)
 {
 	serial->sendData(pData, iLen);
 	string log = str::bytesToHexStr(pData, iLen);
-	string s = str::format("UDP-%s:%d(%d)", strIP.c_str(), port,iLen);
+	string s = str::format("UDP-%s:%d(%d)", udpSession.remoteIP.c_str(),udpSession.remotePort,iLen);
 	LOG(serial->getIOAddrStr() + " <-- " +  s + "  " + log);
 }

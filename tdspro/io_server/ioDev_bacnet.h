@@ -112,7 +112,7 @@ public:
 
 
 	void onEvent_online() override;
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	//后续再改进为并发机制，怕有的设备硬件本身不并发，做成并发意义不大
 	//map<int, BACNET_TRANSACTION*> m_mapCurrentTransaction;
@@ -128,7 +128,7 @@ public:
 
 	void search();
 
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	udpServer udpClt;
 };

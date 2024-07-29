@@ -471,10 +471,9 @@ X'03'       3 (NO SEGMENTATION)
 X'21'       Application Tag 2 (Unsigned Integer, L = 1) (Vendor ID)
 X'63'       99
 */
-void ioDev_searcher_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void ioDev_searcher_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	string ioSessionAddr = "UDP-" + strIP + ":" + str::fromInt(port);
-	IOLogRecv(recvData, recvDataLen, ioSessionAddr);
+	IOLogRecv(recvData, recvDataLen, udpSession);
 
 	if(isValidPkt_BACNET_IP(recvData, recvDataLen)) {
 		NPDU_Header* pNPDU = (NPDU_Header*)(recvData + sizeof(BVLC_Header));
@@ -487,9 +486,9 @@ void ioDev_searcher_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDa
 					if (pBT->TagNumber == Application_Tag_Number::BACnetObjectldentifier) {
 						json jAddr;
 						jAddr["type"] = DEV_ADDR_MODE::udpServer;
-						jAddr["ip"] = strIP;
-						jAddr["port"] = port;
-						ioSrv.onChildDevDiscovered(jAddr, ioSessionAddr, "bacnet-ip");
+						jAddr["ip"] = udpSession.remoteIP;
+						jAddr["port"] = udpSession.remotePort;
+						ioSrv.onChildDevDiscovered(jAddr, udpSession.getRemoteIOAddr(), "bacnet-ip");
 					}
 				}
 			}
@@ -498,10 +497,11 @@ void ioDev_searcher_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDa
 }
 
 
-void ioDev_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void ioDev_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	string ioSessionAddr = "UDP-" + strIP + ":" + str::fromInt(port);
-	IOLogRecv(recvData, recvDataLen, ioSessionAddr);
+	string remoteAddr = "UDP-" + udpSession.remoteIP + ":" + str::fromInt(udpSession.remotePort);
+	string localAddr = "UDP-" + udpSession.localIP + ":" + str::fromInt(udpSession.localPort);
+	IOLogRecv(recvData, recvDataLen, remoteAddr, localAddr);
 	setOnline();
 
 	if (isValidPkt_BACNET_IP(recvData, recvDataLen)) {

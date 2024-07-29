@@ -101,7 +101,7 @@ struct DEV_STATIS {
 class ioHandler_mbRtu : public ITcpServerCallBack, public IUdpServerCallBack {
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 };
 
 
@@ -187,7 +187,7 @@ public:
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	//应用层字节流组包 与 首发包处理
 	bool handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);

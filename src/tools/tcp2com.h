@@ -49,7 +49,7 @@ public:
 	 void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
 	 void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 
-	 void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) override;
+	 void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	 string registerPktStr;
 	 string registerPktHexStr;

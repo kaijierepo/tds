@@ -53,6 +53,7 @@ public:
 	unsigned long conn_id; //mongoose conn id
 	string getRemoteAddr();
 	string getRemoteIP();
+	string getLocalAddr();
 	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 
 	//基本属性

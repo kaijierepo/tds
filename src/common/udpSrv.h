@@ -2,9 +2,18 @@
 #include <string>
 using namespace std;
 
+struct UDP_SESSION {
+	string remoteIP;
+	int remotePort;
+	string localIP;
+	int localPort;
+
+	string getRemoteIOAddr();
+};
+
 class IUdpServerCallBack {
 public:
-	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port) = 0;
+	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION  udpSession) = 0;
 };
 
 

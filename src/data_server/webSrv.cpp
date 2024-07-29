@@ -109,7 +109,9 @@ void sendToPktMonitorClient(char* p, size_t len)
 	}
 	csIoPktMonitorClient.unlock_shared();
 }
-void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr)
+
+
+void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,string localAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -132,7 +134,16 @@ void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr)
 	string s = j.dump(4);
 	sendToPktMonitorClient((char*)s.c_str(), s.length());
 }
-void IOLogRecv(unsigned char* p, size_t len,string remoteAddr)
+
+void IOLogRecv(unsigned char* p, size_t len, UDP_SESSION udpSession)
+{
+	string r = str::format("UDP-%s:%d", udpSession.remoteIP, udpSession.remotePort);
+	string l = str::format("UDP-%s:%d", udpSession.localIP, udpSession.localPort);
+	IOLogRecv(p, len, r, l);
+}
+
+
+void IOLogRecv(unsigned char* p, size_t len,string remoteAddr,string localAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);

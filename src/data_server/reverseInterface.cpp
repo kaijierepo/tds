@@ -337,14 +337,14 @@ void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, t
 	}
 }
 
-void ReverseInterface::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, std::string strIP, int port)
+void ReverseInterface::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
 	string req;
 	str::fromBuff(recvData, recvDataLen,req);
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
 	RPC_SESSION rpcSess;
-	rpcSess.remoteAddr = strIP;
-	rpcSess.remotePort = port;
+	rpcSess.remoteAddr = udpSession.remoteIP;
+	rpcSess.remotePort = udpSession.remotePort;
 	pSession->setRpcSession(&rpcSess);
 	rpcSrv.handleRpcCallAsyn(req, pSession,false);
 }

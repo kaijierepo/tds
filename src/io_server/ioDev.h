@@ -417,7 +417,7 @@ public:
 
 	string m_strErrorInfo;
 
-	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port) override;
+	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 };
 
 ioDev* createIODev(string type);

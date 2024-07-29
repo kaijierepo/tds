@@ -189,7 +189,10 @@ size_t udpServer::onRecvData(unsigned char* recvData, size_t recvDataLen, string
 {
 	if (m_pCallback)
 	{
-		m_pCallback->OnRecvUdpData(recvData, recvDataLen, strIP, port);
+		UDP_SESSION us;
+		us.remoteIP = strIP;
+		us.remotePort = port;
+		m_pCallback->OnRecvUdpData(recvData, recvDataLen,us);
 	}
 	return 0;
 }
@@ -248,4 +251,9 @@ void udpRecvThread(void* lpParam)
 size_t UdpClt::sendData(unsigned char* pData, size_t iLen)
 {
 	return udpServer::SendData(pData, iLen, m_remoteIP, m_remotePort);
+}
+
+string UDP_SESSION::getRemoteIOAddr(){
+	string s = "UDP-" + remoteIP + ":" + str::format("%d", remotePort);
+	return s;
 }

@@ -1174,8 +1174,11 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 			port = m_jDevAddr["port"].get<int>();
 		}
 		size_t iSent = m_udpClt->SendData(pData, iLen,ip,port);
-		if (m_bEnableIoLog)
-			IOLogSend((unsigned char*)pData, iLen, iSent > 0, "UDP-" + ip + ":" + str::fromInt(port));
+		if (m_bEnableIoLog) {
+			string remoteAddr = "UDP-" + ip + ":" + str::fromInt(port);
+			string localAddr = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr);
+		}
 	}
 	else {
 		//直接发送给设备
@@ -1190,8 +1193,11 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 			if (m_bViaAdaptor) {
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
-					if (m_bEnableIoLog)
-						IOLogSend((unsigned char*)pData, iLen, iSent>0, "UDP-" + ioSrv.m_strAdpIp + str::fromInt(ioSrv.m_iAdpPort));
+					if (m_bEnableIoLog) {
+						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + str::fromInt(ioSrv.m_iAdpPort);
+						string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
+						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr );
+					}
 				}
 			}
 			else
@@ -1535,9 +1541,9 @@ bool ioDev::loadStatusBuff()
 	return true;
 }
 
-void ioDev::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, string strIP, int port)
+void ioDev::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	IOLogRecv((unsigned char*)recvData, recvDataLen, strIP + ":" + str::fromInt(port));
+	IOLogRecv((unsigned char*)recvData, recvDataLen,udpSession);
 	onRecvData(recvData, recvDataLen);
 }
 
