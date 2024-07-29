@@ -1,7 +1,8 @@
 #include "tcpSrv.h"
 #include "common.h"
-#include "statusServer.h"
 
+
+fp_statisSend g_fp_tcpSrv_statisSend = nullptr;
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -157,9 +158,9 @@ bool tcpSession::send(char* pData, size_t iLen)
 	else
 		iSendFailCount += iLen;
 
-#ifdef _WIN32
-	statusSrv.statisSend(((tcpSrv*)pTcpServer)->m_iServerPort, iLen);
-#endif
+	if (g_fp_tcpSrv_statisSend) {
+		g_fp_tcpSrv_statisSend(((tcpSrv*)pTcpServer)->m_iServerPort, iLen);
+	}
 
 	return iRet > 0;
 }

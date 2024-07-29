@@ -84,4 +84,6 @@ public:
 };
 
 extern StatusServer statusSrv;
+
+void statisSend(int port, size_t len);
 #endif

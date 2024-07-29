@@ -125,6 +125,7 @@ void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,stri
 	timeopt::now(&st);
 	j["time"] = timeopt::st2strWithMilli(st);
 	j["remoteAddr"] = remoteAddr;
+	j["localAddr"] = localAddr;
 	if (success)
 		j["type"] = "发送成功";
 	else
@@ -137,8 +138,8 @@ void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,stri
 
 void IOLogRecv(unsigned char* p, size_t len, UDP_SESSION udpSession)
 {
-	string r = str::format("UDP-%s:%d", udpSession.remoteIP, udpSession.remotePort);
-	string l = str::format("UDP-%s:%d", udpSession.localIP, udpSession.localPort);
+	string r = str::format("UDP-%s:%d", udpSession.remoteIP.c_str(), udpSession.remotePort);
+	string l = str::format("UDP-%s:%d", udpSession.localIP.c_str(), udpSession.localPort);
 	IOLogRecv(p, len, r, l);
 }
 
@@ -157,6 +158,7 @@ void IOLogRecv(unsigned char* p, size_t len,string remoteAddr,string localAddr)
 		timeopt::now(&st);
 		j["time"] = timeopt::st2strWithMilli(st);
 		j["remoteAddr"] = remoteAddr;
+		j["localAddr"] = localAddr;
 		j["type"] = "接收";
 		j["len"] = len;
 		//j["data"] = str::fromBuff(p, len);

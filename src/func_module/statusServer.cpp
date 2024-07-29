@@ -322,5 +322,10 @@ void StatusServer::statisRecv(int port, size_t len) {
 	}
 }
 
+
+void statisSend(int port, size_t len){
+	statusSrv.statisSend(port, len);
+}
+
 #endif
 

@@ -407,6 +407,17 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	return handled;
 }
 
+bool ioDev_tdsp::onRecvData(unsigned char* pData, size_t iLen) {
+	yyjson_doc* doc = yyjson_read((const char*)pData, iLen, 0);
+	if (!doc) {
+		LOG("[error]解析tdsp数据包失败,不是正确的json格式,%s",getIOAddrStr().c_str());
+		return false;
+	}
+	yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
+	onRecvPkt(yyv_resp, doc);
+	yyjson_doc_free(doc);
+}
+
 bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 	setOnline();
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);

@@ -31,6 +31,7 @@ SOFTWARE.
 #include "tds_imp.h"
 #include "tdsWatchDog.h"
 #include "tdb.h"
+#include "statusServer.h"
 
 //#define _CRTDBG_MAP_ALLOC
 //#include <stdlib.h>
@@ -256,6 +257,10 @@ int main(int argc, char** argv)
 	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	//_CrtSetBreakAlloc(124823298);
+
+#ifdef _WIN32
+	g_fp_tcpSrv_statisSend = statisSend;
+#endif
 
 	//取出命令行命令
 	vector<string> args;

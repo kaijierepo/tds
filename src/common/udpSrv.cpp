@@ -99,8 +99,10 @@ void udpServer::start()
 	}
 
 	//获得已经绑定的端口号
-	//int nLen = sizeof(addr);
-	//getsockname(m_sock, (sockaddr*)&addr, &nLen);
+	struct sockaddr_in localAddr;
+	int addrLen = sizeof(localAddr);
+	getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen);
+	m_port = ntohs(localAddr.sin_port);
 
 
 	thread t(udpRecvThread, this);
@@ -192,6 +194,8 @@ size_t udpServer::onRecvData(unsigned char* recvData, size_t recvDataLen, string
 		UDP_SESSION us;
 		us.remoteIP = strIP;
 		us.remotePort = port;
+		us.localIP = m_bindIP;
+		us.localPort = m_port;
 		m_pCallback->OnRecvUdpData(recvData, recvDataLen,us);
 	}
 	return 0;

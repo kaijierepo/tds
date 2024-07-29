@@ -1202,6 +1202,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 			}
 			else
 			{
+				LOG("[error]内部错误，设备sendData未建立正确的目标地址，%s", getIOAddrStr().c_str());
 				return false;
 			}
 		}

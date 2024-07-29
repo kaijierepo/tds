@@ -77,6 +77,9 @@ public:
 	virtual void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
 };
 
+typedef void (*fp_statisSend)(int port, size_t len);
+
+
 
 class tcpSrv  {
 public:
@@ -110,3 +113,5 @@ public:
 	int m_iServerPort;
 	int keepAliveTimeout;
 };
+
+extern fp_statisSend g_fp_tcpSrv_statisSend;
