@@ -34,7 +34,9 @@ SOFTWARE.
 #include <mutex>
 #include <regex>
 #ifdef _WIN32
+#include <experimental/filesystem>
 #include <windows.h>
+using namespace std::experimental;
 #else
 //#include "iconv.h"
 #include <filesystem>
@@ -409,7 +411,7 @@ namespace DB_TAG {
 }
 
 
-#include <filesystem>
+//#include <filesystem>
 /*
 #ifdef _WIN32
 #include <windows.h>
@@ -2077,30 +2079,107 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	return true;
 }
 
-bool DB_FILE::loadFile()
+void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org)
 {
-	time.fromUnixTime(ttTime);
-	ymd = time.toYMD();
-	path = pOwnerDB->getPath_dbFile(tag, time,deType);
-	DB_FS::readFile(path, data);
-	if (data == "") {
-		return false;
-	}
-
-	yyjson_read_err err = { 0 };
-	doc = yyjson_read_opts((char*)data.c_str(), data.length(),0,nullptr,&err);
-	if (err.code != YYJSON_READ_SUCCESS) {
-		// 处理错误
-		string sErr = err.msg;
-		sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + formatStr("%d",err.pos) + ",errInfo:" + sErr;
-		db_exception e;
-		e.m_error = sErr;
-		throw e;
-	}
-	root = yyjson_doc_get_root(doc);
-	return true;
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	rpc_db_select(yyv_params, rlt, err, queryInfo, org);
+	yyjson_doc_free(doc);
 }
 
+void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org)
+{
+	DE_SELECTOR deSel;
+
+	string dbName;
+	TDB* tdb = nullptr;
+	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+	if (yyjson_is_str(yyv_db)) {
+		dbName = yyjson_get_str(yyv_db);
+		tdb = db.getChildDB(dbName);
+		if (tdb == nullptr) {
+			err = "specified db not found";
+			return;
+		}
+	}
+
+	string rootTag = "";
+	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
+	if (yyv_rootTag) {
+		rootTag = yyjson_get_str(yyv_rootTag);
+		if (m_isGbk) {
+			rootTag = DB_STR::gb_to_utf8(rootTag);
+		}
+	}
+	deSel.tagSel.m_org = org;
+	parseDESelector(params, deSel, err);
+	if (err != "") {
+		err = "\"" + err + "\"";
+		return;
+	}
+
+	yyjson_val* yyv_calc = yyjson_obj_get(params, "calc");
+	if (yyv_calc && yyjson_is_str(yyv_calc)) {
+		deSel.calc = yyjson_get_str(yyv_calc);
+	}
+
+	yyjson_val* yyv_timeFill = yyjson_obj_get(params, "timeFill");
+	if (yyv_timeFill && yyjson_is_bool(yyv_timeFill)) {
+		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
+	}
+
+	//tag select set by tdb user
+	if (m_getTagsByTagSelector != nullptr)
+		m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
+	//by default ,tdb only support exact tag
+	//if change fuzzy tag to real tag, tdb  must save all tag in map when tdb runs or inserts. Doing this in http is easier!
+	else {
+		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
+			string& exp = deSel.tagSel.exactMatchExp[i];
+			deSel.tagSel.tagSet.push_back(exp);
+		}
+	}
+
+	SELECT_RLT result;
+	if (deSel.tagSel.tagSet.size() == 0) {
+		err = "specified tag not found";
+	}
+	else {
+		try
+		{
+			yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+
+			if (dbName != "") {
+				tdb->Select(deSel, result);
+			}
+			else
+				Select(deSel, result);
+
+			if (result.error != "") {
+				err = result.error;
+			}
+			else {
+				if (deSel.calc != "") {
+					rlt = result.calcResult;
+				}
+				else {
+					rlt = result.dataList;
+				}
+			}
+		}
+		catch (std::exception& e)
+		{
+			string sErr = e.what();
+			err = "\"" + sErr + "\"";
+		}
+	}
+
+	queryInfo = result.info;
+
+	//params["timeParsed"] = deSel.timeSel.getParsedSelector();
+	//resp.params = params.dump();
+	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
+}
 
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
@@ -2120,17 +2199,17 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	//data buff in processing steps, all will be released in the end
 	vector<vector<DATA_SET*>*>  dataSetBuff;
 
-	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr; 
+	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr;
 	string sCalcResult; //calc result dumped to string
-	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt; 
+	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 
-	if (deSel.deType == "curve" ) {
+	if (deSel.deType == "curve") {
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
 			string& tag = fSet.tag; // yyjson do not copy string,src string can not be release,use string& instead of a local variant
-;
+			;
 			for (int i = 0; i < fSet.fileList.size(); i++)
 			{
 				DB_FILE* pdf = fSet.fileList[i];
@@ -2188,7 +2267,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 
 		//get seleted de, parse files in to de dataset
-		bRet = Select_Step_loadDataElem(deSel, tagFileSet,*dataSet, result, rlt_mut_doc);
+		bRet = Select_Step_loadDataElem(deSel, tagFileSet, *dataSet, result, rlt_mut_doc);
 		if (!bRet)
 			return false;
 
@@ -2205,7 +2284,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 					for (auto& g : fs.m_groupedBeforeAggr) {
 						if (fSet.m_groupedBeforeAggr.find(g.first) != fSet.m_groupedBeforeAggr.end()) {
 							vector<yyjson_val*>& vec = fSet.m_groupedBeforeAggr[g.first];
-							vec.insert(vec.begin(), g.second.begin(),g.second.end());
+							vec.insert(vec.begin(), g.second.begin(), g.second.end());
 						}
 						else {
 							fSet.m_groupedBeforeAggr[g.first] = g.second;
@@ -2216,7 +2295,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			else {
 				for (int i = 0; i < dataSet->size(); i++) {
 					DATA_SET& fs = *dataSet->at(i);
-					fSet.m_beforeAggr.insert(fSet.m_beforeAggr.end(),fs.m_beforeAggr.begin(), fs.m_beforeAggr.end());
+					fSet.m_beforeAggr.insert(fSet.m_beforeAggr.end(), fs.m_beforeAggr.begin(), fs.m_beforeAggr.end());
 				}
 			}
 			vector<DATA_SET*>* dataSet2 = new vector<DATA_SET*>;
@@ -2262,7 +2341,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 				dbLast = dbCur;
 				lastVal = curVal;
 			}
-			if(mapRlt.size() > 0)
+			if (mapRlt.size() > 0)
 				mapRlt.erase(mapRlt.begin());
 			pCalcResult = &mapRlt;
 		}
@@ -2282,22 +2361,22 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			sCalcResult = formatStr("%f", dbSum);
 		}
 	}
-	
+
 
 	//use new yyjson doc to output. merge data of multi tag,multi time range into a json result
-	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc); 
+	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
 	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 
 	for (auto& i : mapRlt)
 	{
-		if(deSel.ascendingSort)
+		if (deSel.ascendingSort)
 			yyjson_mut_arr_append(rlt_mut_root, i.second);
 		else
 			yyjson_mut_arr_prepend(rlt_mut_root, i.second);
 	}
-	
+
 	size_t len = 0;
-	if (deSel.calc != ""){
+	if (deSel.calc != "") {
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 			//size_t len = strlen(p);
@@ -2339,65 +2418,251 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	return true;
 }
 
-void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 {
-	string folderPath = getPath_dataFolder(strTag, stTime);
-	string dlPath = folderPath + "/" + m_dbFmt.deListName;
-	if (!fileExist(folderPath))
-		DB_FS::createFolderOfPath(folderPath.c_str());
+	//parse time selector
+	std::string strTime = "";
+	std::string strStartDate, strEndDate;
+	DB_TIME stStartDate, stEndDate;
+	yyjson_val* yyv_time = yyjson_obj_get(yyParams, "time");
+	if (yyv_time == nullptr) {
+		err = "param missing: time";
+		return;
+	}
+	if (!yyjson_is_str(yyv_time)) {
+		err = "param time must be string type";
+		return;
+	}
+	strTime = yyjson_get_str(yyv_time);
+	if (!deSel.timeSel.init(strTime)) {
+		err = "time selector format error:" + deSel.timeSel.error;
+		return;
+	}
+	yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
+	if (yyv_timeFmt && yyjson_is_str(yyv_timeFmt)) {
+		deSel.timeSel.timeFmt = yyjson_get_str(yyv_timeFmt);
+	}
 
-	bool bAppend = false;
-	if (fileExist(dlPath))
+
+	//parse tag selector
+	std::string strRootTag;
+	std::vector<string> tagList;
+	yyjson_val* yyv_tag = yyjson_obj_get(yyParams, "tag");
+	yyjson_val* yyv_colume = yyjson_obj_get(yyParams, "colume");
+	if (yyv_tag && yyjson_is_str(yyv_tag))
 	{
-#ifdef _WIN32
-		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
-#else
-		FILE* fp = fopen(dlPath.c_str(), "rb+");
-#endif
-		if (fp)
-		{
-			fseek(fp, 0L, SEEK_END);
-			long len = ftell(fp);
-			if (len > 0)
-			{
-				fseek(fp, len - 1, SEEK_SET);
-				std::string d = ",";
-				size_t len = 0;
-				string s = "{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
-				d += s;
-				d += "]";
-				fwrite(d.c_str(), 1, d.length(), fp);
-				bAppend = true;
+		string tag = yyjson_get_str(yyv_tag);
+		if (m_isGbk) {
+			tag = DB_STR::gb_to_utf8(tag);
+		}
+		tagList.push_back(tag);
+	}
+	else if (yyv_tag && yyjson_is_arr(yyv_tag)) {
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		yyjson_arr_foreach(yyv_tag, idx, max, item) {
+			if (!yyjson_is_str(item)) {
+				err = "tag must be string type";
+				return;
 			}
-			fclose(fp);
+			string tag = yyjson_get_str(item);
+			tagList.push_back(tag);
+		}
+	}
+	else if (yyv_colume) {//colume only support exact tag , fuzzy tag not supported
+		deSel.tagAsColume = true;
+		yyjson_val* yyv_colList = yyv_colume;
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		yyjson_arr_foreach(yyv_colList, idx, max, item) {
+			yyjson_val* yyv_tag = yyjson_obj_get(item, "tag");
+			string tag = yyjson_get_str(yyv_tag);
+			tagList.push_back(tag);
+			yyjson_val* yyv_aggr = yyjson_obj_get(item, "aggregate");
+			deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
+			deSel.bAggr = true;
+			yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
+			string tagLabel = yyjson_get_str(yyv_tagLabel);
+			if (tagLabel != "")
+				deSel.vecTagLable.push_back(tagLabel);
+			else {
+				deSel.vecTagLable.push_back(tag);
+			}
+		}
+	}
+	else {
+		err = " tag or colume must be specified";
+		return;
+	}
+
+	yyjson_val* yyv_rootTag = yyjson_obj_get(yyParams, "rootTag");
+	if (yyv_rootTag && yyjson_is_str(yyv_rootTag))
+	{
+		strRootTag = yyjson_get_str(yyv_rootTag);
+	}
+
+	if (!deSel.tagSel.init(tagList, strRootTag)) {
+		err = "tag selector format error:" + deSel.tagSel.error;
+		return;
+	}
+
+	yyjson_val* yyv_getTag = yyjson_obj_get(yyParams, "getTag");
+	if (yyv_getTag) {
+		deSel.tagSel.getTag = yyjson_get_bool(yyv_getTag);
+	}
+
+
+	//obj type
+	yyjson_val* yyv_type = yyjson_obj_get(yyParams, "type");
+	if (yyv_type && yyjson_is_str(yyv_type)) {
+		deSel.tagSel.type = yyjson_get_str(yyv_type);
+	}
+
+	yyjson_val* yyv_deType = yyjson_obj_get(yyParams, "deType");
+	if (yyv_deType && yyjson_is_str(yyv_deType)) {
+		deSel.deType = yyjson_get_str(yyv_deType);
+	}
+
+	//parse interval selector
+	yyjson_val* yyv_interval = yyjson_obj_get(yyParams, "interval");
+	if (yyv_interval && yyjson_is_int(yyv_interval))
+	{
+		deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Count;
+		deSel.interval.dsi = yyjson_get_int(yyv_interval);
+	}
+	else if (yyv_interval && yyjson_is_str(yyv_interval))
+	{
+		string sDsti = yyjson_get_str(yyv_interval);
+		deSel.interval.dsti = dhmsSpan2Seconds(sDsti);
+		if (deSel.interval.dsti > 0)
+			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Time;
+	}
+
+	//parse condition selector
+	string filter;
+	yyjson_val* yyv_match = yyjson_obj_get(yyParams, "match");
+	if (yyv_match) {
+		filter = yyjson_get_str(yyv_match);
+		deSel.condition.init(filter);
+	}
+
+	yyjson_val* yyv_aSort = yyjson_obj_get(yyParams, "a-sort");
+	yyjson_val* yyv_dSort = yyjson_obj_get(yyParams, "d-sort");
+	if (yyv_aSort) {
+		deSel.ascendingSort = true;
+		deSel.sortKey = yyjson_get_str(yyv_aSort);
+	}
+	else if (yyv_dSort) {
+		deSel.ascendingSort = false;
+		deSel.sortKey = yyjson_get_str(yyv_dSort);
+	}
+
+	yyjson_val* yyv_tagAsColume = yyjson_obj_get(yyParams, "tagAsColume");
+	if (yyjson_is_bool(yyv_tagAsColume)) {
+		deSel.tagAsColume = yyjson_get_bool(yyv_tagAsColume);
+	}
+
+
+	yyjson_val* yyv_valType = yyjson_obj_get(yyParams, "valType");
+	if (yyv_valType && yyjson_is_str(yyv_valType)) {
+		deSel.valType = yyjson_get_str(yyv_valType);
+	}
+
+
+	//name mode or  tag mode  colLabel
+	yyjson_val* yyv_colLabel = yyjson_obj_get(yyParams, "columeLabel");
+	if (yyv_colLabel && yyjson_is_str(yyv_colLabel)) {
+		deSel.tagLabel = yyjson_get_str(yyv_colLabel);
+
+		//use name or tag as label,or specified label ,only supported when only one tag
+		if (deSel.tagLabel != "name" && deSel.tagLabel != "tag") {
+			deSel.vecTagLable.push_back(deSel.tagLabel);
+		}
+	}
+	//custom columeLabel
+	else if (yyv_colLabel && yyjson_is_arr(yyv_colLabel)) {
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		yyjson_arr_foreach(yyv_colLabel, idx, max, item) {
+			deSel.vecTagLable.push_back(yyjson_get_str(item));
 		}
 	}
 
-	if (!bAppend) {
-		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
-		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
-		{
-			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
+	yyjson_val* yyv_groupby = yyjson_obj_get(yyParams, "groupby");
+	if (yyv_groupby && yyjson_is_str(yyv_groupby)) {
+		deSel.groupby = yyjson_get_str(yyv_groupby);
+
+		//if aggr by time
+		if (deSel.groupby.find("day") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "day";
+		}
+		else if (deSel.groupby.find("month") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "month";
+		}
+		else if (deSel.groupby.find("hour") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "hour";
+		}
+		else {
+			deSel.groupByTime = false;
+		}
+
+		//if aggr by tag
+		if (deSel.groupby.find("tag") != string::npos) {
+			deSel.groupByTag = true;
+		}
+		else {
+			deSel.groupByTag = false;
 		}
 	}
-}
 
-void TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
-{
-	string s = formatStr("%d", iVal);
-	InsertValJsonStr(strTag, stTime, s);
-}
+	yyjson_val* yyv_aggr = yyjson_obj_get(yyParams, "aggregate");
+	if (yyv_aggr == nullptr) {
+		yyv_aggr = yyjson_obj_get(yyParams, "aggr");
+	}
 
-void TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
-{
-	string s = formatStr("%d", iVal);
-	InsertValJsonStr(strTag, stTime, s);
-}
+	if (yyjson_is_arr(yyv_aggr)) { //muti tag aggr
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		yyjson_arr_foreach(yyv_aggr, idx, max, item) {
+			deSel.vecAggregate.push_back(getAggrOpt(item));
+		}
+		deSel.bAggr = true;
+		deSel.groupByTag = true; //group by tag by defaut,equals to aggr by each column
+	}
+	else if (yyjson_is_obj(yyv_aggr) || yyjson_is_str(yyv_aggr)) {
+		deSel.aggregate = getAggrOpt(yyv_aggr);
+		deSel.bAggr = true;
+	}
 
-void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
-{
-	string s = formatStr("%f", dbVal);
-	InsertValJsonStr(strTag, stTime, s);
+	yyjson_val* yyv_timeSlots = yyjson_obj_get(yyParams, "timeSlot");
+	if (yyjson_is_obj(yyv_timeSlots)) {
+		size_t idx = 0;
+		size_t maxIdx = 0;
+		yyjson_val* key;
+		yyjson_val* val;
+		yyjson_obj_foreach(yyv_timeSlots, idx, maxIdx, key, val) {
+			string slotName = yyjson_get_str(key);
+			vector<DB_TIME_RANGE> rangeSeries;
+
+			size_t timeIdx = 0;
+			size_t maxTimeIdx = 0;
+			yyjson_val* yyTimeRange;
+			yyjson_arr_foreach(val, timeIdx, maxTimeIdx, yyTimeRange) {
+				string timeRange = yyjson_get_str(yyTimeRange);
+				DB_TIME_RANGE t = parseTimeRange(timeRange);
+				rangeSeries.push_back(t);
+			}
+
+			deSel.mapTimeSlots[slotName] = rangeSeries;
+		}
+	}
 }
 
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
@@ -2411,7 +2676,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				time_t loadTime = deSel.timeSel.startTime;
 				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -2425,7 +2690,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				time_t loadTime = deSel.timeSel.endTime;
 				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -2457,7 +2722,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					time_t loadTime = deSel.timeSel.startTime;
 					for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2470,7 +2735,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					loadTime = deSel.timeSel.endTime;
 					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2484,7 +2749,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					time_t loadTime = deSel.timeSel.endTime;
 					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag,this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2494,9 +2759,6 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					}
 				}
 			}
-
-
-
 
 			if (fSet.fileList.size() == 0)
 				continue;
@@ -2516,7 +2778,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 		{
 			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 			time_t t = 0;
-			DB_FILE* pdf = new DB_FILE(t, fSet.tag,this);
+			DB_FILE* pdf = new DB_FILE(t, fSet.tag, this);
 			pdf->deType = deSel.deType;
 			if (!pdf->loadFile()) {
 				delete pdf;
@@ -2589,7 +2851,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				deList = yyjson_obj_get(pdf->root, "data");
 				if (deList == nullptr) { //copatible with sap  data_list[0].data mode
 					deList = yyjson_obj_get(pdf->root, "data_list");
-					if (yyjson_is_arr(deList) && yyjson_arr_size(deList)>0){
+					if (yyjson_is_arr(deList) && yyjson_arr_size(deList) > 0) {
 						deList = yyjson_arr_get(deList, 0);
 						if (yyjson_is_obj(deList)) {
 							deList = yyjson_obj_get(deList, "data");
@@ -2676,7 +2938,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				if (m_timeUnit == BY_DAY) {
-					
+
 					const char* pHms = nullptr;
 					int hmsLen = 0;
 					if (szTime.length() == 19) //2020-02-02 02:02:02
@@ -2709,7 +2971,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				else {
 					//assert(false);
 				}
-				
+
 
 				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 					continue;
@@ -2762,15 +3024,15 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 						fSetOut.m_beforeAggr.push_back(de);
 					}
 				}
-				else { 
-					DE_yyjson& deyy  = *(new DE_yyjson());
+				else {
+					DE_yyjson& deyy = *(new DE_yyjson());
 					deyy.deTime = deTime;
 
 					//set time
 					//deyy.time = yyjson_mut_str(rlt_mut_doc, deyy.deTime.data());
 
 					//set val
-					yyjson_val* yyVal = nullptr;	
+					yyjson_val* yyVal = nullptr;
 					if (deJsonType == DE_JSON_TYPE::DE_J_OBJ) {
 						yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					}
@@ -2779,14 +3041,14 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					}
 					if (yyVal)
 						deyy.val = yyjson_val_mut_copy(rlt_mut_doc, yyVal);
-					
+
 					//set all fields except time,val
 					if (deJsonType == DE_JSON_TYPE::DE_J_OBJ) {
 						deyy.de = yyjson_val_mut_copy(rlt_mut_doc, de);
 					}
 
 					if (yyjson_mut_get_type(deyy.val) == YYJSON_TYPE_STR) {
-						if (deSel.isValTypeNumber()) 
+						if (deSel.isValTypeNumber())
 						{
 							string valStr = yyjson_mut_get_str(deyy.val);
 							deyy.val = yyjson_mut_real(rlt_mut_doc, atof(valStr.data()));
@@ -2812,8 +3074,8 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				DATA_SET& fSet = *inputData[tagIdx];
 				//every group aggr into a de
 				for (auto& i : fSet.m_groupedBeforeAggr) {
-					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
-					doAggregateOneGroup(deSel, fSet.aggregate,i.first, i.second, aggrRltDe, rlt_mut_doc);
+					DE_yyjson& aggrRltDe = *(new DE_yyjson());
+					doAggregateOneGroup(deSel, fSet.aggregate, i.first, i.second, aggrRltDe, rlt_mut_doc);
 					aggrRltDe.deTime = i.first.data(); //set as time group key
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
@@ -2824,8 +3086,8 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 			{
 				DATA_SET& fSet = *inputData[tagIdx];
 				if (fSet.m_beforeAggr.size() > 0) {
-					DE_yyjson& aggrRltDe = *(new DE_yyjson()); 
-					doAggregateOneGroup(deSel, fSet.aggregate,"all-time-range", fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
+					DE_yyjson& aggrRltDe = *(new DE_yyjson());
+					doAggregateOneGroup(deSel, fSet.aggregate, "all-time-range", fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
 					aggrRltDe.deTime = deSel.timeSel.selector;
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
@@ -2833,6 +3095,124 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 		}
 	}
 	return true;
+}
+
+
+void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	rpc_db_insert(yyv_params, rlt, err, queryInfo, org);
+	yyjson_doc_free(doc);
+}
+
+void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+	yyjson_val* yyv_val = yyjson_obj_get(params, "val");
+	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
+	if (yyv_val == nullptr && yyv_file == nullptr)
+	{
+		err = "one of param val or file must be specified";
+	}
+	else
+	{
+		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
+		string tag = yyjson_get_str(yyv_tag);
+		DB_TIME tNow;
+		yyjson_val* yyv_time = yyjson_obj_get(params, "time");
+		if (yyv_time) {
+			string time = yyjson_get_str(yyv_time);
+			if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
+				time += " 00:00:00";
+			}
+
+			if (!tNow.fromStr(time)) {
+				err = "param time invalid format.";
+				return;
+			}
+		}
+		else {
+			tNow.setNow();
+		}
+
+		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
+		yyjson_mut_obj_remove_key(yymv_params, "tag");
+		size_t len = 0;
+		string sDe = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		yyjson_mut_doc_free(mut_doc);
+
+		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
+
+		if (yyjson_is_str(yyv_db)) {
+			string dbName = yyjson_get_str(yyv_db);
+			TDB* tdb = db.getChildDB(dbName);
+			tdb->Insert(tag, sDe, &tNow);
+		}
+		else
+			Insert(tag, sDe, &tNow);
+		rlt = "\"ok\"";
+	}
+}
+
+
+void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
+{
+	string folderPath = getPath_dataFolder(strTag, stTime);
+	string dlPath = folderPath + "/" + m_dbFmt.deListName;
+	if (!fileExist(folderPath))
+		DB_FS::createFolderOfPath(folderPath.c_str());
+
+	bool bAppend = false;
+	if (fileExist(dlPath))
+	{
+#ifdef _WIN32
+		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
+#else
+		FILE* fp = fopen(dlPath.c_str(), "rb+");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0L, SEEK_END);
+			long len = ftell(fp);
+			if (len > 0)
+			{
+				fseek(fp, len - 1, SEEK_SET);
+				std::string d = ",";
+				size_t len = 0;
+				string s = "{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}";
+				d += s;
+				d += "]";
+				fwrite(d.c_str(), 1, d.length(), fp);
+				bAppend = true;
+			}
+			fclose(fp);
+		}
+	}
+
+	if (!bAppend) {
+		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
+		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
+		{
+			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
+		}
+	}
+}
+
+void TDB::Insert(string strTag, DB_TIME stTime, int& iVal)
+{
+	string s = formatStr("%d", iVal);
+	InsertValJsonStr(strTag, stTime, s);
+}
+
+void TDB::Insert(string strTag, DB_TIME stTime, long long iVal)
+{
+	string s = formatStr("%d", iVal);
+	InsertValJsonStr(strTag, stTime, s);
+}
+
+void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
+{
+	string s = formatStr("%f", dbVal);
+	InsertValJsonStr(strTag, stTime, s);
 }
 
 void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
@@ -3211,7 +3591,6 @@ bool TDB::Count(string tag, TIME_SELECTOR& timeSelector, string filter, int& iCo
 	return false;
 }
 
-
 string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, string& type)
 {
 	string deFilePath = "";
@@ -3285,8 +3664,6 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 
 	return deFilePath;
 }
-
-
 
 
 bool TDB::Open(string strDBUrl,fp_getTagsByTagSelector f,string name)
@@ -3385,252 +3762,6 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 	return n1 + n2 + n3 + n4;
 }
 
-void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel,string& err)
-{
-	//parse time selector
-	std::string strTime = "";
-	std::string strStartDate, strEndDate;
-	DB_TIME stStartDate, stEndDate;
-	yyjson_val* yyv_time = yyjson_obj_get(yyParams, "time");
-	if (yyv_time == nullptr){
-		err = "param missing: time";
-		return;
-	}
-	if (!yyjson_is_str(yyv_time)) {
-		err = "param time must be string type";
-		return;
-	}
-	strTime = yyjson_get_str(yyv_time);
-	if (!deSel.timeSel.init(strTime)) {
-		err = "time selector format error:" + deSel.timeSel.error;
-		return;
-	}
-	yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
-	if(yyv_timeFmt && yyjson_is_str(yyv_timeFmt)){
-		deSel.timeSel.timeFmt = yyjson_get_str(yyv_timeFmt);
-	}
-
-
-	//parse tag selector
-	std::string strRootTag;
-	std::vector<string> tagList;
-	yyjson_val* yyv_tag = yyjson_obj_get(yyParams, "tag");
-	yyjson_val* yyv_colume = yyjson_obj_get(yyParams, "colume");
-	if(yyv_tag && yyjson_is_str(yyv_tag))
-	{
-		string tag = yyjson_get_str(yyv_tag);
-		if (m_isGbk) {
-			tag = DB_STR::gb_to_utf8(tag);
-		}
-		tagList.push_back(tag);
-	}
-	else if (yyv_tag && yyjson_is_arr(yyv_tag)) {
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyv_tag, idx, max, item) {
-			if (!yyjson_is_str(item)) {
-				err = "tag must be string type";
-				return;
-			}
-			string tag = yyjson_get_str(item);
-			tagList.push_back(tag);
-		}
-	}
-	else if (yyv_colume) {//colume only support exact tag , fuzzy tag not supported
-		deSel.tagAsColume = true;
-		yyjson_val* yyv_colList = yyv_colume;
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyv_colList, idx, max, item){
-			yyjson_val* yyv_tag = yyjson_obj_get(item, "tag");
-			string tag = yyjson_get_str(yyv_tag);
-			tagList.push_back(tag);
-			yyjson_val* yyv_aggr = yyjson_obj_get(item, "aggregate");
-			deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
-			deSel.bAggr = true;
-			yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
-			string tagLabel = yyjson_get_str(yyv_tagLabel);
-			if(tagLabel!="")
-				deSel.vecTagLable.push_back(tagLabel);
-			else {
-				deSel.vecTagLable.push_back(tag);
-			}
-		}
-	}
-	else {
-		err = " tag or colume must be specified";
-		return;
-	}
-
-	yyjson_val* yyv_rootTag = yyjson_obj_get(yyParams, "rootTag");
-	if(yyv_rootTag && yyjson_is_str(yyv_rootTag))
-	{
-		strRootTag = yyjson_get_str(yyv_rootTag);
-	}
-
-	if (!deSel.tagSel.init(tagList, strRootTag)) {
-		err = "tag selector format error:" + deSel.tagSel.error;
-		return;
-	}
-
-	yyjson_val* yyv_getTag = yyjson_obj_get(yyParams, "getTag");
-	if (yyv_getTag) {
-		deSel.tagSel.getTag = yyjson_get_bool(yyv_getTag);
-	}
-
-
-	//obj type
-	yyjson_val* yyv_type = yyjson_obj_get(yyParams, "type");
-	if (yyv_type && yyjson_is_str(yyv_type)) {
-		deSel.tagSel.type = yyjson_get_str(yyv_type);
-	}
-	
-	yyjson_val* yyv_deType = yyjson_obj_get(yyParams, "deType");
-	if (yyv_deType && yyjson_is_str(yyv_deType)){
-		deSel.deType = yyjson_get_str(yyv_deType);
-	}
-
-	//parse interval selector
-	yyjson_val* yyv_interval = yyjson_obj_get(yyParams, "interval");
-	if (yyv_interval && yyjson_is_int(yyv_interval))
-	{
-		deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Count;
-		deSel.interval.dsi = yyjson_get_int(yyv_interval);
-	}
-	else if (yyv_interval && yyjson_is_str(yyv_interval))
-	{
-		string sDsti = yyjson_get_str(yyv_interval);
-		deSel.interval.dsti = dhmsSpan2Seconds(sDsti);
-		if (deSel.interval.dsti > 0)
-			deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Time;
-	}
-
-	//parse condition selector
-	string filter;
-	yyjson_val* yyv_match = yyjson_obj_get(yyParams, "match");
-	if (yyv_match) {
-		filter = yyjson_get_str(yyv_match);
-		deSel.condition.init(filter);
-	}
-
-	yyjson_val* yyv_aSort = yyjson_obj_get(yyParams, "a-sort");
-	yyjson_val* yyv_dSort = yyjson_obj_get(yyParams, "d-sort");
-	if (yyv_aSort) {
-		deSel.ascendingSort = true;
-		deSel.sortKey = yyjson_get_str(yyv_aSort);
-	}
-	else if (yyv_dSort) {
-		deSel.ascendingSort = false;
-		deSel.sortKey = yyjson_get_str(yyv_dSort);
-	}
-
-	yyjson_val* yyv_tagAsColume = yyjson_obj_get(yyParams, "tagAsColume");
-	if (yyjson_is_bool(yyv_tagAsColume)) {
-		deSel.tagAsColume = yyjson_get_bool(yyv_tagAsColume);
-	}
-
-
-	yyjson_val* yyv_valType = yyjson_obj_get(yyParams, "valType");
-	if (yyv_valType && yyjson_is_str(yyv_valType)) {
-		deSel.valType = yyjson_get_str(yyv_valType);
-	}
-
-
-	//name mode or  tag mode  colLabel
-	yyjson_val* yyv_colLabel = yyjson_obj_get(yyParams, "columeLabel");
-	if (yyv_colLabel && yyjson_is_str(yyv_colLabel)) {
-		deSel.tagLabel = yyjson_get_str(yyv_colLabel);
-
-		//use name or tag as label,or specified label ,only supported when only one tag
-		if (deSel.tagLabel != "name" && deSel.tagLabel != "tag") {
-			deSel.vecTagLable.push_back(deSel.tagLabel);
-		}
-	}
-	//custom columeLabel
-	else if (yyv_colLabel && yyjson_is_arr(yyv_colLabel)) {
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyv_colLabel, idx, max, item) {
-			deSel.vecTagLable.push_back(yyjson_get_str(item));
-		}
-	}
-
-	yyjson_val* yyv_groupby = yyjson_obj_get(yyParams, "groupby");
-	if (yyv_groupby && yyjson_is_str(yyv_groupby)) {
-		deSel.groupby = yyjson_get_str(yyv_groupby);
-
-		//if aggr by time
-		if (deSel.groupby.find("day") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "day";
-		}
-		else if (deSel.groupby.find("month") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "month";
-		}
-		else if (deSel.groupby.find("hour")!=string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "hour";
-		}
-		else {
-			deSel.groupByTime = false;
-		}
-
-		//if aggr by tag
-		if (deSel.groupby.find("tag") != string::npos) {
-			deSel.groupByTag = true;
-		}
-		else {
-			deSel.groupByTag = false;
-		}
-	}
-
-	yyjson_val* yyv_aggr = yyjson_obj_get(yyParams, "aggregate");
-	if (yyv_aggr == nullptr) {
-		yyv_aggr = yyjson_obj_get(yyParams, "aggr");
-	}
-		
-	if (yyjson_is_arr(yyv_aggr)) { //muti tag aggr
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyv_aggr, idx, max, item) {
-			deSel.vecAggregate.push_back(getAggrOpt(item));
-		}
-		deSel.bAggr = true;
-		deSel.groupByTag = true; //group by tag by defaut,equals to aggr by each column
-	}
-	else if(yyjson_is_obj(yyv_aggr) || yyjson_is_str(yyv_aggr)){
-		deSel.aggregate = getAggrOpt(yyv_aggr);
-		deSel.bAggr = true;
-	}
-
-	yyjson_val* yyv_timeSlots = yyjson_obj_get(yyParams, "timeSlot");
-	if (yyjson_is_obj(yyv_timeSlots)) {
-		size_t idx = 0;
-		size_t maxIdx = 0;
-		yyjson_val* key;
-		yyjson_val* val;
-		yyjson_obj_foreach(yyv_timeSlots, idx, maxIdx,key,val) {
-			string slotName = yyjson_get_str(key);
-			vector<DB_TIME_RANGE> rangeSeries;
-
-			size_t timeIdx = 0;
-			size_t maxTimeIdx = 0;
-			yyjson_val* yyTimeRange;
-			yyjson_arr_foreach(val, timeIdx, maxTimeIdx, yyTimeRange) {
-				string timeRange = yyjson_get_str(yyTimeRange);
-				DB_TIME_RANGE t = parseTimeRange(timeRange);
-				rangeSeries.push_back(t);
-			}
-
-			deSel.mapTimeSlots[slotName] = rangeSeries;
-		}
-	}
-}
 
 TDB* TDB::getChildDB(string dbName) {
 	map<string, TDB*>::iterator iter = m_childDB.find(dbName);
@@ -3647,162 +3778,6 @@ TDB* TDB::getChildDB(string dbName) {
 		m_childDB[dbName] = p;
 		return p;
 	}
-}
-
-void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
-	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
-	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_insert(yyv_params, rlt, err, queryInfo, org);
-	yyjson_doc_free(doc);
-}
-
-void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
-	yyjson_val* yyv_val = yyjson_obj_get(params, "val");
-	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
-	if (yyv_val==nullptr && yyv_file==nullptr)
-	{
-		err = "one of param val or file must be specified";
-	}
-	else
-	{
-		yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
-		string tag = yyjson_get_str(yyv_tag);
-		DB_TIME tNow;
-		yyjson_val* yyv_time = yyjson_obj_get(params, "time");
-		if (yyv_time) {
-			string time = yyjson_get_str(yyv_time);
-			if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
-				time += " 00:00:00";
-			}
-
-			if (!tNow.fromStr(time)) {
-				err = "param time invalid format.";
-				return;
-			}
-		}
-		else {
-			tNow.setNow();
-		}
-
-		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
-		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
-		yyjson_mut_obj_remove_key(yymv_params, "tag");
-		size_t len = 0;
-		string sDe = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
-		yyjson_mut_doc_free(mut_doc);
-
-		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
-
-		if (yyjson_is_str(yyv_db)) {
-			string dbName = yyjson_get_str(yyv_db);
-			TDB* tdb = db.getChildDB(dbName);
-			tdb->Insert(tag, sDe, &tNow);
-		}
-		else
-			Insert(tag, sDe, &tNow);
-		rlt = "\"ok\"";
-	}
-}
-
-void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org)
-{
-	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
-	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_select(yyv_params, rlt, err, queryInfo, org);
-	yyjson_doc_free(doc);
-}
-
-void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org)
-{
-	DE_SELECTOR deSel;
-
-	string dbName;
-	TDB* tdb = nullptr;
-	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
-	if (yyjson_is_str(yyv_db)) {
-		dbName = yyjson_get_str(yyv_db);
-		tdb = db.getChildDB(dbName);
-		if (tdb == nullptr) {
-			err = "specified db not found";
-			return;
-		}
-	}
-
-	string rootTag = "";
-	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
-	if (yyv_rootTag) {
-		rootTag = yyjson_get_str(yyv_rootTag);
-		if (m_isGbk) {
-			rootTag = DB_STR::gb_to_utf8(rootTag);
-		}
-	}
-	deSel.tagSel.m_org = org;
-	parseDESelector(params, deSel,err);
-	if (err != "") {
-		err = "\"" + err + "\"";
-		return;
-	}
-
-	yyjson_val* yyv_calc = yyjson_obj_get(params, "calc");
-	if (yyv_calc && yyjson_is_str(yyv_calc)) {
-		deSel.calc = yyjson_get_str(yyv_calc);
-	}
-
-	yyjson_val* yyv_timeFill = yyjson_obj_get(params, "timeFill");
-	if (yyv_timeFill && yyjson_is_bool(yyv_timeFill)) {
-		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
-	}
-
-	//tag select set by tdb user
-	if(m_getTagsByTagSelector != nullptr)
-		m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-	//by default ,tdb only support exact tag
-	else {
-		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
-			string& exp = deSel.tagSel.exactMatchExp[i];
-			deSel.tagSel.tagSet.push_back(exp);
-		}
-	}
-
-	SELECT_RLT result;
-	if (deSel.tagSel.tagSet.size() == 0) {
-		err = "specified tag not found";
-	}
-	else {
-		try
-		{
-			yyjson_val* yyv_db = yyjson_obj_get(params, "db");
-
-			if (dbName!="") {
-				tdb->Select(deSel, result);
-			}
-			else
-				Select(deSel, result);
-
-			if (result.error != "") {
-				err = result.error;
-			}
-			else {
-				if (deSel.calc != "") {
-					rlt = result.calcResult;
-				}
-				else {
-					rlt = result.dataList;
-				}
-			}
-		}
-		catch (std::exception& e)
-		{
-			string sErr = e.what();
-			err = "\"" + sErr + "\"";
-		}
-	}
-
-	queryInfo = result.info;
-
-	//params["timeParsed"] = deSel.timeSel.getParsedSelector();
-	//resp.params = params.dump();
-	queryInfo = "tags:" + DB_STR::format("%d",deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
 string TDB::parseSuffix(string deFileUrl)
@@ -4709,4 +4684,36 @@ string DB_TIME::nowStrWithMilli()
 	DB_TIME t;
 	t.setNow();
 	return t.toStr(true);
+}
+
+bool DB_FILE::loadFile()
+{
+	time.fromUnixTime(ttTime);
+	ymd = time.toYMD();
+	path = pOwnerDB->getPath_dbFile(tag, time, deType);
+	DB_FS::readFile(path, data);
+	if (data == "") {
+		return false;
+	}
+
+	yyjson_read_err err = { 0 };
+	doc = yyjson_read_opts((char*)data.c_str(), data.length(), 0, nullptr, &err);
+	if (err.code != YYJSON_READ_SUCCESS) {
+		//reload gbk string
+		if (err.code == YYJSON_READ_ERROR_INVALID_STRING)
+		{
+			data = DB_STR::gb_to_utf8(data);
+			doc = yyjson_read_opts((char*)data.c_str(), data.length(), 0, nullptr, &err);
+		}
+		if (err.code != YYJSON_READ_SUCCESS) {
+			// error message
+			string sErr = err.msg;
+			sErr = "load json file fail,file path:" + path + " ,parse fail at byte " + formatStr("%d", err.pos) + ",errInfo:" + sErr;
+			db_exception e;
+			e.m_error = sErr;
+			throw e;
+		}
+	}
+	root = yyjson_doc_get_root(doc);
+	return true;
 }
