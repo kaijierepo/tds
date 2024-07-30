@@ -1309,11 +1309,6 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "hexSend" || method == "sendToDev") {
 		LOG("[warn][sendToDev] %s", params.dump().c_str());
-		string spkt = params["data"];
-		if (!str::isValidHexString(spkt)) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "invalid hex string");
-			return true;
-		}
 
 		if (!params["tag"].is_string()) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "tag params must be specifed and be string type");
@@ -1347,9 +1342,54 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 				return true;
 			}
 
-			LOG("[warn][hexSend] 发送到设备:%s,数据:%s", p->getIOAddrStr().c_str(),spkt.c_str());
-			vector<unsigned char> pkt = str::hexStrToBytes(spkt);
-			p->sendData(pkt.data(), pkt.size());
+			struct SendPkt {
+				string sPkt;
+				vector<unsigned char> pkt;
+				int delay;
+				SendPkt() {
+					delay = 0;
+				}
+			};
+			vector<SendPkt> pktList;
+
+			if (params["data"].is_string()) {
+				SendPkt sp;
+				sp.sPkt = params["data"];
+				if (!str::isValidHexString(sp.sPkt)) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "invalid hex string");
+					return true;
+				}
+				sp.pkt = str::hexStrToBytes(sp.sPkt);
+				pktList.push_back(sp);
+			}
+			else if (params["data"].is_array()) {
+				json jData = params["data"];
+				for (int i = 0; i < jData.size(); i++) {
+					SendPkt sp;
+					json& jOnePkt = jData[i];
+					sp.sPkt = jOnePkt["pkt"];
+					if (!str::isValidHexString(sp.sPkt)) {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "invalid hex string");
+						return true;
+					}
+					sp.pkt = str::hexStrToBytes(sp.sPkt);
+					if (jOnePkt["delay"].is_number_integer()) {
+						sp.delay = jOnePkt["delay"].get<int>();
+					}
+					pktList.push_back(sp);
+				}
+			}
+
+			for (int i = 0; i < pktList.size(); i++) {
+				SendPkt& sp = pktList[i];
+				LOG("[warn][sendToDev] 发送到设备:%s,数据包:%s,发送后延时:%dms", p->getIOAddrStr().c_str(), sp.sPkt.c_str());
+				p->sendData(sp.pkt.data(), sp.pkt.size());
+
+				if (sp.delay > 0) {
+					timeopt::sleepMilli(sp.delay);
+				}
+			}
+
 			rpcResp.result = RPC_OK;
 		}
 	}
