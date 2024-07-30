@@ -43,6 +43,7 @@ public:
 	json getAddr() override;
 	void DoAcq();
 	void DoCycleTask() override;
+	void DoCycleTaskSync() override;
 	void onEvent_online() override;
 
 	map<int, TDSP_SYNC_INFO*> m_mapSyncRPCInfo;

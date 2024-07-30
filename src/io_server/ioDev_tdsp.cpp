@@ -1136,6 +1136,21 @@ void ioDev_tdsp::DoAcq()
 	}
 }
 
+//该模式用于适配器模式串口网关下的设备
+void ioDev_tdsp::DoCycleTaskSync() {
+	if (!m_bRunning)
+		return;
+
+	if (m_upgradeInfo.isUpgrading)
+		return;
+
+	if (!m_bEnableAcq)
+		return;
+	if (m_dispositionMode != DEV_DISPOSITION_MODE::managed)
+		return;
+
+	DoAcq();
+}
 
 
 void ioDev_tdsp::DoCycleTask()

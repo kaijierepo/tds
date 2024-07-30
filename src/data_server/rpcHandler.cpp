@@ -408,8 +408,14 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	if (method == "startPanTilt")
 	{
 		string dir = params["dir"];
-		float panSpeed = params["panSpeed"].get<float>();
-		float tiltSpeed = params["tiltSpeed"].get<float>();
+		float panSpeed = 0;
+		if (params.contains("panSpeed")) {
+			panSpeed = params["panSpeed"].get<float>();
+		}
+		float tiltSpeed = 0;
+		if (params.contains("tiltSpeed")) {
+			tiltSpeed = params["tiltSpeed"].get<float>();
+		}
 		pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
 
 		LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
@@ -417,12 +423,21 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 		pCam->isMoving = true;
 		pCam->startMoveTime = timeopt::now();
 
+		//sync mode
 		if (params.contains("time")) {
 			int time = params["time"].get<int>();
-			json paramAsynCall;
-			paramAsynCall["tag"] = tag;
-			tds->callAsyn("stopPanTilt", paramAsynCall, time);
+			timeopt::sleepMilli(time);
+			pCam->ptz_stopMove();
+			pCam->isMoving = false;
 		}
+
+		//async mode
+		//if (params.contains("time")) {
+		//	int time = params["time"].get<int>();
+		//	json paramAsynCall;
+		//	paramAsynCall["tag"] = tag;
+		//	tds->callAsyn("stopPanTilt", paramAsynCall, time);
+		//}
 	}
 	else if (method == "stopPanTilt")
 	{
@@ -442,10 +457,16 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 
 		if (params.contains("time")) {
 			int time = params["time"].get<int>();
-			json paramAsynCall;
-			paramAsynCall["tag"] = tag;
-			tds->callAsyn("stopZoom", paramAsynCall, time);
+			timeopt::sleepMilli(time);
+			pCam->ptz_stopZoom();
 		}
+
+		//if (params.contains("time")) {
+		//	int time = params["time"].get<int>();
+		//	json paramAsynCall;
+		//	paramAsynCall["tag"] = tag;
+		//	tds->callAsyn("stopZoom", paramAsynCall, time);
+		//}
 	}
 	else if (method == "stopZoom")
 	{
