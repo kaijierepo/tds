@@ -34,9 +34,9 @@ SOFTWARE.
 #include <mutex>
 #include <regex>
 #ifdef _WIN32
-#include <experimental/filesystem>
+//#include <experimental/filesystem>
 #include <windows.h>
-using namespace std::experimental;
+//using namespace std::experimental;
 #else
 //#include "iconv.h"
 #include <filesystem>
@@ -525,6 +525,7 @@ namespace DB_FS {
 	}
 
 	//delete dir and files
+	/*
 	void deleteDirectory(const filesystem::path& dir_path) {
 		if (filesystem::exists(dir_path) && filesystem::is_directory(dir_path)) {
 			for (auto& p : filesystem::recursive_directory_iterator(dir_path)) {
@@ -541,6 +542,7 @@ namespace DB_FS {
 			filesystem::remove(dir_path);
 		}
 	}
+	*/
 
 
 }
@@ -3441,7 +3443,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		//refresh the entire files dir  or one file ,  update the file urls
 		if (theDir != "") {
 			theDir = DB_STR::utf8_to_gb(theDir);
-			DB_FS::deleteDirectory(theDir);
+			//DB_FS::deleteDirectory(theDir.c_str());
 			for (auto one : vecToBeUpdatedFile) {
 				string p;
 				if (yyjson_is_str(one.yyFileToUpdate))
@@ -3463,7 +3465,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	else {
 		if (bEmptyAry) {
 			theDir = DB_STR::utf8_to_gb(theDir);
-			DB_FS::deleteDirectory(theDir);
+			//DB_FS::deleteDirectory(theDir);
 		}
 	}
 
@@ -3580,7 +3582,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 			}
 
 			strPath = DB_STR::utf8_to_gb(strPath);
-			DB_FS::deleteDirectory(strPath);
+			//DB_FS::deleteDirectory(strPath);
 		}
 	}
 
