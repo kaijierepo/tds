@@ -1285,10 +1285,12 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 	if (m_bOnline == false)
 	{
 		LOG("[warn]设备上线,%s", getIOAddrStr().c_str());
-		TDB* dbOS = db.getChildDB("onlineStatus");
-		//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
-		if (dbOS) {
-			dbOS->Insert(m_confNodeId,true);
+		if (m_strTagBind != "") {
+			TDB* dbOS = db.getChildDB("onlineStatus");
+			//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
+			if (dbOS) {
+				dbOS->Insert(m_strTagBind, true);
+			}
 		}
 		m_offlineCount = 0;
 		m_bOnline = true;
@@ -1319,13 +1321,17 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 	{
 		m_offlineCount++;
 		LOG("[warn]设备掉线,次数累计,%d/%d,%s,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
-		TDB* dbOS = db.getChildDB("onlineStatus");
-		//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
-		if (dbOS) {
-			DB_TIME dbt;
-			dbt.setNow();
-			dbOS->Insert(m_confNodeId, dbt, false);
+
+		if (m_strTagBind != "") {
+			TDB* dbOS = db.getChildDB("onlineStatus");
+			//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
+			if (dbOS) {
+				DB_TIME dbt;
+				dbt.setNow();
+				dbOS->Insert(m_strTagBind, dbt, false);
+			}
 		}
+
 		if (m_offlineCount >= m_offlineConfirmCount) {
 			m_bOnline = false;
 			json jNotify;
