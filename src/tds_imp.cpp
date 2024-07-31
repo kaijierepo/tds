@@ -323,6 +323,7 @@ bool TDS_imp::run(string cmdline)
 	tds->conf->loadConf();
 
 	tds->conf->bCallAsyn = tds->conf->getInt("callAsyn", 1);
+	ioDev::m_pingInterval = tds->conf->getInt("pingInterval", 30000);
 
 	//check mode
 	if (conf->uiMode == "")

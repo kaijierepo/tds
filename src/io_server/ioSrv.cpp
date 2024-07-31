@@ -35,6 +35,18 @@ void thread_do_ping_heartbeat(std::list<ioDev*> listDev) {
 	ioSrv.m_bPingThreadStart = false;
 }
 
+
+void thread_do_ping_single_dev(ioDev* pDev) {
+	if (pDev->m_bPingThreadRunning)
+		return;
+
+	pDev->m_bPingThreadRunning = true;
+	string ip = pDev->m_jDevAddr["ip"].get<string>();
+	pDev->doPingHeartbeat(ip);
+	pDev->m_bPingThreadRunning = false;
+}
+
+
 void IOThread()
 {
 	setThreadName("ioSrv io thread");
@@ -60,7 +72,7 @@ void IOThread()
 			break;
 
 		ioSrv.lock_conf_unique();
-		std::list<ioDev*> listPing;
+		std::vector<ioDev*> listPing;
 		for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
 		{
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
@@ -71,7 +83,7 @@ void IOThread()
 				pIoDev->DoCycleTask(); 
 
 				////添加ping thread
-				if (timeopt::CalcTimePassSecond(pIoDev->m_stLastPingTime) > pIoDev->m_pingInterval)
+				if (timeopt::CalcTimePassMilliSecond(pIoDev->m_stLastPingTime) > pIoDev->m_pingInterval)
 				{
 					pIoDev->m_stLastPingTime = timeopt::now();
 					if (pIoDev->m_bEnablePingOnlineCheck) 
@@ -85,10 +97,18 @@ void IOThread()
 				break;
 		}
 
-		// 开启设备ping检测
-		if (listPing.size())
-		{
-			thread t(thread_do_ping_heartbeat, listPing);
+		// 开启设备ping检测,串行ping
+		//if (listPing.size())
+		//{
+		//	thread t(thread_do_ping_heartbeat, listPing);
+		//	t.detach();
+		//}
+		//并发ping
+		for (int i = 0; i < listPing.size(); i++) {
+			ioDev* pDev = listPing[i];
+			if (pDev->m_bPingThreadRunning)
+				continue;
+			thread t(thread_do_ping_single_dev,pDev);
 			t.detach();
 		}
 

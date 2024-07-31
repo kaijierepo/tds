@@ -177,6 +177,7 @@ public:
 	bool m_bEnablePingOnlineCheck;
 	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
+	bool m_bPingThreadRunning;
 
 	bool viaTcpConn(); //通过tcp与tds建立连接
 
@@ -303,7 +304,7 @@ public:
 	bool m_bCycleAcqThreadRunning;
 	bool m_bOutputting;
 	bool m_bRecvProcessing;
-	static int m_heartBeatInterval;//单位秒
+	static int m_heartBeatInterval;//单位毫秒
 	static int m_pingInterval;//单位秒
 	TIME m_stLastHeartbeatTime;
 	TIME m_stLastPingTime;

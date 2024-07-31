@@ -137,12 +137,13 @@ bool ioDev::IsGateway()
 
 bool ioDev::m_bAsynAcqMode = false;
 int ioDev::m_heartBeatInterval = 3;
-int ioDev::m_pingInterval = 30;
+int ioDev::m_pingInterval = 30000;
 bool ioDev::m_defaultOnline = false;
 int ioDev::m_offlineConfirmCount = 1;
 
 ioDev::ioDev(void)
 {
+	m_bPingThreadRunning = false;
 	m_bWorkingThreadRunning = false;
 	m_bIsWaitingResp = false;
 	m_bEnableIoLog = true;
@@ -1283,6 +1284,12 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 
 	if (m_bOnline == false)
 	{
+		LOG("[warn]设备上线,%s", getIOAddrStr().c_str());
+		TDB* dbOS = db.getChildDB("onlineStatus");
+		//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
+		if (dbOS) {
+			dbOS->Insert(m_confNodeId,true);
+		}
 		m_offlineCount = 0;
 		m_bOnline = true;
 		timeopt::now(&m_stOnlineTime);
@@ -1311,8 +1318,14 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 	if (m_bOnline)
 	{
 		m_offlineCount++;
-		LOG("[warn]设备掉线次数累计,%d/%d,%s,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
-
+		LOG("[warn]设备掉线,次数累计,%d/%d,%s,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
+		TDB* dbOS = db.getChildDB("onlineStatus");
+		//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
+		if (dbOS) {
+			DB_TIME dbt;
+			dbt.setNow();
+			dbOS->Insert(m_confNodeId, dbt, false);
+		}
 		if (m_offlineCount >= m_offlineConfirmCount) {
 			m_bOnline = false;
 			json jNotify;

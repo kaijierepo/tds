@@ -2665,6 +2665,18 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	}
 }
 
+void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	string s = bVal ? "true" : "false";
+	InsertValJsonStr(strTag, dbt, s);
+}
+
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
 {
 	if (m_timeUnit == BY_DAY) {
