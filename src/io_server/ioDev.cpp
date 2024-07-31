@@ -720,17 +720,27 @@ void ioDev::triggerCycleAcq()
 
 void ioDev::doPingHeartbeat(string ip)
 {
-	//string strcmd = "start cmd /c ping -n 1 > null " + ip;
 	string strcmd;
-#ifdef _WIN32
-	strcmd = "ping -n 2 -w 500 > null " + ip;
-#else
-	strcmd = "ping -c 2 -w 500 > null " + ip;
-#endif
 
-	//LOG("[trace] ping ip start %s : ", ip.c_str());
-	int isatus = system(strcmd.c_str());  
-	//LOG("[trace] ping ip end : %d", isatus);
+	//这段代码的含义是执行ping命令，其中：
+	// -n 1 表示只发送一个数据包。
+	// -w 300 表示设置超时时间为300毫秒。
+	// > nul 表示将命令的输出定向到空设备
+#ifdef _WIN32
+	strcmd = "ping -n 1 -w 300 > nul "+ ip;
+#else
+	strcmd = "ping -c 2 -w 500 > /dev/null " + ip;
+#endif
+	
+	//int isatus = system(strcmd.c_str());  
+
+	int isatus = 1;
+	FILE* fp = _popen(strcmd.c_str(), "r");
+	if (fp == NULL)
+		isatus = -1;
+	else
+		isatus = _pclose(fp);
+
 	if (isatus == 0)
 	{
 		setOnline(true);

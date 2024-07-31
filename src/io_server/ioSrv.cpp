@@ -98,19 +98,19 @@ void IOThread()
 		}
 
 		// 开启设备ping检测,串行ping
-		if (listPing.size())
-		{
-			thread t(thread_do_ping_heartbeat, listPing);
-			t.detach();
-		}
-		//并发ping
-		//for (int i = 0; i < listPing.size(); i++) {
-		//	ioDev* pDev = listPing[i];
-		//	if (pDev->m_bPingThreadRunning)
-		//		continue;
-		//	thread t(thread_do_ping_single_dev,pDev);
+		//if (listPing.size())
+		//{
+		//	thread t(thread_do_ping_heartbeat, listPing);
 		//	t.detach();
 		//}
+		//并发ping
+		for (int i = 0; i < listPing.size(); i++) {
+			ioDev* pDev = listPing[i];
+			if (pDev->m_bPingThreadRunning)
+				continue;
+			thread t(thread_do_ping_single_dev,pDev);
+			t.detach();
+		}
 
 		ioSrv.unlock_conf_unique();
 	}
