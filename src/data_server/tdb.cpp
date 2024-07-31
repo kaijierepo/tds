@@ -34,9 +34,7 @@ SOFTWARE.
 #include <mutex>
 #include <regex>
 #ifdef _WIN32
-//#include <experimental/filesystem>
 #include <windows.h>
-//using namespace std::experimental;
 #else
 //#include "iconv.h"
 #include <filesystem>
@@ -411,15 +409,6 @@ namespace DB_TAG {
 }
 
 
-//#include <filesystem>
-/*
-#ifdef _WIN32
-#include <windows.h>
-#include <shlwapi.h>
-#pragma comment(lib, "shlwapi.lib")
-#else
-#include <unistd.h>
-#endif*/
 namespace DB_FS {
 	bool readFile(string path, string& data)
 	{
