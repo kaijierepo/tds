@@ -524,27 +524,66 @@ namespace DB_FS {
 
 	}
 
-	//delete dir and files
-	/*
-	void deleteDirectory(const filesystem::path& dir_path) {
-		if (filesystem::exists(dir_path) && filesystem::is_directory(dir_path)) {
-			for (auto& p : filesystem::recursive_directory_iterator(dir_path)) {
-				if (filesystem::is_directory(p.status())) {
-					filesystem::remove(p);
-				}
-				else if (filesystem::is_regular_file(p.status())) {
-					filesystem::remove(p);
+	//delete children(include subdirs and files, not include dirPath itself
+	void DeleteDirectoryContents(const std::string& dirPath) {
+#ifdef _WIN32
+		WIN32_FIND_DATA findFileData;
+		HANDLE hFind;
+
+		std::string searchPath = dirPath + "\\*";
+		hFind = FindFirstFile(searchPath.c_str(), &findFileData);
+		if (hFind == INVALID_HANDLE_VALUE) {
+			std::cerr << "FindFirstFile failed: " << GetLastError() << std::endl;
+			return;
+		}
+
+		do {
+			const std::string fileName = findFileData.cFileName;
+
+			// escape  "." , ".."
+			if (fileName != "." && fileName != "..") {
+				std::string fullPath = dirPath + "\\" + fileName;
+
+				if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+					// delete subdirs
+					DeleteDirectoryContents(fullPath);
+					// delete empty dirs
+					RemoveDirectory(fullPath.c_str());
 				}
 				else {
-					std::cerr << "Unexpected file type: " << p << std::endl;
+					// delete file
+					if (DeleteFile(fullPath.c_str())) {
+						std::cout << "Deleted file: " << fullPath << std::endl;
+					}
+					else {
+						std::cerr << "Failed to delete file: " << fullPath << ". Error: " << GetLastError() << std::endl;
+					}
 				}
 			}
-			filesystem::remove(dir_path);
-		}
+		} while (FindNextFile(hFind, &findFileData) != 0);
+
+		FindClose(hFind);
+#else
+		//linux
+		return ;
+#endif
 	}
-	*/
 
-
+	//delete dir_path(include itself) and children(include subdirs and files)
+	void deleteDirectory(string& dirPath) {
+#ifdef _WIN32
+		DeleteDirectoryContents(dirPath);
+		if (RemoveDirectory(dirPath.c_str())) {
+			std::cout << "Deleted directory: " << dirPath << std::endl;
+		}
+		else {
+			std::cerr << "Failed to delete directory: " << dirPath << ". Error: " << GetLastError() << std::endl;
+		}
+#else
+		//linux
+		return ;
+#endif
+	}
 }
 
 
@@ -3443,7 +3482,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		//refresh the entire files dir  or one file ,  update the file urls
 		if (theDir != "") {
 			theDir = DB_STR::utf8_to_gb(theDir);
-			//DB_FS::deleteDirectory(theDir.c_str());
+			DB_FS::deleteDirectory(theDir);
 			for (auto one : vecToBeUpdatedFile) {
 				string p;
 				if (yyjson_is_str(one.yyFileToUpdate))
@@ -3465,7 +3504,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	else {
 		if (bEmptyAry) {
 			theDir = DB_STR::utf8_to_gb(theDir);
-			//DB_FS::deleteDirectory(theDir);
+			DB_FS::deleteDirectory(theDir);
 		}
 	}
 
@@ -3582,7 +3621,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 			}
 
 			strPath = DB_STR::utf8_to_gb(strPath);
-			//DB_FS::deleteDirectory(strPath);
+			DB_FS::deleteDirectory(strPath);
 		}
 	}
 
