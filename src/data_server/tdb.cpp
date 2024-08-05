@@ -2885,7 +2885,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			int currDeTime = 0;
 			string deTime = pdf->ymd + " 00:00:00.000";
 			string groupKeyVal;
-
+			bool ymdEqualityCheckedInDe = false; //check ymd in one de ,if not equal to db folder ymd throw exception
 
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
@@ -2987,10 +2987,28 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					{
 						pHms = szTime.data() + 11;//get hour min sec
 						hmsLen = 8;
+
+						if (ymdEqualityCheckedInDe == false) {
+							ymdEqualityCheckedInDe = true;
+							if (memcmp(szTime.data(), pdf->ymd.data(), 10) != 0) {
+								db_exception dbe;
+								dbe.m_error = "db corruption,ymd in one de not equal to db folder path ymd";
+								throw dbe;
+							}
+						}
 					}
 					else if (szTime.length() == 23) {//2020-02-02 02:02:02.222
 						pHms = szTime.data() + 11;
 						hmsLen = 12;
+
+						if (ymdEqualityCheckedInDe == false) {
+							ymdEqualityCheckedInDe = true;
+							if (memcmp(szTime.data(), pdf->ymd.data(), 10) != 0) {
+								db_exception dbe;
+								dbe.m_error = "db corruption,ymd " + szTime + " in one de not equal to db folder path ymd " + pdf->ymd + ",db file path:" + pdf->path;
+								throw dbe;
+							}
+						}
 					}
 					else
 					{
@@ -4710,6 +4728,10 @@ bool DB_TIME::fromStr(string str)
 		fromUnixTime(tt);
 		return true;
 	}
+
+	db_exception e;
+	e.m_error = "wrong time string format," + str;
+	throw e;
 
 	return false;
 }
