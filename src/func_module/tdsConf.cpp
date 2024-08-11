@@ -66,6 +66,7 @@ confPath=../conf       #配置路径
 dbPath=../db           #数据库路径
 logPath=../log         #日志目录
 loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
+fmsPath=../fms         #文件管理服务，提供文件上传下载预览等
 
 #数据服务
 httpsPort=0            #https服务端口666,同时支持websocket secure
@@ -173,6 +174,10 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		else if (checkKey(tci.key, "logPath")) {
 			logPath = tci.val.c_str();
 			logPath = fs::toAbsolutePath(logPath);
+		}
+		else if (checkKey(tci.key, "fmsPath")) {
+			fmsPath = tci.val.c_str();
+			fmsPath = fs::toAbsolutePath(fmsPath);
 		}
 		else if (checkKey(tci.key, "mediaSrvIP"))
 			mediaSrvIP = tci.val.c_str();

@@ -20,7 +20,7 @@
 string rootDir;
 string confDir;
 string filesDir;
-string fsRootDir;
+string fmsDir;
 string topoDir;
 string dbDir;
 
@@ -1084,6 +1084,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 		else if (mg_http_match_uri(hm, "/release"))
 		{
+			
 			string localPath = fs::appPath() + "/files/release";
 			string redirectPath = "/files/release/";
 			if (!fs::fileExist(localPath)) {
@@ -1158,8 +1159,8 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			struct mg_http_serve_opts opts;
 			memset(&opts, 0, sizeof(opts));
 			string dir = "/=" + rootDir + ",/config/=" + confDir + ",/files/=" + filesDir + ",/app/topo/res/=" + topoDir + ",/app//topo/res/=" + topoDir + ",/db/=" + dbDir;
-			if (fsRootDir != "") {
-				dir += ",/fsRoot/=" + fsRootDir;
+			if (fmsDir != "") {
+				dir += ",/fmsPath/=" + fmsDir;
 			}
 			opts.root_dir = dir.c_str();   // Serve local dir
 			mg_http_serve_dir(c, (mg_http_message*)ev_data, &opts);
@@ -1421,7 +1422,7 @@ bool runWebServers()
 	dbDir = fs::toAbsolutePath(dbDir);
 	filesDir = "./files";
 	topoDir = tds->conf->confPath + "/topo/res";
-	fsRootDir = tds->conf->getStr("fsRoot", "");
+	fmsDir = tds->conf->fmsPath;
 
 	//initHMRConf();
 	//if (tds->conf->getInt("enableHMR",0))
@@ -1438,8 +1439,8 @@ bool runWebServers()
 		LOG("[Web目录	] /files  <--> " + filesDir);
 		LOG("[Web目录	] /db  <--> " + dbDir);
 
-		if (fsRootDir != "") {
-			LOG("[HTTP文件服务] /fsRoot  <--> " + fsRootDir);
+		if (fmsDir != "") {
+			LOG("[文件管理服务] /fmsPath  <--> " + fmsDir);
 		}
 	}
 
@@ -1448,11 +1449,11 @@ bool runWebServers()
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort);
 		g_WebServerList.push_back(pws);
-		if (tds->conf->httpPort != 667) {
-			WebServer* pws667 = new WebServer();
-			pws667->run(667);
-			g_WebServerList.push_back(pws667);
-		}
+		//if (tds->conf->httpPort != 667) {
+		//	WebServer* pws667 = new WebServer();
+		//	pws667->run(667);
+		//	g_WebServerList.push_back(pws667);
+		//}
 	}
 	if (tds->conf->httpPort2 != 0)
 	{

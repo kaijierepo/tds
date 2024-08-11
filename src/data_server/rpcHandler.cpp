@@ -20,6 +20,7 @@
 #include "ioDev_camera.h"
 #include "statusServer.h"
 #include <io_server/ioDev_tdsp.h>
+#include "miniz.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -135,6 +136,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	else if (method == "fs.deleteFile")
 	{
 		string p = params["path"].get<string>();
+		p = tds->conf->fmsPath + "/" + p;
 		if (fs::deleteFile(p)) {
 			result = "\"ok\"";
 		}
@@ -145,6 +147,8 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	else if (method == "fs.writeFile")
 	{
 		string p = params["path"].get<string>();
+		p =  tds->conf->fmsPath + "/" + p;
+		fs::createFolderOfPath(p);
 
 		if (params["data"] != nullptr)
 		{
@@ -206,10 +210,9 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	{
 		vector<fs::FILE_INFO> fileList;
 		vector<fs::FILE_INFO> folderList;
-
-		string path = tds->conf->getStr("fsRoot", "");
+		string path = tds->conf->fmsPath;
 		if (path == "") {
-			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "file service is not started,config fsRoot param in tds.ini");
+			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "file service is not started,config fmsPath param in tds.ini");
 			return true;
 		}
 		path = fs::toAbsolutePath(path);
@@ -1434,6 +1437,159 @@ bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_R
 	return bHandled;*/
 }
 
+std::string getFileNameFromURL(const std::string& url) {
+	size_t found = url.find_last_of("/\\");
+	if (found != std::string::npos) {
+		return url.substr(found + 1);
+	}
+	return "";
+}
+
+#include <filesystem>
+namespace stdfs = std::filesystem;
+bool renameFile(const std::string& filePath, const std::string& oldName, const std::string& newName) {
+	try {
+		stdfs::path oldPath = stdfs::path(filePath) / oldName;
+		stdfs::path newPath = stdfs::path(filePath) / newName;
+		stdfs::rename(oldPath, newPath);
+		return true;
+	}
+	catch (const stdfs::filesystem_error& e) {
+		std::cerr << "Error renaming file: " << e.what() << std::endl;
+		return false;
+	}
+}
+
+// 创建目录（包括父目录）
+bool create_directory(const std::string& path) {
+	size_t pos = 0;
+	std::string dir;
+	int status = 0;
+
+	while ((pos = path.find_first_of('/', pos)) != std::string::npos) {
+		dir = path.substr(0, pos++);
+		if (dir.size() == 0) continue; // 如果是根目录，跳过
+		status = mkdir(dir.c_str(), S_IRWXU);
+		if (status != 0 && errno != EEXIST) return false;
+	}
+	status = mkdir(path.c_str(), S_IRWXU);
+	return (status == 0 || errno == EEXIST);
+}
+
+// 解压缩文件
+bool extract_zip(const std::string& zip_path, const std::string& dest_dir) {
+	mz_zip_archive zip_archive;
+	memset(&zip_archive, 0, sizeof(zip_archive));
+
+	if (!mz_zip_reader_init_file(&zip_archive, zip_path.c_str(), 0)) {
+		std::cerr << "Failed to open zip file." << std::endl;
+		return false;
+	}
+
+	int num_files = mz_zip_reader_get_num_files(&zip_archive);
+	for (int i = 0; i < num_files; ++i) {
+		mz_zip_archive_file_stat file_stat;
+		if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
+			std::cerr << "Failed to get file info." << std::endl;
+			mz_zip_reader_end(&zip_archive);
+			return false;
+		}
+
+		std::string file_path = dest_dir + "/" + file_stat.m_filename;
+
+		if (mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
+			// 创建目录
+			if (!create_directory(file_path)) {
+				std::cerr << "Failed to create directory: " << file_path << std::endl;
+				mz_zip_reader_end(&zip_archive);
+				return false;
+			}
+		}
+		else {
+			// 创建文件所在的目录
+			size_t last_slash = file_path.find_last_of('/');
+			if (last_slash != std::string::npos) {
+				std::string dir_path = file_path.substr(0, last_slash);
+				if (!create_directory(dir_path)) {
+					std::cerr << "Failed to create directory: " << dir_path << std::endl;
+					mz_zip_reader_end(&zip_archive);
+					return false;
+				}
+			}
+
+			// 解压文件
+			if (!mz_zip_reader_extract_to_file(&zip_archive, i, file_path.c_str(), 0)) {
+				std::cerr << "Failed to extract file: " << file_path << std::endl;
+				mz_zip_reader_end(&zip_archive);
+				return false;
+			}
+		}
+	}
+
+	mz_zip_reader_end(&zip_archive);
+	return true;
+}
+
+// 解析URL并提取协议、主机、端口和路径
+bool parse_url(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path) {
+	std::regex url_regex(R"((http|https)://([^/:]+)(:([0-9]+))?(/.*)?)");
+	std::smatch url_match_result;
+
+	if (std::regex_match(url, url_match_result, url_regex)) {
+		protocol = url_match_result[1].str();
+		host = url_match_result[2].str();
+		port = url_match_result[4].str().empty() ? (protocol == "https" ? "443" : "80") : url_match_result[4].str();
+		path = url_match_result[5].str().empty() ? "/" : url_match_result[5].str();
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+bool g_bTdsUpgradeThreadRunning = false;
+void thread_tds_upgrade(string packageUrl) {
+	g_bTdsUpgradeThreadRunning = true;
+
+	std::string protocol, host, port, path;
+	if (parse_url(packageUrl, protocol, host, port, path)) {
+		httplib::Client client(host.c_str(), std::stoi(port));
+		auto res = client.Get(path.c_str());
+		if (res && res->status == 200) {
+			//保存升级包
+			string fileName = getFileNameFromURL(packageUrl);
+			fs::createFolderOfPath("../packages");
+			string packagePath = fs::toAbsolutePath("../packages/") + "/" + fileName;
+			fs::writeFile(packagePath.c_str(), res->body.data(), res->body.size());
+
+			//重命名原始文件
+			string tdsPath = fs::toAbsolutePath("./") + "/";
+			string appName = fs::appName();
+			string newName = appName + "_" + tds->getSvnVersion() + ".exe";
+			newName = str::replace(newName, ":", "");
+			renameFile(tdsPath, appName + ".exe", newName);
+
+			string uiOld = "ui";
+			string uiNew = "ui_" + tds->getSvnVersion();
+			uiNew = str::replace(uiNew, ":", "");
+			renameFile(tdsPath, uiOld, uiNew);
+
+			//解压缩包到程序路径
+			extract_zip(packagePath.c_str(), tdsPath.c_str());
+
+			//退出程序，等待tKeep重启
+			tds->stop();
+
+			exit(0);
+		}
+		else {
+
+		}
+	}
+
+	g_bTdsUpgradeThreadRunning = false;
+}
+
 bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -1459,6 +1615,24 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		prj.toJson(j, query, nullptr,session.user);
 		result = j.dump(4);
 		//LOG("88888: " + result);
+	}
+	else if (method == "upgradeTds" || method == "startServerUpgrade") {
+		string packageUrl = params["packageUrl"];
+		if (packageUrl == "") {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"未传入有效的升级包地址");
+		}
+		else {
+			if (g_bTdsUpgradeThreadRunning) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "升级正在进行中");
+			}
+			else {
+				thread t(thread_tds_upgrade, packageUrl);
+				t.detach();
+				rpcResp.result = RPC_OK;
+			}
+		}
+
+
 	}
 	else
 	{
@@ -3021,20 +3195,20 @@ bool rpcHandler::isGB2312Pkt(string& req)
 }
 
 
-void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode) {
+void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
 	RPC_RESP resp;
-	rpcSrv.handleRpcCall(str, resp, pSession, bAccessCtrl,bEdgeDevMode);
+	rpcSrv.handleRpcCall(str, resp, pSession, bAccessCtrl);
 	pSession->send((unsigned char*)resp.strResp.data(), resp.strResp.length(), false);
 }
 
 
-void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode)
+void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
-	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl, bEdgeDevMode);
+	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl);
 	t.detach();
 }
 
-void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl, bool bEdgeDevMode)
+void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
 	if (!jReq.contains("method"))
 	{
@@ -3099,7 +3273,12 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 	//心跳最先处理
 	if (method == "heartbeat")
 	{
-		rpcResp.result = RPC_OK;
+		json j;
+		j["tdsVersion"] = tds->getSvnVersion();
+		j["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
+		j["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
+		j["serverStatus"]["handle"] = statusSrv.m_srvStatus.handle;
+		rpcResp.result = j.dump();
 		goto HANDLE_END;
 	}
 
@@ -3259,7 +3438,7 @@ HANDLE_END:
 	//组装jsonRPC
 	if (rpcResp.error != "")
 	{
-		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
+		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":" + rpcResp.error + ",\"id\":" + id.dump();
 	}
 	else if (rpcResp.result != "")
 	{
@@ -3324,7 +3503,7 @@ HANDLE_END:
 }
 
 
-void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl,bool bEdgeDevMode)
+void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
 	string error = "";
 	string method = "";
@@ -3349,7 +3528,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			for (int i = 0; i < jReq.size();i++){
 				json& singleReq = jReq[i];
 				RPC_RESP singleResp;
-				handleRpcCall_single(singleReq, singleResp, pSession, bAccessCtrl, bEdgeDevMode);
+				handleRpcCall_single(singleReq, singleResp, pSession, bAccessCtrl);
 				rpcResp.strResp += singleResp.strResp;
 				if (i != jReq.size() - 1) {
 					rpcResp.strResp += ",";
@@ -3358,7 +3537,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			rpcResp.strResp += "]";
 		}
 		else {
-			handleRpcCall_single(jReq, rpcResp, pSession, bAccessCtrl, bEdgeDevMode);
+			handleRpcCall_single(jReq, rpcResp, pSession, bAccessCtrl);
 		}
 	}
 	catch (std::exception& e)
@@ -5095,7 +5274,10 @@ void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION sessi
 {
 	string rootTag;
 	vector<ioDev*> filterRlt;
-	DEV_STATIS ds = ioSrv.getDevStatis(rootTag, filterRlt);
+	DEV_QUERIER devQuery;
+	devQuery.rootTag = rootTag;
+	DEV_STATIS ds;
+	ioSrv.queryDev(devQuery,ds,filterRlt);
 	resp.result = ds.toJson().dump();
 }
 
@@ -5115,7 +5297,8 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 		string ioAddr = params["ioAddr"];
 		p = ioSrv.getIODev(ioAddr);
 		if (p) {
-			DEV_QUERIER query = p->parseQueryOpt(params);
+			DEV_QUERIER query;
+			query.parseQueryOpt(params);
 			p->toJson(j, query);
 		}
 		else {
@@ -5127,7 +5310,8 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 		tag = TAG::addRoot(tag, session.org);
 		p = ioSrv.getIODevByTag(tag);
 		if (p) {
-			DEV_QUERIER query = p->parseQueryOpt(params);
+			DEV_QUERIER query;
+			query.parseQueryOpt(params);
 			p->toJson(j, query);
 		}
 		else {

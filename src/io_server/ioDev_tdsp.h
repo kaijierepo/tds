@@ -57,4 +57,5 @@ public:
 	string m_childTdsTag;
 	int m_childTdsHttpPort;
 	int m_childTdsHttpsPort;
+
 };

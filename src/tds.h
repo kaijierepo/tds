@@ -305,6 +305,7 @@ struct iTDSConf {
 	string dbPath;     //database folder path
 	string uiPath;     //ui web files path
 	string logPath;
+	string fmsPath;  //file manage service root path
 
 	//tds service conf
 	int httpsPort;    //https port of tds;  default value 666; can be upgraded to websocket secure
@@ -498,6 +499,7 @@ struct PLUGIN_INFO {
 class i_tds {
 public:
 	virtual string getVersion() = 0;
+	virtual string getSvnVersion() = 0;
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;
 	virtual void stop() = 0;

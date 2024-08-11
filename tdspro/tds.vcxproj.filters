@@ -236,6 +236,9 @@
     <ClCompile Include="..\src\io_server\Parse315Protocol.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\common\miniz.c">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -475,6 +478,9 @@
     </ClInclude>
     <ClInclude Include="..\src\io_server\proto_can.hpp">
       <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\miniz.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

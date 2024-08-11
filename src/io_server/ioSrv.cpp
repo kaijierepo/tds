@@ -1442,10 +1442,9 @@ void ioServer::stop()
 	LOG("ioServer stopped");
 }
 
-DEV_STATIS ioServer::getDevStatis(string rootTag, vector<ioDev*>& filterRlt) {
-	DEV_STATIS devStatis;
-	devStatis.rootTag = rootTag;
-	for (auto& i : m_vecChildDev)
+void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<ioDev*>& filterRlt) {
+	devStatis.rootTag = devQuerier.rootTag;
+	for (auto& dev : m_vecChildDev)
 	{
 		//为指定所有忽略串口
 		//if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
@@ -1467,24 +1466,51 @@ DEV_STATIS ioServer::getDevStatis(string rootTag, vector<ioDev*>& filterRlt) {
 		//}
 
 		//根据指定的rootTag进行过滤；
-		if (i->m_strTagBind != "" && rootTag != "")
+		if (dev->m_strTagBind != "" && devQuerier.rootTag != "")
 		{
-			if (i->m_strTagBind.find(rootTag) == string::npos)
+			if (dev->m_strTagBind.find(devQuerier.rootTag) == string::npos)
 			{
 				continue;
 			}
 		}
 
+		//根据设备类型进行过滤
+		if (devQuerier.type.size() > 0) {
+			bool typeMatched = false;
+			for (int i = 0; i < devQuerier.type.size(); i++) {
+				string s = devQuerier.type[i];
+				if (s == dev->m_devType) {
+					typeMatched = true;
+				}
+			}
+			if (!typeMatched) {
+				continue;
+			}
+		}
 
-		i->recursiveGetChanCount(i, devStatis.iChan);
-		if (i->m_bOnline) {
+		//根据设备子类型进行过滤
+		if (devQuerier.subType.size() > 0) {
+			bool subtypeMatched = false;
+			for (int i = 0; i < devQuerier.subType.size(); i++) {
+				string s = devQuerier.subType[i];
+				if (s == dev->m_devSubType) {
+					subtypeMatched = true;
+				}
+			}
+			if (!subtypeMatched) {
+				continue;
+			}
+		}
+
+		dev->recursiveGetChanCount(dev, devStatis.iChan);
+		if (dev->m_bOnline) {
 			devStatis.iOnline++;
 		}
 		else {
 			devStatis.iOffline++;
 		}
 
-		if (i->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
+		if (dev->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
 			devStatis.iInservice++;
 		}
 		else {
@@ -1492,9 +1518,8 @@ DEV_STATIS ioServer::getDevStatis(string rootTag, vector<ioDev*>& filterRlt) {
 		}
 		devStatis.iTotal++;
 
-		filterRlt.push_back(i);
+		filterRlt.push_back(dev);
 	}
-	return devStatis;
 }
 
 bool ioServer::toJson(json& conf, json opt)
@@ -1531,9 +1556,12 @@ bool ioServer::toJson(json& conf, json opt)
 		}
 	}
 
-	
+	DEV_QUERIER devQuery;
+	devQuery.parseQueryOpt(opt);
+	devQuery.rootTag = rootTag;
+	DEV_STATIS devStatis;
 	vector<ioDev*> filterRlt;
-	DEV_STATIS devStatis = getDevStatis(rootTag, filterRlt);
+	queryDev(devQuery,devStatis, filterRlt);
 	
 
 	if (paging && pageSize>0) {
@@ -1552,7 +1580,8 @@ bool ioServer::toJson(json& conf, json opt)
 		json jDevices = json::array();
 		for (size_t i = startIdx; i < endIdx; i++) {
 			json j;
-			DEV_QUERIER query = filterRlt[i]->parseQueryOpt(opt);
+			DEV_QUERIER query;
+			query.parseQueryOpt(opt);
 			filterRlt[i]->toJson(j, query);
 			jDevices.push_back(j);
 		}
@@ -1569,13 +1598,11 @@ bool ioServer::toJson(json& conf, json opt)
 		conf = json::array();
 		for (int i = 0; i < filterRlt.size(); i++) {
 			json j;
-			DEV_QUERIER query = filterRlt[i]->parseQueryOpt(opt);
-			filterRlt[i]->toJson(j, query);
+			filterRlt[i]->toJson(j, devQuery);
 			conf.push_back(j);
 		}
 	}
 	
-
 	unlock_conf_shared();
 	return true;
 }

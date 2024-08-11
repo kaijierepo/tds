@@ -58,6 +58,7 @@ public:
 	 bool sendToIoAddr(string ioAddr, const char* p, int l);
 	 bool connectDev(string ioAddr);
 	 string getVersion() override;
+	 string getSvnVersion() override;
 	 bool isOnline(string ioAddr);
 	 bool isConnected(string ioAddr);
 	 bool isInUse(string ioAddr);

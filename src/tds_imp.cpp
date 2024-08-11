@@ -701,6 +701,20 @@ string TDS_imp::getVersion() {
 	return s;
 }
 
+string TDS_imp::getSvnVersion() {
+	string s;
+#ifdef USE_SVN_REV
+	string s = SVN_VERSION;
+#endif
+
+	if (s != "")
+		s += "_";
+
+	s += "build " + getbuildtime();
+
+	return s;
+}
+
 bool TDS_imp::isOnline(string ioAddr)
 {
 	ioDev* d = ioSrv.getIODev(ioAddr);

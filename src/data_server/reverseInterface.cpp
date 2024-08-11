@@ -362,22 +362,9 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 	{
 		string req = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
 
-		if (req == "ping\n\n") { 
-			string s = "pong\n\n";
-			tdsSession->send((unsigned char*)s.data(), s.length(), false);
-		}
-		else if (req == "pong\n\n") {
-
-		}
-		else {
-			//rpc命令统一启动线程处理，调用异步接口，因为很多rpc处理是阻塞等待的
-			//不路由，不认证
-			bool bEdgeDevMode = true;
-			if (tdsSession->pTcpSession != nullptr) {
-				bEdgeDevMode = false;
-			}
-			rpcSrv.handleRpcCallAsyn(req, tdsSession, false, bEdgeDevMode);
-		}
+		//rpc命令统一启动线程处理，调用异步接口，因为很多rpc处理是阻塞等待的
+		//不路由，不认证
+		rpcSrv.handleRpcCallAsyn(req, tdsSession, false);
 	}
 }
 

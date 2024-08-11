@@ -23,6 +23,7 @@ namespace DEV_TYPE {
 	namespace DEV {
 		const string tdsp_device = "tdsp-device";
 	}
+	const string child_tds = "childTds";
 };
 
 #define DEV_TYPE_iq60 "iq60-gateway"
@@ -140,7 +141,7 @@ public:
 	map<string, CHAN_TEMPLATE> m_mapChanTempalte;
 
 	//查询与管理
-	DEV_STATIS getDevStatis(string rootTag, vector<ioDev*>& filterRlt);
+	void queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<ioDev*>& filterRlt);
 	void getAllSmartDev(vector<ioDev*>& aryDev);
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
 	ioDev* getOwnerChildTdsDev(string tag);

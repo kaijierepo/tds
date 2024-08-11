@@ -7,6 +7,7 @@
 #include "webSrv.h"
 #include "tdb.h"
 #include "yyjson.h"
+#include "statusServer.h"
 
 
 int devIdIdx = 0;
@@ -313,6 +314,15 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 
 		if (m_bEnablePingOnlineCheck) {
 			conf["enablePingOnlineCheck"] = m_bEnablePingOnlineCheck;
+		}
+
+		if (m_devType == DEV_TYPE::DEV::tdsp_device && m_devSubType == TDSP_SUB_TYPE::childTds) {
+			conf["tdsVersion"] = m_tdsVersion;
+			conf["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
+			conf["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
+			conf["serverStatus"]["handle"] = statusSrv.m_srvStatus.handle;
+			conf["statusUpdateTime"] = m_statusUpdateTime;
+			conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
 		}
 	}
 
@@ -805,10 +815,9 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 	return true;
 }
 
-DEV_QUERIER ioDev::parseQueryOpt(json& opt)
+void DEV_QUERIER::parseQueryOpt(json& opt)
 {
-	DEV_QUERIER q;
-
+	DEV_QUERIER& q = *this;
 
 	if (opt.contains("getStatus")) {
 		q.getStatus = opt["getStatus"].get<bool>();
@@ -828,7 +837,31 @@ DEV_QUERIER ioDev::parseQueryOpt(json& opt)
 	if (opt.contains("getUpgradeInfo")) {
 		q.getUpgradeInfo = opt["getUpgradeInfo"].get<bool>();
 	}
-	return q;
+	if (opt["type"].is_string()) {
+		q.type.push_back(opt["type"].get<string>());
+	}
+	else if (opt["type"].is_array()) {
+		json jTypes = opt["type"];
+		for (int i = 0; i < jTypes.size(); i++) {
+			json j = jTypes[i];
+			if (j.is_string()) {
+				q.type.push_back(j.get<string>());
+			}
+		}
+	}
+
+	if (opt["subType"].is_string()) {
+		q.subType.push_back(opt["subType"].get<string>());
+	}
+	else if (opt["subType"].is_array()) {
+		json jSubTypes = opt["subType"];
+		for (int i = 0; i < jSubTypes.size(); i++) {
+			json j = jSubTypes[i];
+			if (j.is_string()) {
+				q.subType.push_back(j.get<string>());
+			}
+		}
+	}
 }
 
 ioDev* ioDev::getIODevByNodeID(string nodeID)

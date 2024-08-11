@@ -5,6 +5,7 @@
 #include "yyjson.h"
 #include "proto_common.h"
 #include <shared_mutex>
+#include "statusServer.h"
 
 
 
@@ -89,6 +90,12 @@ struct DEV_QUERIER {
 	bool getChan;
 	bool getDetail;
 	bool getUpgradeInfo;
+	string rootTag;
+	vector<string> type;
+	vector<string> subType;
+
+	void parseQueryOpt(json& opt);
+
 	DEV_QUERIER() {
 		getStatus = false;
 		getConf = true;
@@ -139,7 +146,6 @@ public:
 
 	//将io设备内缓存的实时数据全部同步到绑定的位号
 	virtual void syncDataToBindTag() {};
-	DEV_QUERIER parseQueryOpt(json& opt);
 	////
 	//is Gateway
 	// can be 1.ip or domain name with port 2.tuya project id 3.gateway guid
@@ -354,6 +360,10 @@ public:
 	string m_hardVer;
 	string m_mfrDate;
 	string m_IMEI; 
+	string m_tdsVersion;
+	SRV_STATUS m_tdsSrvStatus;
+	string m_statusUpdateTime;
+	string m_childTdsUpgradeStatus;
 
 	bool m_bWorkingThreadRunning;
 	semaphore m_signalWorkThreadExit; //工作线程退出信号

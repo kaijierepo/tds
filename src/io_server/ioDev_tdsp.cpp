@@ -41,6 +41,7 @@ ioDev_tdsp::ioDev_tdsp()
 	m_childTdsHttpPort = 667;
 	m_childTdsHttpsPort = 666;
 	m_level = "devcie";
+	m_childTdsUpgradeStatus = "未开始";
 }
 
 ioDev_tdsp::~ioDev_tdsp()
@@ -320,6 +321,34 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	{
 		handle_AcqOrInput(rlt,doc);
 	}
+	else if (method == "heartbeat")
+	{
+		yyjson_val* yyv_tdsVer = yyjson_obj_get(rlt, "tdsVersion");
+		if (yyv_tdsVer) {
+			string version = yyjson_get_str(yyv_tdsVer);
+			if (m_tdsVersion != "" && version != m_tdsVersion) {
+				m_childTdsUpgradeStatus = "升级成功! " + m_tdsVersion + "->" + version;
+			}
+			m_tdsVersion = version;
+		}
+
+		yyjson_val* yyv_serverStatus = yyjson_obj_get(rlt, "serverStatus");
+		if (yyv_serverStatus) {
+			yyjson_val* yyv_cpu = yyjson_obj_get(yyv_serverStatus, "cpu");
+			if(yyv_cpu)
+				m_tdsSrvStatus.cpu = yyjson_get_real(yyv_cpu);
+
+			yyjson_val* yyv_mem = yyjson_obj_get(yyv_serverStatus, "mem");
+			if(yyv_mem)
+				m_tdsSrvStatus.mem = yyjson_get_real(yyv_mem);
+
+			yyjson_val* yyv_handle = yyjson_obj_get(yyv_serverStatus, "handle");
+			if(yyv_handle)
+				m_tdsSrvStatus.handle = yyjson_get_real(yyv_handle);
+
+			m_statusUpdateTime = timeopt::nowStr();
+		}
+	}
 	else if (method == "getAlarmStatus")
 	{
 		//handleAlarmStatusData(rlt,doc);
@@ -328,33 +357,38 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	{
 		LOG("[warn]收到异步getDevConf");
 	}
-	//else if (method == "getDevInfo") {
-	//	string sOld = m_jInfo.dump();
-	//	string sNew = rlt.dump();
-	//	lock_conf_unique();
-	//	m_jInfo = rlt;
-	//	saveInfoBuff();
-	//	unlock_conf_unique();
+	else if (method == "getDevInfo") {
 
-	//	if ( (sOld != sNew) && m_jInfo.contains("deviceType")) {
-	//		string devType = m_jInfo["deviceType"];
-	//		json tplData = ioSrv.getDevTemplate(devType);
-	//		if (tplData != nullptr) {
-	//			m_strChanTemplate = tplData["name"];
-	//			json conf;
-	//			conf["channels"] = tplData["channels"];
-	//			loadConf(conf);
-	//			json jDev;
-	//			DEV_QUERIER query;
-	//			toJson(jDev, query);
-	//			rpcSrv.notify("devModified",jDev);
-	//		}
-	//	}
+		yyjson_val* yyv_softVer = yyjson_obj_get(rlt, "softVer");
+		if (yyv_softVer) {
 
-	//	if (m_strTagBind == "" && m_jInfo.contains("tagBind")) {
-	//		m_strTagBind = m_jInfo["tagBind"];
-	//	}
-	//}
+		}
+		//string sOld = m_jInfo.dump();
+		//string sNew = rlt.dump();
+		//lock_conf_unique();
+		//m_jInfo = rlt;
+		//saveInfoBuff();
+		//unlock_conf_unique();
+
+		//if ( (sOld != sNew) && m_jInfo.contains("deviceType")) {
+		//	string devType = m_jInfo["deviceType"];
+		//	json tplData = ioSrv.getDevTemplate(devType);
+		//	if (tplData != nullptr) {
+		//		m_strChanTemplate = tplData["name"];
+		//		json conf;
+		//		conf["channels"] = tplData["channels"];
+		//		loadConf(conf);
+		//		json jDev;
+		//		DEV_QUERIER query;
+		//		toJson(jDev, query);
+		//		rpcSrv.notify("devModified",jDev);
+		//	}
+		//}
+
+		//if (m_strTagBind == "" && m_jInfo.contains("tagBind")) {
+		//	m_strTagBind = m_jInfo["tagBind"];
+		//}
+	}
 	//else if (method == "getObj") {
 	//	if (rlt.contains("parentTag")) { //响应当中包含了配置
 	//		//获取参数
@@ -888,10 +922,16 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 					}
 					yyjson_doc_free(doc);
 				}
+				else if (method == "startServerUpgrade") {
+					m_childTdsUpgradeStatus = "正在升级";
+				}
 			}
 			else if (resp["error"] != nullptr)
 			{
 				error = resp["error"];
+				if (method == "startServerUpgrade") {
+					m_childTdsUpgradeStatus = "错误:" + error["message"];
+				}
 			}
 			else {
 				error = "device response has no error and result field";
