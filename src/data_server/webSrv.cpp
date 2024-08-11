@@ -1449,11 +1449,11 @@ bool runWebServers()
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort);
 		g_WebServerList.push_back(pws);
-		//if (tds->conf->httpPort != 667) {
-		//	WebServer* pws667 = new WebServer();
-		//	pws667->run(667);
-		//	g_WebServerList.push_back(pws667);
-		//}
+		if (tds->conf->httpPort != 667) {
+			WebServer* pws667 = new WebServer();
+			pws667->run(667);
+			g_WebServerList.push_back(pws667);
+		}
 	}
 	if (tds->conf->httpPort2 != 0)
 	{
