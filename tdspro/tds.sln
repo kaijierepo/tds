@@ -15,6 +15,8 @@ Global
 		exe - D svn|x86 = exe - D svn|x86
 		exe - D|x64 = exe - D|x64
 		exe - D|x86 = exe - D|x86
+		exe - R svn|x64 = exe - R svn|x64
+		exe - R svn|x86 = exe - R svn|x86
 		exe - R|x64 = exe - R|x64
 		exe - R|x86 = exe - R|x86
 	EndGlobalSection
@@ -35,6 +37,10 @@ Global
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.Build.0 = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.ActiveCfg = exe - D|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.Build.0 = exe - D|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.ActiveCfg = exe - R svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.Build.0 = exe - R svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.ActiveCfg = exe - R svn|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.Build.0 = exe - R svn|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.ActiveCfg = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.Build.0 = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.ActiveCfg = exe - R|Win32

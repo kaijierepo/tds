@@ -1567,17 +1567,42 @@ void thread_tds_upgrade(string packageUrl) {
 			string appName = fs::appName();
 			string tmpExeName = appName + "_old.exe";
 			string tmpUIName = "ui_old";
-			fs::deleteFile(tdsPath + "/" + tmpExeName);
-			fs::deleteFolder(tdsPath + "/" + tmpUIName);
+			if (!fs::deleteFile(tdsPath + "/" + tmpExeName)) {
+				json j;
+				j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpExeName;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				goto UPGRADE_END;
+			}
+			if (!fs::deleteFolder(tdsPath + "/" + tmpUIName)) {
+				json j;
+				j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpUIName;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				goto UPGRADE_END;
+			}
 
 			//重命名当前版本
 			string exeName = fs::appName() + ".exe";
 			string uiName = "ui";
-			renameFile(tdsPath, exeName, tmpExeName);
-			renameFile(tdsPath, uiName, tmpUIName);
+			if (!renameFile(tdsPath, exeName, tmpExeName)) {
+				json j;
+				j["serverUpgradeStatus"] = "重命名文件失败," + exeName;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				goto UPGRADE_END;
+			}
+			if (!renameFile(tdsPath, uiName, tmpUIName)) {
+				json j;
+				j["serverUpgradeStatus"] = "重命名文件失败," + uiName;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				goto UPGRADE_END;
+			}
 
 			//解压缩包到程序路径
-			extract_zip(packagePath.c_str(), tdsPath.c_str());
+			if (!extract_zip(packagePath.c_str(), tdsPath.c_str())) {
+				json j;
+				j["serverUpgradeStatus"] = "解压缩升级包失败," + packagePath + "->" + tdsPath;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				goto UPGRADE_END;
+			}
 
 			//退出程序，等待tKeep重启
 			tds->stop();
@@ -1591,6 +1616,7 @@ void thread_tds_upgrade(string packageUrl) {
 		}
 	}
 
+UPGRADE_END:
 	g_bTdsUpgradeThreadRunning = false;
 }
 
