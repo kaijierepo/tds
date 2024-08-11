@@ -344,7 +344,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 
 			yyjson_val* yyv_handle = yyjson_obj_get(yyv_serverStatus, "handle");
 			if(yyv_handle)
-				m_tdsSrvStatus.handle = yyjson_get_real(yyv_handle);
+				m_tdsSrvStatus.handle = yyjson_get_int(yyv_handle);
 
 			m_statusUpdateTime = timeopt::nowStr();
 		}

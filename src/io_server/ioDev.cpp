@@ -318,9 +318,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 
 		if (m_devType == DEV_TYPE::DEV::tdsp_device && m_devSubType == TDSP_SUB_TYPE::childTds) {
 			conf["tdsVersion"] = m_tdsVersion;
-			conf["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
-			conf["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
-			conf["serverStatus"]["handle"] = statusSrv.m_srvStatus.handle;
+			conf["serverStatus"]["cpu"] = m_tdsSrvStatus.cpu;
+			conf["serverStatus"]["mem"] = m_tdsSrvStatus.mem;
+			conf["serverStatus"]["handle"] = m_tdsSrvStatus.handle;
 			conf["statusUpdateTime"] = m_statusUpdateTime;
 			conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
 		}

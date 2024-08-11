@@ -1447,10 +1447,16 @@ std::string getFileNameFromURL(const std::string& url) {
 
 #include <filesystem>
 namespace stdfs = std::filesystem;
+
+
 bool renameFile(const std::string& filePath, const std::string& oldName, const std::string& newName) {
+	std::wstring wsFilePath = charCodec::utf8_to_utf16(filePath);
+	std::wstring wsOldName = charCodec::utf8_to_utf16(oldName);
+	std::wstring wsNewName = charCodec::utf8_to_utf16(newName);
+
 	try {
-		stdfs::path oldPath = stdfs::path(filePath) / oldName;
-		stdfs::path newPath = stdfs::path(filePath) / newName;
+		stdfs::path oldPath = stdfs::path(wsFilePath) / wsOldName;
+		stdfs::path newPath = stdfs::path(wsFilePath) / wsNewName;
 		stdfs::rename(oldPath, newPath);
 		return true;
 	}
@@ -1477,7 +1483,10 @@ bool create_directory(const std::string& path) {
 }
 
 // 解压缩文件
-bool extract_zip(const std::string& zip_path, const std::string& dest_dir) {
+bool extract_zip( std::string zip_path,  std::string dest_dir) {
+	zip_path = charCodec::utf8_to_gb(zip_path);
+	dest_dir = charCodec::utf8_to_gb(dest_dir);
+
 	mz_zip_archive zip_archive;
 	memset(&zip_archive, 0, sizeof(zip_archive));
 
@@ -1549,6 +1558,7 @@ bool parse_url(const std::string& url, std::string& protocol, std::string& host,
 
 bool g_bTdsUpgradeThreadRunning = false;
 void thread_tds_upgrade(string packageUrl) {
+	LOG("[warn]startServerUpgrade,升级线程开始");
 	g_bTdsUpgradeThreadRunning = true;
 
 	std::string protocol, host, port, path;
@@ -1560,47 +1570,69 @@ void thread_tds_upgrade(string packageUrl) {
 			string fileName = getFileNameFromURL(packageUrl);
 			fs::createFolderOfPath("../packages");
 			string packagePath = fs::toAbsolutePath("../packages/") + "/" + fileName;
-			fs::writeFile(packagePath.c_str(), res->body.data(), res->body.size());
+			if (!fs::writeFile(packagePath.c_str(), res->body.data(), res->body.size())) {
+				json j;
+				string s = "保存升级包失败," + packagePath;
+				j["serverUpgradeStatus"] = s;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
+				goto UPGRADE_END;
+			}
 
 			string tdsPath = fs::toAbsolutePath("./") + "/";
 			//删除重命名文件
 			string appName = fs::appName();
 			string tmpExeName = appName + "_old.exe";
 			string tmpUIName = "ui_old";
-			if (!fs::deleteFile(tdsPath + "/" + tmpExeName)) {
-				json j;
-				j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpExeName;
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				goto UPGRADE_END;
+			if (fs::fileExist(tdsPath + "/" + tmpExeName)) {
+				if (!fs::deleteFile(tdsPath + "/" + tmpExeName)) {
+					json j;
+					string s = "删除文件失败," + tdsPath + "/" + tmpExeName;
+					j["serverUpgradeStatus"] = s;
+					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					LOG("[warn]升级失败," + s);
+					goto UPGRADE_END;
+				}
 			}
-			if (!fs::deleteFolder(tdsPath + "/" + tmpUIName)) {
-				json j;
-				j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpUIName;
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				goto UPGRADE_END;
+			if (fs::fileExist(tdsPath + "/" + tmpUIName)) {
+				if (!fs::deleteFolder(tdsPath + "/" + tmpUIName)) {
+					json j;
+					string s = "删除文件失败," + tdsPath + "/" + tmpUIName;
+					j["serverUpgradeStatus"] = s;
+					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					LOG("[warn]升级失败," + s);
+					goto UPGRADE_END;
+				}
 			}
+
 
 			//重命名当前版本
 			string exeName = fs::appName() + ".exe";
 			string uiName = "ui";
 			if (!renameFile(tdsPath, exeName, tmpExeName)) {
 				json j;
-				j["serverUpgradeStatus"] = "重命名文件失败," + exeName;
+				string s = "重命名文件失败," + exeName;
+				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
 			}
 			if (!renameFile(tdsPath, uiName, tmpUIName)) {
 				json j;
-				j["serverUpgradeStatus"] = "重命名文件失败," + uiName;
+				string s = "重命名文件失败," + uiName;
+				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
 			}
 
 			//解压缩包到程序路径
 			if (!extract_zip(packagePath.c_str(), tdsPath.c_str())) {
 				json j;
-				j["serverUpgradeStatus"] = "解压缩升级包失败," + packagePath + "->" + tdsPath;
+				string s = "解压缩升级包失败," + packagePath + "->" + tdsPath;
+				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
 			}
 
@@ -1613,11 +1645,13 @@ void thread_tds_upgrade(string packageUrl) {
 			json j;
 			j["serverUpgradeStatus"] = "下载升级包失败," + packageUrl;
 			rpcSrv.notify("onServerUpgradeStatusChange", j);
+			LOG("[warn]startServerUpgrade,下载升级包失败");
 		}
 	}
 
 UPGRADE_END:
 	g_bTdsUpgradeThreadRunning = false;
+	LOG("[warn]startServerUpgrade,升级线程结束");
 }
 
 bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -1648,12 +1682,15 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 	}
 	else if (method == "upgradeTds" || method == "startServerUpgrade") {
 		string packageUrl = params["packageUrl"];
+		LOG("[warn]startServerUpgrade,升级包地址:" + packageUrl);
 		if (packageUrl == "") {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"未传入有效的升级包地址");
+			LOG("[warn]startServerUpgrade,未传入有效的升级包地址");
 		}
 		else {
 			if (g_bTdsUpgradeThreadRunning) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "升级正在进行中");
+				LOG("[warn]startServerUpgrade,升级正在进行中");
 			}
 			else {
 				thread t(thread_tds_upgrade, packageUrl);
