@@ -704,7 +704,7 @@ string TDS_imp::getVersion() {
 string TDS_imp::getSvnVersion() {
 	string s;
 #ifdef USE_SVN_REV
-	string s = SVN_VERSION;
+	s = SVN_VERSION;
 #endif
 
 	if (s != "")
