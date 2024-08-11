@@ -1949,6 +1949,24 @@ namespace fs {
 	}
 
 
+	bool deleteFolder(string path) {
+		try {
+			if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+				std::filesystem::remove_all(path);
+				return true;
+			}
+			else {
+				std::cerr << "Path does not exist or is not a directory: " << path << std::endl;
+				return false;
+			}
+		}
+		catch (const std::filesystem::filesystem_error& e) {
+			std::cerr << "Filesystem error: " << e.what() << std::endl;
+			return false;
+		}
+	}
+
+
 	 void getFolderList(vector<fs::FILE_INFO>& list, string strFolder, bool recursive) {
 #ifndef _WINXP
 		 try

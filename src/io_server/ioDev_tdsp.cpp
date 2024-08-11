@@ -603,6 +603,12 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			rpcSrv.rpc_input(jParams, resp, session);
 		}
 	}
+	else if (method == "onServerUpgradeStatusChange") {
+		yyjson_val* yyv_sus = yyjson_obj_get(yyv_params, "serverUpgradeStatus");
+		if (yyv_sus) {
+			m_childTdsUpgradeStatus = yyjson_get_str(yyv_sus);
+		}
+	}
 	else if (method == "onUpdateAlarmStatus")
 	{
 		/*if (m_devSubType == TDSP_SUB_TYPE::childTds) {

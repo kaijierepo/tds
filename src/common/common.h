@@ -446,7 +446,7 @@ namespace fs {
 	bool writeFile(string path, string& data);
 	bool fileExist(string pszFileName);
 	bool deleteFile(string path);
-
+	bool deleteFolder(string path);
 	struct FILE_INFO {
 		string modifyTime;
 		string createTime;

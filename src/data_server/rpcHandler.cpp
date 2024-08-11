@@ -1562,17 +1562,19 @@ void thread_tds_upgrade(string packageUrl) {
 			string packagePath = fs::toAbsolutePath("../packages/") + "/" + fileName;
 			fs::writeFile(packagePath.c_str(), res->body.data(), res->body.size());
 
-			//重命名原始文件
 			string tdsPath = fs::toAbsolutePath("./") + "/";
+			//删除重命名文件
 			string appName = fs::appName();
-			string newName = appName + "_" + tds->getSvnVersion() + ".exe";
-			newName = str::replace(newName, ":", "");
-			renameFile(tdsPath, appName + ".exe", newName);
+			string tmpExeName = appName + "_old.exe";
+			string tmpUIName = "ui_old";
+			fs::deleteFile(tdsPath + "/" + tmpExeName);
+			fs::deleteFolder(tdsPath + "/" + tmpUIName);
 
-			string uiOld = "ui";
-			string uiNew = "ui_" + tds->getSvnVersion();
-			uiNew = str::replace(uiNew, ":", "");
-			renameFile(tdsPath, uiOld, uiNew);
+			//重命名当前版本
+			string exeName = fs::appName() + ".exe";
+			string uiName = "ui";
+			renameFile(tdsPath, exeName, tmpExeName);
+			renameFile(tdsPath, uiName, tmpUIName);
 
 			//解压缩包到程序路径
 			extract_zip(packagePath.c_str(), tdsPath.c_str());
@@ -1583,7 +1585,9 @@ void thread_tds_upgrade(string packageUrl) {
 			exit(0);
 		}
 		else {
-
+			json j;
+			j["serverUpgradeStatus"] = "下载升级包失败," + packageUrl;
+			rpcSrv.notify("onServerUpgradeStatusChange", j);
 		}
 	}
 
