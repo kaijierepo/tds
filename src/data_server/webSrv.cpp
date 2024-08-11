@@ -1444,7 +1444,7 @@ bool runWebServers()
 		}
 	}
 
-	if (tds->conf->httpPort != 0)
+	if (tds->conf->httpPort != 0) 
 	{
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort);
