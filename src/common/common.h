@@ -430,7 +430,7 @@ namespace fs {
 	string normalizationPath(string& s);
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	void createFolderOfPath(string strFile);
+	bool createFolderOfPath(string strFile);
 	string appName();
 	string appPath();
 	string toAbsolutePath(string path, string currentPath);

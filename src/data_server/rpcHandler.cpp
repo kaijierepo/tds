@@ -1449,7 +1449,7 @@ std::string getFileNameFromURL(const std::string& url) {
 namespace stdfs = std::filesystem;
 
 
-bool renameFile(const std::string& filePath, const std::string& oldName, const std::string& newName) {
+bool renameFile(std::string filePath, const std::string& oldName, const std::string& newName) {
 	std::wstring wsFilePath = charCodec::utf8_to_utf16(filePath);
 	std::wstring wsOldName = charCodec::utf8_to_utf16(oldName);
 	std::wstring wsNewName = charCodec::utf8_to_utf16(newName);
@@ -1466,27 +1466,9 @@ bool renameFile(const std::string& filePath, const std::string& oldName, const s
 	}
 }
 
-// 创建目录（包括父目录）
-bool create_directory(const std::string& path) {
-	size_t pos = 0;
-	std::string dir;
-	int status = 0;
-
-	while ((pos = path.find_first_of('/', pos)) != std::string::npos) {
-		dir = path.substr(0, pos++);
-		if (dir.size() == 0) continue; // 如果是根目录，跳过
-		status = mkdir(dir.c_str(), S_IRWXU);
-		if (status != 0 && errno != EEXIST) return false;
-	}
-	status = mkdir(path.c_str(), S_IRWXU);
-	return (status == 0 || errno == EEXIST);
-}
 
 // 解压缩文件
 bool extract_zip( std::string zip_path,  std::string dest_dir) {
-	zip_path = charCodec::utf8_to_gb(zip_path);
-	dest_dir = charCodec::utf8_to_gb(dest_dir);
-
 	mz_zip_archive zip_archive;
 	memset(&zip_archive, 0, sizeof(zip_archive));
 
@@ -1508,22 +1490,14 @@ bool extract_zip( std::string zip_path,  std::string dest_dir) {
 
 		if (mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
 			// 创建目录
-			if (!create_directory(file_path)) {
-				std::cerr << "Failed to create directory: " << file_path << std::endl;
-				mz_zip_reader_end(&zip_archive);
-				return false;
-			}
+			fs::createFolderOfPath(file_path);
 		}
 		else {
 			// 创建文件所在的目录
 			size_t last_slash = file_path.find_last_of('/');
 			if (last_slash != std::string::npos) {
 				std::string dir_path = file_path.substr(0, last_slash);
-				if (!create_directory(dir_path)) {
-					std::cerr << "Failed to create directory: " << dir_path << std::endl;
-					mz_zip_reader_end(&zip_archive);
-					return false;
-				}
+				fs::createFolderOfPath(dir_path);
 			}
 
 			// 解压文件
@@ -1579,7 +1553,7 @@ void thread_tds_upgrade(string packageUrl) {
 				goto UPGRADE_END;
 			}
 
-			string tdsPath = fs::toAbsolutePath("./") + "/";
+			string tdsPath = fs::toAbsolutePath("./"); //末尾不带斜杠
 			//删除重命名文件
 			string appName = fs::appName();
 			string tmpExeName = appName + "_old.exe";
@@ -1609,7 +1583,7 @@ void thread_tds_upgrade(string packageUrl) {
 			//重命名当前版本
 			string exeName = fs::appName() + ".exe";
 			string uiName = "ui";
-			if (!renameFile(tdsPath, exeName, tmpExeName)) {
+			if (!renameFile(tdsPath + "/", exeName, tmpExeName)) {
 				json j;
 				string s = "重命名文件失败," + exeName;
 				j["serverUpgradeStatus"] = s;
@@ -1617,7 +1591,7 @@ void thread_tds_upgrade(string packageUrl) {
 				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
 			}
-			if (!renameFile(tdsPath, uiName, tmpUIName)) {
+			if (!renameFile(tdsPath + "/", uiName, tmpUIName)) {
 				json j;
 				string s = "重命名文件失败," + uiName;
 				j["serverUpgradeStatus"] = s;
@@ -1626,7 +1600,7 @@ void thread_tds_upgrade(string packageUrl) {
 				goto UPGRADE_END;
 			}
 
-			//解压缩包到程序路径
+			//解压缩包到程序路径.miniz使用utf8路径
 			if (!extract_zip(packagePath.c_str(), tdsPath.c_str())) {
 				json j;
 				string s = "解压缩升级包失败," + packagePath + "->" + tdsPath;

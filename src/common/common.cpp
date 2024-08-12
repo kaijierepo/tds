@@ -1641,7 +1641,7 @@ namespace fs {
 	//带后缀 .XXX 作为文件路径
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
-	void createFolderOfPath(string strFile)
+	bool createFolderOfPath(string strFile)
 	{
 		strFile = str::replace(strFile, "\\", "/");
 		strFile = str::replace(strFile, "////", "/");
@@ -1654,13 +1654,18 @@ namespace fs {
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
+		//如果路径的末尾是/，创建成功也会返回false,因此删除末尾的 /
+		if (iSlashPos == strFile.length() - 1) {
+			strFile = strFile.substr(0, iSlashPos);
+		}
+
 #ifdef _WIN32
 	#ifndef _WINXP
-		filesystem::create_directories(charCodec::tds_to_utf16(strFile));
+		return filesystem::create_directories(charCodec::tds_to_utf16(strFile));
 	#endif
 #else
 		filesystem::path p = strFile;
-		filesystem::create_directories(p);
+		return filesystem::create_directories(p);
 #endif
 	}
 
@@ -1935,7 +1940,18 @@ namespace fs {
 
 	bool deleteFile(string path) {
 #ifndef _WINXP
-		return std::filesystem::remove(charCodec::tds_to_utf16(path));
+		bool ret;
+		try
+		{
+			ret = std::filesystem::remove(charCodec::tds_to_utf16(path));
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "std::filesystem::remove error: " << e.what() << std::endl;
+			return false;
+			ret = false;
+		}
+		return ret;
 #else
 		std::wstring filePath = charCodec::tds_to_utf16(path);
 
@@ -1951,12 +1967,12 @@ namespace fs {
 
 	bool deleteFolder(string path) {
 		try {
-			if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-				std::filesystem::remove_all(path);
+			wstring wsPath = charCodec::tds_to_utf16(path);
+			if (std::filesystem::exists(wsPath) && std::filesystem::is_directory(wsPath)) {
+				std::filesystem::remove_all(wsPath);
 				return true;
 			}
 			else {
-				std::cerr << "Path does not exist or is not a directory: " << path << std::endl;
 				return false;
 			}
 		}
