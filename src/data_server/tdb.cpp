@@ -2235,6 +2235,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 
 	if (deSel.deType == "curve") {
+		size_t sortIdx = 0;
 		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
@@ -2244,7 +2245,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			{
 				DB_FILE* pdf = fSet.fileList[i];
 				SORT_FLAG sf;
-				sf.sFlag = formatStr("%d%d", tagIdx, i);
+				sf.dbFlag = sortIdx++;
 				yyjson_mut_val* p = yyjson_val_mut_copy(rlt_mut_doc, pdf->root);
 				mapRlt[sf] = p;
 			}
