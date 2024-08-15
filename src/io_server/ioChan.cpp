@@ -229,19 +229,6 @@ void ioChannel::input(json jVal, TIME* dataTime, bool bPic) {
 	tds->callAsyn("input", param);
 }
 
-//网关，设备，通道  三级设备可以进行三级绑定，并将3级绑定的位号组合成1个最终绑定的位号
-string ioChannel::getTagBind() {
-	string tagBind = m_strTagBind;
-	ioDev* pParent = this->m_pParent;
-	while(pParent){
-		if (tagBind.find(pParent->m_strTagBind) == string::npos) {
-			tagBind = pParent->m_strTagBind + "." + tagBind;
-		}
-		pParent = pParent->m_pParent;
-	}
-	return tagBind;
-}
-
 void ioChannel::input(json jVal, string& tagBind, TIME* dataTime, bool bPic)
 {
 	//更新通道值. 经过一次kb转换，推送的数据流应当是经过转换后的值

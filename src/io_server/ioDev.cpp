@@ -1029,6 +1029,16 @@ ioDev* ioDev::getIODev(string ioAddr,bool bChn, bool ignorePort)
 		if (p)
 			return p;
 	}
+
+	for (auto& it : m_channels)
+	{
+		string tmp = it->getIOAddrStr(ignorePort);
+		str::hanZi2Pinyin(tmp, tmp);
+		if (tmp == ioAddr)
+		{
+			return it;
+		}
+	}
 	return nullptr;
 }
 
@@ -2005,4 +2015,18 @@ void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 
 void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
+}
+
+
+//网关，设备，通道  三级设备可以进行三级绑定，并将3级绑定的位号组合成1个最终绑定的位号
+string ioDev::getTagBind() {
+	string tagBind = m_strTagBind;
+	ioDev* pParent = this->m_pParent;
+	while (pParent) {
+		if (tagBind.find(pParent->m_strTagBind) == string::npos) {
+			tagBind = pParent->m_strTagBind + "." + tagBind;
+		}
+		pParent = pParent->m_pParent;
+	}
+	return tagBind;
 }

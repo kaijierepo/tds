@@ -1105,6 +1105,20 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	{
 		rpc_getDev(params, rpcResp,session);
 	}
+	//用于测试排查相对绑定的关系是否正确
+	else if (method == "getTagBind") {
+		string ioAddr = params["ioAddr"];
+		ioDev* p = ioSrv.getIODev(ioAddr);
+		if (p) {
+			json j;
+			j["tagBindRelative"] = p->m_strTagBind;
+			j["tagBindAbsolute"] = p->getTagBind();
+			result = j.dump();
+		}
+		else {
+			error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "device of specified ioAddr not found");
+		}
+	}
 	else if (method == "getDevStatis")
 	{
 		rpc_getDevStatis(params, rpcResp, session);

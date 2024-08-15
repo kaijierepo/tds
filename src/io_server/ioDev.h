@@ -234,6 +234,8 @@ public:
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn) override;
 	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
+	string getTagBind();
+
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	//设备是tcpServer
 	tcpClt* m_tcpClt; 

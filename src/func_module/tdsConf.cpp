@@ -381,7 +381,8 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		dbPath = fs::toAbsolutePath("../db");
 	if (logPath == "")
 		logPath = fs::toAbsolutePath("../log");
-
+	if (fmsPath == "")
+		fmsPath = fs::toAbsolutePath("../fms");
 
 	if (title == "")
 		title = "TDS";
