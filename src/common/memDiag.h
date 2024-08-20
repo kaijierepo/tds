@@ -21,7 +21,7 @@ typedef std::list<MapSnapshot>	ListSnapshotCollection;
 struct MEM_ALLOC_INFO {
 	std::atomic<bool> used;
 	std::atomic<bool> dataSetted;
-	std::atomic_bool parsed;		//是否分析过了
+	std::atomic_bool parsed;		
     void* stack[10];
     void* ptr;
     size_t size;

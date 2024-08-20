@@ -28,7 +28,7 @@ public:
 	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
 	//bool onRecvPkt(json jPkt);
 	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc);
-	bool onRecvData(unsigned char* pData, size_t iLen) override;//接受数据异步处理函数
+	bool onRecvData(unsigned char* pData, size_t iLen) override;
 	bool getCurrentVal();
 	bool sendData(unsigned char* pData, size_t iLen) override;
 	bool handleNotify(yyjson_val* jNotify, yyjson_doc* doc);

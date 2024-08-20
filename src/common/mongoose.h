@@ -2164,7 +2164,7 @@ struct mg_mgr {
   SocketSet_t ss;  // NOTE(lsm): referenced from socket struct
 #endif
 
-  //wakeupºótcp½ÓÊÕÊ±µÄ×é°ü. ËùÓÐÁ´½Ó¹²ÓÃ¡£
+  //wakeupï¿½ï¿½tcpï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¹ï¿½ï¿½Ã¡ï¿½
   char* m_streamBuf;
   int m_streamLen;
 };

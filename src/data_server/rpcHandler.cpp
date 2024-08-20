@@ -110,9 +110,6 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			char* p = NULL; int len = 0;
 			if (fs::readFile(params["path"].get<string>(), p, len))
 			{
-				rpcResp.setResult(p, len);
-				if (p)
-					delete p;
 			}
 		}
 		else
@@ -3014,16 +3011,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	{
 		return true;
 	}
-	if (handleMethodCall_debugFunc(method, params, rpcResp,session))
-	{
-		return true;
-	}
 	if (handleMethodCall_video(method, params, rpcResp, session)) {
 		return true;
 	}
 
 	
-	if (rpcResp.iBinLen > 0 || rpcResp.result != "" || rpcResp.error!="")
+	if (rpcResp.result != "" || rpcResp.error!="")
 		return true;
 	else {
 		json jError = {
@@ -3263,6 +3256,104 @@ void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> 
 	t.detach();
 }
 
+bool rpcHandler::parseSessionUser(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession){
+	json jUser;
+	if (jReq["user"] != nullptr)
+	{
+		pSession->user = jReq["user"].get<string>();
+		jUser = userMng.getUser(pSession->user);
+		if (jUser != nullptr) {
+			pSession->org = jUser["org"].get<string>();
+			pSession->role = jUser["role"].get<string>();
+		}
+	}
+	else if (pSession->user != "") { //使用cookie设置的用户名
+		jUser = userMng.getUser(pSession->user);
+		if (jUser != nullptr) {
+			pSession->org = jUser["org"].get<string>();
+			pSession->role = jUser["role"].get<string>();
+		}
+	}
+	else
+	{
+		if (tds->conf->enableAccessCtrl) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "user is not set to call api");
+			return false;
+		}
+		else {//没开权限控制，且没有设置用户，默认用户都是admin
+			pSession->user = "admin";
+			pSession->role = "管理员";
+		}
+	}
+
+	//非管理员账户必须预先分配对象树管理权限
+	if (pSession->role != "管理员") {
+		bool isPermissionAssigned = true;
+		if (jUser["permission"].is_null()) {
+			isPermissionAssigned = false;
+			if (jUser["permission"]["mo"].is_null()) {
+				isPermissionAssigned = false;
+			}
+		}
+		if (!isPermissionAssigned) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noObjTreePermission, "permission denied,a non admin user must be assigned permissions first");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+
+bool rpcHandler::userAccessAuthentication(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession) {
+	if (jReq["token"].is_string()){
+		pSession->token = jReq["token"];
+	}
+	if(jReq["pwd"].is_string()){
+		pSession->pwd = jReq["pwd"];
+	}
+
+	if (pSession->token == "" && pSession->pwd == "")
+	{
+		rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, please set access token or password");
+		return false;
+	}
+
+	//user token to access
+	if (pSession->token != "")
+	{
+		pSession->token = jReq["token"].get<string>();
+		string token = pSession->token;
+		string user = pSession->user;
+		if (!userMng.checkToken(user, token))
+		{
+			//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
+			return false;
+		}
+	}
+
+	//use password to access, for api testing, do not use in a productin enviroment
+	if (pSession->pwd != "")
+	{
+		string pwd = jReq["pwd"].get<string>();
+		string user = pSession->user;
+		if (!userMng.checkPwd(user, pwd))
+		{
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid password");
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool rpcHandler::isDebugMethod(string method) {
+	if (method == "getApiSessions") {
+		return true;
+	}
+}
+
 void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
 	if (!jReq.contains("method"))
@@ -3337,6 +3428,12 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 		goto HANDLE_END;
 	}
 
+	//调试类命令
+	if (handleMethodCall_debugFunc(method, params, rpcResp, pSession->getRpcSession()))
+	{
+		goto HANDLE_END;
+	}
+
 	//访问控制
 	if (method == "login")
 	{
@@ -3349,51 +3446,9 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 		goto HANDLE_END;
 	}
 
-	//验证user;    没有打开权限控制，数据包也可以携带user，不进行验证，但是有权限控制。用于测试场景
-	{
-		json jUser;
-		if (jReq["user"] != nullptr)
-		{
-			pSession->user = jReq["user"].get<string>();
-			jUser = userMng.getUser(pSession->user);
-			if (jUser != nullptr) {
-				pSession->org = jUser["org"].get<string>();
-				pSession->role = jUser["role"].get<string>();
-			}
-		}
-		else if (pSession->user != "") { //使用cookie设置的用户名
-			jUser = userMng.getUser(pSession->user);
-			if (jUser != nullptr) {
-				pSession->org = jUser["org"].get<string>();
-				pSession->role = jUser["role"].get<string>();
-			}
-		}
-		else
-		{
-			if (tds->conf->enableAccessCtrl) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_userMissing, "user is not set to call api");
-				goto HANDLE_END;
-			}
-			else {//没开权限控制，且没有设置用户，默认用户都是admin
-				pSession->user = "admin";
-				pSession->role = "管理员";
-			}
-		}
-
-		//非管理员账户必须预先分配对象树管理权限
-		if (pSession->role != "管理员") {
-			bool isPermissionAssigned = true;
-			if (jUser["permission"].is_null()) {
-				isPermissionAssigned = false;
-				if (jUser["permission"]["mo"].is_null()) {
-					isPermissionAssigned = false;
-				}
-			}
-			if (!isPermissionAssigned) {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_noObjTreePermission, "permission denied,a non admin user must be assigned permissions first");
-				goto HANDLE_END;
-			}
-		}
+	//没有打开API鉴权，数据包也可以携带user，用于监控对象范围、读写等权限控制
+	if (!parseSessionUser(jReq, rpcResp, pSession)) {
+		goto HANDLE_END;
 	}
 
 	//test账户具有所有功能模块的浏览权限，但没有控制权限，用户功能演示。可以认为是一个只能浏览的管理员账号
@@ -3416,36 +3471,8 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 	}
 
 	if (bAccessCtrl && tds->conf->enableAccessCtrl) {
-		if (jReq["token"] == nullptr && jReq["pwd"] == nullptr)
-		{
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenMissing, "access denied, please set access token or password");
+		if (!userAccessAuthentication(jReq, rpcResp, pSession)) {
 			goto HANDLE_END;
-		}
-
-		//user token to access
-		if (jReq["token"] != nullptr && jReq["token"] != "")
-		{
-			pSession->token = jReq["token"].get<string>();
-			string token = pSession->token;
-			string user = pSession->user;
-			if (!userMng.checkToken(user, token))
-			{
-				//LOG("[warn]认证失败，token验证未通过,user=%s,token=%s,method=%s",user.c_str(),token.c_str(),method.c_str());
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid access token");
-				goto HANDLE_END;
-			}
-		}
-
-		//use password to access, for api testing, do not use in a productin enviroment
-		if (jReq["pwd"] != nullptr && jReq["pwd"] != "")
-		{
-			string pwd = jReq["pwd"].get<string>();
-			string user = pSession->user;
-			if (!userMng.checkPwd(user, pwd))
-			{
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::AUTH_tokenError, "access denied, invalid password");
-				goto HANDLE_END;
-			}
 		}
 	}
 
@@ -3454,20 +3481,6 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 	{
 		goto HANDLE_END;
 	}
-
-	//通知消息，无需生成响应，转发后直接返回
-	if (method == "notify")//来自于tds客户端的通知消息。 转发给所有的其他tds客户端
-	{
-		notify("notify", params, false, pSession);
-		return;
-	}
-	//后端总线，实现一种微前端模块之间可以相互调用函数的机制(过于复杂的机制，考虑丢弃)
-	//前端总线，可以在前端的app之间实现相互调用，相比于后端总线，只能调用本机浏览器上的app
-	//else if (method.find("app.") != string::npos)
-	//{
-	//	notify(method, params, false, pSession);
-	//	return;
-	//}
 
 	//先使用外部注册的handler受理请求
 	if (m_pluginHandler)
@@ -3547,13 +3560,6 @@ HANDLE_END:
 			LOG("[trace]RPC响应:\r\n" + strRespForLog + "\r\n");
 		else if (bNeedLog)
 			LOG("[trace]RPC响应:\r\n" + rpcResp.result + "\r\n");
-	}
-
-
-	//处理二进制响应
-	if (rpcResp.iBinLen > 0)
-	{
-		LOG("[trace]RPC响应: 二进制数据 len = " + str::fromInt(rpcResp.iBinLen));
 	}
 }
 

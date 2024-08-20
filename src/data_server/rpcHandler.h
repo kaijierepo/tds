@@ -47,6 +47,9 @@ public:
 
 	//json rpc implementation
 	void handleRpcCallAsyn(string& strReq,std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl = true);
+	bool parseSessionUser(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool userAccessAuthentication(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool isDebugMethod(string method);
 	void handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl);
 	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);

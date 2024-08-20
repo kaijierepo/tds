@@ -164,6 +164,7 @@ public:
 	string name; //name is defined by tds client
 	string user;
 	string role;
+	string pwd;
 	string token;
 	string method;
 	string dbpath;
@@ -214,17 +215,12 @@ public:
 class RPC_RESP {
 public:
 	void setResult(string& str) { result = str; }
-	void setResult(char* bin, int len) { binResult = new char[len]; memcpy(binResult, bin, len); iBinLen = len; }
 	RPC_RESP() {
 		result = "";
-		binResult = NULL;
-		iBinLen = 0;
 		isNotification = false;
 	}
 	~RPC_RESP()
 	{
-		if (binResult)
-			delete binResult;
 	}
 
 	string strResp; 
@@ -234,8 +230,6 @@ public:
 	string params; 
 	string info;   //rpc excution log
 	string dbQueryInfo;
-	char* binResult;
-	int iBinLen;
 	bool isNotification; //is request a notification.no response will send if request is a notification
 };
 

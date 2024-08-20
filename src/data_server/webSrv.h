@@ -46,7 +46,7 @@ public:
 	json parseParamFromQuery(string& query);
 	static bool handleAppLayerData_Bridge(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void removeWsSession(mg_connection* c);
-	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions; //这些session接受rpc通知
+	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsSessions; //sessions receives rpc notification
 	std::mutex m_csWsSessions;
 	std::map<void*, std::shared_ptr<TDS_SESSION>>  m_wsBridgeSessions;
 	std::map<string, SESSION_STATIS*>  m_httpSessions;
@@ -84,8 +84,6 @@ extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);
 
 extern bool runWebServers();
-
-// http请求黑名单： apiserver和ioserver
 extern std::map<string, string> apiBlackList; // apiIP des
 extern std::map<string, string> ioBlackList; // ioIP des
 extern bool loadApiBlackList();

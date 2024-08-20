@@ -2128,7 +2128,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		dbName = yyjson_get_str(yyv_db);
 		tdb = db.getChildDB(dbName);
 		if (tdb == nullptr) {
-			err = "specified db not found";
+			err = JSON_STR_VAL("specified db not found");
 			return;
 		}
 	}
@@ -2146,7 +2146,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	deSel.tagSel.rltLanguage = m_dbFmt.language;  //get tags in specified language for further db operation
 	parseDESelector(params, deSel, err);
 	if (err != "") {
-		err = "\"" + err + "\"";
+		err = JSON_STR_VAL(err);
 		return;
 	}
 
@@ -2174,7 +2174,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 	SELECT_RLT result;
 	if (deSel.tagSel.tagSet.size() == 0) {
-		err = "specified tag not found";
+		err = JSON_STR_VAL("specified tag not found");
 	}
 	else {
 		try
@@ -2202,7 +2202,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		catch (std::exception& e)
 		{
 			string sErr = e.what();
-			err = "\"" + sErr + "\"";
+			err = JSON_STR_VAL(sErr);
 		}
 	}
 
