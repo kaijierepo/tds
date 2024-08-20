@@ -161,9 +161,11 @@ public:
 	string type; //object type
 	string level;
 	string error;
-	string language;
+	string selLanguage;
+	string rltLanguage;
 
-	vector<string> tagSet;
+	vector<string> tagSet;  //in query language
+	vector<string> dbFileTagSet;  //in disk storage language
 };
 
 
@@ -294,6 +296,7 @@ struct DE_yyjson {
 class TAG_FILE_SET {
 public:
 	string tag;
+	string dbFileTag;
 	vector<DB_FILE*> fileList; //sort by time asending
 
 	~TAG_FILE_SET(){
@@ -510,6 +513,11 @@ struct  DB_FMT
 	string curveIdxListName;
 	string curveDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;
+	string language;    // zh for chinese en for english
+
+	DB_FMT() {
+		language = "zh";
+	}
 };
 
 enum DB_TIME_UNIT {
@@ -546,19 +554,19 @@ public:
 	DB_FMT m_dbFmt;
 	DB_TIME_UNIT m_timeUnit;
 
-	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
-	void rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
-	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
-	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org = "");
+	void rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org,string language);
+	void rpc_db_select(yyjson_val* params, string& rlt,string& err,string& queryInfo, string org,string language);
 
-	void rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
-	void rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	bool Update(string tag, DB_TIME stTime, yyjson_val& jData);
 
-	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org = "");
-	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org = "");
+	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);

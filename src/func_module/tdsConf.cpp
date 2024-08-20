@@ -36,6 +36,7 @@ tdsConfig::tdsConfig()
 	mode = "tds";
 	bStopCycleAcq = false;
 	showObjOnline = true;
+	dbLanguage = "zh";
 
 #ifdef TDS
 	tds->conf = this;
@@ -178,6 +179,9 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		else if (checkKey(tci.key, "fmsPath")) {
 			fmsPath = tci.val.c_str();
 			fmsPath = fs::toAbsolutePath(fmsPath);
+		}
+		else if (checkKey(tci.key, "dbLanguage")) {
+			dbLanguage = tci.val.c_str();
 		}
 		else if (checkKey(tci.key, "mediaSrvIP"))
 			mediaSrvIP = tci.val.c_str();

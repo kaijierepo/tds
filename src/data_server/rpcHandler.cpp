@@ -838,7 +838,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		if (method == "db.insert")
 		{
 			string s = params.dump();
-			db.rpc_db_insert(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			db.rpc_db_insert(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
 		else if (method == "db.renameFolder") {
 			string oldName = params["old"].get<string>();
@@ -872,17 +872,17 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		else if (method == "db.select")
 		{
 			string s = params.dump();
-			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org);
+			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org,session.language);
 		}
 		else if (method == "db.update")
 		{
 			string s = params.dump();
-			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
 		else if (method == "db.delete")
 		{
 			string s = params.dump();
-			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org);
+			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
 	}
 	else
@@ -1995,7 +1995,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//位号选择
 			vector<string> vecTagSel = parseTagSel(params["tag"],type);
 			TAG_SELECTOR tagSel;
-			tagSel.language = session.language;
+			tagSel.selLanguage = session.language;
 			tagSel.init(vecTagSel, rootTag, type,level);
 
 			string mode = "array";
@@ -2144,7 +2144,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				params["aggr"] = "sum";
 				string err, rlt, queryInfo;
 				string sParams = params.dump();
-				db.rpc_db_select(sParams, err, rlt, queryInfo);
+				db.rpc_db_select(sParams, err, rlt, queryInfo,"",session.language);
 
 				if (rlt != "") {
 					json j = json::parse(rlt);
@@ -2767,7 +2767,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		jParam["aggr"] = "count";
 		string strPara = jParam.dump();
 		string strRet, strErr, strQry;
-		db.rpc_db_select(strPara, strRet, strErr, strQry);
+		db.rpc_db_select(strPara, strRet, strErr, strQry,"", session.language);
 		json jRet = json::parse(strRet);
 		funcMakeData(strRet, NULL, "", "", listRecv);
 
@@ -4690,7 +4690,7 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 
 	attrParam.tagSel.init(tags, attrParam.rootTag);
 	attrParam.tagSel.type = attrParam.moType;
-	attrParam.tagSel.language = session.language;
+	attrParam.tagSel.selLanguage = session.language;
 	vector<OBJ*> moList;
 	prj.getObjByTagSelector(moList, attrParam.tagSel);
 

@@ -941,7 +941,7 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,str
 			string tagCandidate = getTag("",language);
 			TAG_SELECTOR ts;
 			ts.init(strTag);
-			ts.language = language;
+			ts.selLanguage = language;
 			if (ts.match(tagCandidate))
 				tagVec->push_back(this);
 		}
@@ -1545,19 +1545,30 @@ void OBJ::GetAllChildAlarmInfo(string& strSummary)
 bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 {
 	//精确匹配直接返回
+	//for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
+	//	string& exp = tagSelector.exactMatchExp[i];
+	//	tags.push_back(exp);
+	//}
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		tags.push_back(exp);
+		vector<OBJ*> tagSet;
+		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
+		for (auto& i : tagSet)
+		{
+			tagSelector.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
+			tagSelector.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
+		}
 	}
 
 
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, tagSelector.language, tagSelector.type, tagSelector.level);
+		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
 		for (auto& i : tagSet)
 		{
-			tags.push_back(i->getTag());
+			tagSelector.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
+			tagSelector.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
 		}
 	}
 	return true;
@@ -1566,7 +1577,7 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		OBJ* p = prj.queryObj(exp, tagSelector.language);
+		OBJ* p = prj.queryObj(exp, tagSelector.selLanguage);
 		if (p) {
 			objList.push_back(p);
 		}
@@ -1575,7 +1586,7 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, tagSelector.language, tagSelector.type,tagSelector.level);
+		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type,tagSelector.level);
 		for (auto& i : tagSet)
 		{
 			objList.push_back(i);
@@ -1602,7 +1613,7 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 {
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
-		MP* p = GetMPByTag(exp,tagSelector.language);
+		MP* p = GetMPByTag(exp,tagSelector.selLanguage);
 		if (p) {
 			mpList.push_back(p);
 		}
@@ -1612,7 +1623,7 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<MP*> tagSet;
 		vector<MP*> tagSetTmp;
-		prj.GetMPByTag(&tagSetTmp, exp, tagSelector.language);
+		prj.GetMPByTag(&tagSetTmp, exp, tagSelector.selLanguage);
 		if (tagSelector.specifyType())//has type filter //load from database 监测点类型过滤
 		{
 			for (auto& it : tagSetTmp)

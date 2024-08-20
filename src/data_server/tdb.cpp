@@ -2109,15 +2109,15 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	return true;
 }
 
-void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org)
+void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_select(yyv_params, rlt, err, queryInfo, org);
+	rpc_db_select(yyv_params, rlt, err, queryInfo, org,language);
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org)
+void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	DE_SELECTOR deSel;
 
@@ -2142,6 +2142,8 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		}
 	}
 	deSel.tagSel.m_org = org;
+	deSel.tagSel.selLanguage = language;
+	deSel.tagSel.rltLanguage = m_dbFmt.language;  //get tags in specified language for further db operation
 	parseDESelector(params, deSel, err);
 	if (err != "") {
 		err = "\"" + err + "\"";
@@ -2221,7 +2223,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	for (int i = 0; i < tagSet.size(); i++)
 	{
 		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
-		fSet.tag = tagSet[i];
+		fSet.tag = deSel.tagSel.tagSet[i];
+		fSet.dbFileTag = deSel.tagSel.dbFileTagSet[i];
 		tagFileSet.push_back(&fSet);
 	}
 	Select_Step_loadFile(deSel, tagFileSet, result);
@@ -2719,7 +2722,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				time_t loadTime = deSel.timeSel.startTime;
 				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -2733,7 +2736,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				time_t loadTime = deSel.timeSel.endTime;
 				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
+					DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 					pdf->deType = deSel.deType;
 					if (!pdf->loadFile()) {
 						delete pdf;
@@ -2765,7 +2768,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					time_t loadTime = deSel.timeSel.startTime;
 					for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2778,7 +2781,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					loadTime = deSel.timeSel.endTime;
 					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2792,7 +2795,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					time_t loadTime = deSel.timeSel.endTime;
 					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.tag, this);
+						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -2821,7 +2824,7 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 		{
 			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 			time_t t = 0;
-			DB_FILE* pdf = new DB_FILE(t, fSet.tag, this);
+			DB_FILE* pdf = new DB_FILE(t, fSet.dbFileTag, this);
 			pdf->deType = deSel.deType;
 			if (!pdf->loadFile()) {
 				delete pdf;
@@ -3159,14 +3162,14 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 }
 
 
-void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_insert(yyv_params, rlt, err, queryInfo, org);
+	rpc_db_insert(yyv_params, rlt, err, queryInfo, org,language);
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_val* yyv_val = yyjson_obj_get(params, "val");
 	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
 	if (yyv_val == nullptr && yyv_file == nullptr)
@@ -3276,13 +3279,13 @@ void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 	InsertValJsonStr(strTag, stTime, s);
 }
 
-void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_update(yyv_params, rlt, err, queryInfo, org);
+	rpc_db_update(yyv_params, rlt, err, queryInfo, org,language);
 	yyjson_doc_free(doc);
 }
-void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
 	string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");
@@ -3522,13 +3525,13 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 }
 
 
-void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	rpc_db_delete(yyv_params, rlt, err, queryInfo, org);
+	rpc_db_delete(yyv_params, rlt, err, queryInfo, org,language);
 	yyjson_doc_free(doc);
 }
-void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org) {
+void TDB::rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
 	string dbName;
 	TDB* tdb = nullptr;
 	yyjson_val* yyv_db = yyjson_obj_get(params, "db");

@@ -469,7 +469,7 @@ void MemDiag::rpc_memDiag_logTrace(yyjson_val* params, string& rlt, string& err)
 		size_t len;
 		string sParams = yyjson_mut_val_write(de, YYJSON_WRITE_NOFLAG, &len);
 		string dbRlt, dbErr, dbQi;
-		db.rpc_db_insert(sParams,dbRlt,dbErr, dbQi);
+		db.rpc_db_insert(sParams,dbRlt,dbErr, dbQi,"","zh");
 	}
 
 	rlt = "\"ok\"";
