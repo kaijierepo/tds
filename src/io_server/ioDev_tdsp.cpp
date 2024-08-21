@@ -1309,6 +1309,19 @@ void ioDev_tdsp::onEvent_online()
 	}
 }
 
+void ioDev_tdsp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+{
+	
+}
+
+void ioDev_tdsp::translateToDevPkt(string& tdspPkt, vector<unsigned char>& devPkt)
+{
+}
+
+void ioDev_tdsp::translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt)
+{
+}
+
 
 int UPGRADE_INFO::calcPktNum(int pl)
 {
@@ -1340,4 +1353,6 @@ bool UPGRADE_INFO::loadFirmwareFile(string fn, int pl)
 	}
 	return false;
 }
+
+
 

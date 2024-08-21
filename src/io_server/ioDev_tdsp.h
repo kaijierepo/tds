@@ -46,6 +46,11 @@ public:
 	void DoCycleTaskSync() override;
 	void onEvent_online() override;
 
+	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+
+	void translateToDevPkt(string& tdspPkt,vector<unsigned char>& devPkt);
+	void translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt);
+
 	map<int, TDSP_SYNC_INFO*> m_mapSyncRPCInfo;
 	mutex m_csSyncRPCInfo;
 	bool getResponse;
