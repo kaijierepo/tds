@@ -301,6 +301,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		if (m_strPwd != "") {
 			conf["pwd"] = m_strPwd;
 		}
+		if (m_translatorProto != "") {
+			conf["translatorProto"] = m_translatorProto;
+		}
 
 		if (m_bEnableOfflineTimeout) {
 			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
@@ -474,6 +477,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_boolean()) {
 			m_bViaAdaptor = item.get<bool>();
+		}
+	}
+
+	kv = conf.find("translatorProto");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_translatorProto = item.get<string>();
 		}
 	}
 

@@ -51,6 +51,8 @@ public:
 	void translateToDevPkt(string& tdspPkt,vector<unsigned char>& devPkt);
 	void translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt);
 
+	void translateToTdspPkt(char* devPkt, int len, string& tdspPkt);
+
 	map<int, TDSP_SYNC_INFO*> m_mapSyncRPCInfo;
 	mutex m_csSyncRPCInfo;
 	bool getResponse;
@@ -62,5 +64,6 @@ public:
 	string m_childTdsTag;
 	int m_childTdsHttpPort;
 	int m_childTdsHttpsPort;
+	udpServer translatorClient;
 
 };

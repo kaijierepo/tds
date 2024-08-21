@@ -524,7 +524,15 @@ bool ioDev_tdsp::getCurrentVal()
 
 bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 {
-	return ioDev::sendData(pData, iLen);
+	if (m_translatorProto != "") {
+		vector<unsigned char> devPkt;
+		string tdspPkt = (char*)pData;
+		translateToDevPkt(tdspPkt, devPkt);
+		return ioDev::sendData(devPkt.data(), devPkt.size());
+	}
+	else {
+		return ioDev::sendData(pData, iLen);
+	}
 }
 
 
@@ -1311,15 +1319,81 @@ void ioDev_tdsp::onEvent_online()
 
 void ioDev_tdsp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	
+	statisOnRecv(pData, len, getIOAddrStr());
+	if (m_translatorProto != "") {
+		string tdspPkt;
+		translateToTdspPkt((char*)pData, len, tdspPkt);
+		onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.length());
+	}
+	else {
+		onRecvData(pData,len);
+	}
 }
+
+//translator通信数据包格式
+//设备地址，协议类型，待转换数据包
+//001122334455,alishan-power,192.168.0.110:6554,
+//
+#define TRANSLATOR_RECV_BUFF_LEN 10 * 1024 * 1024
+int g_translatorSock = 0;
+struct sockaddr_in servaddr;
+char g_translatorRecvBuffer[TRANSLATOR_RECV_BUFF_LEN] = { 0 };
+mutex g_csTranlator;
+void doTranslate(char* p,size_t len,string& sRecv) {
+	g_csTranlator.lock();
+	if (g_translatorSock == 0) {
+		int sockfd;
+		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		memset(&servaddr, 0, sizeof(servaddr));
+		servaddr.sin_family = AF_INET;
+		servaddr.sin_port = htons(61111);
+		servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		g_translatorSock = sockfd;
+	}
+		
+	sendto(g_translatorSock, (char*)p, len, 0, (struct sockaddr*)&servaddr, sizeof(servaddr));
+	
+	int l = sizeof(servaddr);
+	int recvLen = recvfrom(g_translatorSock, g_translatorRecvBuffer, TRANSLATOR_RECV_BUFF_LEN, 0, (struct sockaddr*)&servaddr, &l);
+	if (recvLen > 0) {
+		g_translatorRecvBuffer[recvLen] = 0;
+		sRecv = g_translatorRecvBuffer;
+	}
+	g_csTranlator.unlock();
+}
+
 
 void ioDev_tdsp::translateToDevPkt(string& tdspPkt, vector<unsigned char>& devPkt)
 {
+	string s = str::removeChar(tdspPkt,'\n');
+	s = s + "\n" + m_translatorProto + "\n" + getIOAddrStr();
+	string sRecv;
+	doTranslate(s.data(), s.length(), sRecv);
+	if (sRecv.length() > 0) {
+		vector<string> vecRecv;
+		str::split(vecRecv, sRecv, "\n");
+		devPkt = str::hexStrToBytes(vecRecv[0]);
+	}
 }
 
 void ioDev_tdsp::translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt)
 {
+	string s = str::bytesToHexStr(devPkt) + "\n" + m_translatorProto + "\n" + getIOAddrStr();
+	string sRecv;
+	doTranslate(s.data(), s.length(), sRecv);
+	vector<string> vecRecv;
+	str::split(vecRecv, sRecv, "\n");
+	tdspPkt = vecRecv[0];
+}
+
+void ioDev_tdsp::translateToTdspPkt(char* devPkt,int len, string& tdspPkt)
+{
+	string s = str::bytesToHexStr(devPkt,len) + "," + m_translatorProto + "," + getIOAddrStr();
+	string sRecv;
+	doTranslate(s.data(), s.length(), sRecv);
+	vector<string> vecRecv;
+	str::split(vecRecv, sRecv, ",");
+	tdspPkt = vecRecv[0];
 }
 
 

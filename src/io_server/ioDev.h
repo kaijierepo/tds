@@ -184,7 +184,7 @@ public:
 	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
 	bool m_bPingThreadRunning;
-
+	string m_translatorProto;
 	bool viaTcpConn(); //通过tcp与tds建立连接
 
 	bool isViaAdaptor();
