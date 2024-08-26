@@ -37,6 +37,10 @@ string tcpSessionClt::getRemoteAddr() {
 	return s;
 }
 
+string tcpSessionClt::getLocalAddr() {
+	string s = str::format("%s:%d", localIP.c_str(), localPort);
+	return s;
+}
 
 void TcpClientRecvThread(void* lpParam)
 {
@@ -223,6 +227,8 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string host, string strLocalIp, int 
 	m_remotePort = atoi(strPort.c_str());
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
+	m_session.localIP = strLocalIp;
+	m_session.localPort = iLocalPort;
 	m_bRun = true;
 	return true;
 }

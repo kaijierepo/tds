@@ -14,6 +14,8 @@ struct tcpSessionClt
 	int sock;
 	std::string remoteIP;//对端ip
 	int remotePort;//对端端口
+	std::string localIP;//对端ip
+	int localPort;//对端端口
 	std::shared_ptr<TDS_SESSION> pALSession;
 	tcpClt* pTcpClt;
 	int bridgeSock;
@@ -25,7 +27,7 @@ struct tcpSessionClt
 	string stLastActive;
 
 	string getRemoteAddr();
-
+	string getLocalAddr();
 	tcpSessionClt()
 	{
 		sock = 0;

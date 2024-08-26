@@ -176,7 +176,7 @@ public:
 	udpServer* m_udpSrv_tdsp;   //665 tdsp ，adaptor
 	string m_strAdpIp;
 	int m_iAdpPort;
-	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn);
+
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 
 
@@ -187,7 +187,7 @@ public:
 	//传输层处理
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
 	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
-	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	//void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	//应用层字节流组包 与 首发包处理

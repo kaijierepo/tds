@@ -191,40 +191,40 @@ ioServer::~ioServer()
 	stop();
 }
 
-void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
-{
-	if (bIsConn)
-	{
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSessClt));
-		p->type = TDS_SESSION_TYPE::iodev;
-		m_mutexIoSessions.lock();
-		m_IoSessions[pTcpSessClt] = p;
-		m_mutexIoSessions.unlock();
-
-		//io服务主动连上TcpServer模式的设备
-		string ioAddr = str::format("%s:%d", pTcpSessClt->remoteIP.c_str(), pTcpSessClt->remotePort);
-		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
-		if (pIoDev)
-		{
-			p->m_IoDev = pIoDev;
-			p->ioDevType = pIoDev->m_devType;
-			pIoDev->bindIOSession(p);
-			pIoDev->setOnline();
-			timeopt::now(&pIoDev->m_stLastActiveTime);
-			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
-			logger.logInternal(s);
-			pIoDev->onEvent_online();
-		}
-	}
-	else
-	{
-		m_mutexIoSessions.lock();
-		std::shared_ptr<TDS_SESSION> p = m_IoSessions[pTcpSessClt];
-		m_IoSessions.erase(pTcpSessClt);
-		m_mutexIoSessions.unlock();
-		p->onTcpDisconnect();
-	}
-}
+//void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
+//{
+//	if (bIsConn)
+//	{
+//		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSessClt));
+//		p->type = TDS_SESSION_TYPE::iodev;
+//		m_mutexIoSessions.lock();
+//		m_IoSessions[pTcpSessClt] = p;
+//		m_mutexIoSessions.unlock();
+//
+//		//io服务主动连上TcpServer模式的设备
+//		string ioAddr = str::format("%s:%d", pTcpSessClt->remoteIP.c_str(), pTcpSessClt->remotePort);
+//		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+//		if (pIoDev)
+//		{
+//			p->m_IoDev = pIoDev;
+//			p->ioDevType = pIoDev->m_devType;
+//			pIoDev->bindIOSession(p);
+//			pIoDev->setOnline();
+//			timeopt::now(&pIoDev->m_stLastActiveTime);
+//			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
+//			logger.logInternal(s);
+//			pIoDev->onEvent_online();
+//		}
+//	}
+//	else
+//	{
+//		m_mutexIoSessions.lock();
+//		std::shared_ptr<TDS_SESSION> p = m_IoSessions[pTcpSessClt];
+//		m_IoSessions.erase(pTcpSessClt);
+//		m_mutexIoSessions.unlock();
+//		p->onTcpDisconnect();
+//	}
+//}
 
 void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
@@ -365,19 +365,19 @@ void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
-void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
-{
-	if (pTcpSessClt->bEnable == false) {
-		return;
-	}
-
-	m_mutexIoSessions.lock();
-	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
-	assert(ioSession != nullptr);
-	m_mutexIoSessions.unlock();
-
-	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
-}
+//void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
+//{
+//	if (pTcpSessClt->bEnable == false) {
+//		return;
+//	}
+//
+//	m_mutexIoSessions.lock();
+//	std::shared_ptr<TDS_SESSION> ioSession = m_IoSessions[pTcpSessClt];
+//	assert(ioSession != nullptr);
+//	m_mutexIoSessions.unlock();
+//
+//	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
+//}
 
 
 struct IP_ADDR {

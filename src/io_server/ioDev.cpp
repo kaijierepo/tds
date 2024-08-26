@@ -234,7 +234,7 @@ bool ioDev::run()
 		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
 				m_tcpClt = new tcpClt();
-			m_tcpClt->run(&ioSrv, ip, port);
+			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClient重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 		}
 		else {
 			if (m_udpClt == nullptr)
@@ -1993,6 +1993,10 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 	return devAddr;
 }
 
+void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+{
+}
+
 void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 {
 	if (bIsConn)
@@ -2003,16 +2007,20 @@ void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		ioSrv.m_IoSessions[pTcpSessClt] = p;
 		ioSrv.m_mutexIoSessions.unlock();
 
-
-		ioDev* pIoDev = this;
-		p->m_IoDev = pIoDev;
-		p->ioDevType = pIoDev->m_devType;
-		pIoDev->bindIOSession(p);
-		pIoDev->setOnline();
-		timeopt::now(&pIoDev->m_stLastActiveTime);
-		string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
-		logger.logInternal(s);
-		pIoDev->onEvent_online();
+		//io服务主动连上TcpServer模式的设备
+		string ioAddr = str::format("%s:%d", pTcpSessClt->remoteIP.c_str(), pTcpSessClt->remotePort);
+		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+		if (pIoDev)
+		{
+			p->m_IoDev = pIoDev;
+			p->ioDevType = pIoDev->m_devType;
+			pIoDev->bindIOSession(p);
+			pIoDev->setOnline();
+			timeopt::now(&pIoDev->m_stLastActiveTime);
+			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
+			logger.logInternal(s);
+			pIoDev->onEvent_online();
+		}
 	}
 	else
 	{
@@ -2023,11 +2031,6 @@ void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		p->onTcpDisconnect();
 	}
 }
-
-void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
-{
-}
-
 
 //网关，设备，通道  三级设备可以进行三级绑定，并将3级绑定的位号组合成1个最终绑定的位号
 string ioDev::getTagBind() {

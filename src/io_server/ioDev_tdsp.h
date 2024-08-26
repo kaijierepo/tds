@@ -34,6 +34,7 @@ public:
 	bool handleNotify(yyjson_val* jNotify, yyjson_doc* doc);
 	bool handleNotify(json& jNotify);
 	int getRpcId();
+	bool isSingleTransaction();
 	void call(string method, json params, json sessionParams, json& result,json& error,  bool sync = true) override;
 	bool startUpgradeProcess(string firmwareFileName);
 	bool rpc_startUpgrade(string firmwareFileName,int pktLen, RPC_RESP& rpcResp);
@@ -49,8 +50,6 @@ public:
 	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	void translateToDevPkt(string& tdspPkt,vector<unsigned char>& devPkt);
-	void translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt);
-
 	void translateToTdspPkt(char* devPkt, int len, string& tdspPkt);
 
 	map<int, TDSP_SYNC_INFO*> m_mapSyncRPCInfo;

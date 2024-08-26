@@ -11,6 +11,7 @@
 #include "mp.h"
 #include "rpcHandler.h"
 #include "as.h"
+#include "webSrv.h"
 
 using namespace httplib;
 
@@ -444,7 +445,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 bool ioDev_tdsp::onRecvData(unsigned char* pData, size_t iLen) {
 	yyjson_doc* doc = yyjson_read((const char*)pData, iLen, 0);
 	if (!doc) {
-		LOG("[error]解析tdsp数据包失败,不是正确的json格式,%s",getIOAddrStr().c_str());
+		LOG("[error]解析tdsp数据包失败,不是正确的json格式,%s:\n%s",getIOAddrStr().c_str(),pData);
 		return false;
 	}
 	yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
@@ -457,7 +458,7 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
 	timeopt::now(&m_stLastActiveTime);
 	try {
-		if (ioSrv.m_tdspSingleTransaction) {
+		if (isSingleTransaction()) { //同一时刻只有一个命令会话模式
 			yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
 			string method;
 			if(yyv_method)
@@ -466,7 +467,7 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 				handleNotify(jResp,doc);
 			}
 			else{
-				//m_tdspSingleTransaction模式时m_mapSyncRPCInfo只有一个缓存会话
+				//SingleTransaction模式时m_mapSyncRPCInfo只有一个缓存会话
 				auto iter = m_mapSyncRPCInfo.begin();
 				if (iter != m_mapSyncRPCInfo.end())
 				{
@@ -744,7 +745,17 @@ int ioDev_tdsp::getRpcId()
 	return id;
 }
 
+bool ioDev_tdsp::isSingleTransaction() {
+	if (ioSrv.m_tdspSingleTransaction) {
+		return true;
+	}
 
+	if (m_translatorProto != "") { //使用适配器时，该协议不支持id，因此不允许多请求并发
+		return true;
+	}
+
+	return false;
+}
 
 
 void ioDev_tdsp::call(string method, json params, json sessionParams, json& result, json& error,  bool sync)
@@ -777,7 +788,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		pIOSession->lastMethodCalled = method;
 	}
 
-	if (ioSrv.m_tdspSingleTransaction) {
+	if (isSingleTransaction()) {
 		CommLock();
 	}
 
@@ -960,7 +971,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	}
 
 TRANSACTION_END:
-	if (ioSrv.m_tdspSingleTransaction) {
+	if (isSingleTransaction()) {
 		CommUnlock();
 	}
 	return;
@@ -1319,14 +1330,34 @@ void ioDev_tdsp::onEvent_online()
 
 void ioDev_tdsp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	statisOnRecv(pData, len, getIOAddrStr());
-	if (m_translatorProto != "") {
+	if (connInfo->bEnable == false) {
+		return;
+	}
+
+	IOLogRecv(pData, len,connInfo->getRemoteAddr(),connInfo->getLocalAddr());
+
+	if (m_translatorProto != ""){ 	//使用协议转换器模式的tcp通信，不允许出现粘包和断包
 		string tdspPkt;
 		translateToTdspPkt((char*)pData, len, tdspPkt);
-		onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.length());
+		if (tdspPkt.size() != 0) {
+			onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.size());
+		}
 	}
 	else {
-		onRecvData(pData,len);
+		stream2pkt* pab = &m_pab;
+		pab->PushStream(pData, len);
+		while (pab->PopPkt(IsValidPkt_TDSP))
+		{
+			if (pab->abandonData != "")
+			{
+				string remoteAddr = connInfo->getRemoteAddr();
+				LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+				pIOSession->abandonLen += pab->iAbandonLen;
+			}
+			pIOSession->iALProto = pab->m_protocolType;
+
+			onRecvData(pab->pkt, pab->iPktLen);
+		}
 	}
 }
 
@@ -1339,11 +1370,19 @@ int g_translatorSock = 0;
 struct sockaddr_in servaddr;
 char g_translatorRecvBuffer[TRANSLATOR_RECV_BUFF_LEN] = { 0 };
 mutex g_csTranlator;
-void doTranslate(char* p,size_t len,string& sRecv) {
+bool doTranslate(char* p,size_t len,string& sRecv) {
+	bool ret = false;
 	g_csTranlator.lock();
 	if (g_translatorSock == 0) {
 		int sockfd;
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+		// 设置超时时间为500毫秒
+		struct timeval timeout;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
+		setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(timeout));
+
 		memset(&servaddr, 0, sizeof(servaddr));
 		servaddr.sin_family = AF_INET;
 		servaddr.sin_port = htons(61111);
@@ -1355,11 +1394,18 @@ void doTranslate(char* p,size_t len,string& sRecv) {
 	
 	int l = sizeof(servaddr);
 	int recvLen = recvfrom(g_translatorSock, g_translatorRecvBuffer, TRANSLATOR_RECV_BUFF_LEN, 0, (struct sockaddr*)&servaddr, &l);
-	if (recvLen > 0) {
+
+	if (recvLen < 0) {
+		LOG("[error][协议转换器]请求协议转换超时，未收到响应,检查协议转换器是否启动,请求:\n%s",p);
+	}
+	else{
 		g_translatorRecvBuffer[recvLen] = 0;
 		sRecv = g_translatorRecvBuffer;
+		ret = true;
 	}
 	g_csTranlator.unlock();
+
+	return ret;
 }
 
 
@@ -1368,31 +1414,33 @@ void ioDev_tdsp::translateToDevPkt(string& tdspPkt, vector<unsigned char>& devPk
 	string s = str::removeChar(tdspPkt,'\n');
 	s = s + "\n" + m_translatorProto + "\n" + getIOAddrStr();
 	string sRecv;
-	doTranslate(s.data(), s.length(), sRecv);
-	if (sRecv.length() > 0) {
-		vector<string> vecRecv;
-		str::split(vecRecv, sRecv, "\n");
-		devPkt = str::hexStrToBytes(vecRecv[0]);
+	if (!doTranslate(s.data(), s.length(), sRecv)) {
+		return;
 	}
-}
+	if (sRecv.size() == 0) {
+		LOG("[error][协议转换器]TDSP数据包->设备数据包 错误，返回空，协议转换器请求:\n" + s);
+		return;
+	}
 
-void ioDev_tdsp::translateToTdspPkt(vector<unsigned char>& devPkt, string& tdspPkt)
-{
-	string s = str::bytesToHexStr(devPkt) + "\n" + m_translatorProto + "\n" + getIOAddrStr();
-	string sRecv;
-	doTranslate(s.data(), s.length(), sRecv);
 	vector<string> vecRecv;
 	str::split(vecRecv, sRecv, "\n");
-	tdspPkt = vecRecv[0];
+	devPkt = str::hexStrToBytes(vecRecv[0]);  //协议转换器可以只返回数据包，不返回协议类型和
 }
+
 
 void ioDev_tdsp::translateToTdspPkt(char* devPkt,int len, string& tdspPkt)
 {
-	string s = str::bytesToHexStr(devPkt,len) + "," + m_translatorProto + "," + getIOAddrStr();
+	string s = str::bytesToHexStr(devPkt,len) + "\n" + m_translatorProto + "\n" + getIOAddrStr();
 	string sRecv;
-	doTranslate(s.data(), s.length(), sRecv);
+	if (!doTranslate(s.data(), s.length(), sRecv)) {
+		return;
+	}
+	if (sRecv.size() == 0) {
+		LOG("[error][协议转换器]设备数据包->TDSP数据包 错误，返回空，协议转换器请求:\n" + s);
+		return;
+	}
 	vector<string> vecRecv;
-	str::split(vecRecv, sRecv, ",");
+	str::split(vecRecv, sRecv, "\n");
 	tdspPkt = vecRecv[0];
 }
 
