@@ -188,25 +188,50 @@ void sendToRpcPktMonitorClient(char* p, size_t len)
 	}
 	csRpcPktMonitorClient.unlock_shared();
 }
-void RpcLogSend(unsigned char* p, size_t len, bool success, string remoteAddr) {
+void RpcLogSend(unsigned char* p, size_t len, bool success, string& remoteIP,int remotePort) {
 	{
 		shared_lock<shared_mutex> lock(csRpcPktMonitorClient);
 		if (rpcPktMonitorClient.size() == 0)
 			return;
 	}
 
-
-	string resp;
-	str::fromBuff(p, len, resp);
-
-	json j;
+	string remoteAddr = str::format("%s:%d", remoteIP.c_str(), remotePort);
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* yyv_root = yyjson_mut_obj(yy_mdoc);
 	TIME st;
 	timeopt::now(&st);
-	j["time"] = timeopt::st2strWithMilli(st);
-	j["remoteAddr"] = remoteAddr;
-	j["len"] = len;
-	j["data"] = resp;
-	string s = j.dump(4);
+	yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(yy_mdoc, "time");
+	yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(yy_mdoc, timeopt::st2strWithMilli(st).c_str());
+	yyjson_mut_obj_put(yyv_root, yyv_time_key, yyv_time_val);
+	yyjson_mut_val* yyv_remoteAddr_key = yyjson_mut_strcpy(yy_mdoc, "remoteAddr");
+	yyjson_mut_val* yyv_remoteAddr_val = yyjson_mut_strcpy(yy_mdoc, remoteAddr.c_str());
+	yyjson_mut_obj_put(yyv_root, yyv_remoteAddr_key, yyv_remoteAddr_val);
+	yyjson_mut_val* yyv_type_key = yyjson_mut_strcpy(yy_mdoc, "type");
+	yyjson_mut_val* yyv_type_val = yyjson_mut_strcpy(yy_mdoc, "response");
+	yyjson_mut_obj_put(yyv_root, yyv_type_key, yyv_type_val);
+	if (len > 2000) {
+		yyjson_mut_val* yyv_len_key = yyjson_mut_strcpy(yy_mdoc, "len");
+		yyjson_mut_val* yyv_len_val = yyjson_mut_int(yy_mdoc,2000);
+		yyjson_mut_obj_put(yyv_root, yyv_len_key, yyv_len_val);
+	
+		yyjson_mut_val* yyv_data_key = yyjson_mut_strcpy(yy_mdoc, "data");
+		yyjson_mut_val* yyv_data_val = yyjson_mut_strn(yy_mdoc,(char*)p,2000);
+		yyjson_mut_obj_put(yyv_root, yyv_data_key, yyv_data_val);
+	}
+	else {
+		yyjson_mut_val* yyv_len_key = yyjson_mut_strcpy(yy_mdoc, "len");
+		yyjson_mut_val* yyv_len_val = yyjson_mut_int(yy_mdoc, len);
+		yyjson_mut_obj_put(yyv_root, yyv_len_key, yyv_len_val);
+
+		yyjson_mut_val* yyv_data_key = yyjson_mut_strcpy(yy_mdoc, "data");
+		yyjson_mut_val* yyv_data_val = yyjson_mut_strn(yy_mdoc, (char*)p, len);
+		yyjson_mut_obj_put(yyv_root, yyv_data_key, yyv_data_val);
+	}
+
+	size_t wlen = 0;
+	string s = yyjson_mut_val_write(yyv_root,0,&wlen);
+	yyjson_mut_doc_free(yy_mdoc);
+
 	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
 }
 void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
@@ -226,6 +251,7 @@ void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
 	j["remoteAddr"] = remoteAddr;
 	j["len"] = len;
 	j["data"] = req;
+	j["type"] = "request";
 	string s = j.dump(4);
 	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
 }
@@ -1195,6 +1221,12 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 
 			mg_http_reply(c, 200, resHeader.c_str(), p);
 			delete p;
+
+			if (c->sessionInfo) { //非调试类命令会话，该字段不为空。调试类会话为请求 /debug 的rpc请求
+				SESSION_STATIS* pss = (SESSION_STATIS*)c->sessionInfo;
+				RpcLogSend((unsigned char*)c->send.buf, c->send.len,true, pss->remoteIP, pss->remotePort);
+			}
+
 #ifdef _WIN32
 			statusSrv.statisSend(pWs->m_port, data->len);
 #endif
