@@ -2160,15 +2160,22 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
 	}
 
-	//tag select set by tdb user
-	if (m_getTagsByTagSelector != nullptr)
+	//check if need tag parse
+	bool needParseTag = false;
+	if (deSel.tagSel.fuzzyMatchExp.size() != 0) {
+		needParseTag = true; //parse fuzzy tag exp to exact tags
+	}
+	else if (deSel.tagSel.selLanguage!="" && deSel.tagSel.selLanguage != m_dbFmt.language) {
+		needParseTag = true; //parse tags in sel language to db language
+	}
+
+	if (needParseTag)
 		m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-	//by default ,tdb only support exact tag
-	//if change fuzzy tag to real tag, tdb  must save all tag in map when tdb runs or inserts. Doing this in http is easier!
 	else {
 		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
 			string& exp = deSel.tagSel.exactMatchExp[i];
 			deSel.tagSel.tagSet.push_back(exp);
+			deSel.tagSel.dbFileTagSet.push_back(exp);
 		}
 	}
 
