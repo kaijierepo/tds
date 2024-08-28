@@ -1342,8 +1342,10 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 	map<string, vector<DB_TIME_RANGE>>& mapTimeSlots = deSel.mapTimeSlots;
 	
 	//order by range start time
+	map<string, double> slotIncrease;
 	map<DB_TIME, RANGE_INCREASE*> listTimeRange;
 	for (auto& slotIter : mapTimeSlots) {
+		slotIncrease[slotIter.first] = 0;
 		for (DB_TIME_RANGE& range : slotIter.second) {
 			RANGE_INCREASE* ri = new RANGE_INCREASE();
 			ri->pTimeRange = &range;
@@ -1352,9 +1354,10 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 			range.p = ri;
 		}
 	}
+
+	if (listTimeRange.size()==0) return slotIncrease;
+
 	map<DB_TIME, RANGE_INCREASE*>::iterator iterTimeRange = listTimeRange.begin();
-
-
 	//get first and last de in each range
 	yyjson_val* pDe = nullptr;
 	yyjson_val* pPreviousDe = nullptr;
@@ -1427,7 +1430,6 @@ map<string, double> TDB::doAggrOneGroup_increase_withTimeSlots(DE_SELECTOR& deSe
 
 	//sum each range incease
 	bool aggrKeyUndefined = false;
-	map<string, double> slotIncrease;
 	for (auto& slotIter : mapTimeSlots) {
 		double dbIncrease = 0;
 		for (DB_TIME_RANGE& iter : slotIter.second) {
@@ -2702,6 +2704,11 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			}
 
 			deSel.mapTimeSlots[slotName] = rangeSeries;
+		}
+		if (deSel.mapTimeSlots.size() == 0)
+		{
+			err = "timeSlot is obj,but null";
+			return;
 		}
 	}
 }
