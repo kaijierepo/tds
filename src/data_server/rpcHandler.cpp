@@ -5098,9 +5098,28 @@ void rpcHandler::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 }
 
+std::string base64_decode(const std::string& in) {
+	std::string out;
+	std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+	int val = 0, valb = -8;
+	for (unsigned char c : in) {
+		if (c == '=') break;
+		if (base64_chars.find(c) == std::string::npos) break;
+		val = (val << 6) + base64_chars.find(c);
+		valb += 6;
+		if (valb >= 0) {
+			out.push_back(char((val >> valb) & 0xFF));
+			valb -= 8;
+		}
+	}
+	return out;
+}
+
 void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	string path = "";
+	string encode = "";
 	if (!params["path"].is_string())
 	{
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
@@ -5113,14 +5132,35 @@ void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION sessio
 		return;
 	}
 
+	if (params["encode"].is_string())
+	{
+		encode= params["encode"].get<string>();
+	}
+
 	path = params["path"].get<string>();
 	if (path != "")
 	{
 		string conf = params["data"].get<string>();
 		path = tds->conf->confPath + "/" + path;
 		fs::createFolderOfPath(path);
-		fs::writeFile(path, conf);
-		resp.result = RPC_OK;
+		if (encode=="base64")
+		{
+			std::string image_data = base64_decode(conf);
+			wstring wpath = charCodec::tds_to_utf16(path);
+			// Write the binary data to a file
+			std::ofstream image_file(wpath, std::ios::out | std::ios::binary);
+			if (image_file.is_open())
+			{
+				image_file.write(image_data.c_str(), image_data.length());
+				image_file.close();
+			}
+			resp.result = RPC_OK;
+		}
+		else
+		{
+			fs::writeFile(path, conf);
+			resp.result = RPC_OK;
+		}
 	}
 	else {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "path not specified");
