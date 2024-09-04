@@ -14,6 +14,7 @@ public:
 	bool onRecvPkt(unsigned char* pData, size_t iLen) override;
 	bool isConnected() override;
 	bool sendData(unsigned char* pData, size_t iLen) override;
+	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo);
 	unsigned short m_transId;
 };
 

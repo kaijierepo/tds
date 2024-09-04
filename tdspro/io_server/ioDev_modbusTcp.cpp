@@ -4,6 +4,7 @@
 #include "logger.h"
 #include "common.h"
 #include "ioSrv.h"
+#include "webSrv.h"
 
 
 namespace ns_ioDev_ModbusTcp {
@@ -80,6 +81,18 @@ bool ioDev_ModbusTcp::sendData(unsigned char* pData, size_t iLen)
 	else
 		return false;
 	return true;
+}
+
+void ioDev_ModbusTcp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+{
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
+
+	stream2pkt* pab = &m_pab;
+	pab->PushStream(pData, len);
+	while (pab->PopPkt(IsValidPkt_ModbusTcp, false))
+	{
+		onRecvPkt(pab->pkt, pab->iPktLen);
+	}
 }
 
 

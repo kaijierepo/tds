@@ -2413,6 +2413,29 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 	return bHandled;
 }
 
+
+void createObjRecursive(string path, OBJ* pParent) {
+	vector<fs::FILE_INFO>  folderList;
+	fs::getFolderList(folderList, path);
+	for (int i = 0; i < folderList.size(); i++) {
+		string folderName = folderList[i].name;
+		OBJ* pC = new OBJ();
+		pC->m_name = folderName;
+		createObjRecursive(path + "/" + folderName, pC);
+
+		if (pC->m_childObj.size() == 0) //pC为监控点
+		{
+			delete pC;
+			MP* pmp = new MP();
+			pmp->m_name = folderName;
+			pParent->m_childObj.push_back(pmp);
+		}
+		else {
+			pParent->m_childObj.push_back(pC);
+		}
+	}
+}
+
 bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	bool bHandled = true;
@@ -2420,6 +2443,12 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	if (method == "xiaot")
 	{
 		rpcResp.result = tds->xiaoT->getReply(params);
+	}
+	else if (method == "generateObjTreeFromDB") {
+		string path = params["path"];
+		prj.clear();
+		createObjRecursive(path, &prj);
+		rpcResp.result = RPC_OK;
 	}
 	else if (method == "addLog")
 	{
