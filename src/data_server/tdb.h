@@ -65,7 +65,7 @@ struct DB_TIME {
 	string toStampHMS();
 	string toStampFull();
 	string toYMD();
-	string toStr(bool enableMS = true);
+	string toStr(bool enableMS = true) const;
 	bool fromStr(string str);
 	static string nowStr();
 	static string nowStrWithMilli();
@@ -259,6 +259,17 @@ struct DB_FILE {
 	TDB* pOwnerDB;
 
 	bool loadFile();
+
+	DB_FILE(DB_TIME t, string tag_, TDB* pOwner) {
+		monthBoundaryFile = false;
+		boundaryFile = false;
+		time = t;
+		ttTime = t.toUnixTime();
+		tag = tag_;
+		doc = nullptr;
+		root = nullptr;
+		pOwnerDB = pOwner;
+	}
 
 	DB_FILE(time_t tt,string tag_,TDB* pOwner) {
 		monthBoundaryFile = false;

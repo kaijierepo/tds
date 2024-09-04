@@ -1116,6 +1116,8 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	bool withTag = tagDBFileSet.size() > 1 ? true : false;
 	if (deSel.tagSel.getTag)
 		withTag = true;
+	if (deSel.deType == "curveIdx")
+		withTag = true;
 
 	map<string, map<string, yyjson_mut_val*>> timeSectionSeries; 
 
@@ -2252,7 +2254,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		{
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
 			string& tag = fSet.tag; // yyjson do not copy string,src string can not be release,use string& instead of a local variant
-			;
 			for (int i = 0; i < fSet.fileList.size(); i++)
 			{
 				DB_FILE* pdf = fSet.fileList[i];
@@ -2403,6 +2404,72 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			}
 			sCalcResult = formatStr("%f", dbSum);
 		}
+		else if (deSel.calc == "aes" || deSel.calc == "绝对误差和") { //Absolute Error Sum
+			map<DB_TIME, vector<double>*> curveList;
+			for (auto& i : mapRlt)
+			{
+				yyjson_mut_val* yyv_curve_de = i.second;
+				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
+				string time = yyjson_mut_get_str(yyv_time);
+				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
+				string tag = yyjson_mut_get_str(yyv_tag);
+				vector<double>* pPtList = new vector<double>();
+				DB_TIME dbtime;
+				dbtime.fromStr(time);
+				DB_FILE dbfile(dbtime,tag,this);
+				dbfile.deType = "curve";
+				if (dbfile.loadFile()) {
+					yyjson_val* yyv_curve = dbfile.root;
+					yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+					size_t idx = 0;
+					size_t max = 0; 
+					yyjson_val* item;
+					yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
+						if (yyjson_is_obj(item)) {
+							yyjson_val* yyv_y = yyjson_obj_get(item, "y");
+							double db;
+							if (yyjson_is_int(yyv_y)) {
+								int ival = yyjson_get_int(yyv_y);
+								db = ival;
+							}
+							else
+							    db = yyjson_get_real(yyv_y);
+							pPtList->push_back(db);
+						}
+					}
+					curveList[dbfile.time] = pPtList;
+				}
+			}
+
+			mapRlt.clear();
+			vector<double>* pLast = nullptr;
+			vector<double>* pCur = nullptr;
+			size_t sortIdx = 0;
+			for (auto& iter : curveList) {
+				pCur = iter.second;
+				double aes = 0;
+				if (pCur && pLast) {
+					for (int i = 0; i < pLast->size() && i < pCur->size(); i++) {
+						aes += abs((*pLast)[i] - (*pCur)[i]);
+					}
+
+					yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
+					yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+					yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+					yyjson_mut_obj_put(yyv_aes_de, yyv_time_key, yyv_time_val);
+
+					yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+					yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, aes);
+					yyjson_mut_obj_put(yyv_aes_de, yyv_val_key, yyv_val_val);
+
+					SORT_FLAG sf;
+					sf.dbFlag = sortIdx++;
+					mapRlt[sf] = yyv_aes_de;
+				}
+				pLast = pCur;
+			}
+			pCalcResult = &mapRlt;
+		}
 	}
 
 
@@ -2419,7 +2486,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 
 	size_t len = 0;
-	if (deSel.calc != "") {
+
+	if(deSel.calc != ""){
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 			//size_t len = strlen(p);
@@ -4651,7 +4719,7 @@ string DB_TIME::toYMD()
 }
 
 
-string  DB_TIME::toStr(bool enableMS)
+string  DB_TIME::toStr(bool enableMS) const
 {
 	if (enableMS) {
 		string str = formatStr("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",wYear, wMonth, wDay,wHour, wMinute, wSecond,wMilliseconds);
