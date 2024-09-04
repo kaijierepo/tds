@@ -753,10 +753,10 @@ void ioDev::doPingHeartbeat(string ip)
 	strcmd = "ping -c 2 -w 500 > /dev/null " + ip;
 #endif
 	
-	//int isatus = system(strcmd.c_str());  
+	//int isatus = system(strcmd.c_str());  该函数不能并发
 
 	int isatus = 1;
-	FILE* fp = _popen(strcmd.c_str(), "r");
+	FILE* fp = _popen(strcmd.c_str(), "r"); //此函数可以并发
 	if (fp == NULL)
 		isatus = -1;
 	else
