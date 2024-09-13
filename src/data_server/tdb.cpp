@@ -28,6 +28,7 @@ SOFTWARE.
 
 #include "tdb.h"
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include "yyjson.h"
 #include <stdarg.h>
@@ -141,6 +142,15 @@ namespace DB_STR {
 		return str;
 	}
 
+	bool isTime(string& s) {
+		char a = s[4];
+		char b = s[7];
+		if (a == '-' && b == '-') {
+			return true;
+		}
+		return false;
+	}
+
 	string utf8_to_gb(string instr) //utf-8-->ansi
 	{
 		string str;
@@ -226,6 +236,18 @@ namespace DB_STR {
 		return nCount;
 	}
 
+	string replace(string str, const string to_replaced, const string newchars)
+	{
+		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		{
+			pos = str.find(to_replaced, pos);
+			if (pos != string::npos)
+				str.replace(pos, to_replaced.length(), newchars);
+			else
+				break;
+		}
+		return   str;
+	}
 }
 
 
@@ -573,6 +595,31 @@ namespace DB_FS {
 		return ;
 #endif
 	}
+
+	bool copyFile(const std::string& src, const std::string& dest) {
+		std::ifstream srcFile(src, std::ios::binary);
+		if (!srcFile) {
+			std::cerr << "Failed to open source file: " << src << std::endl;
+			return false;
+		}
+
+		std::ofstream destFile(dest, std::ios::binary);
+		if (!destFile) {
+			std::cerr << "Failed to open destination file: " << dest << std::endl;
+			return false;
+		}
+		destFile << srcFile.rdbuf();
+
+		if (!destFile) {
+			std::cerr << "Failed to write to destination file: " << dest << std::endl;
+			return false;
+		}
+
+		srcFile.close();
+		destFile.close();
+
+		return true;
+	}
 }
 
 
@@ -890,6 +937,13 @@ string TDB::changeCharForFileName(string s) {
 }
 
 //generate  or get the existted
+string TDB::getPath_dbFile(string tag, string time, string deType)
+{
+	DB_TIME dbt;
+	dbt.fromStr(time);
+	return getPath_dbFile(tag, dbt, deType);
+}
+
 string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 {
 	string folder = getPath_dataFolder(strTag,date);
@@ -2155,8 +2209,18 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 
 	yyjson_val* yyv_calc = yyjson_obj_get(params, "calc");
-	if (yyv_calc && yyjson_is_str(yyv_calc)) {
-		deSel.calc = yyjson_get_str(yyv_calc);
+	if (yyv_calc) {
+		if(yyjson_is_str(yyv_calc))
+			deSel.calc = yyjson_get_str(yyv_calc);
+		else if (yyjson_is_obj(yyv_calc)) {
+			yyjson_val* yyv_calc_alg = yyjson_obj_get(yyv_calc, "alg");
+			if(yyv_calc_alg)
+				deSel.calc = yyjson_get_str(yyv_calc_alg);
+			yyjson_val* yyv_calc_baseCurve = yyjson_obj_get(yyv_calc, "baseCurve");
+			if (yyv_calc_baseCurve) {
+				deSel.baseCurve = yyjson_get_str(yyv_calc_baseCurve);
+			}
+		}
 	}
 
 	yyjson_val* yyv_timeFill = yyjson_obj_get(params, "timeFill");
@@ -2404,15 +2468,18 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			}
 			sCalcResult = formatStr("%f", dbSum);
 		}
-		else if (deSel.calc == "aes" || deSel.calc == "绝对误差和") { //Absolute Error Sum
+		else if (deSel.deType == "curveIdx" && (deSel.calc == "aes" || deSel.calc == "绝对误差和")) { //Absolute Error Sum
 			map<DB_TIME, vector<double>*> curveList;
+			vector<double> refCurvePt;
+			vector<double> specifyCurvePt;
+			string tag;
 			for (auto& i : mapRlt)
 			{
 				yyjson_mut_val* yyv_curve_de = i.second;
 				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
 				string time = yyjson_mut_get_str(yyv_time);
 				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
-				string tag = yyjson_mut_get_str(yyv_tag);
+				tag = yyjson_mut_get_str(yyv_tag);
 				vector<double>* pPtList = new vector<double>();
 				DB_TIME dbtime;
 				dbtime.fromStr(time);
@@ -2442,15 +2509,109 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			}
 
 			mapRlt.clear();
-			vector<double>* pLast = nullptr;
+			vector<double>* pBase = nullptr;
+			if (deSel.baseCurve == "refCurve") {
+				string path = m_confPath + "/refCurve/";
+				string subPath = DB_STR::replace(tag, ".", "/");
+				path += subPath + "/refCurve.json";
+				string s;
+				DB_FS::readFile(path, s);
+				if (s == "") {
+					db_exception dbe;
+					dbe.m_error = "refCurve not found";
+					throw dbe;
+				}
+
+				yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
+				if (!doc) {
+					s = DB_STR::gb_to_utf8(s);
+					doc = yyjson_read(s.data(), s.size(), 0);
+				}
+				if (!doc) {
+					db_exception dbe;
+					dbe.m_error = "refCurve not found";
+					throw dbe;
+				}
+
+				yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
+				if (!yyv_curve) {
+					db_exception dbe;
+					dbe.m_error = "refCurve not found";
+					throw dbe;
+				}
+
+				yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+				size_t idx = 0;
+				size_t max = 0;
+				yyjson_val* item;
+				yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
+					if (yyjson_is_obj(item)) {
+						yyjson_val* yyv_y = yyjson_obj_get(item, "y");
+						double db;
+						if (yyjson_is_int(yyv_y)) {
+							int ival = yyjson_get_int(yyv_y);
+							db = ival;
+						}
+						else
+							db = yyjson_get_real(yyv_y);
+						refCurvePt.push_back(db);
+					}
+				}
+
+				pBase = &refCurvePt;
+			}
+			else if(DB_STR::isTime(deSel.baseCurve)) {
+				string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
+				string s;
+				DB_FS::readFile(path, s);
+				yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
+				if (!doc) {
+					s = DB_STR::gb_to_utf8(s);
+					doc = yyjson_read(s.data(), s.size(), 0);
+				}
+				if (!doc) {
+					db_exception dbe;
+					dbe.m_error = "specified curve not found";
+					throw dbe;
+				}
+
+				yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
+				if (!yyv_curve) {
+					db_exception dbe;
+					dbe.m_error = "specified curve not found";
+					throw dbe;
+				}
+
+				yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+				size_t idx = 0;
+				size_t max = 0;
+				yyjson_val* item;
+				yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
+					if (yyjson_is_obj(item)) {
+						yyjson_val* yyv_y = yyjson_obj_get(item, "y");
+						double db;
+						if (yyjson_is_int(yyv_y)) {
+							int ival = yyjson_get_int(yyv_y);
+							db = ival;
+						}
+						else
+							db = yyjson_get_real(yyv_y);
+						specifyCurvePt.push_back(db);
+					}
+				}
+
+				pBase = &specifyCurvePt;
+			}
+
+
 			vector<double>* pCur = nullptr;
 			size_t sortIdx = 0;
 			for (auto& iter : curveList) {
 				pCur = iter.second;
 				double aes = 0;
-				if (pCur && pLast) {
-					for (int i = 0; i < pLast->size() && i < pCur->size(); i++) {
-						aes += abs((*pLast)[i] - (*pCur)[i]);
+				if (pCur && pBase) {
+					for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+						aes += abs((*pBase)[i] - (*pCur)[i]);
 					}
 
 					yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
@@ -2466,7 +2627,14 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 					sf.dbFlag = sortIdx++;
 					mapRlt[sf] = yyv_aes_de;
 				}
-				pLast = pCur;
+
+				if (deSel.baseCurve == "previous") {
+					pBase = pCur;
+				}
+			}
+
+			for (auto& i : curveList) {
+				delete i.second;
 			}
 			pCalcResult = &mapRlt;
 		}
@@ -4195,6 +4363,10 @@ string TIME_SELECTOR::shortSel2StardardSel(string time)
 	else if (time[4] == '-' && time.length() == 10) {
 		return time + " 00:00:00~" + time + " 23:59:59";
 	}
+	//2020-02-02 11:12:30
+	else if (time[4] == '-' && time.length() == 19) {
+		return time + ".000~" + time + ".999";
+	}
 	//2021~2022
 	else if (time.length() == 9 && time[4] == '~'){
 		string startYear = time.substr(0, 4);
@@ -4224,9 +4396,9 @@ bool TIME_SELECTOR::parseTimeRange(string condition)
 	 strStart = condition.substr(0, pos);
 	 strEnd = condition.substr(pos + 1, condition.length() - pos - 1);
 	if (strStart.find(":") == string::npos)
-		strStart += " 00:00:00";
+		strStart += " 00:00:00.000";
 	if (strEnd.find(":") == string::npos)
-		strEnd += " 23:59:59";
+		strEnd += " 23:59:59.999";
 	stStart.fromStr(strStart);
 	stEnd.fromStr(strEnd);
 	startTime = stStart.toUnixTime(); 

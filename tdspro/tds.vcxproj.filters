@@ -482,6 +482,9 @@
     <ClInclude Include="..\src\common\miniz.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\common\DTW.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

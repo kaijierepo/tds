@@ -2,6 +2,8 @@
 #include <filesystem>
 #include <stdarg.h>
 #include <random>
+#include <iostream>
+#include <fstream>
 using namespace std;
 
 namespace common {
@@ -1964,6 +1966,50 @@ namespace fs {
 #endif
 	}
 
+	bool copyFile(const std::string& src, const std::string& dest) {
+#ifdef _WIN32
+		// 在 Windows 上，将 UTF-8 路径转换为 UTF-16
+		std::wstring src_wstr = charCodec::utf8_to_utf16(src);
+		std::wstring dest_wstr = charCodec::utf8_to_utf16(dest);
+
+		std::ifstream srcFile(src_wstr, std::ios::binary);
+		if (!srcFile) {
+			std::cerr << "Failed to open source file: " << src << std::endl;
+			return false;
+		}
+
+		std::ofstream destFile(dest_wstr, std::ios::binary);
+		if (!destFile) {
+			std::cerr << "Failed to open destination file: " << dest << std::endl;
+			return false;
+		}
+#else
+		std::ifstream srcFile(src, std::ios::binary);
+		if (!srcFile) {
+			std::cerr << "Failed to open source file: " << src << std::endl;
+			return false;
+		}
+
+		std::ofstream destFile(dest, std::ios::binary);
+		if (!destFile) {
+			std::cerr << "Failed to open destination file: " << dest << std::endl;
+			return false;
+		}
+#endif
+
+
+		destFile << srcFile.rdbuf();
+
+		if (!destFile) {
+			std::cerr << "Failed to write to destination file: " << dest << std::endl;
+			return false;
+		}
+
+		srcFile.close();
+		destFile.close();
+
+		return true;
+	}
 
 	bool deleteFolder(string path) {
 		try {

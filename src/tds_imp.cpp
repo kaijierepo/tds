@@ -393,6 +393,7 @@ bool TDS_imp::run(string cmdline)
 		::db.m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.json");
 		::db.m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
+		::db.m_confPath = tds->conf->confPath;
 	}
 		
 	prj.loadObjTemplate();

@@ -444,6 +444,7 @@ namespace fs {
 	bool appendFile(string path, char* data, size_t len);
 	bool appendFile(string path, string data);
 	bool writeFile(string path, string& data);
+	bool copyFile(const std::string& src, const std::string& dest);
 	bool fileExist(string pszFileName);
 	bool deleteFile(string path);
 	bool deleteFolder(string path);

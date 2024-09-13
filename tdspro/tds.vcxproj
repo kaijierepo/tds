@@ -570,6 +570,7 @@
   <ItemGroup>
     <ClInclude Include="..\src\common\base64.h" />
     <ClInclude Include="..\src\common\common.h" />
+    <ClInclude Include="..\src\common\DTW.hpp" />
     <ClInclude Include="..\src\common\hmac.h" />
     <ClInclude Include="..\src\common\httplib.h" />
     <ClInclude Include="..\src\common\json.hpp" />

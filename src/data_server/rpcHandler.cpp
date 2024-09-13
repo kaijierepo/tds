@@ -1711,6 +1711,25 @@ bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP&
 	return bHandled;
 }
 
+string getRefCurvePath(json& params) {
+	string name;
+	if (params.contains("name"))
+		name = params["name"];
+	string tag = params["tag"];
+
+	string path = tds->conf->confPath + "/refCurve/";
+	string subPath = str::replace(tag, ".", "/");
+	path += subPath;
+	if (name.size() > 0) {
+		path += "/" + name + ".json";
+	}
+	else {
+		path += "/refCurve.json";
+	}
+
+	return path;
+}
+
 bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -1722,6 +1741,36 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "getConfFile") {
 		rpc_getconffile(params, rpcResp, session);
+	}
+	else if (method == "setRefCurve") {
+		string tag = params["tag"];
+		string path = getRefCurvePath(params);
+		fs::createFolderOfPath(path);
+
+		if (params.contains("curve")) {
+			json& curve = params["curve"];
+			string s = curve.dump(2);
+			fs::writeFile(path, s);
+		}
+		else if(params.contains("curveIdx")){
+			string curveIdx = params["curveIdx"];
+			string src = db.getPath_dbFile(tag, curveIdx, "curve");
+			fs::copyFile(src, path);
+		}
+
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "getRefCurve") {
+		string path = getRefCurvePath(params);
+		string s;
+		fs::readFile(path, s);
+		if (s != "") {
+			params["curve"] = json::parse(s);
+			rpcResp.result = params.dump();
+		}
+		else {
+			rpcResp.result = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "ref curve not found");
+		}
 	}
 	else if (method == "getObjTemplate") {
 		if (params.contains("name")) {

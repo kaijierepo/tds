@@ -428,7 +428,7 @@ struct DE_SELECTOR {
 
 	//use function to calc the selected dataset
 	string calc;
-
+	string baseCurve;
 	string getSelectorDesc();
 
 	DE_SELECTOR() {
@@ -625,6 +625,7 @@ public:
 	string saveDEFile(yyjson_val* yyvFileInfo, string path,DB_TIME dbTime,string& type);
 
 	//path management
+	string getPath_dbFile(string strTag, string time, string deType = "");
 	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
 	string changeCharForFileName(string s);
 	string getPath_dataFolder(string strTag, DB_TIME date);
@@ -639,6 +640,7 @@ public:
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 	fp_getTagsByTagSelector m_getTagsByTagSelector;
 	bool m_isGbk;
+	string m_confPath;
 };
 
 extern TDB db;
