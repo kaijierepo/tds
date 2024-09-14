@@ -1749,13 +1749,27 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 		if (params.contains("curve")) {
 			json& curve = params["curve"];
+			if (!curve.is_object()) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"curve should be an object");
+				return true;
+			}
 			string s = curve.dump(2);
 			fs::writeFile(path, s);
 		}
 		else if(params.contains("curveIdx")){
-			string curveIdx = params["curveIdx"];
+			json jcurveIdx = params["curveIdx"];
+			if (!jcurveIdx.is_string()) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "curveIdx should be a string");
+				return true;
+			}
+			string curveIdx = jcurveIdx.get<string>();
 			string src = db.getPath_dbFile(tag, curveIdx, "curve");
-			fs::copyFile(src, path);
+			string s;
+			fs::readFile(src, s);
+			if (str::isGB2312(s)) {
+				s = charCodec::gb_to_utf8(s);
+			}
+			fs::writeFile(path, s);
 		}
 
 		rpcResp.result = RPC_OK;
@@ -1769,7 +1783,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			rpcResp.result = params.dump();
 		}
 		else {
-			rpcResp.result = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "ref curve not found");
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "ref curve not found");
 		}
 	}
 	else if (method == "getObjTemplate") {

@@ -34,6 +34,8 @@ SOFTWARE.
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
+#include <DTW.hpp>
+#include "dtwrecoge.h"
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -143,10 +145,12 @@ namespace DB_STR {
 	}
 
 	bool isTime(string& s) {
-		char a = s[4];
-		char b = s[7];
-		if (a == '-' && b == '-') {
-			return true;
+		if (s.size() > 10) {
+			char a = s[4];
+			char b = s[7];
+			if (a == '-' && b == '-') {
+				return true;
+			}
 		}
 		return false;
 	}
@@ -805,6 +809,36 @@ std::string formatStr(const char* pszFmt, ...)
 	}
 	va_end(args);
 	return str;
+}
+
+int _vscprintf_cross_dblog(const char* format, va_list pargs) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, pargs);
+	retval = vsnprintf(NULL, 0, format, argcopy);
+	va_end(argcopy);
+	return retval;
+}
+
+void DBLog(const char* pszFmt, ...)
+{
+	std::string str;
+	va_list args;
+	va_start(args, pszFmt);
+	{
+		int nLength = _vscprintf_cross_dblog(pszFmt, args);
+		nLength += 1;
+		std::vector<char> vectorChars(nLength);
+		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+		str.assign(vectorChars.data());
+	}
+	va_end(args);
+
+	DB_TIME stNow;
+	stNow.setNow();
+	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	string logline = time + " " + str;
+	printf(logline.c_str());
 }
 
 TDB::TDB()
@@ -2468,7 +2502,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			}
 			sCalcResult = formatStr("%f", dbSum);
 		}
-		else if (deSel.deType == "curveIdx" && (deSel.calc == "aes" || deSel.calc == "绝对误差和")) { //Absolute Error Sum
+		else if (deSel.deType == "curveIdx" && deSel.calc != "") { //Absolute Error Sum
 			map<DB_TIME, vector<double>*> curveList;
 			vector<double> refCurvePt;
 			vector<double> specifyCurvePt;
@@ -2608,24 +2642,76 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			size_t sortIdx = 0;
 			for (auto& iter : curveList) {
 				pCur = iter.second;
-				double aes = 0;
+	
 				if (pCur && pBase) {
-					for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-						aes += abs((*pBase)[i] - (*pCur)[i]);
+					if (deSel.calc == "aes") {
+						double aes = 0;
+						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+							aes += abs((*pBase)[i] - (*pCur)[i]);
+						}
+
+						yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
+						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+						yyjson_mut_obj_put(yyv_aes_de, yyv_time_key, yyv_time_val);
+
+						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, aes);
+						yyjson_mut_obj_put(yyv_aes_de, yyv_val_key, yyv_val_val);
+
+						SORT_FLAG sf;
+						sf.dbFlag = sortIdx++;
+						mapRlt[sf] = yyv_aes_de;
 					}
+					else if (deSel.calc == "dtw") {
+						if (pBase->size() != pCur->size()) {
+							DBLog("dtw calc use different length,%d,%d\r\n", pBase->size(), pCur->size());
+						}
 
-					yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
-					yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-					yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-					yyjson_mut_obj_put(yyv_aes_de, yyv_time_key, yyv_time_val);
+						size_t len = pBase->size() < pCur->size() ? pBase->size() : pCur->size();
+						double dtw = DTWDistanceFun(pCur->data(), pCur->size(), pBase->data(), pBase->size(), pBase->size() / 10);
 
-					yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-					yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, aes);
-					yyjson_mut_obj_put(yyv_aes_de, yyv_val_key, yyv_val_val);
+						yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
+						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+						yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
 
-					SORT_FLAG sf;
-					sf.dbFlag = sortIdx++;
-					mapRlt[sf] = yyv_aes_de;
+						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
+						yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
+
+						SORT_FLAG sf;
+						sf.dbFlag = sortIdx++;
+						mapRlt[sf] = yyv_dtw_de;
+					}
+					else if (deSel.calc == "dtw2") {
+						vector<vector<double>> base;	
+						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+							vector<double> pt;
+							pt.push_back((*pBase)[i]);
+							base.push_back(pt);
+						}
+						vector<vector<double>> cur;
+						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+							vector<double> pt;
+							pt.push_back((*pCur)[i]);
+							cur.push_back(pt);
+						}
+						double dtw = DTW::dtw_distance_only(base, cur, 2);
+
+						yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
+						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+						yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
+
+						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
+						yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
+
+						SORT_FLAG sf;
+						sf.dbFlag = sortIdx++;
+						mapRlt[sf] = yyv_dtw_de;
+					}
 				}
 
 				if (deSel.baseCurve == "previous") {
@@ -3211,7 +3297,9 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				//every downsampling interval output one de; dsi=3,output 0 3 6...
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
 				{
-					if (idx % deSel.interval.dsi > 0 && idx < max - deSel.interval.dsi) continue;
+					bool reachInterval = idx % deSel.interval.dsi == 0 && idx < max - deSel.interval.dsi;
+					if(!reachInterval)
+						continue;
 				}
 
 				//generate standard time stamp, then do match

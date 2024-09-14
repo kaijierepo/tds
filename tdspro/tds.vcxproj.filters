@@ -239,6 +239,9 @@
     <ClCompile Include="..\src\common\miniz.c">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\common\dtwrecoge.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -483,6 +486,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\DTW.hpp">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\dtwrecoge.h">
       <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
