@@ -64,7 +64,7 @@ public:
 
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
 
-	size_t IsValidPkt_HTTP(unsigned char* pData,size_t iLen);
+
 
 
 };
@@ -72,6 +72,7 @@ public:
 
 //LF == line feed == 0x0A  CR == carriage return == 0x0D
 //return 0 if no valid pkt, else return length of the pkt
+extern size_t IsValidPkt_HTTP(unsigned char* pData, size_t iLen);
 extern size_t IsValidPkt_textEnd_LF(unsigned char* pData, size_t iLen); // 1个换行符结尾
 extern size_t IsValidPkt_textEnd_LFLF(unsigned char* pData, size_t iLen); // 2个换行符结尾
 extern size_t IsValidPkt_textEnd_CRLF(unsigned char* pData, size_t iLen); // 2个换行符结尾

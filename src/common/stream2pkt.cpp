@@ -375,7 +375,7 @@ bool stream2pkt::PopAllAs(string cpt)
 }
 
 
-size_t stream2pkt::IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
+size_t IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 {
 	unsigned char* ptmp = new unsigned char[iLen + 1];
 	memset(ptmp, 0, iLen + 1);

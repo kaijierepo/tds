@@ -162,6 +162,7 @@ public:
 	//io addr in struct format
 	string getIOAddrStr(bool ignorePort = false);
 	string getDevAddrStr(bool ignorePort = false);
+	string getIP();
 	string m_dispositionMode;
 	string m_devType;
 	string m_devSubType; //设备子类型
@@ -195,6 +196,7 @@ public:
 	virtual ioDev* getIODev(string ioAddr, bool bChn = false, bool ignorePort = false); //是否启用中文地址拼音模式查找
 	ioDev* getIODevByNodeID(string nodeID);
 	ioDev* getIODevByTag(string tag);
+	ioDev* getIODevByIP(string ip);
 	bool deleteIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChildDev;

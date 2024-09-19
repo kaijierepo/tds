@@ -326,20 +326,42 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 			tlBuf.Init();
 		}
 	}
-	//http处理    设备端http看以后是否需要支持
+	//http处理 http仅依靠ip地址区分设备，可以与其他连接同时存在
 	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
 	{
-		LOG("[warn][ioSrv]收到http数据，地址:%s,暂时不支持http数据，%s",ioSession->getRemoteAddr().c_str(), strData.c_str());
-		//stream2pkt& tlBuf = ioSession->m_tlBuf;
-		//tlBuf.PushStream((unsigned char*)pData, iLen);
-		//while (tlBuf.PopPkt(APP_LAYER_PROTO::HTTP))
-		//{
-		//	string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
-		//	httplib::Request httpReq;
-		//	httplib::Server srv;
-		//	srv.parse_request_line(sHttp.c_str(), httpReq);
-		//	OnRecvAppLayerData((unsigned char*)httpReq.body.c_str(),httpReq.body.length(), ioSession,true);
-		//}
+		stream2pkt& tlBuf = ioSession->m_tlBuf;
+		tlBuf.PushStream((unsigned char*)pData, iLen);
+		while (tlBuf.PopPkt(IsValidPkt_HTTP))
+		{
+			bool handled = false;
+			string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
+			vector<string> vec;
+			str::split(vec, sHttp, "\r\n\r\n");
+			
+			if (vec.size() >= 2) {
+				try
+				{
+					json j;
+					j.parse(vec[1]);
+					ioDev* p = getIODev(ioSession->remoteIP);
+					if (p->m_devType == DEV_TYPE::DEV::tdsp_device) {
+						ioDev* ptdsp = (ioDev*)p;
+						if (ptdsp) {
+							ptdsp->onRecvPkt(j);
+							handled = true;
+						}
+					}
+				}
+				catch (const std::exception&)
+				{
+
+				}
+			}
+
+			if (!handled) {
+				LOG("[warn]收到没有处理的设备http请求包,%s", sHttp.c_str());
+			}
+		}
 	}
 	//tcp直连,没有传输层，表示全部都是应用层数据
 	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)

@@ -1091,6 +1091,20 @@ string ioDev::getIOAddrStr(bool ignorePort)
 	return devAddr;
 }
 
+string ioDev::getIP() {
+	if (m_jDevAddr.is_object())
+	{
+		if (m_jDevAddr.contains("ip")) {
+			json jip = m_jDevAddr["ip"];
+			if (jip.is_string()) {
+				string ip = jip.get<string>();
+				return ip;
+			}
+		}
+	}
+	return "";
+}
+
 string ioDev::getDevAddrStr(bool ignorePort)
 {
 	string devAddr;
@@ -1170,6 +1184,19 @@ string ioDev::getDevAddrStr(bool ignorePort)
 	return devAddr;
 }
 
+ioDev* ioDev::getIODevByIP(string ip) {
+	ioDev* pD = nullptr;
+	lock_conf_shared();
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		if (p->getIP() == ip) {
+			pD = p;
+		}
+	}
+	unlock_conf_shared();
+	return pD;
+}
 
 ioDev* ioDev::getIODevByTag(string tag)
 {
