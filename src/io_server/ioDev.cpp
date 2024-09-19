@@ -1192,6 +1192,7 @@ ioDev* ioDev::getIODevByIP(string ip) {
 		ioDev* p = m_vecChildDev[i];
 		if (p->getIP() == ip) {
 			pD = p;
+			break;
 		}
 	}
 	unlock_conf_shared();
@@ -2022,6 +2023,7 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 
 void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
+	onRecvData(pData, len);
 }
 
 void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)

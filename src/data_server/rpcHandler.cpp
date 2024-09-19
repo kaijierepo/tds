@@ -3925,8 +3925,44 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	string rootTag = "";
 	vector<INPUT_DE> inputDEList;
 	if (params.is_object()) {
+		//文件模式输入
+		if (params.find("file") != params.end())
+		{
+			ioDev* p = ioSrv.getIODevByIP(session.remoteIP);
+			string tag;
+			if (p)
+			{
+				//tag = charCodec::utf8_to_gb(p->m_strTagBind);
+				tag = p->m_strTagBind + ".";
+			}
+
+			if (params.contains("tag"))
+				tag += params["tag"].get<string>();
+
+			DB_TIME tNow;
+			if (params.contains("time"))
+			{
+				string time = params["time"].get<string>();
+				if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
+					time += " 00:00:00";
+				}
+
+				if (!tNow.fromStr(time)) {
+					//err = "param time invalid format.";
+					return;
+				}
+			}
+			else {
+				tNow.setNow();
+			}
+
+			auto yymv_params = params;
+			yymv_params.erase("tag");
+			string sDe = yymv_params.dump();
+			db.Insert(tag, sDe, &tNow);
+		}
 		//对象属性模式输入
-		if (params.find("data") != params.end()) {
+		else if (params.find("data") != params.end()) {
 			json deList = params["data"];
 
 			if (params.find("tag") != params.end()) {
