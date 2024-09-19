@@ -589,8 +589,8 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 	else if (method == "input" || method == "acq")
 	{
 		handle_AcqOrInput(yyv_params,doc);
-		string resp = "{\"method\":\"" + method + "\",\"result\":\"ok\"}\n\n";
-		sendData((unsigned char*)resp.c_str(), resp.size());
+		//string resp = "{\"method\":\"" + method + "\",\"result\":\"ok\"}\n\n";
+		//sendData((unsigned char*)resp.c_str(), resp.size());
 	}
 	else if (method == "notifyAlarmStatus")
 	{

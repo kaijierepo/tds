@@ -341,13 +341,12 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 			if (vec.size() >= 2) {
 				try
 				{
-					json j;
-					j.parse(vec[1]);
-					ioDev* p = getIODev(ioSession->remoteIP);
+					string& tdspPkt = vec[1];
+					ioDev* p = getIODevByIP(ioSession->remoteIP);
 					if (p->m_devType == DEV_TYPE::DEV::tdsp_device) {
-						ioDev* ptdsp = (ioDev*)p;
+						ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
 						if (ptdsp) {
-							ptdsp->onRecvPkt(j);
+							ptdsp->onRecvData((unsigned char*)tdspPkt.c_str(),tdspPkt.size());
 							handled = true;
 						}
 					}
