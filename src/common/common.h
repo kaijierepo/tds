@@ -32,6 +32,26 @@
 #include <stdlib.h>
 #endif
 
+#ifdef _WIN32
+class CAutoLock
+{
+public:
+	CAutoLock(LPCRITICAL_SECTION lpCriticalSetion)
+	{
+		EnterCriticalSection(lpCriticalSetion);
+		m_lpCriticalSetion = lpCriticalSetion;
+	}
+
+	virtual ~CAutoLock()
+	{
+		LeaveCriticalSection(m_lpCriticalSetion);
+	}
+protected:
+	LPCRITICAL_SECTION   m_lpCriticalSetion;
+};
+
+#endif
+
 using namespace std;
 
 struct Date {

@@ -10,6 +10,7 @@
 #include  "reverseInterface.h"
 #include "httplib.h"
 #include "ioDev_tdsp.h"
+#include "ioDev_dcqk.h"
 #include "base64.h"
 #include "webSrv.h"
 #include "wsProto.h"
@@ -246,9 +247,12 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			p->m_IoDev = pIoDev;
 			pIoDev->setOnline();
 			timeopt::now(&pIoDev->m_stLastActiveTime);
-			logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
-			pIoDev->bindIOSession(p);
 
+			pIoDev->bindIOSession(p);
+			if (pIoDev->pIOSession == p)
+			{
+				logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
+			}
 			if (pIoDev->m_devType == DEV_TYPE_iq60) {
 				pIoDev->sendStr("[]\n");
 			}
@@ -343,10 +347,10 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 				{
 					string& tdspPkt = vec[1];
 					ioDev* p = getIODevByIP(ioSession->remoteIP);
-					if (p->m_devType == DEV_TYPE::DEV::tdsp_device) {
+					if (p && p->isTdsp()) {
 						ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
 						if (ptdsp) {
-							ptdsp->onRecvData((unsigned char*)tdspPkt.c_str(),tdspPkt.size());
+							ptdsp->ioDev_tdsp::onRecvData((unsigned char*)tdspPkt.c_str(),tdspPkt.size());
 							handled = true;
 						}
 					}

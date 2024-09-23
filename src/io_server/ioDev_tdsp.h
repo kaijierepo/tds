@@ -18,7 +18,7 @@ public:
 	~ioDev_tdsp();
 
 	void syncDataToMasterTds(yyjson_val* val,yyjson_doc* doc);
-
+	bool isTdsp() { return true; }
 	void stop();
 	void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) override;
 	void output(ioChannel* pC, json jVal, json& rlt, json& err, bool sync = true) override;
@@ -28,7 +28,7 @@ public:
 	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
 	//bool onRecvPkt(json jPkt);
 	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc);
-	bool onRecvData(unsigned char* pData, size_t iLen) override;
+	virtual bool onRecvData(unsigned char* pData, size_t iLen) override;
 	bool getCurrentVal();
 	bool sendData(unsigned char* pData, size_t iLen) override;
 	bool handleNotify(yyjson_val* jNotify, yyjson_doc* doc);
@@ -47,7 +47,7 @@ public:
 	void DoCycleTaskSync() override;
 	void onEvent_online() override;
 
-	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	void translateToDevPkt(string& tdspPkt,vector<unsigned char>& devPkt);
 	void translateToTdspPkt(char* devPkt, int len, string& tdspPkt);

@@ -51,6 +51,7 @@ void TcpClientRecvThread(void* lpParam)
 	pTcpClt->m_session.remoteIP = pTcpClt->m_remoteIP;
 	pTcpClt->m_session.remotePort = pTcpClt->m_remotePort;
 	pTcpClt->m_session.sock = sock;
+	//pTcpClt->m_session.bIsHttp = false;
 
 	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
 

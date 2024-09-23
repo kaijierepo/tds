@@ -716,8 +716,8 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		data += str;
 	}
 	fs::createFolderOfPath(strFile);
-	
-	fs::writeFile(strFile,data);
+	data = charCodec::utf8_to_gb(data);
+	fs::writeFile(strFile, data);
 }
 
 string almTable::getFilePath(int y,int m){
@@ -757,6 +757,7 @@ void almTable::loadFile(string strFile)
 
 	string strDBData;
 	fs::readFile(strFile, strDBData);
+	strDBData = charCodec::gb_to_utf8(strDBData);
 	vector<string> recLines;
 	str::split(recLines, strDBData, "\r\n");
 	for (int i = 1; i < recLines.size(); i++)

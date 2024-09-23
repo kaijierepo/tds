@@ -121,6 +121,7 @@ public:
 	virtual void stop();
 	bool m_bRunning;
 	semaphore m_evtIO;
+	virtual bool isTdsp() { return false; }
 	virtual bool isBusBusy() { return false; };
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
 	virtual bool toJson(json& conf, DEV_QUERIER querier);
@@ -234,7 +235,7 @@ public:
 	static string removePortFromDevAddr(string devAddr);
 
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn) override;
-	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	string getTagBind();
 

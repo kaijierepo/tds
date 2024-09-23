@@ -1,12 +1,12 @@
 #pragma once
-#include "ioDev.h"
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "json.hpp"
 #include "Parse315Protocol.h"
+#include "ioDev_tdsp.h"
 
 
-class ioDev_dcqk : public ioDev
+class ioDev_dcqk : public ioDev_tdsp
 {
 public:
 	ioDev_dcqk();
@@ -69,6 +69,7 @@ public:
 	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
 
 	void ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc);
+	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	//
 	void Do_CMD_CODE_YYQX(LPVOID pData);

@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <windows.h>
 using namespace std;
 
 typedef size_t(*fp_validPktCheck)(unsigned char* pData, size_t iLen);
@@ -28,7 +29,7 @@ public:
 		}
 	}
 	
-	void Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize);
+	static void Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize);
 	void ResizeStreamBuff(size_t iNewSize);
 	void ResizePopPktBuff(size_t iNewSize);
 	void PushStream(unsigned char* pData, size_t iLen);
@@ -43,7 +44,12 @@ public:
 	{
 		pkt = NULL;
 		stream = NULL;
+		InitializeCriticalSection(&m_cs); // 初始化临界区
 		Init();
+	}
+	~stream2pkt()
+	{
+		DeleteCriticalSection(&m_cs); // 删除临界区
 	}
 
 	std::vector<unsigned char> m_prefix;
@@ -61,12 +67,8 @@ public:
 
 	size_t iAbandonLen;
 	string abandonData;
-
+	CRITICAL_SECTION m_cs;
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
-
-
-
-
 };
 
 

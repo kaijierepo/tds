@@ -36,6 +36,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		pts->remotePort = ntohs(c->rem.port); 
 		pts->localIP = pSrv->m_strServerIP;
 		pts->localPort = pSrv->m_iServerPort;
+		pts->bIsHttp = true;
 		pSrv->m_csClientVectorLock.lock();
 		pSrv->m_mapTcpSessions[pts] = pts;
 		pSrv->m_csClientVectorLock.unlock();

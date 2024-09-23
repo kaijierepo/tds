@@ -202,16 +202,19 @@ void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 
 void stream2pkt::ResizeStreamBuff(size_t iNewSize)
 {
+	CAutoLock lock(&m_cs);
 	Resize(stream, iStreaBuffSize, iNewSize);
 }
 
 void stream2pkt::ResizePopPktBuff(size_t iNewSize)
 {
+	CAutoLock lock(&m_cs);
 	Resize(pkt, iPktBuffSize, iNewSize);
 }
 
 void stream2pkt::PushStream(unsigned char* pData, size_t iLen)
 {
+	CAutoLock lock(&m_cs);
 	if (iStreamLen + iLen > iStreaBuffSize)
 		ResizeStreamBuff(iStreamLen + iLen);
 
@@ -226,6 +229,7 @@ void stream2pkt::PushStream(char* pData, size_t iLen)
 
 bool stream2pkt::PopPkt(string cpt)
 {
+	CAutoLock lock(&m_cs);
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
 	for (size_t i = 0; i < iStreamLen; i++)
 	{
@@ -298,6 +302,8 @@ bool stream2pkt::PopPkt(string cpt)
 
 bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 {
+	CAutoLock lock(&m_cs);
+
 	//对位置i到末尾的数据进行有效数据包判断，允许i之前出现错误数据。有可能i到末尾之前有多个数据包
 	for (int i = 0; i < iStreamLen; i++)
 	{
@@ -359,6 +365,8 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 
 bool stream2pkt::PopAllAs(string cpt)
 {
+	CAutoLock lock(&m_cs);
+
 	if(iStreamLen > iPktBuffSize)
 		ResizePopPktBuff(iStreamLen);
 
@@ -387,11 +395,15 @@ size_t IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 	//没有http body的情况
 	if (iPos_contentLengthLineStart == string::npos)
 	{
-		string tail = strData.substr(strData.length() - 4, 4);
-		if (tail == "\r\n\r\n")
-			return iLen;
-		else
-			return 0;
+		auto iDataLen = strData.length();
+		if (iDataLen >= 4)
+		{
+			string tail = strData.substr(iDataLen - 4, 4);
+			if (tail == "\r\n\r\n")
+				return iLen;
+			else
+				return 0;
+		}
 	}
 	else
 	{
@@ -424,6 +436,7 @@ size_t IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 
 		return 0;
 	}
+	return 0;
 }
 
 

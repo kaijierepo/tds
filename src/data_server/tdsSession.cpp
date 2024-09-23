@@ -251,13 +251,13 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      {
          delete pBridgedTcpClient;
      }
-     if (m_IoDev)
+     if (m_IoDev && shared_from_this() == m_IoDev->pIOSession)
      {
          m_IoDev->bindIOSession(NULL);
          m_IoDev->setOffline();
          logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDev->getIOAddrStr() + ",tag=" + m_IoDev->m_strTagBind);
-         m_IoDev = NULL;
      }
+	 m_IoDev = NULL;
      if (bridgedIoSession)
      {
          bridgedIoSession->bridgedIoSessionClient = NULL;

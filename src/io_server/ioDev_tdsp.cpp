@@ -230,6 +230,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 			//通道地址通过ioAddr来指定
 			if (yyjson_is_obj(yyvDe)) {
 				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "addr");
+				yyjson_val* yyv_tag = yyjson_obj_get(yyvDe, "tag");
 				if (yyv_addr == nullptr)
 					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式，ioAddr语义不合理，应该使用addr语义才准确
 				if (yyv_addr) {
@@ -245,6 +246,14 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 
 					if (pC)
 						pC->input(yyv_val);
+				}
+				else if (yyv_tag) {
+					string s = yyjson_val_write(yyvDe, YYJSON_WRITE_NOFLAG, nullptr);
+					json j = json::parse(s);
+					string tag = yyjson_get_str(yyv_tag);
+					tag = m_strTagBind + "." + tag;
+					j["tag"] = tag;
+					tds->callAsyn("input", j);
 				}
 			}
 			//格式为 [1.3,1.2,2,3,true] ,数组序号就是通道号

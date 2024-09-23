@@ -21,7 +21,7 @@ namespace TDSP_SUB_TYPE{
 
 
 //有状态会话信息，包含通信链路信息
-class TDS_SESSION : public RPC_SESSION{
+class TDS_SESSION : public RPC_SESSION, public std::enable_shared_from_this<TDS_SESSION> {
 public:
     TDS_SESSION();
 	~TDS_SESSION();

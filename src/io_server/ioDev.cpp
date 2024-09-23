@@ -1880,6 +1880,15 @@ void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 	if (pIOSession == ioSession)
 		return;
 
+	// tdspPort端口连接不进行替换绑定
+	if (pIOSession != nullptr && pIOSession != ioSession && ioSession != nullptr && isConnected())
+	{
+		if (tds->conf->tdspPort == ioSession->localPort)
+		{
+			return; 
+		}
+	}
+
 	//1个tcp链接对应1个io设备的场景
 	if(ioSession!=nullptr)
 		ioSession->m_IoDev = this;

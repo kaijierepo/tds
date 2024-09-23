@@ -3926,48 +3926,49 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	vector<INPUT_DE> inputDEList;
 	if (params.is_object()) {
 		//文件模式输入
-		if (params.find("file") != params.end())
-		{
-			ioDev* p = ioSrv.getIODevByIP(session.remoteIP);
-			string tag;
-			if (p)
-			{
-				//tag = charCodec::utf8_to_gb(p->m_strTagBind);
-				tag = p->m_strTagBind + ".";
-			}
-
-			if (params.contains("tag"))
-				tag += params["tag"].get<string>();
-
-			DB_TIME tNow;
-			if (params.contains("time"))
-			{
-				string time = params["time"].get<string>();
-				if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
-					time += " 00:00:00";
-				}
-
-				if (!tNow.fromStr(time)) {
-					//err = "param time invalid format.";
-					return;
-				}
-			}
-			else {
-				tNow.setNow();
-			}
-
-			auto yymv_params = params;
-			yymv_params.erase("tag");
-			string sDe = yymv_params.dump();
-			db.Insert(tag, sDe, &tNow);
-		}
+// 		if (params.find("file") != params.end())
+// 		{
+// 			ioDev* p = ioSrv.getIODevByIP(session.remoteIP);
+// 			string tag;
+// 			if (p)
+// 			{
+// 				//tag = charCodec::utf8_to_gb(p->m_strTagBind);
+// 				tag = p->m_strTagBind + ".";
+// 			}
+// 
+// 			if (params.contains("tag"))
+// 				tag += params["tag"].get<string>();
+// 
+// 			DB_TIME tNow;
+// 			if (params.contains("time"))
+// 			{
+// 				string time = params["time"].get<string>();
+// 				if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
+// 					time += " 00:00:00";
+// 				}
+// 
+// 				if (!tNow.fromStr(time)) {
+// 					//err = "param time invalid format.";
+// 					return;
+// 				}
+// 			}
+// 			else {
+// 				tNow.setNow();
+// 			}
+// 
+// 			auto yymv_params = params;
+// 			yymv_params.erase("tag");
+// 			string sDe = yymv_params.dump();
+// 			db.Insert(tag, sDe, &tNow);
+// 		}
 		//对象属性模式输入
-		else if (params.find("data") != params.end()) {
+		/*else*/ if (params.find("data") != params.end()) {
 			json deList = params["data"];
 
 			if (params.find("tag") != params.end()) {
 				rootTag = params["tag"];
 			}
+
 			if (params.find("objID") != params.end()) {
 				string objID = params["objID"];
 				OBJ* pO = prj.getObjByID(objID);
@@ -4017,6 +4018,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 			}
 			*/
 			if (tag.is_string()) {
+				string strTag = charCodec::utf8_to_gb(tag.get<string>());
 				INPUT_DE de;
 				de.tag = tag;
 				de.val = val;
@@ -4114,7 +4116,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	//使用位号输入
 	if (inputDEList.size() > 0) {
 		//监测点组输入模式
-		json jTagNotExist = json::array();
+		//json jTagNotExist = json::array();
 		vector<MP*> vecMps;
 		for (int i = 0; i < inputDEList.size(); i++) {
 			INPUT_DE& de = inputDEList[i];
@@ -4134,10 +4136,12 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 						vecMps.push_back(pmp);
 				}
 				else {
-					//params.erase("tag");
-					//string sDe = params.dump();
-					//db.Insert(tag, sDe);
-					jTagNotExist.push_back(tag);
+					params.erase("tag");
+					string sDe = params.dump();
+					DB_TIME dbTime;
+					dbTime.fromStr(de.sTime);
+					db.Insert(tag, sDe, &dbTime);
+					//jTagNotExist.push_back(tag);
 				}
 			}
 		}

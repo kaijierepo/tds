@@ -258,6 +258,18 @@ int main(int argc, char** argv)
 
 	//_CrtSetBreakAlloc(124823298);
 
+	//{
+	//	unsigned char* pData; int iLen = 0;
+	//	fs::readFile("d:\\2.txt", pData, iLen);
+	//	stream2pkt tlBuf;
+	//	tlBuf.PushStream((unsigned char*)pData, iLen);
+	//	while (tlBuf.PopPkt(IsValidPkt_HTTP))
+	//	{
+	//		string sHttp = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
+	//		printf("收到请求包:%s\r\n", sHttp);
+	//	}
+	//}
+
 #ifdef _WIN32
 	g_fp_tcpSrv_statisSend = statisSend;
 #endif

@@ -92,9 +92,10 @@ size_t IsValidPkt_315(BYTE* pData, size_t iLen)
 	return frameLen + 16;
 }
 
-bool ioDev_dcqk::onRecvData(unsigned char* pData, size_t iLen) {
+void ioDev_dcqk::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+{
 	stream2pkt* pab = &m_pab;
-	pab->PushStream(pData, iLen);
+	pab->PushStream(pData, len);
 
 	while (pab->PopPkt(IsValidPkt_315))
 	{
@@ -106,6 +107,14 @@ bool ioDev_dcqk::onRecvData(unsigned char* pData, size_t iLen) {
 		}
 		onRecvPkt(pab->pkt, pab->iPktLen);
 	}
+	while (pab->PopPkt(IsValidPkt_315))
+	{
+
+	}
+}
+
+bool ioDev_dcqk::onRecvData(unsigned char* pData, size_t iLen) {
+
 	return false;
 }
 
