@@ -228,20 +228,24 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			
 			string sDaoChaName = sZZJName.substr(0, iPos)+ sTmp;
 
-			TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
-			string sTime = timeopt::stTimeToStr(tm);
 
 			BYTE* cbFill = ((BYTE*)&lpsubdata->filldata);
-
+			if (basic->cmdid == CMD_CODE_ALARM_AND_IMG)
+			{
+				cbFill[0]++;
+			}
 			json jParams;
-			jParams["time"] = sTime.c_str();
-			jParams["desc"] = "";
-			jParams["level"] = GetAlmType(lpsubdata->alarmtype);
+			if (basic->cmdid == CMD_CODE_ALARM)
+			{
+				jParams["desc"] = GetAlarmDesc(*lpsubdata);
+			}
+			else
+				jParams["desc"] = "";
+
+			jParams["level"] = GetAlarmLevelType(lpsubdata->alarmtype);
 			jParams["tag"] = m_strTagBind + "." + sDaoChaName+sZZJName;
-			jParams["type"] = GetAlarmDesc(lpsubdata->alarmtype, cbFill[0]);
+			jParams["type"] = GetAlarmType(lpsubdata->alarmtype, cbFill[0]);
 			jParams["id"] = "";
-
-
 			almServer* pAlmSrv = &almSrv;
 			RPC_RESP resp;
 			
@@ -250,10 +254,25 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			//	"tag" : "1幢B6区3层",
 			//	"type" : "感烟探测器",
 			//	"id" : "69001"
-			if (IsRecover(lpsubdata->alarmtype)){
+			if (IsRecover(lpsubdata->alarmtype))
+			{
+				TIME tm = timeopt::Unix2SysTime(lpsubdata->alarmconfirm);
+				string sTime = timeopt::stTimeToStr(tm);
+				jParams["time"] = sTime.c_str();
+
+				tm = timeopt::Unix2SysTime(lpsubdata->time);
+				sTime = timeopt::stTimeToStr(tm);
+				jParams["recoverTime"] = sTime.c_str();
+
 				pAlmSrv->rpc_recoverAlarm(jParams, resp);
 			}
-			else{
+			else
+			{
+				TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
+				string sTime = timeopt::stTimeToStr(tm);
+				jParams["time"] = sTime.c_str();
+
+
 				pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
 			}
 
@@ -401,7 +420,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 	return 0;
 }
 
-string ioDev_dcqk::GetAlmType(BYTE type)
+string ioDev_dcqk::GetAlarmLevelType(BYTE type)
 {
 	if (type == 1 || type == 9 || type == 11 || type == 16 
 		|| type == 101 || type == 109 || type == 111 || type == 116)
@@ -419,7 +438,7 @@ string ioDev_dcqk::GetAlmLevel(BYTE type)
 	else return "三级";
 }
 
-string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
+string ioDev_dcqk::GetAlarmType(BYTE type, BYTE type1)
 {
 	string strDesc = "";
 	switch (type) {
@@ -527,11 +546,217 @@ string ioDev_dcqk::GetAlarmDesc(BYTE type, BYTE type1)
 	return strDesc;
 }
 
+string ioDev_dcqk::GetAlarmDesc(const StAlarmAndImgRec& data)
+{
+	string strRst;
+	TCHAR buf[256] = { 0 };
+	BYTE* cbFill = ((BYTE*)&data.filldata);
+	//温湿度
+	if (data.alarmtype == ALARM_TYPE_TEMPERATURE || data.alarmtype == ALARM_TYPE_WDBJ
+		|| data.alarmtype == ALARM_TYPE_HUMILITY || data.alarmtype == ALARM_TYPE_SDBJ
+		|| data.alarmtype == ALARM_TYPE_TEMPERATUREHF || data.alarmtype == ALARM_TYPE_WDBJHF
+		|| data.alarmtype == ALARM_TYPE_HUMILITYHF || data.alarmtype == ALARM_TYPE_SDBJHF)
+	{
+
+		tstring sunit = (data.alarmtype % 10 == 7 ? ("℃") : ("%"));
+
+		strRst += (data.alarmtype % 10 == 7 ? ("温度:") : ("湿度:"));
+
+		sprintf_s(buf, ("(%.2f%s)"), ((float)data.gap) / 100.0, sunit.c_str());
+		strRst += buf;
+
+		if (data.alarmtype <= 100)
+		{
+			if (data.lrsign == 1)
+			{
+				sprintf_s(buf, ("大于%s上限(%.2f%s)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)data.std) / 100.0, sunit.c_str());
+				strRst += buf;
+			}
+			else if (data.lrsign == 2)
+			{
+				sprintf_s(buf, ("小于%s下限(%.2%s)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)data.offset) / 100.0, sunit.c_str());
+				strRst += buf;
+			}
+		}
+
+		return strRst;
+	}
+	//油位报警
+	else if (data.alarmtype == ALARM_TYPE_YWYJ || data.alarmtype == ALARM_TYPE_YWYJHF
+		|| data.alarmtype == ALARM_TYPE_YWBJ || data.alarmtype == ALARM_TYPE_YWBJHF)
+	{
+		sprintf_s(buf, ("油位(%dmm)"), data.gap);
+		strRst += buf;
+		if (data.alarmtype <= 100)
+		{
+			if (data.lrsign == 1)
+			{
+				sprintf_s(buf, ("大于%s上限(%dmm)"), GetAlarmLevelType(data.alarmtype).c_str(), data.std);
+				strRst += buf;
+			}
+			else if (data.lrsign == 2)
+			{
+				sprintf_s(buf, ("小于%s下限(%dmm)"), GetAlarmLevelType(data.alarmtype).c_str(), data.offset);
+				strRst += buf;
+			}
+		}
+		return strRst;
+	}
+	//油压报警
+	else if (data.alarmtype == ALARM_TYPE_POWERYJHF || data.alarmtype == ALARM_TYPE_POWERBJHF
+		|| data.alarmtype == ALARM_TYPE_POWERYJ || data.alarmtype == ALARM_TYPE_POWERBJ)
+	{
+		strRst += ("，");
+
+		if (data.fixorinvert == 1)
+			strRst += ("定到反");
+		else
+			strRst += ("反到定");
+
+		strRst += (":");
+
+		switch (cbFill[0])
+		{
+		case 1:
+			strRst += ("解锁阶段");
+			break;
+		case 2:
+			strRst += ("动作阶段");
+			break;
+		case 3:
+			strRst += ("锁闭阶段");
+			break;
+		case 4:
+			strRst += ("释压阶段");
+			break;
+		default:
+			break;
+		}
+		sprintf_s(buf, ("油压最大值(%.2fMPa)"), ((float)data.gap) / 100.0);
+		strRst += buf;
+		if (data.alarmtype <= 100)
+		{
+			if (data.lrsign == 1)
+			{
+				sprintf_s(buf, ("大于上限(%.2fMPa)"), ((float)data.std) / 100.0);
+				strRst += buf;
+			}
+			else if (data.lrsign == 2)
+			{
+				sprintf_s(buf, ("小于下限(%.2fMPa)"), ((float)data.offset) / 100.0);
+				strRst += buf;
+			}
+		}
+		return strRst;
+	}
+	else if (data.alarmtype == ALARM_TYPE_QKYJ || data.alarmtype == ALARM_TYPE_QKYJHF
+		|| data.alarmtype == ALARM_TYPE_QKBJ || data.alarmtype == ALARM_TYPE_QKBJHF)
+	{
+		strRst += ("，");
+
+		switch (cbFill[0])
+		{
+		case 1:
+			strRst += ("静态缺口:");
+			break;
+		case 2:
+			strRst += ("扳动后缺口:");
+			break;
+		case 3:
+			strRst += ("过车缺口:");
+			break;
+		case 4:
+			strRst += ("过车前缺口:");
+			break;
+		case 5:
+			strRst += ("过车后缺口:");
+			break;
+		default:
+			break;
+		}
+		if (data.fixorinvert == 1)
+			strRst += ("反位缺口");
+		else
+			strRst += ("定位缺口");
+
+		sprintf_s(buf, ("(%.2fmm)"), ((float)data.gap) / 100.0);
+		strRst += buf;
+
+		if (data.alarmtype <= 100)
+		{
+			if (cbFill[3] == 1)
+			{
+				sprintf_s(buf, ("大于%s上限(%.2fmm)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
+				strRst += buf;
+			}
+			else if (cbFill[3] == 2)
+			{
+				sprintf_s(buf, ("小于%s下限(%.2fmm)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
+				strRst += buf;
+			}
+		}
+		return strRst;
+	}
+	else
+	{
+
+		strRst += ("定反位:");
+		if (data.fixorinvert == 0)
+			strRst += ("定位");
+		else
+			strRst += ("反位");
+
+		strRst += ("，");
+		strRst += ("左右偏标志:");
+		if (data.lrsign == 1)
+			strRst += ("左偏");
+		else if (data.lrsign == 2)
+			strRst += ("右偏");
+		else
+			strRst += ("无效");
+	}
+
+	if (data.alarmtype == ALARM_TYPE_POWERYJHF || data.alarmtype == ALARM_TYPE_POWERBJHF
+		|| data.alarmtype == ALARM_TYPE_POWERYJ || data.alarmtype == ALARM_TYPE_POWERBJ)
+	{
+		strRst += ("，");
+		sprintf_s(buf, ("动作杆伸缩方向:%s"), data.offset == 0 ? "拉入" : "伸出");
+		strRst += buf;
+
+		strRst += ("，");
+		sprintf_s(buf, ("预警/报警起始点数:%d"), data.gap);
+		strRst += buf;
+
+		strRst += ("，");
+		sprintf_s(buf, ("预警/报警结束点数:%d"), data.std);
+		strRst += buf;
+	}
+	else
+	{
+		strRst += ("，");
+		sprintf_s(buf, ("偏移值:%.2fmm"), data.offset / 100.0);
+		strRst += buf;
+
+		strRst += ("，");
+		sprintf_s(buf, ("缺口值:%.2fmm"), data.gap / 100.0);
+		strRst += buf;
+
+		strRst += ("，");
+		sprintf_s(buf, ("标准值:%.2fmm"), data.std / 100.0);
+		strRst += buf;
+
+		strRst += ("，");
+		sprintf_s(buf, ("图像长度:%d"), data.imglen);
+		strRst += buf;
+	}
+
+	return strRst;
+}
+
+
 BOOL ioDev_dcqk::IsRecover(BYTE type)
 {
-	if (type == 1 || type == 2 || type == 7 || type == 8 
-		|| type == 9 || type == 10 || type == 11 || type == 12
-		|| type == 15 || type == 16 || type == 17 || type == 65)
+	if (type <= 100)
 		return FALSE;
 	else
 		return TRUE;

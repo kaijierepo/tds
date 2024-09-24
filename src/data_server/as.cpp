@@ -130,7 +130,7 @@ void almServer::init(const string& aCurPath, const string& aHisPath)
 	initMOAlarmStatus();
 }
 
-void almServer::recover(ALARM_KEY& key)
+void almServer::recover(ALARM_INFO& key)
 {
 	/*tableStatus.remove(key);
 
@@ -155,6 +155,7 @@ void almServer::recover(ALARM_KEY& key)
 	if (tableCurrent.query(params, ai))
 	{
 		ai.bRecover = 1;
+		ai.stRecoverTime = key.stRecoverTime;
 		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		{
 			tableCurrent.remove(key);
@@ -165,6 +166,7 @@ void almServer::recover(ALARM_KEY& key)
 	if (tableHist.query(params, ai))
 	{
 		ai.bRecover = 1;
+		ai.stRecoverTime = key.stRecoverTime;
 		tableHist.update(ai);
 	}
 
@@ -314,6 +316,7 @@ void almServer::Update(ALARM_INFO newStatus)
 		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
+			lastStatus.stRecoverTime = newStatus.stRecoverTime;
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus);
 			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
@@ -326,6 +329,9 @@ void almServer::Update(ALARM_INFO newStatus)
 		else
 		{
 			//maintain last status
+			lastStatus.stRecoverTime = newStatus.stRecoverTime;
+			lastStatus.bRecover = true;
+			recover(lastStatus);
 		}
 	}
 	else
@@ -403,7 +409,8 @@ void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 		j["tag"] = TAG::addRoot(tag, rootTag);
 	}
 
-	j["level"] = "normal";
+	if (!j.contains("level"))
+		j["level"] = "normal";
 	rpc_updateStatus(j, resp);
 	return;
 }
@@ -433,7 +440,7 @@ void almServer::rpc_updateStatus(json j,RPC_RESP& resp)
 	{
 		ALARM_INFO ai;
 		ai.fromJson(j);
-		ai.time = timeopt::nowStr();
+		//ai.time = timeopt::nowStr();
 		Update(ai);
 		resp.result = RPC_OK;
 	}
@@ -1212,8 +1219,18 @@ bool almTable::query(json params, ALARM_INFO& ai)
 				continue;
 			if (params["time"] != nullptr && it.time != params["time"].get<string>())
 				continue;
-			if (params["type"] != nullptr && it.type != params["type"].get<string>())
-				continue;
+			if (params["type"] != nullptr)
+			{
+				const string strRecoverFlag = /*charCodec::gb_to_utf8(*/"恢复"/*)*/;
+				string strType = params["type"].get<string>();
+				auto pos = strType.find(strRecoverFlag);
+				if (pos != string::npos)
+				{
+					strType.replace(pos, strRecoverFlag.length(), "");
+				}
+				if (it.type != strType)
+					continue;
+			}
 			if (params["isAck"] != nullptr && it.bAck != params["isAck"].get<bool>())
 				continue;
 			if (params["isRecover"] != nullptr && it.bRecover != params["isRecover"].get<bool>())
