@@ -15,6 +15,47 @@
 
 using namespace httplib;
 
+std::map<int, std::string> ioDev_dcqk::g_map0x97AlarmLevel = {
+	{ALARM_TYPE_QKYJ, "预警"},		//缺口预警及预警图像
+	{ ALARM_TYPE_QKBJ			, "告警" },		//缺口告警及告警图像
+	{ ALARM_TYPE_QKSBGZ		, "预警" },		//缺口采集设备故障，此时没有缺口值及缺口图像，左右偏移标志填无效(00),总包数填1，本包序号0，图像总长度0， 本帧图像长度0.
+	{ ALARM_TYPE_TXWFSB		, "告警" },		//缺口图像无法识别告警
+	{ ALARM_TYPE_GCKLGD		, "告警" },		//过车时框量过大告警及过车视频
+	{ ALARM_TYPE_ZZJSBGZ		, "告警" },		//转辙机采集设备故障告警
+	{ ALARM_TYPE_WDBJ			, "告警" },		//温度告警
+	{ ALARM_TYPE_SDBJ			, "告警" },		//湿度告警
+	{ ALARM_TYPE_YWYJ			, "预警" },		//油位预警（预留）
+	{ ALARM_TYPE_YWBJ			, "告警" },		//油位告警（预留）
+	{ ALARM_TYPE_POWERYJ      , "预警" },        //阻力预警
+	{ ALARM_TYPE_POWERBJ      , "告警" },        //阻力告警
+	{ ALARM_TYPE_ZHUANPOWERBJ, "告警" },
+	{ ALARM_TYPE_LOCKBJ      , "告警" },
+	{ ALARM_TYPE_CRSGAP      , "预警" },
+	{ ALARM_TYPE_STATICGAPYJ , "预警" },
+	{ ALARM_TYPE_STATICGAPBJ , "告警" },
+	{ ALARM_TYPE_TEMPERATURE  , "预警" },		//温度预警
+	{ ALARM_TYPE_HUMILITY		, "预警" },		//湿度预警
+	{ ALARM_TYPE_QKYJHF		, "预警" },		//缺口预警恢复及图像
+	{ ALARM_TYPE_QKBJHF		, "告警" },		//缺口告警恢复及图像
+	{ ALARM_TYPE_QKSBGZHF		, "预警" },		//缺口采集设备故障恢复及图像
+	{ ALARM_TYPE_TXWFSBHF		, "告警" },		//缺口图像无法识别告警恢复及图像
+	{ ALARM_TYPE_ZZJSBGZHF	, "告警" },		//转辙机采集设备故障告警恢复
+	{ ALARM_TYPE_GCKLGDHF		, "告警" },		//过车时框量过大告警恢复及过车视频
+	{ ALARM_TYPE_WDBJHF		, "告警" },		//温度告警恢复
+	{ ALARM_TYPE_SDBJHF		, "告警" },		//温度告警恢复
+	{ ALARM_TYPE_YWYJHF		, "预警" },		//油位预警恢复（预留）
+	{ ALARM_TYPE_YWBJHF		, "告警" },		//油位告警恢复（预留）
+	{ ALARM_TYPE_POWERYJHF    , "预警" },        //阻力预警恢复
+	{ ALARM_TYPE_POWERBJHF    , "告警" },        //阻力告警恢复
+	{ ALARM_TYPE_ZHUANPOWERBJHF, "告警" },
+	{ ALARM_TYPE_LOCKBJHF      , "告警" },
+	{ ALARM_TYPE_CRSGAPHF      , "预警" },
+	{ ALARM_TYPE_STATICGAPYJHF , "预警" },
+	{ ALARM_TYPE_STATICGAPBJHF , "告警" },
+	{ ALARM_TYPE_TEMPERATUREHF, "预警" },		//温度预警恢复
+	{ ALARM_TYPE_HUMILITYHF	, "预警" } };		//湿度预警恢复
+
+
 namespace ns_ioDev_dcqk {
 	ioDev* createDev()
 	{
@@ -230,6 +271,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 
 
 			BYTE* cbFill = ((BYTE*)&lpsubdata->filldata);
+			int nVer = (cbFill[1] == 0xFF ? 2015 : (cbFill[1] + 2000));
 			if (basic->cmdid == CMD_CODE_ALARM_AND_IMG)
 			{
 				cbFill[0]++;
@@ -237,14 +279,18 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			json jParams;
 			if (basic->cmdid == CMD_CODE_ALARM)
 			{
-				jParams["desc"] = GetAlarmDesc(*lpsubdata);
+				jParams["desc"] = Get0x97AlarmDesc(*lpsubdata);
+				jParams["level"] = Get0x97AlarmLevelType(lpsubdata->alarmtype);
+				jParams["type"] = Get0x97AlarmType(lpsubdata->alarmtype, cbFill[0]);
 			}
 			else
+			{
 				jParams["desc"] = "";
+				jParams["level"] = Get0x27AlarmLevelType(lpsubdata->alarmtype);
+				jParams["type"] = Get0x27AlarmType(lpsubdata->alarmtype, cbFill[0], nVer);
+			}
 
-			jParams["level"] = GetAlarmLevelType(lpsubdata->alarmtype);
 			jParams["tag"] = m_strTagBind + "." + sDaoChaName+sZZJName;
-			jParams["type"] = GetAlarmType(lpsubdata->alarmtype, cbFill[0]);
 			jParams["id"] = "";
 			almServer* pAlmSrv = &almSrv;
 			RPC_RESP resp;
@@ -420,16 +466,22 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 	return 0;
 }
 
-string ioDev_dcqk::GetAlarmLevelType(BYTE type)
+
+string ioDev_dcqk::Get0x27AlarmLevelType(BYTE type)
 {
-	if (type == 1 || type == 9 || type == 11 || type == 16 
+	if (type == 1 || type == 9 || type == 11 || type == 16
 		|| type == 101 || type == 109 || type == 111 || type == 116)
 		return "预警";
-	else if (type == 2 || type == 7 || type == 8 || type == 10 || type == 12 || type == 15 || type == 17 ||type == 65
-		|| type == 102 || type == 107 || type == 108 || type == 110 || type == 112 || type == 115 || type == 117 || type == 165)
+	else if (type == 2 || type == 7 || type == 8 || type == 10 || type == 12 || type == 13 || type == 14 || type == 15 || type == 17 || type == 65
+		|| type == 102 || type == 107 || type == 108 || type == 110 || type == 112 || type == 113 || type == 114 || type == 115 || type == 117 || type == 165)
 		return "告警";
-	
+
 	return "";
+}
+
+string ioDev_dcqk::Get0x97AlarmLevelType(BYTE type)
+{	
+	return g_map0x97AlarmLevel[type];
 }
 
 string ioDev_dcqk::GetAlmLevel(BYTE type)
@@ -438,115 +490,339 @@ string ioDev_dcqk::GetAlmLevel(BYTE type)
 	else return "三级";
 }
 
-string ioDev_dcqk::GetAlarmType(BYTE type, BYTE type1)
+string ioDev_dcqk::Get0x97AlarmType(BYTE type, BYTE type1)
 {
-	string strDesc = "";
-	switch (type) {
-	case 1:
-		{
-			if (type1 == 2)
-				strDesc = "扳动采集缺口预警";
-			else if (type1 == 3)
-				strDesc = "过车采集缺口预警";
-			else
-				strDesc = "周期采集缺口预警";
-		}
+	string strRst;
+	switch (type)
+	{
+	case ALARM_TYPE_QKYJ:
+		strRst += ("缺口预警及预警图像");
 		break;
-	case 2:
-		{
-			if (type1 == 2)
-				strDesc = "扳动采集缺口告警";
-			else if (type1 == 3)
-				strDesc = "过车采集缺口告警";
-			else
-				strDesc = "周期采集缺口告警";
-		}
+	case ALARM_TYPE_QKBJ:
+		strRst += ("缺口告警及告警图像");
 		break;
-	case 7:
-		strDesc = "温度告警";
+	case ALARM_TYPE_QKSBGZ:
+		strRst += ("缺口采集设备故障");
 		break;
-	case 8:
-		strDesc = "湿度告警";
+	case ALARM_TYPE_TXWFSB:
+		strRst += ("缺口图像无法识别告警");
 		break;
-	case 9:
-		strDesc = "油位预警";
+	case ALARM_TYPE_GCKLGD:
+		strRst += ("过车时框量过大告警及过车视频");
 		break;
-	case 10:
-		strDesc = "油位告警";
+	case ALARM_TYPE_ZZJSBGZ:
+		strRst += ("转辙机采集设备故障告警");
 		break;
-	case 11:
-		strDesc = "油压预警";
+	case ALARM_TYPE_WDBJ:
+		strRst += ("温度告警");
 		break;
-	case 12:
-		strDesc = "油压告警";
+	case ALARM_TYPE_SDBJ:
+		strRst += ("湿度告警");
+		break;
+	case ALARM_TYPE_YWYJ:
+		strRst += ("油位预警");
+		break;
+	case ALARM_TYPE_YWBJ:
+		strRst += ("油位告警");
+		break;
+	case ALARM_TYPE_POWERYJ:
+		strRst += ("油压预警");
+		break;
+	case ALARM_TYPE_POWERBJ:
+		strRst += ("油压告警");
+		break;
+	case 13:
+		return ("道岔转换阻力超限报警");
+		break;
+	case 14:
+		return ("外锁闭装置锁闭力超限报警");
 		break;
 	case 15:
-		strDesc = "过车时缺口告警";
+		return ("过车时缺口值");
 		break;
 	case 16:
-		strDesc = "静态缺口预警";
+		return ("静态缺口预警");
 		break;
 	case 17:
-		strDesc = "静态缺口告警";
+		return ("静态缺口报警");
 		break;
-	case 65:
-		strDesc = "锁舌锁块告警";
+	case ALARM_TYPE_TEMPERATURE:
+		strRst += ("温度预警");
 		break;
-	case 101:
-		{
-			if (type1 == 2)
-				strDesc = "扳动采集缺口预警恢复";
-			else if (type1 == 3)
-				strDesc = "过车采集缺口预警恢复";
-			else
-				strDesc = "周期采集缺口预警恢复";
-		}
+	case ALARM_TYPE_HUMILITY:
+		strRst += ("湿度预警");
 		break;
-	case 102:
-		{
-			if (type1 == 2)
-				strDesc = "扳动采集缺口告警恢复";
-			else if (type1 == 3)
-				strDesc = "过车采集缺口告警恢复";
-			else
-				strDesc = "周期采集缺口告警恢复";
-		}
+	case ALARM_TYPE_QKYJHF:
+		strRst += ("缺口预警恢复及图像");
 		break;
-	case 107:
-		strDesc = "温度告警恢复";
+	case ALARM_TYPE_QKBJHF:
+		strRst += ("缺口告警恢复及图像");
 		break;
-	case 108:
-		strDesc = "湿度告警恢复";
+	case ALARM_TYPE_QKSBGZHF:
+		strRst += ("缺口采集设备故障恢复及图像");
 		break;
-	case 109:
-		strDesc = "油位预警恢复";
+	case ALARM_TYPE_TXWFSBHF:
+		strRst += ("缺口图像无法识别告警恢复及图像");
 		break;
-	case 110:
-		strDesc = "油位告警恢复";
+	case ALARM_TYPE_ZZJSBGZHF:
+		strRst += ("转辙机采集设备故障告警恢复");
 		break;
-	case 111:
-		strDesc = "油压预警恢复";
+	case ALARM_TYPE_GCKLGDHF:
+		strRst += ("过车时框量过大告警恢复及过车视频");
 		break;
-	case 112:
-		strDesc = "油压告警恢复";
+	case ALARM_TYPE_WDBJHF:
+		strRst += ("温度告警恢复");
+		break;
+	case ALARM_TYPE_SDBJHF:
+		strRst += ("温度告警恢复");
+		break;
+	case ALARM_TYPE_YWYJHF:
+		strRst += ("油位预警恢复");
+		break;
+	case ALARM_TYPE_YWBJHF:
+		strRst += ("油位告警恢复");
+		break;
+	case ALARM_TYPE_POWERYJHF:
+		strRst += ("油压预警恢复");
+		break;
+	case ALARM_TYPE_POWERBJHF:
+		strRst += ("油压告警恢复");
+		break;
+	case 113:
+		return ("道岔转换阻力超限报警恢复");
+		break;
+	case 114:
+		return ("外锁闭装置锁闭力超限报警恢复");
 		break;
 	case 115:
-		strDesc = "过车时缺口告警恢复";
+		return ("过车时缺口值恢复");
 		break;
 	case 116:
-		strDesc = "静态缺口预警恢复";
+		return ("静态缺口预警恢复");
 		break;
 	case 117:
-		strDesc = "静态缺口告警恢复";
+		return ("静态缺口报警恢复");
 		break;
-	case 165:
-		strDesc = "锁舌锁块告警恢复";
+	case ALARM_TYPE_TEMPERATUREHF:
+		strRst += ("温度预警恢复");
+		break;
+	case ALARM_TYPE_HUMILITYHF:
+		strRst += ("湿度预警恢复");
+		break;
+	default:
+		strRst += ("未知");
 		break;
 	}
-	return strDesc;
+	return strRst;
 }
 
-string ioDev_dcqk::GetAlarmDesc(const StAlarmAndImgRec& data)
+string ioDev_dcqk::Get0x27AlarmType(BYTE type, BYTE type1, int nVer)
+{
+	string strAcqType;
+	if (type1 == 2)
+		strAcqType = "扳动";
+	else if (type1 == 3)
+		strAcqType = "过车";
+	else
+		strAcqType = "周期";
+
+	if (nVer < 2023)
+	{
+		switch (type)
+		{
+		case ALARM_TYPE_QKYJ:
+			return strAcqType + ("缺口预警及预警图像");
+			break;
+		case ALARM_TYPE_QKBJ:
+			return strAcqType + ("缺口报警及报警图像");
+			break;
+		case ALARM_TYPE_QKSBGZ:
+			return ("缺口采集设备故障");
+			break;
+		case ALARM_TYPE_TXWFSB:
+			return ("缺口图像无法识别报警");
+			break;
+		case ALARM_TYPE_GCKLGD:
+			return ("过车时框量过大报警及过车视频");
+			break;
+		case ALARM_TYPE_ZZJSBGZ:
+			return ("转辙机采集设备故障报警");
+			break;
+		case ALARM_TYPE_WDBJ:
+			return ("温度报警");
+			break;
+		case ALARM_TYPE_SDBJ:
+			return ("湿度报警");
+			break;
+		case ALARM_TYPE_YWYJ:
+			return ("油位预警");
+			break;
+		case ALARM_TYPE_YWBJ:
+			return ("油位报警");
+			break;
+		case ALARM_TYPE_POWERYJ:
+			return ("阻力预警");
+			break;
+		case ALARM_TYPE_POWERBJ:
+			return ("阻力报警");
+			break;
+		case ALARM_TYPE_QKYJHF:
+			return strAcqType + ("缺口预警及预警图像恢复");
+			break;
+		case ALARM_TYPE_QKBJHF:
+			return strAcqType + ("缺口报警及报警图像恢复");
+			break;
+		case ALARM_TYPE_QKSBGZHF:
+			return ("缺口采集设备故障恢复");
+			break;
+		case ALARM_TYPE_TXWFSBHF:
+			return ("缺口图像无法识别报警恢复");
+			break;
+		case ALARM_TYPE_ZZJSBGZHF:
+			return ("转辙机采集设备故障报警恢复");
+			break;
+		case ALARM_TYPE_GCKLGDHF:
+			return ("过车时框量过大报警及过车视频恢复");
+			break;
+		case ALARM_TYPE_WDBJHF:
+			return ("温度报警恢复");
+			break;
+		case ALARM_TYPE_SDBJHF:
+			return ("湿度报警恢复");
+			break;
+		case ALARM_TYPE_YWYJHF:
+			return ("油位预警恢复");
+			break;
+		case ALARM_TYPE_YWBJHF:
+			return ("油位报警恢复");
+			break;
+		case ALARM_TYPE_POWERYJHF:
+			return ("阻力预警恢复");
+			break;
+		case ALARM_TYPE_POWERBJHF:
+			return ("阻力报警恢复");
+			break;
+		default:
+			return ("未知");
+			break;
+		}
+	}
+	else
+	{
+		switch (type)
+		{
+		case 1:
+			return strAcqType + ("转换后缺口预警及预警图像");
+			break;
+		case 2:
+			return strAcqType + ("转换后缺口报警及报警图像");
+			break;
+		case 3:
+			return ("缺口采集设备故障");
+			break;
+		case 4:
+			return ("缺口图像无法识别报警");
+			break;
+		case 5:
+			return ("过车时旷量过大报警及过车视频");
+			break;
+		case 6:
+			return ("转辙机采集设备故障报警");
+			break;
+		case 7:
+			return ("温度报警");
+			break;
+		case 8:
+			return ("湿度报警");
+			break;
+		case 9:
+			return ("油位预警");
+			break;
+		case 10:
+			return ("油位报警");
+			break;
+		case 11:
+			return ("油压预警");
+			break;
+		case 12:
+			return ("油压报警");
+			break;
+		case 13:
+			return ("道岔转换阻力超限报警");
+			break;
+		case 14:
+			return ("外锁闭装置锁闭力超限报警");
+			break;
+		case 15:
+			return ("过车时缺口值");
+			break;
+		case 16:
+			return ("静态缺口预警");
+			break;
+		case 17:
+			return ("静态缺口报警");
+			break;
+		case 101:
+			return strAcqType + ("转换后缺口预警及预警图像恢复");
+			break;
+		case 102:
+			return strAcqType + ("转换后缺口报警及报警图像恢复");
+			break;
+		case 103:
+			return ("缺口采集设备故障恢复");
+			break;
+		case 104:
+			return ("缺口图像无法识别报警恢复");
+			break;
+		case 105:
+			return ("转辙机采集设备故障报警恢复");
+			break;
+		case 106:
+			return ("过车时旷量过大报警及过车视频恢复");
+			break;
+		case 107:
+			return ("温度报警恢复");
+			break;
+		case 108:
+			return ("湿度报警恢复");
+			break;
+		case 109:
+			return ("油位预警恢复");
+			break;
+		case 110:
+			return ("油位报警恢复");
+			break;
+		case 111:
+			return ("油压预警恢复");
+			break;
+		case 112:
+			return ("油压报警恢复");
+			break;
+		case 113:
+			return ("道岔转换阻力超限报警恢复");
+			break;
+		case 114:
+			return ("外锁闭装置锁闭力超限报警恢复");
+			break;
+		case 115:
+			return ("过车时缺口值恢复");
+			break;
+		case 116:
+			return ("静态缺口预警恢复");
+			break;
+		case 117:
+			return ("静态缺口报警恢复");
+			break;
+		default:
+			return ("未知");
+			break;
+		}
+	}
+	return ("");
+
+}
+
+string ioDev_dcqk::Get0x97AlarmDesc(const StAlarmAndImgRec& data)
 {
 	string strRst;
 	TCHAR buf[256] = { 0 };
@@ -569,12 +845,12 @@ string ioDev_dcqk::GetAlarmDesc(const StAlarmAndImgRec& data)
 		{
 			if (data.lrsign == 1)
 			{
-				sprintf_s(buf, ("大于%s上限(%.2f%s)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)data.std) / 100.0, sunit.c_str());
+				sprintf_s(buf, ("大于%s上限(%.2f%s)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)data.std) / 100.0, sunit.c_str());
 				strRst += buf;
 			}
 			else if (data.lrsign == 2)
 			{
-				sprintf_s(buf, ("小于%s下限(%.2%s)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)data.offset) / 100.0, sunit.c_str());
+				sprintf_s(buf, ("小于%s下限(%.2%s)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)data.offset) / 100.0, sunit.c_str());
 				strRst += buf;
 			}
 		}
@@ -591,12 +867,12 @@ string ioDev_dcqk::GetAlarmDesc(const StAlarmAndImgRec& data)
 		{
 			if (data.lrsign == 1)
 			{
-				sprintf_s(buf, ("大于%s上限(%dmm)"), GetAlarmLevelType(data.alarmtype).c_str(), data.std);
+				sprintf_s(buf, ("大于%s上限(%dmm)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), data.std);
 				strRst += buf;
 			}
 			else if (data.lrsign == 2)
 			{
-				sprintf_s(buf, ("小于%s下限(%dmm)"), GetAlarmLevelType(data.alarmtype).c_str(), data.offset);
+				sprintf_s(buf, ("小于%s下限(%dmm)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), data.offset);
 				strRst += buf;
 			}
 		}
@@ -686,12 +962,12 @@ string ioDev_dcqk::GetAlarmDesc(const StAlarmAndImgRec& data)
 		{
 			if (cbFill[3] == 1)
 			{
-				sprintf_s(buf, ("大于%s上限(%.2fmm)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
+				sprintf_s(buf, ("大于%s上限(%.2fmm)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
 				strRst += buf;
 			}
 			else if (cbFill[3] == 2)
 			{
-				sprintf_s(buf, ("小于%s下限(%.2fmm)"), GetAlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
+				sprintf_s(buf, ("小于%s下限(%.2fmm)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)(*(WORD*)&cbFill[1])) / 100.0);
 				strRst += buf;
 			}
 		}

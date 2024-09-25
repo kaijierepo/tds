@@ -18,6 +18,11 @@
 #define ALARM_TYPE_YWBJ			10				//油位报警（预留）
 #define ALARM_TYPE_POWERYJ      11              //阻力预警
 #define ALARM_TYPE_POWERBJ      12              //阻力告警
+#define ALARM_TYPE_ZHUANPOWERBJ      13              //道岔转换阻力超限报警
+#define ALARM_TYPE_LOCKBJ      14              //外锁闭装置锁闭力超限报警
+#define ALARM_TYPE_CRSGAP      15              //过车时缺口值
+#define ALARM_TYPE_STATICGAPYJ      16              //静态缺口预警
+#define ALARM_TYPE_STATICGAPBJ      17              //静态缺口报警
 #define ALARM_TYPE_TEMPERATURE  77				//温度预警
 #define ALARM_TYPE_HUMILITY		78				//湿度预警
 #define ALARM_TYPE_QKYJHF		101				//缺口预警恢复及图像
@@ -32,6 +37,11 @@
 #define ALARM_TYPE_YWBJHF		110				//油位报警恢复（预留）
 #define ALARM_TYPE_POWERYJHF    111             //阻力预警恢复
 #define ALARM_TYPE_POWERBJHF    112             //阻力告警恢复
+#define ALARM_TYPE_ZHUANPOWERBJHF      113              //道岔转换阻力超限报警恢复
+#define ALARM_TYPE_LOCKBJHF      114              //外锁闭装置锁闭力超限报警恢复
+#define ALARM_TYPE_CRSGAPHF      115              //过车时缺口值恢复
+#define ALARM_TYPE_STATICGAPYJHF      116              //静态缺口预警恢复
+#define ALARM_TYPE_STATICGAPBJHF      117              //静态缺口报警恢复
 #define ALARM_TYPE_TEMPERATUREHF  177			//温度预警恢复
 #define ALARM_TYPE_HUMILITYHF	178				//湿度预警恢复
 
@@ -50,12 +60,14 @@ public:
 
 	int DealJHDData(LPVOID lpParam);
 
-	string GetAlarmLevelType(BYTE type);
+	string Get0x97AlarmLevelType(BYTE type);
+	string Get0x27AlarmLevelType(BYTE type);
 
 	string GetAlmLevel(BYTE type);
 
-	string GetAlarmType(BYTE type, BYTE type1);
-	string GetAlarmDesc(const StAlarmAndImgRec& data);
+	string Get0x27AlarmType(BYTE type, BYTE type1, int nVer);
+	string Get0x97AlarmType(BYTE type, BYTE type1);
+	string Get0x97AlarmDesc(const StAlarmAndImgRec& data);
 	BOOL IsRecover(BYTE type);
 
 	int SendHeartbeat();
@@ -105,4 +117,6 @@ public:
 	void Do_CMD_CODE_GAPVAL(LPVOID pData);
 	void Do_CMD_CODE_YWINFO(LPVOID pData);
 	std::map<int, string> m_mapSIDToName;
+
+	static std::map<int, std::string> g_map0x97AlarmLevel;
 };
