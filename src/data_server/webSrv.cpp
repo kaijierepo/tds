@@ -532,17 +532,34 @@ bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	if(mg_http_match_uri(hm, "/zlmhook/on_play"))//播放鉴权
 	{
 		json jQuery = parseParamFromQuery(urlParam);
-		//用户名密码鉴权模式
-		if (jQuery["user"] != nullptr && jQuery["pwd"] != nullptr) {
+		bool bAuthentication = false;
+		//用户名+token鉴权模式
+		if (jQuery["user"]!=nullptr&& jQuery["token"] != nullptr)
+		{
+			string user = jQuery["user"];
+			string token = jQuery["token"];
+			bAuthentication = userMng.checkToken(user, token);
+		}
+		//用户名+密码鉴权模式
+		else if (jQuery["user"] != nullptr && jQuery["pwd"] != nullptr) {
 			string user = jQuery["user"];
 			string pwd = jQuery["pwd"];
 
+			bAuthentication = userMng.checkPwd(user, pwd);
 			LOG("[warn]拉流鉴权,用户名:%s,密码:%s", user.c_str(), pwd.c_str());
 		}
 
 		json resp;
-		resp["code"] = 0;
-		resp["msg"] = "success";
+		if (bAuthentication)
+		{
+			resp["code"] = 0;
+			resp["msg"] = "success";
+		}
+		else 
+		{
+			resp["code"] = 1;
+			resp["msg"] = "Authentication fail";
+		}
 
 		string resHeader, resBody;
 		resBody = resp.dump(2);
@@ -648,7 +665,10 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 
 	string urlParam = str::fromBuff(hm->query.ptr, hm->query.len);
 	if (urlParam != "") {
-		url += "?" + urlParam;
+		if (url.find("?") != -1)
+			url += "&" + urlParam;
+		else
+			url += "?" + urlParam;
 	}
 
 	string sHeader = "location:" + url + "\r\n";

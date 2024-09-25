@@ -308,6 +308,55 @@ bool TDS_imp::setWorkingDir()
 	return true;
 }*/
 
+void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
+
+	wstring wstrFolder = charCodec::tds_to_utf16(path);
+	for (auto& i : filesystem::directory_iterator(wstrFolder)) {
+		if (i.is_directory()) {
+			fs::FILE_INFO fi;
+			fi.path = charCodec::gb_to_tds(i.path().string());
+			fi.path = str::replace(fi.path, "\\", "/");
+			size_t pos = fi.path.rfind("/");
+			fi.folderPath = fi.path.substr(0, pos);
+			fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+			fi.len = i.file_size();
+
+			checkDBFormat(path + "/" + fi.name, bCheckEnd, db_Fmt);
+
+			if (bCheckEnd) break;
+		}
+		else if (i.is_regular_file())
+		{
+			fs::FILE_INFO fi;
+			fi.path = charCodec::gb_to_tds(i.path().string());
+			fi.path = str::replace(fi.path, "\\", "/");
+			size_t pos = fi.path.rfind("/");
+			fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+			
+			if (fi.name.rfind(".jdb") == fi.name.length() - 4)
+			{
+				bCheckEnd = true;
+				db_Fmt.deListName = "data_list.jdb";
+				db_Fmt.curveIdxListName = "data_list.jdb";
+				db_Fmt.curveDeNameSuffix = ".curve.jdb";
+				db_Fmt.deItemKey_value = "value";
+				
+			}
+			else if (fi.name.rfind("db.json") == fi.name.length() - 7 || fi.name.rfind(".curve.json") == fi.name.length() - 11)
+			{
+				bCheckEnd = true;
+				db_Fmt.deListName = "db.json";
+				db_Fmt.curveIdxListName = "db.curve.json";
+				db_Fmt.curveDeNameSuffix = ".curve.json";
+				db_Fmt.deItemKey_value = "val";
+			}
+
+			if (bCheckEnd) break;
+
+		}
+	}
+}
+
 
 bool TDS_imp::run(string cmdline)
 {
@@ -388,10 +437,13 @@ bool TDS_imp::run(string cmdline)
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
 		::db.m_timeUnit = (DB_TIME_UNIT)g_prjConf.getValInt("dbTimeUnit", 1);
-		::db.m_dbFmt.deListName = tds->conf->getStr("deListName", "db.json");
-		::db.m_dbFmt.curveIdxListName = tds->conf->getStr("curveIdxListName", "db.curve.json");
-		::db.m_dbFmt.curveDeNameSuffix = tds->conf->getStr("curveDeNameSuffix", ".curve.json");
-		::db.m_dbFmt.deItemKey_value = tds->conf->getStr("deItemKey_value", "val");
+		bool bCheckEnd = false;
+		DB_FMT db_Fmt;
+		checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
+		::db.m_dbFmt.deListName = db_Fmt.deListName == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
+		::db.m_dbFmt.curveIdxListName = db_Fmt.curveIdxListName == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
+		::db.m_dbFmt.curveDeNameSuffix = db_Fmt.curveDeNameSuffix == "" ? tds->conf->getStr("curveDeNameSuffix", ".curve.json") : db_Fmt.curveDeNameSuffix;
+		::db.m_dbFmt.deItemKey_value = db_Fmt.deItemKey_value == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 		::db.m_confPath = tds->conf->confPath;
 	}
