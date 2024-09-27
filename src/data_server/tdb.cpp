@@ -2458,6 +2458,32 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			Select_Step_outputRows_SingleCol_timeFill(deSel, *dataSet, result, rlt_mut_doc);
 		}
 
+		//limit
+		if (deSel.limit > 0)
+		{
+			map<SORT_FLAG, yyjson_mut_val*> temp_mapRlt;
+			int i = 0;
+			for (auto& it : mapRlt)
+			{
+				if (i >= deSel.offset && i < deSel.offset + deSel.limit)
+				{
+					temp_mapRlt.insert(it);
+					i++;
+					continue;
+				}
+				else if (i< deSel.offset)
+				{
+					i++;
+					continue;
+				}
+				else if (i>= deSel.offset + deSel.limit)
+				{
+					break;
+				}
+			}
+			mapRlt.swap(temp_mapRlt);
+		}
+
 		//calc
 		if (deSel.calc == "diff") {
 			int idx = 0;
@@ -3031,6 +3057,21 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		{
 			err = "timeSlot is obj,but null";
 			return;
+		}
+	}
+
+	yyjson_val* yyv_offset = yyjson_obj_get(yyParams, "offset");
+	if (yyv_offset) {
+		if (yyjson_is_int(yyv_offset))
+		{
+			deSel.offset = yyjson_get_int(yyv_offset);
+		}
+	}
+	yyjson_val* yyv_limit = yyjson_obj_get(yyParams, "limit");
+	if (yyv_limit) {
+		if (yyjson_is_int(yyv_limit))
+		{
+			deSel.limit = yyjson_get_int(yyv_limit);
 		}
 	}
 }

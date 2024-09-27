@@ -431,6 +431,9 @@ struct DE_SELECTOR {
 	string baseCurve;
 	string getSelectorDesc();
 
+	int offset = 0;
+	int limit = 0;
+
 	DE_SELECTOR() {
 		ascendingSort = true;
 		tagAsColume = false;
