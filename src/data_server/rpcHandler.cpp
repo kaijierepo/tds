@@ -2688,6 +2688,21 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 #endif
 	else if (method == "getProjectConf") {
 
+		auto pReadFun = [](json &jRlt, const string &confName) -> void
+		{
+			if (tdsConf.tdsIni.mapConf.find(confName) != tdsConf.tdsIni.mapConf.end()) {
+				string sVal = tdsConf.tdsIni.mapConf[confName];
+				if (sVal == "") {
+					jRlt[confName] = sVal;
+				}
+				else if (str::isInteger(sVal)) {
+					jRlt[confName] = atoi(sVal.c_str());
+				}
+				else {
+					jRlt[confName] = sVal;
+				}
+			}
+		};
 		if (params.is_string()) {
 			string confName = params.get<string>();
 			if (confName == "*" || confName == "") {
@@ -2699,24 +2714,36 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 				}
 				rpcResp.result = jsconf.dump();
 			}
-			else {
-				if (tdsConf.tdsIni.mapConf.find(confName) != tdsConf.tdsIni.mapConf.end()){
-					string sVal = tdsConf.tdsIni.mapConf[confName];
-					json jRlt;
-					if (sVal == "") {
-						jRlt[confName] = sVal;
-					}
-					else if (str::isInteger(sVal)) {
-						jRlt[confName] = atoi(sVal.c_str());
-					}
-					else {
-						jRlt[confName] = sVal;
-					}
+			else 
+			{
+				json jRlt;
+				pReadFun(jRlt, confName);
+
+				if (!jRlt.is_null())
+				{
 					rpcResp.result = jRlt.dump();
 				}
-				else {
+				else 
+				{
 					rpcResp.result = RPC_NULL;
 				}
+			}
+		}
+		else if (params.is_array())
+		{
+			json jRlt;
+			for (int i = 0; i < params.size(); i++)
+			{
+				string confName = params[i].get<string>();
+				pReadFun(jRlt, confName);
+			}
+			if (!jRlt.is_null())
+			{
+				rpcResp.result = jRlt.dump();
+			}
+			else
+			{
+				rpcResp.result = RPC_NULL;
 			}
 		}
 		else {

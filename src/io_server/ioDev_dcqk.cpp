@@ -611,8 +611,8 @@ void ioDev_dcqk::DealVedioFile(T* data)
 			j["afterPos"] = data->fixorinvert2;
 			j["vedioTimeLen"] = data->timelen;
 			j["vedioLen"] = data->len;
-			jFile["type"] = "avi";
-			jFile["name"] = timeopt::TimeToHMSForFile(t) + ".avi";
+			jFile["type"] = (data->vediotype == 0x02 ? "avi_crs" : "avi_mv");
+			jFile["name"] = timeopt::TimeToHMSForFile(t) + (data->vediotype == 0x02 ? ".avi_crs" : ".avi_mv");
 			jFile["data"] = out;
 			j["file"] = jFile;
 			tds->callAsyn("input", j);
