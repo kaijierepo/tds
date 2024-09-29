@@ -243,6 +243,11 @@ struct INTERVAL_SELECTOR {
 	}
 };
 
+struct DB_TIME_SPAN {
+	DB_TIME start;
+	DB_TIME end;
+};
+
 
 struct DB_FILE {
 	bool boundaryFile;
@@ -390,15 +395,20 @@ public:
 
 };
 
+struct WHEN_SELECTOR {
+	string tag;
+	string match;
+	CONDITION_SELECTOR condition;
+	vector<DB_TIME_SPAN> eventTimeSlot;
+	vector<string> relation;
+};
 
-
-
-//数据元选择器
 struct DE_SELECTOR {
 	TIME_SELECTOR timeSel;  
 	TAG_SELECTOR tagSel;	
 	CONDITION_SELECTOR condition;	
 	INTERVAL_SELECTOR interval;		
+	WHEN_SELECTOR whenSel;
 	bool ascendingSort;
 	string sortKey;
 	bool timeFill;   //in a time section ,data is not exist in some tag. use value before this time section to fill in this time section
@@ -501,16 +511,24 @@ struct SELECT_RLT {
 	size_t deCount;
 	size_t fileCount;
 	map<SORT_FLAG, yyjson_mut_val*> mapRlt;
+	yyjson_mut_doc* rlt_mut_doc;
 	string error;
 	string info;
 	string query;
 	string calcResult; 
 
 	SELECT_RLT() {
+		rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 		getDE = true;
 		rowCount = 0;
 		deCount = 0;
 		fileCount = 0;
+	}
+
+	~SELECT_RLT() {
+		if (rlt_mut_doc) {
+			yyjson_mut_doc_free(rlt_mut_doc);
+		}
 	}
 };
 
@@ -605,6 +623,7 @@ public:
 	//select
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
+	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);

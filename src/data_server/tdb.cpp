@@ -2344,7 +2344,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr;
 	string sCalcResult; //calc result dumped to string
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
-	yyjson_mut_doc* rlt_mut_doc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_doc* rlt_mut_doc = result.rlt_mut_doc;
 
 	if (deSel.deType == "curve") {
 		size_t sortIdx = 0;
@@ -2412,6 +2412,15 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		bRet = Select_Step_loadDataElem(deSel, tagFileSet, *dataSet, result, rlt_mut_doc);
 		if (!bRet)
 			return false;
+
+		//do when selector after all de is selected
+		if (deSel.whenSel.tag != "") {
+			vector<DATA_SET*>* dataSet_afterWhen = new vector<DATA_SET*>;
+			DATA_SET& fSet = *(new DATA_SET());
+			dataSet_afterWhen->push_back(&fSet);
+			dataSetBuff.push_back(dataSet_afterWhen);
+			
+		}
 
 		//if not groupby tag, merge dataset  (groupby tag is the default behavior)
 		if (!deSel.groupByTag) {
@@ -2483,6 +2492,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			}
 			mapRlt.swap(temp_mapRlt);
 		}
+
+
 
 		//calc
 		if (deSel.calc == "diff") {
@@ -2788,8 +2799,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 	result.rowCount = mapRlt.size();
 
-	//release result
-	yyjson_mut_doc_free(rlt_mut_doc);
 	//release src
 	for (int i = 0; i < dataSetBuff.size(); i++)
 	{
@@ -3072,6 +3081,32 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		if (yyjson_is_int(yyv_limit))
 		{
 			deSel.limit = yyjson_get_int(yyv_limit);
+		}
+	}
+
+	yyjson_val* yyv_when = yyjson_obj_get(yyParams, "when");
+	if (yyv_when) {
+		if (yyjson_is_obj(yyv_when))
+		{
+			yyjson_val* yyv_when_tag = yyjson_obj_get(yyv_when, "tag");
+			yyjson_val* yyv_when_match = yyjson_obj_get(yyv_when, "match");
+			yyjson_val* yyv_when_relation = yyjson_obj_get(yyv_when, "relation");
+			if (yyjson_is_str(yyv_limit)){
+				deSel.whenSel.tag = yyjson_get_str(yyv_when_tag);
+			}
+			if (yyjson_is_str(yyv_when_match)) {
+				deSel.whenSel.match = yyjson_get_str(yyv_when_match);
+				deSel.whenSel.condition.init(deSel.whenSel.match);
+			}
+			if (yyjson_is_arr(yyv_when_relation)) {
+				size_t idx = 0;
+				size_t max = 0;
+				yyjson_val* item;
+				yyjson_arr_foreach(yyv_when_relation, idx, max, item) {
+					string relation = yyjson_get_str(item);
+					deSel.whenSel.relation.push_back(relation);
+				}
+			}
 		}
 	}
 }
@@ -3506,6 +3541,20 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 		}
 	}
 	return true;
+}
+
+bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet)
+{
+	DE_SELECTOR whenSel;
+	whenSel.tagSel.init(deSel.whenSel.tag,deSel.tagSel.m_rootTag);
+	whenSel.timeSel = deSel.timeSel;
+	SELECT_RLT relTagData;
+	Select(whenSel, relTagData);
+
+	//parse sel rlt to time slot
+	for (auto& i : relTagData.mapRlt) {
+
+	}
 }
 
 bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
