@@ -11,6 +11,7 @@
 #include "mp.h"
 #include "rpcHandler.h"
 #include "as.h"
+#include "tdb.h"
 
 
 using namespace httplib;
@@ -73,6 +74,74 @@ namespace ns_ioDev_dcqk {
 
 void ThreadSaveGapAndPic(void* lpParam);
 
+void eqpInfo::AddVedioCache(StVedioRecord* pTimes, WORD wCount, BYTE btType)
+{
+	EnterCriticalSection(&m_csVedioList);
+	for (int i = 0; i < wCount; i++)
+	{
+		pTimes[i].filldata = 0;
+		((BYTE*)&pTimes[i].filldata)[0] = btType;
+		lstVedioCache.push_back(pTimes[i]);
+	}
+	LeaveCriticalSection(&m_csVedioList);
+}
+
+void eqpInfo::DeleteVedioCache(uint32_t sTm, BYTE btType)
+{
+	EnterCriticalSection(&m_csVedioList);
+	for (auto it = lstVedioCache.begin(); it != lstVedioCache.end(); it++)
+	{
+		if (it->time == sTm && ((BYTE*)&it->filldata)[0] == btType)
+		{
+			it = lstVedioCache.erase(it);
+			break;
+		}
+	}
+	LeaveCriticalSection(&m_csVedioList);
+}
+
+
+void ThreadDownloadVedio(void* lpParam)
+{
+	ioDev_dcqk* pDev = (ioDev_dcqk*)lpParam;
+
+	while (true)
+	{
+		if (!pDev->m_bDownloadVedioing) break;
+		DWORD dwTick = GetTickCount();
+		for (auto it = pDev->m_mapEqp.begin(); it != pDev->m_mapEqp.end(); it++)
+		{
+			StVedioRecord *pST = NULL;
+			WORD sid = 0;
+			EnterCriticalSection(&it->second.m_csVedioList);
+			//for (auto itVedio = it->second.lstVedioCache.begin(); itVedio != it->second.lstVedioCache.end(); itVedio++)
+			auto itVedio = it->second.lstVedioCache.begin();
+			if (itVedio != it->second.lstVedioCache.end())
+			{
+				if (((BYTE*)&itVedio->filldata)[1] == 0 || dwTick - it->second.timeLastReqDownload > 30000) //下载文件最多30秒，否则重新下载
+				{
+					((BYTE*)&itVedio->filldata)[1] = 1;
+					pST = &(*itVedio);
+					sid = it->first;
+					it->second.timeLastReqDownload = dwTick;
+				}
+			}
+			LeaveCriticalSection(&it->second.m_csVedioList);
+
+			if (pST)
+			{
+				LeaveCriticalSection(&it->second.m_csVedio);
+				it->second.m_mapVideos.clear();
+				LeaveCriticalSection(&it->second.m_csVedio);
+
+				pDev->QueryVedio(sid, pST);
+			}
+		}
+		if (!pDev->m_bDownloadVedioing) break;
+		Sleep(100);
+	}
+}
+
 
 ioDev_dcqk::ioDev_dcqk()
 {
@@ -85,7 +154,6 @@ ioDev_dcqk::~ioDev_dcqk()
 {
 	stop();
 }
-
 
 void ioDev_dcqk::DoAcq()
 {
@@ -100,11 +168,17 @@ void ioDev_dcqk::DoCycleTask()
 		//SendHeartbeat();
 		m_stLastHeartbeatTime = timeopt::now();
 	}
+
+	if (!m_mapEqp.empty() && timeopt::CalcTimePassSecond(m_stLastQueryVedioTime) >= 2)
+	{
+		m_stLastQueryVedioTime = timeopt::now();
+		QueryVedioList();		
+	}
 }
 
 void ioDev_dcqk::onEvent_online()
 {
-	if (m_mapSIDToName.empty())
+	if (m_mapEqp.empty())
 	{
 		//	获取缺口配置
 		GetGapCfg();
@@ -147,10 +221,6 @@ void ioDev_dcqk::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessi
 			m_abandonLen += pab->iAbandonLen;
 		}
 		onRecvPkt(pab->pkt, pab->iPktLen);
-	}
-	while (pab->PopPkt(IsValidPkt_315))
-	{
-
 	}
 }
 
@@ -211,10 +281,45 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 				memcpy(zzjName, ZZJConf.lpname, ZZJConf.nlen);
 				zzjName[ZZJConf.nlen] = '\0';
 
-				map<int, string>::iterator iter = m_mapSIDToName.find(ZZJConf.sid);
-				if (iter == m_mapSIDToName.end())
+				auto iter = m_mapEqp.find(ZZJConf.sid);
+				if (iter == m_mapEqp.end())
 				{
-					m_mapSIDToName[ZZJConf.sid] = zzjName;
+					eqpInfo eqp;
+					eqp.eqpName = zzjName;
+
+					size_t iPos = 0;
+					string sTmp = "";
+					if (eqp.eqpName.find("#") != string::npos) {
+						iPos = eqp.eqpName.find("#");
+						iPos += 1;
+					}
+					else if (eqp.eqpName.find("J") != string::npos) {
+						iPos = eqp.eqpName.find("J");
+						sTmp = "#";
+					}
+					else if (iPos = eqp.eqpName.find("X") != string::npos) {
+						iPos = eqp.eqpName.find("X");
+						sTmp = "#";
+					}
+					else if (iPos = eqp.eqpName.find("P") != string::npos) {
+						iPos = eqp.eqpName.find("P");
+						sTmp = "#";
+					}
+					else if (iPos = eqp.eqpName.find("W") != string::npos) {
+						iPos = eqp.eqpName.find("W");
+						sTmp = "#";
+					}
+
+					eqp.daochaName = eqp.eqpName.substr(0, iPos) + sTmp;
+
+					string key = m_strTagBind + "." + eqp.daochaName + "." + eqp.eqpName + ".triggerVideoLastTime";
+					eqp.timeLastTriggerVedio = tds->conf->getCurrentInt(key, 0);
+
+					key = m_strTagBind + "." + eqp.daochaName + "." + eqp.eqpName + ".passCarVideoLastTime";
+					eqp.timeLastPassCarVedio = tds->conf->getCurrentInt(key, 0);
+
+
+					m_mapEqp[ZZJConf.sid] = eqp;
 				}
 			}
 
@@ -232,42 +337,19 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			StAlarmAndImgInfo* lpsubdata = (StAlarmAndImgInfo*)pData->lpdata;
 			SendCallBack0x27(lpsubdata);
 
-			map<int, string>::iterator iter = m_mapSIDToName.find(lpsubdata->sid);
-			if (iter == m_mapSIDToName.end())
+			auto iter = m_mapEqp.find(lpsubdata->sid);
+			if (iter == m_mapEqp.end())
 				return 0;
 
-			string sZZJName = iter->second;
-
+			string sZZJName = iter->second.eqpName;
+			string sDaoChaName = iter->second.daochaName;
 			//size_t iPos = sZZJName.find("#");
 			//string sTmp = ".";
 			//if (iPos == string::npos) {
 			//	iPos = sZZJName.find("J");
 			//	sTmp = "#.";
 			//}
-			size_t iPos = 0;
-			string sTmp = ".";
-			if (sZZJName.find("#") != string::npos) {
-				iPos = sZZJName.find("#");
-				iPos += 1;
-			}
-			else if (sZZJName.find("J") != string::npos) {
-				iPos = sZZJName.find("J");
-				sTmp = "#.";
-			}
-			else if (iPos = sZZJName.find("X") != string::npos) {
-				iPos = sZZJName.find("X");
-				sTmp = "#.";
-			}
-			else if (iPos = sZZJName.find("P") != string::npos) {
-				iPos = sZZJName.find("P");
-				sTmp = "#.";
-			}
-			else if (iPos = sZZJName.find("W") != string::npos) {
-				iPos = sZZJName.find("W");
-				sTmp = "#.";
-			}
-			
-			string sDaoChaName = sZZJName.substr(0, iPos)+ sTmp;
+
 
 
 			BYTE* cbFill = ((BYTE*)&lpsubdata->filldata);
@@ -290,7 +372,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 				jParams["type"] = Get0x27AlarmType(lpsubdata->alarmtype, cbFill[0], nVer);
 			}
 
-			jParams["tag"] = m_strTagBind + "." + sDaoChaName+sZZJName;
+			jParams["tag"] = m_strTagBind + "." + sDaoChaName + "." + sZZJName;
 			jParams["id"] = "";
 			almServer* pAlmSrv = &almSrv;
 			RPC_RESP resp;
@@ -348,18 +430,29 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_VEDIOLIST:
 		{
 			StVedioListRes* lpsubdata = (StVedioListRes*)pData->lpdata;
+			StVedioRecord* lpsubdata2 = (StVedioRecord*)lpsubdata->lprecord;
+			m_mapEqp[lpsubdata->sid].AddVedioCache(lpsubdata2, lpsubdata->cnt, lpsubdata->vediotype);
+
+			if (!m_bDownloadVedioThread)
+			{
+				m_bDownloadVedioing = true;
+				m_bDownloadVedioThread = true;
+				m_threadDownloadVedio = thread(ThreadDownloadVedio, this);
+				m_threadDownloadVedio.detach();
+			}
+
 			break;
 		}
 		case CMD_CODE_VEDIOFILE:
 		{
-			//if (Parse315Protocol::b2Flen2byte)
-			//{
-			//	DealVedioFile((StVedioFileRes2*)pData->lpdata);
-			//}
-			//else
-			//{
-			//	DealVedioFile((StVedioFileRes4*)pData->lpdata);
-			//}
+			if (Parse315Protocol::b2Flen2byte)
+			{
+				DealVedioFile((StVedioFileRes2*)pData->lpdata);
+			}
+			else
+			{
+				DealVedioFile((StVedioFileRes4*)pData->lpdata);
+			}
 
 			break;
 		}
@@ -403,7 +496,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			//vdata.datalen = 1 + 1 + 2 + 2 + vsubdata.len;
 			//vdata.lpdata = &vsubdata;
 
-			//LPVOID buf = NULL;
+			//vector<BYTE> buf;
 			//int len = 0;
 			//CVedioParser::Unparse(vdata, buf, len);
 			//SendPlayer(buf, len);
@@ -467,8 +560,85 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 }
 
 
-string ioDev_dcqk::Get0x27AlarmLevelType(BYTE type)
+template<typename T>
+void ioDev_dcqk::DealVedioFile(T* data)
 {
+	EnterCriticalSection(&m_mapEqp[data->sid].m_csVedio);
+	m_mapEqp[data->sid].DeleteVedioCache(data->time, data->vediotype);
+
+	if (m_mapEqp[data->sid].m_mapVideos.find(data->time) == m_mapEqp[data->sid].m_mapVideos.end())
+	{
+		VedioFile vfile;
+		vfile.sid = data->sid;
+		vfile.time = data->time;
+		vfile.timelen = data->timelen;
+		vfile.len = data->len;
+		vfile.packcnt = data->packcnt;
+		vfile.maxpacklen = data->datalen;
+		//vfile.recvcnt = 0;
+		vfile.bFinished = FALSE;
+		vfile.vctPacks.resize(data->len);
+
+		m_mapEqp[data->sid].m_mapVideos.insert(make_pair(vfile.time, vfile));
+	}
+
+	VedioFile& vfile = m_mapEqp[data->sid].m_mapVideos[data->time];
+	vfile.maxpacklen = max(data->datalen, vfile.maxpacklen);
+
+	CopyMemory(vfile.vctPacks.data() + data->curpackid * vfile.maxpacklen, data->lpdata, data->datalen);
+
+	vfile.setPack.insert(data->curpackid);
+
+	if (vfile.setPack.size() == vfile.packcnt)
+	{
+		vfile.bFinished = TRUE;
+
+		m_mapEqp[data->sid].DeleteVedioCache(data->time, data->vediotype);
+
+		//写入数据库
+		int flen = vfile.vctPacks.size();
+		char* out = new char[flen * 2 + 1];
+		tdb_base64_encode(vfile.vctPacks.data(), flen, out);
+		{
+			json j, jV, jFile;
+			string tag = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + (data->vediotype == 0x02 ? ".过车录像" : ".扳动录像");
+			j["tag"] = tag;
+			auto t = timeopt::Unix2SysTime(data->time);
+			j["time"] = timeopt::stTimeToStr(t);
+			jV["aaaa"] = "aaa";
+			j["val"] = jV;
+			j["beforePos"] = data->fixorinvert1;
+			j["afterPos"] = data->fixorinvert2;
+			j["vedioTimeLen"] = data->timelen;
+			j["vedioLen"] = data->len;
+			jFile["type"] = "avi";
+			jFile["name"] = timeopt::TimeToHMSForFile(t) + ".avi";
+			jFile["data"] = out;
+			j["file"] = jFile;
+			tds->callAsyn("input", j);
+		}
+
+		delete[]out;
+		m_mapEqp[data->sid].m_mapVideos.erase(data->time);
+
+		string key;
+		if (data->vediotype == 0x02)
+		{
+			m_mapEqp[data->sid].timeLastPassCarVedio = data->time;
+			key = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + ".passCarVideoLastTime";
+		}
+		else
+		{
+			m_mapEqp[data->sid].timeLastTriggerVedio = data->time;
+			key = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + ".triggerVideoLastTime";
+		}
+		tds->conf->setCurrentInt(key, data->time);
+	}
+	LeaveCriticalSection(&m_mapEqp[data->sid].m_csVedio);
+}
+
+string ioDev_dcqk::Get0x27AlarmLevelType(BYTE type)
+{	
 	if (type == 1 || type == 9 || type == 11 || type == 16
 		|| type == 101 || type == 109 || type == 111 || type == 116)
 		return "预警";
@@ -553,28 +723,28 @@ string ioDev_dcqk::Get0x97AlarmType(BYTE type, BYTE type1)
 		strRst += ("湿度预警");
 		break;
 	case ALARM_TYPE_QKYJHF:
-		strRst += ("缺口预警恢复及图像");
+		strRst += ("缺口预警及预警图像恢复");
 		break;
 	case ALARM_TYPE_QKBJHF:
-		strRst += ("缺口告警恢复及图像");
+		strRst += ("缺口告警及告警图像恢复");
 		break;
 	case ALARM_TYPE_QKSBGZHF:
-		strRst += ("缺口采集设备故障恢复及图像");
+		strRst += ("缺口采集设备故障恢复");
 		break;
 	case ALARM_TYPE_TXWFSBHF:
-		strRst += ("缺口图像无法识别告警恢复及图像");
+		strRst += ("缺口图像无法识别告警恢复");
+		break;
+	case ALARM_TYPE_GCKLGDHF:
+		strRst += ("过车时框量过大告警及过车视频恢复");
 		break;
 	case ALARM_TYPE_ZZJSBGZHF:
 		strRst += ("转辙机采集设备故障告警恢复");
-		break;
-	case ALARM_TYPE_GCKLGDHF:
-		strRst += ("过车时框量过大告警恢复及过车视频");
 		break;
 	case ALARM_TYPE_WDBJHF:
 		strRst += ("温度告警恢复");
 		break;
 	case ALARM_TYPE_SDBJHF:
-		strRst += ("温度告警恢复");
+		strRst += ("湿度告警恢复");
 		break;
 	case ALARM_TYPE_YWYJHF:
 		strRst += ("油位预警恢复");
@@ -1058,12 +1228,12 @@ void ioDev_dcqk::SendCallBackHeart(StHeartBeat315* pData)
 	data.datalen = sizeof(StHeartBeat315);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 int ioDev_dcqk::SendHeartbeat()
@@ -1086,12 +1256,12 @@ int ioDev_dcqk::SendHeartbeat()
 
 	data.lpdata = &hb;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	bool bOk = sendData((unsigned char*)buf, len);
+	bool bOk = sendData((unsigned char*)buf.data(), len);
 
 	if (bOk)
 	{
@@ -1127,11 +1297,11 @@ void ioDev_dcqk::BanDongOpr(int iSID, BYTE bType)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 	Parse315Protocol::Unparse(data, buf, len);
 	
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetHisImg(int nSID, time_t sTm, time_t eTm)
@@ -1158,11 +1328,11 @@ void ioDev_dcqk::GetHisImg(int nSID, time_t sTm, time_t eTm)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetHisVedio(int nSID, time_t sTm, time_t eTm, BYTE btVedioType)
@@ -1189,11 +1359,11 @@ void ioDev_dcqk::GetHisVedio(int nSID, time_t sTm, time_t eTm, BYTE btVedioType)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::RealVedioOpr(int nSID, BYTE btFixorinvert, BYTE btCmdType)
@@ -1222,11 +1392,11 @@ void ioDev_dcqk::RealVedioOpr(int nSID, BYTE btFixorinvert, BYTE btCmdType)
 	data.datalen = 1 + 2 + 1 + 1 + 7;
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetLastGap()
@@ -1248,12 +1418,12 @@ void ioDev_dcqk::GetLastGap()
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetLastImg(int nSID)
@@ -1277,12 +1447,12 @@ void ioDev_dcqk::GetLastImg(int nSID)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetGapCfg()
@@ -1304,12 +1474,12 @@ void ioDev_dcqk::GetGapCfg()
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetGapCfgEx()
@@ -1331,12 +1501,12 @@ void ioDev_dcqk::GetGapCfgEx()
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 
 }
 
@@ -1365,11 +1535,11 @@ void ioDev_dcqk::Getpowerfilelist(int nSID, time_t sTm, time_t eTm, BYTE btDir)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::SearchPowerCurveList(int nSID, time_t sTm, time_t eTm)
@@ -1396,12 +1566,12 @@ void ioDev_dcqk::SearchPowerCurveList(int nSID, time_t sTm, time_t eTm)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::DownloadPowerCurveFile(int nSID, time_t sTm)
@@ -1428,12 +1598,12 @@ void ioDev_dcqk::DownloadPowerCurveFile(int nSID, time_t sTm)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::ManualOiling(int nSID, BYTE btFixorinvert)
@@ -1459,12 +1629,12 @@ void ioDev_dcqk::ManualOiling(int nSID, BYTE btFixorinvert)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GetUnRecoverAlarm(int nSID)
@@ -1488,12 +1658,12 @@ void ioDev_dcqk::GetUnRecoverAlarm(int nSID)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::GongKuangOpr()
@@ -1522,12 +1692,12 @@ void ioDev_dcqk::GetOilBoxVolume(int nSID)
 	data.datalen = sizeof(subdata);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 
@@ -1537,7 +1707,7 @@ void ioDev_dcqk::SendCallBack0x41(StElecCurve* lpsubdata)
 	ZeroMemory(&data, sizeof(StFrame));
 
 	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
-	data.protocode = 0x80;
+	data.protocode = PROTOCAL_CODE;
 	data.dataversion = 0xFF;
 	data.ftype = FRAME_TYPE_DATA;
 	data.ftail = FRAME_TAIL_315;
@@ -1548,12 +1718,12 @@ void ioDev_dcqk::SendCallBack0x41(StElecCurve* lpsubdata)
 	data.datalen = sizeof(StElecCurveRec);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::SendCallBack0x25(StOilPreCurve* lpsubdata)
@@ -1562,7 +1732,7 @@ void ioDev_dcqk::SendCallBack0x25(StOilPreCurve* lpsubdata)
 	ZeroMemory(&data, sizeof(StFrame));
 
 	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
-	data.protocode = 0x80;
+	data.protocode = PROTOCAL_CODE;
 	data.dataversion = 0xFF;
 	data.ftype = FRAME_TYPE_DATA;
 	data.ftail = FRAME_TAIL_315;
@@ -1573,12 +1743,12 @@ void ioDev_dcqk::SendCallBack0x25(StOilPreCurve* lpsubdata)
 	data.datalen = sizeof(StOilPreCurveRec);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::SendCallBack0x27(StAlarmAndImgInfo* lpsubdata)
@@ -1587,7 +1757,7 @@ void ioDev_dcqk::SendCallBack0x27(StAlarmAndImgInfo* lpsubdata)
 	ZeroMemory(&data, sizeof(StFrame));
 
 	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
-	data.protocode = 0x80;
+	data.protocode = PROTOCAL_CODE;
 	data.dataversion = 0xFF;
 	data.ftype = FRAME_TYPE_DATA;
 	data.ftail = FRAME_TAIL_315;
@@ -1598,12 +1768,12 @@ void ioDev_dcqk::SendCallBack0x27(StAlarmAndImgInfo* lpsubdata)
 	data.datalen = sizeof(StAlarmAndImgRec);
 	data.lpdata = &subdata;
 
-	LPVOID buf = NULL;
+	vector<BYTE> buf;
 	int len = 0;
 
 	Parse315Protocol::Unparse(data, buf, len);
 
-	sendData((unsigned char*)buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }
 
 void ioDev_dcqk::ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc)
@@ -1752,7 +1922,7 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 			continue;
 		}
 		string zzj =zzjMo->getName("");
-		string zzj315 = m_mapSIDToName[pRecord->sid];
+		string zzj315 = m_mapEqp[pRecord->sid].eqpName;
 		BYTE location = pRecord->fixorinvert;
 		BYTE acqreason = pRecord->gaptype;
 		string theTag = zzjMo->getTag()+  ".缺口";
@@ -1850,4 +2020,103 @@ void ioDev_dcqk::Do_CMD_CODE_YWINFO(LPVOID pData)
 		RPC_SESSION session;
 		rpcSrv.rpc_input(jParam, resp, session);
 	}
+}
+
+
+//查询视频列表
+void ioDev_dcqk::QueryVedioList()
+{
+	uint32_t tNow = time(NULL);
+	StFrame data;
+	ZeroMemory(&data, sizeof(StFrame));
+
+	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
+	data.protocode = PROTOCAL_CODE;
+	data.dataversion = 0xFF;
+	data.ftype = FRAME_TYPE_DATA;
+	data.ftail = FRAME_TAIL_315;
+	data.datalen = sizeof(StVedioListReq);
+
+	StVedioListReq stReqTrigger = { 0 };
+	stReqTrigger.cmdid = CMD_CODE_VEDIOLIST;
+	stReqTrigger.resqid = 0xFF;
+	stReqTrigger.filldata[0] = 0xFF;
+	stReqTrigger.filldata[1] = 0xFF;
+	stReqTrigger.filldata[2] = 0xFF;
+	stReqTrigger.endtime = tNow;
+	StVedioListReq stReqPassCar = stReqTrigger;
+
+	stReqTrigger.vediotype = 0x01; // 扳动视频
+
+	stReqPassCar.vediotype = 0x02; // 过车视频
+
+	vector<BYTE> buf;
+	int len = 0;
+
+	time_t t = timeopt::SysTime2Unix(m_stLastQueryVedioTime);
+
+	for (auto &it : m_mapEqp)
+	{
+		bool bNeedQuery = false;
+		EnterCriticalSection(&it.second.m_csVedioList);
+		bNeedQuery = it.second.lstVedioCache.empty();
+		LeaveCriticalSection(&it.second.m_csVedioList);
+
+		if (!bNeedQuery) continue;
+
+		if (it.second.timeLastTriggerVedio == 0)
+		{
+			it.second.timeLastTriggerVedio = tNow - 10 * 24 * 60 * 60; // 10天前
+		}
+		if (it.second.timeLastPassCarVedio == 0)
+		{
+			it.second.timeLastPassCarVedio = tNow - 10 * 24 * 60 * 60; // 10天前
+		}
+
+		stReqTrigger.begintime = it.second.timeLastTriggerVedio + 1;
+		stReqPassCar.begintime = it.second.timeLastPassCarVedio + 1;
+		stReqTrigger.sid = it.first;
+		stReqPassCar.sid = it.first;
+
+		data.lpdata = &stReqTrigger;
+
+		Parse315Protocol::Unparse(data, buf, len);
+		sendData((unsigned char*)buf.data(), len);
+
+
+		data.lpdata = &stReqPassCar;
+		Parse315Protocol::Unparse(data, buf, len);
+		sendData((unsigned char*)buf.data(), len);
+	}
+}
+
+
+
+//查询视频
+void ioDev_dcqk::QueryVedio(WORD sid, StVedioRecord *pST)
+{
+	if (pST == NULL) return;
+	StFrame data;
+	ZeroMemory(&data, sizeof(StFrame));
+
+	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
+	data.protocode = PROTOCAL_CODE;
+	data.dataversion = 0xFF;
+	data.ftype = FRAME_TYPE_DATA;
+	data.ftail = FRAME_TAIL_315;
+	data.datalen = sizeof(StVedioFileReq);
+
+	StVedioFileReq stReqVedioFile = { 0 };
+	stReqVedioFile.cmdid = CMD_CODE_VEDIOFILE;
+	stReqVedioFile.vediotype = pST->filldata;
+	stReqVedioFile.sid = sid;
+	stReqVedioFile.filldata = 0xFFFFFFFF;
+	stReqVedioFile.time = pST->time;
+
+	vector<BYTE> buf;
+	int len = 0;
+	data.lpdata = &stReqVedioFile;
+
+	Parse315Protocol::Unparse(data, buf, len);
+	sendData((unsigned char*)buf.data(), len);
 }

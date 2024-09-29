@@ -45,6 +45,57 @@
 #define ALARM_TYPE_TEMPERATUREHF  177			//温度预警恢复
 #define ALARM_TYPE_HUMILITYHF	178				//湿度预警恢复
 
+//typedef struct
+//{
+//	WORD packid;			//本包序号
+//	DWORD datalen;			//本包内容长
+//	LPVOID lpdata;			//本包内容
+//}VedioPackage;
+
+typedef struct
+{
+	WORD sid;				//转辙机ID
+	DWORD time;				//开始时间：4字节(Unix时间)
+	WORD timelen;			//视频时长
+	DWORD len;				//视频长度：视频的大小，字节数
+	WORD packcnt;			//总包数
+	//WORD recvcnt;			//已接收包数
+	WORD maxpacklen;		//包长度
+	BOOL bFinished;			//是否接收完毕
+	set<WORD> setPack;		//已接收包序号
+	vector<BYTE> vctPacks;
+}VedioFile;
+
+typedef map<DWORD, VedioFile> VedioTimeMap;
+
+struct eqpInfo
+{
+	string daochaName;
+	string eqpName;
+	uint32_t timeLastTriggerVedio = 0;	//上次获取扳动视频列表时间
+	uint32_t timeLastPassCarVedio = 0;	//上次获取过车视频列表时间
+	list<StVedioRecord> lstVedioCache;	//视频未获取列表 filldata[0]:视频类型 filldata[1]:视频采集状态
+	DWORD	 timeLastReqDownload;	//上次请求下载时间
+	VedioTimeMap m_mapVideos;
+
+	CRITICAL_SECTION m_csVedioList;
+	CRITICAL_SECTION m_csVedio;
+	eqpInfo()
+	{
+		InitializeCriticalSection(&m_csVedio);
+		InitializeCriticalSection(&m_csVedioList);
+	}
+	~eqpInfo()
+	{
+		DeleteCriticalSection(&m_csVedio);
+		DeleteCriticalSection(&m_csVedioList);
+	}
+
+	void AddVedioCache(StVedioRecord*pTimes, WORD wCount, BYTE btType);
+	void DeleteVedioCache(uint32_t sTm, BYTE btType);
+};
+
+
 class ioDev_dcqk : public ioDev_tdsp
 {
 public:
@@ -103,11 +154,6 @@ public:
 	void GetOilBoxVolume(int nSID);
 
 
-	///	回执
-	void SendCallBackHeart(StHeartBeat315* pData);
-	void SendCallBack0x41(StElecCurve* lpsubdata);
-	void SendCallBack0x25(StOilPreCurve* lpsubdata);
-	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
 
 	void ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc);
 	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
@@ -116,7 +162,30 @@ public:
 	void Do_CMD_CODE_YYQX(LPVOID pData);
 	void Do_CMD_CODE_GAPVAL(LPVOID pData);
 	void Do_CMD_CODE_YWINFO(LPVOID pData);
-	std::map<int, string> m_mapSIDToName;
+	std::map<int, eqpInfo> m_mapEqp;
 
 	static std::map<int, std::string> g_map0x97AlarmLevel;
+	//接收
+public:
+	template<typename T>
+	void DealVedioFile(T*);
+
+	//发送
+public:
+	///	回执
+	void SendCallBackHeart(StHeartBeat315* pData);
+	void SendCallBack0x41(StElecCurve* lpsubdata);
+	void SendCallBack0x25(StOilPreCurve* lpsubdata);
+	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
+
+	//查询视频列表
+	void QueryVedioList(); //
+	//查询视频
+	void QueryVedio(WORD sid, StVedioRecord* pST);
+
+public:
+	TIME m_stLastQueryVedioTime;		//上次查询视频列表时间
+	bool m_bDownloadVedioThread;		//是否存在下载视频线程
+	bool m_bDownloadVedioing;			//是否正在下载视频
+	thread m_threadDownloadVedio;		//下载视频线程
 };

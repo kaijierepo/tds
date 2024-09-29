@@ -526,12 +526,14 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.strConfirmUser = session.user;
 		ai.strConfirmInfo = info;
 		timeopt::now(&ai.stConfirmTime);
-		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
-		{
-			tableCurrent.remove(ai);
-		}
-		else
-			tableCurrent.update(ai);
+		//if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		//{
+		//	tableCurrent.remove(ai);
+		//}
+		//else
+		//	tableCurrent.update(ai);
+
+		tableCurrent.acknowledge(ai);
 	}
 	else
 	{
@@ -553,7 +555,9 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.strConfirmUser = session.user;
 		ai.strConfirmInfo = info;
 		timeopt::now(&ai.stConfirmTime);
-		tableHist.update(ai);
+		//tableHist.update(ai);
+		tableHist.acknowledge(ai);
+
 	}
 
 	json j = ai.toJson(this);
@@ -1192,6 +1196,65 @@ void almTable::add(ALARM_INFO ai)
 	saveFile(pa,buff);
 }
 
+void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
+{
+	for (auto i = buff.begin(); i != buff.end(); )
+	{
+		ALARM_INFO* it = i->second;
+		if (it->tag != ai.tag)
+			goto LOOP_END;
+		if (it->type != ai.type)
+			goto LOOP_END;
+		if (it->bAck)
+			goto LOOP_END;
+		it->bAck = true;
+		if (remove && it->bAck && it->bRecover)
+		{
+			i = buff.erase(i);
+			continue;
+		}
+		it->strConfirmUser = ai.strConfirmUser;
+		it->strConfirmInfo = ai.strConfirmInfo;
+		it->stConfirmTime = ai.stConfirmTime;
+LOOP_END:
+		i++;
+	}
+}
+
+void almTable::acknowledge(const ALARM_INFO& ai)
+{
+	std::unique_lock<shared_mutex> lock(m_csTable);
+	if (bOneFilePerMonth)
+	{
+		// 获取当前路径
+		std::filesystem::path currentPath = db.m_path + "/alarms/";
+		// 遍历当前文件夹
+		for (const auto& entry : std::filesystem::directory_iterator(currentPath)) {
+			if (entry.is_regular_file()) { // 确保是文件
+				std::string filename = entry.path().filename().string();
+				// 检查文件名是否符合指定格式
+				if (filename.find("history_") == 0 && filename.find(".csv") == 14 && filename.size() == 18
+					&& to_string(stoi(filename.substr(8, 6))) == filename.substr(8, 6))
+				{ // "history_YYYYMM.csv" 的长度为 15
+					loadFile(entry.path().string());
+
+					acknowledge(ai, false);
+
+					saveFile(entry.path().string(), buff);
+				}
+			}
+		}
+	}
+	else
+	{
+		string  pa = getFilePath("");
+		loadFile(pa);
+
+		acknowledge(ai, true);
+
+		saveFile(pa, buff);
+	}
+}
 
 //找基于uuid匹配的唯一一个 或 其他字段的组合匹配到的最后一个
 bool almTable::query(json params, ALARM_INFO& ai)
@@ -1204,6 +1267,14 @@ bool almTable::query(json params, ALARM_INFO& ai)
 		time = params["time"].get<string>();
 	string  pa=getFilePath(time);
 	loadFile(pa);
+	const string strRecoverFlag = /*charCodec::gb_to_utf8(*/"恢复"/*)*/;
+	string strType = params["type"].get<string>();
+	auto pos = strType.find(strRecoverFlag);
+	if (pos != string::npos)
+	{
+		strType.replace(pos, strRecoverFlag.length(), "");
+	}
+
 	for(auto& i:buff)
 	{
 		ALARM_INFO& it = *i.second;
@@ -1221,13 +1292,6 @@ bool almTable::query(json params, ALARM_INFO& ai)
 				continue;
 			if (params["type"] != nullptr)
 			{
-				const string strRecoverFlag = /*charCodec::gb_to_utf8(*/"恢复"/*)*/;
-				string strType = params["type"].get<string>();
-				auto pos = strType.find(strRecoverFlag);
-				if (pos != string::npos)
-				{
-					strType.replace(pos, strRecoverFlag.length(), "");
-				}
 				if (it.type != strType)
 					continue;
 			}

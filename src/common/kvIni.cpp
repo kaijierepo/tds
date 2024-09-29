@@ -77,7 +77,7 @@ void KV_INI::setVal(string key, int val)
 	}
 	else
 	{
-		m_strConf = "\n" + m_strConf + key + "=" + s;
+		m_strConf = m_strConf + "\n" + key + "=" + s;
 	}
 
 	save(m_path);

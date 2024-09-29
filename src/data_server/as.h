@@ -160,6 +160,8 @@ public:
 
 	void SetAlarmSrv(almServer* pSrv);
 
+	void acknowledge(const ALARM_INFO& ai);
+	void acknowledge(const ALARM_INFO& ai, bool remove);
 public:
 
 	almTable(){

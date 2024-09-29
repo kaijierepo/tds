@@ -15,13 +15,14 @@ BOOL CVedioParser::Parse(StVedioFrame& data, LPVOID, int)
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioFrame& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioFrame& data, vector<BYTE>& buf, int& len)
 {
 	len = data.datalen + 5 + 4 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 	memcpy_s(pos, 5 + 4, &data, 5 + 4);
 	pos += 5 + 4;
 
@@ -29,7 +30,7 @@ BOOL CVedioParser::Unparse(StVedioFrame& data, LPVOID& buf, int& len)
 	{
 		StDataBasic* basic = (StDataBasic*)data.lpdata;
 
-		LPVOID subbuf = NULL;
+		vector<BYTE> subbuf;
 		int sublen = 0;
 		BOOL success = FALSE;
 
@@ -56,20 +57,18 @@ BOOL CVedioParser::Unparse(StVedioFrame& data, LPVOID& buf, int& len)
 
 		if (!success)
 		{
-			delete[] buf;
 			return FALSE;
 		}
 
 		if (sublen != data.datalen)
 		{
-			delete[] subbuf;
-			delete[] buf;
 			return FALSE;
 		}
 
-		memcpy_s(pos, sublen, subbuf, sublen);
+		memcpy_s(pos, sublen, subbuf.data(), sublen);
+
 		pos += sublen;
-		delete[] subbuf;
+		//delete[] subbuf;
 
 	}
 
@@ -137,13 +136,14 @@ BOOL CVedioParser::Release(StVedioRealPlay& data)
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioFileStart& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioFileStart& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 2 + 2 + 2 + data.titlelen + data.pathlen;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	memcpy_s(pos, 1 + 1 + 2 + 2, &data, 1 + 1 + 2 + 2);
 	pos += 1 + 1 + 2 + 2;
@@ -166,24 +166,26 @@ BOOL CVedioParser::Unparse(StVedioFileStart& data, LPVOID& buf, int& len)
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioFileStop& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioFileStop& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioSetTitle& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioSetTitle& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 2 + data.titlelen;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	memcpy_s(pos, 1 + 1 + 2, &data, 1 + 1 + 2);
 	pos += 1 + 1 + 2;
@@ -197,24 +199,26 @@ BOOL CVedioParser::Unparse(StVedioSetTitle& data, LPVOID& buf, int& len)
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioRealCtrl& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioRealCtrl& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 1 + 2 + 1 + 2 + 2;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
 
-BOOL CVedioParser::Unparse(StVedioRealPlay& data, LPVOID& buf, int& len)
+BOOL CVedioParser::Unparse(StVedioRealPlay& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 2 + 2 + data.len;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	memcpy_s(pos, 1 + 1 + 2 + 2, &data, 1 + 1 + 2 + 2);
 	pos += 1 + 1 + 2 + 2;
@@ -365,7 +369,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 				delete lpdata;
 				return FALSE;
 			}
-		} 
+		}
 		else
 		{
 			StImgListReq* lpdata = new StImgListReq;
@@ -397,10 +401,10 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 				delete lpdata;
 				return FALSE;
 			}
-		} 
+		}
 		else
 		{
-			StImgInfoReq *lpdata = new StImgInfoReq;
+			StImgInfoReq* lpdata = new StImgInfoReq;
 			if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
 			{
 				data.lpdata = lpdata;
@@ -429,7 +433,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 				delete lpdata;
 				return FALSE;
 			}
-		} 
+		}
 		else
 		{
 			StVedioListReq* lpdata = new StVedioListReq;
@@ -461,8 +465,8 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 				delete lpdata;
 				return FALSE;
 			}
-		}		
-		else 
+		}
+		else
 		{
 			auto lpdata = new StVedioFileRes4;
 			if (Parse315Protocol::Parse(lpdata, pos, data.datalen))
@@ -572,7 +576,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 	{
 		if (dir == 1)
 		{
-			StPowerListRes *lpdata = new StPowerListRes;
+			StPowerListRes* lpdata = new StPowerListRes;
 			if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
 			{
 				data.lpdata = lpdata;
@@ -586,7 +590,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 		}
 		else
 		{
-			StPowerListReq *lpdata = new StPowerListReq;
+			StPowerListReq* lpdata = new StPowerListReq;
 			if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
 			{
 				data.lpdata = lpdata;
@@ -630,24 +634,24 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 		}
 		break;
 	}
-// 	case CMD_CODE_NEW_DATA_FILE:
-// 	{
-// 		StNewPowerNotify* lpdata = new StNewPowerNotify;
-// 		if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
-// 		{
-// 			data.lpdata = lpdata;
-// 			pos += data.datalen;
-// 		}
-// 		else
-// 		{
-// 			delete lpdata;
-// 			return FALSE;
-// 		}
-// 		break;
-// 	}
+	// 	case CMD_CODE_NEW_DATA_FILE:
+	// 	{
+	// 		StNewPowerNotify* lpdata = new StNewPowerNotify;
+	// 		if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
+	// 		{
+	// 			data.lpdata = lpdata;
+	// 			pos += data.datalen;
+	// 		}
+	// 		else
+	// 		{
+	// 			delete lpdata;
+	// 			return FALSE;
+	// 		}
+	// 		break;
+	// 	}
 	case CMD_CODE_QUERY_POWER_FILE:
 	{
-		if ((data.datalen-1) % sizeof(StPowerFileList) == 0)
+		if ((data.datalen - 1) % sizeof(StPowerFileList) == 0)
 		{
 			//StPowerFileList* lpdata = new StPowerFileList[(data.datalen - 1) / sizeof(StPowerFileList)];
 			StPowerFileListF2* lpdata = new StPowerFileListF2;
@@ -679,7 +683,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 				delete lpdata;
 				return FALSE;
 			}
-		} 
+		}
 		else
 		{
 			StPowerFileDataResq* lpdata = new StPowerFileDataResq;
@@ -779,7 +783,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 	}
 	case (uint8_t)E_315_PROTOCOL_TYPE::GONGKUANG_INIT_VALUE_0x82:
 	{
-		StOpWorkingConditionRes*lpdata = new StOpWorkingConditionRes;
+		StOpWorkingConditionRes* lpdata = new StOpWorkingConditionRes;
 		if (Parse315Protocol::Parse(*lpdata, pos, data.datalen))
 		{
 			data.lpdata = lpdata;
@@ -811,7 +815,7 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 		break;
 	}
 
-	if (g_dw0x23ExCmdID > 0&& basic->cmdid == g_dw0x23ExCmdID)
+	if (g_dw0x23ExCmdID > 0 && basic->cmdid == g_dw0x23ExCmdID)
 	{
 		StGapCfgRes* lpdata = new StGapCfgRes;
 		if (Parse315Protocol::Parse(*lpdata, pos, data.datalen, data.e_frmKind))
@@ -1330,15 +1334,16 @@ BOOL Parse315Protocol::Parse(StFrame& data, LPVOID buf, int len, int dir)
 }
 */
 
-BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, BYTE* cmdBuf, int cmdLen)
+BOOL Parse315Protocol::Unparse(StFrame& data, vector<BYTE>& buf, int& len, BYTE* cmdBuf, int cmdLen)
 {
 	//序列化后包的总长度。315头长度 + 命令域长度
 	data.datalen = cmdLen;
 	int unparselen = data.datalen + 5 + 1 + 1 + 1 + 4 + 4;
-	buf = new BYTE[unparselen];
-	ZeroMemory(buf, unparselen);
+	//buf = new BYTE[unparselen];
+	//ZeroMemory(buf, unparselen);
+	buf.resize(unparselen);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	//拷贝315头信息
 	memcpy_s(pos, 5 + 1 + 1 + 1 + 4, &data, 5 + 1 + 1 + 1 + 4);
@@ -1359,13 +1364,14 @@ BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, BYTE* cmdBu
 
 
 
-BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, int dir)
+BOOL Parse315Protocol::Unparse(StFrame& data, vector<BYTE>& buf, int& len, int dir)
 {
 	int unparselen = data.datalen + 5 + 1 + 1 + 1 + 4 + 4;
-	buf = new BYTE[unparselen];
-	ZeroMemory(buf, unparselen);
+	//buf = new BYTE[unparselen];
+	//ZeroMemory(buf, unparselen);
+	buf.resize(unparselen);
 
-	LPBYTE pos = (LPBYTE)buf;
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	memcpy_s(pos, 5 + 1 + 1 + 1 + 4, &data, 5 + 1 + 1 + 1 + 4);
 	pos += 5 + 1 + 1 + 1 + 4;
@@ -1374,11 +1380,11 @@ BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, int dir)
 	{
 		if (data.lpdata == NULL)
 		{
-			delete[] buf;
+			//delete[] buf;
 			return FALSE;
 		}
 
-		LPVOID subbuf = NULL;
+		vector<BYTE> subbuf;
 		int sublen = 0;
 		BOOL success = FALSE;
 
@@ -1448,7 +1454,7 @@ BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, int dir)
 					success = Parse315Protocol::Unparse(*(StVedioFileReq*)data.lpdata, subbuf, sublen);
 					break;
 				}
-				case CMD_CODE_QUERY_POWER_FILE: 
+				case CMD_CODE_QUERY_POWER_FILE:
 				{
 					success = Parse315Protocol::Unparse(*(StPowerFileListResq*)data.lpdata, subbuf, sublen);
 					break;
@@ -1514,35 +1520,38 @@ BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, int dir)
 
 		if (!success)
 		{
-			if (buf)
-			{
-				delete[] buf;
-			}
+			//if (buf)
+			//{
+			//	delete[] buf;
+			//}
+			buf.clear();
 
 			return FALSE;
 		}
 
 		if (sublen != data.datalen)
 		{
-			if (subbuf)
-			{
-				delete[] subbuf;
-			}
-			if (buf)
-			{
-				delete[] buf;
-			}
+			//if (subbuf)
+			//{
+			//	delete[] subbuf;
+			//}
+			//if (buf)
+			//{
+			//	delete[] buf;
+			//}
+			subbuf.clear();
+			buf.clear();
 
 			return FALSE;
 		}
 
-		memcpy_s(pos, sublen, subbuf, sublen);
+		memcpy_s(pos, sublen, subbuf.data(), sublen);
 		pos += sublen;
 
-		if (subbuf)
-		{
-			delete[] subbuf;
-		}
+		//if (subbuf)
+		//{
+		//	delete[] subbuf;
+		//}
 	}
 
 	memcpy_s(pos, 4, &data.ftail, 4);
@@ -1552,23 +1561,25 @@ BOOL Parse315Protocol::Unparse(StFrame& data, LPVOID& buf, int& len, int dir)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StOilBoxVolumeResq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StOilBoxVolumeResq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
-BOOL Parse315Protocol::Unparse(StAlarmListReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StAlarmListReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 3;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -1676,10 +1687,10 @@ BOOL Parse315Protocol::Release(StFrame& data, int dir)
 					if (b2Flen2byte)
 					{
 						Parse315Protocol::Release((StVedioFileRes2*)data.lpdata);
-					} 
+					}
 					else
 					{
-						Parse315Protocol::Release((StVedioFileRes4 *)data.lpdata);
+						Parse315Protocol::Release((StVedioFileRes4*)data.lpdata);
 					}
 				}
 				break;
@@ -1728,14 +1739,14 @@ BOOL Parse315Protocol::Release(StFrame& data, int dir)
 				}
 				break;
 			}
-// 			case CMD_CODE_NEW_DATA_FILE:
-// 			{
-// 				if (dir != 0)
-// 				{
-// 					Parse315Protocol::Release(*(StNewPowerNotify*)data.lpdata);
-// 				}
-// 				break;
-// 			}
+			// 			case CMD_CODE_NEW_DATA_FILE:
+			// 			{
+			// 				if (dir != 0)
+			// 				{
+			// 					Parse315Protocol::Release(*(StNewPowerNotify*)data.lpdata);
+			// 				}
+			// 				break;
+			// 			}
 			case CMD_CODE_QUERY_POWER_FILE:
 			{
 				if (dir != 0)
@@ -1869,24 +1880,26 @@ BOOL Parse315Protocol::Parse(StHeartBeat315& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StHeartBeat315& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StHeartBeat315& data, vector<BYTE>& buf, int& len)
 {
 	len = 4 + 3;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StDataBasic& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StDataBasic& data, vector<BYTE>& buf, int& len)
 {
 	len = 1;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2266,13 +2279,14 @@ BOOL Parse315Protocol::Parse(StAlarmAndImgInfo& data, LPVOID buf, int len, FRAME
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StAlarmAndImgRec& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StAlarmAndImgRec& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 4 + 1 + 1 + 1 + 2 + 2 + 2 + 4 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2331,13 +2345,14 @@ BOOL Parse315Protocol::Parse(StActionInfo& data, LPVOID buf, int len, FRAME_KIND
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StActionInfoRec& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StActionInfoRec& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 4 + 1 + 1 + 1 + 2 + 2 + 2 + 4 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2352,13 +2367,14 @@ BOOL Parse315Protocol::Release(StActionInfo& data)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StManualOilingResq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StManualOilingResq& data, vector<BYTE>& buf, int& len)
 {
 	len = sizeof(StManualOilingResq);
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2409,13 +2425,14 @@ BOOL Parse315Protocol::Parse(StLastGapImgRes& data, LPVOID buf, int len, FRAME_K
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StLastGapImgReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StLastGapImgReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2487,13 +2504,14 @@ BOOL Parse315Protocol::Parse(StImgListRes& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StImgListReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StImgListReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 4 + 1 + 3;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2552,16 +2570,16 @@ BOOL Parse315Protocol::Parse(StWorkingConditionValRes& data, LPVOID buf, int len
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Parse(StOpWorkingConditionRes&data, LPVOID buf, int len)
+BOOL Parse315Protocol::Parse(StOpWorkingConditionRes& data, LPVOID buf, int len)
 {
-ZeroMemory(&data, sizeof(data));
-if (sizeof(data) != len) return FALSE;
+	ZeroMemory(&data, sizeof(data));
+	if (sizeof(data) != len) return FALSE;
 
-CopyMemory(&data, (BYTE*)buf, sizeof(data));
-return TRUE;
+	CopyMemory(&data, (BYTE*)buf, sizeof(data));
+	return TRUE;
 }
 
-BOOL Parse315Protocol::Parse(StImgInfoReq &data, LPVOID buf, int len)
+BOOL Parse315Protocol::Parse(StImgInfoReq& data, LPVOID buf, int len)
 {
 	ZeroMemory(&data, sizeof(data));
 
@@ -2615,13 +2633,14 @@ BOOL Parse315Protocol::Parse(StImgInfoRes& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StImgInfoReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StImgInfoReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 1 + 3;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2690,13 +2709,14 @@ BOOL Parse315Protocol::Parse(StVedioListRes& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StVedioListReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StVedioListReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 2 + 4 + 4 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2734,7 +2754,7 @@ BOOL Parse315Protocol::ParseReq(StVedioFileReq& data, LPVOID buf, int len)
 }
 
 template<typename T>
-BOOL Parse315Protocol::Parse(T *data, LPVOID buf, int len)
+BOOL Parse315Protocol::Parse(T* data, LPVOID buf, int len)
 {
 	//ZeroMemory(data, sizeof(StVedioFileResHead));
 
@@ -2767,19 +2787,20 @@ BOOL Parse315Protocol::Parse(T *data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StVedioFileReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StVedioFileReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 1 + 2 + 4 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
 
 template<typename T>
-BOOL Parse315Protocol::Release(T *data)
+BOOL Parse315Protocol::Release(T* data)
 {
 	return FALSE;
 
@@ -2793,13 +2814,14 @@ BOOL Parse315Protocol::Release(T *data)
 /*0x2F 视频文件 end */
 
 /*0xF2 查询阻力文件 begin */
-BOOL Parse315Protocol::Unparse(StPowerFileListResq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StPowerFileListResq& data, vector<BYTE>& buf, int& len)
 {
 	len = sizeof(StPowerFileListResq);
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 
@@ -2812,13 +2834,14 @@ BOOL Parse315Protocol::Release(StPowerFileListResq& data)
 /*0xF2 查询阻力文件 end */
 
 /*0xF3 查询阻力文件 begin */
-BOOL Parse315Protocol::Unparse(StPowerFileDataResq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StPowerFileDataResq& data, vector<BYTE>& buf, int& len)
 {
 	len = sizeof(StPowerFileDataResq);
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 
@@ -2850,13 +2873,14 @@ BOOL Parse315Protocol::ParseReq(St1DQJInfo& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(St1DQJInfo& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(St1DQJInfo& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 1 + 4;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -2953,13 +2977,14 @@ string Parse315Protocol::GetStrFromData(BYTE* buf, int dwLen)
 	return strReturn;
 }
 
-BOOL Parse315Protocol::Unparse(StOilPreCurveRec& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StOilPreCurveRec& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 1 + 1 + 4 + 1;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -3143,7 +3168,7 @@ BOOL Parse315Protocol::Parse(StRealCtrlRes& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StRealCtrlReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StRealCtrlReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 1 + 1;
 
@@ -3165,10 +3190,12 @@ BOOL Parse315Protocol::Unparse(StRealCtrlReq& data, LPVOID& buf, int& len)
 		break;
 	}
 
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	LPBYTE pos = (LPBYTE)buf;
+
+	LPBYTE pos = (LPBYTE)buf.data();
 
 	size_t sz = 1 + 2 + 1 + 1;
 	memcpy_s(pos, sz, &data, sz);
@@ -3283,7 +3310,7 @@ BOOL Parse315Protocol::Release(StRealStream& data)
 	return TRUE;
 }
 /*0x31 实时码流  end*/
-BOOL Parse315Protocol::Parse(StPowerListReq &data, LPVOID buf, int len)
+BOOL Parse315Protocol::Parse(StPowerListReq& data, LPVOID buf, int len)
 {
 	ZeroMemory(&data, sizeof(data));
 
@@ -3337,13 +3364,14 @@ BOOL Parse315Protocol::Parse(StPowerListRes& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StPowerListReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StPowerListReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 4 + 1;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -3464,30 +3492,37 @@ BOOL Parse315Protocol::Parse(StPowerFileData& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StPowerInfoReq& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StPowerInfoReq& data, vector<BYTE>& buf, int& len)
 {
 	len = 1 + 2 + 4 + 1;
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(StPowerFileData& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(StPowerFileData& data, vector<BYTE>& buf, int& len)
 {
 	if (len == 9)
 	{
-		buf = new BYTE[len];
-		ZeroMemory(buf, len);
-		//StNewPowerNotify newData;
-		//newData.cmdid = data.cmdid;
-		//newData.sid = data.sid;
-		//newData.acqObjType = data.acqObjType;
-		//newData.time = data.time;
-		//memcpy_s(buf, sizeof(StNewPowerNotify), &newData, sizeof(StNewPowerNotify));
-		CopyMemory(buf, &data, sizeof(StPowerFileData));
+		//buf = new BYTE[len];
+//ZeroMemory(buf, len);
+		buf.resize(len);
+
+		memcpy_s(buf.data(), len, &data, len);
+
+		//buf = new BYTE[len];
+		//ZeroMemory(buf, len);
+		////StNewPowerNotify newData;
+		////newData.cmdid = data.cmdid;
+		////newData.sid = data.sid;
+		////newData.acqObjType = data.acqObjType;
+		////newData.time = data.time;
+		////memcpy_s(buf, sizeof(StNewPowerNotify), &newData, sizeof(StNewPowerNotify));
+		//CopyMemory(buf, &data, sizeof(StPowerFileData));
 	}
 	else
 	{
@@ -3498,13 +3533,14 @@ BOOL Parse315Protocol::Unparse(StPowerFileData& data, LPVOID& buf, int& len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(CalPower& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(CalPower& data, vector<BYTE>& buf, int& len)
 {
 	len = sizeof(CalPower);
-	buf = new BYTE[len];
-	ZeroMemory(buf, len);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	memcpy_s(buf, len, &data, len);
+	memcpy_s(buf.data(), len, &data, len);
 
 	return TRUE;
 }
@@ -3542,17 +3578,19 @@ BOOL Parse315Protocol::Parse(DBJFBJInfo& data, LPVOID buf, int len)
 	return TRUE;
 }
 
-BOOL Parse315Protocol::Unparse(DBJFBJInfo& data, LPVOID& buf, int& len)
+BOOL Parse315Protocol::Unparse(DBJFBJInfo& data, vector<BYTE>& buf, int& len)
 {
 	len = 3 * data.dataCount + 11;
-	buf = new BYTE[len];
-	PBYTE bufTmp = new BYTE[len];
-	
-	memcpy_s(bufTmp, 11, &data, 11);
-	memcpy_s(bufTmp + 11, 3*data.dataCount, data.curveInfoList, 3*data.dataCount);
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
 
-	ZeroMemory(buf, len);
-	memcpy_s(buf, len, bufTmp, len);
+
+	memcpy_s(buf.data(), 11, &data, 11);
+	memcpy_s(buf.data() + 11, 3 * data.dataCount, data.curveInfoList, 3 * data.dataCount);
+
+	//ZeroMemory(buf, len);
+	//memcpy_s(buf, len, bufTmp, len);
 
 	return TRUE;
 }
@@ -3736,7 +3774,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 						if (pIt[k].value == 0xFF)
 						{
 							_stprintf_s(buf, _T("转辙机:%d, 无加油设备\n"), pIt[k].sid);
-						} 
+						}
 						else if (pIt[k].value == 0xFFFF)
 						{
 							_stprintf_s(buf, _T("转辙机:%d, 设备不在线\n"), pIt[k].sid);
@@ -3777,7 +3815,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 				TCHAR buf[256];
 				_stprintf_s(buf, _T("转辙机:%d\n时间:%04d-%02d-%02d %02d:%02d:%02d\n动作类型:%s\n值类型:%s\nK值:%f\nB值:%f\n返回结果:%d"),
 					lpsubdata->zzjid, tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, tm.wSecond,
-					lpsubdata->actionType == 0 ? "获取":"设置", lpsubdata->valType > 8 ?"无效值": s_szValueType[lpsubdata->valType - 1], 
+					lpsubdata->actionType == 0 ? "获取" : "设置", lpsubdata->valType > 8 ? "无效值" : s_szValueType[lpsubdata->valType - 1],
 					lpsubdata->valueK * 1.0 / 1000000, lpsubdata->valueB * 1.0 / 1000000, lpsubdata->result);
 				strRst += buf;
 				break;
@@ -3817,7 +3855,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 				{
 					strRst += _T("报警/预警信息(缺口图像信息)回执");
 					strRst += _T("，");
-					if(basic->cmdid == CMD_CODE_ALARM_AND_IMG)//0x27
+					if (basic->cmdid == CMD_CODE_ALARM_AND_IMG)//0x27
 						strRst += Parse315Protocol::ToString0x27(*(StAlarmAndImgRec*)data.lpdata);
 					else if (basic->cmdid == CMD_CODE_ALARM)//0x97
 						strRst += Parse315Protocol::ToString0x97(*(StAlarmAndImgRec*)data.lpdata);
@@ -3927,7 +3965,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 					strRst += _T("，");
 					if (b2Flen2byte)
 					{
-						strRst += Parse315Protocol::ToString((StVedioFileRes2 *)data.lpdata);
+						strRst += Parse315Protocol::ToString((StVedioFileRes2*)data.lpdata);
 					}
 					else
 					{
@@ -4050,7 +4088,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 				{
 					strRst += _T("阻力文件信息，");
 					strRst += Parse315Protocol::ToString(*(StPowerFileData*)data.lpdata);
-				} 
+				}
 				else
 				{
 					strRst += _T("阻力文件信息，");
@@ -4072,7 +4110,7 @@ tstring Parse315Protocol::ToString(const StFrame& data, int dir)
 					{
 						strRst += ",一次性读取";
 					}
-					else 
+					else
 					{
 						strRst += ",分包读取, 分包号:";
 						strRst += to_string(pResq->wSubID);
@@ -4298,19 +4336,19 @@ tstring Parse315Protocol::ToString(const StGapCfgRes& data)
 		TCHAR buf[256] = { 0 };
 		_stprintf_s(buf, _T("配置数:%d\r\n"), data.cfgcnt);
 		strRst += buf;
-	
+
 		for (int i = 0; i < data.cfgcnt; ++i)
 		{
 			const StSwitchCfg& scfg = ((StSwitchCfg*)data.lpcfg)[i];
-	
+
 			strRst += _T("，");
 			_stprintf_s(buf, _T("配置%d:{"), i);
 			strRst += buf;
-	
+
 			char name[50] = { 0 };
 			memcpy_s(name, 50, scfg.lpname, scfg.nlen);
 			strRst += _T("转辙机:") + AStringToTString(name);
-	
+
 			strRst += _T("，");
 			strRst += _T("转辙机类型:");
 			switch (scfg.stype)
@@ -4343,15 +4381,15 @@ tstring Parse315Protocol::ToString(const StGapCfgRes& data)
 				strRst += _T("未知");
 				break;
 			}
-	
+
 			strRst += _T("，");
 			_stprintf_s(buf, _T("转辙机ID:%d"), scfg.sid);
 			strRst += buf;
-	
+
 			strRst += _T("，");
 			_stprintf_s(buf, _T("采集信息个数:%d"), scfg.cnt);
 			strRst += buf;
-	
+
 			strRst += _T("，");
 			strRst += _T("采集信息类型:{");
 			for (int j = 0; j < scfg.cnt; ++j)
@@ -4397,16 +4435,16 @@ tstring Parse315Protocol::ToString(const StGapCfgRes& data)
 						strRst += _T("未知,");
 					break;
 				}
-	
+
 			}
 			strRst += _T("}");
-	
+
 			strRst += _T("}");
-	
-	
+
+
 			strRst += "\r\n";
 		}
-	} 
+	}
 	else
 	{
 		TCHAR buf[256] = { 0 };
@@ -4426,19 +4464,19 @@ tstring Parse315Protocol::ToString(const StGapValue& data)
 	_stprintf_s(buf, _T("记录数:%d\r\n"), data.cnt);
 	strRst += buf;
 
-//#ifdef _DEBUG
-//	std::map<int, std::string> mapName{ {1,"W0102J1"},
-//		{2,"W0102J2"},
-//		{3,"W0104J1"},
-//		{4,"W0104J2"},
-//		{5,"W0106J1"},
-//		{6,"W0106J2"},
-//		{7,"W0108J1"},
-//		{8,"W0108J2"},
-//		{9,"W0110J1"},
-//		{10,"W0110J2"}
-//	};
-//#endif // _DEBUG
+	//#ifdef _DEBUG
+	//	std::map<int, std::string> mapName{ {1,"W0102J1"},
+	//		{2,"W0102J2"},
+	//		{3,"W0104J1"},
+	//		{4,"W0104J2"},
+	//		{5,"W0106J1"},
+	//		{6,"W0106J2"},
+	//		{7,"W0108J1"},
+	//		{8,"W0108J2"},
+	//		{9,"W0110J1"},
+	//		{10,"W0110J2"}
+	//	};
+	//#endif // _DEBUG
 
 	for (int i = 0; i < data.cnt; ++i)
 	{
@@ -4466,12 +4504,12 @@ tstring Parse315Protocol::ToString(const StGapValue& data)
 		strRst += _T("，");
 		_stprintf_s(buf, _T("转辙机ID:%d"), rcd->sid);
 		strRst += buf;
-//
-//#ifdef _DEBUG
-//		strRst += _T("，");
-//		_stprintf_s(buf, _T("转辙机名称:%s"), mapName[rcd->sid].c_str());
-//		strRst += buf;
-//#endif // _DEBUG
+		//
+		//#ifdef _DEBUG
+		//		strRst += _T("，");
+		//		_stprintf_s(buf, _T("转辙机名称:%s"), mapName[rcd->sid].c_str());
+		//		strRst += buf;
+		//#endif // _DEBUG
 
 		strRst += _T("，");
 		strRst += _T("定反位:");
@@ -4554,7 +4592,7 @@ enum  WIF_VERSION
 	WIF_VERSION_2023 = 2023,
 };
 
-enum  GapAcqTypeOfFile 
+enum  GapAcqTypeOfFile
 {
 	egatofUntyped = 0,//未指定
 	egatofTrigger = 1,//扳动采集
@@ -4630,7 +4668,7 @@ tstring Parse315Protocol::ToString(const StAlarmAndImgInfo& data)
 		tm.wYear, tm.wMonth, tm.wDay, tm.wHour, tm.wMinute, tm.wSecond);
 	strRst += buf;
 
-	BYTE *cbFill = (BYTE *)&data.filldata;
+	BYTE* cbFill = (BYTE*)&data.filldata;
 	switch (cbFill[0])
 	{
 	case 3:
@@ -4664,7 +4702,7 @@ tstring Parse315Protocol::ToString(const StAlarmAndImgInfo& data)
 	bool bPowerAlarm = false; //阻力报警
 	if (nVer < 2023 && (data.alarmtype == ALARM_TYPE_POWERYJHF || data.alarmtype == ALARM_TYPE_POWERBJHF
 		|| data.alarmtype == ALARM_TYPE_POWERYJ || data.alarmtype == ALARM_TYPE_POWERBJ)
-		|| nVer >= 2023 &&(data.alarmtype == 13 || data.alarmtype == 113))
+		|| nVer >= 2023 && (data.alarmtype == 13 || data.alarmtype == 113))
 	{
 		strRst += _T("，");
 		strRst += GetGapAcqTypeName(GapAcqTypeOfFile::egatofTrigger, false) + _T("方向:");
@@ -4772,11 +4810,11 @@ tstring Parse315Protocol::ToString0x27(const StAlarmAndImgRec& data)
 
 	_stprintf_s(buf, _T(",报警确认信号:%s"), strAckTime);
 	strRst += buf;
-	BYTE *cbFill = (BYTE *)&data.filldata;
+	BYTE* cbFill = (BYTE*)&data.filldata;
 	switch (cbFill[0])
 	{
 	case 3:
-		strRst += ",采集类型:"+ GetGapAcqTypeName(GapAcqTypeOfFile::egatofCrsCar, true);
+		strRst += ",采集类型:" + GetGapAcqTypeName(GapAcqTypeOfFile::egatofCrsCar, true);
 		break;
 	case 2:
 		strRst += ",采集类型:" + GetGapAcqTypeName(GapAcqTypeOfFile::egatofTrigger, true);
@@ -5017,7 +5055,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 	{ ALARM_TYPE_TEMPERATUREHF, "预警" },		//温度预警恢复
 	{ ALARM_TYPE_HUMILITYHF	, "预警" } };		//湿度预警恢复
 
-	BYTE *cbFill = ((BYTE *)&data.filldata);
+	BYTE* cbFill = ((BYTE*)&data.filldata);
 
 	string acqType;
 	switch (cbFill[0])
@@ -5045,7 +5083,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 		strRst += acqType + _T("，");
 		strRst += _T("描述:");
 
-		strRst += (data.alarmtype % 10 == 7 ?  _T("温度:"): _T("湿度:"));
+		strRst += (data.alarmtype % 10 == 7 ? _T("温度:") : _T("湿度:"));
 
 		_stprintf_s(buf, _T("(%.2f%s)"), ((float)data.gap) / 100.0, sunit.c_str());
 		strRst += buf;
@@ -5113,7 +5151,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 			break;
 		case 3:
 			strRst += _T("锁闭阶段");
-		break;
+			break;
 		case 4:
 			strRst += _T("释压阶段");
 			break;
@@ -5146,16 +5184,16 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 		{
 		case 1:
 			strRst += _T("静态缺口:");
-		break; 
+			break;
 		case 2:
 			strRst += GetGapAcqTypeName(GapAcqTypeOfFile::egatofTrigger, false) + _T("后缺口:");
-		break;
+			break;
 		case 3:
 			strRst += _T("过车缺口:");
-		break; 
+			break;
 		case 4:
 			strRst += _T("过车前缺口:");
-		break; 
+			break;
 		case 5:
 			strRst += _T("过车后缺口:");
 			break;
@@ -5537,7 +5575,7 @@ tstring Parse315Protocol::ToString(const StImgInfoReq& data)
 	return strRst;
 }
 
-tstring Parse315Protocol::ToString(const StImgInfoRes &data)
+tstring Parse315Protocol::ToString(const StImgInfoRes& data)
 {
 	tstring strRst = _T("");
 
@@ -5617,7 +5655,7 @@ tstring Parse315Protocol::ToString(const StVedioListReq& data)
 		strRst += _T("过车视频");
 	else
 		strRst += _T(" ");
-	strRst += _T(", 请求编号:")+to_string(data.resqid);
+	strRst += _T(", 请求编号:") + to_string(data.resqid);
 
 	strRst += _T("，");
 	//CTime tm = data.begintime;
@@ -5713,7 +5751,7 @@ tstring Parse315Protocol::ToString(const StVedioFileReq& data)
 }
 
 template<typename T>
-tstring Parse315Protocol::ToString(const T *data)
+tstring Parse315Protocol::ToString(const T* data)
 {
 	tstring strRst = _T("");
 
@@ -5835,7 +5873,7 @@ tstring Parse315Protocol::ToString(const StOilPreCurve& data)
 	_stprintf_s(buf, _T("曲线条数:%d"), data.cnt);
 	strRst += buf;
 
-	BYTE *cbFill = (BYTE *)&data.filldata;
+	BYTE* cbFill = (BYTE*)&data.filldata;
 
 	int nVer = (cbFill[1] == 0xFF ? 2015 : (cbFill[1] + 2000));
 	for (int i = 0; i < data.cnt; ++i)
@@ -5856,9 +5894,9 @@ tstring Parse315Protocol::ToString(const StOilPreCurve& data)
 		strRst += _T("，");
 		strRst += _T("曲线数据:{...}");
 
-		strRst += _T("}");		
+		strRst += _T("}");
 	}
-	
+
 
 	return strRst;
 }
@@ -6646,7 +6684,7 @@ tstring Parse315Protocol::ToString(const StPowerInfoReq& data)
 	return strRst;
 }
 
-tstring Parse315Protocol::ToString(const StPowerInfoRes&data)
+tstring Parse315Protocol::ToString(const StPowerInfoRes& data)
 {
 	tstring strRst = _T("");
 
@@ -6704,7 +6742,7 @@ tstring Parse315Protocol::ToString(const StManualOilingRes& data)
 		strRst += _T("反位, ");
 	strRst += _T("结果:");
 	if (data.result == 0)
-		strRst += _T("成功"); 
+		strRst += _T("成功");
 	if (data.result == 1)
 		strRst += _T("没有找到设备");
 	if (data.result == 2)
@@ -6737,15 +6775,15 @@ tstring Parse315Protocol::ToString(const StOilingResultNotify& data)
 
 	strRst += _T(", 异常码:");
 	if (data.failCode == 0)
-		strRst += _T("无问题, "); 
+		strRst += _T("无问题, ");
 	else if (data.failCode == 1)
 		strRst += _T("加油管堵塞 , ");
 	else if (data.failCode == 2)
 		strRst += _T("加油管破损 , ");
 	else if (data.failCode == 3)
-		strRst += _T("加油泵异常 , "); 
+		strRst += _T("加油泵异常 , ");
 	else if (data.failCode == 4)
-		strRst += _T("无压力传感器 , "); 
+		strRst += _T("无压力传感器 , ");
 	else if (data.failCode == 5)
 		strRst += _T("压力值比较小，可能存在漏油");
 
@@ -6761,7 +6799,7 @@ tstring Parse315Protocol::ToString(const StOilingResultNotify& data)
 		tmTrigger.wYear, tmTrigger.wMonth, tmTrigger.wDay, tmTrigger.wHour, tmTrigger.wMinute, tmTrigger.wSecond);
 	strRst += buf;
 
-	strRst += _T("持续时间:")+to_string(data.timeLen);
+	strRst += _T("持续时间:") + to_string(data.timeLen);
 
 	return strRst;
 }
@@ -6893,7 +6931,7 @@ tstring Parse315Protocol::GetCurveTypeDesc(int CurveType, int nVer)//根据曲�
 		default:
 			break;
 		}
-	} 
+	}
 	else
 	{
 		switch (CurveType)
@@ -6994,7 +7032,7 @@ tstring Parse315Protocol::GetAlarmTypeDesc(int Alarmtype, int nVer)//根据报�
 			return _T("未知");
 			break;
 		}
-	} 
+	}
 	else
 	{
 		switch (Alarmtype)

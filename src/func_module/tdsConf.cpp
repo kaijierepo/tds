@@ -17,6 +17,7 @@ tdsConfig::tdsConfig()
 	debugMode = false;
 	bConcurrentGateway = true;
 	confPath = "";
+	currentPath = "";
 	dbPath = "";
 	singleGenicamHost = false;
 	enableDB = true;
@@ -64,6 +65,7 @@ string tdsConfig::defaultConf_tds()
 #系统配置
 uiPath=./ui            #web根目录
 confPath=../conf       #配置路径
+curPath=../current     #实时路径
 dbPath=../db           #数据库路径
 logPath=../log         #日志目录
 loglevel=debug         #日志级别 可选 none,error,warn,debug,trace  none不记录任何日志
@@ -162,6 +164,11 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 		{
 			confPath = tci.val;
 			confPath = fs::toAbsolutePath(confPath);
+		}
+		else if (checkKey(tci.key, "curPath"))
+		{
+			currentPath = tci.val;
+			currentPath = fs::toAbsolutePath(currentPath);
 		}
 		else if (checkKey(tci.key, "uiPath"))
 		{
@@ -379,6 +386,8 @@ void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
 //默认值
 	if (confPath == "")
 		confPath = fs::toAbsolutePath("../conf");
+	if (currentPath == "")
+		currentPath = fs::toAbsolutePath("../current");
 	if(uiPath == "")
 		uiPath = fs::toAbsolutePath("./ui");
 	if (dbPath == "")
@@ -409,6 +418,18 @@ void tdsConfig::loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf)
 		}
 	}
 }
+
+void tdsConfig::loadCurrentData()
+{
+	string confPath;
+	string confFileName;
+	confFileName = mode;
+	confPath = currentPath + "/cur.ini";
+	fs::createFolderOfPath(confPath);
+
+	curIni.load(confPath);
+}
+
 
 void tdsConfig::loadConf()
 {
@@ -518,3 +539,25 @@ bool tdsConfig::setInt(string key, int val)
 	return true;
 }
 
+
+int tdsConfig::getCurrentInt(string key, int iDef)
+{
+	return curIni.getValInt(key, iDef);
+}
+
+string tdsConfig::getCurrentStr(string key, string sDef)
+{
+	return curIni.getValStr(key, sDef);
+}
+
+bool tdsConfig::setCurrentStr(string key, string val)
+{
+	curIni.setVal(key, val);
+	return true;
+}
+
+bool tdsConfig::setCurrentInt(string key, int val)
+{
+	curIni.setVal(key, val);
+	return true;
+}

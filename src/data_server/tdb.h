@@ -644,6 +644,9 @@ public:
 	fp_getTagsByTagSelector m_getTagsByTagSelector;
 	bool m_isGbk;
 	string m_confPath;
+	string m_currentPath;
 };
+unsigned int
+tdb_base64_encode(const unsigned char* in, unsigned int inlen, char* out);
 
 extern TDB db;

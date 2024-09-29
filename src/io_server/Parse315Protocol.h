@@ -1342,7 +1342,6 @@ typedef struct DBJFBJINFO
 #endif
 #endif
 
-
 //JHD系统通信协议解析类
 class Parse315Protocol
 {
@@ -1354,8 +1353,8 @@ public:
 	static BOOL Parse(StFrame&, LPVOID, int, int dir = 1);//解析  JHD->微机监测数据包（JHD就是站机端）
 	static BOOL ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir);
 	static BOOL Parse_4res(StGapValue& data, LPVOID buf, int len);//对接四川众合缺口值解析
-	static BOOL Unparse(StFrame&, LPVOID&, int&, int dir = 0);//反解析   微机监测->JHD数据包
-	static BOOL Unparse(StFrame& data, LPVOID& buf, int& len, BYTE* subbuf, int sublen);
+	static BOOL Unparse(StFrame&, vector<BYTE>&, int&, int dir = 0);//反解析   微机监测->JHD数据包
+	static BOOL Unparse(StFrame& data, vector<BYTE>& buf, int& len, BYTE* subbuf, int sublen);
 	static BOOL Release(StFrame&, int dir = 0);//释放内存，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
 	static BOOL CheckPackData(StFrame&, LPVOID, int, int dir);//检查数据包是否合法并进行解析，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
 
@@ -1419,28 +1418,28 @@ private:
 	static BOOL Parse(DBJFBJInfo& data, LPVOID buf, int len);
 	static BOOL Parse(StAlarmListRes&, LPVOID, int);
 
-	static BOOL Unparse(StHeartBeat315&, LPVOID&, int&);
-	static BOOL Unparse(StDataBasic&, LPVOID&, int&);
-	static BOOL Unparse(StAlarmAndImgRec&, LPVOID&, int&);
-	static BOOL Unparse(StActionInfoRec&, LPVOID&, int&);
-	static BOOL Unparse(StManualOilingResq&, LPVOID&, int&);
-	static BOOL Unparse(StLastGapImgReq&, LPVOID&, int&);
-	static BOOL Unparse(StImgListReq&, LPVOID&, int&);
-	static BOOL Unparse(StImgInfoReq&, LPVOID&, int&);
-	static BOOL Unparse(StVedioListReq&, LPVOID&, int&);
-	static BOOL Unparse(StVedioFileReq&, LPVOID&, int&);
-	static BOOL Unparse(StPowerFileListResq&, LPVOID&, int&);
-	static BOOL Unparse(StPowerFileDataResq&, LPVOID&, int&);
-	static BOOL Unparse(St1DQJInfo&, LPVOID&, int&);
-	static BOOL Unparse(StOilPreCurveRec&, LPVOID&, int&);
-	static BOOL Unparse(StRealCtrlReq&, LPVOID&, int&);
-	static BOOL Unparse(StPowerListReq&, LPVOID&, int&);
-	static BOOL Unparse(StPowerInfoReq&, LPVOID&, int&);
-	static BOOL Unparse(StPowerFileData& data, LPVOID& buf, int& len);
-	static BOOL Unparse(CalPower& data, LPVOID& buf, int& len);
-	static BOOL Unparse(DBJFBJInfo& data, LPVOID& buf, int& len);
-	static BOOL Unparse(StAlarmListReq&, LPVOID&, int&);
-	static BOOL Unparse(StOilBoxVolumeResq&, LPVOID&, int&);
+	static BOOL Unparse(StHeartBeat315&, vector<BYTE>&, int&);
+	static BOOL Unparse(StDataBasic&, vector<BYTE>&, int&);
+	static BOOL Unparse(StAlarmAndImgRec&, vector<BYTE>&, int&);
+	static BOOL Unparse(StActionInfoRec&, vector<BYTE>&, int&);
+	static BOOL Unparse(StManualOilingResq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StLastGapImgReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StImgListReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StImgInfoReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioListReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioFileReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StPowerFileListResq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StPowerFileDataResq&, vector<BYTE>&, int&);
+	static BOOL Unparse(St1DQJInfo&, vector<BYTE>&, int&);
+	static BOOL Unparse(StOilPreCurveRec&, vector<BYTE>&, int&);
+	static BOOL Unparse(StRealCtrlReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StPowerListReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StPowerInfoReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StPowerFileData& data, vector<BYTE>& buf, int& len);
+	static BOOL Unparse(CalPower& data, vector<BYTE>& buf, int& len);
+	static BOOL Unparse(DBJFBJInfo& data, vector<BYTE>& buf, int& len);
+	static BOOL Unparse(StAlarmListReq&, vector<BYTE>&, int&);
+	static BOOL Unparse(StOilBoxVolumeResq&, vector<BYTE>&, int&);
 
 	static BOOL Release(StGapCfgRes&);
 	static BOOL Release(StGapValue&);
@@ -1528,15 +1527,15 @@ public:
 	virtual ~CVedioParser() {}
 
 	static BOOL Parse(StVedioFrame&, LPVOID, int);				//解析
-	static BOOL Unparse(StVedioFrame&, LPVOID&, int&);			//反解析
+	static BOOL Unparse(StVedioFrame&, vector<BYTE>&, int&);			//反解析
 	static BOOL Release(StVedioFrame&);							//释放内存
 
 private:
-	static BOOL Unparse(StVedioFileStart&, LPVOID&, int&);
-	static BOOL Unparse(StVedioFileStop&, LPVOID&, int&);
-	static BOOL Unparse(StVedioSetTitle&, LPVOID&, int&);
-	static BOOL Unparse(StVedioRealCtrl&, LPVOID&, int&);
-	static BOOL Unparse(StVedioRealPlay&, LPVOID&, int&);
+	static BOOL Unparse(StVedioFileStart&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioFileStop&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioSetTitle&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioRealCtrl&, vector<BYTE>&, int&);
+	static BOOL Unparse(StVedioRealPlay&, vector<BYTE>&, int&);
 
 	static BOOL Release(StVedioFileStart&);
 	static BOOL Release(StVedioSetTitle&);

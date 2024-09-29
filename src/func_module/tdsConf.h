@@ -20,6 +20,7 @@ public:
 	void loadConf_tds(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf() override;
+	void loadCurrentData() override;
 	json toJson();
 	
 	bool checkKey(string toCheck, string key);
@@ -32,6 +33,12 @@ public:
 	bool setStr(string key, string val) override;
 	bool setInt(string key, int val) override;
 
+
+	KV_INI curIni;
+	int getCurrentInt(string key, int iDef) override;
+	string getCurrentStr(string key, string sDef) override;
+	bool setCurrentStr(string key, string val) override;
+	bool setCurrentInt(string key, int val) override;
 
 	json jsonConf;
 	string m_confFileName;

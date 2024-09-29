@@ -597,15 +597,23 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 	}
 	else if (method == "input" || method == "acq")
 	{
+		//if (tds->conf->getInt("enableLogInput", 0))
+		{
+			//if (m_tcpClt && m_tcpClt->m_remoteIP == "192.168.2.152")
+			//{
+			//	size_t len;
+			//	string sParams = yyjson_val_write(yyv_params, 0, &len);
+			//	if (sParams.find("1#.1J1") != string::npos)
+			//	{
+			//		LOG("[ioDev_tdsp::handleNotify]:%s", charCodec::utf8_to_gb(sParams).c_str());
+			//	}
+			//}
+			//LOG("[ioDev_tdsp::handleNotify]:%s", charCodec::utf8_to_gb(sParams).c_str());
+		}
 		handle_AcqOrInput(yyv_params,doc);
 		//string resp = "{\"method\":\"" + method + "\",\"result\":\"ok\"}\n\n";
 		//sendData((unsigned char*)resp.c_str(), resp.size());
-		if (tds->conf->getInt("enableLogInput", 0)) 
-		{
-			size_t len;
-			string sParams = yyjson_val_write(yyv_params, 0, &len);
-			LOG("[ioDev_tdsp::handleNotify]:%s", charCodec::utf8_to_gb(sParams).c_str());
-		}
+
 	}
 	else if (method == "notifyAlarmStatus")
 	{

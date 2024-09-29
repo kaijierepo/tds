@@ -1297,6 +1297,23 @@ namespace timeopt {
 		return str;
 	}
 
+	string TimeToHMS(const TIME time)
+	{
+		string str;
+		if (time.wYear > 2000 && time.wDay > 0 && time.wDay < 40 && time.wHour >= 0 && time.wHour <= 24 && time.wMinute >= 0 && time.wMinute <= 60)
+		{
+			str = str::format("%.2d:%.2d:%.2d", time.wHour, time.wMinute, time.wSecond);
+		}
+		return str;
+	}
+	string TimeToHMSForFile(const TIME time)
+	{
+		string str;
+		str = str::format("%.2d%.2d%.2d", time.wHour, time.wMinute, time.wSecond);
+		return str;
+	}
+
+
 	time_t calcTimePassSecond(string lastTime)
 	{
 		TIME t = timeopt::str2st(lastTime);

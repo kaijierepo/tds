@@ -370,6 +370,7 @@ bool TDS_imp::run(string cmdline)
 #endif
 	logger.m_bSaveToFile = true;
 	tds->conf->loadConf();
+	tds->conf->loadCurrentData();
 
 	tds->conf->bCallAsyn = tds->conf->getInt("callAsyn", 1);
 	ioDev::m_pingInterval = tds->conf->getInt("pingInterval", 30000);
@@ -446,6 +447,7 @@ bool TDS_imp::run(string cmdline)
 		::db.m_dbFmt.deItemKey_value = db_Fmt.deItemKey_value == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 		::db.m_confPath = tds->conf->confPath;
+		::db.m_currentPath = tds->conf->currentPath;
 	}
 		
 	prj.loadObjTemplate();

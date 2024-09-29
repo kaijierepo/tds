@@ -283,6 +283,7 @@ struct LOG_ENABLE {
 
 struct iTDSConf {
 	virtual void loadConf() = 0;
+	virtual void loadCurrentData() = 0;
 	//software conf
 	string mode;
 	bool debugMode;
@@ -296,6 +297,7 @@ struct iTDSConf {
 	
 	//path conf
 	string confPath;   //config data path
+	string currentPath; //current data of path
 	string dbPath;     //database folder path
 	string uiPath;     //ui web files path
 	string logPath;
@@ -365,6 +367,11 @@ struct iTDSConf {
 	virtual string getStr(string key, string sDef) = 0;
 	virtual bool setStr(string key, string val) = 0;
 	virtual bool setInt(string key, int val) = 0;
+
+	virtual int getCurrentInt(string key, int iDef) = 0;
+	virtual string getCurrentStr(string key, string sDef) = 0;
+	virtual bool setCurrentStr(string key, string val) = 0;
+	virtual bool setCurrentInt(string key, int val) = 0;
 };
 
 

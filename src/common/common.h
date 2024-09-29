@@ -416,6 +416,8 @@ namespace timeopt {
 
 	string st2strWithMilli(TIME t);
 	string TimeToYMD(const TIME time);
+	string TimeToHMS(const TIME time);
+	string TimeToHMSForFile(const TIME time);
 	time_t calcTimePassSecond(string lastTime);
 	time_t CalcTimePassSecond(TIME lastTime);
 	long long CalcTimePassMilliSecond(TIME lastTime);
