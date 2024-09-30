@@ -2419,7 +2419,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			DATA_SET& fSet = *(new DATA_SET());
 			dataSet_afterWhen->push_back(&fSet);
 			dataSetBuff.push_back(dataSet_afterWhen);
-			
+			Select_Step_FilterByRelation(deSel, *dataSet, *dataSet_afterWhen);
 		}
 
 		//if not groupby tag, merge dataset  (groupby tag is the default behavior)
@@ -3103,8 +3103,14 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 				size_t max = 0;
 				yyjson_val* item;
 				yyjson_arr_foreach(yyv_when_relation, idx, max, item) {
-					string relation = yyjson_get_str(item);
-					deSel.whenSel.relation.push_back(relation);
+					yyjson_val* rela_type = yyjson_obj_get(item,"type");
+					TIME_RELATION tr;
+					tr.type = yyjson_get_str(rela_type);
+					yyjson_val* rela_offset = yyjson_obj_get(item, "offset");
+					tr.offset = yyjson_get_int(rela_offset);
+					yyjson_val* rela_count = yyjson_obj_get(item, "count");
+					tr.count = yyjson_get_int(rela_count);
+					deSel.whenSel.relation.push_back(tr);
 				}
 			}
 		}
@@ -3561,14 +3567,52 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet)
 {
 	DE_SELECTOR whenSel;
-	whenSel.tagSel.init(deSel.whenSel.tag,deSel.tagSel.m_rootTag);
+	whenSel.tagSel.init(deSel.whenSel.tag, deSel.tagSel.m_rootTag);
 	whenSel.timeSel = deSel.timeSel;
-	SELECT_RLT relTagData;
-	Select(whenSel, relTagData);
+	
+	for (int i = 0; i < inputDataSet.size(); i++) {
+		DATA_SET& ids = *inputDataSet[i];
+		DATA_SET& ods = *outputDataSet[i];
 
-	//parse sel rlt to time slot
-	for (auto& i : relTagData.mapRlt) {
+		SELECT_RLT relTagData;
+		Select(whenSel, relTagData);
 
+		//parse sel rlt to time slot
+		if (deSel.whenSel.whenStatus && deSel.whenSel.status.type == DB_VAL_TYPE::DBV_BOOL){
+			bool lastStatus = !deSel.whenSel.status.bVal;
+			bool inStatus = false;
+			DB_TIME_SPAN timespan;
+			for (auto& i : relTagData.mapRlt) {
+				yyjson_mut_val* yyv_val = yyjson_mut_obj_get(i.second, "val");
+				if (yyjson_mut_is_bool(yyv_val)) {
+					bool curStatus = yyjson_mut_get_bool(yyv_val);
+					if (curStatus == deSel.whenSel.status.bVal && lastStatus != deSel.whenSel.status.bVal) {
+						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(i.second, "time");
+						string time = yyjson_mut_get_str(yyv_time);
+						timespan.start.fromStr(time);
+						inStatus = true;
+					}
+
+					if (inStatus && curStatus != deSel.whenSel.status.bVal) {
+						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(i.second, "time");
+						string time = yyjson_mut_get_str(yyv_time);
+						timespan.end.fromStr(time);
+						inStatus = false;
+						deSel.whenSel.eventTimeSlot.push_back(timespan);
+					}
+				}
+				else {
+					return false;
+				}
+			}
+		}
+
+
+		//select only relate to timespan
+		for (int i = 0; i < ids.m_afterAggr.size(); i++) {
+			DE_yyjson* yyde = ids.m_afterAggr[i];
+			//yyde->val
+		}
 	}
 
 	return false;

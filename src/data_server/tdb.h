@@ -183,6 +183,19 @@ enum Period_Type {
 	PT_Hour = 3,
 };
 
+enum DB_VAL_TYPE {
+	DBV_DOUBLE,
+	DBV_INT,
+	DBV_BOOL
+};
+
+struct DB_VAL {
+	DB_VAL_TYPE  type;
+	double dbVal;
+	bool bVal;
+	int iVal;
+};
+
 
 //time selector format is [Time_Set_Type]@[period type]@[time range]
 //head@day@8d  select the first de in each day of 8 days
@@ -395,12 +408,21 @@ public:
 
 };
 
+
+struct TIME_RELATION {
+	string type;
+	int offset;
+	int count;
+};
+
 struct WHEN_SELECTOR {
 	string tag;
 	string match;
+	bool whenStatus;  //false: when match   true: when status
+	DB_VAL status;
 	CONDITION_SELECTOR condition;
 	vector<DB_TIME_SPAN> eventTimeSlot;
-	vector<string> relation;
+	vector<TIME_RELATION> relation;
 };
 
 struct DE_SELECTOR {
