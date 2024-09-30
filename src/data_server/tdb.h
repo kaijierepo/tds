@@ -443,6 +443,8 @@ struct DE_SELECTOR {
 
 	int offset = 0;
 	int limit = 0;
+	int pageNo = 1;
+	int pageSize = 0;
 
 	DE_SELECTOR() {
 		ascendingSort = true;

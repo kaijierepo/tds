@@ -807,6 +807,8 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 	if (params.contains("level")) querier["level"] = params["level"];//string or array
 	if (params.contains("isRecover")) querier["isRecover"] = params["isRecover"].get<bool>();
 	if (params.contains("isAck")) querier["isAck"] = params["isAck"].get<bool>();
+	if (params.contains("pageNo")) querier["pageNo"] = params["pageNo"].get<int>();
+	if (params.contains("pageSize")) querier["pageSize"] = params["pageSize"].get<int>();
 	//....
 	return querier;
 }
@@ -927,7 +929,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int endMonth = timeSelector.stEnd.wMonth;
 	int iMonth = 0;
 	int iEndMonth = 0;
-	json jDataSet = json::array();
+	map<string, ALARM_INFO*> deList;
 	for(int iYear = startYear;iYear<=endYear;iYear++) {
 		if(iYear == startYear) iMonth = startMonth;
 		else iMonth=1;
@@ -987,6 +989,27 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					}
 				}
 
+				deList.insert(*it);
+			}
+		}
+	}
+
+	string dataSet;
+	//pageNo缺省时默认返回第一页
+	if (deSel.pageSize > 0)
+	{
+		json resultObj;
+		json jDataSet = json::array();
+		resultObj["pageNo"] = deSel.pageNo;
+		resultObj["pageSize"] = deSel.pageSize;
+		resultObj["pageCount"] = deList.size() / deSel.pageSize + (deList.size() % deSel.pageSize == 0 ? 0 : 1);
+		resultObj["deCount"] = deList.size();
+		if (deList.size() > (deSel.pageNo - 1) * deSel.pageSize)
+		{
+			auto it = deList.begin();
+			std::advance(it, (deSel.pageNo - 1) * deSel.pageSize);
+			for (int i = 0; i < min(deSel.pageSize, deList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++, it++)
+			{
 				json j = it->second->toJson(this, rootTag);
 				if (getTypeTag) {
 					json jTypeTag = prj.getTypeTagByTag(it->second->tag);
@@ -998,9 +1021,27 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				jDataSet.push_back(j);
 			}
 		}
+		resultObj["pageData"] = jDataSet;
+		dataSet = resultObj.dump(2);
+	}
+	else
+	{
+		json jDataSet = json::array();
+		for (map<string, ALARM_INFO*>::iterator it = deList.begin(); it != deList.end(); it++)
+		{
+			json j = it->second->toJson(this, rootTag);
+			if (getTypeTag) {
+				json jTypeTag = prj.getTypeTagByTag(it->second->tag);
+				if (jTypeTag != nullptr) {
+					j["typeTag"] = jTypeTag;
+				}
+			}
+
+			jDataSet.push_back(j);
+		}
+		dataSet = jDataSet.dump(2);
 	}
 
-	string dataSet = jDataSet.dump(2);
 	return dataSet;
 }
 
@@ -1510,17 +1551,65 @@ vector<ALARM_INFO*> almTable::query(json querier)
 
 string almTable::toJsonStr(const json& querier) {
 	string rootTag = "";
+	int pageNo = 1;
+	int pageSize = 0;
 	if(querier.contains("rootTag"))
 		rootTag = querier["rootTag"].get<string>(); //org  or org + rootTag
-	vector<ALARM_INFO*> vec = query(querier);
-	string dataSet = "[";
-	for (auto& it :vec) {
-		if(dataSet !="[")
-			dataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
-		else
-			dataSet +=  it->toJsonStr(m_pAlmSrv, rootTag);
+	if (querier.contains("pageNo"))
+	{
+		if (querier["pageNo"].is_number_integer())
+			pageNo = querier["pageNo"].get<int>();
 	}
-	dataSet += "]";
+	if (querier.contains("pageSize"))
+	{
+		if (querier["pageSize"].is_number_integer())
+			pageSize = querier["pageSize"].get<int>();
+	}
+
+	vector<ALARM_INFO*> vec = query(querier);
+
+	string dataSet = "";
+	if (pageSize > 0)
+	{
+		//分页查询
+		json resultObj;
+		resultObj["pageNo"] = pageNo;
+		resultObj["pageSize"] = pageSize;
+		resultObj["pageCount"] = vec.size() / pageSize + (vec.size() % pageSize == 0 ? 0 : 1);
+		resultObj["deCount"] = vec.size();
+		string jDataSet = "[";
+		if (vec.size() > (pageNo - 1) * pageSize)
+		{
+			//pageNo=1,说明从0开始,往后走pageSize个元素
+			//pageNo=2,说明从pageSize开始,往后走pageSize个元素
+			for (int i = (pageNo - 1) * pageSize; i < min(pageNo * pageSize, vec.size()); i++)
+			{
+				auto it = vec[i];
+				if (jDataSet != "[")
+					jDataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
+				else
+					jDataSet += it->toJsonStr(m_pAlmSrv, rootTag);
+			}
+		}
+		jDataSet += "]";
+		json dataObj = json::parse(jDataSet);
+		resultObj["pageData"] = dataObj;
+		dataSet = resultObj.dump(2);
+	}
+	else
+	{
+		string jDataSet = "[";
+		for (auto& it : vec) {
+			if (jDataSet != "[")
+				jDataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
+			else
+				jDataSet += it->toJsonStr(m_pAlmSrv, rootTag);
+		}
+		jDataSet += "]";
+
+		dataSet = jDataSet;
+	}
+
 	return dataSet;
 }
 

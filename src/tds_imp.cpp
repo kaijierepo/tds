@@ -311,6 +311,7 @@ bool TDS_imp::setWorkingDir()
 void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 
 	wstring wstrFolder = charCodec::tds_to_utf16(path);
+	if (!fs::fileExist(path)) return;
 	for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 		if (i.is_directory()) {
 			fs::FILE_INFO fi;
@@ -439,8 +440,11 @@ bool TDS_imp::run(string cmdline)
 	if (tds->conf->enableDB) {
 		::db.m_timeUnit = (DB_TIME_UNIT)g_prjConf.getValInt("dbTimeUnit", 1);
 		bool bCheckEnd = false;
+		//1,有配置就用配置来
+		//2,没配置做检查
+		string deListName = tds->conf->getStr("deListName", "");
 		DB_FMT db_Fmt;
-		checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
+		if (deListName == "") checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
 		::db.m_dbFmt.deListName = db_Fmt.deListName == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
 		::db.m_dbFmt.curveIdxListName = db_Fmt.curveIdxListName == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
 		::db.m_dbFmt.curveDeNameSuffix = db_Fmt.curveDeNameSuffix == "" ? tds->conf->getStr("curveDeNameSuffix", ".curve.json") : db_Fmt.curveDeNameSuffix;

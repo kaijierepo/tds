@@ -1602,9 +1602,50 @@ void thread_tds_upgrade(string packageUrl) {
 				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
 			}
-			if (!renameFile(tdsPath + "/", uiName, tmpUIName)) {
+			/*if (!renameFile(tdsPath + "/", uiName, tmpUIName)) {
 				json j;
 				string s = "重命名文件失败," + uiName;
+				j["serverUpgradeStatus"] = s;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
+				goto UPGRADE_END;
+			}*/
+
+			//向tKeep发送请求,停止服务,然后来进行文件替换
+			RPC_RESP resp;
+			httplib::Client cli("127.0.0.1:6007");
+			cli.set_connection_timeout(2);
+			cli.set_read_timeout(8);
+			httplib::Params params;
+			json jReq;
+			jReq["method"] = "suspendGuard";
+			jReq["params"] = "";
+			TIME start = timeopt::now();
+			auto suspendRes = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
+			if (suspendRes)
+			{
+				if (suspendRes->status == 200)
+				{
+					json result = json::parse(suspendRes->body);
+					if (result["error"] != nullptr)
+					{
+						json j;
+						string s = "tKeep停止服务失败";
+						j["serverUpgradeStatus"] = s;
+						rpcSrv.notify("onServerUpgradeStatusChange", j);
+						LOG("[warn]升级失败," + s);
+						goto UPGRADE_END;
+					}
+					else if (result["result"]!=nullptr)
+					{
+						LOG("[服务升级]tKeep停止服务成功");
+					}
+				}
+			}
+			else
+			{
+				json j;
+				string s = "向tKeep请求超时,请确认tKeep版本或运行情况";
 				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
 				LOG("[warn]升级失败," + s);
@@ -1619,6 +1660,16 @@ void thread_tds_upgrade(string packageUrl) {
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
 				LOG("[warn]升级失败," + s);
 				goto UPGRADE_END;
+			}
+
+			//向tKeep发送请求,重新开启服务
+			jReq["method"] = "beginGuard";
+			cli.set_connection_timeout(2);
+			cli.set_read_timeout(3);
+			auto beginRes = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
+			if (beginRes && beginRes->status == 200)
+			{
+				LOG("[服务升级]tKeep重新开启服务成功");
 			}
 
 			//退出程序，等待tKeep重启

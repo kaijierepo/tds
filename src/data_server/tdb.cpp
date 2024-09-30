@@ -3109,6 +3109,21 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			}
 		}
 	}
+
+	yyjson_val* yyv_pageNo = yyjson_obj_get(yyParams, "pageNo");
+	if (yyv_pageNo) {
+		if (yyjson_is_int(yyv_pageNo))
+		{
+			deSel.pageNo = yyjson_get_int(yyv_pageNo);
+		}
+	}
+	yyjson_val* yyv_pageSize = yyjson_obj_get(yyParams, "pageSize");
+	if (yyv_pageSize) {
+		if (yyjson_is_int(yyv_pageSize))
+		{
+			deSel.pageSize = yyjson_get_int(yyv_pageSize);
+		}
+	}
 }
 
 void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
@@ -3555,6 +3570,8 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 	for (auto& i : relTagData.mapRlt) {
 
 	}
+
+	return false;
 }
 
 bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
