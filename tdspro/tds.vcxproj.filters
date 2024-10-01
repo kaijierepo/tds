@@ -242,6 +242,12 @@
     <ClCompile Include="..\src\common\dtwrecoge.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\io_server\JHDEqpProtocol.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_jep_super.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -490,6 +496,12 @@
     </ClInclude>
     <ClInclude Include="..\src\common\dtwrecoge.h">
       <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\JHDEqpProtocol.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_jep_super.h">
+      <Filter>io_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

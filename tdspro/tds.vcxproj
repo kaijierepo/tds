@@ -269,6 +269,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -537,11 +538,13 @@
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_jep_super.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
+    <ClCompile Include="..\src\io_server\JHDEqpProtocol.cpp" />
     <ClCompile Include="..\src\io_server\Parse315Protocol.cpp" />
     <ClCompile Include="..\src\io_server\proto_common.cpp" />
     <ClCompile Include="..\src\io_server\wsProto.cpp" />
@@ -617,11 +620,13 @@
     <ClInclude Include="..\src\io_server\ioDev_camera.h" />
     <ClInclude Include="..\src\io_server\ioDev_custom.h" />
     <ClInclude Include="..\src\io_server\ioDev_dcqk.h" />
+    <ClInclude Include="..\src\io_server\ioDev_jep_super.h" />
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
+    <ClInclude Include="..\src\io_server\JHDEqpProtocol.h" />
     <ClInclude Include="..\src\io_server\Parse315Protocol.h" />
     <ClInclude Include="..\src\io_server\proto_can.hpp" />
     <ClInclude Include="..\src\io_server\proto_common.h" />

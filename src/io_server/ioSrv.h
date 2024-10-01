@@ -32,6 +32,7 @@ namespace DEV_TYPE {
 #define DEV_TYPE_rs485_gateway "rs485-gateway"
 #define DEV_TYPE_local_serial "local-serial"
 #define DEV_TYPE_leak_detect "leak-detect"
+#define DEV_TYPE_jep "jep-super-device"
 
 
 namespace DEV_SUB_TYPE {
@@ -167,6 +168,7 @@ public:
 
 	//Tcp通信
 	map<int, string> m_mapPort2DevType;
+	tcpSrv* m_tcpSrv_jep;	//6011 jep协议
 	tcpSrv* m_tcpSrv_tdsp; //665 tdsp协议
 	vector<tcpSrv*> m_tcpSrv_rtu; //664 modbus RTU over tcp协议
 	vector<udpServer*> m_udpSrv_rtu; //664 modbus RTU over udp协议

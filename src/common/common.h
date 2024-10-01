@@ -394,6 +394,9 @@ namespace str {
 	bool In(wchar_t   start, wchar_t   end, wchar_t   code);
 	char  getShenMu(wchar_t n);
 	bool hanZi2Pinyin(string hanZi, string& pinyin,bool upperCase = false);
+
+	int TwoHexStringToInt(const char* str);
+	int HexCharToInt(char c);
 }
 
 namespace timeopt {

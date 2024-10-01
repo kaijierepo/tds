@@ -16,6 +16,7 @@
 #include "wsProto.h"
 #include "statusServer.h"
 #include "yyjson.h"
+#include "JHDEqpProtocol.h"
 
 
 ioServer ioSrv;
@@ -1322,12 +1323,15 @@ bool ioServer::runAsCloud()
 	int iq60Port = tds->conf->getInt("iq60Port", 663);
 	//adaptor接入端口
 	int adpPort = tds->conf->getInt("adpPort", 662);
+	//
+	int jepPort = tds->conf->getInt("jepPort", 6011);
 
 	m_mapPort2DevType[tdspPort] = DEV_TYPE_tdsp;
 	m_mapPort2DevType[mbPort] = DEV_TYPE_rs485_gateway;
 	m_mapPort2DevType[iq60Port] = DEV_TYPE_iq60;
 	//m_mapPort2DevType[leakDetectPort] = DEV_TYPE_leak_detect;
 	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
+	m_mapPort2DevType[jepPort] = DEV_TYPE_jep;
 
 	//启动服务端口
 	if(tdspPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
@@ -1335,7 +1339,26 @@ bool ioServer::runAsCloud()
 	if(mbPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
 	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
 	if(iq60Port)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
+	if (jepPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(jepPort) + "设备协议 JEP");
 	//if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
+
+
+	//io服务 6011 JEP
+	m_tcpSrv_jep = new tcpSrv();
+	m_tcpSrv_jep->m_strName = "jep";
+	m_tcpSrv_jep->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
+	if (m_tcpSrv_jep->run(this, jepPort, m_ioSrvIP))
+	{
+
+	}
+	else
+	{
+#ifndef _WIN32
+		LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
+#endif
+
+		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(jepPort));
+	}
 
 
 	//io服务 665 TDSP
@@ -1461,6 +1484,9 @@ void ioServer::stop()
 	}
 	if (m_tcpSrv_tdsp)
 		m_tcpSrv_tdsp->stop();
+
+	if (m_tcpSrv_jep)
+		m_tcpSrv_jep->stop();
 
 	LOG("stoping ioServer...");
 	ioDev::stop();
@@ -1974,6 +2000,12 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 			onRecvPkt_leakDetect((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
 		}
+	}
+	else if (tdsSession->ioDevType == DEV_TYPE_jep)
+	{
+		string ioAddr = tdsSession->remoteIP;
+		ioDev* pDev = getIODev(ioAddr, false, true);
+		pDev->onRecvData(pData, iLen);
 	}
 	else {
 		string ioAddr = tdsSession->remoteIP + ":" + str::fromInt(tdsSession->remotePort);
