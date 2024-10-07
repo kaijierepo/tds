@@ -45,23 +45,45 @@ tdsConfig::tdsConfig()
 }
 
 
-void tdsConfig::generateDefaultConfFile(string m)
+void tdsConfig::generateDefaultAppConfFile()
 {
 	string s;
-	s = defaultConf_tds();
+	s = defaultAppConf_tds();
 
 	if (s != "")
 	{
 		s = str::replace(s, "\n", "\r\n");
-		string confPath = fs::appPath() + "/" + mode + ".ini";
+		string confPath = fs::appPath() + "/appConf.ini";
 		fs::writeFile(confPath, s);
 	}
 }
 
 
-string tdsConfig::defaultConf_tds()
+void tdsConfig::generateDefaultProjectConfFile(string confPath)
+{
+	string s;
+	s = defaultProjectConf_tds();
+
+	if (s != "")
+	{
+		s = str::replace(s, "\n", "\r\n");
+		string iniPath = confPath + "/projectConf.ini";
+		fs::writeFile(iniPath, s);
+	}
+}
+
+string tdsConfig::defaultAppConf_tds()
 {
 	string s = R"(#TDS 配置文件
+confPath=./conf
+)";
+	return s;
+}
+
+
+string tdsConfig::defaultProjectConf_tds()
+{
+	string s = R"(#项目配置文件
 #系统配置
 uiPath=./ui            #web根目录
 confPath=../conf       #配置路径
@@ -156,10 +178,12 @@ void tdsConfig::loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf) {
 
 
 
-void tdsConfig::loadConf_tds(vector<KV_CONF_ITEM>& vecConf) {
-	for (int i = 0; i < vecConf.size(); i++)
+void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
+	for (auto& iter: vecConf)
 	{
-		KV_CONF_ITEM& tci = vecConf[i];
+		KV_CONF_ITEM tci;
+		tci.key = iter.first;
+		tci.val = iter.second;
 		if (checkKey(tci.key, "confPath"))
 		{
 			confPath = tci.val;
@@ -433,61 +457,27 @@ void tdsConfig::loadCurrentData()
 
 void tdsConfig::loadConf()
 {
-	string confPath;
-	string confFileName;
-	confFileName = mode;
-	confPath = fs::appPath() + "/" + confFileName + ".ini";
-	
-	
-	
-	if (!fs::fileExist(confPath))
+	//load appConf.ini
+	string appConfPath = fs::appPath() + "/appConf.ini";
+	if (!fs::fileExist(appConfPath))
 	{
-		string s = str::format("[warn]配置文件%s不存在，创建默认配置", confPath.c_str());
+		string s = str::format("[warn]配置文件%s不存在，创建默认配置", appConfPath.c_str());
 		logger.logInternal(s,false);
-		generateDefaultConfFile(confFileName);
+		generateDefaultAppConfFile();
 	}
+	app_ini.load(appConfPath);
+	loadConf_tds(app_ini.mapConf);
 
-	tdsIni.load(confPath);
-
-	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
-	string strConf;
-	fs::readFile(confPath, strConf);
-	vector<string> confItems;
-	str::split(confItems, strConf, "\n");
-
-	//去掉注释
-	for (int i = 0; i < confItems.size(); i++)
+	//load projectConf.ini
+	string projectConfPath = tds->conf->confPath + "/projectConf.ini";
+	if (!fs::fileExist(projectConfPath))
 	{
-		string& ci = confItems[i];
-		size_t pos = ci.find("#");
-		if (pos != string::npos)
-		{
-			ci = ci.substr(0, pos);
-		}
+		string s = str::format("[warn]配置文件%s不存在，创建默认配置", projectConfPath.c_str());
+		logger.logInternal(s, false);
+		generateDefaultProjectConfFile(tds->conf->confPath);
 	}
-	//解析
-	vector<KV_CONF_ITEM> vecConf;
-	for (int i = 0; i < confItems.size(); i++)
-	{
-		string& ci = confItems[i];
-		KV_CONF_ITEM tci;
-		size_t pos = ci.find("=");
-		if (pos != string::npos)
-		{
-			tci.key = ci.substr(0, pos);
-			tci.val = ci.substr(pos + 1, ci.length() - pos - 1);
-
-			tci.val = str::trim(tci.val, "\r");
-			tci.key = str::trim(tci.key, "\t");//去除键值对中间的tab,如果路径内存在tab这个会被读为\t,然后导致创建文件夹失败.
-			tci.val = str::trim(tci.val, "\t");
-			tci.key = str::trim(tci.key, " ");
-			tci.val = str::trim(tci.val, " ");
-
-			vecConf.push_back(tci);
-		}
-	}
-
-	loadConf_tds(vecConf);
+	project_ini.load(projectConfPath);
+	loadConf_tds(project_ini.mapConf);
 }
 
 json tdsConfig::toJson()
@@ -519,23 +509,23 @@ bool tdsConfig::checkKey(string toCheck, string key)
 
 int tdsConfig::getInt(string key, int iDef)
 {
-	return tdsIni.getValInt(key, iDef);
+	return project_ini.getValInt(key, iDef);
 }
 
 string tdsConfig::getStr(string key, string sDef)
 {
-	return tdsIni.getValStr(key, sDef);
+	return project_ini.getValStr(key, sDef);
 }
 
 bool tdsConfig::setStr(string key, string val)
 {
-	tdsIni.setVal(key, val);
+	project_ini.setVal(key, val);
 	return true;
 }
 
 bool tdsConfig::setInt(string key, int val)
 {
-	tdsIni.setVal(key, val);
+	project_ini.setVal(key, val);
 	return true;
 }
 

@@ -12,21 +12,22 @@ class tdsConfig : public iTDSConf
 {
 public:
 	tdsConfig();
-	void generateDefaultConfFile(string m);
-	string defaultConf_tds();
+	void generateDefaultAppConfFile();
+	void generateDefaultProjectConfFile(string prjConfPath);
+	string defaultAppConf_tds();
+	string defaultProjectConf_tds();
 	string defaultConf_tdb();
 	string defaultConf_rphttp();
 	void loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf);
-	void loadConf_tds(vector<KV_CONF_ITEM>& vecConf);
+	void loadConf_tds(map<string, string>& vecConf);
 	void loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf() override;
 	void loadCurrentData() override;
 	json toJson();
-	
 	bool checkKey(string toCheck, string key);
-	string normalizationKey(string key);
 
-	KV_INI tdsIni;
+	KV_INI project_ini;
+	KV_INI app_ini;
 
 	int getInt(string key, int iDef) override;
 	string getStr(string key, string sDef) override;

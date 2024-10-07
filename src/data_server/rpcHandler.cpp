@@ -2741,8 +2741,8 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		auto pReadFun = [](json &jRlt, const string &confName) -> void
 		{
-			if (tdsConf.tdsIni.mapConf.find(confName) != tdsConf.tdsIni.mapConf.end()) {
-				string sVal = tdsConf.tdsIni.mapConf[confName];
+			if (tdsConf.project_ini.mapConf.find(confName) != tdsConf.project_ini.mapConf.end()) {
+				string sVal = tdsConf.project_ini.mapConf[confName];
 				if (sVal == "") {
 					jRlt[confName] = sVal;
 				}
@@ -2758,7 +2758,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			string confName = params.get<string>();
 			if (confName == "*" || confName == "") {
 				json jsconf;
-				map<string, string>& maps = tdsConf.tdsIni.mapConf;
+				map<string, string>& maps = tdsConf.project_ini.mapConf;
 				for (auto itm : maps)
 				{
 					jsconf[itm.first] = itm.second;
@@ -2799,7 +2799,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		}
 		else {
 			json jsconf;
-			map<string, string>& maps = tdsConf.tdsIni.mapConf;
+			map<string, string>& maps = tdsConf.project_ini.mapConf;
 			for (auto itm : maps)
 			{
 				jsconf[itm.first] = itm.second;

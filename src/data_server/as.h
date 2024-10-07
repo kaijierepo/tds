@@ -168,6 +168,11 @@ public:
 		bOneFilePerMonth = false;
 		m_pAlmSrv = nullptr;
 	}
+	~almTable() {
+		for (auto& i : buff) {
+			delete i.second;
+		}
+	}
 	string getFilePath(string time = "");
 	string getFilePath(int y,int m);
 	void loadFile(string strFile);
@@ -241,6 +246,9 @@ public:
 	almTable tableHist;
 	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
+
+	string m_curPath;
+	string m_histPath;
 
 	bool m_bTestSrv;	//	是否测试报警
 };

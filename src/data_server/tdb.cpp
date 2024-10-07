@@ -1622,12 +1622,12 @@ double TDB::doAggrOneGroup_sum(DE_SELECTOR& deSel, string& aggrKey, vector<yyjso
 	return dbSum;
 }
 
-enum DB_VAL_TYPE {
-	DVT_UNKNOWN,
-	DVT_BOOL,
-	DVT_INT,
-	DVT_FLOAT
-};
+//enum DB_VAL_TYPE {
+//	DVT_UNKNOWN,
+//	DVT_BOOL,
+//	DVT_INT,
+//	DVT_FLOAT
+//};
 
 struct DURATION_INFO {
 	time_t duration;
@@ -3578,7 +3578,7 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 		Select(whenSel, relTagData);
 
 		//parse sel rlt to time slot
-		if (deSel.whenSel.whenStatus && deSel.whenSel.status.type == DB_VAL_TYPE::DBV_BOOL){
+		if (deSel.whenSel.whenStatus && deSel.whenSel.status.type == DBV_BOOL){
 			bool lastStatus = !deSel.whenSel.status.bVal;
 			bool inStatus = false;
 			DB_TIME_SPAN timespan;

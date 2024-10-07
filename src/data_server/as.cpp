@@ -119,12 +119,16 @@ void almServer::init()
 
 void almServer::init(const string& aCurPath, const string& aHisPath)
 {
+	m_curPath = aCurPath;
+	m_histPath = aHisPath;
+
 	init();
 
 	tableCurrent.init(aCurPath);
+	tableCurrent.SetAlarmSrv(this);
+
 	tableHist.init(aHisPath);
 	tableHist.bOneFilePerMonth = true;
-	tableCurrent.SetAlarmSrv(this);
 	tableHist.SetAlarmSrv(this);
 
 	initMOAlarmStatus();
@@ -930,14 +934,20 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int iMonth = 0;
 	int iEndMonth = 0;
 	map<string, ALARM_INFO*> deList;
+	vector<almTable*> histTables;
 	for(int iYear = startYear;iYear<=endYear;iYear++) {
 		if(iYear == startYear) iMonth = startMonth;
 		else iMonth=1;
 		if(iYear == endYear) iEndMonth = endMonth;
 		else iEndMonth = 12;
 		for(;iMonth<=iEndMonth;iMonth++) {
-			tableHist.loadFile(tableHist.getFilePath(iYear,iMonth));
-			for (map<string, ALARM_INFO*>::iterator it = tableHist.buff.begin(); it != tableHist.buff.end(); it++) {
+			almTable* tableTemp = new almTable();
+			tableTemp->init(m_histPath);
+			tableTemp->bOneFilePerMonth = true;
+			tableTemp->SetAlarmSrv(this);
+			histTables.push_back(tableTemp);
+			tableTemp->loadFile(tableTemp->getFilePath(iYear,iMonth));
+			for (map<string, ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
 				if (session.user != "") {
 					if (!userMng.checkTagPermission(session.user, it->second->tag))
 						continue;
@@ -1040,6 +1050,10 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			jDataSet.push_back(j);
 		}
 		dataSet = jDataSet.dump(2);
+	}
+
+	for (auto& i : histTables) {
+		delete i;
 	}
 
 	return dataSet;
@@ -1149,40 +1163,26 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	}
 	cols.push_back(el);
 
+	int paddingSize = 14 - cols.size();
+	for (int i = 0; i < paddingSize; i++) {
+		cols.push_back("");
+	}
+
 	ALARM_INFO ai;
-	//兼容老版本的数据
-	if(cols.size()!=13 && cols.size() != 14)return ai;
-	if (cols.size() == 13) {
-		ai.tag = cols[0];
-		ai.time = cols[1].c_str();
-		ai.type = cols[2].c_str();
-		ai.level = cols[3].c_str();
-		ai.strAlarmDesc = cols[4].c_str();
-		ai.strAlarmDetail = cols[5].c_str();
-		ai.bRecover = atoi(cols[6].c_str());
-		ai.stRecoverTime = timeopt::str2st(cols[7].c_str());
-		ai.bAck = atoi(cols[8].c_str());
-		ai.stConfirmTime = timeopt::str2st(cols[9].c_str());
-		ai.strConfirmInfo = cols[10].c_str();
-		ai.strConfirmUser = cols[11].c_str();
-		ai.pic_url = cols[12].c_str();
-	}
-	else {
-		ai.uuid = cols[0];
-		ai.tag = cols[1];
-		ai.time = cols[2].c_str();
-		ai.type = cols[3].c_str();
-		ai.level = cols[4].c_str();
-		ai.strAlarmDesc = cols[5].c_str();
-		ai.strAlarmDetail = cols[6].c_str();
-		ai.bRecover = atoi(cols[7].c_str());
-		ai.stRecoverTime = timeopt::str2st(cols[8].c_str());
-		ai.bAck = atoi(cols[9].c_str());
-		ai.stConfirmTime = timeopt::str2st(cols[10].c_str());
-		ai.strConfirmInfo = cols[11].c_str();
-		ai.strConfirmUser = cols[12].c_str();
-		ai.pic_url = cols[13].c_str();
-	}
+	ai.uuid = cols[0];
+	ai.tag = cols[1];
+	ai.time = cols[2].c_str();
+	ai.type = cols[3].c_str();
+	ai.level = cols[4].c_str();
+	ai.strAlarmDesc = cols[5].c_str();
+	ai.strAlarmDetail = cols[6].c_str();
+	ai.bRecover = atoi(cols[7].c_str());
+	ai.stRecoverTime = timeopt::str2st(cols[8].c_str());
+	ai.bAck = atoi(cols[9].c_str());
+	ai.stConfirmTime = timeopt::str2st(cols[10].c_str());
+	ai.strConfirmInfo = cols[11].c_str();
+	ai.strConfirmUser = cols[12].c_str();
+	ai.pic_url = cols[13].c_str();
 	return ai;
 }
 
