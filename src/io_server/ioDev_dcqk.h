@@ -5,64 +5,64 @@
 #include "Parse315Protocol.h"
 #include "ioDev_tdsp.h"
 
-//��������
-#define ALARM_TYPE_QKYJ			1				//ȱ��Ԥ����Ԥ��ͼ��
-#define ALARM_TYPE_QKBJ			2				//ȱ�ڱ���������ͼ��
-#define ALARM_TYPE_QKSBGZ		3				//ȱ�ڲɼ��豸���ϣ���ʱû��ȱ��ֵ��ȱ��ͼ������ƫ�Ʊ�־����Ч(00),�ܰ�����1���������0��ͼ���ܳ���0�� ��֡ͼ�񳤶�0.
-#define ALARM_TYPE_TXWFSB		4				//ȱ��ͼ���޷�ʶ�𱨾�
-#define ALARM_TYPE_GCKLGD		5				//����ʱ�������󱨾���������Ƶ
-#define ALARM_TYPE_ZZJSBGZ		6				//ת�޻��ɼ��豸���ϱ���
-#define ALARM_TYPE_WDBJ			7				//�¶ȱ���
-#define ALARM_TYPE_SDBJ			8				//ʪ�ȱ���
-#define ALARM_TYPE_YWYJ			9				//��λԤ����Ԥ����
-#define ALARM_TYPE_YWBJ			10				//��λ������Ԥ����
-#define ALARM_TYPE_POWERYJ      11              //����Ԥ��
-#define ALARM_TYPE_POWERBJ      12              //�����澯
-#define ALARM_TYPE_ZHUANPOWERBJ      13              //����ת���������ޱ���
-#define ALARM_TYPE_LOCKBJ      14              //������װ�����������ޱ���
-#define ALARM_TYPE_CRSGAP      15              //����ʱȱ��ֵ
-#define ALARM_TYPE_STATICGAPYJ      16              //��̬ȱ��Ԥ��
-#define ALARM_TYPE_STATICGAPBJ      17              //��̬ȱ�ڱ���
-#define ALARM_TYPE_TEMPERATURE  77				//�¶�Ԥ��
-#define ALARM_TYPE_HUMILITY		78				//ʪ��Ԥ��
-#define ALARM_TYPE_QKYJHF		101				//ȱ��Ԥ���ָ���ͼ��
-#define ALARM_TYPE_QKBJHF		102				//ȱ�ڱ����ָ���ͼ��
-#define ALARM_TYPE_QKSBGZHF		103				//ȱ�ڲɼ��豸���ϻָ���ͼ��
-#define ALARM_TYPE_TXWFSBHF		104				//ȱ��ͼ���޷�ʶ�𱨾��ָ���ͼ��
-#define ALARM_TYPE_ZZJSBGZHF	105				//ת�޻��ɼ��豸���ϱ����ָ�
-#define ALARM_TYPE_GCKLGDHF		106				//����ʱ�������󱨾��ָ���������Ƶ
-#define ALARM_TYPE_WDBJHF		107				//�¶ȱ����ָ�
-#define ALARM_TYPE_SDBJHF		108				//�¶ȱ����ָ�
-#define ALARM_TYPE_YWYJHF		109				//��λԤ���ָ���Ԥ����
-#define ALARM_TYPE_YWBJHF		110				//��λ�����ָ���Ԥ����
-#define ALARM_TYPE_POWERYJHF    111             //����Ԥ���ָ�
-#define ALARM_TYPE_POWERBJHF    112             //�����澯�ָ�
-#define ALARM_TYPE_ZHUANPOWERBJHF      113              //����ת���������ޱ����ָ�
-#define ALARM_TYPE_LOCKBJHF      114              //������װ�����������ޱ����ָ�
-#define ALARM_TYPE_CRSGAPHF      115              //����ʱȱ��ֵ�ָ�
-#define ALARM_TYPE_STATICGAPYJHF      116              //��̬ȱ��Ԥ���ָ�
-#define ALARM_TYPE_STATICGAPBJHF      117              //��̬ȱ�ڱ����ָ�
-#define ALARM_TYPE_TEMPERATUREHF  177			//�¶�Ԥ���ָ�
-#define ALARM_TYPE_HUMILITYHF	178				//ʪ��Ԥ���ָ�
+//报警类型
+#define ALARM_TYPE_QKYJ			1				//缺口预警及预警图像
+#define ALARM_TYPE_QKBJ			2				//缺口报警及报警图像
+#define ALARM_TYPE_QKSBGZ		3				//缺口采集设备故障，此时没有缺口值及缺口图像，左右偏移标志填无效(00),总包数填1，本包序号0，图像总长度0， 本帧图像长度0.
+#define ALARM_TYPE_TXWFSB		4				//缺口图像无法识别报警
+#define ALARM_TYPE_GCKLGD		5				//过车时框量过大报警及过车视频
+#define ALARM_TYPE_ZZJSBGZ		6				//转辙机采集设备故障报警
+#define ALARM_TYPE_WDBJ			7				//温度报警
+#define ALARM_TYPE_SDBJ			8				//湿度报警
+#define ALARM_TYPE_YWYJ			9				//油位预警（预留）
+#define ALARM_TYPE_YWBJ			10				//油位报警（预留）
+#define ALARM_TYPE_POWERYJ      11              //阻力预警
+#define ALARM_TYPE_POWERBJ      12              //阻力告警
+#define ALARM_TYPE_ZHUANPOWERBJ      13              //道岔转换阻力超限报警
+#define ALARM_TYPE_LOCKBJ      14              //外锁闭装置锁闭力超限报警
+#define ALARM_TYPE_CRSGAP      15              //过车时缺口值
+#define ALARM_TYPE_STATICGAPYJ      16              //静态缺口预警
+#define ALARM_TYPE_STATICGAPBJ      17              //静态缺口报警
+#define ALARM_TYPE_TEMPERATURE  77				//温度预警
+#define ALARM_TYPE_HUMILITY		78				//湿度预警
+#define ALARM_TYPE_QKYJHF		101				//缺口预警恢复及图像
+#define ALARM_TYPE_QKBJHF		102				//缺口报警恢复及图像
+#define ALARM_TYPE_QKSBGZHF		103				//缺口采集设备故障恢复及图像
+#define ALARM_TYPE_TXWFSBHF		104				//缺口图像无法识别报警恢复及图像
+#define ALARM_TYPE_ZZJSBGZHF	105				//转辙机采集设备故障报警恢复
+#define ALARM_TYPE_GCKLGDHF		106				//过车时框量过大报警恢复及过车视频
+#define ALARM_TYPE_WDBJHF		107				//温度报警恢复
+#define ALARM_TYPE_SDBJHF		108				//温度报警恢复
+#define ALARM_TYPE_YWYJHF		109				//油位预警恢复（预留）
+#define ALARM_TYPE_YWBJHF		110				//油位报警恢复（预留）
+#define ALARM_TYPE_POWERYJHF    111             //阻力预警恢复
+#define ALARM_TYPE_POWERBJHF    112             //阻力告警恢复
+#define ALARM_TYPE_ZHUANPOWERBJHF      113              //道岔转换阻力超限报警恢复
+#define ALARM_TYPE_LOCKBJHF      114              //外锁闭装置锁闭力超限报警恢复
+#define ALARM_TYPE_CRSGAPHF      115              //过车时缺口值恢复
+#define ALARM_TYPE_STATICGAPYJHF      116              //静态缺口预警恢复
+#define ALARM_TYPE_STATICGAPBJHF      117              //静态缺口报警恢复
+#define ALARM_TYPE_TEMPERATUREHF  177			//温度预警恢复
+#define ALARM_TYPE_HUMILITYHF	178				//湿度预警恢复
 
 //typedef struct
 //{
-//	WORD packid;			//�������
-//	DWORD datalen;			//�������ݳ�
-//	LPVOID lpdata;			//��������
+//	WORD packid;			//本包序号
+//	DWORD datalen;			//本包内容长
+//	LPVOID lpdata;			//本包内容
 //}VedioPackage;
 
 typedef struct
 {
-	WORD sid;				//ת�޻�ID
-	DWORD time;				//��ʼʱ�䣺4�ֽ�(Unixʱ��)
-	WORD timelen;			//��Ƶʱ��
-	DWORD len;				//��Ƶ���ȣ���Ƶ�Ĵ�С���ֽ���
-	WORD packcnt;			//�ܰ���
-	//WORD recvcnt;			//�ѽ��հ���
-	WORD maxpacklen;		//������
-	BOOL bFinished;			//�Ƿ�������
-	set<WORD> setPack;		//�ѽ��հ����
+	WORD sid;				//转辙机ID
+	DWORD time;				//开始时间：4字节(Unix时间)
+	WORD timelen;			//视频时长
+	DWORD len;				//视频长度：视频的大小，字节数
+	WORD packcnt;			//总包数
+	//WORD recvcnt;			//已接收包数
+	WORD maxpacklen;		//包长度
+	BOOL bFinished;			//是否接收完毕
+	set<WORD> setPack;		//已接收包序号
 	vector<BYTE> vctPacks;
 }VedioFile;
 
@@ -72,10 +72,10 @@ struct eqpInfo
 {
 	string daochaName;
 	string eqpName;
-	uint32_t timeLastTriggerVedio = 0;	//�ϴλ�ȡ�⶯��Ƶ�б�ʱ��
-	uint32_t timeLastPassCarVedio = 0;	//�ϴλ�ȡ������Ƶ�б�ʱ��
-	list<StVedioRecord> lstVedioCache;	//��Ƶδ��ȡ�б� filldata[0]:��Ƶ���� filldata[1]:��Ƶ�ɼ�״̬
-	DWORD	 timeLastReqDownload;	//�ϴ���������ʱ��
+	uint32_t timeLastTriggerVedio = 0;	//上次获取扳动视频列表时间
+	uint32_t timeLastPassCarVedio = 0;	//上次获取过车视频列表时间
+	list<StVedioRecord> lstVedioCache;	//视频未获取列表 filldata[0]:视频类型 filldata[1]:视频采集状态
+	DWORD	 timeLastReqDownload;	//上次请求下载时间
 	VedioTimeMap m_mapVideos;
 
 	CRITICAL_SECTION m_csVedioList;
@@ -122,35 +122,35 @@ public:
 	BOOL IsRecover(BYTE type);
 
 	int SendHeartbeat();
-	///	�⶯����
+	///	扳动操作
 	void BanDongOpr(int iSID, BYTE bType);
-	///	��ʷͼƬ
+	///	历史图片
 	void GetHisImg(int nSID, time_t sTm, time_t eTm);
-	///	��ʷ��Ƶ
+	///	历史视频
 	void GetHisVedio(int nSID, time_t sTm, time_t eTm, BYTE btVedioType);
-	/// ʵʱ��Ƶ����
+	/// 实时视频操作
 	void RealVedioOpr(int nSID, BYTE btFixorinvert, BYTE btCmdType);
-	/// ��ȡ����ȱ��
+	/// 获取最新缺口
 	void GetLastGap();
-	/// ȱ��ʵʱͼƬ
+	/// 缺口实时图片
 	void GetLastImg(int nSID);
-	/// ȱ��������Ϣ
+	/// 缺口配置信息
 	void GetGapCfg();
-	///	ȱ����չ������Ϣ
+	///	缺口扩展配置信息
 	void GetGapCfgEx();
-	/// �����ļ��б�
+	/// 阻力文件列表
 	void Getpowerfilelist(int nSID, time_t sTm, time_t eTm, BYTE btDir);
-	///	��ѯ���������б�
+	///	查询阻力曲线列表
 	void SearchPowerCurveList(int nSID, time_t sTm, time_t eTm);
-	///	�������������ļ�
+	///	下载阻力曲线文件
 	void DownloadPowerCurveFile(int nSID, time_t sTm);
-	///	�ֶ�����
+	///	手动加油
 	void ManualOiling(int nSID, BYTE btFixorinvert);
-	///	δ�ָ��澯�б�
+	///	未恢复告警列表
 	void GetUnRecoverAlarm(int nSID);
-	///	��������
+	///	工况操作
 	void GongKuangOpr();
-	/// �����䴢����
+	/// 加油箱储油量
 	void GetOilBoxVolume(int nSID);
 
 
@@ -165,27 +165,27 @@ public:
 	std::map<int, eqpInfo> m_mapEqp;
 
 	static std::map<int, std::string> g_map0x97AlarmLevel;
-	//����
+	//接收
 public:
 	template<typename T>
 	void DealVedioFile(T*);
 
-	//����
+	//发送
 public:
-	///	��ִ
+	///	回执
 	void SendCallBackHeart(StHeartBeat315* pData);
 	void SendCallBack0x41(StElecCurve* lpsubdata);
 	void SendCallBack0x25(StOilPreCurve* lpsubdata);
 	void SendCallBack0x27(StAlarmAndImgInfo* lpsubdata);
 
-	//��ѯ��Ƶ�б�
+	//查询视频列表
 	void QueryVedioList(); //
-	//��ѯ��Ƶ
+	//查询视频
 	void QueryVedio(WORD sid, StVedioRecord* pST);
 
 public:
-	TIME m_stLastQueryVedioTime;		//�ϴβ�ѯ��Ƶ�б�ʱ��
-	bool m_bDownloadVedioThread;		//�Ƿ����������Ƶ�߳�
-	bool m_bDownloadVedioing;			//�Ƿ�����������Ƶ
-	thread m_threadDownloadVedio;		//������Ƶ�߳�
+	TIME m_stLastQueryVedioTime;		//上次查询视频列表时间
+	bool m_bDownloadVedioThread;		//是否存在下载视频线程
+	bool m_bDownloadVedioing;			//是否正在下载视频
+	thread m_threadDownloadVedio;		//下载视频线程
 };
