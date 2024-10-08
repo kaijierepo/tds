@@ -438,6 +438,7 @@ struct IP_ADDR {
 
  void ioServer::handleUDPTdspPkt(yyjson_val* yyv_pkt, yyjson_doc* doc,string strIP, int port, string ioSessionAddr) {
 	 yyjson_val* yyv_method = yyjson_obj_get(yyv_pkt, "method");
+	 yyjson_val* yyv_params = yyjson_obj_get(yyv_pkt, "params");
 	 if (yyv_method == nullptr) {
 		 LOG("[error]解析tdsp数据包失败,没有包含method字段");
 		 return;
@@ -451,6 +452,22 @@ struct IP_ADDR {
 		 m_strAdpIp = strIP;
 		 m_iAdpPort = port;
 		 return;
+	 }
+
+	 if (method == "regStandAloneIO") {
+		 yyjson_val* yyv_type = yyjson_obj_get(yyv_params,"type");
+		 if (yyv_type) {
+			 string type = yyjson_get_str(yyv_type);
+			 if (type != "") {
+				 if (m_standAloneIO.find(type) == m_standAloneIO.end()) {
+					 STANDALONE_IO info;
+					 info.ip = strIP;
+					 info.port = port;
+					 m_standAloneIO[type] = info;
+					 LOG("[独立IO服务] 独立IO服务上线,IP=%s,port=%d,类型=%s", strIP.c_str(), port,type.c_str());
+				 }
+			 }
+		 }
 	 }
 
 	 //适配器上送的地址格式 UDP-192.168.1.100:9009
@@ -1515,6 +1532,13 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 		//	if (tagBind != "*" && tagBind != i->m_strTagBind)
 		//		continue;
 		//}
+
+		//根据是否隶属ioServer进行过滤
+		if (devQuerier.standAloneIO != "") {
+			if (dev->m_standAloneIOType != devQuerier.standAloneIO) {
+				continue;
+			}
+		}
 
 		//根据指定的rootTag进行过滤；
 		if (dev->m_strTagBind != "" && devQuerier.rootTag != "")

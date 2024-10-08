@@ -106,6 +106,11 @@ class ioHandler_mbRtu : public ITcpServerCallBack, public IUdpServerCallBack {
 	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 };
 
+struct STANDALONE_IO {
+	string ip;
+	int port;
+};
+
 
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
@@ -176,8 +181,13 @@ public:
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
 	udpServer* m_udpSrv_tdsp;   //665 tdsp ，adaptor
+
+	//adaptor
 	string m_strAdpIp;
 	int m_iAdpPort;
+
+	//standAlone IO
+	map<string, STANDALONE_IO> m_standAloneIO;
 
 	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
 

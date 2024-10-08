@@ -93,6 +93,7 @@ struct DEV_QUERIER {
 	string rootTag;
 	vector<string> type;
 	vector<string> subType;
+	string standAloneIO;
 
 	void parseQueryOpt(json& opt);
 
@@ -179,14 +180,18 @@ public:
 	string m_charset;  //协议文本编码类型
 	string m_strUser;  //某些设备需要用户名和密码才能访问
 	string m_strPwd;
-	bool m_bViaAdaptor;
+
 	bool m_bEnableOfflineTimeout;
 	bool m_bEnableHttpHeartbeat;
 	bool m_bEnablePingOnlineCheck;
 	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
 	bool m_bPingThreadRunning;
+
+	string m_ioMode; //none,translator,adaptor,standAloneIO
+	bool m_bViaAdaptor;
 	string m_translatorProto;
+	string m_standAloneIOType;
 	bool viaTcpConn(); //通过tcp与tds建立连接
 
 	bool isViaAdaptor();

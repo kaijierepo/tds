@@ -536,7 +536,7 @@ bool ioDev_tdsp::getCurrentVal()
 
 bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 {
-	if (m_translatorProto != "") {
+	if (m_ioMode == "translator" && m_translatorProto != "") {
 		vector<unsigned char> devPkt;
 		string tdspPkt = (char*)pData;
 		translateToDevPkt(tdspPkt, devPkt);

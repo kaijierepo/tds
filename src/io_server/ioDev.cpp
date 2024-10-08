@@ -189,6 +189,7 @@ ioDev::ioDev(void)
 	m_bRecvProcessing = false;
 	m_bOutputting = false;
 	m_offlineCount = 0;
+	m_ioMode = "none";
 }
 
 ioDev::~ioDev(void)
@@ -271,9 +272,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 	if (querier.getConf) {
 		conf["addrMode"] = m_addrType;
 		conf["addr"] = m_jDevAddr;
-		if (m_bViaAdaptor) {
-			conf["viaAdaptor"] = true;
-		}
+		conf["ioMode"] = m_ioMode;
 		conf["type"] = m_devType;
 		conf["typeLabel"] = getDevTypeLabel(m_devType);
 		if (m_devSubType != "") {
@@ -303,6 +302,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		}
 		if (m_translatorProto != "") {
 			conf["translatorProto"] = m_translatorProto;
+		}
+		if (m_standAloneIOType != "") {
+			conf["standAloneIOType"] = m_standAloneIOType;
 		}
 
 		if (m_bEnableOfflineTimeout) {
@@ -472,11 +474,22 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+	kv = conf.find("ioMode");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_ioMode = item.get<string>();
+		}
+	}
+
 	kv = conf.find("viaAdaptor");
 	if (kv != conf.end()) {
 		json& item = kv.value();
 		if (item.is_boolean()) {
-			m_bViaAdaptor = item.get<bool>();
+			bool b = item.get<bool>();
+			if (b) {
+				m_ioMode = "adaptor";
+			}
 		}
 	}
 
@@ -485,6 +498,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_translatorProto = item.get<string>();
+		}
+	}
+
+	kv = conf.find("standAloneIOType");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_standAloneIOType = item.get<string>();
 		}
 	}
 
@@ -850,6 +871,9 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 	}
 	if (opt["type"].is_string()) {
 		q.type.push_back(opt["type"].get<string>());
+	}
+	if (opt["standAloneIO"].is_string()) {
+		q.standAloneIO = opt["standAloneIO"].get<string>();
 	}
 	else if (opt["type"].is_array()) {
 		json jTypes = opt["type"];
@@ -1283,13 +1307,26 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		}
 		//通过协议适配器发送给设备
 		else {
-			if (m_bViaAdaptor) {
+			if (m_ioMode == "adaptor") {
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog) {
 						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + str::fromInt(ioSrv.m_iAdpPort);
 						string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
 						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr );
+					}
+				}
+			}
+			else if (m_ioMode == "standAloneIO" && m_standAloneIOType != "") {
+				if (ioSrv.m_udpSrv_tdsp != nullptr) {
+					if (ioSrv.m_standAloneIO.find(m_standAloneIOType) != ioSrv.m_standAloneIO.end()) {
+						STANDALONE_IO saio = ioSrv.m_standAloneIO[m_standAloneIOType];
+						size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, saio.ip, saio.port);
+						if (m_bEnableIoLog) {
+							string remoteAddr = "UDP-" + saio.ip + str::fromInt(saio.port);
+							string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
+							IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
+						}
 					}
 				}
 			}
