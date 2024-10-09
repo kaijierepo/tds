@@ -69,7 +69,7 @@ namespace ns_ioDev_dcqk {
 			mapDevTypeLabel["dcqk-sys-device"] = "道岔缺口站机";
 		};
 	};
-	createReg reg;
+createReg reg;
 }
 
 void ThreadSaveGapAndPic(void* lpParam);
@@ -111,7 +111,7 @@ void ThreadDownloadVedio(void* lpParam)
 		DWORD dwTick = GetTickCount();
 		for (auto it = pDev->m_mapEqp.begin(); it != pDev->m_mapEqp.end(); it++)
 		{
-			StVedioRecord *pST = NULL;
+			StVedioRecord* pST = NULL;
 			WORD sid = 0;
 			EnterCriticalSection(&it->second.m_csVedioList);
 			//for (auto itVedio = it->second.lstVedioCache.begin(); itVedio != it->second.lstVedioCache.end(); itVedio++)
@@ -169,10 +169,12 @@ void ioDev_dcqk::DoCycleTask()
 		m_stLastHeartbeatTime = timeopt::now();
 	}
 
-	if (!m_mapEqp.empty() && timeopt::CalcTimePassSecond(m_stLastQueryVedioTime) >= 2)
-	{
-		m_stLastQueryVedioTime = timeopt::now();
-		QueryVedioList();		
+	if (tds->conf->getInt("TB3386_EnableVideoSync",1) == 1){
+		if (!m_mapEqp.empty() && timeopt::CalcTimePassSecond(m_stLastQueryVedioTime) >= 2)
+		{
+			m_stLastQueryVedioTime = timeopt::now();
+			QueryVedioList();
+		}
 	}
 }
 
