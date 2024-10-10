@@ -169,18 +169,12 @@ public:
 };
 
 
-enum Time_Set_Type {
+enum Time_Atom_Sel_Type {
 	TSM_All = 0,
 	TSM_Range = 1,
-	TSM_First = 2,
-	TSM_Last = 3
-};
-
-enum Period_Type {
-	PT_None = 0,
-	PT_Month = 1,
-	PT_Day = 2,
-	PT_Hour = 3,
+	TSM_AnyPoint = 2,  
+	TSM_First = 3,
+	TSM_Last = 4
 };
 
 enum DB_VAL_TYPE {
@@ -206,32 +200,41 @@ struct DB_VAL {
 //
 //head@TIME_SEL   tail@TIME_SEL
 
-class TIME_SELECTOR
-{
-public:
-	TIME_SELECTOR();
+struct TIME_SELECTOR_ATOM {
 	bool Match(string& deTime);
-	bool AmountMatch(size_t amount);
 	bool init(string time);
-	string shortSel2StardardSel(string time);
-	bool parseTimeRange(string time);//use standard time selector as 2020-02-01 00:00:00~2020-02-28 23:59:59
-	string getParsedSelector();
-
 	string selector;
-	Time_Set_Type timeSetType;
-	string timeFmt; //specified time format to return,such as YYYY-MM-DD hh:mm:ss
-
+	Time_Atom_Sel_Type timeSetType;
 	string strStart;
 	string strEnd;
 	DB_TIME stStart;
 	DB_TIME stEnd;
 	time_t startTime;
 	time_t endTime;
+	string shortSel2StardardSel(string time);
+	bool parseTimeRange(string time);//use standard time selector as 2020-02-01 00:00:00~2020-02-28 23:59:59
+	string getParsedSelector();
 
-	Period_Type periodType;
-	int startHMS;
-	int endHMS;
+	TIME_SELECTOR_ATOM() {
+		startTime = 0;
+		endTime = 0;
+	}
+};
 
+class TIME_SELECTOR
+{
+public:
+	TIME_SELECTOR();
+	bool Match(string& deTime);
+	bool AmountMatch(size_t amount);
+	bool init(vector<string> time);
+	bool init(string time);
+
+	bool isRange();
+
+	vector<TIME_SELECTOR_ATOM> atomSelList;
+
+	string timeFmt; //specified time format to return,such as YYYY-MM-DD hh:mm:ss
 	int m_dataNum;//how many de to get
 	string error;
 	DE_TIME deTime;
@@ -541,6 +544,9 @@ struct SELECT_RLT {
 	string query;
 	string calcResult; 
 
+	vector<vector<DATA_SET*>*>  dataSetBuff; 
+	vector<TAG_FILE_SET*> tagFileSet;
+
 	SELECT_RLT() {
 		rlt_mut_doc = yyjson_mut_doc_new(nullptr);
 		getDE = true;
@@ -553,6 +559,22 @@ struct SELECT_RLT {
 		if (rlt_mut_doc) {
 			yyjson_mut_doc_free(rlt_mut_doc);
 		}
+		//release src
+		for (int i = 0; i < dataSetBuff.size(); i++)
+		{
+			vector<DATA_SET*>& p = *dataSetBuff[i];
+			for (int j = 0; j < p.size(); j++)
+			{
+				DATA_SET* fSet = p[j];
+				delete fSet;
+			}
+		}
+		//release file data
+		for (int i = 0; i < tagFileSet.size(); i++)
+		{
+			delete tagFileSet[i];
+		}
+
 	}
 };
 

@@ -1044,7 +1044,7 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 	yyjson_val* yyDe = yyjson_doc_get_root(doc);
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
 	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
-		yyjson_mut_val* timeKey = yyjson_mut_str(mdoc, CONST_STR::time.c_str());
+		yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
 		yyjson_mut_val* timeVal;
 		string sTime = stTime.toStr(true);
 		timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
@@ -2322,13 +2322,32 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
+SELECT_RLT idxRlt;
+
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
+	//deType is curve but time sel is range,do a curveIdx select to get curve time points before curve select
+	if (deSel.timeSel.isRange() && deSel.deType == "curve") {
+		DE_SELECTOR deSelIdx = deSel;
+		deSelIdx.deType = "curveIdx";
+
+		Select(deSelIdx, idxRlt);
+		deSel.timeSel.atomSelList.clear();
+		for (auto& iter : idxRlt.mapRlt) {
+			yyjson_mut_val* yyv_time = yyjson_mut_obj_get(iter.second, "time");
+
+			string time = yyjson_mut_get_str(yyv_time);
+			TIME_SELECTOR_ATOM tsa;
+			tsa.init(time);
+			deSel.timeSel.atomSelList.push_back(tsa);
+		}
+	}
+
 	bool bRet = true;
 	vector<string> tagSet = deSel.tagSel.tagSet;
 
 	//load file data
-	vector<TAG_FILE_SET*> tagFileSet;
+	vector<TAG_FILE_SET*>& tagFileSet = result.tagFileSet;
 	for (int i = 0; i < tagSet.size(); i++)
 	{
 		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
@@ -2339,8 +2358,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	Select_Step_loadFile(deSel, tagFileSet, result);
 
 	//data buff in processing steps, all will be released in the end
-	vector<vector<DATA_SET*>*>  dataSetBuff;
-
+	vector<vector<DATA_SET*>*>&  dataSetBuff = result.dataSetBuff;
 	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr;
 	string sCalcResult; //calc result dumped to string
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
@@ -2798,23 +2816,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		result.dataList = p;
 	}
 	result.rowCount = mapRlt.size();
-
-	//release src
-	for (int i = 0; i < dataSetBuff.size(); i++)
-	{
-		vector<DATA_SET*>& p = *dataSetBuff[i];
-		for (int j = 0; j < p.size(); j++)
-		{
-			DATA_SET* fSet = p[j];
-			delete fSet;
-		}
-	}
-	//release file data
-	for (int i = 0; i < tagFileSet.size(); i++)
-	{
-		delete tagFileSet[i];
-	}
-
 	return true;
 }
 
@@ -2829,15 +2830,35 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		err = "param missing: time";
 		return;
 	}
-	if (!yyjson_is_str(yyv_time)) {
-		err = "param time must be string type";
+
+	if (yyjson_is_str(yyv_time)) {
+		strTime = yyjson_get_str(yyv_time);
+		if (!deSel.timeSel.init(strTime)) {
+			err = "time selector format error:" + deSel.timeSel.error;
+			return;
+		}
+	}
+	else if(yyjson_is_arr(yyv_time)){
+		size_t idx = 0;
+		size_t max = 0;
+		yyjson_val* item;
+		vector<string> timeSelList;
+		yyjson_arr_foreach(yyv_time, idx, max, item) {
+			if (!yyjson_is_str(item)) {
+				string s = yyjson_get_str(item);
+				timeSelList.push_back(s);
+			}
+		}
+		if (!deSel.timeSel.init(timeSelList)) {
+			err = "time selector format error:" + deSel.timeSel.error;
+			return;
+		}
+	}
+	else {
+		err = "param time must be string type or array type";
 		return;
 	}
-	strTime = yyjson_get_str(yyv_time);
-	if (!deSel.timeSel.init(strTime)) {
-		err = "time selector format error:" + deSel.timeSel.error;
-		return;
-	}
+
 	yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
 	if (yyv_timeFmt && yyjson_is_str(yyv_timeFmt)) {
 		deSel.timeSel.timeFmt = yyjson_get_str(yyv_timeFmt);
@@ -3151,55 +3172,11 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 		{
 			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
-			if (deSel.timeSel.timeSetType == TSM_First && deSel.timeSel.periodType == PT_None) {
-				time_t loadTime = deSel.timeSel.startTime;
-				for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
-				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
-					pdf->deType = deSel.deType;
-					if (!pdf->loadFile()) {
-						delete pdf;
-						continue;
-					}
-					fSet.fileList.push_back(pdf);
-					break;
-				}
-			}
-			else if (deSel.timeSel.timeSetType == TSM_Last && deSel.timeSel.periodType == PT_None) {
-				time_t loadTime = deSel.timeSel.endTime;
-				for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-				{
-					DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
-					pdf->deType = deSel.deType;
-					if (!pdf->loadFile()) {
-						delete pdf;
-						continue;
-					}
-					fSet.fileList.push_back(pdf);
-					break;
-				}
-			}
-			else {
-
-				bool bFirstLastAggr = false;
-				if (deSel.aggregate.size() > 0) {
-					map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
-					vector<string>& aggrTypes = aggrOpt->second;
-					if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
-					{
-						if (aggrTypes.size() == 1) {
-							string& aggrType = aggrTypes[0];
-							if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-								bFirstLastAggr = true;
-							}
-						}
-					}
-				}
-
-				if (bFirstLastAggr) {
-					//read first file
-					time_t loadTime = deSel.timeSel.startTime;
-					for (; loadTime <= deSel.timeSel.endTime; loadTime += 24 * 60 * 60)
+			for (int timeSelAtomIdx = 0; timeSelAtomIdx < deSel.timeSel.atomSelList.size(); timeSelAtomIdx++) {
+				TIME_SELECTOR_ATOM& tsa = deSel.timeSel.atomSelList[timeSelAtomIdx];
+				if (tsa.timeSetType == TSM_First) {
+					time_t loadTime = tsa.startTime;
+					for (; loadTime <= tsa.endTime; loadTime += 24 * 60 * 60)
 					{
 						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
@@ -3210,9 +3187,10 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 						fSet.fileList.push_back(pdf);
 						break;
 					}
-					//read last file
-					loadTime = deSel.timeSel.endTime;
-					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
+				}
+				else if (tsa.timeSetType == TSM_Last) {
+					time_t loadTime = tsa.endTime;
+					for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
 					{
 						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
@@ -3225,16 +3203,62 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					}
 				}
 				else {
-					time_t loadTime = deSel.timeSel.endTime;
-					for (; loadTime >= deSel.timeSel.startTime; loadTime -= 24 * 60 * 60)
-					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
-						pdf->deType = deSel.deType;
-						if (!pdf->loadFile()) {
-							delete pdf;
-							continue;
+
+					bool bFirstLastAggr = false;
+					if (deSel.aggregate.size() > 0) {
+						map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
+						vector<string>& aggrTypes = aggrOpt->second;
+						if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
+						{
+							if (aggrTypes.size() == 1) {
+								string& aggrType = aggrTypes[0];
+								if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+									bFirstLastAggr = true;
+								}
+							}
 						}
-						fSet.fileList.insert(fSet.fileList.begin(), pdf);
+					}
+
+					if (bFirstLastAggr) {
+						//read first file
+						time_t loadTime = tsa.startTime;
+						for (; loadTime <= tsa.endTime; loadTime += 24 * 60 * 60)
+						{
+							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							pdf->deType = deSel.deType;
+							if (!pdf->loadFile()) {
+								delete pdf;
+								continue;
+							}
+							fSet.fileList.push_back(pdf);
+							break;
+						}
+						//read last file
+						loadTime = tsa.endTime;
+						for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
+						{
+							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							pdf->deType = deSel.deType;
+							if (!pdf->loadFile()) {
+								delete pdf;
+								continue;
+							}
+							fSet.fileList.push_back(pdf);
+							break;
+						}
+					}
+					else {
+						time_t loadTime = tsa.endTime;
+						for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
+						{
+							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							pdf->deType = deSel.deType;
+							if (!pdf->loadFile()) {
+								delete pdf;
+								continue;
+							}
+							fSet.fileList.insert(fSet.fileList.begin(), pdf);
+						}
 					}
 				}
 			}
@@ -3641,7 +3665,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				if (fSet.m_beforeAggr.size() > 0) {
 					DE_yyjson& aggrRltDe = *(new DE_yyjson());
 					doAggregateOneGroup(deSel, fSet.aggregate, "all-time-range", fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
-					aggrRltDe.deTime = deSel.timeSel.selector;
+					aggrRltDe.deTime = deSel.timeSel.atomSelList[0].selector;
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
 			}
@@ -4381,16 +4405,24 @@ bool TDB::fileExist(string pszFileName)
 
 TIME_SELECTOR::TIME_SELECTOR()
 {
-	startTime = 0;
-	endTime = 0;
 	m_dataNum = 0;
-	periodType = PT_None;
+}
+
+bool TIME_SELECTOR_ATOM::Match(string& deTime)
+{
+	if (deTime >= strStart && deTime <= strEnd)
+		return true;
+	return false;
 }
 
 bool TIME_SELECTOR::Match(string& deTime)
 {
-	if (deTime >= strStart && deTime <= strEnd)
-		return true;
+	for (int i = 0; i < atomSelList.size(); i++) {
+		TIME_SELECTOR_ATOM& tsa = atomSelList[i];
+		if (tsa.Match(deTime)) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -4463,7 +4495,50 @@ string time2DbFileDate(string& time) {
 	}
 }
 
+bool TIME_SELECTOR::init(vector<string> timeSelList) {
+	for (int i = 0; i < timeSelList.size(); i++) {
+		string s = timeSelList[i];
+		TIME_SELECTOR_ATOM tsa;
+		if (!tsa.init(s)) {
+			return false;
+		}
+		atomSelList.push_back(tsa);
+	}
+	return true;
+}
+
 bool TIME_SELECTOR::init(string time)
+{
+	if (time.find("e") != string::npos)
+	{
+		time = time.substr(0, time.length() - 1);
+		m_dataNum = atoi(time.c_str());
+		string timeRange = "2020-01-01 00:00:00~" + DB_TIME::nowStr();
+		parseTimeRange(timeRange);
+		TIME_SELECTOR_ATOM tsa;
+		tsa.parseTimeRange(timeRange);
+		atomSelList.push_back(tsa);
+	}
+	else {
+		TIME_SELECTOR_ATOM tsa;
+		tsa.init(time);
+		atomSelList.push_back(tsa);
+	}
+	return true;
+}
+
+bool TIME_SELECTOR::isRange()
+{
+	for (int i = 0; i < atomSelList.size(); i++) {
+		TIME_SELECTOR_ATOM& tsa = atomSelList[i];
+		if (tsa.timeSetType == TSM_Range) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool TIME_SELECTOR_ATOM::init(string time)
 {
 	selector = time;
 
@@ -4532,43 +4607,8 @@ bool TIME_SELECTOR::init(string time)
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 
-	if (time.find("head@") != string::npos) {
-		timeSetType = TSM_First;
-		time = DB_TAG::trimPrefix(time, "head@");
-	}
-	else if (time.find("tail@") != string::npos) {
-		timeSetType = TSM_Last;
-		time = DB_TAG::trimPrefix(time, "tail@");
-	}
-	else {
-		timeSetType = TSM_All;
-	}
 
-	if (time.find("day@") != string::npos) {
-		periodType = PT_Day;
-		time = DB_TAG::trimPrefix(time, "day@");
-	}
-	else if (time.find("hour@") != string::npos) {
-		periodType = PT_Hour;
-		 time = DB_TAG::trimPrefix(time, "hour@");
-	}
-	else if (time.find("month@") != string::npos) {
-		periodType = PT_Month;
-		time = DB_TAG::trimPrefix(time, "month@");
-	}
-	else {
-		periodType = PT_None;
-	}
-
-
-	if (time.find("e") != string::npos)
-	{
-		time = time.substr(0, time.length() - 1);
-		m_dataNum = atoi(time.c_str());
-		string timeRange ="2020-01-01 00:00:00~" + DB_TIME::nowStr();
-		parseTimeRange(timeRange);
-	}
-	else if (
+	if (
 		time.find("y") != string::npos ||
 		time.find("M") != string::npos ||
 		time.find("d") != string::npos||
@@ -4582,11 +4622,19 @@ bool TIME_SELECTOR::init(string time)
 		string timeRange = shortSel2StardardSel(time);
 		parseTimeRange(timeRange);
 	}
+
+	if (startTime == endTime) {
+		timeSetType = TSM_AnyPoint;
+	}
+	else {
+		timeSetType = TSM_Range;
+	}
+
 	return true;
 }
 
 
-string TIME_SELECTOR::shortSel2StardardSel(string time)
+string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 {
 	//2020-02
 	if (time[4] == '-' && time.length() == 7) {
@@ -4629,7 +4677,7 @@ DB_TIME_RANGE parseTimeRange(string timeExp) {
 	return tr;
 }
 
-bool TIME_SELECTOR::parseTimeRange(string condition)
+bool TIME_SELECTOR_ATOM::parseTimeRange(string condition)
 {
 	size_t pos = condition.find("~");
 	 strStart = condition.substr(0, pos);
@@ -4645,7 +4693,7 @@ bool TIME_SELECTOR::parseTimeRange(string condition)
 	return true;
 }
 
-string TIME_SELECTOR::getParsedSelector()
+string TIME_SELECTOR_ATOM::getParsedSelector()
 {
 	return strStart + "~" + strEnd;
 }

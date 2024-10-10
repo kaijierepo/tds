@@ -86,7 +86,6 @@ string tdsConfig::defaultProjectConf_tds()
 	string s = R"(#项目配置文件
 #系统配置
 uiPath=./ui            #web根目录
-confPath=../conf       #配置路径
 curPath=../current     #实时路径
 dbPath=../db           #数据库路径
 logPath=../log         #日志目录

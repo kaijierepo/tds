@@ -65,10 +65,10 @@ string logServer::rpc_queryLog(json params, RPC_SESSION session)
 
 	string dataSet = "[";
 	std::lock_guard<mutex> g(m_csLogData);
-	int startYear = timeSelector.stStart.wYear;
-	int startMonth = timeSelector.stStart.wMonth;
-	int endYear = timeSelector.stEnd.wYear;
-	int endMonth = timeSelector.stEnd.wMonth;
+	int startYear = timeSelector.atomSelList[0].stStart.wYear;
+	int startMonth = timeSelector.atomSelList[0].stStart.wMonth;
+	int endYear = timeSelector.atomSelList[0].stEnd.wYear;
+	int endMonth = timeSelector.atomSelList[0].stEnd.wMonth;
 
 	//默认逆序查询
 	for (int iYear = endYear; iYear >= startYear; iYear--)
