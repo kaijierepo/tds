@@ -1542,7 +1542,7 @@ bool parse_url(const std::string& url, std::string& protocol, std::string& host,
 }
 
 bool g_bTdsUpgradeThreadRunning = false;
-void thread_tds_upgrade(string packageUrl) {
+void thread_tds_upgrade(string packageUrl,string packageType) {
 	LOG("[warn]startServerUpgrade,升级线程开始");
 	g_bTdsUpgradeThreadRunning = true;
 
@@ -1652,10 +1652,12 @@ void thread_tds_upgrade(string packageUrl) {
 				goto UPGRADE_END;
 			}
 
+			string extractPath = tdsPath;
+			if (packageType == "complete") extractPath = fs::toAbsolutePath("../");
 			//解压缩包到程序路径.miniz使用utf8路径
-			if (!extract_zip(packagePath.c_str(), tdsPath.c_str())) {
+			if (!extract_zip(packagePath.c_str(), extractPath.c_str())) {
 				json j;
-				string s = "解压缩升级包失败," + packagePath + "->" + tdsPath;
+				string s = "解压缩升级包失败," + packagePath + "->" + extractPath;
 				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
 				LOG("[warn]升级失败," + s);
@@ -1670,6 +1672,16 @@ void thread_tds_upgrade(string packageUrl) {
 			if (beginRes && beginRes->status == 200)
 			{
 				LOG("[服务升级]tKeep重新开启服务成功");
+			}
+
+			//返回升级成功状态
+			{
+				json j;
+				string timeStr = timeopt::nowStr(false);
+				string s = "升级成功" + timeStr;
+				j["serverUpgradeStatus"] = s;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]" + s);
 			}
 
 			//退出程序，等待tKeep重启
@@ -1718,6 +1730,8 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 	}
 	else if (method == "upgradeTds" || method == "startServerUpgrade") {
 		string packageUrl = params["packageUrl"];
+		string packageType = "main";
+		if (params["packageType"]!=nullptr) packageType = params["packageType"];
 		LOG("[warn]startServerUpgrade,升级包地址:" + packageUrl);
 		if (packageUrl == "") {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL,"未传入有效的升级包地址");
@@ -1729,7 +1743,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 				LOG("[warn]startServerUpgrade,升级正在进行中");
 			}
 			else {
-				thread t(thread_tds_upgrade, packageUrl);
+				thread t(thread_tds_upgrade, packageUrl, packageType);
 				t.detach();
 				rpcResp.result = RPC_OK;
 			}
