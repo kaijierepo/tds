@@ -813,6 +813,8 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 	if (params.contains("isAck")) querier["isAck"] = params["isAck"].get<bool>();
 	if (params.contains("pageNo")) querier["pageNo"] = params["pageNo"].get<int>();
 	if (params.contains("pageSize")) querier["pageSize"] = params["pageSize"].get<int>();
+	if (params.contains("a-sort")) querier["a-sort"] = params["a-sort"];
+	if (params.contains("d-sort")) querier["d-sort"] = params["d-sort"];
 	//....
 	return querier;
 }
@@ -933,7 +935,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int endMonth = timeSelector.atomSelList[0].stEnd.wMonth;
 	int iMonth = 0;
 	int iEndMonth = 0;
-	map<string, ALARM_INFO*> deList;
+	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
 	vector<almTable*> histTables;
 	for(int iYear = startYear;iYear<=endYear;iYear++) {
 		if(iYear == startYear) iMonth = startMonth;
@@ -999,8 +1001,31 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					}
 				}
 
-				deList.insert(*it);
+				SORT_FLAG sf;
+				if (deSel.sortKey == "tag") sf.sFlag = it->second->tag;
+				else if (deSel.sortKey == "type")  sf.sFlag = it->second->type;
+				else sf.sFlag = it->second->time;
+
+				deList_Sort[sf] = it->second;
 			}
+		}
+	}
+	
+	vector<ALARM_INFO*> afterSortList;
+	if (deSel.sortKey == "") deSel.ascendingSort = false;
+	//因为有升降序之后还有分页需求,所以要再把map转为Vector;
+	//也可以直接根据map直接生成最后的json,但是逻辑稍微复杂,所以转换成Vector
+	//报警这块没有配置的话,按时间降序排列
+	if (deSel.ascendingSort)
+	{
+		for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
+			afterSortList.push_back(it->second);
+		}
+	}
+	else
+	{
+		for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
+			afterSortList.push_back(it->second);
 		}
 	}
 
@@ -1012,17 +1037,16 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		json jDataSet = json::array();
 		resultObj["pageNo"] = deSel.pageNo;
 		resultObj["pageSize"] = deSel.pageSize;
-		resultObj["pageCount"] = deList.size() / deSel.pageSize + (deList.size() % deSel.pageSize == 0 ? 0 : 1);
-		resultObj["deCount"] = deList.size();
-		if (deList.size() > (deSel.pageNo - 1) * deSel.pageSize)
+		resultObj["pageCount"] = afterSortList.size() / deSel.pageSize + (afterSortList.size() % deSel.pageSize == 0 ? 0 : 1);
+		resultObj["deCount"] = afterSortList.size();
+		if (afterSortList.size() > (deSel.pageNo - 1) * deSel.pageSize)
 		{
-			auto it = deList.begin();
-			std::advance(it, (deSel.pageNo - 1) * deSel.pageSize);
-			for (int i = 0; i < min(deSel.pageSize, deList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++, it++)
+			for (int i = 0; i < min(deSel.pageSize, afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++)
 			{
-				json j = it->second->toJson(this, rootTag);
+				auto it = afterSortList[i + (deSel.pageNo - 1) * deSel.pageSize];
+				json j = it->toJson(this, rootTag);
 				if (getTypeTag) {
-					json jTypeTag = prj.getTypeTagByTag(it->second->tag);
+					json jTypeTag = prj.getTypeTagByTag(it->tag);
 					if (jTypeTag != nullptr) {
 						j["typeTag"] = jTypeTag;
 					}
@@ -1037,11 +1061,12 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	else
 	{
 		json jDataSet = json::array();
-		for (map<string, ALARM_INFO*>::iterator it = deList.begin(); it != deList.end(); it++)
+		for (int i = 0; i < afterSortList.size(); i++)
 		{
-			json j = it->second->toJson(this, rootTag);
+			auto it = afterSortList[i];
+			json j = it->toJson(this, rootTag);
 			if (getTypeTag) {
-				json jTypeTag = prj.getTypeTagByTag(it->second->tag);
+				json jTypeTag = prj.getTypeTagByTag(it->tag);
 				if (jTypeTag != nullptr) {
 					j["typeTag"] = jTypeTag;
 				}
@@ -1466,7 +1491,25 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		else
 			assert(false);
 	}
-
+	if (querier.contains("a-sort"))
+	{
+		aq.ascendingSort = true;
+		if (querier["a-sort"].is_string())
+			aq.sortKey = querier["a-sort"].get<string>();
+		else aq.sortKey = "time";
+	}
+	else if (querier.contains("d-sort"))
+	{
+		aq.ascendingSort = false;
+		if (querier["d-sort"].is_string())
+			aq.sortKey = querier["d-sort"].get<string>();
+		else aq.sortKey = "time";
+	}
+	else
+	{
+		aq.ascendingSort = false;
+		aq.sortKey = "time";
+	}
 	return aq;
 }
 
@@ -1481,7 +1524,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 	if (aq.filter_time) {
 		ts.init(aq.time);
 	}
-
+	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
 	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
 		if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
 			continue;
@@ -1544,7 +1587,25 @@ vector<ALARM_INFO*> almTable::query(json querier)
 				continue;
 		}
 
-		dataSet.push_back(it->second);
+		SORT_FLAG sf;
+		if (aq.sortKey == "tag") sf.sFlag = it->second->tag;
+		else if (aq.sortKey == "type")  sf.sFlag = it->second->type;
+		else sf.sFlag = it->second->time;
+
+		deList_Sort[sf] = it->second;
+	}
+
+	if (aq.ascendingSort)
+	{
+		for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
+			dataSet.push_back(it->second);
+		}
+	}
+	else
+	{
+		for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
+			dataSet.push_back(it->second);
+		}
 	}
 	return dataSet;
 }

@@ -50,7 +50,7 @@ public:
 	string id;  //用户自定义的alarmid，当某些报警应用，时空+type都一样时，可以使用id进一步区分
 	
 	string getKey(){
-		return tag + ","+ time + "," + type + id;
+		return time + ","+ tag + "," + type + id;
 	}
 };
 
@@ -126,6 +126,8 @@ struct ALARM_QUERY {
 	bool isAck;
 	bool filter_isRecover;
 	bool isRecover;
+	bool ascendingSort;
+	string sortKey;
 
 	ALARM_QUERY() {
 		filter_user = false;
@@ -136,6 +138,7 @@ struct ALARM_QUERY {
 		filter_level = false;
 		filter_isAck = false;
 		filter_isRecover = false;
+		ascendingSort = false;
 	}
 };
 namespace as {
