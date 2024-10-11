@@ -1331,13 +1331,17 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	string  pa=getFilePath(time);
 	loadFile(pa);
 	const string strRecoverFlag = /*charCodec::gb_to_utf8(*/"恢复"/*)*/;
-	string strType = params["type"].get<string>();
-	auto pos = strType.find(strRecoverFlag);
-	if (pos != string::npos)
+	string strType = "";
+	if (params["type"]!=nullptr)
 	{
-		strType.replace(pos, strRecoverFlag.length(), "");
+		strType = params["type"].get<string>();
+		auto pos = strType.find(strRecoverFlag);
+		if (pos != string::npos)
+		{
+			strType.replace(pos, strRecoverFlag.length(), "");
+		}
 	}
-
+	
 	for(auto& i:buff)
 	{
 		ALARM_INFO& it = *i.second;
