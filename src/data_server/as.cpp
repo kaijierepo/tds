@@ -1002,10 +1002,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				}
 
 				SORT_FLAG sf;
-				if (deSel.sortKey == "tag") sf.sFlag = it->second->tag;
-				else if (deSel.sortKey == "type")  sf.sFlag = it->second->type;
-				else sf.sFlag = it->second->time;
-
+				sf.sFlag = it->second->getSortKey(deSel.sortKey);
 				deList_Sort[sf] = it->second;
 			}
 		}
@@ -1588,10 +1585,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 		}
 
 		SORT_FLAG sf;
-		if (aq.sortKey == "tag") sf.sFlag = it->second->tag;
-		else if (aq.sortKey == "type")  sf.sFlag = it->second->type;
-		else sf.sFlag = it->second->time;
-
+		sf.sFlag = it->second->getSortKey(aq.sortKey);
 		deList_Sort[sf] = it->second;
 	}
 

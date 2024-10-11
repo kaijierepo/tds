@@ -52,6 +52,18 @@ public:
 	string getKey(){
 		return time + ","+ tag + "," + type + id;
 	}
+
+	string getSortKey(string sortKey)
+	{
+		//报警依照时间,位号,类型,id这样的优先级顺序
+		//依照某个内容排序时,就将其提至最前端,其他顺延
+		if (sortKey == "tag")
+			return tag + "," + time + "," + type + id;
+		else if (sortKey=="type")
+			return   type + "," + time + "," + tag + id;
+		else 
+			return time + "," + tag + "," + type + id;
+	}
 };
 
 namespace ALARM_TYPE {
