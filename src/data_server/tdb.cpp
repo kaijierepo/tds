@@ -2322,15 +2322,13 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
-SELECT_RLT idxRlt;
-
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	//deType is curve but time sel is range,do a curveIdx select to get curve time points before curve select
 	if (deSel.timeSel.isRange() && deSel.deType == "curve") {
 		DE_SELECTOR deSelIdx = deSel;
 		deSelIdx.deType = "curveIdx";
-
+		SELECT_RLT idxRlt;
 		Select(deSelIdx, idxRlt);
 		deSel.timeSel.atomSelList.clear();
 		for (auto& iter : idxRlt.mapRlt) {
@@ -2375,7 +2373,9 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 				DB_FILE* pdf = fSet.fileList[i];
 				SORT_FLAG sf;
 				sf.dbFlag = sortIdx++;
-				yyjson_mut_val* p = yyjson_val_mut_copy(rlt_mut_doc, pdf->root);
+				auto p = yyjson_mut_obj(rlt_mut_doc);
+				yyjson_mut_obj_add_strcpy(rlt_mut_doc, p, "time", (pdf->time.toStr(false)).c_str());
+				yyjson_mut_obj_add_val(rlt_mut_doc, p, "curve", yyjson_val_mut_copy(rlt_mut_doc, pdf->root));
 				mapRlt[sf] = p;
 			}
 		}

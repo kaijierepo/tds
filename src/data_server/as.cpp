@@ -320,7 +320,7 @@ void almServer::Update(ALARM_INFO newStatus)
 		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
-			lastStatus.stRecoverTime = newStatus.stRecoverTime;
+			lastStatus.stRecoverTime = timeopt::str2st(newStatus.time);
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus);
 			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
@@ -333,7 +333,7 @@ void almServer::Update(ALARM_INFO newStatus)
 		else
 		{
 			//maintain last status
-			lastStatus.stRecoverTime = newStatus.stRecoverTime;
+			lastStatus.stRecoverTime = timeopt::str2st(newStatus.time);
 			lastStatus.bRecover = true;
 			recover(lastStatus);
 		}
