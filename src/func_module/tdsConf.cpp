@@ -457,26 +457,35 @@ void tdsConfig::loadCurrentData()
 void tdsConfig::loadConf()
 {
 	//load appConf.ini
-	string appConfPath = fs::appPath() + "/appConf.ini";
-	if (!fs::fileExist(appConfPath))
+	string appIni = fs::appPath() + "/" + fs::appName() + ".ini";
+	if (fs::fileExist(appIni))
 	{
-		string s = str::format("[warn]配置文件%s不存在，创建默认配置", appConfPath.c_str());
-		logger.logInternal(s,false);
-		generateDefaultAppConfFile();
+		project_ini.load(appIni);
+		loadConf_tds(project_ini.mapConf);
 	}
-	app_ini.load(appConfPath);
-	loadConf_tds(app_ini.mapConf);
+	else
+	{
+		string appConfPath = fs::appPath() + "/appConf.ini";
+		if (!fs::fileExist(appConfPath))
+		{
+			string s = str::format("[warn]配置文件%s不存在，创建默认配置", appConfPath.c_str());
+			logger.logInternal(s, false);
+			generateDefaultAppConfFile();
+		}
+		app_ini.load(appConfPath);
+		loadConf_tds(app_ini.mapConf);
 
-	//load projectConf.ini
-	string projectConfPath = tds->conf->confPath + "/projectConf.ini";
-	if (!fs::fileExist(projectConfPath))
-	{
-		string s = str::format("[warn]配置文件%s不存在，创建默认配置", projectConfPath.c_str());
-		logger.logInternal(s, false);
-		generateDefaultProjectConfFile(tds->conf->confPath);
+		//load projectConf.ini
+		string projectConfPath = tds->conf->confPath + "/projectConf.ini";
+		if (!fs::fileExist(projectConfPath))
+		{
+			string s = str::format("[warn]配置文件%s不存在，创建默认配置", projectConfPath.c_str());
+			logger.logInternal(s, false);
+			generateDefaultProjectConfFile(tds->conf->confPath);
+		}
+		project_ini.load(projectConfPath);
+		loadConf_tds(project_ini.mapConf);
 	}
-	project_ini.load(projectConfPath);
-	loadConf_tds(project_ini.mapConf);
 }
 
 json tdsConfig::toJson()
