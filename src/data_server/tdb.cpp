@@ -1978,10 +1978,12 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 				string sDbDiff = formatStr("%lf", dbDiff);
 				dbDiff = atof(sDbDiff.c_str());
 				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "avg") {
 				double avg = doAggrOneGroup_avg(deSel,aggrKey,deGroup);
 				pAggrVal = yyjson_mut_real(mut_doc, avg);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "max") {
 				double dbMax = -DBL_MAX;
@@ -2068,26 +2070,31 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 			else if (aggrType == "sum") {
 				double dbSum = doAggrOneGroup_sum(deSel, aggrKey, deGroup);
 				pAggrVal = yyjson_mut_real(mut_doc, dbSum);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "diff") {
 				double dbDiff = doAggrOneGroup_diff(deSel, aggrKey, deGroup);
 				pAggrVal = yyjson_mut_real(mut_doc, dbDiff);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "count") {
 				int count = deGroup.size();
 				pAggrVal = yyjson_mut_int(mut_doc, count);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "increase") {
-				map<string, double> aggrRlt = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey,groupKey, deGroup);
+				map<string, double> aggrRltTs = doAggrOneGroup_increase_withTimeSlots(deSel, aggrKey,groupKey, deGroup);
 				pAggrVal = yyjson_mut_obj(mut_doc);
-				for (auto& iter : aggrRlt) {
+				for (auto& iter : aggrRltTs) {
 					yyjson_mut_val* yySlotName = yyjson_mut_strcpy(mut_doc, iter.first.c_str());
 					yyjson_mut_val* yySlotIncrease = yyjson_mut_real(mut_doc, iter.second);
 					yyjson_mut_obj_put(pAggrVal, yySlotName, yySlotIncrease);
 				}
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 			else if (aggrType == "duration") {
 				doAggrOneGroup_duration(deSel, aggrKey, deGroup, pAggrVal, mut_doc);
+				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
 			}
 
 
@@ -2322,6 +2329,8 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
+
+
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 {
 	//deType is curve but time sel is range,do a curveIdx select to get curve time points before curve select
@@ -2331,12 +2340,20 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		SELECT_RLT idxRlt;
 		Select(deSelIdx, idxRlt);
 		deSel.timeSel.atomSelList.clear();
+
+		//get all different time point
+		map<string, string> timePointList;
 		for (auto& iter : idxRlt.mapRlt) {
 			yyjson_mut_val* yyv_time = yyjson_mut_obj_get(iter.second, "time");
 
 			string time = yyjson_mut_get_str(yyv_time);
+			timePointList[time] = time;
+		}
+
+		//generate time atom selector
+		for (auto& timePoint : timePointList) {
 			TIME_SELECTOR_ATOM tsa;
-			tsa.init(time);
+			tsa.init(timePoint.first);
 			deSel.timeSel.atomSelList.push_back(tsa);
 		}
 	}
@@ -2374,7 +2391,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 				SORT_FLAG sf;
 				sf.dbFlag = sortIdx++;
 				auto p = yyjson_mut_obj(rlt_mut_doc);
-				yyjson_mut_obj_add_strcpy(rlt_mut_doc, p, "time", (pdf->time.toStr(false)).c_str());
+				yyjson_mut_obj_add_strcpy(rlt_mut_doc, p, "tag", pdf->tag.c_str());
+				yyjson_mut_obj_add_strcpy(rlt_mut_doc,p,"time",(pdf->time.toStr(false)).c_str());
 				yyjson_mut_obj_add_val(rlt_mut_doc, p, "curve", yyjson_val_mut_copy(rlt_mut_doc, pdf->root));
 				mapRlt[sf] = p;
 			}
@@ -3653,7 +3671,7 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				for (auto& i : fSet.m_groupedBeforeAggr) {
 					DE_yyjson& aggrRltDe = *(new DE_yyjson());
 					doAggregateOneGroup(deSel, fSet.aggregate, i.first, i.second, aggrRltDe, rlt_mut_doc);
-					aggrRltDe.deTime = i.first.data(); //set as time group key
+					aggrRltDe.deTime = i.first.data(); //set as time group key such as 2024-08-13 2024-08-14
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
 			}
@@ -3665,7 +3683,6 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 				if (fSet.m_beforeAggr.size() > 0) {
 					DE_yyjson& aggrRltDe = *(new DE_yyjson());
 					doAggregateOneGroup(deSel, fSet.aggregate, "all-time-range", fSet.m_beforeAggr, aggrRltDe, rlt_mut_doc);
-					aggrRltDe.deTime = deSel.timeSel.atomSelList[0].selector;
 					fSet.m_afterAggr.push_back(&aggrRltDe);
 				}
 			}
