@@ -1281,7 +1281,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 	if (m_pParent != nullptr && m_pParent != &ioSrv) {
 		m_pParent->sendData(pData, iLen);
 	}
-	else if (m_udpClt != nullptr) {
+	else if (m_udpClt != nullptr && m_ioMode == "none") {
 		string ip = "";
 		int port = 0;
 		if (m_jDevAddr["ip"].is_string())

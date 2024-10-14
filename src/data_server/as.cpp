@@ -333,9 +333,9 @@ void almServer::Update(ALARM_INFO newStatus)
 		else
 		{
 			//maintain last status
-			lastStatus.stRecoverTime = timeopt::str2st(newStatus.time);
-			lastStatus.bRecover = true;
-			recover(lastStatus);
+			//lastStatus.stRecoverTime = timeopt::str2st(newStatus.time);
+			//lastStatus.bRecover = true;
+			//recover(lastStatus);
 		}
 	}
 	else
