@@ -466,6 +466,17 @@ struct IP_ADDR {
 					 m_standAloneIO[type] = info;
 					 LOG("[独立IO服务] 独立IO服务上线,IP=%s,port=%d,类型=%s", strIP.c_str(), port,type.c_str());
 				 }
+				 else
+				 {
+					 if (m_standAloneIO[type].ip!= strIP || m_standAloneIO[type].port != port)
+					 {
+						 STANDALONE_IO info;
+						 info.ip = strIP;
+						 info.port = port;
+						 m_standAloneIO[type] = info;
+						 LOG("[独立IO服务] 独立IO服务上线,IP=%s,port=%d,类型=%s", strIP.c_str(), port, type.c_str());
+					 }
+				 }
 			 }
 		 }
 		 return;

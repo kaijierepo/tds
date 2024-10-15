@@ -62,6 +62,8 @@ namespace DEV_ADDR_MODE {
 	const string udpServer = "udpServer";
 	const string udpClient = "udpClient";
 	const string deviceID = "deviceID";
+	const string httpClient = "httpClient";
+	const string httpServer = "httpServer";
 }
 
 namespace IO_DEV_LEVEL {

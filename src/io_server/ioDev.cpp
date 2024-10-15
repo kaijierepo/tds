@@ -1017,6 +1017,9 @@ bool ioDev::viaTcpConn()
 	else if (m_addrType == DEV_ADDR_MODE::udpClient || m_addrType == DEV_ADDR_MODE::udpServer) {
 		return false;
 	}
+	else if (m_addrType == DEV_ADDR_MODE::httpClient || m_addrType == DEV_ADDR_MODE::httpServer) {
+		return false;
+	}
 	else {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			return true;
@@ -1197,6 +1200,36 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			if (!ignorePort)
 				devAddr += ":" + str::fromInt(port);
 		}
+		else if (m_addrType == DEV_ADDR_MODE::httpClient)
+		{
+			string ip;
+			int port = 0;
+			if (m_jDevAddr["ip"].is_string())
+				ip = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["port"].is_number_integer())
+			{
+				port = m_jDevAddr["port"].get<int>();
+			}
+
+			devAddr = "httpClient-" + ip;
+			if (!ignorePort)
+				devAddr += ":" + str::fromInt(port);
+		}
+		else if (m_addrType == DEV_ADDR_MODE::httpServer)
+		{
+			string ip;
+			int port = 0;
+			if (m_jDevAddr["ip"].is_string())
+				ip = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["port"].is_number_integer())
+			{
+				port = m_jDevAddr["port"].get<int>();
+			}
+
+			devAddr = "httpServer-" + ip;
+			if (!ignorePort)
+				devAddr += ":" + str::fromInt(port);
+		}
 	}
 	else if(m_jDevAddr.is_string()){
 		devAddr = m_jDevAddr.get<string>();
@@ -1311,7 +1344,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog) {
-						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + str::fromInt(ioSrv.m_iAdpPort);
+						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + ":" + str::fromInt(ioSrv.m_iAdpPort);
 						string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
 						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr );
 					}
@@ -1323,7 +1356,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 						STANDALONE_IO saio = ioSrv.m_standAloneIO[m_standAloneIOType];
 						size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, saio.ip, saio.port);
 						if (m_bEnableIoLog) {
-							string remoteAddr = "UDP-" + saio.ip + str::fromInt(saio.port);
+							string remoteAddr = "UDP-" + saio.ip +":" + str::fromInt(saio.port);
 							string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
 							IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
 						}
