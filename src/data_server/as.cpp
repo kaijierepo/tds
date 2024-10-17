@@ -731,7 +731,7 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		data += str;
 	}
 	fs::createFolderOfPath(strFile);
-	data = charCodec::utf8_to_gb(data);
+	//data = charCodec::utf8_to_gb(data);//直接存储utf8
 	fs::writeFile(strFile, data);
 }
 
@@ -772,7 +772,7 @@ void almTable::loadFile(string strFile)
 
 	string strDBData;
 	fs::readFile(strFile, strDBData);
-	strDBData = charCodec::gb_to_utf8(strDBData);
+	//strDBData = charCodec::gb_to_utf8(strDBData);//默认使用utf8,出现乱码的GB2312只有健康管理系统,自己手动改数据库
 	vector<string> recLines;
 	str::split(recLines, strDBData, "\r\n");
 	for (int i = 1; i < recLines.size(); i++)
