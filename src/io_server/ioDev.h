@@ -194,7 +194,7 @@ public:
 	bool m_bViaAdaptor;
 	string m_translatorProto;
 	string m_standAloneIOType;
-	bool viaTcpConn(); //通过tcp与tds建立连接
+	bool checkOnlineByTcpConn(); //通过tcp与tds建立连接
 
 	bool isViaAdaptor();
 

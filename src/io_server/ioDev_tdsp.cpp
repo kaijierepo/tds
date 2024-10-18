@@ -804,11 +804,9 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	// adaptor下设备不支持
 	//rs485下的tdsp设备不进行离线判断。 通过 isViaAdaptor过滤
 	//其他情况统一认为 通过tcp连接
-	if (viaTcpConn()) {
-		if (pIOSession == nullptr) {
-			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "device offline"));
-			return;
-		}
+	if (!checkOnlineByTcpConn()) {
+		error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_devOffline, "device offline"));
+		return;
 	}
 
 	if (pIOSession != nullptr) {

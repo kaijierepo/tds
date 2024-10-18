@@ -1009,25 +1009,46 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 //	return nullptr;
 //}
 
-bool ioDev::viaTcpConn()
+//tds是否和设备建立tcp直连
+bool ioDev::checkOnlineByTcpConn()
 {
-	if (m_addrType == DEV_ADDR_MODE::tcpClient || m_addrType == DEV_ADDR_MODE::tcpServer){
-		return true;
-	}
-	else if (m_addrType == DEV_ADDR_MODE::udpClient || m_addrType == DEV_ADDR_MODE::udpServer) {
-		return false;
-	}
-	else if (m_addrType == DEV_ADDR_MODE::httpClient || m_addrType == DEV_ADDR_MODE::httpServer) {
-		return false;
-	}
-	else {
-		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+	//是否直连
+	if (m_ioMode == "none" || m_ioMode == "translator") {
+		//内网环境
+		if (m_addrType == DEV_ADDR_MODE::tcpClient || m_addrType == DEV_ADDR_MODE::tcpServer) {
+			if (pIOSession != nullptr) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		//id模式目前都是tcp
+		else if (m_addrType == DEV_ADDR_MODE::deviceID) {
+			if (pIOSession != nullptr) {
+				return true;
+			}
+			else {
+				return false;
+			}
+		}
+		//udp,http模式
+		else {
 			return true;
 		}
-		else if (isViaAdaptor()) { // 485网关下的设备
-			return false;
+	}
+	//通过适配器或者独立io
+	else {
+		if (m_ioMode == "standAloneIO")
+		{
+			//独立Io模式,判断是否有对应的ioType上线
+			if (m_standAloneIOType!="" && ioSrv.m_standAloneIO.find(m_standAloneIOType) != ioSrv.m_standAloneIO.end())
+				return true;
+			else
+				return false;
 		}
-		else {
+		else
+		{
 			return true;
 		}
 	}
