@@ -3178,7 +3178,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			json one;
 			float dis = CalDTWDist(p1, p2);
 			one["time"] = curve2["time"];
-			one["dtw"] = to_string(dis);
+			one["val"] = to_string(dis);
 
 			list1.push_back(one);
 		}
