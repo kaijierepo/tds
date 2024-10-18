@@ -2731,7 +2731,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			for (auto& iter : curveList) {
 				pCur = iter.second;
 	
-				if (pCur && pBase) {
+				if (pCur && pBase && pBase->size()>0) {
 					if (deSel.calc == "aes") {
 						double aes = 0;
 						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
