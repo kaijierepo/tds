@@ -2610,6 +2610,21 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 							    db = yyjson_get_real(yyv_y);
 							pPtList->push_back(db);
 						}
+						else if (yyjson_is_arr(item)) {
+							size_t size = yyjson_arr_size(item);
+							if (size == 2) {
+								yyjson_val* yyv_y = yyjson_arr_get(item, 1);
+
+								double db;
+								if (yyjson_is_int(yyv_y)) {
+									int ival = yyjson_get_int(yyv_y);
+									db = ival;
+								}
+								else
+									db = yyjson_get_real(yyv_y);
+								pPtList->push_back(db);
+							}
+						}
 					}
 					curveList[dbfile.time] = pPtList;
 				}

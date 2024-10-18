@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿#include <common/dtwrecoge.h>
+#include "pch.h"
 #include "rpcHandler.h"
 #include "prj.h"
 #include "as.h"
@@ -2444,7 +2445,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	//** 数据生成系列 以下接口都会修改报警数据
 	else if (method == "addAlarm")
 	{
-		if (session.dbpath == "alarms2")
+		if (session.dbpath == "alarmsDevelop")
 		{
 			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
 		}
@@ -3139,10 +3140,88 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		addBlackList(params["type"], params["val"]);
 		rpcResp.result = RPC_OK;
 	}
+	else if (method == "CalDTW") {
+		/*
+	   "params": {
+		  "tag": "5#.导曲轨段1",
+		  "time": ["2020-10-10 10:10:10", "2020-10-10 10:10:11", "2020-10-10 10:10:12"],
+	   },
+		*/
+		string tag = params["tag"]; 
+		json & timeAry = params["time"];
+		int si= timeAry.size();
+		vector<json> vecCurves;
+		for (int i = 0; i < si ; i++) {
+			string ti = timeAry[i];
+			string path = db.getPath_dbFile(tag, ti, "curve");
+			//DB_FS::readFile(path, data);
+
+			//string apiJsonPath = fs::appPath() + "/blacklist.api.json";
+			string strJo;
+			fs::readFile(path, strJo);
+
+			json jsFile = json::parse(strJo);
+
+			vecCurves.push_back(jsFile);
+		}
+		json list1 = json::array();
+		for (int i = 0; i < si-1;i++) {
+			json & curve1 = vecCurves[i];
+			json &curve2 = vecCurves[i+1];
+
+			//curve2["data"].size();
+
+			vector<double> p1, p2;
+			jsonToList(curve1, p1);
+			jsonToList(curve2, p2);
+
+			json one;
+			float dis = CalDTWDist(p1, p2);
+			one["time"] = curve2["time"];
+			one["dtw"] = to_string(dis);
+
+			list1.push_back(one);
+		}
+
+		string res0 = list1.dump();
+
+		rpcResp.result = res0;
+
+	}
 	else {
 		bHandled = false;
 	}
 	return bHandled;
+}
+
+void jsonToList(json& curve, vector<double>& p)
+{
+	json& list = curve["data"];
+	int si = list.size();
+	for (int i = 0; i < si; i++) {
+		json &aa = list[i][1];
+		int val = aa.get<int>();
+		p.push_back(val);
+	}
+}
+
+float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
+{
+	int curSize = vecCur.size();
+
+	double* ref = new double[curSize]; //这里ref是被对比的含义
+	for (int j = 0; j < curSize; j++) {
+		ref[j] = vecRef[j];
+	}
+	double* Current = new double[curSize];
+	for (int j = 0; j < curSize; j++) {
+		Current[j] = vecCur[j];
+	}
+
+	float dVal = DTWDistanceFun(ref, curSize, Current, curSize, curSize / 10);
+	delete[]ref; delete[]Current;
+
+	return dVal;
 }
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)

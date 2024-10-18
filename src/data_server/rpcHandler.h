@@ -152,3 +152,7 @@ public:
 	std::map<string, string> m_mapDisableMethod;
 };
 extern rpcHandler rpcSrv;
+
+void jsonToList(json & data, vector<double>& p);
+float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur);
+

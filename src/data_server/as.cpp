@@ -229,6 +229,21 @@ void almServer::addAlarm(ALARM_INFO ai)
 
 	LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 
+
+	//事件报警重复性检查
+	if (m_eventAlarmRepetitiveCheck) {
+		json q;
+		q["time"] = ai.time;
+		RPC_SESSION rs;
+		string s = rpc_getHistory(q, rs);
+		json j = json::parse(s);
+		if (j.is_array() && j.size() > 0) {
+			return;
+		}
+	}
+
+
+
 	ai.uuid = as::getUUID();
 	 
 	tableCurrent.add(ai);
@@ -400,6 +415,14 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 	}
 	else
 		ai.time = timeopt::nowStr();
+
+	m_eventAlarmRepetitiveCheck = false;
+	if (j.contains("repeteCheck")) {
+		bool b0= j["repeteCheck"].get<bool>();
+		if (b0) {
+			m_eventAlarmRepetitiveCheck = true;
+		}
+	}
 
 	addAlarm(ai);
 	return "\"success\"";

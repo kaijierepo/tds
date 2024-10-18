@@ -265,6 +265,9 @@ public:
 	string m_curPath;
 	string m_histPath;
 
+	bool m_eventAlarmRepetitiveCheck=false;
+	int m_evtAlmRepeCheckTimeLen=1; //秒单位
+
 	bool m_bTestSrv;	//	是否测试报警
 };
 
