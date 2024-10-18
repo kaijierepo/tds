@@ -3333,8 +3333,8 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 			fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
 
 			//do not down sample when time is short than one day 
-			if (fSet.fileList.size() <= 1)
-				deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
+			//if (fSet.fileList.size() <= 1)
+				//deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
 
 			result.fileCount += fSet.fileList.size();
 		}
