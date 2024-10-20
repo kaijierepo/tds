@@ -3141,52 +3141,106 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = RPC_OK;
 	}
 	else if (method == "CalDTW") {
+		//参数错误直接返回空数组了
 		/*
 	   "params": {
 		  "tag": "5#.导曲轨段1",
-		  "time": ["2020-10-10 10:10:10", "2020-10-10 10:10:11", "2020-10-10 10:10:12"],
+		  "time": ["2020-10-10 10:10:10", "2020-10-10 10:10:11", "2020-10-10 10:10:12"], 
+		  或
+		   "time": [["2020-10-10 10:10:10", "2020-10-10 10:10:11"],["2020-10-10 10:10:14", "2020-10-10 10:10:16"],...]
 	   },
 		*/
-		string tag = params["tag"]; 
-		json & timeAry = params["time"];
-		int si= timeAry.size();
-		vector<json> vecCurves;
-		for (int i = 0; i < si ; i++) {
-			string ti = timeAry[i];
-			string path = db.getPath_dbFile(tag, ti, "curve");
-			//DB_FS::readFile(path, data);
+		string res0;
+		int _once = 1; while (_once--) {
+			string tag = params["tag"];
+			json& timeAry = params["time"];
+			int si = timeAry.size();
+			bool  hasSubAry = true;
+			if (si > 0) {
+				if (timeAry[0].is_string())
+					hasSubAry = false;
+				//timeAry[0].is_array()
+			}
+			else {
+				res0 = "[]";
+				break;
+			}
+			if (!hasSubAry) {
+				vector<json> vecCurves;
+				if (si == 1) {
+					res0 = "[]";
+					break;
+				}
+				for (int i = 0; i < si; i++) {
+					string ti = timeAry[i];
+					string path = db.getPath_dbFile(tag, ti, "curve");
+					//DB_FS::readFile(path, data);
 
-			//string apiJsonPath = fs::appPath() + "/blacklist.api.json";
-			string strJo;
-			fs::readFile(path, strJo);
+					//string apiJsonPath = fs::appPath() + "/blacklist.api.json";
+					string strJo;
+					fs::readFile(path, strJo);
+					json jsFile = json::parse(strJo);
 
-			json jsFile = json::parse(strJo);
+					vecCurves.push_back(jsFile);
+				}
+				json list1 = json::array();
+				for (int i = 0; i < si - 1; i++) {
+					json& curve1 = vecCurves[i];
+					json& curve2 = vecCurves[i + 1];
 
-			vecCurves.push_back(jsFile);
+					//curve2["data"].size();
+
+					vector<double> p1, p2;
+					jsonToList(curve1, p1);
+					jsonToList(curve2, p2);
+
+					json one;
+					float dis = CalDTWDist(p1, p2);
+					one["time"] = curve2["time"];
+					one["val"] = to_string(dis);
+
+					list1.push_back(one);
+				}
+				res0 = list1.dump();
+			}
+			else {
+				vector<vector<json>> vecCurves;
+				for (int i = 0; i < si; i++) {
+					json& subAry = timeAry[i];
+					if (subAry.size() != 2) {
+						res0 = "[]";
+						break;
+					}
+					vector<json> vecOne;
+					for (int j = 0; j < subAry.size(); j++) {
+						string ti = subAry[j];
+						string path = db.getPath_dbFile(tag, ti, "curve");
+						string strJo;
+						fs::readFile(path, strJo);
+						json jsFile = json::parse(strJo);
+						vecOne.push_back(jsFile);
+					}
+					vecCurves.push_back(vecOne);
+				}
+				json list1 = json::array();
+				for (int i = 0; i < si; i++) {
+					json& curve1 = vecCurves[i][0];
+					json& curve2 = vecCurves[i][1];
+
+					vector<double> p1, p2;
+					jsonToList(curve1, p1);
+					jsonToList(curve2, p2);
+					json one;
+					float dis = CalDTWDist(p1, p2);
+					one["time"] = curve2["time"];
+					one["val"] = to_string(dis);
+
+					list1.push_back(one);
+				}
+				res0 = list1.dump();
+			}
 		}
-		json list1 = json::array();
-		for (int i = 0; i < si-1;i++) {
-			json & curve1 = vecCurves[i];
-			json &curve2 = vecCurves[i+1];
-
-			//curve2["data"].size();
-
-			vector<double> p1, p2;
-			jsonToList(curve1, p1);
-			jsonToList(curve2, p2);
-
-			json one;
-			float dis = CalDTWDist(p1, p2);
-			one["time"] = curve2["time"];
-			one["val"] = to_string(dis);
-
-			list1.push_back(one);
-		}
-
-		string res0 = list1.dump();
-
 		rpcResp.result = res0;
-
 	}
 	else {
 		bHandled = false;
