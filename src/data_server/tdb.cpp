@@ -3015,6 +3015,12 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	{
 		deSel.interval.type = DOWN_SAMPLING_TYPE::DST_Count;
 		deSel.interval.dsi = yyjson_get_int(yyv_interval);
+		//interval: every xxx, take the first 
+		//"No this param" 、interval=1 is the same thing
+		if (deSel.interval.dsi == 0) {
+			err = "when interval is num, it must large than 0 ";
+			return;
+		}
 	}
 	else if (yyv_interval && yyjson_is_str(yyv_interval))
 	{
@@ -3481,8 +3487,13 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				//every downsampling interval output one de; dsi=3,output 0 3 6...
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
 				{
-					bool reachInterval = idx % deSel.interval.dsi == 0 && idx < max - deSel.interval.dsi;
-					if(!reachInterval)
+					//"No this param" 、interval=1 is the same thing
+					if (deSel.interval.dsi > 1) {
+						bool reachInterval = idx % deSel.interval.dsi == 0 ;
+						if (!reachInterval)
+							continue;
+					}
+					if(deSel.interval.dsi > max)
 						continue;
 				}
 
