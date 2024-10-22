@@ -309,6 +309,7 @@ struct iTDSConf {
 	int httpPort;  //http port of tds;  default value 667; can be upgraded to websocket
 	int httpsPort2;//default 0 not enable; another httpsport
 	int httpPort2; //default 0 not enable; another httpport
+	int fileUploadPort; // default 0 not enable;
 	bool authDownload;
 	int tcpKeepAliveDS;
 	string mediaSrvIP;

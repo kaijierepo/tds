@@ -98,6 +98,7 @@ httpPort=667           #http服务端口667,同时支持websocket
 httpsMediaPort=668     #https流媒体服务端口668
 httpMediaPort=669      #http流媒体服务端口669
 tcpPort=670            #tcp服务端口
+fileUploadPort=671	   #文件上传服务端口671
 mediaSrvIP=            #流媒体服务地址,留空为本机
 
 #IO服务
@@ -388,6 +389,10 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 				logEnable.scriptEngine = true;
 			else if (tci.val == "false" || tci.val == "0")
 				logEnable.scriptEngine = false;
+		}
+		else if (checkKey(tci.key, "fileUploadPort"))
+		{
+			fileUploadPort=atoi(tci.val.c_str());
 		}
 	}
 

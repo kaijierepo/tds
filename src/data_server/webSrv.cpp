@@ -14,6 +14,7 @@
 #include "hmrSrv.h"
 #include "ioChan.h"
 #include "statusServer.h"
+#include "fileUploadSrv.h"
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -1551,6 +1552,11 @@ bool runWebServers()
 	if (tds->conf->getInt("enableHMR", 0))
 	{
 		hmrServer.run(tds->conf->uiPath);
+	}
+
+	if (tds->conf->fileUploadPort != 0)
+	{
+		fileUploadServer.run(tds->conf->fileUploadPort);
 	}
 
 	return true;
