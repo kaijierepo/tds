@@ -217,6 +217,7 @@ void createChromeWnd()
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
+#include <diskClean.h>
 
 bool isTdsRunning() {
 #ifdef _DEBUG
@@ -555,6 +556,8 @@ bool TDS_imp::run(string cmdline)
 	SetConsoleTitleW(charCodec::utf8_to_utf16(m_sTitle).c_str());
 #endif
 #endif
+
+	g_diskClean.Run();
 
 	return true;
 }

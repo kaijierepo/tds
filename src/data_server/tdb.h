@@ -612,6 +612,17 @@ namespace DB_STR {
 	string gb_to_utf8(string instr);
 }
 
+namespace DB_FS {
+	bool readFile(string path, string& data);
+	void createFolderOfPath(string strFile);
+	bool writeFile(string path, char* data, size_t len);
+	bool writeFile(string path, unsigned char* data, size_t len);
+	bool deleteFile(string path);
+	void DeleteDirectoryContents(const std::string& dirPath);
+	void deleteDirectory(string& dirPath);
+	bool copyFile(const std::string& src, const std::string& dest);
+}
+
 inline string JSON_STR_VAL(string s) {
 	return "\"" + s + "\"";
 }

@@ -394,6 +394,27 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 		{
 			fileUploadPort=atoi(tci.val.c_str());
 		}
+		//磁盘清理相关
+		else if (checkKey(tci.key, "triggerStratgy"))
+		{
+			triggerStratgy = tci.val;
+		}
+		else if (checkKey(tci.key, "diskSpaceLeft"))
+		{
+			diskSpaceLeft = atoi(tci.val.c_str());
+		}
+		else if (checkKey(tci.key, "judgePeriod"))
+		{
+			judgePeriod = atoi(tci.val.c_str());
+		}
+		else if (checkKey(tci.key, "dataStorageMonths"))
+		{
+			dataStorageMonths = atoi(tci.val.c_str());
+		}
+		else if (checkKey(tci.key, "mediaStorageMonths"))
+		{
+			mediaStorageMonths = atoi(tci.val.c_str());
+		}
 	}
 
 	//j = jsonConf["active_session"];

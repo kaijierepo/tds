@@ -252,6 +252,9 @@
       <Filter>tools</Filter>
     </ClCompile>
     <ClCompile Include="fileUploadSrv.cpp" />
+    <ClCompile Include="diskClean.cpp">
+      <Filter>tdb</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -511,6 +514,9 @@
       <Filter>tools</Filter>
     </ClInclude>
     <ClInclude Include="fileUploadSrv.h" />
+    <ClInclude Include="diskClean.h">
+      <Filter>tdb</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

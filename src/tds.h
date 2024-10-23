@@ -362,6 +362,13 @@ struct iTDSConf {
 	bool bStopCycleAcq;
 	bool bCallAsyn;
 
+	//disk clean  remove the data which is out dataStorageMonths、mediaStorageMonths。
+	string triggerStratgy = "period"; // LowLimit、 peroid
+	int diskSpaceLeft=20; //unit GB
+	int judgePeriod = 60;  //unit second
+	int dataStorageMonths = 24;
+	int mediaStorageMonths = 3;
+
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(string key, int iDef) = 0;
