@@ -557,6 +557,8 @@
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\tools\tcp2com.cpp" />
+    <ClCompile Include="..\src\tools\tcpHub.cpp" />
+    <ClCompile Include="fileUploadSrv.cpp" />
     <ClCompile Include="func_module\aliDDNS.cpp" />
     <ClCompile Include="func_module\gzhServer.cpp" />
     <ClCompile Include="func_module\smsServer.cpp" />
@@ -639,6 +641,8 @@
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\tcp2com.h" />
+    <ClInclude Include="..\src\tools\tcpHub.h" />
+    <ClInclude Include="fileUploadSrv.h" />
     <ClInclude Include="func_module\aliDDNS.h" />
     <ClInclude Include="func_module\gzhServer.h" />
     <ClInclude Include="func_module\smsServer.h" />

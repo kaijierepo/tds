@@ -248,6 +248,10 @@
     <ClCompile Include="..\src\io_server\ioDev_jep_super.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tools\tcpHub.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="fileUploadSrv.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -503,6 +507,10 @@
     <ClInclude Include="..\src\io_server\ioDev_jep_super.h">
       <Filter>io_server</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\tools\tcpHub.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="fileUploadSrv.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
