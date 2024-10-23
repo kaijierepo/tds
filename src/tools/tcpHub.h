@@ -40,7 +40,7 @@ public:
 	void run();
 
 	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
-	 void OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	 void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 
 	 virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
 	 virtual void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;

@@ -146,11 +146,11 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
-void tcpHub::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo)
+void tcpHub::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
 {
 	if (pCltInfo->pTcpServer == &sLeft)
 	{
-		sRight.SendData(pData, iLen);
+		sRight.SendData((char*)pData, iLen);
 		cRight.SendData(pData, iLen);
 		if (enable_pkt_log) {
 			string sData = str::bytesToHexStr(pData, iLen);
@@ -159,7 +159,7 @@ void tcpHub::OnRecvData_TCPServer(char* pData, size_t iLen, tcpSession* pCltInfo
 	}
 	else if (pCltInfo->pTcpServer == &sRight)
 	{
-		sLeft.SendData(pData, iLen);
+		sLeft.SendData((char*)pData, iLen);
 		cLeft.SendData(pData, iLen);
 		if (enable_pkt_log) {
 			string sData = str::bytesToHexStr(pData, iLen);
@@ -172,14 +172,14 @@ void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{
-		if (connInfo->tcpClt == &cLeft) {
+		if (connInfo->pTcpClt == &cLeft) {
 			LOG("Left Client to %s:%d connected",left_c_ip.c_str(),left_c_port);
 			if (left_reg_pkt.length() > 0) {
 				cLeft.SendData(left_reg_pkt.data(), left_reg_pkt.length());
 				LOG("首发包:" + left_reg_pkt);
 			}
 		}
-		else if (connInfo->tcpClt == &cRight) {
+		else if (connInfo->pTcpClt == &cRight) {
 			LOG("Right Client to %s:%d connected", right_c_ip.c_str(), right_c_port);
 			if (right_reg_pkt.length() > 0) {
 				cRight.SendData(right_reg_pkt.data(), right_reg_pkt.length());
@@ -188,10 +188,10 @@ void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 		}
 	}
 	else {
-		if (connInfo->tcpClt == &cLeft) {
+		if (connInfo->pTcpClt == &cLeft) {
 			LOG("Left Client to %s:%d disconnected", left_c_ip.c_str(), left_c_port);
 		}
-		else if (connInfo->tcpClt == &cRight) {
+		else if (connInfo->pTcpClt == &cRight) {
 			LOG("Right Client to %s:%d disconnected", right_c_ip.c_str(), right_c_port);
 		}
 	}
@@ -199,7 +199,7 @@ void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 
 void tcpHub::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
 {
-	if (connInfo->tcpClt == &cLeft)
+	if (connInfo->pTcpClt == &cLeft)
 	{
 		sRight.SendData((char*)pData, iLen);
 		cRight.SendData(pData, iLen);
@@ -208,7 +208,7 @@ void tcpHub::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionC
 			LOG(" --> (%d) %s", iLen, sData.c_str());
 		}
 	}
-	else if (connInfo->tcpClt == &cRight)
+	else if (connInfo->pTcpClt == &cRight)
 	{
 		sLeft.SendData((char*)pData, iLen);
 		cLeft.SendData(pData, iLen);

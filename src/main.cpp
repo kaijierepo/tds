@@ -37,8 +37,8 @@ SOFTWARE.
 //#include <stdlib.h>
 //#include <crtdbg.h>
 
-#ifdef ENABLE_TOOLS
 #include "tools/tcpHub.h"
+#ifdef ENABLE_TOOLS
 #include "tools/tcpSwitch.h"
 #include "tools/tcpReverseProxy.h"
 #include "tools/rproxy.h"
@@ -319,12 +319,12 @@ int main(int argc, char** argv)
 		watchDog.run();
 #endif
 	}
-#ifdef ENABLE_TOOLS
 	else if (mode == "tcpHub")
 	{
 		tcpHub* tr = new tcpHub();
 		tr->run();
 	}
+#ifdef ENABLE_TOOLS
 	else if (mode == "testconf") {
 		gen_testMoConf();
 		gen_testIoConf();
