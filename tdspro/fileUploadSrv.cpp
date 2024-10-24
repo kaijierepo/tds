@@ -10,15 +10,18 @@ std::mutex chunk_mutex;
 void save_chunk(const std::string& filename, int chunk_index, const std::string& chunk_data, const httplib::Request& req) {
 	auto chunk_obj = req.get_file_value("chunk");
 	string oss = tds->conf->fmsPath + "/" + filename + ".part" + to_string(chunk_index);
+	if (!fs::fileExist(oss)) {
+		fs::createFolderOfPath(oss);
+	}
 	oss = charCodec::utf8_to_gb(oss);
 	std::ofstream ofs(oss.c_str(), std::ios::binary);
 	if (ofs) {
 		ofs.write(chunk_obj.content.c_str(), chunk_obj.content.size());
 		ofs.close();
-		std::cout << "Chunk " << chunk_index << " saved for file " << filename << std::endl;
+		LOG(str::format("[文件上传服务]文件片段: %s 已保存", (filename+ ".part" + to_string(chunk_index)).c_str()).c_str());
 	}
 	else {
-		std::cerr << "Failed to save chunk " << chunk_index << " for file " << filename << std::endl;
+		LOG(str::format("[文件上传服务]文件片段: %s 保存失败", (filename + ".part" + to_string(chunk_index)).c_str()).c_str());
 	}
 }
 
@@ -43,15 +46,15 @@ void merge_chunks(const std::string& filename, int total_chunks) {
 				std::remove(OneChunksPath.c_str()); // 删除临时块文件  
 			}
 			else {
-				std::cerr << "Failed to open chunk " << i << " for file " << filename << std::endl;
-				// 处理错误，可能需要重新上传缺失的块  
+				LOG(str::format("[文件上传服务]文件: %s 打开失败,导致合并失败", (filename + ".part" + to_string(i)).c_str()).c_str());
+				break;
 			}
 		}
 		ofs.close();
-		std::cout << "File " << filename << " merged successfully" << std::endl;
+		LOG(str::format("[文件上传服务]文件: %s 合并成功",filename.c_str()).c_str());
 	}
 	else {
-		std::cerr << "Failed to open file " << filename << " for merging" << std::endl;
+		LOG(str::format("[文件上传服务]文件: %s 打开失败,合并失败", filename.c_str()).c_str());
 	}
 }
 
@@ -86,8 +89,7 @@ void fileUpload_thread(int port)
 			}
 
 			if (all_chunks_uploaded) {
-				// 获取总块数（这里假设在上传第一个块时已经通过其他方式告知服务器）  
-				// 在实际应用中，你可能需要在请求中包含总块数，或者通过其他机制获取它  
+				//合并段落
 				merge_chunks(filename, chunk_total);
 
 				// 清除已上传块的状态（可选）  
