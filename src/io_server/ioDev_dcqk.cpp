@@ -214,7 +214,7 @@ void ioDev_dcqk::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessi
 	stream2pkt* pab = &m_pab;
 	pab->PushStream(pData, len);
 
-	while (pab->PopPkt(IsValidPkt_315))
+	while (pab->PopPkt(IsValidPkt_315, false))
 	{
 		if (pab->abandonData != "")
 		{

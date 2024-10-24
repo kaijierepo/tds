@@ -230,10 +230,10 @@ void RpcLogSend(unsigned char* p, size_t len, bool success, string& remoteIP,int
 	}
 
 	size_t wlen = 0;
-	string s = yyjson_mut_val_write(yyv_root,0,&wlen);
+	auto s = yyjson_mut_val_write(yyv_root,0,&wlen);
 	yyjson_mut_doc_free(yy_mdoc);
 
-	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
+	sendToRpcPktMonitorClient((char*)s, wlen);
 }
 void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
 	{

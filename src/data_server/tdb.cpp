@@ -2864,6 +2864,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 			//size_t len = strlen(p);
 			result.calcResult = p;
+			free(p);
 		}
 		else if (sCalcResult != "") {
 			result.calcResult = sCalcResult;
@@ -2877,6 +2878,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 		//size_t len = strlen(p);
 		result.dataList = p;
+		free(p);
 	}
 	result.rowCount = mapRlt.size();
 	return true;
@@ -3787,7 +3789,9 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
 		yyjson_mut_obj_remove_key(yymv_params, "tag");
 		size_t len = 0;
-		string sDe = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		auto s = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		string sDe = s;
+		free(s);
 		yyjson_mut_doc_free(mut_doc);
 
 		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
@@ -4074,6 +4078,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
 	DB_FS::writeFile(dbFile,p,len);
+	free(p);
 
 	if (vecToBeUpdatedFile.size()>0) {
 		//refresh the entire files dir  or one file ,  update the file urls
@@ -4096,6 +4101,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		else {
 			p = yyjson_val_write(vecToBeUpdatedFile[0].yyFileToUpdate, 0, &len);
 			DB_FS::writeFile(vecToBeUpdatedFile[0].dbFile1, p, len);
+			free(p);
 		}
 	}
 	else {
@@ -4230,6 +4236,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 		size_t len = 0;
 		char* p = yyjson_mut_write(mut_doc, 0, &len);
 		DB_FS::writeFile(dbFile, p, len);
+		free(p);
 	}
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);

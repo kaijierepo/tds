@@ -336,7 +336,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 	{
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
-		while (tlBuf.PopPkt(IsValidPkt_HTTP))
+		while (tlBuf.PopPkt(IsValidPkt_HTTP, false))
 		{
 			bool handled = false;
 			string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);

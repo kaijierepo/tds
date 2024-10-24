@@ -60,8 +60,10 @@ void ioDev_tdsp::syncDataToMasterTds(yyjson_val* objTree, yyjson_doc* doc)
 			yyjson_mut_val* yyv_rootTag_val = yyjson_mut_strcpy(mdoc, m_strTagBind.c_str());
 			yyjson_mut_obj_put(yyv_objTree, yyv_rootTag_key, yyv_rootTag_val);//子服务绑定到的主服务树节点
 			size_t len;
-			string s = yyjson_mut_val_write(yyv_objTree, 0, &len);
-			tds->callAsyn("input", s);
+			auto s = yyjson_mut_val_write(yyv_objTree, 0, &len);
+			string ss = s;
+			free(s);
+			tds->callAsyn("input", ss);
 			yyjson_mut_doc_free(mdoc);
 		}
 	}
@@ -248,8 +250,9 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 						pC->input(yyv_val);
 				}
 				else if (yyv_tag) {
-					string s = yyjson_val_write(yyvDe, YYJSON_WRITE_NOFLAG, nullptr);
+					auto s = yyjson_val_write(yyvDe, YYJSON_WRITE_NOFLAG, nullptr);
 					json j = json::parse(s);
+					free(s);
 					string tag = yyjson_get_str(yyv_tag);
 					tag = m_strTagBind + "." + tag;
 					j["tag"] = tag;
@@ -318,8 +321,11 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	if (err != nullptr)
 	{
 		size_t len = 0;
-		string s = yyjson_val_write(jResp, YYJSON_WRITE_NOFLAG, &len);
-		LOG("[warn]TDSP设备,返回error\r\n" + s);
+		auto s = yyjson_val_write(jResp, YYJSON_WRITE_NOFLAG, &len);
+		string ss = s;
+		free(s);
+
+		LOG("[warn]TDSP设备,返回error\r\n" + ss);
 		return false;
 	}
 	
@@ -484,7 +490,9 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 				{
 					TDSP_SYNC_INFO* p = iter->second;
 					size_t len;
-					p->strResp = yyjson_val_write(jResp,0,&len);
+					auto s = yyjson_val_write(jResp,0,&len);
+					p->strResp = s;
+					free(s);
 					p->respSignal.notify();
 				}
 				else
@@ -507,7 +515,9 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 				{
 					TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
 					size_t len;
-					p->strResp = yyjson_val_write(jResp, 0, &len);
+					auto s = yyjson_val_write(jResp, 0, &len);
+					p->strResp = s;
+					free(s);
 					p->respSignal.notify();
 				}
 				else
@@ -522,8 +532,9 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
 		size_t len;
-		string errPkt = yyjson_val_write(jResp,0,&len);
-		LOG("[warn]" + log + ",Pkt: " + errPkt);
+		auto s = yyjson_val_write(jResp,0,&len);
+		LOG("[warn]" + log + ",Pkt: " + s);
+		free(s);
 	}
 	return true;
 }
@@ -623,8 +634,9 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			//位号增加上该子服务绑定的位号。
 			size_t len;
-			string sParams = yyjson_val_write(yyv_params, 0, &len);
+			auto sParams = yyjson_val_write(yyv_params, 0, &len);
 			json jParams = json::parse(sParams);
+			free(sParams);
 			if (jParams.is_array()) {
 				for (auto& de : jParams) {
 					de["rootTag"] = m_strTagBind;
