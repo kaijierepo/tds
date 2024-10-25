@@ -618,7 +618,6 @@ void ioDev_dcqk::DealVedioFile(T* data)
 	{
 		vfile.bFinished = TRUE;
 
-		pEqp->DeleteVedioCache(data->time, data->vediotype);
 
 		//写入数据库
 		int flen = vfile.vctPacks.size();
@@ -662,6 +661,8 @@ void ioDev_dcqk::DealVedioFile(T* data)
 			key = m_strTagBind + "." + pEqp->daochaName + "." + pEqp->eqpName + ".triggerVideoLastTime";
 		}
 		tds->conf->setCurrentInt(key, data->time);
+
+		pEqp->DeleteVedioCache(data->time, data->vediotype);
 	}
 	LeaveCriticalSection(&pEqp->m_csVedio);
 }
