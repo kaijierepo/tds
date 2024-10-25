@@ -109,34 +109,37 @@ void ThreadDownloadVedio(void* lpParam)
 	{
 		if (!pDev->m_bDownloadVedioing) break;
 		DWORD dwTick = GetTickCount();
+		EnterCriticalSection(&pDev->m_csEqp);
 		for (auto it = pDev->m_mapEqp.begin(); it != pDev->m_mapEqp.end(); it++)
 		{
 			StVedioRecord* pST = NULL;
 			WORD sid = 0;
-			EnterCriticalSection(&it->second.m_csVedioList);
+			EnterCriticalSection(&it->second->m_csVedioList);
 			//for (auto itVedio = it->second.lstVedioCache.begin(); itVedio != it->second.lstVedioCache.end(); itVedio++)
-			auto itVedio = it->second.lstVedioCache.begin();
-			if (itVedio != it->second.lstVedioCache.end())
+			auto itVedio = it->second->lstVedioCache.begin();
+			if (itVedio != it->second->lstVedioCache.end())
 			{
-				if (((BYTE*)&itVedio->filldata)[1] == 0 || dwTick - it->second.timeLastReqDownload > 30000) //下载文件最多30秒，否则重新下载
+				if (((BYTE*)&itVedio->filldata)[1] == 0 || dwTick - it->second->timeLastReqDownload > 30000) //下载文件最多30秒，否则重新下载
 				{
 					((BYTE*)&itVedio->filldata)[1] = 1;
 					pST = &(*itVedio);
 					sid = it->first;
-					it->second.timeLastReqDownload = dwTick;
+					it->second->timeLastReqDownload = dwTick;
 				}
 			}
-			LeaveCriticalSection(&it->second.m_csVedioList);
+			LeaveCriticalSection(&it->second->m_csVedioList);
 
 			if (pST)
 			{
-				LeaveCriticalSection(&it->second.m_csVedio);
-				it->second.m_mapVideos.clear();
-				LeaveCriticalSection(&it->second.m_csVedio);
+				LeaveCriticalSection(&it->second->m_csVedio);
+				it->second->m_mapVideos.clear();
+				LeaveCriticalSection(&it->second->m_csVedio);
 
 				pDev->QueryVedio(sid, pST);
 			}
 		}
+		LeaveCriticalSection(&pDev->m_csEqp);
+
 		if (!pDev->m_bDownloadVedioing) break;
 		Sleep(100);
 	}
@@ -148,11 +151,19 @@ ioDev_dcqk::ioDev_dcqk()
 	m_devType = "dcqk-sys-device";
 	m_devTypeLabel = "道岔缺口站机";
 	m_level = "devcie";
+	InitializeCriticalSection(&m_csEqp);
 }
 
 ioDev_dcqk::~ioDev_dcqk()
 {
 	stop();
+	EnterCriticalSection(&m_csEqp);
+	for (auto it : m_mapEqp)
+	{
+		delete it.second;
+	}
+	LeaveCriticalSection(&m_csEqp);
+	DeleteCriticalSection(&m_csEqp);
 }
 
 void ioDev_dcqk::DoAcq()
@@ -274,6 +285,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_GAPCFG:
 		{
 			StGapCfgRes* lpsubdata = (StGapCfgRes*)pData->lpdata;
+			EnterCriticalSection(&m_csEqp);
 
 			for (int k = 0; k < lpsubdata->cfgcnt; k++) {
 
@@ -286,44 +298,44 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 				auto iter = m_mapEqp.find(ZZJConf.sid);
 				if (iter == m_mapEqp.end())
 				{
-					eqpInfo eqp;
-					eqp.eqpName = zzjName;
+					auto eqp = new eqpInfo();
+					eqp->eqpName = zzjName;
 
 					size_t iPos = 0;
 					string sTmp = "";
-					if (eqp.eqpName.find("#") != string::npos) {
-						iPos = eqp.eqpName.find("#");
+					if (eqp->eqpName.find("#") != string::npos) {
+						iPos = eqp->eqpName.find("#");
 						iPos += 1;
 					}
-					else if (eqp.eqpName.find("J") != string::npos) {
-						iPos = eqp.eqpName.find("J");
+					else if (eqp->eqpName.find("J") != string::npos) {
+						iPos = eqp->eqpName.find("J");
 						sTmp = "#";
 					}
-					else if (iPos = eqp.eqpName.find("X") != string::npos) {
-						iPos = eqp.eqpName.find("X");
+					else if (iPos = eqp->eqpName.find("X") != string::npos) {
+						iPos = eqp->eqpName.find("X");
 						sTmp = "#";
 					}
-					else if (iPos = eqp.eqpName.find("P") != string::npos) {
-						iPos = eqp.eqpName.find("P");
+					else if (iPos = eqp->eqpName.find("P") != string::npos) {
+						iPos = eqp->eqpName.find("P");
 						sTmp = "#";
 					}
-					else if (iPos = eqp.eqpName.find("W") != string::npos) {
-						iPos = eqp.eqpName.find("W");
+					else if (iPos = eqp->eqpName.find("W") != string::npos) {
+						iPos = eqp->eqpName.find("W");
 						sTmp = "#";
 					}
 
-					eqp.daochaName = eqp.eqpName.substr(0, iPos) + sTmp;
+					eqp->daochaName = eqp->eqpName.substr(0, iPos) + sTmp;
 
-					string key = m_strTagBind + "." + eqp.daochaName + "." + eqp.eqpName + ".triggerVideoLastTime";
-					eqp.timeLastTriggerVedio = tds->conf->getCurrentInt(key, 0);
+					string key = m_strTagBind + "." + eqp->daochaName + "." + eqp->eqpName + ".triggerVideoLastTime";
+					eqp->timeLastTriggerVedio = tds->conf->getCurrentInt(key, 0);
 
-					key = m_strTagBind + "." + eqp.daochaName + "." + eqp.eqpName + ".passCarVideoLastTime";
-					eqp.timeLastPassCarVedio = tds->conf->getCurrentInt(key, 0);
-
+					key = m_strTagBind + "." + eqp->daochaName + "." + eqp->eqpName + ".passCarVideoLastTime";
+					eqp->timeLastPassCarVedio = tds->conf->getCurrentInt(key, 0);
 
 					m_mapEqp[ZZJConf.sid] = eqp;
 				}
 			}
+			LeaveCriticalSection(&m_csEqp);
 
 			break;
 		}
@@ -339,12 +351,18 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			StAlarmAndImgInfo* lpsubdata = (StAlarmAndImgInfo*)pData->lpdata;
 			SendCallBack0x27(lpsubdata);
 
+			EnterCriticalSection(&m_csEqp);
 			auto iter = m_mapEqp.find(lpsubdata->sid);
 			if (iter == m_mapEqp.end())
+			{
+				LeaveCriticalSection(&m_csEqp);
 				return 0;
+			}
 
-			string sZZJName = iter->second.eqpName;
-			string sDaoChaName = iter->second.daochaName;
+			string sZZJName = iter->second->eqpName;
+			string sDaoChaName = iter->second->daochaName;
+			LeaveCriticalSection(&m_csEqp);
+
 			//size_t iPos = sZZJName.find("#");
 			//string sTmp = ".";
 			//if (iPos == string::npos) {
@@ -433,7 +451,9 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		{
 			StVedioListRes* lpsubdata = (StVedioListRes*)pData->lpdata;
 			StVedioRecord* lpsubdata2 = (StVedioRecord*)lpsubdata->lprecord;
-			m_mapEqp[lpsubdata->sid].AddVedioCache(lpsubdata2, lpsubdata->cnt, lpsubdata->vediotype);
+			EnterCriticalSection(&m_csEqp);
+			m_mapEqp[lpsubdata->sid]->AddVedioCache(lpsubdata2, lpsubdata->cnt, lpsubdata->vediotype);
+			LeaveCriticalSection(&m_csEqp);
 
 			if (!m_bDownloadVedioThread)
 			{
@@ -565,12 +585,16 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 template<typename T>
 void ioDev_dcqk::DealVedioFile(T* data)
 {
-	EnterCriticalSection(&m_mapEqp[data->sid].m_csVedio);
-	m_mapEqp[data->sid].DeleteVedioCache(data->time, data->vediotype);
+	EnterCriticalSection(&m_csEqp);
+	auto pEqp = m_mapEqp[data->sid];
+	LeaveCriticalSection(&m_csEqp);
+	
+	EnterCriticalSection(&pEqp->m_csVedio);
+	//pEqp->DeleteVedioCache(data->time, data->vediotype);
 
-	if (m_mapEqp[data->sid].m_mapVideos.find(data->time) == m_mapEqp[data->sid].m_mapVideos.end())
+	if (pEqp->m_mapVideos.find(data->time) == pEqp->m_mapVideos.end())
 	{
-		VedioFile vfile;
+		VedioFile &vfile = pEqp->m_mapVideos[data->time];
 		vfile.sid = data->sid;
 		vfile.time = data->time;
 		vfile.timelen = data->timelen;
@@ -581,12 +605,11 @@ void ioDev_dcqk::DealVedioFile(T* data)
 		vfile.bFinished = FALSE;
 		vfile.vctPacks.resize(data->len);
 
-		m_mapEqp[data->sid].m_mapVideos.insert(make_pair(vfile.time, vfile));
+
 	}
+	VedioFile& vfile = pEqp->m_mapVideos[data->time];
 
-	VedioFile& vfile = m_mapEqp[data->sid].m_mapVideos[data->time];
 	vfile.maxpacklen = max(data->datalen, vfile.maxpacklen);
-
 	CopyMemory(vfile.vctPacks.data() + data->curpackid * vfile.maxpacklen, data->lpdata, data->datalen);
 
 	vfile.setPack.insert(data->curpackid);
@@ -595,7 +618,7 @@ void ioDev_dcqk::DealVedioFile(T* data)
 	{
 		vfile.bFinished = TRUE;
 
-		m_mapEqp[data->sid].DeleteVedioCache(data->time, data->vediotype);
+		pEqp->DeleteVedioCache(data->time, data->vediotype);
 
 		//写入数据库
 		int flen = vfile.vctPacks.size();
@@ -603,7 +626,7 @@ void ioDev_dcqk::DealVedioFile(T* data)
 		tdb_base64_encode(vfile.vctPacks.data(), flen, out);
 		{
 			json j, jV, jFile;
-			string tag = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + (data->vediotype == 0x02 ? ".过车录像" : ".扳动录像");
+			string tag = m_strTagBind + "." + pEqp->daochaName + "." + pEqp->eqpName + (data->vediotype == 0x02 ? ".过车录像" : ".扳动录像");
 			j["tag"] = tag;
 			auto t = timeopt::Unix2SysTime(data->time);
 			j["time"] = timeopt::stTimeToStr(t);
@@ -625,22 +648,22 @@ void ioDev_dcqk::DealVedioFile(T* data)
 		}
 
 		delete[]out;
-		m_mapEqp[data->sid].m_mapVideos.erase(data->time);
+		pEqp->m_mapVideos.erase(data->time);
 
 		string key;
 		if (data->vediotype == 0x02)
 		{
-			m_mapEqp[data->sid].timeLastPassCarVedio = data->time;
-			key = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + ".passCarVideoLastTime";
+			pEqp->timeLastPassCarVedio = data->time;
+			key = m_strTagBind + "." + pEqp->daochaName + "." + pEqp->eqpName + ".passCarVideoLastTime";
 		}
 		else
 		{
-			m_mapEqp[data->sid].timeLastTriggerVedio = data->time;
-			key = m_strTagBind + "." + m_mapEqp[data->sid].daochaName + "." + m_mapEqp[data->sid].eqpName + ".triggerVideoLastTime";
+			pEqp->timeLastTriggerVedio = data->time;
+			key = m_strTagBind + "." + pEqp->daochaName + "." + pEqp->eqpName + ".triggerVideoLastTime";
 		}
 		tds->conf->setCurrentInt(key, data->time);
 	}
-	LeaveCriticalSection(&m_mapEqp[data->sid].m_csVedio);
+	LeaveCriticalSection(&pEqp->m_csVedio);
 }
 
 string ioDev_dcqk::Get0x27AlarmLevelType(BYTE type)
@@ -1928,7 +1951,9 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 			continue;
 		}
 		string zzj =zzjMo->getName("");
-		string zzj315 = m_mapEqp[pRecord->sid].eqpName;
+		EnterCriticalSection(&m_csEqp);
+		string zzj315 = m_mapEqp[pRecord->sid]->eqpName;
+		LeaveCriticalSection(&m_csEqp);
 		BYTE location = pRecord->fixorinvert;
 		BYTE acqreason = pRecord->gaptype;
 		string theTag = zzjMo->getTag()+  ".缺口";
@@ -2061,26 +2086,27 @@ void ioDev_dcqk::QueryVedioList()
 
 	time_t t = timeopt::SysTime2Unix(m_stLastQueryVedioTime);
 
+	EnterCriticalSection(&m_csEqp);
 	for (auto &it : m_mapEqp)
 	{
 		bool bNeedQuery = false;
-		EnterCriticalSection(&it.second.m_csVedioList);
-		bNeedQuery = it.second.lstVedioCache.empty();
-		LeaveCriticalSection(&it.second.m_csVedioList);
+		EnterCriticalSection(&it.second->m_csVedioList);
+		bNeedQuery = it.second->lstVedioCache.empty();
+		LeaveCriticalSection(&it.second->m_csVedioList);
 
 		if (!bNeedQuery) continue;
 
-		if (it.second.timeLastTriggerVedio == 0)
+		if (it.second->timeLastTriggerVedio == 0)
 		{
-			it.second.timeLastTriggerVedio = tNow - 10 * 24 * 60 * 60; // 10天前
+			it.second->timeLastTriggerVedio = tNow - 10 * 24 * 60 * 60; // 10天前
 		}
-		if (it.second.timeLastPassCarVedio == 0)
+		if (it.second->timeLastPassCarVedio == 0)
 		{
-			it.second.timeLastPassCarVedio = tNow - 10 * 24 * 60 * 60; // 10天前
+			it.second->timeLastPassCarVedio = tNow - 10 * 24 * 60 * 60; // 10天前
 		}
 
-		stReqTrigger.begintime = it.second.timeLastTriggerVedio + 1;
-		stReqPassCar.begintime = it.second.timeLastPassCarVedio + 1;
+		stReqTrigger.begintime = it.second->timeLastTriggerVedio + 1;
+		stReqPassCar.begintime = it.second->timeLastPassCarVedio + 1;
 		stReqTrigger.sid = it.first;
 		stReqPassCar.sid = it.first;
 
@@ -2094,6 +2120,7 @@ void ioDev_dcqk::QueryVedioList()
 		Parse315Protocol::Unparse(data, buf, len);
 		sendData((unsigned char*)buf.data(), len);
 	}
+	LeaveCriticalSection(&m_csEqp);
 }
 
 

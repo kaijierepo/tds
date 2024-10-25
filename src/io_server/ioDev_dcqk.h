@@ -162,7 +162,8 @@ public:
 	void Do_CMD_CODE_YYQX(LPVOID pData);
 	void Do_CMD_CODE_GAPVAL(LPVOID pData);
 	void Do_CMD_CODE_YWINFO(LPVOID pData);
-	std::map<int, eqpInfo> m_mapEqp;
+	CRITICAL_SECTION		m_csEqp;
+	std::map<int, eqpInfo*> m_mapEqp;
 
 	static std::map<int, std::string> g_map0x97AlarmLevel;
 	//接收
