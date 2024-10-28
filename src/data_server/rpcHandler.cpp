@@ -3331,7 +3331,12 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 	if (handleMethodCall_video(method, params, rpcResp, session)) {
 		return true;
 	}
-
+	if (method == "getLocalTime")
+	{
+		json nowtime;
+		nowtime["time"] = timeopt::nowStr();
+		rpcResp.result = nowtime.dump();
+	}
 	
 	if (rpcResp.result != "" || rpcResp.error!="")
 		return true;
