@@ -3154,6 +3154,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		int _once = 1; while (_once--) {
 			string tag = params["tag"];
 			json& timeAry = params["time"];
+			string type ="dtw";
+			if(params.contains("type"))
+				type = params["type"];//dtw、 aes
 			int si = timeAry.size();
 			bool  hasSubAry = true;
 			if (si > 0) {
@@ -3194,8 +3197,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 					jsonToList(curve1, p1);
 					jsonToList(curve2, p2);
 
+					float dis = -1;
+					if(type == "dtw")
+						dis = CalDTWDist(p1, p2);
+					else if (type == "aes") {
+						double sum = 0;
+						for (int i = 0; i < p1.size() && i < p2.size(); i++) {
+							sum += abs(p1[i] - p2[i]);
+						}
+						if (p1.size() > 0 && p2.size() > 0)
+							dis = sum * 1.0 / MIN(p1.size(), p2.size());
+					}
+					
 					json one;
-					float dis = CalDTWDist(p1, p2);
 					one["time"] = curve2["time"];
 					one["val"] = to_string(dis);
 
@@ -3230,8 +3244,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 					vector<double> p1, p2;
 					jsonToList(curve1, p1);
 					jsonToList(curve2, p2);
+					float dis = -1;
+					if (type == "dtw")
+						dis = CalDTWDist(p1, p2);
+					else if (type == "aes") {
+						double sum = 0;
+						for (int i = 0; i < p1.size() && i < p2.size(); i++) {
+							sum += abs(p1[i] - p2[i]);
+						}
+						if (p1.size() > 0 && p2.size() > 0)
+							dis = sum * 1.0 / MIN(p1.size(), p2.size());
+					}
+
 					json one;
-					float dis = CalDTWDist(p1, p2);
 					one["time"] = curve2["time"];
 					one["val"] = to_string(dis);
 
