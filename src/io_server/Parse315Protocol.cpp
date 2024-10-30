@@ -860,6 +860,55 @@ BOOL Parse315Protocol::ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir
 	break;*/
 }
 
+BOOL Parse315Protocol::ParseDataFrmJson(StFrame& data, LPVOID* buf, int len, int dir)
+{
+	LPBYTE pos = (LPBYTE)(*buf);
+	StDataBasic* basic = (StDataBasic*)pos;
+	switch (basic->cmdid)
+	{
+	case CMD_CODE_VEDIOLIST://视频列表  //这里BYTE强转为char 小于0x7F没问题 超了就不对了 比如工况0x81
+	{
+		St315Json* lpdata = new St315Json;
+		if (Parse315Protocol::Parse(*lpdata, pos, data.datalen, data.e_frmKind))
+		{
+			data.lpdata = lpdata;
+			pos += data.datalen;
+		}
+		else
+		{
+			delete lpdata;
+			return FALSE;
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	*buf = pos;
+	return true;
+}
+
+BOOL Parse315Protocol::Parse(St315Json& data, LPVOID buf, int len, FRAME_KIND& kind)
+{
+	ZeroMemory(&data, sizeof(data));
+	int szcnt = 0;
+	LPBYTE pos = (LPBYTE)buf;
+	BOOL failed = FALSE;
+
+	kind = RES;
+	size_t sz = 1 + 2 + 4 + 1 + 4;  //命令码	1、 包序号 2、 预留	4、 帧内容类型	1、	 帧内容长度	4、 帧内容	N
+	szcnt += sz;
+	if (szcnt > len)
+		return FALSE;
+	memcpy_s(&data, sz, pos, sz);
+	pos += sz;
+
+	data.lpContent = new char[len - szcnt];
+	memcpy_s(data.lpContent, len - szcnt, pos, len - szcnt);
+
+	return TRUE;
+}
+
 //将buf解析为StFrame, 内部包含包的类别 命令还是应答等
 BOOL Parse315Protocol::Parse(StFrame& data, LPVOID buf, int len, int dir)
 {
@@ -905,6 +954,13 @@ BOOL Parse315Protocol::Parse(StFrame& data, LPVOID buf, int len, int dir)
 		case FRAME_TYPE_DATA:
 		{
 			if (!ParseDataFrm(data, (LPVOID*)&pos, data.datalen, dir)) { //pos传地址用于在内部更新最新位置,失败了内部释放内存
+				return false;
+			};
+			break;
+		}
+		case FRAME_TYPE_JSON://(char)0x3f:  //zgw json  视频url
+		{
+			if (!ParseDataFrmJson(data, (LPVOID*)&pos, data.datalen, dir)) { //pos传地址用于在内部更新最新位置,失败了内部释放内存
 				return false;
 			};
 			break;
@@ -1514,6 +1570,23 @@ BOOL Parse315Protocol::Unparse(StFrame& data, vector<BYTE>& buf, int& len, int d
 				}
 			}
 		}
+		case FRAME_TYPE_JSON:
+		{
+			StDataBasic* basic = (StDataBasic*)data.lpdata;
+			if (dir == 0)
+			{
+				switch (basic->cmdid)
+				{
+				case CMD_CODE_VEDIOLIST:
+				{
+					success = Parse315Protocol::Unparse(*(St315Json*)data.lpdata, subbuf, sublen);
+					break;
+				}
+				}
+			}
+
+			break;
+		}
 		default:
 			break;
 		}
@@ -1581,6 +1654,21 @@ BOOL Parse315Protocol::Unparse(StAlarmListReq& data, vector<BYTE>& buf, int& len
 
 	memcpy_s(buf.data(), len, &data, len);
 
+	return TRUE;
+}
+
+BOOL Parse315Protocol::Unparse(St315Json& data, vector<BYTE>& buf, int& len)
+{
+	len = 1 + 2 + 4 + 1 + 4 + data.frmLength;
+	//buf = new BYTE[len];
+	//ZeroMemory(buf, len);
+	buf.resize(len);
+
+	//memcpy_s(buf, len, &data, len);  
+	int n0 = 12;// 1 + 2 + 4 + 1 + 4;
+	memcpy_s(buf.data(), n0, &data, n0);
+	char* p = (char*)buf.data();
+	memcpy_s(&(p[12]), data.frmLength, (char*)data.lpContent, data.frmLength);
 	return TRUE;
 }
 
@@ -1795,6 +1883,16 @@ BOOL Parse315Protocol::Release(StAlarmListRes& data)
 		return TRUE;
 
 	delete[] data.lprecord;
+
+	return TRUE;
+}
+
+BOOL Parse315Protocol::Release(St315Json& data)
+{
+	if (data.frmLength == 0 || data.lpContent == NULL)
+		return TRUE;
+
+	delete[] data.lpContent;
 
 	return TRUE;
 }

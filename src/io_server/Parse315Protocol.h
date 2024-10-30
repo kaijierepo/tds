@@ -1329,7 +1329,16 @@ typedef struct DBJFBJINFO
 
 }DBJFBJInfo;
 
-
+//315扩展的json格式的视频列表
+typedef struct
+{
+	BYTE cmdid;				//命令码：0x2E
+	WORD pkt_num;				//包序号
+	BYTE filldata[4];		//0xFF(4B, 预留)
+	BYTE frmType;		//0x01 代表json数组  0x02 json对象
+	DWORD frmLength;				//json帧内容长度
+	LPSTR lpContent;			//json帧内容
+}St315Json;
 
 #pragma pack(pop)
 
@@ -1352,6 +1361,8 @@ public:
 
 	static BOOL Parse(StFrame&, LPVOID, int, int dir = 1);//解析  JHD->微机监测数据包（JHD就是站机端）
 	static BOOL ParseDataFrm(StFrame& data, LPVOID* buf, int len, int dir);
+	static BOOL ParseDataFrmJson(StFrame& data, LPVOID* buf, int len, int dir);
+
 	static BOOL Parse_4res(StGapValue& data, LPVOID buf, int len);//对接四川众合缺口值解析
 	static BOOL Unparse(StFrame&, vector<BYTE>&, int&, int dir = 0);//反解析   微机监测->JHD数据包
 	static BOOL Unparse(StFrame& data, vector<BYTE>& buf, int& len, BYTE* subbuf, int sublen);
@@ -1417,6 +1428,8 @@ private:
 	static BOOL Parse(StPowerFileData& data, LPVOID buf, int len);
 	static BOOL Parse(DBJFBJInfo& data, LPVOID buf, int len);
 	static BOOL Parse(StAlarmListRes&, LPVOID, int);
+	static BOOL Parse(St315Json& data, LPVOID buf, int len, FRAME_KIND& kind);
+
 
 	static BOOL Unparse(StHeartBeat315&, vector<BYTE>&, int&);
 	static BOOL Unparse(StDataBasic&, vector<BYTE>&, int&);
@@ -1440,6 +1453,7 @@ private:
 	static BOOL Unparse(DBJFBJInfo& data, vector<BYTE>& buf, int& len);
 	static BOOL Unparse(StAlarmListReq&, vector<BYTE>&, int&);
 	static BOOL Unparse(StOilBoxVolumeResq&, vector<BYTE>&, int&);
+	static BOOL Unparse(St315Json& data, vector<BYTE>&, int& len);
 
 	static BOOL Release(StGapCfgRes&);
 	static BOOL Release(StGapValue&);
@@ -1469,6 +1483,7 @@ private:
 	static BOOL Release(StPowerInfoRes&);
 	static BOOL Release(DBJFBJInfo&);
 	static BOOL Release(StAlarmListRes&);
+	static BOOL Release(St315Json&);
 
 	static tstring ToString(const StHeartBeat315&);
 	static tstring ToString(const StGapCfgRes&);

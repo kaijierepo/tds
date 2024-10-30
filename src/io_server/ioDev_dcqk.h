@@ -184,6 +184,20 @@ public:
 	//查询视频
 	void QueryVedio(WORD sid, StVedioRecord* pST);
 
+	/// 基于http的视频同步 -begin
+	//周期发送视频列表 收到后记录最新的时间更新到这里 重启后发送的第一次仅用于初始化 不插入DB
+	map<string, map<string, int>> m_mapZzjId_newestVideoTime; //zzj名-> {"move":上次最新视频的下一秒, "cross":上次最新视频的下一秒}  初始化为当日第0秒的时间戳  
+	bool m_bFirstDoCycle = false; //是否第一次调用DoCycleTask
+	bool m_bFirstSendAfterBoot = true; //重启后时间清0 会发当日重复时间段 插入DB需要额外判断  没用了
+	TIME m_stLastQueryVedioUrlTime;	 //上次查询视频列表时间
+
+	void InitVedioBuf();
+	void QueryVedioUrlList();
+	bool SendGetVideoList_ext(string zzj, string strType, int nStartUnix, int nEndUnix);
+	BOOL ProcessJsonFrmData_0x3F(LPVOID pData);
+	/// 基于http的视频同步 -end
+
+
 public:
 	TIME m_stLastQueryVedioTime;		//上次查询视频列表时间
 	bool m_bDownloadVedioThread;		//是否存在下载视频线程

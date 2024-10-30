@@ -91,11 +91,11 @@ void eqpInfo::DeleteVedioCache(uint32_t sTm, BYTE btType)
 	EnterCriticalSection(&m_csVedioList);
 	for (auto it = lstVedioCache.begin(); it != lstVedioCache.end(); it++)
 	{
-		if (it->time == sTm && ((BYTE*)&it->filldata)[0] == btType)
-		{
-			it = lstVedioCache.erase(it);
-			break;
-		}
+if (it->time == sTm && ((BYTE*)&it->filldata)[0] == btType)
+{
+	it = lstVedioCache.erase(it);
+	break;
+}
 	}
 	LeaveCriticalSection(&m_csVedioList);
 }
@@ -146,12 +146,301 @@ void ThreadDownloadVedio(void* lpParam)
 }
 
 
+
+//基于http的视频同步-begin
+void ioDev_dcqk::InitVedioBuf()
+{
+	//总体初始化为 当日零秒，再更新为db中既有记录的最新时间
+	TIME stNow;
+	timeopt::now(&stNow); //stNow.wHour = 0; stNow.wMinute = 0; stNow.wSecond = 0; 地铁3分钟几乎一次过车 若首次部署时在晚上 从0秒开始 则一天的过车太多了
+	int unix0 = timeopt::SysTime2Unix(stNow);
+	//所关联站下面的转辙机
+	m_strTagBind;
+	std::vector<OBJ*> tagVec;
+	prj.queryObj(&tagVec, "*", "", "转辙机", "mo");
+	for (auto& it : tagVec) {
+		map<string, int> m0; m0["move"] = unix0; m0["cross"] = unix0;
+		m_mapZzjId_newestVideoTime[it->m_name] = m0;
+	}
+
+	//更新为db中既有记录的最新时间的下一秒
+	//算了 启动之前的视频直接丢弃吧
+}
+
+//查询视频http Url列表
+void ioDev_dcqk::QueryVedioUrlList()
+{
+	TIME stNow, stNowDay;
+	timeopt::now(stNow);
+	stNowDay = stNow;  stNowDay.wHour = 0; stNowDay.wMinute = 0; stNowDay.wSecond = 0;
+	int unixNowDayFirstSec = timeopt::SysTime2Unix(stNowDay);
+
+	for (auto& it : m_mapZzjId_newestVideoTime) {
+		auto& zzj = it.first;
+
+		auto& mapInfo = it.second;
+		int& nMoveTime = mapInfo["move"];
+		//长时间如跨天没视频更新，或 程序没启动，则缓存和DB的时间太老,计算的时间段也是老的,无法完整覆盖, nMoveTime改为当前
+		{
+			if (nMoveTime < unixNowDayFirstSec)
+				nMoveTime = timeopt::SysTime2Unix(stNow);
+		}
+		TIME stMoveEnd = timeopt::Unix2SysTime(nMoveTime); stMoveEnd.wHour = 23; stMoveEnd.wMinute = 59; stMoveEnd.wSecond = 59;
+		int nMoveEnd = timeopt::SysTime2Unix(stMoveEnd);
+
+		int& nCrossTime = mapInfo["cross"];
+		{
+			if (nCrossTime < unixNowDayFirstSec)
+				nCrossTime = timeopt::SysTime2Unix(stNow);
+		}
+		TIME stCrossEnd = timeopt::Unix2SysTime(nCrossTime); stCrossEnd.wHour = 23; stCrossEnd.wMinute = 59; stCrossEnd.wSecond = 59;
+		int nCrossEnd = timeopt::SysTime2Unix(stCrossEnd);
+
+		if (zzj == "1J1") {
+			int d1 = 0;
+		}
+		else if (zzj == "20") {
+			int d1 = 0;
+		}
+		else {
+			int d1 = 0;
+		}
+		//if (zzjId != "19")
+			//continue;
+
+		bool bRet = SendGetVideoList_ext(zzj, "car_move_video", nMoveTime, nMoveEnd);
+		if (!bRet) {
+			//log
+		}
+		bRet = SendGetVideoList_ext(zzj, "car_cross_video", nCrossTime, nCrossEnd);
+		if (!bRet) {
+			//log
+		}
+	}
+
+	//下载
+	m_bFirstSendAfterBoot = false;
+}
+
+//strType : car_cross_video  car_move_video
+bool ioDev_dcqk::SendGetVideoList_ext(string zzj, string strType, int nStartUnix, int nEndUnix)
+{
+	bool bRet = false;
+	StFrame data;
+	ZeroMemory(&data, sizeof(StFrame));
+
+	memcpy_s(data.fheader, 5, FRAME_HEADER_315, 5);
+	data.protocode = PROTOCAL_CODE;
+	data.dataversion = PROTOCAL_DATAVERSION;
+	data.ftype = FRAME_TYPE_JSON;
+	data.ftail = FRAME_TAIL_315;
+
+
+	St315Json subdata;
+	ZeroMemory(&subdata, sizeof(StImgInfoReq));
+
+	json joData;
+	joData["id"] = zzj; //转辙机名 或ID  下位机根据是否包含字母自动判断
+	joData["type"] = strType;//car_cross_video  car_move_video
+	joData["object"] = "gap";//gap, lock
+	joData["starttime"] = nStartUnix;
+	joData["endtime"] = nEndUnix;
+
+	subdata.cmdid = CMD_CODE_VEDIOLIST;
+	subdata.pkt_num = 65535;
+	memset(&(subdata.filldata), 0xFF, 4);
+	subdata.frmType = 0x2;
+
+	string str0 = joData.dump();
+
+	subdata.frmLength = str0.length();
+	subdata.lpContent = new char[subdata.frmLength];
+	memcpy(subdata.lpContent, str0.c_str(), subdata.frmLength);
+
+	data.datalen = sizeof(subdata) - sizeof(void*) + subdata.frmLength;
+	data.lpdata = &subdata;
+
+	vector<BYTE> buf;
+	int len = 0;
+	bRet = Parse315Protocol::Unparse(data, buf, len);
+	delete[] subdata.lpContent;
+	if (!bRet) {
+		return false;
+	}
+
+	if (len > 0) {
+		int nRet = sendData((unsigned char*)buf.data(), len);
+
+		if (nRet <= 0) {
+			bRet = false;
+		}
+		else if (nRet < len) {
+			//最好重发剩余的 直接算失败吧
+		}
+		else if (nRet > len) {
+			//log
+		}
+		else {
+			bRet = true;
+		}
+	}
+	return bRet;
+}
+
+BOOL ioDev_dcqk::ProcessJsonFrmData_0x3F(LPVOID pData)
+{
+	StFrame* stFrm = (StFrame*)pData;
+
+	LPVOID pSubData = stFrm->lpdata;
+	char byCmd = *((char*)pSubData);
+
+	switch (byCmd) {
+	case CMD_CODE_VEDIOLIST: {
+		St315Json* pInfo = (St315Json*)pSubData;
+
+		//zzj id、视频类型 默认从filldata里取，没有的话再从url里提取 道岔、zzj、视频类型   后续filldata扩展为8字节 发送方写入 响应包原样返回。 前两字节 zzjId。第3字节 视频类型。后面4字节 时间戳。
+		//前两字节 zzjId， B[0] 高8位 B[1] 低8位。第3字节 视频类型；
+		//WORD wZzjId = pInfo->filldata[0];
+		//wZzjId = wZzjId<<8 + pInfo->filldata[1];
+		//BYTE bType = pInfo->filldata[2];
+
+		string strJo(pInfo->lpContent, pInfo->frmLength);
+		json joList = json::parse(strJo);
+
+		int cnt = joList.size();
+		string strZzj;
+		string strType;
+		string strTime;
+		bool bSaveOk = false;
+		for (int i = 0; i < cnt; i++) {
+			string ti = joList[i]["time"];
+			string url0 = joList[i]["url"];
+			string label = joList[i]["label"];
+
+			//IP/ db / 202305、18、dc（ % 23）、zzj、扳动录像、1010101.avi_mv 
+
+			int pos = url0.find("/db/");
+			if (pos == string::npos) {
+				//log 
+				continue;
+			}
+
+			int pos1 = url0.substr(0, pos).rfind(":");
+			if (pos1 == string::npos) {
+				//log 
+				continue;
+			}
+			string port = url0.substr(pos1 + 1);
+
+			char ss[512];  strcpy(ss, url0.c_str());
+			string url = httplib::detail::decode_url(ss, false);
+
+			string yearMonth = url.substr(pos + 4, 6);
+			string day = url.substr(pos + 4 + 7, 2);
+
+			int daochaPos = pos + 14;
+			int po1 = url.find("/", daochaPos);
+			string dc = url.substr(daochaPos, po1 - daochaPos);
+
+			int zzjPos = po1 + 1;
+			int po2 = url.find("/", zzjPos);
+			strZzj = url.substr(zzjPos, po2 - zzjPos);
+
+			int typePos = po2 + 1;
+			int po3 = url.find("/", typePos);
+			string videoType = url.substr(typePos, po3 - typePos);
+
+			string ipPort = getIP() + string(":82");
+			string path = url0.substr(pos);
+
+			{
+				string ss9 = str::format("总数:%d, %s\n", cnt, url.c_str());
+				OutputDebugString(ss9.c_str());
+			}
+			// 存个map key为 yearMonth / day，若新的一天，则删掉旧的一天的map  每次插入DB存入map，重启了会去重  额 不行 必须得从DB种取最新时间
+			string time0 = ti.substr(0, 2) + ":" + ti.substr(2, 2) + ":" + ti.substr(4, 2);
+			string theTime = yearMonth.substr(0, 4) + "-" + yearMonth.substr(4, 2) + "-" + day + " " + time0;
+			strType = videoType == "扳动录像" ? "move" : "cross";
+
+			//防止重复   临界情况: 处理完但在更新m_mapZzjId_newestVideoTime之前又send了一次 
+			//前边查询视频时间时保证了按照从小到大的顺序发起查询 保证新收到的时间一定更大
+			{
+				int& unix0 = m_mapZzjId_newestVideoTime[strZzj][strType];
+				if (timeopt::SysTime2Unix(timeopt::str2st(theTime)) < unix0) {
+					continue;
+				}
+			}
+
+			int beforePos = 0;
+			int afterPos = 0;
+			if (strType == "cross") {
+				if (label == "定位" || label == "左位") { beforePos = 0; afterPos = 0; }
+				else { beforePos = 1; afterPos = 1; }
+			}
+			else {
+				if (label == "定位->反位" || label == "左位->右位") { beforePos = 0; afterPos = 1; }
+				else { beforePos = 1; afterPos = 0; }
+			}
+			httplib::Client cli(ipPort); 
+			auto res = cli.Get(path);//"/db/202410/30/1%23/1J1/扳动录像/170102.avi_mv" 
+			if (res && res->status == 200) {
+
+				//写入数据库
+				int flen = res->body.size();
+				char* out = new char[flen * 2 + 1];
+				tdb_base64_encode((const unsigned char*)res->body.c_str(), flen, out);
+				{
+					json j, jV, jFile;
+					string tag = m_strTagBind + "." + dc + "." + strZzj + "." + videoType;
+					j["tag"] = tag;
+					j["time"] = theTime;
+					jV["aaaa"] = "aaa";
+					j["val"] = jV;
+					j["beforePos"] = beforePos; // 0 定位， 1  反位
+					j["afterPos"] = afterPos;
+					j["vedioTimeLen"] = 0;// data->timelen;
+					j["vedioLen"] = res->body.size();
+					jFile["type"] = (strType == "cross" ? "avi_crs" : "avi_mv");
+					jFile["name"] = timeopt::TimeToHMSForFile(timeopt::str2st(theTime)) + (strType == "cross" ? ".avi_crs" : ".avi_mv");
+					jFile["data"] = out;
+					j["file"] = jFile;
+
+					j["db"] = "media";
+					tds->callAsyn("db.insert", j);
+				}
+				delete[] out;
+			}
+			else {
+				string err = res ? std::to_string(res->status) : "No response";
+				//log
+			}
+
+			bSaveOk = true;
+			strTime = theTime;
+		}
+		if (bSaveOk)
+			m_mapZzjId_newestVideoTime[strZzj][strType] = timeopt::SysTime2Unix(timeopt::str2st(strTime)) + 1;
+
+		break;
+	}
+	default:
+		break;
+	}
+
+	return true;
+}
+
+//基于http的视频同步-end
+
+
 ioDev_dcqk::ioDev_dcqk()
 {
 	m_devType = "dcqk-sys-device";
 	m_devTypeLabel = "道岔缺口站机";
 	m_level = "devcie";
 	InitializeCriticalSection(&m_csEqp);
+
+	m_stLastQueryVedioUrlTime = timeopt::now();
 }
 
 ioDev_dcqk::~ioDev_dcqk()
@@ -172,7 +461,6 @@ void ioDev_dcqk::DoAcq()
 }
 
 
-
 void ioDev_dcqk::DoCycleTask()
 {
 	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval) {
@@ -180,11 +468,21 @@ void ioDev_dcqk::DoCycleTask()
 		m_stLastHeartbeatTime = timeopt::now();
 	}
 
-	if (tds->conf->getInt("TB3386_EnableVideoSync",1) == 1){
-		if (!m_mapEqp.empty() && timeopt::CalcTimePassSecond(m_stLastQueryVedioTime) >= 2)
+	if (tds->conf->getInt("TB3386_EnableVideoSync", 1) == 1) {
+		/*if (!m_mapEqp.empty() && timeopt::CalcTimePassSecond(m_stLastQueryVedioTime) >= 2)
 		{
 			m_stLastQueryVedioTime = timeopt::now();
 			QueryVedioList();
+		}*/
+
+		//改为老版健康管理的机制：定期获取url列表，再用http下载
+		if(!m_bFirstDoCycle){
+			m_bFirstDoCycle = true;
+			InitVedioBuf();
+		}
+		if (timeopt::CalcTimePassSecond(m_stLastQueryVedioUrlTime) > 10) {
+			m_stLastQueryVedioUrlTime = timeopt::now();
+			QueryVedioUrlList();
 		}
 	}
 }
@@ -574,6 +872,14 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		}
 		break;
 	}
+	case FRAME_TYPE_JSON: 
+		if (pData->lpdata == NULL) {
+			string str = Parse315Protocol::ToString(*pData, 1);
+			LOG("[ioDev]dcqk异常的315数据包,%s", str.c_str());
+			return false;
+		}
+		ProcessJsonFrmData_0x3F((LPVOID)pData);
+		break;
 	default:
 		break;
 	}
@@ -2123,7 +2429,6 @@ void ioDev_dcqk::QueryVedioList()
 	}
 	LeaveCriticalSection(&m_csEqp);
 }
-
 
 
 //查询视频
