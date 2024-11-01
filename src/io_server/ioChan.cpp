@@ -60,8 +60,9 @@ bool ioChannel::loadConf(json& conf)
 			m_regType = conf["addr"]["regType"].get<string>();
 		if (conf["addr"]["regOffset"] != nullptr)
 			m_regOffset = conf["addr"]["regOffset"].get<int>();
+		if (conf["addr"]["regBitIndex"] != nullptr)
+			m_regBitIndex = conf["addr"]["regBitIndex"].get<int>();
 	}
-
 
 	if (conf["fmt"] != nullptr) {
 		m_fmt = conf["fmt"].get<string>();
@@ -71,7 +72,6 @@ bool ioChannel::loadConf(json& conf)
 		m_byteOrder = conf["byteOrder"].get<string>();
 	}
 		
-	
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
 

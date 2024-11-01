@@ -515,6 +515,7 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 		char* pChanData = regData + regOffsetResp * 2;
 		string storageFmt = pC->m_fmt;
 		string byteOrder = pC->m_byteOrder;
+		int bit16Index = pC->m_regBitIndex;
 		if (storageFmt == STORAGE_FMT::UInt16)
 		{
 			unsigned short mbVal;
@@ -560,6 +561,14 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 		else if (storageFmt == STORAGE_FMT::BCD32) {
 			unsigned long mbVal = BCDtoDec((const unsigned char*)pChanData, 4);
 			jVal = mbVal;
+		}
+		else if (storageFmt== STORAGE_FMT::Bit16No)
+		{
+			unsigned short mbVal;
+			memcpy(&mbVal, pChanData, 2);
+			common::endianSwap((char*)&mbVal, 2);
+			bool temp = (mbVal >> (15 - bit16Index) & 1) != 0;
+			jVal = temp;
 		}
 	}
 	else if(pC->m_regType == MODBUS_REG_TYPE::discreteInput || pC->m_regType == MODBUS_REG_TYPE::coil)

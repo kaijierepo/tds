@@ -1166,6 +1166,10 @@ string ioDev::getDevAddrStr(bool ignorePort)
 		{
 			string regType = m_jDevAddr["regType"].get<string>();
 			devAddr = regType + "/" + str::fromInt(m_jDevAddr["regOffset"].get<int>());
+			//增加了regBitIndex
+			auto kvRegBitIndex = m_jDevAddr.find("regBitIndex");
+			if (kvRegBitIndex != m_jDevAddr.end() && kvRegBitIndex.value().is_number())
+				devAddr += ("/" + str::fromInt(m_jDevAddr["regBitIndex"].get<int>()));
 		}
 		else if (m_addrType == DEV_ADDR_MODE::deviceID)
 		{

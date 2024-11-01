@@ -22,6 +22,7 @@ namespace STORAGE_FMT {
 	const string Double = "double";
 	const string BCD16 = "bcd16";
 	const string BCD32 = "bcd32";
+	const string Bit16No = "bit16no";
 }
 
 inline int storageSize(string fmt) {
@@ -61,6 +62,7 @@ public:
 	string m_regType; //modbus寄存器类型
 	string m_fmt;
 	string m_byteOrder;
+	int m_regBitIndex;
 
 	//线性校正
 	double m_k;
