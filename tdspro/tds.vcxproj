@@ -172,7 +172,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>tds</TargetName>
+    <TargetName>net2com</TargetName>
     <OutDir>../out/tds</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|Win32'">
@@ -556,7 +556,7 @@
     <ClCompile Include="..\src\tds.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
-    <ClCompile Include="..\src\tools\tcp2com.cpp" />
+    <ClCompile Include="..\src\tools\net2com.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
     <ClCompile Include="diskClean.cpp" />
     <ClCompile Include="fileUploadSrv.cpp" />
@@ -641,7 +641,7 @@
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
-    <ClInclude Include="..\src\tools\tcp2com.h" />
+    <ClInclude Include="..\src\tools\net2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
     <ClInclude Include="diskClean.h" />
     <ClInclude Include="fileUploadSrv.h" />

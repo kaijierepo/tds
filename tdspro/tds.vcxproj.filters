@@ -203,9 +203,6 @@
     <ClCompile Include="io_server\ioDev_srvStatus.cpp">
       <Filter>tdsPro\io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tools\tcp2com.cpp">
-      <Filter>tools</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\func_module\statusServer.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
@@ -254,6 +251,9 @@
     <ClCompile Include="fileUploadSrv.cpp" />
     <ClCompile Include="diskClean.cpp">
       <Filter>tdb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tools\net2com.cpp">
+      <Filter>tools</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -456,9 +456,6 @@
     <ClInclude Include="io_server\ioDev_srvStatus.h">
       <Filter>tdsPro\io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tools\tcp2com.h">
-      <Filter>tools</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\func_module\statusServer.h">
       <Filter>func_module</Filter>
     </ClInclude>
@@ -516,6 +513,9 @@
     <ClInclude Include="fileUploadSrv.h" />
     <ClInclude Include="diskClean.h">
       <Filter>tdb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\tools\net2com.h">
+      <Filter>tools</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
