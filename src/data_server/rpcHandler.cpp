@@ -947,7 +947,7 @@ void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SE
 		rpcResp.result = jList.dump(2);
 	}
 }
-
+#define TEST
 bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	string& result = rpcResp.result;
@@ -1011,6 +1011,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			return true;
 		}
 	}
+
 #ifdef TEST
 	else if (method == "testCrash")
 	{

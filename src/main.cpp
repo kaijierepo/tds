@@ -313,13 +313,8 @@ int main(int argc, char** argv)
 		ptr = tds->tools[mode];
 	}
 
-	if (mode == "watchDog" || mode == "wd" || mode == "dog" || mode == "tdsd" || mode[mode.length()-1] == 'd') //自定义守护进程
-	{
-#ifdef _WIN32
-		watchDog.run();
-#endif
-	}
-	else if (mode == "tcpHub")
+
+	if (mode == "tcpHub")
 	{
 		tcpHub* tr = new tcpHub();
 		tr->run();
