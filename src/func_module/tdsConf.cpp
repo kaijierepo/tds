@@ -14,6 +14,7 @@ tdsConfig::tdsConfig()
 	tdspPort = 665;
 	mbPort.push_back(664);
 	iq60Port = 663;
+	fileUploadPort = 671;
 	debugMode = false;
 	bConcurrentGateway = true;
 	confPath = "";
