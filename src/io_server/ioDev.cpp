@@ -216,7 +216,7 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
+			LOG("[error]IODev启动失败,地址配置异常,ip必须是一个字符串,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
 			return false;
 		}
 
@@ -228,21 +228,18 @@ bool ioDev::run()
 		}
 		else
 		{
-			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s",m_addrType.c_str(),m_jDevAddr.dump().c_str());
+			LOG("[error]IODev启动失败,地址配置异常,port必须是一个整数,设备地址模式=%s,配置信息:%s",m_addrType.c_str(),m_jDevAddr.dump().c_str());
 			return false;
 		}
 
 		//udp模式下，配置localPort不为0，用于设备进行udp回包时，不回给请求的udp客户端，而是发往固定端口的场景。
+		//localPort不是必须的
 		int localPort = 0;
 		if (m_jDevAddr["localPort"].is_number_integer())
 		{
 			localPort = m_jDevAddr["localPort"].get<int>();
 		}
-		else
-		{
-			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
-			return false;
-		}
+
 
 		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
@@ -380,6 +377,10 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		json jui;
 		jui = m_upgradeInfo.toJson();
 		conf["upgradeInfo"] = jui;
+	}
+
+	if (querier.getPAB) {
+		conf["pktAssembleBuff"] = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
 	}
 
 	if (querier.getChild)
@@ -882,6 +883,9 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 	}
 	if (opt.contains("getUpgradeInfo")) {
 		q.getUpgradeInfo = opt["getUpgradeInfo"].get<bool>();
+	}
+	if (opt.contains("getPAB")) {
+		q.getPAB = opt["getPAB"].get<bool>();
 	}
 	if (opt["type"].is_string()) {
 		q.type.push_back(opt["type"].get<string>());

@@ -92,6 +92,7 @@ struct DEV_QUERIER {
 	bool getChan;
 	bool getDetail;
 	bool getUpgradeInfo;
+	bool getPAB;  //get pkt assemble buffer
 	string rootTag;
 	vector<string> type;
 	vector<string> subType;
@@ -106,6 +107,7 @@ struct DEV_QUERIER {
 		getChan = true;
 		getDetail = true;
 		getUpgradeInfo = false;
+		getPAB = false;
 	}
 };
 

@@ -37,13 +37,44 @@ size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 	if (iLen < 4)
 		return 0;
 
+	unsigned char fCode = pData[1];
+
+	//头尾检测处理粘包
+	if (fCode == 0x01 || fCode == 0x02 || fCode == 0x03 || fCode == 0x04){
+		int byteCount = pData[2];
+
+		unsigned short crc1 = *(unsigned short*)(pData + 1/*addr*/ + 1/*funcCode*/ + 1/*byteCount*/ + byteCount);
+		unsigned short crc2 = common::N_CRC16((unsigned char*)pData, 3 + byteCount); //crc校验包含地址字节和功能码字节
+
+		//某些设备错误的使用了小端方式，兼容。crc本身并不绝对正确
+		if (crc1 == crc2) {
+			return 3 + byteCount + 2;
+		}
+
+		//规范方式，大端模式。 modbus slave软件，netAssist软件都是标准的
+		common::endianSwap((char*)&crc1, 2);
+		if (crc1 == crc2) {
+			return 3 + byteCount + 2;
+		}
+	}
+	//else if (fCode == 0x05) {
+	//	unsigned short crc1 = *(unsigned short*)(pData + 1/*addr*/ + 1/*funcCode*/ + 1/*byteCount*/ + byteCount);
+	//	common::endianSwap((char*)&crc1, 2);
+	//	unsigned short crc2 = common::N_CRC16((unsigned char*)pData, 3 + byteCount); //crc校验包含地址字节和功能码字节
+	//	if (crc1 == crc2) {
+	//		return 2 + byteCount + 2;
+	//	}
+	//}
+
 	unsigned short crc1 = *(unsigned short*)(pData + iLen - 2);
-	common::endianSwap((char*)&crc1, 2);
 	unsigned short crc2 = common::N_CRC16((unsigned char*)pData, iLen - 2);
 	if (crc1 == crc2)
 		return iLen;
-	else
-		return 0;
+	common::endianSwap((char*)&crc1, 2);
+	if (crc1 == crc2)
+		return iLen;
+
+	return 0;
 }
 
 size_t IsValidPkt_TDSP(unsigned char* pData, size_t iLen)
