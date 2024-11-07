@@ -64,6 +64,11 @@ bool ioDev_ModbusRtu::sendData(unsigned char* pData, size_t iLen)
 	return false;
 }
 
+
+bool ioDev_ModbusRtu::onRecvData(unsigned char* pData, size_t iLen) {
+	return ioDev_ModbusSlave::onRecvData(pData, iLen);
+}
+
 bool ioDev_ModbusRtu::onRecvPkt(unsigned char* pData, size_t iLen)
 {
 	MB_RTU_PKT respPkt;

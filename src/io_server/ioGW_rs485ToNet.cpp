@@ -119,6 +119,23 @@ bool ioGW_rs485ToNet::sendData(unsigned char* pData, size_t iLen)
 	return ioDev::sendData(pData, iLen);
 }
 
+void ioGW_rs485ToNet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
+{
+	stream2pkt* pab = &m_pab;
+	pab->PushStream(recvData, recvDataLen);
+
+
+	while (pab->PopPkt(IsValidPkt_ModbusRTU))
+	{
+		if (pab->abandonData != "")
+		{
+			string remoteAddr = udpSession.getRemoteIOAddr();
+			LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+		}
+		onRecvData(pab->pkt, pab->iPktLen);
+	}
+}
+
 
 
 bool ioGW_rs485ToNet::isConnected()
@@ -135,6 +152,8 @@ bool ioGW_rs485ToNet::isConnected()
 
 bool ioGW_rs485ToNet::onRecvData(unsigned char* pData, size_t iLen )
 {
+	setOnline();
+
 	m_lastBusRecvTime = timeopt::now();
 
 	if (!m_bRunning)
@@ -160,6 +179,7 @@ bool ioGW_rs485ToNet::onRecvData(unsigned char* pData, size_t iLen )
 
 bool ioGW_rs485ToNet::onRecvPkt(unsigned char* pData, size_t iLen)
 {
+	setOnline();
 	int addr = pData[0];
 
 	ioDev* p = getChild(str::fromInt(addr));

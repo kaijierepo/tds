@@ -105,7 +105,7 @@ mediaSrvIP=            #流媒体服务地址,留空为本机
 #IO服务
 ioSrvIP =                 #IO服务绑定的本地地址。在多网卡服务器上，需要指定与设备通信的那个IP地址。留空为默认0.0.0.0
 tdspPort = 665            #IO服务端口 默认665  TDSP协议   
-mbPort = 664              #IO服务端口 默认664  Modbus-RTU over TCP 使用串转网网关连接Modbus总线
+mbPort = 664              #IO服务端口 默认664  Modbus-RTU over TCP 使用串转网网关连接Modbus总线。支持逗号分隔配置多个端口( mbPort=664,20022)，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。
 iq60Port = 663            #IO服务端口 默认663  IQ60物云协议  
 mbTcpPort = 502           #IO服务端口 默认502  modbusTcp协议 
 leakDetectPort = 8085     #IO服务端口 默认8085 漏点监测设备

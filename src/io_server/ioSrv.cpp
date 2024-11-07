@@ -1365,7 +1365,6 @@ bool ioServer::runAsCloud()
 	//启动服务端口
 	if(tdspPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
 	if(tdspPort)LOG("[IO服务    ] 监听地址:UDP-" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP, Adaptor接入");
-	if(mbPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
 	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
 	if(iq60Port)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
 	if (jepPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(jepPort) + "设备协议 JEP");
@@ -1408,10 +1407,15 @@ bool ioServer::runAsCloud()
 	}
 
 
-
+	//modbus 接收端口可以支持多个端口，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。
 	for (int i = 0; i < tds->conf->mbPort.size(); i++) {
 		//io服务 664 Modbus over TCP
 		int mbPort = tds->conf->mbPort[i];
+		if (mbPort == 0)
+			continue;
+
+		LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbPort) + " 设备协议 modbus RTU over TCP");
+
 		tcpSrv* ts = new tcpSrv();
 		ts->m_strName = "modbus rtu";
 		ts->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
@@ -1425,6 +1429,7 @@ bool ioServer::runAsCloud()
 		}
 
 		//io服务 664 Modbus over UDP
+		//针对mbRtu的ioSrv处理服务。用于固定端口接收场景
 		udpServer* us = new udpServer();
 		if (us->run(&this->ioHandler_mbRtu_udp, mbPort, m_ioSrvIP))
 		{

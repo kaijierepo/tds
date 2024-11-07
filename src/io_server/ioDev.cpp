@@ -232,19 +232,33 @@ bool ioDev::run()
 			return false;
 		}
 
+		//udp模式下，配置localPort不为0，用于设备进行udp回包时，不回给请求的udp客户端，而是发往固定端口的场景。
+		int localPort = 0;
+		if (m_jDevAddr["localPort"].is_number_integer())
+		{
+			localPort = m_jDevAddr["localPort"].get<int>();
+		}
+		else
+		{
+			LOG("[error]IODev启动失败,地址配置异常,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
+			return false;
+		}
+
 		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
 				m_tcpClt = new tcpClt();
 			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClient重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
+			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 		}
 		else {
 			if (m_udpClt == nullptr)
 				m_udpClt = new UdpClt();
 
-			m_udpClt->run(this,0,ioSrv.m_ioSrvIPAsClient);
+			m_udpClt->run(this,localPort,ioSrv.m_ioSrvIPAsClient);
+			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpClient,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(),m_udpClt->m_port);
 		}
 
-		LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,设备地址:%s,绑定本地IP:%s", m_addrType.c_str(),m_devType.c_str(), getDevAddrStr().c_str(),ioSrv.m_ioSrvIP.c_str());
+
 	}
 	return true;
 }

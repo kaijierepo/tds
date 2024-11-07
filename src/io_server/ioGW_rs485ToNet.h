@@ -23,6 +23,8 @@ public:
 
 	bool sendData(unsigned char* pData, size_t iLen) override;
 
+	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
+
 	TIME m_lastBusSendTime;
 	TIME m_lastBusRecvTime;
 
