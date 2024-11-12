@@ -467,6 +467,9 @@ typedef bool (*tfunc_obj_setJAlmStatus)(std::string, std::string, json & js);
 typedef json (*tfunc_obj_getTypeTagByTag)(std::string);
 //log模块相关
 typedef void (*tfunc_log)(const char*, ...);
+//rpcHandler相关
+typedef bool (*tfunc_rpcHand_notify)(std::string,  json& js);
+
 struct AsInitParam
 {
 	string confPath; //alarm.json的目录
@@ -476,6 +479,7 @@ struct AsInitParam
 	tfunc_obj_setJAlmStatus func_obj_setJAlmStatus = NULL;
 	tfunc_obj_getTypeTagByTag func_obj_getTypeTagByTag = NULL;
 	tfunc_log func_log = NULL;
+	tfunc_rpcHand_notify func_rpcHand_notify = NULL;
 };
 
 class almServer

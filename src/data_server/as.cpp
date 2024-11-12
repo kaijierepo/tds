@@ -1,7 +1,6 @@
 ﻿#include "as.h"
 #include "tdb.h"
 
-#include "rpcHandler.h"
 #include "userMng.h"
 
 #include <regex>
@@ -1158,7 +1157,9 @@ void almServer::recover(ALARM_INFO& key)
 	}
 
 	json j = ai.toJson(this);
-	rpcSrv.notify("onAlarmRecover", j);  
+	//rpcSrv.notify("onAlarmRecover", j);  
+	if (m_initParam.func_rpcHand_notify)
+		m_initParam.func_rpcHand_notify("onAlarmRecover", j);
 }
 
 /*
@@ -1283,7 +1284,9 @@ void almServer::addAlarm(ALARM_INFO ai)
 	//通知给TDS客户端
 	if (!m_bTestSrv) {
 		json j = ai.toJson(this);
-		 rpcSrv.notify("onAlarmAdd", j);  
+		//rpcSrv.notify("onAlarmAdd", j); 
+		if (m_initParam.func_rpcHand_notify)
+			m_initParam.func_rpcHand_notify("onAlarmAdd", j);
 	}
 }
 
@@ -1600,7 +1603,9 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 	}
 
 	json j = ai.toJson(this);
-	rpcSrv.notify("onAlarmAck", j);  
+	//rpcSrv.notify("onAlarmAck", j);  
+	if (m_initParam.func_rpcHand_notify)
+		m_initParam.func_rpcHand_notify("onAlarmAck", j);
 
 	resp.result = "\"ok\"";
 }
@@ -1683,7 +1688,9 @@ int almServer::rpc_approve(json& params, as::RPC_RESP& resp, as::RPC_SESSION ses
 	}
 
 	json j = ai.toJson(this);
-	rpcSrv.notify("onAlarmAck", j);  
+	//rpcSrv.notify("onAlarmAck", j);  
+	if (m_initParam.func_rpcHand_notify)
+		m_initParam.func_rpcHand_notify("onAlarmAck", j);
 
 	resp.result = "\"ok\"";
 	return nRet;

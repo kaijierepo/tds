@@ -1,6 +1,7 @@
 #include "as_interface.h"
 #include <prj.h>
 //#include "logger.h"
+#include "rpcHandler.h"
 
 bool funcImp_obj_isEnableAlarm(string tag, string lang)
 {
@@ -32,3 +33,11 @@ json funcImp_obj_getTypeTagByTag(string tag)
 //{
 //	LOG(fmt,);
 //}
+
+bool funcImp_rpcHand_notify(string method,  json& js)
+{
+	rpcSrv.notify(method, js);
+
+	return true;
+}
+

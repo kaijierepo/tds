@@ -471,6 +471,7 @@ bool TDS_imp::run(string cmdline)
 	asInitParam.func_obj_setJAlmStatus = funcImp_obj_setJAlmStatus;
 	asInitParam.func_obj_getTypeTagByTag = funcImp_obj_getTypeTagByTag;
 	asInitParam.func_log = LOG;
+	asInitParam.func_rpcHand_notify = funcImp_rpcHand_notify;
 	//报警
 	string sCurAlarmFile = "/alarms/current";
 	string sHisAlarmFile = "/alarms/history";
