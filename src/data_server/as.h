@@ -461,13 +461,28 @@ protected:
 	almServer* m_pAlmSrv;
 };
 
+//obj模块相关 
+typedef bool (*tfunc_obj_isEnableAlarm)(std::string, std::string);
+typedef bool (*tfunc_obj_setJAlmStatus)(std::string, std::string, json & js);
+typedef json (*tfunc_obj_getTypeTagByTag)(std::string);
+//log模块相关
+typedef void (*tfunc_log)(const char*, ...);
+struct AsInitParam
+{
+	string confPath; //alarm.json的目录
+	bool enableGlobalAlarm = false;
+
+	tfunc_obj_isEnableAlarm func_obj_isEnableAlarm = NULL;
+	tfunc_obj_setJAlmStatus func_obj_setJAlmStatus = NULL;
+	tfunc_obj_getTypeTagByTag func_obj_getTypeTagByTag = NULL;
+	tfunc_log func_log = NULL;
+};
 
 class almServer
 {
 public:
-	//基础配置
-	string m_confpath; 
-	bool m_enableGlobalAlarm;
+	//基础配置 ini时指定
+	AsInitParam m_initParam;
 
 public:
 ////internal interface
@@ -513,7 +528,7 @@ public:
 		return inst;
 	}
 	void init(); //tds的conf路径
-	void init(const string& aCurPath, const string& aHisPath, string& confPath, bool enableGlobalAlarm);
+	void init(const string& aCurPath, const string& aHisPath, AsInitParam & asInitParam);
 
 	bool CompareTime(as::TIME& time1, as::TIME& time2);
 

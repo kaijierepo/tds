@@ -558,6 +558,7 @@
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\tools\net2com.cpp" />
     <ClCompile Include="..\src\tools\tcpHub.cpp" />
+    <ClCompile Include="as_interface.cpp" />
     <ClCompile Include="diskClean.cpp" />
     <ClCompile Include="fileUploadSrv.cpp" />
     <ClCompile Include="func_module\aliDDNS.cpp" />
@@ -643,6 +644,7 @@
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\net2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
+    <ClInclude Include="as_interface.h" />
     <ClInclude Include="diskClean.h" />
     <ClInclude Include="fileUploadSrv.h" />
     <ClInclude Include="func_module\aliDDNS.h" />

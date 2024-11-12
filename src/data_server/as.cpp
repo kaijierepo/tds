@@ -1,10 +1,8 @@
 ﻿#include "as.h"
 #include "tdb.h"
 
-//#include "prj.h"
 #include "rpcHandler.h"
 #include "userMng.h"
-#include "logger.h"
 
 #include <regex>
 #include <fstream>
@@ -1077,7 +1075,7 @@ almServer::~almServer(void)
 void almServer::init()
 {
 	string s;
-	if (as_fs::readFile(m_confpath + "/alarm.json", s) && s!="")
+	if (as_fs::readFile(m_initParam.confPath + "/alarm.json", s) && s!="")
 	{
 		json jAlms = json::parse(s);
 		for(int i=0;i< jAlms.size();i++)
@@ -1100,10 +1098,9 @@ void almServer::init()
 
 }
 
-void almServer::init(const string& aCurPath, const string& aHisPath, string &confPath, bool enableGlobalAlarm)
+void almServer::init(const string& aCurPath, const string& aHisPath, AsInitParam & asInitParam)
 {
-	m_confpath = confPath;
-	m_enableGlobalAlarm = enableGlobalAlarm;
+	m_initParam = asInitParam;
 
 	m_curPath = aCurPath;
 	m_histPath = aHisPath;
@@ -1179,7 +1176,10 @@ void almServer::addAlarm(ALARM_INFO ai)
 		string sTag = ai.tag;
 		if ( (ai.tag.find("(") != string::npos || ai.tag.find(")") != string::npos)
 			&& (ai.tag.find("[") != string::npos || ai.tag.find("]") != string::npos) ) {
-			LOG("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+			//LOG("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+			auto func_log = m_initParam.func_log;
+			if (func_log)
+				func_log("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
 			return;
 		}
 		string::size_type pos_s = ai.tag.find("(");
@@ -1208,12 +1208,25 @@ void almServer::addAlarm(ALARM_INFO ai)
 				return;
 			}
 		}*/
+		auto func_obj_isEnableAlarm = m_initParam.func_obj_isEnableAlarm;
+		if (func_obj_isEnableAlarm != NULL && func_obj_isEnableAlarm(sTag, "zh") == false) {
+			auto func_log = m_initParam.func_log;
+			if(func_log)
+				func_log("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+			//string  log = as_str::format("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+			//if (cb_log != NULL) {
+			//	cb_log(log);
+			//}
+			return;
+		}
 
 		//如果没有位号，报警默认不禁用
 	}
 
-	LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
-
+	//LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
+	auto func_log = m_initParam.func_log;
+	if (func_log)
+		func_log("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 
 	//事件报警重复性检查
 	if (m_eventAlarmRepetitiveCheck) {
@@ -1259,7 +1272,10 @@ void almServer::addAlarm(ALARM_INFO ai)
 	{
 		if (tds->smsServer->send(msg, pl))
 		{
-			LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
+			//LOG("[报警短信通知]报警:" + msg + ",通知人:" + pnl);
+			auto func_log = m_initParam.func_log;
+			if (func_log)
+				func_log(("[报警短信通知]报警:" + msg + ",通知人:" + pnl).c_str());
 		}
 		
 	}
@@ -1293,7 +1309,10 @@ void almServer::Update(ALARM_INFO newStatus)
 
 		if (newStatus.typeLabel == "")
 		{
-			LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
+			//LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
+			auto func_log = m_initParam.func_log;
+			if (func_log)
+				func_log(("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息").c_str());
 		}
 	}
 	
@@ -1368,6 +1387,12 @@ void almServer::Update(ALARM_INFO newStatus)
 		{
 			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
 		}*/
+		auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
+		if (func_obj_setJAlmStatus != NULL ) {
+			json  js = getAlarmStatus(newStatus.tag);
+			func_obj_setJAlmStatus(sTag, "zh", js);
+		}
+
 	//}
 
 	//json j = newStatus.toJson(this);
@@ -1700,7 +1725,7 @@ json almServer::rpcReqParams2Querier(json& params, as::RPC_SESSION session)
 string almServer::rpc_getCurrent(json params, as::RPC_SESSION session)
 {
 	//全局报警禁用功能
-	if (!m_enableGlobalAlarm)
+	if (!m_initParam.enableGlobalAlarm)
 	{
 		return "[]";
 	}
@@ -1712,7 +1737,7 @@ string almServer::rpc_getCurrent(json params, as::RPC_SESSION session)
 string almServer::rpc_getUnRecover(json params, as::RPC_SESSION session)
 {
 	//全局报警禁用功能
-	if (!m_enableGlobalAlarm)
+	if (!m_initParam.enableGlobalAlarm)
 	{
 		return "[]";
 	}
@@ -1725,7 +1750,7 @@ string almServer::rpc_getUnRecover(json params, as::RPC_SESSION session)
 string almServer::rpc_getUnack(json params, as::RPC_SESSION session)
 {
 	//全局报警禁用功能
-	if (!m_enableGlobalAlarm)
+	if (!m_initParam.enableGlobalAlarm)
 	{
 		return "[]";
 	}
@@ -1925,6 +1950,14 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 					if (jTypeTag != nullptr) {
 						j["typeTag"] = jTypeTag;
 					}*/
+					auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
+					if (func_obj_getTypeTagByTag != NULL) {
+						json jTypeTag = func_obj_getTypeTagByTag(it->tag);
+						if (jTypeTag != nullptr) {
+							j["typeTag"] = jTypeTag;
+						}
+					}
+					
 				}
 
 				jDataSet.push_back(j);
@@ -1945,6 +1978,13 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 				if (jTypeTag != nullptr) {
 					j["typeTag"] = jTypeTag;
 				}*/
+				auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
+				if (func_obj_getTypeTagByTag != NULL) {
+					json jTypeTag = func_obj_getTypeTagByTag(it->tag);
+					if (jTypeTag != nullptr) {
+						j["typeTag"] = jTypeTag;
+					}
+				}
 			}
 
 			jDataSet.push_back(j);

@@ -255,6 +255,9 @@
     <ClCompile Include="..\src\tools\net2com.cpp">
       <Filter>tools</Filter>
     </ClCompile>
+    <ClCompile Include="as_interface.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -516,6 +519,9 @@
     </ClInclude>
     <ClInclude Include="..\src\tools\net2com.h">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="as_interface.h">
+      <Filter>data_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

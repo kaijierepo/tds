@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
 #include "kvIni.h"
+#include "tds.h"//not good, but if not include this,it will show the error: undefined iTDSConf.
 using namespace std;
 #include "json.hpp"
 using json = nlohmann::json;
-
 
 
 

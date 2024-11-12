@@ -46,6 +46,8 @@ SOFTWARE.
 #include "taskServer.h"
 #include "statusServer.h"
 #include "common.h"
+
+#include "as_interface.h"
 #ifdef _WIN32
 #include "memDiag.h"
 #endif
@@ -461,21 +463,29 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.loadConf();
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
 
+	//报警服务相关
+	AsInitParam asInitParam;
+	asInitParam.confPath = tds->conf->confPath;
+	asInitParam.enableGlobalAlarm = tds->conf->enableGlobalAlarm;
+	asInitParam.func_obj_isEnableAlarm = funcImp_obj_isEnableAlarm;
+	asInitParam.func_obj_setJAlmStatus = funcImp_obj_setJAlmStatus;
+	asInitParam.func_obj_getTypeTagByTag = funcImp_obj_getTypeTagByTag;
+	asInitParam.func_log = LOG;
 	//报警
 	string sCurAlarmFile = "/alarms/current";
 	string sHisAlarmFile = "/alarms/history";
-	almSrv.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
+	almSrv.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
 	sCurAlarmFile = "/alarmsDevelop/current";
 	sHisAlarmFile = "/alarmsDevelop/history";
-	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
+	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
 	almSrv_dev.m_bTestSrv = true;
 	//故障
 	sCurAlarmFile = "/faults/current";
 	sHisAlarmFile = "/faults/history";
-	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
+	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
 	sCurAlarmFile = "/faultsDevelop/current";
 	sHisAlarmFile = "/faultsDevelop/history";
-	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
+	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
 	almSrv_fauDev.m_bTestSrv = true;
 	
 

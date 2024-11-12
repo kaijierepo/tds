@@ -30,6 +30,7 @@ SOFTWARE.
 #include "json.hpp"
 
 #include "tdb.h"
+#include "common.h"
 using namespace std;
 using json = nlohmann::json;
 class OBJ;
