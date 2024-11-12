@@ -2371,8 +2371,9 @@ vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
 	return vec;
 }
 
-bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION session0)
 {
+	as::RPC_SESSION session = *(as::RPC_SESSION*)(&session0);//强转不太好 先这样吧
 	almServer* pAlmSrv = nullptr;
 
 	if (session.dbpath == "alarmsDevelop")
@@ -2395,6 +2396,8 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		pAlmSrv = &almSrv;
 	}
+	
+	as::RPC_RESP rpcResp;
 	string& result = rpcResp.result;
 	bool bHandled = true;
 	//** 数据查询系列
@@ -2402,6 +2405,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		json jFilter= params;
 		//jFilter["rootTag"] = params["rootTag"];
+		
 		result = pAlmSrv->rpc_getCurrent(jFilter, session);
 	}
 	else if (method == "getAlarmUnRecover")
@@ -2464,7 +2468,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	}
 	else if (method == "ackAlarm" || method == "ackAlarmEvent")
 	{
-		pAlmSrv->rpc_acknowledge(params,rpcResp, session);
+		pAlmSrv->rpc_acknowledge(params, rpcResp, session);
 	}
 	else if (method == "ackAllAlarm" || method == "ackAllAlarmEvent")
 	{
@@ -2484,6 +2488,8 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		bHandled = false;
 	}
+
+	rpcResp0 = *( (RPC_RESP*)&rpcResp );//强转不太好 先这样吧
 	return bHandled;
 }
 

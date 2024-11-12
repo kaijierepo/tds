@@ -464,18 +464,18 @@ bool TDS_imp::run(string cmdline)
 	//报警
 	string sCurAlarmFile = "/alarms/current";
 	string sHisAlarmFile = "/alarms/history";
-	almSrv.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
 	sCurAlarmFile = "/alarmsDevelop/current";
 	sHisAlarmFile = "/alarmsDevelop/history";
-	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
 	almSrv_dev.m_bTestSrv = true;
 	//故障
 	sCurAlarmFile = "/faults/current";
 	sHisAlarmFile = "/faults/history";
-	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
 	sCurAlarmFile = "/faultsDevelop/current";
 	sHisAlarmFile = "/faultsDevelop/history";
-	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile);
+	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile, tds->conf->confPath, tds->conf->enableGlobalAlarm);
 	almSrv_fauDev.m_bTestSrv = true;
 	
 

@@ -693,7 +693,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			jParams["tag"] = m_strTagBind + "." + sDaoChaName + "." + sZZJName;
 			jParams["id"] = "";
 			almServer* pAlmSrv = &almSrv;
-			RPC_RESP resp;
+			as::RPC_RESP resp;
 			
 
 			//"time":"2023-08-08 11:12:23",
@@ -2249,7 +2249,6 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 	for (int i = 0; i < pInfo->cnt; i++) {
 		auto list = (StGapRecord*)(pInfo->lpdata);
 		StGapRecord* pRecord = &(list[i]);
-
 		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
 		//m_mapSIDToName;
 		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));
