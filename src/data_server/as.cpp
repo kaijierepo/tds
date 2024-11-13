@@ -1,8 +1,6 @@
 ﻿#include "as.h"
 #include "tdb.h"
 
-#include "userMng.h"
-
 #include <regex>
 #include <fstream>
 #include <sstream>
@@ -1060,6 +1058,19 @@ namespace as_sys {
 
 }
 
+namespace as_TAG {
+	string addRoot(string tag, string root)
+	{
+		if (root == "")
+			return tag;
+
+		//tag是相对于root的相对位号
+		if (tag == "")
+			return root;
+
+		return root + "." + tag;
+	}
+}
 
 almServer::almServer(void)
 {
@@ -1253,6 +1264,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 	msg += "报警对象:" + ai.tag + "; ";
 	msg += "报警时间:" + ai.time + "; ";
 	
+	/*
 	vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
 	string pl, pnl;
 
@@ -1279,8 +1291,11 @@ void almServer::addAlarm(ALARM_INFO ai)
 				func_log(("[报警短信通知]报警:" + msg + ",通知人:" + pnl).c_str());
 		}
 		
+	}*/
+	if (m_initParam.func_sms_notify) {
+		m_initParam.func_sms_notify(ai.tag, msg);
 	}
-	
+
 	//通知给TDS客户端
 	if (!m_bTestSrv) {
 		json j = ai.toJson(this);
@@ -1459,7 +1474,7 @@ string almServer::rpc_addAlarm(json j, as::RPC_RESP& resp, bool bUpdate)
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];
 		string tag = j["tag"];
-		j["tag"] = TAG::addRoot(tag, rootTag);
+		j["tag"] = as_TAG::addRoot(tag, rootTag);
 	}
 
 	ALARM_INFO ai;
@@ -1488,7 +1503,7 @@ void almServer::rpc_recoverAlarm(json j, as::RPC_RESP& resp)
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];
 		string tag = j["tag"];
-		j["tag"] = TAG::addRoot(tag, rootTag);
+		j["tag"] = as_TAG::addRoot(tag, rootTag);
 	}
 
 	if (!j.contains("level"))
@@ -1515,7 +1530,7 @@ void almServer::rpc_updateStatus(json j, as::RPC_RESP& resp)
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];
 		string tag = j["tag"];
-		j["tag"] = TAG::addRoot(tag, rootTag);
+		j["tag"] = as_TAG::addRoot(tag, rootTag);
 	}
 
 	try
@@ -1524,7 +1539,7 @@ void almServer::rpc_updateStatus(json j, as::RPC_RESP& resp)
 		ai.fromJson(j);
 		//ai.time = timeopt::nowStr();
 		Update(ai);
-		resp.result = RPC_OK;
+		resp.result = as::rPC_OK;
 	}
 	catch (std::exception& e)
 	{
@@ -1538,7 +1553,7 @@ void almServer::rpc_updateStatus(json j, as::RPC_RESP& resp)
 //基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSION session) {
 	if (params.contains("uuid")==false  && (params.contains("tag") == false)) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+		string error = as::makeRPCError(as::RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
 		resp.error = error;
 		return;
 	}
@@ -1549,10 +1564,10 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 			rootTag = params["rootTag"];
 		}
 		string tag = params["tag"];
-		tag = TAG::addRoot(tag, rootTag);
+		tag = as_TAG::addRoot(tag, rootTag);
 
 		//用户位号转系统位号
-		tag = TAG::addRoot(tag, session.org);
+		tag = as_TAG::addRoot(tag, session.org);
 		params["tag"] = tag;
 	}
 
@@ -1579,7 +1594,7 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 	}
 	else
 	{
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+		string error = as::makeRPCError(as::RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
 		resp.error = error;
 		return;
 	}
@@ -1621,7 +1636,7 @@ void almServer::rpc_acknowledgeAll(json& params, as::RPC_RESP& resp, as::RPC_SES
 int almServer::rpc_approve(json& params, as::RPC_RESP& resp, as::RPC_SESSION session) {
 	int nRet = -1;
 	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+		string error = as::makeRPCError(as::RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
 		resp.error = error;
 		return nRet;
 	}
@@ -1636,10 +1651,10 @@ int almServer::rpc_approve(json& params, as::RPC_RESP& resp, as::RPC_SESSION ses
 			rootTag = params["rootTag"];
 		}
 		string tag = params["tag"];
-		tag = TAG::addRoot(tag, rootTag);
+		tag = as_TAG::addRoot(tag, rootTag);
 
 		//用户位号转系统位号
-		tag = TAG::addRoot(tag, session.org);
+		tag = as_TAG::addRoot(tag, session.org);
 		params["tag"] = tag;
 	}
 
@@ -1666,7 +1681,7 @@ int almServer::rpc_approve(json& params, as::RPC_RESP& resp, as::RPC_SESSION ses
 	}
 	else
 	{
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+		string error = as::makeRPCError(as::RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
 		resp.error = error;
 		return nRet;
 	}
@@ -1705,12 +1720,12 @@ json almServer::rpcReqParams2Querier(json& params, as::RPC_SESSION session)
 	if (params["rootTag"] != nullptr)
 	{
 		rootTag = params["rootTag"].get<string>();
-		rootTag = TAG::addRoot(rootTag, session.org);
+		rootTag = as_TAG::addRoot(rootTag, session.org);
 	}
 	//用户没有设置rootTag.将用户的org直接作为rootTag
 	else
 	{
-		rootTag = TAG::addRoot(rootTag, session.org);
+		rootTag = as_TAG::addRoot(rootTag, session.org);
 	}
 	querier["rootTag"] = rootTag;
 	querier["user"] = session.user;
@@ -1776,7 +1791,7 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 	if (params["rootTag"].is_string()) {
 		rootTag = params["rootTag"].get<string>();
 	}
-	rootTag = TAG::addRoot(rootTag, session.org);
+	rootTag = as_TAG::addRoot(rootTag, session.org);
 	params["rootTag"] = rootTag;
 
 	if (!params.contains("tag")) {
@@ -1861,8 +1876,14 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 			tableTemp->loadFile(tableTemp->getFilePath(iYear, iMonth));
 			for (map<string, ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
 				if (session.user != "") {
-					if (!userMng.checkTagPermission(session.user, it->second->tag))
-						continue;
+					//if (!userMng.checkTagPermission(session.user, it->second->tag))
+						//continue;
+					if (m_initParam.func_usrMng_checkTagPermission) {
+						if (m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
+							continue;
+						}
+					}
+					
 				}
 				if (!tagSelector.match(it->second->tag)) {
 					continue;
@@ -2586,9 +2607,16 @@ vector<ALARM_INFO*> almTable::query(json querier)
 	}
 	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
 	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
-		if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
-			continue;
-		
+		//if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
+			//continue;
+		if (aq.filter_user) {
+			if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission) {
+				if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission(aq.user, it->second->tag)) {
+					continue;
+				}
+			}
+		}
+
 		ALARM_INFO* pAi = it->second;
 
 		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)

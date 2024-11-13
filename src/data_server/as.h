@@ -6,7 +6,7 @@
 #include <shared_mutex>
 /*
 要求可直接移植到JHD，把引用其他文件里的那些东西都挪进来  by zgw 20241112
-无名空间的各种原有定义放到名空间as(宏改为全局变量), 原有的名空间上加上as_前缀  
+无名空间的各种原有定义放到名空间as(宏改为全局变量); 原有的名空间上加上as_前缀; 调用其他模块的地方及关联逻辑改为函数指针移到外面;  
 */
 namespace as {
 
@@ -187,11 +187,28 @@ namespace as {
 		bool isNotification; //is request a notification.no response will send if request is a notification
 	};
 
+	enum RPC_ERROR_CODE {
+		ALM_alarmEventNotFound = -44001,
+	};
+
 	bool matchTag(string pattern, const string& src);
 	bool generalMatch(string pattern, const string& src);
 	string getUUID();
 
 	int _vscprintf_cross(const char* format, va_list pargs);
+
+	inline string makeRPCError(int code, string msg, string desc = "")
+	{
+		string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"";
+		if (desc != "")
+		{
+			string data = ",\"data\":{\"desc\":\"" + desc + "\"}";
+			error += data;
+		}
+		error += "}";
+
+		return error;
+	}
 };
 
 namespace as_timeopt {
@@ -264,6 +281,10 @@ namespace as_common {
 namespace as_sys {
 	string getLastError(string szReason = "");
 
+}
+
+namespace as_TAG {
+	string addRoot(string tag, string root);
 }
 
 /*  Alarm Key
@@ -469,6 +490,9 @@ typedef json (*tfunc_obj_getTypeTagByTag)(std::string);
 typedef void (*tfunc_log)(const char*, ...);
 //rpcHandler相关
 typedef bool (*tfunc_rpcHand_notify)(std::string,  json& js);
+//取用户信息发短信
+typedef bool (*tfunc_sms_notify)(std::string, std::string&);
+typedef bool (*tfunc_usrMng_checkTagPermission)(std::string, std::string);
 
 struct AsInitParam
 {
@@ -480,6 +504,8 @@ struct AsInitParam
 	tfunc_obj_getTypeTagByTag func_obj_getTypeTagByTag = NULL;
 	tfunc_log func_log = NULL;
 	tfunc_rpcHand_notify func_rpcHand_notify = NULL;
+	tfunc_sms_notify func_sms_notify = NULL;
+	tfunc_usrMng_checkTagPermission func_usrMng_checkTagPermission=NULL;
 };
 
 class almServer
