@@ -30,10 +30,10 @@ almServer almSrv_fauDev;
 
 namespace as {
 	const char* rPC_NULL = "null";
-	const char* rPC_OK ="\"ok\"";
-	const char* rPC_TIMEOUT= "\"timeout\"";
-	const char* rPC_FAIL= "\"fail\"";
-//#define RPC_STR(s) "\""+s+"\""
+	const char* rPC_OK = "\"ok\"";
+	const char* rPC_TIMEOUT = "\"timeout\"";
+	const char* rPC_FAIL = "\"fail\"";
+	//#define RPC_STR(s) "\""+s+"\""
 
 	string Date::toStr()
 	{
@@ -540,7 +540,7 @@ namespace as_str {
 		}
 		return ary;
 	}
-	
+
 	string removeChar(string str, char c)
 	{
 		str.erase(std::remove(str.begin(), str.end(), c), str.end());
@@ -549,6 +549,40 @@ namespace as_str {
 }
 
 namespace as_fs {
+	string GetDir(string strIn)
+	{
+#ifdef _WIN32
+		std::string& str = strIn;
+		std::string::size_type pos = str.find_last_of("\\/");
+		std::string strDir = str;
+		if (pos != std::string::npos) {
+			strDir = str.substr(0, pos);
+		}
+		return strDir;
+#else
+		return "";
+#endif
+	}
+
+	void CreateDirectoryPlus_old(string str)
+	{
+#ifdef _WIN32
+		if (str.empty()) return;
+		::CreateDirectory(str.c_str(), NULL);
+
+		DWORD dwAttrib = GetFileAttributes(str.c_str());
+		bool bDirExist = INVALID_FILE_ATTRIBUTES != dwAttrib && 0 != (dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
+
+		if (!bDirExist) {
+			CreateDirectoryPlus_old(GetDir(str));
+			::CreateDirectory(str.c_str(), NULL);
+		}
+#else
+		return;
+#endif
+	}
+
+
 	//带后缀 .XXX 作为文件路径
 //不带后缀作为文件夹路径。不要输入无后缀的文件路径
 //filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
@@ -572,7 +606,14 @@ namespace as_fs {
 
 #ifdef _WIN32
 #ifndef _WINXP
+
+#if __cplusplus <= 201402L
+		CreateDirectoryPlus_old(strFile);
+		return true;
+#else
 		return filesystem::create_directories(as_charCodec::tds_to_utf16(strFile));
+#endif
+
 #endif
 #else
 		filesystem::path p = strFile;
@@ -637,7 +678,7 @@ namespace as_fs {
 	}
 	bool writeFile(string path, char* data, size_t len)
 	{
-		createFolderOfPath(path);
+		CreateDirectoryPlus_old(path);
 
 		FILE* fp = nullptr;
 #ifdef _WIN32
@@ -1085,10 +1126,10 @@ almServer::~almServer(void)
 void almServer::init()
 {
 	string s;
-	if (as_fs::readFile(m_initParam.confPath + "/alarm.json", s) && s!="")
+	if (as_fs::readFile(m_initParam.confPath + "/alarm.json", s) && s != "")
 	{
 		json jAlms = json::parse(s);
-		for(int i=0;i< jAlms.size();i++)
+		for (int i = 0; i < jAlms.size(); i++)
 		{
 			json& jAlmDesc = jAlms[i];
 			ALARM_TEMPLATE at;
@@ -1102,13 +1143,13 @@ void almServer::init()
 			m_mapCustomAlarmDesc[jAlmDesc["type"].get<string>()] = at;
 		}
 	}
-	
+
 	//tableStatus.init("\\alarms\\status");
 	//tableUnack.init("\\alarms\\unack");
 
 }
 
-void almServer::init(const string& aCurPath, const string& aHisPath, AsInitParam & asInitParam)
+void almServer::init(const string& aCurPath, const string& aHisPath, AsInitParam& asInitParam)
 {
 	m_initParam = asInitParam;
 
@@ -1137,7 +1178,7 @@ void almServer::recover(ALARM_INFO& key)
 		ai.bRecover = 1;
 		tableUnack.update(ai);
 	}
-	
+
 	if(tableHist.query(key,ai))
 	{
 		ai.bRecover = 1;
@@ -1175,7 +1216,7 @@ void almServer::recover(ALARM_INFO& key)
 
 /*
 2类as：  正式 和 测试
-对于正式as 
+对于正式as
 1）tag支持 小括号和 中括号
 真正tag可放小括号里外面的表示备注或额外说明，或   中括号表示备注 外面的表示备注
 即： 真正tag、xxx(真正tag)、真正tag[xxx]
@@ -1186,8 +1227,8 @@ void almServer::addAlarm(ALARM_INFO ai)
 	if (m_bTestSrv == false)
 	{
 		string sTag = ai.tag;
-		if ( (ai.tag.find("(") != string::npos || ai.tag.find(")") != string::npos)
-			&& (ai.tag.find("[") != string::npos || ai.tag.find("]") != string::npos) ) {
+		if ((ai.tag.find("(") != string::npos || ai.tag.find(")") != string::npos)
+			&& (ai.tag.find("[") != string::npos || ai.tag.find("]") != string::npos)) {
 			//LOG("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
 			auto func_log = m_initParam.func_log;
 			if (func_log)
@@ -1195,18 +1236,18 @@ void almServer::addAlarm(ALARM_INFO ai)
 			return;
 		}
 		string::size_type pos_s = ai.tag.find("(");
-		if (pos_s != string::npos){
+		if (pos_s != string::npos) {
 			string::size_type pos_e = ai.tag.find(")");
-			if (pos_e != string::npos){
-				sTag = ai.tag.substr(pos_s+1, pos_e-(pos_s+1));
+			if (pos_e != string::npos) {
+				sTag = ai.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
 			}
 		}
 		else {
 			string::size_type pos_s = ai.tag.find("[");
-			if (pos_s != string::npos){
+			if (pos_s != string::npos) {
 				string::size_type pos_e = ai.tag.find("]");
-				if (pos_e != string::npos){
-					
+				if (pos_e != string::npos) {
+
 					sTag = ai.tag.substr(0, pos_s) + ai.tag.substr(pos_e + 1);
 				}
 			}
@@ -1223,12 +1264,9 @@ void almServer::addAlarm(ALARM_INFO ai)
 		auto func_obj_isEnableAlarm = m_initParam.func_obj_isEnableAlarm;
 		if (func_obj_isEnableAlarm != NULL && func_obj_isEnableAlarm(sTag, "zh") == false) {
 			auto func_log = m_initParam.func_log;
-			if(func_log)
+			if (func_log)
 				func_log("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			//string  log = as_str::format("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			//if (cb_log != NULL) {
-			//	cb_log(log);
-			//}
+			//LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
 			return;
 		}
 
@@ -1255,7 +1293,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 
 
 	ai.uuid = as::getUUID();
-	 
+
 	tableCurrent.add(ai);
 	tableHist.add(ai);
 
@@ -1263,7 +1301,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 	string msg = "报警类型:" + ai.typeLabel + "; ";
 	msg += "报警对象:" + ai.tag + "; ";
 	msg += "报警时间:" + ai.time + "; ";
-	
+
 	/*
 	vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
 	string pl, pnl;
@@ -1290,7 +1328,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 			if (func_log)
 				func_log(("[报警短信通知]报警:" + msg + ",通知人:" + pnl).c_str());
 		}
-		
+
 	}*/
 	if (m_initParam.func_sms_notify) {
 		m_initParam.func_sms_notify(ai.tag, msg);
@@ -1333,7 +1371,7 @@ void almServer::Update(ALARM_INFO newStatus)
 				func_log(("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息").c_str());
 		}
 	}
-	
+
 	std::lock_guard<mutex> g(m_csAlarmData);
 
 	if (newStatus.time == "")
@@ -1351,7 +1389,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
 	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
-	if (tableCurrent.query(filter,lastStatus))
+	if (tableCurrent.query(filter, lastStatus))
 	{
 		//check if status has changed
 		//如果当前报警等级和之前发生改变。
@@ -1360,7 +1398,7 @@ void almServer::Update(ALARM_INFO newStatus)
 			lastStatus.stRecoverTime = as_timeopt::str2st(newStatus.time);
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus);
-			if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
+			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
 			{
 				//再产生新的报警
 				addAlarm(newStatus);
@@ -1377,7 +1415,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	}
 	else
 	{
-		if (newStatus.level != "" &&  newStatus.level != "normal" && newStatus.level != "正常")
+		if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
 		{
 			addAlarm(newStatus);
 			bTagAlarmStatusChanged = true;
@@ -1388,28 +1426,28 @@ void almServer::Update(ALARM_INFO newStatus)
 	//更新mo对象中的缓存
 	//if (bTagAlarmStatusChanged)
 	//{
-		string sTag = newStatus.tag;
-		string::size_type pos_s = newStatus.tag.find("(");
-		if (pos_s != string::npos)
-		{
-			string::size_type pos_e = newStatus.tag.find(")");
+	string sTag = newStatus.tag;
+	string::size_type pos_s = newStatus.tag.find("(");
+	if (pos_s != string::npos)
+	{
+		string::size_type pos_e = newStatus.tag.find(")");
 
-			if (pos_e != string::npos)
-			{
-				sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
-			}
-		}
-		
-		/*OBJ* pmo = prj.queryObj(sTag, "zh");
-		if (pmo)
+		if (pos_e != string::npos)
 		{
-			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
-		}*/
-		auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
-		if (func_obj_setJAlmStatus != NULL ) {
-			json  js = getAlarmStatus(newStatus.tag);
-			func_obj_setJAlmStatus(sTag, "zh", js);
+			sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
 		}
+	}
+
+	/*OBJ* pmo = prj.queryObj(sTag, "zh");
+	if (pmo)
+	{
+		pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
+	}*/
+	auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
+	if (func_obj_setJAlmStatus != NULL) {
+		json  js = getAlarmStatus(newStatus.tag);
+		func_obj_setJAlmStatus(sTag, "zh", js);
+	}
 
 	//}
 
@@ -1488,7 +1526,7 @@ string almServer::rpc_addAlarm(json j, as::RPC_RESP& resp, bool bUpdate)
 
 	m_eventAlarmRepetitiveCheck = false;
 	if (j.contains("repeteCheck")) {
-		bool b0= j["repeteCheck"].get<bool>();
+		bool b0 = j["repeteCheck"].get<bool>();
 		if (b0) {
 			m_eventAlarmRepetitiveCheck = true;
 		}
@@ -1546,13 +1584,13 @@ void almServer::rpc_updateStatus(json j, as::RPC_RESP& resp)
 		json jErr = e.what();
 		resp.error = jErr.dump();
 	}
-	
+
 }
 
 
 //基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSION session) {
-	if (params.contains("uuid")==false  && (params.contains("tag") == false)) {
+	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
 		string error = as::makeRPCError(as::RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
 		resp.error = error;
 		return;
@@ -1572,7 +1610,7 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 	}
 
 	ALARM_INFO ai;
-	if(tableCurrent.query(params,ai))
+	if (tableCurrent.query(params, ai))
 	{
 		string user = session.user;
 		string info;
@@ -1599,9 +1637,9 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 		return;
 	}
 
-	if (params.contains("time")==false)//用时间对应历史表文件  时间来自未确定文件.
+	if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
 		params["time"] = ai.time;
-	if(tableHist.query(params,ai))
+	if (tableHist.query(params, ai))
 	{
 		string user = session.user;
 		string info;
@@ -1627,7 +1665,7 @@ void almServer::rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSIO
 
 void almServer::rpc_acknowledgeAll(json& params, as::RPC_RESP& resp, as::RPC_SESSION session)
 {
-	
+
 }
 
 //params ：对应ai那个结构
@@ -1883,7 +1921,7 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 							continue;
 						}
 					}
-					
+
 				}
 				if (!tagSelector.match(it->second->tag)) {
 					continue;
@@ -1985,7 +2023,7 @@ string almServer::rpc_getHistory(json params, as::RPC_SESSION session)
 							j["typeTag"] = jTypeTag;
 						}
 					}
-					
+
 				}
 
 				jDataSet.push_back(j);
@@ -2104,34 +2142,34 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		string str = toCSV(ai);
 		data += str;
 	}
-	as_fs::createFolderOfPath(strFile);
+	as_fs::CreateDirectoryPlus_old(strFile);
 	//data = as_charCodec::utf8_to_gb(data);//直接存储utf8
 	as_fs::writeFile(strFile, data);
 }
 
-string almTable::getFilePath(int y,int m){
-	string p ;
-	if(bOneFilePerMonth)
+string almTable::getFilePath(int y, int m) {
+	string p;
+	if (bOneFilePerMonth)
 	{
 		string strYM = as_str::format("%04d%02d", y, m);
 		p = db.m_path + filePath + "_" + strYM + ".csv";
 	}
 	else
 	{
-		p = db.m_path + filePath  + ".csv";
+		p = db.m_path + filePath + ".csv";
 	}
 	return p;
 }
 
-string almTable::getFilePath(string time){
+string almTable::getFilePath(string time) {
 	if (time == "")
-		return db.m_path + filePath  + ".csv";
-	
+		return db.m_path + filePath + ".csv";
+
 	as::TIME st = as_timeopt::str2st(time);
-	int y,m;
+	int y, m;
 	y = st.wYear;
 	m = st.wMonth;
-	return getFilePath(y,m);
+	return getFilePath(y, m);
 }
 
 void almTable::loadFile(string strFile)
@@ -2152,11 +2190,11 @@ void almTable::loadFile(string strFile)
 	for (int i = 1; i < recLines.size(); i++)
 	{
 		string str = recLines.at(i);
-		if(as_str::trim(str) == "")
+		if (as_str::trim(str) == "")
 			continue;
 		ALARM_INFO* pAi = new ALARM_INFO();
 		*pAi = fromCSV(str);
-		buff[pAi->getKey()]=pAi;
+		buff[pAi->getKey()] = pAi;
 	}
 }
 
@@ -2164,7 +2202,7 @@ void almTable::loadFile(string strFile)
 ALARM_INFO ALARM_INFO::fromJson(json j)
 {
 	ALARM_INFO& ai = *this;
-	
+
 	//必填字段
 	ai.tag = j["tag"];
 	ai.type = j["type"];
@@ -2178,7 +2216,7 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 		ai.level = ALARM_LEVEL::alarm;
 
 	//可选字段
-	if(j["desc"] != nullptr)
+	if (j["desc"] != nullptr)
 		ai.strAlarmDesc = j["desc"];
 	if (j["isRecover"] != nullptr)
 		ai.bRecover = j["isRecover"].get<bool>();
@@ -2193,10 +2231,10 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	json j;
 	j["uuid"] = info->uuid;
 
-	if (rootTag == ""){
+	if (rootTag == "") {
 		j["tag"] = info->tag;
 	}
-	else{
+	else {
 		string tag = info->tag;
 		tag = as_str::trimPrefix(tag, rootTag + ".");
 		j["tag"] = tag;
@@ -2246,15 +2284,15 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	vector<string> cols;
 	string el;
 	bool bInQuotation = false;
-	for(int i=0;i<line.length();i++)
+	for (int i = 0; i < line.length(); i++)
 	{
 		char* p = (char*)line.c_str() + i;
-		if(!bInQuotation && *p == ',')
+		if (!bInQuotation && *p == ',')
 		{
 			cols.push_back(el);
 			el = "";
 		}
-		else if(*p =='\"')
+		else if (*p == '\"')
 		{
 			bInQuotation = !bInQuotation;
 		}
@@ -2302,9 +2340,9 @@ string almTable::toCSV(ALARM_INFO& info)
 	/*7*/str += as_timeopt::st2str(info.stRecoverTime); str += ",";
 	/*8*/str += info.bAck ? "1" : "0"; str += ",";
 	/*9*/str += as_timeopt::st2str(info.stConfirmTime); str += ",";
-	/*10*/str +="\"" + info.strConfirmInfo + "\""; str += ",";
-	/*11*/str += info.strConfirmUser;str += ",";
-	/*12*/str+= info.pic_url;
+	/*10*/str += "\"" + info.strConfirmInfo + "\""; str += ",";
+	/*11*/str += info.strConfirmUser; str += ",";
+	/*12*/str += info.pic_url;
 	str += "\r\n";
 	return str;
 }
@@ -2336,7 +2374,7 @@ void almTable::add(ALARM_INFO ai)
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
 	buff[ai.getKey()] = pNew;
-	saveFile(pa,buff);
+	saveFile(pa, buff);
 }
 
 void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
@@ -2359,7 +2397,7 @@ void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
 		it->strConfirmUser = ai.strConfirmUser;
 		it->strConfirmInfo = ai.strConfirmInfo;
 		it->stConfirmTime = ai.stConfirmTime;
-LOOP_END:
+	LOOP_END:
 		i++;
 	}
 }
@@ -2369,6 +2407,45 @@ void almTable::acknowledge(const ALARM_INFO& ai)
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	if (bOneFilePerMonth)
 	{
+		/*
+		__cplusplus
+		C++98: 199711L
+		C++03: 199711L（与 C++98 相同，C++03 只是对 C++98 的一些修正，没有新特性）
+		C++11: 201103L
+		C++14: 201402L
+		C++17: 201703L
+		C++20: 202002L
+		*/
+#if __cplusplus <= 201402L
+		WIN32_FIND_DATA findFileData;
+		std::string searchPath = db.m_path + "/alarms/";
+		HANDLE hFind = FindFirstFile((searchPath + "*").c_str(), &findFileData);//添加通配符以匹配所有文件
+
+		if (hFind == INVALID_HANDLE_VALUE) {
+			//Error finding files in directory;
+			return;
+		}
+		do {
+			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) //目录
+				continue;
+			std::string filename = findFileData.cFileName;
+			if (filename == "." || filename == "..") {
+				continue;
+			}
+
+			if (filename.find("history_") == 0 && filename.find(".csv") == 14 && filename.size() == 18
+				&& to_string(stoi(filename.substr(8, 6))) == filename.substr(8, 6))
+			{ // "history_YYYYMM.csv" 的长度为 15
+				string fi = searchPath + filename;
+				loadFile(fi);
+				acknowledge(ai, false);
+				saveFile(fi, buff);
+			}
+		} while (FindNextFile(hFind, &findFileData) != 0);
+
+		FindClose(hFind); // 关闭句柄
+
+#else
 		// 获取当前路径
 		std::filesystem::path currentPath = db.m_path + "/alarms/";
 		// 遍历当前文件夹
@@ -2387,6 +2464,7 @@ void almTable::acknowledge(const ALARM_INFO& ai)
 				}
 			}
 		}
+#endif
 	}
 	else
 	{
@@ -2408,11 +2486,11 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	string time;
 	if (params["time"] != nullptr)
 		time = params["time"].get<string>();
-	string  pa=getFilePath(time);
+	string  pa = getFilePath(time);
 	loadFile(pa);
 	const string strRecoverFlag = /*as_charCodec::gb_to_utf8(*/"恢复"/*)*/;
 	string strType = "";
-	if (params["type"]!=nullptr)
+	if (params["type"] != nullptr)
 	{
 		strType = params["type"].get<string>();
 		auto pos = strType.find(strRecoverFlag);
@@ -2421,8 +2499,8 @@ bool almTable::query(json params, ALARM_INFO& ai)
 			strType.replace(pos, strRecoverFlag.length(), "");
 		}
 	}
-	
-	for(auto& i:buff)
+
+	for (auto& i : buff)
 	{
 		ALARM_INFO& it = *i.second;
 		if (params["uuid"] != nullptr) {
@@ -2451,7 +2529,7 @@ bool almTable::query(json params, ALARM_INFO& ai)
 			bFind = true;
 		}
 	}
-	if(bFind)
+	if (bFind)
 	{
 		return true;
 	}
@@ -2463,10 +2541,10 @@ void almTable::update(ALARM_INFO ai)
 	string  pa = getFilePath(ai.time);
 	loadFile(pa); //获取报警对应的数据文件
 	ALARM_INFO* p = buff.at(ai.getKey());
-	if(p)
+	if (p)
 	{
 		*p = ai;
-		saveFile(pa,buff);
+		saveFile(pa, buff);
 	}
 }
 void almTable::remove(ALARM_KEY& ai)
@@ -2475,7 +2553,7 @@ void almTable::remove(ALARM_KEY& ai)
 	string  pa = getFilePath(ai.time);
 	loadFile(pa);
 	buff.erase(ai.getKey());
-	saveFile(pa,buff);
+	saveFile(pa, buff);
 }
 
 ALARM_QUERY almTable::parseQuerier(json& querier)
@@ -2492,7 +2570,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 		aq.rootTag = querier["rootTag"].get<string>();
 	}
 
-	if (querier.contains("tag")){
+	if (querier.contains("tag")) {
 		aq.filter_tag = true;
 		if (querier["tag"].is_array()) {
 			for (int i = 0; i < querier["tag"].size(); i++) {
@@ -2559,7 +2637,7 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	if (querier.contains("isAck"))
 	{
 		aq.filter_isAck = true;
-		if(querier["isAck"].is_boolean())
+		if (querier["isAck"].is_boolean())
 			aq.isAck = querier["isAck"].get<bool>();
 		else
 			assert(false);
@@ -2635,12 +2713,12 @@ vector<ALARM_INFO*> almTable::query(json querier)
 					break;
 				}
 			}
-			if(!bMatch)
+			if (!bMatch)
 				continue;
 		}
 
 		if (aq.filter_time) {
-			if (false ==ts.Match(pAi->time))
+			if (false == ts.Match(pAi->time))
 				continue;
 		}
 		if (aq.filter_type) {
@@ -2665,12 +2743,12 @@ vector<ALARM_INFO*> almTable::query(json querier)
 			if (!bMatch)
 				continue;
 		}
-		if (aq.filter_isAck){
+		if (aq.filter_isAck) {
 			if (aq.isAck != pAi->bAck)
 				continue;
 		}
 
-		if (aq.filter_isRecover){
+		if (aq.filter_isRecover) {
 			if (aq.isRecover != pAi->bRecover)
 				continue;
 		}
@@ -2699,7 +2777,7 @@ string almTable::toJsonStr(const json& querier) {
 	string rootTag = "";
 	int pageNo = 1;
 	int pageSize = 0;
-	if(querier.contains("rootTag"))
+	if (querier.contains("rootTag"))
 		rootTag = querier["rootTag"].get<string>(); //org  or org + rootTag
 	if (querier.contains("pageNo"))
 	{

@@ -42,3 +42,5 @@ extern Clogger logger;
 void LOG(const char* pszFmt, ...);
 void LOG(string info);
 void LOG3(char* p, int len);
+
+int _vscprintf_cross_log(const char* format, va_list pargs);

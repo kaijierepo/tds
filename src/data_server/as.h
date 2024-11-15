@@ -6,7 +6,8 @@
 #include <shared_mutex>
 /*
 要求可直接移植到JHD，把引用其他文件里的那些东西都挪进来  by zgw 20241112
-无名空间的各种原有定义放到名空间as(宏改为全局变量); 原有的名空间上加上as_前缀; 调用其他模块的地方及关联逻辑改为函数指针移到外面;  
+无名空间的各种原有定义放到名空间as(宏改为全局变量); 原有的名空间上加上as_前缀; 调用其他模块的地方及关联逻辑改为函数指针移到外面;
+项目 -> 属性; C/C++ ->命令行; 在其他选项中输入/Zc:__cplusplus  否则__cplusplus 一直是199711L
 */
 namespace as {
 
@@ -236,6 +237,9 @@ namespace as_str {
 }
 
 namespace as_fs {
+	string GetDir(string strIn);
+	void CreateDirectoryPlus_old(string str);
+
 	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
 	bool createFolderOfPath(string strFile);
 	bool readFile(string path, char*& pData, int& len);
@@ -321,7 +325,7 @@ inline string getAlarmLevelLabel(string level)
 	return "";
 }
 
-class ALARM_KEY{
+class ALARM_KEY {
 public:
 	string uuid;//系统生成的唯一id
 
@@ -329,9 +333,9 @@ public:
 	string time;
 	string type;
 	string id;  //用户自定义的alarmid，当某些报警应用，时空+type都一样时，可以使用id进一步区分
-	
-	string getKey(){
-		return time + ","+ tag + "," + type + id;
+
+	string getKey() {
+		return time + "," + tag + "," + type + id;
 	}
 
 	string getSortKey(string sortKey)
@@ -340,9 +344,9 @@ public:
 		//依照某个内容排序时,就将其提至最前端,其他顺延
 		if (sortKey == "tag")
 			return tag + "," + time + "," + type + id;
-		else if (sortKey=="type")
+		else if (sortKey == "type")
 			return   type + "," + time + "," + tag + id;
-		else 
+		else
 			return time + "," + tag + "," + type + id;
 	}
 };
@@ -361,7 +365,7 @@ public:
 
 class almServer;
 
-class ALARM_INFO : public ALARM_KEY{
+class ALARM_INFO : public ALARM_KEY {
 public:
 	string level;
 	string strAlarmDesc;
@@ -381,9 +385,9 @@ public:
 		strAlarmDetail = "";
 		strSuggest = "";
 		bRecover = 0;
-		memset(&stRecoverTime,0,sizeof(as::TIME));
+		memset(&stRecoverTime, 0, sizeof(as::TIME));
 		bAck = 0;
-		memset(&stConfirmTime,0,sizeof(as::TIME));
+		memset(&stConfirmTime, 0, sizeof(as::TIME));
 		strConfirmInfo = "";
 	}
 
@@ -435,14 +439,14 @@ struct ALARM_QUERY {
 	}
 };
 
-class almTable{
+class almTable {
 public:
 	//bind with disk data file
 	void init(string file);
 
 	//table options
 	void add(ALARM_INFO ai);
-	bool query(json params,ALARM_INFO& ai);
+	bool query(json params, ALARM_INFO& ai);
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
@@ -455,7 +459,7 @@ public:
 	void acknowledge(const ALARM_INFO& ai, bool remove);
 public:
 
-	almTable(){
+	almTable() {
 		bOneFilePerMonth = false;
 		m_pAlmSrv = nullptr;
 	}
@@ -465,7 +469,7 @@ public:
 		}
 	}
 	string getFilePath(string time = "");
-	string getFilePath(int y,int m);
+	string getFilePath(int y, int m);
 	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
@@ -484,12 +488,12 @@ protected:
 
 //obj模块相关 
 typedef bool (*tfunc_obj_isEnableAlarm)(std::string, std::string);
-typedef bool (*tfunc_obj_setJAlmStatus)(std::string, std::string, json & js);
-typedef json (*tfunc_obj_getTypeTagByTag)(std::string);
+typedef bool (*tfunc_obj_setJAlmStatus)(std::string, std::string, json& js);
+typedef json(*tfunc_obj_getTypeTagByTag)(std::string);
 //log模块相关
 typedef void (*tfunc_log)(const char*, ...);
 //rpcHandler相关
-typedef bool (*tfunc_rpcHand_notify)(std::string,  json& js);
+typedef bool (*tfunc_rpcHand_notify)(std::string, json& js);
 //取用户信息发短信
 typedef bool (*tfunc_sms_notify)(std::string, std::string&);
 typedef bool (*tfunc_usrMng_checkTagPermission)(std::string, std::string);
@@ -505,7 +509,7 @@ struct AsInitParam
 	tfunc_log func_log = NULL;
 	tfunc_rpcHand_notify func_rpcHand_notify = NULL;
 	tfunc_sms_notify func_sms_notify = NULL;
-	tfunc_usrMng_checkTagPermission func_usrMng_checkTagPermission=NULL;
+	tfunc_usrMng_checkTagPermission func_usrMng_checkTagPermission = NULL;
 };
 
 class almServer
@@ -515,8 +519,8 @@ public:
 	AsInitParam m_initParam;
 
 public:
-////internal interface
-//alarm generation
+	////internal interface
+	//alarm generation
 	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
 	void addAlarm(ALARM_INFO ai);
@@ -558,7 +562,7 @@ public:
 		return inst;
 	}
 	void init(); //tds的conf路径
-	void init(const string& aCurPath, const string& aHisPath, AsInitParam & asInitParam);
+	void init(const string& aCurPath, const string& aHisPath, AsInitParam& asInitParam);
 
 	bool CompareTime(as::TIME& time1, as::TIME& time2);
 
@@ -573,8 +577,8 @@ public:
 	string m_curPath;
 	string m_histPath;
 
-	bool m_eventAlarmRepetitiveCheck=false;
-	int m_evtAlmRepeCheckTimeLen=1; //秒单位
+	bool m_eventAlarmRepetitiveCheck = false;
+	int m_evtAlmRepeCheckTimeLen = 1; //秒单位
 
 	bool m_bTestSrv;	//	是否测试报警
 };

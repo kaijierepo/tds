@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "rpcHandler.h"
 #include "userMng.h"
+#include <cstdarg>
 
 bool funcImp_obj_isEnableAlarm(string tag, string lang)
 {
@@ -30,10 +31,21 @@ json funcImp_obj_getTypeTagByTag(string tag)
 	return jTypeTag;
 }
 
-//void funcImp_log(const char* fmt, ...)
-//{
-//	LOG(fmt,);
-//}
+void funcImp_log(const char* pszFmt, ...)
+{
+	std::string str;
+	va_list args;
+	va_start(args, pszFmt); {
+		int nLength = _vscprintf_cross_log(pszFmt, args);
+		nLength += 1;  //上面返回的长度是包含\0，这里加上
+		std::vector<char> vectorChars(nLength);
+		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+		str.assign(vectorChars.data());
+	}
+	va_end(args);
+
+	LOG(str);
+}
 
 bool funcImp_rpcHand_notify(string method,  json& js)
 {
