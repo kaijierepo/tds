@@ -4599,6 +4599,41 @@ bool TIME_SELECTOR::init(string time)
 		tsa.parseTimeRange(timeRange);
 		atomSelList.push_back(tsa);
 	}
+	//maybe multi time range, such as:
+	//2024-09-20 00:00:00~2024-09-20 10:10:10, 2024-09-21 00:00:00~2024-09-21 10:10:10, ...
+	//"00:00:00~01:00:00@2024-09-20~2024-09-21"
+	else if (time.find(",") != string::npos) {
+		return false;//later do this
+	}
+	else if (time.find("@") != string::npos) {
+		int pos = time.find("@");
+		string hmsRange = time.substr(0, pos);
+		string dateRange = time.substr(pos + 1);
+
+		int pos1 = hmsRange.find("~");
+		if (pos1 == string::npos || hmsRange.length() != 17)
+			return false;
+		string hmsStart = hmsRange.substr(0, pos1);
+		string hmsEnd = hmsRange.substr(pos1 + 1);
+
+		int pos2 = dateRange.find("~");
+		if (pos2 == string::npos || dateRange.length() != 21)
+			return false;
+		DB_TIME stDateStart; stDateStart.fromStr(dateRange.substr(0, pos2) + " 00:00:00");
+		int unixDateStart = stDateStart.toUnixTime();
+		DB_TIME stDateEnd; stDateEnd.fromStr(dateRange.substr(pos2 + 1) + " 00:00:00");
+		int unixDateEnd = stDateEnd.toUnixTime();
+
+		vector<string> timeSelList;
+		for (int i = unixDateStart; i <= unixDateEnd; i += 86400) {
+			DB_TIME tmp; tmp.fromUnixTime(i);
+			string ymd = tmp.toYMD();
+
+			string oneRange = ymd + " " + hmsStart + "~" + ymd + " " + hmsEnd;
+			timeSelList.push_back(oneRange);
+		}
+		init(timeSelList);
+	}
 	else {
 		TIME_SELECTOR_ATOM tsa;
 		tsa.init(time);
@@ -4687,14 +4722,13 @@ bool TIME_SELECTOR_ATOM::init(string time)
 		time = tStart.toStr() + "~" + tEnd.toStr();
 	}
 
-
 	if (
 		time.find("y") != string::npos ||
 		time.find("M") != string::npos ||
-		time.find("d") != string::npos||
+		time.find("d") != string::npos ||
 		time.find("h") != string::npos ||
-		time.find("m") != string::npos 
-	) { // 1d2h3m mode
+		time.find("m") != string::npos
+		) { // 1d2h3m mode
 		string timeRange = TIME_OPT::rel2abs(time);
 		parseTimeRange(timeRange);
 	}
@@ -4712,7 +4746,6 @@ bool TIME_SELECTOR_ATOM::init(string time)
 
 	return true;
 }
-
 
 string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 {
