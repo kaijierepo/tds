@@ -463,14 +463,14 @@ bool TDS_imp::run(string cmdline)
 	ioSrv.loadConf();
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
 
-	//报警服务相关
+	//报警服务相关参数与接口
 	AsInitParam asInitParam;
 	asInitParam.confPath = tds->conf->confPath;
 	asInitParam.enableGlobalAlarm = tds->conf->enableGlobalAlarm;
 	asInitParam.func_obj_isEnableAlarm = funcImp_obj_isEnableAlarm;
 	asInitParam.func_obj_setJAlmStatus = funcImp_obj_setJAlmStatus;
 	asInitParam.func_obj_getTypeTagByTag = funcImp_obj_getTypeTagByTag;
-	asInitParam.func_log = LOG;
+	asInitParam.func_log = funcImp_log;
 	asInitParam.func_rpcHand_notify = funcImp_rpcHand_notify;
 	asInitParam.func_sms_notify = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
