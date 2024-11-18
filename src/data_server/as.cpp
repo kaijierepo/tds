@@ -2135,6 +2135,9 @@ bool almServer::CompareTime(as::TIME& time1, as::TIME& time2) {
 void almTable::saveFile(string strFile, map<string, AS_ALARM_INFO*>& memData)
 {
 	string data = "uuid,位号,报警时间,报警类型,报警等级,报警信息,报警详情,恢复状态,恢复时间,确认状态,确认时间,确认信息,确认用户\r\n";
+	if (as_charCodec::isValidGB2312(data)) {
+		data = as_charCodec::gb_to_utf8(data);
+	}
 	map<string, AS_ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
@@ -2255,6 +2258,9 @@ json AS_ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 
 	j["level"] = info->level;
 	string levelLabel = getAlarmLevelLabel(level);
+	if (as_charCodec::isValidGB2312(levelLabel)) {
+		levelLabel = as_charCodec::gb_to_utf8(levelLabel);
+	}
 	if (levelLabel != "")
 	{
 		j["levelLabel"] = levelLabel;
