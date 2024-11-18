@@ -882,6 +882,29 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			string s = params.dump();
 			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
+		else if (method == "db.manage")
+		{
+			/*
+			{
+   "jsonrpc": "2.0",
+   "method": "db.manage",
+   "params": {
+	  "opt":"getMids"
+   },
+   "id": 4
+}
+
+响应：
+{
+   "jsonrpc": "2.0",
+   "method": "db.manage",
+   "id": 4,
+   "result": ["标识1","标识2",...]
+}
+			*/
+			string s = params.dump();
+			//db.rpc_db_manage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+		}
 	}
 	else
 	{
@@ -4792,12 +4815,12 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 
 	almServer* pAlmSrv = &almSrv;
 
-	vector<ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
+	vector<AS_ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
 	int iAlarmCount = 0;
 	int iWarnCount = 0;
 	for (int i = 0; i < vecAlarms.size(); i++)
 	{
-		ALARM_INFO* pai = vecAlarms[i];
+		AS_ALARM_INFO* pai = vecAlarms[i];
 		if (pai->bRecover)
 			continue;
 

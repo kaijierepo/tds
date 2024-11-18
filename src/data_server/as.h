@@ -308,7 +308,7 @@ there aren't 2 record with the same "tag","time","type" attributes and with diff
 so level is not needed to specify an Alarm Key
 */
 
-namespace ALARM_LEVEL {
+namespace AS_ALARM_LEVEL {
 	const string normal = "normal";
 	const string warn = "warn";
 	const string alarm = "alarm";
@@ -365,7 +365,7 @@ public:
 
 class almServer;
 
-class ALARM_INFO : public ALARM_KEY {
+class AS_ALARM_INFO : public ALARM_KEY {
 public:
 	string level;
 	string strAlarmDesc;
@@ -380,7 +380,7 @@ public:
 	string strConfirmUser;
 	string pic_url;
 
-	ALARM_INFO() {
+	AS_ALARM_INFO() {
 		strAlarmDesc = "";
 		strAlarmDetail = "";
 		strSuggest = "";
@@ -398,7 +398,7 @@ public:
 	}
 
 	string toJsonStr(almServer* almSrv, string rootTag = "");
-	ALARM_INFO fromJson(json j);
+	AS_ALARM_INFO fromJson(json j);
 	json toJson(almServer* almSrv, string rootTag = "");
 };
 
@@ -445,18 +445,18 @@ public:
 	void init(string file);
 
 	//table options
-	void add(ALARM_INFO ai);
-	bool query(json params, ALARM_INFO& ai);
-	void update(ALARM_INFO ai);
+	void add(AS_ALARM_INFO ai);
+	bool query(json params, AS_ALARM_INFO& ai);
+	void update(AS_ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
-	vector<ALARM_INFO*> query(json filter);
+	vector<AS_ALARM_INFO*> query(json filter);
 	string toJsonStr(const json& filter);
 
 	void SetAlarmSrv(almServer* pSrv);
 
-	void acknowledge(const ALARM_INFO& ai);
-	void acknowledge(const ALARM_INFO& ai, bool remove);
+	void acknowledge(const AS_ALARM_INFO& ai);
+	void acknowledge(const AS_ALARM_INFO& ai, bool remove);
 public:
 
 	almTable() {
@@ -471,13 +471,13 @@ public:
 	string getFilePath(string time = "");
 	string getFilePath(int y, int m);
 	void loadFile(string strFile);
-	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
-	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
-	ALARM_INFO fromCSV(const string& line);
+	void saveFile(string strFile, map<string, AS_ALARM_INFO*>& memData);
+	void freeBuff(map<string, AS_ALARM_INFO*>& mapAlarm);
+	AS_ALARM_INFO fromCSV(const string& line);
 
-	string toCSV(ALARM_INFO& info);
+	string toCSV(AS_ALARM_INFO& info);
 	string filePath;
-	map<string, ALARM_INFO*> buff;
+	map<string, AS_ALARM_INFO*> buff;
 	string buffFilePath;
 	bool bOneFilePerMonth;
 	shared_mutex m_csTable;
@@ -521,12 +521,12 @@ public:
 public:
 	////internal interface
 	//alarm generation
-	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
-	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
-	void addAlarm(ALARM_INFO ai);
+	void Update(AS_ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
+	void AddEvent(AS_ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
+	void addAlarm(AS_ALARM_INFO ai);
 
 	//报警恢复
-	void recover(ALARM_INFO& key);
+	void recover(AS_ALARM_INFO& key);
 
 	//报警确认
 	void rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSION session);
@@ -566,7 +566,7 @@ public:
 
 	bool CompareTime(as::TIME& time1, as::TIME& time2);
 
-	static void ClearMap(map<string, ALARM_INFO*>& inMap);
+	static void ClearMap(map<string, AS_ALARM_INFO*>& inMap);
 	//almTable tableStatus;
 	//almTable tableUnack;
 	almTable tableCurrent; //未确认或未恢复的
