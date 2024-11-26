@@ -108,9 +108,19 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 				pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
 				pCmd->setOffset(pC->m_regOffset);
 				bool val = jVal.get<bool>();
-				unsigned short mask = (val ? 1 : 0) << (15 - pC->m_regBitIndex);
-				unsigned short outputVal = pC->holdingRegVal | mask;
-				pCmd->setVal(outputVal);
+				if (val)
+				{
+					unsigned short mask = 1 << (15 - pC->m_regBitIndex);
+					unsigned short outputVal = pC->holdingRegVal | mask;
+					pCmd->setVal(outputVal);
+				}
+				else
+				{
+					unsigned short a = pC->holdingRegVal; // 初始值
+					unsigned short mask = ~(1 << (15 - pC->m_regBitIndex));
+					a = a & mask;
+					pCmd->setVal(a);
+				}
 				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
 			}
 			else
