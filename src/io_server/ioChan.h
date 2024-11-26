@@ -63,6 +63,7 @@ public:
 	string m_fmt;
 	string m_byteOrder;
 	int m_regBitIndex;
+	unsigned short holdingRegVal; //当m_curVal是hr的bit的值时，同时把整个保持寄存器的值存储于此处
 
 	//线性校正
 	double m_k;

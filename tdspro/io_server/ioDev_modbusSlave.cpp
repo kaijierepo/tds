@@ -99,36 +99,60 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 	MB_PDU pduReq;
 	if (pC->m_regType == MODBUS_REG_TYPE::holdingRegister)
 	{
-		int regDataLen = storageSize(pC->m_fmt);
-		int regCount = regDataLen / 2;
-		if (regCount == 1) //
+		
+		if (pC->m_fmt == STORAGE_FMT::Bit16No)
 		{
-			PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
-			pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
-			pCmd->setOffset(pC->m_regOffset);
-			if (pC->m_fmt == STORAGE_FMT::UInt16)
+			if (jVal.is_boolean())
 			{
-				unsigned short usVal = jVal.get<unsigned short>();
-				pCmd->setVal(usVal);
+				PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
+				pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
+				pCmd->setOffset(pC->m_regOffset);
+				bool val = jVal.get<bool>();
+				unsigned short mask = (val ? 1 : 0) << (15 - pC->m_regBitIndex);
+				unsigned short outputVal = pC->holdingRegVal | mask;
+				pCmd->setVal(outputVal);
+				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
 			}
-			else if (pC->m_fmt == STORAGE_FMT::Int16)
+			else
 			{
-				short usVal = jVal.get<short>();
-				pCmd->setVal(usVal);
+				string errorInfo = "[error]输出失败, 当前为保持寄存器Bit16No类型, 但输出值不是布尔量";
+				err = makeRPCError(RPC_ERROR_CODE::MO_outputFail, errorInfo);
+				return;
 			}
-
-			pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
 		}
 		else
 		{
-			PDU_REQ_writeMultiReg* pCmd = new PDU_REQ_writeMultiReg();
-			pCmd->func_code = MB_FUNC_CODE::writeMultipleRegister;
-			pCmd->setStartReg(pC->m_regOffset);
-			pCmd->setRegNum(regCount);
-			pCmd->byte_count = regDataLen;
-			setChanValToRegBuff(pC,jVal,pCmd->reg_data);
+			int regDataLen = storageSize(pC->m_fmt);
+			int regCount = regDataLen / 2;
+			if (regCount == 1) //
+			{
+				PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
+				pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
+				pCmd->setOffset(pC->m_regOffset);
+				if (pC->m_fmt == STORAGE_FMT::UInt16)
+				{
+					unsigned short usVal = jVal.get<unsigned short>();
+					pCmd->setVal(usVal);
+				}
+				else if (pC->m_fmt == STORAGE_FMT::Int16)
+				{
+					short usVal = jVal.get<short>();
+					pCmd->setVal(usVal);
+				}
 
-			pduReq.setData(pCmd, pCmd->getSize());
+				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+			}
+			else
+			{
+				PDU_REQ_writeMultiReg* pCmd = new PDU_REQ_writeMultiReg();
+				pCmd->func_code = MB_FUNC_CODE::writeMultipleRegister;
+				pCmd->setStartReg(pC->m_regOffset);
+				pCmd->setRegNum(regCount);
+				pCmd->byte_count = regDataLen;
+				setChanValToRegBuff(pC, jVal, pCmd->reg_data);
+
+				pduReq.setData(pCmd, pCmd->getSize());
+			}
 		}
 	}
 	else if (pC->m_regType == MODBUS_REG_TYPE::coil)
@@ -569,6 +593,8 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 			common::endianSwap((char*)&mbVal, 2);
 			bool temp = (mbVal >> (15 - bit16Index) & 1) != 0;
 			jVal = temp;
+
+			pC->holdingRegVal = temp;
 		}
 	}
 	else if(pC->m_regType == MODBUS_REG_TYPE::discreteInput || pC->m_regType == MODBUS_REG_TYPE::coil)
