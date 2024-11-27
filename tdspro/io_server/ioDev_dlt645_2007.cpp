@@ -131,14 +131,15 @@ json ioDev_dlt645_2007::parseReadData(unsigned char* pD, int len,string fmt) {
 	DATA_FMT df;
 	df.init(fmt);
 
-	if (df.readValDigitCount == 2 * len) {
-		unsigned char* readVal = new unsigned char[len];
-		for (int i = 0; i < len; i++) {
+	if (df.readValDigitCount <= 2 * len) { //模拟器测试时返回数据长度比实际数据长度大，忽略尾部的数据
+		int validByteLen = df.readValDigitCount / 2;
+		unsigned char* readVal = new unsigned char[validByteLen];
+		for (int i = 0; i < validByteLen; i++) {
 			readVal[i] = pD[i] - 0x33;
 		}
 
 		char szVal[50] = { 0 };
-		d07_bcd2str(readVal, szVal, len);
+		d07_bcd2str(readVal, szVal, validByteLen);
 
 		double fVal = atof(szVal);
 		fVal *= df.k;
@@ -223,6 +224,23 @@ void ioDev_dlt645_2007::DoCycleTask()
 			m_bCycleAcqThreadRunning = true;
 			thread t(cycleAcq_thread_dlt645, this);
 			t.detach();
+			timeopt::now(&m_stLastAcqTime);
+		}
+	}
+}
+
+void ioDev_dlt645_2007::DoCycleTaskSync() {
+	if (!m_bEnableAcq)return;
+	if (!m_bRunning)return;
+	if (!isConnected())return;
+	if (isCommBusy())return;
+
+	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
+	{
+		if (!m_bCycleAcqThreadRunning)
+		{
+			m_bCycleAcqThreadRunning = true;
+			cycleAcq_thread_dlt645(this);
 			timeopt::now(&m_stLastAcqTime);
 		}
 	}

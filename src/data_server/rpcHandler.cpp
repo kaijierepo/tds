@@ -1689,6 +1689,25 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				goto UPGRADE_END;
 			}
 
+			//升级结束后检查是否存在 tds.exe，否则tds启动不了，目标机器就断了
+			if (!fs::fileExist(tdsPath + "/" + exeName)) {
+				json j;
+				string s = "压缩包中未包含" + exeName;
+				j["serverUpgradeStatus"] = s;
+				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				LOG("[warn]升级失败," + s);
+
+				if (!renameFile(tdsPath + "/", tmpExeName,exeName)) {
+					json j;
+					string s = "压缩包中未包含" + exeName +",恢复重命名文件失败, " + tmpExeName;
+					j["serverUpgradeStatus"] = s;
+					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					LOG("[warn]升级失败," + s);
+				}
+
+				goto UPGRADE_END;
+			}
+
 			//向tKeep发送请求,重新开启服务
 			jReq["method"] = "beginGuard";
 			cli.set_connection_timeout(2);

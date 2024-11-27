@@ -2145,6 +2145,7 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 
 void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
 	onRecvData(pData, len);
 }
 
