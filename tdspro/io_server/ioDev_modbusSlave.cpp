@@ -601,10 +601,10 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 			unsigned short mbVal;
 			memcpy(&mbVal, pChanData, 2);
 			common::endianSwap((char*)&mbVal, 2);
+			pC->holdingRegVal = mbVal;
+
 			bool temp = (mbVal >> (15 - bit16Index) & 1) != 0;
 			jVal = temp;
-
-			pC->holdingRegVal = temp;
 		}
 	}
 	else if(pC->m_regType == MODBUS_REG_TYPE::discreteInput || pC->m_regType == MODBUS_REG_TYPE::coil)
