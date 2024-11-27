@@ -1722,7 +1722,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 			{
 				json j;
 				string timeStr = timeopt::nowStr(false);
-				string s = "升级成功" + timeStr;
+				string s = "升级成功,等待重启," + timeStr;
 				j["serverUpgradeStatus"] = s;
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
 				LOG("[warn]" + s);
