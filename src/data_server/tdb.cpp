@@ -2288,6 +2288,19 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		}
 	}
 
+	yyjson_val* yyv_selfParams = yyjson_obj_get(params, "self_params");
+	if (yyv_selfParams) {
+		if (yyjson_is_obj(yyv_selfParams)) {
+			if (yyjson_obj_get(yyv_selfParams, "n")) {
+				deSel.theLimit = yyjson_get_int(yyjson_obj_get(yyv_selfParams, "n"));
+			}
+			if (yyjson_obj_get(yyv_selfParams, "interval")) {
+				deSel.self_interval = yyjson_get_int(yyjson_obj_get(yyv_selfParams, "interval"));
+			}
+		}
+			//deSel.selfParams = yyv_selfParams;
+	}
+
 	SELECT_RLT result;
 	if (deSel.tagSel.tagSet.size() == 0) {
 		err = JSON_STR_VAL("specified tag not found");
@@ -2529,7 +2542,66 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			mapRlt.swap(temp_mapRlt);
 		}
 
+		//这里处理自定义筛选 如theLimit、theInterval等， select流程：1.时间+tag筛选；2.原始数据降采样；3.limit；4 自定义筛选(二次降采样、逻辑筛选等)；5 calc 
+		if (deSel.deType == "curveIdx" && deSel.theLimit > 0) {
+			int max = mapRlt.size();
+			int idx = 0;
+			map<SORT_FLAG, yyjson_mut_val*> mapRlt0;
+			if (deSel.self_interval > 0) {
+				for (auto it = mapRlt.begin(); it != mapRlt.end(); it++, idx++) {
+					//"No this param" 、interval=1 is the same thing
+					if (deSel.self_interval > 1) {
+						bool reachInterval = idx % deSel.self_interval == 0;
+						if (!reachInterval)
+							continue;
+					}
+					if (deSel.self_interval > max)
+						continue;
 
+					mapRlt0[it->first] = it->second;
+				}
+			}
+			mapRlt.swap(mapRlt0);
+
+			map<SORT_FLAG, yyjson_mut_val*> mapRlt1;
+			for (auto& i : mapRlt)
+			{
+				yyjson_mut_val* yyv_curve_de = i.second;
+				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
+				string time = yyjson_mut_get_str(yyv_time);
+				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
+				string tag = yyjson_mut_get_str(yyv_tag);
+
+				bool bDropIt = false;
+				yyjson_mut_val* data_attr = yyjson_mut_obj_get(yyv_curve_de, "data_attr");
+				size_t size = yyjson_mut_arr_size(data_attr);
+				for (int k = size - 1; k > 0; k--) {
+					auto element = yyjson_mut_arr_get(data_attr, k);
+
+					size_t size1 = yyjson_mut_arr_size(element);
+					if (size1 != 3)
+						continue;
+					auto name = yyjson_mut_arr_get(element, 0);
+					string strName = yyjson_mut_get_str(name);
+					if (strName == "lastDi") {
+						auto val = yyjson_mut_arr_get(element, 2);
+						string strVal = yyjson_mut_get_str(val);
+						float fVal = atof(strVal.c_str());
+						if (fVal >= deSel.theLimit) {
+							bDropIt = true;
+							break;
+						}
+					}
+				}
+				if (!bDropIt) {
+					mapRlt1[i.first] = i.second;
+				}
+			}
+			result.rowCount = mapRlt1.size();
+			result.deCount = mapRlt1.size();
+
+			mapRlt.swap(mapRlt1);
+		}
 
 		//calc
 		if (deSel.calc == "diff") {
@@ -2844,7 +2916,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 	}
 
-
 	//use new yyjson doc to output. merge data of multi tag,multi time range into a json result
 	yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
 	yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
@@ -2858,7 +2929,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	}
 
 	size_t len = 0;
-
 	if(deSel.calc != ""){
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
@@ -3571,10 +3641,11 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					//assert(false);
 				}
 
-
-				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+				//consider "08:40:00~09:40:00@2024-09-20~2024-09-22",
+				//if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+				//	continue;
+				if (!deSel.timeSel.Match(deTime))
 					continue;
-
 
 				//use javascript to filter
 				if (deSel.condition.bEnable && !deSel.condition.match(de))
@@ -4600,21 +4671,26 @@ bool TIME_SELECTOR::init(string time)
 		atomSelList.push_back(tsa);
 	}
 	//maybe multi time range, such as:
-	//2024-09-20 00:00:00~2024-09-20 10:10:10, 2024-09-21 00:00:00~2024-09-21 10:10:10, ...
-	//"00:00:00~01:00:00@2024-09-20~2024-09-21"
-	else if (time.find(",") != string::npos) {
-		return false;//later do this
-	}
+	//"00:00:00~01:00:00@2024-09-20~2024-09-21", or "08:40:00~09:40:00,08:40:00~09:40:00@2024-09-20~2024-09-21" 
 	else if (time.find("@") != string::npos) {
 		int pos = time.find("@");
-		string hmsRange = time.substr(0, pos);
+		string strHmsRanges = time.substr(0, pos);
 		string dateRange = time.substr(pos + 1);
 
-		int pos1 = hmsRange.find("~");
-		if (pos1 == string::npos || hmsRange.length() != 17)
-			return false;
-		string hmsStart = hmsRange.substr(0, pos1);
-		string hmsEnd = hmsRange.substr(pos1 + 1);
+		vector<vector<string>> vecHms;//[[hmsStart,hmsEnd],...]
+		vector<string> hmsRanges;
+		DB_STR::split(hmsRanges, strHmsRanges,",");
+		for (auto& oneRange : hmsRanges) {
+			string &hmsRange = oneRange;
+
+			int pos1 = hmsRange.find("~");
+			if (pos1 == string::npos || hmsRange.length() != 17)
+				return false;
+			string hmsStart = hmsRange.substr(0, pos1);
+			string hmsEnd = hmsRange.substr(pos1 + 1);
+			vector<string> one; one.push_back(hmsStart); one.push_back(hmsEnd);
+			vecHms.push_back(one);
+		}
 
 		int pos2 = dateRange.find("~");
 		if (pos2 == string::npos || dateRange.length() != 21)
@@ -4629,10 +4705,16 @@ bool TIME_SELECTOR::init(string time)
 			DB_TIME tmp; tmp.fromUnixTime(i);
 			string ymd = tmp.toYMD();
 
-			string oneRange = ymd + " " + hmsStart + "~" + ymd + " " + hmsEnd;
-			timeSelList.push_back(oneRange);
+			for (auto& one : vecHms) {
+				string oneRange = ymd + " " + one[0] + "~" + ymd + " " + one[1];
+				timeSelList.push_back(oneRange);
+			}
 		}
 		init(timeSelList);
+	}
+	//2024-09-20 00:00:00~2024-09-20 10:10:10, 2024-09-21 00:00:00~2024-09-21 10:10:10, ...
+	else if (time.find(",") != string::npos) { //not have "@" && have "," 
+		return false;//later do this
 	}
 	else {
 		TIME_SELECTOR_ATOM tsa;

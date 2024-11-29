@@ -471,6 +471,10 @@ struct DE_SELECTOR {
 	int pageNo = 1;
 	int pageSize = 0;
 
+	//map<string, string> mapSelfParms;
+	int theLimit=-9999;
+	int self_interval = -9999;
+
 	DE_SELECTOR() {
 		ascendingSort = true;
 		tagAsColume = false;
