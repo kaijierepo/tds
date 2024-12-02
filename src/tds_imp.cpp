@@ -59,7 +59,7 @@ SOFTWARE.
 string InterfaceEncoding = "utf8";
 
 string version = "v1.0";
-
+string g_ComputerStartupTime="";
 
 #ifdef _WIN32
 #include <stdio.h>
@@ -361,6 +361,44 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 	}
 }
 
+std::string execCommand(const char* cmd) {
+
+	FILE* fp = _popen("systeminfo", "r");
+	if (!fp) {
+		return "获取系统启动时间失败";
+	}
+
+	// 读取命令输出
+	char buffer[128];
+	std::string result;
+	while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
+		result += buffer;
+	}
+
+	// 关闭管道
+	int status = _pclose(fp);
+	if (status == -1) {
+	}
+
+	return result;
+}
+
+std::string getSystemBootTime() {
+	std::string output = execCommand("systeminfo");
+	std::string bootTimeLabel =charCodec::utf8_to_gb("系统启动时间:");
+	size_t pos = output.find(bootTimeLabel);
+	if (pos != std::string::npos) {
+		size_t endPos = output.find('\n', pos);
+		if (endPos != std::string::npos) {
+			string bootTime = output.substr(pos + bootTimeLabel.length(), endPos - pos - bootTimeLabel.length());
+			bootTime.erase(std::remove(bootTime.begin(), bootTime.end(), ' '), bootTime.end());
+			bootTime.erase(std::remove(bootTime.begin(), bootTime.end(), '\r'), bootTime.end());
+			return bootTime;
+		}
+	}
+	return "BootTimeNotFound";
+}
+
 
 bool TDS_imp::run(string cmdline)
 {
@@ -571,6 +609,8 @@ bool TDS_imp::run(string cmdline)
 #endif
 
 	g_diskClean.Run();
+
+	g_ComputerStartupTime = getSystemBootTime();
 
 	return true;
 }

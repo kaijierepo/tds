@@ -80,3 +80,4 @@ public:
 };
 
 extern void createConsole();
+extern string g_ComputerStartupTime;

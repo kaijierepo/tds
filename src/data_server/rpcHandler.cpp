@@ -22,6 +22,7 @@
 #include "statusServer.h"
 #include <io_server/ioDev_tdsp.h>
 #include "miniz.h"
+#include "tds_imp.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -3315,6 +3316,10 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			}
 		}
 		rpcResp.result = res0;
+	}
+	else if (method == "getComputerStartupTime")
+	{
+		rpcResp.result = "\"" + g_ComputerStartupTime + "\"";
 	}
 	else {
 		bHandled = false;
