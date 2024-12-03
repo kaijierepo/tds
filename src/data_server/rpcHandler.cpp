@@ -3317,9 +3317,15 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		}
 		rpcResp.result = res0;
 	}
-	else if (method == "getComputerStartupTime")
+	else if (method == "getSystemInfo")
 	{
-		rpcResp.result = "\"" + g_ComputerStartupTime + "\"";
+		json resultObj;
+		resultObj["computerStartupTime"] = g_ComputerStartupTime.c_str();
+		resultObj["tdsVersion"] = tds->getSvnVersion();
+		resultObj["cpu"] = statusSrv.m_srvStatus.cpu;
+		resultObj["mem"] = statusSrv.m_srvStatus.mem;
+		resultObj["handle"] = statusSrv.m_srvStatus.handle;
+		rpcResp.result = resultObj.dump();
 	}
 	else {
 		bHandled = false;

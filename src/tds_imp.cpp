@@ -362,24 +362,57 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 }
 
 std::string execCommand(const char* cmd) {
-
-	FILE* fp = _popen("systeminfo", "r");
-	if (!fp) {
-		return "获取系统启动时间失败";
-	}
-
-	// 读取命令输出
-	char buffer[128];
+	std::array<char, 128> buffer;
 	std::string result;
-	while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
-		result += buffer;
+
+	// 创建匿名管道
+	SECURITY_ATTRIBUTES sa;
+	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+	sa.lpSecurityDescriptor = NULL;
+	sa.bInheritHandle = TRUE;
+
+	HANDLE hRead, hWrite;
+	if (!CreatePipe(&hRead, &hWrite, &sa, 0)) {
+		throw std::runtime_error("CreatePipe() failed!");
 	}
 
-	// 关闭管道
-	int status = _pclose(fp);
-	if (status == -1) {
+	// 设置启动信息
+	STARTUPINFOA si;
+	ZeroMemory(&si, sizeof(STARTUPINFOA));
+	si.cb = sizeof(STARTUPINFOA);
+	si.hStdOutput = hWrite;
+	si.hStdError = hWrite;
+	si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE; // 隐藏窗口
+
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+	// 创建进程
+	if (!CreateProcessA(NULL, const_cast<char*>(cmd), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
+		CloseHandle(hRead);
+		CloseHandle(hWrite);
+		throw std::runtime_error("CreateProcess() failed!");
 	}
 
+	// 关闭写句柄
+	CloseHandle(hWrite);
+
+	// 读取输出
+	DWORD bytesRead;
+	while (ReadFile(hRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0) {
+		result.append(buffer.data(), bytesRead);
+	}
+
+	// 关闭读句柄
+	CloseHandle(hRead);
+
+	// 等待进程结束
+	WaitForSingleObject(pi.hProcess, INFINITE);
+
+	// 关闭进程和线程句柄
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
 	return result;
 }
 
