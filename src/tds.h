@@ -369,6 +369,10 @@ struct iTDSConf {
 	int dataStorageMonths = 24;
 	int mediaStorageMonths = 3;
 
+	//memory clean
+	//ini:  CleanMemoryInterval = xxxh  
+	string strCleanMemoryInterval;
+
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(string key, int iDef) = 0;

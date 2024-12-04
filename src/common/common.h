@@ -448,6 +448,7 @@ namespace sys {
 	vector<COM_INFO> getCOMInfoList();
 	string getLastError(string szReason = "");
 	unsigned long getThreadId();
+	bool CmdExecParam(string strParam, DWORD dwMilliseconds = 0, int nShow = SW_SHOW, LPCSTR lpDirectory = NULL);
 }
 
 

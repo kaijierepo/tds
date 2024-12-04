@@ -4,6 +4,10 @@
 #include <random>
 #include <iostream>
 #include <fstream>
+#ifdef _WIN32
+#include <shellapi.h>  //for this:  SHELLEXECUTEINFO
+#endif
+
 using namespace std;
 
 namespace common {
@@ -1657,6 +1661,38 @@ namespace sys {
 	return 0;
 #endif
 	}
+
+	bool CmdExecParam(string strParam, DWORD dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, LPCSTR lpDirectory /*= NULL*/)
+	{
+#ifdef _WIN32
+		string strExePath = "cmd.exe";
+		string cmd = "/c " + strParam;
+		SHELLEXECUTEINFO ShExecInfo = { 0 };
+		ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+		ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+		ShExecInfo.hwnd = NULL;
+		ShExecInfo.lpVerb = "open";
+		ShExecInfo.lpFile = (LPCTSTR)strExePath.c_str();
+		ShExecInfo.lpParameters = (LPCTSTR)cmd.c_str();
+		ShExecInfo.lpDirectory = lpDirectory;
+		ShExecInfo.nShow = nShow;
+		ShExecInfo.hInstApp = NULL;
+		if (ShellExecuteEx(&ShExecInfo))
+		{
+			HANDLE hProcess = ShExecInfo.hProcess;
+			if (hProcess != 0)
+			{
+				WaitForSingleObject(hProcess, dwMilliseconds == 0 ? INFINITE : dwMilliseconds);
+				CloseHandle(hProcess);
+			}
+			return true;
+		}
+		return false;
+	}
+#else
+		// TODO: linux
+		return 0;
+#endif
 }
 
 

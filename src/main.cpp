@@ -55,7 +55,6 @@ SOFTWARE.
 #include "rpcHandler.h"
 #include "httplib.h"
 
-
 void clearZlmNoReaderPusher() {
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://localhost:" + sPort;
@@ -485,6 +484,7 @@ int main(int argc, char** argv)
 			LOG("共有%d个萤石云视频监控点", ezvizMp.size());
 		}
 
+		time_t tPrevious; time(&tPrevious); //用于内存清理
 		while (1)
 		{
 			timeopt::sleepMilli(1000);
@@ -514,23 +514,30 @@ int main(int argc, char** argv)
 				clearZlmNoReaderPusher();
 				zlmLastClearPusherTime = timeopt::now();
 			}
+
+			//clean memory
+			string timeParam = tds->conf->strCleanMemoryInterval;
+			if (timeParam.size() >= 2 && timeParam.at(timeParam.length() - 1) == 'h') {
+				if (fs::fileExist(fs::appPath() + "/RAMMap.exe")) {
+					int secs = atoi(timeParam.substr(0, timeParam.length() - 1).c_str()) * 3600;
+
+					time_t tNow;  time(&tNow);
+					if (tNow - tPrevious > secs) {
+						tPrevious = tNow;
+						sys::CmdExecParam(fs::appPath() + "/RAMMap.exe -Ew", 1, SW_HIDE);
+
+						timeopt::sleepMilli(5000);
+						sys::CmdExecParam(fs::appPath() + "/RAMMap.exe -Et", 1, SW_HIDE);
+					}
+				}
+			}
+
+
 		}
 	}
 
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 #else

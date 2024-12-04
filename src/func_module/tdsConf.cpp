@@ -416,6 +416,12 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 		{
 			mediaStorageMonths = atoi(tci.val.c_str());
 		}
+		//内存清理相关
+		else if (checkKey(tci.key, "CleanMemoryInterval"))
+		{
+			strCleanMemoryInterval = tci.val;
+		}
+		
 	}
 
 	//j = jsonConf["active_session"];
