@@ -110,14 +110,14 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 				bool val = jVal.get<bool>();
 				if (val)
 				{
-					unsigned short mask = 1 << (15 - pC->m_regBitIndex);
+					unsigned short mask = 1 << pC->m_regBitIndex;
 					unsigned short outputVal = pC->holdingRegVal | mask;
 					pCmd->setVal(outputVal);
 				}
 				else
 				{
 					unsigned short a = pC->holdingRegVal; // 初始值
-					unsigned short mask = ~(1 << (15 - pC->m_regBitIndex));
+					unsigned short mask = ~(1 << pC->m_regBitIndex);
 					a = a & mask;
 					pCmd->setVal(a);
 				}
@@ -603,7 +603,7 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 			common::endianSwap((char*)&mbVal, 2);
 			pC->holdingRegVal = mbVal;
 
-			bool temp = (mbVal >> (15 - bit16Index) & 1) != 0;
+			bool temp = ((mbVal >> bit16Index) & 1) != 0;
 			jVal = temp;
 		}
 	}
