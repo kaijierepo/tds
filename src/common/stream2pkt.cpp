@@ -32,6 +32,7 @@ size_t IsValidPkt_ModbusTcp(unsigned char* pData, size_t iLen)
 }
 
 
+//该函数目前未制作完美,只能检查响应包的是否有效
 size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 {
 	if (iLen < 4)
@@ -42,6 +43,9 @@ size_t IsValidPkt_ModbusRTU(unsigned char* pData, size_t iLen)
 	//头尾检测处理粘包
 	if (fCode == 0x01 || fCode == 0x02 || fCode == 0x03 || fCode == 0x04){
 		int byteCount = pData[2];
+
+		//说明不是一个完整包
+		if (iLen < byteCount + 1 + 1 + 1 + 2) return 0;
 
 		unsigned short crc1 = *(unsigned short*)(pData + 1/*addr*/ + 1/*funcCode*/ + 1/*byteCount*/ + byteCount);
 		unsigned short crc2 = common::N_CRC16((unsigned char*)pData, 3 + byteCount); //crc校验包含地址字节和功能码字节
