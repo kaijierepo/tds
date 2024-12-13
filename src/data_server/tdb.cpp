@@ -2270,6 +2270,11 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 			if (yyv_calc_baseCurve) {
 				deSel.baseCurve = yyjson_get_str(yyv_calc_baseCurve);
 			}
+
+			yyjson_val* yyv_calc_aggr = yyjson_obj_get(yyv_calc, "aggr");
+			if (yyv_calc_aggr) {
+				deSel.curvePtAggr = yyjson_get_str(yyv_calc_aggr);
+			}
 		}
 	}
 
@@ -2658,7 +2663,106 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 		else if (deSel.deType == "curveIdx" && deSel.calc != "") { //Absolute Error Sum
 			if (deSel.calc == "curvePtAggr") {
-			
+				std::vector<std::string> aggrList;
+				std::string src = deSel.curvePtAggr;
+				std::string separator = ",";
+				std::string temp;
+				size_t pos = 0, offset = 0;
+
+				// 分割第1~n-1个
+				while ((pos = src.find(separator, offset)) != std::string::npos)
+				{
+					temp = src.substr(offset, pos - offset);
+					if (temp.length() > 0) {
+						aggrList.push_back(temp);
+					}
+					else
+					{
+						aggrList.push_back("");
+					}
+					offset = pos + separator.size();
+				}
+
+				// 分割第n个
+				temp = src.substr(offset, src.length() - offset);
+				if (temp.length() > 0) {
+					aggrList.push_back(temp);
+				}
+
+				if (aggrList.size() > 0)
+				{
+					double sortIdx = 0;
+					for (auto& i : mapRlt)
+					{
+						yyjson_mut_val* yyv_curve_de = i.second;
+						yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
+						string time = yyjson_mut_get_str(yyv_time);
+						yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
+						string tag = yyjson_mut_get_str(yyv_tag);
+						vector<double>* pPtList = new vector<double>();
+						DB_TIME dbtime;
+						dbtime.fromStr(time);
+						DB_FILE dbfile(dbtime, tag, this);
+						dbfile.deType = "curve";
+						if (dbfile.loadFile())
+						{
+							yyjson_val* yyv_curve = dbfile.root;
+							yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+							size_t idx = 0;
+							size_t count = 0;
+							yyjson_val* item;
+							double min = DBL_MAX;
+							double max = -DBL_MAX;
+							double first = 0;
+							double last = 0;
+							yyjson_arr_foreach(yyv_pt_list, idx, count, item) {
+								int temp;
+								if (yyjson_is_int(item))
+									temp = (double)yyjson_get_int(item);
+								else if (yyjson_is_real(item))
+									temp = (double)yyjson_get_real(item);
+								else if (yyjson_is_str(item))
+									temp = (double)atof(yyjson_get_str(item));
+
+								if (idx == 0) first = temp;
+								if (idx == count-1) last = temp;
+								if (temp < min) min = temp;
+								if (temp > max)max = temp;
+							}
+
+							yyjson_mut_val* curvePtAggr_obj = yyjson_mut_obj(rlt_mut_doc);
+							yyjson_mut_obj_add_val(rlt_mut_doc, yyv_curve_de, "curvePtAggr", curvePtAggr_obj);
+
+							for (int j = 0; j < aggrList.size(); j++)
+							{
+								string aggr = aggrList[j];
+								if (aggr == "first")
+								{
+									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "first", (int)first);
+								}
+								else if (aggr == "last")
+								{
+									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "last", (int)last);
+								}
+								else if (aggr == "min")
+								{
+									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "min", (int)min);
+								}
+								else if (aggr == "max")
+								{
+									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "max", (int)max);
+								}
+								else if (aggr == "diff")
+								{
+									yyjson_mut_obj_add_int(rlt_mut_doc, curvePtAggr_obj, "diff", (int)(max - min));
+								}
+							}
+
+						}
+					}
+				}
+
+				pCalcResult = &mapRlt;
 			}
 			else {
 				map<DB_TIME, vector<double>*> curveList;

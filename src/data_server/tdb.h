@@ -464,6 +464,7 @@ struct DE_SELECTOR {
 
 	//use function to calc the selected dataset
 	string calc;
+	string curvePtAggr;
 	string baseCurve;
 	string getSelectorDesc();
 
