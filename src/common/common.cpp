@@ -1627,7 +1627,7 @@ namespace sys {
 			NULL
 		);
 
-		
+
 
 		if (dwLen == 0)
 		{
@@ -1655,10 +1655,10 @@ namespace sys {
 
 	unsigned long getThreadId() {
 #ifdef _WIN32
-	return GetCurrentThreadId();
+		return GetCurrentThreadId();
 #else
-	// TODO: linux
-	return 0;
+		// TODO: linux
+		return 0;
 #endif
 	}
 
@@ -1688,11 +1688,11 @@ namespace sys {
 			return true;
 		}
 		return false;
-	}
 #else
 		// TODO: linux
 		return 0;
 #endif
+	}
 }
 
 
