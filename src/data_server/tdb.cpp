@@ -2648,27 +2648,99 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			sCalcResult = formatStr("%f", dbSum);
 		}
 		else if (deSel.deType == "curveIdx" && deSel.calc != "") { //Absolute Error Sum
-			map<DB_TIME, vector<double>*> curveList;
-			vector<double> refCurvePt;
-			vector<double> specifyCurvePt;
-			string tag;
-			for (auto& i : mapRlt)
-			{
-				yyjson_mut_val* yyv_curve_de = i.second;
-				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
-				string time = yyjson_mut_get_str(yyv_time);
-				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
-				tag = yyjson_mut_get_str(yyv_tag);
-				vector<double>* pPtList = new vector<double>();
-				DB_TIME dbtime;
-				dbtime.fromStr(time);
-				DB_FILE dbfile(dbtime,tag,this);
-				dbfile.deType = "curve";
-				if (dbfile.loadFile()) {
-					yyjson_val* yyv_curve = dbfile.root;
+			if (deSel.calc == "curvePtAggr") {
+			
+			}
+			else {
+				map<DB_TIME, vector<double>*> curveList;
+				vector<double> refCurvePt;
+				vector<double> specifyCurvePt;
+				string tag;
+				for (auto& i : mapRlt)
+				{
+					yyjson_mut_val* yyv_curve_de = i.second;
+					yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
+					string time = yyjson_mut_get_str(yyv_time);
+					yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
+					tag = yyjson_mut_get_str(yyv_tag);
+					vector<double>* pPtList = new vector<double>();
+					DB_TIME dbtime;
+					dbtime.fromStr(time);
+					DB_FILE dbfile(dbtime, tag, this);
+					dbfile.deType = "curve";
+					if (dbfile.loadFile()) {
+						yyjson_val* yyv_curve = dbfile.root;
+						yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+						size_t idx = 0;
+						size_t max = 0;
+						yyjson_val* item;
+						yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
+							if (yyjson_is_obj(item)) {
+								yyjson_val* yyv_y = yyjson_obj_get(item, "y");
+								double db;
+								if (yyjson_is_int(yyv_y)) {
+									int ival = yyjson_get_int(yyv_y);
+									db = ival;
+								}
+								else
+									db = yyjson_get_real(yyv_y);
+								pPtList->push_back(db);
+							}
+							else if (yyjson_is_arr(item)) {
+								size_t size = yyjson_arr_size(item);
+								if (size == 2) {
+									yyjson_val* yyv_y = yyjson_arr_get(item, 1);
+
+									double db;
+									if (yyjson_is_int(yyv_y)) {
+										int ival = yyjson_get_int(yyv_y);
+										db = ival;
+									}
+									else
+										db = yyjson_get_real(yyv_y);
+									pPtList->push_back(db);
+								}
+							}
+						}
+						curveList[dbfile.time] = pPtList;
+					}
+				}
+
+				mapRlt.clear();
+				vector<double>* pBase = nullptr;
+				if (deSel.baseCurve == "refCurve") {
+					string path = m_confPath + "/refCurve/";
+					string subPath = DB_STR::replace(tag, ".", "/");
+					path += subPath + "/refCurve.json";
+					string s;
+					DB_FS::readFile(path, s);
+					if (s == "") {
+						db_exception dbe;
+						dbe.m_error = "refCurve not found";
+						throw dbe;
+					}
+
+					yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
+					if (!doc) {
+						s = DB_STR::gb_to_utf8(s);
+						doc = yyjson_read(s.data(), s.size(), 0);
+					}
+					if (!doc) {
+						db_exception dbe;
+						dbe.m_error = "refCurve not found";
+						throw dbe;
+					}
+
+					yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
+					if (!yyv_curve) {
+						db_exception dbe;
+						dbe.m_error = "refCurve not found";
+						throw dbe;
+					}
+
 					yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
 					size_t idx = 0;
-					size_t max = 0; 
+					size_t max = 0;
 					yyjson_val* item;
 					yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
 						if (yyjson_is_obj(item)) {
@@ -2679,8 +2751,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 								db = ival;
 							}
 							else
-							    db = yyjson_get_real(yyv_y);
-							pPtList->push_back(db);
+								db = yyjson_get_real(yyv_y);
+							refCurvePt.push_back(db);
 						}
 						else if (yyjson_is_arr(item)) {
 							size_t size = yyjson_arr_size(item);
@@ -2694,124 +2766,42 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 								}
 								else
 									db = yyjson_get_real(yyv_y);
-								pPtList->push_back(db);
+								refCurvePt.push_back(db);
 							}
 						}
 					}
-					curveList[dbfile.time] = pPtList;
-				}
-			}
 
-			mapRlt.clear();
-			vector<double>* pBase = nullptr;
-			if (deSel.baseCurve == "refCurve") {
-				string path = m_confPath + "/refCurve/";
-				string subPath = DB_STR::replace(tag, ".", "/");
-				path += subPath + "/refCurve.json";
-				string s;
-				DB_FS::readFile(path, s);
-				if (s == "") {
-					db_exception dbe;
-					dbe.m_error = "refCurve not found";
-					throw dbe;
+					pBase = &refCurvePt;
 				}
-
-				yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
-				if (!doc) {
-					s = DB_STR::gb_to_utf8(s);
-					doc = yyjson_read(s.data(), s.size(), 0);
-				}
-				if (!doc) {
-					db_exception dbe;
-					dbe.m_error = "refCurve not found";
-					throw dbe;
-				}
-
-				yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
-				if (!yyv_curve) {
-					db_exception dbe;
-					dbe.m_error = "refCurve not found";
-					throw dbe;
-				}
-
-				yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
-				size_t idx = 0;
-				size_t max = 0;
-				yyjson_val* item;
-				yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
-					if (yyjson_is_obj(item)) {
-						yyjson_val* yyv_y = yyjson_obj_get(item, "y");
-						double db;
-						if (yyjson_is_int(yyv_y)) {
-							int ival = yyjson_get_int(yyv_y);
-							db = ival;
-						}
-						else
-							db = yyjson_get_real(yyv_y);
-						refCurvePt.push_back(db);
+				else if (DB_STR::isTime(deSel.baseCurve)) {
+					string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
+					string s;
+					DB_FS::readFile(path, s);
+					yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
+					if (!doc) {
+						s = DB_STR::gb_to_utf8(s);
+						doc = yyjson_read(s.data(), s.size(), 0);
 					}
-					else if (yyjson_is_arr(item)) {
-						size_t size = yyjson_arr_size(item);
-						if (size == 2) {
-							yyjson_val* yyv_y = yyjson_arr_get(item, 1);
-
-							double db;
-							if (yyjson_is_int(yyv_y)) {
-								int ival = yyjson_get_int(yyv_y);
-								db = ival;
-							}
-							else
-								db = yyjson_get_real(yyv_y);
-							refCurvePt.push_back(db);
-						}
+					if (!doc) {
+						db_exception dbe;
+						dbe.m_error = "specified curve not found";
+						throw dbe;
 					}
-				}
 
-				pBase = &refCurvePt;
-			}
-			else if(DB_STR::isTime(deSel.baseCurve)) {
-				string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
-				string s;
-				DB_FS::readFile(path, s);
-				yyjson_doc* doc = yyjson_read(s.data(), s.size(), 0);
-				if (!doc) {
-					s = DB_STR::gb_to_utf8(s);
-					doc = yyjson_read(s.data(), s.size(), 0);
-				}
-				if (!doc) {
-					db_exception dbe;
-					dbe.m_error = "specified curve not found";
-					throw dbe;
-				}
-
-				yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
-				if (!yyv_curve) {
-					db_exception dbe;
-					dbe.m_error = "specified curve not found";
-					throw dbe;
-				}
-
-				yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
-				size_t idx = 0;
-				size_t max = 0;
-				yyjson_val* item;
-				yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
-					if (yyjson_is_obj(item)) {
-						yyjson_val* yyv_y = yyjson_obj_get(item, "y");
-						double db;
-						if (yyjson_is_int(yyv_y)) {
-							int ival = yyjson_get_int(yyv_y);
-							db = ival;
-						}
-						else
-							db = yyjson_get_real(yyv_y);
-						specifyCurvePt.push_back(db);
+					yyjson_val* yyv_curve = yyjson_doc_get_root(doc);
+					if (!yyv_curve) {
+						db_exception dbe;
+						dbe.m_error = "specified curve not found";
+						throw dbe;
 					}
-					else if (yyjson_is_arr(item)) {
-						size_t size = yyjson_arr_size(item);
-						if (size == 2) {
-							yyjson_val* yyv_y = yyjson_arr_get(item, 1);
 
+					yyjson_val* yyv_pt_list = yyjson_obj_get(yyv_curve, "data");
+					size_t idx = 0;
+					size_t max = 0;
+					yyjson_val* item;
+					yyjson_arr_foreach(yyv_pt_list, idx, max, item) {
+						if (yyjson_is_obj(item)) {
+							yyjson_val* yyv_y = yyjson_obj_get(item, "y");
 							double db;
 							if (yyjson_is_int(yyv_y)) {
 								int ival = yyjson_get_int(yyv_y);
@@ -2821,98 +2811,113 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 								db = yyjson_get_real(yyv_y);
 							specifyCurvePt.push_back(db);
 						}
+						else if (yyjson_is_arr(item)) {
+							size_t size = yyjson_arr_size(item);
+							if (size == 2) {
+								yyjson_val* yyv_y = yyjson_arr_get(item, 1);
+
+								double db;
+								if (yyjson_is_int(yyv_y)) {
+									int ival = yyjson_get_int(yyv_y);
+									db = ival;
+								}
+								else
+									db = yyjson_get_real(yyv_y);
+								specifyCurvePt.push_back(db);
+							}
+						}
+					}
+
+					pBase = &specifyCurvePt;
+				}
+
+
+				vector<double>* pCur = nullptr;
+				size_t sortIdx = 0;
+				for (auto& iter : curveList) {
+					pCur = iter.second;
+
+					if (pCur && pBase && pBase->size() > 0) {
+						if (deSel.calc == "aes") {
+							double aes = 0;
+							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+								aes += abs((*pBase)[i] - (*pCur)[i]);
+							}
+
+							yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
+							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+							yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+							yyjson_mut_obj_put(yyv_aes_de, yyv_time_key, yyv_time_val);
+
+							yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+							yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, aes);
+							yyjson_mut_obj_put(yyv_aes_de, yyv_val_key, yyv_val_val);
+
+							SORT_FLAG sf;
+							sf.dbFlag = sortIdx++;
+							mapRlt[sf] = yyv_aes_de;
+						}
+						else if (deSel.calc == "dtw") {
+							if (pBase->size() != pCur->size()) {
+								DBLog("dtw calc use different length,%d,%d\r\n", pBase->size(), pCur->size());
+							}
+
+							size_t len = pBase->size() < pCur->size() ? pBase->size() : pCur->size();
+							double dtw = DTWDistanceFun(pCur->data(), pCur->size(), pBase->data(), pBase->size(), pBase->size() / 10);
+
+							yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
+							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+							yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+							yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
+
+							yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+							yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
+							yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
+
+							SORT_FLAG sf;
+							sf.dbFlag = sortIdx++;
+							mapRlt[sf] = yyv_dtw_de;
+						}
+						else if (deSel.calc == "dtw2") {
+							vector<vector<double>> base;
+							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+								vector<double> pt;
+								pt.push_back((*pBase)[i]);
+								base.push_back(pt);
+							}
+							vector<vector<double>> cur;
+							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
+								vector<double> pt;
+								pt.push_back((*pCur)[i]);
+								cur.push_back(pt);
+							}
+							double dtw = DTW::dtw_distance_only(base, cur, 2);
+
+							yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
+							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
+							yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
+							yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
+
+							yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
+							yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
+							yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
+
+							SORT_FLAG sf;
+							sf.dbFlag = sortIdx++;
+							mapRlt[sf] = yyv_dtw_de;
+						}
+					}
+
+					if (deSel.baseCurve == "previous") {
+						pBase = pCur;
 					}
 				}
 
-				pBase = &specifyCurvePt;
-			}
-
-
-			vector<double>* pCur = nullptr;
-			size_t sortIdx = 0;
-			for (auto& iter : curveList) {
-				pCur = iter.second;
-	
-				if (pCur && pBase && pBase->size()>0) {
-					if (deSel.calc == "aes") {
-						double aes = 0;
-						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-							aes += abs((*pBase)[i] - (*pCur)[i]);
-						}
-
-						yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
-						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-						yyjson_mut_obj_put(yyv_aes_de, yyv_time_key, yyv_time_val);
-
-						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, aes);
-						yyjson_mut_obj_put(yyv_aes_de, yyv_val_key, yyv_val_val);
-
-						SORT_FLAG sf;
-						sf.dbFlag = sortIdx++;
-						mapRlt[sf] = yyv_aes_de;
-					}
-					else if (deSel.calc == "dtw") {
-						if (pBase->size() != pCur->size()) {
-							DBLog("dtw calc use different length,%d,%d\r\n", pBase->size(), pCur->size());
-						}
-
-						size_t len = pBase->size() < pCur->size() ? pBase->size() : pCur->size();
-						double dtw = DTWDistanceFun(pCur->data(), pCur->size(), pBase->data(), pBase->size(), pBase->size() / 10);
-
-						yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
-						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-						yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
-
-						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
-						yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
-
-						SORT_FLAG sf;
-						sf.dbFlag = sortIdx++;
-						mapRlt[sf] = yyv_dtw_de;
-					}
-					else if (deSel.calc == "dtw2") {
-						vector<vector<double>> base;	
-						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-							vector<double> pt;
-							pt.push_back((*pBase)[i]);
-							base.push_back(pt);
-						}
-						vector<vector<double>> cur;
-						for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
-							vector<double> pt;
-							pt.push_back((*pCur)[i]);
-							cur.push_back(pt);
-						}
-						double dtw = DTW::dtw_distance_only(base, cur, 2);
-
-						yyjson_mut_val* yyv_dtw_de = yyjson_mut_obj(rlt_mut_doc);
-						yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
-						yyjson_mut_val* yyv_time_val = yyjson_mut_strcpy(rlt_mut_doc, iter.first.toStr().c_str());
-						yyjson_mut_obj_put(yyv_dtw_de, yyv_time_key, yyv_time_val);
-
-						yyjson_mut_val* yyv_val_key = yyjson_mut_strcpy(rlt_mut_doc, "val");
-						yyjson_mut_val* yyv_val_val = yyjson_mut_real(rlt_mut_doc, dtw);
-						yyjson_mut_obj_put(yyv_dtw_de, yyv_val_key, yyv_val_val);
-
-						SORT_FLAG sf;
-						sf.dbFlag = sortIdx++;
-						mapRlt[sf] = yyv_dtw_de;
-					}
+				for (auto& i : curveList) {
+					delete i.second;
 				}
-
-				if (deSel.baseCurve == "previous") {
-					pBase = pCur;
-				}
+				pCalcResult = &mapRlt;
 			}
-
-			for (auto& i : curveList) {
-				delete i.second;
-			}
-			pCalcResult = &mapRlt;
 		}
 	}
 
