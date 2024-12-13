@@ -93,35 +93,56 @@ struct SCHEDULE_TASK {
 	string name;
 	Date dateStart;
 	Date dateEnd;
-	bool cyclic; 
+	// bool cyclic;
 	HMS time;
 	bool week[7];
+	int repeatInterval[3];
 	string script;
+	string executionMode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
 
 	SCHEDULE_TASK() {
 		memset(week, 0, sizeof(week));
+		memset(repeatInterval, 0, sizeof(repeatInterval));
 	}
 
 	string toDescStr() {
-		if (cyclic) {
-			string s = str::format("%s,%s~%s,%s,%d%d%d%d%d%d%d,%s",
-				name.c_str(),
-				dateStart.toStr().c_str(),
+		//if (cyclic) {
+		//	string s = str::format("%s,%s~%s,%s,%d%d%d%d%d%d%d,%s,%s",
+		//		name.c_str(),
+		//		dateStart.toStr().c_str(),
+		//		dateEnd.toStr().c_str(),
+		//		time.toStr().c_str(),
+		//		week[0], week[1], week[2], week[3], week[4], week[5], week[6],
+		//		script.c_str(),
+		//		executionMode.c_str()
+		//	);
+		//	return s;
+		//}
+		//else {
+		string s = "";
+		if (executionMode == "weeklyRepeat") {
+      s = str::format("%s,%s-%s,%s,%d%d%d%d%d%d%d,%s,%s",
+        name.c_str(),
+        dateStart.toStr().c_str(),
 				dateEnd.toStr().c_str(),
-				time.toStr().c_str(),
-				week[0], week[1], week[2], week[3], week[4], week[5], week[6],
-				script.c_str());
-			return s;
+        time.toStr().c_str(),
+        week[0], week[1], week[2], week[3], week[4], week[5], week[6],
+        script.c_str(),
+        executionMode.c_str()
+      );
 		}
-		else {
-			string s = str::format("%s,%s %s,%d%d%d%d%d%d%d,%s",
-				name.c_str(),
-				dateStart.toStr().c_str(),
-				time.toStr().c_str(),
-				week[0], week[1], week[2], week[3], week[4], week[5], week[6],
-				script.c_str());
-			return s;
+		else if (executionMode == "customTimeRepeat") {
+      s = str::format("%s,%s-%s,%d:%d:%d,%s,%s",
+        name.c_str(),
+        dateStart.toStr().c_str(),
+        dateEnd.toStr().c_str(),
+				repeatInterval[0], repeatInterval[1], repeatInterval[2],
+        script.c_str(),
+        executionMode.c_str()
+      );
 		}
+		return s;
+		//}
 	};
 	TIME getExeTime();
 
@@ -137,21 +158,32 @@ struct SCHEDULE_TASK {
 			string s = j["dateEnd"];
 			dateEnd.fromStr(s);
 		}
-		if (j["time"].is_string()) {
-			string s = j["time"];
-			time.fromStr(s);
-		}
-		if (j["week"].is_array()) {
-			json& jWeek = j["week"];
-			for (int i = 0; i < jWeek.size();i++) {
-				week[i] = jWeek[i].get<bool>();
-			}
-		}
 		if (j["script"].is_string()) {
 			script = j["script"];
 		}
-		if (j["cyclic"].is_boolean()) {
-			cyclic = j["cyclic"].get<bool>();
+		//if (j["cyclic"].is_boolean()) {
+		//	cyclic = j["cyclic"].get<bool>();
+		//}
+		if (j["executionMode"].is_string()) {
+			executionMode = j["executionMode"];
+			if (executionMode == "weeklyRepeat") {
+        if (j["time"].is_string()) {
+          string s = j["time"];
+          time.fromStr(s);
+        }
+        if (j["week"].is_array()) {
+          json& jWeek = j["week"];
+          for (int i = 0; i < jWeek.size(); ++i) {
+            week[i] = jWeek[i].get<bool>();
+          }
+        }
+			}
+			else if (executionMode == "customTimeRepeat") {
+				json& jRepeatInterval = j["repeatInterval"];
+				repeatInterval[0] = jRepeatInterval["hour"].get<int>();
+				repeatInterval[1] = jRepeatInterval["minute"].get<int>();
+				repeatInterval[2] = jRepeatInterval["second"].get<int>();
+			}
 		}
 	}
 
@@ -159,14 +191,24 @@ struct SCHEDULE_TASK {
 		j["name"] = name;
 		j["dateStart"] = dateStart.toStr();
 		j["dateEnd"] = dateEnd.toStr();
-		j["time"] = time.toStr();
-		json jWeek = json::array();
-		for (int i = 0; i < 7; i++) {
-			jWeek.push_back(week[i]);
-		}
-		j["week"] = jWeek;
 		j["script"] = script;
-		j["cyclic"] = cyclic;
+		//j["cyclic"] = cyclic;
+		j["executionMode"] = executionMode;
+		if (executionMode == "weeklyRepeat") {
+      j["time"] = time.toStr();
+      json jWeek = json::array();
+      for (int i = 0; i < 7; ++i) {
+        jWeek.push_back(week[i]);
+      }
+      j["week"] = jWeek;
+		}
+		else if (executionMode == "customTimeRepeat") {
+      j["repeatInterval"] = {
+        {"hour", repeatInterval[0]},
+        {"minute", repeatInterval[1]},
+        {"second", repeatInterval[2]}
+      };
+		}
 	}
 };
 

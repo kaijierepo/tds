@@ -463,6 +463,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 			json jTasks = json::array();
 			json jT;
 			for (int i = 0; i < m_scheduleTasks.size(); i++) {
+				jT.clear();
 				SCHEDULE_TASK& st = m_scheduleTasks[i];
 				st.toJson(jT);
 				jTasks.push_back(jT);
@@ -1647,15 +1648,15 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 
 TIME SCHEDULE_TASK::getExeTime()
 {
-	if (cyclic) {
-		TIME exeTime = timeopt::now();
-		exeTime.setHMS(time);
-		return exeTime;
-	}
-	else {
+	//if (cyclic) {
+	//	TIME exeTime = timeopt::now();
+	//	exeTime.setHMS(time);
+	//	return exeTime;
+	//}
+	//else {
 		TIME exeTime;
 		exeTime.setDate(dateStart);
 		exeTime.setHMS(time);
 		return exeTime;
-	}
+	//}
 }
