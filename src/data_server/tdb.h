@@ -28,6 +28,7 @@ SOFTWARE.
 
 #pragma once
 #include <map>
+#include <set>
 #ifdef ENABLE_JERRY_SCRIPT
 #include "jerryscript.h"
 #include "jerry.h"

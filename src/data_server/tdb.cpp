@@ -1207,7 +1207,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	if (deSel.deType == "curveIdx")
 		withTag = true;
 
-	map<string, map<string, yyjson_mut_val*>> timeSectionSeries; 
+	map<string, map<string, set<yyjson_mut_val*>>> timeSectionSeries; 
 
 
 	//generate output de
@@ -1287,15 +1287,15 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			}
 
 		
-			map<string, map<string, yyjson_mut_val*>>::iterator iter = timeSectionSeries.find(deyy.deTime.data());
+			auto iter = timeSectionSeries.find(deyy.deTime.data());
 			if (iter == timeSectionSeries.end()) {
-				map<string, yyjson_mut_val*> timeSection;
-				timeSection[tag] = jRecord;
+				map<string, set<yyjson_mut_val*>> timeSection;
+				timeSection[tag].insert(jRecord);
 				timeSectionSeries[deyy.deTime.data()] = timeSection;
 			}
 			else {
-				map<string, yyjson_mut_val*>& timeSection = iter->second;
-				timeSection[tag] = jRecord;
+				map<string, set<yyjson_mut_val*>>& timeSection = iter->second;
+				timeSection[tag].insert(jRecord);
 			}
 
 			result.rowCount++;
@@ -1309,43 +1309,49 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 	//time section fill,set time of the filled de
 	if (deSel.timeFill) {
 		int addDeCount = 0;
-		map<string, yyjson_mut_val*>* lastSection = nullptr;
+		map<string, set<yyjson_mut_val*>>* lastSection = nullptr;
 		for (auto& iter : timeSectionSeries) {
-			map<string, yyjson_mut_val*>& timeSection = iter.second;
+			map<string, set<yyjson_mut_val*>>& timeSection = iter.second;
 			for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 			{
 				DATA_SET& fSet = *tagDBFileSet[tagIdx];
 				string& tag = fSet.tag;
 
-				map<string, yyjson_mut_val*>::iterator j = timeSection.find(tag);
+				auto j = timeSection.find(tag);
 				if (j == timeSection.end()) { //tag does not have data in this time section,need to be filled
 					if (lastSection != nullptr) {
-						map<string, yyjson_mut_val*>::iterator k = lastSection->find(tag);
+						auto k = lastSection->find(tag);
 						if (k != lastSection->end()) {
-							yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
 
+							set<yyjson_mut_val*> jReSet;
 							//a de must exist in this time section,use the first de to get the time of this time section
-							yyjson_mut_val* jTimeRefRec = timeSection.begin()->second;
-							yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
-							yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
-							yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
-							yyjson_mut_obj_put(jRecord, timeKey, yyTime);
-
-
-							yyjson_mut_val* jValRefRec = k->second;
-							yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
-							yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
-							yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
-							yyjson_mut_obj_put(jRecord, valKey, yyVal);
-
-							yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
-							yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
-							yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
-							yyjson_mut_obj_put(jRecord, tagKey, yyTag);
-
-
-							timeSection[tag] = jRecord;
-							addDeCount++;
+							for (auto jValRefRec : k->second)
+							{
+								yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
+								yyjson_mut_val* jTimeRefRec = *(timeSection.begin()->second.begin());
+								yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
+								yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
+								yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
+								yyjson_mut_obj_put(jRecord, timeKey, yyTime);
+	
+	
+								//yyjson_mut_val* jValRefRec = k->second;
+								yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
+								yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
+								yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
+								yyjson_mut_obj_put(jRecord, valKey, yyVal);
+	
+								yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
+								yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
+								yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
+								yyjson_mut_obj_put(jRecord, tagKey, yyTag);
+	
+	
+								//timeSection[tag] = jRecord;
+								jReSet.insert(jRecord);
+								addDeCount++;
+							}
+							timeSection[tag].swap(jReSet);
 						}
 					}
 				}
@@ -1358,34 +1364,37 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 	//sort de and output
 	for (auto& i : timeSectionSeries) {
-		map<string, yyjson_mut_val*>& timeSection = i.second;
+		map<string, set<yyjson_mut_val*>>& timeSection = i.second;
 		for (auto& j : timeSection) {
-			yyjson_mut_val* jRec = j.second;
-
 			SORT_FLAG sortFlag;
-			if (deSel.sortKey.length() > 0) {
-				yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
-				if (deSel.sortKey == "val") {
-					if (yyjson_mut_is_str(yyVal)) {
-						sortFlag.sFlag = yyjson_mut_get_str(yyVal);
+			for (auto jRec : j.second)
+			{
+				//yyjson_mut_val* jRec = j.second;
+	
+				if (deSel.sortKey.length() > 0) {
+					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
+					if (deSel.sortKey == "val") {
+						if (yyjson_mut_is_str(yyVal)) {
+							sortFlag.sFlag = yyjson_mut_get_str(yyVal);
+						}
+						else if (yyjson_mut_is_num(yyVal)) {
+							sortFlag.dbFlag = yyjson_mut_get_real(yyVal);
+						}
 					}
-					else if (yyjson_mut_is_num(yyVal)) {
-						sortFlag.dbFlag = yyjson_mut_get_real(yyVal);
+					else if (yyjson_mut_is_obj(yyVal)) {
+						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+						if (yyjson_mut_is_str(yySortKey)) {
+							sortFlag.sFlag = yyjson_mut_get_str(yySortKey);
+						}
+						else if (yyjson_mut_is_num(yySortKey)) {
+							sortFlag.dbFlag = yyjson_mut_get_real(yySortKey);
+						}
 					}
 				}
-				else if (yyjson_mut_is_obj(yyVal)) {
-					yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
-					if (yyjson_mut_is_str(yySortKey)) {
-						sortFlag.sFlag = yyjson_mut_get_str(yySortKey);
-					}
-					else if (yyjson_mut_is_num(yySortKey)) {
-						sortFlag.dbFlag = yyjson_mut_get_real(yySortKey);
-					}
-				}
+	
+				sortFlag.sFlag += i.first + j.first + std::to_string(result.rowCount);
+				mapRlt[sortFlag] = jRec; 
 			}
-
-			sortFlag.sFlag += i.first + j.first + std::to_string(result.rowCount);
-			mapRlt[sortFlag] = jRec; 
 		}
 	}
 	
@@ -2984,7 +2993,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_val* item;
 		vector<string> timeSelList;
 		yyjson_arr_foreach(yyv_time, idx, max, item) {
-			if (!yyjson_is_str(item)) {
+			if (yyjson_is_str(item)) {
 				string s = yyjson_get_str(item);
 				timeSelList.push_back(s);
 			}
@@ -3865,9 +3874,13 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
 		yyjson_mut_obj_remove_key(yymv_params, "tag");
 		size_t len = 0;
-		auto s = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
-		string sDe = s;
-		free(s);
+		auto json_str = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		string sDe;
+		if (json_str)
+		{
+			sDe = json_str;
+			free(json_str);
+		}
 		yyjson_mut_doc_free(mut_doc);
 
 		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
