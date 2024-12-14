@@ -36,6 +36,7 @@ SOFTWARE.
 #include "yyjson.h"
 #include <vector>
 #include <string>
+#include <mutex>
 using namespace std;
 
 class TDB;
@@ -59,6 +60,10 @@ struct DB_TIME {
 	unsigned short wSecond;
 	unsigned short wMilliseconds;
 	unsigned short wDayOfWeek;
+
+	DB_TIME() {
+		memset(this, 0, sizeof(DB_TIME));
+	}
 
 	void fromUnixTime(time_t iUnix, int milli = 0);
 	time_t toUnixTime();
@@ -281,6 +286,8 @@ struct DB_FILE {
 	TDB* pOwnerDB;
 
 	bool loadFile();
+
+	bool isDataList();  //datalist file, curve index file ,not curve file. only data list is buffered in tdb
 
 	DB_FILE(DB_TIME t, string tag_, TDB* pOwner) {
 		monthBoundaryFile = false;
@@ -630,23 +637,19 @@ namespace DB_FS {
 }
 
 struct FILE_BUFF {
-	char* data;
-	size_t len;
+	DB_TIME lastActive;
+	string data;
 	FILE_BUFF() {
-		data = nullptr;
-		len = 0;
+
 	}
 	~FILE_BUFF() {
-		if (data) {
-			delete data;
-		}
 	}
 };
 
 class FS_BUFF {
 public:
 	std::mutex m_csFsb;
-	std::map<string,FILE_BUFF> m_mapFsBuff;
+	std::map<string,FILE_BUFF*> m_mapFsBuff;
 
 	bool readFile(string path, string& data);
 	bool writeFile(string path, unsigned char* data, size_t len);
@@ -671,6 +674,8 @@ public:
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
 	DB_FMT m_dbFmt;
 	bool m_bEnableFsBuff;
+	FS_BUFF m_FsBuff;
+	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
 
 	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
@@ -686,6 +691,9 @@ public:
 
 	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
+
+	void rpc_db_getBufferStatus(string& rlt, string& err);
+	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);
