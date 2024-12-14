@@ -629,6 +629,29 @@ namespace DB_FS {
 	bool copyFile(const std::string& src, const std::string& dest);
 }
 
+struct FILE_BUFF {
+	char* data;
+	size_t len;
+	FILE_BUFF() {
+		data = nullptr;
+		len = 0;
+	}
+	~FILE_BUFF() {
+		if (data) {
+			delete data;
+		}
+	}
+};
+
+class FS_BUFF {
+public:
+	std::mutex m_csFsb;
+	std::map<string,FILE_BUFF> m_mapFsBuff;
+
+	bool readFile(string path, string& data);
+	bool writeFile(string path, unsigned char* data, size_t len);
+};
+
 inline string JSON_STR_VAL(string s) {
 	return "\"" + s + "\"";
 }
@@ -647,6 +670,7 @@ public:
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
 	DB_FMT m_dbFmt;
+	bool m_bEnableFsBuff;
 	DB_TIME_UNIT m_timeUnit;
 
 	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);

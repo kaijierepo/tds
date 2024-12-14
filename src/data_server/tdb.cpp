@@ -846,6 +846,7 @@ TDB::TDB()
 	m_getTagsByTagSelector = nullptr;
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
+	m_bEnableFsBuff = false;
 }
 
 string TDB::getPath_deFile(string strTag, DB_TIME stTime)
@@ -5642,4 +5643,18 @@ bool DB_FILE::loadFile()
 	}
 	root = yyjson_doc_get_root(doc);
 	return true;
+}
+
+bool FS_BUFF::readFile(string path, string& data)
+{
+	m_csFsb.lock();
+
+
+
+	return false;
+}
+
+bool FS_BUFF::writeFile(string path, unsigned char* data, size_t len)
+{
+	return false;
 }
