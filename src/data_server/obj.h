@@ -96,13 +96,13 @@ struct SCHEDULE_TASK {
 	// bool cyclic;
 	HMS time;
 	bool week[7];
-	int repeatInterval[3];
+	time_t lastExecuteTime;
 	string script;
 	string executionMode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
 
 	SCHEDULE_TASK() {
 		memset(week, 0, sizeof(week));
-		memset(repeatInterval, 0, sizeof(repeatInterval));
+		lastExecuteTime = timeopt::getTick();
 	}
 
 	string toDescStr() {
@@ -136,7 +136,7 @@ struct SCHEDULE_TASK {
         name.c_str(),
         dateStart.toStr().c_str(),
         dateEnd.toStr().c_str(),
-				repeatInterval[0], repeatInterval[1], repeatInterval[2],
+				time.wHour, time.wMinute, time.wSecond,
         script.c_str(),
         executionMode.c_str()
       );
@@ -144,6 +144,7 @@ struct SCHEDULE_TASK {
 		return s;
 		//}
 	};
+
 	TIME getExeTime();
 
 	void fromJson(json& j) {
@@ -180,9 +181,9 @@ struct SCHEDULE_TASK {
 			}
 			else if (executionMode == "customTimeRepeat") {
 				json& jRepeatInterval = j["repeatInterval"];
-				repeatInterval[0] = jRepeatInterval["hour"].get<int>();
-				repeatInterval[1] = jRepeatInterval["minute"].get<int>();
-				repeatInterval[2] = jRepeatInterval["second"].get<int>();
+        time.wHour = jRepeatInterval["hour"].get<int>();
+        time.wMinute = jRepeatInterval["minute"].get<int>();
+        time.wSecond = jRepeatInterval["second"].get<int>();
 			}
 		}
 	}
@@ -204,12 +205,16 @@ struct SCHEDULE_TASK {
 		}
 		else if (executionMode == "customTimeRepeat") {
       j["repeatInterval"] = {
-        {"hour", repeatInterval[0]},
-        {"minute", repeatInterval[1]},
-        {"second", repeatInterval[2]}
+        {"hour", time.wHour},
+        {"minute", time.wMinute},
+        {"second", time.wSecond}
       };
 		}
 	}
+
+	bool isInterval();
+
+	void updateExecuteTime();
 };
 
 struct OBJ_STATIS {

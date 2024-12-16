@@ -1648,15 +1648,20 @@ void OBJ::getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector)
 
 TIME SCHEDULE_TASK::getExeTime()
 {
-	//if (cyclic) {
-	//	TIME exeTime = timeopt::now();
-	//	exeTime.setHMS(time);
-	//	return exeTime;
-	//}
-	//else {
-		TIME exeTime;
-		exeTime.setDate(dateStart);
-		exeTime.setHMS(time);
-		return exeTime;
-	//}
+  TIME exeTime = timeopt::now();
+  exeTime.setHMS(time);
+  return exeTime;
+}
+
+bool SCHEDULE_TASK::isInterval()
+{
+  time_t currentTime = timeopt::getTick();
+  int intervalSeconds = time.wHour * 3600 + time.wMinute * 60 + time.wSecond;
+  int pass = (currentTime - lastExecuteTime) / 1000;
+  return pass >= intervalSeconds;
+}
+
+void SCHEDULE_TASK::updateExecuteTime()
+{
+	lastExecuteTime = timeopt::getTick();
 }

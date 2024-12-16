@@ -22,24 +22,25 @@ void taskServer::recursiveExeTask(OBJ* pObj) {
 	TIME now = timeopt::now();
 	for (int i = 0; i < pObj->m_scheduleTasks.size();i++) {
 		SCHEDULE_TASK* pTask = &pObj->m_scheduleTasks[i];
-		//if (pTask->cyclic) {
-		//	TIME exeTime = pTask->getExeTime();
-		//	if (pTask->week[exeTime.wDayOfWeek]) {
-		//		time_t pass = timeopt::CalcTimePassSecond(exeTime);
-		//		if (pass >= 0 && pass < 5) {
-		//			LOG("[warn]执行计划任务,%s", pTask->toDescStr().c_str());
-		//			scriptManager.runScriptFileAsyn(pTask->script, pObj->getTag());
-		//		}
-		//	}
-		//}
-		//else {
+		if (pTask->executionMode == "weeklyRepeat") {
 			TIME exeTime = pTask->getExeTime();
-			time_t pass = timeopt::CalcTimePassSecond(exeTime);
-			if (pass >= 0 && pass < 5) {
-				LOG("[warn]执行计划任务,%s", pTask->toDescStr().c_str());
-				scriptManager.runScriptFileAsyn(pTask->script, pObj->getTag());
+			if (pTask->week[exeTime.wDayOfWeek]) {
+				time_t pass = timeopt::CalcTimePassSecond(exeTime);
+				if (pass >= 0 && pass < 5) {
+					LOG("[warn]执行计划任务,%s", pTask->toDescStr().c_str());
+					scriptManager.runScriptFileAsyn(pTask->script, pObj->getTag());
+				}
 			}
-		//}
+		}
+		else if(pTask->executionMode == "customTimeRepeat") {
+      if (pTask->isInterval()) {
+#ifdef DEBUG
+				LOG("[warn]执行计划任务,%s", pTask->toDescStr().c_str());
+#endif // DEBUG
+        scriptManager.runScriptFileAsyn(pTask->script, pObj->getTag());
+				pTask->updateExecuteTime();
+      }
+		}
 	}
 
 	for (int i = 0; i < pObj->m_childObj.size(); i++) {
