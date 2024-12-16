@@ -94,6 +94,7 @@ struct DEV_QUERIER {
 	bool getUpgradeInfo;
 	bool getPAB;  //get pkt assemble buffer
 	string rootTag;
+	string tag;
 	vector<string> type;
 	vector<string> subType;
 	string standAloneIO;

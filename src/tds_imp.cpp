@@ -526,6 +526,7 @@ bool TDS_imp::run(string cmdline)
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 		::db.m_confPath = tds->conf->confPath;
 		::db.m_currentPath = tds->conf->currentPath;
+		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
 	}
 		
 	prj.loadObjTemplate();

@@ -1531,24 +1531,18 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 	devStatis.rootTag = devQuerier.rootTag;
 	for (auto& dev : m_vecChildDev)
 	{
-		//为指定所有忽略串口
-		//if (i->m_devType == IO_DEV_TYPE::GW::local_serial && interfaceType!="*")
-		//{
-		//	continue;
-		//}
+		//根据绑定位号进行过滤
+		if (devQuerier.tag != "") {
+			if (dev->m_strTagBind == "") {
+				continue;
+			}
 
-
-		////指定查找智能设备。但是是非智能设备
-		//if (i->m_strTagBind == "")
-		//{
-		//	if(tagBind != "")
-		//		continue;
-		//}
-		//else
-		//{
-		//	if (tagBind != "*" && tagBind != i->m_strTagBind)
-		//		continue;
-		//}
+			TAG_SELECTOR tagSel;
+			tagSel.init(devQuerier.tag);
+			if (!tagSel.match(dev->m_strTagBind)) {
+				continue;
+			}
+		}
 
 		//根据是否隶属ioServer进行过滤
 		if (devQuerier.standAloneIO != "") {
@@ -1625,17 +1619,17 @@ bool ioServer::toJson(json& conf, json opt)
 	int pageNo = 0;
 	int pageSize = 0;
 	bool getStatis = false;
-	string tagBind = "*";  
+	string tagBind = "";  
 	if (opt != nullptr)
 	{
 		if(opt.contains("rootTag"))
 			rootTag = opt["rootTag"].get<string>();
 		if (opt.contains("interface"))
 			interfaceType = opt["interface"].get<string>();
-		if (opt.contains("tagBind"))
-			 tagBind = opt["tagBind"].get<string>();
 		if (opt.contains("getStatis"))
 			getStatis = opt["getStatis"].get<bool>();
+		if (opt.contains("tag"))
+			tagBind = opt["tag"].get<string>();
 
 		//分页参数
 		if (opt.contains("pageNo") && opt.contains("pageSize")) {
@@ -1651,6 +1645,7 @@ bool ioServer::toJson(json& conf, json opt)
 	DEV_QUERIER devQuery;
 	devQuery.parseQueryOpt(opt);
 	devQuery.rootTag = rootTag;
+	devQuery.tag = tagBind;
 	DEV_STATIS devStatis;
 	vector<ioDev*> filterRlt;
 	queryDev(devQuery,devStatis, filterRlt);
