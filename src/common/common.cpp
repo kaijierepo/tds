@@ -437,7 +437,7 @@ namespace charCodec {
 
 		return encoded.str();
 	}
-	string 
+
 }
 namespace str {
 
