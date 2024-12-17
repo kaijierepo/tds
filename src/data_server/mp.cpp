@@ -1002,16 +1002,12 @@ void MP::stopStreamPull(string tag)
 bool MP::startStreamPull()
 {
 	string tag = getTag();
+	tag = charCodec::urlEncode(tag);
 	//string tagPinyin;
 	//str::hanZi2Pinyin(tag,tagPinyin);
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = sIP + ":" + sPort;
-	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
-	//码流的app字段加入tdsID的原因
-	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
-	//frp转发机制配置繁琐，部署过于复杂，废弃。此出暂保留做个记录，作为技术方案对比参考
-	//string app = "stream_" + prj.getTdsId();
 	string app = "stream";
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	httplib::Client cli(streamServerUrl);
@@ -1049,6 +1045,7 @@ bool MP::startStreamPull()
 bool MP::stopStreamPush()
 {
 	string tag = getTag();
+	tag = charCodec::urlEncode(tag);
 	//string tagPinyin;
 	//str::hanZi2Pinyin(tag,tagPinyin);
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
@@ -1080,15 +1077,14 @@ bool MP::stopStreamPush()
 bool MP::startStreamPush(string desUrl)
 {
 	string tag = getTag();
+	tag = charCodec::urlEncode(tag);
 	//string tagPinyin;
 	//str::hanZi2Pinyin(tag,tagPinyin);
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	string streamServerUrl = sIP + ":" + sPort;
-	//tag = httplib::detail::encode_url(charCodec::utf8toAnsi(tag));
-	//码流的app字段加入tdsID的原因
-	//使用frp码流转发时，frp转发http请求需要根据第一级路径来确定需要转发给哪个子服务
+
 	string app = "stream";
 	httplib::Client cli(streamServerUrl);
 	httplib::Headers headers;
