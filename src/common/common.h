@@ -355,6 +355,7 @@ namespace charCodec {
 	string tds_to_gb(string instr);
 	string gb_to_tds(string instr);
 	string utf8_to_tds(string instr);
+	std::string urlEncode(const std::string& str);
 }
 namespace str {
 	string trimPrefix(string s, string prefix = " ");

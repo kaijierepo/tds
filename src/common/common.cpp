@@ -4,6 +4,10 @@
 #include <random>
 #include <iostream>
 #include <fstream>
+#include <string>
+#include <sstream>
+#include <iomanip>
+#include <cctype>
 #ifdef _WIN32
 #include <shellapi.h>  //for this:  SHELLEXECUTEINFO
 #endif
@@ -406,6 +410,34 @@ namespace charCodec {
 			return instr;
 		}
 	}
+
+	bool isUrlReservedChar(char ch) {
+		return std::isalnum(static_cast<unsigned char>(ch)) ||
+			ch == '-' || ch == '_' || ch == '.' || ch == '!' ||
+			ch == '~' || ch == '*' || ch == '\'' || ch == '(' ||
+			ch == ')' || ch == ';' || ch == ':' || ch == '@' ||
+			ch == '&' || ch == '=' || ch == '+' || ch == '$' ||
+			ch == ',' || ch == '/' || ch == '?' || ch == '#' ||
+			ch == '[' || ch == ']' || ch == '@';
+	}
+
+	// Function to URL encode a UTF-8 string
+	std::string urlEncode(const std::string& str) {
+		std::ostringstream encoded;
+
+		for (char ch : str) {
+			if (isUrlReservedChar(ch)) {
+				encoded << ch;
+			}
+			else {
+				encoded << '%' << std::hex << std::setw(2) << std::setfill('0')
+					<< static_cast<int>(static_cast<unsigned char>(ch));
+			}
+		}
+
+		return encoded.str();
+	}
+	string 
 }
 namespace str {
 
