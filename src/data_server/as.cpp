@@ -2695,7 +2695,7 @@ vector<AS_ALARM_INFO*> almTable::query(json querier)
 			//continue;
 		if (aq.filter_user) {
 			if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission) {
-				if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission(aq.user, it->second->tag)) {
+				if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission(aq.user, it->second->tag)==false) {
 					continue;
 				}
 			}
