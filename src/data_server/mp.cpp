@@ -687,24 +687,24 @@ OBJ* MP::getParentMo()
 	return nullptr;
 }
 
-void MP::updateVal(json& jVal, json* fileData, TIME* dataTime)
+void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 {
 	TIME t;
-	if (dataTime == NULL)
+	if (pDataTime == NULL)
 	{
 		timeopt::now(&t);
-		dataTime = &t;
+		pDataTime = &t;
 	}
 
-	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
+	if (memcmp(pDataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
 		return;
 
 	m_dbFileLock.lock();
 
-	m_stDataLastUpdate = *dataTime;
+	m_stDataLastUpdate = *pDataTime;
 	OBJ* pParentMo = getParentMo();
 	if (pParentMo)
-		pParentMo->m_stDataLastUpdate = *dataTime;
+		pParentMo->m_stDataLastUpdate = *pDataTime;
 
 	//save to rt memory
 	m_lastVal = m_curVal;
