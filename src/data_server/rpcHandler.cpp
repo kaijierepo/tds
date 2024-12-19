@@ -6124,6 +6124,11 @@ void rpcHandler::rpc_onObjOnline(json params,RPC_SESSION session) {
 	if (p) {
 		if (p->m_bOnline == false) {
 			p->m_bOnline = true;
+
+			if (p->m_strIoAddrBind != "") {
+				p->setChildMpOnline();
+			}
+
 			LOG("[对象上线  ]位号:%s", tag.c_str());
 			rpcSrv.notify("objOnline", params);
 		}
@@ -6136,6 +6141,11 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_SESSION session) {
 	if (p) {
 		if (p->m_bOnline) {
 			p->m_bOnline = false;
+
+			if (p->m_strIoAddrBind != "") {
+				p->setChildMpOffline();
+			}
+
 			LOG("[对象掉线  ]位号:%s", tag.c_str());
 			rpcSrv.notify("objOffline", params);
 		}

@@ -307,6 +307,7 @@ public:
 	bool m_bEnableAlarm;	//	是否报警
 	bool m_bEnableIO;
 	vector<SCHEDULE_TASK> m_scheduleTasks;
+	bool isChildObjOfIntelliDev();
 
 	//动态创建
 	OBJ* createObjBranchByTag(string tag);
@@ -346,6 +347,8 @@ public:
 
 	//修改接口
 	void recursiveSetOffline();
+	void setChildMpOnline();
+	void setChildMpOffline();
 
 	//树管理
 	std::vector<OBJ*> m_childObj;

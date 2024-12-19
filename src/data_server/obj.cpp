@@ -287,6 +287,32 @@ bool OBJ::isSelectedByLeafLevel(string leafLevel)
 	return false;
 }
 
+void OBJ::setChildMpOnline()
+{
+	if (m_bOnline) {
+		m_bOnline = true;
+	}
+	for (int i = 0; i < m_childObj.size(); i++) {
+		OBJ* pC = m_childObj[i];
+		if (pC->m_level == "mp") {
+			m_bOnline = true;
+		}
+	}
+}
+
+void OBJ::setChildMpOffline()
+{
+	if (m_bOnline) {
+		m_bOnline = false;
+	}
+	for (int i = 0; i < m_childObj.size(); i++) {
+		OBJ* pC = m_childObj[i];
+		if (pC->m_level == "mp") {
+			m_bOnline = false;
+		}
+	}
+}
+
 void OBJ::recursiveSetOffline()
 {
 	if (m_bOnline) {
@@ -691,6 +717,18 @@ OBJ* OBJ::GetProjectMO()
 	}
 
 	return pTmp;
+}
+bool OBJ::isChildObjOfIntelliDev()
+{
+	OBJ* p = this;
+	while (p) {
+		if (p->m_strIoAddrBind != "") {
+			return true;
+		}
+		p = p->m_pParentMO;
+	}
+
+	return false;
 }
 OBJ* OBJ::createObjBranchByTag(string tag)
 {

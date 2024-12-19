@@ -463,6 +463,10 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 		if (m_valType == VAL_TYPE::video) {
 			conf["online"] = m_bOnline;
 		}
+
+		if (isChildObjOfIntelliDev()) {
+			conf["online"] = m_bOnline;
+		}
 	}
 
 	if (q.getStatusDesc || q.getValDesc) {
