@@ -289,13 +289,13 @@ bool OBJ::isSelectedByLeafLevel(string leafLevel)
 
 void OBJ::setChildMpOnline()
 {
-	if (m_bOnline) {
+	if (!m_bOnline) {
 		m_bOnline = true;
 	}
 	for (int i = 0; i < m_childObj.size(); i++) {
 		OBJ* pC = m_childObj[i];
 		if (pC->m_level == "mp") {
-			m_bOnline = true;
+			pC->m_bOnline = m_bOnline;
 		}
 	}
 }
@@ -308,7 +308,7 @@ void OBJ::setChildMpOffline()
 	for (int i = 0; i < m_childObj.size(); i++) {
 		OBJ* pC = m_childObj[i];
 		if (pC->m_level == "mp") {
-			m_bOnline = false;
+			pC->m_bOnline = m_bOnline;
 		}
 	}
 }
