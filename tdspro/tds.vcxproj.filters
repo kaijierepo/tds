@@ -67,7 +67,7 @@
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\src\tds.cpp" />
-    <ClCompile Include="..\src\data_server\as.cpp">
+    <ClCompile Include="..\src\data_server\tAlmSrv.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\mp.cpp">
@@ -299,7 +299,7 @@
     <ClInclude Include="..\src\common\kvIni.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\as.h">
+    <ClInclude Include="..\src\data_server\tAlmSrv.h">
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\mp.h">

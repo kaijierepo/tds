@@ -2,7 +2,7 @@
 #include "pch.h"
 #include "rpcHandler.h"
 #include "prj.h"
-#include "as.h"
+#include "tAlmSrv.h"
 #include "mp.h"
 #include  "reverseInterface.h"
 #include "logger.h"
@@ -2219,6 +2219,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						if (pObj->toJson(jObj, q,&selectedByLeafType, session.user))
 							jRlt.push_back(jObj);
 					}
+					rpcResp.info = str::format("objCount=%d", objList.size());
 					result = jRlt.dump(2);
 				}
 				else

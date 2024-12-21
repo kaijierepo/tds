@@ -515,7 +515,7 @@
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\as.cpp" />
+    <ClCompile Include="..\src\data_server\tAlmSrv.cpp" />
     <ClCompile Include="..\src\data_server\jerry.cpp" />
     <ClCompile Include="..\src\data_server\mp.cpp" />
     <ClCompile Include="..\src\data_server\obj.cpp" />
@@ -600,7 +600,7 @@
     <ClInclude Include="..\src\common\tcpSrv.h" />
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
-    <ClInclude Include="..\src\data_server\as.h" />
+    <ClInclude Include="..\src\data_server\tAlmSrv.h" />
     <ClInclude Include="..\src\data_server\jerry.h" />
     <ClInclude Include="..\src\data_server\mp.h" />
     <ClInclude Include="..\src\data_server\obj.h" />
