@@ -1107,13 +1107,15 @@ ioDev* ioDev::getIODev(string ioAddr,bool bChn, bool ignorePort)
 			return p;
 	}
 
-	for (auto& it : m_channels)
-	{
-		string tmp = it->getIOAddrStr(ignorePort);
-		str::hanZi2Pinyin(tmp, tmp);
-		if (tmp == ioAddr)
+	if (bChn) {
+		for (auto& it : m_channels)
 		{
-			return it;
+			string tmp = it->getIOAddrStr(ignorePort);
+			str::hanZi2Pinyin(tmp, tmp);
+			if (tmp == ioAddr)
+			{
+				return it;
+			}
 		}
 	}
 	return nullptr;
@@ -1489,7 +1491,13 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 
 	if (m_bOnline == false)
 	{
-		LOG("[warn]设备上线,%s", getIOAddrStr().c_str());
+		if (pIOSession) {
+			LOG("[warn]设备上线setOnline设置在线状态,ioAddr=%s,remoteAddr=%s", getIOAddrStr().c_str(),pIOSession->getRemoteAddr().c_str());
+		}
+		else {
+			LOG("[warn]设备上线setOnline设置在线状态,ioAddr=%s", getIOAddrStr().c_str());
+		}
+
 		if (m_strTagBind != "") {
 			TDB* dbOS = db.getChildDB("onlineStatus");
 			//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;

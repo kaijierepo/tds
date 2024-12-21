@@ -80,18 +80,18 @@ void IOThread()
 			ioDev* pIoDev = ioSrv.m_vecChildDev[i];
 			//空闲设备不轮询数据
 			//所有的周期采集命令支持异步处理，doCycleTask不阻塞
-			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq)
+			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq && pIoDev->m_bEnableAcq) //m_bEnableAcq对应设备管理中的启用轮询
 			{
 				pIoDev->DoCycleTask(); 
+			}
 
-				////添加ping thread
+			//执行ping在线监测
+			if (pIoDev->m_bEnablePingOnlineCheck)
+			{
 				if (timeopt::CalcTimePassMilliSecond(pIoDev->m_stLastPingTime) > pIoDev->m_pingInterval)
 				{
 					pIoDev->m_stLastPingTime = timeopt::now();
-					if (pIoDev->m_bEnablePingOnlineCheck) 
-					{
-						listPing.push_back(pIoDev);
-					}
+					listPing.push_back(pIoDev);
 				}
 			}
 
@@ -228,6 +228,7 @@ ioServer::~ioServer()
 //	}
 //}
 
+//该函数中不要进行阻塞操作，大数量轮询操作，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
 void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
@@ -241,22 +242,30 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
 		}
 
-		//tcp客户端类型的设备连接，不支持中文地址，忽略端口号，允许设备使用任意端口
-		ioDev* pIoDev = ioSrv.getIODev(p->remoteIP,false,true);
-		if (pIoDev)
-		{
-			p->m_IoDev = pIoDev;
-			pIoDev->setOnline();
-			timeopt::now(&pIoDev->m_stLastActiveTime);
-
-			pIoDev->bindIOSession(p);
-			if (pIoDev->pIOSession == p)
+		//局域网环境 tcp客户端类型的设备连接，不支持中文地址，忽略端口号，允许设备使用任意端口
+		if (p->remoteIP.find("192.") != string::npos) {
+			ioDev* pIoDev = ioSrv.getIODev(p->remoteIP, false, true);// getIODev需要持续优化性能，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
+			if (pIoDev)
 			{
-				logger.logInternal("[ioDev]设备上线,ioAddr=" + pIoDev->getIOAddrStr());
+				p->m_IoDev = pIoDev;
+				pIoDev->setOnline();
+				timeopt::now(&pIoDev->m_stLastActiveTime);
+
+				pIoDev->bindIOSession(p);
+				if (pIoDev->pIOSession == p)
+				{
+					string s = str::format("[ioSrv]TcpClient设备Tcp连接成功,ioAddr=%s,remoteAddr=%s:%d", pIoDev->getIOAddrStr().c_str(), pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+					logger.logInternal(s);
+				}
+				if (pIoDev->m_devType == DEV_TYPE_iq60) {
+					pIoDev->sendStr("[]\n");
+				}
 			}
-			if (pIoDev->m_devType == DEV_TYPE_iq60) {
-				pIoDev->sendStr("[]\n");
-			}
+		}
+		//公网环境，此时还找不到ioDev对象，需要依据后续的注册包来匹配设备对象
+		else {
+			string s = str::format("[ioSrv]TcpClient设备Tcp连接成功,remoteAddr=%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+			logger.logInternal(s);
 		}
 
 		m_mutexIoSessions.lock();
@@ -1892,7 +1901,7 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
 		{
 			string s = str::fromBuff((char*)pData, iLen);
-			LOG("[IQ60首发数据]" + s);
+			LOG("[IQ60首发数据]remoteAddr=%s,data=%s",tdsSession->getRemoteAddr().c_str(), s.c_str());
 			if (s.find("IQ60_") == 0)
 			{
 				s = s.substr(0, 16);
