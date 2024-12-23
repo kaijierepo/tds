@@ -36,7 +36,7 @@ SOFTWARE.
 #include "tdsConf.h"
 #include "mp.h"
 #include "res/resource.h"
-#include "as.h"
+#include "tAlmSrv.h"
 #include "logServer.h"
 #include "scriptManager.h"
 #include "tdb.h"
