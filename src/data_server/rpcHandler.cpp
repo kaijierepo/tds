@@ -1166,10 +1166,12 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "closeAllCycleAcq") {
 		ioSrv.closeAllCycleAcq();
+		ioSrv.saveConf();
 		result = RPC_OK;
 	}
 	else if (method == "openAllCycleAcq") {
 		ioSrv.openAllCycleAcq();
+		ioSrv.saveConf();
 		result = RPC_OK;
 	}
 	else if (method == "closeIOSession")
