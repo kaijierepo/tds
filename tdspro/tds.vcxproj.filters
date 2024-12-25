@@ -275,7 +275,6 @@
     <ClInclude Include="..\src\common\tcpSrv.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\common\yyjson.h">
@@ -523,6 +522,8 @@
     <ClInclude Include="as_interface.h">
       <Filter>data_server</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\include\tds.h" />
+    <ClInclude Include="..\src\include\tdsRPC.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

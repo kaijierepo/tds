@@ -331,7 +331,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -356,7 +356,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_SVN_REV;TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -383,7 +383,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -415,7 +415,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>USE_SVN_REV;TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -622,6 +622,8 @@
     <ClInclude Include="..\src\func_module\tdsConf.h" />
     <ClInclude Include="..\src\func_module\tdsWatchDog.h" />
     <ClInclude Include="..\src\func_module\userMng.h" />
+    <ClInclude Include="..\src\include\tds.h" />
+    <ClInclude Include="..\src\include\tdsRPC.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
     <ClInclude Include="..\src\io_server\ioDev_camera.h" />
@@ -640,7 +642,6 @@
     <ClInclude Include="..\src\io_server\wsProto.h" />
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\res\resource.h" />
-    <ClInclude Include="..\src\tds.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\net2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
