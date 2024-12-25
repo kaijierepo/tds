@@ -139,21 +139,6 @@ namespace TRANSFER_LAYER_PROTO_TYPE
 	const string TLT_HTTP = "tlp_http";
 };
 
-
-//设备管理状态
-namespace DEV_DISPOSITION_MODE {
-	const string managed = "managed"; //后续重构为 inService 表示启用
-	const string spare = "spare";
-};
-
-
-struct MODULE_BUS_MSG {
-	string moduleName;
-	string eventName;
-	string content; //json
-	char* bin; 
-};
-
 //stateless rpc session
 class RPC_SESSION {
 public:
@@ -235,12 +220,7 @@ public:
 
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, size_t iLen);
-typedef void (*fp_createLicence)();
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);
-typedef void(*fp_msgSinker)(MODULE_BUS_MSG& msg);
-#ifdef ENABLE_GENICAM
-typedef void (*fp_onVideoStreamRecv)(char* p, int len, STREAM_INFO si, void* user);
-#endif
 typedef void (*fp_procBeforeExit)();
 
 namespace TDS_SESSION_TYPE {
@@ -519,7 +499,6 @@ public:
 	virtual void stop() = 0;
 	virtual bool setProcBeforeExit(fp_procBeforeExit callback) = 0;
 	fp_procBeforeExit m_fpProcBeforeExit;
-	fp_createLicence createLicence;
 	virtual void call(string method, json& param, json& err,json& rlt,RPC_SESSION session) = 0;
 	virtual bool call(string method, string param, RPC_RESP& resp) = 0;
 	virtual void callAsyn(string method, json& param, int delay = 0) = 0;
@@ -551,11 +530,6 @@ public:
 
 	virtual void log(const char* text) = 0;
 
-	//event bus
-	virtual void registerMsgSinker(fp_msgSinker sinker) = 0;
-	virtual void publishMsg(MODULE_BUS_MSG& msg) = 0;
-
-	
 	iTDSConf* conf;
 	i_xiaoT* xiaoT;
 	i_gzhServer* gzhServer;

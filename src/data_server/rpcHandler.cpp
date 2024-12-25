@@ -31,18 +31,6 @@
 
 rpcHandler rpcSrv;
 
-void msgSinker_rpcHandler(MODULE_BUS_MSG& msg)
-{
-	if (msg.eventName == "ioDev.offline")
-	{
-		json jMsg = json::parse(msg.content);
-		json j;
-		j["addr"] = jMsg["ioAddr"];
-		j["type"] = msg.eventName;
-		rpcSrv.notify("devOffline", j);
-	}
-}
-
 size_t write_data(void* ptr, size_t size, size_t nmemb, FILE* stream) {
 	if (stream == nullptr) return 0;
 	size_t written = fwrite(ptr, size, nmemb, stream);
@@ -73,30 +61,6 @@ bool rpcHandler::init()
 {
 	return true;
 }
-
-
-
-
-
-//string rpcHandler::ResolveTdsRpcEvnVar(string strIn, std::shared_ptr<TDS_SESSION> pSession)
-//{
-//	//使用正则搜寻 ${XXX}
-//	//"${src_ip}" 替换成 pSession->ip
-//	string str = strIn;
-//	if (str.find("$srcIp$") != str.npos) {
-//		string ip = pSession->ip;
-//		string::size_type pos = pSession->ip.find(":");
-//		if (std::string::npos != pos) {
-//			ip = pSession->ip.substr(0, pos);
-//		}
-//		str = str::replace(str, "$src_ip$", ip);
-//		}
-//
-//	str = str::replace(str, "$dbPath$", db.m_path);
-//	str = str::replace(str, "$confPath$", tds->conf->confPath);
-//
-//	return str;
-//}
 
 
 bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp)

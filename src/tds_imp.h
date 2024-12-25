@@ -73,10 +73,6 @@ public:
 	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
 #endif
 	 void log(const char* text);
-
-	 void registerMsgSinker(fp_msgSinker sinker);
-	 void publishMsg(MODULE_BUS_MSG& msg);
-	 vector<fp_msgSinker> m_msgSinkers;
 };
 
 extern void createConsole();

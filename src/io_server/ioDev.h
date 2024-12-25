@@ -73,6 +73,12 @@ namespace IO_DEV_LEVEL {
 	const string channel = "channel";
 }
 
+//设备管理状态
+namespace DEV_DISPOSITION_MODE {
+	const string managed = "managed"; //后续重构为 inService 表示启用
+	const string spare = "spare";
+};
+
 class ioDev;
 class OBJ;
 class MP;

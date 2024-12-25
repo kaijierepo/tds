@@ -300,12 +300,6 @@ int main(int argc, char** argv)
 	//根据模式差异化加载配置
 	tds->conf->mode = mode;
 
-	//专业版创建授权文件
-	if (tds->createLicence)
-	{
-		tds->createLicence();
-	}
-
 	//从注册的工具当中寻找工具
 	fp_toolRun ptr = nullptr;
 	if (tds->tools.find(mode) != tds->tools.end()) {
