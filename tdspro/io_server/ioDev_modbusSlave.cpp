@@ -37,12 +37,10 @@ void ioDev_ModbusSlave::getIOTypeByMBDataType(ioChannel* p)
 	if (p->m_regType == MODBUS_REG_TYPE::coil || p->m_regType == MODBUS_REG_TYPE::holdingRegister)
 	{
 		p->m_ioType = CHAN_IO_TYPE::IO;
-		p->m_ioTypeLabel = getIOTypeLabel(p->m_ioType);
 	}
 	else if (p->m_regType == MODBUS_REG_TYPE::discreteInput || p->m_regType == MODBUS_REG_TYPE::inputRegister)
 	{
 		p->m_ioType = CHAN_IO_TYPE::I;
-		p->m_ioTypeLabel = getIOTypeLabel(p->m_ioType);
 	}
 }
 

@@ -320,7 +320,6 @@ bool ioDev_iq60::scanChannel(json& chanList)
 					jChan["valType"] = VAL_TYPE::integer;
 				else
 					continue;
-				jChan["valTypeLabel"] = getValTypeLabel(jChan["valType"]);
 				jChan["name"] = jPt["DisplayName"];
 				if (jPt["RW"] == "rw")
 				{

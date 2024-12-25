@@ -75,9 +75,6 @@ bool ioChannel::loadConf(json& conf)
 	if (conf["ioType"] != nullptr)
 		m_ioType = conf["ioType"];
 
-	if(m_ioType!="")
-		m_ioTypeLabel = getIOTypeLabel(m_ioType);
-
 	//先加载k再计算valType,转换函数内部会利用k设置来判断
 	if (conf["k"] != nullptr)
 		m_k = conf["k"].get<double>();
@@ -86,10 +83,6 @@ bool ioChannel::loadConf(json& conf)
 		m_valType = storageFmt2valType(m_fmt);
 	else if (conf["valType"] != nullptr)
 		m_valType = conf["valType"];
-
-
-	if (m_valType != "")
-		m_valTypeLabel = getValTypeLabel(m_valType);
 
 	if (conf["name"] != nullptr)
 		m_name = conf["name"];

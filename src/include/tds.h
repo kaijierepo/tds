@@ -217,16 +217,6 @@ namespace VAL_TYPE {
 	const string man_strobe = "man_strobe";
 };
 	
-inline string getValTypeLabel(string valType)
-{
-	if (valType == "json") return "JSON";
-	else if (valType == "float") return "浮点型";
-	else if (valType == "int") return "整型";
-	else if (valType == "bool") return "布尔型";
-	else if (valType == "video") return "视频";
-	else if (valType == "string") return "字符串型";
-	else return "未知值类型";
-};
 
 namespace CHAN_IO_TYPE {
 	const string I = "i";
@@ -234,40 +224,6 @@ namespace CHAN_IO_TYPE {
 	const string IO = "io";
 };
 
-inline string getIOTypeLabel(string valType)
-{
-	if (valType == "i") return "输入";
-	else if (valType == "o") return "输出";
-	else if (valType == "io") return "输入/输出";
-	else if (valType == "v") return "内部变量";
-	else if (valType == "c") return "常量";
-	else return "未知IO类型";
-};
-
-
-
-//应用层协议类型
-namespace APP_LAYER_PROTO {
-	const string UNKNOWN = "unknown";
-	const string HTTP = "http";
-	const string PROTOCOL_WEBSOCKET = "websocket";
-	const string PROTOCOL_FRAMING_PROTOCOL = "alp_framing_protocol";
-	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
-	const string terminalPrompt = "->";  //以 -> 结尾的字符串 
-	const string textEnd1LF = "textEnd1LF";
-	const string textEnd2LF = "textEnd2LF";
-};
-
-//the protocol used as a transportation layer (no command specified in this layer,only for data transfer)
-namespace TRANSFER_LAYER_PROTO_TYPE
-{
-	const string TLT_UNKNOWN = "tlp_unknonw";
-	const string TLT_NONE = "tlp_none"; //no transportation layer
-	const string TLT_CAN_V1 = "tlp_can_v1"; //payload is self framing protocol
-	const string TLT_CAN_V2 = "tlp_can_v2"; //payload use can head subpkt info for framing
-	const string TLT_WEB_SOCKET = "tlp_websocket";
-	const string TLT_HTTP = "tlp_http";
-};
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, size_t iLen);
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);

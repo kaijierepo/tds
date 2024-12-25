@@ -5,6 +5,17 @@
 #include <windows.h>
 using namespace std;
 
+namespace APP_LAYER_PROTO {
+	const string UNKNOWN = "unknown";
+	const string HTTP = "http";
+	const string PROTOCOL_WEBSOCKET = "websocket";
+	const string PROTOCOL_FRAMING_PROTOCOL = "alp_framing_protocol";
+	const string tdsHMR = "tdsHMR";  //tds web hot module replacement
+	const string terminalPrompt = "->";
+	const string textEnd1LF = "textEnd1LF";
+	const string textEnd2LF = "textEnd2LF";
+};
+
 typedef size_t(*fp_validPktCheck)(unsigned char* pData, size_t iLen);
 
 class stream2pkt{

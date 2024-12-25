@@ -6,6 +6,17 @@
 #include "stream2pkt.h"
 #include "tds.h"
 
+//the protocol used as a transportation layer (no command specified in this layer,only for data transfer)
+namespace TRANSFER_LAYER_PROTO_TYPE
+{
+	const string TLT_UNKNOWN = "tlp_unknonw";
+	const string TLT_NONE = "tlp_none"; //no transportation layer
+	const string TLT_CAN_V1 = "tlp_can_v1"; //payload is self framing protocol
+	const string TLT_CAN_V2 = "tlp_can_v2"; //payload use can head subpkt info for framing
+	const string TLT_WEB_SOCKET = "tlp_websocket";
+	const string TLT_HTTP = "tlp_http";
+};
+
 class MP;
 class ioDev;
 

@@ -13,6 +13,27 @@
 #include "httplib.h"
 #include "json.hpp"
 
+inline string getValTypeLabel(string valType)
+{
+	if (valType == "json") return "JSON";
+	else if (valType == "float") return "浮点型";
+	else if (valType == "int") return "整型";
+	else if (valType == "bool") return "布尔型";
+	else if (valType == "video") return "视频";
+	else if (valType == "string") return "字符串型";
+	else return "未知值类型";
+};
+
+inline string getIOTypeLabel(string valType)
+{
+	if (valType == "i") return "输入";
+	else if (valType == "o") return "输出";
+	else if (valType == "io") return "输入/输出";
+	else if (valType == "v") return "内部变量";
+	else if (valType == "c") return "常量";
+	else return "未知IO类型";
+};
+
 MP::MP()
 {
 	m_level = "mp";
