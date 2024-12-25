@@ -1,4 +1,5 @@
-﻿#include "tAlmSrv.h"
+﻿#include <StdAfx.h>
+#include "tAlmSrv.h"
 #include "tdb.h"
 
 #include <regex>
@@ -246,11 +247,11 @@ void almServer::init(const string& aCurPath, const string& aHisPath, AsInitParam
 	initMOAlarmStatus();
 }
 
-void almServer::recover(AS_ALARM_INFO& key)
+void almServer::recover(ALARM_INFO& key)
 {
 	/*tableStatus.remove(key);
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	if(tableUnack.query(key,ai))
 	{
 		ai.bRecover = 1;
@@ -263,7 +264,7 @@ void almServer::recover(AS_ALARM_INFO& key)
 		tableHist.update(ai);
 	}*/
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	json params;
 	params["time"] = key.time;
 	params["type"] = key.type;
@@ -292,6 +293,37 @@ void almServer::recover(AS_ALARM_INFO& key)
 		m_initParam.func_rpcHand_notify("onAlarmRecover", j);
 }
 
+bool almServer::isRecover(ALARM_INFO& key) {
+	std::lock_guard<mutex> g(m_csAlarmData);
+
+	json filter;
+	filter["tag"] = key.tag;
+	filter["type"] = key.type;
+	filter["isRecover"] = false;
+	ALARM_INFO lastStatus;
+	if (tableCurrent.query(filter, lastStatus))
+	{
+		return false;
+	}
+	return true;
+}
+
+bool almServer::isRecover(string tag, string type) {
+	ALARM_INFO ai;
+	ai.tag = tag;
+	ai.type = type;
+	return isRecover(ai);
+}
+
+bool almServer::isActive(ALARM_INFO& key) {
+	return !isRecover(key);
+}
+
+bool almServer::isActive(string tag, string type)
+{	
+	return !isRecover(tag,type);
+}
+
 /*
 2类as：  正式 和 测试
 对于正式as
@@ -300,7 +332,7 @@ void almServer::recover(AS_ALARM_INFO& key)
 即： 真正tag、xxx(真正tag)、真正tag[xxx]
 2）支持基于真正tag的报警过滤
 */
-void almServer::addAlarm(AS_ALARM_INFO ai)
+void almServer::addAlarm(ALARM_INFO ai)
 {
 	if (m_bTestSrv == false)
 	{
@@ -438,7 +470,7 @@ string almServer::uuid() {
 }
 
 
-void almServer::Update(AS_ALARM_INFO newStatus)
+void almServer::Update(ALARM_INFO newStatus)
 {
 	//忽略屏蔽报警
 	if (newStatus.typeLabel == "")
@@ -481,7 +513,7 @@ void almServer::Update(AS_ALARM_INFO newStatus)
 	filter["tag"] = newStatus.tag;
 	filter["type"] = newStatus.type;
 	filter["isRecover"] = false;
-	AS_ALARM_INFO lastStatus;
+	ALARM_INFO lastStatus;
 	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
 	if (tableCurrent.query(filter, lastStatus))
 	{
@@ -549,9 +581,9 @@ void almServer::Update(AS_ALARM_INFO newStatus)
 	//rpcSrv.notify("onUpdateAlarmStatus", j);
 }
 
-void almTable::freeBuff(map<string, AS_ALARM_INFO*>& mapAlarm)
+void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 {
-	map<string, AS_ALARM_INFO*>::iterator i = mapAlarm.begin();
+	map<string, ALARM_INFO*>::iterator i = mapAlarm.begin();
 	for (; i != mapAlarm.end(); i++)
 	{
 		delete i->second;
@@ -564,12 +596,12 @@ json almServer::getAlarmStatus(string tag)
 	json querier;
 	querier["tag"] = tag;
 	querier["isRecover"] = false;
-	vector<AS_ALARM_INFO*> statusList = tableCurrent.query(querier);
+	vector<ALARM_INFO*> statusList = tableCurrent.query(querier);
 	json list = json::array();
 
 	for (int i = 0; i < statusList.size(); i++)
 	{
-		AS_ALARM_INFO* p = statusList[i];
+		ALARM_INFO* p = statusList[i];
 		json j = p->toJson(this);
 		list.push_back(j);
 	}
@@ -592,7 +624,7 @@ string almServer::getAlarmTypeLabel(string type)
 	return "";
 }
 
-void almServer::AddEvent(AS_ALARM_INFO ai)
+void almServer::AddEvent(ALARM_INFO ai)
 {
 	std::lock_guard<mutex>  g(m_csAlarmData);
 	ai.uuid = uuid();
@@ -609,7 +641,7 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		j["tag"] = TAG::addRoot(tag, rootTag);
 	}
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	ai.fromJson(j);
 
 	if (j["time"].is_string()) {
@@ -670,7 +702,7 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 
 	try
 	{
-		AS_ALARM_INFO ai;
+		ALARM_INFO ai;
 		ai.fromJson(j);
 		//ai.time = timeopt::nowStr();
 		Update(ai);
@@ -706,7 +738,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		params["tag"] = tag;
 	}
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	if (tableCurrent.query(params, ai))
 	{
 		string user = session.user;
@@ -793,7 +825,7 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 		params["tag"] = tag;
 	}
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	if (tableCurrent.query(params, ai))
 	{
 		string user = session.user;
@@ -1032,7 +1064,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	int endMonth = timeSelector.atomSelList[0].stEnd.wMonth;
 	int iMonth = 0;
 	int iEndMonth = 0;
-	map<SORT_FLAG, AS_ALARM_INFO*> deList_Sort;
+	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
 	vector<almTable*> histTables;
 	for (int iYear = startYear; iYear <= endYear; iYear++) {
 		if (iYear == startYear) iMonth = startMonth;
@@ -1046,7 +1078,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			tableTemp->SetAlarmSrv(this);
 			histTables.push_back(tableTemp);
 			tableTemp->loadFile(tableTemp->getFilePath(iYear, iMonth));
-			for (map<string, AS_ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
+			for (map<string, ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
 				if (session.user != "") {
 					//if (!userMng.checkTagPermission(session.user, it->second->tag))
 						//continue;
@@ -1111,7 +1143,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		}
 	}
 
-	vector<AS_ALARM_INFO*> afterSortList;
+	vector<ALARM_INFO*> afterSortList;
 	if (deSel.sortKey == "") deSel.ascendingSort = false;
 	//因为有升降序之后还有分页需求,所以要再把map转为Vector;
 	//也可以直接根据map直接生成最后的json,但是逻辑稍微复杂,所以转换成Vector
@@ -1266,17 +1298,17 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 	}
 }
 
-void almTable::saveFile(string strFile, map<string, AS_ALARM_INFO*>& memData)
+void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
 	string data = "uuid,位号,报警时间,报警类型,报警等级,报警信息,报警详情,恢复状态,恢复时间,确认状态,确认时间,确认信息,确认用户\r\n";
 #ifdef UTF8
 #else
 	data = str::gb_to_utf8(data);
 #endif
-	map<string, AS_ALARM_INFO*>::iterator i;
+	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
-		AS_ALARM_INFO& ai = *i->second;
+		ALARM_INFO& ai = *i->second;
 		string str = toCSV(ai);
 		data += str;
 	}
@@ -1331,16 +1363,16 @@ void almTable::loadFile(string strFile)
 		string str = recLines.at(i);
 		if (str::trim(str) == "")
 			continue;
-		AS_ALARM_INFO* pAi = new AS_ALARM_INFO();
+		ALARM_INFO* pAi = new ALARM_INFO();
 		*pAi = fromCSV(str);
 		buff[pAi->getKey()] = pAi;
 	}
 }
 
 
-AS_ALARM_INFO AS_ALARM_INFO::fromJson(json j)
+ALARM_INFO ALARM_INFO::fromJson(json j)
 {
-	AS_ALARM_INFO& ai = *this;
+	ALARM_INFO& ai = *this;
 
 	//必填字段
 	ai.tag = j["tag"];
@@ -1352,7 +1384,7 @@ AS_ALARM_INFO AS_ALARM_INFO::fromJson(json j)
 	if (j["level"] != nullptr)
 		ai.level = j["level"];
 	else
-		ai.level = AS_ALARM_LEVEL::alarm;
+		ai.level = ALARM_LEVEL::alarm;
 
 	//可选字段
 	if (j["desc"] != nullptr)
@@ -1364,9 +1396,9 @@ AS_ALARM_INFO AS_ALARM_INFO::fromJson(json j)
 	return ai;
 }
 
-json AS_ALARM_INFO::toJson(almServer* almSrv, string rootTag)
+json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 {
-	AS_ALARM_INFO* info = this;
+	ALARM_INFO* info = this;
 	json j;
 	j["uuid"] = info->uuid;
 
@@ -1408,7 +1440,7 @@ json AS_ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	return j;
 }
 
-AS_ALARM_INFO almTable::fromCSV(const string& line)
+ALARM_INFO almTable::fromCSV(const string& line)
 {
 	vector<string> cols;
 	string el;
@@ -1437,7 +1469,7 @@ AS_ALARM_INFO almTable::fromCSV(const string& line)
 		cols.push_back("");
 	}
 
-	AS_ALARM_INFO ai;
+	ALARM_INFO ai;
 	ai.uuid = cols[0];
 	ai.tag = cols[1];
 	ai.time = cols[2].c_str();
@@ -1455,7 +1487,7 @@ AS_ALARM_INFO almTable::fromCSV(const string& line)
 	return ai;
 }
 
-string almTable::toCSV(AS_ALARM_INFO& info)
+string almTable::toCSV(ALARM_INFO& info)
 {
 	string str;
 	str += info.uuid; str += ",";
@@ -1476,15 +1508,15 @@ string almTable::toCSV(AS_ALARM_INFO& info)
 	return str;
 }
 
-string AS_ALARM_INFO::toJsonStr(almServer* almSrv, string rootTag)
+string ALARM_INFO::toJsonStr(almServer* almSrv, string rootTag)
 {
 	json j = toJson(almSrv, rootTag);
 	return j.dump(2);
 }
 
-void almServer::ClearMap(map<string, AS_ALARM_INFO*>& inMap)
+void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
 {
-	for (map<string, AS_ALARM_INFO*>::iterator it = inMap.begin(); it != inMap.end(); it++) {
+	for (map<string, ALARM_INFO*>::iterator it = inMap.begin(); it != inMap.end(); it++) {
 		if (it->second) delete it->second;
 	}
 	inMap.clear();
@@ -1495,22 +1527,22 @@ void almTable::init(string file)
 	filePath = file;
 }
 
-void almTable::add(AS_ALARM_INFO ai)
+void almTable::add(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	string  pa = getFilePath(ai.time);
 	loadFile(pa);
-	AS_ALARM_INFO* pNew = new AS_ALARM_INFO();
+	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
 	buff[ai.getKey()] = pNew;
 	saveFile(pa, buff);
 }
 
-void almTable::acknowledge(const AS_ALARM_INFO& ai, bool remove)
+void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
 {
 	for (auto i = buff.begin(); i != buff.end(); )
 	{
-		AS_ALARM_INFO* it = i->second;
+		ALARM_INFO* it = i->second;
 		if (it->tag != ai.tag)
 			goto LOOP_END;
 		if (it->type != ai.type)
@@ -1531,7 +1563,7 @@ void almTable::acknowledge(const AS_ALARM_INFO& ai, bool remove)
 	}
 }
 
-void almTable::acknowledge(const AS_ALARM_INFO& ai)
+void almTable::acknowledge(const ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	if (bOneFilePerMonth)
@@ -1607,11 +1639,11 @@ void almTable::acknowledge(const AS_ALARM_INFO& ai)
 }
 
 //找基于uuid匹配的唯一一个 或 其他字段的组合匹配到的最后一个
-bool almTable::query(json params, AS_ALARM_INFO& ai)
+bool almTable::query(json params, ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	bool bFind = false;
-	AS_ALARM_INFO* p = NULL;
+	ALARM_INFO* p = NULL;
 	string time;
 	if (params["time"] != nullptr)
 		time = params["time"].get<string>();
@@ -1631,7 +1663,7 @@ bool almTable::query(json params, AS_ALARM_INFO& ai)
 
 	for (auto& i : buff)
 	{
-		AS_ALARM_INFO& it = *i.second;
+		ALARM_INFO& it = *i.second;
 		if (params["uuid"] != nullptr) {
 			if (it.uuid == params["uuid"].get<string>()) {
 				ai = it;
@@ -1664,12 +1696,12 @@ bool almTable::query(json params, AS_ALARM_INFO& ai)
 	}
 	return false;
 }
-void almTable::update(AS_ALARM_INFO ai)
+void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	string  pa = getFilePath(ai.time);
 	loadFile(pa); //获取报警对应的数据文件
-	AS_ALARM_INFO* p = buff.at(ai.getKey());
+	ALARM_INFO* p = buff.at(ai.getKey());
 	if (p)
 	{
 		*p = ai;
@@ -1801,10 +1833,10 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	return aq;
 }
 
-vector<AS_ALARM_INFO*> almTable::query(json querier)
+vector<ALARM_INFO*> almTable::query(json querier)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	vector<AS_ALARM_INFO*> dataSet;
+	vector<ALARM_INFO*> dataSet;
 	loadFile(getFilePath());
 	ALARM_QUERY aq = parseQuerier(querier);
 
@@ -1812,8 +1844,8 @@ vector<AS_ALARM_INFO*> almTable::query(json querier)
 	if (aq.filter_time) {
 		ts.init(aq.time);
 	}
-	map<SORT_FLAG, AS_ALARM_INFO*> deList_Sort;
-	for (map<string, AS_ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
+	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
+	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
 		//if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
 			//continue;
 		if (aq.filter_user) {
@@ -1824,7 +1856,7 @@ vector<AS_ALARM_INFO*> almTable::query(json querier)
 			}
 		}
 
-		AS_ALARM_INFO* pAi = it->second;
+		ALARM_INFO* pAi = it->second;
 
 		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
 			continue;
@@ -1919,7 +1951,7 @@ string almTable::toJsonStr(const json& querier) {
 			pageSize = querier["pageSize"].get<int>();
 	}
 
-	vector<AS_ALARM_INFO*> vec = query(querier);
+	vector<ALARM_INFO*> vec = query(querier);
 
 	string dataSet = "";
 	if (pageSize > 0)
