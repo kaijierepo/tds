@@ -537,6 +537,7 @@
     <ClCompile Include="..\src\func_module\tdsConf.cpp" />
     <ClCompile Include="..\src\func_module\tdsWatchDog.cpp" />
     <ClCompile Include="..\src\func_module\userMng.cpp" />
+    <ClCompile Include="..\src\include\tds.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp" />
@@ -553,7 +554,6 @@
     <ClCompile Include="..\src\io_server\wsProto.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\pch.cpp" />
-    <ClCompile Include="..\src\tds.cpp" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\tools\net2com.cpp" />

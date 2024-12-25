@@ -1,5 +1,5 @@
 ﻿#pragma once
-
+#include "tds.h"
 #include <time.h>
 #include <queue>
 #include <string>
@@ -54,111 +54,7 @@ protected:
 
 using namespace std;
 
-struct Date {
-	unsigned short wYear;
-	unsigned short wMonth;
-	unsigned short wDay;
-	unsigned short wDayOfWeek;
-	Date() {
-		memset(this, 0, sizeof(this));
-	}
-	string toStr();
-	void fromStr(string s);
-};
 
-struct HMS {
-	unsigned short wHour;
-	unsigned short wMinute;
-	unsigned short wSecond;
-	unsigned short wMilliseconds;
-	HMS() {
-		memset(this, 0, sizeof(this));
-	}
-	string toStr();
-	void fromStr(string s);
-};
-
-
-struct TIME {
-	unsigned short wYear;
-	unsigned short wMonth;
-	unsigned short wDay;
-	unsigned short wHour;
-	unsigned short wMinute;
-	unsigned short wSecond;
-	unsigned short wMilliseconds;
-	unsigned short wDayOfWeek;
-
-	TIME() {
-		memset(this, 0, sizeof(this));
-	}
-
-	void initAsInvalid() {
-		memset(this, 0, sizeof(this));
-	}
-
-	bool isValid() {
-		if (wYear > 0)
-			return true;
-		return false;
-	}
-
-	void setDate(Date t);
-	void setHMS(HMS t);
-
-	bool operator==(TIME& right){
-		return 0 == memcmp(this, &right, sizeof(TIME));
-	}
-
-	bool operator>(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
-		if (sl > sr) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	bool operator>=(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
-		if (sl >= sr) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	bool operator<(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
-		if (sl < sr) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	bool operator<=(TIME& right) {
-		string sl = toStr();
-		string sr = right.toStr();
-		if (sl <= sr) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	string toStr(bool enableMilli = true);
-	void fromStr(string s);
-	string toDateStr();
-	string toStampHMS();
-	string toTimeStr();
-	string toStampFull();
-	time_t toUnixTimeStamp();
-	void fromUnixTimeStamp(time_t t);
-};
 class semaphore
 {
 public:
@@ -326,10 +222,6 @@ namespace common {
 #define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__func__);};
 #define EXCEPTION(e) LOG("[warn]Exception raised, info:%s,file:%s,line:%d,function:%s",e.what(), __FILE__, __LINE__,__func__)
 
-namespace str {
-	std::string format(const char* pszFmt,... );
-}
-
 namespace charCodec {
 	//gbk,utf8 <-> unicode
 	string utf16_to_utf8(wstring instr);
@@ -362,8 +254,6 @@ namespace str {
 	string trimSuffix(string s, string suffix = " ");
 	string trim(std::string s, string toTrim = " ");
 	string replace(string str, const string to_replaced, const string newchars);
-	bool isDigits(char* pData, int len);
-	bool isDigits(string s);
 	bool isASCII(const std::string& str);
 	bool isGB2312(const std::string& str);
 	bool isUTF8(const string& s);

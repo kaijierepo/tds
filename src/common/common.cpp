@@ -52,33 +52,6 @@ namespace common {
 }
 
 
-int _vscprintf_cross(const char* format, va_list pargs) {
-	int retval;
-	va_list argcopy;
-	va_copy(argcopy, pargs);
-	retval = vsnprintf(NULL, 0, format, argcopy);
-	va_end(argcopy);
-	return retval;
-}
-
-namespace str {
-	std::string format(const char* pszFmt, ...)
-	{
-		std::string str;
-		va_list args;
-		va_start(args, pszFmt);
-		{
-			int nLength = _vscprintf_cross(pszFmt, args);
-			nLength += 1;  //上面返回的长度是包含\0，这里加上
-			std::vector<char> vectorChars(nLength);
-			vsnprintf(vectorChars.data(), nLength, pszFmt, args);
-			str.assign(vectorChars.data());
-		}
-		va_end(args);
-		return str;
-	}
-}
-
 namespace charCodec {
 
 	string utf16_to_utf8(wstring instr) //utf-8-->ansi
@@ -500,39 +473,6 @@ namespace str {
 				break;
 		}
 		return   str;
-	}
-
-	bool isDigits(char* pData, int len) {
-		for (int i = 0; i < len; i++)
-		{
-			char c = pData[i];
-			if (c >= '0' && c <= '9')
-			{
-				continue;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-
-	bool isDigits(string s)
-	{
-		for (int i = 0; i < s.length(); i++)
-		{
-			char c = s[i];
-			if (c >= '0' && c <= '9')
-			{
-				continue;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		return true;
 	}
 
 	bool isASCII(const std::string& str) {
@@ -2291,102 +2231,3 @@ void setThreadName(string name)
 	setThreadName2(name);
 }
 
-void TIME::setDate(Date t)
-{
-	wYear = t.wYear;
-	wMonth = t.wMonth;
-	wDay = t.wDay;
-	wDayOfWeek = t.wDayOfWeek;
-}
-
-void TIME::setHMS(HMS t)
-{
-	wHour = t.wHour;
-	wMinute = t.wMinute;
-	wSecond = t.wSecond;
-	wMilliseconds = t.wMilliseconds;
-}
-
-string TIME::toStr(bool enableMilli)
-{
-	return timeopt::st2str(*this,enableMilli);
-}
-
-void TIME::fromStr(string s) {
-	*this = timeopt::str2st(s);
-}
-
-string TIME::toDateStr()
-{
-	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
-	return s;
-}
-
-string TIME::toTimeStr()
-{
-	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
-	return s;
-}
-
-string TIME::toStampFull()
-{
-	string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
-	return s;
-}
-
-time_t  TIME::toUnixTimeStamp() {
-	tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
-	time_t unixTime = mktime(&temptm);
-	return unixTime;
-}
-
-void  TIME::fromUnixTimeStamp(time_t unixTime) {
-	static std::mutex mtx;
-	mtx.lock();
-	tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
-	mtx.unlock();
-
-	wYear = time_tm.tm_year + 1900;
-	wMonth = time_tm.tm_mon + 1;
-	wDay = time_tm.tm_mday;
-	wHour = time_tm.tm_hour;
-	wMinute = time_tm.tm_min;
-	wSecond = time_tm.tm_sec;
-	wDayOfWeek = time_tm.tm_wday;
-}
-
-string TIME::toStampHMS()
-{
-	string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);
-	return s;
-}
-
-string Date::toStr()
-{
-	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
-	return s;
-}
-
-void Date::fromStr(string s)
-{
-	int y, m, d;
-	sscanf(s.c_str(), "%4d-%2d-%2d",&y,&m,&d);
-	wYear = y;
-	wMonth = m;
-	wDay = d;
-}
-
-string HMS::toStr()
-{
-	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
-	return s;
-}
-
-void HMS::fromStr(string str)
-{
-	int h, m, s;
-	sscanf(str.c_str(), "%2d:%2d:%2d",&h,&m,&s);
-	wHour = h;
-	wMinute = m;
-	wSecond = s;
-}

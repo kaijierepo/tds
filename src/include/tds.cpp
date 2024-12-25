@@ -25,6 +25,245 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "tds.h"
+#include <stdarg.h>
+#include <mutex>
+
+int _vscprintf_cross(const char* format, va_list pargs) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, pargs);
+	retval = vsnprintf(NULL, 0, format, argcopy);
+	va_end(argcopy);
+	return retval;
+}
+
+namespace str {
+	std::string format(const char* pszFmt, ...)
+	{
+		std::string str;
+		va_list args;
+		va_start(args, pszFmt);
+		{
+			int nLength = _vscprintf_cross(pszFmt, args);
+			nLength += 1;  //上面返回的长度是包含\0，这里加上
+			std::vector<char> vectorChars(nLength);
+			vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+			str.assign(vectorChars.data());
+		}
+		va_end(args);
+		return str;
+	}
+
+	bool isDigits(char* pData, int len) {
+		for (int i = 0; i < len; i++)
+		{
+			char c = pData[i];
+			if (c >= '0' && c <= '9')
+			{
+				continue;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool isDigits(string s)
+	{
+		for (int i = 0; i < s.length(); i++)
+		{
+			char c = s[i];
+			if (c >= '0' && c <= '9')
+			{
+				continue;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+}
+
+
+void TIME::setDate(Date t)
+{
+	wYear = t.wYear;
+	wMonth = t.wMonth;
+	wDay = t.wDay;
+	wDayOfWeek = t.wDayOfWeek;
+}
+
+void TIME::setHMS(HMS t)
+{
+	wHour = t.wHour;
+	wMinute = t.wMinute;
+	wSecond = t.wSecond;
+	wMilliseconds = t.wMilliseconds;
+}
+
+string TIME::toStr(bool enableMilli)
+{
+	if (enableMilli) {
+		return str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",wYear, wMonth, wDay,wHour, wMinute, wSecond,wMilliseconds);
+	}
+	else {
+		return str::format("%.4d-%.2d-%.2d %.2d:%.2d:%.2d",wYear, wMonth, wDay,wHour, wMinute, wSecond);
+	}
+}
+
+void TIME::fromStr(string str) {
+	TIME& t = *this;
+	memset(&t, 0, sizeof(t));
+	int y, m, d, h, min, s, milli;
+	if (str.length() > 3 && str[2] != '-' && str[2] != ':') {
+		//2023-12-31T16:00:00.000Z
+		if (str.length() == 24) {
+			sscanf(str.c_str(), "%4d-%2d-%2dT%2d:%2d:%2d.%dZ",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s,
+				&milli);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+		}
+		//2022-02-22 11:11:11.123   23bytes
+		else if (str.length() == 23) {
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d.%d",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s,
+				&milli);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s; t.wMilliseconds = milli;
+		}
+		//2022-02-22 11:11:11   19bytes
+		else if (str.length() == 19)
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min,
+				&s);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min; t.wSecond = s;
+		}
+		//2022-02-22 11:11   16bytes
+		else if (str.length() == 16)
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d %2d:%2d",
+				&y,
+				&m,
+				&d,
+				&h,
+				&min);
+			t.wYear = y; t.wMonth = m; t.wDay = d; t.wHour = h; t.wMinute = min;
+		}
+		else if (str.length() == 10) //2022-02-02
+		{
+			sscanf(str.c_str(), "%4d-%2d-%2d",
+				&y,
+				&m,
+				&d);
+			t.wYear = y; t.wMonth = m; t.wDay = d;
+		}
+		else if (str.length() == 8) //12:11:11
+		{
+			sscanf(str.c_str(), "%2d:%2d:%2d",
+				&h,
+				&min,
+				&s);
+			t.wHour = h; t.wMinute = min; t.wSecond = s;
+		}
+	}
+	else if (str::isDigits(str)) {
+		time_t tt = atoi(str.c_str());
+		fromUnixTimeStamp(tt);
+	}
+}
+
+string TIME::toDateStr()
+{
+	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	return s;
+}
+
+string TIME::toTimeStr()
+{
+	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
+string TIME::toStampFull()
+{
+	string s = str::format("%04d-%02d-%02d %02d%02d%02d", wYear, wMonth, wDay, wHour, wMinute, wSecond);
+	return s;
+}
+
+time_t  TIME::toUnixTimeStamp() {
+	tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
+	time_t unixTime = mktime(&temptm);
+	return unixTime;
+}
+
+void  TIME::fromUnixTimeStamp(time_t unixTime) {
+	static std::mutex mtx;
+	mtx.lock();
+	tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+	mtx.unlock();
+
+	wYear = time_tm.tm_year + 1900;
+	wMonth = time_tm.tm_mon + 1;
+	wDay = time_tm.tm_mday;
+	wHour = time_tm.tm_hour;
+	wMinute = time_tm.tm_min;
+	wSecond = time_tm.tm_sec;
+	wDayOfWeek = time_tm.tm_wday;
+}
+
+string TIME::toStampHMS()
+{
+	string s = str::format("%02d%02d%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
+string Date::toStr()
+{
+	string s = str::format("%04d-%02d-%02d", wYear, wMonth, wDay);
+	return s;
+}
+
+void Date::fromStr(string s)
+{
+	int y, m, d;
+	sscanf(s.c_str(), "%4d-%2d-%2d", &y, &m, &d);
+	wYear = y;
+	wMonth = m;
+	wDay = d;
+}
+
+string HMS::toStr()
+{
+	string s = str::format("%02d:%02d:%02d", wHour, wMinute, wSecond);
+	return s;
+}
+
+void HMS::fromStr(string str)
+{
+	int h, m, s;
+	sscanf(str.c_str(), "%2d:%2d:%2d", &h, &m, &s);
+	wHour = h;
+	wMinute = m;
+	wSecond = s;
+}
 
 string TAG::trimPrefix(string s, string prefix)
 {

@@ -52,6 +52,119 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 using namespace std;
 using json = nlohmann::json;	
 
+namespace str {
+	std::string format(const char* pszFmt, ...);	
+	bool isDigits(char* pData, int len);
+	bool isDigits(string s);
+}
+
+struct Date {
+	unsigned short wYear;
+	unsigned short wMonth;
+	unsigned short wDay;
+	unsigned short wDayOfWeek;
+	Date() {
+		memset(this, 0, sizeof(this));
+	}
+	string toStr();
+	void fromStr(string s);
+};
+
+struct HMS {
+	unsigned short wHour;
+	unsigned short wMinute;
+	unsigned short wSecond;
+	unsigned short wMilliseconds;
+	HMS() {
+		memset(this, 0, sizeof(this));
+	}
+	string toStr();
+	void fromStr(string s);
+};
+
+
+struct TIME {
+	unsigned short wYear;
+	unsigned short wMonth;
+	unsigned short wDay;
+	unsigned short wHour;
+	unsigned short wMinute;
+	unsigned short wSecond;
+	unsigned short wMilliseconds;
+	unsigned short wDayOfWeek;
+
+	TIME() {
+		memset(this, 0, sizeof(this));
+	}
+
+	void initAsInvalid() {
+		memset(this, 0, sizeof(this));
+	}
+
+	bool isValid() {
+		if (wYear > 0)
+			return true;
+		return false;
+	}
+
+	void setDate(Date t);
+	void setHMS(HMS t);
+
+	bool operator==(TIME& right) {
+		return 0 == memcmp(this, &right, sizeof(TIME));
+	}
+
+	bool operator>(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl > sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator>=(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl >= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl < sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<=(TIME& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl <= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	string toStr(bool enableMilli = true);
+	void fromStr(string s);
+	string toDateStr();
+	string toStampHMS();
+	string toTimeStr();
+	string toStampFull();
+	time_t toUnixTimeStamp();
+	void fromUnixTimeStamp(time_t t);
+};
+
+
 namespace TAG {
 	string resolveTag(string strTagExp, string tagThis);
 	string trimRoot(string tag, string root);
@@ -66,9 +179,6 @@ namespace TAG {
 	string trimPrefix(string s, string prefix);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 }
-
-struct TIME;
-
 
 namespace MO_TYPE {
 	const string mo = "mo";

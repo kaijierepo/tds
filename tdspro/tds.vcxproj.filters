@@ -66,7 +66,6 @@
     <ClCompile Include="..\src\common\kvIni.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tds.cpp" />
     <ClCompile Include="..\src\data_server\tAlmSrv.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
@@ -258,6 +257,7 @@
     <ClCompile Include="as_interface.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\include\tds.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
