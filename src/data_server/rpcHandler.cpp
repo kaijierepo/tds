@@ -2007,10 +2007,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 	}
-	else if (method == "objOnline") {
+	else if (method == "onObjOnline" || method == "objOnline") {
 		rpc_onObjOnline(params,session);
 	}
-	else if (method == "objOffline") {
+	else if (method == "onObjOffline" || method == "objOffline") {
 		rpc_onObjOffline(params, session);
 	}
 	else
@@ -6113,7 +6113,7 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_SESSION session) {
 			}
 
 			LOG("[对象掉线  ]位号:%s", tag.c_str());
-			rpcSrv.notify("objOffline", params);
+			rpcSrv.notify("onObjOffline", params);
 		}
 	
 		if (p->m_bChildTds) { //设置所有子对象掉线

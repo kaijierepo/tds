@@ -608,29 +608,9 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 	}
 	else if (method == "input" || method == "acq")
 	{
-		//if (tds->conf->getInt("enableLogInput", 0))
-		{
-			//if (m_tcpClt && m_tcpClt->m_remoteIP == "192.168.2.152")
-			//{
-			//	size_t len;
-			//	string sParams = yyjson_val_write(yyv_params, 0, &len);
-			//	if (sParams.find("1#.1J1") != string::npos)
-			//	{
-			//		LOG("[ioDev_tdsp::handleNotify]:%s", charCodec::utf8_to_gb(sParams).c_str());
-			//	}
-			//}
-			//LOG("[ioDev_tdsp::handleNotify]:%s", charCodec::utf8_to_gb(sParams).c_str());
-		}
 		handle_AcqOrInput(yyv_params,doc);
-		//string resp = "{\"method\":\"" + method + "\",\"result\":\"ok\"}\n\n";
-		//sendData((unsigned char*)resp.c_str(), resp.size());
-
 	}
-	else if (method == "notifyAlarmStatus")
-	{
-		//handleAlarmStatusData(jParams);
-	}
-	else if (method == "onDataUpdate" || method=="statusUpdate" || method=="onStatusUpdate") {
+	else if (method == "onDataUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			//位号增加上该子服务绑定的位号。
 			size_t len;
@@ -657,9 +637,12 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			m_childTdsUpgradeStatus = yyjson_get_str(yyv_sus);
 		}
 	}
-	else if (method == "onUpdateAlarmStatus")
+	else if (method == "onAlarmUpdate")
 	{
-		/*if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+			size_t len;
+			string sNotify = yyjson_val_write(yyv_params, 0, &len);
+			json jParams = json::parse(sNotify);
 			string sTag = jParams["tag"];
 			sTag = TAG::addRoot(sTag, m_strTagBind);
 			jParams["tag"] = sTag;
@@ -670,9 +653,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			}
 
 			RPC_RESP resp;
-
 			almServer* pAlmSrv = NULL;
-
 			if (sDbPath.find("alarmsDevelop") != string::npos)
 			{
 				pAlmSrv = &almSrv_dev;
@@ -694,11 +675,14 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 				pAlmSrv = &almSrv;
 			}
 			pAlmSrv->rpc_updateStatus(jParams, resp);
-		}*/
+		}
 	}
-	else if (method == "alarmAdd")
+	else if (method == "onAlarmAdd")
 	{
-		/*if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
+			size_t len;
+			string sNotify = yyjson_val_write(yyv_params, 0, &len);
+			json jParams = json::parse(sNotify);
 			string sTag = jParams["tag"];
 			string::size_type pos_s = sTag.find("(");
 			if (pos_s != string::npos)
@@ -744,27 +728,27 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			}
 
 			pAlmSrv->rpc_addAlarm(jParams, resp, false);
-		}*/
+		}
 	}
-	else if (method == "objOnline") {
+	else if (method == "onObjOnline" || method == "objOnline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
 				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
-				tds->callAsyn("objOnline", sParams);
+				tds->callAsyn("onObjOnline", sParams);
 			}
 		}
 	}
-	else if (method == "objOffline") {
+	else if (method == "onObjOffline" || method == "objOffline") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
 				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
-				tds->callAsyn("objOffline", sParams);
+				tds->callAsyn("onObjOffline", sParams);
 			}
 		}
 	}
