@@ -47,15 +47,33 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #include <string>
 #include <vector>
 #include <map>
-#include "json.hpp"
 #include "tds.h"
+#include "json.hpp"
 using namespace std;
-using json = nlohmann::json;	
+using json = nlohmann::json;
+
+string TDS_LAST_ERROR();
 
 namespace str {
+	//format
 	std::string format(const char* pszFmt, ...);	
+
+	//process
+	string replace(string str, const string to_replaced, const string newchars);
 	bool isDigits(char* pData, int len);
 	bool isDigits(string s);
+	string trimPrefix(string s, string prefix = " ");
+	string trimSuffix(string s, string suffix = " ");
+	string trim(std::string s, string toTrim = " ");
+	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
+
+	//char codec
+	wstring gb_to_utf16(string instr);
+	wstring utf8_to_utf16(string instr);
+	wstring utf8_to_utf16(string instr);
+	wstring gb_to_utf16(string instr);
+	string utf8_to_gb(string instr);
+	string gb_to_utf8(string instr);
 }
 
 struct Date {
@@ -109,6 +127,7 @@ struct TIME {
 
 	void setDate(Date t);
 	void setHMS(HMS t);
+	void setNow();
 
 	bool operator==(TIME& right) {
 		return 0 == memcmp(this, &right, sizeof(TIME));
@@ -160,8 +179,8 @@ struct TIME {
 	string toStampHMS();
 	string toTimeStr();
 	string toStampFull();
-	time_t toUnixTimeStamp();
-	void fromUnixTimeStamp(time_t t);
+	time_t toUnixTime();
+	void fromUnixTime(time_t t,int milli=0);
 };
 
 
@@ -173,9 +192,7 @@ namespace TAG {
 	string sysTag2userTag(string sysTag, string userOrg);
 	string addRoot(string tag, string root);
 
-	bool hasTag(json& tree, string tag); 
 	size_t getMoLevel(string tag);
-	json mapTree2List(json mapTree);
 	string trimPrefix(string s, string prefix);
 	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 }
@@ -383,10 +400,6 @@ public:
 	virtual size_t getBindedChanCount() = 0;
 };
 
-class i_rpcServer {
-public:
-	virtual void setLicenceStatus(json j) = 0;
-};
 
 class i_xiaoT : public i_tdsPlugin {
 public:
@@ -401,7 +414,6 @@ public:
 class i_smsServer : public i_tdsPlugin {
 public:
 	virtual bool send(string& msg,string& phoneNum) = 0;
-	virtual bool send(json& params, string& phoneNum) = 0;
 	virtual bool sendVerificationCode(string phoneNum) = 0;
 	virtual bool checkVerificationCode(string phoneNum, string code) = 0;
 };
@@ -461,7 +473,6 @@ public:
 	i_smsServer* smsServer;
 	i_tdsPlugin* shellServer;
 	i_ioServer* ioServer;
-	i_rpcServer* rpcServer;
 
 	map<string,i_tdsPlugin*> plugins;
 

@@ -28,7 +28,7 @@ struct Mo_Attr_Params {
 //一些设计考虑
 //参数使用RPC_RESP而没有使用json对象，主要为了考虑和外部集成，外部不需要json.hpp
 //目前看来外部集成需求很少，未来改成直接使用json对象应该更加方便
-class rpcHandler : public i_rpcServer
+class rpcHandler
 {
 public:
 
@@ -38,7 +38,7 @@ public:
 
 	bool needLog(string method);
 
-	void setLicenceStatus(json j) override;
+	void setLicenceStatus(json j);
 	//rpc路由的命令  可以路由到tdsp设备，或者childTds
 	bool handleRpcRoute(json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 	void logRPCRoute(string method, json& params, RPC_SESSION& session);

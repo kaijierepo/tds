@@ -48,7 +48,6 @@ bool DownloadHTTPFile(std::string url, std::string file_save_path)//待下载文
 rpcHandler::rpcHandler()
 {
 	m_pluginHandler = NULL;
-	tds->rpcServer = this;
 }
 
 rpcHandler::~rpcHandler()
@@ -2390,9 +2389,8 @@ vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
 	return vec;
 }
 
-bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION session0)
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION session)
 {
-	as::RPC_SESSION session = *(as::RPC_SESSION*)(&session0);//强转不太好 先这样吧
 	almServer* pAlmSrv = nullptr;
 
 	if (session.dbpath == "alarmsDevelop")
@@ -2416,7 +2414,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 		pAlmSrv = &almSrv;
 	}
 	
-	as::RPC_RESP rpcResp;
+	RPC_RESP rpcResp;
 	string& result = rpcResp.result;
 	bool bHandled = true;
 	//** 数据查询系列
@@ -2762,7 +2760,8 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	}
 	else if (method == "sendShortMsg") {
 		string phoneNum = params["phoneNum"];
-		tds->smsServer->send(params, phoneNum);
+		string s = params.dump();
+		tds->smsServer->send(s, phoneNum);
 		rpcResp.result = RPC_OK;
 	}
 	else if (method == "setSrvConf") {

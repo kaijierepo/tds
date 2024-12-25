@@ -15,6 +15,7 @@
 #include <regex>
 #include <queue>
 #include <functional>
+#include "json.hpp"
 #define WIN32_LEAN_AND_MEAN
 #ifdef _WIN32
 #include <windows.h>
@@ -32,6 +33,8 @@
 #include <stdlib.h>
 #endif
 
+using json = nlohmann::json;
+using namespace std;
 #ifdef _WIN32
 class CAutoLock
 {
@@ -250,10 +253,6 @@ namespace charCodec {
 	std::string urlEncode(const std::string& str);
 }
 namespace str {
-	string trimPrefix(string s, string prefix = " ");
-	string trimSuffix(string s, string suffix = " ");
-	string trim(std::string s, string toTrim = " ");
-	string replace(string str, const string to_replaced, const string newchars);
 	bool isASCII(const std::string& str);
 	bool isGB2312(const std::string& str);
 	bool isUTF8(const string& s);
@@ -327,6 +326,12 @@ namespace timeopt {
 	string nowStrForFile(bool enableMS = false);
 	TIME addTime(TIME base, int h, int m, int s);
 	bool isValidTimeStr(string time);
+}
+
+
+namespace TAG {
+	bool hasTag(json& tree, string tag);
+	json mapTree2List(json mapTree);
 }
 
 

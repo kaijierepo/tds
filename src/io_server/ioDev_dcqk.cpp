@@ -693,7 +693,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			jParams["tag"] = m_strTagBind + "." + sDaoChaName + "." + sZZJName;
 			jParams["id"] = "";
 			almServer* pAlmSrv = &almSrv;
-			as::RPC_RESP resp;
+			RPC_RESP resp;
 			
 
 			//"time":"2023-08-08 11:12:23",
@@ -2180,7 +2180,7 @@ void ioDev_dcqk::Do_CMD_CODE_YYQX(LPVOID pData)
 			unsigned char dir = lpsubdata->direct;//0　定到反， 1 反到定
 			unsigned char dzg_dir = lpsubdata->filldata & 0x0000ff00;//动作杆伸缩方向
 			unsigned char curveAlm = lpsubdata->filldata & 0x0000ff00;//曲线报警状态
-				TIME ti; ti.fromUnixTimeStamp(lpsubdata->time);
+				TIME ti; ti.fromUnixTime(lpsubdata->time);
 				string startTi = timeopt::stTimeToStr(ti);
 
 				json jParamsArry = json::array();
@@ -2264,7 +2264,7 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		BYTE acqreason = pRecord->gaptype;
 		string theTag = zzjMo->getTag()+  ".缺口";
 
-		TIME ti; ti.fromUnixTimeStamp(pRecord->time);
+		TIME ti; ti.fromUnixTime(pRecord->time);
 		string  strTi = timeopt::st2str(ti);
 		string  strJustTime = ti.toTimeStr();
 		string val;

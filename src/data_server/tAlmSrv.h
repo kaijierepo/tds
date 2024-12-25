@@ -2,239 +2,9 @@
 
 #include <mutex>
 #include "tdb.h"
+#include "tds.h"
 #include "json.hpp"
 #include <shared_mutex>
-/*
-要求可直接移植到JHD，把引用其他文件里的那些东西都挪进来  by zgw 20241112
-无名空间的各种原有定义放到名空间as(宏改为全局变量); 原有的名空间上加上as_前缀; 调用其他模块的地方及关联逻辑改为函数指针移到外面;
-项目 -> 属性; C/C++ ->命令行; 在其他选项中输入/Zc:__cplusplus  否则__cplusplus 一直是199711L
-*/
-namespace as {
-
-	struct Date {
-		unsigned short wYear;
-		unsigned short wMonth;
-		unsigned short wDay;
-		unsigned short wDayOfWeek;
-		Date() {
-			memset(this, 0, sizeof(this));
-		}
-		string toStr();
-		void fromStr(string s);
-	};
-
-	struct HMS {
-		unsigned short wHour;
-		unsigned short wMinute;
-		unsigned short wSecond;
-		unsigned short wMilliseconds;
-		HMS() {
-			memset(this, 0, sizeof(this));
-		}
-		string toStr();
-		void fromStr(string s);
-	};
-	struct TIME {
-		unsigned short wYear;
-		unsigned short wMonth;
-		unsigned short wDay;
-		unsigned short wHour;
-		unsigned short wMinute;
-		unsigned short wSecond;
-		unsigned short wMilliseconds;
-		unsigned short wDayOfWeek;
-
-		TIME() {
-			memset(this, 0, sizeof(this));
-		}
-
-		void initAsInvalid() {
-			memset(this, 0, sizeof(this));
-		}
-
-		bool isValid() {
-			if (wYear > 0)
-				return true;
-			return false;
-		}
-
-		void setDate(as::Date t);
-		void setHMS(as::HMS t);
-
-		bool operator==(TIME& right) {
-			return 0 == memcmp(this, &right, sizeof(TIME));
-		}
-
-		bool operator>(TIME& right) {
-			string sl = toStr();
-			string sr = right.toStr();
-			if (sl > sr) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-		bool operator>=(TIME& right) {
-			string sl = toStr();
-			string sr = right.toStr();
-			if (sl >= sr) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-		bool operator<(TIME& right) {
-			string sl = toStr();
-			string sr = right.toStr();
-			if (sl < sr) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-		bool operator<=(TIME& right) {
-			string sl = toStr();
-			string sr = right.toStr();
-			if (sl <= sr) {
-				return true;
-			}
-			else {
-				return false;
-			}
-		}
-		string toStr(bool enableMilli = true);
-		void fromStr(string s);
-		string toDateStr();
-		string toStampHMS();
-		string toTimeStr();
-		string toStampFull();
-		time_t toUnixTimeStamp();
-		void fromUnixTimeStamp(time_t t);
-	};
-
-
-	class RPC_SESSION {
-	public:
-		string req;   //maybe batch call
-		string req_single;  //single call
-
-		//authentification
-		string name; //name is defined by tds client
-		string user;
-		string role;
-		string pwd;
-		string token;
-		string method;
-		string dbpath;
-		string language;
-
-		//tag expression in current user; multi-tenant
-		//rootTag = org + queryRootTag
-		//sysTag = org + queryRootTag + tag used in this session   rootTag = org + queryRootTag;
-		string org; //user's org
-
-
-		bool isNotification;
-
-		//session params for rpc route
-		string route_ioAddr;  //route to io device
-		string route_tag;     //route to io device or childTds
-		string route_childTds;
-
-		//ip params
-		string remoteAddr;
-		string remoteIP;
-		int remotePort;
-		string localIP;
-		int localPort;
-		bool isHttps;
-
-		string sLastRecvTime;
-		string lastMethodCalled;
-		string sLastSendTime;
-		string lastMethodNotified;
-
-		bool isDebug; //调试调用不计入session统计
-
-		RPC_SESSION() {
-			isNotification = false;
-			remotePort = 0;
-			localPort = 0;
-			isDebug = false;
-		}
-	};
-
-	class RPC_RESP {
-	public:
-		void setResult(string& str) { result = str; }
-		RPC_RESP() {
-			result = "";
-			isNotification = false;
-		}
-		~RPC_RESP()
-		{
-		}
-
-		string strResp;
-		string strRespForLog; //ignore some pkt data ,for log only
-		string error;
-		string result;
-		string params;
-		string info;   //rpc excution log
-		string dbQueryInfo;
-		bool isNotification; //is request a notification.no response will send if request is a notification
-	};
-
-	enum RPC_ERROR_CODE {
-		ALM_alarmEventNotFound = -44001,
-	};
-
-	bool matchTag(string pattern, const string& src);
-	bool generalMatch(string pattern, const string& src);
-	string getUUID();
-
-	int _vscprintf_cross(const char* format, va_list pargs);
-
-	inline string makeRPCError(int code, string msg, string desc = "")
-	{
-		string error = "{\"code\":" + std::to_string(code) + ",\"message\":\"" + msg + "\"";
-		if (desc != "")
-		{
-			string data = ",\"data\":{\"desc\":\"" + desc + "\"}";
-			error += data;
-		}
-		error += "}";
-
-		return error;
-	}
-};
-
-namespace as_timeopt {
-	as::TIME now();
-	void now(as::TIME& t);
-	void now(as::TIME* t);
-	as::TIME str2st(string str);
-	string st2str(as::TIME t, bool enableMS = false);
-	as::TIME Unix2SysTime(time_t iUnix, int milli = 0);
-	string stTimeToStr(as::TIME time);
-	string nowStr(bool enableMS = false);
-}
-
-namespace as_str {
-	string trimPrefix(string s, string prefix = " ");
-	string trimSuffix(string s, string suffix = " ");
-	string trim(std::string s, string toTrim = " ");
-	std::string format(const char* pszFmt, ...);
-	string replace(string str, const string to_replaced, const string newchars);
-	bool isDigits(char* pData, int len);
-	bool isDigits(string s);
-	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
-	vector<unsigned char> hexStrToBytes(string hexStr);
-	string removeChar(string str, char c);
-}
 
 namespace as_fs {
 	string GetDir(string strIn);
@@ -248,47 +18,6 @@ namespace as_fs {
 	bool writeFile(string path, unsigned char* data, size_t len);
 	bool writeFile(string path, char* data, size_t len);	//带后缀 .XXX 作为文件路径
 	bool writeFile(string path, string& data);
-
-}
-
-namespace as_charCodec {
-	//gbk,utf8 <-> unicode
-	string utf16_to_utf8(wstring instr);
-	string utf16_to_gb(wstring instr);
-	wstring utf8_to_utf16(string instr);
-	wstring gb_to_utf16(string instr);
-
-	//gbk <-> utf8
-	string utf8_to_gb(string instr);
-	string gb_to_utf8(string instr);
-
-	string utf16Str_to_utf8(string s);
-
-	//gbk checks   GB2312 value region  A1A1－FEFE  for chinese chars is B0A1-F7FE。
-	bool hasGB2312(string s);
-	bool isValidGB2312(string s, size_t& errorPos, string& errorChar);
-	bool isValidGB2312(string s);
-
-	//tds local codec can  be utf8 or gbk.
-	string utf16_to_tds(wstring instr);
-	wstring tds_to_utf16(string instr);
-	string tds_to_utf8(string instr);
-	string tds_to_gb(string instr);
-	string gb_to_tds(string instr);
-	string utf8_to_tds(string instr);
-}
-
-namespace as_common {
-	string& getCharCodec();
-}
-
-namespace as_sys {
-	string getLastError(string szReason = "");
-
-}
-
-namespace as_TAG {
-	string addRoot(string tag, string root);
 }
 
 /*  Alarm Key
@@ -373,9 +102,9 @@ public:
 	string strSuggest;
 	string typeLabel;
 	bool bRecover;
-	as::TIME stRecoverTime;
+	TIME stRecoverTime;
 	bool bAck;
-	as::TIME stConfirmTime;
+	TIME stConfirmTime;
 	string strConfirmInfo;
 	string strConfirmUser;
 	string pic_url;
@@ -385,9 +114,9 @@ public:
 		strAlarmDetail = "";
 		strSuggest = "";
 		bRecover = 0;
-		memset(&stRecoverTime, 0, sizeof(as::TIME));
+		memset(&stRecoverTime, 0, sizeof(TIME));
 		bAck = 0;
-		memset(&stConfirmTime, 0, sizeof(as::TIME));
+		memset(&stConfirmTime, 0, sizeof(TIME));
 		strConfirmInfo = "";
 	}
 
@@ -529,10 +258,10 @@ public:
 	void recover(AS_ALARM_INFO& key);
 
 	//报警确认
-	void rpc_acknowledge(json& params, as::RPC_RESP& resp, as::RPC_SESSION session);
-	void rpc_acknowledgeAll(json& params, as::RPC_RESP& resp, as::RPC_SESSION session);
-	int rpc_approve(json& params, as::RPC_RESP& resp, as::RPC_SESSION session);
-	json rpcReqParams2Querier(json& params, as::RPC_SESSION session);
+	void rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
+	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
+	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
 	//过滤器参数
 	/*
@@ -543,13 +272,13 @@ public:
 		user:null
 	}
 	*/
-	string rpc_getCurrent(json filter, as::RPC_SESSION session);//combined list of active status and unack event
-	string rpc_getUnRecover(json filter, as::RPC_SESSION session);
-	string rpc_getUnack(json filter, as::RPC_SESSION session);
-	string rpc_getHistory(json params, as::RPC_SESSION session);
-	string rpc_addAlarm(json j, as::RPC_RESP& resp, bool bUpdate = true);
-	void rpc_recoverAlarm(json j, as::RPC_RESP& resp);
-	void rpc_updateStatus(json j, as::RPC_RESP& resp);
+	string rpc_getCurrent(json filter, RPC_SESSION session);//combined list of active status and unack event
+	string rpc_getUnRecover(json filter, RPC_SESSION session);
+	string rpc_getUnack(json filter, RPC_SESSION session);
+	string rpc_getHistory(json params, RPC_SESSION session);
+	string rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
+	void rpc_recoverAlarm(json j, RPC_RESP& resp);
+	void rpc_updateStatus(json j, RPC_RESP& resp);
 
 	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表
 	void initMOAlarmStatus();
@@ -564,7 +293,8 @@ public:
 	void init(); //tds的conf路径
 	void init(const string& aCurPath, const string& aHisPath, AsInitParam& asInitParam);
 
-	bool CompareTime(as::TIME& time1, as::TIME& time2);
+	bool CompareTime(TIME& time1, TIME& time2);
+	string uuid();
 
 	static void ClearMap(map<string, AS_ALARM_INFO*>& inMap);
 	//almTable tableStatus;

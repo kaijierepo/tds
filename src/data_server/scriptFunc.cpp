@@ -833,9 +833,9 @@ jerry_value_t func_increaseSeconds(const jerry_call_info_t* call_info_p,
 	t.wMinute = jTime["minute"].get<int>();
 	t.wSecond = jTime["second"].get<int>();
 	t.wMilliseconds = jTime["millisecond"].get<int>();
-	time_t unixTime = t.toUnixTimeStamp();
+	time_t unixTime = t.toUnixTime();
 	unixTime += jArgs[0].get<int>();
-	t.fromUnixTimeStamp(unixTime);
+	t.fromUnixTime(unixTime);
 	TIMEToJerryTime(t, time);
 	
 	jerry_value_t ret = jerry_create_null();

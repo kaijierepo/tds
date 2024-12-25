@@ -413,68 +413,6 @@ namespace charCodec {
 
 }
 namespace str {
-
-	string trimPrefix(string s, string prefix)
-	{
-		if (prefix == "")
-			return s;
-
-		while (1)
-		{
-			if (s.find(prefix) == 0)
-			{
-				s = s.substr(prefix.length(), s.length() - prefix.length());
-			}
-			else
-			{
-				break;
-			}
-		}
-
-		return s;
-	}
-
-	string trimSuffix(string s, string suffix)
-	{
-		if (suffix == "")
-			return s;
-
-		while (1)
-		{
-			size_t ipos = s.rfind(suffix);
-			if (ipos != string::npos && ipos + suffix.length() == s.length())
-			{
-				s = s.substr(0, ipos);
-			}
-			else
-			{
-				break;
-			}
-		}
-		return s;
-	}
-
-	string trim(std::string s, string toTrim)
-	{
-		s = trimPrefix(s, toTrim);
-		s = trimSuffix(s, toTrim);
-		return s;
-	}
-
-
-	string replace(string str, const string to_replaced, const string newchars)
-	{
-		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
-		{
-			pos = str.find(to_replaced, pos);
-			if (pos != string::npos)
-				str.replace(pos, to_replaced.length(), newchars);
-			else
-				break;
-		}
-		return   str;
-	}
-
 	bool isASCII(const std::string& str) {
 		for (char c : str) {
 			if (c < 0 || c > 127) {
@@ -550,40 +488,6 @@ namespace str {
 
 	
 
-	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
-	{
-		if (src.empty() || separator.empty())
-			return 0;
-
-		int nCount = 0;
-		std::string temp;
-		size_t pos = 0, offset = 0;
-
-		// 分割第1~n-1个
-		while ((pos = src.find(separator, offset)) != std::string::npos)
-		{
-			temp = src.substr(offset, pos - offset);
-			if (temp.length() > 0) {
-				dst.push_back(temp);
-				nCount++;
-			}
-			else
-			{
-				dst.push_back("");
-				nCount++;
-			}
-			offset = pos + separator.size();
-		}
-
-		// 分割第n个
-		temp = src.substr(offset, src.length() - offset);
-		if (temp.length() > 0) {
-			dst.push_back(temp);
-			nCount++;
-		}
-
-		return nCount;
-	}
 
 	string removeChar(string str, char c)
 	{
@@ -2229,5 +2133,54 @@ void setThreadName2(string name)
 void setThreadName(string name)
 {
 	setThreadName2(name);
+}
+
+
+bool TAG::hasTag(json& tree, string tag)
+{
+	vector<string> nodeNames;
+	split(nodeNames, tag, ".");
+	json* node = &tree;
+	for (int i = 0; i < nodeNames.size(); i++)
+	{
+		string name = nodeNames[i];
+
+
+		//查找子节点中有没有是 指定name的节点。如果有node指向该节点，继续查找node的子节点中是否有下一个name
+		if ((*node)["children"] == nullptr)
+			return false;
+		json& jChildren = (*node)["children"];
+		bool bHaveChild = false;
+		if (jChildren.is_array())//具体指定
+		{
+			for (int j = 0; j < jChildren.size(); j++)
+			{
+				json& child = jChildren[j];
+				if (child["name"].get<string>() == name)
+				{
+					bHaveChild = true;
+					node = &child;
+				}
+			}
+		}
+		else if (jChildren.is_string() && jChildren.get<string>() == "*") //通配符指定，所有子节点
+		{
+			return true;
+		}
+
+		if (!bHaveChild)return false;
+	}
+
+	return true;
+}
+
+json TAG::mapTree2List(json mapTree)
+{
+	for (auto& [k, v] : mapTree.items())
+	{
+
+	}
+
+	return json();
 }
 

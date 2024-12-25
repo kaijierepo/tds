@@ -27,6 +27,21 @@ SOFTWARE.
 #include "tds.h"
 #include <stdarg.h>
 #include <mutex>
+#ifdef _WIN32
+#include <windows.h>
+#include <Commdlg.h>
+#include <ShlObj_core.h>
+#include <SetupAPI.h>
+#include <devguid.h>
+#pragma comment (lib, "Setupapi.lib")
+#else
+#include <unistd.h>
+//#include <iconv.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <wchar.h>
+#include <stdlib.h>
+#endif
 
 int _vscprintf_cross(const char* format, va_list pargs) {
 	int retval;
@@ -52,6 +67,19 @@ namespace str {
 		}
 		va_end(args);
 		return str;
+	}
+
+	string replace(string str, const string to_replaced, const string newchars)
+	{
+		for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
+		{
+			pos = str.find(to_replaced, pos);
+			if (pos != string::npos)
+				str.replace(pos, to_replaced.length(), newchars);
+			else
+				break;
+		}
+		return   str;
 	}
 
 	bool isDigits(char* pData, int len) {
@@ -86,6 +114,243 @@ namespace str {
 		}
 		return true;
 	}
+
+	int split(std::vector<std::string>& dst, const std::string& src, std::string separator)
+	{
+		if (src.empty() || separator.empty())
+			return 0;
+
+		int nCount = 0;
+		std::string temp;
+		size_t pos = 0, offset = 0;
+
+		// 分割第1~n-1个
+		while ((pos = src.find(separator, offset)) != std::string::npos)
+		{
+			temp = src.substr(offset, pos - offset);
+			if (temp.length() > 0) {
+				dst.push_back(temp);
+				nCount++;
+			}
+			else
+			{
+				dst.push_back("");
+				nCount++;
+			}
+			offset = pos + separator.size();
+		}
+
+		// 分割第n个
+		temp = src.substr(offset, src.length() - offset);
+		if (temp.length() > 0) {
+			dst.push_back(temp);
+			nCount++;
+		}
+
+		return nCount;
+	}
+
+	string trimPrefix(string s, string prefix)
+	{
+		if (prefix == "")
+			return s;
+
+		while (1)
+		{
+			if (s.find(prefix) == 0)
+			{
+				s = s.substr(prefix.length(), s.length() - prefix.length());
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return s;
+	}
+
+	string trimSuffix(string s, string suffix)
+	{
+		if (suffix == "")
+			return s;
+
+		while (1)
+		{
+			size_t ipos = s.rfind(suffix);
+			if (ipos != string::npos && ipos + suffix.length() == s.length())
+			{
+				s = s.substr(0, ipos);
+			}
+			else
+			{
+				break;
+			}
+		}
+		return s;
+	}
+
+	string trim(std::string s, string toTrim)
+	{
+		s = trimPrefix(s, toTrim);
+		s = trimSuffix(s, toTrim);
+		return s;
+	}
+
+	wstring gb_to_utf16(string instr)
+	{
+		wstring str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete wcharstr;
+#else
+
+#endif
+		return str;
+	}
+	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	{
+		wstring str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete[] wcharstr;
+
+#else
+
+#endif
+		return str;
+	}
+	string utf16_to_utf8(wstring instr) //utf-8-->ansi
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 4 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete charstr;
+#else
+
+#endif
+		return str;
+	}
+	string utf16_to_gb(wstring instr)
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete charstr;
+#else
+
+#endif
+		return str;
+	}
+	string utf8_to_gb(string instr) //utf-8-->ansi
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		//int ret = 0;
+		//size_t inlen = instr.size() + 1;
+		//size_t outlen = 2*inlen;
+
+		//// duanqn: The iconv function in Linux requires non-const char *
+		//// So we need to copy the source string
+		//char* inbuf = (char*)malloc(inlen);
+		//memset(inbuf,0,inlen);
+		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+		//							// so we use another pointer to keep the address
+		//memcpy(inbuf, instr.data(), instr.length());
+
+		//char* outbuf =(char*)malloc(outlen);
+		//memset(outbuf, 0, outlen);
+		//iconv_t cd;
+		//cd = iconv_open("GBK", "UTF-8");
+		//if (cd != (iconv_t)-1) {
+		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+		//	if (ret != 0) {
+		//		printf("iconv failed err: %s\n", strerror(errno));
+		//	}
+
+		//	iconv_close(cd);
+		//}
+		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+
+		//if(outbuf!=nullptr){
+		//	str = outbuf;
+		//	free(outbuf);
+		//}
+		str = instr;
+#endif
+		return str;
+	}
+	string gb_to_utf8(string instr) //ansi-->utf-8
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		//int ret = 0;
+		//size_t inlen = instr.length() + 1;
+		//size_t outlen = 2*inlen;
+
+		//// duanqn: The iconv function in Linux requires non-const char *
+		//// So we need to copy the source string
+		//char* inbuf = (char*)malloc(inlen);
+		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+		//							// so we use another pointer to keep the address
+		//memcpy(inbuf, instr.data(), instr.length());
+
+		//char* outbuf = (char*)malloc(outlen);
+		//memset(outbuf, 0, outlen);
+		//iconv_t cd;
+
+		//cd = iconv_open("UTF-8", "GBK");
+		//if (cd != (iconv_t)-1) {
+		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+		//	if (ret != 0)
+		//		printf("iconv failed err: %s\n", strerror(errno));
+		//	iconv_close(cd);
+		//}
+		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		//str = outbuf;
+		//free(outbuf);
+		str = instr;
+#endif
+		return str;
+	}
 }
 
 
@@ -103,6 +368,14 @@ void TIME::setHMS(HMS t)
 	wMinute = t.wMinute;
 	wSecond = t.wSecond;
 	wMilliseconds = t.wMilliseconds;
+}
+
+void TIME::setNow() {
+	auto now = std::chrono::system_clock::now();
+	unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+		- std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+	time_t tt = std::chrono::system_clock::to_time_t(now);
+	fromUnixTime(tt, milli);
 }
 
 string TIME::toStr(bool enableMilli)
@@ -186,7 +459,7 @@ void TIME::fromStr(string str) {
 	}
 	else if (str::isDigits(str)) {
 		time_t tt = atoi(str.c_str());
-		fromUnixTimeStamp(tt);
+		fromUnixTime(tt);
 	}
 }
 
@@ -208,13 +481,13 @@ string TIME::toStampFull()
 	return s;
 }
 
-time_t  TIME::toUnixTimeStamp() {
+time_t  TIME::toUnixTime() {
 	tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
 	time_t unixTime = mktime(&temptm);
 	return unixTime;
 }
 
-void  TIME::fromUnixTimeStamp(time_t unixTime) {
+void  TIME::fromUnixTime(time_t unixTime,int milli) {
 	static std::mutex mtx;
 	mtx.lock();
 	tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
@@ -226,6 +499,7 @@ void  TIME::fromUnixTimeStamp(time_t unixTime) {
 	wHour = time_tm.tm_hour;
 	wMinute = time_tm.tm_min;
 	wSecond = time_tm.tm_sec;
+	wMilliseconds = milli;
 	wDayOfWeek = time_tm.tm_wday;
 }
 
@@ -363,43 +637,6 @@ int TAG::split(std::vector<std::string>& dst, const std::string& src, std::strin
 	return nCount;
 }
 
-bool TAG::hasTag(json& tree, string tag)
-{
-	vector<string> nodeNames;
-	split(nodeNames, tag, ".");
-	json* node = &tree;
-	for (int i = 0; i < nodeNames.size(); i++)
-	{
-		string name = nodeNames[i];
-
-
-		//查找子节点中有没有是 指定name的节点。如果有node指向该节点，继续查找node的子节点中是否有下一个name
-		if ((*node)["children"] == nullptr)
-			return false;
-		json& jChildren = (*node)["children"];
-		bool bHaveChild = false;
-		if (jChildren.is_array())//具体指定
-		{
-			for (int j = 0; j < jChildren.size(); j++)
-			{
-				json& child = jChildren[j];
-				if (child["name"].get<string>() == name)
-				{
-					bHaveChild = true;
-					node = &child;
-				}
-			}
-		}
-		else if (jChildren.is_string() && jChildren.get<string>() == "*") //通配符指定，所有子节点
-		{
-			return true;
-		}
-
-		if (!bHaveChild)return false;
-	}
-
-	return true;
-}
 
 size_t TAG::getMoLevel(string tag)
 {
@@ -407,15 +644,6 @@ size_t TAG::getMoLevel(string tag)
 	return std::count(tag.begin(), tag.end(), '.');
 }
 
-json TAG::mapTree2List(json mapTree)
-{
-	for (auto& [k, v] : mapTree.items())
-	{
-
-	}
-
-	return json();
-}
 
 //tagThis当前位号
 //strTagExp相对与当前位号的相对位号表达式
@@ -449,3 +677,52 @@ string TAG::resolveTag(string strTagExp, string tagContext)
 	return tagName;
 }
 
+
+string TDS_LAST_ERROR()
+{
+	string szErrMsg = "";
+#ifdef WINDOWS
+	DWORD dwErrCode = GetLastError(); //之前的错误代码
+
+	LPVOID lpMsgBuf = NULL;
+	DWORD dwLen = FormatMessageW(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,
+		dwErrCode,
+		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), // Default language
+		(LPWSTR)&lpMsgBuf,
+		0,
+		NULL
+	);
+
+
+
+	if (dwLen == 0)
+	{
+		DWORD dwFmtErrCode = GetLastError(); //FormatMessage 引起的错误代码
+		szErrMsg = str::format("FormatMessage failed with %u\n", dwFmtErrCode);
+	}
+
+	if (lpMsgBuf)
+	{
+		wstring utf16msg = (LPWSTR)lpMsgBuf;
+#ifdef UTF8
+		string msg = str::utf16_to_utf8(utf16msg);
+#else
+		string msg = str::uft16_to_gb(utf16msg);
+#endif
+		szErrMsg = str::format("Code = %u, Mean = %s", dwErrCode, msg.c_str());
+	}
+
+	if (lpMsgBuf)
+	{
+		// Free the buffer.
+		LocalFree(lpMsgBuf);
+		lpMsgBuf = NULL;
+	}
+#endif
+
+	return szErrMsg;
+}
