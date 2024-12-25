@@ -63,6 +63,8 @@ namespace TAG {
 	bool hasTag(json& tree, string tag); 
 	size_t getMoLevel(string tag);
 	json mapTree2List(json mapTree);
+	string trimPrefix(string s, string prefix);
+	int split(std::vector<std::string>& dst, const std::string& src, std::string separator);
 }
 
 struct TIME;

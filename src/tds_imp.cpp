@@ -967,3 +967,22 @@ void TDS_imp::log(const char* text)
 }
 
 
+i_tds* getTds() {
+	static TDS_imp inst;
+	return &inst;
+}
+
+#ifdef TDSDLL
+i_tds* getITDS() {
+	HMODULE hMod = LoadLibrary("tds.dll");
+	if (hMod)
+	{
+		fp_getTds pGetTds = (fp_getTds)GetProcAddress(hMod, "getTds");
+		if (pGetTds)
+		{
+			return pGetTds();
+		}
+	}
+	return NULL;
+}
+#endif
