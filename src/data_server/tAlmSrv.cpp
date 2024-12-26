@@ -61,6 +61,14 @@ namespace as_fs {
 #endif
 	}
 
+	string fixPath(string path) {
+		path = str::replace(path, "\\", "/");
+		path = str::replace(path, "////", "/");
+		path = str::replace(path, "///", "/");
+		path = str::replace(path, "//", "/");
+		return path;
+	}
+
 
 	void createFolderOfPath(string strFile)
 	{
@@ -211,6 +219,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 {
 	m_initParam = asInitParam;
 	m_dbPath = dbPath;
+	m_dbPath = as_fs::fixPath(m_dbPath);
 
 	init();
 
