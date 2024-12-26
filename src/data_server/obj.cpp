@@ -512,6 +512,9 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 			{
 				conf["online"] = m_bOnline;
 			}
+			if (m_level == "mp" && m_pParentMO->m_strIoAddrBind != "") {
+				conf["online"] = m_pParentMO->m_bOnline;
+			}
 		}
 
 			

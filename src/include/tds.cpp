@@ -711,7 +711,7 @@ string TDS_LAST_ERROR()
 #ifdef UTF8
 		string msg = str::utf16_to_utf8(utf16msg);
 #else
-		string msg = str::uft16_to_gb(utf16msg);
+		string msg = str::utf16_to_gb(utf16msg);
 #endif
 		szErrMsg = str::format("Code = %u, Mean = %s", dwErrCode, msg.c_str());
 	}
