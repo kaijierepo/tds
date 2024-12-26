@@ -4820,12 +4820,12 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 
 	almServer* pAlmSrv = &almSrv;
 
-	vector<AS_ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
+	vector<ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
 	int iAlarmCount = 0;
 	int iWarnCount = 0;
 	for (int i = 0; i < vecAlarms.size(); i++)
 	{
-		AS_ALARM_INFO* pai = vecAlarms[i];
+		ALARM_INFO* pai = vecAlarms[i];
 		if (pai->bRecover)
 			continue;
 

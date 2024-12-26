@@ -594,19 +594,19 @@ void MP::calcAlarm()
 		{
 			if (dbCurVal > m_alarmLimit.high)
 			{
-				AS_ALARM_INFO ai;
+				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overHighLimit;
-				ai.level = AS_ALARM_LEVEL::alarm;
+				ai.level = ALARM_LEVEL::alarm;
 				ai.strAlarmDesc = str::format("报警值%f,上限值%f", dbCurVal, m_alarmLimit.high);
 				almSrv.Update(ai);
 			}
 			else
 			{
-				AS_ALARM_INFO ai;
+				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overHighLimit;
-				ai.level = AS_ALARM_LEVEL::normal;
+				ai.level = ALARM_LEVEL::normal;
 				almSrv.Update(ai);
 			}
 		}
@@ -614,19 +614,19 @@ void MP::calcAlarm()
 		{
 			if (dbCurVal < m_alarmLimit.low)
 			{
-				AS_ALARM_INFO ai;
+				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overLowLimit;
-				ai.level = AS_ALARM_LEVEL::alarm;
+				ai.level = ALARM_LEVEL::alarm;
 				ai.strAlarmDesc = str::format("报警值%f,下限值%f", dbCurVal, m_alarmLimit.low);
 				almSrv.Update(ai);
 			}
 			else
 			{
-				AS_ALARM_INFO ai;
+				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overLowLimit;
-				ai.level = AS_ALARM_LEVEL::normal;
+				ai.level = ALARM_LEVEL::normal;
 				almSrv.Update(ai);
 			}
 		}
@@ -775,12 +775,12 @@ void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 
 	if (m_alarmMp && m_curVal.is_boolean()) //是一个报警监控点，更新报警
 	{
-		AS_ALARM_INFO ai;
+		ALARM_INFO ai;
 		ai.type = m_name;
 		if (m_curVal.get<bool>() == true)
-			ai.level = AS_ALARM_LEVEL::alarm;
+			ai.level = ALARM_LEVEL::alarm;
 		else
-			ai.level = AS_ALARM_LEVEL::normal;
+			ai.level = ALARM_LEVEL::normal;
 		ai.tag = getTag();
 		ai.typeLabel = m_name;
 		almSrv.Update(ai);
