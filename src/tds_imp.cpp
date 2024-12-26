@@ -547,20 +547,11 @@ bool TDS_imp::run(string cmdline)
 	asInitParam.func_sms_notify = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
 	//报警
-	string sCurAlarmFile = "/alarms/current";
-	string sHisAlarmFile = "/alarms/history";
-	almSrv.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
-	sCurAlarmFile = "/alarmsDevelop/current";
-	sHisAlarmFile = "/alarmsDevelop/history";
-	almSrv_dev.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
+	almSrv.init(::db.m_path + "/alarms", asInitParam);
+	almSrv_dev.init(::db.m_path + "/alarmsDev", asInitParam);
 	almSrv_dev.m_bTestSrv = true;
-	//故障
-	sCurAlarmFile = "/faults/current";
-	sHisAlarmFile = "/faults/history";
-	almSrv_fau.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
-	sCurAlarmFile = "/faultsDevelop/current";
-	sHisAlarmFile = "/faultsDevelop/history";
-	almSrv_fauDev.init(sCurAlarmFile, sHisAlarmFile, asInitParam);
+	almSrv_fau.init(::db.m_path + "/alarmsFault", asInitParam);
+	almSrv_fauDev.init(::db.m_path + "/alarmsFaultDev", asInitParam);
 	almSrv_fauDev.m_bTestSrv = true;
 	
 

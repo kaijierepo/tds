@@ -598,7 +598,7 @@ void MP::calcAlarm()
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overHighLimit;
 				ai.level = ALARM_LEVEL::alarm;
-				ai.strAlarmDesc = str::format("报警值%f,上限值%f", dbCurVal, m_alarmLimit.high);
+				ai.desc = str::format("报警值%f,上限值%f", dbCurVal, m_alarmLimit.high);
 				almSrv.Update(ai);
 			}
 			else
@@ -618,7 +618,7 @@ void MP::calcAlarm()
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overLowLimit;
 				ai.level = ALARM_LEVEL::alarm;
-				ai.strAlarmDesc = str::format("报警值%f,下限值%f", dbCurVal, m_alarmLimit.low);
+				ai.desc = str::format("报警值%f,下限值%f", dbCurVal, m_alarmLimit.low);
 				almSrv.Update(ai);
 			}
 			else

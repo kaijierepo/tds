@@ -10,13 +10,12 @@ namespace as_fs {
 	string GetDir(string strIn);
 	void CreateDirectoryPlus_old(string str);
 
-	//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-	bool createFolderOfPath(string strFile);
+	void createFolderOfPath(string strFile);
 	bool readFile(string path, char*& pData, int& len);
 	bool readFile(string path, unsigned char*& pData, int& len);
 	bool readFile(string path, string& data);
 	bool writeFile(string path, unsigned char* data, size_t len);
-	bool writeFile(string path, char* data, size_t len);	//带后缀 .XXX 作为文件路径
+	bool writeFile(string path, char* data, size_t len);	
 	bool writeFile(string path, string& data);
 }
 
@@ -29,9 +28,9 @@ namespace as_fs {
 
 /* Alarm Level
 there are 3 solutions of level
-solution 1: "normal|warn|alarm" or "正常|预警|告警"
-solution 2: "normal|red|yellow|blue" or "正常|红|黄|蓝"
-solution 3: "normal|1|2|3" or "正常|一级|二级|三级"
+solution 1: "normal|warn|alarm" 
+solution 2: "normal|red|yellow|blue" 
+solution 3: "normal|1|2|3" 
 value of level can by any of the 12 strings above
 there aren't 2 record with the same "tag","time","type" attributes and with different "level" attribute
 so level is not needed to specify an Alarm Key
@@ -47,25 +46,14 @@ namespace ALARM_LEVEL {
 	const string L4 = "L4";
 }
 
-inline string getAlarmLevelLabel(string level)
-{
-	if (level == "alarm")
-		return "告警";
-	else if (level == "warn")
-		return "预警";
-	else if (level == "normal")
-		return "正常";
-	return "";
-}
-
 class ALARM_KEY {
 public:
-	string uuid;//系统生成的唯一id
+	string uuid;
 
 	string tag;
 	string time;
 	string type;
-	string id;  //用户自定义的alarmid，当某些报警应用，时空+type都一样时，可以使用id进一步区分
+	string id;  //custom id
 
 	string getKey() {
 		return time + "," + tag + "," + type + id;
@@ -73,8 +61,6 @@ public:
 
 	string getSortKey(string sortKey)
 	{
-		//报警依照时间,位号,类型,id这样的优先级顺序
-		//依照某个内容排序时,就将其提至最前端,其他顺延
 		if (sortKey == "tag")
 			return tag + "," + time + "," + type + id;
 		else if (sortKey == "type")
@@ -85,8 +71,8 @@ public:
 };
 
 namespace ALARM_TYPE {
-	const string overHighLimit = "超高限";
-	const string overLowLimit = "超低限";
+	const string overHighLimit = "over high limit";
+	const string overLowLimit = "over low limit";
 }
 
 class ALARM_TEMPLATE {
@@ -101,27 +87,31 @@ class almServer;
 class ALARM_INFO : public ALARM_KEY {
 public:
 	string level;
-	string strAlarmDesc;
-	string strAlarmDetail;
-	string strSuggest;
+	string desc;
+	string detail;
+	string suggest;
 	string typeLabel;
-	bool bRecover;
-	TIME stRecoverTime;
-	bool bAck;
-	TIME stConfirmTime;
-	string strConfirmInfo;
-	string strConfirmUser;
+	bool isRecover;
+	bool needRecover;
+	TIME recoverTime;
+	bool isAck;
+	bool needAck;
+	TIME ackTime;
+	string ackInfo;
+	string ackUser;
 	string pic_url;
 
 	ALARM_INFO() {
-		strAlarmDesc = "";
-		strAlarmDetail = "";
-		strSuggest = "";
-		bRecover = 0;
-		memset(&stRecoverTime, 0, sizeof(TIME));
-		bAck = 0;
-		memset(&stConfirmTime, 0, sizeof(TIME));
-		strConfirmInfo = "";
+		desc = "";
+		detail = "";
+		suggest = "";
+		isRecover = 0;
+		needRecover = true;
+		needAck = true;
+		memset(&recoverTime, 0, sizeof(TIME));
+		isAck = 0;
+		memset(&ackTime, 0, sizeof(TIME));
+		ackInfo = "";
 	}
 
 	bool isAlarming() {
@@ -219,22 +209,19 @@ protected:
 	almServer* m_pAlmSrv;
 };
 
-//obj模块相关 
+
 typedef bool (*tfunc_obj_isEnableAlarm)(std::string, std::string);
 typedef bool (*tfunc_obj_setJAlmStatus)(std::string, std::string, json& js);
 typedef json(*tfunc_obj_getTypeTagByTag)(std::string);
-//log模块相关
 typedef void (*tfunc_log)(const char*, ...);
-//rpcHandler相关
 typedef bool (*tfunc_rpcHand_notify)(std::string, json& js);
-//取用户信息发短信
 typedef bool (*tfunc_sms_notify)(std::string, std::string&);
 typedef bool (*tfunc_usrMng_checkTagPermission)(std::string, std::string);
 
 struct AsInitParam
 {
-	string confPath; //alarm.json的目录
-	bool enableGlobalAlarm = false;
+	string confPath; 
+	bool enableGlobalAlarm = true;
 
 	tfunc_obj_isEnableAlarm func_obj_isEnableAlarm = NULL;
 	tfunc_obj_setJAlmStatus func_obj_setJAlmStatus = NULL;
@@ -248,32 +235,28 @@ struct AsInitParam
 class almServer
 {
 public:
-	//基础配置 ini时指定
 	AsInitParam m_initParam;
-
+	//path should be utf8 format if in Chinese
+	void init(const string dbPath, AsInitParam& asInitParam);
+	string m_dbPath;
 public:
 	////internal interface
 	//alarm generation
 	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
 	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
 	void addAlarm(ALARM_INFO ai);
-
-	//报警恢复
 	void recover(ALARM_INFO& key);
-
-	//报警状态是否恢复
 	bool isRecover(ALARM_INFO& key);
 	bool isActive(ALARM_INFO& key);
 	bool isRecover(string tag, string type);
 	bool isActive(string tag, string type);
 
-	//报警确认
+	//rpc handler
 	void rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
 	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
 	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
-	//过滤器参数
 	/*
 	{
 		isAck:false,
@@ -290,9 +273,9 @@ public:
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
 
-	json getAlarmStatus(string tag);//获得某一个mo对象的所有报警状态列表
+	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
-	string getAlarmTypeLabel(string type);//内置报警的类型描述
+	string getAlarmTypeLabel(string type);
 public:
 	almServer(void);
 	~almServer(void);
@@ -300,8 +283,8 @@ public:
 		static almServer inst;
 		return inst;
 	}
-	void init(); //tds的conf路径
-	void init(const string& aCurPath, const string& aHisPath, AsInitParam& asInitParam);
+	void init();
+
 
 	bool CompareTime(TIME& time1, TIME& time2);
 	string uuid();
@@ -309,18 +292,18 @@ public:
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
 	//almTable tableStatus;
 	//almTable tableUnack;
-	almTable tableCurrent; //未确认或未恢复的
+	almTable tableCurrent; 
 	almTable tableHist;
 	std::mutex m_csAlarmData;
-	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; //自定义报警信息，在配置文件的alarm.json中定义，一般是某个项目的专用报警
+	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
 
 	string m_curPath;
 	string m_histPath;
 
 	bool m_eventAlarmRepetitiveCheck = false;
-	int m_evtAlmRepeCheckTimeLen = 1; //秒单位
+	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 
-	bool m_bTestSrv;	//	是否测试报警
+	bool m_bTestSrv;
 };
 
 

@@ -4826,7 +4826,7 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 	for (int i = 0; i < vecAlarms.size(); i++)
 	{
 		ALARM_INFO* pai = vecAlarms[i];
-		if (pai->bRecover)
+		if (pai->isRecover)
 			continue;
 
 		if (pai->level == "alarm")

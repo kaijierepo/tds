@@ -1,6 +1,4 @@
 ﻿#include "tAlmSrv.h"
-#include "tdb.h"
-
 #include <regex>
 #include <fstream>
 #include <sstream>
@@ -64,10 +62,7 @@ namespace as_fs {
 	}
 
 
-	//带后缀 .XXX 作为文件路径
-//不带后缀作为文件夹路径。不要输入无后缀的文件路径
-//filesystem::path 统一用 wstring utf16输入，可以做到windows与linux兼容
-	bool createFolderOfPath(string strFile)
+	void createFolderOfPath(string strFile)
 	{
 		strFile = str::replace(strFile, "\\", "/");
 		strFile = str::replace(strFile, "////", "/");
@@ -76,29 +71,28 @@ namespace as_fs {
 
 		size_t iDotPos = strFile.rfind('.');
 		size_t iSlashPos = strFile.rfind('/');
-		if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
+		if (iDotPos != string::npos && iDotPos > iSlashPos)//is a file
 		{
 			strFile = strFile.substr(0, iSlashPos);
 		}
-		//如果路径的末尾是/，创建成功也会返回false,因此删除末尾的 /
-		if (iSlashPos == strFile.length() - 1) {
-			strFile = strFile.substr(0, iSlashPos);
-		}
-
 #ifdef _WIN32
-#ifndef _WINXP
+		//filesystem::create_directories(utf8_to_utf16(strFile));
+		int iStartPos = 0;
+		while (1)
+		{
+			int iSlash = strFile.find('/', iStartPos);
+			if (iSlash == string::npos) { break; }
 
-#if __cplusplus <= 201402L
-		CreateDirectoryPlus_old(strFile);
-		return true;
-#else
-		return filesystem::create_directories(as_charCodec::tds_to_utf16(strFile));
-#endif
+			string strFolder = strFile.substr(0, iSlash);
+			CreateDirectoryW(DB_STR::utf8_to_utf16(strFolder).c_str(), NULL);
 
-#endif
+			if (iSlash + 1 == strFile.length())//last char is /
+				break;
+			iStartPos = iSlash + 1;
+		}
+		CreateDirectoryW(DB_STR::utf8_to_utf16(strFile).c_str(), NULL);
 #else
-		filesystem::path p = strFile;
-		return filesystem::create_directories(p);
+		std::filesystem::create_directories(strFile);
 #endif
 	}
 
@@ -106,11 +100,7 @@ namespace as_fs {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
-#ifdef UTF8
 		_wfopen_s(&fp, str::utf8_to_utf16(path).c_str(), L"rb");
-#else
-		fp = fopen(path.c_str(), "rb");
-#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -133,11 +123,7 @@ namespace as_fs {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
-#ifdef UTF8
 		_wfopen_s(&fp, str::utf8_to_utf16(path).c_str(), L"rb");
-#else
-		fp = fopen(path.c_str(), "rb");
-#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -159,15 +145,11 @@ namespace as_fs {
 	}
 	bool writeFile(string path, char* data, size_t len)
 	{
-		CreateDirectoryPlus_old(path);
+		createFolderOfPath(path);
 
 		FILE* fp = nullptr;
-#ifdef UTF8
 		wstring wpath = str::utf8_to_utf16(path);
 		_wfopen_s(&fp, wpath.c_str(), L"wb");
-#else
-		fp = fopen(path.c_str(), "wb");
-#endif
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -176,11 +158,9 @@ namespace as_fs {
 		}
 		else
 		{
-#ifdef UTF8
 			string err = TDS_LAST_ERROR();
 			err = str::utf8_to_gb(err);
 			printf("[error]%s", err.c_str());
-#endif
 		}
 		return false;
 	}
@@ -227,19 +207,17 @@ void almServer::init()
 
 }
 
-void almServer::init(const string& aCurPath, const string& aHisPath, AsInitParam& asInitParam)
+void almServer::init(const string dbPath, AsInitParam& asInitParam)
 {
 	m_initParam = asInitParam;
-
-	m_curPath = aCurPath;
-	m_histPath = aHisPath;
+	m_dbPath = dbPath;
 
 	init();
 
-	tableCurrent.init(aCurPath);
+	tableCurrent.init("current");
 	tableCurrent.SetAlarmSrv(this);
 
-	tableHist.init(aHisPath);
+	tableHist.init("history");
 	tableHist.bOneFilePerMonth = true;
 	tableHist.SetAlarmSrv(this);
 
@@ -270,9 +248,9 @@ void almServer::recover(ALARM_INFO& key)
 	params["tag"] = key.tag;
 	if (tableCurrent.query(params, ai))
 	{
-		ai.bRecover = 1;
-		ai.stRecoverTime = key.stRecoverTime;
-		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		ai.isRecover = 1;
+		ai.recoverTime = key.recoverTime;
+		if (ai.isAck && ai.isRecover)
 		{
 			tableCurrent.remove(key);
 		}
@@ -281,8 +259,8 @@ void almServer::recover(ALARM_INFO& key)
 	}
 	if (tableHist.query(params, ai))
 	{
-		ai.bRecover = 1;
-		ai.stRecoverTime = key.stRecoverTime;
+		ai.isRecover = 1;
+		ai.recoverTime = key.recoverTime;
 		tableHist.update(ai);
 	}
 
@@ -333,6 +311,15 @@ bool almServer::isActive(string tag, string type)
 */
 void almServer::addAlarm(ALARM_INFO ai)
 {
+	if (ai.time == "") {
+		TIME t;
+		t.setNow();
+		ai.time = t.toStr();
+	}
+	if (ai.level == "") {
+		ai.level = ALARM_LEVEL::alarm;
+	}
+
 	if (m_bTestSrv == false)
 	{
 		string sTag = ai.tag;
@@ -399,7 +386,8 @@ void almServer::addAlarm(ALARM_INFO ai)
 		}
 	}
 
-	ai.uuid = uuid();
+	//ai.uuid = uuid();
+	ai.uuid = ai.time + ai.tag + ai.type + ai.level;
 
 	tableCurrent.add(ai);
 	tableHist.add(ai);
@@ -520,7 +508,7 @@ void almServer::Update(ALARM_INFO newStatus)
 		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
-			lastStatus.stRecoverTime.fromStr(newStatus.time);
+			lastStatus.recoverTime.fromStr(newStatus.time);
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus);
 			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
@@ -548,36 +536,43 @@ void almServer::Update(ALARM_INFO newStatus)
 	}
 
 
-	//更新mo对象中的缓存
-	//if (bTagAlarmStatusChanged)
-	//{
-	string sTag = newStatus.tag;
-	string::size_type pos_s = newStatus.tag.find("(");
-	if (pos_s != string::npos)
-	{
-		string::size_type pos_e = newStatus.tag.find(")");
 
-		if (pos_e != string::npos)
+	if (bTagAlarmStatusChanged)
+	{
+		//update alarm status buffered in MO
+		string sTag = newStatus.tag;
+		string::size_type pos_s = newStatus.tag.find("(");
+		if (pos_s != string::npos)
 		{
-			sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
+			string::size_type pos_e = newStatus.tag.find(")");
+
+			if (pos_e != string::npos)
+			{
+				sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
+			}
+		}
+
+		/*OBJ* pmo = prj.queryObj(sTag, "zh");
+		if (pmo)
+		{
+			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
+		}*/
+		auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
+		if (func_obj_setJAlmStatus != NULL) {
+			json  js = getAlarmStatus(newStatus.tag);
+			func_obj_setJAlmStatus(sTag, "zh", js);
+		}
+
+
+		//notify client
+		//json j = newStatus.toJson(this);
+		//rpcSrv.notify("onUpdateAlarmStatus", j);
+		if (!m_bTestSrv) {
+				json j = newStatus.toJson(this);
+			if (m_initParam.func_rpcHand_notify)
+				m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
 		}
 	}
-
-	/*OBJ* pmo = prj.queryObj(sTag, "zh");
-	if (pmo)
-	{
-		pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
-	}*/
-	auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
-	if (func_obj_setJAlmStatus != NULL) {
-		json  js = getAlarmStatus(newStatus.tag);
-		func_obj_setJAlmStatus(sTag, "zh", js);
-	}
-
-	//}
-
-	//json j = newStatus.toJson(this);
-	//rpcSrv.notify("onUpdateAlarmStatus", j);
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
@@ -745,10 +740,10 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		if (params.contains("ackInfo"))
 			info = params["ackInfo"];
 
-		ai.bAck = 1;
-		ai.strConfirmUser = session.user;
-		ai.strConfirmInfo = info;
-		ai.stConfirmTime.setNow();
+		ai.isAck = 1;
+		ai.ackUser = session.user;
+		ai.ackInfo = info;
+		ai.ackTime.setNow();
 		//if (ai.bAck && ai.bRecover)//删除已消除已确认报警
 		//{
 		//	tableCurrent.remove(ai);
@@ -774,10 +769,10 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		if (params.contains("ackInfo"))
 			info = params["ackInfo"];
 
-		ai.bAck = 1;
-		ai.strConfirmUser = session.user;
-		ai.strConfirmInfo = info;
-		ai.stConfirmTime.setNow();
+		ai.isAck = 1;
+		ai.ackUser = session.user;
+		ai.ackInfo = info;
+		ai.ackTime.setNow();
 		//tableHist.update(ai);
 		tableHist.acknowledge(ai);
 
@@ -834,11 +829,11 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 		if (info == "通过") {
 			nRet = 1;
 		}
-		ai.bAck = 1;
-		ai.strConfirmUser = session.user;
-		ai.strConfirmInfo = info;
-		ai.stConfirmTime.setNow();
-		if (ai.bAck && ai.bRecover)//删除已消除已确认报警
+		ai.isAck = 1;
+		ai.ackUser = session.user;
+		ai.ackInfo = info;
+		ai.ackTime.setNow();
+		if (ai.isAck && ai.isRecover)//删除已消除已确认报警
 		{
 			tableCurrent.remove(ai);
 		}
@@ -861,10 +856,10 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 		if (params.contains("ackInfo"))
 			info = params["ackInfo"];
 
-		ai.bAck = 1;
-		ai.strConfirmUser = session.user;
-		ai.strConfirmInfo = info;
-		ai.stConfirmTime.setNow();
+		ai.isAck = 1;
+		ai.ackUser = session.user;
+		ai.ackInfo = info;
+		ai.ackTime.setNow();
 		tableHist.update(ai);
 	}
 
@@ -1073,6 +1068,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		for (; iMonth <= iEndMonth; iMonth++) {
 			almTable* tableTemp = new almTable();
 			tableTemp->init(m_histPath);
+			tableTemp->filePath = tableHist.filePath;
 			tableTemp->bOneFilePerMonth = true;
 			tableTemp->SetAlarmSrv(this);
 			histTables.push_back(tableTemp);
@@ -1124,13 +1120,13 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					continue;
 
 				if (filter_isRecover) {
-					if (isRecover != it->second->bRecover) {
+					if (isRecover != it->second->isRecover) {
 						continue;
 					}
 				}
 
 				if (filter_isAck) {
-					if (isAck != it->second->bAck) {
+					if (isAck != it->second->isAck) {
 						continue;
 					}
 				}
@@ -1299,11 +1295,7 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 
 void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
-	string data = "uuid,位号,报警时间,报警类型,报警等级,报警信息,报警详情,恢复状态,恢复时间,确认状态,确认时间,确认信息,确认用户\r\n";
-#ifdef UTF8
-#else
-	data = str::gb_to_utf8(data);
-#endif
+	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,ackTime,ackInfo,ackUser\r\n";
 	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
@@ -1311,8 +1303,7 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		string str = toCSV(ai);
 		data += str;
 	}
-	as_fs::CreateDirectoryPlus_old(strFile);
-	//data = as_charCodec::utf8_to_gb(data);//直接存储utf8
+	as_fs::createFolderOfPath(strFile);
 	as_fs::writeFile(strFile, data);
 }
 
@@ -1321,18 +1312,18 @@ string almTable::getFilePath(int y, int m) {
 	if (bOneFilePerMonth)
 	{
 		string strYM = str::format("%04d%02d", y, m);
-		p = db.m_path + filePath + "_" + strYM + ".csv";
+		p = m_pAlmSrv->m_dbPath + "/" + filePath + "_" + strYM + ".csv";
 	}
 	else
 	{
-		p = db.m_path + filePath + ".csv";
+		p = m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
 	}
 	return p;
 }
 
 string almTable::getFilePath(string time) {
 	if (time == "")
-		return db.m_path + filePath + ".csv";
+		return m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
 
 	TIME st;
 	st.fromStr(time);
@@ -1387,11 +1378,17 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 
 	//可选字段
 	if (j["desc"] != nullptr)
-		ai.strAlarmDesc = j["desc"];
+		ai.desc = j["desc"];
 	if (j["isRecover"] != nullptr)
-		ai.bRecover = j["isRecover"].get<bool>();
+		ai.isRecover = j["isRecover"].get<bool>();
+	if (j["isAck"].is_boolean())
+		ai.isAck = j["isAck"].get<bool>();
 	if (j["recoverTime"] != nullptr)
-		ai.stRecoverTime.fromStr(j["recoverTime"]);
+		ai.recoverTime.fromStr(j["recoverTime"]);
+	if (j["needRecover"].is_boolean())
+		ai.needRecover = j["needRecover"].get<bool>();
+	if (j["needAck"].is_boolean())
+		ai.needAck = j["needAck"].get<bool>();
 	return ai;
 }
 
@@ -1424,16 +1421,18 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	}
 
 	j["level"] = info->level;
-	j["desc"] = info->strAlarmDesc;
-	j["detail"] = info->strAlarmDetail;
+	j["desc"] = info->desc;
+	j["detail"] = info->detail;
 	j["time"] = info->time;
-	j["suggest"] = info->strSuggest;
-	j["isRecover"] = info->bRecover;
-	j["recoverTime"] = info->stRecoverTime.toStr();
-	j["isAck"] = info->bAck;
-	j["ackTime"] = info->stConfirmTime.toStr();
-	j["ackInfo"] = info->strConfirmInfo;
-	j["ackUser"] = info->strConfirmUser;
+	j["suggest"] = info->suggest;
+	j["isRecover"] = info->isRecover;
+	j["needRecover"] = info->needRecover;
+	j["recoverTime"] = info->recoverTime.toStr();
+	j["isAck"] = info->isAck;
+	j["needAck"] = info->needAck;
+	j["ackTime"] = info->ackTime.toStr();
+	j["ackInfo"] = info->ackInfo;
+	j["ackUser"] = info->ackUser;
 	j["picUrl"] = info->pic_url;
 	j["dbPath"] = almSrv->tableCurrent.filePath;
 	return j;
@@ -1469,40 +1468,54 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	}
 
 	ALARM_INFO ai;
+	//core info
 	ai.uuid = cols[0];
 	ai.tag = cols[1];
 	ai.time = cols[2].c_str();
 	ai.type = cols[3].c_str();
 	ai.level = cols[4].c_str();
-	ai.strAlarmDesc = cols[5].c_str();
-	ai.strAlarmDetail = cols[6].c_str();
-	ai.bRecover = atoi(cols[7].c_str());
-	ai.stRecoverTime.fromStr(cols[8].c_str());
-	ai.bAck = atoi(cols[9].c_str());
-	ai.stConfirmTime.fromStr(cols[10].c_str());
-	ai.strConfirmInfo = cols[11].c_str();
-	ai.strConfirmUser = cols[12].c_str();
-	ai.pic_url = cols[13].c_str();
+	ai.desc = cols[5].c_str();
+	ai.detail = cols[6].c_str();
+
+	//ack and recover
+	ai.isRecover = atoi(cols[7].c_str());
+	ai.needRecover = atoi(cols[8].c_str());
+	ai.recoverTime.fromStr(cols[9].c_str());
+	ai.isAck = atoi(cols[10].c_str());
+	ai.needAck = atoi(cols[11].c_str());
+	ai.ackTime.fromStr(cols[12].c_str());
+	ai.ackInfo = cols[13].c_str();
+	ai.ackUser = cols[14].c_str();
+
+	//others
+	ai.pic_url = cols[15].c_str();
 	return ai;
 }
 
 string almTable::toCSV(ALARM_INFO& info)
 {
 	string str;
-	str += info.uuid; str += ",";
-	/*0*/str += info.tag; str += ",";
-	/*1*/str += info.time; str += ",";
-	/*2*/str += info.type; str += ",";
-	/*3*/str += info.level; str += ",";
-	/*4*/str += "\"" + info.strAlarmDesc + "\""; str += ",";
-	/*5*/str += "\"" + info.strAlarmDetail + "\""; str += ",";
-	/*6*/str += info.bRecover ? "1" : "0"; str += ",";
-	/*7*/str += info.stRecoverTime.toStr(); str += ",";
-	/*8*/str += info.bAck ? "1" : "0"; str += ",";
-	/*9*/str += info.stConfirmTime.toStr(); str += ",";
-	/*10*/str += "\"" + info.strConfirmInfo + "\""; str += ",";
-	/*11*/str += info.strConfirmUser; str += ",";
-	/*12*/str += info.pic_url;
+	//core info
+	/*0*/str += "\"" + info.uuid + "\""; str += ",";
+	/*1*/str += "\"" + info.tag + "\""; str += ",";
+	/*2*/str += info.time; str += ",";
+	/*3*/str += info.type; str += ",";
+	/*4*/str += info.level; str += ",";
+	/*5*/str += "\"" + info.desc + "\""; str += ",";
+	/*6*/str += "\"" + info.detail + "\""; str += ",";
+
+	//ack and recover
+	/*7*/str += info.isRecover ? "1" : "0"; str += ",";
+	/*8*/str += info.needRecover ? "1" : "0"; str += ",";
+	/*9*/str += info.recoverTime.toStr(); str += ",";
+	/*10*/str += info.isAck ? "1" : "0"; str += ",";
+	/*11*/str += info.needAck ? "1" : "0"; str += ",";
+	/*12*/str += info.ackTime.toStr(); str += ",";
+	/*13*/str += "\"" + info.ackInfo + "\""; str += ",";
+	/*14*/str += info.ackUser; str += ",";
+
+	//others
+	/*15*/str += info.pic_url;
 	str += "\r\n";
 	return str;
 }
@@ -1546,17 +1559,17 @@ void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
 			goto LOOP_END;
 		if (it->type != ai.type)
 			goto LOOP_END;
-		if (it->bAck)
+		if (it->isAck)
 			goto LOOP_END;
-		it->bAck = true;
-		if (remove && it->bAck && it->bRecover)
+		it->isAck = true;
+		if (remove && it->isAck && it->isRecover)
 		{
 			i = buff.erase(i);
 			continue;
 		}
-		it->strConfirmUser = ai.strConfirmUser;
-		it->strConfirmInfo = ai.strConfirmInfo;
-		it->stConfirmTime = ai.stConfirmTime;
+		it->ackUser = ai.ackUser;
+		it->ackInfo = ai.ackInfo;
+		it->ackTime = ai.ackTime;
 	LOOP_END:
 		i++;
 	}
@@ -1680,9 +1693,9 @@ bool almTable::query(json params, ALARM_INFO& ai)
 				if (it.type != strType)
 					continue;
 			}
-			if (params["isAck"] != nullptr && it.bAck != params["isAck"].get<bool>())
+			if (params["isAck"] != nullptr && it.isAck != params["isAck"].get<bool>())
 				continue;
-			if (params["isRecover"] != nullptr && it.bRecover != params["isRecover"].get<bool>())
+			if (params["isRecover"] != nullptr && it.isRecover != params["isRecover"].get<bool>())
 				continue;
 
 			ai = it;
@@ -1904,12 +1917,12 @@ vector<ALARM_INFO*> almTable::query(json querier)
 				continue;
 		}
 		if (aq.filter_isAck) {
-			if (aq.isAck != pAi->bAck)
+			if (aq.isAck != pAi->isAck)
 				continue;
 		}
 
 		if (aq.filter_isRecover) {
-			if (aq.isRecover != pAi->bRecover)
+			if (aq.isRecover != pAi->isRecover)
 				continue;
 		}
 
