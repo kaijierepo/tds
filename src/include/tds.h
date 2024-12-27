@@ -71,6 +71,7 @@ namespace str {
 	wstring gb_to_utf16(string instr);
 	wstring utf8_to_utf16(string instr);
 	wstring utf8_to_utf16(string instr);
+	string utf16_to_utf8(wstring instr);
 	wstring gb_to_utf16(string instr);
 	string utf8_to_gb(string instr);
 	string gb_to_utf8(string instr);

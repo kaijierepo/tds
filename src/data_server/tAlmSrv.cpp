@@ -1568,13 +1568,15 @@ void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
 			goto LOOP_END;
 		if (it->type != ai.type)
 			goto LOOP_END;
+		if (it->time != ai.time)
+			goto LOOP_END;
 		if (it->isAck)
 			goto LOOP_END;
 		it->isAck = true;
 		if (remove && it->isAck && it->isRecover)
 		{
 			i = buff.erase(i);
-			continue;
+			break;
 		}
 		it->ackUser = ai.ackUser;
 		it->ackInfo = ai.ackInfo;
@@ -1599,9 +1601,10 @@ void almTable::acknowledge(const ALARM_INFO& ai)
 		C++20: 202002L
 		*/
 #if __cplusplus <= 201402L
-		WIN32_FIND_DATA findFileData;
+		WIN32_FIND_DATAW  findFileData;
 		std::string searchPath = db.m_path + "/alarms/";
-		HANDLE hFind = FindFirstFile((searchPath + "*").c_str(), &findFileData);//添加通配符以匹配所有文件
+		std::wstring searchPath_w = str::utf8_to_utf16(db.m_path + "/alarms/*").c_str();
+		HANDLE hFind = FindFirstFileW(searchPath_w.c_str(), &findFileData);//添加通配符以匹配所有文件
 
 		if (hFind == INVALID_HANDLE_VALUE) {
 			//Error finding files in directory;
@@ -1610,7 +1613,7 @@ void almTable::acknowledge(const ALARM_INFO& ai)
 		do {
 			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) //目录
 				continue;
-			std::string filename = findFileData.cFileName;
+			std::string filename = str::utf16_to_utf8(findFileData.cFileName);
 			if (filename == "." || filename == "..") {
 				continue;
 			}
@@ -1623,7 +1626,7 @@ void almTable::acknowledge(const ALARM_INFO& ai)
 				acknowledge(ai, false);
 				saveFile(fi, buff);
 			}
-		} while (FindNextFile(hFind, &findFileData) != 0);
+		} while (FindNextFileW(hFind, &findFileData) != 0);
 
 		FindClose(hFind); // 关闭句柄
 
