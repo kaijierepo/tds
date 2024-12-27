@@ -602,6 +602,12 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			{
 				m_childTdsHttpsPort = yyjson_get_int(yyv_httpsPort);
 			}
+			yyjson_val* yyv_devSubType = yyjson_obj_get(yyv_params, "devSubType");
+			if (yyv_devSubType != nullptr)
+			{
+				m_devSubType = yyjson_get_str(yyv_devSubType);
+			}
+
 		}
 
 		triggerCycleAcq();

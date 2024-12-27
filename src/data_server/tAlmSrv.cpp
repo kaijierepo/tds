@@ -366,14 +366,14 @@ void almServer::addAlarm(ALARM_INFO ai)
 				return;
 			}
 		}*/
-		auto func_obj_isEnableAlarm = m_initParam.func_obj_isEnableAlarm;
-		if (func_obj_isEnableAlarm != NULL && func_obj_isEnableAlarm(sTag, "zh") == false) {
-			auto func_log = m_initParam.func_log;
-			if (func_log)
-				func_log("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			//LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			return;
-		}
+		//auto func_obj_isEnableAlarm = m_initParam.func_obj_isEnableAlarm;
+		//if (func_obj_isEnableAlarm != NULL && func_obj_isEnableAlarm(sTag, "zh") == false) {
+		//	auto func_log = m_initParam.func_log;
+		//	if (func_log)
+		//		func_log("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+		//	//LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
+		//	return;
+		//}
 
 		//如果没有位号，报警默认不禁用
 	}
@@ -469,30 +469,30 @@ string almServer::uuid() {
 void almServer::Update(ALARM_INFO newStatus)
 {
 	//忽略屏蔽报警
-	if (newStatus.typeLabel == "")
-	{
-		//内置类型查找
-		newStatus.typeLabel = getAlarmTypeLabel(newStatus.type);
-		//自定义类型查找
-		if (newStatus.typeLabel == "") {
-			if (m_mapCustomAlarmDesc.find(newStatus.type) != m_mapCustomAlarmDesc.end())
-			{
-				ALARM_TEMPLATE at = m_mapCustomAlarmDesc[newStatus.type];
-				newStatus.typeLabel = at.label;
-				if (at.enable == false)
-					return;
-			}
-		}
+	//if (newStatus.typeLabel == "")
+	//{
+	//	//内置类型查找
+	//	newStatus.typeLabel = getAlarmTypeLabel(newStatus.type);
+	//	//自定义类型查找
+	//	if (newStatus.typeLabel == "") {
+	//		if (m_mapCustomAlarmDesc.find(newStatus.type) != m_mapCustomAlarmDesc.end())
+	//		{
+	//			ALARM_TEMPLATE at = m_mapCustomAlarmDesc[newStatus.type];
+	//			newStatus.typeLabel = at.label;
+	//			if (at.enable == false)
+	//				return;
+	//		}
+	//	}
 
 
-		if (newStatus.typeLabel == "")
-		{
-			//LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
-			auto func_log = m_initParam.func_log;
-			if (func_log)
-				func_log(("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息").c_str());
-		}
-	}
+	//	if (newStatus.typeLabel == "")
+	//	{
+	//		//LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
+	//		auto func_log = m_initParam.func_log;
+	//		if (func_log)
+	//			func_log(("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息").c_str());
+	//	}
+	//}
 
 	std::lock_guard<mutex> g(m_csAlarmData);
 
@@ -1087,7 +1087,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					//if (!userMng.checkTagPermission(session.user, it->second->tag))
 						//continue;
 					if (m_initParam.func_usrMng_checkTagPermission) {
-						if (m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
+						if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
 							continue;
 						}
 					}
