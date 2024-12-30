@@ -3918,6 +3918,10 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				result.deCount++;
+
+				if (deSel.timeSel.AmountMatch(result.deCount)) {
+					break;
+				}
 			}
 		}
 	}
@@ -4900,6 +4904,7 @@ bool TIME_SELECTOR::init(string time)
 		string timeRange = "2020-01-01 00:00:00~" + DB_TIME::nowStr();
 		parseTimeRange(timeRange);
 		TIME_SELECTOR_ATOM tsa;
+		tsa.timeSetType = TSM_Last;
 		tsa.parseTimeRange(timeRange);
 		atomSelList.push_back(tsa);
 	}
