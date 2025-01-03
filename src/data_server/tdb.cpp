@@ -25,7 +25,6 @@ LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
 #include "tdb.h"
 #include <iostream>
 #include <fstream>
@@ -34,7 +33,7 @@ SOFTWARE.
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
-#include <DTW.hpp>
+#include "DTW.hpp"
 #include <thread>
 #include "dtwrecoge.h"
 #ifdef _WIN32
@@ -3921,9 +3920,9 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 				if (deSel.timeSel.AmountMatch(result.deCount)) {
 					break;
-				}
 			}
 		}
+	}
 	}
 	return true;
 }
@@ -4897,6 +4896,9 @@ bool TIME_SELECTOR::init(vector<string> timeSelList) {
 
 bool TIME_SELECTOR::init(string time)
 {
+	if (time == "")
+		return false;
+
 	if (time.find("e") != string::npos)
 	{
 		time = time.substr(0, time.length() - 1);
@@ -4906,6 +4908,14 @@ bool TIME_SELECTOR::init(string time)
 		TIME_SELECTOR_ATOM tsa;
 		tsa.timeSetType = TSM_Last;
 		tsa.parseTimeRange(timeRange);
+		atomSelList.push_back(tsa);
+	}
+	else if (time.find("now") != string::npos) {
+		DB_TIME tNow; tNow.setNow();
+		string s = tNow.toStr(false);
+		time = DB_STR::replace(time, "now", s);
+		TIME_SELECTOR_ATOM tsa;
+		tsa.init(time);
 		atomSelList.push_back(tsa);
 	}
 	//maybe multi time range, such as:
