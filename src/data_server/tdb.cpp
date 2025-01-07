@@ -306,58 +306,63 @@ namespace TIME_OPT {
 		return false;
 	}
 
+	int timeLen2seconds(string timeLen) {
+		//相对时间区间模式
+		string time1 = timeLen;
+		string strDay = "", strH = "", strM = "", strS = "";
+		int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
+		size_t pos = time1.find("y");
+		if (pos == string::npos)
+			pos = time1.find("Y");
+		if (pos != string::npos) {
+			string strYear = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n1 = (int)atof(strYear.c_str()) * 365 * 24 * 3600;
+		}
+		pos = time1.find("d");
+		if (pos == string::npos)
+			pos = time1.find("D");
+		if (pos != string::npos) {
+			strDay = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n1 = (int)atof(strDay.c_str()) * 24 * 3600;
+		}
+		pos = time1.find("h");
+		if (pos == string::npos)
+			pos = time1.find("H");
+		if (pos != string::npos) {
+			strH = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n2 = (int)atof(strH.c_str()) * 3600;
+		}
+		pos = time1.find("m");
+		if (pos == string::npos)
+			pos = time1.find("M");
+		if (pos != string::npos) {
+			strM = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n3 = (int)atof(strM.c_str()) * 60;
+		}
+		pos = time1.find("s");
+		if (pos == string::npos)
+			pos = time1.find("S");
+		if (pos != string::npos) {
+			strS = time1.substr(0, pos);
+			time1 = time1.erase(0, pos + 1);
+			n4 = (int)atof(strS.c_str());
+		}
+		return n1 + n2 + n3 + n4;
+	}
+
 	string rel2abs(string time)
 	{
 		string strTime1 = time;
 		if (isRelative(time)) {
-			//相对时间区间模式
-			string time1 = strTime1;
-			string strDay = "", strH = "", strM = "", strS = "";
-			int n1 = 0, n2 = 0, n3 = 0, n4 = 0;
-			size_t pos = time1.find("y");
-			if (pos == string::npos)
-				pos = time1.find("Y");
-			if (pos != string::npos) {
-				string strYear = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n1 = (int)atof(strYear.c_str())* 365 * 24 * 3600;
-			}
-			pos = time1.find("d");
-			if (pos == string::npos)
-				pos = time1.find("D");
-			if (pos != string::npos) {
-				strDay = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n1 = (int)atof(strDay.c_str()) * 24 * 3600;
-			}
-			pos = time1.find("h");
-			if (pos == string::npos)
-				pos = time1.find("H");
-			if (pos != string::npos) {
-				strH = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n2 = (int)atof(strH.c_str()) * 3600;
-			}
-			pos = time1.find("m");
-			if (pos == string::npos)
-				pos = time1.find("M");
-			if (pos != string::npos) {
-				strM = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n3 = (int)atof(strM.c_str()) * 60;
-			}
-			pos = time1.find("s");
-			if (pos == string::npos)
-				pos = time1.find("S");
-			if (pos != string::npos) {
-				strS = time1.substr(0, pos);
-				time1 = time1.erase(0, pos + 1);
-				n4 = (int)atof(strS.c_str());
-			}
+			int timeLen = timeLen2seconds(time);
 			DB_TIME stNow;
 			stNow.setNow();
 			time_t endTime = stNow.toUnixTime();
-			time_t startTime = endTime - n1 - n2 - n3 - n4;
+			time_t startTime = endTime - timeLen;
 			DB_TIME  stStart;
 			stStart.fromUnixTime(startTime);
 			string strNow = stNow.toStr(false);
@@ -3503,11 +3508,17 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 			for (int timeSelAtomIdx = 0; timeSelAtomIdx < deSel.timeSel.atomSelList.size(); timeSelAtomIdx++) {
 				TIME_SELECTOR_ATOM& tsa = deSel.timeSel.atomSelList[timeSelAtomIdx];
+				//use date only to iterator db file. use time plus 24*60*60 to iterator will cause time not in timerange
+				//2024-12-12 17:00:00~2024-12-13 05:00:00, iterator by adding 24*60*60,2024-12-13 17:00:00 is not in time range,file will not be selected
+				DB_TIME dbtStartDate = tsa.stStart; dbtStartDate.clearHMS();
+				DB_TIME dbtEndDate = tsa.stEnd; dbtEndDate.clearHMS();
+				time_t startDate = dbtStartDate.toUnixTime();
+				time_t endDate = dbtEndDate.toUnixTime();
 				if (tsa.timeSetType == TSM_First) {
-					time_t loadTime = tsa.startTime;
-					for (; loadTime <= tsa.endTime; loadTime += 24 * 60 * 60)
+					time_t loadDate = startDate;
+					for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+						DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -3518,10 +3529,10 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					}
 				}
 				else if (tsa.timeSetType == TSM_Last) {
-					time_t loadTime = tsa.endTime;
-					for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
+					time_t loadDate = endDate;
+					for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
 					{
-						DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+						DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 						pdf->deType = deSel.deType;
 						if (!pdf->loadFile()) {
 							delete pdf;
@@ -3550,10 +3561,10 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 					if (bFirstLastAggr) {
 						//read first file
-						time_t loadTime = tsa.startTime;
-						for (; loadTime <= tsa.endTime; loadTime += 24 * 60 * 60)
+						time_t loadDate = startDate;
+						for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
 						{
-							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 							pdf->deType = deSel.deType;
 							if (!pdf->loadFile()) {
 								delete pdf;
@@ -3563,10 +3574,10 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 							break;
 						}
 						//read last file
-						loadTime = tsa.endTime;
-						for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
+						loadDate = endDate;
+						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
 						{
-							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 							pdf->deType = deSel.deType;
 							if (!pdf->loadFile()) {
 								delete pdf;
@@ -3577,10 +3588,10 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 						}
 					}
 					else {
-						time_t loadTime = tsa.endTime;
-						for (; loadTime >= tsa.startTime; loadTime -= 24 * 60 * 60)
+						time_t loadDate = endDate;
+						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
 						{
-							DB_FILE* pdf = new DB_FILE(loadTime, fSet.dbFileTag, this);
+							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 							pdf->deType = deSel.deType;
 							if (!pdf->loadFile()) {
 								delete pdf;
@@ -3700,6 +3711,10 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 			DE_JSON_TYPE deJsonType = DE_J_OBJ;
 
+			if (deSel.timeSel.atomSelList[0].timeSetType = TSM_Last)
+			{
+				idx = yyjson_arr_size(deList) - 1;
+			}
 			yyjson_arr_foreach(deList, idx, max, de) {
 				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
 				if (idx == 0)
@@ -4646,6 +4661,15 @@ bool TDB::Open_gbk(string strDBUrl, fp_getTagsByTagSelector f, string name)
 	strDBUrl = DB_STR::gb_to_utf8(strDBUrl);
 	m_isGbk = true;
 	return Open(strDBUrl, f, name);
+}
+
+bool TDB::setBufferTTL(string bufferTTL)
+{
+	int timeLen = TIME_OPT::timeLen2seconds(bufferTTL);
+	if (timeLen != 0) {
+		m_bufferTTL = timeLen;
+	}
+	return false;
 }
 
 void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)

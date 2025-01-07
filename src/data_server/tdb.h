@@ -71,6 +71,12 @@ struct DB_TIME {
 	string toStampHMS();
 	string toStampFull();
 	string toYMD();
+	void clearHMS() {
+		wHour = 0;
+		wMinute = 0;
+		wSecond = 0;
+		wMilliseconds = 0;
+	}
 	string toStr(bool enableMS = true) const;
 	bool fromStr(string str);
 	static string nowStr();
@@ -672,6 +678,7 @@ public:
 //interface
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
+	bool setBufferTTL(string bufferTTL);
 	DB_FMT m_dbFmt;
 	bool m_bEnableFsBuff;
 	FS_BUFF m_FsBuff;
