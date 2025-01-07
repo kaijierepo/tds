@@ -356,10 +356,10 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		}
 
 		//详细信息
-		conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
+		conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
 
 		if (m_jAlarmStatus != nullptr) {
-			conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
+			conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
 			conf["alarmStatus"] = m_jAlarmStatus;
 		}
 

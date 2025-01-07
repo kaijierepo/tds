@@ -104,8 +104,12 @@ void ioDev_tdsp::output(ioChannel* pC, json jVal, json& rlt, json& err, bool syn
 	call("output", params, nullptr, rlt, err);
 }
 
-void ioDev_tdsp::handleAlarmStatusData(json& alarmStatus)
+void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 {
+	size_t len;
+	string s = yyjson_val_write(yyv_alarmStatus,0,&len);
+	json alarmStatus = json::parse(s);
+
 	json querier;
 	querier["tag"] = m_strTagBind;
 	querier["isRecover"] = false;
@@ -369,7 +373,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 	}
 	else if (method == "getAlarmStatus")
 	{
-		//handleAlarmStatusData(rlt,doc);
+		handleAlarmStatusData(rlt);
 	}
 	else if (method == "getDevConf")
 	{

@@ -22,7 +22,7 @@ public:
 	void stop();
 	void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) override;
 	void output(ioChannel* pC, json jVal, json& rlt, json& err, bool sync = true) override;
-	void handleAlarmStatusData(json& alarmStatus);
+	void handleAlarmStatusData(yyjson_val* alarmStatus);
 	ioChannel* createChan(yyjson_val* jVal, string addr);
 	bool handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc);
 	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
