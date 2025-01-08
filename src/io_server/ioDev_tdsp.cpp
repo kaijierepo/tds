@@ -115,26 +115,28 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 	querier["isRecover"] = false;
 
 	//当前有的报警，新的里面没有的，消除
-	for (auto& almCur : m_jAlarmStatus)
-	{
-		bool bIsAlarm = false;
-		for (auto& almNew : alarmStatus)
-		{
-			if (almNew["type"] == almCur["type"])
-			{
-				bIsAlarm = true;
-			}
-		}
+	m_csAlmStatus.lock();
+  for (auto& almCur : m_jAlarmStatus)
+    {
+      bool bIsAlarm = false;
+      for (auto& almNew : alarmStatus)
+      {
+        if (almNew["type"] == almCur["type"])
+        {
+          bIsAlarm = true;
+        }
+      }
 
-		if (!bIsAlarm)
-		{
-			json jStatus;
-			jStatus["tag"] = m_strTagBind;
-			jStatus["type"] = almCur["type"];
-			jStatus["level"] = "alarm";
-			tds->callAsyn("updateAlarm", jStatus);
-		}
-	}
+      if (!bIsAlarm)
+      {
+        json jStatus;
+        jStatus["tag"] = m_strTagBind;
+        jStatus["type"] = almCur["type"];
+        jStatus["level"] = "alarm";
+        tds->callAsyn("updateAlarm", jStatus);
+      }
+    }
+	m_csAlmStatus.unlock();
 
 
 	//原来没有现在有的，产生报警
@@ -147,9 +149,9 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 		tds->callAsyn("updateAlarm", jStatus);
 	}
 	
-	lock_conf_unique();
+	m_csAlmStatus.lock();
 	m_jAlarmStatus = alarmStatus;
-	unlock_conf_unique();
+	m_csAlmStatus.unlock();
 
 	timeopt::now(&m_stLastAlarmStatusTime);
 	saveStatusBuff();

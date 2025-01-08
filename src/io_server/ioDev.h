@@ -436,6 +436,7 @@ public:
 
 	yyjson_doc* m_pDocBuff;
 	json m_jAlarmStatus;
+	mutex m_csAlmStatus;
 	json m_jAcq;
 	json m_jConf;
 	json m_jInfo;

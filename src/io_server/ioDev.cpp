@@ -358,10 +358,12 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		//详细信息
 		conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
 
+		m_csAlmStatus.lock();
 		if (m_jAlarmStatus != nullptr) {
 			conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
 			conf["alarmStatus"] = m_jAlarmStatus;
 		}
+		m_csAlmStatus.unlock();
 
 
 		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
@@ -1746,7 +1748,9 @@ void ioDev::saveStatusBuff()
 	string path = db.getPath_dbRoot() + "/devices/" + getIOAddrStr() + "/status.json";
 	fs::createFolderOfPath(path);
 	json status;
+	m_csAlmStatus.lock();
 	status["alarms"] = m_jAlarmStatus;
+	m_csAlmStatus.unlock();
 	status["channels"] = m_jAcq;
 	string data = status.dump(4);
 	fs::writeFile(path, data);
@@ -1761,7 +1765,9 @@ bool ioDev::loadStatusBuff()
 	try
 	{
 		json status = json::parse(s);
+		m_csAlmStatus.lock();
 		m_jAlarmStatus = status["alarms"];
+		m_csAlmStatus.unlock();
 		m_jAcq = status["channels"];
 	}
 	catch (std::exception& e)
