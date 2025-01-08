@@ -708,6 +708,7 @@ public:
 	void Insert(string strTag, DB_TIME stTime, long long iVal);
 	void Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
 	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
+	void Insert(string strTag, string& sDeIdx,string& sDeCurve, DB_TIME* stTime = nullptr);
 	bool Delete(string tag, DB_TIME stTime);
 	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
 
@@ -728,6 +729,7 @@ public:
 	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
