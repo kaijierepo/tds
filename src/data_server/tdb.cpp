@@ -3508,59 +3508,23 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 
 			for (int timeSelAtomIdx = 0; timeSelAtomIdx < deSel.timeSel.atomSelList.size(); timeSelAtomIdx++) {
 				TIME_SELECTOR_ATOM& tsa = deSel.timeSel.atomSelList[timeSelAtomIdx];
-				//use date only to iterator db file. use time plus 24*60*60 to iterator will cause time not in timerange
-				//2024-12-12 17:00:00~2024-12-13 05:00:00, iterator by adding 24*60*60,2024-12-13 17:00:00 is not in time range,file will not be selected
-				DB_TIME dbtStartDate = tsa.stStart; dbtStartDate.clearHMS();
-				DB_TIME dbtEndDate = tsa.stEnd; dbtEndDate.clearHMS();
-				time_t startDate = dbtStartDate.toUnixTime();
-				time_t endDate = dbtEndDate.toUnixTime();
-				if (tsa.timeSetType == TSM_First) {
-					time_t loadDate = startDate;
-					for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
-					{
-						DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
-						pdf->deType = deSel.deType;
-						if (!pdf->loadFile()) {
-							delete pdf;
-							continue;
-						}
-						fSet.fileList.push_back(pdf);
-						break;
+				if (deSel.deType == "curve") { //time select must be a time point
+					DB_FILE* pdf = new DB_FILE(tsa.startTime, fSet.dbFileTag, this);
+					pdf->deType = deSel.deType;
+					if (!pdf->loadFile()) {
+						delete pdf;
+						continue;
 					}
-				}
-				else if (tsa.timeSetType == TSM_Last) {
-					time_t loadDate = endDate;
-					for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-					{
-						DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
-						pdf->deType = deSel.deType;
-						if (!pdf->loadFile()) {
-							delete pdf;
-							continue;
-						}
-						fSet.fileList.push_back(pdf);
-						break;
-					}
+					fSet.fileList.push_back(pdf);
 				}
 				else {
-
-					bool bFirstLastAggr = false;
-					if (deSel.aggregate.size() > 0) {
-						map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
-						vector<string>& aggrTypes = aggrOpt->second;
-						if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
-						{
-							if (aggrTypes.size() == 1) {
-								string& aggrType = aggrTypes[0];
-								if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
-									bFirstLastAggr = true;
-								}
-							}
-						}
-					}
-
-					if (bFirstLastAggr) {
-						//read first file
+					//use date only to iterator db file. use time plus 24*60*60 to iterator will cause time not in timerange
+					//2024-12-12 17:00:00~2024-12-13 05:00:00, iterator by adding 24*60*60,2024-12-13 17:00:00 is not in time range,file will not be selected
+					DB_TIME dbtStartDate = tsa.stStart; dbtStartDate.clearHMS();
+					DB_TIME dbtEndDate = tsa.stEnd; dbtEndDate.clearHMS();
+					time_t startDate = dbtStartDate.toUnixTime();
+					time_t endDate = dbtEndDate.toUnixTime();
+					if (tsa.timeSetType == TSM_First) {
 						time_t loadDate = startDate;
 						for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
 						{
@@ -3573,8 +3537,9 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 							fSet.fileList.push_back(pdf);
 							break;
 						}
-						//read last file
-						loadDate = endDate;
+					}
+					else if (tsa.timeSetType == TSM_Last) {
+						time_t loadDate = endDate;
 						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
 						{
 							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
@@ -3588,16 +3553,62 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 						}
 					}
 					else {
-						time_t loadDate = endDate;
-						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-						{
-							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
-							pdf->deType = deSel.deType;
-							if (!pdf->loadFile()) {
-								delete pdf;
-								continue;
+
+						bool bFirstLastAggr = false;
+						if (deSel.aggregate.size() > 0) {
+							map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
+							vector<string>& aggrTypes = aggrOpt->second;
+							if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
+							{
+								if (aggrTypes.size() == 1) {
+									string& aggrType = aggrTypes[0];
+									if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+										bFirstLastAggr = true;
+									}
+								}
 							}
-							fSet.fileList.insert(fSet.fileList.begin(), pdf);
+						}
+
+						if (bFirstLastAggr) {
+							//read first file
+							time_t loadDate = startDate;
+							for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.push_back(pdf);
+								break;
+							}
+							//read last file
+							loadDate = endDate;
+							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.push_back(pdf);
+								break;
+							}
+						}
+						else {
+							time_t loadDate = endDate;
+							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.insert(fSet.fileList.begin(), pdf);
+							}
 						}
 					}
 				}
@@ -5812,6 +5823,8 @@ bool FS_BUFF::readFile(string path, string& data)
 	std::map<string, FILE_BUFF*>::iterator iter = m_mapFsBuff.find(path);
 	if (iter != m_mapFsBuff.end()) {
 		data = iter->second->data;
+		FILE_BUFF* fb = iter->second;
+		fb->lastActive.setNow();
 		m_csFsb.unlock();
 		return true;
 	}
