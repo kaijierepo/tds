@@ -187,6 +187,7 @@ ioServer::ioServer()
 	m_ioSrvIP = "0.0.0.0";
 	m_bPingThreadStart = false;
 	m_bDisableIOHandle = false;
+	m_bGb2312Tdsp = true;
 }
 ioServer::~ioServer()
 {
@@ -1349,9 +1350,13 @@ bool ioServer::runAsCloud()
 
 	m_tdspSingleTransaction = tds->conf->getInt("tdspSingleTransaction", 0);
 	m_serialSendDelayAfterRecv = tds->conf->getInt("serialSendDelayAfterRecv", 0);
-
+	m_bGb2312Tdsp = tds->conf->getInt("gb2312Tdsp", 0) ? true : false;
 	m_ioSrvIPAsClient = tds->conf->getStr("ioSrvIP", "0.0.0.0");
 	m_ioSrvIP = "0.0.0.0";
+
+	if (m_bGb2312Tdsp) {
+		LOG("[warn]TDSP设备使用GB2312编码");
+	}
 
 
 	//int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
@@ -2087,31 +2092,20 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			}
 		}
 		else {
-			//string sResp;
-			//str::fromBuff((char*)pData, iLen,sResp);
-
-			////数据包预处理
-			//if (tdsSession->tdspSubType == "") {
-			//	//编解码转换
-			//	if (rpcSrv.isGB2312Pkt(sResp))
-			//	{
-			//		tdsSession->m_charset = "gb2312";
-			//		size_t ipos = 0; string errChar;
-			//		if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
-			//		{
-			//			LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
-			//			return;
-			//		}
-			//		sResp = charCodec::gb_to_utf8(sResp);
-			//	}
-
-			//	//解析请求基本信息。将设备包中的ioAddr替换为addr。此处tdsp协议有不合理性，后续完善
-			//	sResp = str::replace(sResp, "\"ioAddr\"", "\"addr\"");
-			//}
-
-			//json jResp = json::parse(sResp);
-
-
+			string sResp;
+			if (m_bGb2312Tdsp) {
+				str::fromBuff((char*)pData, iLen,sResp);
+				size_t ipos = 0; string errChar;
+				if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
+				{
+					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
+					return;
+				}
+				sResp = charCodec::gb_to_utf8(sResp);
+				pData = (unsigned char*)sResp.c_str();
+				iLen = sResp.length();
+			}
+			
 			yyjson_doc* doc = yyjson_read((const char*)pData, iLen, 0);
 			if (!doc) {
 				LOG("[error]解析tdsp数据包失败,不是正确的json格式");
