@@ -109,33 +109,33 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 	size_t len;
 	string s = yyjson_val_write(yyv_alarmStatus,0,&len);
 	json alarmStatus = json::parse(s);
+	string tagBind = getTagBind();
 
 	json querier;
-	querier["tag"] = m_strTagBind;
+	querier["tag"] = tagBind;
 	querier["isRecover"] = false;
 
 	//当前有的报警，新的里面没有的，消除
 	m_csAlmStatus.lock();
-  for (auto& almCur : m_jAlarmStatus)
+	for (auto& almCur : m_jAlarmStatus)
     {
-      bool bIsAlarm = false;
-      for (auto& almNew : alarmStatus)
-      {
-        if (almNew["type"] == almCur["type"])
-        {
-          bIsAlarm = true;
-        }
-      }
-
-      if (!bIsAlarm)
-      {
-        json jStatus;
-        jStatus["tag"] = m_strTagBind;
-        jStatus["type"] = almCur["type"];
-        jStatus["level"] = "alarm";
-        tds->callAsyn("updateAlarm", jStatus);
-      }
-    }
+		bool bIsAlarm = false;
+		for (auto& almNew : alarmStatus)
+		{
+			if (almNew["type"] == almCur["type"])
+			{
+				bIsAlarm = true;
+			}
+		}
+		if (!bIsAlarm)
+		{
+			json jStatus;
+			jStatus["tag"] = tagBind;
+			jStatus["type"] = almCur["type"];
+			jStatus["level"] = "normal";
+			tds->callAsyn("updateAlarm", jStatus);
+		}
+	}
 	m_csAlmStatus.unlock();
 
 
@@ -143,7 +143,7 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 	for (auto& almNew : alarmStatus)
 	{
 		json jStatus;
-		jStatus["tag"] = m_strTagBind;
+		jStatus["tag"] = tagBind;
 		jStatus["type"] = almNew["type"];
 		jStatus["level"] = "alarm";
 		tds->callAsyn("updateAlarm", jStatus);
@@ -152,6 +152,13 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus)
 	m_csAlmStatus.lock();
 	m_jAlarmStatus = alarmStatus;
 	m_csAlmStatus.unlock();
+
+
+
+	OBJ* pObj = prj.queryObj(tagBind,"zh");
+	if (pObj) {
+		pObj->m_jAlarmStatus = alarmStatus;
+	}
 
 	timeopt::now(&m_stLastAlarmStatusTime);
 	saveStatusBuff();
