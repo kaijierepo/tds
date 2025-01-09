@@ -4204,10 +4204,20 @@ struct INPUT_DE {
 	json val;
 	json file;
 	json ioAddr;
+	json valAttr;
 	string sTime;
 	TIME time;
 };
 
+
+json getValAttr(json de) {
+	de.erase("time");
+	de.erase("val");
+	de.erase("tag");
+	de.erase("rootTag");
+	de.erase("file");
+	return de;
+}
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
@@ -4215,44 +4225,20 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 	string rootTag = "";
 	vector<INPUT_DE> inputDEList;
 	if (params.is_object()) {
-		//文件模式输入
-// 		if (params.find("file") != params.end())
-// 		{
-// 			ioDev* p = ioSrv.getIODevByIP(session.remoteIP);
-// 			string tag;
-// 			if (p)
-// 			{
-// 				//tag = charCodec::utf8_to_gb(p->m_strTagBind);
-// 				tag = p->m_strTagBind + ".";
-// 			}
-// 
-// 			if (params.contains("tag"))
-// 				tag += params["tag"].get<string>();
-// 
-// 			DB_TIME tNow;
-// 			if (params.contains("time"))
-// 			{
-// 				string time = params["time"].get<string>();
-// 				if (time.length() == 10) { // 2020-11-11 11:11:11 支持按照日期插入，按日期插入时，当作0点时候插入
-// 					time += " 00:00:00";
-// 				}
-// 
-// 				if (!tNow.fromStr(time)) {
-// 					//err = "param time invalid format.";
-// 					return;
-// 				}
-// 			}
-// 			else {
-// 				tNow.setNow();
-// 			}
-// 
-// 			auto yymv_params = params;
-// 			yymv_params.erase("tag");
-// 			string sDe = yymv_params.dump();
-// 			db.Insert(tag, sDe, &tNow);
-// 		}
-		//对象属性模式输入
-		/*else*/ if (params.find("data") != params.end()) {
+		/*对象模式输入,输入对象的位号,内部监控点只要输入相对位号就行,类似树形结构输入,但是只有对象和监控点2级
+		"params": {
+			"tag":"客厅",   //需要输入的对象
+			"data":[    //对象下的监控点
+				{
+					"tag":"温度",
+					"val":26.5
+				},{
+					"tag":"湿度",
+					"val":23.5
+				}
+			]
+		}*/
+		if (params.find("data") != params.end()) {
 			json deList = params["data"];
 
 			if (params.find("tag") != params.end()) {
@@ -4279,6 +4265,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 					de.tag = j["tag"];
 					de.val = j["val"];
 					de.file = j["file"];
+					de.valAttr = getValAttr(j);
 					inputDEList.push_back(de);
 				}
 			}
@@ -4313,6 +4300,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				de.tag = tag;
 				de.val = val;
 				de.file = file;
+				de.valAttr= getValAttr(params);
 				if (time.is_string()) {
 					de.sTime = time;
 					de.time = timeopt::str2st(de.sTime);
@@ -4356,20 +4344,6 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 		}
 	}
 	//多位号模式输入
-	/*
-	"params": {
-        "tag":"客厅",
-        "data":[
-            {
-                "tag":"温度",
-                "val":26.5
-            },{
-                "tag":"湿度",
-                "val":23.5
-            }
-        ]
-    }
-	*/
 	else if (params.is_array()) { 
 		for (auto& jDe : params) {
 			INPUT_DE de;
@@ -4422,8 +4396,10 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				if (pmp)
 				{
 					pmp->input(val, &file, &de.time);
-					if(pmp->m_bEnableIO)
+					if (pmp->m_bEnableIO) {
+						pmp->m_curValAttr = de.valAttr;
 						vecMps.push_back(pmp);
+					}
 				}
 				else {
 					params.erase("tag");

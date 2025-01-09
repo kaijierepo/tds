@@ -851,6 +851,11 @@ void MP::saveToDB() {
 		sFileData = m_curFileData.dump();
 		jDE["file"] = m_curFileData;
 	}
+	if (m_curValAttr != nullptr) {
+		for (auto& item : m_curValAttr.items()) {
+			jDE[item.key()] = item.value();
+		}
+	}
 	string sDe = jDE.dump();
 
 	DB_TIME dbt;
