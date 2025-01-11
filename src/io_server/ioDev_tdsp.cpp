@@ -857,7 +857,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 
 	string strReq = req.dump() + "\n\n";
 
-	if (m_charset == "gb2312")
+	if (m_charset == "gb2312" || ioSrv.m_bGb2312Tdsp)
 	{
 		strReq = charCodec::utf8_to_gb(strReq);
 	}
