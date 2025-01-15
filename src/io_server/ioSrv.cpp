@@ -1992,60 +1992,13 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		{
 			unsigned char* pGwData = pData;
 			size_t gwLen = iLen;
-			//485网关启用前缀，前缀就是注册包
-			/*if (tds->conf->getInt("485GwPrefix", 0)) {
-				if (tdsSession->regPkt.size() > 0) {
-					if (tdsSession->regPkt.size() < iLen) {
-						if (memcmp(tdsSession->regPkt.data(), pData, tdsSession->regPkt.size()) == 0) {
-							pGwData = pData + tdsSession->regPkt.size();
-							gwLen = iLen - tdsSession->regPkt.size();
-						}
-						else {
-							string s1 = str::bytesToHexStr(tdsSession->regPkt);
-							string s2 = str::bytesToHexStr(pData, iLen);
-							LOG("[error][485网关] 前缀与注册包不一致,注册包:" + s1 + ",收到数据:" + s2);
-							return;
-						}
-					}
-					else {
-						string s1 = str::bytesToHexStr(tdsSession->regPkt);
-						string s2 = str::bytesToHexStr(pData, iLen);
-						LOG("[error][485网关] 启用了数据包前缀，数据包的长度没有大于注册包前缀,注册包:" + s1 + ",收到数据:" + s2);
-					}
-				}
-				else {
-					LOG("[error][485网关] 启用了数据包前缀，但是没有收到注册包");
-					return;
-				}
-			}*/
 			
-
-			stream2pkt* pab = &tdsSession->m_alBuf;
-			pab->PushStream(pGwData, gwLen);
-
-
-			while (pab->PopPkt(IsValidPkt_ModbusRTU))
+			//485直接透传到设备
+			if (tdsSession->m_IoDev)
 			{
-				if (pab->abandonData != "")
-				{
-					string remoteAddr = tdsSession->getRemoteAddr();
-					LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-					tdsSession->abandonLen += pab->iAbandonLen;
-				}
-				tdsSession->iALProto = pab->m_protocolType;
-				onRecvPkt_mbRtu(pab->pkt, pab->iPktLen, tdsSession);
+				tdsSession->m_IoDev->onRecvData(pGwData, gwLen);
 			}
-
-			while (pab->PopPkt(isValidPkt_DLT645_2007)) {
-				if (pab->abandonData != "")
-				{
-					string remoteAddr = tdsSession->getRemoteAddr();
-					LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
-					tdsSession->abandonLen += pab->iAbandonLen;
-				}
-				tdsSession->iALProto = pab->m_protocolType;
-				onRecvPkt_mbRtu(pab->pkt, pab->iPktLen, tdsSession);
-			}
+			
 		}
 	}
 	else if (tdsSession->ioDevType == DEV_TYPE_leak_detect) {

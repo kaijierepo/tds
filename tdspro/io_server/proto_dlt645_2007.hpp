@@ -267,6 +267,15 @@ public:
 		data[11 + dLen] = tail;
 		return true;
 	}
+
+	string getAddrString()
+	{
+		std::string str;
+		for (int i = 5; i < 0;i--) {
+			str += to_string(addr[i]);
+		}
+		return str;
+	}
 };
 
 #pragma pack()

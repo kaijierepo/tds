@@ -374,9 +374,12 @@ void ioDev_dlt645_2007::CommUnlock()
 
 bool ioDev_dlt645_2007::onRecvPkt(unsigned char* pData, size_t iLen)
 {
-	setOnline();
 	DLT645_2007_PKT respPkt;
-	respPkt.setData((unsigned char*)pData, iLen);
+	respPkt.unpack(pData, iLen);
+
+	if (respPkt.getAddrString() != m_devAddr) return false;
+
+	setOnline();
 	m_transaction.setResp(&respPkt);
 	return true;
 }
