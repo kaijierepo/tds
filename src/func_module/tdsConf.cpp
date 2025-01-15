@@ -509,12 +509,12 @@ void tdsConfig::loadConf()
 		loadConf_tds(app_ini.mapConf);
 
 		//load projectConf.ini
-		string projectConfPath = tds->conf->confPath + "/projectConf.ini";
+		string projectConfPath = this->confPath + "/projectConf.ini";
 		if (!fs::fileExist(projectConfPath))
 		{
 			string s = str::format("[warn]配置文件%s不存在，创建默认配置", projectConfPath.c_str());
 			logger.logInternal(s, false);
-			generateDefaultProjectConfFile(tds->conf->confPath);
+			generateDefaultProjectConfFile(this->confPath);
 		}
 		project_ini.load(projectConfPath);
 		loadConf_tds(project_ini.mapConf);

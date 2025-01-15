@@ -2035,6 +2035,17 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 				tdsSession->iALProto = pab->m_protocolType;
 				onRecvPkt_mbRtu(pab->pkt, pab->iPktLen, tdsSession);
 			}
+
+			while (pab->PopPkt(isValidPkt_DLT645_2007)) {
+				if (pab->abandonData != "")
+				{
+					string remoteAddr = tdsSession->getRemoteAddr();
+					LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+					tdsSession->abandonLen += pab->iAbandonLen;
+				}
+				tdsSession->iALProto = pab->m_protocolType;
+				onRecvPkt_mbRtu(pab->pkt, pab->iPktLen, tdsSession);
+			}
 		}
 	}
 	else if (tdsSession->ioDevType == DEV_TYPE_leak_detect) {
@@ -2220,6 +2231,14 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 }
 
 void ioServer::onRecvPkt_mbRtu(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+{
+	if (tdsSession->m_IoDev)
+	{
+		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+	}
+}
+
+void ioServer::onRecvPkt_dlt645_2007(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	if (tdsSession->m_IoDev)
 	{
