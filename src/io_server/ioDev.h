@@ -290,7 +290,7 @@ public:
 	//对于设备tagBind表示设备安装在某个对象上,该对象一般视作智能设备
 	string m_strTagBind;
 	string m_strChanTemplate;
-	string m_acqMode; //周期采集模式，分 all group single 三种模式
+	string m_acqMode; //周期采集模式，分 all group single none 四种种模式
 	string m_chanGroup;//在acqMode为group模式下有效
 	bool m_acqAlarm; //是否轮询报警，发送getAlarmStatus给TDSP设备
 	OBJ* m_pMO;

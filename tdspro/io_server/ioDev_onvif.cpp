@@ -91,6 +91,11 @@ void ioDev_onvif::DoCycleTask()
 			t.detach();
 		}
 	}
+
+	//onvif_getSnapshotUri();
+	//onvif_getProfiles();
+	//onvif_getPresets();
+	//onvif_gotoPresets();
 }
 
 bool ioDev_onvif::onRecvPkt(unsigned char* pData, size_t iLen)
@@ -174,6 +179,63 @@ void ioDev_onvif::onvif_getDevInfo()
 	doOnvifTransaction(body, "/onvif/device_service",false);
 }
 
+void ioDev_onvif::onvif_getSnapshotUri()
+{
+	string body = R"(<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <GetSnapshotUri xmlns="http://www.onvif.org/ver10/media/wsdl">
+            <ProfileToken>Profile_1</ProfileToken>
+        </GetSnapshotUri>
+    </s:Body>
+</s:Envelope>)";
+
+	doOnvifTransaction(body, "/onvif/media_service", false);
+}
+
+void ioDev_onvif::onvif_getProfiles()
+{
+	string body = R"(<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <GetProfiles xmlns="http://www.onvif.org/ver10/media/wsdl">
+        </GetProfiles>
+    </s:Body>
+</s:Envelope>)";
+
+	doOnvifTransaction(body, "/onvif/media_service", false);
+}
+
+void ioDev_onvif::onvif_getPresets()
+{
+	string body = R"(<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <GetPresets xmlns="http://www.onvif.org/ver10/PTZ/wsdl">
+			<ProfileToken>Profile_1</ProfileToken>
+        </GetPresets>
+    </s:Body>
+</s:Envelope>)";
+
+	doOnvifTransaction(body, "/onvif/PTZ", false);
+}
+
+void ioDev_onvif::onvif_gotoPresets()
+{
+	string body = R"(<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <GotoPreset xmlns="http://www.onvif.org/ver10/PTZ/wsdl">
+			<ProfileToken>Profile_1</ProfileToken>
+			<PresetToken>1</PresetToken>
+        </GotoPreset>
+    </s:Body>
+</s:Envelope>)";
+
+	doOnvifTransaction(body, "/onvif/PTZ", false);	
+}
+
+
 void ioDev_onvif::ptz_startMove(string dir, float panSpeed, float tiltSpeed)
 {
 	if (panSpeed > 1)
@@ -256,6 +318,125 @@ bool ioDev_onvif::isAddrValid()
 	return false;
 }
 
+struct PTZPosition {
+	float pan;    // 水平角度
+	float tilt;   // 垂直角度
+	float zoom;   // 变焦值
+	bool isValid; // 位置是否有效
+};
+
+struct PresetInfo {
+	std::string token;
+	std::string name;
+	PTZPosition position;
+	bool isSet;
+};
+
+std::vector<PresetInfo> parsePresetsResponse(const std::string& response) {
+	std::vector<PresetInfo> presets;
+
+	size_t pos = 0;
+	while (true) {
+		size_t presetStart = response.find("<tptz:Preset", pos);
+		if (presetStart == std::string::npos) break;
+
+		size_t presetEnd = response.find("</tptz:Preset>", presetStart);
+		if (presetEnd == std::string::npos) break;
+
+		std::string presetXml = response.substr(presetStart,
+			presetEnd - presetStart + std::string("</tptz:Preset>").length());
+
+		PresetInfo preset;
+		preset.isSet = false;
+		preset.position.isValid = false;
+
+		// 提取token
+		size_t tokenStart = presetXml.find("token=\"");
+		if (tokenStart != std::string::npos) {
+			tokenStart += 7;
+			size_t tokenEnd = presetXml.find("\"", tokenStart);
+			if (tokenEnd != std::string::npos) {
+				preset.token = presetXml.substr(tokenStart, tokenEnd - tokenStart);
+			}
+		}
+
+		// 提取name
+		size_t nameStart = presetXml.find("<tt:Name>");
+		if (nameStart != std::string::npos) {
+			nameStart += 9;
+			size_t nameEnd = presetXml.find("</tt:Name>", nameStart);
+			if (nameEnd != std::string::npos) {
+				preset.name = presetXml.substr(nameStart, nameEnd - nameStart);
+			}
+		}
+
+		// 提取PTZ位置信息
+		size_t ptzStart = presetXml.find("<tt:PTZPosition>");
+		if (ptzStart != std::string::npos) {
+			// 提取pan值
+			size_t panStart = presetXml.find("<tt:PanTilt x=\"", ptzStart);
+			if (panStart != std::string::npos) {
+				panStart += 15; // "<tt:PanTilt x=\"" 的长度
+				size_t panEnd = presetXml.find("\"", panStart);
+				if (panEnd != std::string::npos) {
+					try {
+						preset.position.pan = std::stof(presetXml.substr(panStart, panEnd - panStart));
+						if (preset.position.pan != 0)
+						{
+							preset.position.isValid = true;
+						}
+					}
+					catch (...) {
+						preset.position.pan = 0.0f;
+					}
+				}
+			}
+
+			// 提取tilt值
+			size_t tiltStart = presetXml.find("y=\"", ptzStart);
+			if (tiltStart != std::string::npos) {
+				tiltStart += 3; // "y=\"" 的长度
+				size_t tiltEnd = presetXml.find("\"", tiltStart);
+				if (tiltEnd != std::string::npos) {
+					try {
+						preset.position.tilt = std::stof(presetXml.substr(tiltStart, tiltEnd - tiltStart));
+					}
+					catch (...) {
+						preset.position.tilt = 0.0f;
+					}
+				}
+			}
+
+			// 提取zoom值
+			size_t zoomStart = presetXml.find("<tt:Zoom x=\"");
+			if (zoomStart != std::string::npos) {
+				zoomStart += 12; // "<tt:Zoom x=\"" 的长度
+				size_t zoomEnd = presetXml.find("\"", zoomStart);
+				if (zoomEnd != std::string::npos) {
+					try {
+						preset.position.zoom = std::stof(presetXml.substr(zoomStart, zoomEnd - zoomStart));
+					}
+					catch (...) {
+						preset.position.zoom = 0.0f;
+					}
+				}
+			}
+		}
+
+		// 通过position是否有效来判断预置位是否设置
+		preset.isSet = preset.position.isValid;
+
+		// 只要有token就添加到列表
+		if (preset.isSet) {
+			presets.push_back(preset);
+		}
+
+		pos = presetEnd + 1;
+	}
+
+	return presets;
+}
+
 bool ioDev_onvif::doOnvifTransaction(string msg,string uri,bool log)
 {
 	if (!isAddrValid())
@@ -288,12 +469,41 @@ bool ioDev_onvif::doOnvifTransaction(string msg,string uri,bool log)
 		res = cli.Post(uri, header, msg, "application/soap+xml; charset=utf-8");
 
 		if (res != nullptr) {
+
+			std::ofstream file("C://Users//kang//Desktop//temp//gotoPreset.txt", std::ios::binary);
+			if (!file) {
+				return false;
+			}
+
+			file.write(res->body.c_str(), res->body.size());
+
+
 			if (res->status == 401) {
 				LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
 			}
 
 			if (log) {
 				LOG("[Onvif]响应,地址:" + addr + uri + "\r\nSoap Message:" + res->body);
+			}
+
+			if (uri == "/onvif/media_service")
+			{
+				string response = res->body;
+				size_t urlStart = response.find("<tt:Uri>");
+				size_t urlEnd = response.find("</tt:Uri>");
+				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
+					string picUrl = response.substr(urlStart + 8, urlEnd - urlStart - 8);
+
+					cli.set_basic_auth(m_strUser.c_str(), m_strPwd.c_str());
+					auto res = cli.Get(picUrl.c_str());
+
+					std::ofstream file("C://Users//kang//Desktop//temp//snapshot.jpg", std::ios::binary);
+					if (!file) {
+						return false;
+					}
+
+					file.write(res->body.c_str(), res->body.size());
+				}
 			}
 		}
 

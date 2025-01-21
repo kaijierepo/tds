@@ -16,16 +16,19 @@ public:
 	void setVal(string& str, string name, string val);
 
 	void onvif_getDevInfo();
-	bool doOnvifTransaction(string msg, string uri,bool log = true);
+	void onvif_getSnapshotUri();
+	void onvif_getProfiles();
+	void onvif_getPresets();
+	void onvif_gotoPresets();
+	bool doOnvifTransaction(string msg, string uri, bool log = true);
 	bool isAddrValid();
 
-	virtual void ptz_startMove(string dir,float panSpeed = 0.5,float tiltSpeed = 0.5) override;
+	virtual void ptz_startMove(string dir, float panSpeed = 0.5, float tiltSpeed = 0.5) override;
 	map<string, string> parseKeyValStr(string s);
 	virtual void ptz_stopMove() override;
 	virtual void ptz_startZoom(string dir, float zoomSpeed = 0.5) override;
 	virtual void ptz_stopZoom();
 	string generateNouce();
 	string generateAuthStr(string uri,string realm, string nonce,string cnonce);
-
-
+	string m_snapshotURL;
 };

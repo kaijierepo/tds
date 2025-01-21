@@ -1325,7 +1325,11 @@ void ioDev_tdsp::DoCycleTask()
 
 	if (m_fAcqInterval == 0 || timeopt::CalcTimePassSecond(m_stLastAcqTime) < m_fAcqInterval)
 		return;
-	DoAcq();
+
+	//用于仅进行心跳通信,但是不进行采集的场景
+	if (m_acqMode != "none") {
+		DoAcq();
+	}
 }
 
 void ioDev_tdsp::onEvent_online()
