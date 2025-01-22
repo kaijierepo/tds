@@ -181,7 +181,11 @@ namespace as_fs {
 
 almServer::almServer(void)
 {
+	m_enable = true;
 	m_bTestSrv = false;
+	m_iUpdateCallCount = 0;
+	tableCurrent.m_tableType = CURRENT_TABLE;
+	tableHist.m_tableType = HISTORY_TABLE;
 }
 
 
@@ -233,7 +237,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	initMOAlarmStatus();
 }
 
-void almServer::recover(ALARM_INFO& key)
+void almServer::recover(ALARM_INFO& key, bool notify)
 {
 	/*tableStatus.remove(key);
 
@@ -275,7 +279,7 @@ void almServer::recover(ALARM_INFO& key)
 
 	json j = ai.toJson(this);
 	//rpcSrv.notify("onAlarmRecover", j);  
-	if (m_initParam.func_rpcHand_notify)
+	if (m_initParam.func_rpcHand_notify && notify)
 		m_initParam.func_rpcHand_notify("onAlarmRecover", j);
 }
 
@@ -311,15 +315,14 @@ bool almServer::isActive(string tag, string type)
 }
 
 /*
-2类as：  正式 和 测试
-对于正式as
-1）tag支持 小括号和 中括号
-真正tag可放小括号里外面的表示备注或额外说明，或   中括号表示备注 外面的表示备注
-即： 真正tag、xxx(真正tag)、真正tag[xxx]
-2）支持基于真正tag的报警过滤
+need add alarm after status check
+must and only refered in almServer::Update , almServer::Add
 */
-void almServer::addAlarm(ALARM_INFO ai)
+void almServer::addAlarm(ALARM_INFO ai, bool notify)
 {
+	if (!m_enable)
+		return;
+
 	if (ai.time == "") {
 		TIME t;
 		t.setNow();
@@ -442,7 +445,7 @@ void almServer::addAlarm(ALARM_INFO ai)
 	if (!m_bTestSrv) {
 		json j = ai.toJson(this);
 		//rpcSrv.notify("onAlarmAdd", j); 
-		if (m_initParam.func_rpcHand_notify)
+		if (m_initParam.func_rpcHand_notify && notify)
 			m_initParam.func_rpcHand_notify("onAlarmAdd", j);
 	}
 }
@@ -466,8 +469,12 @@ string almServer::uuid() {
 }
 
 
-void almServer::Update(ALARM_INFO newStatus)
+void almServer::Update(ALARM_INFO newStatus, bool notify)
 {
+	if (!m_enable)
+		return;
+
+	m_iUpdateCallCount++;
 	//忽略屏蔽报警
 	//if (newStatus.typeLabel == "")
 	//{
@@ -511,6 +518,7 @@ void almServer::Update(ALARM_INFO newStatus)
 	filter["isRecover"] = false;
 	ALARM_INFO lastStatus;
 	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
+	bool bNeedAdd = false;
 	if (tableCurrent.query(filter, lastStatus))
 	{
 		//check if status has changed
@@ -519,11 +527,10 @@ void almServer::Update(ALARM_INFO newStatus)
 		{
 			lastStatus.recoverTime.fromStr(newStatus.time);
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
-			recover(lastStatus);
+			recover(lastStatus, notify);
 			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
 			{
-				//再产生新的报警
-				addAlarm(newStatus);
+				bNeedAdd = true;
 			}
 			bTagAlarmStatusChanged = true;
 		}
@@ -539,12 +546,14 @@ void almServer::Update(ALARM_INFO newStatus)
 	{
 		if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
 		{
-			addAlarm(newStatus);
+			bNeedAdd = true;
 			bTagAlarmStatusChanged = true;
 		}
 	}
 
-
+	if (bNeedAdd) {
+		addAlarm(newStatus, notify);
+	}
 
 	if (bTagAlarmStatusChanged)
 	{
@@ -576,10 +585,12 @@ void almServer::Update(ALARM_INFO newStatus)
 		//notify client
 		//json j = newStatus.toJson(this);
 		//rpcSrv.notify("onUpdateAlarmStatus", j);
-		if (!m_bTestSrv) {
+		if (notify) {
+			if (!m_bTestSrv) {
 				json j = newStatus.toJson(this);
-			if (m_initParam.func_rpcHand_notify)
-				m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
+				if (m_initParam.func_rpcHand_notify && notify)
+					m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
+			}
 		}
 	}
 }
@@ -627,12 +638,30 @@ string almServer::getAlarmTypeLabel(string type)
 	return "";
 }
 
-void almServer::AddEvent(ALARM_INFO ai)
+void almServer::Add(ALARM_INFO ai, bool bNotify)
 {
 	std::lock_guard<mutex>  g(m_csAlarmData);
-	ai.uuid = uuid();
-	tableCurrent.add(ai);
-	tableHist.add(ai);
+
+	json filter;
+	filter["tag"] = ai.tag;
+	filter["type"] = ai.type;
+	filter["isRecover"] = false;
+	ALARM_INFO lastStatus;
+	
+	bool bNeedAdd = false;
+
+	if (ai.needRecover) {
+		if (!tableCurrent.query(filter, lastStatus))
+		{
+			bNeedAdd = true;
+		}
+	}
+	else { // state less alarm
+		bNeedAdd = true;
+	}
+
+	if(bNeedAdd)
+		addAlarm(ai, bNotify);
 }
 
 #if 1
@@ -656,15 +685,7 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		ai.time = t.toStr();
 	}
 
-	m_eventAlarmRepetitiveCheck = false;
-	if (j.contains("repeteCheck")) {
-		bool b0 = j["repeteCheck"].get<bool>();
-		if (b0) {
-			m_eventAlarmRepetitiveCheck = true;
-		}
-	}
-
-	addAlarm(ai);
+	Add(ai, true);
 	return "\"success\"";
 }
 
@@ -720,6 +741,12 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 }
 
 
+void almServer::rpc_getAlmSrvStatus(json j, RPC_RESP& resp) {
+	json js;
+	js["updateCallCount"] = m_iUpdateCallCount;
+	resp.result = js.dump();
+}
+
 //基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
@@ -753,24 +780,15 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
 		ai.ackTime.setNow();
-		//if (ai.bAck && ai.bRecover)//删除已消除已确认报警
-		//{
-		//	tableCurrent.remove(ai);
-		//}
-		//else
-		//	tableCurrent.update(ai);
-
-		tableCurrent.acknowledge(ai);
+		if (ai.isAck && ai.isRecover)//删除已消除已确认报警
+		{
+			tableCurrent.remove(ai);
+		}
+		else
+			tableCurrent.update(ai);
 	}
-	else
-	{
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
-		resp.error = error;
-		return;
-	}
+	
 
-	if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
-		params["time"] = ai.time;
 	if (tableHist.query(params, ai))
 	{
 		string user = session.user;
@@ -782,9 +800,13 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
 		ai.ackTime.setNow();
-		//tableHist.update(ai);
-		tableHist.acknowledge(ai);
-
+		tableHist.update(ai);
+	}
+	else
+	{
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+		resp.error = error;
+		return;
 	}
 
 	json j = ai.toJson(this);
@@ -916,9 +938,7 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 
 string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 {
-	//全局报警禁用功能
-	if (!m_initParam.enableGlobalAlarm)
-	{
+	if (!m_enable){
 		return "[]";
 	}
 
@@ -928,8 +948,7 @@ string almServer::rpc_getCurrent(json params, RPC_SESSION session)
 
 string almServer::rpc_getUnRecover(json params, RPC_SESSION session)
 {
-	//全局报警禁用功能
-	if (!m_initParam.enableGlobalAlarm)
+	if (!m_enable) 
 	{
 		return "[]";
 	}
@@ -1081,6 +1100,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			tableTemp->bOneFilePerMonth = true;
 			tableTemp->SetAlarmSrv(this);
 			histTables.push_back(tableTemp);
+			tableTemp->m_tableType = HISTORY_TABLE;
 			tableTemp->loadFile(tableTemp->getFilePath(iYear, iMonth));
 			for (map<string, ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
 				if (session.user != "") {
@@ -1331,15 +1351,21 @@ string almTable::getFilePath(int y, int m) {
 }
 
 string almTable::getFilePath(string time) {
-	if (time == "")
+	if (m_tableType == CURRENT_TABLE || time == "")
 		return m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
-
-	TIME st;
-	st.fromStr(time);
-	int y, m;
-	y = st.wYear;
-	m = st.wMonth;
-	return getFilePath(y, m);
+	else if (time != "")
+	{
+		TIME st;
+		st.fromStr(time);
+		int y, m;
+		y = st.wYear;
+		m = st.wMonth;
+		return getFilePath(y, m);
+	}
+	else
+	{
+		return m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
+	}
 }
 
 void almTable::loadFile(string strFile)
@@ -1364,7 +1390,7 @@ void almTable::loadFile(string strFile)
 			continue;
 		ALARM_INFO* pAi = new ALARM_INFO();
 		*pAi = fromCSV(str);
-		buff[pAi->getKey()] = pAi;
+		buff[pAi->getKey(m_tableType)] = pAi;
 	}
 }
 
@@ -1555,7 +1581,7 @@ void almTable::add(ALARM_INFO ai)
 	loadFile(pa);
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
-	buff[ai.getKey()] = pNew;
+	buff[ai.getKey(m_tableType)] = pNew;
 	saveFile(pa, buff);
 }
 
@@ -1725,7 +1751,7 @@ void almTable::update(ALARM_INFO ai)
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	string  pa = getFilePath(ai.time);
 	loadFile(pa); //获取报警对应的数据文件
-	ALARM_INFO* p = buff.at(ai.getKey());
+	ALARM_INFO* p = buff.at(ai.getKey(m_tableType));
 	if (p)
 	{
 		*p = ai;
@@ -1737,7 +1763,7 @@ void almTable::remove(ALARM_KEY& ai)
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	string  pa = getFilePath(ai.time);
 	loadFile(pa);
-	buff.erase(ai.getKey());
+	buff.erase(ai.getKey(m_tableType));
 	saveFile(pa, buff);
 }
 

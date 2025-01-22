@@ -46,6 +46,13 @@ namespace ALARM_LEVEL {
 	const string L4 = "L4";
 }
 
+enum ALM_TABLE_TYPE {
+	CURRENT_TABLE,
+	UNRECOVER_TABLE,
+	UNACK_TABLE,
+	HISTORY_TABLE
+};
+
 class ALARM_KEY {
 public:
 	string uuid;
@@ -55,8 +62,11 @@ public:
 	string type;
 	string id;  //custom id
 
-	string getKey() {
-		return time + "," + tag + "," + type + id;
+	string getKey(ALM_TABLE_TYPE tableType) {
+		if(tableType == HISTORY_TABLE)
+			return time + "," + tag + "," + type + id;
+		else if(tableType == CURRENT_TABLE)
+			return tag + "," + type + id;
 	}
 
 	string getSortKey(string sortKey)
@@ -204,7 +214,7 @@ public:
 	string buffFilePath;
 	bool bOneFilePerMonth;
 	shared_mutex m_csTable;
-
+	ALM_TABLE_TYPE m_tableType;
 protected:
 	almServer* m_pAlmSrv;
 };
@@ -239,13 +249,15 @@ public:
 	//path should be utf8 format if in Chinese
 	void init(const string dbPath, AsInitParam& asInitParam);
 	string m_dbPath;
+	bool m_enable;
+
 public:
 	////internal interface
 	//alarm generation
-	void Update(ALARM_INFO newStatus);  //update alarm state of a MO. almServer will calc alarm event internally
-	void AddEvent(ALARM_INFO ai);//add alarm event of a MO.use for stateless alarm.
-	void addAlarm(ALARM_INFO ai);
-	void recover(ALARM_INFO& key);
+	void Update(ALARM_INFO newStatus,bool notify = true);  //update alarm state of a MO. almServer will calc alarm event internally
+	void Add(ALARM_INFO ai, bool bNotify = true);//add alarm event of a MO.use for stateless alarm.
+
+	//status check
 	bool isRecover(ALARM_INFO& key);
 	bool isActive(ALARM_INFO& key);
 	bool isRecover(string tag, string type);
@@ -272,10 +284,17 @@ public:
 	string rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
+	void rpc_getAlmSrvStatus(json j, RPC_RESP& resp);
+
+private:
+	void addAlarm(ALARM_INFO ai, bool notify = true);
+	//alarm status modify
+	void recover(ALARM_INFO& key, bool notify = true);
 
 	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
 	string getAlarmTypeLabel(string type);
+
 public:
 	almServer(void);
 	~almServer(void);
@@ -304,6 +323,7 @@ public:
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 
 	bool m_bTestSrv;
+	long long m_iUpdateCallCount;
 };
 
 
