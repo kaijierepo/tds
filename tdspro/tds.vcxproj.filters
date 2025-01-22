@@ -524,7 +524,6 @@
     </ClInclude>
     <ClInclude Include="..\src\include\tds.h" />
     <ClInclude Include="..\src\include\tdsRPC.h" />
-    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

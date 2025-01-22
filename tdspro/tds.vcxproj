@@ -675,6 +675,9 @@
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="tds Pro.rc" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
