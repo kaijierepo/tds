@@ -79,6 +79,38 @@ ioDev* createIODev(string type)
 	return p;
 }
 
+void ioDev::output(string chanAddr, json jVal, json& rlt, json& err, bool sync)
+{
+}
+
+bool ioDev::input(json jVal, string addr, TIME* stDataTime) {
+	TIME st;
+	if (stDataTime == nullptr) {
+		timeopt::now(&st);
+	}
+	else {
+		st = *stDataTime;
+	}
+
+	string tagBind;
+	if (m_mapDataChannel.find(addr) != m_mapDataChannel.end()) {
+		ioChannel* pC = m_mapDataChannel[addr];
+		pC->input(jVal, tagBind, &st);
+	}
+	else {
+		return false;
+	}
+
+	if (tagBind != "") {
+		json param;
+		param["tag"] = tagBind;
+		param["val"] = jVal;
+		param["time"] = timeopt::st2str(st);
+		tds->callAsyn("input", param);
+	}
+
+	return true;
+}
 
 bool ioDev::input(vector<string> chanAddr, vector<json> val, TIME* stDataTime)
 {
@@ -146,6 +178,7 @@ ioDev::ioDev(void)
 {
 	m_bPingThreadRunning = false;
 	m_bWorkingThreadRunning = false;
+	m_bAcqThreadRunning = false;
 	m_bIsWaitingResp = false;
 	m_bEnableIoLog = true;
 	m_bEnableAcq = true;
@@ -316,6 +349,12 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		}
 		if (m_standAloneIOType != "") {
 			conf["standAloneIOType"] = m_standAloneIOType;
+		}
+		if (m_cycleTaskScript != "") {
+			conf["cycleTaskScript"] = m_cycleTaskScript;
+		}
+		if (m_outputScript != "") {
+			conf["outputScript"] = m_outputScript;
 		}
 
 		if (m_bEnableOfflineTimeout) {
@@ -523,6 +562,22 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_standAloneIOType = item.get<string>();
+		}
+	}
+
+	kv = conf.find("cycleTaskScript");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_cycleTaskScript = item.get<string>();
+		}
+	}
+
+	kv = conf.find("outputScript");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_outputScript = item.get<string>();
 		}
 	}
 
@@ -1175,6 +1230,20 @@ string ioDev::getIP() {
 	return "";
 }
 
+int ioDev::getPort() {
+	if (m_jDevAddr.is_object())
+	{
+		if (m_jDevAddr.contains("port")) {
+			json j = m_jDevAddr["port"];
+			if (j.is_number_integer()) {
+				int p = j.get<int>();
+				return p;
+			}
+		}
+	}
+	return 0;
+}
+
 string ioDev::getDevAddrStr(bool ignorePort)
 {
 	string devAddr;
@@ -1295,6 +1364,24 @@ ioDev* ioDev::getIODevByIP(string ip) {
 	{
 		ioDev* p = m_vecChildDev[i];
 		if (p->getIP() == ip) {
+			pD = p;
+			break;
+		}
+	}
+	unlock_conf_shared();
+	return pD;
+}
+
+ioDev* ioDev::getIODevByIPPort(string ipport) {
+	ioDev* pD = nullptr;
+	lock_conf_shared();
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		string ip = p->getIP();
+		int port = p->getPort();
+		string tmp = str::format("%s:%d", ip.c_str(), port);
+		if (tmp == ipport) {
 			pD = p;
 			break;
 		}

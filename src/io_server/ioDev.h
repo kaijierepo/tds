@@ -176,6 +176,7 @@ public:
 	string getIOAddrStr(bool ignorePort = false);
 	string getDevAddrStr(bool ignorePort = false);
 	string getIP();
+	int getPort();
 	string m_dispositionMode;
 	string m_devType;
 	string m_devSubType; //设备子类型
@@ -207,6 +208,7 @@ public:
 
 	bool isViaAdaptor();
 
+	bool m_bAcqThreadRunning;
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示全速采样
 	//// iodev hierachy tree management
@@ -214,6 +216,7 @@ public:
 	ioDev* getIODevByNodeID(string nodeID);
 	ioDev* getIODevByTag(string tag);
 	ioDev* getIODevByIP(string ip);
+	ioDev* getIODevByIPPort(string ipport);
 	bool deleteIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChildDev;
@@ -275,10 +278,11 @@ public:
 	virtual bool inputVal(json jVal,string chanAddr="") { return false; };
 
 	//输出到设备的下属通道
-	virtual void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) {  }
+	virtual void output(string chanAddr, json jVal, json& rlt, json& err, bool sync = true);
 	virtual void output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync = true) { };
 
 	//设备多通道批量输入
+	virtual bool input(json jVal, string chanAddr,TIME* stDataTime = nullptr);
 	virtual bool input(vector<string> chanAddr, vector<json> val, TIME* stDataTime = nullptr);
 
 	void AutoDataLink(OBJ* mo);
@@ -327,6 +331,9 @@ public:
 	virtual void DoCycleTask();
 	virtual void DoCycleTaskSync() {};
 	virtual void checkAcqReqTimeout();
+
+	string m_cycleTaskScript;
+	string m_outputScript;
 
 	bool m_bCycleAcqThreadRunning;
 	bool m_bOutputting;

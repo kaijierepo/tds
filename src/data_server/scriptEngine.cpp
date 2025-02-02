@@ -1,6 +1,7 @@
 #ifdef ENABLE_JERRY_SCRIPT
 #include "ScriptEngine.h"
 #include "jerryscript-port.h"
+#include "scriptFunc.h"
 
 
 void ScriptEngine::releaseGlobalFunc() {
@@ -50,6 +51,7 @@ thread_local ScriptEngine* pEngine;
 ScriptEngine::ScriptEngine()
 {
 	m_initGlobalFunc = nullptr;
+	m_ioDevThis = nullptr;
 }
 
 string jerryVal2Str(jerry_value_t jerryVal) {
@@ -84,6 +86,32 @@ bool ScriptEngine::runScript(string& script, string user)
 		if(m_initGlobalFunc)
 			m_initGlobalFunc(global_object,m_vecGlobalFunc);
 
+		if (m_initIODevFunc) {
+			jerry_value_t ioDev = jerry_create_object();
+			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"dev");
+			m_initIODevFunc(ioDev,m_ioDevThis);
+			jerry_release_value(jerry_set_property(global_object, prop_name, ioDev));
+			jerry_release_value(prop_name);
+			jerry_release_value(ioDev);
+		}
+
+		if (!m_globalObj.is_null()) {
+			for (auto& [key, value] : m_globalObj.items()) {
+				jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
+				jerry_value_t prop_value;
+				jsonVal2jerryVal(value, prop_value);
+
+				jerry_value_t set_result = jerry_set_property(global_object, prop_name, prop_value);
+				if (jerry_value_is_error(set_result)) {
+					jerry_error_t error = jerry_get_error_type(set_result);
+					jerry_release_value(error);
+				}
+				jerry_release_value(set_result);
+				jerry_release_value(prop_name);
+				jerry_release_value(prop_value);
+			}
+		}
+
 		for (int i = 0; i < lines.size(); i++) {
 			string line = lines[i];
 			while (1) {
@@ -114,9 +142,9 @@ bool ScriptEngine::runScript(string& script, string user)
 			else
 			{
 				jerry_error_t error = jerry_get_error_type(eval_ret);
-				string sErr = getErrorDesc(error);
+				m_sError = getErrorDesc(error);
 				//m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
-				m_vecOutput.push_back("脚本执行错误,错误类型:" + sErr);
+				m_vecOutput.push_back("脚本执行错误,错误类型:" + m_sError);
 				jerry_release_value(eval_ret);
 				break;
 			}

@@ -58,8 +58,6 @@ public:
 	int m_iRpcId;
 	mutex m_csRPCId;
 
-	bool m_bAcqThreadRunning;
-
 	string m_childTdsTag;
 	int m_childTdsHttpPort;
 	int m_childTdsHttpsPort;

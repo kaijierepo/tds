@@ -14,6 +14,7 @@ public:
 public:
 	taskServer(void);
 	~taskServer(void);
+	void doOutput(OBJ* pObj, SCHEDULE_TASK* pTask);
 	void recursiveExeTask(OBJ* pObj);
 };
 

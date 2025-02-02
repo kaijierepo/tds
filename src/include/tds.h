@@ -97,6 +97,51 @@ struct HMS {
 	HMS() {
 		memset(this, 0, sizeof(this));
 	}
+	bool operator==(HMS& right) {
+		return 0 == memcmp(this, &right, sizeof(HMS));
+	}
+
+	bool operator>(HMS& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl > sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator>=(HMS& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl >= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<(HMS& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl < sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	bool operator<=(HMS& right) {
+		string sl = toStr();
+		string sr = right.toStr();
+		if (sl <= sr) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	void setNow();
 	string toStr();
 	void fromStr(string s);
 };
@@ -128,6 +173,7 @@ struct TIME {
 
 	void setDate(Date t);
 	void setHMS(HMS t);
+	HMS getHMS();
 	void setNow();
 
 	bool operator==(TIME& right) {

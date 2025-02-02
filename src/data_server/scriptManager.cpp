@@ -3,6 +3,7 @@
 #include "scriptEngine.h"
 #include "logger.h"
 #include "jerryscript-port.h"
+#include "ioSrv.h"
 
 ScriptManager scriptManager;
 
@@ -142,6 +143,9 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		if (params.contains("rootTag"))
 			si.rootTag = params["rootTag"];
 
+		if (params.contains("devAddr"))
+			si.devAddr = params["devAddr"];
+
 		bool getExpRet = false; //是否获取表达式的返回值。测试表达式时使用
 		if (params.contains("getExpRet")) {
 			getExpRet = params["getExpRet"].get<bool>();
@@ -150,6 +154,18 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		ScriptEngine se;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
+		if (si.devAddr != "") {
+			ioDev* p = ioSrv.getIODevByIPPort(si.devAddr);
+			if (p) {
+				se.m_ioDevThis = p;
+				se.m_initIODevFunc = initIODevFunc;
+			}
+			else {
+				json jError = "specified ioDev not found";
+				rpcResp.error = jError.dump();
+			}
+		}
+
 		se.runScript(s,session.user);
 
 		json jOutput = json::array();
@@ -487,6 +503,7 @@ void SCRIPT_INFO::toJson(json& j,bool getStatus)
 	jIter["milli"] = milli;
 	j["interval"] = jIter;
 	j["rootTag"] = rootTag;
+	j["devAddr"] = devAddr;
 	j["calcMpTag"] = calcMpTag;
 	j["callerObjTag"] = callerObjTag;
 
@@ -514,6 +531,9 @@ void SCRIPT_INFO::fromJson(json& j)
 
 	if (j.contains("rootTag"))
 		rootTag = j["rootTag"];
+
+	if (j.contains("devAddr"))
+		devAddr = j["devAddr"];
 
 	if (j.contains("interval")) {
 		json jInter = j["interval"];

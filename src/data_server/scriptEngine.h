@@ -6,6 +6,7 @@
 #include "jerry.h"
 #include "jerryscript.h"
 #include  "tdsSession.h"
+#include "ioDev.h"
 
 using json = nlohmann::json;
 using namespace std;
@@ -18,17 +19,22 @@ struct GLOBAL_FUNC {
 };
 
 typedef bool (*fp_initGlobalFunc)(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
-
+typedef bool (*fp_initIODevFunc)(jerry_value_t ioDev_object,ioDev* pDev);
 
 class ScriptEngine {
 public:
 	ScriptEngine();
 	bool runScript(string& script,string user);
 
+	string m_sError;
 	vector<string> m_vecOutput; //执行一次脚本的输出信息，包含错误信息，脚本中的log
 	void releaseGlobalFunc();
 	string getErrorDesc(jerry_error_t error);
+
 	fp_initGlobalFunc m_initGlobalFunc;
+	fp_initIODevFunc m_initIODevFunc;
+
+	json m_globalObj;
 
 	//当前脚本执行的环境变量
 	string m_tagContext;
@@ -36,6 +42,7 @@ public:
 	jerry_value_t global_object;
 	vector<GLOBAL_FUNC> m_vecGlobalFunc;
 	string m_script;
+	ioDev* m_ioDevThis;
 
 	RPC_SESSION currentSession;
 	//脚本执行结果

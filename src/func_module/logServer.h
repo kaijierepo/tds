@@ -41,6 +41,7 @@ class logServer
 public:
 	void rpc_addLog(json& log,RPC_SESSION session);
 	string rpc_queryLog(json params, RPC_SESSION session);
+	void addLog(json& log);
 
 public:
 	logServer(void);

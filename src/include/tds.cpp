@@ -370,6 +370,15 @@ void TIME::setHMS(HMS t)
 	wMilliseconds = t.wMilliseconds;
 }
 
+HMS TIME::getHMS() {
+	HMS hms;
+	hms.wHour = wHour;
+	hms.wMinute = wMinute;
+	hms.wSecond = wSecond;
+	hms.wMilliseconds = wMilliseconds;
+	return hms;
+}
+
 void TIME::setNow() {
 	auto now = std::chrono::system_clock::now();
 	unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
@@ -522,6 +531,15 @@ void Date::fromStr(string s)
 	wYear = y;
 	wMonth = m;
 	wDay = d;
+}
+
+void HMS::setNow() {
+	TIME t;
+	t.setNow();
+	wHour = t.wHour;
+	wMinute = t.wMinute;
+	wSecond = t.wSecond;
+	wMilliseconds = t.wMilliseconds;
 }
 
 string HMS::toStr()

@@ -32,6 +32,14 @@ void logServer::run()
 }
 
 
+void logServer::addLog(json& log) {
+	if (!log.contains("time"))
+	{
+		log["time"] = timeopt::nowStr();
+	}
+	tableLog.add(log);
+}
+
 void logServer::rpc_addLog(json& log, RPC_SESSION session)
 {
 	if (!log.contains("time"))

@@ -5,6 +5,7 @@
 #include "tds.h"
 #include "rpcHandler.h"
 #include "prj.h"
+#include "httplib.h"
 
 
 bool jerryItem2JsonItem(const jerry_value_t prop_name,
@@ -133,13 +134,13 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 	else if (jVal.is_null()) {
 		jerryVal = jerry_create_null();
 	}
-	else if (jVal.is_number_float())
-		jerryVal = jerry_create_number(jVal.get<double>());
 	else if (jVal.is_number_integer())
 	{
 		int val = jVal.get<int>();
 		jerryVal = jerry_create_number(val);
 	}
+	else if (jVal.is_number_float())
+		jerryVal = jerry_create_number(jVal.get<double>());
 	else if (jVal.is_boolean())
 		jerryVal = jerry_create_boolean(jVal.get<bool>());
 	else if (jVal.is_object()) {
@@ -698,6 +699,110 @@ jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+
+jerry_value_t func_http_request(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		if (params.is_object()) {
+
+			string ip = params["hostname"];
+			string addr = "http://" + ip;
+			int port = params["port"].get<int>();
+			string method = params["method"];
+			httplib::Client cli(ip, port);
+			string path = params["path"];
+			string body;
+			if (params.contains("body")) {
+				body = params["body"];
+			}
+			if (method == "GET") {
+
+			}
+			else if (method == "POST") {
+				httplib::Result rlt = cli.Post(path, body, "application/json");
+				if (rlt != nullptr) {
+					jerry_value_t ret = jerry_create_object();
+					jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"body");
+					jerry_value_t prop_val = jerry_create_string((const jerry_char_t*)rlt->body.c_str());
+					jerry_release_value(jerry_set_property(ret, prop_name, prop_val));
+					jerry_release_value(prop_name);
+					jerry_release_value(prop_val);
+					return ret;
+				}
+			}
+		}
+	}
+	
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
+jerry_value_t func_json_stringify(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		string s = params.dump();
+		jerry_value_t ret = jerry_create_string((const jerry_char_t*)s.c_str());
+		return ret;
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
+jerry_value_t func_json_parse(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		string s = params.get<string>();
+		json j = json::parse(s);
+		jerry_value_t ret;
+		jsonVal2jerryVal(j, ret);
+		return ret;
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+jerry_value_t func_ioDev_input(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() >= 2)
+	{
+		json jVal = jArgs[0];
+		json addr = jArgs[1];
+		string chanAddr = addr.get<string>();
+		bool bRet = pEngine->m_ioDevThis->input(jVal, chanAddr);
+		return jerry_create_boolean(bRet);
+	}
+
+	jerry_value_t ret = jerry_create_boolean(false);
+	return ret;
+}
+
+
 void TIMEToJerryTime(TIME& t, jerry_value_t& time) {
 	jerry_value_t prop_name, prop_value, set_result;
 	uint64_t intVal;
@@ -1103,7 +1208,61 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 		jerry_release_value(obj);
 	}
 
+	//http对象
+	{
+		jerry_value_t obj = jerry_create_object();
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"http");
+
+		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"request");
+		jerry_value_t obj_prop_func = jerry_create_external_function(func_http_request);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
+		jerry_release_value(prop_name);
+		jerry_release_value(obj);
+	}
+
+	//JSON对象
+	{
+		jerry_value_t obj = jerry_create_object();
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"JSON");
+
+		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"stringify");
+		jerry_value_t obj_prop_func = jerry_create_external_function(func_json_stringify);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		 obj_prop_name = jerry_create_string((const jerry_char_t*)"parse");
+		 obj_prop_func = jerry_create_external_function(func_json_parse);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
+		jerry_release_value(prop_name);
+		jerry_release_value(obj);
+	}
+
 	return true;
 }
 
+
+bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
+	jerry_value_t n = jerry_create_string((const jerry_char_t*)"input");
+	jerry_value_t v = jerry_create_external_function(func_ioDev_input);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"addr");
+	jsonVal2jerryVal(pDev->m_jDevAddr, v);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	return true;
+}
 #endif

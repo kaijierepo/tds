@@ -91,58 +91,59 @@ struct OBJ_QUERIER {
 
 struct SCHEDULE_TASK {
 	string name;
+	string type;   // runScript or output
 	Date dateStart;
 	Date dateEnd;
-	// bool cyclic;
+	string outputTag;
+	string outputVal;
 	HMS time;
 	bool week[7];
-	time_t lastExecuteTime;
+	TIME lastExecuteTime;
 	string script;
-	string executionMode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
+	string mode; // weeklyRepeat, dailyRepeat, cutsomTimeRepeat, onlyOnce
+
+	//run time 
+	bool lastHmsReach;
 
 	SCHEDULE_TASK() {
 		memset(week, 0, sizeof(week));
-		lastExecuteTime = timeopt::getTick();
+		lastExecuteTime.setNow();
+		type = "runScript";
+		mode = "weeklyRepeat";
+		lastHmsReach = true;
+	}
+
+	string getTypeDesc() {
+		if (type == "output") {
+			return "控制输出,位号=" + outputTag + ",值=" + outputVal;
+		}
+		else {
+			return "执行脚本," + script;
+		}
 	}
 
 	string toDescStr() {
-		//if (cyclic) {
-		//	string s = str::format("%s,%s~%s,%s,%d%d%d%d%d%d%d,%s,%s",
-		//		name.c_str(),
-		//		dateStart.toStr().c_str(),
-		//		dateEnd.toStr().c_str(),
-		//		time.toStr().c_str(),
-		//		week[0], week[1], week[2], week[3], week[4], week[5], week[6],
-		//		script.c_str(),
-		//		executionMode.c_str()
-		//	);
-		//	return s;
-		//}
-		//else {
 		string s = "";
-		if (executionMode == "weeklyRepeat") {
-      s = str::format("%s,%s-%s,%s,%d%d%d%d%d%d%d,%s,%s",
-        name.c_str(),
-        dateStart.toStr().c_str(),
-				dateEnd.toStr().c_str(),
-        time.toStr().c_str(),
-        week[0], week[1], week[2], week[3], week[4], week[5], week[6],
-        script.c_str(),
-        executionMode.c_str()
-      );
+		if (mode == "weeklyRepeat") {
+			s = str::format("任务名称:%s,类型:%s,调度模式:%s,%d%d%d%d%d%d%d,%s",
+				name.c_str(),
+				getTypeDesc().c_str(),
+				mode.c_str(),
+				week[0], week[1], week[2], week[3], week[4], week[5], week[6],
+				time.toStr().c_str()
+		  );
 		}
-		else if (executionMode == "customTimeRepeat") {
-      s = str::format("%s,%s-%s,%d:%d:%d,%s,%s",
-        name.c_str(),
-        dateStart.toStr().c_str(),
-        dateEnd.toStr().c_str(),
-				time.wHour, time.wMinute, time.wSecond,
-        script.c_str(),
-        executionMode.c_str()
-      );
+		else if (mode == "customTimeRepeat") {
+		  s = str::format("%s,%s-%s,%d:%d:%d,%s,%s",
+			name.c_str(),
+			dateStart.toStr().c_str(),
+			dateEnd.toStr().c_str(),
+			time.wHour, time.wMinute, time.wSecond,
+			script.c_str(),
+			mode.c_str()
+		  );
 		}
 		return s;
-		//}
 	};
 
 	TIME getExeTime();
@@ -159,31 +160,37 @@ struct SCHEDULE_TASK {
 			string s = j["dateEnd"];
 			dateEnd.fromStr(s);
 		}
+		if (j["type"].is_string()) {
+			type = j["type"];
+		}
 		if (j["script"].is_string()) {
 			script = j["script"];
 		}
-		//if (j["cyclic"].is_boolean()) {
-		//	cyclic = j["cyclic"].get<bool>();
-		//}
-		if (j["executionMode"].is_string()) {
-			executionMode = j["executionMode"];
-			if (executionMode == "weeklyRepeat") {
+		if (j["outputTag"].is_string()) {
+			outputTag = j["outputTag"].get<string>();
+		}
+		if (j["outputVal"]!= nullptr) {
+			outputVal = j["outputVal"];
+		}
+		if (j["mode"].is_string()) {
+			mode = j["mode"];
+			if (mode == "weeklyRepeat") {
         if (j["time"].is_string()) {
           string s = j["time"];
           time.fromStr(s);
         }
         if (j["week"].is_array()) {
-          json& jWeek = j["week"];
-          for (int i = 0; i < jWeek.size(); ++i) {
-            week[i] = jWeek[i].get<bool>();
-          }
-        }
+				json& jWeek = j["week"];
+				  for (int i = 0; i < jWeek.size(); ++i) {
+					week[i] = jWeek[i].get<bool>();
+				  }
+				}
 			}
-			else if (executionMode == "customTimeRepeat") {
+			else if (mode == "customTimeRepeat") {
 				json& jRepeatInterval = j["repeatInterval"];
-        time.wHour = jRepeatInterval["hour"].get<int>();
-        time.wMinute = jRepeatInterval["minute"].get<int>();
-        time.wSecond = jRepeatInterval["second"].get<int>();
+				time.wHour = jRepeatInterval["hour"].get<int>();
+				time.wMinute = jRepeatInterval["minute"].get<int>();
+				time.wSecond = jRepeatInterval["second"].get<int>();
 			}
 		}
 	}
@@ -193,22 +200,24 @@ struct SCHEDULE_TASK {
 		j["dateStart"] = dateStart.toStr();
 		j["dateEnd"] = dateEnd.toStr();
 		j["script"] = script;
-		//j["cyclic"] = cyclic;
-		j["executionMode"] = executionMode;
-		if (executionMode == "weeklyRepeat") {
-      j["time"] = time.toStr();
-      json jWeek = json::array();
-      for (int i = 0; i < 7; ++i) {
-        jWeek.push_back(week[i]);
-      }
-      j["week"] = jWeek;
+		j["type"] = type;
+		j["outputTag"] = outputTag;
+		j["outputVal"] = outputVal;
+		j["mode"] = mode;
+		if (mode == "weeklyRepeat") {
+			j["time"] = time.toStr();
+			json jWeek = json::array();
+			for (int i = 0; i < 7; ++i) {
+			jWeek.push_back(week[i]);
+			}
+			j["week"] = jWeek;
 		}
-		else if (executionMode == "customTimeRepeat") {
-      j["repeatInterval"] = {
-        {"hour", time.wHour},
-        {"minute", time.wMinute},
-        {"second", time.wSecond}
-      };
+		else if (mode == "customTimeRepeat") {
+		  j["repeatInterval"] = {
+			{"hour", time.wHour},
+			{"minute", time.wMinute},
+			{"second", time.wSecond}
+		  };
 		}
 	}
 
@@ -306,6 +315,7 @@ public:
 	string m_comment;
 	bool m_bEnableAlarm;	//	是否报警
 	bool m_bEnableIO;
+	bool m_bEnableTask;
 	vector<SCHEDULE_TASK> m_scheduleTasks;
 	bool isChildObjOfIntelliDev();
 

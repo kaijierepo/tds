@@ -83,6 +83,7 @@ OBJ::OBJ()
 	m_bChildTds = false;
 	m_bEnableAlarm = true;
 	m_bEnableIO = true;
+	m_bEnableTask = true;
 }
 
 OBJ::~OBJ()
@@ -159,6 +160,9 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 		m_mapConf.merge_patch(conf["map"]);
 	}
 		
+	if (conf.contains("enableTask")) {
+		m_bEnableTask = conf["enableTask"].get<bool>();
+	}
 
 	if (conf.contains("tasks")) {
 		loadTask(conf["tasks"]);
@@ -484,6 +488,8 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 		if (m_objID != "") {
 			conf["objID"] = m_objID;
 		}
+
+		conf["enableTask"] = m_bEnableTask;
 
 		if (m_scheduleTasks.size() > 0) {
 			json jTasks = json::array();
@@ -1696,13 +1702,12 @@ TIME SCHEDULE_TASK::getExeTime()
 
 bool SCHEDULE_TASK::isInterval()
 {
-  time_t currentTime = timeopt::getTick();
   int intervalSeconds = time.wHour * 3600 + time.wMinute * 60 + time.wSecond;
-  int pass = (currentTime - lastExecuteTime) / 1000;
+  int pass = timeopt::CalcTimePassSecond(lastExecuteTime);
   return pass >= intervalSeconds;
 }
 
 void SCHEDULE_TASK::updateExecuteTime()
 {
-	lastExecuteTime = timeopt::getTick();
+	lastExecuteTime.setNow();
 }
