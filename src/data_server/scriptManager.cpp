@@ -138,6 +138,11 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	if (params["script"] != nullptr) {
 		string s = params["script"];
 
+		string sEnvVar = params["envVarScript"];
+		if (sEnvVar != "") {
+			s = sEnvVar + "\n" + s;
+		}
+
 		SCRIPT_INFO si;
 		si.org = session.org;
 		if (params.contains("rootTag"))
@@ -280,12 +285,19 @@ bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	unique_lock<mutex> lock(m_csScripts);
 	string path = getScriptPath(params,session);
 	string fileName = params["name"].get<string>();
-	path += "/" + fileName + ".js";
+	string path1 = path + "/" + fileName + ".js";
+	string path2 = path + "/" + fileName + "_envVar.js";
 
 	string s;
-	if (fs::readFile(path, s))
+	if (fs::readFile(path1, s))
 	{
-		json j = s;
+		json j;
+		j["code"] = s;
+		string s1;
+		if (fs::readFile(path2, s1)) {
+			j["envVarCode"] = s1;
+		}
+
 		rpcResp.result = j.dump();
 	}
 	else
@@ -320,6 +332,13 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 		string s = params["code"].get<string>();
 		fs::writeFile(codePath, s);
 		si.script = s;
+	}
+
+	if (params.contains("envVarCode")) {
+		string codePath = tds->conf->confPath + "/scripts/" + si.name + "_envVar.js";
+		string s = params["envVarCode"].get<string>();
+		fs::writeFile(codePath, s);
+		si.envVarScript = s;
 	}
 
 	saveScriptList("", m_mapScripts);

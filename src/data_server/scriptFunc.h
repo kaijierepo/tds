@@ -11,6 +11,7 @@ using json = nlohmann::json;
 using namespace std;
 
 extern RPC_SESSION currentSession;
+extern jerry_value_t func_setReturn(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_log(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_output(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);
 extern jerry_value_t func_input(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count);

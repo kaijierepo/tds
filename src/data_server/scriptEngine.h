@@ -47,6 +47,7 @@ public:
 	RPC_SESSION currentSession;
 	//脚本执行结果
 	string m_sEvalRet;
+	json m_scriptRet; //脚本自定义的执行结果
 
 	bool m_bValNullInCalc;  //val函数返回了null，当使用计算表达式时，例如 val(tag1) -val(tag2)，某一个val函数返回null，null会被作为0，但该次计算无效
 };

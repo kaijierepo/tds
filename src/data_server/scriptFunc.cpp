@@ -174,6 +174,20 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 
 
 
+jerry_value_t func_setReturn(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json j = jArgs[0];
+		pEngine->m_scriptRet = j;
+	}
+
+	jerry_value_t ret = jerry_create_undefined();
+	return ret;
+}
+
 jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -783,6 +797,25 @@ jerry_value_t func_json_parse(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	pEngine->m_ioDevThis->setOnline();
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
+jerry_value_t func_ioDev_setOffline(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	pEngine->m_ioDevThis->setOffline();
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 jerry_value_t func_ioDev_input(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -1060,6 +1093,15 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 
+	// setReturn函数
+	property_name = jerry_create_string((const jerry_char_t*)"setReturn");
+	property_func = jerry_create_external_function(func_setReturn);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
 	// log函数
 	property_name = jerry_create_string((const jerry_char_t*)"log");
 	property_func = jerry_create_external_function(func_log);
@@ -1259,6 +1301,18 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 
 	n = jerry_create_string((const jerry_char_t*)"addr");
 	jsonVal2jerryVal(pDev->m_jDevAddr, v);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"setOnline");
+	v = jerry_create_external_function(func_ioDev_setOnline);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"setOffline");
+	v = jerry_create_external_function(func_ioDev_setOffline);
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);

@@ -140,8 +140,29 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 		se.runScript(si.script, "");
 
 		if (se.m_sError != "") {
-			LOG("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			LOG(s);
+			err = s;
 		}
+		else {
+			if (se.m_scriptRet.is_object()) {
+				if (se.m_scriptRet["result"] != nullptr) {
+					rlt = "ok";
+				}
+				else if (se.m_scriptRet["error"] != nullptr) {
+					err = se.m_scriptRet["error"];
+				}
+				else {
+					err = "未知错误,控制输出脚本未返回有效的错误信息";
+				}
+			}
+			else {
+				err = "控制输出脚本的返回信息必须是一个对象";
+			}
+		}
+	}
+	else {
+		err = "自定义设备未设置控制输出脚本";
 	}
 }
 
