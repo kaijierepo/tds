@@ -699,18 +699,33 @@ public:
 	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
+	void rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_getBufferStatus(string& rlt, string& err);
 	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
+
+	// db.insert functions
+	// insert basic val type
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);
 	void Insert(string strTag, DB_TIME stTime, int& iVal);
 	void Insert(string strTag, DB_TIME stTime, long long iVal);
 	void Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
-	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr );
+
+	// insert complex data type
+	// custom data element in json format
+	void Insert(string strTag, string& sDe,DB_TIME* stTime = nullptr ); 
+	// curve type internal data type of tds, save to file  123000.curve.json in the same path with db.json(datalist file)
 	void Insert(string strTag, string& sDeIdx,string& sDeCurve, DB_TIME* stTime = nullptr);
-	bool Delete(string tag, DB_TIME stTime);
+
+
+	//db.update functions
 	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
+
+	//save main image data such as 123000.image.jpg,data list will not be modified 
+	bool saveImageFile(string tag, DB_TIME stTime,string& imgBase64); 
+
+	bool Delete(string tag, DB_TIME stTime);
 
 	TDB* getChildDB(string dbName);
 	map<string, TDB*> m_childDB;

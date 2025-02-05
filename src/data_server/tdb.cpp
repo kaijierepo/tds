@@ -279,7 +279,7 @@ namespace TIME_OPT {
 	time_t calcTimePassSecond(DB_TIME& lastTime)
 	{
 		time_t last = lastTime.toUnixTime();
-		time_t now = time(NULL);
+		time_t now = ::time(NULL);
 		time_t milli = now - last;
 		return milli;
 	}
@@ -1048,6 +1048,9 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 	}
 	else if (deType == "curve") {
 		return folder + "/" + date.toStampHMS()  + m_dbFmt.curveDeNameSuffix;
+	}
+	else if (deType == "image") {
+		return folder + "/" + date.toStampHMS() + ".image.jpg";
 	}
 	else {
 		return folder + "/" + m_dbFmt.deListName;
@@ -4467,6 +4470,36 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 }
 
 
+void TDB::rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
+{
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+	if (yyv_tag == nullptr) {
+		err = JSON_STR_VAL("tag must be specified");
+		return;
+	}
+	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
+	if (yyv_time == nullptr) {
+		err = JSON_STR_VAL("time must be specified");
+		return;
+	}
+	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "img");
+	if (yyv_img == nullptr) {
+		err = JSON_STR_VAL("img must be specified");
+		return;
+	}
+
+	string tag = yyjson_get_str(yyv_tag);
+	string time = yyjson_get_str(yyv_time);
+	string img = yyjson_get_str(yyv_img);
+
+	DB_TIME t;
+	t.fromStr(time);
+	saveImageFile(tag, t, img);
+	yyjson_doc_free(doc);
+}
+
 void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
 	m_FsBuff.m_csFsb.lock();
 	size_t fileCount = m_FsBuff.m_mapFsBuff.size();
@@ -4802,6 +4835,12 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 	return n1 + n2 + n3 + n4;
 }
 
+
+bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
+{
+	string p = getPath_dbFile(tag, stTime, "image");
+	return DB_FS::writeFile(p, (char*)imgBase64.c_str(), imgBase64.length());
+}
 
 TDB* TDB::getChildDB(string dbName) {
 	map<string, TDB*>::iterator iter = m_childDB.find(dbName);
