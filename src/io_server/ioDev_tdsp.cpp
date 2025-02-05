@@ -323,10 +323,51 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 	return true;
 }
 
+bool ioDev_tdsp::handleDevRequest(yyjson_val* jRequest, yyjson_doc* doc)
+{
+	yyjson_val* params = yyjson_obj_get(jRequest, "params");
+	yyjson_val* yyv_method = yyjson_obj_get(jRequest, "method");
+	yyjson_val* yyv_id = yyjson_obj_get(jRequest, "id");
+	if (yyv_id == nullptr)
+		return false;
+	size_t ll;
+	string sId = yyjson_val_write(yyv_id, 0, &ll);
+	string method;
+	if (yyv_method)
+		method = yyjson_get_str(yyv_method);
+
+	yyjson_val* yyv_tag = yyjson_obj_get(params, "tag");
+	if (yyv_tag) {
+		string tag = yyjson_get_str(yyv_tag);
+		string tagInMaster = TAG::addRoot(tag, m_strTagBind);
+		yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
+		yyjson_mut_val* yymv_req = yyjson_mut_doc_get_root(mdoc);
+		yyjson_mut_val* yymv_params = yyjson_mut_obj_get(yymv_req, "params");
+		yyjson_mut_val* yymv_key = yyjson_mut_strcpy(mdoc, "tag");
+		yyjson_mut_val* yymv_val = yyjson_mut_strcpy(mdoc, tagInMaster.c_str());
+		yyjson_mut_obj_put(yymv_params, yymv_key, yymv_val);
+		size_t l;
+		string sReq = yyjson_mut_val_write(yymv_req, 0, &l);
+		yyjson_mut_doc_free(mdoc);
+
+		//转发到中心端的rpcHandler
+		std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+		RPC_RESP rpcResp;
+		rpcSrv.handleRpcCall(sReq, rpcResp, pSession);
+
+		sendData((unsigned char*)rpcResp.strResp.c_str(), rpcResp.strResp.length());
+	}
+}
+
 bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 {
 	yyjson_val* rlt = yyjson_obj_get(jResp,"result");
 	yyjson_val* err = yyjson_obj_get(jResp,"error");
+	yyjson_val* params = yyjson_obj_get(jResp, "params");
+	if (params != nullptr) {
+		return handleDevRequest(jResp, doc);
+	}
+
 	yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
 	string method;
 	if(yyv_method)

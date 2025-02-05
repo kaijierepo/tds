@@ -25,6 +25,7 @@ public:
 	void handleAlarmStatusData(yyjson_val* alarmStatus);
 	ioChannel* createChan(yyjson_val* jVal, string addr);
 	bool handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc);
+	bool handleDevRequest(yyjson_val* jRequest, yyjson_doc* doc);
 	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
 	//bool onRecvPkt(json jPkt);
 	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc);
