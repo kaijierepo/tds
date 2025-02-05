@@ -251,7 +251,7 @@ bool isTdsRunning() {
 		// todo_linux
 		//iErr = errno;
 #endif
-		std::cout << "tds is already running" << std::endl;
+		std::cout << "tds is already running,try to bind port 60006 fail " << std::endl;
 #ifdef _WIN32
 		closesocket(sockfd);
 		WSACleanup();
