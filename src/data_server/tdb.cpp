@@ -4846,7 +4846,7 @@ bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 	if (data.find("data:") == 0) {
 		startPos = data.find(",");
 		if (startPos == string::npos) {
-			return "";
+			return false;
 		}
 
 		startPos += 1;
@@ -4857,8 +4857,9 @@ bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 	memset(out, 0, buffLen);
 	int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 
-	DB_FS::writeFile(path, out, outLen);
+	bool ret = DB_FS::writeFile(path, out, outLen);
 	delete[] out;
+	return ret;
 }
 
 TDB* TDB::getChildDB(string dbName) {
