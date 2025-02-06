@@ -359,9 +359,20 @@ bool ioDev_tdsp::handleDevRequest(yyjson_val* jRequest, yyjson_doc* doc)
 	}
 }
 
-bool ioDev_tdsp::handleSyncResp(yyjson_val* jResp, yyjson_doc* doc)
+bool ioDev_tdsp::handleSyncResp(yyjson_val* jResp, yyjson_val* yyv_id, yyjson_doc* doc)
 {
-
+	int id = yyjson_get_int(yyv_id);
+	if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
+	{
+		TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
+		size_t len;
+		auto s = yyjson_val_write(jResp, 0, &len);
+		p->strResp = s;
+		free(s);
+		p->respSignal.notify();
+		return true;
+	}
+	return false;
 }
 
 bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
@@ -574,19 +585,10 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 			//3.设备响应
 			else if (yyv_result != nullptr || yyv_err != nullptr) {
 				//存在响应等待handler
-				int id = yyjson_get_int(yyv_id);
-				if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
-				{
-					TDSP_SYNC_INFO* p = m_mapSyncRPCInfo[id];
-					size_t len;
-					auto s = yyjson_val_write(jResp, 0, &len);
-					p->strResp = s;
-					free(s);
-					p->respSignal.notify();
-				}
+				bool handled = handleSyncResp(jResp, yyv_id, doc);
 				//不存在响应等待handler
-				else
-				{
+				if(!handled)
+				{//请求响应超时后或者网络延迟等情况，或者发送了rpc请求，但是没有等待处理响应
 					handleAsynResp(jResp, doc);
 				}
 			}
