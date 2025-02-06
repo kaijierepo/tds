@@ -359,15 +359,15 @@ bool ioDev_tdsp::handleDevRequest(yyjson_val* jRequest, yyjson_doc* doc)
 	}
 }
 
+bool ioDev_tdsp::handleSyncResp(yyjson_val* jResp, yyjson_doc* doc)
+{
+
+}
+
 bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 {
 	yyjson_val* rlt = yyjson_obj_get(jResp,"result");
 	yyjson_val* err = yyjson_obj_get(jResp,"error");
-	yyjson_val* params = yyjson_obj_get(jResp, "params");
-	if (params != nullptr) {
-		return handleDevRequest(jResp, doc);
-	}
-
 	yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
 	string method;
 	if(yyv_method)
@@ -557,13 +557,23 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 		}
 		else {
 			yyjson_val* yyv_id = yyjson_obj_get(jResp, "id");
-			if (yyv_id == nullptr) //主动上送命令
+			yyjson_val* yyv_params = yyjson_obj_get(jResp, "params");
+			yyjson_val* yyv_result = yyjson_obj_get(jResp, "result");
+			yyjson_val* yyv_err = yyjson_obj_get(jResp, "error");
+
+			//接收到的设备数据共3种类型。
+			//1.设备通知
+			if (yyv_id == nullptr) 
 			{
 				handleNotify(jResp,doc);
 			}
-			else
-			{
-				//有多个缓存会话，用id来区分
+			//2.设备请求
+			else if (yyv_params != nullptr) {
+				handleDevRequest(jResp, doc);
+			}
+			//3.设备响应
+			else if (yyv_result != nullptr || yyv_err != nullptr) {
+				//存在响应等待handler
 				int id = yyjson_get_int(yyv_id);
 				if (m_mapSyncRPCInfo.find(id) != m_mapSyncRPCInfo.end())
 				{
@@ -574,9 +584,10 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 					free(s);
 					p->respSignal.notify();
 				}
+				//不存在响应等待handler
 				else
 				{
-					handleAsynResp(jResp,doc);
+					handleAsynResp(jResp, doc);
 				}
 			}
 		}
