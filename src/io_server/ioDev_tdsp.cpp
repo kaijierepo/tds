@@ -1474,6 +1474,7 @@ bool doTranslate(char* p,size_t len,string& sRecv) {
 	if (g_translatorSock == 0) {
 		int sockfd;
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		SetHandleInformation((HANDLE)sockfd, HANDLE_FLAG_INHERIT, 0);
 
 		// 设置超时时间为500毫秒
 		struct timeval timeout;

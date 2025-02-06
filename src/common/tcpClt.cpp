@@ -298,6 +298,7 @@ bool tcpClt::connect()
 
 
 	sockClient=socket(AF_INET,SOCK_STREAM,0);
+	SetHandleInformation((HANDLE)sockClient, HANDLE_FLAG_INHERIT, 0);
 
 	//如果设置了本地地址端口，绑定本地地址端口
 	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0)

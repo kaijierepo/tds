@@ -76,7 +76,7 @@ void udpServer::start()
 	else {
 
 	}
-
+	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
 	//绑定
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
@@ -123,6 +123,7 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	//sock = m_sock;
+	SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
 
 	//绑定
 	struct in_addr localInterface;

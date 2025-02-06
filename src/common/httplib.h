@@ -2647,6 +2647,7 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     auto sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 #endif
     if (sock == INVALID_SOCKET) { continue; }
+	SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
 
 #ifndef _WIN32
     if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) { continue; }

@@ -237,6 +237,7 @@ bool isTdsRunning() {
 	if (sockfd < 0) {
 		return true;
 	}
+	SetHandleInformation((HANDLE)sockfd, HANDLE_FLAG_INHERIT, 0);
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;

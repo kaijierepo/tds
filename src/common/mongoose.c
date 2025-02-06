@@ -7252,6 +7252,9 @@ bool mg_open_listener(struct mg_connection *c, const char *url) {
 
     if ((fd = socket(af, type, proto)) == MG_INVALID_SOCKET) {
       MG_ERROR(("socket: %d", MG_SOCK_ERR(-1)));
+	}
+	else if (SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0) == 0) {
+		MG_ERROR(("socket reomve HANDLE_FLAG_INHERIT faild"));
 #if defined(SO_EXCLUSIVEADDRUSE)
     } else if ((rc = setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
                                 (char *) &on, sizeof(on))) != 0) {
