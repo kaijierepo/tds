@@ -4836,6 +4836,13 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 }
 
 
+bool TDB::saveImageFile(string tag, DB_TIME stTime, char* pData, size_t len)
+{
+	string path = getPath_dbFile(tag, stTime, "image");
+	bool ret = DB_FS::writeFile(path, pData, len);
+	return ret;
+}
+
 bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 {
 	string& data = imgBase64;
