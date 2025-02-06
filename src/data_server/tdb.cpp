@@ -4838,8 +4838,27 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 
 bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 {
-	string p = getPath_dbFile(tag, stTime, "image");
-	return DB_FS::writeFile(p, (char*)imgBase64.c_str(), imgBase64.length());
+	string& data = imgBase64;
+	string path = getPath_dbFile(tag, stTime, "image");
+
+	//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
+	size_t startPos = 0;
+	if (data.find("data:") == 0) {
+		startPos = data.find(",");
+		if (startPos == string::npos) {
+			return "";
+		}
+
+		startPos += 1;
+	}
+
+	size_t buffLen = data.length() * 2;
+	unsigned char* out = new unsigned char[buffLen];
+	memset(out, 0, buffLen);
+	int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+
+	DB_FS::writeFile(path, out, outLen);
+	delete[] out;
 }
 
 TDB* TDB::getChildDB(string dbName) {
