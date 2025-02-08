@@ -598,6 +598,45 @@ bool ioDev::loadConf(json& conf)
 				else
 					m_addrType = DEV_ADDR_MODE::tcpClient;
 			}
+
+			//TCP服务器模式下，如果有修改IP或者端口，则重新启动连接
+			if (m_addrType == DEV_ADDR_MODE::tcpServer && m_tcpClt)
+			{
+				string ip;
+				if (m_jDevAddr["ip"].is_string())
+				{
+					ip = m_jDevAddr["ip"].get<string>();
+
+					int port;
+					if (m_jDevAddr["port"].is_number_integer())
+					{
+						port = m_jDevAddr["port"].get<int>();
+
+						if (m_tcpClt->m_remoteIP != ip || m_tcpClt->m_remotePort != port)
+						{
+							m_tcpClt->stop();
+							m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClient重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
+							LOG("[IO设备]修改地址重新启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
+						}
+					}
+				}
+			}
+			//UDP服务器模式下，如果有修改端口，则重新启动连接
+			else if (m_addrType == DEV_ADDR_MODE::udpServer && m_udpClt)
+			{
+				int localPort = 0;
+				if (m_jDevAddr["localPort"].is_number_integer())
+				{
+					localPort = m_jDevAddr["localPort"].get<int>();
+
+					if (localPort != m_udpClt->m_port)
+					{
+						m_udpClt->stop();
+						m_udpClt->run(this, localPort, ioSrv.m_ioSrvIPAsClient);
+						LOG("[IO设备]修改地址重新启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpClient,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(), m_udpClt->m_port);
+					}
+				}
+			}
 		}
 	}
 
