@@ -235,23 +235,25 @@ void RpcLogSend(unsigned char* p, size_t len, bool success, string& remoteIP,int
 
 	sendToRpcPktMonitorClient((char*)s, wlen);
 }
-void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr) {
+void RpcLogRecv(unsigned char* pHead, size_t headLen, unsigned char* pBody, size_t bodyLen, string remoteAddr) {
 	{
 		shared_lock<shared_mutex> lock(csRpcPktMonitorClient);
 		if (rpcPktMonitorClient.size() == 0)
 			return;
 	}
 
-	string req;
-	str::fromBuff(p, len,req);
+	string shead,sbody;
+	str::fromBuff(pHead, headLen,shead);
+	str::fromBuff(pBody, bodyLen, sbody);
 
 	json j;
 	TIME st;
 	timeopt::now(&st);
 	j["time"] = timeopt::st2strWithMilli(st);
 	j["remoteAddr"] = remoteAddr;
-	j["len"] = len;
-	j["data"] = req;
+	j["len"] = bodyLen;
+	j["head"] = shead;
+	j["body"] = sbody;
 	j["type"] = "request";
 	string s = j.dump(4);
 	sendToRpcPktMonitorClient((char*)s.c_str(), s.length());
@@ -796,7 +798,7 @@ void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm
 
 
 	//is debug request. do not need log
-	if (mg_http_match_uri(hm, "/debug")) {
+	if (mg_http_match_uri(hm, "/debug") || mg_http_match_uri(hm, "/rpc/debug")) {
 		pSession->isDebug = true;
 	}
 
@@ -1053,24 +1055,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			//thread t(thread_handleRpc_respBodyOnlyRltOrErr, pSession, pipeSock);
 			//t.detach();
 		}
-		else if (mg_http_match_uri(hm, "/api") && memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
+		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 		{
-			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
-			getSessionInfo(pSession, c, hm, pWs);
-			c->app_layer_data = pSession;
-
-			if (!pSession->isDebug)
-				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-
-			struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
-			data->message = mg_strdup(hm->message);               // Pass message
-			data->conn_id = c->id;
-			data->mgr = c->mgr;
-			thread t(thread_handleRpc_respBodyOnlyRltOrErr, data, pSession);
-			t.detach();
-		}
-		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0 || mg_http_match_uri(hm, "/rpc"))
-		{
+			//黑白名单处理
 			if (c->bl_timeStamp != g_bl_timeStamp) {
 				unsigned char* pIP = (unsigned char*)&c->rem.ip;
 				string sip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
@@ -1097,37 +1084,53 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 					return;
 				}
 			}
+
 			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
 			getSessionInfo(pSession, c, hm, pWs);
 			c->app_layer_data = pSession;
-			c->sessionInfo = nullptr;
-			//
-			if (!pSession->isDebug) {
-				RpcLogRecv((unsigned char*)hm->message.ptr, hm->message.len, pSession->remoteAddr);
-				std::map<string, SESSION_STATIS*>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
-				SESSION_STATIS* pSs;
-				if (iter == pWs->m_httpSessions.end()) {
-					pSs = new SESSION_STATIS;
-					pWs->m_httpSessions[pSession->remoteIP] = pSs;
-					pSs->remoteIP = pSession->remoteIP;
-					pSs->remotePort = pSession->remotePort;
-				}
-				else {
-					pSs = iter->second;
-				}
-				pSs->reqCount++;
-				pSs->recv += hm->message.len;
-				pSs->lastRecvTime = timeopt::now();
-				c->sessionInfo = pSs;
-			}
-				
 
-			struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
-			data->message = mg_strdup(hm->message);               // Pass message
-			data->conn_id = c->id;
-			data->mgr = c->mgr;
-			thread t(thread_handleRpcOverHttp,data, pSession);
-			t.detach();
+			if (!pSession->isDebug)
+				RpcLogRecv((unsigned char*)hm->head.ptr, hm->head.len, (unsigned char*)hm->body.ptr, hm->body.len, pSession->remoteAddr);
+
+			if (mg_http_match_uri(hm, "/api")) {
+				struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
+				data->message = mg_strdup(hm->message);               // Pass message
+				data->conn_id = c->id;
+				data->mgr = c->mgr;
+				thread t(thread_handleRpc_respBodyOnlyRltOrErr, data, pSession);
+				t.detach();
+			}
+			else if (mg_http_match_uri(hm, "/rpc") || mg_http_match_uri(hm, "/debug")){
+				c->sessionInfo = nullptr;
+				if (!pSession->isDebug) {
+					std::map<string, SESSION_STATIS*>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
+					SESSION_STATIS* pSs;
+					if (iter == pWs->m_httpSessions.end()) {
+						pSs = new SESSION_STATIS;
+						pWs->m_httpSessions[pSession->remoteIP] = pSs;
+						pSs->remoteIP = pSession->remoteIP;
+						pSs->remotePort = pSession->remotePort;
+					}
+					else {
+						pSs = iter->second;
+					}
+					pSs->reqCount++;
+					pSs->recv += hm->message.len;
+					pSs->lastRecvTime = timeopt::now();
+					c->sessionInfo = pSs;
+				}
+
+
+				struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
+				data->message = mg_strdup(hm->message);               // Pass message
+				data->conn_id = c->id;
+				data->mgr = c->mgr;
+				thread t(thread_handleRpcOverHttp, data, pSession);
+				t.detach();
+			}
+			else if (mg_http_match_uri(hm, "/api/cmd")) {
+				mg_http_reply(c, 200,nullptr,"ok");
+			}
 		}
 		else if (mg_http_match_uri(hm, "/release"))
 		{

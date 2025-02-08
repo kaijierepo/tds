@@ -78,7 +78,7 @@ extern vector<std::shared_ptr<TDS_SESSION>> rpcPktMonitorClient;
 extern shared_mutex csRpcPktMonitorClient;
 extern void sendToRpcPktMonitorClient(char* p, size_t len);
 extern void RpcLogSend(unsigned char* p, size_t len, bool success, string remoteAddr);
-extern void RpcLogRecv(unsigned char* p, size_t len, string remoteAddr);
+extern void RpcLogRecv(unsigned char* pHead, size_t headLen, unsigned char* pBody, size_t bodyLen, string remoteAddr);
 
 extern vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
 extern void logToWebsock(string text);
