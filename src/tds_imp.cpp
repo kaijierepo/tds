@@ -60,6 +60,7 @@ string InterfaceEncoding = "utf8";
 
 string version = "v1.0";
 string g_ComputerStartupTime="";
+string g_strStartupTime = "";
 
 #ifdef _WIN32
 #include <stdio.h>
@@ -440,6 +441,8 @@ bool TDS_imp::run(string cmdline)
 #ifndef DEBUG
  // mg_log_set("0");
 #endif
+
+	TIME exeTime = timeopt::now(); g_strStartupTime = exeTime.toStr(false);
 
 #ifdef _WINDLL // dll模式下需要创建命令行
 	tds->conf->mode = "tds";
