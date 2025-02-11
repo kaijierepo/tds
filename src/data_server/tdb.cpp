@@ -4494,7 +4494,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 }
 
 
-void TDB::rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
+void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
@@ -4508,49 +4508,68 @@ void TDB::rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string
 		err = JSON_STR_VAL("time must be specified");
 		return;
 	}
-	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "img");
-	if (yyv_img == nullptr) {
-		err = JSON_STR_VAL("img must be specified");
-		return;
-	}
+	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "data");
+	yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
 
 	string tag = yyjson_get_str(yyv_tag);
 	string time = yyjson_get_str(yyv_time);
-	string img = yyjson_get_str(yyv_img);
-
 	DB_TIME t;
 	t.fromStr(time);
-	saveImageFile(tag, t, img);
-	yyjson_doc_free(doc);
-}
+	if (yyv_img && yyv_info)
+	{
+		string img = yyjson_get_str(yyv_img);
+		string info = yyjson_get_str(yyv_info);
 
-void TDB::rpc_db_saveImageInfo(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
-{
-	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
-	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
-	if (yyv_tag == nullptr) {
-		err = JSON_STR_VAL("tag must be specified");
-		return;
-	}
-	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
-	if (yyv_time == nullptr) {
-		err = JSON_STR_VAL("time must be specified");
-		return;
-	}
-	yyjson_val* yyv_infoData = yyjson_obj_get(yyv_params, "infoData");
-	if (yyv_infoData == nullptr) {
-		err = JSON_STR_VAL("img must be specified");
-		return;
-	}
+		string& data = img;
+		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
+		size_t startPos = 0;
+		if (data.find("data:") == 0) {
+			startPos = data.find(",");
+			if (startPos == string::npos) {
+				yyjson_doc_free(doc);
+				return ;
+			}
 
-	string tag = yyjson_get_str(yyv_tag);
-	string time = yyjson_get_str(yyv_time);
-	string infoData = yyjson_get_str(yyv_infoData);
+			startPos += 1;
+		}
 
-	DB_TIME t;
-	t.fromStr(time);
-	saveImageInfo(tag, t, infoData);
+		size_t buffLen = data.length() * 2;
+		unsigned char* out = new unsigned char[buffLen];
+		memset(out, 0, buffLen);
+		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+		saveImage(tag, t, (char*)out, outLen, info);
+		delete[] out;
+	}
+	else if (yyv_img)
+	{
+		string img = yyjson_get_str(yyv_img);
+
+		string& data = img;
+		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
+		size_t startPos = 0;
+		if (data.find("data:") == 0) {
+			startPos = data.find(",");
+			if (startPos == string::npos) {
+				yyjson_doc_free(doc);
+				return;
+			}
+
+			startPos += 1;
+		}
+
+		size_t buffLen = data.length() * 2;
+		unsigned char* out = new unsigned char[buffLen];
+		memset(out, 0, buffLen);
+		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
+		saveImageFile(tag, t, (char*)out, outLen);
+		delete[] out;
+	}
+	else if (yyv_info)
+	{
+		string info = yyjson_get_str(yyv_info);
+		saveImageInfo(tag, t, info);
+	}
+	
 	yyjson_doc_free(doc);
 }
 

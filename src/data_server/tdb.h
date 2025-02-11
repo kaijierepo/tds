@@ -699,8 +699,7 @@ public:
 	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
-	void rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
-	void rpc_db_saveImageInfo(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_getBufferStatus(string& rlt, string& err);
 	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
