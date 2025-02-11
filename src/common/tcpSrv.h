@@ -8,8 +8,8 @@
 
 using namespace std;
 
-//为了方便linux和win兼容，sock句柄win下SOCKET类型，linux下为int类型，统一使用 int 来存放 
-//64位win下SOCKET是8字节，但是是安全的
+//for compatialble with linux and win,sock in win is SOCKET ,int linux is int ,use int for both 
+//64win SOCKET is 8 bytes,but is safe
 /*
  * Even though sizeof(SOCKET) is 8, it's safe to cast it to int, because
  * the value constitutes an index in per-process table of limited size
@@ -32,7 +32,7 @@ struct tcpSession
 	void* pTcpServer;  
 	void* pALSession; 
 	int bridgeSock;  
-	bool bEnableActivityCheck; //是否进行活动检测
+	bool bEnableActivityCheck; 
 
 	bool bEnable;
 

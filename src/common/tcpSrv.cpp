@@ -88,7 +88,7 @@ void tcpSrv::disconnect(string remoteAddr)
 	{
 		for (auto& i : m_mapTcpSessions)
 		{
-			//目前tcpServer统一使用mongoose的 poll模型。poll模型closesocket不会触发响应,使用shutdown
+			//tcpServer use mongoose  poll mode. int poll mode ,closesocket will not trigger event,use shutdown instead
 			shutdown(i.second->sock,SHUT_DOWN_BOTH);
 			i.second->sock = 0;
 		}
@@ -111,19 +111,18 @@ void tcpSrv::disconnect(string remoteAddr)
 
 bool tcpSession::send(char* pData, size_t iLen)
 {
-	//socket是阻塞式socket，当socket发送缓冲区满时，该函数会阻塞；在发送大数据时会出现阻塞状态
+	//socket is blocking socket ,when socket is full in send buffer,this function will block
+	//could be block when send big size data
 	if (iLen == 0) 
 		return false;
 	if (sock == 0)
 		return false;
 
-	//调用mg_send，必须在mongoose的回调中调用，才能立即发送
-	//如果异步调用mg_send,poll函数不会返回，必须等到poll函数timeout才能发送出去
+	//call mg_send, must be in mongoose call, then will send immediatly
+	//if call mg_send in other threads,poll will not return,untill poll timeout,then data is send
 	//mg_connection* mgc = (mg_connection*)pData1;
 	//int iRet = mg_send(mgc, pData, iLen);
-
 	int iRet = ::send(sock, pData, iLen, 0);
-
 	if (iRet <=0)
 	{
 		/*
@@ -131,7 +130,7 @@ bool tcpSession::send(char* pData, size_t iLen)
 		string strError;
 		if (iErr == WSAETIMEDOUT)
 		{
-			strError = "timeout";//客户端不接受数据或者接受处理缓慢可能导致此问题
+			strError = "timeout";//when client do not recv data or recv too slow
 		}
 		else if (iErr == WSAENOTSOCK)
 		{
@@ -168,11 +167,8 @@ bool tcpSession::send(char* pData, size_t iLen)
 bool tcpSrv::SendData(char* pData, size_t iLen, string remoteIP)
 {
 	bool bRet = false;
-
 	std::unique_lock<mutex> lock(m_csClientVectorLock);
-
 	std::map<tcpSession*,tcpSession*>::iterator iter = m_mapTcpSessions.begin();
-	//所有该ip的客户端都发送，一个ip有两个连接，发送给了僵尸连接却没有发送给正常连接
 	for (; iter != m_mapTcpSessions.end(); ++iter)
 	{
 		if (iter->second->remoteIP == remoteIP)
@@ -180,11 +176,10 @@ bool tcpSrv::SendData(char* pData, size_t iLen, string remoteIP)
 			bRet = iter->second->send(pData,iLen);
 		}
 	}
-
 	return bRet;
 }
 
-//广播发送
+
 bool tcpSrv::SendData(char* pData, size_t iLen)
 {
 	std::unique_lock<mutex> lock(m_csClientVectorLock);
@@ -197,7 +192,6 @@ bool tcpSrv::SendData(char* pData, size_t iLen)
 }
 
 
-/*构造函数*/
 void tcpSrv::Log(char* sz)
 {
 	if (pLog)

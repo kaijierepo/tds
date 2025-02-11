@@ -247,8 +247,8 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, str
 
 void tcpClt::stop()
 {
-	m_bRun = false; //触发重连线程退出
-	DisConnect();   //触发接收线程退出。
+	m_bRun = false; 
+	DisConnect();  
 	while (1) {
 #ifdef _WIN32
 		timeopt::sleepMilli(1);
@@ -288,19 +288,16 @@ bool tcpClt::connect()
 	m_bIsConnectting = true;
 	bool ret = false;
 
-	//将域名解析成ip地址
 	hptr = gethostbyname(m_remoteIP.c_str());
 	if (hptr == NULL || hptr->h_addr == NULL) {
-		m_strErrorInfo = "无法解析该域名的解析" + m_remoteIP;
+		m_strErrorInfo = "can not resolve addr " + m_remoteIP;
 		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 		goto CONN_END;
 	}
 
-
 	sockClient=socket(AF_INET,SOCK_STREAM,0);
 	SetHandleInformation((HANDLE)sockClient, HANDLE_FLAG_INHERIT, 0);
 
-	//如果设置了本地地址端口，绑定本地地址端口
 	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0)
 	{
 		sockaddr_in sAddTemp;
@@ -309,13 +306,12 @@ bool tcpClt::connect()
 		sAddTemp.sin_port = htons(m_iLocalPort);
 		if(-1 == ::bind(sockClient, (sockaddr*)&sAddTemp,sizeof(sockaddr)))
 		{
-			m_strErrorInfo = "绑定IP失败";
+			m_strErrorInfo = "bind ip fail";
 			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 			goto CONN_END;
 		}
 	}
 
-	//连接远端服务器
 	sockaddr_in addrSrv;
 	memcpy(&addrSrv.sin_addr.s_addr, hptr->h_addr_list[0], hptr->h_length);
 	addrSrv.sin_family=AF_INET;
@@ -326,12 +322,12 @@ bool tcpClt::connect()
 
 	if(nConnect == -1)
 	{
-		m_strErrorInfo = "连接失败:" + sys::getLastError();
+		m_strErrorInfo = "connect fail:" + sys::getLastError();
 		m_bIsConnectting = false;
 		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 	}
 	else {
-		//在创建TcpClientRecvThread之前设置m_bConn为true,因为TcpClientRecvThread中回调statucChange的时候可能会读取该变量
+		//set m_bConn to true before TcpClientRecvThread created,when TcpClientRecvThread callback statucChange,will read this variable
 		m_bConn = true;
 		ret = true;
 		lastConnTime = timeopt::nowStr();
@@ -384,7 +380,7 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 	if(iRet <= 0)
 	{
 #ifdef _WIN32
-	closesocket(sockClient); //没有连接成功也需要closesocket，释放资源
+	closesocket(sockClient); 
 #else
 	close(sockClient);
 #endif

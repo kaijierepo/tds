@@ -6,16 +6,15 @@
 
 using namespace std;
 
-//连接信息
 class tcpClt;
 class TDS_SESSION;
 struct tcpSessionClt
 {
 	int sock;
-	std::string remoteIP;//对端ip
-	int remotePort;//对端端口
-	std::string localIP;//对端ip
-	int localPort;//对端端口
+	std::string remoteIP;
+	int remotePort;
+	std::string localIP;
+	int localPort;
 	std::shared_ptr<TDS_SESSION> pALSession;
 	tcpClt* pTcpClt;
 	int bridgeSock;
