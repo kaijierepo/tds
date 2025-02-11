@@ -700,6 +700,7 @@ public:
 	void rpc_db_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
 	void rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_saveImageInfo(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_getBufferStatus(string& rlt, string& err);
 	void rpc_db_setConf(string& sParams, string& rlt, string& err);
 
@@ -724,7 +725,9 @@ public:
 
 	//save main image data such as 123000.image.jpg,data list will not be modified 
 	bool saveImageFile(string tag, DB_TIME stTime, char* pData,size_t len);
-	bool saveImageFile(string tag, DB_TIME stTime,string& imgBase64); 
+	bool saveImageFile(string tag, DB_TIME stTime,string& imgBase64);
+	bool saveImageInfo(string tag, DB_TIME stTime, string& imgInfo);
+	bool saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo);
 
 	bool Delete(string tag, DB_TIME stTime);
 

@@ -836,6 +836,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			string s = params.dump();
 			db.rpc_db_saveImageFile(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
+		else if (method == "db.saveImageInfo")
+		{
+			string s = params.dump();
+			db.rpc_db_saveImageInfo(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+		}
 		else if (method == "db.setConf")
 		{
 			string s = params.dump();

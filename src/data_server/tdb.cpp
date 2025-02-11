@@ -536,6 +536,27 @@ namespace DB_FS {
 	{
 		return writeFile(path, (char*)data, len);
 	}
+	bool appendWrite(string path, char* data, size_t len)
+	{
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"a");
+#else
+		fp = fopen(path.c_str(), "wb");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+	}
+		else
+		{
+
+		}
+		return false;
+	}
 	bool deleteFile(string path) {
 #ifdef _WIN32
 		std::wstring filePath = DB_STR::utf8_to_utf16(path);
@@ -1051,6 +1072,9 @@ string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
 	}
 	else if (deType == "image") {
 		return folder + "/" + date.toStampHMS() + ".image.jpg";
+	}
+	else if (deType == "imageInfo") {
+		return folder + "/" + date.toStampHMS() + ".imageInfo.json";
 	}
 	else {
 		return folder + "/" + m_dbFmt.deListName;
@@ -4500,6 +4524,36 @@ void TDB::rpc_db_saveImageFile(string& sParams, string& rlt, string& err, string
 	yyjson_doc_free(doc);
 }
 
+void TDB::rpc_db_saveImageInfo(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
+{
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+	if (yyv_tag == nullptr) {
+		err = JSON_STR_VAL("tag must be specified");
+		return;
+	}
+	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
+	if (yyv_time == nullptr) {
+		err = JSON_STR_VAL("time must be specified");
+		return;
+	}
+	yyjson_val* yyv_infoData = yyjson_obj_get(yyv_params, "infoData");
+	if (yyv_infoData == nullptr) {
+		err = JSON_STR_VAL("img must be specified");
+		return;
+	}
+
+	string tag = yyjson_get_str(yyv_tag);
+	string time = yyjson_get_str(yyv_time);
+	string infoData = yyjson_get_str(yyv_infoData);
+
+	DB_TIME t;
+	t.fromStr(time);
+	saveImageInfo(tag, t, infoData);
+	yyjson_doc_free(doc);
+}
+
 void TDB::rpc_db_getBufferStatus(string& rlt, string& err) {
 	m_FsBuff.m_csFsb.lock();
 	size_t fileCount = m_FsBuff.m_mapFsBuff.size();
@@ -4838,16 +4892,29 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 
 bool TDB::saveImageFile(string tag, DB_TIME stTime, char* pData, size_t len)
 {
-	string path = getPath_dbFile(tag, stTime, "image");
-	bool ret = DB_FS::writeFile(path, pData, len);
-	return ret;
+	string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
+	//judge xxxxxx.imageInfo.jpg file exist
+	//exist		--> save jjpg = jpg + string + string.size + "jjpg"
+	//not exist --> save jpg
+	if (fileExist(imageInfoPath))
+	{
+		string imageInfo;
+		DB_FS::readFile(imageInfoPath, imageInfo);
+		bool ret = saveImage(tag, stTime, pData, len, imageInfo);
+		if (ret) { DB_FS::deleteFile(imageInfo); }
+		return ret;
+	}
+	else
+	{
+		string path = getPath_dbFile(tag, stTime, "image");
+		bool ret = DB_FS::writeFile(path, pData, len);
+		return ret;
+	}
 }
 
 bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 {
 	string& data = imgBase64;
-	string path = getPath_dbFile(tag, stTime, "image");
-
 	//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 	size_t startPos = 0;
 	if (data.find("data:") == 0) {
@@ -4863,9 +4930,51 @@ bool TDB::saveImageFile(string tag, DB_TIME stTime, string& imgBase64)
 	unsigned char* out = new unsigned char[buffLen];
 	memset(out, 0, buffLen);
 	int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-
-	bool ret = DB_FS::writeFile(path, out, outLen);
+	bool ret = saveImageFile(tag, stTime, (char*)out, outLen);
 	delete[] out;
+	return ret;
+}
+
+bool TDB::saveImageInfo(string tag, DB_TIME stTime, string& imgInfo)
+{
+	string imagePath = getPath_dbFile(tag, stTime, "image");
+	//judge xxxxxx.image.jpg file exist
+	//exist		--> add to the end of the image file
+	//not exist --> save to xxxxxx.imageInfo.json
+	if (fileExist(imagePath))
+	{
+		size_t imgInfoSize = imgInfo.size();
+		size_t buffLen = imgInfo.size() + 4 + 4;
+		char* buff = new char[buffLen];
+		memcpy(buff, imgInfo.c_str(), imgInfoSize);
+		memcpy(buff + imgInfoSize, &imgInfoSize, 4);
+		memcpy(buff + imgInfoSize + 4, "jjpg", 4);
+		bool ret = DB_FS::appendWrite(imagePath, buff, buffLen);
+		delete[] buff;
+		return ret;
+	}
+	else
+	{
+		string imageInfoPath = getPath_dbFile(tag, stTime, "imageInfo");
+		bool ret = DB_FS::writeFile(imageInfoPath, (char*)imgInfo.c_str(), imgInfo.size());
+		return ret;
+	}
+}
+
+
+bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo)
+{
+	//jjpg = jpg + string + string.size + "jjpg"
+	string path = getPath_dbFile(tag, stTime, "image");
+	size_t imgInfoSize = imgInfo.size();
+	size_t buffLen = len + imgInfo.size() + 4 + 4;
+	char* buff = new char[buffLen];
+	memcpy(buff, pData, len);
+	memcpy(buff + len, imgInfo.c_str(), imgInfoSize);
+	memcpy(buff + len + imgInfoSize, &imgInfoSize, 4);
+	memcpy(buff + len + imgInfoSize + 4, "jjpg", 4);
+	bool ret = DB_FS::writeFile(path, buff, buffLen);
+	delete[] buff;
 	return ret;
 }
 
