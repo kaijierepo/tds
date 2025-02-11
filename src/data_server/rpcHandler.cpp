@@ -4,7 +4,7 @@
 #include "prj.h"
 #include "tAlmSrv.h"
 #include "mp.h"
-#include  "reverseInterface.h"
+#include "tSockSrv.h"
 #include "logger.h"
 #include "tdb.h"
 #include <json.hpp>
@@ -740,7 +740,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		else if (method == "keepStream") {
 			TIME st;
 			timeopt::now(&st);
-			reverseInterface.m_mapPullerActive[tag] = st;
+			sockSrv.m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "closeStream") {
@@ -2750,7 +2750,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = rpc_getTopoList(params, rpcResp.error, session);
 	}
 	else if (method == "startStreamPush" || method == "startPushStream") {
-		reverseInterface.rpc_startStreamPush(params, rpcResp, session);
+		sockSrv.rpc_startStreamPush(params, rpcResp, session);
 	}
 	else if (method == "getVerifyCode") {
 		string phoneNum = params["phoneNum"];
@@ -6112,7 +6112,7 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	WebServer::notifyAllSrvAllWs(notify);
-	reverseInterface.sendToAllSessions(notify, specialNotify);
+	sockSrv.sendToAllSessions(notify, specialNotify);
 }
 
 

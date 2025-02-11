@@ -11,7 +11,7 @@ ReverseInterface
 #include "udpSrv.h"
 
 
-class ReverseInterface : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
+class tSockSrv : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
 {
 public:
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
@@ -24,8 +24,8 @@ public:
 public:
 	bool run();
 	void stop();
-	ReverseInterface();
-	virtual ~ReverseInterface();
+	tSockSrv();
+	virtual ~tSockSrv();
 
 	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
 
@@ -54,4 +54,4 @@ public:
 };
 
 
-extern ReverseInterface reverseInterface;
+extern tSockSrv sockSrv;

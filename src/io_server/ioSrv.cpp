@@ -7,7 +7,7 @@
 #include "logger.h"
 #include "ioChan.h"
 #include "rpcHandler.h"
-#include  "reverseInterface.h"
+#include "tSockSrv.h"
 #include "httplib.h"
 #include "ioDev_tdsp.h"
 #include "ioDev_dcqk.h"

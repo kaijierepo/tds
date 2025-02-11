@@ -1,5 +1,5 @@
 #include "pch.h"
-#include  "reverseInterface.h"
+#include "tSockSrv.h"
 #include "logger.h"
 #include "prj.h"
 #include "mp.h"
@@ -11,18 +11,18 @@
 #include "userMng.h"
 #include "ioChan.h"
 
-ReverseInterface reverseInterface;
+tSockSrv sockSrv;
 
-ReverseInterface::ReverseInterface()
+tSockSrv::tSockSrv()
 {
 }
 
-ReverseInterface::~ReverseInterface()
+tSockSrv::~tSockSrv()
 {
 	stop();
 }
 
-void ReverseInterface::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
+void tSockSrv::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	if (params["srcTag"] == nullptr) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param srcTag missing");
@@ -74,7 +74,7 @@ void ReverseInterface::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESS
 	}
 }
 
-void ReverseInterface::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
+void tSockSrv::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
 {
 	json jReg;
 	jReg["method"] = "devRegister";
@@ -88,7 +88,7 @@ void ReverseInterface::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
 	p->sendStr(s);
 }
 
-void ReverseInterface::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p,string tag)
+void tSockSrv::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p,string tag)
 {
 	json jReg;
 	jReg["method"] = "devRegister";
@@ -100,7 +100,7 @@ void ReverseInterface::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p,str
 	p->sendStr(s);
 }
 
-void ReverseInterface::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
+void tSockSrv::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 {
 	if (bIsConn)
 	{
@@ -137,7 +137,7 @@ void deleteTcpClt(tcpClt* p) {
 	delete p;
 }
 
-void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
+void tSockSrv::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 {
 	std::shared_ptr<TDS_SESSION> p = pTcpSess->pALSession;
 	if (bIsConn)
@@ -177,7 +177,7 @@ void ReverseInterface::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn
 	}
 }
 
-void ReverseInterface::onTcpCltEvent_error(tcpClt* pClt, string error)
+void tSockSrv::onTcpCltEvent_error(tcpClt* pClt, string error)
 {
 	LOG("[warn]Tcp客户端,remoteAddr=%s:%d,错误事件,%s",pClt->m_remoteIP.c_str(),pClt->m_remotePort,error.c_str());
 }
@@ -188,7 +188,7 @@ void streamPusherMng_thread() {
 		timeopt::sleepMilli(2000);
 		vector<string> toErase;
 		prj.m_csPrj.lock_shared();
-		for (auto i : reverseInterface.m_mapPullerActive) {
+		for (auto i : sockSrv.m_mapPullerActive) {
 			TIME st = i.second;
 			if (timeopt::CalcTimePassSecond(st) > 5) {
 				MP* pmp = prj.GetMPByTag(i.first,"zh");
@@ -207,12 +207,12 @@ void streamPusherMng_thread() {
 		prj.m_csPrj.unlock_shared();
 
 		for (int i = 0; i < toErase.size(); i++) {
-			reverseInterface.m_mapPullerActive.erase(toErase[i]);
+			sockSrv.m_mapPullerActive.erase(toErase[i]);
 		}
 	}
 }
 
-bool ReverseInterface::run()
+bool tSockSrv::run()
 {
 	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
 	string childTdsIP = tds->conf->getStr("childTdsIP", "");
@@ -265,7 +265,7 @@ bool ReverseInterface::run()
 	return false;
 }
 
-void ReverseInterface::stop()
+void tSockSrv::stop()
 {
 	LOG("[keyinfo]正在停止数据服务DataServer...");
 	LOG("[keyinfo]数据服务已停止");
@@ -316,12 +316,12 @@ void tdsSessionProcessThread(std::shared_ptr<TDS_SESSION> tdsSession)
 		tdsSession->m_mutexTcpBuff.unlock();
 
 		//执行任务
-		reverseInterface.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
+		sockSrv.OnRecvData_TCP(tdb.pData, tdb.iLen, tdsSession);
 		delete tdb.pData;
 	}
 }
 
-void ReverseInterface::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
+void tSockSrv::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<TDS_SESSION> tdsSession = m_reverseTdsSessions[pTcpSess];
@@ -329,7 +329,7 @@ void ReverseInterface::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, t
 	OnRecvData_TCP((char*)pData, iLen, tdsSession);
 }
 
-void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)
+void tSockSrv::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)
 {
 	if (pTcpSess->pALSession) {
 		std::shared_ptr<TDS_SESSION> p = pTcpSess->pALSession;
@@ -337,7 +337,7 @@ void ReverseInterface::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, t
 	}
 }
 
-void ReverseInterface::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
+void tSockSrv::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
 	string req;
 	str::fromBuff(recvData, recvDataLen,req);
@@ -353,7 +353,7 @@ void ReverseInterface::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen
 
 
 
-void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void tSockSrv::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	timeopt::now(&tdsSession->lastRecvTime);
 	stream2pkt& tlBuf = tdsSession->m_tlBuf;
@@ -370,7 +370,7 @@ void ReverseInterface::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<
 
 
 
-void ReverseInterface::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify)
+void tSockSrv::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify)
 {
 	m_mutexSessions.lock();
 	for (auto& i : m_reverseTdsSessions) {
@@ -388,7 +388,7 @@ void ReverseInterface::sendToAllSessions(unsigned char* pData, size_t len, bool 
 	m_mutexSessions.unlock();
 }
 
-void ReverseInterface::sendToAllSessions(string& s, bool specialNotify)
+void tSockSrv::sendToAllSessions(string& s, bool specialNotify)
 {
 	sendToAllSessions((unsigned char*)s.c_str(), s.length(), specialNotify);
 }

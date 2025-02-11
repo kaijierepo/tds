@@ -78,7 +78,7 @@
     <ClCompile Include="..\src\data_server\prj.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\reverseInterface.cpp">
+    <ClCompile Include="..\src\data_server\tSockSrv.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\rpcHandler.cpp">
@@ -310,7 +310,7 @@
     <ClInclude Include="..\src\data_server\prj.h">
       <Filter>data_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\reverseInterface.h">
+    <ClInclude Include="..\src\data_server\tSockSrv.h">
       <Filter>data_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\rpcHandler.h">
