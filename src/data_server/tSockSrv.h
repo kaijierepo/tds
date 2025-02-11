@@ -27,8 +27,6 @@ public:
 	tSockSrv();
 	virtual ~tSockSrv();
 
-	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
-
 	void sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p);
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 

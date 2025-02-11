@@ -22,58 +22,6 @@ tSockSrv::~tSockSrv()
 	stop();
 }
 
-void tSockSrv::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
-{
-	if (params["srcTag"] == nullptr) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param srcTag missing");
-		return;
-	}
-	if (params["destTag"] == nullptr) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param destTag missing");
-		return;
-	}
-	if (!params["port"].is_number_integer()) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param port error");
-		return;
-	}
-	string srcTag = params["srcTag"];
-	string destTag = params["destTag"];
-	int port = params["port"].get<int>();
-
-	ioChannel* pChan = ioSrv.getChanByTag(srcTag);
-	if (pChan == nullptr) {
-		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "channel bind specified tag not found");
-		return;
-	}
-
-	tcpClt* pClt = new tcpClt();
-	if (pClt->connect(this, session.remoteIP, port)) {
-
-		tcpSessionClt* pTcpSess = &pClt->m_session;
-
-		//创建TDS Session
-		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
-		pTcpSess->pALSession = p;
-		p->name = "数据流推流客户端";
-		p->type = TDS_SESSION_TYPE::dataStream;
-
-		//相对于本地io通道来说是拉流
-		pChan->m_csStreamPuller.lock();
-		pChan->m_vecStreamPuller.push_back(p);
-		pChan->m_csStreamPuller.unlock();
-
-		LOG("[数据流   ]  推流服务连接成功,服务地址:%s:%d,源位号:%s,目标位号:%s", session.remoteIP.c_str(), port,srcTag.c_str(),destTag.c_str());
-		sendStreamPusherRegPkt(p, destTag);
-
-		resp.result = RPC_OK;
-		m_tcpClt_streamPusher[pClt] = pClt;
-	}
-	else {
-		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "connect fail");
-		delete pClt;
-	}
-}
-
 void tSockSrv::sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p)
 {
 	json jReg;

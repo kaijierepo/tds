@@ -105,6 +105,8 @@ public:
 
 	void rpc_onObjOnline(json params, RPC_SESSION session);
 	void rpc_onObjOffline(json params, RPC_SESSION session);
+	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
+
 	//genicam steam function
 #ifdef ENABLE_GENICAM
 	string rpc_getStreamInfo(json params, string& error);
