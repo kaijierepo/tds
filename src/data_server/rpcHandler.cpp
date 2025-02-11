@@ -740,7 +740,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		else if (method == "keepStream") {
 			TIME st;
 			timeopt::now(&st);
-			sockSrv.m_mapPullerActive[tag] = st;
+			m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
 		}
 		else if (method == "closeStream") {
@@ -3639,6 +3639,24 @@ void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession,
 	pSession->send((unsigned char*)resp.strResp.data(), resp.strResp.length(), false);
 }
 
+void thread_handleSockSrvRpcCallAsyn(string req, std::shared_ptr<SOCK_SESSION> ss) {
+	RPC_RESP resp;
+	std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
+	p->Init();
+	p->bConnected = true;
+	p->sock = p->sock;
+	p->remotePort = ss->remotePort;
+	p->remoteIP = ss->remoteIP;
+	rpcSrv.handleRpcCall(req, resp, p);
+	resp.strResp += "\n\n";
+	sockSrv.sendToSockSession(ss,(unsigned char*) resp.strResp.c_str(), resp.strResp.length());
+}
+
+void onSockSrvCallback(char* p, size_t l, std::shared_ptr<SOCK_SESSION> sockSess) {
+	string req = str::fromBuff((char*)p,l);
+	thread t(thread_handleSockSrvRpcCallAsyn, req, sockSess);
+	t.detach();
+}
 
 void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
@@ -6147,7 +6165,7 @@ void rpcHandler::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION se
 		pChan->m_csStreamPuller.unlock();
 
 		LOG("[数据流   ]  推流服务连接成功,服务地址:%s:%d,源位号:%s,目标位号:%s", session.remoteIP.c_str(), port, srcTag.c_str(), destTag.c_str());
-		sockSrv.sendStreamPusherRegPkt(p, destTag);
+		sendStreamPusherRegPkt(p, destTag);
 
 		resp.result = RPC_OK;
 		sockSrv.m_tcpClt_streamPusher[pClt] = pClt;
@@ -6156,6 +6174,33 @@ void rpcHandler::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION se
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "connect fail");
 		delete pClt;
 	}
+}
+
+
+string rpcHandler::getChildTdsRegPkt()
+{
+	json jReg;
+	jReg["method"] = "devRegister";
+	json jParams;
+	jParams["devType"] = "childTds";
+	jParams["httpPort"] = tds->conf->httpPort;
+	jParams["httpsPort"] = tds->conf->httpsPort;
+	jReg["params"] = jParams;
+	jReg["addr"] = prj.m_name;
+	string s = jReg.dump() + "\n\n";
+	return s;
+}
+
+void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag)
+{
+	json jReg;
+	jReg["method"] = "devRegister";
+	json jParams;
+	jParams["devType"] = "streamPusher";
+	jParams["tag"] = tag;
+	jReg["params"] = jParams;
+	string s = jReg.dump() + "\n\n";
+	p->sendStr(s);
 }
 
 void rpcHandler::notify(string method, json params, bool specialNotify,std::shared_ptr<TDS_SESSION> orgSession)
@@ -6191,4 +6236,34 @@ bool haveNode(string link, string node)
 	}
 
 	return false;
+}
+
+
+void streamPusherMng_thread() {
+	while (1) {
+		timeopt::sleepMilli(2000);
+		vector<string> toErase;
+		prj.m_csPrj.lock_shared();
+		for (auto i : rpcSrv.m_mapPullerActive) {
+			TIME st = i.second;
+			if (timeopt::CalcTimePassSecond(st) > 5) {
+				MP* pmp = prj.GetMPByTag(i.first, "zh");
+				string src = "?";
+				string status = "";
+				if (pmp) {
+
+				}
+				else {
+					status = "位号未找到";
+				}
+				LOG("[流媒体]5秒没有活动的媒体客户端，断开媒体源，tag=%s,src=%s,status=%s", i.first.c_str(), src.c_str(), status.c_str());
+				toErase.push_back(i.first);
+			}
+		}
+		prj.m_csPrj.unlock_shared();
+
+		for (int i = 0; i < toErase.size(); i++) {
+			rpcSrv.m_mapPullerActive.erase(toErase[i]);
+		}
+	}
 }

@@ -5,6 +5,7 @@ rpc handler
 #include "tdb.h"
 #include "tdsSession.h"
 #include "obj.h"
+#include "tSockSrv.h"
 
 struct Mo_Attr_Params {
 	json renameMap;
@@ -107,6 +108,10 @@ public:
 	void rpc_onObjOffline(json params, RPC_SESSION session);
 	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
 
+	string getChildTdsRegPkt();
+
+	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
+
 	//genicam steam function
 #ifdef ENABLE_GENICAM
 	string rpc_getStreamInfo(json params, string& error);
@@ -152,9 +157,10 @@ public:
 	void statisCall(string method);
 
 	std::map<string, string> m_mapDisableMethod;
+	map<string, TIME> m_mapPullerActive;
 };
 extern rpcHandler rpcSrv;
 
 void jsonToList(json & data, vector<double>& p);
 float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur);
-
+void onSockSrvCallback(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);

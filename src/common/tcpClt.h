@@ -58,7 +58,6 @@ public:
 	tcpClt(void);
 	~tcpClt(void);
 
-	//指定服务器运行，断线自动重连
 	bool run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
 	void stop();
 
@@ -89,7 +88,7 @@ public:
 	bool m_bConn;
 	bool m_bRun;
 	int m_keepAliveTimeout;
-	string lastConnTime; //上一次尝试重连的时间
+	string lastConnTime;
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
 	ITcpClientCallBack* m_pCallBackUser;

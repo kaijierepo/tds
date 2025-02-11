@@ -1,54 +1,84 @@
-/*
-ReverseInterface
-以主动连接 数据客户端的方式提供服务，包含以下几种情况
-
-1.作为下级服务主动连接上级服务
-2.作为推流器对外推流
-
-*/
 #pragma once
-#include "tdsSession.h"
+#include <string>
 #include "udpSrv.h"
+#include "tcpSrv.h"
+#include "tcpClt.h"
+#include "stream2pkt.h"
+
+enum SOCK_CONN_TYPE {
+	UDP_SOCK,
+	TCP_SOCK
+};
+
+struct SOCK_SESSION {
+	int sock;
+	string remoteIP;
+	int remotePort;
+	string localIP;
+	int localPort;
+	SOCK_CONN_TYPE type;
+	stream2pkt recvBuff;
+
+	SOCK_SESSION(tcpSessionClt* p) {
+		sock = p->sock;
+		remoteIP = p->remoteIP;
+		remotePort = p->remotePort;
+		localIP = p->localIP;
+		localPort = p->localPort;
+		type = TCP_SOCK;
+	}
+
+	SOCK_SESSION(tcpSession* p) {
+		sock = p->sock;
+		remoteIP = p->remoteIP;
+		remotePort = p->remotePort;
+		localIP = p->localIP;
+		localPort = p->localPort;
+		type = TCP_SOCK;
+	}
+};
+
+
+typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);
 
 
 class tSockSrv : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
 {
 public:
-	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
-	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
-	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
-	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
-	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
-	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
-public:
 	bool run();
 	void stop();
 	tSockSrv();
 	virtual ~tSockSrv();
-
-	void sendChildTdsRegPkt(std::shared_ptr<TDS_SESSION> p);
-	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
-
-	udpServer m_udpSrv;
-	tcpSrv m_tcpSrv;
-	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //作为子服务连接上级服务的客户端
-
-	mutex m_csTcpClt_streamPusher;
-	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher; //推流
-
+	bool sendToSockSession(std::shared_ptr<SOCK_SESSION> sockSession,unsigned char* pData, size_t len);
 	void sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify = false);
-	void sendToAllSessions(string& s,bool specialNotify = false);
-	//应用层会话
-	map<void*,std::shared_ptr<TDS_SESSION>> m_reverseTdsSessions;
+	void sendToAllSessions(string& s, bool specialNotify = false);
+	map<int, std::shared_ptr<SOCK_SESSION>> m_sockSessions;
 	mutex m_mutexSessions;
+	sockSessionRecvCallback m_pCallback;
 
-	//级联功能
+public:
+	//tcp client 
+	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
+	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
+	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //client as child service
+	string m_tcpClientRegPkt;
+	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher;	//data steam pusher
+	mutex m_csTcpClt_streamPusher;
 	string m_masterTdsIP;
 	int m_masterTdsPort;
 
-	//zlm的码流管理
-	map<string, TIME> m_mapPullerActive;
+	//tcp server 
+	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
+	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	tcpSrv m_tcpSrv;
+
+	//udp server
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
+	udpServer m_udpSrv;
+
+public:
+	void OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> ss);
 };
 
 
