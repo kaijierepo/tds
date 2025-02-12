@@ -58,7 +58,7 @@ struct SOCK_SRV_CONF {
 };
 
 
-class tSockSrv : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
+class tSockSrv : public ICallback_tcpSrv,public ICallback_tcpClt,public ICallback_udpSrv
 {
 public:
 	bool run(SOCK_SRV_CONF& conf);
@@ -75,7 +75,7 @@ public:
 	SOCK_SRV_CONF m_conf;
 public:
 	//tcp client 
-	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
 	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
 	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //client as child service
@@ -86,7 +86,7 @@ public:
 
 	//tcp server 
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
-	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	tcpSrv m_tcpSrv;
 
 	//udp server

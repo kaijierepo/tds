@@ -193,7 +193,7 @@ void tcp2com::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
-void tcp2com::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
+void tcp2com::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
 {
 	serial->sendData(pData, iLen);
 	string log;
@@ -222,7 +222,7 @@ void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	}
 }
 
-void tcp2com::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
+void tcp2com::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
 {
 	serial->sendData(pData, iLen);
 	string log;

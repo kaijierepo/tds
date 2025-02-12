@@ -7,7 +7,7 @@
 #define FOOD_PLATE_PORT 651
 #define FOOD_FEEDER_PORT  652
 
-class tdsWatchDog : public IUdpServerCallBack
+class tdsWatchDog : public ICallback_udpSrv
 {
 public:
 	tdsWatchDog();

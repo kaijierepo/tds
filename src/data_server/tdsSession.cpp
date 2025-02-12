@@ -227,7 +227,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
  {
  }
 
- void TDS_SESSION::CBridgedTcpClientHandler::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
+ void TDS_SESSION::CBridgedTcpClientHandler::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
  {
      pTdsSession->send(pData, iLen);
  }

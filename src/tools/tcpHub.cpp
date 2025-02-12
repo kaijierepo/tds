@@ -146,7 +146,7 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
-void tcpHub::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
+void tcpHub::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
 {
 	if (pCltInfo->pTcpServer == &sLeft)
 	{
@@ -197,7 +197,7 @@ void tcpHub::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	}
 }
 
-void tcpHub::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
+void tcpHub::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
 {
 	if (connInfo->pTcpClt == &cLeft)
 	{

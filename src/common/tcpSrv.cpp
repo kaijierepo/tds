@@ -49,7 +49,7 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		if (ev_data) {
 			tcpSession* ptcp = (tcpSession*)c->fn_data;
 			ptcp->iRecvCount += c->recv.len;
-			pSrv->m_pCallBackUser->OnRecvData_TCPServer(c->recv.buf, c->recv.len, ptcp);
+			pSrv->m_pCallBackUser->onRecvData_tcpSrv(c->recv.buf, c->recv.len, ptcp);
 		}
 		mg_iobuf_del(&c->recv, 0, c->recv.len);   // And discard it
 	}
@@ -94,7 +94,7 @@ void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
 	mg_mgr_free(&pSrv->mgr);                                // Cleanup
 }
 
-bool tcpSrv::run(ITcpServerCallBack* pUser, int port, string strLocalIP /*= ""*/)
+bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/)
 {
 	m_strServerIP = strLocalIP;
 	m_iServerPort = port;

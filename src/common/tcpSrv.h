@@ -76,10 +76,10 @@ struct tcpSession
 	bool send(char* pData, size_t iLen);
 };
 
-class ITcpServerCallBack {
+class ICallback_tcpSrv {
 public:
 	virtual void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) = 0;
-	virtual void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
+	virtual void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) = 0;
 };
 
 typedef void (*fp_statisSend)(int port, size_t len);
@@ -88,14 +88,14 @@ typedef void (*fp_statisSend)(int port, size_t len);
 
 class tcpSrv  {
 public:
-	bool run(ITcpServerCallBack* pUser, int port, string strLocalIP = "");
+	bool run(ICallback_tcpSrv* pUser, int port, string strLocalIP = "");
 	void stop();
 
 	void disconnect(string remoteAddr);
 
 	bool SendData(char* pData, size_t iLen, string remoteIP);
 	bool SendData(char* pData, size_t iLen);
-	ITcpServerCallBack* m_pCallBackUser;
+	ICallback_tcpSrv* m_pCallBackUser;
 
 	std::map<tcpSession*, tcpSession*> m_mapTcpSessions;
 	std::mutex m_csClientVectorLock;

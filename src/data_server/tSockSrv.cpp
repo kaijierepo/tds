@@ -4,7 +4,7 @@
 
 #ifdef TDS
 #include "logger.h"
-#elif
+#else
 namespace sockServer {
 	void LOG(const char* pszFmt, ...) {}
 }
@@ -151,7 +151,7 @@ void tSockSrv::stop()
 	LOG("[keyinfo]stopping sock server...");
 }
 
-void tSockSrv::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
+void tSockSrv::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<SOCK_SESSION> sockSess = m_sockSessions[pTcpSess->sock];
@@ -159,7 +159,7 @@ void tSockSrv::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 	OnRecvData_TCP((char*)pData, iLen, sockSess);
 }
 
-void tSockSrv::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)
+void tSockSrv::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSess)
 {
 	m_mutexSessions.lock();
 	std::shared_ptr<SOCK_SESSION> sockSess = m_sockSessions[pTcpSess->sock];

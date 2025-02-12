@@ -1426,7 +1426,7 @@ void ioDev_tdsp::onEvent_online()
 	}
 }
 
-void ioDev_tdsp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+void ioDev_tdsp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
 	if (connInfo->bEnable == false) {
 		return;

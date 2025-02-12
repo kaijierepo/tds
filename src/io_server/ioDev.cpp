@@ -277,7 +277,7 @@ bool ioDev::run()
 		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
 				m_tcpClt = new tcpClt();
-			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClient重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
+			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClt重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 		}
 		else {
@@ -615,7 +615,7 @@ bool ioDev::loadConf(json& conf)
 						if (m_tcpClt->m_remoteIP != ip || m_tcpClt->m_remotePort != port)
 						{
 							m_tcpClt->stop();
-							m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClient重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
+							m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClt重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 							LOG("[IO设备]修改地址重新启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 						}
 					}
@@ -2283,7 +2283,7 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 	return devAddr;
 }
 
-void ioDev::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+void ioDev::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
 	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
 	onRecvData(pData, len);

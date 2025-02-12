@@ -43,11 +43,11 @@ struct tcpSessionClt
 };
 
 
-class ITcpClientCallBack {
+class ICallback_tcpClt {
 public:
 	virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) = 0;
 	virtual void onTcpCltEvent_error(tcpClt* pClt,string error) {};
-	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) = 0;
+	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) = 0;
 };
 
 class tcpClt
@@ -58,17 +58,17 @@ public:
 	tcpClt(void);
 	~tcpClt(void);
 
-	bool run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
+	bool run(ICallback_tcpClt* pUser, string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
 	void stop();
 
 	tcpSessionClt m_session;
 	vector<char> heartbeat;
 
-	void AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
-	bool connect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
-	bool connect(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
+	void AsynConnect(ICallback_tcpClt* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
+	bool connect(ICallback_tcpClt* pUser,string strServIP, int iServPort, string strLocalIp = "", int iLocalPort = 0);
+	bool connect(ICallback_tcpClt* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
 
-	bool run(ITcpClientCallBack* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
+	bool run(ICallback_tcpClt* pUser, string host, string strLocalIp = "", int iLocalPort = 0);
 	
 	bool connect();
 	bool ReConnect();
@@ -91,7 +91,7 @@ public:
 	string lastConnTime;
 	bool m_bIsConnectting;
 	string m_strErrorInfo;
-	ITcpClientCallBack* m_pCallBackUser;
+	ICallback_tcpClt* m_pCallBackUser;
 	bool m_bRecvThreadRunning;
 	bool m_bConnThreadRunning;
 };

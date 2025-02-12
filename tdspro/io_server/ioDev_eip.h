@@ -97,7 +97,7 @@ public:
 	bool onRecvPkt(unsigned char* pData, size_t iLen) override;
 	bool onRecvData(unsigned char* pData, size_t iLen) override;
 
-	void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+	void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 	void onEvent_online() override;
 };
 

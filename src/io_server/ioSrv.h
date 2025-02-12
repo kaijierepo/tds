@@ -100,8 +100,8 @@ struct DEV_STATIS {
 	}
 };
 
-class ioHandler_mbRtu : public ITcpServerCallBack, public IUdpServerCallBack {
-	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+class ioHandler_mbRtu : public ICallback_tcpSrv, public ICallback_udpSrv {
+	void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
 	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 };
@@ -115,7 +115,7 @@ struct STANDALONE_IO {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
-class ioServer : public i_ioServer, public ioDev, public ITcpServerCallBack
+class ioServer : public i_ioServer, public ioDev, public ICallback_tcpSrv
 {
 public:
 	ioServer();
@@ -198,8 +198,8 @@ public:
 	//通信分层处理
 	//传输层处理
 	void OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession);
-	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
-	//void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	//void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 
 	//应用层字节流组包 与 首发包处理

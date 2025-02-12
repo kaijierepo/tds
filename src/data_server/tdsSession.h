@@ -96,10 +96,10 @@ public:
 	string bridgedLocalCom; //和本地串口桥接
 	string bridgedTcpServer; //和tcp服务器的一个连接桥接
 	tcpClt* pBridgedTcpClient;
-	class CBridgedTcpClientHandler :public ITcpClientCallBack {
+	class CBridgedTcpClientHandler :public ICallback_tcpClt {
 	public:
 		virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
-		virtual void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo);
+		virtual void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo);
 		TDS_SESSION* pTdsSession;
 	} bridgedTcpCltHandler;
 

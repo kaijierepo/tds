@@ -384,7 +384,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 	}
 }
 
-void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
+void ioServer::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
 	if (pTcpSess->bEnable == false) {
 		return;
@@ -401,7 +401,7 @@ void ioServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSessio
 	OnRecvData_TCP((unsigned char*)pData, iLen, ioSession);
 }
 
-//void ioServer::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
+//void ioServer::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* pTcpSessClt)
 //{
 //	if (pTcpSessClt->bEnable == false) {
 //		return;
@@ -2500,7 +2500,7 @@ vector<std::shared_ptr<TDS_SESSION>> ioServer::getStreamPushers(string tag)
 	return vec;
 }
 
-void ioHandler_mbRtu::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
+void ioHandler_mbRtu::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
 {
 }
 

@@ -19,14 +19,14 @@ struct HMR_SESSION {
 //当目录文件发生变化时，主动通知浏览器改变
 //暂时没有接受浏览器请求指令的机制
 //生产环境关闭该功能，因为文件改动监测需要耗费性能，在前端开发时使用
-class HMRServer : public ITcpServerCallBack {
+class HMRServer : public ICallback_tcpSrv {
 public:
 	HMRServer();
 	void watchFile_process(string dir_path);
 	void run(const std::string dir_path);
 	void websocketSend(string s, int sock);
 	void statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn) override;
-	void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) override;
+	void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess) override;
 
 	tcpSrv* m_httpHotUpdateSrv;
 	json m_jConf;

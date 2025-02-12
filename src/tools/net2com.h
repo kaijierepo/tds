@@ -19,7 +19,7 @@ struct tcp2com_Conf {
 
 };
 
-class tcp2com : public  ITcpServerCallBack ,public ITcpClientCallBack,public IUdpServerCallBack{
+class tcp2com : public  ICallback_tcpSrv ,public ICallback_tcpClt,public ICallback_udpSrv{
 public:
 	tcp2com();
 
@@ -45,10 +45,10 @@ public:
 	void run();
 
 	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
-	 void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	 void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 
 	 void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
-	 void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	 void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 
 	 void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 

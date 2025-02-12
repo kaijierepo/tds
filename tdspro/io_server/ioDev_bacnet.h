@@ -120,7 +120,7 @@ public:
 };
 
 
-class ioDev_searcher_bacnet : public IUdpServerCallBack
+class ioDev_searcher_bacnet : public ICallback_udpSrv
 {
 public:
 	ioDev_searcher_bacnet();

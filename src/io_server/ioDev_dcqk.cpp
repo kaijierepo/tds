@@ -518,7 +518,7 @@ size_t IsValidPkt_315(BYTE* pData, size_t iLen)
 	return frameLen + 16;
 }
 
-void ioDev_dcqk::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+void ioDev_dcqk::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
 	stream2pkt* pab = &m_pab;
 	pab->PushStream(pData, len);

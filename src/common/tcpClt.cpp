@@ -140,7 +140,7 @@ void TcpClientRecvThread(void* lpParam)
 #endif
 
 		pTcpClt->m_session.stLastActive = getNowStr();
-		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
+		pTcpClt->m_pCallBackUser->onRecvData_tcpClt(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
 	}
@@ -234,7 +234,7 @@ tcpClt::~tcpClt(void)
 	csAllTcpClt.unlock();
 }
 
-bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
+bool tcpClt::connect(ICallback_tcpClt* pUser, string strServIP,int iServPort,string strLocalIp,int iLocalPort )
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
@@ -246,7 +246,7 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string strServIP,int iServPort,s
 	return connect();
 }
 
-bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
+bool tcpClt::connect(ICallback_tcpClt* pUser, string host, string strLocalIp, int iLocalPort)
 {
 	DisConnect();
 	m_pCallBackUser = pUser;
@@ -260,7 +260,7 @@ bool tcpClt::connect(ITcpClientCallBack* pUser, string host, string strLocalIp, 
 	return connect();
 }
 
-bool tcpClt::run(ITcpClientCallBack* pUser, string host, string strLocalIp, int iLocalPort)
+bool tcpClt::run(ICallback_tcpClt* pUser, string host, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;
 	size_t pos = host.find(":");
@@ -276,7 +276,7 @@ bool tcpClt::run(ITcpClientCallBack* pUser, string host, string strLocalIp, int 
 	return true;
 }
 
-bool tcpClt::run(ITcpClientCallBack* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
+bool tcpClt::run(ICallback_tcpClt* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
 {
 	m_pCallBackUser = pUser;
 	m_remoteIP = strServIP;
@@ -302,7 +302,7 @@ void tcpClt::stop()
 	}
 }
 
-void tcpClt::AsynConnect(ITcpClientCallBack* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)
+void tcpClt::AsynConnect(ICallback_tcpClt* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)
 {
 	if(m_bIsConnectting)
 		return;

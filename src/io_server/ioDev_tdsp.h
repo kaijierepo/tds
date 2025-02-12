@@ -49,7 +49,7 @@ public:
 	void DoCycleTaskSync() override;
 	void onEvent_online() override;
 
-	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	void translateToDevPkt(string& tdspPkt,vector<unsigned char>& devPkt);
 	void translateToTdspPkt(char* devPkt, int len, string& tdspPkt);

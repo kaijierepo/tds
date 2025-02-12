@@ -11,7 +11,7 @@ public:
 	map<string, string> mapConf;
 };
 
-class tcpHub : public  ITcpServerCallBack,public ITcpClientCallBack {
+class tcpHub : public  ICallback_tcpSrv,public ICallback_tcpClt {
 public:
 	tcpSrv sLeft;
 	tcpSrv sRight;
@@ -40,8 +40,8 @@ public:
 	void run();
 
 	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
-	 void OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
+	 void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 
 	 virtual void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
-	 virtual void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+	 virtual void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 };

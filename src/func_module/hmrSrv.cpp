@@ -243,7 +243,7 @@ void HMRServer::statusChange_tcpSrv(tcpSession* pTcpSession, bool bIsConn)
     //}
 }
 
-void HMRServer::OnRecvData_TCPServer(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
+void HMRServer::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
 {
     //m_mutexSessions.lock();
     //HMR_SESSION hs = m_mapSessions[pTcpSess];

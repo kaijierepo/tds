@@ -83,7 +83,7 @@ bool ioDev_ModbusTcp::sendData(unsigned char* pData, size_t iLen)
 	return true;
 }
 
-void ioDev_ModbusTcp::OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
+void ioDev_ModbusTcp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
 	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
 

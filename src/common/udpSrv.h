@@ -11,7 +11,7 @@ struct UDP_SESSION {
 	string getRemoteIOAddr();
 };
 
-class IUdpServerCallBack {
+class ICallback_udpSrv {
 public:
 	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION  udpSession) = 0;
 };
@@ -26,7 +26,7 @@ public:
 	size_t onRecvData(unsigned char* recvData, size_t recvDataLen, string strIP, int port);
 	size_t SendData(unsigned char* pData, size_t iLen, string strIP, int port);
 
-	bool run(IUdpServerCallBack* pcb,int localPort = 0, string localIP = "");
+	bool run(ICallback_udpSrv* pcb,int localPort = 0, string localIP = "");
 	void start();
 	void stop();
 
@@ -43,7 +43,7 @@ public:
 	int m_multiCastRecvSock;
 	string m_bindIP;
 	int m_port;
-	IUdpServerCallBack*  m_pCallback;
+	ICallback_udpSrv*  m_pCallback;
 };
 
 class UdpClt : public udpServer {

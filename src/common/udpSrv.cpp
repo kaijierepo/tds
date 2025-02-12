@@ -1,15 +1,16 @@
 #include "udpSrv.h"
 #ifdef TDS
 #include "logger.h"
-#elif
-namespace udpServer {
-	void LOG(const char* pszFmt, ...) {}
+#else
+namespace UdpServer {
+	void LOG(string s) {}
 }
-using namespace udpServer;
+using namespace UdpServer;
 #endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -55,7 +56,7 @@ udpServer::~udpServer(void)
 {
 }
 
-bool udpServer::run(IUdpServerCallBack* pcb, int port,string serverIP)
+bool udpServer::run(ICallback_udpSrv* pcb, int port,string serverIP)
 {
 	m_port = port;
 	m_pCallback = pcb;

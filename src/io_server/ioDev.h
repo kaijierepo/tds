@@ -121,7 +121,7 @@ struct DEV_QUERIER {
 
 
 
-class ioDev : public IUdpServerCallBack,public ITcpClientCallBack
+class ioDev : public ICallback_udpSrv,public ICallback_tcpClt
 {
 public:
 	ioDev(void);
@@ -255,7 +255,7 @@ public:
 	static string removePortFromDevAddr(string devAddr);
 
 	void statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn) override;
-	virtual void OnRecvData_TCPClient(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
+	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	string getTagBind();
 
