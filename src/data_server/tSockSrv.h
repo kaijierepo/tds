@@ -42,10 +42,26 @@ struct SOCK_SESSION {
 typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);
 
 
+struct SOCK_SRV_CONF {
+	string masterTdsAddrs;
+	string childTdsIP;
+	int tcpKeepAliveSec;
+	int tcpSrvPort;
+	int udpSrvPort;
+	string tcpClientRegPkt;
+
+	SOCK_SRV_CONF() {
+		tcpKeepAliveSec = 300;
+		tcpSrvPort = 0;
+		udpSrvPort = 0;
+	}
+};
+
+
 class tSockSrv : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
 {
 public:
-	bool run(string masterTdsAddrs, string childTdsIP);
+	bool run(SOCK_SRV_CONF& conf);
 	void stop();
 	tSockSrv();
 	virtual ~tSockSrv();
@@ -56,13 +72,13 @@ public:
 	mutex m_mutexSessions;
 	sockSessionRecvCallback m_pCallback;
 
+	SOCK_SRV_CONF m_conf;
 public:
 	//tcp client 
 	void OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
 	void onTcpCltEvent_error(tcpClt* pClt,string error) override;
 	map<tcpClt*, tcpClt*> m_tcpClt_ParentTds; //client as child service
-	string m_tcpClientRegPkt;
 	map<tcpClt*, tcpClt*> m_tcpClt_streamPusher;	//data steam pusher
 	mutex m_csTcpClt_streamPusher;
 	string m_masterTdsIP;

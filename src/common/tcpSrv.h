@@ -3,7 +3,6 @@
 #include <vector>
 #include <mutex>
 #include <memory>
-#include "common.h"
 #include "mongoose.h"
 
 using namespace std;
@@ -16,6 +15,12 @@ using namespace std;
  * and not a real pointer.
  */
 
+namespace tcpServer {
+	SYSTEMTIME str2time(const std::string& s);
+	time_t time2unixstamp(SYSTEMTIME t);
+	int calcTimePassSecond(string sTime);
+	string getNowStr();
+}
 
 struct tcpSession
 {
@@ -36,12 +41,12 @@ struct tcpSession
 
 	bool bEnable;
 
-	TIME stLastActive;
+	string stLastActive;
 	void* pData1;
 
 	tcpSession()
 	{
-		timeopt::now(&stLastActive);
+		stLastActive = tcpServer::getNowStr();
 		sock = 0;
 		pALSession = nullptr;
 		pTcpServer = nullptr;

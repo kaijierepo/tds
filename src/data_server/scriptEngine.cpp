@@ -2,6 +2,7 @@
 #include "ScriptEngine.h"
 #include "jerryscript-port.h"
 #include "scriptFunc.h"
+#include "common.h"
 
 
 void ScriptEngine::releaseGlobalFunc() {

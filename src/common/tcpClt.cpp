@@ -1,4 +1,3 @@
-#include "common.h"
 #include "tcpClt.h"
 #pragma warning(disable:4996)
 std::vector<tcpClt*> m_vecTCPIOCPClient;
@@ -13,7 +12,44 @@ std::vector<tcpClt*> m_vecTCPIOCPClient;
 #include <netdb.h>
 #endif
 
-namespace tds_tcpClt {
+namespace tcpClient {
+	SYSTEMTIME str2time(const std::string& s) {
+		SYSTEMTIME t; t.wMilliseconds = 0;
+		sscanf(s.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+			&t.wYear,
+			&t.wMonth,
+			&t.wDay,
+			&t.wHour,
+			&t.wMinute,
+			&t.wSecond);
+		return t;
+	}
+
+	time_t time2unixstamp(SYSTEMTIME t)
+	{
+		tm temptm = { t.wSecond, t.wMinute, t.wHour,
+			t.wDay, t.wMonth - 1, t.wYear - 1900, t.wDayOfWeek, 0, 0 };
+		time_t iReturn = mktime(&temptm);
+		return iReturn;
+	}
+
+	int calcTimePassSecond(string sTime) {
+		time_t now = time(nullptr);
+		SYSTEMTIME tlast = str2time(sTime);
+		time_t last = time2unixstamp(tlast);
+		return now - last;
+	}
+
+	string getNowStr() {
+		SYSTEMTIME t;
+		GetLocalTime(&t);
+		char buff[50] = { 0 };
+		sprintf(buff, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+			t.wYear, t.wMonth, t.wDay,
+			t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+		return buff;
+	}
+
 #ifdef _WIN32
 	class WinSockInit {
 	public:
@@ -32,13 +68,19 @@ namespace tds_tcpClt {
 #endif
 }
 
+using namespace tcpClient;
+
 string tcpSessionClt::getRemoteAddr() {
-	string s = str::format("%s:%d", remoteIP.c_str(), remotePort);
+	char buffer[50] = {0}; 
+	sprintf(buffer, "%s:%d", remoteIP.c_str(), remotePort);
+	string s = buffer;
 	return s;
 }
 
 string tcpSessionClt::getLocalAddr() {
-	string s = str::format("%s:%d", localIP.c_str(), localPort);
+	char buffer[50] = { 0 };
+	sprintf(buffer, "%s:%d", localIP.c_str(), localPort);
+	string s = buffer;
 	return s;
 }
 
@@ -97,7 +139,7 @@ void TcpClientRecvThread(void* lpParam)
 		}
 #endif
 
-		pTcpClt->m_session.stLastActive = timeopt::nowStr();
+		pTcpClt->m_session.stLastActive = getNowStr();
 		pTcpClt->m_pCallBackUser->OnRecvData_TCPClient(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
 	
 		iRecvBuffLen = 0;
@@ -127,7 +169,7 @@ void ConnectThread(void* lpParam)
 	while (1)
 	{
 #ifdef _WIN32
-		timeopt::sleepMilli(500);
+		Sleep(500);
 #else
 		sleep(500);
 #endif
@@ -139,7 +181,7 @@ void ConnectThread(void* lpParam)
 
 			if (p->IsConnect()) {
 				if (p->m_keepAliveTimeout > 0) {
-					if (timeopt::calcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
+					if (tcpClient::calcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
 						p->DisConnect();
 						printf("disconnect inactive connection %s:%d\r\n", p->m_remoteIP.c_str(), p->m_remotePort);
 					}
@@ -150,8 +192,8 @@ void ConnectThread(void* lpParam)
 			if (p->m_bIsConnectting)
 				continue;
 
-			if (timeopt::calcTimePassMilliSecond(p->lastConnTime) > 3000) {
-				p->lastConnTime = timeopt::nowStr();
+			if (tcpClient::calcTimePassSecond(p->lastConnTime) > 3000) {
+				p->lastConnTime = getNowStr();
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
@@ -169,7 +211,7 @@ tcpClt::tcpClt(void)
 	m_bConn = false;
 	m_bRun = false;
 	m_bIsConnectting = false;
-	lastConnTime = timeopt::nowStr();
+	lastConnTime = getNowStr();
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
 	m_bConnThreadRunning = false;
@@ -251,7 +293,7 @@ void tcpClt::stop()
 	DisConnect();  
 	while (1) {
 #ifdef _WIN32
-		timeopt::sleepMilli(1);
+		Sleep(1);
 #else
 		sleep(1);
 #endif
@@ -322,7 +364,7 @@ bool tcpClt::connect()
 
 	if(nConnect == -1)
 	{
-		m_strErrorInfo = "connect fail:" + sys::getLastError();
+		//m_strErrorInfo = "connect fail:" + sys::getLastError();
 		m_bIsConnectting = false;
 		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 	}
@@ -330,8 +372,8 @@ bool tcpClt::connect()
 		//set m_bConn to true before TcpClientRecvThread created,when TcpClientRecvThread callback statucChange,will read this variable
 		m_bConn = true;
 		ret = true;
-		lastConnTime = timeopt::nowStr();
-		m_session.stLastActive = timeopt::nowStr();
+		lastConnTime = getNowStr();
+		m_session.stLastActive = getNowStr();
 		m_strErrorInfo = "";
 
 		thread t(TcpClientRecvThread, this);

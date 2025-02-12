@@ -5,6 +5,7 @@
 #include <mutex>
 #include "stream2pkt.h"
 #include "tds.h"
+#include <queue>
 
 //the protocol used as a transportation layer (no command specified in this layer,only for data transfer)
 namespace TRANSFER_LAYER_PROTO_TYPE

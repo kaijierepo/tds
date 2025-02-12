@@ -1,6 +1,43 @@
 #include "tcpSrv.h"
-#include "common.h"
 
+namespace tcpServer {
+	SYSTEMTIME str2time(const std::string& s) {
+		SYSTEMTIME t; t.wMilliseconds = 0;
+		sscanf(s.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
+			&t.wYear,
+			&t.wMonth,
+			&t.wDay,
+			&t.wHour,
+			&t.wMinute,
+			&t.wSecond);
+		return t;
+	}
+
+	time_t time2unixstamp(SYSTEMTIME t)
+	{
+		tm temptm = { t.wSecond, t.wMinute, t.wHour,
+			t.wDay, t.wMonth - 1, t.wYear - 1900, t.wDayOfWeek, 0, 0 };
+		time_t iReturn = mktime(&temptm);
+		return iReturn;
+	}
+
+	int calcTimePassSecond(string sTime) {
+		time_t now = time(nullptr);
+		SYSTEMTIME tlast = str2time(sTime);
+		time_t last = time2unixstamp(tlast);
+		return now - last;
+	}
+
+	string getNowStr() {
+		SYSTEMTIME t;
+		GetLocalTime(&t);
+		char buff[50] = { 0 };
+		sprintf(buff, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
+			t.wYear, t.wMonth, t.wDay,
+			t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+		return buff;
+	}
+}
 
 fp_statisSend g_fp_tcpSrv_statisSend = nullptr;
 
@@ -31,7 +68,9 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		pts->pTcpServer = pSrv;
 		pts->pData1 = c;
 		unsigned char* ip = (unsigned char*)&c->rem.ip;
-		pts->remoteIP = str::format("%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+		char buff[50] = { 0 };
+		sprintf(buff, "%d.%d.%d.%d", ip[0], ip[1], ip[2], ip[3]);
+		pts->remoteIP = buff;
 		pts->sock = (int) c->fd;  
 		pts->remotePort = ntohs(c->rem.port); 
 		pts->localIP = pSrv->m_strServerIP;
@@ -62,7 +101,9 @@ bool tcpSrv::run(ITcpServerCallBack* pUser, int port, string strLocalIP /*= ""*/
 	m_pCallBackUser = pUser;
 
 	mg_mgr_init(&mgr);  // Init manager
-	string url = "tcp://0.0.0.0:" + str::fromInt(port);
+	char sz[50] = { 0 };
+	sprintf(sz, "tcp://0.0.0.0:%d", port);
+	string url = sz;
 	mg_connection* c = mg_listen(&mgr, url.c_str() , cb, &mgr);  // Setup listener
 	mgr.userdata = this;
 
@@ -97,7 +138,9 @@ void tcpSrv::disconnect(string remoteAddr)
 	{
 		for (auto& i : m_mapTcpSessions)
 		{
-			string tmp = str::format("%s:%d", i.second->remoteIP.c_str(), i.second->remotePort);
+			char sz[50] = { 0 };
+			sprintf(sz, "%s:%d", i.second->remoteIP.c_str(), i.second->remotePort);
+			string tmp = sz;
 			if (tmp == remoteAddr)
 			{
 				shutdown(i.second->sock,SHUT_DOWN_BOTH);

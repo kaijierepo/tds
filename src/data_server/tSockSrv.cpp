@@ -1,4 +1,7 @@
 #include "tSockSrv.h"
+#include <iostream>
+#include <sstream>
+
 #ifdef TDS
 #include "logger.h"
 #elif
@@ -49,8 +52,8 @@ void tSockSrv::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 		m_mutexSessions.unlock();
 		LOG("[SockSrv]Tcp Client connect to server:%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
 			
-		if (m_tcpClientRegPkt.length() > 0) {
-			::send(pTcpSess->sock, m_tcpClientRegPkt.c_str(), m_tcpClientRegPkt.length(),0);
+		if (m_conf.tcpClientRegPkt.length() > 0) {
+			::send(pTcpSess->sock, m_conf.tcpClientRegPkt.c_str(), m_conf.tcpClientRegPkt.length(),0);
 		}
 	}
 	else
@@ -76,13 +79,40 @@ void tSockSrv::onTcpCltEvent_error(tcpClt* pClt, string error)
 	LOG("[warn][SockSrv]TcpClient,remoteAddr=%s:%d,ErrorInfo,%s",pClt->m_remoteIP.c_str(),pClt->m_remotePort,error.c_str());
 }
 
-bool tSockSrv::run(string masterTdsAddrs, string childTdsIP)
-{
-	if (masterTdsAddrs != "") {
-		vector<string> vecAddrs;
-		str::split(vecAddrs, masterTdsAddrs, ",");
+std::vector<std::string> splitStr(const std::string& str, char delimiter) {
+	std::vector<std::string> tokens;
+	std::string token;
+	std::istringstream tokenStream(str);
 
-		LOG("[SockSrv]Connect to master service %s,local addr:%s", masterTdsAddrs.c_str(), childTdsIP.c_str());
+	while (std::getline(tokenStream, token, delimiter)) {
+		tokens.push_back(token);
+	}
+
+	return tokens;
+}
+
+bool getIpPort(string s, string& ip, int& port)
+{
+	size_t ipos = s.find(":");
+	if (ipos == string::npos)
+		return false;
+	string sip = s.substr(0, ipos);
+	string sport = s.substr(ipos + 1, s.length() - ipos - 1);
+	ip = sip;
+	if (sport == "")
+		return false;
+	port = atoi(sport.c_str());
+	return true;
+}
+
+bool tSockSrv::run(SOCK_SRV_CONF& conf)
+{
+	m_conf = conf;
+
+	if (m_conf.masterTdsAddrs != "") {
+		vector<string> vecAddrs = splitStr(m_conf.masterTdsAddrs, ',');
+
+		LOG("[SockSrv]Connect to master service %s,local addr:%s", m_conf.masterTdsAddrs.c_str(), m_conf.childTdsIP.c_str());
 
 		for (int i = 0; i < vecAddrs.size(); i++) {
 			string addr = vecAddrs[i];
@@ -90,21 +120,21 @@ bool tSockSrv::run(string masterTdsAddrs, string childTdsIP)
 
 			string ip;
 			int port;
-			str::parseIpPort(addr, ip, port);
+			getIpPort(addr, ip, port);
 
-			pTcpClt->m_keepAliveTimeout = tds->conf->tcpKeepAliveDS;
-			pTcpClt->run(this, addr, childTdsIP);
+			pTcpClt->m_keepAliveTimeout = m_conf.tcpKeepAliveSec;
+			pTcpClt->run(this, addr, m_conf.childTdsIP);
 			m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
 		}
 	}
 
-	int tcpPort = tds->conf->getInt("tcpPort", 670);
+	int tcpPort = m_conf.tcpSrvPort;
 	if (tcpPort > 0) {
 		LOG("[SockSrv] Tcp Port:%d", tcpPort);
 		m_tcpSrv.run(this, tcpPort);
 	}
 
-	int udpPort = tds->conf->getInt("udpPort", 666);
+	int udpPort = m_conf.udpSrvPort;
 	if (udpPort > 0) {
 		LOG("[SockSrv] Udp Port:%d", udpPort);
 		m_udpSrv.run(this, udpPort);
