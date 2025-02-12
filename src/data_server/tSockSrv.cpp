@@ -1,15 +1,8 @@
 #include "pch.h"
 #include "tSockSrv.h"
 #include "logger.h"
-#include "prj.h"
-#include "mp.h"
 #include "rpcHandler.h"
-#include "ioSrv.h"
-#include "tcpClt.h"
-#include "tdsConf.h"
 #include "tds.h"
-#include "userMng.h"
-#include "ioChan.h"
 
 tSockSrv sockSrv;
 
