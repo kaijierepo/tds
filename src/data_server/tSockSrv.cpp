@@ -5,7 +5,10 @@
 #ifdef TDS
 #include "logger.h"
 #elif
-void LOG(const char* pszFmt, ...){}
+namespace sockServer {
+	void LOG(const char* pszFmt, ...) {}
+}
+using namespace sockServer;
 #endif
 
 tSockSrv sockSrv;

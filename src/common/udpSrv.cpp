@@ -1,10 +1,15 @@
 #include "udpSrv.h"
+#ifdef TDS
 #include "logger.h"
+#elif
+namespace udpServer {
+	void LOG(const char* pszFmt, ...) {}
+}
+using namespace udpServer;
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "common.h"
-
 #ifdef _WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -65,7 +70,6 @@ bool udpServer::run(IUdpServerCallBack* pcb, int port,string serverIP)
 
 void udpServer::start()
 {
-	//创建socket套接字
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (-1 == m_sock)
 	{
@@ -77,7 +81,6 @@ void udpServer::start()
 
 	}
 	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
-	//绑定
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons((u_short)(m_port));
@@ -93,8 +96,10 @@ void udpServer::start()
 	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
 	if (0 != nBind)
 	{
-		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
-		LOG(strData);
+		char sz[200] = { 0 };
+		sprintf(sz,"[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		string str = sz;
+		LOG(str);
 		return;
 	}
 
@@ -122,10 +127,8 @@ void udpServer::stop()
 void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
-	//sock = m_sock;
 	SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
 
-	//绑定
 	struct in_addr localInterface;
 	localInterface.s_addr = inet_addr(m_bindIP.c_str());
 	
@@ -135,11 +138,9 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 	//	return;
 	//}
 
-
-	//绑定
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
-	//组播端口和udp服务端口不能使用同一端口，待研究
+	// group cast port can not be the same with udp server port. don't know why
 	addr.sin_port = htons((u_short)(m_port +10));
 	if (m_bindIP == "0.0.0.0")
 	{
@@ -150,12 +151,13 @@ void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
 
 	}
-	int nBind = ::bind(sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
+	int nBind = ::bind(sock, (sockaddr*)&addr, sizeof(addr));
 	if (0 != nBind)
 	{
-		//DWORD dwErr = GetLastError();
-		string strData = str::format("[error]UDP服务器端口被占用,IP=%s,Port=%d,错误码:%d", m_bindIP.c_str(), m_port,0);
-		LOG(strData);
+		char sz[200] = { 0 };
+		sprintf(sz, "[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		string str = sz;
+		LOG(str);
 		return;
 	}
 
@@ -222,9 +224,6 @@ size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, i
 void udpRecvThread(void* lpParam)
 {
 	udpServer* pServ = (udpServer*)lpParam;
-
-
-	//等待并接收数据
 	unsigned char szBuff[10025];
 	while (true)
 	{
@@ -259,6 +258,8 @@ size_t UdpClt::sendData(unsigned char* pData, size_t iLen)
 }
 
 string UDP_SESSION::getRemoteIOAddr(){
-	string s = "UDP-" + remoteIP + ":" + str::format("%d", remotePort);
+	char sz[50] = {};
+	sprintf(sz,"UDP-%s:%d", remoteIP.c_str(), remotePort);
+	string s = sz;
 	return s;
 }
