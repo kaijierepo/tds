@@ -3058,11 +3058,15 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 					pCur = iter.second;
 
 					if (pCur && pBase && pBase->size() > 0) {
-						if (deSel.calc == "aes") {
+						if (deSel.calc == "aes" || deSel.calc == "aea") {
 							double aes = 0;
+							int cnt = 0;
 							for (int i = 0; i < pBase->size() && i < pCur->size(); i++) {
 								aes += abs((*pBase)[i] - (*pCur)[i]);
+								cnt++;
 							}
+							if (cnt > 0 && deSel.calc == "aea")
+								aes /= cnt;
 
 							yyjson_mut_val* yyv_aes_de = yyjson_mut_obj(rlt_mut_doc);
 							yyjson_mut_val* yyv_time_key = yyjson_mut_strcpy(rlt_mut_doc, "time");
