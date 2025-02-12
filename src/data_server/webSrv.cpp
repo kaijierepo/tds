@@ -15,6 +15,7 @@
 #include "ioChan.h"
 #include "statusServer.h"
 #include "fileUploadSrv.h"
+#include "base64.h"
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -244,7 +245,14 @@ void RpcLogRecv(unsigned char* pHead, size_t headLen, unsigned char* pBody, size
 
 	string shead,sbody;
 	str::fromBuff(pHead, headLen,shead);
-	str::fromBuff(pBody, bodyLen, sbody);
+
+	if (bodyLen > 0) {
+		char* out = new char[bodyLen * 2];
+		memset(out, 0, bodyLen * 2);
+		base64_encode(pBody, bodyLen, out);
+		sbody = out;
+	}
+
 
 	json j;
 	TIME st;
