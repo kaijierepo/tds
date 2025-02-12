@@ -579,8 +579,10 @@ bool TDS_imp::run(string cmdline)
 
 	//开始运行，与外部建立通讯并进行数据io
 	runWebServers();
+	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
+	string childTdsIP = tds->conf->getStr("childTdsIP", "");
 	sockSrv.m_tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
-	sockSrv.run();
+	sockSrv.run(masterTdsAddrs, childTdsIP);
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
 	scriptManager.run();

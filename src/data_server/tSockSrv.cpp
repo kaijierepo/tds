@@ -1,8 +1,9 @@
-#include "pch.h"
 #include "tSockSrv.h"
+#ifdef TDS
 #include "logger.h"
-#include "rpcHandler.h"
-#include "tds.h"
+#elif
+void LOG(const char* pszFmt, ...){}
+#endif
 
 tSockSrv sockSrv;
 
@@ -75,11 +76,8 @@ void tSockSrv::onTcpCltEvent_error(tcpClt* pClt, string error)
 	LOG("[warn][SockSrv]TcpClient,remoteAddr=%s:%d,ErrorInfo,%s",pClt->m_remoteIP.c_str(),pClt->m_remotePort,error.c_str());
 }
 
-bool tSockSrv::run()
+bool tSockSrv::run(string masterTdsAddrs, string childTdsIP)
 {
-	string masterTdsAddrs = tds->conf->getStr("masterTds", "");
-	string childTdsIP = tds->conf->getStr("childTdsIP", "");
-
 	if (masterTdsAddrs != "") {
 		vector<string> vecAddrs;
 		str::split(vecAddrs, masterTdsAddrs, ",");
@@ -138,14 +136,14 @@ void tSockSrv::OnRecvData_TCPClient(unsigned char* pData, size_t iLen, tcpSessio
 
 void tSockSrv::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
 {
-	string req;
-	str::fromBuff(recvData, recvDataLen,req);
-	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	RPC_SESSION rpcSess;
-	rpcSess.remoteAddr = udpSession.remoteIP;
-	rpcSess.remotePort = udpSession.remotePort;
-	pSession->setRpcSession(&rpcSess);
-	rpcSrv.handleRpcCallAsyn(req, pSession,false);
+	//string req;
+	//str::fromBuff(recvData, recvDataLen,req);
+	//std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+	//RPC_SESSION rpcSess;
+	//rpcSess.remoteAddr = udpSession.remoteIP;
+	//rpcSess.remotePort = udpSession.remotePort;
+	//pSession->setRpcSession(&rpcSess);
+	//rpcSrv.handleRpcCallAsyn(req, pSession,false);
 }
 
 void tSockSrv::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> ss)

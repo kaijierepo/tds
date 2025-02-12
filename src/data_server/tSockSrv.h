@@ -45,7 +45,7 @@ typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_pt
 class tSockSrv : public ITcpServerCallBack,public ITcpClientCallBack,public IUdpServerCallBack
 {
 public:
-	bool run();
+	bool run(string masterTdsAddrs, string childTdsIP);
 	void stop();
 	tSockSrv();
 	virtual ~tSockSrv();
