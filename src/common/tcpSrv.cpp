@@ -2,14 +2,29 @@
 
 namespace tcpServer {
 	SYSTEMTIME str2time(const std::string& s) {
-		SYSTEMTIME t; t.wMilliseconds = 0;
-		sscanf(s.c_str(), "%4d-%2d-%2d %2d:%2d:%2d",
-			&t.wYear,
-			&t.wMonth,
-			&t.wDay,
-			&t.wHour,
-			&t.wMinute,
-			&t.wSecond);
+		SYSTEMTIME t;
+		//2022-02-22 11:11:11.123   23bytes
+		if (s.length() == 23) {
+			sscanf(s.c_str(), "%hu-%hu-%hu %hu:%hu:%hu.%hu",
+				&t.wYear,
+				&t.wMonth,
+				&t.wDay,
+				&t.wHour,
+				&t.wMinute,
+				&t.wSecond,
+				&t.wMilliseconds);
+		}
+		//2022-02-22 11:11:11   19bytes
+		else if (s.length() == 19) {
+			t.wMilliseconds = 0;
+			sscanf(s.c_str(), "%hu-%hu-%hu %hu:%hu:%hu",
+				&t.wYear,
+				&t.wMonth,
+				&t.wDay,
+				&t.wHour,
+				&t.wMinute,
+				&t.wSecond);
+		}
 		return t;
 	}
 
