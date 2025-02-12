@@ -299,27 +299,24 @@ void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 
 void stream2pkt::ResizeStreamBuff(size_t iNewSize)
 {
-	m_cs.lock();
+	//in this function do not have to lock m_cs;
 	Resize(stream, iStreaBuffSize, iNewSize);
-	m_cs.unlock();
 }
 
 void stream2pkt::ResizePopPktBuff(size_t iNewSize)
 {
-	m_cs.lock();
+	//in this function do not have to lock m_cs;
 	Resize(pkt, iPktBuffSize, iNewSize);
-	m_cs.unlock();
 }
 
 void stream2pkt::PushStream(unsigned char* pData, size_t iLen)
 {
-	m_cs.lock();
+	std::lock_guard<mutex> g(m_cs);
 	if (iStreamLen + iLen > iStreaBuffSize)
 		ResizeStreamBuff(iStreamLen + iLen);
 
 	memcpy(stream + iStreamLen , pData, iLen);
 	iStreamLen += iLen;
-	m_cs.unlock();
 }
 
 void stream2pkt::PushStream(char* pData, size_t iLen)
@@ -334,7 +331,7 @@ string bytesToHexStr(vector<char>& bytes)
 	{
 		string b;
 		b.resize(2);
-		sprintf(b.data(),"%02X", (unsigned char)bytes[i]);
+		sprintf((char*)b.data(),"%02X", (unsigned char)bytes[i]);
 		str += b;
 	}
 	return str;
@@ -347,7 +344,7 @@ string bytesToHexStr(unsigned char* p, size_t len, string splitter = "")
 	{
 		string b;
 		b.resize(2);
-		sprintf(b.data(), "%02X", (unsigned char)p[i]);
+		sprintf((char*)b.data(), "%02X", (unsigned char)p[i]);
 		str += b;
 		str += splitter;
 	}
@@ -357,7 +354,7 @@ string bytesToHexStr(unsigned char* p, size_t len, string splitter = "")
 
 bool stream2pkt::PopPkt(string cpt)
 {
-	m_cs.lock();
+	std::lock_guard<mutex> g(m_cs);
 	for (size_t i = 0; i < iStreamLen; i++)
 	{
 		size_t ilen = 0;
@@ -423,13 +420,12 @@ bool stream2pkt::PopPkt(string cpt)
 			return true;
 		}
 	}
-	m_cs.unlock();
 	return false;
 }
 
 bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 {
-	m_cs.lock();
+	std::lock_guard<mutex> g(m_cs);
 
 	for (int i = 0; i < iStreamLen; i++)
 	{
@@ -483,7 +479,7 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 
 bool stream2pkt::PopAllAs(string cpt)
 {
-	m_cs.lock();
+	std::lock_guard<mutex> g(m_cs);
 	if(iStreamLen > iPktBuffSize)
 		ResizePopPktBuff(iStreamLen);
 	memcpy(pkt, stream, iStreamLen);
@@ -494,7 +490,6 @@ bool stream2pkt::PopAllAs(string cpt)
 	int ret = 0;
 	if (iPktLen > 0)
 		ret = 1;
-	m_cs.unlock();
 	return ret;
 }
 
