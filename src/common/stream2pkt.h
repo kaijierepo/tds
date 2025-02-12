@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <windows.h>
+#include <mutex>
 using namespace std;
 
 namespace APP_LAYER_PROTO {
@@ -46,8 +46,8 @@ public:
 	void PushStream(unsigned char* pData, size_t iLen);
 	void PushStream(char* pData, size_t iLen);
 	bool PopPkt(string cpt = "");
-	//faultTolerant是否容错，允许数据包之间有异常数据出现
-	//打开容错会降低性能
+	//faultTolerant=true,allow error data between data pkt
+	//causes performance loss
 	bool PopPkt(fp_validPktCheck pktCheckFn,bool faultTolerant = true);
 	bool PopAllAs(string cpt); 
 
@@ -55,22 +55,18 @@ public:
 	{
 		pkt = NULL;
 		stream = NULL;
-		InitializeCriticalSection(&m_cs); // 初始化临界区
 		Init();
 	}
 	~stream2pkt()
 	{
-		DeleteCriticalSection(&m_cs); // 删除临界区
 	}
 
 	std::vector<unsigned char> m_prefix;
 
-	//流数据
 	unsigned char* stream;
 	size_t iStreaBuffSize;
 	size_t iStreamLen;
 
-	//组包成功的数据
 	unsigned char* pkt;
 	size_t iPktBuffSize;
 	size_t iPktLen;
@@ -78,7 +74,7 @@ public:
 
 	size_t iAbandonLen;
 	string abandonData;
-	CRITICAL_SECTION m_cs;
+	mutex m_cs;
 	map<string, fp_validPktCheck> m_mapProto2PktCheckFn;
 };
 
