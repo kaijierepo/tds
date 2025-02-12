@@ -50,6 +50,13 @@ public:
 	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) = 0;
 };
 
+enum class enTcpCltConnectStatus : uint8_t
+{
+	FREE = 0,
+	CONNECT_SOON = 1,
+	CONNECTING = 2
+};
+
 class tcpClt
 {
 	friend bool operator==(const tcpClt&, const tcpClt&);
@@ -89,7 +96,7 @@ public:
 	bool m_bRun;
 	int m_keepAliveTimeout;
 	string lastConnTime;
-	bool m_bIsConnectting;
+	std::atomic<enTcpCltConnectStatus> m_isConnectting = enTcpCltConnectStatus::FREE;
 	string m_strErrorInfo;
 	ICallback_tcpClt* m_pCallBackUser;
 	bool m_bRecvThreadRunning;

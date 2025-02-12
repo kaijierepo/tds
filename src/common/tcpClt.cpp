@@ -170,7 +170,9 @@ void TcpClientRecvThread(void* lpParam)
 void AsynConnectThread(void* lpParam)
 {
 	tcpClt* p = (tcpClt*)lpParam;
+	p->m_isConnectting = enTcpCltConnectStatus::CONNECTING;
 	p->connect();
+	p->m_isConnectting = enTcpCltConnectStatus::FREE;
 }
 
 
@@ -204,11 +206,12 @@ void ConnectThread(void* lpParam)
 				continue;
 			}
 				
-			if (p->m_bIsConnectting)
+			if (p->m_isConnectting != enTcpCltConnectStatus::FREE)
 				continue;
 
 			if (tcpClient::calcTimePassSecond(p->lastConnTime) > 3) {
 				p->lastConnTime = getNowStr();
+				p->m_isConnectting = enTcpCltConnectStatus::CONNECT_SOON;
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
@@ -225,7 +228,6 @@ tcpClt::tcpClt(void)
 	m_remotePort = 0;
 	m_bConn = false;
 	m_bRun = false;
-	m_bIsConnectting = false;
 	lastConnTime = getNowStr();
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
@@ -319,10 +321,12 @@ void tcpClt::stop()
 
 void tcpClt::AsynConnect(ICallback_tcpClt* pUser,string strServIP, int iServPort, string strLocalIp /*= ""*/, int iLocalPort /*= -1*/)
 {
-	if(m_bIsConnectting)
+	if(m_isConnectting != enTcpCltConnectStatus::FREE)
 		return;
+	m_isConnectting = enTcpCltConnectStatus::CONNECT_SOON;
 	if(m_bConn)
-	DisConnect();
+		DisConnect();
+
 	m_pCallBackUser = pUser;
 	m_remoteIP = strServIP;
 	m_remotePort = iServPort;
@@ -342,7 +346,6 @@ bool tcpClt::connect()
 
 	int nConnect;
 	struct hostent* hptr;
-	m_bIsConnectting = true;
 	bool ret = false;
 
 	hptr = gethostbyname(m_remoteIP.c_str());
@@ -380,7 +383,6 @@ bool tcpClt::connect()
 	if(nConnect == -1)
 	{
 		//m_strErrorInfo = "connect fail:" + sys::getLastError();
-		m_bIsConnectting = false;
 		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
 	}
 	else {
@@ -407,7 +409,7 @@ bool tcpClt::connect()
 		}
 		sockClient = 0;
 	}
-	m_bIsConnectting = false;
+
 	return ret;
 }
 
