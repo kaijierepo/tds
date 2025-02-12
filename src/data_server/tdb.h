@@ -723,9 +723,6 @@ public:
 	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
 
 	//save main image data such as 123000.image.jpg,data list will not be modified 
-	bool saveImageFile(string tag, DB_TIME stTime, char* pData,size_t len);
-	bool saveImageFile(string tag, DB_TIME stTime,string& imgBase64);
-	bool saveImageInfo(string tag, DB_TIME stTime, string& imgInfo);
 	bool saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo);
 
 	bool Delete(string tag, DB_TIME stTime);
