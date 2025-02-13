@@ -100,6 +100,7 @@ struct DEV_QUERIER {
 	bool getDetail;
 	bool getUpgradeInfo;
 	bool getPAB;  //get pkt assemble buffer
+	bool getRemark;
 	string rootTag;
 	string tag;
 	vector<string> type;
@@ -114,6 +115,7 @@ struct DEV_QUERIER {
 		getChild = true;
 		getChan = true;
 		getDetail = true;
+		getRemark = true;
 		getUpgradeInfo = false;
 		getPAB = false;
 	}
@@ -170,6 +172,7 @@ public:
 	//device addr in string format
 	string m_devAddr;  // 多个devAddr 使用 / 连接组合成 ioAddr 
 	string m_addrType; 
+	string m_remark; //备注
 	json m_jDevAddr;  //json格式的设备地址   内部的数据结构按实际类型。例如地址如果是int，就用int类型，而不用string
 	//device addr in json format
 	virtual json getAddr(); 

@@ -413,6 +413,12 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		conf["avgRespTime"] = m_avgTransactionTime;
 	}
 
+	//备注
+	if (querier.getRemark)
+	{
+		conf["remark"] = m_remark;
+	}
+
 	//升级状态信息数据
 	if (querier.getUpgradeInfo) {
 		json jui;
@@ -522,6 +528,14 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+	kv = conf.find("remark");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_remark = item.get<string>();
+		}
+	}
+	
 	kv = conf.find("subType");
 	if (kv != conf.end()) {
 		json& item = kv.value();
@@ -976,6 +990,9 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 	}
 	if (opt.contains("getDetail")) {
 		q.getDetail = opt["getDetail"].get<bool>();
+	}
+	if (opt.contains("getRemark")) {
+		q.getRemark = opt["getRemark"].get<bool>();
 	}
 	if (opt.contains("getUpgradeInfo")) {
 		q.getUpgradeInfo = opt["getUpgradeInfo"].get<bool>();
