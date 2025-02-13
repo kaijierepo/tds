@@ -3230,13 +3230,18 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 					float dis = -1;
 					if(type == "dtw")
 						dis = CalDTWDist(p1, p2);
-					else if (type == "aes") {
+					else if (type == "aes" || type == "aea") {
 						double sum = 0;
 						for (int i = 0; i < p1.size() && i < p2.size(); i++) {
 							sum += abs(p1[i] - p2[i]);
 						}
-						if (p1.size() > 0 && p2.size() > 0)
-							dis = sum * 1.0 / MIN(p1.size(), p2.size());
+						if (type == "aea")
+						{
+							if (p1.size() > 0 && p2.size() > 0)
+								dis = sum * 1.0 / MIN(p1.size(), p2.size());
+						}
+						else
+							dis = sum;
 					}
 					
 					json one;
@@ -3277,14 +3282,20 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 					float dis = -1;
 					if (type == "dtw")
 						dis = CalDTWDist(p1, p2);
-					else if (type == "aes") {
+					else if (type == "aes" || type == "aea") {
 						double sum = 0;
 						for (int i = 0; i < p1.size() && i < p2.size(); i++) {
 							sum += abs(p1[i] - p2[i]);
 						}
-						if (p1.size() > 0 && p2.size() > 0)
-							dis = sum * 1.0 / MIN(p1.size(), p2.size());
+						if (type == "aea")
+						{
+							if (p1.size() > 0 && p2.size() > 0)
+								dis = sum * 1.0 / MIN(p1.size(), p2.size());
+						}
+						else
+							dis = sum;
 					}
+
 
 					json one;
 					one["time"] = curve2["time"];
