@@ -32,6 +32,10 @@ void tSockSrv::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		m_mutexSessions.lock();
 		m_sockSessions[pTcpSess->sock] = p;
 		m_mutexSessions.unlock();
+
+		if (m_conf.tcpServerRegPkt.length() > 0) {
+			::send(pTcpSess->sock, m_conf.tcpServerRegPkt.c_str(), m_conf.tcpServerRegPkt.length(), 0);
+		}
 	}
 	else
 	{

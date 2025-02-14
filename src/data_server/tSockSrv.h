@@ -49,6 +49,7 @@ struct SOCK_SRV_CONF {
 	int tcpSrvPort;
 	int udpSrvPort;
 	string tcpClientRegPkt;
+	string tcpServerRegPkt;
 
 	SOCK_SRV_CONF() {
 		tcpKeepAliveSec = 300;
