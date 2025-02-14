@@ -5004,7 +5004,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 				yyjson_doc_free(doc);
 
 				string strJsonSize = image_yuan.substr(image_yuan.size() - 8, 4);
-				size_t jsonSize;
+				size_t jsonSize = 0;
 				memcpy(&jsonSize, &strJsonSize, 4);
 				string strImg = image_yuan.substr(0, image_yuan.size() - jsonSize - 8);
 				if (jsonSize>0)
@@ -5019,14 +5019,12 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 					size_t indx = 0, max = 0;
 					yyjson_mut_obj_foreach(mut_root, indx, max, key, val)
 					{
-						string strKey = yyjson_mut_get_str(key);
-						if (!yyjson_mut_obj_get(mut_root_yuan, strKey.c_str()))
+						if (!yyjson_mut_obj_get(mut_root_yuan, yyjson_mut_get_str(key)))
 						{
-							yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, strKey.c_str(), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
+							yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, yyjson_mut_get_str(key), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
 						}
 					}
-					size_t len = yyjson_mut_get_len(mut_root_yuan);
-					char* strTemp = yyjson_mut_write(mut_doc_yuan, 0, &len);
+					char* strTemp = yyjson_mut_write(mut_doc_yuan, 0, 0);
 					imgInfo = strTemp;
 					delete strTemp;
 					yyjson_mut_doc_free(mut_doc);
