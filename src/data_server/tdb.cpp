@@ -5005,7 +5005,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 
 				string strJsonSize = image_yuan.substr(image_yuan.size() - 8, 4);
 				size_t jsonSize = 0;
-				memcpy(&jsonSize, &strJsonSize, 4);
+				memcpy(&jsonSize, strJsonSize.c_str(), 4);
 				string strImg = image_yuan.substr(0, image_yuan.size() - jsonSize - 8);
 				if (jsonSize>0)
 				{
