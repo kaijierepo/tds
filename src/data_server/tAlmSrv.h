@@ -180,6 +180,7 @@ public:
 	//table options
 	void add(ALARM_INFO ai);
 	bool query(json params, ALARM_INFO& ai);
+	bool query(string customId, ALARM_INFO& ai, string time = "");
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
@@ -250,6 +251,7 @@ public:
 	void init(const string dbPath, AsInitParam& asInitParam);
 	string m_dbPath;
 	bool m_enable;
+	bool m_init;
 
 public:
 	////internal interface
@@ -285,6 +287,8 @@ public:
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
 	void rpc_getAlmSrvStatus(json j, RPC_RESP& resp);
+
+	bool canRemoveFromCurrent(ALARM_INFO& ai);
 
 private:
 	void addAlarm(ALARM_INFO ai, bool notify = true);

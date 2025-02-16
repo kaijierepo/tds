@@ -1,4 +1,5 @@
-﻿#include "tAlmSrv.h"
+﻿#include <StdAfx.h>
+#include "tAlmSrv.h"
 #include <regex>
 #include <fstream>
 #include <sstream>
@@ -186,6 +187,7 @@ almServer::almServer(void)
 	m_iUpdateCallCount = 0;
 	tableCurrent.m_tableType = CURRENT_TABLE;
 	tableHist.m_tableType = HISTORY_TABLE;
+	m_init = false;
 }
 
 
@@ -235,10 +237,13 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	tableHist.SetAlarmSrv(this);
 
 	initMOAlarmStatus();
+
+	m_init = true;
 }
 
 void almServer::recover(ALARM_INFO& key, bool notify)
 {
+	if (!m_init)return;
 	/*tableStatus.remove(key);
 
 	ALARM_INFO ai;
@@ -320,6 +325,8 @@ must and only refered in almServer::Update , almServer::Add
 */
 void almServer::addAlarm(ALARM_INFO ai, bool notify)
 {
+	if (!m_init)
+		return;
 	if (!m_enable)
 		return;
 
@@ -471,6 +478,8 @@ string almServer::uuid() {
 
 void almServer::Update(ALARM_INFO newStatus, bool notify)
 {
+	if (!m_init)
+		return;
 	if (!m_enable)
 		return;
 
@@ -747,6 +756,22 @@ void almServer::rpc_getAlmSrvStatus(json j, RPC_RESP& resp) {
 	resp.result = js.dump();
 }
 
+bool almServer::canRemoveFromCurrent(ALARM_INFO& ai) {
+	if (ai.needRecover && ai.isRecover && ai.needAck && ai.isAck) {
+		return true;
+	}
+
+	if (ai.needRecover && ai.isRecover && ai.needAck == false) {
+		return true;
+	}
+
+	if (ai.needAck && ai.isAck && ai.needRecover == false) {
+		return true;
+	}
+
+	return false;
+}
+
 //基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
@@ -780,7 +805,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
 		ai.ackTime.setNow();
-		if (ai.isAck && ai.isRecover)//删除已消除已确认报警
+		if (canRemoveFromCurrent(ai))//删除已消除已确认报警
 		{
 			tableCurrent.remove(ai);
 		}
@@ -1746,6 +1771,31 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	}
 	return false;
 }
+
+bool almTable::query(string customId, ALARM_INFO& ai, string time)
+{
+	std::unique_lock<shared_mutex> lock(m_csTable);
+	bool bFind = false;
+	ALARM_INFO* p = NULL;
+	string  pa = getFilePath(time);
+	loadFile(pa);
+	for (auto& i : buff)
+	{
+		ALARM_INFO& it = *i.second;
+		if (it.id == customId)
+		{
+			ai = it;
+			bFind = true;
+			break;
+		}
+	}
+	if (bFind)
+	{
+		return true;
+	}
+	return false;
+}
+
 void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
