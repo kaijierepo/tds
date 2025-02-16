@@ -1,5 +1,4 @@
-﻿#include <StdAfx.h>
-#include "tAlmSrv.h"
+﻿#include "tAlmSrv.h"
 #include <regex>
 #include <fstream>
 #include <sstream>
