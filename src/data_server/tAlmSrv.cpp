@@ -1048,6 +1048,23 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		params["tag"] = "*";
 	}
 
+	//keyword search
+	vector<string> keywords;
+	if (params["keyword"].is_string()) {
+		vector<string> kwtemp;
+		string kw = params["keyword"];
+		kw = str::trim(kw);
+		if (kw != "") {
+			str::split(kwtemp, kw, " ");
+			for (auto& i : kwtemp) {
+				string s = str::trim(i);
+				if (s != "") {
+					keywords.push_back(s);
+				}
+			}
+		}
+	}
+
 	bool getTypeTag = false;
 	if (params.contains("getTypeTag") && params["getTypeTag"].is_boolean()) {
 		getTypeTag = true;
@@ -1137,6 +1154,45 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					}
 
 				}
+
+				if (keywords.size() > 0) {
+					vector<bool> matchRlt;
+					for (int i = 0; i < keywords.size(); i++) {
+						string& kw = keywords[i];
+						bool match = false;
+						if (it->second->tag.find(kw) != string::npos) {
+							match = true;
+						}
+						else if (it->second->time.find(kw) != string::npos) {
+							match = true;
+						}
+						else if (it->second->type.find(kw) != string::npos) {
+							match = true;
+						}
+						else if (it->second->level.find(kw) != string::npos) {
+							match = true;
+						}
+						else if (it->second->desc.find(kw) != string::npos) {
+							match = true;
+						}
+						else if (it->second->detail.find(kw) != string::npos) {
+							match = true;
+						}
+						matchRlt.push_back(match);
+					}
+
+					bool bMatchRlt = true;
+					for (int i = 0; i < matchRlt.size();i++) {
+						if (matchRlt[i] == false) {
+							bMatchRlt = false;
+						}
+					}
+
+					if (bMatchRlt == false) {
+						continue;
+					}
+				}
+
 				if (!tagSelector.match(it->second->tag)) {
 					continue;
 				}
