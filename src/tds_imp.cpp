@@ -447,22 +447,23 @@ void loadDeepVersion()
 		fs::getFileList(filist, onnxPath, true, ".onnx");
 		if (filist.size()>0)
 		{
+			deepVersionDllPath = charCodec::utf8_to_gb(deepVersionDllPath);
 			HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // 请确保 DLL 文件路径正确
 			if (hDLL == NULL) {
-				std::cerr << "Failed to load DLL!" << std::endl;
+				LOG("[deepVision] Failed to load DLL,"+ deepVersionDllPath);
 				return ;
 			}
 
 			LoadModelFunc loadModel = (LoadModelFunc)GetProcAddress(hDLL, "load_model");
 			if (loadModel == NULL) {
-				std::cerr << "Failed to get loadModel function!" << std::endl;
+				LOG("[deepVision] Failed to get loadModel function!");
 				FreeLibrary(hDLL);
 				return ;
 			}
 
 			dv_predict = (PredictFunc)GetProcAddress(hDLL, "predict");
 			if (dv_predict == NULL) {
-				std::cerr << "Failed to get predict function!" << std::endl;
+				LOG("[deepVision]Failed to get predict function!");
 				FreeLibrary(hDLL);
 				return ;
 			}
@@ -470,11 +471,12 @@ void loadDeepVersion()
 			// 调用 loadModel 和 predict 方法
 			std::string modelPath = filist[0].path;
 			bool isCPU = true;
+			modelPath = charCodec::utf8_to_gb(modelPath);
 			if (loadModel(modelPath.c_str(), isCPU)) {
-				std::cout << "Model loaded successfully!" << std::endl;
+				LOG("[deepVision]Model loaded successfully!");
 			}
 			else {
-				std::cerr << "Failed to load model!" << std::endl;
+				LOG("[deepVision]Failed to load model!");
 			}
 		}
 	}
