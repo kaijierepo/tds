@@ -3321,6 +3321,94 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		resultObj["thread"] = statusSrv.m_srvStatus.thread;
 		rpcResp.result = resultObj.dump();
 	}
+	else if (method == "imageReco")
+	{
+		string tag = params["tag"];
+		string strTime = params["time"];
+		string imagePath = db.getPath_dbFile(tag, strTime, "image");
+		if (db.fileExist(imagePath))
+		{
+			if (dv_predict)
+			{
+				string imageBuff = "";
+				DB_FS::readFile(imagePath, imageBuff);
+				size_t temp = imageBuff.size();
+				string strFileEnd = imageBuff.substr(imageBuff.size() - 4, 4);
+				//judge xxxxxx.image.jpg file inside,info does it exist
+				if (strFileEnd == "jjpg")
+				{
+					string strJsonSize = imageBuff.substr(imageBuff.size() - 8, 4);
+					size_t jsonSize = 0;
+					memcpy(&jsonSize, strJsonSize.c_str(), 4);
+					imageBuff = imageBuff.substr(0, imageBuff.size() - jsonSize - 8);
+				}
+
+				string info = "";
+				char* c_info = new char[1000000];
+				dv_predict((const unsigned char*)imageBuff.c_str(), imageBuff.size(), c_info);
+				info = c_info;
+				delete[] c_info;
+
+				if (!info.empty())
+				{
+					auto doc_info = yyjson_read(info.c_str(), info.size(), 0);
+					auto root_info = yyjson_doc_get_root(doc_info);
+
+					auto mut_doc_info = yyjson_mut_doc_new(nullptr);
+					auto mut_root_info = yyjson_mut_obj(mut_doc_info);
+					yyjson_mut_doc_set_root(mut_doc_info, mut_root_info);
+
+					yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "tag", tag.c_str());
+					yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "time", strTime.c_str());
+					auto objContourArr = yyjson_mut_arr(mut_doc_info);
+					yyjson_mut_obj_add_val(mut_doc_info, mut_root_info, "objContour", objContourArr);
+
+					auto objectsObj = yyjson_obj_get(root_info, "objects");
+					yyjson_val* val;
+					size_t indx = 0, max = 0;
+					yyjson_arr_foreach(objectsObj, indx, max, val)
+					{
+						auto oneObjContour = yyjson_mut_obj(mut_doc_info);
+						auto nameObj = yyjson_obj_get(val, "name");
+						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "type", yyjson_val_mut_copy(mut_doc_info, nameObj));
+						auto confidenceObj = yyjson_obj_get(val, "confidence");
+						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "confidence", yyjson_val_mut_copy(mut_doc_info, confidenceObj));
+
+						auto bboxArr = yyjson_mut_arr(mut_doc_info);
+						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "bbox", bboxArr);
+						auto bbox_yuanObj = yyjson_obj_get(val, "bbox");
+						auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
+						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_x_yuanObj));
+						auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
+						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_y_yuanObj));
+						auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
+						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_w_yuanObj));
+						auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
+						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_h_yuanObj));
+						auto maskObj = yyjson_obj_get(val, "mask");
+						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "mask", yyjson_val_mut_copy(mut_doc_info, maskObj));
+
+						yyjson_mut_arr_add_val(objContourArr, oneObjContour);
+					}
+
+					char* temp = yyjson_mut_write(mut_doc_info, 0, 0);
+					info = temp;
+					delete temp;
+					yyjson_doc_free(doc_info);
+					yyjson_mut_doc_free(mut_doc_info);
+				}
+				rpcResp.result = info;
+			}
+			else
+			{
+				rpcResp.error = R"("onnx未加载或加载失败,请检查")";
+			}
+		}
+		else
+		{
+			rpcResp.error = R"("cannot find file, imagePath:)" + imagePath+R"(")";
+		}
+	}
 	else {
 		bHandled = false;
 	}

@@ -291,7 +291,8 @@ string TDS_imp::getUIMode()
 	{
 		uimode = "chrome";
 	}
-	else if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll"))
+	else if (fs::fileExist(fs::appPath() + "\\miniblink_x64.dll")||\
+		fs::fileExist(fs::appPath() + "\\mb108_x64.dll"))
 	{
 		uimode = "miniblink";
 	}
@@ -434,6 +435,50 @@ std::string getSystemBootTime() {
 	return "BootTimeNotFound";
 }
 
+PredictFunc dv_predict;
+
+void loadDeepVersion()
+{
+	string deepVersionDllPath = fs::appPath() + "/DeepVision.dll";
+	string onnxPath = fs::appPath() + "/onnx/";
+	if (fs::fileExist(deepVersionDllPath) && fs::fileExist(onnxPath))
+	{
+		vector<fs::FILE_INFO> filist;
+		fs::getFileList(filist, onnxPath, true, ".onnx");
+		if (filist.size()>0)
+		{
+			HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // 请确保 DLL 文件路径正确
+			if (hDLL == NULL) {
+				std::cerr << "Failed to load DLL!" << std::endl;
+				return ;
+			}
+
+			LoadModelFunc loadModel = (LoadModelFunc)GetProcAddress(hDLL, "load_model");
+			if (loadModel == NULL) {
+				std::cerr << "Failed to get loadModel function!" << std::endl;
+				FreeLibrary(hDLL);
+				return ;
+			}
+
+			dv_predict = (PredictFunc)GetProcAddress(hDLL, "predict");
+			if (dv_predict == NULL) {
+				std::cerr << "Failed to get predict function!" << std::endl;
+				FreeLibrary(hDLL);
+				return ;
+			}
+
+			// 调用 loadModel 和 predict 方法
+			std::string modelPath = filist[0].path;
+			bool isCPU = true;
+			if (loadModel(modelPath.c_str(), isCPU)) {
+				std::cout << "Model loaded successfully!" << std::endl;
+			}
+			else {
+				std::cerr << "Failed to load model!" << std::endl;
+			}
+		}
+	}
+}
 
 bool TDS_imp::run(string cmdline)
 {
@@ -508,7 +553,7 @@ bool TDS_imp::run(string cmdline)
 	LOG("[数据库	] " + tds->conf->dbPath);
 
 	g_prjConf.load(tds->conf->confPath + "/prj.ini");
-
+	
 	//初始化系统组件，完成静态结构建立。loadConf和init类函数。在调用run之前，要先完成.否则在结构建立之前就进行数据io，可能会出现一些不必要的错误。
 
 	//startup tds modules
@@ -576,6 +621,8 @@ bool TDS_imp::run(string cmdline)
 		i.second->init();
 	}
 
+	//加载deepVersion
+	loadDeepVersion();
 
 	//开始运行，与外部建立通讯并进行数据io
 	runWebServers();

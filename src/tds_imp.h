@@ -78,3 +78,7 @@ public:
 extern void createConsole();
 extern string g_ComputerStartupTime;
 extern string g_strStartupTime;
+
+typedef bool (*LoadModelFunc)(const char*, const bool&);                             // load_model
+typedef bool (*PredictFunc)(const unsigned char* img, const int& size, char* rlt);   // predict
+extern PredictFunc dv_predict;
