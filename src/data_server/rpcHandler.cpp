@@ -5668,6 +5668,14 @@ void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION sessio
 		fs::createFolderOfPath(path);
 		if (encode=="base64")
 		{
+			//移除Data URI scheme中的前缀 
+			if (conf.find("data:") == 0) {
+				size_t pos = conf.find(",");
+				if (pos > 0) {
+					conf = conf.substr(pos + 1, conf.size() - pos);
+				}
+			}
+
 			std::string image_data = base64_decode(conf);
 			wstring wpath = charCodec::tds_to_utf16(path);
 			// Write the binary data to a file
