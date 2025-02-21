@@ -694,6 +694,9 @@ public:
 	void rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
+	void rpc_db_merge(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
+	void rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
+	
 	bool Update(string tag, DB_TIME stTime, yyjson_val& jData);
 
 	void rpc_db_delete(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
@@ -721,6 +724,10 @@ public:
 
 	//db.update functions
 	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
+
+	//db.merge functions
+	int Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_val*>& mMergeParams);
+
 
 	//save main image data such as 123000.image.jpg,data list will not be modified 
 	bool saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo);

@@ -4249,6 +4249,137 @@ void TDB::Insert(string strTag, DB_TIME stTime, double& dbVal)
 	string s = formatStr("%f", dbVal);
 	InsertValJsonStr(strTag, stTime, s);
 }
+void TDB::rpc_db_merge(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+	rpc_db_merge(yyv_params, rlt, err, queryInfo, org, language);
+	yyjson_doc_free(doc);
+}
+
+void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
+	string dbName;
+	TDB* tdb = nullptr;
+	yyjson_val* yyv_db = nullptr;
+	yyjson_val* yyTag = nullptr;
+	yyjson_val* yyTime = nullptr;
+
+	size_t idx, maxIdx;
+	yyjson_val* key, * value;
+	std::multimap<string, yyjson_val*> mapParams;
+	yyjson_obj_foreach(params, idx, maxIdx, key, value) {
+		string sKey = yyjson_get_str(key);
+		if (sKey == "db") yyv_db = value;
+		else if (sKey == "tag") yyTag = value;
+		else if (sKey == "time") yyTime = value;
+		else mapParams.insert(std::pair<string, yyjson_val*>(sKey, value));
+	}
+
+	if (yyjson_is_str(yyv_db)) {
+		dbName = yyjson_get_str(yyv_db);
+		tdb = db.getChildDB(dbName);
+		if (tdb == nullptr) {
+			err = "specified db not found";
+			return;
+		}
+	}
+
+	if (!yyjson_is_str(yyTag)) {
+		err = JSON_STR_VAL("specify tag in string format");
+		return;
+	}
+
+	if (!yyjson_is_str(yyTime)) {
+		err = JSON_STR_VAL("specify time in string format");
+		return;
+	}
+
+	string tag = yyjson_get_str(yyTag);
+	string time = yyjson_get_str(yyTime);
+
+	if (time.length() != 19 && time.length() != 23) {
+		err = JSON_STR_VAL("wrong time format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX");
+		return;
+	}
+
+	DB_TIME dbTime;
+	dbTime.fromStr(time);
+	int mergeRet = 0;
+
+	if (tdb) {
+		mergeRet = tdb->Merge(tag, dbTime, mapParams);
+	}
+	else {
+		mergeRet = Merge(tag, dbTime, mapParams);
+	}
+
+	if (mergeRet == 0) {
+		rlt = JSON_STR_VAL("ok");
+	}
+	else {
+		err = JSON_STR_VAL("merge fail,code: " + to_string(mergeRet));
+	}
+}
+
+int TDB::Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_val*>& mMergeParams)
+{
+	string dbFile = getPath_dbFile(tag, stTime);
+	string dbData;
+	DB_FS::readFile(dbFile, dbData);
+	if (dbData == "")
+		return -1;
+
+	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
+	yyjson_doc_free(doc);
+
+	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
+
+	yyjson_mut_val* deList = nullptr;
+	yyjson_type type = yyjson_mut_get_type(mut_root);
+	if (type == YYJSON_TYPE_OBJ) { //file with desc
+		deList = yyjson_mut_obj_get(mut_root, "data");
+	}
+	else if (type == YYJSON_TYPE_ARR) {
+		deList = mut_root;
+	}
+	else {
+		return -2;
+	}
+
+	bool findDE = false;
+	string deTime = stTime.toYMD() + " 00:00:00.000";
+	string updateTime = stTime.toStr();
+	size_t idx, max;
+	yyjson_mut_val* de;
+	//the file contont and url to be updated
+	yyjson_mut_arr_foreach(deList, idx, max, de) {
+		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
+		getDeTime(yyTime, deTime);
+		if (updateTime == deTime) {
+			//replace the "val", update the file urls, refresh the file dir
+			for (auto &it : mMergeParams)
+			{
+				yyjson_mut_val* yyValKey = yyjson_mut_strcpy(mut_doc, it.first.c_str());
+				yyjson_mut_val* yyToMergeVal = yyjson_val_mut_copy(mut_doc, it.second);
+	
+				yyjson_mut_obj_put(de, yyValKey, yyToMergeVal);
+			}
+			findDE = true;
+		}
+	}
+	if (!findDE)
+		return -3;
+
+	size_t len = 0;
+	char* p = yyjson_mut_write(mut_doc, 0, &len);
+	DB_FS::writeFile(dbFile, p, len);
+	free(p);
+
+	yyjson_mut_doc_free(mut_doc);
+	return 0;
+}
+
+
 
 void TDB::rpc_db_update(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);

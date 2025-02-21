@@ -855,6 +855,11 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			string s = params.dump();
 			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
+		else if (method == "db.merge")
+		{
+			string s = params.dump();
+			db.rpc_db_merge(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+		}
 		else if (method == "db.delete")
 		{
 			string s = params.dump();
