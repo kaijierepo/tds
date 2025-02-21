@@ -414,6 +414,7 @@ public:
 	void yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& jerryVal);
 	bool setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj);
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
+	bool clearScriptEngineObj(jerry_value_t engineObj);
 	jerry_value_t global_object;
 #endif
 

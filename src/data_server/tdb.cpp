@@ -5908,6 +5908,25 @@ void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& je
 	}
 }
 
+bool CONDITION_SELECTOR::clearScriptEngineObj(jerry_value_t engineObj)
+{
+	jerry_value_t prop_names = jerry_get_object_keys(engineObj);
+	jerry_length_t length = jerry_get_array_length(prop_names);
+	for (jerry_length_t i = 0; i < length; i++) {
+		jerry_value_t key = jerry_get_property_by_index(prop_names, i);
+		// 删除该属性
+		jerry_delete_property(engineObj, key);
+
+		// 释放键的引用
+		jerry_release_value(key);
+	}
+
+	// 释放属性名称数组的引用
+	jerry_release_value(prop_names);
+	return true;
+}
+
+
 bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj)
 {
 	size_t idx, maxIdx;
@@ -6031,6 +6050,9 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	{
 		bMatch = jerry_value_to_boolean(eval_ret);
 	}
+	//clear all propertys
+	if (yyjson_is_obj(de))
+		clearScriptEngineObj(global_object);
 
 	if (!run_ok)
 	{
