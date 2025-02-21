@@ -6043,7 +6043,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 		}
 		else
 			e.m_error = "db exception: error when execute filter script";
-		throw e;
+		//throw e;
 	}
 #endif
 	return bMatch;
