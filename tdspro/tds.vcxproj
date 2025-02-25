@@ -334,7 +334,7 @@
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -385,7 +385,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>Default</LanguageStandard_C>
