@@ -732,14 +732,22 @@ jerry_value_t func_http_request(const jerry_call_info_t* call_info_p,
 			httplib::Client cli(ip, port);
 			string path = params["path"];
 			string body;
+			httplib::Headers headers;
 			if (params.contains("body")) {
 				body = params["body"];
+			}
+			if (params.contains("headers")) {
+				json jHeaders = params["headers"];
+				for (auto it = jHeaders.begin(); it != jHeaders.end(); ++it) {
+					std::pair<string, string> p = { it.key(),it.value() };
+					headers.insert(p);
+				}
 			}
 			if (method == "GET") {
 
 			}
 			else if (method == "POST") {
-				httplib::Result rlt = cli.Post(path, body, "application/json");
+				httplib::Result rlt = cli.Post(path, headers,body, "application/json");
 				if (rlt != nullptr) {
 					jerry_value_t ret = jerry_create_object();
 					jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"body");
