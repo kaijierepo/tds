@@ -1985,6 +1985,16 @@ namespace fs {
 					 fi.folderPath = fi.path.substr(0, pos);
 					 fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
 					 fi.len = i.file_size();
+					 auto ftime = i.last_write_time();
+					 // 将 file_time_type 转换为 system_clock::time_point
+					 auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+						 ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+						 );
+					 auto ti = std::chrono::system_clock::to_time_t(sctp);
+					 std::stringstream ss;
+					 ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
+					 fi.modifyTime = ss.str();
+
 					 list.push_back(fi);
 
 					 if (recursive) {
