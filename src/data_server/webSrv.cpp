@@ -922,7 +922,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		// api找到在黑名单，返回
 		{
 			std::shared_lock<shared_mutex> lock(g_csApiBlackList);
-			if (apiBlackList.find(wsip) != apiBlackList.end())
+			if (!apiBlackList.empty() && apiBlackList.find(wsip) != apiBlackList.end())
 			{
 				string resHeader = "Connection: close\r\n";
 				string body = "";
@@ -1070,7 +1070,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 				unsigned char* pIP = (unsigned char*)&c->rem.ip;
 				string sip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
 				std::shared_lock<shared_mutex> lock(g_csApiBlackList);
-				if (apiBlackList.find(sip) != apiBlackList.end())
+				if (!apiBlackList.empty() && apiBlackList.find(sip) != apiBlackList.end())
 				{
 					string resHeader = "Connection: close\r\n";
 					string body = "";
@@ -1605,6 +1605,7 @@ bool loadApiBlackList()
 bool saveApiBlackList()
 {
 	json apiJson = json::array();
+	std::shared_lock<shared_mutex> lock(g_csApiBlackList);
 	for (auto itm : apiBlackList)
 	{
 		json apiObj;		

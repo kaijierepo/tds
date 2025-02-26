@@ -88,7 +88,7 @@ OBJ::OBJ()
 
 OBJ::~OBJ()
 {
-	for (auto& i : m_childObj) {
+	for (auto* i : m_childObj) {
 		delete i;
 	}
 	m_childObj.clear();
