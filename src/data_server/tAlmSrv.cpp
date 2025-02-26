@@ -1466,6 +1466,18 @@ void almTable::loadFile(string strFile)
 	//strDBData = as_charCodec::gb_to_utf8(strDBData);//默认使用utf8,出现乱码的GB2312只有健康管理系统,自己手动改数据库
 	vector<string> recLines;
 	str::split(recLines, strDBData, "\r\n");
+
+	if (recLines.size() >= 1) {
+		string tableHeader = recLines[0];
+		vector<string> colNames;
+		str::split(colNames, tableHeader, ",");
+		for (int i = 0; i < colNames.size(); i++) {
+			string name = colNames[i];
+			m_colIdx[name] = i;
+		}
+	}
+
+
 	for (int i = 1; i < recLines.size(); i++)
 	{
 		string str = recLines.at(i);
@@ -1507,8 +1519,8 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 		ai.needRecover = j["needRecover"].get<bool>();
 	if (j["needAck"].is_boolean())
 		ai.needAck = j["needAck"].get<bool>();
-	if (j["multiUnackInOneTag"].is_boolean())
-		ai.multiUnackInOneTag = j["multiUnackInOneTag"].get<bool>();
+	if (j["multiUnack"].is_boolean())
+		ai.multiUnack = j["multiUnack"].get<bool>();
 	return ai;
 }
 
@@ -1555,8 +1567,19 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	j["ackUser"] = info->ackUser;
 	j["picUrl"] = info->pic_url;
 	j["dbPath"] = almSrv->tableCurrent.filePath;
-	j["multiUnackInOneTag"] = info->multiUnackInOneTag;
+	j["multiUnack"] = info->multiUnack;
 	return j;
+}
+
+string almTable::csvColVal(vector<string>& colVals, string colName) {
+	map<string, int>::iterator iter = m_colIdx.find(colName);
+	if (iter != m_colIdx.end()) {
+		int idx = m_colIdx[colName];
+		return colVals[idx];
+	}
+	else {
+		return "";
+	}
 }
 
 ALARM_INFO almTable::fromCSV(const string& line)
@@ -1590,26 +1613,27 @@ ALARM_INFO almTable::fromCSV(const string& line)
 
 	ALARM_INFO ai;
 	//core info
-	ai.uuid = cols[0];
-	ai.tag = cols[1];
-	ai.time = cols[2].c_str();
-	ai.type = cols[3].c_str();
-	ai.level = cols[4].c_str();
-	ai.desc = cols[5].c_str();
-	ai.detail = cols[6].c_str();
+	ai.uuid = csvColVal(cols,"uuid");
+	ai.tag = csvColVal(cols,"tag");
+	ai.time = csvColVal(cols,"time").c_str();
+	ai.type = csvColVal(cols,"type").c_str();
+	ai.level = csvColVal(cols,"level").c_str();
+	ai.desc = csvColVal(cols,"desc").c_str();
+	ai.detail = csvColVal(cols,"detail").c_str();
 
 	//ack and recover
-	ai.isRecover = atoi(cols[7].c_str());
-	ai.needRecover = atoi(cols[8].c_str());
-	ai.recoverTime.fromStr(cols[9].c_str());
-	ai.isAck = atoi(cols[10].c_str());
-	ai.needAck = atoi(cols[11].c_str());
-	ai.ackTime.fromStr(cols[12].c_str());
-	ai.ackInfo = cols[13].c_str();
-	ai.ackUser = cols[14].c_str();
+	ai.isRecover = atoi(csvColVal(cols,"isRecover").c_str());
+	ai.needRecover = atoi(csvColVal(cols,"needRecover").c_str());
+	ai.recoverTime.fromStr(csvColVal(cols,"recoverTime").c_str());
+	ai.isAck = atoi(csvColVal(cols,"isAck").c_str());
+	ai.needAck = atoi(csvColVal(cols,"needAck").c_str());
+	ai.multiUnack = atoi(csvColVal(cols,"multiUnack").c_str());
+	ai.ackTime.fromStr(csvColVal(cols,"ackTime").c_str());
+	ai.ackInfo = csvColVal(cols,"ackInfo").c_str();
+	ai.ackUser = csvColVal(cols,"ackUser").c_str();
 
 	//others
-	ai.pic_url = cols[15].c_str();
+	ai.pic_url = csvColVal(cols,"picUrl").c_str();
 	return ai;
 }
 
@@ -1617,26 +1641,27 @@ string almTable::toCSV(ALARM_INFO& info)
 {
 	string str;
 	//core info
-	/*0*/str += "\"" + info.uuid + "\""; str += ",";
-	/*1*/str += "\"" + info.tag + "\""; str += ",";
-	/*2*/str += info.time; str += ",";
-	/*3*/str += info.type; str += ",";
-	/*4*/str += info.level; str += ",";
-	/*5*/str += "\"" + info.desc + "\""; str += ",";
-	/*6*/str += "\"" + info.detail + "\""; str += ",";
+	str += "\"" + info.uuid + "\""; str += ",";
+	str += "\"" + info.tag + "\""; str += ",";
+	str += info.time; str += ",";
+	str += info.type; str += ",";
+	str += info.level; str += ",";
+	str += "\"" + info.desc + "\""; str += ",";
+	str += "\"" + info.detail + "\""; str += ",";
 
 	//ack and recover
-	/*7*/str += info.isRecover ? "1" : "0"; str += ",";
-	/*8*/str += info.needRecover ? "1" : "0"; str += ",";
-	/*9*/str += info.recoverTime.toStr(); str += ",";
-	/*10*/str += info.isAck ? "1" : "0"; str += ",";
-	/*11*/str += info.needAck ? "1" : "0"; str += ",";
-	/*12*/str += info.ackTime.toStr(); str += ",";
-	/*13*/str += "\"" + info.ackInfo + "\""; str += ",";
-	/*14*/str += info.ackUser; str += ",";
+	str += info.isRecover ? "1" : "0"; str += ",";
+	str += info.needRecover ? "1" : "0"; str += ",";
+	str += info.recoverTime.toStr(); str += ",";
+	str += info.isAck ? "1" : "0"; str += ",";
+	str += info.needAck ? "1" : "0"; str += ",";
+	str += info.multiUnack ? "1" : "0"; str += ",";
+	str += info.ackTime.toStr(); str += ",";
+	str += "\"" + info.ackInfo + "\""; str += ",";
+	str += info.ackUser; str += ",";
 
 	//others
-	/*15*/str += info.pic_url;
+	str += info.pic_url;
 	str += "\r\n";
 	return str;
 }

@@ -62,13 +62,13 @@ public:
 	string type;
 	string id;  //custom id
 
-	bool multiUnackInOneTag;  //default disabled. one unack of one tag,so current alarm list will not be too big.
+	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
 
 	string getKey(ALM_TABLE_TYPE tableType) {
 		if(tableType == HISTORY_TABLE)
 			return time + "," + tag + "," + type + id;
 		else if (tableType == CURRENT_TABLE) {
-			if (multiUnackInOneTag) {
+			if (multiUnack) {
 				return time + "," + tag + "," + type + id;
 			}
 			else
@@ -129,7 +129,7 @@ public:
 		isAck = 0;
 		memset(&ackTime, 0, sizeof(TIME));
 		ackInfo = "";
-		multiUnackInOneTag = false;
+		multiUnack = false;
 	}
 
 	bool isAlarming() {
@@ -216,6 +216,7 @@ public:
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 	ALARM_INFO fromCSV(const string& line);
+	string csvColVal(vector<string>& colVals, string colName);
 
 	string toCSV(ALARM_INFO& info);
 	string filePath;
@@ -226,6 +227,7 @@ public:
 	ALM_TABLE_TYPE m_tableType;
 protected:
 	almServer* m_pAlmSrv;
+	map<string, int> m_colIdx;
 };
 
 
