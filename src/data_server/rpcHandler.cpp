@@ -2479,11 +2479,11 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		if (session.dbpath == "alarmsDevelop")
 		{
-			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
+			pAlmSrv->rpc_addAlarm(params, rpcResp);
 		}
 		else
 		{
-			result = pAlmSrv->rpc_addAlarm(params, rpcResp);
+			pAlmSrv->rpc_addAlarm(params, rpcResp);
 		}
 	}
 	else if (method == "recoverAlarm" || method == "clearAlarm") {

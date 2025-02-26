@@ -814,6 +814,22 @@ jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_ioDev_setStatusData(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		pEngine->m_ioDevThis->m_statusData = params;
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 
 jerry_value_t func_ioDev_setOffline(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
