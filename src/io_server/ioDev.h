@@ -197,6 +197,8 @@ public:
 	string m_strUser;  //某些设备需要用户名和密码才能访问
 	string m_strPwd;
 
+	json m_statusData;
+
 	bool m_bEnableOfflineTimeout;
 	bool m_bEnableHttpHeartbeat;
 	bool m_bEnablePingOnlineCheck;
