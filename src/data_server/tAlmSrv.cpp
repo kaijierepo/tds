@@ -1555,6 +1555,7 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	j["ackUser"] = info->ackUser;
 	j["picUrl"] = info->pic_url;
 	j["dbPath"] = almSrv->tableCurrent.filePath;
+	j["multiUnackInOneTag"] = info->multiUnackInOneTag;
 	return j;
 }
 
