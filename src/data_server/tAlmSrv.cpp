@@ -322,7 +322,7 @@ bool almServer::isActive(string tag, string type)
 need add alarm after status check
 must and only refered in almServer::Update , almServer::Add
 */
-void almServer::addAlarm(ALARM_INFO ai, bool notify)
+void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 {
 	if (!m_init)
 		return;
@@ -391,18 +391,6 @@ void almServer::addAlarm(ALARM_INFO ai, bool notify)
 	auto func_log = m_initParam.func_log;
 	if (func_log)
 		func_log("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
-
-	//事件报警重复性检查
-	if (m_eventAlarmRepetitiveCheck) {
-		json q;
-		q["time"] = ai.time;
-		RPC_SESSION rs;
-		string s = rpc_getHistory(q, rs);
-		json j = json::parse(s);
-		if (j.is_array() && j.size() > 0) {
-			return;
-		}
-	}
 
 	//ai.uuid = uuid();
 	ai.uuid = ai.time + ai.tag + ai.type + ai.level;
@@ -646,9 +634,14 @@ string almServer::getAlarmTypeLabel(string type)
 	return "";
 }
 
-void almServer::Add(ALARM_INFO ai, bool bNotify)
+string almServer::Add(ALARM_INFO& ai, bool bNotify)
 {
 	std::lock_guard<mutex>  g(m_csAlarmData);
+
+
+	if (!ai.needRecover) {
+		ai.isRecover = true;
+	}
 
 	json filter;
 	filter["tag"] = ai.tag;
@@ -668,12 +661,17 @@ void almServer::Add(ALARM_INFO ai, bool bNotify)
 		bNeedAdd = true;
 	}
 
-	if(bNeedAdd)
+	if (bNeedAdd) {
 		addAlarm(ai, bNotify);
+		return "ok";
+	}
+	else {
+		return "unrecover alarm with the same alarm key already existed,add fail";
+	}	
 }
 
 #if 1
-string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
+void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 {
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];
@@ -693,8 +691,13 @@ string almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		ai.time = t.toStr();
 	}
 
-	Add(ai, true);
-	return "\"success\"";
+	string sRet = Add(ai, true);
+	if (sRet == "ok") {
+		resp.result = ai.toJsonStr(this);
+	}
+	else {
+		resp.error = sRet;
+	}
 }
 
 void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
@@ -1504,6 +1507,8 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 		ai.needRecover = j["needRecover"].get<bool>();
 	if (j["needAck"].is_boolean())
 		ai.needAck = j["needAck"].get<bool>();
+	if (j["multiUnackInOneTag"].is_boolean())
+		ai.multiUnackInOneTag = j["multiUnackInOneTag"].get<bool>();
 	return ai;
 }
 
