@@ -1407,7 +1407,7 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 
 void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
-	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,ackTime,ackInfo,ackUser\r\n";
+	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
