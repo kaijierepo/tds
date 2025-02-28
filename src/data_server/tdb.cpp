@@ -4360,9 +4360,17 @@ int TDB::Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_va
 			for (auto &it : mMergeParams)
 			{
 				yyjson_mut_val* yyValKey = yyjson_mut_strcpy(mut_doc, it.first.c_str());
-				yyjson_mut_val* yyToMergeVal = yyjson_val_mut_copy(mut_doc, it.second);
-	
-				yyjson_mut_obj_put(de, yyValKey, yyToMergeVal);
+				//param is null, remove the key
+				if (yyjson_is_null(it.second))
+				{
+					yyjson_mut_obj_remove(de, yyValKey);
+				} 
+				else
+				{
+					yyjson_mut_val* yyToMergeVal = yyjson_val_mut_copy(mut_doc, it.second);
+		
+					yyjson_mut_obj_put(de, yyValKey, yyToMergeVal);
+				}
 			}
 			findDE = true;
 		}
