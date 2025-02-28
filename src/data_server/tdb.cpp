@@ -3976,6 +3976,18 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
 						}
 					}
+					else if (deSel.timeGroupBy == "minute") { //2020-02-03 11:12:14
+						groupKeyVal = deTime.substr(0, 16);
+						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_groupedBeforeAggr.find(groupKeyVal);
+						if (it != fSetOut.m_groupedBeforeAggr.end()) {
+							it->second.push_back(de);
+						}
+						else {
+							vector<yyjson_val*> newVec;
+							newVec.push_back(de);
+							fSetOut.m_groupedBeforeAggr[groupKeyVal] = newVec;
+						}
+					}
 					else {
 						fSetOut.m_beforeAggr.push_back(de);
 					}
