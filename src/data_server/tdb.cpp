@@ -936,7 +936,7 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 	}
 }
 
-string TDB::getPath_dataFolder(string strTag, DB_TIME date)
+string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 {
 	if (m_timeUnit == BY_DAY) {
 		strTag = changeCharForFileName(strTag);
@@ -953,7 +953,7 @@ string TDB::getPath_dataFolder(string strTag, DB_TIME date)
 	}
 }
 // no '/' in bengin ,and in end
-string TDB::getPath_dataFolder_NO_DB(string strTag, DB_TIME date)
+string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
 {
 	if (m_timeUnit == BY_DAY) {
 		strTag = changeCharForFileName(strTag);
@@ -992,7 +992,7 @@ string ic8 = formatStr("[%02X]", '|');
 string ic9 = formatStr("[%02X]", '/');
 
 //escple illigal filename char  / \ : * ? " < > |
-string TDB::changeCharForFileName(string s) {
+string TDB::changeCharForFileName(string s)  const {
 	string out;
 	for (int i = 0; i < s.length(); i++)
 	{
@@ -1049,7 +1049,7 @@ string TDB::getPath_dbFile(string tag, string time, string deType)
 	return getPath_dbFile(tag, dbt, deType);
 }
 
-string TDB::getPath_dbFile(string strTag, DB_TIME date,string deType)
+string TDB::getPath_dbFile(string strTag, const DB_TIME &date,string deType) const
 {
 	string folder = getPath_dataFolder(strTag,date);
 	if (deType == "") {
@@ -4294,22 +4294,51 @@ void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& que
 	}
 
 	string tag = yyjson_get_str(yyTag);
-	string time = yyjson_get_str(yyTime);
+	string timerange = yyjson_get_str(yyTime);
+	string time[2];
+	DB_TIME dbTime[2];
 
-	if (time.length() != 19 && time.length() != 23) {
-		err = JSON_STR_VAL("wrong time format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX");
+	auto pos = timerange.find('~');
+	if (pos != string::npos)
+	{
+		time[0] = timerange.substr(0, pos);
+		time[1] = timerange.substr(pos + 1);
+		dbTime[0].fromStr(timerange.substr(0, pos));
+		dbTime[1].fromStr(timerange.substr(pos + 1));
+	}
+	else
+	{
+		time[0] = time[1] = timerange;
+		dbTime[1].fromStr(timerange);
+		dbTime[0] = dbTime[1];
+	}
+
+	if (time[0].length() != 19 && time[0].length() != 23 && time[1].length() != 19 && time[1].length() != 23) {
+		err = JSON_STR_VAL("wrong timerange format,should be XXXX-XX-XX XX:XX:XX or XXXX-XX-XX XX:XX:XX.XXX or with '~'");
+		return;
+	}
+	if (time[0] > time[1]) {
+		err = JSON_STR_VAL("wrong timerange format,should be mintime~maxtime");
 		return;
 	}
 
-	DB_TIME dbTime;
-	dbTime.fromStr(time);
 	int mergeRet = 0;
 
-	if (tdb) {
-		mergeRet = tdb->Merge(tag, dbTime, mapParams);
-	}
-	else {
-		mergeRet = Merge(tag, dbTime, mapParams);
+	DB_TIME dtBegin = dbTime[0];
+	DB_TIME dtEnd = dbTime[1];
+	dtBegin.clearHMS();
+	dtEnd.setMaxHMS();
+
+	DB_TIME oneDay{ 0, 0, 1, 0, 0, 0, 0 };
+
+	for (DB_TIME dt = dtBegin; dt <= dtEnd; dt += oneDay)
+	{
+		if (tdb) {
+			mergeRet = tdb->Merge(tag, dt, dbTime[0], dbTime[1], mapParams);
+		}
+		else {
+			mergeRet = Merge(tag, dt, dbTime[0], dbTime[1], mapParams);
+		}
 	}
 
 	if (mergeRet == 0) {
@@ -4320,7 +4349,7 @@ void TDB::rpc_db_merge(yyjson_val* params, string& rlt, string& err, string& que
 	}
 }
 
-int TDB::Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_val*>& mMergeParams)
+int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, const DB_TIME& stTimeRange2, const std::multimap<string, yyjson_val*>& mMergeParams)
 {
 	string dbFile = getPath_dbFile(tag, stTime);
 	string dbData;
@@ -4348,14 +4377,15 @@ int TDB::Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_va
 
 	bool findDE = false;
 	string deTime = stTime.toYMD() + " 00:00:00.000";
-	string updateTime = stTime.toStr();
+	string updateTime1 = stTimeRange1.toStr();
+	string updateTime2 = stTimeRange2.toStr();
 	size_t idx, max;
 	yyjson_mut_val* de;
 	//the file contont and url to be updated
 	yyjson_mut_arr_foreach(deList, idx, max, de) {
 		yyjson_mut_val* yyTime = yyjson_mut_obj_get(de, "time");
 		getDeTime(yyTime, deTime);
-		if (updateTime == deTime) {
+		if (updateTime1 <= deTime && deTime <= updateTime2) {
 			//replace the "val", update the file urls, refresh the file dir
 			for (auto &it : mMergeParams)
 			{
@@ -5272,7 +5302,7 @@ string TDB::parseSuffix(string deFileUrl)
 }
 
 
-bool TDB::fileExist(string pszFileName)
+bool TDB::fileExist(string pszFileName) const
 {
 #ifdef _WIN32
 		wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
@@ -6108,7 +6138,7 @@ void DB_TIME::fromUnixTime(time_t iUnix, int milli)
 	wDayOfWeek = time_tm.tm_wday;
 }
 
-time_t DB_TIME::toUnixTime()
+time_t DB_TIME::toUnixTime() const
 {
 	tm temptm = { wSecond, wMinute, wHour,wDay, wMonth - 1, wYear - 1900, wDayOfWeek, 0, 0 };
 	time_t iReturn = mktime(&temptm);
@@ -6124,19 +6154,19 @@ void DB_TIME::setNow()
 	fromUnixTime(tt, milli);
 }
 
-string DB_TIME::toStampHMS()
+string DB_TIME::toStampHMS() const
 {
 	string s = formatStr("%02d%02d%02d", wHour, wMinute, wSecond);
 	return s;
 }
 
-string DB_TIME::toStampFull()
+string DB_TIME::toStampFull() const
 {
 	string s = formatStr("%04d-%02d-%02d %02d%02d%02d", wYear,wMonth,wDay,wHour, wMinute, wSecond);
 	return s;
 }
 
-string DB_TIME::toYMD()
+string DB_TIME::toYMD() const
 {
 	string str;
 	if (wYear > 2000 && wDay > 0 && wDay < 40 && wHour >= 0 && wHour <= 24 && wMinute >= 0 && wMinute <= 60)

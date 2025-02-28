@@ -64,18 +64,34 @@ struct DB_TIME {
 	DB_TIME() {
 		memset(this, 0, sizeof(DB_TIME));
 	}
+	DB_TIME(unsigned short year, unsigned short month, unsigned short day, unsigned short hour, unsigned short minute, unsigned short second, unsigned short millisecond)
+	{
+		wYear = year;
+		wMonth = month;
+		wDay = day;
+		wHour = hour;
+		wMinute = minute;
+		wSecond = second;
+		wMilliseconds = millisecond;
+	}
 
 	void fromUnixTime(time_t iUnix, int milli = 0);
-	time_t toUnixTime();
+	time_t toUnixTime() const;
 	void setNow();
-	string toStampHMS();
-	string toStampFull();
-	string toYMD();
+	string toStampHMS() const;
+	string toStampFull() const;
+	string toYMD() const;
 	void clearHMS() {
 		wHour = 0;
 		wMinute = 0;
 		wSecond = 0;
 		wMilliseconds = 0;
+	}
+	void setMaxHMS() {
+		wHour = 23;
+		wMinute = 59;
+		wSecond = 59;
+		wMilliseconds = 999;
 	}
 	string toStr(bool enableMS = true) const;
 	bool fromStr(string str);
@@ -84,6 +100,77 @@ struct DB_TIME {
 
 	bool operator==(const DB_TIME& right) const {
 		return 0 == memcmp(this, &right,sizeof(DB_TIME));
+	}
+	// 判断是否为闰年
+	bool isLeapYear() const {
+		return (wYear % 4 == 0 && wYear % 100 != 0) || (wYear % 400 == 0);
+	}
+
+	// 获取某个月的最大天数
+	unsigned short getMaxDayOfMonth() const {
+		static const unsigned short daysInMonth[] = {
+			31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+		};
+		if (wMonth == 2 && isLeapYear()) {
+			return 29;
+		}
+		return daysInMonth[wMonth - 1];
+	}
+	DB_TIME& operator+=(const DB_TIME& right)
+	{
+		// 毫秒
+		wMilliseconds += right.wMilliseconds;
+		if (wMilliseconds >= 1000) {
+			wMilliseconds -= 1000;
+			wSecond += 1;
+		}
+
+		// 秒
+		wSecond += right.wSecond;
+		if (wSecond >= 60) {
+			wSecond -= 60;
+			wMinute += 1;
+		}
+
+		// 分钟
+		wMinute += right.wMinute;
+		if (wMinute >= 60) {
+			wMinute -= 60;
+			wHour += 1;
+		}
+
+		// 小时
+		wHour += right.wHour;
+		if (wHour >= 24) {
+			wHour -= 24;
+			wDay += 1;
+		}
+
+		// 天
+		wDay += right.wDay;
+		while (wDay > getMaxDayOfMonth()) {
+			wDay -= getMaxDayOfMonth();
+			wMonth += 1;
+			if (wMonth > 12) {
+				wMonth = 1;
+				wYear += 1;
+			}
+		}
+
+		// 月
+		wMonth += right.wMonth;
+		if (wMonth > 12) {
+			wMonth -= 12;
+			wYear += 1;
+		}
+
+		// 年
+		wYear += right.wYear;
+
+		// 星期（可选，根据需求计算）
+		// 这里假设 wDayOfWeek 不需要更新
+
+		return *this;
 	}
 
 	bool operator>(const DB_TIME& right) const {
@@ -727,7 +814,7 @@ public:
 	int Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updateFile);
 
 	//db.merge functions
-	int Merge(string tag, DB_TIME stTime, const std::multimap<string, yyjson_val*>& mMergeParams);
+	int Merge(string tag, const DB_TIME& stTime, const DB_TIME &stTimeRange1, const DB_TIME& stTimeRange2, const std::multimap<string, yyjson_val*>& mMergeParams);
 
 
 	//save main image data such as 123000.image.jpg,data list will not be modified 
@@ -775,16 +862,16 @@ public:
 
 	//path management
 	string getPath_dbFile(string strTag, string time, string deType = "");
-	string getPath_dbFile(string strTag, DB_TIME date, string deType = "");
-	string changeCharForFileName(string s);
-	string getPath_dataFolder(string strTag, DB_TIME date);
-	string getPath_dataFolder_NO_DB(string strTag, DB_TIME date);
+	string getPath_dbFile(string strTag, const DB_TIME& date, string deType = "") const;
+	string changeCharForFileName(string s)  const;
+	string getPath_dataFolder(string strTag, const DB_TIME& date) const;
+	string getPath_dataFolder_NO_DB(string strTag, const DB_TIME& date) const;
 	string getPath_deFile(string strTag, DB_TIME stTime);
 	string getPath_dbRoot();
 	string getName_deFile(string tag, DB_TIME time);
 
 	string parseSuffix(string deFileUrl);
-	bool fileExist(string pszFileName);
+	bool fileExist(string pszFileName)const;
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 	fp_getTagsByTagSelector m_getTagsByTagSelector;
