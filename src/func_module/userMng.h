@@ -79,6 +79,7 @@ public:
 	void rpc_login(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_logout(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session);
+	bool rpc_setUser(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session);
 	bool rpc_updateToken(json params, RPC_RESP& resp, RPC_SESSION session);
 	json rpc_getUsers(json params, RPC_RESP& resp, RPC_SESSION session); //获得可以管理的用户列表

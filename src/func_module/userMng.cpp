@@ -567,12 +567,19 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 				return true;
 			}
 			string name = jName.get<string>();
+			json jNewName = oneUser["newName"];
+			string newName = jNewName.get<string>();
+
 
 
 			//已存在则修改
 			if (m_mapUsers.find(name) != m_mapUsers.end())
 			{
 				json& userTmp = m_mapUsers[name];
+				if (newName != "") {
+					oneUser["name"] = newName;
+					oneUser.erase("newName");
+				}
 				userTmp = oneUser;
 			}
 			//不存在则新增
@@ -589,6 +596,11 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 	resp.result = "\"ok\"";
 
 	return true;
+}
+
+bool userManager::rpc_setUser(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	return false;
 }
 
 bool userManager::rpc_addUser(json params, RPC_RESP& resp, RPC_SESSION session)
