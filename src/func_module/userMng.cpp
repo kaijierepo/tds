@@ -568,11 +568,8 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 			}
 			string name = jName.get<string>();
 			json jNewName = oneUser["newName"];
-			if (jNewName.is_null()) {
-				resp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "newName must be set to a user");
-				return true;
-			}
-			string newName = jNewName.get<string>();
+			//因为新增和更改都使用该函数,所以newName并非必须
+			string newName = jNewName.is_string() ? jNewName.get<string>() : "";
 
 			//已存在则修改
 			if (m_mapUsers.find(name) != m_mapUsers.end())
@@ -589,6 +586,7 @@ bool userManager::rpc_setUsers(json params, RPC_RESP& resp, RPC_SESSION session)
 			{
 				m_mapUsers[name] = oneUser;
 			}
+			
 		}
 	}
 
