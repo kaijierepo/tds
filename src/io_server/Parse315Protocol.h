@@ -1373,8 +1373,8 @@ public:
 	static BOOL GetFrameData(LPVOID&, int&, int&);//从缓冲区取得一帧数据
 	static tstring ToString(const StFrame&, int dir);//将数据包翻译成字符串，dir: 数据包方向  0-微机监测->JHD  1-JHD->微机监测
 	static tstring AStringToTString(LPCSTR lpStr);
-	static SYSTEMTIME Time_tToSystemTime(time_t t);
-	static BOOL TimeToString(const SYSTEMTIME& time, string& str);
+	static TIME Time_tToSystemTime(time_t t);
+	static BOOL TimeToString(const TIME& time, string& str);
 	static BYTE GetOptDirIndex(tstring direct);//根据操作方向类型描述文本获取对应值
 	static tstring GetOptDirDesc(int direct);//根据操作方向类型值获取对应描述文本
 	static tstring GetOptDirDesc(eMOVE_DIRECT direct);//根据操作方向类型值获取对应描述文本

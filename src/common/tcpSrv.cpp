@@ -1,8 +1,9 @@
 #include "tcpSrv.h"
+#include "tds.h"
 
 namespace tcpServer {
-	SYSTEMTIME str2time(const std::string& s) {
-		SYSTEMTIME t;
+	TIME str2time(const std::string& s) {
+		TIME t;
 		//2022-02-22 11:11:11.123   23bytes
 		if (s.length() == 23) {
 			sscanf(s.c_str(), "%hu-%hu-%hu %hu:%hu:%hu.%hu",
@@ -28,7 +29,7 @@ namespace tcpServer {
 		return t;
 	}
 
-	time_t time2unixstamp(SYSTEMTIME t)
+	time_t time2unixstamp(TIME t)
 	{
 		tm temptm = { t.wSecond, t.wMinute, t.wHour,
 			t.wDay, t.wMonth - 1, t.wYear - 1900, t.wDayOfWeek, 0, 0 };
@@ -38,14 +39,15 @@ namespace tcpServer {
 
 	int calcTimePassSecond(string sTime) {
 		time_t now = time(nullptr);
-		SYSTEMTIME tlast = str2time(sTime);
-		time_t last = time2unixstamp(tlast);
+		TIME tlast;
+		tlast.fromStr(sTime);
+		time_t last = tlast.toUnixTime();
 		return now - last;
 	}
 
 	string getNowStr() {
-		SYSTEMTIME t;
-		GetLocalTime(&t);
+		TIME t;
+		t.setNow();
 		char buff[50] = { 0 };
 		sprintf(buff, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%.3d",
 			t.wYear, t.wMonth, t.wDay,

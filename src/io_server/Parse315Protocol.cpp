@@ -4656,23 +4656,15 @@ tstring Parse315Protocol::ToString(const StGapValue& data)
 	return strRst;
 }
 
-SYSTEMTIME Parse315Protocol::Time_tToSystemTime(time_t t)
+TIME Parse315Protocol::Time_tToSystemTime(time_t t)
 {
-	tm temptm;
-	localtime_s(&temptm, &t);
-	SYSTEMTIME st = { 1900 + temptm.tm_year,
-		1 + temptm.tm_mon,
-		temptm.tm_wday,
-		temptm.tm_mday,
-		temptm.tm_hour,
-		temptm.tm_min,
-		temptm.tm_sec,
-		0 };
+	TIME st;
+	st.fromUnixTime(t);
 	return st;
 }
 
 
-BOOL Parse315Protocol::TimeToString(const SYSTEMTIME& time, string& str)
+BOOL Parse315Protocol::TimeToString(const TIME& time, string& str)
 {
 	if (time.wYear > 2000 && time.wDay > 0 && time.wDay < 40 && time.wHour >= 0 && time.wHour <= 24 && time.wMinute >= 0 && time.wMinute <= 60)
 	{
@@ -4785,7 +4777,7 @@ tstring Parse315Protocol::ToString(const StAlarmAndImgInfo& data)
 
 
 	strRst += _T("，");
-	SYSTEMTIME ackTime = Time_tToSystemTime(data.alarmconfirm);
+	TIME ackTime = Time_tToSystemTime(data.alarmconfirm);
 	string strAckTime;
 	TimeToString(ackTime, strAckTime);
 
@@ -4902,7 +4894,7 @@ tstring Parse315Protocol::ToString0x27(const StAlarmAndImgRec& data)
 	string strAckTime = "0xFFFFFFFF";
 	if (data.alarmtype >= 100)
 	{
-		SYSTEMTIME ackTime = Time_tToSystemTime(data.alarmconfirm);
+		TIME ackTime = Time_tToSystemTime(data.alarmconfirm);
 		TimeToString(ackTime, strAckTime);
 	}
 
@@ -5116,7 +5108,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 	string strAckTime = "0xFFFFFFFF";
 	if (data.alarmtype >= 100)
 	{
-		SYSTEMTIME ackTime = Time_tToSystemTime(data.alarmconfirm);
+		TIME ackTime = Time_tToSystemTime(data.alarmconfirm);
 		TimeToString(ackTime, strAckTime);
 	}
 

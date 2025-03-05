@@ -4,6 +4,7 @@
 #include <mutex>
 #include <memory>
 #include "mongoose.h"
+#include "tds.h"
 
 using namespace std;
 
@@ -16,8 +17,8 @@ using namespace std;
  */
 
 namespace tcpServer {
-	SYSTEMTIME str2time(const std::string& s);
-	time_t time2unixstamp(SYSTEMTIME t);
+	TIME str2time(const std::string& s);
+	time_t time2unixstamp(TIME t);
 	int calcTimePassSecond(string sTime);
 	string getNowStr();
 }
