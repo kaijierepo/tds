@@ -902,12 +902,19 @@ void ioDev::doPingHeartbeat(string ip)
 	//int isatus = system(strcmd.c_str());  该函数不能并发
 
 	int isatus = 1;
+#ifdef _WIN32
+	FILE* fp = _popen(strcmd.c_str(), "r"); //此函数可以并发
+#else
 	FILE* fp = popen(strcmd.c_str(), "r"); //此函数可以并发
+#endif
 	if (fp == NULL)
 		isatus = -1;
 	else
+#ifdef _WIN32
+		isatus = _pclose(fp);
+#else
 		isatus = pclose(fp);
-
+#endif
 	if (isatus == 0)
 	{
 		setOnline(true);
