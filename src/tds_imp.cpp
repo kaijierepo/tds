@@ -238,7 +238,6 @@ bool isTdsRunning() {
 	if (sockfd < 0) {
 		return true;
 	}
-	SetHandleInformation((HANDLE)sockfd, HANDLE_FLAG_INHERIT, 0);
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
@@ -249,20 +248,15 @@ bool isTdsRunning() {
 	if (bindResult < 0) {
 #ifdef _WIN32
 		unsigned long iErr = GetLastError();
-#else
-		// todo_linux
-		//iErr = errno;
-#endif
-		std::cout << "tds is already running,try to bind port 60006 fail " << std::endl;
-#ifdef _WIN32
 		closesocket(sockfd);
 		WSACleanup();
 #else
+		int iErr = errno;
 		close(sockfd);
 #endif
+		std::cout << "TDS is already running, trying to bind port 60006 failed. Error: " << iErr << std::endl;
 		return true;
 	}
-
 	return false;
 }
 

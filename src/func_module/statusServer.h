@@ -1,11 +1,5 @@
-#ifdef _WIN32
 #pragma once
-#include <windows.h>
-#include <tlhelp32.h>
-#include <Psapi.h>
-#include <Pdh.h>
 #include <atomic>
-#include <map>
 
 struct SRV_STATUS {
 	double cpu; //%
@@ -18,6 +12,12 @@ struct SRV_STATUS {
 	std::atomic<long long> webReqCount;
 };
 
+#ifdef _WIN32
+#include <windows.h>
+#include <tlhelp32.h>
+#include <Psapi.h>
+#include <Pdh.h>
+#include <map>
 
 struct NET_TRAFFIC {
 	std::atomic<long long> send;
