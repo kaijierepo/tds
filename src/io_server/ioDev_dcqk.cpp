@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "pch.h"
 #include "httplib.h"
 #include "json.hpp"
@@ -2458,3 +2459,4 @@ void ioDev_dcqk::QueryVedio(WORD sid, StVedioRecord *pST)
 	Parse315Protocol::Unparse(data, buf, len);
 	sendData((unsigned char*)buf.data(), len);
 }
+#endif

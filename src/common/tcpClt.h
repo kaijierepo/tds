@@ -4,6 +4,7 @@
 #include <mutex>
 #include <memory>
 #include <map>
+#include <atomic>
 
 using namespace std;
 

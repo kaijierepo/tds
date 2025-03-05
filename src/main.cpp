@@ -510,6 +510,7 @@ int main(int argc, char** argv)
 			}
 
 			//clean memory
+			#ifdef _WIN32
 			string timeParam = tds->conf->strCleanMemoryInterval;
 			if (timeParam.size() >= 2 && timeParam.at(timeParam.length() - 1) == 'h') {
 				if (fs::fileExist(fs::appPath() + "/RAMMap.exe")) {
@@ -525,7 +526,7 @@ int main(int argc, char** argv)
 					}
 				}
 			}
-
+			#endif
 
 		}
 	}

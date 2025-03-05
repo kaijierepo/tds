@@ -1538,10 +1538,10 @@ namespace sys {
 		return 0;
 #endif
 	}
-
-	bool CmdExecParam(string strParam, DWORD dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, LPCSTR lpDirectory /*= NULL*/)
+	#ifdef _WIN32
+	bool CmdExecParam(string strParam, uint32_t dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, const char* lpDirectory /*= NULL*/)
 	{
-#ifdef _WIN32
+
 		string strExePath = "cmd.exe";
 		string cmd = "/c " + strParam;
 		SHELLEXECUTEINFO ShExecInfo = { 0 };
@@ -1565,13 +1565,12 @@ namespace sys {
 			return true;
 		}
 		return false;
+	}
 #else
 		// TODO: linux
-		return 0;
 #endif
-	}
-}
 
+}
 
 
 namespace fs {

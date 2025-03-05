@@ -357,8 +357,11 @@ bool tcpClt::connect()
 	}
 
 	sockClient=socket(AF_INET,SOCK_STREAM,0);
+#ifdef _WIN32
 	SetHandleInformation((HANDLE)sockClient, HANDLE_FLAG_INHERIT, 0);
-
+#else
+	fcntl(sockClient, F_SETFD, fcntl(sockClient, F_GETFD) | FD_CLOEXEC);
+#endif
 	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0)
 	{
 		sockaddr_in sAddTemp;

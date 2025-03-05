@@ -885,7 +885,7 @@ void bufferManageThread(TDB* p) {
 	DB_TIME lastCheck;
 	lastCheck.setNow();
 	while (1) {
-		Sleep(1000);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		if (TIME_OPT::calcTimePassSecond(lastCheck) < p->m_bufferTTL / 2) {
 			continue;
 		}

@@ -82,7 +82,7 @@ void thread_485toNetCycleTask(ioGW_rs485ToNet* p) {
 		while (1) {
 			if (!p->isBusBusy())
 				break;
-			Sleep(300);
+			std::this_thread::sleep_for(std::chrono::milliseconds(300));
 		}
 	}
 	p->m_bCycleAcqThreadRunning = false;

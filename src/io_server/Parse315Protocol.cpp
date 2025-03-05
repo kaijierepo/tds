@@ -1,4 +1,5 @@
-﻿#include "Parse315Protocol.h"
+﻿#ifdef _WIN32
+#include "Parse315Protocol.h"
 #include "logger.h"
 #include "tchar.h"
 #include "inaddr.h"
@@ -7280,3 +7281,4 @@ tstring Parse315Protocol::GetElecCurveTypeDesc(int ElecCurveType)
 	}
 	return _T("");
 }
+#endif

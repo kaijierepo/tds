@@ -443,6 +443,7 @@ PredictFunc dv_predict;
 
 void loadDeepVersion()
 {
+#ifdef _WIN32
 	string deepVersionDllPath = fs::appPath() + "/DeepVision.dll";
 	string onnxPath = fs::appPath() + "/onnx/";
 	if (fs::fileExist(deepVersionDllPath) && fs::fileExist(onnxPath))
@@ -484,6 +485,9 @@ void loadDeepVersion()
 			}
 		}
 	}
+#else
+	// TODO: add Linux .so
+#endif
 }
 
 bool TDS_imp::run(string cmdline)

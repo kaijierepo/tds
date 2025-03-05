@@ -3,7 +3,7 @@
 #include "logger.h"
 #else
 namespace UdpServer {
-	void LOG(string s) {}
+	// void LOG(string s) {}
 }
 using namespace UdpServer;
 #endif
@@ -18,6 +18,7 @@ using namespace UdpServer;
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
 #endif
 
 
@@ -81,7 +82,11 @@ void udpServer::start()
 	else {
 
 	}
+#ifdef _WIN32
 	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
+#else
+	fcntl(m_sock, F_SETFD, fcntl(m_sock, F_GETFD) | FD_CLOEXEC);
+#endif
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons((u_short)(m_port));
@@ -128,8 +133,11 @@ void udpServer::stop()
 void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
 {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+#ifdef _WIN32
 	SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
-
+#else
+	fcntl(sock, F_SETFD, fcntl(sock, F_GETFD) | FD_CLOEXEC);
+#endif
 	struct in_addr localInterface;
 	localInterface.s_addr = inet_addr(m_bindIP.c_str());
 	

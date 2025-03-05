@@ -1,4 +1,5 @@
-﻿/*
+﻿#ifdef _WIN32
+/*
 设备通信协议目前分三个版本：
 1. Equip Protocol Ver 0 (V0)：原始的can采集应用协议,两线载波的方式下也使用此协议
 2. Equip Protocol Ver 1 (V1): 高速载波2014实现时的D520模块扩展，增加了油压油位，扳动信号等的上送
@@ -1205,3 +1206,4 @@ private:
 	//二级命令中的默认产品类型码，默认为缺口类型
 	static UINT g_productid;
 };
+#endif

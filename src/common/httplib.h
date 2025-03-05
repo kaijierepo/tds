@@ -2647,7 +2647,14 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     auto sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 #endif
     if (sock == INVALID_SOCKET) { continue; }
-	SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
+	#ifdef _WIN32
+    SetHandleInformation((HANDLE)sock, HANDLE_FLAG_INHERIT, 0);
+  #else
+    int flags = fcntl(sock, F_GETFD);
+    if (flags != -1) {
+        fcntl(sock, F_SETFD, flags | FD_CLOEXEC);
+    }
+  #endif
 
 #ifndef _WIN32
     if (fcntl(sock, F_SETFD, FD_CLOEXEC) == -1) { continue; }

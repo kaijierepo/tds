@@ -3320,10 +3320,18 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		resultObj["computerStartupTime"] = g_ComputerStartupTime.c_str();
 		resultObj["systemStartupTime"] = g_strStartupTime.c_str();
+		#ifdef _WIN32
 		resultObj["cpu"] = statusSrv.m_srvStatus.cpu;
 		resultObj["mem"] = statusSrv.m_srvStatus.mem;
 		resultObj["handle"] = statusSrv.m_srvStatus.handle;
 		resultObj["thread"] = statusSrv.m_srvStatus.thread;
+		#else
+		// TODO: add Linux
+		resultObj["cpu"] = 0.0;
+		resultObj["mem"] =  0.0;
+		resultObj["handle"] =  0;
+		resultObj["thread"] = 0;
+		#endif
 		rpcResp.result = resultObj.dump();
 	}
 	else if (method == "imageReco")
@@ -3933,9 +3941,16 @@ void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared
 	{
 		json j;
 		j["tdsVersion"] = tds->getSvnVersion();
+		#ifdef _WIN32
 		j["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
 		j["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
 		j["serverStatus"]["handle"] = statusSrv.m_srvStatus.handle;
+		#else
+		// TODO: add Linux
+		j["serverStatus"]["cpu"] = 0;
+		j["serverStatus"]["mem"] = 0;
+		j["serverStatus"]["handle"] = 0;
+		#endif
 		rpcResp.result = j.dump();
 		goto HANDLE_END;
 	}
@@ -5682,9 +5697,13 @@ void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION sessio
 			}
 
 			std::string image_data = base64_decode(conf);
+			#ifdef _WIN32
 			wstring wpath = charCodec::tds_to_utf16(path);
 			// Write the binary data to a file
 			std::ofstream image_file(wpath, std::ios::out | std::ios::binary);
+			#else
+			std::ofstream image_file(path, std::ios::out | std::ios::binary);
+			#endif
 			if (image_file.is_open())
 			{
 				image_file.write(image_data.c_str(), image_data.length());

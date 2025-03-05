@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #pragma once
 #include "tcpClt.h"
 #include "tdsSession.h"
@@ -204,3 +205,4 @@ public:
 	bool m_bDownloadVedioing;			//是否正在下载视频
 	thread m_threadDownloadVedio;		//下载视频线程
 };
+#endif

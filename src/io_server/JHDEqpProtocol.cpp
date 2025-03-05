@@ -1,4 +1,5 @@
-﻿#include "JHDEqpProtocol.h"
+﻿#ifdef _WIN32
+#include "JHDEqpProtocol.h"
 
 
 //默认为缺口类型
@@ -2123,3 +2124,4 @@ JHDEqpPkt& JHDEqpPkt::operator=(const JHDEqpPkt& right)
 	m_CmdBuf = data + 1 + 4 + 8;
 	return *this;
 }
+#endif

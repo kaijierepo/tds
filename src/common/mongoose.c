@@ -7253,7 +7253,11 @@ bool mg_open_listener(struct mg_connection *c, const char *url) {
     if ((fd = socket(af, type, proto)) == MG_INVALID_SOCKET) {
       MG_ERROR(("socket: %d", MG_SOCK_ERR(-1)));
 	}
+#ifdef _WIN32
 	else if (SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0) == 0) {
+#else
+  else if (fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC) == -1) {
+#endif
 		MG_ERROR(("socket reomve HANDLE_FLAG_INHERIT faild"));
 #if defined(SO_EXCLUSIVEADDRUSE)
     } else if ((rc = setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,

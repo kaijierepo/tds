@@ -1,4 +1,5 @@
-﻿/*
+﻿#ifdef _WIN32
+/*
 315协议解析类
 */
 //#include <string>
@@ -34,7 +35,7 @@ using namespace std;
 //扳动方向
 enum class eMOVE_DIRECT : uint8_t
 {
-	unknow = -1,  //无效
+	unknow = 0xff,  //无效
 	fix2invert = 0x00, //定到反
 	invert2fix = 0x01, //反到定
 	fix2fix = 0x02,
@@ -1556,3 +1557,4 @@ private:
 	static BOOL Release(StVedioSetTitle&);
 	static BOOL Release(StVedioRealPlay&);
 };
+#endif

@@ -1049,7 +1049,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 			{
 				error = resp["error"];
 				if (method == "startServerUpgrade") {
-					m_childTdsUpgradeStatus = "错误:" + error["message"];
+					m_childTdsUpgradeStatus = "错误:" + error["message"].dump();
 				}
 			}
 			else {
@@ -1474,7 +1474,11 @@ bool doTranslate(char* p,size_t len,string& sRecv) {
 	if (g_translatorSock == 0) {
 		int sockfd;
 		sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+		#ifdef _WIN32
 		SetHandleInformation((HANDLE)sockfd, HANDLE_FLAG_INHERIT, 0);
+		#else
+		fcntl(sockfd, F_SETFD, FD_CLOEXEC);
+		#endif
 
 		// 设置超时时间为500毫秒
 		struct timeval timeout;
