@@ -361,7 +361,7 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 std::string execCommand(const char* cmd) {
 	std::array<char, 128> buffer;
 	std::string result;
-
+#ifdef _WIN32
 	// 创建匿名管道
 	SECURITY_ATTRIBUTES sa;
 	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
@@ -410,6 +410,16 @@ std::string execCommand(const char* cmd) {
 	// 关闭进程和线程句柄
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
+#else
+	FILE* pipe = popen(cmd, "r");
+	if (!pipe) {
+		throw std::runtime_error("popen() failed!");
+	}
+	while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+		result += buffer.data();
+	}
+	pclose(pipe);
+#endif
 	return result;
 }
 
