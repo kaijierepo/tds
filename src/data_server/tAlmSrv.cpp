@@ -2160,7 +2160,7 @@ string almTable::toJsonStr(const json& querier) {
 	string dataSet = "";
 	if (pageSize > 0)
 	{
-		//分页查询
+		//query by page no
 		json resultObj;
 		resultObj["pageNo"] = pageNo;
 		resultObj["pageSize"] = pageSize;
@@ -2169,9 +2169,11 @@ string almTable::toJsonStr(const json& querier) {
 		string jDataSet = "[";
 		if (vec.size() > (pageNo - 1) * pageSize)
 		{
-			//pageNo=1,说明从0开始,往后走pageSize个元素
-			//pageNo=2,说明从pageSize开始,往后走pageSize个元素
-			for (int i = (pageNo - 1) * pageSize; i < std::min(static_cast<size_t>(pageNo * pageSize), vec.size()); i++)
+			int iterScope = pageNo * pageSize;
+			if (vec.size() < iterScope) {
+				iterScope = vec.size();
+			}
+			for (int i = (pageNo - 1) * pageSize; i < iterScope; i++)
 			{
 				auto it = vec[i];
 				if (jDataSet != "[")
