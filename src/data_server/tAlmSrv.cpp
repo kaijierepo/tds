@@ -1292,7 +1292,13 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		resultObj["deCount"] = afterSortList.size();
 		if (afterSortList.size() > (deSel.pageNo - 1) * deSel.pageSize)
 		{
-			for (int i = 0; i < std::min(static_cast<size_t>(deSel.pageSize), afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++)
+			int curPageSize = deSel.pageSize;
+			int leftPageCount = afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize;
+			if (leftPageCount < curPageSize) {
+				curPageSize = leftPageCount;
+			}
+
+			for (int i = 0; i < curPageSize; i++)
 			{
 				auto it = afterSortList[i + (deSel.pageNo - 1) * deSel.pageSize];
 				json j = it->toJson(this, rootTag);

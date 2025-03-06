@@ -3,6 +3,7 @@
 #include <string>
 #include "udpSrv.h"
 #include "json.hpp"
+using namespace std;
 
 class CHAN_TEMPLATE {
 public:

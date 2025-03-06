@@ -204,7 +204,7 @@ bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, uns
 		int ret = ::send(sockSession->sock, (char*)pData, len, 0);
 		if (ret <= 0) {
 			int ShutDownBoth = 2; //SD_BOTH in win,SHUT_RDWR in linux
-			shutdown(sockSession->sock, SHUT_DOWN_BOTH);
+			shutdown(sockSession->sock, ShutDownBoth);
 			return false;
 		}
 		return true;
