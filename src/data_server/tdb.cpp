@@ -3402,6 +3402,14 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "hour";
 		}
+		else if (deSel.groupby.find("minute") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "minute";
+		}
+		else if (deSel.groupby.find("week") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "week";
+		}
 		else {
 			deSel.groupByTime = false;
 		}

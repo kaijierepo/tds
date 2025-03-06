@@ -2556,9 +2556,13 @@ bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP&
 		json j = userMng.getRoles(session.user);
 		result = j.dump(4);
 	}
+	else if (method == "setUser")
+	{
+		userMng.rpc_setUser(params,rpcResp,session);
+	}
 	else if (method == "setUsers")
 	{
-		userMng.rpc_setUsers(params,rpcResp,session);
+		userMng.rpc_setUsers(params, rpcResp, session);
 	}
 	else if (method == "getUiTree")
 	{
