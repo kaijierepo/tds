@@ -108,7 +108,11 @@ namespace as_fs {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
+		#ifdef _WIN32
 		_wfopen_s(&fp, str::utf8_to_utf16(path).c_str(), L"rb");
+		#else
+		fp = fopen(path.c_str(), "rb");
+		#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -131,7 +135,11 @@ namespace as_fs {
 	bool readFile(string path, string& data)
 	{
 		FILE* fp = nullptr;
+		#ifdef _WIN32
 		_wfopen_s(&fp, str::utf8_to_utf16(path).c_str(), L"rb");
+		#else
+		fp = fopen(path.c_str(), "rb");
+		#endif
 		if (fp)
 		{
 			fseek(fp, 0, SEEK_END);
@@ -156,8 +164,12 @@ namespace as_fs {
 		createFolderOfPath(path);
 
 		FILE* fp = nullptr;
+		#ifdef _WIN32
 		wstring wpath = str::utf8_to_utf16(path);
 		_wfopen_s(&fp, wpath.c_str(), L"wb");
+		#else
+		fp = fopen(path.c_str(), "wb");
+		#endif
 		if (fp)
 		{
 			fwrite(data, 1, len, fp);
@@ -1280,7 +1292,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		resultObj["deCount"] = afterSortList.size();
 		if (afterSortList.size() > (deSel.pageNo - 1) * deSel.pageSize)
 		{
-			for (int i = 0; i < min(deSel.pageSize, afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++)
+			for (int i = 0; i < std::min(static_cast<size_t>(deSel.pageSize), afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize); i++)
 			{
 				auto it = afterSortList[i + (deSel.pageNo - 1) * deSel.pageSize];
 				json j = it->toJson(this, rootTag);
@@ -2153,7 +2165,7 @@ string almTable::toJsonStr(const json& querier) {
 		{
 			//pageNo=1,说明从0开始,往后走pageSize个元素
 			//pageNo=2,说明从pageSize开始,往后走pageSize个元素
-			for (int i = (pageNo - 1) * pageSize; i < min(pageNo * pageSize, vec.size()); i++)
+			for (int i = (pageNo - 1) * pageSize; i < std::min(static_cast<size_t>(pageNo * pageSize), vec.size()); i++)
 			{
 				auto it = vec[i];
 				if (jDataSet != "[")

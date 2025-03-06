@@ -1,5 +1,8 @@
 #include "tcpClt.h"
 #include "tds.h"
+#include <thread>
+#include <fcntl.h>
+
 #pragma warning(disable:4996)
 std::vector<tcpClt*> m_vecTCPIOCPClient;
 

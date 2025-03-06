@@ -16,6 +16,7 @@
 
 #include "json.hpp"
 #include "tds.h"
+#include "tds_imp.h"
 #include <shared_mutex>
 using json = nlohmann::json;
 using namespace std;
@@ -30,3 +31,5 @@ using namespace std;
 #else
 #define MG_TLS MG_TLS_NONE
 #endif
+
+extern i_tds* tds;

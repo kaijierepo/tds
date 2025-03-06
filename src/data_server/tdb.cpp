@@ -872,7 +872,7 @@ void DBLog(const char* pszFmt, ...)
 	stNow.setNow();
 	string time = formatStr("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
 	string logline = time + " " + str;
-	printf(logline.c_str());
+	printf("%s\n", logline.c_str());
 }
 
 
@@ -934,6 +934,7 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 		string strURL = m_path + "/" + strTag;
 		return strURL;
 	}
+	return "";
 }
 
 string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
@@ -951,6 +952,7 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		string strURL = m_path + "/" + strTag;
 		return strURL;
 	}
+	return "";
 }
 // no '/' in bengin ,and in end
 string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
@@ -967,6 +969,7 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
 		string strURL =  strTag;
 		return strURL;
 	}
+	return "";
 }
 
 string TDB::getPath_dbRoot()
@@ -1237,7 +1240,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 		fileData = "[" + fileData + "]";
 		if (!DB_FS::writeFile(dataListPath, (unsigned char*)fileData.c_str(), fileData.length()))
 		{
-			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), fileData);
+			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), fileData.c_str());
 		}
 		if (pDe)
 			free(pDe);
@@ -1290,14 +1293,14 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 //for yyjson debug, dump json string to debug
 //copy mut_val before put in to a new mut_obj , otherwise the origin val will be changed
 string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
-	printf("********time section dump*********");
+	printf("********time section dump*********\n");
 	if (timeSection == nullptr)
 		printf("null");
 	else {
 		for (auto& i : *timeSection) {
-			printf(i.first.c_str());
+			printf("%s\t", i.first.c_str());
 			char* sz = yyjson_mut_val_write(i.second, 0, nullptr);
-			printf(sz);
+			printf("%s\n", sz);
 			if (sz)
 				free(sz);
 		}
@@ -4239,7 +4242,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		string s = "[{\n  \"time\":\"" + stTime.toStr() + "\",\n  \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}\n]";
 		if (!DB_FS::writeFile(dlPath, (unsigned char*)s.c_str(), s.length()))
 		{
-			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s);
+			printf("[error]save to db file fail,path:%s,data:%s", dlPath.c_str(), s.c_str());
 		}
 	}
 }
@@ -6310,6 +6313,7 @@ bool DB_FILE::isDataList() {
 	if (deType != "curve") {
 		return true;
 	}
+	return false;
 }
 
 bool DB_FILE::loadFile()

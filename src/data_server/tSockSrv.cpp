@@ -1,12 +1,13 @@
 #include "tSockSrv.h"
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 #ifdef TDS
 #include "logger.h"
 #else
 namespace sockServer {
-	void LOG(const char* pszFmt, ...) {}
+	void LOG(const char* pszFmt, ...);
 }
 using namespace sockServer;
 #endif
@@ -202,7 +203,7 @@ bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, uns
 			return false;
 		int ret = ::send(sockSession->sock, (char*)pData, len, 0);
 		if (ret <= 0) {
-			int SHUT_DOWN_BOTH = 2; //SD_BOTH in win,SHUT_RDWR in linux
+			int ShutDownBoth = 2; //SD_BOTH in win,SHUT_RDWR in linux
 			shutdown(sockSession->sock, SHUT_DOWN_BOTH);
 			return false;
 		}
@@ -214,6 +215,7 @@ bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, uns
 	else {
 		return false;
 	}
+	return false;
 }
 
 void tSockSrv::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify)

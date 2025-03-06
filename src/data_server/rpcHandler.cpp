@@ -1,5 +1,6 @@
 ﻿#include <common/dtwrecoge.h>
 #include "pch.h"
+#include "miniz.h"
 #include "rpcHandler.h"
 #include "prj.h"
 #include "tAlmSrv.h"
@@ -1489,6 +1490,7 @@ bool renameFile(std::string filePath, const std::string& oldName, const std::str
 
 
 // 解压缩文件
+#ifdef _WIN32
 bool extract_zip( std::string zip_path,  std::string dest_dir) {
 	mz_zip_archive zip_archive;
 	memset(&zip_archive, 0, sizeof(zip_archive));
@@ -1533,6 +1535,7 @@ bool extract_zip( std::string zip_path,  std::string dest_dir) {
 	mz_zip_reader_end(&zip_archive);
 	return true;
 }
+#endif
 
 // 解析URL并提取协议、主机、端口和路径
 bool parse_url(const std::string& url, std::string& protocol, std::string& host, std::string& port, std::string& path) {
@@ -1553,6 +1556,7 @@ bool parse_url(const std::string& url, std::string& protocol, std::string& host,
 
 bool g_bTdsUpgradeThreadRunning = false;
 void thread_tds_upgrade(string packageUrl,string packageType) {
+#ifdef _WIN32
 	LOG("[warn]startServerUpgrade,升级线程开始");
 	g_bTdsUpgradeThreadRunning = true;
 
@@ -1729,6 +1733,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 UPGRADE_END:
 	g_bTdsUpgradeThreadRunning = false;
 	LOG("[warn]startServerUpgrade,升级线程结束");
+#endif
 }
 
 bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
@@ -3872,6 +3877,7 @@ bool rpcHandler::isDebugMethod(string method) {
 	if (method == "getApiSessions") {
 		return true;
 	}
+	return false;
 }
 
 void rpcHandler::handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)

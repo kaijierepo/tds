@@ -1,5 +1,6 @@
 #include "tcpSrv.h"
 #include "tds.h"
+#include <thread>
 
 namespace tcpServer {
 	TIME str2time(const std::string& s) {

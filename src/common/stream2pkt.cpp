@@ -1,4 +1,5 @@
 #include "stream2pkt.h"
+#include <cstring>
 
 size_t IsValidPkt_IQ60(unsigned char* pData, size_t iLen)
 {

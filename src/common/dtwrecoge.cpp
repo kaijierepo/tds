@@ -1,7 +1,7 @@
 /*dtwrecoge.cpp**************************************************************/
 
 #include "dtwrecoge.h"
-double distance[DTWMAXNUM][DTWMAXNUM]; /*保存距离*/
+double dtw_distance[DTWMAXNUM][DTWMAXNUM]; /*保存距离*/
 double dtwpath[DTWMAXNUM][DTWMAXNUM]; /*保存路径*/
 
 /*****************************************************************************/
@@ -30,7 +30,7 @@ double DTWDistanceFun(double *A,int I,double *B,int J,int r)
 	for(i=0;i<I;i++){
 		for(j=0;j<J;j++){
 			dtwpath[i][j]=0;
-			distance[i][j]=DTWVERYBIG;
+			dtw_distance[i][j]=DTWVERYBIG;
 		}
 	}
 	
@@ -41,12 +41,12 @@ double DTWDistanceFun(double *A,int I,double *B,int J,int r)
 	                      .     |
 	                    .       |
 	 */
-	distance[0][0]=(double)2*ABS(A[0]-B[0]);
+	dtw_distance[0][0]=(double)2*ABS(A[0]-B[0]);
 	for(i=1;i<=r2;i++){
-		distance[i][0]=distance[i-1][0]+ABS(A[i]-B[0]);
+		dtw_distance[i][0]=dtw_distance[i-1][0]+ABS(A[i]-B[0]);
 	}
 	for(j=1;j<=r2;j++){
-		distance[0][j]=distance[0][j-1]+ABS(A[0]-B[j]);
+		dtw_distance[0][j]=dtw_distance[0][j-1]+ABS(A[0]-B[j]);
 	}
 	
 	for(j=1;j<J;j++){
@@ -58,16 +58,16 @@ double DTWDistanceFun(double *A,int I,double *B,int J,int r)
 			imax=I-1;
 		
 		for(i=istart;i<=imax;i++){
-			g1=distance[i-1][j]+ABS(A[i]-B[j]);
-			g2=distance[i-1][j-1]+2*ABS(A[i]-B[j]);
-			g3=distance[i][j-1]+ABS(A[i]-B[j]);
+			g1=dtw_distance[i-1][j]+ABS(A[i]-B[j]);
+			g2=dtw_distance[i-1][j-1]+2*ABS(A[i]-B[j]);
+			g3=dtw_distance[i][j-1]+ABS(A[i]-B[j]);
 			g2=MIN(g1,g2);
 			g3=MIN(g2,g3);
-			distance[i][j]=g3;
+			dtw_distance[i][j]=g3;
 		}
 	}
 		
-	dist=distance[I-1][J-1]/((double)(I+J));
+	dist=dtw_distance[I-1][J-1]/((double)(I+J));
 	return dist;
 }/*end DTWDistance*/
 
@@ -105,12 +105,12 @@ int DTWTemplate(double *A,int I,double *B,int J,double *temp,int turn,double tt,
 	while(j>=1||i>=1){
 		double m;
 		if(i>0&&j>0){
-			m=MIN(MIN(distance[i-1][j],distance[i-1][j-1]),distance[i][j-1]);
-			if(m==distance[i-1][j]){
+			m=MIN(MIN(dtw_distance[i-1][j],dtw_distance[i-1][j-1]),dtw_distance[i][j-1]);
+			if(m==dtw_distance[i-1][j]){
 				dtwpath[i-1][j]=pathsig;
 				i--;
 			}
-			else if(m==distance[i-1][j-1]){
+			else if(m==dtw_distance[i-1][j-1]){
 				dtwpath[i-1][j-1]=pathsig;
 				i--;
 				j--;

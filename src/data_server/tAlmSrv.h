@@ -65,15 +65,17 @@ public:
 	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
 
 	string getKey(ALM_TABLE_TYPE tableType) {
+		string keyWithTime = time + "," + tag + "," + type + id;;
 		if(tableType == HISTORY_TABLE)
-			return time + "," + tag + "," + type + id;
+			return keyWithTime;
 		else if (tableType == CURRENT_TABLE) {
 			if (multiUnack) {
-				return time + "," + tag + "," + type + id;
+				return keyWithTime;
 			}
 			else
 				return tag + "," + type + id;
 		}
+		return keyWithTime;
 	}
 
 	string getSortKey(string sortKey)

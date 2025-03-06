@@ -357,6 +357,7 @@ bool ioDev_tdsp::handleDevRequest(yyjson_val* jRequest, yyjson_doc* doc)
 
 		sendData((unsigned char*)rpcResp.strResp.c_str(), rpcResp.strResp.length());
 	}
+	return false;
 }
 
 bool ioDev_tdsp::handleSyncResp(yyjson_val* jResp, yyjson_val* yyv_id, yyjson_doc* doc)
@@ -533,6 +534,7 @@ bool ioDev_tdsp::onRecvData(unsigned char* pData, size_t iLen) {
 	yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 	onRecvPkt(yyv_resp, doc);
 	yyjson_doc_free(doc);
+	return false;
 }
 
 bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
