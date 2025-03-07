@@ -227,6 +227,8 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 			iotimeoutModbusRtu = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "iotimeoutIQ60"))
 			iotimeoutIQ60 = atoi(tci.val.c_str());
+		else if (checkKey(tci.key, "iotimeoutDLT645"))
+			iotimeoutDLT645 = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpsPort"))
 			httpsPort = atoi(tci.val.c_str());
 		else if (checkKey(tci.key, "httpPort"))
