@@ -8,6 +8,7 @@
 #include "tdb.h"
 #include "yyjson.h"
 #include "statusServer.h"
+#include "tAlmSrv.h"
 
 
 int devIdIdx = 0;
@@ -1657,6 +1658,16 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 				dbOS->Insert(m_strTagBind, true);
 			}
 		}
+
+		if (tds->conf->enableOfflineAlarm) {
+			ALARM_INFO ai;
+			ai.tag = getIOAddrStr();
+			ai.level = ALARM_LEVEL::normal;
+			ai.type = "设备掉线";
+			ai.desc = "设备地址:" + getIOAddrStr() + ",绑定位号:" + m_strTagBind;
+			almSrv.Update(ai);
+		}
+
 		m_offlineCount = 0;
 		m_bOnline = true;
 		timeopt::now(&m_stOnlineTime);
@@ -1699,6 +1710,16 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 
 		if (m_offlineCount >= m_offlineConfirmCount) {
 			m_bOnline = false;
+
+			if (tds->conf->enableOfflineAlarm) {
+				ALARM_INFO ai;
+				ai.tag = getIOAddrStr();
+				ai.level = ALARM_LEVEL::warn;
+				ai.type = "设备掉线";
+				ai.desc = "设备地址:" + getIOAddrStr() + ",绑定位号:" + m_strTagBind;
+				almSrv.Update(ai);
+			}
+
 			json jNotify;
 			jNotify["ioAddr"] = getIOAddrStr();
 			jNotify["nodeID"] = m_confNodeId;

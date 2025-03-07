@@ -39,6 +39,7 @@ tdsConfig::tdsConfig()
 	bStopCycleAcq = false;
 	showObjOnline = true;
 	dbLanguage = "zh";
+	enableOfflineAlarm = false;
 
 #ifdef TDS
 	tds->conf = this;
@@ -115,6 +116,8 @@ iotimeoutIQ60=5000
 iotimeoutDLT645=8000
 tdspOnlineReq=0           #tdsp设备上线请求getDevInfo
 tdspSingleTransaction=0   #tdsp设备请求不允许并发
+enableOfflineAlarm=0
+offlineConfirmCount=1     #连续检测到几次离线才报警
 
 #安全性
 enableAccessCtrl = 0      #开启用户认证
@@ -307,6 +310,13 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 				enableDevReboot = true;
 			else if (tci.val == "false" || tci.val == "0")
 				enableDevReboot = false;
+		}
+		else if (checkKey(tci.key, "enableOfflineAlarm"))
+		{
+		if (tci.val == "true" || tci.val == "1")
+			enableOfflineAlarm = true;
+		else if (tci.val == "false" || tci.val == "0")
+			enableOfflineAlarm = false;
 		}
 		else if (checkKey(tci.key, "enableDevCommReboot"))
 		{
