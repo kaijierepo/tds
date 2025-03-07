@@ -29,6 +29,7 @@ ioDev_dlt645_2007::ioDev_dlt645_2007(void)
 	m_bCycleAcqThreadRunning = false;
 	m_level = "device";
 	m_devTypeLabel = getDevTypeLabel(m_devType);
+	m_bEnableRecvPreamble = true;
 }
 
 
@@ -51,6 +52,11 @@ void ioDev_dlt645_2007::stop()
 
 bool ioDev_dlt645_2007::loadConf(json& conf)
 {
+	//if (conf.contains("enableRecvPreamble")) {
+	//	m_bEnableRecvPreamble = conf["enableRecvPreamble"].get<bool>();
+	//}
+
+
 	if (ioDev::loadConf(conf))
 	{
 		for (int i = 0; i < m_channels.size(); i++)
@@ -67,6 +73,19 @@ bool ioDev_dlt645_2007::loadConf(json& conf)
 		run();
 		return false;
 	}
+}
+
+bool ioDev_dlt645_2007::toJson(json& conf, DEV_QUERIER querier)
+{
+	//lock_conf_shared();
+
+	//if (querier.getConf) {
+	//	conf["enableRecvPreamble"] = m_bEnableRecvPreamble;
+	//}
+
+	//unlock_conf_shared();
+
+	return ioDev::toJson(conf,querier);
 }
 
 void ioDev_dlt645_2007::output(string chanAddr, json jVal, json& rlt,json& err, bool sync)

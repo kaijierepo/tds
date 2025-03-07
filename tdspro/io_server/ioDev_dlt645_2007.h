@@ -64,6 +64,7 @@ public:
 	//基本io设备管理
 	void stop() override;
 	bool loadConf(json& conf) override;
+	bool toJson(json& conf, DEV_QUERIER querier) override;
 
 	//通信会话
 	virtual bool doTransaction(DLT645_2007_PKT& req, DLT645_2007_PKT& resp,string& errorInfo);

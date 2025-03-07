@@ -155,6 +155,7 @@ struct DI {
 
 class DLT645_2007_PKT : public DEV_PKT{
 public:
+	unsigned char preamble;
 	unsigned char head;
 	unsigned char addr[6];
 	unsigned char head1;
@@ -177,6 +178,11 @@ public:
 			delete d;
 		}
 	}
+
+	string GetPktDesc() override
+	{ 
+		return ""; 
+	};
 
 	void setDataRegion(unsigned char* pD, unsigned char len) {
 		if (d != nullptr)
@@ -228,7 +234,19 @@ public:
 	}
 
 	bool unpack() override {
-		unsigned char* p = data + 4;//4个FE的前导
+		int preambleCount = 0;
+		//支持0-n的任意个前导字符
+		while (preambleCount < len) {
+			if (data[preambleCount] == 0xFE) {
+				preambleCount++;
+			}
+			else {
+				break;
+			}
+		}
+
+		preamble = preambleCount;
+		unsigned char* p = data + preambleCount;
 		head = p[0] ;
 		memcpy(addr, p + 1, 6);
 		head1 = p[7];

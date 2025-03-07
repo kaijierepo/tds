@@ -129,6 +129,9 @@ public:
 	ioDev(void);
 	virtual ~ioDev(void);
 
+	virtual bool toJson(json& conf, DEV_QUERIER querier);
+	virtual bool loadConf(json& conf);
+
 	static bool m_defaultOnline;
 	static int m_offlineConfirmCount;
 
@@ -139,11 +142,9 @@ public:
 	virtual bool isTdsp() { return false; }
 	virtual bool isBusBusy() { return false; };
 	virtual bool isCommBusy() { return m_bIsWaitingResp; };
-	virtual bool toJson(json& conf, DEV_QUERIER querier);
 	virtual bool getStatus(json& status, string opt = ""); //status是conf+实时状态的数据
 	virtual bool getChanVal(json& valList);
 	virtual bool getChanStatus(json& statusList); //获取所有子通道的状态列表
-	virtual bool loadConf(json& conf);
 	void addChannel(ioChannel* pC);
 	//连接信息， 设备地址+协议组合成连接信息，如果连接信息修改，设备需要重连
 	//例如串口波特率（协议），ip地址修改，都需要重连
@@ -205,6 +206,7 @@ public:
 	string m_httpHeartbeatUrl;
 	int m_offlineTimeout;
 	bool m_bPingThreadRunning;
+	bool m_bEnableRecvPreamble;
 
 	string m_ioMode; //none,translator,adaptor,standAloneIO
 	bool m_bViaAdaptor;

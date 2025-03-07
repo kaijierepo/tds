@@ -186,14 +186,24 @@ unsigned char calcLeakDetectCheckCode(unsigned char* pData, int len) {
 size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen)
 {
 	int D07_FRAME_MIN_LEN = 12;
+	int preambleCount = 0;
 
-	if (iLen < 4 + D07_FRAME_MIN_LEN)
+	//支持0-n的任意个前导字符
+	while (preambleCount < iLen) {
+		if (p[preambleCount] == 0xFE) {
+			preambleCount++;
+		}
+		else {
+			break;
+		}
+	}
+
+	int iDataLen = iLen - preambleCount;
+
+	if (iDataLen < D07_FRAME_MIN_LEN)
 		return 0;
 
-	if (!(p[0] == 0xFE && p[1] == 0xFE && p[2] == 0xFE && p[3] == 0xFE))
-		return 0;
-
-	unsigned char* pkt = p + 4;
+	unsigned char* pkt = p + preambleCount;
 
 	if (pkt[0] != 0x68)
 		return 0;
@@ -203,7 +213,7 @@ size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen)
 
 	int dlen = pkt[9];
 
-	if (iLen < 12 + dlen + 4)
+	if (iLen < 12 + dlen)
 		return 0;
 
 	unsigned char cs = pkt[10 + dlen];
@@ -219,7 +229,7 @@ size_t isValidPkt_DLT645_2007(unsigned char* p, size_t iLen)
 		return 0;
 
 	// preamble + head + payload + tail
-	return 4 + 10 + dlen + 2;
+	return preambleCount + 10 + dlen + 2;
 }
 
 size_t IsValidPkt_315(unsigned char* pData, int iLen)

@@ -24,6 +24,7 @@
 #include <io_server/ioDev_tdsp.h>
 #include "miniz.h"
 #include "tds_imp.h"
+#include "../../tdspro/io_server/proto_dlt645_2007.hpp"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -1493,6 +1494,28 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 
 			rpcResp.result = RPC_OK;
 		}
+	}
+	else if (method == "parseIOPkt" || method == "parseIoPkt") {
+		string s = params["data"];
+		vector<byte> vec = str::hexStrToBytes(s);
+		unsigned char* p = vec.data();
+		size_t l = vec.size();
+		
+		json jResp;
+		if (isValidPkt_DLT645_2007(p, l)) {
+			DLT645_2007_PKT pkt;
+			bool unpackRet = pkt.unpack(p, l);
+			jResp["proto"] = "dlt645-2007";
+			jResp["unpack"] = unpackRet ? "success" : "fail";
+			jResp["preambleCount"] = pkt.preamble;
+			jResp["ctrlCode"] = str::format("%02X", pkt.ctrlCode);
+			jResp["addr"] = str::bytesToHexStr(pkt.addr, 6);
+		}
+		else {
+			jResp["proto"] = "unknown";
+		}
+
+		rpcResp.result = jResp.dump(2);
 	}
 	else
 	{
