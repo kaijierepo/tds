@@ -69,7 +69,23 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	string& error = rpcResp.error;
 	bool bHandled = true;
 	//文件操作
-	if (method == "fs.readFile")
+	if (method == "setAutoStart") {
+		if (!params["autoStart"].is_boolean()) {
+			error = makeRPCError(TEC_FAIL, "param autoStart not specified");
+		}
+		else {
+			bool autoStart = params["autoStart"].get<bool>();
+			if (autoStart) {
+				//....
+				result = RPC_OK;
+			}
+			else {
+				//....
+				result = RPC_OK;
+			}
+		}
+	}
+	else if (method == "fs.readFile")
 	{
 		if (params["type"] != nullptr && params["type"].get<string>() == "binary")
 		{
