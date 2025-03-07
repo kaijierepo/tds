@@ -97,8 +97,8 @@ bool ioDev_dlt645_2007::isConnected()
 
 struct DATA_FMT {
 	string fmt;
-	int readValDigitCount;
-	double k;
+	int readValDigitCount;  //数字的个数
+	double k;  //整数乘上k后，得到该数值
 
 	DATA_FMT() {
 		readValDigitCount = 0;
@@ -131,7 +131,7 @@ json ioDev_dlt645_2007::parseReadData(unsigned char* pD, int len,string fmt) {
 	DATA_FMT df;
 	df.init(fmt);
 
-	if (df.readValDigitCount <= 2 * len) { //模拟器测试时返回数据长度比实际数据长度大，忽略尾部的数据
+	if (df.readValDigitCount <= 2 * len/*一个字节2个BCD码，因此乘2*/) { //模拟器测试时返回数据长度比实际数据长度大，忽略尾部的数据
 		int validByteLen = df.readValDigitCount / 2;
 		unsigned char* readVal = new unsigned char[validByteLen];
 		for (int i = 0; i < validByteLen; i++) {
@@ -170,7 +170,7 @@ void cycleAcq_thread_dlt645(ioDev_dlt645_2007* pDev) {
 
 			if (!pC->m_jDevAddr.is_string())
 				continue;
-			string chanAddr = pC->m_jDevAddr.get<string>();
+			string chanAddr = pC->m_jDevAddr.get<string>(); //此处的devAddr就是 DLT645中的数据标识，固定为4个字节
 			if (chanAddr.length() != 8) {
 				continue;
 			}
@@ -189,7 +189,13 @@ void cycleAcq_thread_dlt645(ioDev_dlt645_2007* pDev) {
 				if (errorInfo == "") {
 					resp.unpack();
 					json jVal = pDev->parseReadData(resp.d + 4 /*偏移4字节的数据标识*/, resp.dLen - 4, pC->m_fmt);
-					pC->input(jVal);
+
+					if (jVal.is_null()) {
+						string s = str::bytesToHexStr(resp.data, resp.len);
+						LOG("[warn][DLT645-2007]读取数据解析回包失败,%s", resp.data, resp.len);
+					}
+					else
+						pC->input(jVal);
 				}
 			}
 		}
