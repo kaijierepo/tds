@@ -327,7 +327,7 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 		{
 			fs::FILE_INFO fi;
 #ifdef _WIN32
-			fi.path = charCodec::utf16_to_utf8(i.path().string());
+			fi.path = charCodec::utf16_to_utf8(i.path().wstring());
 #else
 			fi.path = i.path().string();
 #endif
