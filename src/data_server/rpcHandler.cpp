@@ -62,6 +62,33 @@ bool rpcHandler::init()
 	return true;
 }
 
+bool createSystemdService(const std::string& execPath, const std::string& execName, const std::string& systemdPath= "/etc/systemd/system/tds.service") {
+	std::string serviceContent =
+		"[Unit]\n"
+		"Description=tds\n"
+		"After=network.target\n"
+		"\n"
+		"[Service]\n"
+		"ExecStart=" + execPath + "/" + execName + "\n"
+		"Restart=always\n"
+		"User=root\n"
+		"WorkingDirectory=" + execPath + "\n"
+		"\n"
+		"[Install]\n"
+		"WantedBy=multi-user.target\n";
+
+	std::ofstream serviceFile(systemdPath);
+	if (!serviceFile) {
+		std::cerr << "failed to write systemd file: " << systemdPath << std::endl;
+		return false;
+	}
+
+	serviceFile << serviceContent;
+	serviceFile.close();
+
+	std::cout << "success to create systemd file: " << systemdPath << std::endl;
+	return true;
+}
 
 bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp)
 {
@@ -76,12 +103,45 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		else {
 			bool autoStart = params["autoStart"].get<bool>();
 			if (autoStart) {
-				//....
-				result = RPC_OK;
+				std::string appPath = fs::appPath();
+				std::string appName = fs::appName();
+#ifdef _WIN32
+				result = RPC_FAIL;
+				error = makeRPCError(TEC_FAIL, "TODO");
+#else
+				bool bCreate = createSystemdService(appPath, appName);
+				if (bCreate) {
+					std::cout << "create systemd service success!" << std::endl;
+					int res = system("systemctl enable tds.service");
+					if (res == 0) {
+						result = RPC_OK;
+					}
+					else {
+						result = RPC_FAIL;
+						error = makeRPCError(TEC_FAIL, "disable tds.service failed!, error code: " + std::to_string(res));
+					}
+				}
+				else {
+					std::cerr << "create tds.service failed!" << std::endl;
+					result = RPC_FAIL;
+					error = makeRPCError(TEC_FAIL, "create tds.service failed!");
+				}
+#endif
 			}
 			else {
-				//....
-				result = RPC_OK;
+#ifdef _WIN32
+				result = RPC_FAIL;
+				error = makeRPCError(TEC_FAIL, "TODO");
+#else
+				int res = system("systemctl disable tds.service");
+				if (res != 0) {
+					result = RPC_FAIL;
+					error = makeRPCError(TEC_FAIL, "disable tds.service failed!, error code: " + std::to_string(res));
+				}
+				else {
+					result = RPC_OK;
+				}
+#endif
 			}
 		}
 	}
