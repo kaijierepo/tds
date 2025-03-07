@@ -36,7 +36,6 @@ TDS_SESSION::TDS_SESSION(tcpSession* p)
     type = TDS_SESSION_TYPE::iodev;
     sendedLen = 0;
     recvedLen = 0;
-    pBridgedTcpServer = nullptr;
 }
 
 TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
@@ -101,6 +100,7 @@ void TDS_SESSION::Init()
     conn_id = 0;
     webServer = nullptr;
     m_bEnableIO = true;
+    pBridgedTcpServer = nullptr;
 }
 
 bool TDS_SESSION::isConnected()
