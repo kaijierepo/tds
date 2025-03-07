@@ -314,16 +314,12 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 	if (!fs::fileExist(path)) return;
 	for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 		if (i.is_directory()) {
-			fs::FILE_INFO fi;
-			fi.path = charCodec::gb_to_tds(i.path().string());
-			fi.path = str::replace(fi.path, "\\", "/");
-			size_t pos = fi.path.rfind("/");
-			fi.folderPath = fi.path.substr(0, pos);
-			fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
-			fi.len = i.file_size();
-
-			checkDBFormat(path + "/" + fi.name, bCheckEnd, db_Fmt);
-
+#ifdef _WIN32
+			string childFolderPath = charCodec::utf16_to_utf8(i.path().wstring());
+#else
+			string childFolderPath = i.path().string();
+#endif
+			checkDBFormat(childFolderPath, bCheckEnd, db_Fmt);
 			if (bCheckEnd) break;
 		}
 		else if (i.is_regular_file())
