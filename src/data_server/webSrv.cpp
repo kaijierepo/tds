@@ -981,15 +981,13 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 
 			//加入websocket连接列表.必须先执行initWsSessionInfo，内部会判断session类型
 			//该列表仅记录tdsClient类型，该类型会接收到tdsRPC通知
-			if (p->type == TDS_SESSION_TYPE::tdsClient) {
+			if (p->type == TDS_SESSION_TYPE::tdsClient || 
+				p->type == TDS_SESSION_TYPE::bridgeToiodev ||
+				p->type == TDS_SESSION_TYPE::bridgeToTcpClient ||
+				p->type == TDS_SESSION_TYPE::bridgeToTcpServer) {
 				pWs->m_csWsSessions.lock();
 				pWs->m_wsSessions[c] = p;
 				pWs->m_csWsSessions.unlock();
-			}
-			else if (p->type == TDS_SESSION_TYPE::bridgeToiodev) {
-				pWs->m_csWsBridgeSessions.lock();
-				pWs->m_wsBridgeSessions[c] = p;
-				pWs->m_csWsBridgeSessions.unlock();
 			}
 		}
 		//优先判断跨域请求预检。目前在应用中rpc请求可能跨域。
@@ -1826,7 +1824,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 			return;
 		}
 	}
-	else if (strData.find("tcp") != string::npos)
+	else if (strData.find("tcpclient") != string::npos)
 	{
 		size_t pos = strData.find("tcp");
 		size_t pos1 = strData.find(" ", pos);
@@ -1845,6 +1843,27 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 			tdsSession->pBridgedTcpClient = NULL;
 			//closesocket(tdsSession->sock);
 			shutdown(tdsSession->sock, SHUT_DOWN_BOTH);
+			return;
+		}
+	}
+	else if (strData.find("tcpserver") != string::npos)
+	{
+		size_t pos = strData.find("tcpserver");
+		size_t pos1 = strData.find(" ", pos);
+		string sport = strData.substr(pos + 10, pos1 - (pos + 10));
+		int port = atoi(sport.c_str());
+		tdsSession->pBridgedTcpServer = new tcpSrv();
+		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpServer;
+		tdsSession->setActivityCheck(false);
+		if (tdsSession->pBridgedTcpServer->run(&tdsSession->bridgedTcpSrvHandler, port))
+		{
+			LOG("bridge websocket to tcp server ,port %s success", sport.c_str());
+		}
+		else
+		{
+			LOG("bridge websocket to tcp server ,port %s fail", sport.c_str());
+			delete tdsSession->pBridgedTcpServer;
+			tdsSession->pBridgedTcpServer = NULL;
 			return;
 		}
 	}

@@ -102,6 +102,7 @@ public:
 	std::mutex m_csClientVectorLock;
 
 	bool m_bStarted;
+	bool m_stop;
 	bool m_bReuseAddr;
 
 	string m_strName;

@@ -17,6 +17,10 @@ TDS_SESSION::TDS_SESSION()
 
 TDS_SESSION::~TDS_SESSION()
 {
+    if (pBridgedTcpServer) {
+        pBridgedTcpServer->stop();
+        delete pBridgedTcpServer;
+    }
 }
 
 TDS_SESSION::TDS_SESSION(tcpSession* p)
@@ -32,6 +36,7 @@ TDS_SESSION::TDS_SESSION(tcpSession* p)
     type = TDS_SESSION_TYPE::iodev;
     sendedLen = 0;
     recvedLen = 0;
+    pBridgedTcpServer = nullptr;
 }
 
 TDS_SESSION::TDS_SESSION(tcpSessionClt* p)
@@ -84,6 +89,7 @@ void TDS_SESSION::Init()
     type = "";
     name = "";
     bridgedTcpCltHandler.pTdsSession = this;
+    bridgedTcpSrvHandler.pTdsSession = this;
     sock = 0;
     iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
     iALProto = APP_LAYER_PROTO::UNKNOWN;
@@ -294,3 +300,21 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
  }
  
+
+ void TDS_SESSION::CBridgedTcpServerHandler::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
+ {
+     json j;
+     j["remoteAddr"] = pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort);
+     j["connect"] = bIsConn;
+     string s = j.dump();
+     pTdsSession->sendStr(s, false);
+ }
+
+ void TDS_SESSION::CBridgedTcpServerHandler::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
+ {
+     json j;
+     j["remoteAddr"] = pTcpSess->remoteIP + ":" + str::fromInt(pTcpSess->remotePort);
+     j["recv"] = str::bytesToHexStr(pData, iLen);
+     string s = j.dump();
+     pTdsSession->sendStr(s,false);
+ }

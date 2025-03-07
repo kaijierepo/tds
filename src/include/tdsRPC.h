@@ -139,6 +139,7 @@ namespace TDS_SESSION_TYPE {
 	const string bridgeToLocalCom = "bridgeToLocalCom";
 	const string bridgeToiodev = "bridgeToiodev";
 	const string bridgeToTcpClient = "bridgeToTcpClient";
+	const string bridgeToTcpServer = "bridgeToTcpServer";
 
 	//debug tools
 	const string terminal = "terminal";

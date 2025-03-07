@@ -76,10 +76,12 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 	}
 	else if (ev == MG_EV_CLOSE) { 
 		tcpSession* pts = (tcpSession*)c->fn_data;
-		pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);
-		pSrv->m_csClientVectorLock.lock();
-		pSrv->m_mapTcpSessions.erase(pts);
-		pSrv->m_csClientVectorLock.unlock();
+		if (pSrv->m_pCallBackUser) {
+			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);
+			pSrv->m_csClientVectorLock.lock();
+			pSrv->m_mapTcpSessions.erase(pts);
+			pSrv->m_csClientVectorLock.unlock();
+		}
 	}
 	else if (ev == MG_EV_ACCEPT) {
 		tcpSession* pts = new tcpSession();
@@ -108,8 +110,16 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 }
 
 void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
-	for (;;) mg_mgr_poll(&pSrv->mgr, 1000);                 // Event loop
+	pSrv->m_bStarted = true;
+	for (;;) {
+		if (pSrv->m_stop) {
+			pSrv->m_pCallBackUser = nullptr;
+			break;
+		}
+		mg_mgr_poll(&pSrv->mgr, 1000);
+	}// Event loop
 	mg_mgr_free(&pSrv->mgr);                                // Cleanup
+	pSrv->m_bStarted = false;
 }
 
 bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/)
@@ -137,7 +147,15 @@ bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/)
 
 void tcpSrv::stop()
 {
-
+	m_stop = true;
+	while (1) {
+#ifdef _WIN32
+		Sleep(1);
+		if (!m_bStarted)
+			break;
+#endif
+	}
+	m_stop = false;
 }
 
 void tcpSrv::disconnect(string remoteAddr)
@@ -269,9 +287,10 @@ tcpSrv::tcpSrv()
 	m_bReuseAddr = true;
 	m_pCallBackUser = nullptr;
 	m_iServerPort = 0;
+	m_stop = false;
 }
 
 tcpSrv::~tcpSrv()
 {
-
+	stop();
 }
