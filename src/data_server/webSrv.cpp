@@ -1106,7 +1106,8 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 				thread t(thread_handleRpc_respBodyOnlyRltOrErr, data, pSession);
 				t.detach();
 			}
-			else if (mg_http_match_uri(hm, "/rpc") || mg_http_match_uri(hm, "/debug")){
+			else if (mg_http_match_uri(hm, "/api/rpc") || mg_http_match_uri(hm, "/rpc") || mg_http_match_uri(hm, "/debug"))//增加"/api/rpc"是为了保证tds与JHD的接口兼容
+			{
 				c->sessionInfo = nullptr;
 				if (!pSession->isDebug) {
 					std::map<string, SESSION_STATIS*>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
