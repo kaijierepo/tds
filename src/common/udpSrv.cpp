@@ -3,7 +3,7 @@
 #include "logger.h"
 #else
 namespace UdpServer {
-	// void LOG(string s) {}
+	void LOG(string s) {}
 }
 using namespace UdpServer;
 #endif

@@ -7,7 +7,7 @@
 #include "logger.h"
 #else
 namespace sockServer {
-	void LOG(const char* pszFmt, ...);
+	void LOG(const char* pszFmt, ...) {};
 }
 using namespace sockServer;
 #endif
