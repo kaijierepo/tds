@@ -309,14 +309,15 @@ bool TDS_imp::setWorkingDir()
 }*/
 
 void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
-
-	wstring wstrFolder = charCodec::tds_to_utf16(path);
 	if (!fs::fileExist(path)) return;
+#ifdef _WIN32
+	wstring wstrFolder = charCodec::tds_to_utf16(path);
 	for (auto& i : filesystem::directory_iterator(wstrFolder)) {
 		if (i.is_directory()) {
-#ifdef _WIN32
-			string childFolderPath = charCodec::utf16_to_utf8(i.path().wstring());
+		string childFolderPath = charCodec::utf16_to_utf8(i.path().wstring());
 #else
+	for (auto& i : filesystem::directory_iterator(path)) {
+		if (i.is_directory()) {
 			string childFolderPath = i.path().string();
 #endif
 			checkDBFormat(childFolderPath, bCheckEnd, db_Fmt);
@@ -325,7 +326,11 @@ void checkDBFormat(string path,bool& bCheckEnd, DB_FMT &db_Fmt) {
 		else if (i.is_regular_file())
 		{
 			fs::FILE_INFO fi;
-			fi.path = charCodec::gb_to_tds(i.path().string());
+#ifdef _WIN32
+			fi.path = charCodec::utf16_to_utf8(i.path().string());
+#else
+			fi.path = i.path().string();
+#endif
 			fi.path = str::replace(fi.path, "\\", "/");
 			size_t pos = fi.path.rfind("/");
 			fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
