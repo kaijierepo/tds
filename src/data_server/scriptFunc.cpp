@@ -814,7 +814,29 @@ jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
-jerry_value_t func_ioDev_setStatusData(const jerry_call_info_t* call_info_p,
+jerry_value_t func_ioDev_setDevVar(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 2)
+	{
+		json varName = jArgs[0];
+		if (!varName.is_string()) {
+			return jerry_create_null();
+		}
+		string sName = varName.get<string>();
+		json params = jArgs[1];
+		pEngine->m_ioDevThis->m_mapDevVar[sName] = params;
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
+
+jerry_value_t func_ioDev_getDevVar(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
@@ -822,8 +844,15 @@ jerry_value_t func_ioDev_setStatusData(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() == 1)
 	{
-		json params = jArgs[0];
-		pEngine->m_ioDevThis->m_statusData = params;
+		json varName = jArgs[0];
+		if (!varName.is_string()) {
+			return jerry_create_null();
+		}
+		string sName = varName.get<string>();
+		json val = pEngine->m_ioDevThis->m_mapDevVar[sName];
+		jerry_value_t jerryVal;
+		jsonVal2jerryVal(val, jerryVal);
+		return jerryVal;
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -944,6 +973,29 @@ jerry_value_t func_fromStr(const jerry_call_info_t* call_info_p,
 
 	jerry_value_t ret = jerry_create_null();
 	return ret;
+}
+
+jerry_value_t func_toUnixTime(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	jerry_value_t time = call_info_p->this_value;
+
+	json jTime;
+	jerryVal2jsonVal(time, jTime);
+	TIME t;
+	t.wYear = jTime["year"].get<int>();
+	t.wMonth = jTime["month"].get<int>();
+	t.wDay = jTime["day"].get<int>();
+	t.wHour = jTime["hour"].get<int>();
+	t.wMinute = jTime["minute"].get<int>();
+	t.wSecond = jTime["second"].get<int>();
+	t.wMilliseconds = jTime["millisecond"].get<int>();
+	time_t tt = t.toUnixTime();
+	uint64_t us64time = tt;
+	jerry_value_t jv_unix_time = jerry_create_bigint(&us64time, 1, false);
+
+	return jv_unix_time;
 }
 
 
@@ -1093,6 +1145,13 @@ jerry_value_t func_time(const jerry_call_info_t* call_info_p,
 
 	prop_name = jerry_create_string((const jerry_char_t*)"increaseSeconds");
 	prop_value = jerry_create_external_function(func_increaseSeconds);
+	set_result = jerry_set_property(timeObj, prop_name, prop_value);
+	jerry_release_value(set_result);
+	jerry_release_value(prop_name);
+	jerry_release_value(prop_value);
+
+	prop_name = jerry_create_string((const jerry_char_t*)"toUnixTime");
+	prop_value = jerry_create_external_function(func_toUnixTime);
 	set_result = jerry_set_property(timeObj, prop_name, prop_value);
 	jerry_release_value(set_result);
 	jerry_release_value(prop_name);
@@ -1337,6 +1396,18 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 
 	n = jerry_create_string((const jerry_char_t*)"setOffline");
 	v = jerry_create_external_function(func_ioDev_setOffline);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"setDevVar");
+	v = jerry_create_external_function(func_ioDev_setDevVar);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"getDevVar");
+	v = jerry_create_external_function(func_ioDev_getDevVar);
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);
