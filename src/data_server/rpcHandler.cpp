@@ -63,6 +63,26 @@ bool rpcHandler::init()
 	return true;
 }
 
+#ifdef _WIN32
+
+bool createAutoStartService(const std::string& execPath, const std::string& execName) {
+	std::string fullPath = execPath + "/" + execName + ".exe";
+	std::replace(fullPath.begin(), fullPath.end(), '/', '\\');
+	HKEY hKey;
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_SET_VALUE, &hKey) == ERROR_SUCCESS) {
+		RegSetValueEx(hKey, execName.c_str(), 0, REG_SZ, (const BYTE*)fullPath.c_str(), fullPath.size() + 1);
+		RegCloseKey(hKey);
+		std::cout << "success to write registry Software\\Microsoft\\Windows\\CurrentVersion\\Run: " << fullPath << std::endl;
+		return true;
+	}
+	else {
+		std::cerr << "failed to open registry Software\\Microsoft\\Windows\\CurrentVersion\\Run" << std::endl;
+		return false;
+	}
+}
+
+#else
+
 bool createSystemdService(const std::string& execPath, const std::string& execName, const std::string& systemdPath= "/etc/systemd/system/tds.service") {
 	std::string serviceContent =
 		"[Unit]\n"
@@ -91,6 +111,8 @@ bool createSystemdService(const std::string& execPath, const std::string& execNa
 	return true;
 }
 
+#endif
+
 bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp)
 {
 	string& result = rpcResp.result;
@@ -108,7 +130,15 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 				std::string appName = fs::appName();
 #ifdef _WIN32
 				result = RPC_FAIL;
-				error = makeRPCError(TEC_FAIL, "TODO");
+				bool bCreate = createAutoStartService(appPath, appName);
+				if (bCreate) {
+					result = RPC_OK;
+				}
+				else {
+					std::cerr << "create auto start service failed!" << std::endl;
+					result = RPC_FAIL;
+					error = makeRPCError(TEC_FAIL, "create auto start service failed!");
+				}
 #else
 				bool bCreate = createSystemdService(appPath, appName);
 				if (bCreate) {
@@ -131,8 +161,6 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			}
 			else {
 #ifdef _WIN32
-				result = RPC_FAIL;
-				error = makeRPCError(TEC_FAIL, "TODO");
 #else
 				int res = system("systemctl disable tds.service");
 				if (res != 0) {
