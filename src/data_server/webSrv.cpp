@@ -908,6 +908,16 @@ bool getSSLCertPath(string& certPath, string& keyPath) {
 	return false;
 }
 
+string uriFormbuff(string buff)
+{
+	if (buff.find(" ") != -1)
+	{
+		return buff.substr(0, buff.find(" "));
+	}
+
+	return "";
+}
+
 //static void fn(struct mg_connection* c, int ev, void* ev_data, void* fn_data) 
 static void fn(struct mg_connection* c, int ev,void* ev_data)
 {
@@ -968,7 +978,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			//init session connection info
 			std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 			p->bConnected = true;
-			string uri = str::fromBuff(hm->uri.ptr, hm->uri.len);
+			string uri = uriFormbuff(hm->uri.ptr) != "" ? uriFormbuff(hm->uri.ptr) : str::fromBuff(hm->uri.ptr, hm->uri.len);
 			p->conn_id = c->id;
 			p->webServer = pWs;
 			getSessionInfo(p.get(), c, hm, pWs);
@@ -1850,8 +1860,9 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 	else if (strData.find("tcpserver") != string::npos)
 	{
 		size_t pos = strData.find("tcpserver");
-		size_t pos1 = strData.find(" ", pos);
-		string sport = strData.substr(pos + 10, pos1 - (pos + 10));
+		size_t pos1 = strData.find("port=");
+		size_t pos2 = strData.find("#", pos1) != -1 ? strData.find("#", pos1) : strData.size();
+		string sport = (pos1 != -1) ? strData.substr(pos1 + 5, pos2 - pos1 - 5) : "9090";
 		int port = atoi(sport.c_str());
 		tdsSession->pBridgedTcpServer = new tcpSrv();
 		tdsSession->type = TDS_SESSION_TYPE::bridgeToTcpServer;

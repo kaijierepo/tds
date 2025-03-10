@@ -303,18 +303,37 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
 
  void TDS_SESSION::CBridgedTcpServerHandler::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
  {
-     json j;
-     j["remoteAddr"] = pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort);
-     j["connect"] = bIsConn;
-     string s = j.dump();
+     auto mut_doc = yyjson_mut_doc_new(nullptr);
+     auto mut_root = yyjson_mut_obj(mut_doc);
+     yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+     string remoteAddr = pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort);
+     yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "remoteAddr", remoteAddr.c_str());
+     yyjson_mut_obj_add_bool(mut_doc, mut_root, "connect", bIsConn);
+
+     char* temp = yyjson_mut_write(mut_doc, 0, 0);
+     string s = temp;
      pTdsSession->sendStr(s, false);
+
+     delete temp;
+     yyjson_mut_doc_free(mut_doc);
  }
 
  void TDS_SESSION::CBridgedTcpServerHandler::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pTcpSess)
  {
-     json j;
-     j["remoteAddr"] = pTcpSess->remoteIP + ":" + str::fromInt(pTcpSess->remotePort);
-     j["recv"] = str::bytesToHexStr(pData, iLen);
-     string s = j.dump();
-     pTdsSession->sendStr(s,false);
+	 auto mut_doc = yyjson_mut_doc_new(nullptr);
+	 auto mut_root = yyjson_mut_obj(mut_doc);
+	 yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+	 string remoteAddr = pTcpSess->remoteIP + ":" + str::fromInt(pTcpSess->remotePort);
+	 yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "remoteAddr", remoteAddr.c_str());
+     string strData = str::bytesToHexStr(pData, iLen);
+     yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "recv", strData.c_str());
+
+	 char* temp = yyjson_mut_write(mut_doc, 0, 0);
+	 string s = temp;
+	 pTdsSession->sendStr(s, false);
+
+	 delete temp;
+	 yyjson_mut_doc_free(mut_doc);
  }
