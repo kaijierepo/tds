@@ -357,6 +357,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		if (m_outputScript != "") {
 			conf["outputScript"] = m_outputScript;
 		}
+		if (m_onRecvScript != "") {
+			conf["onRecvScript"] = m_onRecvScript;
+		}
 
 		if (m_bEnableOfflineTimeout) {
 			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
@@ -593,6 +596,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_outputScript = item.get<string>();
+		}
+	}
+
+	kv = conf.find("onRecvScript");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_onRecvScript = item.get<string>();
 		}
 	}
 

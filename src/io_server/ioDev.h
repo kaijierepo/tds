@@ -342,6 +342,7 @@ public:
 
 	string m_cycleTaskScript;
 	string m_outputScript;
+	string m_onRecvScript;
 
 	bool m_bCycleAcqThreadRunning;
 	bool m_bOutputting;

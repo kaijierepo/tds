@@ -6,6 +6,7 @@
 #include "rpcHandler.h"
 #include "prj.h"
 #include "httplib.h"
+#include "ioSrv.h"
 
 
 bool jerryItem2JsonItem(const jerry_value_t prop_name,
@@ -835,6 +836,42 @@ jerry_value_t func_ioDev_setDevVar(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_ioDev_onRecvData(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	jerry_value_t dev = call_info_p->this_value;
+	json jDev;
+	jerryVal2jsonVal(dev, jDev);
+
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1)
+		return jerry_create_null();
+	
+	json data = jArgs[0];
+
+	if (!data.is_array())
+		return jerry_create_null();
+
+	vector<unsigned char> vecData;
+	for (auto& i : data) {
+		if (i.is_number_integer()) {
+			unsigned char b = i.get<int>();
+			vecData.push_back(b);
+		}
+	}
+
+	if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
+		string confNodeId = jDev["confNodeId"];
+		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+		if (p) {
+			p->onRecvData(vecData.data(), vecData.size());
+		}
+	}
+
+	return jerry_create_null();
+}
+
 
 jerry_value_t func_ioDev_getDevVar(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
@@ -1388,6 +1425,12 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 	jerry_release_value(n);
 	jerry_release_value(v);
 
+	n = jerry_create_string((const jerry_char_t*)"confNodeId");
+	v = jerry_create_string((const jerry_char_t*)pDev->m_confNodeId.c_str());
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
 	n = jerry_create_string((const jerry_char_t*)"setOnline");
 	v = jerry_create_external_function(func_ioDev_setOnline);
 	jerry_release_value(jerry_set_property(obj, n, v));
@@ -1411,6 +1454,23 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"onRecvData");
+	v = jerry_create_external_function(func_ioDev_onRecvData);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	if (pDev->m_vecChildDev.size() > 0) {
+		jerry_value_t vecChild = jerry_create_array((uint32_t)pDev->m_vecChildDev.size());
+		for (size_t i = 0; i < pDev->m_vecChildDev.size(); i++) {
+			ioDev* pChildDev = pDev->m_vecChildDev[i];
+			jerry_value_t jerryChildDev = jerry_create_object();
+			initIODevFunc(jerryChildDev, pChildDev);
+			jerry_set_property_by_index(vecChild, (uint32_t)i, jerryChildDev);
+			jerry_release_value(jerryChildDev);
+		}
+	}
 
 	return true;
 }

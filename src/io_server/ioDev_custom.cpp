@@ -121,6 +121,35 @@ void ioDev_custom::onEvent_online()
 	
 }
 
+bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
+{
+	if (m_onRecvScript != "") {
+		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
+		se.m_initIODevFunc = initIODevFunc;
+		json jRecvData = json::array();
+		for (int i = 0; i < iLen; i++) {
+			int v = pData[i];
+			jRecvData.push_back(v);
+		}
+		se.m_globalObj["RecvData"] = jRecvData;
+		se.m_ioDevThis = this;
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(m_onRecvScript, si);
+		se.runScript(si.script, "");
+
+		if (se.m_sError != "") {
+			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			LOG(s);
+		}
+		else {
+			
+		}
+	}
+	return false;
+}
+
 void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool sync)
 {
 	if (m_outputScript != "") {

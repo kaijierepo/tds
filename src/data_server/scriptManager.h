@@ -36,6 +36,7 @@ struct SCRIPT_INFO {
 	string name;
 	string desc;
 	json lastCalcVal;  //如果是一个计算表达式脚本，上一次的计算结果
+	bool enableLog;
 
 	string getContextTag();
 	void toJson(json& j, bool getStatus = false);
