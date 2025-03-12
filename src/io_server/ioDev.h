@@ -271,6 +271,8 @@ public:
 	tcpClt* m_tcpClt; 
 	//设备是udpServer
 	UdpClt* m_udpClt;
+	//设备是udpClient
+	udpServer* m_udpSrv;
 
 	shared_ptr<TDS_SESSION> getIOSession(){
 		shared_ptr<TDS_SESSION> p = nullptr;

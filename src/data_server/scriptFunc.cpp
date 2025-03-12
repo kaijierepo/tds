@@ -41,41 +41,7 @@ json engineArgsToJson(const jerry_value_t arguments[], const jerry_length_t argu
 	for (size_t i = 0; i < argument_count; i++)
 	{
 		json j;
-		if (jerry_value_is_boolean(arguments[i]))
-		{
-			j = jerry_value_to_boolean(arguments[i]);
-		}
-		//else if (jerry_value_is_bigint(arguments[i]))
-		//{
-		//	j = jerry_value_as_integer(arguments[i]);
-		//}
-		else if (jerry_value_is_number(arguments[i]))
-		{
-			double number = jerry_get_number_value(arguments[i]);
-			double fmodnum = fmod(number, 1.0);
-			if (number == (int)number) {
-				j = (int)number;
-			}
-			else {
-				j = number;
-			}
-		}
-		else if (jerry_value_is_string(arguments[i]))
-		{
-			jerry_value_t string_value = jerry_value_to_string(arguments[i]);
-			jerry_size_t tSize = jerry_get_string_size(string_value);
-			jerry_char_t* buffer = new jerry_char_t[tSize + 1];
-			jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, tSize);
-			buffer[copied_bytes] = '\0';
-			jerry_release_value(string_value);
-			string s = (const char*)buffer;
-			j = s;
-			delete buffer;
-		}
-		else if (jerry_value_is_object(arguments[i]))
-		{
-			getScriptEngineObj(j, arguments[i]);
-		}
+		jerryVal2jsonVal(arguments[i], j);
 		jArguments.push_back(j);
 	}
 
@@ -119,11 +85,18 @@ void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 		jVal = s;
 		delete buffer;
 	}
-	else if (jerry_value_is_object(jerryVal))
-	{
-		jerry_foreach_object_property(jerryVal, jerryItem2JsonItem, &jVal);
-	}
 	else if (jerry_value_is_array(jerryVal))
+	{
+		jVal = json::array();
+		jerry_length_t length = jerry_get_array_length(jerryVal);
+		for (jerry_length_t i = 0; i < length; i++) {
+			jerry_value_t element = jerry_get_property_by_index(jerryVal, i);
+			json j;
+			jerryVal2jsonVal(element, j);
+			jVal.push_back(j);
+		}
+	}
+	else if (jerry_value_is_object(jerryVal))
 	{
 		jerry_foreach_object_property(jerryVal, jerryItem2JsonItem, &jVal);
 	}
@@ -829,7 +802,20 @@ jerry_value_t func_ioDev_setDevVar(const jerry_call_info_t* call_info_p,
 		}
 		string sName = varName.get<string>();
 		json params = jArgs[1];
-		pEngine->m_ioDevThis->m_mapDevVar[sName] = params;
+
+		jerry_value_t dev = call_info_p->this_value;
+		json jDev;
+		jerryVal2jsonVal(dev, jDev);
+		if (!jDev.is_object())
+			return jerry_create_boolean(false);
+		if (jDev["confNodeId"] == nullptr)
+			return jerry_create_boolean(false);
+		string confNodeId = jDev["confNodeId"];
+		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+		if (!p)
+			return jerry_create_boolean(false);
+
+		p->m_mapDevVar[sName] = params;
 	}
 
 	jerry_value_t ret = jerry_create_null();
@@ -886,7 +872,20 @@ jerry_value_t func_ioDev_getDevVar(const jerry_call_info_t* call_info_p,
 			return jerry_create_null();
 		}
 		string sName = varName.get<string>();
-		json val = pEngine->m_ioDevThis->m_mapDevVar[sName];
+
+		jerry_value_t dev = call_info_p->this_value;
+		json jDev;
+		jerryVal2jsonVal(dev, jDev);
+		if (!jDev.is_object())
+			return jerry_create_boolean(false);
+		if (jDev["confNodeId"] == nullptr)
+			return jerry_create_boolean(false);
+		string confNodeId = jDev["confNodeId"];
+		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+		if (!p)
+			return jerry_create_boolean(false);
+
+		json val = p->m_mapDevVar[sName];
 		jerry_value_t jerryVal;
 		jsonVal2jerryVal(val, jerryVal);
 		return jerryVal;
@@ -901,7 +900,18 @@ jerry_value_t func_ioDev_setOffline(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
-	pEngine->m_ioDevThis->setOffline();
+	jerry_value_t dev = call_info_p->this_value;
+	json jDev;
+	jerryVal2jsonVal(dev, jDev);
+	if (!jDev.is_object())
+		return jerry_create_boolean(false);
+	if (jDev["confNodeId"] == nullptr)
+		return jerry_create_boolean(false);
+	string confNodeId = jDev["confNodeId"];
+	ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+	if (!p)
+		return jerry_create_boolean(false);
+	p->setOffline();
 	jerry_value_t ret = jerry_create_null();
 	return ret;
 }
@@ -914,10 +924,22 @@ jerry_value_t func_ioDev_input(const jerry_call_info_t* call_info_p,
 
 	if (jArgs.size() >= 2)
 	{
+		jerry_value_t dev = call_info_p->this_value;
+		json jDev;
+		jerryVal2jsonVal(dev, jDev);
+		if (!jDev.is_object())
+			return jerry_create_boolean(false);
+		if(jDev["confNodeId"] == nullptr)
+			return jerry_create_boolean(false);
+		string confNodeId = jDev["confNodeId"];
+		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+		if(!p)
+			return jerry_create_boolean(false);
+
 		json jVal = jArgs[0];
 		json addr = jArgs[1];
 		string chanAddr = addr.get<string>();
-		bool bRet = pEngine->m_ioDevThis->input(jVal, chanAddr);
+		bool bRet = p->input(jVal, chanAddr);
 		return jerry_create_boolean(bRet);
 	}
 
@@ -1462,6 +1484,7 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 	jerry_release_value(v);
 
 	if (pDev->m_vecChildDev.size() > 0) {
+		n = jerry_create_string((const jerry_char_t*)"children");
 		jerry_value_t vecChild = jerry_create_array((uint32_t)pDev->m_vecChildDev.size());
 		for (size_t i = 0; i < pDev->m_vecChildDev.size(); i++) {
 			ioDev* pChildDev = pDev->m_vecChildDev[i];
@@ -1470,6 +1493,9 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 			jerry_set_property_by_index(vecChild, (uint32_t)i, jerryChildDev);
 			jerry_release_value(jerryChildDev);
 		}
+		jerry_release_value(jerry_set_property(obj, n, vecChild));
+		jerry_release_value(n);
+		jerry_release_value(vecChild);
 	}
 
 	return true;

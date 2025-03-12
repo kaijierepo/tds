@@ -192,6 +192,7 @@ ioDev::ioDev(void)
 	m_iSendDataFailCount = 0;
 	m_tcpClt = nullptr;
 	m_udpClt = nullptr;
+	m_udpSrv = nullptr;
 	memset(&m_stLastHeartbeatTime, 0, sizeof(TIME));
 	memset(&m_stLastPingTime, 0, sizeof(TIME));
 	memset(&m_stLastSetClockTime, 0, sizeof(TIME));
@@ -241,7 +242,7 @@ bool ioDev::run()
 	if (m_bViaAdaptor) {
 		//通过适配器无需进行通信模块初始化
 	}
-	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer)
+	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient)
 	{
 		string ip;
 		if (m_jDevAddr["ip"].is_string())
@@ -256,15 +257,18 @@ bool ioDev::run()
 
 
 		int port;
-		if (m_jDevAddr["port"].is_number_integer())
-		{
-			port = m_jDevAddr["port"].get<int>();
+		if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer) {
+			if (m_jDevAddr["port"].is_number_integer())
+			{
+				port = m_jDevAddr["port"].get<int>();
+			}
+			else
+			{
+				LOG("[error]IODev启动失败,地址配置异常,port必须是一个整数,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
+				return false;
+			}
 		}
-		else
-		{
-			LOG("[error]IODev启动失败,地址配置异常,port必须是一个整数,设备地址模式=%s,配置信息:%s",m_addrType.c_str(),m_jDevAddr.dump().c_str());
-			return false;
-		}
+
 
 		//udp模式下，配置localPort不为0，用于设备进行udp回包时，不回给请求的udp客户端，而是发往固定端口的场景。
 		//localPort不是必须的
@@ -281,15 +285,20 @@ bool ioDev::run()
 			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClt重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 		}
-		else {
+		else if(m_addrType == DEV_ADDR_MODE::udpServer){
 			if (m_udpClt == nullptr)
 				m_udpClt = new UdpClt();
 
 			m_udpClt->run(this,localPort,ioSrv.m_ioSrvIPAsClient);
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpClient,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(),m_udpClt->m_port);
 		}
+		else if (m_addrType == DEV_ADDR_MODE::udpClient) {
+			if (m_udpSrv == nullptr)
+				m_udpSrv = new udpServer();
 
-
+			m_udpSrv->run(this, localPort);
+			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpServer,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(), m_udpSrv->m_port);
+		}
 	}
 	return true;
 }
@@ -1308,8 +1317,16 @@ string ioDev::getIP() {
 int ioDev::getPort() {
 	if (m_jDevAddr.is_object())
 	{
-		if (m_jDevAddr.contains("port")) {
+		if (m_jDevAddr["port"].is_number_integer()) {
 			json j = m_jDevAddr["port"];
+			if (j.is_number_integer()) {
+				int p = j.get<int>();
+				return p;
+			}
+		}
+
+		if (m_jDevAddr["localPort"].is_number_integer()) {
+			json j = m_jDevAddr["localPort"];
 			if (j.is_number_integer()) {
 				int p = j.get<int>();
 				return p;
