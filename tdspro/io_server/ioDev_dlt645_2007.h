@@ -81,7 +81,7 @@ public:
 	bool isCommBusy() override;
 	bool isConnected() override;
 	json parseReadData(unsigned char* pD, int len, string fmt);
-	void DoCycleTask();
+	void DoCycleTask() override;
 	void DoCycleTaskSync() override;
 
 	bool handleResp(DLT645_2007_PKT* resp);

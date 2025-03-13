@@ -27,7 +27,7 @@ public:
 	map<string, string> parseKeyValStr(string s);
 	virtual void ptz_stopMove() override;
 	virtual void ptz_startZoom(string dir, float zoomSpeed = 0.5) override;
-	virtual void ptz_stopZoom();
+	virtual void ptz_stopZoom() override;
 	string generateNouce();
 	string generateAuthStr(string uri,string realm, string nonce,string cnonce);
 	string m_snapshotURL;

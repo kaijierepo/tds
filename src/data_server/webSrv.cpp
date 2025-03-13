@@ -1261,7 +1261,7 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
 
 			mg_http_reply(c, 200, resHeader.c_str(), p);
-			delete p;
+			delete [] p;
 
 			if (c->sessionInfo) { //非调试类命令会话，该字段不为空。调试类会话为请求 /debug 的rpc请求
 				SESSION_STATIS* pss = (SESSION_STATIS*)c->sessionInfo;

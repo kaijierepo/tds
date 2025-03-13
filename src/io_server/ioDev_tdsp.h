@@ -18,8 +18,8 @@ public:
 	~ioDev_tdsp();
 
 	void syncDataToMasterTds(yyjson_val* val,yyjson_doc* doc);
-	bool isTdsp() { return true; }
-	void stop();
+	bool isTdsp() override { return true; }
+	void stop() override;
 	void output(string chanAddr, json jVal, json& rlt,json& err, bool sync = true) override;
 	void output(ioChannel* pC, json jVal, json& rlt, json& err, bool sync = true) override;
 	void handleAlarmStatusData(yyjson_val* alarmStatus);
@@ -29,7 +29,7 @@ public:
 	bool handleSyncResp(yyjson_val* jResp, yyjson_val* yyv_id, yyjson_doc* doc);
 	bool handleAsynResp(yyjson_val* jResp, yyjson_doc* doc);
 	//bool onRecvPkt(json jPkt);
-	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc);
+	bool onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc) override;
 	virtual bool onRecvData(unsigned char* pData, size_t iLen) override;
 	bool getCurrentVal();
 	bool sendData(unsigned char* pData, size_t iLen) override;

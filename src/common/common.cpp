@@ -48,7 +48,7 @@ namespace common {
 			pNew[i] = ((char*)pData)[len - 1 - i];
 		}
 		memcpy(pData, pNew, len);
-		delete pNew;
+		delete [] pNew;
 	}
 }
 

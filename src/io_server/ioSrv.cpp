@@ -161,7 +161,7 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 				}
 				else
 				{
-					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id);
+					LOG("[error]%s iq60 online,but this addr is configured as not an iq60 dev", id.c_str());
 				}
 			}
 		}

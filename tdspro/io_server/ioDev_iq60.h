@@ -64,7 +64,7 @@ public:
 	~ioDev_iq60();
     bool isBridged();
     void DoCycleTask() override;
-	bool onRecvPkt(json jPkt);
+	bool onRecvPkt(json jPkt) override;
 	bool getCurrentVal();
 	bool waitResponse(int timeout);
 	bool sendData(unsigned char* pData, size_t iLen) override;

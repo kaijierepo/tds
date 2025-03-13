@@ -34,15 +34,15 @@ SOFTWARE.
 class TDS_imp : public i_tds {
 public:
 	TDS_imp();
-	bool setEncodeing(string encoding);//接口字符串传递使用的字符编码
+	bool setEncodeing(string encoding) override;//接口字符串传递使用的字符编码
 	string getUIMode();
 
-	bool run(string cmdline = "");
+	bool run(string cmdline = "") override;
 	//tds关闭时，一定要快速关闭666端口，因为如果由于某些原因tds延迟关闭，但是依然占用666端口
 	//此时用户以为程序已经退出，再次打开程序。新打开的程序由于666端口被占用而没有启动服务。
 	//但是如果启动了chromeUI，ui依然可能从尚未关闭的前一个进程获取到一些web页面，让人误以为后一个tds服务启动成功了。
 	void stop() override;
-	bool setProcBeforeExit(fp_procBeforeExit callback);
+	bool setProcBeforeExit(fp_procBeforeExit callback) override;
 
 	// tds 数据服务功能
 	 void call(string method, json& param, json& err, json& rlt ,RPC_SESSION session) override;
@@ -50,21 +50,21 @@ public:
 	 void callAsyn(string method, json& param, int delay = 0) override;
 	 void callAsyn(string method, string& param,int delay = 0) override;
 	 void batchCallAsyn(vector<json> calls, int delay) override;
-	 void setRpcHandler(fp_rpcHandler handler);
-	 void rpcNotify(string method, string params="", string sessionId="");
+	 void setRpcHandler(fp_rpcHandler handler) override;
+	 void rpcNotify(string method, string params="", string sessionId="") override;
 
 	// io 通信服务功能
-	 bool enableIoLog(string ioAddr, bool bEnable);
-	 bool sendToIoAddr(string ioAddr, const char* p, int l);
-	 bool connectDev(string ioAddr);
+	 bool enableIoLog(string ioAddr, bool bEnable) override;
+	 bool sendToIoAddr(string ioAddr, const char* p, int l) override;
+	 bool connectDev(string ioAddr) override;
 	 string getVersion() override;
 	 string getSvnVersion() override;
-	 bool isOnline(string ioAddr);
-	 bool isConnected(string ioAddr);
-	 bool isInUse(string ioAddr);
-	 bool lockIoAddr(string ioAddr) ;
-	 bool unlockIoAddr(string ioAddr) ;
-	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback);
+	 bool isOnline(string ioAddr) override;
+	 bool isConnected(string ioAddr) override;
+	 bool isInUse(string ioAddr) override;
+	 bool lockIoAddr(string ioAddr) override;
+	 bool unlockIoAddr(string ioAddr) override;
+	 bool setIoAddrRecvCallback(string ioAddr, void* user, fp_ioAddrRecv recvCallback) override;
 
 	 // 视频功能
 #ifdef ENABLE_GENICAM
@@ -72,7 +72,7 @@ public:
 	 void pushStream(string streamId, char* pData, int len, STREAM_INFO* si = NULL);
 	 void pullStream(string streamId, void* user, fp_onVideoStreamRecv onRecvStream, STREAM_INFO* si = NULL);
 #endif
-	 void log(const char* text);
+	 void log(const char* text) override;
 };
 
 extern void createConsole();

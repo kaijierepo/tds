@@ -103,7 +103,7 @@ public:
 	bool isCommBusy() override;
 	bool isConnected() override;
 	bool disconnect() override;
-	void DoCycleTask();
+	void DoCycleTask() override;
 
 	bool isEipSessionOpen();
 

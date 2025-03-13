@@ -190,7 +190,7 @@ public:
 	//standAlone IO
 	map<string, STANDALONE_IO> m_standAloneIO;
 
-	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn);
+	void statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn) override;
 
 
 	ioHandler_mbRtu ioHandler_mbRtu_udp;
@@ -234,7 +234,7 @@ public:
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
 	void updateAllChanVal();
 
-	bool getStatus(json& conf, string opt = "");
+	bool getStatus(json& conf, string opt = "") override;
 	string getTag(string ioAddr);
 
 	//设备发现必须是某个父设备发现了子设备

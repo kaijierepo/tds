@@ -90,7 +90,7 @@ public:
 
 	bool isCommBusy() override;
 	bool isConnected() override;
-	void DoCycleTask();
+	void DoCycleTask() override;
 	void DoCycleTaskSync() override;
     unsigned char getFCode(string regType);
 

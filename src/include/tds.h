@@ -83,7 +83,7 @@ struct Date {
 	unsigned short wDay;
 	unsigned short wDayOfWeek;
 	Date() {
-		memset(this, 0, sizeof(this));
+		memset(this, 0, sizeof(*this));
 	}
 	string toStr();
 	void fromStr(string s);
@@ -95,7 +95,7 @@ struct HMS {
 	unsigned short wSecond;
 	unsigned short wMilliseconds;
 	HMS() {
-		memset(this, 0, sizeof(this));
+		memset(this, 0, sizeof(*this));
 	}
 	bool operator==(HMS& right) {
 		return 0 == memcmp(this, &right, sizeof(HMS));
@@ -158,11 +158,11 @@ struct TIME {
 	unsigned short wDayOfWeek;
 
 	TIME() {
-		memset(this, 0, sizeof(this));
+		memset(this, 0, sizeof(*this));
 	}
 
 	void initAsInvalid() {
-		memset(this, 0, sizeof(this));
+		memset(this, 0, sizeof(*this));
 	}
 
 	bool isValid() {

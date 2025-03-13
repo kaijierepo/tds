@@ -83,7 +83,7 @@ public:
 
 	bool isCommBusy() override;
 	bool isConnected() override;
-	void DoCycleTask();
+	void DoCycleTask() override;
 
 	bool isEipSessionOpen();
 

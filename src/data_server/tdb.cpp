@@ -4979,7 +4979,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 
 		DB_FS::writeFile(deFilePath, out, outLen);
-		delete out;
+		delete [] out;
 	}
 	else if (type == "text") {  //text file is not encoded 
 		DB_FS::writeFile(deFilePath, (char*)data.c_str(), data.length());
@@ -4993,7 +4993,7 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 		memset(out, 0, buffLen);
 		int outLen = tdb_base64_decode(data.c_str(), data.length(), out);
 		DB_FS::writeFile(deFilePath, out, outLen);
-		delete out;
+		delete [] out;
 	}
 
 	return deFilePath;

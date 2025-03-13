@@ -365,7 +365,6 @@ public:
 		objIdent.set_instance_numnber(instanceId);
 		APDU.pushData(objIdent.data, 4);
 
-		bt;
 		bt.Class = 1; //context specific tag;
 		bt.TagNumber = 1;
 		bt.Length_Value_Type = 1;
@@ -378,7 +377,6 @@ public:
 		unsigned char tag_3e = 0x3e; //opening tag;
 		APDU.pushData(tag_3e);
 
-		bt;
 		bt.Class = 0; //application tag;
 		if (objType == BACNET_OBJECT_TYPE::BINARY_OUTPUT) {
 			bt.TagNumber = Application_Tag_Number::Enumerated;
@@ -402,7 +400,6 @@ public:
 		unsigned char tag_3f = 0x3f; //closing tag;
 		APDU.pushData(tag_3f);
 
-		bt;
 		bt.Class = 1; //context specific tag
 		bt.TagNumber = 4;
 		bt.Length_Value_Type = 1;

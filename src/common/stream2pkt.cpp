@@ -511,7 +511,7 @@ size_t IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )
 	memset(ptmp, 0, iLen + 1);
 	memcpy(ptmp, pData, iLen);
 	string strData = (char*)ptmp;
-	delete ptmp;
+	delete [] ptmp;
 
 	size_t iPos_contentLengthLineStart = strData.find("Content-Length:"); //15
 	//没有http body的情况

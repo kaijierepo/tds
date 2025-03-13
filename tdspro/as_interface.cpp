@@ -11,7 +11,7 @@ bool funcImp_obj_isEnableAlarm(string tag, string lang)
 	if (pObj) {
 		return pObj->m_bEnableAlarm;
 	}
-	return false; //²»´æÔÚÒ²Ëã×÷²»Ê¹ÄÜ
+	return false; //ä¸å­˜åœ¨ä¹Ÿç®—ä½œä¸ä½¿èƒ½
 }
 
 bool funcImp_obj_setJAlmStatus(string tag, string lang, json & js)
@@ -37,7 +37,7 @@ void funcImp_log(const char* pszFmt, ...)
 	va_list args;
 	va_start(args, pszFmt); {
 		int nLength = _vscprintf_cross_log(pszFmt, args);
-		nLength += 1;  //ÉÏÃæ·µ»ØµÄ³¤¶ÈÊÇ°üº¬\0£¬ÕâÀï¼ÓÉÏ
+		nLength += 1;  //ä¸Šé¢è¿”å›çš„é•¿åº¦æ˜¯åŒ…å«\0ï¼Œè¿™é‡ŒåŠ ä¸Š
 		std::vector<char> vectorChars(nLength);
 		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
 		str.assign(vectorChars.data());
@@ -76,7 +76,7 @@ bool funcImp_sms_notify(string tag, string & msg)
 	{
 		if (tds->smsServer->send(msg, pl))
 		{
-			LOG("[±¨¾¯¶ÌĞÅÍ¨Öª]±¨¾¯:" + msg + ",Í¨ÖªÈË:" + pnl);
+			LOG("[æŠ¥è­¦çŸ­ä¿¡é€šçŸ¥]æŠ¥è­¦:" + msg + ",é€šçŸ¥äºº:" + pnl);
 		}
 
 	}
