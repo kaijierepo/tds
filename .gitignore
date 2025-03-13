@@ -25,7 +25,6 @@ temp/
 *.webm
 *.mp4
 *.jdb
-*.txt
 *.exe
 *.avi
 *.h264
