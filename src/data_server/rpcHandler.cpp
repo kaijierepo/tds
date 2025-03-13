@@ -1525,7 +1525,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "parseIOPkt" || method == "parseIoPkt") {
 		string s = params["data"];
-		vector<byte> vec = str::hexStrToBytes(s);
+		vector<unsigned char> vec = str::hexStrToBytes(s);
 		unsigned char* p = vec.data();
 		size_t l = vec.size();
 		
