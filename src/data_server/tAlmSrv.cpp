@@ -788,7 +788,13 @@ bool almServer::canRemoveFromCurrent(ALARM_INFO& ai) {
 
 //基于 uuid,或 tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
-	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
+	if (!params.contains("time")) {
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定time字段");
+		resp.error = error;
+		return;
+	}
+	
+	if (!params.contains("uuid") && !params.contains("tag")) {
 		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
 		resp.error = error;
 		return;
