@@ -347,7 +347,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
+      <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
@@ -372,7 +372,7 @@
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
+      <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
@@ -401,7 +401,7 @@
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
+      <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>../build/publish.bat</Command>
@@ -433,7 +433,7 @@
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
+      <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>../build/publish.bat</Command>
