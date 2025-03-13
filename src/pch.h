@@ -29,7 +29,9 @@ using namespace std;
 #elif defined(_WIN32)
 #define MG_TLS MG_TLS_BUILTIN
 #else
+#ifndef MG_TLS
 #define MG_TLS MG_TLS_NONE
+#endif
 #endif
 
 extern i_tds* tds;
