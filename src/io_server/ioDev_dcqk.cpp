@@ -226,6 +226,10 @@ void ioDev_dcqk::QueryVedioUrlList()
 //strType : car_cross_video  car_move_video
 bool ioDev_dcqk::SendGetVideoList_ext(string zzj, string strType, int nStartUnix, int nEndUnix)
 {
+	if (pIOSession == nullptr) {
+		return false;
+	}
+
 	bool bRet = false;
 	StFrame data;
 	ZeroMemory(&data, sizeof(StFrame));

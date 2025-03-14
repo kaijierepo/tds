@@ -720,8 +720,7 @@ void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 		j["tag"] = TAG::addRoot(tag, rootTag);
 	}
 
-	if (!j.contains("level"))
-		j["level"] = "normal";
+	j["level"] = "normal";
 	rpc_updateStatus(j, resp);
 	return;
 }
