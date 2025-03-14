@@ -404,7 +404,7 @@
       <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>../build/publish.bat</Command>
+      <Command>../tools/publish.bat</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'">
@@ -436,7 +436,7 @@
       <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>../build/publish.bat</Command>
+      <Command>../tools/publish.bat</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
