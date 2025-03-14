@@ -1361,7 +1361,7 @@ string ioDev_dcqk::Get0x97AlarmDesc(const StAlarmAndImgRec& data)
 			}
 			else if (data.lrsign == 2)
 			{
-				sprintf_s(buf, ("小于%s下限(%.2%s)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)data.offset) / 100.0, sunit.c_str());
+				sprintf_s(buf, ("小于%s下限(%.2f%s)"), Get0x97AlarmLevelType(data.alarmtype).c_str(), ((float)data.offset) / 100.0, sunit.c_str());
 				strRst += buf;
 			}
 		}

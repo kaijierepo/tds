@@ -4787,7 +4787,7 @@ tstring Parse315Protocol::ToString(const StAlarmAndImgInfo& data)
 		strAckTime = "0xFFFFFFFF";
 	}
 
-	_stprintf_s(buf, _T("报警确认信号:%s"), strAckTime);
+	_stprintf_s(buf, _T("报警确认信号:%s"), strAckTime.c_str());
 	strRst += buf;
 
 	bool bPowerAlarm = false; //阻力报警
@@ -4899,7 +4899,7 @@ tstring Parse315Protocol::ToString0x27(const StAlarmAndImgRec& data)
 		TimeToString(ackTime, strAckTime);
 	}
 
-	_stprintf_s(buf, _T(",报警确认信号:%s"), strAckTime);
+	_stprintf_s(buf, _T(",报警确认信号:%s"), strAckTime.c_str());
 	strRst += buf;
 	BYTE* cbFill = (BYTE*)&data.filldata;
 	switch (cbFill[0])
@@ -5113,7 +5113,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 		TimeToString(ackTime, strAckTime);
 	}
 
-	_stprintf_s(buf, _T("报警确认信号:%s"), strAckTime);
+	_stprintf_s(buf, _T("报警确认信号:%s"), strAckTime.c_str());
 	strRst += buf;
 
 	static std::map<int, std::string> mapAlarmLevel = {
@@ -5188,7 +5188,7 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 			}
 			else if (data.lrsign == 2)
 			{
-				_stprintf_s(buf, _T("小于%s下限(%.2%s)"), mapAlarmLevel[data.alarmtype].c_str(), ((float)data.offset) / 100.0, sunit.c_str());
+				_stprintf_s(buf, _T("小于%s下限(%.2f%s)"), mapAlarmLevel[data.alarmtype].c_str(), ((float)data.offset) / 100.0, sunit.c_str());
 				strRst += buf;
 			}
 		}

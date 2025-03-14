@@ -27,7 +27,9 @@ using namespace std;
 #ifdef TDSDLL
 #define MG_TLS MG_TLS_NONE// Enable built-in TLS 1.3 stack
 #elif defined(_WIN32)
+#ifndef MG_TLS
 #define MG_TLS MG_TLS_BUILTIN
+#endif
 #else
 #ifndef MG_TLS
 #define MG_TLS MG_TLS_NONE
