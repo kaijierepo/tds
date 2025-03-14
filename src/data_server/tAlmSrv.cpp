@@ -1641,7 +1641,7 @@ ALARM_INFO almTable::fromCSV(const string& line)
 	ai.time = csvColVal(cols,"time").c_str();
 	ai.type = csvColVal(cols,"type").c_str();
 	ai.level = csvColVal(cols,"level").c_str();
-	ai.desc = csvColVal(cols,"desc").c_str();
+	ai.desc = csvColVal(cols,"info").c_str();//这里没对应起来
 	ai.detail = csvColVal(cols,"detail").c_str();
 
 	//ack and recover
