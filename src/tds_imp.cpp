@@ -690,7 +690,7 @@ bool TDS_imp::run(string cmdline)
 	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
 
 #ifdef USE_SVN_REV
-	m_sTitle = appName + " " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")";
+	m_sTitle = appName + "v" + SVN_VERSION + "(" + getbuildtime() + ")";
 #else
 	m_sTitle = appName + " " + version +  "(" + getbuildtime() + ")";
 #endif
