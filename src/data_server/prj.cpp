@@ -122,14 +122,6 @@ void project::runRtDB()
 	t.detach();
 }
 
-MP* project::createMP(string tag,string valType)
-{
-	MP* pmp = (MP*)prj.createChildMO(tag, MO_TYPE::mp);
-	prj.m_mapAllMP[tag] = pmp;		
-	pmp->m_valType = valType;
-	return pmp;
-}
-
 bool project::loadConfFile()
 {
 	OBJ::m_bDefaultOnline = tds->conf->getInt("objDefaultOnline", 0) > 0 ? true:false;
@@ -221,26 +213,16 @@ bool project::loadConf(json& jConf,bool bCreate)
 
 void project::clear()
 {
-	m_mapAllMP.clear();
 	clearChildren();
-}
-
-
-MP* project::getMp(string strSysTag)
-{
-	map<string, MP*>::iterator it = m_mapAllMP.find(strSysTag);
-	if (it != m_mapAllMP.end())
-	{
-		return it->second;
-	}
-	return NULL;
 }
 
 
 void project::getMpTypeList(json& mpTypeList)
 {
+	map<string, MP*> mapAllMP;
+	prj.getMpList(mapAllMP);
 	map<string,string> mapTypes;
-	for (map<string, MP*>::iterator it = m_mapAllMP.begin(); it != m_mapAllMP.end(); it++) {
+	for (map<string, MP*>::iterator it = mapAllMP.begin(); it != mapAllMP.end(); it++) {
 		MP* pmp = (MP*)it->second;
 		string mpType = "";
 

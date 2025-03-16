@@ -64,7 +64,6 @@ public:
 	bool loadConf(json& jConf,bool bCreate=true);
 	bool saveConfFile();
 	void clear();
-	MP* getMp(string strTagname);
 	void getMpTypeList(json& mpTypeList);
 
 	vector<MP*> getAllEzvizMp();
@@ -86,8 +85,6 @@ public:
 	void loadRtDB();
 
 	void runRtDB();
-
-	MP* createMP(string tag, string valType);
 
 	//对象模版配置
 	json getObjTemplate(string objTplType);
