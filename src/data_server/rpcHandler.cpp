@@ -2040,97 +2040,97 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	}
 	else if (method == "setObj")
 	{
-		if (params.contains("children")) { //如果包含children字段，说明要修改树结构。该模式重载对象树。冷重载
+		if (params.is_object()) //单个设置
+		{
 			if (!params.contains("tag")) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 			}
 			else {
-				unique_lock<shared_mutex> lock(prj.m_csPrj);
-				LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
+				json mo = params;
+				string tag = mo["tag"].get<string>();
+				string rootTag = "";
+				if (mo.contains("rootTag"))
+					rootTag = mo["rootTag"].get<string>();
+				tag = TAG::addRoot(tag, rootTag);
+				tag = TAG::addRoot(tag, session.org);
+				OBJ* pmo = prj.queryObj(tag, session.language);
+				if (pmo)
+				{
+					//要修改树结构,冷重载。锁住对象锁
+					if (params.contains("children")) { 
+						unique_lock<shared_mutex> lock(prj.m_csPrj);
+						LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
 
-				//加载新的树
-				project tmpPrj;
-				tmpPrj.loadConf(params);
-				tmpPrj.loadTreeStatus(&prj);//保留原有的实时数据状态
-				prj.clear();
-				prj.m_name = tmpPrj.m_name;
-				prj.m_childObj = tmpPrj.m_childObj;
-				prj.m_type = tmpPrj.m_type;
-				for (int i = 0; i < prj.m_childObj.size(); i++) {
-					OBJ* p = prj.m_childObj[i];
-					p->m_pParentMO = &prj;
-				}
-				tmpPrj.m_childObj.clear();
-				bool bSaved = prj.saveConfFile();
-				if (!bSaved) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
-					LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
-					return true;
-				}
-				std::map<string, SCRIPT_INFO> expScripts;
-				prj.getAllVarExpScript();
+						//设置指定的OBJ对象
+						OBJ& toSetObj = *pmo;
+						OBJ tmpObj;
+						tmpObj.loadConf(params);
+						tmpObj.loadTreeStatus(&toSetObj);//保留原有的实时数据状态
+						toSetObj.clearChildren();
+						toSetObj.m_name = tmpObj.m_name;
+						toSetObj.m_childObj = tmpObj.m_childObj;
+						toSetObj.m_type = tmpObj.m_type;
+						for (int i = 0; i < toSetObj.m_childObj.size(); i++) {
+							OBJ* p = toSetObj.m_childObj[i];
+							p->m_pParentMO = &toSetObj;
+						}
+						tmpObj.m_childObj.clear();
 
-				//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
-				//ioSrv.updateTag2IOAddrBinding();
-				//ioSrv.updateAllChanVal();
+						//持久化
+						bool bSaved = prj.saveConfFile();
+						if (!bSaved) {
+							rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
+							LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
+							return true;
+						}
+						std::map<string, SCRIPT_INFO> expScripts;
+						prj.getAllVarExpScript();
 
-				rpcSrv.notify("objTreeUpdated", nullptr);
-				result = "\"ok\"";
-			}
-		}
-		else {//只用于不改变mo的类型和id信息的非关键信息配置，不改变children,目前暂用于gps地址。热重载
-			if (params.is_object()) //单个设置
-			{
-				if (!params.contains("tag")) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
-				}
-				else {
-					json mo = params;
-					string tag = mo["tag"].get<string>();
-					string rootTag = "";
-					if (mo.contains("rootTag"))
-						rootTag = mo["rootTag"].get<string>();
-					tag = TAG::addRoot(tag, rootTag);
-					tag = TAG::addRoot(tag, session.org);
-					OBJ* pmo = prj.queryObj(tag,session.language);
-					if (pmo)
-					{
+						//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
+						//ioSrv.updateTag2IOAddrBinding();
+						//ioSrv.updateAllChanVal();
+
+						rpcSrv.notify("objTreeUpdated", nullptr);
+						result = "\"ok\"";
+					}
+					//热重载
+					else {
 						pmo->loadConf(mo);
 						prj.saveConfFile();
 						result = "\"ok\"";
 					}
-					else {
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
-					}
+				}
+				else {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
 				}
 			}
-			else if (params.is_array())
-			{
-				bool ok = true;
-				for (int i = 0; i < params.size(); i++) {
-					json& mo = params[i];
-					string tag = mo["tag"].get<string>();
-					string rootTag = "";
-					if (mo.contains("rootTag"))
-						rootTag = mo["rootTag"].get<string>();
-					tag = TAG::addRoot(tag, rootTag);
-					tag = TAG::addRoot(tag, session.org); 
-					OBJ* pmo = prj.queryObj(tag, session.language);
-					if (pmo)
-					{
-						pmo->loadConf(mo);
-					}
-					else {
-						ok = false;
-						rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
-						break;
-					}
+		}
+		else if (params.is_array())
+		{
+			bool ok = true;
+			for (int i = 0; i < params.size(); i++) {
+				json& mo = params[i];
+				string tag = mo["tag"].get<string>();
+				string rootTag = "";
+				if (mo.contains("rootTag"))
+					rootTag = mo["rootTag"].get<string>();
+				tag = TAG::addRoot(tag, rootTag);
+				tag = TAG::addRoot(tag, session.org);
+				OBJ* pmo = prj.queryObj(tag, session.language);
+				if (pmo)
+				{
+					pmo->loadConf(mo);
 				}
+				else {
+					ok = false;
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+					break;
+				}
+			}
 
-				if (ok) {
-					prj.saveConfFile();
-					result = "\"ok\"";
-				}
+			if (ok) {
+				prj.saveConfFile();
+				result = "\"ok\"";
 			}
 		}
 	}
