@@ -39,6 +39,7 @@ namespace DEV_TYPE {
 namespace DEV_SUB_TYPE {
 	namespace ethernetIP {
 		const string control_logix = "control-logix";
+		const string micro800 = "micro800";
 	}
 }
 

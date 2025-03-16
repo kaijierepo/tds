@@ -131,54 +131,54 @@ void cycleAcq_thread_eip(ioDev_eip* pDev) {
 				//string s = str::bytesToHexStr(req.data, req.len);
 				//LOG("[EIP]" + s);
 			}
+			else if (pDev->m_devSubType == DEV_SUB_TYPE::ethernetIP::micro800) {
+				req.pack_Micro800_readTag(pC->getDevAddrStr(), pDev->sessionHandle);
+			}
 
 			if (pDev->doTransaction(req, resp, errorInfo)) {
 				if (errorInfo == "") {
-					unsigned char* p = resp.data;
+					CIP_Response cipResp;
+					resp.unpack_Micro800_readTag(cipResp);
 					bool validResp = false;
-					int i = 0;
-					for (i = resp.len - 5; i >= resp.len - 15; i--) {
-						if (p[i] == 0xcc && p[i + 1] == 0) {
-							validResp = true;
-							break;
-						}
+					if (cipResp.general_status == 0) {
+						validResp = true;
+					}
+					else {
+						LOG("[warn]EIP设备readTag设备返回失败,%s", getReadTagServiceErrorCodeDesc(cipResp.general_status).c_str());
 					}
 
 					//resp tag命令的resp部分
 					if (validResp) {
-						int len = resp.len - i;
-						unsigned char* pCmd = resp.data + i;
-						unsigned char status = pCmd[2];
-						if (status == 0)//成功
-						{
-							unsigned short tagValType = *(unsigned short*)(pCmd + 4);
-							if (tagValType == LOGIX_TAG_VAL_TYPE::Bool) {
-								unsigned char val = *(unsigned char*)(pCmd + 6);
-								if (val == 0xff) {
-									pC->input(true);
-								}
-								else {
-									pC->input(false);
-								}
+						unsigned char* pData = cipResp.response_data.data();
+						unsigned short tagValType = *(unsigned short*)(pData);
+						unsigned char* pTagVal = pData + 2;
+						if (tagValType == LOGIX_TAG_VAL_TYPE::Bool) {
+							unsigned char val = *(unsigned char*)(pTagVal);
+							if (val == 0xff) {
+								pC->input(true);
 							}
-							else if (tagValType == LOGIX_TAG_VAL_TYPE::Real) {
-								float val = *(float*)(pCmd + 6);
-								double dbVal = (double)val;
-								pC->input(dbVal);
+							else {
+								pC->input(false);
 							}
 						}
-						else{
-							string errorInfo;
-							if (status == 0x04) {
-								errorInfo = READ_TAG_SERVICE_ERROR_INFO_0x04;
-							}
-							else if (status == 0x05) {
-								errorInfo = READ_TAG_SERVICE_ERROR_INFO_0x05;
-							}
-							LOG("[warn][EIP]ControlLogix readTag命令返回错误,错误码:%d,错误信息:%s", status, errorInfo.c_str());
+						else if (tagValType == LOGIX_TAG_VAL_TYPE::Real) {
+							float val = *(float*)(pTagVal);
+							double dbVal = (double)val;
+							pC->input(dbVal);
 						}
-						
-					}
+						else if (tagValType == LOGIX_TAG_VAL_TYPE::SInt) {
+							int val = *(unsigned char*)(pTagVal);
+							pC->input(val);
+						}
+						else if (tagValType == LOGIX_TAG_VAL_TYPE::SInt) {
+							int val = *(unsigned short*)(pTagVal);
+							pC->input(val);
+						}
+						else if (tagValType == LOGIX_TAG_VAL_TYPE::DInt) {
+							int val = *(int*)(pTagVal);
+							pC->input(val);
+						}
+					}	
 				}
 			}
 			else {
@@ -422,11 +422,10 @@ void ioDev_eip::onEvent_online()
 	EIP_PKT req;
 	req.header.command = EIP_CMD_REGISTER_SESSION;
 	req.header.length = 4;
-	req.cmdData = new unsigned char[4];
-	memset(req.cmdData, 0, 4);
-	req.cmdData[0] = 1;
-	req.pack();
+	unsigned char cmdData[4] = {1,0,0,0};
 
+	req.pushData(&req.header,sizeof(req.header));
+	req.pushData(cmdData, 4);
 
 	sendData(req.data, req.len);
 }

@@ -35,5 +35,5 @@ unsigned char* DEV_PKT::pushData(unsigned char v)
 
 unsigned short* DEV_PKT::pushData(unsigned short v)
 {
-	return (unsigned short*)pushData(&v, 1);
+	return (unsigned short*)pushData(&v, 2);
 }
