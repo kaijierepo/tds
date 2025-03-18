@@ -1894,7 +1894,7 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 
 	if (calc.boolDurations.size() > 0) {
 		time_t totalRangeTime = 0;
-		for (auto& di : calc.intDurations) {
+		for (auto& di : calc.boolDurations) {
 			totalRangeTime += di.second.duration;
 		}
 		for (auto& di : calc.boolDurations) {
@@ -3165,8 +3165,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 			//size_t len = strlen(p);
-			result.calcResult = p;
-			free(p);
+			if (p) {
+				result.calcResult = p;
+				free(p);
+			}
 		}
 		else if (sCalcResult != "") {
 			result.calcResult = sCalcResult;
@@ -3179,8 +3181,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		//if p==null，maybe int rlt_mut_doc,some string type pointed to local variable and is already released
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
 		//size_t len = strlen(p);
-		result.dataList = p;
-		free(p);
+		if (p) {
+			result.dataList = p;
+			free(p);
+		}
+		
 	}
 	result.rowCount = mapRlt.size();
 	return true;
