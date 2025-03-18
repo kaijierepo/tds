@@ -11,7 +11,6 @@
 
 #pragma pack(1)
 
-
 #define EIP_CMD_NOP             0x00    // 空操作
 #define EIP_CMD_LIST_SERVICES   0x04    // 列出所有服务
 #define EIP_CMD_LIST_IDENTITY   0x63    // 列出身份信息

@@ -166,27 +166,18 @@ jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
-	if (argument_count > 0)
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() > 0)
 	{
-		/* Convert the first argument to a string (JS "toString" operation) */
-		jerry_value_t string_value = jerry_value_to_string(arguments[0]);
+		string log = jArgs[0].get<string>();
 
-		/* A naive allocation of buffer for the string */
-		jerry_char_t buffer[8000] = { 0 };
-
-		/* Copy the whole string to the buffer, without a null termination character,
-		 * Please note that if the string does not fit into the buffer nothing will be copied.
-		 * More details on the API reference page
-		 */
-		jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, sizeof(buffer) - 1);
-		buffer[copied_bytes] = '\0';
-
-		/* Release the "toString" result */
-		jerry_release_value(string_value);
-
-		string log = (const char*)buffer;
-
-		//LOG("[脚本日志]" + log);
+		bool logToTds = false;
+		if (jArgs.size() > 1) {
+			logToTds = jArgs[1].get<bool>();
+		}
+		if (logToTds) {
+			LOG("[脚本日志]" + log);
+		}
 		pEngine->m_vecOutput.push_back(log);
 	}
 
