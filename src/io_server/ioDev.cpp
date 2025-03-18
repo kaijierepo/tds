@@ -308,6 +308,8 @@ void ioDev::stop()
 	m_bRunning = false;
 	if(m_tcpClt)
 		m_tcpClt->stop();
+	if (m_udpSrv)
+		m_udpSrv->stop();
 
 	for (auto i : m_vecChildDev)
 	{
@@ -1402,6 +1404,21 @@ string ioDev::getDevAddrStr(bool ignorePort)
 			if (m_jDevAddr["port"].is_number_integer())
 			{
 				port = m_jDevAddr["port"].get<int>();
+			}
+
+			devAddr = "UDP-" + ip;
+			if (!ignorePort)
+				devAddr += ":" + str::fromInt(port);
+		}
+		else if (m_addrType == DEV_ADDR_MODE::udpClient)
+		{
+			string ip;
+			int port = 0;
+			if (m_jDevAddr["ip"].is_string())
+				ip = m_jDevAddr["ip"].get<string>();
+			if (m_jDevAddr["localPort"].is_number_integer())
+			{
+				port = m_jDevAddr["localPort"].get<int>();
 			}
 
 			devAddr = "UDP-" + ip;

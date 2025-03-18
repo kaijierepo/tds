@@ -50,6 +50,7 @@ udpServer::udpServer(void)
 	m_bindIP = "0.0.0.0";
 	m_port = 660;
 	m_pCallback = NULL;
+	m_recvThreadRunning = false;
 }
 
 
@@ -128,6 +129,17 @@ void udpServer::stop()
 	close(m_sock);
 #endif
 	m_sock = 0;
+
+	while (1) {
+#ifdef _WIN32
+		Sleep(1);
+#else
+		sleep(1);
+#endif
+		if (!m_recvThreadRunning) {
+			break;
+		}
+	}
 }
 
 void udpServer::startMultiCast(string multiCastAddr, int multiCastPort)
@@ -233,6 +245,7 @@ size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, i
 void udpRecvThread(void* lpParam)
 {
 	udpServer* pServ = (udpServer*)lpParam;
+	pServ->m_recvThreadRunning = true;
 	unsigned char szBuff[10025];
 	while (true)
 	{
@@ -249,7 +262,7 @@ void udpRecvThread(void* lpParam)
 		if (recvlen < 0)
 		{
 			//int iErr = GetLastError();
-			continue;
+			break;
 		}
 		else
 		{
@@ -257,8 +270,7 @@ void udpRecvThread(void* lpParam)
 			pServ->onRecvData(szBuff, recvlen, inet_ntoa(addrCli.sin_addr), ntohs(addrCli.sin_port));
 		}
 	}
-
-	pServ->stop();
+	pServ->m_recvThreadRunning = false;
 }
 
 size_t UdpClt::sendData(unsigned char* pData, size_t iLen)

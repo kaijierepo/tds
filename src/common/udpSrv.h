@@ -35,6 +35,8 @@ public:
 
 	void addToMultiCast(string multiCastAddr, int port);
 
+	bool m_recvThreadRunning;
+
 	int m_sock;
 	int m_multiCastSendSock;
 	string m_multiCastSendAddr;

@@ -886,7 +886,12 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 
 			string currentConnInfo = p->getConnInfo();
 			if (currentConnInfo != lastConnInfo) {
-				p->disconnect();//等待其自动重连
+				if (p->m_addrType == DEV_ADDR_MODE::udpClient) {
+					p->stop();
+					p->run();
+				}
+				else
+					p->disconnect();//等待其自动重连
 			}
 		}
 		else {
