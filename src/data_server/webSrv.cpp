@@ -714,9 +714,10 @@ void parseCookie(string& cookie, map<string, string>& mapParams)
 }
 
 #ifdef ENABLE_OPENSSL
-#include <openssl/rsa.h>
+#include <openssl/evp.h>
 #include <openssl/pem.h>
-#include <openssl/ssl.h>
+#include <openssl/x509.h>
+#include <openssl/bn.h>
 #include <openssl/err.h>
 
 void createTestCert() {
@@ -724,17 +725,50 @@ void createTestCert() {
 	OpenSSL_add_all_algorithms();
 	ERR_load_crypto_strings();
 
-	// 生成RSA密钥对
-	RSA* rsa = RSA_generate_key(2048, RSA_F4, nullptr, nullptr);
-	if (rsa == nullptr) {
-		fprintf(stderr, "生成RSA密钥对失败\n");
+	// 创建EVP_PKEY对象来存放RSA密钥对
+	EVP_PKEY* pkey = EVP_PKEY_new();
+	if (pkey == nullptr) {
+		fprintf(stderr, "创建EVP_PKEY对象失败\n");
 		return;
 	}
+
+	// 使用EVP_PKEY_keygen来生成RSA密钥对
+	EVP_PKEY_CTX* pkey_ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+	if (pkey_ctx == nullptr) {
+		fprintf(stderr, "EVP_PKEY_CTX_new_id失败\n");
+		EVP_PKEY_free(pkey);
+		return;
+	}
+
+	if (EVP_PKEY_keygen_init(pkey_ctx) <= 0) {
+		fprintf(stderr, "EVP_PKEY_keygen_init失败\n");
+		EVP_PKEY_CTX_free(pkey_ctx);
+		EVP_PKEY_free(pkey);
+		return;
+	}
+
+	// 设置RSA密钥长度
+	if (EVP_PKEY_CTX_set_rsa_keygen_bits(pkey_ctx, 2048) <= 0) {
+		fprintf(stderr, "设置RSA密钥长度失败\n");
+		EVP_PKEY_CTX_free(pkey_ctx);
+		EVP_PKEY_free(pkey);
+		return;
+	}
+
+	if (EVP_PKEY_keygen(pkey_ctx, &pkey) <= 0) {
+		fprintf(stderr, "密钥生成失败\n");
+		EVP_PKEY_CTX_free(pkey_ctx);
+		EVP_PKEY_free(pkey);
+		return;
+	}
+
+	EVP_PKEY_CTX_free(pkey_ctx); // 完成后释放上下文
 
 	// 创建X509证书对象
 	X509* x509 = X509_new();
 	if (x509 == nullptr) {
 		fprintf(stderr, "创建X509证书对象失败\n");
+		EVP_PKEY_free(pkey);
 		return;
 	}
 
@@ -749,40 +783,63 @@ void createTestCert() {
 	X509_gmtime_adj(X509_get_notAfter(x509), 31536000L); // 有效期为1年
 
 	// 设置证书公钥
-	EVP_PKEY* pkey = EVP_PKEY_new();
-	EVP_PKEY_assign_RSA(pkey, rsa);
 	X509_set_pubkey(x509, pkey);
 
 	// 设置证书自签名
-	X509_sign(x509, pkey, EVP_sha256());
+	if (X509_sign(x509, pkey, EVP_sha256()) <= 0) {
+		fprintf(stderr, "证书签名失败\n");
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		return;
+	}
 
 	// 将证书保存到文件
 	FILE* certFile = fopen("cert.pem", "wb");
 	if (certFile == nullptr) {
 		fprintf(stderr, "无法打开证书文件\n");
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
 		return;
 	}
-	PEM_write_X509(certFile, x509);
+	if (PEM_write_X509(certFile, x509) != 1) {
+		fprintf(stderr, "写入证书文件失败\n");
+		fclose(certFile);
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		return;
+	}
 	fclose(certFile);
 
 	// 将私钥保存到文件
 	FILE* keyFile = fopen("key.pem", "wb");
 	if (keyFile == nullptr) {
 		fprintf(stderr, "无法打开私钥文件\n");
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
 		return;
 	}
-	PEM_write_RSAPrivateKey(keyFile, rsa, nullptr, nullptr, 0, nullptr, nullptr);
+
+	// 写入私钥
+	if (PEM_write_PrivateKey(keyFile, pkey, NULL, NULL, 0, NULL, NULL) != 1) {
+		fprintf(stderr, "写入私钥文件失败\n");
+		fclose(keyFile);
+		X509_free(x509);
+		EVP_PKEY_free(pkey);
+		return;
+	}
 	fclose(keyFile);
 
 	// 释放资源
 	X509_free(x509);
 	EVP_PKEY_free(pkey);
-	RSA_free(rsa);
+
+	// 清理OpenSSL
 	ERR_free_strings();
 	EVP_cleanup();
 
 	printf("测试证书已成功生成！\n");
 }
+
 #endif
 
 void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm, WebServer* pWs) {
