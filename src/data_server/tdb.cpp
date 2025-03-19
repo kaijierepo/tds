@@ -36,6 +36,7 @@ SOFTWARE.
 #include "DTW.hpp"
 #include <thread>
 #include "dtwrecoge.h"
+#include <chrono>
 #ifdef _WIN32
 #include <windows.h>
 #else

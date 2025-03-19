@@ -71,10 +71,10 @@ bool ScriptEngine::runScript(string& script, string user)
 {
 	m_script = script;
 	m_user = user;
-	vector<string> lines;
+	//vector<string> lines;
 	//script = str::replace(script, "\r\n", "\n");
 	//str::split(lines, script, "\n");
-	lines.push_back(script);
+	//lines.push_back(script);
 	m_vecOutput.clear();
 	bool runOk = false;
 	try {
@@ -113,45 +113,28 @@ bool ScriptEngine::runScript(string& script, string user)
 			}
 		}
 
-		for (int i = 0; i < lines.size(); i++) {
-			string line = lines[i];
-			while (1) {
-				size_t pos = line.find(" ");
-				if (pos == 0) {
-					line.erase(0);
-				}
-				else {
-					break;
-				}
-			}
-			if (line == "")
-				continue;
-			///* Run the demo script with 'eval' */
-			jerry_value_t eval_ret = jerry_eval((jerry_char_t*)line.c_str(),
-				line.length(),
-				JERRY_PARSE_NO_OPTS);
+		///* Run the demo script with 'eval' */
+		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
+			script.length(),
+			JERRY_PARSE_NO_OPTS);
 
-			/* Check if there was any error (syntax or runtime) */
-			bool run_ok = !jerry_value_is_error(eval_ret);
+		/* Check if there was any error (syntax or runtime) */
+		bool run_ok = !jerry_value_is_error(eval_ret);
 
-			if (run_ok)
-			{
-				m_sEvalRet = jerryVal2Str(eval_ret);
-				jerry_release_value(eval_ret);
-				runOk = true;
-			}
-			else
-			{
-				jerry_error_t error = jerry_get_error_type(eval_ret);
-				m_sError = getErrorDesc(error);
-				//m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
-				m_vecOutput.push_back("脚本执行错误,错误类型:" + m_sError);
-				jerry_release_value(eval_ret);
-				break;
-			}
+		if (run_ok)
+		{
+			m_sEvalRet = jerryVal2Str(eval_ret);
+			jerry_release_value(eval_ret);
+			runOk = true;
 		}
-
-		
+		else
+		{
+			jerry_error_t error = jerry_get_error_type(eval_ret);
+			m_sError = getErrorDesc(error);
+			//m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
+			m_vecOutput.push_back("脚本执行错误,错误类型:" + m_sError);
+			jerry_release_value(eval_ret);
+		}
 
 		releaseGlobalFunc();
 		jerry_release_value(global_object);
