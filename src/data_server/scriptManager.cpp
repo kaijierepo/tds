@@ -138,9 +138,11 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	if (params["script"] != nullptr) {
 		string s = params["script"];
 
-		string sEnvVar = params["envVarScript"];
-		if (sEnvVar != "") {
-			s = sEnvVar + "\n" + s;
+		if (params.contains("envVarScript")) {
+			string sEnvVar = params["envVarScript"];
+			if (sEnvVar != "") {
+				s = sEnvVar + "\n" + s;
+			}
 		}
 
 		SCRIPT_INFO si;
@@ -498,6 +500,14 @@ void ScriptManager::loopExe()
 #endif
 
 string SCRIPT_INFO::getContextTag()
+{
+	string envTag = rootTag;
+	envTag = TAG::addRoot(envTag, callerObjTag);
+	envTag = TAG::addRoot(envTag, org);
+	return envTag;
+}
+
+string SCRIPT_INFO::getExpContextTag()
 {
 	string envTag = rootTag;
 	envTag = TAG::addRoot(envTag, callerObjTag);

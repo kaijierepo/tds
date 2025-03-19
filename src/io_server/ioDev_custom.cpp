@@ -124,6 +124,11 @@ void ioDev_custom::onEvent_online()
 bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 {
 	if (m_onRecvScript != "") {
+#ifdef _DEBUG
+		LOG("执行脚本: " + m_onRecvScript);
+#endif
+
+
 		ScriptEngine se;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_initIODevFunc = initIODevFunc;

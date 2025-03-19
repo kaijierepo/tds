@@ -39,6 +39,7 @@ struct SCRIPT_INFO {
 	bool enableLog;
 
 	string getContextTag();
+	string getExpContextTag();
 	void toJson(json& j, bool getStatus = false);
 	void fromJson(json& j);
 };

@@ -590,8 +590,14 @@ string TAG::trimRoot(string tag, string root)
 string TAG::getParentTag(string tag)
 {
 	size_t pos = tag.rfind(".");
-	if (pos >= 0) {
+	if (pos == string::npos) {
+		return ""; //parent tag is rootTag
+	}
+	else if (pos >= 0) {
 		tag = tag.substr(0, pos);
+	}
+	else {
+
 	}
 	return tag;
 }
