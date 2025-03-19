@@ -640,6 +640,8 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 	if (!m_bEnableIO)
 		return;
 
+	m_bOnline = true;
+
 	TIME t;
 	if (dataTime == NULL)
 	{
