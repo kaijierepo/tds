@@ -1308,6 +1308,30 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 	return "";
 }
 
+#ifdef _DEBUG
+std::string yyvalDump(yyjson_mut_val* val) {
+	char* str = yyjson_mut_val_write(val, 0, nullptr);
+	if (str != nullptr) {
+		std::string result(str);
+		std::cout << result << std::endl;
+		free(str);
+		return result;
+	}
+	return "";
+}
+
+std::string yyvalDump(yyjson_val* val) {
+	char* str = yyjson_val_write(val, 0, nullptr);
+	if (str != nullptr) {
+		std::string result(str);
+		std::cout << result << std::endl;
+		free(str);
+		return result;
+	}
+	return "";
+}
+#endif
+
 bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	map<SORT_FLAG, yyjson_mut_val*>& mapRlt = result.mapRlt;
@@ -1879,15 +1903,17 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 			yyjson_mut_val* yyKey = yyjson_mut_strcpy(yydoc, "slot");
 			yyjson_mut_val* yyVal = yyjson_mut_int(yydoc, di.first);
 			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
-
 			yyKey = yyjson_mut_strcpy(yydoc, "duration");
 			yyVal = yyjson_mut_int(yydoc, di.second.duration);
 			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
-
 			yyKey = yyjson_mut_strcpy(yydoc, "percentage");
-			yyVal = yyjson_mut_real(yydoc,(double)di.second.duration/(double)totalRangeTime);
+			if (totalRangeTime == 0) {
+				yyVal = yyjson_mut_real(yydoc, 0);
+			}
+			else {
+				yyVal = yyjson_mut_real(yydoc, (double)di.second.duration / (double)totalRangeTime);
+			}
 			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
-
 			yyjson_mut_arr_append(pAggrRlt, oneSlot);
 		}
 	}
@@ -1909,7 +1935,13 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
 
 			yyKey = yyjson_mut_strcpy(yydoc, "percentage");
-			yyVal = yyjson_mut_real(yydoc, (double)di.second.duration / (double)totalRangeTime);
+			if (totalRangeTime == 0) {
+				yyVal = yyjson_mut_real(yydoc, 0);
+			}
+			else {
+				yyVal = yyjson_mut_real(yydoc, (double)di.second.duration / (double)totalRangeTime);
+			}
+			
 			yyjson_mut_obj_put(oneSlot, yyKey, yyVal);
 
 			yyjson_mut_arr_append(pAggrRlt, oneSlot);
@@ -2432,8 +2464,6 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	else {
 		try
 		{
-			yyjson_val* yyv_db = yyjson_obj_get(params, "db");
-
 			if (dbName != "") {
 				tdb->Select(deSel, result);
 			}
