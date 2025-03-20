@@ -49,6 +49,11 @@ void funcImp_log(const char* pszFmt, ...)
 
 bool funcImp_rpcHand_notify(string method,  json& js)
 {
+	//onAlarmUpdate暂时仅用于子服务和主服务之间的数据同步，不通知给tds客户端
+	if (method == "onAlarmUpdate") {
+		return false;
+	}
+
 	rpcSrv.notify(method, js);
 
 	return true;
