@@ -54,6 +54,18 @@ bool getScriptEngineObj(json& jObj, jerry_value_t engineObj)
 	return false;
 }
 
+bool is_integer(double x) {
+	if (std::isnan(x) || std::isinf(x)) {
+		return false;
+	}
+	const double threshold = 9007199254740992.0; // 2^53
+	double abs_x = std::fabs(x);
+	if (abs_x >= threshold) {
+		return true; // 超出精度范围后无法表示小数
+	}
+	return x == std::trunc(x);
+}
+
 void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 	if (jerry_value_is_boolean(jerryVal))
 	{
@@ -71,7 +83,15 @@ void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 	}
 	else if (jerry_value_is_number(jerryVal))
 	{
-		jVal = jerry_get_number_value(jerryVal);
+		double dbVal = jerry_get_number_value(jerryVal);
+		//if (is_integer(dbVal)) {
+		//	int iVal = dbVal;
+		//	jVal = iVal;
+		//}
+		//else {
+		//	jVal = dbVal;
+		//}
+		jVal = dbVal;
 	}
 	else if (jerry_value_is_string(jerryVal))
 	{
