@@ -80,7 +80,7 @@ void thread_485toNetCycleTask(ioGW_rs485ToNet* p) {
 		pChild->DoCycleTaskSync();
 
 		while (1) {
-			if (!p->isBusBusy())
+			if (!p->isBusBusy())  //某些特殊的串口设备，即使接收到了数据，也要等待一会再发下一包，否则会产生通信错误，该机制用于此种情况
 				break;
 			std::this_thread::sleep_for(std::chrono::milliseconds(300));
 		}
