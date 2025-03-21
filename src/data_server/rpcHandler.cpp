@@ -2758,6 +2758,16 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		j["time"] = dbt.toStr();
 		rpcResp.result = j.dump();
 	}
+	else if (method == "calcTimeDiffSecond") {
+		string s1 = params["time1"];
+		string s2 = params["time2"];
+		TIME t1; t1.fromStr(s1);
+		TIME t2; t2.fromStr(s2);
+		time_t diff = timeopt::CalcTimeDiffSecond(t1, t2);
+		json j;
+		j = diff;
+		rpcResp.result = j.dump();
+	}
 	else if (method == "generateObjTreeFromDB") {
 		string path = params["path"];
 		prj.clear();
@@ -4518,6 +4528,12 @@ json getValAttr(json de) {
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
+	//监测点组将忽略不同的保存间隔，其中有1个点要保存就都保存
+	bool isMpGroup = false;
+	if (params.contains("isMpGroup")) {
+		isMpGroup = params["isMpGroup"].get<bool>();
+	}
+
 	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
 	string rootTag = "";
 	vector<INPUT_DE> inputDEList;
@@ -4711,24 +4727,33 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 
 		if (vecMps.size() > 0) {
-
+			//此处的设计尚不完善，modbus的寄存器有时希望作为监测点组，有时不希望
+			//如果发现设置了长的保存周期，依然很短时间就保存了，那就是被监测点组机制影响了
 			//监测点组中有任意一个点需要保存，则全部保存
 			//可能某些监测点发生了值变化需要保存，有些点没有变化。统一保存。因为某些可视化页面必须同一个时间点，两个位号的数据都有
-			bool needSave = false;
-			for (int i = 0; i < vecMps.size(); i++) {
-				MP* pmp = vecMps[i];
-				if (pmp->needSaveToDB()) {
-					needSave = true;
-				}
-			}
-
-			if (needSave) {
+			if (isMpGroup) {
+				bool needSave = false;
 				for (int i = 0; i < vecMps.size(); i++) {
 					MP* pmp = vecMps[i];
-					pmp->saveToDB();
+					if (pmp->needSaveToDB()) {
+						needSave = true;
+					}
+				}
+				if (needSave) {
+					for (int i = 0; i < vecMps.size(); i++) {
+						MP* pmp = vecMps[i];
+						pmp->saveToDB();
+					}
 				}
 			}
-
+			else {
+				for (int i = 0; i < vecMps.size(); i++) {
+					MP* pmp = vecMps[i];
+					if (pmp->needSaveToDB()) {
+						pmp->saveToDB();
+					}
+				}
+			}
 
 			//发送状态更新通知
 			json jStatusNotify = json::array();
