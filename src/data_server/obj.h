@@ -63,6 +63,7 @@ struct OBJ_QUERIER {
 	bool getValDesc;
 	bool getStatus;  //status = val + alarm + 其他运行时数据
 	bool getStatusDesc; //以文本可阅读的方式返回状态信息，方便UI显示或者可视化组态
+	bool getStatusDetail;
 	bool getConf;
 	bool getConfDetail;
 	bool getUnit; //值描述信息是否需要带单位
@@ -76,6 +77,7 @@ struct OBJ_QUERIER {
 		 getConf = true;
 		 getMp = false;
 		 getStatus = false;
+		 getStatusDetail = false;
 		 getVal = false;
 		 getChild = false;
 		 getStatusDesc = false;

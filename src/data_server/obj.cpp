@@ -1486,6 +1486,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	if (opt["dataSaveMp"].is_boolean()) {
 		q.dataSaveMp = opt["dataSaveMp"].get<bool>();
 	}
+	if (opt["getStatusDetail"].is_boolean()) {
+		q.getStatusDetail = opt["getStatusDetail"].get<bool>();
+	}
 	return q;
 }
 

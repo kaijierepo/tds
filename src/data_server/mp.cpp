@@ -480,6 +480,13 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 			conf["time"] = "-";
 	}
 
+	if (q.getStatusDetail) {
+		if (timeopt::isValidTime(m_lastSaveTime))
+			conf["saveTime"] = timeopt::st2str(m_lastSaveTime);
+		else
+			conf["saveTime"] = "-";
+	}
+
 	if (q.getStatus) {
 		if (m_valType == VAL_TYPE::video) {
 			conf["online"] = m_bOnline;
