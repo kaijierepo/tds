@@ -110,14 +110,22 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 				{
 					unsigned short mask = 1 << pC->m_regBitIndex;
 					unsigned short outputVal = pC->holdingRegVal | mask;
-					pCmd->setVal(outputVal);
+
+					unsigned short mbVal;
+					char* pBuff = (char*)&mbVal;
+					mbBuff2Local((char*)&outputVal, pBuff, pC->m_byteOrder, 2);
+					pCmd->setVal(mbVal);
 				}
 				else
 				{
 					unsigned short a = pC->holdingRegVal; // 初始值
 					unsigned short mask = ~(1 << pC->m_regBitIndex);
 					a = a & mask;
-					pCmd->setVal(a);
+
+					unsigned short mbVal;
+					char* pBuff = (char*)&mbVal;
+					mbBuff2Local((char*)&a, pBuff, pC->m_byteOrder, 2);
+					pCmd->setVal(mbVal);
 				}
 				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
 			}
@@ -498,6 +506,17 @@ void mbBuff2Local(char* pMB, char* pLocal, string byteOrder,int size) {
 			pLocal[0] = pMB[0];
 		}
 	}
+	else if (size == 2)
+	{
+		if (byteOrder == MB_BYTE_ORDER::bigEndian) {
+			pLocal[0] = pMB[1];
+			pLocal[1] = pMB[0];
+		}
+		else if (byteOrder == MB_BYTE_ORDER::littleEndian) {
+			pLocal[0] = pMB[0];
+			pLocal[1] = pMB[1];
+		}
+	}
 }
 
 
@@ -597,8 +616,8 @@ json ioDev_ModbusSlave::getChanValFromRegBuff(ioChannel* pC,size_t regOffsetStar
 		else if (storageFmt== STORAGE_FMT::Bit16No)
 		{
 			unsigned short mbVal;
-			memcpy(&mbVal, pChanData, 2);
-			common::endianSwap((char*)&mbVal, 2);
+			char* pBuff = (char*)&mbVal;
+			mbBuff2Local(pChanData, pBuff, byteOrder, 2);
 			pC->holdingRegVal = mbVal;
 
 			bool temp = ((mbVal >> bit16Index) & 1) != 0;
