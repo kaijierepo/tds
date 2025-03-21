@@ -114,6 +114,9 @@ void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 			json j;
 			jerryVal2jsonVal(element, j);
 			jVal.push_back(j);
+
+			// 释放 element
+			jerry_release_value(element);
 		}
 	}
 	else if (jerry_value_is_object(jerryVal))
