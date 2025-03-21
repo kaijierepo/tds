@@ -2254,6 +2254,9 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 	for (int i = 0; i < pInfo->cnt; i++) {
 		auto list = (StGapRecord*)(pInfo->lpdata);
 		StGapRecord* pRecord = &(list[i]);
+		if (pRecord->sid > m_mapEqp.size()) {
+			return;
+		}
 		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
 		//m_mapSIDToName;
 		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));

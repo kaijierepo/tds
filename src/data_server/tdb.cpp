@@ -168,8 +168,8 @@ namespace DB_STR {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete wcharstr;
-		delete charstr;
+		delete [] wcharstr;
+		delete [] charstr;
 #else
 		//int ret = 0;
 		//size_t inlen = instr.size() + 1;
@@ -3430,6 +3430,10 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "day";
 		}
+		else if (deSel.groupby.find("year") != string::npos) {
+			deSel.groupByTime = true;
+			deSel.timeGroupBy = "year";
+		}
 		else if (deSel.groupby.find("month") != string::npos) {
 			deSel.groupByTime = true;
 			deSel.timeGroupBy = "month";
@@ -5492,7 +5496,16 @@ bool TIME_SELECTOR::init(string time)
 	if (time == "")
 		return false;
 
-	if (time.find("e") != string::npos)
+
+	if (time.find("this-year") != string::npos) {
+		string timeRange = "2025-01-01 00:00:00~2025-12-31 23:59:59";
+		parseTimeRange(timeRange);
+		TIME_SELECTOR_ATOM tsa;
+		tsa.timeSetType = TSM_Range;
+		tsa.parseTimeRange(timeRange);
+		atomSelList.push_back(tsa);
+	}
+	else if (time.find("e") != string::npos)
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = atoi(time.c_str());
@@ -5673,7 +5686,7 @@ bool TIME_SELECTOR_ATOM::init(string time)
 string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 {
 	//2020-02
-	if (time[4] == '-' && time.length() == 7) {
+	if (time.length() == 7 && time[4] == '-') {
 		string sYear = time.substr(0, 4);
 		string sMonth = time.substr(5, 2);
 		int y = atoi(sYear.c_str());
@@ -5683,11 +5696,11 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 		return time + "-01 00:00:00~" + time + "-" + sDayEnd + " 23:59:59";
 	}
 	//2020-02-02
-	else if (time[4] == '-' && time.length() == 10) {
+	else if (time.length() == 10 && time[4] == '-') {
 		return time + " 00:00:00~" + time + " 23:59:59";
 	}
 	//2020-02-02 11:12:30
-	else if (time[4] == '-' && time.length() == 19) {
+	else if (time.length() == 19 && time[4] == '-') {
 		return time + ".000~" + time + ".999";
 	}
 	//2021~2022
