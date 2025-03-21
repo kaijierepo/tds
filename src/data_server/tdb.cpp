@@ -5496,16 +5496,7 @@ bool TIME_SELECTOR::init(string time)
 	if (time == "")
 		return false;
 
-
-	if (time.find("this-year") != string::npos) {
-		string timeRange = "2025-01-01 00:00:00~2025-12-31 23:59:59";
-		parseTimeRange(timeRange);
-		TIME_SELECTOR_ATOM tsa;
-		tsa.timeSetType = TSM_Range;
-		tsa.parseTimeRange(timeRange);
-		atomSelList.push_back(tsa);
-	}
-	else if (time.find("e") != string::npos)
+  if ("e" == time.substr(time.length()-1,1))
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = atoi(time.c_str());
