@@ -173,12 +173,33 @@ bool ioGW_LocalSerial::sendData(unsigned char* pData, size_t iLen)
 	return ret;
 }
 
+
+void thread_localSerialCycleTask(ioGW_LocalSerial* p) {
+	for (int i = 0; i < p->m_vecChildDev.size(); i++)
+	{
+		ioDev* pChild = p->m_vecChildDev[i];
+		pChild->DoCycleTaskSync();
+
+		while (1) {
+			if (!p->isBusBusy())  //某些特殊的串口设备，即使接收到了数据，也要等待一会再发下一包，否则会产生通信错误，该机制用于此种情况
+				break;
+			std::this_thread::sleep_for(std::chrono::milliseconds(300));
+		}
+	}
+	p->m_bCycleAcqThreadRunning = false;
+}
+
+
 void ioGW_LocalSerial::DoCycleTask()
 {
-	for (int i = 0; i < m_vecChildDev.size(); i++)
+	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
 	{
-		ioDev* pChild = m_vecChildDev[i];
-		pChild->DoCycleTask();
+		if (!m_bCycleAcqThreadRunning) {
+			m_bCycleAcqThreadRunning = true;
+			thread t(thread_localSerialCycleTask, this);
+			t.detach();
+			m_stLastAcqTime = timeopt::now();
+		}
 	}
 }
 
@@ -277,6 +298,10 @@ bool ioGW_LocalSerial::WriteCom(unsigned char* buf, int len)
 
 bool ioGW_LocalSerial::onRecvData(unsigned char* pData, size_t iLen )
 {
+	setOnline();
+
+	//m_lastBusRecvTime = timeopt::now();
+
 	string s;
 	str::fromBuff(pData, iLen,s);
 	IOLogRecv((unsigned char*)pData, iLen, getIOAddrStr(),"host");
