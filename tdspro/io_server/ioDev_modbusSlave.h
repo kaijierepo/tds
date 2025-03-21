@@ -111,5 +111,5 @@ public:
 	bool onRecvData(unsigned char* pData, size_t iLen) override;
 	unsigned char funcName2funcCode(string name);
 };
-
+void mbBuff2Local(char* pMB, char* pLocal, string byteOrder, int size);
 
