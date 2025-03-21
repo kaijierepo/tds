@@ -482,9 +482,11 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 
 	if (q.getStatusDetail) {
 		if (timeopt::isValidTime(m_lastSaveTime))
-			conf["saveTime"] = timeopt::st2str(m_lastSaveTime);
+			conf["lastSaveTime"] = timeopt::st2str(m_lastSaveTime);
 		else
-			conf["saveTime"] = "-";
+			conf["lastSaveTime"] = "-";
+
+		conf["lastSaveInterval"] = m_lastSaveInterval;
 	}
 
 	if (q.getStatus) {
@@ -801,12 +803,13 @@ bool MP::needSaveToDB()
 	bool bNeedSave = false;
 	if (m_curVal != nullptr)
 	{
+		int timePassLastSave = timeopt::CalcTimeDiffSecond(m_stDataLastUpdate, m_lastSaveTime);
 		//save to db
 		//这里不要使用 elseif 如果是 cyclic|onchange的存储模式， 是否周期到和是否值变化都要判断
 		if (m_saveMode.find("cyclic") != string::npos)
 		{
 			int timespan = getSaveInterval();
-			if (timeopt::CalcTimeDiffSecond(m_stDataLastUpdate, m_lastSaveTime) > timespan)
+			if (timePassLastSave > timespan)
 			{
 				bNeedSave = true;
 			}
@@ -834,6 +837,10 @@ bool MP::needSaveToDB()
 		if (m_saveMode == "always")
 		{
 			bNeedSave = true;
+		}
+
+		if (bNeedSave) {
+			m_lastSaveInterval = timePassLastSave;
 		}
 	}
 

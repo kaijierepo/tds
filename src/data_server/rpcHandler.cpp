@@ -2742,6 +2742,22 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	{
 		rpcResp.result = tds->xiaoT->getReply(params);
 	}
+	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
+		string st = params["time"];
+		json j;
+		TIME dbt;
+		dbt.fromStr(st);
+		j["unix"] = timeopt::SysTime2Unix(dbt);
+		rpcResp.result = j.dump();
+	}
+	else if (method == "unix2time") {
+		time_t unix= params["unix"].get<time_t>();
+		json j;
+		TIME dbt;
+		dbt.fromUnixTime(unix);
+		j["time"] = dbt.toStr();
+		rpcResp.result = j.dump();
+	}
 	else if (method == "generateObjTreeFromDB") {
 		string path = params["path"];
 		prj.clear();

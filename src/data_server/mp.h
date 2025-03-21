@@ -154,6 +154,7 @@ public:
 	json m_curFileData;
 	json m_lastVal;
 	TIME m_lastSaveTime;
+	int  m_lastSaveInterval;  //上一次采集到数据后，距离上一次保存时间达到保存时间间隔，存储改时间间隔，评估是否都定时存了
 	bool hasValue();
 
 	//推拉流
