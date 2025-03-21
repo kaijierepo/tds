@@ -258,17 +258,10 @@ void ioDev_dlt645_2007::DoCycleTaskSync() {
 	if (!m_bEnableAcq)return;
 	if (!m_bRunning)return;
 	if (!isConnected())return;
-	if (isCommBusy())return;
 
-	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval)
-	{
-		if (!m_bCycleAcqThreadRunning)
-		{
-			m_bCycleAcqThreadRunning = true;
-			cycleAcq_thread_dlt645(this);
-			timeopt::now(&m_stLastAcqTime);
-		}
-	}
+	m_bCycleAcqThreadRunning = true;
+	cycleAcq_thread_dlt645(this);
+	timeopt::now(&m_stLastAcqTime);
 }
 
 //只允许只有一个 transaction 进行
