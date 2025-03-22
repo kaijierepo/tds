@@ -37,3 +37,8 @@ unsigned short* DEV_PKT::pushData(unsigned short v)
 {
 	return (unsigned short*)pushData(&v, 2);
 }
+
+uint32_t* DEV_PKT::pushData(uint32_t v)
+{
+	return (uint32_t*)pushData(&v, sizeof(uint32_t));
+}

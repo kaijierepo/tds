@@ -45,7 +45,8 @@ public:
 	void* pushData(void* p, int l);
 	unsigned char* pushData(unsigned char v);
 	unsigned short* pushData(unsigned short v);
-
+	uint32_t* pushData(uint32_t v);
+	float* pushData(float v);
 
 	virtual string GetCmdID() { return ""; };
 	virtual string GetPktDesc() { return ""; }; //包详细描述信息
