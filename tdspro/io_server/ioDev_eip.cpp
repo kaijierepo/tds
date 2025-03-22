@@ -94,8 +94,56 @@ void ioDev_eip::output(string chanAddr, json jVal, json& rlt,json& err, bool syn
 
 void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 {
+	string chanAddr = pC->getDevAddrStr();
+
+	string errorInfo;
+	EIP_PKT req, resp;
+	if (m_devSubType == DEV_SUB_TYPE::ethernetIP::control_logix) {
+		unsigned char slot = 0;
+		if (m_jDevAddr.contains("slot")) {
+			slot = m_jDevAddr["slot"].get<int>();
+		}
+		//req.pack_LOG_writeTag(pC->getDevAddrStr(),sessionHandle, slot);
+	}
+	else if (m_devSubType == DEV_SUB_TYPE::ethernetIP::micro800) {
+		TAG_VAL tagVal;
+		unsigned short tagType;
+		if (pC->m_valType == "BOOL") {
+			tagVal.BOOL_val = jVal.get<bool>() ? 0x01 : 0x00;
+			tagType = LOGIX_TAG_VAL_TYPE::Bool;
+		}
+		else if (pC->m_valType == "SINT") {
+
+		}
 
 
+		req.pack_Micro800_writeTag(pC->getDevAddrStr(), sessionHandle, tagType, tagVal);
+	}
+
+	if (doTransaction(req, resp, errorInfo)) {
+		if (errorInfo == "") {
+			CIP_Response cipResp;
+			resp.unpack_Micro800_writeTag(cipResp);
+			bool validResp = false;
+			if (cipResp.general_status == 0) {
+				validResp = true;
+			}
+			else {
+				errorInfo = getWriteTagServiceErrorCodeDesc(cipResp.general_status,cipResp.additional_status).c_str();
+				LOG("[warn]EIP设备writeTag设备返回失败,%s", errorInfo);
+			}
+		}
+	}
+	else {
+		errorInfo = "timeout";
+	}
+
+	if (errorInfo!="") {
+		err = errorInfo;
+	}
+	else {
+		rlt = "ok";
+	}
 }
 
 bool ioDev_eip::isCommBusy()
@@ -155,6 +203,9 @@ void cycleAcq_thread_eip(ioDev_eip* pDev) {
 						if (tagValType == LOGIX_TAG_VAL_TYPE::Bool) {
 							unsigned char val = *(unsigned char*)(pTagVal);
 							if (val == 0xff) {
+								pC->input(true);
+							}
+							else if (val == 0x01) {
 								pC->input(true);
 							}
 							else {

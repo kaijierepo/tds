@@ -194,7 +194,8 @@ void cycleAcq_thread_dlt645(ioDev_dlt645_2007* pDev) {
 				continue;
 			}
 
-
+			//界面上配置的顺序是 DI3 DI2 DI1 DI0
+			//数据包中的顺序是 DI0 DI1 DI2 DI3
 			DLT645_2007_PKT::setDI(chanAddr.c_str(), DI);
 
 

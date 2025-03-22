@@ -42,3 +42,8 @@ uint32_t* DEV_PKT::pushData(uint32_t v)
 {
 	return (uint32_t*)pushData(&v, sizeof(uint32_t));
 }
+
+float* DEV_PKT::pushData(float v)
+{
+	return (float*)pushData(&v, sizeof(float));
+}

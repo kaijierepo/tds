@@ -31,6 +31,15 @@ enum CIP_SERVICE {
 	Write_Tag_Fragmented = 0x53
 };
 
+struct TAG_VAL {
+	uint16_t INT_val;
+	uint8_t SINT_val;
+	uint32_t DINT_val;
+	uint32_t DWORD_val;
+	float REAL_val;
+	uint8_t BOOL_val;
+};
+
 
 inline string getReadTagServiceErrorCodeDesc(unsigned char errCode) {
 	if (errCode == 0x04)
@@ -45,6 +54,38 @@ inline string getReadTagServiceErrorCodeDesc(unsigned char errCode) {
 		return "The Request Path Size received was shorter or longer than expected.";
 	else if (errCode == 0xFF)
 		return "General Error : Access beyond end of the object.";	
+	return "";
+}
+
+inline string getWriteTagServiceErrorCodeDesc(unsigned char errCode, vector<unsigned short> additional_status) {
+	if (errCode == 0x04)
+		return "A syntax error was detected decoding the Request Path.";
+	else if (errCode == 0x05)
+		return "Request Path destination unknown : Probably instance number is not present";
+	else if (errCode == 0x10) {
+		if (additional_status.size() > 0) {
+			if (additional_status[0] == 0x2101) {
+				return "Device state conflict: keyswitch position: The requestor is changing force information in HARD RUN mode.";
+			}
+			else if (additional_status[0] == 0x2802) {
+				return "Device state conflict: Safety Status: The controller is in a state in which Safety Memory cannot be modified.";
+			}
+		}	
+	}
+	else if (errCode == 0x13)
+		return "Insufficient Request Data : Data too short for expected parameters.";
+	else if (errCode == 0x26)
+		return "The Request Path Size received was shorter or longer than expected.";
+	else if (errCode == 0xFF) {
+		if (additional_status.size() > 0) {
+			if (additional_status[0] == 0x2105) {
+				return "General Error: Number of Elements extends beyond the end of the requested tag.";
+			}
+			else if (additional_status[0] == 0x2107) {
+				return "General Error: Tag type used n request does not match the target tag’s data type.";
+			}
+		}
+	}
 	return "";
 }
 
@@ -94,7 +135,7 @@ public:
 		req.pushData(objAddr, 2);
 		return true;
 	}
-	bool pack_ControlLogix_readTag(string plcTag) {
+	bool pack_CIPService_readTag(string plcTag) {
 		DEV_PKT& req = *this;
 		req.clear();
 		unsigned char service = CIP_SERVICE::Read_Tag;
@@ -121,6 +162,64 @@ public:
 		}
 		unsigned short req_data = 1; //number of elements to read
 		req.pushData(req_data);
+		return true;
+	}
+
+	bool pack_CIPService_writeTag(string plcTag,unsigned short tagType, TAG_VAL tagVal) {
+		DEV_PKT& req = *this;
+		req.clear();
+
+		// request service
+		unsigned char service = CIP_SERVICE::Write_Tag;
+		req.pushData(service);
+
+		// request path size
+		//计算path的大小
+		unsigned char tagLen = plcTag.length();
+		//一个字节是 0x91表示字符串寻址，1个字节是长度,最后一个padding字符1，是长度是2的倍数1
+		// 0x91 len 1stChar ... NthChar (1) 
+		int req_path_byte_size = tagLen + 2; 
+		bool needPad = false;
+		if (req_path_byte_size % 2 > 0) {
+			req_path_byte_size++;
+			needPad = true;
+		}
+		unsigned char req_path_size = req_path_byte_size / 2;
+		req.pushData(req_path_size);
+
+		//request path 
+		unsigned char path_segment_type = 0x91;//ANSI Extended Symbol Segment
+		req.pushData(path_segment_type);
+		req.pushData(tagLen);
+		req.pushData(plcTag.data(), plcTag.length());
+		if (needPad)
+		{
+			req.pushData(nullptr, 1);
+		}
+
+		//request data
+		unsigned short tag_type = tagType;
+		req.pushData(tag_type);
+		unsigned short number_of_elements_to_write = 1;
+		req.pushData(number_of_elements_to_write);
+		if (tagType == LOGIX_TAG_VAL_TYPE::Bool) {
+			req.pushData(tagVal.BOOL_val);
+		}
+		else if (tagType == LOGIX_TAG_VAL_TYPE::Int) {
+			req.pushData(tagVal.INT_val);
+		}
+		else if (tagType == LOGIX_TAG_VAL_TYPE::DInt) {
+			req.pushData(tagVal.DINT_val);
+		}
+		else if (tagType == LOGIX_TAG_VAL_TYPE::DWord) {
+			req.pushData(tagVal.DWORD_val);
+		}
+		else if (tagType == LOGIX_TAG_VAL_TYPE::Real) {
+			req.pushData(tagVal.REAL_val);
+		}
+		else if (tagType == LOGIX_TAG_VAL_TYPE::SInt) {
+			req.pushData(tagVal.SINT_val);
+		}
 		return true;
 	}
 };
