@@ -208,6 +208,9 @@ public:
 	bool m_bPingThreadRunning;
 	bool m_bEnableRecvPreamble;
 
+	TIME m_lastBusSendTime;
+	TIME m_lastBusRecvTime;
+
 	string m_ioMode; //none,translator,adaptor,standAloneIO
 	bool m_bViaAdaptor;
 	string m_translatorProto;
