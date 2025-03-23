@@ -12,8 +12,6 @@ public:
 	void stop() override;
 
 	string getConnInfo() override;
-
-	bool isBusBusy() override;
 	bool isCommBusy() override;
 	bool isConnected() override;
 	bool onRecvData(unsigned char* pData, size_t iLen) override;
@@ -31,5 +29,7 @@ public:
 	stream2pkt m_stream2pkt;
 
 	string m_strErrorInfo;
+
+	bool isBusBusy() override;
 };
 

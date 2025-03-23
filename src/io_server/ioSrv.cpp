@@ -2341,16 +2341,20 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		}
 		jSession["avgTransactionTime"] = 0;
 
-		string ioAddrInSession = "";
-		for (int i = 0; i < p->m_vecIoDev.size(); i++)
-		{
-			if (i > 0)
-				ioAddrInSession += ";";
-			ioAddrInSession += p->m_vecIoDev[i];
-			ioAddrInSession += ",";
-			ioAddrInSession += p->m_vecIoBindTag[i];
+		//string ioAddrInSession = "";
+		//for (int i = 0; i < p->m_vecIoDev.size(); i++)
+		//{
+		//	if (i > 0)
+		//		ioAddrInSession += ";";
+		//	ioAddrInSession += p->m_vecIoDev[i];
+		//	ioAddrInSession += ",";
+		//	ioAddrInSession += p->m_vecIoBindTag[i];
+		//}
+		if (p->m_IoDev) {
+			jSession["ioAddr"] = p->m_IoDev->getIOAddrStr();
+			jSession["bindTag"] = p->m_IoDev->m_strTagBind;
 		}
-		jSession["ioAddr"] = ioAddrInSession;
+	
 
 		string ioAddrInSessionHist = "";
 		for (int i = 0; i < p->m_vecHistIoDev.size(); i++)
@@ -2394,7 +2398,7 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["lastMethod"] = "";
 		jSession["transactionSuccessCount"] = p->m_transactionSuccessCount;
 		jSession["transactionFailCount"] = p->m_transactionFailCount;
-		jSession["ioAddr"] = "";
+		jSession["ioAddr"] = p->getIOAddrStr();
 		jSession["ioAddrHist"] = "";
 		jSession["avgTransactionTime"] =p->m_avgTransactionTime;
 		jList.push_back(jSession);

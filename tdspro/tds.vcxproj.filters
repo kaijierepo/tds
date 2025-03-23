@@ -174,9 +174,6 @@
     <ClCompile Include="io_server\ioDev_visca.cpp">
       <Filter>tdsPro\io_server</Filter>
     </ClCompile>
-    <ClCompile Include="io_server\ioGW_localSerial.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
     <ClCompile Include="io_server\proto_eip.cpp">
       <Filter>tdsPro\io_server</Filter>
     </ClCompile>
@@ -226,9 +223,6 @@
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\Parse315Protocol.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
@@ -258,6 +252,9 @@
       <Filter>data_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\include\tds.cpp" />
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
+      <Filter>io_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -407,9 +404,6 @@
     <ClInclude Include="io_server\ioDev_visca.h">
       <Filter>tdsPro\io_server</Filter>
     </ClInclude>
-    <ClInclude Include="io_server\ioGW_localSerial.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
     <ClInclude Include="io_server\proto_bacnet.hpp">
       <Filter>tdsPro\io_server</Filter>
     </ClInclude>
@@ -485,9 +479,6 @@
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
       <Filter>io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\Parse315Protocol.h">
       <Filter>io_server</Filter>
     </ClInclude>
@@ -524,6 +515,9 @@
     </ClInclude>
     <ClInclude Include="..\src\include\tds.h" />
     <ClInclude Include="..\src\include\tdsRPC.h" />
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
+      <Filter>io_server</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

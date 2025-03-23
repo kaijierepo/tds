@@ -273,6 +273,7 @@ void ioDev_dlt645_2007::DoCycleTaskSync() {
 //2.m_transaction.m_respSignal.wait_for此处等待返回，但是后面的 commUnlock已经不起作用，导致依然占用commLock
 bool ioDev_dlt645_2007::doTransaction(DLT645_2007_PKT& pduReq, DLT645_2007_PKT& pduResp, string& errorInfo)
 {
+	unsigned char* pSend = nullptr;
 	if (m_bRunning == false)
 		return false;
 	unsigned char preamble[4] = { 0xFE,0xFE,0xFE,0xFE };
@@ -292,8 +293,11 @@ bool ioDev_dlt645_2007::doTransaction(DLT645_2007_PKT& pduReq, DLT645_2007_PKT& 
 	m_transaction.m_respSignal.reset();
 
 	
-	sendData(preamble, 4);
-	sendData(pduReq.data, pduReq.len);
+	pSend = new unsigned char[4 + pduReq.len];
+	memcpy(pSend, preamble, 4);
+	memcpy(pSend + 4, pduReq.data, pduReq.len);
+	sendData(pSend, 4+ pduReq.len);
+	delete pSend;
 
 	if (m_transaction.m_respSignal.wait_for(tds->conf->iotimeoutDLT645))
 	{

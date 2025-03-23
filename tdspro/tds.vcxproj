@@ -575,7 +575,6 @@
     <ClCompile Include="io_server\ioDev_onvif.cpp" />
     <ClCompile Include="io_server\ioDev_srvStatus.cpp" />
     <ClCompile Include="io_server\ioDev_visca.cpp" />
-    <ClCompile Include="io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="io_server\proto_eip.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -662,7 +661,6 @@
     <ClInclude Include="io_server\ioDev_onvif.h" />
     <ClInclude Include="io_server\ioDev_srvStatus.h" />
     <ClInclude Include="io_server\ioDev_visca.h" />
-    <ClInclude Include="io_server\ioGW_localSerial.h" />
     <ClInclude Include="io_server\proto_bacnet.hpp" />
     <ClInclude Include="io_server\proto_can.hpp" />
     <ClInclude Include="io_server\proto_cip.hpp" />
