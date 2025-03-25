@@ -283,6 +283,26 @@ public:
 		return true;
 	}
 
+	bool pack_ControlLogix_readTag(string plcTag, unsigned char* sessionHandle) {
+		EIP_PKT& req = *this;
+		req.clear();
+
+		CIP_PKT cip_readTag;
+		cip_readTag.pack_CIPService_readTag(plcTag);
+
+		EIP_PKT cmdSendRR;
+		cmdSendRR.pack_sendRRData_cmd(cip_readTag);
+
+
+		EIP_PKT_HEADER header;
+		header.command = EIP_CMD_SEND_RR_DATA;
+		memcpy(header.session_handle, sessionHandle, 4);
+		header.length = cmdSendRR.len;
+		req.pushData(&header, sizeof(header));
+		req.pushData(cmdSendRR.data, cmdSendRR.len);
+		return true;
+	}
+
 	bool pack_ControlLogix_readTag(string plcTag,unsigned char* sessionHandle,unsigned char slot) {
 		EIP_PKT& req = *this;
 		req.clear();
@@ -303,6 +323,31 @@ public:
 		header.length = cmdSendRR.len;
 		req.pushData(&header, sizeof(header));
 		req.pushData(cmdSendRR.data, cmdSendRR.len);
+		return true;
+	}
+
+	bool unpack_ControlLogix_readTag(CIP_Response& cip_resp) {
+		int h1 = sizeof(EIP_PKT_HEADER);
+		int h2 = sizeof(UCMM_HEADER);
+		memcpy(&header, data, sizeof(EIP_PKT_HEADER));
+		memcpy(&ucmm_header, data + sizeof(EIP_PKT_HEADER), sizeof(UCMM_HEADER));
+
+		unsigned char* pCip = data + sizeof(EIP_PKT_HEADER) + sizeof(UCMM_HEADER);
+
+		cip_resp.reply_service = pCip[0];
+		cip_resp.reserved = pCip[1];
+		cip_resp.general_status = pCip[2];
+		cip_resp.size_of_additional_status = pCip[3];
+		if (cip_resp.size_of_additional_status > 0) {
+			for (int i = 4; i < ucmm_header.data_len; i++) {
+				cip_resp.additional_status.push_back(pCip[i]);
+			}
+		}
+		else {
+			for (int i = 4; i < ucmm_header.data_len; i++) {
+				cip_resp.response_data.push_back(pCip[i]);
+			}
+		}
 		return true;
 	}
 };

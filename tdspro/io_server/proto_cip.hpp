@@ -115,14 +115,26 @@ public:
 		req.clear();
 		//cip header unconnected service
 		//servcie + req path size + req path  6
-		string s = "52 02 20 06 24 01";
+		unsigned char service = CIP_SERVICE::Read_Tag_Fragmented;
+		req.pushData(service);
+		unsigned char req_path_size = 2;  // 2 words
+		req.pushData(req_path_size);
+		unsigned char path_segment_type = 0x20;  //8-bit class segment
+		req.pushData(path_segment_type);
+		unsigned char class_type = 0x06;   //class manager
+		req.pushData(class_type);
+		path_segment_type = 0x24;  //8-bit instance segment
+		req.pushData(path_segment_type);
+		unsigned char instance_type = 0x01;  
+		req.pushData(instance_type);
+		string s = "04 7d"; //priority tick time; 2 定义设备在发送高优先级数据前的等待时间,等待这么长时间后就优先发送
 		req.pushData(s);
-		s = "04 7d"; //priority tick time; 2
-		req.pushData(s);
-		unsigned short& message_request_size = *(unsigned short*)req.pushData(nullptr, 2);//2
-		message_request_size = msg.len;
 
-		req.pushData(msg.data, msg.len);//14
+
+		unsigned short& embedded_message_request_size = *(unsigned short*)req.pushData(nullptr, 2);//2
+		embedded_message_request_size = msg.len;
+
+		req.pushData(msg.data, msg.len);
 
 		//下面4字节
 		unsigned char route_path_size = 1; //1 word;
@@ -135,6 +147,7 @@ public:
 		req.pushData(objAddr, 2);
 		return true;
 	}
+
 	bool pack_CIPService_readTag(string plcTag) {
 		DEV_PKT& req = *this;
 		req.clear();
@@ -165,6 +178,13 @@ public:
 		return true;
 	}
 
+
+	//使用位号名称读取的格式
+	// servcie  1
+	// path size 1
+	// path_segment_type 1
+	// tag asc   n
+	// 
 	bool pack_CIPService_writeTag(string plcTag,unsigned short tagType, TAG_VAL tagVal) {
 		DEV_PKT& req = *this;
 		req.clear();

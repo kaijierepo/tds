@@ -186,7 +186,12 @@ void cycleAcq_thread_eip(ioDev_eip* pDev) {
 			if (pDev->doTransaction(req, resp, errorInfo)) {
 				if (errorInfo == "") {
 					CIP_Response cipResp;
-					resp.unpack_Micro800_readTag(cipResp);
+					if (pDev->m_devSubType == DEV_SUB_TYPE::ethernetIP::control_logix) {
+						resp.unpack_ControlLogix_readTag(cipResp);
+					}
+					else if (pDev->m_devSubType == DEV_SUB_TYPE::ethernetIP::micro800) {
+						resp.unpack_Micro800_readTag(cipResp);
+					}
 					bool validResp = false;
 					if (cipResp.general_status == 0) {
 						validResp = true;
@@ -221,7 +226,7 @@ void cycleAcq_thread_eip(ioDev_eip* pDev) {
 							int val = *(unsigned char*)(pTagVal);
 							pC->input(val);
 						}
-						else if (tagValType == LOGIX_TAG_VAL_TYPE::SInt) {
+						else if (tagValType == LOGIX_TAG_VAL_TYPE::Int) {
 							int val = *(unsigned short*)(pTagVal);
 							pC->input(val);
 						}
