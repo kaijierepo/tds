@@ -1969,6 +1969,27 @@ namespace fs {
 		}
 	}
 
+	float getFolderSizeMB(const std::string& folder)
+	{
+		wstring wsFolder = charCodec::tds_to_utf16(folder);
+		uintmax_t total_size = 0;
+		if (std::filesystem::exists(wsFolder) && std::filesystem::is_directory(wsFolder)) {
+			for (const auto& entry : std::filesystem::recursive_directory_iterator(wsFolder)) {
+				if (std::filesystem::is_regular_file(entry)) {
+					total_size += std::filesystem::file_size(entry);
+				}
+			}
+		}
+		return total_size / (1024 * 1024);
+	}
+
+	float getFreeDiskSizeGB(const std::string& path)
+	{
+		wstring wsPath = charCodec::tds_to_utf16(path);
+		std::filesystem::space_info si = std::filesystem::space(wsPath);
+		return si.available / (1024 * 1024 * 1024);
+	}
+
 
 	 void getFolderList(vector<fs::FILE_INFO>& list, string strFolder, bool recursive) {
 #ifndef _WINXP

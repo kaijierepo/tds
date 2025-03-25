@@ -27,25 +27,20 @@ bool isAllDigits(const std::string& str) {
 
 void CDiskClean::ThreadClean(void* lpParam)
 {
-	if (tds->conf->triggerStratgy == "LowLimit") {
-
-	}
-	else if (tds->conf->triggerStratgy == "peroid") {
-		int period = tds->conf->judgePeriod;  if (period < 5)  period = 5;
-		while (1) {
-			timeopt::sleepMilli(period * 1000);
-
-			int storageMonths = tds->conf->dataStorageMonths;  if (storageMonths < 12)  storageMonths = 12;
-			string folderPath = db.m_path;
-			g_diskClean.DoClean(folderPath, storageMonths);
-
-			storageMonths = tds->conf->mediaStorageMonths;  if (storageMonths < 3)  storageMonths = 3;
-			folderPath = db.m_path+"/media";
-			g_diskClean.DoClean(folderPath, storageMonths);
+	while (1) {
+		int period = tds->conf->judgePeriod;
+		if (period < 60) {
+			period = 60;
+		}
+		timeopt::sleepMilli(1 * 1000);
+		if (tds->conf->triggerStratgy == "period") {
+			g_diskClean.doPeriodClean();
+		}
+		else if (tds->conf->triggerStratgy == "LowLimit") {
+			g_diskClean.doLowLimitClean();
 		}
 	}
 }
-
 
 int CDiskClean::DoClean(string folderPath, int storageMonths)
 {
@@ -64,10 +59,15 @@ int CDiskClean::DoClean(string folderPath, int storageMonths)
 	}
 
 	//从大到小排序 再删除后面的
-	if (vecYearMonth.size() > storageMonths) {
-
-		std::sort(vecYearMonth.begin(), vecYearMonth.end(), [](int a, int b) { return a > b; });
-
+	std::sort(vecYearMonth.begin(), vecYearMonth.end(), [](int a, int b) { return a > b; });
+	if (storageMonths < 0) {
+		// always keep latest, reduce one by one
+		if (vecYearMonth.size() > 1) {
+			string dirPath = folderPath + "/" + to_string(vecYearMonth[vecYearMonth.size() - 1]);
+			DB_FS::deleteDirectory(dirPath);
+		}
+	}
+	else if (vecYearMonth.size() > storageMonths) {
 		for (int i = storageMonths; i < vecYearMonth.size(); i++) {
 			string dirPath = folderPath + "/" + to_string(vecYearMonth[i]);
 			DB_FS::deleteDirectory(dirPath);
@@ -75,4 +75,31 @@ int CDiskClean::DoClean(string folderPath, int storageMonths)
 	}
 
 	return 0;
+}
+
+void CDiskClean::doPeriodClean()
+{
+	int storageMonths = tds->conf->dataStorageMonths;
+	if (storageMonths > 12) {
+		storageMonths = 12;
+	}
+	string folderPath = db.m_path;
+	g_diskClean.DoClean(folderPath, storageMonths);
+
+	storageMonths = tds->conf->mediaStorageMonths;
+	if (storageMonths > 3) {
+		storageMonths = 3;
+	}
+	folderPath = db.m_path + "/media";
+	g_diskClean.DoClean(folderPath, storageMonths);
+}
+
+void CDiskClean::doLowLimitClean()
+{
+	int diskSpaceLeft = tds->conf->diskSpaceLeft;
+	string folderPath = db.m_path;
+	auto freeDiskSize = fs::getFreeDiskSizeGB(folderPath);
+	if (freeDiskSize < diskSpaceLeft) {
+		g_diskClean.DoClean(folderPath, -1);
+	}
 }

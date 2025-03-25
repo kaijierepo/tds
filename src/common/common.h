@@ -372,6 +372,8 @@ namespace fs {
 	bool fileExist(string pszFileName);
 	bool deleteFile(string path);
 	bool deleteFolder(string path);
+	float getFolderSizeMB(const std::string& path);
+	float getFreeDiskSizeGB(const std::string& path);
 	struct FILE_INFO {
 		string modifyTime;
 		string createTime;

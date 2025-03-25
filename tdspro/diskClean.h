@@ -12,7 +12,8 @@ public:
 
 	static void ThreadClean(void* lpParam);
 	int DoClean(std::string folderPath, int storageMonths);
-
+	void doPeriodClean();
+	void doLowLimitClean();
 	/*
 	string	triggerStratgy= LowLimit # 清理的触发策略。 LowLimit： db所在逻辑盘的剩余空间低于门限时触发；peroid：周期触发。
 	int	diskSpaceLeft = 20 #单位 GB。仅triggerStratgy取值为LowLimit时有效。 数据所在盘符的剩余空间低于该值时 触发清理。
