@@ -204,8 +204,8 @@ public:
 		pDI[3] += 0x33;
 	}
 
-	void getDI(unsigned char* pDI) {
-
+	unsigned char* getDIBuff() {
+		return d; //请求响应的di都是在数据域的前4个字节
 	}
 
 	void setAddr(string sAddr) {
@@ -267,6 +267,7 @@ public:
 		memcpy( d, p + 10, dLen);
 		cs = p[10 + dLen];
 		tail = p[11 + dLen];
+
 		return true;
 	};
 	bool unpack(unsigned char* p, int len, bool withDetail = false) override {

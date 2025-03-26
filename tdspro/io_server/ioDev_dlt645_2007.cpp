@@ -302,7 +302,7 @@ bool ioDev_dlt645_2007::doTransaction(DLT645_2007_PKT& pduReq, DLT645_2007_PKT& 
 	if (m_transaction.m_respSignal.wait_for(tds->conf->iotimeoutDLT645))
 	{
 		if (m_transaction.getResp(pduResp)) {
-
+			ret = true;
 		}
 		else {
 			string s = str::bytesToHexStr(pduReq.data, pduReq.len);
@@ -401,9 +401,13 @@ bool ioDev_dlt645_2007::onRecvPkt(unsigned char* pData, size_t iLen)
 
 	setOnline();
 
-	if (respPkt.ctrlCode == m_transaction.req->ctrlCode) {
-		if (respPkt.ctrlCode == D07_CTRL_READ_DATA) {
-			if(respPkt.)
+	if (respPkt.ctrlCode == m_transaction.req->ctrlCode | 0x80) {
+		if (m_transaction.req->ctrlCode == D07_CTRL_READ_DATA) {
+			unsigned char* reqDI = m_transaction.req->getDIBuff();
+			unsigned char* respDI = respPkt.getDIBuff();
+			if (memcmp(reqDI, respDI, 4) == 0) {
+				m_transaction.setResp(&respPkt);
+			}
 		}
 		else
 			m_transaction.setResp(&respPkt);
