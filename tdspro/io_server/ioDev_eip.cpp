@@ -96,6 +96,30 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 {
 	string chanAddr = pC->getDevAddrStr();
 
+
+	TAG_VAL tagVal;
+	unsigned short tagType;
+	if (pC->m_valType == "BOOL") {
+		tagVal.BOOL_val = jVal.get<bool>() ? 0x01 : 0x00;
+		tagType = LOGIX_TAG_VAL_TYPE::Bool;
+	}
+	else if (pC->m_valType == "SINT") {
+		tagVal.SINT_val = jVal.get<int>();
+		tagType = LOGIX_TAG_VAL_TYPE::SInt;
+	}
+	else if (pC->m_valType == "INT") {
+		tagVal.INT_val = jVal.get<int>();
+		tagType = LOGIX_TAG_VAL_TYPE::Int;
+	}
+	else if (pC->m_valType == "DINT") {
+		tagVal.DINT_val = jVal.get<int>();
+		tagType = LOGIX_TAG_VAL_TYPE::DInt;
+	}
+	else if (pC->m_valType == "REAL") {
+		tagVal.REAL_val = jVal.get<int>();
+		tagType = LOGIX_TAG_VAL_TYPE::Real;
+	}
+
 	string errorInfo;
 	EIP_PKT req, resp;
 	if (m_devSubType == DEV_SUB_TYPE::ethernetIP::control_logix) {
@@ -103,20 +127,9 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 		if (m_jDevAddr.contains("slot")) {
 			slot = m_jDevAddr["slot"].get<int>();
 		}
-		//req.pack_LOG_writeTag(pC->getDevAddrStr(),sessionHandle, slot);
+		req.pack_ControlLogix_writeTag(pC->getDevAddrStr(),sessionHandle, slot,tagType,tagVal);
 	}
 	else if (m_devSubType == DEV_SUB_TYPE::ethernetIP::micro800) {
-		TAG_VAL tagVal;
-		unsigned short tagType;
-		if (pC->m_valType == "BOOL") {
-			tagVal.BOOL_val = jVal.get<bool>() ? 0x01 : 0x00;
-			tagType = LOGIX_TAG_VAL_TYPE::Bool;
-		}
-		else if (pC->m_valType == "SINT") {
-
-		}
-
-
 		req.pack_Micro800_writeTag(pC->getDevAddrStr(), sessionHandle, tagType, tagVal);
 	}
 

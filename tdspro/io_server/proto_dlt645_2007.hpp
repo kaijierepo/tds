@@ -165,6 +165,8 @@ public:
 	unsigned char cs;  //校验码
 	unsigned char tail;
 
+	string sDI;
+
 	DLT645_2007_PKT() {
 		head = 0x68;
 		head1 = 0x68;
@@ -194,12 +196,16 @@ public:
 		memcpy(d, pD, len);
 	}
 
-	static void setDI(string sDI, unsigned char* pDI) {
-		d07_str2bcd(sDI.c_str(), (unsigned char*)pDI, 4);
+	static void setDI(string s, unsigned char* pDI) {
+		d07_str2bcd(s.c_str(), (unsigned char*)pDI, 4);
 		pDI[0] += 0x33;
 		pDI[1] += 0x33;
 		pDI[2] += 0x33;
 		pDI[3] += 0x33;
+	}
+
+	void getDI(unsigned char* pDI) {
+
 	}
 
 	void setAddr(string sAddr) {
