@@ -533,7 +533,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
-			lastStatus.recoverTime.fromStr(newStatus.time);
+			lastStatus.recoverTime = newStatus.recoverTime;
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
 			recover(lastStatus, notify);
 			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
