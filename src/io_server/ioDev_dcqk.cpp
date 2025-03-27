@@ -2131,7 +2131,10 @@ void ioDev_dcqk::ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc)
 void ioDev_dcqk::Do_CMD_CODE_YYQX(LPVOID pData)
 {
 	StOilPreCurve* lpsubdata = (StOilPreCurve*)pData;
-	OBJ* pMo = prj.getObjByID(to_string(lpsubdata->sid));
+	auto* pStation = prj.queryObj(m_strTagBind, "zh");
+	if (!pStation) return;
+
+	OBJ* pMo = pStation->getObjByID(to_string(lpsubdata->sid));
 	if (pMo && pMo->m_type == "转辙机") {
 		for (int k = 0; k < lpsubdata->cnt;k++) {
 			StCurve* pCurveAry = (StCurve*)lpsubdata->lpdata;
@@ -2250,6 +2253,9 @@ typedef struct _GapValPicParam {
 } GapValPicParam;
 void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 {
+	auto* pStation = prj.queryObj(m_strTagBind, "zh");
+	if (!pStation) return;
+
 	StGapValue* pInfo = (StGapValue*)pData;
 	for (int i = 0; i < pInfo->cnt; i++) {
 		auto list = (StGapRecord*)(pInfo->lpdata);
@@ -2259,7 +2265,7 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		}
 		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
 		//m_mapSIDToName;
-		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));
+		OBJ* zzjMo = pStation->getObjByID(to_string(pRecord->sid));
 		if (!zzjMo) {
 			//log
 			continue;
@@ -2339,12 +2345,15 @@ void ThreadSaveGapAndPic(void* lpParam)
 
 void ioDev_dcqk::Do_CMD_CODE_YWINFO(LPVOID pData)
 {
+	//auto gbkTag = charCodec::utf8_to_gb(m_strTagBind);
+	auto* pStation = prj.queryObj(m_strTagBind, "zh");
+	if (!pStation) return;
 	StOilLevelInfo* pInfo = (StOilLevelInfo*)pData;
 	for (int i = 0; i < pInfo->cnt; i++) {
 		auto list = (StSdataRecord*)(pInfo->lpdata);
 		StSdataRecord* pRecord = &(list[i]);
-
-		OBJ* zzjMo = prj.getObjByID(to_string(pRecord->sid));
+		
+		OBJ* zzjMo = pStation->getObjByID(to_string(pRecord->sid));
 		if (!zzjMo) {
 			//log
 			continue;

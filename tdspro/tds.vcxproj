@@ -389,7 +389,7 @@
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>Default</LanguageStandard_C>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
