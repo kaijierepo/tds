@@ -225,6 +225,7 @@ ioDev::ioDev(void)
 	m_bOutputting = false;
 	m_offlineCount = 0;
 	m_ioMode = "none";
+	m_unhandledRecvPktCount = 0;
 }
 
 ioDev::~ioDev(void)
@@ -426,6 +427,7 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
 
 		conf["avgRespTime"] = m_avgTransactionTime;
+		conf["unhandleRecvPktCount"] = m_unhandledRecvPktCount;
 	}
 
 	//备注

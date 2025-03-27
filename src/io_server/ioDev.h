@@ -367,6 +367,7 @@ public:
 	TIME m_stLastAlarmStatusTime;
 	TIME m_stLastActiveTime;
 	bool m_bEnableAcq;
+	int m_unhandledRecvPktCount; //未处理的接收数据包。比如不处理的异步通知命令，或者收到包是没有匹配的同步请求
 	// ping在线检测优先级最高
 	void setOnline(bool setByPing = false);
 	void setOffline(bool setByPing = false,string reasonDesc = "");
