@@ -5173,7 +5173,8 @@ inline bool Server::write_response_core(Stream &strm, bool close_connection,
     res.set_header("Content-Length", "0");
   }
 
-  if (!res.has_header("Access-Control-Allow-Origin")) {
+  //if (!res.has_header("Access-Control-Allow-Origin")) 
+  {
 	  res.set_header("Access-Control-Allow-Origin", "*");
 	  res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
 	  res.set_header("Access-Control-Max-Age", "3600");
