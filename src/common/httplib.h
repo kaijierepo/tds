@@ -5173,6 +5173,19 @@ inline bool Server::write_response_core(Stream &strm, bool close_connection,
     res.set_header("Content-Length", "0");
   }
 
+  if (!res.has_header("Access-Control-Allow-Origin")) {
+	  res.set_header("Access-Control-Allow-Origin", "*");
+	  res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PUT");
+	  res.set_header("Access-Control-Max-Age", "3600");
+	  res.set_header("Access-Control-Allow-Headers", "*");
+	  //请求包含的字段内容，如有多个可用哪个逗号分隔如下
+	  //res.set_header("Access-Control-Allow-Headers", "content-type,x-requested-with,Authorization, x-ui-request,lang");
+	  //访问控制允许凭据，true为允许
+	  //res.set_header("Access-Control-Allow-Credentials", "true");
+	  //res.set_header("Access-Control-Max-Age", "2592000");
+	  //res.set_header("Access-Control-Max-Age", "2592000");
+  }
+
   if (!res.has_header("Accept-Ranges") && req.method == "HEAD") {
     res.set_header("Accept-Ranges", "bytes");
   }
