@@ -401,17 +401,30 @@ bool ioDev_dlt645_2007::onRecvPkt(unsigned char* pData, size_t iLen)
 
 	setOnline();
 
-	if (respPkt.ctrlCode == m_transaction.req->ctrlCode | 0x80) {
-		if (m_transaction.req->ctrlCode == D07_CTRL_READ_DATA) {
-			unsigned char* reqDI = m_transaction.req->getDIBuff();
-			unsigned char* respDI = respPkt.getDIBuff();
-			if (memcmp(reqDI, respDI, 4) == 0) {
-				m_transaction.setResp(&respPkt);
+	if (m_transaction.req) {
+		if (respPkt.ctrlCode == m_transaction.req->ctrlCode | 0x80) {
+			if (m_transaction.req->ctrlCode == D07_CTRL_READ_DATA) {
+				unsigned char* reqDI = m_transaction.req->getDIBuff();
+				unsigned char* respDI = respPkt.getDIBuff();
+				//必须判断读取的数据标志位的符合性,有时串口返回慢，会导致下一个di的请求收到上一个di的响应
+				if (memcmp(reqDI, respDI, 4) == 0) {
+					m_transaction.setResp(&respPkt);
+				}
+				else {
+					m_unhandledRecvPktCount++;
+				}
 			}
+			else
+				m_transaction.setResp(&respPkt);
 		}
-		else
-			m_transaction.setResp(&respPkt);
+		else {
+			m_unhandledRecvPktCount++;
+		}
 	}
+	else {
+		m_unhandledRecvPktCount++;
+	}
+
 
 	return true;
 }
