@@ -1313,9 +1313,9 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 			p[data->len] = 0;
 			memcpy(p, data->ptr, data->len);
 
-			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-			resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
-			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+			//string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
+			//resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
+			string resHeader = "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
 
 			mg_http_reply(c, 200, resHeader.c_str(), p);
 			delete [] p;
