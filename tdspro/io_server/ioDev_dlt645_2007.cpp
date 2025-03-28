@@ -415,7 +415,7 @@ bool ioDev_dlt645_2007::onRecvPkt(unsigned char* pData, size_t iLen)
 				}
 			}
 			else
-				m_transaction.setResp(&respPkt);
+				m_unhandledRecvPktCount++; //暂时不支持其他命令
 		}
 		else {
 			m_unhandledRecvPktCount++;
