@@ -2636,8 +2636,8 @@ void mg_http_reply(struct mg_connection *c, int code, const char *headers,
                    const char *fmt, ...) {
   va_list ap;
   size_t len;
-  mg_printf(c, "HTTP/1.1 %d %s\r\n%sContent-Length:            \r\n\r\n", code,
-            mg_http_status_code_str(code), headers == NULL ? "" : headers);
+  mg_printf(c, "HTTP/1.1 %d %s\r\n%sContent-Length: \r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Private-Network: true\r\nAccess-Control-Allow-Headers: *\r\nAccess-Control-Allow-Methods: POST, GET, OPTIONS\r\nConnection: keep-alive\r\nAccess-Control-Max-Age: 3600\r\nContent-Type: application/json\r\nKeep-Alive: timeout=75\r\n\r\n", code,
+	  mg_http_status_code_str(code), headers == NULL ? "" : headers);
   len = c->send.len;
   va_start(ap, fmt);
   mg_vxprintf(mg_pfn_iobuf, &c->send, fmt, &ap);
