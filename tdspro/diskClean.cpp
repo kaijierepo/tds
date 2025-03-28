@@ -32,7 +32,7 @@ void CDiskClean::ThreadClean(void* lpParam)
 		if (period < 60) {
 			period = 60;
 		}
-		timeopt::sleepMilli(1 * 1000);
+		timeopt::sleepMilli(period * 1000);
 		if (tds->conf->triggerStratgy == "period") {
 			g_diskClean.doPeriodClean();
 		}
