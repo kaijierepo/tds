@@ -545,8 +545,8 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 	{
 		json tag = jArgs[0];
 		if (tag.is_string()) { 
-			string sTag = tag.get<string>();
-			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);  
+			string sTagOrg = tag.get<string>();
+			string sTag = TAG::resolveTag(sTagOrg, pEngine->m_tagContext);
 			if (jArgs.size() == 1) {
 				json params;
 				params["tag"] = sTag;
@@ -554,6 +554,13 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 				params["getConf"] = false;
 				json err, rlt;
 				tds->call("getMp", params, err, rlt, pEngine->currentSession);
+
+				if (rlt == nullptr) { //尝试作为全局位号请求
+					sTag = sTagOrg;
+					params["tag"] = sTagOrg;
+					tds->call("getMp", params, err, rlt, pEngine->currentSession);
+				}
+
 				if (rlt != nullptr) {
 					json jVal = rlt["val"];
 	

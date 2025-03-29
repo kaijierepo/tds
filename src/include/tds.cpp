@@ -694,6 +694,32 @@ string TAG::resolveTag(string strTagExp, string tagContext)
 	{
 		tagName = trimPrefix(strTagExp, ".");
 	}
+	else if (strTagExp.find("::") == 0) //绝对位号
+	{
+		tagName = trimPrefix(strTagExp, "::");
+	}
+	//使用^访问上级或者祖父级，如: ^.A ^^.A
+	else if (strTagExp.find("^") == 0) {
+		int parentCount = 0;
+		for (int i = 0; i < tagContext.size(); i++) {
+			char c = tagContext[i];
+			if (c ==  '^' ) {
+				parentCount++;
+			}
+			else {
+				break;
+			}
+		}
+		vector<string> parentNodes;
+		str::split(parentNodes, tagContext, ".");
+		
+		tagName = str::trimPrefix(tagName, "^");
+		tagName = str::trimPrefix(tagName, ".");
+		for (int i = 0; i < parentCount && i< parentNodes.size(); i++) {
+			string node = parentNodes[parentNodes.size() - 1 - i];
+			tagName = TAG::addRoot(tagName, node);
+		}
+	}
 	else {//相对于环境位号的位号
 		tagName = TAG::addRoot(strTagExp, tagContext);
 	}
