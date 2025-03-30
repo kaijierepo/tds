@@ -100,7 +100,7 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 	TAG_VAL tagVal;
 	unsigned short tagType;
 	if (pC->m_valType == "BOOL") {
-		tagVal.BOOL_val = jVal.get<bool>() ? 0xFF : 0x00;  //ab plc 用0xFF表示true
+		tagVal.BOOL_val = jVal.get<bool>() ? 0xFFFF : 0x0000;  //ab plc 用0xFF表示true
 		tagType = LOGIX_TAG_VAL_TYPE::Bool;
 	}
 	else if (pC->m_valType == "SINT") {

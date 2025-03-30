@@ -39,11 +39,11 @@ enum CIP_SERVICE {
 
 struct TAG_VAL {
 	uint16_t INT_val;
-	uint8_t SINT_val;
+	uint16_t SINT_val;
 	uint32_t DINT_val;
 	uint32_t DWORD_val;
 	float REAL_val;
-	uint8_t BOOL_val;
+	uint16_t BOOL_val;
 };
 
 
