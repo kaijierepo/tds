@@ -105,7 +105,7 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 	}
 	else if (pC->m_valType == "SINT") {
 		tagVal.SINT_val = jVal.get<int>();
-		tagType = LOGIX_TAG_VAL_TYPE::SInt;
+		tagType = LOGIX_TAG_VAL_TYPE::SInt; 
 	}
 	else if (pC->m_valType == "INT") {
 		tagVal.INT_val = jVal.get<int>();
@@ -116,7 +116,7 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 		tagType = LOGIX_TAG_VAL_TYPE::DInt;
 	}
 	else if (pC->m_valType == "REAL") {
-		tagVal.REAL_val = jVal.get<int>();
+		tagVal.REAL_val = jVal.get<float>();
 		tagType = LOGIX_TAG_VAL_TYPE::Real;
 	}
 	else {
@@ -219,7 +219,8 @@ void cycleAcq_thread_eip(ioDev_eip* pDev) {
 					}
 
 					//resp tag命令的resp部分
-					if (validResp) {
+					//缺少请求响应匹配机制，需要优化
+					if (validResp && cipResp.reply_service == (CIP_SERVICE::Read_Tag | 0x80)) {
 						unsigned char* pData = cipResp.response_data.data();
 						unsigned short tagValType = *(unsigned short*)(pData);
 						unsigned char* pTagVal = pData + 2;
