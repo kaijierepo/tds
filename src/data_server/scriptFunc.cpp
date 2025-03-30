@@ -547,71 +547,76 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 		if (tag.is_string()) { 
 			string sTagOrg = tag.get<string>();
 			string sTag = TAG::resolveTag(sTagOrg, pEngine->m_tagContext);
-			if (jArgs.size() == 1) {
-				json params;
-				params["tag"] = sTag;
-				params["getStatus"] = true;
-				params["getConf"] = false;
-				json err, rlt;
-				tds->call("getMp", params, err, rlt, pEngine->currentSession);
-
-				if (rlt == nullptr) { //尝试作为全局位号请求
+			OBJ* p = prj.queryObj(sTag);
+			if (p == nullptr) {
+				p = prj.queryObj(sTagOrg);//尝试将原始位号作为全局位号请求
+				if(p)
 					sTag = sTagOrg;
-					params["tag"] = sTagOrg;
+			}
+			if (!p) {
+				if (jArgs.size() == 1) {
+					json params;
+					params["tag"] = sTag;
+					params["getStatus"] = true;
+					params["getConf"] = false;
+					json err, rlt;
 					tds->call("getMp", params, err, rlt, pEngine->currentSession);
-				}
 
-				if (rlt != nullptr) {
-					json jVal = rlt["val"];
-	
-					string info = "val(" + sTag + ") = " + jVal.dump();
-					pEngine->m_vecOutput.push_back(info);
-			
-					jerry_value_t jerryVal;
-					jsonVal2jerryVal(jVal,jerryVal);
-					return jerryVal;
+					if (rlt != nullptr) {
+						json jVal = rlt["val"];
+
+						string info = "val(" + sTag + ") = " + jVal.dump();
+						pEngine->m_vecOutput.push_back(info);
+
+						jerry_value_t jerryVal;
+						jsonVal2jerryVal(jVal, jerryVal);
+						return jerryVal;
+					}
+					else {
+						int errCode = err["code"].get<int>();
+						string errMsg = err["message"].get<string>();
+						string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+						pEngine->m_vecOutput.push_back(errInfo);
+						if (tds->conf->logEnable.scriptEngine) {
+							LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+						}
+					}
 				}
-				else {
-					int errCode = err["code"].get<int>();
-					string errMsg = err["message"].get<string>();
-					string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-					pEngine->m_vecOutput.push_back(errInfo);
-					if (tds->conf->logEnable.scriptEngine) {
-						LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+				//取历史值
+				else if (jArgs.size() >= 2) {
+					json time = jArgs[1];
+					if (time.is_string()) {
+						json jParams;
+						jParams["tag"] = sTag;
+						string sTime = time.get<string>();
+						jParams["time"] = sTime;
+						if (jArgs.size() >= 3) {
+							json jAggr = jArgs[2];
+							jParams["aggregate"] = jAggr;
+						}
+
+						json err, rlt;
+						tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
+
+						string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
+						if (rlt.is_array() && rlt.size() > 0) {
+							json& jDe = rlt[0];
+							json& jVal = jDe["val"];
+							jerry_value_t ret;
+							jsonVal2jerryVal(jVal, ret);
+							info += jVal.dump();
+							pEngine->m_vecOutput.push_back(info);
+							return ret;
+						}
+						else {
+							info += "null";
+							pEngine->m_vecOutput.push_back(info);
+						}
 					}
 				}
 			}
-			//取历史值
-			else if (jArgs.size() >= 2) {
-				json time = jArgs[1];
-				if (time.is_string()) {
-					json jParams;
-					jParams["tag"] = sTag;
-					string sTime = time.get<string>();
-					jParams["time"] = sTime;
-					if (jArgs.size() >= 3) {
-						json jAggr = jArgs[2];
-						jParams["aggregate"] = jAggr;
-					}
-
-					json err, rlt;
-					tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
-						
-					string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
-					if (rlt.is_array() && rlt.size() > 0) {
-						json& jDe = rlt[0];
-						json& jVal = jDe["val"];
-						jerry_value_t ret;
-						jsonVal2jerryVal(jVal, ret);
-						info += jVal.dump();
-						pEngine->m_vecOutput.push_back(info);
-						return ret;
-					}
-					else {
-						info += "null";
-						pEngine->m_vecOutput.push_back(info);
-					}
-				}
+			else {
+				pEngine->m_vecOutput.push_back("无法找到指定的位号");
 			}
 		}
 	}

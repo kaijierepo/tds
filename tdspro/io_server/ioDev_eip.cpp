@@ -100,7 +100,7 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 	TAG_VAL tagVal;
 	unsigned short tagType;
 	if (pC->m_valType == "BOOL") {
-		tagVal.BOOL_val = jVal.get<bool>() ? 0x01 : 0x00;
+		tagVal.BOOL_val = jVal.get<bool>() ? 0xFF : 0x00;  //ab plc 用0xFF表示true
 		tagType = LOGIX_TAG_VAL_TYPE::Bool;
 	}
 	else if (pC->m_valType == "SINT") {
@@ -118,6 +118,11 @@ void ioDev_eip::output(ioChannel* pC, json jVal, json& rlt,json& err, bool sync)
 	else if (pC->m_valType == "REAL") {
 		tagVal.REAL_val = jVal.get<int>();
 		tagType = LOGIX_TAG_VAL_TYPE::Real;
+	}
+	else {
+		err = "channel val type error,not supported,please check your config";
+		LOG("[warn][控制输出]channel val type error,dev=%s,valType=%s", getDevAddrStr().c_str(), pC->m_valType.c_str());
+		return;
 	}
 
 	string errorInfo;

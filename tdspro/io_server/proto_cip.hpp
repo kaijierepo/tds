@@ -14,7 +14,7 @@ struct CIP_Request {
 };
 
 struct CIP_Response {
-	unsigned short reply_service;
+	unsigned char  reply_service;
 	unsigned char  reserved;
 	unsigned char  general_status;
 	unsigned char  size_of_additional_status;
@@ -22,6 +22,12 @@ struct CIP_Response {
 	vector<unsigned char> response_data;
 };
 
+
+enum Connection_Manager_Object_Service {
+	Forward_Open = 0x54,
+	Unconnected_Send = 0x52,
+	Forward_Close = 0x4E
+};
 
 
 enum CIP_SERVICE {
@@ -110,12 +116,17 @@ struct Unconnected_Send_Service_Parameters {
 
 class CIP_PKT : public DEV_PKT {
 public:
+	//调用Connection Manager Object的服务转发数据包，因此多封装了一层
+	//ab1756使用该机制，micro800未使用该机制
+	//回包的格式是一样的，Connection Manager Object的包结构不会在回包中体现。
 	bool pack_unconnected_msg_send(CIP_PKT& msg,unsigned char slot) {
 		DEV_PKT& req = *this;
 		req.clear();
 		//cip header unconnected service
 		//servcie + req path size + req path  6
-		unsigned char service = CIP_SERVICE::Read_Tag_Fragmented;
+		//serice is defined in CIP Common Specification 3-5.5 Connection Manager Object Instance Object Specific Services
+		//此处可以简单看成是一个固定长度的 connnectedServiceHeader,len = 10
+		unsigned char service = Connection_Manager_Object_Service::Unconnected_Send;
 		req.pushData(service);
 		unsigned char req_path_size = 2;  // 2 words
 		req.pushData(req_path_size);
