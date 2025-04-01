@@ -309,6 +309,8 @@ void ioDev::stop()
 	m_bRunning = false;
 	if(m_tcpClt)
 		m_tcpClt->stop();
+	if (m_udpClt)
+		m_udpClt->stop();
 	if (m_udpSrv)
 		m_udpSrv->stop();
 

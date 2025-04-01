@@ -7,6 +7,7 @@
 #include "prj.h"
 #include "httplib.h"
 #include "ioSrv.h"
+#include "ioDev_custom.h"
 
 
 bool jerryItem2JsonItem(const jerry_value_t prop_name,
@@ -84,14 +85,13 @@ void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal) {
 	else if (jerry_value_is_number(jerryVal))
 	{
 		double dbVal = jerry_get_number_value(jerryVal);
-		//if (is_integer(dbVal)) {
-		//	int iVal = dbVal;
-		//	jVal = iVal;
-		//}
-		//else {
-		//	jVal = dbVal;
-		//}
-		jVal = dbVal;
+		if (is_integer(dbVal)) {
+			int iVal = dbVal;
+			jVal = iVal;
+		}
+		else {
+			jVal = dbVal;
+		}
 	}
 	else if (jerry_value_is_string(jerryVal))
 	{
@@ -885,6 +885,54 @@ jerry_value_t func_ioDev_onRecvData(const jerry_call_info_t* call_info_p,
 }
 
 
+jerry_value_t func_ioDev_doTransaction(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	jerry_value_t dev = call_info_p->this_value;
+	json jDev;
+	jerryVal2jsonVal(dev, jDev);
+
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1)
+		return jerry_create_null();
+
+	json req = jArgs[0];
+
+	if (!req.is_array())
+		return jerry_create_null();
+
+	vector<uint8_t> vecReq;
+	for (auto& i : req) {
+		if (i.is_number_integer()) {
+			uint8_t b = i.get<int>();
+			vecReq.push_back(b);
+		}
+	}
+
+	vector<uint8_t> vecResp;
+	if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
+		string confNodeId = jDev["confNodeId"];
+		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+		if (p && p->m_devType == "custom-device") {
+			ioDev_custom* pc = (ioDev_custom*)p;
+			pc->doTransaction(vecReq,vecResp);
+		}
+	}
+
+	if (vecResp.size() > 0) {
+		json j = json::array();
+		for (int i = 0; i < vecResp.size(); i++) {
+			j.push_back(i);
+		}
+		jerry_value_t jrr;
+		jsonVal2jerryVal(j, jrr);
+		return jrr;
+	}
+
+	return jerry_create_null();
+}
+
 jerry_value_t func_ioDev_getDevVar(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -1505,6 +1553,12 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 
 	n = jerry_create_string((const jerry_char_t*)"onRecvData");
 	v = jerry_create_external_function(func_ioDev_onRecvData);
+	jerry_release_value(jerry_set_property(obj, n, v));
+	jerry_release_value(n);
+	jerry_release_value(v);
+
+	n = jerry_create_string((const jerry_char_t*)"doTransaction");
+	v = jerry_create_external_function(func_ioDev_doTransaction);
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);

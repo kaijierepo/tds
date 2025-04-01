@@ -47,6 +47,74 @@ ioDev_custom::~ioDev_custom()
 }
 
 
+bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t> resp)
+{
+	if (m_bRunning == false)
+		return false;
+
+
+	while (1) {
+		if (CommLock(1)) {
+			break;
+		}
+
+		if (m_bRunning == false)
+			return false;
+	}
+
+	TIME startTime = timeopt::now();
+	bool ret = false;
+	if (m_bRunning == false)
+		goto TRANSACTION_END;
+
+
+	m_bIsWaitingResp = true;
+	m_transaction.init();
+	m_transaction.setReq(req);
+
+	m_transaction.m_respSignal.reset();
+
+	if (!sendData(req.data(),req.size())) {
+		goto TRANSACTION_END;
+	}
+
+	if (m_transaction.m_respSignal.wait_for(tds->conf->iotimeoutModbusRtu))
+	{
+		if (m_transaction.getResp(resp)) {	
+			ret = true;
+		}
+		else {
+			ret = false;
+		}
+	}
+	else
+	{
+		setOffline();
+	}
+
+TRANSACTION_END:
+	m_bIsWaitingResp = false;
+	CommUnlock();
+
+	if (ret) {
+		time_t timeCost = timeopt::CalcTimePassMilliSecond(startTime);
+		doRespTimeStatis(timeCost);
+		m_transactionSuccessCount++;
+		if (m_pParent) {
+			m_pParent->m_transactionSuccessCount++;
+			m_pParent->doRespTimeStatis(timeCost);
+		}
+	}
+	else {
+		m_transactionFailCount++;
+		if (m_pParent) {
+			m_pParent->m_transactionFailCount++;
+		}
+	}
+
+	return ret;
+}
+
 void ioDev_custom::DoAcq()
 {
 
@@ -152,6 +220,11 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 			
 		}
 	}
+
+	vector<uint8_t> pkt;
+	pkt.resize(iLen);
+	memcpy(pkt.data(), pData, iLen);
+	m_transaction.setResp(pkt);
 	return false;
 }
 
