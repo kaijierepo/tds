@@ -12,6 +12,7 @@
 #include "rpcHandler.h"
 #include "scriptEngine.h"
 #include "scriptManager.h"
+#include "webSrv.h"
 
 
 using namespace httplib;
@@ -192,6 +193,8 @@ void ioDev_custom::onEvent_online()
 
 bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 {
+	setOnline();
+
 	if (m_onRecvScript != "") {
 #ifdef _DEBUG
 		LOG("执行脚本: " + m_onRecvScript);
