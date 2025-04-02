@@ -47,7 +47,7 @@ ioDev_custom::~ioDev_custom()
 }
 
 
-bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t> resp)
+bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
 {
 	if (m_bRunning == false)
 		return false;
@@ -180,6 +180,7 @@ void ioDev_custom::DoCycleTask()
 		return;
 
 	m_stLastAcqTime.setNow();
+	m_bAcqThreadRunning = true;
 	thread t(acq_thread_customDev, this);
 	t.detach();
 }

@@ -923,7 +923,7 @@ jerry_value_t func_ioDev_doTransaction(const jerry_call_info_t* call_info_p,
 	if (vecResp.size() > 0) {
 		json j = json::array();
 		for (int i = 0; i < vecResp.size(); i++) {
-			j.push_back(i);
+			j.push_back(vecResp[i]);
 		}
 		jerry_value_t jrr;
 		jsonVal2jerryVal(j, jrr);

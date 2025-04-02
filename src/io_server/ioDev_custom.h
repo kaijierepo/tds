@@ -55,7 +55,7 @@ public:
 
 	CUSTOM_PDU_TRANSACTION m_transaction;
 
-	bool doTransaction(vector<uint8_t> req, vector<uint8_t> resp);
+	bool doTransaction(vector<uint8_t> req, vector<uint8_t>& resp);
 	void DoAcq();
 	void doHttpHeartbeat();
 	void DoCycleTask() override;
