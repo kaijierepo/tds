@@ -596,6 +596,11 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		if (notify) {
 			if (!m_bTestSrv) {
 				json j = newStatus.toJson(this);
+				if (m_scriptOnNotify != "") {
+					
+				}
+
+
 				if (m_initParam.func_rpcHand_notify && notify)
 					m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
 			}

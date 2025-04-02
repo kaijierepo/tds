@@ -227,6 +227,8 @@ public:
 	bool bOneFilePerMonth;
 	shared_mutex m_csTable;
 	ALM_TABLE_TYPE m_tableType;
+
+
 protected:
 	almServer* m_pAlmSrv;
 	map<string, int> m_colIdx;
@@ -339,6 +341,7 @@ public:
 
 	bool m_bTestSrv;
 	long long m_iUpdateCallCount;
+	string m_scriptOnNotify;
 };
 
 
