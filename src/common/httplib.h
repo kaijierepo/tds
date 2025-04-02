@@ -5064,6 +5064,22 @@ inline void Server::stop() {
   }
 }
 
+inline string utf8_to_ansi(string instr) //utf-8-->ansi
+{
+	int MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
+	char* charstr = new char[MAX_STRSIZE];
+	memset(charstr, 0, MAX_STRSIZE);
+	WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
+	string charstrtemp(charstr);
+	delete wcharstr;
+	delete charstr;
+	return charstrtemp;
+}
+
+
 inline bool Server::parse_request_line(const char *s, Request &req) {
   auto len = strlen(s);
   if (len < 2 || s[len - 2] != '\r' || s[len - 1] != '\n') { return false; }
@@ -5109,6 +5125,7 @@ inline bool Server::parse_request_line(const char *s, Request &req) {
                     switch (count) {
                     case 0:
                       req.path = detail::decode_url(std::string(b, e), false);
+                      req.path = utf8_to_ansi(req.path);
                       break;
                     case 1: {
                       if (e - b > 0) {
