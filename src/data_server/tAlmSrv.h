@@ -247,6 +247,7 @@ struct AsInitParam
 {
 	string confPath; 
 	bool enableGlobalAlarm = true;
+	string m_scriptOnNotify = "";
 
 	tfunc_obj_isEnableAlarm func_obj_isEnableAlarm = NULL;
 	tfunc_obj_setJAlmStatus func_obj_setJAlmStatus = NULL;
@@ -326,6 +327,7 @@ public:
 	bool CompareTime(TIME& time1, TIME& time2);
 	string uuid();
 
+	bool scriptOnNotify(json& Json);
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
 	//almTable tableStatus;
 	//almTable tableUnack;
@@ -341,7 +343,6 @@ public:
 
 	bool m_bTestSrv;
 	long long m_iUpdateCallCount;
-	string m_scriptOnNotify;
 };
 
 

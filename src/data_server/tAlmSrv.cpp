@@ -21,6 +21,11 @@
 #include <wchar.h>
 #include <stdlib.h>
 #endif
+#ifdef ENABLE_JERRY_SCRIPT
+#include "ScriptEngine.h"
+#include "scriptFunc.h"
+#include "scriptManager.h"
+#endif
 
 almServer almSrv;
 almServer almSrv_dev;
@@ -294,6 +299,10 @@ void almServer::recover(ALARM_INFO& key, bool notify)
 	}
 
 	json j = ai.toJson(this);
+
+	if (m_initParam.m_scriptOnNotify != "")
+		scriptOnNotify(j);
+
 	//rpcSrv.notify("onAlarmRecover", j);  
 	if (m_initParam.func_rpcHand_notify && notify)
 		m_initParam.func_rpcHand_notify("onAlarmRecover", j);
@@ -450,6 +459,10 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 	//通知给TDS客户端
 	if (!m_bTestSrv) {
 		json j = ai.toJson(this);
+
+		if (m_initParam.m_scriptOnNotify != "")
+			scriptOnNotify(j);
+
 		//rpcSrv.notify("onAlarmAdd", j); 
 		if (m_initParam.func_rpcHand_notify && notify)
 			m_initParam.func_rpcHand_notify("onAlarmAdd", j);
@@ -474,6 +487,28 @@ string almServer::uuid() {
 	return uuid;
 }
 
+bool almServer::scriptOnNotify(json& Json)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	if (m_initParam.m_scriptOnNotify != "") {
+		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
+		se.m_globalObj["Alarm"] = Json;
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(m_initParam.m_scriptOnNotify, si);
+		if (se.runScript(si.script, ""))
+		{
+			if (se.m_scriptRet != nullptr)
+				Json = se.m_scriptRet;
+			return true;
+		}
+		return false;
+	}
+#endif
+
+	return false;
+}
 
 void almServer::Update(ALARM_INFO newStatus, bool notify)
 {
@@ -596,10 +631,9 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		if (notify) {
 			if (!m_bTestSrv) {
 				json j = newStatus.toJson(this);
-				if (m_scriptOnNotify != "") {
-					
-				}
 
+				if (m_initParam.m_scriptOnNotify != "")
+					scriptOnNotify(j);
 
 				if (m_initParam.func_rpcHand_notify && notify)
 					m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
@@ -859,6 +893,10 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 
 	json j = ai.toJson(this);
+
+	if (m_initParam.m_scriptOnNotify != "")
+		scriptOnNotify(j);
+	
 	//rpcSrv.notify("onAlarmAck", j);  
 	if (m_initParam.func_rpcHand_notify)
 		m_initParam.func_rpcHand_notify("onAlarmAck", j);
@@ -944,6 +982,10 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	}
 
 	json j = ai.toJson(this);
+
+	if (m_initParam.m_scriptOnNotify != "")
+		scriptOnNotify(j);
+
 	//rpcSrv.notify("onAlarmAck", j);  
 	if (m_initParam.func_rpcHand_notify)
 		m_initParam.func_rpcHand_notify("onAlarmAck", j);

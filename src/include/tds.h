@@ -380,6 +380,9 @@ struct iTDSConf {
 	//ini:  CleanMemoryInterval = xxxh  
 	string strCleanMemoryInterval;
 
+	//rpcSrcipt
+	string rpcSrcipt_onAlarmNotify = "";
+
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(string key, int iDef) = 0;

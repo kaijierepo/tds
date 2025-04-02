@@ -599,6 +599,7 @@ bool TDS_imp::run(string cmdline)
 	AsInitParam asInitParam;
 	asInitParam.confPath = tds->conf->confPath;
 	asInitParam.enableGlobalAlarm = tds->conf->enableGlobalAlarm;
+	asInitParam.m_scriptOnNotify = tds->conf->rpcSrcipt_onAlarmNotify;
 	asInitParam.func_obj_isEnableAlarm = funcImp_obj_isEnableAlarm;
 	asInitParam.func_obj_setJAlmStatus = funcImp_obj_setJAlmStatus;
 	asInitParam.func_obj_getTypeTagByTag = funcImp_obj_getTypeTagByTag;

@@ -433,6 +433,10 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 		{
 			strCleanMemoryInterval = tci.val;
 		}
+		else if (checkKey((tci.key),"rpcSrcipt_onAlarmNotify"))
+		{
+			rpcSrcipt_onAlarmNotify = tci.val;
+		}
 		
 	}
 
