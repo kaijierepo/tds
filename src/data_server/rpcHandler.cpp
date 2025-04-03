@@ -2952,8 +2952,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 
 		auto pReadFun = [](json &jRlt, const string &confName) -> void
 		{
-			if (tdsConf.project_ini.mapConf.find(confName) != tdsConf.project_ini.mapConf.end()) {
-				string sVal = tdsConf.project_ini.mapConf[confName];
+			string sVal = tdsConf.project_ini.getValStr(confName, "查找失败");
+			if (sVal != "查找失败")
+			{
 				if (sVal == "") {
 					jRlt[confName] = sVal;
 				}
@@ -2969,10 +2970,12 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			string confName = params.get<string>();
 			if (confName == "*" || confName == "") {
 				json jsconf;
-				map<string, string>& maps = tdsConf.project_ini.mapConf;
-				for (auto itm : maps)
-				{
-					jsconf[itm.first] = itm.second;
+				vector<KV_INI_LINE>& maps = tdsConf.project_ini.mapConf;
+				bool exist = false;
+				for (auto& line : maps) {
+					if (line.type == CONF_ITEM) {
+						jsconf[line.key] = line.val;
+					}
 				}
 				rpcResp.result = jsconf.dump();
 			}
@@ -3010,10 +3013,12 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		}
 		else {
 			json jsconf;
-			map<string, string>& maps = tdsConf.project_ini.mapConf;
-			for (auto itm : maps)
-			{
-				jsconf[itm.first] = itm.second;
+			vector<KV_INI_LINE>& maps = tdsConf.project_ini.mapConf;
+			bool exist = false;
+			for (auto& line : maps) {
+				if (line.type == CONF_ITEM) {
+					jsconf[line.key] = line.val;
+				}
 			}
 			rpcResp.result = jsconf.dump();
 		}

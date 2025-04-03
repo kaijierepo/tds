@@ -182,69 +182,70 @@ void tdsConfig::loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf) {
 
 
 
-void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
+void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 	for (auto& iter: vecConf)
 	{
-		KV_CONF_ITEM tci;
-		tci.key = iter.first;
-		tci.val = iter.second;
-		if (checkKey(tci.key, "confPath"))
+		if (iter.type != CONF_ITEM) continue;
+
+		string key = iter.key;
+		string val = iter.val;
+		if (checkKey(key, "confPath"))
 		{
-			confPath = tci.val;
+			confPath = val;
 			confPath = fs::toAbsolutePath(confPath);
 		}
-		else if (checkKey(tci.key, "curPath"))
+		else if (checkKey(key, "curPath"))
 		{
-			currentPath = tci.val;
+			currentPath = val;
 			currentPath = fs::toAbsolutePath(currentPath);
 		}
-		else if (checkKey(tci.key, "uiPath"))
+		else if (checkKey(key, "uiPath"))
 		{
-			uiPath = tci.val;
+			uiPath = val;
 			uiPath = fs::toAbsolutePath(uiPath); 
 		}
-		else if (checkKey(tci.key, "dbPath")) {
-			dbPath = tci.val.c_str();
+		else if (checkKey(key, "dbPath")) {
+			dbPath = val.c_str();
 			dbPath = fs::toAbsolutePath(dbPath);
 		}
-		else if (checkKey(tci.key, "logPath")) {
-			logPath = tci.val.c_str();
+		else if (checkKey(key, "logPath")) {
+			logPath = val.c_str();
 			logPath = fs::toAbsolutePath(logPath);
 		}
-		else if (checkKey(tci.key, "fmsPath")) {
-			fmsPath = tci.val.c_str();
+		else if (checkKey(key, "fmsPath")) {
+			fmsPath = val.c_str();
 			fmsPath = fs::toAbsolutePath(fmsPath);
 		}
-		else if (checkKey(tci.key, "dbLanguage")) {
-			dbLanguage = tci.val.c_str();
+		else if (checkKey(key, "dbLanguage")) {
+			dbLanguage = val.c_str();
 		}
-		else if (checkKey(tci.key, "mediaSrvIP"))
-			mediaSrvIP = tci.val.c_str();
-		else if (checkKey(tci.key, "testToken"))
-			testToken = tci.val.c_str();
-		else if (checkKey(tci.key, "tokenExpireTime"))
-			tokenExpireTime = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "iotimeoutTdsp"))
-			iotimeoutTdsp = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "iotimeoutModbusRtu"))
-			iotimeoutModbusRtu = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "iotimeoutIQ60"))
-			iotimeoutIQ60 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "iotimeoutDLT645"))
-			iotimeoutDLT645 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "httpsPort"))
-			httpsPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "httpPort"))
-			httpPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "httpsPort2"))
-			httpsPort2 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "httpPort2"))
-			httpPort2 = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "tdspPort"))
-			tdspPort = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "mbPort")) {
+		else if (checkKey(key, "mediaSrvIP"))
+			mediaSrvIP = val.c_str();
+		else if (checkKey(key, "testToken"))
+			testToken = val.c_str();
+		else if (checkKey(key, "tokenExpireTime"))
+			tokenExpireTime = atoi(val.c_str());
+		else if (checkKey(key, "iotimeoutTdsp"))
+			iotimeoutTdsp = atoi(val.c_str());
+		else if (checkKey(key, "iotimeoutModbusRtu"))
+			iotimeoutModbusRtu = atoi(val.c_str());
+		else if (checkKey(key, "iotimeoutIQ60"))
+			iotimeoutIQ60 = atoi(val.c_str());
+		else if (checkKey(key, "iotimeoutDLT645"))
+			iotimeoutDLT645 = atoi(val.c_str());
+		else if (checkKey(key, "httpsPort"))
+			httpsPort = atoi(val.c_str());
+		else if (checkKey(key, "httpPort"))
+			httpPort = atoi(val.c_str());
+		else if (checkKey(key, "httpsPort2"))
+			httpsPort2 = atoi(val.c_str());
+		else if (checkKey(key, "httpPort2"))
+			httpPort2 = atoi(val.c_str());
+		else if (checkKey(key, "tdspPort"))
+			tdspPort = atoi(val.c_str());
+		else if (checkKey(key, "mbPort")) {
 			mbPort.clear();
-			string s = str::replace(tci.val,"，", ",");
+			string s = str::replace(val,"，", ",");
 			vector<string> sPorts;
 			str::split(sPorts,s, ",");
 			for (int i = 0; i < sPorts.size(); i++) {
@@ -253,189 +254,189 @@ void tdsConfig::loadConf_tds(map<string, string>& vecConf) {
 				mbPort.push_back(p);
 			}
 		}
-		else if (checkKey(tci.key, "iq60Port"))
-			iq60Port = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "devRebootTime"))
-			devRebootTime = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "devCommRebootTime"))
-			devCommRebootTime = atoi(tci.val.c_str());
-		else if (checkKey(tci.key, "ui") && uiMode == "")
-			uiMode = tci.val;
-		else if ((checkKey(tci.key, "logLevel")) && logLevel == "")
-			logLevel = tci.val;
-		else if (checkKey(tci.key, "title") && title == "")
-			title = tci.val;
-		else if (checkKey(tci.key, "homePage") && homepage == "")
-			homepage = tci.val;
-		else if (checkKey(tci.key, "singleGenicamHost"))
-			singleGenicamHost = tci.val == "1" ? true : false;
-		else if (checkKey(tci.key, "authDownload"))
+		else if (checkKey(key, "iq60Port"))
+			iq60Port = atoi(val.c_str());
+		else if (checkKey(key, "devRebootTime"))
+			devRebootTime = atoi(val.c_str());
+		else if (checkKey(key, "devCommRebootTime"))
+			devCommRebootTime = atoi(val.c_str());
+		else if (checkKey(key, "ui") && uiMode == "")
+			uiMode = val;
+		else if ((checkKey(key, "logLevel")) && logLevel == "")
+			logLevel = val;
+		else if (checkKey(key, "title") && title == "")
+			title = val;
+		else if (checkKey(key, "homePage") && homepage == "")
+			homepage = val;
+		else if (checkKey(key, "singleGenicamHost"))
+			singleGenicamHost = val == "1" ? true : false;
+		else if (checkKey(key, "authDownload"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				authDownload = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				authDownload = false;
 		}
-		else if (checkKey(tci.key, "stopCycleAcq"))
+		else if (checkKey(key, "stopCycleAcq"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				bStopCycleAcq = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				bStopCycleAcq = false;
 		}
-		else if (checkKey(tci.key, "debugMode"))
+		else if (checkKey(key, "debugMode"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				debugMode = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				debugMode = false;
 		}
-		else if (checkKey(tci.key, "createDumpWhenLogError"))
+		else if (checkKey(key, "createDumpWhenLogError"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				bCreateDumpWhenLogError = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				bCreateDumpWhenLogError = false;
 		}
-		else if (checkKey(tci.key, "enableLog"))
+		else if (checkKey(key, "enableLog"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableLog = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableLog = false;
 		}
-		else if (checkKey(tci.key, "enableDevReboot"))
+		else if (checkKey(key, "enableDevReboot"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableDevReboot = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableDevReboot = false;
 		}
-		else if (checkKey(tci.key, "enableOfflineAlarm"))
+		else if (checkKey(key, "enableOfflineAlarm"))
 		{
-		if (tci.val == "true" || tci.val == "1")
+		if (val == "true" || val == "1")
 			enableOfflineAlarm = true;
-		else if (tci.val == "false" || tci.val == "0")
+		else if (val == "false" || val == "0")
 			enableOfflineAlarm = false;
 		}
-		else if (checkKey(tci.key, "enableDevCommReboot"))
+		else if (checkKey(key, "enableDevCommReboot"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableDevCommReboot = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableDevCommReboot = false;
 		}
-		else if (checkKey(tci.key, "enableDB"))
+		else if (checkKey(key, "enableDB"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableDB = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableDB = false;
 		}
-		else if (checkKey(tci.key, "enableAccessCtrl"))
+		else if (checkKey(key, "enableAccessCtrl"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableAccessCtrl = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableAccessCtrl = false;
 		}
-		else if (checkKey(tci.key, "enableScript"))
+		else if (checkKey(key, "enableScript"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableScript = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableScript = false;
 		}
-		else if (checkKey(tci.key, "enableGlobalAlarm"))
+		else if (checkKey(key, "enableGlobalAlarm"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				enableGlobalAlarm = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				enableGlobalAlarm = false;
 		}
-		else if (checkKey(tci.key, "cloudIP"))
+		else if (checkKey(key, "cloudIP"))
 		{
-			cloudIP = tci.val;
+			cloudIP = val;
 		}
-		else if (checkKey(tci.key, "deviceID"))
+		else if (checkKey(key, "deviceID"))
 		{
-			deviceID = tci.val;
+			deviceID = val;
 		}
-		else if (checkKey(tci.key, "cloudPort"))
+		else if (checkKey(key, "cloudPort"))
 		{
-			cloudPort = atoi(tci.val.c_str());
+			cloudPort = atoi(val.c_str());
 		}
-		else if (checkKey(tci.key, "fullScreen"))
+		else if (checkKey(key, "fullScreen"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				fullscreen = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				fullscreen = false;
 		}
-		else if (checkKey(tci.key, "smsApiUrl"))
+		else if (checkKey(key, "smsApiUrl"))
 		{
-			smsApiUrl = tci.val;
+			smsApiUrl = val;
 		}
-		else if (checkKey(tci.key, "smsApiUser"))
+		else if (checkKey(key, "smsApiUser"))
 		{
-			smsApiUser = tci.val;
+			smsApiUser = val;
 		}
-		else if (checkKey(tci.key, "smsApiKey"))
+		else if (checkKey(key, "smsApiKey"))
 		{
-			smsApiKey = tci.val;
+			smsApiKey = val;
 		}
-		else if (checkKey(tci.key, "showObjOnline"))
+		else if (checkKey(key, "showObjOnline"))
 		{
-			if (tci.val == "true" || tci.val == "1")
+			if (val == "true" || val == "1")
 				showObjOnline = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				showObjOnline = false;
 		}
-		else if (checkKey(tci.key, "logEnable_innerRPCCall")) {
-			if (tci.val == "true" || tci.val == "1")
+		else if (checkKey(key, "logEnable_innerRPCCall")) {
+			if (val == "true" || val == "1")
 				logEnable.innerRPCCall = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				logEnable.innerRPCCall = false;
 		}
-		else if (checkKey(tci.key, "logEnable_scriptEngine")) {
-			if (tci.val == "true" || tci.val == "1")
+		else if (checkKey(key, "logEnable_scriptEngine")) {
+			if (val == "true" || val == "1")
 				logEnable.scriptEngine = true;
-			else if (tci.val == "false" || tci.val == "0")
+			else if (val == "false" || val == "0")
 				logEnable.scriptEngine = false;
 		}
-		else if (checkKey(tci.key, "fileUploadPort"))
+		else if (checkKey(key, "fileUploadPort"))
 		{
-			fileUploadPort=atoi(tci.val.c_str());
+			fileUploadPort=atoi(val.c_str());
 		}
 		//磁盘清理相关
-		else if (checkKey(tci.key, "triggerStratgy"))
+		else if (checkKey(key, "triggerStratgy"))
 		{
-			triggerStratgy = tci.val;
+			triggerStratgy = val;
 		}
-		else if (checkKey(tci.key, "diskSpaceLeft"))
+		else if (checkKey(key, "diskSpaceLeft"))
 		{
-			diskSpaceLeft = atoi(tci.val.c_str());
+			diskSpaceLeft = atoi(val.c_str());
 		}
-		else if (checkKey(tci.key, "judgePeriod"))
+		else if (checkKey(key, "judgePeriod"))
 		{
-			judgePeriod = atoi(tci.val.c_str());
+			judgePeriod = atoi(val.c_str());
 		}
-		else if (checkKey(tci.key, "dataStorageMonths"))
+		else if (checkKey(key, "dataStorageMonths"))
 		{
-			dataStorageMonths = atoi(tci.val.c_str());
+			dataStorageMonths = atoi(val.c_str());
 		}
-		else if (checkKey(tci.key, "mediaStorageMonths"))
+		else if (checkKey(key, "mediaStorageMonths"))
 		{
-			mediaStorageMonths = atoi(tci.val.c_str());
+			mediaStorageMonths = atoi(val.c_str());
 		}
 		//内存清理相关
-		else if (checkKey(tci.key, "CleanMemoryInterval"))
+		else if (checkKey(key, "CleanMemoryInterval"))
 		{
-			strCleanMemoryInterval = tci.val;
+			strCleanMemoryInterval = val;
 		}
-		else if (checkKey((tci.key),"rpcSrcipt_onAlarmNotify"))
+		else if (checkKey((key),"rpcSrcipt_onAlarmNotify"))
 		{
-			rpcSrcipt_onAlarmNotify = tci.val;
+			rpcSrcipt_onAlarmNotify = val;
 		}
 		
 	}
@@ -530,7 +531,7 @@ void tdsConfig::loadConf()
 		{
 			string s = str::format("[warn]配置文件%s不存在，创建默认配置", projectConfPath.c_str());
 			logger.logInternal(s, false);
-			generateDefaultProjectConfFile(projectConfPath);
+			generateDefaultProjectConfFile(this->confPath);
 		}
 		project_ini.load(projectConfPath);
 		loadConf_tds(project_ini.mapConf);

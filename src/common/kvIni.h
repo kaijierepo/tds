@@ -17,15 +17,29 @@ key value Ini配置文件
 
 #pragma once
 #include <string>
-#include <map>
+#include <vector>
 using namespace std;
 
+enum LINE_TYPE
+{
+	NOTE = 0,
+	CONF_ITEM = 1,
+	BLANK = 2
+};
 
+struct KV_INI_LINE {
+	LINE_TYPE type;
+	string note = "";
+	string key = "";
+	string val = "";
+};
 
-struct KV_CONF_ITEM {
+struct KV_CONF_ITEM
+{
 	string key;
 	string val;
 };
+
 
 class KV_INI {
 public:
@@ -36,7 +50,7 @@ public:
 	void setVal(string key, string val);
 	int getValInt(string key, int defaultVal);
 	string getValStr(string key, string defaultVal);
-	map<string, string> mapConf;
+	vector<KV_INI_LINE> mapConf;
 	string m_path;//ini路径
 	string m_strConf;//ini所有内容
 };

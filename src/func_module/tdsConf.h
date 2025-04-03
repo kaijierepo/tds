@@ -19,7 +19,7 @@ public:
 	string defaultConf_tdb();
 	string defaultConf_rphttp();
 	void loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf);
-	void loadConf_tds(map<string, string>& vecConf);
+	void loadConf_tds(vector<KV_INI_LINE>& vecConf);
 	void loadConf_rphttp(vector<KV_CONF_ITEM>& vecConf);
 	void loadConf() override;
 	void loadCurrentData() override;
