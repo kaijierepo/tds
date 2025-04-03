@@ -4240,6 +4240,7 @@ HANDLE_END:
 
 	rpcResp.strResp += "}\n\n";
 
+	apiAdaptorScript(rpcResp.strResp);
 
 	//数据过长或者频率过高的命令不记录日志
 	if (rpcResp.result != "")
@@ -4293,6 +4294,7 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		}
 		else {
 			handleRpcCall_single(jReq, rpcResp, pSession, bAccessCtrl);
+
 		}
 	}
 	catch (std::exception& e)
@@ -6520,6 +6522,8 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
+	apiAdaptorScript(notify);
+
 	WebServer::notifyAllSrvAllWs(notify);
 	sockSrv.sendToAllSessions(notify, specialNotify);
 }
@@ -6537,6 +6541,52 @@ void rpcHandler::statisCall(string method) {
 	m_csCallStatis.unlock();
 }
 
+bool rpcHandler::apiAdaptorScript(json& jResult)
+{
+#ifdef ENABLE_JERRY_SCRIPT
+	if (tds->conf->m_apiAdaptorScript != "") {
+		
+		string temp = jResult["method"];
+		bool bFind = false;
+		for (auto& item : tds->conf->m_apiAdaptorMethod)
+		{
+			if (item == temp)
+			{
+				bFind = true;
+				break;
+			}
+		}
+
+		if (!bFind) return true;
+
+		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
+		se.m_globalObj["inputJson"] = jResult;
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(tds->conf->m_apiAdaptorScript, si);
+		if (se.runScript(si.script, ""))
+		{
+			if (se.m_scriptRet != nullptr)
+				jResult = se.m_scriptRet;
+			return true;
+		}
+		return false;
+	}
+#endif
+
+	return true;
+}
+
+bool rpcHandler::apiAdaptorScript(string& strResult)
+{
+	json jResult = json::parse(strResult);
+	bool bResult = apiAdaptorScript(jResult);
+	strResult = jResult.dump();
+	strResult += "\n\n";
+
+	return bResult;
+}
 
 bool haveNode(string link, string node)
 {

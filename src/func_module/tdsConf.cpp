@@ -434,9 +434,13 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		{
 			strCleanMemoryInterval = val;
 		}
-		else if (checkKey((key),"rpcSrcipt_onAlarmNotify"))
+		else if (checkKey((key),"apiAdaptorScript"))
 		{
-			rpcSrcipt_onAlarmNotify = val;
+			m_apiAdaptorScript = val;
+		}
+		else if (checkKey((key), "apiAdaptorMethod"))
+		{
+			str::split(m_apiAdaptorMethod, val, ",");
 		}
 		
 	}

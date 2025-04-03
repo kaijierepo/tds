@@ -381,7 +381,8 @@ struct iTDSConf {
 	string strCleanMemoryInterval;
 
 	//rpcSrcipt
-	string rpcSrcipt_onAlarmNotify = "";
+	string m_apiAdaptorScript = "";
+	vector<string> m_apiAdaptorMethod;
 
 	LOG_ENABLE logEnable;
 

@@ -158,6 +158,9 @@ public:
 
 	std::map<string, string> m_mapDisableMethod;
 	map<string, TIME> m_mapPullerActive;
+
+	bool apiAdaptorScript(string& strResult);
+	bool apiAdaptorScript(json& jResult);
 };
 extern rpcHandler rpcSrv;
 
