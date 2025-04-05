@@ -1848,15 +1848,18 @@ void TDB::doAggrOneGroup_duration(DE_SELECTOR& deSel, string& aggrKey, vector<yy
 			}
 		}
 		else if(yyjson_is_bool(pDeSrcVal)) {
-			int bVal = yyjson_get_bool(pDeSrcVal);
+			if (calc.boolDurations.size() == 0) { //always have true&false two slots
+				DURATION_INFO di;
+				calc.boolDurations[true] = di;
+				calc.boolDurations[false] = di;
+			}
+			bool bVal = yyjson_get_bool(pDeSrcVal);
 
 			if (!calc.startCalc) {
 				calc.startCalc = true;
 				yyjson_val* yyTime = yyjson_obj_get(pDeSrc, "time");
 				calc.startTime.fromStr(yyjson_get_str(yyTime));
 				calc.calcBoolVal = bVal;
-				DURATION_INFO di;
-				calc.intDurations[bVal] = di;
 			}
 			else {
 				if (bVal != calc.calcBoolVal || j == deGroup.size() - 1) //last val or val changed , sum up 
