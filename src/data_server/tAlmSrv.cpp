@@ -685,7 +685,7 @@ string almServer::Add(ALARM_INFO& ai, bool bNotify)
 		return "ok";
 	}
 	else {
-		return "unrecover alarm with the same alarm key already existed,add fail";
+		return "\"unrecover alarm with the same alarm key already existed,add fail\"";
 	}	
 }
 
