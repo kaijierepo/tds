@@ -119,18 +119,28 @@ public:
 	stream2pkt m_tlBuf; //stream buff for transport layer data
 	std::shared_ptr<TDS_SESSION> bridgedIoSession; //this是界面session,保留ioSession指针
 	std::shared_ptr<TDS_SESSION> bridgedIoSessionClient; //this是ioSession指针，保留界面session指针
-	ioDev* getIODev(string ioAddr);
-	vector<string> m_vecIoDev;  //通过该tdsSession和tds通信的io设备.可以有多个。4g模式下用到
+
+
+	//和ioSession绑定的ioDev
+	//1个ioSession可以绑定多个ioDev(ioSession为设备网关时候)
+	//1个ioDev只能绑定1个ioSession
+	map<ioDev*, ioDev*> m_mapBindIoDev;
+	ioDev* getBindDev(string ioAddr);
+
 	//历史曾经在这个连接上上线过的io设备。当该设备重新在新的连接上线时。
-	//m_vecIoDev中的关联关系会被删除。m_vecHistIoDev中的依然保留
+	//m_mapBindIoDev中的关联关系会被删除。m_vecHistIoDev中的依然保留
 	//在通过当前连接进行诊断时，方便追溯连接的来源。
 	//因为4g模块可能会不断产生连接，特别是没电的时候。导致设备不断在新的连接上上线。解除老连接的关联
-	//此时通过m_vecIoBindTag可以追溯连接产生的原因。分析问题
-	vector<string> m_vecHistIoDev; 
-	vector<string> m_vecIoBindTag;
-	vector<string> m_vecHistIoBindTag;
+	//此时同一个设备可能有多个连接，这些连接在debugio的sessionList里面，有的当前绑定位号为空，但是历史绑定位号不为空
+	//有的当前绑定位号不为空，说明这个是最新的连接，那些历史绑定位号不为空的，tcp老连接还在，但是在新连接上线了，
+	//该功能可以在debugio的sessionList里面去分析到哪些设备在tcp连接上出了异常。
+	map<string,string> m_vecHistIoDev; 
+	map<string,string> m_vecHistIoBindTag;
+
 	string m_ioAddr;     //当1个io设备对应一个tcp连接时，该ioAddr为设备io地址
-	ioDev* m_IoDev;      //建立了tcp直连的io设备。 当1个io设备对应一个tcp连接时。该指针指向该io设备
+	void bindIoDev(ioDev* ioDev);
+	void unbindIoDev(ioDev* ioDev);
+
 	//单设备模式，只有第一个注册包的地址信息有用。后面的地址信息无效.防止地址信息错误导致的问题，以第一包的地址信息为准
 	bool m_bSingleDevMode; //单设备模式，默认可以多设备。 收到imei首发数据包则转换为单设备模式。
 	vector<unsigned char> regPkt; //透传网关常用的注册包机制，此数据为第一包注册包

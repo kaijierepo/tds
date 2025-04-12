@@ -121,7 +121,7 @@ void IOThread()
 }
 
 
-void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> ioSession)
 {
 	string pkt;
 	str::fromBuff((char*)pData, iLen,pkt);
@@ -137,10 +137,10 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 			string id = jpkt[0];
 
 			//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
-			ioDev* pIoDev = tdsSession->m_IoDev;
-			if (tdsSession->m_IoDev == nullptr)
+			ioDev* pIoDev = ioSession->getBindDev(id);
+			if (pIoDev == nullptr)
 			{
-				pIoDev = ioSrv.handleDevOnline(id, tdsSession);
+				pIoDev = ioSrv.handleDevOnline(id, ioSession);
 			}
 
 			if (pIoDev)
@@ -151,12 +151,8 @@ void ioServer::onRecvPkt_iq60(unsigned char* pData, size_t iLen, std::shared_ptr
 					if (p->m_bEnableIoLog)
 						p->statisOnRecv((unsigned char*)pkt.c_str(), pkt.length(), p->getIOAddrStr());
 
-					p->bindIOSession(tdsSession);
+					p->bindIOSession(ioSession);
 					p->setOnline();
-					if (!tdsSession->getIODev(p->getIOAddrStr()))
-					{
-						tdsSession->m_vecIoDev.push_back(p->getIOAddrStr());
-					}
 					p->onRecvPkt(jpkt);
 				}
 				else
@@ -248,7 +244,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 			ioDev* pIoDev = ioSrv.getIODev(p->remoteIP, false, true);// getIODev需要持续优化性能，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
 			if (pIoDev)
 			{
-				p->m_IoDev = pIoDev;
+				p->bindIoDev(pIoDev);
 				pIoDev->setOnline();
 				timeopt::now(&pIoDev->m_stLastActiveTime);
 
@@ -1995,9 +1991,11 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			size_t gwLen = iLen;
 			
 			//485直接透传到设备
-			if (tdsSession->m_IoDev)
+			if (tdsSession->m_mapBindIoDev.size()>0)
 			{
-				tdsSession->m_IoDev->onRecvData(pGwData, gwLen);
+				for (auto& i : tdsSession->m_mapBindIoDev) {
+					i.first->onRecvData(pGwData, gwLen);
+				}
 			}
 			
 		}
@@ -2145,24 +2143,23 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				}
 			}
 
-			//多设备模式或者还没有设备在该session上上线，处理设备上线
-			//获取当前session关联的设备
-			ioDev* pIoDev = tdsSession->m_IoDev;
-			//如果无关联设备或者是多关联模式
-			if (tdsSession->m_IoDev == nullptr)
+			//获得io地址
+			yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
+			if (yyv_ioAddr == nullptr)
+				yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
+			string strIoAddr;
+			if (yyv_ioAddr)
+				strIoAddr = yyjson_get_str(yyv_ioAddr);
+			if (strIoAddr == "")
 			{
-				//获得该io地址的设备对象
-				yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
-				if(yyv_ioAddr == nullptr)
-					yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
-				string strIoAddr;
-				if(yyv_ioAddr)
-					strIoAddr = yyjson_get_str(yyv_ioAddr);
-				if (strIoAddr == "")
-				{
-					LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
-					return;
-				}
+				LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
+				return;
+			}
+
+			//是否有设备在该session上上线，处理设备上线
+			ioDev* pIoDev = tdsSession->getBindDev(strIoAddr);
+			if (pIoDev == nullptr)
+			{
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
 
@@ -2186,47 +2183,47 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 
 void ioServer::onRecvPkt_mbRtu(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	if (tdsSession->m_IoDev)
+	for(auto& i: tdsSession->m_mapBindIoDev)
 	{
-		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+		i.first->onRecvPkt(pData, iLen);
 	}
 }
 
 void ioServer::onRecvPkt_dlt645_2007(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	if (tdsSession->m_IoDev)
+	for (auto& i : tdsSession->m_mapBindIoDev)
 	{
-		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+		i.first->onRecvPkt(pData, iLen);
 	}
 }
 
 void ioServer::onRecvPkt_mbTcp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	if (tdsSession->m_IoDev)
+	for (auto& i : tdsSession->m_mapBindIoDev)
 	{
-		tdsSession->m_IoDev->onRecvPkt(pData, iLen);
+		i.first->onRecvPkt(pData, iLen);
 	}
 }
 
 void ioServer::onRecvPkt_leakDetect(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
-	int id = pData[6];
-	string sId = str::fromInt(id);
+	//int id = pData[6];
+	//string sId = str::fromInt(id);
 
-	//设备上线看做是 给tdsSession->m_IoDev 赋值的过程
-	ioDev* pIoDev = tdsSession->m_IoDev;
-	if (tdsSession->m_IoDev == nullptr)
-	{
-		pIoDev = ioSrv.handleDevOnline(sId, tdsSession);
-	}
+	////设备上线看做是 给tdsSession->m_IoDev 赋值的过程
+	//ioDev* pIoDev = tdsSession->m_IoDev;
+	//if (tdsSession->m_IoDev == nullptr)
+	//{
+	//	pIoDev = ioSrv.handleDevOnline(sId, tdsSession);
+	//}
 
-	if (pIoDev)
-	{
-		ioDev* p = pIoDev;
-		p->bindIOSession(tdsSession);
-		p->setOnline();
-		p->onRecvPkt(pData,iLen);
-	}
+	//if (pIoDev)
+	//{
+	//	ioDev* p = pIoDev;
+	//	p->bindIOSession(tdsSession);
+	//	p->setOnline();
+	//	p->onRecvPkt(pData,iLen);
+	//}
 }
 
 bool isCommonRegPkt(unsigned char* pData, size_t iLen) {
@@ -2310,6 +2307,10 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 			if (nameFilter.get<string>() != p->name)
 				continue;
 		}
+		ioDev* dev = nullptr;
+		if (p->m_mapBindIoDev.size() != 0) {
+			dev = p->m_mapBindIoDev.begin()->first;
+		}
 
 
 		json jSession;
@@ -2331,9 +2332,9 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		jSession["buffLen"] = p->m_alBuf.iStreamLen;
 		jSession["abandonLen"] = p->abandonLen;
 		jSession["lastMethod"] = p->lastMethodCalled;
-		if (p->m_IoDev != nullptr) {
-			jSession["transactionSuccessCount"] = p->m_IoDev->m_transactionSuccessCount;
-			jSession["transactionFailCount"] = p->m_IoDev->m_transactionFailCount;
+		if(dev){
+			jSession["transactionSuccessCount"] = dev->m_transactionSuccessCount;
+			jSession["transactionFailCount"] = dev->m_transactionFailCount;
 		}
 		jSession["avgTransactionTime"] = 0;
 
@@ -2346,21 +2347,13 @@ void ioServer::rpc_getSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION
 		//	ioAddrInSession += ",";
 		//	ioAddrInSession += p->m_vecIoBindTag[i];
 		//}
-		if (p->m_IoDev) {
-			jSession["ioAddr"] = p->m_IoDev->getIOAddrStr();
-			jSession["bindTag"] = p->m_IoDev->m_strTagBind;
+		if (dev) {
+			jSession["ioAddr"] = dev->getIOAddrStr();
+			jSession["bindTag"] = dev->m_strTagBind;
 		}
 	
 
 		string ioAddrInSessionHist = "";
-		for (int i = 0; i < p->m_vecHistIoDev.size(); i++)
-		{
-			if (i > 0)
-				ioAddrInSessionHist += ";";
-			ioAddrInSessionHist += p->m_vecHistIoDev[i];
-			ioAddrInSessionHist += ",";
-			ioAddrInSessionHist += p->m_vecHistIoBindTag[i];
-		}
 		jSession["ioAddrHist"] = ioAddrInSessionHist;
 
 		if (p->type == "video" && p->pTcpSession)

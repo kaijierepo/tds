@@ -232,7 +232,7 @@ ioDev::~ioDev(void)
 {
 	if (pIOSession)
 	{
-		pIOSession->m_IoDev = nullptr;
+		pIOSession->unbindIoDev(this);
 		ioSrv.handleDevOnlineAsyn(pIOSession->m_ioAddr, pIOSession);
 	}
 }
@@ -2218,81 +2218,55 @@ void ioDev::openAllCycleAcq()
 	}
 }
 
+void ioDev::unbindIOSession()
+{
+	pIOSession = nullptr;
+}
 
 void ioDev::bindIOSession(shared_ptr<TDS_SESSION> ioSession)
 {
+	if (ioSession == nullptr)
+		return;
+
 	std::unique_lock<mutex> lock(m_csIOSession);
 	
 	//已绑定
 	if (pIOSession == ioSession)
 		return;
 
-	// tdspPort端口连接不进行替换绑定
-	if (pIOSession != nullptr && pIOSession != ioSession && ioSession != nullptr && isConnected())
-	{
-		if (tds->conf->tdspPort == ioSession->localPort)
-		{
-			return; 
-		}
-	}
+	// tdspPort端口连接不进行替换绑定.这里看不懂了，暂时注释2025.4.12 卢涛
+	//if (pIOSession != nullptr && isConnected())
+	//{
+	//	if (tds->conf->tdspPort == ioSession->localPort)
+	//	{
+	//		return; 
+	//	}
+	//}
 
-	//1个tcp链接对应1个io设备的场景
-	if(ioSession!=nullptr)
-		ioSession->m_IoDev = this;
+	ioSession->bindIoDev(this);
 
-	if (pIOSession != nullptr && pIOSession != ioSession && ioSession != nullptr && isConnected())
+	if (pIOSession != nullptr && isConnected())
 	{
 		string ioAddr = getIOAddrStr();
 		string devInfo = "ioAddr=" + getIOAddrStr() + ",tag=" + m_strTagBind;
 		LOG("[warn][ioDev]老连接未断开，设备在新连接上线。设备:" + devInfo + ",老连接:" + pIOSession->getRemoteAddr() + ",新连接:" + ioSession->getRemoteAddr());
-		
-
 		//解除原有session对该io设备的绑定
-		pIOSession->m_IoDev = nullptr;
-		//1个tcp链接对应 多个 io设备的场景
-		//应用层数据包包含地址信息时，同一个tcp链接可以用于多个设备通信。
-		//从老的连接里面把ioAddr映射删除，防止老连接断开造成设备掉线。 容错机制
-		for (int i = 0; i < pIOSession->m_vecIoDev.size(); i++)
-		{
-			string temp = pIOSession->m_vecIoDev[i];
-			if (temp == ioAddr)
-			{
-				pIOSession->m_vecIoDev.erase(pIOSession->m_vecIoDev.begin() + i);
-				pIOSession->m_vecIoBindTag.erase(pIOSession->m_vecIoBindTag.begin() + i);
-				LOG("[ioDev]删除" + pIOSession->getRemoteAddr() + "中对" + devInfo + "的映射");
-				break;
-			}
-		}
+		//解除绑定后，老链接的tcp连接还在，但是老连接断开不会造成设备掉线。 容错机制
+		pIOSession->unbindIoDev(this);
 	}
 
-
 	//新的有效连接
-	if (ioSession != nullptr && ioSession != pIOSession)
+	if (ioSession != pIOSession)
 	{
 		triggerCycleAcq();
 	}
 
-
 	pIOSession = ioSession;
 
-	if (ioSession == nullptr)
-		return;
-
-	bool bExist = false;
+	//在ioSession中添加历史绑定记录
 	string ioAddr = this->getIOAddrStr();
-	for (int i = 0; i < ioSession->m_vecIoDev.size(); i++)
-	{
-		string tmp = ioSession->m_vecIoDev[i];
-		if (tmp == ioAddr)
-			bExist = true;
-	}
-	if (!bExist)
-	{
-		ioSession->m_vecIoDev.push_back(ioAddr);
-		ioSession->m_vecIoBindTag.push_back(this->m_strTagBind);
-		ioSession->m_vecHistIoDev.push_back(ioAddr);
-		ioSession->m_vecHistIoBindTag.push_back(this->m_strTagBind);
-	}
+	ioSession->m_vecHistIoBindTag[this->m_strTagBind] = this->m_strTagBind;
+	ioSession->m_vecHistIoDev[ioAddr] = ioAddr;
 }
 
 
@@ -2398,7 +2372,6 @@ void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
 		if (pIoDev)
 		{
-			p->m_IoDev = pIoDev;
 			p->ioDevType = pIoDev->m_devType;
 			pIoDev->bindIOSession(p);
 			pIoDev->setOnline();

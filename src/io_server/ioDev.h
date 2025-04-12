@@ -251,6 +251,8 @@ public:
 	void closeAllCycleAcq();
 	void openAllCycleAcq();
 
+	void unbindIOSession();
+
 	std::shared_ptr<TDS_SESSION>  getStreamPusher(string tag);
 
 	//// data io

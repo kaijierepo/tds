@@ -94,7 +94,6 @@ void TDS_SESSION::Init()
     iALProto = APP_LAYER_PROTO::UNKNOWN;
     pTcpSession = nullptr;
     m_alBuf.Init();
-    m_IoDev = nullptr;
     m_childTdsHttpPort = 667;
     m_childTdsHttpsPort = 666;
     conn_id = 0;
@@ -216,17 +215,24 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      return 0;
  }
 
- ioDev* TDS_SESSION::getIODev(string ioAddr)
+ ioDev* TDS_SESSION::getBindDev(string ioAddr)
  {
-     for (int i = 0; i < m_vecIoDev.size(); i++)
-     {
-         string p = m_vecIoDev.at(i);
-         if (p == ioAddr)
-         {
-             return ioSrv.getIODev(ioAddr);
+     for (auto& i : m_mapBindIoDev) {
+         if (i.first->getIOAddrStr() == ioAddr) {
+             return i.first;
          }
      }
      return nullptr;
+ }
+
+ void TDS_SESSION::bindIoDev(ioDev* ioDev)
+ {
+     m_mapBindIoDev[ioDev] = ioDev;
+ }
+
+ void TDS_SESSION::unbindIoDev(ioDev* ioDev)
+ {
+     m_mapBindIoDev.erase(ioDev);
  }
 
  void TDS_SESSION::CBridgedTcpClientHandler::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
@@ -257,13 +263,13 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      {
          delete pBridgedTcpClient;
      }
-     if (m_IoDev && shared_from_this() == m_IoDev->pIOSession)
+     for(auto& i : m_mapBindIoDev)
      {
-         m_IoDev->bindIOSession(NULL);
-         m_IoDev->setOffline();
-         logger.logInternal("[ioDev]设备掉线,ioAddr=" + m_IoDev->getIOAddrStr() + ",tag=" + m_IoDev->m_strTagBind);
+         i.first->unbindIOSession();
+         i.first->setOffline();
+         logger.logInternal("[ioDev]设备掉线,ioAddr=" + i.first->getIOAddrStr() + ",tag=" + i.first->m_strTagBind);
      }
-	 m_IoDev = NULL;
+     m_mapBindIoDev.clear();
      if (bridgedIoSession)
      {
          bridgedIoSession->bridgedIoSessionClient = NULL;
@@ -276,20 +282,6 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
 
      bConnected = false;
-
-     //暂时取消1个链接上线多台设备机制
-     //此处ioSrv.getIODev会锁住ioSrv，如果此时刚好进行doCycleTask周期采集。会导致死锁
-     // m_mutexTcpLink 套 ioSrv.m_csThis  和 ioSrv.m_csThis 套m_mutexTcpLink导致。doCycleTask后面的发送会锁m_mutexTcpLink
-     //for (int i = 0; i < m_vecIoDev.size(); i++)
-     //{  
-     //    string ioAddr = m_vecIoDev[i];
-     //    ioDev* p = ioSrv.getIODev(ioAddr);
-     //    if (p)
-     //    {
-     //        logger.logInternal("[ioDev]设备掉线,ioAddr=" + ioAddr + ",tag=" + p->m_strTagBind);
-     //        p->setOffline();
-     //    }
-     //}
  }
 
  void TDS_SESSION::setActivityCheck(bool bEnable)
