@@ -10,11 +10,32 @@ bool KV_INI::load(string path)
 	vector<string> confItems;
 	str::split(confItems, m_strConf, "\n");
 
+	bool isAppConf = path.find("appConf.ini") != string::npos;
+
 	//去掉注释
 	for (int i = 0; i < confItems.size(); i++)
 	{
 		string ci = confItems[i];
 		KV_INI_LINE oneLine;
+
+		//appConf.ini 里可以忽略confPath=C:\A\B前面的confPath部分
+		//直接配置为  C:\A\B
+		if (isAppConf) { 
+			if (ci.find("#") == -1 && ci.find("=") == -1 &&
+				(ci.find("/") != string::npos || ci.find("\\") != string::npos))
+			{
+				oneLine.key = "confPath";
+				oneLine.val = ci;
+				oneLine.val = str::trim(oneLine.val, "\r");
+				oneLine.val = str::trim(oneLine.val, " ");
+				oneLine.val = str::trim(oneLine.val, "\t");
+				oneLine.type = CONF_ITEM;
+				mapConf.push_back(oneLine);
+				continue;
+			}
+		}
+
+
 		if (ci.find("#") == -1 && ci.find("=") == -1)
 		{
 			oneLine.type = BLANK;
@@ -42,6 +63,9 @@ bool KV_INI::load(string path)
 				oneLine.val = str::trim(oneLine.val, "\t");
 				oneLine.key = str::trim(oneLine.key, " ");
 				oneLine.val = str::trim(oneLine.val, " ");
+			}
+			else {  //
+
 			}
 
 			if (oneLine.key != "")
