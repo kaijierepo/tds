@@ -3304,18 +3304,25 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		size_t max = 0;
 		yyjson_val* item;
 		yyjson_arr_foreach(yyv_colList, idx, max, item) {
-			yyjson_val* yyv_tag = yyjson_obj_get(item, "tag");
-			string tag = yyjson_get_str(yyv_tag);
-			tagList.push_back(tag);
-			yyjson_val* yyv_aggr = yyjson_obj_get(item, "aggregate");
-			deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
-			deSel.bAggr = true;
-			yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
-			string tagLabel = yyjson_get_str(yyv_tagLabel);
-			if (tagLabel != "")
-				deSel.vecTagLable.push_back(tagLabel);
-			else {
+			if (yyjson_is_obj(item)) {
+				yyjson_val* yyv_tag = yyjson_obj_get(item, "tag");
+				string tag = yyjson_get_str(yyv_tag);
+				tagList.push_back(tag);
+				yyjson_val* yyv_aggr = yyjson_obj_get(item, "aggregate");
+				deSel.vecAggregate.push_back(getAggrOpt(yyv_aggr));
+				deSel.bAggr = true;
+				yyjson_val* yyv_tagLabel = yyjson_obj_get(item, "label");
+				string tagLabel = yyjson_get_str(yyv_tagLabel);
+				if (tagLabel != "")
+					deSel.vecTagLable.push_back(tagLabel);
+				else {
+					deSel.vecTagLable.push_back(tag);
+				}
+			}
+			else if (yyjson_is_str(item)) {
+				string tag = yyjson_get_str(item);
 				deSel.vecTagLable.push_back(tag);
+				tagList.push_back(tag);
 			}
 		}
 	}
@@ -4056,7 +4063,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					//set val
 					yyjson_val* yyVal = nullptr;
 					if (deJsonType == DE_JSON_TYPE::DE_J_OBJ) {
-						yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+						yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
 					}
 					else {
 						yyVal = yyjson_arr_get(de, 1);
