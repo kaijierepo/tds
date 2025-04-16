@@ -5401,7 +5401,7 @@ inline bool Server::read_content_core(Stream &strm, Request &req, Response &res,
   return true;
 }
 
-string httplib_Utf8toAnsi(const std::string& instr) //utf-8-->ansi
+inline string httplib_Utf8toAnsi(const std::string& instr) //utf-8-->ansi
 {
     int MAX_STRSIZE = instr.length() * 2 + 2;
     WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
