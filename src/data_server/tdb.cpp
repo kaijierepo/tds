@@ -2338,27 +2338,28 @@ bool TDB::Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>&
 	}
 
 
-	//time section Fill
-	yyjson_mut_val* lastRec = nullptr;
-	yyjson_mut_val * curRec = nullptr;
-	for (auto& rec : mapRlt) {
-		curRec = rec.second;
-		if (curRec && lastRec) {
-			size_t idx, max;
-			yyjson_mut_val* key, * val;
-			yyjson_mut_obj_foreach(curRec, idx, max, key, val) {
-				if (yyjson_mut_is_null(val)) {
-					string szKey = yyjson_mut_get_str(key);
-					yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
-					yyjson_mut_val* curKey = yyjson_mut_val_mut_copy(mut_doc, key);
-					yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
-					yyjson_mut_obj_put(curRec, curKey, curVal);
+	if (deSel.timeFill) {
+		//time section Fill
+		yyjson_mut_val* lastRec = nullptr;
+		yyjson_mut_val* curRec = nullptr;
+		for (auto& rec : mapRlt) {
+			curRec = rec.second;
+			if (curRec && lastRec) {
+				size_t idx, max;
+				yyjson_mut_val* key, * val;
+				yyjson_mut_obj_foreach(curRec, idx, max, key, val) {
+					if (yyjson_mut_is_null(val)) {
+						string szKey = yyjson_mut_get_str(key);
+						yyjson_mut_val* lastVal = yyjson_mut_obj_get(lastRec, szKey.data());
+						yyjson_mut_val* curKey = yyjson_mut_val_mut_copy(mut_doc, key);
+						yyjson_mut_val* curVal = yyjson_mut_val_mut_copy(mut_doc, lastVal);
+						yyjson_mut_obj_put(curRec, curKey, curVal);
+					}
 				}
 			}
+			lastRec = curRec;
 		}
-		lastRec = curRec;
 	}
-
 
 	return true;
 }
