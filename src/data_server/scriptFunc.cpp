@@ -809,7 +809,8 @@ jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
-	pEngine->m_ioDevThis->setOnline();
+	ioDev* temp = (ioDev*)(pEngine->m_ioDevThis);;
+	temp->setOnline();
 	jerry_value_t ret = jerry_create_null();
 	return ret;
 }
@@ -1507,8 +1508,9 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	return true;
 }
 
-
-bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
+//pDev不直接使用ioDev是因为的伤损也使用了对应的jerry的内容,不能依赖于ioDev的类
+bool initIODevFunc(jerry_value_t obj,void* pDev) {
+	ioDev* pDevTemp = (ioDev*)pDev;
 	jerry_value_t n = jerry_create_string((const jerry_char_t*)"input");
 	jerry_value_t v = jerry_create_external_function(func_ioDev_input);
 	jerry_release_value(jerry_set_property(obj, n, v));
@@ -1516,13 +1518,13 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 	jerry_release_value(v);
 
 	n = jerry_create_string((const jerry_char_t*)"addr");
-	jsonVal2jerryVal(pDev->m_jDevAddr, v);
+	jsonVal2jerryVal(pDevTemp->m_jDevAddr, v);
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);
 
 	n = jerry_create_string((const jerry_char_t*)"confNodeId");
-	v = jerry_create_string((const jerry_char_t*)pDev->m_confNodeId.c_str());
+	v = jerry_create_string((const jerry_char_t*)pDevTemp->m_confNodeId.c_str());
 	jerry_release_value(jerry_set_property(obj, n, v));
 	jerry_release_value(n);
 	jerry_release_value(v);
@@ -1563,11 +1565,11 @@ bool initIODevFunc(jerry_value_t obj,ioDev* pDev) {
 	jerry_release_value(n);
 	jerry_release_value(v);
 
-	if (pDev->m_vecChildDev.size() > 0) {
+	if (pDevTemp->m_vecChildDev.size() > 0) {
 		n = jerry_create_string((const jerry_char_t*)"children");
-		jerry_value_t vecChild = jerry_create_array((uint32_t)pDev->m_vecChildDev.size());
-		for (size_t i = 0; i < pDev->m_vecChildDev.size(); i++) {
-			ioDev* pChildDev = pDev->m_vecChildDev[i];
+		jerry_value_t vecChild = jerry_create_array((uint32_t)pDevTemp->m_vecChildDev.size());
+		for (size_t i = 0; i < pDevTemp->m_vecChildDev.size(); i++) {
+			ioDev* pChildDev = pDevTemp->m_vecChildDev[i];
 			jerry_value_t jerryChildDev = jerry_create_object();
 			initIODevFunc(jerryChildDev, pChildDev);
 			jerry_set_property_by_index(vecChild, (uint32_t)i, jerryChildDev);

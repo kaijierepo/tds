@@ -33,5 +33,5 @@ extern void jerryVal2jsonVal(jerry_value_t jerryVal, json& jVal);
 extern bool jerryItem2JsonItem(const jerry_value_t prop_name, const jerry_value_t prop_value, void* user_data_p);
 
 bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
-bool initIODevFunc(jerry_value_t ioDev_object, ioDev* pDev);
+bool initIODevFunc(jerry_value_t ioDev_object, void* pDev);
 #endif

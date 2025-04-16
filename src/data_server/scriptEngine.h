@@ -6,11 +6,10 @@
 #include "jerry.h"
 #include "jerryscript.h"
 #include  "tdsSession.h"
-#include "ioDev.h"
+
 
 using json = nlohmann::json;
 using namespace std;
-
 
 
 struct GLOBAL_FUNC {
@@ -19,7 +18,7 @@ struct GLOBAL_FUNC {
 };
 
 typedef bool (*fp_initGlobalFunc)(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
-typedef bool (*fp_initIODevFunc)(jerry_value_t ioDev_object,ioDev* pDev);
+typedef bool (*fp_initIODevFunc)(jerry_value_t ioDev_object,void* pDev);
 
 class ScriptEngine {
 public:
@@ -43,7 +42,7 @@ public:
 	vector<GLOBAL_FUNC> m_vecGlobalFunc;
 	string m_scriptName;
 	string m_script;
-	ioDev* m_ioDevThis;
+	void* m_ioDevThis;
 
 	RPC_SESSION currentSession;
 	//脚本执行结果
