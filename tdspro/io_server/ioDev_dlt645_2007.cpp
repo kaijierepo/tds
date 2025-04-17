@@ -181,6 +181,8 @@ void cycleAcq_thread_dlt645(ioDev_dlt645_2007* pDev) {
 
 	//采样周期为0进入全速采集模式，不退出线程
 	while (pDev->m_bRunning) {
+		TIME acqTimeDev;
+		acqTimeDev.setNow();
 		for (int i = 0; i < pDev->m_channels.size(); i++)
 		{
 			ioChannel* pC = pDev->m_channels[i];
@@ -214,8 +216,16 @@ void cycleAcq_thread_dlt645(ioDev_dlt645_2007* pDev) {
 						string s = str::bytesToHexStr(resp.data, resp.len);
 						LOG("[warn][DLT645-2007]读取数据解析回包失败,%s", resp.data, resp.len);
 					}
-					else
-						pC->input(jVal);
+					else {
+						if (pDev->m_chanTimeSync) {
+							pC->input(jVal,&acqTimeDev);
+						}
+						else {
+							TIME acqTimeChan;
+							acqTimeChan.setNow();
+							pC->input(jVal, &acqTimeChan);
+						}
+					}
 				}
 			}
 		}

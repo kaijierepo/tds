@@ -185,6 +185,7 @@ ioDev::ioDev(void)
 	m_bEnableAcq = true;
 	m_bRunning = true; //是否启动了自动工作 （采集线程是否启动）
 	m_bEnableAcq = true;
+	m_chanTimeSync = false;
 	m_dispositionMode = DEV_DISPOSITION_MODE::managed;
 	m_pParent = NULL;
 	m_bEnableOfflineTimeout = false;
@@ -352,6 +353,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["acqMode"] = m_acqMode;
 		if (m_chanGroup != "")
 			conf["chanGroup"] = m_chanGroup;
+		if (m_chanTimeSync)
+			conf["chanTimeSync"] = true;
+
 		conf["acqAlarm"] = m_acqAlarm;
 		if (m_strUser != "") {
 			conf["user"] = m_strUser;
@@ -711,6 +715,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_boolean()) {
 			m_bEnableAcq = item.get<bool>();
+		}
+	}
+
+	kv = conf.find("chanTimeSync");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_chanTimeSync = item.get<bool>();
 		}
 	}
 

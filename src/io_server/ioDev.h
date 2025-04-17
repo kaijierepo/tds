@@ -219,6 +219,7 @@ public:
 
 	bool isViaAdaptor();
 
+	bool m_chanTimeSync;
 	bool m_bAcqThreadRunning;
 	bool m_bEnableIoLog;//是否记录io日志，用于临时暂停某些周期命令的io通讯的场景
 	float m_fAcqInterval; //数据采样间隔，单位秒。精度0.1秒，为0表示全速采样
