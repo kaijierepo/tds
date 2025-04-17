@@ -29,6 +29,7 @@ public:
 	vector<string> m_vecOutput; //执行一次脚本的输出信息，包含错误信息，脚本中的log
 	void releaseGlobalFunc();
 	string getErrorDesc(jerry_error_t error);
+	map<string,TIME> m_vecValRefTime; //本次脚本引用的所有val函数的当前值时间，基于val算出来的二次变量，用所有val的最新时间作为二次变量的时间
 
 	fp_initGlobalFunc m_initGlobalFunc;
 	fp_initIODevFunc m_initIODevFunc;

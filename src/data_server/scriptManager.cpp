@@ -452,6 +452,10 @@ void ScriptManager::exeAllVarExpScripts()
 			json jParams;
 			jParams["tag"] = info.calcMpTag;
 			jParams["val"] = val;
+			if (se.m_vecValRefTime.size() > 0) { //最后的val取值时间作为计算结果的时间
+				auto i = se.m_vecValRefTime.rbegin();
+				jParams["time"] = i->first;
+			}
 			tds->callAsyn("input", jParams);
 			info.lastCalcVal = val;
 		}
