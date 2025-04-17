@@ -553,7 +553,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 				if(p)
 					sTag = sTagOrg;
 			}
-			if (!p) {
+			if (p) {
 				if (jArgs.size() == 1) {
 					json params;
 					params["tag"] = sTag;
