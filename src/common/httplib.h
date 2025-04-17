@@ -5401,21 +5401,6 @@ inline bool Server::read_content_core(Stream &strm, Request &req, Response &res,
   return true;
 }
 
-inline string httplib_Utf8toAnsi(const std::string& instr) //utf-8-->ansi
-{
-    int MAX_STRSIZE = instr.length() * 2 + 2;
-    WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-    memset(wcharstr, 0, MAX_STRSIZE);
-    MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, MAX_STRSIZE);
-    char* charstr = new char[MAX_STRSIZE];
-    memset(charstr, 0, MAX_STRSIZE);
-    WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, MAX_STRSIZE, NULL, NULL);
-    string charstrtemp(charstr);
-    delete[]wcharstr;
-    delete[]charstr;
-    return charstrtemp;
-}
-
 inline bool Server::handle_file_request(const Request &req, Response &res,
                                         bool head) {
   for (const auto &entry : base_dirs_) {
@@ -5423,10 +5408,7 @@ inline bool Server::handle_file_request(const Request &req, Response &res,
     if (!req.path.compare(0, entry.mount_point.size(), entry.mount_point)) {
       std::string sub_path = "/" + req.path.substr(entry.mount_point.size());
       if (detail::is_valid_path(sub_path)) {
-
-        sub_path = httplib_Utf8toAnsi(sub_path);
         auto path = entry.base_dir + sub_path;
-
         if (path.back() == '/') { path += "index.html"; }
 
         if (detail::is_file(path)) {
