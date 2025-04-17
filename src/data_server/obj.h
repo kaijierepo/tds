@@ -385,7 +385,9 @@ public:
 	OBJ* GetChildMO(string type);
 	OBJ* CopyMO();//复制一份与该mo相同的配置
 	virtual OBJ& operator=(OBJ& right);
-	OBJ* GetProjectMO();//获得当前设备所属的Project节点，MO树根节点
+	OBJ* GetProjectMO();
+	bool hasOnlineStatus();
+	//获得当前设备所属的Project节点，MO树根节点
 	string m_rootTag; //仅当当前对象为根节点时有效，将影响getTag的返回，getTag前面都会加上rootTag
 
 	string& getName(string language);

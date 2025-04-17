@@ -271,6 +271,14 @@ namespace CHAN_IO_TYPE {
 	const string IO = "io";
 };
 
+namespace IO_TYPE {
+	const string Input = "i";
+	const string Output = "o";
+	const string InAndOut = "io";
+	const string Const = "c";
+	const string InnerVar = "v";
+}
+
 
 typedef void (*fp_ioAddrRecv)(void* user, char* pData, size_t iLen);
 typedef bool (*fp_rpcHandler)(string strReq, RPC_RESP& resp, string& error);

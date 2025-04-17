@@ -727,6 +727,24 @@ OBJ* OBJ::GetProjectMO()
 
 	return pTmp;
 }
+
+
+bool OBJ::hasOnlineStatus() {
+	//内部变量即使在绑定设备的对象下方，也是没有在线状态的
+	if (m_level == "mp") {
+		MP* pmp = (MP*)this;
+		if (pmp->m_ioType == IO_TYPE::InnerVar) {
+			return false;
+		}
+	}
+
+	if (isChildObjOfIntelliDev())
+		return true;
+
+	return false;
+}
+
+
 bool OBJ::isChildObjOfIntelliDev()
 {
 	OBJ* p = this;

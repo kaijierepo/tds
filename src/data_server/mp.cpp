@@ -494,7 +494,7 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 			conf["online"] = m_bOnline;
 		}
 
-		if (isChildObjOfIntelliDev()) {
+		if (hasOnlineStatus()) {
 			conf["online"] = m_bOnline;
 		}
 	}
