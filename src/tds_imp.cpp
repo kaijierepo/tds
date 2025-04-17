@@ -642,6 +642,7 @@ bool TDS_imp::run(string cmdline)
 	ssc.udpSrvPort = tds->conf->getInt("udpPort", 666);
 	ssc.tcpKeepAliveSec = tds->conf->tcpKeepAliveDS;
 	ssc.tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
+	sockSrv.m_pCallback = onSockSrvCallback;
 	sockSrv.run(ssc);
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();

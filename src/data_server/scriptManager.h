@@ -68,6 +68,7 @@ public:
 	bool rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j);
 	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
@@ -79,6 +80,7 @@ public:
 	void exeAllVarExpScripts();
 	void loopExe();
 	bool loopRunning;
+	int m_lastExpScripTimeCost;
 };
 
 extern ScriptManager scriptManager;

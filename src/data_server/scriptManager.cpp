@@ -353,6 +353,19 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	return true;
 }
 
+bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	json j;
+	j["lastExpScriptTimeCost"] = m_lastExpScripTimeCost;
+	int expScriptCount;
+	m_csExpScripts.lock();
+	expScriptCount = m_vecVarExpScripts.size();
+	m_csExpScripts.unlock();
+	j["expScriptCount"] = expScriptCount;
+	rpcResp.result = j.dump();
+	return true;
+}
+
 void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j)
 {
 	org = str::replace(org, ".", "/");

@@ -601,6 +601,11 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 						json err, rlt;
 						tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
 
+						if (p->m_level == "mp") {
+							MP* pmp = (MP*)p;
+							pEngine->m_vecValRefTime[pmp->m_stDataLastUpdate.toStr(true)] = pmp->m_stDataLastUpdate;
+						}
+
 						string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
 						if (rlt.is_array() && rlt.size() > 0) {
 							json& jDe = rlt[0];

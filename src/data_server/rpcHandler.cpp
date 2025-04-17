@@ -2742,6 +2742,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	{
 		rpcResp.result = tds->xiaoT->getReply(params);
 	}
+	else if (method == "getScriptMngerStatus") {
+		scriptManager.rpc_getScriptMngStatus(params, rpcResp, session);
+	}
 	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
 		string st = params["time"];
 		json j;
@@ -3926,7 +3929,7 @@ void thread_handleSockSrvRpcCallAsyn(string req, std::shared_ptr<SOCK_SESSION> s
 	p->remotePort = ss->remotePort;
 	p->remoteIP = ss->remoteIP;
 	rpcSrv.handleRpcCall(req, resp, p);
-	resp.strResp += "\n\n";
+	//resp.strResp += "\n\n"; 内部已经加了2个\n
 	sockSrv.sendToSockSession(ss,(unsigned char*) resp.strResp.c_str(), resp.strResp.length());
 }
 
