@@ -736,6 +736,9 @@ bool OBJ::hasOnlineStatus() {
 		if (pmp->m_ioType == IO_TYPE::InnerVar) {
 			return false;
 		}
+		if (pmp->m_ioType == IO_TYPE::Const) {
+			return false;
+		}
 	}
 
 	if (isChildObjOfIntelliDev())
