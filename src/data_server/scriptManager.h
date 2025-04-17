@@ -20,6 +20,13 @@ hostObjTag 表示以某个对象为主体来调用执行该脚本
 rootTag 为用户指定的一个自定义前缀
 */
 
+struct SCRIPT_RUN_INFO {
+	bool runSuccess;
+	bool valNullInCalc;
+	json retVal;
+	map<string,string> tagRefDataTime;
+};
+
 struct SCRIPT_INFO {
 	string script;
 	string envVarScript;
@@ -35,7 +42,7 @@ struct SCRIPT_INFO {
 	string lastModifyUser;
 	string name;
 	string desc;
-	json lastCalcVal;  //如果是一个计算表达式脚本，上一次的计算结果
+	SCRIPT_RUN_INFO lastRunInfo;
 	bool enableLog;
 
 	string getContextTag();
@@ -80,7 +87,8 @@ public:
 	void exeAllVarExpScripts();
 	void loopExe();
 	bool loopRunning;
-	int m_lastExpScripTimeCost;
+	float m_lastExpScripTimeCost;
+	TIME m_tLastExpScriptRunTime;
 };
 
 extern ScriptManager scriptManager;

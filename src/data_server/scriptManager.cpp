@@ -357,11 +357,33 @@ bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_
 {
 	json j;
 	j["lastExpScriptTimeCost"] = m_lastExpScripTimeCost;
+	j["lastExpScriptRunTime"] = m_tLastExpScriptRunTime.toStr(true);
 	int expScriptCount;
+	vector<SCRIPT_INFO> allExpInfo;
 	m_csExpScripts.lock();
 	expScriptCount = m_vecVarExpScripts.size();
+	allExpInfo = m_vecVarExpScripts;
 	m_csExpScripts.unlock();
 	j["expScriptCount"] = expScriptCount;
+	json jRunInfoList = json::array();
+	for (int i = 0; i < allExpInfo.size(); i++) {
+		SCRIPT_INFO& si = allExpInfo[i];
+		json jRunInfo;
+		jRunInfo["script"] = si.script;
+		jRunInfo["retVal"] = si.lastRunInfo.retVal;
+		jRunInfo["runSuccess"] = si.lastRunInfo.runSuccess;
+		jRunInfo["valNullInCalc"] = si.lastRunInfo.valNullInCalc;
+		json jTagRefDataTime = json::object();
+		for (auto i : si.lastRunInfo.tagRefDataTime) {
+			jTagRefDataTime[i.first] = i.second;
+		}
+		jRunInfo["tagRefDataTime"] = jTagRefDataTime;
+		jRunInfo["runTime"] = si.lastExe.toStr(true);
+		jRunInfoList.push_back(jRunInfo);
+	}
+	j["runInfo"] = jRunInfoList;
+
+
 	rpcResp.result = j.dump();
 	return true;
 }
@@ -427,15 +449,17 @@ void ScriptManager::exeAllGlobalScripts()
 */
 void ScriptManager::exeAllVarExpScripts()
 {
+	TIME startTime;
+	startTime.setNow();
+	m_tLastExpScriptRunTime = startTime;
 	//获取所有需要执行的脚本
 	//计算表达式脚本都是立即执行的，里面一定没有sleep或者output一类的延时函数，因此以下脚本的执行时间可以认为一致
 	vector<SCRIPT_INFO> toExeScripts;
 	m_csExpScripts.lock();
 	toExeScripts = m_vecVarExpScripts;
-	TIME exeTime = timeopt::now();
 	for (int i = 0; i < m_vecVarExpScripts.size(); i++) {
 		SCRIPT_INFO& si = m_vecVarExpScripts[i];
-		si.lastExe = exeTime;
+		si.lastExe = startTime;
 	}
 	m_csExpScripts.unlock();
 
@@ -450,15 +474,21 @@ void ScriptManager::exeAllVarExpScripts()
 		bool runOk = se.runScript(script, info.lastModifyUser);
 
 		if (!runOk) {
+			info.lastRunInfo.runSuccess = false;
 			continue;
 		}
+		info.lastRunInfo.runSuccess = true;
 
 		if (se.m_bValNullInCalc) {
 			//如果val函数返回null并且参与了计算，本次计算无效
+			info.lastRunInfo.valNullInCalc = true;
 			continue;
 		}
+		info.lastRunInfo.valNullInCalc = false;
 
 		json j = json::parse(se.m_sEvalRet);
+		info.lastRunInfo.retVal = j;
+		info.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 		if (j.is_number())
 		{
 			double val = j.get<double>();
@@ -466,11 +496,14 @@ void ScriptManager::exeAllVarExpScripts()
 			jParams["tag"] = info.calcMpTag;
 			jParams["val"] = val;
 			if (se.m_vecValRefTime.size() > 0) { //最后的val取值时间作为计算结果的时间
-				auto i = se.m_vecValRefTime.rbegin();
+				map<string, string> refTime;
+				for (auto i : se.m_vecValRefTime) {
+					refTime[i.second] = i.second;
+				}
+				auto i = refTime.rbegin();
 				jParams["time"] = i->first;
 			}
 			tds->callAsyn("input", jParams);
-			info.lastCalcVal = val;
 		}
 	}
 
@@ -479,9 +512,13 @@ void ScriptManager::exeAllVarExpScripts()
 	for (int i = 0; i < m_vecVarExpScripts.size(); i++) {
 		SCRIPT_INFO& si = m_vecVarExpScripts[i];
 		SCRIPT_INFO& si1 = toExeScripts[i];
-		si.lastCalcVal = si1.lastCalcVal;
+		si.lastRunInfo = si1.lastRunInfo;
 	}
 	m_csExpScripts.unlock();
+
+	TIME endTime;
+	endTime.setNow();
+	m_lastExpScripTimeCost = ((float)timeopt::CalcTimePassMilliSecond(startTime)) / 1000.0;
 }
 
 void ScriptManager::loopExe()
@@ -555,7 +592,7 @@ void SCRIPT_INFO::toJson(json& j,bool getStatus)
 
 	if (getStatus) {
 		j["lastExeTime"] = lastExe.toStr();
-		j["lastCalcVal"] = lastCalcVal;
+		j["lastCalcVal"] = lastRunInfo.retVal;
 	}
 }
 

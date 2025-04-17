@@ -570,7 +570,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 						string time = jTime.get<string>();
 						TIME t;
 						t.fromStr(time);
-						pEngine->m_vecValRefTime[t.toStr(true)] = t;
+						pEngine->m_vecValRefTime[sTag] = t.toStr(true);
 						jerry_value_t jerryVal;
 						jsonVal2jerryVal(jVal, jerryVal);
 						return jerryVal;
@@ -603,7 +603,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 
 						if (p->m_level == "mp") {
 							MP* pmp = (MP*)p;
-							pEngine->m_vecValRefTime[pmp->m_stDataLastUpdate.toStr(true)] = pmp->m_stDataLastUpdate;
+							pEngine->m_vecValRefTime[sTag] = pmp->m_stDataLastUpdate.toStr(true);
 						}
 
 						string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
