@@ -908,16 +908,24 @@ jerry_value_t func_ioDev_doTransaction(const jerry_call_info_t* call_info_p,
 
 	json req = jArgs[0];
 
-	if (!req.is_array())
-		return jerry_create_null();
-
 	vector<uint8_t> vecReq;
-	for (auto& i : req) {
-		if (i.is_number_integer()) {
-			uint8_t b = i.get<int>();
-			vecReq.push_back(b);
+	if (req.is_array()) {
+		for (auto& i : req) {
+			if (i.is_number_integer()) {
+				uint8_t b = i.get<int>();
+				vecReq.push_back(b);
+			}
 		}
 	}
+	else if(req.is_string()) {
+		string s = req.get<string>();
+		vecReq = str::toBytes(s);
+	}
+	else {
+		pEngine->m_sError = "错误的请求参数格式，必须是数组或者字符串";
+		return jerry_create_null();
+	}
+
 
 	vector<uint8_t> vecResp;
 	if (jDev.is_object() && jDev["confNodeId"] != nullptr) {

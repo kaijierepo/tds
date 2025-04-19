@@ -35,7 +35,6 @@ SOFTWARE.
 #include "ioDev.h"
 #include "tdsConf.h"
 #include "mp.h"
-#include "res/resource.h"
 #include "tAlmSrv.h"
 #include "logServer.h"
 #include "scriptManager.h"

@@ -3767,6 +3767,7 @@ bool rpcHandler::handleRpcRoute(json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TD
 	else if (jReq.contains("tag")) {
 		string tag = jReq["tag"].get<string>();
 		tag = TAG::addRoot(tag, pSession->org);
+		pSession->route_tag = tag;
 
 		//查找是否有直接绑定的设备
 		ioDev* pIoDev = ioSrv.getIODevByTag(tag);

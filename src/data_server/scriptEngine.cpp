@@ -89,7 +89,7 @@ bool ScriptEngine::runScript(string& script, string user)
 
 		if (m_initIODevFunc) {
 			jerry_value_t ioDev = jerry_create_object();
-			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"dev");
+			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"Dev");
 			m_initIODevFunc(ioDev,m_ioDevThis);
 			jerry_release_value(jerry_set_property(global_object, prop_name, ioDev));
 			jerry_release_value(prop_name);

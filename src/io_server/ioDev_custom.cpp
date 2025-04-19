@@ -241,7 +241,7 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 		json jOutput;
 		jOutput["val"] = jVal;
 		jOutput["chan"] = chanAddr;
-		se.m_globalObj["output"] = jOutput;
+		se.m_globalObj["Output"] = jOutput;
 		se.m_ioDevThis = this;
 
 		LOG("[warn]执行自定义output脚本,val=%s,chan=%s,脚本=%s,设备=%s", jVal.dump().c_str(), chanAddr.c_str(), m_outputScript.c_str(), getIOAddrStr().c_str());
@@ -297,7 +297,7 @@ bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 		LOG("[warn]执行自定义Tdsp请求脚本,Req=%s,脚本=%s,设备=%s", jReq.dump().c_str(), m_tdspScript.c_str(), getIOAddrStr().c_str());
 
 		SCRIPT_INFO si;
-		scriptManager.getScript(m_outputScript, si);
+		scriptManager.getScript(m_tdspScript, si);
 		se.runScript(si.script, "");
 
 		if (se.m_sError != "") {
@@ -311,7 +311,7 @@ bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 					rpcResp.result = RPC_OK;
 				}
 				else if (se.m_scriptRet["error"] != nullptr) {
-					rpcResp.error = se.m_scriptRet["error"];
+					rpcResp.error = se.m_scriptRet["error"].dump();
 				}
 				else {
 					json j = "未知错误,控制输出脚本未返回有效的错误信息";

@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
-#include "resource.h"
+
+#define IDI_LOGO                        1000
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////

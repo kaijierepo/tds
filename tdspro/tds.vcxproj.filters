@@ -273,7 +273,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\tds_imp.h" />
-    <ClInclude Include="..\src\res\resource.h" />
     <ClInclude Include="..\src\common\yyjson.h">
       <Filter>common</Filter>
     </ClInclude>
