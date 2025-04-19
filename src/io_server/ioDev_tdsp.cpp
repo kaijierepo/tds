@@ -1062,6 +1062,8 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 		else {
 			error = json::parse(makeRPCError(RPC_ERROR_CODE::IO_reqTimeout, "request time out"));
 			setOffline(false,"请求未响应:" + req.dump());
+			m_lastFailReq = strReq;
+			m_lastFailReqTime = startTime.toStr(true);
 			goto TRANSACTION_END;
 		}
 	}

@@ -286,6 +286,51 @@ void ioDev_custom::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
 }
 
+bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
+	if (m_tdspScript != "") {
+		ScriptEngine se;
+		se.m_initGlobalFunc = initGlobalFunc;
+		se.m_initIODevFunc = initIODevFunc;
+		se.m_globalObj["Req"] = jReq;
+		se.m_ioDevThis = this;
+
+		LOG("[warn]执行自定义Tdsp请求脚本,Req=%s,脚本=%s,设备=%s", jReq.dump().c_str(), m_tdspScript.c_str(), getIOAddrStr().c_str());
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(m_outputScript, si);
+		se.runScript(si.script, "");
+
+		if (se.m_sError != "") {
+			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_tdspScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			LOG(s);
+			rpcResp.error = s;
+		}
+		else {
+			if (se.m_scriptRet.is_object()) {
+				if (se.m_scriptRet["result"] != nullptr) {
+					rpcResp.result = RPC_OK;
+				}
+				else if (se.m_scriptRet["error"] != nullptr) {
+					rpcResp.error = se.m_scriptRet["error"];
+				}
+				else {
+					json j = "未知错误,控制输出脚本未返回有效的错误信息";
+					rpcResp.error = j.dump();
+				}
+			}
+			else {
+				json j = "控制输出脚本的返回信息必须是一个对象";
+				rpcResp.error = j.dump();
+			}
+		}
+	}
+	else {
+		json j = "method not implemented";
+		rpcResp.error = j.dump();
+	}
+	return true;
+}
+
 
 
 

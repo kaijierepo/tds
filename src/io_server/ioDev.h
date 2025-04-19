@@ -101,6 +101,7 @@ struct DEV_QUERIER {
 	bool getUpgradeInfo;
 	bool getPAB;  //get pkt assemble buffer
 	bool getRemark;
+	bool getDebug;
 	string rootTag;
 	string tag;
 	vector<string> type;
@@ -118,6 +119,7 @@ struct DEV_QUERIER {
 		getRemark = true;
 		getUpgradeInfo = false;
 		getPAB = false;
+		getDebug = false;
 	}
 };
 
@@ -351,6 +353,7 @@ public:
 	string m_cycleTaskScript;
 	string m_outputScript;
 	string m_onRecvScript;
+	string m_tdspScript;
 
 	bool m_bCycleAcqThreadRunning;
 	bool m_bOutputting;
@@ -369,6 +372,8 @@ public:
 	TIME m_stLastChanDataTime;
 	TIME m_stLastAlarmStatusTime;
 	TIME m_stLastActiveTime;
+	string m_lastFailReq;
+	string m_lastFailReqTime;
 	bool m_bEnableAcq;
 	int m_unhandledRecvPktCount; //未处理的接收数据包。比如不处理的异步通知命令，或者收到包是没有匹配的同步请求
 	// ping在线检测优先级最高

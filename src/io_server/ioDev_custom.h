@@ -54,7 +54,7 @@ public:
 	~ioDev_custom();
 
 	CUSTOM_PDU_TRANSACTION m_transaction;
-
+	bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) override;
 	bool doTransaction(vector<uint8_t> req, vector<uint8_t>& resp);
 	void DoAcq();
 	void doHttpHeartbeat();

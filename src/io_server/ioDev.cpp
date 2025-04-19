@@ -378,6 +378,9 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		if (m_onRecvScript != "") {
 			conf["onRecvScript"] = m_onRecvScript;
 		}
+		if (m_tdspScript != "") {
+			conf["tdspScript"] = m_tdspScript;
+		}
 
 		if (m_bEnableOfflineTimeout) {
 			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
@@ -449,8 +452,10 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 		conf["upgradeInfo"] = jui;
 	}
 
-	if (querier.getPAB) {
+	if (querier.getDebug) {
 		conf["pktAssembleBuff"] = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
+		conf["lastFailReq"] = m_lastFailReq;
+		conf["lastFailReqTime"] = m_lastFailReqTime;
 	}
 
 	if (querier.getChild)
@@ -623,6 +628,14 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_string()) {
 			m_onRecvScript = item.get<string>();
+		}
+	}
+
+	kv = conf.find("tdspScript");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_tdspScript = item.get<string>();
 		}
 	}
 
@@ -1045,6 +1058,9 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 	}
 	if (opt.contains("getPAB")) {
 		q.getPAB = opt["getPAB"].get<bool>();
+	}
+	if (opt.contains("getDebug")) {
+		q.getDebug = opt["getDebug"].get<bool>();
 	}
 	if (opt["type"].is_string()) {
 		q.type.push_back(opt["type"].get<string>());
