@@ -217,9 +217,17 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
 
  ioDev* TDS_SESSION::getBindDev(string ioAddr)
  {
-     for (auto& i : m_mapBindIoDev) {
-         if (i.first->getIOAddrStr() == ioAddr) {
-             return i.first;
+     //不指定ioAddr，默认第一个ioDev就是绑定的设备
+     if (ioAddr == "") {
+         if (m_mapBindIoDev.size() > 0) {
+             return m_mapBindIoDev.begin()->second;
+         }
+     }
+     else {
+         for (auto& i : m_mapBindIoDev) {
+             if (i.first->getIOAddrStr() == ioAddr) {
+                 return i.first;
+             }
          }
      }
      return nullptr;

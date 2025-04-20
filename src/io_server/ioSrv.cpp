@@ -2089,8 +2089,23 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			//	charset = jResp["charset"].get<string>();
 			//}
 
+			//获得io地址
+			yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
+			if (yyv_ioAddr == nullptr)
+				yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
+			string strIoAddr;
+			if (yyv_ioAddr)
+				strIoAddr = yyjson_get_str(yyv_ioAddr);
+
+
 			//设备或者子服务注册
 			if (method == "devRegister") {
+				if (strIoAddr == "")
+				{
+					LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
+					return;
+				}
+
 				yyjson_val* yyv_params = yyjson_obj_get(yyv_resp, "params");
 				yyjson_val* yyv_devType = yyjson_obj_get(yyv_params,"devType");
 				string devType;
@@ -2143,18 +2158,7 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				}
 			}
 
-			//获得io地址
-			yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
-			if (yyv_ioAddr == nullptr)
-				yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
-			string strIoAddr;
-			if (yyv_ioAddr)
-				strIoAddr = yyjson_get_str(yyv_ioAddr);
-			if (strIoAddr == "")
-			{
-				LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
-				return;
-			}
+
 
 			//是否有设备在该session上上线，处理设备上线
 			ioDev* pIoDev = tdsSession->getBindDev(strIoAddr);
