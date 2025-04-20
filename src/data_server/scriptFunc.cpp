@@ -813,6 +813,39 @@ jerry_value_t func_json_parse(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_str_toHexStr(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json numArr = jArgs[0];
+		if (numArr.is_array()) {
+			vector<unsigned char> arr;
+			for (int i = 0; i < numArr.size(); i++) {
+				json j = numArr[i];
+				unsigned char b = j.get<unsigned char>();
+				arr.push_back(b);
+			}
+			string s;
+			for (size_t i = 0; i < arr.size(); i++)
+			{
+				string sb = str::format("%02X ", (unsigned char)arr[i]);
+				s += sb;
+			}
+			json jRet = s;
+			jerry_value_t ret;
+			jsonVal2jerryVal(jRet, ret);
+			return ret;
+		}
+	}
+
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -1512,6 +1545,22 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 
 		 obj_prop_name = jerry_create_string((const jerry_char_t*)"parse");
 		 obj_prop_func = jerry_create_external_function(func_json_parse);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
+		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
+		jerry_release_value(prop_name);
+		jerry_release_value(obj);
+	}
+
+	//STR对象
+	{
+		jerry_value_t obj = jerry_create_object();
+		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"STR");
+
+		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"toHexStr");
+		jerry_value_t obj_prop_func = jerry_create_external_function(func_str_toHexStr);
 		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
 		jerry_release_value(obj_prop_name);
 		jerry_release_value(obj_prop_func);

@@ -259,6 +259,12 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 			if (se.m_scriptRet.is_object()) {
 				if (se.m_scriptRet["result"] != nullptr) {
 					rlt = "ok";
+					
+					ioChannel* pC = getChanByDevAddr(chanAddr);
+					if (pC)
+					{
+						pC->input(jVal);
+					}
 				}
 				else if (se.m_scriptRet["error"] != nullptr) {
 					err = se.m_scriptRet["error"];
