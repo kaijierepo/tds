@@ -752,7 +752,16 @@ jerry_value_t func_http_request(const jerry_call_info_t* call_info_p,
 				}
 			}
 			if (method == "GET") {
-
+				httplib::Result rlt = cli.Get(path, headers);
+				if (rlt != nullptr) {
+					jerry_value_t ret = jerry_create_object();
+					jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"body");
+					jerry_value_t prop_val = jerry_create_string((const jerry_char_t*)rlt->body.c_str());
+					jerry_release_value(jerry_set_property(ret, prop_name, prop_val));
+					jerry_release_value(prop_name);
+					jerry_release_value(prop_val);
+					return ret;
+				}
 			}
 			else if (method == "POST") {
 				httplib::Result rlt = cli.Post(path, headers,body, "application/json");
