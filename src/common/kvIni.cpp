@@ -7,6 +7,7 @@ bool KV_INI::load(string path)
 	m_path = path;
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	fs::readFile(path, m_strConf);
+	m_strConf = str::remove_utf8_bom(m_strConf);
 	vector<string> confItems;
 	str::split(confItems, m_strConf, "\n");
 

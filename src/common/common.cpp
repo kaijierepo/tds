@@ -896,6 +896,23 @@ namespace str {
 		else if (c >= 'A' && c <= 'F') return c - 'A' + 10;
 		return 0;
 	}
+
+	std::string remove_utf8_bom(const std::string& data) {
+		// UTF-8 BOM是3个字节: 0xEF 0xBB 0xBF
+		const unsigned char bom[] = { 0xEF, 0xBB, 0xBF };
+
+		// 检查字符串是否以BOM开头
+		if (data.size() >= 3 &&
+			static_cast<unsigned char>(data[0]) == bom[0] &&
+			static_cast<unsigned char>(data[1]) == bom[1] &&
+			static_cast<unsigned char>(data[2]) == bom[2]) {
+			// 返回去除BOM后的子字符串
+			return data.substr(3);
+		}
+
+		// 如果没有BOM，返回原字符串
+		return data;
+	}
 }
 namespace timeopt {
 	TIME Unix2SysTime(time_t iUnix,int milli)

@@ -287,6 +287,8 @@ namespace str {
 
 	int TwoHexStringToInt(const char* str);
 	int HexCharToInt(char c);
+
+	std::string remove_utf8_bom(const std::string& data);
 }
 
 namespace timeopt {
