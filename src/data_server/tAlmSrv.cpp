@@ -257,7 +257,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	m_init = true;
 }
 
-void almServer::recover(ALARM_INFO& key, bool notify)
+void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
 {
 	if (!m_init)return;
 	/*tableStatus.remove(key);
@@ -283,7 +283,7 @@ void almServer::recover(ALARM_INFO& key, bool notify)
 	if (tableCurrent.query(params, ai))
 	{
 		ai.isRecover = 1;
-		ai.recoverTime = key.recoverTime;
+		ai.recoverTime.fromStr(recoverTime);
 		if (ai.isAck && ai.isRecover)
 		{
 			tableCurrent.remove(key);
@@ -539,9 +539,8 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		//如果当前报警等级和之前发生改变。
 		if (lastStatus.level != newStatus.level)
 		{
-			lastStatus.recoverTime = newStatus.recoverTime;
 			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
-			recover(lastStatus, notify);
+			recover(lastStatus, newStatus.time, notify);
 			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
 			{
 				bNeedAdd = true;

@@ -307,7 +307,7 @@ public:
 private:
 	void addAlarm(ALARM_INFO& ai, bool notify = true);
 	//alarm status modify
-	void recover(ALARM_INFO& key, bool notify = true);
+	void recover(ALARM_INFO& key, string recoverTime, bool notify = true);
 
 	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
