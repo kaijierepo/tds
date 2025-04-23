@@ -517,7 +517,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 
 	std::lock_guard<mutex> g(m_csAlarmData);
 
-	if (newStatus.time == "")
+	if (newStatus.time == "" || newStatus.time == "0000-00-00 00:00:00")
 	{
 		TIME st;
 		st.setNow();
