@@ -6,16 +6,14 @@
 #include "jerry.h"
 #include "jerryscript.h"
 #include  "tdsSession.h"
+#include  "scriptFunc.h"
 
 
 using json = nlohmann::json;
 using namespace std;
 
 
-struct GLOBAL_FUNC {
-	jerry_value_t property_name;
-	jerry_value_t property_func;
-};
+
 
 typedef bool (*fp_initGlobalFunc)(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
 typedef bool (*fp_initIODevFunc)(jerry_value_t ioDev_object,void* pDev);

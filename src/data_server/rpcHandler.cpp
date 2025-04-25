@@ -25,6 +25,8 @@
 #include "miniz.h"
 #include "tds_imp.h"
 #include "../../tdspro/io_server/proto_dlt645_2007.hpp"
+#include "scriptEngine.h"
+#include "scriptFunc_tds.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>

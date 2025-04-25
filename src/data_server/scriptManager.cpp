@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "scriptManager.h"
 #include "scriptEngine.h"
+#include "scriptFunc_tds.h"
 #include "logger.h"
 #include "jerryscript-port.h"
 #include "ioSrv.h"

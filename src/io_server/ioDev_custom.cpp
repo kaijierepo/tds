@@ -12,6 +12,7 @@
 #include "rpcHandler.h"
 #include "scriptEngine.h"
 #include "scriptManager.h"
+#include "scriptFunc_tds.h"
 #include "webSrv.h"
 
 

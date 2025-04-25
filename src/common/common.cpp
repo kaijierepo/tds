@@ -9,9 +9,6 @@
 #include <iomanip>
 #include <cctype>
 #include <chrono>
-#ifdef _WIN32
-#include <shellapi.h>  //for this:  SHELLEXECUTEINFO
-#endif
 
 using namespace std;
 
@@ -1353,52 +1350,6 @@ namespace timeopt {
 
 
 namespace sys {
-	vector<string> getCOMList()
-	{
-		vector<string> list;
-#ifdef ENABLE_SERIAL
-		HKEY hkey;
-		int result;
-		int i = 0;
-		string strComName;//串口名称   
-		string strDrName;//串口详细名称   
-		result = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			"Hardware\\DeviceMap\\SerialComm",
-			NULL,
-			KEY_READ,
-			&hkey);
-		if (ERROR_SUCCESS == result)   //   打开串口注册表      
-		{
-			WCHAR portName[0x100], commName[0x100];
-			DWORD dwLong, dwSize;
-			do
-			{
-				dwSize = sizeof(portName) / sizeof(TCHAR);
-				dwLong = dwSize;
-				result = RegEnumValueW(hkey, i, portName, &dwLong, NULL, NULL, (LPBYTE)commName, &dwSize);
-				if (ERROR_NO_MORE_ITEMS == result)
-				{
-					//   枚举串口   
-					break;   //   commName就是串口名字"COM2"   
-				}
-				strComName = charCodec::utf16_to_tds(commName);
-				strDrName = charCodec::utf16_to_tds(portName);
-				// 从右往左边开始查找第一个'\\'，获取左边字符串的长度   
-				size_t len = strDrName.rfind('\\');
-				// 获取'\\'左边的字符串   
-				string strFilePath = strDrName.substr(0, len + 1);
-				// 获取'\\'右边的字符串   
-				string fileName = strDrName.substr(len + 1, strDrName.length() - len - 1);
-				fileName = strComName + ": " + fileName;
-				list.push_back(fileName);
-				i++;
-			} while (1);
-			RegCloseKey(hkey);
-		}
-#endif
-		return list;
-	}
-
 	vector<COM_INFO> getCOMInfoList() {
 		vector<COM_INFO> ary;
 #ifdef ENABLE_SERIAL
@@ -1555,38 +1506,6 @@ namespace sys {
 		return 0;
 #endif
 	}
-	#ifdef _WIN32
-	bool CmdExecParam(string strParam, uint32_t dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, const char* lpDirectory /*= NULL*/)
-	{
-
-		string strExePath = "cmd.exe";
-		string cmd = "/c " + strParam;
-		SHELLEXECUTEINFO ShExecInfo = { 0 };
-		ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-		ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-		ShExecInfo.hwnd = NULL;
-		ShExecInfo.lpVerb = "open";
-		ShExecInfo.lpFile = (LPCTSTR)strExePath.c_str();
-		ShExecInfo.lpParameters = (LPCTSTR)cmd.c_str();
-		ShExecInfo.lpDirectory = lpDirectory;
-		ShExecInfo.nShow = nShow;
-		ShExecInfo.hInstApp = NULL;
-		if (ShellExecuteEx(&ShExecInfo))
-		{
-			HANDLE hProcess = ShExecInfo.hProcess;
-			if (hProcess != 0)
-			{
-				WaitForSingleObject(hProcess, dwMilliseconds == 0 ? INFINITE : dwMilliseconds);
-				CloseHandle(hProcess);
-			}
-			return true;
-		}
-		return false;
-	}
-#else
-		// TODO: linux
-#endif
-
 }
 
 

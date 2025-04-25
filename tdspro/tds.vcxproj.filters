@@ -255,6 +255,9 @@
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptFunc_tds.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -516,6 +519,9 @@
     <ClInclude Include="..\src\include\tdsRPC.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
       <Filter>io_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\scriptFunc_tds.h">
+      <Filter>data_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

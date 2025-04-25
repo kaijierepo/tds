@@ -57,6 +57,12 @@ SOFTWARE.
 
 #include "scriptEngine.h"
 
+#ifdef _WIN32
+#include <shellapi.h>  //for this:  SHELLEXECUTEINFO
+#endif
+
+bool CmdExecParam(string strParam, uint32_t dwMilliseconds = 0, int nShow = SW_SHOW, const char* lpDirectory = NULL);
+
 void clearZlmNoReaderPusher() {
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://localhost:" + sPort;
@@ -314,16 +320,17 @@ int main(int argc, char** argv)
 		tcpHub* tr = new tcpHub();
 		tr->run();
 	}
-	else if (mode == "tjs" || mode == "tscript")
+	else if (mode == "t-js" || mode == "tscript")
 	{
-		string sPath = fs::appPath() + "/tmain.js";
-		if (fs::fileExist(sPath)) {
-			string script;
-			fs::readFile(sPath,script);
-			ScriptEngine se;
-			se.m_initGlobalFunc = initGlobalFunc;
-			se.runScript(script, "");
-		}
+		//string sPath = fs::appPath() + "/tmain.js";
+		//if (fs::fileExist(sPath)) {
+		//	string script;
+		//	fs::readFile(sPath,script);
+		//	//ScriptEngine se;
+		//	//se.m_initGlobalFunc = initGlobalFunc;
+		//	//se.runScript(script, "");
+		//}
+		return 0;
 	}
 #ifdef ENABLE_TOOLS
 	else if (mode == "testconf") {
@@ -532,10 +539,10 @@ int main(int argc, char** argv)
 					time_t tNow;  time(&tNow);
 					if (tNow - tPrevious > secs) {
 						tPrevious = tNow;
-						sys::CmdExecParam(fs::appPath() + "/RAMMap.exe -Ew", 1, SW_HIDE);
+						CmdExecParam(fs::appPath() + "/RAMMap.exe -Ew", 1, SW_HIDE);
 
 						timeopt::sleepMilli(5000);
-						sys::CmdExecParam(fs::appPath() + "/RAMMap.exe -Et", 1, SW_HIDE);
+						CmdExecParam(fs::appPath() + "/RAMMap.exe -Et", 1, SW_HIDE);
 					}
 				}
 			}
@@ -550,6 +557,38 @@ int main(int argc, char** argv)
 
 #else
 #endif // !_WINDLL
+
+#ifdef _WIN32
+bool CmdExecParam(string strParam, uint32_t dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, const char* lpDirectory /*= NULL*/)
+{
+
+	string strExePath = "cmd.exe";
+	string cmd = "/c " + strParam;
+	SHELLEXECUTEINFO ShExecInfo = { 0 };
+	ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+	ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+	ShExecInfo.hwnd = NULL;
+	ShExecInfo.lpVerb = "open";
+	ShExecInfo.lpFile = (LPCTSTR)strExePath.c_str();
+	ShExecInfo.lpParameters = (LPCTSTR)cmd.c_str();
+	ShExecInfo.lpDirectory = lpDirectory;
+	ShExecInfo.nShow = nShow;
+	ShExecInfo.hInstApp = NULL;
+	if (ShellExecuteEx(&ShExecInfo))
+	{
+		HANDLE hProcess = ShExecInfo.hProcess;
+		if (hProcess != 0)
+		{
+			WaitForSingleObject(hProcess, dwMilliseconds == 0 ? INFINITE : dwMilliseconds);
+			CloseHandle(hProcess);
+		}
+		return true;
+	}
+	return false;
+	}
+#else
+// TODO: linux
+#endif
 
 #ifdef TDSDLL
 #define DllExport   extern "C" __declspec( dllexport )
