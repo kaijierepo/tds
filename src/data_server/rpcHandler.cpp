@@ -1107,7 +1107,17 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	else if (method == "sendToSession")
 	{
 		string tdsSession = params["sessionAddr"].get<string>();
+		string fmt = params["fmt"].get<string>();
 		string data = params["data"].get<string>();
+		vector<unsigned char> vec;
+
+		if (fmt == "gb2312") {
+			data = charCodec::utf8_to_gb(data);
+		}
+		else if (fmt == "hexStr") {
+			vec = str::hexStrToBytes(data);
+		}
+
 		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
 		if (pDestSession == nullptr)
 		{
@@ -1115,7 +1125,11 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 			return true;
 		}
 		else {
-			size_t iSended = pDestSession->send((char*)data.c_str(), data.length());
+			size_t iSended = 0;
+			if(vec.size()>0)
+				iSended = pDestSession->send(vec.data(), vec.size());
+			else
+				iSended = pDestSession->send((char*)data.c_str(), data.length());
 			if (iSended > 0)
 				rpcResp.result = "\"ok\"";
 			else
