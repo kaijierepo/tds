@@ -197,8 +197,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../out/tds</OutDir>
-    <TargetName>tds</TargetName>
+    <OutDir>../out/</OutDir>
+    <TargetName>tjs</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
     <LinkIncremental>true</LinkIncremental>

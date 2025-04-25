@@ -55,6 +55,8 @@ SOFTWARE.
 #include "rpcHandler.h"
 #include "httplib.h"
 
+#include "scriptEngine.h"
+
 void clearZlmNoReaderPusher() {
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = "http://localhost:" + sPort;
@@ -311,6 +313,17 @@ int main(int argc, char** argv)
 	{
 		tcpHub* tr = new tcpHub();
 		tr->run();
+	}
+	else if (mode == "tjs" || mode == "tscript")
+	{
+		string sPath = fs::appPath() + "/tmain.js";
+		if (fs::fileExist(sPath)) {
+			string script;
+			fs::readFile(sPath,script);
+			ScriptEngine se;
+			se.m_initGlobalFunc = initGlobalFunc;
+			se.runScript(script, "");
+		}
 	}
 #ifdef ENABLE_TOOLS
 	else if (mode == "testconf") {

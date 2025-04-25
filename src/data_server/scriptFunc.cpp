@@ -8,6 +8,51 @@
 #include "httplib.h"
 #include "ioSrv.h"
 #include "ioDev_custom.h"
+#include <string>
+#include <sstream>
+#include <cstdint>
+
+namespace tJSEngine {
+	int parseStopBits(string s)
+	{
+		if (s == "1")
+			return 0;
+		else if (s == "1.5")
+			return 1;
+		else if (s == "2")
+			return 2;
+		return 0;
+	}
+
+	int parseParity(string s)
+	{
+		/* 0-4=None,Odd,Even,Mark,Space    */
+		if (s == "None")
+			return 0;
+		else if (s == "Odd")
+			return 1;
+		else if (s == "Even")
+			return 2;
+		else if (s == "Mark")
+			return 3;
+		else if (s == "Space")
+			return 4;
+		return 0;
+	}
+
+	std::string pointerToString(void* ptr) {
+		uintptr_t ptrVal = reinterpret_cast<uintptr_t>(ptr);
+		std::ostringstream oss;
+		oss << "0x" << std::hex << ptrVal;
+		return oss.str();
+	}
+
+	void* stringToPointer(const std::string& str) {
+		char* endPtr;
+		uintptr_t ptrVal = std::strtoull(str.c_str(), &endPtr, 0);
+		return reinterpret_cast<void*>(ptrVal);
+	}
+}
 
 
 bool jerryItem2JsonItem(const jerry_value_t prop_name,
@@ -1352,6 +1397,217 @@ jerry_value_t func_time(const jerry_call_info_t* call_info_p,
 	return timeObj;
 }
 
+//openSerial(string portName, int baudRate, string parity, int byteSize, int stopBits)
+jerry_value_t func_openSerial(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 5) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+	string errorInfo;
+
+	string portName = jArgs[0].get<string>();
+	int baudRate = jArgs[1].get<int>();
+	string parity = jArgs[2].get<string>();
+	int byteSize = jArgs[3].get<int>();
+	string stopBits = jArgs[4].get<string>();
+
+	HANDLE hCom = nullptr;
+
+	bool ret = false;
+	string  strComPort = "\\\\.\\" + portName;
+
+	hCom = CreateFile(strComPort.c_str(),
+		GENERIC_READ | GENERIC_WRITE,
+		0, // 独占方式
+		NULL,
+		OPEN_EXISTING,// 打开而不是创建
+		FILE_FLAG_OVERLAPPED,
+		NULL);
+
+	if (hCom == INVALID_HANDLE_VALUE)
+	{
+		errorInfo = sys::getLastError("CreateFile");
+		goto OPEN_END;
+	}
+
+	COMSTAT comstat;
+	DWORD dwError;
+	ClearCommError(hCom, &dwError, &comstat);
+
+	//dcb.StopBits = 0, 1, 2对应的是1bit, 1.5bits, 2bits.
+	//dcb.ByteSize = 6, 7, 8时   dcb.StopBits不能为1
+	//dcb.ByteSize = 5时   dcb.StopBits不能为2
+	DCB dcb;
+	SecureZeroMemory(&dcb, sizeof(DCB));
+	dcb.DCBlength = sizeof(DCB);
+	GetCommState(hCom, &dcb);
+	dcb.BaudRate = baudRate;
+	dcb.ByteSize = byteSize;
+	dcb.Parity = tJSEngine::parseParity(parity);
+	dcb.StopBits = tJSEngine::parseStopBits(stopBits);
+	if (!SetCommState(hCom, &dcb))
+	{
+		errorInfo = sys::getLastError("SetCommState");
+		CloseHandle(hCom);
+		hCom = nullptr;
+		goto OPEN_END;
+	}
+
+	SetupComm(hCom, 1024, 1024);
+
+	COMMTIMEOUTS CommTimeouts;
+	ZeroMemory(&CommTimeouts, sizeof(CommTimeouts));
+	CommTimeouts.ReadIntervalTimeout = 200;
+	CommTimeouts.ReadTotalTimeoutMultiplier = 0;
+	CommTimeouts.ReadTotalTimeoutConstant = 2000;
+	CommTimeouts.WriteTotalTimeoutMultiplier = 0;
+	CommTimeouts.WriteTotalTimeoutConstant = 0;
+	SetCommTimeouts(hCom, &CommTimeouts);
+
+	PurgeComm(hCom, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR | PURGE_RXCLEAR);
+
+	SetCommMask(hCom, EV_RXCHAR);
+	ret = true;
+
+OPEN_END:
+	if (ret) {
+		LOG("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str());
+	}
+	else
+		LOG("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), errorInfo.c_str());
+	
+	if (ret) {
+		string sHandle = tJSEngine::pointerToString(hCom);
+		jerry_value_t ret = jerry_create_string((const jerry_char_t*)sHandle.c_str());
+		return ret;
+	}
+	else {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+}
+
+//readSerial(string handle)
+jerry_value_t func_readSerial(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+	string sH = jArgs[0].get<string>();
+	void* hCom = tJSEngine::stringToPointer(sH);
+	COMSTAT comstat;
+	DWORD dwError;
+	bool ret = false;
+	unsigned char buf[500 * 1000] = { 0 };
+	int iLen = 0;
+	BOOL bReadRet = 0;
+
+	OVERLAPPED ovWaitEvent;
+	ovWaitEvent.hEvent = CreateEvent(
+		NULL,   // default security attributes 
+		TRUE,   // manual-reset event 
+		FALSE,  // not signaled 
+		NULL    // no name
+	);
+
+	OVERLAPPED m_ovRead;
+	m_ovRead.hEvent = CreateEvent(
+		NULL,   // default security attributes 
+		TRUE,   // manual-reset event 
+		FALSE,  // not signaled 
+		NULL    // no name
+	);
+
+	DWORD dwEvtMask = 0;
+	//等待用SetCommMask()函数设置的串口事件发生，共有9种事件可被监视：
+	//EV_BREAK，EV_CTS，EV_DSR，EV_ERR，EV_RING，EV_RLSD，EV_RXCHAR，
+	//EV_RXFLAG，EV_TXEMPTY；当其中一个事件发生或错误发生时，函数将
+	//OVERLAPPED结构中的事件置为有信号状态，并将事件掩码填充到dwMask参数中
+	//在openCom函数里面设置了EV_RXCHAR事件
+
+	//如果异步操作不能立即完成的话,函数返回FALSE,并且调用GetLastError()函
+	//数分析错误原因后返回ERROR_IO_PENDING,指示异步操作正在后台进行.这种情
+	//况下,在函数返回之前系统设置OVERLAPPED结构中的事件为无信号状态
+	if (WaitCommEvent(hCom, &dwEvtMask, &ovWaitEvent))
+	{
+	}
+	else
+	{
+		DWORD dwRet = GetLastError();
+		if (ERROR_IO_PENDING == dwRet)
+		{
+			DWORD dwBytesRead = 0;
+			//https://docs.microsoft.com/en-us/windows/win32/api/ioapiset/nf-ioapiset-getoverlappedresult
+			//bWait=TRUE等待层叠读取操作完成
+			//CloseHandle关闭m_hCom可以使得阻塞的函数返回
+			BOOL bResult = GetOverlappedResult(hCom, &ovWaitEvent, &dwBytesRead, TRUE); // 阻塞  Block
+			if (bResult) {
+
+			}
+			else {
+				ret = false;
+				goto READ_END;
+			}
+		}
+		else if (ERROR_ACCESS_DENIED == dwRet)
+		{
+			//usb 串口 虚拟串口等，在串口被打开的情况下删除了设备，拔出了usb线等，进入到这里
+			LOG("[error]hardware serial is deleted,check your hardware connection!");
+			ret = false;
+			goto READ_END;
+		}
+		else {
+			ret = false;
+			goto READ_END;
+		}
+	}
+	ClearCommError(hCom, &dwError, &comstat);
+
+	if (comstat.cbInQue == 0) {
+		ret = false;
+		goto READ_END;
+	}
+
+	assert(comstat.cbInQue < 500 * 1000);
+
+	bReadRet = ReadFile(hCom, (LPVOID)(buf), comstat.cbInQue, (LPDWORD)&iLen, &m_ovRead);//该操作立即返回，因为缓冲区已经有数据
+	if (!bReadRet) {
+		ret = false;
+		goto READ_END;
+	}
+	if (iLen == 0) {
+		ret = false;
+		goto READ_END;
+	}
+
+READ_END:
+	CloseHandle(ovWaitEvent.hEvent);
+	CloseHandle(m_ovRead.hEvent);
+
+	if (ret) {
+		json j = json::array();
+		for (int i = 0; i < iLen; i++) {
+			j.push_back(buf[i]);
+		}
+		jerry_value_t jrr;
+		jsonVal2jerryVal(j, jrr);
+		return jrr;
+	}
+	else {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+}
 
 
 bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
@@ -1487,6 +1743,24 @@ bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	property_name = jerry_create_string((const jerry_char_t*)"time");
 	property_func = jerry_create_external_function(func_time);
 	set_result = jerry_set_property(global_object, property_name, property_func);
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
+	//readSerial
+	property_name = jerry_create_string((const jerry_char_t*)"readSerial");
+	property_func = jerry_create_external_function(func_readSerial);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
+	//openSerial
+	property_name = jerry_create_string((const jerry_char_t*)"openSerial");
+	property_func = jerry_create_external_function(func_openSerial);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
 	jerry_release_value(set_result);
 	m_vecGlobalFunc.push_back(gf);
 
