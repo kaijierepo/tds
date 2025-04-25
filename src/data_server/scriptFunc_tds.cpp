@@ -109,7 +109,8 @@ jerry_value_t func_call(const jerry_call_info_t* call_info_p,
 		json params = jArgs[1];
 
 		json err, rlt;
-		tds->call(method, params, err,rlt, pEngine->currentSession);
+		RPC_SESSION sess;
+		tds->call(method, params, err,rlt, sess);
 	}
 
 	jerry_value_t ret = jerry_create_undefined();
@@ -242,7 +243,8 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 			}
 
 			json err, rlt;
-			tds->call("sum", params, err, rlt, pEngine->currentSession);
+			RPC_SESSION sess;
+			tds->call("sum", params, err, rlt, sess);
 
 
 			if (rlt != nullptr) {
@@ -268,7 +270,8 @@ jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
 			}
 
 			json err, rlt;
-			tds->call("sum", params, err, rlt, pEngine->currentSession);
+			RPC_SESSION sess;
+			tds->call("sum", params, err, rlt, sess);
 
 			if (rlt != nullptr) {
 				jerry_value_t ret;
@@ -298,7 +301,8 @@ jerry_value_t func_avg(const jerry_call_info_t* call_info_p,
 			params["tag"] = sTag;
 
 			json err, rlt;
-			tds->call("avg", params, err, rlt, pEngine->currentSession);
+			RPC_SESSION sess;
+			tds->call("avg", params, err, rlt, sess);
 
 			if (rlt != nullptr) {
 				jerry_value_t ret;
@@ -319,7 +323,8 @@ jerry_value_t func_avg(const jerry_call_info_t* call_info_p,
 			json params;
 			params["tag"] = jResolvedTag;
 			json err, rlt;
-			tds->call("avg", params, err, rlt, pEngine->currentSession);
+			RPC_SESSION sess;
+			tds->call("avg", params, err, rlt, sess);
 
 			if (rlt != nullptr) {
 				jerry_value_t ret;
@@ -358,7 +363,8 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					params["getStatus"] = true;
 					params["getConf"] = false;
 					json err, rlt;
-					tds->call("getMp", params, err, rlt, pEngine->currentSession);
+					RPC_SESSION sess;
+					tds->call("getMp", params, err, rlt, sess);
 
 					if (rlt != nullptr) {
 						json jVal = rlt["val"];
@@ -397,7 +403,8 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 						}
 
 						json err, rlt;
-						tds->call("db.select", jParams, err, rlt, pEngine->currentSession);
+						RPC_SESSION sess;
+						tds->call("db.select", jParams, err, rlt, sess);
 
 						if (p->m_level == "mp") {
 							MP* pmp = (MP*)p;
@@ -442,7 +449,8 @@ jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 		json params = jArgs[0];
 		if (params.is_object()) {
 			json err, rlt;
-			tds->call("db.insert", params, err, rlt, pEngine->currentSession);
+			RPC_SESSION sess;
+			tds->call("db.insert", params, err, rlt, sess);
 			if (rlt != nullptr) {
 				jerry_value_t jerryVal;
 				jsonVal2jerryVal(rlt, jerryVal);
@@ -463,7 +471,8 @@ jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 		params["time"] = jArgs[1];
 		params["val"] = jArgs[2];
 		json err, rlt;
-		tds->call("db.insert", params, err, rlt, pEngine->currentSession);
+		RPC_SESSION sess;
+		tds->call("db.insert", params, err, rlt, sess);
 		if (rlt != nullptr) {
 			jerry_value_t jerryVal;
 			jsonVal2jerryVal(rlt, jerryVal);

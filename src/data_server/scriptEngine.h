@@ -5,7 +5,6 @@
 #include "json.hpp"
 #include "jerry.h"
 #include "jerryscript.h"
-#include  "tdsSession.h"
 #include  "scriptFunc.h"
 
 
@@ -43,7 +42,6 @@ public:
 	string m_script;
 	void* m_ioDevThis;
 
-	RPC_SESSION currentSession;
 	//脚本执行结果
 	string m_sEvalRet;
 	json m_scriptRet; //脚本自定义的执行结果
