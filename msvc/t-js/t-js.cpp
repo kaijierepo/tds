@@ -2,10 +2,30 @@
 //
 
 #include <iostream>
+#include "scriptEngine.h"
+#include "scriptFunc.h"
+#include "common.h"
+#include "logger.h"
+
+void script_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
+	log += "\r\n";
+	printf(charCodec::utf8_to_gb(log).c_str());
+}
 
 int main()
 {
-    std::cout << "Hello World!\n";
+	string sPath = fs::appPath() + "/tmain.js";
+	if (fs::fileExist(sPath)) {
+		string script;
+		fs::readFile(sPath,script);
+		ScriptEngine se;
+		se.m_logImp = script_logImp;
+		se.m_initGlobalFunc = initScriptFunc;
+		se.runScript(script, "");
+		for (int i = 0; i < se.m_vecOutput.size(); i++) {
+			LOG(se.m_vecOutput[i]);
+		}
+	}
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
