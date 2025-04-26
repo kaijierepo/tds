@@ -209,6 +209,9 @@ void jsonVal2jerryVal(json& jVal, jerry_value_t& jerryVal) {
 			jerry_release_value(array_value);
 		}
 	}
+	else {
+		jerryVal = jerry_create_null();
+	}
 }
 
 jerry_value_t func_log(const jerry_call_info_t* call_info_p,
@@ -837,6 +840,7 @@ jerry_value_t func_writeSerial(const jerry_call_info_t* call_info_p,
 	void* hCom = tJSEngine::stringToPointer(sH);
 	json jData = jArgs[1];
 	vector<unsigned char> vec;
+	string sData;
 	char* pData = nullptr;
 	int len = 0;
 	if (jData.is_array()) {
@@ -848,7 +852,7 @@ jerry_value_t func_writeSerial(const jerry_call_info_t* call_info_p,
 		len = vec.size();
 	}
 	else if(jData.is_string()) {
-		string sData = jData.get<string>();
+		sData = jData.get<string>();
 		pData = (char*)sData.c_str();
 		len = sData.length();
 	}
@@ -891,6 +895,55 @@ jerry_value_t func_closeSerial(const jerry_call_info_t* call_info_p,
 	if (hCom != nullptr) {
 		CloseHandle(hCom);
 	}
+}
+
+
+jerry_value_t func_arrayToStr(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+	json jArr = jArgs[0];
+	vector<char> charArray;
+	charArray.resize(jArr.size() + 1);
+	for (int i = 0; i < jArr.size(); i++) {
+		unsigned char b = jArr[i].get<unsigned char>();
+		char cb = *((char*)&b);
+		charArray[i] = cb;
+	}
+
+	charArray[jArr.size()] = 0;
+	string s = (char*) charArray.data();
+
+	jerry_value_t ret = jerry_create_string((const jerry_char_t*)s.c_str());
+	return ret;
+}
+
+jerry_value_t func_strToArray(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+	if (jArgs.size() != 1) {
+		jerry_value_t ret = jerry_create_null();
+		return ret;
+	}
+
+	string s = jArgs[0];
+	json jArr = json::array();
+	for (int i = 0; i < s.length(); i++) {
+		char cb = s[i];
+		unsigned char ucb = *((unsigned char*)&cb);
+		jArr.push_back(ucb);
+	}
+	jerry_value_t ret;
+	jsonVal2jerryVal(jArr, ret);
+	return ret;
 }
 
 bool initScriptFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
@@ -970,6 +1023,23 @@ bool initScriptFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 	m_vecGlobalFunc.push_back(gf);
 
 
+	property_name = jerry_create_string((const jerry_char_t*)"arrayToStr");
+	property_func = jerry_create_external_function(func_arrayToStr);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
+
+	property_name = jerry_create_string((const jerry_char_t*)"strToArray");
+	property_func = jerry_create_external_function(func_strToArray);
+	set_result = jerry_set_property(global_object, property_name, property_func);
+	if (jerry_value_is_error(set_result)) {
+	}
+	jerry_release_value(set_result);
+	m_vecGlobalFunc.push_back(gf);
+
 	//以下全局对象
 	//console对象
 	{
@@ -994,28 +1064,6 @@ bool initScriptFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGloba
 
 		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"request");
 		jerry_value_t obj_prop_func = jerry_create_external_function(func_http_request);
-		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
-		jerry_release_value(obj_prop_name);
-		jerry_release_value(obj_prop_func);
-
-		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
-		jerry_release_value(prop_name);
-		jerry_release_value(obj);
-	}
-
-	//JSON对象
-	{
-		jerry_value_t obj = jerry_create_object();
-		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"JSON");
-
-		jerry_value_t obj_prop_name = jerry_create_string((const jerry_char_t*)"stringify");
-		jerry_value_t obj_prop_func = jerry_create_external_function(func_json_stringify);
-		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
-		jerry_release_value(obj_prop_name);
-		jerry_release_value(obj_prop_func);
-
-		 obj_prop_name = jerry_create_string((const jerry_char_t*)"parse");
-		 obj_prop_func = jerry_create_external_function(func_json_parse);
 		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
 		jerry_release_value(obj_prop_name);
 		jerry_release_value(obj_prop_func);
