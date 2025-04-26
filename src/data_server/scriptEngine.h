@@ -13,9 +13,10 @@ using namespace std;
 
 
 
-
+class ScriptEngine;
 typedef bool (*fp_initGlobalFunc)(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc);
 typedef bool (*fp_initIODevFunc)(jerry_value_t ioDev_object,void* pDev);
+typedef void (*fp_script_logImp)(string log, ScriptEngine* pEngine,bool logToHost);
 
 class ScriptEngine {
 public:
@@ -30,6 +31,7 @@ public:
 
 	fp_initGlobalFunc m_initGlobalFunc;
 	fp_initIODevFunc m_initIODevFunc;
+	fp_script_logImp m_logImp;
 
 	json m_globalObj;
 

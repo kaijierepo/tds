@@ -355,9 +355,9 @@ public:
 	string m_onRecvScript;
 	string m_tdspScript;
 
-	bool m_bCycleAcqThreadRunning;
-	bool m_bOutputting;
-	bool m_bRecvProcessing;
+	std::atomic<bool> m_bCycleAcqThreadRunning;
+	std::atomic<bool> m_bOutputting;
+	std::atomic<bool> m_bRecvProcessing;
 	static int m_heartBeatInterval;//单位毫秒
 	static int m_pingInterval;//单位秒
 	TIME m_stLastHeartbeatTime;

@@ -465,6 +465,10 @@ bool ioGW_LocalSerial::OpenCom()
 {
 	bool ret = false;
 	string comPort = getDevAddrStr();
+
+	if (comPort.find("COM") == string::npos)
+		return false;
+
 	string  strComPort = "\\\\.\\" + comPort;
 	if (m_hCom)
 	{

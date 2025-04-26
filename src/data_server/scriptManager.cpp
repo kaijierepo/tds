@@ -8,6 +8,14 @@
 
 ScriptManager scriptManager;
 
+void scriptManager_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
+	pEngine->m_vecOutput.push_back(log);
+	if (logToHost) {
+		string l = "[脚本日志]" + log;
+		LOG(l);
+	}
+}
+
 void scriptThread(ScriptManager* p)
 {
 #ifdef ENABLE_JERRY_SCRIPT
@@ -93,6 +101,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 		si.callerObjTag = callerObjTag;
 
 		ScriptEngine se;
+		se.m_logImp = scriptManager_logImp;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
@@ -133,6 +142,7 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 }
 
 
+
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
 	//直接执行脚本
@@ -160,6 +170,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		}
 
 		ScriptEngine se;
+		se.m_logImp = scriptManager_logImp;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		if (si.devAddr != "") {
@@ -194,6 +205,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
 			ScriptEngine se;
+			se.m_logImp = scriptManager_logImp;
 			se.m_initGlobalFunc = initGlobalFunc;
 			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {
@@ -436,6 +448,7 @@ void ScriptManager::exeAllGlobalScripts()
 	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
 	for (auto& si : toExeScripts) {
 		ScriptEngine se;
+		se.m_logImp = scriptManager_logImp;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
@@ -469,6 +482,7 @@ void ScriptManager::exeAllVarExpScripts()
 		SCRIPT_INFO& info = toExeScripts[i];
 		string& script = info.script;
 		ScriptEngine se;
+		se.m_logImp = scriptManager_logImp;
 		se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;

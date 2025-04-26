@@ -53,6 +53,7 @@ ScriptEngine::ScriptEngine()
 {
 	m_initGlobalFunc = nullptr;
 	m_ioDevThis = nullptr;
+	m_logImp = nullptr;
 }
 
 string jerryVal2Str(jerry_value_t jerryVal) {
