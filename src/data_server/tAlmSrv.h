@@ -319,6 +319,7 @@ public:
 	//rpc handler
 	void rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session);
 
 	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);

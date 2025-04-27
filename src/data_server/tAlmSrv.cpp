@@ -256,7 +256,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 
 	initMOAlarmStatus();
 
-	string abpConf = m_dbPath + "alarmBlockingPlan.json";
+	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
 	as_fs::readFile(abpConf, s);
 	if (s != "") {
@@ -889,14 +889,21 @@ void almServer::rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION ses
 
 }
 
+void almServer::rpc_getAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session)
+{
+	resp.result = m_blockingPlan.toJson().dump();
+}
+
 void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session)
 {
 	m_blockingPlan.fromJson(params);
 	string s = params.dump();
 
-	string abpConf = m_dbPath + "alarmBlockingPlan.json";
+	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	as_fs::createFolderOfPath(abpConf);
 	as_fs::writeFile(abpConf, s);
+
+	resp.result = RPC_OK;
 }
 
 //params ：对应ai那个结构
