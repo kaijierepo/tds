@@ -232,6 +232,8 @@ void almServer::init()
 		}
 	}
 
+
+
 	//tableStatus.init("\\alarms\\status");
 	//tableUnack.init("\\alarms\\unack");
 
@@ -253,6 +255,14 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	tableHist.SetAlarmSrv(this);
 
 	initMOAlarmStatus();
+
+	string abpConf = m_dbPath + "alarmBlockingPlan.json";
+	string s;
+	as_fs::readFile(abpConf, s);
+	if (s != "") {
+		json j = json::parse(s);
+		m_blockingPlan.fromJson(j);
+	}
 
 	m_init = true;
 }
