@@ -179,11 +179,8 @@ void tdsConfig::loadConf_httpServer(vector<KV_CONF_ITEM>& vecConf) {
 	}
 }
 
-
-
-
-void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
-	for (auto& iter: vecConf)
+void tdsConfig::loadConfPath(vector<KV_INI_LINE>& vecConf) {
+	for (auto& iter : vecConf)
 	{
 		if (iter.type != CONF_ITEM) continue;
 
@@ -194,7 +191,18 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 			confPath = val;
 			confPath = fs::toAbsolutePath(confPath);
 		}
-		else if (checkKey(key, "curPath"))
+	}
+}
+
+void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
+	for (auto& iter: vecConf)
+	{
+		if (iter.type != CONF_ITEM) continue;
+
+		string key = iter.key;
+		string val = iter.val;
+
+		if (checkKey(key, "curPath"))
 		{
 			currentPath = val;
 			currentPath = fs::toAbsolutePath(currentPath);
@@ -527,7 +535,7 @@ void tdsConfig::loadConf()
 			generateDefaultAppConfFile();
 		}
 		app_ini.load(appConfPath);
-		loadConf_tds(app_ini.mapConf);
+		loadConfPath(app_ini.mapConf); //仅加载配置路径 confPath
 
 		//load projectConf.ini
 		string projectConfPath = this->confPath + "/projectConf.ini";

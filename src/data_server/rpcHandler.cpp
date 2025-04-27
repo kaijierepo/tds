@@ -2164,11 +2164,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 	}
-	else if (method == "onObjOnline" || method == "objOnline") {
-		rpc_onObjOnline(params,session);
+	else if (method == "onObjOnline" || method == "objOnline" || method == "setOnline") {
+		rpc_onObjOnline(params,rpcResp,session);
 	}
-	else if (method == "onObjOffline" || method == "objOffline") {
-		rpc_onObjOffline(params, session);
+	else if (method == "onObjOffline" || method == "objOffline" || method == "setOffline") {
+		rpc_onObjOffline(params, rpcResp, session);
 	}
 	else
 	{
@@ -2188,18 +2188,20 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				//数据值和在线状态都来自于io设备采集，因此统一用input接口输入
 				OBJ::treeStatus2ListStatus(params, jDeList, jOnlineStatusList, rootTag);
 
+				//对于对象，更新在线状态
 				for (int i = 0; i < jOnlineStatusList.size();i++) {
 					json& os = jOnlineStatusList[i];
 					if (os["online"].is_boolean()) {
 						if (os["online"].get<bool>() == true) {
-							rpc_onObjOnline(os, session);
+							rpc_onObjOnline(os,rpcResp, session);
 						}
 						else if (os["online"].get<bool>() == false) {
-							rpc_onObjOffline(os, session);
+							rpc_onObjOffline(os, rpcResp, session);
 						}
 					}
 				}
 
+				//对于监控点，更新值
 				rpc_input(jDeList, rpcResp, session);
 			}
 			else {
@@ -4536,6 +4538,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
 struct INPUT_DE {
 	string tag;
 	json val;
+	json online;
 	json file;
 	json ioAddr;
 	json valAttr;
@@ -4605,6 +4608,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 					de.tag = j["tag"];
 					de.val = j["val"];
 					de.file = j["file"];
+					de.online = j["online"];
 					de.valAttr = getValAttr(j);
 					inputDEList.push_back(de);
 				}
@@ -4622,6 +4626,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 
 			json tag = params["tag"];
 			json val = params["val"];
+			json online = params["online"];
 			json file = params["file"];
 			json time = params["time"];
 			if (params.contains("rootTag"))
@@ -4639,6 +4644,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				INPUT_DE de;
 				de.tag = tag;
 				de.val = val;
+				de.online = online;
 				de.file = file;
 				de.valAttr= getValAttr(params);
 				if (time.is_string()) {
@@ -4664,6 +4670,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 					INPUT_DE de;
 					de.tag = tag[i];
 					de.val = val[i];
+					if (online.is_array()) {
+						de.online = online[i];
+					}
 
 					if (time.is_string()) {
 						de.sTime = time;
@@ -4706,6 +4715,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 				de.sTime = de.time.toStr();
 			}
 			de.val = jDe["val"];
+			de.online = jDe["online"];
 			de.file = jDe["file"];
 
 			inputDEList.push_back(de);
@@ -6421,7 +6431,7 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 	return j.dump();
 }
 
-void rpcHandler::rpc_onObjOnline(json params,RPC_SESSION session) {
+void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION session) {
 	string tag = params["tag"];
 	OBJ* p = prj.queryObj(tag, session.language);
 	if (p) {
@@ -6435,10 +6445,14 @@ void rpcHandler::rpc_onObjOnline(json params,RPC_SESSION session) {
 			LOG("[对象上线  ]位号:%s", tag.c_str());
 			rpcSrv.notify("objOnline", params);
 		}
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = "\"tag not found\"";
 	}
 }
 
-void rpcHandler::rpc_onObjOffline(json params, RPC_SESSION session) {
+void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION session) {
 	string tag = params["tag"];
 	OBJ* p = prj.queryObj(tag, session.language);
 	if (p) {
@@ -6456,6 +6470,10 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_SESSION session) {
 		if (p->m_bChildTds) { //设置所有子对象掉线
 			p->recursiveSetOffline();
 		}
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = "\"tag not found\"";
 	}
 }
 

@@ -442,7 +442,6 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 		LOG("[warn]收到异步getDevConf");
 	}
 	else if (method == "getDevInfo") {
-
 		yyjson_val* yyv_softVer = yyjson_obj_get(rlt, "softVer");
 		if (yyv_softVer) {
 
@@ -473,51 +472,53 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 		//	m_strTagBind = m_jInfo["tagBind"];
 		//}
 	}
-	//else if (method == "getObj") {
-	//	if (rlt.contains("parentTag")) { //响应当中包含了配置
-	//		//获取参数
-	//		string parentTag = rlt["parentTag"];
-	//		string tag = rlt["name"];
-	//		tag = TAG::addRoot(tag, parentTag);
-	//		m_childTdsTag = tag;
+	else if (method == "getObj") {
+		yyjson_val* yyv_parentTag = yyjson_obj_get(rlt, "parentTag");
+		if (yyv_parentTag) { //响应当中包含了配置
+			//获取参数
+			string parentTag = yyjson_get_str(yyv_parentTag);
+			yyjson_val* yyv_name = yyjson_obj_get(rlt, "name");
+			string tag = yyjson_get_str(yyv_name);
+			tag = TAG::addRoot(tag, parentTag);
+			m_childTdsTag = tag;
+			size_t len;
+			string sRlt = yyjson_val_write(rlt, 0, &len);
+			json jRlt = json::parse(sRlt);
 
-	//		LOG("[主从服务]获取到子服务对象树配置,子服务位号:%s", tag.c_str());
+			LOG("[主从服务]获取到子服务对象树配置,子服务位号:%s", tag.c_str());
 
-	//		//如果上次修改时间和本地保存的一致，忽略
-	//		//根据修改时间自动同步机制取消，统一改为手动设置
-	//		OBJ* p = prj.queryObj(tag);
+			//如果上次修改时间和本地保存的一致，忽略
+			//根据修改时间自动同步机制取消，统一改为手动设置
+			OBJ* p = prj.queryObj(tag);
 
 
-	//		//将最新子服务配置保存到本地
-	//		unique_lock<shared_mutex> lock(prj.m_csPrj);
-	//		if (!p) {
-	//			LOG("[主从服务]主服务中未包含子服务对象,创建子服务对象树并保存到主服务");
-	//			p = prj.createObjBranchByTag(tag);
-	//			p->loadConf(rlt);
-	//			p->m_bChildTds = true;
-	//			p->m_bOnline = true;
-	//			prj.saveConfFile();
-	//		}
-	//		else {
-	//			p->m_bChildTds = true;
-	//			p->m_bOnline = true;
-	//		}
+			//将最新子服务配置保存到本地
+			unique_lock<shared_mutex> lock(prj.m_csPrj);
+			if (!p) {
+				LOG("[主从服务]主服务中未包含子服务对象,创建子服务对象树并保存到主服务");
+				p = prj.createObjBranchByTag(tag);
+				p->loadConf(jRlt);
+				p->m_bChildTds = true;
+				p->m_bOnline = true;
+				prj.saveConfFile();
+			}
+			else {
+				p->m_bChildTds = true;
+				p->m_bOnline = true;
+			}
 
-	//		if (p) {
-	//			project prjTmp;
-	//			prjTmp.loadConf(rlt);
-	//			prjTmp.m_rootTag = m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
-	//			TIME stNow;
-	//			timeopt::now(&stNow);
-	//			//此处不再保存到数据库，第3个参数需要重构掉
-	//			prjTmp.m_bOnline = true;//根节点就是子服务，当前在线
-	//			p->loadStatus(&prjTmp, &stNow, false);
-	//		}
-	//	}
-	//	else { //响应当中仅包含实时数据,周期轮询得到的响应
-	//		prj.loadObjTreeStatus(rlt, m_childTdsTag);
-	//	}
-	//}
+			if (p) {
+				//project prjTmp;
+				//prjTmp.loadConf(jRlt);
+				//prjTmp.m_rootTag = m_childTdsTag; //使得prjTmp	返回的tag都加上rootTag
+				//TIME stNow;
+				//timeopt::now(&stNow);
+				////此处不再保存到数据库，第3个参数需要重构掉
+				//prjTmp.m_bOnline = true;//根节点就是子服务，当前在线
+				p->loadStatus(jRlt);
+			}
+		}
+	}
 	else {
 		handled = false;
 	}

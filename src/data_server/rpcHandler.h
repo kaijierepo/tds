@@ -104,8 +104,8 @@ public:
 	string rpc_com_list(json params, string& error);
 	string rpc_closeCom(json params, string& error);
 
-	void rpc_onObjOnline(json params, RPC_SESSION session);
-	void rpc_onObjOffline(json params, RPC_SESSION session);
+	void rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION session);
+	void rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION session);
 	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
 
 	string getChildTdsRegPkt();
