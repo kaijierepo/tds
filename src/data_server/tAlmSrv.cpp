@@ -668,7 +668,7 @@ string almServer::getAlarmTypeLabel(string type)
 string almServer::Add(ALARM_INFO& ai, bool bNotify)
 {
 	if (m_blockingPlan.isBlocking())
-		return;
+		return "blocked by blocking plan";
 
 	std::lock_guard<mutex>  g(m_csAlarmData);
 
