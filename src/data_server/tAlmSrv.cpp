@@ -487,6 +487,9 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		return;
 	if (!m_enable)
 		return;
+	if (m_blockingPlan.isBlocking())
+		return;
+
 
 	m_iUpdateCallCount++;
 	//忽略屏蔽报警
@@ -654,6 +657,9 @@ string almServer::getAlarmTypeLabel(string type)
 
 string almServer::Add(ALARM_INFO& ai, bool bNotify)
 {
+	if (m_blockingPlan.isBlocking())
+		return;
+
 	std::lock_guard<mutex>  g(m_csAlarmData);
 
 
@@ -871,6 +877,16 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 void almServer::rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session)
 {
 
+}
+
+void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session)
+{
+	m_blockingPlan.fromJson(params);
+	string s = params.dump();
+
+	string abpConf = m_dbPath + "alarmBlockingPlan.json";
+	as_fs::createFolderOfPath(abpConf);
+	as_fs::writeFile(abpConf, s);
 }
 
 //params ：对应ai那个结构

@@ -257,6 +257,43 @@ struct AsInitParam
 	tfunc_usrMng_checkTagPermission func_usrMng_checkTagPermission = NULL;
 };
 
+
+struct BLOCKING_PLAN {
+	string start;
+	string end;
+	bool enable;
+	string name;
+
+	BLOCKING_PLAN() {
+		enable = false;
+	}
+
+	bool isBlocking() {
+		TIME tNow; tNow.setNow();
+		string sNow = tNow.toStr(false);
+		if (enable && sNow > start && sNow < end) {
+			return true;
+		}
+		return false;
+	}
+
+	void fromJson(json& j) {
+		start = j["start"];
+		end = j["end"];
+		enable = j["enable"].get<bool>();
+		name = j["name"].get<string>();
+	}
+
+	json toJson() {
+		json j;
+		j["start"] = start;
+		j["end"] = end;
+		j["enable"] = enable;
+		j["name"] = name;
+		return j;
+	}
+};
+
 class almServer
 {
 public:
@@ -282,6 +319,8 @@ public:
 	//rpc handler
 	void rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session);
+
 	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
 	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
@@ -333,6 +372,8 @@ public:
 	almTable tableHist;
 	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
+
+	BLOCKING_PLAN m_blockingPlan;
 
 	string m_curPath;
 	string m_histPath;
