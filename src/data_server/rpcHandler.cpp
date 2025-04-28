@@ -2176,37 +2176,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
 		{
-			if (params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
-				string rootTag;
-				if (params.contains("rootTag")) { 
-					rootTag = params["rootTag"];
-				}
-				json jDeList = json::array();
-				json jOnlineStatusList = json::array();
-
-				//params为子服务上送的对象树，rootTag为子服务在上级服务中的位号
-				//数据值和在线状态都来自于io设备采集，因此统一用input接口输入
-				OBJ::treeStatus2ListStatus(params, jDeList, jOnlineStatusList, rootTag);
-
-				//对于对象，更新在线状态
-				for (int i = 0; i < jOnlineStatusList.size();i++) {
-					json& os = jOnlineStatusList[i];
-					if (os["online"].is_boolean()) {
-						if (os["online"].get<bool>() == true) {
-							rpc_onObjOnline(os,rpcResp, session);
-						}
-						else if (os["online"].get<bool>() == false) {
-							rpc_onObjOffline(os, rpcResp, session);
-						}
-					}
-				}
-
-				//对于监控点，更新值
-				rpc_input(jDeList, rpcResp, session);
-			}
-			else {
-				rpc_input(params, rpcResp, session);
-			}
+			rpc_input(params, rpcResp, session);
 		}
 		else if (method == "output")
 		{
@@ -4558,6 +4528,37 @@ json getValAttr(json de) {
 
 void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 {
+	if (params.is_object() && params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
+		string rootTag;
+		if (params.contains("rootTag")) {
+			rootTag = params["rootTag"];
+		}
+		json jDeList = json::array();
+		json jOnlineStatusList = json::array();
+
+		//params为子服务上送的对象树，rootTag为子服务在上级服务中的位号
+		//数据值和在线状态都来自于io设备采集，因此统一用input接口输入
+		OBJ::treeStatus2ListStatus(params, jDeList, jOnlineStatusList, rootTag);
+
+		//对于对象，更新在线状态
+		for (int i = 0; i < jOnlineStatusList.size(); i++) {
+			json& os = jOnlineStatusList[i];
+			if (os["online"].is_boolean()) {
+				if (os["online"].get<bool>() == true) {
+					RPC_RESP respTmp;
+					rpc_onObjOnline(os, respTmp, session);
+				}
+				else if (os["online"].get<bool>() == false) {
+					RPC_RESP respTmp;
+					rpc_onObjOffline(os, respTmp, session);
+				}
+			}
+		}
+
+		params = jDeList;
+	}
+
+
 	//监测点组将忽略不同的保存间隔，其中有1个点要保存就都保存
 	bool isMpGroup = false;
 	if (params.contains("isMpGroup")) {
