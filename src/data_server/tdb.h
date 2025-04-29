@@ -249,6 +249,8 @@ public:
 	string m_org;  
 	string m_rootTag; 
 
+
+	string tagSel;
 	vector<string> fuzzyMatchExp;
 	vector<string> fuzzyMatchRegExp;
 	vector<string> exactMatchExp; 

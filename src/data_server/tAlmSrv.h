@@ -65,7 +65,9 @@ public:
 	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
 
 	string getKey(ALM_TABLE_TYPE tableType) {
-		string keyWithTime = time + "," + tag + "," + type + id;;
+		string keyWithTime;
+		keyWithTime.reserve(time.size() + tag.size() + type.size() + id.size() + 3);
+		keyWithTime.append(time).append(",").append(tag).append(",").append(type).append(",").append(id);
 		if(tableType == HISTORY_TABLE)
 			return keyWithTime;
 		else if (tableType == CURRENT_TABLE) {
@@ -78,14 +80,26 @@ public:
 		return keyWithTime;
 	}
 
-	string getSortKey(string sortKey)
+	void getSortKey(const string& sortKey,string& completeSortKey)
 	{
-		if (sortKey == "tag")
-			return tag + "," + time + "," + type + id;
-		else if (sortKey == "type")
-			return   type + "," + time + "," + tag + id;
-		else
-			return time + "," + tag + "," + type + id;
+		if (sortKey == "tag") {
+			completeSortKey.reserve(tag.size() + time.size() + type.size() + id.size());
+			completeSortKey.append(tag).append(time).append(type).append(id);
+		}
+		else if (sortKey == "type") {
+			completeSortKey.reserve(type.size() + time.size() + tag.size() + id.size());
+			completeSortKey.append(type).append(time).append(tag).append(id);
+		}
+		else {
+			completeSortKey.reserve(time.size() + tag.size() + type.size() + id.size());
+			completeSortKey.append(time).append(tag).append(type).append(id);
+		}
+	}
+
+	string getYearMonth() {
+		string year = time.substr(0, 4);
+		string month = time.substr(5, 2);
+		return year + month;
 	}
 };
 
@@ -112,25 +126,19 @@ public:
 	string typeLabel;
 	bool isRecover;
 	bool needRecover;
-	TIME recoverTime;
+	string recoverTime;
 	bool isAck;
 	bool needAck;
-	TIME ackTime;
+	string ackTime;
 	string ackInfo;
 	string ackUser;
 	string pic_url;
 
 	ALARM_INFO() {
-		desc = "";
-		detail = "";
-		suggest = "";
 		isRecover = 0;
 		needRecover = true;
 		needAck = true;
-		memset(&recoverTime, 0, sizeof(TIME));
 		isAck = 0;
-		memset(&ackTime, 0, sizeof(TIME));
-		ackInfo = "";
 		multiUnack = false;
 	}
 
@@ -143,6 +151,7 @@ public:
 	string toJsonStr(almServer* almSrv, string rootTag = "");
 	ALARM_INFO fromJson(json j);
 	json toJson(almServer* almSrv, string rootTag = "");
+	void toJson(almServer* almSrv, string rootTag, yyjson_mut_val*& jVal, yyjson_mut_doc* doc);
 };
 
 //manage 3 data tables
@@ -182,6 +191,20 @@ struct ALARM_QUERY {
 	}
 };
 
+struct CELL_VAL {
+	const char* p;
+	int len;
+
+	CELL_VAL() {
+		p = nullptr;
+		len = 0;
+	}
+	CELL_VAL(char* cp,int clen) {
+		p = cp;
+		len = clen;
+	}
+};
+
 class almTable {
 public:
 	//bind with disk data file
@@ -206,6 +229,7 @@ public:
 	almTable() {
 		bOneFilePerMonth = false;
 		m_pAlmSrv = nullptr;
+		valLoadIdxInit = false;
 	}
 	~almTable() {
 		for (auto& i : buff) {
@@ -217,8 +241,10 @@ public:
 	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
-	ALARM_INFO fromCSV(const string& line);
-	string csvColVal(vector<string>& colVals, string colName);
+	void fromCSV(const char* line, int lineLen, ALARM_INFO& ai);
+	CELL_VAL* csvColVal(CELL_VAL* colVals, string colName);
+
+	int getCsvColIdx(string colName);
 
 	string toCSV(ALARM_INFO& info);
 	string filePath;
@@ -232,6 +258,8 @@ public:
 protected:
 	almServer* m_pAlmSrv;
 	map<string, int> m_colIdx;
+	int m_loadIdxToColIdx[50];
+	bool valLoadIdxInit;
 };
 
 
@@ -370,7 +398,9 @@ public:
 	//almTable tableStatus;
 	//almTable tableUnack;
 	almTable tableCurrent; 
-	almTable tableHist;
+	map<string,almTable*> tableHist;  //key是202004 年月相加格式
+	std::mutex m_csTableHistList;
+	almTable* getHistTable(string time);
 	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
 

@@ -5754,6 +5754,7 @@ string TIME_SELECTOR_ATOM::getParsedSelector()
 bool TAG_SELECTOR::init(string tag, string rootTag, string objtype,string objlevel){
 	rootTag = DB_TAG::addRoot(rootTag, m_org);
 	m_rootTag = rootTag;
+	tagSel = tag;
 	if (tag.find("*") != string::npos)
 	{
 		//if tag is * ,rootTag is HangZhou, so selector is  HangZhou.*
@@ -5830,6 +5831,9 @@ bool TAG_SELECTOR::specifyType()
 }
 
 bool TAG_SELECTOR::match(string tag){
+	if (tagSel == "*")
+		return true;
+
 	for (int i = 0; i < exactMatchExp.size(); i++) {
 		string& exp = exactMatchExp[i];
 		if (exp == tag) {

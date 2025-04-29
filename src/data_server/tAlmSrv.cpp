@@ -202,7 +202,6 @@ almServer::almServer(void)
 	m_bTestSrv = false;
 	m_iUpdateCallCount = 0;
 	tableCurrent.m_tableType = CURRENT_TABLE;
-	tableHist.m_tableType = HISTORY_TABLE;
 	m_init = false;
 }
 
@@ -250,10 +249,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	tableCurrent.init("current");
 	tableCurrent.SetAlarmSrv(this);
 
-	tableHist.init("history");
-	tableHist.bOneFilePerMonth = true;
-	tableHist.SetAlarmSrv(this);
-
 	initMOAlarmStatus();
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
@@ -293,7 +288,7 @@ void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
 	if (tableCurrent.query(params, ai))
 	{
 		ai.isRecover = 1;
-		ai.recoverTime.fromStr(recoverTime);
+		ai.recoverTime = recoverTime;
 		if (ai.isAck && ai.isRecover)
 		{
 			tableCurrent.remove(key);
@@ -301,11 +296,12 @@ void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
 		else
 			tableCurrent.update(ai);
 	}
-	if (tableHist.query(params, ai))
+	almTable* pTableHist = getHistTable(ai.time);
+	if (pTableHist->query(params, ai))
 	{
 		ai.isRecover = 1;
 		ai.recoverTime = key.recoverTime;
-		tableHist.update(ai);
+		pTableHist->update(ai);
 	}
 
 	json j = ai.toJson(this);
@@ -424,7 +420,8 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 	ai.uuid = ai.time + ai.tag + ai.type + ai.level;
 
 	tableCurrent.add(ai);
-	tableHist.add(ai);
+	almTable* pHistTable = getHistTable(ai.time);
+	pHistTable->add(ai);
 
 	//报警短信通知
 	string msg = "报警类型:" + ai.typeLabel + "; ";
@@ -845,7 +842,8 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.isAck = 1;
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
-		ai.ackTime.setNow();
+		TIME t; t.setNow();
+		ai.ackTime = t.toStr();
 		if (canRemoveFromCurrent(ai))//删除已消除已确认报警
 		{
 			tableCurrent.remove(ai);
@@ -854,8 +852,8 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 			tableCurrent.update(ai);
 	}
 	
-
-	if (tableHist.query(params, ai))
+	almTable* pTableHist = getHistTable(ai.time);
+	if (pTableHist->query(params, ai))
 	{
 		string user = session.user;
 		string info;
@@ -865,8 +863,9 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		ai.isAck = 1;
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
-		ai.ackTime.setNow();
-		tableHist.update(ai);
+		TIME t; t.setNow();
+		ai.ackTime = t.toStr(true);
+		pTableHist->update(ai);
 	}
 	else
 	{
@@ -947,7 +946,8 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 		ai.isAck = 1;
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
-		ai.ackTime.setNow();
+		TIME t; t.setNow();
+		ai.ackTime = t.toStr();
 		if (ai.isAck && ai.isRecover)//删除已消除已确认报警
 		{
 			tableCurrent.remove(ai);
@@ -964,7 +964,8 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 
 	if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
 		params["time"] = ai.time;
-	if (tableHist.query(params, ai))
+	almTable* pTableHist = getHistTable(ai.time);
+	if (pTableHist->query(params, ai))
 	{
 		string user = session.user;
 		string info;
@@ -974,8 +975,9 @@ int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
 		ai.isAck = 1;
 		ai.ackUser = session.user;
 		ai.ackInfo = info;
-		ai.ackTime.setNow();
-		tableHist.update(ai);
+		TIME t; t.setNow();
+		ai.ackTime = t.toStr();
+		pTableHist->update(ai);
 	}
 
 	json j = ai.toJson(this);
@@ -1180,40 +1182,45 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		return error;
 	TIME_SELECTOR& timeSelector = deSel.timeSel;
 	TAG_SELECTOR& tagSelector = deSel.tagSel;
+	int maxSelCount = -1; //-1表示不限制
+	if (deSel.pageSize > 0)
+	{
 
-	std::lock_guard<mutex> g(m_csAlarmData);
+	}
+
 	int startYear = timeSelector.atomSelList[0].stStart.wYear;
 	int startMonth = timeSelector.atomSelList[0].stStart.wMonth;
 	int endYear = timeSelector.atomSelList[0].stEnd.wYear;
 	int endMonth = timeSelector.atomSelList[0].stEnd.wMonth;
 	int iMonth = 0;
 	int iEndMonth = 0;
+	if (deSel.sortKey == "") deSel.ascendingSort = false;
 	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
-	vector<almTable*> histTables;
-	for (int iYear = startYear; iYear <= endYear; iYear++) {
+	vector<ALARM_INFO*> afterSortList;
+	//历史数据查询一般都是查询最近的，因此从最新的数据开始往前查
+	//只加载选择时间范围内的文件
+	for (int iYear = endYear; iYear >= startYear; iYear--) {
 		if (iYear == startYear) iMonth = startMonth;
 		else iMonth = 1;
 		if (iYear == endYear) iEndMonth = endMonth;
 		else iEndMonth = 12;
-		for (; iMonth <= iEndMonth; iMonth++) {
-			almTable* tableTemp = new almTable();
-			tableTemp->init(m_histPath);
-			tableTemp->filePath = tableHist.filePath;
-			tableTemp->bOneFilePerMonth = true;
-			tableTemp->SetAlarmSrv(this);
-			histTables.push_back(tableTemp);
-			tableTemp->m_tableType = HISTORY_TABLE;
-			tableTemp->loadFile(tableTemp->getFilePath(iYear, iMonth));
-			for (map<string, ALARM_INFO*>::iterator it = tableTemp->buff.begin(); it != tableTemp->buff.end(); it++) {
+		for (; iMonth >= startMonth; iMonth--) {
+			string time = str::format("%04d-%02d-00 00:00:00", iYear, iMonth);
+			almTable* pTableHist = getHistTable(time);
+			std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
+			for (map<string, ALARM_INFO*>::iterator it = pTableHist->buff.begin(); it != pTableHist->buff.end(); it++) {
+				//未来拟删除按照单个对象控制权限的机制，过于复杂，也用不太上
 				if (session.user != "") {
 					//if (!userMng.checkTagPermission(session.user, it->second->tag))
 						//continue;
-					if (m_initParam.func_usrMng_checkTagPermission) {
-						if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
-							continue;
-						}
+					//if (m_initParam.func_usrMng_checkTagPermission) {
+					//	if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
+					//		continue;
+					//	}
+					//}
+					if (it->second->tag.find(session.org) != 0) {
+						continue;
 					}
-
 				}
 
 				if (keywords.size() > 0) {
@@ -1301,41 +1308,41 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 					}
 				}
 
-				SORT_FLAG sf;
-				sf.sFlag = it->second->getSortKey(deSel.sortKey);
-				deList_Sort[sf] = it->second;
+				//SORT_FLAG sf;
+				//it->second->getSortKey(deSel.sortKey, sf.sFlag);
+				//deList_Sort[sf] = it->second;
+				afterSortList.push_back(it->second); //时间降序排列
 			}
 		}
 	}
 
-	vector<ALARM_INFO*> afterSortList;
-	if (deSel.sortKey == "") deSel.ascendingSort = false;
 	//因为有升降序之后还有分页需求,所以要再把map转为Vector;
 	//也可以直接根据map直接生成最后的json,但是逻辑稍微复杂,所以转换成Vector
 	//报警这块没有配置的话,按时间降序排列
-	if (deSel.ascendingSort)
-	{
-		for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
-			afterSortList.push_back(it->second);
-		}
-	}
-	else
-	{
-		for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
-			afterSortList.push_back(it->second);
-		}
-	}
+	//if (deSel.ascendingSort)
+	//{
+	//	for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
+	//		afterSortList.push_back(it->second);
+	//	}
+	//}
+	//else
+	//{
+	//	for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
+	//		afterSortList.push_back(it->second);
+	//	}
+	//}
 
 	string dataSet;
 	//pageNo缺省时默认返回第一页
 	if (deSel.pageSize > 0)
 	{
-		json resultObj;
-		json jDataSet = json::array();
-		resultObj["pageNo"] = deSel.pageNo;
-		resultObj["pageSize"] = deSel.pageSize;
-		resultObj["pageCount"] = afterSortList.size() / deSel.pageSize + (afterSortList.size() % deSel.pageSize == 0 ? 0 : 1);
-		resultObj["deCount"] = afterSortList.size();
+		yyjson_mut_doc* yyDoc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* resultObj = yyjson_mut_obj(yyDoc);
+		yyjson_mut_val* jDataSet = yyjson_mut_arr(yyDoc);
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageNo", deSel.pageNo);
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageSize", deSel.pageSize);
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageCount", afterSortList.size() / deSel.pageSize + (afterSortList.size() % deSel.pageSize == 0 ? 0 : 1));
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "deCount", afterSortList.size());
 		if (afterSortList.size() > (deSel.pageNo - 1) * deSel.pageSize)
 		{
 			int curPageSize = deSel.pageSize;
@@ -1346,28 +1353,31 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 
 			for (int i = 0; i < curPageSize; i++)
 			{
-				auto it = afterSortList[i + (deSel.pageNo - 1) * deSel.pageSize];
-				json j = it->toJson(this, rootTag);
-				if (getTypeTag) {
-					/*json jTypeTag = prj.getTypeTagByTag(it->tag);
-					if (jTypeTag != nullptr) {
-						j["typeTag"] = jTypeTag;
-					}*/
-					auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
-					if (func_obj_getTypeTagByTag != NULL) {
-						json jTypeTag = func_obj_getTypeTagByTag(it->tag);
-						if (jTypeTag != nullptr) {
-							j["typeTag"] = jTypeTag;
-						}
-					}
+				int almIdx = i + (deSel.pageNo - 1) * deSel.pageSize;
+				auto it = afterSortList[almIdx];
+				yyjson_mut_val* j = nullptr;
+				it->toJson(this, rootTag,j,yyDoc);
+				//if (getTypeTag) {
+				//	/*json jTypeTag = prj.getTypeTagByTag(it->tag);
+				//	if (jTypeTag != nullptr) {
+				//		j["typeTag"] = jTypeTag;
+				//	}*/
+				//	auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
+				//	if (func_obj_getTypeTagByTag != NULL) {
+				//		json jTypeTag = func_obj_getTypeTagByTag(it->tag);
+				//		if (jTypeTag != nullptr) {
+				//			j["typeTag"] = jTypeTag;
+				//		}
+				//	}
 
-				}
-
-				jDataSet.push_back(j);
+				//}
+				yyjson_mut_arr_append(jDataSet, j);
 			}
 		}
-		resultObj["pageData"] = jDataSet;
-		dataSet = resultObj.dump(2);
+		yyjson_mut_obj_add_val(yyDoc, resultObj, "pageData", jDataSet);
+		size_t len;
+		dataSet = yyjson_mut_val_write(resultObj, 0, &len);
+		yyjson_mut_doc_free(yyDoc);
 	}
 	else
 	{
@@ -1393,10 +1403,6 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			jDataSet.push_back(j);
 		}
 		dataSet = jDataSet.dump(2);
-	}
-
-	for (auto& i : histTables) {
-		delete i;
 	}
 
 	return dataSet;
@@ -1515,6 +1521,37 @@ string almTable::getFilePath(string time) {
 	}
 }
 
+
+struct LINE_VAL {
+	const char* p;  
+	int len;
+};
+
+void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
+	lines.clear();  // 清空现有内容
+
+	if (!s || !*s) return;  // 空输入处理
+
+	const char* start = s;
+	const char* p = s;
+
+	while (*p) {
+		if (*p == '\r' && *(p + 1) == '\n') {
+			lines.push_back({ start, static_cast<int>(p - start) });
+			p += 2;
+			start = p;
+		}
+		else {
+			++p;
+		}
+	}
+
+	// 处理最后一行（如果没有以\r\n结尾）
+	if (p > start) {
+		lines.push_back({ start, static_cast<int>(p - start) });
+	}
+}
+
 void almTable::loadFile(string strFile)
 {
 	//如果当前缓存对应的数据文件和要加载的相同，直接使用内存即可，返回
@@ -1528,11 +1565,11 @@ void almTable::loadFile(string strFile)
 	string strDBData;
 	as_fs::readFile(strFile, strDBData);
 	//strDBData = as_charCodec::gb_to_utf8(strDBData);//默认使用utf8,出现乱码的GB2312只有健康管理系统,自己手动改数据库
-	vector<string> recLines;
-	str::split(recLines, strDBData, "\r\n");
+	std::vector<LINE_VAL> recLines;
+	parse_csv_lines(strDBData.data(), recLines);
 
 	if (recLines.size() >= 1) {
-		string tableHeader = recLines[0];
+		string tableHeader(recLines[0].p, recLines[0].len);
 		vector<string> colNames;
 		str::split(colNames, tableHeader, ",");
 		for (int i = 0; i < colNames.size(); i++) {
@@ -1541,14 +1578,13 @@ void almTable::loadFile(string strFile)
 		}
 	}
 
-
 	for (int i = 1; i < recLines.size(); i++)
 	{
-		string str = recLines.at(i);
-		if (str::trim(str) == "")
-			continue;
+		LINE_VAL& lv = recLines.at(i);
+		//if (str::trim(str) == "") //性能考虑
+		//	continue;
 		ALARM_INFO* pAi = new ALARM_INFO();
-		*pAi = fromCSV(str);
+		fromCSV(lv.p,lv.len,*pAi);
 		buff[pAi->getKey(m_tableType)] = pAi;
 	}
 }
@@ -1578,7 +1614,7 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	if (j["isAck"].is_boolean())
 		ai.isAck = j["isAck"].get<bool>();
 	if (j["recoverTime"] != nullptr)
-		ai.recoverTime.fromStr(j["recoverTime"]);
+		ai.recoverTime = j["recoverTime"];
 	if (j["needRecover"].is_boolean())
 		ai.needRecover = j["needRecover"].get<bool>();
 	if (j["needAck"].is_boolean())
@@ -1623,10 +1659,10 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	j["suggest"] = info->suggest;
 	j["isRecover"] = info->isRecover;
 	j["needRecover"] = info->needRecover;
-	j["recoverTime"] = info->recoverTime.toStr();
+	j["recoverTime"] = info->recoverTime;
 	j["isAck"] = info->isAck;
 	j["needAck"] = info->needAck;
-	j["ackTime"] = info->ackTime.toStr();
+	j["ackTime"] = info->ackTime;
 	j["ackInfo"] = info->ackInfo;
 	j["ackUser"] = info->ackUser;
 	j["picUrl"] = info->pic_url;
@@ -1635,70 +1671,158 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	return j;
 }
 
-string almTable::csvColVal(vector<string>& colVals, string colName) {
+void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,yyjson_mut_doc* doc)
+{
+	ALARM_INFO* info = this;
+	jVal = yyjson_mut_obj(doc);
+	yyjson_mut_obj_add_strcpy(doc, jVal, "uuid", info->uuid.c_str());
+
+	if (rootTag == "") {
+		yyjson_mut_obj_add_strcpy(doc, jVal, "tag", info->tag.c_str());
+	}
+	else {
+		string tag = info->tag;
+		tag = str::trimPrefix(tag, rootTag + ".");
+		yyjson_mut_obj_add_strcpy(doc, jVal, "tag", tag.c_str());
+	}
+
+	yyjson_mut_obj_add_strcpy(doc, jVal, "type", info->type.c_str());
+
+	//if (almSrv->m_mapCustomAlarmDesc.find(info->type) != almSrv->m_mapCustomAlarmDesc.end())
+	//{
+	//	ALARM_TEMPLATE at = almSrv->m_mapCustomAlarmDesc[info->type];
+	//	j["typeLabel"] = at.label;
+	//}
+	//else
+	//{
+	//	j["typeLabel"] = j["type"];
+	//}
+
+	yyjson_mut_obj_add_strcpy(doc, jVal, "level", info->level.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "desc", info->desc.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "detail", info->detail.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "time", info->time.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "suggest", info->suggest.c_str());
+	yyjson_mut_obj_add_bool(doc, jVal, "isRecover", info->isRecover);
+	yyjson_mut_obj_add_bool(doc, jVal, "needRecover", info->needRecover);
+	yyjson_mut_obj_add_strcpy(doc, jVal, "recoverTime", info->recoverTime.c_str());
+	yyjson_mut_obj_add_bool(doc, jVal, "isAck", info->isAck);
+	yyjson_mut_obj_add_bool(doc, jVal, "needAck", info->needAck);
+	yyjson_mut_obj_add_strcpy(doc, jVal, "ackTime", info->ackTime.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "ackInfo", info->ackInfo.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "ackUser", info->ackUser.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "picUrl", info->pic_url.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "dbPath", almSrv->tableCurrent.filePath.c_str());
+	yyjson_mut_obj_add_bool(doc, jVal, "multiUnack", info->multiUnack);
+}
+
+CELL_VAL* almTable::csvColVal(CELL_VAL* colVals, string colName) {
 	map<string, int>::iterator iter = m_colIdx.find(colName);
 	if (iter != m_colIdx.end()) {
 		int idx = m_colIdx[colName];
-		return colVals[idx];
+		return colVals + idx;
 	}
 	else {
-		return "";
+		return nullptr;
 	}
 }
 
-ALARM_INFO almTable::fromCSV(const string& line)
+int almTable::getCsvColIdx(string colName) {
+	map<string, int>::iterator iter = m_colIdx.find(colName);
+	if (iter != m_colIdx.end()) {
+		int idx = m_colIdx[colName];
+		return idx;
+	}
+	else {
+		return -1;
+	}
+}
+
+
+int atoi_n(const char* p, size_t len) {
+	int val = 0;
+	for (size_t i = 0; i < len; ++i) {
+		//if (p[i] < '0' || p[i] > '9') break; // 可选：检查非法字符
+		val = val * 10 + (p[i] - '0');
+	}
+	return val;
+}
+
+void almTable::fromCSV(const char* line,int lineLen, ALARM_INFO& ai)
 {
-	vector<string> cols;
-	string el;
+	CELL_VAL cols[50];
+	int colNum = 0;
+
 	bool bInQuotation = false;
-	for (int i = 0; i < line.length(); i++)
+	int elSize = 0;
+	const char* pElStart = line;
+	for (int i = 0; i < lineLen; i++)
 	{
-		char* p = (char*)line.c_str() + i;
+		const char* p = line + i;
 		if (!bInQuotation && *p == ',')
 		{
-			cols.push_back(el);
-			el = "";
+			cols[colNum].p = pElStart;
+			cols[colNum].len = elSize;
+			colNum++;
+			pElStart = p + 1;
+			elSize = 0;
 		}
 		else if (*p == '\"')
 		{
+			//双引号不算在列的数值字符串之内
 			bInQuotation = !bInQuotation;
+			if (bInQuotation) {
+				pElStart++;
+			}
 		}
 		else
 		{
-			el += *p;
+			elSize++;
 		}
 	}
-	cols.push_back(el);
 
-	int paddingSize = 14 - cols.size();
-	for (int i = 0; i < paddingSize; i++) {
-		cols.push_back("");
+
+	int loadIdx = 0;
+	if (!valLoadIdxInit) {
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("uuid"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("tag"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("time"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("type"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("level"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("info"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("detail"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("isRecover"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("needRecover"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("recoverTime"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("isAck"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("needAck"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("multiUnack"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackTime"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackInfo"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackUser"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("picUrl"); loadIdx++;
+		valLoadIdxInit = true;
 	}
 
-	ALARM_INFO ai;
 	//core info
-	ai.uuid = csvColVal(cols,"uuid");
-	ai.tag = csvColVal(cols,"tag");
-	ai.time = csvColVal(cols,"time").c_str();
-	ai.type = csvColVal(cols,"type").c_str();
-	ai.level = csvColVal(cols,"level").c_str();
-	ai.desc = csvColVal(cols,"info").c_str();//这里没对应起来
-	ai.detail = csvColVal(cols,"detail").c_str();
-
-	//ack and recover
-	ai.isRecover = atoi(csvColVal(cols,"isRecover").c_str());
-	ai.needRecover = atoi(csvColVal(cols,"needRecover").c_str());
-	ai.recoverTime.fromStr(csvColVal(cols,"recoverTime").c_str());
-	ai.isAck = atoi(csvColVal(cols,"isAck").c_str());
-	ai.needAck = atoi(csvColVal(cols,"needAck").c_str());
-	ai.multiUnack = atoi(csvColVal(cols,"multiUnack").c_str());
-	ai.ackTime.fromStr(csvColVal(cols,"ackTime").c_str());
-	ai.ackInfo = csvColVal(cols,"ackInfo").c_str();
-	ai.ackUser = csvColVal(cols,"ackUser").c_str();
-
-	//others
-	ai.pic_url = csvColVal(cols,"picUrl").c_str();
-	return ai;
+	loadIdx = 0; int colIdx;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.uuid.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.tag.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.time.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.type.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.level.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.desc.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.detail.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.isRecover = atoi_n(cv->p, cv->len);}loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.needRecover = atoi_n(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.recoverTime.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.isAck = atoi_n(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.needAck = atoi_n(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.multiUnack = atoi_n(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.ackTime.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.ackInfo.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.ackUser.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.pic_url.assign(cv->p, cv->len); }loadIdx++;
 }
 
 string almTable::toCSV(ALARM_INFO& info)
@@ -1716,11 +1840,11 @@ string almTable::toCSV(ALARM_INFO& info)
 	//ack and recover
 	str += info.isRecover ? "1" : "0"; str += ",";
 	str += info.needRecover ? "1" : "0"; str += ",";
-	str += info.recoverTime.toStr(); str += ",";
+	str += info.recoverTime; str += ",";
 	str += info.isAck ? "1" : "0"; str += ",";
 	str += info.needAck ? "1" : "0"; str += ",";
 	str += info.multiUnack ? "1" : "0"; str += ",";
-	str += info.ackTime.toStr(); str += ",";
+	str += info.ackTime; str += ",";
 	str += "\"" + info.ackInfo + "\""; str += ",";
 	str += info.ackUser; str += ",";
 
@@ -1742,6 +1866,28 @@ void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
 		if (it->second) delete it->second;
 	}
 	inMap.clear();
+}
+
+almTable* almServer::getHistTable(string time)
+{
+	std::unique_lock<mutex> lock(m_csTableHistList);
+	string year = time.substr(0, 4);
+	string month = time.substr(5, 2);
+	string yearMonth = year + month;
+	map<string, almTable*>::iterator iter = tableHist.find(yearMonth);
+	if (iter == tableHist.end()) {
+		almTable* p = new almTable();
+		p->init("history");
+		p->bOneFilePerMonth = true;
+		p->SetAlarmSrv(this);
+		p->m_tableType = HISTORY_TABLE;
+		p->loadFile(p->getFilePath(atoi(year.c_str()), atoi(month.c_str())));
+		tableHist[yearMonth] = p;
+		return p;
+	}
+	else {
+		return iter->second;
+	}
 }
 
 void almTable::init(string file)
@@ -2165,7 +2311,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 		}
 
 		SORT_FLAG sf;
-		sf.sFlag = it->second->getSortKey(aq.sortKey);
+		it->second->getSortKey(aq.sortKey,sf.sFlag);
 		deList_Sort[sf] = it->second;
 	}
 

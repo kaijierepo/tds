@@ -43,8 +43,11 @@ void thread_do_ping_single_dev(ioDev* pDev) {
 		return;
 
 	pDev->m_bPingThreadRunning = true;
-	string ip = pDev->m_jDevAddr["ip"].get<string>();
-	pDev->doPingHeartbeat(ip);
+	json jIP = pDev->m_jDevAddr["ip"];
+	if (jIP.is_string()) {
+		string ip = jIP.get<string>();
+		pDev->doPingHeartbeat(ip);
+	}
 	pDev->m_bPingThreadRunning = false;
 }
 
@@ -353,14 +356,31 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 				try
 				{
 					string& tdspPkt = vec[1];
-					ioDev* p = getIODevByIP(ioSession->remoteIP);
+	/*				ioDev* p = getIODevByIP(ioSession->remoteIP);
 					if (p && p->isTdsp()) {
 						ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
 						if (ptdsp) {
 							ptdsp->ioDev_tdsp::onRecvData((unsigned char*)tdspPkt.c_str(),tdspPkt.size());
 							handled = true;
 						}
+					}*/
+
+					yyjson_doc* doc = yyjson_read(tdspPkt.c_str(), tdspPkt.size(), 0);
+					if (!doc) {
+						return;
 					}
+					yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
+					yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr");
+					if (yyv_ioAddr) {
+						string ioAddr = yyjson_get_str(yyv_ioAddr);
+						ioDev* p = getIODev(ioAddr);
+						if (p && p->isTdsp()) {
+							ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
+							ptdsp->ioDev_tdsp::onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.size());
+							handled = true;
+						}
+					}
+					yyjson_doc_free(doc);
 				}
 				catch (const std::exception&)
 				{
