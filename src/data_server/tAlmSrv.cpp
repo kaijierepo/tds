@@ -1208,7 +1208,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			string time = str::format("%04d-%02d-00 00:00:00", iYear, iMonth);
 			almTable* pTableHist = getHistTable(time);
 			std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
-			for (map<string, ALARM_INFO*>::iterator it = pTableHist->buff.begin(); it != pTableHist->buff.end(); it++) {
+			for (auto it = pTableHist->buff.rbegin(); it != pTableHist->buff.rend(); it++) {
 				//未来拟删除按照单个对象控制权限的机制，过于复杂，也用不太上
 				if (session.user != "") {
 					//if (!userMng.checkTagPermission(session.user, it->second->tag))
