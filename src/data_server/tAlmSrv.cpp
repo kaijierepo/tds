@@ -1189,22 +1189,22 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	}
 
 	int startYear = timeSelector.atomSelList[0].stStart.wYear;
-	int startMonth = timeSelector.atomSelList[0].stStart.wMonth;
+	int startYearStartMonth = timeSelector.atomSelList[0].stStart.wMonth;
 	int endYear = timeSelector.atomSelList[0].stEnd.wYear;
-	int endMonth = timeSelector.atomSelList[0].stEnd.wMonth;
-	int iMonth = 0;
-	int iEndMonth = 0;
+	int endYearEndMonth = timeSelector.atomSelList[0].stEnd.wMonth;
+
 	if (deSel.sortKey == "") deSel.ascendingSort = false;
 	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
 	vector<ALARM_INFO*> afterSortList;
 	//历史数据查询一般都是查询最近的，因此从最新的数据开始往前查
 	//只加载选择时间范围内的文件
 	for (int iYear = endYear; iYear >= startYear; iYear--) {
-		if (iYear == startYear) iMonth = startMonth;
-		else iMonth = 1;
-		if (iYear == endYear) iEndMonth = endMonth;
-		else iEndMonth = 12;
-		for (; iMonth >= startMonth; iMonth--) {
+		int startMonth = 1;
+		if (iYear == startYear)
+			startMonth = startYearStartMonth;
+		else
+			startMonth = 1;
+		for (int iMonth = 12; iMonth >= startMonth; iMonth--) {
 			string time = str::format("%04d-%02d-00 00:00:00", iYear, iMonth);
 			almTable* pTableHist = getHistTable(time);
 			std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
