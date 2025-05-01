@@ -64,7 +64,7 @@ public:
 
 	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
 
-	string getKey(ALM_TABLE_TYPE tableType) {
+	string getKey(ALM_TABLE_TYPE tableType) { //diff tag with the same time is allowed
 		string keyWithTime;
 		keyWithTime.reserve(time.size() + tag.size() + type.size() + id.size() + 3);
 		keyWithTime.append(time).append(",").append(tag).append(",").append(type).append(",").append(id);
@@ -240,6 +240,7 @@ public:
 	string getFilePath(int y, int m);
 	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
+	void appendFile(string strFile, ALARM_INFO* pNew);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 	void fromCSV(const char* line, int lineLen, ALARM_INFO& ai);
 	CELL_VAL* csvColVal(CELL_VAL* colVals, string colName);
@@ -401,7 +402,6 @@ public:
 	map<string,almTable*> tableHist;  //key是202004 年月相加格式
 	std::mutex m_csTableHistList;
 	almTable* getHistTable(string time);
-	std::mutex m_csAlarmData;
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
 
 	BLOCKING_PLAN m_blockingPlan;

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <cstdarg>
 #include <random>
+#include "common.h"
 #define WIN32_LEAN_AND_MEAN
 #ifdef _WIN32
 #include <windows.h>
@@ -26,6 +27,8 @@
 #include "scriptFunc.h"
 #include "scriptManager.h"
 #endif
+
+string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 
 almServer almSrv;
 almServer almSrv_dev;
@@ -312,8 +315,6 @@ void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
 }
 
 bool almServer::isRecover(ALARM_INFO& key) {
-	std::lock_guard<mutex> g(m_csAlarmData);
-
 	json filter;
 	filter["tag"] = key.tag;
 	filter["type"] = key.type;
@@ -525,8 +526,6 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	//	}
 	//}
 
-	std::lock_guard<mutex> g(m_csAlarmData);
-
 	if (newStatus.time == "" || newStatus.time == "0000-00-00 00:00:00")
 	{
 		TIME st;
@@ -666,9 +665,6 @@ string almServer::Add(ALARM_INFO& ai, bool bNotify)
 {
 	if (m_blockingPlan.isBlocking())
 		return "blocked by blocking plan";
-
-	std::lock_guard<mutex>  g(m_csAlarmData);
-
 
 	if (!ai.needRecover) {
 		ai.isRecover = true;
@@ -1489,6 +1485,12 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 	as_fs::writeFile(strFile, data);
 }
 
+void almTable::appendFile(string strFile, ALARM_INFO* pNew)
+{
+	string str = toCSV(*pNew);
+	fs::appendFile(strFile, str);
+}
+
 string almTable::getFilePath(int y, int m) {
 	string p;
 	if (bOneFilePerMonth)
@@ -1561,6 +1563,10 @@ void almTable::loadFile(string strFile)
 	//加载新的路径到缓存
 	freeBuff(buff);
 	buffFilePath = strFile;
+
+	if (!fs::fileExist(strFile)) {
+
+	}
 
 	string strDBData;
 	as_fs::readFile(strFile, strDBData);
