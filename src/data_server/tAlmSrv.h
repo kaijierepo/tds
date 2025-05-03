@@ -243,7 +243,7 @@ public:
 
 	//table options
 	void add(ALARM_INFO ai);
-	bool query(json params, ALARM_INFO& ai);
+	bool query(ALARM_KEY& query, ALARM_INFO& ai);
 	bool query(string customId, ALARM_INFO& ai, string time = "");
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
@@ -417,8 +417,6 @@ public:
 
 private:
 	void addAlarm(ALARM_INFO& ai, bool notify = true);
-	//alarm status modify
-	void recover(ALARM_INFO& key, string recoverTime, bool notify = true);
 
 	bool parseAlmSelector(json& params, RPC_SESSION& session, ALM_SELECTOR& almSel);
 	void getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& timeKey);

@@ -293,40 +293,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	m_init = true;
 }
 
-void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
-{
-	if (!m_init)return;
-
-	ALARM_INFO ai;
-	json params;
-	params["time"] = key.time;
-	params["type"] = key.type;
-	params["tag"] = key.tag;
-	if (tableCurrent.query(params, ai))
-	{
-		ai.isRecover = 1;
-		ai.recoverTime = recoverTime;
-		if (ai.isAck && ai.isRecover)
-		{
-			tableCurrent.remove(key);
-		}
-		else
-			tableCurrent.update(ai);
-	}
-	almTable* pTableHist = getHistTable(ai.time);
-	if (pTableHist->query(params, ai))
-	{
-		ai.isRecover = 1;
-		ai.recoverTime = key.recoverTime;
-		pTableHist->update(ai);
-	}
-
-	json j = ai.toJson(this);
-
-	//rpcSrv.notify("onAlarmRecover", j);  
-	if (m_initParam.func_rpcHand_notify && notify)
-		m_initParam.func_rpcHand_notify("onAlarmRecover", j);
-}
 
 bool almServer::isRecover(ALARM_INFO& key) {
 	json filter;
@@ -429,7 +395,7 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 	//LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 	auto func_log = m_initParam.func_log;
 	if (func_log)
-		func_log("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
+		func_log("[almSrv]new alarm,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 
 	//ai.uuid = uuid();
 	ai.uuid = ai.time + ai.tag + ai.type + ai.level;
@@ -438,10 +404,10 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 	almTable* pHistTable = getHistTable(ai.time);
 	pHistTable->add(ai);
 
-	//报警短信通知
-	string msg = "报警类型:" + ai.typeLabel + "; ";
-	msg += "报警对象:" + ai.tag + "; ";
-	msg += "报警时间:" + ai.time + "; ";
+	//sms send
+	//string msg = "报警类型:" + ai.typeLabel + "; ";
+	//msg += "报警对象:" + ai.tag + "; ";
+	//msg += "报警时间:" + ai.time + "; ";
 
 	/*
 	vector<USER_INFO> relateUsers = userMng.getRelateUsers(ai.tag);
@@ -471,9 +437,9 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 		}
 
 	}*/
-	if (m_initParam.func_sms_notify) {
-		m_initParam.func_sms_notify(ai.tag, msg);
-	}
+	//if (m_initParam.func_sms_notify) {
+	//	m_initParam.func_sms_notify(ai.tag, msg);
+	//}
 
 	//通知给TDS客户端
 	if (!m_bTestSrv) {
@@ -530,6 +496,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	bool bNeedRecover = false;
 	bool bNeedAdd = false;
 	string curLevel;
+	ALARM_INFO curStatus;
 	tableCurrent.m_csTable.lock();
 	auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
 	//get current level
@@ -537,20 +504,43 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 		curLevel = iter->second->level;
 		if (curLevel != newStatus.level)
 		{
-			ALARM_INFO& curStatus = *iter->second;
-			curStatus.isRecover = true;
-			curStatus.recoverTime = newStatus.time;
-			if (curStatus.isRecover && curStatus.isAck) {
-				tableCurrent.unRecoverList.erase(iter);
-				tableCurrent.buff.erase(curStatus.getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
-				tableCurrent.saveFile();
+			ALARM_INFO* pai = iter->second;
+			pai->isRecover = true;
+			pai->recoverTime = newStatus.time;
+			tableCurrent.unRecoverList.erase(iter);
+			curStatus = *pai;
+			if (pai->isRecover && pai->isAck) {
+				tableCurrent.buff.erase(pai->getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
+				delete pai;
 			}
+			tableCurrent.saveFile();
+			bNeedRecover = true;
 		}
 	}
 	else{
 		curLevel = ALARM_LEVEL::normal;
 	}
 	tableCurrent.m_csTable.unlock();
+
+	//recover alarm in history table
+	if (bNeedRecover) {
+		almTable* pTableHist = getHistTable(curStatus.time);
+		string almKeyHist = curStatus.getKey(ALM_TABLE_TYPE::HISTORY_TABLE);
+		pTableHist->m_csTable.lock();
+		auto iterHist = pTableHist->buff.find(almKeyHist);
+		if (iterHist != pTableHist->buff.end())
+		{
+			iterHist->second->isRecover = 1;
+			iterHist->second->recoverTime = newStatus.time;
+			pTableHist->saveFile();
+		}
+		pTableHist->m_csTable.unlock();
+
+		json j = curStatus.toJson(this);
+		if (m_initParam.func_rpcHand_notify && notify) {
+			m_initParam.func_rpcHand_notify("onAlarmRecover", j);
+		}
+	}
 
 	if (curLevel != newStatus.level)
 	{
@@ -607,19 +597,15 @@ string almServer::Add(ALARM_INFO& ai, bool bNotify)
 		ai.isRecover = true;
 	}
 
-	json filter;
-	filter["tag"] = ai.tag;
-	filter["type"] = ai.type;
-	filter["isRecover"] = false;
-	ALARM_INFO lastStatus;
-	
 	bool bNeedAdd = false;
-
 	if (ai.needRecover) {
-		if (!tableCurrent.query(filter, lastStatus))
-		{
+		string alarmKeyStr = ai.getKey(ALM_TABLE_TYPE::CURRENT_TABLE);
+		tableCurrent.m_csTable.lock();
+		auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
+		if (iter == tableCurrent.unRecoverList.end()) {
 			bNeedAdd = true;
 		}
+		tableCurrent.m_csTable.unlock();
 	}
 	else { // state less alarm
 		bNeedAdd = true;
@@ -737,7 +723,7 @@ bool almServer::canRemoveFromCurrent(ALARM_INFO& ai) {
 	return false;
 }
 
-//基于 uuid,或 tag+ time+ type 匹配记录 
+//基于  tag+ time+ type 匹配记录 
 void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session) {
 	if (!params.contains("time")) {
 		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定time字段");
@@ -745,8 +731,14 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		return;
 	}
 	
-	if (!params.contains("uuid") && !params.contains("tag")) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+	if (!params.contains("tag")) {
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定tag字段");
+		resp.error = error;
+		return;
+	}
+
+	if (!params.contains("type")) {
+		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定type字段");
 		resp.error = error;
 		return;
 	}
@@ -764,52 +756,61 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		params["tag"] = tag;
 	}
 
-	ALARM_INFO ai;
-	if (tableCurrent.query(params, ai))
-	{
-		string user = session.user;
-		string info;
-		if (params.contains("ackInfo"))
-			info = params["ackInfo"];
+	string user = session.user;
+	string info;
+	if (params.contains("ackInfo"))
+		info = params["ackInfo"];
 
-		ai.isAck = 1;
-		ai.ackUser = session.user;
-		ai.ackInfo = info;
-		TIME t; t.setNow();
-		ai.ackTime = t.toStr();
-		if (canRemoveFromCurrent(ai))//删除已消除已确认报警
+	ALARM_KEY queryKey;
+	queryKey.time = params["time"];
+	queryKey.tag = params["tag"];
+	queryKey.type = params["type"];
+	TIME t; t.setNow();
+	string ackTime = t.toStr(true);
+	ALARM_INFO ai;
+	{
+		unique_lock<shared_mutex> lock(tableCurrent.m_csTable);
+		auto iter = tableCurrent.buff.find(queryKey.getKey(ALM_TABLE_TYPE::HISTORY_TABLE));
+		if (iter != tableCurrent.buff.end())
 		{
-			tableCurrent.remove(ai);
+			iter->second->isAck = 1;
+			iter->second->ackUser = session.user;
+			iter->second->ackInfo = info;
+			iter->second->ackTime = ackTime;
+			ai = *iter->second;
+			if (iter->second->isRecover && iter->second->isAck) {
+				tableCurrent.buff.erase(iter->second->getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
+				delete iter->second;
+			}
+			tableCurrent.saveFile();
 		}
-		else
-			tableCurrent.update(ai);
+		else {
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+			resp.error = error;
+			return;
+		}
 	}
 	
-	almTable* pTableHist = getHistTable(ai.time);
-	if (pTableHist->query(params, ai))
+	almTable* pTableHist = getHistTable(queryKey.time);
 	{
-		string user = session.user;
-		string info;
-		if (params.contains("ackInfo"))
-			info = params["ackInfo"];
-
-		ai.isAck = 1;
-		ai.ackUser = session.user;
-		ai.ackInfo = info;
-		TIME t; t.setNow();
-		ai.ackTime = t.toStr(true);
-		pTableHist->update(ai);
+		unique_lock<shared_mutex> lock(pTableHist->m_csTable);
+		auto iter = pTableHist->buff.find(queryKey.getKey(ALM_TABLE_TYPE::HISTORY_TABLE));
+		if (iter != pTableHist->buff.end())
+		{
+			iter->second->isAck = 1;
+			iter->second->ackUser = session.user;
+			iter->second->ackInfo = info;
+			iter->second->ackTime = ackTime;
+			pTableHist->saveFile();
+		}
+		else {
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+			resp.error = error;
+			return;
+		}
 	}
-	else
-	{
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
-		resp.error = error;
-		return;
-	}
-
+	
 	json j = ai.toJson(this);
-
-	//rpcSrv.notify("onAlarmAck", j);  
 	if (m_initParam.func_rpcHand_notify)
 		m_initParam.func_rpcHand_notify("onAlarmAck", j);
 
@@ -1044,9 +1045,9 @@ void almServer::rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 
 	vector<ALARM_INFO*> vecAlarm;
-	for (auto& i : tableCurrent.buff) {
-		if (isSelected(i.second, almSel)) {
-			vecAlarm.push_back(i.second);
+	for (auto& i = tableCurrent.buff.rbegin(); i != tableCurrent.buff.rend();i++) {
+		if (isSelected(i->second, almSel)) {
+			vecAlarm.push_back(i->second);
 		}
 	}
 	getPagedDateSet(vecAlarm, almSel, resp.result);
@@ -1820,7 +1821,11 @@ void almTable::add(ALARM_INFO ai)
 	loadFile(pa);
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
-	buff[ai.getKey(m_tableType)] = pNew;
+	string almKey = ai.getKey(m_tableType);
+	buff[almKey] = pNew;
+	if (m_tableType == ALM_TABLE_TYPE::CURRENT_TABLE) {
+		unRecoverList[almKey] = pNew;
+	}
 	appendFile(pa, pNew);
 }
 
@@ -1854,10 +1859,11 @@ void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 void almTable::initUnAckUnRecover()
 {
 	for (auto& i : buff) {
-		if (i.second->isAck == false) {
-			unAckList[i.first] = i.second;
-		}
-		else if (i.second->isRecover == false) {
+		//if (i.second->isAck == false) {
+		//	unAckList[i.first] = i.second;
+		//}
+
+		if (i.second->isRecover == false) {
 			unRecoverList[i.first] = i.second;
 		}
 	}
@@ -1878,61 +1884,14 @@ void almTable::acknowledge(ALARM_INFO& ai)
 	}
 }
 
-bool almTable::query(json params, ALARM_INFO& ai)
+bool almTable::query(ALARM_KEY& query, ALARM_INFO& ai)
 {
 	std::shared_lock<shared_mutex> lock(m_csTable);
+	string almKey = query.getKey(ALM_TABLE_TYPE::HISTORY_TABLE);
 
-
-	bool bFind = false;
-	ALARM_INFO* p = NULL;
-	string time;
-	if (params["time"] != nullptr)
-		time = params["time"].get<string>();
-	string  pa = m_pAlmSrv->getFilePath(time,m_tableType,dbFileMode);
-	loadFile(pa);
-	const string strRecoverFlag = "恢复";
-	string strType = "";
-	if (params["type"] != nullptr)
-	{
-		strType = params["type"].get<string>();
-		auto pos = strType.find(strRecoverFlag);
-		if (pos != string::npos)
-		{
-			strType.replace(pos, strRecoverFlag.length(), "");
-		}
-	}
-
-	for (auto& i : buff)
-	{
-		ALARM_INFO& it = *i.second;
-		if (params["uuid"] != nullptr) {
-			if (it.uuid == params["uuid"].get<string>()) {
-				ai = it;
-				bFind = true;
-				break;
-			}
-		}
-		else {
-			if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
-				continue;
-			if (params["time"] != nullptr && it.time != params["time"].get<string>())
-				continue;
-			if (params["type"] != nullptr)
-			{
-				if (it.type != strType)
-					continue;
-			}
-			if (params["isAck"] != nullptr && it.isAck != params["isAck"].get<bool>())
-				continue;
-			if (params["isRecover"] != nullptr && it.isRecover != params["isRecover"].get<bool>())
-				continue;
-
-			ai = it;
-			bFind = true;
-		}
-	}
-	if (bFind)
-	{
+	auto& iter = buff.find(almKey);
+	if (iter != buff.end()) {
+		ai = *iter->second;
 		return true;
 	}
 	return false;
