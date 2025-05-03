@@ -150,7 +150,7 @@ public:
 	}
 
 	bool isAlarming() {
-		if (level != "" && level != "normal" && level != "正常")
+		if (level != ALARM_LEVEL::normal)
 			return true;
 		return false;
 	}
@@ -237,8 +237,9 @@ struct LINE_PARSER {
 
 class almTable {
 public:
-	//bind with disk data file
-	void init(string file);
+	//disk io options
+	void loadFile(string strFile);
+	void saveFile();
 
 	//table options
 	void add(ALARM_INFO ai);
@@ -247,13 +248,11 @@ public:
 	void update(ALARM_INFO ai);
 	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
-	vector<ALARM_INFO*> query(json filter);
-	string toJsonStr(const json& filter);
-
 	void SetAlarmSrv(almServer* pSrv);
-
 	void acknowledge(ALARM_INFO& ai);
 	void acknowledge(ALARM_INFO& ai, bool remove);
+
+	void initUnAckUnRecover();
 public:
 
 	almTable() {
@@ -266,14 +265,15 @@ public:
 		}
 	}
 
-	void loadFile(string strFile);
+
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void appendFile(string strFile, ALARM_INFO* pNew);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
 
 	string toCSV(ALARM_INFO& info);
-	string filePath;
 	map<string, ALARM_INFO*> buff;
+	map<string, ALARM_INFO*> unRecoverList;
+	map<string, ALARM_INFO*> unAckList;
 	string buffFilePath;
 	DB_FILE_MODE dbFileMode;
 	shared_mutex m_csTable;
@@ -353,6 +353,7 @@ struct ALM_SELECTOR : public DE_SELECTOR {
 	bool isAck;
 	vector<string> type;
 	vector<string> keywords;
+	string org;
 	string parseError;
 	ALM_SELECTOR() {
 		isRecover = false;
@@ -403,10 +404,10 @@ public:
 		user:null
 	}
 	*/
-	string rpc_getCurrent(json filter, RPC_SESSION session);//combined list of active status and unack event
-	string rpc_getUnRecover(json filter, RPC_SESSION session);
-	string rpc_getUnack(json filter, RPC_SESSION session);
-	string rpc_getHistory(json params, RPC_SESSION session);
+	void rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session);//combined list of active status and unack event
+	void rpc_getUnRecover(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getUnack(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getHistory(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp);
@@ -423,7 +424,9 @@ private:
 	void getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& timeKey);
 	void getDBFileTimeKey_daily(ALM_SELECTOR& almSel, vector<string>& timeKey);
 	void getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey);
+	bool isSelected(ALARM_INFO* ai, ALM_SELECTOR& almSel);
 	void loadHistAlarm(vector<ALARM_INFO*>& almList, ALM_SELECTOR& almSel, RPC_SESSION session);
+	void getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSel, string& dataSet);
 	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
 	string getAlarmTypeLabel(string type);
@@ -436,7 +439,6 @@ public:
 		static almServer inst;
 		return inst;
 	}
-	void init();
 	string getFilePath(string time, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
 	string getFilePath(int y, int m, int d, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
 

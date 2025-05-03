@@ -3229,49 +3229,50 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 {
 	//parse time selector
-	std::string strTime = "";
-	std::string strStartDate, strEndDate;
-	DB_TIME stStartDate, stEndDate;
-	yyjson_val* yyv_time = yyjson_obj_get(yyParams, "time");
-	if (yyv_time == nullptr) {
-		err = "param missing: time";
-		return;
-	}
-
-	if (yyjson_is_str(yyv_time)) {
-		strTime = yyjson_get_str(yyv_time);
-		if (!deSel.timeSel.init(strTime)) {
-			err = "time selector format error:" + deSel.timeSel.error;
+	if (deSel.timeSel.enable) {
+		std::string strTime = "";
+		std::string strStartDate, strEndDate;
+		DB_TIME stStartDate, stEndDate;
+		yyjson_val* yyv_time = yyjson_obj_get(yyParams, "time");
+		if (yyv_time == nullptr) {
+			err = "param missing: time";
 			return;
 		}
-	}
-	else if(yyjson_is_arr(yyv_time)){
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		vector<string> timeSelList;
-		yyjson_arr_foreach(yyv_time, idx, max, item) {
-			if (yyjson_is_str(item)) {
-				string s = yyjson_get_str(item);
-				timeSelList.push_back(s);
+
+		if (yyjson_is_str(yyv_time)) {
+			strTime = yyjson_get_str(yyv_time);
+			if (!deSel.timeSel.init(strTime)) {
+				err = "time selector format error:" + deSel.timeSel.error;
+				return;
 			}
 		}
-		if (!deSel.timeSel.init(timeSelList)) {
-			err = "time selector format error:" + deSel.timeSel.error;
+		else if (yyjson_is_arr(yyv_time)) {
+			size_t idx = 0;
+			size_t max = 0;
+			yyjson_val* item;
+			vector<string> timeSelList;
+			yyjson_arr_foreach(yyv_time, idx, max, item) {
+				if (yyjson_is_str(item)) {
+					string s = yyjson_get_str(item);
+					timeSelList.push_back(s);
+				}
+			}
+			if (!deSel.timeSel.init(timeSelList)) {
+				err = "time selector format error:" + deSel.timeSel.error;
+				return;
+			}
+		}
+		else {
+			err = "param time must be string type or array type";
 			return;
 		}
-	}
-	else {
-		err = "param time must be string type or array type";
-		return;
-	}
 
-	yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
-	if (yyv_timeFmt && yyjson_is_str(yyv_timeFmt)) {
-		deSel.timeSel.timeFmt = yyjson_get_str(yyv_timeFmt);
+		yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
+		if (yyv_timeFmt && yyjson_is_str(yyv_timeFmt)) {
+			deSel.timeSel.timeFmt = yyjson_get_str(yyv_timeFmt);
+		}
 	}
-
-
+	
 	//parse tag selector
 	std::string strRootTag;
 	std::vector<string> tagList;
@@ -5400,6 +5401,7 @@ bool TDB::fileExist(string pszFileName) const
 
 TIME_SELECTOR::TIME_SELECTOR()
 {
+	enable = true;
 	m_dataNum = 0;
 }
 
@@ -5412,6 +5414,9 @@ bool TIME_SELECTOR_ATOM::Match(string& deTime)
 
 bool TIME_SELECTOR::Match(string& deTime)
 {
+	if (!enable)
+		return true;
+
 	for (int i = 0; i < atomSelList.size(); i++) {
 		TIME_SELECTOR_ATOM& tsa = atomSelList[i];
 		if (tsa.Match(deTime)) {
@@ -5491,6 +5496,9 @@ string time2DbFileDate(string& time) {
 }
 
 bool TIME_SELECTOR::init(vector<string> timeSelList) {
+	if (!enable)
+		return true;
+
 	for (int i = 0; i < timeSelList.size(); i++) {
 		string s = timeSelList[i];
 		TIME_SELECTOR_ATOM tsa;
@@ -5504,6 +5512,9 @@ bool TIME_SELECTOR::init(vector<string> timeSelList) {
 
 bool TIME_SELECTOR::init(string time)
 {
+	if (!enable)
+		return true;
+
 	if (time == "")
 		return false;
 

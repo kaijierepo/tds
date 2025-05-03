@@ -339,6 +339,7 @@ public:
 	int m_dataNum;//how many de to get
 	string error;
 	DE_TIME deTime;
+	bool enable;
 };
 DB_TIME_RANGE parseTimeRange(string timeExp);
 

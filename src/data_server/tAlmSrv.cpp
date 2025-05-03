@@ -6,6 +6,7 @@
 #include <cstdarg>
 #include <random>
 #include "common.h"
+#include <filesystem>
 
 
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
@@ -230,6 +231,29 @@ namespace as_fs {
 	{
 		return writeFile(path, (char*)data.c_str(), data.length());
 	}
+
+	bool fileExist(string pszFileName)
+	{
+#ifndef _WINXP
+#ifdef _WIN32
+		std::filesystem::path filePath = DB_STR::utf8_to_utf16(pszFileName);
+#else
+		std::filesystem::path filePath = pszFileName;
+#endif
+
+		if (std::filesystem::exists(filePath)) {
+			return true;
+		}
+		else if (std::filesystem::is_directory(filePath)) {
+			return true;
+		}
+		return  false;
+#else
+		wstring filePath = charCodec::tds_to_utf16(pszFileName);
+		DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#endif
+	}
 }
 
 almServer::almServer(void)
@@ -247,45 +271,16 @@ almServer::~almServer(void)
 {
 }
 
-void almServer::init()
-{
-	string s;
-	if (as_fs::readFile(m_initParam.confPath + "/alarm.json", s) && s != "")
-	{
-		json jAlms = json::parse(s);
-		for (int i = 0; i < jAlms.size(); i++)
-		{
-			json& jAlmDesc = jAlms[i];
-			ALARM_TEMPLATE at;
-			at.name = jAlmDesc["type"].get<string>();
-			at.label = jAlmDesc["typeLabel"].get<string>();
-			at.enable = true;
-			if (jAlmDesc["enable"] != nullptr && jAlmDesc["enable"].get<bool>() == false) //报警屏蔽
-			{
-				at.enable = false;
-			}
-			m_mapCustomAlarmDesc[jAlmDesc["type"].get<string>()] = at;
-		}
-	}
-
-
-
-	//tableStatus.init("\\alarms\\status");
-	//tableUnack.init("\\alarms\\unack");
-
-}
-
 void almServer::init(const string dbPath, AsInitParam& asInitParam)
 {
 	m_initParam = asInitParam;
 	m_dbPath = dbPath;
 	m_dbPath = as_fs::fixPath(m_dbPath);
 
-	init();
-
-	tableCurrent.init("current");
 	tableCurrent.SetAlarmSrv(this);
-
+	string currFilePath = m_dbPath + "/current.csv";
+	tableCurrent.loadFile(currFilePath);
+	tableCurrent.initUnAckUnRecover();
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
@@ -301,20 +296,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 void almServer::recover(ALARM_INFO& key,string recoverTime, bool notify)
 {
 	if (!m_init)return;
-	/*tableStatus.remove(key);
-
-	ALARM_INFO ai;
-	if(tableUnack.query(key,ai))
-	{
-		ai.bRecover = 1;
-		tableUnack.update(ai);
-	}
-
-	if(tableHist.query(key,ai))
-	{
-		ai.bRecover = 1;
-		tableHist.update(ai);
-	}*/
 
 	ALARM_INFO ai;
 	json params;
@@ -533,32 +514,6 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 
 
 	m_iUpdateCallCount++;
-	//忽略屏蔽报警
-	//if (newStatus.typeLabel == "")
-	//{
-	//	//内置类型查找
-	//	newStatus.typeLabel = getAlarmTypeLabel(newStatus.type);
-	//	//自定义类型查找
-	//	if (newStatus.typeLabel == "") {
-	//		if (m_mapCustomAlarmDesc.find(newStatus.type) != m_mapCustomAlarmDesc.end())
-	//		{
-	//			ALARM_TEMPLATE at = m_mapCustomAlarmDesc[newStatus.type];
-	//			newStatus.typeLabel = at.label;
-	//			if (at.enable == false)
-	//				return;
-	//		}
-	//	}
-
-
-	//	if (newStatus.typeLabel == "")
-	//	{
-	//		//LOG("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息");
-	//		auto func_log = m_initParam.func_log;
-	//		if (func_log)
-	//			func_log(("[warn]未知的报警类型" + newStatus.type + ",请在项目报警模板文件alarm.json中配置该报警类型信息").c_str());
-	//	}
-	//}
-
 	if (newStatus.time == "" || newStatus.time == "0000-00-00 00:00:00")
 	{
 		TIME st;
@@ -568,42 +523,40 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 
 	//the time attr of a status record is always the newest occuring event
 	//time attr is not needed to specify a status record 
-	json filter;
-	filter["tag"] = newStatus.tag;
-	filter["type"] = newStatus.type;
-	filter["isRecover"] = false;
-	ALARM_INFO lastStatus;
-	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
+	string alarmKeyStr = newStatus.getKey(ALM_TABLE_TYPE::CURRENT_TABLE);
+
+	//deal status change
+	bool bTagAlarmStatusChanged = false; 
+	bool bNeedRecover = false;
 	bool bNeedAdd = false;
-	if (tableCurrent.query(filter, lastStatus))
-	{
-		//check if status has changed
-		//如果当前报警等级和之前发生改变。
-		if (lastStatus.level != newStatus.level)
+	string curLevel;
+	tableCurrent.m_csTable.lock();
+	auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
+	//get current level
+	if (iter != tableCurrent.unRecoverList.end()){
+		curLevel = iter->second->level;
+		if (curLevel != newStatus.level)
 		{
-			//先进行报警恢复。例如从报警到预警的变化。先恢复报警。
-			recover(lastStatus, newStatus.time, notify);
-			if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
-			{
-				bNeedAdd = true;
+			ALARM_INFO& curStatus = *iter->second;
+			curStatus.isRecover = true;
+			curStatus.recoverTime = newStatus.time;
+			if (curStatus.isRecover && curStatus.isAck) {
+				tableCurrent.unRecoverList.erase(iter);
+				tableCurrent.buff.erase(curStatus.getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
+				tableCurrent.saveFile();
 			}
-			bTagAlarmStatusChanged = true;
-		}
-		else
-		{
-			//maintain last status
-			//lastStatus.stRecoverTime = timeopt::str2st(newStatus.time);
-			//lastStatus.bRecover = true;
-			//recover(lastStatus);
 		}
 	}
-	else
+	else{
+		curLevel = ALARM_LEVEL::normal;
+	}
+	tableCurrent.m_csTable.unlock();
+
+	if (curLevel != newStatus.level)
 	{
-		if (newStatus.level != "" && newStatus.level != "normal" && newStatus.level != "正常")
-		{
+		bTagAlarmStatusChanged = true;
+		if(newStatus.level != "normal")
 			bNeedAdd = true;
-			bTagAlarmStatusChanged = true;
-		}
 	}
 
 	if (bNeedAdd) {
@@ -612,34 +565,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 
 	if (bTagAlarmStatusChanged)
 	{
-		//update alarm status buffered in MO
-		string sTag = newStatus.tag;
-		string::size_type pos_s = newStatus.tag.find("(");
-		if (pos_s != string::npos)
-		{
-			string::size_type pos_e = newStatus.tag.find(")");
-
-			if (pos_e != string::npos)
-			{
-				sTag = newStatus.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
-			}
-		}
-
-		/*OBJ* pmo = prj.queryObj(sTag, "zh");
-		if (pmo)
-		{
-			pmo->m_jAlarmStatus = getAlarmStatus(newStatus.tag);
-		}*/
-		auto func_obj_setJAlmStatus = m_initParam.func_obj_setJAlmStatus;
-		if (func_obj_setJAlmStatus != NULL) {
-			json  js = getAlarmStatus(newStatus.tag);
-			func_obj_setJAlmStatus(sTag, "zh", js);
-		}
-
-
 		//notify client
-		//json j = newStatus.toJson(this);
-		//rpcSrv.notify("onUpdateAlarmStatus", j);
 		if (notify) {
 			if (!m_bTestSrv) {
 				json j = newStatus.toJson(this);
@@ -659,23 +585,6 @@ void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
 		delete i->second;
 	}
 	mapAlarm.clear();
-}
-
-json almServer::getAlarmStatus(string tag)
-{
-	json querier;
-	querier["tag"] = tag;
-	querier["isRecover"] = false;
-	vector<ALARM_INFO*> statusList = tableCurrent.query(querier);
-	json list = json::array();
-
-	for (int i = 0; i < statusList.size(); i++)
-	{
-		ALARM_INFO* p = statusList[i];
-		json j = p->toJson(this);
-		list.push_back(j);
-	}
-	return list;
 }
 
 string almServer::getAlarmTypeLabel(string type)
@@ -994,7 +903,7 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 		for (auto& almInfo : fileData.second) {
 			data += almInfo->toCSVLine();
 		}
-		fs::writeFile(path, data);
+		as_fs::writeFile(path, data);
 	}
 
 	resp.result = RPC_OK;
@@ -1118,39 +1027,41 @@ json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
 	return querier;
 }
 
-string almServer::rpc_getCurrent(json params, RPC_SESSION session)
+void almServer::rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session)
 {
 	if (!m_enable){
-		return "[]";
+		json jRlt = json::array();
+		resp.result = jRlt.dump();
+		return;
 	}
 
-	json querier = rpcReqParams2Querier(params, session);
-	return tableCurrent.toJsonStr(querier);
+	ALM_SELECTOR almSel;
+	almSel.timeSel.enable = false; //current alarm do not need time selector
+	if (!parseAlmSelector(params, session, almSel)) {
+		json jErr = almSel.parseError;
+		resp.error = jErr.dump();
+		return;
+	}
+
+	vector<ALARM_INFO*> vecAlarm;
+	for (auto& i : tableCurrent.buff) {
+		if (isSelected(i.second, almSel)) {
+			vecAlarm.push_back(i.second);
+		}
+	}
+	getPagedDateSet(vecAlarm, almSel, resp.result);
 }
 
-string almServer::rpc_getUnRecover(json params, RPC_SESSION session)
+void almServer::rpc_getUnRecover(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	if (!m_enable) 
-	{
-		return "[]";
-	}
-
-	json querier = rpcReqParams2Querier(params, session);
-	querier["isRecover"] = false;
-	return tableCurrent.toJsonStr(querier);
+	params["isRecover"] = false; 
+	rpc_getCurrent(params, resp, session);
 }
 
-string almServer::rpc_getUnack(json params, RPC_SESSION session)
+void almServer::rpc_getUnack(json params, RPC_RESP& resp, RPC_SESSION session)
 {
-	//全局报警禁用功能
-	if (!m_initParam.enableGlobalAlarm)
-	{
-		return "[]";
-	}
-
-	json querier = rpcReqParams2Querier(params, session);
-	querier["isAck"] = false;
-	return tableCurrent.toJsonStr(querier);
+	params["isAck"] = false;
+	rpc_getCurrent(params, resp, session);
 }
 
 
@@ -1192,6 +1103,8 @@ bool generalMatch(string pattern, const string& src)
 
 bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR& almSel)
 {
+	almSel.org = session.org;
+
 	//root tag  to system tag
 	string rootTag = "";
 	if (params["rootTag"].is_string()) {
@@ -1233,17 +1146,17 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 	//	getTypeTag = true;
 	//}
 
-	vector<string> vecType;
+	almSel.type.clear();
 	if (params.contains("type")) {
 		if (params["type"].is_array()) {
 			for (int i = 0; i < params["type"].size(); i++) {
 				if (params["type"][i].is_string()) {
-					vecType.push_back(params["type"][i].get<string>());
+					almSel.type.push_back(params["type"][i].get<string>());
 				}
 			}
 		}
 		else if (params["type"].is_string()) {
-			str::split(vecType, params["type"].get<string>(), ",");
+			str::split(almSel.type, params["type"].get<string>(), ",");
 		}
 	}
 
@@ -1323,6 +1236,101 @@ void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey) 
 	}
 }
 
+bool almServer::isSelected(ALARM_INFO* ai, ALM_SELECTOR& almSel) {
+	if (almSel.org != "") {
+		if (ai->tag.find(almSel.org) != 0) {
+			return false;
+		}
+	}
+
+	if (almSel.keywords.size() > 0) {
+		vector<bool> matchRlt;
+		for (int i = 0; i < almSel.keywords.size(); i++) {
+			string& kw = almSel.keywords[i];
+			bool match = false;
+			if (ai->tag.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->time.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->type.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->level.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->desc.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->detail.find(kw) != string::npos) {
+				match = true;
+			}
+			matchRlt.push_back(match);
+		}
+
+		bool bMatchRlt = true;
+		for (int i = 0; i < matchRlt.size(); i++) {
+			if (matchRlt[i] == false) {
+				bMatchRlt = false;
+			}
+		}
+
+		if (bMatchRlt == false) {
+			return false;
+		}
+	}
+
+	if (!almSel.tagSel.match(ai->tag)) {
+		return false;
+	}
+	if (!almSel.timeSel.Match(ai->time)) {
+		return false;
+	}
+
+	bool bTypeMatch = false;
+	if (almSel.type.size() == 0)
+		bTypeMatch = true;
+	else {
+		for (auto& one : almSel.type) {
+			if (generalMatch(one, ai->type)) {
+				bTypeMatch = true;
+				break;
+			}
+		}
+	}
+	if (!bTypeMatch)
+		return false;
+
+	bool bLevelMatch = false;
+	if (almSel.level.size() == 0)
+		bLevelMatch = true;
+	else {
+		for (auto& one : almSel.level) {
+			if (generalMatch(one, ai->level)) {
+				bLevelMatch = true;
+				break;
+			}
+		}
+	}
+	if (!bLevelMatch)
+		return false;
+
+	if (almSel.filter_isRecover) {
+		if (almSel.isRecover != ai->isRecover) {
+			return false;
+		}
+	}
+
+	if (almSel.filter_isAck) {
+		if (almSel.isAck != ai->isAck) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,RPC_SESSION session) {
 	vector<string> timeKey;
 	getDBFileTimeKey(almSel, timeKey);
@@ -1331,120 +1339,13 @@ void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,
 		almTable* pTableHist = getHistTable(time);
 		std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
 		for (auto it = pTableHist->buff.rbegin(); it != pTableHist->buff.rend(); it++) {
-			//未来拟删除按照单个对象控制权限的机制，过于复杂，也用不太上
-			if (session.user != "") {
-				//if (!userMng.checkTagPermission(session.user, it->second->tag))
-					//continue;
-				//if (m_initParam.func_usrMng_checkTagPermission) {
-				//	if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
-				//		continue;
-				//	}
-				//}
-				if (it->second->tag.find(session.org) != 0) {
-					continue;
-				}
+			if (isSelected(it->second, almSel)) {
+				almList.push_back(it->second); //time desending
 			}
-
-			if (almSel.keywords.size() > 0) {
-				vector<bool> matchRlt;
-				for (int i = 0; i < almSel.keywords.size(); i++) {
-					string& kw = almSel.keywords[i];
-					bool match = false;
-					if (it->second->tag.find(kw) != string::npos) {
-						match = true;
-					}
-					else if (it->second->time.find(kw) != string::npos) {
-						match = true;
-					}
-					else if (it->second->type.find(kw) != string::npos) {
-						match = true;
-					}
-					else if (it->second->level.find(kw) != string::npos) {
-						match = true;
-					}
-					else if (it->second->desc.find(kw) != string::npos) {
-						match = true;
-					}
-					else if (it->second->detail.find(kw) != string::npos) {
-						match = true;
-					}
-					matchRlt.push_back(match);
-				}
-
-				bool bMatchRlt = true;
-				for (int i = 0; i < matchRlt.size(); i++) {
-					if (matchRlt[i] == false) {
-						bMatchRlt = false;
-					}
-				}
-
-				if (bMatchRlt == false) {
-					continue;
-				}
-			}
-
-			if (!almSel.tagSel.match(it->second->tag)) {
-				continue;
-			}
-			if (!almSel.timeSel.Match(it->second->time)) {
-				continue;
-			}
-
-			bool bTypeMatch = false;
-			if (almSel.type.size() == 0)
-				bTypeMatch = true;
-			else {
-				for (auto& one : almSel.type) {
-					if (generalMatch(one, it->second->type)) {
-						bTypeMatch = true;
-						break;
-					}
-				}
-			}
-			if (!bTypeMatch)
-				continue;
-
-			bool bLevelMatch = false;
-			if (almSel.level.size() == 0)
-				bLevelMatch = true;
-			else {
-				for (auto& one : almSel.level) {
-					if (generalMatch(one, it->second->level)) {
-						bLevelMatch = true;
-						break;
-					}
-				}
-			}
-			if (!bLevelMatch)
-				continue;
-
-			if (almSel.filter_isRecover) {
-				if (almSel.isRecover != it->second->isRecover) {
-					continue;
-				}
-			}
-
-			if (almSel.filter_isAck) {
-				if (almSel.isAck != it->second->isAck) {
-					continue;
-				}
-			}
-
-			almList.push_back(it->second); //time desending
 		}
 	}
 }
-
-
-string almServer::rpc_getHistory(json params, RPC_SESSION session)
-{
-	ALM_SELECTOR almSel;
-	parseAlmSelector(params, session, almSel);
-
-	vector<ALARM_INFO*> almList;
-	loadHistAlarm(almList, almSel, session);
-
-	string dataSet;
+void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSel, string& dataSet) {
 	//return page 1 if pageNo no specified
 	if (almSel.pageSize > 0)
 	{
@@ -1468,7 +1369,7 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 				int almIdx = i + (almSel.pageNo - 1) * almSel.pageSize;
 				auto it = almList[almIdx];
 				yyjson_mut_val* j = nullptr;
-				it->toJson(this, almSel.tagSel.m_rootTag,j,yyDoc);
+				it->toJson(this, almSel.tagSel.m_rootTag, j, yyDoc);
 				yyjson_mut_arr_append(jDataSet, j);
 			}
 		}
@@ -1479,74 +1380,32 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	}
 	else
 	{
-		json jDataSet = json::array();
+		yyjson_mut_doc* yyDoc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* jDataSet = yyjson_mut_arr(yyDoc);
 		for (int i = 0; i < almList.size(); i++)
 		{
 			auto it = almList[i];
-			json j = it->toJson(this, almSel.tagSel.m_rootTag);
-			jDataSet.push_back(j);
+			yyjson_mut_val* j = nullptr;
+			it->toJson(this, almSel.tagSel.m_rootTag, j, yyDoc);
+			yyjson_mut_arr_append(jDataSet, j);
 		}
-		dataSet = jDataSet.dump(2);
+		size_t len;
+		dataSet = yyjson_mut_val_write(jDataSet, 0, &len);
+		yyjson_mut_doc_free(yyDoc);
 	}
+}
 
-	return dataSet;
+void almServer::rpc_getHistory(json params, RPC_RESP& resp, RPC_SESSION session)
+{
+	ALM_SELECTOR almSel;
+	parseAlmSelector(params, session, almSel);
+
+	vector<ALARM_INFO*> almList;
+	loadHistAlarm(almList, almSel, session);
+
+	getPagedDateSet(almList, almSel, resp.result);
 }
 #endif
-
-/*
-AS_ALARM_LEVEL almServer::StringToAlarmLevel(string level)
-{
-	if (level.find("预")!= string::npos)
-	{
-		return AL_PRE_ALARM;
-	}
-	else if (level.find("告")!=string::npos)
-	{
-		return AL_ALARM;
-	}
-	else if (level.find("报") != string::npos)
-	{
-		return AL_ALARM;
-	}
-	else if (level.find("一级") != string::npos)
-	{
-		return AL_ALARM_L1;
-	}
-	else if (level.find("二级") != string::npos)
-	{
-		return AL_ALARM_L2;
-	}
-	else if (level.find("三级") != string::npos)
-	{
-		return AL_ALARM_L3;
-	}
-	return AL_NORMAL;
-}
-
-string almServer::AlarmLevelToString(AS_ALARM_LEVEL level) {
-	string strLevel;
-	if (level == AL_PRE_ALARM)
-	{
-		strLevel = "预警";
-	}
-	else if (level == AL_ALARM)
-	{
-		strLevel = "告警";
-	}
-	else if (level == AL_ALARM_L3)
-	{
-		strLevel = "三级告警";
-	}
-	else if (level == AL_ALARM_L2)
-	{
-		strLevel = "二级告警";
-	}
-	else if (level == AL_ALARM_L1)
-	{
-		strLevel = "一级告警";
-	}
-	return strLevel;
-}*/
 
 bool almServer::CompareTime(TIME& time1, TIME& time2) {
 	if (time1.wYear == time2.wYear && time1.wMonth == time2.wMonth && time1.wDay == time2.wDay && time1.wHour == time2.wHour && time1.wMinute == time2.wMinute && time1.wSecond == time2.wSecond)
@@ -1626,13 +1485,19 @@ void almTable::loadFile(string strFile)
 	buffFilePath = strFile;
 
 	//init db file when not exist
-	if (!fs::fileExist(strFile)) {
-		fs::writeFile(strFile, ALM_TABLE_HEAD_LINE);
+	if (!as_fs::fileExist(strFile)) {
+		as_fs::writeFile(strFile, ALM_TABLE_HEAD_LINE);
 	}
 	//load db file
 	else {
 		string strDBData;
-		as_fs::readFile(strFile, strDBData);
+		bool ret = as_fs::readFile(strFile, strDBData);
+#ifdef _WIN32
+		if (!ret) {
+			MessageBox(NULL, "read current.csv fail",NULL,MB_OK);
+			exit(0);
+		}
+#endif
 		//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
 		std::vector<LINE_VAL> recLines;
 		parse_csv_lines(strDBData.data(), recLines);
@@ -1656,6 +1521,11 @@ void almTable::loadFile(string strFile)
 			buff[pAi->getKey(m_tableType)] = pAi;
 		}
 	}
+}
+
+void almTable::saveFile()
+{
+	saveFile(buffFilePath, buff);
 }
 
 
@@ -1735,7 +1605,6 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	j["ackInfo"] = info->ackInfo;
 	j["ackUser"] = info->ackUser;
 	j["picUrl"] = info->pic_url;
-	j["dbPath"] = almSrv->tableCurrent.filePath;
 	j["multiUnack"] = info->multiUnack;
 	return j;
 }
@@ -1781,7 +1650,6 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 	yyjson_mut_obj_add_strcpy(doc, jVal, "ackInfo", info->ackInfo.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "ackUser", info->ackUser.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "picUrl", info->pic_url.c_str());
-	yyjson_mut_obj_add_strcpy(doc, jVal, "dbPath", almSrv->tableCurrent.filePath.c_str());
 	yyjson_mut_obj_add_bool(doc, jVal, "multiUnack", info->multiUnack);
 }
 
@@ -1933,7 +1801,6 @@ almTable* almServer::getHistTable(string time)
 	map<string, almTable*>::iterator iter = tableHist.find(time);
 	if (iter == tableHist.end()) {
 		almTable* p = new almTable();
-		p->init("history");
 		p->dbFileMode = m_dbFileMode;
 		p->SetAlarmSrv(this);
 		p->m_tableType = HISTORY_TABLE;
@@ -1944,11 +1811,6 @@ almTable* almServer::getHistTable(string time)
 	else {
 		return iter->second;
 	}
-}
-
-void almTable::init(string file)
-{
-	filePath = file;
 }
 
 void almTable::add(ALARM_INFO ai)
@@ -1989,6 +1851,18 @@ void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 	}
 }
 
+void almTable::initUnAckUnRecover()
+{
+	for (auto& i : buff) {
+		if (i.second->isAck == false) {
+			unAckList[i.first] = i.second;
+		}
+		else if (i.second->isRecover == false) {
+			unRecoverList[i.first] = i.second;
+		}
+	}
+}
+
 void almTable::acknowledge(ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
@@ -2004,10 +1878,11 @@ void almTable::acknowledge(ALARM_INFO& ai)
 	}
 }
 
-//找基于uuid匹配的唯一一个 或 其他字段的组合匹配到的最后一个
 bool almTable::query(json params, ALARM_INFO& ai)
 {
-	std::unique_lock<shared_mutex> lock(m_csTable);
+	std::shared_lock<shared_mutex> lock(m_csTable);
+
+
 	bool bFind = false;
 	ALARM_INFO* p = NULL;
 	string time;
@@ -2015,7 +1890,7 @@ bool almTable::query(json params, ALARM_INFO& ai)
 		time = params["time"].get<string>();
 	string  pa = m_pAlmSrv->getFilePath(time,m_tableType,dbFileMode);
 	loadFile(pa);
-	const string strRecoverFlag = /*as_charCodec::gb_to_utf8(*/"恢复"/*)*/;
+	const string strRecoverFlag = "恢复";
 	string strType = "";
 	if (params["type"] != nullptr)
 	{
@@ -2090,22 +1965,18 @@ bool almTable::query(string customId, ALARM_INFO& ai, string time)
 void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
-	loadFile(pa); //获取报警对应的数据文件
 	ALARM_INFO* p = buff.at(ai.getKey(m_tableType));
 	if (p)
 	{
 		*p = ai;
-		saveFile(pa, buff);
+		saveFile(buffFilePath, buff);
 	}
 }
 void almTable::remove(ALARM_KEY& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
-	loadFile(pa);
 	buff.erase(ai.getKey(m_tableType));
-	saveFile(pa, buff);
+	saveFile(buffFilePath, buff);
 }
 
 ALARM_QUERY almTable::parseQuerier(json& querier)
@@ -2224,172 +2095,106 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 	return aq;
 }
 
-vector<ALARM_INFO*> almTable::query(json querier)
-{
-	std::unique_lock<shared_mutex> lock(m_csTable);
-	vector<ALARM_INFO*> dataSet;
-	loadFile(m_pAlmSrv->getFilePath("",m_tableType,dbFileMode));
-	ALARM_QUERY aq = parseQuerier(querier);
-
-	TIME_SELECTOR ts;
-	if (aq.filter_time) {
-		ts.init(aq.time);
-	}
-	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
-	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
-		//if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
-			//continue;
-		if (aq.filter_user) {
-			if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission) {
-				if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission(aq.user, it->second->tag)==false) {
-					continue;
-				}
-			}
-		}
-
-		ALARM_INFO* pAi = it->second;
-
-		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
-			continue;
-
-		//记录里存的绝对tag。 单独的tag是相对于roottag的。
-		if (aq.filter_tag) {
-			bool bMatch = false;
-			for (const auto& oneTag : aq.vecTag) {
-				string zong_tag = oneTag;
-				if (aq.rootTag != "") {
-					zong_tag = aq.rootTag + "." + oneTag;
-				}
-				if (matchTag(zong_tag, pAi->tag)) {
-					bMatch = true;
-					break;
-				}
-			}
-			if (!bMatch)
-				continue;
-		}
-
-		if (aq.filter_time) {
-			if (false == ts.Match(pAi->time))
-				continue;
-		}
-		if (aq.filter_type) {
-			bool bMatch = false;
-			for (const auto& one : aq.vecType) {
-				if (generalMatch(one, pAi->type)) {
-					bMatch = true;
-					break;
-				}
-			}
-			if (!bMatch)
-				continue;
-		}
-		if (aq.filter_level) {
-			bool bMatch = false;
-			for (const auto& one : aq.vecLevel) {
-				if (one == pAi->level) {
-					bMatch = true;
-					break;
-				}
-			}
-			if (!bMatch)
-				continue;
-		}
-		if (aq.filter_isAck) {
-			if (aq.isAck != pAi->isAck)
-				continue;
-		}
-
-		if (aq.filter_isRecover) {
-			if (aq.isRecover != pAi->isRecover)
-				continue;
-		}
-
-		SORT_FLAG sf;
-		it->second->getSortKey(aq.sortKey,sf.sFlag);
-		deList_Sort[sf] = it->second;
-	}
-
-	if (aq.ascendingSort)
-	{
-		for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
-			dataSet.push_back(it->second);
-		}
-	}
-	else
-	{
-		for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
-			dataSet.push_back(it->second);
-		}
-	}
-	return dataSet;
-}
-
-string almTable::toJsonStr(const json& querier) {
-	string rootTag = "";
-	int pageNo = 1;
-	int pageSize = 0;
-	if (querier.contains("rootTag"))
-		rootTag = querier["rootTag"].get<string>(); //org  or org + rootTag
-	if (querier.contains("pageNo"))
-	{
-		if (querier["pageNo"].is_number_integer())
-			pageNo = querier["pageNo"].get<int>();
-	}
-	if (querier.contains("pageSize"))
-	{
-		if (querier["pageSize"].is_number_integer())
-			pageSize = querier["pageSize"].get<int>();
-	}
-
-	vector<ALARM_INFO*> vec = query(querier);
-
-	string dataSet = "";
-	if (pageSize > 0)
-	{
-		//query by page no
-		json resultObj;
-		resultObj["pageNo"] = pageNo;
-		resultObj["pageSize"] = pageSize;
-		resultObj["pageCount"] = vec.size() / pageSize + (vec.size() % pageSize == 0 ? 0 : 1);
-		resultObj["deCount"] = vec.size();
-		string jDataSet = "[";
-		if (vec.size() > (pageNo - 1) * pageSize)
-		{
-			int iterScope = pageNo * pageSize;
-			if (vec.size() < iterScope) {
-				iterScope = vec.size();
-			}
-			for (int i = (pageNo - 1) * pageSize; i < iterScope; i++)
-			{
-				auto it = vec[i];
-				if (jDataSet != "[")
-					jDataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
-				else
-					jDataSet += it->toJsonStr(m_pAlmSrv, rootTag);
-			}
-		}
-		jDataSet += "]";
-		json dataObj = json::parse(jDataSet);
-		resultObj["pageData"] = dataObj;
-		dataSet = resultObj.dump(2);
-	}
-	else
-	{
-		string jDataSet = "[";
-		for (auto& it : vec) {
-			if (jDataSet != "[")
-				jDataSet += "," + it->toJsonStr(m_pAlmSrv, rootTag);
-			else
-				jDataSet += it->toJsonStr(m_pAlmSrv, rootTag);
-		}
-		jDataSet += "]";
-
-		dataSet = jDataSet;
-	}
-
-	return dataSet;
-}
+//vector<ALARM_INFO*> almTable::query(json querier)
+//{
+//	std::unique_lock<shared_mutex> lock(m_csTable);
+//	vector<ALARM_INFO*> dataSet;
+//	loadFile(m_pAlmSrv->getFilePath("",m_tableType,dbFileMode));
+//	ALARM_QUERY aq = parseQuerier(querier);
+//
+//	TIME_SELECTOR ts;
+//	if (aq.filter_time) {
+//		ts.init(aq.time);
+//	}
+//	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
+//	for (map<string, ALARM_INFO*>::iterator it = buff.begin(); it != buff.end(); it++) {
+//		//if (aq.filter_user && !userMng.checkTagPermission(aq.user, it->second->tag))
+//			//continue;
+//		if (aq.filter_user) {
+//			if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission) {
+//				if (m_pAlmSrv->m_initParam.func_usrMng_checkTagPermission(aq.user, it->second->tag)==false) {
+//					continue;
+//				}
+//			}
+//		}
+//
+//		ALARM_INFO* pAi = it->second;
+//
+//		if (aq.filter_rootTag && pAi->tag.find(aq.rootTag) == string::npos)
+//			continue;
+//
+//		//记录里存的绝对tag。 单独的tag是相对于roottag的。
+//		if (aq.filter_tag) {
+//			bool bMatch = false;
+//			for (const auto& oneTag : aq.vecTag) {
+//				string zong_tag = oneTag;
+//				if (aq.rootTag != "") {
+//					zong_tag = aq.rootTag + "." + oneTag;
+//				}
+//				if (matchTag(zong_tag, pAi->tag)) {
+//					bMatch = true;
+//					break;
+//				}
+//			}
+//			if (!bMatch)
+//				continue;
+//		}
+//
+//		if (aq.filter_time) {
+//			if (false == ts.Match(pAi->time))
+//				continue;
+//		}
+//		if (aq.filter_type) {
+//			bool bMatch = false;
+//			for (const auto& one : aq.vecType) {
+//				if (generalMatch(one, pAi->type)) {
+//					bMatch = true;
+//					break;
+//				}
+//			}
+//			if (!bMatch)
+//				continue;
+//		}
+//		if (aq.filter_level) {
+//			bool bMatch = false;
+//			for (const auto& one : aq.vecLevel) {
+//				if (one == pAi->level) {
+//					bMatch = true;
+//					break;
+//				}
+//			}
+//			if (!bMatch)
+//				continue;
+//		}
+//		if (aq.filter_isAck) {
+//			if (aq.isAck != pAi->isAck)
+//				continue;
+//		}
+//
+//		if (aq.filter_isRecover) {
+//			if (aq.isRecover != pAi->isRecover)
+//				continue;
+//		}
+//
+//		SORT_FLAG sf;
+//		it->second->getSortKey(aq.sortKey,sf.sFlag);
+//		deList_Sort[sf] = it->second;
+//	}
+//
+//	if (aq.ascendingSort)
+//	{
+//		for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
+//			dataSet.push_back(it->second);
+//		}
+//	}
+//	else
+//	{
+//		for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
+//			dataSet.push_back(it->second);
+//		}
+//	}
+//	return dataSet;
+//}
 
 void almTable::SetAlarmSrv(almServer* pSrv)
 {
