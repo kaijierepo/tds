@@ -465,6 +465,13 @@ void TIME::fromStr(string str) {
 				&s);
 			t.wHour = h; t.wMinute = min; t.wSecond = s;
 		}
+		else if (str.length() == 7) //2022-02-02
+		{
+			sscanf(str.c_str(), "%4d-%2d",
+				&y,
+				&m);
+			t.wYear = y; t.wMonth = m;
+		}
 	}
 	else if (str::isDigits(str)) {
 		time_t tt = atoi(str.c_str());

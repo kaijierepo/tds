@@ -6,27 +6,7 @@
 #include <cstdarg>
 #include <random>
 #include "common.h"
-#define WIN32_LEAN_AND_MEAN
-#ifdef _WIN32
-#include <windows.h>
-#include <Commdlg.h>
-#include <ShlObj_core.h>
-#include <SetupAPI.h>
-#include <devguid.h>
-#pragma comment (lib, "Setupapi.lib")
-#else
-#include <unistd.h>
-//#include <iconv.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <wchar.h>
-#include <stdlib.h>
-#endif
-#ifdef ENABLE_JERRY_SCRIPT
-#include "ScriptEngine.h"
-#include "scriptFunc.h"
-#include "scriptManager.h"
-#endif
+
 
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 
@@ -206,6 +186,7 @@ almServer::almServer(void)
 	m_iUpdateCallCount = 0;
 	tableCurrent.m_tableType = CURRENT_TABLE;
 	m_init = false;
+	m_dbFileMode = ONE_FILE_PER_DAY;
 }
 
 
@@ -252,7 +233,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	tableCurrent.init("current");
 	tableCurrent.SetAlarmSrv(this);
 
-	initMOAlarmStatus();
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
@@ -645,11 +625,6 @@ json almServer::getAlarmStatus(string tag)
 	return list;
 }
 
-void almServer::initMOAlarmStatus()
-{
-
-}
-
 string almServer::getAlarmTypeLabel(string type)
 {
 	if (type == ALARM_TYPE::overHighLimit) {
@@ -901,6 +876,24 @@ void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSI
 	resp.result = RPC_OK;
 }
 
+void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION session)
+{
+	ALM_SELECTOR almSel;
+	parseAlmSelector(params, session, almSel);
+
+	string srcMode = params["srcMode"];
+	string desMode = params["desMode"];
+	if (srcMode == "" && desMode == "") {
+		json jErr = "srcMode and desMode must be specified";
+		resp.error = jErr.dump();
+	}
+
+	vector<string> timeKey;
+	getDBFileTimeKey(almSel, timeKey);
+
+	
+}
+
 //params ：对应ai那个结构
 //返回负数  失败, 非负数 成功：0 未通过，1通过
 //按原理，会马上恢复掉，仅恢复掉的允许审核 前端保证
@@ -1091,24 +1084,28 @@ bool generalMatch(string pattern, const string& src)
 	return false;
 }
 
-string almServer::rpc_getHistory(json params, RPC_SESSION session)
+bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR& almSel)
 {
-	DE_SELECTOR deSel;
-
-	//root tag 转 系统位号
+	//root tag  to system tag
 	string rootTag = "";
 	if (params["rootTag"].is_string()) {
 		rootTag = params["rootTag"].get<string>();
 	}
 	rootTag = TAG::addRoot(rootTag, session.org);
 	params["rootTag"] = rootTag;
-
 	if (!params.contains("tag")) {
 		params["tag"] = "*";
 	}
+	string sSel,error;
+	sSel = params.dump();
+	db.parseDESelector(sSel, almSel, error);
+	if (error != "") {
+		almSel.parseError = error;
+		return false;
+	}
+
 
 	//keyword search
-	vector<string> keywords;
 	if (params["keyword"].is_string()) {
 		vector<string> kwtemp;
 		string kw = params["keyword"];
@@ -1118,16 +1115,17 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 			for (auto& i : kwtemp) {
 				string s = str::trim(i);
 				if (s != "") {
-					keywords.push_back(s);
+					almSel.keywords.push_back(s);
 				}
 			}
 		}
 	}
 
-	bool getTypeTag = false;
-	if (params.contains("getTypeTag") && params["getTypeTag"].is_boolean()) {
-		getTypeTag = true;
-	}
+	//此代码忘了干什么用的了
+	//bool getTypeTag = false;
+	//if (params.contains("getTypeTag") && params["getTypeTag"].is_boolean()) {
+	//	getTypeTag = true;
+	//}
 
 	vector<string> vecType;
 	if (params.contains("type")) {
@@ -1143,230 +1141,220 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 		}
 	}
 
-	vector<string> vecLevel;
+	almSel.level.clear();
 	if (params.contains("level")) {
 		if (params["level"].is_array()) {
 			for (int i = 0; i < params["level"].size(); i++) {
 				if (params["level"][i].is_string()) {
-					vecLevel.push_back(params["level"][i].get<string>());
+					almSel.level.push_back(params["level"][i].get<string>());
 				}
 			}
 		}
 		else if (params["level"].is_string()) {
+			vector<string> vecLevel;
 			str::split(vecLevel, params["level"].get<string>(), ",");
+			almSel.level = vecLevel;
 		}
 	}
 
-	bool filter_isRecover = false;
-	bool isRecover = false;
+	almSel.filter_isRecover = false;
+	almSel.isRecover = false;
 	if (params.contains("isRecover")) {
-		filter_isRecover = true;
-		isRecover = params["isRecover"].get<bool>();
+		almSel.filter_isRecover = true;
+		almSel.isRecover = params["isRecover"].get<bool>();
 	}
 
-	bool filter_isAck = false;
-	bool isAck = false;
+	almSel.filter_isAck = false;
+	almSel.isAck = false;
 	if (params.contains("isAck")) {
-		filter_isAck = true;
-		isAck = params["isAck"].get<bool>();
+		almSel.filter_isAck = true;
+		almSel.isAck = params["isAck"].get<bool>();
 	}
 
-	string error;
-	string sParams = params.dump();
-	db.parseDESelector(sParams, deSel, error);
-	if (error != "")
-		return error;
-	TIME_SELECTOR& timeSelector = deSel.timeSel;
-	TAG_SELECTOR& tagSelector = deSel.tagSel;
-	int maxSelCount = -1; //-1表示不限制
-	if (deSel.pageSize > 0)
-	{
+	return true;
+}
 
-	}
+void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+	if (m_dbFileMode == ONE_FILE_PER_MONTH) {
+		int startYear = almSel.timeSel.atomSelList[0].stStart.wYear;
+		int startYearStartMonth = almSel.timeSel.atomSelList[0].stStart.wMonth;
+		int endYear = almSel.timeSel.atomSelList[0].stEnd.wYear;
+		int endYearEndMonth = almSel.timeSel.atomSelList[0].stEnd.wMonth;
+		//defaut time desending. only db file in time range is loaded
+		for (int iYear = endYear; iYear >= startYear; iYear--) {
+			int startMonth = 1;
+			if (iYear == startYear)
+				startMonth = startYearStartMonth;
+			int endMonth = 12;
+			if (iYear == endYear)
+				endMonth = endYearEndMonth;
 
-	int startYear = timeSelector.atomSelList[0].stStart.wYear;
-	int startYearStartMonth = timeSelector.atomSelList[0].stStart.wMonth;
-	int endYear = timeSelector.atomSelList[0].stEnd.wYear;
-	int endYearEndMonth = timeSelector.atomSelList[0].stEnd.wMonth;
-
-	if (deSel.sortKey == "") deSel.ascendingSort = false;
-	map<SORT_FLAG, ALARM_INFO*> deList_Sort;
-	vector<ALARM_INFO*> afterSortList;
-	//历史数据查询一般都是查询最近的，因此从最新的数据开始往前查
-	//只加载选择时间范围内的文件
-	for (int iYear = endYear; iYear >= startYear; iYear--) {
-		int startMonth = 1;
-		if (iYear == startYear)
-			startMonth = startYearStartMonth;
-		else
-			startMonth = 1;
-		for (int iMonth = 12; iMonth >= startMonth; iMonth--) {
-			string time = str::format("%04d-%02d-00 00:00:00", iYear, iMonth);
-			almTable* pTableHist = getHistTable(time);
-			std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
-			for (auto it = pTableHist->buff.rbegin(); it != pTableHist->buff.rend(); it++) {
-				//未来拟删除按照单个对象控制权限的机制，过于复杂，也用不太上
-				if (session.user != "") {
-					//if (!userMng.checkTagPermission(session.user, it->second->tag))
-						//continue;
-					//if (m_initParam.func_usrMng_checkTagPermission) {
-					//	if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
-					//		continue;
-					//	}
-					//}
-					if (it->second->tag.find(session.org) != 0) {
-						continue;
-					}
-				}
-
-				if (keywords.size() > 0) {
-					vector<bool> matchRlt;
-					for (int i = 0; i < keywords.size(); i++) {
-						string& kw = keywords[i];
-						bool match = false;
-						if (it->second->tag.find(kw) != string::npos) {
-							match = true;
-						}
-						else if (it->second->time.find(kw) != string::npos) {
-							match = true;
-						}
-						else if (it->second->type.find(kw) != string::npos) {
-							match = true;
-						}
-						else if (it->second->level.find(kw) != string::npos) {
-							match = true;
-						}
-						else if (it->second->desc.find(kw) != string::npos) {
-							match = true;
-						}
-						else if (it->second->detail.find(kw) != string::npos) {
-							match = true;
-						}
-						matchRlt.push_back(match);
-					}
-
-					bool bMatchRlt = true;
-					for (int i = 0; i < matchRlt.size();i++) {
-						if (matchRlt[i] == false) {
-							bMatchRlt = false;
-						}
-					}
-
-					if (bMatchRlt == false) {
-						continue;
-					}
-				}
-
-				if (!tagSelector.match(it->second->tag)) {
-					continue;
-				}
-				if (!timeSelector.Match(it->second->time)) {
-					continue;
-				}
-
-				bool bTypeMatch = false;
-				if (vecType.size() == 0)
-					bTypeMatch = true;
-				else {
-					for (auto& one : vecType) {
-						if (generalMatch(one, it->second->type)) {
-							bTypeMatch = true;
-							break;
-						}
-					}
-				}
-				if (!bTypeMatch)
-					continue;
-
-				bool bLevelMatch = false;
-				if (vecLevel.size() == 0)
-					bLevelMatch = true;
-				else {
-					for (auto& one : vecLevel) {
-						if (generalMatch(one, it->second->level)) {
-							bLevelMatch = true;
-							break;
-						}
-					}
-				}
-				if (!bLevelMatch)
-					continue;
-
-				if (filter_isRecover) {
-					if (isRecover != it->second->isRecover) {
-						continue;
-					}
-				}
-
-				if (filter_isAck) {
-					if (isAck != it->second->isAck) {
-						continue;
-					}
-				}
-
-				//SORT_FLAG sf;
-				//it->second->getSortKey(deSel.sortKey, sf.sFlag);
-				//deList_Sort[sf] = it->second;
-				afterSortList.push_back(it->second); //时间降序排列
+			for (int iMonth = endMonth; iMonth >= startMonth; iMonth--) {
+				string time = str::format("%04d-%02d", iYear, iMonth);
+				timeKey.push_back(time);
 			}
 		}
 	}
+	else if (m_dbFileMode == ONE_FILE_PER_DAY) {
+		time_t startDate = almSel.timeSel.atomSelList[0].stStart.toUnixTime();
+		time_t endDate = almSel.timeSel.atomSelList[0].stEnd.toUnixTime();
+		time_t loadDate = endDate;
+		for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
+		{
+			DB_TIME t;
+			t.fromUnixTime(loadDate);
+			string time = str::format("%04d-%02d-%02d", t.wYear, t.wMonth,t.wDay);
+			timeKey.push_back(time);
+		}
+	}
+}
 
-	//因为有升降序之后还有分页需求,所以要再把map转为Vector;
-	//也可以直接根据map直接生成最后的json,但是逻辑稍微复杂,所以转换成Vector
-	//报警这块没有配置的话,按时间降序排列
-	//if (deSel.ascendingSort)
-	//{
-	//	for (auto it = deList_Sort.begin(); it != deList_Sort.end(); ++it) {
-	//		afterSortList.push_back(it->second);
-	//	}
-	//}
-	//else
-	//{
-	//	for (auto it = deList_Sort.rbegin(); it != deList_Sort.rend(); ++it) {
-	//		afterSortList.push_back(it->second);
-	//	}
-	//}
+void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,RPC_SESSION session) {
+	vector<string> timeKey;
+	getDBFileTimeKey(almSel, timeKey);
+
+	for(auto& time:timeKey){
+		almTable* pTableHist = getHistTable(time);
+		std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
+		for (auto it = pTableHist->buff.rbegin(); it != pTableHist->buff.rend(); it++) {
+			//未来拟删除按照单个对象控制权限的机制，过于复杂，也用不太上
+			if (session.user != "") {
+				//if (!userMng.checkTagPermission(session.user, it->second->tag))
+					//continue;
+				//if (m_initParam.func_usrMng_checkTagPermission) {
+				//	if (!m_initParam.func_usrMng_checkTagPermission(session.user, it->second->tag)) {
+				//		continue;
+				//	}
+				//}
+				if (it->second->tag.find(session.org) != 0) {
+					continue;
+				}
+			}
+
+			if (almSel.keywords.size() > 0) {
+				vector<bool> matchRlt;
+				for (int i = 0; i < almSel.keywords.size(); i++) {
+					string& kw = almSel.keywords[i];
+					bool match = false;
+					if (it->second->tag.find(kw) != string::npos) {
+						match = true;
+					}
+					else if (it->second->time.find(kw) != string::npos) {
+						match = true;
+					}
+					else if (it->second->type.find(kw) != string::npos) {
+						match = true;
+					}
+					else if (it->second->level.find(kw) != string::npos) {
+						match = true;
+					}
+					else if (it->second->desc.find(kw) != string::npos) {
+						match = true;
+					}
+					else if (it->second->detail.find(kw) != string::npos) {
+						match = true;
+					}
+					matchRlt.push_back(match);
+				}
+
+				bool bMatchRlt = true;
+				for (int i = 0; i < matchRlt.size(); i++) {
+					if (matchRlt[i] == false) {
+						bMatchRlt = false;
+					}
+				}
+
+				if (bMatchRlt == false) {
+					continue;
+				}
+			}
+
+			if (!almSel.tagSel.match(it->second->tag)) {
+				continue;
+			}
+			if (!almSel.timeSel.Match(it->second->time)) {
+				continue;
+			}
+
+			bool bTypeMatch = false;
+			if (almSel.type.size() == 0)
+				bTypeMatch = true;
+			else {
+				for (auto& one : almSel.type) {
+					if (generalMatch(one, it->second->type)) {
+						bTypeMatch = true;
+						break;
+					}
+				}
+			}
+			if (!bTypeMatch)
+				continue;
+
+			bool bLevelMatch = false;
+			if (almSel.level.size() == 0)
+				bLevelMatch = true;
+			else {
+				for (auto& one : almSel.level) {
+					if (generalMatch(one, it->second->level)) {
+						bLevelMatch = true;
+						break;
+					}
+				}
+			}
+			if (!bLevelMatch)
+				continue;
+
+			if (almSel.filter_isRecover) {
+				if (almSel.isRecover != it->second->isRecover) {
+					continue;
+				}
+			}
+
+			if (almSel.filter_isAck) {
+				if (almSel.isAck != it->second->isAck) {
+					continue;
+				}
+			}
+
+			almList.push_back(it->second); //time desending
+		}
+	}
+}
+
+
+string almServer::rpc_getHistory(json params, RPC_SESSION session)
+{
+	ALM_SELECTOR almSel;
+	parseAlmSelector(params, session, almSel);
+
+	vector<ALARM_INFO*> almList;
+	loadHistAlarm(almList, almSel, session);
 
 	string dataSet;
-	//pageNo缺省时默认返回第一页
-	if (deSel.pageSize > 0)
+	//return page 1 if pageNo no specified
+	if (almSel.pageSize > 0)
 	{
 		yyjson_mut_doc* yyDoc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* resultObj = yyjson_mut_obj(yyDoc);
 		yyjson_mut_val* jDataSet = yyjson_mut_arr(yyDoc);
-		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageNo", deSel.pageNo);
-		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageSize", deSel.pageSize);
-		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageCount", afterSortList.size() / deSel.pageSize + (afterSortList.size() % deSel.pageSize == 0 ? 0 : 1));
-		yyjson_mut_obj_add_int(yyDoc, resultObj, "deCount", afterSortList.size());
-		if (afterSortList.size() > (deSel.pageNo - 1) * deSel.pageSize)
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageNo", almSel.pageNo);
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageSize", almSel.pageSize);
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "pageCount", almList.size() / almSel.pageSize + (almList.size() % almSel.pageSize == 0 ? 0 : 1));
+		yyjson_mut_obj_add_int(yyDoc, resultObj, "deCount", almList.size());
+		if (almList.size() > (almSel.pageNo - 1) * almSel.pageSize)
 		{
-			int curPageSize = deSel.pageSize;
-			int leftPageCount = afterSortList.size() - (deSel.pageNo - 1) * deSel.pageSize;
+			int curPageSize = almSel.pageSize;
+			int leftPageCount = almList.size() - (almSel.pageNo - 1) * almSel.pageSize;
 			if (leftPageCount < curPageSize) {
 				curPageSize = leftPageCount;
 			}
 
 			for (int i = 0; i < curPageSize; i++)
 			{
-				int almIdx = i + (deSel.pageNo - 1) * deSel.pageSize;
-				auto it = afterSortList[almIdx];
+				int almIdx = i + (almSel.pageNo - 1) * almSel.pageSize;
+				auto it = almList[almIdx];
 				yyjson_mut_val* j = nullptr;
-				it->toJson(this, rootTag,j,yyDoc);
-				//if (getTypeTag) {
-				//	/*json jTypeTag = prj.getTypeTagByTag(it->tag);
-				//	if (jTypeTag != nullptr) {
-				//		j["typeTag"] = jTypeTag;
-				//	}*/
-				//	auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
-				//	if (func_obj_getTypeTagByTag != NULL) {
-				//		json jTypeTag = func_obj_getTypeTagByTag(it->tag);
-				//		if (jTypeTag != nullptr) {
-				//			j["typeTag"] = jTypeTag;
-				//		}
-				//	}
-
-				//}
+				it->toJson(this, almSel.tagSel.m_rootTag,j,yyDoc);
 				yyjson_mut_arr_append(jDataSet, j);
 			}
 		}
@@ -1378,24 +1366,10 @@ string almServer::rpc_getHistory(json params, RPC_SESSION session)
 	else
 	{
 		json jDataSet = json::array();
-		for (int i = 0; i < afterSortList.size(); i++)
+		for (int i = 0; i < almList.size(); i++)
 		{
-			auto it = afterSortList[i];
-			json j = it->toJson(this, rootTag);
-			if (getTypeTag) {
-				/*json jTypeTag = prj.getTypeTagByTag(it->tag);
-				if (jTypeTag != nullptr) {
-					j["typeTag"] = jTypeTag;
-				}*/
-				auto func_obj_getTypeTagByTag = m_initParam.func_obj_getTypeTagByTag;
-				if (func_obj_getTypeTagByTag != NULL) {
-					json jTypeTag = func_obj_getTypeTagByTag(it->tag);
-					if (jTypeTag != nullptr) {
-						j["typeTag"] = jTypeTag;
-					}
-				}
-			}
-
+			auto it = almList[i];
+			json j = it->toJson(this, almSel.tagSel.m_rootTag);
 			jDataSet.push_back(j);
 		}
 		dataSet = jDataSet.dump(2);
@@ -1491,12 +1465,16 @@ void almTable::appendFile(string strFile, ALARM_INFO* pNew)
 	fs::appendFile(strFile, str);
 }
 
-string almTable::getFilePath(int y, int m) {
+string almTable::getFilePath(int y, int m,int day) {
 	string p;
-	if (bOneFilePerMonth)
+	if (dbFileMode == ONE_FILE_PER_MONTH)
 	{
 		string strYM = str::format("%04d%02d", y, m);
 		p = m_pAlmSrv->m_dbPath + "/" + filePath + "_" + strYM + ".csv";
+	}
+	else if (dbFileMode == ONE_FILE_PER_DAY) {
+		string s = str::format("%04d%02d/%2d", y, m,day);
+		p = m_pAlmSrv->m_dbPath + "/" + s + ".csv";
 	}
 	else
 	{
@@ -1515,7 +1493,7 @@ string almTable::getFilePath(string time) {
 		int y, m;
 		y = st.wYear;
 		m = st.wMonth;
-		return getFilePath(y, m);
+		return getFilePath(y, m,st.wDay);
 	}
 	else
 	{
@@ -1554,44 +1532,75 @@ void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 	}
 }
 
-void almTable::loadFile(string strFile)
-{
-	//如果当前缓存对应的数据文件和要加载的相同，直接使用内存即可，返回
-	if (buffFilePath == strFile)
-		return;
-
-	//加载新的路径到缓存
-	freeBuff(buff);
-	buffFilePath = strFile;
-
-	if (!fs::fileExist(strFile)) {
-
-	}
-
+bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
 	string strDBData;
 	as_fs::readFile(strFile, strDBData);
-	//strDBData = as_charCodec::gb_to_utf8(strDBData);//默认使用utf8,出现乱码的GB2312只有健康管理系统,自己手动改数据库
+	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
 	std::vector<LINE_VAL> recLines;
 	parse_csv_lines(strDBData.data(), recLines);
 
+	LINE_PARSER lineParser;
 	if (recLines.size() >= 1) {
 		string tableHeader(recLines[0].p, recLines[0].len);
 		vector<string> colNames;
 		str::split(colNames, tableHeader, ",");
 		for (int i = 0; i < colNames.size(); i++) {
 			string name = colNames[i];
-			m_colIdx[name] = i;
+			lineParser.m_colNameToColIdx[name] = i;
 		}
 	}
 
 	for (int i = 1; i < recLines.size(); i++)
 	{
 		LINE_VAL& lv = recLines.at(i);
-		//if (str::trim(str) == "") //性能考虑
-		//	continue;
 		ALARM_INFO* pAi = new ALARM_INFO();
-		fromCSV(lv.p,lv.len,*pAi);
-		buff[pAi->getKey(m_tableType)] = pAi;
+		lineParser.parse(lv.p, lv.len, *pAi);
+		almList.push_back(pAi);
+	}
+
+	return true;
+}
+
+void almTable::loadFile(string strFile)
+{
+	//already loaded
+	if (buffFilePath == strFile)
+		return;
+
+	//load new path db file
+	freeBuff(buff);
+	buffFilePath = strFile;
+
+	//init db file when not exist
+	if (!fs::fileExist(strFile)) {
+		fs::writeFile(strFile, ALM_TABLE_HEAD_LINE);
+	}
+	//load db file
+	else {
+		string strDBData;
+		as_fs::readFile(strFile, strDBData);
+		//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
+		std::vector<LINE_VAL> recLines;
+		parse_csv_lines(strDBData.data(), recLines);
+
+		LINE_PARSER& lineParser = m_lineParser;
+		if (recLines.size() >= 1) {
+			string tableHeader(recLines[0].p, recLines[0].len);
+			vector<string> colNames;
+			str::split(colNames, tableHeader, ",");
+			for (int i = 0; i < colNames.size(); i++) {
+				string name = colNames[i];
+				lineParser.m_colNameToColIdx[name] = i;
+			}
+		}
+
+		for (int i = 1; i < recLines.size(); i++)
+		{
+			LINE_VAL& lv = recLines.at(i);
+			ALARM_INFO* pAi = new ALARM_INFO();
+			lineParser.parse(lv.p, lv.len, *pAi);
+			buff[pAi->getKey(m_tableType)] = pAi;
+		}
 	}
 }
 
@@ -1722,21 +1731,10 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 	yyjson_mut_obj_add_bool(doc, jVal, "multiUnack", info->multiUnack);
 }
 
-CELL_VAL* almTable::csvColVal(CELL_VAL* colVals, string colName) {
-	map<string, int>::iterator iter = m_colIdx.find(colName);
-	if (iter != m_colIdx.end()) {
-		int idx = m_colIdx[colName];
-		return colVals + idx;
-	}
-	else {
-		return nullptr;
-	}
-}
-
-int almTable::getCsvColIdx(string colName) {
-	map<string, int>::iterator iter = m_colIdx.find(colName);
-	if (iter != m_colIdx.end()) {
-		int idx = m_colIdx[colName];
+int LINE_PARSER::getColIdxByColName(string colName) {
+	map<string, int>::iterator iter = m_colNameToColIdx.find(colName);
+	if (iter != m_colNameToColIdx.end()) {
+		int idx = m_colNameToColIdx[colName];
 		return idx;
 	}
 	else {
@@ -1754,7 +1752,7 @@ int atoi_n(const char* p, size_t len) {
 	return val;
 }
 
-void almTable::fromCSV(const char* line,int lineLen, ALARM_INFO& ai)
+void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
 {
 	CELL_VAL cols[50];
 	int colNum = 0;
@@ -1790,23 +1788,23 @@ void almTable::fromCSV(const char* line,int lineLen, ALARM_INFO& ai)
 
 	int loadIdx = 0;
 	if (!valLoadIdxInit) {
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("uuid"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("tag"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("time"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("type"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("level"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("info"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("detail"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("isRecover"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("needRecover"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("recoverTime"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("isAck"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("needAck"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("multiUnack"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackTime"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackInfo"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("ackUser"); loadIdx++;
-		m_loadIdxToColIdx[loadIdx] = getCsvColIdx("picUrl"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("uuid"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("tag"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("time"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("type"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("level"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("info"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("detail"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("isRecover"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("needRecover"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("recoverTime"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("isAck"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("needAck"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("multiUnack"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("ackTime"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("ackInfo"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("ackUser"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("picUrl"); loadIdx++;
 		valLoadIdxInit = true;
 	}
 
@@ -1877,18 +1875,15 @@ void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
 almTable* almServer::getHistTable(string time)
 {
 	std::unique_lock<mutex> lock(m_csTableHistList);
-	string year = time.substr(0, 4);
-	string month = time.substr(5, 2);
-	string yearMonth = year + month;
-	map<string, almTable*>::iterator iter = tableHist.find(yearMonth);
+	map<string, almTable*>::iterator iter = tableHist.find(time);
 	if (iter == tableHist.end()) {
 		almTable* p = new almTable();
 		p->init("history");
-		p->bOneFilePerMonth = true;
+		p->dbFileMode = m_dbFileMode;
 		p->SetAlarmSrv(this);
 		p->m_tableType = HISTORY_TABLE;
-		p->loadFile(p->getFilePath(atoi(year.c_str()), atoi(month.c_str())));
-		tableHist[yearMonth] = p;
+		p->loadFile(p->getFilePath(time));
+		tableHist[time] = p;
 		return p;
 	}
 	else {
@@ -1909,10 +1904,10 @@ void almTable::add(ALARM_INFO ai)
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
 	buff[ai.getKey(m_tableType)] = pNew;
-	saveFile(pa, buff);
+	appendFile(pa, pNew);
 }
 
-void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
+void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 {
 	for (auto i = buff.begin(); i != buff.end(); )
 	{
@@ -1939,78 +1934,17 @@ void almTable::acknowledge(const ALARM_INFO& ai, bool remove)
 	}
 }
 
-void almTable::acknowledge(const ALARM_INFO& ai)
+void almTable::acknowledge(ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	if (bOneFilePerMonth)
-	{
-		/*
-		__cplusplus
-		C++98: 199711L
-		C++03: 199711L（与 C++98 相同，C++03 只是对 C++98 的一些修正，没有新特性）
-		C++11: 201103L
-		C++14: 201402L
-		C++17: 201703L
-		C++20: 202002L
-		*/
-#if __cplusplus <= 201402L
-		WIN32_FIND_DATAW  findFileData;
-		std::string searchPath = db.m_path + "/alarms/";
-		std::wstring searchPath_w = str::utf8_to_utf16(db.m_path + "/alarms/*").c_str();
-		HANDLE hFind = FindFirstFileW(searchPath_w.c_str(), &findFileData);//添加通配符以匹配所有文件
-
-		if (hFind == INVALID_HANDLE_VALUE) {
-			//Error finding files in directory;
-			return;
-		}
-		do {
-			if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) //目录
-				continue;
-			std::string filename = str::utf16_to_utf8(findFileData.cFileName);
-			if (filename == "." || filename == "..") {
-				continue;
-			}
-
-			if (filename.find("history_") == 0 && filename.find(".csv") == 14 && filename.size() == 18
-				&& to_string(stoi(filename.substr(8, 6))) == filename.substr(8, 6))
-			{ // "history_YYYYMM.csv" 的长度为 15
-				string fi = searchPath + filename;
-				loadFile(fi);
-				acknowledge(ai, false);
-				saveFile(fi, buff);
-			}
-		} while (FindNextFileW(hFind, &findFileData) != 0);
-
-		FindClose(hFind); // 关闭句柄
-
-#else
-		// 获取当前路径
-		std::filesystem::path currentPath = db.m_path + "/alarms/";
-		// 遍历当前文件夹
-		for (const auto& entry : std::filesystem::directory_iterator(currentPath)) {
-			if (entry.is_regular_file()) { // 确保是文件
-				std::string filename = entry.path().filename().string();
-				// 检查文件名是否符合指定格式
-				if (filename.find("history_") == 0 && filename.find(".csv") == 14 && filename.size() == 18
-					&& to_string(stoi(filename.substr(8, 6))) == filename.substr(8, 6))
-				{ // "history_YYYYMM.csv" 的长度为 15
-					loadFile(entry.path().string());
-
-					acknowledge(ai, false);
-
-					saveFile(entry.path().string(), buff);
-				}
-			}
-		}
-#endif
-	}
-	else
-	{
-		string  pa = getFilePath("");
-		loadFile(pa);
-
-		acknowledge(ai, true);
-
+	string  pa = getFilePath(ai.time);
+	loadFile(pa); //获取报警对应的数据文件
+	auto iter = buff.find(ai.getKey(m_tableType));
+	if (iter != buff.end()) {
+		ALARM_INFO* p = iter->second;
+		p->ackUser = ai.ackUser;
+		p->ackInfo = ai.ackInfo;
+		p->ackTime = ai.ackTime;
 		saveFile(pa, buff);
 	}
 }

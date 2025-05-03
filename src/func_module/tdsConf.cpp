@@ -189,9 +189,13 @@ void tdsConfig::loadConfPath(vector<KV_INI_LINE>& vecConf) {
 		if (checkKey(key, "confPath"))
 		{
 			confPath = val;
-			confPath = fs::toAbsolutePath(confPath);
 		}
 	}
+
+	if (confPath == ""){
+		confPath = "../conf";
+	}
+	confPath = fs::toAbsolutePath(confPath);
 }
 
 void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {

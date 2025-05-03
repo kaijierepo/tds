@@ -6,6 +6,13 @@
 #include "json.hpp"
 #include <shared_mutex>
 
+/* Performance-critical design
+* append to file tail when insert to history 
+* seperate history to one file per day,reduce overhead when update history data
+* update,add default in async mode,will not block calling thread
+* unrecover alarm is saved in a seperated memory table,because this table is most frequently queried
+*/
+
 namespace as_fs {
 	string GetDir(string strIn);
 	void CreateDirectoryPlus_old(string str);
@@ -205,6 +212,23 @@ struct CELL_VAL {
 	}
 };
 
+enum DB_FILE_MODE {
+	ONE_FILE_PER_DAY,
+	ONE_FILE_PER_MONTH
+};
+
+struct LINE_PARSER {
+	map<string, int> m_colNameToColIdx;
+	int m_loadIdxToColIdx[50];
+	bool valLoadIdxInit;
+	int getColIdxByColName(string colName);
+	void parse(const char* line, int lineLen, ALARM_INFO& ai);
+
+	LINE_PARSER() {
+		valLoadIdxInit = false;
+	}
+};
+
 class almTable {
 public:
 	//bind with disk data file
@@ -222,14 +246,13 @@ public:
 
 	void SetAlarmSrv(almServer* pSrv);
 
-	void acknowledge(const ALARM_INFO& ai);
-	void acknowledge(const ALARM_INFO& ai, bool remove);
+	void acknowledge(ALARM_INFO& ai);
+	void acknowledge(ALARM_INFO& ai, bool remove);
 public:
 
 	almTable() {
-		bOneFilePerMonth = false;
+		dbFileMode = ONE_FILE_PER_DAY;
 		m_pAlmSrv = nullptr;
-		valLoadIdxInit = false;
 	}
 	~almTable() {
 		for (auto& i : buff) {
@@ -237,30 +260,24 @@ public:
 		}
 	}
 	string getFilePath(string time = "");
-	string getFilePath(int y, int m);
+	string getFilePath(int y, int m,int d);
 	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void appendFile(string strFile, ALARM_INFO* pNew);
 	void freeBuff(map<string, ALARM_INFO*>& mapAlarm);
-	void fromCSV(const char* line, int lineLen, ALARM_INFO& ai);
-	CELL_VAL* csvColVal(CELL_VAL* colVals, string colName);
-
-	int getCsvColIdx(string colName);
 
 	string toCSV(ALARM_INFO& info);
 	string filePath;
 	map<string, ALARM_INFO*> buff;
 	string buffFilePath;
-	bool bOneFilePerMonth;
+	DB_FILE_MODE dbFileMode;
 	shared_mutex m_csTable;
 	ALM_TABLE_TYPE m_tableType;
 
 
 protected:
 	almServer* m_pAlmSrv;
-	map<string, int> m_colIdx;
-	int m_loadIdxToColIdx[50];
-	bool valLoadIdxInit;
+	LINE_PARSER m_lineParser;
 };
 
 
@@ -323,6 +340,23 @@ struct BLOCKING_PLAN {
 	}
 };
 
+struct ALM_SELECTOR : public DE_SELECTOR {
+	vector<string> level;
+	bool filter_isRecover;
+	bool filter_isAck;
+	bool isRecover;
+	bool isAck;
+	vector<string> type;
+	vector<string> keywords;
+	string parseError;
+	ALM_SELECTOR() {
+		isRecover = false;
+		isAck = false;
+		filter_isRecover = false;
+		filter_isAck = false;
+	}
+};
+
 class almServer
 {
 public:
@@ -332,6 +366,7 @@ public:
 	string m_dbPath;
 	bool m_enable;
 	bool m_init;
+	DB_FILE_MODE m_dbFileMode;
 
 public:
 	////internal interface
@@ -350,6 +385,7 @@ public:
 	void rpc_acknowledgeAll(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION session);
 
 	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
 	json rpcReqParams2Querier(json& params, RPC_SESSION session);
@@ -378,6 +414,9 @@ private:
 	//alarm status modify
 	void recover(ALARM_INFO& key, string recoverTime, bool notify = true);
 
+	bool parseAlmSelector(json& params, RPC_SESSION& session, ALM_SELECTOR& almSel);
+	void getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey);
+	void loadHistAlarm(vector<ALARM_INFO*>& almList, ALM_SELECTOR& almSel, RPC_SESSION session);
 	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
 	string getAlarmTypeLabel(string type);

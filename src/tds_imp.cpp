@@ -604,6 +604,7 @@ bool TDS_imp::run(string cmdline)
 	asInitParam.func_sms_notify = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
 	//报警
+	almSrv.m_dbFileMode = ONE_FILE_PER_MONTH;
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
 	almSrv_dev.init(::db.m_path + "/alarmsDev", asInitParam);
 	almSrv_dev.m_bTestSrv = true;
