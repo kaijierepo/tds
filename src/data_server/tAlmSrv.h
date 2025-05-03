@@ -155,6 +155,7 @@ public:
 		return false;
 	}
 
+	string toCSVLine();
 	string toJsonStr(almServer* almSrv, string rootTag = "");
 	ALARM_INFO fromJson(json j);
 	json toJson(almServer* almSrv, string rootTag = "");
@@ -212,6 +213,11 @@ struct CELL_VAL {
 	}
 };
 
+struct LINE_VAL {
+	const char* p;
+	int len;
+};
+
 enum DB_FILE_MODE {
 	ONE_FILE_PER_DAY,
 	ONE_FILE_PER_MONTH
@@ -259,8 +265,7 @@ public:
 			delete i.second;
 		}
 	}
-	string getFilePath(string time = "");
-	string getFilePath(int y, int m,int d);
+
 	void loadFile(string strFile);
 	void saveFile(string strFile, map<string, ALARM_INFO*>& memData);
 	void appendFile(string strFile, ALARM_INFO* pNew);
@@ -415,11 +420,14 @@ private:
 	void recover(ALARM_INFO& key, string recoverTime, bool notify = true);
 
 	bool parseAlmSelector(json& params, RPC_SESSION& session, ALM_SELECTOR& almSel);
+	void getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& timeKey);
+	void getDBFileTimeKey_daily(ALM_SELECTOR& almSel, vector<string>& timeKey);
 	void getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey);
 	void loadHistAlarm(vector<ALARM_INFO*>& almList, ALM_SELECTOR& almSel, RPC_SESSION session);
 	json getAlarmStatus(string tag);
 	void initMOAlarmStatus();
 	string getAlarmTypeLabel(string type);
+
 
 public:
 	almServer(void);
@@ -429,7 +437,8 @@ public:
 		return inst;
 	}
 	void init();
-
+	string getFilePath(string time, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
+	string getFilePath(int y, int m, int d, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
 
 	bool CompareTime(TIME& time1, TIME& time2);
 	string uuid();
@@ -454,9 +463,5 @@ public:
 	long long m_iUpdateCallCount;
 };
 
-
 extern almServer almSrv;
-extern almServer almSrv_dev;
-extern almServer almSrv_fau;
-extern almServer almSrv_fauDev;
 

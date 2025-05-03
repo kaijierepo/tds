@@ -2522,21 +2522,9 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 {
 	almServer* pAlmSrv = nullptr;
 
-	if (session.dbpath == "alarmsDevelop")
-	{
-		pAlmSrv = &almSrv_dev;
-	}
-	else if(session.dbpath == "alarms")
+	if(session.dbpath == "alarms")
 	{
 		pAlmSrv = &almSrv;
-	}
-	else if (session.dbpath == "faultsDevelop")
-	{
-		pAlmSrv = &almSrv_fauDev;
-	}
-	else if (session.dbpath == "faults")
-	{
-		pAlmSrv = &almSrv_fau;
 	}
 	else
 	{
@@ -2593,6 +2581,10 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	{
 		result = pAlmSrv->rpc_getHistory(params, session);
 	}
+	else if (method == "convertDBMode")
+	{
+		pAlmSrv->rpc_convertDBMode(params,rpcResp, session);
+	}
 	//** 数据生成系列 以下接口都会修改报警数据
 	else if (method == "addAlarm")
 	{
@@ -2622,13 +2614,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	}
 	else if (method == "approveAlarm" ) //审核报警  审核通过则更新到正式报警
 	{
-		if (pAlmSrv == &almSrv_dev) {
-			string dd = params.dump();
-
-			int nRet = pAlmSrv->rpc_approve(params, rpcResp, session);
-			if(1 == nRet )
-				almSrv.rpc_addAlarm(params, rpcResp);
-		}
+		
 	}
 	else
 	{

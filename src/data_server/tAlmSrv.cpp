@@ -11,9 +11,62 @@
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 
 almServer almSrv;
-almServer almSrv_dev;
-almServer almSrv_fau;
-almServer almSrv_fauDev;
+
+
+void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
+	lines.clear();  // 清空现有内容
+
+	if (!s || !*s) return;  // 空输入处理
+
+	const char* start = s;
+	const char* p = s;
+
+	while (*p) {
+		if (*p == '\r' && *(p + 1) == '\n') {
+			lines.push_back({ start, static_cast<int>(p - start) });
+			p += 2;
+			start = p;
+		}
+		else {
+			++p;
+		}
+	}
+
+	// 处理最后一行（如果没有以\r\n结尾）
+	if (p > start) {
+		lines.push_back({ start, static_cast<int>(p - start) });
+	}
+}
+
+
+bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
+	string strDBData;
+	as_fs::readFile(strFile, strDBData);
+	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
+	std::vector<LINE_VAL> recLines;
+	parse_csv_lines(strDBData.data(), recLines);
+
+	LINE_PARSER lineParser;
+	if (recLines.size() >= 1) {
+		string tableHeader(recLines[0].p, recLines[0].len);
+		vector<string> colNames;
+		str::split(colNames, tableHeader, ",");
+		for (int i = 0; i < colNames.size(); i++) {
+			string name = colNames[i];
+			lineParser.m_colNameToColIdx[name] = i;
+		}
+	}
+
+	for (int i = 1; i < recLines.size(); i++)
+	{
+		LINE_VAL& lv = recLines.at(i);
+		ALARM_INFO* pAi = new ALARM_INFO();
+		lineParser.parse(lv.p, lv.len, *pAi);
+		almList.push_back(pAi);
+	}
+
+	return true;
+}
 
 namespace as_fs {
 	string GetDir(string strIn)
@@ -879,19 +932,72 @@ void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSI
 void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION session)
 {
 	ALM_SELECTOR almSel;
-	parseAlmSelector(params, session, almSel);
+	if (!parseAlmSelector(params, session, almSel)) {
+		json jErr = almSel.parseError;
+		resp.error = jErr.dump();
+		return;
+	}
 
-	string srcMode = params["srcMode"];
-	string desMode = params["desMode"];
+	string srcMode = params["src"];
+	string desMode = params["des"];
 	if (srcMode == "" && desMode == "") {
 		json jErr = "srcMode and desMode must be specified";
 		resp.error = jErr.dump();
 	}
 
 	vector<string> timeKey;
-	getDBFileTimeKey(almSel, timeKey);
+	DB_FILE_MODE  dfm_srcMode;
+	if (srcMode == "monthly") {
+		getDBFileTimeKey_monthly(almSel, timeKey);
+		dfm_srcMode = DB_FILE_MODE::ONE_FILE_PER_MONTH;
+	}
+	else if (srcMode == "daily") {
+		getDBFileTimeKey_daily(almSel, timeKey);
+		dfm_srcMode = DB_FILE_MODE::ONE_FILE_PER_DAY;
+	}
+	DB_FILE_MODE  dfm_desMode;
+	if (desMode == "monthly") {
+		dfm_desMode = DB_FILE_MODE::ONE_FILE_PER_MONTH;
+	}
+	else if (desMode == "daily") {
+		dfm_desMode = DB_FILE_MODE::ONE_FILE_PER_DAY;
+	}
 
-	
+	vector<ALARM_INFO*> almList;
+	for (auto& time : timeKey) {
+		string path = getFilePath(time, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_srcMode);
+		loadAlmDBFile(path, almList);
+	}
+
+	map<string, vector<ALARM_INFO*>> desFileData;
+	for (auto& ai : almList) {
+		string tk;
+		if (desMode == "monthly") {
+			tk = ai->time.substr(0, 7);
+		}
+		else if (desMode == "daily") {
+			tk = ai->time.substr(0, 10);
+		}
+		
+		auto iter = desFileData.find(tk);
+		if (iter == desFileData.end()) {
+			vector<ALARM_INFO*> vec;
+			desFileData[tk] = vec;
+		}
+		iter = desFileData.find(tk);
+		iter->second.push_back(ai);
+	}
+
+	for (auto& fileData : desFileData) {
+		string path = getFilePath(fileData.first, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_desMode);
+		string data = ALM_TABLE_HEAD_LINE;
+		for (auto& almInfo : fileData.second) {
+			data += almInfo->toCSVLine();
+		}
+		fs::writeFile(path, data);
+	}
+
+	resp.result = RPC_OK;
 }
 
 //params ：对应ai那个结构
@@ -1174,38 +1280,46 @@ bool almServer::parseAlmSelector(json& params, RPC_SESSION& session,ALM_SELECTOR
 	return true;
 }
 
-void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey) {
-	if (m_dbFileMode == ONE_FILE_PER_MONTH) {
-		int startYear = almSel.timeSel.atomSelList[0].stStart.wYear;
-		int startYearStartMonth = almSel.timeSel.atomSelList[0].stStart.wMonth;
-		int endYear = almSel.timeSel.atomSelList[0].stEnd.wYear;
-		int endYearEndMonth = almSel.timeSel.atomSelList[0].stEnd.wMonth;
-		//defaut time desending. only db file in time range is loaded
-		for (int iYear = endYear; iYear >= startYear; iYear--) {
-			int startMonth = 1;
-			if (iYear == startYear)
-				startMonth = startYearStartMonth;
-			int endMonth = 12;
-			if (iYear == endYear)
-				endMonth = endYearEndMonth;
+void almServer::getDBFileTimeKey_monthly(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+	int startYear = almSel.timeSel.atomSelList[0].stStart.wYear;
+	int startYearStartMonth = almSel.timeSel.atomSelList[0].stStart.wMonth;
+	int endYear = almSel.timeSel.atomSelList[0].stEnd.wYear;
+	int endYearEndMonth = almSel.timeSel.atomSelList[0].stEnd.wMonth;
+	//defaut time desending. only db file in time range is loaded
+	for (int iYear = endYear; iYear >= startYear; iYear--) {
+		int startMonth = 1;
+		if (iYear == startYear)
+			startMonth = startYearStartMonth;
+		int endMonth = 12;
+		if (iYear == endYear)
+			endMonth = endYearEndMonth;
 
-			for (int iMonth = endMonth; iMonth >= startMonth; iMonth--) {
-				string time = str::format("%04d-%02d", iYear, iMonth);
-				timeKey.push_back(time);
-			}
-		}
-	}
-	else if (m_dbFileMode == ONE_FILE_PER_DAY) {
-		time_t startDate = almSel.timeSel.atomSelList[0].stStart.toUnixTime();
-		time_t endDate = almSel.timeSel.atomSelList[0].stEnd.toUnixTime();
-		time_t loadDate = endDate;
-		for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-		{
-			DB_TIME t;
-			t.fromUnixTime(loadDate);
-			string time = str::format("%04d-%02d-%02d", t.wYear, t.wMonth,t.wDay);
+		for (int iMonth = endMonth; iMonth >= startMonth; iMonth--) {
+			string time = str::format("%04d-%02d", iYear, iMonth);
 			timeKey.push_back(time);
 		}
+	}
+}
+
+void almServer::getDBFileTimeKey_daily(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+	time_t startDate = almSel.timeSel.atomSelList[0].stStart.toUnixTime();
+	time_t endDate = almSel.timeSel.atomSelList[0].stEnd.toUnixTime();
+	time_t loadDate = endDate;
+	for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
+	{
+		DB_TIME t;
+		t.fromUnixTime(loadDate);
+		string time = str::format("%04d-%02d-%02d", t.wYear, t.wMonth, t.wDay);
+		timeKey.push_back(time);
+	}
+}
+
+void almServer::getDBFileTimeKey(ALM_SELECTOR& almSel, vector<string>& timeKey) {
+	if (m_dbFileMode == ONE_FILE_PER_MONTH) {
+		getDBFileTimeKey_monthly(almSel, timeKey);
+	}
+	else if (m_dbFileMode == ONE_FILE_PER_DAY) {
+		getDBFileTimeKey_daily(almSel, timeKey);
 	}
 }
 
@@ -1452,7 +1566,7 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
 		ALARM_INFO& ai = *i->second;
-		string str = toCSV(ai);
+		string str = ai.toCSVLine();
 		data += str;
 	}
 	as_fs::createFolderOfPath(strFile);
@@ -1461,31 +1575,31 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 
 void almTable::appendFile(string strFile, ALARM_INFO* pNew)
 {
-	string str = toCSV(*pNew);
-	fs::appendFile(strFile, str);
+	string line = pNew->toCSVLine();
+	fs::appendFile(strFile, line);
 }
 
-string almTable::getFilePath(int y, int m,int day) {
+string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
 	string p;
-	if (dbFileMode == ONE_FILE_PER_MONTH)
+	if (fileMode == ONE_FILE_PER_MONTH)
 	{
 		string strYM = str::format("%04d%02d", y, m);
-		p = m_pAlmSrv->m_dbPath + "/" + filePath + "_" + strYM + ".csv";
+		p = m_dbPath + "/history_" + strYM + ".csv";
 	}
-	else if (dbFileMode == ONE_FILE_PER_DAY) {
+	else if (fileMode == ONE_FILE_PER_DAY) {
 		string s = str::format("%04d%02d/%2d", y, m,day);
-		p = m_pAlmSrv->m_dbPath + "/" + s + ".csv";
+		p = m_dbPath + "/" + s + ".csv";
 	}
 	else
 	{
-		p = m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
+		p = m_dbPath + "/history.csv";
 	}
 	return p;
 }
 
-string almTable::getFilePath(string time) {
-	if (m_tableType == CURRENT_TABLE || time == "")
-		return m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
+string almServer::getFilePath(string time, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
+	if (tableType == CURRENT_TABLE || time == "")
+		return m_dbPath + "/current.csv";
 	else if (time != "")
 	{
 		TIME st;
@@ -1493,72 +1607,12 @@ string almTable::getFilePath(string time) {
 		int y, m;
 		y = st.wYear;
 		m = st.wMonth;
-		return getFilePath(y, m,st.wDay);
+		return getFilePath(y, m,st.wDay,tableType, fileMode);
 	}
 	else
 	{
-		return m_pAlmSrv->m_dbPath + "/" + filePath + ".csv";
+		return m_dbPath + "/history.csv";
 	}
-}
-
-
-struct LINE_VAL {
-	const char* p;  
-	int len;
-};
-
-void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
-	lines.clear();  // 清空现有内容
-
-	if (!s || !*s) return;  // 空输入处理
-
-	const char* start = s;
-	const char* p = s;
-
-	while (*p) {
-		if (*p == '\r' && *(p + 1) == '\n') {
-			lines.push_back({ start, static_cast<int>(p - start) });
-			p += 2;
-			start = p;
-		}
-		else {
-			++p;
-		}
-	}
-
-	// 处理最后一行（如果没有以\r\n结尾）
-	if (p > start) {
-		lines.push_back({ start, static_cast<int>(p - start) });
-	}
-}
-
-bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
-	string strDBData;
-	as_fs::readFile(strFile, strDBData);
-	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
-	std::vector<LINE_VAL> recLines;
-	parse_csv_lines(strDBData.data(), recLines);
-
-	LINE_PARSER lineParser;
-	if (recLines.size() >= 1) {
-		string tableHeader(recLines[0].p, recLines[0].len);
-		vector<string> colNames;
-		str::split(colNames, tableHeader, ",");
-		for (int i = 0; i < colNames.size(); i++) {
-			string name = colNames[i];
-			lineParser.m_colNameToColIdx[name] = i;
-		}
-	}
-
-	for (int i = 1; i < recLines.size(); i++)
-	{
-		LINE_VAL& lv = recLines.at(i);
-		ALARM_INFO* pAi = new ALARM_INFO();
-		lineParser.parse(lv.p, lv.len, *pAi);
-		almList.push_back(pAi);
-	}
-
-	return true;
 }
 
 void almTable::loadFile(string strFile)
@@ -1829,8 +1883,9 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.pic_url.assign(cv->p, cv->len); }loadIdx++;
 }
 
-string almTable::toCSV(ALARM_INFO& info)
+string ALARM_INFO::toCSVLine()
 {
+	ALARM_INFO& info = *this;
 	string str;
 	//core info
 	str += "\"" + info.uuid + "\""; str += ",";
@@ -1882,7 +1937,7 @@ almTable* almServer::getHistTable(string time)
 		p->dbFileMode = m_dbFileMode;
 		p->SetAlarmSrv(this);
 		p->m_tableType = HISTORY_TABLE;
-		p->loadFile(p->getFilePath(time));
+		p->loadFile(getFilePath(time, HISTORY_TABLE, m_dbFileMode));
 		tableHist[time] = p;
 		return p;
 	}
@@ -1899,7 +1954,7 @@ void almTable::init(string file)
 void almTable::add(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = getFilePath(ai.time);
+	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
 	loadFile(pa);
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
@@ -1937,7 +1992,7 @@ void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 void almTable::acknowledge(ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = getFilePath(ai.time);
+	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
 	loadFile(pa); //获取报警对应的数据文件
 	auto iter = buff.find(ai.getKey(m_tableType));
 	if (iter != buff.end()) {
@@ -1958,7 +2013,7 @@ bool almTable::query(json params, ALARM_INFO& ai)
 	string time;
 	if (params["time"] != nullptr)
 		time = params["time"].get<string>();
-	string  pa = getFilePath(time);
+	string  pa = m_pAlmSrv->getFilePath(time,m_tableType,dbFileMode);
 	loadFile(pa);
 	const string strRecoverFlag = /*as_charCodec::gb_to_utf8(*/"恢复"/*)*/;
 	string strType = "";
@@ -2013,7 +2068,7 @@ bool almTable::query(string customId, ALARM_INFO& ai, string time)
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	bool bFind = false;
 	ALARM_INFO* p = NULL;
-	string  pa = getFilePath(time);
+	string  pa = m_pAlmSrv->getFilePath(time,m_tableType,dbFileMode);
 	loadFile(pa);
 	for (auto& i : buff)
 	{
@@ -2035,7 +2090,7 @@ bool almTable::query(string customId, ALARM_INFO& ai, string time)
 void almTable::update(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = getFilePath(ai.time);
+	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
 	loadFile(pa); //获取报警对应的数据文件
 	ALARM_INFO* p = buff.at(ai.getKey(m_tableType));
 	if (p)
@@ -2047,7 +2102,7 @@ void almTable::update(ALARM_INFO ai)
 void almTable::remove(ALARM_KEY& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = getFilePath(ai.time);
+	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
 	loadFile(pa);
 	buff.erase(ai.getKey(m_tableType));
 	saveFile(pa, buff);
@@ -2173,7 +2228,7 @@ vector<ALARM_INFO*> almTable::query(json querier)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
 	vector<ALARM_INFO*> dataSet;
-	loadFile(getFilePath());
+	loadFile(m_pAlmSrv->getFilePath("",m_tableType,dbFileMode));
 	ALARM_QUERY aq = parseQuerier(querier);
 
 	TIME_SELECTOR ts;

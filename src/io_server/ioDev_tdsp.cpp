@@ -730,21 +730,10 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 
 			RPC_RESP resp;
 			almServer* pAlmSrv = NULL;
-			if (sDbPath.find("alarmsDevelop") != string::npos)
-			{
-				pAlmSrv = &almSrv_dev;
-			}
-			else if (sDbPath.find("alarms") != string::npos)
+
+			if (sDbPath.find("alarms") != string::npos)
 			{
 				pAlmSrv = &almSrv;
-			}
-			else if (sDbPath.find("faultsDevelop") != string::npos)
-			{
-				pAlmSrv = &almSrv_fauDev;
-			}
-			else if (sDbPath.find("faults") != string::npos)
-			{
-				pAlmSrv = &almSrv_fau;
 			}
 			else
 			{
@@ -793,16 +782,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			RPC_RESP resp;
 
 			almServer* pAlmSrv = NULL;
-
-			if (sDbPath.find("alarmsDevelop") != string::npos)
-			{
-				pAlmSrv = &almSrv_dev;
-			}
-			else
-			{
-				pAlmSrv = &almSrv;
-			}
-
+			pAlmSrv = &almSrv;
 			pAlmSrv->rpc_addAlarm(jParams, resp, false);
 		}
 	}
