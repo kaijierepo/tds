@@ -12,7 +12,7 @@
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 
 almServer almSrv;
-
+COMMON::ThreadPool g_asynCallWorker(1);
 
 void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 	lines.clear();  // 清空现有内容
@@ -395,6 +395,29 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 }
 
 
+int almServer::getCallCount(std::chrono::steady_clock::duration duration, vector<std::chrono::steady_clock::time_point>& latestCall) {
+	auto now = std::chrono::steady_clock::now();
+	auto cutoff = now - duration;
+
+	auto it = std::lower_bound(
+		latestCall.begin(),
+		latestCall.end(),
+		cutoff,
+		[](const auto& time, const auto& cutoff) {
+			return time < cutoff;
+		});
+
+	return std::distance(it, latestCall.end());
+}
+
+int almServer::getLastMinuteCalls(vector<std::chrono::steady_clock::time_point>& latestCall) {
+	return getCallCount(std::chrono::minutes(1),latestCall);
+}
+
+int almServer::getLastHourCalls(vector<std::chrono::steady_clock::time_point>& latestCall) {
+	return getCallCount(std::chrono::hours(1), latestCall);
+}
+
 string almServer::uuid() {
 	std::random_device rd;
 	std::mt19937 gen(rd());
@@ -414,6 +437,13 @@ string almServer::uuid() {
 
 void almServer::Update(ALARM_INFO newStatus, bool notify)
 {
+	g_asynCallWorker.enqueue([newStatus, notify] {
+		almSrv.UpdateSync(newStatus,notify);
+		});
+}
+
+void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
+{
 	if (!m_init)
 		return;
 	if (!m_enable)
@@ -421,8 +451,11 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	if (m_blockingPlan.isBlocking())
 		return;
 
-
-	m_iUpdateCallCount++;
+	auto start = std::chrono::high_resolution_clock::now();
+	m_latestUpdateCall.push_back(start);
+	if (m_latestUpdateCall.size() > 10000) {
+		m_latestUpdateCall.erase(m_latestUpdateCall.begin());
+	}
 	if (newStatus.time == "" || newStatus.time == "0000-00-00 00:00:00")
 	{
 		TIME st;
@@ -506,6 +539,20 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 				m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
 		}
 	}
+	auto end = std::chrono::high_resolution_clock::now();
+
+	// 计算持续时间
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+	int msCost = duration.count() / 1000;
+	m_latestUpdateCallTimeCost.push_back(msCost);
+	if (m_latestUpdateCallTimeCost.size() > 10) {
+		m_latestUpdateCallTimeCost.erase(m_latestUpdateCallTimeCost.begin());
+	}
+	int total = 0;
+	for (auto& cost : m_latestUpdateCallTimeCost) {
+		total += cost;
+	}
+	m_lastUpdateCallTimeCostAvg = total / m_latestUpdateCallTimeCost.size();
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
@@ -529,10 +576,25 @@ string almServer::getAlarmTypeLabel(string type)
 	return "";
 }
 
-string almServer::Add(ALARM_INFO& ai, bool bNotify)
+void almServer::Add(ALARM_INFO ai, bool bNotify)
 {
-	if (m_blockingPlan.isBlocking())
-		return "blocked by blocking plan";
+	g_asynCallWorker.enqueue([ai, bNotify] {
+		almSrv.UpdateSync(ai, bNotify);
+		});
+}
+
+void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
+{
+	if (m_blockingPlan.isBlocking()) {
+		err = "blocked by blocking plan";
+		return;
+	}
+
+	auto start = std::chrono::high_resolution_clock::now();
+	m_latestAddCall.push_back(start);
+	if (m_latestAddCall.size() > 10000) {
+		m_latestAddCall.erase(m_latestAddCall.begin());
+	}
 
 	if (!ai.needRecover) {
 		ai.isRecover = true;
@@ -554,11 +616,23 @@ string almServer::Add(ALARM_INFO& ai, bool bNotify)
 
 	if (bNeedAdd) {
 		addAlarm(ai, bNotify);
-		return "ok";
 	}
 	else {
-		return "\"unrecover alarm with the same alarm key already existed,add fail\"";
+		err = "unrecover alarm with the same alarm key already existed,add fail";
 	}	
+
+	auto end = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+	int msCost = duration.count() / 1000;
+	m_latestAddCallTimeCost.push_back(msCost);
+	if (m_latestAddCallTimeCost.size() > 10) {
+		m_latestAddCallTimeCost.erase(m_latestAddCallTimeCost.begin());
+	}
+	int total = 0;
+	for (auto& cost : m_latestAddCallTimeCost) {
+		total += cost;
+	}
+	m_lastAddCallTimeCostAvg = total / m_latestAddCallTimeCost.size();
 }
 
 #if 1
@@ -582,12 +656,14 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		ai.time = t.toStr();
 	}
 
-	string sRet = Add(ai, true);
-	if (sRet == "ok") {
+	string err;
+	AddSync(ai,err, true);
+	if (err == "") {
 		resp.result = ai.toJsonStr(this);
 	}
 	else {
-		resp.error = sRet;
+		json j = err;
+		resp.error = j.dump();
 	}
 }
 
@@ -630,7 +706,7 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 		ALARM_INFO ai;
 		ai.fromJson(j);
 		//ai.time = timeopt::nowStr();
-		Update(ai);
+		UpdateSync(ai);
 		resp.result = RPC_OK;
 	}
 	catch (std::exception& e)
@@ -644,7 +720,12 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 
 void almServer::rpc_getAlmSrvStatus(json j, RPC_RESP& resp) {
 	json js;
-	js["updateCallCount"] = m_iUpdateCallCount;
+	js["latestUpdateCallTimeCost"] = m_latestUpdateCallTimeCost;
+	js["latestAddCallTimeCost"] = m_latestAddCallTimeCost;
+	js["UpdateCallLastMinute"] = getLastMinuteCalls(m_latestUpdateCall);
+	js["UpdateCallLastHour"] = getLastHourCalls(m_latestUpdateCall);
+	js["AddCallLastMinute"] = getLastMinuteCalls(m_latestAddCall);
+	js["AddCallLastHour"] = getLastHourCalls(m_latestAddCall);
 	resp.result = js.dump();
 }
 
@@ -956,7 +1037,7 @@ void almServer::rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session)
 	}
 
 	vector<ALARM_INFO*> vecAlarm;
-	for (auto& i = tableCurrent.buff.rbegin(); i != tableCurrent.buff.rend();i++) {
+	for (auto i = tableCurrent.buff.rbegin(); i != tableCurrent.buff.rend();i++) {
 		if (isSelected(i->second, almSel)) {
 			vecAlarm.push_back(i->second);
 		}

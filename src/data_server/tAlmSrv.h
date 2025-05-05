@@ -5,6 +5,7 @@
 #include "tds.h"
 #include "json.hpp"
 #include <shared_mutex>
+#include <chrono>
 
 /* Performance-critical design
 * append to file tail when insert to history 
@@ -375,8 +376,10 @@ public:
 public:
 	////internal interface
 	//alarm generation
+	void UpdateSync(ALARM_INFO newStatus, bool notify = true);
+	void AddSync(ALARM_INFO ai,string& err, bool bNotify = true);
 	void Update(ALARM_INFO newStatus,bool notify = true);  //update alarm state of a MO. almServer will calc alarm event internally
-	string Add(ALARM_INFO& ai, bool bNotify = true);//add alarm event of a MO.use for stateless alarm.
+	void Add(ALARM_INFO ai, bool bNotify = true);//add alarm event of a MO.use for stateless alarm.
 
 	//status check
 	bool isRecover(ALARM_INFO& key);
@@ -438,6 +441,7 @@ public:
 	string getFilePath(int y, int m, int d, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
 
 	bool CompareTime(TIME& time1, TIME& time2);
+
 	string uuid();
 
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
@@ -454,6 +458,16 @@ public:
 	string m_curPath;
 	string m_histPath;
 
+
+	int getCallCount(std::chrono::steady_clock::duration duration, vector<std::chrono::steady_clock::time_point>& latestCall);
+	int getLastMinuteCalls(vector<std::chrono::steady_clock::time_point>& latestCall);
+	int getLastHourCalls(vector<std::chrono::steady_clock::time_point>& latestCall);
+	vector<std::chrono::steady_clock::time_point> m_latestUpdateCall;
+	vector<int> m_latestUpdateCallTimeCost;
+	int m_lastUpdateCallTimeCostAvg;
+	vector<std::chrono::steady_clock::time_point> m_latestAddCall;
+	vector<int> m_latestAddCallTimeCost;
+	int m_lastAddCallTimeCostAvg;
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 	long long m_iUpdateCallCount;
 };
