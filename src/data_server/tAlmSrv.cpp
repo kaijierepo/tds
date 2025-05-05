@@ -720,8 +720,8 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 
 void almServer::rpc_getAlmSrvStatus(json j, RPC_RESP& resp) {
 	json js;
-	js["latestUpdateCallTimeCost"] = m_latestUpdateCallTimeCost;
-	js["latestAddCallTimeCost"] = m_latestAddCallTimeCost;
+	js["latestUpdateCallTimeCost"] = m_lastUpdateCallTimeCostAvg;
+	js["latestAddCallTimeCost"] = m_lastAddCallTimeCostAvg;
 	js["UpdateCallLastMinute"] = getLastMinuteCalls(m_latestUpdateCall);
 	js["UpdateCallLastHour"] = getLastHourCalls(m_latestUpdateCall);
 	js["AddCallLastMinute"] = getLastMinuteCalls(m_latestAddCall);
