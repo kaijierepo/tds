@@ -463,11 +463,11 @@ public:
 	int getLastMinuteCalls(vector<std::chrono::steady_clock::time_point>& latestCall);
 	int getLastHourCalls(vector<std::chrono::steady_clock::time_point>& latestCall);
 	vector<std::chrono::steady_clock::time_point> m_latestUpdateCall;
-	vector<int> m_latestUpdateCallTimeCost;
-	int m_lastUpdateCallTimeCostAvg;
+	vector<float> m_latestUpdateCallTimeCost;
+	float m_lastUpdateCallTimeCostAvg;
 	vector<std::chrono::steady_clock::time_point> m_latestAddCall;
-	vector<int> m_latestAddCallTimeCost;
-	int m_lastAddCallTimeCostAvg;
+	vector<float> m_latestAddCallTimeCost;
+	float m_lastAddCallTimeCostAvg;
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 	long long m_iUpdateCallCount;
 };

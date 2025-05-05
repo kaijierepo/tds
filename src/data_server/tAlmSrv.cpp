@@ -541,18 +541,17 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	}
 	auto end = std::chrono::high_resolution_clock::now();
 
-	// 计算持续时间
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-	int msCost = duration.count() / 1000;
+	float msCost = duration.count() / 1000.0;
 	m_latestUpdateCallTimeCost.push_back(msCost);
 	if (m_latestUpdateCallTimeCost.size() > 10) {
 		m_latestUpdateCallTimeCost.erase(m_latestUpdateCallTimeCost.begin());
 	}
-	int total = 0;
+	float total = 0;
 	for (auto& cost : m_latestUpdateCallTimeCost) {
 		total += cost;
 	}
-	m_lastUpdateCallTimeCostAvg = total / m_latestUpdateCallTimeCost.size();
+	m_lastUpdateCallTimeCostAvg = (float)total / (float)m_latestUpdateCallTimeCost.size();
 }
 
 void almTable::freeBuff(map<string, ALARM_INFO*>& mapAlarm)
@@ -623,16 +622,16 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 
 	auto end = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-	int msCost = duration.count() / 1000;
+	float msCost = duration.count() / 1000.0;
 	m_latestAddCallTimeCost.push_back(msCost);
 	if (m_latestAddCallTimeCost.size() > 10) {
 		m_latestAddCallTimeCost.erase(m_latestAddCallTimeCost.begin());
 	}
-	int total = 0;
+	float total = 0;
 	for (auto& cost : m_latestAddCallTimeCost) {
 		total += cost;
 	}
-	m_lastAddCallTimeCostAvg = total / m_latestAddCallTimeCost.size();
+	m_lastAddCallTimeCostAvg = total / (float)m_latestAddCallTimeCost.size();
 }
 
 #if 1
