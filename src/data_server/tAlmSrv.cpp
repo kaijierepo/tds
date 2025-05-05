@@ -259,7 +259,6 @@ namespace as_fs {
 almServer::almServer(void)
 {
 	m_enable = true;
-	m_bTestSrv = false;
 	m_iUpdateCallCount = 0;
 	tableCurrent.m_tableType = CURRENT_TABLE;
 	m_init = false;
@@ -295,12 +294,10 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 
 
 bool almServer::isRecover(ALARM_INFO& key) {
-	json filter;
-	filter["tag"] = key.tag;
-	filter["type"] = key.type;
-	filter["isRecover"] = false;
-	ALARM_INFO lastStatus;
-	if (tableCurrent.query(filter, lastStatus))
+	string almKey = key.getKeyUnrecover();
+	shared_lock<shared_mutex> lock(tableCurrent.m_csTable);
+	auto iter = tableCurrent.unRecoverList.find(almKey);
+	if (iter != tableCurrent.unRecoverList.end())
 	{
 		return false;
 	}
@@ -343,66 +340,21 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 		ai.level = ALARM_LEVEL::alarm;
 	}
 
-	if (m_bTestSrv == false)
-	{
-		string sTag = ai.tag;
-		if ((ai.tag.find("(") != string::npos || ai.tag.find(")") != string::npos)
-			&& (ai.tag.find("[") != string::npos || ai.tag.find("]") != string::npos)) {
-			//LOG("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			auto func_log = m_initParam.func_log;
-			if (func_log)
-				func_log("[报警服务]新报警,tag非法，小括号中括号不能同时存在,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-			return;
-		}
-		string::size_type pos_s = ai.tag.find("(");
-		if (pos_s != string::npos) {
-			string::size_type pos_e = ai.tag.find(")");
-			if (pos_e != string::npos) {
-				sTag = ai.tag.substr(pos_s + 1, pos_e - (pos_s + 1));
-			}
-		}
-		else {
-			string::size_type pos_s = ai.tag.find("[");
-			if (pos_s != string::npos) {
-				string::size_type pos_e = ai.tag.find("]");
-				if (pos_e != string::npos) {
-
-					sTag = ai.tag.substr(0, pos_s) + ai.tag.substr(pos_e + 1);
-				}
-			}
-		}
-
-		/*OBJ* pObj = prj.queryObj(sTag, "zh");
-		if (pObj) {
-			if (!pObj->m_bEnableAlarm)
-			{
-				LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-				return;
-			}
-		}*/
-		//auto func_obj_isEnableAlarm = m_initParam.func_obj_isEnableAlarm;
-		//if (func_obj_isEnableAlarm != NULL && func_obj_isEnableAlarm(sTag, "zh") == false) {
-		//	auto func_log = m_initParam.func_log;
-		//	if (func_log)
-		//		func_log("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-		//	//LOG("[报警服务]新报警,报警被禁用,%s,%s", sTag.c_str(), ai.toJson(this).dump().c_str());
-		//	return;
-		//}
-
-		//如果没有位号，报警默认不禁用
-	}
-
-	//LOG("[报警服务]新报警,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 	auto func_log = m_initParam.func_log;
 	if (func_log)
 		func_log("[almSrv]new alarm,%s,%s", ai.tag.c_str(), ai.toJson(this).dump().c_str());
 
-	//ai.uuid = uuid();
-	ai.uuid = ai.time + ai.tag + ai.type + ai.level;
+	//ai.uuid = ai.time + ai.tag + ai.type + ai.level;
 
 	tableCurrent.add(ai);
 	almTable* pHistTable = getHistTable(ai.time);
 	pHistTable->add(ai);
+
+	//通知给TDS客户端
+	json j = ai.toJson(this);
+
+	if (m_initParam.func_rpcHand_notify && notify)
+		m_initParam.func_rpcHand_notify("onAlarmAdd", j);
 
 	//sms send
 	//string msg = "报警类型:" + ai.typeLabel + "; ";
@@ -440,15 +392,6 @@ void almServer::addAlarm(ALARM_INFO& ai, bool notify)
 	//if (m_initParam.func_sms_notify) {
 	//	m_initParam.func_sms_notify(ai.tag, msg);
 	//}
-
-	//通知给TDS客户端
-	if (!m_bTestSrv) {
-		json j = ai.toJson(this);
-
-		//rpcSrv.notify("onAlarmAdd", j); 
-		if (m_initParam.func_rpcHand_notify && notify)
-			m_initParam.func_rpcHand_notify("onAlarmAdd", j);
-	}
 }
 
 
@@ -489,7 +432,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 
 	//the time attr of a status record is always the newest occuring event
 	//time attr is not needed to specify a status record 
-	string alarmKeyStr = newStatus.getKey(ALM_TABLE_TYPE::CURRENT_TABLE);
+	string keyUnrecover = newStatus.getKeyUnrecover();
 
 	//deal status change
 	bool bTagAlarmStatusChanged = false; 
@@ -498,7 +441,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	string curLevel;
 	ALARM_INFO curStatus;
 	tableCurrent.m_csTable.lock();
-	auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
+	auto iter = tableCurrent.unRecoverList.find(keyUnrecover);
 	//get current level
 	if (iter != tableCurrent.unRecoverList.end()){
 		curLevel = iter->second->level;
@@ -510,7 +453,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 			tableCurrent.unRecoverList.erase(iter);
 			curStatus = *pai;
 			if (pai->isRecover && pai->isAck) {
-				tableCurrent.buff.erase(pai->getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
+				tableCurrent.buff.erase(pai->getKey());
 				delete pai;
 			}
 			tableCurrent.saveFile();
@@ -525,7 +468,7 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	//recover alarm in history table
 	if (bNeedRecover) {
 		almTable* pTableHist = getHistTable(curStatus.time);
-		string almKeyHist = curStatus.getKey(ALM_TABLE_TYPE::HISTORY_TABLE);
+		string almKeyHist = curStatus.getKey();
 		pTableHist->m_csTable.lock();
 		auto iterHist = pTableHist->buff.find(almKeyHist);
 		if (iterHist != pTableHist->buff.end())
@@ -557,12 +500,10 @@ void almServer::Update(ALARM_INFO newStatus, bool notify)
 	{
 		//notify client
 		if (notify) {
-			if (!m_bTestSrv) {
-				json j = newStatus.toJson(this);
+			json j = newStatus.toJson(this);
 
-				if (m_initParam.func_rpcHand_notify && notify)
-					m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
-			}
+			if (m_initParam.func_rpcHand_notify && notify)
+				m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
 		}
 	}
 }
@@ -599,7 +540,7 @@ string almServer::Add(ALARM_INFO& ai, bool bNotify)
 
 	bool bNeedAdd = false;
 	if (ai.needRecover) {
-		string alarmKeyStr = ai.getKey(ALM_TABLE_TYPE::CURRENT_TABLE);
+		string alarmKeyStr = ai.getKeyUnrecover();
 		tableCurrent.m_csTable.lock();
 		auto iter = tableCurrent.unRecoverList.find(alarmKeyStr);
 		if (iter == tableCurrent.unRecoverList.end()) {
@@ -770,8 +711,9 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	ALARM_INFO ai;
 	{
 		unique_lock<shared_mutex> lock(tableCurrent.m_csTable);
-		auto iter = tableCurrent.buff.find(queryKey.getKey(ALM_TABLE_TYPE::HISTORY_TABLE));
-		if (iter != tableCurrent.buff.end())
+		string almKey = queryKey.getKey();
+		auto iter = tableCurrent.unAckList.find(almKey);
+		if (iter != tableCurrent.unAckList.end())
 		{
 			iter->second->isAck = 1;
 			iter->second->ackUser = session.user;
@@ -779,13 +721,14 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 			iter->second->ackTime = ackTime;
 			ai = *iter->second;
 			if (iter->second->isRecover && iter->second->isAck) {
-				tableCurrent.buff.erase(iter->second->getKey(ALM_TABLE_TYPE::CURRENT_TABLE));
+				tableCurrent.buff.erase(almKey);
 				delete iter->second;
 			}
 			tableCurrent.saveFile();
+			tableCurrent.unAckList.erase(iter);
 		}
 		else {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in unack list");
 			resp.error = error;
 			return;
 		}
@@ -794,7 +737,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	almTable* pTableHist = getHistTable(queryKey.time);
 	{
 		unique_lock<shared_mutex> lock(pTableHist->m_csTable);
-		auto iter = pTableHist->buff.find(queryKey.getKey(ALM_TABLE_TYPE::HISTORY_TABLE));
+		auto iter = pTableHist->buff.find(queryKey.getKey());
 		if (iter != pTableHist->buff.end())
 		{
 			iter->second->isAck = 1;
@@ -804,7 +747,7 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 			pTableHist->saveFile();
 		}
 		else {
-			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "alarm not found in history");
 			resp.error = error;
 			return;
 		}
@@ -914,118 +857,86 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 //返回负数  失败, 非负数 成功：0 未通过，1通过
 //按原理，会马上恢复掉，仅恢复掉的允许审核 前端保证
 int almServer::rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session) {
-	int nRet = -1;
-	if (params.contains("uuid") == false && (params.contains("tag") == false)) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
-		resp.error = error;
-		return nRet;
-	}
-	if (false == params["isRecover"].get<bool>()) {
-		resp.error = "尚未恢复";
-		nRet = -2;
-		return nRet;
-	}
-	if (params.contains("tag")) {
-		string rootTag;
-		if (params.contains("rootTag")) {
-			rootTag = params["rootTag"];
-		}
-		string tag = params["tag"];
-		tag = TAG::addRoot(tag, rootTag);
+	//int nRet = -1;
+	//if (params.contains("uuid") == false && (params.contains("tag") == false)) {
+	//	string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定uuid或tag字段");
+	//	resp.error = error;
+	//	return nRet;
+	//}
+	//if (false == params["isRecover"].get<bool>()) {
+	//	resp.error = "尚未恢复";
+	//	nRet = -2;
+	//	return nRet;
+	//}
+	//if (params.contains("tag")) {
+	//	string rootTag;
+	//	if (params.contains("rootTag")) {
+	//		rootTag = params["rootTag"];
+	//	}
+	//	string tag = params["tag"];
+	//	tag = TAG::addRoot(tag, rootTag);
 
-		//用户位号转系统位号
-		tag = TAG::addRoot(tag, session.org);
-		params["tag"] = tag;
-	}
+	//	//用户位号转系统位号
+	//	tag = TAG::addRoot(tag, session.org);
+	//	params["tag"] = tag;
+	//}
 
-	ALARM_INFO ai;
-	if (tableCurrent.query(params, ai))
-	{
-		string user = session.user;
-		string info;
-		if (params.contains("ackInfo"))
-			info = params["ackInfo"];
-		if (info == "通过") {
-			nRet = 1;
-		}
-		ai.isAck = 1;
-		ai.ackUser = session.user;
-		ai.ackInfo = info;
-		TIME t; t.setNow();
-		ai.ackTime = t.toStr();
-		if (ai.isAck && ai.isRecover)//删除已消除已确认报警
-		{
-			tableCurrent.remove(ai);
-		}
-		else
-			tableCurrent.update(ai);
-	}
-	else
-	{
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
-		resp.error = error;
-		return nRet;
-	}
+	//ALARM_INFO ai;
+	//if (tableCurrent.query(params, ai))
+	//{
+	//	string user = session.user;
+	//	string info;
+	//	if (params.contains("ackInfo"))
+	//		info = params["ackInfo"];
+	//	if (info == "通过") {
+	//		nRet = 1;
+	//	}
+	//	ai.isAck = 1;
+	//	ai.ackUser = session.user;
+	//	ai.ackInfo = info;
+	//	TIME t; t.setNow();
+	//	ai.ackTime = t.toStr();
+	//	if (ai.isAck && ai.isRecover)//删除已消除已确认报警
+	//	{
+	//		tableCurrent.remove(ai);
+	//	}
+	//	else
+	//		tableCurrent.update(ai);
+	//}
+	//else
+	//{
+	//	string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未找到报警事件");
+	//	resp.error = error;
+	//	return nRet;
+	//}
 
-	if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
-		params["time"] = ai.time;
-	almTable* pTableHist = getHistTable(ai.time);
-	if (pTableHist->query(params, ai))
-	{
-		string user = session.user;
-		string info;
-		if (params.contains("ackInfo"))
-			info = params["ackInfo"];
+	//if (params.contains("time") == false)//用时间对应历史表文件  时间来自未确定文件.
+	//	params["time"] = ai.time;
+	//almTable* pTableHist = getHistTable(ai.time);
+	//if (pTableHist->query(params, ai))
+	//{
+	//	string user = session.user;
+	//	string info;
+	//	if (params.contains("ackInfo"))
+	//		info = params["ackInfo"];
 
-		ai.isAck = 1;
-		ai.ackUser = session.user;
-		ai.ackInfo = info;
-		TIME t; t.setNow();
-		ai.ackTime = t.toStr();
-		pTableHist->update(ai);
-	}
+	//	ai.isAck = 1;
+	//	ai.ackUser = session.user;
+	//	ai.ackInfo = info;
+	//	TIME t; t.setNow();
+	//	ai.ackTime = t.toStr();
+	//	pTableHist->update(ai);
+	//}
 
-	json j = ai.toJson(this);
+	//json j = ai.toJson(this);
 
-	//rpcSrv.notify("onAlarmAck", j);  
-	if (m_initParam.func_rpcHand_notify)
-		m_initParam.func_rpcHand_notify("onAlarmAck", j);
+	////rpcSrv.notify("onAlarmAck", j);  
+	//if (m_initParam.func_rpcHand_notify)
+	//	m_initParam.func_rpcHand_notify("onAlarmAck", j);
 
-	resp.result = "\"ok\"";
-	return nRet;
-}
-
-//构造 querier {K1:V1,...} 基础key： rootTag、user，记录key：记录任意字段 如tag、time、type等  字符串型的val可模糊匹配
-json almServer::rpcReqParams2Querier(json& params, RPC_SESSION session)
-{
-	json querier;
-	string rootTag = "";
-	//把用户rootTag转成系统rootTag
-	if (params["rootTag"] != nullptr)
-	{
-		rootTag = params["rootTag"].get<string>();
-		rootTag = TAG::addRoot(rootTag, session.org);
-	}
-	//用户没有设置rootTag.将用户的org直接作为rootTag
-	else
-	{
-		rootTag = TAG::addRoot(rootTag, session.org);
-	}
-	querier["rootTag"] = rootTag;
-	querier["user"] = session.user;
-
-	if (params.contains("tag")) querier["tag"] = params["tag"];//string or array
-	if (params.contains("type")) querier["type"] = params["type"];//string or array
-	if (params.contains("time")) querier["time"] = params["time"].get<string>();
-	if (params.contains("level")) querier["level"] = params["level"];//string or array
-	if (params.contains("isRecover")) querier["isRecover"] = params["isRecover"].get<bool>();
-	if (params.contains("isAck")) querier["isAck"] = params["isAck"].get<bool>();
-	if (params.contains("pageNo")) querier["pageNo"] = params["pageNo"].get<int>();
-	if (params.contains("pageSize")) querier["pageSize"] = params["pageSize"].get<int>();
-	if (params.contains("a-sort")) querier["a-sort"] = params["a-sort"];
-	if (params.contains("d-sort")) querier["d-sort"] = params["d-sort"];
-	//....
-	return querier;
+	//resp.result = "\"ok\"";
+	//return nRet;
+	return 0;
 }
 
 void almServer::rpc_getCurrent(json params, RPC_RESP& resp, RPC_SESSION session)
@@ -1447,7 +1358,7 @@ string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB
 		p = m_dbPath + "/history_" + strYM + ".csv";
 	}
 	else if (fileMode == ONE_FILE_PER_DAY) {
-		string s = str::format("%04d%02d/%2d", y, m,day);
+		string s = str::format("%04d%02d/%02d", y, m,day);
 		p = m_dbPath + "/" + s + ".csv";
 	}
 	else
@@ -1519,7 +1430,7 @@ void almTable::loadFile(string strFile)
 			LINE_VAL& lv = recLines.at(i);
 			ALARM_INFO* pAi = new ALARM_INFO();
 			lineParser.parse(lv.p, lv.len, *pAi);
-			buff[pAi->getKey(m_tableType)] = pAi;
+			buff[pAi->getKey()] = pAi;
 		}
 	}
 }
@@ -1798,8 +1709,20 @@ void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
 
 almTable* almServer::getHistTable(string time)
 {
+	string histTableName;
+	if (m_dbFileMode == DB_FILE_MODE::ONE_FILE_PER_MONTH) {
+		histTableName = time.substr(0, 7);
+	}
+	else if (m_dbFileMode == DB_FILE_MODE::ONE_FILE_PER_DAY) {
+		histTableName = time.substr(0, 10);
+	}
+	else {
+		return nullptr;
+	}
+
+	
 	std::unique_lock<mutex> lock(m_csTableHistList);
-	map<string, almTable*>::iterator iter = tableHist.find(time);
+	map<string, almTable*>::iterator iter = tableHist.find(histTableName);
 	if (iter == tableHist.end()) {
 		almTable* p = new almTable();
 		p->dbFileMode = m_dbFileMode;
@@ -1817,16 +1740,16 @@ almTable* almServer::getHistTable(string time)
 void almTable::add(ALARM_INFO ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
-	loadFile(pa);
 	ALARM_INFO* pNew = new ALARM_INFO();
 	*pNew = ai;
-	string almKey = ai.getKey(m_tableType);
+	string almKey = ai.getKey();
 	buff[almKey] = pNew;
 	if (m_tableType == ALM_TABLE_TYPE::CURRENT_TABLE) {
-		unRecoverList[almKey] = pNew;
+		string unrecoverKey = ai.getKeyUnrecover();
+		unRecoverList[unrecoverKey] = pNew;
+		unAckList[almKey] = pNew;
 	}
-	appendFile(pa, pNew);
+	appendFile(buffFilePath, pNew);
 }
 
 void almTable::acknowledge(ALARM_INFO& ai, bool remove)
@@ -1859,12 +1782,12 @@ void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 void almTable::initUnAckUnRecover()
 {
 	for (auto& i : buff) {
-		//if (i.second->isAck == false) {
-		//	unAckList[i.first] = i.second;
-		//}
+		if (i.second->isAck == false) {
+			unAckList[i.first] = i.second;
+		}
 
 		if (i.second->isRecover == false) {
-			unRecoverList[i.first] = i.second;
+			unRecoverList[i.second->getKeyUnrecover()] = i.second;
 		}
 	}
 }
@@ -1872,71 +1795,16 @@ void almTable::initUnAckUnRecover()
 void almTable::acknowledge(ALARM_INFO& ai)
 {
 	std::unique_lock<shared_mutex> lock(m_csTable);
-	string  pa = m_pAlmSrv->getFilePath(ai.time,m_tableType,dbFileMode);
-	loadFile(pa); //获取报警对应的数据文件
-	auto iter = buff.find(ai.getKey(m_tableType));
+	auto iter = buff.find(ai.getKey());
 	if (iter != buff.end()) {
 		ALARM_INFO* p = iter->second;
 		p->ackUser = ai.ackUser;
 		p->ackInfo = ai.ackInfo;
 		p->ackTime = ai.ackTime;
-		saveFile(pa, buff);
-	}
-}
-
-bool almTable::query(ALARM_KEY& query, ALARM_INFO& ai)
-{
-	std::shared_lock<shared_mutex> lock(m_csTable);
-	string almKey = query.getKey(ALM_TABLE_TYPE::HISTORY_TABLE);
-
-	auto& iter = buff.find(almKey);
-	if (iter != buff.end()) {
-		ai = *iter->second;
-		return true;
-	}
-	return false;
-}
-
-bool almTable::query(string customId, ALARM_INFO& ai, string time)
-{
-	std::unique_lock<shared_mutex> lock(m_csTable);
-	bool bFind = false;
-	ALARM_INFO* p = NULL;
-	string  pa = m_pAlmSrv->getFilePath(time,m_tableType,dbFileMode);
-	loadFile(pa);
-	for (auto& i : buff)
-	{
-		ALARM_INFO& it = *i.second;
-		if (it.id == customId)
-		{
-			ai = it;
-			bFind = true;
-			break;
-		}
-	}
-	if (bFind)
-	{
-		return true;
-	}
-	return false;
-}
-
-void almTable::update(ALARM_INFO ai)
-{
-	std::unique_lock<shared_mutex> lock(m_csTable);
-	ALARM_INFO* p = buff.at(ai.getKey(m_tableType));
-	if (p)
-	{
-		*p = ai;
 		saveFile(buffFilePath, buff);
 	}
 }
-void almTable::remove(ALARM_KEY& ai)
-{
-	std::unique_lock<shared_mutex> lock(m_csTable);
-	buff.erase(ai.getKey(m_tableType));
-	saveFile(buffFilePath, buff);
-}
+
 
 ALARM_QUERY almTable::parseQuerier(json& querier)
 {

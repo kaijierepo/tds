@@ -71,20 +71,22 @@ public:
 
 	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
 
-	string getKey(ALM_TABLE_TYPE tableType) { //diff tag with the same time is allowed
-		string keyWithTime;
-		keyWithTime.reserve(time.size() + tag.size() + type.size() + id.size() + 3);
-		keyWithTime.append(time).append(",").append(tag).append(",").append(type).append(",").append(id);
-		if(tableType == HISTORY_TABLE)
-			return keyWithTime;
-		else if (tableType == CURRENT_TABLE) {
-			if (multiUnack) {
-				return keyWithTime;
-			}
-			else
-				return tag + "," + type + id;
-		}
-		return keyWithTime;
+	ALARM_KEY() {
+		multiUnack = false;
+	}
+
+	string getKeyUnrecover() {
+		string k;
+		k.reserve(tag.size() + type.size() + id.size());
+		k.append(tag).append(type).append(id);
+		return k;
+	}
+
+	string getKey() { //diff tag with the same time is allowed
+		string k;
+		k.reserve(time.size() + tag.size() + type.size() + id.size());
+		k.append(time).append(tag).append(type).append(id);
+		return k;
 	}
 
 	void getSortKey(const string& sortKey,string& completeSortKey)
@@ -243,10 +245,6 @@ public:
 
 	//table options
 	void add(ALARM_INFO ai);
-	bool query(ALARM_KEY& query, ALARM_INFO& ai);
-	bool query(string customId, ALARM_INFO& ai, string time = "");
-	void update(ALARM_INFO ai);
-	void remove(ALARM_KEY& ai);
 	ALARM_QUERY parseQuerier(json& querier);
 	void SetAlarmSrv(almServer* pSrv);
 	void acknowledge(ALARM_INFO& ai);
@@ -394,7 +392,6 @@ public:
 	void rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION session);
 
 	int rpc_approve(json& params, RPC_RESP& resp, RPC_SESSION session);
-	json rpcReqParams2Querier(json& params, RPC_SESSION session);
 	//query alarm data
 	/*
 	{
@@ -458,8 +455,6 @@ public:
 	string m_histPath;
 
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
-
-	bool m_bTestSrv;
 	long long m_iUpdateCallCount;
 };
 
