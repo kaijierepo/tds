@@ -523,6 +523,7 @@
     <ClInclude Include="..\src\data_server\scriptFunc_tds.h">
       <Filter>data_server</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

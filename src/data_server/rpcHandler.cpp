@@ -2540,17 +2540,17 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 		json jFilter= params;
 		//jFilter["rootTag"] = params["rootTag"];
 		
-		result = pAlmSrv->rpc_getCurrent(jFilter, session);
+		pAlmSrv->rpc_getCurrent(jFilter, rpcResp, session);
 	}
 	else if (method == "getAlarmUnRecover")
 	{
 		json jFilter= params;
-		result = pAlmSrv->rpc_getUnRecover(jFilter, session);
+		pAlmSrv->rpc_getUnRecover(jFilter, rpcResp, session);
 	}
 	else if (method == "getAlarmUnack")
 	{
 		json jFilter= params;
-		result = pAlmSrv->rpc_getUnack(jFilter, session);
+		pAlmSrv->rpc_getUnack(jFilter, rpcResp, session);
 	}
 	//getAlm为上面3个接口的合并接口
 	else if (method == "getAlm")
@@ -2560,13 +2560,13 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 			json jFilter;
 			jFilter["rootTag"] = params["rootTag"];
 			if (status == "unRecover") {
-				result = pAlmSrv->rpc_getUnRecover(jFilter, session);
+				pAlmSrv->rpc_getUnRecover(jFilter, rpcResp,session);
 			}
 			else if (status == "unAck") {
-				result = pAlmSrv->rpc_getUnack(jFilter, session);
+				pAlmSrv->rpc_getUnack(jFilter, rpcResp,session);
 			}
 			else if (status == "unRecover||unAck" || status == "unAck||unRecover") {
-				result = pAlmSrv->rpc_getCurrent(jFilter, session);
+				pAlmSrv->rpc_getCurrent(jFilter, rpcResp,session);
 			}
 			else {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param  status format error");
@@ -2579,7 +2579,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 
 	else if (method == "getAlarmHistory")
 	{
-		result = pAlmSrv->rpc_getHistory(params, session);
+		pAlmSrv->rpc_getHistory(params, rpcResp, session);
 	}
 	else if (method == "convertDBMode")
 	{
@@ -5134,42 +5134,45 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 }
 
 json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
-	json querier = nullptr;
-	if (session.user != "")
-		querier["user"] = session.user;
-	if (rootTag != "")
-		querier["rootTag"] = rootTag;
 
-	almServer* pAlmSrv = &almSrv;
+	return nullptr;
 
-	vector<ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
-	int iAlarmCount = 0;
-	int iWarnCount = 0;
-	for (int i = 0; i < vecAlarms.size(); i++)
-	{
-		ALARM_INFO* pai = vecAlarms[i];
-		if (pai->isRecover)
-			continue;
+	//json querier = nullptr;
+	//if (session.user != "")
+	//	querier["user"] = session.user;
+	//if (rootTag != "")
+	//	querier["rootTag"] = rootTag;
 
-		if (pai->level == "alarm")
-			iAlarmCount++;
-		if (pai->level == "warn")
-			iWarnCount++;
-	}
+	//almServer* pAlmSrv = &almSrv;
+
+	//vector<ALARM_INFO*> vecAlarms = pAlmSrv->tableCurrent.query(querier);
+	//int iAlarmCount = 0;
+	//int iWarnCount = 0;
+	//for (int i = 0; i < vecAlarms.size(); i++)
+	//{
+	//	ALARM_INFO* pai = vecAlarms[i];
+	//	if (pai->isRecover)
+	//		continue;
+
+	//	if (pai->level == "alarm")
+	//		iAlarmCount++;
+	//	if (pai->level == "warn")
+	//		iWarnCount++;
+	//}
 
 
-	//全局报警禁用功能
-	if (!tds->conf->enableGlobalAlarm)
-	{
-		iAlarmCount = 0;
-		iWarnCount = 0;
-	}
+	////全局报警禁用功能
+	//if (!tds->conf->enableGlobalAlarm)
+	//{
+	//	iAlarmCount = 0;
+	//	iWarnCount = 0;
+	//}
 
-	json jAlmStatis;
-	jAlmStatis["alarm"] = iAlarmCount;
-	jAlmStatis["warn"] = iWarnCount;
+	//json jAlmStatis;
+	//jAlmStatis["alarm"] = iAlarmCount;
+	//jAlmStatis["warn"] = iWarnCount;
 
-	return jAlmStatis;
+	//return jAlmStatis;
 }
 
 
