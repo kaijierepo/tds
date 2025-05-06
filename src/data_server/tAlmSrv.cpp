@@ -451,6 +451,10 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	if (m_blockingPlan.isBlocking())
 		return;
 
+	if (!newStatus.needRecover) {
+		return;
+	}
+
 	auto start = std::chrono::high_resolution_clock::now();
 	m_latestUpdateCall.push_back(start);
 	if (m_latestUpdateCall.size() > 10000) {
@@ -675,6 +679,7 @@ void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 	}
 
 	j["level"] = "normal";
+	j.erase("time");// time is invalid in recover method
 	rpc_updateStatus(j, resp);
 	return;
 }
@@ -1825,9 +1830,13 @@ void almTable::add(ALARM_INFO ai)
 	string almKey = ai.getKey();
 	buff[almKey] = pNew;
 	if (m_tableType == ALM_TABLE_TYPE::CURRENT_TABLE) {
-		string unrecoverKey = ai.getKeyUnrecover();
-		unRecoverList[unrecoverKey] = pNew;
-		unAckList[almKey] = pNew;
+		if(ai.needRecover){
+			string unrecoverKey = ai.getKeyUnrecover();
+			unRecoverList[unrecoverKey] = pNew;
+		}
+		if (ai.needAck) {
+			unAckList[almKey] = pNew;
+		}
 	}
 	appendFile(buffFilePath, pNew);
 }
