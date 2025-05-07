@@ -464,7 +464,7 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	{
 		TIME st;
 		st.setNow();
-		newStatus.time = st.toStr();
+		newStatus.time = st.toStr(false);
 	}
 
 	//the time attr of a status record is always the newest occuring event
@@ -797,6 +797,11 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	{
 		unique_lock<shared_mutex> lock(tableCurrent.m_csTable);
 		string almKey = queryKey.getKey();
+		string almkeyAnsi = str::utf8_to_gb(almKey);
+		for (auto& item: tableCurrent.unAckList)
+		{
+			string temp = str::utf8_to_gb(item.first);
+		}
 		auto iter = tableCurrent.unAckList.find(almKey);
 		if (iter != tableCurrent.unAckList.end())
 		{
