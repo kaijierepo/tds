@@ -582,7 +582,8 @@ string almServer::getAlarmTypeLabel(string type)
 void almServer::Add(ALARM_INFO ai, bool bNotify)
 {
 	g_asynCallWorker.enqueue([ai, bNotify] {
-		almSrv.UpdateSync(ai, bNotify);
+		string err;
+		almSrv.AddSync(ai, err, bNotify);
 		});
 }
 
