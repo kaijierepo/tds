@@ -12,7 +12,140 @@
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
 
 almServer almSrv;
-COMMON::ThreadPool g_asynCallWorker(1);
+
+
+namespace tAlm {
+	
+
+	wstring utf8_to_utf16(string instr) //utf-8-->ansi
+	{
+		wstring str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete[] wcharstr;
+#else
+
+#endif
+		return str;
+	}
+	string gb_to_utf8(string instr) //ansi-->utf-8
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete wcharstr;
+		delete charstr;
+#else
+		//int ret = 0;
+		//size_t inlen = instr.length() + 1;
+		//size_t outlen = 2 * inlen;
+
+		//// duanqn: The iconv function in Linux requires non-const char *
+		//// So we need to copy the source string
+		//char* inbuf = (char*)malloc(inlen);
+		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+		//							// so we use another pointer to keep the address
+		//memcpy(inbuf, instr.data(), instr.length());
+
+		//char* outbuf = (char*)malloc(outlen);
+		//memset(outbuf, 0, outlen);
+		//iconv_t cd;
+
+		//cd = iconv_open("UTF-8", "GBK");
+		//if (cd != (iconv_t)-1) {
+		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+		//	if (ret != 0)
+		//		printf("iconv failed err: %s\n", strerror(errno));
+		//	iconv_close(cd);
+		//}
+		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+		//str = outbuf;
+		//free(outbuf);
+		str = instr;
+#endif
+		return str;
+	}
+
+	bool appendFile(string path, char* data, size_t len)
+	{
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		_wfopen_s(&fp, tAlm::utf8_to_utf16(path).c_str(), L"ab");
+#else
+		fp = fopen(path.c_str(), "ab");
+#endif
+		if (fp)
+		{
+			fwrite(data, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		return false;
+	}
+}
+
+
+class asThreadPool {
+public:
+	asThreadPool(size_t numThreads) : stop(false) {
+		for (size_t i = 0; i < numThreads; ++i) {
+			workers.emplace_back([this] {
+				while (true) {
+					std::function<void()> task;
+					{
+						std::unique_lock<std::mutex> lock(this->queueMutex);
+						this->condition.wait(lock, [this] { return this->stop || !this->tasks.empty(); });
+						if (this->stop && this->tasks.empty()) {
+							return;
+						}
+						task = std::move(this->tasks.front());
+						this->tasks.pop();
+					}
+					task();
+				}
+				});
+		}
+	}
+
+	template<class F>
+	void enqueue(F&& f) {
+		{
+			std::unique_lock<std::mutex> lock(queueMutex);
+			tasks.emplace(std::forward<F>(f));
+		}
+		condition.notify_one();
+	}
+
+	~asThreadPool() {
+		{
+			std::unique_lock<std::mutex> lock(queueMutex);
+			stop = true;
+		}
+		condition.notify_all();
+		for (std::thread& worker : workers) {
+			worker.join();
+		}
+	}
+
+	std::vector<std::thread> workers;
+	std::queue<std::function<void()>> tasks;
+	std::mutex queueMutex;
+	std::condition_variable condition;
+	bool stop;
+};
+
+asThreadPool g_asynCallWorker(1);
 
 void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 	lines.clear();  // 清空现有内容
@@ -40,36 +173,9 @@ void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 }
 
 
-bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
-	string strDBData;
-	as_fs::readFile(strFile, strDBData);
-	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
-	std::vector<LINE_VAL> recLines;
-	parse_csv_lines(strDBData.data(), recLines);
 
-	LINE_PARSER lineParser;
-	if (recLines.size() >= 1) {
-		string tableHeader(recLines[0].p, recLines[0].len);
-		vector<string> colNames;
-		str::split(colNames, tableHeader, ",");
-		for (int i = 0; i < colNames.size(); i++) {
-			string name = colNames[i];
-			lineParser.m_colNameToColIdx[name] = i;
-		}
-	}
 
-	for (int i = 1; i < recLines.size(); i++)
-	{
-		LINE_VAL& lv = recLines.at(i);
-		ALARM_INFO* pAi = new ALARM_INFO();
-		lineParser.parse(lv.p, lv.len, *pAi);
-		almList.push_back(pAi);
-	}
-
-	return true;
-}
-
-namespace as_fs {
+namespace tAlm {
 	string GetDir(string strIn)
 	{
 #ifdef _WIN32
@@ -134,13 +240,13 @@ namespace as_fs {
 			if (iSlash == string::npos) { break; }
 
 			string strFolder = strFile.substr(0, iSlash);
-			CreateDirectoryW(DB_STR::utf8_to_utf16(strFolder).c_str(), NULL);
+			CreateDirectoryW(tAlm::utf8_to_utf16(strFolder).c_str(), NULL);
 
 			if (iSlash + 1 == strFile.length())//last char is /
 				break;
 			iStartPos = iSlash + 1;
 		}
-		CreateDirectoryW(DB_STR::utf8_to_utf16(strFile).c_str(), NULL);
+		CreateDirectoryW(tAlm::utf8_to_utf16(strFile).c_str(), NULL);
 #else
 		std::filesystem::create_directories(strFile);
 #endif
@@ -197,10 +303,7 @@ namespace as_fs {
 		}
 		return false;
 	}
-	bool writeFile(string path, unsigned char* data, size_t len)
-	{
-		return writeFile(path, (char*)data, len);
-	}
+
 	bool writeFile(string path, char* data, size_t len)
 	{
 		createFolderOfPath(path);
@@ -227,6 +330,11 @@ namespace as_fs {
 		return false;
 	}
 
+	bool writeFile(string path, unsigned char* data, size_t len)
+	{
+		return writeFile(path, (char*)data, len);
+	}
+
 	bool writeFile(string path, string& data)
 	{
 		return writeFile(path, (char*)data.c_str(), data.length());
@@ -234,26 +342,43 @@ namespace as_fs {
 
 	bool fileExist(string pszFileName)
 	{
-#ifndef _WINXP
 #ifdef _WIN32
-		std::filesystem::path filePath = DB_STR::utf8_to_utf16(pszFileName);
+		wstring filePath = tAlm::utf8_to_utf16(pszFileName);
+		DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 #else
 		std::filesystem::path filePath = pszFileName;
 #endif
-
-		if (std::filesystem::exists(filePath)) {
-			return true;
-		}
-		else if (std::filesystem::is_directory(filePath)) {
-			return true;
-		}
-		return  false;
-#else
-		wstring filePath = charCodec::tds_to_utf16(pszFileName);
-		DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
-		return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
-#endif
 	}
+}
+
+bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
+	string strDBData;
+	tAlm::readFile(strFile, strDBData);
+	//strDBData = as_charCodec::gb_to_utf8(strDBData); //default utf8 file
+	std::vector<LINE_VAL> recLines;
+	parse_csv_lines(strDBData.data(), recLines);
+
+	LINE_PARSER lineParser;
+	if (recLines.size() >= 1) {
+		string tableHeader(recLines[0].p, recLines[0].len);
+		vector<string> colNames;
+		str::split(colNames, tableHeader, ",");
+		for (int i = 0; i < colNames.size(); i++) {
+			string name = colNames[i];
+			lineParser.m_colNameToColIdx[name] = i;
+		}
+	}
+
+	for (int i = 1; i < recLines.size(); i++)
+	{
+		LINE_VAL& lv = recLines.at(i);
+		ALARM_INFO* pAi = new ALARM_INFO();
+		lineParser.parse(lv.p, lv.len, *pAi);
+		almList.push_back(pAi);
+	}
+
+	return true;
 }
 
 almServer::almServer(void)
@@ -274,7 +399,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 {
 	m_initParam = asInitParam;
 	m_dbPath = dbPath;
-	m_dbPath = as_fs::fixPath(m_dbPath);
+	m_dbPath = tAlm::fixPath(m_dbPath);
 
 	tableCurrent.SetAlarmSrv(this);
 	string currFilePath = m_dbPath + "/current.csv";
@@ -283,7 +408,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
-	as_fs::readFile(abpConf, s);
+	tAlm::readFile(abpConf, s);
 	if (s != "") {
 		json j = json::parse(s);
 		m_blockingPlan.fromJson(j);
@@ -867,8 +992,8 @@ void almServer::rpc_setAlarmBlockingPlan(json& params, RPC_RESP& resp, RPC_SESSI
 	string s = params.dump();
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
-	as_fs::createFolderOfPath(abpConf);
-	as_fs::writeFile(abpConf, s);
+	tAlm::createFolderOfPath(abpConf);
+	tAlm::writeFile(abpConf, s);
 
 	resp.result = RPC_OK;
 }
@@ -938,7 +1063,7 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 		for (auto& almInfo : fileData.second) {
 			data += almInfo->toCSVLine();
 		}
-		as_fs::writeFile(path, data);
+		tAlm::writeFile(path, data);
 	}
 
 	resp.result = RPC_OK;
@@ -1431,14 +1556,14 @@ void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 		string str = ai.toCSVLine();
 		data += str;
 	}
-	as_fs::createFolderOfPath(strFile);
-	as_fs::writeFile(strFile, data);
+	tAlm::createFolderOfPath(strFile);
+	tAlm::writeFile(strFile, data);
 }
 
 void almTable::appendFile(string strFile, ALARM_INFO* pNew)
 {
 	string line = pNew->toCSVLine();
-	fs::appendFile(strFile, line);
+	tAlm::appendFile(strFile, (char*)line.c_str(),line.size());
 }
 
 string almServer::getFilePath(int y, int m,int day, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode) {
@@ -1488,13 +1613,13 @@ void almTable::loadFile(string strFile)
 	buffFilePath = strFile;
 
 	//init db file when not exist
-	if (!as_fs::fileExist(strFile)) {
-		as_fs::writeFile(strFile, ALM_TABLE_HEAD_LINE);
+	if (!tAlm::fileExist(strFile)) {
+		tAlm::writeFile(strFile, ALM_TABLE_HEAD_LINE);
 	}
 	//load db file
 	else {
 		string strDBData;
-		bool ret = as_fs::readFile(strFile, strDBData);
+		bool ret = tAlm::readFile(strFile, strDBData);
 #ifdef _WIN32
 		if (!ret) {
 			MessageBox(NULL, "read current.csv fail",NULL,MB_OK);
@@ -2121,6 +2246,103 @@ ALARM_QUERY almTable::parseQuerier(json& querier)
 void almTable::SetAlarmSrv(almServer* pSrv)
 {
 	m_pAlmSrv = pSrv;
+}
+
+
+int almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	bool bHandled = true;
+	if (method == "getAlarmCurrent")
+	{
+		rpc_getCurrent(params, rpcResp, session);
+	}
+	else if (method == "getAlarmUnRecover")
+	{
+		rpc_getUnRecover(params, rpcResp, session);
+	}
+	else if (method == "getAlarmUnack")
+	{
+		rpc_getUnack(params, rpcResp, session);
+	}
+	else if (method == "getAlarmBlockingPlan")
+	{
+		rpc_getAlarmBlockingPlan(params, rpcResp, session);
+	}
+	else if (method == "setAlarmBlockingPlan")
+	{
+		rpc_setAlarmBlockingPlan(params, rpcResp, session);
+	}
+	else if (method == "convertAlarmDBMode")
+	{
+		rpc_convertDBMode(params, rpcResp, session);
+	}
+	else if (method == "getAlmSrvStatus") {
+		rpc_getAlmSrvStatus(params, rpcResp);
+	}
+	//getAlm为上面3个接口的合并接口
+	else if (method == "getAlm")
+	{
+		if (params.contains("status")) {
+			string status = params["status"].get<string>();
+			if (status == "unRecover") {
+				rpc_getUnRecover(params, rpcResp, session);
+			}
+			else if (status == "unAck") {
+				rpc_getUnack(params, rpcResp, session);
+			}
+			else if (status == "unRecover||unAck" || status == "unAck||unRecover") {
+				rpc_getCurrent(params, rpcResp, session);
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param  status format error");
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "missing param  status");
+		}
+	}
+
+	else if (method == "getAlarmHistory")
+	{
+		rpc_getHistory(params, rpcResp, session);
+	}
+	//** 数据生成系列 以下接口都会修改报警数据
+	else if (method == "addAlarm")
+	{
+		if (session.dbpath == "alarmsDevelop")
+		{
+			rpc_addAlarm(params, rpcResp);
+		}
+		else
+		{
+			rpc_addAlarm(params, rpcResp);
+		}
+	}
+	else if (method == "recoverAlarm" || method == "clearAlarm") {
+		rpc_recoverAlarm(params, rpcResp);
+	}
+	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
+	{
+		rpc_updateStatus(params, rpcResp);
+	}
+	else if (method == "ackAlarm" || method == "ackAlarmEvent")
+	{
+		rpc_acknowledge(params, rpcResp, session);
+	}
+	else if (method == "ackAllAlarm" || method == "ackAllAlarmEvent")
+	{
+		rpc_acknowledge(params, rpcResp, session);
+	}
+	else if (method == "approveAlarm") //审核报警  审核通过则更新到正式报警
+	{
+
+	}
+	else
+	{
+		bHandled = false;
+	}
+
+	return bHandled;
 }
 
 

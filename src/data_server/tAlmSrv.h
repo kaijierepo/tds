@@ -451,6 +451,7 @@ public:
 	map<string,almTable*> tableHist;  //key是202004 年月相加格式
 	std::mutex m_csTableHistList;
 	almTable* getHistTable(string time);
+	int handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
 
 	BLOCKING_PLAN m_blockingPlan;
@@ -471,6 +472,6 @@ public:
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 	long long m_iUpdateCallCount;
 };
-
+bool generalMatch(string pattern, const string& src);
 extern almServer almSrv;
 
