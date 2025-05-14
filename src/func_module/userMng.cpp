@@ -283,10 +283,10 @@ void tokenExpire_thread(userManager* p) {
 
 bool userManager::run()
 {
-	if (tds->conf->enableAccessCtrl) {
-		thread t(tokenExpire_thread, this);
-		t.detach();
-	}
+	//无论是否启用验证	tds->conf->enableAccessCtrl,token的保存和过期机制正常运作，
+	// 只是随便什么token都有用
+	thread t(tokenExpire_thread, this);
+	t.detach();
 	return true;
 }
 
@@ -298,6 +298,9 @@ bool userManager::checkLogin(string user, string pwd,json& userInfo)
 
 bool userManager::checkToken(string user, string token)
 {
+	if (tds->conf->enableAccessCtrl == false)
+		return true;
+
 	if (tds->conf->testToken != "" && tds->conf->testToken == token)
 		return true;
 
