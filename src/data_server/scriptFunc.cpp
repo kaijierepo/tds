@@ -221,7 +221,8 @@ jerry_value_t func_log(const jerry_call_info_t* call_info_p,
 	json jArgs = engineArgsToJson(arguments, argument_count);
 	if (jArgs.size() > 0)
 	{
-		string log = jArgs[0].get<string>();
+		json jLog = jArgs[0];
+		string log = jLog.dump();
 
 		bool logToTds = false;
 		if (jArgs.size() > 1) {

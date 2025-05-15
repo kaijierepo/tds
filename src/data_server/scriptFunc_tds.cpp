@@ -438,6 +438,39 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 	return ret;
 }
 
+jerry_value_t func_db_select(const jerry_call_info_t* call_info_p,
+	const jerry_value_t arguments[],
+	const jerry_length_t argument_count)
+{
+	json jArgs = engineArgsToJson(arguments, argument_count);
+
+	if (jArgs.size() == 1)
+	{
+		json params = jArgs[0];
+		if (params.is_object()) {
+			json err, rlt;
+			RPC_SESSION sess;
+			tds->call("db.select", params, err, rlt, sess);
+			if (rlt != nullptr) {
+				json jRet;
+				jRet["result"] = rlt;
+				jerry_value_t jerryVal;
+				jsonVal2jerryVal(jRet, jerryVal);
+				return jerryVal;
+			}
+			else if(err!=nullptr){
+				json jRet;
+				jRet["error"] = err;
+				jerry_value_t jerryVal;
+				jsonVal2jerryVal(jRet, jerryVal);
+				return jerryVal;
+			}
+		}
+	}
+	jerry_value_t ret = jerry_create_null();
+	return ret;
+}
+
 jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
@@ -827,9 +860,18 @@ bool initScripFunc_tds(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGl
 		jerry_release_value(obj_prop_name);
 		jerry_release_value(obj_prop_func);
 
+		obj_prop_name = jerry_create_string((const jerry_char_t*)"select");
+		obj_prop_func = jerry_create_external_function(func_db_select);
+		jerry_release_value(jerry_set_property(obj, obj_prop_name, obj_prop_func));
+		jerry_release_value(obj_prop_name);
+		jerry_release_value(obj_prop_func);
+
 		jerry_release_value(jerry_set_property(global_object, prop_name, obj));
 		jerry_release_value(prop_name);
 		jerry_release_value(obj);
+
+	
+
 	}
 
 	return true;
