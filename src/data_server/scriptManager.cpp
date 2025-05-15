@@ -1,10 +1,15 @@
-#include "pch.h"
+//#include "pch.h"
 #include "scriptManager.h"
 #include "scriptEngine.h"
 #include "scriptFunc_tds.h"
 #include "logger.h"
 #include "jerryscript-port.h"
+
+#ifdef TDS
 #include "ioSrv.h"
+#endif
+
+#include "common.h"
 
 ScriptManager scriptManager;
 
@@ -33,6 +38,7 @@ bool ScriptManager::init()
 {
 	unique_lock<mutex> lock(m_csScripts);
 
+#ifdef TDS
 	string sScriptList;
 	if (fs::readFile(tds->conf->confPath + "/scripts/list.json", sScriptList))
 	{
@@ -42,7 +48,7 @@ bool ScriptManager::init()
 			SCRIPT_INFO si;
 			si.lastExe = timeopt::now();
 			si.fromJson(jInfo);
-			string scriptFilePath = tds->conf->confPath + "/scripts/" + si.name +".js";
+			string scriptFilePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
 			string scriptData;
 			if (fs::readFile(scriptFilePath, scriptData)) {
 				si.script = scriptData;
@@ -52,18 +58,25 @@ bool ScriptManager::init()
 				continue;
 				LOG("[error]加载脚本文件失败," + scriptFilePath);
 			}
-	
+
 		}
 	}
+#endif
+
+	
 	return true;
 }
 
 bool ScriptManager::run()
 {
 	//该配置一般用于临时关闭脚本调用，方便调试打断点
+#ifdef TDS
 	if (tds->conf->getInt("enableScript", 1) == 0) {
 		return true;
-	}
+}
+#endif
+
+
 
 	m_bRun = true;
 	thread t(scriptThread, this);
@@ -102,7 +115,10 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
+#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
+#endif
+		
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 		si.lastExe = timeopt::now();
@@ -171,13 +187,22 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
+		
+#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
+#endif
 		se.m_tagContext = si.getContextTag();
 		if (si.devAddr != "") {
-			ioDev* p = ioSrv.getIODevByIPPort(si.devAddr);
+			ioDev* p = nullptr;
+#ifdef TDS
+			p = ioSrv.getIODevByIPPort(si.devAddr);
+#endif
 			if (p) {
 				se.m_ioDevThis = p;
+				
+#ifdef TDS
 				se.m_initIODevFunc = initIODevFunc;
+#endif
 			}
 			else {
 				json jError = "specified ioDev not found";
@@ -206,7 +231,10 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		if (getScript(scriptName, si)) {
 			ScriptEngine se;
 			se.m_logImp = scriptManager_logImp;
+			
+#ifdef TDS
 			se.m_initGlobalFunc = initGlobalFunc;
+#endif
 			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {
 				rpcResp.result = "\"ok\"";
@@ -273,7 +301,10 @@ bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 	string name = params["name"].get<string>();
 	m_mapScripts.erase(name);
 	saveScriptList("", m_mapScripts);
+#ifdef TDS
 	fs::deleteFile(tds->conf->confPath + "/scripts/" + name + ".js");
+#endif
+	
 	rpcResp.result = "\"ok\"";
 	return true;
 }
@@ -291,7 +322,10 @@ string ScriptManager::getScriptPath(json& params, RPC_SESSION session)
 
 	rootTag = TAG::addRoot(rootTag, session.org);
 	rootTag = str::replace(rootTag, ".", "/");
-	string path = tds->conf->confPath + "/scripts/" + rootTag;
+	string path = nullptr;
+#ifdef TDS
+	path = tds->conf->confPath + "/scripts/" + rootTag;
+#endif
 	return path;
 }
 
@@ -343,14 +377,20 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 	//保存脚本代码
 	if (params.contains("code")) {
-		string codePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
+		string codePath;
+#ifdef TDS
+		codePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
+#endif
 		string s = params["code"].get<string>();
 		fs::writeFile(codePath, s);
 		si.script = s;
 	}
 
 	if (params.contains("envVarCode")) {
-		string codePath = tds->conf->confPath + "/scripts/" + si.name + "_envVar.js";
+		string codePath;
+#ifdef TDS
+		codePath = tds->conf->confPath + "/scripts/" + si.name + "_envVar.js";
+#endif
 		string s = params["envVarCode"].get<string>();
 		fs::writeFile(codePath, s);
 		si.envVarScript = s;
@@ -420,7 +460,10 @@ void ScriptManager::saveScriptList(string org,std::map<string, SCRIPT_INFO>& sl,
 	json j;
 	scriptList2Json(org, sl, j);
 
-	string path = tds->conf->confPath + "/scripts/" + org + "/list.json";
+	string path;
+#ifdef TDS
+	path = tds->conf->confPath + "/scripts/" + org + "/list.json";
+#endif
 	string s = j.dump(2);
 	fs::writeFile(path,s);
 }
@@ -449,7 +492,10 @@ void ScriptManager::exeAllGlobalScripts()
 	for (auto& si : toExeScripts) {
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
+		
+#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
+#endif
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 	}
@@ -483,7 +529,10 @@ void ScriptManager::exeAllVarExpScripts()
 		string& script = info.script;
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
+		
+#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
+#endif
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
 		bool runOk = se.runScript(script, info.lastModifyUser);
@@ -518,7 +567,10 @@ void ScriptManager::exeAllVarExpScripts()
 				auto i = refTime.rbegin();
 				jParams["time"] = i->first;
 			}
+#ifdef TDS
 			tds->callAsyn("input", jParams);
+#endif
+			
 		}
 	}
 
