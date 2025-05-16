@@ -57,6 +57,8 @@ public:
 	ScriptManager();
 	bool init();
 	bool run();
+
+	void setConfPath(const string& conf);
 	string m_confPath; //从原有调用tds->conf->confPath 改为外部设置这个变量，然后启用被注释的代码
 
 	bool m_bRun;

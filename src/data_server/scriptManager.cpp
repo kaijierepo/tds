@@ -38,9 +38,8 @@ bool ScriptManager::init()
 {
 	unique_lock<mutex> lock(m_csScripts);
 
-#ifdef TDS
 	string sScriptList;
-	if (fs::readFile(tds->conf->confPath + "/scripts/list.json", sScriptList))
+	if (fs::readFile(m_confPath + "/scripts/list.json", sScriptList))
 	{
 		json jSL = json::parse(sScriptList);
 		for (int i = 0; i < jSL.size(); i++) {
@@ -48,7 +47,7 @@ bool ScriptManager::init()
 			SCRIPT_INFO si;
 			si.lastExe = timeopt::now();
 			si.fromJson(jInfo);
-			string scriptFilePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
+			string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
 			string scriptData;
 			if (fs::readFile(scriptFilePath, scriptData)) {
 				si.script = scriptData;
@@ -61,7 +60,7 @@ bool ScriptManager::init()
 
 		}
 	}
-#endif
+
 
 	
 	return true;
@@ -82,6 +81,11 @@ bool ScriptManager::run()
 	thread t(scriptThread, this);
 	t.detach();
 	return false;
+}
+
+void ScriptManager::setConfPath(const string& conf)
+{
+	m_confPath = conf;
 }
 
 bool ScriptManager::hasScripts()
@@ -301,9 +305,9 @@ bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 	string name = params["name"].get<string>();
 	m_mapScripts.erase(name);
 	saveScriptList("", m_mapScripts);
-#ifdef TDS
-	fs::deleteFile(tds->conf->confPath + "/scripts/" + name + ".js");
-#endif
+
+	fs::deleteFile(m_confPath + "/scripts/" + name + ".js");
+
 	
 	rpcResp.result = "\"ok\"";
 	return true;
@@ -322,10 +326,8 @@ string ScriptManager::getScriptPath(json& params, RPC_SESSION session)
 
 	rootTag = TAG::addRoot(rootTag, session.org);
 	rootTag = str::replace(rootTag, ".", "/");
-	string path = nullptr;
-#ifdef TDS
-	path = tds->conf->confPath + "/scripts/" + rootTag;
-#endif
+	string path = m_confPath + "/scripts/" + rootTag;
+
 	return path;
 }
 
@@ -377,20 +379,18 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 	//保存脚本代码
 	if (params.contains("code")) {
-		string codePath;
-#ifdef TDS
-		codePath = tds->conf->confPath + "/scripts/" + si.name + ".js";
-#endif
+	
+		string codePath = m_confPath + "/scripts/" + si.name + ".js";
+
 		string s = params["code"].get<string>();
 		fs::writeFile(codePath, s);
 		si.script = s;
 	}
 
 	if (params.contains("envVarCode")) {
-		string codePath;
-#ifdef TDS
-		codePath = tds->conf->confPath + "/scripts/" + si.name + "_envVar.js";
-#endif
+
+		string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
+
 		string s = params["envVarCode"].get<string>();
 		fs::writeFile(codePath, s);
 		si.envVarScript = s;
@@ -460,10 +460,8 @@ void ScriptManager::saveScriptList(string org,std::map<string, SCRIPT_INFO>& sl,
 	json j;
 	scriptList2Json(org, sl, j);
 
-	string path;
-#ifdef TDS
-	path = tds->conf->confPath + "/scripts/" + org + "/list.json";
-#endif
+	string path = m_confPath + "/scripts/" + org + "/list.json";
+
 	string s = j.dump(2);
 	fs::writeFile(path,s);
 }

@@ -608,6 +608,7 @@ bool TDS_imp::run(string cmdline)
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
 
 	userMng.init();
+	scriptManager.setConfPath(tds->conf->confPath);
 	scriptManager.init();
 
 	//初始化tds插件
