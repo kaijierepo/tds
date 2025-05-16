@@ -704,6 +704,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 
 			RPC_RESP resp;
 			RPC_SESSION session;
+			session.caller = METHOD_CALLER::tdspDev;
 			rpcSrv.rpc_input(jParams, resp, session);
 		}
 	}

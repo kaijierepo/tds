@@ -45,6 +45,12 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 using namespace std;
 
 
+namespace METHOD_CALLER {
+	const string tdspDev = "tdspDev";
+	const string script = "script";
+	const string httpClient = "httpClient";
+}
+
 //stateless rpc session
 class RPC_SESSION {
 public:
@@ -86,6 +92,7 @@ public:
 	string lastMethodCalled;
 	string sLastSendTime;
 	string lastMethodNotified;
+	string caller;
 
 	bool isDebug; //调试调用不计入session统计
 
@@ -94,6 +101,7 @@ public:
 		remotePort = 0;
 		localPort = 0;
 		isDebug = false;
+		caller = METHOD_CALLER::httpClient;
 	}
 };
 

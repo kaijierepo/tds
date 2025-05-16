@@ -4738,13 +4738,11 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 						vecMps.push_back(pmp);
 					}
 				}
-				else {
-					params.erase("tag");
-					string sDe = params.dump();
+				else if(session.caller != METHOD_CALLER::tdspDev){
+					string sVal = val.dump();
 					DB_TIME dbTime;
 					dbTime.fromStr(de.sTime);
-					db.Insert(tag, sDe, &dbTime);
-					//jTagNotExist.push_back(tag);
+					db.InsertValJsonStr(tag, dbTime,sVal);
 				}
 			}
 		}
