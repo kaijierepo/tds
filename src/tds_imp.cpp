@@ -810,6 +810,7 @@ void TDS_imp::callAsyn(string method, string& param, int delay)
 	if (tds->conf->bCallAsyn) {
 		if (method == "input") {
 			g_asynCallDealThreadPool.enqueue([method, param, delay] {
+				shared_lock<shared_mutex> lock(prj.m_csPrj);
 				json jparam = json::parse(param);
 				RPC_SESSION session;
 				RPC_RESP resp;

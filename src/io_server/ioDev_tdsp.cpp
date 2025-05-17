@@ -702,10 +702,8 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 				jParams["rootTag"] = m_strTagBind;
 			}
 
-			RPC_RESP resp;
-			RPC_SESSION session;
-			session.caller = METHOD_CALLER::tdspDev;
-			rpcSrv.rpc_input(jParams, resp, session);
+			string sp = jParams.dump();
+			tds->callAsyn("input", sp);
 		}
 	}
 	else if (method == "onServerUpgradeStatusChange") {

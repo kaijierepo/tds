@@ -4738,11 +4738,18 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
 						vecMps.push_back(pmp);
 					}
 				}
-				else if(session.caller != METHOD_CALLER::tdspDev){
-					string sVal = val.dump();
+				else if(file != nullptr){
+					//曲线文件会在此处存储，本地端可能推送中心端不存在的监控点
+					//某些情况下，监控点只有历史数据，没有实时数据
+					//约定使用监控点名称，则中心端不需要创建监控点
+					json jDe;
+					jDe["tag"] = tag;
+					jDe["val"] = val;
+					jDe["file"] = file;
 					DB_TIME dbTime;
 					dbTime.fromStr(de.sTime);
-					db.InsertValJsonStr(tag, dbTime,sVal);
+					string sDe = jDe.dump();
+					db.Insert(tag,sDe,&dbTime);
 				}
 			}
 		}
