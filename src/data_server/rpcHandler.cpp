@@ -6170,6 +6170,18 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified ioAddr not found");
 		}
 	}
+	else if (params.contains("id")) {
+		string id = params["id"];
+		p = ioSrv.getIODevById(id);
+		if (p) {
+			DEV_QUERIER query;
+			query.parseQueryOpt(params);
+			p->toJson(j, query);
+		}
+		else {
+			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified id not found");
+		}
+	}
 	//else if(params.contains("tag")){
 	//	string tag = params["tag"];
 	//	tag = TAG::addRoot(tag, session.org);

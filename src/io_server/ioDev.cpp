@@ -1531,6 +1531,30 @@ ioDev* ioDev::getIODevByIPPort(string ipport) {
 	return pD;
 }
 
+ioDev* ioDev::getIODevById(string id)
+{
+	ioDev* pD = nullptr;
+	lock_conf_shared();
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		json jDevId = p->m_jDevAddr["id"];
+		if (jDevId.is_string()) {
+			string devId = jDevId.get<string>();
+			if (devId == id) {
+				pD = p;
+				break;
+			}
+		}
+		pD = p->getIODevById(id);
+		if (pD) {
+			break;
+		}
+	}
+	unlock_conf_shared();
+	return pD;
+}
+
 ioDev* ioDev::getIODevByTag(string tag)
 {
 	ioDev* pD = nullptr;

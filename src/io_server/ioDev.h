@@ -231,6 +231,7 @@ public:
 	ioDev* getIODevByTag(string tag);
 	ioDev* getIODevByIP(string ip);
 	ioDev* getIODevByIPPort(string ipport);
+	ioDev* getIODevById(string id);
 	bool deleteIODevByNodeID(string nodeID);
 	vector<ioDev*> getChildren(string devType);
 	vector<ioDev*> m_vecChildDev;

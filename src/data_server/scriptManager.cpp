@@ -200,6 +200,8 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 			ioDev* p = nullptr;
 #ifdef TDS
 			p = ioSrv.getIODevByIPPort(si.devAddr);
+			if (!p)
+				p = ioSrv.getIODevById(si.devAddr);
 #endif
 			if (p) {
 				se.m_ioDevThis = p;

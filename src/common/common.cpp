@@ -1761,7 +1761,8 @@ namespace fs {
 		else
 		{
 #ifdef _WIN32
-			string err = sys::getLastError();
+			string info = str::format("writeFile,path=%s,len=%d", path.c_str(), len);
+			string err = sys::getLastError(info);
 			err = charCodec::tds_to_gb(err);
 			printf("[error]%s", err.c_str());
 #endif
