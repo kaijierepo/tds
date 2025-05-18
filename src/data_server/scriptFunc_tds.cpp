@@ -527,8 +527,18 @@ jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
 	const jerry_value_t arguments[],
 	const jerry_length_t argument_count)
 {
-	ioDev* temp = (ioDev*)(pEngine->m_ioDevThis);;
-	temp->setOnline();
+	jerry_value_t dev = call_info_p->this_value;
+	json jDev;
+	jerryVal2jsonVal(dev, jDev);
+	if (!jDev.is_object())
+		return jerry_create_boolean(false);
+	if (jDev["confNodeId"] == nullptr)
+		return jerry_create_boolean(false);
+	string confNodeId = jDev["confNodeId"];
+	ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+	if (!p)
+		return jerry_create_boolean(false);
+	p->setOnline();
 	jerry_value_t ret = jerry_create_null();
 	return ret;
 }
