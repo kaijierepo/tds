@@ -21,6 +21,15 @@ void scriptManager_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
 	}
 }
 
+bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
+{
+	initScriptFunc(global_object, m_vecGlobalFunc);
+#ifdef TDS
+	initScripFunc_tds(global_object, m_vecGlobalFunc);
+#endif
+	return true;
+}
+
 void scriptThread(ScriptManager* p)
 {
 #ifdef ENABLE_JERRY_SCRIPT
@@ -119,9 +128,9 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
-#ifdef TDS
+
 		se.m_initGlobalFunc = initGlobalFunc;
-#endif
+
 		
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
@@ -227,10 +236,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
-		
-#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
-#endif
 		se.m_tagContext = si.getContextTag();
 		if (si.devAddr != "") {
 			ioDev* p = nullptr;
@@ -274,9 +280,8 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 			ScriptEngine se;
 			se.m_logImp = scriptManager_logImp;
 			
-#ifdef TDS
 			se.m_initGlobalFunc = initGlobalFunc;
-#endif
+
 			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {
 				rpcResp.result = "\"ok\"";
@@ -529,9 +534,8 @@ void ScriptManager::exeAllGlobalScripts()
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
 		
-#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
-#endif
+
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
 	}
@@ -566,9 +570,8 @@ void ScriptManager::exeAllVarExpScripts()
 		ScriptEngine se;
 		se.m_logImp = scriptManager_logImp;
 		
-#ifdef TDS
 		se.m_initGlobalFunc = initGlobalFunc;
-#endif
+
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
 		bool runOk = se.runScript(script, info.lastModifyUser);

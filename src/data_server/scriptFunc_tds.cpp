@@ -887,12 +887,6 @@ bool initScripFunc_tds(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGl
 	return true;
 }
 
-bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
-{
-	initScriptFunc(global_object, m_vecGlobalFunc);
-	initScripFunc_tds(global_object, m_vecGlobalFunc);
-	return true;
-}
 
 //pDev不直接使用ioDev是因为的伤损也使用了对应的jerry的内容,不能依赖于ioDev的类
 bool initIODevFunc(jerry_value_t obj,void* pDev) {
