@@ -130,6 +130,42 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 #endif
 }
 
+bool ScriptManager::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+{
+	bool bHandled = true;
+
+	if (method == "getScriptMngerStatus") {
+		rpc_getScriptMngStatus(params, rpcResp, session);
+	}
+#ifdef ENABLE_JERRY_SCRIPT
+	else if (method == "runScript")
+	{
+		rpc_runScript(params, rpcResp, session);
+	}
+	else if (method == "getScriptList")
+	{
+		rpc_getScriptList(params, rpcResp, session);
+	}
+	else if (method == "getScriptFile")
+	{
+		rpc_getScript(params, rpcResp, session);
+	}
+	else if (method == "deleteScriptFile") {
+		rpc_deleteScript(params, rpcResp, session);
+	}
+	else if (method == "setScriptFile")
+	{
+		rpc_setScript(params, rpcResp, session);
+	}
+#endif
+	else
+	{
+		bHandled = false;
+	}
+
+	return bHandled;
+}
+
 bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
 {
 #ifdef ENABLE_JERRY_SCRIPT

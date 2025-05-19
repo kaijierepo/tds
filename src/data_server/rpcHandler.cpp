@@ -2711,14 +2711,15 @@ void createObjRecursive(string path, OBJ* pParent) {
 bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
 {
 	bool bHandled = true;
+
 	//可完全并发的命令
 	if (method == "xiaot")
 	{
 		rpcResp.result = tds->xiaoT->getReply(params);
 	}
-	else if (method == "getScriptMngerStatus") {
-		scriptManager.rpc_getScriptMngStatus(params, rpcResp, session);
-	}
+	//else if (method == "getScriptMngerStatus") {
+	//	scriptManager.rpc_getScriptMngStatus(params, rpcResp, session);
+	//}
 	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
 		string st = params["time"];
 		json j;
@@ -2829,25 +2830,25 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		m_csCallStatis.unlock();
 	}
 #ifdef ENABLE_JERRY_SCRIPT
-	else if (method == "runScript")
-	{
-		scriptManager.rpc_runScript(params, rpcResp, session);
-	}
-	else if (method == "getScriptList")
-	{
-		scriptManager.rpc_getScriptList(params, rpcResp, session);
-	}
-	else if (method == "getScriptFile")
-	{
-		scriptManager.rpc_getScript(params, rpcResp, session);
-	}
-	else if (method == "deleteScriptFile") {
-		scriptManager.rpc_deleteScript(params, rpcResp, session);
-	}
-	else if (method == "setScriptFile")
-	{
-		scriptManager.rpc_setScript(params, rpcResp, session);
-	}
+	//else if (method == "runScript")
+	//{
+	//	scriptManager.rpc_runScript(params, rpcResp, session);
+	//}
+	//else if (method == "getScriptList")
+	//{
+	//	scriptManager.rpc_getScriptList(params, rpcResp, session);
+	//}
+	//else if (method == "getScriptFile")
+	//{
+	//	scriptManager.rpc_getScript(params, rpcResp, session);
+	//}
+	//else if (method == "deleteScriptFile") {
+	//	scriptManager.rpc_deleteScript(params, rpcResp, session);
+	//}
+	//else if (method == "setScriptFile")
+	//{
+	//	scriptManager.rpc_setScript(params, rpcResp, session);
+	//}
 	else if (method == "getReportConf") {
 		string sConf;
 		json jConf;
@@ -3568,6 +3569,10 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	else {
 		bHandled = false;
 	}
+
+	if (!bHandled)
+		bHandled = scriptManager.handleRpc(method, params, rpcResp, session);
+
 	return bHandled;
 }
 

@@ -71,6 +71,8 @@ public:
 	vector<SCRIPT_INFO> m_vecVarExpScripts;
 	std::mutex m_csExpScripts;
 
+	bool handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+
 	bool runScriptFileAsyn(string scriptName,string tagThis);
 	bool getScript(string name, SCRIPT_INFO& si);
 	bool rpc_runScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
