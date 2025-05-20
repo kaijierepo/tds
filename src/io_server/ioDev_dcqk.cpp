@@ -14,7 +14,6 @@
 #include "tAlmSrv.h"
 #include "tdb.h"
 
-
 using namespace httplib;
 
 std::map<int, std::string> ioDev_dcqk::g_map0x97AlarmLevel = {
@@ -639,7 +638,8 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 				}
 			}
 			LeaveCriticalSection(&m_csEqp);
-
+			BYTE req_0x26[17]{ 0x71, 0x6B, 0x6E, 0x65, 0x74, 0x02, 0x01, 0x8F, 0x01, 0x00, 0x00, 0x00, 0x26, 0xFF, 0xFF, 0xFF, 0xFF };
+			sendData(req_0x26, 17);
 			break;
 		}
 		case CMD_CODE_GAPVAL:
@@ -748,6 +748,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		case CMD_CODE_IMGINFO:
 		{
 			StImgInfoRes* lpsubdata = (StImgInfoRes*)pData->lpdata;
+			Do_CMD_CODE_IMGINFO(lpsubdata);
 			break;
 		}
 		case CMD_CODE_VEDIOLIST:
@@ -793,6 +794,7 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 		{
 			StOilLevelInfo* lpsubdata = (StOilLevelInfo*)pData->lpdata;
 			Do_CMD_CODE_YWINFO(lpsubdata);
+
 			break;
 		}
 		case CMD_CODE_REALCTRL:
@@ -2251,6 +2253,22 @@ typedef struct _GapValPicParam {
 	BYTE location;
 	BYTE acqreason;
 } GapValPicParam;
+
+BYTE* reqCompose_0x2A(WORD zzjid, DWORD time, BYTE imgType)
+{
+	static BYTE req[27]{ 0x71, 0x6B, 0x6E, 0x65, 0x74, 0x02, 0x01, 0x8F, 0x0B, 0x00, 0x00, 0x00 };
+	BYTE cmdFrame[8] = { 0x2A };
+	memcpy(&cmdFrame[1], &zzjid, 2);
+	memcpy(&cmdFrame[3], &time, 4);
+	BYTE t = imgType;
+	cmdFrame[7] = imgType;
+	memcpy(req + 12, cmdFrame, 11);
+	BYTE endFrame[7] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+	memcpy(req + 20, endFrame, 7);
+	return req;
+}
+
+
 void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 {
 	auto* pStation = prj.queryObj(m_strTagBind, "zh");
@@ -2260,11 +2278,18 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 	for (int i = 0; i < pInfo->cnt; i++) {
 		auto list = (StGapRecord*)(pInfo->lpdata);
 		StGapRecord* pRecord = &(list[i]);
-		if (pRecord->sid > m_mapEqp.size()) {
-			return;
-		}
+		//if (pRecord->sid > m_mapEqp.size()) {
+		//	return;
+		//}
 		//TDS配置的名字不一定和JHD一致 下载文件时的url以JHD的转辙机名字为准
 		//m_mapSIDToName;
+		//发送0x26命令
+		BYTE* req_0x2A_0x00 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x00);
+		sendData(req_0x2A_0x00, 27);
+		BYTE* req_0x2A_0x02 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x02);
+		sendData(req_0x2A_0x02, 27);
+		BYTE* req_0x2A_0x03 = reqCompose_0x2A(pRecord->sid, pRecord->time, 0x03);
+		sendData(req_0x2A_0x03, 27);
 		OBJ* zzjMo = pStation->getObjByID(to_string(pRecord->sid));
 		if (!zzjMo) {
 			//log
@@ -2278,13 +2303,13 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		BYTE acqreason = pRecord->gaptype;
 		string theTag = zzjMo->getTag()+  ".缺口";
 
-		TIME ti; ti.fromUnixTime(pRecord->time);
+		TIME ti;
+		ti.fromUnixTime(pRecord->time);
 		string  strTi = timeopt::st2str(ti);
 		string  strJustTime = ti.toTimeStr();
 		string val;
 
 		float fVal = pRecord->gap * 1.0 / 100;
-
 		GapValPicParam *param = new GapValPicParam();
 		param->tag = theTag;
 		param->fullTime = strTi;
@@ -2297,11 +2322,188 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		param->zzj315 = zzj315;
 		param->location = location;
 		param->acqreason = acqreason;
-		thread t(ThreadSaveGapAndPic, param);
-		t.detach();
 
+		//thread t(ThreadSaveGapAndPic, param);
+		//t.detach();
 	}
 }
+
+void uploadJson(json& mainJson, string time, WORD gapValue, BYTE imgType, WORD shift, BYTE shiftSymbol, short temper, WORD humi)
+{
+	mainJson["time"] = time;
+	mainJson["value"] = to_string(gapValue);
+	json alarmStatus;
+	alarmStatus["level"] = "alarm";
+	alarmStatus["lockgap"] = false;
+	mainJson["alarmStatus"] = alarmStatus;
+	mainJson["bShyWindow"] = false;
+	mainJson["location"] = 1;
+	mainJson["timeout"] = 0;
+	mainJson["gapImageType"] = "jpg";
+	mainJson["baseline"] = 0;
+	mainJson["gapline"] = 0;
+
+
+	json dataAttr = json::array();
+
+	json acqreason;
+	acqreason["name"] = "acqreason";
+	acqreason["label"] = "";
+	acqreason["value"] = imgType;
+	acqreason["unit"] = "";
+	dataAttr.push_back(acqreason);
+
+	json shiftvalue;
+	shiftvalue["name"] = "shiftvalue";
+	shiftvalue["label"] = "";
+	shiftvalue["value"] = to_string(shift);
+	shiftvalue["unit"] = "";
+	dataAttr.push_back(shiftvalue);
+
+	json leftorright;
+	leftorright["name"] = "leftorright";
+	leftorright["label"] = "";
+	shiftSymbol = (shiftSymbol == 1) ? 1 : 0;
+	leftorright["value"] = shiftSymbol;
+	leftorright["unit"] = "";
+	dataAttr.push_back(leftorright);
+	json temperature;
+	temperature["name"] = "temperature";
+	temperature["label"] = "";
+	temperature["value"] = temper;
+	temperature["unit"] = "";
+	dataAttr.push_back(temperature);
+	json humidity;
+	humidity["name"] = "humidity";
+	humidity["label"] = "";
+	humidity["value"] = humi;
+	humidity["unit"] = "";
+	dataAttr.push_back(humidity);
+	json diffvalue;
+	diffvalue["name"] = "diffvalue";
+	diffvalue["label"] = "";
+	diffvalue["value"] = "0.00";
+	diffvalue["unit"] = "";
+	dataAttr.push_back(diffvalue);
+	mainJson["data_attr"] = dataAttr;
+}
+
+bool saveJpg(string tag, DB_TIME stTime, char* pData, size_t len)
+{
+	string folder = db.getPath_dataFolder(tag, stTime);
+	size_t buffLen = len;
+	char* buff = new char[buffLen];
+	memcpy(buff, pData, len);
+	string path = folder + "/" + stTime.toStampHMS() + ".jpg";
+	bool ret = DB_FS::writeFile(path, buff, buffLen);
+	delete[] buff;
+	return ret;
+}
+
+static map<string, short>tagToTemperature;
+static map<string, WORD>tagToHumidity;
+
+bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::string& timestamp) {
+
+	KV_INI ini; ini.load(path);
+	string latestImgTimeStr = ini.getValStr("latestImgTime", "{}");
+	map<string, string> timeMap;
+	regex pattern(R"(\{([^}]*)\})");
+	smatch match;
+
+	if (std::regex_search(latestImgTimeStr, match, pattern) && match.size() > 1) {
+		string content = match[1].str();
+		regex kvPattern(R"((\w+):\s*([^,\}]+))");
+
+		auto words_begin = std::sregex_iterator(content.begin(), content.end(), kvPattern);
+		auto words_end = std::sregex_iterator();
+
+		for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
+			std::smatch match = *i;
+			if (match.size() >= 3) {
+				string temp1 = match[1].str();
+				string temp2 = match[2].str();
+				timeMap[match[1].str()] = match[2].str();
+			}
+		}
+	}
+
+	bool updated = false;
+	auto it = timeMap.find(tag);
+
+	if (it == timeMap.end()) {
+		timeMap[tag] = timestamp;
+		updated = true;
+	}
+	else if (timestamp > it->second) {
+		timeMap[tag] = timestamp;
+		updated = true;
+	}
+
+	if (updated) {
+		std::stringstream ss;
+		ss << "{";
+		bool first = true;
+
+		for (const auto& pair : timeMap) {
+			if (!first) ss << ", ";
+			ss << pair.first << ":" << pair.second;
+			first = false;
+		}
+
+		ss << "}";
+		ini.setVal("latestImgTime", ss.str());
+		ini.save(path);
+	}
+
+	return updated;
+}
+
+void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
+{
+	DB_TIME stTime;
+	auto* pStation = prj.queryObj(m_strTagBind, "zh");
+	if (!pStation) return;
+	StImgInfoRes* imgInfo = (StImgInfoRes*)pData;
+	OBJ* zzjMo = pStation->getObjByID(to_string(imgInfo->sid));
+	string zzj = zzjMo->getName("");
+	EnterCriticalSection(&m_csEqp);
+	LeaveCriticalSection(&m_csEqp);
+	BYTE location = imgInfo->fixorinvert;
+	BYTE acqreason = imgInfo->imgtype;
+	TIME ti; ti.fromUnixTime(imgInfo->time);
+	string  strTi = timeopt::st2str(ti);
+	string zzjTag = zzjMo->getTag();
+	if (imgInfo->fixorinvert == 1  &&  tagToHumidity.find(zzjMo->getTag())!= tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
+	{
+		string theTag = zzjMo->getTag() + ".定位缺口";
+		string timeTag = "zzj" + to_string(imgInfo->sid);
+		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
+		{
+			stTime.fromStr(strTi);
+			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
+			json Jfile;
+			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.find(zzjMo->getTag())->second, tagToHumidity.find(zzjMo->getTag())->second);
+			string sDE = Jfile.dump();
+			db.Insert(theTag, sDE);
+		}
+	}
+	else if(imgInfo->fixorinvert == 0 && tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
+	{
+		string theTag = zzjMo->getTag() + ".反位缺口";
+		string timeTag = "zzj"+to_string(imgInfo->sid);
+		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
+		{
+			stTime.fromStr(strTi);
+			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
+			json Jfile;
+			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.find(zzjMo->getTag())->second, tagToHumidity.find(zzjMo->getTag())->second);
+			string sDE = Jfile.dump();
+			db.Insert(theTag, sDE);
+		}
+	}
+}
+
 
 void ThreadSaveGapAndPic(void* lpParam)
 {
@@ -2358,6 +2560,8 @@ void ioDev_dcqk::Do_CMD_CODE_YWINFO(LPVOID pData)
 			//log
 			continue;
 		}
+		tagToTemperature[zzjMo->getTag()] = pRecord->temperature;
+		tagToHumidity[zzjMo->getTag()] = pRecord->humidity;
 		if (pRecord->oiltime==0xffff || pRecord->oillevel==0xffff) {
 			continue;
 		}

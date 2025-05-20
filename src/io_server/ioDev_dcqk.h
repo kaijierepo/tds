@@ -155,7 +155,6 @@ public:
 	void GetOilBoxVolume(int nSID);
 
 
-
 	void ParseDaoChaNameByZZJName(const string& sZZJName, string& sDc);
 	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
@@ -163,6 +162,7 @@ public:
 	void Do_CMD_CODE_YYQX(LPVOID pData);
 	void Do_CMD_CODE_GAPVAL(LPVOID pData);
 	void Do_CMD_CODE_YWINFO(LPVOID pData);
+	void Do_CMD_CODE_IMGINFO(LPVOID pData);
 	CRITICAL_SECTION		m_csEqp;
 	std::map<int, eqpInfo*> m_mapEqp;
 
