@@ -41,6 +41,7 @@ ScriptManager::ScriptManager()
 {
 	loopRunning = false;
 	m_bRun = false;
+	m_bEnable = true;
 }
 
 bool ScriptManager::init()
@@ -642,12 +643,13 @@ void ScriptManager::loopExe()
 		if (!m_bRun)
 			break;
 
-		exeAllGlobalScripts();
-
-		if (m_vecVarExpScripts.size() > 0) {
-			if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
-				exeAllVarExpScripts();
-				lastExe2 = timeopt::now();
+		if (m_bEnable) {
+			exeAllGlobalScripts();
+			if (m_vecVarExpScripts.size() > 0) {
+				if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
+					exeAllVarExpScripts();
+					lastExe2 = timeopt::now();
+				}
 			}
 		}
 

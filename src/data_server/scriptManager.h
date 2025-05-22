@@ -62,6 +62,7 @@ public:
 	string m_confPath; //从原有调用tds->conf->confPath 改为外部设置这个变量，然后启用被注释的代码
 
 	bool m_bRun;
+	bool m_bEnable;
 
 	bool hasScripts();
 	//第一个key是组织结构，第二个key是脚本文件的name
