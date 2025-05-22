@@ -812,6 +812,7 @@ void almServer::rpc_recoverAlarm(json j, RPC_RESP& resp)
 
 void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 {
+	bool asyncUpdate = false;
 	if (j["tag"] == nullptr && j["ioAddr"] == nullptr)
 	{
 		json jErr = "必须指定 tag 或者 ioAddr 字段";
@@ -823,6 +824,9 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 		json jErr = "必须指定 type 字段";
 		resp.error = jErr.dump();
 		return;
+	}
+	if (j["async"].is_boolean()) {
+		asyncUpdate = j["async"].get<bool>();
 	}
 
 	if (j.contains("rootTag")) {
@@ -836,7 +840,11 @@ void almServer::rpc_updateStatus(json j, RPC_RESP& resp)
 		ALARM_INFO ai;
 		ai.fromJson(j);
 		//ai.time = timeopt::nowStr();
-		UpdateSync(ai);
+		if (asyncUpdate) {
+			Update(ai);
+		}
+		else
+			UpdateSync(ai);
 		resp.result = RPC_OK;
 	}
 	catch (std::exception& e)
@@ -2321,8 +2329,12 @@ int almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SES
 	else if (method == "recoverAlarm" || method == "clearAlarm") {
 		rpc_recoverAlarm(params, rpcResp);
 	}
-	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
+	else if (method == "updateAlarmStatus" || method == "updateAlarm" || method == "updateAlarmAsync") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
 	{
+		if (method == "updateAlarmAsync") {
+			params["async"] = true;
+		}
+
 		rpc_updateStatus(params, rpcResp);
 	}
 	else if (method == "ackAlarm" || method == "ackAlarmEvent")
