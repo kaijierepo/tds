@@ -3239,11 +3239,19 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			return;
 		}
 
+		yyjson_val* yyv_snapshot = yyjson_obj_get(yyParams, "snapshot");
+		if (yyv_snapshot != nullptr) {
+			deSel.timeSel.snapShot = true;
+		}
+
 		if (yyjson_is_str(yyv_time)) {
 			strTime = yyjson_get_str(yyv_time);
 			if (!deSel.timeSel.init(strTime)) {
 				err = "time selector format error:" + deSel.timeSel.error;
 				return;
+			}
+			for (int i = 0; i < deSel.timeSel.atomSelList.size(); i++) {
+				deSel.timeSel.atomSelList[i].snapShot = deSel.timeSel.snapShot;
 			}
 		}
 		else if (yyjson_is_arr(yyv_time)) {
@@ -3827,7 +3835,9 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			DB_FILE* pdf = fSet.fileList[i];
 
 			size_t idx, max;
-			yyjson_val* de;
+			yyjson_val* de = nullptr;
+			yyjson_val* deSnapshot = nullptr;
+			string snapshotDeTime = "";
 			int lastDeTime = 0;
 			int currDeTime = 0;
 			string deTime = pdf->ymd + " 00:00:00.000";
@@ -3903,7 +3913,6 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 						}
 					}
 				}
-
 
 				//every downsampling interval output one de; dsi=3,output 0 3 6...
 				if (deSel.interval.type == DOWN_SAMPLING_TYPE::DST_Count)
@@ -3993,8 +4002,27 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				//consider "08:40:00~09:40:00@2024-09-20~2024-09-22",
 				//if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
 				//	continue;
-				if (!deSel.timeSel.Match(deTime))
-					continue;
+				if (!deSel.timeSel.Match(deTime)) {
+					if (deSel.timeSel.snapShot) {
+						de = deSnapshot;  //last de before not match is snapshot de. timeSel set to 00:00:00~snapshotTime
+						deTime = snapshotDeTime;
+						if (de == nullptr)
+							break;
+					}
+					else { //normal mode
+						continue;
+					}
+				}
+				else {
+					if (deSel.timeSel.snapShot) { //make desnapshot last de
+						deSnapshot = de;
+						snapshotDeTime = deTime;
+						if (idx < max - 1) {  //not the last de ,check next; otherwise load this de as snapshot de 
+							continue;
+						}
+					}
+				}
+
 
 				//use javascript to filter
 				if (deSel.condition.bEnable && !deSel.condition.match(de))
@@ -4090,6 +4118,10 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				result.deCount++;
+
+				if (deSel.timeSel.snapShot) { //running to here means snapshot de already founded
+					break;
+				}
 
 				if (deSel.timeSel.AmountMatch(result.deCount)) {
 					break;
@@ -5402,14 +5434,24 @@ bool TDB::fileExist(string pszFileName) const
 TIME_SELECTOR::TIME_SELECTOR()
 {
 	enable = true;
+	snapShot = false;
 	m_dataNum = 0;
 }
 
 bool TIME_SELECTOR_ATOM::Match(string& deTime)
 {
-	if (deTime >= strStart && deTime <= strEnd)
-		return true;
-	return false;
+	if (snapShot) {
+		if (deTime <= strEnd) {
+			return true;
+		}
+		else
+			return false;
+	}
+	else {
+		if (deTime >= strStart && deTime <= strEnd)
+			return true;
+		return false;
+	}
 }
 
 bool TIME_SELECTOR::Match(string& deTime)

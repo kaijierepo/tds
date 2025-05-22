@@ -312,6 +312,7 @@ struct TIME_SELECTOR_ATOM {
 	DB_TIME stEnd;
 	time_t startTime;
 	time_t endTime;
+	bool snapShot;
 	string shortSel2StardardSel(string time);
 	bool parseTimeRange(string time);//use standard time selector as 2020-02-01 00:00:00~2020-02-28 23:59:59
 	string getParsedSelector();
@@ -319,6 +320,7 @@ struct TIME_SELECTOR_ATOM {
 	TIME_SELECTOR_ATOM() {
 		startTime = 0;
 		endTime = 0;
+		snapShot = false;
 	}
 };
 
@@ -340,6 +342,7 @@ public:
 	string error;
 	DE_TIME deTime;
 	bool enable;
+	bool snapShot;
 };
 DB_TIME_RANGE parseTimeRange(string timeExp);
 
