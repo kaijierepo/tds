@@ -410,7 +410,7 @@ public:
 	void rpc_getHistory(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
-	void rpc_updateStatus(json j, RPC_RESP& resp);
+	void rpc_updateStatus(json j, RPC_RESP& resp,bool bSync = true);
 	void rpc_getAlmSrvStatus(json j, RPC_RESP& resp);
 
 	bool canRemoveFromCurrent(ALARM_INFO& ai);
