@@ -1699,10 +1699,14 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	ALARM_INFO& ai = *this;
 
 	//必填字段
-	ai.tag = j["tag"];
-	ai.type = j["type"];
-	ai.acqType = j["acqtype"];
-	ai.objStatus = j["objstatus"];
+	if(j["tag"].is_string())
+		ai.tag = j["tag"];
+	if(j["type"].is_string())
+		ai.type = j["type"];
+	if(j["acqtype"].is_string())
+		ai.acqType = j["acqtype"];
+	if(j["objstatus"].is_string())
+		ai.objStatus = j["objstatus"];
 
 
 	if (j["time"] != nullptr)
