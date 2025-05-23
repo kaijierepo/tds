@@ -68,6 +68,8 @@ public:
 	string tag;
 	string time;
 	string type;
+	string acqType;
+	string objStatus;
 	string id;  //custom id
 
 	bool multiUnack;  //default disabled. one unack of one tag,so current alarm list will not be too big.
@@ -80,6 +82,7 @@ public:
 		string k;
 		k.reserve(tag.size() + type.size() + id.size());
 		k.append(tag).append(type).append(id);
+		k += acqType + objStatus;
 		return k;
 	}
 
@@ -87,6 +90,7 @@ public:
 		string k;
 		k.reserve(time.size() + tag.size() + type.size() + id.size());
 		k.append(time).append(tag).append(type).append(id);
+		k += acqType + objStatus;
 		return k;
 	}
 
@@ -104,6 +108,7 @@ public:
 			completeSortKey.reserve(time.size() + tag.size() + type.size() + id.size());
 			completeSortKey.append(time).append(tag).append(type).append(id);
 		}
+		completeSortKey += acqType + objStatus;
 	}
 
 	string getYearMonth() {
@@ -384,8 +389,8 @@ public:
 	//status check
 	bool isRecover(ALARM_INFO& key);
 	bool isActive(ALARM_INFO& key);
-	bool isRecover(string tag, string type);
-	bool isActive(string tag, string type);
+	bool isRecover(const string &tag, const string& type, const string& acqType, const string& objStatus);
+	bool isActive(const string& tag, const string& type, const string& acqType, const string& objStatus);
 
 	//rpc handler
 	void rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION session);

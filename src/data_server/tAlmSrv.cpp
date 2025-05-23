@@ -429,10 +429,13 @@ bool almServer::isRecover(ALARM_INFO& key) {
 	return true;
 }
 
-bool almServer::isRecover(string tag, string type) {
+bool almServer::isRecover(const string& tag, const string& type, const string& acqType, const string& objStatus) {
 	ALARM_INFO ai;
 	ai.tag = tag;
 	ai.type = type;
+	ai.acqType = acqType;
+	ai.objStatus = objStatus;
+
 	return isRecover(ai);
 }
 
@@ -440,9 +443,9 @@ bool almServer::isActive(ALARM_INFO& key) {
 	return !isRecover(key);
 }
 
-bool almServer::isActive(string tag, string type)
+bool almServer::isActive(const string& tag, const string& type, const string& acqType, const string& objStatus)
 {	
-	return !isRecover(tag,type);
+	return !isRecover(tag,type, acqType, objStatus);
 }
 
 /*
@@ -932,6 +935,8 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	queryKey.time = params["time"];
 	queryKey.tag = params["tag"];
 	queryKey.type = params["type"];
+	queryKey.acqType = params["acqtype"];
+	queryKey.objStatus = params["objstatus"];
 	TIME t; t.setNow();
 	string ackTime = t.toStr(true);
 	ALARM_INFO ai;
@@ -1400,6 +1405,12 @@ bool almServer::isSelected(ALARM_INFO* ai, ALM_SELECTOR& almSel) {
 			else if (ai->type.find(kw) != string::npos) {
 				match = true;
 			}
+			else if (ai->acqType.find(kw) != string::npos) {
+				match = true;
+			}
+			else if (ai->objStatus.find(kw) != string::npos) {
+				match = true;
+			}
 			else if (ai->level.find(kw) != string::npos) {
 				match = true;
 			}
@@ -1518,7 +1529,12 @@ void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSe
 		}
 		yyjson_mut_obj_add_val(yyDoc, resultObj, "pageData", jDataSet);
 		size_t len;
-		dataSet = yyjson_mut_val_write(resultObj, 0, &len);
+		auto json = yyjson_mut_val_write(resultObj, 0, &len);
+		if (json)
+		{
+			dataSet = json;
+			free(json);
+		}
 		yyjson_mut_doc_free(yyDoc);
 	}
 	else
@@ -1533,7 +1549,13 @@ void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSe
 			yyjson_mut_arr_append(jDataSet, j);
 		}
 		size_t len;
-		dataSet = yyjson_mut_val_write(jDataSet, 0, &len);
+		auto json = yyjson_mut_val_write(jDataSet, 0, &len);
+		if (json)
+		{
+			dataSet = json;
+			free(json);
+		}
+
 		yyjson_mut_doc_free(yyDoc);
 	}
 }
@@ -1563,7 +1585,7 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 
 void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
-	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
+	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus\r\n";
 	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
@@ -1679,6 +1701,9 @@ ALARM_INFO ALARM_INFO::fromJson(json j)
 	//必填字段
 	ai.tag = j["tag"];
 	ai.type = j["type"];
+	ai.acqType = j["acqtype"];
+	ai.objStatus = j["objstatus"];
+
 
 	if (j["time"] != nullptr)
 		ai.time = j["time"];
@@ -1722,6 +1747,8 @@ json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
 	}
 
 	j["type"] = info->type;
+	j["acqtype"] = info->acqType;
+	j["objstatus"] = info->objStatus;
 
 
 	if (almSrv->m_mapCustomAlarmDesc.find(info->type) != almSrv->m_mapCustomAlarmDesc.end())
@@ -1768,6 +1795,8 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 	}
 
 	yyjson_mut_obj_add_strcpy(doc, jVal, "type", info->type.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "acqtype", info->acqType.c_str());
+	yyjson_mut_obj_add_strcpy(doc, jVal, "objstatus", info->objStatus.c_str());
 
 	//if (almSrv->m_mapCustomAlarmDesc.find(info->type) != almSrv->m_mapCustomAlarmDesc.end())
 	//{
@@ -1870,6 +1899,8 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
 		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("ackInfo"); loadIdx++;
 		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("ackUser"); loadIdx++;
 		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("picUrl"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("acqType"); loadIdx++;
+		m_loadIdxToColIdx[loadIdx] = getColIdxByColName("objStatus"); loadIdx++;
 		valLoadIdxInit = true;
 	}
 
@@ -1892,6 +1923,8 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.ackInfo.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.ackUser.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.pic_url.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
+	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 }
 
 string ALARM_INFO::toCSVLine()
@@ -1919,7 +1952,11 @@ string ALARM_INFO::toCSVLine()
 	str += info.ackUser; str += ",";
 
 	//others
-	str += info.pic_url;
+	str += info.pic_url; str += ",";
+
+	//external info
+	str += info.acqType; str += ",";
+	str += info.objStatus; 
 	str += "\r\n";
 	return str;
 }
@@ -1995,6 +2032,10 @@ void almTable::acknowledge(ALARM_INFO& ai, bool remove)
 		if (it->tag != ai.tag)
 			goto LOOP_END;
 		if (it->type != ai.type)
+			goto LOOP_END;
+		if (it->acqType != ai.acqType)
+			goto LOOP_END;
+		if (it->objStatus != ai.objStatus)
 			goto LOOP_END;
 		if (it->time != ai.time)
 			goto LOOP_END;
