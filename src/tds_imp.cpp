@@ -535,6 +535,14 @@ bool TDS_imp::run(string cmdline)
 		}
 	}
 
+	string appName = fs::appName();
+	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+#ifdef USE_SVN_REV
+	m_sTitle = appName + " v" + SVN_VERSION + " b" + getbuildtimeShort();
+#else
+	m_sTitle = appName + " " + version + "(" + getbuildtime() + ")";
+#endif
+	LOG("[info]服务启动,版本:%s,构建时间:%s", version.c_str(), getbuildtime().c_str());
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
 	string navIniPath = tds->conf->confPath + "/nav.ini";
@@ -678,17 +686,6 @@ bool TDS_imp::run(string cmdline)
 	}
 
 	//timeopt::now(&stStartupTime);
-
-	string appName = fs::appName();
-
-	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
-
-#ifdef USE_SVN_REV
-	m_sTitle = appName + " v" + SVN_VERSION + " b" + getbuildtimeShort();
-#else
-	m_sTitle = appName + " " + version +  "(" + getbuildtime() + ")";
-#endif
-
 
 #ifndef _WINDLL
 #ifdef _WIN32
