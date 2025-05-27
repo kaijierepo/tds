@@ -935,8 +935,14 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	queryKey.time = params["time"];
 	queryKey.tag = params["tag"];
 	queryKey.type = params["type"];
-	queryKey.acqType = params["acqtype"];
-	queryKey.objStatus = params["objstatus"];
+
+	if (params.contains("acqtype")) {
+		queryKey.acqType = params["acqtype"];
+	}
+	if (params.contains("objstatus")) {
+		queryKey.acqType = params["objstatus"];
+	}
+
 	TIME t; t.setNow();
 	string ackTime = t.toStr(true);
 	ALARM_INFO ai;
