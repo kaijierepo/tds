@@ -254,7 +254,7 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 				pIoDev->bindIOSession(p);
 				if (pIoDev->pIOSession == p)
 				{
-					string s = str::format("[ioSrv]TcpClient设备Tcp连接成功,ioAddr=%s,remoteAddr=%s:%d", pIoDev->getIOAddrStr().c_str(), pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
+					string s = str::format("[ioSrv]TcpClient设备Tcp连接成功,ioAddr=%s,remoteAddr=%s:%d,localIP=%s,localPort=%d", pIoDev->getIOAddrStr().c_str(), pTcpSess->remoteIP.c_str(), pTcpSess->remotePort, pTcpSess->localIP, pTcpSess->localPort);
 					logger.logInternal(s);
 				}
 				if (pIoDev->m_devType == DEV_TYPE_iq60) {
