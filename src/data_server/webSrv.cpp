@@ -1529,6 +1529,91 @@ std::shared_ptr<TDS_SESSION> WebServer::getWsSession(void* conn)
 	return p;
 }
 
+#ifdef CPPHTTPLIB_OPENSSL_SUPPORT
+#include <iostream>
+#include <openssl/ssl.h>
+#include <openssl/x509v3.h>
+#include <openssl/rand.h>
+
+void generate_self_signed_cert(std::string& cert_str, std::string& key_str) {
+	OpenSSL_add_all_algorithms();
+	ERR_load_crypto_strings();
+
+	EVP_PKEY* pkey = nullptr;
+	X509* x509 = nullptr;
+	BIO* cert_bio = nullptr;
+	BIO* key_bio = nullptr;
+
+	do {
+		// 1. 生成密钥对
+		EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+		if (!pctx) break;
+		if (EVP_PKEY_keygen_init(pctx) <= 0) { EVP_PKEY_CTX_free(pctx); break; }
+		if (EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, 2048) <= 0) { EVP_PKEY_CTX_free(pctx); break; }
+		if (EVP_PKEY_keygen(pctx, &pkey) <= 0) { EVP_PKEY_CTX_free(pctx); break; }
+		EVP_PKEY_CTX_free(pctx);
+
+		// 2. 创建X509证书
+		x509 = X509_new();
+		if (!x509) break;
+		X509_set_version(x509, 2);
+
+		// 3. 设置序列号
+		ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+
+		// 4. 设置有效期
+		X509_gmtime_adj(X509_get_notBefore(x509), 0);
+		X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); // 10年
+
+		// 5. 设置证书主题和颁发者
+		X509_NAME* name = X509_get_subject_name(x509);
+		X509_NAME_add_entry_by_txt(name, "C", MBSTRING_ASC, (const unsigned char*)"CN", -1, -1, 0);
+		X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, (const unsigned char*)"TDS Community", -1, -1, 0);
+		X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (const unsigned char*)"TDS Test Server", -1, -1, 0);
+		X509_set_issuer_name(x509, name);
+
+		// 6. 设置公钥
+		X509_set_pubkey(x509, pkey);
+
+		// 7. 添加扩展
+		X509V3_CTX ctx;
+		X509V3_set_ctx_nodb(&ctx);
+		X509V3_set_ctx(&ctx, x509, x509, nullptr, nullptr, 0);
+
+		X509_EXTENSION* ext = X509V3_EXT_conf_nid(nullptr, &ctx, NID_basic_constraints, "CA:FALSE");
+		if (ext) { X509_add_ext(x509, ext, -1); X509_EXTENSION_free(ext); }
+		ext = X509V3_EXT_conf_nid(nullptr, &ctx, NID_key_usage, "digitalSignature,keyEncipherment");
+		if (ext) { X509_add_ext(x509, ext, -1); X509_EXTENSION_free(ext); }
+
+		// 8. 签名
+		if (!X509_sign(x509, pkey, EVP_sha256())) break;
+
+		// 9. PEM输出
+		cert_bio = BIO_new(BIO_s_mem());
+		key_bio = BIO_new(BIO_s_mem());
+		if (!PEM_write_bio_X509(cert_bio, x509)) break;
+		if (!PEM_write_bio_PrivateKey(key_bio, pkey, nullptr, nullptr, 0, nullptr, nullptr)) break;
+
+		char* cert_data = nullptr;
+		long cert_len = BIO_get_mem_data(cert_bio, &cert_data);
+		cert_str.assign(cert_data, cert_len);
+
+		char* key_data = nullptr;
+		long key_len = BIO_get_mem_data(key_bio, &key_data);
+		key_str.assign(key_data, key_len);
+
+	} while (0);
+
+	if (cert_bio) BIO_free(cert_bio);
+	if (key_bio) BIO_free(key_bio);
+	if (x509) X509_free(x509);
+	if (pkey) EVP_PKEY_free(pkey);
+
+	ERR_free_strings();
+	EVP_cleanup();
+}
+#endif
+
 
 bool runWebServers()
 {
@@ -1599,11 +1684,17 @@ bool runWebServers()
 		string cert, key;
 		if (!getSSLCertPath(cert, key)) {
 			if (cert == "") {
-				LOG("[error]没有找到证书文件");
+				LOG("[warn]没有找到证书文件");
 			}
 			if (key == "") {
-				LOG("[error]没有找到私钥文件");
+				LOG("[warn]没有找到私钥文件");
 			}
+			LOG("[warn]生成测试用自签名证书与私钥");
+			generate_self_signed_cert(pws->m_certData, pws->m_keyData);
+			cert = tds->conf->confPath + "/cert.pem";
+			key = tds->conf->confPath + "/key.pem";
+			fs::writeFile(cert, pws->m_certData);
+			fs::writeFile(key, pws->m_keyData);
 		}
 		else {
 			LOG("加载证书文件:" + cert);
