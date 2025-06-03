@@ -2240,6 +2240,11 @@ bool WebServer::handleAppLayerData_Bridge(unsigned char* pData, size_t iLen, std
 		string s = str::fromBuff((char*)pData, iLen);
 		LOG("[IO设备透传]client->dev " + s);
 	}
+	else if (tdsSession->type == TDS_SESSION_TYPE::bridgeToTcpServer)
+	{
+		if (tdsSession->pBridgedTcpServer)
+			tdsSession->pBridgedTcpServer->SendData((char*)pData, iLen);
+	}
 	else
 	{
 		bHandled = false;
