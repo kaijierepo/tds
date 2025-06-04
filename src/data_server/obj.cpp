@@ -199,9 +199,9 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 
 	if (conf.contains("children")) {
 		auto children = conf["children"];
-		for (auto& child : children)
-		{
-			if (bCreate) {
+		if (bCreate) {
+			for (auto& child : children)
+			{
 				OBJ* pmo;
 				if ((child.contains("level") && child["level"] == "mp") ||
 					(child.contains("type") && child["type"] == "mp")) {  //保持一段时间兼容，后面删除
@@ -217,15 +217,45 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 					m_childObj.push_back(pmo);
 				}
 			}
-			else {
+		}
+		else {
+			//增量更新
+			map<string, OBJ*> oldChildren;
+			for (auto& i : m_childObj)
+			{
+				oldChildren[i->m_name] = i;
+			}
+			m_childObj.clear();
+
+			for (auto& child : children) {
 				if (child.contains("name")) {
 					string childName = child["name"];
-					OBJ* pmo = GetChildObjByName(childName);
-					if(pmo)
-						pmo->loadConf(child, bCreate);
+					auto iter = oldChildren.find(childName);
+					if (iter != oldChildren.end()) {
+						OBJ* pmo = iter->second;
+						pmo->loadConf(child, false);
+						m_childObj.push_back(pmo);
+						oldChildren.erase(iter); //删除已处理的对象
+					}
+					else
+					{
+						OBJ* pmo;
+						if (child.contains("level") && child["level"] == "mp") {
+							pmo = new MP();
+						}
+						else
+							pmo = new OBJ();
+						if (pmo)
+						{
+							pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+							pmo->loadConf(child, true);
+							m_childObj.push_back(pmo);
+						}
+					}
 				}
 			}
 		}
+
 	}
 
 	return true;
@@ -429,12 +459,6 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 
 	conf["level"] = m_level;
 
-	if(m_bEnableAlarm == false)
-		conf["enableAlarm"] = m_bEnableAlarm;
-
-	if (m_bEnableIO == false)
-		conf["enableIO"] = m_bEnableIO;
-
 	if (q.getConfDetail) {
 		string tag = getTag("", q.language);
 		if (q.rootTag !=  "")
@@ -506,6 +530,12 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 		if (m_customConf != nullptr) {
 			conf["customConf"] = m_customConf;
 		}
+
+		if (m_bEnableAlarm == false)
+			conf["enableAlarm"] = m_bEnableAlarm;
+
+		if (m_bEnableIO == false)
+			conf["enableIO"] = m_bEnableIO;
 	}
 	
 

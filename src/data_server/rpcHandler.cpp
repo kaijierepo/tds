@@ -2062,7 +2062,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 			}
 			else {
-				json mo = params;
+				json& mo = params;
 				string tag = mo["tag"].get<string>();
 				string rootTag = "";
 				if (mo.contains("rootTag"))
@@ -2077,20 +2077,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						unique_lock<shared_mutex> lock(prj.m_csPrj);
 						LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
 
-						//设置指定的OBJ对象
-						OBJ& toSetObj = *pmo;
-						OBJ tmpObj;
-						tmpObj.loadConf(params);
-						tmpObj.loadTreeStatus(&toSetObj);//保留原有的实时数据状态
-						toSetObj.clearChildren();
-						toSetObj.m_name = tmpObj.m_name;
-						toSetObj.m_childObj = tmpObj.m_childObj;
-						toSetObj.m_type = tmpObj.m_type;
-						for (int i = 0; i < toSetObj.m_childObj.size(); i++) {
-							OBJ* p = toSetObj.m_childObj[i];
-							p->m_pParentMO = &toSetObj;
-						}
-						tmpObj.m_childObj.clear();
+						pmo->loadConf(mo, false);
 
 						//持久化
 						bool bSaved = prj.saveConfFile();
@@ -2314,7 +2301,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 							jRlt.push_back(jObj);
 					}
 					rpcResp.info = str::format("objCount=%d", objList.size());
-					result = jRlt.dump(2);
+					result = jRlt.dump();
 				}
 				else
 				{
@@ -2331,7 +2318,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						}
 
 					}
-					result = jRlt.dump(2);
+					result = jRlt.dump();
 				}
 			}
 			//精确查找模式，返回一个对象
@@ -2347,7 +2334,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				q.language = session.language;
 				bool selectedByLeafType = false;
 				if (pmo->toJson(j, q,&selectedByLeafType, session.user))
-					result = j.dump(4);
+					result = j.dump();
 			}
 			else
 			{
@@ -4223,7 +4210,10 @@ HANDLE_END:
 
 	rpcResp.strResp += "}\n\n";
 
-	apiAdaptorScript(rpcResp.strResp);
+	if (tds->conf->m_apiAdaptorScript != "") {
+		apiAdaptorScript(rpcResp.strResp);
+	}
+
 
 	//数据过长或者频率过高的命令不记录日志
 	if (rpcResp.result != "")

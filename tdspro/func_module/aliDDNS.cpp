@@ -3,7 +3,6 @@
 #include "httplib.h"
 #include "common.h"
 #include "logger.h"
-#include <openssl/hmac.h>
 #include "base64.h"
 #include "tds.h"
 #include "secure.h"
