@@ -1167,7 +1167,7 @@ json OBJ::getRT()
 	return j;
 }
 
-string& OBJ::getName(string language)
+string& OBJ::getName(const string& language)
 {
 	if (language == "")
 		return m_name;
