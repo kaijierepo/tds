@@ -576,6 +576,320 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	return true;
 }
 
+bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user)
+{
+	//先进行权限判断
+	if (user != "admin" && user != "") //内部脚本调用时，user == ""
+	{
+		string sTag = getTag();
+		if (!userMng.checkTagPermission(user, sTag))
+			return false;
+	}
+
+	if (q.leafLevel != "" && !isSelectedByLeafLevel(q.leafLevel))
+		return false;
+
+	bool selectedByLeafType = false;
+
+	//leafType开关算法逻辑
+	//如果指定了叶子节点选择,向该路径上的上级节点返回parentSelectedByLeafType=true,表示该路径被选中
+	//路径代表 不同层级节点连成的一条链路
+
+	//1.判断自己是否被leafType选择器选中
+	//1.1 自己就是叶子节点
+	if (q.leafType != "" && q.leafType == m_type) {
+		selectedByLeafType = true;
+	}
+	//1.2 自己不是叶子节点,根据子节点判断是否被选中
+	else {
+		if (m_level != MO_TYPE::mp)
+		{
+			//json jChildren = json::array();
+			yyjson_mut_val* rootChildren = yyjson_mut_arr(doc);
+
+			if (!q.flatten) {
+				for (auto& pmochild : m_childObj)
+				{
+					//可以出现 getMp=true ,getChild=false的组合，因此getChild不代表getMp，虽然Mp也是child
+					if (pmochild->m_level == "mp") {
+						if (!q.getMp) continue;
+					}
+					else {
+						if (!q.getChild) continue;
+					}
+
+					//json jChild;
+					yyjson_mut_val* rootChild = yyjson_mut_obj(doc);
+					if (pmochild->toJson(rootChild, doc, q, &selectedByLeafType, user)) {
+						//jChildren.push_back(jChild);
+						yyjson_mut_arr_append(rootChildren, rootChild);
+					}
+				}
+			}
+			else {
+				vector<MP*> mpList;
+				GetAllChildMp(mpList);
+				for (auto& mp : mpList) {
+					//json jMp;
+					yyjson_mut_val* rootMp = yyjson_mut_obj(doc);
+
+					if (mp->toJson(rootMp, doc, q, nullptr, user)) {
+						string flattenName = mp->getTag();
+						flattenName = TAG::trimRoot(flattenName, getTag());
+						//jMp["name"] = flattenName;
+						//jChildren.push_back(jMp);
+
+						yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
+						yyjson_mut_val* val = yyjson_mut_strcpy(doc, flattenName.c_str());
+						yyjson_mut_obj_put(rootMp, key, val);
+						yyjson_mut_arr_append(rootChildren, rootMp);
+					}
+				}
+			}
+
+			//if (jChildren.size() > 0)
+			//	conf["children"] = jChildren;
+
+			size_t len = yyjson_mut_arr_size(rootChildren);
+			if (len > 0) {
+				yyjson_mut_val* key = yyjson_mut_strcpy(doc, "children");
+				yyjson_mut_obj_put(conf, key, rootChildren);
+			}
+		}
+	}
+
+	//2.将判断结果传递给父节点
+	if (parentSelectedByLeafType && selectedByLeafType) {
+		*parentSelectedByLeafType = selectedByLeafType;
+	}
+
+	//3.根据自己是否被选中,进行响应的操作
+	//子节点遍历后,本节点下面没有找到该leafType类型
+	if (q.leafType != "" && !selectedByLeafType) {
+		return false;
+	}
+
+
+	//conf["name"] = getName(q.language);
+	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
+	yyjson_mut_val* val = yyjson_mut_strcpy(doc, getName(q.language).c_str());
+	yyjson_mut_obj_put(conf, key, val);
+
+	if (m_mapNameTranslate.size() > 0) {
+		//json j;
+		//for (auto& i : m_mapNameTranslate) {
+		//	j[i.first] = i.second;
+		//}
+		//conf["nameTranslate"] = j;
+		yyjson_mut_val* root = yyjson_mut_obj(doc);
+		for (auto& i : m_mapNameTranslate) {
+			yyjson_mut_val* key = yyjson_mut_strcpy(doc, i.first.c_str());
+			yyjson_mut_val* val = yyjson_mut_strcpy(doc, i.second.c_str());
+			yyjson_mut_obj_put(root, key, val);
+		}
+		yyjson_mut_val* key = yyjson_mut_strcpy(doc, "nameTranslate");
+		yyjson_mut_obj_put(conf, key, root);
+	}
+
+	//conf["level"] = m_level;
+	key = yyjson_mut_strcpy(doc, "level");
+	val = yyjson_mut_strcpy(doc, m_level.c_str());
+	yyjson_mut_obj_put(conf, key, val);
+
+	if (q.getConfDetail) {
+		string tag = getTag("", q.language);
+		if (q.rootTag != "")
+		{
+			tag = TAG::trimRoot(tag, q.rootTag);
+			//conf["rootTag"] = q.rootTag;
+			key = yyjson_mut_strcpy(doc, "rootTag");
+			val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (tag != "") {
+			//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+			key = yyjson_mut_strcpy(doc, "tag");
+			val = yyjson_mut_strcpy(doc, tag.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_strIoAddrBind != "") {
+			//conf["ioAddrBind"] = m_strIoAddrBind;
+			key = yyjson_mut_strcpy(doc, "ioAddrBind");
+			val = yyjson_mut_strcpy(doc, m_strIoAddrBind.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+	}
+
+	if (q.getConf) {
+		if (m_bChildTds) {
+			//conf["childTds"] = true;
+			//conf["streamAccess"] = m_streamAccess;
+			key = yyjson_mut_strcpy(doc, "childTds");
+			val = yyjson_mut_true(doc);
+			yyjson_mut_obj_put(conf, key, val);
+
+			key = yyjson_mut_strcpy(doc, "streamAccess");
+			val = yyjson_mut_strcpy(doc, m_streamAccess.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_type != "") {
+			//conf["type"] = m_type;
+
+			key = yyjson_mut_strcpy(doc, "type");
+			val = yyjson_mut_strcpy(doc, m_type.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_groupName != "") {
+			//conf["group"] = m_groupName;
+			key = yyjson_mut_strcpy(doc, "group");
+			val = yyjson_mut_strcpy(doc, m_groupName.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_bDynLocation) {
+			//conf["dynamicLocation"] = m_bDynLocation;
+			key = yyjson_mut_strcpy(doc, "dynamicLocation");
+			val = yyjson_mut_bool(doc, m_bDynLocation);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_bLocationCalib) {
+			//conf["locationCalib"] = m_bLocationCalib;
+			key = yyjson_mut_strcpy(doc, "locationCalib");
+			val = yyjson_mut_bool(doc, m_bLocationCalib);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_dbLongitudeCalib > 0.000001) {
+			//conf["longitudeCalib"] = m_dbLongitudeCalib;
+			key = yyjson_mut_strcpy(doc, "longitudeCalib");
+			val = yyjson_mut_real(doc, m_dbLongitudeCalib);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_dbLatitudeCalib > 0.000001) {
+			//conf["latitudeCalib"] = m_dbLatitudeCalib;
+			key = yyjson_mut_strcpy(doc, "latitudeCalib");
+			val = yyjson_mut_real(doc, m_dbLatitudeCalib);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		//if (m_mapConf != nullptr) 
+		//	conf["map"] = m_mapConf;
+		//if (m_longitude != nullptr)
+		//	conf["longitude"] = m_longitude;
+		//if (m_latitude != nullptr)
+		//	conf["latitude"] = m_latitude;
+
+		if (m_comment != "") {
+			//conf["comment"] = m_comment;
+			key = yyjson_mut_strcpy(doc, "comment");
+			val = yyjson_mut_strcpy(doc, m_comment.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_alias != "") {
+			//conf["alias"] = m_alias;
+			key = yyjson_mut_strcpy(doc, "alias");
+			val = yyjson_mut_strcpy(doc, m_alias.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_objID != "") {
+			//conf["objID"] = m_objID;
+			key = yyjson_mut_strcpy(doc, "objID");
+			val = yyjson_mut_strcpy(doc, m_objID.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		//conf["enableTask"] = m_bEnableTask;
+		key = yyjson_mut_strcpy(doc, "enableTask");
+		val = yyjson_mut_bool(doc, m_bEnableTask);
+		yyjson_mut_obj_put(conf, key, val);
+
+		//if (m_scheduleTasks.size() > 0) {
+		//	//json jTasks = json::array();
+		//	//json jT;
+		//	//for (int i = 0; i < m_scheduleTasks.size(); i++) {
+		//	//	jT.clear();
+		//	//	SCHEDULE_TASK& st = m_scheduleTasks[i];
+		//	//	st.toJson(jT);
+		//	//	jTasks.push_back(jT);
+		//	//}
+		//	//conf["tasks"] = jTasks;
+		//	yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
+		//	yyjson_mut_val* rootT = yyjson_mut_obj(doc);
+		//	for (int i = 0; i < m_scheduleTasks.size(); i++) {
+		//		yyjson_mut_obj_clear(rootT);
+		//		SCHEDULE_TASK& st = m_scheduleTasks[i];
+		//		st.toJson(rootT);
+		//		yyjson_mut_arr_append(rootTasks, rootT);
+		//	}
+		//	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
+		//	yyjson_mut_obj_put(conf, key, rootTasks);
+		//	
+		//}
+
+		//if (m_customConf != nullptr) {
+		//	conf["customConf"] = m_customConf;
+		//}
+
+		if (m_bEnableAlarm == false) {
+			//conf["enableAlarm"] = m_bEnableAlarm;
+			key = yyjson_mut_strcpy(doc, "enableAlarm");
+			val = yyjson_mut_bool(doc, m_bEnableAlarm);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bEnableIO == false) {
+			//conf["enableIO"] = m_bEnableIO;
+			key = yyjson_mut_strcpy(doc, "enableIO");
+			val = yyjson_mut_bool(doc, m_bEnableIO);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+	}
+
+	//运行时状态数据
+	if (q.getStatus) {
+		if (tds->conf->showObjOnline == true) {
+			if (m_strIoAddrBind != "" || isCustomMo() || m_bChildTds) {
+				//conf["online"] = m_bOnline;
+				key = yyjson_mut_strcpy(doc, "online");
+				val = yyjson_mut_bool(doc, m_bOnline);
+				yyjson_mut_obj_put(conf, key, val);
+			}
+
+			if (m_level == "mp" && m_pParentMO->m_strIoAddrBind != "") {
+				//conf["online"] = m_pParentMO->m_bOnline;
+				key = yyjson_mut_strcpy(doc, "online");
+				val = yyjson_mut_bool(doc, m_pParentMO->m_bOnline);
+				yyjson_mut_obj_put(conf, key, val);
+			}
+		}
+
+
+		//if (m_longitudeDyn != nullptr)
+		//	conf["longitudeDyn"] = m_longitudeDyn;
+
+		//if (m_latitudeDyn != nullptr)
+		//	conf["latitudeDyn"] = m_latitudeDyn;
+
+		//if (m_jAlarmStatus != nullptr)
+		//	conf["alarmStatus"] = m_jAlarmStatus;
+	}
+
+	if (q.getStatusDesc) {
+		if (m_strIoAddrBind != "" || isCustomMo()) {
+			if (q.getStatusDesc) {
+				//conf["onlineDesc"] = m_bOnline ? "在线" : "离线";
+				string desc = m_bOnline ? "在线" : "离线";
+				key = yyjson_mut_strcpy(doc, "onlineDesc");
+				val = yyjson_mut_strcpy(doc, desc.c_str());
+				yyjson_mut_obj_put(conf, key, val);
+			}
+		}
+	}
+
+	return true;
+}
+
 bool OBJ::loadTreeStatus(OBJ* pSrcTree)
 {
 	string tag = getTag();

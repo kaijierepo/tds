@@ -2283,7 +2283,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				q.language = session.language;
 
 				if (mode == "array") {
-					json jRlt = json::array();
+					//json jRlt = json::array();
+					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+					yyjson_mut_val* rootRlt = yyjson_mut_arr(doc);
+
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 
@@ -2295,30 +2298,57 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						//		continue;
 						//}
 
-						json jObj;
+						//json jObj;
+						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
+
 						bool selectedByLeafType = false;
-						if (pObj->toJson(jObj, q,&selectedByLeafType, session.user))
-							jRlt.push_back(jObj);
+						if (pObj->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
+							//jRlt.push_back(jObj);
+							yyjson_mut_arr_append(rootRlt, rootObj);
+						}
 					}
 					rpcResp.info = str::format("objCount=%d", objList.size());
-					result = jRlt.dump();
+
+					//result = jRlt.dump();
+					size_t len = 0;
+					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
+					result = s;
+					if (s) {
+						free(s);
+					}
+					yyjson_mut_doc_free(doc);
 				}
-				else
-				{
-					json jRlt = json::object();
+				else {
+					//json jRlt = json::object();
+					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+					yyjson_mut_val* rootRlt = yyjson_mut_obj(doc);
+
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
-						json jObj;
-						bool selectedByLeafType = false;
-						if (pObj->toJson(jObj, q,&selectedByLeafType, session.user)) {
+						//json jObj;
+						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
 
-							string tag = jObj["tag"].get<string>();
+						bool selectedByLeafType = false;
+						if (pObj->toJson(rootObj, doc, q,&selectedByLeafType, session.user)) {
+							//string tag = jObj["tag"].get<string>();
+							//tag = str::replace(tag, ".", "_");
+							//jRlt[tag] = jObj;
+
+							string tag = yyjson_mut_get_str(yyjson_mut_obj_get(rootObj, "tag"));
 							tag = str::replace(tag, ".", "_");
-							jRlt[tag] = jObj;
+							yyjson_mut_val* key = yyjson_mut_strcpy(doc, tag.c_str());
+							yyjson_mut_obj_put(rootRlt, key, rootObj);
 						}
 
 					}
-					result = jRlt.dump();
+					//result = jRlt.dump();
+					size_t len = 0;
+					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
+					result = s;
+					if (s) {
+						free(s);
+					}
+					yyjson_mut_doc_free(doc);
 				}
 			}
 			//精确查找模式，返回一个对象
@@ -2326,15 +2356,27 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				OBJ* pmo = objList[0];
 				//所有位号以用户位号的方式展示。除非另外指定rootTag
 
-				json j;
+				//json j;
+				yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+				yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
+
+
 				params["rootTag"] = rootTag;
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.pRoot = pmo;
 				q.language = session.language;
 				bool selectedByLeafType = false;
-				if (pmo->toJson(j, q,&selectedByLeafType, session.user))
-					result = j.dump();
+				if (pmo->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
+					//result = j.dump();
+					size_t len = 0;
+					auto s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
+					result = s;
+					if (s) {
+						free(s);
+					}
+					yyjson_mut_doc_free(doc);
+				}
 			}
 			else
 			{

@@ -278,7 +278,8 @@ public:
 	virtual bool loadStatus(json& status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
-	virtual bool toJson(json& conf, OBJ_QUERIER querier,bool* isSelectedByLeafType = nullptr, const string& user = "admin");
+	virtual bool toJson(json& conf, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
+	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	//从srcTree找到与自身对应的对象，并拷贝以该对象为根节点的子树的状态
 	virtual bool loadTreeStatus(OBJ* pSrcTree);
