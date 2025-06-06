@@ -308,6 +308,370 @@ bool MP::loadConf(json& conf,bool bCreate)
 	return false;
 }
 
+bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
+{
+	OBJ::loadConf(conf, doc);
+
+	//if (conf["valType"] != nullptr)
+	//	m_valType = conf["valType"].get<string>();
+	if (yyjson_mut_obj_get(conf, "valType")) {
+		m_valType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "valType"));
+	}
+
+	m_valTypeLabel = getValTypeLabel(m_valType);
+
+	//if (conf["alarmMp"] != nullptr)
+	//	m_alarmMp = conf["alarmMp"].get<bool>();
+	//else
+	//	m_alarmMp = false;
+	if (yyjson_mut_obj_get(conf, "alarmMp")) {
+		m_alarmMp = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "alarmMp"));
+	}
+	else {
+		m_alarmMp = false;
+	}
+
+	////不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
+	//if (conf["unit"] != nullptr)
+	//	m_strUnit = conf["unit"].get<string>();
+	if (yyjson_mut_obj_get(conf, "unit")) {
+		m_strUnit = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "unit"));
+	}
+
+	//if (conf["decimalDigits"] != nullptr)
+	//	m_decimalDigits = conf["decimalDigits"].get<int>();
+	//else
+	//	m_decimalDigits = -1;
+	if (yyjson_mut_obj_get(conf, "decimalDigits")) {
+		m_decimalDigits = yyjson_mut_get_int(yyjson_mut_obj_get(conf, "decimalDigits"));
+	}
+	else {
+		m_decimalDigits = -1;
+	}
+
+	//if (conf["ioType"] != nullptr)
+	//{
+	//	m_ioType = conf["ioType"].get<string>();
+	//	//m_ioTypeLabel = getIOTypeLabel(m_ioType);
+	//}
+	if (yyjson_mut_obj_get(conf, "ioType")) {
+		m_ioType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "ioType"));
+	}
+
+	//if (conf["alarmLimit"] != nullptr)
+	//{
+	//	json jAL = conf["alarmLimit"];
+	//	if (jAL["enableHigh"].is_boolean()) {
+	//		m_alarmLimit.enableHigh = jAL["enableHigh"].get<bool>();
+	//	}
+	//	if (jAL["high"].is_number()) {
+	//		m_alarmLimit.high = jAL["high"].get<float>();
+	//	}
+	//	if (jAL["enableLow"].is_boolean()) {
+	//		m_alarmLimit.enableLow = jAL["enableLow"].get<bool>();
+	//	}
+	//	if (jAL["low"].is_number()) {
+	//		m_alarmLimit.low = jAL["low"].get<float>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "alarmLimit")) {
+		yyjson_mut_val* jAL = yyjson_mut_obj_get(conf, "alarmLimit");
+		if (yyjson_mut_obj_get(jAL, "enableHigh")) {
+			m_alarmLimit.enableHigh = yyjson_mut_get_bool(yyjson_mut_obj_get(jAL, "enableHigh"));
+		}
+		if (yyjson_mut_obj_get(jAL, "high")) {
+			m_alarmLimit.high = yyjson_mut_get_real(yyjson_mut_obj_get(jAL, "high"));
+		}
+		if (yyjson_mut_obj_get(jAL, "enableLow")) {
+			m_alarmLimit.enableLow = yyjson_mut_get_bool(yyjson_mut_obj_get(jAL, "enableLow"));
+		}
+		if (yyjson_mut_obj_get(jAL, "low")) {
+			m_alarmLimit.low = yyjson_mut_get_real(yyjson_mut_obj_get(jAL, "low"));
+		}
+	}
+
+	//if (conf["validRange"] != nullptr)
+	//{
+	//	json j = conf["validRange"];
+	//	if (j["enable"].is_boolean()) {
+	//		m_validRange.enable = j["enable"].get<bool>();
+	//	}
+	//	if (j["min"].is_number()) {
+	//		m_validRange.min = j["min"].get<double>();
+	//	}
+	//	if (j["max"].is_number()) {
+	//		m_validRange.max = j["max"].get<double>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "validRange")) {
+		yyjson_mut_val* j = yyjson_mut_obj_get(conf, "validRange");
+		if (yyjson_mut_obj_get(j, "enable")) {
+			m_validRange.enable = yyjson_mut_get_bool(yyjson_mut_obj_get(j, "enable"));
+		}
+		if (yyjson_mut_obj_get(j, "min")) {
+			m_validRange.min = yyjson_mut_get_real(yyjson_mut_obj_get(j, "min"));
+		}
+		if (yyjson_mut_obj_get(j, "max")) {
+			m_validRange.max = yyjson_mut_get_real(yyjson_mut_obj_get(j, "max"));
+		}
+	}
+
+	if (m_valType == VAL_TYPE::json)
+	{
+	//	if (conf["mpType"] != nullptr)
+	//		m_mpType = conf["mpType"].get<string>();
+		if (yyjson_mut_obj_get(conf, "mpType")) {
+			m_mpType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mpType"));
+		}
+	}
+
+	//if (conf["saveMode"] != nullptr)
+	//{
+	//	m_saveMode = conf["saveMode"].get<string>();
+	//}
+	//else
+	//{
+	//	m_saveMode = DATA_SAVE_MODE::always;
+	//}
+	if (yyjson_mut_obj_get(conf, "saveMode")) {
+		m_saveMode = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "saveMode"));
+	}
+	else {
+		m_saveMode = DATA_SAVE_MODE::always;
+	}
+
+	//if (conf["saveInterval"] != nullptr)
+	//{
+	//	json jsi = conf["saveInterval"];
+	//	m_saveInterval.hour = jsi["hour"].get<int>();
+	//	m_saveInterval.minute = jsi["minute"].get<int>();
+	//	m_saveInterval.second = jsi["second"].get<int>();
+
+	//	//周期模式但是周期设为0，相当于全部保存。此配置无效，默认修改为5分钟
+	//	if (m_saveMode == DATA_SAVE_MODE::cyclic || m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
+	//		if (getSaveInterval() == 0) {
+	//			m_saveInterval.minute = 5;
+	//		}
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "saveInterval")) {
+		yyjson_mut_val* jsi = yyjson_mut_obj_get(conf, "saveInterval");
+		m_saveInterval.hour = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "hour"));
+		m_saveInterval.minute = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "minute"));
+		m_saveInterval.second = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "second"));
+
+		//周期模式但是周期设为0，相当于全部保存。此配置无效，默认修改为5分钟
+		if (m_saveMode == DATA_SAVE_MODE::cyclic || m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
+			if (getSaveInterval() == 0) {
+				m_saveInterval.minute = 5;
+			}
+		}
+	}
+
+	//if (conf["k"] != nullptr)
+	//{
+	//	m_K = conf["k"].get<double>();
+	//}
+	//if (conf["b"] != nullptr)
+	//{
+	//	m_B = conf["b"].get<double>();
+	//}
+	if (yyjson_mut_obj_get(conf, "k")) {
+		m_K = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "k"));
+	}
+	if (yyjson_mut_obj_get(conf, "b")) {
+		m_B = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "b"));
+	}
+
+	//if (conf["deadZone"].is_number()) {
+	//	m_deadZone = conf["deadZone"].get<double>();
+	//}
+	if (yyjson_mut_obj_get(conf, "deadZone")) {
+		m_deadZone = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "deadZone"));
+	}
+
+	//if (conf["defaultVal"] != nullptr)
+	//{
+	//	//兼容一些错误书写,支持强转
+	//	if (conf["defaultVal"].is_string())
+	//	{
+	//		m_defaultVal = strVal2Val(conf["defaultVal"].get<string>());
+	//	}
+	//	else
+	//	{
+	//		m_defaultVal = strVal2Val(conf["defaultVal"].dump());
+	//	}
+
+	//	if (m_defaultVal != nullptr && m_curVal == nullptr) {
+	//		m_curVal = m_defaultVal;
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "defaultVal")) {
+		//兼容一些错误书写,支持强转
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "defaultVal"))) {
+			m_defaultVal = strVal2Val(yyjson_mut_get_str(yyjson_mut_obj_get(conf, "defaultVal")));
+		}
+		else {
+			size_t len = 0;
+			auto s = yyjson_mut_val_write(yyjson_mut_obj_get(conf, "defaultVal"), YYJSON_WRITE_NOFLAG, &len);
+			string result = s;
+			if (s) {
+				free(s);
+			}
+			m_defaultVal = strVal2Val(result);
+		}
+
+		if (m_defaultVal != nullptr && m_curVal == nullptr) {
+			m_curVal = m_defaultVal;
+		}
+	}
+
+
+	//if (m_valType == VAL_TYPE::integer) {
+	//	if (conf["isEnum"].is_boolean()) {
+	//		m_isEnum = conf["isEnum"].get<bool>();
+	//	}
+
+	//	if (conf["enum"].is_array()) {
+	//		mapEnumVal.clear();
+	//		json& jEnum = conf["enum"];
+	//		for (int i = 0; i < jEnum.size(); i++) {
+	//			json& jItem = jEnum[i];
+	//			mapEnumVal[jItem[0].get<int>()] = jItem[1].get<string>();
+	//		}
+	//	}
+	//}
+	if (m_valType == VAL_TYPE::integer) {
+		if (yyjson_mut_obj_get(conf, "isEnum")) {
+			m_isEnum = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "isEnum"));
+		}
+
+		if (yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "enum"))) {
+			mapEnumVal.clear();
+			yyjson_mut_val* jEnum = yyjson_mut_obj_get(conf, "enum");
+			size_t size = yyjson_mut_arr_size(jEnum);
+			for (size_t i = 0; i < size; i++) {
+				yyjson_mut_val* jItem = yyjson_mut_arr_get(jEnum, i);
+				int key = yyjson_mut_get_int(yyjson_mut_arr_get(jItem, 0));
+				string value = yyjson_mut_get_str(yyjson_mut_arr_get(jItem, 1));
+				mapEnumVal[key] = value;
+			}
+		}
+	}
+
+	//if (conf["expression"].is_string()) {
+	//	m_expression = conf["expression"];
+	//}
+	if (yyjson_mut_obj_get(conf, "expression")) {
+		m_expression = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "expression"));
+	}
+
+	//if (conf["mediaSrcType"] != nullptr) {
+	//	m_mediaSrcType = conf["mediaSrcType"].get<string>();
+	//}
+	if (yyjson_mut_obj_get(conf, "mediaSrcType")) {
+		m_mediaSrcType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mediaSrcType"));
+	}
+
+	//if (conf["mediaUrl"] != nullptr) {
+	//	m_mediaUrl = conf["mediaUrl"].get<string>();
+	//}
+	if (yyjson_mut_obj_get(conf, "mediaUrl")) {
+		m_mediaUrl = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mediaUrl"));
+	}
+
+	if (m_mediaSrcType == "ezviz") {
+		prj.m_enableEzviz = true;
+	}
+
+	//auto kv = conf.find("serialNo");
+	//if (kv != conf.end()) {
+	//	json& item = kv.value();
+	//	if (item.is_string()) {
+	//		m_serialNo = item.get<string>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "serialNo") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "serialNo"))) {
+		m_serialNo = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "serialNo"));
+	}
+
+	//kv = conf.find("appKey");
+	//if (kv != conf.end()) {
+	//	json& item = kv.value();
+	//	if (item.is_string()) {
+	//		m_appKey = item.get<string>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "appKey") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "appKey"))) {
+		m_appKey = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "appKey"));
+	}
+
+	//kv = conf.find("secret");
+	//if (kv != conf.end()) {
+	//	json& item = kv.value();
+	//	if (item.is_string()) {
+	//		m_secret = item.get<string>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "secret") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "secret"))) {
+		m_secret = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "secret"));
+	}
+
+	//kv = conf.find("serveStream");
+	//if (kv != conf.end()) {
+	//	json& item = kv.value();
+	//	if (item.is_boolean()) {
+	//		m_bServeStream = item.get<bool>();
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "serveStream") && yyjson_mut_is_bool(yyjson_mut_obj_get(conf, "serveStream"))) {
+		m_bServeStream = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "serveStream"));
+	}
+
+
+	////状态数据
+	//// 	val应该通过 loadStatus加载，不知道为何这里有这段代码。暂时注释。观察一段时间后删除
+	////if(conf.contains("val"))
+	////	m_curVal = conf["val"];
+	//if (conf.contains("time"))
+	//{
+	//	string s = conf["time"].get<string>();
+	//	if (s != "" && s != "-")
+	//		m_stDataLastUpdate = timeopt::str2st(s);
+	//}
+	if (yyjson_mut_obj_get(conf, "time")) {
+		string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "time"));
+		if (s != "" && s != "-") {
+			m_stDataLastUpdate = timeopt::str2st(s);
+		}
+	}
+
+	////if (conf["downSample"].is_boolean()) {
+	////	m_bDownSample = conf["downSample"].get<bool>();
+	////}
+
+	////if (conf["downSampleInterval"].is_number_integer()) {
+	////	m_downSampleInterval = conf["downSampleInterval"].get<int>();
+	////}
+
+	//if (conf["srcStreamFetch"].is_string()) {
+	//	m_srcStreamFetch = conf["srcStreamFetch"];
+	//}
+	if (yyjson_mut_obj_get(conf, "srcStreamFetch")) {
+		m_srcStreamFetch = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "srcStreamFetch"));
+	}
+
+
+	//if (conf["onChange"].is_string()) {
+	//	m_onChange = conf["onChange"];
+	//}
+	if (yyjson_mut_obj_get(conf, "onChange")) {
+		m_onChange = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "onChange"));
+	}
+
+	return false;
+}
+
 bool MP::loadStatus(json& status)
 {
 	//常量无需加载

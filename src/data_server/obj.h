@@ -197,6 +197,104 @@ struct SCHEDULE_TASK {
 		}
 	}
 
+	void fromJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+		//if (j["name"].is_string()) {
+		//	name = j["name"];
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "name"))) {
+			name = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "name"));
+		}
+
+		//if (j["dateStart"].is_string()) {
+		//	string s = j["dateStart"];
+		//	dateStart.fromStr(s);
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "dateStart"))) {
+			string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "dateStart"));
+			dateStart.fromStr(s);
+		}
+
+		//if (j["dateEnd"].is_string()) {
+		//	string s = j["dateEnd"];
+		//	dateEnd.fromStr(s);
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "dateEnd"))) {
+			string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "dateEnd"));
+			dateEnd.fromStr(s);
+		}
+
+		//if (j["type"].is_string()) {
+		//	type = j["type"];
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "type"))) {
+			type = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "type"));
+		}
+
+		//if (j["script"].is_string()) {
+		//	script = j["script"];
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "script"))) {
+			script = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "script"));
+		}
+
+		//if (j["outputTag"].is_string()) {
+		//	outputTag = j["outputTag"].get<string>();
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "outputTag"))) {
+			outputTag = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "outputTag"));
+		}
+
+		//if (j["outputVal"] != nullptr) {
+		//	outputVal = j["outputVal"];
+		//}
+		if (yyjson_mut_obj_get(conf, "outputVal") != nullptr) {
+			outputVal = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "outputVal"));
+		}
+
+		//if (j["mode"].is_string()) {
+		//	mode = j["mode"];
+		//	if (mode == "weeklyRepeat") {
+		//		if (j["time"].is_string()) {
+		//			string s = j["time"];
+		//			time.fromStr(s);
+		//		}
+		//		if (j["week"].is_array()) {
+		//			json& jWeek = j["week"];
+		//			for (int i = 0; i < jWeek.size(); ++i) {
+		//				week[i] = jWeek[i].get<bool>();
+		//			}
+		//		}
+		//	}
+		//	else if (mode == "customTimeRepeat") {
+		//		json& jRepeatInterval = j["repeatInterval"];
+		//		time.wHour = jRepeatInterval["hour"].get<int>();
+		//		time.wMinute = jRepeatInterval["minute"].get<int>();
+		//		time.wSecond = jRepeatInterval["second"].get<int>();
+		//	}
+		//}
+		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "mode"))) {
+			mode = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mode"));
+			if (mode == "weeklyRepeat") {
+				if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "time"))) {
+					string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "time"));
+					time.fromStr(s);
+				}
+				if (yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "week"))) {
+					yyjson_mut_val* jWeek = yyjson_mut_obj_get(conf, "week");
+					for (int i = 0; i < yyjson_mut_get_len(jWeek); ++i) {
+						week[i] = yyjson_mut_get_bool(yyjson_mut_arr_get(jWeek, i));
+					}
+				}
+			}
+			else if (mode == "customTimeRepeat") {
+				yyjson_mut_val* jRepeatInterval = yyjson_mut_obj_get(conf, "repeatInterval");
+				time.wHour = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "hour"));
+				time.wMinute = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "minute"));
+				time.wSecond = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "second"));
+			}
+		}
+	}
+
 	void toJson(json& j) {
 		j["name"] = name;
 		j["dateStart"] = dateStart.toStr();
@@ -220,6 +318,56 @@ struct SCHEDULE_TASK {
 			{"minute", time.wMinute},
 			{"second", time.wSecond}
 		  };
+		}
+	}
+
+	void toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+		//j["name"] = name;
+		//j["dateStart"] = dateStart.toStr();
+		//j["dateEnd"] = dateEnd.toStr();
+		//j["script"] = script;
+		//j["type"] = type;
+		//j["outputTag"] = outputTag;
+		//j["outputVal"] = outputVal;
+		//j["mode"] = mode;
+		//if (mode == "weeklyRepeat") {
+		//	j["time"] = time.toStr();
+		//	json jWeek = json::array();
+		//	for (int i = 0; i < 7; ++i) {
+		//		jWeek.push_back(week[i]);
+		//	}
+		//	j["week"] = jWeek;
+		//}
+		//else if (mode == "customTimeRepeat") {
+		//	j["repeatInterval"] = {
+		//	  {"hour", time.wHour},
+		//	  {"minute", time.wMinute},
+		//	  {"second", time.wSecond}
+		//	};
+		//}
+		yyjson_mut_obj_add_str(doc, conf, "name", name.c_str());
+		yyjson_mut_obj_add_str(doc, conf, "dateStart", dateStart.toStr().c_str());
+		yyjson_mut_obj_add_str(doc, conf, "dateEnd", dateEnd.toStr().c_str());
+		yyjson_mut_obj_add_str(doc, conf, "script", script.c_str());
+		yyjson_mut_obj_add_str(doc, conf, "type", type.c_str());
+		yyjson_mut_obj_add_str(doc, conf, "outputTag", outputTag.c_str());
+		yyjson_mut_obj_add_str(doc, conf, "outputVal", outputVal.c_str());
+		yyjson_mut_obj_add_str(doc, conf, "mode", mode.c_str());
+		if (mode == "weeklyRepeat") {
+			yyjson_mut_obj_add_str(doc, conf, "time", time.toStr().c_str());
+			yyjson_mut_val* jWeek = yyjson_mut_arr(doc);
+			for (int i = 0; i < 7; ++i) {
+				yyjson_mut_arr_add_bool(doc, jWeek, week[i]);
+			}
+			yyjson_mut_obj_add_val(doc, conf, "week", jWeek);
+		}
+		else if (mode == "customTimeRepeat") {
+			yyjson_mut_val* jRepeatInterval = yyjson_mut_obj(doc);
+
+			yyjson_mut_obj_add_int(doc, jRepeatInterval, "hour", time.wHour);
+			yyjson_mut_obj_add_int(doc, jRepeatInterval, "minute", time.wMinute);
+			yyjson_mut_obj_add_int(doc, jRepeatInterval, "second", time.wSecond);
+			yyjson_mut_obj_add_val(doc, conf, "repeatInterval", jRepeatInterval);
 		}
 	}
 
@@ -273,8 +421,10 @@ public:
 	static bool m_bDefaultOnline;
 
 	void loadTask(json& jTask);
+	void loadTask(yyjson_mut_val* conf, yyjson_mut_doc* doc);
 
-	virtual bool loadConf(json& conf,bool bCreate = true);
+	virtual bool loadConf(json& conf, bool bCreate = true);
+	virtual bool loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate = true);
 	virtual bool loadStatus(json& status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);

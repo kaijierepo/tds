@@ -61,7 +61,8 @@ public:
 
 	json strVal2Val(string s);
 
-	bool loadConf(json& conf,bool bCreate = true) override;
+	bool loadConf(json& conf, bool bCreate = true) override;
+	bool loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate = true) override;
 	bool loadStatus(json& status) override;
 	bool toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
 	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;

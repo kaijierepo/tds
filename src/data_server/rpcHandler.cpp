@@ -2054,30 +2054,118 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		prj.setObjTemplate(params);
 		rpcResp.result = "\"ok\"";
 	}
-	else if (method == "setObj")
-	{
-		if (params.is_object()) //单个设置
-		{
+	else if (method == "setObj") {
+		//if (params.is_object()) //单个设置
+		//{
+		//	if (!params.contains("tag")) {
+		//		rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+		//	}
+		//	else {
+		//		json& mo = params;
+		//		string tag = mo["tag"].get<string>();
+		//		string rootTag = "";
+		//		if (mo.contains("rootTag"))
+		//			rootTag = mo["rootTag"].get<string>();
+		//		tag = TAG::addRoot(tag, rootTag);
+		//		tag = TAG::addRoot(tag, session.org);
+		//		OBJ* pmo = prj.queryObj(tag, session.language);
+		//		if (pmo)
+		//		{
+		//			//要修改树结构,冷重载。锁住对象锁
+		//			if (params.contains("children")) { 
+		//				unique_lock<shared_mutex> lock(prj.m_csPrj);
+		//				LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
+
+		//				pmo->loadConf(mo, false);
+
+		//				//持久化
+		//				bool bSaved = prj.saveConfFile();
+		//				if (!bSaved) {
+		//					rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
+		//					LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
+		//					return true;
+		//				}
+		//				std::map<string, SCRIPT_INFO> expScripts;
+		//				prj.getAllVarExpScript();
+
+		//				//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
+		//				//ioSrv.updateTag2IOAddrBinding();
+		//				//ioSrv.updateAllChanVal();
+
+		//				rpcSrv.notify("objTreeUpdated", nullptr);
+		//				result = "\"ok\"";
+		//			}
+		//			//热重载
+		//			else {
+		//				pmo->loadConf(mo);
+		//				prj.saveConfFile();
+		//				result = "\"ok\"";
+		//			}
+		//		}
+		//		else {
+		//			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+		//		}
+		//	}
+		//}
+		//else if (params.is_array())
+		//{
+		//	bool ok = true;
+		//	for (int i = 0; i < params.size(); i++) {
+		//		json& mo = params[i];
+		//		string tag = mo["tag"].get<string>();
+		//		string rootTag = "";
+		//		if (mo.contains("rootTag"))
+		//			rootTag = mo["rootTag"].get<string>();
+		//		tag = TAG::addRoot(tag, rootTag);
+		//		tag = TAG::addRoot(tag, session.org);
+		//		OBJ* pmo = prj.queryObj(tag, session.language);
+		//		if (pmo)
+		//		{
+		//			pmo->loadConf(mo);
+		//		}
+		//		else {
+		//			ok = false;
+		//			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+		//			break;
+		//		}
+		//	}
+
+		//	if (ok) {
+		//		prj.saveConfFile();
+		//		result = "\"ok\"";
+		//	}
+		//}
+		string str = params.dump();
+
+		yyjson_doc* doc = yyjson_read(str.c_str(), strlen(str.c_str()), YYJSON_READ_NOFLAG);
+		yyjson_val* root = yyjson_doc_get_root(doc);
+		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(NULL);
+		yyjson_mut_val* mut_root = yyjson_val_mut_copy(mut_doc, root);
+		yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+		if (yyjson_mut_is_obj(mut_root)) {
 			if (!params.contains("tag")) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 			}
 			else {
-				json& mo = params;
-				string tag = mo["tag"].get<string>();
+				string tag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root, "tag"));
+
 				string rootTag = "";
-				if (mo.contains("rootTag"))
-					rootTag = mo["rootTag"].get<string>();
+				if (yyjson_mut_obj_get(mut_root, "rootTag")) {
+					rootTag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root, "rootTag"));
+				}
+
 				tag = TAG::addRoot(tag, rootTag);
 				tag = TAG::addRoot(tag, session.org);
+
 				OBJ* pmo = prj.queryObj(tag, session.language);
-				if (pmo)
-				{
+				if (pmo){
 					//要修改树结构,冷重载。锁住对象锁
-					if (params.contains("children")) { 
+					if (yyjson_mut_obj_get(mut_root, "children")) {
 						unique_lock<shared_mutex> lock(prj.m_csPrj);
 						LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
 
-						pmo->loadConf(mo, false);
+						pmo->loadConf(mut_root, mut_doc, false);
 
 						//持久化
 						bool bSaved = prj.saveConfFile();
@@ -2098,7 +2186,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					}
 					//热重载
 					else {
-						pmo->loadConf(mo);
+						pmo->loadConf(mut_root, mut_doc);
 						prj.saveConfFile();
 						result = "\"ok\"";
 					}
@@ -2108,21 +2196,23 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 			}
 		}
-		else if (params.is_array())
-		{
+		else if (yyjson_mut_is_arr(mut_root)) {
 			bool ok = true;
-			for (int i = 0; i < params.size(); i++) {
-				json& mo = params[i];
-				string tag = mo["tag"].get<string>();
+			for (int i = 0; i < yyjson_mut_get_len(mut_root); i++) {
+				yyjson_mut_val* mut_root_item = yyjson_mut_arr_get(mut_root, i);
+				string tag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root_item, "tag"));
+
 				string rootTag = "";
-				if (mo.contains("rootTag"))
-					rootTag = mo["rootTag"].get<string>();
+				if (yyjson_mut_obj_get(mut_root_item, "rootTag")) {
+					rootTag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root_item, "rootTag"));
+				}
+
 				tag = TAG::addRoot(tag, rootTag);
 				tag = TAG::addRoot(tag, session.org);
+
 				OBJ* pmo = prj.queryObj(tag, session.language);
-				if (pmo)
-				{
-					pmo->loadConf(mo);
+				if (pmo) {
+					pmo->loadConf(mut_root_item, mut_doc);
 				}
 				else {
 					ok = false;
@@ -2136,6 +2226,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				result = "\"ok\"";
 			}
 		}
+
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
 	}
 	else if (method == "setObjAttr") {
 		prj.loadConf(params, false);

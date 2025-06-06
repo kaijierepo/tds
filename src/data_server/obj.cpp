@@ -102,6 +102,16 @@ void OBJ::loadTask(json& jTask) {
 		m_scheduleTasks.push_back(st);
 	}
 }
+void OBJ::loadTask(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+	m_scheduleTasks.clear();
+	size_t indx = 0, max = 0;
+	yyjson_mut_val* taskVal;
+	yyjson_mut_arr_foreach(conf, indx, max, taskVal) {
+		SCHEDULE_TASK st;
+		st.fromJson(taskVal, doc);
+		m_scheduleTasks.push_back(st);
+	}
+}
 
 bool OBJ::loadConf(json& conf, bool bCreate)
 {
@@ -261,7 +271,324 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	return true;
 }
 
+bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
+{
+	//载入配置
+	//if (conf.contains("name")) {
+	//	m_name = conf["name"];
+	//	m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
+	//}
+	if (yyjson_mut_obj_get(conf, "name")) {
+		string name = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "name"));
+		m_name = name;
+		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
+	}
 
+	//if (conf.contains("nameTranslate")) {
+	//	for (auto& i : conf["nameTranslate"].items()) {
+	//		m_mapNameTranslate[i.key()] = i.value();
+	//	}
+	//	if (m_mapNameTranslate["zh"] == "") {
+	//		m_mapNameTranslate["zh"] = m_name;
+	//	}
+	//}
+	if (yyjson_mut_obj_get(conf, "nameTranslate")) {
+		yyjson_mut_val* nameTrans = yyjson_mut_obj_get(conf, "nameTranslate");
+		if (nameTrans) {
+			yyjson_mut_val* key, * val;
+			size_t indx = 0, max = 0;
+			yyjson_mut_obj_foreach(nameTrans, indx, max, key, val) {
+				m_mapNameTranslate[yyjson_mut_get_str(key)] = yyjson_mut_get_str(val);
+			}
+			if (m_mapNameTranslate["zh"] == "") {
+				m_mapNameTranslate["zh"] = m_name;
+			}
+		}
+	}
+
+	//if (conf.contains("level")) {
+	//	m_level = conf["level"];
+	//}
+	if (yyjson_mut_obj_get(conf, "level")) {
+		string level = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "level"));
+		m_level = level;
+	}
+
+	//if (conf.contains("type")) {
+	//	m_type = conf["type"];
+	//}
+	if (yyjson_mut_obj_get(conf, "type")) {
+		string type = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "type"));
+		m_type = type;
+	}
+
+	//if (conf.contains("childTds")) {
+	//	m_bChildTds = conf["childTds"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "childTds")) {
+		m_bChildTds = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "childTds"));
+	}
+
+	//if (conf.contains("streamAccess")) {
+	//	m_streamAccess = conf["streamAccess"].get<string>();
+	//}
+	if (yyjson_mut_obj_get(conf, "streamAccess")) {
+		m_streamAccess = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "streamAccess"));
+	}
+
+	//if (conf.contains("group")) {
+	//	m_groupName = conf["group"].get<string>();
+	//}
+	if (yyjson_mut_obj_get(conf, "group")) {
+		m_groupName = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "group"));
+	}
+
+	//if (conf.contains("dynamicLocation"))
+	//{
+	//	m_bDynLocation = conf["dynamicLocation"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "dynamicLocation")) {
+		m_bDynLocation = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "dynamicLocation"));
+	}
+
+	//if (conf.contains("locationCalib"))
+	//{
+	//	m_bLocationCalib = conf["locationCalib"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "locationCalib")) {
+		m_bLocationCalib = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "locationCalib"));
+	}
+
+	//if (conf.contains("longitudeCalib"))
+	//{
+	//	m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
+	//}
+	if (yyjson_mut_obj_get(conf, "longitudeCalib")) {
+		m_dbLongitudeCalib = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "longitudeCalib"));
+	}
+
+	//if (conf.contains("latitudeCalib"))
+	//{
+	//	m_dbLatitudeCalib = conf["latitudeCalib"].get<double>();
+	//}
+	if (yyjson_mut_obj_get(conf, "latitudeCalib")) {
+		m_dbLatitudeCalib = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "latitudeCalib"));
+	}
+
+	//if (conf.contains("longitude"))
+	//	m_longitude = conf["longitude"];
+	if (yyjson_mut_obj_get(conf, "longitude")) {
+		m_longitude = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "longitude"));
+	}
+
+	//if (conf.contains("latitude"))
+	//	m_latitude = conf["latitude"];
+	if (yyjson_mut_obj_get(conf, "latitude")) {
+		m_latitude = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "latitude"));
+	}
+
+	//if (conf.contains("map")) {
+	//	m_mapConf.merge_patch(conf["map"]);
+	//}
+	if (yyjson_mut_obj_get(conf, "map")) {
+		yyjson_mut_val* mapConf = yyjson_mut_obj_get(conf, "map");
+		if (mapConf) {
+			size_t indx = 0, max = 0;
+			yyjson_mut_val* key, * val;
+			yyjson_mut_obj_foreach(mapConf, indx, max, key, val) {
+				m_mapConf[yyjson_mut_get_str(key)] = yyjson_mut_get_str(val);
+			}
+		}
+	}
+
+	//if (conf.contains("enableTask")) {
+	//	m_bEnableTask = conf["enableTask"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "enableTask")) {
+		m_bEnableTask = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableTask"));
+	}
+
+	//if (conf.contains("tasks")) {
+	//	loadTask(conf["tasks"]);
+	//}
+	if (yyjson_mut_obj_get(conf, "tasks")) {
+		yyjson_mut_val* rootTask = yyjson_mut_obj_get(conf, "tasks");
+		loadTask(rootTask, doc);
+	}
+
+	//if (conf["comment"].is_string()) {
+	//	m_comment = conf["comment"];
+	//}
+	if (yyjson_mut_obj_get(conf, "comment")) {
+		m_comment = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "comment"));
+	}
+
+	//if (conf["objID"].is_string()) {
+	//	m_objID = conf["objID"];
+	//}
+	if (yyjson_mut_obj_get(conf, "objID")) {
+		m_objID = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "objID"));
+	}
+
+	//if (conf["alias"].is_string()) {
+	//	m_comment = conf["alias"];
+	//}
+	if (yyjson_mut_obj_get(conf, "alias")) {
+		m_alias = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "alias"));
+	}
+
+	//if (conf.contains("customConf")) {
+	//	m_customConf = conf["customConf"];
+	//}
+
+	//if (conf.contains("ioAddrBind"))
+	//	m_strIoAddrBind = conf["ioAddrBind"];
+	if (yyjson_mut_obj_get(conf, "ioAddrBind")) {
+		m_strIoAddrBind = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "ioAddrBind"));
+	}
+
+	//if (conf.contains("enableAlarm"))
+	//{
+	//	m_bEnableAlarm = conf["enableAlarm"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "enableAlarm")) {
+		m_bEnableAlarm = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableAlarm"));
+	}
+
+	//if (conf.contains("enableIO"))
+	//{
+	//	m_bEnableIO = conf["enableIO"].get<bool>();
+	//}
+	if (yyjson_mut_obj_get(conf, "enableIO")) {
+		m_bEnableIO = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableIO"));
+	}
+
+	//if (conf.contains("children")) {
+	//	auto children = conf["children"];
+	//	if (bCreate) {
+	//		for (auto& child : children)
+	//		{
+	//			OBJ* pmo;
+	//			if ((child.contains("level") && child["level"] == "mp") ||
+	//				(child.contains("type") && child["type"] == "mp")) {  //保持一段时间兼容，后面删除
+	//				pmo = new MP();
+	//			}
+	//			else
+	//				pmo = new OBJ();
+
+	//			if (pmo)
+	//			{
+	//				pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+	//				pmo->loadConf(child, bCreate);
+	//				m_childObj.push_back(pmo);
+	//			}
+	//		}
+	//	}
+	//	else {
+	//		//增量更新
+	//		map<string, OBJ*> oldChildren;
+	//		for (auto& i : m_childObj)
+	//		{
+	//			oldChildren[i->m_name] = i;
+	//		}
+	//		m_childObj.clear();
+
+	//		for (auto& child : children) {
+	//			if (child.contains("name")) {
+	//				string childName = child["name"];
+	//				auto iter = oldChildren.find(childName);
+	//				if (iter != oldChildren.end()) {
+	//					OBJ* pmo = iter->second;
+	//					pmo->loadConf(child, false);
+	//					m_childObj.push_back(pmo);
+	//					oldChildren.erase(iter); //删除已处理的对象
+	//				}
+	//				else
+	//				{
+	//					OBJ* pmo;
+	//					if (child.contains("level") && child["level"] == "mp") {
+	//						pmo = new MP();
+	//					}
+	//					else
+	//						pmo = new OBJ();
+	//					if (pmo)
+	//					{
+	//						pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+	//						pmo->loadConf(child, true);
+	//						m_childObj.push_back(pmo);
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+
+	//}
+	if (yyjson_mut_obj_get(conf, "children")) {
+		yyjson_mut_val* rootChildren = yyjson_mut_obj_get(conf, "children");
+		if (bCreate) {
+			size_t indx = 0, max = 0;
+			yyjson_mut_val* childVal;
+			yyjson_mut_arr_foreach(rootChildren, indx, max, childVal) {
+				OBJ* pmo;
+				if (yyjson_mut_obj_get(childVal, "level") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "level")) == "mp") {
+					pmo = new MP();
+				}
+				else if (yyjson_mut_obj_get(childVal, "type") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "type")) == "mp") { //保持一段时间兼容，后面删除
+					pmo = new MP();
+				}
+				else {
+					pmo = new OBJ();
+				}
+
+				if (pmo) {
+					pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+					pmo->loadConf(childVal, doc, bCreate);
+					m_childObj.push_back(pmo);
+				}
+			}
+		}
+		else {
+			//增量更新
+			map<string, OBJ*> oldChildren;
+			for (auto& i : m_childObj) {
+				oldChildren[i->m_name] = i;
+			}
+			m_childObj.clear();
+
+			size_t indx = 0, max = 0;
+			yyjson_mut_val* childVal;
+			yyjson_mut_arr_foreach(rootChildren, indx, max, childVal) {
+				if (yyjson_mut_obj_get(childVal, "name")) {
+					string childName = yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "name"));
+					auto iter = oldChildren.find(childName);
+					if (iter != oldChildren.end()) {
+						OBJ* pmo = iter->second;
+						pmo->loadConf(childVal, doc, false);
+						m_childObj.push_back(pmo);
+						oldChildren.erase(iter); //删除已处理的对象
+					}
+					else {
+						OBJ* pmo;
+						if (yyjson_mut_obj_get(childVal, "level") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "level")) == "mp") {
+							pmo = new MP();
+						}
+						else {
+							pmo = new OBJ();
+						}
+
+						if (pmo) {
+							pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
+							pmo->loadConf(childVal, doc, true);
+							m_childObj.push_back(pmo);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return true;
+}
 
 //根据leafType选择器，该节点是否要返回
 //典型查询
@@ -804,28 +1131,28 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 		val = yyjson_mut_bool(doc, m_bEnableTask);
 		yyjson_mut_obj_put(conf, key, val);
 
-		//if (m_scheduleTasks.size() > 0) {
-		//	//json jTasks = json::array();
-		//	//json jT;
-		//	//for (int i = 0; i < m_scheduleTasks.size(); i++) {
-		//	//	jT.clear();
-		//	//	SCHEDULE_TASK& st = m_scheduleTasks[i];
-		//	//	st.toJson(jT);
-		//	//	jTasks.push_back(jT);
-		//	//}
-		//	//conf["tasks"] = jTasks;
-		//	yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
-		//	yyjson_mut_val* rootT = yyjson_mut_obj(doc);
-		//	for (int i = 0; i < m_scheduleTasks.size(); i++) {
-		//		yyjson_mut_obj_clear(rootT);
-		//		SCHEDULE_TASK& st = m_scheduleTasks[i];
-		//		st.toJson(rootT);
-		//		yyjson_mut_arr_append(rootTasks, rootT);
-		//	}
-		//	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
-		//	yyjson_mut_obj_put(conf, key, rootTasks);
-		//	
-		//}
+		if (m_scheduleTasks.size() > 0) {
+			//json jTasks = json::array();
+			//json jT;
+			//for (int i = 0; i < m_scheduleTasks.size(); i++) {
+			//	jT.clear();
+			//	SCHEDULE_TASK& st = m_scheduleTasks[i];
+			//	st.toJson(jT);
+			//	jTasks.push_back(jT);
+			//}
+			//conf["tasks"] = jTasks;
+			yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
+			yyjson_mut_val* rootT = yyjson_mut_obj(doc);
+			for (int i = 0; i < m_scheduleTasks.size(); i++) {
+				yyjson_mut_obj_clear(rootT);
+				SCHEDULE_TASK& st = m_scheduleTasks[i];
+				st.toJson(rootT, doc);
+				yyjson_mut_arr_append(rootTasks, rootT);
+			}
+			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
+			yyjson_mut_obj_put(conf, key, rootTasks);
+			
+		}
 
 		//if (m_customConf != nullptr) {
 		//	conf["customConf"] = m_customConf;
