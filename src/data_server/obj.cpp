@@ -102,11 +102,11 @@ void OBJ::loadTask(json& jTask) {
 		m_scheduleTasks.push_back(st);
 	}
 }
-void OBJ::loadTask(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+void OBJ::loadTask(yyjson_val* conf, yyjson_doc* doc) {
 	m_scheduleTasks.clear();
 	size_t indx = 0, max = 0;
-	yyjson_mut_val* taskVal;
-	yyjson_mut_arr_foreach(conf, indx, max, taskVal) {
+	yyjson_val* taskVal;
+	yyjson_arr_foreach(conf, indx, max, taskVal) {
 		SCHEDULE_TASK st;
 		st.fromJson(taskVal, doc);
 		m_scheduleTasks.push_back(st);
@@ -271,15 +271,15 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	return true;
 }
 
-bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
+bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 {
 	//载入配置
 	//if (conf.contains("name")) {
 	//	m_name = conf["name"];
 	//	m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
 	//}
-	if (yyjson_mut_obj_get(conf, "name")) {
-		string name = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "name"));
+	if (yyjson_obj_get(conf, "name")) {
+		string name = yyjson_get_str(yyjson_obj_get(conf, "name"));
 		m_name = name;
 		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
 	}
@@ -292,13 +292,13 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_mapNameTranslate["zh"] = m_name;
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "nameTranslate")) {
-		yyjson_mut_val* nameTrans = yyjson_mut_obj_get(conf, "nameTranslate");
+	if (yyjson_obj_get(conf, "nameTranslate")) {
+		yyjson_val* nameTrans = yyjson_obj_get(conf, "nameTranslate");
 		if (nameTrans) {
-			yyjson_mut_val* key, * val;
+			yyjson_val* key, * val;
 			size_t indx = 0, max = 0;
-			yyjson_mut_obj_foreach(nameTrans, indx, max, key, val) {
-				m_mapNameTranslate[yyjson_mut_get_str(key)] = yyjson_mut_get_str(val);
+			yyjson_obj_foreach(nameTrans, indx, max, key, val) {
+				m_mapNameTranslate[yyjson_get_str(key)] = yyjson_get_str(val);
 			}
 			if (m_mapNameTranslate["zh"] == "") {
 				m_mapNameTranslate["zh"] = m_name;
@@ -309,94 +309,94 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//if (conf.contains("level")) {
 	//	m_level = conf["level"];
 	//}
-	if (yyjson_mut_obj_get(conf, "level")) {
-		string level = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "level"));
+	if (yyjson_obj_get(conf, "level")) {
+		string level = yyjson_get_str(yyjson_obj_get(conf, "level"));
 		m_level = level;
 	}
 
 	//if (conf.contains("type")) {
 	//	m_type = conf["type"];
 	//}
-	if (yyjson_mut_obj_get(conf, "type")) {
-		string type = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "type"));
+	if (yyjson_obj_get(conf, "type")) {
+		string type = yyjson_get_str(yyjson_obj_get(conf, "type"));
 		m_type = type;
 	}
 
 	//if (conf.contains("childTds")) {
 	//	m_bChildTds = conf["childTds"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "childTds")) {
-		m_bChildTds = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "childTds"));
+	if (yyjson_obj_get(conf, "childTds")) {
+		m_bChildTds = yyjson_get_bool(yyjson_obj_get(conf, "childTds"));
 	}
 
 	//if (conf.contains("streamAccess")) {
 	//	m_streamAccess = conf["streamAccess"].get<string>();
 	//}
-	if (yyjson_mut_obj_get(conf, "streamAccess")) {
-		m_streamAccess = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "streamAccess"));
+	if (yyjson_obj_get(conf, "streamAccess")) {
+		m_streamAccess = yyjson_get_str(yyjson_obj_get(conf, "streamAccess"));
 	}
 
 	//if (conf.contains("group")) {
 	//	m_groupName = conf["group"].get<string>();
 	//}
-	if (yyjson_mut_obj_get(conf, "group")) {
-		m_groupName = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "group"));
+	if (yyjson_obj_get(conf, "group")) {
+		m_groupName = yyjson_get_str(yyjson_obj_get(conf, "group"));
 	}
 
 	//if (conf.contains("dynamicLocation"))
 	//{
 	//	m_bDynLocation = conf["dynamicLocation"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "dynamicLocation")) {
-		m_bDynLocation = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "dynamicLocation"));
+	if (yyjson_obj_get(conf, "dynamicLocation")) {
+		m_bDynLocation = yyjson_get_bool(yyjson_obj_get(conf, "dynamicLocation"));
 	}
 
 	//if (conf.contains("locationCalib"))
 	//{
 	//	m_bLocationCalib = conf["locationCalib"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "locationCalib")) {
-		m_bLocationCalib = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "locationCalib"));
+	if (yyjson_obj_get(conf, "locationCalib")) {
+		m_bLocationCalib = yyjson_get_bool(yyjson_obj_get(conf, "locationCalib"));
 	}
 
 	//if (conf.contains("longitudeCalib"))
 	//{
 	//	m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
 	//}
-	if (yyjson_mut_obj_get(conf, "longitudeCalib")) {
-		m_dbLongitudeCalib = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "longitudeCalib"));
+	if (yyjson_obj_get(conf, "longitudeCalib")) {
+		m_dbLongitudeCalib = yyjson_get_real(yyjson_obj_get(conf, "longitudeCalib"));
 	}
 
 	//if (conf.contains("latitudeCalib"))
 	//{
 	//	m_dbLatitudeCalib = conf["latitudeCalib"].get<double>();
 	//}
-	if (yyjson_mut_obj_get(conf, "latitudeCalib")) {
-		m_dbLatitudeCalib = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "latitudeCalib"));
+	if (yyjson_obj_get(conf, "latitudeCalib")) {
+		m_dbLatitudeCalib = yyjson_get_real(yyjson_obj_get(conf, "latitudeCalib"));
 	}
 
 	//if (conf.contains("longitude"))
 	//	m_longitude = conf["longitude"];
-	if (yyjson_mut_obj_get(conf, "longitude")) {
-		m_longitude = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "longitude"));
+	if (yyjson_obj_get(conf, "longitude")) {
+		m_longitude = yyjson_get_str(yyjson_obj_get(conf, "longitude"));
 	}
 
 	//if (conf.contains("latitude"))
 	//	m_latitude = conf["latitude"];
-	if (yyjson_mut_obj_get(conf, "latitude")) {
-		m_latitude = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "latitude"));
+	if (yyjson_obj_get(conf, "latitude")) {
+		m_latitude = yyjson_get_str(yyjson_obj_get(conf, "latitude"));
 	}
 
 	//if (conf.contains("map")) {
 	//	m_mapConf.merge_patch(conf["map"]);
 	//}
-	if (yyjson_mut_obj_get(conf, "map")) {
-		yyjson_mut_val* mapConf = yyjson_mut_obj_get(conf, "map");
+	if (yyjson_obj_get(conf, "map")) {
+		yyjson_val* mapConf = yyjson_obj_get(conf, "map");
 		if (mapConf) {
 			size_t indx = 0, max = 0;
-			yyjson_mut_val* key, * val;
-			yyjson_mut_obj_foreach(mapConf, indx, max, key, val) {
-				m_mapConf[yyjson_mut_get_str(key)] = yyjson_mut_get_str(val);
+			yyjson_val* key, * val;
+			yyjson_obj_foreach(mapConf, indx, max, key, val) {
+				m_mapConf[yyjson_get_str(key)] = yyjson_get_str(val);
 			}
 		}
 	}
@@ -404,37 +404,37 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//if (conf.contains("enableTask")) {
 	//	m_bEnableTask = conf["enableTask"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "enableTask")) {
-		m_bEnableTask = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableTask"));
+	if (yyjson_obj_get(conf, "enableTask")) {
+		m_bEnableTask = yyjson_get_bool(yyjson_obj_get(conf, "enableTask"));
 	}
 
 	//if (conf.contains("tasks")) {
 	//	loadTask(conf["tasks"]);
 	//}
-	if (yyjson_mut_obj_get(conf, "tasks")) {
-		yyjson_mut_val* rootTask = yyjson_mut_obj_get(conf, "tasks");
+	if (yyjson_obj_get(conf, "tasks")) {
+		yyjson_val* rootTask = yyjson_obj_get(conf, "tasks");
 		loadTask(rootTask, doc);
 	}
 
 	//if (conf["comment"].is_string()) {
 	//	m_comment = conf["comment"];
 	//}
-	if (yyjson_mut_obj_get(conf, "comment")) {
-		m_comment = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "comment"));
+	if (yyjson_obj_get(conf, "comment")) {
+		m_comment = yyjson_get_str(yyjson_obj_get(conf, "comment"));
 	}
 
 	//if (conf["objID"].is_string()) {
 	//	m_objID = conf["objID"];
 	//}
-	if (yyjson_mut_obj_get(conf, "objID")) {
-		m_objID = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "objID"));
+	if (yyjson_obj_get(conf, "objID")) {
+		m_objID = yyjson_get_str(yyjson_obj_get(conf, "objID"));
 	}
 
 	//if (conf["alias"].is_string()) {
 	//	m_comment = conf["alias"];
 	//}
-	if (yyjson_mut_obj_get(conf, "alias")) {
-		m_alias = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "alias"));
+	if (yyjson_obj_get(conf, "alias")) {
+		m_alias = yyjson_get_str(yyjson_obj_get(conf, "alias"));
 	}
 
 	//if (conf.contains("customConf")) {
@@ -443,24 +443,24 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 
 	//if (conf.contains("ioAddrBind"))
 	//	m_strIoAddrBind = conf["ioAddrBind"];
-	if (yyjson_mut_obj_get(conf, "ioAddrBind")) {
-		m_strIoAddrBind = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "ioAddrBind"));
+	if (yyjson_obj_get(conf, "ioAddrBind")) {
+		m_strIoAddrBind = yyjson_get_str(yyjson_obj_get(conf, "ioAddrBind"));
 	}
 
 	//if (conf.contains("enableAlarm"))
 	//{
 	//	m_bEnableAlarm = conf["enableAlarm"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "enableAlarm")) {
-		m_bEnableAlarm = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableAlarm"));
+	if (yyjson_obj_get(conf, "enableAlarm")) {
+		m_bEnableAlarm = yyjson_get_bool(yyjson_obj_get(conf, "enableAlarm"));
 	}
 
 	//if (conf.contains("enableIO"))
 	//{
 	//	m_bEnableIO = conf["enableIO"].get<bool>();
 	//}
-	if (yyjson_mut_obj_get(conf, "enableIO")) {
-		m_bEnableIO = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "enableIO"));
+	if (yyjson_obj_get(conf, "enableIO")) {
+		m_bEnableIO = yyjson_get_bool(yyjson_obj_get(conf, "enableIO"));
 	}
 
 	//if (conf.contains("children")) {
@@ -523,17 +523,17 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//	}
 
 	//}
-	if (yyjson_mut_obj_get(conf, "children")) {
-		yyjson_mut_val* rootChildren = yyjson_mut_obj_get(conf, "children");
+	if (yyjson_obj_get(conf, "children")) {
+		yyjson_val* rootChildren = yyjson_obj_get(conf, "children");
 		if (bCreate) {
 			size_t indx = 0, max = 0;
-			yyjson_mut_val* childVal;
-			yyjson_mut_arr_foreach(rootChildren, indx, max, childVal) {
+			yyjson_val* childVal;
+			yyjson_arr_foreach(rootChildren, indx, max, childVal) {
 				OBJ* pmo;
-				if (yyjson_mut_obj_get(childVal, "level") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "level")) == "mp") {
+				if (yyjson_obj_get(childVal, "level") && yyjson_get_str(yyjson_obj_get(childVal, "level")) == "mp") {
 					pmo = new MP();
 				}
-				else if (yyjson_mut_obj_get(childVal, "type") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "type")) == "mp") { //保持一段时间兼容，后面删除
+				else if (yyjson_obj_get(childVal, "type") && yyjson_get_str(yyjson_obj_get(childVal, "type")) == "mp") { //保持一段时间兼容，后面删除
 					pmo = new MP();
 				}
 				else {
@@ -556,10 +556,10 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 			m_childObj.clear();
 
 			size_t indx = 0, max = 0;
-			yyjson_mut_val* childVal;
-			yyjson_mut_arr_foreach(rootChildren, indx, max, childVal) {
-				if (yyjson_mut_obj_get(childVal, "name")) {
-					string childName = yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "name"));
+			yyjson_val* childVal;
+			yyjson_arr_foreach(rootChildren, indx, max, childVal) {
+				if (yyjson_obj_get(childVal, "name")) {
+					string childName = yyjson_get_str(yyjson_obj_get(childVal, "name"));
 					auto iter = oldChildren.find(childName);
 					if (iter != oldChildren.end()) {
 						OBJ* pmo = iter->second;
@@ -569,7 +569,7 @@ bool OBJ::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 					}
 					else {
 						OBJ* pmo;
-						if (yyjson_mut_obj_get(childVal, "level") && yyjson_mut_get_str(yyjson_mut_obj_get(childVal, "level")) == "mp") {
+						if (yyjson_obj_get(childVal, "level") && yyjson_get_str(yyjson_obj_get(childVal, "level")) == "mp") {
 							pmo = new MP();
 						}
 						else {

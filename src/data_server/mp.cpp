@@ -308,14 +308,14 @@ bool MP::loadConf(json& conf,bool bCreate)
 	return false;
 }
 
-bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
+bool MP::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 {
 	OBJ::loadConf(conf, doc);
 
 	//if (conf["valType"] != nullptr)
 	//	m_valType = conf["valType"].get<string>();
-	if (yyjson_mut_obj_get(conf, "valType")) {
-		m_valType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "valType"));
+	if (yyjson_obj_get(conf, "valType")) {
+		m_valType = yyjson_get_str(yyjson_obj_get(conf, "valType"));
 	}
 
 	m_valTypeLabel = getValTypeLabel(m_valType);
@@ -324,8 +324,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//	m_alarmMp = conf["alarmMp"].get<bool>();
 	//else
 	//	m_alarmMp = false;
-	if (yyjson_mut_obj_get(conf, "alarmMp")) {
-		m_alarmMp = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "alarmMp"));
+	if (yyjson_obj_get(conf, "alarmMp")) {
+		m_alarmMp = yyjson_get_bool(yyjson_obj_get(conf, "alarmMp"));
 	}
 	else {
 		m_alarmMp = false;
@@ -334,16 +334,16 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	////不仅仅float类型可以使用单位. 整形也可以使用单位。例如： 3次   5个 等等 
 	//if (conf["unit"] != nullptr)
 	//	m_strUnit = conf["unit"].get<string>();
-	if (yyjson_mut_obj_get(conf, "unit")) {
-		m_strUnit = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "unit"));
+	if (yyjson_obj_get(conf, "unit")) {
+		m_strUnit = yyjson_get_str(yyjson_obj_get(conf, "unit"));
 	}
 
 	//if (conf["decimalDigits"] != nullptr)
 	//	m_decimalDigits = conf["decimalDigits"].get<int>();
 	//else
 	//	m_decimalDigits = -1;
-	if (yyjson_mut_obj_get(conf, "decimalDigits")) {
-		m_decimalDigits = yyjson_mut_get_int(yyjson_mut_obj_get(conf, "decimalDigits"));
+	if (yyjson_obj_get(conf, "decimalDigits")) {
+		m_decimalDigits = yyjson_get_int(yyjson_obj_get(conf, "decimalDigits"));
 	}
 	else {
 		m_decimalDigits = -1;
@@ -354,8 +354,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//	m_ioType = conf["ioType"].get<string>();
 	//	//m_ioTypeLabel = getIOTypeLabel(m_ioType);
 	//}
-	if (yyjson_mut_obj_get(conf, "ioType")) {
-		m_ioType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "ioType"));
+	if (yyjson_obj_get(conf, "ioType")) {
+		m_ioType = yyjson_get_str(yyjson_obj_get(conf, "ioType"));
 	}
 
 	//if (conf["alarmLimit"] != nullptr)
@@ -374,19 +374,19 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_alarmLimit.low = jAL["low"].get<float>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "alarmLimit")) {
-		yyjson_mut_val* jAL = yyjson_mut_obj_get(conf, "alarmLimit");
-		if (yyjson_mut_obj_get(jAL, "enableHigh")) {
-			m_alarmLimit.enableHigh = yyjson_mut_get_bool(yyjson_mut_obj_get(jAL, "enableHigh"));
+	if (yyjson_obj_get(conf, "alarmLimit")) {
+		yyjson_val* jAL = yyjson_obj_get(conf, "alarmLimit");
+		if (yyjson_obj_get(jAL, "enableHigh")) {
+			m_alarmLimit.enableHigh = yyjson_get_bool(yyjson_obj_get(jAL, "enableHigh"));
 		}
-		if (yyjson_mut_obj_get(jAL, "high")) {
-			m_alarmLimit.high = yyjson_mut_get_real(yyjson_mut_obj_get(jAL, "high"));
+		if (yyjson_obj_get(jAL, "high")) {
+			m_alarmLimit.high = yyjson_get_real(yyjson_obj_get(jAL, "high"));
 		}
-		if (yyjson_mut_obj_get(jAL, "enableLow")) {
-			m_alarmLimit.enableLow = yyjson_mut_get_bool(yyjson_mut_obj_get(jAL, "enableLow"));
+		if (yyjson_obj_get(jAL, "enableLow")) {
+			m_alarmLimit.enableLow = yyjson_get_bool(yyjson_obj_get(jAL, "enableLow"));
 		}
-		if (yyjson_mut_obj_get(jAL, "low")) {
-			m_alarmLimit.low = yyjson_mut_get_real(yyjson_mut_obj_get(jAL, "low"));
+		if (yyjson_obj_get(jAL, "low")) {
+			m_alarmLimit.low = yyjson_get_real(yyjson_obj_get(jAL, "low"));
 		}
 	}
 
@@ -403,16 +403,16 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_validRange.max = j["max"].get<double>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "validRange")) {
-		yyjson_mut_val* j = yyjson_mut_obj_get(conf, "validRange");
-		if (yyjson_mut_obj_get(j, "enable")) {
-			m_validRange.enable = yyjson_mut_get_bool(yyjson_mut_obj_get(j, "enable"));
+	if (yyjson_obj_get(conf, "validRange")) {
+		yyjson_val* j = yyjson_obj_get(conf, "validRange");
+		if (yyjson_obj_get(j, "enable")) {
+			m_validRange.enable = yyjson_get_bool(yyjson_obj_get(j, "enable"));
 		}
-		if (yyjson_mut_obj_get(j, "min")) {
-			m_validRange.min = yyjson_mut_get_real(yyjson_mut_obj_get(j, "min"));
+		if (yyjson_obj_get(j, "min")) {
+			m_validRange.min = yyjson_get_real(yyjson_obj_get(j, "min"));
 		}
-		if (yyjson_mut_obj_get(j, "max")) {
-			m_validRange.max = yyjson_mut_get_real(yyjson_mut_obj_get(j, "max"));
+		if (yyjson_obj_get(j, "max")) {
+			m_validRange.max = yyjson_get_real(yyjson_obj_get(j, "max"));
 		}
 	}
 
@@ -420,8 +420,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	{
 	//	if (conf["mpType"] != nullptr)
 	//		m_mpType = conf["mpType"].get<string>();
-		if (yyjson_mut_obj_get(conf, "mpType")) {
-			m_mpType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mpType"));
+		if (yyjson_obj_get(conf, "mpType")) {
+			m_mpType = yyjson_get_str(yyjson_obj_get(conf, "mpType"));
 		}
 	}
 
@@ -433,8 +433,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//{
 	//	m_saveMode = DATA_SAVE_MODE::always;
 	//}
-	if (yyjson_mut_obj_get(conf, "saveMode")) {
-		m_saveMode = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "saveMode"));
+	if (yyjson_obj_get(conf, "saveMode")) {
+		m_saveMode = yyjson_get_str(yyjson_obj_get(conf, "saveMode"));
 	}
 	else {
 		m_saveMode = DATA_SAVE_MODE::always;
@@ -454,11 +454,11 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		}
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "saveInterval")) {
-		yyjson_mut_val* jsi = yyjson_mut_obj_get(conf, "saveInterval");
-		m_saveInterval.hour = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "hour"));
-		m_saveInterval.minute = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "minute"));
-		m_saveInterval.second = yyjson_mut_get_int(yyjson_mut_obj_get(jsi, "second"));
+	if (yyjson_obj_get(conf, "saveInterval")) {
+		yyjson_val* jsi = yyjson_obj_get(conf, "saveInterval");
+		m_saveInterval.hour = yyjson_get_int(yyjson_obj_get(jsi, "hour"));
+		m_saveInterval.minute = yyjson_get_int(yyjson_obj_get(jsi, "minute"));
+		m_saveInterval.second = yyjson_get_int(yyjson_obj_get(jsi, "second"));
 
 		//周期模式但是周期设为0，相当于全部保存。此配置无效，默认修改为5分钟
 		if (m_saveMode == DATA_SAVE_MODE::cyclic || m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
@@ -476,18 +476,18 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//{
 	//	m_B = conf["b"].get<double>();
 	//}
-	if (yyjson_mut_obj_get(conf, "k")) {
-		m_K = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "k"));
+	if (yyjson_obj_get(conf, "k")) {
+		m_K = yyjson_get_real(yyjson_obj_get(conf, "k"));
 	}
-	if (yyjson_mut_obj_get(conf, "b")) {
-		m_B = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "b"));
+	if (yyjson_obj_get(conf, "b")) {
+		m_B = yyjson_get_real(yyjson_obj_get(conf, "b"));
 	}
 
 	//if (conf["deadZone"].is_number()) {
 	//	m_deadZone = conf["deadZone"].get<double>();
 	//}
-	if (yyjson_mut_obj_get(conf, "deadZone")) {
-		m_deadZone = yyjson_mut_get_real(yyjson_mut_obj_get(conf, "deadZone"));
+	if (yyjson_obj_get(conf, "deadZone")) {
+		m_deadZone = yyjson_get_real(yyjson_obj_get(conf, "deadZone"));
 	}
 
 	//if (conf["defaultVal"] != nullptr)
@@ -506,14 +506,14 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_curVal = m_defaultVal;
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "defaultVal")) {
+	if (yyjson_obj_get(conf, "defaultVal")) {
 		//兼容一些错误书写,支持强转
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "defaultVal"))) {
-			m_defaultVal = strVal2Val(yyjson_mut_get_str(yyjson_mut_obj_get(conf, "defaultVal")));
+		if (yyjson_is_str(yyjson_obj_get(conf, "defaultVal"))) {
+			m_defaultVal = strVal2Val(yyjson_get_str(yyjson_obj_get(conf, "defaultVal")));
 		}
 		else {
 			size_t len = 0;
-			auto s = yyjson_mut_val_write(yyjson_mut_obj_get(conf, "defaultVal"), YYJSON_WRITE_NOFLAG, &len);
+			auto s = yyjson_val_write(yyjson_obj_get(conf, "defaultVal"), YYJSON_WRITE_NOFLAG, &len);
 			string result = s;
 			if (s) {
 				free(s);
@@ -542,18 +542,18 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//	}
 	//}
 	if (m_valType == VAL_TYPE::integer) {
-		if (yyjson_mut_obj_get(conf, "isEnum")) {
-			m_isEnum = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "isEnum"));
+		if (yyjson_obj_get(conf, "isEnum")) {
+			m_isEnum = yyjson_get_bool(yyjson_obj_get(conf, "isEnum"));
 		}
 
-		if (yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "enum"))) {
+		if (yyjson_is_arr(yyjson_obj_get(conf, "enum"))) {
 			mapEnumVal.clear();
-			yyjson_mut_val* jEnum = yyjson_mut_obj_get(conf, "enum");
-			size_t size = yyjson_mut_arr_size(jEnum);
+			yyjson_val* jEnum = yyjson_obj_get(conf, "enum");
+			size_t size = yyjson_arr_size(jEnum);
 			for (size_t i = 0; i < size; i++) {
-				yyjson_mut_val* jItem = yyjson_mut_arr_get(jEnum, i);
-				int key = yyjson_mut_get_int(yyjson_mut_arr_get(jItem, 0));
-				string value = yyjson_mut_get_str(yyjson_mut_arr_get(jItem, 1));
+				yyjson_val* jItem = yyjson_arr_get(jEnum, i);
+				int key = yyjson_get_int(yyjson_arr_get(jItem, 0));
+				string value = yyjson_get_str(yyjson_arr_get(jItem, 1));
 				mapEnumVal[key] = value;
 			}
 		}
@@ -562,22 +562,22 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//if (conf["expression"].is_string()) {
 	//	m_expression = conf["expression"];
 	//}
-	if (yyjson_mut_obj_get(conf, "expression")) {
-		m_expression = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "expression"));
+	if (yyjson_obj_get(conf, "expression")) {
+		m_expression = yyjson_get_str(yyjson_obj_get(conf, "expression"));
 	}
 
 	//if (conf["mediaSrcType"] != nullptr) {
 	//	m_mediaSrcType = conf["mediaSrcType"].get<string>();
 	//}
-	if (yyjson_mut_obj_get(conf, "mediaSrcType")) {
-		m_mediaSrcType = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mediaSrcType"));
+	if (yyjson_obj_get(conf, "mediaSrcType")) {
+		m_mediaSrcType = yyjson_get_str(yyjson_obj_get(conf, "mediaSrcType"));
 	}
 
 	//if (conf["mediaUrl"] != nullptr) {
 	//	m_mediaUrl = conf["mediaUrl"].get<string>();
 	//}
-	if (yyjson_mut_obj_get(conf, "mediaUrl")) {
-		m_mediaUrl = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mediaUrl"));
+	if (yyjson_obj_get(conf, "mediaUrl")) {
+		m_mediaUrl = yyjson_get_str(yyjson_obj_get(conf, "mediaUrl"));
 	}
 
 	if (m_mediaSrcType == "ezviz") {
@@ -591,8 +591,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_serialNo = item.get<string>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "serialNo") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "serialNo"))) {
-		m_serialNo = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "serialNo"));
+	if (yyjson_obj_get(conf, "serialNo") && yyjson_is_arr(yyjson_obj_get(conf, "serialNo"))) {
+		m_serialNo = yyjson_get_str(yyjson_obj_get(conf, "serialNo"));
 	}
 
 	//kv = conf.find("appKey");
@@ -602,8 +602,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_appKey = item.get<string>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "appKey") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "appKey"))) {
-		m_appKey = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "appKey"));
+	if (yyjson_obj_get(conf, "appKey") && yyjson_is_arr(yyjson_obj_get(conf, "appKey"))) {
+		m_appKey = yyjson_get_str(yyjson_obj_get(conf, "appKey"));
 	}
 
 	//kv = conf.find("secret");
@@ -613,8 +613,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_secret = item.get<string>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "secret") && yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "secret"))) {
-		m_secret = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "secret"));
+	if (yyjson_obj_get(conf, "secret") && yyjson_is_arr(yyjson_obj_get(conf, "secret"))) {
+		m_secret = yyjson_get_str(yyjson_obj_get(conf, "secret"));
 	}
 
 	//kv = conf.find("serveStream");
@@ -624,8 +624,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//		m_bServeStream = item.get<bool>();
 	//	}
 	//}
-	if (yyjson_mut_obj_get(conf, "serveStream") && yyjson_mut_is_bool(yyjson_mut_obj_get(conf, "serveStream"))) {
-		m_bServeStream = yyjson_mut_get_bool(yyjson_mut_obj_get(conf, "serveStream"));
+	if (yyjson_obj_get(conf, "serveStream") && yyjson_is_bool(yyjson_obj_get(conf, "serveStream"))) {
+		m_bServeStream = yyjson_get_bool(yyjson_obj_get(conf, "serveStream"));
 	}
 
 
@@ -639,8 +639,8 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//	if (s != "" && s != "-")
 	//		m_stDataLastUpdate = timeopt::str2st(s);
 	//}
-	if (yyjson_mut_obj_get(conf, "time")) {
-		string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "time"));
+	if (yyjson_obj_get(conf, "time")) {
+		string s = yyjson_get_str(yyjson_obj_get(conf, "time"));
 		if (s != "" && s != "-") {
 			m_stDataLastUpdate = timeopt::str2st(s);
 		}
@@ -657,16 +657,16 @@ bool MP::loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate)
 	//if (conf["srcStreamFetch"].is_string()) {
 	//	m_srcStreamFetch = conf["srcStreamFetch"];
 	//}
-	if (yyjson_mut_obj_get(conf, "srcStreamFetch")) {
-		m_srcStreamFetch = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "srcStreamFetch"));
+	if (yyjson_obj_get(conf, "srcStreamFetch")) {
+		m_srcStreamFetch = yyjson_get_str(yyjson_obj_get(conf, "srcStreamFetch"));
 	}
 
 
 	//if (conf["onChange"].is_string()) {
 	//	m_onChange = conf["onChange"];
 	//}
-	if (yyjson_mut_obj_get(conf, "onChange")) {
-		m_onChange = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "onChange"));
+	if (yyjson_obj_get(conf, "onChange")) {
+		m_onChange = yyjson_get_str(yyjson_obj_get(conf, "onChange"));
 	}
 
 	return false;

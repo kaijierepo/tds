@@ -2139,20 +2139,17 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 		yyjson_doc* doc = yyjson_read(str.c_str(), strlen(str.c_str()), YYJSON_READ_NOFLAG);
 		yyjson_val* root = yyjson_doc_get_root(doc);
-		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(NULL);
-		yyjson_mut_val* mut_root = yyjson_val_mut_copy(mut_doc, root);
-		yyjson_mut_doc_set_root(mut_doc, mut_root);
 
-		if (yyjson_mut_is_obj(mut_root)) {
+		if (yyjson_is_obj(root)) {
 			if (!params.contains("tag")) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 			}
 			else {
-				string tag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root, "tag"));
+				string tag = yyjson_get_str(yyjson_obj_get(root, "tag"));
 
 				string rootTag = "";
-				if (yyjson_mut_obj_get(mut_root, "rootTag")) {
-					rootTag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root, "rootTag"));
+				if (yyjson_obj_get(root, "rootTag")) {
+					rootTag = yyjson_get_str(yyjson_obj_get(root, "rootTag"));
 				}
 
 				tag = TAG::addRoot(tag, rootTag);
@@ -2161,11 +2158,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				OBJ* pmo = prj.queryObj(tag, session.language);
 				if (pmo){
 					//要修改树结构,冷重载。锁住对象锁
-					if (yyjson_mut_obj_get(mut_root, "children")) {
+					if (yyjson_obj_get(root, "children")) {
 						unique_lock<shared_mutex> lock(prj.m_csPrj);
 						LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
 
-						pmo->loadConf(mut_root, mut_doc, false);
+						pmo->loadConf(root, doc, false);
 
 						//持久化
 						bool bSaved = prj.saveConfFile();
@@ -2186,7 +2183,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					}
 					//热重载
 					else {
-						pmo->loadConf(mut_root, mut_doc);
+						pmo->loadConf(root, doc);
 						prj.saveConfFile();
 						result = "\"ok\"";
 					}
@@ -2196,15 +2193,15 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				}
 			}
 		}
-		else if (yyjson_mut_is_arr(mut_root)) {
+		else if (yyjson_is_arr(root)) {
 			bool ok = true;
-			for (int i = 0; i < yyjson_mut_get_len(mut_root); i++) {
-				yyjson_mut_val* mut_root_item = yyjson_mut_arr_get(mut_root, i);
-				string tag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root_item, "tag"));
+			for (int i = 0; i < yyjson_get_len(root); i++) {
+				yyjson_val* root_item = yyjson_arr_get(root, i);
+				string tag = yyjson_get_str(yyjson_obj_get(root_item, "tag"));
 
 				string rootTag = "";
-				if (yyjson_mut_obj_get(mut_root_item, "rootTag")) {
-					rootTag = yyjson_mut_get_str(yyjson_mut_obj_get(mut_root_item, "rootTag"));
+				if (yyjson_obj_get(root_item, "rootTag")) {
+					rootTag = yyjson_get_str(yyjson_obj_get(root_item, "rootTag"));
 				}
 
 				tag = TAG::addRoot(tag, rootTag);
@@ -2212,7 +2209,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				OBJ* pmo = prj.queryObj(tag, session.language);
 				if (pmo) {
-					pmo->loadConf(mut_root_item, mut_doc);
+					pmo->loadConf(root_item, doc);
 				}
 				else {
 					ok = false;
@@ -2227,7 +2224,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 		}
 
-		yyjson_mut_doc_free(mut_doc);
 		yyjson_doc_free(doc);
 	}
 	else if (method == "setObjAttr") {

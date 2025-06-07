@@ -197,20 +197,20 @@ struct SCHEDULE_TASK {
 		}
 	}
 
-	void fromJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+	void fromJson(yyjson_val* conf, yyjson_doc* doc) {
 		//if (j["name"].is_string()) {
 		//	name = j["name"];
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "name"))) {
-			name = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "name"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "name"))) {
+			name = yyjson_get_str(yyjson_obj_get(conf, "name"));
 		}
 
 		//if (j["dateStart"].is_string()) {
 		//	string s = j["dateStart"];
 		//	dateStart.fromStr(s);
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "dateStart"))) {
-			string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "dateStart"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "dateStart"))) {
+			string s = yyjson_get_str(yyjson_obj_get(conf, "dateStart"));
 			dateStart.fromStr(s);
 		}
 
@@ -218,37 +218,37 @@ struct SCHEDULE_TASK {
 		//	string s = j["dateEnd"];
 		//	dateEnd.fromStr(s);
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "dateEnd"))) {
-			string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "dateEnd"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "dateEnd"))) {
+			string s = yyjson_get_str(yyjson_obj_get(conf, "dateEnd"));
 			dateEnd.fromStr(s);
 		}
 
 		//if (j["type"].is_string()) {
 		//	type = j["type"];
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "type"))) {
-			type = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "type"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "type"))) {
+			type = yyjson_get_str(yyjson_obj_get(conf, "type"));
 		}
 
 		//if (j["script"].is_string()) {
 		//	script = j["script"];
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "script"))) {
-			script = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "script"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "script"))) {
+			script = yyjson_get_str(yyjson_obj_get(conf, "script"));
 		}
 
 		//if (j["outputTag"].is_string()) {
 		//	outputTag = j["outputTag"].get<string>();
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "outputTag"))) {
-			outputTag = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "outputTag"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "outputTag"))) {
+			outputTag = yyjson_get_str(yyjson_obj_get(conf, "outputTag"));
 		}
 
 		//if (j["outputVal"] != nullptr) {
 		//	outputVal = j["outputVal"];
 		//}
-		if (yyjson_mut_obj_get(conf, "outputVal") != nullptr) {
-			outputVal = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "outputVal"));
+		if (yyjson_obj_get(conf, "outputVal") != nullptr) {
+			outputVal = yyjson_get_str(yyjson_obj_get(conf, "outputVal"));
 		}
 
 		//if (j["mode"].is_string()) {
@@ -272,25 +272,25 @@ struct SCHEDULE_TASK {
 		//		time.wSecond = jRepeatInterval["second"].get<int>();
 		//	}
 		//}
-		if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "mode"))) {
-			mode = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "mode"));
+		if (yyjson_is_str(yyjson_obj_get(conf, "mode"))) {
+			mode = yyjson_get_str(yyjson_obj_get(conf, "mode"));
 			if (mode == "weeklyRepeat") {
-				if (yyjson_mut_is_str(yyjson_mut_obj_get(conf, "time"))) {
-					string s = yyjson_mut_get_str(yyjson_mut_obj_get(conf, "time"));
+				if (yyjson_is_str(yyjson_obj_get(conf, "time"))) {
+					string s = yyjson_get_str(yyjson_obj_get(conf, "time"));
 					time.fromStr(s);
 				}
-				if (yyjson_mut_is_arr(yyjson_mut_obj_get(conf, "week"))) {
-					yyjson_mut_val* jWeek = yyjson_mut_obj_get(conf, "week");
-					for (int i = 0; i < yyjson_mut_get_len(jWeek); ++i) {
-						week[i] = yyjson_mut_get_bool(yyjson_mut_arr_get(jWeek, i));
+				if (yyjson_is_arr(yyjson_obj_get(conf, "week"))) {
+					yyjson_val* jWeek = yyjson_obj_get(conf, "week");
+					for (int i = 0; i < yyjson_get_len(jWeek); ++i) {
+						week[i] = yyjson_get_bool(yyjson_arr_get(jWeek, i));
 					}
 				}
 			}
 			else if (mode == "customTimeRepeat") {
-				yyjson_mut_val* jRepeatInterval = yyjson_mut_obj_get(conf, "repeatInterval");
-				time.wHour = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "hour"));
-				time.wMinute = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "minute"));
-				time.wSecond = yyjson_mut_get_int(yyjson_mut_obj_get(jRepeatInterval, "second"));
+				yyjson_val* jRepeatInterval = yyjson_obj_get(conf, "repeatInterval");
+				time.wHour = yyjson_get_int(yyjson_obj_get(jRepeatInterval, "hour"));
+				time.wMinute = yyjson_get_int(yyjson_obj_get(jRepeatInterval, "minute"));
+				time.wSecond = yyjson_get_int(yyjson_obj_get(jRepeatInterval, "second"));
 			}
 		}
 	}
@@ -421,10 +421,10 @@ public:
 	static bool m_bDefaultOnline;
 
 	void loadTask(json& jTask);
-	void loadTask(yyjson_mut_val* conf, yyjson_mut_doc* doc);
+	void loadTask(yyjson_val* conf, yyjson_doc* doc);
 
 	virtual bool loadConf(json& conf, bool bCreate = true);
-	virtual bool loadConf(yyjson_mut_val* conf, yyjson_mut_doc* doc, bool bCreate = true);
+	virtual bool loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate = true);
 	virtual bool loadStatus(json& status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
