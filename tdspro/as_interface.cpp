@@ -5,15 +5,6 @@
 #include "userMng.h"
 #include <cstdarg>
 
-bool funcImp_obj_isEnableAlarm(string tag, string lang)
-{
-	OBJ* pObj = prj.queryObj(tag, lang);
-	if (pObj) {
-		return pObj->m_bEnableAlarm;
-	}
-	return false; //不存在也算作不使能
-}
-
 bool funcImp_obj_setJAlmStatus(string tag, string lang, json & js)
 {
 	OBJ* pmo = prj.queryObj(tag, lang);

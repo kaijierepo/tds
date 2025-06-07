@@ -81,7 +81,6 @@ OBJ::OBJ()
 	m_dbLatitudeCalib = 0;
 	m_bLocationCalib = false;
 	m_bChildTds = false;
-	m_bEnableAlarm = true;
 	m_bEnableIO = true;
 	m_bEnableTask = true;
 }
@@ -197,11 +196,6 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	if (conf.contains("ioAddrBind"))
 		m_strIoAddrBind = conf["ioAddrBind"];
 
-	if (conf.contains("enableAlarm"))
-	{
-		m_bEnableAlarm = conf["enableAlarm"].get<bool>();
-	}
-
 	if (conf.contains("enableIO"))
 	{
 		m_bEnableIO = conf["enableIO"].get<bool>();
@@ -274,257 +268,133 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 {
 	//载入配置
-	//if (conf.contains("name")) {
-	//	m_name = conf["name"];
-	//	m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
-	//}
-	if (yyjson_obj_get(conf, "name")) {
-		string name = yyjson_get_str(yyjson_obj_get(conf, "name"));
+	yyjson_val* v = yyjson_obj_get(conf, "name");
+	if (v) {
+		string name = yyjson_get_str(v);
 		m_name = name;
 		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
 	}
 
-	//if (conf.contains("nameTranslate")) {
-	//	for (auto& i : conf["nameTranslate"].items()) {
-	//		m_mapNameTranslate[i.key()] = i.value();
-	//	}
-	//	if (m_mapNameTranslate["zh"] == "") {
-	//		m_mapNameTranslate["zh"] = m_name;
-	//	}
-	//}
-	if (yyjson_obj_get(conf, "nameTranslate")) {
-		yyjson_val* nameTrans = yyjson_obj_get(conf, "nameTranslate");
-		if (nameTrans) {
-			yyjson_val* key, * val;
-			size_t indx = 0, max = 0;
-			yyjson_obj_foreach(nameTrans, indx, max, key, val) {
-				m_mapNameTranslate[yyjson_get_str(key)] = yyjson_get_str(val);
-			}
-			if (m_mapNameTranslate["zh"] == "") {
-				m_mapNameTranslate["zh"] = m_name;
-			}
+	v = yyjson_obj_get(conf, "nameTranslate");
+	if (v) {
+		yyjson_val* key, * val;
+		size_t indx = 0, max = 0;
+		yyjson_obj_foreach(v, indx, max, key, val) {
+			m_mapNameTranslate[yyjson_get_str(key)] = yyjson_get_str(val);
+		}
+		if (m_mapNameTranslate["zh"] == "") {
+			m_mapNameTranslate["zh"] = m_name;
 		}
 	}
 
-	//if (conf.contains("level")) {
-	//	m_level = conf["level"];
-	//}
-	if (yyjson_obj_get(conf, "level")) {
-		string level = yyjson_get_str(yyjson_obj_get(conf, "level"));
+	v = yyjson_obj_get(conf, "level");
+	if (v) {
+		string level = yyjson_get_str(v);
 		m_level = level;
 	}
 
-	//if (conf.contains("type")) {
-	//	m_type = conf["type"];
-	//}
-	if (yyjson_obj_get(conf, "type")) {
-		string type = yyjson_get_str(yyjson_obj_get(conf, "type"));
+	v = yyjson_obj_get(conf, "type");
+	if (v) {
+		string type = yyjson_get_str(v);
 		m_type = type;
 	}
 
-	//if (conf.contains("childTds")) {
-	//	m_bChildTds = conf["childTds"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "childTds")) {
-		m_bChildTds = yyjson_get_bool(yyjson_obj_get(conf, "childTds"));
+	v = yyjson_obj_get(conf, "childTds");
+	if (v) {
+		m_bChildTds = yyjson_get_bool(v);
 	}
 
-	//if (conf.contains("streamAccess")) {
-	//	m_streamAccess = conf["streamAccess"].get<string>();
-	//}
-	if (yyjson_obj_get(conf, "streamAccess")) {
-		m_streamAccess = yyjson_get_str(yyjson_obj_get(conf, "streamAccess"));
+	v = yyjson_obj_get(conf, "streamAccess");
+	if (v) {
+		m_streamAccess = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("group")) {
-	//	m_groupName = conf["group"].get<string>();
-	//}
-	if (yyjson_obj_get(conf, "group")) {
-		m_groupName = yyjson_get_str(yyjson_obj_get(conf, "group"));
+	v = yyjson_obj_get(conf, "group");
+	if (v) {
+		m_groupName = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("dynamicLocation"))
-	//{
-	//	m_bDynLocation = conf["dynamicLocation"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "dynamicLocation")) {
-		m_bDynLocation = yyjson_get_bool(yyjson_obj_get(conf, "dynamicLocation"));
+	v = yyjson_obj_get(conf, "dynamicLocation");
+	if (v) {
+		m_bDynLocation = yyjson_get_bool(v);
 	}
 
-	//if (conf.contains("locationCalib"))
-	//{
-	//	m_bLocationCalib = conf["locationCalib"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "locationCalib")) {
-		m_bLocationCalib = yyjson_get_bool(yyjson_obj_get(conf, "locationCalib"));
+	v = yyjson_obj_get(conf, "locationCalib");
+	if (v) {
+		m_bLocationCalib = yyjson_get_bool(v);
 	}
 
-	//if (conf.contains("longitudeCalib"))
-	//{
-	//	m_dbLongitudeCalib = conf["longitudeCalib"].get<double>();
-	//}
-	if (yyjson_obj_get(conf, "longitudeCalib")) {
-		m_dbLongitudeCalib = yyjson_get_real(yyjson_obj_get(conf, "longitudeCalib"));
+	v = yyjson_obj_get(conf, "longitudeCalib");
+	if (v) {
+		m_dbLongitudeCalib = yyjson_get_real(v);
 	}
 
-	//if (conf.contains("latitudeCalib"))
-	//{
-	//	m_dbLatitudeCalib = conf["latitudeCalib"].get<double>();
-	//}
-	if (yyjson_obj_get(conf, "latitudeCalib")) {
-		m_dbLatitudeCalib = yyjson_get_real(yyjson_obj_get(conf, "latitudeCalib"));
+	v = yyjson_obj_get(conf, "latitudeCalib");
+	if (v) {
+		m_dbLatitudeCalib = yyjson_get_real(v);
 	}
 
-	//if (conf.contains("longitude"))
-	//	m_longitude = conf["longitude"];
-	if (yyjson_obj_get(conf, "longitude")) {
-		m_longitude = yyjson_get_str(yyjson_obj_get(conf, "longitude"));
+	v = yyjson_obj_get(conf, "longitude");
+	if (v) {
+		m_longitude = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("latitude"))
-	//	m_latitude = conf["latitude"];
-	if (yyjson_obj_get(conf, "latitude")) {
-		m_latitude = yyjson_get_str(yyjson_obj_get(conf, "latitude"));
+	v = yyjson_obj_get(conf, "latitude");
+	if (v) {
+		m_latitude = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("map")) {
-	//	m_mapConf.merge_patch(conf["map"]);
-	//}
-	if (yyjson_obj_get(conf, "map")) {
-		yyjson_val* mapConf = yyjson_obj_get(conf, "map");
-		if (mapConf) {
-			size_t indx = 0, max = 0;
-			yyjson_val* key, * val;
-			yyjson_obj_foreach(mapConf, indx, max, key, val) {
-				m_mapConf[yyjson_get_str(key)] = yyjson_get_str(val);
-			}
+	v = yyjson_obj_get(conf, "map");
+	if (v) {
+		size_t indx = 0, max = 0;
+		yyjson_val* key, * val;
+		yyjson_obj_foreach(v, indx, max, key, val) {
+			m_mapConf[yyjson_get_str(key)] = yyjson_get_str(val);
 		}
 	}
 
-	//if (conf.contains("enableTask")) {
-	//	m_bEnableTask = conf["enableTask"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "enableTask")) {
-		m_bEnableTask = yyjson_get_bool(yyjson_obj_get(conf, "enableTask"));
+	v = yyjson_obj_get(conf, "enableTask");
+	if (v) {
+		m_bEnableTask = yyjson_get_bool(v);
 	}
 
-	//if (conf.contains("tasks")) {
-	//	loadTask(conf["tasks"]);
-	//}
-	if (yyjson_obj_get(conf, "tasks")) {
-		yyjson_val* rootTask = yyjson_obj_get(conf, "tasks");
-		loadTask(rootTask);
+	v = yyjson_obj_get(conf, "tasks");
+	if (v) {
+		loadTask(v);
 	}
 
-	//if (conf["comment"].is_string()) {
-	//	m_comment = conf["comment"];
-	//}
-	if (yyjson_obj_get(conf, "comment")) {
-		m_comment = yyjson_get_str(yyjson_obj_get(conf, "comment"));
+	v = yyjson_obj_get(conf, "comment");
+	if (v) {
+		m_comment = yyjson_get_str(v);
 	}
 
-	//if (conf["objID"].is_string()) {
-	//	m_objID = conf["objID"];
-	//}
-	if (yyjson_obj_get(conf, "objID")) {
-		m_objID = yyjson_get_str(yyjson_obj_get(conf, "objID"));
+	v = yyjson_obj_get(conf, "objID");
+	if (v) {
+		m_objID = yyjson_get_str(v);
 	}
 
-	//if (conf["alias"].is_string()) {
-	//	m_comment = conf["alias"];
-	//}
-	if (yyjson_obj_get(conf, "alias")) {
-		m_alias = yyjson_get_str(yyjson_obj_get(conf, "alias"));
+	v = yyjson_obj_get(conf, "alias");
+	if (v) {
+		m_alias = yyjson_get_str(v);
 	}
 
 	//if (conf.contains("customConf")) {
 	//	m_customConf = conf["customConf"];
 	//}
 
-	//if (conf.contains("ioAddrBind"))
-	//	m_strIoAddrBind = conf["ioAddrBind"];
-	if (yyjson_obj_get(conf, "ioAddrBind")) {
-		m_strIoAddrBind = yyjson_get_str(yyjson_obj_get(conf, "ioAddrBind"));
+	v = yyjson_obj_get(conf, "ioAddrBind");
+	if (v) {
+		m_strIoAddrBind = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("enableAlarm"))
-	//{
-	//	m_bEnableAlarm = conf["enableAlarm"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "enableAlarm")) {
-		m_bEnableAlarm = yyjson_get_bool(yyjson_obj_get(conf, "enableAlarm"));
+	v = yyjson_obj_get(conf, "enableIO");
+	if (v) {
+		m_bEnableIO = yyjson_get_bool(v);
 	}
 
-	//if (conf.contains("enableIO"))
-	//{
-	//	m_bEnableIO = conf["enableIO"].get<bool>();
-	//}
-	if (yyjson_obj_get(conf, "enableIO")) {
-		m_bEnableIO = yyjson_get_bool(yyjson_obj_get(conf, "enableIO"));
-	}
-
-	//if (conf.contains("children")) {
-	//	auto children = conf["children"];
-	//	if (bCreate) {
-	//		for (auto& child : children)
-	//		{
-	//			OBJ* pmo;
-	//			if ((child.contains("level") && child["level"] == "mp") ||
-	//				(child.contains("type") && child["type"] == "mp")) {  //保持一段时间兼容，后面删除
-	//				pmo = new MP();
-	//			}
-	//			else
-	//				pmo = new OBJ();
-
-	//			if (pmo)
-	//			{
-	//				pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-	//				pmo->loadConf(child, bCreate);
-	//				m_childObj.push_back(pmo);
-	//			}
-	//		}
-	//	}
-	//	else {
-	//		//增量更新
-	//		map<string, OBJ*> oldChildren;
-	//		for (auto& i : m_childObj)
-	//		{
-	//			oldChildren[i->m_name] = i;
-	//		}
-	//		m_childObj.clear();
-
-	//		for (auto& child : children) {
-	//			if (child.contains("name")) {
-	//				string childName = child["name"];
-	//				auto iter = oldChildren.find(childName);
-	//				if (iter != oldChildren.end()) {
-	//					OBJ* pmo = iter->second;
-	//					pmo->loadConf(child, false);
-	//					m_childObj.push_back(pmo);
-	//					oldChildren.erase(iter); //删除已处理的对象
-	//				}
-	//				else
-	//				{
-	//					OBJ* pmo;
-	//					if (child.contains("level") && child["level"] == "mp") {
-	//						pmo = new MP();
-	//					}
-	//					else
-	//						pmo = new OBJ();
-	//					if (pmo)
-	//					{
-	//						pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-	//						pmo->loadConf(child, true);
-	//						m_childObj.push_back(pmo);
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-
-	//}
-	if (yyjson_obj_get(conf, "children")) {
-		yyjson_val* rootChildren = yyjson_obj_get(conf, "children");
+	v = yyjson_obj_get(conf, "children");
+	if (v) {
+		yyjson_val* rootChildren = v;
 		if (bCreate) {
 			size_t indx = 0, max = 0;
 			yyjson_val* childVal;
@@ -865,8 +735,6 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 			conf["customConf"] = m_customConf;
 		}
 
-		if (m_bEnableAlarm == false)
-			conf["enableAlarm"] = m_bEnableAlarm;
 
 		if (m_bEnableIO == false)
 			conf["enableIO"] = m_bEnableIO;
@@ -1031,21 +899,21 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 	yyjson_mut_obj_put(conf, key, val);
 
 	if (q.getConfDetail) {
-		string tag = getTag("", q.language);
-		if (q.rootTag != "")
-		{
-			tag = TAG::trimRoot(tag, q.rootTag);
-			//conf["rootTag"] = q.rootTag;
-			key = yyjson_mut_strcpy(doc, "rootTag");
-			val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
-			yyjson_mut_obj_put(conf, key, val);
-		}
-		if (tag != "") {
-			//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
-			key = yyjson_mut_strcpy(doc, "tag");
-			val = yyjson_mut_strcpy(doc, tag.c_str());
-			yyjson_mut_obj_put(conf, key, val);
-		}
+		//string tag = getTag("", q.language);
+		//if (q.rootTag != "")
+		//{
+		//	tag = TAG::trimRoot(tag, q.rootTag);
+		//	//conf["rootTag"] = q.rootTag;
+		//	key = yyjson_mut_strcpy(doc, "rootTag");
+		//	val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
+		//	yyjson_mut_obj_put(conf, key, val);
+		//}
+		//if (tag != "") {
+		//	//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+		//	key = yyjson_mut_strcpy(doc, "tag");
+		//	val = yyjson_mut_strcpy(doc, tag.c_str());
+		//	yyjson_mut_obj_put(conf, key, val);
+		//}
 		if (m_strIoAddrBind != "") {
 			//conf["ioAddrBind"] = m_strIoAddrBind;
 			key = yyjson_mut_strcpy(doc, "ioAddrBind");
@@ -1133,21 +1001,11 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		//conf["enableTask"] = m_bEnableTask;
-		key = yyjson_mut_strcpy(doc, "enableTask");
-		val = yyjson_mut_bool(doc, m_bEnableTask);
-		yyjson_mut_obj_put(conf, key, val);
-
 		if (m_scheduleTasks.size() > 0) {
-			//json jTasks = json::array();
-			//json jT;
-			//for (int i = 0; i < m_scheduleTasks.size(); i++) {
-			//	jT.clear();
-			//	SCHEDULE_TASK& st = m_scheduleTasks[i];
-			//	st.toJson(jT);
-			//	jTasks.push_back(jT);
-			//}
-			//conf["tasks"] = jTasks;
+			key = yyjson_mut_strcpy(doc, "enableTask");
+			val = yyjson_mut_bool(doc, m_bEnableTask);
+			yyjson_mut_obj_put(conf, key, val);
+
 			yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
 			yyjson_mut_val* rootT = yyjson_mut_obj(doc);
 			for (int i = 0; i < m_scheduleTasks.size(); i++) {
@@ -1158,19 +1016,12 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			}
 			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
 			yyjson_mut_obj_put(conf, key, rootTasks);
-			
 		}
 
 		//if (m_customConf != nullptr) {
 		//	conf["customConf"] = m_customConf;
 		//}
 
-		if (m_bEnableAlarm == false) {
-			//conf["enableAlarm"] = m_bEnableAlarm;
-			key = yyjson_mut_strcpy(doc, "enableAlarm");
-			val = yyjson_mut_bool(doc, m_bEnableAlarm);
-			yyjson_mut_obj_put(conf, key, val);
-		}
 
 		if (m_bEnableIO == false) {
 			//conf["enableIO"] = m_bEnableIO;
