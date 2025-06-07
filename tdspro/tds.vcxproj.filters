@@ -7,9 +7,6 @@
     <Filter Include="tdsPro">
       <UniqueIdentifier>{55f4ffc4-1c52-448a-9316-d0c36fe31046}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdsPro\licence">
-      <UniqueIdentifier>{8e4f04ff-4e86-4c67-8cf6-7d57cc5aa2ca}</UniqueIdentifier>
-    </Filter>
     <Filter Include="data_server">
       <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
     </Filter>
@@ -134,18 +131,6 @@
     </ClCompile>
     <ClCompile Include="..\src\func_module\userMng.cpp">
       <Filter>func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="func_module\aliDDNS.cpp">
-      <Filter>tdsPro\func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="func_module\gzhServer.cpp">
-      <Filter>tdsPro\func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="func_module\smsServer.cpp">
-      <Filter>tdsPro\func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="func_module\xiaot.cpp">
-      <Filter>tdsPro\func_module</Filter>
     </ClCompile>
     <ClCompile Include="io_server\ioDev_bacnet.cpp">
       <Filter>tdsPro\io_server</Filter>
@@ -367,18 +352,6 @@
       <Filter>func_module</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pch.h" />
-    <ClInclude Include="func_module\aliDDNS.h">
-      <Filter>tdsPro\func_module</Filter>
-    </ClInclude>
-    <ClInclude Include="func_module\gzhServer.h">
-      <Filter>tdsPro\func_module</Filter>
-    </ClInclude>
-    <ClInclude Include="func_module\smsServer.h">
-      <Filter>tdsPro\func_module</Filter>
-    </ClInclude>
-    <ClInclude Include="func_module\xiaot.h">
-      <Filter>tdsPro\func_module</Filter>
-    </ClInclude>
     <ClInclude Include="io_server\ioDev_bacnet.h">
       <Filter>tdsPro\io_server</Filter>
     </ClInclude>

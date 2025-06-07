@@ -562,10 +562,6 @@
     <ClCompile Include="as_interface.cpp" />
     <ClCompile Include="diskClean.cpp" />
     <ClCompile Include="fileUploadSrv.cpp" />
-    <ClCompile Include="func_module\aliDDNS.cpp" />
-    <ClCompile Include="func_module\gzhServer.cpp" />
-    <ClCompile Include="func_module\smsServer.cpp" />
-    <ClCompile Include="func_module\xiaot.cpp" />
     <ClCompile Include="io_server\ioDev_bacnet.cpp" />
     <ClCompile Include="io_server\ioDev_dlt645_2007.cpp" />
     <ClCompile Include="io_server\ioDev_eip.cpp" />
@@ -648,10 +644,6 @@
     <ClInclude Include="as_interface.h" />
     <ClInclude Include="diskClean.h" />
     <ClInclude Include="fileUploadSrv.h" />
-    <ClInclude Include="func_module\aliDDNS.h" />
-    <ClInclude Include="func_module\gzhServer.h" />
-    <ClInclude Include="func_module\smsServer.h" />
-    <ClInclude Include="func_module\xiaot.h" />
     <ClInclude Include="io_server\ioDev_bacnet.h" />
     <ClInclude Include="io_server\ioDev_dlt645_2007.h" />
     <ClInclude Include="io_server\ioDev_eip.h" />

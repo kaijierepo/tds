@@ -308,9 +308,9 @@ bool MP::loadConf(json& conf,bool bCreate)
 	return false;
 }
 
-bool MP::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
+bool MP::loadConf(yyjson_val* conf, bool bCreate)
 {
-	OBJ::loadConf(conf, doc);
+	OBJ::loadConf(conf);
 
 	//if (conf["valType"] != nullptr)
 	//	m_valType = conf["valType"].get<string>();

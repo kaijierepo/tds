@@ -41,17 +41,17 @@ public:
 
 	void setLicenceStatus(json j);
 	//rpc路由的命令  可以路由到tdsp设备，或者childTds
-	bool handleRpcRoute(json& jReq, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
+	bool handleRpcRoute(yyjson_val*, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
 	void logRPCRoute(string method, json& params, RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 
 	//json rpc implementation
 	void handleRpcCallAsyn(string& strReq,std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl = true);
-	bool parseSessionUser(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
-	bool userAccessAuthentication(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool parseSessionUser(yyjson_val* jReq,RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
+	bool userAccessAuthentication(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 	bool isDebugMethod(string method);
-	void handleRpcCall_single(json& jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl);
+	void handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl);
 	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
 	bool handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -70,7 +70,8 @@ public:
 	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
-
+	bool handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResult, RPC_SESSION session);
+	
 	//参数处理
 	bool parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session,string& tag,string& rootTag);
 

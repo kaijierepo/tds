@@ -197,7 +197,7 @@ struct SCHEDULE_TASK {
 		}
 	}
 
-	void fromJson(yyjson_val* conf, yyjson_doc* doc) {
+	void fromJson(yyjson_val* conf) {
 		//if (j["name"].is_string()) {
 		//	name = j["name"];
 		//}
@@ -421,10 +421,10 @@ public:
 	static bool m_bDefaultOnline;
 
 	void loadTask(json& jTask);
-	void loadTask(yyjson_val* conf, yyjson_doc* doc);
+	void loadTask(yyjson_val* conf);
 
 	virtual bool loadConf(json& conf, bool bCreate = true);
-	virtual bool loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate = true);
+	virtual bool loadConf(yyjson_val* conf, bool bCreate = true);
 	virtual bool loadStatus(json& status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);

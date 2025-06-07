@@ -6,6 +6,7 @@
 #include "mp.h"
 #include "logger.h"
 #include "yyjson.h"
+#include "rpcHandler.h"
 
 
 project prj;
@@ -85,11 +86,16 @@ void thread_rt_data_save() {
 		timeopt::sleepMilli(interval * 1000);
 
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
-		json j;
-		prj.saveStatus(j);
-
-		string s = j.dump(1);
-		fs::writeFile(path, s);
+		yyjson_mut_doc* md = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* mr = yyjson_mut_doc_get_root(md);
+		prj.saveStatus(mr,md);
+		size_t len;
+		char* s = yyjson_mut_val_write(mr,0,&len);
+		if (s) {
+			fs::writeFile(path, s,len);
+			free(s);
+		}
+		yyjson_mut_doc_free(md);
 	}
 }
 
@@ -159,23 +165,32 @@ bool project::saveConfFile()
 	q.getStatus = false;
 	q.getConfDetail = false;
 
+	bool bSaved = false;
 	toJson(mut_root,mut_doc, q);
 	size_t len;
 	char* p = yyjson_mut_val_write(mut_root, 0, &len);
-
-	bool bSaved = false;
-	if (len> 0 && (len != m_moConfFileDump.size()|| memcmp(p, m_moConfFileDump.c_str(),len) !=0)){
-		TIME st;
-		timeopt::now(&st);
-		KV_INI ini;
-		ini.load(tds->conf->confPath + "/lastModify.ini");
-		ini.setVal("mo", timeopt::st2str(st));
-
-		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p,len);
-		if(bSaved)
-			m_moConfFileDump = p;
+	if (len == 0) {
+		LOG("[error]critical error,mo tree to json fail");
 	}
-	if (p) {
+	else {
+		bool changed = len != m_moConfFileDump.size() || memcmp(p, m_moConfFileDump.c_str(), len) != 0;
+		if (changed) {
+			TIME st;
+			timeopt::now(&st);
+			KV_INI ini;
+			ini.load(tds->conf->confPath + "/lastModify.ini");
+			ini.setVal("mo", timeopt::st2str(st));
+
+			bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
+			if (bSaved)
+				m_moConfFileDump = p;
+		}
+		else {
+			bSaved = true;
+		}
+	}
+	
+	if(p){
 		free(p);
 	}
 	yyjson_mut_doc_free(mut_doc);
@@ -212,9 +227,9 @@ bool project::loadConf(json& jConf,bool bCreate)
 	return ret;
 }
 
-bool project::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
+bool project::loadConf(yyjson_val* conf, bool bCreate)
 {
-	return OBJ::loadConf(conf, doc, bCreate);
+	return OBJ::loadConf(conf, bCreate);
 }
 
 
@@ -425,4 +440,92 @@ bool project::closeStream(string tag)
 		LOG("[流媒体  ]请求的位号不存在,tag=" + tag);
 	}
 	return ret;
+}
+
+
+void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session) {
+	string& result = rpcResp.result;
+	if (yyjson_is_obj(params)) {
+		if (!yyjson_obj_get(params,"tag")) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
+		}
+		else {
+			string tag = yyjson_get_str(yyjson_obj_get(params, "tag"));
+
+			string rootTag = "";
+			if (yyjson_obj_get(params, "rootTag")) {
+				rootTag = yyjson_get_str(yyjson_obj_get(params, "rootTag"));
+			}
+
+			tag = TAG::addRoot(tag, rootTag);
+			tag = TAG::addRoot(tag, session.org);
+
+			OBJ* pmo = prj.queryObj(tag, session.language);
+			if (pmo) {
+				//要修改树结构,冷重载。锁住对象锁
+				if (yyjson_obj_get(params, "children")) {
+					unique_lock<shared_mutex> lock(prj.m_csPrj);
+					LOCK_THREAD_RECORDER recorder(&prj.m_prjWriteLockThread, sys::getThreadId());
+
+					pmo->loadConf(params, false);
+
+					//持久化
+					bool bSaved = prj.saveConfFile();
+					if (!bSaved) {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "save mo.json file fail; maybe file is set to readonly");
+						LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
+						return;
+					}
+					std::map<string, SCRIPT_INFO> expScripts;
+					prj.getAllVarExpScript();
+
+					//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
+					//ioSrv.updateTag2IOAddrBinding();
+					//ioSrv.updateAllChanVal();
+
+					rpcSrv.notify("objTreeUpdated", nullptr);
+					result = "\"ok\"";
+				}
+				//热重载
+				else {
+					pmo->loadConf(params);
+					prj.saveConfFile();
+					result = "\"ok\"";
+				}
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+			}
+		}
+	}
+	else if (yyjson_is_arr(params)) {
+		bool ok = true;
+		for (int i = 0; i < yyjson_get_len(params); i++) {
+			yyjson_val* root_item = yyjson_arr_get(params, i);
+			string tag = yyjson_get_str(yyjson_obj_get(root_item, "tag"));
+
+			string rootTag = "";
+			if (yyjson_obj_get(root_item, "rootTag")) {
+				rootTag = yyjson_get_str(yyjson_obj_get(root_item, "rootTag"));
+			}
+
+			tag = TAG::addRoot(tag, rootTag);
+			tag = TAG::addRoot(tag, session.org);
+
+			OBJ* pmo = prj.queryObj(tag, session.language);
+			if (pmo) {
+				pmo->loadConf(root_item);
+			}
+			else {
+				ok = false;
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, tag + " specified tag not found");
+				break;
+			}
+		}
+
+		if (ok) {
+			prj.saveConfFile();
+			result = "\"ok\"";
+		}
+	}
 }

@@ -62,10 +62,12 @@ public:
 	bool loadConfFile();
 	bool loadConf(string& confStr);
 	bool loadConf(json& jConf,bool bCreate=true);
-	bool loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate = true);
+	bool loadConf(yyjson_val* conf, bool bCreate = true);
 	bool saveConfFile();
 	void clear();
 	void getMpTypeList(json& mpTypeList);
+
+	void rpc_setObj(yyjson_val* params, RPC_RESP& resp, RPC_SESSION session);
 
 	vector<MP*> getAllEzvizMp();
 

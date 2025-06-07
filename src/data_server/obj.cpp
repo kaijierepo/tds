@@ -102,13 +102,13 @@ void OBJ::loadTask(json& jTask) {
 		m_scheduleTasks.push_back(st);
 	}
 }
-void OBJ::loadTask(yyjson_val* conf, yyjson_doc* doc) {
+void OBJ::loadTask(yyjson_val* conf) {
 	m_scheduleTasks.clear();
 	size_t indx = 0, max = 0;
 	yyjson_val* taskVal;
 	yyjson_arr_foreach(conf, indx, max, taskVal) {
 		SCHEDULE_TASK st;
-		st.fromJson(taskVal, doc);
+		st.fromJson(taskVal);
 		m_scheduleTasks.push_back(st);
 	}
 }
@@ -271,7 +271,7 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	return true;
 }
 
-bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
+bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 {
 	//载入配置
 	//if (conf.contains("name")) {
@@ -413,7 +413,7 @@ bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 	//}
 	if (yyjson_obj_get(conf, "tasks")) {
 		yyjson_val* rootTask = yyjson_obj_get(conf, "tasks");
-		loadTask(rootTask, doc);
+		loadTask(rootTask);
 	}
 
 	//if (conf["comment"].is_string()) {
@@ -530,10 +530,12 @@ bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 			yyjson_val* childVal;
 			yyjson_arr_foreach(rootChildren, indx, max, childVal) {
 				OBJ* pmo;
-				if (yyjson_obj_get(childVal, "level") && yyjson_get_str(yyjson_obj_get(childVal, "level")) == "mp") {
-					pmo = new MP();
+				yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
+				string sLevel;
+				if (yylevel) {
+					sLevel = yyjson_get_str(yylevel);
 				}
-				else if (yyjson_obj_get(childVal, "type") && yyjson_get_str(yyjson_obj_get(childVal, "type")) == "mp") { //保持一段时间兼容，后面删除
+				if (sLevel == "mp"){
 					pmo = new MP();
 				}
 				else {
@@ -542,7 +544,7 @@ bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 
 				if (pmo) {
 					pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-					pmo->loadConf(childVal, doc, bCreate);
+					pmo->loadConf(childVal, bCreate);
 					m_childObj.push_back(pmo);
 				}
 			}
@@ -563,13 +565,18 @@ bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 					auto iter = oldChildren.find(childName);
 					if (iter != oldChildren.end()) {
 						OBJ* pmo = iter->second;
-						pmo->loadConf(childVal, doc, false);
+						pmo->loadConf(childVal, false);
 						m_childObj.push_back(pmo);
 						oldChildren.erase(iter); //删除已处理的对象
 					}
 					else {
 						OBJ* pmo;
-						if (yyjson_obj_get(childVal, "level") && yyjson_get_str(yyjson_obj_get(childVal, "level")) == "mp") {
+						yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
+						string sLevel;
+						if (yylevel) {
+							sLevel = yyjson_get_str(yylevel);
+						}
+						if (sLevel == "mp") {
 							pmo = new MP();
 						}
 						else {
@@ -578,7 +585,7 @@ bool OBJ::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
 
 						if (pmo) {
 							pmo->m_pParentMO = this; //放在loadConf之前，loadConf中会使用到m_pParentMO
-							pmo->loadConf(childVal, doc, true);
+							pmo->loadConf(childVal, true);
 							m_childObj.push_back(pmo);
 						}
 					}
@@ -1317,7 +1324,6 @@ bool OBJ::loadStatus(json& status)
 bool OBJ::saveStatus(json& statusNode)
 {
 	statusNode["name"] = m_name;
-	statusNode["level"] = m_level;
 	if (m_level == "mp") {
 		MP* pmp = (MP*)this;
 		statusNode["val"] = pmp->m_curVal;
@@ -1340,18 +1346,35 @@ bool OBJ::saveStatus(json& statusNode)
 
 bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
 {
-	//yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
-	//yyjson_mut_obj_put(statusNode, key, yyjson_mut_strcpy(doc, m_name.c_str()));
-	//if (m_level == "mp") {
-	//	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "val");
-	//}
+	yyjson_mut_val* yykey, *yyval;
+	yykey = yyjson_mut_strcpy(doc, "name");
+	yyjson_mut_obj_put(statusNode, yykey, yyjson_mut_strcpy(doc, m_name.c_str()));
+	if (m_level == "mp") {
+		MP* pmp = (MP*)this;
+		yykey = yyjson_mut_strcpy(doc, "val");
+		string sCurVal = pmp->m_curVal.dump();
+		yyjson_doc* d = yyjson_read(sCurVal.c_str(), sCurVal.size(), 0);
+		yyjson_val* r = yyjson_doc_get_root(d);
+		yyval = yyjson_val_mut_copy(doc, r);
+		yyjson_doc_free(d);
+		yyjson_mut_obj_put(statusNode, yykey, yyval);
 
-	//if (m_childObj.size() > 0) {
-	//	json jChildren = json::array();
-	//	for (int i = 0; i < m_childObj.size(); i++) {
-	//		OBJ* p = m_childObj[i];
-	//	}
-	//}
+		yykey = yyjson_mut_strcpy(doc, "time");
+		yyval = yyjson_mut_strcpy(doc, pmp->m_stDataLastUpdate.toStr().c_str());
+		yyjson_mut_obj_put(statusNode, yykey, yyval);
+	}
+
+	if (m_childObj.size() > 0) {
+		yyjson_mut_val* yyChildren = yyjson_mut_arr(doc);
+		for (int i = 0; i < m_childObj.size(); i++) {
+			OBJ* p = m_childObj[i];
+			yyjson_mut_val* yyChild = yyjson_mut_obj(doc);
+			p->saveStatus(yyChild, doc);
+			yyjson_mut_arr_append(yyChildren, yyChild);
+		}
+		yykey = yyjson_mut_strcpy(doc, "children");
+		yyjson_mut_obj_put(statusNode, yykey, yyChildren);
+	}
 	return false;
 }
 
