@@ -62,6 +62,7 @@ public:
 	bool loadConfFile();
 	bool loadConf(string& confStr);
 	bool loadConf(json& jConf,bool bCreate=true);
+	bool loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate = true);
 	bool saveConfFile();
 	void clear();
 	void getMpTypeList(json& mpTypeList);

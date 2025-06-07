@@ -149,14 +149,9 @@ bool project::loadConfFile()
 
 bool project::saveConfFile()
 {
-	json j;
-	//json opt;
-	//opt["getConf"] = true;
-	//opt["getChild"] = true;
-	//opt["getMp"] = true;
-	//opt["getStatus"] = false;
-	//opt["getDetailConf"] = false;
-
+	yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
+	mut_root = yyjson_mut_obj(mut_doc);
 	OBJ_QUERIER q;
 	q.getConf = true;
 	q.getChild = true;
@@ -164,22 +159,27 @@ bool project::saveConfFile()
 	q.getStatus = false;
 	q.getConfDetail = false;
 
-	toJson(j, q);
-	string s = j.dump(2);
+	toJson(mut_root,mut_doc, q);
+	size_t len;
+	char* p = yyjson_mut_val_write(mut_root, 0, &len);
 
-	if (s != m_moConfFileDump) {
+	bool bSaved = false;
+	if (len> 0 && (len != m_moConfFileDump.size()|| memcmp(p, m_moConfFileDump.c_str(),len) !=0)){
 		TIME st;
 		timeopt::now(&st);
 		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
 		ini.setVal("mo", timeopt::st2str(st));
 
-		bool bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", s);
+		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p,len);
 		if(bSaved)
-			m_moConfFileDump = s;
-		return bSaved;
+			m_moConfFileDump = p;
 	}
-	return true;
+	if (p) {
+		free(p);
+	}
+	yyjson_mut_doc_free(mut_doc);
+	return bSaved;
 }
 
 bool project::loadConf(string& confStr)
@@ -188,10 +188,13 @@ bool project::loadConf(string& confStr)
 	if (confStr == "")
 		return true;
 
+	unique_lock<shared_mutex> lock(prj.m_csPrj);
+
 	try {
-		json moRoot = json::parse(confStr.c_str());
-		moRoot["level"] = "root";
-		bool ret = loadConf(moRoot);
+		yyjson_doc* doc = yyjson_read(confStr.c_str(), confStr.size(), YYJSON_READ_NOFLAG);
+		yyjson_val* root = yyjson_doc_get_root(doc);
+		bool ret = loadConf(root,doc);
+		yyjson_doc_free(doc);
 		return ret;
 	}
 	catch (std::exception& e)
@@ -207,6 +210,11 @@ bool project::loadConf(json& jConf,bool bCreate)
 {
 	bool ret = OBJ::loadConf(jConf, bCreate);
 	return ret;
+}
+
+bool project::loadConf(yyjson_val* conf, yyjson_doc* doc, bool bCreate)
+{
+	return OBJ::loadConf(conf, doc, bCreate);
 }
 
 
