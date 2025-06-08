@@ -54,9 +54,9 @@ void TDS_SESSION::setRpcSession(RPC_SESSION* pRpc)
     *pThis = *pRpc;
 }
 
-RPC_SESSION TDS_SESSION::getRpcSession()
+RPC_SESSION& TDS_SESSION::getRpcSession()
 {
-    RPC_SESSION s = *this;
+    RPC_SESSION& s = *this;
     s.remoteAddr = getRemoteAddr();
     return s;
 }

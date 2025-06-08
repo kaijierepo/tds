@@ -52,7 +52,7 @@ public:
 	size_t sendStr(string str, bool bNeedLog = true);
 	size_t getSendedBytes();
 	size_t getRecvedBytes();
-	RPC_SESSION getRpcSession();
+	RPC_SESSION& getRpcSession();
 	void onTcpDisconnect();
 	void setActivityCheck(bool bEnable);
 

@@ -52,49 +52,50 @@ public:
 	bool userAccessAuthentication(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession);
 	bool isDebugMethod(string method);
 	void handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl);
+	long long getTick();
 	void handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession,bool bAccessCtrl = true);
 	bool handleMethodCall_OSFunc(string method, json& params, RPC_RESP& rpcResp);
-	bool handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_ptz_ioDev(string method, string tag, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	void rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
+	bool handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_ptz_ioDev(string method, string tag, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
 	vector<string> parseTagSel(json& tagSel,string& type);
-	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION session);
-	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION session);
-	bool handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResult, RPC_SESSION session);
+	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
+	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION& session);
+	bool handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResult, RPC_SESSION& session);
 	
 	//参数处理
-	bool parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session,string& tag,string& rootTag);
+	bool parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION& session,string& tag,string& rootTag);
 
 	//object manage
-	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION session);
-	string rpc_getTopoList(json params, string& error,RPC_SESSION session);
-	void rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_getDevStatis_old(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session);
+	string rpc_getTopoList(json params, string& error,RPC_SESSION& session);
+	void rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_getDevStatis_old(json params, RPC_RESP& resp, RPC_SESSION& session);
 	string rpc_getMoOnlineStatus(json params, string& error);
 	string renameItem(string orgName, json& renameMap);
-	void toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo, RPC_SESSION session);
-	void rpc_moList2Attrlist(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session);
-	void rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION session);
-	string rpc_getMpStatus(json params, string& error, RPC_SESSION session,bool bValOnly =false);
-	string rpc_heartbeat(json params, string& error, RPC_SESSION session);
+	void toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo, RPC_SESSION& session);
+	void rpc_moList2Attrlist(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION& session);
+	void rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session);
+	string rpc_getMpStatus(json params, string& error, RPC_SESSION& session,bool bValOnly =false);
+	string rpc_heartbeat(json params, string& error, RPC_SESSION& session);
 
 	//device manage
-	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION& session);
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	string rpc_io_scanChannel(json params, string& error);
@@ -105,9 +106,9 @@ public:
 	string rpc_com_list(json params, string& error);
 	string rpc_closeCom(json params, string& error);
 
-	void rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION session);
-	void rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION session);
-	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION& session);
 
 	string getChildTdsRegPkt();
 
@@ -129,13 +130,13 @@ public:
 
 
 	//alarm
-	json getAlarmStatis(string rootTag, RPC_SESSION session);
+	json getAlarmStatis(string rootTag, RPC_SESSION& session);
 
 	//辅助功能
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);
-	void rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
 
 	json rpc_getStreamUrl(MP* pmp, string tag, bool isHttps, string hostname, int port);
 

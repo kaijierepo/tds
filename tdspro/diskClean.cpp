@@ -15,6 +15,9 @@ int CDiskClean::Init()
 
 int CDiskClean::Run()
 {
+	if (tds->conf->getInt("enableDiskClean", 1) == 0){
+		return 0;
+	}
 	thread t(ThreadClean, this);
 	t.detach();
 	return 0;

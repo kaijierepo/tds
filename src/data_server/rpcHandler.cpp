@@ -405,7 +405,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 //此处有两种可能的设计，萤石云设计成ioDev，通过ioDev中转
 //但这样子服务的控制还要先发给子服务，子服务再发给萤石云，有点多余
 //目前采用主服务获取到子服务的萤石云配置后，直接发给萤石云
-bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 #ifdef ENABLE_OPENSSL
 	if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) != prj.m_mapEzvizAccess.end()) {
@@ -464,7 +464,7 @@ bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params
 }
 
 //通过ioDev进行
-bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	ioDev* p = ioSrv.getIODevByTag(tag);
 	if (!p) {
@@ -593,7 +593,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 
 
 
-bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -873,7 +873,7 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 //参见核心概念，位号表示法
 //https://www.liangtusoft.com/doc/#/核心概念?id=位号表示法
 //sysTag = session.org + rootTag + tag
-bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION session, string& tag, string& rootTag)
+bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION& session, string& tag, string& rootTag)
 {
 	if (!params.contains("tag"))
 	{
@@ -895,7 +895,7 @@ bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION s
 	return true;
 }
 
-bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -1023,7 +1023,7 @@ void threadErase() {
 }
 
 
-void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	WebServer* pWs = getWebServer(session.localPort, session.isHttps);
 	if (pWs) {
 		pWs->m_csWsSessions.lock();
@@ -1062,7 +1062,7 @@ void rpcHandler::rpc_getApiSessionStatus(json& params, RPC_RESP& rpcResp, RPC_SE
 	}
 }
 #define TEST
-bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -1223,7 +1223,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -1569,7 +1569,7 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	return false;
 	/*string& result = rpcResp.result;
@@ -1879,7 +1879,7 @@ UPGRADE_END:
 #endif
 }
 
-bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -1935,7 +1935,7 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -1972,7 +1972,7 @@ string getRefCurvePath(json& params) {
 	return path;
 }
 
-bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -2129,6 +2129,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo")
 		{
+			session.tStartHandle = getTick();
 			//位号选择器 参数tag + rootTag
 			//用户查询时 tag默认"",rootTag默认""
 			//tag是相对于rootTag的相对位号
@@ -2289,8 +2290,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					//result = j.dump();
 					size_t len = 0;
 					auto s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
-					result = s;
 					if (s) {
+						result = s;
 						free(s);
 					}
 					yyjson_mut_doc_free(doc);
@@ -2465,7 +2466,7 @@ vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
 	return vec;
 }
 
-bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION& session)
 {
 	almServer* pAlmSrv = nullptr;
 
@@ -2572,7 +2573,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
@@ -2655,7 +2656,7 @@ void createObjRecursive(string path, OBJ* pParent) {
 	}
 }
 
-bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	bool bHandled = true;
 
@@ -3553,7 +3554,7 @@ float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
 	return dVal;
 }
 
-bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	bool bHandled = true;
 	if (method == "setObj") {
@@ -3565,7 +3566,7 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 	return bHandled;
 }
 
-bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	if (method.find("set") == 0) {
 		if (params == nullptr) {
@@ -3894,7 +3895,7 @@ void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> 
 bool rpcHandler::parseSessionUser(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession){
 	yyjson_val* yyUser = yyjson_obj_get(jReq, "user");
 	json jUser;
-	if (yyUser)
+	if (yyUser && yyjson_is_str(yyUser))
 	{
 		pSession->user = yyjson_get_str(yyUser);
 		jUser = userMng.getUser(pSession->user);
@@ -4213,6 +4214,14 @@ HANDLE_END:
 		rpcResp.strResp += ",\"childTds\":\"" + pSession->route_childTds + "\"";
 	}
 
+	if (pSession->tStartHandle != 0) {
+		pSession->tEndCall = getTick();
+		double tWait = (pSession->tStartHandle - pSession->tStartCall)/1000.0;
+		double tHandle = (pSession->tEndCall - pSession->tStartHandle)/1000.0;
+		string s = str::format(",\"timeCost\":{\"waitLock\":%lf,\"handle\":%lf}", tWait, tHandle);
+		rpcResp.strResp += s;
+	}
+
 
 	rpcResp.strResp += "}\n\n";
 
@@ -4230,8 +4239,17 @@ HANDLE_END:
 }
 
 
+long long rpcHandler::getTick() {
+	auto now = std::chrono::high_resolution_clock::now();
+	auto microsec = std::chrono::time_point_cast<std::chrono::microseconds>(now);
+	auto epoch = microsec.time_since_epoch();
+	long long microseconds = epoch.count();
+	return microseconds;
+}
+
 void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
 {
+	pSession->tStartCall = getTick();
 	string error = "";
 	string method = "";
 	json id = nullptr;
@@ -4331,7 +4349,7 @@ void rpcHandler::cleanRpcSession()
 	}
 }
 
-void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	json val = nullptr;
 
@@ -4506,7 +4524,7 @@ json getValAttr(json de) {
 	return de;
 }
 
-void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 {
 	if (params.is_object() && params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 		string rootTag;
@@ -4820,7 +4838,7 @@ json map2array(json& j) {
 }
 
 
-string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION session)
+string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION& session)
 {
 	string topopath = tds->conf->confPath + "/topo";
 	fs::normalizationPath(topopath);
@@ -4930,7 +4948,7 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION sessio
 	return j.dump();
 }
 
-void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION session) {
+void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION& session) {
 	MP_STATIS mpStatis;
 	vector<MP*> allMp;
 	prj.GetAllChildMp(allMp);
@@ -4968,7 +4986,7 @@ void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 	resp.result = j.dump();
 }
 
-void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	vector<string> rootTagListOrg; //用于返回统计分组时作为分组的key
 	vector<string> rootTagList;
@@ -5067,7 +5085,7 @@ void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION sessi
 }
 
 
-void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	string rootTag = ""; 
 	if (params.contains("rootTag"))
@@ -5132,7 +5150,7 @@ void rpcHandler::rpc_getMoStatis(json params, RPC_RESP& resp, RPC_SESSION sessio
 	}
 }
 
-json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
+json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION& session) {
 
 	return nullptr;
 
@@ -5176,7 +5194,7 @@ json rpcHandler::getAlarmStatis(string rootTag, RPC_SESSION session) {
 
 
 
-void rpcHandler::rpc_getDevStatis_old(json params, RPC_RESP& resp,RPC_SESSION session)
+void rpcHandler::rpc_getDevStatis_old(json params, RPC_RESP& resp,RPC_SESSION& session)
 {
 	string rootTag = session.org; //absolute queryRoot
 	if (params.contains("rootTag"))
@@ -5312,7 +5330,7 @@ string rpcHandler::renameItem(string orgName, json& renameMap) {
 	return desName;
 }
 
-void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo,RPC_SESSION session) {
+void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_json& attrInfo,RPC_SESSION& session) {
 	string sysTag = pMo->getTag("",session.language);
 	string queryTag = sysTag;
 	queryTag = TAG::trimRoot(sysTag, params.tagSel.m_rootTag);
@@ -5367,7 +5385,7 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 	}
 }
 
-void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,RPC_RESP& resp, RPC_SESSION& session)
 {
 	string strList = "[";
 	for (int i = 0; i < moList.size(); i++)
@@ -5384,7 +5402,7 @@ void rpcHandler::rpc_moList2Attrlist(Mo_Attr_Params& params,vector<OBJ*> moList,
 }
 
 
-void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION session)
+void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION& session)
 {
 	Mo_Attr_Params attrParam;
 
@@ -5479,7 +5497,7 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION sess
 
 //返回1个具有 header,body,tag3个字段的结果
 //header根据对象模版生成，位号为所有的mp，递归平铺
-void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, RPC_RESP& resp, RPC_SESSION& session)
 {
 	json jTable = json::object();
 	json jTableHead = json::array();
@@ -5674,7 +5692,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 	resp.result = jTable.dump();
 }
 
-string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION session, bool bValOnly)
+string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION& session, bool bValOnly)
 {
 	bool getStatus = true;
 	bool getConf = true;
@@ -5818,7 +5836,7 @@ string rpcHandler::rpc_setconf(json params, string& error)
 	return "";
 }
 
-void rpcHandler::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	string p = "";
 	if (!params["path"].is_string())
@@ -5862,7 +5880,7 @@ std::string base64_decode(const std::string& in) {
 	return out;
 }
 
-void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	string path = "";
 	string encode = "";
@@ -6092,7 +6110,7 @@ json rpcHandler::rpc_getStreamUrl(MP* pmp,string tag, bool isHttps, string local
 	return j;
 }
 
-string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION session)
+string rpcHandler::rpc_heartbeat(json params, string& error , RPC_SESSION& session)
 {
 	if (params.is_object())
 	{
@@ -6129,7 +6147,7 @@ string rpcHandler::rpc_openCom(json params, string& error)
 	return "";
 }
 
-void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	string rootTag;
 	vector<ioDev*> filterRlt;
@@ -6140,7 +6158,7 @@ void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION sessi
 	resp.result = ds.toJson().dump();
 }
 
-void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	json j;
 	if (!params.contains("rootTag"))
@@ -6432,7 +6450,7 @@ string rpcHandler::rpc_closeCom(json params, string& error)
 	return j.dump();
 }
 
-void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION session) {
+void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string tag = params["tag"];
 	OBJ* p = prj.queryObj(tag, session.language);
 	if (p) {
@@ -6453,7 +6471,7 @@ void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION ses
 	}
 }
 
-void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION session) {
+void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string tag = params["tag"];
 	OBJ* p = prj.queryObj(tag, session.language);
 	if (p) {
@@ -6478,7 +6496,7 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION se
 	}
 }
 
-void rpcHandler::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION session)
+void rpcHandler::rpc_startStreamPush(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
 	if (params["srcTag"] == nullptr) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param srcTag missing");

@@ -96,12 +96,19 @@ public:
 
 	bool isDebug; //调试调用不计入session统计
 
+	long long tStartCall;
+	long long tStartHandle;
+	long long tEndCall;
+
 	RPC_SESSION() {
 		isNotification = false;
 		remotePort = 0;
 		localPort = 0;
 		isDebug = false;
 		caller = METHOD_CALLER::httpClient;
+		tStartCall = 0;
+		tStartHandle = 0;
+		tEndCall = 0;
 	}
 };
 

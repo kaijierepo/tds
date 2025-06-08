@@ -200,89 +200,52 @@ struct SCHEDULE_TASK {
 	}
 
 	void fromJson(yyjson_val* conf) {
-		//if (j["name"].is_string()) {
-		//	name = j["name"];
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "name"))) {
-			name = yyjson_get_str(yyjson_obj_get(conf, "name"));
+		yyjson_val* v = yyjson_obj_get(conf, "name");
+		if (v) {
+			name = yyjson_get_str(v);
 		}
 
-		//if (j["dateStart"].is_string()) {
-		//	string s = j["dateStart"];
-		//	dateStart.fromStr(s);
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "dateStart"))) {
-			string s = yyjson_get_str(yyjson_obj_get(conf, "dateStart"));
-			dateStart.fromStr(s);
+		v = yyjson_obj_get(conf, "dateStart");
+		if (v) {
+			dateStart.fromStr(yyjson_get_str(v));
 		}
 
-		//if (j["dateEnd"].is_string()) {
-		//	string s = j["dateEnd"];
-		//	dateEnd.fromStr(s);
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "dateEnd"))) {
-			string s = yyjson_get_str(yyjson_obj_get(conf, "dateEnd"));
-			dateEnd.fromStr(s);
+		v = yyjson_obj_get(conf, "dateEnd");
+		if (v) {
+			dateEnd.fromStr(yyjson_get_str(v));
 		}
 
-		//if (j["type"].is_string()) {
-		//	type = j["type"];
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "type"))) {
-			type = yyjson_get_str(yyjson_obj_get(conf, "type"));
+		v = yyjson_obj_get(conf, "type");
+		if (v) {
+			type = yyjson_get_str(v);
 		}
 
-		//if (j["script"].is_string()) {
-		//	script = j["script"];
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "script"))) {
-			script = yyjson_get_str(yyjson_obj_get(conf, "script"));
+		v = yyjson_obj_get(conf, "script");
+		if (v) {
+			script = yyjson_get_str(v);
 		}
 
-		//if (j["outputTag"].is_string()) {
-		//	outputTag = j["outputTag"].get<string>();
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "outputTag"))) {
-			outputTag = yyjson_get_str(yyjson_obj_get(conf, "outputTag"));
+		v = yyjson_obj_get(conf, "outputTag");
+		if (v) {
+			outputTag = yyjson_get_str(v);
 		}
 
-		//if (j["outputVal"] != nullptr) {
-		//	outputVal = j["outputVal"];
-		//}
-		if (yyjson_obj_get(conf, "outputVal") != nullptr) {
-			outputVal = yyjson_get_str(yyjson_obj_get(conf, "outputVal"));
+		v = yyjson_obj_get(conf, "outputVal");
+		if ( v) {
+			outputVal = yyjson_get_str(v);
 		}
 
-		//if (j["mode"].is_string()) {
-		//	mode = j["mode"];
-		//	if (mode == "weeklyRepeat") {
-		//		if (j["time"].is_string()) {
-		//			string s = j["time"];
-		//			time.fromStr(s);
-		//		}
-		//		if (j["week"].is_array()) {
-		//			json& jWeek = j["week"];
-		//			for (int i = 0; i < jWeek.size(); ++i) {
-		//				week[i] = jWeek[i].get<bool>();
-		//			}
-		//		}
-		//	}
-		//	else if (mode == "customTimeRepeat") {
-		//		json& jRepeatInterval = j["repeatInterval"];
-		//		time.wHour = jRepeatInterval["hour"].get<int>();
-		//		time.wMinute = jRepeatInterval["minute"].get<int>();
-		//		time.wSecond = jRepeatInterval["second"].get<int>();
-		//	}
-		//}
-		if (yyjson_is_str(yyjson_obj_get(conf, "mode"))) {
-			mode = yyjson_get_str(yyjson_obj_get(conf, "mode"));
+		v = yyjson_obj_get(conf, "mode");
+		if (v) {
+			mode = yyjson_get_str(v);
 			if (mode == "weeklyRepeat") {
-				if (yyjson_is_str(yyjson_obj_get(conf, "time"))) {
-					string s = yyjson_get_str(yyjson_obj_get(conf, "time"));
+				v = yyjson_obj_get(conf, "time");
+				if (v) {
+					string s = yyjson_get_str(v);
 					time.fromStr(s);
 				}
-				if (yyjson_is_arr(yyjson_obj_get(conf, "week"))) {
-					yyjson_val* jWeek = yyjson_obj_get(conf, "week");
+				yyjson_val* jWeek = yyjson_obj_get(conf, "week");
+				if (jWeek) {
 					for (int i = 0; i < yyjson_get_len(jWeek); ++i) {
 						week[i] = yyjson_get_bool(yyjson_arr_get(jWeek, i));
 					}
@@ -324,39 +287,16 @@ struct SCHEDULE_TASK {
 	}
 
 	void toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
-		//j["name"] = name;
-		//j["dateStart"] = dateStart.toStr();
-		//j["dateEnd"] = dateEnd.toStr();
-		//j["script"] = script;
-		//j["type"] = type;
-		//j["outputTag"] = outputTag;
-		//j["outputVal"] = outputVal;
-		//j["mode"] = mode;
-		//if (mode == "weeklyRepeat") {
-		//	j["time"] = time.toStr();
-		//	json jWeek = json::array();
-		//	for (int i = 0; i < 7; ++i) {
-		//		jWeek.push_back(week[i]);
-		//	}
-		//	j["week"] = jWeek;
-		//}
-		//else if (mode == "customTimeRepeat") {
-		//	j["repeatInterval"] = {
-		//	  {"hour", time.wHour},
-		//	  {"minute", time.wMinute},
-		//	  {"second", time.wSecond}
-		//	};
-		//}
-		yyjson_mut_obj_add_str(doc, conf, "name", name.c_str());
-		yyjson_mut_obj_add_str(doc, conf, "dateStart", dateStart.toStr().c_str());
-		yyjson_mut_obj_add_str(doc, conf, "dateEnd", dateEnd.toStr().c_str());
-		yyjson_mut_obj_add_str(doc, conf, "script", script.c_str());
-		yyjson_mut_obj_add_str(doc, conf, "type", type.c_str());
-		yyjson_mut_obj_add_str(doc, conf, "outputTag", outputTag.c_str());
-		yyjson_mut_obj_add_str(doc, conf, "outputVal", outputVal.c_str());
-		yyjson_mut_obj_add_str(doc, conf, "mode", mode.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "name", name.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "dateStart", dateStart.toStr().c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "dateEnd", dateEnd.toStr().c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "script", script.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "type", type.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "outputTag", outputTag.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "outputVal", outputVal.c_str());
+		yyjson_mut_obj_add_strcpy(doc, conf, "mode", mode.c_str());
 		if (mode == "weeklyRepeat") {
-			yyjson_mut_obj_add_str(doc, conf, "time", time.toStr().c_str());
+			yyjson_mut_obj_add_strcpy(doc, conf, "time", time.toStr().c_str());
 			yyjson_mut_val* jWeek = yyjson_mut_arr(doc);
 			for (int i = 0; i < 7; ++i) {
 				yyjson_mut_arr_add_bool(doc, jWeek, week[i]);
@@ -412,13 +352,19 @@ struct MP_STATIS {
 };
 
 struct MAP_CONF {
+	bool enable;
 	double center[2];
 	double pitch;
 	double rotation;
 	string viewMode; //3D 2D
 	double zoom;
+
+	MAP_CONF() {
+		enable = false;
+	}
 };
 
+#define INVALID_COORD 1000
 
 class MP;
 class TDB;

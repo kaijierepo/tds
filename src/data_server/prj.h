@@ -67,7 +67,7 @@ public:
 	void clear();
 	void getMpTypeList(json& mpTypeList);
 
-	void rpc_setObj(yyjson_val* params, RPC_RESP& resp, RPC_SESSION session);
+	void rpc_setObj(yyjson_val* params, RPC_RESP& resp, RPC_SESSION& session);
 
 	vector<MP*> getAllEzvizMp();
 

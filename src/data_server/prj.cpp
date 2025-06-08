@@ -447,7 +447,8 @@ bool project::closeStream(string tag)
 }
 
 
-void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION session) {
+void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
+	session.tStartHandle = rpcSrv.getTick();
 	string& result = rpcResp.result;
 	if (yyjson_is_obj(params)) {
 		if (!yyjson_obj_get(params,"tag")) {

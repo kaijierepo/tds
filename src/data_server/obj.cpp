@@ -83,6 +83,8 @@ OBJ::OBJ()
 	m_bChildTds = false;
 	m_bEnableIO = true;
 	m_bEnableTask = true;
+	m_longitude = INVALID_COORD;
+	m_latitude = INVALID_COORD;
 }
 
 OBJ::~OBJ()
@@ -343,6 +345,7 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 
 	yyjson_val* yymap = yyjson_obj_get(conf, "map");
 	if (yymap) {
+		m_mapConf.enable = true;
 		v = yyjson_obj_get(yymap, "center");
 		m_mapConf.center[0] = yyjson_get_num(yyjson_arr_get(v, 0));
 		m_mapConf.center[1] = yyjson_get_num(yyjson_arr_get(v, 1));
@@ -759,9 +762,9 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 		}
 
 			
-		if (m_longitudeDyn > 0.000001)
+		if (m_longitudeDyn != INVALID_COORD)
 			conf["longitudeDyn"] = m_longitudeDyn;
-		if (m_latitudeDyn > 0.000001)
+		if (m_latitudeDyn != INVALID_COORD)
 			conf["latitudeDyn"] = m_latitudeDyn;
 
 		if (m_jAlarmStatus != nullptr)
@@ -980,27 +983,34 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		yyjson_mut_val* yyMap = yyjson_mut_obj(doc);
-		yyjson_mut_val* yyCenter = yyjson_mut_arr(doc);
-		yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc,m_mapConf.center[0]));
-		yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[1]));
-		key = yyjson_mut_strcpy(doc, "center");
-		yyjson_mut_obj_put(yyMap, key, yyCenter);
-		key = yyjson_mut_strcpy(doc, "pitch");
-		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.pitch));
-		key = yyjson_mut_strcpy(doc, "rotation");
-		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.rotation));
-		key = yyjson_mut_strcpy(doc, "zoom");
-		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.zoom));
-		key = yyjson_mut_strcpy(doc, "viewMode");
-		yyjson_mut_obj_put(yyMap, key, yyjson_mut_str(doc, m_mapConf.viewMode.c_str()));
-		key = yyjson_mut_strcpy(doc, "map");
-		yyjson_mut_obj_put(conf, key, yyMap);
+		if (m_mapConf.enable) {
+			yyjson_mut_val* yyMap = yyjson_mut_obj(doc);
+			yyjson_mut_val* yyCenter = yyjson_mut_arr(doc);
+			yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[0]));
+			yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[1]));
+			key = yyjson_mut_strcpy(doc, "center");
+			yyjson_mut_obj_put(yyMap, key, yyCenter);
+			key = yyjson_mut_strcpy(doc, "pitch");
+			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.pitch));
+			key = yyjson_mut_strcpy(doc, "rotation");
+			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.rotation));
+			key = yyjson_mut_strcpy(doc, "zoom");
+			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.zoom));
+			key = yyjson_mut_strcpy(doc, "viewMode");
+			yyjson_mut_obj_put(yyMap, key, yyjson_mut_strcpy(doc, m_mapConf.viewMode.c_str()));
+			key = yyjson_mut_strcpy(doc, "map");
+			yyjson_mut_obj_put(conf, key, yyMap);
+		}
+		
 
-		key = yyjson_mut_strcpy(doc, "longitude");
-		yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_longitude));
-		key = yyjson_mut_strcpy(doc, "latitude");
-		yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_latitude));
+		if (m_longitude != INVALID_COORD) {
+			key = yyjson_mut_strcpy(doc, "longitude");
+			yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_longitude));
+		}
+		if (m_latitude != INVALID_COORD) {
+			key = yyjson_mut_strcpy(doc, "latitude");
+			yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_latitude));
+		}
 
 		if (m_comment != "") {
 			//conf["comment"] = m_comment;

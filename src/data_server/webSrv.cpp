@@ -16,6 +16,7 @@
 #include "statusServer.h"
 #include "fileUploadSrv.h"
 #include "base64.h"
+#include "miniz.h"
 
 #define SHUT_DOWN_BOTH 2 //SD_BOTH in win,SHUT_RDWR in linux
 
@@ -843,8 +844,29 @@ void createTestCert() {
 #endif
 
 void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm, WebServer* pWs) {
+	mg_str* mgs_compressed = mg_http_get_header(hm, "Compressed");
+	string compressed = str::fromBuff(mgs_compressed->ptr, mgs_compressed->len);
+
 	//basic info
-	pSession->req = str::fromBuff(hm->body.ptr, hm->body.len);
+	if (compressed == "1") {
+		size_t outBufSize = 10 * 1024 * 1024;
+		unsigned char* outBuf = new unsigned char[outBufSize];
+		mz_ulong outLen = outBufSize;
+
+		int status = uncompress(outBuf, &outLen,(unsigned char*) hm->body.ptr, hm->body.len);
+		if (status == Z_OK) {
+			pSession->req.resize(outLen);
+			memcpy(pSession->req.data(), outBuf, outLen);
+		}
+		else {
+		}
+		delete[] outBuf;
+
+	}
+	else {
+		pSession->req.resize(hm->body.len);
+		memcpy(pSession->req.data(), hm->body.ptr, hm->body.len);
+	}
 	pSession->isHttps = pWs->m_isHttps;
 
 	//local addr info
@@ -1664,11 +1686,6 @@ bool runWebServers()
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort);
 		g_WebServerList.push_back(pws);
-		if (tds->conf->httpPort != 667) {
-			WebServer* pws667 = new WebServer();
-			pws667->run(667);
-			g_WebServerList.push_back(pws667);
-		}
 	}
 	if (tds->conf->httpPort2 != 0)
 	{
