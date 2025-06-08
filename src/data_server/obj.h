@@ -411,6 +411,14 @@ struct MP_STATIS {
 	}
 };
 
+struct MAP_CONF {
+	double center[2];
+	double pitch;
+	double rotation;
+	string viewMode; //3D 2D
+	double zoom;
+};
+
 
 class MP;
 class TDB;
@@ -458,8 +466,8 @@ public:
 	string m_alias;
 	string m_objID;  //name可能在系统中有重名，ID不会
 	bool m_bShow;
-	json m_longitude;
-	json m_latitude;
+	double m_longitude;
+	double m_latitude;
 	bool m_bDynLocation; //动态定位模式，从监控点获取
 	bool m_bLocationCalib;
 	double m_dbLongitudeCalib;
@@ -479,8 +487,8 @@ public:
 	//状态数据
 	bool m_bOnline;
 	TIME m_stDataLastUpdate;
-	json m_longitudeDyn;
-	json m_latitudeDyn;
+	double m_longitudeDyn;
+	double m_latitudeDyn;
 	string m_status;
 	json m_jAlarmStatus;
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
@@ -549,7 +557,7 @@ public:
 	vector<string> GetAlias();
 	vector<string> GetAllTagNamePlus();
 	virtual string getTagWithRoot();
-	json m_mapConf;
+	MAP_CONF m_mapConf;
 
 
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示

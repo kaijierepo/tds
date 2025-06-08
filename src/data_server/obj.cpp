@@ -165,9 +165,9 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 		m_longitude = conf["longitude"];
 	if(conf.contains("latitude"))
 		m_latitude = conf["latitude"];
-	if (conf.contains("map")) {
-		m_mapConf.merge_patch(conf["map"]);
-	}
+	//if (conf.contains("map")) {
+	//	m_mapConf.merge_patch(conf["map"]);
+	//}
 		
 	if (conf.contains("enableTask")) {
 		m_bEnableTask = conf["enableTask"].get<bool>();
@@ -333,21 +333,27 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 
 	v = yyjson_obj_get(conf, "longitude");
 	if (v) {
-		m_longitude = yyjson_get_str(v);
+		m_longitude = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "latitude");
 	if (v) {
-		m_latitude = yyjson_get_str(v);
+		m_latitude = yyjson_get_num(v);
 	}
 
-	v = yyjson_obj_get(conf, "map");
-	if (v) {
-		size_t indx = 0, max = 0;
-		yyjson_val* key, * val;
-		yyjson_obj_foreach(v, indx, max, key, val) {
-			m_mapConf[yyjson_get_str(key)] = yyjson_get_str(val);
-		}
+	yyjson_val* yymap = yyjson_obj_get(conf, "map");
+	if (yymap) {
+		v = yyjson_obj_get(yymap, "center");
+		m_mapConf.center[0] = yyjson_get_num(yyjson_arr_get(v, 0));
+		m_mapConf.center[1] = yyjson_get_num(yyjson_arr_get(v, 1));
+		v = yyjson_obj_get(yymap, "pitch");
+		m_mapConf.pitch = yyjson_get_num(v);
+		v = yyjson_obj_get(yymap, "rotation");
+		m_mapConf.rotation = yyjson_get_num(v);
+		v = yyjson_obj_get(yymap, "zoom");
+		m_mapConf.zoom = yyjson_get_num(v);
+		v = yyjson_obj_get(yymap, "viewMode");
+		m_mapConf.viewMode = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "enableTask");
@@ -697,12 +703,12 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 			conf["longitudeCalib"] = m_dbLongitudeCalib;
 		if (m_dbLatitudeCalib > 0.000001)
 			conf["latitudeCalib"] = m_dbLatitudeCalib;
-		if (m_mapConf != nullptr)
-			conf["map"] = m_mapConf;
-		if (m_longitude != nullptr)
-			conf["longitude"] = m_longitude;
-		if (m_latitude != nullptr)
-			conf["latitude"] = m_latitude;
+		//if (m_mapConf != nullptr)
+		//	conf["map"] = m_mapConf;
+		//if (m_longitude != nullptr)
+		//	conf["longitude"] = m_longitude;
+		//if (m_latitude != nullptr)
+		//	conf["latitude"] = m_latitude;
 		if (m_comment != "") {
 			conf["comment"] = m_comment;
 		}
@@ -753,9 +759,9 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 		}
 
 			
-		if (m_longitudeDyn != nullptr)
+		if (m_longitudeDyn > 0.000001)
 			conf["longitudeDyn"] = m_longitudeDyn;
-		if (m_latitudeDyn != nullptr)
+		if (m_latitudeDyn > 0.000001)
 			conf["latitudeDyn"] = m_latitudeDyn;
 
 		if (m_jAlarmStatus != nullptr)
@@ -974,12 +980,27 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		//if (m_mapConf != nullptr) 
-		//	conf["map"] = m_mapConf;
-		//if (m_longitude != nullptr)
-		//	conf["longitude"] = m_longitude;
-		//if (m_latitude != nullptr)
-		//	conf["latitude"] = m_latitude;
+		yyjson_mut_val* yyMap = yyjson_mut_obj(doc);
+		yyjson_mut_val* yyCenter = yyjson_mut_arr(doc);
+		yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc,m_mapConf.center[0]));
+		yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[1]));
+		key = yyjson_mut_strcpy(doc, "center");
+		yyjson_mut_obj_put(yyMap, key, yyCenter);
+		key = yyjson_mut_strcpy(doc, "pitch");
+		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.pitch));
+		key = yyjson_mut_strcpy(doc, "rotation");
+		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.rotation));
+		key = yyjson_mut_strcpy(doc, "zoom");
+		yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.zoom));
+		key = yyjson_mut_strcpy(doc, "viewMode");
+		yyjson_mut_obj_put(yyMap, key, yyjson_mut_str(doc, m_mapConf.viewMode.c_str()));
+		key = yyjson_mut_strcpy(doc, "map");
+		yyjson_mut_obj_put(conf, key, yyMap);
+
+		key = yyjson_mut_strcpy(doc, "longitude");
+		yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_longitude));
+		key = yyjson_mut_strcpy(doc, "latitude");
+		yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_latitude));
 
 		if (m_comment != "") {
 			//conf["comment"] = m_comment;
