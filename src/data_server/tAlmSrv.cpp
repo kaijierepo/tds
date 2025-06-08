@@ -405,6 +405,9 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	string currFilePath = m_dbPath + "/current.csv";
 	tableCurrent.loadFile(currFilePath);
 	tableCurrent.initUnAckUnRecover();
+	if (tableCurrent.buff.size() > 10000) {
+		printf("!!! current alarm count reaches 10000,may causes performance problems\r\n");
+	}
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;

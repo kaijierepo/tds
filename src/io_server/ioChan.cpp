@@ -136,7 +136,6 @@ bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 	if (querier.getStatus)
 	{
 		conf["ioTypeLabel"] = m_ioTypeLabel;
-		conf["valTypeLabel"] = m_valTypeLabel;
 		conf["val"] = m_curVal;
 	}
 

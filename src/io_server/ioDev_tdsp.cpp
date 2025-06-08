@@ -481,9 +481,6 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 			string tag = yyjson_get_str(yyv_name);
 			tag = TAG::addRoot(tag, parentTag);
 			m_childTdsTag = tag;
-			size_t len;
-			string sRlt = yyjson_val_write(rlt, 0, &len);
-			json jRlt = json::parse(sRlt);
 
 			LOG("[主从服务]获取到子服务对象树配置,子服务位号:%s", tag.c_str());
 
@@ -497,7 +494,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 			if (!p) {
 				LOG("[主从服务]主服务中未包含子服务对象,创建子服务对象树并保存到主服务");
 				p = prj.createObjBranchByTag(tag);
-				p->loadConf(jRlt);
+				p->loadConf(rlt);
 				p->m_bChildTds = true;
 				p->m_bOnline = true;
 				prj.saveConfFile();
@@ -515,7 +512,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc)
 				//timeopt::now(&stNow);
 				////此处不再保存到数据库，第3个参数需要重构掉
 				//prjTmp.m_bOnline = true;//根节点就是子服务，当前在线
-				p->loadStatus(jRlt);
+				p->loadStatus(rlt);
 			}
 		}
 	}

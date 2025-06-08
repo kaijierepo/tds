@@ -87,7 +87,7 @@ void thread_rt_data_save() {
 
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 		yyjson_mut_doc* md = yyjson_mut_doc_new(nullptr);
-		yyjson_mut_val* mr = yyjson_mut_doc_get_root(md);
+		yyjson_mut_val* mr = yyjson_mut_obj(md);
 		prj.saveStatus(mr,md);
 		size_t len;
 		char* s = yyjson_mut_val_write(mr,0,&len);
@@ -110,8 +110,9 @@ void project::loadRtDB() {
 	if (s != "") {
 		try
 		{
-			json j = json::parse(s);
-			loadStatus(j);
+			yyjson_doc* d = yyjson_read(s.c_str(), s.size(), 0);
+			yyjson_val* r = yyjson_doc_get_root(d);
+			loadStatus(r);
 		}
 		catch (const std::exception& e)
 		{
@@ -173,22 +174,25 @@ bool project::saveConfFile()
 		LOG("[error]critical error,mo tree to json fail");
 	}
 	else {
-		bool changed = len != m_moConfFileDump.size() || memcmp(p, m_moConfFileDump.c_str(), len) != 0;
-		if (changed) {
-			TIME st;
-			timeopt::now(&st);
-			KV_INI ini;
-			ini.load(tds->conf->confPath + "/lastModify.ini");
-			ini.setVal("mo", timeopt::st2str(st));
-
-			bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
-			if (bSaved)
-				m_moConfFileDump = p;
-		}
-		else {
-			bSaved = true;
-		}
+		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
 	}
+	//else {
+	//	bool changed = len != m_moConfFileDump.size() || memcmp(p, m_moConfFileDump.c_str(), len) != 0;
+	//	if (changed) {
+	//		TIME st;
+	//		timeopt::now(&st);
+	//		KV_INI ini;
+	//		ini.load(tds->conf->confPath + "/lastModify.ini");
+	//		ini.setVal("mo", timeopt::st2str(st));
+
+	//		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
+	//		if (bSaved)
+	//			m_moConfFileDump = p;
+	//	}
+	//	else {
+	//		bSaved = true;
+	//	}
+	//}
 	
 	if(p){
 		free(p);

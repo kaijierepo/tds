@@ -63,7 +63,7 @@ public:
 
 	bool loadConf(json& conf, bool bCreate = true) override;
 	bool loadConf(yyjson_val* conf, bool bCreate = true) override;
-	bool loadStatus(json& status) override;
+	bool loadStatus(yyjson_val* status) override;
 	bool toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
 	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
 	string getValDesc(json& jVal, bool getUnit = true);
@@ -102,7 +102,6 @@ public:
 	//配置
 	json m_defaultVal; //默认值，软件刚启动时加载的值
 	string m_valType;//数值类型， bool，模拟量，json等
-	string m_valTypeLabel;
 	string m_ioType;
 	string m_ioTypeLabel;
 	//监测点类型，按应用方式来区分，例如温度、湿度、车闸、人闸等。
@@ -127,7 +126,6 @@ public:
 	//TIME m_stLastSampleTime;
 	string m_srcStreamFetch; //ondemand按需拉流 或 always持续拉流
 	string m_expression;    //计算表达式
-	string m_onChange; //值改变时执行脚本
 
 	//整型枚举值
 	bool getValByEnumVal(string enumVal, int& val);

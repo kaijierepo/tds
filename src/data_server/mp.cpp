@@ -97,8 +97,6 @@ bool MP::loadConf(json& conf,bool bCreate)
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
-	m_valTypeLabel = getValTypeLabel(m_valType);
-
 	if (conf["alarmMp"] != nullptr)
 		m_alarmMp = conf["alarmMp"].get<bool>();
 	else
@@ -300,11 +298,6 @@ bool MP::loadConf(json& conf,bool bCreate)
 		m_srcStreamFetch = conf["srcStreamFetch"];
 	}
 
-
-	if (conf["onChange"].is_string()) {
-		m_onChange = conf["onChange"];
-	}
-
 	return false;
 }
 
@@ -316,8 +309,6 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 	if (v) {
 		m_valType = yyjson_get_str(v);
 	}
-
-	m_valTypeLabel = getValTypeLabel(m_valType);
 
 	v = yyjson_obj_get(conf, "alarmMp");
 	if (v) {
@@ -354,7 +345,7 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		}
 		v = yyjson_obj_get(yyalmlimit, "high");
 		if (v) {
-			m_alarmLimit.high = yyjson_get_real(v);
+			m_alarmLimit.high = yyjson_get_num(v);
 		}
 		v = yyjson_obj_get(yyalmlimit, "enableLow");
 		if (v) {
@@ -362,7 +353,7 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		}
 		v = yyjson_obj_get(yyalmlimit, "low");
 		if (v) {
-			m_alarmLimit.low = yyjson_get_real(v);
+			m_alarmLimit.low = yyjson_get_num(v);
 		}
 	}
 
@@ -374,11 +365,11 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		}
 		v = yyjson_obj_get(yyValidRange, "min");
 		if (v) {
-			m_validRange.min = yyjson_get_real(v);
+			m_validRange.min = yyjson_get_num(v);
 		}
 		v = yyjson_obj_get(yyValidRange, "max");
 		if (v) {
-			m_validRange.max = yyjson_get_real(v);
+			m_validRange.max = yyjson_get_num(v);
 		}
 	}
 
@@ -414,16 +405,16 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 
 	v = yyjson_obj_get(conf, "k");
 	if (v) {
-		m_K = yyjson_get_real(v);
+		m_K = yyjson_get_num(v);
 	}
 	v = yyjson_obj_get(conf, "b");
 	if (v) {
-		m_B = yyjson_get_real(v);
+		m_B = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "deadZone");
 	if (v) {
-		m_deadZone = yyjson_get_real(v);
+		m_deadZone = yyjson_get_num(v);
 	}
 
 	yyjson_val* yyDefaultVal = yyjson_obj_get(conf, "defaultVal");
@@ -472,74 +463,48 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 		m_expression = yyjson_get_str(v);
 	}
 
-	v = yyjson_obj_get(conf, "mediaSrcType");
-	if (v) {
-		m_mediaSrcType = yyjson_get_str(v);
-	}
-
-	v = yyjson_obj_get(conf, "mediaUrl");
-	if (v) {
-		m_mediaUrl = yyjson_get_str(v);
-	}
-
-	if (m_mediaSrcType == "ezviz") {
-		prj.m_enableEzviz = true;
-	}
-
-	v = yyjson_obj_get(conf, "serialNo");
-	if (v) {
-		m_serialNo = yyjson_get_str(v);
-	}
-
-	v = yyjson_obj_get(conf, "appKey");
-	if (v) {
-		m_appKey = yyjson_get_str(v);
-	}
-
-	v = yyjson_obj_get(conf, "secret");
-	if (v) {
-		m_secret = yyjson_get_str(v);
-	}
-
-	v = yyjson_obj_get(conf, "serveStream");
-	if (v) {
-		m_bServeStream = yyjson_get_bool(v);
-	}
-
-
-	////状态数据
-	//// 	val应该通过 loadStatus加载，不知道为何这里有这段代码。暂时注释。观察一段时间后删除
-	////if(conf.contains("val"))
-	////	m_curVal = conf["val"];
-	//if (conf.contains("time"))
-	//{
-	//	string s = conf["time"].get<string>();
-	//	if (s != "" && s != "-")
-	//		m_stDataLastUpdate = timeopt::str2st(s);
-	//}
-	v = yyjson_obj_get(conf, "time");
-	if (v) {
-		string s = yyjson_get_str(v);
-		if (s != "" && s != "-") {
-			m_stDataLastUpdate = timeopt::str2st(s);
+	yyjson_val* yyMediaSrvType = yyjson_obj_get(conf, "mediaSrcType");
+	if (yyMediaSrvType) {
+		m_mediaSrcType = yyjson_get_str(yyMediaSrvType);
+		if (m_mediaSrcType == "ezviz") {
+			prj.m_enableEzviz = true;
 		}
-	}
 
-	v = yyjson_obj_get(conf, "srcStreamFetch");
-	if (v) {
-		m_srcStreamFetch = yyjson_get_str(v);
-	}
+		v = yyjson_obj_get(conf, "mediaUrl");
+		if (v) {
+			m_mediaUrl = yyjson_get_str(v);
+		}
 
+		v = yyjson_obj_get(conf, "serialNo");
+		if (v) {
+			m_serialNo = yyjson_get_str(v);
+		}
 
-	v = yyjson_obj_get(conf, "onChange");
-	if (v) {
-		m_onChange = yyjson_get_str(v);
+		v = yyjson_obj_get(conf, "appKey");
+		if (v) {
+			m_appKey = yyjson_get_str(v);
+		}
+
+		v = yyjson_obj_get(conf, "secret");
+		if (v) {
+			m_secret = yyjson_get_str(v);
+		}
+
+		v = yyjson_obj_get(conf, "serveStream");
+		if (v) {
+			m_bServeStream = yyjson_get_bool(v);
+		}
+
+		v = yyjson_obj_get(conf, "srcStreamFetch");
+		if (v) {
+			m_srcStreamFetch = yyjson_get_str(v);
+		}
 	}
 
 	return false;
 }
 
-bool MP::loadStatus(json& status)
+bool MP::loadStatus(yyjson_val* status)
 {
 	//常量无需加载
 	if (m_ioType == "c") {
@@ -550,12 +515,12 @@ bool MP::loadStatus(json& status)
 	TIME t;
 
 	//如果 status 内部不携带时间，使用当前时间，使用在使用树形结构进行input的时候
-	json jTime = status["time"];
-	if (jTime == nullptr) {
+	yyjson_val* yytime = yyjson_obj_get(status, "time");
+	if (yytime == nullptr) {
 		t = timeopt::now();
 	}
 	else {
-		sTime = jTime.get<string>();
+		sTime = yyjson_get_str(yytime);
 		if (!timeopt::isValidTimeStr(sTime)) {
 			return true;
 		}
@@ -566,7 +531,12 @@ bool MP::loadStatus(json& status)
 	}
 
 	m_lastVal = m_curVal;
-	m_curVal = status["val"];
+	yyjson_val* yyVal = yyjson_obj_get(status,"val");
+	if (yyVal) {
+		m_curVal = json::parse(yyjson_val_write(yyVal,0,nullptr));
+	}
+	else
+		m_curVal = nullptr;
 	m_stDataLastUpdate = t;
 
 	return true;
@@ -693,11 +663,6 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 
 		if (m_bServeStream) {
 			conf["serveStream"] = m_bServeStream;
-		}
-
-
-		if (m_onChange != "") {
-			conf["onChange"] = m_onChange;
 		}
 	}
 	
@@ -866,11 +831,6 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 
 		//有效值范围
 		if (m_validRange.enable) {
-			//json validRange;
-			//validRange["enable"] = m_validRange.enable;
-			//validRange["min"] = m_validRange.min;
-			//validRange["max"] = m_validRange.max;
-			//conf["validRange"] = validRange;
 			yyjson_mut_val* rootValidRange = yyjson_mut_obj(doc);
 
 			key = yyjson_mut_strcpy(doc, "enable");
@@ -891,15 +851,12 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 
 		//有效小数位
 		if (m_decimalDigits >= 0) {
-			//conf["decimalDigits"] = m_decimalDigits;
 			key = yyjson_mut_strcpy(doc, "decimalDigits");
 			val = yyjson_mut_int(doc, m_decimalDigits);
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		if (p->m_valType == "video") {
-			//conf["mediaSrcType"] = m_mediaSrcType;
-			//conf["mediaUrl"] = m_mediaUrl;
+		if (p->m_valType == VAL_TYPE::video) {
 			key = yyjson_mut_strcpy(doc, "mediaSrcType");
 			val = yyjson_mut_strcpy(doc, m_mediaSrcType.c_str());
 			yyjson_mut_obj_put(conf, key, val);
@@ -909,9 +866,6 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 			yyjson_mut_obj_put(conf, key, val);
 
 			if (m_mediaSrcType == "ezviz") {
-				//conf["serialNo"] = m_serialNo;
-				//conf["appKey"] = m_appKey;
-				//conf["secret"] = m_secret;
 				key = yyjson_mut_strcpy(doc, "serialNo");
 				val = yyjson_mut_strcpy(doc, m_serialNo.c_str());
 				yyjson_mut_obj_put(conf, key, val);
@@ -922,6 +876,16 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 
 				key = yyjson_mut_strcpy(doc, "secret");
 				val = yyjson_mut_strcpy(doc, m_secret.c_str());
+				yyjson_mut_obj_put(conf, key, val);
+			}
+
+			key = yyjson_mut_strcpy(doc, "srcStreamFetch");
+			val = yyjson_mut_strcpy(doc, m_srcStreamFetch.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+
+			if (m_bServeStream) {
+				key = yyjson_mut_strcpy(doc, "serveStream");
+				val = yyjson_mut_bool(doc, m_bServeStream);
 				yyjson_mut_obj_put(conf, key, val);
 			}
 		}
@@ -970,31 +934,11 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 		//	conf["downSampleInterval"] = m_downSampleInterval;
 		//}
 
-		if (m_valType == VAL_TYPE::video) {
-			//conf["srcStreamFetch"] = m_srcStreamFetch;
-			key = yyjson_mut_strcpy(doc, "srcStreamFetch");
-			val = yyjson_mut_strcpy(doc, m_srcStreamFetch.c_str());
-			yyjson_mut_obj_put(conf, key, val);
-		}
 
 		if (m_expression != "") {
 			//conf["expression"] = m_expression;
 			key = yyjson_mut_strcpy(doc, "expression");
 			val = yyjson_mut_strcpy(doc, m_expression.c_str());
-			yyjson_mut_obj_put(conf, key, val);
-		}
-
-		if (m_bServeStream) {
-			//conf["serveStream"] = m_bServeStream;
-			key = yyjson_mut_strcpy(doc, "serveStream");
-			val = yyjson_mut_bool(doc, m_bServeStream);
-			yyjson_mut_obj_put(conf, key, val);
-		}
-
-		if (m_onChange != "") {
-			//conf["onChange"] = m_onChange;
-			key = yyjson_mut_strcpy(doc, "onChange");
-			val = yyjson_mut_strcpy(doc, m_onChange.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 	}
@@ -1310,17 +1254,6 @@ void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 	{
 		jVal["type"] = this->m_valType;
 		jVal["mpType"] = this->m_mpType;
-	}
-
-	//值改变事件脚本调用
-	if (m_onChange != "") {
-		if (m_lastVal.is_boolean() && m_lastVal.get<bool>() == false &&
-			m_curVal.is_boolean() && m_curVal.get<bool>() == true)
-		{
-#ifdef ENABLE_JERRY_SCRIPT
-			scriptManager.runScriptFileAsyn(m_onChange,getTag());
-#endif
-		}
 	}
 
 

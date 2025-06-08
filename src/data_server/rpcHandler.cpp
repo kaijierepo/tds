@@ -2198,6 +2198,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.language = session.language;
+				q.getTag = true; //多选模式，没有树结构，因此需要tag信息
 
 				if (mode == "array") {
 					//json jRlt = json::array();
@@ -4058,15 +4059,10 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 		m_csRpcSessions.unlock();
 	}
 
-
-
-	//对部分命令日志记录
-	bool bNeedLog = needLog(method);
-	if (bNeedLog) {
-		size_t len;string s = yyjson_val_write(jReq, 0, &len);
-		LOG("[trace]RPC请求:\r\n" + s + "\r\n");
-	}
+	//命令请求日志，日志记录在 handle前，方便观察执行时间
+	bool needLog = false;
 	if (method == "output" || method == "openStream") {
+		needLog = true;
 		size_t len; string s = yyjson_val_write(jReq, 0, &len);
 		LOG("[warn]RPC请求:\r\n" + s + "\r\n");
 	}
@@ -4226,18 +4222,10 @@ HANDLE_END:
 
 
 	//数据过长或者频率过高的命令不记录日志
-	if (rpcResp.result != "")
+	if (rpcResp.result != "" && needLog)
 	{
-		string strRespForLog = "";
-		if (method == "db.select" || method == "getObj")
-		{
-			strRespForLog = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + jStrId + ",\"result\":\"$resultLen = " + str::fromInt(rpcResp.result.length()) + "$\"}";
-		}
-
-		if (strRespForLog != "")
-			LOG("[trace]RPC响应:\r\n" + strRespForLog + "\r\n");
-		else if (bNeedLog)
-			LOG("[trace]RPC响应:\r\n" + rpcResp.result + "\r\n");
+		//更多的api请求响应日志，使用 apiDebug页面分析
+		LOG("[warn]RPC响应:\r\n" + rpcResp.result + "\r\n");
 	}
 }
 

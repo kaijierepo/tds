@@ -72,7 +72,6 @@ public:
 	string m_ioType;
 	string m_ioTypeLabel;
 	string m_valType;
-	string m_valTypeLabel;
 
 	TIME m_stLastUpdateTime;
 

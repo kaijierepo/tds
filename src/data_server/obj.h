@@ -67,6 +67,7 @@ struct OBJ_QUERIER {
 	bool getConf;
 	bool getConfDetail;
 	bool getUnit; //值描述信息是否需要带单位
+	bool getTag;
 
 	string language;
 
@@ -87,6 +88,7 @@ struct OBJ_QUERIER {
 		 getUnit = true;
 		 flatten = false;
 		 pRoot = nullptr;
+		 getTag = false;
 	}
 };
 
@@ -425,7 +427,7 @@ public:
 
 	virtual bool loadConf(json& conf, bool bCreate = true);
 	virtual bool loadConf(yyjson_val* conf, bool bCreate = true);
-	virtual bool loadStatus(json& status);
+	virtual bool loadStatus(yyjson_val* status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
 	virtual bool toJson(json& conf, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");

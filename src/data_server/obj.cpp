@@ -270,9 +270,8 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 	//载入配置
 	yyjson_val* v = yyjson_obj_get(conf, "name");
 	if (v) {
-		string name = yyjson_get_str(v);
-		m_name = name;
-		m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现
+		m_name = yyjson_get_str(v);
+		//m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现。此句性能差
 	}
 
 	v = yyjson_obj_get(conf, "nameTranslate");
@@ -289,14 +288,12 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 
 	v = yyjson_obj_get(conf, "level");
 	if (v) {
-		string level = yyjson_get_str(v);
-		m_level = level;
+		m_level = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "type");
 	if (v) {
-		string type = yyjson_get_str(v);
-		m_type = type;
+		m_type = yyjson_get_str(v);
 	}
 
 	v = yyjson_obj_get(conf, "childTds");
@@ -326,12 +323,12 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 
 	v = yyjson_obj_get(conf, "longitudeCalib");
 	if (v) {
-		m_dbLongitudeCalib = yyjson_get_real(v);
+		m_dbLongitudeCalib = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "latitudeCalib");
 	if (v) {
-		m_dbLatitudeCalib = yyjson_get_real(v);
+		m_dbLatitudeCalib = yyjson_get_num(v);
 	}
 
 	v = yyjson_obj_get(conf, "longitude");
@@ -898,22 +895,25 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 	val = yyjson_mut_strcpy(doc, m_level.c_str());
 	yyjson_mut_obj_put(conf, key, val);
 
+	if (q.getTag) {
+		string tag = getTag("", q.language);
+		if (q.rootTag != "")
+		{
+			tag = TAG::trimRoot(tag, q.rootTag);
+			//conf["rootTag"] = q.rootTag;
+			key = yyjson_mut_strcpy(doc, "rootTag");
+			val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (tag != "") {
+			//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
+			key = yyjson_mut_strcpy(doc, "tag");
+			val = yyjson_mut_strcpy(doc, tag.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+	}
+
 	if (q.getConfDetail) {
-		//string tag = getTag("", q.language);
-		//if (q.rootTag != "")
-		//{
-		//	tag = TAG::trimRoot(tag, q.rootTag);
-		//	//conf["rootTag"] = q.rootTag;
-		//	key = yyjson_mut_strcpy(doc, "rootTag");
-		//	val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
-		//	yyjson_mut_obj_put(conf, key, val);
-		//}
-		//if (tag != "") {
-		//	//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
-		//	key = yyjson_mut_strcpy(doc, "tag");
-		//	val = yyjson_mut_strcpy(doc, tag.c_str());
-		//	yyjson_mut_obj_put(conf, key, val);
-		//}
 		if (m_strIoAddrBind != "") {
 			//conf["ioAddrBind"] = m_strIoAddrBind;
 			key = yyjson_mut_strcpy(doc, "ioAddrBind");
@@ -1138,38 +1138,39 @@ bool OBJ::isCustomOrg()
 
 
 // 有一个MP::loadStatus重载
-bool OBJ::loadStatus(json& status)
+bool OBJ::loadStatus(yyjson_val* status)
 {
-	if (status.is_object()) {
-		//载入状态
-		if (status.contains("online"))
-			m_bOnline = status["online"].get<bool>();
-		if (status.contains("longitudeDyn"))
-			m_longitudeDyn = status["longitudeDyn"];
-		if (status.contains("latitudeDyn"))
-			m_latitudeDyn = status["latitudeDyn"];
-		if (status.contains("alarmStatus"))
-			m_jAlarmStatus = status["alarmStatus"];
+	if (yyjson_is_obj(status)){
+		yyjson_val* v = yyjson_obj_get(status, "online");
+		if(v)
+			m_bOnline = yyjson_get_bool(v);
+		v = yyjson_obj_get(status, "longitudeDyn");
+			//m_longitudeDyn = status["longitudeDyn"];
+		//if (status.contains("latitudeDyn"))
+		//	m_latitudeDyn = status["latitudeDyn"];
+		//if (status.contains("alarmStatus"))
+		//	m_jAlarmStatus = status["alarmStatus"];
 
-		json jChildren = status["children"];
-		if (jChildren != nullptr) {
-			for (auto& childStatus : jChildren) {
-				string name = childStatus["name"];
-				OBJ* pChildObj = GetChildObjByName(name);
-				if (pChildObj) {
-					pChildObj->loadStatus(childStatus);
+		v = yyjson_obj_get(status, "children");
+		if (v) {
+			size_t idx, max;
+			yyjson_val* child;
+			map<string, OBJ*> mapObj;
+			for (auto& i : m_childObj) {
+				mapObj[i->m_name] = i;
+			}
+
+			yyjson_arr_foreach(v,idx,max,child){
+				yyjson_val* yyname = yyjson_obj_get(child, "name");
+				auto iter = mapObj.find(yyjson_get_str(yyname));
+				if (iter != mapObj.end()) {
+					iter->second->loadStatus(child);
 				}
 			}
 		}
 	}
-	else if (status.is_array()) {
-		for (auto& i : status) {
-			string tag = i["tag"].get<string>();
-			//MP* pmp = 
-		}
-	}
 
-	return false;
+	return true;
 }
 
 bool OBJ::saveStatus(json& statusNode)
