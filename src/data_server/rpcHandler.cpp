@@ -4017,11 +4017,14 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	}
 	string method = yyjson_get_str(yyMethod);
 	yyjson_val* id = yyjson_obj_get(jReq, "id");
+	string jStrId;
 	if (id == nullptr) {
 		rpcResp.isNotification = true;
 		pSession->isNotification = true;
 	}
-	string jStrId = yyjson_val_write(id, 0, 0);
+	else {
+		jStrId = yyjson_val_write(id, 0, 0);
+	}
 
 	statisCall(method);
 	if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {

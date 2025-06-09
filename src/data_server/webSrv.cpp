@@ -845,28 +845,36 @@ void createTestCert() {
 
 void getSessionInfo(RPC_SESSION* pSession, mg_connection* c, mg_http_message* hm, WebServer* pWs) {
 	mg_str* mgs_compressed = mg_http_get_header(hm, "Compressed");
-	string compressed = str::fromBuff(mgs_compressed->ptr, mgs_compressed->len);
 
-	//basic info
-	if (compressed == "1") {
-		size_t outBufSize = 10 * 1024 * 1024;
-		unsigned char* outBuf = new unsigned char[outBufSize];
-		mz_ulong outLen = outBufSize;
+	if (mgs_compressed) {
+		string compressed = str::fromBuff(mgs_compressed->ptr, mgs_compressed->len);
 
-		int status = uncompress(outBuf, &outLen,(unsigned char*) hm->body.ptr, hm->body.len);
-		if (status == Z_OK) {
-			pSession->req.resize(outLen);
-			memcpy(pSession->req.data(), outBuf, outLen);
+		//basic info
+		if (compressed == "1") {
+			size_t outBufSize = 10 * 1024 * 1024;
+			unsigned char* outBuf = new unsigned char[outBufSize];
+			mz_ulong outLen = outBufSize;
+
+			int status = uncompress(outBuf, &outLen, (unsigned char*)hm->body.ptr, hm->body.len);
+			if (status == Z_OK) {
+				pSession->req.resize(outLen);
+				memcpy(pSession->req.data(), outBuf, outLen);
+			}
+			else {
+			}
+
+			delete[] outBuf;
 		}
 		else {
+			pSession->req.resize(hm->body.len);
+			memcpy(pSession->req.data(), hm->body.ptr, hm->body.len);
 		}
-		delete[] outBuf;
-
 	}
 	else {
 		pSession->req.resize(hm->body.len);
 		memcpy(pSession->req.data(), hm->body.ptr, hm->body.len);
 	}
+	
 	pSession->isHttps = pWs->m_isHttps;
 
 	//local addr info
