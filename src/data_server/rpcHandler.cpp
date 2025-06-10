@@ -4524,6 +4524,7 @@ json getValAttr(json de) {
 	de.erase("tag");
 	de.erase("rootTag");
 	de.erase("file");
+	de.erase("online");
 	return de;
 }
 
