@@ -346,21 +346,24 @@ public:
 };
 DB_TIME_RANGE parseTimeRange(string timeExp);
 
-enum class DOWN_SAMPLING_TYPE {
+enum class INTERVAL_DOWN_SAMPLING_TYPE {
 	DST_None,
 	DST_Count,
 	DST_Time
 };
 
-struct INTERVAL_SELECTOR {
-	DOWN_SAMPLING_TYPE type;
+struct DOWN_SAMPLING_SELECTOR {
+	INTERVAL_DOWN_SAMPLING_TYPE intervalType;
 	int dsi;   //down sampling de count interval
 	int dsti;  //down sampling time length interval in seconds
+	bool minDiffDownSampling;
+	double minDiff;
 
-	INTERVAL_SELECTOR() {
-		type = DOWN_SAMPLING_TYPE::DST_None;
+	DOWN_SAMPLING_SELECTOR() {
+		intervalType = INTERVAL_DOWN_SAMPLING_TYPE::DST_None;
 		dsi = 0;
 		dsti = 0;
+		minDiffDownSampling = false;
 	}
 };
 
@@ -540,11 +543,12 @@ struct DE_SELECTOR {
 	TIME_SELECTOR timeSel;  
 	TAG_SELECTOR tagSel;	
 	CONDITION_SELECTOR condition;	
-	INTERVAL_SELECTOR interval;		
+	DOWN_SAMPLING_SELECTOR downSamplingSel;		
 	WHEN_SELECTOR whenSel;
 	bool ascendingSort;
 	string sortKey;
 	bool timeFill;   //in a time section ,data is not exist in some tag. use value before this time section to fill in this time section
+	string splitBy;    //split into multiple result data set
 
 	string valType;  //transform de val to specified value
 	string deType;   //get de by default;  curveIdx to get curveIdx in curveList file
@@ -650,7 +654,8 @@ struct SELECT_RLT {
 	size_t rowCount;
 	size_t deCount;
 	size_t fileCount;
-	map<SORT_FLAG, yyjson_mut_val*> mapRlt;
+	map<SORT_FLAG, yyjson_mut_val*> rltDataSet; //single result data set
+	map<string, map<SORT_FLAG, yyjson_mut_val*>> rltDataSetList; //db.select uses splitBy
 	yyjson_mut_doc* rlt_mut_doc;
 	string error;
 	string info;
@@ -846,7 +851,7 @@ public:
 	bool Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet,yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe);
-	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, string groupKey,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
