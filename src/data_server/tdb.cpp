@@ -4206,9 +4206,6 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				if (deSel.timeSel.AmountMatch(result.deCount)) {
 					break;
 				}
-
-			ONE_DE_PROCESS_END:
-
 			}
 		}
 	}
