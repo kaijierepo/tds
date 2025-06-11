@@ -2661,6 +2661,9 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			out_set_list->push_back(&out_set);
 			dataSetBuff.push_back(out_set_list);
 		}
+		else {
+			out_set_list = in_set_list;
+		}
 		set_list = out_set_list; //use out_set_list as current data set, will be used in next steps
 
 		//do aggr
@@ -3425,7 +3428,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	yyjson_val* yyv_minDiff = yyjson_obj_get(yyParams, "minDiff");
 	if (yyv_minDiff && yyjson_is_num(yyv_minDiff)) {
 		deSel.downSamplingSel.minDiffDownSampling = true;
-		deSel.downSamplingSel.minDiff = yyjson_get_real(yyv_minDiff);
+		deSel.downSamplingSel.minDiff = yyjson_get_num(yyv_minDiff);
 	}
 
 	//parse condition selector
@@ -3866,6 +3869,18 @@ void TDB::getDeTime(yyjson_mut_val* yyTime, string& deTime) {
 	}
 }
 
+struct AutoLastDeSet {
+	yyjson_val** de;
+	yyjson_val** lastDe;
+	AutoLastDeSet(yyjson_val** de, yyjson_val** lastDe) {
+		this->de = de;
+		this->lastDe = lastDe;
+	}
+	~AutoLastDeSet() {
+		*lastDe = *de;
+	}
+};
+
 bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
 {
 	for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
@@ -3920,6 +3935,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			}
 			yyjson_arr_foreach(deList, idx, max, de) {
 				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
+				AutoLastDeSet autoSet(&de, &lastDe);
 				if (idx == 0)
 				{
 					if (yyjson_is_arr(de)) {
@@ -3961,8 +3977,8 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					}
 				}
 
-				bool ignore_minDiff = false;
-				bool ignore_interval = false;
+				bool selBy_minDiff = true;
+				bool selBy_interval = true;
 				if (deSel.downSamplingSel.minDiffDownSampling) {
 					if (de && lastDe) {
 						yyjson_val* yyVal = nullptr;
@@ -3973,7 +3989,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 							yyVal = yyjson_arr_get(de, 1);
 						}
 						if (yyVal && yyjson_is_num(yyVal)) {
-							double currVal = yyjson_get_real(yyVal);
+							double currVal = yyjson_get_num(yyVal);
 							yyjson_val* lastYyVal = nullptr;
 							if (deJsonType == DE_J_OBJ) {
 								lastYyVal = yyjson_obj_get(lastDe, m_dbFmt.deItemKey_value.c_str());
@@ -3982,9 +3998,9 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 								lastYyVal = yyjson_arr_get(lastDe, 1);
 							}
 							if (lastYyVal && yyjson_is_num(lastYyVal)) {
-								double lastVal = yyjson_get_real(lastYyVal);
+								double lastVal = yyjson_get_num(lastYyVal);
 								if (fabs(currVal - lastVal) < deSel.downSamplingSel.minDiff)
-									ignore_minDiff = true;
+									selBy_minDiff = false;
 							}
 						}
 					}
@@ -3996,15 +4012,28 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					if (deSel.downSamplingSel.dsi > 1) {
 						bool reachInterval = idx % deSel.downSamplingSel.dsi == 0 ;
 						if (!reachInterval)
-							ignore_interval = true;
+							selBy_interval = false;
 					}
 					if(deSel.downSamplingSel.dsi > max)
-						ignore_interval = true;
+						selBy_interval = false;
+
+					if (deSel.downSamplingSel.minDiffDownSampling) {
+						if (!selBy_minDiff && !selBy_interval) {
+							continue;
+						}
+					}
+					else {
+						if (!selBy_interval)
+							continue;
+					}
 				}
-				if (ignore_minDiff && ignore_interval) {
-					lastDe = de;
-					continue; 
+				else if (deSel.downSamplingSel.intervalType == INTERVAL_DOWN_SAMPLING_TYPE::DST_None) {
+					if (deSel.downSamplingSel.minDiffDownSampling) {
+						if (!selBy_minDiff)
+							continue;
+					}
 				}
+
 
 
 				//generate standard time stamp, then do match
@@ -4065,10 +4094,21 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					memcpy((char*)deTime.data() + 11, pHms, hmsLen);//get hour min sec
 
 					if (deSel.downSamplingSel.intervalType == INTERVAL_DOWN_SAMPLING_TYPE::DST_Time) {
+						selBy_interval = true;
 						HMS_STR* p = (HMS_STR*)pHms;
 						currDeTime = p->getTotalSec();
-						if (currDeTime - lastDeTime < deSel.downSamplingSel.dsti)
-							continue;
+						if (currDeTime - lastDeTime < deSel.downSamplingSel.dsti) {
+							selBy_interval = false;
+							if (deSel.downSamplingSel.minDiffDownSampling) {
+								if (!selBy_minDiff && !selBy_interval) {
+									continue;
+								}
+							}
+							else {
+								if (!selBy_interval)
+									continue;
+							}
+						}
 						lastDeTime = currDeTime;
 					}
 				}
@@ -4265,6 +4305,7 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 
 	return false;
 }
+
 
 bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
 {

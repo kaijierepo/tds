@@ -367,6 +367,38 @@ struct DOWN_SAMPLING_SELECTOR {
 	}
 };
 
+struct DOWN_SAMPLING_CHECK {
+	INTERVAL_DOWN_SAMPLING_TYPE intervalType;
+	bool minDiffDownSampling;
+	bool selBy_timeInterval;
+	bool selBy_countInterval;
+	bool selBy_minDiff;
+
+	DOWN_SAMPLING_CHECK() {
+		init();
+	}
+
+	void init() {
+		selBy_timeInterval = false;
+		selBy_countInterval = false;
+		selBy_minDiff = false;
+	}
+
+	bool isSel() {
+		if (minDiffDownSampling) {
+			if (selBy_minDiff)
+				return true;
+			else if (selBy_timeInterval)
+				return true;
+			else if (selBy_countInterval)
+				return true;
+		}
+		else {
+			
+		}
+	}
+};
+
 struct DB_TIME_SPAN {
 	DB_TIME start;
 	DB_TIME end;
