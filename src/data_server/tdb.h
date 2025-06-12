@@ -738,6 +738,7 @@ namespace CONST_STR {
 struct  DB_FMT
 {
 	string deListName;
+	string deListStatisticsName;
 	string curveIdxListName;
 	string curveDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;

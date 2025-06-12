@@ -930,6 +930,14 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 		strURL += "/" + timeStamp;
 		return strURL;
 	}
+	else if (m_timeUnit == BY_MONTH) {
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("/%04d%02d/", stTime.wYear, stTime.wMonth);
+		strURL += strTag;
+		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
+		strURL += "/" + timeStamp;
+		return strURL;
+	}
 	else if (m_timeUnit == NONE) {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = m_path + "/" + strTag;
@@ -948,6 +956,14 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		strURL = m_path + strURL;
 		return strURL;
 	}
+	else if (m_timeUnit == BY_MONTH) {
+		strTag = changeCharForFileName(strTag);
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("/%04d%02d/", date.wYear, date.wMonth);
+		strURL += strTag;
+		strURL = m_path + strURL;
+		return strURL;
+	}
 	else if (m_timeUnit == NONE) {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = m_path + "/" + strTag;
@@ -962,6 +978,13 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		strURL += strTag;
+		return strURL;
+	}
+	else if (m_timeUnit == BY_MONTH) {
+		strTag = changeCharForFileName(strTag);
+		strTag = replaceStr(strTag, ".", "/");
+		string strURL = formatStr("%04d%02d/", date.wYear, date.wMonth);
 		strURL += strTag;
 		return strURL;
 	}
@@ -1070,6 +1093,9 @@ string TDB::getPath_dbFile(string strTag, const DB_TIME &date,string deType) con
 	}
 	else if (deType == "curveIdx") {
 		return folder + "/" + m_dbFmt.curveIdxListName;
+	}
+	else if (deType == "statsDe") {
+		return folder + "/" + m_dbFmt.deListStatisticsName;
 	}
 	else if (deType == "curve") {
 		return folder + "/" + date.toStampHMS()  + m_dbFmt.curveDeNameSuffix;
@@ -2461,6 +2487,17 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 			//deSel.selfParams = yyv_selfParams;
 	}
 
+	auto oldTimeUint = m_timeUnit;
+
+	yyjson_val* yyv_timeUint = yyjson_obj_get(params, "timeUint");
+	if (yyv_timeUint && yyjson_is_str(yyv_timeUint)) {
+		string timeUnit = yyjson_get_str(yyv_timeUint);
+		if (timeUnit == "month") m_timeUnit = BY_MONTH;
+		else if (timeUnit == "year") m_timeUnit = BY_YEAR;
+		else if (timeUnit == "day") m_timeUnit = BY_DAY;
+		else if (timeUnit == "none") m_timeUnit = NONE;
+	}
+
 	SELECT_RLT result;
 	if (deSel.tagSel.tagSet.size() == 0) {
 		err = JSON_STR_VAL("specified tag not found");
@@ -2492,7 +2529,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 			err = JSON_STR_VAL(sErr);
 		}
 	}
-
+	m_timeUnit = oldTimeUint;
 	queryInfo = result.info;
 
 	//params["timeParsed"] = deSel.timeSel.getParsedSelector();
@@ -3819,6 +3856,135 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 			result.fileCount += fSet.fileList.size();
 		}
 	}
+	else if (m_timeUnit == BY_MONTH) {
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
+		{
+			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
+
+			for (int timeSelAtomIdx = 0; timeSelAtomIdx < deSel.timeSel.atomSelList.size(); timeSelAtomIdx++) {
+				TIME_SELECTOR_ATOM& tsa = deSel.timeSel.atomSelList[timeSelAtomIdx];
+				if (deSel.deType == "curve") { //time select must be a time point
+					DB_FILE* pdf = new DB_FILE(tsa.startTime, fSet.dbFileTag, this);
+					pdf->deType = deSel.deType;
+					if (!pdf->loadFile()) {
+						delete pdf;
+						continue;
+					}
+					fSet.fileList.push_back(pdf);
+				}
+				else {
+					//use date only to iterator db file. use time plus 24*60*60 to iterator will cause time not in timerange
+					//2024-12-12 17:00:00~2024-12-13 05:00:00, iterator by adding 24*60*60,2024-12-13 17:00:00 is not in time range,file will not be selected
+					DB_TIME dbtStartDate = tsa.stStart; dbtStartDate.clearHMS();
+					DB_TIME dbtEndDate = tsa.stEnd; dbtEndDate.clearHMS();
+					//time_t startDate = dbtStartDate.toUnixTime();
+					//time_t endDate = dbtEndDate.toUnixTime();
+					if (tsa.timeSetType == TSM_First) {
+						DB_TIME loadDate = dbtStartDate;
+						for (; loadDate <= dbtEndDate && loadDate.wMonth < 13; loadDate.wMonth++)
+						{
+							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+							pdf->deType = deSel.deType;
+							if (!pdf->loadFile()) {
+								delete pdf;
+								continue;
+							}
+							fSet.fileList.push_back(pdf);
+							break;
+						}
+					}
+					else if (tsa.timeSetType == TSM_Last) {
+						DB_TIME loadDate = dbtStartDate;
+						for (; loadDate <= dbtEndDate && loadDate.wMonth < 13; loadDate.wMonth++)
+						{
+							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+							pdf->deType = deSel.deType;
+							if (!pdf->loadFile()) {
+								delete pdf;
+								continue;
+							}
+							fSet.fileList.push_back(pdf);
+							break;
+						}
+					}
+					else {
+
+						bool bFirstLastAggr = false;
+						if (deSel.aggregate.size() > 0) {
+							map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
+							vector<string>& aggrTypes = aggrOpt->second;
+							if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
+							{
+								if (aggrTypes.size() == 1) {
+									string& aggrType = aggrTypes[0];
+									if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
+										bFirstLastAggr = true;
+									}
+								}
+							}
+						}
+
+						if (bFirstLastAggr) {
+							//read first file
+							DB_TIME loadDate = dbtStartDate;
+							for (; loadDate <= dbtEndDate && loadDate.wMonth < 13; loadDate.wMonth++)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.push_back(pdf);
+								break;
+							}
+							//read last file
+							//loadDate = endDate;
+							//for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
+							loadDate = dbtEndDate;
+							for (; loadDate >= dbtStartDate && loadDate.wMonth > 0; loadDate.wMonth--)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.push_back(pdf);
+								break;
+							}
+						}
+						else {
+							DB_TIME loadDate = dbtEndDate;
+							for (; loadDate >= dbtStartDate && loadDate.wMonth > 0; loadDate.wMonth--)
+							{
+								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
+								pdf->deType = deSel.deType;
+								if (!pdf->loadFile()) {
+									delete pdf;
+									continue;
+								}
+								fSet.fileList.insert(fSet.fileList.begin(), pdf);
+							}
+						}
+					}
+				}
+			}
+
+			if (fSet.fileList.size() == 0)
+				continue;
+			//the first and last file need time range check when load de,the middles do not need
+			fSet.fileList[0]->boundaryFile = true;
+			fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
+
+			//do not down sample when time is short than one day 
+			//if (fSet.fileList.size() <= 1)
+				//deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
+
+			result.fileCount += fSet.fileList.size();
+		}
+	}
+
 	else if (m_timeUnit == NONE) {
 		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 		{
@@ -4037,6 +4203,8 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 
 				//generate standard time stamp, then do match
+				if (deSel.deType != "statsDe") //statistics data element do not need to match time
+				{
 				yyjson_val* yyTime = nullptr;
 				if (deJsonType == DE_J_OBJ) {
 					yyTime = yyjson_obj_get(de, "time");
@@ -4141,6 +4309,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 							continue;
 						}
 					}
+				}
 				}
 
 
@@ -4305,7 +4474,6 @@ bool TDB::Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& in
 
 	return false;
 }
-
 
 bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputData, yyjson_mut_doc* rlt_mut_doc)
 {
@@ -5884,6 +6052,10 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 		string startYear = time.substr(0, 4);
 		string endYear = time.substr(5, 4);
 		return startYear + "-01-01 00:00:00~" + endYear + "-12-31 23:59:59"; //12月份固定是31天
+	}
+	//2021
+	else if (time.length() == 4) {
+		return time + "-01-01 00:00:00~" + time + "-12-31 23:59:59"; //12月份固定是31天
 	}
 	return time;
 }
