@@ -4173,6 +4173,24 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				AutoLastDeSet autoSet(&de, &lastDe);
 				if (idx == 0)
 				{
+					if (deSel.downSamplingSel.minDiffDownSampling)
+					{
+						yyjson_val* yyVal = nullptr;
+						if (deJsonType == DE_J_OBJ) {
+							yyVal = yyjson_obj_get(de, m_dbFmt.deItemKey_value.c_str());
+						}
+						else {
+							yyVal = yyjson_arr_get(de, 1);
+						}
+
+						if (!yyjson_is_num(yyVal))
+						{
+							db_exception e;
+							e.m_error = "val type must be number when use minDiff query";
+							throw e;
+						}
+					}
+
 					if (yyjson_is_arr(de)) {
 						deJsonType = DE_J_ARR;
 						if (yyjson_arr_size(de) != 2) {
@@ -4229,23 +4247,22 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 						else {
 							yyVal = yyjson_arr_get(de, 1);
 						}
-						if (yyVal && yyjson_is_num(yyVal)) {
-							double currVal = yyjson_get_num(yyVal);
-							yyjson_val* lastYyVal = nullptr;
-							if (deJsonType == DE_J_OBJ) {
-								lastYyVal = yyjson_obj_get(lastDe, m_dbFmt.deItemKey_value.c_str());
-							}
-							else {
-								lastYyVal = yyjson_arr_get(lastDe, 1);
-							}
-							if (lastYyVal && yyjson_is_num(lastYyVal)) {
-								double lastVal = yyjson_get_num(lastYyVal);
-								if (fabs(currVal - lastVal) < deSel.downSamplingSel.minDiff)
-									selBy_minDiff = false;
-							}
+						double currVal = yyjson_get_num(yyVal);
+
+						yyjson_val* lastYyVal = nullptr;
+						if (deJsonType == DE_J_OBJ) {
+							lastYyVal = yyjson_obj_get(lastDe, m_dbFmt.deItemKey_value.c_str());
 						}
+						else {
+							lastYyVal = yyjson_arr_get(lastDe, 1);
+						}
+						double lastVal = yyjson_get_num(lastYyVal);
+
+						if (fabs(currVal - lastVal) < deSel.downSamplingSel.minDiff)
+							selBy_minDiff = false;
 					}
 				}
+
 				//every downsampling interval output one de; dsi=3,output 0 3 6...
 				if (deSel.downSamplingSel.intervalType == INTERVAL_DOWN_SAMPLING_TYPE::DST_Count)
 				{
