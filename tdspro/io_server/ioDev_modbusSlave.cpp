@@ -451,7 +451,7 @@ unsigned char ioDev_ModbusSlave::getFCode(string regType)
 	else if (regType == MODBUS_REG_TYPE::holdingRegister)
 		return MB_FUNC_CODE::readHoldingRegisters;
 	else {
-		ASSERT(false);
+		T_ASSERT(false);
 		return 0;
 	}
 }

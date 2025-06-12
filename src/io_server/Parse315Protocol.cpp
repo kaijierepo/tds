@@ -6997,7 +6997,7 @@ tstring Parse315Protocol::GetOptDirDesc(eMOVE_DIRECT direct)
 		return _T("无效");
 		break;
 	default:
-		ASSERT(FALSE);
+		T_ASSERT(FALSE);
 	}
 	return _T("");
 }

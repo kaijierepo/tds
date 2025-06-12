@@ -735,7 +735,7 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 		pIoDev->onEvent_online();
 	}
 	else {
-		ASSERT(false);
+		T_ASSERT(false);
 	}
 		
 	return pIoDev;

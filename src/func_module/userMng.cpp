@@ -212,7 +212,7 @@ bool userManager::loadConf()
 	}
 	catch (std::exception& e)
 	{
-		EXCEPTION(e);
+		T_EXCEPTION(e);
 	}
 
 	//静态token
@@ -235,7 +235,7 @@ bool userManager::loadConf()
 	}
 	catch (std::exception& e)
 	{
-		EXCEPTION(e);
+		T_EXCEPTION(e);
 	}
 
 	return true;
@@ -693,7 +693,7 @@ vector<USER_INFO> userManager::getRelateUsers(string tag)
 	}
 	catch (std::exception& e)
 	{
-		EXCEPTION(e);
+		T_EXCEPTION(e);
 	}
 
 	return vec;
@@ -731,7 +731,7 @@ json userManager::getMoPermission(string user)
 	}
 	catch (std::exception& e)
 	{
-		EXCEPTION(e);
+		T_EXCEPTION(e);
 		return nullptr;
 	}
 }
@@ -920,7 +920,7 @@ void userManager::rpc_login(json params, RPC_RESP& resp, RPC_SESSION session)
 	catch (std::exception& e)
 	{
 		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "request data error");
-		EXCEPTION(e);
+		T_EXCEPTION(e);
 	}
 
 LOGIN_END:

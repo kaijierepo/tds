@@ -550,7 +550,7 @@ BOOL JHDEqpPkt::ExtractOnePacket(BYTE* pData, int& iLen, BOOL bDelFromSrc)
 		BOOL ret = GetFrameData(pBuf, iBufSize, startCheckPos, iFramePos, iDataLen, continueCheck);
 
 		//if (iFramePos > 0 && ret)
-		//	ASSERT(FALSE);
+		//	T_ASSERT(FALSE);
 
 
 		if (ret)
@@ -563,7 +563,7 @@ BOOL JHDEqpPkt::ExtractOnePacket(BYTE* pData, int& iLen, BOOL bDelFromSrc)
 			int iLeftSize = iBufSize - iFramePos - iDataLen; //提取包后剩余的数据长度
 			if (iLeftSize < 0)
 			{
-				//ASSERT(FALSE);
+				//T_ASSERT(FALSE);
 				return FALSE; //2016采集发送心跳包后会进入此处，原因暂不明，先做保护 
 			}
 
