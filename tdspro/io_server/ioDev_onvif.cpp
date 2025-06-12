@@ -470,14 +470,6 @@ bool ioDev_onvif::doOnvifTransaction(string msg,string uri,bool log)
 
 		if (res != nullptr) {
 
-			std::ofstream file("C://Users//kang//Desktop//temp//gotoPreset.txt", std::ios::binary);
-			if (!file) {
-				return false;
-			}
-
-			file.write(res->body.c_str(), res->body.size());
-
-
 			if (res->status == 401) {
 				LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
 			}
