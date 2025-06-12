@@ -1094,7 +1094,7 @@ string TDB::getPath_dbFile(string strTag, const DB_TIME &date,string deType) con
 	else if (deType == "curveIdx") {
 		return folder + "/" + m_dbFmt.curveIdxListName;
 	}
-	else if (deType == "statsDe") {
+	else if (deType == "statisDe") {
 		return folder + "/" + m_dbFmt.deListStatisticsName;
 	}
 	else if (deType == "curve") {
@@ -4071,7 +4071,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			string deTime = pdf->ymd + " 00:00:00.000";
 			string groupKeyVal;
 			bool ymdEqualityCheckedInDe = false; //check ymd in one de ,if not equal to db folder ymd throw exception
-
+			bool hasTimeStamp = deSel.deType != "statisDe";
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
 			if (type == YYJSON_TYPE_OBJ) { //file with desc
@@ -4203,7 +4203,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 
 				//generate standard time stamp, then do match
-				if (deSel.deType != "statsDe") //statistics data element do not need to match time
+				if (hasTimeStamp) //has time stamp with HourMinSecond. statis de has no hms info,skip this process
 				{
 				yyjson_val* yyTime = nullptr;
 				if (deJsonType == DE_J_OBJ) {
@@ -4287,9 +4287,9 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 					//assert(false);
 				}
 
-				//consider "08:40:00~09:40:00@2024-09-20~2024-09-22",
-				//if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
-				//	continue;
+				//boundary file is the first and last file of selected files,all de of files in the middle is selected,do not need to do time match
+				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
+					continue;
 				if (!deSel.timeSel.Match(deTime)) {
 					if (deSel.timeSel.snapShot) {
 						de = deSnapshot;  //last de before not match is snapshot de. timeSel set to 00:00:00~snapshotTime
