@@ -495,10 +495,11 @@ public:
 
 
 	map<string, vector<string>> aggregate; //key is the json key to aggregate，val is aggregate mode (max,min,diff ...)
+	
 	//grouped data before aggregate key is time stamp ,val is de vector
-	map<string, vector<yyjson_val*>> m_groupedBeforeAggr;
+	map<string, vector<yyjson_val*>> m_origDeGrouped;
 	//ungrouped data before aggregate
-	vector<yyjson_val*> m_beforeAggr;
+	vector<yyjson_val*> m_orgDe;
 
 	//data after aggregate or without aggr option
 	vector<DE_yyjson*> m_afterAggr;
@@ -688,6 +689,8 @@ struct SELECT_RLT {
 	size_t fileCount;
 	map<SORT_FLAG, yyjson_mut_val*> rltDataSet; //single result data set
 	map<string, map<SORT_FLAG, yyjson_mut_val*>> rltDataSetList; //db.select uses splitBy
+	vector<yyjson_mut_val*> rltDataSetVec;  //single result data set ,do not need order
+	map<string, vector<yyjson_mut_val*>> rltDataSetVecList; //db.select uses splitBy
 	yyjson_mut_doc* rlt_mut_doc;
 	string error;
 	string info;
@@ -885,6 +888,8 @@ public:
 	bool Select_Step_outputRows_MultiCol(DE_SELECTOR& deSel, vector<DATA_SET*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe);
 	bool Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt,SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
+	bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	string getDeFilesFolder(string& deListFolder, DB_TIME& time);
 	//bool Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<TAG_DB_DATA*>& tagDBFileSet, SELECT_RLT& result, yyjson_mut_doc* mut_doc);
 	bool doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string>> aggrKeyType, string groupKey,vector<yyjson_val*>& src, DE_yyjson& des, yyjson_mut_doc* mut_doc);
