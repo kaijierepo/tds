@@ -223,8 +223,8 @@ namespace common {
 	void endianSwap(void* pData, int len);
 }
 
-#define ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__func__);};
-#define EXCEPTION(e) LOG("[warn]Exception raised, info:%s,file:%s,line:%d,function:%s",e.what(), __FILE__, __LINE__,__func__)
+#define T_ASSERT(exp) if((exp) == false){LOG("[error][Assert  ] fail, file:%s,line:%d,function:%s", __FILE__, __LINE__,__func__);};
+#define T_EXCEPTION(e) LOG("[warn]Exception raised, info:%s,file:%s,line:%d,function:%s",e.what(), __FILE__, __LINE__,__func__)
 
 namespace charCodec {
 	//gbk,utf8 <-> unicode
