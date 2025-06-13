@@ -63,6 +63,7 @@ public:
 
 	bool m_bRun;
 	bool m_bEnable;
+	bool m_bEnableAutoCyclic;
 
 	bool hasScripts();
 	//第一个key是组织结构，第二个key是脚本文件的name

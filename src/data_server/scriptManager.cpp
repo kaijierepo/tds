@@ -42,6 +42,7 @@ ScriptManager::ScriptManager()
 	loopRunning = false;
 	m_bRun = false;
 	m_bEnable = true;
+	m_bEnableAutoCyclic = true;
 }
 
 bool ScriptManager::init()
@@ -340,6 +341,11 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 		rpcResp.result = j.dump(2);
 	}
 
+	if (m_bEnableAutoCyclic) {
+		//触发脚本循环。如果已经在循环中，此句无效果
+		run();
+	}
+	
 	return true;
 }
 
