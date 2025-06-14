@@ -101,7 +101,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'" Label="Configuration">
@@ -114,7 +114,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -197,7 +197,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>../out/tds</OutDir>
+    <OutDir>C:\Users\Administrator\Desktop\节能管理平台\tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
@@ -212,7 +212,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out/tds</OutDir>
+    <OutDir>C:\Users\Administrator\Desktop\节能管理平台\tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
@@ -329,7 +329,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UTF8;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -354,9 +354,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>

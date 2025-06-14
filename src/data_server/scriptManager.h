@@ -30,7 +30,7 @@ struct SCRIPT_RUN_INFO {
 struct SCRIPT_INFO {
 	string script;
 	string envVarScript;
-	string calcMpTag;    //监控点利用同级监控点计算自身数值的情况，以某个监控点为主体调用脚本，将mp的父对象的位号作为callerObjTag。 
+	string calcMpTag;    //监控点利用同级监控点计算自身数值的情况，当为表达式脚本时，该变量就是表达式所属的监控点位号。以某个监控点为主体调用脚本，将mp的父对象的位号作为callerObjTag。 
 	string callerObjTag;   //以某个对象为主体来调用执行该脚本. 例如风管机 调用 开机脚本
 	string rootTag;  //脚本配置时指定的根位号
 	string devAddr;  //环境设备地址

@@ -472,6 +472,7 @@ bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_
 	for (int i = 0; i < allExpInfo.size(); i++) {
 		SCRIPT_INFO& si = allExpInfo[i];
 		json jRunInfo;
+		jRunInfo["tag"] = si.calcMpTag;
 		jRunInfo["script"] = si.script;
 		jRunInfo["retVal"] = si.lastRunInfo.retVal;
 		jRunInfo["runSuccess"] = si.lastRunInfo.runSuccess;
