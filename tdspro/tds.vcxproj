@@ -197,7 +197,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>C:\Users\Administrator\Desktop\节能管理平台\tds</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
@@ -212,7 +212,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>C:\Users\Administrator\Desktop\节能管理平台\tds</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
