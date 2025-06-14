@@ -369,7 +369,7 @@ jerry_value_t func_val(const jerry_call_info_t* call_info_p,
 					if (rlt != nullptr) {
 						json jVal = rlt["val"];
 						json jTime = rlt["time"];
-						string info = "val(" + sTag + ") = " + jVal.dump();
+						string info = "val(\"" + sTag + "\") = " + jVal.dump();
 						pEngine->m_vecOutput.push_back(info);
 						string time = jTime.get<string>();
 						TIME t;

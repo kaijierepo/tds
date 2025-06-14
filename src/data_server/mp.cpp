@@ -944,17 +944,26 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 	}
 
 	if (q.getStatus || q.getVal) {
-		//conf["val"] = m_curVal;
+		yyjson_mut_val* key = yyjson_mut_strcpy(doc, "val");
+		string sVal = m_curVal.dump();
+		yyjson_doc* read_doc = yyjson_read_opts((char*)sVal.c_str(), sVal.size(), 0, NULL, NULL);
+		yyjson_mut_val* val;
+		if (read_doc) {
+			yyjson_val* read_root = yyjson_doc_get_root(read_doc);
+			yyjson_mut_val* val = yyjson_val_mut_copy(doc, read_root);
+			yyjson_doc_free(read_doc);
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+
 		if (timeopt::isValidTime(m_stDataLastUpdate)) {
-			//conf["time"] = timeopt::st2str(m_stDataLastUpdate);
-			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "time");
-			yyjson_mut_val* val = yyjson_mut_strcpy(doc, timeopt::st2str(m_stDataLastUpdate).c_str());
+			key = yyjson_mut_strcpy(doc, "time");
+			val = yyjson_mut_strcpy(doc, timeopt::st2str(m_stDataLastUpdate).c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		else {
-			//conf["time"] = "-";
-			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "time");
-			yyjson_mut_val* val = yyjson_mut_strcpy(doc, "-");
+			key = yyjson_mut_strcpy(doc, "time");
+			val = yyjson_mut_strcpy(doc, "-");
 			yyjson_mut_obj_put(conf, key, val);
 		}
 	}
