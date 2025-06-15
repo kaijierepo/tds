@@ -304,6 +304,10 @@ void ioChannel::input(yyjson_val* jVal, string& tagBind, TIME* dataTime, bool bP
 		m_curOrgVal = valOrg;
 		m_curVal = valOrg;
 	}
+	else if (yyjson_is_str(jVal)) {
+		string s = yyjson_get_str(jVal);
+		m_curVal = s;
+	}
 
 	//如果有数据流订阅者，直接推送
 	m_csStreamPuller.lock();
