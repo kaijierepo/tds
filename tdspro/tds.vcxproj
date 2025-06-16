@@ -354,7 +354,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -368,7 +368,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\libz\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;libz-static.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
