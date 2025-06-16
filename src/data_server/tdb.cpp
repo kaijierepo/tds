@@ -3328,6 +3328,12 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 		result.rowCount = vecRlt.size();
 	}
+	else
+	{
+		yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
+		yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
+		result.rowCount = 0;
+	}
 
 	size_t len = 0;
 	if(deSel.calc != ""){
