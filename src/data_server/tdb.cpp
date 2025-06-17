@@ -5184,9 +5184,11 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 	}
 	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "data");
 	yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
+	yyjson_val* yyv_index = yyjson_obj_get(yyv_params, "index");
 
 	string tag = yyjson_get_str(yyv_tag);
 	string time = yyjson_get_str(yyv_time);
+	string strIndex = yyv_index ? yyjson_get_str(yyv_index) : "";
 	DB_TIME t;
 	t.fromStr(time);
 	if (yyv_img && yyv_info)
@@ -5211,7 +5213,7 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		unsigned char* out = new unsigned char[buffLen];
 		memset(out, 0, buffLen);
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-		saveImage(tag, t, (char*)out, outLen, info);
+		saveImage(tag, t, (char*)out, outLen, info, strIndex);
 		delete[] out;
 	}
 	else if (yyv_img)
@@ -5236,13 +5238,13 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		memset(out, 0, buffLen);
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 		string info = "";
-		saveImage(tag, t, (char*)out, outLen, info);
+		saveImage(tag, t, (char*)out, outLen, info, strIndex);
 		delete[] out;
 	}
 	else if (yyv_info)
 	{
 		string info = yyjson_get_str(yyv_info);
-		saveImage(tag, t, NULL, 0, info);
+		saveImage(tag, t, NULL, 0, info, strIndex);
 	}
 	
 	yyjson_doc_free(doc);
@@ -5583,7 +5585,7 @@ int TDB::dhmsSpan2Seconds(string timeSpan) {
 	return n1 + n2 + n3 + n4;
 }
 
-bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo)
+bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo, string sDeIdx)
 {
 	if (pData)
 	{
@@ -5648,8 +5650,46 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			memcpy(buff + len + imgInfoSize, &imgInfoSize, 4);
 			memcpy(buff + len + imgInfoSize + 4, "jjpg", 4);
 		}
+
 		bool ret = DB_FS::writeFile(path, buff, buffLen);
 		delete[] buff;
+
+		//save index list
+		if (sDeIdx != "")
+		{
+			yyjson_doc* doc = yyjson_read(sDeIdx.c_str(), sDeIdx.length(), 0);
+			yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
+			yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
+			yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
+			yyjson_mut_val* timeVal;
+			string sTime = stTime.toStr(true);
+			timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
+			yyjson_mut_obj_put(yymDe, timeKey, timeVal);
+
+			string dataListPath;
+			string deListFolderPath = getPath_dataFolder(tag, stTime);
+			dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+			saveDeToDataListFile(dataListPath, yymDe);
+
+			yyjson_doc_free(doc);
+			yyjson_mut_doc_free(mdoc);
+		}
+		else
+		{
+			auto mut_doc = yyjson_mut_doc_new(nullptr);
+			auto mut_root = yyjson_mut_obj(mut_doc);
+			yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+			string sTime = stTime.toStr(true);
+			yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", sTime.c_str());
+			string dataListPath;
+			string deListFolderPath = getPath_dataFolder(tag, stTime);
+			dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+			saveDeToDataListFile(dataListPath, mut_root);
+
+			yyjson_mut_doc_free(mut_doc);
+		}
+
 		return ret;
 	}
 	else if (imgInfo != "")

@@ -865,7 +865,7 @@ public:
 
 
 	//save main image data such as 123000.image.jpg,data list will not be modified 
-	bool saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo);
+	bool saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string& imgInfo, string sDeIdx = "");
 
 	bool Delete(string tag, DB_TIME stTime);
 
