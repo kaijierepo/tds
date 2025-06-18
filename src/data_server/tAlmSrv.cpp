@@ -792,7 +792,7 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 	}
 
 	bool notify = true;
-	if (j["notify"].is_boolean()) {
+	if (j.contains("notify") && j["notify"].is_boolean()) {
 		notify = j["notify"];
 	}
 
@@ -856,7 +856,7 @@ void almServer::rpc_updateStatus(json jAlm, RPC_RESP& resp, bool bSync)
 			ai.fromJson(j);
 			
 			bool notify = true;
-			if (j["notify"].is_boolean()) {
+			if (j.contains("notify") && j["notify"].is_boolean()) {
 				notify = j["notify"];
 			}
 
