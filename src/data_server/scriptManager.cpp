@@ -1,6 +1,7 @@
 //#include "pch.h"
 #include "scriptManager.h"
 #include "scriptEngine.h"
+#include "scriptEngine_qjs.h"
 #include "scriptFunc_tds.h"
 #include "logger.h"
 #include "jerryscript-port.h"
@@ -209,7 +210,6 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 }
 
 
-
 bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session)
 {
 	//直接执行脚本
@@ -236,9 +236,9 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 			getExpRet = params["getExpRet"].get<bool>();
 		}
 
-		ScriptEngine se;
-		se.m_logImp = scriptManager_logImp;
-		se.m_initGlobalFunc = initGlobalFunc;
+		ScriptEngine_qjs se;
+		//se.m_logImp = scriptManager_logImp;
+		//se.m_initGlobalFunc = initGlobalFunc;
 		se.m_tagContext = si.getContextTag();
 		if (si.devAddr != "") {
 			ioDev* p = nullptr;
@@ -279,10 +279,10 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		string scriptName = params["name"].get<string>();
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
-			ScriptEngine se;
-			se.m_logImp = scriptManager_logImp;
+			ScriptEngine_qjs se;
+			//se.m_logImp = scriptManager_logImp;
 			
-			se.m_initGlobalFunc = initGlobalFunc;
+			//se.m_initGlobalFunc = initGlobalFunc;
 
 			se.m_tagContext = si.getContextTag();
 			if (se.runScript(si.script, si.lastModifyUser)) {

@@ -99,20 +99,20 @@ bool ScriptEngine::runScript(string& script, string user)
 		}
 
 		if (!m_globalObj.is_null()) {
-			for (auto& [key, value] : m_globalObj.items()) {
-				jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
-				jerry_value_t prop_value;
-				jsonVal2jerryVal(value, prop_value);
+			//for (auto& [key, value] : m_globalObj.items()) {
+			//	jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
+			//	jerry_value_t prop_value;
+			//	jsonVal2jerryVal(value, prop_value);
 
-				jerry_value_t set_result = jerry_set_property(global_object, prop_name, prop_value);
-				if (jerry_value_is_error(set_result)) {
-					jerry_error_t error = jerry_get_error_type(set_result);
-					jerry_release_value(error);
-				}
-				jerry_release_value(set_result);
-				jerry_release_value(prop_name);
-				jerry_release_value(prop_value);
-			}
+			//	jerry_value_t set_result = jerry_set_property(global_object, prop_name, prop_value);
+			//	if (jerry_value_is_error(set_result)) {
+			//		jerry_error_t error = jerry_get_error_type(set_result);
+			//		jerry_release_value(error);
+			//	}
+			//	jerry_release_value(set_result);
+			//	jerry_release_value(prop_name);
+			//	jerry_release_value(prop_value);
+			//}
 		}
 
 		///* Run the demo script with 'eval' */
