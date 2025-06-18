@@ -4387,25 +4387,25 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				//boundary file is the first and last file of selected files,all de of files in the middle is selected,do not need to do time match
-				if (pdf->boundaryFile && !deSel.timeSel.Match(deTime))
-					continue;
-				if (!deSel.timeSel.Match(deTime)) {
-					if (deSel.timeSel.snapShot) {
-						de = deSnapshot;  //last de before not match is snapshot de. timeSel set to 00:00:00~snapshotTime
-						deTime = snapshotDeTime;
-						if (de == nullptr)
-							break;
-					}
-					else { //normal mode
-						continue;
-					}
-				}
-				else {
-					if (deSel.timeSel.snapShot) { //make desnapshot last de
-						deSnapshot = de;
-						snapshotDeTime = deTime;
-						if (idx < max - 1) {  //not the last de ,check next; otherwise load this de as snapshot de 
+				if (pdf->boundaryFile) {
+					if (!deSel.timeSel.Match(deTime)) {
+						if (deSel.timeSel.snapShot) {
+							de = deSnapshot;  //last de before not match is snapshot de. timeSel set to 00:00:00~snapshotTime
+							deTime = snapshotDeTime;
+							if (de == nullptr)
+								break;
+						}
+						else { //normal mode
 							continue;
+						}
+					}
+					else {
+						if (deSel.timeSel.snapShot) { //make desnapshot last de
+							deSnapshot = de;
+							snapshotDeTime = deTime;
+							if (idx < max - 1) {  //not the last de ,check next; otherwise load this de as snapshot de 
+								continue;
+							}
 						}
 					}
 				}
@@ -5668,7 +5668,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
-			dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 			saveDeToDataListFile(dataListPath, yymDe);
 
 			yyjson_doc_free(doc);
@@ -5684,7 +5684,7 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", sTime.c_str());
 			string dataListPath;
 			string deListFolderPath = getPath_dataFolder(tag, stTime);
-			dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
+			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 			saveDeToDataListFile(dataListPath, mut_root);
 
 			yyjson_mut_doc_free(mut_doc);
