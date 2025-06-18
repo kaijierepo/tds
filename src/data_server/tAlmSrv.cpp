@@ -791,8 +791,13 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		ai.time = t.toStr();
 	}
 
+	bool notify = true;
+	if (j["notify"].is_boolean()) {
+		notify = j["notify"];
+	}
+
 	string err;
-	AddSync(ai,err, true);
+	AddSync(ai,err, notify);
 	if (err == "") {
 		resp.result = ai.toJsonStr(this);
 	}
@@ -849,13 +854,18 @@ void almServer::rpc_updateStatus(json jAlm, RPC_RESP& resp, bool bSync)
 		{
 			ALARM_INFO ai;
 			ai.fromJson(j);
-			//ai.time = timeopt::nowStr();
-			if (bSync) {
-				UpdateSync(ai);
+			
+			bool notify = true;
+			if (j["notify"].is_boolean()) {
+				notify = j["notify"];
 			}
-			else
-				Update(ai);
 
+			if (bSync) {
+				UpdateSync(ai, notify);
+			}
+			else {
+				Update(ai, notify);
+			}
 		}
 		catch (std::exception& e)
 		{
