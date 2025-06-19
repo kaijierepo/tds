@@ -46,6 +46,77 @@ SOFTWARE.
 
 TDB db;
 
+#ifdef ENABLE_QJS
+#include "quickjs.h"
+JSValue yyjson_value_to_quickjs(JSContext* ctx, yyjson_val* val) {
+	if (!val) return JS_UNDEFINED;
+
+	// 根据 yyjson 值的类型进行转换
+	switch (yyjson_get_type(val)) {
+	case YYJSON_TYPE_NULL:
+		return JS_NULL;
+
+	case YYJSON_TYPE_BOOL:
+		return JS_NewBool(ctx, yyjson_get_bool(val));
+
+	case YYJSON_TYPE_NUM:
+		if (yyjson_is_int(val)) {
+			return JS_NewInt64(ctx, yyjson_get_int(val));
+		}
+		else {
+			return JS_NewFloat64(ctx, yyjson_get_num(val));
+		}
+
+	case YYJSON_TYPE_STR: {
+		const char* str = yyjson_get_str(val);
+		size_t len = yyjson_get_len(val);
+		return JS_NewStringLen(ctx, str, len);
+	}
+
+	case YYJSON_TYPE_ARR: {
+		size_t count = yyjson_arr_size(val);
+		JSValue arr = JS_NewArray(ctx);
+		size_t idx, max;
+		yyjson_val* item;
+		yyjson_arr_foreach(val, idx,max,item) {
+			JSValue js_item = yyjson_value_to_quickjs(ctx, item);
+			JS_SetPropertyUint32(ctx, arr, idx, js_item);
+			//JS_FreeValue(ctx, js_item); 
+		}
+
+		return arr;
+	}
+
+	case YYJSON_TYPE_OBJ: {
+		JSValue obj = JS_NewObject(ctx);
+		yyjson_val* k,*v;
+		size_t idx, max;
+		yyjson_obj_foreach(val,idx,max, k, v) {
+			const char* key_str = yyjson_get_str(k);
+			JSValue js_val = yyjson_value_to_quickjs(ctx, v);
+			JS_SetPropertyStr(ctx, obj, key_str, js_val);
+			//JS_FreeValue(ctx, js_val); // 设置后释放临时值
+		}
+
+		return obj;
+	}
+
+	default:
+		return JS_UNDEFINED;
+	}
+}
+bool setScriptEngineObj(yyjson_val* jObj, JSValue engineObj, JSContext* ctx)
+{
+	size_t idx, maxIdx;
+	yyjson_val* key, * value;
+	yyjson_obj_foreach(jObj, idx, maxIdx, key, value) {
+		const char* key_str = yyjson_get_str(key);
+		JSValue js_val = yyjson_value_to_quickjs(ctx, value);
+		JS_SetPropertyStr(ctx, engineObj, key_str, js_val);;
+	}
+	return true;
+}
+#endif
 string replaceStr(string str, const string to_replaced, const string newchars)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
@@ -6356,6 +6427,10 @@ bool TAG_SELECTOR::singleSelMode()
 CONDITION_SELECTOR::CONDITION_SELECTOR()
 {
 	bEnable = false;
+#ifdef ENABLE_QJS
+	rt = 0;
+	ctx = 0;
+#endif
 }
 
 
@@ -6375,6 +6450,15 @@ bool CONDITION_SELECTOR::init(string filter)
 		bEnable = true;
 	}
 #endif
+#ifdef ENABLE_QJS
+	if (filter.length() > 0)
+	{
+		filterExp = filter;
+		rt = JS_NewRuntime();
+		ctx = JS_NewContext(rt);
+		bEnable = true;
+	}
+#endif
 	return true;
 }
 
@@ -6387,6 +6471,12 @@ CONDITION_SELECTOR::~CONDITION_SELECTOR()
 		jerry_cleanup();
 		free(tls_context);
 	}
+#endif
+#ifdef ENABLE_QJS
+	if(ctx)
+	JS_FreeContext(ctx);
+	if(rt)
+	JS_FreeRuntime(rt);
 #endif
 }
 
@@ -6630,10 +6720,9 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 bool CONDITION_SELECTOR::match(yyjson_val* de)
 {
 	bool bMatch = false;
-#ifdef ENABLE_JERRY_SCRIPT
 	if (!bEnable)
 		return true;
-
+#ifdef ENABLE_JERRY_SCRIPT
 	if (yyjson_is_obj(de))
 	{
 		setScriptEngineObj(de, global_object);
@@ -6674,6 +6763,33 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 			e.m_error = "db exception: error when execute filter script";
 		//throw e;
 	}
+#endif
+#ifdef ENABLE_QJS
+	db_exception e;
+	if (yyjson_is_obj(de))
+	{
+		JSValue global = JS_GetGlobalObject(ctx);
+		setScriptEngineObj(de, global, ctx);
+		JS_FreeValue(ctx, global);	
+	}
+	JSValue result = JS_Eval(ctx, filterExp.c_str(), filterExp.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+
+	if (JS_IsBool(result)) {
+		bMatch = JS_ToBool(ctx, result);
+	}
+
+	if (JS_IsException(result)) {
+		JSValue error = JS_GetException(ctx);
+		const char* err = JS_ToCString(ctx, error);
+		string s = err;
+		e.m_error = "db exception:" + s;
+		JS_FreeCString(ctx, err);
+		JS_FreeValue(ctx, error);
+	}
+
+	JS_FreeValue(ctx, result);
+	if (e.m_error != "")
+		throw e;
 #endif
 	return bMatch;
 }

@@ -33,6 +33,11 @@ SOFTWARE.
 #include "jerryscript.h"
 #include "jerry.h"
 #endif
+#ifdef ENABLE_QJS
+#include "cutils.h"
+#include "quickjs-libc.h"
+#include "quickjs.h"
+#endif
 #include "yyjson.h"
 #include <vector>
 #include <string>
@@ -545,6 +550,11 @@ public:
 	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
 	bool clearScriptEngineObj(jerry_value_t engineObj);
 	jerry_value_t global_object;
+#endif
+
+#ifdef ENABLE_QJS
+	JSRuntime* rt;
+	JSContext* ctx;
 #endif
 
 	bool match(yyjson_val* de);
