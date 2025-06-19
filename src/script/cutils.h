@@ -179,7 +179,6 @@ static inline int ctz32(unsigned int a)
     return (int)index;
 }
 
-// 只在64位下定义ctz64，32位下用其他实现
 #if defined(_M_X64) || defined(_M_AMD64)
 static inline int ctz64(uint64_t a)
 {
@@ -190,7 +189,6 @@ static inline int ctz64(uint64_t a)
         return 64; // 如果a为0，返回64
 }
 #else
-// 32位下没有_BitScanForward64，可以用两个32位拼接
 static inline int ctz64(uint64_t a)
 {
     unsigned long index;
@@ -215,7 +213,6 @@ static inline int clz32(unsigned int a)
     return 31 - (int)index;
 }
 
-// 只在64位下定义clz64，32位下用其他实现
 #if defined(_M_X64) || defined(_M_AMD64)
 static inline int clz64(uint64_t a)
 {
@@ -226,7 +223,6 @@ static inline int clz64(uint64_t a)
         return 64; // 如果a为0，返回64
 }
 #else
-// 32位下没有_BitScanReverse64，可以用两个32位拼接
 static inline int clz64(uint64_t a)
 {
     unsigned long index;
