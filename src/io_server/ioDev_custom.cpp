@@ -14,7 +14,7 @@
 #include "scriptManager.h"
 #include "scriptFunc_tds.h"
 #include "webSrv.h"
-
+#include "scriptEngine_qjs.h"
 
 using namespace httplib;
 
@@ -143,7 +143,7 @@ void ioDev_custom::doHttpHeartbeat()
 }
 
 void acq_thread_customDev(ioDev_custom* pDev) {
-
+#ifdef ENABLE_JERRY_SCRIPT
 	if (pDev->m_cycleTaskScript != "") {
 		ScriptEngine se;
 		se.m_initGlobalFunc = initGlobalFunc;
@@ -160,6 +160,7 @@ void acq_thread_customDev(ioDev_custom* pDev) {
 	}
 
 	pDev->m_bAcqThreadRunning = false;
+#endif
 }
 
 void ioDev_custom::DoCycleTask()
@@ -201,10 +202,9 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 		LOG("执行脚本: " + m_onRecvScript);
 #endif
 
-
-		ScriptEngine se;
-		se.m_initGlobalFunc = initGlobalFunc;
-		se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine_qjs se;
+		//se.m_initGlobalFunc = initGlobalFunc;
+		//se.m_initIODevFunc = initIODevFunc;
 		json jRecvData = json::array();
 		for (int i = 0; i < iLen; i++) {
 			int v = pData[i];
@@ -236,9 +236,9 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool sync)
 {
 	if (m_outputScript != "") {
-		ScriptEngine se;
-		se.m_initGlobalFunc = initGlobalFunc;
-		se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine_qjs se;
+		//se.m_initGlobalFunc = initGlobalFunc;
+		//se.m_initIODevFunc = initIODevFunc;
 		json jOutput;
 		jOutput["val"] = jVal;
 		jOutput["chan"] = chanAddr;
@@ -295,9 +295,9 @@ void ioDev_custom::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 
 bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 	if (m_tdspScript != "") {
-		ScriptEngine se;
-		se.m_initGlobalFunc = initGlobalFunc;
-		se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine_qjs se;
+		//se.m_initGlobalFunc = initGlobalFunc;
+		//se.m_initIODevFunc = initIODevFunc;
 		se.m_globalObj["Req"] = jReq;
 		se.m_ioDevThis = this;
 

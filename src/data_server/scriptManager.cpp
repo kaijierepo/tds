@@ -14,21 +14,12 @@
 
 ScriptManager scriptManager;
 
-void scriptManager_logImp(string log, ScriptEngine* pEngine, bool logToHost) {
+void scriptManager_logImp(string log, ScriptEngine_qjs* pEngine, bool logToHost) {
 	pEngine->m_vecOutput.push_back(log);
 	if (logToHost) {
 		string l = "[脚本日志]" + log;
 		LOG(l);
 	}
-}
-
-bool initGlobalFunc(jerry_value_t global_object, vector<GLOBAL_FUNC>& m_vecGlobalFunc)
-{
-	initScriptFunc(global_object, m_vecGlobalFunc);
-#ifdef TDS
-	initScripFunc_tds(global_object, m_vecGlobalFunc);
-#endif
-	return true;
 }
 
 void scriptThread(ScriptManager* p)
@@ -129,10 +120,10 @@ void scriptThreadTmp(string scriptName, string callerObjTag)
 	if (scriptManager.getScript(scriptName, si)) {
 		si.callerObjTag = callerObjTag;
 
-		ScriptEngine se;
-		se.m_logImp = scriptManager_logImp;
+		ScriptEngine_qjs se;
+		//se.m_logImp = scriptManager_logImp;
 
-		se.m_initGlobalFunc = initGlobalFunc;
+		//se.m_initGlobalFunc = initGlobalFunc;
 
 		
 		se.m_tagContext = si.getContextTag();
@@ -187,7 +178,7 @@ bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis)
 	return false;
 }
 
-#ifdef ENABLE_JERRY_SCRIPT
+
 
 void scriptThread1(ScriptManager* p)
 {
@@ -196,7 +187,6 @@ void scriptThread1(ScriptManager* p)
 
 
 bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
-#ifdef ENABLE_JERRY_SCRIPT
 	unique_lock<mutex> lock(scriptManager.m_csScripts);
 	for (auto& i : scriptManager.m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
@@ -206,7 +196,6 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 		}
 	}
 	return false;
-#endif
 }
 
 
@@ -251,7 +240,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 				se.m_ioDevThis = p;
 				
 #ifdef TDS
-				se.m_initIODevFunc = initIODevFunc;
+				//se.m_initIODevFunc = initIODevFunc;
 #endif
 			}
 			else {
@@ -539,10 +528,9 @@ void ScriptManager::exeAllGlobalScripts()
 	//执行脚本(执行脚本时，不要占用 m_csScripts锁)
 	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
 	for (auto& si : toExeScripts) {
-		ScriptEngine se;
-		se.m_logImp = scriptManager_logImp;
-		
-		se.m_initGlobalFunc = initGlobalFunc;
+		ScriptEngine_qjs se;
+		//se.m_logImp = scriptManager_logImp;	
+		//se.m_initGlobalFunc = initGlobalFunc;
 
 		se.m_tagContext = si.getContextTag();
 		se.runScript(si.script, si.lastModifyUser);
@@ -575,10 +563,10 @@ void ScriptManager::exeAllVarExpScripts()
 	for (int i = 0; i < toExeScripts.size();i++) {
 		SCRIPT_INFO& info = toExeScripts[i];
 		string& script = info.script;
-		ScriptEngine se;
-		se.m_logImp = scriptManager_logImp;
+		ScriptEngine_qjs se;
+		//se.m_logImp = scriptManager_logImp;
 		
-		se.m_initGlobalFunc = initGlobalFunc;
+		//se.m_initGlobalFunc = initGlobalFunc;
 
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
@@ -666,7 +654,7 @@ void ScriptManager::loopExe()
 }
 
 
-#endif
+
 
 string SCRIPT_INFO::getContextTag()
 {
