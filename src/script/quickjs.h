@@ -119,7 +119,13 @@ typedef const struct __JSValue *JSValueConst;
 #define JS_VALUE_GET_SHORT_BIG_INT(v) JS_VALUE_GET_INT(v)
 #define JS_VALUE_GET_PTR(v) (void *)((intptr_t)(v) & ~0xf)
 
-#define JS_MKVAL(tag, val) (JSValue)(intptr_t)(((val) << 4) | (tag))
+//#define JS_MKVAL(tag, val) (JSValue)(intptr_t)(((val) << 4) | (tag))
+#ifdef __cplusplus
+#define JS_MKVAL(tag, val) JSValue{ JSValueUnion{ val }, tag }
+#else
+#define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
+#endif
+
 #define JS_MKPTR(tag, p) (JSValue)((intptr_t)(p) | (tag))
 
 #define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
@@ -548,29 +554,16 @@ int JS_IsRegisteredClass(JSRuntime *rt, JSClassID class_id);
 
 static js_force_inline JSValue JS_NewBool(JSContext *ctx, JS_BOOL val)
 {
- //   JSValue jsv;
- //   jsv.u.int32 = val != 0;
-	//jsv.tag = JS_TAG_BOOL;
- //   return jsv;
     return JS_MKVAL(JS_TAG_BOOL, val != 0);
 }
 
 static js_force_inline JSValue JS_NewInt32(JSContext *ctx, int32_t val)
 {
-    //JSValue jsv;
-    //jsv.u.int32 = val;
-    //jsv.tag = JS_TAG_INT;
-    //return jsv;
     return JS_MKVAL(JS_TAG_INT, val != 0);
-
 }
 
 static js_force_inline JSValue JS_NewCatchOffset(JSContext *ctx, int32_t val)
 {
-    //JSValue jsv;
-    //jsv.u.int32 = val;
-    //jsv.tag = JS_TAG_CATCH_OFFSET;
-    //return jsv;
     return JS_MKVAL(JS_TAG_CATCH_OFFSET, val != 0);
 }
 
@@ -613,12 +606,7 @@ static js_force_inline JSValue JS_NewFloat64(JSContext *ctx, double d)
         /* -0 cannot be represented as integer, so we compare the bit
            representation */
         if (u.u == t.u) {
-            //JSValue jsv;
-            //jsv.u.int32 = val;
-            //jsv.tag = JS_TAG_INT;
-            //return jsv;
             return JS_MKVAL(JS_TAG_INT, val != 0);
-
         }
     }
     return __JS_NewFloat64(ctx, d);

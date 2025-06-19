@@ -258,6 +258,7 @@ void register_cpp_functions(JSContext* ctx) {
 ScriptEngine_qjs::ScriptEngine_qjs()
 {
 	m_ioDevThis = nullptr;
+    m_initIODevFunc = nullptr;
 }
 
 // 查找错误行号的辅助函数

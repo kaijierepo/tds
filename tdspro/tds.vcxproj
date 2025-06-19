@@ -354,9 +354,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../src/script;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
@@ -515,6 +515,7 @@
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptEngine_qjs.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc_tds.cpp" />
     <ClCompile Include="..\src\data_server\tAlmSrv.cpp" />
     <ClCompile Include="..\src\data_server\jerry.cpp" />
@@ -555,6 +556,15 @@
     <ClCompile Include="..\src\io_server\wsProto.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\pch.cpp" />
+    <ClCompile Include="..\src\script\cutils.c" />
+    <ClCompile Include="..\src\script\dtoa.c" />
+    <ClCompile Include="..\src\script\libregexp.c" />
+    <ClCompile Include="..\src\script\libunicode.c" />
+    <ClCompile Include="..\src\script\quickjs-libc.c" />
+    <ClCompile Include="..\src\script\quickjs.c" />
+    <ClCompile Include="..\src\script\repl.c" />
+    <ClCompile Include="..\src\script\unicode_data.c" />
+    <ClCompile Include="..\src\script\unicode_gen.c" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\tools\net2com.cpp" />
@@ -596,6 +606,7 @@
     <ClInclude Include="..\src\common\tcpSrv.h" />
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
+    <ClInclude Include="..\src\data_server\scriptEngine_qjs.h" />
     <ClInclude Include="..\src\data_server\scriptFunc_tds.h" />
     <ClInclude Include="..\src\data_server\tAlmSrv.h" />
     <ClInclude Include="..\src\data_server\jerry.h" />
@@ -638,6 +649,18 @@
     <ClInclude Include="..\src\io_server\proto_common.h" />
     <ClInclude Include="..\src\io_server\wsProto.h" />
     <ClInclude Include="..\src\pch.h" />
+    <ClInclude Include="..\src\script\cutils.h" />
+    <ClInclude Include="..\src\script\dtoa.h" />
+    <ClInclude Include="..\src\script\libregexp-opcode.h" />
+    <ClInclude Include="..\src\script\libregexp.h" />
+    <ClInclude Include="..\src\script\libunicode-table.h" />
+    <ClInclude Include="..\src\script\libunicode.h" />
+    <ClInclude Include="..\src\script\list.h" />
+    <ClInclude Include="..\src\script\quickjs-atom.h" />
+    <ClInclude Include="..\src\script\quickjs-libc.h" />
+    <ClInclude Include="..\src\script\quickjs-opcode.h" />
+    <ClInclude Include="..\src\script\quickjs.h" />
+    <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
     <ClInclude Include="..\src\tools\net2com.h" />
     <ClInclude Include="..\src\tools\tcpHub.h" />
