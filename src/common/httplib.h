@@ -133,10 +133,13 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+#if defined(_WIN32) && !defined(__SSIZE_T_DEFINED)
 #ifdef _WIN64
 using ssize_t = __int64;
 #else
 using ssize_t = long;
+#endif
+#define __SSIZE_T_DEFINED
 #endif
 #endif // _MSC_VER
 
