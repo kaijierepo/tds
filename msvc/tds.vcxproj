@@ -1,9 +1,41 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="dll - D|Win32">
+      <Configuration>dll - D</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll - D|x64">
+      <Configuration>dll - D</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="exe - D svn|Win32">
+      <Configuration>exe - D svn</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="exe - D svn|x64">
+      <Configuration>exe - D svn</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="exe - D|Win32">
       <Configuration>exe - D</Configuration>
       <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll - R|Win32">
+      <Configuration>dll - R</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="dll - R|x64">
+      <Configuration>dll - R</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="exe - R svn|Win32">
+      <Configuration>exe - R svn</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="exe - R svn|x64">
+      <Configuration>exe - R svn</Configuration>
+      <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="exe - R|Win32">
       <Configuration>exe - R</Configuration>
@@ -17,22 +49,6 @@
       <Configuration>exe - R</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -R svnRev|Win32">
-      <Configuration>exe -R svnRev</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -R svnRev|x64">
-      <Configuration>exe -R svnRev</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -R xp|Win32">
-      <Configuration>exe -R xp</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="exe -R xp|x64">
-      <Configuration>exe -R xp</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -40,10 +56,16 @@
     <ProjectGuid>{544c442e-fcb4-4cfa-82d0-261ff1f58b8b}</ProjectGuid>
     <RootNamespace>tds</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>tds</ProjectName>
+    <ProjectName>tds Pro</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
@@ -56,24 +78,30 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|Win32'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'" Label="Configuration">
@@ -83,19 +111,28 @@
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
-    <UseDebugLibraries>false</UseDebugLibraries>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
     <PlatformToolset>v142</PlatformToolset>
-    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
+    <PlatformToolset>v142</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -105,51 +142,65 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>tds</TargetName>
-    <OutDir>../out</OutDir>
-    <IncludePath>E:\tds\src\3rdparty\jerryscript\include;E:\tds\src\3rdparty\jerryscript\include\jerryscript-ext;$(IncludePath)</IncludePath>
-    <ReferencePath>E:\tds\src\3rdparty\jerryscript\lib_x86\MTd;$(ReferencePath)</ReferencePath>
+    <OutDir>../out/tds</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>tds</TargetName>
+    <OutDir>../out/tds</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|Win32'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../../tBrowser/out_32</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>../out/tds</OutDir>
+    <TargetName>tds</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
@@ -159,64 +210,85 @@
     <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>../out/tds</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>../out</OutDir>
+    <OutDir>../../atexpert/out</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
+    <OutDir>../../atexpert/out</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
+    <OutDir>../../tBrowser/out_32</OutDir>
     <TargetName>tds</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;ENABLE_JERRY_SCRIPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>E:\tds\src\3rdparty\jerryscript;E:\tds\src\3rdparty\jerryscript\include;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\MTd;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>zlib.lib;mqtt.lib;libssl-1_1-static.lib;libcrypto-1_1-static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;ENABLE_JERRY_SCRIPT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MT;..\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
       <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_JERRY_SCRIPT;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;MG_TLS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -229,22 +301,19 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\mt;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MT;..\src\3rdparty\jerryscript\lib\mt;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_WINXP;ENABLE_SERIAL;TDS;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MG_TLS=MG_TLS_NONE;TDSDLL;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -252,18 +321,44 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\MTd;..\src\3rdparty\rc_genicam_api\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\mt;</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;ENABLE_QJS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/script/;../src/3rdparty/jerryscript/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\ssl\lib\VC\x64\MTd;..\src\3rdparty\libz\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+    <PreBuildEvent>
+      <Command>../tools/preBuild.bat</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - D svn|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../src/script;../tdspro/func_module</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
@@ -272,13 +367,12 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MTd;..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\mujs\lib;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\MTd;..\src\3rdparty\openssl\lib;..\src\3rdparty\libz\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>../tools/preBuild.bat</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R|x64'">
@@ -287,14 +381,77 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UTF8;TDS;ENABLE_OPENSSL;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\mt;..\src\3rdparty\ssl\lib\VC\x64\MT;..\src\3rdparty\libz\lib</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <PreBuildEvent>
+      <Command>../tools/preBuild.bat</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>../tools/publish.bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe - R svn|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard_C>Default</LanguageStandard_C>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib\mt</AdditionalLibraryDirectories>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <PreBuildEvent>
+      <Command>../tools/preBuild.bat</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>../tools/publish.bat</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - R|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>TDSDLL;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module;../src/3rdparty/ssl/include</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -303,85 +460,50 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MT;..\src\3rdparty\jerryscript\lib\mt;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
-    <PreBuildEvent>
-      <Command>
-      </Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>../build/publish.bat</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R svnRev|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">
     <ClCompile>
+      <AdditionalIncludeDirectories>../src/3rdparty/rc_genicam_api/include/;../src/3rdparty/jerryscript/include/;../src/3rdparty/miniblink/include/;../src/3rdparty/openssl/include/;../src/3rdparty/mqtt/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/alarm_server;../src/mo_model;../src/video;../src/3rdparty/openssl-1.0.2t/inc;../src/3rdparty/ssl/include/openssl/</AdditionalIncludeDirectories>
       <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
+      <SupportJustMyCode>true</SupportJustMyCode>
+      <PreprocessorDefinitions>_HAS_STD_BYTE=0;_TDS;_WINDLL;CPPHTTPLIB_OPENSSL_SUPPORT;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 /Zm200 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;libz-static.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MT;..\src\3rdparty\jerryscript\lib\mt;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib;..\src\3rdparty\libz\lib</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalDependencies>rc_genicam_api_static.lib;jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;vfw32.lib;OleAut32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MDd;..\src\3rdparty\jerryscript\lib\MDd;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
     </Link>
-    <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>
-      </Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='exe -R xp|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='dll - D|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_OPENSSL;MG_ENABLE_POLL;_HAS_STD_BYTE=0;CPPHTTPLIB_OPENSSL_SUPPORT;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/3rdparty/jerryscript/include/;../src/3rdparty/openssl/include/;../src/3rdparty/ffmpeg/include;../src;../src/common;../src/io_server;../src/data_server;../src/3rdparty/openssl-1.0.2t/inc;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>MG_TLS=MG_TLS_NONE;TDSDLL;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;libcrypto-1_1-static.lib;libssl-1_1-static.lib;Bcrypt.lib;Secur32.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;zlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\src\3rdparty\rc_genicam_api\lib\MT;..\src\3rdparty\jerryscript\lib\mt;..\src\3rdparty\openssl\lib;..\src\3rdparty\mqtt\lib;..\src\3rdparty\ffmpeg\lib</AdditionalLibraryDirectories>
-      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>..\src\3rdparty\jerryscript\lib_x86\MTd;</AdditionalLibraryDirectories>
+      <AdditionalDependencies>jerry-core.lib;jerry-ext.lib;jerry-port-default.lib;Shlwapi.lib;OleAut32.lib;vfw32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PreBuildEvent>
-      <Command>../build/preBuild.bat</Command>
-    </PreBuildEvent>
-    <PostBuildEvent>
-      <Command>../build/publish.bat</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\common\base64.c" />
     <ClCompile Include="..\src\common\common.cpp" />
+    <ClCompile Include="..\src\common\dtwrecoge.cpp" />
     <ClCompile Include="..\src\common\kvIni.cpp" />
     <ClCompile Include="..\src\common\logger.cpp" />
     <ClCompile Include="..\src\common\md5.cpp" />
+    <ClCompile Include="..\src\common\memDiag.cpp" />
+    <ClCompile Include="..\src\common\miniz.c" />
     <ClCompile Include="..\src\common\mongoose.c" />
     <ClCompile Include="..\src\common\secure.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
@@ -390,61 +512,84 @@
     <ClCompile Include="..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\src\common\udpSrv.cpp" />
-    <ClCompile Include="..\src\common\yyjson.c" />
-    <ClCompile Include="..\src\data_server\as.cpp" />
-    <ClCompile Include="..\src\data_server\jerry.cpp" />
+    <ClCompile Include="..\src\common\yyjson.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
+    <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
+    <ClCompile Include="..\src\data_server\tAlmSrv.cpp" />
     <ClCompile Include="..\src\data_server\mp.cpp" />
     <ClCompile Include="..\src\data_server\obj.cpp" />
     <ClCompile Include="..\src\data_server\prj.cpp" />
-    <ClCompile Include="..\src\data_server\reverseInterface.cpp" />
+    <ClCompile Include="..\src\data_server\tSockSrv.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler.cpp" />
-    <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
-    <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
     <ClCompile Include="..\src\data_server\scriptManager.cpp" />
     <ClCompile Include="..\src\data_server\tdb.cpp" />
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
     <ClCompile Include="..\src\data_server\webSrv.cpp" />
-    <ClCompile Include="..\src\func_module\aliDDNS.cpp" />
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
-    <ClCompile Include="..\src\func_module\gzhServer.cpp" />
     <ClCompile Include="..\src\func_module\hmrSrv.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
-    <ClCompile Include="..\src\func_module\smsServer.cpp" />
     <ClCompile Include="..\src\func_module\statusServer.cpp" />
     <ClCompile Include="..\src\func_module\taskServer.cpp" />
     <ClCompile Include="..\src\func_module\tdsConf.cpp" />
-    <ClCompile Include="..\src\func_module\tdsWatchDog.cpp" />
     <ClCompile Include="..\src\func_module\userMng.cpp" />
-    <ClCompile Include="..\src\func_module\xiaot.cpp" />
+    <ClCompile Include="..\src\include\tds.cpp" />
     <ClCompile Include="..\src\io_server\ioChan.cpp" />
     <ClCompile Include="..\src\io_server\ioDev.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_jep_super.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp" />
     <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp" />
     <ClCompile Include="..\src\io_server\ioSrv.cpp" />
+    <ClCompile Include="..\src\io_server\JHDEqpProtocol.cpp" />
     <ClCompile Include="..\src\io_server\Parse315Protocol.cpp" />
     <ClCompile Include="..\src\io_server\proto_common.cpp" />
     <ClCompile Include="..\src\io_server\wsProto.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\pch.cpp" />
-    <ClCompile Include="..\src\tds.cpp" />
+    <ClCompile Include="..\src\script\cutils.c" />
+    <ClCompile Include="..\src\script\dtoa.c" />
+    <ClCompile Include="..\src\script\libregexp.c" />
+    <ClCompile Include="..\src\script\libunicode.c" />
+    <ClCompile Include="..\src\script\quickjs-libc.c" />
+    <ClCompile Include="..\src\script\quickjs.c" />
+    <ClCompile Include="..\src\script\repl.c" />
+    <ClCompile Include="..\src\script\unicode_data.c" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
-    <ClCompile Include="..\src\tools\tcp2com.cpp" />
+    <ClCompile Include="as_interface.cpp" />
+    <ClCompile Include="diskClean.cpp" />
+    <ClCompile Include="fileUploadSrv.cpp" />
+    <ClCompile Include="io_server\ioDev_bacnet.cpp" />
+    <ClCompile Include="io_server\ioDev_dlt645_2007.cpp" />
+    <ClCompile Include="io_server\ioDev_eip.cpp" />
+    <ClCompile Include="io_server\ioDev_iq60.cpp" />
+    <ClCompile Include="io_server\ioDev_modbusRtu.cpp" />
+    <ClCompile Include="io_server\ioDev_modbusSlave.cpp" />
+    <ClCompile Include="io_server\ioDev_modbusTcp.cpp" />
+    <ClCompile Include="io_server\ioDev_onvif.cpp" />
+    <ClCompile Include="io_server\ioDev_srvStatus.cpp" />
+    <ClCompile Include="io_server\ioDev_visca.cpp" />
+    <ClCompile Include="io_server\proto_eip.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\base64.h" />
     <ClInclude Include="..\src\common\common.h" />
+    <ClInclude Include="..\src\common\DTW.hpp" />
+    <ClInclude Include="..\src\common\dtwrecoge.h" />
     <ClInclude Include="..\src\common\hmac.h" />
     <ClInclude Include="..\src\common\httplib.h" />
     <ClInclude Include="..\src\common\json.hpp" />
     <ClInclude Include="..\src\common\kvIni.h" />
     <ClInclude Include="..\src\common\logger.h" />
     <ClInclude Include="..\src\common\md5.h" />
+    <ClInclude Include="..\src\common\memDiag.h" />
+    <ClInclude Include="..\src\common\miniz.h" />
     <ClInclude Include="..\src\common\mongoose.h" />
     <ClInclude Include="..\src\common\secure.h" />
     <ClInclude Include="..\src\common\sha1.h" />
@@ -454,49 +599,86 @@
     <ClInclude Include="..\src\common\tcpSrv.h" />
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
-    <ClInclude Include="..\src\data_server\as.h" />
+    <ClInclude Include="..\src\data_server\scriptEngine.h" />
+    <ClInclude Include="..\src\data_server\scriptFunc.h" />
+    <ClInclude Include="..\src\data_server\tAlmSrv.h" />
     <ClInclude Include="..\src\data_server\jerry.h" />
     <ClInclude Include="..\src\data_server\mp.h" />
     <ClInclude Include="..\src\data_server\obj.h" />
     <ClInclude Include="..\src\data_server\prj.h" />
-    <ClInclude Include="..\src\data_server\reverseInterface.h" />
+    <ClInclude Include="..\src\data_server\tSockSrv.h" />
     <ClInclude Include="..\src\data_server\rpcHandler.h" />
-    <ClInclude Include="..\src\data_server\scriptEngine.h" />
-    <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\scriptManager.h" />
     <ClInclude Include="..\src\data_server\tdb.h" />
     <ClInclude Include="..\src\data_server\tdsSession.h" />
     <ClInclude Include="..\src\data_server\webSrv.h" />
-    <ClInclude Include="..\src\func_module\aliDDNS.h" />
     <ClInclude Include="..\src\func_module\csvTable.h" />
     <ClInclude Include="..\src\func_module\dumpCatch.h" />
-    <ClInclude Include="..\src\func_module\gzhServer.h" />
     <ClInclude Include="..\src\func_module\hmrSrv.h" />
     <ClInclude Include="..\src\func_module\logServer.h" />
-    <ClInclude Include="..\src\func_module\smsServer.h" />
     <ClInclude Include="..\src\func_module\statusServer.h" />
     <ClInclude Include="..\src\func_module\taskServer.h" />
     <ClInclude Include="..\src\func_module\tdsConf.h" />
-    <ClInclude Include="..\src\func_module\tdsWatchDog.h" />
     <ClInclude Include="..\src\func_module\userMng.h" />
-    <ClInclude Include="..\src\func_module\xiaot.h" />
+    <ClInclude Include="..\src\include\tds.h" />
+    <ClInclude Include="..\src\include\tdsRPC.h" />
     <ClInclude Include="..\src\io_server\ioChan.h" />
     <ClInclude Include="..\src\io_server\ioDev.h" />
+    <ClInclude Include="..\src\io_server\ioDev_camera.h" />
     <ClInclude Include="..\src\io_server\ioDev_custom.h" />
     <ClInclude Include="..\src\io_server\ioDev_dcqk.h" />
+    <ClInclude Include="..\src\io_server\ioDev_jep_super.h" />
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
     <ClInclude Include="..\src\io_server\ioGW_localSerial.h" />
     <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h" />
     <ClInclude Include="..\src\io_server\ioSrv.h" />
+    <ClInclude Include="..\src\io_server\JHDEqpProtocol.h" />
     <ClInclude Include="..\src\io_server\Parse315Protocol.h" />
     <ClInclude Include="..\src\io_server\proto_can.hpp" />
     <ClInclude Include="..\src\io_server\proto_common.h" />
     <ClInclude Include="..\src\io_server\wsProto.h" />
     <ClInclude Include="..\src\pch.h" />
-    <ClInclude Include="..\src\tds.h" />
+    <ClInclude Include="..\src\script\cutils.h" />
+    <ClInclude Include="..\src\script\dtoa.h" />
+    <ClInclude Include="..\src\script\libregexp-opcode.h" />
+    <ClInclude Include="..\src\script\libregexp.h" />
+    <ClInclude Include="..\src\script\libunicode-table.h" />
+    <ClInclude Include="..\src\script\libunicode.h" />
+    <ClInclude Include="..\src\script\list.h" />
+    <ClInclude Include="..\src\script\quickjs-atom.h" />
+    <ClInclude Include="..\src\script\quickjs-libc.h" />
+    <ClInclude Include="..\src\script\quickjs-opcode.h" />
+    <ClInclude Include="..\src\script\quickjs.h" />
+    <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
-    <ClInclude Include="..\src\tools\tcp2com.h" />
+    <ClInclude Include="as_interface.h" />
+    <ClInclude Include="diskClean.h" />
+    <ClInclude Include="fileUploadSrv.h" />
+    <ClInclude Include="io_server\ioDev_bacnet.h" />
+    <ClInclude Include="io_server\ioDev_dlt645_2007.h" />
+    <ClInclude Include="io_server\ioDev_eip.h" />
+    <ClInclude Include="io_server\ioDev_iq60.h" />
+    <ClInclude Include="io_server\ioDev_modbusRtu.h" />
+    <ClInclude Include="io_server\ioDev_modbusSlave.h" />
+    <ClInclude Include="io_server\ioDev_modbusTcp.h" />
+    <ClInclude Include="io_server\ioDev_onvif.h" />
+    <ClInclude Include="io_server\ioDev_srvStatus.h" />
+    <ClInclude Include="io_server\ioDev_visca.h" />
+    <ClInclude Include="io_server\proto_bacnet.hpp" />
+    <ClInclude Include="io_server\proto_can.hpp" />
+    <ClInclude Include="io_server\proto_cip.hpp" />
+    <ClInclude Include="io_server\proto_dlt645_2007.hpp" />
+    <ClInclude Include="io_server\proto_eip.hpp" />
+    <ClInclude Include="io_server\proto_logix_plc.hpp" />
+    <ClInclude Include="io_server\proto_rtu.hpp" />
+    <ClInclude Include="io_server\proto_visca.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\src\res\logo.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="tds Pro.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

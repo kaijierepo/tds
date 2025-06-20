@@ -1,38 +1,38 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.7.34031.279
+VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds", "tds.vcxproj", "{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds Pro", "tds.vcxproj", "{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		exe - D svn|x64 = exe - D svn|x64
+		exe - D svn|x86 = exe - D svn|x86
 		exe - D|x64 = exe - D|x64
 		exe - D|x86 = exe - D|x86
+		exe - R svn|x64 = exe - R svn|x64
+		exe - R svn|x86 = exe - R svn|x86
 		exe - R|x64 = exe - R|x64
 		exe - R|x86 = exe - R|x86
-		exe -R svnRev|x64 = exe -R svnRev|x64
-		exe -R svnRev|x86 = exe -R svnRev|x86
-		exe -R xp|x64 = exe -R xp|x64
-		exe -R xp|x86 = exe -R xp|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.ActiveCfg = exe - D svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.Build.0 = exe - D svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x86.ActiveCfg = exe - D svn|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x86.Build.0 = exe - D svn|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.ActiveCfg = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.Build.0 = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.ActiveCfg = exe - D|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.Build.0 = exe - D|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.ActiveCfg = exe - R svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.Build.0 = exe - R svn|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.ActiveCfg = exe - R svn|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.Build.0 = exe - R svn|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.ActiveCfg = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.Build.0 = exe - R|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.ActiveCfg = exe - R|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.Build.0 = exe - R|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x64.ActiveCfg = exe -R svnRev|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x64.Build.0 = exe -R svnRev|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x86.ActiveCfg = exe -R svnRev|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R svnRev|x86.Build.0 = exe -R svnRev|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.ActiveCfg = exe - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x64.Build.0 = exe - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x86.ActiveCfg = exe -R xp|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe -R xp|x86.Build.0 = exe -R xp|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
