@@ -516,6 +516,10 @@ bool ScriptEngine::runScript(string& script, string user) {
 			JS_FreeCString(ctx, err);
 			JS_FreeValue(ctx, error);
 		}
+        else {
+            jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
+            runOk = true;
+        }
 
 		// 清理资源
 		JS_FreeValue(ctx, result);

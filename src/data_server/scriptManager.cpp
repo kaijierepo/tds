@@ -245,7 +245,7 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 
 		json jOutput = json::array();
 		if (getExpRet) {
-			jOutput.push_back("计算结果=" + se.m_sEvalRet);
+			jOutput.push_back("计算结果=" + se.m_sEvalRet.dump());
 		}
 
 		for (int i = 0; i < se.m_vecOutput.size(); i++) {
@@ -595,7 +595,7 @@ void ScriptManager::exeAllVarExpScripts() {
 
 		info.lastRunInfo.valNullInCalc = false;
 
-		json j = json::parse(se.m_sEvalRet);
+		json& j = se.m_sEvalRet;
 		info.lastRunInfo.retVal = j;
 		info.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 
