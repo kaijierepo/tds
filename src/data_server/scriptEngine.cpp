@@ -1,161 +1,1062 @@
-#ifdef ENABLE_JERRY_SCRIPT
+#ifdef ENABLE_QJS
 #include "ScriptEngine.h"
-#include "jerryscript-port.h"
-#include "scriptFunc.h"
 #include "common.h"
-
-
-void ScriptEngine::releaseGlobalFunc() {
-	for (int i = 0; i < m_vecGlobalFunc.size(); i++) {
-		GLOBAL_FUNC gf = m_vecGlobalFunc[i];
-		jerry_release_value(gf.property_func);
-		jerry_release_value(gf.property_name);
-	}
-	m_vecGlobalFunc.clear();
-}
-
-string ScriptEngine::getErrorDesc(jerry_error_t err) {
-	if (err == JERRY_ERROR_NONE) {
-		return "error none";
-	}
-	else if (err == JERRY_ERROR_COMMON) {
-		return "error";
-	}
-	else if (err == JERRY_ERROR_EVAL) {
-		return "eval error";
-	}
-	else if (err == JERRY_ERROR_RANGE) {
-		return "range error";
-	}
-	else if (err == JERRY_ERROR_REFERENCE) {
-		return "reference error";
-	}
-	else if (err == JERRY_ERROR_SYNTAX) {
-		return "syntax error";
-	}
-	else if (err == JERRY_ERROR_TYPE) {
-		return "type error";
-	}
-	else if (err == JERRY_ERROR_URI) {
-		return "uri error";
-	}
-	else if (err == JERRY_ERROR_AGGREGATE) {
-		return "aggregate error";
-	}
-	else {
-		return "error none";
-	}
-}
+#include "cutils.h"
+#include "quickjs-libc.h"
+#include "httplib.h"
+#include "yyjson.h"
+#include <limits>
+#include <cmath>
 
 thread_local ScriptEngine* pEngine;
 
-ScriptEngine::ScriptEngine()
-{
-	m_initGlobalFunc = nullptr;
+// 递归将 JS 值转换为 yyjson 值
+static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst val, std::vector<JSValueConst>& visited);
+
+// 处理对象类型
+static yyjson_mut_val* handle_object(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst obj, std::vector<JSValueConst>& visited) {
+    // 检查循环引用
+    for (auto& v : visited) {
+        if (JS_VALUE_GET_PTR(v) == JS_VALUE_GET_PTR(obj)) {
+            return yyjson_mut_str(doc, "[Circular Reference]");
+        }
+    }
+
+    visited.push_back(obj);
+
+    // 创建新的 JSON 对象
+    yyjson_mut_val* json_obj = yyjson_mut_obj(doc);
+
+    // 获取属性枚举
+    JSPropertyEnum* props = nullptr;
+    uint32_t prop_count = 0;
+
+    if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, obj, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)) {
+        visited.pop_back();
+        return json_obj; // 空对象
+    }
+
+    // 遍历所有属性
+    for (uint32_t i = 0; i < prop_count; i++) {
+        JSAtom atom = props[i].atom;
+        const char* key = JS_AtomToCString(ctx, atom);
+
+        if (!key) continue;
+
+        JSValue prop_val = JS_GetProperty(ctx, obj, atom);
+        yyjson_mut_val* json_val = js_value_to_yyjson(ctx, doc, prop_val, visited);
+
+        // 添加到 JSON 对象
+        yyjson_mut_obj_add_val(doc,json_obj, key, json_val);
+
+        JS_FreeCString(ctx, key);
+        JS_FreeValue(ctx, prop_val);
+        JS_FreeAtom(ctx, atom);
+    }
+
+    free(props);
+    visited.pop_back();
+    return json_obj;
+}
+
+// 处理数组类型
+static yyjson_mut_val* handle_array(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst arr, std::vector<JSValueConst>& visited) {
+    // 检查循环引用
+    for (auto& v : visited) {
+        if (JS_VALUE_GET_PTR(v) == JS_VALUE_GET_PTR(arr)) {
+            return yyjson_mut_str(doc, "[Circular Reference]");
+        }
+    }
+
+    visited.push_back(arr);
+
+    // 创建新的 JSON 数组
+    yyjson_mut_val* json_arr = yyjson_mut_arr(doc);
+
+    // 获取数组长度
+    JSValue len_val = JS_GetPropertyStr(ctx, arr, "length");
+    int32_t len = 0;
+    JS_ToInt32(ctx, &len, len_val);
+    JS_FreeValue(ctx, len_val);
+
+    // 遍历数组元素
+    for (int32_t i = 0; i < len; i++) {
+        JSValue item_val = JS_GetPropertyUint32(ctx, arr, i);
+        yyjson_mut_val* json_item = js_value_to_yyjson(ctx, doc, item_val, visited);
+        yyjson_mut_arr_append(json_arr, json_item);
+        JS_FreeValue(ctx, item_val);
+    }
+
+    visited.pop_back();
+    return json_arr;
+}
+
+// 主转换函数
+static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst val, std::vector<JSValueConst>& visited) {
+    if (JS_IsUndefined(val) || JS_IsUninitialized(val)) {
+        return yyjson_mut_null(doc);
+    }
+    else if (JS_IsNull(val)) {
+        return yyjson_mut_null(doc);
+    }
+    else if (JS_IsBool(val)) {
+        return yyjson_mut_bool(doc, JS_ToBool(ctx, val));
+    }
+    else if (JS_IsNumber(val)) {
+        double num;
+        JS_ToFloat64(ctx, &num, val);
+        return yyjson_mut_real(doc, num);
+    }
+    else if (JS_IsString(val)) {
+        const char* str = JS_ToCString(ctx, val);
+        yyjson_mut_val* json_str = yyjson_mut_strcpy(doc, str);
+        JS_FreeCString(ctx, str);
+        return json_str;
+    }
+    else if (JS_IsArray(ctx, val)) {
+        return handle_array(ctx, doc, val, visited);
+    }
+    else if (JS_IsObject(val)) {
+        return handle_object(ctx, doc, val, visited);
+    }
+    else if (JS_IsFunction(ctx, val)) {
+        return yyjson_mut_str(doc, "[Function]");
+    }
+    else {
+        return yyjson_mut_str(doc, "[Unsupported Type]");
+    }
+}
+
+extern "C" {
+	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+		const char* log = JS_ToCString(ctx, argv[0]);
+        if (!log) {
+            return JS_ThrowTypeError(ctx, "Argument must be a string");
+        }
+
+		std::string s = log;
+		pEngine->m_vecOutput.push_back(s);
+
+		JS_FreeCString(ctx, log); 
+		return JS_NewObject(ctx);
+	}
+
+	static JSValue qjs_http_request(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+		std::vector<JSValueConst> visited;
+
+        yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* yyv = js_value_to_yyjson(ctx, mdoc, argv[0], visited);
+		if (yyv) {
+			if (yyjson_mut_is_obj(yyv)) {
+				string ip;
+                if (yyjson_mut_obj_get(yyv, "hostname")) {
+                    ip = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "hostname"));
+                }
+
+				string addr = "http://" + ip;
+
+				int port = 0;
+                if (yyjson_mut_obj_get(yyv, "port")) {
+                    port = yyjson_mut_get_num(yyjson_mut_obj_get(yyv, "port"));
+                }
+
+				string method;
+                if (yyjson_mut_obj_get(yyv, "method")) {
+                    method = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "method"));
+                }
+
+				httplib::Client cli(ip, port);
+
+				string path;
+                if (yyjson_mut_obj_get(yyv, "path")) {
+                    path = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "path"));
+                }
+
+				string body;
+				if (yyjson_mut_obj_get(yyv, "body")) {
+					body = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "body"));
+				}
+
+                httplib::Headers headers;
+				if (method == "GET") {
+					httplib::Result rlt = cli.Get(path, headers);
+					if (rlt != nullptr) {
+						JSValue ret = JS_NewObject(ctx);
+						JSValue body = JS_NewString(ctx, rlt->body.c_str());
+						JS_SetPropertyStr(ctx, ret, "body", body);
+						return ret;
+					}
+				}
+				else if (method == "POST") {
+					httplib::Result rlt = cli.Post(path, headers, body, "application/json");
+					if (rlt != nullptr) {
+						JSValue ret = JS_NewObject(ctx);
+						JSValue body = JS_NewString(ctx, rlt->body.c_str());
+						JS_SetPropertyStr(ctx, ret, "body", body);
+						return ret;
+					}
+				}
+			}
+		}
+
+		yyjson_mut_doc_free(mdoc);
+		return JS_NewObject(ctx);
+	}
+
+    static JSValue qjs_sleep(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc > 0) {
+            int milli = 0;
+            JS_ToInt32(ctx, &milli, argv[0]);
+            timeopt::sleepMilli(milli);
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_backtrace(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JSValue error = JS_NewError(ctx);
+        JSValue stackVal = JS_GetPropertyStr(ctx, error, "stack");
+        const char* stack = JS_ToCString(ctx, stackVal);
+
+        if (stack) {
+            printf("%s\n", stack);
+            JS_FreeCString(ctx, stack);
+        }
+        else {
+            printf("No backtrace available\n");
+        }
+
+        JS_FreeValue(ctx, stackVal);
+        JS_FreeValue(ctx, error);
+
+        return JS_UNDEFINED;
+    }
+
+    static JSValue qjs_json_stringify(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc == 1) {
+            JSValue global = JS_GetGlobalObject(ctx);
+            JSValue jsonObj = JS_GetPropertyStr(ctx, global, "JSON");
+            JSValue stringifyFunc = JS_GetPropertyStr(ctx, jsonObj, "stringify");
+            JSValue result = JS_Call(ctx, stringifyFunc, jsonObj, 1, argv);
+
+            JS_FreeValue(ctx, stringifyFunc);
+            JS_FreeValue(ctx, jsonObj);
+            JS_FreeValue(ctx, global);
+
+            return result;
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_json_parse(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc == 1) {
+            JSValue global = JS_GetGlobalObject(ctx);
+            JSValue jsonObj = JS_GetPropertyStr(ctx, global, "JSON");
+            JSValue parseFunc = JS_GetPropertyStr(ctx, jsonObj, "parse");
+            JSValue result = JS_Call(ctx, parseFunc, jsonObj, 1, argv);
+
+            JS_FreeValue(ctx, parseFunc);
+            JS_FreeValue(ctx, jsonObj);
+            JS_FreeValue(ctx, global);
+
+            return result;
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_str_toHexStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc == 1 && JS_IsArray(ctx, argv[0])) {
+            JSValue len_val = JS_GetPropertyStr(ctx, argv[0], "length");
+            int32_t len = 0;
+            JS_ToInt32(ctx, &len, len_val);
+            JS_FreeValue(ctx, len_val);
+
+            std::string s;
+            for (int32_t i = 0; i < len; ++i) {
+                JSValue item = JS_GetPropertyUint32(ctx, argv[0], i);
+                int32_t b = 0;
+                JS_ToInt32(ctx, &b, item);
+                char buf[8];
+                snprintf(buf, sizeof(buf), "%02X ", (unsigned char)b);
+                s += buf;
+                JS_FreeValue(ctx, item);
+            }
+            return JS_NewString(ctx, s.c_str());
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_toStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        json jTime;
+        jsValToJsonVal(ctx, this_val, jTime);
+
+        TIME t;
+        t.wYear = jTime["year"].get<int>();
+        t.wMonth = jTime["month"].get<int>();
+        t.wDay = jTime["day"].get<int>();
+        t.wHour = jTime["hour"].get<int>();
+        t.wMinute = jTime["minute"].get<int>();
+        t.wSecond = jTime["second"].get<int>();
+        t.wMilliseconds = jTime["millisecond"].get<int>();
+
+        std::string sTime = t.toStr();
+        return JS_NewString(ctx, sTime.c_str());
+    }
+
+    static JSValue qjs_fromStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1 || !JS_IsString(argv[0])) {
+            return JS_NULL;
+        }
+        
+        JSValue jsTime = JS_DupValue(ctx, this_val);
+
+        const char* strTime = JS_ToCString(ctx, argv[0]);
+        if (!strTime) {
+            JS_FreeValue(ctx, jsTime);
+            return JS_NULL;
+        }
+
+        TIME t;
+        t.fromStr(strTime);
+        JS_FreeCString(ctx, strTime);
+
+        JS_SetPropertyStr(ctx, jsTime, "year", JS_NewInt32(ctx, t.wYear));
+        JS_SetPropertyStr(ctx, jsTime, "month", JS_NewInt32(ctx, t.wMonth));
+        JS_SetPropertyStr(ctx, jsTime, "day", JS_NewInt32(ctx, t.wDay));
+        JS_SetPropertyStr(ctx, jsTime, "hour", JS_NewInt32(ctx, t.wHour));
+        JS_SetPropertyStr(ctx, jsTime, "minute", JS_NewInt32(ctx, t.wMinute));
+        JS_SetPropertyStr(ctx, jsTime, "second", JS_NewInt32(ctx, t.wSecond));
+        JS_SetPropertyStr(ctx, jsTime, "millisecond", JS_NewInt32(ctx, t.wMilliseconds));
+
+        JS_FreeValue(ctx, jsTime);
+        return JS_NULL;
+    }
+
+    static JSValue qjs_increaseSeconds(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1 || !JS_IsNumber(argv[0])) {
+            return JS_NULL;
+        }
+
+        json jTime;
+        jsValToJsonVal(ctx, this_val, jTime);
+
+        TIME t;
+        t.wYear = jTime["year"].get<int>();
+        t.wMonth = jTime["month"].get<int>();
+        t.wDay = jTime["day"].get<int>();
+        t.wHour = jTime["hour"].get<int>();
+        t.wMinute = jTime["minute"].get<int>();
+        t.wSecond = jTime["second"].get<int>();
+        t.wMilliseconds = jTime["millisecond"].get<int>();
+
+        int addSec = 0;
+        JS_ToInt32(ctx, &addSec, argv[0]);
+        time_t unixTime = t.toUnixTime();
+        unixTime += addSec;
+        t.fromUnixTime(unixTime);
+
+        JSValue jsTime = JS_DupValue(ctx, this_val);
+        JS_SetPropertyStr(ctx, jsTime, "year", JS_NewInt32(ctx, t.wYear));
+        JS_SetPropertyStr(ctx, jsTime, "month", JS_NewInt32(ctx, t.wMonth));
+        JS_SetPropertyStr(ctx, jsTime, "day", JS_NewInt32(ctx, t.wDay));
+        JS_SetPropertyStr(ctx, jsTime, "hour", JS_NewInt32(ctx, t.wHour));
+        JS_SetPropertyStr(ctx, jsTime, "minute", JS_NewInt32(ctx, t.wMinute));
+        JS_SetPropertyStr(ctx, jsTime, "second", JS_NewInt32(ctx, t.wSecond));
+        JS_SetPropertyStr(ctx, jsTime, "millisecond", JS_NewInt32(ctx, t.wMilliseconds));
+
+        JS_FreeValue(ctx, jsTime);
+
+        return JS_NULL;
+    }
+
+    static JSValue qjs_toUnixTime(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        json jTime;
+        jsValToJsonVal(ctx, this_val, jTime);
+
+        TIME t;
+        t.wYear = jTime["year"].get<int>();
+        t.wMonth = jTime["month"].get<int>();
+        t.wDay = jTime["day"].get<int>();
+        t.wHour = jTime["hour"].get<int>();
+        t.wMinute = jTime["minute"].get<int>();
+        t.wSecond = jTime["second"].get<int>();
+        t.wMilliseconds = jTime["millisecond"].get<int>();
+
+        time_t tt = t.toUnixTime();
+        return JS_NewInt64(ctx, static_cast<int64_t>(tt));
+    }
+
+    static JSValue qjs_time(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        TIME t = timeopt::now();
+
+        JSValue timeObj = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, timeObj, "year", JS_NewInt32(ctx, t.wYear));
+        JS_SetPropertyStr(ctx, timeObj, "month", JS_NewInt32(ctx, t.wMonth));
+        JS_SetPropertyStr(ctx, timeObj, "day", JS_NewInt32(ctx, t.wDay));
+        JS_SetPropertyStr(ctx, timeObj, "hour", JS_NewInt32(ctx, t.wHour));
+        JS_SetPropertyStr(ctx, timeObj, "minute", JS_NewInt32(ctx, t.wMinute));
+        JS_SetPropertyStr(ctx, timeObj, "second", JS_NewInt32(ctx, t.wSecond));
+        JS_SetPropertyStr(ctx, timeObj, "millisecond", JS_NewInt32(ctx, t.wMilliseconds));
+
+        // 绑定方法
+        JS_SetPropertyStr(ctx, timeObj, "toStr", JS_NewCFunction(ctx, qjs_toStr, "toStr", 0));
+        JS_SetPropertyStr(ctx, timeObj, "fromStr", JS_NewCFunction(ctx, qjs_fromStr, "fromStr", 1));
+        JS_SetPropertyStr(ctx, timeObj, "increaseSeconds", JS_NewCFunction(ctx, qjs_increaseSeconds, "increaseSeconds", 1));
+        JS_SetPropertyStr(ctx, timeObj, "toUnixTime", JS_NewCFunction(ctx, qjs_toUnixTime, "toUnixTime", 0));
+
+        return timeObj;
+    }
+} 
+
+void register_cpp_functions(JSContext* ctx) {
+    JSValue global = JS_GetGlobalObject(ctx);
+
+    JS_SetPropertyStr(ctx, global, "log", JS_NewCFunction(ctx, qjs_log, "log", 1));
+
+    JSValue console = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, qjs_log, "log", 1));
+    JS_SetPropertyStr(ctx, global, "console", console);
+
+    JSValue http = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, http, "request", JS_NewCFunction(ctx, qjs_http_request, "request", 1));
+    JS_SetPropertyStr(ctx, global, "http", http);
+
+    JS_SetPropertyStr(ctx, global, "sleep", JS_NewCFunction(ctx, qjs_sleep, "sleep", 1));
+    JS_SetPropertyStr(ctx, global, "backtrace", JS_NewCFunction(ctx, qjs_backtrace, "backtrace", 1));
+    JS_SetPropertyStr(ctx, global, "json_stringify", JS_NewCFunction(ctx, qjs_json_stringify, "json_stringify", 1));
+    JS_SetPropertyStr(ctx, global, "json_parse", JS_NewCFunction(ctx, qjs_json_parse, "json_parse", 1));
+
+    JSValue strObj = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, strObj, "toHexStr", JS_NewCFunction(ctx, qjs_str_toHexStr, "toHexStr", 1));
+    JS_SetPropertyStr(ctx, global, "STR", strObj);
+
+    JS_SetPropertyStr(ctx, global, "time", JS_NewCFunction(ctx, qjs_time, "time", 0));
+
+    JS_FreeValue(ctx, global);
+}
+
+// 查找错误行号的辅助函数
+int extract_line_number(const char* stack_str) {
+    const char* line_pos = strstr(stack_str, ":");
+
+    // 未找到行号
+    if (!line_pos) {
+        return -1;  
+    }
+
+    line_pos++;  // 跳过冒号
+
+    // 解析行号
+    int line = 0;
+    while (*line_pos >= '0' && *line_pos <= '9') {
+        line = line * 10 + (*line_pos - '0');
+        line_pos++;
+    }
+
+    return line > 0 ? line : -1;
+}
+
+bool is_integer(double x) {
+    if (std::isnan(x) || std::isinf(x)) {
+        return false;
+    }
+
+    const double threshold = 9007199254740992.0; // 2^53
+    double abs_x = std::fabs(x);
+
+    // 超出精度范围后无法表示小数
+    if (abs_x >= threshold) {
+        return true;
+    }
+
+    return x == std::trunc(x);
+}
+
+ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
-	m_logImp = nullptr;
-	m_initIODevFunc = nullptr;
+    m_initTdsFunc = nullptr;
+    m_bValNullInCalc = false;
 }
 
-string jerryVal2Str(jerry_value_t jerryVal) {
-	jerry_value_t string_value = jerry_json_stringify(jerryVal);
-	jerry_size_t tSize = jerry_get_string_size(string_value);
-	jerry_char_t* buffer = new jerry_char_t[tSize + 1];
-	jerry_size_t copied_bytes = jerry_string_to_utf8_char_buffer(string_value, buffer, tSize);
-	buffer[copied_bytes] = '\0';
-	jerry_release_value(string_value);
-	string s = (const char*)buffer;
-	delete buffer;
-	return s;
-}
-
-bool ScriptEngine::runScript(string& script, string user)
-{
+bool ScriptEngine::runScript(string& script, string user) {
 	m_script = script;
 	m_user = user;
-	//vector<string> lines;
-	//script = str::replace(script, "\r\n", "\n");
-	//str::split(lines, script, "\n");
-	//lines.push_back(script);
+
 	m_vecOutput.clear();
 	bool runOk = false;
+
 	try {
 		TIME tStart = timeopt::now();
 		pEngine = this;
-		tls_context = jerry_create_context(512 * 1024,context_alloc_fn,NULL);;
-		jerry_init(JERRY_INIT_EMPTY);
-		global_object = jerry_get_global_object();
+		
+		// 初始化 QuickJS
+		JSRuntime* rt = JS_NewRuntime();
+		JSContext* ctx = JS_NewContext(rt);
 
-		if(m_initGlobalFunc)
-			m_initGlobalFunc(global_object,m_vecGlobalFunc);
+		register_cpp_functions(ctx);
+        if (m_initTdsFunc) {
+            m_initTdsFunc(ctx);
+        }
 
-		if (m_initIODevFunc) {
-			jerry_value_t ioDev = jerry_create_object();
-			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)"Dev");
-			m_initIODevFunc(ioDev,m_ioDevThis);
-			jerry_release_value(jerry_set_property(global_object, prop_name, ioDev));
-			jerry_release_value(prop_name);
-			jerry_release_value(ioDev);
+		JSValue result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+
+		if (JS_IsException(result)) {
+			JSValue error = JS_GetException(ctx);
+			const char* err = JS_ToCString(ctx, error);
+
+            JSValue stack_val = JS_GetPropertyStr(ctx, error, "stack");
+            const char* stack = JS_ToCString(ctx, stack_val);
+
+            // 提取行号
+            int line = extract_line_number(stack);
+
+			string s = err;
+			s = "Exception at line " + str::fromInt(line) + ":" + s;
+			m_vecOutput.push_back(s);
+
+			JS_FreeCString(ctx, err);
+			JS_FreeValue(ctx, error);
 		}
 
-		if (!m_globalObj.is_null()) {
-			//for (auto& [key, value] : m_globalObj.items()) {
-			//	jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)key.c_str());
-			//	jerry_value_t prop_value;
-			//	jsonVal2jerryVal(value, prop_value);
-
-			//	jerry_value_t set_result = jerry_set_property(global_object, prop_name, prop_value);
-			//	if (jerry_value_is_error(set_result)) {
-			//		jerry_error_t error = jerry_get_error_type(set_result);
-			//		jerry_release_value(error);
-			//	}
-			//	jerry_release_value(set_result);
-			//	jerry_release_value(prop_name);
-			//	jerry_release_value(prop_value);
-			//}
-		}
-
-		///* Run the demo script with 'eval' */
-		jerry_value_t eval_ret = jerry_eval((jerry_char_t*)script.c_str(),
-			script.length(),
-			JERRY_PARSE_NO_OPTS);
-
-		/* Check if there was any error (syntax or runtime) */
-		bool run_ok = !jerry_value_is_error(eval_ret);
-
-		if (run_ok)
-		{
-			m_sEvalRet = jerryVal2Str(eval_ret);
-			jerry_release_value(eval_ret);
-			runOk = true;
-		}
-		else
-		{
-			jerry_error_t error = jerry_get_error_type(eval_ret);
-			m_sError = getErrorDesc(error);
-			//m_vecOutput.push_back("脚本执行错误,第" + str::fromInt(i+1) +"行,错误类型:" + sErr);
-			m_vecOutput.push_back("脚本执行错误,错误类型:" + m_sError);
-			jerry_release_value(eval_ret);
-		}
-
-		releaseGlobalFunc();
-		jerry_release_value(global_object);
-
-		jerry_cleanup();
-		free(tls_context);
+		// 清理资源
+		JS_FreeValue(ctx, result);
+		JS_FreeContext(ctx);
+		JS_FreeRuntime(rt);
 
 		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
 		m_vecOutput.push_back("执行耗时:" + str::fromInt(costMilli) + "ms");
 	}
-	catch (std::exception& e)
-	{
+	catch (std::exception& e) {
 		string s = e.what();
 		m_vecOutput.push_back(s);
 		return false;
 	}
+
 	return runOk;
 }
 
+namespace tJSEngine {
+	int parseStopBits(string s) {
+        if (s == "1") {
+            return 0;
+        }
+        else if (s == "1.5") {
+            return 1;
+        }
+        else if (s == "2") {
+            return 2;
+        }
+
+		return 0;
+	}
+
+	int parseParity(string s) {
+        if (s == "None") {
+            return 0;
+        }
+        else if (s == "Odd") {
+            return 1;
+        }
+        else if (s == "Even") {
+            return 2;
+        }
+        else if (s == "Mark") {
+            return 3;
+        }
+        else if (s == "Space") {
+            return 4;
+        }
+
+		return 0;
+	}
+
+	std::string pointerToString(void* ptr) {
+		uintptr_t ptrVal = reinterpret_cast<uintptr_t>(ptr);
+		std::ostringstream oss;
+		oss << "0x" << std::hex << ptrVal;
+		return oss.str();
+	}
+
+	void* stringToPointer(const std::string& str) {
+		char* endPtr;
+		uintptr_t ptrVal = std::strtoull(str.c_str(), &endPtr, 0);
+		return reinterpret_cast<void*>(ptrVal);
+	}
+}
+
+void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal) {
+    if (JS_IsBool(jsVal)) {
+        jsonVal = JS_VALUE_GET_BOOL(jsVal) != 0;
+    }
+    else if (JS_IsBigInt(ctx, jsVal)) {
+        int64_t digit = 0;
+        JS_ToInt64(ctx, &digit, jsVal);
+
+        int intValue = (int)digit;
+        jsonVal = intValue;
+    }
+    else if (JS_IsNumber(jsVal)) {
+        double num = 0;
+        JS_ToFloat64(ctx, &num, jsVal);
+
+        // 判断是否为整数
+        if (std::trunc(num) == num && 
+            num <= static_cast<double>((std::numeric_limits<int64_t>::max)()) &&
+            num >= static_cast<double>((std::numeric_limits<int64_t>::min)())) {
+            jsonVal = static_cast<int64_t>(num);
+        }
+        else {
+            jsonVal = num;
+        }
+    }
+    else if (JS_IsString(jsVal)) {
+        const char* str = JS_ToCString(ctx, jsVal);
+        jsonVal = str ? str : "";
+
+        JS_FreeCString(ctx, str);
+    }
+    else if (JS_IsArray(ctx, jsVal)) {
+        jsonVal = json::array();
+
+        JSValue len_val = JS_GetPropertyStr(ctx, jsVal, "length");
+        int32_t len = 0;
+
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsVal, i);
+
+            json jItem;
+            jsValToJsonVal(ctx, item, jItem);
+
+            jsonVal.push_back(jItem);
+            JS_FreeValue(ctx, item);
+        }
+    }
+    else if (JS_IsObject(jsVal)) {
+        jsonVal = json::object();
+
+        JSPropertyEnum* props = nullptr;
+        uint32_t prop_count = 0;
+
+        if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, jsVal, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY) == 0) {
+            for (uint32_t i = 0; i < prop_count; ++i) {
+                JSAtom atom = props[i].atom;
+
+                const char* key = JS_AtomToCString(ctx, atom);
+                if (!key) {
+                    continue;
+                }
+
+                JSValue propValue = JS_GetProperty(ctx, jsVal, atom);
+
+                json jsonValue;
+                jsValToJsonVal(ctx, propValue, jsonValue);
+
+                jsonVal[key] = jsonValue;
+
+                JS_FreeCString(ctx, key);
+                JS_FreeValue(ctx, propValue);
+                JS_FreeAtom(ctx, atom);
+            }
+
+            free(props);
+        }
+    }
+    else {
+        jsonVal = nullptr;
+    }
+}
+
+void jsonValToJsVal(json& jsonVal, JSContext* ctx, JSValue& jsVal) {
+    if (jsonVal.is_string()) {
+        jsVal = JS_NewString(ctx, jsonVal.get<string>().c_str());
+    }
+    else if (jsonVal.is_null()) {
+        jsVal = JS_NULL;
+    }
+    else if (jsonVal.is_number_integer()) {
+        int64_t val = jsonVal.get<int64_t>();
+        jsVal = JS_NewInt64(ctx, val);
+    }
+    else if (jsonVal.is_number_float()) {
+        jsVal = JS_NewFloat64(ctx, jsonVal.get<double>());
+    }
+    else if (jsonVal.is_boolean()) {
+        jsVal = JS_NewBool(ctx, jsonVal.get<bool>());
+    }
+    else if (jsonVal.is_object()) {
+        jsVal = JS_NewObject(ctx);
+
+        for (auto& [key, value] : jsonVal.items()) {
+            JSValue jsValue;
+            jsonValToJsVal(value, ctx, jsValue);
+
+            JS_SetPropertyStr(ctx, jsVal, key.c_str(), jsValue);
+        }
+    }
+    else if (jsonVal.is_array()) {
+        jsVal = JS_NewArray(ctx);
+
+        for (size_t i = 0; i < jsonVal.size(); i++) {
+            JSValue jsValue;
+            jsonValToJsVal(jsonVal[i], ctx, jsValue);
+
+            JS_SetPropertyUint32(ctx, jsVal, (uint32_t)i, jsValue);
+        }
+    }
+    else {
+        jsVal = JS_NULL;
+	}
+}
+
+json engineArrayToJson(JSContext* ctx, const JSValueConst array[], const int count) {
+    json jsonArgs = json::array();
+
+    for (int i = 0; i < count; ++i) {
+        json jsonVal;
+        jsValToJsonVal(ctx, array[i], jsonVal);
+        jsonArgs.push_back(jsonVal);
+    }
+
+    return jsonArgs;
+}
+
+json engineObjectToJson(JSContext* ctx, JSValueConst object) {
+    json jsonObj = json::object();
+
+    if (!JS_IsObject(object)) {
+        return jsonObj;
+    }
+
+    JSPropertyEnum* props = nullptr;
+    uint32_t count = 0;
+
+    if (JS_GetOwnPropertyNames(ctx, &props, &count, object, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)) {
+        return jsonObj;
+    }
+
+    for (uint32_t i = 0; i < count; i++) {
+        JSAtom atom = props[i].atom;
+
+        const char* key = JS_AtomToCString(ctx, atom);
+        if (!key) {
+            continue;
+        }
+
+        JSValue jsValue = JS_GetProperty(ctx, object, atom);
+
+        json jsonVal;
+        jsValToJsonVal(ctx, jsValue, jsonVal);
+
+        jsonObj[key] = jsonVal;
+
+        JS_FreeCString(ctx, key);
+        JS_FreeValue(ctx, jsValue);
+        JS_FreeAtom(ctx, atom);
+    }
+
+    free(props);
+    return jsonObj;
+}
+
+bool jsItemToJsonItem(JSContext* ctx, JSValueConst propName, JSValueConst propValue, void* data) {
+    using json = nlohmann::json;
+    json& jsonObj = *(json*)data;
+
+    //解析key
+    std::string key;
+    const char* ckey = JS_ToCString(ctx, propName);
+    if (!ckey) {
+		return false;
+    }
+
+    key = ckey;
+    JS_FreeCString(ctx, ckey);
+
+    // 解析val
+    json jsonValue;
+    jsValToJsonVal(ctx, propValue, jsonValue);
+    jsonObj[key] = jsonValue;
+
+    return true;
+}
+
+bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst prop_value, void* data) {
+    using json = nlohmann::json;
+    json& jsonObj = *(json*)data;
+
+    // 解析key
+    const char* key = JS_AtomToCString(ctx, atom);
+    if (!key) {
+        return false;
+    }
+
+    // 解析val
+    json jsonValue;
+    jsValToJsonVal(ctx, prop_value, jsonValue);
+    jsonObj[key] = jsonValue;
+
+    JS_FreeCString(ctx, key);
+    return true;
+}
+
+
+
+
+
+
+////openSerial(string portName, int baudRate, string parity, int byteSize, int stopBits)
+//jerry_value_t func_openSerial(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 5) {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//
+//	//预处理打开参数
+//	string errorInfo;
+//	string portName = jArgs[0].get<string>();
+//	int baudRate = jArgs[1].get<int>();
+//	string parity = jArgs[2].get<string>();
+//	int byteSize = jArgs[3].get<int>();
+//	string stopBits = jArgs[4].get<string>();
+//	HANDLE hCom = nullptr;
+//	bool ret = false;
+//	string  strComPort = "\\\\.\\" + portName;
+//	COMMTIMEOUTS timeouts = { 0 };
+//
+//	//打开串口（同步模式）
+//	hCom = CreateFileA(strComPort.c_str(),
+//		GENERIC_READ | GENERIC_WRITE,
+//		0, // 独占方式
+//		NULL,
+//		OPEN_EXISTING,// 打开而不是创建
+//		0,            // 同步模式（无 FILE_FLAG_OVERLAPPED）
+//		NULL);
+//	if (hCom == INVALID_HANDLE_VALUE)
+//	{
+//		errorInfo = sys::getLastError("CreateFile");
+//		goto OPEN_END;
+//	}
+//
+//	//配置串口参数
+//	COMSTAT comstat;
+//	DWORD dwError;
+//	ClearCommError(hCom, &dwError, &comstat);
+//	//dcb.StopBits = 0, 1, 2对应的是1bit, 1.5bits, 2bits.
+//	//dcb.ByteSize = 6, 7, 8时   dcb.StopBits不能为1
+//	//dcb.ByteSize = 5时   dcb.StopBits不能为2
+//	DCB dcb;
+//	SecureZeroMemory(&dcb, sizeof(DCB));
+//	dcb.DCBlength = sizeof(DCB);
+//	GetCommState(hCom, &dcb);
+//	dcb.BaudRate = baudRate;
+//	dcb.ByteSize = byteSize;
+//	dcb.Parity = tJSEngine::parseParity(parity);
+//	dcb.StopBits = tJSEngine::parseStopBits(stopBits);
+//	if (!SetCommState(hCom, &dcb))
+//	{
+//		errorInfo = sys::getLastError("SetCommState");
+//		CloseHandle(hCom);
+//		hCom = nullptr;
+//		goto OPEN_END;
+//	}
+//	SetupComm(hCom, 1024, 1024);
+//
+//	//设置超时时间
+//	timeouts.ReadIntervalTimeout = 50;         // 字符间超时（毫秒）
+//	timeouts.ReadTotalTimeoutConstant = 100;   // 固定超时
+//	timeouts.ReadTotalTimeoutMultiplier = 10;  // 每字节附加超时
+//	timeouts.WriteTotalTimeoutConstant = 2000;  // 最大阻塞 1000ms
+//	if (!SetCommTimeouts(hCom, &timeouts)) {
+//		printf("设置超时失败，错误代码: %d\n", GetLastError());
+//		CloseHandle(hCom);
+//		goto OPEN_END;
+//	}
+//	ret = true;
+//
+//OPEN_END:
+//	if (ret) {
+//		LOG("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,串口句柄:%p", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), hCom);
+//	}
+//	else
+//		LOG("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), errorInfo.c_str());
+//
+//	if (ret) {
+//		string sHandle = tJSEngine::pointerToString(hCom);
+//		jerry_value_t ret = jerry_create_string((const jerry_char_t*)sHandle.c_str());
+//		return ret;
+//	}
+//	else {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//}
+//
+////readSerial(string handle)
+//jerry_value_t func_readSerial(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 1) {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//
+//	string sH = jArgs[0].get<string>();
+//	void* hCom = tJSEngine::stringToPointer(sH);
+//	DWORD dwError;
+//	bool ret = false;
+//	unsigned char buf[50000] = { 0 };
+//	int iLen = 0;
+//	BOOL bReadRet = 0;
+//
+//	bReadRet = ReadFile(hCom, (LPVOID)(buf), 50000, (LPDWORD)&iLen, NULL);//阻塞读取
+//	dwError = GetLastError();
+//	if (dwError != 0)
+//		LOG("[warn]ReadFile Error %d", dwError);
+//
+//READ_END:
+//	if (iLen > 0) {
+//		json j = json::array();
+//		for (int i = 0; i < iLen; i++) {
+//			j.push_back(buf[i]);
+//		}
+//		jerry_value_t jrr;
+//		jsonVal2jerryVal(j, jrr);
+//		return jrr;
+//	}
+//	else {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//}
+//
+//jerry_value_t func_writeSerial(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 2) {
+//		jerry_value_t ret = jerry_create_boolean(false);
+//		return ret;
+//	}
+//
+//	string sH = jArgs[0].get<string>();
+//	void* hCom = tJSEngine::stringToPointer(sH);
+//	json jData = jArgs[1];
+//	vector<unsigned char> vec;
+//	string sData;
+//	char* pData = nullptr;
+//	int len = 0;
+//	if (jData.is_array()) {
+//		for (int i = 0; i < jData.size(); i++) {
+//			unsigned char b = jData[i].get<unsigned char>();
+//			vec.push_back(b);
+//		}
+//		pData = (char*)vec.data();
+//		len = vec.size();
+//	}
+//	else if (jData.is_string()) {
+//		sData = jData.get<string>();
+//		pData = (char*)sData.c_str();
+//		len = sData.length();
+//	}
+//	else {
+//		jerry_value_t ret = jerry_create_boolean(false);
+//		return ret;
+//	}
+//
+//
+//	DWORD bytesWritten;
+//	if (WriteFile(
+//		hCom,                   // 串口句柄
+//		pData,                      // 数据缓冲区
+//		len,              // 数据长度
+//		&bytesWritten,             // 实际写入的字节数
+//		NULL                       // 同步模式设为 NULL
+//	)) {
+//		jerry_value_t ret = jerry_create_boolean(true);
+//		return ret;
+//	}
+//	else {
+//		jerry_value_t ret = jerry_create_boolean(false);
+//		return ret;
+//	}
+//}
+//
+//
+//jerry_value_t func_closeSerial(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 1) {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//
+//	string sH = jArgs[0].get<string>();
+//	void* hCom = tJSEngine::stringToPointer(sH);
+//	if (hCom != nullptr) {
+//		CloseHandle(hCom);
+//	}
+//}
+//
+//
+//jerry_value_t func_arrayToStr(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 1) {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//
+//	json jArr = jArgs[0];
+//	vector<char> charArray;
+//	charArray.resize(jArr.size() + 1);
+//	for (int i = 0; i < jArr.size(); i++) {
+//		unsigned char b = jArr[i].get<unsigned char>();
+//		char cb = *((char*)&b);
+//		charArray[i] = cb;
+//	}
+//
+//	charArray[jArr.size()] = 0;
+//	string s = (char*)charArray.data();
+//
+//	jerry_value_t ret = jerry_create_string((const jerry_char_t*)s.c_str());
+//	return ret;
+//}
+//
+//jerry_value_t func_strToArray(const jerry_call_info_t* call_info_p,
+//	const jerry_value_t arguments[],
+//	const jerry_length_t argument_count)
+//{
+//	json jArgs = engineArgsToJson(arguments, argument_count);
+//	if (jArgs.size() != 1) {
+//		jerry_value_t ret = jerry_create_null();
+//		return ret;
+//	}
+//
+//	string s = jArgs[0];
+//	json jArr = json::array();
+//	for (int i = 0; i < s.length(); i++) {
+//		char cb = s[i];
+//		unsigned char ucb = *((unsigned char*)&cb);
+//		jArr.push_back(ucb);
+//	}
+//	jerry_value_t ret;
+//	jsonVal2jerryVal(jArr, ret);
+//	return ret;
+//}
+//
 
 
 #endif

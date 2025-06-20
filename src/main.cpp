@@ -315,21 +315,11 @@ int main(int argc, char** argv)
 	}
 
 
-	if (mode == "tcpHub")
-	{
+	if (mode == "tcpHub") {
 		tcpHub* tr = new tcpHub();
 		tr->run();
 	}
-	else if (mode == "t-js" || mode == "tscript")
-	{
-		//string sPath = fs::appPath() + "/tmain.js";
-		//if (fs::fileExist(sPath)) {
-		//	string script;
-		//	fs::readFile(sPath,script);
-		//	//ScriptEngine se;
-		//	//se.m_initGlobalFunc = initGlobalFunc;
-		//	//se.runScript(script, "");
-		//}
+	else if (mode == "t-js" || mode == "tscript") {
 		return 0;
 	}
 #ifdef ENABLE_TOOLS

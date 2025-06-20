@@ -329,7 +329,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;ENABLE_QJS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/script/;../src/3rdparty/jerryscript/include/;../src/include;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../tdspro/func_module</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -515,8 +515,8 @@
     <ClCompile Include="..\src\common\yyjson.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\scriptEngine_qjs.cpp" />
-    <ClCompile Include="..\src\data_server\scriptFunc_tds.cpp" />
+    <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
+    <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
     <ClCompile Include="..\src\data_server\tAlmSrv.cpp" />
     <ClCompile Include="..\src\data_server\jerry.cpp" />
     <ClCompile Include="..\src\data_server\mp.cpp" />
@@ -524,8 +524,6 @@
     <ClCompile Include="..\src\data_server\prj.cpp" />
     <ClCompile Include="..\src\data_server\tSockSrv.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler.cpp" />
-    <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
-    <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
     <ClCompile Include="..\src\data_server\scriptManager.cpp" />
     <ClCompile Include="..\src\data_server\tdb.cpp" />
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
@@ -605,8 +603,8 @@
     <ClInclude Include="..\src\common\tcpSrv.h" />
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
-    <ClInclude Include="..\src\data_server\scriptEngine_qjs.h" />
-    <ClInclude Include="..\src\data_server\scriptFunc_tds.h" />
+    <ClInclude Include="..\src\data_server\scriptEngine.h" />
+    <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\tAlmSrv.h" />
     <ClInclude Include="..\src\data_server\jerry.h" />
     <ClInclude Include="..\src\data_server\mp.h" />
@@ -614,8 +612,6 @@
     <ClInclude Include="..\src\data_server\prj.h" />
     <ClInclude Include="..\src\data_server\tSockSrv.h" />
     <ClInclude Include="..\src\data_server\rpcHandler.h" />
-    <ClInclude Include="..\src\data_server\scriptEngine.h" />
-    <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\scriptManager.h" />
     <ClInclude Include="..\src\data_server\tdb.h" />
     <ClInclude Include="..\src\data_server\tdsSession.h" />

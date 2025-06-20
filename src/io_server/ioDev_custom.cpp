@@ -12,9 +12,8 @@
 #include "rpcHandler.h"
 #include "scriptEngine.h"
 #include "scriptManager.h"
-#include "scriptFunc_tds.h"
+#include "scriptFunc.h"
 #include "webSrv.h"
-#include "scriptEngine_qjs.h"
 
 using namespace httplib;
 
@@ -143,11 +142,14 @@ void ioDev_custom::doHttpHeartbeat()
 }
 
 void acq_thread_customDev(ioDev_custom* pDev) {
-#ifdef ENABLE_JERRY_SCRIPT
+#ifdef ENABLE_QJS
 	if (pDev->m_cycleTaskScript != "") {
 		ScriptEngine se;
-		se.m_initGlobalFunc = initGlobalFunc;
-		se.m_initIODevFunc = initIODevFunc;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
 		se.m_ioDevThis = pDev;
 
 		SCRIPT_INFO si;
@@ -202,14 +204,18 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 		LOG("执行脚本: " + m_onRecvScript);
 #endif
 
-		ScriptEngine_qjs se;
-		//se.m_initGlobalFunc = initGlobalFunc;
-		//se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
 		json jRecvData = json::array();
 		for (int i = 0; i < iLen; i++) {
 			int v = pData[i];
 			jRecvData.push_back(v);
 		}
+
 		se.m_globalObj["RecvData"] = jRecvData;
 		se.m_ioDevThis = this;
 
@@ -236,9 +242,12 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool sync)
 {
 	if (m_outputScript != "") {
-		ScriptEngine_qjs se;
-		//se.m_initGlobalFunc = initGlobalFunc;
-		//se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
 		json jOutput;
 		jOutput["val"] = jVal;
 		jOutput["chan"] = chanAddr;
@@ -295,9 +304,12 @@ void ioDev_custom::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 
 bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 	if (m_tdspScript != "") {
-		ScriptEngine_qjs se;
-		//se.m_initGlobalFunc = initGlobalFunc;
-		//se.m_initIODevFunc = initIODevFunc;
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
 		se.m_globalObj["Req"] = jReq;
 		se.m_ioDevThis = this;
 

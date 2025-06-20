@@ -6436,20 +6436,6 @@ CONDITION_SELECTOR::CONDITION_SELECTOR()
 
 bool CONDITION_SELECTOR::init(string filter)
 {
-#ifdef ENABLE_JERRY_SCRIPT
-	if (filter.length() > 0)
-	{
-		filterExp = filter;
-		//1024 will crash
-		//should global_object be released when do match
-		//seems globalObject only has one buffer,release prop_value will exe after setObject
-		//buffer here is enough when one de is executed
-		tls_context = jerry_create_context(500*1024, context_alloc_fn, NULL);;
-		jerry_init(JERRY_INIT_EMPTY);
-		global_object = jerry_get_global_object();
-		bEnable = true;
-	}
-#endif
 #ifdef ENABLE_QJS
 	if (filter.length() > 0)
 	{
@@ -6464,14 +6450,6 @@ bool CONDITION_SELECTOR::init(string filter)
 
 CONDITION_SELECTOR::~CONDITION_SELECTOR()
 {
-#ifdef ENABLE_JERRY_SCRIPT
-	if (filterExp.length() > 0)
-	{
-		jerry_release_value(global_object);
-		jerry_cleanup();
-		free(tls_context);
-	}
-#endif
 #ifdef ENABLE_QJS
 	if(ctx)
 	JS_FreeContext(ctx);
@@ -6480,7 +6458,7 @@ CONDITION_SELECTOR::~CONDITION_SELECTOR()
 #endif
 }
 
-#ifdef ENABLE_JERRY_SCRIPT
+#ifdef ENABLE_QJS_TODO
 void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryVal)
 {
 	if (yyjson_is_str(yyVal))
@@ -6669,7 +6647,7 @@ bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t 
 
 bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 {
-#ifdef ENABLE_JERRY_SCRIPT
+#ifdef ENABLE_QJS_TODO
 	if (!bEnable)
 		return true;
 
@@ -6722,48 +6700,7 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 	bool bMatch = false;
 	if (!bEnable)
 		return true;
-#ifdef ENABLE_JERRY_SCRIPT
-	if (yyjson_is_obj(de))
-	{
-		setScriptEngineObj(de, global_object);
-	}
-	else
-	{
 
-	}
-
-	/* Run the demo script with 'eval' */
-	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
-		filterExp.length(),
-		JERRY_PARSE_NO_OPTS);
-
-	/* Check if there was any error (syntax or runtime) */
-	bool run_ok = !jerry_value_is_error(eval_ret);
-	jerry_error_t error = jerry_get_error_type(eval_ret);
-	jerry_release_value(eval_ret);
-
-	if (run_ok)
-	{
-		bMatch = jerry_value_to_boolean(eval_ret);
-	}
-	//clear all propertys
-	if (yyjson_is_obj(de))
-		clearScriptEngineObj(global_object);
-
-	if (!run_ok)
-	{
-		db_exception e;
-		if (error == JERRY_ERROR_REFERENCE)
-			e.m_error = "db exception: error when execute filter script,reference not found!";
-		else if (error == JERRY_ERROR_TYPE)
-		{
-			e.m_error = "db exception: error when execute filter script,error type!";
-		}
-		else
-			e.m_error = "db exception: error when execute filter script";
-		//throw e;
-	}
-#endif
 #ifdef ENABLE_QJS
 	db_exception e;
 	if (yyjson_is_obj(de))

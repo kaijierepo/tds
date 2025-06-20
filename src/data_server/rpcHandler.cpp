@@ -26,7 +26,7 @@
 #include "tds_imp.h"
 #include "../../tdspro/io_server/proto_dlt645_2007.hpp"
 #include "scriptEngine.h"
-#include "scriptFunc_tds.h"
+#include "scriptFunc.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -2777,26 +2777,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = j.dump();
 		m_csCallStatis.unlock();
 	}
-#ifdef ENABLE_JERRY_SCRIPT
-	//else if (method == "runScript")
-	//{
-	//	scriptManager.rpc_runScript(params, rpcResp, session);
-	//}
-	//else if (method == "getScriptList")
-	//{
-	//	scriptManager.rpc_getScriptList(params, rpcResp, session);
-	//}
-	//else if (method == "getScriptFile")
-	//{
-	//	scriptManager.rpc_getScript(params, rpcResp, session);
-	//}
-	//else if (method == "deleteScriptFile") {
-	//	scriptManager.rpc_deleteScript(params, rpcResp, session);
-	//}
-	//else if (method == "setScriptFile")
-	//{
-	//	scriptManager.rpc_setScript(params, rpcResp, session);
-	//}
+#ifdef ENABLE_QJS
 	else if (method == "getReportConf") {
 		string sConf;
 		json jConf;
@@ -6604,7 +6585,7 @@ void rpcHandler::statisCall(string method) {
 
 bool rpcHandler::apiAdaptorScript(json& jResult)
 {
-#ifdef ENABLE_JERRY_SCRIPT
+#ifdef ENABLE_QJS
 	if (tds->conf->m_apiAdaptorScript != "") {
 		
 		string temp = jResult["method"];
@@ -6621,7 +6602,11 @@ bool rpcHandler::apiAdaptorScript(json& jResult)
 		if (!bFind) return true;
 
 		ScriptEngine se;
-		se.m_initGlobalFunc = initGlobalFunc;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
 		se.m_globalObj["inputJson"] = jResult;
 
 		SCRIPT_INFO si;

@@ -29,10 +29,6 @@ SOFTWARE.
 #pragma once
 #include <map>
 #include <set>
-#ifdef ENABLE_JERRY_SCRIPT
-#include "jerryscript.h"
-#include "jerry.h"
-#endif
 #ifdef ENABLE_QJS
 #include "cutils.h"
 #include "quickjs-libc.h"
@@ -543,15 +539,6 @@ public:
 	CONDITION_SELECTOR();
 	~CONDITION_SELECTOR();
 	
-#ifdef ENABLE_JERRY_SCRIPT
-	void yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryVal);
-	void yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& jerryVal);
-	bool setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj);
-	bool setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj);
-	bool clearScriptEngineObj(jerry_value_t engineObj);
-	jerry_value_t global_object;
-#endif
-
 #ifdef ENABLE_QJS
 	JSRuntime* rt;
 	JSContext* ctx;
