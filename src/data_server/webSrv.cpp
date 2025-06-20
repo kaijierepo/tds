@@ -5,13 +5,10 @@
 #include "common.h"
 #include "logger.h"
 #include "httplib.h"
-#include "hmrSrv.h"
 #include "ioSrv.h"
 #include "prj.h"
-#include "httplib.h"
 #include "mp.h"
 #include "userMng.h"
-#include "hmrSrv.h"
 #include "ioChan.h"
 #include "statusServer.h"
 #include "fileUploadSrv.h"
@@ -1742,10 +1739,10 @@ bool runWebServers()
 	//}
 #endif
 
-	if (tds->conf->getInt("enableHMR", 0))
-	{
-		hmrServer.run(tds->conf->uiPath);
-	}
+	//if (tds->conf->getInt("enableHMR", 0))
+	//{
+	//	hmrServer.run(tds->conf->uiPath);
+	//}
 
 	if (tds->conf->fileUploadPort != 0)
 	{
@@ -1972,11 +1969,11 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		}
 	}
 	else if (strData.find("/hmr") != string::npos) {
-		string hmrPath = str::trimPrefix(strData, "/hmr");
-		tdsSession->webHMRPath = hmrPath;
-		tdsSession->type = TDS_SESSION_TYPE::webHMR;
-		hmrServer.m_mapSessions[hmrPath] = tdsSession;
-		tdsSession->setActivityCheck(false);
+		//string hmrPath = str::trimPrefix(strData, "/hmr");
+		//tdsSession->webHMRPath = hmrPath;
+		//tdsSession->type = TDS_SESSION_TYPE::webHMR;
+		//hmrServer.m_mapSessions[hmrPath] = tdsSession;
+		//tdsSession->setActivityCheck(false);
 	}
 	else if (strData.find("/COM") != string::npos)
 	{

@@ -13,10 +13,9 @@
 #include "ioDev_dcqk.h"
 #include "base64.h"
 #include "webSrv.h"
-#include "wsProto.h"
 #include "statusServer.h"
 #include "yyjson.h"
-#include "JHDEqpProtocol.h"
+#include "proto_ws.h"
 
 
 ioServer ioSrv;

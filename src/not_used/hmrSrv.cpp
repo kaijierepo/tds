@@ -2,7 +2,6 @@
 #include "hmrSrv.h"
 #include "logger.h"
 #include "common.h"
-#include "wsProto.h"
  
 string hmrCodeStr = R"(
 <!--code injected by TDS for hot module replacement-->

@@ -3,7 +3,7 @@
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "json.hpp"
-#include "Parse315Protocol.h"
+#include "proto_tb3386.h"
 #include "ioDev_tdsp.h"
 
 //报警类型

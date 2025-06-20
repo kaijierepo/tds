@@ -10,8 +10,6 @@
 #include "tdb.h"
 #include <json.hpp>
 #include "ioSrv.h"
-#include "tdb.h"
-#include "logger.h"
 #include "ioChan.h"
 #include "userMng.h"
 #include "logServer.h"
@@ -22,9 +20,8 @@
 #include "ioDev_camera.h"
 #include "statusServer.h"
 #include <io_server/ioDev_tdsp.h>
-#include "miniz.h"
 #include "tds_imp.h"
-#include "../../tdspro/io_server/proto_dlt645_2007.hpp"
+#include "proto_dlt645_2007.hpp"
 #include "scriptEngine.h"
 #include "scriptFunc.h"
 

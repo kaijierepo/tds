@@ -7,7 +7,7 @@
 #include "ioSrv.h"
 #include "webSrv.h"
 #include "httplib.h"
-#include "wsProto.h"
+
 
 
 TDS_SESSION::TDS_SESSION()
@@ -160,19 +160,10 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      }
      else 
      {
-         unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
+         unique_lock<recursive_mutex> lock(m_mutexTcpLink);
          if (pTcpSession) // means lower layer has been disconneted
          {
-             //远端是websocket客户端
-             if (iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-             {
-                 CWSPPkt wsp;
-                 wsp.pack((char*)p, len, WS_TEXT_FRAME);
-                 iSend = pTcpSession->send((char*)wsp.data, wsp.len);
-             }
-             else {
-                 iSend = pTcpSession->send((char*)p, len);
-             }
+             iSend = pTcpSession->send((char*)p, len);
          }
      }
 

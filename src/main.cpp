@@ -32,23 +32,6 @@ SOFTWARE.
 #include "tdsWatchDog.h"
 #include "tdb.h"
 #include "statusServer.h"
-
-//#define _CRTDBG_MAP_ALLOC
-//#include <stdlib.h>
-//#include <crtdbg.h>
-
-#include "tools/tcpHub.h"
-#ifdef ENABLE_TOOLS
-#include "tools/tcpSwitch.h"
-#include "tools/tcpReverseProxy.h"
-#include "tools/rproxy.h"
-#include "tools/tcp2wsRproxy.h"
-#include "tools/httpServer.h"
-#include "tools/tools.hpp"
-#include "tools/demoTools.h"
-#include "tools/dumpCatch.h"
-#endif
-
 #include "base64.h"
 #include "prj.h"
 #include "common.h"
@@ -242,41 +225,14 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //exe模式下，都会有命令行窗口，通过设置 ui = chrome 或者 miniblink打开 浏览器窗口
 //dll模式下，默认没有命名行窗口，通过设置 ui = console 来打开命令行窗口
 
-
-#ifndef _WINDLL
 //命令行参数调用 ，js解释器等模式需要默认控制台，因此默认控制台不隐藏
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 
-void thread_cpu_test() {
-	int ii = 0;
-	while (1) {
-		ii++;
-	}
-}
 
 bool isTdsRunning();
 int main(int argc, char** argv)
 {
-	//cpu占用测试
-	//thread t(thread_cpu_test);
-	//t.detach();
-	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
-	//_CrtSetBreakAlloc(124823298);
-
-	//{
-	//	unsigned char* pData; int iLen = 0;
-	//	fs::readFile("d:\\2.txt", pData, iLen);
-	//	stream2pkt tlBuf;
-	//	tlBuf.PushStream((unsigned char*)pData, iLen);
-	//	while (tlBuf.PopPkt(IsValidPkt_HTTP))
-	//	{
-	//		string sHttp = str::fromBuff((char*)tlBuf.pkt, tlBuf.iPktLen);
-	//		printf("收到请求包:%s\r\n", sHttp);
-	//	}
-	//}
-
 #ifdef _WIN32
 	g_fp_tcpSrv_statisSend = statisSend;
 #endif
@@ -290,263 +246,74 @@ int main(int argc, char** argv)
 
 	setThreadName("main thread");
 	
-	//确认程序运行模式
-	string appName = fs::appName();
-	string mode = "tds";
-	if (appName == "tds") {
-		if(args.size() > 1)
-		   mode = args[1];   //第一个参数为运行模式
-		args.erase(args.begin());
-	}
-	else {
-		mode = appName;
-	}
-	
 	//设置当前路径为程序运行目录 tdsConf.loadConf();中的相对路径解析会用到当前路径
 	//tdsImp.setWorkingDir();
 
-	//根据模式差异化加载配置
-	tds->conf->mode = mode;
+	//run tds
+	tds->run();
 
-	//从注册的工具当中寻找工具
-	fp_toolRun ptr = nullptr;
-	if (tds->tools.find(mode) != tds->tools.end()) {
-		ptr = tds->tools[mode];
+	TIME zlmLastClearPusherTime = timeopt::now();
+	vector<MP*> ezvizMp = prj.getAllEzvizMp();
+
+	if (ezvizMp.size() > 0) {
+		LOG("共有%d个萤石云视频监控点", ezvizMp.size());
 	}
 
+	time_t tPrevious; time(&tPrevious); //用于内存清理
+	while (1)
+	{
+		timeopt::sleepMilli(1000);
+		if (prj.m_enableEzviz) {
+			ezvizMp = prj.getAllEzvizMp();
 
-	if (mode == "tcpHub") {
-		tcpHub* tr = new tcpHub();
-		tr->run();
-	}
-	else if (mode == "t-js" || mode == "tscript") {
-		return 0;
-	}
-#ifdef ENABLE_TOOLS
-	else if (mode == "testconf") {
-		gen_testMoConf();
-		gen_testIoConf();
-		return 0;
-	}
-	else if (mode == "testdb") {
-		gen_testdb();
-		return 0;
-	}
-	else if (mode == "dump") {
-		if (args.size() >= 3) {
-			string name = args[1];
-			string path = args[2];
-			CDumpCatch::createDump(name, path);
+			for (int i = 0; i < ezvizMp.size(); i++) {
+				MP* pmp = ezvizMp[i];
+				if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
+					EZVIZ_ACCESS_INFO  info;
+					info.tag = pmp->getTag();
+					info.serialNo = pmp->m_serialNo;
+					info.appKey = pmp->m_appKey;
+					info.secret = pmp->m_secret;
+					info.token = "";
+					timeopt::setAsTimeOrg(info.lastUpdate);
+					prj.m_mapEzvizAccess[info.serialNo] = info;
+				}
+			}
+
+			updateEzvizAccessInfo();
 		}
-		return 0;
-	}
-	else if (mode == "js")
-	{
-		//doShell();
-	}
-	else if (mode == "hs" || mode == "httpServer" || mode == "httpserver" || mode == "httpSrv" || mode == "httpsrv") //httpServer
-	{
-		HttpServer* hs = new HttpServer();
-		hs->m_ProcName = mode;
-		hs->run();
-	}
-	else if (mode == "switch")
-	{
-		tcpSwitch* tr = new tcpSwitch();
-		tr->run();
-	}
-	else if (mode == "rphttp")
-	{
-		rpProxy  = new RProxy();
-		rpProxy->run();
-	}
-	else if (mode == "rptcp")
-	{
-		tcpReverseProxy* tr = new tcpReverseProxy();
-		tr->run();
-	}
-	else if (mode == "tcp2ws")
-	{
-		Tcp2wsRproxy* tr = new Tcp2wsRproxy();
-		tr->run();
-	}
-	else if (mode == "replace") {
-		//.rc文件为gb2312编码
-		//string path = parser.get<string>("path");
-		//string oldstr = parser.get<string>("os");
-		//string newstr = parser.get<string>("ns");
-		//Tools::replaceStrInFile(path, oldstr, newstr);
-		exit(0);
-	}
-	else if (mode == "gb2u8")
-	{
-		vector<string> fileList;
-		fs::getFileList(fileList, fs::appPath());
-		LOG("文件总数:" + str::fromInt(fileList.size()));
-		try {
-			for (int i = 0; i < fileList.size(); i++)
-			{
-				string p = fs::appPath() + "/" + fileList[i];
-				if (p.find(".h") == string::npos && p.find(".cpp") == string::npos)
-				{
-					continue;
-				}
 
-				string gbData;
-				fs::readFile(p, gbData);
-				if (charCodec::hasGB2312(gbData))
-				{
-					string u8Data = charCodec::gb_to_utf8(gbData);
-					fs::writeFile(p, u8Data);
-					LOG("已转换:" + p);
-				}
-				else
-				{
-					LOG("未找到GB2312字符:" + p);
+		rpcSrv.cleanRpcSession();
+
+		if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 30) {
+			clearZlmNoReaderPusher();
+			zlmLastClearPusherTime = timeopt::now();
+		}
+
+		//clean memory
+		#ifdef _WIN32
+		string timeParam = tds->conf->strCleanMemoryInterval;
+		if (timeParam.size() >= 2 && timeParam.at(timeParam.length() - 1) == 'h') {
+			if (fs::fileExist(fs::appPath() + "/RAMMap.exe")) {
+				int secs = atoi(timeParam.substr(0, timeParam.length() - 1).c_str()) * 3600;
+
+				time_t tNow;  time(&tNow);
+				if (tNow - tPrevious > secs) {
+					tPrevious = tNow;
+					CmdExecParam(fs::appPath() + "/RAMMap.exe -Ew", 1, SW_HIDE);
+
+					timeopt::sleepMilli(5000);
+					CmdExecParam(fs::appPath() + "/RAMMap.exe -Et", 1, SW_HIDE);
 				}
 			}
 		}
-		catch (exception& e)
-		{
-			string es = e.what();
-			LOG("转换异常:" + es);
-		}
-		return 0;
-	}
-	else if (mode == "base64") {
-		if (args.size() != 3) {
-			printf("参数错误");
-			return 0;
-		}
+		#endif
 
-		if (args[1] == "enc") {
-			char* pFile = nullptr;
-			int len;
-			if (fs::readFile(args[2], pFile, len) ){
-				char* out = new char[len * 2];
-				memset(out, 0, len * 2);
-				base64_encode((const unsigned char*)pFile, len,out);
-				string s = out;
-				fs::writeFile(args[2] + "base64_enc.txt", s);
-			}
-		}
-		else if (args[1] == "dec") {
-			char* pFile = nullptr;
-			int len;
-			if (fs::readFile(args[2], pFile, len)) {
-				unsigned char* out = new unsigned char[len * 2];
-				memset(out, 0, len * 2);
-				int outLen = base64_decode(pFile, len, out);
-				fs::writeFile(args[2] + "base64_dec.bin",(char*)out,outLen);
-			}
-		}
-		else {
-
-		}
-		return 0;
-	}
-	else if (mode == "base85") {
-		//if (args.size() != 3) {
-		//	printf("参数错误");
-		//	return 0;
-		//}
-
-		//if (args[1] == "enc") {
-		//	char* pFile = nullptr;
-		//	int len;
-		//	if (fs::readFile(args[2], pFile, len)) {
-		//		char* dest = new char[10 * 1024 * 1024];
-		//		memset(dest, 0, 10 * 1024 * 1024);
-		//		 bintob85(dest,(void const*)pFile,len);
-		//		 string encData = dest;
-		//		 fs::writeFile(args[2] + "base85_enc.txt", encData);
-		//	}
-		//}
-		//else {
-
-		//}
-		//return 0;
-	}
-#endif
-	else if (ptr != nullptr) //工具模式启动
-	{
-		ptr();
-
-		while (1) {
-			timeopt::sleepMilli(1000);
-		}
-	}
-	else
-	{
-		//run tds
-		tds->run();
-
-		TIME zlmLastClearPusherTime = timeopt::now();
-		vector<MP*> ezvizMp = prj.getAllEzvizMp();
-
-		if (ezvizMp.size() > 0) {
-			LOG("共有%d个萤石云视频监控点", ezvizMp.size());
-		}
-
-		time_t tPrevious; time(&tPrevious); //用于内存清理
-		while (1)
-		{
-			timeopt::sleepMilli(1000);
-			if (prj.m_enableEzviz) {
-				ezvizMp = prj.getAllEzvizMp();
-
-				for (int i = 0; i < ezvizMp.size(); i++) {
-					MP* pmp = ezvizMp[i];
-					if (prj.m_mapEzvizAccess.find(pmp->m_serialNo) == prj.m_mapEzvizAccess.end()) {
-						EZVIZ_ACCESS_INFO  info;
-						info.tag = pmp->getTag();
-						info.serialNo = pmp->m_serialNo;
-						info.appKey = pmp->m_appKey;
-						info.secret = pmp->m_secret;
-						info.token = "";
-						timeopt::setAsTimeOrg(info.lastUpdate);
-						prj.m_mapEzvizAccess[info.serialNo] = info;
-					}
-				}
-
-				updateEzvizAccessInfo();
-			}
-
-			rpcSrv.cleanRpcSession();
-
-			if (timeopt::CalcTimePassSecond(zlmLastClearPusherTime) > 30) {
-				clearZlmNoReaderPusher();
-				zlmLastClearPusherTime = timeopt::now();
-			}
-
-			//clean memory
-			#ifdef _WIN32
-			string timeParam = tds->conf->strCleanMemoryInterval;
-			if (timeParam.size() >= 2 && timeParam.at(timeParam.length() - 1) == 'h') {
-				if (fs::fileExist(fs::appPath() + "/RAMMap.exe")) {
-					int secs = atoi(timeParam.substr(0, timeParam.length() - 1).c_str()) * 3600;
-
-					time_t tNow;  time(&tNow);
-					if (tNow - tPrevious > secs) {
-						tPrevious = tNow;
-						CmdExecParam(fs::appPath() + "/RAMMap.exe -Ew", 1, SW_HIDE);
-
-						timeopt::sleepMilli(5000);
-						CmdExecParam(fs::appPath() + "/RAMMap.exe -Et", 1, SW_HIDE);
-					}
-				}
-			}
-			#endif
-
-		}
 	}
 
 	return 0;
 }
 
-
-#else
-#endif // !_WINDLL
 
 #ifdef _WIN32
 bool CmdExecParam(string strParam, uint32_t dwMilliseconds/* = 0*/, int nShow /*= SW_SHOW*/, const char* lpDirectory /*= NULL*/)
