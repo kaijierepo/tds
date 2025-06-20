@@ -3,7 +3,6 @@
 #include <string>
 #include <map>
 #include "json.hpp"
-#include "jerryscript.h"
 #include "tdsSession.h"
 #include "scriptEngine.h"
 #include "scriptFunc.h"

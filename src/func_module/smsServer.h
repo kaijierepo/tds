@@ -10,8 +10,8 @@ public:
 	SmsServer();
 	bool init() override;
 	bool run() override;
-	bool send(string& msg, string& phoneNum)  override;
-	bool send(json& params, string& phoneNum) override;
+	bool send(string& msg, string& phoneNum) override;
+	bool send(json& params, string& phoneNum);
 	bool sendVerificationCode(string phoneNum) override;
 	bool checkVerificationCode(string phoneNum,string code) override;
 	string m_url;
