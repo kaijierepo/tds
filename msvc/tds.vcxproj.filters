@@ -4,9 +4,6 @@
     <Filter Include="common">
       <UniqueIdentifier>{61f8ed5b-3995-4b52-98af-21ad15ab804f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdsPro">
-      <UniqueIdentifier>{55f4ffc4-1c52-448a-9316-d0c36fe31046}</UniqueIdentifier>
-    </Filter>
     <Filter Include="data_server">
       <UniqueIdentifier>{5d91d037-d2ac-4c19-880f-65f813a180bc}</UniqueIdentifier>
     </Filter>
@@ -16,17 +13,17 @@
     <Filter Include="func_module">
       <UniqueIdentifier>{2ceef404-76b7-46d3-825a-f27e496c0dda}</UniqueIdentifier>
     </Filter>
-    <Filter Include="tdsPro\func_module">
-      <UniqueIdentifier>{c46dc1af-c615-4170-9fb1-b3d05abdf64a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="tdsPro\io_server">
-      <UniqueIdentifier>{d59154be-8bdb-450c-8f61-33eabb9fec09}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="tools">
-      <UniqueIdentifier>{71bb2987-59a1-4354-b2ab-cdcc697f1816}</UniqueIdentifier>
-    </Filter>
     <Filter Include="tdb">
       <UniqueIdentifier>{81ba2ff7-a317-4111-888d-0c00a3926fb6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io_server\io_dev">
+      <UniqueIdentifier>{5d15c05a-673e-4837-ba4f-f137414c2c12}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="io_server\protocol">
+      <UniqueIdentifier>{555db3b2-d165-4f93-9ca3-cb495ddbe43f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="script">
+      <UniqueIdentifier>{b2626dd6-bf07-45c3-ac89-5f97cbdd8196}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -105,19 +102,10 @@
     <ClCompile Include="..\src\io_server\ioSrv.cpp">
       <Filter>io_server</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\proto_common.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\wsProto.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\func_module\csvTable.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\dumpCatch.cpp">
-      <Filter>func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\func_module\hmrSrv.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
     <ClCompile Include="..\src\func_module\logServer.cpp">
@@ -126,41 +114,8 @@
     <ClCompile Include="..\src\func_module\tdsConf.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\func_module\tdsWatchDog.cpp">
-      <Filter>func_module</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\func_module\userMng.cpp">
       <Filter>func_module</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_bacnet.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_dlt645_2007.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_eip.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_iq60.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_modbusRtu.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_modbusSlave.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_modbusTcp.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_onvif.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\ioDev_visca.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="io_server\proto_eip.cpp">
-      <Filter>tdsPro\io_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp">
       <Filter>io_server</Filter>
@@ -181,17 +136,11 @@
       <Filter>func_module</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pch.cpp" />
-    <ClCompile Include="io_server\ioDev_srvStatus.cpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\func_module\statusServer.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\tdb.cpp">
       <Filter>tdb</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp">
-      <Filter>io_server</Filter>
     </ClCompile>
     <ClCompile Include="..\src\io_server\ioDev_custom.cpp">
       <Filter>io_server</Filter>
@@ -199,49 +148,97 @@
     <ClCompile Include="..\src\common\memDiag.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\Parse315Protocol.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\common\miniz.c">
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\src\common\dtwrecoge.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\io_server\JHDEqpProtocol.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\io_server\ioDev_jep_super.cpp">
-      <Filter>io_server</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tools\tcpHub.cpp">
-      <Filter>tools</Filter>
-    </ClCompile>
-    <ClCompile Include="fileUploadSrv.cpp" />
-    <ClCompile Include="diskClean.cpp">
-      <Filter>tdb</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tools\net2com.cpp">
-      <Filter>tools</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\include\tds.cpp" />
-    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
-      <Filter>io_server</Filter>
+    <ClCompile Include="..\src\io_server\ioDev_dcqk.cpp">
+      <Filter>io_server\io_dev</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\script\cutils.c" />
-    <ClCompile Include="..\src\script\dtoa.c" />
-    <ClCompile Include="..\src\script\libregexp.c" />
-    <ClCompile Include="..\src\script\libunicode.c" />
-    <ClCompile Include="..\src\script\quickjs-libc.c" />
-    <ClCompile Include="..\src\script\quickjs.c" />
-    <ClCompile Include="..\src\script\repl.c" />
-    <ClCompile Include="..\src\script\unicode_data.c" />
+    <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_localSerial.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioGW_rs485ToNet.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\proto_common.cpp">
+      <Filter>io_server\protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_dlt645_2007.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_eip.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_iq60.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_modbusRtu.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_modbusTcp.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_onvif.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_visca.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\proto_eip.cpp">
+      <Filter>io_server\protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\proto_tb3386.cpp">
+      <Filter>io_server\protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\ioDev_bacnet.cpp">
+      <Filter>io_server\io_dev</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\cutils.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\dtoa.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\fileUploadSrv.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\func_module\diskClean.cpp">
+      <Filter>func_module</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\io_server\proto_ws.cpp">
+      <Filter>io_server\protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\data_server\as_interface.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\libregexp.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\libunicode.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\quickjs.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\quickjs-libc.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\repl.c">
+      <Filter>script</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\script\unicode_data.c">
+      <Filter>script</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -323,19 +320,10 @@
     <ClInclude Include="..\src\io_server\ioSrv.h">
       <Filter>io_server</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_common.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\wsProto.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\func_module\csvTable.h">
       <Filter>func_module</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\dumpCatch.h">
-      <Filter>func_module</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\func_module\hmrSrv.h">
       <Filter>func_module</Filter>
     </ClInclude>
     <ClInclude Include="..\src\func_module\logServer.h">
@@ -344,64 +332,10 @@
     <ClInclude Include="..\src\func_module\tdsConf.h">
       <Filter>func_module</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\func_module\tdsWatchDog.h">
-      <Filter>func_module</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\func_module\userMng.h">
       <Filter>func_module</Filter>
     </ClInclude>
     <ClInclude Include="..\src\pch.h" />
-    <ClInclude Include="io_server\ioDev_bacnet.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_dlt645_2007.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_eip.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_iq60.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_modbusRtu.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_modbusSlave.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_modbusTcp.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_onvif.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\ioDev_visca.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_bacnet.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_can.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_cip.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_dlt645_2007.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_eip.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_logix_plc.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_rtu.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="io_server\proto_visca.hpp">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h">
       <Filter>io_server</Filter>
     </ClInclude>
@@ -423,9 +357,6 @@
     <ClInclude Include="..\src\func_module\taskServer.h">
       <Filter>func_module</Filter>
     </ClInclude>
-    <ClInclude Include="io_server\ioDev_srvStatus.h">
-      <Filter>tdsPro\io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\func_module\statusServer.h">
       <Filter>func_module</Filter>
     </ClInclude>
@@ -435,29 +366,11 @@
     <ClInclude Include="..\src\data_server\tdb.h">
       <Filter>tdb</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\ioDev_custom.h">
       <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\memDiag.h">
       <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_camera.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_dcqk.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\Parse315Protocol.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\proto_can.hpp">
-      <Filter>io_server</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\miniz.h">
       <Filter>common</Filter>
@@ -468,44 +381,130 @@
     <ClInclude Include="..\src\common\dtwrecoge.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\io_server\JHDEqpProtocol.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\io_server\ioDev_jep_super.h">
-      <Filter>io_server</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tools\tcpHub.h">
-      <Filter>tools</Filter>
-    </ClInclude>
-    <ClInclude Include="fileUploadSrv.h" />
-    <ClInclude Include="diskClean.h">
-      <Filter>tdb</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\tools\net2com.h">
-      <Filter>tools</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\include\tds.h" />
     <ClInclude Include="..\src\include\tdsRPC.h" />
-    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
-      <Filter>io_server</Filter>
+    <ClInclude Include="..\src\io_server\ioDev_dcqk.h">
+      <Filter>io_server\io_dev</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\script\cutils.h" />
-    <ClInclude Include="..\src\script\dtoa.h" />
-    <ClInclude Include="..\src\script\libregexp-opcode.h" />
-    <ClInclude Include="..\src\script\libregexp.h" />
-    <ClInclude Include="..\src\script\libunicode-table.h" />
-    <ClInclude Include="..\src\script\libunicode.h" />
-    <ClInclude Include="..\src\script\list.h" />
-    <ClInclude Include="..\src\script\quickjs-atom.h" />
-    <ClInclude Include="..\src\script\quickjs-libc.h" />
-    <ClInclude Include="..\src\script\quickjs-opcode.h" />
-    <ClInclude Include="..\src\script\quickjs.h" />
-    <ClInclude Include="..\src\script\unicode_gen_def.h" />
+    <ClInclude Include="..\src\io_server\ioDev_srvStatus.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_localSerial.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioGW_rs485ToNet.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_can.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_common.h">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_camera.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_bacnet.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_dlt645_2007.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_eip.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_iq60.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_modbusRtu.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_modbusTcp.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_onvif.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\ioDev_visca.h">
+      <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_bacnet.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_cip.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_dlt645_2007.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_eip.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_logix_plc.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_rtu.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_visca.hpp">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_tb3386.h">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\cutils.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\dtoa.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\fileUploadSrv.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\func_module\diskClean.h">
+      <Filter>func_module</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\io_server\proto_ws.h">
+      <Filter>io_server\protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\as_interface.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libregexp.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libregexp-opcode.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libunicode.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\libunicode-table.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\list.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-atom.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-libc.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\quickjs-opcode.h">
+      <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\script\unicode_gen_def.h">
+      <Filter>script</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="tds Pro.rc" />
   </ItemGroup>
 </Project>

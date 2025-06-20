@@ -542,7 +542,7 @@ bool TDS_imp::run(string cmdline)
 #else
 	m_sTitle = appName + " " + version + "(" + getbuildtime() + ")";
 #endif
-	LOG("[info]服务启动,版本:%s,构建时间:%s", version.c_str(), getbuildtime().c_str());
+	LOG("[info]服务启动,版本:%s", m_sTitle.c_str());
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
 	string navIniPath = tds->conf->confPath + "/nav.ini";
