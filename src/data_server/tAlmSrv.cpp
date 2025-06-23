@@ -1820,17 +1820,6 @@ void ALARM_INFO::toJson(almServer* almSrv, string rootTag,yyjson_mut_val*& jVal,
 	yyjson_mut_obj_add_strcpy(doc, jVal, "type", info->type.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "acqtype", info->acqType.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "objstatus", info->objStatus.c_str());
-
-	//if (almSrv->m_mapCustomAlarmDesc.find(info->type) != almSrv->m_mapCustomAlarmDesc.end())
-	//{
-	//	ALARM_TEMPLATE at = almSrv->m_mapCustomAlarmDesc[info->type];
-	//	j["typeLabel"] = at.label;
-	//}
-	//else
-	//{
-	//	j["typeLabel"] = j["type"];
-	//}
-
 	yyjson_mut_obj_add_strcpy(doc, jVal, "level", info->level.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "desc", info->desc.c_str());
 	yyjson_mut_obj_add_strcpy(doc, jVal, "detail", info->detail.c_str());

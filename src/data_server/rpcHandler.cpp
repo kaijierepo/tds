@@ -1193,7 +1193,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 				errorType = str::encodeAscII(errorType);
 			}
 			else
-			    errorType = "unknown error";
+				errorType = "unknown error";
 			json jError = {
 					{"code", -32700},
 					{"message" , "Parse error," + errorType}
@@ -1204,7 +1204,7 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 #endif
 	else if (method == "testCall")
 	{
-	    int timeCost = 5;
+		int timeCost = 5;
 		if (params["time"] != nullptr)
 		{
 			timeCost = params["time"].get<int>();
@@ -2482,9 +2482,7 @@ bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP
 	//** 数据查询系列
 	if (method == "getAlarmCurrent")
 	{
-		json jFilter= params;
-		//jFilter["rootTag"] = params["rootTag"];
-		
+		json jFilter= params;		
 		pAlmSrv->rpc_getCurrent(jFilter, rpcResp, session);
 	}
 	else if (method == "getAlarmUnRecover")
@@ -3999,6 +3997,7 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	if (id == nullptr) {
 		rpcResp.isNotification = true;
 		pSession->isNotification = true;
+		jStrId = "null";
 	}
 	else {
 		jStrId = yyjson_val_write(id, 0, 0);
@@ -4425,7 +4424,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 				}
 			}
 			else if (val.is_string() && val.get<string>() == "取反" && pmp->m_curVal.is_number_integer()) {
-                //modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
+				//modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
 				int iVal = pmp->m_curVal.get<int>();
 				if (iVal != 0) {
 					val = 0;
@@ -5703,7 +5702,7 @@ string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION& sess
 
 	string mode = "array";
 	if(params["mode"]!=nullptr)
-	 	mode = params["mode"].get<string>();
+		mode = params["mode"].get<string>();
 
 	if (params.contains("getStatusDesc")) {
 		if(params["getStatusDesc"].get<bool>() == true)
