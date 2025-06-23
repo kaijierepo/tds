@@ -1,4 +1,4 @@
-#ifdef ENABLE_QJS
+#if defined(ENABLE_QJS) && defined(TDS)
 #include "scriptFunc.h"
 #include "logger.h"
 #include "tds.h"

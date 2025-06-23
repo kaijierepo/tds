@@ -1,4 +1,4 @@
-#ifdef ENABLE_QJS
+#if defined(ENABLE_QJS) && defined(TDS)
 #pragma once
 #include <string>
 #include <map>
