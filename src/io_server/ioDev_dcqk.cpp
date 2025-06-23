@@ -2462,10 +2462,19 @@ bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::str
 void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 {
 	DB_TIME stTime;
+
 	auto* pStation = prj.queryObj(m_strTagBind, "zh");
-	if (!pStation) return;
+	if (!pStation) {
+		return;
+	}
+
 	StImgInfoRes* imgInfo = (StImgInfoRes*)pData;
 	OBJ* zzjMo = pStation->getObjByID(to_string(imgInfo->sid));
+	if (!zzjMo) {
+		LOG("未找到对应的转辙机对象, id=%s", to_string(imgInfo->sid).c_str());
+		return;
+	}
+
 	string zzj = zzjMo->getName("");
 	EnterCriticalSection(&m_csEqp);
 	LeaveCriticalSection(&m_csEqp);
