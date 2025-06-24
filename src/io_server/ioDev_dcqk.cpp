@@ -1463,10 +1463,8 @@ string ioDev_dcqk::Get0x97AlarmDesc(const StAlarmAndImgRec& data)
 		default:
 			break;
 		}
-		if (data.fixorinvert == 1)
-			strRst += ("反位缺口");
-		else
-			strRst += ("定位缺口");
+
+		strRst += ("缺口");
 
 		sprintf_s(buf, ("(%.2fmm)"), ((float)data.gap) / 100.0);
 		strRst += buf;
@@ -2485,7 +2483,7 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	string zzjTag = zzjMo->getTag();
 	if (imgInfo->fixorinvert == 1  &&  tagToHumidity.find(zzjMo->getTag())!= tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
 	{
-		string theTag = zzjMo->getTag() + ".定位缺口";
+		string theTag = zzjMo->getTag() + ".缺口";
 		string timeTag = "zzj" + to_string(imgInfo->sid);
 		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
 		{
@@ -2499,7 +2497,7 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	}
 	else if(imgInfo->fixorinvert == 0 && tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
 	{
-		string theTag = zzjMo->getTag() + ".反位缺口";
+		string theTag = zzjMo->getTag() + ".缺口";
 		string timeTag = "zzj"+to_string(imgInfo->sid);
 		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
 		{
