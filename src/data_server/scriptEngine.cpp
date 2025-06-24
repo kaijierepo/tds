@@ -10,6 +10,55 @@
 
 thread_local ScriptEngine* pEngine;
 
+namespace tJSEngine {
+    int parseStopBits(string s) {
+        if (s == "1") {
+            return 0;
+        }
+        else if (s == "1.5") {
+            return 1;
+        }
+        else if (s == "2") {
+            return 2;
+        }
+
+        return 0;
+    }
+
+    int parseParity(string s) {
+        if (s == "None") {
+            return 0;
+        }
+        else if (s == "Odd") {
+            return 1;
+        }
+        else if (s == "Even") {
+            return 2;
+        }
+        else if (s == "Mark") {
+            return 3;
+        }
+        else if (s == "Space") {
+            return 4;
+        }
+
+        return 0;
+    }
+
+    std::string pointerToString(void* ptr) {
+        uintptr_t ptrVal = reinterpret_cast<uintptr_t>(ptr);
+        std::ostringstream oss;
+        oss << "0x" << std::hex << ptrVal;
+        return oss.str();
+    }
+
+    void* stringToPointer(const std::string& str) {
+        char* endPtr;
+        uintptr_t ptrVal = std::strtoull(str.c_str(), &endPtr, 0);
+        return reinterpret_cast<void*>(ptrVal);
+    }
+}
+
 // 递归将 JS 值转换为 yyjson 值
 static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst val, std::vector<JSValueConst>& visited);
 
@@ -405,6 +454,247 @@ extern "C" {
 
         return timeObj;
     }
+
+    static JSValue qjs_openSerial(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 5) {
+            return JS_NULL;
+        }
+
+        // 参数解析
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() != 5) {
+            return JS_NULL;
+        }
+
+        std::string errorInfo;
+        std::string portName = jArgs[0].get<std::string>();
+        int baudRate = jArgs[1].get<int>();
+        std::string parity = jArgs[2].get<std::string>();
+        int byteSize = jArgs[3].get<int>();
+        std::string stopBits = jArgs[4].get<std::string>();
+
+        HANDLE hCom = nullptr;
+        bool ret = false;
+        std::string strComPort = "\\\\.\\" + portName;
+        COMMTIMEOUTS timeouts = { 0 };
+
+        // 打开串口
+        hCom = CreateFileA(strComPort.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+        if (hCom == INVALID_HANDLE_VALUE) {
+            errorInfo = sys::getLastError("CreateFile");
+            goto OPEN_END;
+        }
+
+        // 配置串口参数
+        COMSTAT comstat;
+        DWORD dwError;
+        ClearCommError(hCom, &dwError, &comstat);
+
+        DCB dcb;
+        SecureZeroMemory(&dcb, sizeof(DCB));
+
+        dcb.DCBlength = sizeof(DCB);
+        GetCommState(hCom, &dcb);
+
+        dcb.BaudRate = baudRate;
+        dcb.ByteSize = byteSize;
+        dcb.Parity = tJSEngine::parseParity(parity);
+        dcb.StopBits = tJSEngine::parseStopBits(stopBits);
+
+        if (!SetCommState(hCom, &dcb)) {
+            errorInfo = sys::getLastError("SetCommState");
+            CloseHandle(hCom);
+            hCom = nullptr;
+            goto OPEN_END;
+        }
+
+        SetupComm(hCom, 1024, 1024);
+
+        // 设置超时时间
+        timeouts.ReadIntervalTimeout = 50;
+        timeouts.ReadTotalTimeoutConstant = 100;
+        timeouts.ReadTotalTimeoutMultiplier = 10;
+        timeouts.WriteTotalTimeoutConstant = 2000;
+        if (!SetCommTimeouts(hCom, &timeouts)) {
+            printf("设置超时失败，错误代码: %d\n", GetLastError());
+            CloseHandle(hCom);
+            goto OPEN_END;
+        }
+        ret = true;
+
+    OPEN_END:
+        if (ret) {
+            printf("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,串口句柄:%p",
+                portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), hCom);
+        }
+        else {
+            printf("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s",
+                portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), errorInfo.c_str());
+        }
+
+        if (ret) {
+            std::string sHandle = tJSEngine::pointerToString(hCom);
+            return JS_NewString(ctx, sHandle.c_str());
+        }
+        else {
+            return JS_NULL;
+        }
+    }
+
+    static JSValue qjs_readSerial(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1) {
+            return JS_NULL;
+        }
+
+        // 参数解析
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() != 1) {
+            return JS_NULL;
+        }
+
+        std::string sH = jArgs[0].get<std::string>();
+        void* hCom = tJSEngine::stringToPointer(sH);
+        DWORD dwError = 0;
+        unsigned char buf[50000] = { 0 };
+        int iLen = 0;
+
+        BOOL bReadRet = ReadFile(hCom, (LPVOID)(buf), 50000, (LPDWORD)&iLen, NULL); // 阻塞读取
+        dwError = GetLastError();
+        if (dwError != 0) {
+            printf("[warn]ReadFile Error %d\n", dwError);
+        }
+
+        if (iLen > 0) {
+            JSValue arr = JS_NewArray(ctx);
+            for (int i = 0; i < iLen; i++) {
+                JS_SetPropertyUint32(ctx, arr, i, JS_NewInt32(ctx, buf[i]));
+            }
+            return arr;
+        }
+        else {
+            return JS_NULL;
+        }
+    }
+
+    static JSValue qjs_writeSerial(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NewBool(ctx, false);
+        }
+
+        // 参数解析
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() != 2) {
+            return JS_NewBool(ctx, false);
+        }
+
+        std::string sH = jArgs[0].get<std::string>();
+        void* hCom = tJSEngine::stringToPointer(sH);
+        json jData = jArgs[1];
+        std::vector<unsigned char> vec;
+        std::string sData;
+        char* pData = nullptr;
+        int len = 0;
+
+        if (jData.is_array()) {
+            for (int i = 0; i < jData.size(); i++) {
+                unsigned char b = jData[i].get<unsigned char>();
+                vec.push_back(b);
+            }
+            pData = (char*)vec.data();
+            len = static_cast<int>(vec.size());
+        }
+        else if (jData.is_string()) {
+            sData = jData.get<std::string>();
+            pData = (char*)sData.c_str();
+            len = static_cast<int>(sData.length());
+        }
+        else {
+            return JS_NewBool(ctx, false);
+        }
+
+        DWORD bytesWritten = 0;
+        BOOL bRet = WriteFile(
+            hCom,           // 串口句柄
+            pData,          // 数据缓冲区
+            len,            // 数据长度
+            &bytesWritten,  // 实际写入的字节数
+            NULL            // 同步模式设为 NULL
+        );
+
+        if (bRet) {
+            return JS_NewBool(ctx, true);
+        }
+        else {
+            return JS_NewBool(ctx, false);
+        }
+    }
+
+    static JSValue qjs_closeSerial(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1) {
+            return JS_NULL;
+        }
+
+        // 参数解析
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() != 1) {
+            return JS_NULL;
+        }
+
+        std::string sH = jArgs[0].get<std::string>();
+        void* hCom = tJSEngine::stringToPointer(sH);
+        if (hCom != nullptr) {
+            CloseHandle(hCom);
+        }
+
+        return JS_NULL;
+    }
+
+    static JSValue qjs_arrayToStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1 || !JS_IsArray(ctx, argv[0])) {
+            return JS_NULL;
+        }
+
+        // 解析 JS 数组为 json
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() != 1 || !jArgs[0].is_array()) {
+            return JS_NULL;
+        }
+
+        json jArr = jArgs[0];
+        std::vector<char> charArray;
+        charArray.resize(jArr.size() + 1);
+        for (size_t i = 0; i < jArr.size(); i++) {
+            unsigned char b = jArr[i].get<unsigned char>();
+            char cb = *((char*)&b);
+            charArray[i] = cb;
+        }
+        charArray[jArr.size()] = 0;
+        std::string s = (char*)charArray.data();
+
+        return JS_NewString(ctx, s.c_str());
+    }
+
+    static JSValue qjs_strToArray(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 1 || !JS_IsString(argv[0])) {
+            return JS_NULL;
+        }
+
+        // 获取字符串
+        const char* s = JS_ToCString(ctx, argv[0]);
+        if (!s) {
+            return JS_NULL;
+        }
+
+        size_t len = strlen(s);
+        JSValue arr = JS_NewArray(ctx);
+        for (size_t i = 0; i < len; ++i) {
+            unsigned char ucb = static_cast<unsigned char>(s[i]);
+            JS_SetPropertyUint32(ctx, arr, (uint32_t)i, JS_NewInt32(ctx, ucb));
+        }
+
+        JS_FreeCString(ctx, s);
+        return arr;
+    }
 } 
 
 void register_cpp_functions(JSContext* ctx) {
@@ -430,6 +720,12 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "STR", strObj);
 
     JS_SetPropertyStr(ctx, global, "time", JS_NewCFunction(ctx, qjs_time, "time", 0));
+    JS_SetPropertyStr(ctx, global, "openSerial", JS_NewCFunction(ctx, qjs_openSerial, "openSerial", 5));
+    JS_SetPropertyStr(ctx, global, "readSerial", JS_NewCFunction(ctx, qjs_readSerial, "readSerial", 1));
+    JS_SetPropertyStr(ctx, global, "writeSerial", JS_NewCFunction(ctx, qjs_writeSerial, "writeSerial", 2));
+    JS_SetPropertyStr(ctx, global, "closeSerial", JS_NewCFunction(ctx, qjs_closeSerial, "closeSerial", 1));
+    JS_SetPropertyStr(ctx, global, "arrayToStr", JS_NewCFunction(ctx, qjs_arrayToStr, "arrayToStr", 1));
+    JS_SetPropertyStr(ctx, global, "strToArray", JS_NewCFunction(ctx, qjs_strToArray, "strToArray", 1));
 
     JS_FreeValue(ctx, global);
 }
@@ -536,55 +832,6 @@ bool ScriptEngine::runScript(string& script, string user) {
 	}
 
 	return runOk;
-}
-
-namespace tJSEngine {
-	int parseStopBits(string s) {
-        if (s == "1") {
-            return 0;
-        }
-        else if (s == "1.5") {
-            return 1;
-        }
-        else if (s == "2") {
-            return 2;
-        }
-
-		return 0;
-	}
-
-	int parseParity(string s) {
-        if (s == "None") {
-            return 0;
-        }
-        else if (s == "Odd") {
-            return 1;
-        }
-        else if (s == "Even") {
-            return 2;
-        }
-        else if (s == "Mark") {
-            return 3;
-        }
-        else if (s == "Space") {
-            return 4;
-        }
-
-		return 0;
-	}
-
-	std::string pointerToString(void* ptr) {
-		uintptr_t ptrVal = reinterpret_cast<uintptr_t>(ptr);
-		std::ostringstream oss;
-		oss << "0x" << std::hex << ptrVal;
-		return oss.str();
-	}
-
-	void* stringToPointer(const std::string& str) {
-		char* endPtr;
-		uintptr_t ptrVal = std::strtoull(str.c_str(), &endPtr, 0);
-		return reinterpret_cast<void*>(ptrVal);
-	}
 }
 
 void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal) {
@@ -804,263 +1051,5 @@ bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst prop_value, void
     JS_FreeCString(ctx, key);
     return true;
 }
-
-
-
-
-
-
-////openSerial(string portName, int baudRate, string parity, int byteSize, int stopBits)
-//jerry_value_t func_openSerial(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 5) {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//
-//	//预处理打开参数
-//	string errorInfo;
-//	string portName = jArgs[0].get<string>();
-//	int baudRate = jArgs[1].get<int>();
-//	string parity = jArgs[2].get<string>();
-//	int byteSize = jArgs[3].get<int>();
-//	string stopBits = jArgs[4].get<string>();
-//	HANDLE hCom = nullptr;
-//	bool ret = false;
-//	string  strComPort = "\\\\.\\" + portName;
-//	COMMTIMEOUTS timeouts = { 0 };
-//
-//	//打开串口（同步模式）
-//	hCom = CreateFileA(strComPort.c_str(),
-//		GENERIC_READ | GENERIC_WRITE,
-//		0, // 独占方式
-//		NULL,
-//		OPEN_EXISTING,// 打开而不是创建
-//		0,            // 同步模式（无 FILE_FLAG_OVERLAPPED）
-//		NULL);
-//	if (hCom == INVALID_HANDLE_VALUE)
-//	{
-//		errorInfo = sys::getLastError("CreateFile");
-//		goto OPEN_END;
-//	}
-//
-//	//配置串口参数
-//	COMSTAT comstat;
-//	DWORD dwError;
-//	ClearCommError(hCom, &dwError, &comstat);
-//	//dcb.StopBits = 0, 1, 2对应的是1bit, 1.5bits, 2bits.
-//	//dcb.ByteSize = 6, 7, 8时   dcb.StopBits不能为1
-//	//dcb.ByteSize = 5时   dcb.StopBits不能为2
-//	DCB dcb;
-//	SecureZeroMemory(&dcb, sizeof(DCB));
-//	dcb.DCBlength = sizeof(DCB);
-//	GetCommState(hCom, &dcb);
-//	dcb.BaudRate = baudRate;
-//	dcb.ByteSize = byteSize;
-//	dcb.Parity = tJSEngine::parseParity(parity);
-//	dcb.StopBits = tJSEngine::parseStopBits(stopBits);
-//	if (!SetCommState(hCom, &dcb))
-//	{
-//		errorInfo = sys::getLastError("SetCommState");
-//		CloseHandle(hCom);
-//		hCom = nullptr;
-//		goto OPEN_END;
-//	}
-//	SetupComm(hCom, 1024, 1024);
-//
-//	//设置超时时间
-//	timeouts.ReadIntervalTimeout = 50;         // 字符间超时（毫秒）
-//	timeouts.ReadTotalTimeoutConstant = 100;   // 固定超时
-//	timeouts.ReadTotalTimeoutMultiplier = 10;  // 每字节附加超时
-//	timeouts.WriteTotalTimeoutConstant = 2000;  // 最大阻塞 1000ms
-//	if (!SetCommTimeouts(hCom, &timeouts)) {
-//		printf("设置超时失败，错误代码: %d\n", GetLastError());
-//		CloseHandle(hCom);
-//		goto OPEN_END;
-//	}
-//	ret = true;
-//
-//OPEN_END:
-//	if (ret) {
-//		LOG("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,串口句柄:%p", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), hCom);
-//	}
-//	else
-//		LOG("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s", portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), errorInfo.c_str());
-//
-//	if (ret) {
-//		string sHandle = tJSEngine::pointerToString(hCom);
-//		jerry_value_t ret = jerry_create_string((const jerry_char_t*)sHandle.c_str());
-//		return ret;
-//	}
-//	else {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//}
-//
-////readSerial(string handle)
-//jerry_value_t func_readSerial(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1) {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//
-//	string sH = jArgs[0].get<string>();
-//	void* hCom = tJSEngine::stringToPointer(sH);
-//	DWORD dwError;
-//	bool ret = false;
-//	unsigned char buf[50000] = { 0 };
-//	int iLen = 0;
-//	BOOL bReadRet = 0;
-//
-//	bReadRet = ReadFile(hCom, (LPVOID)(buf), 50000, (LPDWORD)&iLen, NULL);//阻塞读取
-//	dwError = GetLastError();
-//	if (dwError != 0)
-//		LOG("[warn]ReadFile Error %d", dwError);
-//
-//READ_END:
-//	if (iLen > 0) {
-//		json j = json::array();
-//		for (int i = 0; i < iLen; i++) {
-//			j.push_back(buf[i]);
-//		}
-//		jerry_value_t jrr;
-//		jsonVal2jerryVal(j, jrr);
-//		return jrr;
-//	}
-//	else {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//}
-//
-//jerry_value_t func_writeSerial(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 2) {
-//		jerry_value_t ret = jerry_create_boolean(false);
-//		return ret;
-//	}
-//
-//	string sH = jArgs[0].get<string>();
-//	void* hCom = tJSEngine::stringToPointer(sH);
-//	json jData = jArgs[1];
-//	vector<unsigned char> vec;
-//	string sData;
-//	char* pData = nullptr;
-//	int len = 0;
-//	if (jData.is_array()) {
-//		for (int i = 0; i < jData.size(); i++) {
-//			unsigned char b = jData[i].get<unsigned char>();
-//			vec.push_back(b);
-//		}
-//		pData = (char*)vec.data();
-//		len = vec.size();
-//	}
-//	else if (jData.is_string()) {
-//		sData = jData.get<string>();
-//		pData = (char*)sData.c_str();
-//		len = sData.length();
-//	}
-//	else {
-//		jerry_value_t ret = jerry_create_boolean(false);
-//		return ret;
-//	}
-//
-//
-//	DWORD bytesWritten;
-//	if (WriteFile(
-//		hCom,                   // 串口句柄
-//		pData,                      // 数据缓冲区
-//		len,              // 数据长度
-//		&bytesWritten,             // 实际写入的字节数
-//		NULL                       // 同步模式设为 NULL
-//	)) {
-//		jerry_value_t ret = jerry_create_boolean(true);
-//		return ret;
-//	}
-//	else {
-//		jerry_value_t ret = jerry_create_boolean(false);
-//		return ret;
-//	}
-//}
-//
-//
-//jerry_value_t func_closeSerial(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1) {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//
-//	string sH = jArgs[0].get<string>();
-//	void* hCom = tJSEngine::stringToPointer(sH);
-//	if (hCom != nullptr) {
-//		CloseHandle(hCom);
-//	}
-//}
-//
-//
-//jerry_value_t func_arrayToStr(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1) {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//
-//	json jArr = jArgs[0];
-//	vector<char> charArray;
-//	charArray.resize(jArr.size() + 1);
-//	for (int i = 0; i < jArr.size(); i++) {
-//		unsigned char b = jArr[i].get<unsigned char>();
-//		char cb = *((char*)&b);
-//		charArray[i] = cb;
-//	}
-//
-//	charArray[jArr.size()] = 0;
-//	string s = (char*)charArray.data();
-//
-//	jerry_value_t ret = jerry_create_string((const jerry_char_t*)s.c_str());
-//	return ret;
-//}
-//
-//jerry_value_t func_strToArray(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1) {
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}
-//
-//	string s = jArgs[0];
-//	json jArr = json::array();
-//	for (int i = 0; i < s.length(); i++) {
-//		char cb = s[i];
-//		unsigned char ucb = *((unsigned char*)&cb);
-//		jArr.push_back(ucb);
-//	}
-//	jerry_value_t ret;
-//	jsonVal2jerryVal(jArr, ret);
-//	return ret;
-//}
-//
-
 
 #endif

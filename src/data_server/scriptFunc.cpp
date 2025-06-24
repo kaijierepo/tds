@@ -12,651 +12,6 @@
 #include <cstdint>
 #include "mp.h"
 
-
-//jerry_value_t func_setReturn(const jerry_call_info_t* call_info_p, const jerry_value_t arguments[], const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 1)
-//	{
-//		json j = jArgs[0];
-//		pEngine->m_scriptRet = j;
-//	}
-//
-//	jerry_value_t ret = jerry_create_undefined();
-//	return ret;
-//}
-//
-//jerry_value_t func_notify(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 2)
-//	{
-//		json jParams = jArgs[1];
-//
-//		string method = jArgs[0].get<string>();
-//
-//		RPC_SESSION session;
-//		json err, rlt;
-//		rpcSrv.notify(method, jParams, true);
-//	}
-//
-//	jerry_value_t ret = jerry_create_undefined();
-//	return ret;
-//}
-//
-//jerry_value_t func_input(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 2)
-//	{
-//		string sTag = jArgs[0].get<string>();
-//		sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-//
-//		json jParams;
-//		jParams["tag"] = sTag;
-//		jParams["val"] = jArgs[1];
-//
-//		RPC_SESSION session;
-//		json err, rlt;
-//		tds->call("input", jParams, err, rlt, session);
-//	}
-//
-//	jerry_value_t ret = jerry_create_undefined();
-//	return ret;
-//}
-//
-//jerry_value_t func_output(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 2)
-//	{
-//		string sTag = jArgs[0].get<string>();
-//		sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-//
-//		json jParams;
-//		jParams["tag"] = sTag;
-//		jParams["val"] = jArgs[1];
-//
-//		json err, rlt;
-//		RPC_SESSION session;
-//		session.user = pEngine->m_user;
-//		tds->call("output", jParams, err, rlt, session);
-//	}
-//
-//	jerry_value_t ret = jerry_create_undefined();
-//	return ret;
-//}
-//
-//jerry_value_t func_call(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 2)
-//	{
-//		string method = jArgs[0].get<string>();
-//		json params = jArgs[1];
-//
-//		json err, rlt;
-//		RPC_SESSION sess;
-//		tds->call(method, params, err, rlt, sess);
-//	}
-//
-//	jerry_value_t ret = jerry_create_undefined();
-//	return ret;
-//}
-//
-//jerry_value_t func_parseTag(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() > 0)
-//	{
-//		string tag = jArgs[0].get<string>();
-//		string sTag = TAG::resolveTag(tag, pEngine->m_tagContext);
-//
-//		if (tag.find("*") == string::npos) {
-//			json jTag = sTag;
-//			jerry_value_t obj;
-//			jsonVal2jerryVal(jTag, obj);
-//			return obj;
-//		}
-//		else {
-//			vector<string> vecTags;
-//			TAG_SELECTOR ts;
-//			ts.init(sTag);
-//			prj.getTagsByTagSelector(vecTags, ts);
-//			json jTags = json::array();
-//			for (int i = 0; i < vecTags.size(); i++) {
-//				jTags.push_back(vecTags[i]);
-//			}
-//			jerry_value_t obj;
-//			jsonVal2jerryVal(jTags, obj);
-//			return obj;
-//		}
-//
-//	}
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_getObj(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() > 0)
-//	{
-//		json tag = jArgs[0];
-//		if (tag.is_string()) {
-//			string sTag = tag.get<string>();
-//			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-//			OBJ* pObj = prj.queryObj(sTag, "zh");
-//			if (pObj) {
-//				json j;
-//				OBJ_QUERIER query;
-//				query.getConf = true;
-//				query.getStatus = true;
-//				query.getChild = false;
-//				query.getMp = false;
-//				pObj->toJson(j, query);
-//				jerry_value_t obj;
-//				jsonVal2jerryVal(j, obj);
-//				return obj;
-//			}
-//		}
-//	}
-//
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_getMp(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	/*json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if(jArgs.size()>0)
-//	{
-//		string tag = jArgs[0].get<string>();
-//		MP* pmp = prj.GetMPByTag(tag);
-//		if (pmp)
-//		{
-//			jerry_value_t obj_mo;
-//			json jMpStatus = pmp->getRTData();
-//			jsonVal2jerryVal(jMpStatus, obj_mo);
-//			return obj_mo;
-//		}
-//		else
-//		{
-//			jerry_value_t ret = jerry_create_null();
-//			return ret;
-//		}
-//	}
-//	else
-//	{
-//		jerry_value_t ret = jerry_create_null();
-//		return ret;
-//	}*/
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_sum(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() > 0)
-//	{
-//		json tag = jArgs[0];
-//		if (tag.is_string()) {
-//			string sTag = tag.get<string>();
-//			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-//			json params;
-//			params["tag"] = sTag;
-//			if (jArgs.size() == 2) {
-//				params["invalidAsZero"] = jArgs[1];
-//			}
-//			else if (jArgs.size() == 3) {
-//				params["time"] = jArgs[1];
-//				params["invalidAsZero"] = jArgs[2];
-//			}
-//
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("sum", params, err, rlt, sess);
-//
-//
-//			if (rlt != nullptr) {
-//				jerry_value_t ret;
-//				jsonVal2jerryVal(rlt, ret);
-//				return ret;
-//			}
-//		}
-//		else if (tag.is_array()) {
-//			json jResolvedTag = json::array();
-//			for (auto& t : tag) {
-//				if (t.is_string()) {
-//					string s = t.get<string>();
-//					s = TAG::resolveTag(s, pEngine->m_tagContext);
-//					jResolvedTag.push_back(s);
-//				}
-//			}
-//
-//			json params;
-//			params["tag"] = jResolvedTag;
-//			if (jArgs.size() > 1) {
-//				params["invalidAsZero"] = jArgs[1];
-//			}
-//
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("sum", params, err, rlt, sess);
-//
-//			if (rlt != nullptr) {
-//				jerry_value_t ret;
-//				jsonVal2jerryVal(rlt, ret);
-//				return ret;
-//			}
-//		}
-//	}
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_avg(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() > 0)
-//	{
-//		json tag = jArgs[0];
-//		if (tag.is_string()) {
-//			string sTag = tag.get<string>();
-//			sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-//			json params;
-//			params["tag"] = sTag;
-//
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("avg", params, err, rlt, sess);
-//
-//			if (rlt != nullptr) {
-//				jerry_value_t ret;
-//				jsonVal2jerryVal(rlt, ret);
-//				return ret;
-//			}
-//		}
-//		else if (tag.is_array()) {
-//			json jResolvedTag = json::array();
-//			for (auto& t : tag) {
-//				if (t.is_string()) {
-//					string s = t.get<string>();
-//					s = TAG::resolveTag(s, pEngine->m_tagContext);
-//					jResolvedTag.push_back(s);
-//				}
-//			}
-//
-//			json params;
-//			params["tag"] = jResolvedTag;
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("avg", params, err, rlt, sess);
-//
-//			if (rlt != nullptr) {
-//				jerry_value_t ret;
-//				jsonVal2jerryVal(rlt, ret);
-//				return ret;
-//			}
-//		}
-//	}
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-
-//jerry_value_t func_db_select(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 1)
-//	{
-//		json params = jArgs[0];
-//		if (params.is_object()) {
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("db.select", params, err, rlt, sess);
-//			if (rlt != nullptr) {
-//				json jRet;
-//				jRet["result"] = rlt;
-//				jerry_value_t jerryVal;
-//				jsonVal2jerryVal(jRet, jerryVal);
-//				return jerryVal;
-//			}
-//			else if (err != nullptr) {
-//				json jRet;
-//				jRet["error"] = err;
-//				jerry_value_t jerryVal;
-//				jsonVal2jerryVal(jRet, jerryVal);
-//				return jerryVal;
-//			}
-//		}
-//	}
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_db_insert(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 1)
-//	{
-//		json params = jArgs[0];
-//		if (params.is_object()) {
-//			json err, rlt;
-//			RPC_SESSION sess;
-//			tds->call("db.insert", params, err, rlt, sess);
-//			if (rlt != nullptr) {
-//				jerry_value_t jerryVal;
-//				jsonVal2jerryVal(rlt, jerryVal);
-//				return jerryVal;
-//			}
-//			else {
-//				int errCode = err["code"].get<int>();
-//				string errMsg = err["message"].get<string>();
-//				string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-//				pEngine->m_vecOutput.push_back(errInfo);
-//				LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-//			}
-//		}
-//	}
-//	else if (jArgs.size() == 3) {
-//		json params;
-//		params["tag"] = jArgs[0];
-//		params["time"] = jArgs[1];
-//		params["val"] = jArgs[2];
-//		json err, rlt;
-//		RPC_SESSION sess;
-//		tds->call("db.insert", params, err, rlt, sess);
-//		if (rlt != nullptr) {
-//			jerry_value_t jerryVal;
-//			jsonVal2jerryVal(rlt, jerryVal);
-//			return jerryVal;
-//		}
-//		else {
-//			int errCode = err["code"].get<int>();
-//			string errMsg = err["message"].get<string>();
-//			string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-//			pEngine->m_vecOutput.push_back(errInfo);
-//			LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-//		}
-//	}
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_ioDev_setOnline(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	jerry_value_t dev = call_info_p->this_value;
-//	json jDev;
-//	jerryVal2jsonVal(dev, jDev);
-//	if (!jDev.is_object())
-//		return jerry_create_boolean(false);
-//	if (jDev["confNodeId"] == nullptr)
-//		return jerry_create_boolean(false);
-//	string confNodeId = jDev["confNodeId"];
-//	ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//	if (!p)
-//		return jerry_create_boolean(false);
-//	p->setOnline();
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_ioDev_setDevVar(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 2)
-//	{
-//		json varName = jArgs[0];
-//		if (!varName.is_string()) {
-//			return jerry_create_null();
-//		}
-//		string sName = varName.get<string>();
-//		json params = jArgs[1];
-//
-//		jerry_value_t dev = call_info_p->this_value;
-//		json jDev;
-//		jerryVal2jsonVal(dev, jDev);
-//		if (!jDev.is_object())
-//			return jerry_create_boolean(false);
-//		if (jDev["confNodeId"] == nullptr)
-//			return jerry_create_boolean(false);
-//		string confNodeId = jDev["confNodeId"];
-//		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//		if (!p)
-//			return jerry_create_boolean(false);
-//
-//		p->m_mapDevVar[sName] = params;
-//	}
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_ioDev_onRecvData(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	jerry_value_t dev = call_info_p->this_value;
-//	json jDev;
-//	jerryVal2jsonVal(dev, jDev);
-//
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1)
-//		return jerry_create_null();
-//
-//	json data = jArgs[0];
-//
-//	if (!data.is_array())
-//		return jerry_create_null();
-//
-//	vector<unsigned char> vecData;
-//	for (auto& i : data) {
-//		if (i.is_number_integer()) {
-//			unsigned char b = i.get<int>();
-//			vecData.push_back(b);
-//		}
-//	}
-//
-//	if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
-//		string confNodeId = jDev["confNodeId"];
-//		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//		if (p) {
-//			p->onRecvData(vecData.data(), vecData.size());
-//		}
-//	}
-//
-//	return jerry_create_null();
-//}
-//
-//jerry_value_t func_ioDev_doTransaction(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	jerry_value_t dev = call_info_p->this_value;
-//	json jDev;
-//	jerryVal2jsonVal(dev, jDev);
-//
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//	if (jArgs.size() != 1)
-//		return jerry_create_null();
-//
-//	json req = jArgs[0];
-//
-//	vector<uint8_t> vecReq;
-//	if (req.is_array()) {
-//		for (auto& i : req) {
-//			if (i.is_number_integer()) {
-//				uint8_t b = i.get<int>();
-//				vecReq.push_back(b);
-//			}
-//		}
-//	}
-//	else if (req.is_string()) {
-//		string s = req.get<string>();
-//		vecReq = str::toBytes(s);
-//	}
-//	else {
-//		pEngine->m_sError = "错误的请求参数格式，必须是数组或者字符串";
-//		return jerry_create_null();
-//	}
-//
-//
-//	vector<uint8_t> vecResp;
-//	if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
-//		string confNodeId = jDev["confNodeId"];
-//		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//		if (p && p->m_devType == "custom-device") {
-//			ioDev_custom* pc = (ioDev_custom*)p;
-//			pc->doTransaction(vecReq, vecResp);
-//		}
-//	}
-//
-//	if (vecResp.size() > 0) {
-//		json j = json::array();
-//		for (int i = 0; i < vecResp.size(); i++) {
-//			j.push_back(vecResp[i]);
-//		}
-//		jerry_value_t jrr;
-//		jsonVal2jerryVal(j, jrr);
-//		return jrr;
-//	}
-//
-//	return jerry_create_null();
-//}
-//
-//jerry_value_t func_ioDev_getDevVar(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() == 1)
-//	{
-//		json varName = jArgs[0];
-//		if (!varName.is_string()) {
-//			return jerry_create_null();
-//		}
-//		string sName = varName.get<string>();
-//
-//		jerry_value_t dev = call_info_p->this_value;
-//		json jDev;
-//		jerryVal2jsonVal(dev, jDev);
-//		if (!jDev.is_object())
-//			return jerry_create_boolean(false);
-//		if (jDev["confNodeId"] == nullptr)
-//			return jerry_create_boolean(false);
-//		string confNodeId = jDev["confNodeId"];
-//		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//		if (!p)
-//			return jerry_create_boolean(false);
-//
-//		json val = p->m_mapDevVar[sName];
-//		jerry_value_t jerryVal;
-//		jsonVal2jerryVal(val, jerryVal);
-//		return jerryVal;
-//	}
-//
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_ioDev_setOffline(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	jerry_value_t dev = call_info_p->this_value;
-//	json jDev;
-//	jerryVal2jsonVal(dev, jDev);
-//	if (!jDev.is_object())
-//		return jerry_create_boolean(false);
-//	if (jDev["confNodeId"] == nullptr)
-//		return jerry_create_boolean(false);
-//	string confNodeId = jDev["confNodeId"];
-//	ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//	if (!p)
-//		return jerry_create_boolean(false);
-//	p->setOffline();
-//	jerry_value_t ret = jerry_create_null();
-//	return ret;
-//}
-//
-//jerry_value_t func_ioDev_input(const jerry_call_info_t* call_info_p,
-//	const jerry_value_t arguments[],
-//	const jerry_length_t argument_count)
-//{
-//	json jArgs = engineArgsToJson(arguments, argument_count);
-//
-//	if (jArgs.size() >= 2)
-//	{
-//		jerry_value_t dev = call_info_p->this_value;
-//		json jDev;
-//		jerryVal2jsonVal(dev, jDev);
-//		if (!jDev.is_object())
-//			return jerry_create_boolean(false);
-//		if (jDev["confNodeId"] == nullptr)
-//			return jerry_create_boolean(false);
-//		string confNodeId = jDev["confNodeId"];
-//		ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-//		if (!p)
-//			return jerry_create_boolean(false);
-//
-//		json jVal = jArgs[0];
-//		json addr = jArgs[1];
-//		string chanAddr = addr.get<string>();
-//		bool bRet = p->input(jVal, chanAddr);
-//		return jerry_create_boolean(bRet);
-//	}
-//
-//	jerry_value_t ret = jerry_create_boolean(false);
-//	return ret;
-//}
-
 static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -766,10 +121,597 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
+static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    // 参数转 json
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 1) {
+        json j = jArgs[0];
+        pEngine->m_scriptRet = j;
+    }
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_notify(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        json jParams = jArgs[1];
+        std::string method = jArgs[0].get<std::string>();
+
+        RPC_SESSION session;
+        json err, rlt;
+        rpcSrv.notify(method, jParams, true);
+    }
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_input(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        std::string sTag = jArgs[0].get<std::string>();
+        sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+
+        json jParams;
+        jParams["tag"] = sTag;
+        jParams["val"] = jArgs[1];
+
+        RPC_SESSION session;
+        json err, rlt;
+        tds->call("input", jParams, err, rlt, session);
+    }
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_output(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        std::string sTag = jArgs[0].get<std::string>();
+        sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+
+        json jParams;
+        jParams["tag"] = sTag;
+        jParams["val"] = jArgs[1];
+
+        json err, rlt;
+        RPC_SESSION session;
+        session.user = pEngine->m_user;
+        tds->call("output", jParams, err, rlt, session);
+    }
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        std::string method = jArgs[0].get<std::string>();
+        json params = jArgs[1];
+
+        json err, rlt;
+        RPC_SESSION sess;
+        tds->call(method, params, err, rlt, sess);
+    }
+
+    return JS_UNDEFINED;
+}
+
+static JSValue qjs_parseTag(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() > 0) {
+        std::string tag = jArgs[0].get<std::string>();
+        std::string sTag = TAG::resolveTag(tag, pEngine->m_tagContext);
+
+        if (tag.find("*") == std::string::npos) {
+            json jTag = sTag;
+            JSValue obj;
+            jsonValToJsVal(jTag, ctx, obj);
+            return obj;
+        }
+        else {
+            std::vector<std::string> vecTags;
+            TAG_SELECTOR ts;
+            ts.init(sTag);
+            prj.getTagsByTagSelector(vecTags, ts);
+            json jTags = json::array();
+            for (size_t i = 0; i < vecTags.size(); i++) {
+                jTags.push_back(vecTags[i]);
+            }
+            JSValue obj;
+            jsonValToJsVal(jTags, ctx, obj);
+            return obj;
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() > 0) {
+        json tag = jArgs[0];
+        if (tag.is_string()) {
+            std::string sTag = tag.get<std::string>();
+            sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+            OBJ* pObj = prj.queryObj(sTag, "zh");
+            if (pObj) {
+                json j;
+                OBJ_QUERIER query;
+                query.getConf = true;
+                query.getStatus = true;
+                query.getChild = false;
+                query.getMp = false;
+                pObj->toJson(j, query);
+                JSValue obj;
+                jsonValToJsVal(j, ctx, obj);
+                return obj;
+            }
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_getMp(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() > 0) {
+        std::string tag = jArgs[0].get<std::string>();
+        MP* pmp = prj.GetMPByTag(tag, "zh");
+        if (pmp) {
+            json jMpStatus = pmp->getRT();
+            JSValue obj_mo;
+            jsonValToJsVal(jMpStatus, ctx, obj_mo);
+            return obj_mo;
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() > 0) {
+        json tag = jArgs[0];
+        if (tag.is_string()) {
+            std::string sTag = tag.get<std::string>();
+            sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+            json params;
+            params["tag"] = sTag;
+            if (jArgs.size() == 2) {
+                params["invalidAsZero"] = jArgs[1];
+            }
+            else if (jArgs.size() == 3) {
+                params["time"] = jArgs[1];
+                params["invalidAsZero"] = jArgs[2];
+            }
+
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("sum", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue ret;
+                jsonValToJsVal(rlt, ctx, ret);
+                return ret;
+            }
+        }
+        else if (tag.is_array()) {
+            json jResolvedTag = json::array();
+            for (auto& t : tag) {
+                if (t.is_string()) {
+                    std::string s = t.get<std::string>();
+                    s = TAG::resolveTag(s, pEngine->m_tagContext);
+                    jResolvedTag.push_back(s);
+                }
+            }
+
+            json params;
+            params["tag"] = jResolvedTag;
+            if (jArgs.size() > 1) {
+                params["invalidAsZero"] = jArgs[1];
+            }
+
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("sum", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue ret;
+                jsonValToJsVal(rlt, ctx, ret);
+                return ret;
+            }
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() > 0) {
+        json tag = jArgs[0];
+        if (tag.is_string()) {
+            std::string sTag = tag.get<std::string>();
+            sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
+            json params;
+            params["tag"] = sTag;
+
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("avg", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue ret;
+                jsonValToJsVal(rlt, ctx, ret);
+                return ret;
+            }
+        }
+        else if (tag.is_array()) {
+            json jResolvedTag = json::array();
+            for (auto& t : tag) {
+                if (t.is_string()) {
+                    std::string s = t.get<std::string>();
+                    s = TAG::resolveTag(s, pEngine->m_tagContext);
+                    jResolvedTag.push_back(s);
+                }
+            }
+
+            json params;
+            params["tag"] = jResolvedTag;
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("avg", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue ret;
+                jsonValToJsVal(rlt, ctx, ret);
+                return ret;
+            }
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 1) {
+        json params = jArgs[0];
+        if (params.is_object()) {
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("db.select", params, err, rlt, sess);
+            if (rlt != nullptr) {
+                json jRet;
+                jRet["result"] = rlt;
+                JSValue jsVal;
+                jsonValToJsVal(jRet, ctx, jsVal);
+                return jsVal;
+            }
+            else if (err != nullptr) {
+                json jRet;
+                jRet["error"] = err;
+                JSValue jsVal;
+                jsonValToJsVal(jRet, ctx, jsVal);
+                return jsVal;
+            }
+        }
+    }
+    return JS_NULL;
+}
+
+static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 1) {
+        json params = jArgs[0];
+        if (params.is_object()) {
+            json err, rlt;
+            RPC_SESSION sess;
+
+            tds->call("db.insert", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue jsVal;
+                jsonValToJsVal(rlt, ctx, jsVal);
+
+                return jsVal;
+            }
+            else {
+                int errCode = err["code"].get<int>();
+                std::string errMsg = err["message"].get<std::string>();
+                std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+                pEngine->m_vecOutput.push_back(errInfo);
+                LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                    errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+            }
+        }
+    }
+    else if (jArgs.size() == 3) {
+        json params;
+        params["tag"] = jArgs[0];
+        params["time"] = jArgs[1];
+        params["val"] = jArgs[2];
+
+        json err, rlt;
+        RPC_SESSION sess;
+
+        tds->call("db.insert", params, err, rlt, sess);
+
+        if (rlt != nullptr) {
+            JSValue jsVal;
+            jsonValToJsVal(rlt, ctx, jsVal);
+            return jsVal;
+        }
+        else {
+            int errCode = err["code"].get<int>();
+
+            std::string errMsg = err["message"].get<std::string>();
+            std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+            pEngine->m_vecOutput.push_back(errInfo);
+            LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+        }
+    }
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_setOnline(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    JSValue dev = this_val;
+    json jDev;
+
+    jsValToJsonVal(ctx, dev, jDev);
+    if (!jDev.is_object())
+        return JS_NewBool(ctx, false);
+
+    if (jDev["confNodeId"] == nullptr)
+        return JS_NewBool(ctx, false);
+
+    std::string confNodeId = jDev["confNodeId"];
+
+    ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+    if (!p)
+        return JS_NewBool(ctx, false);
+
+    p->setOnline();
+
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_setDevVar(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        json varName = jArgs[0];
+        if (!varName.is_string()) {
+            return JS_NULL;
+        }
+
+        std::string sName = varName.get<std::string>();
+        json params = jArgs[1];
+
+        JSValue dev = this_val;
+        json jDev;
+
+        jsValToJsonVal(ctx, dev, jDev);
+
+        if (!jDev.is_object())
+            return JS_NewBool(ctx, false);
+
+        if (jDev["confNodeId"] == nullptr)
+            return JS_NewBool(ctx, false);
+
+        std::string confNodeId = jDev["confNodeId"];
+
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (!p)
+            return JS_NewBool(ctx, false);
+
+        p->m_mapDevVar[sName] = params;
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_onRecvData(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+    if (jArgs.size() != 1)
+        return JS_NULL;
+
+    json data = jArgs[0];
+    if (!data.is_array())
+        return JS_NULL;
+
+    std::vector<unsigned char> vecData;
+    for (auto& i : data) {
+        if (i.is_number_integer()) {
+            unsigned char b = i.get<int>();
+            vecData.push_back(b);
+        }
+    }
+
+    if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
+        std::string confNodeId = jDev["confNodeId"];
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (p) {
+            p->onRecvData(vecData.data(), vecData.size());
+        }
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_doTransaction(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+    if (jArgs.size() != 1)
+        return JS_NULL;
+
+    json req = jArgs[0];
+    std::vector<uint8_t> vecReq;
+    if (req.is_array()) {
+        for (auto& i : req) {
+            if (i.is_number_integer()) {
+                uint8_t b = i.get<int>();
+                vecReq.push_back(b);
+            }
+        }
+    }
+    else if (req.is_string()) {
+        std::string s = req.get<std::string>();
+        vecReq = str::toBytes(s);
+    }
+    else {
+        pEngine->m_sError = "错误的请求参数格式，必须是数组或者字符串";
+        return JS_NULL;
+    }
+
+    std::vector<uint8_t> vecResp;
+    if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
+        std::string confNodeId = jDev["confNodeId"];
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (p && p->m_devType == "custom-device") {
+            ioDev_custom* pc = (ioDev_custom*)p;
+            pc->doTransaction(vecReq, vecResp);
+        }
+    }
+
+    if (!vecResp.empty()) {
+        json j = json::array();
+        for (size_t i = 0; i < vecResp.size(); i++) {
+            j.push_back(vecResp[i]);
+        }
+        JSValue jrr;
+        jsonValToJsVal(j, ctx, jrr);
+        return jrr;
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_getDevVar(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 1) {
+        json varName = jArgs[0];
+        if (!varName.is_string()) {
+            return JS_NULL;
+        }
+        std::string sName = varName.get<std::string>();
+
+        json jDev;
+        jsValToJsonVal(ctx, this_val, jDev);
+        if (!jDev.is_object())
+            return JS_NewBool(ctx, false);
+        if (jDev["confNodeId"] == nullptr)
+            return JS_NewBool(ctx, false);
+        std::string confNodeId = jDev["confNodeId"];
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (!p)
+            return JS_NewBool(ctx, false);
+
+        json val = p->m_mapDevVar[sName];
+        JSValue jsVal;
+        jsonValToJsVal(val, ctx, jsVal);
+        return jsVal;
+    }
+
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_setOffline(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    if (!jDev.is_object())
+        return JS_NewBool(ctx, false);
+
+    if (jDev["confNodeId"] == nullptr)
+        return JS_NewBool(ctx, false);
+
+    std::string confNodeId = jDev["confNodeId"];
+
+    ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+    if (!p)
+        return JS_NewBool(ctx, false);
+
+    p->setOffline();
+    return JS_NULL;
+}
+
+static JSValue qjs_ioDev_input(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() >= 2) {
+        json jDev;
+        jsValToJsonVal(ctx, this_val, jDev);
+
+        if (!jDev.is_object())
+            return JS_NewBool(ctx, false);
+
+        if (jDev["confNodeId"] == nullptr)
+            return JS_NewBool(ctx, false);
+
+        std::string confNodeId = jDev["confNodeId"];
+
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (!p)
+            return JS_NewBool(ctx, false);
+
+        json jVal = jArgs[0];
+        json addr = jArgs[1];
+
+        std::string chanAddr = addr.get<std::string>();
+        bool bRet = p->input(jVal, chanAddr);
+
+        return JS_NewBool(ctx, bRet);
+    }
+
+    return JS_NewBool(ctx, false);
+}
+
 void initTdsFunc(JSContext* ctx) {
     JSValue global = JS_GetGlobalObject(ctx);
 
     JS_SetPropertyStr(ctx, global, "val", JS_NewCFunction(ctx, qjs_val, "val", 3));
+    JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
+    JS_SetPropertyStr(ctx, global, "notify", JS_NewCFunction(ctx, qjs_notify, "notify", 2));
+    JS_SetPropertyStr(ctx, global, "input", JS_NewCFunction(ctx, qjs_input, "input", 2));
+    JS_SetPropertyStr(ctx, global, "output", JS_NewCFunction(ctx, qjs_output, "output", 2));
+    JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_call, "call", 2));
+    JS_SetPropertyStr(ctx, global, "parseTag", JS_NewCFunction(ctx, qjs_parseTag, "parseTag", 1));
+    JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
+    JS_SetPropertyStr(ctx, global, "getMp", JS_NewCFunction(ctx, qjs_getMp, "getMp", 1));
+    JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
+    JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
+    JS_SetPropertyStr(ctx, global, "db_select", JS_NewCFunction(ctx, qjs_db_select, "db_select", 1));
+    JS_SetPropertyStr(ctx, global, "db_insert", JS_NewCFunction(ctx, qjs_db_insert, "db_insert", 3));
+    JS_SetPropertyStr(ctx, global, "ioDev_setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "ioDev_setOnline", 0));
+    JS_SetPropertyStr(ctx, global, "ioDev_setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "ioDev_setDevVar", 2));
+    JS_SetPropertyStr(ctx, global, "ioDev_onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "ioDev_onRecvData", 1));
+    JS_SetPropertyStr(ctx, global, "ioDev_doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "ioDev_doTransaction", 1));
+    JS_SetPropertyStr(ctx, global, "ioDev_getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "ioDev_getDevVar", 1));
+    JS_SetPropertyStr(ctx, global, "ioDev_setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "ioDev_setOffline", 0));
+    JS_SetPropertyStr(ctx, global, "ioDev_input", JS_NewCFunction(ctx, qjs_ioDev_input, "ioDev_input", 2));
 
     JS_FreeValue(ctx, global);
 }
