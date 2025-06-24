@@ -260,22 +260,22 @@ static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSVal
     return JS_NULL;
 }
 
-static JSValue qjs_getMp(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-
-    if (jArgs.size() > 0) {
-        std::string tag = jArgs[0].get<std::string>();
-        MP* pmp = prj.GetMPByTag(tag, "zh");
-        if (pmp) {
-            json jMpStatus = pmp->getRT();
-            JSValue obj_mo;
-            jsonValToJsVal(jMpStatus, ctx, obj_mo);
-            return obj_mo;
-        }
-    }
-
-    return JS_NULL;
-}
+//static JSValue qjs_getMp(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+//    json jArgs = engineArrayToJson(ctx, argv, argc);
+//
+//    if (jArgs.size() > 0) {
+//        std::string tag = jArgs[0].get<std::string>();
+//        MP* pmp = prj.GetMPByTag(tag, "zh");
+//        if (pmp) {
+//            json jMpStatus = pmp->getRT();
+//            JSValue obj_mo;
+//            jsonValToJsVal(jMpStatus, ctx, obj_mo);
+//            return obj_mo;
+//        }
+//    }
+//
+//    return JS_NULL;
+//}
 
 static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
@@ -700,7 +700,7 @@ void initTdsFunc(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_call, "call", 2));
     JS_SetPropertyStr(ctx, global, "parseTag", JS_NewCFunction(ctx, qjs_parseTag, "parseTag", 1));
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
-    JS_SetPropertyStr(ctx, global, "getMp", JS_NewCFunction(ctx, qjs_getMp, "getMp", 1));
+    //JS_SetPropertyStr(ctx, global, "getMp", JS_NewCFunction(ctx, qjs_getMp, "getMp", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
     JS_SetPropertyStr(ctx, global, "db_select", JS_NewCFunction(ctx, qjs_db_select, "db_select", 1));
