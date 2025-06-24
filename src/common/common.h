@@ -440,7 +440,7 @@ inline string getbuildtimeShort()
 	int year = YEAR - 2000;
 	string t = __TIME__;
 	t = str::replace(t,":","");
-	return str::format("%02d%02d%02d-%s", year, MONTH + 1, DAY, t);
+	return str::format("%02d%02d%02d-%s", year, MONTH + 1, DAY, t.c_str());
 }
 
 inline string getbuilddate()
