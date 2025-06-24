@@ -5292,7 +5292,10 @@ tstring Parse315Protocol::ToString0x97(const StAlarmAndImgRec& data)
 			break;
 		}
 
-		strRst += _T("缺口");
+		if (data.fixorinvert == 1)
+			strRst += _T("反位缺口");
+		else
+			strRst += _T("定位缺口");
 
 		_stprintf_s(buf, _T("(%.2fmm)"), ((float)data.gap) / 100.0);
 		strRst += buf;

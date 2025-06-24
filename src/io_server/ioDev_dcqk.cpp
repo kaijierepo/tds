@@ -1464,7 +1464,10 @@ string ioDev_dcqk::Get0x97AlarmDesc(const StAlarmAndImgRec& data)
 			break;
 		}
 
-		strRst += ("缺口");
+		if (data.fixorinvert == 1)
+			strRst += ("反位缺口");
+		else
+			strRst += ("定位缺口");
 
 		sprintf_s(buf, ("(%.2fmm)"), ((float)data.gap) / 100.0);
 		strRst += buf;
@@ -2299,7 +2302,14 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		LeaveCriticalSection(&m_csEqp);
 		BYTE location = pRecord->fixorinvert;
 		BYTE acqreason = pRecord->gaptype;
-		string theTag = zzjMo->getTag()+  ".缺口";
+
+		string theTag;
+		if (pRecord->fixorinvert == 1) {
+			theTag += zzjMo->getTag() + ".反位缺口";
+		}
+		else {
+			theTag += zzjMo->getTag() + ".定位缺口";
+		}
 
 		TIME ti;
 		ti.fromUnixTime(pRecord->time);
@@ -2401,27 +2411,45 @@ bool saveJpg(string tag, DB_TIME stTime, char* pData, size_t len)
 static map<string, short>tagToTemperature;
 static map<string, WORD>tagToHumidity;
 
-bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::string& timestamp) {
+std::string timeToString(DWORD unixTime) {
+	std::time_t rawTime = static_cast<std::time_t>(unixTime);
+	std::tm* timeInfo = std::localtime(&rawTime);
 
-	KV_INI ini; ini.load(path);
-	string latestImgTimeStr = ini.getValStr("latestImgTime", "{}");
+	std::ostringstream oss;
+	oss << std::put_time(timeInfo, "%Y-%m-%d %H:%M:%S");
+	return oss.str();
+}
+
+time_t strToUnixTime(const std::string& strTime) {
+	std::tm tm = {};
+	std::istringstream ss(strTime);
+	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+	return mktime(&tm);
+}
+
+bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::string& timeStamp) {
+	char temp[256] = { 0 };
+	GetPrivateProfileString("config", "latestTime", "", temp, 256, path.c_str());
+	string timeList(temp);
+
+	if (!timeList.empty() && timeList.front() == '{')
+		timeList.erase(0, 1);
+	if (!timeList.empty() && timeList.back() == '}')
+		timeList.pop_back();
+
 	map<string, string> timeMap;
-	regex pattern(R"(\{([^}]*)\})");
-	smatch match;
+	stringstream ss(timeList);
+	string item;
 
-	if (std::regex_search(latestImgTimeStr, match, pattern) && match.size() > 1) {
-		string content = match[1].str();
-		regex kvPattern(R"((\w+):\s*([^,\}]+))");
+	while (std::getline(ss, item, ',')) {
+		if (item.empty()) continue;
+		size_t equalPos = item.find('=');
+		if (equalPos != std::string::npos) {
+			std::string key = item.substr(0, equalPos);
+			std::string value = item.substr(equalPos + 1);
 
-		auto words_begin = std::sregex_iterator(content.begin(), content.end(), kvPattern);
-		auto words_end = std::sregex_iterator();
-
-		for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
-			std::smatch match = *i;
-			if (match.size() >= 3) {
-				string temp1 = match[1].str();
-				string temp2 = match[2].str();
-				timeMap[match[1].str()] = match[2].str();
+			if (!key.empty()) {
+				timeMap[key] = value;
 			}
 		}
 	}
@@ -2429,12 +2457,13 @@ bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::str
 	bool updated = false;
 	auto it = timeMap.find(tag);
 
+	string stringStamp = timeToString(strToUnixTime(timeStamp));
 	if (it == timeMap.end()) {
-		timeMap[tag] = timestamp;
+		timeMap[tag] = stringStamp;
 		updated = true;
 	}
-	else if (timestamp > it->second) {
-		timeMap[tag] = timestamp;
+	else if (stringStamp > it->second) {
+		timeMap[tag] = stringStamp;
 		updated = true;
 	}
 
@@ -2444,17 +2473,22 @@ bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::str
 		bool first = true;
 
 		for (const auto& pair : timeMap) {
-			if (!first) ss << ", ";
-			ss << pair.first << ":" << pair.second;
+			if (!first) ss << ",";
+			ss << pair.first << "=" << pair.second;
 			first = false;
 		}
-
 		ss << "}";
-		ini.setVal("latestImgTime", ss.str());
-		ini.save(path);
+		string outStr;
+		std::getline(ss, outStr);
+		BOOL result = WritePrivateProfileString(
+			"config",
+			"latestTime",
+			outStr.c_str(),
+			path.c_str()
+		);
 	}
 
-	return updated;
+	return false;
 }
 
 void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
@@ -2481,9 +2515,9 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	TIME ti; ti.fromUnixTime(imgInfo->time);
 	string  strTi = timeopt::st2str(ti);
 	string zzjTag = zzjMo->getTag();
-	if (imgInfo->fixorinvert == 1  &&  tagToHumidity.find(zzjMo->getTag())!= tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
+	if (imgInfo->fixorinvert == 1 && tagToHumidity.find(zzjMo->getTag())!= tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
 	{
-		string theTag = zzjMo->getTag() + ".缺口";
+		string theTag = zzjMo->getTag() + ".反位缺口";
 		string timeTag = "zzj" + to_string(imgInfo->sid);
 		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
 		{
@@ -2495,9 +2529,9 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 			db.Insert(theTag, sDE);
 		}
 	}
-	else if(imgInfo->fixorinvert == 0 && tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
+	else if(tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
 	{
-		string theTag = zzjMo->getTag() + ".缺口";
+		string theTag = zzjMo->getTag() + ".定位缺口";
 		string timeTag = "zzj"+to_string(imgInfo->sid);
 		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
 		{
