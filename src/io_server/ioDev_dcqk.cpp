@@ -2432,10 +2432,7 @@ time_t strToUnixTime(const std::string& strTime) {
 	return mktime(&tm);
 }
 
-void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
-{
-	DB_TIME stTime;
-
+void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
 	auto* pStation = prj.queryObj(m_strTagBind, "zh");
 	if (!pStation) {
 		return;
@@ -2465,7 +2462,9 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	if(tagToHumidity.find(zzjTag) != tagToHumidity.end() && tagToTemperature.find(zzjTag) != tagToTemperature.end()) {
 		string theTag = zzjMo->getTag() + ".缺口";
 
+		DB_TIME stTime;
 		stTime.fromStr(strTi);
+
 		string folder = db.getPath_dataFolder(theTag, stTime);
 		string imgPath = folder + "/" + stTime.toStampHMS() + ".jpg";
 		if (!db.fileExist(imgPath)) {
@@ -2475,7 +2474,7 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.at(zzjTag), tagToHumidity.at(zzjTag));
 
 			string sDE = Jfile.dump();
-			db.Insert(theTag, sDE);
+			db.Insert(theTag, sDE, &stTime);
 		}
 	}
 }
