@@ -2344,7 +2344,7 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 void uploadJson(json& mainJson, string time, WORD gapValue, BYTE imgType, WORD shift, BYTE shiftSymbol, short temper, WORD humi)
 {
 	mainJson["time"] = time;
-	mainJson["value"] = to_string(gapValue);
+	mainJson["value"] = to_string(gapValue * 1.0 / 100);
 	json alarmStatus;
 	alarmStatus["level"] = "alarm";
 	alarmStatus["lockgap"] = false;
@@ -2369,7 +2369,7 @@ void uploadJson(json& mainJson, string time, WORD gapValue, BYTE imgType, WORD s
 	json shiftvalue;
 	shiftvalue["name"] = "shiftvalue";
 	shiftvalue["label"] = "";
-	shiftvalue["value"] = to_string(shift);
+	shiftvalue["value"] = to_string(shift * 1.0 / 100);
 	shiftvalue["unit"] = "";
 	dataAttr.push_back(shiftvalue);
 
@@ -2383,13 +2383,13 @@ void uploadJson(json& mainJson, string time, WORD gapValue, BYTE imgType, WORD s
 	json temperature;
 	temperature["name"] = "temperature";
 	temperature["label"] = "";
-	temperature["value"] = temper;
+	temperature["value"] = temper * 1.0 / 100;
 	temperature["unit"] = "";
 	dataAttr.push_back(temperature);
 	json humidity;
 	humidity["name"] = "humidity";
 	humidity["label"] = "";
-	humidity["value"] = humi;
+	humidity["value"] = humi * 1.0 / 100;
 	humidity["unit"] = "";
 	dataAttr.push_back(humidity);
 	json diffvalue;
