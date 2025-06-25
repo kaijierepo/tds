@@ -2298,7 +2298,12 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		}
 		string zzj =zzjMo->getName("");
 		EnterCriticalSection(&m_csEqp);
-		string zzj315 = m_mapEqp[pRecord->sid]->eqpName;
+
+		string zzj315;
+		if (m_mapEqp.find(pRecord->sid) != m_mapEqp.end()) {
+			zzj315 = m_mapEqp[pRecord->sid]->eqpName;
+		}
+		
 		LeaveCriticalSection(&m_csEqp);
 		BYTE location = pRecord->fixorinvert;
 		BYTE acqreason = pRecord->gaptype;
@@ -2488,7 +2493,7 @@ bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::str
 		);
 	}
 
-	return false;
+	return updated;
 }
 
 void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
@@ -2508,30 +2513,22 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	}
 
 	string zzj = zzjMo->getName("");
+
 	EnterCriticalSection(&m_csEqp);
 	LeaveCriticalSection(&m_csEqp);
+
 	BYTE location = imgInfo->fixorinvert;
 	BYTE acqreason = imgInfo->imgtype;
-	TIME ti; ti.fromUnixTime(imgInfo->time);
+
+	TIME ti; 
+	ti.fromUnixTime(imgInfo->time);
+
 	string  strTi = timeopt::st2str(ti);
 	string zzjTag = zzjMo->getTag();
-	if (imgInfo->fixorinvert == 1 && tagToHumidity.find(zzjMo->getTag())!= tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
+
+	if(tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
 	{
-		string theTag = zzjMo->getTag() + ".反位缺口";
-		string timeTag = "zzj" + to_string(imgInfo->sid);
-		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
-		{
-			stTime.fromStr(strTi);
-			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
-			json Jfile;
-			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.find(zzjMo->getTag())->second, tagToHumidity.find(zzjMo->getTag())->second);
-			string sDE = Jfile.dump();
-			db.Insert(theTag, sDE);
-		}
-	}
-	else if(tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
-	{
-		string theTag = zzjMo->getTag() + ".定位缺口";
+		string theTag = zzjMo->getTag() + ".缺口";
 		string timeTag = "zzj"+to_string(imgInfo->sid);
 		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
 		{
