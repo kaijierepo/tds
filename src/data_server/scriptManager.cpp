@@ -311,6 +311,23 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 			json jSi;
 			si.toJson(jSi,getStatus);
 
+			json jRunInfo;
+			jRunInfo["tag"] = si.calcMpTag;
+			jRunInfo["script"] = si.script;
+			jRunInfo["retVal"] = si.lastRunInfo.retVal;
+			jRunInfo["runSuccess"] = si.lastRunInfo.runSuccess;
+			jRunInfo["valNullInCalc"] = si.lastRunInfo.valNullInCalc;
+
+			json jTagRefDataTime = json::object();
+			for (auto i : si.lastRunInfo.tagRefDataTime) {
+				jTagRefDataTime[i.first] = i.second;
+			}
+
+			jRunInfo["tagRefDataTime"] = jTagRefDataTime;
+			jRunInfo["runTime"] = si.lastExe.toStr(true);
+
+			jSi["runInfo"] = jRunInfo;
+
 			j.push_back(jSi);
 		}
 
@@ -537,8 +554,36 @@ void ScriptManager::exeAllGlobalScripts() {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-		se.runScript(si.script, si.lastModifyUser);
+		se.m_bValNullInCalc = false;
+
+		si.lastRunInfo.runSuccess = false;
+		si.lastRunInfo.valNullInCalc = false;
+
+		bool runOk = se.runScript(si.script, si.lastModifyUser);
+		if (!runOk) {
+			continue;
+		}
+
+		si.lastRunInfo.runSuccess = true;
+
+		if (se.m_bValNullInCalc) {
+			si.lastRunInfo.valNullInCalc = true;
+			continue;
+		}
+
+		json& jsonRet = se.m_sEvalRet;
+		si.lastRunInfo.retVal = jsonRet;
+		si.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 	}
+
+	m_csScripts.lock();
+	for (auto& si : toExeScripts) {
+		string name = si.name;
+		if (m_mapScripts.find(name) != m_mapScripts.end()) {
+			m_mapScripts.at(name).lastRunInfo = si.lastRunInfo;
+		}
+	}
+	m_csScripts.unlock();
 }
 
 /*
