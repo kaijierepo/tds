@@ -2432,70 +2432,6 @@ time_t strToUnixTime(const std::string& strTime) {
 	return mktime(&tm);
 }
 
-bool checkAndUpdateTimeStamp(string path, const std::string& tag, const std::string& timeStamp) {
-	char temp[256] = { 0 };
-	GetPrivateProfileString("config", "latestTime", "", temp, 256, path.c_str());
-	string timeList(temp);
-
-	if (!timeList.empty() && timeList.front() == '{')
-		timeList.erase(0, 1);
-	if (!timeList.empty() && timeList.back() == '}')
-		timeList.pop_back();
-
-	map<string, string> timeMap;
-	stringstream ss(timeList);
-	string item;
-
-	while (std::getline(ss, item, ',')) {
-		if (item.empty()) continue;
-		size_t equalPos = item.find('=');
-		if (equalPos != std::string::npos) {
-			std::string key = item.substr(0, equalPos);
-			std::string value = item.substr(equalPos + 1);
-
-			if (!key.empty()) {
-				timeMap[key] = value;
-			}
-		}
-	}
-
-	bool updated = false;
-	auto it = timeMap.find(tag);
-
-	string stringStamp = timeToString(strToUnixTime(timeStamp));
-	if (it == timeMap.end()) {
-		timeMap[tag] = stringStamp;
-		updated = true;
-	}
-	else if (stringStamp > it->second) {
-		timeMap[tag] = stringStamp;
-		updated = true;
-	}
-
-	if (updated) {
-		std::stringstream ss;
-		ss << "{";
-		bool first = true;
-
-		for (const auto& pair : timeMap) {
-			if (!first) ss << ",";
-			ss << pair.first << "=" << pair.second;
-			first = false;
-		}
-		ss << "}";
-		string outStr;
-		std::getline(ss, outStr);
-		BOOL result = WritePrivateProfileString(
-			"config",
-			"latestTime",
-			outStr.c_str(),
-			path.c_str()
-		);
-	}
-
-	return updated;
-}
-
 void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 {
 	DB_TIME stTime;
@@ -2523,25 +2459,26 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData)
 	TIME ti; 
 	ti.fromUnixTime(imgInfo->time);
 
-	string  strTi = timeopt::st2str(ti);
+	string strTi = timeopt::st2str(ti);
 	string zzjTag = zzjMo->getTag();
 
-	if(tagToHumidity.find(zzjMo->getTag()) != tagToHumidity.end() && tagToTemperature.find(zzjMo->getTag()) != tagToTemperature.end())
-	{
+	if(tagToHumidity.find(zzjTag) != tagToHumidity.end() && tagToTemperature.find(zzjTag) != tagToTemperature.end()) {
 		string theTag = zzjMo->getTag() + ".缺口";
-		string timeTag = "zzj"+to_string(imgInfo->sid);
-		if (checkAndUpdateTimeStamp(tds->conf->confPath + "/lastModify.ini", timeTag, strTi))
-		{
-			stTime.fromStr(strTi);
+
+		stTime.fromStr(strTi);
+		string folder = db.getPath_dataFolder(theTag, stTime);
+		string imgPath = folder + "/" + stTime.toStampHMS() + ".jpg";
+		if (!db.fileExist(imgPath)) {
 			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
+
 			json Jfile;
-			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.find(zzjMo->getTag())->second, tagToHumidity.find(zzjMo->getTag())->second);
+			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.at(zzjTag), tagToHumidity.at(zzjTag));
+
 			string sDE = Jfile.dump();
 			db.Insert(theTag, sDE);
 		}
 	}
 }
-
 
 void ThreadSaveGapAndPic(void* lpParam)
 {

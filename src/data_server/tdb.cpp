@@ -1214,33 +1214,31 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 	}
 
 	string deListFolderPath = getPath_dataFolder(strTag, stTime);
-	if(!fileExist(deListFolderPath))
+	if (!fileExist(deListFolderPath)) {
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
+	}
 
 	yyjson_doc* doc = yyjson_read(sDe.c_str(), sDe.length(), 0);
 	yyjson_mut_doc* mdoc = yyjson_doc_mut_copy(doc, NULL);
 	yyjson_val* yyDe = yyjson_doc_get_root(doc);
 	yyjson_mut_val* yymDe = yyjson_mut_doc_get_root(mdoc);
-	//if (yyjson_obj_get(yyDe, "time") == nullptr) {
-		yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
-		yyjson_mut_val* timeVal;
-		string sTime = stTime.toStr(true);
-		timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
-		yyjson_mut_obj_put(yymDe, timeKey, timeVal);
-	//}
+	yyjson_mut_val* timeKey = yyjson_mut_strcpy(mdoc, "time");
 
+	string sTime = stTime.toStr(true);
+	yyjson_mut_val* timeVal = yyjson_mut_strcpy(mdoc, sTime.data());
+	yyjson_mut_obj_put(yymDe, timeKey, timeVal);
 
 	//write file data
 	vector<string> fileUrl;
 	string fileType;
 	yyjson_val* yyv_file = yyjson_obj_get(yyDe, "file");
-	if (yyv_file)
-	{
+	if (yyv_file) {
 		//save to a directory name as timestamp
 		if (yyjson_is_arr(yyv_file)) {
 			string deFilesFolder = getDeFilesFolder(deListFolderPath, stTime);
-			if (!fileExist(deFilesFolder))
+			if (!fileExist(deFilesFolder)) {
 				DB_FS::createFolderOfPath(deFilesFolder.c_str());
+			}
 
 			size_t idx = 0;
 			size_t max = 0;
