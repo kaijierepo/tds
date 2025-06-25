@@ -574,6 +574,29 @@ void ScriptManager::exeAllGlobalScripts() {
 		json& jsonRet = se.m_sEvalRet;
 		si.lastRunInfo.retVal = jsonRet;
 		si.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
+
+		if (jsonRet.is_number()) {
+			double val = jsonRet.get<double>();
+
+			json jParams;
+			jParams["tag"] = si.calcMpTag;
+			jParams["val"] = val;
+
+			//最后的val取值时间作为计算结果的时间
+			if (se.m_vecValRefTime.size() > 0) {
+				map<string, string> refTime;
+				for (auto iter : se.m_vecValRefTime) {
+					refTime[iter.second] = iter.second;
+				}
+
+				auto iter = refTime.rbegin();
+				jParams["time"] = iter->first;
+			}
+
+#ifdef TDS
+			tds->callAsyn("input", jParams);
+#endif
+		}
 	}
 
 	m_csScripts.lock();
