@@ -60,6 +60,8 @@ public:
 	json m_curOrgVal; //未经过倍率转换的
 	unsigned short m_regOffset;  // 如果是寄存器，偏移1代表2字节；如果是线圈偏移，偏移1代表1个bit
 	string m_regType; //modbus寄存器类型
+	bool m_bCustomOutputType = false;
+	string m_sCustomOutputType = "";
 	string m_fmt;
 	string m_byteOrder;
 	int m_regBitIndex;

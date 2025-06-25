@@ -96,38 +96,48 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 
 	MB_PDU pduReq;
 	if (pC->m_regType == MODBUS_REG_TYPE::holdingRegister)
-	{
-		
+	{	
 		if (pC->m_fmt == STORAGE_FMT::Bit16No)
 		{
 			if (jVal.is_boolean())
 			{
-				PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
-				pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
-				pCmd->setOffset(pC->m_regOffset);
+				unsigned short mbVal;
 				bool val = jVal.get<bool>();
 				if (val)
 				{
 					unsigned short mask = 1 << pC->m_regBitIndex;
 					unsigned short outputVal = pC->holdingRegVal | mask;
-
-					unsigned short mbVal;
-					char* pBuff = (char*)&mbVal;
-					mbBuff2Local((char*)&outputVal, pBuff, pC->m_byteOrder, 2);
-					pCmd->setVal(mbVal);
+					mbVal = outputVal;
 				}
 				else
 				{
 					unsigned short a = pC->holdingRegVal; // 初始值
 					unsigned short mask = ~(1 << pC->m_regBitIndex);
 					a = a & mask;
-
-					unsigned short mbVal;
-					char* pBuff = (char*)&mbVal;
-					mbBuff2Local((char*)&a, pBuff, pC->m_byteOrder, 2);
-					pCmd->setVal(mbVal);
+					mbVal = a;
 				}
-				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+
+				if (pC->m_bCustomOutputType && pC->m_sCustomOutputType == "writeMultipleRegister")
+				{
+					PDU_REQ_writeMultiReg* pCmd = new PDU_REQ_writeMultiReg();
+					pCmd->func_code = MB_FUNC_CODE::writeMultipleRegister;
+					pCmd->setStartReg(pC->m_regOffset);
+					pCmd->setRegNum(1);
+					pCmd->byte_count = 2;
+					json tempVal = mbVal;
+					setChanValToRegBuff(pC, tempVal, pCmd->reg_data);
+
+					pduReq.setData(pCmd, pCmd->getSize());
+				}
+				else
+				{
+					PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
+					pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
+					pCmd->setOffset(pC->m_regOffset);
+					pCmd->setVal(mbVal);
+
+					pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+				}
 			}
 			else
 			{
@@ -142,21 +152,35 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 			int regCount = regDataLen / 2;
 			if (regCount == 1) //
 			{
-				PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
-				pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
-				pCmd->setOffset(pC->m_regOffset);
-				if (pC->m_fmt == STORAGE_FMT::UInt16)
+				if (pC->m_bCustomOutputType && pC->m_sCustomOutputType == "writeMultipleRegister")
 				{
-					unsigned short usVal = jVal.get<unsigned short>();
-					pCmd->setVal(usVal);
-				}
-				else if (pC->m_fmt == STORAGE_FMT::Int16)
-				{
-					short usVal = jVal.get<short>();
-					pCmd->setVal(usVal);
-				}
+					PDU_REQ_writeMultiReg* pCmd = new PDU_REQ_writeMultiReg();
+					pCmd->func_code = MB_FUNC_CODE::writeMultipleRegister;
+					pCmd->setStartReg(pC->m_regOffset);
+					pCmd->setRegNum(regCount);
+					pCmd->byte_count = regDataLen;
+					setChanValToRegBuff(pC, jVal, pCmd->reg_data);
 
-				pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+					pduReq.setData(pCmd, pCmd->getSize());
+				}
+				else
+				{
+					PDU_REQ_writeSingleReg* pCmd = new PDU_REQ_writeSingleReg();
+					pCmd->func_code = MB_FUNC_CODE::writeSingleRegister;
+					pCmd->setOffset(pC->m_regOffset);
+					if (pC->m_fmt == STORAGE_FMT::UInt16)
+					{
+						unsigned short usVal = jVal.get<unsigned short>();
+						pCmd->setVal(usVal);
+					}
+					else if (pC->m_fmt == STORAGE_FMT::Int16)
+					{
+						short usVal = jVal.get<short>();
+						pCmd->setVal(usVal);
+					}
+
+					pduReq.setData(pCmd, sizeof(PDU_REQ_writeSingleReg));
+				}
 			}
 			else
 			{
@@ -215,6 +239,10 @@ void ioDev_ModbusSlave::handle_pduResp_read(PDU_REQ_read* req,PDU_RESP_read* res
 	for (auto i : m_mapDataChannel)
 	{
 		ioChannel* pC = i.second;
+		
+		//判断一下如果绑定的位号只输出,则不进行读取
+		if (pC->m_ioType == "o") continue;
+
 		unsigned char FCode = pPduReq->func_code;
 		json jVal = nullptr;
 		//根据当前读取的modbusReg缓存类型，将值设置到对应的通道类型
@@ -679,6 +707,12 @@ void ioDev_ModbusSlave::setChanValToRegBuff(ioChannel* pC, json jVal, char* pReg
 			float mbVal = jVal.get<float>();
 			char* pBuff = (char*)&mbVal;
 			Local2MbBuff(pRegData, pBuff, byteOrder, 4);
+		}
+		else if (storageFmt == STORAGE_FMT::Bit16No)
+		{
+			unsigned short mbVal = jVal.get<unsigned short>();
+			common::endianSwap((char*)&mbVal, 2);
+			memcpy(pRegData, &mbVal, 2);
 		}
 	}
 	else if (pC->m_regType == MODBUS_REG_TYPE::coil)

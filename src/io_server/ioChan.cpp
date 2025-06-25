@@ -64,6 +64,16 @@ bool ioChannel::loadConf(json& conf)
 			m_regBitIndex = conf["addr"]["regBitIndex"].get<int>();
 	}
 
+	if (conf["isCustomOutputType"] != nullptr)
+	{
+		m_bCustomOutputType = conf["isCustomOutputType"].get<bool>();
+	}
+
+	if (conf["customOutputType"] != nullptr)
+	{
+		m_sCustomOutputType = conf["customOutputType"].get<string>();
+	}
+
 	if (conf["fmt"] != nullptr) {
 		m_fmt = conf["fmt"].get<string>();
 	}
@@ -124,6 +134,12 @@ bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 
 		if (m_byteOrder != "")
 			conf["byteOrder"] = m_byteOrder;
+
+		if (m_bCustomOutputType)
+		{
+			conf["isCustomOutputType"] = m_bCustomOutputType;
+			conf["customOutputType"] = m_sCustomOutputType;
+		}
 
 		if (m_bDownSample)
 		{
