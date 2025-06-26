@@ -54,6 +54,7 @@ using json = nlohmann::json;
 
 string TDS_LAST_ERROR();
 
+
 namespace str {
 	//format
 	std::string format(const char* pszFmt, ...);	
@@ -277,6 +278,17 @@ namespace IO_TYPE {
 	const string InAndOut = "io";
 	const string Const = "c";
 	const string InnerVar = "v";
+}
+
+namespace JSON_STR {
+	inline bool is_bool(const string& s) {
+		if (s == "true" || s == "false") { return true; }
+		return false;
+	}
+	inline bool is_null(const string& s) {
+		if (s == "null") { return true; }
+		return false;
+	}
 }
 
 
