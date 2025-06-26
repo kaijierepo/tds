@@ -2374,8 +2374,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			else {
 				for (int i = 0; i < mpList.size(); i++) {
 					MP* pmp = mpList[i];
-					if (pmp->m_curVal.is_number()) {
-						double val = pmp->m_curVal.get<double>();
+					if (JSON_STR::is_num(pmp->m_curVal)) {
+						double val = JSON_STR::get_num(pmp->m_curVal);
 						dbSum += val;
 					}
 					else {
@@ -2414,8 +2414,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			bool success = true;
 			for (int i = 0; i < mpList.size(); i++) {
 				MP* pmp = mpList[i];
-				if (pmp->m_curVal.is_number()) {
-					double val = pmp->m_curVal.get<double>();
+				if (JSON_STR::is_num(pmp->m_curVal)) {
+					double val = JSON_STR::get_num(pmp->m_curVal);
 					dbSum += val;
 					calcCount++;
 				}
@@ -4374,8 +4374,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 		if (!val.is_boolean())
 		{
 			if (val.is_string() && val.get<string>() == "取反") {
-				if (pmp->m_curVal.is_boolean())
-					val = !pmp->m_curVal.get<bool>();
+				if (JSON_STR::is_bool(pmp->m_curVal))
+					val = !JSON_STR::get_bool(pmp->m_curVal);
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
@@ -4384,8 +4384,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 			}
 			else if (val.is_null()) //开关量输出值省略 表示输出当前值取反
 			{
-				if(pmp->m_curVal.is_boolean())
-					val = !pmp->m_curVal.get<bool>();
+				if (JSON_STR::is_bool(pmp->m_curVal))
+					val = !JSON_STR::get_bool(pmp->m_curVal);
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
@@ -4423,9 +4423,9 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 					return;
 				}
 			}
-			else if (val.is_string() && val.get<string>() == "取反" && pmp->m_curVal.is_number_integer()) {
+			else if (val.is_string() && val.get<string>() == "取反" && JSON_STR::is_int(pmp->m_curVal)) {
 				//modbus寄存器在工程实践中，常常用03保持寄存器0，1数值代表一个bool量
-				int iVal = pmp->m_curVal.get<int>();
+				int iVal = JSON_STR::get_int(pmp->m_curVal);
 				if (iVal != 0) {
 					val = 0;
 				}
@@ -4490,6 +4490,7 @@ struct INPUT_DE {
 	json file;
 	json ioAddr;
 	json valAttr;
+	bool hasAttr;
 	string sTime;
 	TIME time;
 };
@@ -4627,6 +4628,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 				de.online = online;
 				de.file = file;
 				de.valAttr= getValAttr(params);
+				de.hasAttr = de.valAttr.size() > 0;
 				if (time.is_string()) {
 					de.sTime = time;
 					de.time = timeopt::str2st(de.sTime);
@@ -4726,7 +4728,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 				if (pmp)
 				{
 					pmp->input(val, &file, &de.time);
-					if (pmp->m_bEnableIO) {
+					if (pmp->m_bEnableIO && de.hasAttr) {
 						pmp->m_curValAttr = de.valAttr;
 						vecMps.push_back(pmp);
 					}
@@ -4783,7 +4785,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 				MP* pmp = vecMps[i];
 				json jDe;
 				jDe["tag"] = pmp->getTag("",session.language);
-				jDe["val"] = pmp->m_curVal;
+				jDe["val"] = json::parse(pmp->m_curVal);
 				jDe["file"] = pmp->m_curFileData;
 				jDe["time"] = pmp->m_stDataLastUpdate.toStr();
 				jDe["valDesc"] = pmp->getValDesc(false);
@@ -5346,7 +5348,7 @@ void rpcHandler::toMoAttr(Mo_Attr_Params& params, OBJ* pMo, nlohmann::ordered_js
 		MP* pmp = aryMps[j];
 		json jVal;
 		if (params.valFmt == "val") {
-			jVal = pmp->m_curVal;
+			jVal = json::parse(pmp->m_curVal);
 		}
 		else if (params.valFmt == "valStr") {
 			jVal = pmp->getValDesc(false);
@@ -5623,7 +5625,7 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 					}
 					else// (valFmt == "val") 
 					{
-						jTableRow.push_back(pmp->m_curVal);
+						jTableRow.push_back(json::parse(pmp->m_curVal));
 					}
 				}
 				else {

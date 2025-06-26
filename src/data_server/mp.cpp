@@ -203,8 +203,8 @@ bool MP::loadConf(json& conf,bool bCreate)
 			m_defaultVal = strVal2Val(conf["defaultVal"].dump());
 		}
 
-		if (m_defaultVal != nullptr && m_curVal == nullptr) {
-			m_curVal = m_defaultVal;
+		if (m_defaultVal != nullptr && JSON_STR::is_null(m_curVal)) {
+			m_curVal = m_defaultVal.dump();
 		}
 	}
 
@@ -433,8 +433,8 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 			m_defaultVal = strVal2Val(result);
 		}
 
-		if (m_defaultVal != nullptr && m_curVal == nullptr) {
-			m_curVal = m_defaultVal;
+		if (m_defaultVal != nullptr && JSON_STR::is_null(m_curVal)) {
+			m_curVal = m_defaultVal.dump();
 		}
 	}
 
@@ -530,13 +530,13 @@ bool MP::loadStatus(yyjson_val* status)
 		}
 	}
 
-	m_lastVal = m_curVal;
+	m_lastVal = json::parse(m_curVal);
 	yyjson_val* yyVal = yyjson_obj_get(status,"val");
 	if (yyVal) {
-		m_curVal = json::parse(yyjson_val_write(yyVal,0,nullptr));
+		m_curVal = yyjson_val_write(yyVal,0,nullptr);
 	}
 	else
-		m_curVal = nullptr;
+		m_curVal = JSON_STR::getNull();
 	m_stDataLastUpdate = t;
 
 	return true;
@@ -669,7 +669,7 @@ bool MP::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType , cons
 
 	if (q.getStatus || q.getVal)
 	{
-		conf["val"] = m_curVal;
+		conf["val"] = json::parse(m_curVal);
 		if (timeopt::isValidTime(m_stDataLastUpdate))
 			conf["time"] = timeopt::st2str(m_stDataLastUpdate);
 		else
@@ -945,7 +945,7 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 
 	if (q.getStatus || q.getVal) {
 		yyjson_mut_val* key = yyjson_mut_strcpy(doc, "val");
-		string sVal = m_curVal.dump();
+		string sVal = m_curVal;
 		yyjson_doc* read_doc = yyjson_read_opts((char*)sVal.c_str(), sVal.size(), 0, NULL, NULL);
 		yyjson_mut_val* val;
 		if (read_doc) {
@@ -1069,7 +1069,8 @@ string MP::getValDesc(json& jVal,bool getUnit) {
 
 
 string MP::getValDesc(bool getUnit) {
-	return getValDesc(m_curVal, getUnit);
+	json temp = json::parse(m_curVal);
+	return getValDesc(temp, getUnit);
 }
 
 bool MP::loadTreeStatus(OBJ* pSrc)
@@ -1102,9 +1103,9 @@ bool MP::loadObjStatus(OBJ* pSrcObj)
 
 void MP::calcAlarm()
 {
-	if (m_curVal.is_number())
+	if (JSON_STR::is_num(m_curVal))
 	{
-		double dbCurVal = m_curVal.get<double>();
+		double dbCurVal = JSON_STR::get_num(m_curVal);
 		//计算报警
 		if (m_alarmLimit.enableHigh)
 		{
@@ -1166,7 +1167,7 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 	}
 
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0) {
-		string sLastVal = m_curVal.dump();
+		string sLastVal = m_curVal;
 		string newVal = jVal.dump();
 		//特殊情况，数据更新时间没有改变，但是数据却改变了，可能发生在二次计算监控点利用脚本算出了一个错误数值
 		//后续脚本更新，算出正确数值，但是由于时间都使用了计算脚本引用的监控点的时间，该监控点更新时间不改变的话
@@ -1262,8 +1263,8 @@ void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 		pParentMo->m_stDataLastUpdate = *pDataTime;
 
 	//save to rt memory
-	m_lastVal = m_curVal;
-	m_curVal = jVal;
+	m_lastVal = json::parse(m_curVal);
+	m_curVal = jVal.dump();
 
 	if(fileData != nullptr)
 		m_curFileData = *fileData;
@@ -1281,22 +1282,22 @@ void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 	//特殊的属性监测点
 	if (m_name == "经度")
 	{
-		m_pParentMO->m_longitudeDyn = m_curVal;
+		m_pParentMO->m_longitudeDyn = JSON_STR::is_num(m_curVal) ? JSON_STR::get_num(m_curVal) : m_pParentMO->m_longitudeDyn;
 	}
 	else if (m_name == "纬度")
 	{
-		m_pParentMO->m_latitudeDyn = m_curVal;
+		m_pParentMO->m_latitudeDyn = JSON_STR::is_num(m_curVal) ? JSON_STR::get_num(m_curVal) : m_pParentMO->m_latitudeDyn;
 	}
 
 
 	m_pParentMO->m_bOnline = true;
 
 
-	if (m_alarmMp && m_curVal.is_boolean()) //是一个报警监控点，更新报警
+	if (m_alarmMp && JSON_STR::is_bool(m_curVal)) //是一个报警监控点，更新报警
 	{
 		ALARM_INFO ai;
 		ai.type = m_name;
-		if (m_curVal.get<bool>() == true)
+		if (JSON_STR::get_bool(m_curVal))
 			ai.level = ALARM_LEVEL::alarm;
 		else
 			ai.level = ALARM_LEVEL::normal;
@@ -1309,7 +1310,7 @@ void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
 bool MP::needSaveToDB()
 {
 	bool bNeedSave = false;
-	if (m_curVal != nullptr)
+	if (!JSON_STR::is_null(m_curVal))
 	{
 		int timePassLastSave = timeopt::CalcTimeDiffSecond(m_stDataLastUpdate, m_lastSaveTime);
 		//save to db
@@ -1325,17 +1326,17 @@ bool MP::needSaveToDB()
 		
 		if (m_saveMode.find("onchange") != string::npos)
 		{
-			if (m_curVal.is_number() && m_lastVal.is_number()) {
+			if (JSON_STR::is_num(m_curVal) && m_lastVal.is_number()) {
 				double last = m_lastVal.get<double>();
-				double cur = m_curVal.get<double>();
+				double cur = JSON_STR::get_num(m_curVal);
 				double diff = fabs(last - cur);
 				if (diff > m_deadZone && diff > 0.00001) {
 					bNeedSave = true;
 				}
 			}
-			else if (m_curVal.is_boolean() && m_lastVal.is_boolean()) {
+			else if (JSON_STR::is_bool(m_curVal) && m_lastVal.is_boolean()) {
 				bool last = m_lastVal.get<bool>();
-				bool cur = m_curVal.get<bool>();
+				bool cur = JSON_STR::get_bool(m_curVal);
 				if (last != cur) {
 					bNeedSave = true;
 				}
@@ -1368,8 +1369,8 @@ void MP::saveToDB() {
 	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
 
 	string sFileData;
-	if(m_curVal != nullptr)
-		jDE["val"] = m_curVal;
+	if (!JSON_STR::is_null(m_curVal))
+		jDE["val"] = json::parse(m_curVal);
 	if (m_curFileData != nullptr)
 	{
 		sFileData = m_curFileData.dump();
@@ -1414,7 +1415,7 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 		pDev->call("output", params, nullptr, childRlt, childErr, sync);
 		if (childRlt != nullptr) {
 			rlt = params;
-			m_curVal = jVal;
+			m_curVal = jVal.dump();
 			timeopt::now(&m_stDataLastUpdate);
 			LOG("[warn][数据输出  ]请求子服务 成功，tag=%s,子服务名称:%s,返回:%s", tag.c_str(), childTdsTag.c_str(),rlt.dump().c_str());
 		}
@@ -1450,7 +1451,7 @@ void MP::output(json jVal, json& rlt, json& err,bool sync)
 
 bool MP::IsCurValValid()
 {
-	return !m_curVal.empty();
+	return !JSON_STR::is_null(m_curVal);
 }
 
 string MP::getMpTypeLabel()

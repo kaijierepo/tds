@@ -49,6 +49,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #include <map>
 #include "tds.h"
 #include "json.hpp"
+#include "yyjson.h"
 using namespace std;
 using json = nlohmann::json;
 
@@ -288,6 +289,86 @@ namespace JSON_STR {
 	inline bool is_null(const string& s) {
 		if (s == "null") { return true; }
 		return false;
+	}
+	inline bool is_num(const string& s)
+	{
+		auto doc = yyjson_read(s.c_str(), s.size(), 0);
+		if (!doc) return false;
+		auto root = yyjson_doc_get_root(doc);
+		if (!root) return false;
+		bool bResult = yyjson_is_num(root);
+		yyjson_doc_free(doc);
+		return bResult;
+	}
+	inline bool is_str(const string& s)
+	{
+		auto doc = yyjson_read(s.c_str(), s.size(), 0);
+		if (!doc) return false;
+		auto root = yyjson_doc_get_root(doc);
+		if (!root) return false;
+		bool bResult = yyjson_is_str(root);
+		yyjson_doc_free(doc);
+		return bResult;
+	}
+	inline bool is_int(const string& s)
+	{
+		auto doc = yyjson_read(s.c_str(), s.size(), 0);
+		if (!doc) return false;
+		auto root = yyjson_doc_get_root(doc);
+		if (!root) return false;
+		bool bResult = yyjson_is_int(root);
+		yyjson_doc_free(doc);
+		return bResult;
+	}
+	
+	inline bool get_bool(const string& s)
+	{
+		if (s == "true") return true;
+		else if (s == "false") return false;
+		else false;
+	}
+	inline string getNull()
+	{
+		return "null";
+	}
+	inline double get_num(const string& s)
+	{
+		if (is_num(s))
+		{
+			auto doc = yyjson_read(s.c_str(), s.size(), 0);
+			auto root = yyjson_doc_get_root(doc);
+			double iResult = yyjson_get_num(root);
+			yyjson_doc_free(doc);
+			return iResult;
+		}
+		else
+			return 0.0;
+	}
+	inline string get_str(const string& s)
+	{
+		if (is_str(s))
+		{
+			auto doc = yyjson_read(s.c_str(), s.size(), 0);
+			auto root = yyjson_doc_get_root(doc);
+			string iResult = yyjson_get_str(root);
+			yyjson_doc_free(doc);
+			return iResult;
+		}
+		else
+			return "";
+	}
+	inline int get_int(const string& s)
+	{
+		if (is_int(s))
+		{
+			auto doc = yyjson_read(s.c_str(), s.size(), 0);
+			auto root = yyjson_doc_get_root(doc);
+			double iResult = yyjson_get_int(root);
+			yyjson_doc_free(doc);
+			return iResult;
+		}
+		else
+			return 0;
 	}
 }
 

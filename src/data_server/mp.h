@@ -149,7 +149,7 @@ public:
 	// curValValid = true 表示 m_curVal!=null
 	// curValValid = false 表示 m_curVal==null
 	json m_orgVal;
-	json m_curVal;   
+	string m_curVal = "null";
 	json m_curValAttr;  //与val同级的Attri
 	json m_curFileData;
 	json m_lastVal;

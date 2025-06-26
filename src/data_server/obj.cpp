@@ -1209,7 +1209,7 @@ bool OBJ::saveStatus(json& statusNode)
 	statusNode["name"] = m_name;
 	if (m_level == "mp") {
 		MP* pmp = (MP*)this;
-		statusNode["val"] = pmp->m_curVal;
+		statusNode["val"] = json::parse(pmp->m_curVal);
 		statusNode["time"] = pmp->m_stDataLastUpdate.toStr();
 	}
 
@@ -1235,7 +1235,7 @@ bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
 	if (m_level == "mp") {
 		MP* pmp = (MP*)this;
 		yykey = yyjson_mut_strcpy(doc, "val");
-		string sCurVal = pmp->m_curVal.dump();
+		string sCurVal = pmp->m_curVal;
 		yyjson_doc* d = yyjson_read(sCurVal.c_str(), sCurVal.size(), 0);
 		yyjson_val* r = yyjson_doc_get_root(d);
 		yyval = yyjson_val_mut_copy(doc, r);
@@ -1961,8 +1961,8 @@ void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
 
 		if (m_level == "mp") {
 			MP* pmp = (MP*)this;
-			if (pmp->m_curVal.is_string()) {
-				string sCur = pmp->m_curVal.get<string>();
+			if (JSON_STR::is_str(pmp->m_curVal)) {
+				string sCur = JSON_STR::get_str(pmp->m_curVal);
 				if (sCur == "报警") {
 					os.alarm++;
 				}
