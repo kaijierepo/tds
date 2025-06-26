@@ -8,6 +8,7 @@
 #include <limits>
 #include <cmath>
 #include "logger.h"
+#include "quickjs.h"
 
 thread_local ScriptEngine* pEngine;
 
@@ -680,13 +681,12 @@ extern "C" {
             return JS_NULL;
         }
 
-        // 获取字符串
-        const char* s = JS_ToCString(ctx, argv[0]);
+        size_t len = 0;
+        const char* s = JS_ToCStringLen(ctx, &len, argv[0]);
         if (!s) {
             return JS_NULL;
         }
 
-        size_t len = strlen(s);
         JSValue arr = JS_NewArray(ctx);
         for (size_t i = 0; i < len; ++i) {
             unsigned char ucb = static_cast<unsigned char>(s[i]);
