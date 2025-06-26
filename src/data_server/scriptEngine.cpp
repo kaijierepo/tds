@@ -7,6 +7,7 @@
 #include "yyjson.h"
 #include <limits>
 #include <cmath>
+#include "logger.h"
 
 thread_local ScriptEngine* pEngine;
 
@@ -267,11 +268,11 @@ extern "C" {
         const char* stack = JS_ToCString(ctx, stackVal);
 
         if (stack) {
-            printf("%s\n", stack);
+            LOG("%s\n", stack);
             JS_FreeCString(ctx, stack);
         }
         else {
-            printf("No backtrace available\n");
+            LOG("No backtrace available\n");
         }
 
         JS_FreeValue(ctx, stackVal);

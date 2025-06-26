@@ -50,29 +50,33 @@ int _vscprintf_cross_log(const char* format, va_list pargs) {
 }
 
 Clogger logger;
-void LOG(const char* pszFmt, ...)
-{
+
+void LOG(const char* pszFmt, ...) {
 	std::string str;
 	va_list args;
+
 	va_start(args, pszFmt);
+
 	{
 		int nLength = _vscprintf_cross_log(pszFmt, args);
 		nLength += 1;  //上面返回的长度是包含\0，这里加上
+
 		std::vector<char> vectorChars(nLength);
 		vsnprintf(vectorChars.data(), nLength, pszFmt, args);
+
 		str.assign(vectorChars.data());
 	}
+
 	va_end(args);
+
 	LOG(str);
 }
 
-void LOG(string info)
-{
+void LOG(string info) {
 	logger.log(info);
 }
 
-void loggingCB(char* info)
-{
+void LOG_C(char* info) {
 	logger.log(info);
 }
 
@@ -169,43 +173,36 @@ string Clogger::logInternal(string info, bool writeToFile)
 		info = str::trim(info, "[keyinfo]");
 	}
 	
-
 	TIME stNow;
 	timeopt::now(&stNow);
+
 	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+
 	//命令行和文件中的日志用gb2312编码
 	string logline = time + " " + info;
 
 	//logLevel用户控制本地命令行界面和日志文件当中是否记录。weblog监视统一全部推送
-	if (ll < logLevel)
+	if (ll < logLevel) {
 		return logline;
+	}
 
 #ifdef _WIN32
 	info = charCodec::utf8_to_gb(logline);
 #else
 	info = logline;
 #endif
+
 	setConsoleTextColor(ll);
+
 	cout << info;
 	printf("\r\n");
-	//std::cout << info << std::endl; 这句话在 AllocConsole 生成的命令行中不输出了
 
 	if (writeToFile && m_strLogDir!="") {
 		//create log path
 		std::lock_guard<mutex> lockGuard(m_lock);
-		//if (!dirCreated)
-		//{
-		//	wstring strLogDir = charCodec::utf8toUtf16(fs::appPath() + "\\log");
-		//	DWORD dwAttr = ::GetFileAttributesW(strLogDir.c_str());
-		//	if ((dwAttr == -1) || ((dwAttr & FILE_ATTRIBUTE_DIRECTORY) == 0))
-		//	{
-		//		::CreateDirectoryW(strLogDir.c_str(), NULL);
-		//	}
-		//	dirCreated = true;
-		//}
+	
 		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
 		fs::createFolderOfPath(m_strLogDir);
-
 
 		//save to log file
 		string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
@@ -213,33 +210,19 @@ string Clogger::logInternal(string info, bool writeToFile)
 		fs::appendFile(strFile, info + "\r\n");
 	}
 
-#ifdef _TDS
-	//if (ll == LOG_LEVEL::LL_ERROR)
-	//{
-	//	if (tds->conf->bCreateDumpWhenLogError)
-	//	{
-	//		int iRet = ::MessageBox(NULL, charCodec::utf8_to_gb("CreateDumpWhenLogError功能开启,错误日志,是否截取dump").c_str(), "CreateDumpWhenLogError", MB_OKCANCEL);
-	//		if (iRet = IDOK)
-	//		{
-	//			CDumpCatch::createDump(NULL);
-	//		}
-	//	}
-	//}
-#endif
-
 	return logline;
 }
 
-void Clogger::log(string info, bool writeToFile)
-{
-	if (LL_NONE == logLevel)
+void Clogger::log(string info, bool writeToFile) {
+	if (LL_NONE == logLevel) {
 		return;
+	}
+
 	//logInternal only log to file and cmdline
 	//log will log to some user specified place, the code must not trigger log again
 	//log to websocket code routine must not use log, but use logInternal
 	string log = logInternal(info);
-	if (log != "" && logOutput)
-	{
+	if (log != "" && logOutput) {
 		logOutput(log);
 	}
 }

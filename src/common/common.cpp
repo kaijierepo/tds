@@ -1555,30 +1555,39 @@ namespace fs {
 	string appPath()
 	{
 		string str;
+
 		//不要使用std::filesystem::current_path(),这个是当前运行目录，和程序目录可能不一致
+
 #ifdef _WIN32
 		//windows获取到的是反斜杠，tds内统一使用斜杠
 		TCHAR p[MAX_PATH] = { 0 };
 		GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+
 		string strPath = (char*)p;
 		size_t nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+
 		strPath = strPath.substr(0, nEnd);
 		strPath = charCodec::gb_to_tds(strPath);
+
 		str = str::replace(strPath, "\\", "/");
 #else 
 		char* p = NULL;
 		const int len = 256;
+
 		/// to keep the absolute path of executable's path
 		char arr_tmp[len] = { 0 };
 		int n = readlink("/proc/self/exe", arr_tmp, len);
-		if (NULL != (p = strrchr(arr_tmp, '/')))
+
+		if (NULL != (p = strrchr(arr_tmp, '/'))) {
 			*p = '\0';
-		else
-		{
+		}
+		else {
 			return std::string("");
 		}
+
 		str = arr_tmp;
 #endif
+
 		return str;
 	}
 
