@@ -34,7 +34,13 @@ void ioDev_ModbusSlave::stop()
 
 void ioDev_ModbusSlave::getIOTypeByMBDataType(ioChannel* p)
 {
-	if (p->m_regType == MODBUS_REG_TYPE::coil || p->m_regType == MODBUS_REG_TYPE::holdingRegister)
+	//这里增加一个特殊的机制,用于广达的开合闸功能
+	//如果选择了自定义输出类型,则认为他是仅输出.
+	if (p->m_bCustomOutputType)
+	{
+		p->m_ioType = CHAN_IO_TYPE::O;
+	}
+	else if (p->m_regType == MODBUS_REG_TYPE::coil || p->m_regType == MODBUS_REG_TYPE::holdingRegister)
 	{
 		p->m_ioType = CHAN_IO_TYPE::IO;
 	}
@@ -240,8 +246,9 @@ void ioDev_ModbusSlave::handle_pduResp_read(PDU_REQ_read* req,PDU_RESP_read* res
 	{
 		ioChannel* pC = i.second;
 		
-		//判断一下如果绑定的位号只输出,则不进行读取
-		if (pC->m_ioType == "o") continue;
+		//如果是仅输出,不进行读取.
+		//如果未绑定对应位置,不进行读取.
+		if (pC->m_ioType == "o" || pC->m_strTagBind == "") continue;
 
 		unsigned char FCode = pPduReq->func_code;
 		json jVal = nullptr;
