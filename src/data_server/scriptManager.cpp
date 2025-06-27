@@ -8,6 +8,7 @@
 #endif
 
 #include "common.h"
+#include "tdb.h"
 
 ScriptManager scriptManager;
 
@@ -24,10 +25,11 @@ void scriptThread(ScriptManager* p){
 #ifdef ENABLE_QJS
 	p->loopExe();
 #endif
+
+	p->m_bRun = false;
 }
 
 ScriptManager::ScriptManager() {
-	loopRunning = false;
 	m_bRun = false;
 	m_bEnable = true;
 	m_bEnableAutoCyclic = true;
@@ -65,18 +67,21 @@ bool ScriptManager::init() {
 }
 
 bool ScriptManager::run() {
-	//该配置一般用于临时关闭脚本调用，方便调试打断点
 #ifdef TDS
 	if (tds->conf->getInt("enableScript", 1) == 0) {
-		return true;
-}
+		return false;
+	}
 #endif
+
+	if (m_bRun) {
+		return false;
+	}
 
 	m_bRun = true;
 	thread t(scriptThread, this);
 	t.detach();
 
-	return false;
+	return true;
 }
 
 void ScriptManager::setConfPath(const string& conf) {
@@ -90,12 +95,14 @@ bool ScriptManager::hasScripts() {
 			return true;
 		}
 	}
+	
 	{
 		unique_lock<mutex> lock(m_csExpScripts);
 		if (m_vecVarExpScripts.size() > 0) {
 			return true;
 		}
 	}
+	
 	return false;
 }
 
@@ -199,7 +206,9 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		}
 
 		SCRIPT_INFO si;
+		si.lastExe = timeopt::now();
 		si.org = session.org;
+
 		if (params.contains("rootTag")) {
 			si.rootTag = params["rootTag"];
 		}
@@ -241,7 +250,8 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 			}
 		}
 
-		se.runScript(s,session.user);
+		bool runOk = se.runScript(s,session.user);
+		si.lastRunInfo.runSuccess = runOk;
 
 		json jOutput = json::array();
 		if (getExpRet) {
@@ -254,12 +264,21 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		}
 		
 		rpcResp.result = jOutput.dump();
+
+		m_csScripts.lock();
+		if (m_mapScripts.find(si.name) != m_mapScripts.end()) {
+			m_mapScripts.at(si.name).lastExe = si.lastExe;
+			m_mapScripts.at(si.name).lastRunInfo = si.lastRunInfo;
+		}
+		m_csScripts.unlock();
 	}
 	else { 	//执行保存的脚本文件
 		string scriptName = params["name"].get<string>();
 
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
+			si.lastExe = timeopt::now();
+
 			ScriptEngine se;
 
 #ifdef TDS
@@ -267,7 +286,11 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 #endif
 
 			se.m_tagContext = si.getContextTag();
-			if (se.runScript(si.script, si.lastModifyUser)) {
+
+			bool runOk = se.runScript(si.script, si.lastModifyUser);
+			si.lastRunInfo.runSuccess = runOk;
+
+			if (runOk) {
 				rpcResp.result = "\"ok\"";
 			}
 			else {
@@ -275,7 +298,12 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 				rpcResp.error = jError.dump();
 			}
 
-			si.lastExe = timeopt::now();
+			m_csScripts.lock();
+			if (m_mapScripts.find(si.name) != m_mapScripts.end()) {
+				m_mapScripts.at(si.name).lastExe = si.lastExe;
+				m_mapScripts.at(si.name).lastRunInfo = si.lastRunInfo;
+			}
+			m_csScripts.unlock();
 		}
 		else {
 			json jError = "specified script not found";
@@ -324,7 +352,7 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 			}
 
 			jRunInfo["tagRefDataTime"] = jTagRefDataTime;
-			jRunInfo["runTime"] = si.lastExe.toStr(true);
+			jRunInfo["runTime"] = si.lastExe.toStr();
 
 			jSi["runInfo"] = jRunInfo;
 
@@ -345,17 +373,12 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 			}
 
 			json jSi;
-			si.toJson(jSi,getStatus);
+			si.toJson(jSi, getStatus);
 
 			j.push_back(jSi);
 		}
 
 		rpcResp.result = j.dump(2);
-	}
-
-	//触发脚本循环。如果已经在循环中，此句无效果
-	if (m_bEnableAutoCyclic) {
-		run();
 	}
 	
 	return true;
@@ -452,9 +475,6 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	saveScriptList("", m_mapScripts);
 	rpcResp.result = RPC_OK;
 
-	//触发脚本循环。如果已经在循环中，此句无效果
-	run();
-
 	return true;
 }
 
@@ -530,13 +550,11 @@ json ScriptManager::getScriptList(string tag) {
 }
 
 void ScriptManager::exeAllGlobalScripts() {
-	//获取所有需要执行的脚本
 	vector<SCRIPT_INFO> toExeScripts;
 
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
-
 		if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
 			toExeScripts.push_back(si);
 			si.lastExe = timeopt::now();
@@ -544,8 +562,7 @@ void ScriptManager::exeAllGlobalScripts() {
 	}
 	m_csScripts.unlock();
 
-	//执行脚本(执行脚本时，不要占用 m_csScripts锁)
-	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
+	// Execute the script(do not hold the m_csScripts lock while the script is being executed).
 	for (auto& si : toExeScripts) {
 		ScriptEngine se;
 
@@ -554,56 +571,47 @@ void ScriptManager::exeAllGlobalScripts() {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-		se.m_bValNullInCalc = false;
 
-		si.lastRunInfo.runSuccess = false;
-		si.lastRunInfo.valNullInCalc = false;
+		TIME tStart = timeopt::now();
 
 		bool runOk = se.runScript(si.script, si.lastModifyUser);
-		if (!runOk) {
-			continue;
+		si.lastRunInfo.runSuccess = runOk;
+
+		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
+
+		// db data
+		auto mutdoc = yyjson_mut_doc_new(nullptr);
+		auto mutroot = yyjson_mut_obj(mutdoc);
+
+		yyjson_mut_doc_set_root(mutdoc, mutroot);
+		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "name", si.name.c_str());
+		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastExe.toStr().c_str());
+		yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
+		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
+
+		auto len = yyjson_mut_get_len(mutroot);
+		char* writeResult = yyjson_mut_val_write_opts(mutroot, YYJSON_WRITE_NOFLAG, nullptr, &len, nullptr);
+
+		string str;
+		if (writeResult) {
+			str = writeResult;
+			free(writeResult);
+			yyjson_mut_doc_free(mutdoc);
 		}
+		
+		if (!str.empty()) {
+			DB_TIME dbt;
+			dbt.fromStr(si.lastExe.toStr());
 
-		si.lastRunInfo.runSuccess = true;
-
-		if (se.m_bValNullInCalc) {
-			si.lastRunInfo.valNullInCalc = true;
-			continue;
-		}
-
-		json& jsonRet = se.m_sEvalRet;
-		si.lastRunInfo.retVal = jsonRet;
-		si.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
-
-		if (jsonRet.is_number()) {
-			double val = jsonRet.get<double>();
-
-			json jParams;
-			jParams["tag"] = si.calcMpTag;
-			jParams["val"] = val;
-
-			//最后的val取值时间作为计算结果的时间
-			if (se.m_vecValRefTime.size() > 0) {
-				map<string, string> refTime;
-				for (auto iter : se.m_vecValRefTime) {
-					refTime[iter.second] = iter.second;
-				}
-
-				auto iter = refTime.rbegin();
-				jParams["time"] = iter->first;
-			}
-
-#ifdef TDS
-			tds->callAsyn("input", jParams);
-#endif
+			TDB* ssdb = db.getChildDB("autoScript");
+			ssdb->InsertValJsonStr("runStatus", dbt, str);
 		}
 	}
 
 	m_csScripts.lock();
 	for (auto& si : toExeScripts) {
-		string name = si.name;
-		if (m_mapScripts.find(name) != m_mapScripts.end()) {
-			m_mapScripts.at(name).lastRunInfo = si.lastRunInfo;
+		if (m_mapScripts.find(si.name) != m_mapScripts.end()) {
+			m_mapScripts.at(si.name).lastRunInfo = si.lastRunInfo;
 		}
 	}
 	m_csScripts.unlock();
@@ -707,35 +715,31 @@ void ScriptManager::exeAllVarExpScripts() {
 }
 
 void ScriptManager::loopExe() {
-	loopRunning = true;
+	if (!m_bEnable) {
+		return;
+	}
 
-	TIME lastExe1 = timeopt::now();
-	TIME lastExe2 = timeopt::now();
-
+	TIME lastExe = timeopt::now();
 	while (1){
+		if (!m_bEnable) {
+			break;
+		}
+
 		if (!hasScripts()) {
 			break;
 		}
+		
+		exeAllGlobalScripts();
 
-		if (!m_bRun) {
-			break;
-		}
-
-		if (m_bEnable) {
-			exeAllGlobalScripts();
-
-			if (m_vecVarExpScripts.size() > 0) {
-				if (timeopt::CalcTimePassSecond(lastExe2) > 5) {
-					exeAllVarExpScripts();
-					lastExe2 = timeopt::now();
-				}
+		if (m_vecVarExpScripts.size() > 0) {
+			if (timeopt::CalcTimePassSecond(lastExe) > 5) {
+				exeAllVarExpScripts();
+				lastExe = timeopt::now();
 			}
 		}
 
 		timeopt::sleepMilli(50);
 	}
-
-	loopRunning = false;
 }
 
 string SCRIPT_INFO::getContextTag() {

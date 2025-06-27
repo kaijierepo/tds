@@ -16,35 +16,35 @@ rootTag 为用户指定的一个自定义前缀
 */
 
 struct SCRIPT_RUN_INFO {
-	bool runSuccess;
-	bool valNullInCalc;
+	bool runSuccess     = false;
+	bool valNullInCalc  = false;
 
-	string lastError;
-	int runTimeCost; 
-	json retVal;
-	map<string,string> tagRefDataTime;
+	string lastError    = "";
+	int runTimeCost     = 0; 
+	json retVal         = nullptr;
+	map<string, string> tagRefDataTime;
 };
 
 struct SCRIPT_INFO {
-	string script;
-	string envVarScript;
-	string calcMpTag;      //监控点利用同级监控点计算自身数值的情况，当为表达式脚本时，该变量就是表达式所属的监控点位号。以某个监控点为主体调用脚本，将mp的父对象的位号作为callerObjTag。 
-	string callerObjTag;   //以某个对象为主体来调用执行该脚本. 例如风管机 调用 开机脚本
-	string rootTag;        //脚本配置时指定的根位号
-	string devAddr;        //环境设备地址
-	string mode;
+	string script         = "";
+	string envVarScript   = "";
+	string calcMpTag      = "";   //监控点利用同级监控点计算自身数值的情况，当为表达式脚本时，该变量就是表达式所属的监控点位号。以某个监控点为主体调用脚本，将mp的父对象的位号作为callerObjTag。 
+	string callerObjTag   = "";   //以某个对象为主体来调用执行该脚本. 例如风管机 调用 开机脚本
+	string rootTag        = "";   //脚本配置时指定的根位号
+	string devAddr        = "";   //环境设备地址
+	string mode           = "";
 
-	int interval;
-	TIME lastExe;
+	int interval          = 0;
+	TIME lastExe          = TIME();
 
-	string org;
-	string lastModifyTime;
-	string lastModifyUser;
-	string name;
-	string desc;
+	string org            = "";
+	string lastModifyTime = "";
+	string lastModifyUser = "";
+	string name           = "";
+	string desc           = "";
 
-	SCRIPT_RUN_INFO lastRunInfo;
-	bool enableLog;
+	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
+	bool enableLog        = false;
 
 	string getContextTag();
 	string getExpContextTag();
@@ -97,7 +97,6 @@ public:
 	void exeAllVarExpScripts();
 
 	void loopExe();
-	bool loopRunning;
 
 	float m_lastExpScripTimeCost;
 	TIME m_tLastExpScriptRunTime;
