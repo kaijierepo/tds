@@ -642,28 +642,36 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 	return true;
 }
 
-void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j) {
+void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot) {
 	org = str::replace(org, ".", "/");
 
-	j = json::array();
 	for (auto& i : sl) {
 		SCRIPT_INFO& si = i.second;
 
-		json jSi;
-		si.toJson(jSi);
+		yyjson_mut_val* obj = yyjson_mut_obj(mutDoc);
+		si.toJson(mutDoc, obj);
 
-		j.push_back(jSi);
+		yyjson_mut_arr_append(mutRoot, obj);
 	}
 }
 
-void ScriptManager::saveScriptList(string org,std::map<string, SCRIPT_INFO>& sl, bool saveScriptData) {
-	json j;
-	scriptList2Json(org, sl, j);
+void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData) {
+	yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* mutRoot = yyjson_mut_arr(mutDoc);
+	yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+	scriptList2Json(org, sl, mutDoc, mutRoot);
 
 	string path = m_confPath + "/scripts/" + org + "/list.json";
 
-	string s = j.dump(2);
-	fs::writeFile(path,s);
+	size_t len = 0;
+	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
+	if (s) {
+		fs::writeFile(path, string(s, len));
+		free(s);
+	}
+
+	yyjson_mut_doc_free(mutDoc);
 }
 
 string ScriptManager::getScriptPath(yyjson_val* params_obj, RPC_SESSION session) {

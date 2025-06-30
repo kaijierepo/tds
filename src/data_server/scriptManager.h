@@ -94,7 +94,7 @@ public:
 	bool rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
-	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j);
+	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot);
 	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
 
 	void updateVarExpScript(vector<SCRIPT_INFO>& varExpScripts);
