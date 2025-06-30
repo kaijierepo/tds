@@ -667,7 +667,8 @@ void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl
 	size_t len = 0;
 	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
 	if (s) {
-		fs::writeFile(path, string(s, len));
+		string str = s;
+		fs::writeFile(path, str);
 		free(s);
 	}
 
