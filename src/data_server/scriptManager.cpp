@@ -133,43 +133,36 @@ void scriptThreadTmp(string scriptName, string callerObjTag) {
 #endif
 }
 
-bool ScriptManager::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	bool bHandled = true;
 
 	if (method == "getScriptMngerStatus") {
-		rpc_getScriptMngStatus(params, rpcResp, session);
+		rpc_getScriptMngStatus(params_obj, rpcResp, session);
 	}
 #ifdef ENABLE_QJS
-	else if (method == "runScript")
-	{
-		rpc_runScript(params, rpcResp, session);
+	else if (method == "runScript") {
+		rpc_runScript(params_obj, rpcResp, session);
 	}
-	else if (method == "getScriptList")
-	{
-		rpc_getScriptList(params, rpcResp, session);
+	else if (method == "getScriptList") {
+		rpc_getScriptList(params_obj, rpcResp, session);
 	}
-	else if (method == "getScriptFile")
-	{
-		rpc_getScript(params, rpcResp, session);
+	else if (method == "getScriptFile") {
+		rpc_getScript(params_obj, rpcResp, session);
 	}
 	else if (method == "deleteScriptFile") {
-		rpc_deleteScript(params, rpcResp, session);
+		rpc_deleteScript(params_obj, rpcResp, session);
 	}
-	else if (method == "setScriptFile")
-	{
-		rpc_setScript(params, rpcResp, session);
+	else if (method == "setScriptFile") {
+		rpc_setScript(params_obj, rpcResp, session);
 	}
-	else if (method == "setScriptActived")
-	{
-		rpc_setScriptActived(params, rpcResp, session);
+	else if (method == "setScriptActived") {
+		rpc_setScriptActived(params_obj, rpcResp, session);
 	}
-	else if (method == "setScriptLooping")
-	{
-		rpc_setScriptLooping(params, rpcResp, session);
+	else if (method == "setScriptLooping") {
+		rpc_setScriptLooping(params_obj, rpcResp, session);
 	}
 #endif
-	else
-	{
+	else {
 		bHandled = false;
 	}
 
@@ -201,13 +194,14 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 	return false;
 }
 
-bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION session) {
-	//直接执行脚本
-	if (params["script"] != nullptr) {
-		string s = params["script"];
+bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
+	if (script_val && yyjson_is_str(script_val)) {
+		string s = yyjson_get_str(script_val);
 
-		if (params.contains("envVarScript")) {
-			string sEnvVar = params["envVarScript"];
+		yyjson_val* env_var_val = yyjson_obj_get(params_obj, "envVarScript");
+		if (env_var_val && yyjson_is_str(env_var_val)) {
+			string sEnvVar = yyjson_get_str(env_var_val);
 			if (sEnvVar != "") {
 				s = sEnvVar + "\n" + s;
 			}
@@ -217,18 +211,23 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		si.lastExe = timeopt::now();
 		si.org = session.org;
 
-		if (params.contains("rootTag")) {
-			si.rootTag = params["rootTag"];
+		// rootTag
+		yyjson_val* root_tag_val = yyjson_obj_get(params_obj, "rootTag");
+		if (root_tag_val && yyjson_is_str(root_tag_val)) {
+			si.rootTag = yyjson_get_str(root_tag_val);
 		}
 
-		if (params.contains("devAddr")) {
-			si.devAddr = params["devAddr"];
+		// devAddr
+		yyjson_val* dev_addr_val = yyjson_obj_get(params_obj, "devAddr");
+		if (dev_addr_val && yyjson_is_str(dev_addr_val)) {
+			si.devAddr = yyjson_get_str(dev_addr_val);
 		}
 
-		//是否获取表达式的返回值。测试表达式时使用
-		bool getExpRet = false; 
-		if (params.contains("getExpRet")) {
-			getExpRet = params["getExpRet"].get<bool>();
+		// getExpRet
+		bool getExpRet = false;
+		yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
+		if (get_exp_ret_val && yyjson_is_bool(get_exp_ret_val)) {
+			getExpRet = yyjson_get_bool(get_exp_ret_val);
 		}
 
 		ScriptEngine se;
@@ -280,8 +279,12 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 		}
 		m_csScripts.unlock();
 	}
-	else { 	//执行保存的脚本文件
-		string scriptName = params["name"].get<string>();
+	else {
+		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
+		std::string scriptName;
+		if (name_val && yyjson_is_str(name_val)) {
+			scriptName = yyjson_get_str(name_val);
+		}
 
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
@@ -322,58 +325,63 @@ bool ScriptManager::rpc_runScript(json& params,RPC_RESP& rpcResp,RPC_SESSION ses
 	return true;
 }
 
-bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	string type = "global";
-	if (params.contains("type")) {
-		type = params["type"];
+
+	yyjson_val* type_val = yyjson_obj_get(params_obj, "type");
+	if (type_val && yyjson_is_str(type_val)) {
+		type = yyjson_get_str(type_val);
 	}
 
 	bool getStatus = false;
-	if (params.contains("getStatus")) {
-		getStatus = params["getStatus"].get<bool>();
+	yyjson_val* getStatus_val = yyjson_obj_get(params_obj, "getStatus");
+	if (getStatus_val && yyjson_is_bool(getStatus_val)) {
+		getStatus = yyjson_get_bool(getStatus_val);
 	}
+
+	yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* mutRoot = yyjson_mut_arr(mutDoc);
+	yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
 	if (type == "global") {
 		unique_lock<mutex> lock(m_csScripts);
 
-		json j = json::array();
-		for (auto& i : m_mapScripts) {
-			SCRIPT_INFO& si = i.second;
+		for (auto& iter : m_mapScripts) {
+			SCRIPT_INFO& si = iter.second;
 
 			if (si.org.find(session.org) != 0) {
 				continue;
 			}
 
-			json jSi;
-			si.toJson(jSi,getStatus);
+			yyjson_mut_val* obj = yyjson_mut_obj(mutDoc);
+			si.toJson(mutDoc, obj, getStatus);
 
-			json jRunInfo;
-			jRunInfo["tag"] = si.calcMpTag;
-			jRunInfo["script"] = si.script;
-			jRunInfo["retVal"] = si.lastRunInfo.retVal;
-			jRunInfo["runSuccess"] = si.lastRunInfo.runSuccess;
-			jRunInfo["valNullInCalc"] = si.lastRunInfo.valNullInCalc;
+			yyjson_mut_val* runInfo = yyjson_mut_obj(mutDoc);
+			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "tag", si.calcMpTag.c_str());
+			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "script", si.script.c_str());
+			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "retVal", si.lastRunInfo.retVal.c_str());
+			yyjson_mut_obj_add_bool(mutDoc, runInfo, "runSuccess", si.lastRunInfo.runSuccess);
+			yyjson_mut_obj_add_bool(mutDoc, runInfo, "valNullInCalc", si.lastRunInfo.valNullInCalc);
 
-			json jTagRefDataTime = json::object();
-			for (auto i : si.lastRunInfo.tagRefDataTime) {
-				jTagRefDataTime[i.first] = i.second;
+			yyjson_mut_val* tagRefDataTime = yyjson_mut_obj(mutDoc);
+			for (auto& iter2 : si.lastRunInfo.tagRefDataTime) {
+				string key = iter2.first;
+				string value = iter2.second;
+				yyjson_mut_obj_add_strcpy(mutDoc, tagRefDataTime, key.c_str(), value.c_str());
 			}
 
-			jRunInfo["tagRefDataTime"] = jTagRefDataTime;
-			jRunInfo["runTime"] = si.lastExe.toStr();
+			yyjson_mut_obj_add_val(mutDoc, runInfo, "tagRefDataTime", tagRefDataTime);
+			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "runTime", si.lastExe.toStr().c_str());
 
-			jSi["runInfo"] = jRunInfo;
-			jSi["scriptLooping"] = si.scriptLooping;
+			yyjson_mut_obj_add_val(mutDoc, obj, "runInfo", runInfo);
+			yyjson_mut_obj_add_bool(mutDoc, obj, "scriptLooping", si.scriptLooping);
 
-			j.push_back(jSi);
+			yyjson_mut_arr_append(mutRoot, obj);
 		}
-
-		rpcResp.result = j.dump(2);
 	}
 	else if (type == "exp") {
 		unique_lock<mutex> lock(m_csExpScripts);
 
-		json j = json::array();
 		for (auto& i : m_vecVarExpScripts) {
 			SCRIPT_INFO& si = i;
 
@@ -381,22 +389,37 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 				continue;
 			}
 
-			json jSi;
-			si.toJson(jSi, getStatus);
+			yyjson_mut_val* obj = yyjson_mut_obj(mutDoc);
+			si.toJson(mutDoc, obj, getStatus);
 
-			j.push_back(jSi);
+			yyjson_mut_arr_append(mutRoot, obj);
 		}
-
-		rpcResp.result = j.dump(2);
 	}
+
+	size_t len = 0;
+	char* result = yyjson_mut_write(mutDoc, 0, &len);
+	if (result) {
+		rpcResp.result = result;
+		free(result);
+	}
+	else {
+		rpcResp.result = "[]";
+	}
+
+	yyjson_mut_doc_free(mutDoc);
 	
 	return true;
 }
 
-bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
-	string name = params["name"].get<string>();
+	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
+	std::string name;
+	if (name_val && yyjson_is_str(name_val)) {
+		name = yyjson_get_str(name_val);
+	}
+
 	m_mapScripts.erase(name);
 
 	saveScriptList("", m_mapScripts);
@@ -407,24 +430,15 @@ bool ScriptManager::rpc_deleteScript(json& params, RPC_RESP& rpcResp, RPC_SESSIO
 	return true;
 }
 
-string ScriptManager::getScriptPath(json& params, RPC_SESSION session) {
-	string rootTag = "";
-	if (!params.is_null() && !params["tag"].is_null()){
-		rootTag = params["tag"].get<string>();
-	}
-		
-	rootTag = TAG::addRoot(rootTag, session.org);
-	rootTag = str::replace(rootTag, ".", "/");
-
-	string path = m_confPath + "/scripts/" + rootTag;
-	return path;
-}
-
-bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
-	string path = getScriptPath(params,session);
-	string fileName = params["name"].get<string>();
+	string path = getScriptPath(params_obj, session);
+	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
+	std::string fileName;
+	if (name_val && yyjson_is_str(name_val)) {
+		fileName = yyjson_get_str(name_val);
+	}
 
 	string path1 = path + "/" + fileName + ".js";
 	string path2 = path + "/" + fileName + "_envVar.js";
@@ -448,10 +462,17 @@ bool ScriptManager::rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	return true;
 }
 
-bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
-	string name = params["info"]["name"];
+	std::string name;
+	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
+		if (name_val && yyjson_is_str(name_val)) {
+			name = yyjson_get_str(name_val);
+		}
+	}
 
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
 		SCRIPT_INFO si;
@@ -460,22 +481,25 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 
 	SCRIPT_INFO& si = m_mapScripts[name];
 
-	//支持局部更新，info当中可以只包含1，2个需要修改的字段
-	si.fromJson(params["info"]);
+	if (info_val) {
+		si.fromJson(info_val);
+	}
+
 	si.lastModifyUser = session.user;
 
-	//保存脚本代码
-	if (params.contains("code")) {
+	yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
+	if (code_val && yyjson_is_str(code_val)) {
 		string codePath = m_confPath + "/scripts/" + si.name + ".js";
-		string s = params["code"].get<string>();
+		string s = yyjson_get_str(code_val);
 
 		fs::writeFile(codePath, s);
 		si.script = s;
 	}
 
-	if (params.contains("envVarCode")) {
+	yyjson_val* env_var_code_val = yyjson_obj_get(params_obj, "envVarCode");
+	if (env_var_code_val && yyjson_is_str(env_var_code_val)) {
 		string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
-		string s = params["envVarCode"].get<string>();
+		string s = yyjson_get_str(env_var_code_val);
 
 		fs::writeFile(codePath, s);
 		si.envVarScript = s;
@@ -487,7 +511,7 @@ bool ScriptManager::rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION s
 	return true;
 }
 
-bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	json j;
 	j["lastExpScriptTimeCost"] = m_lastExpScripTimeCost;
 	j["lastExpScriptRunTime"] = m_tLastExpScriptRunTime.toStr(true);
@@ -530,21 +554,37 @@ bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_
 	return true;
 }
 
-bool ScriptManager::rpc_setScriptActived(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
 	if (!m_bEnable) {
-		rpcResp.result = "script enable setting is false";
+		json jResult = "script enable setting is false";
+		rpcResp.result = jResult.dump();
 		return false;
 	}
 
-	string name = params["info"]["name"];
+	std::string name;
+	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
+		if (name_val && yyjson_is_str(name_val)) {
+			name = yyjson_get_str(name_val);
+		}
+	}
+
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
-		rpcResp.result = "can not find script name";
+		json jResult = "can not find script name";
+		rpcResp.result = jResult.dump();
 		return false;
 	}
 
-	bool scriptActived = params["info"]["scriptActived"];
+	bool scriptActived = false;
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* scriptActived_val = yyjson_obj_get(info_val, "scriptActived");
+		if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+			scriptActived = yyjson_get_bool(scriptActived_val);
+		}
+	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
 	si.scriptActived = scriptActived;
@@ -556,27 +596,51 @@ bool ScriptManager::rpc_setScriptActived(json& params, RPC_RESP& rpcResp, RPC_SE
 	return true;
 }
 
-bool ScriptManager::rpc_setScriptLooping(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
 	if (!m_bEnable) {
-		rpcResp.result = "script enable setting is false";
+		json jResult = "script enable setting is false";
+		rpcResp.result = jResult.dump();
 		return false;
 	}
 
-	string name = params["info"]["name"];
+	std::string name;
+	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
+		if (name_val && yyjson_is_str(name_val)) {
+			name = yyjson_get_str(name_val);
+		}
+	}
+
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
-		rpcResp.result = "can not find script name";
+		json jResult = "can not find script name";
+		rpcResp.result = jResult.dump();
 		return false;
 	}
 
-	bool scriptActived = params["info"]["scriptActived"];
+	bool scriptActived = false;
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* scriptActived_val = yyjson_obj_get(info_val, "scriptActived");
+		if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+			scriptActived = yyjson_get_bool(scriptActived_val);
+		}
+	}
+
 	if (!scriptActived) {
-		rpcResp.result = "scriptActived is false";
+		json jResult = "scriptActived is false";
+		rpcResp.result = jResult.dump();
 		return false;
 	}
 
-	bool scriptLooping = params["info"]["scriptLooping"];
+	bool scriptLooping = false;
+	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* scriptLooping_val = yyjson_obj_get(info_val, "scriptLooping");
+		if (scriptLooping_val && yyjson_is_str(scriptLooping_val)) {
+			scriptLooping = yyjson_get_bool(scriptLooping_val);
+		}
+	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
 	si.scriptLooping = scriptLooping;
@@ -612,6 +676,21 @@ void ScriptManager::saveScriptList(string org,std::map<string, SCRIPT_INFO>& sl,
 
 	string s = j.dump(2);
 	fs::writeFile(path,s);
+}
+
+string ScriptManager::getScriptPath(yyjson_val* params_obj, RPC_SESSION session) {
+	string rootTag;
+
+	yyjson_val* tag_val = yyjson_obj_get(params_obj, "tag");
+	if (tag_val && yyjson_is_str(tag_val)) {
+		rootTag = yyjson_get_str(tag_val);
+	}
+
+	rootTag = TAG::addRoot(rootTag, session.org);
+	rootTag = str::replace(rootTag, ".", "/");
+
+	string path = m_confPath + "/scripts/" + rootTag;
+	return path;
 }
 
 json ScriptManager::getScriptList(string tag) {
@@ -687,11 +766,11 @@ void ScriptManager::exeAllGlobalScripts() {
 }
 
 /*
-表达式脚本中如果使用了val函数，该函数返回null时，将不会生成计算结果。
-例如，需要计算今天的用电量 val("总电量") - val("总电量","today","first")，使用当前值减去今天的第一个值，
-如果今天没有采集到过任何数据，后面那个val函数返回null
-前面的val函数返回最新值，可能是昨天采集的
-那么该二次计算表达式将不返回计算结果
+If the val function is used in the expression script, when the function returns null, no calculation result will be generated.
+For example, if you need to calculate today's electricity consumption val("total electricity") - val("total electricity", "today", "first"), use the current value minus the first value of today.
+If no data has been collected today, the latter val function returns null
+The previous val function returns the latest value, which may be collected yesterday
+Then the secondary calculation expression will not return the calculation result
 */
 void ScriptManager::exeAllVarExpScripts() {
 	TIME startTime;
@@ -741,7 +820,7 @@ void ScriptManager::exeAllVarExpScripts() {
 		info.lastRunInfo.valNullInCalc = false;
 
 		json& j = se.m_sEvalRet;
-		info.lastRunInfo.retVal = j;
+		info.lastRunInfo.retVal = j.dump();
 		info.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 
 		if (j.is_number()) {
@@ -904,5 +983,97 @@ void SCRIPT_INFO::fromJson(json& j) {
 
 	if (j.contains("scriptActived")) {
 		scriptActived = j["scriptActived"];
+	}
+}
+
+void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus) {
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "mode", mode.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "name", name.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "desc", desc.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyTime", lastModifyTime.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyUser", lastModifyUser.c_str());
+
+	int min = interval / (60 * 1000);
+	int time = interval % (60 * 1000);
+	int sec = time / 1000;
+	int milli = time % 1000;
+
+	yyjson_mut_val* jIter = yyjson_mut_obj(mutDoc);
+	yyjson_mut_obj_add_int(mutDoc, jIter, "min", min);
+	yyjson_mut_obj_add_int(mutDoc, jIter, "sec", sec);
+	yyjson_mut_obj_add_int(mutDoc, jIter, "milli", milli);
+	yyjson_mut_obj_add_val(mutDoc, mutRoot, "interval", jIter);
+
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "rootTag", rootTag.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devAddr", devAddr.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "calcMpTag", calcMpTag.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "callerObjTag", callerObjTag.c_str());
+
+	if (getStatus) {
+		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastExeTime", lastExe.toStr().c_str());
+		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastCalcVal", lastRunInfo.retVal.c_str());
+	}
+
+	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "scriptActived", scriptActived);
+}
+
+void SCRIPT_INFO::fromJson(yyjson_val* root) {
+	yyjson_val* val;
+
+	val = yyjson_obj_get(root, "mode");
+	if (val && yyjson_is_str(val)) {
+		mode = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "name");
+	if (val && yyjson_is_str(val)) {
+		name = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "lastModifyUser");
+	if (val && yyjson_is_str(val)) {
+		lastModifyUser = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "desc");
+	if (val && yyjson_is_str(val)) {
+		desc = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "rootTag");
+	if (val && yyjson_is_str(val)) {
+		rootTag = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "devAddr");
+	if (val && yyjson_is_str(val)) {
+		devAddr = yyjson_get_str(val);
+	}
+	
+	val = yyjson_obj_get(root, "interval");
+	if (val && yyjson_is_obj(val)) {
+		int min = 0, sec = 0, milli = 0;
+		yyjson_val* vmin = yyjson_obj_get(val, "min");
+		yyjson_val* vsec = yyjson_obj_get(val, "sec");
+		yyjson_val* vmilli = yyjson_obj_get(val, "milli");
+
+		if (vmin && yyjson_is_int(vmin)) {
+			min = (int)yyjson_get_int(vmin);
+		}
+
+		if (vsec && yyjson_is_int(vsec)) {
+			sec = (int)yyjson_get_int(vsec);
+		}
+
+		if (vmilli && yyjson_is_int(vmilli)) {
+			milli = (int)yyjson_get_int(vmilli);
+		}
+		
+		interval = min * 60 * 1000 + sec * 1000 + milli;
+	}
+
+	val = yyjson_obj_get(root, "scriptActived");
+	if (val && yyjson_is_bool(val)) {
+		scriptActived = yyjson_get_bool(val);
 	}
 }
