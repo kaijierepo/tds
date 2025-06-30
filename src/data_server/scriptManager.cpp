@@ -563,13 +563,10 @@ bool ScriptManager::rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
+	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
 	std::string name;
-	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
-	if (info_val && yyjson_is_obj(info_val)) {
-		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
-		if (name_val && yyjson_is_str(name_val)) {
-			name = yyjson_get_str(name_val);
-		}
+	if (name_val && yyjson_is_str(name_val)) {
+		name = yyjson_get_str(name_val);
 	}
 
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
@@ -578,12 +575,10 @@ bool ScriptManager::rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
+	yyjson_val* scriptActived_val = yyjson_obj_get(params_obj, "scriptActived");
 	bool scriptActived = false;
-	if (info_val && yyjson_is_obj(info_val)) {
-		yyjson_val* scriptActived_val = yyjson_obj_get(info_val, "scriptActived");
-		if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
-			scriptActived = yyjson_get_bool(scriptActived_val);
-		}
+	if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+		scriptActived = yyjson_get_bool(scriptActived_val);
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
@@ -605,13 +600,10 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
+	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
 	std::string name;
-	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
-	if (info_val && yyjson_is_obj(info_val)) {
-		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
-		if (name_val && yyjson_is_str(name_val)) {
-			name = yyjson_get_str(name_val);
-		}
+	if (name_val && yyjson_is_str(name_val)) {
+		name = yyjson_get_str(name_val);
 	}
 
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
@@ -620,12 +612,10 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
+	yyjson_val* scriptActived_val = yyjson_obj_get(params_obj, "scriptActived");
 	bool scriptActived = false;
-	if (info_val && yyjson_is_obj(info_val)) {
-		yyjson_val* scriptActived_val = yyjson_obj_get(info_val, "scriptActived");
-		if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
-			scriptActived = yyjson_get_bool(scriptActived_val);
-		}
+	if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+		scriptActived = yyjson_get_bool(scriptActived_val);
 	}
 
 	if (!scriptActived) {
@@ -634,12 +624,10 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
+	yyjson_val* scriptLooping_val = yyjson_obj_get(params_obj, "scriptLooping");
 	bool scriptLooping = false;
-	if (info_val && yyjson_is_obj(info_val)) {
-		yyjson_val* scriptLooping_val = yyjson_obj_get(info_val, "scriptLooping");
-		if (scriptLooping_val && yyjson_is_str(scriptLooping_val)) {
-			scriptLooping = yyjson_get_bool(scriptLooping_val);
-		}
+	if (scriptLooping_val && yyjson_is_str(scriptLooping_val)) {
+		scriptLooping = yyjson_get_bool(scriptLooping_val);
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
