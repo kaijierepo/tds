@@ -2655,6 +2655,10 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 {
 	bool bHandled = true;
 
+	std::string s = params.dump();
+	yyjson_doc* doc = yyjson_read(s.c_str(), s.size(), 0);
+	yyjson_val* root = yyjson_doc_get_root(doc);
+
 	//可完全并发的命令
 	if (method == "xiaot")
 	{
@@ -3494,8 +3498,11 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		bHandled = false;
 	}
 
-	if (!bHandled)
-		bHandled = scriptManager.handleRpc(method, params, rpcResp, session);
+	if (!bHandled) {
+		bHandled = scriptManager.handleRpc(method, root, rpcResp, session);
+	}
+
+	yyjson_doc_free(doc);
 
 	return bHandled;
 }
