@@ -46,6 +46,9 @@ struct SCRIPT_INFO {
 	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
 	bool enableLog        = false;
 
+	bool scriptActived    = false;
+	bool scriptLooping    = false;
+
 	string getContextTag();
 	string getExpContextTag();
 
@@ -84,6 +87,9 @@ public:
 	bool rpc_getScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScript(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScriptActived(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScriptLooping(json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+
 
 	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j);
 	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
@@ -100,6 +106,8 @@ public:
 
 	float m_lastExpScripTimeCost;
 	TIME m_tLastExpScriptRunTime;
+
+	void updateAutoCyclicScripLoopings();
 };
 
 extern ScriptManager scriptManager;

@@ -159,6 +159,14 @@ bool ScriptManager::handleRpc(string method, json& params, RPC_RESP& rpcResp, RP
 	{
 		rpc_setScript(params, rpcResp, session);
 	}
+	else if (method == "setScriptActived")
+	{
+		rpc_setScriptActived(params, rpcResp, session);
+	}
+	else if (method == "setScriptLooping")
+	{
+		rpc_setScriptLooping(params, rpcResp, session);
+	}
 #endif
 	else
 	{
@@ -355,6 +363,7 @@ bool ScriptManager::rpc_getScriptList(json& params, RPC_RESP& rpcResp, RPC_SESSI
 			jRunInfo["runTime"] = si.lastExe.toStr();
 
 			jSi["runInfo"] = jRunInfo;
+			jSi["scriptLooping"] = si.scriptLooping;
 
 			j.push_back(jSi);
 		}
@@ -521,6 +530,66 @@ bool ScriptManager::rpc_getScriptMngStatus(json& params, RPC_RESP& rpcResp, RPC_
 	return true;
 }
 
+bool ScriptManager::rpc_setScriptActived(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+	unique_lock<mutex> lock(m_csScripts);
+
+	if (!m_bEnable) {
+		rpcResp.result = "script enable setting is false";
+		return false;
+	}
+
+	string name = params["info"]["name"];
+	if (m_mapScripts.find(name) == m_mapScripts.end()) {
+		rpcResp.result = "can not find script name";
+		return false;
+	}
+
+	bool scriptActived = params["info"]["scriptActived"];
+
+	SCRIPT_INFO& si = m_mapScripts[name];
+	si.scriptActived = scriptActived;
+	si.scriptLooping = false;
+
+	saveScriptList("", m_mapScripts);
+	rpcResp.result = RPC_OK;
+
+	return true;
+}
+
+bool ScriptManager::rpc_setScriptLooping(json& params, RPC_RESP& rpcResp, RPC_SESSION session) {
+	unique_lock<mutex> lock(m_csScripts);
+
+	if (!m_bEnable) {
+		rpcResp.result = "script enable setting is false";
+		return false;
+	}
+
+	string name = params["info"]["name"];
+	if (m_mapScripts.find(name) == m_mapScripts.end()) {
+		rpcResp.result = "can not find script name";
+		return false;
+	}
+
+	bool scriptActived = params["info"]["scriptActived"];
+	if (!scriptActived) {
+		rpcResp.result = "scriptActived is false";
+		return false;
+	}
+
+	bool scriptLooping = params["info"]["scriptLooping"];
+
+	SCRIPT_INFO& si = m_mapScripts[name];
+	si.scriptLooping = scriptLooping;
+
+	if (scriptLooping) {
+		run();
+	}
+
+	rpcResp.result = RPC_OK;
+
+	return true;
+}
+
 void ScriptManager::scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl,json& j) {
 	org = str::replace(org, ".", "/");
 
@@ -555,7 +624,7 @@ void ScriptManager::exeAllGlobalScripts() {
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
-		if (si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
+		if (si.mode == "cyclic" && si.scriptActived && si.scriptLooping && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
 			toExeScripts.push_back(si);
 			si.lastExe = timeopt::now();
 		}
@@ -742,6 +811,17 @@ void ScriptManager::loopExe() {
 	}
 }
 
+void ScriptManager::updateAutoCyclicScripLoopings() {
+	m_csScripts.lock();
+	for (auto& i : m_mapScripts) {
+		SCRIPT_INFO& si = i.second;
+		if (si.mode == "cyclic" && si.scriptActived) {
+			si.scriptLooping = true;
+		}
+	}
+	m_csScripts.unlock();
+}
+
 string SCRIPT_INFO::getContextTag() {
 	string envTag = rootTag;
 	envTag = TAG::addRoot(envTag, callerObjTag);
@@ -785,6 +865,8 @@ void SCRIPT_INFO::toJson(json& j,bool getStatus) {
 		j["lastExeTime"] = lastExe.toStr();
 		j["lastCalcVal"] = lastRunInfo.retVal;
 	}
+
+	j["scriptActived"] = scriptActived;
 }
 
 void SCRIPT_INFO::fromJson(json& j) {
@@ -818,5 +900,9 @@ void SCRIPT_INFO::fromJson(json& j) {
 		int sec = jInter["sec"].get<int>();
 		int milli = jInter["milli"].get<int>();
 		interval = min * 60 * 1000 + sec * 1000 + milli;
+	}
+
+	if (j.contains("scriptActived")) {
+		scriptActived = j["scriptActived"];
 	}
 }
