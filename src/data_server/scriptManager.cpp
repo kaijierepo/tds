@@ -741,8 +741,9 @@ void ScriptManager::exeAllGlobalScripts() {
 		if (writeResult) {
 			str = writeResult;
 			free(writeResult);
-			yyjson_mut_doc_free(mutdoc);
 		}
+
+		yyjson_mut_doc_free(mutdoc);
 		
 		if (!str.empty()) {
 			DB_TIME dbt;

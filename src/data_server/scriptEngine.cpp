@@ -9,6 +9,7 @@
 #include <cmath>
 #include "logger.h"
 #include "quickjs.h"
+#include "mongoose.h"
 
 thread_local ScriptEngine* pEngine;
 
@@ -178,6 +179,29 @@ static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, J
     }
 }
 
+struct http_data {
+    std::string body;
+    bool done = false;
+    int status = 0;
+};
+
+static void fn(struct mg_connection* connect, int ev, void* ev_data) {
+    http_data* data = (http_data*)connect->fn_data;
+    if (ev == MG_EV_HTTP_MSG) {
+        struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+
+        data->body.assign(hm->body.ptr, hm->body.len);
+        data->status = mg_http_status(hm);
+
+        data->done = true;
+        connect->is_closing = 1;
+    }
+    else if (ev == MG_EV_ERROR) {
+        data->done = true;
+        connect->is_closing = 1;
+    }
+}
+
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
 		const char* log = JS_ToCString(ctx, argv[0]);
@@ -197,57 +221,75 @@ extern "C" {
 
         yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* yyv = js_value_to_yyjson(ctx, mdoc, argv[0], visited);
-		if (yyv) {
-			if (yyjson_mut_is_obj(yyv)) {
-				string ip;
-                if (yyjson_mut_obj_get(yyv, "hostname")) {
-                    ip = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "hostname"));
+		if (yyv && yyjson_mut_is_obj(yyv)) {
+            string ip;
+            if (yyjson_mut_obj_get(yyv, "hostname")) {
+                ip = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "hostname"));
+            }
+
+            int port = 0;
+            if (yyjson_mut_obj_get(yyv, "port")) {
+                port = yyjson_mut_get_num(yyjson_mut_obj_get(yyv, "port"));
+            }
+
+            string method;
+            if (yyjson_mut_obj_get(yyv, "method")) {
+                method = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "method"));
+            }
+
+            string path;
+            if (yyjson_mut_obj_get(yyv, "path")) {
+                path = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "path"));
+            }
+
+            string body;
+            if (yyjson_mut_obj_get(yyv, "body")) {
+                body = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "body"));
+            }
+
+            string url = "http://" + ip + ":" + std::to_string(port) + path;
+
+            TIME tStart = timeopt::now();
+
+            struct mg_mgr mgr;
+            mg_mgr_init(&mgr);
+
+            http_data data;
+            struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), fn, &data);
+
+            if (connect) {
+                if (method == "POST") {
+                    mg_printf(connect,
+                        "POST %s HTTP/1.0\r\n"
+                        "Host: %s\r\n"
+                        "Content-Type: application/json\r\n"
+                        "Content-Length: %u\r\n"
+                        "\r\n"
+                        "%s",
+                        path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+                    );
+                }
+                else {
+                    mg_printf(connect,
+                        "GET %s HTTP/1.0\r\n"
+                        "Host: %s\r\n"
+                        "\r\n",
+                        path.c_str(), ip.c_str()
+                    );
                 }
 
-				string addr = "http://" + ip;
-
-				int port = 0;
-                if (yyjson_mut_obj_get(yyv, "port")) {
-                    port = yyjson_mut_get_num(yyjson_mut_obj_get(yyv, "port"));
+                while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+                    mg_mgr_poll(&mgr, 100);
                 }
+            }
 
-				string method;
-                if (yyjson_mut_obj_get(yyv, "method")) {
-                    method = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "method"));
-                }
+            mg_mgr_free(&mgr);
+            yyjson_mut_doc_free(mdoc);
 
-				httplib::Client cli(ip, port);
-
-				string path;
-                if (yyjson_mut_obj_get(yyv, "path")) {
-                    path = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "path"));
-                }
-
-				string body;
-				if (yyjson_mut_obj_get(yyv, "body")) {
-					body = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "body"));
-				}
-
-                httplib::Headers headers;
-				if (method == "GET") {
-					httplib::Result rlt = cli.Get(path, headers);
-					if (rlt != nullptr) {
-						JSValue ret = JS_NewObject(ctx);
-						JSValue body = JS_NewString(ctx, rlt->body.c_str());
-						JS_SetPropertyStr(ctx, ret, "body", body);
-						return ret;
-					}
-				}
-				else if (method == "POST") {
-					httplib::Result rlt = cli.Post(path, headers, body, "application/json");
-					if (rlt != nullptr) {
-						JSValue ret = JS_NewObject(ctx);
-						JSValue body = JS_NewString(ctx, rlt->body.c_str());
-						JS_SetPropertyStr(ctx, ret, "body", body);
-						return ret;
-					}
-				}
-			}
+            JSValue ret = JS_NewObject(ctx);
+            JS_SetPropertyStr(ctx, ret, "body", JS_NewString(ctx, data.body.c_str()));
+            JS_SetPropertyStr(ctx, ret, "status", JS_NewInt32(ctx, data.status));
+            return ret;
 		}
 
 		yyjson_mut_doc_free(mdoc);
