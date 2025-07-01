@@ -2341,16 +2341,23 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 	}
 }
 
-void uploadJson(json& mainJson, string time, WORD gapValue, BYTE imgType, WORD shift, BYTE shiftSymbol, short temper, WORD humi)
-{
+void uploadJson(json& mainJson, string time, StImgInfoRes* imgInfo, short temper, WORD humi) {
+	WORD gapValue    = imgInfo->gap;
+	BYTE imgType     = imgInfo->imgtype;
+	WORD shift       = imgInfo->offset;
+	BYTE shiftSymbol = imgInfo->lrsign;
+	BYTE location    = imgInfo->fixorinvert;
+
 	mainJson["time"] = time;
 	mainJson["value"] = str::format("%.2f", gapValue * 1.0 / 100);
+
 	json alarmStatus;
 	alarmStatus["level"] = "alarm";
 	alarmStatus["lockgap"] = false;
+
 	mainJson["alarmStatus"] = alarmStatus;
 	mainJson["bShyWindow"] = false;
-	mainJson["location"] = 1;
+	mainJson["location"] = imgInfo->fixorinvert;
 	mainJson["timeout"] = 0;
 	mainJson["gapImageType"] = "jpg";
 	mainJson["baseline"] = 0;
@@ -2471,7 +2478,7 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
 			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
 
 			json Jfile;
-			uploadJson(Jfile, strTi, imgInfo->gap, imgInfo->imgtype, imgInfo->offset, imgInfo->lrsign, tagToTemperature.at(zzjTag), tagToHumidity.at(zzjTag));
+			uploadJson(Jfile, strTi, imgInfo, tagToTemperature.at(zzjTag), tagToHumidity.at(zzjTag));
 
 			string sDE = Jfile.dump();
 			db.Insert(theTag, sDE, &stTime);
