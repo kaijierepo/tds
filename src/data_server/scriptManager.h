@@ -71,7 +71,6 @@ public:
 
 	bool m_bRun;
 	bool m_bEnable;
-	bool m_bEnableAutoCyclic;
 
 	bool hasScripts();
 	

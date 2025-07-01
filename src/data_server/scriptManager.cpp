@@ -32,7 +32,6 @@ void scriptThread(ScriptManager* p){
 ScriptManager::ScriptManager() {
 	m_bRun = false;
 	m_bEnable = true;
-	m_bEnableAutoCyclic = true;
 }
 
 bool ScriptManager::init() {
