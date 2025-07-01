@@ -611,13 +611,9 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 		return false;
 	}
 
-	yyjson_val* scriptActived_val = yyjson_obj_get(params_obj, "scriptActived");
-	bool scriptActived = false;
-	if (scriptActived_val && yyjson_is_bool(scriptActived_val)) {
-		scriptActived = yyjson_get_bool(scriptActived_val);
-	}
+	SCRIPT_INFO& si = m_mapScripts[name];
 
-	if (!scriptActived) {
+	if (!si.scriptActived) {
 		json jResult = "scriptActived is false";
 		rpcResp.result = jResult.dump();
 		return false;
@@ -629,7 +625,6 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 		scriptLooping = yyjson_get_bool(scriptLooping_val);
 	}
 
-	SCRIPT_INFO& si = m_mapScripts[name];
 	si.scriptLooping = scriptLooping;
 
 	if (scriptLooping) {
