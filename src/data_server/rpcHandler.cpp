@@ -4505,13 +4505,42 @@ json getValAttr(json de) {
 	return de;
 }
 
-void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
-{
+/*对象模式输入,输入对象的位号,内部监控点只要输入相对位号就行,类似树形结构输入,但是只有对象和监控点2级
+"params": {
+	"tag":"客厅",   //需要输入的对象
+	"data":[    //对象下的监控点
+		{
+			"tag":"温度",
+			"val":26.5
+		},{
+			"tag":"湿度",
+			"val":23.5
+		}
+	]
+}*/
+//单位号模式输入
+/*
+"params": {
+	"tag": "客厅.温度",
+	"time": "2020-02-14 20:20:20",
+	"val": 35
+}
+*/
+//多位号模式 （采集时间相同）
+/*
+"params": {
+	"tag": ["客厅.温度","客厅.湿度"],
+	"time": "2020-02-14 20:20:20",
+	"val": [26.5,65.1]
+}
+*/
+void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session) {
 	if (params.is_object() && params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 		string rootTag;
 		if (params.contains("rootTag")) {
 			rootTag = params["rootTag"];
 		}
+
 		json jDeList = json::array();
 		json jOnlineStatusList = json::array();
 
@@ -4522,6 +4551,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 		//对于对象，更新在线状态
 		for (int i = 0; i < jOnlineStatusList.size(); i++) {
 			json& os = jOnlineStatusList[i];
+
 			if (os["online"].is_boolean()) {
 				if (os["online"].get<bool>() == true) {
 					RPC_RESP respTmp;
@@ -4537,7 +4567,6 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 		params = jDeList;
 	}
 
-
 	//监测点组将忽略不同的保存间隔，其中有1个点要保存就都保存
 	bool isMpGroup = false;
 	if (params.contains("isMpGroup")) {
@@ -4547,20 +4576,8 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 	//输入 位号，值，文件数据，时间 四元组。 文件不一定有
 	string rootTag = "";
 	vector<INPUT_DE> inputDEList;
+
 	if (params.is_object()) {
-		/*对象模式输入,输入对象的位号,内部监控点只要输入相对位号就行,类似树形结构输入,但是只有对象和监控点2级
-		"params": {
-			"tag":"客厅",   //需要输入的对象
-			"data":[    //对象下的监控点
-				{
-					"tag":"温度",
-					"val":26.5
-				},{
-					"tag":"湿度",
-					"val":23.5
-				}
-			]
-		}*/
 		if (params.find("data") != params.end()) {
 			json deList = params["data"];
 
@@ -4570,6 +4587,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 
 			if (params.find("objID") != params.end()) {
 				string objID = params["objID"];
+
 				OBJ* pO = prj.getObjByID(objID);
 				if (pO) {
 					rootTag = pO->getTag("",session.language);
@@ -4609,18 +4627,14 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 			json online = params["online"];
 			json file = params["file"];
 			json time = params["time"];
-			if (params.contains("rootTag"))
+
+			if (params.contains("rootTag")) {
 				rootTag = params["rootTag"].get<string>();
-			//单位号模式输入
-			/*
-				"params": {
-				"tag": "客厅.温度",
-				"time": "2020-02-14 20:20:20",
-				"val": 35
 			}
-			*/
+
 			if (tag.is_string()) {
 				string strTag = charCodec::utf8_to_gb(tag.get<string>());
+
 				INPUT_DE de;
 				de.tag = tag;
 				de.val = val;
@@ -4628,6 +4642,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 				de.file = file;
 				de.valAttr= getValAttr(params);
 				de.hasAttr = de.valAttr.size() > 0;
+
 				if (time.is_string()) {
 					de.sTime = time;
 					de.time = timeopt::str2st(de.sTime);
@@ -4636,21 +4651,15 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 					de.time = timeopt::now();
 					de.sTime = de.time.toStr();
 				}
+
 				inputDEList.push_back(de);
 			}
-			//多位号模式 （采集时间相同）
-			/*
-			"params": {
-				"tag": ["客厅.温度","客厅.湿度"],
-				"time": "2020-02-14 20:20:20",
-				"val": [26.5,65.1]
-			}
-			*/
 			else if (tag.is_array()) {
 				for (int i = 0; i < tag.size(); i++) {
 					INPUT_DE de;
 					de.tag = tag[i];
 					de.val = val[i];
+
 					if (online.is_array()) {
 						de.online = online[i];
 					}
@@ -4673,20 +4682,20 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 			}
 		}
 	}
-	//多位号模式输入
 	else if (params.is_array()) { 
 		for (auto& jDe : params) {
 			INPUT_DE de;
 			de.tag = jDe["tag"];
+
 			if (jDe.contains("rootTag")) {
 				string rootTagTmp = jDe["rootTag"].get<string>();
 				de.tag = TAG::addRoot(de.tag, rootTagTmp);
 			}
 				
-
 			if (jDe["time"].is_string()) {
 				de.sTime = jDe["time"];
 				de.time = timeopt::str2st(de.sTime);
+
 				if (!de.time.isValid()) {
 					continue;
 				}
@@ -4707,28 +4716,28 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 		return;
 	}
 
-
 	//使用位号输入
 	if (inputDEList.size() > 0) {
-		//监测点组输入模式
-		//json jTagNotExist = json::array();
 		vector<MP*> vecMps;
+
 		for (int i = 0; i < inputDEList.size(); i++) {
 			INPUT_DE& de = inputDEList[i];
+
 			string tag = de.tag;
 			json& val = de.val;
 			json& file = de.file;
+
 			tag = TAG::addRoot(tag, rootTag);
 			tag = TAG::addRoot(tag, session.org);
 
-			if (tag != "")
-			{
+			if (tag != "") {
 				MP* pmp = prj.GetMPByTag(tag, session.language);
-				if (pmp)
-				{
+				if (pmp) {
 					pmp->input(val, &file, &de.time);
-					if (pmp->m_bEnableIO && de.hasAttr) {
-						pmp->m_curValAttr = de.valAttr;
+					if (pmp->m_bEnableIO) {
+						if (de.hasAttr) {
+							pmp->m_curValAttr = de.valAttr;
+						}
 						vecMps.push_back(pmp);
 					}
 				}
@@ -4740,14 +4749,15 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 					jDe["tag"] = tag;
 					jDe["val"] = val;
 					jDe["file"] = file;
+
 					DB_TIME dbTime;
 					dbTime.fromStr(de.sTime);
+
 					string sDe = jDe.dump();
-					db.Insert(tag,sDe,&dbTime);
+					db.Insert(tag, sDe, &dbTime);
 				}
 			}
 		}
-
 
 		if (vecMps.size() > 0) {
 			//此处的设计尚不完善，modbus的寄存器有时希望作为监测点组，有时不希望
@@ -4762,6 +4772,7 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 						needSave = true;
 					}
 				}
+
 				if (needSave) {
 					for (int i = 0; i < vecMps.size(); i++) {
 						MP* pmp = vecMps[i];
@@ -4782,16 +4793,18 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session)
 			json jStatusNotify = json::array();
 			for (int i = 0; i < vecMps.size(); i++) {
 				MP* pmp = vecMps[i];
+
 				json jDe;
 				jDe["tag"] = pmp->getTag("",session.language);
 				jDe["val"] = json::parse(pmp->m_curVal);
 				jDe["file"] = pmp->m_curFileData;
 				jDe["time"] = pmp->m_stDataLastUpdate.toStr();
 				jDe["valDesc"] = pmp->getValDesc(false);
+
 				jStatusNotify.push_back(jDe);
 			}
+
 			rpcSrv.notify("onDataUpdate", jStatusNotify);
-			
 			resp.result = "\"ok\"";
 		}
 		else {
