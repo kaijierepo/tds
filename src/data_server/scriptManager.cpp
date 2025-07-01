@@ -39,14 +39,15 @@ bool ScriptManager::init() {
 
 	string sScriptList;
 	if (fs::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
-		json jSL = json::parse(sScriptList);
+		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
+		yyjson_val* root = yyjson_doc_get_root(doc);
 
-		for (int i = 0; i < jSL.size(); i++) {
-			json jInfo = jSL[i];
-
+		size_t idx, count = yyjson_arr_size(root);
+		yyjson_val* info;
+		yyjson_arr_foreach(root, idx, count, info) {
 			SCRIPT_INFO si;
 			si.lastExe = timeopt::now();
-			si.fromJson(jInfo);
+			si.fromJson(info);
 
 			string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
 			string scriptData;
@@ -56,10 +57,11 @@ bool ScriptManager::init() {
 				m_mapScripts[si.name] = si;
 			}
 			else {
-				continue;
 				LOG("[error]加载脚本文件失败," + scriptFilePath);
+				continue;
 			}
 		}
+		yyjson_doc_free(doc);
 	}
 
 	return true;
@@ -511,9 +513,12 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 }
 
 bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
-	json j;
-	j["lastExpScriptTimeCost"] = m_lastExpScripTimeCost;
-	j["lastExpScriptRunTime"] = m_tLastExpScriptRunTime.toStr(true);
+	yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* mutRoot = yyjson_mut_obj(mutDoc);
+	yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+	yyjson_mut_obj_add_real(mutDoc, mutRoot, "lastExpScriptTimeCost", m_lastExpScripTimeCost);
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastExpScriptRunTime", m_tLastExpScriptRunTime.toStr(true).c_str());
 
 	int expScriptCount;
 	vector<SCRIPT_INFO> allExpInfo;
@@ -523,33 +528,41 @@ bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpc
 	allExpInfo = m_vecVarExpScripts;
 	m_csExpScripts.unlock();
 
-	j["expScriptCount"] = expScriptCount;
+	yyjson_mut_obj_add_int(mutDoc, mutRoot, "expScriptCount", expScriptCount);
 
-	json jRunInfoList = json::array();
+	yyjson_mut_val* runInfo = yyjson_mut_arr(mutDoc);
 	for (int i = 0; i < allExpInfo.size(); i++) {
 		SCRIPT_INFO& si = allExpInfo[i];
 
-		json jRunInfo;
-		jRunInfo["tag"] = si.calcMpTag;
-		jRunInfo["script"] = si.script;
-		jRunInfo["retVal"] = si.lastRunInfo.retVal;
-		jRunInfo["runSuccess"] = si.lastRunInfo.runSuccess;
-		jRunInfo["valNullInCalc"] = si.lastRunInfo.valNullInCalc;
+		yyjson_mut_val* runInfoObj = yyjson_mut_obj(mutDoc);
+		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "tag", si.calcMpTag.c_str());
+		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "script", si.script.c_str());
+		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "retVal", si.lastRunInfo.retVal.c_str());
+		yyjson_mut_obj_add_bool(mutDoc, runInfoObj, "runSuccess", si.lastRunInfo.runSuccess);
+		yyjson_mut_obj_add_bool(mutDoc, runInfoObj, "valNullInCalc", si.lastRunInfo.valNullInCalc);
 
-		json jTagRefDataTime = json::object();
-		for (auto i : si.lastRunInfo.tagRefDataTime) {
-			jTagRefDataTime[i.first] = i.second;
+		yyjson_mut_val* tagRefDataTime = yyjson_mut_obj(mutDoc);
+		for (const auto& kv : si.lastRunInfo.tagRefDataTime) {
+			yyjson_mut_obj_add_strcpy(mutDoc, tagRefDataTime, kv.first.c_str(), kv.second.c_str());
 		}
 
-		jRunInfo["tagRefDataTime"] = jTagRefDataTime;
-		jRunInfo["runTime"] = si.lastExe.toStr(true);
+		yyjson_mut_obj_add_val(mutDoc, runInfoObj, "tagRefDataTime", tagRefDataTime);
+		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "runTime", si.lastExe.toStr(true).c_str());
 
-		jRunInfoList.push_back(jRunInfo);
+		yyjson_mut_arr_append(runInfo, runInfoObj);
 	}
 
-	j["runInfo"] = jRunInfoList;
+	yyjson_mut_obj_add_val(mutDoc, mutRoot, "runInfo", runInfo);
 
-	rpcResp.result = j.dump();
+	size_t len = 0;
+	char* result = yyjson_mut_write(mutDoc, 0, &len);
+	if (result) {
+		rpcResp.result = result;
+		free(result);
+	}
+
+	yyjson_mut_doc_free(mutDoc);
+
 	return true;
 }
 
@@ -810,17 +823,16 @@ void ScriptManager::exeAllVarExpScripts() {
 		}
 
 		info.lastRunInfo.valNullInCalc = false;
-
-		json& j = se.m_sEvalRet;
-		info.lastRunInfo.retVal = j.dump();
+		info.lastRunInfo.retVal = se.m_sEvalRet.dump();
 		info.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 
-		if (j.is_number()) {
-			double val = j.get<double>();
+		if (se.m_sEvalRet.is_number()) {
+			double val = se.m_sEvalRet.get<double>();
 
-			json jParams;
-			jParams["tag"] = info.calcMpTag;
-			jParams["val"] = val;
+			yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* mutRoot = yyjson_mut_obj(mutDoc);
+			yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "tag", info.calcMpTag.c_str());
+			yyjson_mut_obj_add_real(mutDoc, mutRoot, "val", val);
 
 			//最后的val取值时间作为计算结果的时间
 			if (se.m_vecValRefTime.size() > 0) {
@@ -829,13 +841,20 @@ void ScriptManager::exeAllVarExpScripts() {
 					refTime[i.second] = i.second;
 				}
 
-				auto i = refTime.rbegin();
-				jParams["time"] = i->first;
+				auto it = refTime.rbegin();
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "time", it->first.c_str());
 			}
 
 #ifdef TDS
-			tds->callAsyn("input", jParams);
+			size_t len = 0;
+			char* result = yyjson_mut_write(mutDoc, 0, &len);
+			if (result) {
+				string str = result;
+				tds->callAsyn("input", str);
+				free(result);
+			}
 #endif
+			yyjson_mut_doc_free(mutDoc);
 		}
 	}
 
