@@ -577,7 +577,7 @@ bool ScriptManager::rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcRe
 
 	yyjson_val* scriptActived_val = yyjson_obj_get(params_obj, "scriptActived");
 	bool scriptActived = false;
-	if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+	if (scriptActived_val && yyjson_is_bool(scriptActived_val)) {
 		scriptActived = yyjson_get_bool(scriptActived_val);
 	}
 
@@ -614,7 +614,7 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 
 	yyjson_val* scriptActived_val = yyjson_obj_get(params_obj, "scriptActived");
 	bool scriptActived = false;
-	if (scriptActived_val && yyjson_is_str(scriptActived_val)) {
+	if (scriptActived_val && yyjson_is_bool(scriptActived_val)) {
 		scriptActived = yyjson_get_bool(scriptActived_val);
 	}
 
@@ -626,7 +626,7 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 
 	yyjson_val* scriptLooping_val = yyjson_obj_get(params_obj, "scriptLooping");
 	bool scriptLooping = false;
-	if (scriptLooping_val && yyjson_is_str(scriptLooping_val)) {
+	if (scriptLooping_val && yyjson_is_bool(scriptLooping_val)) {
 		scriptLooping = yyjson_get_bool(scriptLooping_val);
 	}
 
