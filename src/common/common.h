@@ -16,6 +16,8 @@
 #include <queue>
 #include <functional>
 #include "json.hpp"
+#include "mongoose.h"
+
 #define WIN32_LEAN_AND_MEAN
 #ifdef _WIN32
 #include <windows.h>
@@ -447,3 +449,11 @@ inline string getbuilddate()
 {
 	return str::format("%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 }
+
+struct mg_http_data {
+	std::string body;
+	bool done = false;
+	int status = 0;
+};
+
+void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data);

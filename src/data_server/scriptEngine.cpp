@@ -9,7 +9,6 @@
 #include <cmath>
 #include "logger.h"
 #include "quickjs.h"
-#include "mongoose.h"
 
 thread_local ScriptEngine* pEngine;
 
@@ -179,29 +178,6 @@ static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, J
     }
 }
 
-struct http_data {
-    std::string body;
-    bool done = false;
-    int status = 0;
-};
-
-static void fn(struct mg_connection* connect, int ev, void* ev_data) {
-    http_data* data = (http_data*)connect->fn_data;
-    if (ev == MG_EV_HTTP_MSG) {
-        struct mg_http_message* hm = (struct mg_http_message*)ev_data;
-
-        data->body.assign(hm->body.ptr, hm->body.len);
-        data->status = mg_http_status(hm);
-
-        data->done = true;
-        connect->is_closing = 1;
-    }
-    else if (ev == MG_EV_ERROR) {
-        data->done = true;
-        connect->is_closing = 1;
-    }
-}
-
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
 		const char* log = JS_ToCString(ctx, argv[0]);
@@ -249,13 +225,11 @@ extern "C" {
 
             string url = "http://" + ip + ":" + std::to_string(port) + path;
 
-            TIME tStart = timeopt::now();
-
             struct mg_mgr mgr;
             mg_mgr_init(&mgr);
 
-            http_data data;
-            struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), fn, &data);
+            mg_http_data data;
+            struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
 
             if (connect) {
                 if (method == "POST") {
@@ -278,6 +252,7 @@ extern "C" {
                     );
                 }
 
+                TIME tStart = timeopt::now();
                 while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
                     mg_mgr_poll(&mgr, 100);
                 }
