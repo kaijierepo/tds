@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <cctype>
 #include <chrono>
+#include "mongoose.h"
 
 using namespace std;
 

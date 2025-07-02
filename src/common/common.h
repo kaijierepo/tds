@@ -16,9 +16,9 @@
 #include <queue>
 #include <functional>
 #include "json.hpp"
-#include "mongoose.h"
 
 #define WIN32_LEAN_AND_MEAN
+
 #ifdef _WIN32
 #include <windows.h>
 #include <Commdlg.h>
@@ -34,7 +34,6 @@
 #include <wchar.h>
 #include <stdlib.h>
 #endif
-
 
 using json = nlohmann::json;
 using namespace std;

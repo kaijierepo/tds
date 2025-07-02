@@ -9,6 +9,7 @@
 #include <cmath>
 #include "logger.h"
 #include "quickjs.h"
+#include "mongoose.h"
 
 thread_local ScriptEngine* pEngine;
 
