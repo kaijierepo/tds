@@ -289,7 +289,7 @@ namespace str {
 
 	int TwoHexStringToInt(const char* str);
 	int HexCharToInt(char c);
-
+	std::string url_decode(const std::string& str);
 	std::string remove_utf8_bom(const std::string& data);
 }
 

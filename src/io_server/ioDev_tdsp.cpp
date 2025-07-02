@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "httplib.h"
+
 #include "json.hpp"
 #include "ioDev_tdsp.h"
 #include "logger.h"
@@ -9,11 +9,8 @@
 #include "rpcHandler.h"
 #include "base64.h"
 #include "mp.h"
-#include "rpcHandler.h"
 #include "tAlmSrv.h"
 #include "webSrv.h"
-
-using namespace httplib;
 
 namespace ns_ioDev_tdsp {
 	ioDev* createDev()

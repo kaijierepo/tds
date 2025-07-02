@@ -1,5 +1,6 @@
 #include "pch.h"
-#include "httplib.h"
+#include <sstream>
+#include <fstream>
 #include "json.hpp"
 #include "ioDev_onvif.h"
 #include "logger.h"
@@ -7,10 +8,9 @@
 #include "ioChan.h"
 #include "ioSrv.h"
 #include "rpcHandler.h"
-#include "httplib.h"
 #include "secure.h"
 
-using namespace httplib;
+
 
 ioDev* createDev_onvif()
 {

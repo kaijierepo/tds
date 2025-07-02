@@ -4,7 +4,7 @@
 #include "rpcHandler.h"
 #include "common.h"
 #include "logger.h"
-#include "httplib.h"
+
 #include "ioSrv.h"
 #include "prj.h"
 #include "mp.h"
@@ -50,6 +50,8 @@ WebServer* getWebServer(int port, bool isHttps) {
 	}
 	return nullptr;
 }
+
+
 
 //日志监视会话
 vector<std::shared_ptr<TDS_SESSION>> logTdsSessions;
@@ -528,7 +530,7 @@ bool WebServer::handle_zlmhook(mg_http_message* hm, struct mg_connection* c) {
 	string hookData = str::fromBuff(hm->body.ptr, hm->body.len);
 	
 	//zlm中的中文被编码成url格式.格式如%E8%89%AF%E9%80%94%E8%BD
-	hookData = httplib::detail::decode_url(hookData,false);
+	hookData = str::url_decode(hookData);
 
 	//解析部分unicode编码。webRTC的hook会出现unicode编码
 	//hookData = charCodec::utf16Str_to_utf8(hookData); 
@@ -650,7 +652,7 @@ bool WebServer::handle_stream_redirect(mg_http_message* hm, struct mg_connection
 		proto = "rtsp";
 	}
 
-	tag = httplib::detail::decode_url(tag, false);
+	tag = str::url_decode(tag);
 	MP* pmp = prj.GetMPByTag(tag,"zh");
 	if (!pmp) {
 		mg_http_reply(c, 404, "", "");
@@ -2080,7 +2082,7 @@ void WebServer::initWsSessionInfo(string& strData, std::shared_ptr<TDS_SESSION> 
 		tdsSession->type = TDS_SESSION_TYPE::dataStream;
 		string tag = str::trimPrefix(strData,"/stream/"); 
 		 tag = str::trimSuffix(tag, ".de"); 
-		tag = httplib::detail::decode_url(tag, false);
+		tag = str::url_decode(tag);
 		ioChannel* pChan = ioSrv.getChanByTag(tag);
 		//本地端
 		if (pChan) {

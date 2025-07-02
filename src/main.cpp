@@ -36,7 +36,7 @@ SOFTWARE.
 #include "prj.h"
 #include "common.h"
 #include "rpcHandler.h"
-#include "httplib.h"
+
 
 #include "scriptEngine.h"
 

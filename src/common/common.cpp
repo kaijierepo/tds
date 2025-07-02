@@ -421,6 +421,30 @@ namespace str {
 		return true;
 	}
 
+	std::string url_decode(const std::string& str) {
+		std::string result;
+		size_t i = 0;
+		while (i < str.length()) {
+			if (str[i] == '%' && i + 2 < str.length() &&
+				std::isxdigit(str[i + 1]) && std::isxdigit(str[i + 2])) {
+				// 解析十六进制
+				int value = 0;
+				sscanf(str.substr(i + 1, 2).c_str(), "%x", &value);
+				result += static_cast<char>(value);
+				i += 3;
+			}
+			else if (str[i] == '+') {
+				result += ' ';
+				i++;
+			}
+			else {
+				result += str[i];
+				i++;
+			}
+		}
+		return result;
+	}
+
 	bool isGB2312(const std::string& str) {
 		size_t len = str.length();
 		for (size_t i = 0; i < len; ++i) {

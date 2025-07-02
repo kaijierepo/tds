@@ -1,6 +1,5 @@
 #ifdef _WIN32
 #include "pch.h"
-#include "httplib.h"
 #include "json.hpp"
 #include "ioDev_dcqk.h"
 #include "logger.h"
@@ -10,11 +9,9 @@
 #include "rpcHandler.h"
 #include "base64.h"
 #include "mp.h"
-#include "rpcHandler.h"
 #include "tAlmSrv.h"
 #include "tdb.h"
-
-using namespace httplib;
+#include <sstream>
 
 std::map<int, std::string> ioDev_dcqk::g_map0x97AlarmLevel = {
 	{ALARM_TYPE_QKYJ, "预警"},		//缺口预警及预警图像
@@ -335,7 +332,7 @@ BOOL ioDev_dcqk::ProcessJsonFrmData_0x3F(LPVOID pData)
 			string port = url0.substr(pos1 + 1);
 
 			char ss[512];  strcpy(ss, url0.c_str());
-			string url = httplib::detail::decode_url(ss, false);
+			string url = str::url_decode(ss);
 
 			string yearMonth = url.substr(pos + 4, 6);
 			string day = url.substr(pos + 4 + 7, 2);

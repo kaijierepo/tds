@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "httplib.h"
+
 #include "json.hpp"
 #include "ioDev_visca.h"
 #include "logger.h"
@@ -9,7 +9,6 @@
 #include "rpcHandler.h"
 #include "webSrv.h"
 
-using namespace httplib;
 
 ioDev* createDev_visca()
 {

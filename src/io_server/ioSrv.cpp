@@ -8,7 +8,7 @@
 #include "ioChan.h"
 #include "rpcHandler.h"
 #include "tSockSrv.h"
-#include "httplib.h"
+
 #include "ioDev_tdsp.h"
 #include "ioDev_dcqk.h"
 #include "base64.h"

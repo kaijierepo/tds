@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "httplib.h"
 #include "json.hpp"
 #include "ioDev_iq60.h"
 #include "logger.h"
@@ -8,7 +7,6 @@
 #include "ioSrv.h"
 #include "rpcHandler.h"
 
-using namespace httplib;
 
 ioDev* createDev_iq60()
 {

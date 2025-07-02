@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "httplib.h"
 #include "json.hpp"
 #include "ioDev_custom.h"
 #include "logger.h"
@@ -9,13 +8,12 @@
 #include "rpcHandler.h"
 #include "base64.h"
 #include "mp.h"
-#include "rpcHandler.h"
 #include "scriptEngine.h"
 #include "scriptManager.h"
 #include "scriptFunc.h"
 #include "webSrv.h"
 
-using namespace httplib;
+
 
 namespace ns_ioDev_custom {
 	ioDev* createDev()

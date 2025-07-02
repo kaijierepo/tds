@@ -4,7 +4,7 @@
 #include "tds.h"
 #include "rpcHandler.h"
 #include "prj.h"
-#include "httplib.h"
+
 #include "ioSrv.h"
 #include "ioDev_custom.h"
 #include <string>

@@ -15,7 +15,7 @@
 #include "logServer.h"
 #include "scriptManager.h"
 #include "base64.h"
-#include "httplib.h"
+#include <fstream>
 #include "webSrv.h"
 #include "ioDev_camera.h"
 #include "statusServer.h"

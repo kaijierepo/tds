@@ -3,7 +3,7 @@
 #include "common.h"
 #include "cutils.h"
 #include "quickjs-libc.h"
-#include "httplib.h"
+#include <sstream>
 #include "yyjson.h"
 #include <limits>
 #include <cmath>
