@@ -1529,61 +1529,104 @@ bool MP::hasValue()
 	return m_stDataLastUpdate.isValid();
 }
 
-void MP::stopStreamPull(string tag)
-{
+void MP::stopStreamPull(string tag) {
 	string key = "__defaultVhost__/stream/" + tag;
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
-	string streamServerUrl = "http://127.0.0.1:" + sPort;
+	string streamServerUrl = "127.0.0.1";
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{ "key", key },
-		{"secret",zlmSecret}
-	};
-
 	string uri = "/index/api/delStreamProxy";
-	auto res = cli.Get(uri, params, headers);
-	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",proxyKey=" + key);
-	if (res != nullptr) {
-		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
+
+	string ip = streamServerUrl;
+	string port = sPort;
+	string path = uri 
+		+ "?key=" + mg_get_url_encode(key) 
+		+ "&secret=" + mg_get_url_encode(zlmSecret);
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	LOG("[ZLMediaServer]Rest Api,Get %s,proxyKey=%s", url.c_str(), key.c_str());
+	if (data.status != 0) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", data.status, data.body.c_str());
 	}
 	else {
-		LOG("[error]zlm stream server 未响应," + uri);
+		LOG("[error]zlm stream server 未响应,%s", uri.c_str());
 	}
 }
 
-
-bool MP::startStreamPull()
-{
+bool MP::startStreamPull() {
 	string tag = getTag();
 	tag = charCodec::urlEncode(tag);
-	//string tagPinyin;
-	//str::hanZi2Pinyin(tag,tagPinyin);
+	
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string streamServerUrl = sIP + ":" + sPort;
 	string app = "stream";
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{ "vhost", "__defaultVhost__" },
-		{"app",app},
-		{"stream",tag},
-		{"url",m_mediaUrl},
-		{"secret",zlmSecret},
-		{"enable_hls","0"},
-		{"enable_ts","0"},
-		{"enable_mp4","0"}
-	};
-
 	string uri = "/index/api/addStreamProxy";
-	auto res = cli.Get(uri, params, headers);
-	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",app=" + app + ",stream=" + tag + ",媒体源=" + m_mediaUrl);
-	if (res != nullptr) {
-		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
-		json jResp = json::parse(res->body);
+
+	string ip = sIP;
+	string port = sPort;
+	string path = uri 
+		+ "?vhost=" + mg_get_url_encode("__defaultVhost__")
+		+ "&app=" + mg_get_url_encode(app)
+		+ "&stream=" + mg_get_url_encode(tag)
+		+ "&url=" + mg_get_url_encode(m_mediaUrl)
+		+ "&secret=" + mg_get_url_encode(zlmSecret)
+		+ "&enable_hls=0"
+		+ "&enable_ts=0"
+		+ "&enable_mp4=0";
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	LOG("[ZLMediaServer]Rest Api,Get %s,app=%s,stream=%s,媒体源=%s", (streamServerUrl + uri).c_str(), app.c_str(), tag.c_str(), m_mediaUrl.c_str());
+	if (data.status != 0) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", data.status, data.body.c_str());
+
+		json jResp = json::parse(data.body);
 		json jData = jResp["data"];
 		if (jData != nullptr && jData["key"] != nullptr) {
 			m_mpStatus.m_pullingSrcUrl = m_mediaUrl;
@@ -1591,73 +1634,113 @@ bool MP::startStreamPull()
 		}
 	}
 	else {
-		LOG("[error]zlm stream server 未响应," + uri);
+		LOG("[error]zlm stream server 未响应,%s", uri.c_str());
 	}
 
 	return false;
 }
 
-bool MP::stopStreamPush()
-{
+bool MP::stopStreamPush() {
 	string tag = getTag();
 	tag = charCodec::urlEncode(tag);
-	//string tagPinyin;
-	//str::hanZi2Pinyin(tag,tagPinyin);
+	
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	string streamServerUrl = sIP + ":" + sPort;
-
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{"key",m_strPusherProxyKey},
-		{"secret",zlmSecret}
-	};
-
 	string uri = "/index/api/delStreamPusherProxy";
-	auto res = cli.Get(uri, params, headers);
-	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",key=" + m_strPusherProxyKey);
-	if (res != nullptr) {
-		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
+
+	string ip = sIP;
+	string port = sPort;
+	string path = uri
+		+ "?key=" + mg_get_url_encode(m_strPusherProxyKey)
+		+ "&secret=" + mg_get_url_encode(zlmSecret);
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	LOG("[ZLMediaServer]Rest Api,Get %s,key=%s", (streamServerUrl + uri).c_str(), m_strPusherProxyKey.c_str());
+	if (data.status != 0) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", data.status, data.body.c_str());
 		return true;
 	}
 	else {
-		LOG("[error]zlm stream server 未响应," + uri);
+		LOG("[error]zlm stream server 未响应,%s", uri.c_str());
 	}
 
 	return false;
 }
 
-bool MP::startStreamPush(string desUrl)
-{
+bool MP::startStreamPush(string desUrl) {
 	string tag = getTag();
 	tag = charCodec::urlEncode(tag);
-	//string tagPinyin;
-	//str::hanZi2Pinyin(tag,tagPinyin);
+	
 	string sIP = tds->conf->getStr("streamServerIP", "127.0.0.1");
 	string sPort = tds->conf->getStr("httpMediaPort", "669");
 	string zlmSecret = tds->conf->getStr("zlmSecret", "Tds-666666");
 	string streamServerUrl = sIP + ":" + sPort;
-
 	string app = "stream";
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{ "vhost", "__defaultVhost__" },
-		{"app",app},
-		{"stream",tag},
-		{"dst_url",desUrl},
-		{"schema","rtsp"},
-		{"secret",zlmSecret}
-	};
-
 	string uri = "/index/api/addStreamPusherProxy";
-	auto res = cli.Get(uri, params, headers);
-	LOG("[ZLMediaServer]Rest Api,Get " + streamServerUrl + uri + ",app=" + app + ",stream=" + tag + ",推流目标=" + desUrl);
-	if (res != nullptr) {
-		LOG("[ZLMediaServer] Status:%d,Response Body:%s", res->status, res->body.c_str());
-		json jResp = json::parse(res->body);
+
+	string ip = sIP;
+	string port = sPort;
+	string path = uri
+		+ "?vhost=" + mg_get_url_encode("__defaultVhost__")
+		+ "&app=" + mg_get_url_encode(app)
+		+ "&stream=" + mg_get_url_encode(tag)
+		+ "&dst_url=" + mg_get_url_encode(desUrl)
+		+ "&schema=" + mg_get_url_encode("rtsp")
+		+ "&secret=" + mg_get_url_encode(zlmSecret);
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	LOG("[ZLMediaServer]Rest Api,Get %s,app=%s,stream=%s,推流目标=%s", (streamServerUrl + uri).c_str(), app.c_str(), tag.c_str(), desUrl.c_str());
+	if (data.status != 0) {
+		LOG("[ZLMediaServer] Status:%d,Response Body:%s", data.status, data.body.c_str());
+		json jResp = json::parse(data.body);
 		json jData = jResp["data"];
 		if (jData != nullptr && jData["key"] != nullptr) {
 			m_strPusherProxyKey = jData["key"];
@@ -1665,7 +1748,7 @@ bool MP::startStreamPush(string desUrl)
 		}
 	}
 	else {
-		LOG("[error]zlm stream server 未响应," + uri);
+		LOG("[error]zlm stream server 未响应,%s", uri.c_str());
 	}
 
 	return false;

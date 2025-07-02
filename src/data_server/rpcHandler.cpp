@@ -1700,138 +1700,199 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 	LOG("[warn]startServerUpgrade,升级线程开始");
 	g_bTdsUpgradeThreadRunning = true;
 
-	std::string protocol, host, port, path;
+	std::string protocol, host, port, path, ip, url;
 	if (parse_url(packageUrl, protocol, host, port, path)) {
-		httplib::Client client(host.c_str(), std::stoi(port));
-		auto res = client.Get(path.c_str());
-		if (res && res->status == 200) {
+		std::string hostTmp = host;
+
+		size_t pos = hostTmp.find("://");
+		if (pos != std::string::npos) {
+			hostTmp = hostTmp.substr(pos + 3);
+		}
+
+		pos = hostTmp.find(":");
+		if (pos != std::string::npos) {
+			hostTmp = hostTmp.substr(0, pos);
+		}
+
+		ip = hostTmp;
+		url = "http://" + ip + ":" + port + path;
+
+		struct mg_mgr mgr;
+		mg_mgr_init(&mgr);
+
+		mg_http_data data;
+		struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+		if (connect) {
+			mg_printf(connect,
+				"GET %s HTTP/1.0\r\n"
+				"Host: %s\r\n"
+				"Connection: close\r\n"
+				"\r\n",
+				path.c_str(), ip.c_str()
+			);
+
+			TIME tStart = timeopt::now();
+			while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}
+
+		mg_mgr_free(&mgr);
+
+		if (data.status == 200) {
 			//保存升级包
-			string fileName = getFileNameFromURL(packageUrl);
 			fs::createFolderOfPath("../packages");
+
+			string fileName = getFileNameFromURL(packageUrl);
 			string packagePath = fs::toAbsolutePath("../packages/") + "/" + fileName;
-			if (!fs::writeFile(packagePath.c_str(), res->body.data(), res->body.size())) {
+
+			if (!fs::writeFile(packagePath.c_str(), data.body.data(), data.body.size())) {
 				json j;
-				string s = "保存升级包失败," + packagePath;
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "保存升级包失败," + packagePath;
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
+				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
 				goto UPGRADE_END;
 			}
 
 			string tdsPath = fs::toAbsolutePath("./"); //末尾不带斜杠
+
 			//删除重命名文件
 			string appName = fs::appName();
 			string tmpExeName = appName + "_old.exe";
 			string tmpUIName = "ui_old";
+
 			if (fs::fileExist(tdsPath + "/" + tmpExeName)) {
 				if (!fs::deleteFile(tdsPath + "/" + tmpExeName)) {
 					json j;
-					string s = "删除文件失败," + tdsPath + "/" + tmpExeName;
-					j["serverUpgradeStatus"] = s;
+					j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpExeName;
+
 					rpcSrv.notify("onServerUpgradeStatusChange", j);
-					LOG("[warn]升级失败," + s);
-					goto UPGRADE_END;
-				}
-			}
-			if (fs::fileExist(tdsPath + "/" + tmpUIName)) {
-				if (!fs::deleteFolder(tdsPath + "/" + tmpUIName)) {
-					json j;
-					string s = "删除文件失败," + tdsPath + "/" + tmpUIName;
-					j["serverUpgradeStatus"] = s;
-					rpcSrv.notify("onServerUpgradeStatusChange", j);
-					LOG("[warn]升级失败," + s);
+					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
 					goto UPGRADE_END;
 				}
 			}
 
+			if (fs::fileExist(tdsPath + "/" + tmpUIName)) {
+				if (!fs::deleteFolder(tdsPath + "/" + tmpUIName)) {
+					json j;
+					j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpUIName;
+
+					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
+					goto UPGRADE_END;
+				}
+			}
 
 			//重命名当前版本
 			string exeName = fs::appName() + ".exe";
 			string uiName = "ui";
+
 			if (!renameFile(tdsPath + "/", exeName, tmpExeName)) {
 				json j;
-				string s = "重命名文件失败," + exeName;
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "重命名文件失败," + exeName;
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
+				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
 				goto UPGRADE_END;
 			}
-			/*if (!renameFile(tdsPath + "/", uiName, tmpUIName)) {
-				json j;
-				string s = "重命名文件失败," + uiName;
-				j["serverUpgradeStatus"] = s;
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
-				goto UPGRADE_END;
-			}*/
 
 			//向tKeep发送请求,停止服务,然后来进行文件替换
-			RPC_RESP resp;
-			httplib::Client cli("127.0.0.1:6007");
-			cli.set_connection_timeout(2);
-			cli.set_read_timeout(8);
-			httplib::Params params;
 			json jReq;
 			jReq["method"] = "suspendGuard";
 			jReq["params"] = "";
-			TIME start = timeopt::now();
-			auto suspendRes = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
-			if (suspendRes)
-			{
-				if (suspendRes->status == 200)
-				{
-					json result = json::parse(suspendRes->body);
-					if (result["error"] != nullptr)
-					{
-						json j;
-						string s = "tKeep停止服务失败";
-						j["serverUpgradeStatus"] = s;
-						rpcSrv.notify("onServerUpgradeStatusChange", j);
-						LOG("[warn]升级失败," + s);
-						goto UPGRADE_END;
-					}
-					else if (result["result"]!=nullptr)
-					{
-						LOG("[服务升级]tKeep停止服务成功");
-					}
+
+			string keepIP = "127.0.0.1";
+			string keepPort = "6007";
+			string keepPath = "/rpc";
+			string keepUrl = "http://" + keepIP + ":" + keepPort + keepPath;
+			string keepBody = jReq.dump();
+
+			struct mg_mgr keepMgr;
+			mg_mgr_init(&keepMgr);
+
+			mg_http_data keepData;
+			struct mg_connection* keepConnect = mg_http_connect(&keepMgr, keepUrl.c_str(), mg_connect_fn, &keepData);
+
+			if (keepConnect) {
+				mg_printf(connect,
+					"POST %s HTTP/1.0\r\n"
+					"Host: %s\r\n"
+					"Content-Type: application/json\r\n"
+					"Content-Length: %u\r\n"
+					"\r\n"
+					"%s",
+					keepPath.c_str(), keepIP.c_str(), (unsigned int)keepBody.size(), keepBody.c_str()
+				);
+
+				TIME keepStart = timeopt::now();
+				while (!keepData.done && timeopt::calcTimePassMilliSecond(keepStart) / 1000.0 < 10.0) {
+					mg_mgr_poll(&keepMgr, 100);
+				}
+			}			
+
+			mg_mgr_free(&keepMgr);
+
+			if (keepData.status == 200) {
+				json result = json::parse(keepData.body);
+				if (result["error"] != nullptr) {
+					json j;
+					j["serverUpgradeStatus"] = "tKeep停止服务失败";
+
+					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
+					goto UPGRADE_END;
+				}
+				else if (result["result"] != nullptr) {
+					LOG("[服务升级]tKeep停止服务成功");
 				}
 			}
-			else
-			{
+			else {
 				json j;
-				string s = "向tKeep请求超时,请确认tKeep版本或运行情况";
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "向tKeep请求超时,请确认tKeep版本或运行情况";
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
+				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
 				goto UPGRADE_END;
 			}
 
 			string extractPath = tdsPath;
-			if (packageType == "complete") extractPath = fs::toAbsolutePath("../");
+			if (packageType == "complete") {
+				extractPath = fs::toAbsolutePath("../");
+			}
+
 			//解压缩包到程序路径.miniz使用utf8路径
 			if (!extract_zip(packagePath.c_str(), extractPath.c_str())) {
 				json j;
-				string s = "解压缩升级包失败," + packagePath + "->" + extractPath;
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "解压缩升级包失败," + packagePath + "->" + extractPath;
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
+				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
+
 				goto UPGRADE_END;
 			}
 
 			//升级结束后检查是否存在 tds.exe，否则tds启动不了，目标机器就断了
 			if (!fs::fileExist(tdsPath + "/" + exeName)) {
 				json j;
-				string s = "压缩包中未包含" + exeName;
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "压缩包中未包含" + exeName;
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]升级失败," + s);
+				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				if (!renameFile(tdsPath + "/", tmpExeName,exeName)) {
 					json j;
-					string s = "压缩包中未包含" + exeName +",恢复重命名文件失败, " + tmpExeName;
-					j["serverUpgradeStatus"] = s;
+					j["serverUpgradeStatus"] = "压缩包中未包含" + exeName + ",恢复重命名文件失败, " + tmpExeName;
+
 					rpcSrv.notify("onServerUpgradeStatusChange", j);
-					LOG("[warn]升级失败," + s);
+					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 				}
 
 				goto UPGRADE_END;
@@ -1839,32 +1900,59 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 
 			//向tKeep发送请求,重新开启服务
 			jReq["method"] = "beginGuard";
-			cli.set_connection_timeout(2);
-			cli.set_read_timeout(3);
-			auto beginRes = cli.Post("/rpc", jReq.dump().c_str(), "application/json; charset=utf-8");
-			if (beginRes && beginRes->status == 200)
-			{
+			jReq["params"] = "";
+
+			keepIP = "127.0.0.1";
+			keepPort = "6007";
+			keepPath = "/rpc";
+			keepUrl = "http://" + keepIP + ":" + keepPort + keepPath;
+			keepBody = jReq.dump();
+
+			mg_mgr_init(&keepMgr);
+
+			keepData.reset();
+			keepConnect = mg_http_connect(&keepMgr, keepUrl.c_str(), mg_connect_fn, &keepData);
+
+			if (keepConnect) {
+				mg_printf(connect,
+					"POST %s HTTP/1.0\r\n"
+					"Host: %s\r\n"
+					"Content-Type: application/json\r\n"
+					"Content-Length: %u\r\n"
+					"\r\n"
+					"%s",
+					keepPath.c_str(), keepIP.c_str(), (unsigned int)keepBody.size(), keepBody.c_str()
+				);
+
+				TIME keepStart = timeopt::now();
+				while (!keepData.done && timeopt::calcTimePassMilliSecond(keepStart) / 1000.0 < 10.0) {
+					mg_mgr_poll(&keepMgr, 100);
+				}
+			}
+
+			mg_mgr_free(&keepMgr);
+
+			if (data.status == 200) {
 				LOG("[服务升级]tKeep重新开启服务成功");
 			}
 
 			//返回升级成功状态
 			{
 				json j;
-				string timeStr = timeopt::nowStr(false);
-				string s = "升级成功,等待重启," + timeStr;
-				j["serverUpgradeStatus"] = s;
+				j["serverUpgradeStatus"] = "升级成功,等待重启," + timeopt::nowStr(false);
+
 				rpcSrv.notify("onServerUpgradeStatusChange", j);
-				LOG("[warn]" + s);
+				LOG("[warn]" + j["serverUpgradeStatus"]);
 			}
 
 			//退出程序，等待tKeep重启
 			tds->stop();
-
 			exit(0);
 		}
 		else {
 			json j;
 			j["serverUpgradeStatus"] = "下载升级包失败," + packageUrl;
+
 			rpcSrv.notify("onServerUpgradeStatusChange", j);
 			LOG("[warn]startServerUpgrade,下载升级包失败");
 		}
@@ -2938,164 +3026,6 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			}
 		}
 		rpcResp.result = RPC_OK;
-	}
-	else if (method == "GetDamageDataSummary") {
-		string tag = params["tag"]; //车站的tag
-		string time = params["time"];
-		// send  http cmd to the station,waitting for the station's part of sunmmary 
-		//根据关联的tag找到ioDev
-		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
-		string theIp = "";
-		if (pIoDev) {
-			string debug = pIoDev->m_jDevAddr.dump();
-			if (pIoDev->m_jDevAddr.is_object()) {
-				theIp = pIoDev->m_jDevAddr["ip"];
-			}
-		}
-		string res0;
-		std::function<bool(string&, json*, string, string, json&)> funcMakeData = [](string& strJsonArr, json* in_pArr, string tagPrefix, string tagSuffix, json& out_list)-> bool
-		{
-			map<string, string> tableFieldsDescAndKey{
-				{"道岔","dc"},
-				{"直尖轨段1","zhijian1"},{"直尖轨段2","zhijian2"},{"导曲轨段1","daoqu1"},{"曲尖轨段1","qujian1"},{"曲尖轨段2","qujian2"},{"导曲轨段3","daoqu3"},
-				{"导曲轨段2","daoqu2"},{"导曲轨段4","daoqu4"},{"翼轨段1","yi1"},{"翼轨段2","yi2"},{"心轨段1","xin1"},{"心轨段2","xin2"},{"心轨段3","xin3"}
-			};
-			json* pJsIn = NULL; json sIn;
-			if (in_pArr) {
-				pJsIn = in_pArr;
-			}
-			else if ("" != strJsonArr) {
-				sIn = json::parse(strJsonArr);
-				pJsIn = &sIn;
-			}
-
-			json& jsIn = *pJsIn;
-			map<string, map<string, string>> tmpMap; // 1#: 段1->100,段2->100,..., 2#: 段1->100,段2->100,...,
-			vector<string> tmpVec;
-			for (int i = 0; i < jsIn.size(); i++) {
-				json& jOne = jsIn[i];
-				string ta0 = jOne["tag"];  ta0 = tagPrefix + ta0 + tagSuffix;
-				int cnt = jOne["count"].get<int>();
-
-				auto pMp = prj.GetMPByTag(ta0, "zh");
-				string rail = pMp->m_pParentMO->m_name;
-				string daocha = pMp->m_pParentMO->m_pParentMO->m_name;
-
-				rail = charCodec::utf16_to_gb(charCodec::utf8_to_utf16(rail));
-
-				if (tmpMap.find(daocha) != tmpMap.end()) {
-					map<string, string>& theDcData = tmpMap[daocha];
-					theDcData[rail] = to_string(cnt);
-				}
-				else {
-					map<string, string> theDcData;
-					theDcData[rail] = to_string(cnt);
-					tmpMap[daocha] = theDcData;
-
-					tmpVec.push_back(daocha);
-				}
-			}
-			json& list = out_list;
-			for (int i = 0; i < tmpVec.size(); i++) {
-				string& dc = tmpVec[i];
-				json jRow; jRow["dc"] = dc;
-
-				map<string, string>& theDcData = tmpMap[dc];
-				auto it = theDcData.begin();
-				for (; it != theDcData.end(); it++) {
-					string desc = charCodec::gb_to_utf8(it->first);
-					jRow[tableFieldsDescAndKey[desc]] = it->second;
-				}
-				list.push_back(jRow);
-			}
-			return true;
-		};
-		
-		//各种异常情况：
-		//没配置ip或类似问题则 界面send这部分显示空白
-		//没有指数数据 对应的区段显示0 
-		//1.
-		json listSend = json::array();
-		if (theIp != "") {  
-			json jsSend, jsParam;
-			jsSend["jsonrpc"] = "2.0";   jsSend["method"] = "GetDamageDataSendSummary"; jsSend["id"] = "1";
-			jsParam["time"] = time;
-			jsSend["params"] = jsParam;
-			string strSend = jsSend.dump();
-
-			httplib::Client httpClt(theIp.c_str(), 81);
-			httpClt.set_connection_timeout(5);
-			string path = "/api/rpc";
-			httplib::Result ret = httpClt.Post(path.c_str(), strSend, "application/json");
-			if (ret) {
-				int jj = 0;
-			}
-			if (ret && ret->status == 200) {
-				res0 = ret->body;
-				funcMakeData(res0, NULL, tag + ".", ".伤损指数", listSend);
-			}
-			else {
-				//LOG
-			}
-		}
-		//2.
-		json listRecv = json::array();
-		vector<string> vecTagSel; vecTagSel.push_back(tag + ".*"); //验证tag必须是站点
-		TAG_SELECTOR tagSel;
-		tagSel.init(vecTagSel, "", "道岔", "mo");
-		vector<OBJ*> objList;
-		prj.getObjByTagSelector(objList, tagSel);//该站的全部道岔
-
-		json jParam;
-		jParam["tag"] = tag + ".*.伤损指数";//该车站全部道岔全部铁轨的指数
-		jParam["time"] = time;
-		jParam["aggr"] = "count";
-		string strPara = jParam.dump();
-		string strRet, strErr, strQry;
-		db.rpc_db_select(strPara, strRet, strErr, strQry,"", session.language);
-		json jRet = json::parse(strRet);
-		funcMakeData(strRet, NULL, "", "", listRecv);
-
-		//3. 发送-接收
-		json listLost = json::array();
-		//先把recv的每个数组元素 加上 道岔的索引.
-		map<string, json*> mapRecv;
-		for (int i = 0; i < listRecv.size(); i++) {
-			string dc = listRecv[i]["dc"];
-			mapRecv[dc] = &listRecv[i];
-		}
-		for (int i = 0; i < listSend.size(); i++) {
-				json& sendOne = listSend[i];
-				string dc = sendOne["dc"];
-				if (mapRecv.find(dc) == mapRecv.end()) {
-					continue;
-				}
-				json& recvOne = *(mapRecv[dc]);
-
-				json one;
-				for (json::iterator it = sendOne.begin(); it != sendOne.end(); ++it) {
-					//string debug = sendOne.dump();
-					string k = it.key();
-					if (k == "dc") {
-						one["dc"] = it.value();
-					}
-					else {
-						string sendCnt = it.value();
-						string recvCnt = recvOne[k];
-						int diff = atoi(sendCnt.c_str()) - atoi(recvCnt.c_str());
-						one[it.key()] = diff;
-					}
-				}
-				listLost.push_back(one);
-		}
-
-		json jRecv;
-		jRecv["recv"] = listRecv;
-		jRecv["send"] = listSend;
-		jRecv["lost"] = listLost;
-		res0 = jRecv.dump();
-
-		rpcResp.result = res0;
 	}
 	else if (method == "updateDeList")
 	{

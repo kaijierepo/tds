@@ -72,8 +72,6 @@ namespace ns_ioDev_dcqk {
 createReg reg;
 }
 
-void ThreadSaveGapAndPic(void* lpParam);
-
 void eqpInfo::AddVedioCache(StVedioRecord* pTimes, WORD wCount, BYTE btType)
 {
 	EnterCriticalSection(&m_csVedioList);
@@ -385,39 +383,41 @@ BOOL ioDev_dcqk::ProcessJsonFrmData_0x3F(LPVOID pData)
 				if (label == "定位->反位" || label == "左位->右位") { beforePos = 0; afterPos = 1; }
 				else { beforePos = 1; afterPos = 0; }
 			}
-			httplib::Client cli(ipPort); 
-			auto res = cli.Get(path);//"/db/202410/30/1%23/1J1/扳动录像/170102.avi_mv" 
-			if (res && res->status == 200) {
 
-				//写入数据库
-				int flen = res->body.size();
-				char* out = new char[flen * 2 + 1];
-				tdb_base64_encode((const unsigned char*)res->body.c_str(), flen, out);
-				{
-					json j, jV, jFile;
-					string tag = m_strTagBind + "." + dc + "." + strZzj + "." + videoType;
-					j["tag"] = tag;
-					j["time"] = theTime;
-					jV["aaaa"] = "aaa";
-					j["val"] = jV;
-					j["beforePos"] = beforePos; // 0 定位， 1  反位
-					j["afterPos"] = afterPos;
-					j["vedioTimeLen"] = 0;// data->timelen;
-					j["vedioLen"] = res->body.size();
-					jFile["type"] = (strType == "cross" ? "avi_crs" : "avi_mv");
-					jFile["name"] = timeopt::TimeToHMSForFile(timeopt::str2st(theTime)) + (strType == "cross" ? ".avi_crs" : ".avi_mv");
-					jFile["data"] = out;
-					j["file"] = jFile;
+			// Sixf todo 未来改为tb3386通信
+			//httplib::Client cli(ipPort); 
+			//auto res = cli.Get(path);//"/db/202410/30/1%23/1J1/扳动录像/170102.avi_mv" 
+			//if (res && res->status == 200) {
 
-					j["db"] = "media";
-					tds->callAsyn("db.insert", j);
-				}
-				delete[] out;
-			}
-			else {
-				string err = res ? std::to_string(res->status) : "No response";
-				//log
-			}
+			//	//写入数据库
+			//	int flen = res->body.size();
+			//	char* out = new char[flen * 2 + 1];
+			//	tdb_base64_encode((const unsigned char*)res->body.c_str(), flen, out);
+			//	{
+			//		json j, jV, jFile;
+			//		string tag = m_strTagBind + "." + dc + "." + strZzj + "." + videoType;
+			//		j["tag"] = tag;
+			//		j["time"] = theTime;
+			//		jV["aaaa"] = "aaa";
+			//		j["val"] = jV;
+			//		j["beforePos"] = beforePos; // 0 定位， 1  反位
+			//		j["afterPos"] = afterPos;
+			//		j["vedioTimeLen"] = 0;// data->timelen;
+			//		j["vedioLen"] = res->body.size();
+			//		jFile["type"] = (strType == "cross" ? "avi_crs" : "avi_mv");
+			//		jFile["name"] = timeopt::TimeToHMSForFile(timeopt::str2st(theTime)) + (strType == "cross" ? ".avi_crs" : ".avi_mv");
+			//		jFile["data"] = out;
+			//		j["file"] = jFile;
+
+			//		j["db"] = "media";
+			//		tds->callAsyn("db.insert", j);
+			//	}
+			//	delete[] out;
+			//}
+			//else {
+			//	string err = res ? std::to_string(res->status) : "No response";
+			//	//log
+			//}
 
 			bSaveOk = true;
 			strTime = theTime;
@@ -2335,9 +2335,6 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 		param->zzj315 = zzj315;
 		param->location = location;
 		param->acqreason = acqreason;
-
-		//thread t(ThreadSaveGapAndPic, param);
-		//t.detach();
 	}
 }
 
@@ -2484,46 +2481,6 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
 			db.Insert(theTag, sDE, &stTime);
 		}
 	}
-}
-
-void ThreadSaveGapAndPic(void* lpParam)
-{
-	GapValPicParam* param = (GapValPicParam*)lpParam;
-
-	httplib::Client client("http://127.0.0.1");
-	string nianyue = param->fullTime.substr(0,4)+ param->fullTime.substr(5, 2);
-	string day = param->fullTime.substr(8, 2);
-	string ti = param->justTime.substr(0, 2) + param->justTime.substr(3, 2) + param->justTime.substr(6, 2);
-	string url = "/db/" + nianyue + "/" + day + "/" + param->zzj315 + "/" + ti + ".grh";
-	httplib::Result res = client.Get(url);
-	if (res) {
-		int len = res->body.size();
-		char* out = new char[len * 2 + 1];   memset(out, 0, len * 2 + 1);
-		base64_encode((const unsigned char*)res->body.data(), len, out);
-
-		json jParam, jVal;
-		jParam["tag"] = param->tag;
-		jParam["time"] = param->fullTime;
-		jVal["val"] = str::format("%.2f", param->fVal);
-		jVal["std"] = str::format("%.2f", param->std);
-		jVal["offset"] = str::format("%.2f", param->offset);
-		jVal["lrsign"] = param->lrsign==0 ? "left" :  (param->lrsign == 1 ? "right" :  "invalid");
-		jVal["location"] = param->location;
-		jVal["acqreason"] = param->acqreason;
-		jParam["val"] = jVal;
-		json jFile;
-		jFile["name"] = ti + ".grh";
-		jFile["type"] = "grh";
-		jFile["data"] = string(out);
-		jParam["file"] = jFile;
-		delete[] out;
-		//string s = jParam.dump();
-
-		RPC_RESP resp;
-		RPC_SESSION session;
-		rpcSrv.rpc_input(jParam, resp, session);
-	}
-	delete param;
 }
 
 void ioDev_dcqk::Do_CMD_CODE_YWINFO(LPVOID pData)

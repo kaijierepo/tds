@@ -47,62 +47,85 @@ SOFTWARE.
 bool CmdExecParam(string strParam, uint32_t dwMilliseconds = 0, int nShow = SW_SHOW, const char* lpDirectory = NULL);
 
 void clearZlmNoReaderPusher() {
-	string sPort = tds->conf->getStr("httpMediaPort", "669");
-	string streamServerUrl = "http://localhost:" + sPort;
 	string mediaSrvIP = tds->conf->mediaSrvIP;
-	if (mediaSrvIP != "") {
-		streamServerUrl = "http://" + mediaSrvIP + ":" + sPort;
-	}
-	else {
+	if (mediaSrvIP == "") {
 		return;
 	}
 
-
-	httplib::Client cli(streamServerUrl);
-	httplib::Headers headers;
-	httplib::Params params = {
-		{"secret","Tds-666666"}
-	};
-
+	string sPort = tds->conf->getStr("httpMediaPort", "669");
+	string streamServerUrl = "http://" + mediaSrvIP + ":" + sPort;
 	string uri = "/index/api/getMediaList";
-	auto res = cli.Get(uri, params, headers);
-	if (res != nullptr && res->body.size() > 0) {
-		json j = json::parse(res->body);
+
+	string ip = mediaSrvIP;
+	string port = sPort;
+	string path = uri + "?secret=" + mg_get_url_encode("Tds-666666");
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	if (data.status == 200) {
+		json j = json::parse(data.body);
+
 		if (j["code"] != nullptr && j["code"].get<int>() == 0) {
 			json jMediaList = j["data"];
+
 			for (int i = 0; i < jMediaList.size(); i++) {
 				json jM = jMediaList[i];
-				if (jM["totalReaderCount"].is_number()) {
-					if (jM["totalReaderCount"].get<int>() == 0) {
-						if (jM["originTypeStr"] == "rtsp_push") {
-							string tag = jM["stream"];
-							MP* pmp = prj.GetMPByTag(tag,"zh");
+				if (jM["totalReaderCount"].is_number() && jM["totalReaderCount"].get<int>() == 0 && jM["originTypeStr"] == "rtsp_push") {
+					string tag = jM["stream"];
+					MP* pmp = prj.GetMPByTag(tag, "zh");
 
-							if (pmp) {
-								if (pmp->m_srcStreamFetch == "ondemand") {
-									std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-									RPC_SESSION rpcSess;
-									rpcSess.remoteAddr = "127.0.0.1";
-									rpcSess.remotePort = 0;
-									pSession->setRpcSession(&rpcSess);
-									json jReq;
-									jReq["method"] = "closeStream";
-									json jParams;
-									jParams["tag"] = tag;
-									jReq["id"] = timeopt::nowStr();
-									jReq["params"] = jParams;
-									string sReq = jReq.dump();
-									rpcSrv.handleRpcCallAsyn(sReq, pSession, false);
-									LOG("[流媒体  ]位号:%s 无人观看，取流模式为:按需取流,关闭推流", tag.c_str());
-								}
-								else {
-									LOG("[流媒体  ]位号:%s 无人观看，取流模式为:持续取流,保持媒体源连接", tag.c_str());
-								}
-							}
-							else {
-								LOG("[流媒体  ]位号:%s 无人观看，没有找到对应的监控点", tag.c_str());
-							}
+					if (pmp) {
+						if (pmp->m_srcStreamFetch == "ondemand") {
+							std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
+
+							RPC_SESSION rpcSess;
+							rpcSess.remoteAddr = "127.0.0.1";
+							rpcSess.remotePort = 0;
+
+							pSession->setRpcSession(&rpcSess);
+
+							json jReq;
+							jReq["method"] = "closeStream";
+
+							json jParams;
+							jParams["tag"] = tag;
+
+							jReq["id"] = timeopt::nowStr();
+							jReq["params"] = jParams;
+
+							string sReq = jReq.dump();
+							rpcSrv.handleRpcCallAsyn(sReq, pSession, false);
+
+							LOG("[流媒体  ]位号:%s 无人观看，取流模式为:按需取流,关闭推流", tag.c_str());
 						}
+						else {
+							LOG("[流媒体  ]位号:%s 无人观看，取流模式为:持续取流,保持媒体源连接", tag.c_str());
+						}
+					}
+					else {
+						LOG("[流媒体  ]位号:%s 无人观看，没有找到对应的监控点", tag.c_str());
 					}
 				}
 			}
@@ -112,7 +135,6 @@ void clearZlmNoReaderPusher() {
 		LOG("[error]zlm stream server 未响应,url=%s,path=%s", streamServerUrl.c_str(), uri.c_str());
 	}
 }
-
 
 void updateEzvizAccessInfo() {
 #ifdef ENABLE_OPENSSL

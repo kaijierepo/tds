@@ -125,15 +125,38 @@ void thread_do_http_heartbeat(ioDev_custom* pDev) {
 	pDev->doHttpHeartbeat();
 }
 
-void ioDev_custom::doHttpHeartbeat()
-{
-	string ip = m_jDevAddr["ip"];
-	int port = m_jDevAddr["port"].get<int>();
-	string addr = "http://" + ip + ":" + str::fromInt(port);
-	httplib::Client cli(addr);
-	auto res = cli.Get(m_httpHeartbeatUrl);
+void ioDev_custom::doHttpHeartbeat() {
+	int nPort = m_jDevAddr["port"].get<int>();
 
-	if (res != nullptr) {
+	string ip = m_jDevAddr["ip"];
+	string port = str::fromInt(nPort);
+	string path = "";
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	if (data.status == 200) {
 		setOnline();
 	}
 	else {

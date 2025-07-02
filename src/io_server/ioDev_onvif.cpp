@@ -437,65 +437,127 @@ std::vector<PresetInfo> parsePresetsResponse(const std::string& response) {
 	return presets;
 }
 
-bool ioDev_onvif::doOnvifTransaction(string msg,string uri,bool log)
-{
-	if (!isAddrValid())
+bool ioDev_onvif::doOnvifTransaction(string msg, string uri, bool log) {
+	if (!isAddrValid()) {
 		return false;
+	}
 
 	string ip = m_jDevAddr["ip"];
-	string addr = "http://" + ip;
+	string port = "";
+	string path = uri;
+	string url = "http://" + ip + ":" + port + path;
+	string body = msg;
 
-	httplib::Client cli(addr);
-	httplib::Params params;
-	auto res = cli.Post(uri, msg, "application/soap+xml; charset=utf-8");
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
 
-	if(log)
-		LOG("[Onvif]请求,地址:" + addr  + uri + "\r\nSoap Message:" + msg);
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"POST %s HTTP/1.0\r\n"
+			"Host: %s\r\n"
+			"Content-Type: application/json\r\n"
+			"Content-Length: %u\r\n"
+			"\r\n"
+			"%s",
+			path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+		);
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+	if (log) {
+		LOG("[Onvif]请求,地址:" + url + "\r\nSoap Message:" + msg);
+	}
 
 	//获取摘要盘问
-	if (res != nullptr) {
-		string s = res->get_header_value("WWW-Authenticate");
-		s = str::trimPrefix(s, "Digest ");
-		map<string, string> mapKV = parseKeyValStr(s);
+	if (data.status == 200) {
+		string head = mg_get_header_value(data.head, "WWW-Authenticate");
+		head = str::trimPrefix(head, "Digest ");
+
+		map<string, string> mapKV = parseKeyValStr(head);
 		string realm = mapKV["realm"];
 		string nonce = mapKV["nonce"];
 
 		string authStr = generateAuthStr(uri, realm, nonce, generateNouce());
 
-		httplib::Headers header = {
-			{"Authorization",authStr}
-		};
+		mg_mgr_init(&mgr);
 
-		res = cli.Post(uri, header, msg, "application/soap+xml; charset=utf-8");
+		data.reset();
+		connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
 
-		if (res != nullptr) {
+		if (connect) {
+			mg_printf(connect,
+				"POST %s HTTP/1.0\r\n"
+				"Host: %s\r\n"
+				"Content-Type: application/soap+xml; charset=utf-8\r\n"
+				"Authorization: %s\r\n"
+				"Content-Length: %u\r\n"
+				"Connection: close\r\n"
+				"\r\n"
+				"%s",
+				path.c_str(), ip.c_str(), authStr.c_str(), (unsigned int)body.size(), body.c_str()
+			);
 
-			if (res->status == 401) {
-				LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
+			TIME tStart = timeopt::now();
+			while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+				mg_mgr_poll(&mgr, 100);
 			}
+		}
 
-			if (log) {
-				LOG("[Onvif]响应,地址:" + addr + uri + "\r\nSoap Message:" + res->body);
-			}
+		mg_mgr_free(&mgr);
 
-			if (uri == "/onvif/media_service")
-			{
-				string response = res->body;
-				size_t urlStart = response.find("<tt:Uri>");
-				size_t urlEnd = response.find("</tt:Uri>");
-				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
-					string picUrl = response.substr(urlStart + 8, urlEnd - urlStart - 8);
+		if (data.status == 401) {
+			LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
+		}
 
-					cli.set_basic_auth(m_strUser.c_str(), m_strPwd.c_str());
-					auto res = cli.Get(picUrl.c_str());
+		if (log) {
+			LOG("[Onvif]响应,地址:%s%s\r\nSoap Message:%s", ip.c_str(), path.c_str(), data.body.c_str());
+		}
 
-					std::ofstream file("C://Users//kang//Desktop//temp//snapshot.jpg", std::ios::binary);
-					if (!file) {
-						return false;
+		if (uri == "/onvif/media_service") {
+			size_t urlStart = data.body.find("<tt:Uri>");
+			size_t urlEnd = data.body.find("</tt:Uri>");
+
+			if (urlStart != std::string::npos && urlEnd != std::string::npos) {
+				string picUrl = data.body.substr(urlStart + 8, urlEnd - urlStart - 8);
+
+				mg_mgr_init(&mgr);
+
+				data.reset();
+				connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+				if (connect) {
+					mg_printf(connect,
+						"GET %s HTTP/1.0\r\n"
+						"Host: %s\r\n"
+						"Authorization: Basic %s\r\n"
+						"Connection: close\r\n"
+						"\r\n",
+						picUrl.c_str(), ip.c_str(), mg_base64_encode(m_strUser + ":" + m_strPwd).c_str()
+					);
+
+					TIME tStart = timeopt::now();
+					while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+						mg_mgr_poll(&mgr, 100);
 					}
-
-					file.write(res->body.c_str(), res->body.size());
 				}
+
+				mg_mgr_free(&mgr);
+				
+				std::ofstream file("C://Users//kang//Desktop//temp//snapshot.jpg", std::ios::binary);
+				if (!file) {
+					return false;
+				}
+
+				file.write(data.body.c_str(), data.body.size());
 			}
 		}
 
