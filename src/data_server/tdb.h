@@ -29,15 +29,15 @@ SOFTWARE.
 #pragma once
 #include <map>
 #include <set>
+#include <mutex>
 #ifdef ENABLE_QJS
-#include "cutils.h"
-#include "quickjs-libc.h"
-#include "quickjs.h"
+#include <script\cutils.h>
+#include <script\quickjs-libc.h>
+#include <script\quickjs.h>
 #endif
 #include "yyjson.h"
 #include <vector>
 #include <string>
-#include <mutex>
 using namespace std;
 
 class TDB;
@@ -539,9 +539,9 @@ public:
 	CONDITION_SELECTOR();
 	~CONDITION_SELECTOR();
 	
-#ifdef ENABLE_QJS
-	JSRuntime* rt;
-	JSContext* ctx;
+#if ENABLE_QJS
+	bool evaluate_condition(const char* json_str, size_t json_len);
+	JSContext* global_object;
 #endif
 
 	bool match(yyjson_val* de);

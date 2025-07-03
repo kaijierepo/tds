@@ -49,7 +49,7 @@ public:
 	//faultTolerant=true,allow error data between data pkt
 	//causes performance loss
 	bool PopPkt(fp_validPktCheck pktCheckFn,bool faultTolerant = true);
-	bool PopAllAs(string cpt); 
+	//bool PopAllAs(string cpt); 
 
 	stream2pkt()
 	{

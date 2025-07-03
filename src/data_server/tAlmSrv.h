@@ -4,7 +4,7 @@
 #include "tdb.h"
 #include "tds.h"
 #include "json.hpp"
-#include <shared_mutex>
+//#include <shared_mutex>
 #include <chrono>
 
 /* Performance-critical design
@@ -280,7 +280,7 @@ public:
 	map<string, ALARM_INFO*> unAckList;
 	string buffFilePath;
 	DB_FILE_MODE dbFileMode;
-	shared_mutex m_csTable;
+	mutex m_csTable;
 	ALM_TABLE_TYPE m_tableType;
 
 
@@ -446,8 +446,6 @@ public:
 	string getFilePath(int y, int m, int d, ALM_TABLE_TYPE tableType, DB_FILE_MODE fileMode);
 
 	bool CompareTime(TIME& time1, TIME& time2);
-
-	string uuid();
 
 	static void ClearMap(map<string, ALARM_INFO*>& inMap);
 	//almTable tableStatus;

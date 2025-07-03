@@ -46,77 +46,6 @@ SOFTWARE.
 
 TDB db;
 
-#ifdef ENABLE_QJS
-#include "quickjs.h"
-JSValue yyjson_value_to_quickjs(JSContext* ctx, yyjson_val* val) {
-	if (!val) return JS_UNDEFINED;
-
-	// 根据 yyjson 值的类型进行转换
-	switch (yyjson_get_type(val)) {
-	case YYJSON_TYPE_NULL:
-		return JS_NULL;
-
-	case YYJSON_TYPE_BOOL:
-		return JS_NewBool(ctx, yyjson_get_bool(val));
-
-	case YYJSON_TYPE_NUM:
-		if (yyjson_is_int(val)) {
-			return JS_NewInt64(ctx, yyjson_get_int(val));
-		}
-		else {
-			return JS_NewFloat64(ctx, yyjson_get_num(val));
-		}
-
-	case YYJSON_TYPE_STR: {
-		const char* str = yyjson_get_str(val);
-		size_t len = yyjson_get_len(val);
-		return JS_NewStringLen(ctx, str, len);
-	}
-
-	case YYJSON_TYPE_ARR: {
-		size_t count = yyjson_arr_size(val);
-		JSValue arr = JS_NewArray(ctx);
-		size_t idx, max;
-		yyjson_val* item;
-		yyjson_arr_foreach(val, idx,max,item) {
-			JSValue js_item = yyjson_value_to_quickjs(ctx, item);
-			JS_SetPropertyUint32(ctx, arr, idx, js_item);
-			//JS_FreeValue(ctx, js_item); 
-		}
-
-		return arr;
-	}
-
-	case YYJSON_TYPE_OBJ: {
-		JSValue obj = JS_NewObject(ctx);
-		yyjson_val* k,*v;
-		size_t idx, max;
-		yyjson_obj_foreach(val,idx,max, k, v) {
-			const char* key_str = yyjson_get_str(k);
-			JSValue js_val = yyjson_value_to_quickjs(ctx, v);
-			JS_SetPropertyStr(ctx, obj, key_str, js_val);
-			//JS_FreeValue(ctx, js_val); // 设置后释放临时值
-		}
-
-		return obj;
-	}
-
-	default:
-		return JS_UNDEFINED;
-	}
-}
-bool setScriptEngineObj(yyjson_val* jObj, JSValue engineObj, JSContext* ctx)
-{
-	size_t idx, maxIdx;
-	yyjson_val* key, * value;
-	yyjson_obj_foreach(jObj, idx, maxIdx, key, value) {
-		const char* key_str = yyjson_get_str(key);
-		JSValue js_val = yyjson_value_to_quickjs(ctx, value);
-		JS_SetPropertyStr(ctx, engineObj, key_str, js_val);;
-	}
-	return true;
-}
-#endif
 string replaceStr(string str, const string to_replaced, const string newchars)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
@@ -6425,270 +6354,155 @@ bool TAG_SELECTOR::singleSelMode()
 CONDITION_SELECTOR::CONDITION_SELECTOR()
 {
 	bEnable = false;
-#ifdef ENABLE_QJS
-	rt = 0;
-	ctx = 0;
-#endif
 }
 
 
 bool CONDITION_SELECTOR::init(string filter)
 {
-#ifdef ENABLE_QJS
 	if (filter.length() > 0)
 	{
-		filterExp = filter;
-		rt = JS_NewRuntime();
-		ctx = JS_NewContext(rt);
-		bEnable = true;
-	}
+#ifdef ENABLE_QJS
+		// create runtime and context
+		JSRuntime* rt = JS_NewRuntime();
+		if (!rt) return false;
+		global_object = JS_NewContext(rt);
+		if (!global_object)
+		{
+			JS_FreeRuntime(rt);
+			return false;
+		}
 #endif
+
+		filterExp = filter;
+		bEnable = true;
 	return true;
+
+	}
+	return false;
 }
 
 CONDITION_SELECTOR::~CONDITION_SELECTOR()
 {
+	if (filterExp.length() > 0)
+	{
 #ifdef ENABLE_QJS
-	if(ctx)
-	JS_FreeContext(ctx);
-	if(rt)
-	JS_FreeRuntime(rt);
+		// get runtime
+		JSRuntime* rt = JS_GetRuntime(global_object);
+
+		// free
+		JS_FreeContext(global_object);
+		JS_FreeRuntime(rt);
 #endif
+	}
 }
 
-#ifdef ENABLE_QJS_TODO
-void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_val* yyVal, jerry_value_t& jerryVal)
-{
-	if (yyjson_is_str(yyVal))
-		jerryVal = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_get_str(yyVal));
-	else if (yyjson_is_null(yyVal)) {
-		jerryVal = jerry_create_null();
-	}
-	else if (yyjson_is_real(yyVal)) {
-		double val = yyjson_get_real(yyVal);
-		jerryVal = jerry_create_number(val);
-	}
-	else if (yyjson_is_int(yyVal))//handle int and float seprately, because the accracy problem of float,if cast int to float,eval == in a script will fail
-	{
-		int val = yyjson_get_int(yyVal);
-		jerryVal = jerry_create_number(val);
-	}
-	/*else if (yyjson_is_uint(yyVal)) 
-	{
-		uint64_t digits[1] = { yyjson_get_uint(yyVal) };
-		jerryVal = jerry_create_bigint(digits, 1, false);
-	}
-	else if (yyjson_is_sint(yyVal))
-	{
-		uint64_t digits[1] = { yyjson_get_sint(yyVal) };
-		jerryVal = jerry_create_bigint(digits, 1, true);
-	}*/
-	else if (yyjson_is_bool(yyVal))
-		jerryVal = jerry_create_boolean(yyjson_get_bool(yyVal));
-	else if (yyjson_is_obj(yyVal))
-	{
-		jerryVal = jerry_create_object();
-		size_t idx, maxIdx;
-		yyjson_val* key, * value;
-		yyjson_obj_foreach(yyVal, idx, maxIdx, key, value) {
-			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_get_str(key));
-			jerry_value_t prop_value;
-			yyVal2jerryVal(value, prop_value);
+#ifdef ENABLE_QJS
 
-			jerry_value_t set_result = jerry_set_property(jerryVal, prop_name, prop_value);
-			if (jerry_value_is_error(set_result)) {
-				jerry_error_t error = jerry_get_error_type(set_result);
-				jerry_release_value(error);
+bool CONDITION_SELECTOR::evaluate_condition(const char* json_str, size_t json_len)
+{
+	bool ret = false;
+	JSValue json_val = JS_UNDEFINED;
+	JSValue global = JS_UNDEFINED;
+	JSPropertyEnum* props = nullptr;
+	uint32_t len = 0;
+
+	try
+	{
+		// parse JSON
+		json_val = JS_ParseJSON(global_object, json_str, json_len, "<input>");
+		if (JS_IsException(json_val)) {
+			JSValue exception = JS_GetException(global_object);
+			const char* err_str = JS_ToCString(global_object, exception);
+			string err = DB_STR::utf8_to_gb(err_str);
+			std::cerr << "JSON parse json: " << err << std::endl;
+			JS_FreeCString(global_object, err_str);
+			JS_FreeValue(global_object, exception);
+			return false;
+		}
+
+		// get global object
+		global = JS_GetGlobalObject(global_object);
+
+		// copy properties from JSON to global object
+		if (JS_GetOwnPropertyNames(global_object, &props, &len, json_val, JS_GPN_STRING_MASK) < 0) {
+			throw std::runtime_error("getOwnPropertyNames failed");
+		}
+
+		for (uint32_t i = 0; i < len; i++) {
+			JSValue val = JS_GetProperty(global_object, json_val, props[i].atom);
+			if (JS_IsException(val)) {
+				JS_FreeAtom(global_object, props[i].atom);
+				continue;
 			}
-			jerry_release_value(set_result);
-			jerry_release_value(prop_name); //this 2 release must be done or jerry_cleanup will crash
-			jerry_release_value(prop_value);
+
+			JS_SetProperty(global_object, global, props[i].atom, val);
+			JS_FreeAtom(global_object, props[i].atom);
 		}
-	}
-	else if (yyjson_is_arr(yyVal))
-	{
-		jerryVal = jerry_create_array((uint32_t)yyjson_arr_size(yyVal));
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_val* item;
-		yyjson_arr_foreach(yyVal, idx, max, item) {
-			jerry_value_t engineItem;
-			yyVal2jerryVal(item, engineItem);
-			jerry_value_t set_result_arr = jerry_set_property_by_index(jerryVal, (uint32_t)idx, engineItem);
-			jerry_release_value(engineItem);
+
+
+		// evaluate script
+		std::string script = "!!(" + filterExp + ")";
+		JSValue result = JS_Eval(global_object, script.c_str(), script.size(), "<eval>", JS_EVAL_TYPE_GLOBAL);
+
+		if (JS_IsException(result)) {
+			JSValue exception = JS_GetException(global_object);
+			const char* err_str = JS_ToCString(global_object, exception);
+			string err = DB_STR::utf8_to_gb(err_str);
+			std::cerr << "evaluate script error: " << err << std::endl;
+			JS_FreeCString(global_object, err_str);
+			JS_FreeValue(global_object, exception);
+			ret = false;
 		}
-	}
-	else {
-		
-	}
-}
-
-void CONDITION_SELECTOR::yyVal2jerryVal(yyjson_mut_val* yyVal, jerry_value_t& jerryVal)
-{
-	if (yyjson_mut_is_str(yyVal))
-		jerryVal = jerry_create_string_from_utf8((const jerry_char_t*)yyjson_mut_get_str(yyVal));
-	else if (yyjson_mut_is_null(yyVal)) {
-		jerryVal = jerry_create_null();
-	}
-	else if (yyjson_mut_is_real(yyVal)) {
-		double val = yyjson_mut_get_real(yyVal);
-		jerryVal = jerry_create_number(val);
-	}
-	else if (yyjson_mut_is_int(yyVal))
-	{
-		int val = yyjson_mut_get_int(yyVal);
-		jerryVal = jerry_create_number(val);
-	}
-	else if (yyjson_mut_is_bool(yyVal))
-		jerryVal = jerry_create_boolean(yyjson_mut_get_bool(yyVal));
-	else if (yyjson_mut_is_obj(yyVal))
-	{
-		jerryVal = jerry_create_object();
-		size_t idx, maxIdx;
-		yyjson_mut_val* key, * value;
-		yyjson_mut_obj_foreach(yyVal, idx, maxIdx, key, value) {
-			jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_mut_get_str(key));
-			jerry_value_t prop_value;
-			yyVal2jerryVal(value, prop_value);
-
-			jerry_value_t set_result = jerry_set_property(jerryVal, prop_name, prop_value);
-			//if (jerry_value_is_error(set_result)) {
-			//	jerry_error_t error = jerry_get_error_type(set_result);
-			//	jerry_release_value(error);
-			//}
-			jerry_release_value(set_result);
-			jerry_release_value(prop_name);
-			jerry_release_value(prop_value);
+		else {
+			ret = JS_ToBool(global_object, result);
 		}
+
+		JS_FreeValue(global_object, result);
 	}
-	else if (yyjson_mut_is_arr(yyVal))
+	catch (const std::exception& e)
 	{
-		jerryVal = jerry_create_array(yyjson_mut_arr_size(yyVal));
-		size_t idx = 0;
-		size_t max = 0;
-		yyjson_mut_val* item;
-		yyjson_mut_arr_foreach(yyVal, idx, max, item) {
-			jerry_value_t engineItem;
-			yyVal2jerryVal(item, engineItem);
-			jerry_value_t set_result_arr = jerry_set_property_by_index(jerryVal, idx, engineItem);
-			//if (jerry_value_is_error(set_result_arr)) {
-			//	jerry_error_t error = jerry_get_error_type(set_result_arr);
-			//	jerry_release_value(error);
-			//}
-			jerry_release_value(set_result_arr);
-			jerry_release_value(engineItem);
-		}
+		std::cerr << "err: " << e.what() << std::endl;
+		ret = false;
 	}
-}
-
-bool CONDITION_SELECTOR::clearScriptEngineObj(jerry_value_t engineObj)
-{
-	jerry_value_t prop_names = jerry_get_object_keys(engineObj);
-	jerry_length_t length = jerry_get_array_length(prop_names);
-	for (jerry_length_t i = 0; i < length; i++) {
-		jerry_value_t key = jerry_get_property_by_index(prop_names, i);
-		// 删除该属性
-		jerry_delete_property(engineObj, key);
-
-		// 释放键的引用
-		jerry_release_value(key);
+	catch (...)
+	{
+		std::cerr << "err: unknown exception" << std::endl;
+		ret = false;
 	}
 
-	// 释放属性名称数组的引用
-	jerry_release_value(prop_names);
-	return true;
-}
-
-
-bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_val* jObj, jerry_value_t engineObj)
-{
-	size_t idx, maxIdx;
-	yyjson_val* key, * value;
-	yyjson_obj_foreach(jObj, idx, maxIdx, key, value) {
-		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_get_str(key));
-		jerry_value_t prop_value;
-		yyVal2jerryVal(value, prop_value);
-
-		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		//if (jerry_value_is_error(set_result)) {
-		//	jerry_error_t error = jerry_get_error_type(set_result);
-		//}
-		jerry_release_value(set_result);
-		jerry_release_value(prop_name);
-		jerry_release_value(prop_value);
+	// free resources
+	if (!JS_IsUndefined(global)) {
+		for (uint32_t i = 0; i < len; i++) JS_DeleteProperty(global_object, global, props[i].atom, 0);
+		JS_FreeValue(global_object, global);
 	}
-	return true;
-}
-
-
-bool CONDITION_SELECTOR::setScriptEngineObj(yyjson_mut_val* jObj, jerry_value_t engineObj)
-{
-	size_t idx, maxIdx;
-	yyjson_mut_val* key, * value;
-	yyjson_mut_obj_foreach(jObj, idx, maxIdx, key, value) {
-		jerry_value_t prop_name = jerry_create_string((const jerry_char_t*)yyjson_mut_get_str(key));
-		jerry_value_t prop_value;
-		yyVal2jerryVal(value, prop_value);
-
-
-		jerry_value_t set_result = jerry_set_property(engineObj, prop_name, prop_value);
-		//if (jerry_value_is_error(set_result)) {
-		//	jerry_error_t error = jerry_get_error_type(set_result);
-		//}
-		jerry_release_value(set_result);
-		jerry_release_value(prop_name);
-		jerry_release_value(prop_value);
+	if (props) {
+		// free property array
+		js_free(global_object, props);
+		props = nullptr;
 	}
-	return true;
+	if (!JS_IsUndefined(json_val)) {
+		JS_FreeValue(global_object, json_val);
+	}
+
+	return ret;
 }
 #endif
 
 bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 {
-#ifdef ENABLE_QJS_TODO
+#ifdef ENABLE_QJS
 	if (!bEnable)
 		return true;
-
 	bool bMatch = true;
-	if (yyjson_mut_is_obj(de))
+	size_t json_len = 0;
+	auto json_str = yyjson_mut_val_write(de, NULL, &json_len);
+	if (json_str)
 	{
-		yyjson_mut_val* jVal = yyjson_mut_obj_get(de, db.m_dbFmt.deItemKey_value.c_str());
-		setScriptEngineObj(jVal, global_object);
-	}
-	else
-	{
+		bMatch = evaluate_condition(json_str, json_len);
 
-	}
-
-	/* Run the demo script with 'eval' */
-	jerry_value_t eval_ret = jerry_eval((jerry_char_t*)filterExp.c_str(),
-		filterExp.length(),
-		JERRY_PARSE_NO_OPTS);
-
-	/* Check if there was any error (syntax or runtime) */
-	bool run_ok = !jerry_value_is_error(eval_ret);
-	jerry_error_t error = jerry_get_error_type(eval_ret);
-	jerry_release_value(eval_ret);
-	if (run_ok)
-	{
-		bMatch = jerry_value_to_boolean(eval_ret);
+		free(json_str);
 		return bMatch;
 	}
-	else
-	{
-		db_exception e;
-		if (error == JERRY_ERROR_REFERENCE)
-			e.m_error = "db exception: error when execute filter script,reference not found!";
-		else if (error == JERRY_ERROR_TYPE)
-		{
-			// A.str1.indexOf("xxx") if A don't have a str1 key,this error will throw
-			e.m_error = "db exception: error when execute filter script,error type!";
-		}
-		else
-			e.m_error = "db exception: error when execute filter script";
-		throw e;
-	}
-	//do not filter when filter fails
 #endif
 	return true;
 }
@@ -6696,35 +6510,18 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 bool CONDITION_SELECTOR::match(yyjson_val* de)
 {
 	bool bMatch = false;
+#ifdef ENABLE_QJS
 	if (!bEnable)
 		return true;
-
-#ifdef ENABLE_QJS
-	db_exception e;
-	if (yyjson_is_obj(de))
+	size_t json_len = 0;
+	auto json_str = yyjson_val_write(de, NULL, &json_len);
+	if (json_str)
 	{
-		JSValue global = JS_GetGlobalObject(ctx);
-		setScriptEngineObj(de, global, ctx);
-		JS_FreeValue(ctx, global);	
-	}
-	JSValue result = JS_Eval(ctx, filterExp.c_str(), filterExp.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+		bMatch = evaluate_condition(json_str, json_len);
 
-	if (JS_IsBool(result)) {
-		bMatch = JS_ToBool(ctx, result);
+		free(json_str);
+		return bMatch;
 	}
-
-	if (JS_IsException(result)) {
-		JSValue error = JS_GetException(ctx);
-		const char* err = JS_ToCString(ctx, error);
-		string s = err;
-		e.m_error = "db exception:" + s;
-		JS_FreeCString(ctx, err);
-		JS_FreeValue(ctx, error);
-	}
-
-	JS_FreeValue(ctx, result);
-	if (e.m_error != "")
-		throw e;
 #endif
 	return bMatch;
 }

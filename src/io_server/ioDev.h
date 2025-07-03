@@ -412,9 +412,9 @@ public:
 	string m_hardVer;
 	string m_mfrDate;
 	string m_IMEI; 
+	string m_statusUpdateTime="";
 	string m_tdsVersion;
 	SRV_STATUS m_tdsSrvStatus;
-	string m_statusUpdateTime;
 	string m_childTdsUpgradeStatus;
 
 	bool m_bWorkingThreadRunning;

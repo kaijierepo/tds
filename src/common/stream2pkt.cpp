@@ -487,22 +487,22 @@ bool stream2pkt::PopPkt(fp_validPktCheck pktCheckFn, bool faultTolerant)
 
 	return false;
 }
-
-bool stream2pkt::PopAllAs(string cpt)
-{
-	std::lock_guard<mutex> g(m_cs);
-	if(iStreamLen > iPktBuffSize)
-		ResizePopPktBuff(iStreamLen);
-	memcpy(pkt, stream, iStreamLen);
-	iPktLen = iStreamLen;
-	iStreamLen = 0;
-	ResizeStreamBuff(iStreamLen);
-	m_protocolType = cpt;
-	int ret = 0;
-	if (iPktLen > 0)
-		ret = 1;
-	return ret;
-}
+//
+//bool stream2pkt::PopAllAs(string cpt)
+//{
+//	std::lock_guard<mutex> g(m_cs);
+//	if(iStreamLen > iPktBuffSize)
+//		ResizePopPktBuff(iStreamLen);
+//	memcpy(pkt, stream, iStreamLen);
+//	iPktLen = iStreamLen;
+//	iStreamLen = 0;
+//	ResizeStreamBuff(iStreamLen);
+//	m_protocolType = cpt;
+//	int ret = 0;
+//	if (iPktLen > 0)
+//		ret = 1;
+//	return ret;
+//}
 
 
 size_t IsValidPkt_HTTP(unsigned  char* pData,size_t iLen )

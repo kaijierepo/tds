@@ -9,7 +9,7 @@
 #include <filesystem>
 
 
-string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser\r\n";
+string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
 
 almServer almSrv;
 
@@ -375,6 +375,8 @@ bool loadAlmDBFile(string strFile, vector<ALARM_INFO*>& almList) {
 		LINE_VAL& lv = recLines.at(i);
 		ALARM_INFO* pAi = new ALARM_INFO();
 		lineParser.parse(lv.p, lv.len, *pAi);
+		if (pAi->uuid.empty()) pAi->uuid = pAi->getKey();
+
 		almList.push_back(pAi);
 	}
 
@@ -405,9 +407,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 	string currFilePath = m_dbPath + "/current.csv";
 	tableCurrent.loadFile(currFilePath);
 	tableCurrent.initUnAckUnRecover();
-	if (tableCurrent.buff.size() > 10000) {
-		printf("!!! current alarm count reaches 10000,may causes performance problems\r\n");
-	}
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
@@ -423,7 +422,7 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 
 bool almServer::isRecover(ALARM_INFO& key) {
 	string almKey = key.getKeyUnrecover();
-	shared_lock<shared_mutex> lock(tableCurrent.m_csTable);
+	lock_guard<mutex> lock(tableCurrent.m_csTable);
 	auto iter = tableCurrent.unRecoverList.find(almKey);
 	if (iter != tableCurrent.unRecoverList.end())
 	{
@@ -547,23 +546,6 @@ int almServer::getLastMinuteCalls(vector<std::chrono::steady_clock::time_point>&
 
 int almServer::getLastHourCalls(vector<std::chrono::steady_clock::time_point>& latestCall) {
 	return getCallCount(std::chrono::hours(1), latestCall);
-}
-
-string almServer::uuid() {
-	std::random_device rd;
-	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, 15);
-	std::string uuid = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx";
-	int pos = 0;
-	for (char& c : uuid) {
-		if (c == 'x' || c == 'y') {
-			int n = dis(gen);
-			int r = (n & 0x3) | 0x8;
-			c = (c == 'x') ? "0123456789abcdef"[n] : "89ab"[r];
-		}
-		++pos;
-	}
-	return uuid;
 }
 
 void almServer::Update(ALARM_INFO newStatus, bool notify)
@@ -793,7 +775,7 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 
 	bool notify = true;
 	if (j.contains("notify") && j["notify"].is_boolean()) {
-		notify = j["notify"];
+		notify = j["notify"].get<bool>();
 	}
 
 	string err;
@@ -857,7 +839,7 @@ void almServer::rpc_updateStatus(json jAlm, RPC_RESP& resp, bool bSync)
 			
 			bool notify = true;
 			if (j.contains("notify") && j["notify"].is_boolean()) {
-				notify = j["notify"];
+				notify = j["notify"].get<bool>();
 			}
 
 			if (bSync) {
@@ -913,30 +895,40 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 		resp.error = error;
 		return;
 	}
-	
-	if (!params.contains("tag")) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定tag字段");
-		resp.error = error;
-		return;
-	}
 
-	if (!params.contains("type")) {
-		string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定type字段");
-		resp.error = error;
-		return;
+	ALARM_KEY queryKey;
+	if (params.contains("uuid"))
+	{
+		queryKey.uuid = params["uuid"];
 	}
-
-	if (params.contains("tag")) {
-		string rootTag;
-		if (params.contains("rootTag")) {
-			rootTag = params["rootTag"];
+	else
+	{
+		if (!params.contains("tag")) {
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定tag字段");
+			resp.error = error;
+			return;
 		}
-		string tag = params["tag"];
-		tag = TAG::addRoot(tag, rootTag);
 
-		//用户位号转系统位号
-		tag = TAG::addRoot(tag, session.org);
-		params["tag"] = tag;
+		if (!params.contains("type")) {
+			string error = makeRPCError(RPC_ERROR_CODE::ALM_alarmEventNotFound, "未指定type字段");
+			resp.error = error;
+			return;
+		}
+
+		if (params.contains("tag")) {
+			string rootTag;
+			if (params.contains("rootTag")) {
+				rootTag = params["rootTag"];
+			}
+			string tag = params["tag"];
+			tag = TAG::addRoot(tag, rootTag);
+
+			//用户位号转系统位号
+			tag = TAG::addRoot(tag, session.org);
+			params["tag"] = tag;
+		}
+		queryKey.tag = params["tag"];
+		queryKey.type = params["type"];
 	}
 
 	string user = session.user;
@@ -944,30 +936,28 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	if (params.contains("ackInfo"))
 		info = params["ackInfo"];
 
-	ALARM_KEY queryKey;
 	queryKey.time = params["time"];
-	queryKey.tag = params["tag"];
-	queryKey.type = params["type"];
-
-	if (params.contains("acqtype")) {
-		queryKey.acqType = params["acqtype"];
-	}
-	if (params.contains("objstatus")) {
-		queryKey.acqType = params["objstatus"];
-	}
-
+	if (params.contains("acqtype")) queryKey.acqType = params["acqtype"];
+	if (params.contains("objstatus")) queryKey.objStatus = params["objstatus"];
 	TIME t; t.setNow();
 	string ackTime = t.toStr(true);
 	ALARM_INFO ai;
+	string almKey;
 	{
-		unique_lock<shared_mutex> lock(tableCurrent.m_csTable);
-		string almKey = queryKey.getKey();
-		string almkeyAnsi = str::utf8_to_gb(almKey);
-		for (auto& item: tableCurrent.unAckList)
+		lock_guard<mutex> lock(tableCurrent.m_csTable);
+
+		auto iter = tableCurrent.unAckList.end();
+		if (params.contains("uuid"))
 		{
-			string temp = str::utf8_to_gb(item.first);
+			almKey = queryKey.uuid;
+			iter = tableCurrent.unAckList.find(almKey);
 		}
-		auto iter = tableCurrent.unAckList.find(almKey);
+		if (iter == tableCurrent.unAckList.end())
+		{
+			almKey = queryKey.getKey();
+			
+			iter = tableCurrent.unAckList.find(almKey);
+		}
 		if (iter != tableCurrent.unAckList.end())
 		{
 			iter->second->isAck = 1;
@@ -991,8 +981,8 @@ void almServer::rpc_acknowledge(json& params, RPC_RESP& resp, RPC_SESSION sessio
 	
 	almTable* pTableHist = getHistTable(queryKey.time);
 	{
-		unique_lock<shared_mutex> lock(pTableHist->m_csTable);
-		auto iter = pTableHist->buff.find(queryKey.getKey());
+		lock_guard<mutex> lock(pTableHist->m_csTable);
+		auto iter = pTableHist->buff.find(almKey);
 		if (iter != pTableHist->buff.end())
 		{
 			iter->second->isAck = 1;
@@ -1098,7 +1088,7 @@ void almServer::rpc_convertDBMode(json& params, RPC_RESP& resp, RPC_SESSION sess
 
 	for (auto& fileData : desFileData) {
 		string path = getFilePath(fileData.first, ALM_TABLE_TYPE::HISTORY_TABLE, dfm_desMode);
-		string data = ALM_TABLE_HEAD_LINE;
+		string data = ALM_TABLE_HEAD_LINE + "\r\n";
 		for (auto& almInfo : fileData.second) {
 			data += almInfo->toCSVLine();
 		}
@@ -1510,7 +1500,7 @@ void almServer::loadHistAlarm(vector<ALARM_INFO*>& almList,ALM_SELECTOR& almSel,
 
 	for(auto& time:timeKey){
 		almTable* pTableHist = getHistTable(time);
-		std::shared_lock<shared_mutex> lock(pTableHist->m_csTable);
+		std::lock_guard<mutex> lock(pTableHist->m_csTable);
 		for (auto it = pTableHist->buff.rbegin(); it != pTableHist->buff.rend(); it++) {
 			if (isSelected(it->second, almSel)) {
 				almList.push_back(it->second); //time desending
@@ -1604,7 +1594,7 @@ bool almServer::CompareTime(TIME& time1, TIME& time2) {
 
 void almTable::saveFile(string strFile, map<string, ALARM_INFO*>& memData)
 {
-	string data = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus\r\n";
+	string data = ALM_TABLE_HEAD_LINE + "\r\n";
 	map<string, ALARM_INFO*>::iterator i;
 	for (i = memData.begin(); i != memData.end(); i++)
 	{
@@ -1670,7 +1660,8 @@ void almTable::loadFile(string strFile)
 
 	//init db file when not exist
 	if (!tAlm::fileExist(strFile)) {
-		tAlm::writeFile(strFile, ALM_TABLE_HEAD_LINE);
+		string data = ALM_TABLE_HEAD_LINE + "\r\n";
+		tAlm::writeFile(strFile, data);
 	}
 	//load db file
 	else {
@@ -1686,11 +1677,18 @@ void almTable::loadFile(string strFile)
 		std::vector<LINE_VAL> recLines;
 		parse_csv_lines(strDBData.data(), recLines);
 
+		bool bReWrite = false;
 		LINE_PARSER& lineParser = m_lineParser;
 		if (recLines.size() >= 1) {
-			string tableHeader(recLines[0].p, recLines[0].len);
-			vector<string> colNames;
+			string tableHeader1(recLines[0].p, recLines[0].len);
+			string tableHeader= ALM_TABLE_HEAD_LINE;
+			vector<string> colNames, colNames1;
 			str::split(colNames, tableHeader, ",");
+			str::split(colNames1, tableHeader1, ",");
+			if (colNames.size() != colNames1.size())
+			{
+				bReWrite = true;
+			}
 			for (int i = 0; i < colNames.size(); i++) {
 				string name = colNames[i];
 				lineParser.m_colNameToColIdx[name] = i;
@@ -1702,7 +1700,14 @@ void almTable::loadFile(string strFile)
 			LINE_VAL& lv = recLines.at(i);
 			ALARM_INFO* pAi = new ALARM_INFO();
 			lineParser.parse(lv.p, lv.len, *pAi);
+			/*if (pAi->uuid.empty())*/ pAi->uuid = pAi->getKey(); //强制初始化
 			buff[pAi->getKey()] = pAi;
+		}
+
+		if (bReWrite)
+		{
+			//DeleteFile(buffFilePath);
+			saveFile();
 		}
 	}
 }
@@ -1944,7 +1949,7 @@ string ALARM_INFO::toCSVLine()
 	ALARM_INFO& info = *this;
 	string str;
 	//core info
-	str += "\"" + info.uuid + "\""; str += ",";
+	str += "\"\""; str += ",";//uuid为空
 	str += "\"" + info.tag + "\""; str += ",";
 	str += info.time; str += ",";
 	str += info.type; str += ",";
@@ -1968,7 +1973,7 @@ string ALARM_INFO::toCSVLine()
 
 	//external info
 	str += info.acqType; str += ",";
-	str += info.objStatus; 
+	str += info.objStatus; str += ",";
 	str += "\r\n";
 	return str;
 }
@@ -2009,7 +2014,7 @@ almTable* almServer::getHistTable(string time)
 		p->SetAlarmSrv(this);
 		p->m_tableType = HISTORY_TABLE;
 		p->loadFile(getFilePath(time, HISTORY_TABLE, m_dbFileMode));
-		tableHist[time] = p;
+		tableHist[histTableName] = p;
 		return p;
 	}
 	else {
@@ -2019,8 +2024,10 @@ almTable* almServer::getHistTable(string time)
 
 void almTable::add(ALARM_INFO ai)
 {
-	std::unique_lock<shared_mutex> lock(m_csTable);
+	lock_guard<mutex> lock(m_csTable);
 	ALARM_INFO* pNew = new ALARM_INFO();
+	if (ai.uuid.empty()) ai.uuid = ai.getKey();
+
 	*pNew = ai;
 	string almKey = ai.getKey();
 	buff[almKey] = pNew;
@@ -2082,7 +2089,7 @@ void almTable::initUnAckUnRecover()
 
 void almTable::acknowledge(ALARM_INFO& ai)
 {
-	std::unique_lock<shared_mutex> lock(m_csTable);
+	lock_guard<mutex> lock(m_csTable);
 	auto iter = buff.find(ai.getKey());
 	if (iter != buff.end()) {
 		ALARM_INFO* p = iter->second;

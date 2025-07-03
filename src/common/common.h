@@ -16,6 +16,7 @@
 #include <queue>
 #include <functional>
 #include "json.hpp"
+#include <atomic>
 
 #define WIN32_LEAN_AND_MEAN
 
