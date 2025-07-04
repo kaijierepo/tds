@@ -2434,16 +2434,52 @@ time_t strToUnixTime(const std::string& strTime) {
 }
 
 void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
+	StImgInfoRes* imgInfo = (StImgInfoRes*)pData;
+
+	if (imgInfo->imgtype == 3) {
+		LOG("Do_CMD_CODE_IMGINFO 过车 进入逻辑");
+	}
+
+	TIME ti;
+	ti.fromUnixTime(imgInfo->time);
+	string strTi = timeopt::st2str(ti);
+
+	DB_TIME stTime;
+	stTime.fromStr(strTi);
+
+	if (imgInfo->imgtype == 3) {
+		LOG("Do_CMD_CODE_IMGINFO 过车 time: %s", strTi.c_str());
+	}
+
+	if (imgInfo->imgtype == 3) {
+		LOG("Do_CMD_CODE_IMGINFO 过车 m_strTagBind: %s", m_strTagBind.c_str());
+	}
+
+	if (imgInfo->imgtype == 3) {
+		LOG("Do_CMD_CODE_IMGINFO 过车 imgInfo->sid: %s", to_string(imgInfo->sid).c_str());
+	}
+
 	auto* pStation = prj.queryObj(m_strTagBind, "zh");
 	if (!pStation) {
+		if (imgInfo->imgtype == 3) {
+			LOG("Do_CMD_CODE_IMGINFO 过车 Error pStation不存在");
+		}
+
 		return;
 	}
 
-	StImgInfoRes* imgInfo = (StImgInfoRes*)pData;
 	OBJ* zzjMo = pStation->getObjByID(to_string(imgInfo->sid));
 	if (!zzjMo) {
+		if (imgInfo->imgtype == 3) {
+			LOG("Do_CMD_CODE_IMGINFO 过车 Error zzjMo不存在");
+		}
+
 		LOG("未找到对应的转辙机对象, id=%s", to_string(imgInfo->sid).c_str());
 		return;
+	}
+
+	if (imgInfo->imgtype == 3) {
+		LOG("Do_CMD_CODE_IMGINFO 过车 zzjTag: %s", zzjMo->getTag().c_str());
 	}
 
 	string zzj = zzjMo->getName("");
@@ -2454,20 +2490,21 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
 	BYTE location = imgInfo->fixorinvert;
 	BYTE acqreason = imgInfo->imgtype;
 
-	TIME ti; 
-	ti.fromUnixTime(imgInfo->time);
-
-	string strTi = timeopt::st2str(ti);
 	string zzjTag = zzjMo->getTag();
-
 	if(tagToHumidity.find(zzjTag) != tagToHumidity.end() && tagToTemperature.find(zzjTag) != tagToTemperature.end()) {
 		string theTag = zzjMo->getTag() + ".缺口";
 
-		DB_TIME stTime;
-		stTime.fromStr(strTi);
-
 		string folder = db.getPath_dataFolder(theTag, stTime);
 		string imgPath = folder + "/" + stTime.toStampHMS() + ".jpg";
+
+		if (imgInfo->imgtype == 3) {
+			LOG("Do_CMD_CODE_IMGINFO 过车 theTag：", theTag.c_str());
+		}
+
+		if (imgInfo->imgtype == 3) {
+			LOG("Do_CMD_CODE_IMGINFO 过车 imgPath：", imgPath.c_str());
+		}
+
 		if (!db.fileExist(imgPath)) {
 			saveJpg(theTag, stTime, reinterpret_cast<char*>(imgInfo->lpimg), imgInfo->imglen);
 
@@ -2476,6 +2513,26 @@ void ioDev_dcqk::Do_CMD_CODE_IMGINFO(LPVOID pData) {
 
 			string sDE = Jfile.dump();
 			db.Insert(theTag, sDE, &stTime);
+
+			if (imgInfo->imgtype == 3) {
+				LOG("Do_CMD_CODE_IMGINFO 过车 执行成功");
+			}
+		}
+		else {
+			if (imgInfo->imgtype == 3) {
+				LOG("Do_CMD_CODE_IMGINFO 过车 Error db.fileExist(imgPath)");
+			}
+		}
+	}
+	else {
+		if (imgInfo->imgtype == 3) {
+			if (tagToHumidity.find(zzjTag) == tagToHumidity.end()) {
+				LOG("Do_CMD_CODE_IMGINFO 过车 Error tagToHumidity.find(zzjTag) == tagToHumidity.end()");
+			}
+
+			if (tagToTemperature.find(zzjTag) == tagToTemperature.end()) {
+				LOG("Do_CMD_CODE_IMGINFO 过车 Error tagToTemperature.find(zzjTag) == tagToTemperature.end()");
+			}
 		}
 	}
 }
