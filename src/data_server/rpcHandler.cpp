@@ -4177,23 +4177,29 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	{
 		yyjson_doc* yydoc = yyjson_read(strReq.c_str(), strReq.size(), 0);
 		yyjson_val* yyReq = yyjson_doc_get_root(yydoc);
-		if (yyjson_is_arr(yyReq)){
-			rpcResp.strResp = "[";
-			size_t idx, max;
-			yyjson_val* yySingleReq;
-			yyjson_arr_foreach(yyReq,idx,max,yySingleReq){
-				RPC_RESP singleResp;
-				handleRpcCall_single(yySingleReq, singleResp, pSession, bAccessCtrl);
-				rpcResp.strResp += singleResp.strResp;
-				if (idx != max - 1) {
-					rpcResp.strResp += ",";
+		if (yyReq) {
+			if (yyjson_is_arr(yyReq)) {
+				rpcResp.strResp = "[";
+				size_t idx, max;
+				yyjson_val* yySingleReq;
+				yyjson_arr_foreach(yyReq, idx, max, yySingleReq) {
+					RPC_RESP singleResp;
+					handleRpcCall_single(yySingleReq, singleResp, pSession, bAccessCtrl);
+					rpcResp.strResp += singleResp.strResp;
+					if (idx != max - 1) {
+						rpcResp.strResp += ",";
+					}
 				}
+				rpcResp.strResp += "]";
 			}
-			rpcResp.strResp += "]";
+			else {
+				handleRpcCall_single(yyReq, rpcResp, pSession, bAccessCtrl);
+
+			}
 		}
 		else {
-			handleRpcCall_single(yyReq, rpcResp, pSession, bAccessCtrl);
-
+			LOG("[error]RPC请求包处理异常,无法解析的json格式:\r\n错误信息:\r\n" + strReq);
+			rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error" : {"code": -32700, "message" : "%s"}, "id" : null})", "无法解析的json格式");
 		}
 	}
 	catch (std::exception& e)
