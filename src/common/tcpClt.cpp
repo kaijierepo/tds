@@ -114,7 +114,9 @@ void TcpClientRecvThread(void* lpParam)
 	pTcpClt->m_session.sock = sock;
 	//pTcpClt->m_session.bIsHttp = false;
 
-	pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
+	if (pTcpClt->m_pCallBackUser) {
+		pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
+	}
 
 	vector<unsigned char> recvBuff;
 	int iRecvBuffLen = 0;
@@ -136,7 +138,10 @@ void TcpClientRecvThread(void* lpParam)
 			close(sock);
 #endif
 
-			pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, false);
+			if (pTcpClt->m_pCallBackUser) {
+				pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, false);
+			}
+
 			pTcpClt->sockClient = 0;
 			break;
 		}
@@ -159,7 +164,10 @@ void TcpClientRecvThread(void* lpParam)
 #endif
 
 		pTcpClt->m_session.stLastActive = getNowStr();
-		pTcpClt->m_pCallBackUser->onRecvData_tcpClt(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
+
+		if (pTcpClt->m_pCallBackUser) {
+			pTcpClt->m_pCallBackUser->onRecvData_tcpClt(recvBuff.data(), iRecvBuffLen, &pTcpClt->m_session);
+		}
 	
 		iRecvBuffLen = 0;
 	}
@@ -342,11 +350,9 @@ void tcpClt::AsynConnect(ICallback_tcpClt* pUser,string strServIP, int iServPort
 
 bool tcpClt::connect()
 {
-	if (sockClient != 0)
-	{
+	if (sockClient != 0) {
 		return true;
 	}
-
 
 	int nConnect;
 	struct hostent* hptr;
@@ -355,7 +361,11 @@ bool tcpClt::connect()
 	hptr = gethostbyname(m_remoteIP.c_str());
 	if (hptr == NULL || hptr->h_addr == NULL) {
 		m_strErrorInfo = "can not resolve addr " + m_remoteIP;
-		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+
+		if (m_pCallBackUser) {
+			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+		}
+
 		goto CONN_END;
 	}
 
@@ -371,10 +381,13 @@ bool tcpClt::connect()
 		sAddTemp.sin_family = AF_INET;
 		sAddTemp.sin_addr.s_addr = inet_addr(m_strLocalIP.c_str());
 		sAddTemp.sin_port = htons(m_iLocalPort);
-		if(-1 == ::bind(sockClient, (sockaddr*)&sAddTemp,sizeof(sockaddr)))
-		{
+		if(-1 == ::bind(sockClient, (sockaddr*)&sAddTemp,sizeof(sockaddr))) {
 			m_strErrorInfo = "bind ip fail";
-			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+
+			if (m_pCallBackUser) {
+				m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+			}
+
 			goto CONN_END;
 		}
 	}
@@ -387,10 +400,10 @@ bool tcpClt::connect()
 	 nConnect = ::connect(sockClient,(sockaddr*)&addrSrv,sizeof(sockaddr));
 
 
-	if(nConnect == -1)
-	{
-		//m_strErrorInfo = "connect fail:" + sys::getLastError();
-		m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+	if(nConnect == -1) {
+		if (m_pCallBackUser) {
+			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
+		}
 	}
 	else {
 		//set m_bConn to true before TcpClientRecvThread created,when TcpClientRecvThread callback statucChange,will read this variable

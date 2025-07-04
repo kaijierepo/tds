@@ -67,7 +67,10 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		if (ev_data) {
 			tcpSession* ptcp = (tcpSession*)c->fn_data;
 			ptcp->iRecvCount += c->recv.len;
-			pSrv->m_pCallBackUser->onRecvData_tcpSrv(c->recv.buf, c->recv.len, ptcp);
+
+			if (pSrv->m_pCallBackUser) {
+				pSrv->m_pCallBackUser->onRecvData_tcpSrv(c->recv.buf, c->recv.len, ptcp);
+			}
 		}
 		mg_iobuf_del(&c->recv, 0, c->recv.len);   // And discard it
 	}
@@ -77,11 +80,12 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 	else if (ev == MG_EV_CLOSE) { 
 		tcpSession* pts = (tcpSession*)c->fn_data;
 		if (pSrv->m_pCallBackUser) {
-			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);
-			pSrv->m_csClientVectorLock.lock();
-			pSrv->m_mapTcpSessions.erase(pts);
-			pSrv->m_csClientVectorLock.unlock();
+			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, false);			
 		}
+
+		pSrv->m_csClientVectorLock.lock();
+		pSrv->m_mapTcpSessions.erase(pts);
+		pSrv->m_csClientVectorLock.unlock();
 	}
 	else if (ev == MG_EV_ACCEPT) {
 		tcpSession* pts = new tcpSession();
@@ -99,7 +103,10 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		pSrv->m_mapTcpSessions[pts] = pts;
 		pSrv->m_csClientVectorLock.unlock();
 		c->fn_data = pts;
-		pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, true);
+
+		if (pSrv->m_pCallBackUser) {
+			pSrv->m_pCallBackUser->statusChange_tcpSrv(pts, true);
+		}
 	}
 	else if (ev == MG_EV_OPEN) {
 
