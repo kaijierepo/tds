@@ -17,6 +17,7 @@ struct Mo_Attr_Params {
 	string columeLabel; //默认使用位号作为列名
 	string moType;
 	string rootTag;
+	json jColumes;
 	Mo_Attr_Params() {
 		bSelAttr = false;
 		columeLabel = "tag";

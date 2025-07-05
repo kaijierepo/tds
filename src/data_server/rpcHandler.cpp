@@ -4670,7 +4670,9 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session) {
 					pmp->input(val, &file, &de.time);
 					if (pmp->m_bEnableIO) {
 						if (de.hasAttr) {
-							pmp->m_curValAttr = de.valAttr;
+							for (auto& iter : de.valAttr.items()) {
+								pmp->m_curValAttr[iter.key()] = iter.value().dump();
+							}
 						}
 						vecMps.push_back(pmp);
 					}
@@ -5419,8 +5421,10 @@ void rpcHandler::rpc_getMoAttr_list(json params, RPC_RESP& resp,RPC_SESSION& ses
 			rpc_moList2Attrlist(attrParam, moList, resp, session);
 		}
 	}
-	else
+	else{
+		attrParam.jColumes = params["columes"];
 		rpc_moList2table(attrParam, moList, resp, session);
+	}
 }
 
 
@@ -5433,13 +5437,75 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 	json jTableBody = json::array();
 	json jColTag = json::array();
 
-
 	//根据对象模版生成列模版
 	map<string, OBJ_TEMPLATE*>::iterator it = prj.m_mapObjTempalte.find(params.moType);
 
 	bool bStandardObj = false;
-	//标准化对象，显示模板列
-	if (it != prj.m_mapObjTempalte.end()) {
+
+	if (params.jColumes != nullptr) {
+		if (moList.size() == 0) {
+			resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "no object found");
+			return;
+		}
+
+		/*
+ 		 head:   tag   online   温度          湿度          online updateTime
+		 tag:    null  null     温控器.温度   温控器.湿度   null  null
+		 row1:   1号   true     23            65            true    2023-01-03 23:11:11
+		 row2:   2号   true     33            ...
+		*/
+		jTableHead.push_back("tag");
+		jColTag.push_back(nullptr);
+		for (auto& iter : params.jColumes) {
+			string colName = iter["name"].get<string>();
+			string tag = iter["tag"].get<string>();
+			jTableHead.push_back(colName);
+			jColTag.push_back(tag);
+		}
+		jTableHead.push_back("online");
+		jColTag.push_back(nullptr);
+		jTableHead.push_back("updateTime");
+		jColTag.push_back(nullptr);
+
+		for (int i = 0; i < moList.size(); i++)
+		{
+			OBJ* pMo = moList[i];
+			string moTag = pMo->getTag("", session.language);
+
+			//数据行
+			json jTableRow;
+			jTableRow.push_back(moTag);
+			for (int j = 1; j < jColTag.size() - 2; j++)
+			{
+				string tag = jColTag[j];
+				tag = TAG::addRoot(tag, moTag);
+				MP* pmp = pMo->GetMPByTag(tag, session.language);
+				if (pmp) {
+					if (params.valFmt == "valStr") {
+						jTableRow.push_back(pmp->getValDesc(false));
+					}
+					else if (params.valFmt == "valStr-unit") {
+						jTableRow.push_back(pmp->getValDesc(true));
+					}
+					else// (valFmt == "val") 
+					{
+						jTableRow.push_back(json::parse(pmp->m_curVal));
+					}
+				}
+				else {
+					jTableRow.push_back("-");
+				}
+			}
+			jTableRow.push_back(pMo->m_bOnline);
+			jTableRow.push_back(pMo->getUpdateTimeDesc());
+			jTableBody.push_back(jTableRow);
+		}
+		jTable["header"] = jTableHead;
+		jTable["tag"] = jColTag;
+		jTable["body"] = jTableBody;
+		jTable["standardObj"] = bStandardObj;
+	}
+	else if (it != prj.m_mapObjTempalte.end()) {
 		bStandardObj = true;
 		OBJ_TEMPLATE* ot = it->second;
 		vector<MP*> mps;
