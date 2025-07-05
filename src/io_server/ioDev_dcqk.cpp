@@ -702,28 +702,29 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			//	"tag" : "1幢B6区3层",
 			//	"type" : "感烟探测器",
 			//	"id" : "69001"
-			if (IsRecover(lpsubdata->alarmtype))
-			{
-				TIME tm = timeopt::Unix2SysTime(lpsubdata->alarmconfirm);
-				string sTime = timeopt::stTimeToStr(tm);
-				jParams["time"] = sTime.c_str();
+			if (tds->conf->getInt("enableTB3386Alarm", 1)) {
+				if (IsRecover(lpsubdata->alarmtype))
+				{
+					TIME tm = timeopt::Unix2SysTime(lpsubdata->alarmconfirm);
+					string sTime = timeopt::stTimeToStr(tm);
+					jParams["time"] = sTime.c_str();
 
-				tm = timeopt::Unix2SysTime(lpsubdata->time);
-				sTime = timeopt::stTimeToStr(tm);
-				jParams["recoverTime"] = sTime.c_str();
+					tm = timeopt::Unix2SysTime(lpsubdata->time);
+					sTime = timeopt::stTimeToStr(tm);
+					jParams["recoverTime"] = sTime.c_str();
 
-				pAlmSrv->rpc_recoverAlarm(jParams, resp);
+					pAlmSrv->rpc_recoverAlarm(jParams, resp);
+				}
+				else
+				{
+					TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
+					string sTime = timeopt::stTimeToStr(tm);
+					jParams["time"] = sTime.c_str();
+
+
+					pAlmSrv->rpc_addAlarm(jParams, resp, TRUE);
+				}
 			}
-			else
-			{
-				TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
-				string sTime = timeopt::stTimeToStr(tm);
-				jParams["time"] = sTime.c_str();
-
-
-				pAlmSrv->rpc_addAlarm(jParams, resp, FALSE);
-			}
-
 			break;
 		}
 		case CMD_CODE_ACTION_INFO:
