@@ -1166,9 +1166,10 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 		dataTime = &t;
 	}
 
+	string newVal = jVal.dump();
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0) {
 		string sLastVal = m_curVal;
-		string newVal = jVal.dump();
+
 		//特殊情况，数据更新时间没有改变，但是数据却改变了，可能发生在二次计算监控点利用脚本算出了一个错误数值
 		//后续脚本更新，算出正确数值，但是由于时间都使用了计算脚本引用的监控点的时间，该监控点更新时间不改变的话
 		//数值无法更新进入计算监测点
@@ -1186,7 +1187,8 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 	{
 		if (m_valType == "int") {
 			int iVal = jVal.get<int>();
-			m_orgVal = iVal;
+			json jOrgVal = iVal;
+			m_orgVal = jOrgVal.dump();
 			int iCurVal = (int) (iVal * m_K + m_B);
 			jVal = iCurVal;
 			if (m_validRange.enable)
@@ -1199,7 +1201,8 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 		}
 		else {
 			double dbVal = jVal.get<double>();
-			m_orgVal = dbVal;
+			json jOrgVal = dbVal;
+			m_orgVal = jOrgVal.dump();
 			//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
 			double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
 			string sVal;
@@ -1226,7 +1229,11 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 		}
 	}
 
-	updateVal(jVal, dataFile,dataTime);
+	string sFileData = "null";
+	if (dataFile != nullptr) {
+		sFileData = dataFile->dump();
+	}
+	updateVal(newVal,*dataTime,sFileData);
 }
 
 //监控点组不算
@@ -1243,41 +1250,25 @@ OBJ* MP::getParentMo()
 	return nullptr;
 }
 
-void MP::updateVal(json& jVal, json* fileData, TIME* pDataTime)
+void MP::updateVal(string& jstrVal, TIME& dataTime, string& fileData)
 {
-	TIME t;
-	if (pDataTime == NULL)
-	{
-		timeopt::now(&t);
-		pDataTime = &t;
-	}
-
-	if (memcmp(pDataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0)
-		return;
-
 	m_dbFileLock.lock();
 
-	m_stDataLastUpdate = *pDataTime;
+	m_stDataLastUpdate = dataTime;
 	OBJ* pParentMo = getParentMo();
 	if (pParentMo)
-		pParentMo->m_stDataLastUpdate = *pDataTime;
+		pParentMo->m_stDataLastUpdate = dataTime;
 
 	//save to rt memory
-	m_lastVal = json::parse(m_curVal);
-	m_curVal = jVal.dump();
+	m_lastVal = m_curVal;
+	m_curVal = jstrVal;
 
-	if(fileData != nullptr)
-		m_curFileData = *fileData;
+	if(fileData != "null")
+		m_curFileData = fileData;
 
 	m_dbFileLock.unlock();
 
 	calcAlarm();
-	if (this->m_valType == "json")
-	{
-		jVal["type"] = this->m_valType;
-		jVal["mpType"] = this->m_mpType;
-	}
-
 
 	//特殊的属性监测点
 	if (m_name == "经度")
@@ -1326,16 +1317,16 @@ bool MP::needSaveToDB()
 		
 		if (m_saveMode.find("onchange") != string::npos)
 		{
-			if (JSON_STR::is_num(m_curVal) && m_lastVal.is_number()) {
-				double last = m_lastVal.get<double>();
+			if (JSON_STR::is_num(m_curVal) && JSON_STR::is_num(m_lastVal)) {
+				double last = JSON_STR::get_num(m_lastVal);
 				double cur = JSON_STR::get_num(m_curVal);
 				double diff = fabs(last - cur);
 				if (diff > m_deadZone && diff > 0.00001) {
 					bNeedSave = true;
 				}
 			}
-			else if (JSON_STR::is_bool(m_curVal) && m_lastVal.is_boolean()) {
-				bool last = m_lastVal.get<bool>();
+			else if (JSON_STR::is_bool(m_curVal) && JSON_STR::is_bool(m_lastVal)) {
+				bool last = JSON_STR::get_bool(m_lastVal);
 				bool cur = JSON_STR::get_bool(m_curVal);
 				if (last != cur) {
 					bNeedSave = true;
@@ -1353,7 +1344,7 @@ bool MP::needSaveToDB()
 		}
 	}
 
-	if (m_curFileData != nullptr)
+	if (m_curFileData != "null")
 	{
 		bNeedSave = true;
 	}
@@ -1365,23 +1356,21 @@ bool MP::needSaveToDB()
 void MP::saveToDB() {
 	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
-	json jDE;
-	jDE["time"] = timeopt::st2strWithMilli(m_stDataLastUpdate);
-
-	string sFileData;
-	if (!JSON_STR::is_null(m_curVal))
-		jDE["val"] = json::parse(m_curVal);
-	if (m_curFileData != nullptr)
-	{
-		sFileData = m_curFileData.dump();
-		jDE["file"] = m_curFileData;
+	string sDe = "{";
+	sDe += "\"time\":\"" + timeopt::st2strWithMilli(m_stDataLastUpdate) +"\"";
+	if (!JSON_STR::is_null(m_curVal)) {
+		sDe += ",\"val\":" + m_curVal;
 	}
-	if (m_curValAttr != nullptr) {
-		for (auto& item : m_curValAttr.items()) {
-			jDE[item.key()] = item.value();
+	if (m_curFileData != "null")
+	{
+		sDe += ",\"file\":" + m_curFileData;
+	}
+	if (m_curValAttr.size() > 0) {
+		for (auto& item : m_curValAttr) {
+			sDe += ",\"" + item.first + "\":" + item.second;
 		}
 	}
-	string sDe = jDE.dump();
+	sDe += "}";
 
 	DB_TIME dbt;
 	dbt.fromStr(m_stDataLastUpdate.toStr(true));

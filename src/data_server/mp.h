@@ -75,7 +75,7 @@ public:
 	//fileData为数据元携带的文件数据
 	//这个函数为最频繁调用的函数，使用引用提高性能
 	void input(json& jVal,  json* fileData = NULL, TIME* dataTime = NULL);
-	void updateVal(json& jVal, json* fileData = NULL, TIME* dataTime = NULL);
+	void updateVal(string& jstrVal, TIME& dataTime, string& fileData);
 	OBJ* getParentMo();
 
 	bool needSaveToDB();
@@ -148,11 +148,11 @@ public:
 	// hasValue = false 表示从没有收到过数据。lastUpdateTime为无效。
 	// curValValid = true 表示 m_curVal!=null
 	// curValValid = false 表示 m_curVal==null
-	json m_orgVal;
+	string m_orgVal = "null";
 	string m_curVal = "null";
-	json m_curValAttr;  //与val同级的Attri
-	json m_curFileData;
-	json m_lastVal;
+	map<string,string> m_curValAttr;  //与val同级的Attri
+	string m_curFileData = "null";
+	string m_lastVal = "null";
 	TIME m_lastSaveTime;
 	int  m_lastSaveInterval;  //上一次采集到数据后，距离上一次保存时间达到保存时间间隔，存储改时间间隔，评估是否都定时存了
 	bool hasValue();

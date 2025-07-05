@@ -4569,8 +4569,6 @@ void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session) {
 			}
 
 			if (tag.is_string()) {
-				string strTag = charCodec::utf8_to_gb(tag.get<string>());
-
 				INPUT_DE de;
 				de.tag = tag;
 				de.val = val;
