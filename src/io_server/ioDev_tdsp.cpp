@@ -1394,12 +1394,7 @@ void ioDev_tdsp::onEvent_online()
 			query.getMp = true;
 			prj.toJson(j, query);
 		*/
-		json jReq, jParam;
-		jReq["method"] = "acq";
-		jReq["params"] = jParam;
-		jReq["id"] = getRpcId();
-		string s = jReq.dump();
-		s += "\n\n";
+		string s = "{\"method\":\"acq\",\"params\":{},\"id\":" + str::fromInt(getRpcId()) + ",\"info\":\"do acq when get online\"}\n\n";
 		sendStr(s);
 	}
 }
