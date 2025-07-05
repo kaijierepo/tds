@@ -5471,10 +5471,11 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 		{
 			OBJ* pMo = moList[i];
 			string moTag = pMo->getTag("", session.language);
-
+			string tag = moTag;
+			tag = TAG::trimRoot(tag, params.tagSel.m_rootTag);
 			//数据行
 			json jTableRow;
-			jTableRow.push_back(moTag);
+			jTableRow.push_back(tag);
 			for (int j = 1; j < jColTag.size() - 2; j++)
 			{
 				string tag = jColTag[j];
