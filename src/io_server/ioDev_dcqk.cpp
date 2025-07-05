@@ -1,6 +1,5 @@
 #ifdef _WIN32
 #include "pch.h"
-#include "json.hpp"
 #include "ioDev_dcqk.h"
 #include "logger.h"
 #include "prj.h"
@@ -678,23 +677,21 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			{
 				cbFill[0]++;
 			}
-			json jParams;
+			ALARM_INFO almInfo;
 			if (basic->cmdid == CMD_CODE_ALARM)
 			{
-				jParams["desc"] = Get0x97AlarmDesc(*lpsubdata);
-				jParams["level"] = Get0x97AlarmLevelType(lpsubdata->alarmtype);
-				jParams["type"] = Get0x97AlarmType(lpsubdata->alarmtype, cbFill[0]);
+				almInfo.desc = Get0x97AlarmDesc(*lpsubdata);
+				almInfo.level = Get0x97AlarmLevelType(lpsubdata->alarmtype);
+				almInfo.type = Get0x97AlarmType(lpsubdata->alarmtype, cbFill[0]);
 			}
 			else
 			{
-				jParams["desc"] = "";
-				jParams["level"] = Get0x27AlarmLevelType(lpsubdata->alarmtype);
-				jParams["type"] = Get0x27AlarmType(lpsubdata->alarmtype, cbFill[0], nVer);
+				almInfo.desc = "";
+				almInfo.level = Get0x27AlarmLevelType(lpsubdata->alarmtype);
+				almInfo.type = Get0x27AlarmType(lpsubdata->alarmtype, cbFill[0], nVer);
 			}
 
-			jParams["tag"] = m_strTagBind + "." + sDaoChaName + "." + sZZJName;
-			jParams["id"] = "";
-			almServer* pAlmSrv = &almSrv;
+			almInfo.tag = m_strTagBind + "." + sDaoChaName + "." + sZZJName;
 			RPC_RESP resp;
 			
 
@@ -703,26 +700,16 @@ int ioDev_dcqk::DealJHDData(LPVOID lpParam)
 			//	"type" : "感烟探测器",
 			//	"id" : "69001"
 			if (tds->conf->getInt("enableTB3386Alarm", 1)) {
+				TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
+				almInfo.time = timeopt::stTimeToStr(tm);
 				if (IsRecover(lpsubdata->alarmtype))
 				{
-					TIME tm = timeopt::Unix2SysTime(lpsubdata->alarmconfirm);
-					string sTime = timeopt::stTimeToStr(tm);
-					jParams["time"] = sTime.c_str();
-
-					tm = timeopt::Unix2SysTime(lpsubdata->time);
-					sTime = timeopt::stTimeToStr(tm);
-					jParams["recoverTime"] = sTime.c_str();
-
-					pAlmSrv->rpc_recoverAlarm(jParams, resp);
+					almInfo.level = ALARM_LEVEL::normal;
+					almSrv.Update(almInfo);
 				}
 				else
 				{
-					TIME tm = timeopt::Unix2SysTime(lpsubdata->time);
-					string sTime = timeopt::stTimeToStr(tm);
-					jParams["time"] = sTime.c_str();
-
-
-					pAlmSrv->rpc_addAlarm(jParams, resp, TRUE);
+					almSrv.Update(almInfo);
 				}
 			}
 			break;
