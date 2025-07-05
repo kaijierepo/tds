@@ -530,7 +530,7 @@ bool MP::loadStatus(yyjson_val* status)
 		}
 	}
 
-	m_lastVal = json::parse(m_curVal);
+	m_lastVal = m_curVal;
 	yyjson_val* yyVal = yyjson_obj_get(status,"val");
 	if (yyVal) {
 		m_curVal = yyjson_val_write(yyVal,0,nullptr);
