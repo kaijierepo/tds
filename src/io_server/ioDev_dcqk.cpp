@@ -2325,10 +2325,33 @@ void ioDev_dcqk::Do_CMD_CODE_GAPVAL(LPVOID pData)
 
 void uploadJson(json& mainJson, string time, StImgInfoRes* imgInfo, short temper, WORD humi) {
 	WORD gapValue    = imgInfo->gap;
-	BYTE imgType     = imgInfo->imgtype;
 	WORD shift       = imgInfo->offset;
 	BYTE shiftSymbol = imgInfo->lrsign;
+
 	BYTE location    = imgInfo->fixorinvert;
+	if (location == 0) {
+		location = 1;
+	}
+	else if (location == 1) {
+		location = 2;
+	}
+	else {
+		location = 0;
+	}
+
+	BYTE imgType = imgInfo->imgtype;
+	if (imgType == 0) {
+		imgType = 2;
+	}
+	else if (imgType == 2) {
+		imgType = 1;
+	}
+	else if (imgType == 3) {
+		imgType = 8;
+	}
+	else {
+		imgType = 0;
+	}
 
 	mainJson["time"] = time;
 	mainJson["value"] = str::format("%.2f", gapValue * 1.0 / 100);
@@ -2339,7 +2362,7 @@ void uploadJson(json& mainJson, string time, StImgInfoRes* imgInfo, short temper
 
 	mainJson["alarmStatus"] = alarmStatus;
 	mainJson["bShyWindow"] = false;
-	mainJson["location"] = imgInfo->fixorinvert;
+	mainJson["location"] = location;
 	mainJson["timeout"] = 0;
 	mainJson["gapImageType"] = "jpg";
 	mainJson["baseline"] = 0;
