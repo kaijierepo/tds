@@ -7,14 +7,6 @@
 using json = nlohmann::json;
 using namespace std;
 
-/*
-When executing a script, you do not need to write the complete system bit number, just write a bit number relative to the "environment bit number" (contextTag)
-Complete environment bit number envTag = user.org + callerObjTag + rootTag;
-user.org is the organizational structure to which the user who edited the script belongs
-hostObjTag means calling and executing the script with a certain object as the main body
-rootTag is a custom prefix specified by the user
-*/
-
 struct SCRIPT_RUN_INFO {
 	bool runSuccess     = false;
 	bool valNullInCalc  = false;
@@ -29,10 +21,10 @@ struct SCRIPT_RUN_INFO {
 struct SCRIPT_INFO {
 	string script         = "";
 	string envVarScript   = "";
-	string calcMpTag      = "";   // The monitoring point uses the monitoring point of the same level to calculate its own value. When it is an expression script, the variable is the monitoring point number to which the expression belongs. Call the script with a certain monitoring point as the main body, and use the number of the parent object of mp as callerObjTag.
-	string callerObjTag   = "";   // Use an object as the main body to call and execute the script. For example, the duct machine calls the startup script
-	string rootTag        = "";   // The root tag specified when the script is configured
-	string devAddr        = "";   // Environmental device address
+	string calcMpTag      = "";   
+	string callerObjTag   = "";   
+	string rootTag        = "";   
+	string devAddr        = "";   
 	string mode           = "";
 
 	int interval          = 0;

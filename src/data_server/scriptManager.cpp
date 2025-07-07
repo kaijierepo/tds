@@ -770,13 +770,6 @@ void ScriptManager::exeAllGlobalScripts() {
 	m_csScripts.unlock();
 }
 
-/*
-If the val function is used in the expression script, when the function returns null, no calculation result will be generated.
-For example, if you need to calculate today's electricity consumption val("total electricity") - val("total electricity", "today", "first"), use the current value minus the first value of today.
-If no data has been collected today, the latter val function returns null
-The previous val function returns the latest value, which may be collected yesterday
-Then the secondary calculation expression will not return the calculation result
-*/
 void ScriptManager::exeAllVarExpScripts() {
 	TIME startTime;
 	startTime.setNow();

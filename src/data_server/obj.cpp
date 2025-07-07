@@ -2236,8 +2236,7 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 		string& exp = tagSelector.fuzzyMatchExp[i];
 		vector<OBJ*> tagSet;
 		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type,tagSelector.level);
-		for (auto& i : tagSet)
-		{
+		for (auto& i : tagSet) {
 			objList.push_back(i);
 		}
 	}
