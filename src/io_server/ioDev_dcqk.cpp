@@ -2357,7 +2357,7 @@ void uploadJson(json& mainJson, string time, StImgInfoRes* imgInfo, short temper
 	mainJson["value"] = str::format("%.2f", gapValue * 1.0 / 100);
 
 	json alarmStatus;
-	alarmStatus["level"] = "alarm";
+	alarmStatus["level"] = "normal";
 	alarmStatus["lockgap"] = false;
 
 	mainJson["alarmStatus"] = alarmStatus;
