@@ -365,62 +365,90 @@ void getPermission(json& tree, string tag, bool& read, bool& write)
 	return;
 }
 
-bool userManager::checkTagWritePermission(string user, string tag)
-{
+bool userManager::checkTagWritePermission(string user, string tag) {
 	json jUser = userMng.getUser(user);
-	if (jUser.is_null())return false;
+	if (jUser.is_null()) {
+		return false;
+	}
 
 	//用户所属组织
 	string org = jUser["org"].get<string>();
 
 	//位号是否在用户所属的组织结构中，不在则一定没有权限
-	if (tag.find(org) == string::npos)
+	if (tag.find(org) == string::npos) {
 		return false;
+	}
 
 	//管理员级别默认拥有所有权限。简化操作，无需去设置管理员的权限
 	string role = jUser["role"].get<string>();
 
 	//管理员默认有写权限
-	if (role == "管理员")
+	if (role == "管理员") {
 		return true;
+	}
 
 	//观察员默认没有
-	if (role == "观察员")
+	if (role == "观察员") {
 		return false;
+	}
 
 	json moPermission = userMng.getMoPermission(user);
-	if (moPermission.is_null())return false;
+	if (moPermission.is_null()) {
+		return false;
+	}
 	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
 	tag = TAG::trimRoot(tag, org);
-	bool read, write;
-	getPermission(moPermission, tag, read, write);
-	return write;
+
+	if (moPermission.is_object()) {
+		bool read, write;
+		getPermission(moPermission, tag, read, write);
+		return write;
+	}
+	else if (moPermission.is_array()) {
+		for (auto& mo : moPermission) {
+			string hasPermissionTag = mo["tag"];
+			if (tag.find(hasPermissionTag) == 0) { //检查是否子节点
+				return true;
+			}
+			else if (hasPermissionTag.find(tag) == 0) { //检查是否父节点
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	return false;
 }
 
-
-
-bool userManager::checkTagPermission(string user, string tag)
-{
+bool userManager::checkTagPermission(string user, string tag) {
 	json& jUser = userMng.getUser(user);
-	if (jUser.is_null())return false; 
+	if (jUser.is_null()) {
+		return false;
+	}
 
 	//用户所属组织
 	string org = jUser["org"].get<string>();
 
 	//位号是否在用户所属的组织结构中，不在则一定没有权限
-	if (tag.find(org) == string::npos)
+	if (tag.find(org) == string::npos) {
 		return false;
+	}
 
 	//管理员级别默认拥有所有权限。简化操作，无需去设置管理员的权限
-	if (jUser["role"].get<string>() == "管理员")
+	if (jUser["role"].get<string>() == "管理员") {
 		return true;
+	}
 
 	json& permission = jUser["permission"];
-	if (permission.is_null())
+	if (permission.is_null()) {
 		return false;
+	}
 
 	json& moPermission = permission["mo"];
-	if(moPermission.is_null())return false;
+	if (moPermission.is_null()) {
+		return false;
+	}
+
 	//生成以用户所属组织为根节点的位号，不包含根节点。为空表示根节点，有权限
 	tag = TAG::trimRoot(tag, org);
 
@@ -428,10 +456,15 @@ bool userManager::checkTagPermission(string user, string tag)
 	if (moPermission.is_object()) {
 		return TAG::hasTag(moPermission, tag);
 	}
+	//数组模式配置，数组元素是一个位号
+	//配置了改位号，表示用户对该位号的父节点和子节点都有权限
 	else if (moPermission.is_array()) {
 		for (auto& mo : moPermission) {
 			string hasPermissionTag = mo["tag"];
-			if (tag.find(hasPermissionTag) == 0) {
+			if (tag.find(hasPermissionTag) == 0) { //检查是否子节点
+				return true;
+			}
+			else if (hasPermissionTag.find(tag) == 0) { //检查是否父节点
 				return true;
 			}
 		}
