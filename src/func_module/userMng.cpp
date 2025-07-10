@@ -425,7 +425,20 @@ bool userManager::checkTagPermission(string user, string tag)
 	tag = TAG::trimRoot(tag, org);
 
 	//检查权限树中是否有该位号
-	return TAG::hasTag(moPermission, tag);
+	if (moPermission.is_object()) {
+		return TAG::hasTag(moPermission, tag);
+	}
+	else if (moPermission.is_array()) {
+		for (auto& mo : moPermission) {
+			string hasPermissionTag = mo["tag"];
+			if (tag.find(hasPermissionTag) == 0) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	return false;
 }
 
 bool userManager::isChildMo(string parent, string child)
