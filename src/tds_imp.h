@@ -31,6 +31,17 @@ SOFTWARE.
 #include "tdsConf.h"
 #include "mp.h"
 
+namespace FUNC_TYPE {
+	const std::string ChaoShengNoSignalCurveClassify = "ChaoShengNoSignalCurveClassify";  //曲线分类
+	const std::string RailDamange = "RailDamage";                                         //伤损图像检测
+	const std::string JM_A_Gap = "JM_A_Gap";                                              //JM-A缺口识别
+	const std::string DiodeTubeAlarm = "DiodeTubeAlarm";                                  //二极管报警
+
+	//扩展与兼容性
+	const std::string DiodeTubeAlarm_V1 = "DiodeTubeAlarm_V1";                            //二极管报警 v1版本接口
+	//定义v1版本的返回json结构
+};
+
 class TDS_imp : public i_tds {
 public:
 	TDS_imp();
@@ -80,5 +91,5 @@ extern string g_ComputerStartupTime;
 extern string g_strStartupTime;
 
 typedef bool (*LoadModelFunc)(const char*, const bool&);                             // load_model
-typedef bool (*PredictFunc)(const unsigned char* img, const int& size, char* rlt);   // predict
+typedef bool (*PredictFunc)(IN const char* funcType, IN const char* modelPath, IN void* inData, IN size_t inDataLen, OUT char* outData, OUT size_t& outDataLen, OUT char* errData, OUT size_t& errDataLen);   // predict
 extern PredictFunc dv_predict;

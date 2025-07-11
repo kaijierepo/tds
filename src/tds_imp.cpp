@@ -439,50 +439,22 @@ std::string getSystemBootTime() {
 	return "BootTimeNotFound";
 }
 
-PredictFunc dv_predict;
+PredictFunc dv_predict = NULL;
 
-void loadDeepVersion()
-{
+void loadDeepVersion() {
 #ifdef _WIN32
 	string deepVersionDllPath = fs::appPath() + "/DeepVision.dll";
-	string onnxPath = fs::appPath() + "/onnx/";
-	if (fs::fileExist(deepVersionDllPath) && fs::fileExist(onnxPath))
-	{
-		vector<fs::FILE_INFO> filist;
-		fs::getFileList(filist, onnxPath, true, ".onnx");
-		if (filist.size()>0)
-		{
-			deepVersionDllPath = charCodec::utf8_to_gb(deepVersionDllPath);
-			HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // 请确保 DLL 文件路径正确
-			if (hDLL == NULL) {
-				LOG("[deepVision] Failed to load DLL,"+ deepVersionDllPath);
-				return ;
-			}
+	if (fs::fileExist(deepVersionDllPath)) {
+		HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // 请确保 DLL 文件路径正确
+		if (hDLL == NULL) {
+			DWORD errorCode = GetLastError();
+			std::cerr << "Failed to load DLL!" << std::endl;
+			return;
+		}
 
-			LoadModelFunc loadModel = (LoadModelFunc)GetProcAddress(hDLL, "load_model");
-			if (loadModel == NULL) {
-				LOG("[deepVision] Failed to get loadModel function!");
-				FreeLibrary(hDLL);
-				return ;
-			}
-
-			dv_predict = (PredictFunc)GetProcAddress(hDLL, "predict");
-			if (dv_predict == NULL) {
-				LOG("[deepVision]Failed to get predict function!");
-				FreeLibrary(hDLL);
-				return ;
-			}
-
-			// 调用 loadModel 和 predict 方法
-			std::string modelPath = filist[0].path;
-			bool isCPU = true;
-			modelPath = charCodec::utf8_to_gb(modelPath);
-			if (loadModel(modelPath.c_str(), isCPU)) {
-				LOG("[deepVision]Model loaded successfully!");
-			}
-			else {
-				LOG("[deepVision]Failed to load model!");
-			}
+		dv_predict = (PredictFunc)GetProcAddress(hDLL, "predict");
+		if (dv_predict == NULL) {
+			std::cerr << "Failed to get predict function!" << std::endl;
 		}
 	}
 #else

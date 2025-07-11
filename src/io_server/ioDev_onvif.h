@@ -9,26 +9,40 @@ class ioDev_onvif : public ioDev_camera
 public:
 	ioDev_onvif();
 	~ioDev_onvif();
+
 	bool run() override;
 	void DoCycleTask() override;
+
 	bool onRecvPkt(unsigned char* pData, size_t iLen) override; //接收到完整的协议数据包
+
 	bool getCurrentVal();
 	void setVal(string& str, string name, string val);
+
+	string generateNouce();
+	string generateAuthStr(string uri, string realm, string nonce, string cnonce);
+
+	map<string, string> parseKeyValStr(string s);
+
+	bool isAddrValid();
 
 	void onvif_getDevInfo();
 	void onvif_getSnapshotUri();
 	void onvif_getProfiles();
 	void onvif_getPresets();
-	void onvif_gotoPresets();
-	bool doOnvifTransaction(string msg, string uri, bool log = true);
-	bool isAddrValid();
 
 	virtual void ptz_startMove(string dir, float panSpeed = 0.5, float tiltSpeed = 0.5) override;
-	map<string, string> parseKeyValStr(string s);
 	virtual void ptz_stopMove() override;
 	virtual void ptz_startZoom(string dir, float zoomSpeed = 0.5) override;
 	virtual void ptz_stopZoom() override;
-	string generateNouce();
-	string generateAuthStr(string uri,string realm, string nonce,string cnonce);
+	virtual void ptz_gotoPreset(int presetIdx) override;
+	virtual void ptz_gotoAbsolute(float pan, float tilt, float zoom) override;
+
+	bool doOnvifTransaction(string msg, string uri, string method, bool log = true);
+	bool doOnvifTransaction_onvif_getSnapshotUri(mg_http_data& data);
+
 	string m_snapshotURL;
+
+	int m_curPZTChan;
+	TIME m_lastPTZPollTime; //上一次预置位巡检时间
+	int m_ptzPollInterval;  //0
 };

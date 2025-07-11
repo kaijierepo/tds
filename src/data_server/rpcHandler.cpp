@@ -2221,10 +2221,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			//rootTag和tag组合出用户位号。
 			//用户位号和用户组织结构组合成系统位号
 			string rootTag = "";//查询根
-			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") //获取子树
-			{
+			if (params != nullptr && params["rootTag"] != nullptr && params["rootTag"].get<string>() != "") { //获取子树
 				rootTag = params["rootTag"].get<string>();
 			}
+
 			rootTag = TAG::addRoot(rootTag, session.org);//组合为系统查询根
 
 			//类型选择
@@ -2234,10 +2234,11 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 	
 			//层级选择
-			string level = "*";
-			if (params["level"] != nullptr)
-				level = params["level"].get<string>();
 			//将getOrg,getMp,getMo统一转化为getObj
+			string level = "*";
+			if (params["level"] != nullptr) {
+				level = params["level"].get<string>();
+			}
 			else if (method == "getOrg") {
 				level = "org";
 			}
@@ -2257,6 +2258,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 
 			//位号选择
 			vector<string> vecTagSel = parseTagSel(params["tag"],type);
+
 			TAG_SELECTOR tagSel;
 			tagSel.selLanguage = session.language;
 			tagSel.init(vecTagSel, rootTag, type,level);
@@ -2273,71 +2275,47 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			if (!tagSel.singleSelMode()) {
 				params["rootTag"] = rootTag;
 
-				//方便api使用，通配模式下，默认获取子节点和mp
-				//非通配模式下，默认关闭
-				//if (!params.contains("getMp")) {
-				//	params["getMp"] = true;
-				//}
-				//if (!params.contains("getChild")) {
-				//	params["getChild"] = true;
-				//}
-
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.language = session.language;
 				q.getTag = true; //多选模式，没有树结构，因此需要tag信息
 
 				if (mode == "array") {
-					//json jRlt = json::array();
 					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 					yyjson_mut_val* rootRlt = yyjson_mut_arr(doc);
 
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
 
-						//string sTag = pObj->getTag();
-
-						//if (session.user != "")
-						//{
-						//	if (!userMng.checkTagPermission(session.user, sTag))
-						//		continue;
-						//}
-
-						//json jObj;
 						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
 
 						bool selectedByLeafType = false;
 						if (pObj->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
-							//jRlt.push_back(jObj);
 							yyjson_mut_arr_append(rootRlt, rootObj);
 						}
 					}
+
 					rpcResp.info = str::format("objCount=%d", objList.size());
 
-					//result = jRlt.dump();
 					size_t len = 0;
 					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
 					result = s;
 					if (s) {
 						free(s);
 					}
+
 					yyjson_mut_doc_free(doc);
 				}
 				else {
-					//json jRlt = json::object();
 					yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 					yyjson_mut_val* rootRlt = yyjson_mut_obj(doc);
 
 					for (int i = 0; i < objList.size(); i++) {
 						OBJ* pObj = objList[i];
-						//json jObj;
+
 						yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
 
 						bool selectedByLeafType = false;
 						if (pObj->toJson(rootObj, doc, q,&selectedByLeafType, session.user)) {
-							//string tag = jObj["tag"].get<string>();
-							//tag = str::replace(tag, ".", "_");
-							//jRlt[tag] = jObj;
-
 							string tag = yyjson_mut_get_str(yyjson_mut_obj_get(rootObj, "tag"));
 							tag = str::replace(tag, ".", "_");
 							yyjson_mut_val* key = yyjson_mut_strcpy(doc, tag.c_str());
@@ -2345,45 +2323,44 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 						}
 
 					}
-					//result = jRlt.dump();
+
 					size_t len = 0;
 					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
 					result = s;
 					if (s) {
 						free(s);
 					}
+
 					yyjson_mut_doc_free(doc);
 				}
 			}
 			//精确查找模式，返回一个对象
 			else if(objList.size() == 1){
 				OBJ* pmo = objList[0];
-				//所有位号以用户位号的方式展示。除非另外指定rootTag
 
-				//json j;
+				//所有位号以用户位号的方式展示。除非另外指定rootTag
 				yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 				yyjson_mut_val* rootObj = yyjson_mut_obj(doc);
-
 
 				params["rootTag"] = rootTag;
 
 				OBJ_QUERIER q = OBJ::parseQuerier(params);
 				q.pRoot = pmo;
 				q.language = session.language;
+
 				bool selectedByLeafType = false;
 				if (pmo->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
-					//result = j.dump();
 					size_t len = 0;
 					auto s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
 					if (s) {
 						result = s;
 						free(s);
 					}
+
 					yyjson_mut_doc_free(doc);
 				}
 			}
-			else
-			{
+			else {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
 			}
 		}
@@ -3332,91 +3309,89 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		#endif
 		rpcResp.result = resultObj.dump();
 	}
-	else if (method == "imageReco")
-	{
+	else if (method == "imageReco") {
 		string tag = params["tag"];
 		string strTime = params["time"];
+
 		string imagePath = db.getPath_dbFile(tag, strTime, "image");
-		if (db.fileExist(imagePath))
-		{
-			if (dv_predict)
-			{
-				string imageBuff = "";
-				DB_FS::readFile(imagePath, imageBuff);
-				size_t temp = imageBuff.size();
-				string strFileEnd = imageBuff.substr(imageBuff.size() - 4, 4);
-				//judge xxxxxx.image.jpg file inside,info does it exist
-				if (strFileEnd == "jjpg")
-				{
-					string strJsonSize = imageBuff.substr(imageBuff.size() - 8, 4);
-					size_t jsonSize = 0;
-					memcpy(&jsonSize, strJsonSize.c_str(), 4);
-					imageBuff = imageBuff.substr(0, imageBuff.size() - jsonSize - 8);
-				}
+		if (db.fileExist(imagePath)) {
+			//if (dv_predict)
+			//{
+			//	string imageBuff = "";
+			//	DB_FS::readFile(imagePath, imageBuff);
+			//	size_t temp = imageBuff.size();
+			//	string strFileEnd = imageBuff.substr(imageBuff.size() - 4, 4);
+			//	//judge xxxxxx.image.jpg file inside,info does it exist
+			//	if (strFileEnd == "jjpg")
+			//	{
+			//		string strJsonSize = imageBuff.substr(imageBuff.size() - 8, 4);
+			//		size_t jsonSize = 0;
+			//		memcpy(&jsonSize, strJsonSize.c_str(), 4);
+			//		imageBuff = imageBuff.substr(0, imageBuff.size() - jsonSize - 8);
+			//	}
 
-				string info = "";
-				char* c_info = new char[1000000];
-				dv_predict((const unsigned char*)imageBuff.c_str(), imageBuff.size(), c_info);
-				info = c_info;
-				delete[] c_info;
+			//	string info = "";
+			//	char* c_info = new char[1000000];
+			//	dv_predict((const unsigned char*)imageBuff.c_str(), imageBuff.size(), c_info);
+			//	info = c_info;
+			//	delete[] c_info;
 
-				if (!info.empty())
-				{
-					auto doc_info = yyjson_read(info.c_str(), info.size(), 0);
-					auto root_info = yyjson_doc_get_root(doc_info);
+			//	if (!info.empty())
+			//	{
+			//		auto doc_info = yyjson_read(info.c_str(), info.size(), 0);
+			//		auto root_info = yyjson_doc_get_root(doc_info);
 
-					auto mut_doc_info = yyjson_mut_doc_new(nullptr);
-					auto mut_root_info = yyjson_mut_obj(mut_doc_info);
-					yyjson_mut_doc_set_root(mut_doc_info, mut_root_info);
+			//		auto mut_doc_info = yyjson_mut_doc_new(nullptr);
+			//		auto mut_root_info = yyjson_mut_obj(mut_doc_info);
+			//		yyjson_mut_doc_set_root(mut_doc_info, mut_root_info);
 
-					yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "tag", tag.c_str());
-					yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "time", strTime.c_str());
-					auto objContourArr = yyjson_mut_arr(mut_doc_info);
-					yyjson_mut_obj_add_val(mut_doc_info, mut_root_info, "objContour", objContourArr);
+			//		yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "tag", tag.c_str());
+			//		yyjson_mut_obj_add_strcpy(mut_doc_info, mut_root_info, "time", strTime.c_str());
+			//		auto objContourArr = yyjson_mut_arr(mut_doc_info);
+			//		yyjson_mut_obj_add_val(mut_doc_info, mut_root_info, "objContour", objContourArr);
 
-					auto objectsObj = yyjson_obj_get(root_info, "objects");
-					yyjson_val* val;
-					size_t indx = 0, max = 0;
-					yyjson_arr_foreach(objectsObj, indx, max, val)
-					{
-						auto oneObjContour = yyjson_mut_obj(mut_doc_info);
-						auto nameObj = yyjson_obj_get(val, "name");
-						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "type", yyjson_val_mut_copy(mut_doc_info, nameObj));
-						auto confidenceObj = yyjson_obj_get(val, "confidence");
-						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "confidence", yyjson_val_mut_copy(mut_doc_info, confidenceObj));
+			//		auto objectsObj = yyjson_obj_get(root_info, "objects");
+			//		yyjson_val* val;
+			//		size_t indx = 0, max = 0;
+			//		yyjson_arr_foreach(objectsObj, indx, max, val)
+			//		{
+			//			auto oneObjContour = yyjson_mut_obj(mut_doc_info);
+			//			auto nameObj = yyjson_obj_get(val, "name");
+			//			yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "type", yyjson_val_mut_copy(mut_doc_info, nameObj));
+			//			auto confidenceObj = yyjson_obj_get(val, "confidence");
+			//			yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "confidence", yyjson_val_mut_copy(mut_doc_info, confidenceObj));
 
-						auto bboxArr = yyjson_mut_arr(mut_doc_info);
-						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "bbox", bboxArr);
-						auto bbox_yuanObj = yyjson_obj_get(val, "bbox");
-						auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
-						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_x_yuanObj));
-						auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
-						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_y_yuanObj));
-						auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
-						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_w_yuanObj));
-						auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
-						yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_h_yuanObj));
-						auto maskObj = yyjson_obj_get(val, "mask");
-						yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "mask", yyjson_val_mut_copy(mut_doc_info, maskObj));
+			//			auto bboxArr = yyjson_mut_arr(mut_doc_info);
+			//			yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "bbox", bboxArr);
+			//			auto bbox_yuanObj = yyjson_obj_get(val, "bbox");
+			//			auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
+			//			yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_x_yuanObj));
+			//			auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
+			//			yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_y_yuanObj));
+			//			auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
+			//			yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_w_yuanObj));
+			//			auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
+			//			yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc_info, bbox_h_yuanObj));
+			//			auto maskObj = yyjson_obj_get(val, "mask");
+			//			yyjson_mut_obj_add_val(mut_doc_info, oneObjContour, "mask", yyjson_val_mut_copy(mut_doc_info, maskObj));
 
-						yyjson_mut_arr_add_val(objContourArr, oneObjContour);
-					}
+			//			yyjson_mut_arr_add_val(objContourArr, oneObjContour);
+			//		}
 
-					char* temp = yyjson_mut_write(mut_doc_info, 0, 0);
-					info = temp;
-					delete temp;
-					yyjson_doc_free(doc_info);
-					yyjson_mut_doc_free(mut_doc_info);
-				}
-				rpcResp.result = info;
-			}
-			else
-			{
-				rpcResp.error = R"("onnx未加载或加载失败,请检查")";
-			}
+			//		char* temp = yyjson_mut_write(mut_doc_info, 0, 0);
+			//		info = temp;
+			//		delete temp;
+			//		yyjson_doc_free(doc_info);
+			//		yyjson_mut_doc_free(mut_doc_info);
+			//	}
+			//	rpcResp.result = info;
+			//}
+			//else
+			//{
+			//	rpcResp.error = R"("onnx未加载或加载失败,请检查")";
+			//}
 		}
-		else
-		{
+		else {
 			rpcResp.error = R"("cannot find file, imagePath:)" + imagePath+R"(")";
 		}
 	}
