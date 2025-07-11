@@ -7,32 +7,32 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tds Pro", "tds.vcxproj", "{
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		debug|x64 = debug|x64
+		debug|x86 = debug|x86
 		exe - D svn|x64 = exe - D svn|x64
 		exe - D svn|x86 = exe - D svn|x86
-		exe - D|x64 = exe - D|x64
-		exe - D|x86 = exe - D|x86
 		exe - R svn|x64 = exe - R svn|x64
 		exe - R svn|x86 = exe - R svn|x86
-		exe - R|x64 = exe - R|x64
-		exe - R|x86 = exe - R|x86
+		release|x64 = release|x64
+		release|x86 = release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x64.ActiveCfg = exe - D|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x64.Build.0 = exe - D|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x86.ActiveCfg = exe - D|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x86.Build.0 = exe - D|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.ActiveCfg = exe - D svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.Build.0 = exe - D svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x86.ActiveCfg = exe - D svn|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x86.Build.0 = exe - D svn|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.ActiveCfg = exe - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x64.Build.0 = exe - D|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.ActiveCfg = exe - D|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D|x86.Build.0 = exe - D|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.ActiveCfg = exe - R svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x64.Build.0 = exe - R svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.ActiveCfg = exe - R svn|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R svn|x86.Build.0 = exe - R svn|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.ActiveCfg = exe - R|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x64.Build.0 = exe - R|x64
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.ActiveCfg = exe - R|Win32
-		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - R|x86.Build.0 = exe - R|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.release|x64.ActiveCfg = exe - R|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.release|x64.Build.0 = exe - R|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.release|x86.ActiveCfg = exe - R|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.release|x86.Build.0 = exe - R|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
