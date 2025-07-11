@@ -201,7 +201,7 @@ void ioDev_onvif::DoCycleTask() {
 		}
 	}
 
-	if (m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
+	if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
 		//解析通道ptz配置并移动相机
 		ioChannel* pC = m_channels[m_curPZTChan];
 		string chanId = pC->getAddr();   
