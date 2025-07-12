@@ -251,11 +251,19 @@ void ioDev_onvif::DoCycleTask() {
 			//拍照
 			onvif_getSnapshotUri();
 
+			TIME time = timeopt::now();
+
 			//deepVision识别
 			string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
 			if (fs::fileExist(imagePath)) {
 				string imageBuff = "";
 				DB_FS::readFile(imagePath, imageBuff);
+
+				int inLen = imageBuff.size();
+				char* out = new char[inLen * 2 + 1];
+				int outLen = tdb_base64_encode((const unsigned char*)imageBuff.c_str(), inLen, out);
+				string imgBase64(out, outLen);
+				delete[] out;
 
 				string modelPath = fs::appPath() + "/onnx/railway_n_2402213_1920.onnx";
 				
@@ -264,10 +272,13 @@ void ioDev_onvif::DoCycleTask() {
 				shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
 				bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
 			
-				//报警
+				string info;
 				if (bRC) {
-					string info = c_info.get();
+					info = c_info.get();
+				}
 
+				//报警
+				if (!info.empty()) {
 					bool alarm = false;
 
 					auto doc = yyjson_read(info.c_str(), info.size(), 0);
@@ -289,12 +300,54 @@ void ioDev_onvif::DoCycleTask() {
 
 					if (alarm) {
 						ALARM_INFO ai;
-						ai.tag = m_strTagBind + "." + pC->m_name;
+						ai.tag = m_strTagBind + ".预置位" + chanId;
 						ai.type = "视频伤损";
 						ai.level = ALARM_LEVEL::alarm;
 						almSrv.Add(ai);
 					}
+
+					yyjson_doc_free(doc);
 				}
+
+				//db
+				string tag = m_strTagBind + ".预置位" + chanId;
+
+				DB_TIME dbt;
+				dbt.fromStr(time.toStr());
+
+				string strIndex = "";
+				db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
+
+				//发中心端
+				auto mutDoc = yyjson_mut_doc_new(nullptr);
+				auto mutRoot = yyjson_mut_obj(mutDoc);
+
+				yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
+				yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
+
+				auto paramsObj = yyjson_mut_obj(mutDoc);
+				yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+
+				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
+				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
+				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+
+				if (!info.empty()) {
+					yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
+				}
+
+				char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+				if (writeResult) {
+					string s = writeResult;
+					s += "\n\n";
+					//sockSrv.sendToAllSessions(s);
+					free(writeResult);
+				}
+
+				yyjson_mut_doc_free(mutDoc);
 			}
 		}
 	}
