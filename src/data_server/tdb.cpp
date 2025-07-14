@@ -5213,6 +5213,7 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 		saveImage(tag, t, (char*)out, outLen, info, strIndex);
 		delete[] out;
+		rlt = "\"image info and data saved\"";
 	}
 	else if (yyv_img)
 	{
@@ -5238,11 +5239,16 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		string info = "";
 		saveImage(tag, t, (char*)out, outLen, info, strIndex);
 		delete[] out;
+		rlt = "\"image data saved\"";
 	}
 	else if (yyv_info)
 	{
 		string info = yyjson_get_str(yyv_info);
 		saveImage(tag, t, NULL, 0, info, strIndex);
+		rlt = "\"image info saved\"";
+	}
+	else {
+		err = "\"set image info or data in rpc request\"";
 	}
 	
 	yyjson_doc_free(doc);

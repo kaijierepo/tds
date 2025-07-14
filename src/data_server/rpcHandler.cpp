@@ -4055,8 +4055,14 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 
 	//tds自身受理
 	if (!handleMethodCall(method, params, rpcResp, pSession->getRpcSession())) {
-		string s = yyjson_val_write(jReq, 0, 0);
-		LOG("[warn]调用不存在的rpc方法\r\n" + s);
+		string strReq;
+		char* writeResult = yyjson_val_write(jReq, 0, 0);
+		if (writeResult) {
+			strReq = writeResult;
+			free(writeResult);
+		}
+
+		LOG("[warn]调用不存在的rpc方法\r\n" + strReq);
 		rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error": {"code": -32601, "message": "Method not found"}, "id": %s})", jStrId.c_str());
 		return;
 	}
@@ -4086,6 +4092,19 @@ HANDLE_END:
 		}
 
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
+	}
+	else {
+		string se = "internal error!! request not correctly handled ,no result or error returned";
+
+		string strReq;
+		char* writeResult = yyjson_val_write(jReq, 0, 0);
+		if (writeResult) {
+			strReq = writeResult;
+			free(writeResult);
+		}
+
+		LOG("[error]" + se + " " + strReq);
+		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":\"" + se + "\"" + ",\"id\":" + jStrId;
 	}
 
 
