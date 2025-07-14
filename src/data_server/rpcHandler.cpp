@@ -892,18 +892,15 @@ bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION& 
 	return true;
 }
 
-bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
-{
+bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
-	bool bHandled = true;
 
+	bool bHandled = true;
 	
-	if (method.find("db.") != string::npos)
-	{
-		//insert不进行 time参数校验
-		if (method == "db.insert")
-		{
+	if (method.find("db.") != string::npos) {
+		if (method == "db.insert") {
+			//insert不进行 time参数校验
 			string s = params.dump();
 			db.rpc_db_insert(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
@@ -913,8 +910,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 
 			vector<fs::FILE_INFO> vec;
 			fs::getFolderList(vec, db.m_path,true);
-			try
-			{
+			try {
 				for (int i = 0; i < vec.size(); i++) {
 					fs::FILE_INFO& fi = vec[i];
 					if (fi.name.find(oldName) != string::npos) {
@@ -926,81 +922,51 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 				}
 				rpcResp.result = RPC_OK;
 			}
-			catch (const std::exception& e)
-			{
+			catch (const std::exception& e) {
 				json jErr = e.what();
 				rpcResp.error = jErr.dump();
 			}
 		}
-		else if (method == "db.getBufferStatus")
-		{
+		else if (method == "db.getBufferStatus") {
 			db.rpc_db_getBufferStatus(rpcResp.result, rpcResp.error);
 		}
-		else if (method == "db.saveImage")
-		{
+		else if (method == "db.saveImage") {
 			string s = params.dump();
 			db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
-		else if (method == "db.setConf")
-		{
+		else if (method == "db.setConf") {
 			string s = params.dump();
 			db.rpc_db_setConf(s, rpcResp.result, rpcResp.error);
 		}
-		else if (!params.contains("time"))
-		{
+		else if (!params.contains("time")) {
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
-		else if (method == "db.select")
-		{
+		else if (method == "db.select") {
 			string s = params.dump();
 			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org,session.language);
 		}
-		else if (method == "db.update")
-		{
+		else if (method == "db.update") {
 			string s = params.dump();
 			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
-		else if (method == "db.merge")
-		{
+		else if (method == "db.merge") {
 			string s = params.dump();
 			db.rpc_db_merge(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
-		else if (method == "db.delete")
-		{
+		else if (method == "db.delete") {
 			string s = params.dump();
 			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
-		else if (method == "db.manage")
-		{
-			/*
-			{
-   "jsonrpc": "2.0",
-   "method": "db.manage",
-   "params": {
-	  "opt":"getMids"
-   },
-   "id": 4
-}
-
-响应：
-{
-   "jsonrpc": "2.0",
-   "method": "db.manage",
-   "id": 4,
-   "result": ["标识1","标识2",...]
-}
-			*/
-			string s = params.dump();
-			//db.rpc_db_manage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+		else {
+			bHandled = false;
 		}
 	}
-	else
-	{
+	else {
 		bHandled = false;
 	}
+
 	return bHandled;
 }
-
 
 vector<std::shared_ptr<TDS_SESSION>>  concurrentTestVec;
 
@@ -3444,73 +3410,71 @@ bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp,
 		}
 	}
 
-	if (handleMethodCall_unclassified(method, params, rpcResp, session)) 
-	{
+	if (handleMethodCall_unclassified(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_edgeDev(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_edgeDev(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_gamePad(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_gamePad(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_audioPlayer(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_audioPlayer(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_MoMng(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_MoMng(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_alarmMng(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_alarmMng(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_userMng(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_userMng(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_OSFunc(method, params, rpcResp))
-	{
+
+	if (handleMethodCall_OSFunc(method, params, rpcResp)) {
 		return true;
 	}
-	if (handleMethodCall_db(method, params, rpcResp, session))
-	{
+
+	if (handleMethodCall_db(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (handleMethodCall_IoMng(method, params, rpcResp,session))
-	{
+
+	if (handleMethodCall_IoMng(method, params, rpcResp,session)) {
 		return true;
 	}
+
 	if (handleMethodCall_video(method, params, rpcResp, session)) {
 		return true;
 	}
-	if (method == "getLocalTime")
-	{
+
+	if (method == "getLocalTime") {
 		json nowtime;
 		nowtime["time"] = timeopt::nowStr();
 		rpcResp.result = nowtime.dump();
 	}
 	
-	if (rpcResp.result != "" || rpcResp.error!="")
+	if (rpcResp.result != "" || rpcResp.error != "") {
 		return true;
+	}
 	else {
 		json jError = {
 			{"code", -32601},
 			{"message" , "Method not found"},
 			{"method", method}
 		};
+
 		rpcResp.error = jError.dump();
 	}
 
 	return false;
 }
-
-
-
-
 
 bool rpcHandler::needLog(string method)
 {
@@ -3737,15 +3701,16 @@ void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession,
 
 void thread_handleSockSrvRpcCallAsyn(string req, std::shared_ptr<SOCK_SESSION> ss) {
 	RPC_RESP resp;
+
 	std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
 	p->Init();
 	p->bConnected = true;
 	p->sock = p->sock;
 	p->remotePort = ss->remotePort;
 	p->remoteIP = ss->remoteIP;
+
 	rpcSrv.handleRpcCall(req, resp, p);
-	//resp.strResp += "\n\n"; 内部已经加了2个\n
-	sockSrv.sendToSockSession(ss,(unsigned char*) resp.strResp.c_str(), resp.strResp.length());
+	sockSrv.sendToSockSession(ss, (unsigned char*) resp.strResp.c_str(), resp.strResp.length());
 }
 
 void onSockSrvCallback(char* p, size_t l, std::shared_ptr<SOCK_SESSION> sockSess) {
@@ -3759,8 +3724,7 @@ void onSockSrvCallback(char* p, size_t l, std::shared_ptr<SOCK_SESSION> sockSess
 	}
 }
 
-void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
-{
+void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
 	thread t(thread_handleRpcCallAsyn, strReq, pSession, bAccessCtrl);
 	t.detach();
 }
@@ -3867,29 +3831,36 @@ bool rpcHandler::isDebugMethod(string method) {
 	return false;
 }
 
-void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
-{
+void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
 	yyjson_val* yyMethod = yyjson_obj_get(jReq, "method");
 	yyjson_val* yyParams = yyjson_obj_get(jReq, "params");
+
 	json params;
-	if (yyMethod == nullptr)
-	{
+
+	if (yyMethod == nullptr) {
 		size_t len;
 		string s = yyjson_val_write(jReq, 0, &len);
+
 		LOG("[error][TDS-RPC]协议数据包必须包含method字段\n" + s);
 		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"missing field method", "id" : null})";
+
 		return;
 	}
-	if (yyParams == nullptr)
-	{
+
+	if (yyParams == nullptr) {
 		size_t len;
 		string s = yyjson_val_write(jReq, 0, &len);
+
 		LOG("[error][TDS-RPC]协议数据包必须包含params字段\n" + s);
 		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"missing field params", "id" : null})";
+
 		return;
 	}
+
 	string method = yyjson_get_str(yyMethod);
+
 	yyjson_val* id = yyjson_obj_get(jReq, "id");
+
 	string jStrId;
 	if (id == nullptr) {
 		rpcResp.isNotification = true;
@@ -3901,6 +3872,7 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	}
 
 	statisCall(method);
+
 	if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {
 		size_t len;
 		rpcResp.strResp = str::format(R"({"jsonrpc":"2.0","error":"method disabled", "id" : %s})",yyjson_val_write(id,0,&len));
@@ -3911,6 +3883,7 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	if (yydbPath) {
 		pSession->dbpath = yyjson_get_str(yydbPath);
 	}
+
 	yyjson_val* yylanguage = yyjson_obj_get(jReq, "language");
 	if (yylanguage) {
 		pSession->language = yyjson_get_str(yylanguage);
@@ -3919,9 +3892,11 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	//调试命令会话不纳入统计
 	if (!pSession->isDebug) {
 		m_csRpcSessions.lock();
+
 		std::map<string, RPC_SESSION>::iterator iter = m_mapRpcSessions.find(pSession->remoteAddr);
 		if (iter != m_mapRpcSessions.end()) {
 			RPC_SESSION& sess = iter->second;
+
 			sess.sLastRecvTime = timeopt::nowStr();
 			sess.lastMethodCalled = method;
 		}
@@ -3932,8 +3907,10 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 			sess.remotePort = pSession->remotePort;
 			sess.sLastRecvTime = timeopt::nowStr();
 			sess.lastMethodCalled = method;
+
 			m_mapRpcSessions[pSession->remoteAddr] = sess;
 		}
+
 		m_csRpcSessions.unlock();
 	}
 
@@ -3941,15 +3918,16 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	bool needLog = false;
 	if (method == "output" || method == "openStream") {
 		needLog = true;
+
 		size_t len; string s = yyjson_val_write(jReq, 0, &len);
 		LOG("[warn]RPC请求:\r\n" + s + "\r\n");
 	}
 
 	//心跳最先处理
-	if (method == "heartbeat")
-	{
+	if (method == "heartbeat") {
 		json j;
 		j["tdsVersion"] = tds->getSvnVersion();
+
 		#ifdef _WIN32
 		j["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
 		j["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
@@ -3960,30 +3938,29 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 		j["serverStatus"]["mem"] = 0;
 		j["serverStatus"]["handle"] = 0;
 		#endif
+
 		rpcResp.result = j.dump();
 		goto HANDLE_END;
 	}
 
 	//setObj走yyjson handler,其他的走json.hpp handler,逐步重构
 	if (method != "setObj") {
-		size_t len; string s = yyjson_val_write(yyParams, 0, &len);
+		size_t len; 
+		string s = yyjson_val_write(yyParams, 0, &len);
 		params = json::parse(s);
 	}
 
 	//调试类命令
-	if (handleMethodCall_debugFunc(method, params, rpcResp, pSession->getRpcSession()))
-	{
+	if (handleMethodCall_debugFunc(method, params, rpcResp, pSession->getRpcSession())) {
 		goto HANDLE_END;
 	}
 
 	//访问控制
-	if (method == "login")
-	{
+	if (method == "login") {
 		userMng.rpc_login(params, rpcResp, pSession->getRpcSession());
 		goto HANDLE_END;
 	}
-	else if (method == "logout")
-	{
+	else if (method == "logout") {
 		userMng.rpc_logout(params, rpcResp, pSession->getRpcSession());
 		goto HANDLE_END;
 	}
@@ -4019,19 +3996,17 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	}
 
 	//设备模式不开启中继转发处理.返回true表示是中继命令.放在用户认证前面处理.
-	if (handleRpcRoute(jReq, rpcResp, pSession))
-	{
+	if (handleRpcRoute(jReq, rpcResp, pSession)) {
 		goto HANDLE_END;
 	}
 
 	//先使用外部注册的handler受理请求
-	if (m_pluginHandler)
-	{
+	if (m_pluginHandler) {
 		string sReq = yyjson_val_write(jReq,0,nullptr);
 		string error;
+
 		bool bHandled = m_pluginHandler(sReq, rpcResp, error);
-		if (bHandled)
-		{
+		if (bHandled) {
 			goto HANDLE_END;
 		}
 	}
@@ -4058,12 +4033,10 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 HANDLE_END:
 
 	//组装jsonRPC
-	if (rpcResp.error != "")
-	{
+	if (rpcResp.error != "") {
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":" + rpcResp.error + ",\"id\":" + jStrId;
 	}
-	else if (rpcResp.result != "")
-	{
+	else if (rpcResp.result != "") {
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + jStrId;
 
 		//info放在result前面打印，因为result可能比较长，info短，放前面测试观察方便
@@ -4095,18 +4068,16 @@ HANDLE_END:
 		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":\"" + se + "\"" + ",\"id\":" + jStrId;
 	}
 
-
 	//route参数，路由请求的回包包含请求中的路由参数
-	if (pSession->route_ioAddr != "")
-	{
+	if (pSession->route_ioAddr != "") {
 		rpcResp.strResp += ",\"ioAddr\":\"" + pSession->route_ioAddr + "\"";
 	}
-	if (pSession->route_tag != "")
-	{
+
+	if (pSession->route_tag != "") {
 		rpcResp.strResp += ",\"tag\":\"" + pSession->route_tag + "\"";
 	}
-	if (pSession->route_childTds != "")
-	{
+
+	if (pSession->route_childTds != "") {
 		rpcResp.strResp += ",\"childTds\":\"" + pSession->route_childTds + "\"";
 	}
 
@@ -4118,22 +4089,18 @@ HANDLE_END:
 		rpcResp.strResp += s;
 	}
 
-
 	rpcResp.strResp += "}\n\n";
 
 	if (tds->conf->m_apiAdaptorScript != "") {
 		apiAdaptorScript(rpcResp.strResp);
 	}
 
-
 	//数据过长或者频率过高的命令不记录日志
-	if (rpcResp.result != "" && needLog)
-	{
+	if (rpcResp.result != "" && needLog) {
 		//更多的api请求响应日志，使用 apiDebug页面分析
 		LOG("[warn]RPC响应:\r\n" + rpcResp.result + "\r\n");
 	}
 }
-
 
 long long rpcHandler::getTick() {
 	auto now = std::chrono::high_resolution_clock::now();
@@ -4143,27 +4110,28 @@ long long rpcHandler::getTick() {
 	return microseconds;
 }
 
-void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)
-{
+void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl) {
 	pSession->tStartCall = getTick();
+
 	string error = "";
 	string method = "";
+
 	json id = nullptr;
+
 	bool bGB2312 = false;
 	bool bNeedLog = true;
+
 	std::map<string, RPC_SESSION>::iterator iter;
 
-	if (strReq.length() == 0) 
-	{
+	if (strReq.length() == 0)  {
 		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"invalid request format. request length is 0", "id" : null})";
 		return;
 	}
 
-	//pSession->req = strReq;
-	try
-	{
+	try {
 		yyjson_doc* yydoc = yyjson_read(strReq.c_str(), strReq.size(), 0);
 		yyjson_val* yyReq = yyjson_doc_get_root(yydoc);
+
 		if (yyReq) {
 			if (yyjson_is_arr(yyReq)) {
 				rpcResp.strResp = "[";
@@ -4172,16 +4140,18 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 				yyjson_arr_foreach(yyReq, idx, max, yySingleReq) {
 					RPC_RESP singleResp;
 					handleRpcCall_single(yySingleReq, singleResp, pSession, bAccessCtrl);
+
 					rpcResp.strResp += singleResp.strResp;
+
 					if (idx != max - 1) {
 						rpcResp.strResp += ",";
 					}
 				}
+
 				rpcResp.strResp += "]";
 			}
 			else {
 				handleRpcCall_single(yyReq, rpcResp, pSession, bAccessCtrl);
-
 			}
 		}
 		else {
@@ -4189,9 +4159,9 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error" : {"code": -32700, "message" : "%s"}, "id" : null})", "无法解析的json格式");
 		}
 	}
-	catch (std::exception& e)
-	{
+	catch (std::exception& e) {
 		string errorType = e.what();
+
 		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
 		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
 		errorType = str::encodeAscII(errorType);
@@ -4199,7 +4169,6 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error" : {"code": -32700, "message" : "%s"}, "id" : null})",errorType.c_str());
 	}
 }
-
 
 void rpcHandler::saveDataFromUrl(string& strUrl, TIME& stTime, string& strTag, string suffix)
 {

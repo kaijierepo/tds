@@ -198,18 +198,23 @@ void tSockSrv::OnRecvData_TCP(char* pData, size_t iLen, std::shared_ptr<SOCK_SES
 	}
 }
 
-bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, unsigned char* pData, size_t len) {
+bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION> sockSession, unsigned char* pData, size_t len) {
 	if (sockSession->type == TCP_SOCK) {
-		if (len <= 0)
+		if (len <= 0) {
 			return false;
-		if (sockSession->sock <= 0)
+		}
+
+		if (sockSession->sock <= 0) {
 			return false;
+		}
+
 		int ret = ::send(sockSession->sock, (char*)pData, len, 0);
 		if (ret <= 0) {
 			int ShutDownBoth = 2; //SD_BOTH in win,SHUT_RDWR in linux
 			shutdown(sockSession->sock, ShutDownBoth);
 			return false;
 		}
+
 		return true;
 	}
 	else if (sockSession->type == UDP_SOCK) {
@@ -218,6 +223,7 @@ bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, uns
 	else {
 		return false;
 	}
+
 	return false;
 }
 
