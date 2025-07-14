@@ -201,156 +201,156 @@ void ioDev_onvif::DoCycleTask() {
 		}
 	}
 
-	if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
-		//解析通道ptz配置并移动相机
-		ioChannel* pC = m_channels[m_curPZTChan];
-		string chanId = pC->getAddr();   
+	//if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
+	//	//解析通道ptz配置并移动相机
+	//	ioChannel* pC = m_channels[m_curPZTChan];
+	//	string chanId = pC->getAddr();   
 
-		//下一个要巡检的通道
-		m_curPZTChan++;
-		if (m_curPZTChan >= m_channels.size()) {
-			m_curPZTChan = 0;
-		}
+	//	//下一个要巡检的通道
+	//	m_curPZTChan++;
+	//	if (m_curPZTChan >= m_channels.size()) {
+	//		m_curPZTChan = 0;
+	//	}
 
-		bool valid = false;
-		if (str::isDigits(chanId)) {
-			int presetIdx = atoi(chanId.c_str());
-			ptz_gotoPreset(presetIdx);
+	//	bool valid = false;
+	//	if (str::isDigits(chanId)) {
+	//		int presetIdx = atoi(chanId.c_str());
+	//		ptz_gotoPreset(presetIdx);
 
-			valid = true;
-		}
+	//		valid = true;
+	//	}
 
-		//bool valid = false;
-		//if (chanId.find(",") != string::npos) {
-		//	vector<string> v;
-		//	str::split(v, chanId, ",");
-		//
-		//	if (v.size() == 3) {
-		//		float pan = atof(v[0].c_str());
-		//		float tilt = atof(v[1].c_str());
-		//		float zoom = atof(v[2].c_str());
-		//		ptz_gotoAbsolute(pan, tilt, zoom);
-		//
-		//		valid = true;
-		//	}
-		//}
-		//else {
-		//	if (str::isDigits(chanId)) {
-		//		int presetIdx = atoi(chanId.c_str());
-		//		ptz_gotoPreset(presetIdx);
-		//
-		//		valid = true;
-		//	}
-		//}
+	//	//bool valid = false;
+	//	//if (chanId.find(",") != string::npos) {
+	//	//	vector<string> v;
+	//	//	str::split(v, chanId, ",");
+	//	//
+	//	//	if (v.size() == 3) {
+	//	//		float pan = atof(v[0].c_str());
+	//	//		float tilt = atof(v[1].c_str());
+	//	//		float zoom = atof(v[2].c_str());
+	//	//		ptz_gotoAbsolute(pan, tilt, zoom);
+	//	//
+	//	//		valid = true;
+	//	//	}
+	//	//}
+	//	//else {
+	//	//	if (str::isDigits(chanId)) {
+	//	//		int presetIdx = atoi(chanId.c_str());
+	//	//		ptz_gotoPreset(presetIdx);
+	//	//
+	//	//		valid = true;
+	//	//	}
+	//	//}
 
-		if (valid) {
-			//等待摄像机移动到位
-			int waitMoveTime = 2000;
-			timeopt::sleepMilli(waitMoveTime);
+	//	if (valid) {
+	//		//等待摄像机移动到位
+	//		int waitMoveTime = 2000;
+	//		timeopt::sleepMilli(waitMoveTime);
 
-			//拍照
-			onvif_getSnapshotUri();
+	//		//拍照
+	//		onvif_getSnapshotUri();
 
-			TIME time = timeopt::now();
+	//		TIME time = timeopt::now();
 
-			//deepVision识别
-			string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
-			if (fs::fileExist(imagePath)) {
-				string imageBuff = "";
-				DB_FS::readFile(imagePath, imageBuff);
+	//		//deepVision识别
+	//		string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
+	//		if (fs::fileExist(imagePath)) {
+	//			string imageBuff = "";
+	//			DB_FS::readFile(imagePath, imageBuff);
 
-				int inLen = imageBuff.size();
-				char* out = new char[inLen * 2 + 1];
-				int outLen = tdb_base64_encode((const unsigned char*)imageBuff.c_str(), inLen, out);
-				string imgBase64(out, outLen);
-				delete[] out;
+	//			int inLen = imageBuff.size();
+	//			char* out = new char[inLen * 2 + 1];
+	//			int outLen = tdb_base64_encode((const unsigned char*)imageBuff.c_str(), inLen, out);
+	//			string imgBase64(out, outLen);
+	//			delete[] out;
 
-				string modelPath = fs::appPath() + "/onnx/railway_n_2402213_1920.onnx";
-				
-				size_t c_info_len = 0, c_err_len;
-				shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
-				shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
-				bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
-			
-				string info;
-				if (bRC) {
-					info = c_info.get();
-				}
+	//			string modelPath = fs::appPath() + "/onnx/railway_n_2402213_1920.onnx";
+	//			
+	//			size_t c_info_len = 0, c_err_len;
+	//			shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
+	//			shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
+	//			bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
+	//		
+	//			string info;
+	//			if (bRC) {
+	//				info = c_info.get();
+	//			}
 
-				//报警
-				if (!info.empty()) {
-					bool alarm = false;
+	//			//报警
+	//			if (!info.empty()) {
+	//				bool alarm = false;
 
-					auto doc = yyjson_read(info.c_str(), info.size(), 0);
-					auto root = yyjson_doc_get_root(doc);
+	//				auto doc = yyjson_read(info.c_str(), info.size(), 0);
+	//				auto root = yyjson_doc_get_root(doc);
 
-					auto objectsObj = yyjson_obj_get(root, "objects");
-					yyjson_val* val;
-					size_t indx = 0, max = 0;
-					yyjson_arr_foreach(objectsObj, indx, max, val) {
-						auto idxVal = yyjson_obj_get(val, "idx");
-						if (idxVal && yyjson_is_int(idxVal)) {
-							int idx = (int)yyjson_get_int(idxVal);
-							if (idx == 1) {
-								alarm = true;
-								break;
-							}
-						}
-					}
+	//				auto objectsObj = yyjson_obj_get(root, "objects");
+	//				yyjson_val* val;
+	//				size_t indx = 0, max = 0;
+	//				yyjson_arr_foreach(objectsObj, indx, max, val) {
+	//					auto idxVal = yyjson_obj_get(val, "idx");
+	//					if (idxVal && yyjson_is_int(idxVal)) {
+	//						int idx = (int)yyjson_get_int(idxVal);
+	//						if (idx == 1) {
+	//							alarm = true;
+	//							break;
+	//						}
+	//					}
+	//				}
 
-					if (alarm) {
-						ALARM_INFO ai;
-						ai.tag = m_strTagBind + ".预置位" + chanId;
-						ai.type = "视频伤损";
-						ai.level = ALARM_LEVEL::alarm;
-						almSrv.Add(ai);
-					}
+	//				if (alarm) {
+	//					ALARM_INFO ai;
+	//					ai.tag = m_strTagBind + ".预置位" + chanId;
+	//					ai.type = "视频伤损";
+	//					ai.level = ALARM_LEVEL::alarm;
+	//					almSrv.Add(ai);
+	//				}
 
-					yyjson_doc_free(doc);
-				}
+	//				yyjson_doc_free(doc);
+	//			}
 
-				//db
-				string tag = m_strTagBind + ".预置位" + chanId;
+	//			//db
+	//			string tag = m_strTagBind + ".预置位" + chanId;
 
-				DB_TIME dbt;
-				dbt.fromStr(time.toStr());
+	//			DB_TIME dbt;
+	//			dbt.fromStr(time.toStr());
 
-				string strIndex = "";
-				db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
+	//			string strIndex = "";
+	//			db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
 
-				//发中心端
-				auto mutDoc = yyjson_mut_doc_new(nullptr);
-				auto mutRoot = yyjson_mut_obj(mutDoc);
+	//			//发中心端
+	//			auto mutDoc = yyjson_mut_doc_new(nullptr);
+	//			auto mutRoot = yyjson_mut_obj(mutDoc);
 
-				yyjson_mut_doc_set_root(mutDoc, mutRoot);
+	//			yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
-				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
-				yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
+	//			yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
+	//			yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
+	//			yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
 
-				auto paramsObj = yyjson_mut_obj(mutDoc);
-				yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+	//			auto paramsObj = yyjson_mut_obj(mutDoc);
+	//			yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
 
-				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
-				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
-				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+	//			yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
+	//			yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
+	//			yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
 
-				if (!info.empty()) {
-					yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
-				}
+	//			if (!info.empty()) {
+	//				yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
+	//			}
 
-				char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
-				if (writeResult) {
-					string s = writeResult;
-					s += "\n\n";
-					sockSrv.sendToAllSessions(s);
-					free(writeResult);
-				}
+	//			char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+	//			if (writeResult) {
+	//				string s = writeResult;
+	//				s += "\n\n";
+	//				sockSrv.sendToAllSessions(s);
+	//				free(writeResult);
+	//			}
 
-				yyjson_mut_doc_free(mutDoc);
-			}
-		}
-	}
+	//			yyjson_mut_doc_free(mutDoc);
+	//		}
+	//	}
+	//}
 }
 
 bool ioDev_onvif::onRecvPkt(unsigned char* pData, size_t iLen) {

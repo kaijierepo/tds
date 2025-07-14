@@ -2061,7 +2061,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
+
 	bool bHandled = true;
+
 	//配置的使用与配置的修改之间不允许并发。使用读写锁保护
 	if (method == "setConfFile") {
 		rpc_setconffile(params, rpcResp,session);
@@ -2159,9 +2161,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 	else if (method == "onObjOffline" || method == "objOffline" || method == "setOffline") {
 		rpc_onObjOffline(params, rpcResp, session);
 	}
-	else
-	{
+	else {
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
+
 		//以下配置使用 mo conf 和 io conf
 		if (method == "input")
 		{
@@ -2494,8 +2496,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			}
 			rpcResp.result = rlt.dump();
 		}
-		else
-		{
+		else {
 			bHandled = false;
 		}
 	}
