@@ -3762,8 +3762,13 @@ void thread_handleSockSrvRpcCallAsyn(string req, std::shared_ptr<SOCK_SESSION> s
 
 void onSockSrvCallback(char* p, size_t l, std::shared_ptr<SOCK_SESSION> sockSess) {
 	string req = str::fromBuff((char*)p,l);
-	thread t(thread_handleSockSrvRpcCallAsyn, req, sockSess);
-	t.detach();
+	if (req.find("params") != string::npos) { 
+		thread t(thread_handleSockSrvRpcCallAsyn, req, sockSess);
+		t.detach();
+	}
+	else if (req.find("result") != string::npos){// 本地向中心端请求之后的回包，非中心端请求，无需处理
+		//此处如何处理未来研究
+	}
 }
 
 void rpcHandler::handleRpcCallAsyn(string& strReq, std::shared_ptr<TDS_SESSION> pSession, bool bAccessCtrl)

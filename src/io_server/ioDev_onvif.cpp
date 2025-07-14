@@ -215,7 +215,7 @@ void ioDev_onvif::DoCycleTask() {
 		bool valid = false;
 		if (str::isDigits(chanId)) {
 			int presetIdx = atoi(chanId.c_str());
-			ptz_gotoPreset(presetIdx);
+			//ptz_gotoPreset(presetIdx);
 
 			valid = true;
 		}
@@ -249,7 +249,7 @@ void ioDev_onvif::DoCycleTask() {
 			timeopt::sleepMilli(waitMoveTime);
 
 			//拍照
-			onvif_getSnapshotUri();
+			//onvif_getSnapshotUri();
 
 			TIME time = timeopt::now();
 
@@ -343,7 +343,7 @@ void ioDev_onvif::DoCycleTask() {
 				if (writeResult) {
 					string s = writeResult;
 					s += "\n\n";
-					//sockSrv.sendToAllSessions(s);
+					sockSrv.sendToAllSessions(s);
 					free(writeResult);
 				}
 
