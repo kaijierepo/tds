@@ -623,16 +623,17 @@ bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 }
 
 
-bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
-{
+bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc) {
 	yyjson_val* yyv_method = yyjson_obj_get(jNotify, "method");
+
 	string method;
-	if(yyv_method)
+	if (yyv_method) {
 		method = yyjson_get_str(yyv_method);
+	}
+
 	yyjson_val* yyv_params = yyjson_obj_get(jNotify, "params");
 	
-	if (method == "devRegister")
-	{
+	if (method == "devRegister") {
 		if (yyv_params != nullptr)
 		{
 			yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
@@ -676,17 +677,18 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 
 		triggerCycleAcq();
 	}
-	else if (method == "input" || method == "acq")
-	{
+	else if (method == "input" || method == "acq") {
 		handle_AcqOrInput(yyv_params,doc);
 	}
 	else if (method == "onDataUpdate") {
+		//位号增加上该子服务绑定的位号。
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-			//位号增加上该子服务绑定的位号。
 			size_t len;
 			auto sParams = yyjson_val_write(yyv_params, 0, &len);
 			json jParams = json::parse(sParams);
+
 			free(sParams);
+
 			if (jParams.is_array()) {
 				for (auto& de : jParams) {
 					de["rootTag"] = m_strTagBind;
@@ -706,8 +708,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			m_childTdsUpgradeStatus = yyjson_get_str(yyv_sus);
 		}
 	}
-	else if (method == "onAlarmUpdate")
-	{
+	else if (method == "onAlarmUpdate") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			size_t len;
 			string sNotify = yyjson_val_write(yyv_params, 0, &len);
@@ -735,8 +736,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc)
 			pAlmSrv->rpc_updateStatus(jParams, resp);
 		}
 	}
-	else if (method == "onAlarmAdd")
-	{
+	else if (method == "onAlarmAdd") {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			size_t len;
 			string sNotify = yyjson_val_write(yyv_params, 0, &len);

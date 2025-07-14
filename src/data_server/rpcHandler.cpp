@@ -2057,8 +2057,7 @@ string getRefCurvePath(json& params) {
 	return path;
 }
 
-bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
-{
+bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
 
@@ -2165,48 +2164,37 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		shared_lock<shared_mutex> lock(prj.m_csPrj);
 
 		//以下配置使用 mo conf 和 io conf
-		if (method == "input")
-		{
+		if (method == "input") {
 			rpc_input(params, rpcResp, session);
 		}
-		else if (method == "output")
-		{
+		else if (method == "output") {
 			rpc_output(params, rpcResp,session);
 		}
-		else if (method == "getMpStatus")
-		{
+		else if (method == "getMpStatus") {
 			result = rpc_getMpStatus(params, error, session);
 		}
-		else if (method == "getMpVal")
-		{
+		else if (method == "getMpVal") {
 			result = rpc_getMpStatus(params, error, session,true);
 		}
-		else if (method == "getMoOnlineStatus") //智能设备在线状态
-		{
+		else if (method == "getMoOnlineStatus") {//智能设备在线状态
 			result = rpc_getMoOnlineStatus(params, error);
 		}
-		else if (method == "getMoStatis")
-		{
+		else if (method == "getMoStatis") {
 			rpc_getMoStatis(params, rpcResp, session);
 		}
-		else if (method == "getObjStatis")
-		{
+		else if (method == "getObjStatis") {
 			rpc_getObjStatis(params, rpcResp, session);
 		}
-		else if (method == "getMpStatis")
-		{
+		else if (method == "getMpStatis") {
 			rpc_getMpStatis(params, rpcResp, session);
 		}
-		else if (method == "getMoAttri" || method == "getMoAttr")
-		{
+		else if (method == "getMoAttri" || method == "getMoAttr") {
 			rpc_getMoAttr_list(params, rpcResp, session);
 		}
-		else if (method == "getconf")
-		{
+		else if (method == "getconf") {
 			result = rpc_getconf(params, error);
 		}
-		else if (method == "getMpTypeList")
-		{
+		else if (method == "getMpTypeList") {
 			json list;
 			prj.getMpTypeList(list);
 			result = list.dump();
@@ -2214,9 +2202,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		else if (method == "getObjTree") {
 			result = prj.m_moConfFileDump;
 		}
-		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo")
-		{
+		else if (method == "getMo" || method == "getOrg" || method == "getObj" || method == "getMp" || method == "getCustomOrg" || method == "getCustomMo") {
 			session.tStartHandle = getTick();
+
 			//位号选择器 参数tag + rootTag
 			//用户查询时 tag默认"",rootTag默认""
 			//tag是相对于rootTag的相对位号
@@ -2366,8 +2354,7 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
 			}
 		}
-		else if ( method == "getCustomTypes")
-		{
+		else if ( method == "getCustomTypes") {
 			OBJ* pmo = nullptr;
 			if (params != nullptr && params.contains("tag"))
 			{
@@ -4470,7 +4457,7 @@ json getValAttr(json de) {
 	"val": [26.5,65.1]
 }
 */
-void rpcHandler::rpc_input(json params,RPC_RESP& resp, RPC_SESSION& session) {
+void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 	if (params.is_object() && params.contains("name")) { //tdsp接收到子服务的数据后，会进入到此处
 		string rootTag;
 		if (params.contains("rootTag")) {
@@ -6618,8 +6605,7 @@ void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string t
 	p->sendStr(s);
 }
 
-void rpcHandler::notify(string method, json params, bool specialNotify,std::shared_ptr<TDS_SESSION> orgSession)
-{
+void rpcHandler::notify(string method, json params, bool specialNotify,std::shared_ptr<TDS_SESSION> orgSession) {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	apiAdaptorScript(notify);
@@ -6627,7 +6613,6 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 	WebServer::notifyAllSrvAllWs(notify);
 	sockSrv.sendToAllSessions(notify, specialNotify);
 }
-
 
 void rpcHandler::statisCall(string method) {
 	m_csCallStatis.lock();

@@ -221,8 +221,7 @@ bool tSockSrv::sendToSockSession(std::shared_ptr<SOCK_SESSION>  sockSession, uns
 	return false;
 }
 
-void tSockSrv::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify)
-{
+void tSockSrv::sendToAllSessions(unsigned char* pData, size_t len, bool specialNotify) {
 	m_mutexSessions.lock();
 	for (auto& i : m_sockSessions) {
 		sendToSockSession(i.second, pData, len);
@@ -230,7 +229,6 @@ void tSockSrv::sendToAllSessions(unsigned char* pData, size_t len, bool specialN
 	m_mutexSessions.unlock();
 }
 
-void tSockSrv::sendToAllSessions(string& s, bool specialNotify)
-{
+void tSockSrv::sendToAllSessions(string& s, bool specialNotify) {
 	sendToAllSessions((unsigned char*)s.c_str(), s.length(), specialNotify);
 }
