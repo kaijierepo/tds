@@ -50,4 +50,5 @@ public:
 
 	bool m_bPaused;
 	TIME m_pauseResumeTime;
+	int m_pauseResumeInterval;  //0
 };
