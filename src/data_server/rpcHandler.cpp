@@ -564,6 +564,15 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	else if (method == "stopFocus") {
 		pCam->ptz_stopFocus();
 	}
+	else if (method == "pausePresetPatrol") {
+		if (!params["parseTime"].is_number_integer()) {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "int param parseTime must be specified");
+			return true;
+		}
+
+		int parseTime = params["presetIndex"].get<int>();
+		pCam->ptz_pausePresetPatrol(parseTime);
+	}
 	else if (method.find("Preset") != string::npos) {
 		if (params.contains("presetIndex")) {
 			if (!params["presetIndex"].is_number_integer()) {
@@ -816,7 +825,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			     method == "stopFocus" ||
 			     method == "gotoPreset" ||
 			     method == "addPreset" ||
-			     method == "deletePreset") {
+			     method == "deletePreset" ||
+			     method == "pausePresetPatrol") {
 			MP* pmp = pObj;
 			if (!pmp) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");

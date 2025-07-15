@@ -37,6 +37,7 @@ public:
 	virtual void ptz_gotoPreset(int presetIdx) override;
 	virtual void ptz_gotoPreset(string preset) override;
 	virtual void ptz_gotoAbsolute(float pan, float tilt, float zoom) override;
+	virtual void ptz_pausePresetPatrol(int parseTime) override;
 
 	bool doOnvifTransaction(string msg, string uri, string method, bool log = true);
 	bool doOnvifTransaction_onvif_getSnapshotUri(mg_http_data& data);
@@ -46,4 +47,7 @@ public:
 	int m_curPZTChan;
 	TIME m_lastPTZPollTime; //上一次预置位巡检时间
 	int m_ptzPollInterval;  //0
+
+	bool m_bPaused;
+	TIME m_pauseResumeTime;
 };

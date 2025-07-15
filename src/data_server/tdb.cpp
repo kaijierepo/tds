@@ -5166,35 +5166,40 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 }
 
 
-void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language)
-{
+void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+
 	if (yyv_tag == nullptr) {
 		err = JSON_STR_VAL("tag must be specified");
 		return;
 	}
+
 	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
 	if (yyv_time == nullptr) {
 		err = JSON_STR_VAL("time must be specified");
 		return;
 	}
+
 	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "data");
 	yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
 	yyjson_val* yyv_index = yyjson_obj_get(yyv_params, "index");
 
 	string tag = yyjson_get_str(yyv_tag);
 	string time = yyjson_get_str(yyv_time);
+
 	string strIndex = yyv_index ? yyjson_get_str(yyv_index) : "";
+
 	DB_TIME t;
 	t.fromStr(time);
-	if (yyv_img && yyv_info)
-	{
+
+	if (yyv_img && yyv_info){
 		string img = yyjson_get_str(yyv_img);
 		string info = yyjson_get_str(yyv_info);
 
 		string& data = img;
+
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
@@ -5210,16 +5215,19 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		size_t buffLen = data.length() * 2;
 		unsigned char* out = new unsigned char[buffLen];
 		memset(out, 0, buffLen);
+
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
 		saveImage(tag, t, (char*)out, outLen, info, strIndex);
+
 		delete[] out;
 		rlt = "\"image info and data saved\"";
 	}
-	else if (yyv_img)
-	{
+	else if (yyv_img) {
 		string img = yyjson_get_str(yyv_img);
+		string info = "";
 
 		string& data = img;
+
 		//copatiable with DATA URI Scheme like data:image/jpg;base64,XINGSXXIANGJIJIGSAG== 
 		size_t startPos = 0;
 		if (data.find("data:") == 0) {
@@ -5235,16 +5243,17 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 		size_t buffLen = data.length() * 2;
 		unsigned char* out = new unsigned char[buffLen];
 		memset(out, 0, buffLen);
+
 		int outLen = tdb_base64_decode(data.c_str() + startPos, data.length() - startPos, out);
-		string info = "";
 		saveImage(tag, t, (char*)out, outLen, info, strIndex);
+
 		delete[] out;
 		rlt = "\"image data saved\"";
 	}
-	else if (yyv_info)
-	{
+	else if (yyv_info) {
 		string info = yyjson_get_str(yyv_info);
 		saveImage(tag, t, NULL, 0, info, strIndex);
+
 		rlt = "\"image info saved\"";
 	}
 	else {
