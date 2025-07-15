@@ -461,8 +461,7 @@ bool rpcHandler::handleMethodCall_ptz_cloud(string method, MP* pmp, json& params
 }
 
 //通过ioDev进行
-bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
-{
+bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	ioDev* p = ioSrv.getIODevByTag(tag);
 	if (!p) {
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "no io device bind to specified tag");
@@ -475,17 +474,19 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 	}
 
 	ioDev_camera* pCam = (ioDev_camera*)p;
-	if (method == "startPanTilt")
-	{
+	if (method == "startPanTilt") {
 		string dir = params["dir"];
+
 		float panSpeed = 0;
 		if (params.contains("panSpeed")) {
 			panSpeed = params["panSpeed"].get<float>();
 		}
+
 		float tiltSpeed = 0;
 		if (params.contains("tiltSpeed")) {
 			tiltSpeed = params["tiltSpeed"].get<float>();
 		}
+
 		pCam->ptz_startMove(dir, panSpeed, tiltSpeed);
 
 		LOG("移动云台,方向:%s,panSpeed:%.2f,tiltSpeed:%.2f", dir.c_str(), panSpeed, tiltSpeed);
@@ -509,20 +510,22 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 		//	tds->callAsyn("stopPanTilt", paramAsynCall, time);
 		//}
 	}
-	else if (method == "stopPanTilt")
-	{
-		if(!pCam->isMoving)
+	else if (method == "stopPanTilt") {
+		if (!pCam->isMoving) {
 			timeopt::sleepMilli(400);  //解决前端点击按钮快速发送一个开始停止云台命令的情况，startPanTilt的代码处理逻辑多，会导致发送出去在 stopMove的后面
+		}
+
 		pCam->ptz_stopMove();
 		pCam->isMoving = false;
 	}
-	else if (method == "startZoom")
-	{
+	else if (method == "startZoom") {
 		string dir = params["dir"];
+
 		float speed = 0;
 		if (params.contains("speed")) {
 			speed = params["speed"].get<float>();
 		}
+
 		pCam->ptz_startZoom(dir,speed);
 
 		if (params.contains("time")) {
@@ -538,17 +541,17 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 		//	tds->callAsyn("stopZoom", paramAsynCall, time);
 		//}
 	}
-	else if (method == "stopZoom")
-	{
+	else if (method == "stopZoom") {
 		pCam->ptz_stopZoom();
 	}
-	else if (method == "startFocus")
-	{
+	else if (method == "startFocus") {
 		string dir = params["dir"];
+
 		float speed = 0;
 		if (params.contains("speed")) {
 			speed = params["speed"].get<float>();
 		}
+
 		pCam->ptz_startFocus(dir);
 
 		if (params.contains("time")) {
@@ -558,46 +561,48 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			tds->callAsyn("stopFocus", paramAsynCall, time);
 		}
 	}
-	else if (method == "stopFocus")
-	{
+	else if (method == "stopFocus") {
 		pCam->ptz_stopFocus();
 	}
 	else if (method.find("Preset") != string::npos) {
-		if (!params["presetIndex"].is_number_integer()) {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "int param presetIndex must be specified");
-			return true;
-		}
-		int idx = params["presetIndex"].get<int>();
+		if (params.contains("presetIndex")) {
+			if (!params["presetIndex"].is_number_integer()) {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "int param presetIndex must be specified");
+				return true;
+			}
 
-		if (method == "gotoPreset")
-		{
-			pCam->ptz_gotoPreset(idx);
+			int idx = params["presetIndex"].get<int>();
+
+			if (method == "gotoPreset") {
+				pCam->ptz_gotoPreset(idx);
+			}
+			else if (method == "addPreset") {
+				pCam->ptz_addPreset(idx);
+			}
+			else if (method == "deletePreset") {
+				pCam->ptz_deletePreset(idx);
+			}
 		}
-		else if (method == "addPreset")
-		{
-			pCam->ptz_addPreset(idx);
+		else if(params.contains("preset")){
+			string preset = params["preset"].get<string>();
+			if (method == "gotoPreset") {
+				pCam->ptz_gotoPreset(preset);
+			}
 		}
-		else if (method == "deletePreset")
-		{
-			pCam->ptz_deletePreset(idx);
-		}
+		
 	}
 	
 	rpcResp.result = "\"ok\"";
-
 	return true;
 }
 
-
-
-bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
-{
+bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	string& result = rpcResp.result;
 	string& error = rpcResp.error;
+
 	bool bHandled = true;
 
-	if (method == "getStreamInfo")
-	{
+	if(method == "getStreamInfo") {
 		//result = rpc_getStreamInfo(params, error);
 	}
 	else if (method == "getYsAccessInfo") {
@@ -658,28 +663,27 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 	}
 #endif
 	else if (method == "startPanTilt" ||
-				method == "stopPanTilt" ||
-				method == "startZoom" ||
-				method == "stopZoom" ||
-				method == "startFocus" ||
-				method == "stopFocus" ||
-				method == "gotoPreset" ||
-				method == "addPreset" ||
-				method == "deletePreset" ||
-				method == "openStream" ||
-				method == "keepStream" ||
-				method == "closeStream" )
-	{
+			 method == "stopPanTilt" ||
+			 method == "startZoom" ||
+			 method == "stopZoom" ||
+			 method == "startFocus" ||
+			 method == "stopFocus" ||
+			 method == "gotoPreset" ||
+			 method == "addPreset" ||
+			 method == "deletePreset" ||
+			 method == "openStream" ||
+			 method == "keepStream" ||
+			 method == "closeStream" ) {
 		string tag, rootTag;
-		if (!parseParam_tag(params, rpcResp, session, tag, rootTag))
-			return true; 
+		if (!parseParam_tag(params, rpcResp, session, tag, rootTag)) {
+			return true;
+		}
 
-		MP* pObj =(MP*) prj.queryObj(tag,session.language);
+		MP* pObj = (MP*)prj.queryObj(tag,session.language);
 		if (!pObj) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "object of specified tag not found");
 			return true;
 		}
-
 
 		if (method.find("start") != string::npos) {
 			string dir = params["dir"];
@@ -712,16 +716,21 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			logSrv.rpc_addLog(logParams, session);
 		}
 		else if(method.find("Preset") != string::npos) {
-			
 			string info;
 			if (method == "gotoPreset") {
-				if (!params["presetIndex"].is_number_integer()) {
-					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "param presetIndex must be specified,and must be int type");
-					return true;
-				}
+				if (params.contains("presetIndex")) {
+					if (!params["presetIndex"].is_number_integer()) {
+						rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "param presetIndex must be specified,and must be int type");
+						return true;
+					}
 
-				string presetIndex = params["presetIndex"].dump();
-				info = "调用预置位:" + presetIndex;
+					string presetIndex = params["presetIndex"].dump();
+					info = "调用预置位:" + presetIndex;
+				}
+				else if (params.contains("preset")) {
+					string preset = params["preset"].get<string>();
+					info = "调用预置位:" + preset;
+				}
 			}
 			else if (method == "deletePreset") {
 				if (!params["presetIndex"].is_number_integer()) {
@@ -745,9 +754,9 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			logParams["org"] = session.org;
 			logParams["host"] = session.remoteAddr;
 			logParams["info"] = info;
+
 			logSrv.rpc_addLog(logParams, session);
 		}
-		
 
 		//通过第三方云平台进行控制。如萤石云。该模式无需转发到子服务
 		if (pObj->m_mediaSrcType == "ezviz") {
@@ -759,8 +768,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				method == "stopFocus" ||
 				method == "gotoPreset" ||
 				method == "addPreset" ||
-				method == "deletePreset"  )
-			{
+				method == "deletePreset") {
+
 				handleMethodCall_ptz_cloud(method, pObj, params, rpcResp, session);
 				return true;
 			}
@@ -773,15 +782,20 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 		//TDS系统内控制。 有转发给子服务和直接处理两种情况
 		ioDev* childTds = ioSrv.getOwnerChildTdsDev(tag);
+
 		//转发给子服务
 		if (childTds) {
 			string childTdsTag = childTds->m_strTagBind;
 			tag = TAG::trimRoot(tag, childTdsTag);
+
 			json paramsChild = params;
 			paramsChild["tag"] = tag;
+
 			json childRlt, childErr;
 			childTds->call(method, paramsChild, nullptr, childRlt, childErr);
+
 			LOG("[warn][服务级联   ]转发摄像头控制指令\r\n" + session.req);
+
 			if (childRlt != nullptr) {
 				json jRlt;
 				if (childTds->pIOSession) {
@@ -795,21 +809,20 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 		}
 		//直接处理
 		else if (method == "startPanTilt" ||
-			method == "stopPanTilt" ||
-			method == "startZoom" ||
-			method == "stopZoom" ||
-			method == "startFocus" ||
-			method == "stopFocus" ||
-			method == "gotoPreset" ||
-			method == "addPreset" ||
-			method == "deletePreset")
-		{
+			     method == "stopPanTilt" ||
+			     method == "startZoom" ||
+			     method == "stopZoom" ||
+			     method == "startFocus" ||
+			     method == "stopFocus" ||
+			     method == "gotoPreset" ||
+			     method == "addPreset" ||
+			     method == "deletePreset") {
 			MP* pmp = pObj;
 			if (!pmp) {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found");
 			}
 			else {
-					handleMethodCall_ptz_ioDev(method, tag, params, rpcResp, session);
+				handleMethodCall_ptz_ioDev(method, tag, params, rpcResp, session);
 			}
 			return true;
 		}
@@ -836,15 +849,16 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				rpcResp.result = RPC_OK;
 			else
 				rpcResp.error = RPC_FAIL;
+
 			return true;
 		}
 		else if (method == "pushStream") {
-			
 			return true;
 		}
 		else if (method == "keepStream") {
 			TIME st;
 			timeopt::now(&st);
+
 			m_mapPullerActive[tag] = st;
 			rpcResp.result = "\"ok\"";
 		}
@@ -857,38 +871,33 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				rpcResp.error = RPC_FAIL;
 		}
 	}
-	else
-	{
+	else {
 		bHandled = false;
 	}
 
 	return bHandled;
 }
 
-
-
 //参见核心概念，位号表示法
 //https://www.liangtusoft.com/doc/#/核心概念?id=位号表示法
 //sysTag = session.org + rootTag + tag
-bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION& session, string& tag, string& rootTag)
-{
-	if (!params.contains("tag"))
-	{
+bool rpcHandler::parseParam_tag(json& params, RPC_RESP& rpcResult, RPC_SESSION& session, string& tag, string& rootTag) {
+	if (!params.contains("tag")) {
 		rpcResult.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : tag");
 		return false;
 	}
 
 	tag = params["tag"];
 
-
 	//获取查询根
 	rootTag = "";
-	if (params["rootTag"] != nullptr)
+	if (params["rootTag"] != nullptr) {
 		rootTag = params["rootTag"].get<string>();
+	}
+
 	rootTag = TAG::addRoot(rootTag, session.org);
-
-
 	tag = TAG::addRoot(tag, rootTag);
+
 	return true;
 }
 

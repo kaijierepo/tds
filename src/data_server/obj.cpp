@@ -607,7 +607,7 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	}
 	//1.2 自己不是叶子节点,根据子节点判断是否被选中
 	else {
-		if (m_level != MO_TYPE::mp)
+		//if (m_level != MO_TYPE::mp)
 		{
 			json jChildren = json::array();
 			if (!q.flatten) {
@@ -810,7 +810,7 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 	}
 	//1.2 自己不是叶子节点,根据子节点判断是否被选中
 	else {
-		if (m_level != MO_TYPE::mp)
+		//if (m_level != MO_TYPE::mp)
 		{
 			//json jChildren = json::array();
 			yyjson_mut_val* rootChildren = yyjson_mut_arr(doc);

@@ -612,23 +612,15 @@ void ioDev_onvif::ptz_gotoPreset(int presetIdx) {
 }
 
 void ioDev_onvif::ptz_gotoPreset(string preset) {
-	//根据绑定位号找通道
+	ioChannel* channel = getChanByTag(preset);
+	if (channel) {
+		string channelID = channel->getAddr();
 
-
-	//string body = R"(
-	//	<?xml version="1.0" encoding="UTF-8"?>
-	//	<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
-	//	    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	//	        <GotoPreset xmlns="http://www.onvif.org/ver10/PTZ/wsdl">
-	//				<ProfileToken>Profile_1</ProfileToken>
-	//				<PresetToken>%d</PresetToken>
-	//	        </GotoPreset>
-	//	    </s:Body>
-	//	</s:Envelope>
-	//)";
-
-	//body = str::format(body.c_str(), presetIdx, presetIdx);
-	//doOnvifTransaction(body, "/onvif/PTZ", "onvif_gotoPresets", false);
+		if (str::isDigits(channelID)) {
+			int presetIdx = atoi(channelID.c_str());
+			ptz_gotoPreset(presetIdx);
+		}
+	}
 }
 
 void ioDev_onvif::ptz_gotoAbsolute(float pan, float tilt, float zoom) {
