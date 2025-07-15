@@ -35,6 +35,7 @@ public:
 	virtual void ptz_startZoom(string dir, float zoomSpeed = 0.5) override;
 	virtual void ptz_stopZoom() override;
 	virtual void ptz_gotoPreset(int presetIdx) override;
+	virtual void ptz_gotoPreset(string preset) override;
 	virtual void ptz_gotoAbsolute(float pan, float tilt, float zoom) override;
 
 	bool doOnvifTransaction(string msg, string uri, string method, bool log = true);

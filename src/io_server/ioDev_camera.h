@@ -11,6 +11,7 @@ public:
 	virtual void ptz_startFocus(string dir, float focusSpeed = 0) {};
 	virtual void ptz_stopFocus() {};
 	virtual void ptz_gotoPreset(int presetIdx) {};
+	virtual void ptz_gotoPreset(string preset) {};
 	virtual void ptz_addPreset(int presetIdx) {};
 	virtual void ptz_deletePreset(int presetIdx) {};
 	virtual void ptz_gotoAbsolute(float pan, float tilt, float zoom) {};
