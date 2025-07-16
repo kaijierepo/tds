@@ -4159,8 +4159,6 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 		yyjson_doc* yydoc = yyjson_read(strReq.c_str(), strReq.size(), 0);
 		yyjson_val* yyReq = yyjson_doc_get_root(yydoc);
 
-		LOG(strReq);
-
 		if (yyReq) {
 			if (yyjson_is_arr(yyReq)) {
 				rpcResp.strResp = "[";
