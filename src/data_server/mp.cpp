@@ -91,9 +91,9 @@ json MP::strVal2Val(string sdv)
 }
 
 
-bool MP::loadConf(json& conf,bool bCreate)
-{
-	OBJ::loadConf(conf);
+bool MP::loadConf(json& conf, bool bCreate) {
+	OBJ::loadConf(conf, bCreate);
+
 	if(conf["valType"]!=nullptr)
 		m_valType = conf["valType"].get<string>();
 
@@ -111,60 +111,57 @@ bool MP::loadConf(json& conf,bool bCreate)
 	else
 		m_decimalDigits = -1;
 
-	if (conf["ioType"] != nullptr)
-	{
+	if (conf["ioType"] != nullptr) {
 		m_ioType = conf["ioType"].get<string>();
-		//m_ioTypeLabel = getIOTypeLabel(m_ioType);
 	}
 
-	if (conf["alarmLimit"] != nullptr)
-	{
+	if (conf["alarmLimit"] != nullptr) {
 		json jAL = conf["alarmLimit"];
 		if (jAL["enableHigh"].is_boolean()){
 			m_alarmLimit.enableHigh = jAL["enableHigh"].get<bool>();
 		}
+
 		if (jAL["high"].is_number()) {
 			m_alarmLimit.high = jAL["high"].get<float>();
 		}
+
 		if (jAL["enableLow"].is_boolean()) {
 			m_alarmLimit.enableLow = jAL["enableLow"].get<bool>();
 		}
+
 		if (jAL["low"].is_number()) {
 			m_alarmLimit.low = jAL["low"].get<float>();
 		}
 	}
 
-	if (conf["validRange"] != nullptr)
-	{
+	if (conf["validRange"] != nullptr) {
 		json j = conf["validRange"];
 		if (j["enable"].is_boolean()) {
 			m_validRange.enable = j["enable"].get<bool>();
 		}
+
 		if (j["min"].is_number()) {
 			m_validRange.min = j["min"].get<double>();
 		}
+
 		if (j["max"].is_number()) {
 			m_validRange.max = j["max"].get<double>();
 		}
 	}
 
-	if (m_valType == VAL_TYPE::json)
-	{
+	if (m_valType == VAL_TYPE::json) {
 		if(conf["mpType"]!=nullptr)
 		m_mpType = conf["mpType"].get<string>();
 	}
 
-	if (conf["saveMode"] != nullptr)
-	{
+	if (conf["saveMode"] != nullptr) {
 		m_saveMode = conf["saveMode"].get<string>();
 	}
-	else
-	{
+	else {
 		m_saveMode = DATA_SAVE_MODE::always;
 	}
 
-	if (conf["saveInterval"] != nullptr)
-	{
+	if (conf["saveInterval"] != nullptr) {
 		json jsi = conf["saveInterval"];
 		m_saveInterval.hour = jsi["hour"].get<int>();
 		m_saveInterval.minute = jsi["minute"].get<int>();
@@ -178,12 +175,11 @@ bool MP::loadConf(json& conf,bool bCreate)
 		}
 	}
 
-	if (conf["k"] != nullptr)
-	{
+	if (conf["k"] != nullptr) {
 		m_K = conf["k"].get<double>();
 	}
-	if (conf["b"] != nullptr)
-	{
+
+	if (conf["b"] != nullptr) {
 		m_B = conf["b"].get<double>();
 	}
 
@@ -191,11 +187,9 @@ bool MP::loadConf(json& conf,bool bCreate)
 		m_deadZone = conf["deadZone"].get<double>();
 	}
 
-	if (conf["defaultVal"] != nullptr)
-	{
+	if (conf["defaultVal"] != nullptr) {
 		//兼容一些错误书写,支持强转
-		if (conf["defaultVal"].is_string())
-		{
+		if (conf["defaultVal"].is_string()) {
 			m_defaultVal = strVal2Val(conf["defaultVal"].get<string>());
 		}
 		else
@@ -207,7 +201,6 @@ bool MP::loadConf(json& conf,bool bCreate)
 			m_curVal = m_defaultVal.dump();
 		}
 	}
-
 
 	if (m_valType == VAL_TYPE::integer) {
 		if (conf["isEnum"].is_boolean()) {
@@ -228,7 +221,6 @@ bool MP::loadConf(json& conf,bool bCreate)
 		m_expression = conf["expression"];
 	}
 
-
 	if (conf["mediaSrcType"] != nullptr) {
 		m_mediaSrcType = conf["mediaSrcType"].get<string>();
 	}
@@ -241,7 +233,6 @@ bool MP::loadConf(json& conf,bool bCreate)
 		prj.m_enableEzviz = true;
 	}
 
-
 	auto kv = conf.find("serialNo");
 	if (kv != conf.end()) {
 		json& item = kv.value();
@@ -250,7 +241,7 @@ bool MP::loadConf(json& conf,bool bCreate)
 		}
 	}
 
-	 kv = conf.find("appKey");
+	kv = conf.find("appKey");
 	if (kv != conf.end()) {
 		json& item = kv.value();
 		if (item.is_string()) {
@@ -274,25 +265,11 @@ bool MP::loadConf(json& conf,bool bCreate)
 		}
 	}
 
-
-	//状态数据
-	// 	val应该通过 loadStatus加载，不知道为何这里有这段代码。暂时注释。观察一段时间后删除
-	//if(conf.contains("val"))
-	//	m_curVal = conf["val"];
-	if (conf.contains("time"))
-	{
+	if (conf.contains("time")) {
 		string s = conf["time"].get<string>();
 		if(s != "" && s != "-")
 			m_stDataLastUpdate = timeopt::str2st(s);
 	}
-
-	//if (conf["downSample"].is_boolean()) {
-	//	m_bDownSample = conf["downSample"].get<bool>();
-	//}
-
-	//if (conf["downSampleInterval"].is_number_integer()) {
-	//	m_downSampleInterval = conf["downSampleInterval"].get<int>();
-	//}
 
 	if (conf["srcStreamFetch"].is_string()) {
 		m_srcStreamFetch = conf["srcStreamFetch"];
@@ -303,7 +280,7 @@ bool MP::loadConf(json& conf,bool bCreate)
 
 bool MP::loadConf(yyjson_val* conf, bool bCreate)
 {
-	OBJ::loadConf(conf);
+	OBJ::loadConf(conf, bCreate);
 
 	yyjson_val* v = yyjson_obj_get(conf, "valType");
 	if (v) {

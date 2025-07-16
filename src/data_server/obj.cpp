@@ -267,13 +267,11 @@ bool OBJ::loadConf(json& conf, bool bCreate)
 	return true;
 }
 
-bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
-{
+bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 	//载入配置
 	yyjson_val* v = yyjson_obj_get(conf, "name");
 	if (v) {
 		m_name = yyjson_get_str(v);
-		//m_name = str::trim(m_name, " "); //界面在编辑时，非常容易不小心输入空格。并且不容易发现。此句性能差
 	}
 
 	v = yyjson_obj_get(conf, "nameTranslate");
@@ -346,15 +344,20 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 	yyjson_val* yymap = yyjson_obj_get(conf, "map");
 	if (yymap) {
 		m_mapConf.enable = true;
+
 		v = yyjson_obj_get(yymap, "center");
 		m_mapConf.center[0] = yyjson_get_num(yyjson_arr_get(v, 0));
 		m_mapConf.center[1] = yyjson_get_num(yyjson_arr_get(v, 1));
+
 		v = yyjson_obj_get(yymap, "pitch");
 		m_mapConf.pitch = yyjson_get_num(v);
+
 		v = yyjson_obj_get(yymap, "rotation");
 		m_mapConf.rotation = yyjson_get_num(v);
+
 		v = yyjson_obj_get(yymap, "zoom");
 		m_mapConf.zoom = yyjson_get_num(v);
+
 		v = yyjson_obj_get(yymap, "viewMode");
 		m_mapConf.viewMode = yyjson_get_str(v);
 	}
@@ -384,10 +387,6 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 		m_alias = yyjson_get_str(v);
 	}
 
-	//if (conf.contains("customConf")) {
-	//	m_customConf = conf["customConf"];
-	//}
-
 	v = yyjson_obj_get(conf, "ioAddrBind");
 	if (v) {
 		m_strIoAddrBind = yyjson_get_str(v);
@@ -408,9 +407,11 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 				OBJ* pmo;
 				yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
 				string sLevel;
+
 				if (yylevel) {
 					sLevel = yyjson_get_str(yylevel);
 				}
+
 				if (sLevel == "mp"){
 					pmo = new MP();
 				}
@@ -431,6 +432,7 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 			for (auto& i : m_childObj) {
 				oldChildren[i->m_name] = i;
 			}
+
 			m_childObj.clear();
 
 			size_t indx = 0, max = 0;
@@ -438,10 +440,12 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 			yyjson_arr_foreach(rootChildren, indx, max, childVal) {
 				if (yyjson_obj_get(childVal, "name")) {
 					string childName = yyjson_get_str(yyjson_obj_get(childVal, "name"));
+
 					auto iter = oldChildren.find(childName);
 					if (iter != oldChildren.end()) {
 						OBJ* pmo = iter->second;
 						pmo->loadConf(childVal, false);
+
 						m_childObj.push_back(pmo);
 						oldChildren.erase(iter); //删除已处理的对象
 					}
@@ -449,9 +453,11 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate)
 						OBJ* pmo;
 						yyjson_val* yylevel = yyjson_obj_get(childVal, "level");
 						string sLevel;
+
 						if (yylevel) {
 							sLevel = yyjson_get_str(yylevel);
 						}
+
 						if (sLevel == "mp") {
 							pmo = new MP();
 						}
@@ -784,18 +790,18 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	return true;
 }
 
-bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user)
-{
+bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user) {
 	//先进行权限判断
-	if (user != "admin" && user != "") //内部脚本调用时，user == ""
-	{
+	if (user != "admin" && user != "") {//内部脚本调用时，user == ""
 		string sTag = getTag();
-		if (!userMng.checkTagPermission(user, sTag))
+		if (!userMng.checkTagPermission(user, sTag)) {
 			return false;
+		}
 	}
 
-	if (q.leafLevel != "" && !isSelectedByLeafLevel(q.leafLevel))
+	if (q.leafLevel != "" && !isSelectedByLeafLevel(q.leafLevel)) {
 		return false;
+	}
 
 	bool selectedByLeafType = false;
 
@@ -812,12 +818,10 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 	else {
 		//if (m_level != MO_TYPE::mp)
 		{
-			//json jChildren = json::array();
 			yyjson_mut_val* rootChildren = yyjson_mut_arr(doc);
 
 			if (!q.flatten) {
-				for (auto& pmochild : m_childObj)
-				{
+				for (auto& pmochild : m_childObj) {
 					//可以出现 getMp=true ,getChild=false的组合，因此getChild不代表getMp，虽然Mp也是child
 					if (pmochild->m_level == "mp") {
 						if (!q.getMp) continue;
@@ -826,10 +830,8 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 						if (!q.getChild) continue;
 					}
 
-					//json jChild;
 					yyjson_mut_val* rootChild = yyjson_mut_obj(doc);
 					if (pmochild->toJson(rootChild, doc, q, &selectedByLeafType, user)) {
-						//jChildren.push_back(jChild);
 						yyjson_mut_arr_append(rootChildren, rootChild);
 					}
 				}
@@ -837,16 +839,14 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			else {
 				vector<MP*> mpList;
 				GetAllChildMp(mpList);
+
 				for (auto& mp : mpList) {
-					//json jMp;
 					yyjson_mut_val* rootMp = yyjson_mut_obj(doc);
 
 					if (mp->toJson(rootMp, doc, q, nullptr, user)) {
 						string flattenName = mp->getTag();
 						flattenName = TAG::trimRoot(flattenName, getTag());
-						//jMp["name"] = flattenName;
-						//jChildren.push_back(jMp);
-
+						
 						yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
 						yyjson_mut_val* val = yyjson_mut_strcpy(doc, flattenName.c_str());
 						yyjson_mut_obj_put(rootMp, key, val);
@@ -854,9 +854,6 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 					}
 				}
 			}
-
-			//if (jChildren.size() > 0)
-			//	conf["children"] = jChildren;
 
 			size_t len = yyjson_mut_arr_size(rootChildren);
 			if (len > 0) {
@@ -877,45 +874,38 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 		return false;
 	}
 
-
-	//conf["name"] = getName(q.language);
 	yyjson_mut_val* key = yyjson_mut_strcpy(doc, "name");
 	yyjson_mut_val* val = yyjson_mut_strcpy(doc, getName(q.language).c_str());
 	yyjson_mut_obj_put(conf, key, val);
 
 	if (m_mapNameTranslate.size() > 0) {
-		//json j;
-		//for (auto& i : m_mapNameTranslate) {
-		//	j[i.first] = i.second;
-		//}
-		//conf["nameTranslate"] = j;
 		yyjson_mut_val* root = yyjson_mut_obj(doc);
+
 		for (auto& i : m_mapNameTranslate) {
 			yyjson_mut_val* key = yyjson_mut_strcpy(doc, i.first.c_str());
 			yyjson_mut_val* val = yyjson_mut_strcpy(doc, i.second.c_str());
 			yyjson_mut_obj_put(root, key, val);
 		}
+
 		yyjson_mut_val* key = yyjson_mut_strcpy(doc, "nameTranslate");
 		yyjson_mut_obj_put(conf, key, root);
 	}
 
-	//conf["level"] = m_level;
 	key = yyjson_mut_strcpy(doc, "level");
 	val = yyjson_mut_strcpy(doc, m_level.c_str());
 	yyjson_mut_obj_put(conf, key, val);
 
 	if (q.getTag) {
 		string tag = getTag("", q.language);
-		if (q.rootTag != "")
-		{
+
+		if (q.rootTag != "") {
 			tag = TAG::trimRoot(tag, q.rootTag);
-			//conf["rootTag"] = q.rootTag;
 			key = yyjson_mut_strcpy(doc, "rootTag");
 			val = yyjson_mut_strcpy(doc, q.rootTag.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
+
 		if (tag != "") {
-			//conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
 			key = yyjson_mut_strcpy(doc, "tag");
 			val = yyjson_mut_strcpy(doc, tag.c_str());
 			yyjson_mut_obj_put(conf, key, val);
@@ -924,7 +914,6 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 
 	if (q.getConfDetail) {
 		if (m_strIoAddrBind != "") {
-			//conf["ioAddrBind"] = m_strIoAddrBind;
 			key = yyjson_mut_strcpy(doc, "ioAddrBind");
 			val = yyjson_mut_strcpy(doc, m_strIoAddrBind.c_str());
 			yyjson_mut_obj_put(conf, key, val);
@@ -933,8 +922,6 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 
 	if (q.getConf) {
 		if (m_bChildTds) {
-			//conf["childTds"] = true;
-			//conf["streamAccess"] = m_streamAccess;
 			key = yyjson_mut_strcpy(doc, "childTds");
 			val = yyjson_mut_true(doc);
 			yyjson_mut_obj_put(conf, key, val);
@@ -945,39 +932,33 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 		}
 
 		if (m_type != "") {
-			//conf["type"] = m_type;
-
+			
 			key = yyjson_mut_strcpy(doc, "type");
 			val = yyjson_mut_strcpy(doc, m_type.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		if (m_groupName != "") {
-			//conf["group"] = m_groupName;
 			key = yyjson_mut_strcpy(doc, "group");
 			val = yyjson_mut_strcpy(doc, m_groupName.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		if (m_bDynLocation) {
-			//conf["dynamicLocation"] = m_bDynLocation;
 			key = yyjson_mut_strcpy(doc, "dynamicLocation");
 			val = yyjson_mut_bool(doc, m_bDynLocation);
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		if (m_bLocationCalib) {
-			//conf["locationCalib"] = m_bLocationCalib;
 			key = yyjson_mut_strcpy(doc, "locationCalib");
 			val = yyjson_mut_bool(doc, m_bLocationCalib);
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		if (m_dbLongitudeCalib > 0.000001) {
-			//conf["longitudeCalib"] = m_dbLongitudeCalib;
 			key = yyjson_mut_strcpy(doc, "longitudeCalib");
 			val = yyjson_mut_real(doc, m_dbLongitudeCalib);
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
 		if (m_dbLatitudeCalib > 0.000001) {
-			//conf["latitudeCalib"] = m_dbLatitudeCalib;
 			key = yyjson_mut_strcpy(doc, "latitudeCalib");
 			val = yyjson_mut_real(doc, m_dbLatitudeCalib);
 			yyjson_mut_obj_put(conf, key, val);
@@ -986,18 +967,25 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 		if (m_mapConf.enable) {
 			yyjson_mut_val* yyMap = yyjson_mut_obj(doc);
 			yyjson_mut_val* yyCenter = yyjson_mut_arr(doc);
+
 			yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[0]));
 			yyjson_mut_arr_append(yyCenter, yyjson_mut_real(doc, m_mapConf.center[1]));
+
 			key = yyjson_mut_strcpy(doc, "center");
 			yyjson_mut_obj_put(yyMap, key, yyCenter);
+
 			key = yyjson_mut_strcpy(doc, "pitch");
 			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.pitch));
+
 			key = yyjson_mut_strcpy(doc, "rotation");
 			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.rotation));
+
 			key = yyjson_mut_strcpy(doc, "zoom");
 			yyjson_mut_obj_put(yyMap, key, yyjson_mut_real(doc, m_mapConf.zoom));
+
 			key = yyjson_mut_strcpy(doc, "viewMode");
 			yyjson_mut_obj_put(yyMap, key, yyjson_mut_strcpy(doc, m_mapConf.viewMode.c_str()));
+
 			key = yyjson_mut_strcpy(doc, "map");
 			yyjson_mut_obj_put(conf, key, yyMap);
 		}
@@ -1007,26 +995,24 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			key = yyjson_mut_strcpy(doc, "longitude");
 			yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_longitude));
 		}
+
 		if (m_latitude != INVALID_COORD) {
 			key = yyjson_mut_strcpy(doc, "latitude");
 			yyjson_mut_obj_put(conf, key, yyjson_mut_real(doc, m_latitude));
 		}
 
 		if (m_comment != "") {
-			//conf["comment"] = m_comment;
 			key = yyjson_mut_strcpy(doc, "comment");
 			val = yyjson_mut_strcpy(doc, m_comment.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 		if (m_alias != "") {
-			//conf["alias"] = m_alias;
 			key = yyjson_mut_strcpy(doc, "alias");
 			val = yyjson_mut_strcpy(doc, m_alias.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
 		if (m_objID != "") {
-			//conf["objID"] = m_objID;
 			key = yyjson_mut_strcpy(doc, "objID");
 			val = yyjson_mut_strcpy(doc, m_objID.c_str());
 			yyjson_mut_obj_put(conf, key, val);
@@ -1039,23 +1025,21 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 
 			yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
 			yyjson_mut_val* rootT = yyjson_mut_obj(doc);
+
 			for (int i = 0; i < m_scheduleTasks.size(); i++) {
 				yyjson_mut_obj_clear(rootT);
+
 				SCHEDULE_TASK& st = m_scheduleTasks[i];
 				st.toJson(rootT, doc);
+
 				yyjson_mut_arr_append(rootTasks, rootT);
 			}
+
 			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
 			yyjson_mut_obj_put(conf, key, rootTasks);
 		}
 
-		//if (m_customConf != nullptr) {
-		//	conf["customConf"] = m_customConf;
-		//}
-
-
 		if (m_bEnableIO == false) {
-			//conf["enableIO"] = m_bEnableIO;
 			key = yyjson_mut_strcpy(doc, "enableIO");
 			val = yyjson_mut_bool(doc, m_bEnableIO);
 			yyjson_mut_obj_put(conf, key, val);
@@ -1066,35 +1050,22 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 	if (q.getStatus) {
 		if (tds->conf->showObjOnline == true) {
 			if (m_strIoAddrBind != "" || isCustomMo() || m_bChildTds) {
-				//conf["online"] = m_bOnline;
 				key = yyjson_mut_strcpy(doc, "online");
 				val = yyjson_mut_bool(doc, m_bOnline);
 				yyjson_mut_obj_put(conf, key, val);
 			}
 
 			if (m_level == "mp" && m_pParentMO->m_strIoAddrBind != "") {
-				//conf["online"] = m_pParentMO->m_bOnline;
 				key = yyjson_mut_strcpy(doc, "online");
 				val = yyjson_mut_bool(doc, m_pParentMO->m_bOnline);
 				yyjson_mut_obj_put(conf, key, val);
 			}
 		}
-
-
-		//if (m_longitudeDyn != nullptr)
-		//	conf["longitudeDyn"] = m_longitudeDyn;
-
-		//if (m_latitudeDyn != nullptr)
-		//	conf["latitudeDyn"] = m_latitudeDyn;
-
-		//if (m_jAlarmStatus != nullptr)
-		//	conf["alarmStatus"] = m_jAlarmStatus;
 	}
 
 	if (q.getStatusDesc) {
 		if (m_strIoAddrBind != "" || isCustomMo()) {
 			if (q.getStatusDesc) {
-				//conf["onlineDesc"] = m_bOnline ? "在线" : "离线";
 				string desc = m_bOnline ? "在线" : "离线";
 				key = yyjson_mut_strcpy(doc, "onlineDesc");
 				val = yyjson_mut_strcpy(doc, desc.c_str());

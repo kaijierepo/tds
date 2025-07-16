@@ -570,7 +570,7 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 			return true;
 		}
 
-		int parseTime = params["presetIndex"].get<int>();
+		int parseTime = params["parseTime"].get<int>();
 		pCam->ptz_pausePresetPatrol(parseTime);
 	}
 	else if (method.find("Preset") != string::npos) {
@@ -4158,6 +4158,8 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 	try {
 		yyjson_doc* yydoc = yyjson_read(strReq.c_str(), strReq.size(), 0);
 		yyjson_val* yyReq = yyjson_doc_get_root(yydoc);
+
+		LOG(strReq);
 
 		if (yyReq) {
 			if (yyjson_is_arr(yyReq)) {

@@ -154,11 +154,11 @@ bool project::loadConfFile()
 	return loadConf(conf);
 }
 
-bool project::saveConfFile()
-{
+bool project::saveConfFile() {
 	yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 	mut_root = yyjson_mut_obj(mut_doc);
+
 	OBJ_QUERIER q;
 	q.getConf = true;
 	q.getChild = true;
@@ -167,7 +167,8 @@ bool project::saveConfFile()
 	q.getConfDetail = false;
 
 	bool bSaved = false;
-	toJson(mut_root,mut_doc, q);
+	toJson(mut_root, mut_doc, q);
+
 	size_t len;
 	char* p = yyjson_mut_val_write(mut_root, 0, &len);
 	if (len == 0) {
@@ -176,27 +177,11 @@ bool project::saveConfFile()
 	else {
 		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
 	}
-	//else {
-	//	bool changed = len != m_moConfFileDump.size() || memcmp(p, m_moConfFileDump.c_str(), len) != 0;
-	//	if (changed) {
-	//		TIME st;
-	//		timeopt::now(&st);
-	//		KV_INI ini;
-	//		ini.load(tds->conf->confPath + "/lastModify.ini");
-	//		ini.setVal("mo", timeopt::st2str(st));
-
-	//		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
-	//		if (bSaved)
-	//			m_moConfFileDump = p;
-	//	}
-	//	else {
-	//		bSaved = true;
-	//	}
-	//}
 	
 	if(p){
 		free(p);
 	}
+
 	yyjson_mut_doc_free(mut_doc);
 	return bSaved;
 }
@@ -450,8 +435,9 @@ bool project::closeStream(string tag)
 void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	session.tStartHandle = rpcSrv.getTick();
 	string& result = rpcResp.result;
+
 	if (yyjson_is_obj(params)) {
-		if (!yyjson_obj_get(params,"tag")) {
+		if (!yyjson_obj_get(params, "tag")) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param: tag");
 		}
 		else {
@@ -481,6 +467,7 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 						LOG("[error]保存mo.json失败;检查该文件是否被设置成了只读属性");
 						return;
 					}
+
 					std::map<string, SCRIPT_INFO> expScripts;
 					prj.getAllVarExpScript();
 
