@@ -550,6 +550,7 @@ bool TDS_imp::run(string cmdline)
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
 		::db.m_timeUnit = (DB_TIME_UNIT)g_prjConf.getValInt("dbTimeUnit", 1);
+		::db.m_dbFmt.dbRootTag = g_prjConf.getValStr("dbRootTag", "");
 		bool bCheckEnd = false;
 		//1,有配置就用配置来
 		//2,没配置做检查
