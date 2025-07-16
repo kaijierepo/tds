@@ -1381,15 +1381,14 @@ std::string yyvalDump(yyjson_val* val) {
 }
 #endif
 
-bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
-{
+bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc) {
 	bool withTag = deSel.tagSel.getTag;
 	map<string, map<string, set<yyjson_mut_val*>>> timeSectionSeries; 
 
 	//generate output de
-	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
-	{
+	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 		DATA_SET& fSet = *set_list[tagIdx];
+
 		string& tagAlias = fSet.colKey;
 		string& tag = fSet.tag;
 
@@ -1408,41 +1407,16 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 				jRecord = yyjson_mut_obj(mut_doc);
 			}
 			
-
 			//set time
 			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
-			yyjson_mut_val* timeVal; 
-			timeVal = yyjson_mut_str(mut_doc, deyy.deTime.data());
-			//if (deSel.timeSel.timeFmt != "")
-				//deyy.fmtTime = timeopt::toFmt(szTime.data(), deSel.timeSel.timeFmt);
-				//timeVal = yyjson_mut_str(mut_doc, deyy.fmtTime.c_str());
-			//}
+			yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, deyy.deTime.data());
 			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
-
 
 			//set keys except time
 			if (deyy.items.size()>0) {
 				for (auto& i : deyy.items) {
 					yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, i.first.c_str());
 					yyjson_mut_obj_put(jRecord, valKey, i.second);
-
-					//generate url when selected ,will reduce performance
-					//if (i.first == "file") {
-					//	yyjson_mut_val* yymv_dataFile = i.second;
-					//	if (yymv_dataFile) {
-					//		if (yyjson_mut_is_arr(yymv_dataFile)) {
-					//			size_t idx = 0;
-					//			size_t max = 0;
-					//			yyjson_mut_val* item;
-					//			yyjson_mut_arr_foreach(yymv_dataFile, idx, max, item) {
-
-					//			}
-					//		}
-					//		else if (yyjson_mut_is_obj(yymv_dataFile)) {
-					//			yyjson_mut_obj_remove_key(yymv_dataFile, "data");
-					//		}
-					//	}
-					//}
 				}
 			}
 
@@ -1453,8 +1427,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 			}
 
 			//set tag
-			if (withTag)
-			{
+			if (withTag) {
 				//in a multi tag selection ,tag must be set
 				//tagAlias memory can not release before write_doc,otherwise causes crash
 				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
@@ -1476,20 +1449,21 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 
 			result.rowCount++;
 
-			if (deSel.timeSel.AmountMatch(result.rowCount))
+			if (deSel.timeSel.AmountMatch(result.rowCount)) {
 				break;
+			}
 		}
 	}
-
 
 	//time section fill,set time of the filled de
 	if (deSel.timeFill) {
 		int addDeCount = 0;
 		map<string, set<yyjson_mut_val*>>* lastSection = nullptr;
+
 		for (auto& iter : timeSectionSeries) {
 			map<string, set<yyjson_mut_val*>>& timeSection = iter.second;
-			for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
-			{
+
+			for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 				DATA_SET& fSet = *set_list[tagIdx];
 				string& tag = fSet.tag;
 
@@ -1498,18 +1472,16 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 					if (lastSection != nullptr) {
 						auto k = lastSection->find(tag);
 						if (k != lastSection->end()) {
-
 							set<yyjson_mut_val*> jReSet;
+
 							//a de must exist in this time section,use the first de to get the time of this time section
-							for (auto jValRefRec : k->second)
-							{
+							for (auto jValRefRec : k->second) {
 								yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
 								yyjson_mut_val* jTimeRefRec = *(timeSection.begin()->second.begin());
 								yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
 								yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
 								yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
 								yyjson_mut_obj_put(jRecord, timeKey, yyTime);
-	
 	
 								//yyjson_mut_val* jValRefRec = k->second;
 								yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
@@ -1522,33 +1494,32 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 								yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
 								yyjson_mut_obj_put(jRecord, tagKey, yyTag);
 	
-	
 								//timeSection[tag] = jRecord;
 								jReSet.insert(jRecord);
 								addDeCount++;
 							}
+
 							timeSection[tag].swap(jReSet);
 						}
 					}
 				}
 			}
+
 			lastSection = &timeSection;
 		}
-		
 	}
 	
-
 	//sort de and output
 	for (auto& i : timeSectionSeries) {
 		map<string, set<yyjson_mut_val*>>& timeSection = i.second;
+
 		for (auto& j : timeSection) {
 			SORT_FLAG sortFlag;
-			for (auto jRec : j.second)
-			{
-				//yyjson_mut_val* jRec = j.second;
-	
+
+			for (auto jRec : j.second) {	
 				if (deSel.sortKey.length() > 0) {
 					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
+
 					if (deSel.sortKey == "val") {
 						if (yyjson_mut_is_str(yyVal)) {
 							sortFlag.sFlag = yyjson_mut_get_str(yyVal);
@@ -1559,6 +1530,7 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 					}
 					else if (yyjson_mut_is_obj(yyVal)) {
 						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
+
 						if (yyjson_mut_is_str(yySortKey)) {
 							sortFlag.sFlag = yyjson_mut_get_str(yySortKey);
 						}
@@ -2446,8 +2418,7 @@ void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& query
 	yyjson_doc_free(doc);
 }
 
-void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
-{
+void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
 	DE_SELECTOR deSel;
 
 	string dbName;
@@ -2470,10 +2441,12 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 			rootTag = DB_STR::gb_to_utf8(rootTag);
 		}
 	}
+
 	deSel.tagSel.m_org = org;
 	deSel.tagSel.selLanguage = language;
 	deSel.tagSel.rltLanguage = m_dbFmt.language;  //get tags in specified language for further db operation
 	parseDESelector(params, deSel, err);
+
 	if (err != "") {
 		err = JSON_STR_VAL(err);
 		return;
@@ -2481,12 +2454,15 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 	yyjson_val* yyv_calc = yyjson_obj_get(params, "calc");
 	if (yyv_calc) {
-		if(yyjson_is_str(yyv_calc))
+		if (yyjson_is_str(yyv_calc)) {
 			deSel.calc = yyjson_get_str(yyv_calc);
+		}
 		else if (yyjson_is_obj(yyv_calc)) {
 			yyjson_val* yyv_calc_alg = yyjson_obj_get(yyv_calc, "alg");
-			if(yyv_calc_alg)
+			if (yyv_calc_alg) {
 				deSel.calc = yyjson_get_str(yyv_calc_alg);
+			}
+
 			yyjson_val* yyv_calc_baseCurve = yyjson_obj_get(yyv_calc, "baseCurve");
 			if (yyv_calc_baseCurve) {
 				deSel.baseCurve = yyjson_get_str(yyv_calc_baseCurve);
@@ -2529,11 +2505,11 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 			if (yyjson_obj_get(yyv_selfParams, "n")) {
 				deSel.theLimit = yyjson_get_int(yyjson_obj_get(yyv_selfParams, "n"));
 			}
+
 			if (yyjson_obj_get(yyv_selfParams, "interval")) {
 				deSel.self_interval = yyjson_get_int(yyjson_obj_get(yyv_selfParams, "interval"));
 			}
 		}
-			//deSel.selfParams = yyv_selfParams;
 	}
 
 	auto oldTimeUint = m_timeUnit;
@@ -2552,13 +2528,13 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		err = JSON_STR_VAL("specified tag not found");
 	}
 	else {
-		try
-		{
+		try {
 			if (dbName != "") {
 				tdb->Select(deSel, result);
 			}
-			else
+			else {
 				Select(deSel, result);
+			}
 
 			if (result.error != "") {
 				err = result.error;
@@ -2572,30 +2548,27 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 				}
 			}
 		}
-		catch (std::exception& e)
-		{
+		catch (std::exception& e) {
 			string sErr = e.what();
 			err = JSON_STR_VAL(sErr);
 		}
 	}
-	m_timeUnit = oldTimeUint;
-	queryInfo = result.info;
 
-	//params["timeParsed"] = deSel.timeSel.getParsedSelector();
-	//resp.params = params.dump();
+	m_timeUnit = oldTimeUint;
+
+	queryInfo = result.info;
 	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
 }
 
-
-
-bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
-{
+bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	//deType is curve but time sel is range,do a curveIdx select to get curve time points before curve select
 	if (deSel.timeSel.isRange() && deSel.deType == "curve") {
 		DE_SELECTOR deSelIdx = deSel;
 		deSelIdx.deType = "curveIdx";
+
 		SELECT_RLT idxRlt;
 		Select(deSelIdx, idxRlt);
+
 		deSel.timeSel.atomSelList.clear();
 
 		//get all different time point
@@ -2620,36 +2593,41 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 	//load file data
 	vector<TAG_FILE_SET*>& tagFileSet = result.tagFileSet;
-	for (int i = 0; i < tagSet.size(); i++)
-	{
+	for (int i = 0; i < tagSet.size(); i++) {
 		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
 		fSet.tag = deSel.tagSel.tagSet[i];
 		fSet.dbFileTag = deSel.tagSel.dbFileTagSet[i];
+
 		tagFileSet.push_back(&fSet);
 	}
+
 	Select_Step_loadFile(deSel, tagFileSet, result);
 
 	//data buff in processing steps, all will be released in the end
 	vector<vector<DATA_SET*>*>&  dataSetBuff = result.dataSetBuff;
+
 	map<SORT_FLAG, yyjson_mut_val*>* pCalcResult = nullptr;
 	string sCalcResult; //calc result dumped to string
+
 	yyjson_mut_doc* rlt_mut_doc = result.rlt_mut_doc;
 
 	if (deSel.deType == "curve") {
 		size_t sortIdx = 0;
-		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++)
-		{
+		for (int tagIdx = 0; tagIdx < tagFileSet.size(); tagIdx++) {
 			TAG_FILE_SET& fSet = *tagFileSet[tagIdx];
 			string& tag = fSet.tag; // yyjson do not copy string,src string can not be release,use string& instead of a local variant
-			for (int i = 0; i < fSet.fileList.size(); i++)
-			{
+			
+			for (int i = 0; i < fSet.fileList.size(); i++) {
 				DB_FILE* pdf = fSet.fileList[i];
+
 				SORT_FLAG sf;
 				sf.dbFlag = sortIdx++;
+
 				auto p = yyjson_mut_obj(rlt_mut_doc);
 				yyjson_mut_obj_add_strcpy(rlt_mut_doc, p, "tag", pdf->tag.c_str());
 				yyjson_mut_obj_add_strcpy(rlt_mut_doc,p,"time",(pdf->time.toStr(false)).c_str());
 				yyjson_mut_obj_add_val(rlt_mut_doc, p, "curve", yyjson_val_mut_copy(rlt_mut_doc, pdf->root));
+
 				result.rltDataSet[sf] = p;
 			}
 		}
@@ -2659,10 +2637,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 		//orgin data set    dataSet1 
 		vector<DATA_SET*>* dataSet1 = new vector<DATA_SET*>;
+
 		set_list = dataSet1;
 		dataSetBuff.push_back(dataSet1);//add to buff list when create a new dataset,will be released in the end
-		for (int i = 0; i < tagSet.size(); i++)
-		{
+
+		for (int i = 0; i < tagSet.size(); i++) {
 			//get relTag
 			DATA_SET& fSet = *(new DATA_SET());
 			fSet.tag = tagSet[i];
@@ -2676,8 +2655,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 				if (deSel.tagLabel == "tag") {
 					fSet.colKey = fSet.relTag;
 				}
-				else
-				{
+				else {
 					size_t pos = fSet.relTag.rfind(".");
 					if (pos != string::npos) {
 						fSet.mpName = fSet.relTag.substr(pos + 1, fSet.relTag.size() - pos - 1);
@@ -2685,6 +2663,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 					else {
 						fSet.mpName = fSet.relTag;
 					}
+
 					fSet.colKey = fSet.mpName;
 				}
 			}
@@ -2702,21 +2681,25 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 
 		//get seleted de, parse files in to de dataset
 		bRet = Select_Step_loadDataElem(deSel, tagFileSet, *set_list, result, rlt_mut_doc);
-		if (!bRet)
+		if (!bRet) {
 			return false;
+		}
 
 		//do when selector after all de is selected
 		if (deSel.whenSel.tag != "") {
 			vector<DATA_SET*>* dataSet_afterWhen = new vector<DATA_SET*>;
 			DATA_SET& fSet = *(new DATA_SET());
+
 			dataSet_afterWhen->push_back(&fSet);
 			dataSetBuff.push_back(dataSet_afterWhen);
+
 			Select_Step_FilterByRelation(deSel, *set_list, *dataSet_afterWhen);
 		}
 
 		//if not groupby tag, merge multiple dataset into one data set  (groupby tag is the default behavior)
 		vector<DATA_SET*>* in_set_list = set_list;
 		vector<DATA_SET*>* out_set_list = nullptr;
+
 		if (!deSel.groupByTag) {
 			DATA_SET& out_set = *(new DATA_SET());
 			out_set.tag = "*";
@@ -2725,6 +2708,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			if (deSel.groupByTime) {
 				for (int i = 0; i < in_set_list->size(); i++) {
 					DATA_SET& in_set = *in_set_list->at(i);
+
 					//find out time group of all tag,and merge them
 					for (auto& g : in_set.m_origDeGrouped) {
 						if (out_set.m_origDeGrouped.find(g.first) != out_set.m_origDeGrouped.end()) {
@@ -2740,9 +2724,11 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 			else {
 				for (int i = 0; i < in_set_list->size(); i++) {
 					DATA_SET& in_set = *in_set_list->at(i);
+
 					out_set.m_orgDe.insert(out_set.m_orgDe.end(), in_set.m_orgDe.begin(), in_set.m_orgDe.end());
 				}
 			}
+
 			out_set_list = new vector<DATA_SET*>;
 			out_set_list->push_back(&out_set);
 			dataSetBuff.push_back(out_set_list);
@@ -2750,6 +2736,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		else {
 			out_set_list = in_set_list;
 		}
+
 		set_list = out_set_list; //use out_set_list as current data set, will be used in next steps
 
 		//do aggr
@@ -2783,74 +2770,84 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 
 		//limit
-		if (deSel.limit > 0)
-		{
+		if (deSel.limit > 0) {
 			map<SORT_FLAG, yyjson_mut_val*> temp_mapRlt;
+
 			int i = 0;
-			for (auto& it : result.rltDataSet)
-			{
-				if (i >= deSel.offset && i < deSel.offset + deSel.limit)
-				{
+			for (auto& it : result.rltDataSet) {
+				if (i >= deSel.offset && i < deSel.offset + deSel.limit) {
 					temp_mapRlt.insert(it);
 					i++;
+
 					continue;
 				}
-				else if (i< deSel.offset)
-				{
+				else if (i< deSel.offset) {
 					i++;
 					continue;
 				}
-				else if (i>= deSel.offset + deSel.limit)
-				{
+				else if (i>= deSel.offset + deSel.limit) {
 					break;
 				}
 			}
+
 			result.rltDataSet.swap(temp_mapRlt);
 		}
  
 		if (deSel.deType == "curveIdx" && deSel.theLimit > 0) {
 			int max = result.rltDataSet.size();
 			int idx = 0;
+
 			map<SORT_FLAG, yyjson_mut_val*> mapRlt0;
 			if (deSel.self_interval > 0) {
 				for (auto it = result.rltDataSet.begin(); it != result.rltDataSet.end(); it++, idx++) {
 					//"No this param" 、interval=1 is the same thing
 					if (deSel.self_interval > 1) {
 						bool reachInterval = idx % deSel.self_interval == 0;
-						if (!reachInterval)
+						if (!reachInterval) {
 							continue;
+						}
 					}
-					if (deSel.self_interval > max)
+
+					if (deSel.self_interval > max) {
 						continue;
+					}
 
 					mapRlt0[it->first] = it->second;
 				}
 			}
+
 			result.rltDataSet.swap(mapRlt0);
 
 			map<SORT_FLAG, yyjson_mut_val*> mapRlt1;
-			for (auto& i : result.rltDataSet)
-			{
+			for (auto& i : result.rltDataSet) {
 				yyjson_mut_val* yyv_curve_de = i.second;
+
 				yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_curve_de, "time");
 				string time = yyjson_mut_get_str(yyv_time);
+
 				yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
 				string tag = yyjson_mut_get_str(yyv_tag);
 
 				bool bDropIt = false;
+
 				yyjson_mut_val* data_attr = yyjson_mut_obj_get(yyv_curve_de, "data_attr");
 				size_t size = yyjson_mut_arr_size(data_attr);
+
 				for (int k = size - 1; k > 0; k--) {
 					auto element = yyjson_mut_arr_get(data_attr, k);
-
 					size_t size1 = yyjson_mut_arr_size(element);
-					if (size1 != 3)
+
+					if (size1 != 3) {
 						continue;
+					}
+
 					auto name = yyjson_mut_arr_get(element, 0);
 					string strName = yyjson_mut_get_str(name);
+
 					if (strName == "lastDi") {
 						auto val = yyjson_mut_arr_get(element, 2);
 						string strVal = yyjson_mut_get_str(val);
+
 						float fVal = atof(strVal.c_str());
 						if (fVal >= deSel.theLimit) {
 							bDropIt = true;
@@ -2858,10 +2855,12 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 						}
 					}
 				}
+
 				if (!bDropIt) {
 					mapRlt1[i.first] = i.second;
 				}
 			}
+
 			result.rowCount = mapRlt1.size();
 			result.deCount = mapRlt1.size();
 
@@ -3350,8 +3349,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 		}
 		result.rowCount = vecRlt.size();
 	}
-	else
-	{
+	else {
 		yyjson_mut_val* rlt_mut_root = yyjson_mut_arr(rlt_mut_doc);
 		yyjson_mut_doc_set_root(rlt_mut_doc, rlt_mut_root);
 		result.rowCount = 0;
@@ -3361,7 +3359,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	if(deSel.calc != ""){
 		if (pCalcResult != nullptr) {
 			char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
-			//size_t len = strlen(p);
 			if (p) {
 				result.calcResult = p;
 				free(p);
@@ -3377,12 +3374,10 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result)
 	else {
 		//if p==null，maybe int rlt_mut_doc,some string type pointed to local variable and is already released
 		char* p = yyjson_mut_write(rlt_mut_doc, 0, &len);
-		//size_t len = strlen(p);
 		if (p) {
 			result.dataList = p;
 			free(p);
 		}
-		
 	}
 
 	return true;
