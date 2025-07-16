@@ -1818,6 +1818,7 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 //根据某个位号找所属的TDS下级服务
 ioDev* ioServer::getOwnerChildTdsDev(string tag)
 {
+	vector<ioDev*> aryChildTds;
 	for (auto& it : m_vecChildDev)
 	{
 		if (it->m_devSubType == TDSP_SUB_TYPE::childTds)
@@ -1827,12 +1828,23 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag)
 			//避免混淆 浙江.杭州.办公室   和 浙江.杭州.办公室Linux  两种位号。必须判断 . 符号
 			if (pos==0 && tag.length() > it->m_strTagBind.length()) {
 				if (tag.at(it->m_strTagBind.length()) == '.') {
-					return it;
+					aryChildTds.push_back(it);
 				}
 			}
 		}
 	}
-	return nullptr;
+
+	if (aryChildTds.size() == 0)
+		return nullptr;
+	else {
+		int maxIndex = 0;
+		for (auto& it : aryChildTds) {
+			if (it->m_strTagBind.length() > aryChildTds[maxIndex]->m_strTagBind.length()) {
+				maxIndex = &it - &aryChildTds[0];
+			}
+		}
+		return aryChildTds[maxIndex];
+	}
 }
 
 bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
