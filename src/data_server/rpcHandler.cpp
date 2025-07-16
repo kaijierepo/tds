@@ -681,7 +681,8 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			 method == "deletePreset" ||
 			 method == "openStream" ||
 			 method == "keepStream" ||
-			 method == "closeStream" ) {
+			 method == "closeStream" ||
+		     method == "pausePresetPatrol") {
 		string tag, rootTag;
 		if (!parseParam_tag(params, rpcResp, session, tag, rootTag)) {
 			return true;
@@ -748,6 +749,15 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 
 				string presetIndex = params["presetIndex"].dump();
 				info = "删除预置位:" + presetIndex;
+			}
+			else if (method == "pausePresetPatrol") {
+				if (!params["parseTime"].is_number_integer()) {
+					rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "param parseTime must be specified,and must be int type");
+					return true;
+				}
+
+				string parseTime = params["parseTime"].dump();
+				info = "暂停预置位时间:" + parseTime;
 			}
 			else {
 				info = "添加预置位";
@@ -2295,7 +2305,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 							yyjson_mut_val* key = yyjson_mut_strcpy(doc, tag.c_str());
 							yyjson_mut_obj_put(rootRlt, key, rootObj);
 						}
-
 					}
 
 					size_t len = 0;

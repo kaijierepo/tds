@@ -1517,26 +1517,24 @@ string OBJ::getTagWithRoot()
 	return strTagName;
 }
 
-void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,string type, string level)
-{
-	if (strTag.find("*") == string::npos)//精确查找
-	{
+void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,string type, string level) {
+	if (strTag.find("*") == string::npos) {//精确查找
 		//如果这是一个TDS子服务对象，m_rootTag不为空。
 		//使用父服务的位号，在子服务中查询对象，需要先除去rootTag
-		if (m_rootTag != "")
+		if (m_rootTag != "") {
 			strTag = TAG::trimRoot(strTag, m_rootTag);
+		}
 
 		//判断自身位号是否是搜索位号的上级位号，如果不是一定搜索不到
 		string tagThis = getTag("",language);
 		if (strTag.find(tagThis) == string::npos) {
 			return;
 		}
+
 		strTag = TAG::trimRoot(strTag, tagThis);
-		if (strTag == "")
-		{
+		if (strTag == ""){
 			tagVec->push_back(this);
 		}
-
 
 		//根据相对位号的名字节点，查找子对象的名字，获取到对象
 		vector<string> vecNames;
@@ -1545,32 +1543,31 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,str
 		OBJ* toQuery = NULL;
 		std::vector<OBJ*>* childMO = &m_childObj;
 		bool findMO = false;
-		for (int i = 0; i < vecNames.size(); i++)
-		{
+
+		for (int i = 0; i < vecNames.size(); i++) {
 			string name = vecNames[i];
+
 			bool findNode = false;
-			for (int j = 0; j < childMO->size(); j++)
-			{
+			for (int j = 0; j < childMO->size(); j++) {
 				OBJ* tmp = childMO->at(j);
+
 				string tmpName = tmp->getName(language);
-				if (tmpName == name)
-				{
+				if (tmpName == name) {
 					toQuery = tmp;
 					findNode = true;
-					if (i == vecNames.size() - 1)
-					{
+
+					if (i == vecNames.size() - 1) {
 						findMO = true;
 					}
+
 					break;
 				}
 			}
 
-			if (findNode)
-			{
+			if (findNode) {
 				childMO = &toQuery->m_childObj;
 			}
-			else
-			{
+			else {
 				break;
 			}
 		}
@@ -1581,19 +1578,20 @@ void OBJ::queryObj(std::vector<OBJ*>* tagVec, string strTag, string language,str
 			}
 		}
 	}
-	else //通配符匹配
-	{
+	else { //通配符匹配
 		if (isSelectedByLevel(level) && isSelectedByType(type)) {
 			string tagCandidate = getTag("",language);
+
 			TAG_SELECTOR ts;
 			ts.init(strTag);
 			ts.selLanguage = language;
-			if (ts.match(tagCandidate))
+
+			if (ts.match(tagCandidate)) {
 				tagVec->push_back(this);
+			}
 		}
 
-		for (int i = 0; i < m_childObj.size(); i++)
-		{
+		for (int i = 0; i < m_childObj.size(); i++) {
 			OBJ* pMOChild = m_childObj.at(i);
 			pMOChild->queryObj(tagVec, strTag, language,type, level);
 		}
@@ -2226,6 +2224,7 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) {
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
+
 		OBJ* p = prj.queryObj(exp, tagSelector.selLanguage);
 		if (p) {
 			objList.push_back(p);
@@ -2234,8 +2233,10 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 
 	for (int i = 0; i < tagSelector.fuzzyMatchExp.size(); i++) {
 		string& exp = tagSelector.fuzzyMatchExp[i];
+
 		vector<OBJ*> tagSet;
-		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type,tagSelector.level);
+		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
+
 		for (auto& i : tagSet) {
 			objList.push_back(i);
 		}

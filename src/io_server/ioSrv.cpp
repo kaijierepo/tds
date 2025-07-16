@@ -1816,14 +1816,12 @@ void ioServer::getAllTDSPDev(vector<ioDev*>& aryDev)
 
 //如果1个位号是某个TDS下级服务绑定位号的子位号，那么该位号来自于该tds下级服务
 //根据某个位号找所属的TDS下级服务
-ioDev* ioServer::getOwnerChildTdsDev(string tag)
-{
+ioDev* ioServer::getOwnerChildTdsDev(string tag) {
 	vector<ioDev*> aryChildTds;
-	for (auto& it : m_vecChildDev)
-	{
-		if (it->m_devSubType == TDSP_SUB_TYPE::childTds)
-		{
+	for (auto& it : m_vecChildDev) {
+		if (it->m_devSubType == TDSP_SUB_TYPE::childTds) {
 			size_t pos = tag.find(it->m_strTagBind);
+
 			//指定位号前半段是子服务位号，并且后面跟的是 . 符号
 			//避免混淆 浙江.杭州.办公室   和 浙江.杭州.办公室Linux  两种位号。必须判断 . 符号
 			if (pos==0 && tag.length() > it->m_strTagBind.length()) {
@@ -1834,8 +1832,9 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag)
 		}
 	}
 
-	if (aryChildTds.size() == 0)
+	if (aryChildTds.size() == 0) {
 		return nullptr;
+	}
 	else {
 		int maxIndex = 0;
 		for (auto& it : aryChildTds) {
