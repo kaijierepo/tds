@@ -925,6 +925,10 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 	if (m_timeUnit == BY_DAY) {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/%02d/", stTime.wYear, stTime.wMonth, stTime.wDay);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
 		strURL += "/" + timeStamp;
@@ -933,6 +937,10 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 	else if (m_timeUnit == BY_MONTH) {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/", stTime.wYear, stTime.wMonth);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		string timeStamp = formatStr("%02d%02d%02d", stTime.wHour, stTime.wMinute, stTime.wSecond);
 		strURL += "/" + timeStamp;
@@ -952,6 +960,10 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		strURL = m_path + strURL;
 		return strURL;
@@ -960,6 +972,10 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/", date.wYear, date.wMonth);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		strURL = m_path + strURL;
 		return strURL;
@@ -978,6 +994,10 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		return strURL;
 	}
@@ -985,6 +1005,10 @@ string TDB::getPath_dataFolder_NO_DB(string strTag, const DB_TIME &date) const
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("%04d%02d/", date.wYear, date.wMonth);
+		if (m_dbFmt.dbRootTag != "") {
+			string dbRootTag = replaceStr(m_dbFmt.dbRootTag, ".", "/");
+			strURL += dbRootTag + "/";
+		}
 		strURL += strTag;
 		return strURL;
 	}

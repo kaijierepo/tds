@@ -743,6 +743,7 @@ struct  DB_FMT
 	string curveDeNameSuffix;  //The suffix contains "."
 	string deItemKey_value;
 	string language;    // zh for chinese en for english
+	string dbRootTag;   // root tag of tag in query. when multi db engines use one db folder
 
 	DB_FMT() {
 		language = "zh";
