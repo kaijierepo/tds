@@ -450,31 +450,33 @@ namespace DB_TAG {
 
 
 namespace DB_FS {
-	bool readFile(string path, string& data)
-	{
+	bool readFile(string path, string& data) {
 		FILE* fp = nullptr;
 		wstring wPath = DB_STR::utf8_to_utf16(path);
+
 #ifdef _WIN32
 		_wfopen_s(&fp, wPath.c_str(), L"rb");
 #else
 		fp = fopen(path.c_str(), "rb");
 #endif
-		if (fp)
-		{
+
+		if (fp) {
 			fseek(fp, 0, SEEK_END);
+
 			long len = ftell(fp);
 			if (len > 0) {
 				data.resize(len);
 				char* pdata = (char*)data.data();
+
 				fseek(fp, 0, SEEK_SET);
 				fread(pdata, 1, len, fp);
 			}
+
 			fclose(fp);
 			return true;
 		}
 		return false;
 	}
-
 
 	//do not use a file path without a suffix
 	//filesystem::path use wstring utf16 ,compatible with windows and linux
@@ -3817,22 +3819,23 @@ void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 	yyjson_mut_doc_free(mdoc);
 }
 
-bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result)
-{
+bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
 	if (m_timeUnit == BY_DAY) {
-		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
-		{
+		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++) {
 			TAG_FILE_SET& fSet = *tagDBFileSet[tagIdx];
 
 			for (int timeSelAtomIdx = 0; timeSelAtomIdx < deSel.timeSel.atomSelList.size(); timeSelAtomIdx++) {
 				TIME_SELECTOR_ATOM& tsa = deSel.timeSel.atomSelList[timeSelAtomIdx];
+
 				if (deSel.deType == "curve") { //time select must be a time point
 					DB_FILE* pdf = new DB_FILE(tsa.startTime, fSet.dbFileTag, this);
 					pdf->deType = deSel.deType;
+
 					if (!pdf->loadFile()) {
 						delete pdf;
 						continue;
 					}
+
 					fSet.fileList.push_back(pdf);
 				}
 				else {
@@ -3840,44 +3843,47 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 					//2024-12-12 17:00:00~2024-12-13 05:00:00, iterator by adding 24*60*60,2024-12-13 17:00:00 is not in time range,file will not be selected
 					DB_TIME dbtStartDate = tsa.stStart; dbtStartDate.clearHMS();
 					DB_TIME dbtEndDate = tsa.stEnd; dbtEndDate.clearHMS();
+
 					time_t startDate = dbtStartDate.toUnixTime();
 					time_t endDate = dbtEndDate.toUnixTime();
+
 					if (tsa.timeSetType == TSM_First) {
 						time_t loadDate = startDate;
-						for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
-						{
+						for (; loadDate <= endDate; loadDate += 24 * 60 * 60) {
 							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 							pdf->deType = deSel.deType;
+
 							if (!pdf->loadFile()) {
 								delete pdf;
 								continue;
 							}
+
 							fSet.fileList.push_back(pdf);
 							break;
 						}
 					}
 					else if (tsa.timeSetType == TSM_Last) {
 						time_t loadDate = endDate;
-						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-						{
+						for (; loadDate >= startDate; loadDate -= 24 * 60 * 60) {
 							DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 							pdf->deType = deSel.deType;
+
 							if (!pdf->loadFile()) {
 								delete pdf;
 								continue;
 							}
+
 							fSet.fileList.push_back(pdf);
 							break;
 						}
 					}
 					else {
-
 						bool bFirstLastAggr = false;
 						if (deSel.aggregate.size() > 0) {
 							map<string, vector<string>>::iterator aggrOpt = deSel.aggregate.begin();
 							vector<string>& aggrTypes = aggrOpt->second;
-							if (deSel.groupByTime == false) //groupby entire time range,optimize performance in this kind of query
-							{
+
+							if (deSel.groupByTime == false) {//groupby entire time range,optimize performance in this kind of query
 								if (aggrTypes.size() == 1) {
 									string& aggrType = aggrTypes[0];
 									if (aggrType == "diff.first-last" || aggrType == "diff.last-first") {
@@ -3890,41 +3896,45 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 						if (bFirstLastAggr) {
 							//read first file
 							time_t loadDate = startDate;
-							for (; loadDate <= endDate; loadDate += 24 * 60 * 60)
-							{
+							for (; loadDate <= endDate; loadDate += 24 * 60 * 60) {
 								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 								pdf->deType = deSel.deType;
+
 								if (!pdf->loadFile()) {
 									delete pdf;
 									continue;
 								}
+
 								fSet.fileList.push_back(pdf);
 								break;
 							}
+
 							//read last file
 							loadDate = endDate;
-							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-							{
+							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60) {
 								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 								pdf->deType = deSel.deType;
+
 								if (!pdf->loadFile()) {
 									delete pdf;
 									continue;
 								}
+
 								fSet.fileList.push_back(pdf);
 								break;
 							}
 						}
 						else {
 							time_t loadDate = endDate;
-							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
-							{
+							for (; loadDate >= startDate; loadDate -= 24 * 60 * 60) {
 								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 								pdf->deType = deSel.deType;
+
 								if (!pdf->loadFile()) {
 									delete pdf;
 									continue;
 								}
+
 								fSet.fileList.insert(fSet.fileList.begin(), pdf);
 							}
 						}
@@ -3932,15 +3942,13 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 				}
 			}
 
-			if (fSet.fileList.size() == 0)
+			if (fSet.fileList.size() == 0) {
 				continue;
+			}
+
 			//the first and last file need time range check when load de,the middles do not need
 			fSet.fileList[0]->boundaryFile = true;
 			fSet.fileList[fSet.fileList.size() - 1]->boundaryFile = true;
-
-			//do not down sample when time is short than one day 
-			//if (fSet.fileList.size() <= 1)
-				//deSel.interval.type = DOWN_SAMPLING_TYPE::DST_None;
 
 			result.fileCount += fSet.fileList.size();
 		}
@@ -4073,7 +4081,6 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 			result.fileCount += fSet.fileList.size();
 		}
 	}
-
 	else if (m_timeUnit == NONE) {
 		for (int tagIdx = 0; tagIdx < tagDBFileSet.size(); tagIdx++)
 		{
@@ -6752,11 +6759,12 @@ bool DB_FILE::isDataList() {
 	return false;
 }
 
-bool DB_FILE::loadFile()
-{
+bool DB_FILE::loadFile() {
 	time.fromUnixTime(ttTime);
+
 	ymd = time.toYMD();
 	path = pOwnerDB->getPath_dbFile(tag, time, deType);
+
 	if (pOwnerDB->m_bEnableFsBuff && isDataList()) {
 		pOwnerDB->m_FsBuff.readFile(path, data);
 	}
@@ -6777,6 +6785,7 @@ bool DB_FILE::loadFile()
 			data = DB_STR::gb_to_utf8(data);
 			doc = yyjson_read_opts((char*)data.c_str(), data.length(), 0, nullptr, &err);
 		}
+
 		if (err.code != YYJSON_READ_SUCCESS) {
 			// error message
 			string sErr = err.msg;
@@ -6786,6 +6795,7 @@ bool DB_FILE::loadFile()
 			throw e;
 		}
 	}
+
 	root = yyjson_doc_get_root(doc);
 	return true;
 }
