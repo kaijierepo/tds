@@ -598,7 +598,6 @@ bool rpcHandler::handleMethodCall_ptz_ioDev(string method, string tag,json& para
 				pCam->ptz_gotoPreset(preset);
 			}
 		}
-		
 	}
 	
 	rpcResp.result = "\"ok\"";

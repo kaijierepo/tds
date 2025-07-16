@@ -259,9 +259,6 @@ bool isTdsRunning() {
 	return false;
 }
 
-
-KV_INI g_prjConf;
-
 TDS_imp::TDS_imp()
 {
 	conf = nullptr;
@@ -549,8 +546,8 @@ bool TDS_imp::run(string cmdline)
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
-		::db.m_timeUnit = (DB_TIME_UNIT)g_prjConf.getValInt("dbTimeUnit", 1);
-		::db.m_dbFmt.dbRootTag = g_prjConf.getValStr("dbRootTag", "");
+		::db.m_timeUnit = (DB_TIME_UNIT)tds->conf->getInt("dbTimeUnit", 1);
+		::db.m_dbFmt.dbRootTag = tds->conf->getStr("dbRootTag", "");
 		bool bCheckEnd = false;
 		//1,有配置就用配置来
 		//2,没配置做检查
