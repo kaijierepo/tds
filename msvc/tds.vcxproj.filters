@@ -239,9 +239,6 @@
     <ClCompile Include="..\src\script\unicode_data.c">
       <Filter>script</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\data_server\CleanDisk.cpp">
-      <Filter>tdb</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -505,9 +502,6 @@
     </ClInclude>
     <ClInclude Include="..\src\script\unicode_gen_def.h">
       <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\data_server\CleanDisk.h">
-      <Filter>tdb</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
