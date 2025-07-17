@@ -48,6 +48,7 @@ namespace ALARM_LEVEL {
 	const string normal = "normal";
 	const string warn = "warn";
 	const string alarm = "alarm";
+	const string L0 = "L0";
 	const string L1 = "L1";
 	const string L2 = "L2";
 	const string L3 = "L3";
