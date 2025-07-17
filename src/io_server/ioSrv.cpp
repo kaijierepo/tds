@@ -282,107 +282,100 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	}
 }
 
-void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> ioSession)
-{
+void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> ioSession) {
 	timeopt::now(&ioSession->lastRecvTime);
 
 	//if it's the first time recv data from a connection. check transport layer protocol first
 	//if applayer protocol is TDS RPC,transport layer protocol can be HTTP or WebSocket or RawTcp(no transport layer)
 	//if applayer protocol is HTTP,transport layer is specified as none
+	
 	//首次从该链接收到数据时的处理。
 	string strData;
-	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN)
-	{
+	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN) {
 		str::fromBuff((char*)pData, iLen,strData);
+
 		//parse transfer layer protocol
-		if (strData.find("HTTP") != string::npos)
-		{
+		if (strData.find("HTTP") != string::npos) {
 			ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
-			if (CWSPPkt::isHandShake(strData))
-			{
+
+			if (CWSPPkt::isHandShake(strData)) {
 				ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
 			}
 		}
-		else
-		{
+		else {
 			ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
 		}
 
 		//if websocket. deal the first handshake pkt 
-		if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-		{
+		if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET) {
 			//回复websocket握手
 			CWSPPkt req;
 			std::string handshakeString = req.GetHandshakeString(strData);
+
 			send(ioSession->sock, handshakeString.c_str(), (int)handshakeString.size(), 0);
 			return;
 		}
 	}
 
-
-	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET)
-	{
+	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET) {
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
-		while (tlBuf.PopPkt(IsValidPkt_WEBSOCKET))
-		{
+
+		while (tlBuf.PopPkt(IsValidPkt_WEBSOCKET)) {
 			CWSPPkt wsPkt;
 			wsPkt.unpack(tlBuf.pkt, tlBuf.iPktLen);
-			if (wsPkt.isDataFrame())
-				OnRecvAppLayerData((unsigned char*)wsPkt.payloadData, wsPkt.iPayloadLen,ioSession,wsPkt.fin_?true:false);
+
+			if (wsPkt.isDataFrame()) {
+				OnRecvAppLayerData((unsigned char*)wsPkt.payloadData, wsPkt.iPayloadLen, ioSession, wsPkt.fin_ ? true : false);
+			}
 		}
 
-		if (tlBuf.iStreamLen > 1 * 1024 * 1024)
-		{
+		if (tlBuf.iStreamLen > 1 * 1024 * 1024) {
 			string str = str::format("%s", ioSession->remoteIP.c_str());
 			LOG("[error]websocket parse error,can not get a pkt when length exceeded 10Mb,Addr=" + str);
+
 			tlBuf.Init();
 		}
 	}
 	//http处理 http仅依靠ip地址区分设备，可以与其他连接同时存在
-	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP)
-	{
+	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP) {
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
-		while (tlBuf.PopPkt(IsValidPkt_HTTP, false))
-		{
+
+		while (tlBuf.PopPkt(IsValidPkt_HTTP, false)) {
 			bool handled = false;
 			string sHttp = str::fromBuff(( char*)tlBuf.pkt, tlBuf.iPktLen);
+
 			vector<string> vec;
 			str::split(vec, sHttp, "\r\n\r\n");
 			
 			if (vec.size() >= 2) {
-				try
-				{
+				try {
 					string& tdspPkt = vec[1];
-	/*				ioDev* p = getIODevByIP(ioSession->remoteIP);
-					if (p && p->isTdsp()) {
-						ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
-						if (ptdsp) {
-							ptdsp->ioDev_tdsp::onRecvData((unsigned char*)tdspPkt.c_str(),tdspPkt.size());
-							handled = true;
-						}
-					}*/
 
 					yyjson_doc* doc = yyjson_read(tdspPkt.c_str(), tdspPkt.size(), 0);
 					if (!doc) {
 						return;
 					}
+
 					yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 					yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr");
+
 					if (yyv_ioAddr) {
 						string ioAddr = yyjson_get_str(yyv_ioAddr);
+
 						ioDev* p = getIODev(ioAddr);
 						if (p && p->isTdsp()) {
 							ioDev_tdsp* ptdsp = (ioDev_tdsp*)p;
 							ptdsp->ioDev_tdsp::onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.size());
+
 							handled = true;
 						}
 					}
+
 					yyjson_doc_free(doc);
 				}
-				catch (const std::exception&)
-				{
+				catch (const std::exception&) {
 
 				}
 			}
@@ -390,11 +383,19 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 			if (!handled) {
 				LOG("[warn]收到没有处理的设备http请求包,%s", sHttp.c_str());
 			}
+
+			string httpResp =
+				"HTTP/1.1 200 OK\r\n"
+				"Content-Type: application/json; charset=utf-8\r\n"
+				"Content-Length: 0\r\n"
+				"Connection: close\r\n"
+				"\r\n";
+
+			send(ioSession->sock, httpResp.c_str(), (int)httpResp.size(), 0);
 		}
 	}
 	//tcp直连,没有传输层，表示全部都是应用层数据
-	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE)
-	{
+	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE) {
 		OnRecvAppLayerData(pData, iLen, ioSession);
 	}
 }
@@ -694,20 +695,18 @@ void ioServer::handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> t
 //io设备在一个tdsSession上线
 //该函数必须返回非空值
 //只在tdsSession上收到首发包或者 注册包，第一次确定该session对应的设备地址的时候触发一次
-ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession)
-{
+ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession) {
 	tdsSession->m_ioAddr = ioAddr;
 	ioDev* pIoDev = ioSrv.getIODev(ioAddr);
+
 	//设备发现
-	if (!pIoDev)
-	{
+	if (!pIoDev) {
 		json jAddr;
 		jAddr["id"] = ioAddr;
 		jAddr["type"] = DEV_ADDR_MODE::deviceID;
-		pIoDev = ioSrv.onChildDevDiscovered(jAddr,tdsSession->getRemoteAddr(), tdsSession->ioDevType, tdsSession->tdspSubType);
 
-		if (pIoDev)
-		{
+		pIoDev = ioSrv.onChildDevDiscovered(jAddr,tdsSession->getRemoteAddr(), tdsSession->ioDevType, tdsSession->tdspSubType);
+		if (pIoDev) {
 			pIoDev->m_devSubType = tdsSession->tdspSubType;
 
 			if (pIoDev->m_devSubType != "") {
@@ -717,13 +716,13 @@ ioDev* ioServer::handleDevOnline(string ioAddr, std::shared_ptr<TDS_SESSION> tds
 
 	}
 	//设备上线
-	else
-	{
-		if (pIoDev->m_bOnline == false)
-		{
+	else {
+		if (pIoDev->m_bOnline == false) {
 			pIoDev->setOnline();
 			pIoDev->triggerCycleAcq();
+
 			timeopt::now(&pIoDev->m_stLastActiveTime);
+
 			string log = str::format("[ioDev   ]设备上线，ioAddr=%s,ioSessionAddr=%s,type=%s,subType=%s", pIoDev->getIOAddrStr().c_str(), tdsSession->getRemoteAddr().c_str(), pIoDev->m_devType.c_str(), pIoDev->m_devSubType.c_str());
 			logger.logInternal(log);
 		}

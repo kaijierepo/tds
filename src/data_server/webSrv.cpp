@@ -438,14 +438,18 @@ void thread_handleGzhReq(string req,int pipeSock)
 
 static void* thread_handleRpcOverHttp(void* param,RPC_SESSION* pRpcSession) {
 	struct thread_data* p = (struct thread_data*)param;
+
 	RPC_RESP resp;
 	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
 	pSession->setRpcSession(pRpcSession);
+
 	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
 
 	mg_wakeup(p->mgr, p->conn_id, resp.strResp.c_str(), (int)resp.strResp.length());  // Respond to parent
+
 	free((void*)p->message.ptr);            // Free all resources that were
 	free(p);                                  // passed to us
+
 	return NULL;
 }
 

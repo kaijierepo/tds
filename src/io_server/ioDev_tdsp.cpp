@@ -623,7 +623,7 @@ bool ioDev_tdsp::sendData(unsigned char* pData, size_t iLen)
 }
 
 
-bool ioDev_tdsp::handleNotify(yyjson_val* jNotify,yyjson_doc* doc) {
+bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 	yyjson_val* yyv_method = yyjson_obj_get(jNotify, "method");
 
 	string method;
