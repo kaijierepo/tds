@@ -526,39 +526,46 @@ bool ioDev_tdsp::onRecvData(unsigned char* pData, size_t iLen) {
 		LOG("[error]解析tdsp数据包失败,不是正确的json格式,%s:\n%s",getIOAddrStr().c_str(),pData);
 		return false;
 	}
+
 	yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 	onRecvPkt(yyv_resp, doc);
+
 	yyjson_doc_free(doc);
 	return false;
 }
 
 bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 	setOnline();
+
 	std::unique_lock<mutex> lock(m_csSyncRPCInfo);
 	timeopt::now(&m_stLastActiveTime);
+
 	try {
 		if (isSingleTransaction()) { //同一时刻只有一个命令会话模式
 			yyjson_val* yyv_method = yyjson_obj_get(jResp, "method");
+
 			string method;
-			if(yyv_method)
+			if (yyv_method) {
 				method = yyjson_get_str(yyv_method);
+			}
+
 			if (method == "input") {
 				handleNotify(jResp,doc);
 			}
 			else{
 				//SingleTransaction模式时m_mapSyncRPCInfo只有一个缓存会话
 				auto iter = m_mapSyncRPCInfo.begin();
-				if (iter != m_mapSyncRPCInfo.end())
-				{
+				if (iter != m_mapSyncRPCInfo.end()) {
 					TDSP_SYNC_INFO* p = iter->second;
+
 					size_t len;
 					auto s = yyjson_val_write(jResp,0,&len);
 					p->strResp = s;
+
 					free(s);
 					p->respSignal.notify();
 				}
-				else
-				{
+				else {
 					handleAsynResp(jResp,doc);
 				}
 			}
@@ -571,8 +578,7 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 
 			//接收到的设备数据共3种类型。
 			//1.设备通知
-			if (yyv_id == nullptr) 
-			{
+			if (yyv_id == nullptr) {
 				handleNotify(jResp,doc);
 			}
 			//2.设备请求
@@ -583,16 +589,15 @@ bool ioDev_tdsp::onRecvPkt(yyjson_val* jResp, yyjson_doc* doc) {
 			else if (yyv_result != nullptr || yyv_err != nullptr) {
 				//存在响应等待handler
 				bool handled = handleSyncResp(jResp, yyv_id, doc);
+
 				//不存在响应等待handler
-				if(!handled)
-				{//请求响应超时后或者网络延迟等情况，或者发送了rpc请求，但是没有等待处理响应
+				if(!handled) {//请求响应超时后或者网络延迟等情况，或者发送了rpc请求，但是没有等待处理响应
 					handleAsynResp(jResp, doc);
 				}
 			}
 		}
 	}
-	catch (std::exception& e)
-	{
+	catch (std::exception& e) {
 		string errorType = e.what();
 		string log = "tdsp device ,json parse error. " + errorType;
 		size_t len;
@@ -634,45 +639,43 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 	yyjson_val* yyv_params = yyjson_obj_get(jNotify, "params");
 	
 	if (method == "devRegister") {
-		if (yyv_params != nullptr)
-		{
+		if (yyv_params != nullptr) {
 			yyjson_val* yyv_info = yyjson_obj_get(yyv_params, "info");
+
 			yyjson_val* yyv_softVer = yyjson_obj_get(yyv_info, "softVer");
-			if (yyv_softVer != nullptr)
-			{
+			if (yyv_softVer != nullptr){
 				m_softVer = yyjson_get_str(yyv_softVer);
 			}
+
 			yyjson_val* yyv_hardVer = yyjson_obj_get(yyv_info, "hardVer"); 
-			if (yyv_hardVer != nullptr)
-			{
+			if (yyv_hardVer != nullptr) {
 				m_hardVer = yyjson_get_str(yyv_hardVer);
 			}
+
 			yyjson_val* yyv_mfrDate = yyjson_obj_get(yyv_info, "mfrDate");
-			if (yyv_mfrDate != nullptr)
-			{
+			if (yyv_mfrDate != nullptr) {
 				m_mfrDate = yyjson_get_str(yyv_mfrDate);
 			}
+
 			yyjson_val* yyv_imei = yyjson_obj_get(yyv_info, "IMEI");
-			if (yyv_imei != nullptr)
-			{
+			if (yyv_imei != nullptr) {
 				m_IMEI = yyjson_get_str(yyv_imei);
 			}
+
 			yyjson_val* yyv_httpPort = yyjson_obj_get(yyv_params, "httpPort");
-			if (yyv_httpPort != nullptr)
-			{
+			if (yyv_httpPort != nullptr) {
 				m_childTdsHttpPort = yyjson_get_int(yyv_httpPort);
 			}
+
 			yyjson_val* yyv_httpsPort = yyjson_obj_get(yyv_params, "httpsPort");
-			if (yyv_httpsPort != nullptr)
-			{
+			if (yyv_httpsPort != nullptr) {
 				m_childTdsHttpsPort = yyjson_get_int(yyv_httpsPort);
 			}
+
 			yyjson_val* yyv_devSubType = yyjson_obj_get(yyv_params, "devSubType");
-			if (yyv_devSubType != nullptr)
-			{
+			if (yyv_devSubType != nullptr) {
 				m_devSubType = yyjson_get_str(yyv_devSubType);
 			}
-
 		}
 
 		triggerCycleAcq();
@@ -712,25 +715,25 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			size_t len;
 			string sNotify = yyjson_val_write(yyv_params, 0, &len);
+
 			json jParams = json::parse(sNotify);
+
 			string sTag = jParams["tag"];
 			sTag = TAG::addRoot(sTag, m_strTagBind);
 			jParams["tag"] = sTag;
+
 			string sDbPath;
-			if (jParams.contains("dbPath"))
-			{
+			if (jParams.contains("dbPath")) {
 				sDbPath = jParams["dbPath"];
 			}
 
 			RPC_RESP resp;
 			almServer* pAlmSrv = NULL;
 
-			if (sDbPath.find("alarms") != string::npos)
-			{
+			if (sDbPath.find("alarms") != string::npos) {
 				pAlmSrv = &almSrv;
 			}
-			else
-			{
+			else {
 				pAlmSrv = &almSrv;
 			}
 			pAlmSrv->rpc_updateStatus(jParams, resp);
@@ -740,35 +743,32 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 		if (m_devSubType == TDSP_SUB_TYPE::childTds) {
 			size_t len;
 			string sNotify = yyjson_val_write(yyv_params, 0, &len);
+
 			json jParams = json::parse(sNotify);
 			string sTag = jParams["tag"];
+
 			string::size_type pos_s = sTag.find("(");
-			if (pos_s != string::npos)
-			{
+			if (pos_s != string::npos) {
 				string::size_type pos_e = sTag.find(")");
 
-				if (pos_e != string::npos)
-				{
+				if (pos_e != string::npos) {
 					string sIp = sTag.substr(0, pos_s);
 					sTag = sTag.substr(pos_s + 1, pos_e - (pos_s + 1));
 					sTag = TAG::addRoot(sTag, m_strTagBind);
 
 					sTag = str::format("%s(%s)", sIp.c_str(), sTag.c_str());
 				}
-				else
-				{
+				else{
 					sTag = TAG::addRoot(sTag, m_strTagBind);
 				}
 			}
-			else
-			{
+			else{
 				sTag = TAG::addRoot(sTag, m_strTagBind);
 			}
 			
 			jParams["tag"] = sTag;
 			string sDbPath;
-			if (jParams.contains("dbPath"))
-			{
+			if (jParams.contains("dbPath")) {
 				sDbPath = jParams["dbPath"];
 			}
 
@@ -785,6 +785,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
+
 				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
 				tds->callAsyn("onObjOnline", sParams);
 			}
@@ -796,6 +797,7 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 			if (yyv_tag && m_strTagBind != "") {
 				string tagChild = yyjson_get_str(yyv_tag);
 				string tag = m_strTagBind + "." + tagChild;
+
 				string sParams = str::format("{\"tag\":\"%s\"}", tag.c_str());
 				tds->callAsyn("onObjOffline", sParams);
 			}

@@ -1864,48 +1864,43 @@ bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 
 
 //onRecvData需要组包
-bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt)
-{
+bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt) {
 	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr(),tdsSession->getLocalAddr());
 
-	if (m_bDisableIOHandle)
+	if (m_bDisableIOHandle) {
 		return true;
+	}
 
 	//协议检测
-	if (tdsSession->ioDevType == "")//应用层协议类型检测
-	{
+	if (tdsSession->ioDevType == "") {//应用层协议类型检测
 		//应用层协议智能检测。根据收到的首包数据进行检测
 		//傲华尔远程控制协议
 		if ((pData[0] == '[' && pData[iLen - 1] == ']') ||
-			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')
-			)
-		{
+			(pData[0] == '[' && pData[iLen - 1] == '\n' && pData[iLen - 2] == ']')) {
 			tdsSession->iALProto = IO_PROTO::IQ60;
 			tdsSession->type = TDS_SESSION_TYPE::iodev;
 		}
 	}
 
 	//应用层协议处理
-	if (tdsSession->bridgedIoSessionClient != NULL)
-	{
-		if (tdsSession->ioDevType == DEV_TYPE_tdsp)
-		{
+	if (tdsSession->bridgedIoSessionClient != NULL) {
+		if (tdsSession->ioDevType == DEV_TYPE_tdsp) {
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(IsValidPkt_textEnd_LFLF))
-			{
+
+			while (pab->PopPkt(IsValidPkt_textEnd_LFLF)) {
 				size_t iSend = tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+
 				string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 				LOG("[IO设备透传]dev->client " + s);
 			}
 		}
 		//iq60的命令行数据包需要组包后再转发，否则可能导致中文utf8字符被分割后无法解析
-		else if (tdsSession->ioDevType == DEV_TYPE_iq60)
-		{
+		else if (tdsSession->ioDevType == DEV_TYPE_iq60) {
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (1)
-			{
+
+			while (1) {
 				//每一个数据包都先检测是否是iq60数据包。因为iq60也属于 textEnd_LF 类型
 				if(pab->PopPkt(IsValidPkt_IQ60)) {
 					onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
@@ -1916,7 +1911,9 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 					pab->PopPkt(IsValidPkt_textEnd_LF) ||
 					pab->PopPkt(IsValidPkt_textEnd_LFLF) ||
 					pab->PopPkt(IsValidPkt_textEnd_CRLF)) {
+
 					tdsSession->bridgedIoSessionClient->send(pab->pkt, pab->iPktLen);
+
 					string s = str::fromBuff((char*)pab->pkt, pab->iPktLen);
 					LOG("[IO设备透传]dev->client " + s);
 					continue;
@@ -1926,125 +1923,112 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_iq60)
-	{
+	else if (tdsSession->ioDevType == DEV_TYPE_iq60) {
 		bool regPkt = false;
-		if (!tdsSession->m_bAppDataRecved)//首包数据,按照tdsp注册包处理
-		{
+		if (!tdsSession->m_bAppDataRecved) {//首包数据,按照tdsp注册包处理
 			string s = str::fromBuff((char*)pData, iLen);
 			LOG("[IQ60首发数据]remoteAddr=%s,data=%s",tdsSession->getRemoteAddr().c_str(), s.c_str());
-			if (s.find("IQ60_") == 0)
-			{
+
+			if (s.find("IQ60_") == 0) {
 				s = s.substr(0, 16);
 				LOG("IQ60首发数据," + s);
+
 				regPkt = true;
 				string strIoAddr = s.substr(5, s.length() - 5);
 				ioSrv.handleDevOnline(strIoAddr, tdsSession);
 
-				if (iLen > 16)
-				{
+				if (iLen > 16) {
 					stream2pkt* pab = &tdsSession->m_alBuf;
 					pab->PushStream(pData + 16, iLen - 16);
-					while (pab->PopPkt(IsValidPkt_IQ60))
-					{
+
+					while (pab->PopPkt(IsValidPkt_IQ60)) {
 						onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
 					}
 				}
 			}
 		}
 
-		if (!regPkt)
-		{
+		if (!regPkt) {
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(IsValidPkt_IQ60))
-			{
+
+			while (pab->PopPkt(IsValidPkt_IQ60)) {
 				onRecvPkt_iq60(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_tdsp)
-	{
-		if (handleFirstRegPkt(pData, iLen, tdsSession))
-		{
+	else if (tdsSession->ioDevType == DEV_TYPE_tdsp) {
+		if (handleFirstRegPkt(pData, iLen, tdsSession)) {
 			tdsSession->m_bSingleDevMode = true;
 		}
-		else
-		{
-			if (isPkt)
-			{
+		else {
+			if (isPkt) {
 				onRecvPkt_tdsp(pData, iLen, tdsSession);
 			}
-			else
-			{
+			else {
 				stream2pkt* pab = &tdsSession->m_alBuf;
 				pab->PushStream(pData, iLen);
-				while (pab->PopPkt(IsValidPkt_TDSP))
-				{
-					if (pab->abandonData != "")
-					{
+
+				while (pab->PopPkt(IsValidPkt_TDSP)) {
+					if (pab->abandonData != "") {
 						string remoteAddr = tdsSession->getRemoteAddr();
 						LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+
 						tdsSession->abandonLen += pab->iAbandonLen;
 					}
+
 					tdsSession->iALProto = pab->m_protocolType;
 					onRecvPkt_tdsp(pab->pkt, pab->iPktLen, tdsSession);
 				}
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_modbus_tcp_slave)
-	{
-		if (handleFirstRegPkt(pData, iLen, tdsSession))
-		{
+	else if (tdsSession->ioDevType == DEV_TYPE_modbus_tcp_slave) {
+		if (handleFirstRegPkt(pData, iLen, tdsSession)) {
 
 		}
 		else {
 			stream2pkt* pab = &tdsSession->m_alBuf;
 			pab->PushStream(pData, iLen);
-			while (pab->PopPkt(IsValidPkt_ModbusTcp, false))
-			{
+
+			while (pab->PopPkt(IsValidPkt_ModbusTcp, false)) {
 				onRecvPkt_mbTcp(pab->pkt, pab->iPktLen, tdsSession);
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_rs485_gateway)
-	{
+	else if (tdsSession->ioDevType == DEV_TYPE_rs485_gateway) {
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
-		if (handleFirstRegPkt(pData, iLen, tdsSession))//首包数据,按照tdsp注册包处理
-		{
+		if (handleFirstRegPkt(pData, iLen, tdsSession)) {//首包数据,按照tdsp注册包处理
+		
 		}
-		else
-		{
+		else {
 			unsigned char* pGwData = pData;
 			size_t gwLen = iLen;
 			
 			//485直接透传到设备
-			if (tdsSession->m_mapBindIoDev.size()>0)
-			{
+			if (tdsSession->m_mapBindIoDev.size()>0) {
 				for (auto& i : tdsSession->m_mapBindIoDev) {
 					i.first->onRecvData(pGwData, gwLen);
 				}
 			}
-			
 		}
 	}
 	else if (tdsSession->ioDevType == DEV_TYPE_leak_detect) {
 		stream2pkt* pab = &tdsSession->m_alBuf;
 		pab->PushStream((unsigned char*)pData, iLen);
-		while (pab->PopPkt(IsValidPkt_LeakDetect))
-		{
-			if (pab->abandonData != "")
-			{
+
+		while (pab->PopPkt(IsValidPkt_LeakDetect)) {
+			if (pab->abandonData != "") {
 				string remoteAddr = tdsSession->getRemoteAddr();
 				LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+
 				tdsSession->abandonLen += pab->iAbandonLen;
 			}
+
 			onRecvPkt_leakDetect((unsigned char*)pab->pkt, pab->iPktLen, tdsSession);
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_jep)
-	{
+	else if (tdsSession->ioDevType == DEV_TYPE_jep) {
 		string ioAddr = tdsSession->remoteIP;
 		ioDev* pDev = getIODev(ioAddr, false, true);
 		pDev->onRecvData(pData, iLen);
@@ -2059,23 +2043,24 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 	return true;
 }
 
-
-void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
-{
-	try
-	{
+void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession) {
+	try {
 		if (tdsSession->tdspSubType == TDSP_SUB_TYPE::streamPusher) {
 			tdsSession->m_csPuller.lock();
+
 			size_t sizeLast = tdsSession->m_vecPuller.size();
 			for (size_t i = 0; i < tdsSession->m_vecPuller.size(); i++) {
 				std::shared_ptr<TDS_SESSION> p = tdsSession->m_vecPuller[i];
+
 				int iSent = p->send(pData, iLen);
 				if (iSent <= 0) {
 					tdsSession->m_vecPuller.erase(tdsSession->m_vecPuller.begin() + i);
 					i--;
 				}
 			}
+
 			size_t sizeNow = tdsSession->m_vecPuller.size();
+
 			tdsSession->m_csPuller.unlock();
 
 			if (sizeLast > 0 && sizeNow == 0) {
@@ -2087,12 +2072,14 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			string sResp;
 			if (m_bGb2312Tdsp) {
 				str::fromBuff((char*)pData, iLen,sResp);
-				size_t ipos = 0; string errChar;
-				if (!charCodec::isValidGB2312(sResp, ipos, errChar)) //硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
-				{
+
+				size_t ipos = 0; 
+				string errChar;
+				if (!charCodec::isValidGB2312(sResp, ipos, errChar)) {//硬件启用gb2312传输中文后。出bug的可能性很大。做一次有效性检测
 					LOG("[error][TDSP]GB2312编码数据包包含非法字符，无法解析\nGB2312字符范围A1A1-FEFE,ascII范围0-7F\n错误字符位置:" + str::fromInt(ipos) + ",错误字符:" + errChar + "\n" + str::bytesToHexStr(pData, iLen));
 					return;
 				}
+
 				sResp = charCodec::gb_to_utf8(sResp);
 				pData = (unsigned char*)sResp.c_str();
 				iLen = sResp.length();
@@ -2103,56 +2090,61 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				LOG("[error]解析tdsp数据包失败,不是正确的json格式");
 				return;
 			}
-			yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 
+			yyjson_val* yyv_resp = yyjson_doc_get_root(doc);
 			yyjson_val* yyv_method = yyjson_obj_get(yyv_resp, "method");
 			if (yyv_method == nullptr) {
 				LOG("[error]解析tdsp数据包失败,没有包含method字段");
 				return;
 			}
+
 			string method = yyjson_get_str(yyv_method);
-			 
-			//string charset = "utf8";
-			//if (jResp.contains("charset"))
-			//{
-			//	charset = jResp["charset"].get<string>();
-			//}
 
 			//获得io地址
 			yyjson_val* yyv_ioAddr = yyjson_obj_get(yyv_resp, "addr");
-			if (yyv_ioAddr == nullptr)
+			if (yyv_ioAddr == nullptr) {
 				yyv_ioAddr = yyjson_obj_get(yyv_resp, "ioAddr"); //ioAddr用于兼容老的格式
-			string strIoAddr;
-			if (yyv_ioAddr)
-				strIoAddr = yyjson_get_str(yyv_ioAddr);
+			}
 
+			string strIoAddr;
+			if (yyv_ioAddr) {
+				strIoAddr = yyjson_get_str(yyv_ioAddr);
+			}
 
 			//设备或者子服务注册
 			if (method == "devRegister") {
-				if (strIoAddr == "")
-				{
+				if (strIoAddr == "") {
 					LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
 					return;
 				}
 
 				yyjson_val* yyv_params = yyjson_obj_get(yyv_resp, "params");
 				yyjson_val* yyv_devType = yyjson_obj_get(yyv_params,"devType");
+
 				string devType;
-				if(yyv_devType) 
+				if (yyv_devType) {
 					devType = yyjson_get_str(yyv_devType);
+				}
+
 				if (devType != "") {
 					tdsSession->tdspSubType = devType;
 					if (devType == TDSP_SUB_TYPE::streamPusher) {
 						string rootTag, tag;
+
 						yyjson_val* yyv_rootTag = yyjson_obj_get(yyv_params, "rootTag");
-						if(yyv_rootTag)
+						if (yyv_rootTag) {
 							rootTag = yyjson_get_str(yyv_rootTag);
+						}
+
 						yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
-						if(yyv_tag)
+						if (yyv_tag) {
 							tag = yyjson_get_str(yyv_tag);
+						}
+
 						tag = TAG::addRoot(tag, rootTag);
 
 						std::shared_ptr<TDS_SESSION> pusherSession = getStreamPusher(tag);
+
 						//该位号推流已经存在
 						if (pusherSession != nullptr) {
 							LOG("[warn][数据流   ]位号:%s的推流已经存在", tag.c_str());
@@ -2162,15 +2154,18 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 						else {
 							//以下复制相当于创建了一个流节点
 							tdsSession->streamId = tag;
+
 							MP* pmp = prj.GetMPByTag(tag, "zh");
 							if (pmp) {
-								vector< std::shared_ptr<TDS_SESSION>>   puller;
+								vector< std::shared_ptr<TDS_SESSION>> puller;
+
 								pmp->m_csPuller.lock();
 								puller = pmp->m_vecPuller;
 								pmp->m_vecPuller.clear();
 								pmp->m_csPuller.unlock();
 
 								size_t pullerCount = 0;
+
 								tdsSession->m_csPuller.lock();
 								tdsSession->m_vecPuller = puller;
 								pullerCount = tdsSession->m_vecPuller.size();
@@ -2187,25 +2182,21 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 				}
 			}
 
-
-
 			//是否有设备在该session上上线，处理设备上线
 			ioDev* pIoDev = tdsSession->getBindDev(strIoAddr);
-			if (pIoDev == nullptr)
-			{
+
+			if (pIoDev == nullptr) {
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);
 			}
 
-			if (pIoDev)
-			{
-				//pIoDev->m_charset = charset;
+			if (pIoDev) {
 				pIoDev->onRecvPkt(yyv_resp, doc);
 			}
+
 			yyjson_doc_free(doc);
 		}
 	}
-	catch (const std::exception& e)
-	{
+	catch (const std::exception& e) {
 		string errorType = e.what();
 		//json库的 what 返回的字符串，本身可能是一个携带非utf8字符的字符串。这串错误描述可能包含了解析错误的那个字符,所以也非法。
 		//全部转换为ascII，用转义字符表示。否则后面的jError.dump() 会奔溃
