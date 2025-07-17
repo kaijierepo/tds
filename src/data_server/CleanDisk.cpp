@@ -447,65 +447,66 @@ bool CCleanDisk::CheckAndDelUsefulFile(int iCleanDiskStartTime, int iCleanDiskEn
 		tm now_tm;
 		localtime_s(&now_tm, &now_c);
 
-		if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false/* && m_bCleanDiskByManual == FALSE*/)
-			return true;
-		std::string strVideoPath = m_strDBPathAbs;
-
-		for (const auto &entry : fs::directory_iterator(strVideoPath))
+		if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime))
 		{
-			strFileName = entry.path().filename().string();
-			//判断是否是文件夹
-			if (entry.status().type() == fs::file_type::directory
-				&& strFileName != "." && strFileName != ".."
-				&& strFileName.size() == 6 && IsNumberString(strFileName))
-			{
-				if (IsNumberString(strFileName))//是否满足年月命名规则
-				{
-					for (int iDay = 1; iDay <= 31; iDay++)
-					{
-						strTemp = format("%02d", iDay);
-						strFilePath = entry.path().string() + "\\" + strTemp;
-						if (IsDirExist(strFilePath))
-						{
-							tm cFolderTime;
-							memset(&cFolderTime, 0, sizeof(cFolderTime));
-							cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
-							cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
-							cFolderTime.tm_mday = iDay;
-							if (cFolderTime.tm_year >= 0)
-							{
-								double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24); // 计算相差天数
+			std::string strVideoPath = m_strDBPathAbs;
 
-								if (int(difference) > iRemainUselessFileDays)
+			for (const auto& entry : fs::directory_iterator(strVideoPath))
+			{
+				strFileName = entry.path().filename().string();
+				//判断是否是文件夹
+				if (entry.status().type() == fs::file_type::directory
+					&& strFileName != "." && strFileName != ".."
+					&& strFileName.size() == 6 && IsNumberString(strFileName))
+				{
+					if (IsNumberString(strFileName))//是否满足年月命名规则
+					{
+						for (int iDay = 1; iDay <= 31; iDay++)
+						{
+							strTemp = format("%02d", iDay);
+							strFilePath = entry.path().string() + "\\" + strTemp;
+							if (IsDirExist(strFilePath))
+							{
+								tm cFolderTime;
+								memset(&cFolderTime, 0, sizeof(cFolderTime));
+								cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
+								cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
+								cFolderTime.tm_mday = iDay;
+								if (cFolderTime.tm_year >= 0)
 								{
-									//去查找是否存在带"录像"的文件夹,找到则直接删除文件夹
-									DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
-									bDel = true;
+									double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24); // 计算相差天数
+
+									if (int(difference) > iRemainUselessFileDays)
+									{
+										//去查找是否存在带"录像"的文件夹,找到则直接删除文件夹
+										DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
+										bDel = true;
+									}
 								}
 							}
 						}
 					}
 				}
-			}
-			else if (strFileName != "." && strFileName != "..")
-			{
-				fs::file_time_type time = fs::last_write_time(entry.path());
-				std::time_t cftime = to_time_t(time);
-
-				double difference = std::difftime(now_c, cftime) / (60 * 60 * 24); // 计算相差天数					
-				if ((int)difference > iRemainUselessFileDays)
+				else if (strFileName != "." && strFileName != "..")
 				{
-					strFilePath = entry.path().string();
+					fs::file_time_type time = fs::last_write_time(entry.path());
+					std::time_t cftime = to_time_t(time);
 
-					if (entry.status().type() == fs::file_type::directory)
+					double difference = std::difftime(now_c, cftime) / (60 * 60 * 24); // 计算相差天数					
+					if ((int)difference > iRemainUselessFileDays)
 					{
-						mapDeleteFiles[strFilePath] = true;
+						strFilePath = entry.path().string();
+
+						if (entry.status().type() == fs::file_type::directory)
+						{
+							mapDeleteFiles[strFilePath] = true;
+						}
+						else
+						{
+							mapDeleteFiles[strFilePath] = false;
+						}
+						bDel = true;
 					}
-					else
-					{
-						mapDeleteFiles[strFilePath] = false;
-					}
-					bDel = true;
 				}
 			}
 		}
