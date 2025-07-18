@@ -39,6 +39,8 @@ public:
 	virtual void ptz_gotoAbsolute(float pan, float tilt, float zoom) override;
 	virtual void ptz_pausePresetPatrol(int parseTime) override;
 
+	bool doOnvifTransaction_getSnapShot();
+
 	bool doOnvifTransaction(string msg, string uri, string method, bool log = true);
 	bool doOnvifTransaction_onvif_getSnapshotUri(mg_http_data& data);
 

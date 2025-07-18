@@ -407,7 +407,7 @@ string ioDev_onvif::generateAuthStr(string uri, string realm, string nonce, stri
 	authStr += ",";
 	authStr += "realm=\"" + realm + "\"";
 	authStr += ",";
-	authStr += "qop=\"auth\"";
+	authStr += "response=\"" + response + "\"";
 	authStr += ",";
 	authStr += "algorithm=MD5";
 	authStr += ",";
@@ -419,7 +419,7 @@ string ioDev_onvif::generateAuthStr(string uri, string realm, string nonce, stri
 	authStr += ",";
 	authStr += "cnonce=\"" + cnonce + "\"";
 	authStr += ",";
-	authStr += "response=\"" + response + "\"";
+	authStr += "qop=auth";
 
 	return authStr;
 }
@@ -463,18 +463,19 @@ void ioDev_onvif::onvif_getDevInfo() {
 }
 
 void ioDev_onvif::onvif_getSnapshotUri() {
-	string body = R"(
-		<?xml version="1.0" encoding="UTF-8"?>
-		<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
-		    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-		        <GetSnapshotUri xmlns="http://www.onvif.org/ver10/media/wsdl">
-		            <ProfileToken>Profile_1</ProfileToken>
-		        </GetSnapshotUri>
-		    </s:Body>
-		</s:Envelope>
-	)";
+	//string body = R"(
+	//	<?xml version="1.0" encoding="UTF-8"?>
+	//	<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+	//	    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	//	        <GetSnapshotUri xmlns="http://www.onvif.org/ver10/media/wsdl">
+	//	            <ProfileToken>Profile_1</ProfileToken>
+	//	        </GetSnapshotUri>
+	//	    </s:Body>
+	//	</s:Envelope>
+	//)";
 
-	doOnvifTransaction(body, "/onvif/media_service", "onvif_getSnapshotUri", false);
+	//doOnvifTransaction(body, "/onvif/media_service", "onvif_getSnapshotUri", false);
+	doOnvifTransaction_getSnapShot();
 }
 
 void ioDev_onvif::onvif_getProfiles() {
@@ -667,6 +668,88 @@ void ioDev_onvif::ptz_pausePresetPatrol(int parseTime) {
 }
 
 
+bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
+	if (!isAddrValid()) {
+		return false;
+	}
+
+	int nPort = m_jDevAddr["port"].get<int>();
+
+	string ip = m_jDevAddr["ip"];
+	string port = str::fromInt(nPort);
+	string path = "/onvif-http/snapshot?Profile_1";
+	string url = "http://" + ip + ":" + port + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.1\r\n"
+			"Host: %s\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str());
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+
+	//获取摘要盘问
+	if (data.done) {
+		string head = mg_get_header_value(data.head, "WWW-Authenticate");
+		head = str::trimPrefix(head, "Digest ");
+
+		map<string, string> mapKV = parseKeyValStr(head);
+		string realm = mapKV["realm"];
+		string nonce = mapKV["nonce"];
+
+		string authStr = generateAuthStr(path, realm, nonce, generateNouce());
+
+		mg_mgr_init(&mgr);
+
+		data.reset();
+		connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+		if (connect) {
+			mg_printf(connect,
+				"GET %s HTTP/1.1\r\n"
+				"Host: %s\r\n"
+				"Authorization: %s\r\n"
+				"\r\n",
+				path.c_str(), ip.c_str(), authStr.c_str());
+
+			TIME tStart = timeopt::now();
+			while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}
+
+		mg_mgr_free(&mgr);
+
+		if (data.done) {
+			doOnvifTransaction_onvif_getSnapshotUri(data);
+		}
+
+		setOnline();
+		return true;
+	}
+	else {
+		setOffline();
+	}
+
+	return false;
+}
+
+
+
 bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool log) {
 	if (!isAddrValid()) {
 		return false;
@@ -761,6 +844,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 				//第一次请求图片，获取realm和nouce
 				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
 					string picUrl = data.body.substr(urlStart + 8, urlEnd - urlStart - 8);
+					string snapShotUrl = "/onvif-http/snapshot?Profile_1";
 					picUrl = str::format("http://%s:%s/onvif-http/snapshot?Profile_1", ip, port);
 
 					mg_mgr_init(&mgr);
@@ -791,7 +875,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 						mapKV = parseKeyValStr(head);
 						realm = mapKV["realm"];
 						nonce = mapKV["nonce"];
-						authStr = generateAuthStr(uri, realm, nonce, generateNouce());
+						authStr = generateAuthStr(snapShotUrl, realm, nonce, generateNouce());
 
 						mg_mgr_init(&mgr);
 
