@@ -666,6 +666,7 @@ void ioDev_onvif::ptz_pausePresetPatrol(int parseTime) {
 	timeopt::now(&m_pauseResumeTime);
 }
 
+
 bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool log) {
 	if (!isAddrValid()) {
 		return false;
@@ -757,7 +758,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 			if (uri == "/onvif/media_service") {
 				size_t urlStart = data.body.find("<tt:Uri>");
 				size_t urlEnd = data.body.find("</tt:Uri>");
-
+				//第一次请求图片，获取realm和nouce
 				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
 					string picUrl = data.body.substr(urlStart + 8, urlEnd - urlStart - 8);
 					picUrl = str::format("http://%s:%s/onvif-http/snapshot?Profile_1", ip, port);
@@ -771,10 +772,9 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 						mg_printf(connect,
 							"GET %s HTTP/1.0\r\n"
 							"Host: %s\r\n"
-							"Authorization: Basic %s\r\n"
 							"Connection: close\r\n"
 							"\r\n",
-							picUrl.c_str(), ip.c_str(), mg_base64_encode(m_strUser + ":" + m_strPwd).c_str()
+							picUrl.c_str(), ip.c_str()
 						);
 
 						TIME tStart = timeopt::now();
@@ -784,9 +784,41 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 					}
 
 					mg_mgr_free(&mgr);
+					//第2次请求图片，digist认证
+					if (data.done) {
+						head = mg_get_header_value(data.head, "WWW-Authenticate");
+						head = str::trimPrefix(head, "Digest ");
+						mapKV = parseKeyValStr(head);
+						realm = mapKV["realm"];
+						nonce = mapKV["nonce"];
+						authStr = generateAuthStr(uri, realm, nonce, generateNouce());
 
-					if (method == "onvif_getSnapshotUri") {
-						doOnvifTransaction_onvif_getSnapshotUri(data);
+						mg_mgr_init(&mgr);
+
+						data.reset();
+						connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+						if (connect) {
+							mg_printf(connect,
+								"GET %s HTTP/1.0\r\n"
+								"Host: %s\r\n"
+								"Authorization: %s\r\n"
+								"Connection: close\r\n"
+								"\r\n",
+								picUrl.c_str(), ip.c_str(), authStr.c_str()
+							);
+
+							TIME tStart = timeopt::now();
+							while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+								mg_mgr_poll(&mgr, 100);
+							}
+						}
+
+						mg_mgr_free(&mgr);
+
+						if (method == "onvif_getSnapshotUri") {
+							doOnvifTransaction_onvif_getSnapshotUri(data);
+						}
 					}
 				}
 			}
