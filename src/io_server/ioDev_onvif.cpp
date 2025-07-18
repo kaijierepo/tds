@@ -208,7 +208,7 @@ void ioDev_onvif::DoCycleTask() {
 			m_bPaused = false;
 		}
 	}
-	
+
 	if (!m_bPaused) {
 		if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
 			timeopt::now(&m_lastPTZPollTime);
@@ -760,6 +760,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 
 				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
 					string picUrl = data.body.substr(urlStart + 8, urlEnd - urlStart - 8);
+					picUrl = str::format("http://%s:%s/onvif-http/snapshot?Profile_1", ip, port);
 
 					mg_mgr_init(&mgr);
 
