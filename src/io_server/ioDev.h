@@ -379,7 +379,7 @@ public:
 	int m_unhandledRecvPktCount; //未处理的接收数据包。比如不处理的异步通知命令，或者收到包是没有匹配的同步请求
 	// ping在线检测优先级最高
 	void setOnline(bool setByPing = false);
-	void setOffline(bool setByPing = false,string reasonDesc = "");
+	void setOffline(bool setByPing = false,string reasonDesc = "unknownReason");
 	virtual bool isOnline() { return m_bOnline; };
 	bool m_bOnline;    //设备发现后，处于在线状态
 	int m_offlineCount;   //检测到掉线的次数。达到一定次数才认为掉线

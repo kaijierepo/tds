@@ -1797,7 +1797,7 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 	if (m_bOnline)
 	{
 		m_offlineCount++;
-		LOG("[warn]设备掉线,次数累计,%d/%d,%s,%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
+		LOG("[warn]设备掉线,次数累计,%d/%d,%s,offlineReason:%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
 
 		if (m_strTagBind != "") {
 			TDB* dbOS = db.getChildDB("onlineStatus");
