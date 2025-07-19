@@ -24,6 +24,7 @@
 #include "proto_dlt645_2007.hpp"
 #include "scriptEngine.h"
 #include "scriptFunc.h"
+#include "ioDev_onvif.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -1551,6 +1552,31 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 		}
 
 		rpcResp.result = jResp.dump(2);
+	}
+	else if (method == "onvifSnapshot") {
+		string user = params["user"].get<string>();
+		string pwd = params["pwd"].get<string>();
+		string ip = params["ip"].get<string>();
+		int port = params["port"].get<int>();
+		DIGIST_INFO di;
+		onvifSnapshot(ip, port, user, pwd, di);
+		json j;
+		j["authorization"] = di.authorization;
+		j["realm"] = di.realm;
+		j["nouce"] = di.nouce;
+		rpcResp.result = j.dump();
+	}
+	else if (method == "generateDigestAuth") {
+		string user = params["user"].get<string>();
+		string pwd = params["pwd"].get<string>();
+		string uri = params["uri"].get<string>();
+		string realm = params["realm"].get<string>();
+		string nonce = params["nonce"].get<string>();
+		string cnonce = params["cnonce"].get<string>();
+		string method = params["method"].get<string>();
+		string s = ioDev_onvif::generateAuthStr(user, pwd,method, uri, realm, nonce, cnonce);
+		json j = s;
+		rpcResp.result = j.dump();
 	}
 	else
 	{

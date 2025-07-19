@@ -3,6 +3,14 @@
 #include "tdsSession.h"
 #include "ioDev_camera.h"
 
+struct DIGIST_INFO {
+	string uri;
+	string nouce;
+	string cnouce;
+	string realm;
+	string authorization;
+};
+void onvifSnapshot(string ip, int port, string user, string pwd, DIGIST_INFO& di);
 
 class ioDev_onvif : public ioDev_camera
 {
@@ -18,10 +26,10 @@ public:
 	bool getCurrentVal();
 	void setVal(string& str, string name, string val);
 
-	string generateNouce();
-	string generateAuthStr(string uri, string realm, string nonce, string cnonce);
+	static string generateNouce();
+	static string generateAuthStr(string user,string pwd, string method, string uri, string realm, string nonce, string cnonce);
 
-	map<string, string> parseKeyValStr(string s);
+	static map<string, string> parseKeyValStr(string s);
 
 	bool isAddrValid();
 

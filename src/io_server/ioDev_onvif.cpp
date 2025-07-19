@@ -209,8 +209,9 @@ void ioDev_onvif::DoCycleTask() {
 		}
 	}
 
+	int ptzPatrolInterval = tds->conf->getInt("ptzPatrolInterval", 0);
 	if (!m_bPaused) {
-		if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > m_ptzPollInterval) {
+		if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > ptzPatrolInterval) {
 			timeopt::now(&m_lastPTZPollTime);
 
 			//解析通道ptz配置并移动相机
@@ -256,7 +257,7 @@ void ioDev_onvif::DoCycleTask() {
 
 			if (valid) {
 				//等待摄像机移动到位
-				int waitMoveTime = 2000;
+				int waitMoveTime = 5000;
 				timeopt::sleepMilli(waitMoveTime);
 
 				//拍照
@@ -382,7 +383,7 @@ string ioDev_onvif::generateNouce() {
 	return "45B6D40AA685B9CC6A367BBF9C33D0BC";
 }
 
-string ioDev_onvif::generateAuthStr(string uri, string realm, string nonce, string cnonce) {
+string ioDev_onvif::generateAuthStr(string user , string pwd,string method,string uri, string realm, string nonce, string cnonce) {
 	//nc：“现时”计数器，这是一个16进制的数值，即客户端发送出请求的数量（包括当前这个请求），这些请求都使用了当前请求中这个“现时”值。例如，对一个给定的“现时”值，
 	//在响应的第一个请求中，客户端将发送“nc=00000001”。这个指示值的目的，是让服务器保持这个计数器的一个副本，以便检测重复的请求。如果这个相同的值看到了两次，则这个请求是重复的。
 	string nc = "00000001";
@@ -393,9 +394,9 @@ string ioDev_onvif::generateAuthStr(string uri, string realm, string nonce, stri
 	//对用户名、认证域(realm)以及密码的合并值计算 MD5 哈希值，结果称为 HA1。
 	//对HTTP方法以及URI的摘要的合并值计算 MD5 哈希值，例如，"GET" 和 "/dir/index.html"，结果称为 HA2。
 	//对 HA1、服务器密码随机数(nonce)、请求计数(nc)、客户端密码随机数(cnonce)、保护质量(qop)以及 HA2 的合并值计算 MD5 哈希值。结果即为客户端提供的 response 值。
-	string a1 = m_strUser + ":" + realm + ":" + m_strPwd;
+	string a1 = user + ":" + realm + ":" + pwd;
 	string ha1 = getMD5(a1);
-	string a2 = "POST:" + uri;
+	string a2 = method + ":" + uri;
 	string ha2 = getMD5(a2);
 	string responseBefore = ha1 + ":" + nonce + ":" + nc + ":" + cnonce + ":" + qop + ":" + ha2;
 	string response = getMD5(responseBefore);
@@ -667,6 +668,76 @@ void ioDev_onvif::ptz_pausePresetPatrol(int parseTime) {
 	timeopt::now(&m_pauseResumeTime);
 }
 
+void onvifSnapshot(string ip, int port,string user,string pwd, DIGIST_INFO& di) {
+	string sport = str::fromInt(port);
+	string path = "/onvif-http/snapshot?Profile_1";
+	string url = "http://" + ip + ":" + sport + path;
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		mg_printf(connect,
+			"GET %s HTTP/1.1\r\n"
+			"Host: %s\r\n"
+			"\r\n",
+			path.c_str(), ip.c_str());
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+
+	//获取摘要盘问
+	if (data.done) {
+		string head = mg_get_header_value(data.head, "WWW-Authenticate");
+		head = str::trimPrefix(head, "Digest ");
+
+		map<string, string> mapKV = ioDev_onvif::parseKeyValStr(head);
+		string realm = mapKV["realm"];
+		string nonce = mapKV["nonce"];
+
+		string authStr = ioDev_onvif::generateAuthStr(user,pwd,"GET",path, realm, nonce, ioDev_onvif::generateNouce());
+
+		mg_mgr_init(&mgr);
+
+		data.reset();
+		connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+		if (connect) {
+			mg_printf(connect,
+				"GET %s HTTP/1.1\r\n"
+				"Host: %s\r\n"
+				"Authorization: %s\r\n"
+				"\r\n",
+				path.c_str(), ip.c_str(), authStr.c_str());
+
+			TIME tStart = timeopt::now();
+			while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}
+
+		mg_mgr_free(&mgr);
+
+		di.authorization = authStr;
+		di.nouce = nonce;
+		di.realm = realm;
+
+		std::ofstream file(fs::appPath() + "/onvif_snapshot.jpg", std::ios::binary);
+		if (file) {
+			file.write(data.body.c_str(), data.body.size());
+		}
+	}
+}
+
 
 bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 	if (!isAddrValid()) {
@@ -711,7 +782,7 @@ bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 		string realm = mapKV["realm"];
 		string nonce = mapKV["nonce"];
 
-		string authStr = generateAuthStr(path, realm, nonce, generateNouce());
+		string authStr = generateAuthStr(m_strUser,m_strPwd,"GET",path, realm, nonce, generateNouce());
 
 		mg_mgr_init(&mgr);
 
@@ -801,7 +872,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 		string realm = mapKV["realm"];
 		string nonce = mapKV["nonce"];
 
-		string authStr = generateAuthStr(uri, realm, nonce, generateNouce());
+		string authStr = generateAuthStr(m_strUser,m_strPwd,"POST",uri, realm, nonce, generateNouce());
 
 		mg_mgr_init(&mgr);
 
@@ -875,7 +946,7 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 						mapKV = parseKeyValStr(head);
 						realm = mapKV["realm"];
 						nonce = mapKV["nonce"];
-						authStr = generateAuthStr(snapShotUrl, realm, nonce, generateNouce());
+						authStr = generateAuthStr(m_strUser,m_strPwd,"GET",snapShotUrl, realm, nonce, generateNouce());
 
 						mg_mgr_init(&mgr);
 
