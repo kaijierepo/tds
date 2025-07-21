@@ -753,8 +753,7 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 }
 
 #if 1
-void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
-{
+void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate) {
 	if (j.contains("rootTag")) {
 		string rootTag = j["rootTag"];
 		string tag = j["tag"];
@@ -773,13 +772,21 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate)
 		ai.time = t.toStr();
 	}
 
+	if (j.contains("type") && j["type"] == "视频伤损") {
+		DB_TIME dbt;
+		dbt.fromStr(ai.time);
+
+		string imageInfoPath = db.getPath_dbFile(ai.tag, dbt, "imageInfo");
+		ai.pic_url = "imageInfoPath";
+	}
+
 	bool notify = true;
 	if (j.contains("notify") && j["notify"].is_boolean()) {
 		notify = j["notify"].get<bool>();
 	}
 
 	string err;
-	AddSync(ai,err, notify);
+	AddSync(ai, err, notify);
 	if (err == "") {
 		resp.result = ai.toJsonStr(this);
 	}

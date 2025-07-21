@@ -315,7 +315,7 @@ void ioDev_onvif::DoCycleTask() {
 							ai.tag = m_strTagBind + "." + pC->m_strTagBind;
 							ai.type = "视频伤损";
 							ai.level = ALARM_LEVEL::alarm;
-							ai.pic_url = time.toStr();
+							ai.time = time.toStr();
 							almSrv.Add(ai);
 						}
 
