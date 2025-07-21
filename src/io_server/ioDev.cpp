@@ -238,52 +238,44 @@ ioDev::~ioDev(void)
 	}
 }
 
-bool ioDev::run()
-{
+bool ioDev::run() {
 	m_bRunning = true;
+
 	if (m_bViaAdaptor) {
 		//通过适配器无需进行通信模块初始化
 	}
-	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient)
-	{
+	else if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient) {
 		string ip;
-		if (m_jDevAddr["ip"].is_string())
-		{
+		if (m_jDevAddr["ip"].is_string()) {
 			ip = m_jDevAddr["ip"].get<string>();
 		}
-		else
-		{
+		else {
 			LOG("[error]IODev启动失败,地址配置异常,ip必须是一个字符串,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
 			return false;
 		}
 
-
 		int port;
 		if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer) {
-			if (m_jDevAddr["port"].is_number_integer())
-			{
+			if (m_jDevAddr["port"].is_number_integer()){
 				port = m_jDevAddr["port"].get<int>();
 			}
-			else
-			{
+			else {
 				LOG("[error]IODev启动失败,地址配置异常,port必须是一个整数,设备地址模式=%s,配置信息:%s", m_addrType.c_str(), m_jDevAddr.dump().c_str());
 				return false;
 			}
 		}
 
-
 		//udp模式下，配置localPort不为0，用于设备进行udp回包时，不回给请求的udp客户端，而是发往固定端口的场景。
 		//localPort不是必须的
 		int localPort = 0;
-		if (m_jDevAddr["localPort"].is_number_integer())
-		{
+		if (m_jDevAddr["localPort"].is_number_integer()) {
 			localPort = m_jDevAddr["localPort"].get<int>();
 		}
-
 
 		if (m_addrType == DEV_ADDR_MODE::tcpServer) {
 			if (m_tcpClt == nullptr)
 				m_tcpClt = new tcpClt();
+
 			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClt重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 		}
@@ -302,6 +294,7 @@ bool ioDev::run()
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpServer,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(), m_udpSrv->m_port);
 		}
 	}
+
 	return true;
 }
 
@@ -1705,8 +1698,7 @@ bool ioDev::onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc)
 	return false;
 }
 
-void notifyDevOnline(json jNotify)
-{
+void notifyDevOnline(json jNotify) {
 	//发给客户端,tds不接受devOnline事件
 	string ioAddr = jNotify["ioAddr"];
 	rpcSrv.notify("devOnline", jNotify);
@@ -1717,8 +1709,7 @@ void notifyDevOnline(json jNotify)
 	}
 }
 
-void notifyDevOffline(json jNotify)
-{
+void notifyDevOffline(json jNotify) {
 	string ioAddr = jNotify["ioAddr"];
 	rpcSrv.notify("devOffline", jNotify);
 
@@ -1728,8 +1719,7 @@ void notifyDevOffline(json jNotify)
 	}
 }
 
-void ioDev::setOnline(bool setByPing /*= false*/)
-{
+void ioDev::setOnline(bool setByPing /*= false*/) {
 	// 在线状态当有ping检测时，忽略其他
 	// if ping is enabled ,ioDev can be setonline by other check method.
 	//if (m_bEnablePingOnlineCheck && !setByPing)
@@ -1742,9 +1732,7 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 		m_pParent->setOnline();
 	}
 
-
-	if (m_bOnline == false)
-	{
+	if (m_bOnline == false) {
 		if (pIOSession) {
 			LOG("[warn]设备上线setOnline设置在线状态,ioAddr=%s,remoteAddr=%s", getIOAddrStr().c_str(),pIOSession->getRemoteAddr().c_str());
 		}
@@ -1754,7 +1742,6 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 
 		if (m_strTagBind != "") {
 			TDB* dbOS = db.getChildDB("onlineStatus");
-			//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
 			if (dbOS) {
 				dbOS->Insert(m_strTagBind, true);
 			}
@@ -1766,42 +1753,39 @@ void ioDev::setOnline(bool setByPing /*= false*/)
 			ai.level = ALARM_LEVEL::normal;
 			ai.type = "设备掉线";
 			ai.desc = "设备地址:" + getIOAddrStr() + ",绑定位号:" + m_strTagBind;
+
 			almSrv.Update(ai);
 		}
 
 		m_offlineCount = 0;
+
 		m_bOnline = true;
 		timeopt::now(&m_stOnlineTime);
 		m_onlineInfoQueried = false;
+
 		json jNotify;
 		jNotify["ioAddr"] = getIOAddrStr();
 		jNotify["nodeID"] = m_confNodeId;
+
 		if (m_strTagBind != "")
 			jNotify["tag"] = m_strTagBind;
+
 		thread t(notifyDevOnline, jNotify);
 		t.detach();
 	}
-
-	//if (pIOSession == nullptr)
-	//{
-	//	LOG("[error]IO设备链接已断开，但仍在进行该设备的数据接收处理,ioAddr=" + getIOAddrStr());
-	//}
 }
 
-void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
-{
+void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc) {
 	// 掉线状态当有ping检测时，忽略其他
 	if (m_bEnablePingOnlineCheck && !setByPing)
 		return;
 
-	if (m_bOnline)
-	{
+	if (m_bOnline) {
 		m_offlineCount++;
 		LOG("[warn]设备掉线,次数累计,%d/%d,%s,offlineReason:%s", m_offlineCount, m_offlineConfirmCount, getIOAddrStr().c_str(),reasonDesc.c_str());
 
 		if (m_strTagBind != "") {
 			TDB* dbOS = db.getChildDB("onlineStatus");
-			//dbOS->m_timeUnit = DB_TIME_UNIT::BY_MONTH;
 			if (dbOS) {
 				DB_TIME dbt;
 				dbt.setNow();
@@ -1818,14 +1802,17 @@ void ioDev::setOffline(bool setByPing/* = false*/,string reasonDesc)
 				ai.level = ALARM_LEVEL::warn;
 				ai.type = "设备掉线";
 				ai.desc = "设备地址:" + getIOAddrStr() + ",绑定位号:" + m_strTagBind;
+
 				almSrv.Update(ai);
 			}
 
 			json jNotify;
 			jNotify["ioAddr"] = getIOAddrStr();
 			jNotify["nodeID"] = m_confNodeId;
+
 			if (m_strTagBind != "")
 				jNotify["tag"] = m_strTagBind;
+
 			thread t(notifyDevOffline, jNotify);
 			t.detach();
 		}
@@ -2409,12 +2396,11 @@ void ioDev::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* c
 	onRecvData(pData, len);
 }
 
-void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
-{
-	if (bIsConn)
-	{
+void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn) {
+	if (bIsConn) {
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSessClt));
 		p->type = TDS_SESSION_TYPE::iodev;
+
 		ioSrv.m_mutexIoSessions.lock();
 		ioSrv.m_IoSessions[pTcpSessClt] = p;
 		ioSrv.m_mutexIoSessions.unlock();
@@ -2422,23 +2408,26 @@ void ioDev::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
 		//io服务主动连上TcpServer模式的设备
 		string ioAddr = str::format("%s:%d", pTcpSessClt->remoteIP.c_str(), pTcpSessClt->remotePort);
 		ioDev* pIoDev = ioSrv.getIODev(ioAddr);
-		if (pIoDev)
-		{
+
+		if (pIoDev) {
 			p->ioDevType = pIoDev->m_devType;
+
 			pIoDev->bindIOSession(p);
 			pIoDev->setOnline();
 			timeopt::now(&pIoDev->m_stLastActiveTime);
+
 			string s = str::format("[ioDev]设备上线,设备类型:%s,ioAddr:%s", pIoDev->m_devType.c_str(), pIoDev->getIOAddrStr().c_str());
 			logger.logInternal(s);
+
 			pIoDev->onEvent_online();
 		}
 	}
-	else
-	{
+	else {
 		ioSrv.m_mutexIoSessions.lock();
 		std::shared_ptr<TDS_SESSION> p = ioSrv.m_IoSessions[pTcpSessClt];
 		ioSrv.m_IoSessions.erase(pTcpSessClt);
 		ioSrv.m_mutexIoSessions.unlock();
+
 		p->onTcpDisconnect();
 	}
 }

@@ -103,10 +103,10 @@ string tcpSessionClt::getLocalAddr() {
 	return s;
 }
 
-void TcpClientRecvThread(void* lpParam)
-{
+void TcpClientRecvThread(void* lpParam) {
 	tcpClt *pTcpClt=(tcpClt*)lpParam;
 	pTcpClt->m_bRecvThreadRunning = true;
+
 	int sock = pTcpClt->sockClient;
 
 	pTcpClt->m_session.remoteIP = pTcpClt->m_remoteIP;
@@ -121,17 +121,15 @@ void TcpClientRecvThread(void* lpParam)
 	vector<unsigned char> recvBuff;
 	int iRecvBuffLen = 0;
 	int ret;
-	while(1)
-	{
+
+	while(1){
 		//buffer full , dynamicly increase 10k
-		if(recvBuff.size() == iRecvBuffLen)
-		{
+		if(recvBuff.size() == iRecvBuffLen) {
 			recvBuff.resize(recvBuff.size() + 100000);
 		}
 
-		ret=recv(sock,(char*)recvBuff.data() + iRecvBuffLen,recvBuff.size() - iRecvBuffLen,0);
-		if(ret<=0)
-		{
+		ret = recv(sock, (char*)recvBuff.data() + iRecvBuffLen, recvBuff.size() - iRecvBuffLen, 0);
+		if(ret <= 0) {
 #ifdef _WIN32
 			closesocket(sock);
 #else
@@ -153,13 +151,11 @@ void TcpClientRecvThread(void* lpParam)
 		//keep recv   prevent callback to applayer too many times.
 		unsigned long bytesToRecv = 0;
 		int iRet = ioctlsocket(sock, FIONREAD, &bytesToRecv);
-		if (iRet == 0)
-		{
+		if (iRet == 0) {
 			if(bytesToRecv > 0)
 				continue;
 		}
-		else
-		{
+		else {
 		}
 #endif
 
@@ -172,16 +168,14 @@ void TcpClientRecvThread(void* lpParam)
 		iRecvBuffLen = 0;
 	}
 
-	pTcpClt->sockClient=0;
+	pTcpClt->sockClient = 0;
 	pTcpClt->m_bConn = false;
 	pTcpClt->m_bRecvThreadRunning = false;
 }
 
-
-
-void AsynConnectThread(void* lpParam)
-{
+void AsynConnectThread(void* lpParam) {
 	tcpClt* p = (tcpClt*)lpParam;
+
 	p->m_isConnectting = enTcpCltConnectStatus::CONNECTING;
 	p->connect();
 	p->m_isConnectting = enTcpCltConnectStatus::FREE;
@@ -193,10 +187,8 @@ mutex csAllTcpClt;
 bool connectThreadRunning = false;
 
 
-void ConnectThread(void* lpParam)
-{
-	while (1)
-	{
+void ConnectThread(void* lpParam) {
+	while (1) {
 #ifdef _WIN32
 		Sleep(500);
 #else
@@ -224,6 +216,7 @@ void ConnectThread(void* lpParam)
 			if (tcpClient::calcTimePassSecond(p->lastConnTime) > 3) {
 				p->lastConnTime = getNowStr();
 				p->m_isConnectting = enTcpCltConnectStatus::CONNECT_SOON;
+
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
@@ -231,8 +224,7 @@ void ConnectThread(void* lpParam)
 	}
 }
 
-tcpClt::tcpClt(void)
-{
+tcpClt::tcpClt(void) {
 	sockClient = 0;
 	m_iLocalPort = 0;
 	m_session.pTcpClt = this;
@@ -244,14 +236,17 @@ tcpClt::tcpClt(void)
 	m_vecTCPIOCPClient.push_back(this);
 	m_bRecvThreadRunning = false;
 	m_bConnThreadRunning = false;
+
 	csAllTcpClt.lock();
 	mapAllTcpClt[this] = this;
 	if (!connectThreadRunning){
 		connectThreadRunning = true;
+
 		thread t(ConnectThread,this);
 		t.detach();
 	}
 	csAllTcpClt.unlock();
+
 	m_keepAliveTimeout = 0;
 }
 
@@ -348,8 +343,7 @@ void tcpClt::AsynConnect(ICallback_tcpClt* pUser,string strServIP, int iServPort
 	t.detach();
 }
 
-bool tcpClt::connect()
-{
+bool tcpClt::connect() {
 	if (sockClient != 0) {
 		return true;
 	}
@@ -369,18 +363,20 @@ bool tcpClt::connect()
 		goto CONN_END;
 	}
 
-	sockClient=socket(AF_INET,SOCK_STREAM,0);
+	sockClient = socket(AF_INET,SOCK_STREAM,0);
+
 #ifdef _WIN32
 	SetHandleInformation((HANDLE)sockClient, HANDLE_FLAG_INHERIT, 0);
 #else
 	fcntl(sockClient, F_SETFD, fcntl(sockClient, F_GETFD) | FD_CLOEXEC);
 #endif
-	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0)
-	{
+
+	if(m_strLocalIP.length() > 0 && m_iLocalPort != 0) {
 		sockaddr_in sAddTemp;
 		sAddTemp.sin_family = AF_INET;
 		sAddTemp.sin_addr.s_addr = inet_addr(m_strLocalIP.c_str());
 		sAddTemp.sin_port = htons(m_iLocalPort);
+
 		if(-1 == ::bind(sockClient, (sockaddr*)&sAddTemp,sizeof(sockaddr))) {
 			m_strErrorInfo = "bind ip fail";
 
@@ -397,9 +393,7 @@ bool tcpClt::connect()
 	addrSrv.sin_family=AF_INET;
 	addrSrv.sin_port=htons(m_remotePort);
 	
-	 nConnect = ::connect(sockClient,(sockaddr*)&addrSrv,sizeof(sockaddr));
-
-
+	nConnect = ::connect(sockClient,(sockaddr*)&addrSrv,sizeof(sockaddr));
 	if(nConnect == -1) {
 		if (m_pCallBackUser) {
 			m_pCallBackUser->onTcpCltEvent_error(this, m_strErrorInfo);
@@ -409,6 +403,7 @@ bool tcpClt::connect()
 		//set m_bConn to true before TcpClientRecvThread created,when TcpClientRecvThread callback statucChange,will read this variable
 		m_bConn = true;
 		ret = true;
+
 		lastConnTime = getNowStr();
 		m_session.stLastActive = getNowStr();
 		m_strErrorInfo = "";
@@ -418,13 +413,14 @@ bool tcpClt::connect()
 	}
 
 
- CONN_END:
+CONN_END:
+
 	if (ret == false) {
 		if (sockClient > 0) {
 #ifdef _WIN32
-	closesocket(sockClient);
+			closesocket(sockClient);
 #else
-	close(sockClient);
+			close(sockClient);
 #endif
 		}
 		sockClient = 0;

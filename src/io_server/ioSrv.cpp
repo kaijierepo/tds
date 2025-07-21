@@ -1521,8 +1521,7 @@ bool ioServer::runAsCloud()
 
 
 	//启动所有子设备
-	for (auto i : m_vecChildDev)
-	{
+	for (auto i : m_vecChildDev) {
 		i->run();
 	}
 

@@ -245,8 +245,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
 
  
 
- void TDS_SESSION::onTcpDisconnect()
- {
+ void TDS_SESSION::onTcpDisconnect() {
      //p->pTcpSession is a tcpSession will be deleted after statusChange_tcpSrv callback
      //but TDS_SESSION is not deleted until all users release it
      //so here p->pTcpSession is set to none
@@ -258,24 +257,25 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      m_mutexTcpLink.unlock();
 
 
-     if (pBridgedTcpClient)
-     {
+     if (pBridgedTcpClient) {
          delete pBridgedTcpClient;
      }
-     for(auto& i : m_mapBindIoDev)
-     {
+
+     for(auto& i : m_mapBindIoDev) {
          i.first->unbindIOSession();
          i.first->setOffline();
+
          logger.logInternal("[ioDev]设备掉线,ioAddr=" + i.first->getIOAddrStr() + ",tag=" + i.first->m_strTagBind);
      }
+
      m_mapBindIoDev.clear();
-     if (bridgedIoSession)
-     {
+
+     if (bridgedIoSession) {
          bridgedIoSession->bridgedIoSessionClient = NULL;
          bridgedIoSession = NULL;
      }
-     if (bridgedIoSessionClient)
-     {
+
+     if (bridgedIoSessionClient) {
          bridgedIoSessionClient->bridgedIoSession = NULL;
          bridgedIoSessionClient = NULL;
      }
