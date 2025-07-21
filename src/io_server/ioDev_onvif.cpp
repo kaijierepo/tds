@@ -464,18 +464,6 @@ void ioDev_onvif::onvif_getDevInfo() {
 }
 
 void ioDev_onvif::onvif_getSnapshotUri() {
-	//string body = R"(
-	//	<?xml version="1.0" encoding="UTF-8"?>
-	//	<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope">
-	//	    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-	//	        <GetSnapshotUri xmlns="http://www.onvif.org/ver10/media/wsdl">
-	//	            <ProfileToken>Profile_1</ProfileToken>
-	//	        </GetSnapshotUri>
-	//	    </s:Body>
-	//	</s:Envelope>
-	//)";
-
-	//doOnvifTransaction(body, "/onvif/media_service", "onvif_getSnapshotUri", false);
 	doOnvifTransaction_getSnapShot();
 }
 
@@ -738,7 +726,6 @@ void onvifSnapshot(string ip, int port,string user,string pwd, DIGIST_INFO& di) 
 	}
 }
 
-
 bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 	if (!isAddrValid()) {
 		return false;
@@ -806,7 +793,12 @@ bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 		mg_mgr_free(&mgr);
 
 		if (data.done) {
-			doOnvifTransaction_onvif_getSnapshotUri(data);
+			std::ofstream file(fs::appPath() + "/onnx/snapshot.jpg", std::ios::binary);
+			if (!file) {
+				return false;
+			}
+
+			file.write(data.body.c_str(), data.body.size());
 		}
 
 		setOnline();
@@ -818,8 +810,6 @@ bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 
 	return false;
 }
-
-
 
 bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool log) {
 	if (!isAddrValid()) {
@@ -900,85 +890,6 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 
 		mg_mgr_free(&mgr);
 
-		if (data.done) {
-			if (data.status == 401) {
-				LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
-			}
-
-			if (log) {
-				LOG("[Onvif]响应,地址:%s%s\r\nSoap Message:%s", ip.c_str(), path.c_str(), data.body.c_str());
-			}
-
-			if (uri == "/onvif/media_service") {
-				size_t urlStart = data.body.find("<tt:Uri>");
-				size_t urlEnd = data.body.find("</tt:Uri>");
-				//第一次请求图片，获取realm和nouce
-				if (urlStart != std::string::npos && urlEnd != std::string::npos) {
-					string picUrl = data.body.substr(urlStart + 8, urlEnd - urlStart - 8);
-					string snapShotUrl = "/onvif-http/snapshot?Profile_1";
-					picUrl = str::format("http://%s:%s/onvif-http/snapshot?Profile_1", ip, port);
-
-					mg_mgr_init(&mgr);
-
-					data.reset();
-					connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
-
-					if (connect) {
-						mg_printf(connect,
-							"GET %s HTTP/1.0\r\n"
-							"Host: %s\r\n"
-							"Connection: close\r\n"
-							"\r\n",
-							picUrl.c_str(), ip.c_str()
-						);
-
-						TIME tStart = timeopt::now();
-						while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
-							mg_mgr_poll(&mgr, 100);
-						}
-					}
-
-					mg_mgr_free(&mgr);
-					//第2次请求图片，digist认证
-					if (data.done) {
-						head = mg_get_header_value(data.head, "WWW-Authenticate");
-						head = str::trimPrefix(head, "Digest ");
-						mapKV = parseKeyValStr(head);
-						realm = mapKV["realm"];
-						nonce = mapKV["nonce"];
-						authStr = generateAuthStr(m_strUser,m_strPwd,"GET",snapShotUrl, realm, nonce, generateNouce());
-
-						mg_mgr_init(&mgr);
-
-						data.reset();
-						connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
-
-						if (connect) {
-							mg_printf(connect,
-								"GET %s HTTP/1.0\r\n"
-								"Host: %s\r\n"
-								"Authorization: %s\r\n"
-								"Connection: close\r\n"
-								"\r\n",
-								picUrl.c_str(), ip.c_str(), authStr.c_str()
-							);
-
-							TIME tStart = timeopt::now();
-							while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
-								mg_mgr_poll(&mgr, 100);
-							}
-						}
-
-						mg_mgr_free(&mgr);
-
-						if (method == "onvif_getSnapshotUri") {
-							doOnvifTransaction_onvif_getSnapshotUri(data);
-						}
-					}
-				}
-			}
-		}
-
 		setOnline();
 		return true;
 	}
@@ -988,15 +899,4 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 
 	return false;
 }
-
-bool ioDev_onvif::doOnvifTransaction_onvif_getSnapshotUri(mg_http_data& data) {
-	std::ofstream file(fs::appPath() + "/onnx/snapshot.jpg", std::ios::binary);
-	if (!file) {
-		return false;
-	}
-
-	file.write(data.body.c_str(), data.body.size());
-	return true;
-}
-
 
