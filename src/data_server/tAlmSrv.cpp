@@ -772,14 +772,6 @@ void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate) {
 		ai.time = t.toStr();
 	}
 
-	if (j.contains("type") && j["type"] == "视频伤损") {
-		DB_TIME dbt;
-		dbt.fromStr(ai.time);
-
-		string imageInfoPath = db.getPath_dbFile(ai.tag, dbt, "imageInfo");
-		ai.pic_url = "imageInfoPath";
-	}
-
 	bool notify = true;
 	if (j.contains("notify") && j["notify"].is_boolean()) {
 		notify = j["notify"].get<bool>();
