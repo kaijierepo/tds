@@ -86,6 +86,11 @@ static void cb(struct mg_connection* c, int ev, void* ev_data) {
 		pSrv->m_csClientVectorLock.lock();
 		pSrv->m_mapTcpSessions.erase(pts);
 		pSrv->m_csClientVectorLock.unlock();
+		int lastErr = 0;
+#ifdef _WIN32
+		lastErr = WSAGetLastError();
+#endif
+		printf("MG_EV_CLOSE,lastErr=%d,remoteIp=%s,remotePort=%d\r\n",lastErr, pts->remoteIP.c_str(), pts->remotePort);
 	}
 	else if (ev == MG_EV_ACCEPT) {
 		tcpSession* pts = new tcpSession();
@@ -211,26 +216,11 @@ bool tcpSession::send(char* pData, size_t iLen)
 	int iRet = ::send(sock, pData, iLen, 0);
 	if (iRet <=0)
 	{
-		/*
-		int iErr = GetLastError();
-		string strError;
-		if (iErr == WSAETIMEDOUT)
-		{
-			strError = "timeout";//when client do not recv data or recv too slow
-		}
-		else if (iErr == WSAENOTSOCK)
-		{
-			sock = 0;
-		}
-		else
-		{
-			shutdown(sock,SHUT_DOWN_BOTH); 
-		}
-		strError = sys::getLastError();
-		string str = str::format("[tcpSrv][error]send data fail，error=%s,%s:%d", strError.c_str(),remoteIP.c_str(),remotePort);
-		logger.logInternal(str);
-		*/
-
+#ifdef _WIN32
+		int errCode = WSAGetLastError();
+		string str = str::format("[tcpSrv]send data fail，ret=%d,errorCode=%d,%s:%d",iRet, errCode,remoteIP.c_str(),remotePort);
+		printf(str.c_str());
+#endif
 		if (sock != 0)
 		{
 			shutdown(sock, SHUT_DOWN_BOTH);

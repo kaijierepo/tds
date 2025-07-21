@@ -132,6 +132,15 @@ void TcpClientRecvThread(void* lpParam) {
 		if(ret <= 0) {
 #ifdef _WIN32
 			closesocket(sock);
+			if (ret == 0) {
+				pTcpClt->m_strErrorInfo = "[tcpClt]recv error,ret=0,connection closed by peer";
+			}
+			else {
+				pTcpClt->m_strErrorInfo = "[tcpClt]recv error,err code=" + std::to_string(WSAGetLastError());
+			}
+			pTcpClt->m_strErrorInfo += " " + pTcpClt->m_remoteIP + ":" + std::to_string(pTcpClt->m_remotePort);
+			printf(pTcpClt->m_strErrorInfo.c_str());
+			pTcpClt->m_lastErrTime = getNowStr();
 #else
 			close(sock);
 #endif
@@ -456,6 +465,15 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 	{
 #ifdef _WIN32
 	closesocket(sockClient); 
+	if (iRet == 0) {
+		m_strErrorInfo = "[tcpClt]send error,ret=0,connection closed by peer";
+	}
+	else {
+		m_strErrorInfo = "[tcpClt]send error,err code=" + std::to_string(WSAGetLastError());
+	}
+	m_strErrorInfo += " " + m_remoteIP + ":" + std::to_string(m_remotePort);
+	printf(m_strErrorInfo.c_str());
+	m_lastErrTime = getNowStr();
 #else
 	close(sockClient);
 #endif

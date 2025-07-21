@@ -99,6 +99,7 @@ public:
 	string lastConnTime;
 	std::atomic<enTcpCltConnectStatus> m_isConnectting = enTcpCltConnectStatus::FREE;
 	string m_strErrorInfo;
+	string m_lastErrTime;
 	ICallback_tcpClt* m_pCallBackUser;
 	bool m_bRecvThreadRunning;
 	bool m_bConnThreadRunning;
