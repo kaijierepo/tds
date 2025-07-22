@@ -891,6 +891,16 @@ bool ioDev_onvif::doOnvifTransaction(string msg, string uri, string method, bool
 
 		mg_mgr_free(&mgr);
 
+		if (data.done) {
+			if (data.status == 401) {
+				LOG("[Onvif]用户名密码验证失败,user=%s,pwd=%s,地址:%s", m_strUser.c_str(), m_strPwd.c_str(), getDevAddrStr().c_str());
+			}
+
+			if (log) {
+				LOG("[Onvif]响应,地址:%s%s\r\nSoap Message:%s", ip.c_str(), path.c_str(), data.body.c_str());
+			}
+		}
+
 		setOnline();
 		return true;
 	}
