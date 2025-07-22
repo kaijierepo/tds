@@ -4936,6 +4936,9 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 		deList = mut_root;
 	}
 	else {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return -2;
 	}
 
@@ -4969,8 +4972,12 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 			findDE = true;
 		}
 	}
-	if (!findDE)
+	if (!findDE) {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return -3;
+	}
 
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
@@ -5071,6 +5078,9 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		deList = mut_root;
 	}
 	else {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return -2;
 	}
 
@@ -5189,10 +5199,18 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 			findDE = true;
 		}
 	}
-	if (!findDE)
+	if (!findDE) {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return -3;
-	else if(nSomeWrong != 0)
+	}
+	else if (nSomeWrong != 0) {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return nSomeWrong;
+	}
 
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
@@ -5248,12 +5266,16 @@ void TDB::rpc_db_saveImage(string& sParams, string& rlt, string& err, string& qu
 
 	if (yyv_tag == nullptr) {
 		err = JSON_STR_VAL("tag must be specified");
+		yyjson_doc_free(doc);
+
 		return;
 	}
 
 	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
 	if (yyv_time == nullptr) {
 		err = JSON_STR_VAL("time must be specified");
+		yyjson_doc_free(doc);
+
 		return;
 	}
 
@@ -5436,6 +5458,9 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 		deList = mut_root;
 	}
 	else {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return false;
 	}
 
@@ -5453,8 +5478,12 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 			toDeleteIdx = idx;
 		}
 	}
-	if (!findDE)
+	if (!findDE) {
+		yyjson_mut_doc_free(mut_doc);
+		yyjson_doc_free(doc);
+
 		return false;
+	}
 
 	//if match, must only match one 
 	//delete the attachments

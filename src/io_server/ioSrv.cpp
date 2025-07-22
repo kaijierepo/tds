@@ -2094,6 +2094,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			yyjson_val* yyv_method = yyjson_obj_get(yyv_resp, "method");
 			if (yyv_method == nullptr) {
 				LOG("[error]解析tdsp数据包失败,没有包含method字段");
+
+				yyjson_doc_free(doc);
 				return;
 			}
 
@@ -2114,6 +2116,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			if (method == "devRegister") {
 				if (strIoAddr == "") {
 					LOG("[error]注册包devRegister中的addr或ioAddr为空，无效");
+
+					yyjson_doc_free(doc);
 					return;
 				}
 
@@ -2176,6 +2180,8 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 								LOG("[数据流   ]收到推流请求,没有找到位号。推流端地址:%s,位号:%s", tdsSession->getRemoteAddr().c_str(), tag.c_str());
 							}
 						}
+
+						yyjson_doc_free(doc);
 						return;
 					}
 				}
