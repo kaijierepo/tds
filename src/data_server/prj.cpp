@@ -113,6 +113,8 @@ void project::loadRtDB() {
 			yyjson_doc* d = yyjson_read(s.c_str(), s.size(), 0);
 			yyjson_val* r = yyjson_doc_get_root(d);
 			loadStatus(r);
+
+			yyjson_doc_free(d);
 		}
 		catch (const std::exception& e)
 		{
@@ -175,13 +177,12 @@ bool project::saveConfFile() {
 		LOG("[error]critical error,mo tree to json fail");
 	}
 	else {
-		bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
+		if (p) {
+			bSaved = fs::writeFile(tds->conf->confPath + "/mo.json", p, len);
+			free(p);
+		}
 	}
 	
-	if(p){
-		free(p);
-	}
-
 	yyjson_mut_doc_free(mut_doc);
 	return bSaved;
 }

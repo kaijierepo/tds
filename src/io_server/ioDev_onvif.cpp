@@ -357,6 +357,7 @@ void ioDev_onvif::DoCycleTask() {
 						string s = writeResult;
 						s += "\n\n";
 						sockSrv.sendToAllSessions(s);
+
 						free(writeResult);
 					}
 

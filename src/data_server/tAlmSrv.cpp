@@ -1536,13 +1536,14 @@ void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSe
 			}
 		}
 		yyjson_mut_obj_add_val(yyDoc, resultObj, "pageData", jDataSet);
+
 		size_t len;
-		auto json = yyjson_mut_val_write(resultObj, 0, &len);
-		if (json)
-		{
+		char* json = yyjson_mut_val_write(resultObj, 0, &len);
+		if (json) {
 			dataSet = json;
 			free(json);
 		}
+
 		yyjson_mut_doc_free(yyDoc);
 	}
 	else
@@ -1556,10 +1557,10 @@ void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSe
 			it->toJson(this, almSel.tagSel.m_rootTag, j, yyDoc);
 			yyjson_mut_arr_append(jDataSet, j);
 		}
+
 		size_t len;
-		auto json = yyjson_mut_val_write(jDataSet, 0, &len);
-		if (json)
-		{
+		char* json = yyjson_mut_val_write(jDataSet, 0, &len);
+		if (json) {
 			dataSet = json;
 			free(json);
 		}

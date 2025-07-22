@@ -303,10 +303,13 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      yyjson_mut_obj_add_bool(mut_doc, mut_root, "connect", bIsConn);
 
      char* temp = yyjson_mut_write(mut_doc, 0, 0);
-     string s = temp;
-     pTdsSession->sendStr(s, false);
+     if (temp) {
+         string s = temp;
+         pTdsSession->sendStr(s, false);
 
-     delete temp;
+         free(temp);
+     }
+
      yyjson_mut_doc_free(mut_doc);
  }
 
@@ -322,9 +325,12 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
      yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "recv", strData.c_str());
 
 	 char* temp = yyjson_mut_write(mut_doc, 0, 0);
-	 string s = temp;
-	 pTdsSession->sendStr(s, false);
+     if (temp) {
+         string s = temp;
+         pTdsSession->sendStr(s, false);
 
-	 delete temp;
+         free(temp);
+     }
+	 
 	 yyjson_mut_doc_free(mut_doc);
  }

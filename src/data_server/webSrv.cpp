@@ -231,10 +231,14 @@ void RpcLogSend(unsigned char* p, size_t len, bool success, string& remoteIP,int
 	}
 
 	size_t wlen = 0;
-	auto s = yyjson_mut_val_write(yyv_root,0,&wlen);
-	yyjson_mut_doc_free(yy_mdoc);
-
+	char* s = yyjson_mut_val_write(yyv_root, 0, &wlen);
 	sendToRpcPktMonitorClient((char*)s, wlen);
+
+	if (s) {
+		free(s);
+	}
+
+	yyjson_mut_doc_free(yy_mdoc);
 }
 void RpcLogRecv(unsigned char* pHead, size_t headLen, unsigned char* pBody, size_t bodyLen, string remoteAddr) {
 	{

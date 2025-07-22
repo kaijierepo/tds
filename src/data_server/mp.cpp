@@ -401,12 +401,15 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 			m_defaultVal = strVal2Val(yyjson_get_str(yyDefaultVal));
 		}
 		else {
+			string result;
+
 			size_t len = 0;
 			auto s = yyjson_val_write(yyDefaultVal, YYJSON_WRITE_NOFLAG, &len);
-			string result = s;
 			if (s) {
+				result = s;
 				free(s);
 			}
+
 			m_defaultVal = strVal2Val(result);
 		}
 
@@ -508,12 +511,19 @@ bool MP::loadStatus(yyjson_val* status)
 	}
 
 	m_lastVal = m_curVal;
+
 	yyjson_val* yyVal = yyjson_obj_get(status,"val");
 	if (yyVal) {
-		m_curVal = yyjson_val_write(yyVal,0,nullptr);
+		char* p = yyjson_val_write(yyVal,0,nullptr);
+		if (p) {
+			m_curVal = p;
+			free(p);
+		}
 	}
-	else
+	else {
 		m_curVal = JSON_STR::getNull();
+	}
+
 	m_stDataLastUpdate = t;
 
 	return true;

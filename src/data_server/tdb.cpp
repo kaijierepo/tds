@@ -1256,8 +1256,8 @@ void TDB::Insert(string strTag,  string& sDe, DB_TIME* time)
 
 	saveDeToDataListFile(dataListPath, yymDe);
 
-	yyjson_doc_free(doc);
 	yyjson_mut_doc_free(mdoc);
+	yyjson_doc_free(doc);
 }
 
 struct DE_TEMP {
@@ -1273,20 +1273,26 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 		std::map<string, FILE_BUFF*>::iterator iter = m_FsBuff.m_mapFsBuff.find(dataListPath);
 		if (iter != m_FsBuff.m_mapFsBuff.end()) {
 			string& fileData = iter->second->data;  // can be an empty file ,length is 0
+
+			string strDe;
+
 			size_t len = 0;
 			char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+			if (pDe) {
+				strDe = pDe;
+				free(pDe);
+			}
+
 			if (fileData.size() > 0) {
 				fileData.resize(fileData.size() - 1);
 				fileData += ",";
-				fileData += pDe;
+				fileData += strDe;
 				fileData += "]";
 			}
 			else {
-				fileData = pDe;
+				fileData = strDe;
 				fileData = "[" + fileData + "]";
-			}
-			if (pDe)
-				free(pDe);
+			}				
 		}
 		m_FsBuff.m_csFsb.unlock();
 	}
@@ -1294,16 +1300,20 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 
 	if (!fileExist(dataListPath.c_str())) //first de to save
 	{
+		string fileData;
+
 		size_t len = 0;
 		char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-		string fileData = pDe;
+		if (pDe) {
+			fileData = pDe;
+			free(pDe);
+		}
+
 		fileData = "[" + fileData + "]";
 		if (!DB_FS::writeFile(dataListPath, (unsigned char*)fileData.c_str(), fileData.length()))
 		{
 			printf("[error]save to db file fail,dataListFile path:%s,data:%s", dataListPath.c_str(), fileData.c_str());
 		}
-		if (pDe)
-			free(pDe);
 	}
 	else
 	{
@@ -1322,24 +1332,36 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 			if (len > 0)
 			{
 				fseek(fp, len - 1, SEEK_SET);
+
 				std::string d = ",";
+
+				string str;
+
 				size_t len = 0;
 				char* s = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-				d += s;
-				d += "]";
-				fwrite(d.c_str(), 1, d.length(), fp);
-				if (s)
+				if (s) {
+					str = s;
 					free(s);
+				}
+
+				d += str;
+				d += "]";
+
+				fwrite(d.c_str(), 1, d.length(), fp);
 			}
 			else
 			{
+				string fileData;
+
 				size_t len = 0;
 				char* pDe = yyjson_mut_val_write(yymDe, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-				string fileData = pDe;
+				if (pDe) {
+					fileData = pDe;
+					free(pDe);
+				}
+
 				fileData = "[" + fileData + "]";
 				fwrite(fileData.c_str(), 1, fileData.length(), fp);
-				if (pDe)
-					free(pDe);
 			}
 
 			fclose(fp);
@@ -1359,10 +1381,12 @@ string printfTimeSection(map<string, yyjson_mut_val*>* timeSection) {
 	else {
 		for (auto& i : *timeSection) {
 			printf("%s\t", i.first.c_str());
+
 			char* sz = yyjson_mut_val_write(i.second, 0, nullptr);
-			printf("%s\n", sz);
-			if (sz)
+			if (sz) {
+				printf("%s\n", sz);
 				free(sz);
+			}
 		}
 	}
 	return "";
@@ -3099,6 +3123,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 						s = DB_STR::gb_to_utf8(s);
 						doc = yyjson_read(s.data(), s.size(), 0);
 					}
+
 					if (!doc) {
 						db_exception dbe;
 						dbe.m_error = "refCurve not found";
@@ -3146,6 +3171,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					}
 
 					pBase = &refCurvePt;
+
+					yyjson_doc_free(doc);
 				}
 				else if (DB_STR::isTime(deSel.baseCurve)) {
 					string path = getPath_dbFile(tag, deSel.baseCurve, "curve");
@@ -3156,6 +3183,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 						s = DB_STR::gb_to_utf8(s);
 						doc = yyjson_read(s.data(), s.size(), 0);
 					}
+
 					if (!doc) {
 						db_exception dbe;
 						dbe.m_error = "specified curve not found";
@@ -3203,8 +3231,9 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 					}
 
 					pBase = &specifyCurvePt;
-				}
 
+					yyjson_doc_free(doc);
+				}
 
 				vector<double>* pCur = nullptr;
 				size_t sortIdx = 0;
@@ -3824,8 +3853,8 @@ void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 	dataListPath = deListFolderPath + "/" + m_dbFmt.curveIdxListName;
 	saveDeToDataListFile(dataListPath, yymDe);
 
-	yyjson_doc_free(doc);
 	yyjson_mut_doc_free(mdoc);
+	yyjson_doc_free(doc);
 }
 
 bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result) {
@@ -4683,14 +4712,16 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* yymv_params = yyjson_val_mut_copy(mut_doc, params);
 		yyjson_mut_obj_remove_key(yymv_params, "tag");
-		size_t len = 0;
-		auto json_str = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+
 		string sDe;
-		if (json_str)
-		{
+
+		size_t len = 0;
+		char* json_str = yyjson_mut_val_write(yymv_params, YYJSON_WRITE_NOFLAG, &len);
+		if (json_str) {
 			sDe = json_str;
 			free(json_str);
 		}
+
 		yyjson_mut_doc_free(mut_doc);
 
 		yyjson_val* yyv_db = yyjson_obj_get(params, "db");
@@ -4892,9 +4923,8 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 		return -1;
 
 	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
-	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
-	yyjson_doc_free(doc);
 
+	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 
 	yyjson_mut_val* deList = nullptr;
@@ -4944,10 +4974,14 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
-	DB_FS::writeFile(dbFile, p, len);
-	free(p);
+	if (p) {
+		DB_FS::writeFile(dbFile, p, len);
+		free(p);
+	}
 
 	yyjson_mut_doc_free(mut_doc);
+	yyjson_doc_free(doc);
+
 	return 0;
 }
 
@@ -5024,6 +5058,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		return -1;
 
 	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+
 	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc,nullptr);
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 
@@ -5161,8 +5196,10 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
-	DB_FS::writeFile(dbFile,p,len);
-	free(p);
+	if (p) {
+		DB_FS::writeFile(dbFile, p, len);
+		free(p);
+	}
 
 	if (vecToBeUpdatedFile.size()>0) {
 		//refresh the entire files dir  or one file ,  update the file urls
@@ -5184,8 +5221,10 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		}
 		else {
 			p = yyjson_val_write(vecToBeUpdatedFile[0].yyFileToUpdate, 0, &len);
-			DB_FS::writeFile(vecToBeUpdatedFile[0].dbFile1, p, len);
-			free(p);
+			if (p) {
+				DB_FS::writeFile(vecToBeUpdatedFile[0].dbFile1, p, len);
+				free(p);
+			}
 		}
 	}
 	else {
@@ -5197,6 +5236,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);
+
 	return 0;
 }
 
@@ -5383,6 +5423,7 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 		return false;
 
 	yyjson_doc* doc = yyjson_read(dbData.c_str(), dbData.length(), 0);
+
 	yyjson_mut_doc* mut_doc = yyjson_doc_mut_copy(doc, nullptr);
 	yyjson_mut_val* mut_root = yyjson_mut_doc_get_root(mut_doc);
 
@@ -5438,13 +5479,18 @@ bool TDB::Delete(string tag, DB_TIME stTime)
 	}
 	else {
 		yyjson_mut_arr_remove(deList, toDeleteIdx);
+
 		size_t len = 0;
 		char* p = yyjson_mut_write(mut_doc, 0, &len);
-		DB_FS::writeFile(dbFile, p, len);
-		free(p);
+		if (p) {
+			DB_FS::writeFile(dbFile, p, len);
+			free(p);
+		}
 	}
+
 	yyjson_mut_doc_free(mut_doc);
 	yyjson_doc_free(doc);
+
 	return true;
 }
 
@@ -5480,11 +5526,12 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo,string path,DB_TIME dbTime, strin
 	}
 	else {
 		char* p = yyjson_val_write(yyv_data, 0, nullptr);
-		data = p;
-		free(p);
+		if (p) {
+			data = p;
+			free(p);
+		}
 	}
 	
-
 	deFilePath = path + "/" + name;
 	//encoded to base64 by default
 	if (type.find("jpg")!=string::npos || type.find("grh") != string::npos ||
@@ -5675,8 +5722,11 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 				}
 
 				char* strTemp = yyjson_mut_write(mut_doc_yuan, 0, 0);
-				imgInfo = strTemp;
-				delete strTemp;
+				if (strTemp) {
+					imgInfo = strTemp;
+					free(strTemp);
+				}
+				
 				yyjson_mut_doc_free(mut_doc);
 				yyjson_mut_doc_free(mut_doc_yuan);
 			}
@@ -5719,8 +5769,8 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			dataListPath = deListFolderPath + "/" + m_dbFmt.deListName;
 			saveDeToDataListFile(dataListPath, yymDe);
 
-			yyjson_doc_free(doc);
 			yyjson_mut_doc_free(mdoc);
+			yyjson_doc_free(doc);
 		}
 		else
 		{
@@ -5782,9 +5832,13 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 							yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, yyjson_mut_get_str(key), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
 						}
 					}
+
 					char* strTemp = yyjson_mut_write(mut_doc_yuan, 0, 0);
-					imgInfo = strTemp;
-					delete strTemp;
+					if (strTemp) {
+						imgInfo = strTemp;
+						free(strTemp);
+					}
+
 					yyjson_mut_doc_free(mut_doc);
 					yyjson_mut_doc_free(mut_doc_yuan);
 				}
@@ -5829,9 +5883,13 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 					yyjson_mut_obj_add_val(mut_doc_yuan, mut_root_yuan, strKey.c_str(), yyjson_mut_val_mut_copy(mut_doc_yuan, val));
 				}
 			}
+
 			char* strTemp = yyjson_mut_write(mut_doc_yuan, 0, 0);
-			imgInfo = strTemp;
-			delete strTemp;
+			if (strTemp) {
+				imgInfo = strTemp;
+				free(strTemp);
+			}
+			
 			yyjson_mut_doc_free(mut_doc);
 			yyjson_mut_doc_free(mut_doc_yuan);
 
@@ -6543,13 +6601,13 @@ bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 #ifdef ENABLE_QJS
 	if (!bEnable)
 		return true;
+
 	bool bMatch = true;
+
 	size_t json_len = 0;
 	auto json_str = yyjson_mut_val_write(de, NULL, &json_len);
-	if (json_str)
-	{
+	if (json_str) {
 		bMatch = evaluate_condition(json_str, json_len);
-
 		free(json_str);
 		return bMatch;
 	}
@@ -6563,10 +6621,10 @@ bool CONDITION_SELECTOR::match(yyjson_val* de)
 #ifdef ENABLE_QJS
 	if (!bEnable)
 		return true;
+
 	size_t json_len = 0;
-	auto json_str = yyjson_val_write(de, NULL, &json_len);
-	if (json_str)
-	{
+	char* json_str = yyjson_val_write(de, NULL, &json_len);
+	if (json_str) {
 		bMatch = evaluate_condition(json_str, json_len);
 
 		free(json_str);

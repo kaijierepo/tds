@@ -2307,9 +2307,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					rpcResp.info = str::format("objCount=%d", objList.size());
 
 					size_t len = 0;
-					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
-					result = s;
+					char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
 					if (s) {
+						result = s;
 						free(s);
 					}
 
@@ -2334,9 +2334,9 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 					}
 
 					size_t len = 0;
-					auto s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
-					result = s;
+					char* s = yyjson_mut_val_write(rootRlt, YYJSON_WRITE_NOFLAG, &len);
 					if (s) {
+						result = s;
 						free(s);
 					}
 
@@ -2360,14 +2360,14 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 				bool selectedByLeafType = false;
 				if (pmo->toJson(rootObj, doc, q, &selectedByLeafType, session.user)) {
 					size_t len = 0;
-					auto s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
+					char* s = yyjson_mut_val_write(rootObj, YYJSON_WRITE_NOFLAG, &len);
 					if (s) {
 						result = s;
 						free(s);
 					}
-
-					yyjson_mut_doc_free(doc);
 				}
+
+				yyjson_mut_doc_free(doc);
 			}
 			else {
 				rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "monitor object of specified tag not found");
@@ -3559,54 +3559,86 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 	yyjson_val* yytdsSession = yyjson_obj_get(jReq, "tdsSession");
 	yyjson_val* yyioAddr = yyjson_obj_get(jReq, "ioAddr");
 	yyjson_val* yytag = yyjson_obj_get(jReq, "tag");
-	if (yytdsSession) //使用tdsSession进行io透传
-	{
+
+	if (yytdsSession) {//使用tdsSession进行io透传
 		string tdsSession = yyjson_get_str(yytdsSession);
 		shared_ptr<TDS_SESSION> pDestSession = ioSrv.getTDSSession(tdsSession);
 		
-		if (pDestSession == nullptr)
-		{
+		if (pDestSession == nullptr) {
 			return true;
 		}
+
+		string str;
+
 		size_t len;
-		json j = json::parse(yyjson_val_write(jReq, 0, &len));
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			str = p;
+			free(p);
+		}
+
+		json j = json::parse(str);
 		j["clientId"] = pSession->getRemoteAddr();
 		j.erase("user");
 		j.erase("token");
+
 		string s = j.dump() + "\n\n";
 		pDestSession->send((char*)s.c_str(), s.length());
+
 		return true;
 	}
-	else if (yyioAddr)
-	{
+	else if (yyioAddr) {
 		ioDev* pIoDev = nullptr;
+
 		string strIoAddr = yyjson_get_str(yyioAddr);
 		pSession->route_ioAddr = strIoAddr;
-		pIoDev  = ioSrv.getIODev(strIoAddr);
-		if (!pIoDev)
-		{
+
+		pIoDev = ioSrv.getIODev(strIoAddr);
+		if (!pIoDev) {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到指定IO地址的IO设备");
 			return true;
 		}
-		size_t len; string s = yyjson_val_write(jReq, 0, &len);
+
+		string s;
+
+		size_t len; 
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
+
 		json j = json::parse(s);
 		pIoDev->handleDevRpcCall(j,rpcResp);
+
 		logRPCRoute(method, j["params"], *pSession);
+
 		return true;
 	}
 	else if (yytag) {
 		string tag = yyjson_get_str(yytag);
 		tag = TAG::addRoot(tag, pSession->org);
+
 		pSession->route_tag = tag;
-		size_t len; string s = yyjson_val_write(jReq, 0, &len);
+
+		string s;
+		
+		size_t len;
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
+
 		json j = json::parse(s);
+
 		//查找是否有直接绑定的设备
 		ioDev* pIoDev = ioSrv.getIODevByTag(tag);
-		if (pIoDev)
-		{
+		if (pIoDev) {
 			j.erase("tag");
 			pSession->route_ioAddr = pIoDev->getIOAddrStr();
 			pIoDev->handleDevRpcCall(j, rpcResp);
+
 			logRPCRoute(method, j["params"], *pSession);
 			return true;
 		}
@@ -3616,11 +3648,12 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		if (pChildTds) {
 			string childTdsTag = pChildTds->m_strTagBind;
 			string tagInChild = TAG::trimRoot(tag, childTdsTag);
+
 			j["tag"] = tagInChild;
 			pChildTds->handleDevRpcCall(j, rpcResp);
+
 			return true;
 		}
-
 
 		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的IO设备");
 		return true;
@@ -3891,8 +3924,14 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	json params;
 
 	if (yyMethod == nullptr) {
+		string s;
+
 		size_t len;
-		string s = yyjson_val_write(jReq, 0, &len);
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
 
 		LOG("[error][TDS-RPC]协议数据包必须包含method字段\n" + s);
 		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"missing field method", "id" : null})";
@@ -3901,8 +3940,14 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	}
 
 	if (yyParams == nullptr) {
+		string s;
+
 		size_t len;
-		string s = yyjson_val_write(jReq, 0, &len);
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
 
 		LOG("[error][TDS-RPC]协议数据包必须包含params字段\n" + s);
 		rpcResp.strResp = R"({"jsonrpc":"2.0","error":"missing field params", "id" : null})";
@@ -3920,15 +3965,27 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 		pSession->isNotification = true;
 		jStrId = "null";
 	}
-	else {
-		jStrId = yyjson_val_write(id, 0, 0);
+	else {	
+		char* p= yyjson_val_write(id, 0, 0);
+		if (p) {
+			jStrId = p;
+			free(p);
+		}
 	}
 
 	statisCall(method);
 
 	if (m_mapDisableMethod.find(method) != m_mapDisableMethod.end()) {
+		string s;
+
 		size_t len;
-		rpcResp.strResp = str::format(R"({"jsonrpc":"2.0","error":"method disabled", "id" : %s})",yyjson_val_write(id,0,&len));
+		char* p = yyjson_val_write(id, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
+
+		rpcResp.strResp = str::format(R"({"jsonrpc":"2.0","error":"method disabled", "id" : %s})", s);
 		return;
 	}
 
@@ -3972,7 +4029,15 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	if (method == "output" || method == "openStream") {
 		needLog = true;
 
-		size_t len; string s = yyjson_val_write(jReq, 0, &len);
+		string s;
+
+		size_t len; 
+		char* p = yyjson_val_write(jReq, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
+
 		LOG("[warn]RPC请求:\r\n" + s + "\r\n");
 	}
 
@@ -3998,8 +4063,15 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 
 	//setObj走yyjson handler,其他的走json.hpp handler,逐步重构
 	if (method != "setObj") {
+		string s;
+
 		size_t len; 
-		string s = yyjson_val_write(yyParams, 0, &len);
+		char* p = yyjson_val_write(yyParams, 0, &len);
+		if (p) {
+			s = p;
+			free(p);
+		}
+
 		params = json::parse(s);
 	}
 
@@ -4055,8 +4127,14 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 
 	//先使用外部注册的handler受理请求
 	if (m_pluginHandler) {
-		string sReq = yyjson_val_write(jReq,0,nullptr);
+		string sReq;
 		string error;
+
+		char* p = yyjson_val_write(jReq, 0, nullptr);
+		if (p) {
+			sReq = p;
+			free(p);
+		}
 
 		bool bHandled = m_pluginHandler(sReq, rpcResp, error);
 		if (bHandled) {
@@ -4211,6 +4289,8 @@ void rpcHandler::handleRpcCall(string& strReq, RPC_RESP& rpcResp, std::shared_pt
 			LOG("[error]RPC请求包处理异常,无法解析的json格式:\r\n错误信息:\r\n" + strReq);
 			rpcResp.strResp = str::format(R"({"jsonrpc": "2.0", "error" : {"code": -32700, "message" : "%s"}, "id" : null})", "无法解析的json格式");
 		}
+
+		yyjson_doc_free(yydoc);
 	}
 	catch (std::exception& e) {
 		string errorType = e.what();

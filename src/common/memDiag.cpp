@@ -387,10 +387,14 @@ bool MemDiag::handleRpcCall_memDiag(string method,string& sParams, string& rlt, 
 			yyjson_mut_obj_put(func, key, val);
 			yyjson_mut_arr_append(rlt_mut_root, func);
 		}
+
 		size_t len;
-		auto s = yyjson_mut_val_write(rlt_mut_root, YYJSON_WRITE_NOFLAG, &len);
-		rlt = s;
-		free(s);
+		char* s = yyjson_mut_val_write(rlt_mut_root, YYJSON_WRITE_NOFLAG, &len);
+		if (s) {
+			rlt = s;
+			free(s);
+		}
+		
 		yyjson_mut_doc_free(mdoc);
 	}
 	else if (method == "memDiag.alloc") {
@@ -468,15 +472,23 @@ void MemDiag::rpc_memDiag_logTrace(yyjson_val* params, string& rlt, string& err)
 		val = yyjson_val_mut_copy(mdoc, item);
 		yyjson_mut_obj_put(de, key, val);
 
+		string sParams;
+
 		size_t len;
-		auto s = yyjson_mut_val_write(de, YYJSON_WRITE_NOFLAG, &len);
-		string sParams = s;
-		free(s);
+		char* s = yyjson_mut_val_write(de, YYJSON_WRITE_NOFLAG, &len);
+		if (s) {
+			sParams = s;
+			free(s);
+		}
+		
 		string dbRlt, dbErr, dbQi;
 		db.rpc_db_insert(sParams,dbRlt,dbErr, dbQi,"","zh");
+
+		yyjson_mut_doc_free(mdoc);
 	}
 
 	rlt = "\"ok\"";
+	yyjson_doc_free(doc);
 }
 
 bool readFile(string path, string& data)
