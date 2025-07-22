@@ -14,7 +14,7 @@ void* DEV_PKT::pushData(void* p, int l) {
 	unsigned char* pNew = new unsigned char[len + l];
 	if (data != nullptr) {
 		memcpy(pNew, data, len);
-		delete data;
+		delete[] data;
 	}
 	if (p != nullptr) {
 		memcpy(pNew + len, p, l);

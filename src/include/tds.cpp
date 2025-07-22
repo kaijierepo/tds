@@ -206,7 +206,7 @@ namespace str {
 		memset(wcharstr, 0, MAX_STRSIZE);
 		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
 		str = wcharstr;
-		delete wcharstr;
+		delete[] wcharstr;
 #else
 
 #endif
@@ -237,7 +237,7 @@ namespace str {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete charstr;
+		delete[] charstr;
 #else
 
 #endif
@@ -252,7 +252,7 @@ namespace str {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete charstr;
+		delete[] charstr;
 #else
 
 #endif
@@ -270,8 +270,8 @@ namespace str {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete wcharstr;
-		delete charstr;
+		delete[] wcharstr;
+		delete[] charstr;
 #else
 		//int ret = 0;
 		//size_t inlen = instr.size() + 1;
@@ -319,8 +319,8 @@ namespace str {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete wcharstr;
-		delete charstr;
+		delete[] wcharstr;
+		delete[] charstr;
 #else
 		//int ret = 0;
 		//size_t inlen = instr.length() + 1;

@@ -121,8 +121,8 @@ namespace DB_STR {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete wcharstr;
-		delete charstr;
+		delete[] wcharstr;
+		delete[] charstr;
 #else
 		//int ret = 0;
 		//size_t inlen = instr.length() + 1;
@@ -2984,7 +2984,6 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 						string time = yyjson_mut_get_str(yyv_time);
 						yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_curve_de, "tag");
 						string tag = yyjson_mut_get_str(yyv_tag);
-						vector<double>* pPtList = new vector<double>();
 						DB_TIME dbtime;
 						dbtime.fromStr(time);
 						DB_FILE dbfile(dbtime, tag, this);
@@ -5235,6 +5234,7 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 				memset(out, 0, buffLen);
 				int outLen = tdb_base64_decode(p.c_str(), p.length(), out);
 				DB_FS::writeFile(one.dbFile1, out, outLen);
+				delete[] out;
 			}
 		}
 		else {

@@ -255,6 +255,7 @@ void RpcLogRecv(unsigned char* pHead, size_t headLen, unsigned char* pBody, size
 		memset(out, 0, bodyLen * 2);
 		base64_encode(pBody, bodyLen, out);
 		sbody = out;
+		delete[] out;
 	}
 
 
@@ -307,58 +308,6 @@ bool extractWsPkt(mg_iobuf& iobuff, size_t& pktLen) {
 		return true;
 	}
 	return false;
-}
-
-//websocket主动通知数据和所线程的响应都通过触发pairdsock的 pcb 实现
-static void pipeCallback(struct mg_connection* c, int ev, void* ev_data, void* fn_data) {
-	struct mg_connection* parent = (struct mg_connection*)fn_data;
-	//MG_INFO(("%lu %p %d %p", c->id, c->fd, ev, parent));
-	if (parent == NULL) {  // If parent connection closed, close too
-		c->is_closing = 1;
-	}
-	else if (ev == MG_EV_READ) {  // websocket的 pairsocket发完不断开
-		if (parent->is_websocket) //websocket通知数据包大小不能大于 c->recv 的ioBuff的大小。大于会导致应用层分包。目前前端不进行应用层组包
-		{
-			//此处可能收到粘连包，使用\n\n分包
-			size_t pktLen = 0;
-			while (extractWsPkt(c->recv, pktLen)) {
-				//发送1包
-				mg_ws_send(parent, (const char*)c->recv.buf + WS_PKT_HEADER_LEN, pktLen - WS_PKT_HEADER_LEN, WEBSOCKET_OP_TEXT);
-				//删除已发送数据
-				size_t leftLen = c->recv.len - pktLen;
-				memcpy(c->recv.buf, c->recv.buf + pktLen, leftLen);
-				c->recv.len = leftLen;
-			}
-		}
-	}
-	else if (ev == MG_EV_OPEN) {
-		link_conns(c, parent);
-#ifdef DEBUG
-		//LOG("websocket pipe建立： src conn = %p ,src sock=%d,pipe conn=%p,pipe sock=%d", parent, parent->fd, c, c->fd);
-#endif
-	}
-	else if (ev == MG_EV_CLOSE) { //http的 pair sock发完就断开
-		if (c->is_websocket)
-		{
-
-		}
-		else
-		{
-			
-			string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-			resHeader += "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
-			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
-
-			RPC_SESSION* pRpc = (RPC_SESSION*)parent->app_layer_data; 
-			if (pRpc!=nullptr && pRpc->method == "login") {
-				resHeader += "Set-Cookie: user=" + pRpc->user + "\r\n";
-			}
-			
-			mg_http_reply(parent, 200, resHeader.c_str(), (const char*)c->recv.buf);  // Respond!
-			delete pRpc;
-		}
-		unlink_conns(c, parent);
-	}
 }
 
 //https://blog.csdn.net/weixin_34242509/article/details/86260104
@@ -453,36 +402,9 @@ static void* thread_handleRpcOverHttp(void* param,RPC_SESSION* pRpcSession) {
 
 	free((void*)p->message.ptr);            // Free all resources that were
 	free(p);                                  // passed to us
-
-	return NULL;
+	delete pRpcSession;
+	return nullptr;
 }
-
-void thread_handleRpc_respBodyOnlyRltOrErr(void* param, RPC_SESSION* pRpcSession)
-{
-	struct thread_data* p = (struct thread_data*)param;
-	RPC_RESP resp;
-	std::shared_ptr<TDS_SESSION> pSession(new TDS_SESSION());
-	pSession->setRpcSession(pRpcSession);
-	rpcSrv.handleRpcCall(pRpcSession->req, resp, pSession);
-
-	string resBody = "";
-	if (resp.result.length() > 0) {
-		resBody = resp.result;
-	}
-	else if (resp.error.length() > 0) {
-		resBody = resp.error;
-	}
-	else {
-		resBody = "rpc call return null";
-	}
-
-
-	mg_wakeup(p->mgr, p->conn_id, resBody.c_str(), (int)resBody.length());  // Respond to parent
-	free((void*)p->message.ptr);            // Free all resources that were
-	free(p);                                  // passed to us
-}
-
-
 
 void thread_handleDataOverWebsocket(thread_data* data, std::shared_ptr<TDS_SESSION> p)
 {
@@ -1167,56 +1089,47 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 		}
 		else if (memcmp(hm->method.ptr, "POST", hm->method.len) == 0)
 		{
-			//黑白名单处理
-			if (c->bl_timeStamp != g_bl_timeStamp) {
-				unsigned char* pIP = (unsigned char*)&c->rem.ip;
-				string sip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
-				std::shared_lock<shared_mutex> lock(g_csApiBlackList);
-				if (!apiBlackList.empty() && apiBlackList.find(sip) != apiBlackList.end())
-				{
-					string resHeader = "Connection: close\r\n";
-					string body = "";
-					mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
-					c->is_closing = 1;
-					c->isBlackIp = true;
-					return;
+			if (mg_http_match_uri(hm, "/api/rpc") || mg_http_match_uri(hm, "/rpc") || mg_http_match_uri(hm, "/debug"))//增加"/api/rpc"是为了保证tds与JHD的接口兼容
+			{
+				//黑白名单处理
+				if (c->bl_timeStamp != g_bl_timeStamp) {
+					unsigned char* pIP = (unsigned char*)&c->rem.ip;
+					string sip = str::format("%d.%d.%d.%d", pIP[0], pIP[1], pIP[2], pIP[3]);;
+					std::shared_lock<shared_mutex> lock(g_csApiBlackList);
+					if (!apiBlackList.empty() && apiBlackList.find(sip) != apiBlackList.end())
+					{
+						string resHeader = "Connection: close\r\n";
+						string body = "";
+						mg_http_reply(c, 403, resHeader.c_str(), body.c_str());
+						c->is_closing = 1;
+						c->isBlackIp = true;
+						return;
+					}
+					else {
+						c->isBlackIp = false;
+					}
+					c->bl_timeStamp = g_bl_timeStamp;
 				}
 				else {
-					c->isBlackIp = false;
+					if (c->isBlackIp) {
+						string resHeader = "Connection: close\r\n";
+						mg_http_reply(c, 403, resHeader.c_str(), "");
+						c->is_closing = 1;
+						return;
+					}
 				}
-				c->bl_timeStamp = g_bl_timeStamp;
-			}
-			else {
-				if (c->isBlackIp) {
-					string resHeader = "Connection: close\r\n";
-					mg_http_reply(c, 403, resHeader.c_str(), "");
-					c->is_closing = 1;
-					return;
-				}
-			}
 
-			RPC_SESSION* pSession = new RPC_SESSION; //released when response has sended in pipe callback
-			getSessionInfo(pSession, c, hm, pWs);
-			c->app_layer_data = pSession;
+				RPC_SESSION* pSession = new RPC_SESSION;
+				getSessionInfo(pSession, c, hm, pWs);
 
-			if (!pSession->isDebug)
-				RpcLogRecv((unsigned char*)hm->head.ptr, hm->head.len, (unsigned char*)hm->body.ptr, hm->body.len, pSession->remoteAddr);
+				if (!pSession->isDebug)
+					RpcLogRecv((unsigned char*)hm->head.ptr, hm->head.len, (unsigned char*)hm->body.ptr, hm->body.len, pSession->remoteAddr);
 
-			if (mg_http_match_uri(hm, "/api")) {
-				struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
-				data->message = mg_strdup(hm->message);               // Pass message
-				data->conn_id = c->id;
-				data->mgr = c->mgr;
-				thread t(thread_handleRpc_respBodyOnlyRltOrErr, data, pSession);
-				t.detach();
-			}
-			else if (mg_http_match_uri(hm, "/api/rpc") || mg_http_match_uri(hm, "/rpc") || mg_http_match_uri(hm, "/debug"))//增加"/api/rpc"是为了保证tds与JHD的接口兼容
-			{
 				c->sessionInfo = nullptr;
 				if (!pSession->isDebug) {
 					std::map<string, SESSION_STATIS*>::iterator iter = pWs->m_httpSessions.find(pSession->remoteIP);
 					SESSION_STATIS* pSs;
-					if (iter == pWs->m_httpSessions.end()) {
+					if (iter == pWs->m_httpSessions.end()) { //目前数组元素不删除
 						pSs = new SESSION_STATIS;
 						pWs->m_httpSessions[pSession->remoteIP] = pSs;
 						pSs->remoteIP = pSession->remoteIP;
@@ -1231,16 +1144,12 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 					c->sessionInfo = pSs;
 				}
 
-
 				struct thread_data* data = (thread_data*)calloc(1, sizeof(*data));  // Worker owns it
 				data->message = mg_strdup(hm->message);               // Pass message
 				data->conn_id = c->id;
 				data->mgr = c->mgr;
 				thread t(thread_handleRpcOverHttp, data, pSession);
 				t.detach();
-			}
-			else if (mg_http_match_uri(hm, "/api/cmd")) {
-				mg_http_reply(c, 200,nullptr,"ok");
 			}
 		}
 		else if (mg_http_match_uri(hm, "/release"))

@@ -77,9 +77,9 @@ public:
 	~DEV_PKT()
 	{
 		if (data)
-			delete data;
+			delete[] data;
 		if (cmd_data)
-			delete cmd_data;
+			delete[] cmd_data;
 	}
 
 	void copy(const DEV_PKT& r) {

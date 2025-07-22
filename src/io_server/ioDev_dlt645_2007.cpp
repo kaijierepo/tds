@@ -159,6 +159,7 @@ json ioDev_dlt645_2007::parseReadData(unsigned char* pD, int len,string fmt) {
 
 		char szVal[50] = { 0 };
 		d07_bcd2str(readVal, szVal, validByteLen);
+		delete[] readVal;
 
 		double fVal = atof(szVal);
 		fVal *= df.k;

@@ -44,8 +44,8 @@ namespace tAlm {
 		memset(charstr, 0, MAX_STRSIZE);
 		WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
 		str = charstr;
-		delete wcharstr;
-		delete charstr;
+		delete[] wcharstr;
+		delete[] charstr;
 #else
 		//int ret = 0;
 		//size_t inlen = instr.length() + 1;

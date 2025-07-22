@@ -301,7 +301,7 @@ void stream2pkt::Resize(unsigned char*& pData, size_t& iLen, size_t iNewSize)
 	{
 		size_t iCopySize = iLen < iNewSize ? iLen : iNewSize;
 		memcpy(pNewData, pData, iCopySize);
-		delete pData;
+		delete[] pData;
 	}
 
 	pData = pNewData;

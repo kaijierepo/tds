@@ -236,6 +236,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 				{
 					error = makeRPCError(TEC_FAIL, "fail");
 				}
+				delete[] out;
 			}
 			else {
 				string ap = fs::toAbsolutePath(p);

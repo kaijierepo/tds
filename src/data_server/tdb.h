@@ -713,12 +713,13 @@ struct SELECT_RLT {
 		//release src
 		for (int i = 0; i < dataSetBuff.size(); i++)
 		{
-			vector<DATA_SET*>& p = *dataSetBuff[i];
-			for (int j = 0; j < p.size(); j++)
+			vector<DATA_SET*>* p = dataSetBuff[i];
+			for (int j = 0; j < p->size(); j++)
 			{
-				DATA_SET* fSet = p[j];
+				DATA_SET* fSet = p->at(j);
 				delete fSet;
 			}
+			delete p;
 		}
 		//release file data
 		for (int i = 0; i < tagFileSet.size(); i++)
