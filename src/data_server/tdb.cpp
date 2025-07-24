@@ -965,9 +965,28 @@ string TDB::getPath_deFile(string strTag, DB_TIME stTime)
 	return "";
 }
 
-string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
+string TDB::getPath_dataFolder(string strTag, const DB_TIME& date, const string &deType) const
 {
-	if (m_timeUnit == BY_DAY) {
+	string pathType = "day";
+	if (deType == "statisByDay" || deType == "statisDe")
+	{
+		pathType = "day";
+	}
+	else if (deType == "statisByMonth")
+	{
+		pathType = "month";
+	}
+	else if (m_timeUnit == BY_DAY) {
+		pathType = "day";
+	}
+	else if (m_timeUnit == BY_MONTH) {
+		pathType = "month";		
+	}
+	else
+		pathType = "none";
+
+	if (pathType == "day")
+	{
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/%02d/", date.wYear, date.wMonth, date.wDay);
@@ -979,7 +998,8 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		strURL = m_path + strURL;
 		return strURL;
 	}
-	else if (m_timeUnit == BY_MONTH) {
+	else if (pathType == "month")
+	{
 		strTag = changeCharForFileName(strTag);
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = formatStr("/%04d%02d/", date.wYear, date.wMonth);
@@ -991,7 +1011,7 @@ string TDB::getPath_dataFolder(string strTag, const DB_TIME& date) const
 		strURL = m_path + strURL;
 		return strURL;
 	}
-	else if (m_timeUnit == NONE) {
+	else if (pathType == "none") {
 		strTag = replaceStr(strTag, ".", "/");
 		string strURL = m_path + "/" + strTag;
 		return strURL;
@@ -1113,7 +1133,7 @@ string TDB::getPath_dbFile(string tag, string time, string deType)
 
 string TDB::getPath_dbFile(string strTag, const DB_TIME &date,string deType) const
 {
-	string folder = getPath_dataFolder(strTag,date);
+	string folder = getPath_dataFolder(strTag,date, deType);
 	if (deType == "") {
 		//auto judge
 		if (fileExist((folder + "/" + m_dbFmt.deListName).c_str()))
@@ -1129,7 +1149,7 @@ string TDB::getPath_dbFile(string strTag, const DB_TIME &date,string deType) con
 	else if (deType == "curveIdx") {
 		return folder + "/" + m_dbFmt.curveIdxListName;
 	}
-	else if (deType == "statisDe") {
+	else if (deType == "statisDe" || deType == "statisByDay" || deType == "statisByMonth") {
 		return folder + "/" + m_dbFmt.deListStatisticsName;
 	}
 	else if (deType == "curve") {
@@ -4221,7 +4241,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			string tmpTime;
 			string groupKeyVal;
 			bool ymdEqualityCheckedInDe = false; //check ymd in one de ,if not equal to db folder ymd throw exception
-			bool hasTimeStamp = deSel.deType != "statisDe";
+			bool hasTimeStamp = (deSel.deType != "statisDe" && deSel.deType == "statisByDay" && deSel.deType == "statisByMonth");
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
 			if (type == YYJSON_TYPE_OBJ) { //file with desc
@@ -6870,7 +6890,7 @@ bool DB_FILE::isDataList() {
 }
 
 bool DB_FILE::loadFile() {
-	time.fromUnixTime(ttTime);
+	//time.fromUnixTime(ttTime);
 
 	ymd = time.toYMD();
 	path = pOwnerDB->getPath_dbFile(tag, time, deType);

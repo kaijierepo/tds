@@ -414,7 +414,6 @@ struct DB_FILE {
 	string path;
 	string ymd;
 	DB_TIME time;
-	time_t ttTime;
 	string tag;
 	yyjson_doc* doc;
 	yyjson_val* root;
@@ -429,7 +428,6 @@ struct DB_FILE {
 		monthBoundaryFile = false;
 		boundaryFile = false;
 		time = t;
-		ttTime = t.toUnixTime();
 		tag = tag_;
 		doc = nullptr;
 		root = nullptr;
@@ -439,7 +437,7 @@ struct DB_FILE {
 	DB_FILE(time_t tt,string tag_,TDB* pOwner) {
 		monthBoundaryFile = false;
 		boundaryFile = false;
-		ttTime = tt;
+		time.fromUnixTime(tt);
 		tag = tag_;
 		doc = nullptr;
 		root = nullptr;
@@ -913,7 +911,7 @@ public:
 	string getPath_dbFile(string strTag, string time, string deType = "");
 	string getPath_dbFile(string strTag, const DB_TIME& date, string deType = "") const;
 	string changeCharForFileName(string s)  const;
-	string getPath_dataFolder(string strTag, const DB_TIME& date) const;
+	string getPath_dataFolder(string strTag, const DB_TIME& date, const string& deType = "") const;
 	string getPath_dataFolder_NO_DB(string strTag, const DB_TIME& date) const;
 	string getPath_deFile(string strTag, DB_TIME stTime);
 	string getPath_dbRoot();
