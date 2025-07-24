@@ -4076,8 +4076,15 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 							//loadDate = endDate;
 							//for (; loadDate >= startDate; loadDate -= 24 * 60 * 60)
 							loadDate = dbtEndDate;
+							auto wDay = dbtEndDate.wDay;
 							for (; loadDate >= dbtStartDate && loadDate.wMonth > 0; loadDate.wMonth--)
 							{
+								loadDate.wDay = wDay;
+								auto lastDayOfMonth = loadDate.getMaxDayOfMonth();
+								if (loadDate.wDay > lastDayOfMonth) {
+									loadDate.wDay = lastDayOfMonth;
+								}
+
 								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 								pdf->deType = deSel.deType;
 								if (!pdf->loadFile()) {
@@ -4090,8 +4097,15 @@ bool TDB::Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBF
 						}
 						else {
 							DB_TIME loadDate = dbtEndDate;
+							auto wDay = dbtEndDate.wDay;
 							for (; loadDate >= dbtStartDate && loadDate.wMonth > 0; loadDate.wMonth--)
 							{
+								loadDate.wDay = wDay;
+								auto lastDayOfMonth = loadDate.getMaxDayOfMonth();
+								if (loadDate.wDay > lastDayOfMonth) {
+									loadDate.wDay = lastDayOfMonth;
+								}
+
 								DB_FILE* pdf = new DB_FILE(loadDate, fSet.dbFileTag, this);
 								pdf->deType = deSel.deType;
 								if (!pdf->loadFile()) {
