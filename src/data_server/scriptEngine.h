@@ -11,7 +11,7 @@ using namespace std;
 
 class ScriptEngine;
 
-typedef void (*fp_initTdsFunc)(JSContext* ctx);
+typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
 
 class ScriptEngine {
 public:

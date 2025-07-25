@@ -809,7 +809,7 @@ bool ScriptEngine::runScript(string& script, string user) {
 
 		register_cpp_functions(ctx);
         if (m_initTdsFunc) {
-            m_initTdsFunc(ctx);
+            m_initTdsFunc(ctx, m_ioDevThis);
         }
 
 		JSValue result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);

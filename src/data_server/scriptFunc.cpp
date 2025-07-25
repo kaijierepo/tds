@@ -672,7 +672,7 @@ static JSValue qjs_ioDev_input(JSContext* ctx, JSValueConst this_val, int argc, 
     return JS_NewBool(ctx, false);
 }
 
-void initTdsFunc(JSContext* ctx) {
+void initTdsFunc(JSContext* ctx, void* pDev) {
     JSValue global = JS_GetGlobalObject(ctx);
 
     JS_SetPropertyStr(ctx, global, "val", JS_NewCFunction(ctx, qjs_val, "val", 3));
@@ -686,22 +686,54 @@ void initTdsFunc(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
 
-    JSValue js_db = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, js_db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
-    JS_SetPropertyStr(ctx, js_db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
-	JS_SetPropertyStr(ctx, global, "db", js_db);
+    JSValue db = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
+    JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
+	JS_SetPropertyStr(ctx, global, "db", db);
 
-    JSValue js_dev = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, js_dev, "setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "setOnline", 0));
-    JS_SetPropertyStr(ctx, js_dev, "setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "setDevVar", 2));
-    JS_SetPropertyStr(ctx, js_dev, "onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "onRecvData", 1));
-    JS_SetPropertyStr(ctx, js_dev, "doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "doTransaction", 1));
-    JS_SetPropertyStr(ctx, js_dev, "getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "getDevVar", 1));
-    JS_SetPropertyStr(ctx, js_dev, "setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "setOffline", 0));
-    JS_SetPropertyStr(ctx, js_dev, "input", JS_NewCFunction(ctx, qjs_ioDev_input, "input", 2));
-	JS_SetPropertyStr(ctx, global, "Dev", js_dev);
+    JSValue dev = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, global, "Dev", dev);
+    initIODevFunc(ctx, pDev, dev);
 
     JS_FreeValue(ctx, global);
+}
+
+void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj) {
+    ioDev* pDevTemp = (ioDev*)pDev;
+
+    json jVal;
+    JSValue value;
+
+    JS_SetPropertyStr(ctx, obj, "setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "setOnline", 0));
+    JS_SetPropertyStr(ctx, obj, "setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "setDevVar", 2));
+    JS_SetPropertyStr(ctx, obj, "onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "onRecvData", 1));
+    JS_SetPropertyStr(ctx, obj, "doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "doTransaction", 1));
+    JS_SetPropertyStr(ctx, obj, "getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "getDevVar", 1));
+    JS_SetPropertyStr(ctx, obj, "setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "setOffline", 0));
+    JS_SetPropertyStr(ctx, obj, "input", JS_NewCFunction(ctx, qjs_ioDev_input, "input", 2));
+
+    jsonValToJsVal(pDevTemp->m_jDevAddr, ctx, value);
+    JS_SetPropertyStr(ctx, obj, "addr", value);
+
+    jVal = pDevTemp->m_bOnline;
+    jsonValToJsVal(jVal, ctx, value);
+    JS_SetPropertyStr(ctx, obj, "online", value);
+
+    value = JS_NewString(ctx, pDevTemp->m_confNodeId.c_str());
+    JS_SetPropertyStr(ctx, obj, "confNodeId", value);
+
+    if (pDevTemp->m_vecChildDev.size() > 0) {
+        JSValue vecChild = JS_NewArray(ctx);
+        JS_SetPropertyStr(ctx, obj, "children", vecChild);
+
+        for (size_t i = 0; i < pDevTemp->m_vecChildDev.size(); i++) {
+            ioDev* pChildDev = pDevTemp->m_vecChildDev[i];
+            JSValue qjsChildDev = JS_NewObject(ctx);
+            JS_SetPropertyUint32(ctx, vecChild, (uint32_t)i, qjsChildDev);
+
+            initIODevFunc(ctx, pChildDev, qjsChildDev);
+        }
+    }
 }
 
 #endif

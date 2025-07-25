@@ -1477,17 +1477,17 @@ void ioDev_tdsp::onEvent_online()
 	}
 }
 
-void ioDev_tdsp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
-{
+void ioDev_tdsp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) {
 	if (connInfo->bEnable == false) {
 		return;
 	}
 
 	IOLogRecv(pData, len,connInfo->getRemoteAddr(),connInfo->getLocalAddr());
 
-	if (m_translatorProto != ""){ 	//使用协议转换器模式的tcp通信，不允许出现粘包和断包
+	if (m_translatorProto != "") { 	//使用协议转换器模式的tcp通信，不允许出现粘包和断包
 		string tdspPkt;
 		translateToTdspPkt((char*)pData, len, tdspPkt);
+
 		if (tdspPkt.size() != 0) {
 			onRecvData((unsigned char*)tdspPkt.c_str(), tdspPkt.size());
 		}
@@ -1495,16 +1495,16 @@ void ioDev_tdsp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionC
 	else {
 		stream2pkt* pab = &m_pab;
 		pab->PushStream(pData, len);
-		while (pab->PopPkt(IsValidPkt_TDSP))
-		{
-			if (pab->abandonData != "")
-			{
+
+		while (pab->PopPkt(IsValidPkt_TDSP)) {
+			if (pab->abandonData != "") {
 				string remoteAddr = connInfo->getRemoteAddr();
 				LOG("[warn]地址 " + remoteAddr + " 已提取正确包,丢弃包前面错误数据:" + pab->abandonData);
+
 				pIOSession->abandonLen += pab->iAbandonLen;
 			}
-			pIOSession->iALProto = pab->m_protocolType;
 
+			pIOSession->iALProto = pab->m_protocolType;
 			onRecvData(pab->pkt, pab->iPktLen);
 		}
 	}

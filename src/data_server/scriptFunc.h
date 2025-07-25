@@ -12,6 +12,7 @@ using namespace std;
 
 extern RPC_SESSION currentSession;
 
-void initTdsFunc(JSContext* ctx);
+void initTdsFunc(JSContext* ctx, void* pDev);
+void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj);
 
 #endif
