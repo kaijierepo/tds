@@ -685,15 +685,21 @@ void initTdsFunc(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
-    JS_SetPropertyStr(ctx, global, "db_select", JS_NewCFunction(ctx, qjs_db_select, "db_select", 1));
-    JS_SetPropertyStr(ctx, global, "db_insert", JS_NewCFunction(ctx, qjs_db_insert, "db_insert", 3));
-    JS_SetPropertyStr(ctx, global, "ioDev_setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "ioDev_setOnline", 0));
-    JS_SetPropertyStr(ctx, global, "ioDev_setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "ioDev_setDevVar", 2));
-    JS_SetPropertyStr(ctx, global, "ioDev_onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "ioDev_onRecvData", 1));
-    JS_SetPropertyStr(ctx, global, "ioDev_doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "ioDev_doTransaction", 1));
-    JS_SetPropertyStr(ctx, global, "ioDev_getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "ioDev_getDevVar", 1));
-    JS_SetPropertyStr(ctx, global, "ioDev_setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "ioDev_setOffline", 0));
-    JS_SetPropertyStr(ctx, global, "ioDev_input", JS_NewCFunction(ctx, qjs_ioDev_input, "ioDev_input", 2));
+
+    JSValue js_db = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, js_db, "db_select", JS_NewCFunction(ctx, qjs_db_select, "db_select", 1));
+    JS_SetPropertyStr(ctx, js_db, "db_insert", JS_NewCFunction(ctx, qjs_db_insert, "db_insert", 3));
+	JS_SetPropertyStr(ctx, global, "db", js_db);
+
+    JSValue js_dev = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "ioDev_setOnline", 0));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "ioDev_setDevVar", 2));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "ioDev_onRecvData", 1));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "ioDev_doTransaction", 1));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "ioDev_getDevVar", 1));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "ioDev_setOffline", 0));
+    JS_SetPropertyStr(ctx, js_dev, "ioDev_input", JS_NewCFunction(ctx, qjs_ioDev_input, "ioDev_input", 2));
+	JS_SetPropertyStr(ctx, global, "Dev", js_dev);
 
     JS_FreeValue(ctx, global);
 }
