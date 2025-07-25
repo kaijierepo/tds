@@ -4241,7 +4241,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 			string tmpTime;
 			string groupKeyVal;
 			bool ymdEqualityCheckedInDe = false; //check ymd in one de ,if not equal to db folder ymd throw exception
-			bool hasTimeStamp = (deSel.deType != "statisDe" && deSel.deType == "statisByDay" && deSel.deType == "statisByMonth");
+			bool hasTimeStamp = (deSel.deType != "statisDe" && deSel.deType != "statisByDay" && deSel.deType != "statisByMonth");
 			yyjson_val* deList = nullptr;
 			yyjson_type type = yyjson_get_type(pdf->root);
 			if (type == YYJSON_TYPE_OBJ) { //file with desc
