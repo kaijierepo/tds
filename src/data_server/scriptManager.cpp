@@ -724,6 +724,21 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		se.m_tagContext = si.getContextTag();
 
+		if (si.devAddr != "") {
+			ioDev* p = nullptr;
+
+#ifdef TDS
+			p = ioSrv.getIODevByIPPort(si.devAddr);
+			if (!p) {
+				p = ioSrv.getIODevById(si.devAddr);
+			}
+#endif
+
+			if (p) {
+				se.m_ioDevThis = p;
+			}
+		}
+
 		TIME tStart = timeopt::now();
 
 		bool runOk = se.runScript(si.script, si.lastModifyUser);
