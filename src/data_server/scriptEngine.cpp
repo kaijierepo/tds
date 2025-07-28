@@ -812,6 +812,18 @@ bool ScriptEngine::runScript(string& script, string user) {
             m_initTdsFunc(ctx, m_ioDevThis);
         }
 
+        if (!m_globalObj.is_null()) {
+            JSValue global = JS_GetGlobalObject(ctx);
+            for (auto& [key, value] : m_globalObj.items()) {
+                JSValue prop_value;
+                jsonValToJsVal(value, ctx, prop_value);
+
+                JS_SetPropertyStr(ctx, global, key.c_str(), prop_value);
+            }
+
+            JS_FreeValue(ctx, global);
+        }
+
 		JSValue result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
 
 		if (JS_IsException(result)) {

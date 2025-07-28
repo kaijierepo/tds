@@ -235,19 +235,14 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 #ifdef TDS
 		se.m_initTdsFunc = initTdsFunc;
-#endif
-
-		se.m_tagContext = si.getContextTag();
 
 		if (si.devAddr != "") {
 			ioDev* p = nullptr;
 
-#ifdef TDS
 			p = ioSrv.getIODevByIPPort(si.devAddr);
 			if (!p) {
 				p = ioSrv.getIODevById(si.devAddr);
 			}
-#endif
 
 			if (p) {
 				se.m_ioDevThis = p;
@@ -257,6 +252,9 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 				rpcResp.error = jError.dump();
 			}
 		}
+#endif
+
+		se.m_tagContext = si.getContextTag();
 
 		bool runOk = se.runScript(s,session.user);
 		si.lastRunInfo.runSuccess = runOk;
@@ -720,24 +718,22 @@ void ScriptManager::exeAllGlobalScripts() {
 
 #ifdef TDS
 		se.m_initTdsFunc = initTdsFunc;
-#endif
-
-		se.m_tagContext = si.getContextTag();
 
 		if (si.devAddr != "") {
 			ioDev* p = nullptr;
 
-#ifdef TDS
 			p = ioSrv.getIODevByIPPort(si.devAddr);
 			if (!p) {
 				p = ioSrv.getIODevById(si.devAddr);
 			}
-#endif
 
 			if (p) {
 				se.m_ioDevThis = p;
 			}
 		}
+#endif
+
+		se.m_tagContext = si.getContextTag();
 
 		TIME tStart = timeopt::now();
 

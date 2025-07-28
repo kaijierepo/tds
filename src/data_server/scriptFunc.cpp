@@ -691,19 +691,16 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
 	JS_SetPropertyStr(ctx, global, "db", db);
 
-    JSValue dev = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, global, "Dev", dev);
-    initIODevFunc(ctx, pDev, dev);
-
+    if (pDev) {
+        JSValue dev = JS_NewObject(ctx);
+        JS_SetPropertyStr(ctx, global, "Dev", dev);
+        initIODevFunc(ctx, pDev, dev);
+    }
+    
     JS_FreeValue(ctx, global);
 }
 
 void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj) {
-    ioDev* pDevTemp = (ioDev*)pDev;
-
-    json jVal;
-    JSValue value;
-
     JS_SetPropertyStr(ctx, obj, "setOnline", JS_NewCFunction(ctx, qjs_ioDev_setOnline, "setOnline", 0));
     JS_SetPropertyStr(ctx, obj, "setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "setDevVar", 2));
     JS_SetPropertyStr(ctx, obj, "onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "onRecvData", 1));
@@ -711,6 +708,11 @@ void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj) {
     JS_SetPropertyStr(ctx, obj, "getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "getDevVar", 1));
     JS_SetPropertyStr(ctx, obj, "setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "setOffline", 0));
     JS_SetPropertyStr(ctx, obj, "input", JS_NewCFunction(ctx, qjs_ioDev_input, "input", 2));
+    
+    ioDev* pDevTemp = (ioDev*)pDev;
+
+    json jVal;
+    JSValue value;
 
     jsonValToJsVal(pDevTemp->m_jDevAddr, ctx, value);
     JS_SetPropertyStr(ctx, obj, "addr", value);
