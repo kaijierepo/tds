@@ -213,7 +213,7 @@ void ioDev_custom::DoCycleTask()
 
 void ioDev_custom::onEvent_online()
 {
-	
+	ioDev::onEvent_online();
 }
 
 bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
@@ -321,6 +321,7 @@ void ioDev_custom::output(ioChannel* pC, json jVal, json& rlt, json& err, bool s
 
 void ioDev_custom::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
+	ioDev::statusChange_tcpClt(connInfo, bIsConn);
 }
 
 bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
