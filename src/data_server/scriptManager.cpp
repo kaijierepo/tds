@@ -851,7 +851,7 @@ void ScriptManager::exeAllVarExpScripts() {
 
 #ifdef TDS
 			size_t len = 0;
-			char* result = yyjson_mut_write(mutDoc, 0, &len);
+			char* result = yyjson_mut_val_write(mutRoot, 0, &len);
 			if (result) {
 				string str = result;
 				tds->callAsyn("input", str);
