@@ -6980,12 +6980,14 @@ public:
 
 public:
 	void DelAllPointDir(const std::string& strDir, const std::string& strDirName, std::map<std::string, bool>& mapDeleteFiles);
-	//clean log files
-	bool CheckAndDelUselessFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays);
-	//clean picture，video，curve files
-	bool CheckAndDelUsefulFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays, bool bVideoTag = false);
-
 	void LogStatic(const std::string& strLog);
+
+	//clean Log files
+	bool CheckAndDelUselessFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays);
+	//clean DB files
+	bool CheckAndDelUsefulFile_DB(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays);
+	//clean Video files
+	bool CheckAndDelUsefulFile_Video(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays);
 
 public:
 	void SetPath(const std::string& strProjectPath, const std::string& strDBPathAbs, const std::string& strVideoTag);
@@ -7228,286 +7230,336 @@ bool CCleanDisk::IsInTimeZone(int Now, int sta, int sto)
 	}
 }
 
-bool CCleanDisk::CheckAndDelUselessFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays)
-{
-	if (iRemainUselessFileDays <= 7) return true;
+bool CCleanDisk::CheckAndDelUselessFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays) {
+	if (iRemainUselessFileDays <= 7) {
+		return true;
+	}
+
 	std::string strLogPathFile = m_strProjectPath + "\\Log\\";
 	std::string strFilePath = "", strFileName = "", strLog = "", strTemp = "";
 
 	auto now = std::chrono::system_clock::now();
 	time_t now_c = std::chrono::system_clock::to_time_t(now);
+
 	tm now_tm;
 	localtime_s(&now_tm, &now_c);
-	if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false)
-		return true;
 
-	std::map<std::string, bool> mapDeleteFiles;//true:dir false:file
+	if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false) {
+		return true;
+	}
 
 	bool bDel = false;
+	std::map<std::string, bool> mapDeleteFiles;//true:dir false:file
 
-	for (const auto& entry : fs::directory_iterator(strLogPathFile))
-	{
+	for (const auto& entry : fs::directory_iterator(strLogPathFile)) {
 		strFileName = entry.path().filename().string();
 		strFilePath = entry.path().string();
 
 		if (entry.status().type() == fs::file_type::directory
 			&& strFileName != "." && strFileName != ".."
-			&& strFileName.size() == 8 && IsNumberString(strFileName))
-		{
+			&& strFileName.size() == 8 && IsNumberString(strFileName)) {
+
 			tm cFolderTime;
 			memset(&cFolderTime, 0, sizeof(cFolderTime));
+
 			cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
 			cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
 			cFolderTime.tm_mday = stoi(strFileName.substr(6, 2));
-			if (cFolderTime.tm_year >= 0)
-			{
-				double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
 
-				if (int(difference) > iRemainUselessFileDays)
-				{
-					mapDeleteFiles[strFilePath] = true;
+			if (cFolderTime.tm_year >= 0) {
+				double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+				if (int(difference) > iRemainUselessFileDays) {
 					bDel = true;
+					mapDeleteFiles[strFilePath] = true;
 				}
 			}
 		}
-		else if (strFileName != "." && strFileName != "..")
-		{
+		else if (strFileName != "." && strFileName != "..") {
 			fs::file_time_type time = fs::last_write_time(entry.path());
 			std::time_t cftime = to_time_t(time);
 
 			double difference = std::difftime(now_c, cftime) / (60 * 60 * 24);
-			if ((int)difference > iRemainUselessFileDays)
-			{
-				if (entry.status().type() == fs::file_type::directory)
-				{
+			if ((int)difference > iRemainUselessFileDays) {
+				bDel = true;
+
+				if (entry.status().type() == fs::file_type::directory) {
 					mapDeleteFiles[strFilePath] = true;
 				}
-				else
-				{
+				else {
 					mapDeleteFiles[strFilePath] = false;
 				}
-
-				bDel = true;
 			}
 		}
 	}
 
 	//start delete
 	auto bDelRetu = false;
-	for (auto& it : mapDeleteFiles)
-	{
-		if (it.second)
-		{
+	for (auto& it : mapDeleteFiles) {
+		if (it.second) {
 			bDelRetu = DeleteDirectory(it.first);
 
 			strLog = format("[DiskMng]delete log dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
-		else
-		{
+		else {
 			bDelRetu = DeleteFile(it.first);
+
 			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 	}
+
 	return bDel;
 }
 
 
-bool CCleanDisk::CheckAndDelUsefulFile(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays, bool bVideoTag/* = false*/)
-{
-	if (iRemainUsefulFileDays <= 30 || iRemainUselessFileDays <= 7) return true;
-	std::string strDataPath = m_strDBPathAbs;
-	if (bVideoTag)
-	{
-		strDataPath + "/" + m_strVideoTag + "/";
+bool CCleanDisk::CheckAndDelUsefulFile_DB(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays) {
+	if (iRemainUsefulFileDays <= 30 || iRemainUselessFileDays <= 7) {
+		return true;
 	}
+
+	std::string strDataPath = m_strDBPathAbs;
 	std::string strFilePath = "", strFileName = "", strLog = "", strTemp = "";
 
 	bool bDel = false;
-
 	std::map<std::string, bool> mapDeleteFiles;//true:dir false:file
-	{
-		auto now = std::chrono::system_clock::now();
-		time_t now_c = std::chrono::system_clock::to_time_t(now);
-		tm now_tm;
-		localtime_s(&now_tm, &now_c);
+	auto now = std::chrono::system_clock::now();
+	time_t now_c = std::chrono::system_clock::to_time_t(now);
+	tm now_tm;
+	localtime_s(&now_tm, &now_c);
 
-		if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false)
-			return true;
+	if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false) {
+		return true;
+	}
 
+	// useful
+	for (const auto& entry : fs::directory_iterator(strDataPath)) {
+		strFileName = entry.path().filename().string();
 
-		for (const auto& entry : fs::directory_iterator(strDataPath))
-		{
-			strFileName = entry.path().filename().string();
-			if (entry.status().type() == fs::file_type::directory
-				&& strFileName != "." && strFileName != ".."
-				&& strFileName.size() == 6 && IsNumberString(strFileName))
-			{
-				if (IsNumberString(strFileName))
-				{
-					int year_month = stoi(strFileName);
+		if (entry.status().type() == fs::file_type::directory
+			&& strFileName != "." && strFileName != ".."
+			&& strFileName.size() == 6 && IsNumberString(strFileName)) {
+
+			int year_month = stoi(strFileName);
+
+			tm cFolderTime;
+			memset(&cFolderTime, 0, sizeof(cFolderTime));
+
+			cFolderTime.tm_year = year_month / 100 - 1900;
+			cFolderTime.tm_mon = year_month % 100 - 1;
+			cFolderTime.tm_mday = DaysInAMonth(year_month / 100, year_month % 100);
+
+			bool bDeleteDir = false;
+			if (cFolderTime.tm_year >= 0) {
+				double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+				if (int(difference) > iRemainUsefulFileDays) {
+					bDel = true;
+					bDeleteDir = true;
+
+					strFilePath = entry.path().string();
+					mapDeleteFiles[strFilePath] = true;
+				}
+			}
+
+			if (!bDeleteDir) {
+				for (int iDay = 1; iDay <= 31; iDay++) {
+					strTemp = format("%02d", iDay);
+					strFilePath = entry.path().string() + "\\" + strTemp;
+
+					if (IsDirExist(strFilePath)) {
+						tm cFolderTime;
+						memset(&cFolderTime, 0, sizeof(cFolderTime));
+
+						cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
+						cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
+						cFolderTime.tm_mday = iDay;
+
+						if (cFolderTime.tm_year >= 0) {
+							double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+							if (int(difference) > iRemainUsefulFileDays) {
+								bDel = true;
+								mapDeleteFiles[strFilePath] = true;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//useless and "录像"
+	for (const auto& entry : fs::directory_iterator(strDataPath)) {
+		strFileName = entry.path().filename().string();
+
+		if (entry.status().type() == fs::file_type::directory
+			&& strFileName != "." && strFileName != ".."
+			&& strFileName.size() == 6 && IsNumberString(strFileName)) {
+
+			for (int iDay = 1; iDay <= 31; iDay++) {
+				strTemp = format("%02d", iDay);
+				strFilePath = entry.path().string() + "\\" + strTemp;
+
+				if (IsDirExist(strFilePath)) {
 					tm cFolderTime;
 					memset(&cFolderTime, 0, sizeof(cFolderTime));
-					cFolderTime.tm_year = year_month / 100 - 1900;
-					cFolderTime.tm_mon = year_month % 100 - 1;
-					cFolderTime.tm_mday = DaysInAMonth(year_month / 100, year_month % 100);
 
-					bool bDeleteDir = false;
-					if (cFolderTime.tm_year >= 0)
-					{
+					cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
+					cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
+					cFolderTime.tm_mday = iDay;
+
+					if (cFolderTime.tm_year >= 0) {
 						double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
 
-						if (int(difference) > iRemainUsefulFileDays)
-						{
-							strFilePath = entry.path().string();
+						if (int(difference) > iRemainUselessFileDays) {
+							DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
 							bDel = true;
-							bDeleteDir = true;
-							mapDeleteFiles[strFilePath] = true;
 						}
-					}
-
-					if (!bDeleteDir)
-					{
-						for (int iDay = 1; iDay <= 31; iDay++)
-						{
-							strTemp = format("%02d", iDay);
-							strFilePath = entry.path().string() + "\\" + strTemp;
-							if (IsDirExist(strFilePath))
-							{
-								tm cFolderTime;
-								memset(&cFolderTime, 0, sizeof(cFolderTime));
-								cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
-								cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
-								cFolderTime.tm_mday = iDay;
-								if (cFolderTime.tm_year >= 0)
-								{
-									double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
-
-									if (int(difference) > iRemainUsefulFileDays)
-									{
-										mapDeleteFiles[strFilePath] = true;
-
-										bDel = true;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-			else if (strFileName != "." && strFileName != "..")
-			{
-				fs::file_time_type time = fs::last_write_time(entry.path());
-				std::time_t cftime = to_time_t(time);
-
-				double difference = std::difftime(now_c, cftime) / (60 * 60 * 24);
-				if ((int)difference > iRemainUselessFileDays)
-				{
-					strFilePath = entry.path().string();
-
-					if (entry.status().type() == fs::file_type::directory)
-					{
-						mapDeleteFiles[strFilePath] = true;
-					}
-					else
-					{
-						mapDeleteFiles[strFilePath] = false;
-					}
-					bDel = true;
-				}
-			}
-		}
-	}
-
-	{
-		auto now = std::chrono::system_clock::now();
-		time_t now_c = std::chrono::system_clock::to_time_t(now);
-		tm now_tm;
-		localtime_s(&now_tm, &now_c);
-
-		if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime))
-		{
-			std::string strVideoPath = m_strDBPathAbs;
-			if (bVideoTag)
-			{
-				strVideoPath + "/" + m_strVideoTag + "/";
-			}
-			for (const auto& entry : fs::directory_iterator(strVideoPath))
-			{
-				strFileName = entry.path().filename().string();
-
-				if (entry.status().type() == fs::file_type::directory
-					&& strFileName != "." && strFileName != ".."
-					&& strFileName.size() == 6 && IsNumberString(strFileName))
-				{
-					if (IsNumberString(strFileName))
-					{
-						for (int iDay = 1; iDay <= 31; iDay++)
-						{
-							strTemp = format("%02d", iDay);
-							strFilePath = entry.path().string() + "\\" + strTemp;
-							if (IsDirExist(strFilePath))
-							{
-								tm cFolderTime;
-								memset(&cFolderTime, 0, sizeof(cFolderTime));
-								cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
-								cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
-								cFolderTime.tm_mday = iDay;
-								if (cFolderTime.tm_year >= 0)
-								{
-									double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
-
-									if (int(difference) > iRemainUselessFileDays)
-									{
-										DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
-										bDel = true;
-									}
-								}
-							}
-						}
-					}
-				}
-				else if (strFileName != "." && strFileName != "..")
-				{
-					fs::file_time_type time = fs::last_write_time(entry.path());
-					std::time_t cftime = to_time_t(time);
-
-					double difference = std::difftime(now_c, cftime) / (60 * 60 * 24);
-					if ((int)difference > iRemainUselessFileDays)
-					{
-						strFilePath = entry.path().string();
-
-						if (entry.status().type() == fs::file_type::directory)
-						{
-							mapDeleteFiles[strFilePath] = true;
-						}
-						else
-						{
-							mapDeleteFiles[strFilePath] = false;
-						}
-						bDel = true;
 					}
 				}
 			}
 		}
 	}
-
 
 	//start delete
 	auto bDelRetu = false;
-	for (auto& it : mapDeleteFiles)
-	{
-		if (it.second)
-		{
+	for (auto& it : mapDeleteFiles) {
+		if (it.second) {
 			bDelRetu = DeleteDirectory(it.first);
 
 			strLog = format("[DiskMng]delete dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
-		else
-		{
+		else {
 			bDelRetu = DeleteFile(it.first);
+
+			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			LogStatic(strLog);
+		}
+	}
+
+	return bDel;
+}
+
+bool CCleanDisk::CheckAndDelUsefulFile_Video(int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays) {
+	if (iRemainUsefulFileDays <= 30 || iRemainUselessFileDays <= 7) {
+		return true;
+	}
+
+	std::string strDataPath = m_strDBPathAbs + "/" + m_strVideoTag + "/";
+	std::string strFilePath = "", strFileName = "", strLog = "", strTemp = "";
+
+	bool bDel = false;
+	std::map<std::string, bool> mapDeleteFiles;//true:dir false:file
+
+	auto now = std::chrono::system_clock::now();
+	time_t now_c = std::chrono::system_clock::to_time_t(now);
+	tm now_tm;
+	localtime_s(&now_tm, &now_c);
+
+	if (IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false) {
+		return true;
+	}
+
+	// useful
+	for (const auto& entry : fs::directory_iterator(strDataPath)) {
+		strFileName = entry.path().filename().string();
+
+		if (entry.status().type() == fs::file_type::directory
+			&& strFileName != "." && strFileName != ".."
+			&& strFileName.size() == 6 && IsNumberString(strFileName)) {
+
+			int year_month = stoi(strFileName);
+
+			tm cFolderTime;
+			memset(&cFolderTime, 0, sizeof(cFolderTime));
+
+			cFolderTime.tm_year = year_month / 100 - 1900;
+			cFolderTime.tm_mon = year_month % 100 - 1;
+			cFolderTime.tm_mday = DaysInAMonth(year_month / 100, year_month % 100);
+
+			bool bDeleteDir = false;
+			if (cFolderTime.tm_year >= 0) {
+				double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+				if (int(difference) > iRemainUsefulFileDays) {
+					bDel = true;
+					bDeleteDir = true;
+
+					strFilePath = entry.path().string();
+					mapDeleteFiles[strFilePath] = true;
+				}
+			}
+
+			if (!bDeleteDir) {
+				for (int iDay = 1; iDay <= 31; iDay++) {
+					strTemp = format("%02d", iDay);
+					strFilePath = entry.path().string() + "\\" + strTemp;
+
+					if (IsDirExist(strFilePath)) {
+						tm cFolderTime;
+						memset(&cFolderTime, 0, sizeof(cFolderTime));
+
+						cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
+						cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
+						cFolderTime.tm_mday = iDay;
+
+						if (cFolderTime.tm_year >= 0) {
+							double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+							if (int(difference) > iRemainUsefulFileDays) {
+								bDel = true;
+								mapDeleteFiles[strFilePath] = true;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// useless + "录像"
+	for (const auto& entry : fs::directory_iterator(strDataPath)) {
+		strFileName = entry.path().filename().string();
+
+		if (entry.status().type() == fs::file_type::directory
+			&& strFileName != "." && strFileName != ".."
+			&& strFileName.size() == 6 && IsNumberString(strFileName)) {
+
+			for (int iDay = 1; iDay <= 31; iDay++) {
+				strTemp = format("%02d", iDay);
+				strFilePath = entry.path().string() + "\\" + strTemp;
+
+				if (IsDirExist(strFilePath)) {
+					tm cFolderTime;
+					memset(&cFolderTime, 0, sizeof(cFolderTime));
+
+					cFolderTime.tm_year = stoi(strFileName.substr(0, 4)) - 1900;
+					cFolderTime.tm_mon = stoi(strFileName.substr(4, 2)) - 1;
+					cFolderTime.tm_mday = iDay;
+
+					if (cFolderTime.tm_year >= 0) {
+						double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
+
+						if (int(difference) > iRemainUselessFileDays) {
+							bDel = true;
+							DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	//start delete
+	auto bDelRetu = false;
+	for (auto& it : mapDeleteFiles) {
+		if (it.second) {
+			bDelRetu = DeleteDirectory(it.first);
+
+			strLog = format("[DiskMng]delete dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			LogStatic(strLog);
+		}
+		else {
+			bDelRetu = DeleteFile(it.first);
+
 			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
@@ -7611,12 +7663,12 @@ void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideo
 
 				CleanDisk.LogStatic("start clean data disk");
 
-				auto bDel = CleanDisk.CheckAndDelUsefulFile(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays);
+				auto bDel = CleanDisk.CheckAndDelUsefulFile_DB(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays);
 				if (CleanDisk.g_nCleanStatus == 3) break;
 				while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0)
 				{
 					CleanDisk.LogStatic("no clean data disk, force delete one day data");
-					bDel = CleanDisk.CheckAndDelUsefulFile(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
+					bDel = CleanDisk.CheckAndDelUsefulFile_DB(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
 					if (CleanDisk.g_nCleanStatus == 3) break;
 				}
 				CleanDisk.LogStatic("end clean data disk");
@@ -7626,12 +7678,12 @@ void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideo
 					nRemainUsefulFileDays = iRemainUsefulFileDays;
 					CleanDisk.LogStatic("start clean video data disk");
 
-					auto bDel = CleanDisk.CheckAndDelUsefulFile(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays, true);
+					auto bDel = CleanDisk.CheckAndDelUsefulFile_Video(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays);
 					if (CleanDisk.g_nCleanStatus == 3) break;
 					while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0)
 					{
 						CleanDisk.LogStatic("no clean video data disk, force delete one day video data");
-						bDel = CleanDisk.CheckAndDelUsefulFile(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays, true);
+						bDel = CleanDisk.CheckAndDelUsefulFile_Video(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
 						if (CleanDisk.g_nCleanStatus == 3) break;
 					}
 					CleanDisk.LogStatic("end clean video data disk");
