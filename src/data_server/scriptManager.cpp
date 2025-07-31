@@ -224,6 +224,11 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 			si.devAddr = yyjson_get_str(dev_addr_val);
 		}
 
+		yyjson_val* dev_addr_id = yyjson_obj_get(params_obj, "devId");
+		if (dev_addr_id && yyjson_is_str(dev_addr_id)) {
+			si.devId = yyjson_get_str(dev_addr_id);
+		}
+
 		// getExpRet
 		bool getExpRet = false;
 		yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
@@ -236,7 +241,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 #ifdef TDS
 		se.m_initTdsFunc = initTdsFunc;
 
-		if (si.devAddr != "") {
+		if (si.devAddr != "" || si.devId != "") {
 			ioDev* p = nullptr;
 			if (si.devId != "") {
 				p = ioSrv.getIODevByNodeID(si.devId);
@@ -1027,6 +1032,7 @@ void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool g
 
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "rootTag", rootTag.c_str());
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devAddr", devAddr.c_str());
+	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devId", devId.c_str());
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "calcMpTag", calcMpTag.c_str());
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "callerObjTag", callerObjTag.c_str());
 
