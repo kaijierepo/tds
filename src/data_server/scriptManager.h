@@ -26,6 +26,7 @@ struct SCRIPT_INFO {
 	string rootTag        = "";   
 	string devAddr        = "";   
 	string mode           = "";
+	string devId          = ""; 
 
 	int interval          = 0;
 	TIME lastExe          = TIME();

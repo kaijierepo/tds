@@ -238,11 +238,16 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 		if (si.devAddr != "") {
 			ioDev* p = nullptr;
-
-			p = ioSrv.getIODevByIPPort(si.devAddr);
-			if (!p) {
-				p = ioSrv.getIODevById(si.devAddr);
+			if (si.devId != "") {
+				p = ioSrv.getIODevByNodeID(si.devId);
 			}
+			if (!p && si.devAddr != "") {
+				p = ioSrv.getIODevByIPPort(si.devAddr);
+				if (!p) {
+					p = ioSrv.getIODevById(si.devAddr);
+				}
+			}
+
 
 			if (p) {
 				se.m_ioDevThis = p;
@@ -949,6 +954,7 @@ void SCRIPT_INFO::toJson(json& j,bool getStatus) {
 	jIter["sec"] = sec;
 	jIter["milli"] = milli;
 
+	j["devId"] = devId;
 	j["interval"] = jIter;
 	j["rootTag"] = rootTag;
 	j["devAddr"] = devAddr;
@@ -1063,6 +1069,11 @@ void SCRIPT_INFO::fromJson(yyjson_val* root) {
 	val = yyjson_obj_get(root, "devAddr");
 	if (val && yyjson_is_str(val)) {
 		devAddr = yyjson_get_str(val);
+	}
+
+	val = yyjson_obj_get(root, "devId");
+	if (val && yyjson_is_str(val)) {
+		devId = yyjson_get_str(val);
 	}
 	
 	val = yyjson_obj_get(root, "interval");
