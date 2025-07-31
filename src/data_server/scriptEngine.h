@@ -9,6 +9,16 @@
 using json = nlohmann::json;
 using namespace std;
 
+struct SCRIPT_RUN_INFO {
+	bool runSuccess = false;
+	bool valNullInCalc = false;
+	string lastError = "";
+	string lastExe;
+	string retVal = "";
+	int runTimeCost = 0;
+	map<string, string> tagRefDataTime;
+};
+
 class ScriptEngine;
 
 typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
@@ -16,7 +26,7 @@ typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
 class ScriptEngine {
 public:
 	ScriptEngine();
-	bool runScript(string& script, string user);
+	bool runScript(string& script, string user, SCRIPT_RUN_INFO& sri);
 
 	string m_sError;
 	vector<string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log

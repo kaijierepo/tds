@@ -3,20 +3,11 @@
 #include <map>
 #include "json.hpp"
 #include "tdsSession.h"
+#include "scriptEngine.h"
 
 using json = nlohmann::json;
 using namespace std;
 
-struct SCRIPT_RUN_INFO {
-	bool runSuccess     = false;
-	bool valNullInCalc  = false;
-
-	string lastError    = "";
-	string retVal       = "";
-
-	int runTimeCost     = 0; 
-	map<string, string> tagRefDataTime;
-};
 
 struct SCRIPT_INFO {
 	string script         = "";
@@ -29,7 +20,6 @@ struct SCRIPT_INFO {
 	string devId          = ""; 
 
 	int interval          = 0;
-	TIME lastExe          = TIME();
 
 	string org            = "";
 	string lastModifyTime = "";
@@ -45,9 +35,6 @@ struct SCRIPT_INFO {
 
 	string getContextTag();
 	string getExpContextTag();
-
-	void toJson(json& j, bool getStatus = false);
-	void fromJson(json& j);
 	
 	void toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus = false);
 	void fromJson(yyjson_val* mutRoot);
@@ -77,6 +64,7 @@ public:
 
 	bool runScriptFileAsyn(string scriptName,string tagThis);
 	bool getScript(string name, SCRIPT_INFO& si);
+	bool setRunInfo(string name, SCRIPT_RUN_INFO& sri);
 	bool rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
@@ -93,6 +81,8 @@ public:
 
 	string getScriptPath(yyjson_val* params_obj, RPC_SESSION session);
 	json getScriptList(string tag);
+
+	ioDev* getEvnDev(SCRIPT_INFO& si);
 
 	void exeAllGlobalScripts();
 	void exeAllVarExpScripts();

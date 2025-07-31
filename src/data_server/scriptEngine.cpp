@@ -792,12 +792,14 @@ ScriptEngine::ScriptEngine() {
     m_bValNullInCalc = false;
 }
 
-bool ScriptEngine::runScript(string& script, string user) {
+bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) {
 	m_script = script;
 	m_user = user;
 
 	m_vecOutput.clear();
 	bool runOk = false;
+
+    sri.lastExe = timeopt::nowStr();
 
 	try {
 		TIME tStart = timeopt::now();
@@ -862,6 +864,11 @@ bool ScriptEngine::runScript(string& script, string user) {
 		return false;
 	}
 
+
+    sri.tagRefDataTime = m_vecValRefTime;
+    sri.retVal = m_sEvalRet.dump();
+    sri.valNullInCalc = m_bValNullInCalc;
+    sri.runSuccess = runOk;
 	return runOk;
 }
 

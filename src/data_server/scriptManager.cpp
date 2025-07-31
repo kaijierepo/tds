@@ -46,7 +46,7 @@ bool ScriptManager::init() {
 		yyjson_val* info;
 		yyjson_arr_foreach(root, idx, count, info) {
 			SCRIPT_INFO si;
-			si.lastExe = timeopt::now();
+			si.lastRunInfo.lastExe = timeopt::nowStr();
 			si.fromJson(info);
 
 			string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
@@ -127,9 +127,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag) {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-		se.runScript(si.script, si.lastModifyUser);
-
-		si.lastExe = timeopt::now();
+		se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
 	}
 #endif
 }
@@ -195,6 +193,16 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 	return false;
 }
 
+bool ScriptManager::setRunInfo(string name, SCRIPT_RUN_INFO& sri)
+{
+	unique_lock<mutex> lock(scriptManager.m_csScripts);
+	if (m_mapScripts.find(name) != m_mapScripts.end()) {
+		m_mapScripts.at(name).lastRunInfo = sri;
+		return true;
+	}
+	return false;
+}
+
 bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
 	if (script_val && yyjson_is_str(script_val)) {
@@ -209,7 +217,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 
 		SCRIPT_INFO si;
-		si.lastExe = timeopt::now();
 		si.org = session.org;
 
 		// rootTag
@@ -266,8 +273,8 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 		se.m_tagContext = si.getContextTag();
 
-		bool runOk = se.runScript(s,session.user);
-		si.lastRunInfo.runSuccess = runOk;
+		bool runOk = se.runScript(s,session.user,si.lastRunInfo);
+
 
 		json jOutput = json::array();
 		if (getExpRet) {
@@ -281,12 +288,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		
 		rpcResp.result = jOutput.dump();
 
-		m_csScripts.lock();
-		if (m_mapScripts.find(si.name) != m_mapScripts.end()) {
-			m_mapScripts.at(si.name).lastExe = si.lastExe;
-			m_mapScripts.at(si.name).lastRunInfo = si.lastRunInfo;
-		}
-		m_csScripts.unlock();
+		setRunInfo(si.name, si.lastRunInfo);
 	}
 	else {
 		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
@@ -297,7 +299,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
-			si.lastExe = timeopt::now();
+			si.lastRunInfo.lastExe = timeopt::nowStr();
 
 			ScriptEngine se;
 
@@ -307,8 +309,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 			se.m_tagContext = si.getContextTag();
 
-			bool runOk = se.runScript(si.script, si.lastModifyUser);
-			si.lastRunInfo.runSuccess = runOk;
+			bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
 
 			if (runOk) {
 				rpcResp.result = "\"ok\"";
@@ -318,12 +319,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 				rpcResp.error = jError.dump();
 			}
 
-			m_csScripts.lock();
-			if (m_mapScripts.find(si.name) != m_mapScripts.end()) {
-				m_mapScripts.at(si.name).lastExe = si.lastExe;
-				m_mapScripts.at(si.name).lastRunInfo = si.lastRunInfo;
-			}
-			m_csScripts.unlock();
+			setRunInfo(si.name,si.lastRunInfo);
 		}
 		else {
 			json jError = "specified script not found";
@@ -380,7 +376,7 @@ bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp,
 			}
 
 			yyjson_mut_obj_add_val(mutDoc, runInfo, "tagRefDataTime", tagRefDataTime);
-			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "runTime", si.lastExe.toStr().c_str());
+			yyjson_mut_obj_add_strcpy(mutDoc, runInfo, "runTime", si.lastRunInfo.lastExe.c_str());
 
 			yyjson_mut_obj_add_val(mutDoc, obj, "runInfo", runInfo);
 			yyjson_mut_obj_add_bool(mutDoc, obj, "scriptLooping", si.scriptLooping);
@@ -555,7 +551,7 @@ bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpc
 		}
 
 		yyjson_mut_obj_add_val(mutDoc, runInfoObj, "tagRefDataTime", tagRefDataTime);
-		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "runTime", si.lastExe.toStr(true).c_str());
+		yyjson_mut_obj_add_strcpy(mutDoc, runInfoObj, "runTime", si.lastRunInfo.lastExe.c_str());
 
 		yyjson_mut_arr_append(runInfo, runInfoObj);
 	}
@@ -709,15 +705,21 @@ json ScriptManager::getScriptList(string tag) {
 	return json();
 }
 
+ioDev* ScriptManager::getEvnDev(SCRIPT_INFO& si) {
+	return nullptr;
+}
+
 void ScriptManager::exeAllGlobalScripts() {
 	vector<SCRIPT_INFO> toExeScripts;
 
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
-		if (si.mode == "cyclic" && si.scriptActived && si.scriptLooping && timeopt::CalcTimePassMilliSecond(si.lastExe) > si.interval) {
+		TIME tLastExe;
+		tLastExe.fromStr(si.lastRunInfo.lastExe);
+		if (si.mode == "cyclic" && si.scriptActived && si.scriptLooping && timeopt::CalcTimePassMilliSecond(tLastExe) > si.interval) {
 			toExeScripts.push_back(si);
-			si.lastExe = timeopt::now();
+			si.lastRunInfo.lastExe = timeopt::nowStr();
 		}
 	}
 	m_csScripts.unlock();
@@ -728,27 +730,13 @@ void ScriptManager::exeAllGlobalScripts() {
 
 #ifdef TDS
 		se.m_initTdsFunc = initTdsFunc;
-
-		if (si.devAddr != "") {
-			ioDev* p = nullptr;
-
-			p = ioSrv.getIODevByIPPort(si.devAddr);
-			if (!p) {
-				p = ioSrv.getIODevById(si.devAddr);
-			}
-
-			if (p) {
-				se.m_ioDevThis = p;
-			}
-		}
 #endif
 
 		se.m_tagContext = si.getContextTag();
 
 		TIME tStart = timeopt::now();
 
-		bool runOk = se.runScript(si.script, si.lastModifyUser);
-		si.lastRunInfo.runSuccess = runOk;
+		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
 
 		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
 
@@ -758,7 +746,7 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		yyjson_mut_doc_set_root(mutdoc, mutroot);
 		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "name", si.name.c_str());
-		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastExe.toStr().c_str());
+		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastRunInfo.lastExe.c_str());
 		yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
 		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
 
@@ -775,7 +763,7 @@ void ScriptManager::exeAllGlobalScripts() {
 		
 		if (!str.empty()) {
 			DB_TIME dbt;
-			dbt.fromStr(si.lastExe.toStr());
+			dbt.fromStr(si.lastRunInfo.lastExe);
 
 			TDB* ssdb = db.getChildDB("autoScript");
 			ssdb->InsertValJsonStr("runStatus", dbt, str);
@@ -805,7 +793,6 @@ void ScriptManager::exeAllVarExpScripts() {
 	toExeScripts = m_vecVarExpScripts;
 	for (int i = 0; i < m_vecVarExpScripts.size(); i++) {
 		SCRIPT_INFO& si = m_vecVarExpScripts[i];
-		si.lastExe = startTime;
 	}
 	m_csExpScripts.unlock();
 
@@ -822,23 +809,16 @@ void ScriptManager::exeAllVarExpScripts() {
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
 
-		bool runOk = se.runScript(script, info.lastModifyUser);
+		bool runOk = se.runScript(script, info.lastModifyUser,info.lastRunInfo);
 		if (!runOk) {
-			info.lastRunInfo.runSuccess = false;
 			continue;
 		}
-
-		info.lastRunInfo.runSuccess = true;
 
 		//如果val函数返回null并且参与了计算，本次计算无效
 		if (se.m_bValNullInCalc) {
-			info.lastRunInfo.valNullInCalc = true;
 			continue;
 		}
 
-		info.lastRunInfo.valNullInCalc = false;
-		info.lastRunInfo.retVal = se.m_sEvalRet.dump();
-		info.lastRunInfo.tagRefDataTime = se.m_vecValRefTime;
 
 		if (se.m_sEvalRet.is_number()) {
 			double val = se.m_sEvalRet.get<double>();
@@ -942,76 +922,6 @@ string SCRIPT_INFO::getExpContextTag() {
 	return envTag;
 }
 
-void SCRIPT_INFO::toJson(json& j,bool getStatus) {
-	j["mode"] = mode;
-	j["name"] = name;
-	j["desc"] = desc;
-	j["lastModifyTime"] = lastModifyTime;
-	j["lastModifyUser"] = lastModifyUser;
-
-	int min = interval / (60 * 1000);
-	int time = interval % (60 * 1000);
-	int sec = time / 1000;
-	int milli = time % 1000;
-
-	json jIter;
-	jIter["min"] = min;
-	jIter["sec"] = sec;
-	jIter["milli"] = milli;
-
-	j["devId"] = devId;
-	j["interval"] = jIter;
-	j["rootTag"] = rootTag;
-	j["devAddr"] = devAddr;
-	j["calcMpTag"] = calcMpTag;
-	j["callerObjTag"] = callerObjTag;
-
-	if (getStatus) {
-		j["lastExeTime"] = lastExe.toStr();
-		j["lastCalcVal"] = lastRunInfo.retVal;
-	}
-
-	j["scriptActived"] = scriptActived;
-}
-
-void SCRIPT_INFO::fromJson(json& j) {
-	if (j.contains("mode")) {
-		mode = j["mode"];
-	}
-
-	if (j.contains("name")) {
-		name = j["name"];
-	}
-
-	if (j.contains("lastModifyUser")) {
-		lastModifyUser = j["lastModifyUser"];
-	}
-
-	if (j.contains("desc")) {
-		desc = j["desc"];
-	}
-
-	if (j.contains("rootTag")) {
-		rootTag = j["rootTag"];
-	}
-
-	if (j.contains("devAddr")) {
-		devAddr = j["devAddr"];
-	}
-
-	if (j.contains("interval")) {
-		json jInter = j["interval"];
-		int min = jInter["min"].get<int>();
-		int sec = jInter["sec"].get<int>();
-		int milli = jInter["milli"].get<int>();
-		interval = min * 60 * 1000 + sec * 1000 + milli;
-	}
-
-	if (j.contains("scriptActived")) {
-		scriptActived = j["scriptActived"];
-	}
-}
-
 void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus) {
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "mode", mode.c_str());
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "name", name.c_str());
@@ -1037,7 +947,7 @@ void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool g
 	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "callerObjTag", callerObjTag.c_str());
 
 	if (getStatus) {
-		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastExeTime", lastExe.toStr().c_str());
+		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastExeTime", lastRunInfo.lastExe.c_str());
 		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastCalcVal", lastRunInfo.retVal.c_str());
 	}
 
