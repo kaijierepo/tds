@@ -7098,10 +7098,11 @@ std::time_t to_time_t(const fs::file_time_type& ftime)
 #if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
 	return fs::file_time_type::clock::to_time_t(ftime);
 #else
-	const auto epoch = ftime.time_since_epoch();
-	auto system_epoch = std::chrono::duration_cast<std::chrono::system_clock::duration>(epoch);
-	std::chrono::system_clock::time_point sys_time{ system_epoch };
-	return std::chrono::system_clock::to_time_t(sys_time);
+	auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+		ftime - fs::file_time_type::clock::now() + std::chrono::system_clock::now()
+	);
+
+	return std::chrono::system_clock::to_time_t(sctp);
 #endif
 }
 
