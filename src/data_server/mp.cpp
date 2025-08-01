@@ -1366,7 +1366,7 @@ void MP::saveToDB() {
 }
 
 //该接口保证rlt或者err一定会有一个值返回
-void MP::output(json jVal, json& rlt, json& err,bool sync)
+void MP::output(json jVal, json& rlt, json& err, bool sync)
 {
 	//方案1：当前值变为nullptr,直到采集到新的数据值,才能确认当前值
 	//m_curVal = nullptr;

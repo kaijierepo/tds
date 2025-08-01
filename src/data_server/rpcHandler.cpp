@@ -4359,27 +4359,27 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 	json val = nullptr;
 
 	//获取输出参数
-	if (params.is_object())
-	{
-		if (params["val"] != nullptr)
+	if (params.is_object()) {
+		if (params["val"] != nullptr) {
 			val = params["val"];
+		}
 	}
-	else
-	{
+	else {
 		val = params; 
 	}
 
-
 	//查找需要输出的位号
 	string tag, rootTag; 
+
 	if (params["tag"] != nullptr)
 		tag = params["tag"].get<string>();
+
 	if (params["rootTag"] != nullptr && params["rootTag"] != "")
 		tag = params["rootTag"].get<string>() + "." + tag;
+
 	tag = TAG::addRoot(tag, session.org);
 	MP* pmp = prj.GetMPByTag(tag, session.language);
-	if (!pmp)
-	{
+	if (!pmp) {
 		resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "specified tag not found:" + tag);
 		LOG("[warn]output请求错误," + resp.error);
 		return;
@@ -4392,53 +4392,49 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 		return;
 	}
 
-
 	//值类型校验
-	if (pmp->m_valType == VAL_TYPE::boolean)
-	{
-		if (!val.is_boolean())
-		{
+	if (pmp->m_valType == VAL_TYPE::boolean) {
+		if (!val.is_boolean()) {
 			if (val.is_string() && val.get<string>() == "取反") {
-				if (JSON_STR::is_bool(pmp->m_curVal))
+				if (JSON_STR::is_bool(pmp->m_curVal)) {
 					val = !JSON_STR::get_bool(pmp->m_curVal);
+				}
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
 					return;
 				}
 			}
-			else if (val.is_null()) //开关量输出值省略 表示输出当前值取反
-			{
-				if (JSON_STR::is_bool(pmp->m_curVal))
+			else if (val.is_null()) { //开关量输出值省略 表示输出当前值取反
+				if (JSON_STR::is_bool(pmp->m_curVal)) {
 					val = !JSON_STR::get_bool(pmp->m_curVal);
+				}
 				else {
 					resp.error = makeRPCError(RPC_ERROR_CODE::MO_currentValIsNull, "current value is null");
 					LOG("[warn]output请求错误," + resp.error);
 					return;
 				}
 			}
-			else
-			{
+			else {
 				resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeBool, "output val should be bool type");
 				LOG("[warn]output请求错误," + resp.error);
 				return;
 			}
 		}
 	}
-	else if (pmp->m_valType == VAL_TYPE::Float)
-	{
+	else if (pmp->m_valType == VAL_TYPE::Float) {
 		if (!val.is_number()) {
 			resp.error = makeRPCError(RPC_ERROR_CODE::MO_outputValShouldBeNumber, "output val should be number type");
 			LOG("[warn]output请求错误," + resp.error);
 			return;
 		}
 	}
-	else if (pmp->m_valType == VAL_TYPE::integer)
-	{
+	else if (pmp->m_valType == VAL_TYPE::integer) {
 		if (!val.is_number_integer()) {
 			if (pmp->m_isEnum && val.is_string()) {
 				string enumVal = val.get<string>();
 				int iVal = 0;
+
 				if (pmp->getValByEnumVal(enumVal, iVal)) {
 					val = iVal;
 				}
@@ -4466,20 +4462,20 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 		} 
 	} 
 
-
 	json rlt,err;
 
 	bool syncCall = true;
-	if (session.isNotification)
+	if (session.isNotification) {
 		syncCall = false;
+	}
+
 	if (params["waitResp"].is_boolean() && params["waitResp"].get<bool>() == false) {
 		syncCall = false;
 	}
 
 	pmp->output(val, rlt, err, syncCall);
 	if (syncCall) {
-		if(rlt!=nullptr)
-		{
+		if(rlt!=nullptr) {
 			json jDe = params; //返回输出成功的结果
 			jDe["val"] = val;
 			resp.result = rlt.dump();
@@ -4487,8 +4483,7 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 			pmp->input(val);
 			pmp->saveToDB();
 		}
-		else
-		{
+		else {
 			resp.error = err.dump();
 		}
 	}
@@ -4504,7 +4499,8 @@ void rpcHandler::rpc_output(json params, RPC_RESP& resp, RPC_SESSION& session)
 	logParams["type"] = "控制输出";
 	logParams["org"] = session.org;
 	logParams["host"] = session.remoteAddr;
-	logParams["info"] = "设置为:" + valDesc;;
+	logParams["info"] = "设置为:" + valDesc;
+
 	logSrv.rpc_addLog(logParams, session);
 }
 

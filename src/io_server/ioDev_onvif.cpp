@@ -291,21 +291,62 @@ void ioDev_onvif::DoCycleTask() {
 
 					//报警
 					if (!info.empty()) {
-						bool alarm = false;
-
 						auto doc = yyjson_read(info.c_str(), info.size(), 0);
 						auto root = yyjson_doc_get_root(doc);
 
-						auto objectsObj = yyjson_obj_get(root, "objects");
+						//
+						auto mut_doc = yyjson_mut_doc_new(nullptr);
+						auto mut_root = yyjson_mut_obj(mut_doc);
+
+						yyjson_mut_doc_set_root(mut_doc, mut_root);
+						auto objContourArr = yyjson_mut_arr(mut_doc);
+
+						yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", time.toStr().c_str());
+						yyjson_mut_obj_add_val(mut_doc, mut_root, "objContour", objContourArr);
+
+						//
 						yyjson_val* val;
 						size_t indx = 0, max = 0;
+						bool alarm = false;
+
+						auto objectsObj = yyjson_obj_get(root, "objects");
 						yyjson_arr_foreach(objectsObj, indx, max, val) {
+							auto nameObj        = yyjson_obj_get(val, "name");
+							auto confidenceObj  = yyjson_obj_get(val, "confidence");
+							auto bbox_yuanObj   = yyjson_obj_get(val, "bbox");
+							auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
+							auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
+							auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
+							auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
+							auto maskObj        = yyjson_obj_get(val, "mask");
+
+							//
+							auto objContour = yyjson_mut_obj(mut_doc);
+
+							yyjson_mut_obj_add_val(mut_doc, objContour, "type", yyjson_val_mut_copy(mut_doc, nameObj));
+							yyjson_mut_obj_add_val(mut_doc, objContour, "confidence", yyjson_val_mut_copy(mut_doc, confidenceObj));
+							
+							auto bboxArr = yyjson_mut_arr(mut_doc);
+							yyjson_mut_obj_add_val(mut_doc, objContour, "bbox", bboxArr);
+
+							yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_x_yuanObj));
+							yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_y_yuanObj));
+							yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_w_yuanObj));
+							yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_h_yuanObj));
+
+							yyjson_mut_obj_add_val(mut_doc, objContour, "mask", yyjson_val_mut_copy(mut_doc, maskObj));
+
+							yyjson_mut_arr_add_val(objContourArr, objContour);
+
+							if (alarm) {
+								continue;
+							}
+
 							auto idxVal = yyjson_obj_get(val, "idx");
 							if (idxVal && yyjson_is_int(idxVal)) {
 								int idx = (int)yyjson_get_int(idxVal);
 								if (idx == 1) {
 									alarm = true;
-									break;
 								}
 							}
 						}
@@ -319,7 +360,14 @@ void ioDev_onvif::DoCycleTask() {
 							almSrv.Add(ai);
 						}
 
+						char* temp = yyjson_mut_write(mut_doc, 0, 0);
+						if (temp) {
+							info = temp;
+							free(temp);
+						}
+
 						yyjson_doc_free(doc);
+						yyjson_mut_doc_free(mut_doc);
 					}
 
 					//db
