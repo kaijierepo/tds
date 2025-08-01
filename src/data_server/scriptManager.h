@@ -31,7 +31,6 @@ struct SCRIPT_INFO {
 	bool enableLog        = false;
 
 	bool enable    = false;
-	bool scriptLooping    = false;
 
 	string getContextTag();
 	string getExpContextTag();
@@ -50,8 +49,6 @@ public:
 	string m_confPath;
 
 	bool m_bRun;
-	bool m_bEnable;
-
 	bool hasScripts();
 	
 	std::map<string, SCRIPT_INFO> m_mapScripts;  
@@ -71,8 +68,7 @@ public:
 	bool rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScriptEnable(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot);
 	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);
