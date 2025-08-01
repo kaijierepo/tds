@@ -7658,6 +7658,7 @@ void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideo
 					if (dwCurLeftDisk >= dwRemainDisk)
 						continue;
 				}
+
 				int nRemainUselessFileDays = iRemainUselessFileDays;
 				int nRemainUsefulFileDays = iRemainUsefulFileDays;
 

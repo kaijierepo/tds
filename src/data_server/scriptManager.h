@@ -30,7 +30,7 @@ struct SCRIPT_INFO {
 	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
 	bool enableLog        = false;
 
-	bool enable    = false;
+	bool enable           = false;
 
 	string getContextTag();
 	string getExpContextTag();
@@ -87,8 +87,6 @@ public:
 
 	float m_lastExpScripTimeCost;
 	TIME m_tLastExpScriptRunTime;
-
-	void updateAutoCyclicScripLoopings();
 };
 
 extern ScriptManager scriptManager;
