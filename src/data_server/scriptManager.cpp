@@ -598,7 +598,7 @@ bool ScriptManager::rpc_setScriptActived(yyjson_val* params_obj, RPC_RESP& rpcRe
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
-	si.scriptActived = scriptActived;
+	si.enable = scriptActived;
 	si.scriptLooping = false;
 
 	saveScriptList("", m_mapScripts);
@@ -630,7 +630,7 @@ bool ScriptManager::rpc_setScriptLooping(yyjson_val* params_obj, RPC_RESP& rpcRe
 
 	SCRIPT_INFO& si = m_mapScripts[name];
 
-	if (!si.scriptActived) {
+	if (!si.enable) {
 		json jResult = "scriptActived is false";
 		rpcResp.result = jResult.dump();
 		return false;
@@ -717,7 +717,7 @@ void ScriptManager::exeAllGlobalScripts() {
 		SCRIPT_INFO& si = i.second;
 		TIME tLastExe;
 		tLastExe.fromStr(si.lastRunInfo.lastExe);
-		if (si.mode == "cyclic" && si.scriptActived && si.scriptLooping && timeopt::CalcTimePassMilliSecond(tLastExe) > si.interval) {
+		if (si.mode == "cyclic" && si.enable && si.scriptLooping && timeopt::CalcTimePassMilliSecond(tLastExe) > si.interval) {
 			toExeScripts.push_back(si);
 			si.lastRunInfo.lastExe = timeopt::nowStr();
 		}
@@ -899,7 +899,7 @@ void ScriptManager::updateAutoCyclicScripLoopings() {
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
-		if (si.mode == "cyclic" && si.scriptActived) {
+		if (si.mode == "cyclic" && si.enable) {
 			si.scriptLooping = true;
 		}
 	}
@@ -951,7 +951,7 @@ void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool g
 		yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastCalcVal", lastRunInfo.retVal.c_str());
 	}
 
-	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "scriptActived", scriptActived);
+	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "scriptActived", enable);
 }
 
 void SCRIPT_INFO::fromJson(yyjson_val* root) {
@@ -1016,6 +1016,6 @@ void SCRIPT_INFO::fromJson(yyjson_val* root) {
 
 	val = yyjson_obj_get(root, "scriptActived");
 	if (val && yyjson_is_bool(val)) {
-		scriptActived = yyjson_get_bool(val);
+		enable = yyjson_get_bool(val);
 	}
 }

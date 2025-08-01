@@ -175,11 +175,13 @@ void acq_thread_customDev(ioDev_custom* pDev) {
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(pDev->m_cycleTaskScript, si);
-		se.runScript(si.script,"",si.lastRunInfo);
-		scriptManager.setRunInfo(si.name, si.lastRunInfo);
+		if (si.enable) {
+			se.runScript(si.script, "", si.lastRunInfo);
+			scriptManager.setRunInfo(si.name, si.lastRunInfo);
 
-		if (se.m_sError != "") {
-			LOG("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", pDev->m_cycleTaskScript.c_str(), se.m_sError.c_str(), pDev->getIOAddrStr().c_str());
+			if (se.m_sError != "") {
+				LOG("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", pDev->m_cycleTaskScript.c_str(), se.m_sError.c_str(), pDev->getIOAddrStr().c_str());
+			}
 		}
 	}
 
@@ -281,34 +283,37 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_outputScript, si);
-		se.runScript(si.script, "",si.lastRunInfo);
-		scriptManager.setRunInfo(si.name, si.lastRunInfo);
 
-		if (se.m_sError != "") {
-			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
-			LOG(s);
-			err = s;
-		}
-		else {
-			if (se.m_scriptRet.is_object()) {
-				if (se.m_scriptRet["result"] != nullptr) {
-					rlt = "ok";
-					
-					ioChannel* pC = getChanByDevAddr(chanAddr);
-					if (pC)
-					{
-						pC->input(jVal);
-					}
-				}
-				else if (se.m_scriptRet["error"] != nullptr) {
-					err = se.m_scriptRet["error"];
-				}
-				else {
-					err = "未知错误,控制输出脚本未返回有效的错误信息";
-				}
+		if (si.enable) {
+			se.runScript(si.script, "", si.lastRunInfo);
+			scriptManager.setRunInfo(si.name, si.lastRunInfo);
+
+			if (se.m_sError != "") {
+				string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+				LOG(s);
+				err = s;
 			}
 			else {
-				err = "控制输出脚本的返回信息必须是一个对象";
+				if (se.m_scriptRet.is_object()) {
+					if (se.m_scriptRet["result"] != nullptr) {
+						rlt = "ok";
+
+						ioChannel* pC = getChanByDevAddr(chanAddr);
+						if (pC)
+						{
+							pC->input(jVal);
+						}
+					}
+					else if (se.m_scriptRet["error"] != nullptr) {
+						err = se.m_scriptRet["error"];
+					}
+					else {
+						err = "未知错误,控制输出脚本未返回有效的错误信息";
+					}
+				}
+				else {
+					err = "控制输出脚本的返回信息必须是一个对象";
+				}
 			}
 		}
 	}

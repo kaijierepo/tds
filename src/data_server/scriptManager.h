@@ -30,7 +30,7 @@ struct SCRIPT_INFO {
 	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
 	bool enableLog        = false;
 
-	bool scriptActived    = false;
+	bool enable    = false;
 	bool scriptLooping    = false;
 
 	string getContextTag();
