@@ -723,6 +723,7 @@ void register_cpp_functions(JSContext* ctx) {
 
     JSValue console = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, qjs_log, "log", 1));
+    JS_SetPropertyStr(ctx, console, "error", JS_NewCFunction(ctx, qjs_log, "error", 1));
     JS_SetPropertyStr(ctx, global, "console", console);
 
     JSValue http = JS_NewObject(ctx);
