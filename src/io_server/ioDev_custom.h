@@ -3,6 +3,7 @@
 #include "tcpClt.h"
 #include "tdsSession.h"
 #include "json.hpp"
+#include "scriptEngine.h"
 
 
 class CUSTOM_PDU_TRANSACTION {
@@ -53,6 +54,8 @@ public:
 	ioDev_custom();
 	~ioDev_custom();
 
+	bool toJson(json& conf, DEV_QUERIER querier);
+
 	CUSTOM_PDU_TRANSACTION m_transaction;
 	bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) override;
 	bool doTransaction(vector<uint8_t> req, vector<uint8_t>& resp);
@@ -64,4 +67,8 @@ public:
 	void output(string chanAddr, json jVal, json& rlt, json& err, bool sync = true) override;
 	void output(ioChannel* pC, json jVal, json& rlt, json& err, bool sync = true) override;
 	void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
+
+	SCRIPT_RUN_INFO m_lastRunInfo_cycleAcq;
+	SCRIPT_RUN_INFO m_lastRunInfo_output;
+	SCRIPT_RUN_INFO m_lastRunInfo_onRecv;
 };

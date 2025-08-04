@@ -1061,7 +1061,7 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 	if (opt["standAloneIO"].is_string()) {
 		q.standAloneIO = opt["standAloneIO"].get<string>();
 	}
-	else if (opt["type"].is_array()) {
+	if (opt["type"].is_array()) {
 		json jTypes = opt["type"];
 		for (int i = 0; i < jTypes.size(); i++) {
 			json j = jTypes[i];
@@ -1069,6 +1069,10 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 				q.type.push_back(j.get<string>());
 			}
 		}
+	}
+	else if (opt["type"].is_string()) {
+		string type = opt["type"].get<string>();
+		q.type.push_back(type);
 	}
 
 	if (opt["subType"].is_string()) {

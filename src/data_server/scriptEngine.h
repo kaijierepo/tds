@@ -5,6 +5,7 @@
 #include "json.hpp"
 #include "quickjs.h"
 #include <vector>
+#include "yyjson.h"
 
 using json = nlohmann::json;
 using namespace std;
@@ -17,6 +18,8 @@ struct SCRIPT_RUN_INFO {
 	string retVal = "";
 	int runTimeCost = 0;
 	map<string, string> tagRefDataTime;
+
+	void toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal);
 };
 
 class ScriptEngine;

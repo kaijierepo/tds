@@ -45,6 +45,53 @@ ioDev_custom::~ioDev_custom()
 	stop();
 }
 
+bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
+{
+	ioDev::toJson(conf, querier);
+
+	if (querier.getStatus) {
+		json jRunInfo = json::object();
+		if (m_cycleTaskScript != "") {
+			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_cycleAcq.toJson(doc, yyRuninfo);
+			size_t len;
+			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
+			if (p) {
+				json j = json::parse(p);
+				free(p);
+				jRunInfo["cycleAcq"] = j;
+			}
+		}
+		if (m_outputScript != "") {
+			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_output.toJson(doc, yyRuninfo);
+			size_t len;
+			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
+			if (p) {
+				json j = json::parse(p);
+				free(p);
+				jRunInfo["output"] = j;
+			}
+		}
+		if (m_onRecvScript != "") {
+			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_onRecv.toJson(doc, yyRuninfo);
+			size_t len;
+			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
+			if (p) {
+				json j = json::parse(p);
+				free(p);
+				jRunInfo["onRecv"] = j;
+			}
+		}
+	}
+
+	return true;
+}
+
 
 bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
 {
@@ -176,8 +223,7 @@ void acq_thread_customDev(ioDev_custom* pDev) {
 		SCRIPT_INFO si;
 		scriptManager.getScript(pDev->m_cycleTaskScript, si);
 		if (si.enable) {
-			se.runScript(si.script, "", si.lastRunInfo);
-			scriptManager.setRunInfo(si.name, si.lastRunInfo);
+			se.runScript(si.script, "", pDev->m_lastRunInfo_cycleAcq);
 
 			if (se.m_sError != "") {
 				LOG("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", pDev->m_cycleTaskScript.c_str(), se.m_sError.c_str(), pDev->getIOAddrStr().c_str());
@@ -245,8 +291,7 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_onRecvScript, si);
-		se.runScript(si.script, "",si.lastRunInfo);
-		scriptManager.setRunInfo(si.name, si.lastRunInfo);
+		se.runScript(si.script, "",m_lastRunInfo_onRecv);
 
 		if (se.m_sError != "") {
 			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
@@ -285,8 +330,7 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 		scriptManager.getScript(m_outputScript, si);
 
 		if (si.enable) {
-			se.runScript(si.script, "", si.lastRunInfo);
-			scriptManager.setRunInfo(si.name, si.lastRunInfo);
+			se.runScript(si.script, "", m_lastRunInfo_output);
 
 			if (se.m_sError != "") {
 				string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());

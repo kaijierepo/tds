@@ -1092,3 +1092,21 @@ bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst prop_value, void
 }
 
 #endif
+
+void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
+{
+    yyjson_mut_obj_add_strcpy(doc, yyVal, "runTime", lastExe.c_str());
+	yyjson_mut_obj_add_str(doc, yyVal, "retVal", retVal.c_str());
+	yyjson_mut_obj_add_bool(doc, yyVal, "runSuccess", runSuccess);
+	yyjson_mut_obj_add_bool(doc, yyVal, "valNullInCalc", valNullInCalc);
+
+
+    yyjson_mut_val* yyTagRefDataTime = yyjson_mut_obj(doc);
+    for (auto& iter : tagRefDataTime) {
+        string key = iter.first;
+        string value = iter.second;
+        yyjson_mut_obj_add_strcpy(doc, yyTagRefDataTime, key.c_str(), value.c_str());
+    }
+
+    yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);
+}
