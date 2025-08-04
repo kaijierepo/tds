@@ -7298,13 +7298,13 @@ bool CCleanDisk::CheckAndDelUselessFile(int iCleanDiskStartTime, int iCleanDiskE
 		if (it.second) {
 			bDelRetu = DeleteDirectory(it.first);
 
-			strLog = format("[DiskMng]delete log dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete log dir:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 		else {
 			bDelRetu = DeleteFile(it.first);
 
-			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete file:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 	}
@@ -7426,13 +7426,13 @@ bool CCleanDisk::CheckAndDelUsefulFile_DB(int iCleanDiskStartTime, int iCleanDis
 		if (it.second) {
 			bDelRetu = DeleteDirectory(it.first);
 
-			strLog = format("[DiskMng]delete dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete dir:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 		else {
 			bDelRetu = DeleteFile(it.first);
 
-			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete file:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 	}
@@ -7554,13 +7554,13 @@ bool CCleanDisk::CheckAndDelUsefulFile_Video(int iCleanDiskStartTime, int iClean
 		if (it.second) {
 			bDelRetu = DeleteDirectory(it.first);
 
-			strLog = format("[DiskMng]delete dir:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete dir:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 		else {
 			bDelRetu = DeleteFile(it.first);
 
-			strLog = format("[DiskMng]delete file:%s[%s]", strFilePath.c_str(), bDelRetu ? "success" : "failed");
+			strLog = format("[DiskMng]delete file:%s[%s]", it.first.c_str(), bDelRetu ? "success" : "failed");
 			LogStatic(strLog);
 		}
 	}
