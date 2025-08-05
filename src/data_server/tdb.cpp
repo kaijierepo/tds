@@ -7186,28 +7186,25 @@ bool CCleanDisk::DeleteDirectory(const std::string& DirName)
 }
 
 
-void CCleanDisk::DelAllPointDir(const std::string& strDir, const std::string& strDirName, std::map<std::string, bool>& mapDeleteFiles)
-{
-	if (strDir == "")
+void CCleanDisk::DelAllPointDir(const std::string& strDir, const std::string& strDirName, std::map<std::string, bool>& mapDeleteFiles) {
+	if (strDir == "") {
 		return;
+	}
 
-	for (const auto& entry : fs::directory_iterator(strDir))
-	{
-		if (entry.status().type() == fs::file_type::directory)
-		{
-			if (entry.path().filename() == "." || entry.path().filename() == "..")
-			{
+	for (const auto& entry : fs::directory_iterator(strDir)) {
+		if (entry.status().type() == fs::file_type::directory) {
+			if (entry.path().filename() == "." || entry.path().filename() == "..") {
 				continue;
 			}
+
 			auto strPath = entry.path().string();
 
-			if (strPath.find(strDirName) != std::string::npos)
-			{
+			if (strPath.find(strDirName) != std::string::npos) {
 				mapDeleteFiles[strPath] = true;
 			}
-			else
+			else {
 				DelAllPointDir(strPath, strDirName, mapDeleteFiles);
-
+			}
 		}
 	}
 }
@@ -7575,88 +7572,114 @@ void CCleanDisk::SetPath(const std::string& strProjectPath, const std::string& s
 	m_strVideoTag = strVideoTag;
 }
 
-void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideoTag, const std::string& strDBPathAbs, const std::function<void(void)>& fun,
-	int dwRemainDisk, int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays)
-{
+void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideoTag, const std::string& strDBPathAbs, const std::function<void(void)>& fun, int dwRemainDisk, int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays) {
 	CCleanDisk CleanDisk;
 	CleanDisk.SetPath(strProjectPath, strDBPathAbs, strVideoTag);
 
 	dwRemainDisk = dwRemainDisk * 1024;
 	int dwCurLeftDisk = 0;
 
-	if (iCleanDiskStartTime < 0 || iCleanDiskStartTime >= 24) iCleanDiskStartTime = 2;
-	if (iCleanDiskEndTime < 0 || iCleanDiskEndTime >= 24) iCleanDiskEndTime = 4;
-	if (CleanDisk.g_nCleanStatus == 3)
-	{
+	if (iCleanDiskStartTime < 0 || iCleanDiskStartTime >= 24) {
+		iCleanDiskStartTime = 2;
+	}
+
+	if (iCleanDiskEndTime < 0 || iCleanDiskEndTime >= 24) {
+		iCleanDiskEndTime = 4;
+	}
+
+	if (CleanDisk.g_nCleanStatus == 3){
 		CleanDisk.g_nCleanStatus = 0;
-		if (fun)
+
+		if (fun) {
 			fun();
+		}
+
 		return;
 	}
-	CleanDisk.g_nCleanStatus = 2;
-	if (fun)
-		fun();
 
-	while (true)
-	{
+	CleanDisk.g_nCleanStatus = 2;
+
+	if (fun) {
+		fun();
+	}
+
+	while (true) {
 		int nSecond = 30;
-		while (nSecond > 0)
-		{
-			if (CleanDisk.g_nCleanStatus == 3) break;
+		while (nSecond > 0) {
+			if (CleanDisk.g_nCleanStatus == 3) {
+				break;
+			}
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			nSecond--;
 		}
-		if (CleanDisk.g_nCleanStatus == 3) break;
-		try
-		{
-			do
-			{
+
+		if (CleanDisk.g_nCleanStatus == 3) {
+			break;
+		}
+
+		try {
+			do {
 				auto now = std::chrono::system_clock::now();
 				time_t now_c = std::chrono::system_clock::to_time_t(now);
+
 				tm now_tm;
 				localtime_s(&now_tm, &now_c);
 
 				{
-					if (CleanDisk.IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false)
+					if (CleanDisk.IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false) {
 						continue;
+					}
 
 					fs::space_info space = fs::space(strProjectPath);
 					dwCurLeftDisk = int(space.free >> 20);
-					if (dwCurLeftDisk >= dwRemainDisk)
+
+					if (dwCurLeftDisk >= dwRemainDisk) {
 						continue;
+					}
 				}
 
 				int nRemainUselessFileDays = iRemainUselessFileDays;
+
 				CleanDisk.LogStatic("start clean log disk");
 
 				auto bDel = CleanDisk.CheckAndDelUselessFile(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays);
-				if (CleanDisk.g_nCleanStatus == 3) break;
-				while (false == bDel && nRemainUselessFileDays > 0)
-				{
+
+				if (CleanDisk.g_nCleanStatus == 3) {
+					break;
+				}
+
+				while (false == bDel && nRemainUselessFileDays > 0) {
 					CleanDisk.LogStatic("no clean log disk, force delete one day log");
 
 					bDel = CleanDisk.CheckAndDelUselessFile(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays);
-					if (CleanDisk.g_nCleanStatus == 3) break;
-				}
-				CleanDisk.LogStatic("end clean log disk");
 
+					if (CleanDisk.g_nCleanStatus == 3) {
+						break;
+					}
+				}
+
+				CleanDisk.LogStatic("end clean log disk");
 			} while (false);
 
-			do
-			{
+			do {
 				auto now = std::chrono::system_clock::now();
 				time_t now_c = std::chrono::system_clock::to_time_t(now);
+
 				tm now_tm;
 				localtime_s(&now_tm, &now_c);
 
 				{
-					if (CleanDisk.IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false)
+					if (CleanDisk.IsInTimeZone(now_tm.tm_hour, iCleanDiskStartTime, iCleanDiskEndTime) == false) {
 						continue;
+					}
 
 					fs::space_info space = fs::space(strDBPathAbs);
 					dwCurLeftDisk = int(space.free >> 20);
-					if (dwCurLeftDisk >= dwRemainDisk)
+
+					if (dwCurLeftDisk >= dwRemainDisk) {
 						continue;
+					}
 				}
 
 				int nRemainUselessFileDays = iRemainUselessFileDays;
@@ -7665,43 +7688,59 @@ void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideo
 				CleanDisk.LogStatic("start clean data disk");
 
 				auto bDel = CleanDisk.CheckAndDelUsefulFile_DB(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays);
-				if (CleanDisk.g_nCleanStatus == 3) break;
-				while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0)
-				{
-					CleanDisk.LogStatic("no clean data disk, force delete one day data");
-					bDel = CleanDisk.CheckAndDelUsefulFile_DB(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
-					if (CleanDisk.g_nCleanStatus == 3) break;
+
+				if (CleanDisk.g_nCleanStatus == 3) {
+					break;
 				}
+
+				while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0) {
+					CleanDisk.LogStatic("no clean data disk, force delete one day data");
+
+					bDel = CleanDisk.CheckAndDelUsefulFile_DB(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
+
+					if (CleanDisk.g_nCleanStatus == 3) {
+						break;
+					}
+				}
+
 				CleanDisk.LogStatic("end clean data disk");
 
-				if (!strVideoTag.empty())
-				{
+				if (!strVideoTag.empty()) {
 					nRemainUsefulFileDays = iRemainUsefulFileDays;
+
 					CleanDisk.LogStatic("start clean video data disk");
 
 					auto bDel = CleanDisk.CheckAndDelUsefulFile_Video(iCleanDiskStartTime, iCleanDiskEndTime, nRemainUselessFileDays, nRemainUsefulFileDays);
-					if (CleanDisk.g_nCleanStatus == 3) break;
-					while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0)
-					{
-						CleanDisk.LogStatic("no clean video data disk, force delete one day video data");
-						bDel = CleanDisk.CheckAndDelUsefulFile_Video(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
-						if (CleanDisk.g_nCleanStatus == 3) break;
+
+					if (CleanDisk.g_nCleanStatus == 3) {
+						break;
 					}
+
+					while (false == bDel && nRemainUselessFileDays > 0 && nRemainUsefulFileDays > 0) {
+						CleanDisk.LogStatic("no clean video data disk, force delete one day video data");
+
+						bDel = CleanDisk.CheckAndDelUsefulFile_Video(iCleanDiskStartTime, iCleanDiskEndTime, --nRemainUselessFileDays, --nRemainUsefulFileDays);
+
+						if (CleanDisk.g_nCleanStatus == 3) {
+							break;
+						}
+					}
+
 					CleanDisk.LogStatic("end clean video data disk");
 				}
-
 			} while (false);
 		}
 		catch (const fs::filesystem_error& ex) {
 			auto strLog = CCleanDisk::format("[DiskMng]exception: %s", ex.what());
 			CleanDisk.LogStatic(strLog);
 		}
-		catch (...)
-		{
+		catch (...) {
 		}
 	}
 
 	CleanDisk.g_nCleanStatus = 0;
-	if (fun)
+
+	if (fun) {
 		fun();
+	}
 }
