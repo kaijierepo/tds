@@ -1,5 +1,6 @@
 #include "serial.h"
 #include "common.h"
+#include "logger.h"
 
 DWORD WINAPI GWLocalComWorkThread(LPVOID lpParam)
 {
@@ -263,7 +264,7 @@ bool Serial::open(string confPort, int baudRate, string parity, int byteSize, st
 			m_hCom = NULL;
 	}
 
-	m_hCom = CreateFile(m_comPort.c_str(),
+	m_hCom = CreateFile(strComPort.c_str(),
 		GENERIC_READ | GENERIC_WRITE,
 		0, // 独占方式
 		NULL,
@@ -320,10 +321,10 @@ bool Serial::open(string confPort, int baudRate, string parity, int byteSize, st
 
 OPEN_END:
 	if (ret) {
-		printf("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s", m_comPort.c_str(), m_baudRate, m_byteSize, m_stopBits.c_str(), m_parity.c_str());
+		LOG("[warn][串口   ]串口打开成功,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s", m_comPort.c_str(), m_baudRate, m_byteSize, m_stopBits.c_str(), m_parity.c_str());
 	}
 	else
-		printf("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s", m_comPort.c_str(), m_baudRate, m_byteSize, m_stopBits.c_str(), m_parity.c_str(), m_strErrorInfo.c_str());
+		LOG("[warn][串口   ]串口打开失败,串口号:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,错误信息:%s", m_comPort.c_str(), m_baudRate, m_byteSize, m_stopBits.c_str(), m_parity.c_str(), m_strErrorInfo.c_str());
 	return ret;
 }
 

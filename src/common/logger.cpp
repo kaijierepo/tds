@@ -6,6 +6,7 @@
 #include <windows.h>
 #endif
 #include <filesystem>
+#include <iostream>
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
@@ -304,30 +305,7 @@ wstring utf8_to_utf16(string instr) //utf-8-->ansi
 
 bool createFolderOfPath(string strFile)
 {
-	strFile.replace(strFile.begin(),strFile.end(), "\\", "/");
-	strFile.replace(strFile.begin(), strFile.end(), "////", "/");
-	strFile.replace(strFile.begin(), strFile.end(), "///", "/");
-	strFile.replace(strFile.begin(), strFile.end(), "//", "/");
-
-	size_t iDotPos = strFile.rfind('.');
-	size_t iSlashPos = strFile.rfind('/');
-	if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
-	{
-		strFile = strFile.substr(0, iSlashPos);
-	}
-	//如果路径的末尾是/，创建成功也会返回false,因此删除末尾的 /
-	if (iSlashPos == strFile.length() - 1) {
-		strFile = strFile.substr(0, iSlashPos);
-	}
-
-#ifdef _WIN32
-#ifndef _WINXP
 	return filesystem::create_directories(utf8_to_utf16(strFile));
-#endif
-#else
-	filesystem::path p = strFile;
-	return filesystem::create_directories(p);
-#endif
 }
 
 bool appendFile(string path, char* data, size_t len)
@@ -375,7 +353,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 
 	setConsoleTextColor(ll);
 
-	printf(info.c_str());
+	cout << info;
 	printf("\r\n");
 
 	if (writeToFile && m_strLogDir!="") {

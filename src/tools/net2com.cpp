@@ -5,6 +5,7 @@
 #include <format>
 #include <filesystem>
 #include "common.h"
+#include <algorithm>
 
 
 tcp2com::tcp2com()
@@ -16,6 +17,9 @@ tcp2com::tcp2com()
 string tcp2com::defaultConf()
 {
 	string s = R"(#net2com 串口转网络透传网关配置
+#基本参数
+logStr=0               #0 使用16进制字符串记录日志，1 将数据包原始内存作为utf8字符串记录日志
+
 #串口参数
 com=COM1
 baudRate=19200
@@ -113,7 +117,7 @@ string appPath()
 	strPath = strPath.substr(0, nEnd);
 	strPath = gb_to_utf8(strPath);
 
-	strPath.replace(strPath.begin(),strPath.end(),"\\", "/");
+	str = str::replace(strPath,"\\", "/");
 #else 
 	char* p = NULL;
 	const int len = 256;
@@ -190,7 +194,7 @@ void tcp2com::run()
 	int byteSize = tdsIni.getValInt("byteSize",8);
 	string stopBits = tdsIni.getValStr("stopBits","1");
 
-	m_bLogCommPktAsStr = tdsIni.getValInt("logCommPktAsStr", 0);
+	m_bLogCommPktAsStr = tdsIni.getValInt("logStr", 0);
 	m_bLogToFile = tdsIni.getValInt("logToFile", 1);
 	m_bLogToConsole = tdsIni.getValInt("logToConsole", 1);
 	m_mode = tdsIni.getValStr("mode", "");
