@@ -7320,8 +7320,10 @@ bool CCleanDisk::CheckAndDelUsefulFile_DB(int iCleanDiskStartTime, int iCleanDis
 
 	bool bDel = false;
 	std::map<std::string, bool> mapDeleteFiles;//true:dir false:file
+
 	auto now = std::chrono::system_clock::now();
 	time_t now_c = std::chrono::system_clock::to_time_t(now);
+
 	tm now_tm;
 	localtime_s(&now_tm, &now_c);
 
@@ -7408,8 +7410,8 @@ bool CCleanDisk::CheckAndDelUsefulFile_DB(int iCleanDiskStartTime, int iCleanDis
 						double difference = std::difftime(now_c, std::mktime(&cFolderTime)) / (60 * 60 * 24);
 
 						if (int(difference) > iRemainUselessFileDays) {
-							DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
 							bDel = true;
+							DelAllPointDir(strFilePath, "录像", mapDeleteFiles);
 						}
 					}
 				}
@@ -7450,6 +7452,7 @@ bool CCleanDisk::CheckAndDelUsefulFile_Video(int iCleanDiskStartTime, int iClean
 
 	auto now = std::chrono::system_clock::now();
 	time_t now_c = std::chrono::system_clock::to_time_t(now);
+
 	tm now_tm;
 	localtime_s(&now_tm, &now_c);
 
@@ -7706,6 +7709,7 @@ void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideo
 				CleanDisk.LogStatic("end clean data disk");
 
 				if (!strVideoTag.empty()) {
+					nRemainUselessFileDays = iRemainUselessFileDays;
 					nRemainUsefulFileDays = iRemainUsefulFileDays;
 
 					CleanDisk.LogStatic("start clean video data disk");
