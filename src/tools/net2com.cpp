@@ -1,62 +1,16 @@
-#include "pch.h"
 #include "net2com.h"
 #include "logger.h"
-#include "common.h"
-#include "json.hpp"
-#include "ioSrv.h"
 #include "kvIni.h"
 #include <WinSock2.h>
-
-using json = nlohmann::json;
-
-namespace ns_tcp2com {
-	void run() {
-		tcp2com* t2c = new tcp2com();
-		t2c->run();
-	}
-
-	class Reg {
-	public:
-		Reg() {
-			tds->tools["net2com"] = ns_tcp2com::run;
-		}
-	};
-
-	Reg reg;
-};
-
+#include <format>
+#include <filesystem>
+#include "common.h"
 
 
 tcp2com::tcp2com()
 {
 	m_bLogToFile = true;
 	m_iDestPort = 0;
-	serial = createIODev(DEV_TYPE_local_serial);
-}
-
-void  serialRecvCallback(void* user, unsigned char* pData, size_t iLen)
-{
-	string netAddr;
-	tcp2com* pt2c = (tcp2com*)user;
-	if (pt2c->m_mode == "tcpClient") {
-		pt2c->tcpClt.SendData(pData, iLen);
-	}
-	else if (pt2c->m_mode == "tcpServer") {
-		pt2c->tcpServer.SendData((char*)pData, iLen);
-	}
-	else if (pt2c->m_mode == "udpServer") {
-		netAddr = str::format("UDP-%s:%d(%d)", pt2c->m_strDestIp, pt2c->m_iDestPort,iLen);
-		pt2c->udpServer.SendData(pData, iLen, pt2c->m_strDestIp, pt2c->m_iDestPort);
-	}
-
-	string log;
-	if (pt2c->m_bLogCommPktAsStr) {
-		log = str::fromBuff(pData, iLen);
-	}
-	else {
-		log = str::bytesToHexStr(pData, iLen);
-	}
-	LOG(pt2c->serial->getIOAddrStr() + " --> " + netAddr + "  " + log);
 }
 
 string tcp2com::defaultConf()
@@ -89,32 +43,152 @@ string tcp2com::getTcpAddr()
 {
 	string s;
 	if (m_mode == "tcpClient") {
-		s = m_strDestIp + ":" + str::fromInt(m_iDestPort);
+		s = m_strDestIp + ":" + std::format("{}",m_iDestPort);
 	}
 	else if (m_mode == "tcpServer") {
-		s = m_localIP + ":" + str::fromInt(m_localPort);
+		s = m_localIP + ":" + std::format("{}",m_localPort);
 	}
 	return s;
+}
+
+string gb_to_utf8(string instr) //ansi-->utf-8
+{
+	string str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	char* charstr = new char[MAX_STRSIZE];
+	memset(charstr, 0, MAX_STRSIZE);
+	WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+	str = charstr;
+	delete[] wcharstr;
+	delete[] charstr;
+#else
+	//int ret = 0;
+	//size_t inlen = instr.length() + 1;
+	//size_t outlen = 2*inlen;
+
+	//// duanqn: The iconv function in Linux requires non-const char *
+	//// So we need to copy the source string
+	//char* inbuf = (char*)malloc(inlen);
+	//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+	//							// so we use another pointer to keep the address
+	//memcpy(inbuf, instr.data(), instr.length());
+
+	//char* outbuf = (char*)malloc(outlen);
+	//memset(outbuf, 0, outlen);
+	//iconv_t cd;
+
+	//cd = iconv_open("UTF-8", "GBK");
+	//if (cd != (iconv_t)-1) {
+	//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+	//	if (ret != 0)
+	//		printf("iconv failed err: %s\n", strerror(errno));
+	//	iconv_close(cd);
+	//}
+	//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+	//str = outbuf;
+	//free(outbuf);
+	str = instr;
+#endif
+	return str;
+}
+
+string appPath()
+{
+	string str;
+
+	//不要使用std::filesystem::current_path(),这个是当前运行目录，和程序目录可能不一致
+
+#ifdef _WIN32
+		//windows获取到的是反斜杠，tds内统一使用斜杠
+	TCHAR p[MAX_PATH] = { 0 };
+	GetModuleFileName(NULL, p, MAX_PATH);//获取可执行模块的路径
+
+	string strPath = (char*)p;
+	size_t nEnd = strPath.rfind('\\');//取最后的"\"号之前地址
+
+	strPath = strPath.substr(0, nEnd);
+	strPath = gb_to_utf8(strPath);
+
+	strPath.replace(strPath.begin(),strPath.end(),"\\", "/");
+#else 
+	char* p = NULL;
+	const int len = 256;
+
+	/// to keep the absolute path of executable's path
+	char arr_tmp[len] = { 0 };
+	int n = readlink("/proc/self/exe", arr_tmp, len);
+
+	if (NULL != (p = strrchr(arr_tmp, '/'))) {
+		*p = '\0';
+	}
+	else {
+		return std::string("");
+	}
+
+	str = arr_tmp;
+#endif
+
+	return str;
+}
+
+bool fileExist(string pszFileName)
+{
+	std::filesystem::path filePath = charCodec::utf8_to_utf16(pszFileName);
+
+	if (std::filesystem::exists(filePath)) {
+		return true;
+	}
+	else if (std::filesystem::is_directory(filePath)) {
+		return true;
+	}
+	return  false;
+}
+
+bool writeFile(string path, char* data, size_t len)
+{
+	FILE* fp = nullptr;
+	wstring wpath = charCodec::utf8_to_utf16(path);
+	_wfopen_s(&fp, wpath.c_str(), L"wb");
+
+	if (fp)
+	{
+		fwrite(data, 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	else
+	{
+#ifdef _WIN32
+		string info = std::format("writeFile,path={0},len={1}", path.c_str(), len);
+		DWORD dwErrCode = GetLastError();
+		printf("[error]%d", dwErrCode);
+#endif
+	}
+	return false;
 }
 
 
 void tcp2com::run()
 {
-	string confPath = fs::appPath() + "/net2com.ini"; 
-	if (!fs::fileExist(confPath))
+	string confPath = appPath() + "/net2com.ini"; 
+	if (!fileExist(confPath))
 	{
 		string s = defaultConf();
-		fs::writeFile(confPath, s);
+		writeFile(confPath, (char*)s.c_str(),s.length());
 	}
 
 	KV_INI tdsIni;
 	tdsIni.load(confPath);
-	json jConf;
-	jConf["com"] = tdsIni.getValStr("com","COM1");
-	jConf["baudRate"] = tdsIni.getValInt("baudRate", 19200);
-	jConf["parity"] = tdsIni.getValStr("parity","None");
-	jConf["byteSize"] = tdsIni.getValInt("byteSize",8);
-	jConf["stopBits"] = tdsIni.getValStr("stopBits","1");
+
+	string com = tdsIni.getValStr("com","COM1");
+	int baudRate = tdsIni.getValInt("baudRate", 19200);
+	string parity = tdsIni.getValStr("parity","None");
+	int byteSize = tdsIni.getValInt("byteSize",8);
+	string stopBits = tdsIni.getValStr("stopBits","1");
 
 	m_bLogCommPktAsStr = tdsIni.getValInt("logCommPktAsStr", 0);
 	m_bLogToFile = tdsIni.getValInt("logToFile", 1);
@@ -161,20 +235,19 @@ void tcp2com::run()
 
 
 
-	if (serial->connect(jConf))
+	if (m_serial.open(com, baudRate,parity, byteSize, stopBits))
 	{
-		serial->setRecvCallback(this, serialRecvCallback);
-		serial->run();
-		LOG("打开串口成功: " + serial->getIOAddrStr());
-		string comParam = "波特率:" + str::fromInt(jConf["baudRate"].get<int>()) + ",";
-		comParam += "停止位:" + jConf["stopBits"].get<string>() + ",";
-		comParam += "数据位:" + str::fromInt(jConf["byteSize"].get<int>()) + ",";
-		comParam += "校验位:" + jConf["parity"].get<string>();
+		m_serial.run(this);
+		LOG("打开串口成功: " + com);
+		string comParam = "波特率:" + std::format("{}",baudRate) + ",";
+		comParam += "停止位:" + stopBits + ",";
+		comParam += "数据位:" + std::format("{}",byteSize) + ",";
+		comParam += "校验位:" + parity;
 		LOG(comParam);
 	}
 	else
 	{
-		LOG("打开串口失败: " + jConf["com"].get<string>());
+		LOG("打开串口失败: " + com);
 		getchar();
 		exit(0);
 	}
@@ -193,24 +266,45 @@ void tcp2com::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn)
 	
 }
 
+string fromBuff(const char* p, size_t len)
+{
+	string s;
+	s.resize(len);
+	memcpy(&s[0], p, len);
+	return s;
+}
+
+string bytesToHexStr(char* p, size_t len, string splitter)
+{
+	string str;
+	for (int i = 0; i < len; i++)
+	{
+		string b = format("%02X", (unsigned char)p[i]);
+		str += b;
+		str += splitter;
+	}
+
+	return str;
+}
+
 void tcp2com::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo)
 {
-	serial->sendData(pData, iLen);
+	m_serial.write(pData, iLen);
 	string log;
 	if (m_bLogCommPktAsStr) {
-		log = str::fromBuff(pData, iLen);
+		log = fromBuff((const char*)pData, iLen);
 	}
 	else
-		log = str::bytesToHexStr(pData, iLen);
-	LOG(serial->getIOAddrStr() + " <-- " + getTcpAddr() + "  " + log);
+		log = bytesToHexStr((char*)pData, iLen," ");
+	LOG(m_serial.m_comPort + " <-- " + getTcpAddr() + "  " + log);
 }
 
 void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 {
 	if (bIsConn)
 	{
-		LOG("连接Tcp服务成功: " + m_strDestIp + ":" + str::fromInt(m_iDestPort));
-		string s = str::parseEscapeChar(registerPktStr);
+		LOG("连接Tcp服务成功: " + m_strDestIp + ":" + std::format("{}",m_iDestPort));
+		string s = registerPktStr;
 		if (s.length() > 0) {
 			tcpClt.SendData((char*)s.c_str(), s.length());
 			LOG("发送首发注册包,长度=%d,[%s]", s.length(), s.c_str());
@@ -218,28 +312,56 @@ void tcp2com::statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn)
 	}
 	else
 	{
-		LOG("Tcp连接断开: " + m_strDestIp + ":" + str::fromInt(m_iDestPort));
+		LOG("Tcp连接断开: " + m_strDestIp + ":" + std::format("{}",m_iDestPort));
 	}
 }
 
 void tcp2com::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo)
 {
-	serial->sendData(pData, iLen);
+	m_serial.write(pData, iLen);
 	string log;
 	if (m_bLogCommPktAsStr) {
-		log = str::fromBuff(pData, iLen);
+		log = fromBuff((char*)pData, iLen);
 	}
 	else {
-		log = str::bytesToHexStr(pData, iLen);
+		log = bytesToHexStr((char*)pData, iLen," ");
 	}
 
-	LOG(serial->getIOAddrStr() + " <-- " + getTcpAddr() + "  " + log);
+	LOG(m_serial.m_comPort + " <-- " + getTcpAddr() + "  " + log);
+}
+
+void tcp2com::statusChange_serial(bool bIsOpen)
+{
+}
+
+void tcp2com::onRecvData_serial(unsigned char* pData, size_t iLen)
+{
+	string netAddr;
+	if (m_mode == "tcpClient") {
+		tcpClt.SendData(pData, iLen);
+	}
+	else if (m_mode == "tcpServer") {
+		tcpServer.SendData((char*)pData, iLen);
+	}
+	else if (m_mode == "udpServer") {
+		netAddr = std::format("UDP-{0}:{1}({2})", m_strDestIp.c_str(), m_iDestPort, iLen);
+		udpServer.SendData(pData, iLen, m_strDestIp, m_iDestPort);
+	}
+
+	string log;
+	if (m_bLogCommPktAsStr) {
+		log = fromBuff((char*)pData, iLen);
+	}
+	else {
+		log = bytesToHexStr((char*)pData, iLen," ");
+	}
+	LOG(m_serial.m_comPort + " --> " + netAddr + "  " + log);
 }
 
 void tcp2com::OnRecvUdpData(unsigned char* pData, size_t iLen, UDP_SESSION udpSession)
 {
-	serial->sendData(pData, iLen);
-	string log = str::bytesToHexStr(pData, iLen);
-	string s = str::format("UDP-%s:%d(%d)", udpSession.remoteIP.c_str(),udpSession.remotePort,iLen);
-	LOG(serial->getIOAddrStr() + " <-- " +  s + "  " + log);
+	m_serial.write(pData, iLen);
+	string log = bytesToHexStr((char*)pData, iLen," ");
+	string s = std::format("UDP-{0}:{1}({2})", udpSession.remoteIP.c_str(),udpSession.remotePort,iLen);
+	LOG(m_serial.m_comPort + " <-- " +  s + "  " + log);
 }

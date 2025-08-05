@@ -3,7 +3,7 @@
 #include "tcpClt.h"
 #include "udpSrv.h"
 #include <memory>
-#include "ioDev.h"
+#include "serial.h"
 
 
 struct tcp2com_Conf {
@@ -19,7 +19,7 @@ struct tcp2com_Conf {
 
 };
 
-class tcp2com : public  ICallback_tcpSrv ,public ICallback_tcpClt,public ICallback_udpSrv{
+class tcp2com : public  ICallback_tcpSrv ,public ICallback_tcpClt,public ICallback_udpSrv,public ICallback_serial{
 public:
 	tcp2com();
 
@@ -27,7 +27,7 @@ public:
 	tcpClt tcpClt;
 	udpServer udpServer;
 
-	ioDev* serial;
+	Serial m_serial;
 
 	bool m_bLogCommPktAsStr;
 	bool m_bLogToFile;
@@ -44,11 +44,14 @@ public:
 
 	void run();
 
-	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn);
+	 void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
 	 void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 
-	 void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn);
+	 void statusChange_tcpClt(tcpSessionClt* connInfo, bool bIsConn) override;
 	 void onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt* connInfo) override;
+
+	 void statusChange_serial(bool bIsOpen) override;
+	 void onRecvData_serial(unsigned char* pData, size_t iLen) override;
 
 	 void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
 

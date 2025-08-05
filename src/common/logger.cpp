@@ -2,8 +2,10 @@
 #include <vector>
 #include <stdio.h>
 #include <stdarg.h>
-#include "common.h"
-#include "tds.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <filesystem>
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
@@ -165,21 +167,200 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #endif
 }
 
+#include <array>
+#include <chrono>
+#include <cstdio>
+
+
+std::string getTimeInfo(struct tm& timeinfo,string& timestamp) {
+
+	// 获取当前时间
+	auto now = std::chrono::system_clock::now();
+	auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+	auto duration = now_ms.time_since_epoch();
+
+	// 转换为time_t
+	std::time_t t = std::chrono::system_clock::to_time_t(now_ms);
+
+	// 时间结构
+#if defined(_WIN32)
+	localtime_s(&timeinfo, &t);
+#else
+	localtime_r(&t, &timeinfo);
+#endif
+
+	// 直接格式化到缓冲区
+	constexpr size_t buf_size = 24;
+	std::array<char, buf_size> buf;
+
+	// 格式化日期和时间
+	size_t len = std::strftime(buf.data(), buf_size,
+		"%Y-%m-%d %H:%M:%S",
+		&timeinfo);
+
+	// 添加毫秒
+	auto ms = duration.count() % 1000;
+	std::snprintf(buf.data() + len, 5, ".%03lld", ms);
+
+	return std::string(buf.data());
+}
+
+void fast_tm_to_ymd_str(const struct tm* t, char* buf) {
+	// 预计算的两位数字转换表
+	static const char digits[] =
+		"00010203040506070809"
+		"10111213141516171819"
+		"20212223242526272829"
+		"30313233343536373839"
+		"40414243444546474849"
+		"50515253545556575859"
+		"60616263646566676869"
+		"70717273747576777879"
+		"80818283848586878889"
+		"90919293949596979899";
+
+	// 年: tm_year 是从 1900 开始的偏移
+	const int year = t->tm_year + 1900;
+	const int year_tens = year % 100;
+
+	// 月份调整
+	const int month = t->tm_mon + 1;
+
+	// 直接内存拷贝
+	buf[0] = '0' + year / 1000;       // 年份千位
+	memcpy(buf + 1, digits + (year / 10 % 100) * 2, 2); // 年份中间两位
+	memcpy(buf + 3, digits + (year % 100) * 2, 2);       // 年份十位和个位
+	memcpy(buf + 4, digits + month * 2, 2);             // 月份
+	memcpy(buf + 6, digits + t->tm_mday * 2, 2);        // 日期
+	buf[8] = '\0';
+}
+
+string utf8_to_gb(string instr) //utf-8-->ansi
+{
+	string str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	char* charstr = new char[MAX_STRSIZE];
+	memset(charstr, 0, MAX_STRSIZE);
+	WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+	str = charstr;
+	delete[] wcharstr;
+	delete[] charstr;
+#else
+	//int ret = 0;
+	//size_t inlen = instr.size() + 1;
+	//size_t outlen = 2*inlen;
+
+	//// duanqn: The iconv function in Linux requires non-const char *
+	//// So we need to copy the source string
+	//char* inbuf = (char*)malloc(inlen);
+	//memset(inbuf,0,inlen);
+	//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
+	//							// so we use another pointer to keep the address
+	//memcpy(inbuf, instr.data(), instr.length());
+
+	//char* outbuf =(char*)malloc(outlen);
+	//memset(outbuf, 0, outlen);
+	//iconv_t cd;
+	//cd = iconv_open("GBK", "UTF-8");
+	//if (cd != (iconv_t)-1) {
+	//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
+	//	if (ret != 0) {
+	//		printf("iconv failed err: %s\n", strerror(errno));
+	//	}
+
+	//	iconv_close(cd);
+	//}
+	//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
+
+	//if(outbuf!=nullptr){
+	//	str = outbuf;
+	//	free(outbuf);
+	//}
+	str = instr;
+#endif
+	return str;
+}
+
+wstring utf8_to_utf16(string instr) //utf-8-->ansi
+{
+	wstring str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	str = wcharstr;
+	delete[] wcharstr;
+
+#else
+
+#endif
+	return str;
+}
+
+bool createFolderOfPath(string strFile)
+{
+	strFile.replace(strFile.begin(),strFile.end(), "\\", "/");
+	strFile.replace(strFile.begin(), strFile.end(), "////", "/");
+	strFile.replace(strFile.begin(), strFile.end(), "///", "/");
+	strFile.replace(strFile.begin(), strFile.end(), "//", "/");
+
+	size_t iDotPos = strFile.rfind('.');
+	size_t iSlashPos = strFile.rfind('/');
+	if (iDotPos != string::npos && iDotPos > iSlashPos)//是一个文件
+	{
+		strFile = strFile.substr(0, iSlashPos);
+	}
+	//如果路径的末尾是/，创建成功也会返回false,因此删除末尾的 /
+	if (iSlashPos == strFile.length() - 1) {
+		strFile = strFile.substr(0, iSlashPos);
+	}
+
+#ifdef _WIN32
+#ifndef _WINXP
+	return filesystem::create_directories(utf8_to_utf16(strFile));
+#endif
+#else
+	filesystem::path p = strFile;
+	return filesystem::create_directories(p);
+#endif
+}
+
+bool appendFile(string path, char* data, size_t len)
+{
+	FILE* fp = nullptr;
+#ifdef _WIN32
+	_wfopen_s(&fp, utf8_to_utf16(path).c_str(), L"ab");
+#else
+	fp = fopen(path.c_str(), "ab");
+#endif
+	if (fp)
+	{
+		fwrite(data, 1, len, fp);
+		fclose(fp);
+		return true;
+	}
+	return false;
+}
+
 string Clogger::logInternal(string info, bool writeToFile)
 {
 	LOG_LEVEL ll = getLogLevel(info);
 	if (ll == LOG_LEVEL::LL_KEYINFO)
 	{
-		info = str::trim(info, "[keyinfo]");
+		info.replace(info.begin(), info.end(), "[keyinfo]", "");
 	}
 	
-	TIME stNow;
-	timeopt::now(&stNow);
-
-	string time = str::format("%02d:%02d:%02d.%03d", stNow.wHour, stNow.wMinute, stNow.wSecond, stNow.wMilliseconds);
+	struct tm stNow;
+	string timeStamp;
+	getTimeInfo(stNow,timeStamp);
 
 	//命令行和文件中的日志用gb2312编码
-	string logline = time + " " + info;
+	string logline = timeStamp + " " + info;
 
 	//logLevel用户控制本地命令行界面和日志文件当中是否记录。weblog监视统一全部推送
 	if (ll < logLevel) {
@@ -187,14 +368,14 @@ string Clogger::logInternal(string info, bool writeToFile)
 	}
 
 #ifdef _WIN32
-	info = charCodec::utf8_to_gb(logline);
+	info = utf8_to_gb(logline);
 #else
 	info = logline;
 #endif
 
 	setConsoleTextColor(ll);
 
-	cout << info;
+	printf(info.c_str());
 	printf("\r\n");
 
 	if (writeToFile && m_strLogDir!="") {
@@ -202,12 +383,15 @@ string Clogger::logInternal(string info, bool writeToFile)
 		std::lock_guard<mutex> lockGuard(m_lock);
 	
 		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
-		fs::createFolderOfPath(m_strLogDir);
+		createFolderOfPath(m_strLogDir);
 
 		//save to log file
-		string strFile = str::format("%04d%02d%02d", stNow.wYear, stNow.wMonth, stNow.wDay);
+		char datePath[20] = {0};
+		fast_tm_to_ymd_str(&stNow, datePath);
+		string strFile = datePath;
 		strFile = m_strLogDir + "/" + strFile + ".log";
-		fs::appendFile(strFile, info + "\r\n");
+		info += "\r\n";
+		appendFile(strFile,(char*)info.c_str(),info.size());
 	}
 
 	return logline;
