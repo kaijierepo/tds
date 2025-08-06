@@ -4107,7 +4107,7 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	if (method == "heartbeat") {
 		json j;
 		j["tdsVersion"] = tds->getSvnVersion();
-
+		j["startTime"] = g_strStartupTime;
 		#ifdef _WIN32
 		j["serverStatus"]["cpu"] = statusSrv.m_srvStatus.cpu;
 		j["serverStatus"]["mem"] = statusSrv.m_srvStatus.mem;
