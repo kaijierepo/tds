@@ -319,6 +319,24 @@ static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
+
+static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 2) {
+        json path = jArgs[0];
+        json data = jArgs[1];
+        if (path.is_string() && data.is_string()) {
+            std::string sPath = path.get<std::string>();
+            string sData = data.get<string>();
+
+           
+        }
+    }
+    return JS_NULL;
+}
+
+
 static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -685,6 +703,8 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
+    JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
+    JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
 
     JSValue db = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
