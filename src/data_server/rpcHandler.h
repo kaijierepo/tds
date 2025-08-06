@@ -170,3 +170,4 @@ extern rpcHandler rpcSrv;
 void jsonToList(json & data, vector<double>& p);
 float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur);
 void onSockSrvCallback(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);
+void onSockSrvStatusCallback(bool conn, std::shared_ptr<SOCK_SESSION> sockSess);

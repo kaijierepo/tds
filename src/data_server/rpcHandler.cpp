@@ -2736,6 +2736,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	//else if (method == "getScriptMngerStatus") {
 	//	scriptManager.rpc_getScriptMngStatus(params, rpcResp, session);
 	//}
+	else if (method == "subNotify") {
+		json j = params["method"];
+		if (j.is_array()) {
+			for (auto& i : j) {
+				session.subMethod.insert(i.get<string>());
+			}
+			LOG("[warn]subNotify,%s,remoteAddr=%s:%d", params.dump().c_str(), session.remoteIP.c_str(), session.remotePort);
+			rpcResp.result = RPC_OK;
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param method should be a string or an array of strings");
+		}
+	}
 	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
 		string st = params["time"];
 		json j;
@@ -3788,14 +3801,11 @@ void thread_handleRpcCallAsyn(string str, std::shared_ptr<TDS_SESSION> pSession,
 
 void thread_handleSockSrvRpcCallAsyn(string req, std::shared_ptr<SOCK_SESSION> ss) {
 	RPC_RESP resp;
+	T_ASSERT(ss->appLayerSession != nullptr);
+	if (ss->appLayerSession == nullptr)
+		return;
 
-	std::shared_ptr<TDS_SESSION> p(new TDS_SESSION());
-	p->Init();
-	p->bConnected = true;
-	p->sock = p->sock;
-	p->remotePort = ss->remotePort;
-	p->remoteIP = ss->remoteIP;
-
+	std::shared_ptr<TDS_SESSION> p = std::static_pointer_cast<TDS_SESSION>(ss->appLayerSession);
 	rpcSrv.handleRpcCall(req, resp, p);
 	sockSrv.sendToSockSession(ss, (unsigned char*) resp.strResp.c_str(), resp.strResp.length());
 }
@@ -3808,6 +3818,18 @@ void onSockSrvCallback(char* p, size_t l, std::shared_ptr<SOCK_SESSION> sockSess
 	}
 	else if (req.find("result") != string::npos){// 本地向中心端请求之后的回包，非中心端请求，无需处理
 		//此处如何处理未来研究
+	}
+}
+
+void onSockSrvStatusCallback(bool conn,std::shared_ptr<SOCK_SESSION> sockSess) {
+	if (conn) {
+		std::shared_ptr<TDS_SESSION> p = make_shared<TDS_SESSION>();
+		sockSess->appLayerSession = std::static_pointer_cast<void>(p);
+		p->Init();
+		p->bConnected = true;
+		p->sock = sockSess->sock;
+		p->remotePort = sockSess->remotePort;
+		p->remoteIP = sockSess->remoteIP;
 	}
 }
 
@@ -6709,8 +6731,19 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 
 	apiAdaptorScript(notify);
 
-	WebServer::notifyAllSrvAllWs(notify);
-	sockSrv.sendToAllSessions(notify, specialNotify);
+	WebServer::notifyAllSrvAllWs(method,notify);
+
+
+	sockSrv.m_mutexSessions.lock();
+	for (auto& i : sockSrv.m_sockSessions) {
+		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
+
+		if (pSession->subAllMethod ||
+			pSession->subMethod.find(method) != pSession->subMethod.end()) {
+			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
+		}
+	}
+	sockSrv.m_mutexSessions.unlock();
 }
 
 void rpcHandler::statisCall(string method) {

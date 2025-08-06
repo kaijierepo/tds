@@ -18,6 +18,7 @@ struct SOCK_SESSION {
 	int localPort;
 	SOCK_CONN_TYPE type;
 	stream2pkt recvBuff;
+	std::shared_ptr<void> appLayerSession;
 
 	SOCK_SESSION(tcpSessionClt* p) {
 		sock = p->sock;
@@ -38,7 +39,7 @@ struct SOCK_SESSION {
 	}
 };
 
-
+typedef void (*sockSessionStatusCallback)(bool conn,std::shared_ptr<SOCK_SESSION> sockSess);
 typedef void (*sockSessionRecvCallback)(char* pData, size_t iLen, std::shared_ptr<SOCK_SESSION> sockSess);
 
 
@@ -72,6 +73,7 @@ public:
 	map<int, std::shared_ptr<SOCK_SESSION>> m_sockSessions;
 	mutex m_mutexSessions;
 	sockSessionRecvCallback m_pCallback;
+	sockSessionStatusCallback m_pStatusCallback;
 
 	SOCK_SRV_CONF m_conf;
 public:

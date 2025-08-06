@@ -8,7 +8,7 @@
 #include "webSrv.h"
 
 
-
+bool RPC_SESSION::defaultSubAll = true;
 
 TDS_SESSION::TDS_SESSION()
 {

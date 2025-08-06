@@ -42,6 +42,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 */
 #pragma once
 #include <string>
+#include <unordered_set>
 using namespace std;
 
 
@@ -73,7 +74,12 @@ public:
 	string org; //user's org
 
 
+	static bool defaultSubAll;
 	bool isNotification; 
+	bool subAllMethod;
+	bool subAllTag;
+	std::unordered_set<std::string> subMethod;
+	std::unordered_set<std::string> subTag;
 
 	//session params for rpc route
 	string route_ioAddr;  //route to io device
@@ -109,6 +115,14 @@ public:
 		tStartCall = 0;
 		tStartHandle = 0;
 		tEndCall = 0;
+		if (RPC_SESSION::defaultSubAll) {
+			subAllMethod = true;
+			subAllTag = true;
+		}
+		else {
+			subAllMethod = false;
+			subAllTag = false;
+		}
 	}
 };
 

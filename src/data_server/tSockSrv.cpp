@@ -17,6 +17,7 @@ tSockSrv sockSrv;
 tSockSrv::tSockSrv()
 {
 	m_pCallback = nullptr;
+	m_pStatusCallback = nullptr;
 }
 
 tSockSrv::~tSockSrv()
@@ -36,6 +37,10 @@ void tSockSrv::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 
 		if (m_conf.tcpServerRegPkt.length() > 0) {
 			::send(pTcpSess->sock, m_conf.tcpServerRegPkt.c_str(), m_conf.tcpServerRegPkt.length(), 0);
+		}
+
+		if (m_pStatusCallback) {
+			m_pStatusCallback(true, p);
 		}
 	}
 	else
@@ -62,6 +67,10 @@ void tSockSrv::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 			
 		if (m_conf.tcpClientRegPkt.length() > 0) {
 			::send(pTcpSess->sock, m_conf.tcpClientRegPkt.c_str(), m_conf.tcpClientRegPkt.length(),0);
+		}
+
+		if (m_pStatusCallback) {
+			m_pStatusCallback(true, p);
 		}
 	}
 	else

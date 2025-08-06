@@ -173,7 +173,7 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #include <cstdio>
 
 
-std::string getTimeInfo(struct tm& timeinfo,string& timestamp) {
+void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 
 	// 获取当前时间
 	auto now = std::chrono::system_clock::now();
@@ -203,7 +203,7 @@ std::string getTimeInfo(struct tm& timeinfo,string& timestamp) {
 	auto ms = duration.count() % 1000;
 	std::snprintf(buf.data() + len, 5, ".%03lld", ms);
 
-	return std::string(buf.data());
+	timestamp = buf.data();
 }
 
 void fast_tm_to_ymd_str(const struct tm* t, char* buf) {
@@ -328,11 +328,7 @@ bool appendFile(string path, char* data, size_t len)
 string Clogger::logInternal(string info, bool writeToFile)
 {
 	LOG_LEVEL ll = getLogLevel(info);
-	if (ll == LOG_LEVEL::LL_KEYINFO)
-	{
-		info.replace(info.begin(), info.end(), "[keyinfo]", "");
-	}
-	
+
 	struct tm stNow;
 	string timeStamp;
 	getTimeInfo(stNow,timeStamp);

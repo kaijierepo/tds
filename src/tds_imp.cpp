@@ -478,7 +478,7 @@ bool TDS_imp::run(string cmdline)
 
 	tds->conf->bCallAsyn = tds->conf->getInt("callAsyn", 1);
 	ioDev::m_pingInterval = tds->conf->getInt("pingInterval", 30000);
-
+	RPC_SESSION::defaultSubAll = tds->conf->getInt("defaultSubAll", 1) == 1 ? true : false;
 	//check mode
 	if (conf->uiMode == "")
 		conf->uiMode = getUIMode();
@@ -618,6 +618,7 @@ bool TDS_imp::run(string cmdline)
 	ssc.tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
 
 	sockSrv.m_pCallback = onSockSrvCallback;
+	sockSrv.m_pStatusCallback = onSockSrvStatusCallback;
 	sockSrv.run(ssc);
 
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备

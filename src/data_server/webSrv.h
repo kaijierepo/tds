@@ -35,8 +35,8 @@ public:
 	~WebServer();
 	void run(int port, bool https = false);
 	int notifyWs(unsigned char* p, size_t len, unsigned long conn_id);
-	void notifyAllWs(string& s);
-	static int notifyAllSrvAllWs(string& s);
+	void notifyAllWs(string method, string& s);
+	static int notifyAllSrvAllWs(string method, string& s);
 	int m_port;
 	bool m_isHttps;
 	std::shared_ptr<TDS_SESSION> getWsSession(void* conn);
