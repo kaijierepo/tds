@@ -1413,7 +1413,7 @@ void WebServer::run(int port,bool https)
 //websocket通过pipe发送的原因是为了使用moogoose的websocket secure功能
 //所以不选择直接组装websocket pkt通过socket发送
 //但是通过pipe发送会导致粘连包问题
-void WebServer::notifyAllWs(string method, string& s)
+void WebServer::notifyAllWs(const string& method, const string& tag, const string& s)
 {
 	if (!g_enableWsNotify) {
 		return;
@@ -1431,8 +1431,7 @@ void WebServer::notifyAllWs(string method, string& s)
 #endif
 		std::shared_ptr<TDS_SESSION > pSess = i->second;
 
-		if (pSess->subAllMethod ||
-			pSess->subMethod.find(method) != pSess->subMethod.end())
+		if (pSess->isSubscribed(method,tag))
 		{
 			notifyWs((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
 		}
@@ -1440,13 +1439,13 @@ void WebServer::notifyAllWs(string method, string& s)
 	m_csWsSessions.unlock();
 }
 
-int WebServer::notifyAllSrvAllWs(string method,string& s)
+int WebServer::notifyAllSrvAllWs(const string& method, const string& tag, const string& s)
 {
 	if (!g_enableWsNotify) {
 		return 0;
 	}
 	for (auto& iter : g_WebServerList) {
-		iter->notifyAllWs(method,s);
+		iter->notifyAllWs(method, tag, s);
 	}
 	return 0;
 }

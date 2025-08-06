@@ -75,11 +75,14 @@ public:
 
 
 	static bool defaultSubAll;
+
+
 	bool isNotification; 
 	bool subAllMethod;
 	bool subAllTag;
-	std::unordered_set<std::string> subMethod;
-	std::unordered_set<std::string> subTag;
+	std::vector<std::string> subMethod;
+	std::vector<std::string> subRootTag;
+	std::vector<std::string> subTag;
 
 	//session params for rpc route
 	string route_ioAddr;  //route to io device
@@ -105,6 +108,43 @@ public:
 	long long tStartCall;
 	long long tStartHandle;
 	long long tEndCall;
+
+	bool isSubscribed(const string& method, const string& tag) {
+		bool subByMethod = false;
+		if (subAllMethod) {
+			subByMethod = true;
+		}
+		else {
+			for (auto& i : subMethod) {
+				if (i == method) {
+					subByMethod = true;
+					break;
+				}
+			}
+		}
+
+		if (tag == "") { //无位号属性
+			return true;
+		}
+
+		bool subByTag = false;
+		if (subAllTag) {
+			subByTag = true;
+		}
+		else {
+			for (const std::string& rootTag : subRootTag) {
+				if (tag.find(rootTag) == 0) {
+					subByTag = true;
+				}
+			}
+		}
+				
+		if (subByMethod && subByTag)
+		{
+			return true;
+		}
+		return false;
+	}
 
 	RPC_SESSION() {
 		isNotification = false;

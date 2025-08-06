@@ -2738,16 +2738,55 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	//}
 	else if (method == "subNotify") {
 		json j = params["method"];
-		if (j.is_array()) {
-			for (auto& i : j) {
-				session.subMethod.insert(i.get<string>());
+		LOG("[warn]subNotify,%s,remoteAddr=%s:%d", params.dump().c_str(), session.remoteIP.c_str(), session.remotePort);
+		
+		if (j.is_string()) {
+			string m = j.get<string>();
+			session.subTag.push_back(m);
+			if (m == "*") {
+				session.subAllMethod = true;
 			}
-			LOG("[warn]subNotify,%s,remoteAddr=%s:%d", params.dump().c_str(), session.remoteIP.c_str(), session.remotePort);
-			rpcResp.result = RPC_OK;
+		}
+		else if (j.is_array()) {
+			for (auto& i : j) {
+				session.subMethod.push_back(i.get<string>());
+			}
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param method should be a string or an array of strings");
+			return true;
 		}
+
+		j = params["rootTag"];
+		if (j.is_array()) {
+			for (auto& i : j) {
+				session.subRootTag.push_back(i.get<string>());
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param rootTag should be a string or an array of strings");
+			return true;
+		}
+
+		j = params["tag"];
+		if (j.is_string()) {
+			string tag = j.get<string>();
+			session.subTag.push_back(tag);
+			if (tag == "*") {
+				session.subAllTag = true;
+			}
+		}
+		else if (j.is_array()) {
+			for (auto& i : j) {
+				session.subTag.push_back(i.get<string>());
+			}
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param rootTag should be a string or an array of strings");
+			return true;
+		}
+
+		rpcResp.result = RPC_OK;
 	}
 	else if (method == "time2unix") {   //跨国项目，测试时间造成的一些问题
 		string st = params["time"];
@@ -6731,15 +6770,17 @@ void rpcHandler::notify(string method, json params, bool specialNotify,std::shar
 
 	apiAdaptorScript(notify);
 
-	WebServer::notifyAllSrvAllWs(method,notify);
-
+	string tag;
+	if (params.contains("tag")) {
+		tag = params["tag"].get<string>();
+	}
+	WebServer::notifyAllSrvAllWs(method,tag,notify);
 
 	sockSrv.m_mutexSessions.lock();
 	for (auto& i : sockSrv.m_sockSessions) {
 		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
 
-		if (pSession->subAllMethod ||
-			pSession->subMethod.find(method) != pSession->subMethod.end()) {
+		if (pSession->isSubscribed(method, tag)) {
 			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
 		}
 	}

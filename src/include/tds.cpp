@@ -43,6 +43,8 @@ SOFTWARE.
 #include <stdlib.h>
 #endif
 
+bool RPC_SESSION::defaultSubAll = true;
+
 int _vscprintf_cross(const char* format, va_list pargs) {
 	int retval;
 	va_list argcopy;
