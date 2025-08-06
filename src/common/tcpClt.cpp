@@ -112,7 +112,6 @@ void TcpClientRecvThread(void* lpParam) {
 	pTcpClt->m_session.remoteIP = pTcpClt->m_remoteIP;
 	pTcpClt->m_session.remotePort = pTcpClt->m_remotePort;
 	pTcpClt->m_session.sock = sock;
-	//pTcpClt->m_session.bIsHttp = false;
 
 	if (pTcpClt->m_pCallBackUser) {
 		pTcpClt->m_pCallBackUser->statusChange_tcpClt(&pTcpClt->m_session, true);
@@ -161,8 +160,9 @@ void TcpClientRecvThread(void* lpParam) {
 		unsigned long bytesToRecv = 0;
 		int iRet = ioctlsocket(sock, FIONREAD, &bytesToRecv);
 		if (iRet == 0) {
-			if(bytesToRecv > 0)
+			if (bytesToRecv > 0) {
 				continue;
+			}
 		}
 		else {
 		}
@@ -206,8 +206,9 @@ void ConnectThread(void* lpParam) {
 
 		for (map<tcpClt*, tcpClt*>::iterator  i = mapAllTcpClt.begin(); i != mapAllTcpClt.end(); i++) {
 			tcpClt* p = i->first;
-			if (!p->m_bRun)
+			if (!p->m_bRun) {
 				continue;
+			}
 
 			if (p->IsConnect()) {
 				if (p->m_keepAliveTimeout > 0) {
@@ -216,11 +217,13 @@ void ConnectThread(void* lpParam) {
 						printf("disconnect inactive connection %s:%d\r\n", p->m_remoteIP.c_str(), p->m_remotePort);
 					}
 				}
+
 				continue;
 			}
 				
-			if (p->m_isConnectting != enTcpCltConnectStatus::FREE)
+			if (p->m_isConnectting != enTcpCltConnectStatus::FREE) {
 				continue;
+			}
 
 			if (tcpClient::calcTimePassSecond(p->lastConnTime) > 3) {
 				p->lastConnTime = getNowStr();
@@ -247,13 +250,16 @@ tcpClt::tcpClt(void) {
 	m_bConnThreadRunning = false;
 
 	csAllTcpClt.lock();
+
 	mapAllTcpClt[this] = this;
+
 	if (!connectThreadRunning){
 		connectThreadRunning = true;
 
-		thread t(ConnectThread,this);
+		thread t(ConnectThread, this);
 		t.detach();
 	}
+
 	csAllTcpClt.unlock();
 
 	m_keepAliveTimeout = 0;
@@ -309,13 +315,13 @@ bool tcpClt::run(ICallback_tcpClt* pUser, string host, string strLocalIp, int iL
 	return true;
 }
 
-bool tcpClt::run(ICallback_tcpClt* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort)
-{
+bool tcpClt::run(ICallback_tcpClt* pUser, string strServIP, int iServPort, string strLocalIp, int iLocalPort) {
 	m_pCallBackUser = pUser;
 	m_remoteIP = strServIP;
 	m_remotePort = iServPort;
 	m_strLocalIP = strLocalIp;
 	m_iLocalPort = iLocalPort;
+
 	m_bRun = true;
 	return true;
 }

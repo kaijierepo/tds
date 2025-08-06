@@ -1431,8 +1431,7 @@ void WebServer::notifyAllWs(const string& method, const string& tag, const strin
 #endif
 		std::shared_ptr<TDS_SESSION > pSess = i->second;
 
-		if (pSess->isSubscribed(method,tag))
-		{
+		if (pSess->isSubscribed(method, tag)) {
 			notifyWs((unsigned char*)s.c_str(), s.length(), i->second->conn_id);
 		}
 	}

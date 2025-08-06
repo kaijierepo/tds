@@ -326,10 +326,10 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		}
 		else if (checkKey(key, "enableOfflineAlarm"))
 		{
-		if (val == "true" || val == "1")
-			enableOfflineAlarm = true;
-		else if (val == "false" || val == "0")
-			enableOfflineAlarm = false;
+			if (val == "true" || val == "1")
+				enableOfflineAlarm = true;
+			else if (val == "false" || val == "0")
+				enableOfflineAlarm = false;
 		}
 		else if (checkKey(key, "enableDevCommReboot"))
 		{

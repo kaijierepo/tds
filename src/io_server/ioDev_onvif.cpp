@@ -352,12 +352,18 @@ void ioDev_onvif::DoCycleTask() {
 						}
 
 						if (alarm) {
+							string val = tds->conf->getStr("enableOnvifAlarmToTds", "0");
+							bool enableOnvifAlarmToTds = false;
+							if (val == "true" || val == "1") {
+								enableOnvifAlarmToTds = true;
+							}
+
 							ALARM_INFO ai;
 							ai.tag = m_strTagBind + "." + pC->m_strTagBind;
 							ai.type = "视频伤损";
 							ai.level = ALARM_LEVEL::alarm;
 							ai.time = time.toStr();
-							almSrv.Add(ai);
+							almSrv.Add(ai, enableOnvifAlarmToTds);
 						}
 
 						char* temp = yyjson_mut_write(mut_doc, 0, 0);

@@ -2737,9 +2737,9 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	//	scriptManager.rpc_getScriptMngStatus(params, rpcResp, session);
 	//}
 	else if (method == "subNotify") {
-		json j = params["method"];
 		LOG("[warn]subNotify,%s,remoteAddr=%s:%d", params.dump().c_str(), session.remoteIP.c_str(), session.remotePort);
-		
+
+		json j = params["method"];
 		if (j.is_string()) {
 			string m = j.get<string>();
 			session.subTag.push_back(m);
@@ -2757,17 +2757,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			return true;
 		}
 
-		j = params["rootTag"];
-		if (j.is_array()) {
-			for (auto& i : j) {
-				session.subRootTag.push_back(i.get<string>());
+		if (params.contains("rootTag")) {
+			j = params["rootTag"];
+			if (j.is_array()) {
+				for (auto& i : j) {
+					session.subRootTag.push_back(i.get<string>());
+				}
+			}
+			else {
+				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param rootTag should be a string or an array of strings");
+				return true;
 			}
 		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param rootTag should be a string or an array of strings");
-			return true;
-		}
-
+		
 		j = params["tag"];
 		if (j.is_string()) {
 			string tag = j.get<string>();
@@ -6765,16 +6767,13 @@ void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string t
 	p->sendStr(s);
 }
 
-void rpcHandler::notify(string method, json params, bool specialNotify,std::shared_ptr<TDS_SESSION> orgSession) {
+void rpcHandler::notify(string method, json params, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
 
 	apiAdaptorScript(notify);
 
-	string tag;
-	if (params.contains("tag")) {
-		tag = params["tag"].get<string>();
-	}
-	WebServer::notifyAllSrvAllWs(method,tag,notify);
+	string tag = "";  // sixf todo
+	WebServer::notifyAllSrvAllWs(method, tag, notify);
 
 	sockSrv.m_mutexSessions.lock();
 	for (auto& i : sockSrv.m_sockSessions) {

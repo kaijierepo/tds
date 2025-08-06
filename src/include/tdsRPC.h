@@ -123,6 +123,10 @@ public:
 			}
 		}
 
+		if (!subByMethod) {
+			return false;
+		}
+
 		if (tag == "") { //无位号属性
 			return true;
 		}
@@ -139,10 +143,10 @@ public:
 			}
 		}
 				
-		if (subByMethod && subByTag)
-		{
+		if (subByMethod && subByTag) {
 			return true;
 		}
+
 		return false;
 	}
 
