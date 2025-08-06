@@ -847,6 +847,18 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
 			JS_FreeValue(ctx, error);
 		}
         else {
+            //返回全局对象在脚本内部的修改
+            if (!m_globalObj.is_null()) {
+                JSValue global = JS_GetGlobalObject(ctx);
+                for (auto& [key, value] : m_globalObj.items()) {
+                    JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());;
+                    jsValToJsonVal(ctx, prop_value, value);  
+                }
+
+                JS_FreeValue(ctx, global);
+            }
+
+
             jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
             runOk = true;
         }

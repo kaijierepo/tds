@@ -4,6 +4,7 @@
 #include "tdb.h"
 #include "tds.h"
 #include "json.hpp"
+#include "yyjson.h"
 //#include <shared_mutex>
 #include <chrono>
 
@@ -166,7 +167,8 @@ public:
 
 	string toCSVLine();
 	string toJsonStr(almServer* almSrv, string rootTag = "");
-	ALARM_INFO fromJson(json j);
+	void fromJsonStr(const string& s);
+	void fromJson(yyjson_val* j);
 	json toJson(almServer* almSrv, string rootTag = "");
 	void toJson(almServer* almSrv, string rootTag, yyjson_mut_val*& jVal, yyjson_mut_doc* doc);
 };
@@ -414,7 +416,7 @@ public:
 	void rpc_getUnRecover(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getUnack(json params, RPC_RESP& resp, RPC_SESSION session);
 	void rpc_getHistory(json params, RPC_RESP& resp, RPC_SESSION session);
-	void rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate = true);
+	void rpc_addAlarm(yyjson_val* yyv_params, RPC_RESP& resp, bool bUpdate = true);
 	void rpc_recoverAlarm(json j, RPC_RESP& resp);
 	void rpc_updateStatus(json j, RPC_RESP& resp,bool bSync = true);
 	void rpc_getAlmSrvStatus(json j, RPC_RESP& resp);
@@ -455,7 +457,7 @@ public:
 	map<string,almTable*> tableHist;  //key是202004 年月相加格式
 	std::mutex m_csTableHistList;
 	almTable* getHistTable(string time);
-	int handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	map<string, ALARM_TEMPLATE> m_mapCustomAlarmDesc; 
 
 	BLOCKING_PLAN m_blockingPlan;
@@ -475,6 +477,11 @@ public:
 	float m_lastAddCallTimeCostAvg;
 	int m_evtAlmRepeCheckTimeLen = 1; //in seconds
 	long long m_iUpdateCallCount;
+
+
+#ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
+	string m_scriptBeforeUpdateAlarm;
+#endif
 };
 bool generalMatch(string pattern, const string& src);
 extern almServer almSrv;

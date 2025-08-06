@@ -8,6 +8,7 @@ using json = nlohmann::json;
 #include <shared_mutex>
 #include "scriptManager.h"
 
+
 struct OBJ_TEMPLATE {
 	string type;
 	json tplData;
@@ -54,6 +55,8 @@ struct LOCK_THREAD_RECORDER {
 
 	unsigned long* pid;
 };
+
+extern map<string, string> g_mapConfFile;
 
 
 class project : public OBJ  

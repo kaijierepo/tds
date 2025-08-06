@@ -8,6 +8,12 @@
 #include "common.h"
 #include <filesystem>
 
+#ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
+#include "scriptEngine.h"
+#include "scriptFunc.h"
+#include "scriptManager.h"
+#endif
+
 
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
 
@@ -568,6 +574,29 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 		return;
 	}
 
+#ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
+	if (m_scriptBeforeUpdateAlarm != "") {
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+		se.m_globalObj["AlarmInfo"] = newStatus.toJson(this);
+
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(m_scriptBeforeUpdateAlarm, si);
+		if (si.enable) {
+			se.runScript(si.script, "", si.lastRunInfo);
+			scriptManager.setRunInfo(m_scriptBeforeUpdateAlarm, si.lastRunInfo);
+			if (si.lastRunInfo.runSuccess) {
+				string s = se.m_globalObj["AlarmInfo"].dump();
+				newStatus.fromJsonStr(s);
+			}
+		}
+	}
+#endif
+
 	auto start = std::chrono::high_resolution_clock::now();
 	m_latestUpdateCall.push_back(start);
 	if (m_latestUpdateCall.size() > 10000) {
@@ -753,28 +782,21 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 }
 
 #if 1
-void almServer::rpc_addAlarm(json j, RPC_RESP& resp, bool bUpdate) {
-	if (j.contains("rootTag")) {
-		string rootTag = j["rootTag"];
-		string tag = j["tag"];
-		j["tag"] = TAG::addRoot(tag, rootTag);
-	}
+void almServer::rpc_addAlarm(yyjson_val* yyv_params, RPC_RESP& resp, bool bUpdate) {
 
 	ALARM_INFO ai;
-	ai.fromJson(j);
+	ai.fromJson(yyv_params);
 
-	if (j["time"].is_string()) {
-		ai.time = j["time"];
-	}
-	else {
+	if (ai.time == ""){
 		TIME t;
 		t.setNow();
 		ai.time = t.toStr();
 	}
 
 	bool notify = true;
-	if (j.contains("notify") && j["notify"].is_boolean()) {
-		notify = j["notify"].get<bool>();
+	yyjson_val* yyv_notify = yyjson_obj_get(yyv_params, "notify");
+	if (yyv_notify && yyjson_is_bool(yyv_notify) ){
+		notify = yyjson_get_bool(yyv_notify);
 	}
 
 	string err;
@@ -834,7 +856,7 @@ void almServer::rpc_updateStatus(json jAlm, RPC_RESP& resp, bool bSync)
 		try
 		{
 			ALARM_INFO ai;
-			ai.fromJson(j);
+			ai.fromJsonStr(j.dump());
 			
 			bool notify = true;
 			if (j.contains("notify") && j["notify"].is_boolean()) {
@@ -1718,45 +1740,67 @@ void almTable::saveFile()
 }
 
 
-ALARM_INFO ALARM_INFO::fromJson(json j)
+void ALARM_INFO::fromJson(yyjson_val* params)
 {
-	ALARM_INFO& ai = *this;
+	string rootTag;
+	yyjson_val* v = yyjson_obj_get(params, "rootTag");
+	if (v)
+		rootTag = yyjson_get_str(v);
+		
+	v = yyjson_obj_get(params, "tag");
+	if (v) {
+		tag = yyjson_get_str(v);
+		if (rootTag != "") {
+			tag = rootTag + "." + tag;
+		}
+	}
+	v = yyjson_obj_get(params, "type");
+	if(v)
+		type = yyjson_get_str(v);
+	v = yyjson_obj_get(params, "acqtype");
+	if(v)
+		acqType = yyjson_get_str(v);
+	v = yyjson_obj_get(params, "objstatus");
+	if (v)
+		objStatus = yyjson_get_str(v);
 
-	//必填字段
-	if(j["tag"].is_string())
-		ai.tag = j["tag"];
-	if(j["type"].is_string())
-		ai.type = j["type"];
-	if(j["acqtype"].is_string())
-		ai.acqType = j["acqtype"];
-	if(j["objstatus"].is_string())
-		ai.objStatus = j["objstatus"];
+	v = yyjson_obj_get(params, "time");
+	if (v)
+		time = yyjson_get_str(v);
 
-
-	if (j["time"] != nullptr)
-		ai.time = j["time"];
-
-	if (j["level"] != nullptr)
-		ai.level = j["level"];
+	v = yyjson_obj_get(params, "level");
+	if (v)
+		level = yyjson_get_str(v);
 	else
-		ai.level = ALARM_LEVEL::alarm;
+		level = ALARM_LEVEL::alarm;
 
-	//可选字段
-	if (j["desc"] != nullptr)
-		ai.desc = j["desc"];
-	if (j["isRecover"] != nullptr)
-		ai.isRecover = j["isRecover"].get<bool>();
-	if (j["isAck"].is_boolean())
-		ai.isAck = j["isAck"].get<bool>();
-	if (j["recoverTime"] != nullptr)
-		ai.recoverTime = j["recoverTime"];
-	if (j["needRecover"].is_boolean())
-		ai.needRecover = j["needRecover"].get<bool>();
-	if (j["needAck"].is_boolean())
-		ai.needAck = j["needAck"].get<bool>();
-	if (j["multiUnack"].is_boolean())
-		ai.multiUnack = j["multiUnack"].get<bool>();
-	return ai;
+	v = yyjson_obj_get(params, "desc");
+	if (v)
+		desc = yyjson_get_str(v);
+
+	v = yyjson_obj_get(params, "isRecover");
+	if (v)
+		isRecover = yyjson_get_bool(v);
+
+	v = yyjson_obj_get(params, "isAck");
+	if (v)
+		isAck = yyjson_get_bool(v);
+
+	v = yyjson_obj_get(params, "recoverTime");
+	if (v)
+		recoverTime = yyjson_get_str(v);
+
+	v = yyjson_obj_get(params, "needRecover");
+	if (v)
+		needRecover = yyjson_get_bool(v);
+
+	v = yyjson_obj_get(params, "needAck");
+	if (v)
+		needAck = yyjson_get_bool(v);
+
+	v = yyjson_obj_get(params, "multiUnack");
+	if (v)
+		multiUnack = yyjson_get_bool(v);
 }
 
 json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
@@ -1982,6 +2026,16 @@ string ALARM_INFO::toJsonStr(almServer* almSrv, string rootTag)
 {
 	json j = toJson(almSrv, rootTag);
 	return j.dump(2);
+}
+
+void ALARM_INFO::fromJsonStr(const string& s)
+{
+	yyjson_doc* doc = yyjson_read(s.c_str(),s.size(),0);
+	if (doc) {
+		yyjson_val* root = yyjson_doc_get_root(doc);
+		fromJson(root);
+	}
+	yyjson_doc_free(doc);
 }
 
 void almServer::ClearMap(map<string, ALARM_INFO*>& inMap)
@@ -2324,7 +2378,7 @@ void almTable::SetAlarmSrv(almServer* pSrv)
 }
 
 
-int almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION session)
+bool almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
 	bool bHandled = true;
 	if (method == "getAlarmCurrent")
@@ -2384,14 +2438,11 @@ int almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SES
 	//** 数据生成系列 以下接口都会修改报警数据
 	else if (method == "addAlarm")
 	{
-		if (session.dbpath == "alarmsDevelop")
-		{
-			rpc_addAlarm(params, rpcResp);
-		}
-		else
-		{
-			rpc_addAlarm(params, rpcResp);
-		}
+		string s = params.dump();
+		yyjson_doc* doc = yyjson_read(s.c_str(), s.size(), 0);
+		yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+		rpc_addAlarm(yyv_params, rpcResp);
+		yyjson_doc_free(doc);
 	}
 	else if (method == "recoverAlarm" || method == "clearAlarm") {
 		rpc_recoverAlarm(params, rpcResp);

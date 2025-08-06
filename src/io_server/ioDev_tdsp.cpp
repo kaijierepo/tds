@@ -843,16 +843,12 @@ bool ioDev_tdsp::handleNotify(yyjson_val* jNotify, yyjson_doc* doc) {
 			}
 			
 			jParams["tag"] = sTag;
-			string sDbPath;
-			if (jParams.contains("dbPath")) {
-				sDbPath = jParams["dbPath"];
-			}
-
+			string s = jParams.dump();
+			yyjson_doc* doc = yyjson_read(s.c_str(), s.size(),0);
+			yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 			RPC_RESP resp;
-
-			almServer* pAlmSrv = NULL;
-			pAlmSrv = &almSrv;
-			pAlmSrv->rpc_addAlarm(jParams, resp, false);
+			almSrv.rpc_addAlarm(yyv_params, resp, false);
+			yyjson_doc_free(doc);
 		}
 	}
 	else if (method == "onObjOnline" || method == "objOnline") {

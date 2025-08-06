@@ -8,6 +8,7 @@
 #include "yyjson.h"
 #include "rpcHandler.h"
 
+map<string, string> g_mapConfFile;
 
 project prj;
 

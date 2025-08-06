@@ -583,6 +583,7 @@ bool TDS_imp::run(string cmdline)
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
 	//报警
 	almSrv.m_dbFileMode = ONE_FILE_PER_MONTH;
+	almSrv.m_scriptBeforeUpdateAlarm = tds->conf->getStr("scriptBeforeUpdateAlarm", "");
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
 
 	userMng.init();

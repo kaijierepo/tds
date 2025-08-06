@@ -2536,109 +2536,9 @@ vector<string> rpcHandler::parseTagSel(json& tagSel,string& type) {
 	return vec;
 }
 
-bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp0, RPC_SESSION& session)
+bool rpcHandler::handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
 {
-	almServer* pAlmSrv = nullptr;
-
-	if(session.dbpath == "alarms")
-	{
-		pAlmSrv = &almSrv;
-	}
-	else
-	{
-		pAlmSrv = &almSrv;
-	}
-	
-	RPC_RESP rpcResp;
-	string& result = rpcResp.result;
-	bool bHandled = true;
-	//** 数据查询系列
-	if (method == "getAlarmCurrent")
-	{
-		json jFilter= params;		
-		pAlmSrv->rpc_getCurrent(jFilter, rpcResp, session);
-	}
-	else if (method == "getAlarmUnRecover")
-	{
-		json jFilter= params;
-		pAlmSrv->rpc_getUnRecover(jFilter, rpcResp, session);
-	}
-	else if (method == "getAlarmUnack")
-	{
-		json jFilter= params;
-		pAlmSrv->rpc_getUnack(jFilter, rpcResp, session);
-	}
-	//getAlm为上面3个接口的合并接口
-	else if (method == "getAlm")
-	{
-		if (params.contains("status")) {
-			string status = params["status"].get<string>();
-			json jFilter;
-			jFilter["rootTag"] = params["rootTag"];
-			if (status == "unRecover") {
-				pAlmSrv->rpc_getUnRecover(jFilter, rpcResp,session);
-			}
-			else if (status == "unAck") {
-				pAlmSrv->rpc_getUnack(jFilter, rpcResp,session);
-			}
-			else if (status == "unRecover||unAck" || status == "unAck||unRecover") {
-				pAlmSrv->rpc_getCurrent(jFilter, rpcResp,session);
-			}
-			else {
-				rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "param  status format error");
-			}
-		}
-		else {
-			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_WrongParamFmt, "missing param  status");
-		}
-	}
-
-	else if (method == "getAlarmHistory")
-	{
-		pAlmSrv->rpc_getHistory(params, rpcResp, session);
-	}
-	else if (method == "convertDBMode")
-	{
-		pAlmSrv->rpc_convertDBMode(params,rpcResp, session);
-	}
-	//** 数据生成系列 以下接口都会修改报警数据
-	else if (method == "addAlarm")
-	{
-		if (session.dbpath == "alarmsDevelop")
-		{
-			pAlmSrv->rpc_addAlarm(params, rpcResp);
-		}
-		else
-		{
-			pAlmSrv->rpc_addAlarm(params, rpcResp);
-		}
-	}
-	else if (method == "recoverAlarm" || method == "clearAlarm") {
-		pAlmSrv->rpc_recoverAlarm(params, rpcResp);
-	}
-	else if (method == "updateAlarmStatus") //该接入送入一个最新计算出的报警状态，报警服务内部计算 是需要add还是 recover
-	{
-		pAlmSrv->rpc_updateStatus(params, rpcResp);
-	}
-	else if (method == "ackAlarm" || method == "ackAlarmEvent")
-	{
-		pAlmSrv->rpc_acknowledge(params, rpcResp, session);
-	}
-	else if (method == "ackAllAlarm" || method == "ackAllAlarmEvent")
-	{
-		pAlmSrv->rpc_acknowledge(params, rpcResp, session);
-	}
-	else if (method == "approveAlarm" ) //审核报警  审核通过则更新到正式报警
-	{
-		
-	}
-	else
-	{
-		bHandled = false;
-	}
-
-	rpcResp0 = *( (RPC_RESP*)&rpcResp );//强转不太好 先这样吧
-	return bHandled;
+	return almSrv.handleRpc(method, params, rpcResp, session);
 }
 
 bool rpcHandler::handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session)
@@ -3055,13 +2955,19 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 	else if (method == "setProjectConf") {	 
 		for (auto itm: params.items())
 		{
+			const string& key = itm.key();
+
+			if (key == "scriptBeforeUpdateAlarm") {
+				almSrv.m_scriptBeforeUpdateAlarm = itm.value().get<string>();
+			}
+
 			if (itm.value().is_string())
 			{
-				tds->conf->setStr(itm.key(), itm.value());
+				tds->conf->setStr(key, itm.value().get<string>());
 			}
 			else
 			{
-				tds->conf->setInt(itm.key(), itm.value());
+				tds->conf->setInt(key, itm.value().get<int>());
 			}
 		}
 		rpcResp.result = RPC_OK;
@@ -6093,11 +5999,11 @@ void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& sessi
 		encode= params["encode"].get<string>();
 	}
 
-	path = params["path"].get<string>();
-	if (path != "")
+	string rPath = params["path"].get<string>();
+	if (rPath != "")
 	{
 		string conf = params["data"].get<string>();
-		path = tds->conf->confPath + "/" + path;
+		path = tds->conf->confPath + "/" + rPath;
 		fs::createFolderOfPath(path);
 		if (encode=="base64")
 		{
@@ -6126,7 +6032,10 @@ void rpcHandler::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& sessi
 		}
 		else
 		{
-			fs::writeFile(path, conf);
+			bool bRet = fs::writeFile(path, conf);
+			if (bRet) {
+				g_mapConfFile[rPath] = conf; //更新内存中的配置文件]
+			}
 			resp.result = RPC_OK;
 		}
 	}
