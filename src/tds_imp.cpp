@@ -581,9 +581,14 @@ bool TDS_imp::run(string cmdline)
 	asInitParam.func_rpcHand_notify = funcImp_rpcHand_notify;
 	asInitParam.func_sms_notify = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
+
 	//报警
 	almSrv.m_dbFileMode = ONE_FILE_PER_MONTH;
+
+#ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
 	almSrv.m_scriptBeforeUpdateAlarm = tds->conf->getStr("scriptBeforeUpdateAlarm", "");
+#endif
+
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
 
 	userMng.init();

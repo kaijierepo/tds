@@ -2957,9 +2957,11 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		{
 			const string& key = itm.key();
 
+#ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
 			if (key == "scriptBeforeUpdateAlarm") {
 				almSrv.m_scriptBeforeUpdateAlarm = itm.value().get<string>();
 			}
+#endif
 
 			if (itm.value().is_string())
 			{
