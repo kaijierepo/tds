@@ -677,16 +677,19 @@ bool OBJ::toJson(json& conf, OBJ_QUERIER q, bool* parentSelectedByLeafType, cons
 	conf["level"] = m_level;
 
 	if (q.getConfDetail) {
+		if(m_strIoAddrBind!="")
+			conf["ioAddrBind"] = m_strIoAddrBind;
+	}
+
+	if (q.getTag) {
 		string tag = getTag("", q.language);
-		if (q.rootTag !=  "")
+		if (q.rootTag != "")
 		{
 			tag = TAG::trimRoot(tag, q.rootTag);
 			conf["rootTag"] = q.rootTag;
 		}
-		if(tag!="")
+		if (tag != "")
 			conf["tag"] = tag; //tag = "" 表示根节点。 tds中约定这样表示
-		if(m_strIoAddrBind!="")
-			conf["ioAddrBind"] = m_strIoAddrBind;
 	}
 
 
@@ -2044,6 +2047,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	}
 	if (opt["getVal"] != nullptr) {
 		q.getVal = opt["getVal"].get<bool>();
+	}
+	if (opt["getTag"] != nullptr) {
+		q.getTag = opt["getTag"].get<bool>();
 	}
 	if (opt["getValDesc"].is_boolean()) {
 		q.getValDesc = opt["getValDesc"].get<bool>();
