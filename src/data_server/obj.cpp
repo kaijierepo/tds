@@ -281,6 +281,7 @@ bool OBJ::loadConf(yyjson_val* conf, bool bCreate) {
 		yyjson_obj_foreach(v, indx, max, key, val) {
 			m_mapNameTranslate[yyjson_get_str(key)] = yyjson_get_str(val);
 		}
+
 		if (m_mapNameTranslate["zh"] == "") {
 			m_mapNameTranslate["zh"] = m_name;
 		}

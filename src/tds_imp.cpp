@@ -459,39 +459,43 @@ void loadDeepVersion() {
 #endif
 }
 
-bool TDS_imp::run(string cmdline)
-{
+bool TDS_imp::run(string cmdline) {
 	mg_log_set(MG_LL_NONE);
 
 #ifndef DEBUG
  // mg_log_set("0");
 #endif
 
-	TIME exeTime = timeopt::now(); g_strStartupTime = exeTime.toStr(false);
+	TIME exeTime = timeopt::now(); 
+	g_strStartupTime = exeTime.toStr(false);
 
 #ifdef _WINDLL // dll模式下需要创建命令行
 	tds->conf->mode = "tds";
 #endif
+
 	logger.m_bSaveToFile = true;
+
 	tds->conf->loadConf();
 	tds->conf->loadCurrentData();
 
 	tds->conf->bCallAsyn = tds->conf->getInt("callAsyn", 1);
 	ioDev::m_pingInterval = tds->conf->getInt("pingInterval", 30000);
 	RPC_SESSION::defaultSubAll = tds->conf->getInt("defaultSubAll", 1) == 1 ? true : false;
+
 	//check mode
-	if (conf->uiMode == "")
+	if (conf->uiMode == "") {
 		conf->uiMode = getUIMode();
+	}
 
 #ifdef _WINDLL // dll模式下需要创建命令行
-	if (conf->uiMode == "console")
-	{
+	if (conf->uiMode == "console") {
 		createConsole();
 	}
 #endif
 
 	logger.m_strLogDir = tds->conf->logPath;
 	logger.setLogLevel(tdsConf.logLevel);
+
 	if (tds->conf->getInt("singleInst", 1)) {
 		if (isTdsRunning()) {
 #ifdef _WIN32
@@ -499,19 +503,22 @@ bool TDS_imp::run(string cmdline)
 #else
 			printf("tds已经运行，程序将于5秒后自动退出\r\n");
 #endif
+
 			LOG("tds已经运行，退出程序");
+
 			timeopt::sleepMilli(5 * 1000);
 			exit(0);
 		}
 	}
 
 	string appName = fs::appName();
-	//m_sTitle = "TDS " + version + "." + SVN_VERSION + "(" + getbuildtime() + ")|启动:" + timeopt::st2str(tds->stStartupTime);
+
 #ifdef USE_SVN_REV
 	m_sTitle = appName + " v" + SVN_VERSION + " b" + getbuildtimeShort();
 #else
 	m_sTitle = appName + " " + version + "(" + getbuildtime() + ")";
 #endif
+
 	LOG("[info]服务启动,版本:%s", m_sTitle.c_str());
 	LOG("[日志      ] 记录等级:" + tdsConf.logLevel + ",日志文件路径:" + logger.m_strLogDir);
 
@@ -519,19 +526,21 @@ bool TDS_imp::run(string cmdline)
 	if (fs::fileExist(navIniPath)) {
 		string s;
 		fs::readFile(navIniPath, s);
+
 		if (!str::isUTF8(s)) {
 			string u8s = charCodec::gb_to_utf8(s);
 			fs::writeFile(navIniPath, u8s);
+
 			LOG("[warn]nav.ini非utf8编码，进行gb2312->utf8转换");
 		}
 	}
 
 
 	//指定配置路径没有配置文件夹，则新建
-	if (tds->conf->confPath == fs::appPath() + "/conf")
-	{
+	if (tds->conf->confPath == fs::appPath() + "/conf") {
 		if (!fs::fileExist(tds->conf->confPath)) {
 			fs::createFolderOfPath(tds->conf->confPath);
+
 			LOG("[keyinfo]配置路径未找到配置文件夹,新建配置,路径:" + tds->conf->confPath);
 		}
 	}
@@ -549,37 +558,47 @@ bool TDS_imp::run(string cmdline)
 	if (tds->conf->enableDB) {
 		::db.m_timeUnit = (DB_TIME_UNIT)tds->conf->getInt("dbTimeUnit", 1);
 		::db.m_dbFmt.dbRootTag = tds->conf->getStr("dbRootTag", "");
+
 		bool bCheckEnd = false;
+
 		//1,有配置就用配置来
 		//2,没配置做检查
 		string deListName = tds->conf->getStr("deListName", "");
+
 		DB_FMT db_Fmt;
-		if (deListName == "") checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
-		::db.m_dbFmt.deListName = db_Fmt.deListName == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
-		::db.m_dbFmt.curveIdxListName = db_Fmt.curveIdxListName == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
+		if (deListName == "") {
+			checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
+		}
+
+		::db.m_dbFmt.deListName        = db_Fmt.deListName == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
+		::db.m_dbFmt.curveIdxListName  = db_Fmt.curveIdxListName == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
 		::db.m_dbFmt.curveDeNameSuffix = db_Fmt.curveDeNameSuffix == "" ? tds->conf->getStr("curveDeNameSuffix", ".curve.json") : db_Fmt.curveDeNameSuffix;
-		::db.m_dbFmt.deItemKey_value = db_Fmt.deItemKey_value == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
+		::db.m_dbFmt.deItemKey_value   = db_Fmt.deItemKey_value == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
+
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
-		::db.m_confPath = tds->conf->confPath;
-		::db.m_currentPath = tds->conf->currentPath;
+
+		::db.m_confPath      = tds->conf->confPath;
+		::db.m_currentPath   = tds->conf->currentPath;
 		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
 	}
 		
 	prj.loadObjTemplate();
 	prj.loadConfFile();
 	prj.getAllVarExpScript();
+
 	ioSrv.loadConf();
+
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
 
 	//报警服务相关参数与接口
 	AsInitParam asInitParam;
-	asInitParam.confPath = tds->conf->confPath;
+	asInitParam.confPath          = tds->conf->confPath;
 	asInitParam.enableGlobalAlarm = tds->conf->enableGlobalAlarm;
-	asInitParam.func_obj_setJAlmStatus = funcImp_obj_setJAlmStatus;
-	asInitParam.func_obj_getTypeTagByTag = funcImp_obj_getTypeTagByTag;
-	asInitParam.func_log = funcImp_log;
-	asInitParam.func_rpcHand_notify = funcImp_rpcHand_notify;
-	asInitParam.func_sms_notify = funcImp_sms_notify;
+	asInitParam.func_obj_setJAlmStatus         = funcImp_obj_setJAlmStatus;
+	asInitParam.func_obj_getTypeTagByTag       = funcImp_obj_getTypeTagByTag;
+	asInitParam.func_log                       = funcImp_log;
+	asInitParam.func_rpcHand_notify            = funcImp_rpcHand_notify;
+	asInitParam.func_sms_notify                = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
 
 	//报警
@@ -591,7 +610,9 @@ bool TDS_imp::run(string cmdline)
 
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
 
+	//
 	userMng.init();
+
 	scriptManager.setConfPath(tds->conf->confPath);
 	scriptManager.init();
 
@@ -604,8 +625,8 @@ bool TDS_imp::run(string cmdline)
 		tds->shellServer->init();
 	if (tds->gzhServer)
 		tds->gzhServer->init();
-	for(auto& i:tds->plugins)
-	{
+
+	for(auto& i:tds->plugins) {
 		i.second->init();
 	}
 
@@ -616,35 +637,31 @@ bool TDS_imp::run(string cmdline)
 	runWebServers();
 
 	SOCK_SRV_CONF ssc;
-	ssc.masterTdsAddrs = tds->conf->getStr("masterTds", "");
-	ssc.childTdsIP = tds->conf->getStr("childTdsIP", "");
-	ssc.tcpSrvPort = tds->conf->getInt("tcpPort", 670);
-	ssc.udpSrvPort = tds->conf->getInt("udpPort", 666);
+	ssc.masterTdsAddrs  = tds->conf->getStr("masterTds", "");
+	ssc.childTdsIP      = tds->conf->getStr("childTdsIP", "");
+	ssc.tcpSrvPort      = tds->conf->getInt("tcpPort", 670);
+	ssc.udpSrvPort      = tds->conf->getInt("udpPort", 666);
 	ssc.tcpKeepAliveSec = tds->conf->tcpKeepAliveDS;
 	ssc.tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
 
-	sockSrv.m_pCallback = onSockSrvCallback;
+	sockSrv.m_pCallback       = onSockSrvCallback;
 	sockSrv.m_pStatusCallback = onSockSrvStatusCallback;
 	sockSrv.run(ssc);
 
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
 	scriptManager.run();
-	//audioPlayer.run();
 	userMng.run();
-
 
 	//运行tds插件
 	if (tds->xiaoT)
 		tds->xiaoT->run();
 	if (tds->smsServer)
 		tds->smsServer->run();
-	//if (tds->shellServer)
-	//	tds->shellServer->run();
 	if (tds->gzhServer)
 		tds->gzhServer->run();
-	for (auto& i : tds->plugins) 
-	{
+
+	for (auto& i : tds->plugins)  {
 		i.second->run();
 	}
 
@@ -660,12 +677,9 @@ bool TDS_imp::run(string cmdline)
 	prj.runRtDB();
 
 	//create browser window
-	if (conf->uiMode == "chrome")
-	{
+	if (conf->uiMode == "chrome") {
 		createChromeWnd();
 	}
-
-	//timeopt::now(&stStartupTime);
 
 #ifndef _WINDLL
 #ifdef _WIN32

@@ -1358,58 +1358,48 @@ bool ioServer::run()
 	return false;
 }
 
-bool ioServer::runAsCloud()
-{
+bool ioServer::runAsCloud() {
 	m_bRunning = true;
 	loadChanTemplate();
 
-	m_tdspSingleTransaction = tds->conf->getInt("tdspSingleTransaction", 0);
+	m_tdspSingleTransaction    = tds->conf->getInt("tdspSingleTransaction", 0);
 	m_serialSendDelayAfterRecv = tds->conf->getInt("serialSendDelayAfterRecv", 0);
-	m_bGb2312Tdsp = tds->conf->getInt("gb2312Tdsp", 0) ? true : false;
-	m_ioSrvIPAsClient = tds->conf->getStr("ioSrvIP", "0.0.0.0");
+	m_bGb2312Tdsp              = tds->conf->getInt("gb2312Tdsp", 0) ? true : false;
+	m_ioSrvIPAsClient          = tds->conf->getStr("ioSrvIP", "0.0.0.0");
 	m_ioSrvIP = "0.0.0.0";
 
 	if (m_bGb2312Tdsp) {
 		LOG("[warn]TDSP设备使用GB2312编码");
 	}
 
-
-	//int leakDetectPort = tds->conf->getInt("leakDetectPort", 8085);
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
-	int tdspPort = tds->conf->getInt("tdspPort", 665);
-	int mbPort = tds->conf->getInt("mbPort", 664);
-	int iq60Port = tds->conf->getInt("iq60Port", 663);
-	//adaptor接入端口
-	int adpPort = tds->conf->getInt("adpPort", 662);
-	//
-	int jepPort = tds->conf->getInt("jepPort", 6011);
+	int tdspPort  = tds->conf->getInt("tdspPort", 665);
+	int mbPort    = tds->conf->getInt("mbPort", 664);
+	int iq60Port  = tds->conf->getInt("iq60Port", 663);
+	int adpPort   = tds->conf->getInt("adpPort", 662); //adaptor接入端口
+	int jepPort   = tds->conf->getInt("jepPort", 6011);
 
-	m_mapPort2DevType[tdspPort] = DEV_TYPE_tdsp;
-	m_mapPort2DevType[mbPort] = DEV_TYPE_rs485_gateway;
-	m_mapPort2DevType[iq60Port] = DEV_TYPE_iq60;
-	//m_mapPort2DevType[leakDetectPort] = DEV_TYPE_leak_detect;
+	m_mapPort2DevType[tdspPort]  = DEV_TYPE_tdsp;
+	m_mapPort2DevType[mbPort]    = DEV_TYPE_rs485_gateway;
+	m_mapPort2DevType[iq60Port]  = DEV_TYPE_iq60;
 	m_mapPort2DevType[mbTcpPort] = DEV_TYPE_modbus_tcp_slave;
-	m_mapPort2DevType[jepPort] = DEV_TYPE_jep;
+	m_mapPort2DevType[jepPort]   = DEV_TYPE_jep;
 
 	//启动服务端口
-	if(tdspPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP");
-	if(tdspPort)LOG("[IO服务    ] 监听地址:UDP-" + m_ioSrvIP + ":" + str::fromInt(tdspPort) + "设备协议 TDSP, Adaptor接入");
-	if(mbTcpPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
-	if(iq60Port)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(iq60Port) + " 设备协议 IQ60");
-	if (jepPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(jepPort) + "设备协议 JEP");
-	//if(leakDetectPort)LOG("[IO服务    ] 监听地址:" + m_ioSrvIP + ":" + str::fromInt(leakDetectPort) + " 设备协议 漏点监测");
-
+	if(tdspPort) LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(tdspPort)  + "设备协议 TDSP");
+	if(tdspPort) LOG("[IO服务    ] 监听地址:UDP-" + m_ioSrvIP + ":" + str::fromInt(tdspPort)  + "设备协议 TDSP, Adaptor接入");
+	if(mbTcpPort)LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(mbTcpPort) + " 设备协议 modbus TCP");
+	if(iq60Port) LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(iq60Port)  + " 设备协议 IQ60");
+	if(jepPort)  LOG("[IO服务    ] 监听地址:"     + m_ioSrvIP + ":" + str::fromInt(jepPort)   + "设备协议 JEP");
 
 	//io服务 6011 JEP
 	m_tcpSrv_jep = new tcpSrv();
 	m_tcpSrv_jep->m_strName = "jep";
 	m_tcpSrv_jep->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_jep->run(this, jepPort, m_ioSrvIP))
-	{
 
+	if (m_tcpSrv_jep->run(this, jepPort, m_ioSrvIP)){
 	}
-	else
-	{
+	else {
 #ifndef _WIN32
 		LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
 #endif
@@ -1417,24 +1407,19 @@ bool ioServer::runAsCloud()
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(jepPort));
 	}
 
-
 	//io服务 665 TDSP
 	m_tcpSrv_tdsp = new tcpSrv();
 	m_tcpSrv_tdsp->m_strName = "tdsp";
 	m_tcpSrv_tdsp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort, m_ioSrvIP))
-	{
-		
+	if (m_tcpSrv_tdsp->run(this, tds->conf->tdspPort, m_ioSrvIP)) {
 	}
-	else
-	{
+	else {
 #ifndef _WIN32
 		LOG("[error]linux need sudo to bind port under 1024,run this cmd to allow to bind without sudo\nsudo setcap 'cap_net_bind_service=+ep' .\\tds");
 #endif
 
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
 	}
-
 
 	//modbus 接收端口可以支持多个端口，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。
 	for (int i = 0; i < tds->conf->mbPort.size(); i++) {
@@ -1448,39 +1433,31 @@ bool ioServer::runAsCloud()
 		tcpSrv* ts = new tcpSrv();
 		ts->m_strName = "modbus rtu";
 		ts->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-		if (ts->run(this,mbPort, m_ioSrvIP))
-		{
 
+		if (ts->run(this,mbPort, m_ioSrvIP)) {
 		}
-		else
-		{
+		else {
 			LOG("[error][IO服务    ] 启动失败 TCP端口:" + str::fromInt(mbPort));
 		}
 
 		//io服务 664 Modbus over UDP
 		//针对mbRtu的ioSrv处理服务。用于固定端口接收场景
 		udpServer* us = new udpServer();
-		if (us->run(&this->ioHandler_mbRtu_udp, mbPort, m_ioSrvIP))
-		{
-
+		if (us->run(&this->ioHandler_mbRtu_udp, mbPort, m_ioSrvIP)) {
 		}
-		else
-		{
+		else {
 			LOG("[error][IO服务    ] 启动失败 UDP端口:" + str::fromInt(mbPort));
 		}
 	}
-
 
 	//io服务 502 Modbus over TCP
 	m_tcpSrv_mbTcp = new tcpSrv();
 	m_tcpSrv_mbTcp->m_strName = "modbus tcp";
 	m_tcpSrv_mbTcp->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_mbTcp->run(this, mbTcpPort, m_ioSrvIP))
-	{
 
+	if (m_tcpSrv_mbTcp->run(this, mbTcpPort, m_ioSrvIP)) {
 	}
-	else
-	{
+	else {
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(mbTcpPort));
 	}
 
@@ -1488,37 +1465,20 @@ bool ioServer::runAsCloud()
 	m_tcpSrv_iq60 = new tcpSrv();
 	m_tcpSrv_iq60->m_strName = "iq60";
 	m_tcpSrv_iq60->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port, m_ioSrvIP))
-	{
-		
+
+	if (m_tcpSrv_iq60->run(this, tds->conf->iq60Port, m_ioSrvIP)){
 	}
-	else
-	{
+	else {
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->iq60Port));
 	}
-
-	//io服务 663 IQ60
-	//m_tcpSrv_leakDetect = new tcpSrv();
-	//m_tcpSrv_leakDetect->m_strName = "leakDetect";
-	//m_tcpSrv_leakDetect->keepAliveTimeout = tds->conf->tcpKeepAliveIO;
-	//if (m_tcpSrv_leakDetect->run(this, leakDetectPort, m_ioSrvIP))
-	//{
-
-	//}
-	//else
-	//{
-	//	LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(leakDetectPort));
-	//}
 
 	//adaptor接入服务
 	m_udpSrv_tdsp = new udpServer();
 	if (m_udpSrv_tdsp->run(this,tdspPort, m_ioSrvIP)) {
-
 	}
 	else {
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tdspPort));
 	}
-
 
 	//启动所有子设备
 	for (auto i : m_vecChildDev) {
@@ -1529,21 +1489,21 @@ bool ioServer::runAsCloud()
 	std::thread io(IOThread);
 	io.detach();
 
-
 	return true;
 }
 
-
-void ioServer::stop()
-{
+void ioServer::stop() {
 	if (m_tcpSrv_iq60)
 		m_tcpSrv_iq60->stop();
+
 	for (int i = 0; i < m_udpSrv_rtu.size(); i++) {
 		m_udpSrv_rtu[i]->stop();
 	}
+
 	for (int i = 0; i < m_tcpSrv_rtu.size(); i++) {
 		m_tcpSrv_rtu[i]->stop();
 	}
+
 	if (m_tcpSrv_tdsp)
 		m_tcpSrv_tdsp->stop();
 

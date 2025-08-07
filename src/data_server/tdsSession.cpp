@@ -134,78 +134,66 @@ string TDS_SESSION::GetClientIp()
     return "";
 }
 
-size_t TDS_SESSION::send(char* p, size_t len, bool bNeedLog)
-{
+size_t TDS_SESSION::send(char* p, size_t len, bool bNeedLog) {
     return send((unsigned char*)p, len, bNeedLog);
 }
 
-
-size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
+size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog) {
     if (m_bEnableIO == false) {
         return 0;
     }
 
      timeopt::now(&lastSendTime);
-     int iSend = 0;
 
-     if (conn_id != 0)
-     {
+     int iSend = 0;
+     if (conn_id != 0) {
          iSend = ((WebServer*)webServer)->notifyWs(p, len, conn_id);
      }
-     else if (pTcpSessionClt)
-     {
+     else if (pTcpSessionClt) {
          iSend = pTcpSessionClt->pTcpClt->SendData(p, len);
      }
-     else 
-     {
+     else {
          unique_lock<recursive_mutex> lock(m_mutexTcpLink);
-         if (pTcpSession) // means lower layer has been disconneted
-         {
+         if (pTcpSession) { // means lower layer has been disconneted
              iSend = pTcpSession->send((char*)p, len);
          }
      }
 
-
      if (bNeedLog && type == TDS_SESSION_TYPE::iodev)
          IOLogSend(p, len, iSend > 0, getRemoteAddr(), getLocalAddr());
+
      return iSend;
  }
 
- size_t TDS_SESSION::sendStr(string str, bool bNeedLog)
- {
+ size_t TDS_SESSION::sendStr(string str, bool bNeedLog) {
      return send((unsigned char*)str.c_str(),str.length(),bNeedLog);
  }
 
- size_t TDS_SESSION::getSendedBytes()
- {
+ size_t TDS_SESSION::getSendedBytes() {
      std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
-     if (pTcpSession)
-     {
+     if (pTcpSession) {
          return pTcpSession->iSendSucCount;
      }
-     else if (pTcpSessionClt)
-     {
+     else if (pTcpSessionClt) {
          return pTcpSessionClt->iSendSucCount;
      }
+
      return 0;
  }
 
- size_t TDS_SESSION::getRecvedBytes()
- {
+ size_t TDS_SESSION::getRecvedBytes() {
      std::unique_lock<recursive_mutex> lock(m_mutexTcpLink);//使用tcplink
-     if (pTcpSession)
-     {
+     if (pTcpSession) {
          return pTcpSession->iRecvCount;
      }
-     else if (pTcpSessionClt)
-     {
+     else if (pTcpSessionClt) {
          return  pTcpSessionClt->iRecvCount;
      }
+
      return 0;
  }
 
- ioDev* TDS_SESSION::getBindDev(string ioAddr)
- {
+ ioDev* TDS_SESSION::getBindDev(string ioAddr) {
      //不指定ioAddr，默认第一个ioDev就是绑定的设备
      if (ioAddr == "") {
          if (m_mapBindIoDev.size() > 0) {
@@ -219,6 +207,7 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog){
              }
          }
      }
+
      return nullptr;
  }
 

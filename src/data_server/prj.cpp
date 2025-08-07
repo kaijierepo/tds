@@ -132,24 +132,25 @@ void project::runRtDB()
 	t.detach();
 }
 
-bool project::loadConfFile()
-{
+bool project::loadConfFile() {
 	OBJ::m_bDefaultOnline = tds->conf->getInt("objDefaultOnline", 0) > 0 ? true:false;
 
-
 	string& conf = m_moConfFileDump;
-	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf)) 
-	{
+	if (!fs::readFile(tds->conf->confPath + "/mo.json", conf)) {
 		LOG("[keyinfo]未找到监控对象配置mo.json，新建配置");
+
 		m_name = "empty project";
 		conf = "";
+
 		TIME st;
 		timeopt::now(&st);
+
 		m_strLastModify = timeopt::st2str(st);
 	}
 	else {
 		KV_INI ini;
 		ini.load(tds->conf->confPath + "/lastModify.ini");
+
 		string stime = ini.getValStr("mo","");
 		m_strLastModify = stime;
 	}
@@ -188,8 +189,7 @@ bool project::saveConfFile() {
 	return bSaved;
 }
 
-bool project::loadConf(string& confStr)
-{
+bool project::loadConf(string& confStr) {
 	//加载空配置
 	if (confStr == "")
 		return true;
@@ -199,12 +199,13 @@ bool project::loadConf(string& confStr)
 	try {
 		yyjson_doc* doc = yyjson_read(confStr.c_str(), confStr.size(), YYJSON_READ_NOFLAG);
 		yyjson_val* root = yyjson_doc_get_root(doc);
-		bool ret = loadConf(root,doc);
+
+		bool ret = loadConf(root, doc);
+
 		yyjson_doc_free(doc);
 		return ret;
 	}
-	catch (std::exception& e)
-	{
+	catch (std::exception& e) {
 		string s = e.what();
 		LOG("[error]加载监控对象配置mo.json异常,错误信息:" + s);
 		return false;
@@ -218,18 +219,14 @@ bool project::loadConf(json& jConf,bool bCreate)
 	return ret;
 }
 
-bool project::loadConf(yyjson_val* conf, bool bCreate)
-{
+bool project::loadConf(yyjson_val* conf, bool bCreate) {
 	return OBJ::loadConf(conf, bCreate);
 }
-
-
 
 void project::clear()
 {
 	clearChildren();
 }
-
 
 void project::getMpTypeList(json& mpTypeList)
 {

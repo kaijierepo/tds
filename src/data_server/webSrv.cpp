@@ -1348,8 +1348,7 @@ void webThread(WebServer* pSrv,int port) {
 }
 
 
-WebServer::WebServer()
-{
+WebServer::WebServer() {
 	m_isHttps = false;
 	m_restApiID = 0;
 }
@@ -1358,18 +1357,19 @@ WebServer::~WebServer()
 {
 }
 
-void WebServer::run(int port,bool https)
-{
+void WebServer::run(int port, bool https) {
 	m_isHttps = https;
 	m_port = port;
 
 	string proto = "http:";
 	if (m_isHttps)
 		proto = "https:";
+
 	string url = proto + "//0.0.0.0:" + to_string(port);
-	//pSrv->pMgr = &mgr;
+
 	struct mg_mgr& mgr = m_mgr;
-	mg_mgr_init(&mgr);                                        // Init manager
+	mg_mgr_init(&mgr);  // Init manager
+
 	// !!!!!非常重要。 mg_http_listen最后一个参数不要传入pSrv等其他外部线程会操作的指针
 	//传入pSrv后。由于WebServer::sendToWs会被其他线程调用。可能和mongoose内部发生多线程读写pSrv指针冲突。会导致奔溃
 	//问题描述如下：
@@ -1385,22 +1385,21 @@ void WebServer::run(int port,bool https)
 	mg_wakeup_init(&mgr);  // Initialise wakeup socket pair
 	mgr.userdata = this;
 
-
 	string log;
-	if (https)
-	{
+	if (https) {
 		log = str::format("[HTTPS服务	] 端口:%d,支持websocket secure, https://localhost:%d 访问用户界面",port,port);
 	}
-	else
-	{
+	else {
 		log = str::format("[HTTP服务	] 端口:%d,支持websocket, http://localhost:%d 访问用户界面",port,port);
 	}
+
 	if(c){
 		log += ",启动成功";
 	}
 	else{
 		log ="[error]" + log + ",启动失败";
 	}
+
 	LOG(log);
 
 	if(c){
@@ -1564,15 +1563,14 @@ void generate_self_signed_cert(std::string& cert_str, std::string& key_str) {
 #endif
 
 
-bool runWebServers()
-{
+bool runWebServers() {
 /*
 	spec - String, containing log level, can be one of the following values :
 	0 - Disable logging
-		1 - Log errors only
-		2 - Log errors and info messages
-		3 - Log errors, intoand debug messages
-		4 - Log everything
+	1 - Log errors only
+	2 - Log errors and info messages
+	3 - Log errors, intoand debug messages
+	4 - Log everything
 */
 	mg_log_set(1);//禁用mongoose日志
 
@@ -1580,21 +1578,16 @@ bool runWebServers()
 	loadApiBlackList();
 
 	rootDir = tds->conf->uiPath; 
+
 	confDir = tds->conf->confPath;
 	confDir = fs::toAbsolutePath(confDir);
+
 	dbDir = tds->conf->dbPath;
 	dbDir = fs::toAbsolutePath(dbDir);
+
 	filesDir = "./files";
 	topoDir = tds->conf->confPath + "/topo/res";
 	fmsDir = tds->conf->fmsPath;
-
-	//initHMRConf();
-	//if (tds->conf->getInt("enableHMR",0))
-	//{
-	//	hmr_conf.code = (char*)hmrCodeStr.c_str();
-	//	hmr_conf.len = hmrCodeStr.length();
-	//	hmr_conf.enable = 1;
-	//}
 
 	LOG("[Web目录	] /       <--> " + rootDir);
 
@@ -1608,14 +1601,13 @@ bool runWebServers()
 		}
 	}
 
-	if (tds->conf->httpPort != 0) 
-	{
+	if (tds->conf->httpPort != 0) {
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort);
 		g_WebServerList.push_back(pws);
 	}
-	if (tds->conf->httpPort2 != 0)
-	{
+
+	if (tds->conf->httpPort2 != 0) {
 		WebServer* pws = new WebServer();
 		pws->run(tds->conf->httpPort2);
 		g_WebServerList.push_back(pws);
@@ -1661,13 +1653,7 @@ bool runWebServers()
 	//}
 #endif
 
-	//if (tds->conf->getInt("enableHMR", 0))
-	//{
-	//	hmrServer.run(tds->conf->uiPath);
-	//}
-
-	if (tds->conf->fileUploadPort != 0)
-	{
+	if (tds->conf->fileUploadPort != 0) {
 		fileUploadServer.run(tds->conf->fileUploadPort);
 	}
 

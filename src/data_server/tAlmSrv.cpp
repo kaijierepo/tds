@@ -403,20 +403,23 @@ almServer::~almServer(void)
 {
 }
 
-void almServer::init(const string dbPath, AsInitParam& asInitParam)
-{
+void almServer::init(const string dbPath, AsInitParam& asInitParam) {
 	m_initParam = asInitParam;
+
 	m_dbPath = dbPath;
 	m_dbPath = tAlm::fixPath(m_dbPath);
 
 	tableCurrent.SetAlarmSrv(this);
+
 	string currFilePath = m_dbPath + "/current.csv";
 	tableCurrent.loadFile(currFilePath);
+
 	tableCurrent.initUnAckUnRecover();
 
 	string abpConf = m_dbPath + "/alarmBlockingPlan.json";
 	string s;
 	tAlm::readFile(abpConf, s);
+
 	if (s != "") {
 		json j = json::parse(s);
 		m_blockingPlan.fromJson(j);
@@ -424,7 +427,6 @@ void almServer::init(const string dbPath, AsInitParam& asInitParam)
 
 	m_init = true;
 }
-
 
 bool almServer::isRecover(ALARM_INFO& key) {
 	string almKey = key.getKeyUnrecover();

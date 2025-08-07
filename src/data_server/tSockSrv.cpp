@@ -146,7 +146,6 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 	}
 
 	string sMasterDsConf;
-	//fs::readFile()
 
 	int tcpPort = m_conf.tcpSrvPort;
 	if (tcpPort > 0) {
