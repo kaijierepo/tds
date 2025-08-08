@@ -1139,16 +1139,15 @@ void MP::calcAlarm()
 
 
 
-void MP::input(json& jVal, json* dataFile, TIME* dataTime)
-{
-	if (!m_bEnableIO)
+void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
+	if (!m_bEnableIO) {
 		return;
+	}
 
 	m_bOnline = true;
 
 	TIME t;
-	if (dataTime == NULL)
-	{
+	if (dataTime == NULL) {
 		timeopt::now(&t);
 		dataTime = &t;
 	}
@@ -1164,63 +1163,68 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime)
 			timeopt::now(&t);
 			dataTime = &t;
 		}
-		else
+		else {
 			return;
+		}
 	}
 
-
 	//数字类型进行kb处理和上下限处理
-	if (jVal.is_number())
-	{
+	if (jVal.is_number()) {
 		if (m_valType == "int") {
 			int iVal = jVal.get<int>();
+
 			json jOrgVal = iVal;
 			m_orgVal = jOrgVal.dump();
+
 			int iCurVal = (int) (iVal * m_K + m_B);
 			jVal = iCurVal;
-			if (m_validRange.enable)
-			{
-				if (iCurVal < m_validRange.min || iCurVal > m_validRange.max)
-				{
+
+			if (m_validRange.enable) {
+				if (iCurVal < m_validRange.min || iCurVal > m_validRange.max) {
 					jVal = nullptr;
 				}
 			}
 		}
 		else {
 			double dbVal = jVal.get<double>();
+
 			json jOrgVal = dbVal;
 			m_orgVal = jOrgVal.dump();
+
 			//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
 			double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
+
 			string sVal;
-			if (m_decimalDigits >= 0)
-			{
+			if (m_decimalDigits >= 0) {
 				string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
 				sVal = str::format(formatter.c_str(), dbCurVal);
 			}
-			else
+			else {
 				sVal = str::format("%.10f", dbCurVal);
+			}
+
 			dbCurVal = atof(sVal.c_str());
 			jVal = dbCurVal;
 
 			//关键机制。当采集到的数据是错误的（不在有效范围内），将当前值置为fasle
 			//否则如果将错误值进行二次计算或者统计分析，会得到很多错误的结果
 			//程序应当允许在某些值为null时，依然能够输出一些二次计算或者统计分析的结果
-			if (m_validRange.enable)
-			{
-				if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max)
-				{
+			if (m_validRange.enable) {
+				if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max) {
 					jVal = nullptr;
 				}
 			}
 		}
+
+		newVal = jVal.dump();
 	}
 
 	string sFileData = "null";
 	if (dataFile != nullptr) {
 		sFileData = dataFile->dump();
 	}
-	updateVal(newVal,*dataTime,sFileData);
+
+	updateVal(newVal, *dataTime, sFileData);
 }
 
 //监控点组不算

@@ -229,12 +229,16 @@ bool isTdsRunning() {
 #ifdef _WIN32
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		LOG("sixf------------------------------------WSAStartup");
+
 		return true;
 	}
 #endif
 
 	int sockfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sockfd < 0) {
+		LOG("sixf------------------------------------sockfd");
+
 		return true;
 	}
 
@@ -254,8 +258,11 @@ bool isTdsRunning() {
 		close(sockfd);
 #endif
 		std::cout << "TDS is already running, trying to bind port 60006 failed. Error: " << iErr << std::endl;
+
+		LOG("sixf------------------------------------bindResult");
 		return true;
 	}
+
 	return false;
 }
 
@@ -556,7 +563,7 @@ bool TDS_imp::run(string cmdline) {
 	//先初始化数据库。 mo和io的初始化都可能从数据库中加载数据 。
 	//ioSrv会从数据库加载设备配置缓存数据
 	if (tds->conf->enableDB) {
-		::db.m_timeUnit = (DB_TIME_UNIT)tds->conf->getInt("dbTimeUnit", 1);
+		::db.m_timeUnit        = (DB_TIME_UNIT)tds->conf->getInt("dbTimeUnit", 1);
 		::db.m_dbFmt.dbRootTag = tds->conf->getStr("dbRootTag", "");
 
 		bool bCheckEnd = false;
@@ -570,10 +577,10 @@ bool TDS_imp::run(string cmdline) {
 			checkDBFormat(tds->conf->dbPath, bCheckEnd, db_Fmt);
 		}
 
-		::db.m_dbFmt.deListName        = db_Fmt.deListName == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
-		::db.m_dbFmt.curveIdxListName  = db_Fmt.curveIdxListName == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
+		::db.m_dbFmt.deListName        = db_Fmt.deListName        == "" ? tds->conf->getStr("deListName", "db.json") : db_Fmt.deListName;
+		::db.m_dbFmt.curveIdxListName  = db_Fmt.curveIdxListName  == "" ? tds->conf->getStr("curveIdxListName", "db.curve.json") : db_Fmt.curveIdxListName;
 		::db.m_dbFmt.curveDeNameSuffix = db_Fmt.curveDeNameSuffix == "" ? tds->conf->getStr("curveDeNameSuffix", ".curve.json") : db_Fmt.curveDeNameSuffix;
-		::db.m_dbFmt.deItemKey_value   = db_Fmt.deItemKey_value == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
+		::db.m_dbFmt.deItemKey_value   = db_Fmt.deItemKey_value   == "" ? tds->conf->getStr("deItemKey_value", "val") : db_Fmt.deItemKey_value;
 
 		::db.Open(tds->conf->dbPath, g_getTagsByTagSelector, prj.m_name);
 
@@ -592,8 +599,8 @@ bool TDS_imp::run(string cmdline) {
 
 	//报警服务相关参数与接口
 	AsInitParam asInitParam;
-	asInitParam.confPath          = tds->conf->confPath;
-	asInitParam.enableGlobalAlarm = tds->conf->enableGlobalAlarm;
+	asInitParam.confPath                       = tds->conf->confPath;
+	asInitParam.enableGlobalAlarm              = tds->conf->enableGlobalAlarm;
 	asInitParam.func_obj_setJAlmStatus         = funcImp_obj_setJAlmStatus;
 	asInitParam.func_obj_getTypeTagByTag       = funcImp_obj_getTypeTagByTag;
 	asInitParam.func_log                       = funcImp_log;
