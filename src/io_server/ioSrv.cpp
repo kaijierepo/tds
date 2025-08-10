@@ -2148,7 +2148,13 @@ void ioServer::onRecvPkt_tdsp(unsigned char* pData, size_t iLen, std::shared_ptr
 			}
 
 			//是否有设备在该session上上线，处理设备上线
-			ioDev* pIoDev = tdsSession->getBindDev(strIoAddr);
+			ioDev* pIoDev = nullptr;
+			if (tdsSession->m_bSingleDevMode) { //收到imei注册包包，进入单设备模式
+				pIoDev = tdsSession->getBindDev(""); //单设备模式，取注册包里已经绑定的第一个。双宝项目设备注册包的imei和后续正常命令包的imei不一致。如果按当前包imei去找会找不到
+			}
+			else {
+				pIoDev = tdsSession->getBindDev(strIoAddr);
+			}
 
 			if (pIoDev == nullptr) {
 				pIoDev = ioSrv.handleDevOnline(strIoAddr, tdsSession);

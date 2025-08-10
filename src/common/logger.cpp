@@ -196,7 +196,7 @@ void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 
 	// 格式化日期和时间
 	size_t len = std::strftime(buf.data(), buf_size,
-		"%Y-%m-%d %H:%M:%S",
+		"%Y%m%d %H:%M:%S",
 		&timeinfo);
 
 	// 添加毫秒
@@ -204,36 +204,6 @@ void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 	std::snprintf(buf.data() + len, 5, ".%03lld", ms);
 
 	timestamp = buf.data();
-}
-
-void fast_tm_to_ymd_str(const struct tm* t, char* buf) {
-	// 预计算的两位数字转换表
-	static const char digits[] =
-		"00010203040506070809"
-		"10111213141516171819"
-		"20212223242526272829"
-		"30313233343536373839"
-		"40414243444546474849"
-		"50515253545556575859"
-		"60616263646566676869"
-		"70717273747576777879"
-		"80818283848586878889"
-		"90919293949596979899";
-
-	// 年: tm_year 是从 1900 开始的偏移
-	const int year = t->tm_year + 1900;
-	const int year_tens = year % 100;
-
-	// 月份调整
-	const int month = t->tm_mon + 1;
-
-	// 直接内存拷贝
-	buf[0] = '0' + year / 1000;       // 年份千位
-	memcpy(buf + 1, digits + (year / 10 % 100) * 2, 2); // 年份中间两位
-	memcpy(buf + 3, digits + (year % 100) * 2, 2);       // 年份十位和个位
-	memcpy(buf + 4, digits + month * 2, 2);             // 月份
-	memcpy(buf + 6, digits + t->tm_mday * 2, 2);        // 日期
-	buf[8] = '\0';
 }
 
 string utf8_to_gb(string instr) //utf-8-->ansi
@@ -360,9 +330,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 		createFolderOfPath(m_strLogDir);
 
 		//save to log file
-		char datePath[20] = {0};
-		fast_tm_to_ymd_str(&stNow, datePath);
-		string strFile = datePath;
+		string strFile = timeStamp.substr(0,8);
 		strFile = m_strLogDir + "/" + strFile + ".log";
 		info += "\r\n";
 		appendFile(strFile,(char*)info.c_str(),info.size());
