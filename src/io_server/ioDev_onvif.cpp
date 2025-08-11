@@ -382,8 +382,8 @@ void ioDev_onvif::DoCycleTask() {
 					if (pmp) {
 						int dbStoreInterval = pmp->getSaveInterval();
 
-						if (timeopt::CalcTimePassSecond(pmp->m_dbStoreTime) > dbStoreInterval) {
-							timeopt::now(&pmp->m_dbStoreTime);
+						if (timeopt::CalcTimePassSecond(pmp->m_lastSaveTime) > dbStoreInterval) {
+							timeopt::now(&pmp->m_lastSaveTime);
 
 							//db
 							DB_TIME dbt;

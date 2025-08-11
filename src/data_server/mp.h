@@ -161,6 +161,4 @@ public:
 	vector<std::shared_ptr<TDS_SESSION>> m_vecPuller;
 	mutex m_csPuller;
 
-	TIME m_dbStoreTime;
-
 };

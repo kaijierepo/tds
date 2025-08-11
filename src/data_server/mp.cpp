@@ -1289,44 +1289,41 @@ void MP::updateVal(string& jstrVal, TIME& dataTime, string& fileData)
 	}
 }
 
-bool MP::needSaveToDB()
-{
+bool MP::needSaveToDB() {
 	bool bNeedSave = false;
-	if (!JSON_STR::is_null(m_curVal))
-	{
+	if (!JSON_STR::is_null(m_curVal)) {
 		int timePassLastSave = timeopt::CalcTimeDiffSecond(m_stDataLastUpdate, m_lastSaveTime);
+
 		//save to db
 		//这里不要使用 elseif 如果是 cyclic|onchange的存储模式， 是否周期到和是否值变化都要判断
-		if (m_saveMode.find("cyclic") != string::npos)
-		{
+		if (m_saveMode.find("cyclic") != string::npos) {
 			int timespan = getSaveInterval();
-			if (timePassLastSave > timespan)
-			{
+			if (timePassLastSave > timespan) {
 				bNeedSave = true;
 			}
 		}
 		
-		if (m_saveMode.find("onchange") != string::npos)
-		{
+		if (m_saveMode.find("onchange") != string::npos) {
 			if (JSON_STR::is_num(m_curVal) && JSON_STR::is_num(m_lastVal)) {
 				double last = JSON_STR::get_num(m_lastVal);
-				double cur = JSON_STR::get_num(m_curVal);
+				double cur  = JSON_STR::get_num(m_curVal);
 				double diff = fabs(last - cur);
+
 				if (diff > m_deadZone && diff > 0.00001) {
 					bNeedSave = true;
 				}
 			}
 			else if (JSON_STR::is_bool(m_curVal) && JSON_STR::is_bool(m_lastVal)) {
 				bool last = JSON_STR::get_bool(m_lastVal);
-				bool cur = JSON_STR::get_bool(m_curVal);
+				bool cur  = JSON_STR::get_bool(m_curVal);
+
 				if (last != cur) {
 					bNeedSave = true;
 				}
 			}
 		}
 		
-		if (m_saveMode == "always")
-		{
+		if (m_saveMode == "always") {
 			bNeedSave = true;
 		}
 
@@ -1335,36 +1332,39 @@ bool MP::needSaveToDB()
 		}
 	}
 
-	if (m_curFileData != "null")
-	{
+	if (m_curFileData != "null") {
 		bNeedSave = true;
 	}
 
 	return bNeedSave;
 }
 
-
 void MP::saveToDB() {
 	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
+
 	string sDe = "{";
 	sDe += "\"time\":\"" + timeopt::st2strWithMilli(m_stDataLastUpdate) +"\"";
+
 	if (!JSON_STR::is_null(m_curVal)) {
 		sDe += ",\"val\":" + m_curVal;
 	}
-	if (m_curFileData != "null")
-	{
+
+	if (m_curFileData != "null") {
 		sDe += ",\"file\":" + m_curFileData;
 	}
+
 	if (m_curValAttr.size() > 0) {
 		for (auto& item : m_curValAttr) {
 			sDe += ",\"" + item.first + "\":" + item.second;
 		}
 	}
+
 	sDe += "}";
 
 	DB_TIME dbt;
 	dbt.fromStr(m_stDataLastUpdate.toStr(true));
+
 	db.Insert(getTag().c_str(), sDe, &dbt);
 	m_dbFileLock.unlock();
 }
