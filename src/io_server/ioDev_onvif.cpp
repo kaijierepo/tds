@@ -376,46 +376,55 @@ void ioDev_onvif::DoCycleTask() {
 						yyjson_mut_doc_free(mut_doc);
 					}
 
-					//db
 					string tag = m_strTagBind + "." + pC->m_strTagBind;
 
-					DB_TIME dbt;
-					dbt.fromStr(time.toStr());
+					MP* pmp = prj.GetMPByTag(tag, "zh");
+					if (pmp) {
+						int dbStoreInterval = pmp->getSaveInterval();
 
-					string strIndex = "";
-					db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
+						if (timeopt::CalcTimePassSecond(pmp->m_dbStoreTime) > dbStoreInterval) {
+							timeopt::now(&pmp->m_dbStoreTime);
 
-					//发中心端
-					auto mutDoc = yyjson_mut_doc_new(nullptr);
-					auto mutRoot = yyjson_mut_obj(mutDoc);
+							//db
+							DB_TIME dbt;
+							dbt.fromStr(time.toStr());
 
-					yyjson_mut_doc_set_root(mutDoc, mutRoot);
+							string strIndex = "";
+							db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
 
-					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
-					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
-					yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
+							//发中心端
+							auto mutDoc = yyjson_mut_doc_new(nullptr);
+							auto mutRoot = yyjson_mut_obj(mutDoc);
 
-					auto paramsObj = yyjson_mut_obj(mutDoc);
-					yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+							yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-					yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
-					yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
-					yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+							yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
+							yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
+							yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
 
-					if (!info.empty()) {
-						yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
+							auto paramsObj = yyjson_mut_obj(mutDoc);
+							yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+
+							yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
+							yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
+							yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+
+							if (!info.empty()) {
+								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
+							}
+
+							char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+							if (writeResult) {
+								string s = writeResult;
+								s += "\n\n";
+								sockSrv.sendToAllSessions(s);
+
+								free(writeResult);
+							}
+
+							yyjson_mut_doc_free(mutDoc);
+						}
 					}
-
-					char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
-					if (writeResult) {
-						string s = writeResult;
-						s += "\n\n";
-						sockSrv.sendToAllSessions(s);
-
-						free(writeResult);
-					}
-
-					yyjson_mut_doc_free(mutDoc);
 				}
 			}
 		}

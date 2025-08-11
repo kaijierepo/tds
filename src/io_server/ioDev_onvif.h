@@ -52,11 +52,12 @@ public:
 
 	string m_snapshotURL;
 
-	int m_curPZTChan;
+	int  m_curPZTChan;
 	TIME m_lastPTZPollTime; //上一次预置位巡检时间
-	int m_ptzPollInterval;  //0
+	int  m_ptzPollInterval; //0
 
 	bool m_bPaused;
 	TIME m_pauseResumeTime;
-	int m_pauseResumeInterval;  //0
+	int  m_pauseResumeInterval;  //0
+
 };
