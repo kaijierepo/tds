@@ -2379,6 +2379,8 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			if (params != nullptr && params.contains("tag"))
 			{
 				string tag = params["tag"].get<string>();
+				tag = TAG::addRoot(tag, session.org);
+
 				if (tag == "")
 				{
 					pmo = &prj;
@@ -4136,11 +4138,12 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 HANDLE_END:
 
 	//组装jsonRPC
+	rpcResp.strResp = "{\"server\":\"" + prj.m_name + "," + tds->m_sTitle + "\",\"method\":\"" + method;
 	if (rpcResp.error != "") {
-		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":" + rpcResp.error + ",\"id\":" + jStrId;
+		rpcResp.strResp += "\",\"error\":" + rpcResp.error + ",\"id\":" + jStrId;
 	}
 	else if (rpcResp.result != "") {
-		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"id\":" + jStrId;
+		rpcResp.strResp += "\",\"id\":" + jStrId;
 
 		//info放在result前面打印，因为result可能比较长，info短，放前面测试观察方便
 		if (rpcResp.params != "") {
@@ -4168,7 +4171,7 @@ HANDLE_END:
 		}
 
 		LOG("[error]" + se + " " + strReq);
-		rpcResp.strResp = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"error\":\"" + se + "\"" + ",\"id\":" + jStrId;
+		rpcResp.strResp += "\",\"error\":\"" + se + "\"" + ",\"id\":" + jStrId;
 	}
 
 	//route参数，路由请求的回包包含请求中的路由参数
