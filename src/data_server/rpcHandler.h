@@ -72,6 +72,10 @@ public:
 	bool handleMethodCall_userMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_unclassified(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall(string method, json params, RPC_RESP& rpcResult, RPC_SESSION& session);
+
+	bool handleMethodCall_hardware(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void handleMethodCall_hardware_getRegister(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	void handleMethodCall_hardware_setRegister(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResult, RPC_SESSION& session);
 	
 	//参数处理
