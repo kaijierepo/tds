@@ -3402,99 +3402,19 @@ float CalDTWDist(const vector<double>& vecRef, const vector<double>& vecCur)
 	return dVal;
 }
 
-bool rpcHandler::handleMethodCall_hardware(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
-	if (method == "getRegister") {
-		handleMethodCall_hardware_getRegister(params, rpcResp, session);
-		return true;
-	}
-
-	if (method == "setRegister") {
-		handleMethodCall_hardware_setRegister(params, rpcResp, session);
-		return true;
-	}
-
-	return false;
-}
-
-void rpcHandler::handleMethodCall_hardware_getRegister(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
-	yyjson_val* offsetVal = yyjson_obj_get(params, "offset");
-
-	int offset = -1;
-	if (offsetVal && yyjson_is_int(offsetVal)) {
-		offset = yyjson_get_int(offsetVal);
-	}
-
-	if (offset < 0) {
-		json jResult = "regist offset is not in params";
-		rpcResp.error = jResult.dump();
-		return;
-	}
-
-	int value = 0;
-
-	yyjson_mut_doc* mutDoc = yyjson_mut_doc_new(nullptr);
-	yyjson_mut_val* mutRoot = yyjson_mut_arr(mutDoc);
-
-	yyjson_mut_obj_add_int(mutDoc, mutRoot, "offset", offset);
-	yyjson_mut_obj_add_int(mutDoc, mutRoot, "value", value);
-
-	string result;
-
-	auto len = yyjson_mut_get_len(mutRoot);
-	char* tmp = yyjson_mut_val_write_opts(mutRoot, YYJSON_WRITE_NOFLAG, nullptr, &len, nullptr);
-	if (tmp) {
-		result = tmp;
-		free(tmp);
-	}
-
-	yyjson_mut_doc_free(mutDoc);
-	rpcResp.result = result;
-}
-
-void rpcHandler::handleMethodCall_hardware_setRegister(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
-	yyjson_val* offsetVal = yyjson_obj_get(params, "offset");
-	yyjson_val* valueVal = yyjson_obj_get(params, "value");
-
-	int offset = -1;
-	if (offsetVal && yyjson_is_int(offsetVal)) {
-		offset = yyjson_get_int(offsetVal);
-	}
-
-	if (offset < 0) {
-		json jResult = "regist offset is not in params";
-		rpcResp.error = jResult.dump();
-		return;
-	}
-
-	int value = -1;
-	if (valueVal && yyjson_is_int(valueVal)) {
-		value = yyjson_get_int(valueVal);
-	}
-
-	if (value < 0) {
-		json jResult = "regist Value is not in params";
-		rpcResp.error = jResult.dump();
-		return;
-	}
-
-	rpcResp.result = RPC_OK;
-}
-
 bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
+	bool bHandled = true;
 	if (method == "setObj") {
 		prj.rpc_setObj(params, rpcResp, session);
-		return true;
 	}
-	
-	if (scriptManager.handleRpc(method, params, rpcResp, session)) {
-		return true;
+	else if (scriptManager.handleRpc(method, params, rpcResp, session)) {
+		bHandled = true;
+	}
+	else {
+		bHandled = false;
 	}
 
-	if (handleMethodCall_hardware(method, params, rpcResp, session)) {
-		return true;
-	}
-	
-	return false;
+	return bHandled;
 }
 
 bool rpcHandler::handleMethodCall(string method, json params, RPC_RESP& rpcResp, RPC_SESSION& session)
@@ -4198,8 +4118,6 @@ void rpcHandler::handleRpcCall_single(yyjson_val* jReq, RPC_RESP& rpcResp, std::
 	if (handleMethodCall(method, yyParams, rpcResp, pSession->getRpcSession())) {
 		goto HANDLE_END;
 	}
-
-	LOG("sixf-----------------------%s", method);
 
 	//tds自身受理
 	if (!handleMethodCall(method, params, rpcResp, pSession->getRpcSession())) {
