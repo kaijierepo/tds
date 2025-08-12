@@ -1,15 +1,18 @@
 #ifdef ENABLE_QJS
 #include "ScriptEngine.h"
-#include "Common\common.h"
+#include "common.h"
 #include "cutils.h"
 #include "quickjs-libc.h"
 #include <sstream>
 #include "yyjson.h"
 #include <limits>
 #include <cmath>
-#include "Common\logger.h"
+#include "logger.h"
 #include "quickjs.h"
+
+#ifdef ENABLE_QJS_HTTP
 #include "mongoose.h"
+#endif
 
 thread_local ScriptEngine* pEngine;
 
@@ -179,6 +182,21 @@ static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, J
     }
 }
 
+#ifdef ENABLE_QJS_HTTP
+struct mg_http_data {
+    std::string head;
+    std::string body;
+    bool done = false;
+    int status = 0;
+
+    void reset() {
+        head.clear();
+        body.clear();
+        done = false;
+        status = 0;
+    }
+};
+
 static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) {
     mg_http_data* data = (mg_http_data*)connect->fn_data;
     if (ev == MG_EV_HTTP_MSG) {
@@ -196,6 +214,7 @@ static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) 
         connect->is_closing = 1;
     }
 }
+#endif
 
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {

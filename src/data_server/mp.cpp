@@ -1509,6 +1509,20 @@ bool MP::hasValue()
 	return m_stDataLastUpdate.isValid();
 }
 
+struct mg_http_data {
+	std::string head;
+	std::string body;
+	bool done = false;
+	int status = 0;
+
+	void reset() {
+		head.clear();
+		body.clear();
+		done = false;
+		status = 0;
+	}
+};
+
 static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) {
 	mg_http_data* data = (mg_http_data*)connect->fn_data;
 	if (ev == MG_EV_HTTP_MSG) {

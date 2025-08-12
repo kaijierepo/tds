@@ -9,7 +9,6 @@
 #include <iomanip>
 #include <cctype>
 #include <chrono>
-//#include "mongoose.h"
 
 using namespace std;
 
@@ -2193,11 +2192,4 @@ json TAG::mapTree2List(json mapTree)
 	}
 
 	return json();
-}
-
-void mg_http_data::reset() {
-	head.clear();
-	body.clear();
-	done = false;
-	status = 0;
 }

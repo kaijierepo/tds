@@ -449,12 +449,3 @@ inline string getbuilddate()
 {
 	return str::format("%d-%02d-%02d", YEAR, MONTH + 1, DAY);
 }
-
-struct mg_http_data {
-	std::string head;
-	std::string body;
-	bool done = false;
-	int status = 0;
-
-	void reset();
-};

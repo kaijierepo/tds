@@ -5,7 +5,7 @@
 #include "statusServer.h"
 #include "tdb.h"
 #include <thread>
-#include "Common\common.h"
+#include "common.h"
 #include "winternl.h"
 
 #pragma comment(lib, "Pdh.lib")
