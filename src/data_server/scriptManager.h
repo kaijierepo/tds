@@ -11,6 +11,7 @@ using namespace std;
 
 struct SCRIPT_INFO {
 	string script         = "";
+	bool isFolder		= false;
 	string envVarScript   = "";
 	string calcMpTag      = "";   
 	string callerObjTag   = "";   

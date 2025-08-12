@@ -201,18 +201,18 @@ bool ScriptManager::setRunInfo(string name, SCRIPT_RUN_INFO& sri)
 
 bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
+
+	// getExpRet
+	bool getExpRet = false;
+	yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
+	if (get_exp_ret_val && yyjson_is_bool(get_exp_ret_val)) {
+		getExpRet = yyjson_get_bool(get_exp_ret_val);
+	}
+	string mainScript;
+	string folder;
+	SCRIPT_INFO si;
 	if (script_val && yyjson_is_str(script_val)) {
-		string s = yyjson_get_str(script_val);
-
-		yyjson_val* env_var_val = yyjson_obj_get(params_obj, "envVarScript");
-		if (env_var_val && yyjson_is_str(env_var_val)) {
-			string sEnvVar = yyjson_get_str(env_var_val);
-			if (sEnvVar != "") {
-				s = sEnvVar + "\n" + s;
-			}
-		}
-
-		SCRIPT_INFO si;
+		string mainScript = yyjson_get_str(script_val);
 		si.org = session.org;
 
 		// rootTag
@@ -231,60 +231,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		if (dev_addr_id && yyjson_is_str(dev_addr_id)) {
 			si.devId = yyjson_get_str(dev_addr_id);
 		}
-
-		// getExpRet
-		bool getExpRet = false;
-		yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
-		if (get_exp_ret_val && yyjson_is_bool(get_exp_ret_val)) {
-			getExpRet = yyjson_get_bool(get_exp_ret_val);
-		}
-
-		ScriptEngine se;
-
-#ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
-
-		if (si.devAddr != "" || si.devId != "") {
-			ioDev* p = nullptr;
-			if (si.devId != "") {
-				p = ioSrv.getIODevByNodeID(si.devId);
-			}
-			if (!p && si.devAddr != "") {
-				p = ioSrv.getIODevByIPPort(si.devAddr);
-				if (!p) {
-					p = ioSrv.getIODevById(si.devAddr);
-				}
-			}
-
-
-			if (p) {
-				se.m_ioDevThis = p;
-			}
-			else {
-				json jError = "specified ioDev not found";
-				rpcResp.error = jError.dump();
-			}
-		}
-#endif
-
-		se.m_tagContext = si.getContextTag();
-
-		bool runOk = se.runScript(s,session.user,si.lastRunInfo);
-
-
-		json jOutput = json::array();
-		if (getExpRet) {
-			jOutput.push_back("计算结果=" + se.m_sEvalRet.dump());
-		}
-
-		for (int i = 0; i < se.m_vecOutput.size(); i++) {
-			string sline = se.m_vecOutput[i];
-			jOutput.push_back(sline);
-		}
-		
-		rpcResp.result = jOutput.dump();
-
-		setRunInfo(si.name, si.lastRunInfo);
 	}
 	else {
 		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
@@ -293,35 +239,81 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 			scriptName = yyjson_get_str(name_val);
 		}
 
-		SCRIPT_INFO si;
 		if (getScript(scriptName, si)) {
-			si.lastRunInfo.lastExe = timeopt::nowStr();
-
-			ScriptEngine se;
-
-#ifdef TDS
-			se.m_initTdsFunc = initTdsFunc;
-#endif
-
-			se.m_tagContext = si.getContextTag();
-
-			bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
-
-			if (runOk) {
-				rpcResp.result = "\"ok\"";
+			if (si.isFolder) {
+				folder = tds->conf->confPath + "/scripts/" + si.name;
+				if (!fs::readFile(folder + "/main.js", mainScript)) {
+					json jError = "main.js is empty";
+					rpcResp.error = jError.dump();
+					return true;
+				}
 			}
 			else {
-				json jError = "run fail";
-				rpcResp.error = jError.dump();
+				mainScript = si.script;
 			}
-
-			setRunInfo(si.name,si.lastRunInfo);
 		}
 		else {
 			json jError = "specified script not found";
 			rpcResp.error = jError.dump();
+			return true;
 		}
 	}
+
+	ScriptEngine se;
+
+#ifdef TDS
+	se.m_initTdsFunc = initTdsFunc;
+
+	if (si.devAddr != "" || si.devId != "") {
+		ioDev* p = nullptr;
+		if (si.devId != "") {
+			p = ioSrv.getIODevByNodeID(si.devId);
+		}
+		if (!p && si.devAddr != "") {
+			p = ioSrv.getIODevByIPPort(si.devAddr);
+			if (!p) {
+				p = ioSrv.getIODevById(si.devAddr);
+			}
+		}
+
+
+		if (p) {
+			se.m_ioDevThis = p;
+		}
+		else {
+			json jError = "specified ioDev not found";
+			rpcResp.error = jError.dump();
+			return true;
+		}
+	}
+#endif
+
+	yyjson_val* env_var_val = yyjson_obj_get(params_obj, "envVarScript");
+	if (env_var_val && yyjson_is_str(env_var_val)) {
+		string sEnvVar = yyjson_get_str(env_var_val);
+		if (sEnvVar != "") {
+			mainScript = sEnvVar + "\n" + mainScript;
+		}
+	}
+
+	se.m_tagContext = si.getContextTag();
+
+	bool runOk = se.runScript(mainScript, session.user, si.lastRunInfo,folder);
+
+
+	json jOutput = json::array();
+	if (getExpRet) {
+		jOutput.push_back("计算结果=" + se.m_sEvalRet.dump());
+	}
+
+	for (int i = 0; i < se.m_vecOutput.size(); i++) {
+		string sline = se.m_vecOutput[i];
+		jOutput.push_back(sline);
+	}
+
+	rpcResp.result = jOutput.dump();
+
+	setRunInfo(si.name, si.lastRunInfo);
 
 	return true;
 }
@@ -658,7 +650,13 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		TIME tStart = timeopt::now();
 
-		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
+		string folder = "";
+		if (si.isFolder) {
+			folder = tds->conf->confPath + "/scripts/" + si.name;
+			fs::readFile(folder + "./main.js", si.script);
+		}
+
+		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo,folder);
 
 		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
 
@@ -856,6 +854,7 @@ void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool g
 	}
 
 	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "enable", enable);
+	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "isFolder", isFolder);
 }
 
 void SCRIPT_INFO::fromJson(yyjson_val* root) {
@@ -921,5 +920,10 @@ void SCRIPT_INFO::fromJson(yyjson_val* root) {
 	val = yyjson_obj_get(root, "enable");
 	if (val && yyjson_is_bool(val)) {
 		enable = yyjson_get_bool(val);
+	}
+
+	val = yyjson_obj_get(root, "isFolder");
+	if (val && yyjson_is_bool(val)) {
+		isFolder = yyjson_get_bool(val);
 	}
 }

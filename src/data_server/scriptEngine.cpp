@@ -827,13 +827,45 @@ bool is_integer(double x) {
     return x == std::trunc(x);
 }
 
+
+JSModuleDef* qjs_module_loader(JSContext* ctx,
+    const char* module_name,
+    void* opaque) {
+
+    string s = str::trim(module_name,".");
+	string path = pEngine->m_folderPath + "/" + s;
+
+    string script;
+    if (!fs::readFile(path, script)) {
+        JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
+        return NULL;
+    }
+
+    if (script == "") {
+        JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
+        return NULL;
+    }
+
+    // 编译模块
+    JSValue val = JS_Eval(ctx, script.c_str(), script.size(), module_name,
+        JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+
+    if (JS_IsException(val)) {
+        return NULL; // 异常已设置
+    }
+
+    // 获取模块对象
+    JSModuleDef* m = reinterpret_cast<JSModuleDef*>(JS_VALUE_GET_PTR(val));
+    return m;
+}
+
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
     m_initTdsFunc = nullptr;
     m_bValNullInCalc = false;
 }
 
-bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) {
+bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder) {
 	m_script = script;
 	m_user = user;
 
@@ -845,11 +877,12 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
 	try {
 		TIME tStart = timeopt::now();
 		pEngine = this;
+        pEngine->m_folderPath = folder;
 		
 		// 初始化 QuickJS
 		JSRuntime* rt = JS_NewRuntime();
 		JSContext* ctx = JS_NewContext(rt);
-
+        JS_SetModuleLoaderFunc(rt, NULL, qjs_module_loader, NULL);
 		register_cpp_functions(ctx);
         if (m_initTdsFunc) {
             m_initTdsFunc(ctx, m_ioDevThis);
@@ -870,7 +903,14 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
             JS_FreeValue(ctx, global);
         }
 
-		JSValue result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+        JSValue result;
+        if (folder != "") {
+            result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_MODULE);
+        }
+        else {
+            result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+        }
+        
 
 		if (JS_IsException(result)) {
 			JSValue error = JS_GetException(ctx);
@@ -884,6 +924,7 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
 
 			string s = err;
 			s = "Exception at line " + str::fromInt(line) + ":" + s;
+            sri.lastError = s;
 			m_vecOutput.push_back(s);
 
 			JS_FreeCString(ctx, err);

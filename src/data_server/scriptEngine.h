@@ -29,7 +29,7 @@ typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
 class ScriptEngine {
 public:
 	ScriptEngine();
-	bool runScript(string& script, string user, SCRIPT_RUN_INFO& sri);
+	bool runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder = "");
 
 	string m_sError;
 	vector<string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log
@@ -44,6 +44,8 @@ public:
 	string m_script;
 
 	void* m_ioDevThis;
+
+	string m_folderPath;              //脚本所在的文件夹路径
 
 	//脚本执行结果
 	json m_sEvalRet;                   //脚本表达式的执行结果
