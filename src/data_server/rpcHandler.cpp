@@ -185,7 +185,24 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 		}
 		else
 		{
-			if (fs::readFile(params["path"], result))
+			string path = params["path"].get<string>();
+			string rootPath = "";
+			string rootType;
+			if (params["root"].is_string()) {
+				rootType = params["root"].get<string>();
+			}
+			if (rootType == "fms") {
+				rootPath = tds->conf->fmsPath;
+			}
+			else if (rootType == "conf") {
+				rootPath = tds->conf->confPath;
+			}
+			else if (rootType == "db") {
+				rootPath = tds->conf->dbPath;
+			}
+			path = rootPath + "/" + path;
+
+			if (fs::readFile(path, result))
 			{
 				json j = result;
 				result = j.dump();
@@ -203,9 +220,24 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.deleteFile")
 	{
-		string p = params["path"].get<string>();
-		p = tds->conf->fmsPath + "/" + p;
-		if (fs::deleteFile(p)) {
+		string path = params["path"].get<string>();
+		string rootPath = "";
+		string rootType;
+		if (params["root"].is_string()) {
+			rootType = params["root"].get<string>();
+		}
+		if (rootType == "fms") {
+			rootPath = tds->conf->fmsPath;
+		}
+		else if (rootType == "conf") {
+			rootPath = tds->conf->confPath;
+		}
+		else if (rootType == "db") {
+			rootPath = tds->conf->dbPath;
+		}
+		path = rootPath + "/" + path;
+
+		if (fs::deleteFile(path)) {
 			result = "\"ok\"";
 		}
 		else {
@@ -214,9 +246,26 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.writeFile")
 	{
-		string p = params["path"].get<string>();
-		p =  tds->conf->fmsPath + "/" + p;
-		fs::createFolderOfPath(p);
+		string path = params["path"].get<string>();
+		string rootPath = "";
+		string rootType;
+		if (params["root"].is_string()) {
+			rootType = params["root"].get<string>();
+		}
+
+		if (rootType == "fms") {
+			rootPath = tds->conf->fmsPath;
+		}
+		else if (rootType == "conf") {
+			rootPath = tds->conf->confPath;
+		}
+		else if (rootType == "db") {
+			rootPath = tds->conf->dbPath;
+		}
+
+
+		path = rootPath + "/" + path;
+		fs::createFolderOfPath(path);
 
 		if (params["data"] != nullptr)
 		{
@@ -228,7 +277,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 			if (encode == "base64") {
 				unsigned char* out = new unsigned char[d.length()];
 				int len = base64_decode(d.c_str(),(int) d.length(), out);
-				if (fs::writeFile(p,(char*)out, len))
+				if (fs::writeFile(path,(char*)out, len))
 				{
 					result = "\"ok\"";
 				}
@@ -239,7 +288,7 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 				delete[] out;
 			}
 			else {
-				string ap = fs::toAbsolutePath(p);
+				string ap = fs::toAbsolutePath(path);
 				if (fs::writeFile(ap, d))
 				{
 					result = "\"ok\"";
@@ -277,9 +326,24 @@ bool rpcHandler::handleMethodCall_OSFunc(string method, json& params, RPC_RESP& 
 	}
 	else if (method == "fs.exploreFolder")
 	{
+		string root = "";
+		if (params["root"].is_string()) {
+			root = params["root"].get<string>();
+		}
+
 		vector<fs::FILE_INFO> fileList;
 		vector<fs::FILE_INFO> folderList;
-		string path = tds->conf->fmsPath;
+		string path;
+		if (root == "fms") {
+			path = tds->conf->fmsPath;
+		}
+		else if (root == "conf") {
+			path = tds->conf->confPath;
+		}
+		else if (root == "db") {
+			path = tds->conf->dbPath;
+		}
+		
 		if (path == "") {
 			error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "file service is not started,config fmsPath param in tds.ini");
 			return true;
