@@ -556,7 +556,7 @@ bool ScriptManager::rpc_setScriptEnable(yyjson_val* params_obj, RPC_RESP& rpcRes
 
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
 		json jResult = "can not find script name";
-		rpcResp.result = jResult.dump();
+		rpcResp.error = jResult.dump();
 		return false;
 	}
 
