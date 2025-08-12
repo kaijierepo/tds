@@ -817,7 +817,10 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
 
         if (!m_globalObj.is_null()) {
             JSValue global = JS_GetGlobalObject(ctx);
-            for (auto& [key, value] : m_globalObj.items()) {
+            for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
+                const std::string& key = it.key();
+                json& value            = it.value();
+
                 JSValue prop_value;
                 jsonValToJsVal(value, ctx, prop_value);
 
@@ -850,9 +853,12 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri) 
             //返回全局对象在脚本内部的修改
             if (!m_globalObj.is_null()) {
                 JSValue global = JS_GetGlobalObject(ctx);
-                for (auto& [key, value] : m_globalObj.items()) {
+                for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
+                    const std::string& key = it.key();
+                    json& value = it.value();
+
                     JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());;
-                    jsValToJsonVal(ctx, prop_value, value);  
+                    jsValToJsonVal(ctx, prop_value, value);
                 }
 
                 JS_FreeValue(ctx, global);
@@ -990,7 +996,10 @@ void jsonValToJsVal(json& jsonVal, JSContext* ctx, JSValue& jsVal) {
     else if (jsonVal.is_object()) {
         jsVal = JS_NewObject(ctx);
 
-        for (auto& [key, value] : jsonVal.items()) {
+        for (auto it = jsonVal.items().begin(); it != jsonVal.items().end(); ++it) {
+            const std::string& key = it.key();
+            json& value = it.value();
+
             JSValue jsValue;
             jsonValToJsVal(value, ctx, jsValue);
 
