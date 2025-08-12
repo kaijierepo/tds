@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <cctype>
 #include <chrono>
-#include "mongoose.h"
+//#include "mongoose.h"
 
 using namespace std;
 
@@ -2200,85 +2200,4 @@ void mg_http_data::reset() {
 	body.clear();
 	done = false;
 	status = 0;
-}
-
-void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) {
-	mg_http_data* data = (mg_http_data*)connect->fn_data;
-	if (ev == MG_EV_HTTP_MSG) {
-		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
-
-		data->head.assign(hm->head.ptr, hm->head.len);
-		data->body.assign(hm->body.ptr, hm->body.len);
-		data->status = mg_http_status(hm);
-
-		data->done = true;
-		connect->is_closing = 1;
-	}
-	else if (ev == MG_EV_ERROR) {
-		data->done = true;
-		connect->is_closing = 1;
-	}
-}
-
-std::string mg_get_url_encode(const std::string& str) {
-	const char* in = str.c_str();
-	size_t inLen = strlen(in);
-	size_t outLen = 3 * inLen + 1;
-	char* out = new char[outLen];
-
-	size_t resultLen = mg_url_encode(in, inLen, out, outLen);
-	std::string result(out, resultLen);
-
-	delete[] out;
-	return result;
-}
-
-std::string mg_get_header_value(const std::string& headers, const std::string& key) {
-	std::istringstream stream(headers);
-
-	std::string line;
-	std::string key_lower = key;
-
-	std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
-
-	while (std::getline(stream, line)) {
-		auto pos = line.find(':');
-		if (pos != std::string::npos) {
-			std::string header_key = line.substr(0, pos);
-			std::string header_val = line.substr(pos + 1);
-
-			header_key.erase(header_key.find_last_not_of(" \t\r\n") + 1);
-			header_val.erase(0, header_val.find_first_not_of(" \t\r\n"));
-
-			std::string header_key_lower = header_key;
-			std::transform(header_key_lower.begin(), header_key_lower.end(), header_key_lower.begin(), ::tolower);
-
-			if (header_key_lower == key_lower) {
-				return header_val;
-			}
-		}
-	}
-
-	return "";
-}
-
-static const char base64_chars[] =
-"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-"abcdefghijklmnopqrstuvwxyz"
-"0123456789+/";
-
-std::string mg_base64_encode(const std::string& in) {
-	std::string out;
-	int val = 0, valb = -6;
-	for (unsigned char c : in) {
-		val = (val << 8) + c;
-		valb += 8;
-		while (valb >= 0) {
-			out.push_back(base64_chars[(val >> valb) & 0x3F]);
-			valb -= 6;
-		}
-	}
-	if (valb > -6) out.push_back(base64_chars[((val << 8) >> (valb + 8)) & 0x3F]);
-	while (out.size() % 4) out.push_back('=');
-	return out;
 }

@@ -1509,6 +1509,37 @@ bool MP::hasValue()
 	return m_stDataLastUpdate.isValid();
 }
 
+static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) {
+	mg_http_data* data = (mg_http_data*)connect->fn_data;
+	if (ev == MG_EV_HTTP_MSG) {
+		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+
+		data->head.assign(hm->head.ptr, hm->head.len);
+		data->body.assign(hm->body.ptr, hm->body.len);
+		data->status = mg_http_status(hm);
+
+		data->done = true;
+		connect->is_closing = 1;
+	}
+	else if (ev == MG_EV_ERROR) {
+		data->done = true;
+		connect->is_closing = 1;
+	}
+}
+
+static std::string mg_get_url_encode(const std::string& str) {
+	const char* in = str.c_str();
+	size_t inLen = strlen(in);
+	size_t outLen = 3 * inLen + 1;
+	char* out = new char[outLen];
+
+	size_t resultLen = mg_url_encode(in, inLen, out, outLen);
+	std::string result(out, resultLen);
+
+	delete[] out;
+	return result;
+}
+
 void MP::stopStreamPull(string tag) {
 	string key = "__defaultVhost__/stream/" + tag;
 	string sPort = tds->conf->getStr("httpMediaPort", "669");

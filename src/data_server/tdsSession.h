@@ -1,9 +1,9 @@
 #pragma once
 
-#include "tcpClt.h"
-#include "tcpSrv.h"
+#include "Common\tcpClt.h"
+#include "Common\tcpSrv.h"
 #include <mutex>
-#include "stream2pkt.h"
+#include "Common\stream2pkt.h"
 #include "tds.h"
 #include <queue>
 

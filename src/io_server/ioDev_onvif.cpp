@@ -721,6 +721,53 @@ void ioDev_onvif::ptz_pausePresetPatrol(int parseTime) {
 	timeopt::now(&m_pauseResumeTime);
 }
 
+static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) {
+	mg_http_data* data = (mg_http_data*)connect->fn_data;
+	if (ev == MG_EV_HTTP_MSG) {
+		struct mg_http_message* hm = (struct mg_http_message*)ev_data;
+
+		data->head.assign(hm->head.ptr, hm->head.len);
+		data->body.assign(hm->body.ptr, hm->body.len);
+		data->status = mg_http_status(hm);
+
+		data->done = true;
+		connect->is_closing = 1;
+	}
+	else if (ev == MG_EV_ERROR) {
+		data->done = true;
+		connect->is_closing = 1;
+	}
+}
+
+static std::string mg_get_header_value(const std::string& headers, const std::string& key) {
+	std::istringstream stream(headers);
+
+	std::string line;
+	std::string key_lower = key;
+
+	std::transform(key_lower.begin(), key_lower.end(), key_lower.begin(), ::tolower);
+
+	while (std::getline(stream, line)) {
+		auto pos = line.find(':');
+		if (pos != std::string::npos) {
+			std::string header_key = line.substr(0, pos);
+			std::string header_val = line.substr(pos + 1);
+
+			header_key.erase(header_key.find_last_not_of(" \t\r\n") + 1);
+			header_val.erase(0, header_val.find_first_not_of(" \t\r\n"));
+
+			std::string header_key_lower = header_key;
+			std::transform(header_key_lower.begin(), header_key_lower.end(), header_key_lower.begin(), ::tolower);
+
+			if (header_key_lower == key_lower) {
+				return header_val;
+			}
+		}
+	}
+
+	return "";
+}
+
 void onvifSnapshot(string ip, int port,string user,string pwd, DIGIST_INFO& di) {
 	string sport = str::fromInt(port);
 	string path = "/onvif-http/snapshot?Profile_1";

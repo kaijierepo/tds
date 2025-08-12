@@ -33,9 +33,9 @@ SOFTWARE.
 #include <stdarg.h>
 #include <mutex>
 #include <regex>
-#include "DTW.hpp"
+#include "Common\DTW.hpp"
 #include <thread>
-#include "dtwrecoge.h"
+#include "Common\dtwrecoge.h"
 #include <chrono>
 #include <atomic>
 #include <string>

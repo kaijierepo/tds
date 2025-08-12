@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <cstdarg>
 #include <random>
-#include "common.h"
+#include "Common\common.h"
 #include <filesystem>
 
 #ifdef ENABLE_ALM_SRV_HOOK_SCRIPT

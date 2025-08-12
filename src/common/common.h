@@ -458,8 +458,3 @@ struct mg_http_data {
 
 	void reset();
 };
-
-void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data);
-std::string mg_get_url_encode(const std::string& src);
-std::string mg_get_header_value(const std::string& headers, const std::string& key);
-std::string mg_base64_encode(const std::string& in);
