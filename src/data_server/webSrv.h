@@ -5,7 +5,7 @@ web server of tds
 dispatch http request to rpcHandler
 */
 #include "tdsSession.h"
-#include "common/mongoose.h"
+#include "mongoose.h"
 #include "udpSrv.h"
 
 struct SESSION_STATIS {

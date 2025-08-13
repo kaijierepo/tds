@@ -416,7 +416,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;ENABLE_QJS;ENABLE_QJS_HTTP;UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_JERRY_SCRIPT;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;_HAS_STD_BYTE=0;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../src/include;../src/script;../src;../src/common;../src/io_server;../src/data_server;../src/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -506,7 +506,6 @@
     <ClCompile Include="..\src\common\md5.cpp" />
     <ClCompile Include="..\src\common\memDiag.cpp" />
     <ClCompile Include="..\src\common\miniz.c" />
-    <ClCompile Include="..\src\common\mongoose.c" />
     <ClCompile Include="..\src\common\secure.cpp" />
     <ClCompile Include="..\src\common\sha1.cpp" />
     <ClCompile Include="..\src\common\sha256.cpp" />
@@ -563,6 +562,7 @@
     <ClCompile Include="..\src\io_server\proto_eip.cpp" />
     <ClCompile Include="..\src\io_server\proto_ws.cpp" />
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\mongoose\mongoose.c" />
     <ClCompile Include="..\src\pch.cpp" />
     <ClCompile Include="..\src\script\cutils.c" />
     <ClCompile Include="..\src\script\dtoa.c" />
@@ -588,7 +588,6 @@
     <ClInclude Include="..\src\common\md5.h" />
     <ClInclude Include="..\src\common\memDiag.h" />
     <ClInclude Include="..\src\common\miniz.h" />
-    <ClInclude Include="..\src\common\mongoose.h" />
     <ClInclude Include="..\src\common\secure.h" />
     <ClInclude Include="..\src\common\sha1.h" />
     <ClInclude Include="..\src\common\sha256.h" />
@@ -652,6 +651,7 @@
     <ClInclude Include="..\src\io_server\proto_rtu.hpp" />
     <ClInclude Include="..\src\io_server\proto_visca.hpp" />
     <ClInclude Include="..\src\io_server\proto_ws.h" />
+    <ClInclude Include="..\src\mongoose\mongoose.h" />
     <ClInclude Include="..\src\pch.h" />
     <ClInclude Include="..\src\script\cutils.h" />
     <ClInclude Include="..\src\script\dtoa.h" />

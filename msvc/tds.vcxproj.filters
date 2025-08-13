@@ -47,9 +47,6 @@
     <ClCompile Include="..\src\common\stream2pkt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\common\mongoose.c">
-      <Filter>common</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\test.cpp" />
     <ClCompile Include="..\src\common\base64.c">
       <Filter>common</Filter>
@@ -239,6 +236,9 @@
     <ClCompile Include="..\src\script\unicode_data.c">
       <Filter>script</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\mongoose\mongoose.c">
+      <Filter>common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -264,9 +264,6 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\stream2pkt.h">
-      <Filter>common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\common\mongoose.h">
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\common\base64.h">
@@ -502,6 +499,9 @@
     </ClInclude>
     <ClInclude Include="..\src\script\unicode_gen_def.h">
       <Filter>script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\mongoose\mongoose.h">
+      <Filter>common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
