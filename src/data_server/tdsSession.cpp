@@ -88,7 +88,7 @@ void TDS_SESSION::Init()
     bridgedTcpCltHandler.pTdsSession = this;
     bridgedTcpSrvHandler.pTdsSession = this;
     sock = 0;
-    iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN;
+    iTLProto = TRANSFER_LAYER_PROTO::TLT_UNKNOWN;
     iALProto = APP_LAYER_PROTO::UNKNOWN;
     pTcpSession = nullptr;
     m_alBuf.Init();

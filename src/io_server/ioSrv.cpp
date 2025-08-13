@@ -291,23 +291,23 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 	
 	//首次从该链接收到数据时的处理。
 	string strData;
-	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_UNKNOWN) {
+	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO::TLT_UNKNOWN) {
 		str::fromBuff((char*)pData, iLen,strData);
 
 		//parse transfer layer protocol
 		if (strData.find("HTTP") != string::npos) {
-			ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP;
+			ioSession->iTLProto = TRANSFER_LAYER_PROTO::TLT_HTTP;
 
 			if (CWSPPkt::isHandShake(strData)) {
-				ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET;
+				ioSession->iTLProto = TRANSFER_LAYER_PROTO::TLT_WEB_SOCKET;
 			}
 		}
 		else {
-			ioSession->iTLProto = TRANSFER_LAYER_PROTO_TYPE::TLT_NONE;
+			ioSession->iTLProto = TRANSFER_LAYER_PROTO::TLT_NONE;
 		}
 
 		//if websocket. deal the first handshake pkt 
-		if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET) {
+		if (ioSession->iTLProto == TRANSFER_LAYER_PROTO::TLT_WEB_SOCKET) {
 			//回复websocket握手
 			CWSPPkt req;
 			std::string handshakeString = req.GetHandshakeString(strData);
@@ -317,7 +317,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 		}
 	}
 
-	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_WEB_SOCKET) {
+	if (ioSession->iTLProto == TRANSFER_LAYER_PROTO::TLT_WEB_SOCKET) {
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
 
@@ -338,7 +338,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 		}
 	}
 	//http处理 http仅依靠ip地址区分设备，可以与其他连接同时存在
-	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_HTTP) {
+	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO::TLT_HTTP) {
 		stream2pkt& tlBuf = ioSession->m_tlBuf;
 		tlBuf.PushStream((unsigned char*)pData, iLen);
 
@@ -395,7 +395,7 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 		}
 	}
 	//tcp直连,没有传输层，表示全部都是应用层数据
-	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO_TYPE::TLT_NONE) {
+	else if (ioSession->iTLProto == TRANSFER_LAYER_PROTO::TLT_NONE) {
 		OnRecvAppLayerData(pData, iLen, ioSession);
 	}
 }
