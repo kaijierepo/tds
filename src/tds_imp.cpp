@@ -694,8 +694,6 @@ bool TDS_imp::run(string cmdline) {
 #endif
 #endif
 
-	g_diskClean.Run();
-
 	g_ComputerStartupTime = getSystemBootTime();
 
 	return true;

@@ -50,6 +50,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #include "tds.h"
 #include "json.hpp"
 #include "yyjson.h"
+#include <thread>
 using namespace std;
 using json = nlohmann::json;
 
@@ -230,6 +231,40 @@ struct TIME {
 	string toStampFull();
 	time_t toUnixTime();
 	void fromUnixTime(time_t t,int milli=0);
+
+	static 	long long calcTimePassMilliSecond(TIME& lastTime)
+	{
+		TIME nowTime;
+		nowTime.setNow();
+		time_t now = nowTime.toUnixTime();
+		time_t last = lastTime.toUnixTime();
+		time_t second = now - last;
+		time_t milli = nowTime.wMilliseconds - lastTime.wMilliseconds;
+		milli = second * 1000 + milli;
+		return milli;
+	}
+
+	static 	long long calcTimePassSecond(TIME& lastTime)
+	{
+		TIME nowTime;
+		nowTime.setNow();
+		time_t now = nowTime.toUnixTime();
+		time_t last = lastTime.toUnixTime();
+		time_t second = now - last;
+		return second;
+	}
+
+	static void sleepMilli(int milliSec)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(milliSec));
+	}
+
+	static string nowStr(bool enableMS)
+	{
+		TIME t; 
+		t.setNow();
+		return t.toStr(enableMS);
+	}
 };
 
 

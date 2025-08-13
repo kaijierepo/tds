@@ -7,7 +7,6 @@
 #include "ioSrv.h"
 #endif
 
-#include "common.h"
 #include "tdb.h"
 
 ScriptManager scriptManager;
@@ -48,17 +47,18 @@ bool ScriptManager::init() {
 			si.lastRunInfo.lastExe = timeopt::nowStr();
 			si.fromJson(info);
 
-			string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
-			string scriptData;
+			if (!si.isFolder) {
+				string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
+				if (fs::readFile(scriptFilePath, si.script)) {
 
-			if (fs::readFile(scriptFilePath, scriptData)) {
-				si.script = scriptData;
-				m_mapScripts[si.name] = si;
+				}
+				else {
+					LOG("[error]加载脚本文件失败," + scriptFilePath);
+					continue;
+				}
 			}
-			else {
-				LOG("[error]加载脚本文件失败," + scriptFilePath);
-				continue;
-			}
+
+			m_mapScripts[si.name] = si;
 		}
 		yyjson_doc_free(doc);
 	}
@@ -417,20 +417,17 @@ bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	string path2 = path + "/" + fileName + "_envVar.js";
 
 	string s;
+	json j;
 	if (fs::readFile(path1, s)) {
-		json j;
 		j["code"] = s;
-
-		string s1;
-		if (fs::readFile(path2, s1)) {
-			j["envVarCode"] = s1;
-		}
-
-		rpcResp.result = j.dump();
 	}
-	else {
-		rpcResp.result = "";
+
+	string s1;
+	if (fs::readFile(path2, s1)) {
+		j["envVarCode"] = s1;
 	}
+
+	rpcResp.result = j.dump();
 
 	return true;
 }

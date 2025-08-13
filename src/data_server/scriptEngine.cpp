@@ -1,6 +1,6 @@
 #ifdef ENABLE_QJS
 #include "ScriptEngine.h"
-#include "common.h"
+#include "tds.h"
 #include "cutils.h"
 #include "quickjs-libc.h"
 #include <sstream>
@@ -9,6 +9,7 @@
 #include <cmath>
 #include "logger.h"
 #include "quickjs.h"
+#include "windows.h"
 
 #ifdef ENABLE_QJS_HTTP
 #include "mongoose.h"
@@ -290,8 +291,9 @@ extern "C" {
                     );
                 }
 
-                TIME tStart = timeopt::now();
-                while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+                TIME tStart;
+                tStart.setNow();
+                while (!data.done && TIME::calcTimePassSecond(tStart) < 10.0) {
                     mg_mgr_poll(&mgr, 100);
                 }
             }
@@ -316,7 +318,7 @@ extern "C" {
         if (argc > 0) {
             int milli = 0;
             JS_ToInt32(ctx, &milli, argv[0]);
-            timeopt::sleepMilli(milli);
+            TIME::sleepMilli(milli);
         }
         return JS_NULL;
     }
@@ -495,7 +497,7 @@ extern "C" {
     }
 
     static JSValue qjs_time(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        TIME t = timeopt::now();
+        TIME t; t.setNow();
 
         JSValue timeObj = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, timeObj, "year", JS_NewInt32(ctx, t.wYear));
@@ -541,7 +543,7 @@ extern "C" {
         // 打开串口
         hCom = CreateFileA(strComPort.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
         if (hCom == INVALID_HANDLE_VALUE) {
-            errorInfo = sys::getLastError("CreateFile");
+            errorInfo = "CreateFile fail,error code:" + std::to_string(GetLastError());
             goto OPEN_END;
         }
 
@@ -562,7 +564,7 @@ extern "C" {
         dcb.StopBits = tJSEngine::parseStopBits(stopBits);
 
         if (!SetCommState(hCom, &dcb)) {
-            errorInfo = sys::getLastError("SetCommState");
+            errorInfo = "SetCommState fail,error code" + std::to_string(GetLastError());
             CloseHandle(hCom);
             hCom = nullptr;
             goto OPEN_END;
@@ -827,6 +829,132 @@ bool is_integer(double x) {
     return x == std::trunc(x);
 }
 
+#ifndef UTF8_TO_UTF16_H
+#define UTF8_TO_UTF16_H
+
+#include <string>
+#include <vector>
+#include <stdexcept>
+#include <cstddef>
+
+// 跨平台 wchar_t 兼容性处理
+#if defined(_WIN32) || defined(_WIN64)
+using wide_char = wchar_t;
+#else
+#include <cwchar>
+#if WCHAR_MAX > 0xFFFFu
+// Linux/macOS 上 wchar_t 是 32 位，转换为 16 位存储
+using wide_char = char16_t;
+#else
+using wide_char = wchar_t;
+#endif
+#endif
+
+void utf8ToUtf16(const std::string& utf8, std::wstring& utf16) {
+    // 清空输出字符串
+    utf16.clear();
+
+    // 直接使用原始指针和长度操作
+    const char* ptr = utf8.data();
+    const size_t len = utf8.size();
+
+    // 预分配空间（大约估算）
+    if (len > 0) {
+        utf16.reserve(len);
+    }
+
+    for (size_t i = 0; i < len; ) {
+        unsigned char c = static_cast<unsigned char>(ptr[i]);
+        size_t charLen = 0;
+        uint32_t codePoint = 0;
+
+        // 确定字符长度和提取首字节信息
+        if (c < 0x80) {           // 1 字节字符
+            charLen = 1;
+            codePoint = c;
+        }
+        else if ((c & 0xE0) == 0xC0) { // 2 字节字符
+            charLen = 2;
+            codePoint = c & 0x1F;
+        }
+        else if ((c & 0xF0) == 0xE0) { // 3 字节字符
+            charLen = 3;
+            codePoint = c & 0x0F;
+        }
+        else if ((c & 0xF8) == 0xF0) { // 4 字节字符
+            charLen = 4;
+            codePoint = c & 0x07;
+        }
+        else {
+            throw std::runtime_error("Invalid UTF-8 start byte");
+        }
+
+        // 检查是否越界
+        if (i + charLen > len) {
+            throw std::runtime_error("Incomplete UTF-8 sequence");
+        }
+
+        // 处理后续字节
+        for (size_t j = 1; j < charLen; ++j) {
+            unsigned char next = static_cast<unsigned char>(ptr[i + j]);
+            if ((next & 0xC0) != 0x80) {
+                throw std::runtime_error("Invalid UTF-8 continuation byte");
+            }
+            codePoint = (codePoint << 6) | (next & 0x3F);
+        }
+
+        // 转换为 UTF-16
+        if (codePoint <= 0xFFFF) {
+            // 直接存储基本多语言平面字符
+            utf16.push_back(static_cast<wide_char>(codePoint));
+        }
+        else if (codePoint <= 0x10FFFF) {
+            // 处理代理对
+            codePoint -= 0x10000;
+            uint16_t high = static_cast<uint16_t>(0xD800 | (codePoint >> 10));
+            uint16_t low = static_cast<uint16_t>(0xDC00 | (codePoint & 0x3FF));
+
+            // 分两次添加到 wstring
+            utf16.push_back(static_cast<wide_char>(high));
+            utf16.push_back(static_cast<wide_char>(low));
+        }
+        else {
+            throw std::runtime_error("Code point out of valid range");
+        }
+
+        i += charLen;
+    }
+}
+#endif // UTF8_TO_UTF16_H
+
+bool se_readFile(string path, string& data) {
+    FILE* fp = nullptr;
+    wstring wPath;
+    utf8ToUtf16(path,wPath);
+
+#ifdef _WIN32
+    _wfopen_s(&fp, wPath.c_str(), L"rb");
+#else
+    fp = fopen(path.c_str(), "rb");
+#endif
+
+    if (fp) {
+        fseek(fp, 0, SEEK_END);
+
+        long len = ftell(fp);
+        if (len > 0) {
+            data.resize(len);
+            char* pdata = (char*)data.data();
+
+            fseek(fp, 0, SEEK_SET);
+            fread(pdata, 1, len, fp);
+        }
+
+        fclose(fp);
+        return true;
+    }
+    return false;
+}
 
 JSModuleDef* qjs_module_loader(JSContext* ctx,
     const char* module_name,
@@ -836,7 +964,7 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
 	string path = pEngine->m_folderPath + "/" + s;
 
     string script;
-    if (!fs::readFile(path, script)) {
+    if (!se_readFile(path, script)) {
         JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
         return NULL;
     }
@@ -872,10 +1000,11 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
 	m_vecOutput.clear();
 	bool runOk = false;
 
-    sri.lastExe = timeopt::nowStr();
+    sri.lastExe = TIME::nowStr(true);
 
 	try {
-		TIME tStart = timeopt::now();
+		TIME tStart;
+        tStart.setNow();
 		pEngine = this;
         pEngine->m_folderPath = folder;
 		
@@ -923,7 +1052,7 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
             int line = extract_line_number(stack);
 
 			string s = err;
-			s = "Exception at line " + str::fromInt(line) + ":" + s;
+			s = "Exception at line " + std::to_string(line) + ":" + s;
             sri.lastError = s;
 			m_vecOutput.push_back(s);
 
@@ -955,8 +1084,8 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
 		JS_FreeContext(ctx);
 		JS_FreeRuntime(rt);
 
-		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
-		m_vecOutput.push_back("执行耗时:" + str::fromInt(costMilli) + "ms");
+		int costMilli = TIME::calcTimePassMilliSecond(tStart);
+		m_vecOutput.push_back("执行耗时:" + to_string(costMilli) + "ms");
 	}
 	catch (std::exception& e) {
 		string s = e.what();
