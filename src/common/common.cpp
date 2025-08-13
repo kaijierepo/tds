@@ -129,36 +129,6 @@ namespace charCodec {
 		delete [] wcharstr;
 		delete [] charstr;
 #else
-		//int ret = 0;
-		//size_t inlen = instr.size() + 1;
-		//size_t outlen = 2*inlen;
-
-		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
-		//char* inbuf = (char*)malloc(inlen);
-		//memset(inbuf,0,inlen);
-		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
-		//							// so we use another pointer to keep the address
-		//memcpy(inbuf, instr.data(), instr.length());
-
-		//char* outbuf =(char*)malloc(outlen);
-		//memset(outbuf, 0, outlen);
-		//iconv_t cd;
-		//cd = iconv_open("GBK", "UTF-8");
-		//if (cd != (iconv_t)-1) {
-		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
-		//	if (ret != 0) {
-		//		printf("iconv failed err: %s\n", strerror(errno));
-		//	}
-
-		//	iconv_close(cd);
-		//}
-		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-
-		//if(outbuf!=nullptr){
-		//	str = outbuf;
-		//	free(outbuf);
-		//}
 		str = instr;
 #endif
 		return str;
@@ -178,31 +148,6 @@ namespace charCodec {
 		delete [] wcharstr;
 		delete [] charstr;
 #else
-		//int ret = 0;
-		//size_t inlen = instr.length() + 1;
-		//size_t outlen = 2*inlen;
-
-		//// duanqn: The iconv function in Linux requires non-const char *
-		//// So we need to copy the source string
-		//char* inbuf = (char*)malloc(inlen);
-		//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
-		//							// so we use another pointer to keep the address
-		//memcpy(inbuf, instr.data(), instr.length());
-
-		//char* outbuf = (char*)malloc(outlen);
-		//memset(outbuf, 0, outlen);
-		//iconv_t cd;
-
-		//cd = iconv_open("UTF-8", "GBK");
-		//if (cd != (iconv_t)-1) {
-		//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
-		//	if (ret != 0)
-		//		printf("iconv failed err: %s\n", strerror(errno));
-		//	iconv_close(cd);
-		//}
-		//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-		//str = outbuf;
-		//free(outbuf);
 		str = instr;
 #endif
 		return str;

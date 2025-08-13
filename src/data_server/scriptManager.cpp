@@ -670,24 +670,24 @@ void ScriptManager::exeAllGlobalScripts() {
 		yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
 		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
 
-		string str;
+		//string str;
 
-		auto len = yyjson_mut_get_len(mutroot);
-		char* writeResult = yyjson_mut_val_write_opts(mutroot, YYJSON_WRITE_NOFLAG, nullptr, &len, nullptr);
-		if (writeResult) {
-			str = writeResult;
-			free(writeResult);
-		}
+		//auto len = yyjson_mut_get_len(mutroot);
+		//char* writeResult = yyjson_mut_val_write_opts(mutroot, YYJSON_WRITE_NOFLAG, nullptr, &len, nullptr);
+		//if (writeResult) {
+		//	str = writeResult;
+		//	free(writeResult);
+		//}
 
-		yyjson_mut_doc_free(mutdoc);
-		
-		if (!str.empty()) {
-			DB_TIME dbt;
-			dbt.fromStr(si.lastRunInfo.lastExe);
+		//yyjson_mut_doc_free(mutdoc);
+		//
+		//if (!str.empty()) {
+		//	DB_TIME dbt;
+		//	dbt.fromStr(si.lastRunInfo.lastExe);
 
-			TDB* ssdb = db.getChildDB("autoScript");
-			ssdb->InsertValJsonStr("runStatus", dbt, str);
-		}
+		//	TDB* ssdb = db.getChildDB("autoScript");
+		//	ssdb->InsertValJsonStr("runStatus", dbt, str);
+		//}
 	}
 
 	m_csScripts.lock();
