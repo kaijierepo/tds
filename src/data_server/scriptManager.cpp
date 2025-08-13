@@ -241,7 +241,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 		if (getScript(scriptName, si)) {
 			if (si.isFolder) {
-				folder = tds->conf->confPath + "/scripts/" + si.name;
+				folder = m_confPath + "/scripts/" + si.name;
 				if (!fs::readFile(folder + "/main.js", mainScript)) {
 					json jError = "main.js is empty";
 					rpcResp.error = jError.dump();
@@ -652,7 +652,7 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		string folder = "";
 		if (si.isFolder) {
-			folder = tds->conf->confPath + "/scripts/" + si.name;
+			folder = m_confPath + "/scripts/" + si.name;
 			fs::readFile(folder + "./main.js", si.script);
 		}
 
