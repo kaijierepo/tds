@@ -172,7 +172,7 @@ void Clogger::setConsoleTextColor(LOG_LEVEL ll) {
 #include <cstdio>
 
 
-void getTimeInfo(struct tm& timeinfo,string& timestamp) {
+static void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 
 	// 获取当前时间
 	auto now = std::chrono::system_clock::now();
@@ -205,7 +205,7 @@ void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 	timestamp = buf.data();
 }
 
-string utf8_to_gb(string instr) //utf-8-->ansi
+static string utf8_to_gb(string instr) //utf-8-->ansi
 {
 	string str;
 #ifdef _WIN32
@@ -220,42 +220,12 @@ string utf8_to_gb(string instr) //utf-8-->ansi
 	delete[] wcharstr;
 	delete[] charstr;
 #else
-	//int ret = 0;
-	//size_t inlen = instr.size() + 1;
-	//size_t outlen = 2*inlen;
-
-	//// duanqn: The iconv function in Linux requires non-const char *
-	//// So we need to copy the source string
-	//char* inbuf = (char*)malloc(inlen);
-	//memset(inbuf,0,inlen);
-	//char* inbuf_hold = inbuf;   // iconv may change the address of inbuf
-	//							// so we use another pointer to keep the address
-	//memcpy(inbuf, instr.data(), instr.length());
-
-	//char* outbuf =(char*)malloc(outlen);
-	//memset(outbuf, 0, outlen);
-	//iconv_t cd;
-	//cd = iconv_open("GBK", "UTF-8");
-	//if (cd != (iconv_t)-1) {
-	//	ret = iconv(cd, &inbuf, &inlen, &outbuf, &outlen);
-	//	if (ret != 0) {
-	//		printf("iconv failed err: %s\n", strerror(errno));
-	//	}
-
-	//	iconv_close(cd);
-	//}
-	//free(inbuf_hold);   // Don't pass in inbuf as it may have been modified
-
-	//if(outbuf!=nullptr){
-	//	str = outbuf;
-	//	free(outbuf);
-	//}
 	str = instr;
 #endif
 	return str;
 }
 
-wstring utf8_to_utf16(string instr) //utf-8-->ansi
+static wstring utf8_to_utf16(string instr) //utf-8-->ansi
 {
 	wstring str;
 #ifdef _WIN32
@@ -272,7 +242,7 @@ wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	return str;
 }
 
-bool appendFile(string path, char* data, size_t len)
+static bool appendFile(string path, char* data, size_t len)
 {
 	FILE* fp = nullptr;
 #ifdef _WIN32
