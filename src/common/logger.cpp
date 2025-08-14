@@ -6,6 +6,7 @@
 #include <windows.h>
 #endif
 #include <iostream>
+#include <ctime>
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
