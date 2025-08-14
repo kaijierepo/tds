@@ -9,11 +9,12 @@
 #include <cmath>
 #include "logger.h"
 #include "quickjs.h"
-#include "windows.h"
 
 #ifdef ENABLE_QJS_HTTP
 #include "mongoose.h"
 #endif
+
+#include "windows.h"
 
 thread_local ScriptEngine* pEngine;
 
