@@ -6,7 +6,6 @@
 #include <windows.h>
 #endif
 #include <iostream>
-#include "tdb.h"
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
@@ -290,6 +289,57 @@ bool appendFile(string path, char* data, size_t len)
 	return false;
 }
 
+static string replaceStr(string str, const string to_replaced, const string newchars) {
+	for (string::size_type pos(0); pos != string::npos; pos += newchars.length()) {
+		pos = str.find(to_replaced, pos);
+
+		if (pos != string::npos) {
+			str.replace(pos, to_replaced.length(), newchars);
+		}
+		else {
+			break;
+		}
+	}
+
+	return str;
+}
+
+static void createFolderOfPath(string strFile) {
+	strFile = replaceStr(strFile, "\\", "/");
+	strFile = replaceStr(strFile, "////", "/");
+	strFile = replaceStr(strFile, "///", "/");
+	strFile = replaceStr(strFile, "//", "/");
+
+	size_t iDotPos = strFile.rfind('.');
+	size_t iSlashPos = strFile.rfind('/');
+	if (iDotPos != string::npos && iDotPos > iSlashPos) {//is a file
+		strFile = strFile.substr(0, iSlashPos);
+	}
+
+#ifdef _WIN32
+	int iStartPos = 0;
+	while (1) {
+		int iSlash = strFile.find('/', iStartPos);
+		if (iSlash == string::npos) {
+			break; 
+		}
+
+		string strFolder = strFile.substr(0, iSlash);
+		CreateDirectoryW(utf8_to_utf16(strFolder).c_str(), NULL);
+
+		if (iSlash + 1 == strFile.length()) {//last char is /
+			break;
+		}
+
+		iStartPos = iSlash + 1;
+	}
+
+	CreateDirectoryW(utf8_to_utf16(strFile).c_str(), NULL);
+#else
+	
+#endif
+}
+
 string Clogger::logInternal(string info, bool writeToFile)
 {
 	LOG_LEVEL ll = getLogLevel(info);
@@ -322,7 +372,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 		std::lock_guard<mutex> lockGuard(m_lock);
 	
 		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
-		DB_FS::createFolderOfPath(m_strLogDir);
+		createFolderOfPath(m_strLogDir);
 
 		//save to log file
 		string strFile = timeStamp.substr(0,8);
