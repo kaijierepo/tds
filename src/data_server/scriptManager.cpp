@@ -212,7 +212,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	string folder;
 	SCRIPT_INFO si;
 	if (script_val && yyjson_is_str(script_val)) {
-		string mainScript = yyjson_get_str(script_val);
+		mainScript = yyjson_get_str(script_val);
 		si.org = session.org;
 
 		// rootTag
