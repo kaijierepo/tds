@@ -5,8 +5,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <filesystem>
 #include <iostream>
+#include "tdb.h"
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \
@@ -273,11 +273,6 @@ wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	return str;
 }
 
-bool createFolderOfPath(string strFile)
-{
-	return filesystem::create_directories(utf8_to_utf16(strFile));
-}
-
 bool appendFile(string path, char* data, size_t len)
 {
 	FILE* fp = nullptr;
@@ -327,7 +322,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 		std::lock_guard<mutex> lockGuard(m_lock);
 	
 		//程序调试过程中，可能经常有删除整个日志文件夹，然后运行一会看下日志这样的操作。因此每次都尝试创建文件夹
-		createFolderOfPath(m_strLogDir);
+		DB_FS::createFolderOfPath(m_strLogDir);
 
 		//save to log file
 		string strFile = timeStamp.substr(0,8);

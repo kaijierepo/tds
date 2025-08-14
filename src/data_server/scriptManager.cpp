@@ -36,7 +36,7 @@ bool ScriptManager::init() {
 	unique_lock<mutex> lock(m_csScripts);
 
 	string sScriptList;
-	if (fs::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
+	if (DB_FS::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
 		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
 		yyjson_val* root = yyjson_doc_get_root(doc);
 
@@ -44,12 +44,12 @@ bool ScriptManager::init() {
 		yyjson_val* info;
 		yyjson_arr_foreach(root, idx, count, info) {
 			SCRIPT_INFO si;
-			si.lastRunInfo.lastExe = timeopt::nowStr();
+			si.lastRunInfo.lastExe = TIME::nowStr(true);
 			si.fromJson(info);
 
 			if (!si.isFolder) {
 				string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
-				if (fs::readFile(scriptFilePath, si.script)) {
+				if (DB_FS::readFile(scriptFilePath, si.script)) {
 
 				}
 				else {
@@ -242,7 +242,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		if (getScript(scriptName, si)) {
 			if (si.isFolder) {
 				folder = m_confPath + "/scripts/" + si.name;
-				if (!fs::readFile(folder + "/main.js", mainScript)) {
+				if (!DB_FS::readFile(folder + "/main.js", mainScript)) {
 					json jError = "main.js is empty";
 					rpcResp.error = jError.dump();
 					return true;
@@ -397,7 +397,7 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 
 	saveScriptList("", m_mapScripts);
 
-	fs::deleteFile(m_confPath + "/scripts/" + name + ".js");
+	DB_FS::deleteFile(m_confPath + "/scripts/" + name + ".js");
 	rpcResp.result = "\"ok\"";
 
 	return true;
@@ -418,12 +418,12 @@ bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	string s;
 	json j;
-	if (fs::readFile(path1, s)) {
+	if (DB_FS::readFile(path1, s)) {
 		j["code"] = s;
 	}
 
 	string s1;
-	if (fs::readFile(path2, s1)) {
+	if (DB_FS::readFile(path2, s1)) {
 		j["envVarCode"] = s1;
 	}
 
@@ -462,7 +462,7 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		string codePath = m_confPath + "/scripts/" + si.name + ".js";
 		string s = yyjson_get_str(code_val);
 
-		fs::writeFile(codePath, s);
+		DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
 		si.script = s;
 	}
 
@@ -471,7 +471,7 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
 		string s = yyjson_get_str(env_var_code_val);
 
-		fs::writeFile(codePath, s);
+		DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
 		si.envVarScript = s;
 	}
 
@@ -590,7 +590,8 @@ void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl
 	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
 	if (s) {
 		string str = s;
-		fs::writeFile(path, str);
+		DB_FS::writeFile(path, (char*)str.c_str(), str.length());
+
 		free(s);
 	}
 
@@ -628,9 +629,9 @@ void ScriptManager::exeAllGlobalScripts() {
 		SCRIPT_INFO& si = i.second;
 		TIME tLastExe;
 		tLastExe.fromStr(si.lastRunInfo.lastExe);
-		if (si.enable && si.mode == "cyclic" && timeopt::CalcTimePassMilliSecond(tLastExe) > si.interval) {
+		if (si.enable && si.mode == "cyclic" && TIME::calcTimePassMilliSecond(tLastExe) > si.interval) {
 			toExeScripts.push_back(si);
-			si.lastRunInfo.lastExe = timeopt::nowStr();
+			si.lastRunInfo.lastExe = TIME::nowStr(true);
 		}
 	}
 	m_csScripts.unlock();
@@ -645,17 +646,18 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		se.m_tagContext = si.getContextTag();
 		se.m_reloadFile = false;
-		TIME tStart = timeopt::now();
+		TIME tStart;
+		tStart.setNow();
 
 		string folder = "";
 		if (si.isFolder) {
 			folder = m_confPath + "/scripts/" + si.name;
-			fs::readFile(folder + "./main.js", si.script);
+			DB_FS::readFile(folder + "./main.js", si.script);
 		}
 
 		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo,folder);
 
-		int costMilli = timeopt::calcTimePassMilliSecond(tStart);
+		int costMilli = TIME::calcTimePassMilliSecond(tStart);
 
 		// db data
 		auto mutdoc = yyjson_mut_doc_new(nullptr);
@@ -781,11 +783,13 @@ void ScriptManager::exeAllVarExpScripts() {
 	TIME endTime;
 	endTime.setNow();
 
-	m_lastExpScripTimeCost = ((float)timeopt::CalcTimePassMilliSecond(startTime)) / 1000.0;
+	m_lastExpScripTimeCost = ((float)TIME::calcTimePassMilliSecond(startTime)) / 1000.0;
 }
 
 void ScriptManager::loopExe() {
-	TIME lastExe = timeopt::now();
+	TIME lastExe;
+	lastExe.setNow();
+
 	while (1){
 		if (!hasScripts()) {
 			break;
@@ -794,13 +798,13 @@ void ScriptManager::loopExe() {
 		exeAllGlobalScripts();
 
 		if (m_vecVarExpScripts.size() > 0) {
-			if (timeopt::CalcTimePassSecond(lastExe) > 5) {
+			if (TIME::calcTimePassSecond(lastExe) > 5) {
 				exeAllVarExpScripts();
-				lastExe = timeopt::now();
+				lastExe.setNow();
 			}
 		}
 
-		timeopt::sleepMilli(50);
+		TIME::sleepMilli(50);
 	}
 }
 
