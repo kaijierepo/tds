@@ -13,6 +13,8 @@
 #include "mongoose.h"
 #endif
 
+#include <windows.h>
+
 #include "tds.h"
 #include "tdb.h"
 
