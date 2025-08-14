@@ -297,7 +297,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	se.m_tagContext = si.getContextTag();
-
+	se.m_reloadFile = true;
 	bool runOk = se.runScript(mainScript, session.user, si.lastRunInfo,folder);
 
 
@@ -644,7 +644,7 @@ void ScriptManager::exeAllGlobalScripts() {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-
+		se.m_reloadFile = false;
 		TIME tStart = timeopt::now();
 
 		string folder = "";

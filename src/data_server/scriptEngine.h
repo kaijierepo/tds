@@ -47,6 +47,8 @@ public:
 
 	string m_folderPath;              //脚本所在的文件夹路径
 
+	bool m_reloadFile;
+
 	//脚本执行结果
 	json m_sEvalRet;                   //脚本表达式的执行结果
 	json m_scriptRet;                  //脚本内部返回的自定义的执行结果

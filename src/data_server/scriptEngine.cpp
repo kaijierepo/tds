@@ -956,6 +956,9 @@ bool se_readFile(string path, string& data) {
     return false;
 }
 
+mutex g_mutexScriptFileBuff;
+map<string, string> g_mapScriptFileBuff;
+
 JSModuleDef* qjs_module_loader(JSContext* ctx,
     const char* module_name,
     void* opaque) {
@@ -964,14 +967,26 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
 	string path = pEngine->m_folderPath + "/" + s;
 
     string script;
-    if (!se_readFile(path, script)) {
-        JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
-        return NULL;
+    g_mutexScriptFileBuff.lock();
+    map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
+    g_mutexScriptFileBuff.unlock();
+    if (iter != g_mapScriptFileBuff.end()) {
+        script = iter->second;
     }
+    else{
+        if (!se_readFile(path, script)) {
+            JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
+            return NULL;
+        }
 
-    if (script == "") {
-        JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
-        return NULL;
+        if (script == "") {
+            JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
+            return NULL;
+        }
+
+        g_mutexScriptFileBuff.lock();
+		g_mapScriptFileBuff[path] = script;
+        g_mutexScriptFileBuff.unlock();
     }
 
     // 编译模块
@@ -991,6 +1006,7 @@ ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
     m_initTdsFunc = nullptr;
     m_bValNullInCalc = false;
+    m_reloadFile = false;
 }
 
 bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder) {
