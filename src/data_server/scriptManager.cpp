@@ -200,17 +200,19 @@ bool ScriptManager::setRunInfo(string name, SCRIPT_RUN_INFO& sri)
 }
 
 bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
-	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
-
 	// getExpRet
-	bool getExpRet = false;
 	yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
+
+	bool getExpRet = false;
 	if (get_exp_ret_val && yyjson_is_bool(get_exp_ret_val)) {
 		getExpRet = yyjson_get_bool(get_exp_ret_val);
 	}
+
 	string mainScript;
 	string folder;
 	SCRIPT_INFO si;
+
+	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
 	if (script_val && yyjson_is_str(script_val)) {
 		mainScript = yyjson_get_str(script_val);
 		si.org = session.org;
@@ -234,6 +236,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 	else {
 		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
+
 		std::string scriptName;
 		if (name_val && yyjson_is_str(name_val)) {
 			scriptName = yyjson_get_str(name_val);
@@ -298,8 +301,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	se.m_tagContext = si.getContextTag();
 	se.m_reloadFile = true;
-	bool runOk = se.runScript(mainScript, session.user, si.lastRunInfo,folder);
-
+	bool runOk = se.runScript(mainScript, session.user, si.lastRunInfo, folder);
 
 	json jOutput = json::array();
 	if (getExpRet) {
@@ -312,7 +314,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	rpcResp.result = jOutput.dump();
-
 	setRunInfo(si.name, si.lastRunInfo);
 
 	return true;

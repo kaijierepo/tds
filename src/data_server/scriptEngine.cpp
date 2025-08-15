@@ -265,6 +265,25 @@ extern "C" {
                 body = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "body"));
             }
 
+            string headers;
+            if (yyjson_mut_obj_get(yyv, "headers")) {
+                yyjson_mut_val* jHeaders = yyjson_mut_obj_get(yyv, "headers");
+
+                size_t idx, max;
+                yyjson_mut_val* key;
+                yyjson_mut_val* val;
+
+                max = yyjson_mut_obj_size(jHeaders);
+                yyjson_mut_obj_foreach(jHeaders, idx, max, key, val) {
+                    const char* k = yyjson_mut_get_str(key);
+                    const char* v = yyjson_mut_get_str(val);
+
+                    if (k && v) {
+                        headers += string(k) + ": " + string(v) + "\r\n";
+                    }
+                }
+            }
+
             string url = "http://" + ip + ":" + std::to_string(port) + path;
 
             struct mg_mgr mgr;
@@ -278,19 +297,21 @@ extern "C" {
                     mg_printf(connect,
                         "POST %s HTTP/1.0\r\n"
                         "Host: %s\r\n"
+                        "%s"
                         "Content-Type: application/json\r\n"
                         "Content-Length: %u\r\n"
                         "\r\n"
                         "%s",
-                        path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+                        path.c_str(), ip.c_str(), headers.c_str(), (unsigned int)body.size(), body.c_str()
                     );
                 }
                 else {
                     mg_printf(connect,
                         "GET %s HTTP/1.0\r\n"
                         "Host: %s\r\n"
+                        "%s"
                         "\r\n",
-                        path.c_str(), ip.c_str()
+                        path.c_str(), ip.c_str(), headers.c_str()
                     );
                 }
 
