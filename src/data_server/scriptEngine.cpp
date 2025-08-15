@@ -983,6 +983,8 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
 
                     JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());;
                     jsValToJsonVal(ctx, prop_value, value);
+
+                    JS_FreeValue(ctx, prop_value);
                 }
 
                 JS_FreeValue(ctx, global);
