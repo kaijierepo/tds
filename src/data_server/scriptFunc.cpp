@@ -4,7 +4,7 @@
 #include "tds.h"
 #include "rpcHandler.h"
 #include "prj.h"
-
+#include "scriptEngine.h"
 #include "ioSrv.h"
 #include "ioDev_custom.h"
 #include <string>
@@ -243,15 +243,16 @@ static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSVal
             sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
             OBJ* pObj = prj.queryObj(sTag, "zh");
             if (pObj) {
-                json j;
                 OBJ_QUERIER query;
                 query.getConf = true;
                 query.getStatus = true;
                 query.getChild = false;
                 query.getMp = false;
-                pObj->toJson(j, query);
-                JSValue obj;
-                jsonValToJsVal(j, ctx, obj);
+				yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
+				yyjson_mut_val* j = yyjson_mut_obj(doc);
+                pObj->toJson(j, doc,query);
+                JSValue obj = yyVal_to_qjsVal(ctx,j);
+                yyjson_mut_doc_free(doc);
                 return obj;
             }
         }
@@ -319,7 +320,6 @@ static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
-
 static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -363,7 +363,6 @@ static JSValue qjs_getConfFile(JSContext* ctx, JSValueConst this_val, int argc, 
     return JS_NULL;
 }
 
-
 static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
     if (jArgs.size() == 1) {
@@ -379,7 +378,6 @@ static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int ar
     }
     return JS_NULL;
 }
-
 
 static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);

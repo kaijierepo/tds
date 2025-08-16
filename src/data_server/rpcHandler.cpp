@@ -2097,15 +2097,15 @@ bool rpcHandler::handleMethodCall_edgeDev(string method, json& params, RPC_RESP&
 		result = p.dump();
 	}
 	else if (method == "acq") {
-		json j;
 		OBJ_QUERIER query;
 		query.getConf = false;
 		query.getStatus = true;
 		query.getChild = true;
 		query.getMp = true;
-		prj.toJson(j, query, nullptr,session.user);
-		result = j.dump(4);
-		//LOG("88888: " + result);
+
+		YY_OBJ_VAL yyObj;
+		prj.toJson(yyObj, query, nullptr, session.user);
+		result = yyObj.dump();
 	}
 	else if (method == "upgradeTds" || method == "startServerUpgrade") {
 		string packageUrl = params["packageUrl"];
@@ -2286,12 +2286,6 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 		}
 		else if (method == "output") {
 			rpc_output(params, rpcResp,session);
-		}
-		else if (method == "getMpStatus") {
-			result = rpc_getMpStatus(params, error, session);
-		}
-		else if (method == "getMpVal") {
-			result = rpc_getMpStatus(params, error, session,true);
 		}
 		else if (method == "getMoOnlineStatus") {//智能设备在线状态
 			result = rpc_getMoOnlineStatus(params, error);
@@ -5890,115 +5884,6 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 
 	resp.result = jTable.dump();
 }
-
-string rpcHandler::rpc_getMpStatus(json params, string& error, RPC_SESSION& session, bool bValOnly)
-{
-	bool getStatus = true;
-	bool getConf = true;
-	bool getStatusDesc = false;
-	bool getUnit = true;
-
-	if (params.contains("getConf"))
-	{
-		getConf = params["getConf"].get<bool>();
-	}
-	if (params.contains("getStatus"))
-		getStatus = params["getStatus"].get<bool>();
-	if (params.contains("getUnit"))
-		getUnit = params["getUnit"].get<bool>();
-
-
-	//获取位号查询参数
-	json jTagQuerier = params["tag"];
-
-
-	//获取查询根
-	string rootTag = "";
-	if (params["rootTag"] != nullptr)
-		rootTag = params["rootTag"].get<string>();
-	rootTag = TAG::addRoot(rootTag, session.org);
-
-	string mode = "array";
-	if(params["mode"]!=nullptr)
-		mode = params["mode"].get<string>();
-
-	if (params.contains("getStatusDesc")) {
-		if(params["getStatusDesc"].get<bool>() == true)
-			getStatusDesc = true;
-	}
-
-
-	json rtList = json::array();
-	json rtMap = json::object();
-
-
-	if(mode=="tree")
-	{
-		json j = prj.getRT();
-		string result = j.dump(4);
-		return result;
-	}
-	else
-	{
-		TAG_SELECTOR tagSel;
-		tagSel.init(jTagQuerier, rootTag);
-		vector<MP*> mpList;
-		prj.getMpByTagSelector(mpList,tagSel);
-		for (int i=0;i<mpList.size();i++)
-		{
-			MP* pmp = mpList[i];
-			string tag = pmp->getTag("",session.language);
-
-			//if (session.user != "")
-			//{
-			//	if (!userMng.checkTagPermission(session.user, tag))
-			//		continue;
-			//}
-
-			if (rootTag != "")
-			{
-				if (tag.find(rootTag)  != 0)
-					continue;
-			}
-
-
-			OBJ_QUERIER q;
-			//以下两句是基于树结构的查询，应当是不需要的，以后重构
-			q.getChild = true;
-			q.getMp = true;
-			q.getConf = getConf;
-			q.getStatusDesc = getStatusDesc;
-			q.getStatus = getStatus;
-			q.rootTag = rootTag;
-			q.getUnit = getUnit;
-			json j;
-			if (pmp->toJson(j, q, nullptr,session.user))
-				rtList.push_back(j);
-		}	
-						
-		string result;
-		if (mode == "array")
-		{
-			result = rtList.dump(4);
-		}
-		else if (mode == "map")
-		{
-			for (int i = 0; i < rtList.size(); i++)
-			{
-				json& de = rtList[i];
-				rtMap[de["tag"].get<string>()] = de;
-			}
-			result = rtMap.dump(4);
-		}
-		else
-		{
-			result = rtList.dump(4);
-		}
-			
-		return result;
-	}
-}
-
 
 string rpcHandler::rpc_getconf(json params, string& error)
 {

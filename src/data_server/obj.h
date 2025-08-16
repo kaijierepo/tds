@@ -366,6 +366,32 @@ struct MAP_CONF {
 
 #define INVALID_COORD 1000
 
+struct YY_OBJ_VAL {
+	yyjson_mut_doc* doc;
+	yyjson_mut_val* val;
+	char* s;
+
+	char* dump() {
+		if (s)
+			free(s);
+		s = yyjson_mut_val_write(val, 0, nullptr);
+		return s;
+	}
+
+	YY_OBJ_VAL() {
+		doc = yyjson_mut_doc_new(nullptr);
+		val = yyjson_mut_obj(doc);
+		s = nullptr;
+	}
+
+	~YY_OBJ_VAL() {
+		if (s) {
+			free(s);
+		}
+		yyjson_mut_doc_free(doc);
+	}
+};
+
 class MP;
 class TDB;
 class OBJ
@@ -384,7 +410,7 @@ public:
 	virtual bool loadStatus(yyjson_val* status);
 	virtual bool saveStatus(json& statusNode);
 	virtual bool saveStatus(yyjson_mut_val* statusNode, yyjson_mut_doc* doc);
-	virtual bool toJson(json& conf, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
+	virtual bool toJson(YY_OBJ_VAL& yyObj, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
 	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER querier, bool* isSelectedByLeafType = nullptr, const string& user = "admin");
 	//virtual bool toJson(json& conf, json serializeOption);
 	//从srcTree找到与自身对应的对象，并拷贝以该对象为根节点的子树的状态

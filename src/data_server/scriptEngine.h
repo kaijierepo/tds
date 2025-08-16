@@ -69,4 +69,7 @@ extern json engineObjectToJson(JSContext* ctx, JSValueConst object);
 extern bool jsItemToJsonItem(JSContext* ctx, JSValueConst propName, JSValueConst propValue, void* data);
 extern bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst propValue, void* data);
 
+JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val);
+yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc);
+
 #endif

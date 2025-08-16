@@ -69,122 +69,54 @@ namespace tJSEngine {
     }
 }
 
-// 递归将 JS 值转换为 yyjson 值
-static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst val, std::vector<JSValueConst>& visited);
 
-// 处理对象类型
-static yyjson_mut_val* handle_object(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst obj, std::vector<JSValueConst>& visited) {
-    // 检查循环引用
-    for (auto& v : visited) {
-        if (JS_VALUE_GET_PTR(v) == JS_VALUE_GET_PTR(obj)) {
-            return yyjson_mut_str(doc, "[Circular Reference]");
-        }
+JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val) {
+    if (!val) return JS_NULL;
+
+    char* json_str = yyjson_mut_val_write(val, YYJSON_WRITE_PRETTY, NULL);
+    if (!json_str) {
+        printf("yyjson serialization failed");
+        return JS_NULL;
     }
 
-    visited.push_back(obj);
+    JSValue js_val = JS_ParseJSON(ctx, json_str, strlen(json_str), "<yyjson>");
 
-    // 创建新的 JSON 对象
-    yyjson_mut_val* json_obj = yyjson_mut_obj(doc);
+    free(json_str);
 
-    // 获取属性枚举
-    JSPropertyEnum* props = nullptr;
-    uint32_t prop_count = 0;
-
-    if (JS_GetOwnPropertyNames(ctx, &props, &prop_count, obj, JS_GPN_STRING_MASK | JS_GPN_ENUM_ONLY)) {
-        visited.pop_back();
-        return json_obj; // 空对象
+    if (JS_IsException(js_val)) {
+        JSValue error = JS_GetException(ctx);
+        const char* error_msg = JS_ToCString(ctx, error);
+        printf("JSON parse error: %s", error_msg);
+        JS_FreeCString(ctx, error_msg);
+        JS_FreeValue(ctx, error);
+        return JS_NULL;
     }
 
-    // 遍历所有属性
-    for (uint32_t i = 0; i < prop_count; i++) {
-        JSAtom atom = props[i].atom;
-        const char* key = JS_AtomToCString(ctx, atom);
-
-        if (!key) continue;
-
-        JSValue prop_val = JS_GetProperty(ctx, obj, atom);
-        yyjson_mut_val* json_val = js_value_to_yyjson(ctx, doc, prop_val, visited);
-
-        // 添加到 JSON 对象
-        yyjson_mut_obj_add_val(doc,json_obj, key, json_val);
-
-        JS_FreeCString(ctx, key);
-        JS_FreeValue(ctx, prop_val);
-        JS_FreeAtom(ctx, atom);
-    }
-
-    free(props);
-    visited.pop_back();
-    return json_obj;
+    return js_val;
 }
 
-// 处理数组类型
-static yyjson_mut_val* handle_array(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst arr, std::vector<JSValueConst>& visited) {
-    // 检查循环引用
-    for (auto& v : visited) {
-        if (JS_VALUE_GET_PTR(v) == JS_VALUE_GET_PTR(arr)) {
-            return yyjson_mut_str(doc, "[Circular Reference]");
-        }
+yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc) {
+    JSValue json_str_val = JS_JSONStringify(ctx, js_val, JS_UNDEFINED, JS_UNDEFINED);
+    if (JS_IsException(json_str_val)) {
+        return NULL; 
     }
 
-    visited.push_back(arr);
-
-    // 创建新的 JSON 数组
-    yyjson_mut_val* json_arr = yyjson_mut_arr(doc);
-
-    // 获取数组长度
-    JSValue len_val = JS_GetPropertyStr(ctx, arr, "length");
-    int32_t len = 0;
-    JS_ToInt32(ctx, &len, len_val);
-    JS_FreeValue(ctx, len_val);
-
-    // 遍历数组元素
-    for (int32_t i = 0; i < len; i++) {
-        JSValue item_val = JS_GetPropertyUint32(ctx, arr, i);
-        yyjson_mut_val* json_item = js_value_to_yyjson(ctx, doc, item_val, visited);
-        yyjson_mut_arr_append(json_arr, json_item);
-        JS_FreeValue(ctx, item_val);
+    const char* json_str = JS_ToCString(ctx, json_str_val);
+    if (!json_str) {
+        JS_FreeValue(ctx, json_str_val);
+        return NULL;
     }
 
-    visited.pop_back();
-    return json_arr;
+    yyjson_read_err err;
+    doc = yyjson_read((char*)json_str, strlen(json_str),0);
+    yyjson_val* yyVal = yyjson_doc_get_root(doc);
+ 
+    JS_FreeCString(ctx, json_str);
+    JS_FreeValue(ctx, json_str_val);
+
+    return yyVal;
 }
 
-// 主转换函数
-static yyjson_mut_val* js_value_to_yyjson(JSContext* ctx, yyjson_mut_doc* doc, JSValueConst val, std::vector<JSValueConst>& visited) {
-    if (JS_IsUndefined(val) || JS_IsUninitialized(val)) {
-        return yyjson_mut_null(doc);
-    }
-    else if (JS_IsNull(val)) {
-        return yyjson_mut_null(doc);
-    }
-    else if (JS_IsBool(val)) {
-        return yyjson_mut_bool(doc, JS_ToBool(ctx, val));
-    }
-    else if (JS_IsNumber(val)) {
-        double num;
-        JS_ToFloat64(ctx, &num, val);
-        return yyjson_mut_real(doc, num);
-    }
-    else if (JS_IsString(val)) {
-        const char* str = JS_ToCString(ctx, val);
-        yyjson_mut_val* json_str = yyjson_mut_strcpy(doc, str);
-        JS_FreeCString(ctx, str);
-        return json_str;
-    }
-    else if (JS_IsArray(ctx, val)) {
-        return handle_array(ctx, doc, val, visited);
-    }
-    else if (JS_IsObject(val)) {
-        return handle_object(ctx, doc, val, visited);
-    }
-    else if (JS_IsFunction(ctx, val)) {
-        return yyjson_mut_str(doc, "[Function]");
-    }
-    else {
-        return yyjson_mut_str(doc, "[Unsupported Type]");
-    }
-}
 
 #ifdef ENABLE_QJS_HTTP
 struct mg_http_data {
@@ -237,46 +169,46 @@ extern "C" {
 	static JSValue qjs_http_request(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
 #ifdef ENABLE_QJS_HTTP
 		std::vector<JSValueConst> visited;
-        yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
-		yyjson_mut_val* yyv = js_value_to_yyjson(ctx, mdoc, argv[0], visited);
-		if (yyv && yyjson_mut_is_obj(yyv)) {
+        yyjson_doc* yydoc = nullptr;
+		yyjson_val* yyv = qjsVal_to_yyVal(ctx, argv[0],yydoc);
+		if (yydoc && yyv && yyjson_is_obj(yyv)) {
             string ip;
-            if (yyjson_mut_obj_get(yyv, "hostname")) {
-                ip = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "hostname"));
+            if (yyjson_obj_get(yyv, "hostname")) {
+                ip = yyjson_get_str(yyjson_obj_get(yyv, "hostname"));
             }
 
             int port = 0;
-            if (yyjson_mut_obj_get(yyv, "port")) {
-                port = yyjson_mut_get_num(yyjson_mut_obj_get(yyv, "port"));
+            if (yyjson_obj_get(yyv, "port")) {
+                port = yyjson_get_num(yyjson_obj_get(yyv, "port"));
             }
 
             string method;
-            if (yyjson_mut_obj_get(yyv, "method")) {
-                method = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "method"));
+            if (yyjson_obj_get(yyv, "method")) {
+                method = yyjson_get_str(yyjson_obj_get(yyv, "method"));
             }
 
             string path;
-            if (yyjson_mut_obj_get(yyv, "path")) {
-                path = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "path"));
+            if (yyjson_obj_get(yyv, "path")) {
+                path = yyjson_get_str(yyjson_obj_get(yyv, "path"));
             }
 
             string body;
-            if (yyjson_mut_obj_get(yyv, "body")) {
-                body = yyjson_mut_get_str(yyjson_mut_obj_get(yyv, "body"));
+            if (yyjson_obj_get(yyv, "body")) {
+                body = yyjson_get_str(yyjson_obj_get(yyv, "body"));
             }
 
             string headers;
-            if (yyjson_mut_obj_get(yyv, "headers")) {
-                yyjson_mut_val* jHeaders = yyjson_mut_obj_get(yyv, "headers");
+            if (yyjson_obj_get(yyv, "headers")) {
+                yyjson_val* jHeaders = yyjson_obj_get(yyv, "headers");
 
                 size_t idx, max;
-                yyjson_mut_val* key;
-                yyjson_mut_val* val;
+                yyjson_val* key;
+                yyjson_val* val;
 
-                max = yyjson_mut_obj_size(jHeaders);
-                yyjson_mut_obj_foreach(jHeaders, idx, max, key, val) {
-                    const char* k = yyjson_mut_get_str(key);
-                    const char* v = yyjson_mut_get_str(val);
+                max = yyjson_obj_size(jHeaders);
+                yyjson_obj_foreach(jHeaders, idx, max, key, val) {
+                    const char* k = yyjson_get_str(key);
+                    const char* v = yyjson_get_str(val);
 
                     if (k && v) {
                         headers += string(k) + ": " + string(v) + "\r\n";
@@ -284,7 +216,11 @@ extern "C" {
                 }
             }
 
-            string url = "http://" + ip + ":" + std::to_string(port) + path;
+            string url;
+            if(port != 0)
+                url = "http://" + ip + ":" + std::to_string(port) + path;
+            else
+                url = "http://" + ip + path;
 
             struct mg_mgr mgr;
             mg_mgr_init(&mgr);
@@ -323,7 +259,7 @@ extern "C" {
             }
 
             mg_mgr_free(&mgr);
-            yyjson_mut_doc_free(mdoc);
+            yyjson_doc_free(yydoc);
 
             JSValue ret = JS_NewObject(ctx);
             JS_SetPropertyStr(ctx, ret, "body", JS_NewString(ctx, data.body.c_str()));
@@ -331,7 +267,6 @@ extern "C" {
             return ret;
 		}
 
-		yyjson_mut_doc_free(mdoc);
 		return JS_NewObject(ctx);
 #else
         return JS_NULL;
