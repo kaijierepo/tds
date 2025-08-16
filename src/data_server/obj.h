@@ -400,11 +400,13 @@ public:
 	OBJ();
 	virtual ~OBJ();
 
+	//static
 	static bool m_bDefaultOnline;
+	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus, string tag);
 
+	//function
 	void loadTask(json& jTask);
 	void loadTask(yyjson_val* conf);
-
 	virtual bool loadConf(json& conf, bool bCreate = true);
 	virtual bool loadConf(yyjson_val* conf, bool bCreate = true);
 	virtual bool loadStatus(yyjson_val* status);
@@ -417,17 +419,76 @@ public:
 	virtual bool loadTreeStatus(OBJ* pSrcTree);
 	//从srcObj拷贝对象状态，不含子对象的状态
 	virtual bool loadObjStatus(OBJ* pSrcObj);
-
 	void toAttrInfo(nlohmann::ordered_json& attrInfo);
-
 	void getVal(yyjson_mut_val*& val, yyjson_mut_doc* doc);
-
 	//配置数据
 	bool isCustomMo();
 	bool isCustomMp();
 	bool isCustomOrg();
+	bool isChildObjOfIntelliDev();
+	OBJ* createObjBranchByTag(string tag);
+	//查询接口
+	virtual json getRT();
+	void getMpList(map<string, MP*>& MPlist);
+	OBJ* queryObj(string strTag, string language = "");//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
+	MP* GetMPByTag(string strTag, string language);
+	MP* GetMPByTagPinyin(string strTag);
+	void queryObj(std::vector<OBJ*>* tagVec, string strTag, string language, string type = "", string level = "*");
+	void GetMPByTag(std::vector<MP*>* tagVec, string strTag, string language);
+	void getMpList(vector<MP*>& MPlist);
+	OBJ* GetChildObjByName(string strName);
+	MP* GetDescendantMPByName(string strName);
+	OBJ* GetDescendantObjByName(string strName);
+	//确认自己是否被某类型选中
+	bool isSelectedByLevel(string level);
+	bool isSelectedByType(string type);
+	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
+	bool isSelectedByLeafType(string leafType);
+	bool isSelectedByLeafLevel(string leafType);
+	//修改接口
+	void recursiveSetOffline();
+	void setChildMpOnline();
+	void setChildMpOffline();
+	//树管理
+	OBJ* createChildMO(string subTag, string moType);
+	void GetAllChildObj(std::vector<OBJ*>& aryMO, string type);
+	void GetAllChildMp(std::vector<MP*>& aryMP);
+	void GetAttriMp(std::vector<MP*>& aryMP);
+	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
+	map<string, json> getChildCustomTypeList(string level = "*");
+	void statisChildCustomMoType(map<string, json>& list);
+	string getChildObjStatis();
+	void statisChildObj(map<string, OBJ_STATIS>& rlt);
+	void statisChildMo(json& jStatis);
+	void removeMp(json& mo);
+	void clearChildren();
+	OBJ* getOwnerChildTds();
+	static OBJ_QUERIER parseQuerier(json& opt);
+	OBJ* GetRootMO();
+	OBJ* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
+	OBJ* GetChildMO(string type);
+	OBJ* CopyMO();//复制一份与该mo相同的配置
+	virtual OBJ& operator=(OBJ& right);
+	OBJ* GetProjectMO();
+	bool hasOnlineStatus();
+	string& getName(const string& language);
+	string getTag();
+	virtual string getTag(string root, string language); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
+	json getTypeTag();
+	vector<string> GetAlias();
+	vector<string> GetAllTagNamePlus();
+	virtual string getTagWithRoot();
+	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
+	void GetAllChildAlarmInfo(string& strSummary);
+	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
+	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
+	OBJ* getObjByID(string id);
+	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
+	vector<string> getTagPartials(string strTag);
+	string getTypeLabel(string type);
+	string getUpdateTimeDesc();
 
-
+	//conf
 	string m_level;
 	string m_type;  
 	map<string, string> m_mapTypeTranslate;
@@ -451,96 +512,21 @@ public:
 	bool m_bEnableIO;
 	bool m_bEnableTask;
 	vector<SCHEDULE_TASK> m_scheduleTasks;
-	bool isChildObjOfIntelliDev();
-
-	//动态创建
-	OBJ* createObjBranchByTag(string tag);
-
-	//状态数据
-	bool m_bOnline;
-	TIME m_stDataLastUpdate;
-	double m_longitudeDyn;
-	double m_latitudeDyn;
-	string m_status;
-	json m_jAlarmStatus;
 	string m_strIoAddrBind; //如果绑定了io地址，该mo是一台智能设备
-
 	json m_customConf;
-
-	static void treeStatus2ListStatus(json& tree, json& list, json& onlineStatus,string tag);
-
-	//查询接口
-	virtual json getRT();
-	void getMpList(map<string, MP*>& MPlist);
-	OBJ* queryObj(string strTag, string language = "");//在以自己为根节点的整颗书检索Tag,找到对应的CMO返回
-	MP* GetMPByTag(string strTag,string language);
-	MP* GetMPByTagPinyin(string strTag);
-	void queryObj(std::vector<OBJ*>* tagVec, string strTag,string language, string type = "", string level = "*");
-	void GetMPByTag(std::vector<MP*>* tagVec, string strTag, string language);
-	void getMpList(vector<MP*>& MPlist);
-	OBJ* GetChildObjByName(string strName);
-	MP* GetDescendantMPByName(string strName);
-	OBJ* GetDescendantObjByName(string strName);
-	//确认自己是否被某类型选中
-	bool isSelectedByLevel(string level);
-	bool isSelectedByType(string type);
-	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
-	bool isSelectedByLeafType(string leafType);
-
-	bool isSelectedByLeafLevel(string leafType);
-
-	//修改接口
-	void recursiveSetOffline();
-	void setChildMpOnline();
-	void setChildMpOffline();
-
-	//树管理
 	std::vector<OBJ*> m_childObj;
 	OBJ* m_pParentMO;
-	OBJ* createChildMO(string subTag, string moType);
-	void GetAllChildObj(std::vector<OBJ*>& aryMO, string type);
-	void GetAllChildMp(std::vector<MP*>& aryMP);
-	void GetAttriMp(std::vector<MP*>& aryMP);
-	map<string, json> m_childCustomMoTypeList;  //子mo中所有的自定义的moType类型
-	map<string, json> getChildCustomTypeList(string level = "*");
-	void statisChildCustomMoType(map<string, json>& list);
-	string getChildObjStatis();
-	void statisChildObj(map<string, OBJ_STATIS>& rlt);
-	void statisChildMo(json& jStatis);
-	void removeMp(json& mo);
-	void clearChildren();
-	OBJ* getOwnerChildTds();
-
-	static OBJ_QUERIER parseQuerier(json& opt);
-	OBJ* GetRootMO();
-	OBJ* GetFatherMO(string type);//获得指定类型的父节点，或者是自身
-	OBJ* GetChildMO(string type);
-	OBJ* CopyMO();//复制一份与该mo相同的配置
-	virtual OBJ& operator=(OBJ& right);
-	OBJ* GetProjectMO();
-	bool hasOnlineStatus();
-	//获得当前设备所属的Project节点，MO树根节点
-	string m_rootTag; //仅当当前对象为根节点时有效，将影响getTag的返回，getTag前面都会加上rootTag
-
-	string& getName(const string& language);
-	string getTag();
-	virtual string getTag(string root,string language); //返回不包含根节点的位号 如果指定了root，返回以root为根节点的位号
-	json getTypeTag();
-	vector<string> GetAlias();
-	vector<string> GetAllTagNamePlus();
-	virtual string getTagWithRoot();
 	MAP_CONF m_mapConf;
+	string m_rootTag;
 
-
-	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
-	void GetAllChildAlarmInfo(string& strSummary);
-	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
-	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
-	OBJ* getObjByID(string id);
-	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);
-	vector<string> getTagPartials(string strTag);
-	string getTypeLabel(string type);
-	string getUpdateTimeDesc();
+	//status
+	atomic<bool> m_bOnline;
+	TIME m_stDataLastUpdate;
+	atomic<double> m_longitudeDyn;
+	atomic<double> m_latitudeDyn;
+	string m_status;
+	mutex m_mxAlarmStatus;
+	json m_jAlarmStatus;
 };
 
 OBJ* createMO(string type);

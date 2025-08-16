@@ -5873,7 +5873,10 @@ void rpcHandler::rpc_moList2table(Mo_Attr_Params& params, vector<OBJ*> moList, R
 			jTableRow.push_back(pMo->m_bOnline);
 			jTableRow.push_back(tag);
 			jTableRow.push_back(pMo->getChildObjStatis());
-			jTableRow.push_back(pMo->m_jAlarmStatus);
+			pMo->m_mxAlarmStatus.lock();
+			json jAlmStatus = pMo->m_jAlarmStatus;
+			pMo->m_mxAlarmStatus.unlock();
+			jTableRow.push_back(jAlmStatus);
 
 			jTableBody.push_back(jTableRow);
 		}

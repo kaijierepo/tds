@@ -1750,12 +1750,14 @@ void OBJ::statisChildObj(map<string, OBJ_STATIS>& rlt) {
 			}
 		}
 		else {
+			m_mxAlarmStatus.lock();
 			if (m_jAlarmStatus != nullptr) {
 				os.alarm++;
 			}
 			else {
 				os.normal++;
 			}
+			m_mxAlarmStatus.unlock();
 		}
 
 		rlt[m_type] = os;
