@@ -354,7 +354,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>ENABLE_ALM_SRV_HOOK_SCRIPT;CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_QJS_HTTP;ENABLE_ALM_SRV_HOOK_SCRIPT;CONFIG_VERSION="2025-04-26";UTF8;USE_SVN_REV;TDS;ENABLE_SERIAL;ENABLE_QJS;_TDS;MG_TLS=MG_TLS_BUILTIN;MG_ENABLE_POLL;GENICAM_MAIN_COMPILER=VC141;_HAS_STD_BYTE=0;DEBUG;WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>../src/include;../src/3rdparty/jerryscript/include/;../src;../src/common;../src/io_server;../src/data_server;../tdspro;../src/func_module;../src/script;../tdspro/func_module;../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -600,7 +600,6 @@
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />
     <ClInclude Include="..\src\data_server\tAlmSrv.h" />
-    <ClInclude Include="..\src\data_server\jerry.h" />
     <ClInclude Include="..\src\data_server\mp.h" />
     <ClInclude Include="..\src\data_server\obj.h" />
     <ClInclude Include="..\src\data_server\prj.h" />

@@ -162,7 +162,9 @@ void ioDev_tdsp::handleAlarmStatusData(yyjson_val* yyv_alarmStatus) {
 
 	OBJ* pObj = prj.queryObj(tagBind,"zh");
 	if (pObj) {
+		pObj->m_mxAlarmStatus.lock();
 		pObj->m_jAlarmStatus = alarmStatus;
+		pObj->m_mxAlarmStatus.unlock();
 	}
 
 	timeopt::now(&m_stLastAlarmStatusTime);
