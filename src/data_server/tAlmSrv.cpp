@@ -2096,11 +2096,15 @@ void almTable::add(ALARM_INFO ai)
 			unAckList[almKey] = pNew;
 
 			if (unAckListSizeLimit > 0 && unAckList.size() > unAckListSizeLimit) {
-				for (const auto& pair : unAckList) {
-					const std::string& key = pair.first;
-					ALARM_INFO* pInfo = pair.second;
+				for (auto it = unAckList.begin(); it != unAckList.end(); ++it) {
+					const std::string& key = it->first;
+					ALARM_INFO* pInfo      = it->second;
 					
 					if (pInfo->needRecover) {
+						continue;
+					}
+
+					if (pInfo->type != ai.type) {
 						continue;
 					}
 
