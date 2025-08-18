@@ -2121,6 +2121,7 @@ void almTable::add(ALARM_INFO ai)
 				}
 
 				if (tmpList.size() > unAckListSizeLimit) {
+					buff.erase(tmpList.begin()->first);
 					unAckList.erase(tmpList.begin()->first);
 				}
 			}
