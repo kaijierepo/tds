@@ -458,14 +458,20 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	si.lastModifyUser = session.user;
 
-	yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
-	if (code_val && yyjson_is_str(code_val)) {
-		string codePath = m_confPath + "/scripts/" + si.name + ".js";
-		string s = yyjson_get_str(code_val);
+	if (!si.isFolder) {
+		yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
+		if (code_val && yyjson_is_str(code_val)) {
+			string codePath = m_confPath + "/scripts/" + si.name + ".js";
+			string s = yyjson_get_str(code_val);
 
-		DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
-		si.script = s;
+			DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
+			si.script = s;
+		}
 	}
+	else {
+
+	}
+
 
 	yyjson_val* env_var_code_val = yyjson_obj_get(params_obj, "envVarCode");
 	if (env_var_code_val && yyjson_is_str(env_var_code_val)) {
