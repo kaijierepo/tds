@@ -860,7 +860,9 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
 		// 初始化 QuickJS
 		JSRuntime* rt = JS_NewRuntime();
 		JSContext* ctx = JS_NewContext(rt);
+
         JS_SetModuleLoaderFunc(rt, NULL, qjs_module_loader, NULL);
+
 		register_cpp_functions(ctx);
         if (m_initTdsFunc) {
             m_initTdsFunc(ctx, m_ioDevThis);

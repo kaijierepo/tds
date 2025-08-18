@@ -520,10 +520,10 @@ public:
 	string m_rootTag;
 
 	//status
-	atomic<bool> m_bOnline;
+	bool m_bOnline;
 	TIME m_stDataLastUpdate;
-	atomic<double> m_longitudeDyn;
-	atomic<double> m_latitudeDyn;
+	double m_longitudeDyn;
+	double m_latitudeDyn;
 	string m_status;
 	mutex m_mxAlarmStatus;
 	json m_jAlarmStatus;
