@@ -31,16 +31,19 @@ void tSockSrv::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<SOCK_SESSION> p = std::make_shared<SOCK_SESSION>(pTcpSess);
+
+		//先赋值appLayerSession指针
+		if (m_pStatusCallback) {
+			m_pStatusCallback(true, p);
+		}
+
+		//然后给session列表赋值，否则通知时可能使用appLayerSession空指针
 		m_mutexSessions.lock();
 		m_sockSessions[pTcpSess->sock] = p;
 		m_mutexSessions.unlock();
 
 		if (m_conf.tcpServerRegPkt.length() > 0) {
 			::send(pTcpSess->sock, m_conf.tcpServerRegPkt.c_str(), m_conf.tcpServerRegPkt.length(), 0);
-		}
-
-		if (m_pStatusCallback) {
-			m_pStatusCallback(true, p);
 		}
 	}
 	else
@@ -60,17 +63,20 @@ void tSockSrv::statusChange_tcpClt(tcpSessionClt* pTcpSess, bool bIsConn)
 	if (bIsConn)
 	{
 		std::shared_ptr<SOCK_SESSION> p = std::make_shared<SOCK_SESSION>(pTcpSess);
+		
+		//先赋值appLayerSession指针
+		if (m_pStatusCallback) {
+			m_pStatusCallback(true, p);
+		}
+
+		//然后给session列表赋值，否则通知时可能使用appLayerSession空指针
 		m_mutexSessions.lock();
 		m_sockSessions[pTcpSess->sock] = p;
 		m_mutexSessions.unlock();
 		LOG("[SockSrv]Tcp Client connect to server:%s:%d", pTcpSess->remoteIP.c_str(), pTcpSess->remotePort);
-			
-		if (m_conf.tcpClientRegPkt.length() > 0) {
-			::send(pTcpSess->sock, m_conf.tcpClientRegPkt.c_str(), m_conf.tcpClientRegPkt.length(),0);
-		}
 
-		if (m_pStatusCallback) {
-			m_pStatusCallback(true, p);
+		if (m_conf.tcpClientRegPkt.length() > 0) {
+			::send(pTcpSess->sock, m_conf.tcpClientRegPkt.c_str(), m_conf.tcpClientRegPkt.length(), 0);
 		}
 	}
 	else

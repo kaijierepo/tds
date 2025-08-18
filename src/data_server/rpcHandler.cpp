@@ -6677,7 +6677,7 @@ void rpcHandler::notify(string method, json params, bool specialNotify, std::sha
 	for (auto& i : sockSrv.m_sockSessions) {
 		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
 
-		if (pSession->isSubscribed(method, tag)) {
+		if (pSession && pSession->isSubscribed(method, tag)) {
 			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
 		}
 	}
