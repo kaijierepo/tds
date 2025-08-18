@@ -285,7 +285,7 @@ public:
 	DB_FILE_MODE dbFileMode;
 	mutex m_csTable;
 	ALM_TABLE_TYPE m_tableType;
-	int unAckListSizeLimit = 1000;
+	int unAckListSizeLimit = 10;
 
 
 protected:

@@ -2095,7 +2095,9 @@ void almTable::add(ALARM_INFO ai)
 		if (ai.needAck) {
 			unAckList[almKey] = pNew;
 
-			if (unAckListSizeLimit > 0 && unAckList.size() > unAckListSizeLimit) {
+			if (!ai.needRecover && unAckListSizeLimit > 0) {
+				map<string, ALARM_INFO*> tmpList;
+
 				for (auto it = unAckList.begin(); it != unAckList.end(); ++it) {
 					const std::string& key = it->first;
 					ALARM_INFO* pInfo      = it->second;
@@ -2104,12 +2106,22 @@ void almTable::add(ALARM_INFO ai)
 						continue;
 					}
 
+					if (pInfo->tag != ai.tag) {
+						continue;
+					}
+
 					if (pInfo->type != ai.type) {
 						continue;
 					}
 
-					unAckList.erase(key);
-					break;
+					tmpList[key] = pInfo;
+					if (tmpList.size() > unAckListSizeLimit) {
+						break;
+					}
+				}
+
+				if (tmpList.size() > unAckListSizeLimit) {
+					unAckList.erase(tmpList.begin()->first);
 				}
 			}
 		}
