@@ -2094,6 +2094,20 @@ void almTable::add(ALARM_INFO ai)
 		}
 		if (ai.needAck) {
 			unAckList[almKey] = pNew;
+
+			if (unAckListSizeLimit > 0 && unAckList.size() > unAckListSizeLimit) {
+				for (const auto& pair : unAckList) {
+					const std::string& key = pair.first;
+					ALARM_INFO* pInfo = pair.second;
+					
+					if (pInfo->needRecover) {
+						continue;
+					}
+
+					unAckList.erase(key);
+					break;
+				}
+			}
 		}
 	}
 	appendFile(buffFilePath, pNew);

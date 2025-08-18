@@ -616,6 +616,7 @@ bool TDS_imp::run(string cmdline) {
 #endif
 
 	almSrv.init(::db.m_path + "/alarms", asInitParam);
+	almSrv.tableCurrent.unAckListSizeLimit = tds->conf->getInt("unAckListSizeLimit", 1000);
 
 	//
 	userMng.init();
