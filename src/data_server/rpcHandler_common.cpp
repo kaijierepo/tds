@@ -26,13 +26,13 @@ bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& r
 				rootType = params["root"].get<string>();
 			}
 			if (rootType == "fms") {
-				rootPath = tds->conf->fmsPath;
+				rootPath = m_fmsPath;
 			}
 			else if (rootType == "conf") {
-				rootPath = tds->conf->confPath;
+				rootPath = m_confPath;
 			}
 			else if (rootType == "db") {
-				rootPath = tds->conf->dbPath;
+				rootPath = m_dbPath;
 			}
 			path = rootPath + "/" + path;
 
@@ -62,13 +62,13 @@ bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& r
 			rootType = params["root"].get<string>();
 		}
 		if (rootType == "fms") {
-			rootPath = tds->conf->fmsPath;
+			rootPath = m_fmsPath;
 		}
 		else if (rootType == "conf") {
-			rootPath = tds->conf->confPath;
+			rootPath = m_confPath;
 		}
 		else if (rootType == "db") {
-			rootPath = tds->conf->dbPath;
+			rootPath = m_dbPath;
 		}
 		path = rootPath + "/" + path;
 
@@ -89,13 +89,13 @@ bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& r
 		}
 
 		if (rootType == "fms") {
-			rootPath = tds->conf->fmsPath;
+			rootPath = m_fmsPath;
 		}
 		else if (rootType == "conf") {
-			rootPath = tds->conf->confPath;
+			rootPath = m_confPath;
 		}
 		else if (rootType == "db") {
-			rootPath = tds->conf->dbPath;
+			rootPath = m_dbPath;
 		}
 
 
@@ -170,13 +170,13 @@ bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& r
 		vector<fs::FILE_INFO> folderList;
 		string path;
 		if (root == "fms") {
-			path = tds->conf->fmsPath;
+			path = m_fmsPath;
 		}
 		else if (root == "conf") {
-			path = tds->conf->confPath;
+			path = m_confPath;
 		}
 		else if (root == "db") {
-			path = tds->conf->dbPath;
+			path = m_dbPath;
 		}
 
 		if (path == "") {
