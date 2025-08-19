@@ -637,8 +637,10 @@ void ScriptManager::exeAllGlobalScripts() {
 	m_csScripts.lock();
 	for (auto& i : m_mapScripts) {
 		SCRIPT_INFO& si = i.second;
+
 		TIME tLastExe;
 		tLastExe.fromStr(si.lastRunInfo.lastExe);
+
 		if (si.enable && si.mode == "cyclic" && TIME::calcTimePassMilliSecond(tLastExe) > si.interval) {
 			toExeScripts.push_back(si);
 			si.lastRunInfo.lastExe = TIME::nowStr(true);
@@ -656,8 +658,9 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		se.m_tagContext = si.getContextTag();
 		se.m_reloadFile = m_reloadFile;
-		TIME tStart;
-		tStart.setNow();
+
+		//TIME tStart;
+		//tStart.setNow();
 
 		string folder = "";
 		if (si.isFolder) {
@@ -665,7 +668,7 @@ void ScriptManager::exeAllGlobalScripts() {
 			DB_FS::readFile(folder + "./main.js", si.script);
 		}
 
-		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo,folder);
+		bool runOk = se.runScript(si.script, si.lastModifyUser, si.lastRunInfo, folder);
 
 		//int costMilli = TIME::calcTimePassMilliSecond(tStart);
 
