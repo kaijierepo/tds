@@ -350,6 +350,20 @@ void ioServer::OnRecvData_TCP(unsigned char* pData, size_t iLen, std::shared_ptr
 			str::split(vec, sHttp, "\r\n\r\n");
 			
 			if (vec.size() >= 2) {
+				if (vec[1] == "isPortActive") {
+					string httpResp =
+						"HTTP/1.1 200 OK\r\n"
+						"Content-Type: application/json; charset=utf-8\r\n"
+						"Content-Length: 0\r\n"
+						"Connection: close\r\n"
+						"\r\n"
+						"active";
+
+					send(ioSession->sock, httpResp.c_str(), (int)httpResp.size(), 0);
+					return;
+				}
+
+
 				try {
 					string& tdspPkt = vec[1];
 
@@ -1362,6 +1376,7 @@ bool ioServer::runAsCloud() {
 	m_bRunning = true;
 	loadChanTemplate();
 
+	bool exitIfPortBindFail = tds->conf->getInt("exitIfPortBindFail", 0) ? true : false;
 	m_tdspSingleTransaction    = tds->conf->getInt("tdspSingleTransaction", 0);
 	m_serialSendDelayAfterRecv = tds->conf->getInt("serialSendDelayAfterRecv", 0);
 	m_bGb2312Tdsp              = tds->conf->getInt("gb2312Tdsp", 0) ? true : false;
@@ -1419,6 +1434,11 @@ bool ioServer::runAsCloud() {
 #endif
 
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
+		if (exitIfPortBindFail) {
+			LOG("[error][IO服务    ] 端口启动失败，退出程序");
+			Sleep(5000);
+			exit(0);
+		}
 	}
 
 	//modbus 接收端口可以支持多个端口，用于udp设备回包不是回给请求的udp端口，而是回给固定的udp端口的场景。
