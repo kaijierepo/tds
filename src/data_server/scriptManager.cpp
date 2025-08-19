@@ -669,15 +669,15 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		int costMilli = TIME::calcTimePassMilliSecond(tStart);
 
-		// db data
-		auto mutdoc = yyjson_mut_doc_new(nullptr);
-		auto mutroot = yyjson_mut_obj(mutdoc);
+		//// db data
+		//auto mutdoc = yyjson_mut_doc_new(nullptr);
+		//auto mutroot = yyjson_mut_obj(mutdoc);
 
-		yyjson_mut_doc_set_root(mutdoc, mutroot);
-		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "name", si.name.c_str());
-		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastRunInfo.lastExe.c_str());
-		yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
-		yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
+		//yyjson_mut_doc_set_root(mutdoc, mutroot);
+		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "name", si.name.c_str());
+		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastRunInfo.lastExe.c_str());
+		//yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
+		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
 
 		//string str;
 
