@@ -15,6 +15,7 @@ public:
 	string m_confPath;
 	string m_dbPath;
 	string m_fmsPath;
+	string m_appPath;
 };
 
 extern RpcHandler_common rpcHandler_common;
