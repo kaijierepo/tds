@@ -667,7 +667,7 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		bool runOk = se.runScript(si.script, si.lastModifyUser,si.lastRunInfo,folder);
 
-		int costMilli = TIME::calcTimePassMilliSecond(tStart);
+		//int costMilli = TIME::calcTimePassMilliSecond(tStart);
 
 		//// db data
 		//auto mutdoc = yyjson_mut_doc_new(nullptr);
