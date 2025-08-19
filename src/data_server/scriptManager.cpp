@@ -30,6 +30,7 @@ void scriptThread(ScriptManager* p){
 
 ScriptManager::ScriptManager() {
 	m_bRun = false;
+	m_reloadFile = false;
 }
 
 bool ScriptManager::init() {
@@ -654,7 +655,7 @@ void ScriptManager::exeAllGlobalScripts() {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-		se.m_reloadFile = false;
+		se.m_reloadFile = m_reloadFile;
 		TIME tStart;
 		tStart.setNow();
 

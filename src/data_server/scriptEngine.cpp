@@ -802,7 +802,7 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
     g_mutexScriptFileBuff.lock();
     map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
     g_mutexScriptFileBuff.unlock();
-    if (iter != g_mapScriptFileBuff.end()) {
+    if (iter != g_mapScriptFileBuff.end() && !pEngine->m_reloadFile) {
         script = iter->second;
     }
     else{

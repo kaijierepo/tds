@@ -49,6 +49,7 @@ public:
 	void setConfPath(const string& conf);
 	string m_confPath;
 
+	bool m_reloadFile;
 	bool m_bRun;
 	bool hasScripts();
 	
