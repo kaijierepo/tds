@@ -55,6 +55,9 @@ public:
 
 	bool m_bValNullInCalc;             //val函数返回了null，当使用计算表达式时，例如 val(tag1) -val(tag2)，某一个val函数返回null，null会被作为0，但该次计算无效
 
+	// 环境变量脚本行数
+	int m_envVarScriptLine;
+
 	fp_initTdsFunc m_initTdsFunc;
 };
 

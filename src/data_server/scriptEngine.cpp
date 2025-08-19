@@ -839,6 +839,7 @@ ScriptEngine::ScriptEngine() {
     m_initTdsFunc = nullptr;
     m_bValNullInCalc = false;
     m_reloadFile = false;
+    m_envVarScriptLine = 0;
 }
 
 bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder) {
@@ -900,7 +901,7 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
             const char* stack = JS_ToCString(ctx, stack_val);
 
             // 提取行号
-            int line = extract_line_number(stack);
+            int line = extract_line_number(stack) - m_envVarScriptLine;
 
 			string s = err;
 			s = "Exception at line " + std::to_string(line) + ":" + s;
@@ -921,7 +922,7 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
                     const std::string& key = it.key();
                     json& value = it.value();
 
-                    JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());;
+                    JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());
                     jsValToJsonVal(ctx, prop_value, value);
 
                     JS_FreeValue(ctx, prop_value);

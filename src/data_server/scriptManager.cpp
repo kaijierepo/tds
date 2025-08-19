@@ -296,6 +296,8 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		string sEnvVar = yyjson_get_str(env_var_val);
 		if (sEnvVar != "") {
 			mainScript = sEnvVar + "\n" + mainScript;
+
+			se.m_envVarScriptLine = static_cast<int>(std::count(sEnvVar.begin(), sEnvVar.end(), '\n')) + 1;
 		}
 	}
 
