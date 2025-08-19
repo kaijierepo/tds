@@ -907,6 +907,9 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
             sri.lastError = s;
 			m_vecOutput.push_back(s);
 
+            JS_FreeCString(ctx, stack);
+            JS_FreeValue(ctx, stack_val);
+
 			JS_FreeCString(ctx, err);
 			JS_FreeValue(ctx, error);
 		}
