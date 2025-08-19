@@ -693,6 +693,41 @@ static JSValue qjs_ioDev_send(JSContext* ctx, JSValueConst this_val, int argc, J
     return JS_NewBool(ctx,sended);
 }
 
+
+static JSValue qjs_ioDev_sendStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+    if (jArgs.size() != 1)
+        return JS_NULL;
+
+    json req = jArgs[0];
+    std::vector<uint8_t> vecReq;
+    string sReq = "";
+    if (req.is_string()) {
+		sReq = req.get<std::string>();
+    }
+    else {
+        pEngine->m_sError = "错误的请求参数格式，必须是字符串";
+        return JS_NULL;
+    }
+
+    bool sended = false;
+    std::vector<uint8_t> vecResp;
+    if (jDev.is_object() && jDev["confNodeId"] != nullptr) {
+        std::string confNodeId = jDev["confNodeId"];
+        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+        if (p && p->m_devType == "custom-device") {
+            ioDev_custom* pc = (ioDev_custom*)p;
+            sended = pc->sendData((unsigned char*)sReq.c_str(), sReq.size());
+        }
+    }
+
+    return JS_NewBool(ctx, sended);
+}
+
+
 static JSValue qjs_ioDev_getDevVar(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -810,6 +845,7 @@ void initIODevFunc(JSContext* ctx, void* pDev, JSValue obj) {
     JS_SetPropertyStr(ctx, obj, "setDevVar", JS_NewCFunction(ctx, qjs_ioDev_setDevVar, "setDevVar", 2));
     JS_SetPropertyStr(ctx, obj, "onRecvData", JS_NewCFunction(ctx, qjs_ioDev_onRecvData, "onRecvData", 1));
     JS_SetPropertyStr(ctx, obj, "send", JS_NewCFunction(ctx, qjs_ioDev_send, "send", 1));
+    JS_SetPropertyStr(ctx, obj, "sendStr", JS_NewCFunction(ctx, qjs_ioDev_sendStr, "sendStr", 1));
     JS_SetPropertyStr(ctx, obj, "doTransaction", JS_NewCFunction(ctx, qjs_ioDev_doTransaction, "doTransaction", 1));
     JS_SetPropertyStr(ctx, obj, "getDevVar", JS_NewCFunction(ctx, qjs_ioDev_getDevVar, "getDevVar", 1));
     JS_SetPropertyStr(ctx, obj, "setOffline", JS_NewCFunction(ctx, qjs_ioDev_setOffline, "setOffline", 0));
