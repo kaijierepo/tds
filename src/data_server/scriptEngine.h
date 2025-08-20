@@ -26,6 +26,7 @@ class ScriptEngine;
 
 typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
 typedef void (*fp_callMethod)(string method, string param, string& rlt,string& err);
+typedef void (*fp_callMethodRR)(const string& req,string& resp);
 
 class ScriptEngine {
 public:
@@ -61,6 +62,7 @@ public:
 
 	fp_initTdsFunc m_initTdsFunc;
 	static fp_callMethod  callMethodImp;
+	static fp_callMethodRR callMethodRRImp;
 };
 
 extern thread_local ScriptEngine* pEngine;

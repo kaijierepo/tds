@@ -191,15 +191,27 @@ extern "C" {
                 string rlt, err;
                 ScriptEngine::callMethodImp(method, params.dump(), rlt,err);
 
-                if (rlt != "") {
-                    JSValue js_val = JS_ParseJSON(ctx, rlt.c_str(), rlt.size(), "<yyjson>");
-                    return js_val;
+                string resp;
+                if(rlt != ""){
+                    resp = "{\"result\":" + rlt + "}";
+                }
+                else if (err != "") {
+                    resp = "{\"error\":" + err + "}";       
+                }
+                else {
+                    return JS_UNDEFINED;
                 }
 
-                if (err != "") {
-                    JSValue js_val = JS_ParseJSON(ctx, err.c_str(), err.size(), "<yyjson>");
-                    return js_val;
-                }
+                JSValue js_val = JS_ParseJSON(ctx, resp.c_str(), resp.size(), "<yyjson>");
+                return js_val;
+            }
+            else if (ScriptEngine::callMethodRRImp) {
+                string req = "{\"method\":\"" + method + "\",\"params\":" + params.dump() + "}";
+                string resp;
+                ScriptEngine::callMethodRRImp(req,resp);
+
+                JSValue js_val = JS_ParseJSON(ctx, resp.c_str(), resp.size(), "<yyjson>");
+                return js_val;
             }
         }
 
@@ -878,6 +890,7 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
 }
 
 fp_callMethod ScriptEngine::callMethodImp = nullptr;
+fp_callMethodRR ScriptEngine::callMethodRRImp = nullptr;
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
