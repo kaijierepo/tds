@@ -626,7 +626,7 @@ bool TDS_imp::run(string cmdline) {
 
 	//
 	userMng.init();
-
+	ScriptEngine::callMethodImp = callMethod;
 	scriptManager.setConfPath(tds->conf->confPath);
 	scriptManager.init();
 
@@ -1047,3 +1047,10 @@ i_tds* getITDS() {
 	return NULL;
 }
 #endif
+
+void callMethod(string method, string param, string& rlt, string& err) {
+	RPC_RESP resp;
+	tds->call(method, param, resp);
+	rlt = resp.result;
+	err = resp.error;
+}

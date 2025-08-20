@@ -25,6 +25,7 @@ struct SCRIPT_RUN_INFO {
 class ScriptEngine;
 
 typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
+typedef void (*fp_callMethod)(string method, string param, string& rlt,string& err);
 
 class ScriptEngine {
 public:
@@ -59,6 +60,7 @@ public:
 	int m_envVarScriptLine;
 
 	fp_initTdsFunc m_initTdsFunc;
+	static fp_callMethod  callMethodImp;
 };
 
 extern thread_local ScriptEngine* pEngine;

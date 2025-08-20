@@ -12,6 +12,8 @@
 #include <cstdint>
 #include "mp.h"
 
+
+
 static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -121,18 +123,6 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
-static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    // 参数转 json
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-
-    if (jArgs.size() == 1) {
-        json j = jArgs[0];
-        pEngine->m_scriptRet = j;
-    }
-
-    return JS_UNDEFINED;
-}
-
 static JSValue qjs_notify(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -182,21 +172,6 @@ static JSValue qjs_output(JSContext* ctx, JSValueConst this_val, int argc, JSVal
         RPC_SESSION session;
         session.user = pEngine->m_user;
         tds->call("output", jParams, err, rlt, session);
-    }
-
-    return JS_UNDEFINED;
-}
-
-static JSValue qjs_call(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-
-    if (jArgs.size() == 2) {
-        std::string method = jArgs[0].get<std::string>();
-        json params = jArgs[1];
-
-        json err, rlt;
-        RPC_SESSION sess;
-        tds->call(method, params, err, rlt, sess);
     }
 
     return JS_UNDEFINED;
@@ -813,11 +788,9 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JSValue global = JS_GetGlobalObject(ctx);
 
     JS_SetPropertyStr(ctx, global, "val", JS_NewCFunction(ctx, qjs_val, "val", 3));
-    JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
     JS_SetPropertyStr(ctx, global, "notify", JS_NewCFunction(ctx, qjs_notify, "notify", 2));
     JS_SetPropertyStr(ctx, global, "input", JS_NewCFunction(ctx, qjs_input, "input", 2));
     JS_SetPropertyStr(ctx, global, "output", JS_NewCFunction(ctx, qjs_output, "output", 2));
-    JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_call, "call", 2));
     JS_SetPropertyStr(ctx, global, "parseTag", JS_NewCFunction(ctx, qjs_parseTag, "parseTag", 1));
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));

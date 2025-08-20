@@ -42,6 +42,8 @@ namespace FUNC_TYPE {
 	//定义v1版本的返回json结构
 };
 
+void callMethod(string method, string param, string& rlt, string& err);
+
 class TDS_imp : public i_tds {
 public:
 	TDS_imp();

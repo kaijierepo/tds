@@ -166,6 +166,46 @@ extern "C" {
 		return JS_NewObject(ctx);
 	}
 
+    static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        // 参数转 json
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+
+        if (jArgs.size() == 1) {
+            json j = jArgs[0];
+            pEngine->m_scriptRet = j;
+        }
+
+        return JS_UNDEFINED;
+    }
+
+    static JSValue qjs_callMethod(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        // 参数转 json
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+
+        if (jArgs.size() == 2) {
+            json j = jArgs[0];
+            string method = j.get<string>();
+            json& params = jArgs[1];
+
+            if (ScriptEngine::callMethodImp) {
+                string rlt, err;
+                ScriptEngine::callMethodImp(method, params.dump(), rlt,err);
+
+                if (rlt != "") {
+                    JSValue js_val = JS_ParseJSON(ctx, rlt.c_str(), rlt.size(), "<yyjson>");
+                    return js_val;
+                }
+
+                if (err != "") {
+                    JSValue js_val = JS_ParseJSON(ctx, err.c_str(), err.size(), "<yyjson>");
+                    return js_val;
+                }
+            }
+        }
+
+        return JS_UNDEFINED;
+    }
+
 	static JSValue qjs_http_request(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
 #ifdef ENABLE_QJS_HTTP
 		std::vector<JSValueConst> visited;
@@ -747,6 +787,9 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "closeSerial", JS_NewCFunction(ctx, qjs_closeSerial, "closeSerial", 1));
     JS_SetPropertyStr(ctx, global, "arrayToStr", JS_NewCFunction(ctx, qjs_arrayToStr, "arrayToStr", 1));
     JS_SetPropertyStr(ctx, global, "strToArray", JS_NewCFunction(ctx, qjs_strToArray, "strToArray", 1));
+    JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
+    JS_SetPropertyStr(ctx, global, "callMethod", JS_NewCFunction(ctx, qjs_callMethod, "callMethod", 2));
+    JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_callMethod, "call", 2));
 
     JS_FreeValue(ctx, global);
 }
@@ -834,9 +877,12 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
     return m;
 }
 
+fp_callMethod ScriptEngine::callMethodImp = nullptr;
+
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
     m_initTdsFunc = nullptr;
+
     m_bValNullInCalc = false;
     m_reloadFile = false;
     m_envVarScriptLine = 0;
