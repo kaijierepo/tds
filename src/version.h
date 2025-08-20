@@ -1,7 +1,7 @@
 #ifndef VERSION_H_
 #define VERSION_H_
 
-#define SVN_VERSION "1988"
+#define SVN_VERSION "2004"
 
 #if 1
 #pragma message("warning: local modification found ,please make sure source is updated,when bulid release package")

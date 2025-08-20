@@ -219,4 +219,57 @@ BOOL CDumpCatch::PreventSetUnhandledExceptionFilter()
 	return bRet;
 }
 
+void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
+
+#ifdef _WIN32
+
+	string sExe = "/procdump.exe";
+#if defined(_WIN64)
+	sExe = "/procdump64.exe";
+#elif defined(_WIN32)
+	
+#endif
+
+	if (fs::fileExist(fs::appPath() + sExe)) {
+
+		if (sCmd.empty())	//	-accepteula -ma -e <PID>
+		{
+			return;
+		}
+
+		// 获取当前进程ID
+		DWORD currentPid = GetCurrentProcessId();
+
+		TCHAR commandLine[256];
+		sprintf_s(commandLine, sizeof(commandLine), "%s %s %d", "procdump64", sCmd.c_str(), currentPid);
+
+		STARTUPINFO si = { sizeof(si) };
+		PROCESS_INFORMATION pi;
+
+		if (!CreateProcess(
+			NULL,
+			commandLine,
+			NULL,
+			NULL,
+			FALSE,
+			0,
+			NULL,
+			NULL,
+			&si,
+			&pi))
+		{
+			std::cerr << "CreateProcess failed (" << GetLastError() << ")." << std::endl;
+
+			return;
+		}
+
+		// 关闭不需要的句柄
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+
+		std::cout << "ProcDump started to monitor this process (PID: " << currentPid << ")" << std::endl;
+	}
+#endif
+}
+
 #endif

@@ -39,6 +39,7 @@ SOFTWARE.
 
 
 #include "scriptEngine.h"
+#include "./func_module/dumpCatch.h"
 
 #ifdef _WIN32
 #include <shellapi.h>  //for this:  SHELLEXECUTEINFO
@@ -300,16 +301,23 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 bool isTdsRunning();
 int main(int argc, char** argv)
 {
-#ifdef _WIN32
-	g_fp_tcpSrv_statisSend = statisSend;
-#endif
-
 	//取出命令行命令
 	vector<string> args;
 	for (int i = 0; i < argc; i++) {
 		string s = argv[i];
 		args.push_back(s);
 	}
+
+	if (args.size() > 1)
+	{
+		//	规定参数1为抓取dump相关参数
+		dumpCatch.StartProcDumpMonitoring(args[1]);
+	}
+
+#ifdef _WIN32
+	g_fp_tcpSrv_statisSend = statisSend;
+#endif
+
 
 	setThreadName("main thread");
 	

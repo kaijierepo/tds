@@ -22,6 +22,8 @@ public:
 	void SetInvalidHandle();
 	void UnSetInvalidHandle();
 
+	void StartProcDumpMonitoring(const std::string& sCmd);
+
 private:
 	LPTOP_LEVEL_EXCEPTION_FILTER m_preFilter;
 	_invalid_parameter_handler m_preIph;
