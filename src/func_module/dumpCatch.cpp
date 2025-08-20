@@ -223,14 +223,18 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 
 #ifdef _WIN32
 
-	string sExe = "/procdump.exe";
+	string sExe = "procdump.exe";
 #if defined(_WIN64)
-	sExe = "/procdump64.exe";
+	sExe = "procdump64.exe";
 #elif defined(_WIN32)
 	
 #endif
 
-	if (fs::fileExist(fs::appPath() + sExe)) {
+	string sAppPath = fs::appPath();
+	sAppPath.append("/");
+	sAppPath.append(sExe);
+
+	if (fs::fileExist(sAppPath)) {
 
 		if (sCmd.empty())	//	-accepteula -ma -e <PID>
 		{
@@ -241,7 +245,7 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 		DWORD currentPid = GetCurrentProcessId();
 
 		TCHAR commandLine[256];
-		sprintf_s(commandLine, sizeof(commandLine), "%s %s %d", "procdump64", sCmd.c_str(), currentPid);
+		sprintf_s(commandLine, sizeof(commandLine), "%s %s %d", sExe.c_str(), sCmd.c_str(), currentPid);
 
 		STARTUPINFO si = { sizeof(si) };
 		PROCESS_INFORMATION pi;
@@ -252,7 +256,7 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 			NULL,
 			NULL,
 			FALSE,
-			0,
+			CREATE_NO_WINDOW,
 			NULL,
 			NULL,
 			&si,
