@@ -1742,12 +1742,13 @@ void almTable::saveFile()
 }
 
 
-void ALARM_INFO::fromJson(yyjson_val* params)
-{
-	string rootTag;
+void ALARM_INFO::fromJson(yyjson_val* params) {
 	yyjson_val* v = yyjson_obj_get(params, "rootTag");
-	if (v)
+
+	string rootTag;
+	if (v) {
 		rootTag = yyjson_get_str(v);
+	}
 		
 	v = yyjson_obj_get(params, "tag");
 	if (v) {
@@ -1756,53 +1757,74 @@ void ALARM_INFO::fromJson(yyjson_val* params)
 			tag = rootTag + "." + tag;
 		}
 	}
+
 	v = yyjson_obj_get(params, "type");
-	if(v)
+	if (v) {
 		type = yyjson_get_str(v);
+	}
+
 	v = yyjson_obj_get(params, "acqtype");
-	if(v)
+	if (v) {
 		acqType = yyjson_get_str(v);
+	}
+
 	v = yyjson_obj_get(params, "objstatus");
-	if (v)
+	if (v) {
 		objStatus = yyjson_get_str(v);
+	}
 
 	v = yyjson_obj_get(params, "time");
-	if (v)
+	if (v) {
 		time = yyjson_get_str(v);
+	}
 
 	v = yyjson_obj_get(params, "level");
-	if (v)
+	if (v) {
 		level = yyjson_get_str(v);
-	else
+	}
+	else {
 		level = ALARM_LEVEL::alarm;
+	}
 
 	v = yyjson_obj_get(params, "desc");
-	if (v)
+	if (v) {
 		desc = yyjson_get_str(v);
+	}
 
 	v = yyjson_obj_get(params, "isRecover");
-	if (v)
+	if (v) {
 		isRecover = yyjson_get_bool(v);
+	}
 
 	v = yyjson_obj_get(params, "isAck");
-	if (v)
+	if (v) {
 		isAck = yyjson_get_bool(v);
+	}
 
 	v = yyjson_obj_get(params, "recoverTime");
-	if (v)
+	if (v) {
 		recoverTime = yyjson_get_str(v);
+	}
 
 	v = yyjson_obj_get(params, "needRecover");
-	if (v)
+	if (v) {
 		needRecover = yyjson_get_bool(v);
+	}
 
 	v = yyjson_obj_get(params, "needAck");
-	if (v)
+	if (v) {
 		needAck = yyjson_get_bool(v);
+	}
 
 	v = yyjson_obj_get(params, "multiUnack");
-	if (v)
+	if (v) {
 		multiUnack = yyjson_get_bool(v);
+	}
+
+	v = yyjson_obj_get(params, "detail");
+	if (v) {
+		detail = yyjson_get_str(v);
+	}
 }
 
 json ALARM_INFO::toJson(almServer* almSrv, string rootTag)
