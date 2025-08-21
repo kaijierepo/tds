@@ -62,8 +62,11 @@ BOOL CDumpCatch::RemoveExceptionHandle()
 
 CDumpCatch::CDumpCatch()
 {
-	SetInvalidHandle();
-	AddExceptionHandle();
+	//if (StartProcDumpMonitoring())
+	//	return;
+
+	//SetInvalidHandle();
+	//AddExceptionHandle();
 }
 
 CDumpCatch::~CDumpCatch()
@@ -219,7 +222,7 @@ BOOL CDumpCatch::PreventSetUnhandledExceptionFilter()
 	return bRet;
 }
 
-void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
+bool CDumpCatch::StartProcDumpMonitoring() {
 
 #ifdef _WIN32
 
@@ -236,16 +239,15 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 
 	if (fs::fileExist(sAppPath)) {
 
-		if (sCmd.empty())	//	-accepteula -ma -e <PID>
-		{
-			return;
-		}
+		string sCmd = "-accepteula -ma -e";
 
 		// 获取当前进程ID
 		DWORD currentPid = GetCurrentProcessId();
 
-		TCHAR commandLine[256];
+		TCHAR commandLine[256] = {0};
 		sprintf_s(commandLine, sizeof(commandLine), "%s %s %d", sExe.c_str(), sCmd.c_str(), currentPid);
+
+		std::cout << commandLine << std::endl;
 
 		STARTUPINFO si = { sizeof(si) };
 		PROCESS_INFORMATION pi;
@@ -264,7 +266,7 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 		{
 			std::cerr << "CreateProcess failed (" << GetLastError() << ")." << std::endl;
 
-			return;
+			return false;
 		}
 
 		// 关闭不需要的句柄
@@ -272,7 +274,9 @@ void CDumpCatch::StartProcDumpMonitoring(const std::string& sCmd) {
 		CloseHandle(pi.hThread);
 
 		std::cout << "ProcDump started to monitor this process (PID: " << currentPid << ")" << std::endl;
+		return true;
 	}
+	return false;
 #endif
 }
 

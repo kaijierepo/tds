@@ -308,12 +308,6 @@ int main(int argc, char** argv)
 		args.push_back(s);
 	}
 
-	if (args.size() > 1)
-	{
-		//	规定参数1为抓取dump相关参数
-		dumpCatch.StartProcDumpMonitoring(args[1]);
-	}
-
 #ifdef _WIN32
 	g_fp_tcpSrv_statisSend = statisSend;
 #endif

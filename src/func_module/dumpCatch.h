@@ -22,7 +22,7 @@ public:
 	void SetInvalidHandle();
 	void UnSetInvalidHandle();
 
-	void StartProcDumpMonitoring(const std::string& sCmd);
+	bool StartProcDumpMonitoring();
 
 private:
 	LPTOP_LEVEL_EXCEPTION_FILTER m_preFilter;
