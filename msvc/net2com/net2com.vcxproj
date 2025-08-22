@@ -22,12 +22,12 @@
     <ClCompile Include="..\..\src\common\common.cpp" />
     <ClCompile Include="..\..\src\common\kvIni.cpp" />
     <ClCompile Include="..\..\src\common\logger.cpp" />
-    <ClCompile Include="..\..\src\common\mongoose.c" />
     <ClCompile Include="..\..\src\common\serial.cpp" />
     <ClCompile Include="..\..\src\common\tcpClt.cpp" />
     <ClCompile Include="..\..\src\common\tcpSrv.cpp" />
     <ClCompile Include="..\..\src\common\udpSrv.cpp" />
     <ClCompile Include="..\..\src\include\tds.cpp" />
+    <ClCompile Include="..\..\src\mongoose\mongoose.c" />
     <ClCompile Include="..\..\src\tools\net2com.cpp" />
     <ClCompile Include="net2com_tool.cpp" />
   </ItemGroup>
@@ -35,11 +35,11 @@
     <ClInclude Include="..\..\src\common\common.h" />
     <ClInclude Include="..\..\src\common\kvIni.h" />
     <ClInclude Include="..\..\src\common\logger.h" />
-    <ClInclude Include="..\..\src\common\mongoose.h" />
     <ClInclude Include="..\..\src\common\serial.h" />
     <ClInclude Include="..\..\src\common\tcpClt.h" />
     <ClInclude Include="..\..\src\common\tcpSrv.h" />
     <ClInclude Include="..\..\src\common\udpSrv.h" />
+    <ClInclude Include="..\..\src\mongoose\mongoose.h" />
     <ClInclude Include="..\..\src\tools\net2com.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -142,9 +142,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;MG_ENABLE_POLL;MG_TLS=MG_TLS_BUILTIN;_HAS_STD_BYTE=0;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../../src/common;../../src/tools;../../src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src/common;../../src/tools;../../src/include;../../src/mongoose</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -159,9 +160,10 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WINDOWS;_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;MG_ENABLE_POLL;MG_TLS=MG_TLS_BUILTIN;_HAS_STD_BYTE=0;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../../src/common;../../src/tools;../../src/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src/common;../../src/tools;../../src/include;../../src/mongoose</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>/utf-8 /Zc:__cplusplus %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

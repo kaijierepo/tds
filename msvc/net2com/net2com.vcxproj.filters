@@ -42,10 +42,10 @@
     <ClCompile Include="..\..\src\common\serial.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\common\mongoose.c">
+    <ClCompile Include="..\..\src\include\tds.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\include\tds.cpp">
+    <ClCompile Include="..\..\src\mongoose\mongoose.c">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -74,7 +74,7 @@
     <ClInclude Include="..\..\src\common\serial.h">
       <Filter>源文件</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\common\mongoose.h">
+    <ClInclude Include="..\..\src\mongoose\mongoose.h">
       <Filter>源文件</Filter>
     </ClInclude>
   </ItemGroup>
