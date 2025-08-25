@@ -289,7 +289,7 @@ void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION
 
 		json j;
 		j["path"] = p;
-		j["data"] = conf;
+		j["data"] = charCodec::gb_to_utf8(conf);
 		resp.result = j.dump();
 	}
 	else {
