@@ -762,6 +762,7 @@ typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagS
 namespace DB_STR {
 	wstring utf8_to_utf16(string instr);
 	string gb_to_utf8(string instr);
+	string utf8_to_gb(string instr);
 }
 
 namespace DB_FS {
@@ -773,6 +774,7 @@ namespace DB_FS {
 	void DeleteDirectoryContents(const std::string& dirPath);
 	void deleteDirectory(string& dirPath);
 	bool copyFile(const std::string& src, const std::string& dest);
+	bool rename(const std::string& oldPath, const std::string& newPath);
 }
 
 struct FILE_BUFF {

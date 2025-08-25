@@ -670,8 +670,11 @@ namespace DB_FS {
 
 		return true;
 	}
-}
 
+	bool rename(const std::string& oldPath, const std::string& newPath) {
+		return std::rename(oldPath.c_str(), newPath.c_str()) == 0;
+	}
+}
 
 #define TDB_BASE64_PAD '='
 #define TDB_BASE64DE_FIRST '+'
