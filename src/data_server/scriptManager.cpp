@@ -389,6 +389,8 @@ bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp,
 }
 
 bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+	unique_lock<mutex> lock(m_csScripts);
+
 	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
 
 	std::string name;
@@ -396,14 +398,13 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 		name = yyjson_get_str(name_val);
 	}
 
-	SCRIPT_INFO si;
-	if (!getScript(name, si)) {
+	if (m_mapScripts.find(name) == m_mapScripts.end()) {
 		json jError = "specified script not found";
 		rpcResp.error = jError.dump();
 		return true;
 	}
-	
-	unique_lock<mutex> lock(m_csScripts);
+
+	SCRIPT_INFO& si = m_mapScripts[name];
 	if (si.isFolder) {
 		DB_FS::deleteDirectory(m_confPath + "/scripts/" + name);
 	}
@@ -450,15 +451,42 @@ bool ScriptManager::rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
 	unique_lock<mutex> lock(m_csScripts);
 
+	std::string oldName;
 	std::string name;
+
 	yyjson_val* info_val = yyjson_obj_get(params_obj, "info");
 	if (info_val && yyjson_is_obj(info_val)) {
+		yyjson_val* oldName_val = yyjson_obj_get(info_val, "oldName");
+		if (oldName_val && yyjson_is_str(oldName_val)) {
+			oldName = yyjson_get_str(oldName_val);
+		}
+
 		yyjson_val* name_val = yyjson_obj_get(info_val, "name");
 		if (name_val && yyjson_is_str(name_val)) {
 			name = yyjson_get_str(name_val);
 		}
 	}
 
+	//
+	if (!oldName.empty()) {
+		if (m_mapScripts.find(oldName) == m_mapScripts.end()) {
+			json jError = "specified script not found";
+			rpcResp.error = jError.dump();
+			return true;
+		}
+
+		SCRIPT_INFO& si = m_mapScripts[oldName];
+		if (si.isFolder) {
+			DB_FS::deleteDirectory(m_confPath + "/scripts/" + oldName);
+		}
+		else {
+			DB_FS::deleteFile(m_confPath + "/scripts/" + oldName + ".js");
+		}
+
+		m_mapScripts.erase(oldName);
+	}
+	
+	//
 	if (m_mapScripts.find(name) == m_mapScripts.end()) {
 		SCRIPT_INFO si;
 		m_mapScripts[name] = si;
