@@ -389,21 +389,32 @@ bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp,
 }
 
 bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
-	unique_lock<mutex> lock(m_csScripts);
-
 	yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
+
 	std::string name;
 	if (name_val && yyjson_is_str(name_val)) {
 		name = yyjson_get_str(name_val);
 	}
 
-	m_mapScripts.erase(name);
+	SCRIPT_INFO si;
+	if (!getScript(name, si)) {
+		json jError = "specified script not found";
+		rpcResp.error = jError.dump();
+		return true;
+	}
+	
+	unique_lock<mutex> lock(m_csScripts);
+	if (si.isFolder) {
+		DB_FS::deleteDirectory(m_confPath + "/scripts/" + name);
+	}
+	else {
+		DB_FS::deleteFile(m_confPath + "/scripts/" + name + ".js");
+	}
 
+	m_mapScripts.erase(name);
 	saveScriptList("", m_mapScripts);
 
-	DB_FS::deleteFile(m_confPath + "/scripts/" + name + ".js");
 	rpcResp.result = "\"ok\"";
-
 	return true;
 }
 
