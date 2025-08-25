@@ -494,49 +494,47 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		m_mapScripts.erase(oldName);
 		m_mapScripts[name] = si;
 	}
-	else {
-		if (m_mapScripts.find(name) == m_mapScripts.end()) {
-			SCRIPT_INFO si;
-			m_mapScripts[name] = si;
-		}
+	
+	if (m_mapScripts.find(name) == m_mapScripts.end()) {
+		SCRIPT_INFO si;
+		m_mapScripts[name] = si;
+	}
 
-		SCRIPT_INFO& si = m_mapScripts[name];
+	SCRIPT_INFO& si = m_mapScripts[name];
 
-		if (info_val) {
-			si.fromJson(info_val);
-		}
+	if (info_val) {
+		si.fromJson(info_val);
+	}
 
-		si.lastModifyUser = session.user;
+	si.lastModifyUser = session.user;
 
-		if (!si.isFolder) {
-			yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
-			if (code_val && yyjson_is_str(code_val)) {
-				string codePath = m_confPath + "/scripts/" + si.name + ".js";
-				string s = yyjson_get_str(code_val);
-
-				DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
-				si.script = s;
-			}
-		}
-		else {
-
-		}
-
-
-		yyjson_val* env_var_code_val = yyjson_obj_get(params_obj, "envVarCode");
-		if (env_var_code_val && yyjson_is_str(env_var_code_val)) {
-			string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
-			string s = yyjson_get_str(env_var_code_val);
+	if (!si.isFolder) {
+		yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
+		if (code_val && yyjson_is_str(code_val)) {
+			string codePath = m_confPath + "/scripts/" + si.name + ".js";
+			string s = yyjson_get_str(code_val);
 
 			DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
-			si.envVarScript = s;
+			si.script = s;
 		}
-
-		saveScriptList("", m_mapScripts);
-		rpcResp.result = RPC_OK;
-
-		return true;
 	}
+	else {
+
+	}
+
+	yyjson_val* env_var_code_val = yyjson_obj_get(params_obj, "envVarCode");
+	if (env_var_code_val && yyjson_is_str(env_var_code_val)) {
+		string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
+		string s = yyjson_get_str(env_var_code_val);
+
+		DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
+		si.envVarScript = s;
+	}
+
+	saveScriptList("", m_mapScripts);
+	rpcResp.result = RPC_OK;
+
+	return true;
 }
 
 bool ScriptManager::rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
