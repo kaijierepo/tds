@@ -12,6 +12,9 @@ class RpcHandler_common {
 public:
 	bool handleRpc(const string& method,json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 
+	void rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
+	void rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
+
 	string m_confPath;
 	string m_dbPath;
 	string m_fmsPath;

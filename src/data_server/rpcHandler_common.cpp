@@ -1,10 +1,12 @@
 ﻿#include "rpcHandler_common.h"
 #include "common.h"
 #include "base64.h"
+#include <fstream>
 
 RpcHandler_common rpcHandler_common;
+map<string, string> g_mapConfFile;
 
-bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
+bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
 	bool handled = true;
 
 	if (method == "fs.readFile") {
@@ -239,9 +241,119 @@ bool RpcHandler_common::handleRpc(const string& method,json& params, RPC_RESP& r
 
 		rpcResp.result = infoList.dump();
 	}
+	else if (method == "getConfFile") {
+		rpc_getconffile(params, rpcResp, session);
+	}
+	else if (method == "setConfFile") {
+		rpc_setconffile(params, rpcResp, session);
+	}
 	else {
 		handled = false;
 	}
 
 	return handled;
+}
+
+static std::string base64_decode(const std::string& in) {
+	std::string out;
+	std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+	int val = 0, valb = -8;
+	for (unsigned char c : in) {
+		if (c == '=') break;
+		if (base64_chars.find(c) == std::string::npos) break;
+		val = (val << 6) + base64_chars.find(c);
+		valb += 6;
+		if (valb >= 0) {
+			out.push_back(char((val >> valb) & 0xFF));
+			valb -= 8;
+		}
+	}
+	return out;
+}
+
+void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session) {
+	string p = "";
+	if (!params["path"].is_string()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
+		return;
+	}
+
+	p = params["path"].get<string>();
+	if (p != "") {
+		string conf = "";
+		p = m_confPath + "/" + p;
+
+		fs::normalizationPath(p);
+		fs::readFile(p, conf);
+
+		json j;
+		j["path"] = p;
+		j["data"] = conf;
+		resp.result = j.dump();
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "path not specified");
+	}
+}
+
+void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session) {
+	string path = "";
+	string encode = "";
+	if (!params["path"].is_string()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param path error");
+		return;
+	}
+
+	if (!params["data"].is_string()) {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "param data error");
+		return;
+	}
+
+	if (params["encode"].is_string()) {
+		encode = params["encode"].get<string>();
+	}
+
+	string rPath = params["path"].get<string>();
+	if (rPath != "") {
+		string conf = params["data"].get<string>();
+		path = m_confPath + "/" + rPath;
+		fs::createFolderOfPath(path);
+
+		if (encode == "base64") {
+			//移除Data URI scheme中的前缀 
+			if (conf.find("data:") == 0) {
+				size_t pos = conf.find(",");
+				if (pos > 0) {
+					conf = conf.substr(pos + 1, conf.size() - pos);
+				}
+			}
+
+			std::string image_data = base64_decode(conf);
+#ifdef _WIN32
+			wstring wpath = charCodec::tds_to_utf16(path);
+			// Write the binary data to a file
+			std::ofstream image_file(wpath, std::ios::out | std::ios::binary);
+#else
+			std::ofstream image_file(path, std::ios::out | std::ios::binary);
+#endif
+			if (image_file.is_open()){
+				image_file.write(image_data.c_str(), image_data.length());
+				image_file.close();
+			}
+
+			resp.result = RPC_OK;
+		}
+		else {
+			bool bRet = fs::writeFile(path, conf);
+			if (bRet) {
+				g_mapConfFile[rPath] = conf; //更新内存中的配置文件]
+			}
+
+			resp.result = RPC_OK;
+		}
+	}
+	else {
+		resp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "path not specified");
+	}
 }

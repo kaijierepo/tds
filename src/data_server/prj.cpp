@@ -8,8 +8,6 @@
 #include "yyjson.h"
 #include "rpcHandler.h"
 
-map<string, string> g_mapConfFile;
-
 project prj;
 
 void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector) {

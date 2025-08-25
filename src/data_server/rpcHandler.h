@@ -135,8 +135,6 @@ public:
 	//辅助功能
 	string rpc_getconf(json params, string& error);
 	string rpc_setconf(json params, string& error);
-	void rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
-	void rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION& session);
 
 	json rpc_getStreamUrl(MP* pmp, string tag, bool isHttps, string hostname, int port);
 
