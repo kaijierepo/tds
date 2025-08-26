@@ -476,13 +476,15 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 
 		bool success = false;
+		string oldPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + oldName);
+		string newPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
 
 		SCRIPT_INFO& si = m_mapScripts[oldName];
 		if (si.isFolder) {
-			success = DB_FS::rename(m_confPath + "/scripts/" + oldName, m_confPath + "/scripts/" + name);
+			success = DB_FS::rename(oldPath, newPath);
 		}
 		else {
-			success = DB_FS::rename(m_confPath + "/scripts/" + oldName + ".js", m_confPath + "/scripts/" + name + ".js");
+			success = DB_FS::rename(oldPath + ".js", newPath + ".js");
 		}
 
 		if (!success) {
