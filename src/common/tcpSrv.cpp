@@ -146,7 +146,7 @@ bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/) 
 
 	char sz[50] = { 0 };
 	if (!g_cmdListScockIP.empty() && !g_cmdListScockPort.empty()) {
-		sprintf(sz, "tcp://%s:%s", g_cmdListScockIP, g_cmdListScockPort);
+		sprintf(sz, "tcp://%s:%s", g_cmdListScockIP.c_str(), g_cmdListScockPort.c_str());
 	}
 	else {
 		sprintf(sz, "tcp://0.0.0.0:%d", port);
