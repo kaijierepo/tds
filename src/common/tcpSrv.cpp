@@ -134,15 +134,24 @@ void mongoose_tcp_listen_thread(int port, tcpSrv* pSrv) {
 	pSrv->m_bStarted = false;
 }
 
-bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/)
-{
+string g_cmdListScockIP;
+string g_cmdListScockPort;
+
+bool tcpSrv::run(ICallback_tcpSrv* pUser, int port, string strLocalIP /*= ""*/) {
 	m_strServerIP = strLocalIP;
 	m_iServerPort = port;
 	m_pCallBackUser = pUser;
 
 	mg_mgr_init(&mgr);  // Init manager
+
 	char sz[50] = { 0 };
-	sprintf(sz, "tcp://0.0.0.0:%d", port);
+	if (!g_cmdListScockIP.empty() && !g_cmdListScockPort.empty()) {
+		sprintf(sz, "tcp://%s:%s", g_cmdListScockIP, g_cmdListScockPort);
+	}
+	else {
+		sprintf(sz, "tcp://0.0.0.0:%d", port);
+	}
+
 	string url = sz;
 	mg_connection* c = mg_listen(&mgr, url.c_str() , cb, &mgr);  // Setup listener
 	mgr.userdata = this;

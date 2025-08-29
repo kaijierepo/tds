@@ -122,3 +122,5 @@ public:
 };
 
 extern fp_statisSend g_fp_tcpSrv_statisSend;
+extern string        g_cmdListScockIP;
+extern string        g_cmdListScockPort;
