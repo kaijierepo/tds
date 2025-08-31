@@ -932,6 +932,3 @@ unsigned int
 tdb_base64_encode(const unsigned char* in, unsigned int inlen, char* out);
 
 extern TDB db;
-
-void CleanDiskFun(const std::string& strProjectPath, const std::string& strVideoTag, const std::string& strDBPathAbs, const std::function<void(void)>& fun,
-	int dwRemainDisk, int iCleanDiskStartTime, int iCleanDiskEndTime, int iRemainUselessFileDays, int iRemainUsefulFileDays);

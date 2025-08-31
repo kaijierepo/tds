@@ -83,12 +83,86 @@ void LOG_C(char* info) {
 	logger.log(info);
 }
 
+static std::string getAppDir() {
+#ifdef _WIN32
+	char buffer[MAX_PATH] = { 0 };
+	// 获取当前进程的可执行文件完整路径
+	if (GetModuleFileNameA(NULL, buffer, MAX_PATH) == 0) {
+		return "";
+	}
+
+	std::string path(buffer);
+	// Windows路径使用反斜杠或正斜杠作为分隔符
+	size_t last_slash = path.find_last_of("\\/");
+	if (last_slash != std::string::npos) {
+		return path.substr(0, last_slash);
+	}
+#else
+	char buffer[PATH_MAX];
+	ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+	if (len == -1) {
+		return "";
+	}
+	buffer[len] = '\0';
+
+	std::string path(buffer);
+	// Linux/macOS使用正斜杠作为分隔符
+	size_t last_slash = path.find_last_of('/');
+	if (last_slash != std::string::npos) {
+		return path.substr(0, last_slash);
+	}
+#endif
+	return ""; // 如果没有找到路径分隔符
+}
+
+static std::string getAppName() {
+#ifdef _WIN32
+	char buffer[MAX_PATH] = { 0 };
+	// 获取当前进程的可执行文件完整路径
+	if (GetModuleFileNameA(NULL, buffer, MAX_PATH) == 0) {
+		return "";
+	}
+
+	std::string path(buffer);
+	// Windows路径使用反斜杠或正斜杠作为分隔符
+	size_t last_slash = path.find_last_of("\\/");
+	if (last_slash != std::string::npos) {
+		return path.substr(last_slash + 1);
+	}
+	else {
+		// 如果没有找到路径分隔符，返回整个路径（可能就是文件名）
+		return path;
+	}
+#else
+	char buffer[PATH_MAX];
+	ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
+	if (len == -1) {
+		return "";
+	}
+	buffer[len] = '\0';
+
+	std::string path(buffer);
+	// Linux/macOS使用正斜杠作为分隔符
+	size_t last_slash = path.find_last_of('/');
+	if (last_slash != std::string::npos) {
+		return path.substr(last_slash + 1);
+	}
+	else {
+		// 如果没有找到路径分隔符，返回整个路径（可能就是文件名）
+		return path;
+	}
+#endif
+}
+
 Clogger::Clogger()
 {
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
 	m_bEnable = true;
+	string appDir = getAppDir();
+	string appName = getAppName();
+	m_strLogDir = appDir + "/log_" + appName;
 }
 
 void Clogger::init()
