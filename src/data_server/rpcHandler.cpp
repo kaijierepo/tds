@@ -3460,7 +3460,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 		json j = json::parse(s);
 		pIoDev->handleDevRpcCall(j,rpcResp);
 
-		logRPCRoute(method, j["params"], *pSession);
+		logRPCRoute(method, j["params"],rpcResp, *pSession);
 
 		return true;
 	}
@@ -3488,7 +3488,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 			pSession->route_ioAddr = pIoDev->getIOAddrStr();
 			pIoDev->handleDevRpcCall(j, rpcResp);
 
-			logRPCRoute(method, j["params"], *pSession);
+			logRPCRoute(method, j["params"],rpcResp, *pSession);
 			return true;
 		}
 
@@ -3573,25 +3573,39 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 	return false;
 }
 
-void rpcHandler::logRPCRoute(string method,json& params,RPC_SESSION& session) {
+void logOutput(const string& tag,json& j) {
+	string sDe = j.dump();
+	TDB* pOutputLogDB = db.getChildDB("ctrlLog");
+	pOutputLogDB->Insert(tag, sDe);
+}
+
+void rpcHandler::logRPCRoute(string method,json& params,const RPC_RESP& rpcResp,RPC_SESSION& session) {
+	json logParams;
 	if (method == "startRepel") {
-		json logParams;
-		logParams["src"] = "用户:" + session.user;
+		logParams["tag"] = session.route_tag;
+		logParams["user"] = "用户:" + session.user;
 		logParams["type"] = "探驱联动开始";
 		logParams["org"] = session.org;
-		logParams["host"] = session.remoteAddr;
+		logParams["remoteAddr"] = session.remoteAddr;
+		logParams["timeCost"] = rpcResp.timeCost;
 		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
-		logSrv.rpc_addLog(logParams, session);
+		logParams["success"] = rpcResp.result != "";
+		//logSrv.rpc_addLog(logParams, session);
+		logOutput(session.route_tag, logParams);
 	}	
 	else if (method == "stopRepel") {
-		json logParams;
-		logParams["src"] = "用户:" + session.user;
+		logParams["tag"] = session.route_tag;
+		logParams["user"] = "用户:" + session.user;
 		logParams["type"] = "探驱联动结束";
 		logParams["org"] = session.org;
-		logParams["host"] = session.remoteAddr;
+		logParams["remoteAddr"] = session.remoteAddr;
+		logParams["timeCost"] = rpcResp.timeCost;
 		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr;
-		logSrv.rpc_addLog(logParams, session);
+		logParams["success"] = rpcResp.result != "";
+		//logSrv.rpc_addLog(logParams, session);
+		logOutput(session.route_tag, logParams);
 	}
+
 }
 
 bool rpcHandler::isGB2312Pkt(string& req)

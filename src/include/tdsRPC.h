@@ -182,6 +182,7 @@ public:
 	RPC_RESP() {
 		result = "";
 		isNotification = false;
+		timeCost = 0;
 	}
 	~RPC_RESP()
 	{
@@ -194,6 +195,7 @@ public:
 	string params; 
 	string info;   //rpc excution log
 	string dbQueryInfo;
+	int timeCost;
 	bool isNotification; //is request a notification.no response will send if request is a notification
 };
 

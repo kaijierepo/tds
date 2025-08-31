@@ -977,8 +977,12 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 	json jId = jReq["id"];
 
 	bool sync = jId != nullptr ? true : false;
-
-	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s,sync=%d\r\n",getIOAddrStr().c_str(), method.c_str(),sync?1:0);
+	TIME tStart; tStart.setNow();
+	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s,rpcId=%s,sync=%d",
+		getIOAddrStr().c_str(), 
+		method.c_str(),
+		jId.dump().c_str(),
+		sync?1:0);
 	ioDev* pIoDev = this;
 	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrType != DEV_ADDR_MODE::udpServer)
 	{
@@ -1007,20 +1011,27 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 	//发起同步请求，此处阻塞
 	bool callRet = false;
 	pIoDev->call(method, jParams, jSessionParams, jRlt, jErr,sync);
+	string respInfo;
 	if (jRlt != nullptr) {
 		rpcResp.result = jRlt.dump();
-		LOG("[TDSP路由转发]设备->客户端,result=%s\r\n" ,rpcResp.result.c_str());
+		respInfo = "成功,result=" + rpcResp.result;
 	}
 	else if (jErr != nullptr)
 	{
 		rpcResp.error = jErr.dump();
-		LOG("[TDSP路由转发]设备->客户端,error=%s\r\n", rpcResp.error.c_str());
+		respInfo = "失败,error=" + rpcResp.error;
 	}
 	else
 	{
 		assert(false);
 	}
-		
+	rpcResp.timeCost = TIME::calcTimePassMilliSecond(tStart);
+	LOG("[TDSP路由转发]设备->客户端,ioAddr=%s,method=%s,rpcId=%s,耗时=%d,%s\r\n", 
+		getIOAddrStr().c_str(),
+		method.c_str(), 
+		jId.dump().c_str(),
+		rpcResp.timeCost,
+		respInfo.c_str());
 	return true;
 }
 

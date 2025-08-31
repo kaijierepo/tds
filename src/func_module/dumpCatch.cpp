@@ -65,8 +65,8 @@ CDumpCatch::CDumpCatch()
 	//if (StartProcDumpMonitoring())
 	//	return;
 
-	//SetInvalidHandle();
-	//AddExceptionHandle();
+	SetInvalidHandle();
+	AddExceptionHandle();
 }
 
 CDumpCatch::~CDumpCatch()

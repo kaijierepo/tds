@@ -43,7 +43,7 @@ public:
 	void setLicenceStatus(json j);
 	//rpc路由的命令  可以路由到tdsp设备，或者childTds
 	bool handleRpcRoute(yyjson_val*, RPC_RESP& rpcResp,std::shared_ptr<TDS_SESSION> pSession);
-	void logRPCRoute(string method, json& params, RPC_SESSION& session);
+	void logRPCRoute(string method, json& params, const RPC_RESP& rpcResp,RPC_SESSION& session);
 
 	bool isGB2312Pkt(string& req);
 
