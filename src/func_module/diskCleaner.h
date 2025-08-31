@@ -10,3 +10,5 @@ public:
 	string dbDir;
 	int saveMonthCount;
 };
+
+extern DiskCleaner diskCleaner;
