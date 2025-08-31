@@ -209,9 +209,6 @@
     <ClCompile Include="..\src\func_module\fileUploadSrv.cpp">
       <Filter>func_module</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\func_module\diskClean.cpp">
-      <Filter>func_module</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\io_server\proto_ws.cpp">
       <Filter>io_server\protocol</Filter>
     </ClCompile>
@@ -239,6 +236,7 @@
     <ClCompile Include="..\src\mongoose\mongoose.c">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -357,9 +355,6 @@
     <ClInclude Include="..\src\func_module\statusServer.h">
       <Filter>func_module</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\data_server\jerry.h">
-      <Filter>tdb</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\data_server\tdb.h">
       <Filter>tdb</Filter>
     </ClInclude>
@@ -461,9 +456,6 @@
     <ClInclude Include="..\src\func_module\fileUploadSrv.h">
       <Filter>func_module</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\func_module\diskClean.h">
-      <Filter>func_module</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\io_server\proto_ws.h">
       <Filter>io_server\protocol</Filter>
     </ClInclude>
@@ -503,6 +495,7 @@
     <ClInclude Include="..\src\mongoose\mongoose.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />

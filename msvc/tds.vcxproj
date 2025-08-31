@@ -531,7 +531,6 @@
     <ClCompile Include="..\src\data_server\tdsSession.cpp" />
     <ClCompile Include="..\src\data_server\webSrv.cpp" />
     <ClCompile Include="..\src\func_module\csvTable.cpp" />
-    <ClCompile Include="..\src\func_module\diskClean.cpp" />
     <ClCompile Include="..\src\func_module\dumpCatch.cpp" />
     <ClCompile Include="..\src\func_module\fileUploadSrv.cpp" />
     <ClCompile Include="..\src\func_module\logServer.cpp" />
@@ -612,7 +611,6 @@
     <ClInclude Include="..\src\data_server\tdsSession.h" />
     <ClInclude Include="..\src\data_server\webSrv.h" />
     <ClInclude Include="..\src\func_module\csvTable.h" />
-    <ClInclude Include="..\src\func_module\diskClean.h" />
     <ClInclude Include="..\src\func_module\dumpCatch.h" />
     <ClInclude Include="..\src\func_module\fileUploadSrv.h" />
     <ClInclude Include="..\src\func_module\logServer.h" />
