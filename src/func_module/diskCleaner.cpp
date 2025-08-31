@@ -27,6 +27,80 @@ extern void LOG(const char* format, ...);
 
 namespace fs = std::filesystem;
 
+static std::wstring utf8_to_utf16(const string& u8str) {
+    const char* utf8_str = u8str.c_str();
+    size_t length = u8str.length();
+    if (!utf8_str || length == 0) {
+        return std::wstring();
+    }
+
+    // 预分配足够的空间（最坏情况：每个ASCII字符对应1个wchar_t）
+    std::wstring result;
+    result.reserve(length);
+
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(utf8_str);
+    const uint8_t* end = data + length;
+
+    while (data < end) {
+        uint8_t c = *data;
+
+        if (c < 0x80) {
+            // 单字节UTF-8 (0-0x7F)
+            result.push_back(static_cast<wchar_t>(c));
+            data++;
+        }
+        else if ((c & 0xE0) == 0xC0) {
+            // 双字节UTF-8 (0x80-0x7FF)
+            if (data + 1 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x1F) << 6) | (data[1] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 2;
+        }
+        else if ((c & 0xF0) == 0xE0) {
+            // 三字节UTF-8 (0x800-0xFFFF)
+            if (data + 2 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x0F) << 12) |
+                ((data[1] & 0x3F) << 6) |
+                (data[2] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 3;
+        }
+        else if ((c & 0xF8) == 0xF0) {
+            // 四字节UTF-8 (0x10000-0x10FFFF)，需要UTF-16代理对
+            if (data + 3 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x07) << 18) |
+                ((data[1] & 0x3F) << 12) |
+                ((data[2] & 0x3F) << 6) |
+                (data[3] & 0x3F);
+
+            // 转换为UTF-16代理对
+            code_point -= 0x10000;
+            wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
+            wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
+
+            result.push_back(high_surrogate);
+            result.push_back(low_surrogate);
+            data += 4;
+        }
+        else {
+            throw std::runtime_error("Invalid UTF-8 sequence: invalid leading byte");
+        }
+    }
+
+    // 调整容量以释放多余空间
+    result.shrink_to_fit();
+    return result;
+}
+
 // 日期结构，用于比较
 struct Date {
     int year;
@@ -247,11 +321,73 @@ static std::string getAppDir() {
     return ""; // 如果没有找到路径分隔符
 }
 
+
+static bool fileExist(string pszFileName)
+{
+#ifndef _WINXP
+#ifdef _WIN32
+    std::filesystem::path filePath = utf8_to_utf16(pszFileName);
+#else
+    std::filesystem::path filePath = pszFileName;
+#endif
+
+    if (std::filesystem::exists(filePath)) {
+        return true;
+    }
+    else if (std::filesystem::is_directory(filePath)) {
+        return true;
+    }
+    return  false;
+#else
+    wstring filePath = charCodec::tds_to_utf16(pszFileName);
+    DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+    return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#endif
+}
+
+static string defaultConf()
+{
+    string s = R"(dbPath=          
+saveMonthCount=36
+)";
+    return s;
+}
+
+static bool writeFile(string path, char* data, size_t len)
+{
+    FILE* fp = nullptr;
+#ifdef _WIN32
+    wstring wpath = utf8_to_utf16(path);
+    _wfopen_s(&fp, wpath.c_str(), L"wb");
+#else
+    fp = fopen(path.c_str(), "wb");
+#endif
+    if (fp)
+    {
+        fwrite(data, 1, len, fp);
+        fclose(fp);
+        return true;
+    }
+    else
+    {
+        printf("writeFile error");
+    }
+    return false;
+}
+
 void DiskCleaner::run()
 {
 	KV_INI kvi;
    
     string iniPath = getAppDir() + "/diskCleaner.ini";
+
+	if (fileExist(iniPath) == false)
+	{
+        string s = defaultConf();
+		writeFile(iniPath,(char*) s.c_str(),s.length());
+		return;
+	}
+
 	kvi.load(iniPath);
 
 	dbDir = kvi.getValStr("dbPath", "");

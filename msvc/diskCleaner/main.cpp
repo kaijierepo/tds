@@ -11,6 +11,8 @@ void sleep_ms(unsigned int milliseconds) {
 
 int main(int argc, char** argv)
 {
+	diskCleaner.run();
+
 	while (1) {
 		sleep_ms(1000);
 	}

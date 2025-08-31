@@ -293,7 +293,7 @@ static std::string remove_utf8_bom(const std::string& data) {
 	return data;
 }
 
-string replaceStr(string str, const string to_replaced, const string newchars)
+static string replaceStr(string str, const string to_replaced, const string newchars)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
 	{

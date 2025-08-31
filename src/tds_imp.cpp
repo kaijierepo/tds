@@ -220,7 +220,6 @@ void createChromeWnd()
 #include <arpa/inet.h>
 #include <unistd.h>
 #endif
-#include <diskClean.h>
 
 bool isTdsRunning() {
 #ifdef _DEBUG
