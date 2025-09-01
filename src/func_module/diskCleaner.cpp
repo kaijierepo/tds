@@ -179,7 +179,7 @@ std::string getCurrentTimeString() {
 std::vector<std::pair<std::string, Date>> getDateFolders(const std::string& dirPath) {
     std::vector<std::pair<std::string, Date>> result;
 
-    if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
+    if (!fs::exists(utf8_to_utf16(dirPath)) || !fs::is_directory(utf8_to_utf16(dirPath))) {
         LOG("Directory does not exist or is not a directory: %s", dirPath.c_str());
         throw std::invalid_argument("Invalid directory");
     }
@@ -187,7 +187,7 @@ std::vector<std::pair<std::string, Date>> getDateFolders(const std::string& dirP
     // 正则表达式匹配YYYYMM格式的文件夹名称
     std::regex datePattern(R"(^\d{4}(0[1-9]|1[0-2])$)");
 
-    for (const auto& entry : fs::directory_iterator(dirPath)) {
+    for (const auto& entry : fs::directory_iterator(utf8_to_utf16(dirPath))) {
         if (entry.is_directory()) {
             std::string folderName = entry.path().filename().string();
             if (std::regex_match(folderName, datePattern)) {
@@ -212,7 +212,7 @@ std::vector<std::pair<std::string, Date>> getDateFolders(const std::string& dirP
  */
 bool fastDeleteDirectory(const std::string& dirPath) {
     // 检查目录是否存在
-    if (!fs::exists(dirPath) || !fs::is_directory(dirPath)) {
+    if (!fs::exists(utf8_to_utf16(dirPath)) || !fs::is_directory(utf8_to_utf16(dirPath))) {
         LOG("Directory does not exist: %s", dirPath.c_str());
         return false;
     }
@@ -229,7 +229,13 @@ bool fastDeleteDirectory(const std::string& dirPath) {
 
     //LOG("Executing command: %s", command.c_str());
     // 执行系统命令
+#ifdef _WIN32
+    std::wstring wcommand = utf8_to_utf16(command);
+    int result = _wsystem(wcommand.c_str());
+#else
     int result = std::system(command.c_str());
+#endif
+
     return result == 0;
 }
 

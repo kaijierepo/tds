@@ -557,9 +557,9 @@ bool TDS_imp::run(string cmdline) {
 	LOG("[数据库	] " + tds->conf->dbPath);
 
 	rpcHandler_common.m_confPath = tds->conf->confPath;
-	rpcHandler_common.m_dbPath = tds->conf->dbPath;
-	rpcHandler_common.m_fmsPath = tds->conf->fmsPath;
-	rpcHandler_common.m_appPath = fs::appPath();
+	rpcHandler_common.m_dbPath   = tds->conf->dbPath;
+	rpcHandler_common.m_fmsPath  = tds->conf->fmsPath;
+	rpcHandler_common.m_appPath  = fs::appPath();
 
 	//初始化系统组件，完成静态结构建立。loadConf和init类函数。在调用run之前，要先完成.否则在结构建立之前就进行数据io，可能会出现一些不必要的错误。
 
