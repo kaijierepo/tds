@@ -293,7 +293,15 @@ CPU_USE_INFO StatusServer::getCpuUseInfo()
 
 double StatusServer::calcCpuUse()
 {
-	double cpuUsed = 100* (m_currentCpuUseInfo.processTime - m_lastCpuUseInfo.processTime) / (m_currentCpuUseInfo.totalTime - m_lastCpuUseInfo.totalTime);
+
+	ULONGLONG processDiff = m_currentCpuUseInfo.processTime - m_lastCpuUseInfo.processTime;
+	ULONGLONG totalDiff = m_currentCpuUseInfo.totalTime - m_lastCpuUseInfo.totalTime;
+
+	if (totalDiff == 0) {
+		return 0.0;
+	}
+
+	double cpuUsed = 100* static_cast<double>(processDiff) / static_cast<double>(totalDiff);
 	return cpuUsed;
 }
 
