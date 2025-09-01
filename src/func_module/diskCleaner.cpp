@@ -19,7 +19,6 @@ DiskCleaner diskCleaner;
 #include <cstdlib>
 #include <sstream>
 #include <cstdio>  // 确保包含printf所需的头文件
-#include <fstream>
 
 // 假设LOG函数已事先定义，支持printf风格的格式化输出
 // 这里仅做声明，实际实现由用户提供
@@ -111,15 +110,6 @@ struct Date {
         return month < other.month;
     }
 };
-
-int _vscprintf_cross(const char* format, va_list pargs) {
-    int retval;
-    va_list argcopy;
-    va_copy(argcopy, pargs);
-    retval = vsnprintf(NULL, 0, format, argcopy);
-    va_end(argcopy);
-    return retval;
-}
 
 struct TIME {
     unsigned short wYear;
