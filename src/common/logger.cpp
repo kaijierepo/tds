@@ -127,11 +127,15 @@ static std::string getAppName() {
 	// Windows路径使用反斜杠或正斜杠作为分隔符
 	size_t last_slash = path.find_last_of("\\/");
 	if (last_slash != std::string::npos) {
-		return path.substr(last_slash + 1);
+		path = path.substr(last_slash + 1);
+	}
+
+	size_t pos = path.find('.');
+	if (pos != std::string::npos) {
+		return path.substr(0, pos);
 	}
 	else {
-		// 如果没有找到路径分隔符，返回整个路径（可能就是文件名）
-		return path;
+		return path; // 没有点，返回原字符串
 	}
 #else
 	char buffer[PATH_MAX];
@@ -145,11 +149,15 @@ static std::string getAppName() {
 	// Linux/macOS使用正斜杠作为分隔符
 	size_t last_slash = path.find_last_of('/');
 	if (last_slash != std::string::npos) {
-		return path.substr(last_slash + 1);
+		path = path.substr(last_slash + 1);
+	}
+
+	size_t pos = path.find('.');
+	if (pos != std::string::npos) {
+		return path.substr(0, pos);
 	}
 	else {
-		// 如果没有找到路径分隔符，返回整个路径（可能就是文件名）
-		return path;
+		return path; // 没有点，返回原字符串
 	}
 #endif
 }

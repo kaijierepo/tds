@@ -7,7 +7,6 @@
 
 DiskCleaner diskCleaner;
 
-
 #include <iostream>
 #include <string>
 #include <vector>
@@ -20,6 +19,7 @@ DiskCleaner diskCleaner;
 #include <cstdlib>
 #include <sstream>
 #include <cstdio>  // 确保包含printf所需的头文件
+#include <fstream>
 
 // 假设LOG函数已事先定义，支持printf风格的格式化输出
 // 这里仅做声明，实际实现由用户提供
@@ -111,6 +111,77 @@ struct Date {
         return month < other.month;
     }
 };
+
+int _vscprintf_cross(const char* format, va_list pargs) {
+    int retval;
+    va_list argcopy;
+    va_copy(argcopy, pargs);
+    retval = vsnprintf(NULL, 0, format, argcopy);
+    va_end(argcopy);
+    return retval;
+}
+
+struct TIME {
+    unsigned short wYear;
+    unsigned short wMonth;
+    unsigned short wDay;
+    unsigned short wHour;
+    unsigned short wMinute;
+    unsigned short wSecond;
+    unsigned short wMilliseconds;
+    unsigned short wDayOfWeek;
+
+    TIME() {
+        memset(this, 0, sizeof(*this));
+    }
+
+    void setNow();
+
+    time_t toUnixTime();
+    void fromUnixTime(time_t t, int milli = 0);
+
+    static 	long long calcTimePassMilliSecond(TIME& lastTime)
+    {
+        TIME nowTime;
+        nowTime.setNow();
+        time_t now = nowTime.toUnixTime();
+        time_t last = lastTime.toUnixTime();
+        time_t second = now - last;
+        time_t milli = nowTime.wMilliseconds - lastTime.wMilliseconds;
+        milli = second * 1000 + milli;
+        return milli;
+    }
+};
+
+void TIME::setNow() {
+    auto now = std::chrono::system_clock::now();
+    unsigned short milli = (unsigned short)std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count()
+        - std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() * 1000;
+    time_t tt = std::chrono::system_clock::to_time_t(now);
+    fromUnixTime(tt, milli);
+}
+
+time_t  TIME::toUnixTime() {
+    tm temptm = { wSecond, wMinute, wHour,wDay,wMonth - 1,wYear - 1900,wDayOfWeek, 0, 0 };
+    time_t unixTime = mktime(&temptm);
+    return unixTime;
+}
+
+void  TIME::fromUnixTime(time_t unixTime, int milli) {
+    static std::mutex mtx;
+    mtx.lock();
+    tm time_tm = *localtime(&unixTime);  //线程安全linux下推荐用localtime_r，win下推荐用localtime_s，此处为方便直接加个锁
+    mtx.unlock();
+
+    wYear = time_tm.tm_year + 1900;
+    wMonth = time_tm.tm_mon + 1;
+    wDay = time_tm.tm_mday;
+    wHour = time_tm.tm_hour;
+    wMinute = time_tm.tm_min;
+    wSecond = time_tm.tm_sec;
+    wMilliseconds = milli;
+    wDayOfWeek = time_tm.tm_wday;
+}
 
 /**
  * 从文件夹名称解析日期（YYYYMM格式）
@@ -230,8 +301,14 @@ bool fastDeleteDirectory(const std::string& dirPath) {
     //LOG("Executing command: %s", command.c_str());
     // 执行系统命令
 #ifdef _WIN32
+    TIME tStart;
+    tStart.setNow();
+
     std::wstring wcommand = utf8_to_utf16(command);
     int result = _wsystem(wcommand.c_str());
+    int costMilli = TIME::calcTimePassMilliSecond(tStart);
+
+    LOG("文件夹路径：%s, 删除时长：%dms", dirPath.c_str(), costMilli);
 #else
     int result = std::system(command.c_str());
 #endif
@@ -277,7 +354,6 @@ int performCleanup(const std::string& dirPath, int saveMonthCount) {
     return deletedCount;
 }
 
-
 void cleanThread() {
     while (true) {
         try {
@@ -289,10 +365,6 @@ void cleanThread() {
 
         std::this_thread::sleep_for(std::chrono::seconds(10));
     }
-}
-
-void DiskCleaner() {
-
 }
 
 static std::string getAppDir() {
@@ -327,33 +399,9 @@ static std::string getAppDir() {
     return ""; // 如果没有找到路径分隔符
 }
 
-
-static bool fileExist(string pszFileName)
-{
-#ifndef _WINXP
-#ifdef _WIN32
-    std::filesystem::path filePath = utf8_to_utf16(pszFileName);
-#else
-    std::filesystem::path filePath = pszFileName;
-#endif
-
-    if (std::filesystem::exists(filePath)) {
-        return true;
-    }
-    else if (std::filesystem::is_directory(filePath)) {
-        return true;
-    }
-    return  false;
-#else
-    wstring filePath = charCodec::tds_to_utf16(pszFileName);
-    DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
-    return (fileAttributes != INVALID_FILE_ATTRIBUTES && !(fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
-#endif
-}
-
-static string defaultConf()
-{
-    string s = R"(dbPath=          
+static string defaultConf() {
+    string s = R"(
+dbPath=          
 saveMonthCount=36
 )";
     return s;
@@ -381,14 +429,12 @@ static bool writeFile(string path, char* data, size_t len)
     return false;
 }
 
-void DiskCleaner::run()
-{
+void DiskCleaner::run() {
 	KV_INI kvi;
    
     string iniPath = getAppDir() + "/diskCleaner.ini";
 
-	if (fileExist(iniPath) == false)
-	{
+	if (!fs::exists(utf8_to_utf16(iniPath))) {
         string s = defaultConf();
 		writeFile(iniPath,(char*) s.c_str(),s.length());
 		return;

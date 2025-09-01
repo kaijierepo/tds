@@ -2,8 +2,7 @@
 #include <string>
 using namespace std;
 
-class DiskCleaner
-{
+class DiskCleaner {
 public:
 	void run();
 	
