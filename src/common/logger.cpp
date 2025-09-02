@@ -162,15 +162,74 @@ static std::string getAppName() {
 #endif
 }
 
+static string utf8_to_gb(string instr) //utf-8-->ansi
+{
+	string str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	char* charstr = new char[MAX_STRSIZE];
+	memset(charstr, 0, MAX_STRSIZE);
+	WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+	str = charstr;
+	delete[] wcharstr;
+	delete[] charstr;
+#else
+	str = instr;
+#endif
+	return str;
+}
+
+static string gb_to_utf8(string instr) {
+	string str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	char* charstr = new char[MAX_STRSIZE];
+	memset(charstr, 0, MAX_STRSIZE);
+	WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+	str = charstr;
+	delete[] wcharstr;
+	delete[] charstr;
+#else
+	str = instr;
+#endif
+	return str;
+}
+
+static wstring utf8_to_utf16(string instr) //utf-8-->ansi
+{
+	wstring str;
+#ifdef _WIN32
+	size_t MAX_STRSIZE = instr.length() * 2 + 2;
+	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+	memset(wcharstr, 0, MAX_STRSIZE);
+	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+	str = wcharstr;
+	delete[] wcharstr;
+
+#else
+
+#endif
+	return str;
+}
+
 Clogger::Clogger()
 {
 	m_bSaveToFile = false;
 	dirCreated = false;
 	logOutput = NULL;
 	m_bEnable = true;
+
 	string appDir = getAppDir();
 	string appName = getAppName();
-	m_strLogDir = appDir + "/log_" + appName;
+
+	// getAppDir 和 getAppName 获取的中文路径编码格式为gb，需要先转化为utf8
+	m_strLogDir = gb_to_utf8(appDir + "/log_" + appName);
 }
 
 void Clogger::init()
@@ -286,43 +345,6 @@ static void getTimeInfo(struct tm& timeinfo,string& timestamp) {
 	std::snprintf(buf.data() + len, 5, ".%03lld", ms);
 
 	timestamp = buf.data();
-}
-
-static string utf8_to_gb(string instr) //utf-8-->ansi
-{
-	string str;
-#ifdef _WIN32
-	size_t MAX_STRSIZE = instr.length() * 2 + 2;
-	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-	memset(wcharstr, 0, MAX_STRSIZE);
-	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-	char* charstr = new char[MAX_STRSIZE];
-	memset(charstr, 0, MAX_STRSIZE);
-	WideCharToMultiByte(CP_ACP, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
-	str = charstr;
-	delete[] wcharstr;
-	delete[] charstr;
-#else
-	str = instr;
-#endif
-	return str;
-}
-
-static wstring utf8_to_utf16(string instr) //utf-8-->ansi
-{
-	wstring str;
-#ifdef _WIN32
-	size_t MAX_STRSIZE = instr.length() * 2 + 2;
-	WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
-	memset(wcharstr, 0, MAX_STRSIZE);
-	MultiByteToWideChar(CP_UTF8, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
-	str = wcharstr;
-	delete[] wcharstr;
-
-#else
-
-#endif
-	return str;
 }
 
 static bool appendFile(string path, char* data, size_t len)

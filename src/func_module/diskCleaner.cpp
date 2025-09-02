@@ -26,6 +26,25 @@ extern void LOG(const char* format, ...);
 
 namespace fs = std::filesystem;
 
+static string gb_to_utf8(string instr) {
+    string str;
+#ifdef _WIN32
+    size_t MAX_STRSIZE = instr.length() * 2 + 2;
+    WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+    memset(wcharstr, 0, MAX_STRSIZE);
+    MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+    char* charstr = new char[MAX_STRSIZE];
+    memset(charstr, 0, MAX_STRSIZE);
+    WideCharToMultiByte(CP_UTF8, 0, wcharstr, -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+    str = charstr;
+    delete[] wcharstr;
+    delete[] charstr;
+#else
+    str = instr;
+#endif
+    return str;
+}
+
 static std::wstring utf8_to_utf16(const string& u8str) {
     const char* utf8_str = u8str.c_str();
     size_t length = u8str.length();
@@ -390,10 +409,10 @@ static std::string getAppDir() {
 }
 
 static string defaultConf() {
-    string s = R"(
-dbPath=          
+    string s = R"(dbPath=          
 saveMonthCount=36
 )";
+
     return s;
 }
 
@@ -414,33 +433,36 @@ static bool writeFile(string path, char* data, size_t len)
     }
     else
     {
-        printf("writeFile error");
+        printf("writeFile error\n");
     }
     return false;
 }
 
 void DiskCleaner::run() {
+	printf("diskCleaner started\n");
 	KV_INI kvi;
    
+    // getAppDir获取的中文路径编码格式为gb，需要先转化为utf8
     string iniPath = getAppDir() + "/diskCleaner.ini";
+    string iniPathUTF8 = gb_to_utf8(iniPath);
 
-	if (!fs::exists(utf8_to_utf16(iniPath))) {
+    if (!fs::exists(utf8_to_utf16(iniPathUTF8))) {
         string s = defaultConf();
-		writeFile(iniPath,(char*) s.c_str(),s.length());
-		return;
-	}
+        writeFile(iniPathUTF8, (char*)s.c_str(), s.length());
+    }
 
-	kvi.load(iniPath);
+    kvi.load(iniPathUTF8);
+    printf("diskCleaner load ini %s\n", iniPath.c_str());
 
-	dbDir = kvi.getValStr("dbPath", "");
-	saveMonthCount = kvi.getValInt("saveMonthCount", 36);
+    dbDir = kvi.getValStr("dbPath", "");
+    saveMonthCount = kvi.getValInt("saveMonthCount", 36);
 
-	if (dbDir == "") {
-		LOG("请先在diskCleaner设置dbPath为数据库路径");
-	}
-	else {
-		thread t(cleanThread);
-		t.detach();
-		LOG("diskCleaner启动,数据库路径=%s,保留数据=%d个月", dbDir.c_str(), saveMonthCount);
-	}
+    if (dbDir == "") {
+        LOG("请先在diskCleaner设置dbPath为数据库路径");
+    }
+    else {
+        thread t(cleanThread);
+        t.detach();
+        LOG("diskCleaner启动,数据库路径=%s,保留数据=%d个月", dbDir.c_str(), saveMonthCount);
+    }
 }

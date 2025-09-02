@@ -4,7 +4,7 @@
 #include <codecvt>
 #include <stdexcept>
 #include <filesystem>
-
+#include "logger.h"
 
 static std::wstring utf8_to_utf16(const string& u8str) {
 	const char* utf8_str = u8str.c_str();
@@ -377,60 +377,54 @@ bool writeFile(string path, string& data)
 	return writeFile(path, (char*)data.c_str(), data.length());
 }
 
-bool KV_INI::load(string path)
-{
+bool KV_INI::load(string path) {
 	m_path = path;
+
 	//配置文件当中的值  如果有值，说明是命令行设置，命令行优先级最高
 	readFile(path, m_strConf);
 	m_strConf = remove_utf8_bom(m_strConf);
+
 	vector<string> confItems;
 	splitStr(confItems, m_strConf, "\n");
 
 	bool isAppConf = path.find("appConf.ini") != string::npos;
 
 	//去掉注释
-	for (int i = 0; i < confItems.size(); i++)
-	{
+	for (int i = 0; i < confItems.size(); i++) {
 		string ci = confItems[i];
 		KV_INI_LINE oneLine;
 
 		//appConf.ini 里可以忽略confPath=C:\A\B前面的confPath部分
 		//直接配置为  C:\A\B
 		if (isAppConf) { 
-			if (ci.find("#") == -1 && ci.find("=") == -1 &&
-				(ci.find("/") != string::npos || ci.find("\\") != string::npos))
-			{
+			if (ci.find("#") == -1 && ci.find("=") == -1 && (ci.find("/") != string::npos || ci.find("\\") != string::npos)) {
 				oneLine.key = "confPath";
 				oneLine.val = ci;
 				oneLine.val = trim(oneLine.val, "\r");
 				oneLine.val = trim(oneLine.val, " ");
 				oneLine.val = trim(oneLine.val, "\t");
 				oneLine.type = CONF_ITEM;
+
 				mapConf.push_back(oneLine);
 				continue;
 			}
 		}
 
-
-		if (ci.find("#") == -1 && ci.find("=") == -1)
-		{
+		if (ci.find("#") == -1 && ci.find("=") == -1) {
 			oneLine.type = BLANK;
 			mapConf.push_back(oneLine);
 			continue;
 		}
-		else
-		{
+		else {
 			size_t pos = ci.find("#");
-			if (pos != string::npos)
-			{
+			if (pos != string::npos) {
 				oneLine.note = ci.substr(pos + 1);
 				ci = ci.substr(0, pos);
 				oneLine.note = trim(oneLine.note, "\r");
 			}
 
 			pos = ci.find("=");
-			if (pos != string::npos)
-			{
+			if (pos != string::npos) {
 				oneLine.key = ci.substr(0, pos);
 				oneLine.val = ci.substr(pos + 1, ci.length() - pos - 1);
 
@@ -444,14 +438,12 @@ bool KV_INI::load(string path)
 
 			}
 
-			if (oneLine.key != "")
-			{
+			if (oneLine.key != "") {
 				oneLine.type = CONF_ITEM;
 				mapConf.push_back(oneLine);
 				continue;
 			}
-			else
-			{
+			else {
 				oneLine.type = NOTE;
 				mapConf.push_back(oneLine);
 				continue;
