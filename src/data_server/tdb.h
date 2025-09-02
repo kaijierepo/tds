@@ -931,4 +931,7 @@ public:
 unsigned int
 tdb_base64_encode(const unsigned char* in, unsigned int inlen, char* out);
 
+bool IsLeapYear(int wYear);
+int DaysInAMonth(int wYear, int wMonth);
+
 extern TDB db;
