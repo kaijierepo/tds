@@ -286,13 +286,6 @@ bool ioDev::run() {
 			m_udpClt->run(this,localPort,ioSrv.m_ioSrvIPAsClient);
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpClient,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(),m_udpClt->m_port);
 		}
-		else if (m_addrType == DEV_ADDR_MODE::udpClient) {
-			if (m_udpSrv == nullptr)
-				m_udpSrv = new udpServer();
-
-			m_udpSrv->run(this, localPort);
-			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpServer,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(), m_udpSrv->m_port);
-		}
 	}
 
 	return true;
@@ -1366,7 +1359,13 @@ int ioDev::getPort() {
 				return p;
 			}
 		}
+	}
+	return 0;
+}
 
+int ioDev::getLocalPort() {
+	if (m_jDevAddr.is_object())
+	{
 		if (m_jDevAddr["localPort"].is_number_integer()) {
 			json j = m_jDevAddr["localPort"];
 			if (j.is_number_integer()) {
@@ -1630,11 +1629,19 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		{
 			port = m_jDevAddr["port"].get<int>();
 		}
-		size_t iSent = m_udpClt->SendData(pData, iLen,ip,port);
+		int iSent = m_udpClt->SendData(pData, iLen,ip,port);
 		if (m_bEnableIoLog) {
 			string remoteAddr = "UDP-" + ip + ":" + str::fromInt(port);
 			string localAddr = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
 			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr);
+		}
+	}
+	else if (m_tcpClt != nullptr && m_ioMode == "none") {
+		int iSent = m_tcpClt->SendData((unsigned char*)pData, iLen);
+		if (m_bEnableIoLog) {
+			string remoteAddr = m_tcpClt->m_remoteIP + ":" + str::fromInt(m_tcpClt->m_remotePort);
+			string localAddr = m_tcpClt->m_strLocalIP + ":" + str::fromInt(m_tcpClt->m_iLocalPort);
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
 		}
 	}
 	else {

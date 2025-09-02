@@ -166,6 +166,21 @@ extern "C" {
 		return JS_NewObject(ctx);
 	}
 
+    static JSValue qjs_logToServer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        const char* log = JS_ToCString(ctx, argv[0]);
+        if (!log) {
+            return JS_ThrowTypeError(ctx, "Argument must be a string");
+        }
+
+        std::string s = log;
+        pEngine->m_vecOutput.push_back(s);
+
+        LOG(s);
+
+        JS_FreeCString(ctx, log);
+        return JS_NewObject(ctx);
+    }
+
     static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         // 参数转 json
         json jArgs = engineArrayToJson(ctx, argv, argc);
@@ -773,7 +788,7 @@ void register_cpp_functions(JSContext* ctx) {
     JSValue global = JS_GetGlobalObject(ctx);
 
     JS_SetPropertyStr(ctx, global, "log", JS_NewCFunction(ctx, qjs_log, "log", 1));
-
+    JS_SetPropertyStr(ctx, global, "logToServer", JS_NewCFunction(ctx, qjs_logToServer, "logToServer", 1));
     JSValue console = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, console, "log", JS_NewCFunction(ctx, qjs_log, "log", 1));
     JS_SetPropertyStr(ctx, console, "error", JS_NewCFunction(ctx, qjs_log, "error", 1));

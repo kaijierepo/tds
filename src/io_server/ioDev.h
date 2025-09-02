@@ -184,6 +184,7 @@ public:
 	string getDevAddrStr(bool ignorePort = false);
 	string getIP();
 	int getPort();
+	int getLocalPort();
 	string m_dispositionMode;
 	string m_devType;
 	string m_devSubType; //设备子类型

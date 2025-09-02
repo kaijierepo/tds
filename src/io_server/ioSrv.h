@@ -117,6 +117,10 @@ struct STANDALONE_IO {
 //并发问题
 //设备上线操作ioDev列表和读取列表的并发问题,目前缺少有效的控制
 
+struct ioHandler_customUdp : public ICallback_udpSrv {
+	void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
+};
+
 class ioServer : public i_ioServer, public ioDev, public ICallback_tcpSrv
 {
 public:
@@ -183,6 +187,7 @@ public:
 	tcpSrv* m_tcpSrv_iq60; //
 	tcpSrv* m_tcpSrv_leakDetect; //
 	udpServer* m_udpSrv_tdsp;   //665 tdsp ，adaptor
+	map<int, udpServer*> m_mapCustomUdpSrv;
 
 	//adaptor
 	string m_strAdpIp;
@@ -195,7 +200,7 @@ public:
 
 
 	ioHandler_mbRtu ioHandler_mbRtu_udp;
-
+	ioHandler_customUdp ioHandler_custom_udp;
 
 	//通信分层处理
 	//传输层处理

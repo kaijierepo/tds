@@ -466,7 +466,7 @@ int tcpClt::SendData(unsigned char* pData, size_t iLen)
 		return 0;
 	}
 
-	size_t iRet = send(sockClient, (char*)pData, (int)iLen,0);
+	int iRet = send(sockClient, (char*)pData, (int)iLen,0);
 	if(iRet <= 0)
 	{
 #ifdef _WIN32

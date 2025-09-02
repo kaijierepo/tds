@@ -1500,6 +1500,26 @@ bool ioServer::runAsCloud() {
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tdspPort));
 	}
 
+	//找出所有设备指定的localPort并启动服务
+	for (auto i : m_vecChildDev) {
+		if (i->m_addrType == "udpClient") {
+			json j = i->m_jDevAddr["localPort"];
+			if (j.is_number_integer()) {
+				int port = j.get<int>();
+				if (m_mapCustomUdpSrv.find(port) == m_mapCustomUdpSrv.end()) {
+					udpServer* p = new udpServer();
+					if (p->run(&this->ioHandler_custom_udp, port, m_ioSrvIP)) {
+						m_mapCustomUdpSrv[port] = p;
+						LOG("[warn][IO服务    ] 启动自定义UDP服务成功 端口:" + str::fromInt(port));
+					}
+					else {
+						LOG("[error][IO服务   ] 启动自定义UDP服务失败 端口:" + str::fromInt(port));
+					}
+				}
+			}
+		}
+	}
+
 	//启动所有子设备
 	for (auto i : m_vecChildDev) {
 		i->run();
@@ -2528,5 +2548,26 @@ void ioHandler_mbRtu::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen,
 	ioDev* p = ioSrv.getIODev("UDP-" + udpSession.remoteIP, false, true);
 	if (p) {
 		p->onRecvData(recvData, recvDataLen);
+	}
+}
+
+void ioHandler_customUdp::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession)
+{
+	IOLogRecv(recvData, recvDataLen, udpSession);
+
+	ioDev* dev = nullptr;
+	ioSrv.lock_conf_shared();
+	for (int i = 0; i < ioSrv.m_vecChildDev.size(); i++)
+	{
+		ioDev* p = ioSrv.m_vecChildDev[i];
+		if (udpSession.localPort == p->getLocalPort() && udpSession.remoteIP == p->getIP()) {
+			dev = p;
+			break;
+		}
+	}
+	ioSrv.unlock_conf_shared();
+
+	if (dev) {
+		dev->onRecvData(recvData, recvDataLen);
 	}
 }
