@@ -188,6 +188,7 @@ public:
 	tcpSrv* m_tcpSrv_leakDetect; //
 	udpServer* m_udpSrv_tdsp;   //665 tdsp ，adaptor
 	map<int, udpServer*> m_mapCustomUdpSrv;
+	map<int, udpServer*> m_mapCustomMulticastUdpSrv;
 
 	//adaptor
 	string m_strAdpIp;

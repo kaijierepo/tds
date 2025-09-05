@@ -1503,17 +1503,38 @@ bool ioServer::runAsCloud() {
 	//找出所有设备指定的localPort并启动服务
 	for (auto i : m_vecChildDev) {
 		if (i->m_addrType == "udpClient") {
-			json j = i->m_jDevAddr["localPort"];
-			if (j.is_number_integer()) {
-				int port = j.get<int>();
-				if (m_mapCustomUdpSrv.find(port) == m_mapCustomUdpSrv.end()) {
+			int localPort = i->getLocalPort();
+			if (localPort>0 && !i->isMulticast()) {
+				if (m_mapCustomUdpSrv.find(localPort) == m_mapCustomUdpSrv.end()) {
 					udpServer* p = new udpServer();
-					if (p->run(&this->ioHandler_custom_udp, port, m_ioSrvIP)) {
-						m_mapCustomUdpSrv[port] = p;
-						LOG("[warn][IO服务    ] 启动自定义UDP服务成功 端口:" + str::fromInt(port));
+					if (p->run(&this->ioHandler_custom_udp, localPort, m_ioSrvIP)) {
+						m_mapCustomUdpSrv[localPort] = p;
+						LOG("[warn][IO服务    ] 启动自定义UDP服务成功 端口:" + str::fromInt(localPort));
 					}
 					else {
-						LOG("[error][IO服务   ] 启动自定义UDP服务失败 端口:" + str::fromInt(port));
+						LOG("[error][IO服务   ] 启动自定义UDP服务失败 端口:" + str::fromInt(localPort));
+					}
+				}
+			}
+		}
+	}
+
+	//找出所有设备指定的组播接收localPort并启动服务
+	for (auto i : m_vecChildDev) {
+		if (i->m_addrType == "udpClient") {
+			int localPort = i->getLocalPort();
+			if (localPort>0 && i->isMulticast()) {
+				if (m_mapCustomMulticastUdpSrv.find(localPort) == m_mapCustomMulticastUdpSrv.end()) {
+					string multicastIP = i->getMulticastIP();
+					if (multicastIP != "") {
+						udpServer* p = new udpServer();
+						if (p->run_multicast(&this->ioHandler_custom_udp, localPort, multicastIP, m_ioSrvIP)) {
+							m_mapCustomUdpSrv[localPort] = p;
+							LOG("[warn][IO服务    ] 启动自定义组播UDP服务成功 端口:%d,组播IP:%s",localPort, multicastIP.c_str());
+						}
+						else {
+							LOG("[error][IO服务   ] 启动自定义组播UDP服务失败 端口:%d,组播IP:%s", localPort, multicastIP.c_str());
+						}
 					}
 				}
 			}

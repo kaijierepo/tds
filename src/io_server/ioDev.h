@@ -185,6 +185,8 @@ public:
 	string getIP();
 	int getPort();
 	int getLocalPort();
+	bool isMulticast();
+	string getMulticastIP();
 	string m_dispositionMode;
 	string m_devType;
 	string m_devSubType; //设备子类型

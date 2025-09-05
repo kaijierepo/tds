@@ -632,16 +632,16 @@ bool ioDev::loadConf(json& conf)
 			m_jDevAddr = item;
 
 			//addrMode以后保存到io.json。此处兼容未保存的
-			if (m_jDevAddr.is_object() && m_addrType == "")
-			{
-				if (m_jDevAddr["id"] != nullptr) {
-					m_addrType = DEV_ADDR_MODE::deviceID;
-				}
-				else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>() != 0)
-					m_addrType = DEV_ADDR_MODE::tcpServer;
-				else
-					m_addrType = DEV_ADDR_MODE::tcpClient;
-			}
+			//if (m_jDevAddr.is_object() && m_addrType == "")
+			//{
+			//	if (m_jDevAddr["id"] != nullptr) {
+			//		m_addrType = DEV_ADDR_MODE::deviceID;
+			//	}
+			//	else if (m_jDevAddr["port"].is_number_integer() && m_jDevAddr["port"].get<int>() != 0)
+			//		m_addrType = DEV_ADDR_MODE::tcpServer;
+			//	else
+			//		m_addrType = DEV_ADDR_MODE::tcpClient;
+			//}
 
 			//TCP服务器模式下，如果有修改IP或者端口，则重新启动连接
 			if (m_addrType == DEV_ADDR_MODE::tcpServer && m_tcpClt)
@@ -1375,6 +1375,28 @@ int ioDev::getLocalPort() {
 		}
 	}
 	return 0;
+}
+
+bool ioDev::isMulticast() {
+	if (m_jDevAddr.is_object())
+	{
+		if (m_jDevAddr["multicast"].is_boolean()) {
+			json j = m_jDevAddr["multicast"];
+			return j.get<bool>();
+		}
+	}
+	return false;
+}
+
+string ioDev::getMulticastIP() {
+	if (m_jDevAddr.is_object())
+	{
+		if (m_jDevAddr["multicastIP"].is_string()) {
+			json j = m_jDevAddr["multicastIP"];
+			return j.get<string>();
+		}
+	}
+	return "";
 }
 
 string ioDev::getDevAddrStr(bool ignorePort)

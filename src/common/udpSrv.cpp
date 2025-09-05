@@ -13,6 +13,7 @@ using namespace UdpServer;
 #include <thread>
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
 #include <sys/socket.h>
@@ -69,6 +70,88 @@ bool udpServer::run(ICallback_udpSrv* pcb, int port,string serverIP)
 
 	start();
 	return true;
+}
+
+bool udpServer::run_multicast(ICallback_udpSrv* pcb, int localPort, string multicastGroup, string localIP)
+{
+	m_port = localPort;
+	m_pCallback = pcb;
+
+	if (localIP == "")
+		localIP = "0.0.0.0";
+	m_bindIP = localIP;
+	m_multicastRecvIP = multicastGroup;
+
+	startMulticast();
+	return true;
+}
+
+void udpServer::startMulticast()
+{
+	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (-1 == m_sock)
+	{
+		//int iErr = GetLastError();
+		//LOG("create udp sock error,%d", iErr);
+		return;
+	}
+	else {
+
+	}
+#ifdef _WIN32
+	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
+#else
+	fcntl(m_sock, F_SETFD, fcntl(m_sock, F_GETFD) | FD_CLOEXEC);
+#endif
+
+	//加入组播组（核心操作）
+	struct ip_mreq mreq;  // Windows 组播成员结构体（无 imr_ifindex 字段）
+	memset(&mreq, 0, sizeof(mreq));
+
+	// 目标组播地址（239.255.255.100 属于全局组播地址，可跨路由器）
+	inet_pton(AF_INET, m_multicastRecvIP.c_str(), &(mreq.imr_multiaddr.s_addr));
+	// 绑定到本地任意网络接口（INADDR_ANY 表示所有接口）
+	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+
+	if (setsockopt(m_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
+		(const char*)&mreq, sizeof(mreq)) == SOCKET_ERROR) {
+		printf( "setsockopt(IP_ADD_MEMBERSHIP) 失败，错误码:%d " , WSAGetLastError() );
+		closesocket(m_sock);
+		m_sock = 0;
+		return;
+	}
+
+	sockaddr_in addr = { 0 };
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons((u_short)(m_port));
+	if (m_bindIP == "0.0.0.0")
+	{
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	}
+	else
+	{
+		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
+
+	}
+	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
+	if (0 != nBind)
+	{
+		char sz[200] = { 0 };
+		sprintf(sz, "[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
+		string str = sz;
+		LOG(str);
+		return;
+	}
+
+	//获得已经绑定的端口号
+	struct sockaddr_in localAddr;
+	int addrLen = sizeof(localAddr);
+	getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen);
+	m_port = ntohs(localAddr.sin_port);
+
+
+	thread t(udpRecvThread, this);
+	t.detach();
 }
 
 void udpServer::start()
@@ -272,6 +355,7 @@ void udpRecvThread(void* lpParam)
 	}
 	pServ->m_recvThreadRunning = false;
 }
+
 
 size_t UdpClt::sendData(unsigned char* pData, size_t iLen)
 {

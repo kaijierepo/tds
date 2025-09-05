@@ -27,6 +27,8 @@ public:
 	size_t SendData(unsigned char* pData, size_t iLen, string strIP, int port);
 
 	bool run(ICallback_udpSrv* pcb,int localPort = 0, string localIP = "");
+	bool run_multicast(ICallback_udpSrv* pcb, int localPort = 0, string multicastGroup = "", string localIP = "");
+	void startMulticast();
 	void start();
 	void stop();
 
@@ -41,7 +43,7 @@ public:
 	int m_multiCastSendSock;
 	string m_multiCastSendAddr;
 	int m_multiCastSendPort;
-
+	string m_multicastRecvIP;
 	int m_multiCastRecvSock;
 	string m_bindIP;
 	int m_port;
