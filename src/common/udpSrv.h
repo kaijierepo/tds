@@ -7,8 +7,12 @@ struct UDP_SESSION {
 	int remotePort;
 	string localIP;
 	int localPort;
-
+	bool multicast;
 	string getRemoteIOAddr();
+
+	UDP_SESSION() {
+		multicast = false;
+	}
 };
 
 class ICallback_udpSrv {

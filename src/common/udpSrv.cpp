@@ -303,6 +303,9 @@ size_t udpServer::onRecvData(unsigned char* recvData, size_t recvDataLen, string
 		us.remotePort = port;
 		us.localIP = m_bindIP;
 		us.localPort = m_port;
+		if (m_multicastRecvIP.length() > 0) {
+			us.multicast = true;
+		}
 		m_pCallback->OnRecvUdpData(recvData, recvDataLen,us);
 	}
 	return 0;
