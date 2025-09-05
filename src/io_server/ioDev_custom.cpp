@@ -63,6 +63,9 @@ bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
 				jRunInfo["cycleAcq"] = j;
 			}
 		}
+		else {
+			jRunInfo["cycleAcq"] = nullptr;
+		}
 		if (m_outputScript != "") {
 			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
 			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
@@ -74,6 +77,9 @@ bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
 				free(p);
 				jRunInfo["output"] = j;
 			}
+		}
+		else {
+			jRunInfo["output"] = nullptr;
 		}
 		if (m_onRecvScript != "") {
 			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
@@ -87,6 +93,10 @@ bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
 				jRunInfo["onRecv"] = j;
 			}
 		}
+		else {
+			jRunInfo["onRecv"] = nullptr;
+		}
+		conf["scriptStatus"] = jRunInfo;
 	}
 
 	return true;
