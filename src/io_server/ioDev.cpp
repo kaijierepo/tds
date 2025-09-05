@@ -1637,24 +1637,26 @@ bool ioDev::SendPkt(DEV_PKT& pkt)
 	return sendData(pkt.data, pkt.len);
 }
 
-bool ioDev::sendData(unsigned char* pData, size_t iLen)
-{
+bool ioDev::sendData(unsigned char* pData, size_t iLen) {
 	if (m_pParent != nullptr && m_pParent != &ioSrv) {
 		m_pParent->sendData(pData, iLen);
 	}
 	else if (m_udpClt != nullptr && m_ioMode == "none") {
 		string ip = "";
 		int port = 0;
-		if (m_jDevAddr["ip"].is_string())
+
+		if (m_jDevAddr["ip"].is_string()) {
 			ip = m_jDevAddr["ip"].get<string>();
-		if (m_jDevAddr["port"].is_number_integer())
-		{
+		}
+
+		if (m_jDevAddr["port"].is_number_integer()) {
 			port = m_jDevAddr["port"].get<int>();
 		}
-		int iSent = m_udpClt->SendData(pData, iLen,ip,port);
+
+		int iSent = m_udpClt->SendData(pData, iLen, ip, port);
 		if (m_bEnableIoLog) {
 			string remoteAddr = "UDP-" + ip + ":" + str::fromInt(port);
-			string localAddr = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
+			string localAddr  = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
 			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr);
 		}
 	}
@@ -1662,7 +1664,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		int iSent = m_tcpClt->SendData((unsigned char*)pData, iLen);
 		if (m_bEnableIoLog) {
 			string remoteAddr = m_tcpClt->m_remoteIP + ":" + str::fromInt(m_tcpClt->m_remotePort);
-			string localAddr = m_tcpClt->m_strLocalIP + ":" + str::fromInt(m_tcpClt->m_iLocalPort);
+			string localAddr  = m_tcpClt->m_strLocalIP + ":" + str::fromInt(m_tcpClt->m_iLocalPort);
 			IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
 		}
 	}
@@ -1670,8 +1672,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 		//直接发送给设备
 		//此处不要先锁 pIOSession再 send，否则和 tcpLinkLock会锁套锁
 		shared_ptr<TDS_SESSION> pIOSessTmp = getIOSession();
-		if (pIOSessTmp)
-		{
+		if (pIOSessTmp) {
 			pIOSessTmp->send(pData, iLen);
 		}
 		//通过协议适配器发送给设备
@@ -1681,7 +1682,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 					size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, ioSrv.m_strAdpIp, ioSrv.m_iAdpPort);
 					if (m_bEnableIoLog) {
 						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + ":" + str::fromInt(ioSrv.m_iAdpPort);
-						string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
+						string localAddr  = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
 						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr );
 					}
 				}
@@ -1690,17 +1691,17 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen)
 				if (ioSrv.m_udpSrv_tdsp != nullptr) {
 					if (ioSrv.m_standAloneIO.find(m_standAloneIOType) != ioSrv.m_standAloneIO.end()) {
 						STANDALONE_IO saio = ioSrv.m_standAloneIO[m_standAloneIOType];
+
 						size_t iSent = ioSrv.m_udpSrv_tdsp->SendData(pData, iLen, saio.ip, saio.port);
 						if (m_bEnableIoLog) {
 							string remoteAddr = "UDP-" + saio.ip +":" + str::fromInt(saio.port);
-							string localAddr = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
+							string localAddr  = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
 							IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
 						}
 					}
 				}
 			}
-			else
-			{
+			else {
 				LOG("[error]内部错误，设备sendData未建立正确的目标地址，%s", getIOAddrStr().c_str());
 				return false;
 			}

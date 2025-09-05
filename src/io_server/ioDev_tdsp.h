@@ -10,7 +10,6 @@ struct TDSP_SYNC_INFO {
 	string strResp;
 };
 
-
 class ioDev_tdsp : public ioDev
 {
 public:

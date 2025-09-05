@@ -103,11 +103,9 @@ bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
 }
 
 
-bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
-{
+bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp) {
 	if (m_bRunning == false)
 		return false;
-
 
 	while (1) {
 		if (CommLock(1)) {
@@ -120,9 +118,9 @@ bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
 
 	TIME startTime = timeopt::now();
 	bool ret = false;
+
 	if (m_bRunning == false)
 		goto TRANSACTION_END;
-
 
 	m_bIsWaitingResp = true;
 	m_transaction.init();
@@ -130,12 +128,11 @@ bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
 
 	m_transaction.m_respSignal.reset();
 
-	if (!sendData(req.data(),req.size())) {
+	if (!sendData(req.data(), req.size())) {
 		goto TRANSACTION_END;
 	}
 
-	if (m_transaction.m_respSignal.wait_for(tds->conf->iotimeoutModbusRtu))
-	{
+	if (m_transaction.m_respSignal.wait_for(tds->conf->iotimeoutModbusRtu)) {
 		if (m_transaction.getResp(resp)) {	
 			ret = true;
 		}
@@ -143,8 +140,7 @@ bool ioDev_custom::doTransaction(vector<uint8_t> req, vector<uint8_t>& resp)
 			ret = false;
 		}
 	}
-	else
-	{
+	else {
 		setOffline();
 	}
 
@@ -307,8 +303,7 @@ void ioDev_custom::onEvent_online()
 	ioDev::onEvent_online();
 }
 
-bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
-{
+bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen) {
 	setOnline();
 
 	if (m_onRecvScript != "") {
@@ -347,6 +342,7 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen)
 	vector<uint8_t> pkt;
 	pkt.resize(iLen);
 	memcpy(pkt.data(), pData, iLen);
+
 	m_transaction.setResp(pkt);
 	return false;
 }

@@ -1376,7 +1376,7 @@ bool ioServer::runAsCloud() {
 	m_bRunning = true;
 	loadChanTemplate();
 
-	bool exitIfPortBindFail = tds->conf->getInt("exitIfPortBindFail", 0) ? true : false;
+	bool exitIfPortBindFail    = tds->conf->getInt("exitIfPortBindFail", 0) ? true : false;
 	m_tdspSingleTransaction    = tds->conf->getInt("tdspSingleTransaction", 0);
 	m_serialSendDelayAfterRecv = tds->conf->getInt("serialSendDelayAfterRecv", 0);
 	m_bGb2312Tdsp              = tds->conf->getInt("gb2312Tdsp", 0) ? true : false;
@@ -1388,11 +1388,11 @@ bool ioServer::runAsCloud() {
 	}
 
 	int mbTcpPort = tds->conf->getInt("mbTcpPort", 502);
-	int tdspPort  = tds->conf->getInt("tdspPort", 665);
-	int mbPort    = tds->conf->getInt("mbPort", 664);
-	int iq60Port  = tds->conf->getInt("iq60Port", 663);
-	int adpPort   = tds->conf->getInt("adpPort", 662); //adaptor接入端口
-	int jepPort   = tds->conf->getInt("jepPort", 6011);
+	int tdspPort  = tds->conf->getInt("tdspPort",  665);
+	int mbPort    = tds->conf->getInt("mbPort",    664);
+	int iq60Port  = tds->conf->getInt("iq60Port",  663);
+	int adpPort   = tds->conf->getInt("adpPort",   662); //adaptor接入端口
+	int jepPort   = tds->conf->getInt("jepPort",   6011);
 
 	m_mapPort2DevType[tdspPort]  = DEV_TYPE_tdsp;
 	m_mapPort2DevType[mbPort]    = DEV_TYPE_rs485_gateway;

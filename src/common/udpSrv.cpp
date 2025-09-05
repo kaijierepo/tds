@@ -311,20 +311,19 @@ size_t udpServer::onRecvData(unsigned char* recvData, size_t recvDataLen, string
 	return 0;
 }
 
-size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, int remotePort)
-{
-	if (m_sock)
-	{
+size_t udpServer::SendData(unsigned char* pData, size_t iLen, string remoteIP, int remotePort) {
+	if (m_sock) {
 		sockaddr_in addrCli;
 		memset(&addrCli,0, sizeof(addrCli));
-		addrCli.sin_family = AF_INET;
+
+		addrCli.sin_family      = AF_INET;
 		addrCli.sin_addr.s_addr = inet_addr(remoteIP.c_str());
-		addrCli.sin_port = htons((u_short)remotePort);
+		addrCli.sin_port        = htons((u_short)remotePort);
 
 		int nSent = sendto(m_sock, (char*)pData, (int)iLen, 0, (sockaddr*)&addrCli, sizeof(addrCli));
-
 		return nSent;
 	}
+
 	return 0;
 }
 

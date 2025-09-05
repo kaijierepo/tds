@@ -8,8 +8,6 @@
 #include "statusServer.h"
 #include "common.h"
 
-
-
 class UPGRADE_INFO {
 public:
 	unsigned char* fileData;
@@ -58,26 +56,26 @@ public:
 };
 
 namespace DEV_ADDR_MODE {
-	const string tcpClient = "tcpClient";
-	const string tcpServer = "tcpServer";
-	const string udpServer = "udpServer";
-	const string udpClient = "udpClient";
-	const string deviceID = "deviceID";
+	const string tcpClient  = "tcpClient";
+	const string tcpServer  = "tcpServer";
+	const string udpServer  = "udpServer";
+	const string udpClient  = "udpClient";
+	const string deviceID   = "deviceID";
 	const string httpClient = "httpClient";
 	const string httpServer = "httpServer";
 }
 
 namespace IO_DEV_LEVEL {
-	const string server = "server";
+	const string server  = "server";
 	const string gateway = "gateway";
-	const string device = "device";
+	const string device  = "device";
 	const string channel = "channel";
 }
 
 //设备管理状态
 namespace DEV_DISPOSITION_MODE {
 	const string managed = "managed"; //后续重构为 inService 表示启用
-	const string spare = "spare";
+	const string spare   = "spare";
 };
 
 class ioDev;
@@ -111,21 +109,19 @@ struct DEV_QUERIER {
 	void parseQueryOpt(json& opt);
 
 	DEV_QUERIER() {
-		getStatus = false;
-		getConf = true;
-		getChild = true;
-		getChan = true;
-		getDetail = true;
-		getRemark = true;
+		getStatus      = false;
+		getConf        = true;
+		getChild       = true;
+		getChan        = true;
+		getDetail      = true;
+		getRemark      = true;
 		getUpgradeInfo = false;
-		getPAB = false;
-		getDebug = false;
+		getPAB         = false;
+		getDebug       = false;
 	}
 };
 
-
-
-class ioDev : public ICallback_udpSrv,public ICallback_tcpClt
+class ioDev : public ICallback_udpSrv, public ICallback_tcpClt
 {
 public:
 	ioDev(void);
