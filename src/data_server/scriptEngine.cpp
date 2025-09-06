@@ -167,18 +167,33 @@ extern "C" {
 	}
 
     static JSValue qjs_logToServer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        const char* log = JS_ToCString(ctx, argv[0]);
-        if (!log) {
-            return JS_ThrowTypeError(ctx, "Argument must be a string");
+        std::string s;
+        if (JS_IsString(argv[0])) {
+            const char* log = JS_ToCString(ctx, argv[0]);
+            if (!log) {
+                return JS_ThrowTypeError(ctx, "Argument must be a string");
+            }
+            s = log;
+            JS_FreeCString(ctx, log);
+        }
+        else {
+            JSValue json_str_val = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
+            if (JS_IsException(json_str_val)) {
+                return JS_UNDEFINED;
+            }
+
+            const char* json_str = JS_ToCString(ctx, json_str_val);
+            if (!json_str) {
+                JS_FreeValue(ctx, json_str_val);
+                return JS_UNDEFINED;
+            }
+            s = json_str;
+            JS_FreeCString(ctx, json_str);
         }
 
-        std::string s = log;
         pEngine->m_vecOutput.push_back(s);
-
         LOG(s);
-
-        JS_FreeCString(ctx, log);
-        return JS_NewObject(ctx);
+        return JS_UNDEFINED;
     }
 
     static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -366,38 +381,6 @@ extern "C" {
         JS_FreeValue(ctx, error);
 
         return JS_UNDEFINED;
-    }
-
-    static JSValue qjs_json_stringify(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        if (argc == 1) {
-            JSValue global = JS_GetGlobalObject(ctx);
-            JSValue jsonObj = JS_GetPropertyStr(ctx, global, "JSON");
-            JSValue stringifyFunc = JS_GetPropertyStr(ctx, jsonObj, "stringify");
-            JSValue result = JS_Call(ctx, stringifyFunc, jsonObj, 1, argv);
-
-            JS_FreeValue(ctx, stringifyFunc);
-            JS_FreeValue(ctx, jsonObj);
-            JS_FreeValue(ctx, global);
-
-            return result;
-        }
-        return JS_NULL;
-    }
-
-    static JSValue qjs_json_parse(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        if (argc == 1) {
-            JSValue global = JS_GetGlobalObject(ctx);
-            JSValue jsonObj = JS_GetPropertyStr(ctx, global, "JSON");
-            JSValue parseFunc = JS_GetPropertyStr(ctx, jsonObj, "parse");
-            JSValue result = JS_Call(ctx, parseFunc, jsonObj, 1, argv);
-
-            JS_FreeValue(ctx, parseFunc);
-            JS_FreeValue(ctx, jsonObj);
-            JS_FreeValue(ctx, global);
-
-            return result;
-        }
-        return JS_NULL;
     }
 
     static JSValue qjs_str_toHexStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
@@ -782,6 +765,224 @@ extern "C" {
         JS_FreeCString(ctx, s);
         return arr;
     }
+
+    static JSValue qjs_ByteArray_readInt32LE(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsArray = argv[0];
+
+        if (!JS_IsArray(ctx, jsArray)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        JSValue len_val = JS_GetPropertyStr(ctx, jsArray, "length");
+        int32_t len = 0;
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+        vector<unsigned char> byteArray;
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
+            int32_t v = 0;
+            JS_ToInt32(ctx, &v, item);
+            byteArray.push_back(v);
+            JS_FreeValue(ctx, item);
+        }
+
+        if (offset + 4 > byteArray.size()) {
+            return JS_NULL;
+        }
+
+        int ret = 0;
+        unsigned char* pRet = (unsigned char*)&ret;
+        memcpy(pRet, byteArray.data() + offset, 4);
+        return JS_NewInt32(ctx, ret);
+    }
+    static JSValue qjs_ByteArray_readUInt32LE(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsArray = argv[0];
+
+        if (!JS_IsArray(ctx, jsArray)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        JSValue len_val = JS_GetPropertyStr(ctx, jsArray, "length");
+        int32_t len = 0;
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+        vector<unsigned char> byteArray;
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
+            int32_t v = 0;
+            JS_ToInt32(ctx, &v, item);
+            byteArray.push_back(v);
+            JS_FreeValue(ctx, item);
+        }
+
+        if (offset + 4 > byteArray.size()) {
+            return JS_NULL;
+        }
+
+        uint32_t ret = 0;
+        unsigned char* pRet = (unsigned char*)&ret;
+        memcpy(pRet, byteArray.data() + offset, 4);
+        return JS_NewUint32(ctx, ret);
+    }
+    static JSValue qjs_ByteArray_readFloatLE(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsArray = argv[0];
+
+        if (!JS_IsArray(ctx, jsArray)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        JSValue len_val = JS_GetPropertyStr(ctx, jsArray, "length");
+        int32_t len = 0;
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+        vector<unsigned char> byteArray;
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
+            int32_t v = 0;
+            JS_ToInt32(ctx, &v, item);
+            byteArray.push_back(v);
+            JS_FreeValue(ctx, item);
+        }
+
+        if (offset + 4 > byteArray.size()) {
+            return JS_NULL;
+        }
+
+        float ret = 0;
+        unsigned char* pRet = (unsigned char*)&ret;
+        memcpy(pRet, byteArray.data() + offset, 4);
+        return JS_NewFloat64(ctx, ret);
+    }
+    static JSValue qjs_ByteArray_readInt16LE(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsArray = argv[0];
+
+        if (!JS_IsArray(ctx, jsArray)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        JSValue len_val = JS_GetPropertyStr(ctx, jsArray, "length");
+        int32_t len = 0;
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+        vector<unsigned char> byteArray;
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
+            int32_t v = 0;
+            JS_ToInt32(ctx, &v, item);
+            byteArray.push_back(v);
+            JS_FreeValue(ctx, item);
+        }
+
+        if (offset + 4 > byteArray.size()) {
+            return JS_NULL;
+        }
+
+        int16_t ret = 0;
+        unsigned char* pRet = (unsigned char*)&ret;
+        memcpy(pRet, byteArray.data() + offset, 2);
+        return JS_NewInt64(ctx, ret);
+    }
+    static JSValue qjs_ByteArray_readUInt16LE(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsArray = argv[0];
+
+        if (!JS_IsArray(ctx, jsArray)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        JSValue len_val = JS_GetPropertyStr(ctx, jsArray, "length");
+        int32_t len = 0;
+        JS_ToInt32(ctx, &len, len_val);
+        JS_FreeValue(ctx, len_val);
+        vector<unsigned char> byteArray;
+        for (int32_t i = 0; i < len; ++i) {
+            JSValue item = JS_GetPropertyUint32(ctx, jsArray, i);
+            int32_t v = 0;
+            JS_ToInt32(ctx, &v, item);
+            byteArray.push_back(v);
+            JS_FreeValue(ctx, item);
+        }
+
+        if (offset + 4 > byteArray.size()) {
+            return JS_NULL;
+        }
+
+        uint16_t ret = 0;
+        unsigned char* pRet = (unsigned char*)&ret;
+        memcpy(pRet, byteArray.data() + offset, 2);
+        return JS_NewInt64(ctx, ret);
+    }
+    static JSValue qjs_Byte_readBit(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        if (argc != 2) {
+            return JS_NULL;
+        }
+        JSValue jsByteVal = argv[0];
+
+        if (!JS_IsNumber(jsByteVal)) {
+            return JS_NULL;
+        }
+
+        if (!JS_IsNumber(argv[1])) {
+            return JS_NULL;
+        }
+
+        int32_t offset = 0;
+        JS_ToInt32(ctx, &offset, argv[1]);
+        
+        if (offset > 7) {
+            return JS_NULL;
+        }
+
+        int32_t byteVal32 = 0;
+        JS_ToInt32(ctx, &byteVal32, jsByteVal);
+
+        byteVal32 = (byteVal32 >> offset) & 0x01;
+        return JS_NewInt64(ctx, byteVal32);
+    }
 } 
 
 void register_cpp_functions(JSContext* ctx) {
@@ -800,12 +1001,22 @@ void register_cpp_functions(JSContext* ctx) {
 
     JS_SetPropertyStr(ctx, global, "sleep", JS_NewCFunction(ctx, qjs_sleep, "sleep", 1));
     JS_SetPropertyStr(ctx, global, "backtrace", JS_NewCFunction(ctx, qjs_backtrace, "backtrace", 1));
-    JS_SetPropertyStr(ctx, global, "json_stringify", JS_NewCFunction(ctx, qjs_json_stringify, "json_stringify", 1));
-    JS_SetPropertyStr(ctx, global, "json_parse", JS_NewCFunction(ctx, qjs_json_parse, "json_parse", 1));
 
     JSValue strObj = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, strObj, "toHexStr", JS_NewCFunction(ctx, qjs_str_toHexStr, "toHexStr", 1));
     JS_SetPropertyStr(ctx, global, "STR", strObj);
+
+    JSValue ByteArray = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, ByteArray, "readInt32LE", JS_NewCFunction(ctx, qjs_ByteArray_readInt32LE, "readInt32LE", 2));
+    JS_SetPropertyStr(ctx, ByteArray, "readUInt32LE", JS_NewCFunction(ctx, qjs_ByteArray_readUInt32LE, "readUInt32LE", 2));
+    JS_SetPropertyStr(ctx, ByteArray, "readInt16LE", JS_NewCFunction(ctx, qjs_ByteArray_readInt16LE, "readInt16LE", 2));
+    JS_SetPropertyStr(ctx, ByteArray, "readUInt16LE", JS_NewCFunction(ctx, qjs_ByteArray_readUInt16LE, "readUInt16LE", 2));
+    JS_SetPropertyStr(ctx, ByteArray, "readFloatLE", JS_NewCFunction(ctx, qjs_ByteArray_readFloatLE, "readFloatLE", 2));
+    JS_SetPropertyStr(ctx, global, "ByteArray", ByteArray);
+
+    JSValue Byte = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, Byte, "readBit", JS_NewCFunction(ctx, qjs_Byte_readBit, "readBit", 2));
+    JS_SetPropertyStr(ctx, global, "Byte", Byte);
 
     JS_SetPropertyStr(ctx, global, "time", JS_NewCFunction(ctx, qjs_time, "time", 0));
     JS_SetPropertyStr(ctx, global, "openSerial", JS_NewCFunction(ctx, qjs_openSerial, "openSerial", 5));
@@ -1259,6 +1470,7 @@ void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
 {
     yyjson_mut_obj_add_strcpy(doc, yyVal, "runTime", lastExe.c_str());
 	yyjson_mut_obj_add_str(doc, yyVal, "retVal", retVal.c_str());
+    yyjson_mut_obj_add_str(doc, yyVal, "lastError", lastError.c_str());
 	yyjson_mut_obj_add_bool(doc, yyVal, "runSuccess", runSuccess);
 	yyjson_mut_obj_add_bool(doc, yyVal, "valNullInCalc", valNullInCalc);
 

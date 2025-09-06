@@ -756,31 +756,35 @@ static JSValue qjs_ioDev_setOffline(JSContext* ctx, JSValueConst this_val, int a
 static JSValue qjs_ioDev_input(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
 
+    json jDev;
+    jsValToJsonVal(ctx, this_val, jDev);
+
+    if (!jDev.is_object())
+        return JS_NewBool(ctx, false);
+
+    if (jDev["confNodeId"] == nullptr)
+        return JS_NewBool(ctx, false);
+
+    std::string confNodeId = jDev["confNodeId"];
+
+    ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
+    if (!p)
+        return JS_NewBool(ctx, false);
+
     if (jArgs.size() >= 2) {
-        json jDev;
-        jsValToJsonVal(ctx, this_val, jDev);
-
-        if (!jDev.is_object())
-            return JS_NewBool(ctx, false);
-
-        if (jDev["confNodeId"] == nullptr)
-            return JS_NewBool(ctx, false);
-
-        std::string confNodeId = jDev["confNodeId"];
-
-        ioDev* p = ioSrv.getIODevByNodeID(confNodeId);
-        if (!p)
-            return JS_NewBool(ctx, false);
-
         json jVal = jArgs[0];
         json addr = jArgs[1];
-
         std::string chanAddr = addr.get<std::string>();
         bool bRet = p->input(jVal, chanAddr);
-
         return JS_NewBool(ctx, bRet);
     }
-
+    else if (jArgs.size() == 1 && jArgs[0].is_object()) {
+        json& jChans = jArgs[0];
+        for (auto& [key, val] : jChans.items()) {
+            p->input(val, key);
+        }
+        return JS_NewBool(ctx, true);
+    }
     return JS_NewBool(ctx, false);
 }
 
