@@ -317,6 +317,9 @@ namespace IO_TYPE {
 }
 
 namespace JSON_STR {
+	const string Null = "null";
+	const string True = "true";
+	const string False = "false";
 	inline bool is_bool(const string& s) {
 		if (s == "true" || s == "false") { return true; }
 		return false;

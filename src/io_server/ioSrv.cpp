@@ -2568,7 +2568,11 @@ void ioHandler_mbRtu::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen,
 
 	ioDev* p = ioSrv.getIODev("UDP-" + udpSession.remoteIP, false, true);
 	if (p) {
-		p->onRecvData(recvData, recvDataLen);
+		if (udpSession.multicast) { //不解析应用层可以直接判断为通知数据的情形
+			p->onRecvDataNotify(recvData, recvDataLen);
+		}
+		else
+			p->onRecvData(recvData, recvDataLen);
 	}
 }
 

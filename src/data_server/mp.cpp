@@ -999,9 +999,21 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
 	}
 
 	string newVal = jVal.dump();
+
+	if (m_valType == VAL_TYPE::boolean) {
+		if (JSON_STR::is_num(newVal)) {
+			double v = JSON_STR::get_num(newVal);
+			if (v == 0) {
+				newVal = JSON_STR::False;
+			}
+			else {
+				newVal = JSON_STR::True;
+			}
+		}
+	}
+
 	if (memcmp(&dataTime, &m_stDataLastUpdate, sizeof(TIME)) == 0) {
 		string sLastVal = m_curVal;
-
 		//特殊情况，数据更新时间没有改变，但是数据却改变了，可能发生在二次计算监控点利用脚本算出了一个错误数值
 		//后续脚本更新，算出正确数值，但是由于时间都使用了计算脚本引用的监控点的时间，该监控点更新时间不改变的话
 		//数值无法更新进入计算监测点
@@ -1015,43 +1027,31 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
 	}
 
 	//数字类型进行kb处理和上下限处理
-	if (jVal.is_number()) {
+	if (JSON_STR::is_num(newVal)) {
 		if (m_valType == "int") {
-			int iVal = jVal.get<int>();
-
-			json jOrgVal = iVal;
-			m_orgVal = jOrgVal.dump();
-
-			int iCurVal = (int) (iVal * m_K + m_B);
-			jVal = iCurVal;
+			m_orgVal = newVal;
+			int orgVal= JSON_STR::get_int(newVal);
+			int iCurVal = (int) (orgVal * m_K + m_B);
+			newVal = to_string(iCurVal);
 
 			if (m_validRange.enable) {
 				if (iCurVal < m_validRange.min || iCurVal > m_validRange.max) {
-					jVal = nullptr;
+					newVal = JSON_STR::Null;
 				}
 			}
 		}
 		else {
-			double dbVal = jVal.get<double>();
-
-			json jOrgVal = dbVal;
-			m_orgVal = jOrgVal.dump();
-
+			m_orgVal = newVal;
+			double dbVal =  JSON_STR::get_num(newVal);
 			//dbVal*m_k可能会把一些超过double精度的非精确字段移到前面,而产生误差.默认保留10位小数精度
 			double dbCurVal = dbVal * m_K + m_B; // linear calibration using K and B 
-
-			string sVal;
 			if (m_decimalDigits >= 0) {
 				string formatter = "%." + str::fromInt(m_decimalDigits) + "f";
-				sVal = str::format(formatter.c_str(), dbCurVal);
+				newVal = str::format(formatter.c_str(), dbCurVal);
 			}
 			else {
-				sVal = str::format("%.10f", dbCurVal);
+				newVal = str::format("%.10f", dbCurVal);
 			}
-
-			dbCurVal = atof(sVal.c_str());
-			jVal = dbCurVal;
-
 			//关键机制。当采集到的数据是错误的（不在有效范围内），将当前值置为fasle
 			//否则如果将错误值进行二次计算或者统计分析，会得到很多错误的结果
 			//程序应当允许在某些值为null时，依然能够输出一些二次计算或者统计分析的结果
@@ -1061,8 +1061,6 @@ void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
 				}
 			}
 		}
-
-		newVal = jVal.dump();
 	}
 
 	string sFileData = "null";

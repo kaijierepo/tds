@@ -333,7 +333,8 @@ public:
 	virtual bool onRecvPkt(json jPkt);
 	virtual bool onRecvPkt(yyjson_val* jPkt,yyjson_doc* doc);
 	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) { return false; }; //接收到完整的协议数据包
-	virtual bool onRecvData(unsigned char* pData, size_t iLen);//接受数据异步处理函数
+	virtual bool onRecvData(unsigned char* pData, size_t iLen);//接受数据处理函数
+	virtual bool onRecvDataNotify(unsigned char* pData, size_t iLen) { return false; };//无需解析应用层数据，已知该数据是通知，例如组播心跳
 	virtual bool onRecvData(TIME dataTime, unsigned char* pData, size_t iLen);
 	virtual void OnRequestTimeout(int cmd1, int cmd2);
 

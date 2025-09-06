@@ -303,9 +303,48 @@ void ioDev_custom::onEvent_online()
 	ioDev::onEvent_online();
 }
 
+bool ioDev_custom::onRecvDataNotify(unsigned char* pData, size_t iLen) {
+	setOnline();
+	if (m_onRecvScript != "") {
+#ifdef _DEBUG
+		LOG("执行脚本: " + m_onRecvScript);
+#endif
+
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
+		json jRecvData = json::array();
+		for (int i = 0; i < iLen; i++) {
+			int v = pData[i];
+			jRecvData.push_back(v);
+		}
+
+		se.m_globalObj["RecvData"] = jRecvData;
+		se.m_ioDevThis = this;
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(m_onRecvScript, si);
+		se.runScript(si.script, "", m_lastRunInfo_onRecv);
+
+		if (se.m_sError != "") {
+			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			LOG(s);
+		}
+		else {
+
+		}
+	}
+	return true;
+}
+
 bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen) {
 	setOnline();
 
+	//此处的接收脚本，内部需要给出是否handled，来决定数据是否作为response
+	//否则通知可能会作为reponse处理。该机制后续优化
 	if (m_onRecvScript != "") {
 #ifdef _DEBUG
 		LOG("执行脚本: " + m_onRecvScript);
