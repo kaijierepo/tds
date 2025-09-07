@@ -261,7 +261,7 @@ void acq_thread_customDev(ioDev_custom* pDev) {
 		SCRIPT_INFO si;
 		scriptManager.getScript(pDev->m_cycleTaskScript, si);
 		if (si.enable) {
-			se.runScript(si.script, "", pDev->m_lastRunInfo_cycleAcq);
+			se.runScript(si, pDev->m_lastRunInfo_cycleAcq);
 
 			if (se.m_sError != "") {
 				LOG("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", pDev->m_cycleTaskScript.c_str(), se.m_sError.c_str(), pDev->getIOAddrStr().c_str());
@@ -306,12 +306,7 @@ void ioDev_custom::onEvent_online()
 bool ioDev_custom::onRecvDataNotify(unsigned char* pData, size_t iLen) {
 	setOnline();
 	if (m_onRecvScript != "") {
-#ifdef _DEBUG
-		LOG("执行脚本: " + m_onRecvScript);
-#endif
-
 		ScriptEngine se;
-
 #ifdef TDS
 		se.m_initTdsFunc = initTdsFunc;
 #endif
@@ -327,7 +322,7 @@ bool ioDev_custom::onRecvDataNotify(unsigned char* pData, size_t iLen) {
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_onRecvScript, si);
-		se.runScript(si.script, "", m_lastRunInfo_onRecv);
+		se.runScript(si, m_lastRunInfo_onRecv);
 
 		if (se.m_sError != "") {
 			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
@@ -367,7 +362,7 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen) {
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_onRecvScript, si);
-		se.runScript(si.script, "",m_lastRunInfo_onRecv);
+		se.runScript(si,m_lastRunInfo_onRecv);
 
 		if (se.m_sError != "") {
 			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
@@ -407,10 +402,10 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 		scriptManager.getScript(m_outputScript, si);
 
 		if (si.enable) {
-			se.runScript(si.script, "", m_lastRunInfo_output);
+			se.runScript(si,m_lastRunInfo_output);
 
-			if (se.m_sError != "") {
-				string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+			if (m_lastRunInfo_output.lastError != "") {
+				string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", m_outputScript.c_str(), m_lastRunInfo_output.lastError.c_str(), getIOAddrStr().c_str());
 				LOG(s);
 				err = s;
 			}
@@ -468,7 +463,7 @@ bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_tdspScript, si);
-		se.runScript(si.script, "",si.lastRunInfo);
+		se.runScript(si,si.lastRunInfo);
 		scriptManager.setRunInfo(si.name, si.lastRunInfo);
 
 		if (se.m_sError != "") {

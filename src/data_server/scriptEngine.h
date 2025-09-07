@@ -22,6 +22,38 @@ struct SCRIPT_RUN_INFO {
 	void toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal);
 };
 
+struct SCRIPT_INFO {
+	string script = "";
+	bool isFolder = false;
+	string folderPath = "";
+	string envVarScript = "";
+	string calcMpTag = "";
+	string callerObjTag = "";
+	string rootTag = "";
+	string devAddr = "";
+	string mode = "";
+	string devId = "";
+	string user = "";
+	int interval = 0;
+
+	string org = "";
+	string lastModifyTime = "";
+	string lastModifyUser = "";
+	string name = "";
+	string desc = "";
+
+	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
+	bool enableLog = false;
+
+	bool enable = false;
+
+	string getContextTag();
+	string getExpContextTag();
+
+	void toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus = false);
+	void fromJson(yyjson_val* mutRoot);
+};
+
 class ScriptEngine;
 
 typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
@@ -31,7 +63,7 @@ typedef void (*fp_callMethodRR)(const string& req,string& resp);
 class ScriptEngine {
 public:
 	ScriptEngine();
-	bool runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder = "");
+	bool runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri);
 
 	string m_sError;
 	vector<string> m_vecOutput;         //执行一次脚本的输出信息，包含错误信息，脚本中的log
@@ -63,6 +95,8 @@ public:
 	fp_initTdsFunc m_initTdsFunc;
 	static fp_callMethod  callMethodImp;
 	static fp_callMethodRR callMethodRRImp;
+	static string ScriptFolder;
+	static void init();
 };
 
 extern thread_local ScriptEngine* pEngine;

@@ -6422,7 +6422,7 @@ bool rpcHandler::apiAdaptorScript(json& jResult)
 
 		SCRIPT_INFO si;
 		scriptManager.getScript(tds->conf->m_apiAdaptorScript, si);
-		if (se.runScript(si.script, "",si.lastRunInfo))
+		if (se.runScript(si,si.lastRunInfo))
 		{
 			if (se.m_scriptRet != nullptr)
 				jResult = se.m_scriptRet;

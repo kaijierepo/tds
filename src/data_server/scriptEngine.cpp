@@ -1072,6 +1072,235 @@ bool is_integer(double x) {
 mutex g_mutexScriptFileBuff;
 map<string, string> g_mapScriptFileBuff;
 
+static std::wstring utf8_to_utf16(const string& u8str) {
+    const char* utf8_str = u8str.c_str();
+    size_t length = u8str.length();
+    if (!utf8_str || length == 0) {
+        return std::wstring();
+    }
+
+    // 预分配足够的空间（最坏情况：每个ASCII字符对应1个wchar_t）
+    std::wstring result;
+    result.reserve(length);
+
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(utf8_str);
+    const uint8_t* end = data + length;
+
+    while (data < end) {
+        uint8_t c = *data;
+
+        if (c < 0x80) {
+            // 单字节UTF-8 (0-0x7F)
+            result.push_back(static_cast<wchar_t>(c));
+            data++;
+        }
+        else if ((c & 0xE0) == 0xC0) {
+            // 双字节UTF-8 (0x80-0x7FF)
+            if (data + 1 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x1F) << 6) | (data[1] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 2;
+        }
+        else if ((c & 0xF0) == 0xE0) {
+            // 三字节UTF-8 (0x800-0xFFFF)
+            if (data + 2 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x0F) << 12) |
+                ((data[1] & 0x3F) << 6) |
+                (data[2] & 0x3F);
+            result.push_back(static_cast<wchar_t>(code_point));
+            data += 3;
+        }
+        else if ((c & 0xF8) == 0xF0) {
+            // 四字节UTF-8 (0x10000-0x10FFFF)，需要UTF-16代理对
+            if (data + 3 >= end) {
+                throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
+            }
+
+            uint32_t code_point = ((c & 0x07) << 18) |
+                ((data[1] & 0x3F) << 12) |
+                ((data[2] & 0x3F) << 6) |
+                (data[3] & 0x3F);
+
+            // 转换为UTF-16代理对
+            code_point -= 0x10000;
+            wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
+            wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
+
+            result.push_back(high_surrogate);
+            result.push_back(low_surrogate);
+            data += 4;
+        }
+        else {
+            throw std::runtime_error("Invalid UTF-8 sequence: invalid leading byte");
+        }
+    }
+
+    // 调整容量以释放多余空间
+    result.shrink_to_fit();
+    return result;
+}
+
+static std::string utf16_to_utf8(const wstring& u16str) {
+    const wchar_t* utf16_str = u16str.c_str();
+    size_t length = u16str.length();
+    if (!utf16_str || length == 0) {
+        return std::string();
+    }
+
+    // 预分配足够的空间（最坏情况：每个UTF-16代码单元对应3字节）
+    std::string result;
+    result.reserve(length * 3);
+
+    const wchar_t* data = utf16_str;
+    const wchar_t* end = data + length;
+
+    while (data < end) {
+        uint32_t code_unit = static_cast<uint32_t>(*data);
+
+        if (code_unit < 0xD800 || code_unit > 0xDFFF) {
+            // 不是代理对，直接处理
+            if (code_unit < 0x80) {
+                // 单字节UTF-8
+                result.push_back(static_cast<char>(code_unit));
+            }
+            else if (code_unit < 0x800) {
+                // 双字节UTF-8
+                result.push_back(static_cast<char>(0xC0 | (code_unit >> 6)));
+                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+            }
+            else {
+                // 三字节UTF-8
+                result.push_back(static_cast<char>(0xE0 | (code_unit >> 12)));
+                result.push_back(static_cast<char>(0x80 | ((code_unit >> 6) & 0x3F)));
+                result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
+            }
+            data++;
+        }
+        else {
+            // 处理代理对
+            if (code_unit > 0xDBFF || data + 1 >= end) {
+                throw std::runtime_error("Invalid UTF-16 sequence: invalid surrogate pair");
+            }
+
+            uint32_t high_surrogate = code_unit;
+            uint32_t low_surrogate = static_cast<uint32_t>(*(data + 1));
+
+            if (low_surrogate < 0xDC00 || low_surrogate > 0xDFFF) {
+                throw std::runtime_error("Invalid UTF-16 sequence: invalid low surrogate");
+            }
+
+            // 计算实际代码点
+            uint32_t code_point = ((high_surrogate - 0xD800) << 10) +
+                (low_surrogate - 0xDC00) + 0x10000;
+
+            // 四字节UTF-8
+            result.push_back(static_cast<char>(0xF0 | (code_point >> 18)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
+            result.push_back(static_cast<char>(0x80 | (code_point & 0x3F)));
+
+            data += 2;
+        }
+    }
+
+    // 调整容量以释放多余空间
+    result.shrink_to_fit();
+    return result;
+}
+//脚本目录下的所有文件，发现文件直接加载到内存
+void thread_watchScriptFile(string scriptPath) {
+    if (scriptPath.empty()) {
+        return;
+    }
+    wstring wPath = utf8_to_utf16(scriptPath);
+    string lastFileModify;
+    TIME lastFileModifyTime; lastFileModifyTime.setNow();
+#ifdef WIN32
+    HANDLE h_dir = INVALID_HANDLE_VALUE;
+    BYTE lp_buffer[1024];
+    ZeroMemory(lp_buffer, 1024);
+    DWORD bytes = NULL;
+    BOOL isok = FALSE;
+    FILE_NOTIFY_INFORMATION* pnotify = (FILE_NOTIFY_INFORMATION*)lp_buffer;
+    FILE_NOTIFY_INFORMATION* tmp;
+    ZeroMemory(&lp_buffer, sizeof(FILE_NOTIFY_INFORMATION));
+    h_dir = CreateFileW(wPath.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ |
+        FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+    if (INVALID_HANDLE_VALUE == h_dir) {
+        printf("error %d", GetLastError());
+        return;
+    }
+    WCHAR* ws_file_name = new wchar_t[_MAX_FNAME];
+    while (1) {//m_start 判断线程结束的标志
+        //FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,可更改为其他需要检测到的文件的某些变化
+        isok = ReadDirectoryChangesW(h_dir, &lp_buffer, sizeof(lp_buffer), TRUE,
+            FILE_NOTIFY_CHANGE_LAST_WRITE,
+            &bytes, NULL, NULL);
+        if (isok) {
+            tmp = pnotify;
+            if (tmp->FileNameLength) {
+                memcpy(ws_file_name, tmp->FileName, (tmp->FileNameLength + 1) * 2);
+            }
+
+            if (tmp->Action == FILE_ACTION_MODIFIED) {//判断文件发生变化具体的事件
+                string file_name = utf16_to_utf8(ws_file_name);//得到发生变化的文件名
+                file_name = str::replace(file_name, "\\", "/");
+                string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
+                LOG("[keyinfo]检测到脚本文件改变:" + file_path);
+                string file_data;
+                if (DB_FS::readFile(file_path, file_data)) {
+                    g_mutexScriptFileBuff.lock();
+                    g_mapScriptFileBuff[file_path] = file_data;
+                    g_mutexScriptFileBuff.unlock();
+                }
+            }
+            ZeroMemory(tmp, 1024);
+        }
+        else {
+            printf("ReadDirectoryChangesW error");
+        }
+    }
+    if (ws_file_name) {
+        delete[]ws_file_name;
+    }
+    CloseHandle(h_dir);
+#else
+
+#endif
+}
+
+bool loadScriptFile(string path, string& data) {
+    string script;
+    g_mutexScriptFileBuff.lock();
+    map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
+    g_mutexScriptFileBuff.unlock();
+    if (iter != g_mapScriptFileBuff.end() && !pEngine->m_reloadFile) {
+        script = iter->second;
+        return true;
+    }
+    else {
+        if (!DB_FS::readFile(path, script)) {
+            g_mutexScriptFileBuff.lock();
+            g_mapScriptFileBuff.erase(path);
+            g_mutexScriptFileBuff.unlock();
+            return false;
+        }
+        else{
+            g_mutexScriptFileBuff.lock();
+            g_mapScriptFileBuff[path] = script;
+            g_mutexScriptFileBuff.unlock();
+            return true;
+        }
+    }
+}
+
 JSModuleDef* qjs_module_loader(JSContext* ctx,
     const char* module_name,
     void* opaque) {
@@ -1080,26 +1309,11 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
 	string path = pEngine->m_folderPath + "/" + s;
 
     string script;
-    g_mutexScriptFileBuff.lock();
-    map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
-    g_mutexScriptFileBuff.unlock();
-    if (iter != g_mapScriptFileBuff.end() && !pEngine->m_reloadFile) {
-        script = iter->second;
-    }
-    else{
-        if (!DB_FS::readFile(path, script)) {
-            JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
-            return NULL;
-        }
+    bool ret = loadScriptFile(path, script);
 
-        if (script == "") {
-            JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
-            return NULL;
-        }
-
-        g_mutexScriptFileBuff.lock();
-		g_mapScriptFileBuff[path] = script;
-        g_mutexScriptFileBuff.unlock();
+    if (!ret) {
+        JS_ThrowReferenceError(ctx, "Cannot open module: %s", module_name);
+        return NULL;
     }
 
     // 编译模块
@@ -1117,6 +1331,7 @@ JSModuleDef* qjs_module_loader(JSContext* ctx,
 
 fp_callMethod ScriptEngine::callMethodImp = nullptr;
 fp_callMethodRR ScriptEngine::callMethodRRImp = nullptr;
+string ScriptEngine::ScriptFolder = "";
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
@@ -1127,9 +1342,24 @@ ScriptEngine::ScriptEngine() {
     m_envVarScriptLine = 0;
 }
 
-bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,string folder) {
-	m_script = script;
-	m_user = user;
+bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
+    string folder;
+    string scriptPath;
+    if (si.script == "") {
+        if (si.isFolder) {
+            folder = ScriptEngine::ScriptFolder + "/" + si.name;
+            scriptPath = folder + "./main.js";
+        }
+        else {
+            scriptPath = folder + "/" + si.name + ".js";
+        }
+        loadScriptFile(scriptPath, m_script);
+    }
+    else {
+        m_script = si.script;
+    }
+
+	m_user = si.user;
 
 	m_vecOutput.clear();
 	bool runOk = false;
@@ -1171,13 +1401,14 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
 
         JSValue result;
         if (folder != "") {
-            result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_MODULE);
+            result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
         }
         else {
-            result = JS_Eval(ctx, script.c_str(), script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+            result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
         }
-        
 
+        const char* p = JS_ToCString(ctx, result);
+    
 		if (JS_IsException(result)) {
 			JSValue error = JS_GetException(ctx);
 			const char* err = JS_ToCString(ctx, error);
@@ -1186,10 +1417,11 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
             const char* stack = JS_ToCString(ctx, stack_val);
 
             // 提取行号
-            int line = extract_line_number(stack) - m_envVarScriptLine;
+            //int line = extract_line_number(stack) - m_envVarScriptLine;
 
 			string s = err;
-			s = "Exception at line " + std::to_string(line) + ":" + s;
+			//s = "Exception at line " + std::to_string(line) + ":" + s;
+            s += stack;
             sri.lastError = s;
 			m_vecOutput.push_back(s);
 
@@ -1241,6 +1473,12 @@ bool ScriptEngine::runScript(string& script, string user, SCRIPT_RUN_INFO& sri,s
     sri.valNullInCalc = m_bValNullInCalc;
     sri.runSuccess = runOk;
 	return runOk;
+}
+
+void ScriptEngine::init()
+{
+    thread t(thread_watchScriptFile, ScriptEngine::ScriptFolder);
+    t.detach();
 }
 
 void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal) {
@@ -1483,4 +1721,126 @@ void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
     }
 
     yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);
+}
+
+
+string SCRIPT_INFO::getContextTag() {
+    string envTag = rootTag;
+    envTag = TAG::addRoot(envTag, callerObjTag);
+    envTag = TAG::addRoot(envTag, org);
+
+    return envTag;
+}
+
+string SCRIPT_INFO::getExpContextTag() {
+    string envTag = rootTag;
+    envTag = TAG::addRoot(envTag, callerObjTag);
+    envTag = TAG::addRoot(envTag, org);
+
+    return envTag;
+}
+
+void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus) {
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "mode", mode.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "name", name.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "desc", desc.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyTime", lastModifyTime.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyUser", lastModifyUser.c_str());
+
+    int min = interval / (60 * 1000);
+    int time = interval % (60 * 1000);
+    int sec = time / 1000;
+    int milli = time % 1000;
+
+    yyjson_mut_val* jIter = yyjson_mut_obj(mutDoc);
+    yyjson_mut_obj_add_int(mutDoc, jIter, "min", min);
+    yyjson_mut_obj_add_int(mutDoc, jIter, "sec", sec);
+    yyjson_mut_obj_add_int(mutDoc, jIter, "milli", milli);
+    yyjson_mut_obj_add_val(mutDoc, mutRoot, "interval", jIter);
+
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "rootTag", rootTag.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devAddr", devAddr.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devId", devId.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "calcMpTag", calcMpTag.c_str());
+    yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "callerObjTag", callerObjTag.c_str());
+
+    if (getStatus) {
+        yyjson_mut_val* runInfo = yyjson_mut_obj(mutDoc);
+        lastRunInfo.toJson(mutDoc, runInfo);
+        yyjson_mut_obj_add_val(mutDoc, mutRoot, "runInfo", runInfo);
+    }
+
+    yyjson_mut_obj_add_bool(mutDoc, mutRoot, "enable", enable);
+    yyjson_mut_obj_add_bool(mutDoc, mutRoot, "isFolder", isFolder);
+}
+
+void SCRIPT_INFO::fromJson(yyjson_val* root) {
+    yyjson_val* val;
+
+    val = yyjson_obj_get(root, "mode");
+    if (val && yyjson_is_str(val)) {
+        mode = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "name");
+    if (val && yyjson_is_str(val)) {
+        name = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "lastModifyUser");
+    if (val && yyjson_is_str(val)) {
+        lastModifyUser = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "desc");
+    if (val && yyjson_is_str(val)) {
+        desc = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "rootTag");
+    if (val && yyjson_is_str(val)) {
+        rootTag = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "devAddr");
+    if (val && yyjson_is_str(val)) {
+        devAddr = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "devId");
+    if (val && yyjson_is_str(val)) {
+        devId = yyjson_get_str(val);
+    }
+
+    val = yyjson_obj_get(root, "interval");
+    if (val && yyjson_is_obj(val)) {
+        int min = 0, sec = 0, milli = 0;
+        yyjson_val* vmin = yyjson_obj_get(val, "min");
+        yyjson_val* vsec = yyjson_obj_get(val, "sec");
+        yyjson_val* vmilli = yyjson_obj_get(val, "milli");
+
+        if (vmin && yyjson_is_int(vmin)) {
+            min = (int)yyjson_get_int(vmin);
+        }
+
+        if (vsec && yyjson_is_int(vsec)) {
+            sec = (int)yyjson_get_int(vsec);
+        }
+
+        if (vmilli && yyjson_is_int(vmilli)) {
+            milli = (int)yyjson_get_int(vmilli);
+        }
+
+        interval = min * 60 * 1000 + sec * 1000 + milli;
+    }
+
+    val = yyjson_obj_get(root, "enable");
+    if (val && yyjson_is_bool(val)) {
+        enable = yyjson_get_bool(val);
+    }
+
+    val = yyjson_obj_get(root, "isFolder");
+    if (val && yyjson_is_bool(val)) {
+        isFolder = yyjson_get_bool(val);
+    }
 }

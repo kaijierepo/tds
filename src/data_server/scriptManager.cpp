@@ -127,7 +127,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag) {
 #endif
 
 		se.m_tagContext = si.getContextTag();
-		se.runScript(si.script, si.lastModifyUser,si.lastRunInfo);
+		se.runScript(si,si.lastRunInfo);
 	}
 #endif
 }
@@ -209,13 +209,12 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		getExpRet = yyjson_get_bool(get_exp_ret_val);
 	}
 
-	string mainScript;
 	string folder;
 	SCRIPT_INFO si;
 
 	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
 	if (script_val && yyjson_is_str(script_val)) {
-		mainScript = yyjson_get_str(script_val);
+		si.script = yyjson_get_str(script_val);
 		si.org = session.org;
 
 		// rootTag
@@ -244,17 +243,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 
 		if (getScript(scriptName, si)) {
-			if (si.isFolder) {
-				folder = m_confPath + "/scripts/" + si.name;
-				if (!DB_FS::readFile(folder + "/main.js", mainScript)) {
-					json jError = "main.js is empty";
-					rpcResp.error = jError.dump();
-					return true;
-				}
-			}
-			else {
-				mainScript = si.script;
-			}
 		}
 		else {
 			json jError = "specified script not found";
@@ -296,7 +284,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	if (env_var_val && yyjson_is_str(env_var_val)) {
 		string sEnvVar = yyjson_get_str(env_var_val);
 		if (sEnvVar != "") {
-			mainScript = sEnvVar + "\n" + mainScript;
+			si.script = sEnvVar + "\n" + si.script;
 
 			se.m_envVarScriptLine = static_cast<int>(std::count(sEnvVar.begin(), sEnvVar.end(), '\n')) + 1;
 		}
@@ -304,7 +292,8 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 
 	se.m_tagContext = si.getContextTag();
 	se.m_reloadFile = true;
-	bool runOk = se.runScript(mainScript, session.user, si.lastRunInfo, folder);
+	si.user = session.user;
+	bool runOk = se.runScript(si,si.lastRunInfo);
 
 	json jOutput = json::array();
 	if (getExpRet) {
@@ -709,14 +698,7 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		//TIME tStart;
 		//tStart.setNow();
-
-		string folder = "";
-		if (si.isFolder) {
-			folder = m_confPath + "/scripts/" + si.name;
-			DB_FS::readFile(folder + "./main.js", si.script);
-		}
-
-		bool runOk = se.runScript(si.script, si.lastModifyUser, si.lastRunInfo, folder);
+		bool runOk = se.runScript(si, si.lastRunInfo);
 
 		//int costMilli = TIME::calcTimePassMilliSecond(tStart);
 
@@ -789,7 +771,7 @@ void ScriptManager::exeAllVarExpScripts() {
 		se.m_tagContext = info.getContextTag();
 		se.m_bValNullInCalc = false;
 
-		bool runOk = se.runScript(script, info.lastModifyUser,info.lastRunInfo);
+		bool runOk = se.runScript(info,info.lastRunInfo);
 		if (!runOk) {
 			continue;
 		}
@@ -866,126 +848,5 @@ void ScriptManager::loopExe() {
 		}
 
 		TIME::sleepMilli(50);
-	}
-}
-
-string SCRIPT_INFO::getContextTag() {
-	string envTag = rootTag;
-	envTag = TAG::addRoot(envTag, callerObjTag);
-	envTag = TAG::addRoot(envTag, org);
-
-	return envTag;
-}
-
-string SCRIPT_INFO::getExpContextTag() {
-	string envTag = rootTag;
-	envTag = TAG::addRoot(envTag, callerObjTag);
-	envTag = TAG::addRoot(envTag, org);
-
-	return envTag;
-}
-
-void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus) {
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "mode", mode.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "name", name.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "desc", desc.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyTime", lastModifyTime.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "lastModifyUser", lastModifyUser.c_str());
-
-	int min = interval / (60 * 1000);
-	int time = interval % (60 * 1000);
-	int sec = time / 1000;
-	int milli = time % 1000;
-
-	yyjson_mut_val* jIter = yyjson_mut_obj(mutDoc);
-	yyjson_mut_obj_add_int(mutDoc, jIter, "min", min);
-	yyjson_mut_obj_add_int(mutDoc, jIter, "sec", sec);
-	yyjson_mut_obj_add_int(mutDoc, jIter, "milli", milli);
-	yyjson_mut_obj_add_val(mutDoc, mutRoot, "interval", jIter);
-
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "rootTag", rootTag.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devAddr", devAddr.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "devId", devId.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "calcMpTag", calcMpTag.c_str());
-	yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "callerObjTag", callerObjTag.c_str());
-
-	if (getStatus) {
-		yyjson_mut_val* runInfo = yyjson_mut_obj(mutDoc);
-		lastRunInfo.toJson(mutDoc, runInfo);
-		yyjson_mut_obj_add_val(mutDoc, mutRoot, "runInfo", runInfo);
-	}
-
-	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "enable", enable);
-	yyjson_mut_obj_add_bool(mutDoc, mutRoot, "isFolder", isFolder);
-}
-
-void SCRIPT_INFO::fromJson(yyjson_val* root) {
-	yyjson_val* val;
-
-	val = yyjson_obj_get(root, "mode");
-	if (val && yyjson_is_str(val)) {
-		mode = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "name");
-	if (val && yyjson_is_str(val)) {
-		name = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "lastModifyUser");
-	if (val && yyjson_is_str(val)) {
-		lastModifyUser = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "desc");
-	if (val && yyjson_is_str(val)) {
-		desc = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "rootTag");
-	if (val && yyjson_is_str(val)) {
-		rootTag = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "devAddr");
-	if (val && yyjson_is_str(val)) {
-		devAddr = yyjson_get_str(val);
-	}
-
-	val = yyjson_obj_get(root, "devId");
-	if (val && yyjson_is_str(val)) {
-		devId = yyjson_get_str(val);
-	}
-	
-	val = yyjson_obj_get(root, "interval");
-	if (val && yyjson_is_obj(val)) {
-		int min = 0, sec = 0, milli = 0;
-		yyjson_val* vmin = yyjson_obj_get(val, "min");
-		yyjson_val* vsec = yyjson_obj_get(val, "sec");
-		yyjson_val* vmilli = yyjson_obj_get(val, "milli");
-
-		if (vmin && yyjson_is_int(vmin)) {
-			min = (int)yyjson_get_int(vmin);
-		}
-
-		if (vsec && yyjson_is_int(vsec)) {
-			sec = (int)yyjson_get_int(vsec);
-		}
-
-		if (vmilli && yyjson_is_int(vmilli)) {
-			milli = (int)yyjson_get_int(vmilli);
-		}
-		
-		interval = min * 60 * 1000 + sec * 1000 + milli;
-	}
-
-	val = yyjson_obj_get(root, "enable");
-	if (val && yyjson_is_bool(val)) {
-		enable = yyjson_get_bool(val);
-	}
-
-	val = yyjson_obj_get(root, "isFolder");
-	if (val && yyjson_is_bool(val)) {
-		isFolder = yyjson_get_bool(val);
 	}
 }

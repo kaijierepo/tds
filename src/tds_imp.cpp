@@ -626,6 +626,8 @@ bool TDS_imp::run(string cmdline) {
 	//
 	userMng.init();
 	ScriptEngine::callMethodImp = callMethod;
+	ScriptEngine::ScriptFolder = tds->conf->confPath + "/scripts";
+	ScriptEngine::init();
 	scriptManager.setConfPath(tds->conf->confPath);
 	scriptManager.m_reloadFile = tds->conf->getInt("reloadScriptFile", 0);
 	scriptManager.init();

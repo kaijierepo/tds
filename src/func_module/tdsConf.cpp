@@ -189,6 +189,7 @@ void tdsConfig::loadConfPath(vector<KV_INI_LINE>& vecConf) {
 		if (checkKey(key, "confPath"))
 		{
 			confPath = val;
+			confPath = str::replace(confPath, "\\", "/");
 		}
 	}
 

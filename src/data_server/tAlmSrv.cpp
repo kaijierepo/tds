@@ -589,7 +589,7 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 		SCRIPT_INFO si;
 		scriptManager.getScript(m_scriptBeforeUpdateAlarm, si);
 		if (si.enable) {
-			se.runScript(si.script, "", si.lastRunInfo);
+			se.runScript(si,si.lastRunInfo);
 			scriptManager.setRunInfo(m_scriptBeforeUpdateAlarm, si.lastRunInfo);
 			if (si.lastRunInfo.runSuccess) {
 				string s = se.m_globalObj["AlarmInfo"].dump();

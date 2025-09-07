@@ -9,36 +9,7 @@ using json = nlohmann::json;
 using namespace std;
 
 
-struct SCRIPT_INFO {
-	string script         = "";
-	bool isFolder		= false;
-	string envVarScript   = "";
-	string calcMpTag      = "";   
-	string callerObjTag   = "";   
-	string rootTag        = "";   
-	string devAddr        = "";   
-	string mode           = "";
-	string devId          = ""; 
 
-	int interval          = 0;
-
-	string org            = "";
-	string lastModifyTime = "";
-	string lastModifyUser = "";
-	string name           = "";
-	string desc           = "";
-
-	SCRIPT_RUN_INFO lastRunInfo = SCRIPT_RUN_INFO();
-	bool enableLog        = false;
-
-	bool enable           = false;
-
-	string getContextTag();
-	string getExpContextTag();
-	
-	void toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool getStatus = false);
-	void fromJson(yyjson_val* mutRoot);
-};
 
 class ScriptManager {
 public:

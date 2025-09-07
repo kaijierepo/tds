@@ -2593,6 +2593,10 @@ void ioHandler_customUdp::OnRecvUdpData(unsigned char* recvData, size_t recvData
 	ioSrv.unlock_conf_shared();
 
 	if (dev) {
-		dev->onRecvData(recvData, recvDataLen);
+		if (udpSession.multicast) { //不解析应用层可以直接判断为通知数据的情形
+			dev->onRecvDataNotify(recvData, recvDataLen);
+		}
+		else
+			dev->onRecvData(recvData, recvDataLen);
 	}
 }
