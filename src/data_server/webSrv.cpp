@@ -1254,17 +1254,19 @@ static void fn(struct mg_connection* c, int ev,void* ev_data)
 				pss->send += data->len;
 			}
 
-			//data->ptr最后一个字符不是字符串结束标志
-			char* p = new char[data->len+1];
-			p[data->len] = 0;
-			memcpy(p, data->ptr, data->len);
-
+			string contentLen = to_string(data->len);
 			//string resHeader = "Content-Type:application/json;charset=utf-8\r\n";
-			string resHeader = "Access-Control-Allow-Origin:*\r\n";  //允许所有源，也可以指定请求中的源
-			resHeader += "Access-Control-Allow-Private-Network: true\r\n"; //CORS-RFC1918 允许私有网络请求
+			string resHeader =
+				"HTTP/1.1 200 OK\r\n"
+				"Access-Control-Allow-Origin:*\r\n"  //允许所有源，也可以指定请求中的源
+				"Access-Control-Allow-Private-Network: true\r\n" //CORS-RFC1918 允许私有网络请求
+				"Content-Length:" + contentLen + "\r\n\r\n";
 
-			mg_http_reply(c, 200, resHeader.c_str(), p);
-			delete [] p;
+			
+
+			mg_send(c, resHeader.c_str(), resHeader.size());
+			mg_send(c, data->ptr, data->len);
+			c->is_resp = 0;
 
 			if (c->sessionInfo) { //非调试类命令会话，该字段不为空。调试类会话为请求 /debug 的rpc请求
 				SESSION_STATIS* pss = (SESSION_STATIS*)c->sessionInfo;

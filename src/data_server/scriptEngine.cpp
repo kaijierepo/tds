@@ -1276,26 +1276,20 @@ void thread_watchScriptFile(string scriptPath) {
 #endif
 }
 
-bool loadScriptFile(string path, string& data) {
-    string script;
-    g_mutexScriptFileBuff.lock();
+bool loadScriptFile(string path, string& script) {
+    lock_guard<mutex> g(g_mutexScriptFileBuff);
     map<string, string>::iterator iter = g_mapScriptFileBuff.find(path);
-    g_mutexScriptFileBuff.unlock();
-    if (iter != g_mapScriptFileBuff.end() && !pEngine->m_reloadFile) {
+    if (iter != g_mapScriptFileBuff.end()) {
         script = iter->second;
         return true;
     }
     else {
         if (!DB_FS::readFile(path, script)) {
-            g_mutexScriptFileBuff.lock();
             g_mapScriptFileBuff.erase(path);
-            g_mutexScriptFileBuff.unlock();
             return false;
         }
         else{
-            g_mutexScriptFileBuff.lock();
             g_mapScriptFileBuff[path] = script;
-            g_mutexScriptFileBuff.unlock();
             return true;
         }
     }
@@ -1343,15 +1337,13 @@ ScriptEngine::ScriptEngine() {
 }
 
 bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
-    string folder;
-    string scriptPath;
     if (si.script == "") {
+        string scriptPath;
         if (si.isFolder) {
-            folder = ScriptEngine::ScriptFolder + "/" + si.name;
-            scriptPath = folder + "./main.js";
+            scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + "/main.js";
         }
         else {
-            scriptPath = folder + "/" + si.name + ".js";
+            scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + ".js";
         }
         loadScriptFile(scriptPath, m_script);
     }
@@ -1371,7 +1363,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         tStart.setNow();
 
 		pEngine = this;
-        pEngine->m_folderPath = folder;
+        pEngine->m_folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
 		
 		// 初始化 QuickJS
 		JSRuntime* rt = JS_NewRuntime();
@@ -1400,7 +1392,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         }
 
         JSValue result;
-        if (folder != "") {
+        if (si.isFolder) {
             result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
         }
         else {
