@@ -34,6 +34,10 @@ ScriptManager::ScriptManager() {
 }
 
 bool ScriptManager::init() {
+	return loadScriptList();
+}
+
+bool ScriptManager::loadScriptList() {
 	unique_lock<mutex> lock(m_csScripts);
 
 	string sScriptList;
@@ -144,6 +148,12 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	}
 	else if (method == "getScriptList") {
 		rpc_getScriptList(params_obj, rpcResp, session);
+	}
+	else if (method == "setScriptList") {
+		rpc_setScriptList(params_obj, rpcResp, session);
+	}
+	else if (method == "loadScriptList") {
+		rpc_loadScriptList(params_obj, rpcResp, session);
 	}
 	else if (method == "getScriptFile") {
 		rpc_getScript(params_obj, rpcResp, session);
@@ -308,6 +318,22 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	rpcResp.result = jOutput.dump();
 	setRunInfo(si.name, si.lastRunInfo);
 
+	return true;
+}
+
+bool ScriptManager::rpc_setScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+
+	return true;
+}
+
+bool ScriptManager::rpc_loadScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+	bool ret = loadScriptList();
+	if (ret) {
+		rpcResp.result = RPC_OK;
+	}
+	else {
+		rpcResp.error = "\"load script list failed\"";
+	}
 	return true;
 }
 

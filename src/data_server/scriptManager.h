@@ -15,6 +15,7 @@ class ScriptManager {
 public:
 	ScriptManager();
 	bool init();
+	bool loadScriptList();
 	bool run();
 
 	void setConfPath(const string& conf);
@@ -36,6 +37,8 @@ public:
 	bool getScript(string name, SCRIPT_INFO& si);
 	bool setRunInfo(string name, SCRIPT_RUN_INFO& sri);
 	bool rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_setScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_loadScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
