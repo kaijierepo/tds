@@ -1341,9 +1341,22 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         string scriptPath;
         if (si.isFolder) {
             scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + "/main.js";
+            if(si.folderPath == "")
+                si.folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
+        }
+        else if (si.filePath != "") {
+            scriptPath = si.filePath;
+            if (si.folderPath == "") {
+				size_t pos = si.filePath.find_last_of("/");
+                if (pos != string::npos) {
+					si.folderPath = si.filePath.substr(0, pos);
+                }
+            }	
         }
         else {
             scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + ".js";
+            if (si.folderPath == "")
+                si.folderPath = ScriptEngine::ScriptFolder;
         }
         loadScriptFile(scriptPath, m_script);
     }

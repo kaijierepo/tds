@@ -223,6 +223,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	SCRIPT_INFO si;
 
 	yyjson_val* script_val = yyjson_obj_get(params_obj, "script");
+	yyjson_val* filePath_val = yyjson_obj_get(params_obj, "filePath");
 	if (script_val && yyjson_is_str(script_val)) {
 		si.script = yyjson_get_str(script_val);
 		si.org = session.org;
@@ -243,6 +244,9 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		if (dev_addr_id && yyjson_is_str(dev_addr_id)) {
 			si.devId = yyjson_get_str(dev_addr_id);
 		}
+	}
+	else if (filePath_val && yyjson_is_str(filePath_val)) { //vscode任意文件夹调试模式
+		si.filePath = yyjson_get_str(filePath_val);
 	}
 	else {
 		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");

@@ -297,6 +297,55 @@ ioDev虽然一般以tcpClient的方式连接到tds. 但相对于tds来说,设备
 //terminal模式等需要隐藏，使用其他方式隐藏
 //#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )//不显示默认控制台
 
+void runScript(string path) {
+	string url = "http://127.0.0.1:667/rpc";
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	string req = str::format(R"({"method":"runScript","params":{"filePath":"%s"}})", path.c_str());
+
+	//logger.logInternal(req);
+
+	if (connect) {
+		mg_printf(connect,
+			"POST /rpc HTTP/1.1\r\n"
+			"Host: 127.0.0.1\r\n"
+			"Content-Length: %d\r\n"
+			"\r\n"
+			"%s", req.size(),req.c_str());
+
+		TIME tStart = timeopt::now();
+		while (!data.done && timeopt::calcTimePassMilliSecond(tStart) / 1000.0 < 10.0) {
+			mg_mgr_poll(&mgr, 100);
+		}
+	}
+
+	mg_mgr_free(&mgr);
+
+
+	//获取摘要盘问
+	if (data.done) {
+		yyjson_doc* doc = yyjson_read((char*)data.body.c_str(), data.body.size(), 0);
+		yyjson_val* root = yyjson_doc_get_root(doc);
+		if (root) {
+			yyjson_val* yy_result = yyjson_obj_get(root, "result");
+			if (yy_result && yyjson_is_arr(yy_result)) {
+				size_t arr_size = yyjson_arr_size(yy_result);
+				for (size_t i = 0; i < arr_size; ++i) {
+					yyjson_val* elem = yyjson_arr_get(yy_result, i);
+					if (elem && yyjson_is_str(elem)) {
+						string s = yyjson_get_str(elem);
+						logger.logInternal(s, false);
+					}
+				}
+			}
+		}
+	}
+}
 
 bool isTdsRunning();
 int main(int argc, char** argv)
@@ -306,6 +355,19 @@ int main(int argc, char** argv)
 	for (int i = 0; i < argc; i++) {
 		string s = argv[i];
 		args.push_back(s);
+	}
+
+	if (args.size() == 3 && args[1] == "-s") {
+		string sPath = args[2];
+		sPath = str::replace(sPath, "\\", "/");
+		if (charCodec::isValidGB2312(sPath)) {
+			sPath = charCodec::gb_to_utf8(sPath);
+		}
+		else {
+		}
+		logger.logInternal("运行脚本:" + sPath);
+		runScript(sPath);
+		return 0;
 	}
 
 #ifdef _WIN32

@@ -22,7 +22,6 @@ tSockSrv::tSockSrv()
 
 tSockSrv::~tSockSrv()
 {
-	stop();
 }
 
 

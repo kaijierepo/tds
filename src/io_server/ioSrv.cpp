@@ -189,7 +189,7 @@ ioServer::ioServer()
 }
 ioServer::~ioServer()
 {
-	stop();
+
 }
 
 //void ioServer::statusChange_tcpClt(tcpSessionClt* pTcpSessClt, bool bIsConn)
