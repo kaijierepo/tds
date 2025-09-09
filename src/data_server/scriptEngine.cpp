@@ -1404,40 +1404,35 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             JS_FreeValue(ctx, global);
         }
 
-        JSValue result;
-        //if (si.isFolder) {
-           result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
-        //}
-        //else {
-        //    result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
-        //}
+       
+        JSValue evalPromise;
+        evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
+        while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
+            Sleep(1);
+        }
+        int state = JS_PromiseState(ctx, evalPromise);
+        if (state == JS_PROMISE_REJECTED) {
+            JSValue err = JS_PromiseResult(ctx, evalPromise);
+            JSValue err_msg = JS_GetPropertyStr(ctx, err, "message");
+            JSValue err_stack = JS_GetPropertyStr(ctx, err, "stack");
+            const char* msg = JS_ToCString(ctx, err_msg);
+            const char* stack = JS_ToCString(ctx, err_stack);
 
-        const char* p = JS_ToCString(ctx, result);
-    
-		if (JS_IsException(result)) {
-			JSValue error = JS_GetException(ctx);
-			const char* err = JS_ToCString(ctx, error);
-
-            JSValue stack_val = JS_GetPropertyStr(ctx, error, "stack");
-            const char* stack = JS_ToCString(ctx, stack_val);
-
-            // 提取行号
-            //int line = extract_line_number(stack) - m_envVarScriptLine;
-
-			string s = err;
-			//s = "Exception at line " + std::to_string(line) + ":" + s;
-            s += stack;
-            sri.lastError = s;
-			m_vecOutput.push_back(s);
-
+            JS_FreeCString(ctx, msg);
+            JS_FreeValue(ctx, err_msg);
             JS_FreeCString(ctx, stack);
-            JS_FreeValue(ctx, stack_val);
+            JS_FreeValue(ctx, err_stack);
+            JS_FreeValue(ctx, err);
 
-			JS_FreeCString(ctx, err);
-			JS_FreeValue(ctx, error);
-		}
-        else {
-            //返回全局对象在脚本内部的修改
+            string s = msg;
+            s += "\n";
+            s += stack;
+            s = str::replace(s, "\n", "\r\n");
+            sri.lastError = s;
+         	m_vecOutput.push_back(s);
+        }
+        else if (state == JS_PROMISE_FULFILLED) {
+            JSValue result = JS_PromiseResult(ctx, evalPromise);
             if (!m_globalObj.is_null()) {
                 JSValue global = JS_GetGlobalObject(ctx);
                 for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
@@ -1452,14 +1447,13 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 
                 JS_FreeValue(ctx, global);
             }
-
-
             jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
             runOk = true;
+            string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
+            m_vecOutput.push_back(s);
+            JS_FreeValue(ctx, result);
         }
-
-		// 清理资源
-		JS_FreeValue(ctx, result);
+		JS_FreeValue(ctx, evalPromise);
 		JS_FreeContext(ctx);
 		JS_FreeRuntime(rt);
 
