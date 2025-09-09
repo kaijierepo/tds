@@ -254,8 +254,8 @@ bool ioDev::run() {
 			return false;
 		}
 
-		int port;
-		if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer) {
+		int port = 0;
+		if (m_addrType == DEV_ADDR_MODE::tcpServer || m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient) {
 			if (m_jDevAddr["port"].is_number_integer()){
 				port = m_jDevAddr["port"].get<int>();
 			}
@@ -279,11 +279,11 @@ bool ioDev::run() {
 			m_tcpClt->run(this, ip, port); //逐步把 ioSrv 中的 onRecvData_tcpClt重构掉，放在ioDev对象内部处理 tcpClient接收数据更合理
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动tcpClient,本地IP:%s", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str());
 		}
-		else if(m_addrType == DEV_ADDR_MODE::udpServer){
+		else if((m_addrType == DEV_ADDR_MODE::udpServer || m_addrType == DEV_ADDR_MODE::udpClient) && port > 0) {
 			if (m_udpClt == nullptr)
 				m_udpClt = new UdpClt();
 
-			m_udpClt->run(this,localPort,ioSrv.m_ioSrvIPAsClient);
+			m_udpClt->run(this,0,ioSrv.m_ioSrvIPAsClient);
 			LOG("[IO设备]启动设备,地址模式:%s,设备类型:%s,远端地址:%s,本地启动udpClient,本地IP:%s,本地端口:%d", m_addrType.c_str(), m_devType.c_str(), getDevAddrStr().c_str(), ioSrv.m_ioSrvIP.c_str(),m_udpClt->m_port);
 		}
 	}

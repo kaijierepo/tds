@@ -1376,7 +1376,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         tStart.setNow();
 
 		pEngine = this;
-        pEngine->m_folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
+        pEngine->m_folderPath = si.folderPath;
 		
 		// 初始化 QuickJS
 		JSRuntime* rt = JS_NewRuntime();
@@ -1405,12 +1405,12 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         }
 
         JSValue result;
-        if (si.isFolder) {
-            result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
-        }
-        else {
-            result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
-        }
+        //if (si.isFolder) {
+           result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
+        //}
+        //else {
+        //    result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_GLOBAL);
+        //}
 
         const char* p = JS_ToCString(ctx, result);
     

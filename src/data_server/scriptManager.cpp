@@ -219,6 +219,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		getExpRet = yyjson_get_bool(get_exp_ret_val);
 	}
 
+	ScriptEngine se;
 	string folder;
 	SCRIPT_INFO si;
 
@@ -247,6 +248,23 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 	else if (filePath_val && yyjson_is_str(filePath_val)) { //vscode任意文件夹调试模式
 		si.filePath = yyjson_get_str(filePath_val);
+		//读取路径下的debug.json
+		string sDebugParams;
+		if (si.folderPath == "") {
+			size_t pos = si.filePath.find_last_of("/");
+			if (pos != string::npos) {
+				si.folderPath = si.filePath.substr(0, pos);
+			}
+		}
+		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
+			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
+			yyjson_val* r = yyjson_doc_get_root(d);
+			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
+			if (yy_dev) {
+				si.devAddr = yyjson_get_str(yy_dev);
+				se.m_vecOutput.push_back("环境设备:" + si.devAddr);
+			}
+		}
 	}
 	else {
 		yyjson_val* name_val = yyjson_obj_get(params_obj, "name");
@@ -265,7 +283,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 	}
 
-	ScriptEngine se;
 
 #ifdef TDS
 	se.m_initTdsFunc = initTdsFunc;
