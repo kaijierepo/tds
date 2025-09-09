@@ -39,7 +39,7 @@ bool ScriptManager::init() {
 
 bool ScriptManager::loadScriptList() {
 	unique_lock<mutex> lock(m_csScripts);
-
+	m_mapScripts.clear();
 	string sScriptList;
 	if (DB_FS::readFile(m_confPath + "/scripts/list.json", sScriptList)) {
 		yyjson_doc* doc = yyjson_read(sScriptList.c_str(), sScriptList.size(), 0);
