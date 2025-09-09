@@ -837,8 +837,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 }
 
 
-void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
-{
+void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion) {
 	json devList = json::array(); 
 	if (params.is_object())
 		devList.push_back(params);
@@ -851,8 +850,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 		bool bFinded = false;
 		ioDev* p = getIODevByNodeID(sNodeId); 
 
-		if (p)
-		{
+		if (p) {
 			string lastTagBind = p->m_strTagBind;
 			string lastConnInfo = p->getConnInfo();
 
@@ -897,6 +895,8 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 					{"tag",currentTagBind}
 				};
 				calls.push_back(call);
+
+				//
 				call["method"] = "objOffline";
 				call["params"] = {
 					{"tag",lastTagBind}
@@ -908,7 +908,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 				call["method"] = "input";
 				call["params"] = valList;
 
-		
+				//
 				tds->batchCallAsyn(calls);
 			}
 

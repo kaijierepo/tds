@@ -237,37 +237,45 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 	lock_conf_unique();
 	//m_jAcq = chanData;
 	unlock_conf_unique();
+
 	timeopt::now(&m_stLastChanDataTime);
 
 	//更新数据到通道。并更新到绑定对象
 	//列表输入
-	if (yyjson_is_arr(chanData))
-	{
+	if (yyjson_is_arr(chanData)) {
 		lock_conf_unique();
+
 		size_t i, iMax;
 		yyjson_val* yyvDe;
-		yyjson_arr_foreach(chanData,i,iMax, yyvDe)
-		{
+		yyjson_arr_foreach(chanData,i,iMax, yyvDe) {
 			//格式为 [{"ioAddr":"voltage","val":25.1},{"ioAddr":"current","val":35.1}]
 			//通道地址通过ioAddr来指定
 			if (yyjson_is_obj(yyvDe)) {
-				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "addr");
+				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "chan");
 				yyjson_val* yyv_tag = yyjson_obj_get(yyvDe, "tag");
-				if (yyv_addr == nullptr)
-					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式，ioAddr语义不合理，应该使用addr语义才准确
+
+				if (yyv_addr == nullptr) {
+					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式
+				}
+
+				if (yyv_addr == nullptr) {
+					yyv_addr = yyjson_obj_get(yyvDe, "addr"); //兼容老的命名方式
+				}
+
 				if (yyv_addr) {
 					string addr = yyjson_get_str(yyv_addr);
+
 					ioChannel* pC = getChanByDevAddr(addr);
 					yyjson_val* yyv_val = yyjson_obj_get(yyvDe, "val");
 
-					if (pC == nullptr)
-					{
+					if (pC == nullptr) {
 						pC = createChan(yyv_val, addr);
 						addChannel(pC);
 					}
 
-					if (pC)
+					if (pC) {
 						pC->input(yyv_val);
+					}
 				}
 				else if (yyv_tag) {
 					string s;
@@ -291,16 +299,17 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 			else if (yyjson_is_bool(yyvDe) || yyjson_is_num(yyvDe)) {
 				string addr = str::format("%d", i);
 				ioChannel* pC = getChanByDevAddr(addr);
-				if (pC == nullptr)
-				{
+				if (pC == nullptr) {
 					pC = createChan(yyvDe, addr);
 					addChannel(pC);
 				}
 
-				if (pC)
+				if (pC) {
 					pC->input(yyvDe);
+				}
 			}
 		}
+
 		unlock_conf_unique();
 	}
 	//树形输入.设备本身也通过 树状位号模式来管理通道，直接转发到数据服务
@@ -313,6 +322,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 		//通道key,val模式输入
 		else {
 			lock_conf_unique();
+
 			size_t i,iMax;
 			yyjson_val* key;
 			yyjson_val* val;
@@ -320,21 +330,20 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 				string chanAddr = yyjson_get_str(key);
 				ioChannel* pC = getChanByDevAddr(chanAddr);
 
-				if (pC == nullptr)
-				{
+				if (pC == nullptr) {
 					pC = createChan(val, chanAddr);
 					addChannel(pC);
 				}
 
-				if (pC)
+				if (pC) {
 					pC->input(val);
+				}
 			}
+
 			unlock_conf_unique();
 		}
 	}
 
-
-	
 	return true;
 }
 
