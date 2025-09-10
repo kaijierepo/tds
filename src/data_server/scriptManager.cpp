@@ -701,37 +701,6 @@ void ScriptManager::exeAllGlobalScripts() {
 		//TIME tStart;
 		//tStart.setNow();
 		bool runOk = se.runScript(si, si.lastRunInfo);
-
-		//int costMilli = TIME::calcTimePassMilliSecond(tStart);
-
-		//// db data
-		//auto mutdoc = yyjson_mut_doc_new(nullptr);
-		//auto mutroot = yyjson_mut_obj(mutdoc);
-
-		//yyjson_mut_doc_set_root(mutdoc, mutroot);
-		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "name", si.name.c_str());
-		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "time", si.lastRunInfo.lastExe.c_str());
-		//yyjson_mut_obj_add_int(mutdoc, mutroot, "success", si.lastRunInfo.runSuccess ? 1 : 0);
-		//yyjson_mut_obj_add_strcpy(mutdoc, mutroot, "cost", str::format("%dms", costMilli).c_str());
-
-		//string str;
-
-		//auto len = yyjson_mut_get_len(mutroot);
-		//char* writeResult = yyjson_mut_val_write_opts(mutroot, YYJSON_WRITE_NOFLAG, nullptr, &len, nullptr);
-		//if (writeResult) {
-		//	str = writeResult;
-		//	free(writeResult);
-		//}
-
-		//yyjson_mut_doc_free(mutdoc);
-		//
-		//if (!str.empty()) {
-		//	DB_TIME dbt;
-		//	dbt.fromStr(si.lastRunInfo.lastExe);
-
-		//	TDB* ssdb = db.getChildDB("autoScript");
-		//	ssdb->InsertValJsonStr("runStatus", dbt, str);
-		//}
 	}
 
 	m_csScripts.lock();
@@ -763,6 +732,7 @@ void ScriptManager::exeAllVarExpScripts() {
 	//设计原则： 执行脚本前不要锁住任何锁，因为脚本内部函数可能会调用某些锁，避免出现死锁
 	for (int i = 0; i < toExeScripts.size();i++) {
 		SCRIPT_INFO& info = toExeScripts[i];
+		info.isExp = true;
 		string& script = info.script;
 		ScriptEngine se;
 

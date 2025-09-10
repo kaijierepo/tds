@@ -154,15 +154,19 @@ static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) 
 
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-		const char* log = JS_ToCString(ctx, argv[0]);
-        if (!log) {
-            return JS_ThrowTypeError(ctx, "Argument must be a string");
+        std::string s;
+        for (int i = 0; i < argc; i++) {
+            const char* log = JS_ToCString(ctx, argv[i]);
+            if (!log) {
+                return JS_ThrowTypeError(ctx, "Argument must be a string");
+            }
+            if (s != "")
+                s += " ";
+            s += log;
+            JS_FreeCString(ctx, log);
         }
 
-		std::string s = log;
 		pEngine->m_vecOutput.push_back(s);
-
-		JS_FreeCString(ctx, log); 
 		return JS_NewObject(ctx);
 	}
 
@@ -1429,7 +1433,6 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
          	m_vecOutput.push_back(s);
         }
         else if (state == JS_PROMISE_FULFILLED) {
-            JSValue result = JS_PromiseResult(ctx, evalPromise);
             if (!m_globalObj.is_null()) {
                 JSValue global = JS_GetGlobalObject(ctx);
                 for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
@@ -1444,11 +1447,16 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 
                 JS_FreeValue(ctx, global);
             }
-            jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
+
+            if (si.isExp) {
+                JSValue result = JS_PromiseResult(ctx, evalPromise);
+                jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
+                string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
+                m_vecOutput.push_back(s);
+                JS_FreeValue(ctx, result);
+            }
+  
             runOk = true;
-            string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
-            m_vecOutput.push_back(s);
-            JS_FreeValue(ctx, result);
         }
 		JS_FreeValue(ctx, evalPromise);
 		JS_FreeContext(ctx);

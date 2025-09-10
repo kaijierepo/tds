@@ -35,6 +35,7 @@ struct SCRIPT_INFO {
 	string devId = "";
 	string user = "";
 	int interval = 0;
+	bool isExp = 0; //是否表达式脚本
 
 	string org = "";
 	string lastModifyTime = "";
