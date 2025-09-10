@@ -1223,62 +1223,96 @@ void thread_watchScriptFile(string scriptPath) {
         return;
     }
     wstring wPath = utf8_to_utf16(scriptPath);
-    string lastFileModify;
-    TIME lastFileModifyTime; lastFileModifyTime.setNow();
-#ifdef WIN32
-    HANDLE h_dir = INVALID_HANDLE_VALUE;
-    BYTE lp_buffer[1024];
-    ZeroMemory(lp_buffer, 1024);
-    DWORD bytes = NULL;
-    BOOL isok = FALSE;
-    FILE_NOTIFY_INFORMATION* pnotify = (FILE_NOTIFY_INFORMATION*)lp_buffer;
-    FILE_NOTIFY_INFORMATION* tmp;
-    ZeroMemory(&lp_buffer, sizeof(FILE_NOTIFY_INFORMATION));
-    h_dir = CreateFileW(wPath.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_READ |
-        FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
-    if (INVALID_HANDLE_VALUE == h_dir) {
-        printf("error %d", GetLastError());
+
+
+    HANDLE h_dir = CreateFileW(
+        wPath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, // 启用异步 IO
+        nullptr
+    );
+    if (h_dir == INVALID_HANDLE_VALUE) {
+        printf("打开目录失败，错误码: %lu\n", GetLastError());
         return;
     }
-    WCHAR* ws_file_name = new wchar_t[_MAX_FNAME];
-    while (1) {//m_start 判断线程结束的标志
-        //FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,可更改为其他需要检测到的文件的某些变化
-        isok = ReadDirectoryChangesW(h_dir, &lp_buffer, sizeof(lp_buffer), TRUE,
-            FILE_NOTIFY_CHANGE_LAST_WRITE,
-            &bytes, NULL, NULL);
-        if (isok) {
-            tmp = pnotify;
-            if (tmp->FileNameLength) {
-                memcpy(ws_file_name, tmp->FileName, (tmp->FileNameLength + 1) * 2);
-            }
 
-            if (tmp->Action == FILE_ACTION_MODIFIED) {//判断文件发生变化具体的事件
-                string file_name = utf16_to_utf8(ws_file_name);//得到发生变化的文件名
-                file_name = str::replace(file_name, "\\", "/");
-                string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
-                LOG("[keyinfo]检测到脚本文件改变:" + file_path);
-                string file_data;
-                Sleep(1000);//收到通知时，文件可能还在写入，因此等待一点时间再读取
-                if (DB_FS::readFile(file_path, file_data)) {
-                    g_mutexScriptFileBuff.lock();
-                    g_mapScriptFileBuff[file_path] = file_data;
-                    g_mutexScriptFileBuff.unlock();
+    const DWORD BUFFER_SIZE = 1024 * 1024; // 1MB 缓冲区（根据需求调整）
+    BYTE* buffer = new BYTE[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+    DWORD bytes_returned;
+    OVERLAPPED overlapped = { 0 };
+
+    while (true) {
+        // 非阻塞调用：立即返回已有的事件（若有）
+        BOOL is_ok = ReadDirectoryChangesW(
+            h_dir,
+            buffer,
+            BUFFER_SIZE,
+            TRUE, // 监控子目录
+            FILE_NOTIFY_CHANGE_LAST_WRITE, // 监控最后写入时间变化
+            &bytes_returned,
+            nullptr,  // 改为&overlapped则为异步
+            nullptr
+        );
+
+        if (!is_ok) {
+            DWORD error = GetLastError();
+            if (error == ERROR_IO_PENDING) {
+                // 异步操作未完成，等待事件（设置超时避免永久阻塞）
+                DWORD wait_result = WaitForSingleObject(overlapped.hEvent, 100); // 等待 100ms
+                if (wait_result == WAIT_TIMEOUT) {
+                    continue; // 超时后重试
+                }
+                else if (wait_result != WAIT_OBJECT_0) {
+                    printf("等待事件失败，错误码: %lu\n", GetLastError());
+                    break;
                 }
             }
-            ZeroMemory(tmp, 1024);
+            else {
+                printf("ReadDirectoryChangesW 失败，错误码: %lu\n", error);
+                break;
+            }
         }
         else {
-            printf("ReadDirectoryChangesW error");
+            // 处理所有已完成的事件（循环读取直到无新事件）
+            FILE_NOTIFY_INFORMATION* notify_info = (FILE_NOTIFY_INFORMATION*)buffer;
+            while (true) {
+                // 提取文件名（UTF-16）
+                std::wstring file_name_w(notify_info->FileName, notify_info->FileNameLength / sizeof(WCHAR));
+                std::string file_name_utf8 = utf16_to_utf8(file_name_w.c_str());
+
+                // 处理修改事件（FILE_ACTION_MODIFIED）
+                if (notify_info->Action == FILE_ACTION_MODIFIED) {
+                    string file_name = utf16_to_utf8(file_name_w);//得到发生变化的文件名
+                    file_name = str::replace(file_name, "\\", "/");
+                    string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
+                    LOG("[keyinfo]检测到脚本文件改变:" + file_path);
+                    string file_data;
+                    Sleep(1000);//收到通知时，文件可能还在写入，因此等待一点时间再读取
+                    if (DB_FS::readFile(file_path, file_data)) {
+                        g_mutexScriptFileBuff.lock();
+                        g_mapScriptFileBuff[file_path] = file_data;
+                        g_mutexScriptFileBuff.unlock();
+                    }
+                }
+
+                // 移动到下一个事件
+                if (notify_info->NextEntryOffset == 0) 
+                    break; 
+                else
+                    notify_info = (FILE_NOTIFY_INFORMATION*)((BYTE*)notify_info + notify_info->NextEntryOffset);
+            }
+
+            // 重置缓冲区（可选，根据文件系统要求）
+            memset(buffer, 0, BUFFER_SIZE);
         }
     }
-    if (ws_file_name) {
-        delete[]ws_file_name;
-    }
-    CloseHandle(h_dir);
-#else
 
-#endif
+    delete[] buffer;
+    CloseHandle(h_dir);
 }
 
 bool loadScriptFile(string path, string& script) {
