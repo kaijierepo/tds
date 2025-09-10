@@ -252,7 +252,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 			//通道地址通过ioAddr来指定
 			if (yyjson_is_obj(yyvDe)) {
 				yyjson_val* yyv_addr = yyjson_obj_get(yyvDe, "chan");
-				yyjson_val* yyv_tag = yyjson_obj_get(yyvDe, "tag");
+				yyjson_val* yyv_tag  = yyjson_obj_get(yyvDe, "tag");
 
 				if (yyv_addr == nullptr) {
 					yyv_addr = yyjson_obj_get(yyvDe, "ioAddr"); //兼容老的命名方式
@@ -456,8 +456,7 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc) {
 	}
 
 	bool handled = true;
-	if (method == "acq")
-	{
+	if (method == "acq") {
 		handle_AcqOrInput(rlt,doc);
 	}
 	else if (method == "heartbeat")
