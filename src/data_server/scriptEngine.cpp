@@ -1339,12 +1339,7 @@ ScriptEngine::ScriptEngine() {
 bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
     if (si.script == "") {
         string scriptPath;
-        if (si.isFolder) {
-            scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + "/main.js";
-            if(si.folderPath == "")
-                si.folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
-        }
-        else if (si.filePath != "") {
+        if (si.filePath != "") {
             scriptPath = si.filePath;
             if (si.folderPath == "") {
 				size_t pos = si.filePath.find_last_of("/");
@@ -1354,9 +1349,9 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             }	
         }
         else {
-            scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + ".js";
+            scriptPath = ScriptEngine::ScriptFolder + "/" + si.name + "/main.js";
             if (si.folderPath == "")
-                si.folderPath = ScriptEngine::ScriptFolder;
+                si.folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
         }
         loadScriptFile(scriptPath, m_script);
     }
@@ -1404,9 +1399,10 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             JS_FreeValue(ctx, global);
         }
 
+        JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);
        
         JSValue evalPromise;
-        evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "<main>", JS_EVAL_TYPE_MODULE);
+        evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
         while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
             Sleep(1);
         }

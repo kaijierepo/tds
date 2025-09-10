@@ -311,14 +311,11 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 #endif
 
-	yyjson_val* env_var_val = yyjson_obj_get(params_obj, "envVarScript");
-	if (env_var_val && yyjson_is_str(env_var_val)) {
-		string sEnvVar = yyjson_get_str(env_var_val);
-		if (sEnvVar != "") {
-			si.script = sEnvVar + "\n" + si.script;
 
-			se.m_envVarScriptLine = static_cast<int>(std::count(sEnvVar.begin(), sEnvVar.end(), '\n')) + 1;
-		}
+	string sMockjs;
+	if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
+		si.envVarScript = sMockjs;
+		se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
 	}
 
 	se.m_tagContext = si.getContextTag();

@@ -33,7 +33,7 @@ public:
 	bool run(ICallback_udpSrv* pcb,int localPort = 0, string localIP = "");
 	bool run_multicast(ICallback_udpSrv* pcb, int localPort = 0, string multicastGroup = "", string localIP = "");
 	void startMulticast();
-	void start();
+	bool start();
 	void stop();
 
 	void startMultiCast(string multiCastAddr, int port);
@@ -52,6 +52,7 @@ public:
 	string m_bindIP;
 	int m_port;
 	ICallback_udpSrv*  m_pCallback;
+	string m_lastError;
 };
 
 class UdpClt : public udpServer {

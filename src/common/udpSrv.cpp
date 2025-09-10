@@ -68,8 +68,7 @@ bool udpServer::run(ICallback_udpSrv* pcb, int port,string serverIP)
 		serverIP = "0.0.0.0";
 	m_bindIP = serverIP;
 
-	start();
-	return true;
+	return start();
 }
 
 bool udpServer::run_multicast(ICallback_udpSrv* pcb, int localPort, string multicastGroup, string localIP)
@@ -154,14 +153,14 @@ void udpServer::startMulticast()
 	t.detach();
 }
 
-void udpServer::start()
+bool udpServer::start()
 {
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (-1 == m_sock)
 	{
-		//int iErr = GetLastError();
-		//LOG("create udp sock error,%d", iErr);
-		return;
+		int iErr = GetLastError();
+		string s = "create udp sock error," + to_string(iErr);
+		return false;
 	}
 	else {
 
@@ -190,7 +189,8 @@ void udpServer::start()
 		sprintf(sz,"[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
 		string str = sz;
 		LOG(str);
-		return;
+		m_lastError = str;
+		return false;;
 	}
 
 	//获得已经绑定的端口号
@@ -202,6 +202,8 @@ void udpServer::start()
 
 	thread t(udpRecvThread, this);
 	t.detach();
+
+	return true;
 }
 
 void udpServer::stop()
