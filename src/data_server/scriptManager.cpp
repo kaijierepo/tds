@@ -51,18 +51,6 @@ bool ScriptManager::loadScriptList() {
 			SCRIPT_INFO si;
 			si.lastRunInfo.lastExe = TIME::nowStr(true);
 			si.fromJson(info);
-
-			if (!si.isFolder) {
-				string scriptFilePath = m_confPath + "/scripts/" + si.name + ".js";
-				if (DB_FS::readFile(scriptFilePath, si.script)) {
-
-				}
-				else {
-					LOG("[error]加载脚本文件失败," + scriptFilePath);
-					continue;
-				}
-			}
-
 			m_mapScripts[si.name] = si;
 		}
 		yyjson_doc_free(doc);
@@ -143,9 +131,11 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 		rpc_getScriptMngStatus(params_obj, rpcResp, session);
 	}
 #ifdef ENABLE_QJS
+	//脚本调试运行
 	else if (method == "runScript") {
 		rpc_runScript(params_obj, rpcResp, session);
 	}
+	//脚本列表管理
 	else if (method == "getScriptList") {
 		rpc_getScriptList(params_obj, rpcResp, session);
 	}
@@ -155,13 +145,14 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	else if (method == "loadScriptList") {
 		rpc_loadScriptList(params_obj, rpcResp, session);
 	}
-	else if (method == "getScriptFile") {
+	//单个脚本任务管理
+	else if (method == "getScript") {
 		rpc_getScript(params_obj, rpcResp, session);
 	}
-	else if (method == "deleteScriptFile") {
+	else if (method == "deleteScript") {
 		rpc_deleteScript(params_obj, rpcResp, session);
 	}
-	else if (method == "setScriptFile") {
+	else if (method == "setScript") {
 		rpc_setScript(params_obj, rpcResp, session);
 	}
 	else if (method == "setScriptEnable") {
@@ -438,13 +429,8 @@ bool ScriptManager::rpc_deleteScript(yyjson_val* params_obj, RPC_RESP& rpcResp, 
 	}
 
 	SCRIPT_INFO& si = m_mapScripts[name];
-	if (si.isFolder) {
-		string strPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
-		DB_FS::deleteDirectory(strPath);
-	}
-	else {
-		DB_FS::deleteFile(m_confPath + "/scripts/" + name + ".js");
-	}
+	string strPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
+	DB_FS::deleteDirectory(strPath);
 
 	m_mapScripts.erase(name);
 	saveScriptList("", m_mapScripts);
@@ -513,12 +499,7 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		string newPath = DB_STR::utf8_to_gb(m_confPath + "/scripts/" + name);
 
 		SCRIPT_INFO& si = m_mapScripts[oldName];
-		if (si.isFolder) {
-			success = DB_FS::rename(oldPath, newPath);
-		}
-		else {
-			success = DB_FS::rename(oldPath + ".js", newPath + ".js");
-		}
+		success = DB_FS::rename(oldPath, newPath);
 
 		if (!success) {
 			json jError = "rename failed";
@@ -542,29 +523,6 @@ bool ScriptManager::rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 	si.lastModifyUser = session.user;
-
-	if (!si.isFolder) {
-		yyjson_val* code_val = yyjson_obj_get(params_obj, "code");
-		if (code_val && yyjson_is_str(code_val)) {
-			string codePath = m_confPath + "/scripts/" + si.name + ".js";
-			string s = yyjson_get_str(code_val);
-
-			DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
-			si.script = s;
-		}
-	}
-	else {
-
-	}
-
-	yyjson_val* env_var_code_val = yyjson_obj_get(params_obj, "envVarCode");
-	if (env_var_code_val && yyjson_is_str(env_var_code_val)) {
-		string codePath = m_confPath + "/scripts/" + si.name + "_envVar.js";
-		string s = yyjson_get_str(env_var_code_val);
-
-		DB_FS::writeFile(codePath, (char*)s.c_str(), s.length());
-		si.envVarScript = s;
-	}
 
 	saveScriptList("", m_mapScripts);
 	rpcResp.result = RPC_OK;

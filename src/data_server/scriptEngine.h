@@ -24,7 +24,6 @@ struct SCRIPT_RUN_INFO {
 
 struct SCRIPT_INFO {
 	string script = "";
-	bool isFolder = false;
 	string filePath = "";
 	string folderPath = "";
 	string envVarScript = "";

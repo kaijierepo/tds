@@ -1766,7 +1766,6 @@ void SCRIPT_INFO::toJson(yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot, bool g
     }
 
     yyjson_mut_obj_add_bool(mutDoc, mutRoot, "enable", enable);
-    yyjson_mut_obj_add_bool(mutDoc, mutRoot, "isFolder", isFolder);
 }
 
 void SCRIPT_INFO::fromJson(yyjson_val* root) {
@@ -1832,10 +1831,5 @@ void SCRIPT_INFO::fromJson(yyjson_val* root) {
     val = yyjson_obj_get(root, "enable");
     if (val && yyjson_is_bool(val)) {
         enable = yyjson_get_bool(val);
-    }
-
-    val = yyjson_obj_get(root, "isFolder");
-    if (val && yyjson_is_bool(val)) {
-        isFolder = yyjson_get_bool(val);
     }
 }
