@@ -1217,6 +1217,21 @@ static std::string utf16_to_utf8(const wstring& u16str) {
     result.shrink_to_fit();
     return result;
 }
+
+
+void thread_reloadFile(string filePath) {
+    if (filePath.empty()) {
+        return;
+    }
+    Sleep(1000);//收到通知时，文件可能还在写入，因此等待一点时间再读取
+    string file_data;
+    if (DB_FS::readFile(filePath, file_data)) {
+        g_mutexScriptFileBuff.lock();
+        g_mapScriptFileBuff[filePath] = file_data;
+        g_mutexScriptFileBuff.unlock();
+	}
+}
+
 //脚本目录下的所有文件，发现文件直接加载到内存
 void thread_watchScriptFile(string scriptPath) {
     if (scriptPath.empty()) {
@@ -1279,7 +1294,7 @@ void thread_watchScriptFile(string scriptPath) {
         else {
             // 处理所有已完成的事件（循环读取直到无新事件）
             FILE_NOTIFY_INFORMATION* notify_info = (FILE_NOTIFY_INFORMATION*)buffer;
-            Sleep(1000);//收到通知时，文件可能还在写入，因此等待一点时间再读取
+
             while (true) {
                 // 提取文件名（UTF-16）
                 std::wstring file_name_w(notify_info->FileName, notify_info->FileNameLength / sizeof(WCHAR));
@@ -1291,12 +1306,8 @@ void thread_watchScriptFile(string scriptPath) {
                     file_name = str::replace(file_name, "\\", "/");
                     string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
                     LOG("[keyinfo]检测到脚本文件改变:" + file_path);
-                    string file_data;
-                    if (DB_FS::readFile(file_path, file_data)) {
-                        g_mutexScriptFileBuff.lock();
-                        g_mapScriptFileBuff[file_path] = file_data;
-                        g_mutexScriptFileBuff.unlock();
-                    }
+					thread th(thread_reloadFile, file_path);
+                    th.detach();
                 }
                 // 移动到下一个事件
                 if (notify_info->NextEntryOffset == 0) 
