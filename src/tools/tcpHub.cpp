@@ -7,6 +7,7 @@ string tcpHub::defaultConf() {
 	string s = R"(#tcpHub TCP数据转发工具
 #基本配置
 enable_pkt_log=1       #是否启用数据包日志，如果转发码流等大数据，可以关闭
+log_in_string=1        #字符串 1， 16进制 0
 
 #左侧配置
 left_s_port=0          #左侧服务器模式端口
@@ -42,6 +43,7 @@ void tcpHub::run() {
 	tdsIni.load(confPath);
 
 	enable_pkt_log = tdsIni.getValInt("enable_pkt_log", 1) ? true : false;
+	log_in_string  = tdsIni.getValInt("log_in_string", 1) ? true : false;
 
 	left_s_port    = tdsIni.getValInt("left_s_port", 0);
 	left_c_port    = tdsIni.getValInt("left_c_port", 0);
@@ -128,16 +130,26 @@ void tcpHub::onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pC
 		sRight.SendData((char*)pData, iLen);
 		cRight.SendData(pData, iLen);
 		if (enable_pkt_log) {
-			string sData = str::bytesToHexStr(pData, iLen);
-			LOG(" --> (%d) %s", iLen, sData.c_str());
+			if (log_in_string) {
+				LOG(" --> (%d) %s", iLen, pData);
+			}
+			else {
+				string sData = str::bytesToHexStr(pData, iLen);
+				LOG(" --> (%d) %s", iLen, sData.c_str());
+			}
 		}
 	}
 	else if (pCltInfo->pTcpServer == &sRight) {
 		sLeft.SendData((char*)pData, iLen);
 		cLeft.SendData(pData, iLen);
 		if (enable_pkt_log) {
-			string sData = str::bytesToHexStr(pData, iLen);
-			LOG(" <-- (%d) %s", iLen, sData.c_str());
+			if (log_in_string) {
+				LOG(" <-- (%d) %s", iLen, pData);
+			}
+			else {
+				string sData = str::bytesToHexStr(pData, iLen);
+				LOG(" <-- (%d) %s", iLen, sData.c_str());
+			}
 		}
 	}
 }
@@ -174,16 +186,26 @@ void tcpHub::onRecvData_tcpClt(unsigned char* pData, size_t iLen, tcpSessionClt*
 		sRight.SendData((char*)pData, iLen);
 		cRight.SendData(pData, iLen);
 		if (enable_pkt_log) {
-			string sData = str::bytesToHexStr(pData, iLen);
-			LOG(" --> (%d) %s", iLen, sData.c_str());
+			if (log_in_string) {
+				LOG(" --> (%d) %s", iLen, pData);
+			}
+			else {
+				string sData = str::bytesToHexStr(pData, iLen);
+				LOG(" --> (%d) %s", iLen, sData.c_str());
+			}
 		}
 	}
 	else if (connInfo->pTcpClt == &cRight) {
 		sLeft.SendData((char*)pData, iLen);
 		cLeft.SendData(pData, iLen);
 		if (enable_pkt_log) {
-			string sData = str::bytesToHexStr(pData, iLen);
-			LOG(" <-- (%d) %s", iLen, sData.c_str());
+			if (log_in_string) {
+				LOG(" <-- (%d) %s", iLen, pData);
+			}
+			else {
+				string sData = str::bytesToHexStr(pData, iLen);
+				LOG(" <-- (%d) %s", iLen, sData.c_str());
+			}
 		}
 	}
 }

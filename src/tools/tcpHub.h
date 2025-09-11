@@ -10,6 +10,7 @@ public:
 	tcpClt cRight;
 
 	bool enable_pkt_log;
+	bool log_in_string;
 
 	int left_s_port;
 	int left_c_port;
