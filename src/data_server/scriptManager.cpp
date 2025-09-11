@@ -185,6 +185,7 @@ bool ScriptManager::getScript(string name, SCRIPT_INFO& sInfo) {
 		SCRIPT_INFO& si = i.second;
 		if (si.name == name) {
 			sInfo = si;
+			sInfo.folderPath = ScriptEngine::ScriptFolder + "/" + si.name;
 			return true;
 		}
 	}
@@ -240,20 +241,10 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	else if (filePath_val && yyjson_is_str(filePath_val)) { //vscode任意文件夹调试模式
 		si.filePath = yyjson_get_str(filePath_val);
 		//读取路径下的debug.json
-		string sDebugParams;
 		if (si.folderPath == "") {
 			size_t pos = si.filePath.find_last_of("/");
 			if (pos != string::npos) {
 				si.folderPath = si.filePath.substr(0, pos);
-			}
-		}
-		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
-			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
-			yyjson_val* r = yyjson_doc_get_root(d);
-			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
-			if (yy_dev) {
-				si.devAddr = yyjson_get_str(yy_dev);
-				se.m_vecOutput.push_back("环境设备:" + si.devAddr);
 			}
 		}
 	}
@@ -302,11 +293,22 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 #endif
 
-
-	string sMockjs;
-	if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
-		si.envVarScript = sMockjs;
-		se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
+	if (si.folderPath != "") {
+		string sMockjs;
+		if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
+			si.envVarScript = sMockjs;
+			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
+		}
+		string sDebugParams;
+		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
+			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
+			yyjson_val* r = yyjson_doc_get_root(d);
+			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
+			if (yy_dev) {
+				si.devAddr = yyjson_get_str(yy_dev);
+				se.m_vecOutput.push_back("环境设备:" + si.devAddr);
+			}
+		}
 	}
 
 	se.m_tagContext = si.getContextTag();
