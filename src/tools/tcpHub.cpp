@@ -101,14 +101,14 @@ void tcpHub::run() {
 void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) {
 	if (bIsConn) {
 		if (pCltInfo->pTcpServer == &sLeft) {
-			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + " connected");
+			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort) + " connected");
 			if (left_reg_pkt.length() > 0) {
 				pCltInfo->send(left_reg_pkt.data(), left_reg_pkt.length());
 				LOG("首发包LeftServer:" + left_reg_pkt);
 			}
 		}
 		else if (pCltInfo->pTcpServer == &sRight) {
-			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + " connected");
+			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort) + " connected");
 			if (right_reg_pkt.length() > 0) {
 				pCltInfo->send(right_reg_pkt.data(), right_reg_pkt.length());
 				LOG("首发包RightServer:" + right_reg_pkt);
@@ -117,10 +117,10 @@ void tcpHub::statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) {
 	}
 	else {
 		if (pCltInfo->pTcpServer == &sLeft) {
-			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + " disconnected");
+			LOG("Left Server " + str::fromInt(left_s_port) + ": " + pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort) + " disconnected");
 		}
 		else if (pCltInfo->pTcpServer == &sRight) {
-			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + " disconnected");
+			LOG("Right Server " + str::fromInt(right_s_port) + ": " + pCltInfo->remoteIP + ":" + str::fromInt(pCltInfo->remotePort) + " disconnected");
 		}
 	}
 }
