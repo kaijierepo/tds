@@ -291,6 +291,15 @@ void ioDev_onvif::DoCycleTask() {
 							info = c_info.get();
 						}
 
+						//// test
+						//ALARM_INFO ai;
+						//ai.tag = m_strTagBind + "." + pC->m_strTagBind;
+						//ai.type = "视频伤损";
+						//ai.level = ALARM_LEVEL::alarm;
+						//ai.time = time.toStr();
+						//ai.needRecover = false;
+						//almSrv.Add(ai, true);
+
 						//报警
 						if (!info.empty()) {
 							auto doc = yyjson_read(info.c_str(), info.size(), 0);

@@ -1261,39 +1261,44 @@ bool ioDev::isViaAdaptor() {
 	return false;
 }
 
-ioDev* ioDev::getIODev(string ioAddr,bool bChn, bool ignorePort)
-{
+ioDev* ioDev::getIODev(string ioAddr, bool bChn, bool ignorePort, string addrType) {
 	if (bChn) {
 		str::hanZi2Pinyin(ioAddr, ioAddr);
 	}
 
-	for (auto& it : m_vecChildDev)
-	{
+	for (auto& it : m_vecChildDev) {
+		if (!addrType.empty()) {
+			if (addrType != it->m_addrType) {
+				continue;
+			}
+		}
+
 		string tmp = it->getIOAddrStr(ignorePort);
 		if (bChn) {
 			str::hanZi2Pinyin(tmp, tmp);
 		}
-		if (tmp == ioAddr)
-		{
+
+		if (tmp == ioAddr){
 			return it;
 		}
 
 		ioDev* p = it->getIODev(ioAddr,bChn,ignorePort);
-		if (p)
+		if (p) {
 			return p;
+		}
 	}
 
 	if (bChn) {
-		for (auto& it : m_channels)
-		{
+		for (auto& it : m_channels) {
 			string tmp = it->getIOAddrStr(ignorePort);
+
 			str::hanZi2Pinyin(tmp, tmp);
-			if (tmp == ioAddr)
-			{
+			if (tmp == ioAddr) {
 				return it;
 			}
 		}
 	}
+
 	return nullptr;
 }
 

@@ -236,7 +236,7 @@ public:
 	map<void*,std::shared_ptr<TDS_SESSION>> m_IoSessions;
 	mutex m_mutexIoSessions;
 
-	ioDev* getIODev(string ioAddr,bool bChn = false,bool ignorePort = false) override;
+	ioDev* getIODev(string ioAddr, bool bChn = false, bool ignorePort = false, string addrType = "") override;
 	
 	void updateTag2IOAddrBinding();//更新mo中的ioAddr绑定信息
 	void updateAllChanVal();

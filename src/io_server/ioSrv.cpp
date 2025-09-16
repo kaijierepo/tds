@@ -228,14 +228,13 @@ ioServer::~ioServer()
 //}
 
 //该函数中不要进行阻塞操作，大数量轮询操作，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
-void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
-{
-	if (bIsConn)
-	{
+void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn) {
+	if (bIsConn) {
 		std::shared_ptr<TDS_SESSION> p(new TDS_SESSION(pTcpSess));
 		p->type = TDS_SESSION_TYPE::iodev;
 		p->localPort = pTcpSess->localPort;
 		p->localIP = pTcpSess->localIP;
+
 		tcpSrv* pts = (tcpSrv*)pTcpSess->pTcpServer;
 		if (m_mapPort2DevType.find(pts->m_iServerPort) != m_mapPort2DevType.end()) {
 			p->ioDevType = m_mapPort2DevType[pts->m_iServerPort];
@@ -243,19 +242,18 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 
 		//局域网环境 tcp客户端类型的设备连接，不支持中文地址，忽略端口号，允许设备使用任意端口
 		if (p->remoteIP.find("192.") != string::npos) {
-			ioDev* pIoDev = ioSrv.getIODev(p->remoteIP, false, true);// getIODev需要持续优化性能，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
-			if (pIoDev)
-			{
+			ioDev* pIoDev = ioSrv.getIODev(p->remoteIP, false, true, DEV_ADDR_MODE::tcpClient);// getIODev需要持续优化性能，阻塞当前线程会阻塞整个tcpServer的数据通信和连接建立
+			if (pIoDev) {
 				p->bindIoDev(pIoDev);
 				pIoDev->setOnline();
 				timeopt::now(&pIoDev->m_stLastActiveTime);
 
 				pIoDev->bindIOSession(p);
-				if (pIoDev->pIOSession == p)
-				{
+				if (pIoDev->pIOSession == p) {
 					string s = str::format("[ioSrv]TcpClient设备Tcp连接成功,ioAddr=%s,remoteAddr=%s:%d,localAddr=%s:%d", pIoDev->getIOAddrStr().c_str(), pTcpSess->remoteIP.c_str(), pTcpSess->remotePort, pTcpSess->localIP.c_str(), pTcpSess->localPort);
 					logger.logInternal(s);
 				}
+
 				if (pIoDev->m_devType == DEV_TYPE_iq60) {
 					pIoDev->sendStr("[]\n");
 				}
@@ -271,12 +269,12 @@ void ioServer::statusChange_tcpSrv(tcpSession* pTcpSess, bool bIsConn)
 		m_IoSessions[pTcpSess] = p;
 		m_mutexIoSessions.unlock();
 	}
-	else
-	{
+	else {
 		m_mutexIoSessions.lock();
 		std::shared_ptr<TDS_SESSION> p = m_IoSessions[pTcpSess];
 		m_IoSessions.erase(pTcpSess);
 		m_mutexIoSessions.unlock();
+
 		//更新该session状态。等待其他零散指针引用销毁后自动删除
 		p->onTcpDisconnect();
 	}
@@ -1224,12 +1222,14 @@ void ioServer::rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 }
 
 //中文ioAddr查找模式bChn
-ioDev* ioServer::getIODev(string ioAddr,bool bChn,bool ignorePort)
+ioDev* ioServer::getIODev(string ioAddr, bool bChn, bool ignorePort, string addrType)
 {
 	ioDev* p = nullptr;
+
 	lock_conf_shared();
-	p= ioDev::getIODev(ioAddr,bChn,ignorePort);
+	p = ioDev::getIODev(ioAddr, bChn, ignorePort, addrType);
 	unlock_conf_shared();
+
 	return p;
 }
 
