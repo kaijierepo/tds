@@ -278,8 +278,7 @@ void ioDev_onvif::DoCycleTask() {
 						string imgBase64(out, outLen);
 						delete[] out;
 
-						//string modelPath = fs::appPath() + "/onnx/railway_n_2402213_1920.onnx";
-						string modelPath = fs::appPath() + "/onnx/railway_n_20250911.onnx";
+						string modelPath = fs::appPath() + "/onnx/railway_n_250919.onnx";
 						
 						size_t c_info_len = 0, c_err_len;
 						shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
