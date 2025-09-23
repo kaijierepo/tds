@@ -699,6 +699,7 @@ void ScriptManager::exeAllGlobalScripts() {
 
 		se.m_tagContext = si.getContextTag();
 		se.m_reloadFile = m_reloadFile;
+		si.user = "admin";
 
 		//TIME tStart;
 		//tStart.setNow();
