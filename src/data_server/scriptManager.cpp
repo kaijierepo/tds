@@ -400,7 +400,7 @@ bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp,
 	}
 
 	size_t len = 0;
-	char* result = yyjson_mut_write(mutDoc, 0, &len);
+	char* result = yyjson_mut_val_write(mutRoot, 0, &len);
 	if (result) {
 		rpcResp.result = result;
 		free(result);
