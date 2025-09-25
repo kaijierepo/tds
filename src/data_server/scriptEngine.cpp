@@ -1433,81 +1433,90 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             m_initTdsFunc(ctx, m_ioDevThis);
         }
 
-        if (!m_globalObj.is_null()) {
-            JSValue global = JS_GetGlobalObject(ctx);
-            for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
-                const std::string& key = it.key();
-                json& value            = it.value();
+        if (si.isExp) {
+            JSValue result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_GLOBAL);
+            if (!JS_IsException(result)) {
+                jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
+                string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
+                m_vecOutput.push_back(s);
+                JS_FreeValue(ctx, result);
 
-                JSValue prop_value;
-                jsonValToJsVal(value, ctx, prop_value);
-
-                JS_SetPropertyStr(ctx, global, key.c_str(), prop_value);
+                runOk = true;
             }
-
-            JS_FreeValue(ctx, global);
         }
-
-        JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);
-       
-        JSValue evalPromise;
-        evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
-        while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
-            Sleep(1);
-        }
-        int state = JS_PromiseState(ctx, evalPromise);
-        if (state == JS_PROMISE_REJECTED) {
-            JSValue err = JS_PromiseResult(ctx, evalPromise);
-            JSValue err_msg = JS_GetPropertyStr(ctx, err, "message");
-            JSValue err_stack = JS_GetPropertyStr(ctx, err, "stack");
-            const char* msg = JS_ToCString(ctx, err_msg);
-            const char* stack = JS_ToCString(ctx, err_stack);
-
-            JS_FreeCString(ctx, msg);
-            JS_FreeValue(ctx, err_msg);
-            JS_FreeCString(ctx, stack);
-            JS_FreeValue(ctx, err_stack);
-            JS_FreeValue(ctx, err);
-
-            string s = msg;
-            s += "\n";
-            s += stack;
-            s = str::replace(s, "\n", "\r\n");
-            sri.lastError = s;
-         	m_vecOutput.push_back(s);
-        }
-        else if (state == JS_PROMISE_FULFILLED) {
+        else {
             if (!m_globalObj.is_null()) {
                 JSValue global = JS_GetGlobalObject(ctx);
                 for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
                     const std::string& key = it.key();
                     json& value = it.value();
 
-                    JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());
-                    jsValToJsonVal(ctx, prop_value, value);
+                    JSValue prop_value;
+                    jsonValToJsVal(value, ctx, prop_value);
 
-                    JS_FreeValue(ctx, prop_value);
+                    JS_SetPropertyStr(ctx, global, key.c_str(), prop_value);
                 }
 
                 JS_FreeValue(ctx, global);
             }
 
-            if (si.isExp) {
-                JSValue result = JS_PromiseResult(ctx, evalPromise);
-                jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
-                string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
-                m_vecOutput.push_back(s);
-                JS_FreeValue(ctx, result);
-            }
-  
-            runOk = true;
-        }
-		JS_FreeValue(ctx, evalPromise);
-		JS_FreeContext(ctx);
-		JS_FreeRuntime(rt);
+            JSValue mockRet = JS_Eval(ctx, si.envVarScript.c_str(), si.envVarScript.length(), "mock.js", JS_EVAL_TYPE_GLOBAL);
 
-		int costMilli = TIME::calcTimePassMilliSecond(tStart);
-		m_vecOutput.push_back("执行耗时:" + to_string(costMilli) + "ms");
+            JSValue evalPromise;
+            evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
+
+            while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
+                Sleep(1);
+            }
+
+            int state = JS_PromiseState(ctx, evalPromise);
+            if (state == JS_PROMISE_REJECTED) {
+                JSValue err = JS_PromiseResult(ctx, evalPromise);
+                JSValue err_msg = JS_GetPropertyStr(ctx, err, "message");
+                JSValue err_stack = JS_GetPropertyStr(ctx, err, "stack");
+                const char* msg = JS_ToCString(ctx, err_msg);
+                const char* stack = JS_ToCString(ctx, err_stack);
+
+                JS_FreeCString(ctx, msg);
+                JS_FreeValue(ctx, err_msg);
+                JS_FreeCString(ctx, stack);
+                JS_FreeValue(ctx, err_stack);
+                JS_FreeValue(ctx, err);
+
+                string s = msg;
+                s += "\n";
+                s += stack;
+                s = str::replace(s, "\n", "\r\n");
+                sri.lastError = s;
+                m_vecOutput.push_back(s);
+            }
+            else if (state == JS_PROMISE_FULFILLED) {
+                if (!m_globalObj.is_null()) {
+                    JSValue global = JS_GetGlobalObject(ctx);
+                    for (auto it = m_globalObj.items().begin(); it != m_globalObj.items().end(); ++it) {
+                        const std::string& key = it.key();
+                        json& value = it.value();
+
+                        JSValue prop_value = JS_GetPropertyStr(ctx, global, key.c_str());
+                        jsValToJsonVal(ctx, prop_value, value);
+
+                        JS_FreeValue(ctx, prop_value);
+                    }
+
+                    JS_FreeValue(ctx, global);
+                }
+
+                runOk = true;
+            }
+
+            JS_FreeValue(ctx, evalPromise);            
+        }
+
+        JS_FreeContext(ctx);
+        JS_FreeRuntime(rt);
+
+        int costMilli = TIME::calcTimePassMilliSecond(tStart);
+        m_vecOutput.push_back("执行耗时:" + to_string(costMilli) + "ms");
 	}
 	catch (std::exception& e) {
 		string s = e.what();
@@ -1515,11 +1524,11 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 		return false;
 	}
 
-
     sri.tagRefDataTime = m_vecValRefTime;
     sri.retVal = m_sEvalRet.dump();
     sri.valNullInCalc = m_bValNullInCalc;
     sri.runSuccess = runOk;
+
 	return runOk;
 }
 
