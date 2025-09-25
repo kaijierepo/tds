@@ -314,6 +314,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	se.m_tagContext = si.getContextTag();
 	se.m_reloadFile = true;
 	si.user = session.user;
+	si.isExp = getExpRet;
 	bool runOk = se.runScript(si,si.lastRunInfo);
 
 	json jOutput = json::array();
