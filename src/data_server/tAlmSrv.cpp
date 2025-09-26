@@ -14,8 +14,6 @@
 #include "scriptManager.h"
 #endif
 
-#include "GlobalString.h"
-
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
 
 almServer almSrv;
@@ -2058,8 +2056,8 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 
-	StringUtils::replace(ai.desc, "\"\"", "\"");
-	StringUtils::replace(ai.detail, "\"\"", "\"");
+	str::replace(ai.desc, "\"\"", "\"");
+	str::replace(ai.detail, "\"\"", "\"");
 }
 
 
