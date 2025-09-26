@@ -2056,8 +2056,8 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 
-	str::replace(ai.desc, "\"\"", "\"");
-	str::replace(ai.detail, "\"\"", "\"");
+	ai.desc   = str::replace(ai.desc, "\"\"", "\"");
+	ai.detail = str::replace(ai.detail, "\"\"", "\"");
 }
 
 
