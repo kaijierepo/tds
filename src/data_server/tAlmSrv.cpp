@@ -206,6 +206,39 @@ void escape_double_quotes(const std::string& input,string& output) {
 	}
 }
 
+void unescape_double_quotes(const std::string& input, string& output) {
+	// 清空输出字符串
+	output.clear();
+	// 预留足够空间，避免频繁扩容（最坏情况是不做任何替换，和输入一样长）
+	output.reserve(input.size());
+
+	size_t i = 0;
+	const size_t len = input.size();
+
+	// 遍历输入字符串
+	while (i < len) {
+		// 检测到双引号
+		if (input[i] == '"') {
+			// 检查下一个字符是否也是双引号
+			if (i + 1 < len && input[i + 1] == '"') {
+				// 如果是连续双引号，只添加一个双引号
+				output += '"';
+				// 跳过下一个双引号
+				i += 2;
+			}
+			else {
+				// 单个双引号，直接添加
+				output += '"';
+				i += 1;
+			}
+		}
+		else {
+			// 非双引号字符直接添加
+			output += input[i];
+			i += 1;
+		}
+	}
+}
 
 
 
@@ -2056,12 +2089,9 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 
-	ai.desc   = str::replace(ai.desc, "\"\"", "\"");
-	ai.detail = str::replace(ai.detail, "\"\"", "\"");
+	unescape_double_quotes(ai.desc, ai.desc);
+	unescape_double_quotes(ai.detail, ai.detail);
 }
-
-
-
 
 string ALARM_INFO::toCSVLine()
 {
