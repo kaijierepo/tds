@@ -2089,8 +2089,10 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
 
-	unescape_double_quotes(ai.desc, ai.desc);
-	unescape_double_quotes(ai.detail, ai.detail);
+	string descTmp = ai.desc;
+	unescape_double_quotes(descTmp, ai.desc);
+	string detailTmp = ai.detail;
+	unescape_double_quotes(detailTmp, ai.detail);
 }
 
 string ALARM_INFO::toCSVLine()
