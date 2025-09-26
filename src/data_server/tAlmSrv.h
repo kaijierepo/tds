@@ -266,7 +266,6 @@ public:
 
 	//table options
 	void add(ALARM_INFO ai);
-	bool query(json params, ALARM_INFO& ai);
 	ALARM_QUERY parseQuerier(json& querier);
 	void SetAlarmSrv(almServer* pSrv);
 	void acknowledge(ALARM_INFO& ai);
