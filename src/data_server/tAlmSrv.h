@@ -56,6 +56,18 @@ namespace ALARM_LEVEL {
 	const string L4 = "L4";
 }
 
+//	南京恩瑞特用
+namespace AS_ALARM_LEVEL {
+	const string normal = "normal";
+	const string event = "event";
+	const string warn = "warn";
+	const string warn1 = "warn1";
+	const string warn2 = "warn2";
+	const string warn3 = "warn3";
+	const string warn4 = "warn4";
+	const string alarm = "alarm";
+}
+
 enum ALM_TABLE_TYPE {
 	CURRENT_TABLE,
 	UNRECOVER_TABLE,
@@ -254,6 +266,7 @@ public:
 
 	//table options
 	void add(ALARM_INFO ai);
+	bool query(json params, ALARM_INFO& ai);
 	ALARM_QUERY parseQuerier(json& querier);
 	void SetAlarmSrv(almServer* pSrv);
 	void acknowledge(ALARM_INFO& ai);
@@ -423,6 +436,8 @@ public:
 	void rpc_getAlmSrvStatus(json j, RPC_RESP& resp);
 
 	bool canRemoveFromCurrent(ALARM_INFO& ai);
+
+	bool queryCurentAlarm(ALARM_INFO newStatus, ALARM_INFO& lastStatus);
 
 private:
 	void addAlarm(ALARM_INFO& ai, bool notify = true);

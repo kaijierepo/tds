@@ -723,6 +723,21 @@ string almServer::getAlarmTypeLabel(string type)
 	return "";
 }
 
+bool almServer::queryCurentAlarm(ALARM_INFO newStatus, ALARM_INFO& lastStatus)
+{
+	json filter;
+	filter["tag"] = newStatus.tag;
+	filter["type"] = newStatus.type;
+	filter["isRecover"] = false;
+	//AS_ALARM_INFO lastStatus;
+	bool bTagAlarmStatusChanged = false; //该位号的报警状态是否发生改变
+	if (tableCurrent.query(filter, lastStatus))
+	{
+		return true;
+	}
+	return false;
+}
+
 void almServer::Add(ALARM_INFO ai, bool bNotify)
 {
 	g_asynCallWorker.enqueue([ai, bNotify] {
@@ -2150,6 +2165,64 @@ void almTable::add(ALARM_INFO ai)
 		}
 	}
 	appendFile(buffFilePath, pNew);
+}
+
+bool almTable::query(json params, ALARM_INFO& ai)
+{
+	std::lock_guard<mutex> lock(m_csTable);
+	bool bFind = false;
+	ALARM_INFO* p = NULL;
+	string time;
+	if (params["time"] != nullptr)
+		time = params["time"].get<string>();
+	string  pa = m_pAlmSrv->getFilePath(time, ALM_TABLE_TYPE::CURRENT_TABLE, m_pAlmSrv->m_dbFileMode);
+	loadFile(pa);
+	const string strRecoverFlag = /*as_charCodec::gb_to_utf8(*/"恢复"/*)*/;
+	string strType = "";
+	if (params["type"] != nullptr)
+	{
+		strType = params["type"].get<string>();
+		auto pos = strType.find(strRecoverFlag);
+		if (pos != string::npos)
+		{
+			strType.replace(pos, strRecoverFlag.length(), "");
+		}
+	}
+
+	for (auto& i : buff)
+	{
+		ALARM_INFO& it = *i.second;
+		if (params["uuid"] != nullptr) {
+			if (it.uuid == params["uuid"].get<string>()) {
+				ai = it;
+				bFind = true;
+				break;
+			}
+		}
+		else {
+			if (params["tag"] != nullptr && it.tag != params["tag"].get<string>())
+				continue;
+			if (params["time"] != nullptr && it.time != params["time"].get<string>())
+				continue;
+			if (params["type"] != nullptr)
+			{
+				if (it.type != strType)
+					continue;
+			}
+			if (params["isAck"] != nullptr && it.isAck != params["isAck"].get<bool>())
+				continue;
+			if (params["isRecover"] != nullptr && it.isRecover != params["isRecover"].get<bool>())
+				continue;
+
+			ai = it;
+			bFind = true;
+		}
+	}
+	if (bFind)
+	{
+		return true;
+	}
+	return false;
 }
 
 void almTable::acknowledge(ALARM_INFO& ai, bool remove)
