@@ -14,6 +14,7 @@
 #include "scriptManager.h"
 #endif
 
+#include "GlobalString.h"
 
 string ALM_TABLE_HEAD_LINE = "uuid,tag,time,type,level,info,detail,isRecover,needRecover,recoverTime,isAck,needAck,multiUnack,ackTime,ackInfo,ackUser,pic_url,acqType,objStatus";
 
@@ -175,6 +176,35 @@ void parse_csv_lines(const char* s, std::vector<LINE_VAL>& lines) {
 	// 处理最后一行（如果没有以\r\n结尾）
 	if (p > start) {
 		lines.push_back({ start, static_cast<int>(p - start) });
+	}
+}
+
+void escape_double_quotes(const std::string& input,string& output) {
+	// 首先计算需要替换的双引号数量
+	size_t quote_count = 0;
+	for (char c : input) {
+		if (c == '"') {
+			quote_count++;
+		}
+	}
+
+	// 如果没有双引号，直接返回原字符串
+	if (quote_count == 0) {
+		output = input;
+		return;
+	}
+
+	// 预先分配足够的内存，避免多次扩容
+	output.reserve(input.size() + quote_count);  // 每个"会被替换为两个字符
+
+	// 遍历并替换
+	for (char c : input) {
+		if (c == '"') {
+			output += "\"\"";  // 添加转义后的双引号
+		}
+		else {
+			output += c;       // 其他字符直接添加
+		}
 	}
 }
 
@@ -1948,39 +1978,39 @@ int atoi_n(const char* p, size_t len) {
 	return val;
 }
 
-void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
-{
+void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	CELL_VAL cols[50];
 	int colNum = 0;
 
 	bool bInQuotation = false;
 	int elSize = 0;
 	const char* pElStart = line;
-	for (int i = 0; i < lineLen; i++)
-	{
+	for (int i = 0; i < lineLen; i++) {
 		const char* p = line + i;
-		if (!bInQuotation && *p == ',')
-		{
+
+		if (!bInQuotation && *p == ',') {
 			cols[colNum].p = pElStart;
 			cols[colNum].len = elSize;
 			colNum++;
 			pElStart = p + 1;
 			elSize = 0;
 		}
-		else if (*p == '\"')
-		{
+		else if (bInQuotation && *p == '\"' && i < lineLen - 1 && *(p + 1) == '\"') {
+			i++;
+			elSize++;
+			elSize++;
+		}
+		else if (*p == '\"') {
 			//双引号不算在列的数值字符串之内
 			bInQuotation = !bInQuotation;
 			if (bInQuotation) {
 				pElStart++;
 			}
 		}
-		else
-		{
+		else {
 			elSize++;
 		}
 	}
-
 
 	int loadIdx = 0;
 	if (!valLoadIdxInit) {
@@ -2027,20 +2057,36 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai)
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.pic_url.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.acqType.assign(cv->p, cv->len); }loadIdx++;
 	colIdx = m_loadIdxToColIdx[loadIdx]; if (colIdx >= 0) { CELL_VAL* cv = cols + colIdx; ai.objStatus.assign(cv->p, cv->len); }loadIdx++;
+
+	StringUtils::replace(ai.desc, "\"\"", "\"");
+	StringUtils::replace(ai.detail, "\"\"", "\"");
 }
+
+
+
 
 string ALARM_INFO::toCSVLine()
 {
 	ALARM_INFO& info = *this;
 	string str;
+	str.reserve(1000 + info.desc.size()*2 + info.detail.size()*2);
 	//core info
 	str += "\"\""; str += ",";//uuid为空
 	str += "\"" + info.tag + "\""; str += ",";
 	str += info.time; str += ",";
 	str += info.type; str += ",";
 	str += info.level; str += ",";
-	str += "\"" + info.desc + "\""; str += ",";
-	str += "\"" + info.detail + "\""; str += ",";
+
+	string descTmp;
+	escape_double_quotes(info.desc, descTmp);
+	string detailTmp;
+	escape_double_quotes(info.detail, detailTmp);
+
+	str += "\"" + descTmp + "\""; str += ",";
+	str += "\"" + detailTmp + "\""; str += ",";
+
+	//str += "\"" + info.desc + "\""; str += ",";
+	//str += "\"" + info.detail + "\""; str += ",";
 
 	//ack and recover
 	str += info.isRecover ? "1" : "0"; str += ",";
