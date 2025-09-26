@@ -396,17 +396,8 @@ namespace JSON_STR {
 			return "";
 	}
 	inline int get_int(const string& s)
-	{
-		if (is_int(s))
-		{
-			auto doc = yyjson_read(s.c_str(), s.size(), 0);
-			auto root = yyjson_doc_get_root(doc);
-			double iResult = yyjson_get_int(root);
-			yyjson_doc_free(doc);
-			return iResult;
-		}
-		else
-			return 0;
+	{	
+		return atoi(s.c_str());		
 	}
 }
 
