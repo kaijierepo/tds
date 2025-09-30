@@ -2017,6 +2017,10 @@ void LINE_PARSER::parse(const char* line,int lineLen, ALARM_INFO& ai) {
 	int elSize = 0;
 	const char* pElStart = line;
 	for (int i = 0; i < lineLen; i++) {
+		if (colNum >= 50) {
+			break;
+		}
+
 		const char* p = line + i;
 
 		if (!bInQuotation && *p == ',') {
