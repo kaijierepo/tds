@@ -934,16 +934,19 @@ bool MP::loadObjStatus(OBJ* pSrcObj)
 	return true;
 }
 
-void MP::calcAlarm()
-{
-	if (JSON_STR::is_num(m_curVal))
-	{
+void MP::calcAlarm() {
+	if (JSON_STR::is_num(m_curVal)) {
 		double dbCurVal = JSON_STR::get_num(m_curVal);
+
+		if (m_validRange.enable) {
+			if (dbCurVal < m_validRange.min || dbCurVal > m_validRange.max) {
+				return;
+			}
+		}
+
 		//计算报警
-		if (m_alarmLimit.enableHigh)
-		{
-			if (dbCurVal > m_alarmLimit.high)
-			{
+		if (m_alarmLimit.enableHigh) {
+			if (dbCurVal > m_alarmLimit.high) {
 				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overHighLimit;
@@ -951,8 +954,7 @@ void MP::calcAlarm()
 				ai.desc = str::format("报警值%f,上限值%f", dbCurVal, m_alarmLimit.high);
 				almSrv.Update(ai);
 			}
-			else
-			{
+			else {
 				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overHighLimit;
@@ -960,10 +962,9 @@ void MP::calcAlarm()
 				almSrv.Update(ai);
 			}
 		}
-		if (m_alarmLimit.enableLow)
-		{
-			if (dbCurVal < m_alarmLimit.low)
-			{
+
+		if (m_alarmLimit.enableLow) {
+			if (dbCurVal < m_alarmLimit.low) {
 				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overLowLimit;
@@ -971,8 +972,7 @@ void MP::calcAlarm()
 				ai.desc = str::format("报警值%f,下限值%f", dbCurVal, m_alarmLimit.low);
 				almSrv.Update(ai);
 			}
-			else
-			{
+			else {
 				ALARM_INFO ai;
 				ai.tag = getTag();
 				ai.type = ALARM_TYPE::overLowLimit;
@@ -982,8 +982,6 @@ void MP::calcAlarm()
 		}
 	}
 }
-
-
 
 void MP::input(json& jVal, json* dataFile, TIME* dataTime) {
 	if (!m_bEnableIO) {
