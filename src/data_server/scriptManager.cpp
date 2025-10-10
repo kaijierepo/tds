@@ -185,7 +185,8 @@ bool ScriptManager::runScript(string scriptName, string input, string& output)
 		se.m_globalObj["Result"] = json::object();
 
 		SCRIPT_INFO si;
-		scriptManager.getScript(scriptName, si);
+		getScript(scriptName, si);
+		ScriptEngine::ScriptFolder = m_confPath + "/scripts";
 		se.runScript(si, si.lastRunInfo);
 
 		if (se.m_sError != "") {
