@@ -100,8 +100,6 @@ public:
 	static void init();
 };
 
-extern thread_local ScriptEngine* pEngine;
-
 extern void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal);
 extern void jsonValToJsVal(json& jsonVal, JSContext* ctx, JSValue& jsVal);
 

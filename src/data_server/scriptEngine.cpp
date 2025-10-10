@@ -18,8 +18,6 @@
 #include "tds.h"
 #include "tdb.h"
 
-thread_local ScriptEngine* pEngine;
-
 namespace tJSEngine {
     int parseStopBits(string s) {
         if (s == "1") {
@@ -154,6 +152,8 @@ static void mg_connect_fn(struct mg_connection* connect, int ev, void* ev_data) 
 
 extern "C" {
 	static JSValue qjs_log(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
         std::string s;
         for (int i = 0; i < argc; i++) {
             const char* log = JS_ToCString(ctx, argv[i]);
@@ -171,6 +171,8 @@ extern "C" {
 	}
 
     static JSValue qjs_logToServer(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
         std::string s;
         if (JS_IsString(argv[0])) {
             const char* log = JS_ToCString(ctx, argv[0]);
@@ -201,6 +203,8 @@ extern "C" {
     }
 
     static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
         // 参数转 json
         json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -1344,9 +1348,8 @@ bool loadScriptFile(string path, string& script) {
     }
 }
 
-JSModuleDef* qjs_module_loader(JSContext* ctx,
-    const char* module_name,
-    void* opaque) {
+JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* opaque) {
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     string s = str::trim(module_name,".");
 	string path = pEngine->m_folderPath + "/" + s;
@@ -1419,13 +1422,13 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 		TIME tStart;
         tStart.setNow();
 
-		pEngine = this;
-        pEngine->m_folderPath = si.folderPath;
+        m_folderPath = si.folderPath;
 		
 		// 初始化 QuickJS
 		JSRuntime* rt = JS_NewRuntime();
 		JSContext* ctx = JS_NewContext(rt);
 
+        JS_SetContextOpaque(ctx, this);
         JS_SetModuleLoaderFunc(rt, NULL, qjs_module_loader, NULL);
 
 		register_cpp_functions(ctx);
@@ -1436,8 +1439,8 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         if (si.isExp) {
             JSValue result = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_GLOBAL);
             if (!JS_IsException(result)) {
-                jsValToJsonVal(ctx, result, pEngine->m_sEvalRet);
-                string s = "Eval Return:" + pEngine->m_sEvalRet.dump();
+                jsValToJsonVal(ctx, result, m_sEvalRet);
+                string s = "Eval Return:" + m_sEvalRet.dump();
                 m_vecOutput.push_back(s);
                 JS_FreeValue(ctx, result);
 

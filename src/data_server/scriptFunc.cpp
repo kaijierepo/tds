@@ -16,6 +16,7 @@
 
 static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() > 0) {
         json tag = jArgs[0];
@@ -140,6 +141,7 @@ static JSValue qjs_notify(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue qjs_input(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() == 2) {
         std::string sTag = jArgs[0].get<std::string>();
@@ -159,6 +161,7 @@ static JSValue qjs_input(JSContext* ctx, JSValueConst this_val, int argc, JSValu
 
 static JSValue qjs_output(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() == 2) {
         std::string sTag = jArgs[0].get<std::string>();
@@ -179,6 +182,7 @@ static JSValue qjs_output(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue qjs_parseTag(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() > 0) {
         std::string tag = jArgs[0].get<std::string>();
@@ -210,6 +214,7 @@ static JSValue qjs_parseTag(JSContext* ctx, JSValueConst this_val, int argc, JSV
 
 static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() > 0) {
         json tag = jArgs[0];
@@ -238,6 +243,7 @@ static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 
 static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() > 0) {
         json tag = jArgs[0];
@@ -356,6 +362,7 @@ static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int ar
 
 static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() > 0) {
         json tag = jArgs[0];
@@ -432,6 +439,7 @@ static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JS
 
 static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     if (jArgs.size() == 1) {
         json params = jArgs[0];
@@ -584,6 +592,8 @@ static JSValue qjs_ioDev_doTransaction(JSContext* ctx, JSValueConst this_val, in
     if (jArgs.size() != 1)
         return JS_NULL;
 
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
     json req = jArgs[0];
     std::vector<uint8_t> vecReq;
     if (req.is_array()) {
@@ -635,6 +645,8 @@ static JSValue qjs_ioDev_send(JSContext* ctx, JSValueConst this_val, int argc, J
     if (jArgs.size() != 1)
         return JS_NULL;
 
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
     json req = jArgs[0];
     std::vector<uint8_t> vecReq;
     if (req.is_array()) {
@@ -676,6 +688,8 @@ static JSValue qjs_ioDev_sendStr(JSContext* ctx, JSValueConst this_val, int argc
     json jArgs = engineArrayToJson(ctx, argv, argc);
     if (jArgs.size() != 1)
         return JS_NULL;
+
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
     json req = jArgs[0];
     std::vector<uint8_t> vecReq;
