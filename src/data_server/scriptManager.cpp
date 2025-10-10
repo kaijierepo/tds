@@ -166,6 +166,44 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	return bHandled;
 }
 
+bool ScriptManager::runScript(string scriptName, string input, string& output)
+{
+	bool bRet = false;
+	if (!scriptName.empty()) {
+
+		LOG("执行脚本: " + scriptName);
+
+		ScriptEngine se;
+
+#ifdef TDS
+		se.m_initTdsFunc = initTdsFunc;
+#endif
+
+		json jInput = json::parse(input.c_str());
+
+		se.m_globalObj["Params"] = jInput;
+		se.m_globalObj["Result"] = json::object();
+
+		SCRIPT_INFO si;
+		scriptManager.getScript(scriptName, si);
+		se.runScript(si, si.lastRunInfo);
+
+		if (se.m_sError != "") {
+			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s", si.name.c_str(), se.m_sError.c_str());
+			LOG(s);
+		}
+		else {
+
+			json jOutput = se.m_globalObj["Result"];
+			output = jOutput.dump();
+
+			bRet = true;
+		}
+	}
+
+	return bRet;
+}
+
 bool ScriptManager::runScriptFileAsyn(string scriptName,string tagThis) {
 #ifdef ENABLE_QJS
 	thread t(scriptThreadTmp, scriptName,tagThis);
