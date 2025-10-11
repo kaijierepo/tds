@@ -3588,7 +3588,15 @@ void rpcHandler::logRPCRoute(string method,json& params,const RPC_RESP& rpcResp,
 		logParams["org"] = session.org;
 		logParams["remoteAddr"] = session.remoteAddr;
 		logParams["timeCost"] = rpcResp.timeCost;
-		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + str::fromFloat(params["pan"].get<float>()) + ",俯仰角:" + str::fromFloat(params["tilt"].get<float>());
+
+		string pan = "null";
+		if(params["pan"]!=nullptr)
+			pan = str::fromFloat(params["pan"].get<float>());
+		string tilt = "null";
+		if (params["tilt"] != nullptr)
+			tilt = str::fromFloat(params["tilt"].get<float>());
+
+		logParams["info"] = "设备名称:" + session.route_tag + ",设备地址:" + session.route_ioAddr + ",水平角:" + pan + ",俯仰角:" + tilt;
 		logParams["success"] = rpcResp.result != "";
 		//logSrv.rpc_addLog(logParams, session);
 		logOutput(session.route_tag, logParams);

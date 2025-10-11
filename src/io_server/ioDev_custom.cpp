@@ -341,10 +341,6 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen) {
 	//此处的接收脚本，内部需要给出是否handled，来决定数据是否作为response
 	//否则通知可能会作为reponse处理。该机制后续优化
 	if (m_onRecvScript != "") {
-#ifdef _DEBUG
-		LOG("执行脚本: " + m_onRecvScript);
-#endif
-
 		ScriptEngine se;
 
 #ifdef TDS
