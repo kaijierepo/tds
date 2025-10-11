@@ -32,7 +32,7 @@ public:
 	std::mutex m_csExpScripts;
 
 	bool handleRpc(string method, yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
-	bool runScript(string scriptName, string input, string& output);
+	bool runScript(string scriptName, string params, string& result, string& output);
 	bool runScriptFileAsyn(string scriptName,string tagThis);
 	bool getScript(string name, SCRIPT_INFO& si);
 	bool setRunInfo(string name, SCRIPT_RUN_INFO& sri);

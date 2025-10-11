@@ -166,7 +166,7 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	return bHandled;
 }
 
-bool ScriptManager::runScript(string scriptName, string input, string& output)
+bool ScriptManager::runScript(string scriptName, string params, string& result, string& output)
 {
 	bool bRet = false;
 	if (!scriptName.empty()) {
@@ -179,26 +179,41 @@ bool ScriptManager::runScript(string scriptName, string input, string& output)
 		se.m_initTdsFunc = initTdsFunc;
 #endif
 
-		json jInput = json::parse(input.c_str());
+		json jParams = json::parse(params.c_str());
 
-		se.m_globalObj["Params"] = jInput;
+		se.m_globalObj["Params"] = jParams;
 		se.m_globalObj["Result"] = json::object();
 
 		SCRIPT_INFO si;
 		getScript(scriptName, si);
 		se.runScript(si, si.lastRunInfo);
 
+		json jOutput = json::array();
+
+		for (int i = 0; i < se.m_vecOutput.size(); i++) {
+			string sline = se.m_vecOutput[i];
+			jOutput.push_back(sline);
+		}
+
+		output = jOutput.dump();
+
 		if (se.m_sError != "") {
-			string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s", si.name.c_str(), se.m_sError.c_str());
+			string s = str::format("[error]脚本执行错误，脚本=%s,错误=%s", si.name.c_str(), se.m_sError.c_str());
 			LOG(s);
+
+			output = s;
 		}
 		else {
 
-			json jOutput = se.m_globalObj["Result"];
-			output = jOutput.dump();
+			json jResult = se.m_globalObj["Result"];
+			result = jResult.dump();
 
 			bRet = true;
 		}
+	}
+	else
+	{
+		output = "[error]脚本名称为空";
 	}
 
 	return bRet;
