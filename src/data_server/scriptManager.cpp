@@ -210,6 +210,8 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 
 			bRet = true;
 		}
+
+		scriptManager.setRunInfo(si.name, si.lastRunInfo);
 	}
 	else
 	{
