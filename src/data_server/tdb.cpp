@@ -94,6 +94,22 @@ namespace DB_STR {
 		return str;
 	}
 
+	string utf16_to_utf8(wstring instr) //utf-8-->ansi
+	{
+		string str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 4 + 2;
+		char* charstr = new char[MAX_STRSIZE];
+		memset(charstr, 0, MAX_STRSIZE);
+		WideCharToMultiByte(CP_UTF8, 0, instr.c_str(), -1, charstr, (int)MAX_STRSIZE, NULL, NULL);
+		str = charstr;
+		delete[] charstr;
+#else
+
+#endif
+		return str;
+	}
+
 	wstring utf8_to_utf16(string instr) //utf-8-->ansi
 	{
 		wstring str;
@@ -211,6 +227,22 @@ namespace DB_STR {
 		//	free(outbuf);
 		//}
 		str = instr;
+#endif
+		return str;
+	}
+
+	wstring gb_to_utf16(string instr)
+	{
+		wstring str;
+#ifdef _WIN32
+		size_t MAX_STRSIZE = instr.length() * 2 + 2;
+		WCHAR* wcharstr = new WCHAR[MAX_STRSIZE];
+		memset(wcharstr, 0, MAX_STRSIZE);
+		MultiByteToWideChar(CP_ACP, 0, (char*)instr.data(), -1, wcharstr, (int)MAX_STRSIZE);
+		str = wcharstr;
+		delete[] wcharstr;
+#else
+
 #endif
 		return str;
 	}
@@ -487,6 +519,27 @@ namespace DB_FS {
 		return false;
 	}
 
+	bool readFile(string path, char*& pData, int& len)
+	{
+		FILE* fp = nullptr;
+#ifdef _WIN32
+		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
+#else
+		fp = fopen(path.c_str(), "rb");
+#endif
+		if (fp)
+		{
+			fseek(fp, 0, SEEK_END);
+			len = ftell(fp);
+			pData = new char[len];
+			fseek(fp, 0, SEEK_SET);
+			fread(pData, 1, len, fp);
+			fclose(fp);
+			return true;
+		}
+		return false;
+	}
+
 	//do not use a file path without a suffix
 	//filesystem::path use wstring utf16 ,compatible with windows and linux
 	void createFolderOfPath(string strFile)
@@ -547,6 +600,10 @@ namespace DB_FS {
 	bool writeFile(string path, unsigned char* data, size_t len)
 	{
 		return writeFile(path, (char*)data, len);
+	}
+	bool writeFile(string path, string& data)
+	{
+		return writeFile(path, (char*)data.c_str(), data.length());
 	}
 	bool appendWrite(string path, char* data, size_t len)
 	{
@@ -673,6 +730,121 @@ namespace DB_FS {
 
 	bool rename(const std::string& oldPath, const std::string& newPath) {
 		return std::rename(oldPath.c_str(), newPath.c_str()) == 0;
+	}
+
+	string normalizationPath(string& s)
+	{
+		s = replaceStr(s, "\\\\", "/");
+		s = replaceStr(s, "\\", "/");
+		s = replaceStr(s, "//", "/");
+		return s;
+	}
+
+	void getFolderList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive) {
+#ifndef _WINXP
+		try
+		{
+			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
+			for (auto& i : fs::directory_iterator(wstrFolder)) {
+				if (fs::is_directory(i.path())) {
+					FILE_INFO fi;
+					fi.path = DB_STR::gb_to_utf8(i.path().string());
+					fi.path = replaceStr(fi.path, "\\", "/");
+					size_t pos = fi.path.rfind("/");
+					fi.folderPath = fi.path.substr(0, pos);
+					fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
+					fi.len = fs::file_size(i.path());
+					auto ftime = fs::last_write_time(i.path());
+					// 将 file_time_type 转换为 system_clock::time_point
+					auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+						ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+						);
+					auto ti = std::chrono::system_clock::to_time_t(sctp);
+					std::stringstream ss;
+					ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
+					fi.modifyTime = ss.str();
+
+					list.push_back(fi);
+
+					if (recursive) {
+						getFolderList(list, DB_STR::gb_to_utf8(i.path().string()), recursive);
+					}
+				}
+			}
+		}
+		catch (exception&) {
+		}
+#else
+#endif
+	}
+
+
+	void getFileList(vector<DB_FS::FILE_INFO>& list, string strFolder, bool recursive, string suffix, vector<string>* exclude) {
+#ifndef _WINXP
+		try
+		{
+			wstring wstrFolder = DB_STR::utf8_to_utf16(strFolder);
+			for (auto& i : fs::directory_iterator(wstrFolder)) {
+				FILE_INFO fi;
+				fi.path = DB_STR::gb_to_utf8(i.path().string());
+				fi.name = DB_STR::gb_to_utf8(i.path().filename().string());
+				if (exclude != nullptr) {
+					bool excluded = false;
+					for (int i = 0; i < exclude->size(); i++) {
+						string ep = exclude->at(i);
+						if (fi.name == ep) {
+							excluded = true;
+							break;
+						}
+					}
+
+					if (excluded) {
+						continue;
+					}
+				}
+
+				if (fs::is_directory(i.path())) {
+					if (recursive) {
+						getFileList(list, DB_STR::gb_to_utf8(i.path().string()), recursive, suffix, exclude);
+					}
+				}
+				else {
+					//std::filesystem::file_time_type ft = i.last_write_time();
+					//std::time_t tt = decltype(ft)::clock::to_time_t();
+					fi.path = replaceStr(fi.path, "\\", "/");
+					if (suffix != "*" && fi.path.find(suffix) == string::npos)
+						continue;
+					size_t pos = fi.path.rfind("/");
+					fi.folderPath = fi.path.substr(0, pos);
+					fi.len = fs::file_size(i.path());
+					auto ftime = fs::last_write_time(i.path());
+					// 将 file_time_type 转换为 system_clock::time_point
+					auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+						ftime - decltype(ftime)::clock::now() + std::chrono::system_clock::now()
+						);
+					auto ti = std::chrono::system_clock::to_time_t(sctp);
+					std::stringstream ss;
+					ss << std::put_time(std::localtime(&ti), "%Y-%m-%d %H:%M:%S");
+					fi.modifyTime = ss.str();
+					list.push_back(fi);
+				}
+			}
+		}
+		catch (exception&) {
+		}
+#else
+#endif
+	}
+
+
+	void getFileList(vector<string>& list, string strFolder, bool includeFolder, bool recursive)
+	{
+		vector<DB_FS::FILE_INFO> filist;
+		getFileList(filist, strFolder, recursive);
+		for (int i = 0; i < filist.size(); i++) {
+			DB_FS::FILE_INFO& fi = filist[i];
+			list.push_back(fi.path);
+		}
 	}
 }
 
@@ -6015,7 +6187,7 @@ string TDB::parseSuffix(string deFileUrl)
 }
 
 
-bool TDB::fileExist(string pszFileName) const
+bool TDB::fileExist(string pszFileName)
 {
 #ifdef _WIN32
 		wstring filePath = DB_STR::utf8_to_utf16(pszFileName);

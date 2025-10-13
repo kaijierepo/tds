@@ -1,5 +1,6 @@
 ﻿#include "rpcHandler_common.h"
 #include "common.h"
+#include "tdb.h"
 #include "base64.h"
 #include <fstream>
 
@@ -12,7 +13,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 	if (method == "fs.readFile") {
 		if (params["type"] != nullptr && params["type"].get<string>() == "binary") {
 			char* p = NULL; int len = 0;
-			if (fs::readFile(params["path"].get<string>(), p, len)) {
+			if (DB_FS::readFile(params["path"].get<string>(), p, len)) {
 			}
 		}
 		else {
@@ -41,12 +42,12 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			path = rootPath + "/" + path;
 
 			string s;
-			if (fs::readFile(path, s)) {
+			if (DB_FS::readFile(path, s)) {
 				json j = s;
 				rpcResp.result = j.dump();
 			}
 			else {
-				if (!fs::fileExist(params["path"])) {
+				if (!TDB::fileExist(params["path"])) {
 					rpcResp.error = makeRPCError(OS_fileNotExist, "file not exist");
 				}
 				else {
@@ -80,7 +81,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 
 		path = rootPath + "/" + path;
 
-		if (fs::deleteFile(path)) {
+		if (DB_FS::deleteFile(path)) {
 			rpcResp.result = "\"ok\"";
 		}
 		else {
@@ -111,7 +112,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 		}
 
 		path = rootPath + "/" + path;
-		fs::createFolderOfPath(path);
+		DB_FS::createFolderOfPath(path);
 
 		if (params["data"] != nullptr) {
 			string d = params["data"].get<string>();
@@ -125,7 +126,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 				unsigned char* out = new unsigned char[d.length()];
 				int len = base64_decode(d.c_str(), (int)d.length(), out);
 
-				if (fs::writeFile(path, (char*)out, len)) {
+				if (DB_FS::writeFile(path, (char*)out, len)) {
 					rpcResp.result = "\"ok\"";
 				}
 				else {
@@ -136,7 +137,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			}
 			else {
 				string ap = fs::toAbsolutePath(path);
-				if (fs::writeFile(ap, d)) {
+				if (DB_FS::writeFile(ap, d)) {
 					rpcResp.result = "\"ok\"";
 				}
 				else {
@@ -151,7 +152,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 		GetCurrentDirectoryW(300, buff);
 
 		wstring s = buff;
-		json j = charCodec::utf16_to_utf8(s);
+		json j = DB_STR::utf16_to_utf8(s);
 
 		rpcResp.result = j.dump();
 	}
@@ -171,7 +172,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 		}
 
 		vector<string> fl;
-		fs::getFileList(fl, path, includeFolder, recursive);
+		DB_FS::getFileList(fl, path, includeFolder, recursive);
 
 		json j = fl;
 		rpcResp.result = j.dump();
@@ -182,8 +183,8 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			root = params["root"].get<string>();
 		}
 
-		vector<fs::FILE_INFO> fileList;
-		vector<fs::FILE_INFO> folderList;
+		vector<DB_FS::FILE_INFO> fileList;
+		vector<DB_FS::FILE_INFO> folderList;
 
 		string path;
 		if (root == "fms") {
@@ -211,12 +212,12 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 			path = path + "/" + subPath;
 		}
 
-		fs::getFileList(fileList, path);
-		fs::getFolderList(folderList, path);
+		DB_FS::getFileList(fileList, path);
+		DB_FS::getFolderList(folderList, path);
 
 		json infoList = json::array();
 		for (int i = 0; i < folderList.size(); i++) {
-			fs::FILE_INFO& fi = folderList[i];
+			DB_FS::FILE_INFO& fi = folderList[i];
 
 			json j;
 			j["name"]       = fi.name;
@@ -228,7 +229,7 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 		}
 
 		for (int i = 0; i < fileList.size(); i++) {
-			fs::FILE_INFO& fi = fileList[i];
+			DB_FS::FILE_INFO& fi = fileList[i];
 
 			json j;
 			j["name"]       = fi.name;
@@ -284,8 +285,8 @@ void RpcHandler_common::rpc_getconffile(json params, RPC_RESP& resp, RPC_SESSION
 		string conf = "";
 		p = m_confPath + "/" + p;
 
-		fs::normalizationPath(p);
-		fs::readFile(p, conf);
+		DB_FS::normalizationPath(p);
+		DB_FS::readFile(p, conf);
 
 		json j;
 		j["path"] = p;
@@ -318,7 +319,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 	if (rPath != "") {
 		string conf = params["data"].get<string>();
 		path = m_confPath + "/" + rPath;
-		fs::createFolderOfPath(path);
+		DB_FS::createFolderOfPath(path);
 
 		if (encode == "base64") {
 			//移除Data URI scheme中的前缀 
@@ -331,7 +332,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 
 			std::string image_data = base64_decode(conf);
 #ifdef _WIN32
-			wstring wpath = charCodec::tds_to_utf16(path);
+			wstring wpath = DB_STR::gb_to_utf16(path);
 			// Write the binary data to a file
 			std::ofstream image_file(wpath, std::ios::out | std::ios::binary);
 #else
@@ -345,7 +346,7 @@ void RpcHandler_common::rpc_setconffile(json params, RPC_RESP& resp, RPC_SESSION
 			resp.result = RPC_OK;
 		}
 		else {
-			bool bRet = fs::writeFile(path, conf);
+			bool bRet = DB_FS::writeFile(path, conf);
 			if (bRet) {
 				g_mapConfFile[rPath] = conf; //更新内存中的配置文件]
 			}

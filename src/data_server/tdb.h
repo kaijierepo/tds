@@ -761,20 +761,40 @@ typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagS
 
 namespace DB_STR {
 	wstring utf8_to_utf16(string instr);
+	string utf16_to_utf8(wstring instr);
 	string gb_to_utf8(string instr);
 	string utf8_to_gb(string instr);
+	wstring gb_to_utf16(string instr);
 }
 
 namespace DB_FS {
 	bool readFile(string path, string& data);
+	bool readFile(string path, char*& pData, int& len);
 	void createFolderOfPath(string strFile);
 	bool writeFile(string path, char* data, size_t len);
 	bool writeFile(string path, unsigned char* data, size_t len);
+	bool writeFile(string path, string& data);
 	bool deleteFile(string path);
 	void DeleteDirectoryContents(const std::string& dirPath);
 	void deleteDirectory(string& dirPath);
 	bool copyFile(const std::string& src, const std::string& dest);
 	bool rename(const std::string& oldPath, const std::string& newPath);
+
+	string normalizationPath(string& s);
+
+	struct FILE_INFO {
+		string modifyTime;
+		string createTime;
+		size_t len;
+		string accessTime;
+		string name;
+		string path;
+		string folderPath;
+	};
+
+	void getFolderList(vector<FILE_INFO>& list, string strFolder, bool recursive = false);
+	void getFileList(vector<FILE_INFO>& list, string strFolder, bool recursive = false, string suffix = "*", vector<string>* exclude = nullptr);
+	void getFileList(vector<string>& list, string strFolder, bool includeFolder = false, bool recursive = false);
 }
 
 struct FILE_BUFF {
@@ -920,7 +940,7 @@ public:
 	string getName_deFile(string tag, DB_TIME time);
 
 	string parseSuffix(string deFileUrl);
-	bool fileExist(string pszFileName)const;
+	static bool fileExist(string pszFileName);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 	fp_getTagsByTagSelector m_getTagsByTagSelector;
