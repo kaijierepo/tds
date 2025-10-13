@@ -232,6 +232,9 @@ void ioDev_onvif::DoCycleTask() {
 
 					valid = true;
 				}
+				else {
+					LOG("onvif chanId invalid");
+				}
 
 				//bool valid = false;
 				//if (chanId.find(",") != string::npos) {
@@ -288,6 +291,9 @@ void ioDev_onvif::DoCycleTask() {
 						string info;
 						if (bRC) {
 							info = c_info.get();
+						}
+						else {
+							LOG("onvif dv_predict info failed");
 						}
 
 						//// test
@@ -435,8 +441,17 @@ void ioDev_onvif::DoCycleTask() {
 								yyjson_mut_doc_free(mutDoc);
 							}
 						}
+						else {
+							LOG("onvif pmp not found");
+						}
+					}
+					else {
+						LOG("onvif onnx/snapshot.jpg not exist");
 					}
 				}
+			}
+			else {
+				LOG("onvif ptzPatrolInterval failed");
 			}
 		}
 	}

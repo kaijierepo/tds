@@ -318,6 +318,33 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 	}
 
+	if (si.folderPath != "") {
+		string sMockjs;
+		if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
+			si.envVarScript = sMockjs;
+			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
+		}
+		string sDebugParams;
+		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
+			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
+			yyjson_val* r = yyjson_doc_get_root(d);
+			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
+			if (yy_dev) {
+				si.devAddr = yyjson_get_str(yy_dev);
+				se.m_vecOutput.push_back("环境设备:" + si.devAddr);
+				LOG("read devAddr is success, %s", si.devAddr.c_str());
+			}
+			else {
+				LOG("read devAddr is failed");
+			}
+		}
+		else {
+			LOG("DB_FS::readFile debug.json is failed");
+		}
+	}
+	else {
+		LOG("si.folderPath is empty");
+	}
 
 #ifdef TDS
 	se.m_initTdsFunc = initTdsFunc;
@@ -345,24 +372,6 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 		}
 	}
 #endif
-
-	if (si.folderPath != "") {
-		string sMockjs;
-		if (DB_FS::readFile(si.folderPath + "/mock.js", sMockjs) && sMockjs != "") {
-			si.envVarScript = sMockjs;
-			se.m_envVarScriptLine = static_cast<int>(std::count(sMockjs.begin(), sMockjs.end(), '\n')) + 1;
-		}
-		string sDebugParams;
-		if (DB_FS::readFile(si.folderPath + "/debug.json", sDebugParams) && sDebugParams != "") {
-			yyjson_doc* d = yyjson_read(sDebugParams.c_str(), sDebugParams.size(), 0);
-			yyjson_val* r = yyjson_doc_get_root(d);
-			yyjson_val* yy_dev = yyjson_obj_get(r, "dev");
-			if (yy_dev) {
-				si.devAddr = yyjson_get_str(yy_dev);
-				se.m_vecOutput.push_back("环境设备:" + si.devAddr);
-			}
-		}
-	}
 
 	se.m_tagContext = si.getContextTag();
 	se.m_reloadFile = true;
