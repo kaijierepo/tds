@@ -730,11 +730,6 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
     JS_SetPropertyStr(ctx, global, "getConfFileBuff", JS_NewCFunction(ctx, qjs_getConfFileBuff, "getConfFileBuff", 1));
 
-    JSValue db = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
-    JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
-	JS_SetPropertyStr(ctx, global, "db", db);
-
     if (pDev) {
         JSValue dev = JS_NewObject(ctx);
         JS_SetPropertyStr(ctx, global, "Dev", dev);
