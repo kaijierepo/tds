@@ -242,12 +242,14 @@ bool RpcHandler_common::handleRpc(const string& method, json& params, RPC_RESP& 
 
 		rpcResp.result = infoList.dump();
 	}
+#ifdef TDS
 	else if (method == "getConfFile") {
 		rpc_getconffile(params, rpcResp, session);
 	}
 	else if (method == "setConfFile") {
 		rpc_setconffile(params, rpcResp, session);
 	}
+#endif
 	else {
 		handled = false;
 	}
