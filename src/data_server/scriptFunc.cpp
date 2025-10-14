@@ -409,6 +409,93 @@ static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
+static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+
+    if (jArgs.size() == 1) {
+        json params = jArgs[0];
+        if (params.is_object()) {
+            json err, rlt;
+            RPC_SESSION sess;
+            tds->call("db.select", params, err, rlt, sess);
+            if (rlt != nullptr) {
+                json jRet;
+                jRet["result"] = rlt;
+                JSValue jsVal;
+                jsonValToJsVal(jRet, ctx, jsVal);
+                return jsVal;
+            }
+            else if (err != nullptr) {
+                json jRet;
+                jRet["error"] = err;
+                JSValue jsVal;
+                jsonValToJsVal(jRet, ctx, jsVal);
+                return jsVal;
+            }
+        }
+    }
+    return JS_NULL;
+}
+
+static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    json jArgs = engineArrayToJson(ctx, argv, argc);
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
+    if (jArgs.size() == 1) {
+        json params = jArgs[0];
+        if (params.is_object()) {
+            json err, rlt;
+            RPC_SESSION sess;
+
+            tds->call("db.insert", params, err, rlt, sess);
+
+            if (rlt != nullptr) {
+                JSValue jsVal;
+                jsonValToJsVal(rlt, ctx, jsVal);
+
+                return jsVal;
+            }
+            else {
+                int errCode = err["code"].get<int>();
+                std::string errMsg = err["message"].get<std::string>();
+                std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+                pEngine->m_vecOutput.push_back(errInfo);
+                LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                    errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+            }
+        }
+    }
+    else if (jArgs.size() == 3) {
+        json params;
+        params["tag"] = jArgs[0];
+        params["time"] = jArgs[1];
+        params["val"] = jArgs[2];
+
+        json err, rlt;
+        RPC_SESSION sess;
+
+        tds->call("db.insert", params, err, rlt, sess);
+
+        if (rlt != nullptr) {
+            JSValue jsVal;
+            jsonValToJsVal(rlt, ctx, jsVal);
+            return jsVal;
+        }
+        else {
+            int errCode = err["code"].get<int>();
+
+            std::string errMsg = err["message"].get<std::string>();
+            std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+            pEngine->m_vecOutput.push_back(errInfo);
+            LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+        }
+    }
+    return JS_NULL;
+}
+
 static JSValue qjs_ioDev_setOnline(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     JSValue dev = this_val;
     json jDev;
@@ -729,6 +816,11 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
     JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
     JS_SetPropertyStr(ctx, global, "getConfFileBuff", JS_NewCFunction(ctx, qjs_getConfFileBuff, "getConfFileBuff", 1));
+
+    JSValue db = JS_NewObject(ctx);
+    JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
+    JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
+    JS_SetPropertyStr(ctx, global, "db", db);
 
     if (pDev) {
         JSValue dev = JS_NewObject(ctx);

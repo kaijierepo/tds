@@ -2606,7 +2606,7 @@ bool almServer::handleRpc(string method, json& params, RPC_RESP& rpcResp, RPC_SE
 			sync = false;
 		}
 
-		rpc_updateStatus(params, rpcResp,false);
+		rpc_updateStatus(params, rpcResp, false);
 	}
 	else if (method == "ackAlarm" || method == "ackAlarmEvent")
 	{

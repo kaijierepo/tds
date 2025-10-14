@@ -992,106 +992,19 @@ extern "C" {
         return JS_NewInt64(ctx, byteVal32);
     }
 
-    static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-
-        if (jArgs.size() == 1) {
-            json params = jArgs[0];
-            if (params.is_object()) {
-                json err, rlt;
-                RPC_SESSION sess;
-                tds->call("db.select", params, err, rlt, sess);
-                if (rlt != nullptr) {
-                    json jRet;
-                    jRet["result"] = rlt;
-                    JSValue jsVal;
-                    jsonValToJsVal(jRet, ctx, jsVal);
-                    return jsVal;
-                }
-                else if (err != nullptr) {
-                    json jRet;
-                    jRet["error"] = err;
-                    JSValue jsVal;
-                    jsonValToJsVal(jRet, ctx, jsVal);
-                    return jsVal;
-                }
-            }
-        }
-        return JS_NULL;
-    }
-
-    static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        if (jArgs.size() == 1) {
-            json params = jArgs[0];
-            if (params.is_object()) {
-                json err, rlt;
-                RPC_SESSION sess;
-
-                tds->call("db.insert", params, err, rlt, sess);
-
-                if (rlt != nullptr) {
-                    JSValue jsVal;
-                    jsonValToJsVal(rlt, ctx, jsVal);
-
-                    return jsVal;
-                }
-                else {
-                    int errCode = err["code"].get<int>();
-                    std::string errMsg = err["message"].get<std::string>();
-                    std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-
-                    pEngine->m_vecOutput.push_back(errInfo);
-                    LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                        errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-                }
-            }
-        }
-        else if (jArgs.size() == 3) {
-            json params;
-            params["tag"] = jArgs[0];
-            params["time"] = jArgs[1];
-            params["val"] = jArgs[2];
-
-            json err, rlt;
-            RPC_SESSION sess;
-
-            tds->call("db.insert", params, err, rlt, sess);
-
-            if (rlt != nullptr) {
-                JSValue jsVal;
-                jsonValToJsVal(rlt, ctx, jsVal);
-                return jsVal;
-            }
-            else {
-                int errCode = err["code"].get<int>();
-
-                std::string errMsg = err["message"].get<std::string>();
-                std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
-
-                pEngine->m_vecOutput.push_back(errInfo);
-                LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                    errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
-            }
-        }
-        return JS_NULL;
-    }
-
     static JSValue qjs_almSrv_AddAlarm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         // 获取 ScriptEngine 实例
         ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
         // 参数校验
         if (argc != 1) {
-            return JS_ThrowTypeError(ctx, "AddAlarm 需要一个参数");
+            return JS_NULL;
         }
 
         // 转换 JS 参数为 json
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 1 || !jArgs[0].is_object()) {
-            return JS_ThrowTypeError(ctx, "AddAlarm 参数必须为对象");
+            return JS_NULL;
         }
 
         // 调用回调
@@ -1100,7 +1013,7 @@ extern "C" {
             return JS_NewBool(ctx, true);
         }
         else {
-            return JS_ThrowInternalError(ctx, "m_scriptAddAlarm 未设置");
+            return JS_NULL;
         }
     }
 } 
@@ -1148,11 +1061,6 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
     JS_SetPropertyStr(ctx, global, "callMethod", JS_NewCFunction(ctx, qjs_callMethod, "callMethod", 2));
     JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_callMethod, "call", 2));
-
-    JSValue db = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
-    JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
-    JS_SetPropertyStr(ctx, global, "db", db);
 
     JSValue almSrv = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, almSrv, "AddAlarm", JS_NewCFunction(ctx, qjs_almSrv_AddAlarm, "AddAlarm", 1));
