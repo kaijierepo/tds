@@ -60,7 +60,6 @@ class ScriptEngine;
 typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
 typedef void (*fp_callMethod)(string method, string param, string& rlt,string& err);
 typedef void (*fp_callMethodRR)(const string& req,string& resp);
-typedef void (*fp_scriptAddAlarm)(json newAlarm);
 
 class ScriptEngine {
 public:
@@ -100,7 +99,6 @@ public:
 	static string ScriptFolder;
 	static void init();
 
-	fp_scriptAddAlarm m_scriptAddAlarm;
 };
 
 extern void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal);

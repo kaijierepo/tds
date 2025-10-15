@@ -991,31 +991,6 @@ extern "C" {
         byteVal32 = (byteVal32 >> offset) & 0x01;
         return JS_NewInt64(ctx, byteVal32);
     }
-
-    static JSValue qjs_almSrv_AddAlarm(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        // 获取 ScriptEngine 实例
-        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        // 参数校验
-        if (argc != 1) {
-            return JS_NULL;
-        }
-
-        // 转换 JS 参数为 json
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-        if (jArgs.size() != 1 || !jArgs[0].is_object()) {
-            return JS_NULL;
-        }
-
-        // 调用回调
-        if (pEngine->m_scriptAddAlarm) {
-            pEngine->m_scriptAddAlarm(jArgs[0]);
-            return JS_NewBool(ctx, true);
-        }
-        else {
-            return JS_NULL;
-        }
-    }
 } 
 
 void register_cpp_functions(JSContext* ctx) {
@@ -1061,10 +1036,6 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
     JS_SetPropertyStr(ctx, global, "callMethod", JS_NewCFunction(ctx, qjs_callMethod, "callMethod", 2));
     JS_SetPropertyStr(ctx, global, "call", JS_NewCFunction(ctx, qjs_callMethod, "call", 2));
-
-    JSValue almSrv = JS_NewObject(ctx);
-    JS_SetPropertyStr(ctx, almSrv, "AddAlarm", JS_NewCFunction(ctx, qjs_almSrv_AddAlarm, "AddAlarm", 1));
-    JS_SetPropertyStr(ctx, global, "almSrv", almSrv);
 
     JS_FreeValue(ctx, global);
 }
