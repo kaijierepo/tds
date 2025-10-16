@@ -1000,11 +1000,18 @@ extern "C" {
             if (params.is_object()) {
                 string err, rlt, queryInfo;
                 string sParams = params.dump();
-                db.rpc_db_select(sParams, err, rlt, queryInfo, "", "zh");
+                db.rpc_db_select(sParams, rlt, err, queryInfo, "", "zh");
 
-                json jRlt = json::parse(rlt);
-                json jErr = json::parse(err);
+                json jRlt;
+                if (!rlt.empty()) {
+                    jRlt = json::parse(rlt);
+                }
 
+                json jErr;
+                if (!err.empty()) {
+                    jErr = json::parse(err);
+                }
+                 
                 if (jRlt != nullptr) {
                     json jRet;
                     jRet["result"] = jRlt;
@@ -1035,8 +1042,15 @@ extern "C" {
                 string sParams = params.dump();
                 db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
 
-                json jRlt = json::parse(rlt);
-                json jErr = json::parse(err);
+                json jRlt;
+                if (!rlt.empty()) {
+                    jRlt = json::parse(rlt);
+                }
+
+                json jErr;
+                if (!err.empty()) {
+                    jErr = json::parse(err);
+                }
 
                 if (jRlt != nullptr) {
                     JSValue jsVal;
@@ -1065,8 +1079,15 @@ extern "C" {
             string sParams = params.dump();
             db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
 
-            json jRlt = json::parse(rlt);
-            json jErr = json::parse(err);
+            json jRlt;
+            if (!rlt.empty()) {
+                jRlt = json::parse(rlt);
+            }
+
+            json jErr;
+            if (!err.empty()) {
+                jErr = json::parse(err);
+            }
 
             if (jRlt != nullptr) {
                 JSValue jsVal;
