@@ -694,7 +694,7 @@ bool ScriptManager::rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcRe
 		size_t len = 0;
 		char* cParams = yyjson_val_write(params_obj, 0, &len);
 		if (cParams) {
-			rpcResp.result = cParams;
+			sParams = cParams;
 			free(cParams);
 
 			if (scriptManager.runScript(scriptName, sParams, sResult, sOutput)) {
