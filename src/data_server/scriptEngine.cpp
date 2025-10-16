@@ -992,6 +992,7 @@ extern "C" {
         return JS_NewInt64(ctx, byteVal32);
     }
 
+
     static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         json jArgs = engineArrayToJson(ctx, argv, argc);
 
