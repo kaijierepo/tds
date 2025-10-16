@@ -45,6 +45,7 @@ public:
 	bool rpc_setScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_getScriptMngStatus(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 	bool rpc_setScriptEnable(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
+	bool rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session);
 
 	void scriptList2Json(string org, std::map<string, SCRIPT_INFO>& sl, yyjson_mut_doc* mutDoc, yyjson_mut_val* mutRoot);
 	void saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl, bool saveScriptData = false);

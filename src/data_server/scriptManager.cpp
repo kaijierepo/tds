@@ -158,6 +158,9 @@ bool ScriptManager::handleRpc(string method, yyjson_val* params_obj, RPC_RESP& r
 	else if (method == "setScriptEnable") {
 		rpc_setScriptEnable(params_obj, rpcResp, session);
 	}
+	else if (method == "runAnalyseScript") {
+		rpc_runAnalyseScript(params_obj, rpcResp, session);
+	}
 #endif
 	else {
 		bHandled = false;
@@ -677,6 +680,38 @@ bool ScriptManager::rpc_setScriptEnable(yyjson_val* params_obj, RPC_RESP& rpcRes
 	saveScriptList("", m_mapScripts);
 	rpcResp.result = RPC_OK;
 
+	return true;
+}
+bool ScriptManager::rpc_runAnalyseScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
+	yyjson_val* scriptName_val = yyjson_obj_get(params_obj, "scriptName");
+	if (scriptName_val && yyjson_is_str(scriptName_val)) {
+		std::string scriptName = yyjson_get_str(scriptName_val);
+
+		string sParams;
+		string sResult;
+		string sOutput;
+
+		size_t len = 0;
+		char* cParams = yyjson_val_write(params_obj, 0, &len);
+		if (cParams) {
+			rpcResp.result = cParams;
+			free(cParams);
+
+			if (scriptManager.runScript(scriptName, sParams, sResult, sOutput)) {
+				rpcResp.result = sResult;
+			}
+			else {
+				LOG(sOutput);
+			}
+		}
+		else {
+			LOG("rpc_runAnalyseScript params write failed");
+		}
+	}
+	else {
+		LOG("rpc_runAnalyseScript scriptName unvalid");
+	}
+	
 	return true;
 }
 
