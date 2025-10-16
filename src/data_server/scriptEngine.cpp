@@ -1028,6 +1028,7 @@ extern "C" {
                 }
             }
         }
+
         return JS_NULL;
     }
 
@@ -1105,6 +1106,7 @@ extern "C" {
                     errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
             }
         }
+
         return JS_NULL;
     }
 } 
