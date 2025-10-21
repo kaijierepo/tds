@@ -261,7 +261,7 @@ bool ScriptManager::setRunInfo(string name, SCRIPT_RUN_INFO& sri)
 }
 
 bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC_SESSION session) {
-	// getExpRet
+	// getExpRet 
 	yyjson_val* get_exp_ret_val = yyjson_obj_get(params_obj, "getExpRet");
 
 	bool getExpRet = false;
