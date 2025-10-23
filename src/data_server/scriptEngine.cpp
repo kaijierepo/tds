@@ -1109,6 +1109,65 @@ extern "C" {
 
         return JS_NULL;
     }
+
+    static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+
+        if (jArgs.size() == 2) {
+            json path = jArgs[0];
+            json data = jArgs[1];
+            if (path.is_string() && data.is_string()) {
+                std::string rPath = path.get<std::string>();
+                string sData = data.get<string>();
+
+                string aPath = ScriptEngine::ConfFolder + "/" + rPath;
+                DB_FS::createFolderOfPath(aPath);
+
+                bool bRet = DB_FS::writeFile(aPath, sData);
+                if (bRet) {
+                    g_mapConfFile[rPath] = sData;
+                }
+                return JS_NewBool(ctx, bRet);
+            }
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_getConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+
+        if (jArgs.size() == 1) {
+            json path = jArgs[0];
+            if (path.is_string()) {
+                std::string sPath = path.get<std::string>();
+                string sData;
+
+                sPath = ScriptEngine::ConfFolder + "/" + sPath;
+                bool bRet = DB_FS::readFile(sPath, sData);
+                if (bRet) {
+                    return JS_NewString(ctx, sData.c_str());
+                }
+                return JS_NULL;
+            }
+        }
+        return JS_NULL;
+    }
+
+    static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        json jArgs = engineArrayToJson(ctx, argv, argc);
+        if (jArgs.size() == 1) {
+            json path = jArgs[0];
+            if (path.is_string()) {
+                std::string rPath = path.get<std::string>();
+                map<string, string>::iterator iter = g_mapConfFile.find(rPath);
+                if (iter != g_mapConfFile.end()) {
+                    return JS_NewString(ctx, iter->second.c_str());
+                }
+                return JS_NULL;
+            }
+        }
+        return JS_NULL;
+    }
 } 
 
 void register_cpp_functions(JSContext* ctx) {
@@ -1159,6 +1218,10 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
     JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
     JS_SetPropertyStr(ctx, global, "db", db);
+
+    JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
+    JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
+    JS_SetPropertyStr(ctx, global, "getConfFileBuff", JS_NewCFunction(ctx, qjs_getConfFileBuff, "getConfFileBuff", 1));
 
     JS_FreeValue(ctx, global);
 }
@@ -1501,6 +1564,7 @@ JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* op
 fp_callMethod ScriptEngine::callMethodImp = nullptr;
 fp_callMethodRR ScriptEngine::callMethodRRImp = nullptr;
 string ScriptEngine::ScriptFolder = "";
+string ScriptEngine::ConfFolder = "";
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;

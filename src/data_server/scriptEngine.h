@@ -97,6 +97,8 @@ public:
 	static fp_callMethod  callMethodImp;
 	static fp_callMethodRR callMethodRRImp;
 	static string ScriptFolder;
+	static string ConfFolder;
+
 	static void init();
 
 };
@@ -112,5 +114,7 @@ extern bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst propValue
 
 JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val);
 yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc);
+
+extern map<string, string> g_mapConfFile;
 
 #endif
