@@ -4,7 +4,7 @@
 
 Licensed under the MIT License <http://opensource.org/licenses/MIT>.
 SPDX-License-Identifier: MIT
-Copyright (c) 2020-present Tao Lu å¢æ¶›
+Copyright (c) 2020-present Tao Lu Â¬ÌÎ
 
 Permission is hereby  granted, free of charge, to any  person obtaining a copy
 of this software and associated  documentation files (the "Software"), to deal
@@ -52,7 +52,7 @@ SOFTWARE.
 #include "memDiag.h"
 #endif
 
-#ifdef USE_SVN_REV  //æŠŠsvnç‰ˆæœ¬å·ç¼–è¯‘åˆ°ç›®æ ‡æ–‡ä»¶ä¸­
+#ifdef USE_SVN_REV  //°Ñsvn°æ±¾ºÅ±àÒëµ½Ä¿±êÎÄ¼şÖĞ
 #include "version.h"
 #endif
 
@@ -68,8 +68,8 @@ string g_strStartupTime = "";
 #include <FCNTL.H>
 void createConsole()
 {
-	BOOL bRet = AllocConsole(); //æ‰“å¼€æ§åˆ¶å°çª—å£ä»¥æ˜¾ç¤ºè°ƒè¯•ä¿¡æ¯
-	SetConsoleTitleA("TDS Console"); //è®¾ç½®æ ‡é¢˜
+	BOOL bRet = AllocConsole(); //´ò¿ª¿ØÖÆÌ¨´°¿ÚÒÔÏÔÊ¾µ÷ÊÔĞÅÏ¢
+	SetConsoleTitleA("TDS Console"); //ÉèÖÃ±êÌâ
 	freopen("CONOUT$", "w+t", stdout);
 	freopen("CONIN$", "r+t", stdin);
 }
@@ -80,7 +80,7 @@ void chromeThread()
 {
 #ifdef _WIN32
 	string chromePath = fs::appPath() + "\\chrome\\chrome.exe";
-	//--kioskä¸ºå…¨å±å‚æ•°ï¼Œå¹¶ä¸”é¼ æ ‡ç§»åˆ°å±å¹•ä¸Šè¾¹ç¼˜ä¸ä¼šå‡ºç°é€€å‡ºå…¨å±çš„ Ã—
+	//--kioskÎªÈ«ÆÁ²ÎÊı£¬²¢ÇÒÊó±êÒÆµ½ÆÁÄ»ÉÏ±ßÔµ²»»á³öÏÖÍË³öÈ«ÆÁµÄ ¡Á
 	string chromeParam = "";
 	if (tds->conf->fullscreen)
 		chromeParam += " --kiosk";
@@ -111,15 +111,15 @@ void chromeThread()
 			&pi)           // Pointer to PROCESS_INFORMATION structure
 			)
 		{
-			LOG("å¯åŠ¨Chromeå¤±è´¥" + sys::getLastError());
+			LOG("Æô¶¯ChromeÊ§°Ü" + sys::getLastError());
 		}
 		else
 		{
-			// ç­‰å¾…æ–°è¿›ç¨‹åˆå§‹åŒ–å®Œæ¯•  
-			string s = "chromeè¿›ç¨‹Id: " + str::format("0x%x,%d", pi.dwProcessId, pi.dwProcessId);
+			// µÈ´ıĞÂ½ø³Ì³õÊ¼»¯Íê±Ï  
+			string s = "chrome½ø³ÌId: " + str::format("0x%x,%d", pi.dwProcessId, pi.dwProcessId);
 			LOG(s);
 			WaitForInputIdle(pi.hProcess, 5000);
-			int windowFindTime = 3000;  //3ç§’å†…æŒç»­æŸ¥æ‰¾ATExpertä¸ºæ ‡é¢˜çš„çª—å£,ç”±äºChromeçš„æŸäº›æœºåˆ¶,è¯¥æ ‡é¢˜å¯¹åº”çš„çª—å£å¥æŸ„ä¼šå‘ç”Ÿå˜åŒ–
+			int windowFindTime = 3000;  //3ÃëÄÚ³ÖĞø²éÕÒATExpertÎª±êÌâµÄ´°¿Ú,ÓÉÓÚChromeµÄÄ³Ğ©»úÖÆ,¸Ã±êÌâ¶ÔÓ¦µÄ´°¿Ú¾ä±ú»á·¢Éú±ä»¯
 			int idx = 0;
 			while (windowFindTime > 0)
 			{
@@ -127,7 +127,7 @@ void chromeThread()
 				if (tds->uiWnd != hWnd)
 				{
 					tds->uiWnd = hWnd;
-					string s = "chromeçª—å£å¥æŸ„: " + str::format("[%d]0x%x,%d",idx, tds->uiWnd, tds->uiWnd);
+					string s = "chrome´°¿Ú¾ä±ú: " + str::format("[%d]0x%x,%d",idx, tds->uiWnd, tds->uiWnd);
 					LOG(s);
 					idx++;
 				}
@@ -139,12 +139,12 @@ void chromeThread()
 			wstring ws = charCodec::gb_to_utf16(fs::appPath() + "\\favicon.ico");
 			hIcon = (HICON)LoadImageW(NULL, ws.c_str(), IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
 
-			timeopt::sleepMilli(3000); //æ­¤å¤„è¦sleepä¸€ä¸‹,ä¸ç„¶ä»»åŠ¡æ å›¾æ ‡æ›¿æ¢ä¸æ‰
+			timeopt::sleepMilli(3000); //´Ë´¦ÒªsleepÒ»ÏÂ,²»È»ÈÎÎñÀ¸Í¼±êÌæ»»²»µô
 
 			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
 			SendMessage((HWND)tds->uiWnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 			
-			WaitForSingleObject(pi.hProcess, INFINITE);//ç”¨æˆ·ä»ä»»åŠ¡æ å³é”®å…³é—­chromeæµè§ˆå™¨ï¼Œæ­¤å¤„é˜»å¡è§£é™¤ï¼Œç¨‹åºä»æ­¤å¤„é€€å‡º
+			WaitForSingleObject(pi.hProcess, INFINITE);//ÓÃ»§´ÓÈÎÎñÀ¸ÓÒ¼ü¹Ø±Õchromeä¯ÀÀÆ÷£¬´Ë´¦×èÈû½â³ı£¬³ÌĞò´Ó´Ë´¦ÍË³ö
 		}
 
 		CloseHandle(pi.hProcess);
@@ -181,8 +181,8 @@ void createChromeWnd()
 //		ZeroMemory(&pi, sizeof(pi));
 //
 //		// Start the child process.
-//		si.dwFlags = STARTF_USESHOWWINDOW; // æŒ‡å®šwShowWindowæˆå‘˜æœ‰æ•ˆ
-//		si.wShowWindow = TRUE; // æ­¤æˆå‘˜è®¾ä¸ºTRUEçš„è¯åˆ™æ˜¾ç¤ºæ–°å»ºè¿›ç¨‹çš„ä¸»çª—å£
+//		si.dwFlags = STARTF_USESHOWWINDOW; // Ö¸¶¨wShowWindow³ÉÔ±ÓĞĞ§
+//		si.wShowWindow = TRUE; // ´Ë³ÉÔ±ÉèÎªTRUEµÄ»°ÔòÏÔÊ¾ĞÂ½¨½ø³ÌµÄÖ÷´°¿Ú
 //
 //		if (!CreateProcessW(NULL,   // No module name (use command line)
 //			(LPWSTR)charCodec::utf8_to_utf16(path).c_str(),        // Command line
@@ -196,7 +196,7 @@ void createChromeWnd()
 //			&pi)           // Pointer to PROCESS_INFORMATION structure
 //			)
 //		{
-//			LOG("å¯åŠ¨å¤±è´¥" + path + sys::getLastError());
+//			LOG("Æô¶¯Ê§°Ü" + path + sys::getLastError());
 //		}
 //		else
 //		{
@@ -244,8 +244,8 @@ bool isTdsRunning() {
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(60006); // æŒ‡å®šè¦ç»‘å®šçš„ç«¯å£å·
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // ç»‘å®šåˆ°æœ¬åœ°å›ç¯åœ°å€
+	addr.sin_port = htons(60006); // Ö¸¶¨Òª°ó¶¨µÄ¶Ë¿ÚºÅ
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK); // °ó¶¨µ½±¾µØ»Ø»·µØÖ·
 
 	int bindResult = ::bind(sockfd, (struct sockaddr*)&addr, sizeof(addr));
 	if (bindResult < 0) {
@@ -306,8 +306,8 @@ bool TDS_imp::setWorkingDir()
 {
 	string cwd = fs::appPath();
 	BOOL bRet = SetCurrentDirectoryW(charCodec::utf8_to_utf16(cwd).c_str());
-	string s = bRet ? "æˆåŠŸ" : "å¤±è´¥";
-	//LOG("[keyinfo][å·¥ä½œç›®å½•   ]" + cwd + "è®¾ç½®" + s + ",å·¥ä½œç›®å½•ç”¨äºRPCå‘½ä»¤ä¸­çš„ç›¸å¯¹è·¯å¾„");
+	string s = bRet ? "³É¹¦" : "Ê§°Ü";
+	//LOG("[keyinfo][¹¤×÷Ä¿Â¼   ]" + cwd + "ÉèÖÃ" + s + ",¹¤×÷Ä¿Â¼ÓÃÓÚRPCÃüÁîÖĞµÄÏà¶ÔÂ·¾¶");
 	return true;
 }*/
 
@@ -366,7 +366,7 @@ std::string execCommand(const char* cmd) {
 	std::array<char, 128> buffer;
 	std::string result;
 #ifdef _WIN32
-	// åˆ›å»ºåŒ¿åç®¡é“
+	// ´´½¨ÄäÃû¹ÜµÀ
 	SECURITY_ATTRIBUTES sa;
 	sa.nLength = sizeof(SECURITY_ATTRIBUTES);
 	sa.lpSecurityDescriptor = NULL;
@@ -377,41 +377,41 @@ std::string execCommand(const char* cmd) {
 		throw std::runtime_error("CreatePipe() failed!");
 	}
 
-	// è®¾ç½®å¯åŠ¨ä¿¡æ¯
+	// ÉèÖÃÆô¶¯ĞÅÏ¢
 	STARTUPINFOA si;
 	ZeroMemory(&si, sizeof(STARTUPINFOA));
 	si.cb = sizeof(STARTUPINFOA);
 	si.hStdOutput = hWrite;
 	si.hStdError = hWrite;
 	si.dwFlags |= STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-	si.wShowWindow = SW_HIDE; // éšè—çª—å£
+	si.wShowWindow = SW_HIDE; // Òş²Ø´°¿Ú
 
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
-	// åˆ›å»ºè¿›ç¨‹
+	// ´´½¨½ø³Ì
 	if (!CreateProcessA(NULL, const_cast<char*>(cmd), NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
 		CloseHandle(hRead);
 		CloseHandle(hWrite);
 		throw std::runtime_error("CreateProcess() failed!");
 	}
 
-	// å…³é—­å†™å¥æŸ„
+	// ¹Ø±ÕĞ´¾ä±ú
 	CloseHandle(hWrite);
 
-	// è¯»å–è¾“å‡º
+	// ¶ÁÈ¡Êä³ö
 	DWORD bytesRead;
 	while (ReadFile(hRead, buffer.data(), buffer.size(), &bytesRead, NULL) && bytesRead > 0) {
 		result.append(buffer.data(), bytesRead);
 	}
 
-	// å…³é—­è¯»å¥æŸ„
+	// ¹Ø±Õ¶Á¾ä±ú
 	CloseHandle(hRead);
 
-	// ç­‰å¾…è¿›ç¨‹ç»“æŸ
+	// µÈ´ı½ø³Ì½áÊø
 	WaitForSingleObject(pi.hProcess, INFINITE);
 
-	// å…³é—­è¿›ç¨‹å’Œçº¿ç¨‹å¥æŸ„
+	// ¹Ø±Õ½ø³ÌºÍÏß³Ì¾ä±ú
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 #else
@@ -429,7 +429,7 @@ std::string execCommand(const char* cmd) {
 
 std::string getSystemBootTime() {
 	std::string output = execCommand("systeminfo");
-	std::string bootTimeLabel =charCodec::utf8_to_gb("ç³»ç»Ÿå¯åŠ¨æ—¶é—´:");
+	std::string bootTimeLabel =charCodec::utf8_to_gb("ÏµÍ³Æô¶¯Ê±¼ä:");
 	size_t pos = output.find(bootTimeLabel);
 	if (pos != std::string::npos) {
 		size_t endPos = output.find('\n', pos);
@@ -449,7 +449,7 @@ void loadDeepVersion() {
 #ifdef _WIN32
 	string deepVersionDllPath = fs::appPath() + "/DeepVision.dll";
 	if (fs::fileExist(deepVersionDllPath)) {
-		HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // è¯·ç¡®ä¿ DLL æ–‡ä»¶è·¯å¾„æ­£ç¡®
+		HMODULE hDLL = LoadLibrary(deepVersionDllPath.c_str());  // ÇëÈ·±£ DLL ÎÄ¼şÂ·¾¶ÕıÈ·
 		if (hDLL == NULL) {
 			DWORD errorCode = GetLastError();
 			std::cerr << "Failed to load DLL!" << std::endl;
@@ -476,7 +476,7 @@ bool TDS_imp::run(string cmdline) {
 	TIME exeTime = timeopt::now(); 
 	g_strStartupTime = exeTime.toStr(false);
 
-#ifdef _WINDLL // dllæ¨¡å¼ä¸‹éœ€è¦åˆ›å»ºå‘½ä»¤è¡Œ
+#ifdef _WINDLL // dllÄ£Ê½ÏÂĞèÒª´´½¨ÃüÁîĞĞ
 	tds->conf->mode = "tds";
 #endif
 
@@ -494,7 +494,7 @@ bool TDS_imp::run(string cmdline) {
 		conf->uiMode = getUIMode();
 	}
 
-#ifdef _WINDLL // dllæ¨¡å¼ä¸‹éœ€è¦åˆ›å»ºå‘½ä»¤è¡Œ
+#ifdef _WINDLL // dllÄ£Ê½ÏÂĞèÒª´´½¨ÃüÁîĞĞ
 	if (conf->uiMode == "console") {
 		createConsole();
 	}
@@ -506,12 +506,12 @@ bool TDS_imp::run(string cmdline) {
 	if (tds->conf->getInt("singleInst", 1)) {
 		if (isTdsRunning()) {
 #ifdef _WIN32
-			printf(charCodec::tds_to_gb("tdså·²ç»è¿è¡Œï¼Œç¨‹åºå°†äº5ç§’åè‡ªåŠ¨é€€å‡º\r\n").c_str());
+			printf(charCodec::tds_to_gb("tdsÒÑ¾­ÔËĞĞ£¬³ÌĞò½«ÓÚ5Ãëºó×Ô¶¯ÍË³ö\r\n").c_str());
 #else
-			printf("tdså·²ç»è¿è¡Œï¼Œç¨‹åºå°†äº5ç§’åè‡ªåŠ¨é€€å‡º\r\n");
+			printf("tdsÒÑ¾­ÔËĞĞ£¬³ÌĞò½«ÓÚ5Ãëºó×Ô¶¯ÍË³ö\r\n");
 #endif
 
-			LOG("tdså·²ç»è¿è¡Œï¼Œé€€å‡ºç¨‹åº");
+			LOG("tdsÒÑ¾­ÔËĞĞ£¬ÍË³ö³ÌĞò");
 
 			timeopt::sleepMilli(5 * 1000);
 			exit(0);
@@ -526,8 +526,8 @@ bool TDS_imp::run(string cmdline) {
 	m_sTitle = appName + " " + version + "(" + getbuildtime() + ")";
 #endif
 
-	LOG("[keyinfo]æœåŠ¡å¯åŠ¨,ç‰ˆæœ¬:%s", m_sTitle.c_str());
-	LOG("[æ—¥å¿—      ] è®°å½•ç­‰çº§:" + tdsConf.logLevel + ",æ—¥å¿—æ–‡ä»¶è·¯å¾„:" + logger.m_strLogDir);
+	LOG("[keyinfo]·şÎñÆô¶¯,°æ±¾:%s", m_sTitle.c_str());
+	LOG("[ÈÕÖ¾      ] ¼ÇÂ¼µÈ¼¶:" + tdsConf.logLevel + ",ÈÕÖ¾ÎÄ¼şÂ·¾¶:" + logger.m_strLogDir);
 
 	string navIniPath = tds->conf->confPath + "/nav.ini";
 	if (fs::fileExist(navIniPath)) {
@@ -538,43 +538,43 @@ bool TDS_imp::run(string cmdline) {
 			string u8s = charCodec::gb_to_utf8(s);
 			fs::writeFile(navIniPath, u8s);
 
-			LOG("[warn]nav.iniéutf8ç¼–ç ï¼Œè¿›è¡Œgb2312->utf8è½¬æ¢");
+			LOG("[warn]nav.ini·Çutf8±àÂë£¬½øĞĞgb2312->utf8×ª»»");
 		}
 	}
 
 
-	//æŒ‡å®šé…ç½®è·¯å¾„æ²¡æœ‰é…ç½®æ–‡ä»¶å¤¹ï¼Œåˆ™æ–°å»º
+	//Ö¸¶¨ÅäÖÃÂ·¾¶Ã»ÓĞÅäÖÃÎÄ¼ş¼Ğ£¬ÔòĞÂ½¨
 	if (tds->conf->confPath == fs::appPath() + "/conf") {
 		if (!fs::fileExist(tds->conf->confPath)) {
 			fs::createFolderOfPath(tds->conf->confPath);
 
-			LOG("[keyinfo]é…ç½®è·¯å¾„æœªæ‰¾åˆ°é…ç½®æ–‡ä»¶å¤¹,æ–°å»ºé…ç½®,è·¯å¾„:" + tds->conf->confPath);
+			LOG("[keyinfo]ÅäÖÃÂ·¾¶Î´ÕÒµ½ÅäÖÃÎÄ¼ş¼Ğ,ĞÂ½¨ÅäÖÃ,Â·¾¶:" + tds->conf->confPath);
 		}
 	}
 
-	LOG("[UIè·¯å¾„	] " + tds->conf->uiPath);
-	LOG("[ç»„æ€è·¯å¾„	] " + tds->conf->confPath);
-	LOG("[æ•°æ®åº“	] " + tds->conf->dbPath);
+	LOG("[UIÂ·¾¶	] " + tds->conf->uiPath);
+	LOG("[×éÌ¬Â·¾¶	] " + tds->conf->confPath);
+	LOG("[Êı¾İ¿â	] " + tds->conf->dbPath);
 
 	rpcHandler_common.m_confPath = tds->conf->confPath;
 	rpcHandler_common.m_dbPath   = tds->conf->dbPath;
 	rpcHandler_common.m_fmsPath  = tds->conf->fmsPath;
 	rpcHandler_common.m_appPath  = fs::appPath();
 
-	//åˆå§‹åŒ–ç³»ç»Ÿç»„ä»¶ï¼Œå®Œæˆé™æ€ç»“æ„å»ºç«‹ã€‚loadConfå’Œinitç±»å‡½æ•°ã€‚åœ¨è°ƒç”¨runä¹‹å‰ï¼Œè¦å…ˆå®Œæˆ.å¦åˆ™åœ¨ç»“æ„å»ºç«‹ä¹‹å‰å°±è¿›è¡Œæ•°æ®ioï¼Œå¯èƒ½ä¼šå‡ºç°ä¸€äº›ä¸å¿…è¦çš„é”™è¯¯ã€‚
+	//³õÊ¼»¯ÏµÍ³×é¼ş£¬Íê³É¾²Ì¬½á¹¹½¨Á¢¡£loadConfºÍinitÀàº¯Êı¡£ÔÚµ÷ÓÃrunÖ®Ç°£¬ÒªÏÈÍê³É.·ñÔòÔÚ½á¹¹½¨Á¢Ö®Ç°¾Í½øĞĞÊı¾İio£¬¿ÉÄÜ»á³öÏÖÒ»Ğ©²»±ØÒªµÄ´íÎó¡£
 
 	//startup tds modules
 	//if db folder is not exist. open will create an empty folder
-	//å…ˆåˆå§‹åŒ–æ•°æ®åº“ã€‚ moå’Œioçš„åˆå§‹åŒ–éƒ½å¯èƒ½ä»æ•°æ®åº“ä¸­åŠ è½½æ•°æ® ã€‚
-	//ioSrvä¼šä»æ•°æ®åº“åŠ è½½è®¾å¤‡é…ç½®ç¼“å­˜æ•°æ®
+	//ÏÈ³õÊ¼»¯Êı¾İ¿â¡£ moºÍioµÄ³õÊ¼»¯¶¼¿ÉÄÜ´ÓÊı¾İ¿âÖĞ¼ÓÔØÊı¾İ ¡£
+	//ioSrv»á´ÓÊı¾İ¿â¼ÓÔØÉè±¸ÅäÖÃ»º´æÊı¾İ
 	if (tds->conf->enableDB) {
 		::db.m_timeUnit        = (DB_TIME_UNIT)tds->conf->getInt("dbTimeUnit", 1);
 		::db.m_dbFmt.dbRootTag = tds->conf->getStr("dbRootTag", "");
 
 		bool bCheckEnd = false;
 
-		//1,æœ‰é…ç½®å°±ç”¨é…ç½®æ¥
-		//2,æ²¡é…ç½®åšæ£€æŸ¥
+		//1,ÓĞÅäÖÃ¾ÍÓÃÅäÖÃÀ´
+		//2,Ã»ÅäÖÃ×ö¼ì²é
 		string deListName = tds->conf->getStr("deListName", "");
 
 		DB_FMT db_Fmt;
@@ -602,7 +602,7 @@ bool TDS_imp::run(string cmdline) {
 
 	ioDev::m_offlineConfirmCount = tds->conf->getInt("offlineConfirmCount", 1);
 
-	//æŠ¥è­¦æœåŠ¡ç›¸å…³å‚æ•°ä¸æ¥å£
+	//±¨¾¯·şÎñÏà¹Ø²ÎÊıÓë½Ó¿Ú
 	AsInitParam asInitParam;
 	asInitParam.confPath                       = tds->conf->confPath;
 	asInitParam.enableGlobalAlarm              = tds->conf->enableGlobalAlarm;
@@ -613,7 +613,7 @@ bool TDS_imp::run(string cmdline) {
 	asInitParam.func_sms_notify                = funcImp_sms_notify;
 	asInitParam.func_usrMng_checkTagPermission = funcImp_usrMng_checkTagPermission;
 
-	//æŠ¥è­¦
+	//±¨¾¯
 	almSrv.m_dbFileMode = ONE_FILE_PER_MONTH;
 
 #ifdef ENABLE_ALM_SRV_HOOK_SCRIPT
@@ -626,13 +626,14 @@ bool TDS_imp::run(string cmdline) {
 	//
 	userMng.init();
 	ScriptEngine::callMethodImp = callMethod;
-	ScriptEngine::ScriptFolder = tds->conf->confPath + "/scripts";
+	ScriptEngine::ScriptFolder  = tds->conf->confPath + "/scripts";
+	ScriptEngine::ConfFolder    = tds->conf->confPath;
 	ScriptEngine::init();
 	scriptManager.setConfPath(tds->conf->confPath);
 	scriptManager.m_reloadFile = tds->conf->getInt("reloadScriptFile", 0);
 	scriptManager.init();
 
-	//åˆå§‹åŒ–tdsæ’ä»¶
+	//³õÊ¼»¯tds²å¼ş
 	if (tds->xiaoT)
 		tds->xiaoT->init();
 	if (tds->smsServer)
@@ -646,10 +647,10 @@ bool TDS_imp::run(string cmdline) {
 		i.second->init();
 	}
 
-	//åŠ è½½deepVersion
+	//¼ÓÔØdeepVersion
 	loadDeepVersion();
 
-	//å¼€å§‹è¿è¡Œï¼Œä¸å¤–éƒ¨å»ºç«‹é€šè®¯å¹¶è¿›è¡Œæ•°æ®io
+	//¿ªÊ¼ÔËĞĞ£¬ÓëÍâ²¿½¨Á¢Í¨Ñ¶²¢½øĞĞÊı¾İio
 	runWebServers();
 
 	SOCK_SRV_CONF ssc;
@@ -664,12 +665,12 @@ bool TDS_imp::run(string cmdline) {
 	sockSrv.m_pStatusCallback = onSockSrvStatusCallback;
 	sockSrv.run(ssc);
 
-	ioSrv.run(); //å…ˆå¯åŠ¨ioSrvåŠ è½½ioç»„æ€,å†å¯åŠ¨ds.å¦‚æœå…ˆå¯åŠ¨dså¯èƒ½ä¼šæŠŠæŸäº›managedè®¾å¤‡å½“ä½œspareè®¾å¤‡
+	ioSrv.run(); //ÏÈÆô¶¯ioSrv¼ÓÔØio×éÌ¬,ÔÙÆô¶¯ds.Èç¹ûÏÈÆô¶¯ds¿ÉÄÜ»á°ÑÄ³Ğ©managedÉè±¸µ±×÷spareÉè±¸
 	logSrv.run();
 	scriptManager.run();
 	userMng.run();
 
-	//è¿è¡Œtdsæ’ä»¶
+	//ÔËĞĞtds²å¼ş
 	if (tds->xiaoT)
 		tds->xiaoT->run();
 	if (tds->smsServer)
@@ -793,10 +794,10 @@ void thread_handleRpcCall(string method,string sParam,int delay) {
 	catch (const std::exception& e)
 	{
 		string errorType = e.what();
-		//jsonåº“çš„ what è¿”å›çš„å­—ç¬¦ä¸²ï¼Œæœ¬èº«å¯èƒ½æ˜¯ä¸€ä¸ªæºå¸¦éutf8å­—ç¬¦çš„å­—ç¬¦ä¸²ã€‚è¿™ä¸²é”™è¯¯æè¿°å¯èƒ½åŒ…å«äº†è§£æé”™è¯¯çš„é‚£ä¸ªå­—ç¬¦,æ‰€ä»¥ä¹Ÿéæ³•ã€‚
-		//å…¨éƒ¨è½¬æ¢ä¸ºascIIï¼Œç”¨è½¬ä¹‰å­—ç¬¦è¡¨ç¤ºã€‚å¦åˆ™åé¢çš„jError.dump() ä¼šå¥”æºƒ
+		//json¿âµÄ what ·µ»ØµÄ×Ö·û´®£¬±¾Éí¿ÉÄÜÊÇÒ»¸öĞ¯´ø·Çutf8×Ö·ûµÄ×Ö·û´®¡£Õâ´®´íÎóÃèÊö¿ÉÄÜ°üº¬ÁË½âÎö´íÎóµÄÄÇ¸ö×Ö·û,ËùÒÔÒ²·Ç·¨¡£
+		//È«²¿×ª»»ÎªascII£¬ÓÃ×ªÒå×Ö·û±íÊ¾¡£·ñÔòºóÃæµÄjError.dump() »á±¼À£
 		errorType = str::encodeAscII(errorType);
-		LOG("[error]thread_handleRpcCallå¤„ç†å¼‚å¸¸:\r\né”™è¯¯ä¿¡æ¯:" + errorType + "\r\næ•°æ®åŒ…:\r\n" + sParam);
+		LOG("[error]thread_handleRpcCall´¦ÀíÒì³£:\r\n´íÎóĞÅÏ¢:" + errorType + "\r\nÊı¾İ°ü:\r\n" + sParam);
 	}
 }
 
@@ -827,7 +828,7 @@ void TDS_imp::callAsyn(string method, string& param, int delay)
 			t.detach();
 		}
 	}
-	else { //æ–¹ä¾¿è°ƒè¯•æ—¶è§‚å¯Ÿå †æ ˆ
+	else { //·½±ãµ÷ÊÔÊ±¹Û²ì¶ÑÕ»
 		thread_handleRpcCall(method, param, delay);
 	}
 }
