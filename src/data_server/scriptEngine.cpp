@@ -205,7 +205,7 @@ extern "C" {
     static JSValue qjs_setReturn(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
 
-        // ²ÎÊı×ª json
+        // å‚æ•°è½¬ json
         json jArgs = engineArrayToJson(ctx, argv, argc);
 
         if (jArgs.size() == 1) {
@@ -217,7 +217,7 @@ extern "C" {
     }
 
     static JSValue qjs_callMethod(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        // ²ÎÊı×ª json
+        // å‚æ•°è½¬ json
         json jArgs = engineArrayToJson(ctx, argv, argc);
 
         if (jArgs.size() == 2) {
@@ -525,7 +525,7 @@ extern "C" {
         JS_SetPropertyStr(ctx, timeObj, "second", JS_NewInt32(ctx, t.wSecond));
         JS_SetPropertyStr(ctx, timeObj, "millisecond", JS_NewInt32(ctx, t.wMilliseconds));
 
-        // °ó¶¨·½·¨
+        // ç»‘å®šæ–¹æ³•
         JS_SetPropertyStr(ctx, timeObj, "toStr", JS_NewCFunction(ctx, qjs_toStr, "toStr", 0));
         JS_SetPropertyStr(ctx, timeObj, "fromStr", JS_NewCFunction(ctx, qjs_fromStr, "fromStr", 1));
         JS_SetPropertyStr(ctx, timeObj, "increaseSeconds", JS_NewCFunction(ctx, qjs_increaseSeconds, "increaseSeconds", 1));
@@ -539,7 +539,7 @@ extern "C" {
             return JS_NULL;
         }
 
-        // ²ÎÊı½âÎö
+        // å‚æ•°è§£æ
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 5) {
             return JS_NULL;
@@ -557,14 +557,14 @@ extern "C" {
         std::string strComPort = "\\\\.\\" + portName;
         COMMTIMEOUTS timeouts = { 0 };
 
-        // ´ò¿ª´®¿Ú
+        // æ‰“å¼€ä¸²å£
         hCom = CreateFileA(strComPort.c_str(), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
         if (hCom == INVALID_HANDLE_VALUE) {
             errorInfo = "CreateFile fail,error code:" + std::to_string(GetLastError());
             goto OPEN_END;
         }
 
-        // ÅäÖÃ´®¿Ú²ÎÊı
+        // é…ç½®ä¸²å£å‚æ•°
         COMSTAT comstat;
         DWORD dwError;
         ClearCommError(hCom, &dwError, &comstat);
@@ -589,13 +589,13 @@ extern "C" {
 
         SetupComm(hCom, 1024, 1024);
 
-        // ÉèÖÃ³¬Ê±Ê±¼ä
+        // è®¾ç½®è¶…æ—¶æ—¶é—´
         timeouts.ReadIntervalTimeout = 50;
         timeouts.ReadTotalTimeoutConstant = 100;
         timeouts.ReadTotalTimeoutMultiplier = 10;
         timeouts.WriteTotalTimeoutConstant = 2000;
         if (!SetCommTimeouts(hCom, &timeouts)) {
-            printf("ÉèÖÃ³¬Ê±Ê§°Ü£¬´íÎó´úÂë: %d\n", GetLastError());
+            printf("è®¾ç½®è¶…æ—¶å¤±è´¥ï¼Œé”™è¯¯ä»£ç : %d\n", GetLastError());
             CloseHandle(hCom);
             goto OPEN_END;
         }
@@ -603,11 +603,11 @@ extern "C" {
 
     OPEN_END:
         if (ret) {
-            printf("[warn][´®¿Ú   ]´®¿Ú´ò¿ª³É¹¦,´®¿ÚºÅ:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,´®¿Ú¾ä±ú:%p",
+            printf("[warn][ä¸²å£   ]ä¸²å£æ‰“å¼€æˆåŠŸ,ä¸²å£å·:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,ä¸²å£å¥æŸ„:%p",
                 portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), hCom);
         }
         else {
-            printf("[warn][´®¿Ú   ]´®¿Ú´ò¿ªÊ§°Ü,´®¿ÚºÅ:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,´íÎóĞÅÏ¢:%s",
+            printf("[warn][ä¸²å£   ]ä¸²å£æ‰“å¼€å¤±è´¥,ä¸²å£å·:%s,baudRate:%d,byteSize:%d,stopBits:%s,parity:%s,é”™è¯¯ä¿¡æ¯:%s",
                 portName.c_str(), baudRate, byteSize, stopBits.c_str(), parity.c_str(), errorInfo.c_str());
         }
 
@@ -625,7 +625,7 @@ extern "C" {
             return JS_NULL;
         }
 
-        // ²ÎÊı½âÎö
+        // å‚æ•°è§£æ
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 1) {
             return JS_NULL;
@@ -637,7 +637,7 @@ extern "C" {
         unsigned char buf[50000] = { 0 };
         int iLen = 0;
 
-        BOOL bReadRet = ReadFile(hCom, (LPVOID)(buf), 50000, (LPDWORD)&iLen, NULL); // ×èÈû¶ÁÈ¡
+        BOOL bReadRet = ReadFile(hCom, (LPVOID)(buf), 50000, (LPDWORD)&iLen, NULL); // é˜»å¡è¯»å–
         dwError = GetLastError();
         if (dwError != 0) {
             printf("[warn]ReadFile Error %d\n", dwError);
@@ -660,7 +660,7 @@ extern "C" {
             return JS_NewBool(ctx, false);
         }
 
-        // ²ÎÊı½âÎö
+        // å‚æ•°è§£æ
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 2) {
             return JS_NewBool(ctx, false);
@@ -693,11 +693,11 @@ extern "C" {
 
         DWORD bytesWritten = 0;
         BOOL bRet = WriteFile(
-            hCom,           // ´®¿Ú¾ä±ú
-            pData,          // Êı¾İ»º³åÇø
-            len,            // Êı¾İ³¤¶È
-            &bytesWritten,  // Êµ¼ÊĞ´ÈëµÄ×Ö½ÚÊı
-            NULL            // Í¬²½Ä£Ê½ÉèÎª NULL
+            hCom,           // ä¸²å£å¥æŸ„
+            pData,          // æ•°æ®ç¼“å†²åŒº
+            len,            // æ•°æ®é•¿åº¦
+            &bytesWritten,  // å®é™…å†™å…¥çš„å­—èŠ‚æ•°
+            NULL            // åŒæ­¥æ¨¡å¼è®¾ä¸º NULL
         );
 
         if (bRet) {
@@ -713,7 +713,7 @@ extern "C" {
             return JS_NULL;
         }
 
-        // ²ÎÊı½âÎö
+        // å‚æ•°è§£æ
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 1) {
             return JS_NULL;
@@ -733,7 +733,7 @@ extern "C" {
             return JS_NULL;
         }
 
-        // ½âÎö JS Êı×éÎª json
+        // è§£æ JS æ•°ç»„ä¸º json
         json jArgs = engineArrayToJson(ctx, argv, argc);
         if (jArgs.size() != 1 || !jArgs[0].is_array()) {
             return JS_NULL;
@@ -1062,10 +1062,10 @@ extern "C" {
                 else {
                     int errCode = jErr["code"].get<int>();
                     std::string errMsg = jErr["message"].get<std::string>();
-                    std::string errInfo = str::format("º¯ÊıvalÖ´ĞĞ´íÎó,´íÎóÂë:%d,´íÎóĞÅÏ¢:%s", errCode, errMsg.c_str());
+                    std::string errInfo = str::format("å‡½æ•°valæ‰§è¡Œé”™è¯¯,é”™è¯¯ç :%d,é”™è¯¯ä¿¡æ¯:%s", errCode, errMsg.c_str());
 
                     pEngine->m_vecOutput.push_back(errInfo);
-                    LOG("[½Å±¾ÒıÇæ]ÔËĞĞ´íÎó,´íÎóĞÅÏ¢:%s,\r\n»·¾³Î»ºÅ:%s,½Å±¾ÓÃ»§:%s\r\n½Å±¾:%s",
+                    LOG("[è„šæœ¬å¼•æ“]è¿è¡Œé”™è¯¯,é”™è¯¯ä¿¡æ¯:%s,\r\nç¯å¢ƒä½å·:%s,è„šæœ¬ç”¨æˆ·:%s\r\nè„šæœ¬:%s",
                         errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
                 }
             }
@@ -1099,77 +1099,14 @@ extern "C" {
                 int errCode = jErr["code"].get<int>();
 
                 std::string errMsg = jErr["message"].get<std::string>();
-                std::string errInfo = str::format("º¯ÊıvalÖ´ĞĞ´íÎó,´íÎóÂë:%d,´íÎóĞÅÏ¢:%s", errCode, errMsg.c_str());
+                std::string errInfo = str::format("å‡½æ•°valæ‰§è¡Œé”™è¯¯,é”™è¯¯ç :%d,é”™è¯¯ä¿¡æ¯:%s", errCode, errMsg.c_str());
 
                 pEngine->m_vecOutput.push_back(errInfo);
-                LOG("[½Å±¾ÒıÇæ]ÔËĞĞ´íÎó,´íÎóĞÅÏ¢:%s,\r\n»·¾³Î»ºÅ:%s,½Å±¾ÓÃ»§:%s\r\n½Å±¾:%s",
+                LOG("[è„šæœ¬å¼•æ“]è¿è¡Œé”™è¯¯,é”™è¯¯ä¿¡æ¯:%s,\r\nç¯å¢ƒä½å·:%s,è„šæœ¬ç”¨æˆ·:%s\r\nè„šæœ¬:%s",
                     errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
             }
         }
 
-        return JS_NULL;
-    }
-
-    static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        if (jArgs.size() == 2) {
-            json path = jArgs[0];
-            json data = jArgs[1];
-            if (path.is_string() && data.is_string()) {
-                std::string rPath = path.get<std::string>();
-                string sData = data.get<string>();
-
-                string aPath = ScriptEngine::ConfFolder + "/" + rPath;
-                DB_FS::createFolderOfPath(aPath);
-
-                bool bRet = DB_FS::writeFile(aPath, sData);
-                if (bRet) {
-                    g_mapConfFile[rPath] = sData;
-                }
-                return JS_NewBool(ctx, bRet);
-            }
-        }
-        return JS_NULL;
-    }
-
-    static JSValue qjs_getConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        if (jArgs.size() == 1) {
-            json path = jArgs[0];
-            if (path.is_string()) {
-                std::string sPath = path.get<std::string>();
-                string sData;
-
-                sPath = ScriptEngine::ConfFolder + "/" + sPath;
-                bool bRet = DB_FS::readFile(sPath, sData);
-                if (bRet) {
-                    return JS_NewString(ctx, sData.c_str());
-                }
-                return JS_NULL;
-            }
-        }
-        return JS_NULL;
-    }
-
-    static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-        ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
-
-        if (jArgs.size() == 1) {
-            json path = jArgs[0];
-            if (path.is_string()) {
-                std::string rPath = path.get<std::string>();
-                map<string, string>::iterator iter = g_mapConfFile.find(rPath);
-                if (iter != g_mapConfFile.end()) {
-                    return JS_NewString(ctx, iter->second.c_str());
-                }
-                return JS_NULL;
-            }
-        }
         return JS_NULL;
     }
 } 
@@ -1223,25 +1160,21 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
     JS_SetPropertyStr(ctx, global, "db", db);
 
-    JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
-    JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
-    JS_SetPropertyStr(ctx, global, "getConfFileBuff", JS_NewCFunction(ctx, qjs_getConfFileBuff, "getConfFileBuff", 1));
-
     JS_FreeValue(ctx, global);
 }
 
-// ²éÕÒ´íÎóĞĞºÅµÄ¸¨Öúº¯Êı
+// æŸ¥æ‰¾é”™è¯¯è¡Œå·çš„è¾…åŠ©å‡½æ•°
 int extract_line_number(const char* stack_str) {
     const char* line_pos = strstr(stack_str, ":");
 
-    // Î´ÕÒµ½ĞĞºÅ
+    // æœªæ‰¾åˆ°è¡Œå·
     if (!line_pos) {
         return -1;  
     }
 
-    line_pos++;  // Ìø¹ıÃ°ºÅ
+    line_pos++;  // è·³è¿‡å†’å·
 
-    // ½âÎöĞĞºÅ
+    // è§£æè¡Œå·
     int line = 0;
     while (*line_pos >= '0' && *line_pos <= '9') {
         line = line * 10 + (*line_pos - '0');
@@ -1259,7 +1192,7 @@ bool is_integer(double x) {
     const double threshold = 9007199254740992.0; // 2^53
     double abs_x = std::fabs(x);
 
-    // ³¬³ö¾«¶È·¶Î§ºóÎŞ·¨±íÊ¾Ğ¡Êı
+    // è¶…å‡ºç²¾åº¦èŒƒå›´åæ— æ³•è¡¨ç¤ºå°æ•°
     if (abs_x >= threshold) {
         return true;
     }
@@ -1277,7 +1210,7 @@ static std::wstring utf8_to_utf16(const string& u8str) {
         return std::wstring();
     }
 
-    // Ô¤·ÖÅä×ã¹»µÄ¿Õ¼ä£¨×î»µÇé¿ö£ºÃ¿¸öASCII×Ö·û¶ÔÓ¦1¸öwchar_t£©
+    // é¢„åˆ†é…è¶³å¤Ÿçš„ç©ºé—´ï¼ˆæœ€åæƒ…å†µï¼šæ¯ä¸ªASCIIå­—ç¬¦å¯¹åº”1ä¸ªwchar_tï¼‰
     std::wstring result;
     result.reserve(length);
 
@@ -1288,12 +1221,12 @@ static std::wstring utf8_to_utf16(const string& u8str) {
         uint8_t c = *data;
 
         if (c < 0x80) {
-            // µ¥×Ö½ÚUTF-8 (0-0x7F)
+            // å•å­—èŠ‚UTF-8 (0-0x7F)
             result.push_back(static_cast<wchar_t>(c));
             data++;
         }
         else if ((c & 0xE0) == 0xC0) {
-            // Ë«×Ö½ÚUTF-8 (0x80-0x7FF)
+            // åŒå­—èŠ‚UTF-8 (0x80-0x7FF)
             if (data + 1 >= end) {
                 throw std::runtime_error("Invalid UTF-8 sequence: incomplete 2-byte sequence");
             }
@@ -1303,7 +1236,7 @@ static std::wstring utf8_to_utf16(const string& u8str) {
             data += 2;
         }
         else if ((c & 0xF0) == 0xE0) {
-            // Èı×Ö½ÚUTF-8 (0x800-0xFFFF)
+            // ä¸‰å­—èŠ‚UTF-8 (0x800-0xFFFF)
             if (data + 2 >= end) {
                 throw std::runtime_error("Invalid UTF-8 sequence: incomplete 3-byte sequence");
             }
@@ -1315,7 +1248,7 @@ static std::wstring utf8_to_utf16(const string& u8str) {
             data += 3;
         }
         else if ((c & 0xF8) == 0xF0) {
-            // ËÄ×Ö½ÚUTF-8 (0x10000-0x10FFFF)£¬ĞèÒªUTF-16´úÀí¶Ô
+            // å››å­—èŠ‚UTF-8 (0x10000-0x10FFFF)ï¼Œéœ€è¦UTF-16ä»£ç†å¯¹
             if (data + 3 >= end) {
                 throw std::runtime_error("Invalid UTF-8 sequence: incomplete 4-byte sequence");
             }
@@ -1325,7 +1258,7 @@ static std::wstring utf8_to_utf16(const string& u8str) {
                 ((data[2] & 0x3F) << 6) |
                 (data[3] & 0x3F);
 
-            // ×ª»»ÎªUTF-16´úÀí¶Ô
+            // è½¬æ¢ä¸ºUTF-16ä»£ç†å¯¹
             code_point -= 0x10000;
             wchar_t high_surrogate = static_cast<wchar_t>((code_point >> 10) + 0xD800);
             wchar_t low_surrogate = static_cast<wchar_t>((code_point & 0x3FF) + 0xDC00);
@@ -1339,7 +1272,7 @@ static std::wstring utf8_to_utf16(const string& u8str) {
         }
     }
 
-    // µ÷ÕûÈİÁ¿ÒÔÊÍ·Å¶àÓà¿Õ¼ä
+    // è°ƒæ•´å®¹é‡ä»¥é‡Šæ”¾å¤šä½™ç©ºé—´
     result.shrink_to_fit();
     return result;
 }
@@ -1351,7 +1284,7 @@ static std::string utf16_to_utf8(const wstring& u16str) {
         return std::string();
     }
 
-    // Ô¤·ÖÅä×ã¹»µÄ¿Õ¼ä£¨×î»µÇé¿ö£ºÃ¿¸öUTF-16´úÂëµ¥Ôª¶ÔÓ¦3×Ö½Ú£©
+    // é¢„åˆ†é…è¶³å¤Ÿçš„ç©ºé—´ï¼ˆæœ€åæƒ…å†µï¼šæ¯ä¸ªUTF-16ä»£ç å•å…ƒå¯¹åº”3å­—èŠ‚ï¼‰
     std::string result;
     result.reserve(length * 3);
 
@@ -1362,18 +1295,18 @@ static std::string utf16_to_utf8(const wstring& u16str) {
         uint32_t code_unit = static_cast<uint32_t>(*data);
 
         if (code_unit < 0xD800 || code_unit > 0xDFFF) {
-            // ²»ÊÇ´úÀí¶Ô£¬Ö±½Ó´¦Àí
+            // ä¸æ˜¯ä»£ç†å¯¹ï¼Œç›´æ¥å¤„ç†
             if (code_unit < 0x80) {
-                // µ¥×Ö½ÚUTF-8
+                // å•å­—èŠ‚UTF-8
                 result.push_back(static_cast<char>(code_unit));
             }
             else if (code_unit < 0x800) {
-                // Ë«×Ö½ÚUTF-8
+                // åŒå­—èŠ‚UTF-8
                 result.push_back(static_cast<char>(0xC0 | (code_unit >> 6)));
                 result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
             }
             else {
-                // Èı×Ö½ÚUTF-8
+                // ä¸‰å­—èŠ‚UTF-8
                 result.push_back(static_cast<char>(0xE0 | (code_unit >> 12)));
                 result.push_back(static_cast<char>(0x80 | ((code_unit >> 6) & 0x3F)));
                 result.push_back(static_cast<char>(0x80 | (code_unit & 0x3F)));
@@ -1381,7 +1314,7 @@ static std::string utf16_to_utf8(const wstring& u16str) {
             data++;
         }
         else {
-            // ´¦Àí´úÀí¶Ô
+            // å¤„ç†ä»£ç†å¯¹
             if (code_unit > 0xDBFF || data + 1 >= end) {
                 throw std::runtime_error("Invalid UTF-16 sequence: invalid surrogate pair");
             }
@@ -1393,11 +1326,11 @@ static std::string utf16_to_utf8(const wstring& u16str) {
                 throw std::runtime_error("Invalid UTF-16 sequence: invalid low surrogate");
             }
 
-            // ¼ÆËãÊµ¼Ê´úÂëµã
+            // è®¡ç®—å®é™…ä»£ç ç‚¹
             uint32_t code_point = ((high_surrogate - 0xD800) << 10) +
                 (low_surrogate - 0xDC00) + 0x10000;
 
-            // ËÄ×Ö½ÚUTF-8
+            // å››å­—èŠ‚UTF-8
             result.push_back(static_cast<char>(0xF0 | (code_point >> 18)));
             result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3F)));
             result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3F)));
@@ -1407,7 +1340,7 @@ static std::string utf16_to_utf8(const wstring& u16str) {
         }
     }
 
-    // µ÷ÕûÈİÁ¿ÒÔÊÍ·Å¶àÓà¿Õ¼ä
+    // è°ƒæ•´å®¹é‡ä»¥é‡Šæ”¾å¤šä½™ç©ºé—´
     result.shrink_to_fit();
     return result;
 }
@@ -1417,7 +1350,7 @@ void thread_reloadFile(string filePath) {
     if (filePath.empty()) {
         return;
     }
-    Sleep(1000);//ÊÕµ½Í¨ÖªÊ±£¬ÎÄ¼ş¿ÉÄÜ»¹ÔÚĞ´Èë£¬Òò´ËµÈ´ıÒ»µãÊ±¼äÔÙ¶ÁÈ¡
+    Sleep(1000);//æ”¶åˆ°é€šçŸ¥æ—¶ï¼Œæ–‡ä»¶å¯èƒ½è¿˜åœ¨å†™å…¥ï¼Œå› æ­¤ç­‰å¾…ä¸€ç‚¹æ—¶é—´å†è¯»å–
     string file_data;
     if (DB_FS::readFile(filePath, file_data)) {
         g_mutexScriptFileBuff.lock();
@@ -1426,7 +1359,7 @@ void thread_reloadFile(string filePath) {
 	}
 }
 
-//½Å±¾Ä¿Â¼ÏÂµÄËùÓĞÎÄ¼ş£¬·¢ÏÖÎÄ¼şÖ±½Ó¼ÓÔØµ½ÄÚ´æ
+//è„šæœ¬ç›®å½•ä¸‹çš„æ‰€æœ‰æ–‡ä»¶ï¼Œå‘ç°æ–‡ä»¶ç›´æ¥åŠ è½½åˆ°å†…å­˜
 void thread_watchScriptFile(string scriptPath) {
     if (scriptPath.empty()) {
         return;
@@ -1440,77 +1373,77 @@ void thread_watchScriptFile(string scriptPath) {
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         nullptr,
         OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, // ÆôÓÃÒì²½ IO
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, // å¯ç”¨å¼‚æ­¥ IO
         nullptr
     );
     if (h_dir == INVALID_HANDLE_VALUE) {
-        printf("´ò¿ªÄ¿Â¼Ê§°Ü£¬´íÎóÂë: %lu\n", GetLastError());
+        printf("æ‰“å¼€ç›®å½•å¤±è´¥ï¼Œé”™è¯¯ç : %lu\n", GetLastError());
         return;
     }
 
-    const DWORD BUFFER_SIZE = 1024 * 1024; // 1MB »º³åÇø£¨¸ù¾İĞèÇóµ÷Õû£©
+    const DWORD BUFFER_SIZE = 1024 * 1024; // 1MB ç¼“å†²åŒºï¼ˆæ ¹æ®éœ€æ±‚è°ƒæ•´ï¼‰
     BYTE* buffer = new BYTE[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
     DWORD bytes_returned;
     OVERLAPPED overlapped = { 0 };
 
     while (true) {
-        // ·Ç×èÈûµ÷ÓÃ£ºÁ¢¼´·µ»ØÒÑÓĞµÄÊÂ¼ş£¨ÈôÓĞ£©
+        // éé˜»å¡è°ƒç”¨ï¼šç«‹å³è¿”å›å·²æœ‰çš„äº‹ä»¶ï¼ˆè‹¥æœ‰ï¼‰
         BOOL is_ok = ReadDirectoryChangesW(
             h_dir,
             buffer,
             BUFFER_SIZE,
-            TRUE, // ¼à¿Ø×ÓÄ¿Â¼
-            FILE_NOTIFY_CHANGE_LAST_WRITE, // ¼à¿Ø×îºóĞ´ÈëÊ±¼ä±ä»¯
+            TRUE, // ç›‘æ§å­ç›®å½•
+            FILE_NOTIFY_CHANGE_LAST_WRITE, // ç›‘æ§æœ€åå†™å…¥æ—¶é—´å˜åŒ–
             &bytes_returned,
-            nullptr,  // ¸ÄÎª&overlappedÔòÎªÒì²½
+            nullptr,  // æ”¹ä¸º&overlappedåˆ™ä¸ºå¼‚æ­¥
             nullptr
         );
 
         if (!is_ok) {
             DWORD error = GetLastError();
             if (error == ERROR_IO_PENDING) {
-                // Òì²½²Ù×÷Î´Íê³É£¬µÈ´ıÊÂ¼ş£¨ÉèÖÃ³¬Ê±±ÜÃâÓÀ¾Ã×èÈû£©
-                DWORD wait_result = WaitForSingleObject(overlapped.hEvent, 100); // µÈ´ı 100ms
+                // å¼‚æ­¥æ“ä½œæœªå®Œæˆï¼Œç­‰å¾…äº‹ä»¶ï¼ˆè®¾ç½®è¶…æ—¶é¿å…æ°¸ä¹…é˜»å¡ï¼‰
+                DWORD wait_result = WaitForSingleObject(overlapped.hEvent, 100); // ç­‰å¾… 100ms
                 if (wait_result == WAIT_TIMEOUT) {
-                    continue; // ³¬Ê±ºóÖØÊÔ
+                    continue; // è¶…æ—¶åé‡è¯•
                 }
                 else if (wait_result != WAIT_OBJECT_0) {
-                    printf("µÈ´ıÊÂ¼şÊ§°Ü£¬´íÎóÂë: %lu\n", GetLastError());
+                    printf("ç­‰å¾…äº‹ä»¶å¤±è´¥ï¼Œé”™è¯¯ç : %lu\n", GetLastError());
                     break;
                 }
             }
             else {
-                printf("ReadDirectoryChangesW Ê§°Ü£¬´íÎóÂë: %lu\n", error);
+                printf("ReadDirectoryChangesW å¤±è´¥ï¼Œé”™è¯¯ç : %lu\n", error);
                 break;
             }
         }
         else {
-            // ´¦ÀíËùÓĞÒÑÍê³ÉµÄÊÂ¼ş£¨Ñ­»·¶ÁÈ¡Ö±µ½ÎŞĞÂÊÂ¼ş£©
+            // å¤„ç†æ‰€æœ‰å·²å®Œæˆçš„äº‹ä»¶ï¼ˆå¾ªç¯è¯»å–ç›´åˆ°æ— æ–°äº‹ä»¶ï¼‰
             FILE_NOTIFY_INFORMATION* notify_info = (FILE_NOTIFY_INFORMATION*)buffer;
 
             while (true) {
-                // ÌáÈ¡ÎÄ¼şÃû£¨UTF-16£©
+                // æå–æ–‡ä»¶åï¼ˆUTF-16ï¼‰
                 std::wstring file_name_w(notify_info->FileName, notify_info->FileNameLength / sizeof(WCHAR));
                 std::string file_name_utf8 = utf16_to_utf8(file_name_w.c_str());
 
-                // ´¦ÀíĞŞ¸ÄÊÂ¼ş£¨FILE_ACTION_MODIFIED£©
+                // å¤„ç†ä¿®æ”¹äº‹ä»¶ï¼ˆFILE_ACTION_MODIFIEDï¼‰
                 if (notify_info->Action == FILE_ACTION_MODIFIED) {
-                    string file_name = utf16_to_utf8(file_name_w);//µÃµ½·¢Éú±ä»¯µÄÎÄ¼şÃû
+                    string file_name = utf16_to_utf8(file_name_w);//å¾—åˆ°å‘ç”Ÿå˜åŒ–çš„æ–‡ä»¶å
                     file_name = str::replace(file_name, "\\", "/");
                     string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
-                    LOG("[keyinfo]¼ì²âµ½½Å±¾ÎÄ¼ş¸Ä±ä:" + file_path);
+                    LOG("[keyinfo]æ£€æµ‹åˆ°è„šæœ¬æ–‡ä»¶æ”¹å˜:" + file_path);
 					thread th(thread_reloadFile, file_path);
                     th.detach();
                 }
-                // ÒÆ¶¯µ½ÏÂÒ»¸öÊÂ¼ş
+                // ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªäº‹ä»¶
                 if (notify_info->NextEntryOffset == 0) 
                     break; 
                 else
                     notify_info = (FILE_NOTIFY_INFORMATION*)((BYTE*)notify_info + notify_info->NextEntryOffset);
             }
 
-            // ÖØÖÃ»º³åÇø£¨¿ÉÑ¡£¬¸ù¾İÎÄ¼şÏµÍ³ÒªÇó£©
+            // é‡ç½®ç¼“å†²åŒºï¼ˆå¯é€‰ï¼Œæ ¹æ®æ–‡ä»¶ç³»ç»Ÿè¦æ±‚ï¼‰
             memset(buffer, 0, BUFFER_SIZE);
         }
     }
@@ -1552,15 +1485,15 @@ JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* op
         return NULL;
     }
 
-    // ±àÒëÄ£¿é
+    // ç¼–è¯‘æ¨¡å—
     JSValue val = JS_Eval(ctx, script.c_str(), script.size(), module_name,
         JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
 
     if (JS_IsException(val)) {
-        return NULL; // Òì³£ÒÑÉèÖÃ
+        return NULL; // å¼‚å¸¸å·²è®¾ç½®
     }
 
-    // »ñÈ¡Ä£¿é¶ÔÏó
+    // è·å–æ¨¡å—å¯¹è±¡
     JSModuleDef* m = reinterpret_cast<JSModuleDef*>(JS_VALUE_GET_PTR(val));
     return m;
 }
@@ -1568,7 +1501,6 @@ JSModuleDef* qjs_module_loader(JSContext* ctx, const char* module_name, void* op
 fp_callMethod ScriptEngine::callMethodImp = nullptr;
 fp_callMethodRR ScriptEngine::callMethodRRImp = nullptr;
 string ScriptEngine::ScriptFolder = "";
-string ScriptEngine::ConfFolder = "";
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
@@ -1615,7 +1547,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 
         m_folderPath = si.folderPath;
 		
-		// ³õÊ¼»¯ QuickJS
+		// åˆå§‹åŒ– QuickJS
 		JSRuntime* rt = JS_NewRuntime();
 		JSContext* ctx = JS_NewContext(rt);
 
@@ -1710,7 +1642,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         JS_FreeRuntime(rt);
 
         int costMilli = TIME::calcTimePassMilliSecond(tStart);
-        m_vecOutput.push_back("Ö´ĞĞºÄÊ±:" + to_string(costMilli) + "ms");
+        m_vecOutput.push_back("æ‰§è¡Œè€—æ—¶:" + to_string(costMilli) + "ms");
 	}
 	catch (std::exception& e) {
 		string s = e.what();
@@ -1747,7 +1679,7 @@ void jsValToJsonVal(JSContext* ctx, JSValueConst jsVal, json& jsonVal) {
         double num = 0;
         JS_ToFloat64(ctx, &num, jsVal);
 
-        // ÅĞ¶ÏÊÇ·ñÎªÕûÊı
+        // åˆ¤æ–­æ˜¯å¦ä¸ºæ•´æ•°
         if (std::trunc(num) == num && 
             num <= static_cast<double>((std::numeric_limits<int64_t>::max)()) &&
             num >= static_cast<double>((std::numeric_limits<int64_t>::min)())) {
@@ -1916,7 +1848,7 @@ bool jsItemToJsonItem(JSContext* ctx, JSValueConst propName, JSValueConst propVa
     using json = nlohmann::json;
     json& jsonObj = *(json*)data;
 
-    //½âÎökey
+    //è§£ækey
     std::string key;
     const char* ckey = JS_ToCString(ctx, propName);
     if (!ckey) {
@@ -1926,7 +1858,7 @@ bool jsItemToJsonItem(JSContext* ctx, JSValueConst propName, JSValueConst propVa
     key = ckey;
     JS_FreeCString(ctx, ckey);
 
-    // ½âÎöval
+    // è§£æval
     json jsonValue;
     jsValToJsonVal(ctx, propValue, jsonValue);
     jsonObj[key] = jsonValue;
@@ -1938,13 +1870,13 @@ bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst prop_value, void
     using json = nlohmann::json;
     json& jsonObj = *(json*)data;
 
-    // ½âÎökey
+    // è§£ækey
     const char* key = JS_AtomToCString(ctx, atom);
     if (!key) {
         return false;
     }
 
-    // ½âÎöval
+    // è§£æval
     json jsonValue;
     jsValToJsonVal(ctx, prop_value, jsonValue);
     jsonObj[key] = jsonValue;
