@@ -35,7 +35,7 @@ struct SCRIPT_INFO {
 	string devId = "";
 	string user = "";
 	int interval = 0;
-	bool isExp = 0; //æ˜¯å¦è¡¨è¾¾å¼è„šæœ¬
+	bool isExp = 0; //ÊÇ·ñ±í´ïÊ½½Å±¾
 
 	string org = "";
 	string lastModifyTime = "";
@@ -67,36 +67,38 @@ public:
 	bool runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri);
 
 	string m_sError;
-	vector<string> m_vecOutput;         //æ‰§è¡Œä¸€æ¬¡è„šæœ¬çš„è¾“å‡ºä¿¡æ¯ï¼ŒåŒ…å«é”™è¯¯ä¿¡æ¯ï¼Œè„šæœ¬ä¸­çš„log
-	map<string,string> m_vecValRefTime; //æœ¬æ¬¡è„šæœ¬å¼•ç”¨çš„æ‰€æœ‰valå‡½æ•°çš„å½“å‰å€¼æ—¶é—´ï¼ŒåŸºäºvalç®—å‡ºæ¥çš„äºŒæ¬¡å˜é‡ï¼Œç”¨æ‰€æœ‰valçš„æœ€æ–°æ—¶é—´ä½œä¸ºäºŒæ¬¡å˜é‡çš„æ—¶é—´
+	vector<string> m_vecOutput;         //Ö´ĞĞÒ»´Î½Å±¾µÄÊä³öĞÅÏ¢£¬°üº¬´íÎóĞÅÏ¢£¬½Å±¾ÖĞµÄlog
+	map<string,string> m_vecValRefTime; //±¾´Î½Å±¾ÒıÓÃµÄËùÓĞvalº¯ÊıµÄµ±Ç°ÖµÊ±¼ä£¬»ùÓÚvalËã³öÀ´µÄ¶ş´Î±äÁ¿£¬ÓÃËùÓĞvalµÄ×îĞÂÊ±¼ä×÷Îª¶ş´Î±äÁ¿µÄÊ±¼ä
 
 	json m_globalObj;
 
-	//å½“å‰è„šæœ¬æ‰§è¡Œçš„ç¯å¢ƒå˜é‡
+	//µ±Ç°½Å±¾Ö´ĞĞµÄ»·¾³±äÁ¿
 	string m_tagContext;
-	string m_user;                      //æ‰§è¡Œè„šæœ¬çš„ç”¨æˆ·ï¼Œæ ¹æ®è¯¥ç”¨æˆ·æƒé™æ§åˆ¶è¯¥è„šæœ¬çš„æƒé™
+	string m_user;                      //Ö´ĞĞ½Å±¾µÄÓÃ»§£¬¸ù¾İ¸ÃÓÃ»§È¨ÏŞ¿ØÖÆ¸Ã½Å±¾µÄÈ¨ÏŞ
 	string m_scriptName;
 	string m_script;
 
 	void* m_ioDevThis;
 
-	string m_folderPath;              //è„šæœ¬æ‰€åœ¨çš„æ–‡ä»¶å¤¹è·¯å¾„
+	string m_folderPath;              //½Å±¾ËùÔÚµÄÎÄ¼ş¼ĞÂ·¾¶
+	string m_confPath;				  //½Å±¾ÒıÇæËŞÖ÷³ÌĞòÅäÖÃÄ¿Â¼
 
 	bool m_reloadFile;
 
-	//è„šæœ¬æ‰§è¡Œç»“æœ
-	json m_sEvalRet;                   //è„šæœ¬è¡¨è¾¾å¼çš„æ‰§è¡Œç»“æœ
-	json m_scriptRet;                  //è„šæœ¬å†…éƒ¨è¿”å›çš„è‡ªå®šä¹‰çš„æ‰§è¡Œç»“æœ
+	//½Å±¾Ö´ĞĞ½á¹û
+	json m_sEvalRet;                   //½Å±¾±í´ïÊ½µÄÖ´ĞĞ½á¹û
+	json m_scriptRet;                  //½Å±¾ÄÚ²¿·µ»ØµÄ×Ô¶¨ÒåµÄÖ´ĞĞ½á¹û
 
-	bool m_bValNullInCalc;             //valå‡½æ•°è¿”å›äº†nullï¼Œå½“ä½¿ç”¨è®¡ç®—è¡¨è¾¾å¼æ—¶ï¼Œä¾‹å¦‚ val(tag1) -val(tag2)ï¼ŒæŸä¸€ä¸ªvalå‡½æ•°è¿”å›nullï¼Œnullä¼šè¢«ä½œä¸º0ï¼Œä½†è¯¥æ¬¡è®¡ç®—æ— æ•ˆ
+	bool m_bValNullInCalc;             //valº¯Êı·µ»ØÁËnull£¬µ±Ê¹ÓÃ¼ÆËã±í´ïÊ½Ê±£¬ÀıÈç val(tag1) -val(tag2)£¬Ä³Ò»¸övalº¯Êı·µ»Ønull£¬null»á±»×÷Îª0£¬µ«¸Ã´Î¼ÆËãÎŞĞ§
 
-	// ç¯å¢ƒå˜é‡è„šæœ¬è¡Œæ•°
+	// »·¾³±äÁ¿½Å±¾ĞĞÊı
 	int m_envVarScriptLine;
 
 	fp_initTdsFunc m_initTdsFunc;
 	static fp_callMethod  callMethodImp;
 	static fp_callMethodRR callMethodRRImp;
 	static string ScriptFolder;
+	static string ConfFolder;
 	static void init();
 
 };
@@ -112,5 +114,7 @@ extern bool jsItemToJsonItem(JSContext* ctx, JSAtom atom, JSValueConst propValue
 
 JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val);
 yyjson_val* qjsVal_to_yyVal(JSContext* ctx, JSValueConst js_val, yyjson_doc*& doc);
+
+extern map<string, string> g_mapConfFile;
 
 #endif

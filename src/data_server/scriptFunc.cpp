@@ -27,7 +27,7 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
 
             OBJ* p = prj.queryObj(sTag);
             if (p == nullptr) {
-                p = prj.queryObj(sTagOrg); // Â∞ùËØïÂéüÂßã‰ΩçÂè∑
+                p = prj.queryObj(sTagOrg); // ≥¢ ‘‘≠ ºŒª∫≈
 
                 if (p) {
                     sTag = sTagOrg;
@@ -67,11 +67,11 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                         int errCode = err["code"].get<int>();
 
                         string errMsg = err["message"].get<string>();
-                        string errInfo = str::format("ÂáΩÊï∞valÊâßË°åÈîôËØØ,ÈîôËØØÁ†Å:%d,ÈîôËØØ‰ø°ÊÅØ:%s", errCode, errMsg.c_str());
+                        string errInfo = str::format("∫Ø ˝val÷¥––¥ÌŒÛ,¥ÌŒÛ¬Î:%d,¥ÌŒÛ–≈œ¢:%s", errCode, errMsg.c_str());
 
                         pEngine->m_vecOutput.push_back(errInfo);
                         if (tds->conf->logEnable.scriptEngine) {
-                            LOG("[ËÑöÊú¨ÂºïÊìé]ËøêË°åÈîôËØØ,ÈîôËØØ‰ø°ÊÅØ:%s,\r\nÁéØÂ¢É‰ΩçÂè∑:%s,ËÑöÊú¨Áî®Êà∑:%s\r\nËÑöÊú¨:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+                            LOG("[Ω≈±æ“˝«Ê]‘À––¥ÌŒÛ,¥ÌŒÛ–≈œ¢:%s,\r\nª∑æ≥Œª∫≈:%s,Ω≈±æ”√ªß:%s\r\nΩ≈±æ:%s", errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
                         }
                     }
                 }
@@ -116,7 +116,7 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                 }
             }
             else {
-                pEngine->m_vecOutput.push_back("Êó†Ê≥ïÊâæÂà∞ÊåáÂÆöÁöÑ‰ΩçÂè∑");
+                pEngine->m_vecOutput.push_back("Œﬁ∑®’“µΩ÷∏∂®µƒŒª∫≈");
             }
         }
     }
@@ -301,65 +301,6 @@ static JSValue qjs_sum(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NULL;
 }
 
-static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-
-    if (jArgs.size() == 2) {
-        json path = jArgs[0];
-        json data = jArgs[1];
-        if (path.is_string() && data.is_string()) {
-            std::string rPath = path.get<std::string>();
-            string sData = data.get<string>();
-
-            string aPath = tds->conf->confPath + "/" + rPath;
-            fs::createFolderOfPath(aPath);
-
-			bool bRet = fs::writeFile(aPath, sData);
-            if (bRet) {
-                g_mapConfFile[rPath] = sData;
-            }
-            return JS_NewBool(ctx, bRet);
-        }
-    }
-    return JS_NULL;
-}
-
-static JSValue qjs_getConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-
-    if (jArgs.size() == 1) {
-        json path = jArgs[0];
-        if (path.is_string()) {
-            std::string sPath = path.get<std::string>();
-            string sData;
-
-            sPath = tds->conf->confPath + "/" + sPath;
-            bool bRet = fs::readFile(sPath, sData);
-            if (bRet) {
-                return JS_NewString(ctx, sData.c_str());
-            }
-            return JS_NULL;
-        }
-    }
-    return JS_NULL;
-}
-
-static JSValue qjs_getConfFileBuff(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-    if (jArgs.size() == 1) {
-        json path = jArgs[0];
-        if (path.is_string()) {
-            std::string rPath = path.get<std::string>();
-            map<string, string>::iterator iter = g_mapConfFile.find(rPath);
-            if (iter != g_mapConfFile.end()) {
-                return JS_NewString(ctx, iter->second.c_str());
-            }
-            return JS_NULL;
-        }
-    }
-    return JS_NULL;
-}
-
 static JSValue qjs_avg(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
     json jArgs = engineArrayToJson(ctx, argv, argc);
     ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
@@ -522,7 +463,7 @@ static JSValue qjs_ioDev_doTransaction(JSContext* ctx, JSValueConst this_val, in
         vecReq = str::toBytes(s);
     }
     else {
-        pEngine->m_sError = "ÈîôËØØÁöÑËØ∑Ê±ÇÂèÇÊï∞Ê†ºÂºèÔºåÂøÖÈ°ªÊòØÊï∞ÁªÑÊàñËÄÖÂ≠óÁ¨¶‰∏≤";
+        pEngine->m_sError = "¥ÌŒÛµƒ«Î«Û≤Œ ˝∏Ò Ω£¨±ÿ–Î « ˝◊ÈªÚ’ﬂ◊÷∑˚¥Æ";
         return JS_NULL;
     }
 
@@ -575,7 +516,7 @@ static JSValue qjs_ioDev_send(JSContext* ctx, JSValueConst this_val, int argc, J
         vecReq = str::toBytes(s);
     }
     else {
-        pEngine->m_sError = "ÈîôËØØÁöÑËØ∑Ê±ÇÂèÇÊï∞Ê†ºÂºèÔºåÂøÖÈ°ªÊòØÊï∞ÁªÑÊàñËÄÖÂ≠óÁ¨¶‰∏≤";
+        pEngine->m_sError = "¥ÌŒÛµƒ«Î«Û≤Œ ˝∏Ò Ω£¨±ÿ–Î « ˝◊ÈªÚ’ﬂ◊÷∑˚¥Æ";
         return JS_NULL;
     }
 
@@ -611,7 +552,7 @@ static JSValue qjs_ioDev_sendStr(JSContext* ctx, JSValueConst this_val, int argc
 		sReq = req.get<std::string>();
     }
     else {
-        pEngine->m_sError = "ÈîôËØØÁöÑËØ∑Ê±ÇÂèÇÊï∞Ê†ºÂºèÔºåÂøÖÈ°ªÊòØÂ≠óÁ¨¶‰∏≤";
+        pEngine->m_sError = "¥ÌŒÛµƒ«Î«Û≤Œ ˝∏Ò Ω£¨±ÿ–Î «◊÷∑˚¥Æ";
         return JS_NULL;
     }
 
@@ -726,9 +667,6 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
-    JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
-    JS_SetPropertyStr(ctx, global, "getConfFile", JS_NewCFunction(ctx, qjs_getConfFile, "getConfFile", 1));
-    JS_SetPropertyStr(ctx, global, "getConfFileBuff", JS_NewCFunction(ctx, qjs_getConfFileBuff, "getConfFileBuff", 1));
 
     if (pDev) {
         JSValue dev = JS_NewObject(ctx);
