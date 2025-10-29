@@ -78,40 +78,53 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                 else if (jArgs.size() >= 2) {
                     json time = jArgs[1];
                     if (time.is_string()) {
-                        json jParams;
-                        jParams["tag"] = sTag;
-
-                        string sTime = time.get<string>();
-                        jParams["time"] = sTime;
-
-                        if (jArgs.size() >= 3) {
-                            json jAggr = jArgs[2];
-                            jParams["aggregate"] = jAggr;
-                        }
-
-                        json err, rlt;
-                        RPC_SESSION sess;
-                        tds->call("db.select", jParams, err, rlt, sess);
-
+                        MP* pmp = nullptr;
                         if (p->m_level == "mp") {
-                            MP* pmp = (MP*)p;
+                            pmp = (MP*)p;
                             pEngine->m_vecValRefTime[sTag] = pmp->m_stDataLastUpdate.toStr(true);
                         }
-
-                        string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
-                        if (rlt.is_array() && rlt.size() > 0) {
-                            json& jDe = rlt[0];
-                            json& jVal = jDe["val"];
+                        else {
+                            return JS_NULL;
+                        }
+                        if (time == "last") {
                             JSValue ret;
-                            jsonValToJsVal(jVal, ctx, ret);
-                            info += jVal.dump();
-                            pEngine->m_vecOutput.push_back(info);
+                            if (pmp->m_lastVal == "null")
+                                return JS_NULL;
+                            json j = json::parse(pmp->m_lastVal);
+                            jsonValToJsVal(j, ctx, ret);
                             return ret;
                         }
                         else {
-                            info += "null";
-                            pEngine->m_vecOutput.push_back(info);
-                        }
+                            json jParams;
+                            jParams["tag"] = sTag;
+
+                            string sTime = time.get<string>();
+                            jParams["time"] = sTime;
+
+                            if (jArgs.size() >= 3) {
+                                json jAggr = jArgs[2];
+                                jParams["aggregate"] = jAggr;
+                            }
+
+                            json err, rlt;
+                            RPC_SESSION sess;
+                            tds->call("db.select", jParams, err, rlt, sess);
+
+                            string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
+                            if (rlt.is_array() && rlt.size() > 0) {
+                                json& jDe = rlt[0];
+                                json& jVal = jDe["val"];
+                                JSValue ret;
+                                jsonValToJsVal(jVal, ctx, ret);
+                                info += jVal.dump();
+                                pEngine->m_vecOutput.push_back(info);
+                                return ret;
+                            }
+                            else {
+                                info += "null";
+                                pEngine->m_vecOutput.push_back(info);
+                            }
+                        }   
                     }
                 }
             }
