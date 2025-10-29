@@ -821,20 +821,17 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			val = yyjson_mut_bool(doc, m_bEnableTask);
 			yyjson_mut_obj_put(conf, key, val);
 
-			yyjson_mut_val* rootTasks = yyjson_mut_arr(doc);
-			yyjson_mut_val* rootT = yyjson_mut_obj(doc);
+			yyjson_mut_val* yyv_task_list = yyjson_mut_arr(doc);
 
 			for (int i = 0; i < m_scheduleTasks.size(); i++) {
-				yyjson_mut_obj_clear(rootT);
-
+				yyjson_mut_val* yyv_task = yyjson_mut_obj(doc);
 				SCHEDULE_TASK& st = m_scheduleTasks[i];
-				st.toJson(rootT, doc);
-
-				yyjson_mut_arr_append(rootTasks, rootT);
+				st.toJson(yyv_task, doc);
+				yyjson_mut_arr_append(yyv_task_list, yyv_task);
 			}
 
 			yyjson_mut_val* key = yyjson_mut_strcpy(doc, "tasks");
-			yyjson_mut_obj_put(conf, key, rootTasks);
+			yyjson_mut_obj_put(conf, key, yyv_task_list);
 		}
 
 		if (m_bEnableIO == false) {
