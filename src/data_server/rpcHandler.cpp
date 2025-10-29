@@ -789,12 +789,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 	bool bHandled = true;
 	
 	if (method.find("db.") != string::npos) {
-		if (method == "db.insert") {
-			//insert不进行 time参数校验
-			string s = params.dump();
-			db.rpc_db_insert(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
-		}
-		else if (method == "db.renameFolder") {
+		if (method == "db.renameFolder") {
 			string oldName = params["old"].get<string>();
 			string newName = params["new"].get<string>();
 
@@ -3288,6 +3283,9 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 	bool bHandled = true;
 	if (method == "setObj") {
 		prj.rpc_setObj(params, rpcResp, session);
+	}
+	else if (db.handleRpc(method, params, rpcResp.result, rpcResp.error, rpcResp.dbQueryInfo, session.org, session.language)) {
+		bHandled = true;
 	}
 	else if (scriptManager.handleRpc(method, params, rpcResp, session)) {
 		bHandled = true;

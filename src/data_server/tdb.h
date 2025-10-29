@@ -840,6 +840,8 @@ public:
 	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
 
+	bool handleRpc(const string& method,yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
+
 	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 

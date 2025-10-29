@@ -4882,6 +4882,17 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 }
 
 
+bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
+{
+	bool handled = false;
+	if (method == "db.insert") {
+		db.rpc_db_insert(params,rlt, err,queryInfo,org,language);
+		handled = true;
+	}
+
+	return handled;
+}
+
 void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
