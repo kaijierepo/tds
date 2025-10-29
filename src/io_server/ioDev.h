@@ -105,6 +105,7 @@ struct DEV_QUERIER {
 	vector<string> type;
 	vector<string> subType;
 	string standAloneIO;
+	vector<string> keywords;
 
 	void parseQueryOpt(json& opt);
 
@@ -211,6 +212,9 @@ public:
 
 	TIME m_lastBusSendTime;
 	TIME m_lastBusRecvTime;
+
+	string m_reconnectMode;  //periodic , inactive
+	int m_reconnectTime;   //单位秒
 
 	string m_ioMode; //none,translator,adaptor,standAloneIO
 	bool m_bViaAdaptor;
