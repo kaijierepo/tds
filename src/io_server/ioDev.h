@@ -215,6 +215,7 @@ public:
 
 	string m_reconnectMode;  //periodic , inactive
 	int m_reconnectTime;   //单位秒
+	TIME m_stLastReconnectTime;
 
 	string m_ioMode; //none,translator,adaptor,standAloneIO
 	bool m_bViaAdaptor;

@@ -227,6 +227,9 @@ ioDev::ioDev(void)
 	m_offlineCount = 0;
 	m_ioMode = "none";
 	m_unhandledRecvPktCount = 0;
+	m_reconnectMode = "";
+	m_reconnectTime = 0;
+	memset(&m_stLastReconnectTime, 0, sizeof(TIME));
 }
 
 ioDev::~ioDev(void)
@@ -389,6 +392,15 @@ bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 			conf["serverStatus"]["handle"] = m_tdsSrvStatus.handle;
 			conf["statusUpdateTime"] = m_statusUpdateTime;
 			conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
+		}
+
+		if (m_reconnectMode != "" && m_reconnectTime > 0) {
+			json obj = json::object();
+
+			obj["mode"] = m_reconnectMode;
+			obj["time"] = m_reconnectTime;
+
+			conf["reconnect"] = obj;
 		}
 	}
 
@@ -882,6 +894,20 @@ bool ioDev::loadConf(json& conf)
 			if (m_strTagBind != "") { 
 				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, m_strTagBind);
 				pdc->m_strTagBind = str::trimPrefix(pdc->m_strTagBind, ".");
+			}
+		}
+	}
+
+	kv = conf.find("reconnect");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_object()) {
+			if (item["mode"].is_string()) {
+				m_reconnectMode = item["mode"].get<string>();
+			}
+
+			if (item["time"].is_number_integer()) {
+				m_reconnectTime = item["time"].get<int>();
 			}
 		}
 	}
@@ -1903,13 +1929,19 @@ void ioDev::OnRequestTimeout(int cmd1, int cmd2)
 }
 
 
-void ioDev::DoCycleTask()
-{
+void ioDev::DoCycleTask() {
 	DEV_PKT req, resp;
-	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0)
-	{
+	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0) {
 		SendHeartbeatPkt();
 		timeopt::now(&m_stLastHeartbeatTime);
+	}
+
+	if (m_reconnectMode == "periodic") {
+		if (timeopt::CalcTimePassSecond(m_stLastReconnectTime) > m_reconnectTime && m_reconnectTime > 0) {
+			stop();
+			run();
+			timeopt::now(&m_stLastReconnectTime);
+		}
 	}
 }
 
