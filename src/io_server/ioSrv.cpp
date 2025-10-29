@@ -1637,6 +1637,30 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 			}
 		}
 
+		vector<string> keywords;
+		for (auto& kw : devQuerier.keywords) {
+			kw = str::trim(kw);
+			if (kw != "") {
+				keywords.push_back(kw);
+			}
+		}
+		if(keywords.size()>0){
+			bool keywordMatched = false;
+			for(int k=0;k<keywords.size();k++){
+				string& kw = keywords[k];
+				if(dev->m_strTagBind.find(kw) != string::npos ||
+				   dev->getIOAddrStr().find(kw) != string::npos ||
+				   dev->m_devType.find(kw) != string::npos ||
+				   dev->m_devSubType.find(kw) != string::npos){
+					keywordMatched = true;
+					break;
+				}
+			}
+			if(!keywordMatched){
+				continue;
+			}
+		}
+
 		dev->recursiveGetChanCount(dev, devStatis.iChan);
 		if (dev->m_bOnline) {
 			devStatis.iOnline++;
@@ -1668,6 +1692,7 @@ bool ioServer::toJson(json& conf, json opt)
 	int pageNo = 0;
 	int pageSize = 0;
 	bool getStatis = false;
+	string keywords = "";
 	string tagBind = "";  
 	if (opt != nullptr)
 	{
@@ -1679,6 +1704,8 @@ bool ioServer::toJson(json& conf, json opt)
 			getStatis = opt["getStatis"].get<bool>();
 		if (opt.contains("tag"))
 			tagBind = opt["tag"].get<string>();
+		if(opt.contains("keywords"))
+			keywords = opt["keywords"].get<string>();
 
 		//分页参数
 		if (opt.contains("pageNo") && opt.contains("pageSize")) {
@@ -1695,6 +1722,7 @@ bool ioServer::toJson(json& conf, json opt)
 	devQuery.parseQueryOpt(opt);
 	devQuery.rootTag = rootTag;
 	devQuery.tag = tagBind;
+	str::split(devQuery.keywords,keywords," ");
 	DEV_STATIS devStatis;
 	vector<ioDev*> filterRlt;
 	queryDev(devQuery,devStatis, filterRlt);
