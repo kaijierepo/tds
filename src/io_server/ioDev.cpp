@@ -1937,7 +1937,7 @@ void ioDev::DoCycleTask() {
 	}
 
 	if (m_reconnectMode == "periodic") {
-		if (timeopt::CalcTimePassSecond(m_stLastReconnectTime) > m_reconnectTime && m_reconnectTime > 0) {
+		if (timeopt::CalcTimePassSecond(m_stLastReconnectTime) > m_reconnectTime * 60 && m_reconnectTime > 0) {
 			stop();
 			run();
 			timeopt::now(&m_stLastReconnectTime);
