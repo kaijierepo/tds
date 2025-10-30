@@ -85,6 +85,14 @@ void IOThread()
 			if (pIoDev->m_bRunning && !ioSrv.m_stopCycleAcq && pIoDev->m_bEnableAcq) //m_bEnableAcq对应设备管理中的启用轮询
 			{
 				pIoDev->DoCycleTask(); 
+
+				if (pIoDev->m_reconnectMode == "periodic") {
+					if (timeopt::CalcTimePassSecond(pIoDev->m_stLastReconnectTime) > pIoDev->m_reconnectTime && pIoDev->m_reconnectTime > 0) {
+						pIoDev->stop();
+						pIoDev->run();
+						timeopt::now(&pIoDev->m_stLastReconnectTime);
+					}
+				}
 			}
 
 			//执行ping在线监测

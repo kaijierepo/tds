@@ -229,7 +229,7 @@ ioDev::ioDev(void)
 	m_unhandledRecvPktCount = 0;
 	m_reconnectMode = "";
 	m_reconnectTime = 0;
-	memset(&m_stLastReconnectTime, 0, sizeof(TIME));
+	timeopt::now(&m_stLastReconnectTime);
 }
 
 ioDev::~ioDev(void)
@@ -1934,14 +1934,6 @@ void ioDev::DoCycleTask() {
 	if (timeopt::CalcTimePassSecond(m_stLastHeartbeatTime) > ioDev::m_heartBeatInterval&& ioDev::m_heartBeatInterval > 0) {
 		SendHeartbeatPkt();
 		timeopt::now(&m_stLastHeartbeatTime);
-	}
-
-	if (m_reconnectMode == "periodic") {
-		if (timeopt::CalcTimePassSecond(m_stLastReconnectTime) > m_reconnectTime * 60 && m_reconnectTime > 0) {
-			stop();
-			run();
-			timeopt::now(&m_stLastReconnectTime);
-		}
 	}
 }
 
