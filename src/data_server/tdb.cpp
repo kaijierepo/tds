@@ -4979,6 +4979,8 @@ void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, stri
 	}
 	yyjson_doc_free(yy_doc);
     yyjson_mut_doc_free(yy_mdoc);
+
+	rlt = DB_OK;
 }
 
 void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
@@ -5035,6 +5037,7 @@ void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, stri
 	}
 	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);
+	rlt = DB_OK;
 }
 
 
@@ -5117,6 +5120,7 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	}
 	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);
+	rlt = DB_OK;
 }
 
 void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
@@ -5174,6 +5178,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 
 	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);
+	rlt = DB_OK;
 }
 
 void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {

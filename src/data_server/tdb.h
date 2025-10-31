@@ -820,6 +820,8 @@ inline string JSON_STR_VAL(const string& s) {
 	return "\"" + s + "\"";
 }
 
+#define DB_OK "\"ok\""
+
 enum DE_JSON_TYPE {
 	DE_J_ARR,
 	DE_J_OBJ
