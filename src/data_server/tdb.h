@@ -816,7 +816,7 @@ public:
 	bool writeFile(string path, unsigned char* data, size_t len);
 };
 
-inline string JSON_STR_VAL(string s) {
+inline string JSON_STR_VAL(const string& s) {
 	return "\"" + s + "\"";
 }
 
@@ -842,6 +842,7 @@ public:
 
 	bool handleRpc(const string& method,yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
+	// time series db function
 	void rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 
@@ -862,6 +863,12 @@ public:
 	void rpc_db_saveImage(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language);
 	void rpc_db_getBufferStatus(string& rlt, string& err);
 	void rpc_db_setConf(string& sParams, string& rlt, string& err);
+
+	//table db function
+	void rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);
+	void rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);
+	void rpc_db_table_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);
+	void rpc_db_table_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language);
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 

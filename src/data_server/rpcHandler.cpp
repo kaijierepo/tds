@@ -827,21 +827,9 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		else if (!params.contains("time")) {
 			error = makeRPCError(RPC_ERROR_CODE::TEC_paramMissing, "missing param : time");
 		}
-		else if (method == "db.select") {
-			string s = params.dump();
-			db.rpc_db_select(s, rpcResp.result,rpcResp.error,rpcResp.info, session.org,session.language);
-		}
-		else if (method == "db.update") {
-			string s = params.dump();
-			db.rpc_db_update(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
-		}
 		else if (method == "db.merge") {
 			string s = params.dump();
 			db.rpc_db_merge(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
-		}
-		else if (method == "db.delete") {
-			string s = params.dump();
-			db.rpc_db_delete(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 		}
 		else {
 			bHandled = false;

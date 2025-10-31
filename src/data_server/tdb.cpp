@@ -4884,13 +4884,296 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 
 bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
 {
-	bool handled = false;
-	if (method == "db.insert") {
-		db.rpc_db_insert(params,rlt, err,queryInfo,org,language);
-		handled = true;
+	bool handled = true;
+	if (method.find("db.") != string::npos) {
+		yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+		if (yyv_table) {
+			yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+			if (!yyv_tableType) {
+				err = JSON_STR_VAL("must specify tableType");
+				return true;
+			}
+
+			if (method == "db.insert") {
+				db.rpc_db_table_insert(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.select") {
+				db.rpc_db_table_select(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.update") {
+				db.rpc_db_table_update(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.delete") {
+				db.rpc_db_table_delete(params, rlt, err, queryInfo, org, language);
+			}
+			else {
+				handled = false;
+			}
+		}
+		else {
+			if (method == "db.insert") {
+				db.rpc_db_insert(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.select") {
+				db.rpc_db_select(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.update") {
+				db.rpc_db_update(params, rlt, err, queryInfo, org, language);
+			}
+			else if (method == "db.delete") {
+				db.rpc_db_delete(params, rlt, err, queryInfo, org, language);
+			}
+			else {
+				handled = false;
+			}
+		}
+	}
+	else {
+		handled = false;
+	}
+	
+	return handled;
+}
+
+void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo,const string& org, const string& language) {
+	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+	yyjson_val* yyv_row = yyjson_obj_get(params, "row");
+	if (!yyv_row) {
+		err = JSON_STR_VAL("must specify row");
+		return;
+	}
+	string tableType = yyjson_get_str(yyv_tableType);
+	string table = yyjson_get_str(yyv_table);
+
+	string path = m_confPath + "/" + table;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "")
+		data = "[]";
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return;
+	}
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc,nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+	yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_row);
+    yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+
+	size_t len = 0;
+	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES,&len);
+	if (p) {
+		DB_FS::writeFile(path, p, len);
+		free(p);
+	}
+	yyjson_doc_free(yy_doc);
+    yyjson_mut_doc_free(yy_mdoc);
+}
+
+void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+{
+	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
+	if (!yyv_match) {
+		err = JSON_STR_VAL("must specify match");
+		return;
+	}
+	string tableType = yyjson_get_str(yyv_tableType);
+	string table = yyjson_get_str(yyv_table);
+	string match = yyjson_get_str(yyv_match);
+	string path = m_confPath + "/" + table;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "")
+		data = "[]";
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return;
 	}
 
-	return handled;
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+
+	CONDITION_SELECTOR cs;
+	cs.init(match);
+	
+	size_t len = yyjson_mut_arr_size(yy_mroot);
+	for (size_t i = len - 1; i != (size_t)-1; i--) {
+		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+		if (cs.match(obj)) {
+			yyjson_mut_arr_remove(yy_mroot, i);
+		}
+	}
+
+	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+	if (p) {
+		DB_FS::writeFile(path, p, len);
+		free(p);
+	}
+	yyjson_doc_free(yy_doc);
+	yyjson_mut_doc_free(yy_mdoc);
+}
+
+
+void merge_recursive_yyjson_obj(yyjson_mut_val* yy_mut_obj,yyjson_mut_doc* yy_mut_doc, yyjson_val* yyv_obj) {
+	yyjson_val* key, * val;
+	size_t idx, max;
+	yyjson_obj_foreach(yyv_obj, idx, max, key, val) {
+		const char* sk = yyjson_get_str(key);
+		yyjson_mut_val* yy_mut_val = yyjson_val_mut_copy(yy_mut_doc, val);
+		yyjson_mut_val* yy_mut_key = yyjson_mut_strcpy(yy_mut_doc, sk);
+		if (yyjson_is_obj(val)) {
+			yyjson_mut_val* orig_obj = yyjson_mut_obj_get(yy_mut_obj,sk);
+			if (yyjson_mut_is_obj(orig_obj)) {
+				merge_recursive_yyjson_obj(orig_obj, yy_mut_doc, val);
+			}
+			else {
+				yyjson_mut_obj_put(yy_mut_obj, yy_mut_key, yy_mut_val);
+			}
+		}
+		else
+			yyjson_mut_obj_put(yy_mut_obj, yy_mut_key, yy_mut_val);
+	}
+}
+
+void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+{
+	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
+	yyjson_val* yyv_row = yyjson_obj_get(params, "row");
+	if (!yyv_row) {
+		err = JSON_STR_VAL("must specify row");
+		return;
+	}
+	if (!yyv_match) {
+		err = JSON_STR_VAL("must specify match");
+		return;
+	}
+	string tableType = yyjson_get_str(yyv_tableType);
+	string table = yyjson_get_str(yyv_table);
+	string match = yyjson_get_str(yyv_match);
+	string path = m_confPath + "/" + table;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "")
+		data = "[]";
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return;
+	}
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+
+	CONDITION_SELECTOR cs;
+	cs.init(match);
+
+	size_t len = yyjson_mut_arr_size(yy_mroot);
+	for (size_t i = len - 1; i != (size_t)-1; i--) {
+		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+		if (cs.match(obj)) {
+			merge_recursive_yyjson_obj(obj,yy_mdoc, yyv_row);
+		}
+	}
+
+	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+	if (p) {
+		DB_FS::writeFile(path, p, len);
+		free(p);
+	}
+	yyjson_doc_free(yy_doc);
+	yyjson_mut_doc_free(yy_mdoc);
+}
+
+void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+{
+	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
+	if (!yyv_match) {
+		err = JSON_STR_VAL("must specify match");
+		return;
+	}
+	string tableType = yyjson_get_str(yyv_tableType);
+	string table = yyjson_get_str(yyv_table);
+	string match = yyjson_get_str(yyv_match);
+	string path = m_confPath + "/" + table;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "")
+		data = "[]";
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return;
+	}
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
+
+	CONDITION_SELECTOR cs;
+	cs.init(match);
+
+	size_t len = yyjson_mut_arr_size(yy_mroot);
+	for (size_t i = len - 1; i != (size_t)-1; i--) {
+		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+		if (cs.match(obj)) {
+			yyjson_mut_arr_append(yy_selected, obj);
+		}
+	}
+
+	char* p = yyjson_mut_val_write(yy_selected, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+	if (p) {
+        rlt = p;
+		free(p);
+	}
+
+	yyjson_doc_free(yy_doc);
+	yyjson_mut_doc_free(yy_mdoc);
 }
 
 void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& queryInfo, string org, string language) {
@@ -4905,7 +5188,7 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
 	if (yyv_val == nullptr && yyv_file == nullptr)
 	{
-		err = "one of param val or file must be specified";
+		err = JSON_STR_VAL("one of param val or file must be specified");
 	}
 	else
 	{
@@ -4920,7 +5203,7 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 			}
 
 			if (!tNow.fromStr(time)) {
-				err = "param time invalid format.";
+				err = JSON_STR_VAL("param time invalid format.");
 				return;
 			}
 		}
