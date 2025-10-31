@@ -6455,6 +6455,7 @@ bool rpcHandler::apiAdaptorScript(string& strResult)
 void rpcHandler::vlmAlarmCheck(string& sParams) {
 	string url = tds->conf->getStr("vlmAlarmCheck", "");
 	if (url.empty()) {
+		LOG("vlmAlarmCheck url not found");
 		return;
 	}
 
@@ -6464,18 +6465,21 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
 	if (yyv_tag == nullptr) {
 		yyjson_doc_free(doc);
+		LOG("vlmAlarmCheck tag not found");
 		return;
 	}
 
 	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
 	if (yyv_time == nullptr) {
 		yyjson_doc_free(doc);
+		LOG("vlmAlarmCheck time not found");
 		return;
 	}
 
 	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "data");
 	if (yyv_img == nullptr) {
 		yyjson_doc_free(doc);
+		LOG("vlmAlarmCheck data not found");
 		return;
 	}
 
@@ -6538,6 +6542,9 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 				body = writeResult;
 				free(writeResult);
 			}
+			else {
+				LOG("vlmAlarmCheck yyjson_mut_write failed");
+			}
 
 			yyjson_mut_doc_free(mutDoc);
 
@@ -6556,7 +6563,13 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 			while (!data.done && TIME::calcTimePassSecond(tStart) < 10.0) {
 				mg_mgr_poll(&mgr, 100);
 			}
-		}		
+		}
+		else {
+			LOG("vlmAlarmCheck url parse failed");
+		}
+	}
+	else {
+		LOG("vlmAlarmCheck mongoose connect failed");
 	}
 
 	if (data.status == 200) {
@@ -6604,11 +6617,26 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 						ai.time = time;
 						almSrv.Add(ai);
 					}
+					else {
+						LOG("vlmAlarmCheck result yyjson content not found");
+					}
+				}
+				else {
+					LOG("vlmAlarmCheck result yyjson message not found");
 				}
 			}
+			else {
+				LOG("vlmAlarmCheck result yyjson choicesObj not found");
+			}
+		}
+		else {
+			LOG("vlmAlarmCheck result yyjson choices not found");
 		}
 
 		yyjson_doc_free(docResult);
+	}
+	else {
+		LOG("vlmAlarmCheck mongoose callback failed");
 	}
 
 	mg_mgr_free(&mgr);
