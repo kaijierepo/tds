@@ -818,6 +818,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		else if (method == "db.saveImage") {
 			string s = params.dump();
 			db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+			vlmAlarmCheck(s);
 		}
 		else if (method == "db.setConf") {
 			string s = params.dump();
@@ -6449,6 +6450,169 @@ bool rpcHandler::apiAdaptorScript(string& strResult)
 	strResult += "\n\n";
 
 	return bResult;
+}
+
+void rpcHandler::vlmAlarmCheck(string& sParams) {
+	string url = tds->conf->getStr("vlmAlarmCheck", "");
+	if (url.empty()) {
+		return;
+	}
+
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+
+	yyjson_val* yyv_tag = yyjson_obj_get(yyv_params, "tag");
+	if (yyv_tag == nullptr) {
+		yyjson_doc_free(doc);
+		return;
+	}
+
+	yyjson_val* yyv_time = yyjson_obj_get(yyv_params, "time");
+	if (yyv_time == nullptr) {
+		yyjson_doc_free(doc);
+		return;
+	}
+
+	yyjson_val* yyv_img = yyjson_obj_get(yyv_params, "data");
+	if (yyv_img == nullptr) {
+		yyjson_doc_free(doc);
+		return;
+	}
+
+	string tag = yyjson_get_str(yyv_tag);
+	string time = yyjson_get_str(yyv_time);
+	string img = yyjson_get_str(yyv_img);
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		std::string protocol, ip, port, path;
+		if (parse_url(url, protocol, ip, port, path)) {
+			auto mutDoc = yyjson_mut_doc_new(nullptr);
+			auto mutRoot = yyjson_mut_obj(mutDoc);
+
+			yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+			yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", "google/gemma-3-12b");
+			yyjson_mut_obj_add_bool(mutDoc, mutRoot, "stream", false);
+
+			//
+			auto messageArr = yyjson_mut_arr(mutDoc);
+			yyjson_mut_obj_add_val(mutDoc, mutRoot, "messages", messageArr);
+
+			auto messageObj = yyjson_mut_obj(mutDoc);
+			yyjson_mut_arr_add_val(messageArr, messageObj);
+
+			yyjson_mut_obj_add_strcpy(mutDoc, messageObj, "role", "user");
+
+			//
+			auto contentArr = yyjson_mut_arr(mutDoc);
+			yyjson_mut_obj_add_val(mutDoc, messageObj, "content", contentArr);
+
+			//
+			auto contentObj1 = yyjson_mut_obj(mutDoc);
+			yyjson_mut_arr_add_val(contentArr, contentObj1);
+
+			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "type", "text");
+			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "text", "检查图片中的钢轨上是否有异物或者异常");
+
+			//
+			auto contentObj2 = yyjson_mut_obj(mutDoc);
+			yyjson_mut_arr_add_val(contentArr, contentObj2);
+
+			yyjson_mut_obj_add_strcpy(mutDoc, contentObj2, "type", "image_url");
+
+			auto imageUrlObj = yyjson_mut_obj(mutDoc);
+			yyjson_mut_obj_add_val(mutDoc, contentObj2, "image_url", imageUrlObj);
+
+			//yyjson_mut_obj_add_strcpy(mutDoc, imageUrlObj, "url", img.c_str()); 
+
+			string body;
+
+			char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+			if (writeResult) {
+				body = writeResult;
+				free(writeResult);
+			}
+
+			yyjson_mut_doc_free(mutDoc);
+
+			mg_printf(connect,
+				"POST %s HTTP/1.0\r\n"
+				"Host: %s\r\n"
+				"Content-Type: application/json\r\n"
+				"Content-Length: %u\r\n"
+				"\r\n"
+				"%s",
+				path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+			);
+
+			TIME tStart;
+			tStart.setNow();
+			while (!data.done && TIME::calcTimePassSecond(tStart) < 10.0) {
+				mg_mgr_poll(&mgr, 100);
+			}
+		}		
+	}
+
+	if (data.status == 200) {
+		string result = data.body;
+
+		yyjson_doc* docResult = yyjson_read(result.c_str(), result.length(), 0);
+		yyjson_val* resultRoot = yyjson_doc_get_root(docResult);
+
+		yyjson_val* choicesVal = yyjson_obj_get(resultRoot, "choices");
+		if (choicesVal != nullptr && yyjson_is_arr(choicesVal)) {
+			yyjson_val* choicesObjVal = yyjson_arr_get(choicesVal, 0);
+			if (choicesObjVal != nullptr && yyjson_is_obj(choicesObjVal)) {
+				yyjson_val* messageVal = yyjson_obj_get(choicesObjVal, "message");
+				if (messageVal != nullptr && yyjson_is_obj(messageVal)) {
+					yyjson_val* contentVal = yyjson_obj_get(messageVal, "content");
+					if (contentVal != nullptr && yyjson_is_str(contentVal)) {
+						string content = yyjson_get_str(contentVal);
+
+						// 步骤1: 找到并删除标签</think>及其前面的所有内容
+						size_t pos = content.find("</think>");
+						if (pos != string::npos) {
+							content = content.substr(pos + 8);
+						}
+
+						// 步骤2: 根据"\n\n"分割字符串为3部分
+						vector<string> parts;
+						string delimiter = "\n\n";
+						size_t start = 0;
+						size_t end = content.find(delimiter);
+
+						while (end != string::npos) {
+							parts.push_back(content.substr(start, end - start));
+							start = end + delimiter.length();
+							end = content.find(delimiter, start);
+						}
+
+						// 添加最后一部分
+						parts.push_back(content.substr(start));
+
+						ALARM_INFO ai;
+						ai.tag = tag;
+						ai.type = parts[0];
+						ai.desc = parts[1] + parts[2];
+						ai.level = ALARM_LEVEL::alarm;
+						ai.time = time;
+						almSrv.Add(ai);
+					}
+				}
+			}
+		}
+
+		yyjson_doc_free(docResult);
+	}
+
+	mg_mgr_free(&mgr);
+	yyjson_doc_free(doc);
 }
 
 bool haveNode(string link, string node)
