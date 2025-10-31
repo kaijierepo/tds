@@ -6609,13 +6609,15 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 						// 添加最后一部分
 						parts.push_back(content.substr(start));
 
-						ALARM_INFO ai;
-						ai.tag = tag;
-						ai.type = parts[0];
-						ai.desc = parts[1] + parts[2];
-						ai.level = ALARM_LEVEL::alarm;
-						ai.time = time;
-						almSrv.Add(ai);
+						if (parts.size() == 3) {
+							ALARM_INFO ai;
+							ai.tag = tag;
+							ai.type = parts[0];
+							ai.desc = parts[1] + parts[2];
+							ai.level = ALARM_LEVEL::alarm;
+							ai.time = time;
+							almSrv.Add(ai);
+						}					
 					}
 					else {
 						LOG("vlmAlarmCheck result yyjson content not found");
