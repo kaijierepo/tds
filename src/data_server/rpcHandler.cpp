@@ -6608,6 +6608,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 						// 添加最后一部分
 						parts.push_back(content.substr(start));
+						LOG("vlmAlarmCheck result yyjson content parts size %d", parts.size());
 
 						if (parts.size() == 3) {
 							ALARM_INFO ai;
