@@ -4968,8 +4968,26 @@ void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, stri
 	}
 	yy_mdoc = yyjson_doc_mut_copy(yy_doc,nullptr);
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
-	yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_row);
-    yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+
+	if (yyjson_is_obj(yyv_row)) {
+		yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_row);
+		yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+	}
+	else if(yyjson_is_arr(yyv_row)){
+		size_t len = yyjson_arr_size(yyv_row);
+        for (size_t i = 0; i < len; i++) {
+			yyjson_val* yyv_oneRow = yyjson_arr_get(yyv_row, i);
+			if (yyjson_is_obj(yyv_oneRow)) {
+				yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_oneRow);
+				yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+			}
+		}
+	}
+	else {
+		err = JSON_STR_VAL("row must be an object or an array");
+		return;
+	}
+
 
 	size_t len = 0;
 	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES,&len);
@@ -5128,13 +5146,12 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
 	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
 	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
-	if (!yyv_match) {
-		err = JSON_STR_VAL("must specify match");
-		return;
-	}
+	
 	string tableType = yyjson_get_str(yyv_tableType);
 	string table = yyjson_get_str(yyv_table);
-	string match = yyjson_get_str(yyv_match);
+	string match;
+	if(yyv_match)
+	 match = yyjson_get_str(yyv_match);
 	string path = m_confPath + "/" + table;
 
 	string data;
@@ -5159,17 +5176,22 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
 
-	CONDITION_SELECTOR cs;
-	cs.init(match);
-
-	size_t len = yyjson_mut_arr_size(yy_mroot);
-	for (size_t i = len - 1; i != (size_t)-1; i--) {
-		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
-		if (cs.match(obj)) {
-			yyjson_mut_arr_append(yy_selected, obj);
+	if (match != "") {
+		CONDITION_SELECTOR cs;
+		cs.init(match);
+		size_t len = yyjson_mut_arr_size(yy_mroot);
+		for (size_t i = len - 1; i != (size_t)-1; i--) {
+			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+			if (cs.match(obj)) {
+				yyjson_mut_arr_append(yy_selected, obj);
+			}
 		}
 	}
+	else {
+        yy_selected = yy_mroot;
+	}
 
+	size_t len;
 	char* p = yyjson_mut_val_write(yy_selected, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 	if (p) {
         rlt = p;
