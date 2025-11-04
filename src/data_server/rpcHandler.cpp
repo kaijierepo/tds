@@ -6617,10 +6617,28 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 						// 添加最后一部分
 						parts.push_back(content.substr(start));
+
+						if (parts.size() == 1) {
+							parts.clear();
+
+							string delimiter = "\n";
+							size_t start = 0;
+							size_t end = content.find(delimiter);
+
+							while (end != string::npos) {
+								parts.push_back(content.substr(start, end - start));
+								start = end + delimiter.length();
+								end = content.find(delimiter, start);
+							}
+
+							// 添加最后一部分
+							parts.push_back(content.substr(start));
+						}
+
 						LOG("vlmAlarmCheck result yyjson content parts size %d", parts.size());
 
 						if (parts.size() == 3) {
-							if (img.find("正常") == string::npos) {
+							if (parts[0].find("正常") == string::npos) {
 								ALARM_INFO ai;
 								ai.tag = tag;
 								ai.type = parts[0];
