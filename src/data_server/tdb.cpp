@@ -2719,8 +2719,14 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		needParseTag = true; //parse tags in sel language to db language
 	}
 
-	if (needParseTag)
-		m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
+	if (needParseTag) {
+		if(m_getTagsByTagSelector)
+			m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
+		else {
+			err = JSON_STR_VAL("db tagSelector function not inited");
+			return;
+		}
+	}
 	else {
 		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
 			string& exp = deSel.tagSel.exactMatchExp[i];
@@ -5180,11 +5186,15 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		CONDITION_SELECTOR cs;
 		cs.init(match);
 		size_t len = yyjson_mut_arr_size(yy_mroot);
+		vector<yyjson_mut_val*> yyv_selected;
 		for (size_t i = len - 1; i != (size_t)-1; i--) {
 			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
 			if (cs.match(obj)) {
-				yyjson_mut_arr_append(yy_selected, obj);
+				yyv_selected.push_back(obj);
 			}
+		}
+		for (size_t i = 0; i < yyv_selected.size(); i++) {
+			yyjson_mut_arr_append(yy_selected, yyv_selected[i]);
 		}
 	}
 	else {
