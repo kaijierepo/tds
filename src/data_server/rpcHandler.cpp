@@ -6603,41 +6603,46 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 							content = content.substr(pos + 8);
 						}
 
+						//
+						string contentTmp = content;
+
 						// 步骤2: 根据"\n\n"分割字符串为3部分
 						vector<string> parts;
 						string delimiter = "\n\n";
 						size_t start = 0;
-						size_t end = content.find(delimiter);
+						size_t end = contentTmp.find(delimiter);
 
 						while (end != string::npos) {
-							parts.push_back(content.substr(start, end - start));
+							parts.push_back(contentTmp.substr(start, end - start));
 							start = end + delimiter.length();
-							end = content.find(delimiter, start);
+							end = contentTmp.find(delimiter, start);
 						}
 
 						// 添加最后一部分
-						parts.push_back(content.substr(start));
+						parts.push_back(contentTmp.substr(start));
 
 						if (parts.size() == 1) {
 							parts.clear();
+							contentTmp = content;
 
-							string delimiter = "\n";
-							size_t start = 0;
-							size_t end = content.find(delimiter);
+							delimiter = "\n";
+							start = 0;
+							end = contentTmp.find(delimiter);
 
 							while (end != string::npos) {
-								parts.push_back(content.substr(start, end - start));
+								parts.push_back(contentTmp.substr(start, end - start));
 								start = end + delimiter.length();
-								end = content.find(delimiter, start);
+								end = contentTmp.find(delimiter, start);
 							}
 
 							// 添加最后一部分
-							parts.push_back(content.substr(start));
+							parts.push_back(contentTmp.substr(start));
 						}
 
 						LOG("vlmAlarmCheck result yyjson content parts size %d", parts.size());
 
 						if (parts.size() == 3) {
+							LOG("%s", parts[0]);
 							if (parts[0].find("正常") == string::npos) {
 								ALARM_INFO ai;
 								ai.tag = tag;
