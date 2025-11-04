@@ -6514,7 +6514,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 			yyjson_mut_arr_add_val(contentArr, contentObj1);
 
 			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "type", "text");
-			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "text", "检查图片中的钢轨上是否有异物或者异常");
+			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "text", "图像信息：\n\n这是一张监控摄像头巡检钢轨的图片，图片尺寸1920*1080。可能是白天或者晚上。如果图片基本黑白，那就是晚上的。\n\n检查方法:\n\n仔细检察钢轨上是否有异物，注意区分钢轨上和钢轨旁，你在详细描述里，还可以进一步区分轨头、轨腰或者轨底。你可以沿着钢轨的方向，从一端到另外一端仔细观察，根据钢轨是否纹理整体平滑，有没有纹理轮廓上的不规则，如果发现有，停下来仔细看一下他的形状，是否是螺丝刀，扳手一类的工具。\n\n回复格式:\n\n回复只需要回复3行。回复的第1行，也就是第一个回车之前，描述异常类型。第2行描述你检查了几根钢轨，是基本轨还是尖轨。如果有异常，第3行详细描述你观察到的异常。\n\n异常类型:\n\n类型分为：正常，断轨，钢轨裂缝，轨上异物,轨旁异物。可以留意是否有螺丝刀，扳手，螺丝一类的小物件遗留在钢轨上，或者遗留在轨枕，道床等位置。\n\n特殊说明:\n\n我们在钢轨轨底安装了一个夹具，那个是测量钢轨伤损的探头，如果你观察到了探头，探头可以忽略不要作为轨上异物。");
 
 			//
 			auto contentObj2 = yyjson_mut_obj(mutDoc);
@@ -6603,13 +6603,15 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 						LOG("vlmAlarmCheck result yyjson content parts size %d", parts.size());
 
 						if (parts.size() == 3) {
-							ALARM_INFO ai;
-							ai.tag = tag;
-							ai.type = parts[0];
-							ai.desc = parts[1] + parts[2];
-							ai.level = ALARM_LEVEL::alarm;
-							ai.time = time;
-							almSrv.Add(ai);
+							if (img.find("正常") == string::npos) {
+								ALARM_INFO ai;
+								ai.tag = tag;
+								ai.type = parts[0];
+								ai.desc = parts[1] + parts[2];
+								ai.level = ALARM_LEVEL::alarm;
+								ai.time = time;
+								almSrv.Add(ai);
+							}
 						}					
 					}
 					else {
