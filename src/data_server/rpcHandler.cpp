@@ -6475,6 +6475,10 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 	string time = yyjson_get_str(yyv_time);
 	string img = yyjson_get_str(yyv_img);
 
+	if (img.find("data:") == string::npos) {
+		img = "data:image/jpg;base64," + img;
+	}
+
 	struct mg_mgr mgr;
 	mg_mgr_init(&mgr);
 
@@ -6521,7 +6525,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 			auto imageUrlObj = yyjson_mut_obj(mutDoc);
 			yyjson_mut_obj_add_val(mutDoc, contentObj2, "image_url", imageUrlObj);
 
-			//yyjson_mut_obj_add_strcpy(mutDoc, imageUrlObj, "url", img.c_str()); 
+			yyjson_mut_obj_add_strcpy(mutDoc, imageUrlObj, "url", img.c_str()); 
 
 			string body;
 
@@ -6548,7 +6552,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 			TIME tStart;
 			tStart.setNow();
-			while (!data.done && TIME::calcTimePassSecond(tStart) < 10.0) {
+			while (!data.done && TIME::calcTimePassSecond(tStart) < 60.0) {
 				mg_mgr_poll(&mgr, 100);
 			}
 		}
@@ -6627,7 +6631,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 		yyjson_doc_free(docResult);
 	}
 	else {
-		LOG("vlmAlarmCheck mongoose callback failed");
+		LOG("vlmAlarmCheck mongoose callback failed, dataStatus %d", data.status);
 	}
 
 	mg_mgr_free(&mgr);

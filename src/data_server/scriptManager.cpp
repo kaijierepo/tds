@@ -474,6 +474,7 @@ bool ScriptManager::rpc_getScriptList(yyjson_val* params_obj, RPC_RESP& rpcResp,
 		free(result);
 	}
 	else {
+		LOG("yyjson_mut_val_write failed");
 		rpcResp.result = "[]";
 	}
 

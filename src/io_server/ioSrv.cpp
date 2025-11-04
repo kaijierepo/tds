@@ -88,6 +88,7 @@ void IOThread()
 
 				if (pIoDev->m_reconnectMode == "periodic") {
 					if (timeopt::CalcTimePassSecond(pIoDev->m_stLastReconnectTime) > pIoDev->m_reconnectTime && pIoDev->m_reconnectTime > 0) {
+						LOG("tcp 定时重连 ip:%s, port:%d, time: %d", pIoDev->getIP(), pIoDev->getPort(), pIoDev->m_reconnectTime);
 						pIoDev->stop();
 						pIoDev->run();
 						timeopt::now(&pIoDev->m_stLastReconnectTime);
