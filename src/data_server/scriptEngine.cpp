@@ -1628,7 +1628,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 	bool runOk = false;
 
     sri.lastExe = TIME::nowStr(true);
-
+    sri.lastError = "";
 	try {
 		TIME tStart;
         tStart.setNow();

@@ -2792,8 +2792,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 	m_timeUnit = oldTimeUint;
 
-	queryInfo = result.info;
-	queryInfo = "tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount);
+	queryInfo = JSON_STR_VAL("tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount));
 }
 
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
