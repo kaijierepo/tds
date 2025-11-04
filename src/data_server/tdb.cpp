@@ -55,6 +55,29 @@ namespace fs = std::filesystem;
 
 TDB db;
 
+#include <random>
+#include <cstdio>
+#include <string>
+
+std::string generate_tdb_uuid() {
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_int_distribution<uint32_t> dis(0, 0xFFFFFFFF);
+
+	uint32_t data1 = dis(gen);
+	uint16_t data2 = static_cast<uint16_t>(dis(gen));
+	uint16_t data3 = (static_cast<uint16_t>(dis(gen)) & 0x0FFF) | 0x4000;
+	uint16_t data4 = (static_cast<uint16_t>(dis(gen)) & 0x3FFF) | 0x8000;
+	uint32_t data5 = dis(gen);
+
+	char uuid[37];
+	std::snprintf(uuid, sizeof(uuid),
+		"%08x-%04x-%04x-%04x-%08x",
+		data1, data2, data3, data4, data5);
+
+	return std::string(uuid);
+}
+
 string replaceStr(string str, const string to_replaced, const string newchars)
 {
 	for (string::size_type pos(0); pos != string::npos; pos += newchars.length())
@@ -5181,6 +5204,29 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
 
+	//check tdb_row_id ,add if not exist
+	size_t len = yyjson_mut_arr_size(yy_mroot);
+	bool rowIdRefresh = false;
+	for (size_t i = len - 1; i != (size_t)-1; i--) {
+		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+		if (yyjson_mut_obj_get(obj, "tdb_row_id") == nullptr){
+			string s = generate_tdb_uuid();
+			yyjson_mut_val* yy_key_uuid = yyjson_mut_strcpy(yy_mdoc, "tdb_row_id");
+			yyjson_mut_val* yy_val_uuid = yyjson_mut_strcpy(yy_mdoc, s.c_str());
+			yyjson_mut_obj_put(obj, yy_key_uuid, yy_val_uuid);
+			rowIdRefresh = true;
+		}
+	}
+
+	if (rowIdRefresh) {
+        char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+		if (!p) {
+			err = JSON_STR_VAL("generate tdb row id fail");
+			return;
+		}
+		DB_FS::writeFile(path, p, len);
+	}
+
 	int totalRow = 0;
 	int selectedRow = 0;
 	if (match != "") {
@@ -5204,7 +5250,6 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		yy_selected = yy_mroot;
 	}
 
-	size_t len;
 	char* p = yyjson_mut_val_write(yy_selected, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 	if (p) {
 		rlt = p;
