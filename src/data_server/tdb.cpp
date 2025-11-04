@@ -5190,7 +5190,7 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		for (size_t i = len - 1; i != (size_t)-1; i--) {
 			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
 			if (cs.match(obj)) {
-				yyv_selected.push_back(obj);
+				yyv_selected.push_back(obj); //do not append to yy_selected,causes yydoc error
 			}
 		}
 		for (size_t i = 0; i < yyv_selected.size(); i++) {

@@ -68,6 +68,32 @@ namespace tJSEngine {
 }
 
 
+JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_val* val)
+{
+    if (!val) return JS_NULL;
+
+    char* json_str = yyjson_val_write(val, YYJSON_WRITE_PRETTY, NULL);
+    if (!json_str) {
+        printf("yyjson serialization failed");
+        return JS_NULL;
+    }
+
+    JSValue js_val = JS_ParseJSON(ctx, json_str, strlen(json_str), "<yyjson>");
+
+    free(json_str);
+
+    if (JS_IsException(js_val)) {
+        JSValue error = JS_GetException(ctx);
+        const char* error_msg = JS_ToCString(ctx, error);
+        printf("JSON parse error: %s", error_msg);
+        JS_FreeCString(ctx, error_msg);
+        JS_FreeValue(ctx, error);
+        return JS_NULL;
+    }
+
+    return js_val;
+}
+
 JSValue yyVal_to_qjsVal(JSContext* ctx, yyjson_mut_val* val) {
     if (!val) return JS_NULL;
 
@@ -993,43 +1019,46 @@ extern "C" {
     }
 
     static JSValue qjs_db_select(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-        json jArgs = engineArrayToJson(ctx, argv, argc);
-
-        if (jArgs.size() == 1) {
-            json params = jArgs[0];
-            if (params.is_object()) {
+        JSValue jsVal = JS_NULL;
+        if (argc == 1) {
+            JSValue jsParams = argv[0];
+            if (JS_IsObject(jsParams)) {
                 string err, rlt, queryInfo;
-                string sParams = params.dump();
-                db.rpc_db_select(sParams, rlt, err, queryInfo, "", "zh");
+                yyjson_doc* yydoc = nullptr;
+                qjsVal_to_yyVal(ctx, jsParams, yydoc);
 
-                json jRlt;
-                if (!rlt.empty()) {
-                    jRlt = json::parse(rlt);
-                }
+                if (yydoc) {
+                    yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
+                    db.handleRpc("db.select",yyParams, rlt, err, queryInfo, "", "zh");
 
-                json jErr;
-                if (!err.empty()) {
-                    jErr = json::parse(err);
-                }
-                 
-                if (jRlt != nullptr) {
-                    json jRet;
-                    jRet["result"] = jRlt;
-                    JSValue jsVal;
-                    jsonValToJsVal(jRet, ctx, jsVal);
-                    return jsVal;
-                }
-                else if (jErr != nullptr) {
-                    json jRet;
-                    jRet["error"] = jErr;
-                    JSValue jsVal;
-                    jsonValToJsVal(jRet, ctx, jsVal);
-                    return jsVal;
+                    yyjson_doc* yydocRet = nullptr;
+
+                    if (!rlt.empty()) {
+                        yyjson_read_err e = { 0 };
+                        yydocRet = yyjson_read_opts((char*)rlt.c_str(), rlt.length(), 0, nullptr, &e);
+                        if (e.code == YYJSON_READ_SUCCESS) {
+                            yyjson_val* yyVal = yyjson_doc_get_root(yydocRet);
+                            jsVal = yyVal_to_qjsVal(ctx, yyVal);
+                            yyjson_doc_free(yydocRet);
+                        }
+                    }
+
+                    if (!err.empty()) {
+                        yyjson_read_err e = { 0 };
+                        yydocRet = yyjson_read_opts((char*)err.c_str(), err.length(), 0, nullptr, &e);
+                        if (e.code == YYJSON_READ_SUCCESS) {
+                            yyjson_val* yyVal = yyjson_doc_get_root(yydocRet);
+                            jsVal = yyVal_to_qjsVal(ctx, yyVal);
+                            yyjson_doc_free(yydocRet);
+                        }
+                    }
+
+                    yyjson_doc_free(yydoc);     
                 }
             }
         }
 
-        return JS_NULL;
+        return jsVal;
     }
 
     static JSValue qjs_db_insert(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
