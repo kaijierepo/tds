@@ -6488,72 +6488,89 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 	if (connect) {
 		std::string protocol, ip, port, path;
 		if (parse_url(url, protocol, ip, port, path)) {
-			auto mutDoc = yyjson_mut_doc_new(nullptr);
-			auto mutRoot = yyjson_mut_obj(mutDoc);
+			// 文件路径
+			const std::string filePath = fs::appPath() + "/vlm_command.json";
 
-			yyjson_mut_doc_set_root(mutDoc, mutRoot);
+			// 打开文件
+			std::ifstream file(filePath);
+			if (file.is_open()) {
+				// 读取文件内容
+				std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-			yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", "google/gemma-3-12b");
-			yyjson_mut_obj_add_bool(mutDoc, mutRoot, "stream", false);
+				// 关闭文件
+				file.close();
 
-			//
-			auto messageArr = yyjson_mut_arr(mutDoc);
-			yyjson_mut_obj_add_val(mutDoc, mutRoot, "messages", messageArr);
+				auto mutDoc = yyjson_mut_doc_new(nullptr);
+				auto mutRoot = yyjson_mut_obj(mutDoc);
 
-			auto messageObj = yyjson_mut_obj(mutDoc);
-			yyjson_mut_arr_add_val(messageArr, messageObj);
+				yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-			yyjson_mut_obj_add_strcpy(mutDoc, messageObj, "role", "user");
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", "google/gemma-3-12b");
+				yyjson_mut_obj_add_bool(mutDoc, mutRoot, "stream", false);
 
-			//
-			auto contentArr = yyjson_mut_arr(mutDoc);
-			yyjson_mut_obj_add_val(mutDoc, messageObj, "content", contentArr);
+				//
+				auto messageArr = yyjson_mut_arr(mutDoc);
+				yyjson_mut_obj_add_val(mutDoc, mutRoot, "messages", messageArr);
 
-			//
-			auto contentObj1 = yyjson_mut_obj(mutDoc);
-			yyjson_mut_arr_add_val(contentArr, contentObj1);
+				auto messageObj = yyjson_mut_obj(mutDoc);
+				yyjson_mut_arr_add_val(messageArr, messageObj);
 
-			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "type", "text");
-			yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "text", "图像信息：\n\n这是一张监控摄像头巡检钢轨的图片，图片尺寸1920*1080。可能是白天或者晚上。如果图片基本黑白，那就是晚上的。\n\n检查方法:\n\n仔细检察钢轨上是否有异物，注意区分钢轨上和钢轨旁，你在详细描述里，还可以进一步区分轨头、轨腰或者轨底。你可以沿着钢轨的方向，从一端到另外一端仔细观察，根据钢轨是否纹理整体平滑，有没有纹理轮廓上的不规则，如果发现有，停下来仔细看一下他的形状，是否是螺丝刀，扳手一类的工具。\n\n回复格式:\n\n回复只需要回复3行。回复的第1行，也就是第一个回车之前，描述异常类型。第2行描述你检查了几根钢轨，是基本轨还是尖轨。如果有异常，第3行详细描述你观察到的异常。\n\n异常类型:\n\n类型分为：正常，断轨，钢轨裂缝，轨上异物,轨旁异物。可以留意是否有螺丝刀，扳手，螺丝一类的小物件遗留在钢轨上，或者遗留在轨枕，道床等位置。\n\n特殊说明:\n\n我们在钢轨轨底安装了一个夹具，那个是测量钢轨伤损的探头，如果你观察到了探头，探头可以忽略不要作为轨上异物。");
+				yyjson_mut_obj_add_strcpy(mutDoc, messageObj, "role", "user");
 
-			//
-			auto contentObj2 = yyjson_mut_obj(mutDoc);
-			yyjson_mut_arr_add_val(contentArr, contentObj2);
+				//
+				auto contentArr = yyjson_mut_arr(mutDoc);
+				yyjson_mut_obj_add_val(mutDoc, messageObj, "content", contentArr);
 
-			yyjson_mut_obj_add_strcpy(mutDoc, contentObj2, "type", "image_url");
+				//
+				auto contentObj1 = yyjson_mut_obj(mutDoc);
+				yyjson_mut_arr_add_val(contentArr, contentObj1);
 
-			auto imageUrlObj = yyjson_mut_obj(mutDoc);
-			yyjson_mut_obj_add_val(mutDoc, contentObj2, "image_url", imageUrlObj);
 
-			yyjson_mut_obj_add_strcpy(mutDoc, imageUrlObj, "url", img.c_str()); 
+				yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "type", "text");
+				yyjson_mut_obj_add_strcpy(mutDoc, contentObj1, "text", fileContent.c_str());
 
-			string body;
+				//
+				auto contentObj2 = yyjson_mut_obj(mutDoc);
+				yyjson_mut_arr_add_val(contentArr, contentObj2);
 
-			char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
-			if (writeResult) {
-				body = writeResult;
-				free(writeResult);
+				yyjson_mut_obj_add_strcpy(mutDoc, contentObj2, "type", "image_url");
+
+				auto imageUrlObj = yyjson_mut_obj(mutDoc);
+				yyjson_mut_obj_add_val(mutDoc, contentObj2, "image_url", imageUrlObj);
+
+				yyjson_mut_obj_add_strcpy(mutDoc, imageUrlObj, "url", img.c_str());
+
+				string body;
+
+				char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+				if (writeResult) {
+					body = writeResult;
+					free(writeResult);
+				}
+				else {
+					LOG("vlmAlarmCheck yyjson_mut_write failed");
+				}
+
+				yyjson_mut_doc_free(mutDoc);
+
+				mg_printf(connect,
+					"POST %s HTTP/1.0\r\n"
+					"Host: %s\r\n"
+					"Content-Type: application/json\r\n"
+					"Content-Length: %u\r\n"
+					"\r\n"
+					"%s",
+					path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+				);
+
+				TIME tStart;
+				tStart.setNow();
+				while (!data.done && TIME::calcTimePassSecond(tStart) < 60.0) {
+					mg_mgr_poll(&mgr, 100);
+				}
 			}
 			else {
-				LOG("vlmAlarmCheck yyjson_mut_write failed");
-			}
-
-			yyjson_mut_doc_free(mutDoc);
-
-			mg_printf(connect,
-				"POST %s HTTP/1.0\r\n"
-				"Host: %s\r\n"
-				"Content-Type: application/json\r\n"
-				"Content-Length: %u\r\n"
-				"\r\n"
-				"%s",
-				path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
-			);
-
-			TIME tStart;
-			tStart.setNow();
-			while (!data.done && TIME::calcTimePassSecond(tStart) < 60.0) {
-				mg_mgr_poll(&mgr, 100);
+				LOG("vlmAlarmCheck read vlm_command.json failed");
 			}
 		}
 		else {
