@@ -5182,17 +5182,21 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 	yyjson_mut_val* yy_selected = yyjson_mut_arr(yy_mdoc);
 
+	int totalRow = 0;
+	int selectedRow = 0;
 	if (match != "") {
 		CONDITION_SELECTOR cs;
 		cs.init(match);
 		size_t len = yyjson_mut_arr_size(yy_mroot);
 		vector<yyjson_mut_val*> yyv_selected;
+		totalRow = len;
 		for (size_t i = len - 1; i != (size_t)-1; i--) {
 			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
 			if (cs.match(obj)) {
 				yyv_selected.push_back(obj); //do not append to yy_selected,causes yydoc error
 			}
 		}
+		selectedRow = yyv_selected.size();
 		for (size_t i = 0; i < yyv_selected.size(); i++) {
 			yyjson_mut_arr_append(yy_selected, yyv_selected[i]);
 		}
@@ -5207,6 +5211,8 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		rlt = p;
 		free(p);
 	}
+
+	queryInfo = JSON_STR_VAL("total row " + to_string(totalRow) +  ",selected " + to_string(selectedRow));
 
 	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);

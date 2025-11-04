@@ -1031,28 +1031,23 @@ extern "C" {
                     yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
                     db.handleRpc("db.select",yyParams, rlt, err, queryInfo, "", "zh");
 
-                    yyjson_doc* yydocRet = nullptr;
-
+                    string ret;
                     if (!rlt.empty()) {
-                        yyjson_read_err e = { 0 };
-                        yydocRet = yyjson_read_opts((char*)rlt.c_str(), rlt.length(), 0, nullptr, &e);
-                        if (e.code == YYJSON_READ_SUCCESS) {
-                            yyjson_val* yyVal = yyjson_doc_get_root(yydocRet);
-                            jsVal = yyVal_to_qjsVal(ctx, yyVal);
-                            yyjson_doc_free(yydocRet);
-                        }
+                        ret = "{\"result\":" + rlt;
+                    }
+                    else if (!err.empty()) {
+                        ret = "{\"error\":" + rlt;
+                    }
+                    else {
+                        ret = "{\"error\":\"unhandled\"}";
                     }
 
-                    if (!err.empty()) {
-                        yyjson_read_err e = { 0 };
-                        yydocRet = yyjson_read_opts((char*)err.c_str(), err.length(), 0, nullptr, &e);
-                        if (e.code == YYJSON_READ_SUCCESS) {
-                            yyjson_val* yyVal = yyjson_doc_get_root(yydocRet);
-                            jsVal = yyVal_to_qjsVal(ctx, yyVal);
-                            yyjson_doc_free(yydocRet);
-                        }
+                    if (!queryInfo.empty()) {
+                        ret += ",\"queryInfo\":" + queryInfo;
                     }
+                    ret +="}";
 
+                    jsVal = JS_ParseJSON(ctx, ret.c_str(), ret.length(), nullptr);
                     yyjson_doc_free(yydoc);     
                 }
             }
