@@ -504,6 +504,8 @@ public:
 	//data after aggregate or without aggr option
 	vector<DE_yyjson*> m_afterAggr;
 
+	//   saved custom groupby columns
+	map<string, map<string, string>> customGroupValues;
 	DATA_SET() {
 
 	}
@@ -595,6 +597,8 @@ struct DE_SELECTOR {
 	string timeGroupBy;
 	bool groupByTime; //time in selected de is set a time group key such as "2023-09-01 11" when groupby "hour"
 	bool groupByTag;  
+	vector<string> customGroupBy;  // 自定义分组字段，如 ["acqType"]
+	map<string, string> customGroupAlias; // 自定义分组字段别名
 
 	bool bAggr; 
 	map<string,vector<string>> aggregate; //global aggr option. key is the json key to aggr, val is aggr type

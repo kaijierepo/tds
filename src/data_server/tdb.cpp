@@ -1612,170 +1612,86 @@ std::string yyvalDump(yyjson_val* val) {
 #endif
 
 bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc) {
-	bool withTag = deSel.tagSel.getTag;
-	map<string, map<string, set<yyjson_mut_val*>>> timeSectionSeries; 
-
-	//generate output de
 	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 		DATA_SET& fSet = *set_list[tagIdx];
 
-		string& tagAlias = fSet.colKey;
-		string& tag = fSet.tag;
+		for (int i = 0; i < fSet.m_afterAggr.size(); i++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[i];
 
-		for (int j = 0; j < fSet.m_afterAggr.size(); j++) {
-			DE_yyjson& deyy = *fSet.m_afterAggr[j];
+			yyjson_mut_val* yyRlt = yyjson_mut_obj(mut_doc);
 
-			//create a output de
-			yyjson_mut_val* jRecord;
-			if (deSel.bAggr) { //create a mut obj in a aggr select mode
-				jRecord = yyjson_mut_obj(mut_doc);
-			}
-			else if(deyy.de != nullptr) { //copy directly for speed in a none aggr select mode
-				jRecord = deyy.de;
-			}
-			else {
-				jRecord = yyjson_mut_obj(mut_doc);
-			}
-			
-			//set time
-			yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
-			yyjson_mut_val* timeVal = yyjson_mut_str(mut_doc, deyy.deTime.data());
-			yyjson_mut_obj_put(jRecord, timeKey, timeVal);
+			string fullGroupKey = deyy.deTime;
+			vector<string> keyParts;
+			DB_STR::split(keyParts, fullGroupKey, "|");
 
-			//set keys except time
-			if (deyy.items.size()>0) {
-				for (auto& i : deyy.items) {
-					yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, i.first.c_str());
-					yyjson_mut_obj_put(jRecord, valKey, i.second);
+			string timePart = keyParts.empty() ? "" : keyParts[0];
+			yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "time", timePart.c_str());
+
+			int customFieldCount = deSel.customGroupBy.size();
+			bool hasTagGroup = deSel.groupByTag;
+
+			for (size_t j = 1; j < keyParts.size(); j++) {
+				string fieldValue = keyParts[j];
+				string fieldName;
+
+				if (j <= customFieldCount) {
+					fieldName = deSel.customGroupBy[j - 1];
 				}
-			}
+				else if (hasTagGroup && j == keyParts.size() - 1) {
+					fieldName = "tag";
+				}
+				else {
+					fieldName = "field_" + to_string(j);
+				}
 
-			//set val
-			if (deyy.val != nullptr) {
-				yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, m_dbFmt.deItemKey_value.c_str());
-				yyjson_mut_obj_put(jRecord, valKey, deyy.val);
-			}
 
-			//set tag
-			if (withTag) {
-				//in a multi tag selection ,tag must be set
-				//tagAlias memory can not release before write_doc,otherwise causes crash
-				yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, "tag");
-				yyjson_mut_val* tagVal = yyjson_mut_str(mut_doc, tagAlias.c_str());
-				yyjson_mut_obj_put(jRecord, tagKey, tagVal);
-			}
-
-		
-			auto iter = timeSectionSeries.find(deyy.deTime.data());
-			if (iter == timeSectionSeries.end()) {
-				map<string, set<yyjson_mut_val*>> timeSection;
-				timeSection[tag].insert(jRecord);
-				timeSectionSeries[deyy.deTime.data()] = timeSection;
-			}
-			else {
-				map<string, set<yyjson_mut_val*>>& timeSection = iter->second;
-				timeSection[tag].insert(jRecord);
-			}
-
-			result.rowCount++;
-
-			if (deSel.timeSel.AmountMatch(result.rowCount)) {
-				break;
-			}
-		}
-	}
-
-	//time section fill,set time of the filled de
-	if (deSel.timeFill) {
-		int addDeCount = 0;
-		map<string, set<yyjson_mut_val*>>* lastSection = nullptr;
-
-		for (auto& iter : timeSectionSeries) {
-			map<string, set<yyjson_mut_val*>>& timeSection = iter.second;
-
-			for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
-				DATA_SET& fSet = *set_list[tagIdx];
-				string& tag = fSet.tag;
-
-				auto j = timeSection.find(tag);
-				if (j == timeSection.end()) { //tag does not have data in this time section,need to be filled
-					if (lastSection != nullptr) {
-						auto k = lastSection->find(tag);
-						if (k != lastSection->end()) {
-							set<yyjson_mut_val*> jReSet;
-
-							//a de must exist in this time section,use the first de to get the time of this time section
-							for (auto jValRefRec : k->second) {
-								yyjson_mut_val* jRecord = yyjson_mut_obj(mut_doc);
-								yyjson_mut_val* jTimeRefRec = *(timeSection.begin()->second.begin());
-								yyjson_mut_val* yyTimeSrc = yyjson_mut_obj_get(jTimeRefRec, "time");
-								yyjson_mut_val* yyTime = yyjson_mut_val_mut_copy(mut_doc, yyTimeSrc);
-								yyjson_mut_val* timeKey = yyjson_mut_str(mut_doc, CONST_STR::time.c_str());
-								yyjson_mut_obj_put(jRecord, timeKey, yyTime);
-	
-								//yyjson_mut_val* jValRefRec = k->second;
-								yyjson_mut_val* yyValSrc = yyjson_mut_obj_get(jValRefRec, m_dbFmt.deItemKey_value.c_str());
-								yyjson_mut_val* yyVal = yyjson_mut_val_mut_copy(mut_doc, yyValSrc);  //a copy operation must be done, do not put yyValSrc into obj, it causes error in dumped json string. may be the obj the pointer pointed is a node of a linked list,if in two obj at the same time,causes error when yyjson try to dump the linked list
-								yyjson_mut_val* valKey = yyjson_mut_str(mut_doc, CONST_STR::val.c_str());
-								yyjson_mut_obj_put(jRecord, valKey, yyVal);
-	
-								yyjson_mut_val* yyTagSrc = yyjson_mut_obj_get(jValRefRec, "tag");
-								yyjson_mut_val* yyTag = yyjson_mut_val_mut_copy(mut_doc, yyTagSrc);
-								yyjson_mut_val* tagKey = yyjson_mut_str(mut_doc, CONST_STR::tag.c_str());
-								yyjson_mut_obj_put(jRecord, tagKey, yyTag);
-	
-								//timeSection[tag] = jRecord;
-								jReSet.insert(jRecord);
-								addDeCount++;
-							}
-
-							timeSection[tag].swap(jReSet);
+				if (fieldName == "tag") {
+					yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "tag", fieldValue.c_str());
+				}
+				else {
+					auto yyKey = yyjson_mut_strcpy(mut_doc, fieldName.c_str());
+					if (fieldValue == "true") {
+						auto yyVal = yyjson_mut_bool(mut_doc, true);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else if (fieldValue == "false") {
+						auto yyVal = yyjson_mut_bool(mut_doc, false);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else if (fieldValue == "null") {
+						auto yyVal = yyjson_mut_null(mut_doc);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else {
+						char* end;
+						double numVal = strtod(fieldValue.c_str(), &end);
+						if (end != fieldValue.c_str() && *end == '\0') {
+							auto yyVal = yyjson_mut_real(mut_doc, numVal);
+							yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+						}
+						else {
+							auto yyVal = yyjson_mut_strcpy(mut_doc, fieldValue.c_str());
+							yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
 						}
 					}
 				}
 			}
 
-			lastSection = &timeSection;
-		}
-	}
-	
-	//sort de and output
-	for (auto& i : timeSectionSeries) {
-		map<string, set<yyjson_mut_val*>>& timeSection = i.second;
-
-		for (auto& j : timeSection) {
-			SORT_FLAG sortFlag;
-
-			for (auto jRec : j.second) {	
-				if (deSel.sortKey.length() > 0) {
-					yyjson_mut_val* yyVal = yyjson_mut_obj_get(jRec, m_dbFmt.deItemKey_value.c_str());
-
-					if (deSel.sortKey == "val") {
-						if (yyjson_mut_is_str(yyVal)) {
-							sortFlag.sFlag = yyjson_mut_get_str(yyVal);
-						}
-						else if (yyjson_mut_is_num(yyVal)) {
-							sortFlag.dbFlag = yyjson_mut_get_real(yyVal);
-						}
-					}
-					else if (yyjson_mut_is_obj(yyVal)) {
-						yyjson_mut_val* yySortKey = yyjson_mut_obj_get(yyVal, deSel.sortKey.c_str());
-
-						if (yyjson_mut_is_str(yySortKey)) {
-							sortFlag.sFlag = yyjson_mut_get_str(yySortKey);
-						}
-						else if (yyjson_mut_is_num(yySortKey)) {
-							sortFlag.dbFlag = yyjson_mut_get_real(yySortKey);
-						}
-					}
-				}
-	
-				sortFlag.sFlag += i.first + j.first + std::to_string(result.rowCount);
-				mapRlt[sortFlag] = jRec; 
+			if (deyy.val) {
+				yyjson_mut_obj_add_val(mut_doc, yyRlt, "val", deyy.val);
 			}
+
+			for (const auto& item : deyy.items) {
+				auto yyKey = yyjson_mut_strcpy(mut_doc, item.first.c_str());
+				yyjson_mut_obj_put(yyRlt, yyKey, item.second);
+			}
+
+			SORT_FLAG sf;
+			sf.dbFlag = mapRlt.size();
+			mapRlt[sf] = yyRlt;
 		}
 	}
-	
+
 	return true;
 }
 
@@ -1783,31 +1699,135 @@ bool TDB::Select_Step_outputRows_SingleCol_timeFill(DE_SELECTOR& deSel, vector<D
 bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, map<SORT_FLAG, yyjson_mut_val*>& mapRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	//generate output de
-	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
-	{
+	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 		DATA_SET& fSet = *set_list[tagIdx];
-		SORT_FLAG sf;
-		for (int j = 0; j < fSet.m_orgDe.size(); j++) {
-			sf.dbFlag = j;
-			yyjson_mut_val* mde = yyjson_val_mut_copy(mut_doc, fSet.m_orgDe[j]);
-			mapRlt[sf] =  mde;
+
+		for (int i = 0; i < fSet.m_afterAggr.size(); i++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[i];
+
+			yyjson_mut_val* yyRlt = yyjson_mut_obj(mut_doc);
+
+			string fullGroupKey = deyy.deTime;
+			vector<string> keyParts;
+			DB_STR::split(keyParts, fullGroupKey, "|");
+
+			string timePart = keyParts.empty() ? "" : keyParts[0];
+			yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "time", timePart.c_str());
+
+			if (keyParts.size() > 1) {
+				auto yyKey = yyjson_mut_strcpy(mut_doc, keyParts[1].c_str());
+				char* end;
+				double numVal = strtod(keyParts[1].c_str(), &end);
+				if (end != keyParts[1].c_str() && *end == '\0') {
+					auto yyVal = yyjson_mut_real(mut_doc, numVal);
+					yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+				}
+				else {
+					auto yyVal = yyjson_mut_strcpy(mut_doc, keyParts[1].c_str());
+					yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+				}
+			}
+
+			if (keyParts.size() > 2) {
+				string tagValue = keyParts[2];
+				yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "tag", tagValue.c_str());
+			}
+			else if (deSel.groupByTag) {
+				yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "tag", fSet.tag.c_str());
+			}
+
+			for (const auto& item : deyy.items) {
+				auto yyKey = yyjson_mut_strcpy(mut_doc, item.first.c_str());
+				yyjson_mut_obj_put(yyRlt, yyKey, item.second);
+			}
+
+			SORT_FLAG sf;
+			sf.dbFlag = mapRlt.size();
+			mapRlt[sf] = yyRlt;
 		}
 	}
+
 	return true;
 }
 
 bool TDB::Select_Step_outputRows_SingleCol(DE_SELECTOR& deSel, vector<DATA_SET*>& set_list, vector<yyjson_mut_val*>& vecRlt, SELECT_RLT& result, yyjson_mut_doc* mut_doc)
 {
 	//generate output de
-	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++)
-	{
+	for (int tagIdx = 0; tagIdx < set_list.size(); tagIdx++) {
 		DATA_SET& fSet = *set_list[tagIdx];
-		vecRlt.resize(fSet.m_orgDe.size());
-		for (int j = 0; j < fSet.m_orgDe.size(); j++) {
-			yyjson_mut_val* mde = yyjson_val_mut_copy(mut_doc, fSet.m_orgDe[j]);
-			vecRlt[j] = mde;
+
+		for (int i = 0; i < fSet.m_afterAggr.size(); i++) {
+			DE_yyjson& deyy = *fSet.m_afterAggr[i];
+
+			yyjson_mut_val* yyRlt = yyjson_mut_obj(mut_doc);
+
+			string fullGroupKey = deyy.deTime;
+			vector<string> keyParts;
+			DB_STR::split(keyParts, fullGroupKey, "|");
+
+			string timePart = keyParts.empty() ? "" : keyParts[0];
+			yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "time", timePart.c_str());
+
+			int customFieldIndex = 0;
+			for (size_t j = 1; j < keyParts.size(); j++) {
+				string fieldValue = keyParts[j];
+				string fieldName;
+
+				if (j - 1 < deSel.customGroupBy.size()) {
+					fieldName = deSel.customGroupBy[j - 1];
+				}
+				else if (deSel.groupByTag && j == keyParts.size() - 1) {
+					fieldName = "tag";
+				}
+				else {
+					fieldName = "field_" + to_string(j);
+				}
+
+				if (fieldName == "tag") {
+					yyjson_mut_obj_add_strcpy(mut_doc, yyRlt, "tag", fieldValue.c_str());
+				}
+				else {
+					auto yyKey = yyjson_mut_strcpy(mut_doc, fieldName.c_str());
+					if (fieldValue == "true") {
+						auto yyVal = yyjson_mut_bool(mut_doc, true);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else if (fieldValue == "false") {
+						auto yyVal = yyjson_mut_bool(mut_doc, false);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else if (fieldValue == "null") {
+						auto yyVal = yyjson_mut_null(mut_doc);
+						yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+					}
+					else {
+						char* end;
+						double numVal = strtod(fieldValue.c_str(), &end);
+						if (end != fieldValue.c_str() && *end == '\0') {
+							auto yyVal = yyjson_mut_real(mut_doc, numVal);
+							yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+						}
+						else {
+							auto yyVal = yyjson_mut_strcpy(mut_doc, fieldValue.c_str());
+							yyjson_mut_obj_put(yyRlt, yyKey, yyVal);
+						}
+					}
+				}
+			}
+
+			if (deyy.val) {
+				yyjson_mut_obj_add_val(mut_doc, yyRlt, "val", deyy.val);
+			}
+
+			for (const auto& item : deyy.items) {
+				auto yyKey = yyjson_mut_strcpy(mut_doc, item.first.c_str());
+				yyjson_mut_obj_put(yyRlt, yyKey, item.second);
+			}
+
+			vecRlt.push_back(yyRlt);
 		}
 	}
+
 	return true;
 }
 
@@ -2316,7 +2336,7 @@ double TDB::doAggrOneGroup_avg(DE_SELECTOR& deSel, string& aggrKey,vector<yyjson
 		throw e;
 	}
 	double avg = dbTotal / count;
-
+	avg = round(avg * 100.0) / 100.0;
 	return avg;
 }
 
@@ -2326,8 +2346,7 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string,vector<string>
 	//1:  single key single aggr type
 	//2:  multi keys single aggr type
 	//3:  single key multi aggr types
-
-
+	aggrRlt.deTime = groupKey;
 	//which key to aggr
 	//if val type is basic types,aggrKeyType.size()==1, aggr "val" key
 	//if val type is json,  aggrKeyType has multiple items,each key corresponding to key of the json object. only support one level of json keys 
@@ -3841,41 +3860,48 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	if (yyv_groupby && yyjson_is_str(yyv_groupby)) {
 		deSel.groupby = yyjson_get_str(yyv_groupby);
 
-		//if aggr by time
-		if (deSel.groupby.find("day") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "day";
-		}
-		else if (deSel.groupby.find("year") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "year";
-		}
-		else if (deSel.groupby.find("month") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "month";
-		}
-		else if (deSel.groupby.find("hour") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "hour";
-		}
-		else if (deSel.groupby.find("minute") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "minute";
-		}
-		else if (deSel.groupby.find("week") != string::npos) {
-			deSel.groupByTime = true;
-			deSel.timeGroupBy = "week";
-		}
-		else {
-			deSel.groupByTime = false;
-		}
+		vector<string> groupParts;
+		DB_STR::split(groupParts, deSel.groupby, ",");
 
-		//if aggr by tag
-		if (deSel.groupby.find("tag") != string::npos) {
-			deSel.groupByTag = true;
-		}
-		else {
-			deSel.groupByTag = false;
+		for (const auto& part : groupParts) {
+			string groupItem = part;
+
+			groupItem.erase(0, groupItem.find_first_not_of(" "));
+			groupItem.erase(groupItem.find_last_not_of(" ") + 1);
+
+			//if aggr by time
+			if (groupItem.find("day") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "day";
+			}
+			else if (groupItem.find("year") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "year";
+			}
+			else if (groupItem.find("month") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "month";
+			}
+			else if (groupItem.find("hour") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "hour";
+			}
+			else if (groupItem.find("minute") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "minute";
+			}
+			else if (groupItem.find("week") != string::npos) {
+				deSel.groupByTime = true;
+				deSel.timeGroupBy = "week";
+			}
+			//if aggr by tag
+			else if (groupItem.find("tag") != string::npos) {
+				deSel.groupByTag = true;
+			}
+			// custom group
+			else {
+				deSel.customGroupBy.push_back(groupItem);
+			}
 		}
 	}
 
@@ -4689,58 +4715,68 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 				}
 
 				if (deSel.bAggr) {
-					if (deSel.timeGroupBy == "day") {
-						groupKeyVal = deTime.substr(0, 10);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
-						if (it != fSetOut.m_origDeGrouped.end()) {
-							it->second.push_back(de);
-						}
-						else {
-							vector<yyjson_val*> newVec;
-							newVec.push_back(de);
-							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
-						}
-					}
-					else if (deSel.timeGroupBy == "month") {
-						groupKeyVal = deTime.substr(0, 7);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
-						if (it != fSetOut.m_origDeGrouped.end()) {
-							it->second.push_back(de);
-						}
-						else {
-							vector<yyjson_val*> newVec;
-							newVec.push_back(de);
-							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
-						}
-					}
-					else if (deSel.timeGroupBy == "hour") {
-						groupKeyVal = deTime.substr(0, 13);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
-						if (it != fSetOut.m_origDeGrouped.end()) {
-							it->second.push_back(de);
-						}
-						else {
-							vector<yyjson_val*> newVec;
-							newVec.push_back(de);
-							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
-						}
-					}
-					else if (deSel.timeGroupBy == "minute") { //2020-02-03 11:12:14
-						groupKeyVal = deTime.substr(0, 16);
-						map<string, vector<yyjson_val*>>::iterator it = fSetOut.m_origDeGrouped.find(groupKeyVal);
-						if (it != fSetOut.m_origDeGrouped.end()) {
-							it->second.push_back(de);
-						}
-						else {
-							vector<yyjson_val*> newVec;
-							newVec.push_back(de);
-							fSetOut.m_origDeGrouped[groupKeyVal] = newVec;
-						}
-					}
-					else {
-						fSetOut.m_orgDe.push_back(de);
-					}
-				}
+			        string groupKeyVal;
+			        map<string, string> customGroupValues;
+
+			        // time group
+			        if (deSel.timeGroupBy == "day") {
+			            groupKeyVal = deTime.substr(0, 10);
+			        }
+			        else if (deSel.timeGroupBy == "month") {
+			            groupKeyVal = deTime.substr(0, 7);
+			        }
+			        else if (deSel.timeGroupBy == "hour") {
+			            groupKeyVal = deTime.substr(0, 13);
+			        }
+			        else if (deSel.timeGroupBy == "minute") {
+			            groupKeyVal = deTime.substr(0, 16);
+			        }
+			        else {
+			            groupKeyVal = "all-time-range";
+			        }
+
+			        // custom
+			        if (!deSel.customGroupBy.empty()) {
+			            for (const auto& customField : deSel.customGroupBy) {
+			                yyjson_val* customVal = yyjson_obj_get_recursive(de, customField.c_str());
+			                string fieldValue = "null";
+                
+			                if (customVal) {
+			                    if (yyjson_is_str(customVal)) {
+			                        fieldValue = string(yyjson_get_str(customVal));
+			                    }
+			                    else if (yyjson_is_int(customVal)) {
+			                        fieldValue = to_string(yyjson_get_int(customVal));
+			                    }
+			                    else if (yyjson_is_real(customVal)) {
+			                        fieldValue = to_string(yyjson_get_real(customVal));
+			                    }
+			                    else if (yyjson_is_bool(customVal)) {
+			                        fieldValue = yyjson_get_bool(customVal) ? "true" : "false";
+			                    }
+			                    else {
+			                        fieldValue = "unknown";
+			                    }
+			                }
+                
+			                customGroupValues[customField] = fieldValue;
+			                groupKeyVal += "|" + fieldValue;
+			            }
+			        }
+
+			        // tag group
+			        if (deSel.groupByTag) {
+			            customGroupValues["tag"] = fSet.tag;
+			            groupKeyVal += "|" + fSet.tag;
+			        }
+
+			        // 
+			        auto& groupVec = fSetOut.m_origDeGrouped[groupKeyVal];
+			        groupVec.push_back(de);
+
+			        // 
+			        fSetOut.customGroupValues[groupKeyVal] = customGroupValues;
+			    }
 				else {
 					//need to add region tag in de
 					if (deSel.tagSel.getTag || needMut) {
