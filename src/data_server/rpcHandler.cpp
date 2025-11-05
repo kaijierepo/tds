@@ -6447,6 +6447,12 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 		return;
 	}
 
+	string model = tds->conf->getStr("vlmAlarmModel", "");
+	if (model.empty()) {
+		LOG("vlmAlarmModel url not found");
+		return;
+	}
+
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 
@@ -6505,7 +6511,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 				yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", "google/gemma-3-12b");
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", model.c_str());
 				yyjson_mut_obj_add_bool(mutDoc, mutRoot, "stream", false);
 
 				//
