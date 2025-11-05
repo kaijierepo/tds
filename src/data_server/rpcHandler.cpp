@@ -4048,7 +4048,7 @@ HANDLE_END:
 		}
 
 		if (rpcResp.dbQueryInfo != "") {
-			rpcResp.strResp += ",\"dbLog\":\"" + rpcResp.dbQueryInfo + "\"";
+			rpcResp.strResp += ",\"dbLog\":" + rpcResp.dbQueryInfo;
 		}
 
 		rpcResp.strResp += ",\"result\":" + rpcResp.result;
