@@ -7083,6 +7083,30 @@ CONDITION_SELECTOR::CONDITION_SELECTOR()
 	bEnable = false;
 }
 
+std::string replaceSingleEquals(const std::string& input) {
+	std::string result;
+	result.reserve(input.length() * 2);
+
+	for (size_t i = 0; i < input.length(); ++i) {
+		if (input[i] == '=') {
+			bool isSingle = true;
+			if (i > 0 && input[i - 1] == '=') isSingle = false;
+			if (i < input.length() - 1 && input[i + 1] == '=') isSingle = false;
+
+			if (isSingle) {
+				result += "==";
+			}
+			else {
+				result += '=';
+			}
+		}
+		else {
+			result += input[i];
+		}
+	}
+	return result;
+}
+
 
 bool CONDITION_SELECTOR::init(string filter)
 {
@@ -7100,7 +7124,7 @@ bool CONDITION_SELECTOR::init(string filter)
 		}
 #endif
 
-		filterExp = filter;
+		filterExp = replaceSingleEquals(filter);
 		bEnable = true;
 		return true;
 
@@ -7214,6 +7238,9 @@ bool CONDITION_SELECTOR::evaluate_condition(const char* json_str, size_t json_le
 	return ret;
 }
 #endif
+
+
+
 
 bool CONDITION_SELECTOR::match(yyjson_mut_val* de)
 {
