@@ -2369,6 +2369,24 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_
 			}
 			return true;
 		}
+		//通用注册包reg,type:COS-06-240A-N0_s4,imei:$(IMEI)
+		else if (str::fromBuff((char*)pData, 4) == "reg,") {
+            string reg = str::fromBuff((char*)pData, iLen);
+			LOG("收到首发注册包," + reg);
+			vector<string> parts;
+			str::split(parts, reg, ",");
+            for (auto& part : parts) {
+				if (part.find("type:") == 0) {
+					string devType = part.substr(5);
+					tdsSession->ioDevType = devType;
+					break;
+				}
+				else if (part.find("imei:") == 0) {
+                    string imei = part.substr(5);
+					ioSrv.handleDevOnline(imei, tdsSession);
+				}
+			}
+		}
 		//通用注册包，全部都是ASII字符，并且没有 { } 符号，不是json
 		else if (isCommonRegPkt(pData, iLen)) {
 			string reg = str::fromBuff((char*)pData, iLen);
