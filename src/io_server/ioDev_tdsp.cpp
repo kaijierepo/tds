@@ -1488,7 +1488,7 @@ void ioDev_tdsp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionC
 		return;
 	}
 
-	IOLogRecv(pData, len,connInfo->getRemoteAddr(),connInfo->getLocalAddr());
+	IOLogRecv(pData, len,connInfo->getRemoteAddr(),connInfo->getLocalAddr(), getIOAddrStr());
 
 	if (m_translatorProto != "") { 	//使用协议转换器模式的tcp通信，不允许出现粘包和断包
 		string tdspPkt;

@@ -1194,21 +1194,13 @@ void ioServer::rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSI
 	}
 }
 
-json CHAN_TEMPLATE::toJson() {
-	json j;
-	j["name"] = name;
-	j["label"] = label;
-	j["channels"] = channels;
-	return j;
-}
 
 void ioServer::rpc_getChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
 	if (params.contains("name")) {
 		string name = params["name"];
 		if (ioSrv.m_mapChanTempalte.find(name) != ioSrv.m_mapChanTempalte.end()) {
-			CHAN_TEMPLATE ct = ioSrv.m_mapChanTempalte[name];
-			rpcResp.result = ct.channels.dump();
+			rpcResp.result = ioSrv.m_mapChanTempalte[name];
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_chanTemplateNotFound, "chan template not found");
@@ -1221,12 +1213,10 @@ void ioServer::rpc_getChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 
 void ioServer::rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
-	CHAN_TEMPLATE ct;
-	ct.label = params["name"];
-	str::hanZi2Pinyin(ct.label, ct.name);
-	ct.channels = params["channels"];
-	ioSrv.m_mapChanTempalte[ct.name] = ct;
-	ioSrv.saveChanTemplate();
+	string name = params["name"].get<string>();
+	string s = params["channels"].dump(2, ' ');
+	ioSrv.m_mapChanTempalte[name] = s;
+	ioSrv.saveChanTemplate(name,s);
 	rpcResp.result = "\"ok\"";
 }
 
@@ -1318,12 +1308,12 @@ size_t ioServer::getChanCount()
 	return count;
 }
 
-json ioServer::getDevTemplate(string devTplType)
+string ioServer::getDevTemplate(string devTplType)
 {
 	for (auto& i : m_mapChanTempalte) {
 		string tplName = i.first;
 		if (devTplType.find(tplName) != string::npos) {
-			return i.second.toJson();
+			return i.second;
 		}
 	}
 	return nullptr;
@@ -1331,48 +1321,26 @@ json ioServer::getDevTemplate(string devTplType)
 
 bool ioServer::loadChanTemplate()
 {
-	string p = tds->conf->confPath + "/template/device/conf.json";
-	string tplListStr;
-	if (fs::readFile(p, tplListStr)) {
-		try {
-			json jTplList = json::parse(tplListStr);
-			for (auto& i : jTplList) {
-				CHAN_TEMPLATE ct;
-				ct.name = i["name"];
-				ct.label = i["label"];
-				string tplDataStr;
-				string p1 = tds->conf->confPath + "/template/device/" + ct.name + ".json";
-				if (fs::readFile(p1, tplDataStr)) {
-					ct.channels = json::parse(tplDataStr);
-					m_mapChanTempalte[ct.name] = ct;
-				}
-			}
-		}
-		catch (exception& e) {
-			LOG("[error]加载/template/device/conf.json失败,error=%s", e.what());
+	vector<fs::FILE_INFO> fileList;
+	fs::getFileList(fileList, tds->conf->confPath + "/template/device");
+
+	for (auto& file : fileList) {
+		string tplDataStr;
+		if(file.name.find(".json") == string::npos)
+			continue;
+		string p1 = tds->conf->confPath + "/template/device/" + file.name;
+		if (fs::readFile(p1, tplDataStr)) {
+			m_mapChanTempalte[file.name] = tplDataStr;
 		}
 	}
+
 	return false;
 }
 
-void ioServer::saveChanTemplate()
+void ioServer::saveChanTemplate(string name,string& data)
 {
-	string p = tds->conf->confPath + "/template/device/conf.json";
-	json jConf = json::array();
-	for (auto& i : m_mapChanTempalte) {
-		json c;
-		c["name"] = i.second.name;
-		c["label"] = i.second.label;
-		jConf.push_back(c);
-	}
-	string sConf = jConf.dump(2);
-	fs::writeFile(p, sConf);
-
-	string chanPath = tds->conf->confPath + "/template/device/";
-	for (auto& i : m_mapChanTempalte) {
-		string s = i.second.channels.dump(2);
-		fs::writeFile(chanPath + "/" + i.second.name + ".json", s);
-	}
+	string p = tds->conf->confPath + "/template/device/" + name + ".json";
+	fs::writeFile(p, data);
 }
 
 bool ioServer::run()
@@ -1941,10 +1909,10 @@ void ioServer::rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSI
 	DEV_STATIS devStatis;
 	//仅支持2级设备
 	for (auto& it : m_vecChildDev) {
-		devTypeStatis[it->m_devType + it->m_devSubType + "[" + m_strChanTemplate + "]"]++;
+		devTypeStatis[it->m_devType + it->m_devSubType + "[" + it->m_strChanTemplate + "]"]++;
 		it->doStatis(devStatis);
 		for (auto& childDev : it->m_vecChildDev){
-            devTypeStatis[childDev->m_devType + it->m_devSubType + "[" + m_strChanTemplate + "]"]++;
+            devTypeStatis[childDev->m_devType + childDev->m_devSubType + "[" + childDev->m_strChanTemplate + "]"]++;
 		}
 	}
 
@@ -1983,7 +1951,7 @@ void ioServer::rpc_getChanStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESS
 
 //onRecvData需要组包
 bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession, bool isPkt) {
-	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr(),tdsSession->getLocalAddr());
+	IOLogRecv(pData, iLen, tdsSession->getRemoteAddr(),tdsSession->getLocalAddr(), tdsSession->getIoAddr());
 
 	if (m_bDisableIOHandle) {
 		return true;

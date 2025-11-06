@@ -501,7 +501,7 @@ void ioDev_bacnet::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UD
 {
 	string remoteAddr = "UDP-" + udpSession.remoteIP + ":" + str::fromInt(udpSession.remotePort);
 	string localAddr = "UDP-" + udpSession.localIP + ":" + str::fromInt(udpSession.localPort);
-	IOLogRecv(recvData, recvDataLen, remoteAddr, localAddr);
+	IOLogRecv(recvData, recvDataLen, remoteAddr, localAddr,getIOAddrStr());
 	setOnline();
 
 	if (isValidPkt_BACNET_IP(recvData, recvDataLen)) {

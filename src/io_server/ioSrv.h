@@ -8,9 +8,7 @@ using namespace std;
 class CHAN_TEMPLATE {
 public:
 	string name;
-	string label;
-	json channels;
-	json toJson();
+	string data;
 };
 
 namespace IO_PROTO {
@@ -117,10 +115,10 @@ public:
 	int m_totalPtCount;
 
 	//通道模版配置
-	json getDevTemplate(string devTplType);
+	string getDevTemplate(string devTplType);
 	bool loadChanTemplate();
-	void saveChanTemplate();
-	map<string, CHAN_TEMPLATE> m_mapChanTempalte;
+	void saveChanTemplate(string name, string& data);
+	map<string, string> m_mapChanTempalte;
 
 	//查询与管理
 	void queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<ioDev*>& filterRlt);

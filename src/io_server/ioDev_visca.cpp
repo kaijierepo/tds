@@ -110,7 +110,7 @@ bool ioDev_visca::sendData(unsigned char* pData, size_t iLen)
 			int iSent = m_udpClt->SendData(pData, iLen, ip, udpPort);
 			string remoteAddr = "UDP-" + ip + ":" + str::fromInt(udpPort);
 			string localAddr = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
-			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr);
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr, getIOAddrStr());
 		}
 	}
 	else

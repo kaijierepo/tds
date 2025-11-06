@@ -488,7 +488,7 @@ bool ioDev_eip::onRecvData(unsigned char* pData, size_t iLen)
 
 void ioDev_eip::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	IOLogRecv(pData, len, connInfo->getRemoteAddr(),"host");
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(),"host", getIOAddrStr());
 	onRecvData(pData, len);
 }
 

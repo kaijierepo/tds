@@ -1688,7 +1688,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen) {
 		if (m_bEnableIoLog) {
 			string remoteAddr = "UDP-" + ip + ":" + str::fromInt(port);
 			string localAddr  = "UDP-" + m_udpClt->m_bindIP + ":" + str::fromInt(m_udpClt->m_port);
-			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr);
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr,localAddr,getIOAddrStr());
 		}
 	}
 	else if (m_tcpClt != nullptr && m_ioMode == "none") {
@@ -1696,7 +1696,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen) {
 		if (m_bEnableIoLog) {
 			string remoteAddr = m_tcpClt->m_remoteIP + ":" + str::fromInt(m_tcpClt->m_remotePort);
 			string localAddr  = m_tcpClt->m_strLocalIP + ":" + str::fromInt(m_tcpClt->m_iLocalPort);
-			IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
+			IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr, getIOAddrStr());
 		}
 	}
 	else {
@@ -1714,7 +1714,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen) {
 					if (m_bEnableIoLog) {
 						string remoteAddr = "UDP-" + ioSrv.m_strAdpIp + ":" + str::fromInt(ioSrv.m_iAdpPort);
 						string localAddr  = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
-						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr );
+						IOLogSend((unsigned char*)pData, iLen, iSent > 0,remoteAddr ,localAddr, getIOAddrStr());
 					}
 				}
 			}
@@ -1727,7 +1727,7 @@ bool ioDev::sendData(unsigned char* pData, size_t iLen) {
 						if (m_bEnableIoLog) {
 							string remoteAddr = "UDP-" + saio.ip +":" + str::fromInt(saio.port);
 							string localAddr  = "UDP-" + ioSrv.m_udpSrv_tdsp->m_bindIP + str::fromInt(ioSrv.m_udpSrv_tdsp->m_port);
-							IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr);
+							IOLogSend((unsigned char*)pData, iLen, iSent > 0, remoteAddr, localAddr, getIOAddrStr());
 						}
 					}
 				}
@@ -2466,7 +2466,7 @@ string ioDev::removePortFromDevAddr(string devAddr) {
 
 void ioDev::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr(), getIOAddrStr());
 	onRecvData(pData, len);
 }
 

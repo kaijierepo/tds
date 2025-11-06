@@ -85,7 +85,7 @@ bool ioDev_ModbusTcp::sendData(unsigned char* pData, size_t iLen)
 
 void ioDev_ModbusTcp::onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo)
 {
-	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr());
+	IOLogRecv(pData, len, connInfo->getRemoteAddr(), connInfo->getLocalAddr(), getIOAddrStr());
 
 	stream2pkt* pab = &m_pab;
 	pab->PushStream(pData, len);
