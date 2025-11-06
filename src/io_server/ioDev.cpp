@@ -2518,3 +2518,27 @@ string ioDev::getTagBind() {
 	}
 	return tagBind;
 }
+
+void ioDev::doStatis(DEV_STATIS& statis)
+{
+	statis.iTotal++;
+
+	if (m_bOnline) {
+        statis.iOnline++;
+	}
+	else {
+        statis.iOffline++;
+	}
+
+	if (m_dispositionMode == DEV_DISPOSITION_MODE::spare) {
+        statis.iSpare++;
+	}
+	else {
+        statis.iManaged++;
+	}
+
+    for (int i = 0; i < m_vecChildDev.size(); i++) {
+		ioDev* p = m_vecChildDev[i];
+		p->doStatis(statis);
+	}
+}

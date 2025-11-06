@@ -66,6 +66,7 @@ public:
 	bool handleMethodCall_audioPlayer(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_edgeDev(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_gamePad(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session);
+	bool handleMethodCall_utils(const string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
 	bool handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
 	vector<string> parseTagSel(json& tagSel,string& type);
 	bool handleMethodCall_alarmMng(string method, json& params, RPC_RESP& rpcResp,RPC_SESSION& session);
@@ -95,7 +96,6 @@ public:
 
 	//device manage
 	void rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session);
-	void rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION& session);
 	void rpc_getChanStatus(json params, RPC_RESP& resp);
 	void rpc_getChanVal(json params, RPC_RESP& resp);
 	string rpc_io_scanChannel(json params, string& error);

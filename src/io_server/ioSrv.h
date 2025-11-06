@@ -72,36 +72,6 @@ struct CHILD_TDS_INFO {
 };
 
 
-struct DEV_STATIS {
-	string rootTag;
-	size_t iOnline;
-	size_t iOffline;
-	size_t iTotal;
-	size_t iInservice;
-	size_t iSpare;
-	size_t iChan;
-
-	DEV_STATIS() {
-		 iOnline =0;
-		 iOffline = 0;
-		 iTotal = 0;
-		 iInservice = 0;
-		 iSpare = 0;
-		 iChan = 0;
-	}
-
-	json toJson() {
-		json jStatis;
-		jStatis["online"] = iOnline;
-		jStatis["offline"] = iOffline;
-		jStatis["inService"] = iInservice;
-		jStatis["spare"] = iSpare;
-		jStatis["channel"] = iChan;
-		jStatis["total"] = iTotal;
-		return jStatis;
-	}
-};
-
 class ioHandler_mbRtu : public ICallback_tcpSrv, public ICallback_udpSrv {
 	void onRecvData_tcpSrv(unsigned char* pData, size_t iLen, tcpSession* pCltInfo) override;
 	void statusChange_tcpSrv(tcpSession* pCltInfo, bool bIsConn) override;
@@ -158,6 +128,11 @@ public:
 	void getAllTDSPDev(vector<ioDev*>& aryDev);
 	ioDev* getOwnerChildTdsDev(string tag);
 	bool getOwnerChildTdsInfo(string tag,CHILD_TDS_INFO& info);
+
+	bool handleRpc(const string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session);
+
+	void rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_getChanStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 
 	//在线组态
 	void rpc_addDev(json& params, RPC_RESP& rpcResp,RPC_SESSION sesion);

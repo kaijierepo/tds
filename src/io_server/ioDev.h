@@ -122,6 +122,36 @@ struct DEV_QUERIER {
 	}
 };
 
+struct DEV_STATIS {
+	string rootTag;
+	size_t iOnline;
+	size_t iOffline;
+	size_t iTotal;
+	size_t iManaged;
+	size_t iSpare;
+	size_t iChan;
+
+	DEV_STATIS() {
+		iOnline = 0;
+		iOffline = 0;
+		iTotal = 0;
+		iManaged = 0;
+		iSpare = 0;
+		iChan = 0;
+	}
+
+	json toJson() {
+		json jStatis;
+		jStatis["online"] = iOnline;
+		jStatis["offline"] = iOffline;
+		jStatis["inService"] = iManaged;
+		jStatis["spare"] = iSpare;
+		jStatis["channel"] = iChan;
+		jStatis["total"] = iTotal;
+		return jStatis;
+	}
+};
+
 class ioDev : public ICallback_udpSrv, public ICallback_tcpClt
 {
 public:
@@ -278,6 +308,7 @@ public:
 	virtual void onRecvData_tcpClt(unsigned char* pData, size_t len, tcpSessionClt* connInfo) override;
 
 	string getTagBind();
+	void doStatis(DEV_STATIS& statis);
 
 	//设备关联的网络会话。1个会话可以关联多台设备。  1台设备只关联1个会话
 	//设备是tcpServer

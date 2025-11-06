@@ -337,17 +337,28 @@ struct OBJ_STATIS {
 	}
 };
 
+struct IO_TYPE_STATIS {
+	int I;
+	int O;
+	int IO;
+	int C;
+	int V;
+	int Unknown;
 
-struct MP_STATIS {
-	int AI;
-	int AO;
-	int DI;
-	int DO;
-	int Var;
+	IO_TYPE_STATIS() {
+		memset(this, 0, sizeof(IO_TYPE_STATIS));
+	}
+};
+
+struct VAL_TYPE_STATIS {
+	int Float;
+	int Bool;
+	int String;
+	int Int;
 	int Video;
-
-	MP_STATIS() {
-		memset(this, 0, sizeof(MP_STATIS));
+	int Unknown;
+	VAL_TYPE_STATIS() {
+		memset(this, 0, sizeof(VAL_TYPE_STATIS));
 	}
 };
 

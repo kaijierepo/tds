@@ -1679,7 +1679,7 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 		}
 
 		if (dev->m_dispositionMode == DEV_DISPOSITION_MODE::managed) {
-			devStatis.iInservice++;
+			devStatis.iManaged++;
 		}
 		else {
 			devStatis.iSpare++;
@@ -1880,7 +1880,7 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag) {
 
 			//指定位号前半段是子服务位号，并且后面跟的是 . 符号
 			//避免混淆 浙江.杭州.办公室   和 浙江.杭州.办公室Linux  两种位号。必须判断 . 符号
-			if (pos==0 && tag.length() > it->m_strTagBind.length()) {
+			if (pos == 0 && tag.length() > it->m_strTagBind.length()) {
 				if (tag.at(it->m_strTagBind.length()) == '.') {
 					aryChildTds.push_back(it);
 				}
@@ -1904,7 +1904,7 @@ ioDev* ioServer::getOwnerChildTdsDev(string tag) {
 
 bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 {
-	ioDev_tdsp* childTds =(ioDev_tdsp*) getOwnerChildTdsDev(tag);
+	ioDev_tdsp* childTds = (ioDev_tdsp*)getOwnerChildTdsDev(tag);
 	if (childTds == nullptr)
 		return false;
 
@@ -1917,6 +1917,67 @@ bool ioServer::getOwnerChildTdsInfo(string tag, CHILD_TDS_INFO& info)
 	}
 
 	return true;
+}
+
+bool ioServer::handleRpc(const string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session)
+{
+	bool handled = true;
+	if (method == "getDevStatis") {
+		rpc_getDevStatis(params, rpcResp, session);
+	}
+	else if (method == "getChanStatis") {
+		rpc_getChanStatis(params, rpcResp, session);
+	}
+	else {
+		handled = false;
+	}
+	return handled;
+}
+
+void ioServer::rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	lock_conf_shared();
+	map<string, int> devTypeStatis;
+	DEV_STATIS devStatis;
+	//仅支持2级设备
+	for (auto& it : m_vecChildDev) {
+		devTypeStatis[it->m_devType + it->m_devSubType + "[" + m_strChanTemplate + "]"]++;
+		it->doStatis(devStatis);
+		for (auto& childDev : it->m_vecChildDev){
+            devTypeStatis[childDev->m_devType + it->m_devSubType + "[" + m_strChanTemplate + "]"]++;
+		}
+	}
+
+	string jStr_devTypeStatis;
+    for (auto& it : devTypeStatis) {
+		if(jStr_devTypeStatis != "")
+            jStr_devTypeStatis += ",";
+		jStr_devTypeStatis += str::format("\"%s\":%d", it.first.c_str(), it.second);
+	}
+
+	//connection + disposition 的两个值两两组合组成设备管理的4个象限
+	rpcResp.result = "{"
+		"\"total\":" + to_string(devStatis.iTotal) +
+        ",\"devType\":{" + jStr_devTypeStatis + "}"
+        ",\"connection\":{"
+			"\"online\":" + to_string(devStatis.iOnline)+
+			",\"offline\":" + to_string(devStatis.iOffline)+
+			"}"
+        ",\"disposition\":{"
+			"\"spare\":" + to_string(devStatis.iSpare) +
+			",\"managed\":" + to_string(devStatis.iManaged) +
+			"}"
+		"}";
+
+	unlock_conf_shared();
+}
+
+void ioServer::rpc_getChanStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	lock_conf_shared();
+
+
+	unlock_conf_shared();
 }
 
 

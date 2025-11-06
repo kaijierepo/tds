@@ -1083,10 +1083,6 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 			error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "device of specified ioAddr not found");
 		}
 	}
-	else if (method == "getDevStatis")
-	{
-		rpc_getDevStatis(params, rpcResp, session);
-	}
 	else if (method == "setIOTree")
 	{
 		//io tree 热更新
@@ -1952,6 +1948,11 @@ string getRefCurvePath(json& params) {
 	}
 
 	return path;
+}
+
+bool rpcHandler::handleMethodCall_utils(const string& method, yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& session) {
+	bool bHandled = true;
+	return false;
 }
 
 bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
@@ -3274,6 +3275,9 @@ bool rpcHandler::handleMethodCall(string method, yyjson_val* params, RPC_RESP& r
 		prj.rpc_setObj(params, rpcResp, session);
 	}
 	else if (db.handleRpc(method, params, rpcResp.result, rpcResp.error, rpcResp.dbQueryInfo, session.org, session.language)) {
+		bHandled = true;
+	}
+	else if (ioSrv.handleRpc(method, params, rpcResp, session)) {
 		bHandled = true;
 	}
 	else if (scriptManager.handleRpc(method, params, rpcResp, session)) {
@@ -4833,41 +4837,69 @@ string rpcHandler::rpc_getTopoList(json params, string& error,RPC_SESSION& sessi
 }
 
 void rpcHandler::rpc_getMpStatis(json params, RPC_RESP& resp, RPC_SESSION& session) {
-	MP_STATIS mpStatis;
+	IO_TYPE_STATIS ioTypeStatis;
+	VAL_TYPE_STATIS valTypeStatis;
 	vector<MP*> allMp;
 	prj.GetAllChildMp(allMp);
 	for (int i = 0; i < allMp.size(); i++){
 		MP* pmp = allMp[i];
 		if (pmp->m_ioType == "v") {
-			mpStatis.Var++;
+			ioTypeStatis.V++;
 		}
-		else if (pmp->m_valType == VAL_TYPE::Float || pmp->m_valType == VAL_TYPE::integer) {
-			if (pmp->m_ioType == "i") {
-				mpStatis.AI++;
-			}
-			else if (pmp->m_ioType == "io" || pmp->m_ioType == "o") {
-				mpStatis.AO++;
-			}
+		else if (pmp->m_ioType == "c") {
+			ioTypeStatis.C++;
 		}
-		else if (pmp->m_valType == VAL_TYPE::boolean) {
-			if (pmp->m_ioType == "i") {
-				mpStatis.DI++;
-			}
-			else if (pmp->m_ioType == "io" || pmp->m_ioType == "o") {
-				mpStatis.DO++;
-			}
+		else if (pmp->m_ioType == "i") {
+			ioTypeStatis.I++;
+		}
+		else if (pmp->m_ioType == "o") {
+			ioTypeStatis.O++;
+		}
+		else if (pmp->m_ioType == "io") {
+			ioTypeStatis.IO++;
+		}
+		else {
+			ioTypeStatis.Unknown++;
+		}
+
+		if (pmp->m_valType == VAL_TYPE::Float) {
+			valTypeStatis.Float++;
+		}
+		else if(pmp->m_valType == VAL_TYPE::boolean) {
+			valTypeStatis.Bool++;
+		}
+		else if (pmp->m_valType == VAL_TYPE::integer) {
+			valTypeStatis.Int++;
+		}
+		else if (pmp->m_valType == VAL_TYPE::str) {
+			valTypeStatis.String++;
+		}
+		else if (pmp->m_valType == VAL_TYPE::video) {
+			valTypeStatis.Video++;
+		}
+		else {
+			valTypeStatis.Unknown++;
 		}
 	}
 
-	json j;
-	j["total"] = allMp.size();
-	j["AI"] = mpStatis.AI;
-	j["AO"] = mpStatis.AO;
-	j["DI"] = mpStatis.DI;
-	j["DO"] = mpStatis.DO;
-	j["Var"] = mpStatis.Var;
 
-	resp.result = j.dump();
+	resp.result = "{"
+		"\"total\":" + to_string(allMp.size()) + ","
+		"\"ioType\":{"
+			"\"v\":" + to_string(ioTypeStatis.V) + ","
+			"\"c\":" + to_string(ioTypeStatis.C) + ","
+			"\"i\":" + to_string(ioTypeStatis.I) + ","
+			"\"o\":" + to_string(ioTypeStatis.O) + ","
+			"\"io\":" + to_string(ioTypeStatis.IO) +
+		"},"
+		"\"valType\":{"
+			"\"float\":" + to_string(valTypeStatis.Float) + ","
+			"\"bool\":" + to_string(valTypeStatis.Bool) + ","
+			"\"int\":" + to_string(valTypeStatis.Int) + ","
+			"\"string\":" + to_string(valTypeStatis.String) + ","
+			"\"video\":" + to_string(valTypeStatis.Video) +
+		"}" +
+	"}";
 }
 
 void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION& session)
@@ -5930,16 +5962,6 @@ string rpcHandler::rpc_openCom(json params, string& error)
 	return "";
 }
 
-void rpcHandler::rpc_getDevStatis(json params, RPC_RESP& resp, RPC_SESSION& session)
-{
-	string rootTag;
-	vector<ioDev*> filterRlt;
-	DEV_QUERIER devQuery;
-	devQuery.rootTag = rootTag;
-	DEV_STATIS ds;
-	ioSrv.queryDev(devQuery,ds,filterRlt);
-	resp.result = ds.toJson().dump();
-}
 
 void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
