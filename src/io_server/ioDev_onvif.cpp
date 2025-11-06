@@ -213,6 +213,7 @@ void ioDev_onvif::DoCycleTask() {
 		int ptzPatrolInterval = tds->conf->getInt("ptzPatrolInterval", 0);
 		if (!m_bPaused) {
 			if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > ptzPatrolInterval) {
+				LOG("onvif ptzPatrolInterval success");
 				timeopt::now(&m_lastPTZPollTime);
 
 				//解析通道ptz配置并移动相机
@@ -449,9 +450,6 @@ void ioDev_onvif::DoCycleTask() {
 						LOG("onvif onnx/snapshot.jpg not exist");
 					}
 				}
-			}
-			else {
-				LOG("onvif ptzPatrolInterval failed");
 			}
 		}
 	}
