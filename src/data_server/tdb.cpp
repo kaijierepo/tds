@@ -53,7 +53,10 @@ namespace fs = std::experimental::filesystem;
 namespace fs = std::filesystem;
 #endif
 
+
 TDB db;
+
+bool DB_LOCK_GUARD::enable = false;
 
 #include <random>
 #include <cstdio>
@@ -2686,14 +2689,6 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 		}
 	}
 
-	string rootTag = "";
-	yyjson_val* yyv_rootTag = yyjson_obj_get(params, "rootTag");
-	if (yyv_rootTag) {
-		rootTag = yyjson_get_str(yyv_rootTag);
-		if (m_isGbk) {
-			rootTag = DB_STR::gb_to_utf8(rootTag);
-		}
-	}
 
 	deSel.tagSel.m_org = org;
 	deSel.tagSel.selLanguage = language;
@@ -2703,59 +2698,6 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	if (err != "") {
 		err = JSON_STR_VAL(err);
 		return;
-	}
-
-	yyjson_val* yyv_calc = yyjson_obj_get(params, "calc");
-	if (yyv_calc) {
-		if (yyjson_is_str(yyv_calc)) {
-			deSel.calc = yyjson_get_str(yyv_calc);
-		}
-		else if (yyjson_is_obj(yyv_calc)) {
-			yyjson_val* yyv_calc_alg = yyjson_obj_get(yyv_calc, "alg");
-			if (yyv_calc_alg) {
-				deSel.calc = yyjson_get_str(yyv_calc_alg);
-			}
-
-			yyjson_val* yyv_calc_baseCurve = yyjson_obj_get(yyv_calc, "baseCurve");
-			if (yyv_calc_baseCurve) {
-				deSel.baseCurve = yyjson_get_str(yyv_calc_baseCurve);
-			}
-
-			yyjson_val* yyv_calc_aggr = yyjson_obj_get(yyv_calc, "aggr");
-			if (yyv_calc_aggr) {
-				deSel.curvePtAggr = yyjson_get_str(yyv_calc_aggr);
-			}
-		}
-	}
-
-	yyjson_val* yyv_timeFill = yyjson_obj_get(params, "timeFill");
-	if (yyv_timeFill && yyjson_is_bool(yyv_timeFill)) {
-		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
-	}
-
-	//check if need tag parse
-	bool needParseTag = false;
-	if (deSel.tagSel.fuzzyMatchExp.size() != 0) {
-		needParseTag = true; //parse fuzzy tag exp to exact tags
-	}
-	else if (deSel.tagSel.selLanguage != "" && deSel.tagSel.selLanguage != m_dbFmt.language) {
-		needParseTag = true; //parse tags in sel language to db language
-	}
-
-	if (needParseTag) {
-		if(m_getTagsByTagSelector)
-			m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-		else {
-			err = JSON_STR_VAL("db tagSelector function not inited");
-			return;
-		}
-	}
-	else {
-		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
-			string& exp = deSel.tagSel.exactMatchExp[i];
-			deSel.tagSel.tagSet.push_back(exp);
-			deSel.tagSel.dbFileTagSet.push_back(exp);
-		}
 	}
 
 	yyjson_val* yyv_selfParams = yyjson_obj_get(params, "self_params");
@@ -3645,7 +3587,7 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	return true;
 }
 
-void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
+bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 {
 	//parse time selector
 	if (deSel.timeSel.enable) {
@@ -3655,7 +3597,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_val* yyv_time = yyjson_obj_get(yyParams, "time");
 		if (yyv_time == nullptr) {
 			err = "param missing: time";
-			return;
+			return false;
 		}
 
 		yyjson_val* yyv_snapshot = yyjson_obj_get(yyParams, "snapshot");
@@ -3667,7 +3609,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			strTime = yyjson_get_str(yyv_time);
 			if (!deSel.timeSel.init(strTime)) {
 				err = "time selector format error:" + deSel.timeSel.error;
-				return;
+				return false;
 			}
 			for (int i = 0; i < deSel.timeSel.atomSelList.size(); i++) {
 				deSel.timeSel.atomSelList[i].snapShot = deSel.timeSel.snapShot;
@@ -3686,12 +3628,12 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 			}
 			if (!deSel.timeSel.init(timeSelList)) {
 				err = "time selector format error:" + deSel.timeSel.error;
-				return;
+				return false;
 			}
 		}
 		else {
 			err = "param time must be string type or array type";
-			return;
+			return false;
 		}
 
 		yyjson_val* yyv_timeFmt = yyjson_obj_get(yyParams, "timeFmt");
@@ -3720,7 +3662,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		yyjson_arr_foreach(yyv_tag, idx, max, item) {
 			if (!yyjson_is_str(item)) {
 				err = "tag must be string type";
-				return;
+				return false;
 			}
 			string tag = yyjson_get_str(item);
 			tagList.push_back(tag);
@@ -3757,7 +3699,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	}
 	else {
 		err = " tag or colume must be specified";
-		return;
+		return false;
 	}
 
 	yyjson_val* yyv_rootTag = yyjson_obj_get(yyParams, "rootTag");
@@ -3768,7 +3710,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 
 	if (!deSel.tagSel.init(tagList, strRootTag)) {
 		err = "tag selector format error:" + deSel.tagSel.error;
-		return;
+		return false;
 	}
 
 	yyjson_val* yyv_getTag = yyjson_obj_get(yyParams, "getTag");
@@ -3798,7 +3740,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		//"No this param" 、interval=1 is the same thing
 		if (deSel.downSamplingSel.dsi == 0) {
 			err = "when interval is num, it must large than 0 ";
-			return;
+			return false;
 		}
 	}
 	else if (yyv_interval && yyjson_is_str(yyv_interval))
@@ -3951,7 +3893,7 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		if (deSel.mapTimeSlots.size() == 0)
 		{
 			err = "timeSlot is obj,but null";
-			return;
+			return false;
 		}
 	}
 
@@ -4029,6 +3971,87 @@ void TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	if (deSel.tagSel.tagSet.size() > 1 || deSel.splitBy != "tag" || deSel.deType == "curveIdx") {
 		deSel.tagSel.getTag = true;
 	}
+
+	yyjson_val* yyv_calc = yyjson_obj_get(yyParams, "calc");
+	if (yyv_calc) {
+		if (yyjson_is_str(yyv_calc)) {
+			deSel.calc = yyjson_get_str(yyv_calc);
+		}
+		else if (yyjson_is_obj(yyv_calc)) {
+			yyjson_val* yyv_calc_alg = yyjson_obj_get(yyv_calc, "alg");
+			if (yyv_calc_alg) {
+				deSel.calc = yyjson_get_str(yyv_calc_alg);
+			}
+
+			yyjson_val* yyv_calc_baseCurve = yyjson_obj_get(yyv_calc, "baseCurve");
+			if (yyv_calc_baseCurve) {
+				deSel.baseCurve = yyjson_get_str(yyv_calc_baseCurve);
+			}
+
+			yyjson_val* yyv_calc_aggr = yyjson_obj_get(yyv_calc, "aggr");
+			if (yyv_calc_aggr) {
+				deSel.curvePtAggr = yyjson_get_str(yyv_calc_aggr);
+			}
+		}
+	}
+
+	yyjson_val* yyv_timeFill = yyjson_obj_get(yyParams, "timeFill");
+	if (yyv_timeFill && yyjson_is_bool(yyv_timeFill)) {
+		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
+	}
+
+	//check if need tag parse
+	bool needParseTag = false;
+	if (deSel.tagSel.fuzzyMatchExp.size() != 0) {
+		needParseTag = true; //parse fuzzy tag exp to exact tags
+	}
+	else if (deSel.tagSel.selLanguage != "" && deSel.tagSel.selLanguage != m_dbFmt.language) {
+		needParseTag = true; //parse tags in sel language to db language
+	}
+
+	if (needParseTag) {
+		if (m_getTagsByTagSelector)
+			m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
+		else {
+			err = "db tagSelector function not inited";
+			return false;
+		}
+	}
+	else {
+		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
+			string& exp = deSel.tagSel.exactMatchExp[i];
+			deSel.tagSel.tagSet.push_back(exp);
+			deSel.tagSel.dbFileTagSet.push_back(exp);
+		}
+	}
+
+	return true;
+}
+
+void TDB::Insert(string strTag, int iVal, DB_TIME* stTime)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	string s = to_string(iVal);
+	InsertValJsonStr(strTag, dbt, s);
+}
+
+void TDB::Insert(string strTag, long long iVal, DB_TIME* stTime)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	string s = to_string(iVal);
+	InsertValJsonStr(strTag, dbt, s);
 }
 
 void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
@@ -4040,6 +4063,19 @@ void TDB::Insert(string strTag, bool bVal, DB_TIME* stTime) {
 		dbt.setNow();
 	}
 	string s = bVal ? "true" : "false";
+	InsertValJsonStr(strTag, dbt, s);
+}
+
+void TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
+{
+	DB_TIME dbt;
+	if (stTime != nullptr) {
+		dbt = *stTime;
+	}
+	else {
+		dbt.setNow();
+	}
+	string s = to_string(dbVal);
 	InsertValJsonStr(strTag, dbt, s);
 }
 
@@ -5353,6 +5389,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	}
 
 
+	DB_LOCK_GUARD dbLock(dlPath);
 
 	bool bAppend = false;
 	if (fileExist(dlPath))
@@ -6221,12 +6258,13 @@ bool TDB::setBufferTTL(string bufferTTL)
 	return false;
 }
 
-void TDB::parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err)
+bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	parseDESelector(yyv_params, deSelector, err);
+	bool ret = parseDESelector(yyv_params, deSelector, err);
 	yyjson_doc_free(doc);
+	return ret;
 }
 
 
@@ -7285,6 +7323,11 @@ string DE_SELECTOR::getSelectorDesc()
 	return "";
 }
 
+bool DE_SELECTOR::init(const string& params, string& err)
+{
+	return db.parseDESelector(params,*this,err);
+}
+
 void DB_TIME::fromUnixTime(time_t iUnix, int milli)
 {
 	if (iUnix > 100000000000) { //unix timestamp with milli
@@ -7482,6 +7525,7 @@ bool DB_FILE::loadFile() {
 		pOwnerDB->m_FsBuff.readFile(path, data);
 	}
 	else {
+		DB_LOCK_GUARD dbLock(path);
 		DB_FS::readFile(path, data);
 	}
 
@@ -7561,4 +7605,3 @@ int DaysInAMonth(int wYear, int wMonth)
 	else
 		return MonthDays[wMonth + 12 - 1];
 }
-

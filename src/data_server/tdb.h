@@ -449,6 +449,90 @@ struct DB_FILE {
 	}
 };
 
+#include <unordered_map>
+#include <atomic>
+
+class DB_LOCK {
+public:
+	std::mutex mutex_;
+	std::chrono::steady_clock::time_point last_used_ = std::chrono::steady_clock::now();
+	std::atomic<int> ref_count_{ 0 };
+};
+
+class DB_LOCK_POOL {
+public:
+	static DB_LOCK_POOL& instance() {
+		static DB_LOCK_POOL pool;
+		return pool;
+	}
+
+	DB_LOCK& get_lock(const std::string& path) {
+		std::lock_guard<std::mutex> lock(pool_mutex_); 
+		auto& entry = locks_[path];
+		entry.last_used_ = std::chrono::steady_clock::now();
+		entry.ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
+		return entry;
+	}
+
+	void release_lock(DB_LOCK& lock) {
+		//do not need to lock pool_mutex_,not thread safe ref_count option.
+		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
+		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
+		lock.last_used_ = std::chrono::steady_clock::now();
+		lock.ref_count_--;
+	}
+
+private:
+	DB_LOCK_POOL() {
+		cleaner_.store(true);
+		std::thread([this]() {
+			while (cleaner_.load()) {
+				std::this_thread::sleep_for(std::chrono::minutes(30));
+				std::lock_guard<std::mutex> lock(pool_mutex_);
+				auto now = std::chrono::steady_clock::now();
+				for (auto it = locks_.begin(); it != locks_.end();) {
+					// in pool_mutex_ ,keep ref_count_ check thread safe
+					if (it->second.ref_count_ == 0 &&
+						std::chrono::duration_cast<std::chrono::hours>(now - it->second.last_used_) >= std::chrono::hours(1)) {
+						it = locks_.erase(it);
+					}
+					else {
+						++it;
+					}
+				}
+			}
+			}).detach();
+	}
+
+	~DB_LOCK_POOL() {
+		cleaner_.store(false);
+	}
+
+	std::mutex pool_mutex_; //keep locks_ thread safe, keep clean and getLock thread safe
+	std::unordered_map<std::string, DB_LOCK> locks_;
+	std::atomic<bool> cleaner_{ false };
+};
+
+struct DB_LOCK_GUARD {
+	DB_LOCK* lock_;
+
+	static bool enable;
+
+	DB_LOCK_GUARD(const std::string& path) {
+		if (DB_LOCK_GUARD::enable) {
+			lock_ = &DB_LOCK_POOL::instance().get_lock(path);
+			lock_->mutex_.lock();
+		}
+	}
+
+	~DB_LOCK_GUARD() {
+		if (DB_LOCK_GUARD::enable) {
+			lock_->mutex_.unlock();
+			DB_LOCK_POOL::instance().release_lock(*lock_);
+		}
+	}
+};
+
 //as the data after aggregate, only time and items are valid
 //items is empty before aggregate
 struct DE_yyjson {
@@ -630,6 +714,8 @@ struct DE_SELECTOR {
 		bAggr = false;
 		timeFill = false;
 	}
+
+	bool init(const string& params,string& err);
 };
 
 class db_exception : public std::exception {
@@ -751,6 +837,10 @@ struct  DB_FMT
 
 	DB_FMT() {
 		language = "zh";
+		deListName = "db.json";
+		curveIdxListName = "db.curve.json";
+		curveDeNameSuffix = ".curve.json";
+		deItemKey_value = "val";
 	}
 };
 
@@ -884,6 +974,9 @@ public:
 	void Insert(string strTag, DB_TIME stTime, int& iVal);
 	void Insert(string strTag, DB_TIME stTime, long long iVal);
 	void Insert(string strTag, bool bVal, DB_TIME* stTime=nullptr);
+	void Insert(string strTag, double dbVal, DB_TIME* stTime = nullptr);
+	void Insert(string strTag, int iVal, DB_TIME* stTime = nullptr);
+	void Insert(string strTag, long long iVal, DB_TIME* stTime = nullptr);
 
 	// insert complex data type
 	// custom data element in json format
@@ -910,8 +1003,8 @@ public:
 public:
 	//param parse
 	map<string, vector<string>> getAggrOpt(yyjson_val* jAggr);
-	void parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);
-	void parseDESelector(string& sParams, DE_SELECTOR& deSelector, string& err);
+	bool parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);
+	bool parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err);
 	int dhmsSpan2Seconds(string timeSpan);
 	//insert
 	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
