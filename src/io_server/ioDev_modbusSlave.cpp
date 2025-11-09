@@ -448,6 +448,7 @@ bool ioDev_ModbusSlave::doTransaction(MB_PDU& pduReq, MB_PDU& pduResp, string& e
 	}
 	else
 	{
+		m_transaction.setReq(nullptr);
 		setOffline();
 	}
 
@@ -833,6 +834,47 @@ bool ioDev_ModbusSlave::CommLock(int dwTimeoutMS)
 void ioDev_ModbusSlave::CommUnlock()
 {
 	m_pParent->CommUnlock();
+}
+
+bool ioDev_ModbusSlave::onRecvNotify(unsigned char* pData, size_t iLen)
+{
+	lock_conf_shared();
+
+	vector<string> vecDevAddr;
+	vector<json> vecVal;
+	for (auto i : m_mapDataChannel)
+	{
+		ioChannel* pC = i.second;
+
+		//如果是仅输出,不进行读取.
+		//如果未绑定对应位置,不进行读取.
+		if (pC->m_ioType == "o" || pC->m_strTagBind == "") continue;
+
+		//按通道解析协议，必须连续
+		unsigned char* pRegData = pData + 3;
+		//遍历通道 01 03 04 02 FB 00 E2 0A 33 
+		unsigned char FCode = pData[1];
+		if (FCode != MB_FUNC_CODE::readHoldingRegisters) {
+			continue;
+		}
+
+		json jVal = nullptr;
+		//根据当前读取的modbusReg缓存类型，将值设置到对应的通道类型
+		jVal = getChanValFromRegBuff(pC, 0, (char*)pRegData, pData[2]);
+		
+		if (jVal != nullptr) {
+			vecDevAddr.push_back(i.first);
+			vecVal.push_back(jVal);
+		}
+	}
+
+	if (vecDevAddr.size() > 0) {
+		input(vecDevAddr, vecVal);
+	}
+	unlock_conf_shared();
+
+
+	return true;
 }
 
 //串口通信时，需要进行字节流组包

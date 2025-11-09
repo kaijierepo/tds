@@ -256,7 +256,7 @@ namespace charCodec {
 	std::string urlEncode(const std::string& str);
 }
 namespace str {
-	bool isASCII(const std::string& str);
+	bool isASCII(char* p, int len);
 	bool isGB2312(const std::string& str);
 	bool isUTF8(const string& s);
 	std::string parseEscapeChar(string s);

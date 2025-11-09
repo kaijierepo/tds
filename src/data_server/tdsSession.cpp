@@ -68,6 +68,14 @@ string TDS_SESSION::getLocalAddr() {
     return str::format("%s:%d", localIP.c_str(), localPort);
 }
 
+string TDS_SESSION::getIoAddr() {
+    ioDev* pDev = getBindDev();
+    if (pDev) {
+        return pDev->getIOAddrStr();
+    }
+    return "";
+}
+
 string TDS_SESSION::getRemoteIP()
 {
     return remoteIP;
@@ -159,8 +167,15 @@ size_t TDS_SESSION::send(unsigned char* p,size_t len,bool bNeedLog) {
          }
      }
 
-     if (bNeedLog && type == TDS_SESSION_TYPE::iodev)
-         IOLogSend(p, len, iSend > 0, getRemoteAddr(), getLocalAddr());
+     if (bNeedLog && type == TDS_SESSION_TYPE::iodev) {
+         string ioAddr;
+         ioDev* pDev = getBindDev();
+         if (pDev) {
+             ioAddr = pDev->getIOAddrStr();
+         }
+         IOLogSend(p, len, iSend > 0, getRemoteAddr(), getLocalAddr(), ioAddr);
+     }
+       
 
      return iSend;
  }

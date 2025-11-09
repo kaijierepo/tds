@@ -642,7 +642,7 @@ bool ioDev::loadConf(json& conf)
 		json& item = kv.value();
 		if (!item.is_null()) {
 			m_jDevAddr = item;
-
+			m_devAddr = getDevAddrStr();
 			//addrMode以后保存到io.json。此处兼容未保存的
 			//if (m_jDevAddr.is_object() && m_addrType == "")
 			//{
@@ -1774,14 +1774,13 @@ bool ioDev::onRecvPkt(yyjson_val* jPkt, yyjson_doc* doc)
 	return false;
 }
 
-void notifyDevOnline(json jNotify) {
+void notifyDevOnline(string sNotify) {
 	//发给客户端,tds不接受devOnline事件
-	string ioAddr = jNotify["ioAddr"];
-	rpcSrv.notify("devOnline", jNotify);
+	rpcSrv.notify("devOnline", sNotify);
 
 	//发给数据服务
-	if (jNotify.contains("tag")) {
-		tds->callAsyn("objOnline", jNotify);
+	if (sNotify.find("tag")!=string::npos) {
+		tds->callAsyn("objOnline", sNotify);
 	}
 }
 
@@ -1839,14 +1838,16 @@ void ioDev::setOnline(bool setByPing /*= false*/) {
 		timeopt::now(&m_stOnlineTime);
 		m_onlineInfoQueried = false;
 
-		json jNotify;
-		jNotify["ioAddr"] = getIOAddrStr();
-		jNotify["nodeID"] = m_confNodeId;
+		string sNotify = "{" 
+			"\"ioAddr\":\"" + getIOAddrStr() + "\"," +
+			"\"nodeID\":\"" + m_confNodeId + "\"";
 
-		if (m_strTagBind != "")
-			jNotify["tag"] = m_strTagBind;
+		if (m_strTagBind != "") {
+			sNotify += ",\"tag\":\"" + m_strTagBind + "\"";
+		}
+			sNotify += "}";
 
-		thread t(notifyDevOnline, jNotify);
+		thread t(notifyDevOnline, sNotify);
 		t.detach();
 	}
 }

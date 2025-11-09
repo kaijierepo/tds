@@ -356,9 +356,10 @@ namespace charCodec {
 
 }
 namespace str {
-	bool isASCII(const std::string& str) {
-		for (char c : str) {
-			if (c < 0 || c > 127) {
+	bool isASCII(char* p ,int len) {
+		for (int i = 0; i < len; ++i) {
+			// 有符号char转无符号避免负值问题
+			if (static_cast<unsigned char>(p[i]) > 127) {
 				return false;
 			}
 		}

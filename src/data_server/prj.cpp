@@ -471,8 +471,8 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 					//数据服务自己缓存状态，并重新加载，此处不应从ioSrv同步数据，后续应当删除。
 					//ioSrv.updateTag2IOAddrBinding();
 					//ioSrv.updateAllChanVal();
-
-					rpcSrv.notify("objTreeUpdated", nullptr);
+					string sp = "{}";
+					rpcSrv.notify("objTreeUpdated", sp);
 					result = "\"ok\"";
 				}
 				//热重载

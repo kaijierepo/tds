@@ -113,7 +113,7 @@ void sendToPktMonitorClient(char* p, size_t len)
 }
 
 
-void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,string localAddr)
+void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,string localAddr,string ioAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -121,20 +121,18 @@ void IOLogSend(unsigned char* p, size_t len, bool success,string remoteAddr,stri
 			return;
 	}
 
-
-	json j;
+	string type = success ? "发送成功" : "发送失败";
 	TIME st;
 	timeopt::now(&st);
-	j["time"] = timeopt::st2strWithMilli(st);
-	j["remoteAddr"] = remoteAddr;
-	j["localAddr"] = localAddr;
-	if (success)
-		j["type"] = "发送成功";
-	else
-		j["type"] = "发送失败";
-	j["len"] = len;
-	j["data"] = str::bytesToHexStr(p, len);
-	string s = j.dump(4);
+	string s = "{"
+		"\"time\":\"" + timeopt::st2strWithMilli(st) + "\","
+        "\"localAddr\":\"" + localAddr + "\","
+        "\"remoteAddr\":\"" + remoteAddr + "\","
+        "\"ioAddr\":\"" + ioAddr + "\","
+        "\"type\":\"" + type + "\","
+        "\"len\":" + to_string(len) + ","
+        "\"data\":\"" + str::bytesToHexStr(p, len) + "\""
+        "}";
 	sendToPktMonitorClient((char*)s.c_str(), s.length());
 }
 
@@ -142,11 +140,11 @@ void IOLogRecv(unsigned char* p, size_t len, UDP_SESSION udpSession)
 {
 	string r = str::format("UDP-%s:%d", udpSession.remoteIP.c_str(), udpSession.remotePort);
 	string l = str::format("UDP-%s:%d", udpSession.localIP.c_str(), udpSession.localPort);
-	IOLogRecv(p, len, r, l);
+	IOLogRecv(p, len, r, l,"");
 }
 
 
-void IOLogRecv(unsigned char* p, size_t len,string remoteAddr,string localAddr)
+void IOLogRecv(unsigned char* p, size_t len,string remoteAddr,string localAddr,string ioAddr)
 {
 	{
 		shared_lock<shared_mutex> lock(csIoPktMonitorClient);
@@ -155,17 +153,17 @@ void IOLogRecv(unsigned char* p, size_t len,string remoteAddr,string localAddr)
 	}
 	
 	try {
-		json j;
 		TIME st;
 		timeopt::now(&st);
-		j["time"] = timeopt::st2strWithMilli(st);
-		j["remoteAddr"] = remoteAddr;
-		j["localAddr"] = localAddr;
-		j["type"] = "接收";
-		j["len"] = len;
-		//j["data"] = str::fromBuff(p, len);
-		j["data"] = str::bytesToHexStr(p, len);
-		string s = j.dump();
+		string s = "{"
+			"\"time\":\"" + timeopt::st2strWithMilli(st) + "\","
+			"\"localAddr\":\"" + localAddr + "\","
+			"\"remoteAddr\":\"" + remoteAddr + "\","
+			"\"ioAddr\":\"" + ioAddr + "\","
+			"\"type\":\"接收\","
+			"\"len\":" + to_string(len) + ","
+			"\"data\":\"" + str::bytesToHexStr(p, len) + "\""
+			"}";
 		sendToPktMonitorClient((char*)s.c_str(), s.length());
 	}
 	catch (std::exception& e)

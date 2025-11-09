@@ -14,6 +14,11 @@ public:
 	bool m_bGetResp;
 
 	void setReq(MB_PDU* pkt) { //req不用加锁，因为doTransaction函数不能并发调用
+		if (pkt == nullptr) {
+			req = nullptr;
+			return;
+		}
+
 		if (req)delete req;
 		req = new MB_PDU();
 		*req = *pkt;
@@ -108,6 +113,7 @@ public:
 	//因为modbus设备先完成组包，确定地址，才能知道数据是属于当前设备的。因此字节流组包在ioDev对象外部完成。
 	//设备不会收到该地址的包的分片，因此onRecvData无用，直接使用onRecvPkt
 	virtual bool onRecvPkt(unsigned char* pData, size_t iLen) override { return false; };
+	bool onRecvNotify(unsigned char* pData, size_t iLen);
 	bool onRecvData(unsigned char* pData, size_t iLen) override;
 	unsigned char funcName2funcCode(string name);
 };

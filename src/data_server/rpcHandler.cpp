@@ -1241,14 +1241,14 @@ bool rpcHandler::handleMethodCall_IoMng(string method, json& params, RPC_RESP& r
 	}
 	else if(method == "getChanTemplateList")
 	{
-		json jList = json::array();
+		rpcResp.result = "[";
 		for (auto& i : ioSrv.m_mapChanTempalte) {
-			json tplInfo;
-			tplInfo["name"] = i.second.name;
-			tplInfo["label"] = i.second.label;
-			jList.push_back(tplInfo);
+			if (rpcResp.result != "[") {
+                rpcResp.result += ",";
+			}
+			rpcResp.result += "{\"name\":\"" + i.first + "\"}";
 		}
-		rpcResp.result = jList.dump();
+		rpcResp.result += "]";
 	}
 	else if (method == "startDevUpgrade")
 	{
@@ -6380,12 +6380,39 @@ void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string t
 	p->sendStr(s);
 }
 
-void rpcHandler::notify(string method, json params, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
-	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + params.dump() + "}\n\n";
+void rpcHandler::notify(string method, const json& params, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
+	string sp;
+	try { 
+		sp = params.dump();
+	}
+    catch (exception& e) {
+        LOG("json dump error:%s", e.what());
+    }
 
-	apiAdaptorScript(notify);
+	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + sp + "}\n\n";
 
-	string tag = "";  // sixf todo
+	//apiAdaptorScript(notify);
+
+	string tag = "";
+	WebServer::notifyAllSrvAllWs(method, tag, notify);
+
+	sockSrv.m_mutexSessions.lock();
+	for (auto& i : sockSrv.m_sockSessions) {
+		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
+
+		if (pSession && pSession->isSubscribed(method, tag)) {
+			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
+		}
+	}
+	sockSrv.m_mutexSessions.unlock();
+}
+
+void rpcHandler::notify(string method, string notifyParams, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
+	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + notifyParams + "}\n\n";
+
+	//apiAdaptorScript(notify);
+
+	string tag = "";  
 	WebServer::notifyAllSrvAllWs(method, tag, notify);
 
 	sockSrv.m_mutexSessions.lock();

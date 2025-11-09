@@ -2044,7 +2044,8 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		}
 	}
 	else if (tdsSession->ioDevType == DEV_TYPE_tdsp) {
-		if (handleFirstRegPkt(pData, iLen, tdsSession)) {
+		size_t regPktLen = 0;
+		if (handleFirstRegPkt(pData, iLen, regPktLen, tdsSession)) {
 			tdsSession->m_bSingleDevMode = true;
 		}
 		else {
@@ -2070,7 +2071,8 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 		}
 	}
 	else if (tdsSession->ioDevType == DEV_TYPE_modbus_tcp_slave) {
-		if (handleFirstRegPkt(pData, iLen, tdsSession)) {
+		size_t regPktLen = 0;
+		if (handleFirstRegPkt(pData, iLen, regPktLen,tdsSession)) {
 
 		}
 		else {
@@ -2082,10 +2084,21 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 			}
 		}
 	}
-	else if (tdsSession->ioDevType == DEV_TYPE_rs485_gateway) {
+	else if (tdsSession->ioDevType == DEV_TYPE_rs485_gateway) { //根据tdsSession对应的本地端口，确定类型为网关
 		//检查是否是imei直接注册包,15位且都是数字，认为是imei
-		if (handleFirstRegPkt(pData, iLen, tdsSession)) {//首包数据,按照tdsp注册包处理
-		
+		size_t regPktLen = 0;
+		if (handleFirstRegPkt(pData, iLen, regPktLen, tdsSession)) {//首包数据,按照tdsp注册包处理
+			if (regPktLen < iLen) { //注册包与正常数据粘连
+				unsigned char* pGwData = pData + regPktLen;
+				size_t gwLen = iLen - regPktLen;
+
+				//485直接透传到设备
+				if (tdsSession->m_mapBindIoDev.size() > 0) {
+					for (auto& i : tdsSession->m_mapBindIoDev) {
+						i.first->onRecvData(pGwData, gwLen);
+					}
+				}
+			}
 		}
 		else {
 			unsigned char* pGwData = pData;
@@ -2117,12 +2130,16 @@ bool ioServer::OnRecvAppLayerData(unsigned char* pData, size_t iLen, std::shared
 	else if (tdsSession->ioDevType == DEV_TYPE_jep) {
 		string ioAddr = tdsSession->remoteIP;
 		ioDev* pDev = getIODev(ioAddr, false, true);
-		pDev->onRecvData(pData, iLen);
+		if (pDev != NULL) {
+			pDev->onRecvData(pData, iLen);
+		}
 	}
 	else {
 		string ioAddr = tdsSession->remoteIP + ":" + str::fromInt(tdsSession->remotePort);
 		ioDev* pDev = getIODev(ioAddr);
-		pDev->onRecvData(pData, iLen);
+		if (pDev != NULL) {
+			pDev->onRecvData(pData, iLen);
+		}
 	}
 
 	tdsSession->m_bAppDataRecved = true; //放在上方处理的后面
@@ -2363,10 +2380,32 @@ bool isCommonRegPkt(unsigned char* pData, size_t iLen) {
 }
 
 
-bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_ptr<TDS_SESSION> tdsSession)
+std::string extractRegPktStr_PrintableAscii(const char* pData, size_t len) {
+	std::string result;
+	result.reserve(len);
+
+	for (size_t i = 0; i < len; ++i) {
+		unsigned char c = static_cast<unsigned char>(pData[i]);
+		// 只保留可打印ASCII (32-126)
+		if (c >= 32 && c <= 126) {
+			result += pData[i];
+		}
+		else { // 遇到非可打印ASCII字符，停止提取
+			break;
+		}
+	}
+
+	return result;
+}
+
+bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen,size_t& regPktLen, std::shared_ptr<TDS_SESSION> tdsSession)
 {
 	if (!tdsSession->m_bAppDataRecved)
 	{
+		if (!str::isASCII((char*)pData, iLen)) {
+
+		}
+
 		//15位IMEI模式
 		if (iLen == 15 && str::isDigits((char*)pData, iLen))
 		{
@@ -2400,21 +2439,26 @@ bool ioServer::handleFirstRegPkt(unsigned char* pData, size_t iLen, std::shared_
 		}
 		//通用注册包reg,type:COS-06-240A-N0_s4,imei:$(IMEI)
 		else if (str::fromBuff((char*)pData, 4) == "reg,") {
-            string reg = str::fromBuff((char*)pData, iLen);
+            string reg = extractRegPktStr_PrintableAscii((char*)pData, iLen);
 			LOG("收到首发注册包," + reg);
+			if (reg.length() != iLen) {
+				string s = str::bytesToHexStr((char*)pData, iLen);
+				LOG("[warn]注册包包含无效字符，已自动剔除，原始注册包:" + s);
+			}
+
 			vector<string> parts;
 			str::split(parts, reg, ",");
             for (auto& part : parts) {
-				if (part.find("type:") == 0) {
-					string devType = part.substr(5);
-					tdsSession->ioDevType = devType;
-					break;
-				}
-				else if (part.find("imei:") == 0) {
+				//if (part.find("type:") == 0) {
+				//	string devType = part.substr(5);
+				//}
+
+				if (part.find("imei:") == 0) {
                     string imei = part.substr(5);
 					ioSrv.handleDevOnline(imei, tdsSession);
 				}
 			}
+			return true;
 		}
 		//通用注册包，全部都是ASII字符，并且没有 { } 符号，不是json
 		else if (isCommonRegPkt(pData, iLen)) {

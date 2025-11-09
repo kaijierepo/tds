@@ -114,6 +114,8 @@ public:
 
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 
+	void notify(string method, const json& params, bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
+
 	//genicam steam function
 #ifdef ENABLE_GENICAM
 	string rpc_getStreamInfo(json params, string& error);
@@ -125,7 +127,7 @@ public:
 	//notify为一般通知，没有订阅则不通知。订阅机制以后做
 	//特殊通知，所有客户端都通知
 	//普通通知，数值变化这些，数据量很多，订阅才通知
-	void notify(string method, json params,bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
+	void notify(string method, string notifyParams,bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
 	
 
 

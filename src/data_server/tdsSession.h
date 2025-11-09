@@ -65,6 +65,7 @@ public:
 	string getRemoteAddr();
 	string getRemoteIP();
 	string getLocalAddr();
+	string getIoAddr();
 	std::recursive_mutex m_mutexTcpLink; //tcp连接锁。处理连接断开修改tcpLink,数据发送线程使用tcpLink冲突的问题
 
 	//基本属性
@@ -124,7 +125,7 @@ public:
 	//1个ioSession可以绑定多个ioDev(ioSession为设备网关时候)
 	//1个ioDev只能绑定1个ioSession
 	map<ioDev*, ioDev*> m_mapBindIoDev;
-	ioDev* getBindDev(string ioAddr);
+	ioDev* getBindDev(string ioAddr = "");
 
 	//历史曾经在这个连接上上线过的io设备。当该设备重新在新的连接上线时。
 	//m_mapBindIoDev中的关联关系会被删除。m_vecHistIoDev中的依然保留

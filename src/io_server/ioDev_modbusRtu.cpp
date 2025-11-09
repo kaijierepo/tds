@@ -80,7 +80,17 @@ bool ioDev_ModbusRtu::onRecvPkt(unsigned char* pData, size_t iLen)
 		return false;
 
 	setOnline();
-	string adu_resp = str::bytesToHexStr(pData, iLen);
-	m_transaction.setResp(&respPkt.pdu,adu_resp);
+
+	if (m_transaction.req != nullptr) {
+		string adu_resp = str::bytesToHexStr(pData, iLen);
+		m_transaction.setResp(&respPkt.pdu, adu_resp);
+	}
+	else {
+		//只有关闭轮询，才处理modbus通知
+		if (!m_bEnableAcq) {
+			ioDev_ModbusSlave::onRecvNotify(pData, iLen);
+		}
+	}
+
 	return true;
 }

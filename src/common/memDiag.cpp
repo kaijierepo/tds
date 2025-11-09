@@ -562,7 +562,7 @@ void MemDiag::rpc_memDiag_getStatis_fromStatis(yyjson_val* params, string& rlt, 
 				{
 					s += str::format("(%s:%d)", line.FileName, line.LineNumber);
 				}
-				if (!str::isASCII(s)) {
+				if (!str::isASCII((char*)s.c_str(),s.length())) {
 					statisInfo.valid = false;
 					LOG("[warn]%s %d,invalid ascii string: %s",__FILE__,__LINE__, str::encodeAscII(s.c_str()).c_str());
 					break;
