@@ -1935,6 +1935,11 @@ void ioServer::rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSI
 			"\"spare\":" + to_string(devStatis.iSpare) +
 			",\"managed\":" + to_string(devStatis.iManaged) +
 			"}"
+		",\"channel\":{"
+			"\"total\":" + to_string(devStatis.iChan) +
+			",\"binded\":" + to_string(devStatis.iChanBinded) +
+			",\"unbinded\":" + to_string(devStatis.iChanUnbinded) +
+		  "}"
 		"}";
 
 	unlock_conf_shared();

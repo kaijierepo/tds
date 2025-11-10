@@ -4942,54 +4942,46 @@ void rpcHandler::rpc_getObjStatis(json params, RPC_RESP& resp, RPC_SESSION& sess
 		{
 			pMo->statisChildObj(rlt);
 
-			if (mode == "groupByType") {
+			OBJ_STATIS total;
+			total.customType = "*";
+			for (auto& iter : rlt) {
+				total.count += iter.second.count;
+				total.online += iter.second.online;
+				total.offline += iter.second.offline;
+				total.alarm += iter.second.alarm;
+				total.fault += iter.second.fault;
+				total.normal += iter.second.normal;
+			}
+			json j;
+			j["count"] = total.count;
+			j["online"] = total.online;
+			j["offline"] = total.offline;
+			j["alarm"] = total.alarm;
+			j["fault"] = total.fault;
+			j["normal"] = total.normal;
+
+			{
 				json jList = json::array();
 				for (auto& iter : rlt) {
-					json j;
-					j["customType"] = iter.second.customType;
-					j["count"] = iter.second.count;
-					j["online"] = iter.second.online;
-					j["offline"] = iter.second.offline;
-					j["alarm"] = iter.second.alarm;
-					j["fault"] = iter.second.fault;
-					j["normal"] = iter.second.normal;
-					jList.push_back(j);
+					json jt;
+					jt["customType"] = iter.second.customType;
+					jt["count"] = iter.second.count;
+					jt["online"] = iter.second.online;
+					jt["offline"] = iter.second.offline;
+					jt["alarm"] = iter.second.alarm;
+					jt["fault"] = iter.second.fault;
+					jt["normal"] = iter.second.normal;
+					jList.push_back(jt);
 				}
 
-				if (rootTagList.size() == 1) {
-					jStatisRlt = jList;
-				}
-				else {
-					jStatisRlt[tagOrg] = jList;
-				}
-			}
-			else if (mode == "total") {
-				OBJ_STATIS total;
-				total.customType = "*";
-				for (auto& iter : rlt) {
-					total.count += iter.second.count;
-					total.online += iter.second.online;
-					total.offline += iter.second.offline;
-					total.alarm += iter.second.alarm;
-					total.fault += iter.second.fault;
-					total.normal += iter.second.normal;
-				}
-				json j;
-				j["customType"] = "*";
-				j["count"] = total.count;
-				j["online"] = total.online;
-				j["offline"] = total.offline;
-				j["alarm"] = total.alarm;
-				j["fault"] = total.fault;
-				j["normal"] = total.normal;
-
-				if (rootTagList.size() == 1) {
-					jStatisRlt = j;
-				}
-				else
-					jStatisRlt[tagOrg] = j;
+				j["typeStatis"] = jList;
 			}
 
+			if (rootTagList.size() == 1) {
+				jStatisRlt = j;
+			}
+			else
+				jStatisRlt[tagOrg] = j;
 		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound, "没有找到需要统计的根对象" + tag);

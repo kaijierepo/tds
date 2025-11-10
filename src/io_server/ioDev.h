@@ -130,6 +130,8 @@ struct DEV_STATIS {
 	size_t iManaged;
 	size_t iSpare;
 	size_t iChan;
+	size_t iChanBinded;
+	size_t iChanUnbinded;
 
 	DEV_STATIS() {
 		iOnline = 0;
@@ -138,6 +140,8 @@ struct DEV_STATIS {
 		iManaged = 0;
 		iSpare = 0;
 		iChan = 0;
+		iChanBinded = 0;
+		iChanUnbinded = 0;
 	}
 
 	json toJson() {

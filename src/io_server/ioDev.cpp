@@ -2538,6 +2538,8 @@ void ioDev::doStatis(DEV_STATIS& statis)
         statis.iManaged++;
 	}
 
+	statis.iChan += m_channels.size();
+
     for (int i = 0; i < m_vecChildDev.size(); i++) {
 		ioDev* p = m_vecChildDev[i];
 		p->doStatis(statis);
