@@ -3587,6 +3587,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	return true;
 }
 
+
+
 bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 {
 	//parse time selector
@@ -5010,57 +5012,11 @@ void TDB::rpc_db_table_insert(yyjson_val* params, string& rlt, string& err, stri
 	string tableType = yyjson_get_str(yyv_tableType);
 	string table = yyjson_get_str(yyv_table);
 
-	string path = m_confPath + "/" + table;
+	tableInsert(table, yyv_row, err);
 
-	string data;
-	DB_FS::readFile(path, data);
-	if (data == "")
-		data = "[]";
-
-	yyjson_read_err yy_err = { 0 };
-	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
-	yyjson_doc* yy_doc = yyjson_read_opts(
-		(char*)data.data(),
-		data.length(),
-		YYJSON_READ_NOFLAG,
-		NULL,
-		&yy_err
-	);
-	if (!yy_doc) {
-		err = JSON_STR_VAL("wrong table format,json parse error");
+	if (err != "") {
 		return;
 	}
-	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
-	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
-
-	if (yyjson_is_obj(yyv_row)) {
-		yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_row);
-		yyjson_mut_arr_append(yy_mroot, yy_mut_row);
-	}
-	else if (yyjson_is_arr(yyv_row)) {
-		size_t len = yyjson_arr_size(yyv_row);
-		for (size_t i = 0; i < len; i++) {
-			yyjson_val* yyv_oneRow = yyjson_arr_get(yyv_row, i);
-			if (yyjson_is_obj(yyv_oneRow)) {
-				yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_oneRow);
-				yyjson_mut_arr_append(yy_mroot, yy_mut_row);
-			}
-		}
-	}
-	else {
-		err = JSON_STR_VAL("row must be an object or an array");
-		return;
-	}
-
-
-	size_t len = 0;
-	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
-	if (p) {
-		DB_FS::writeFile(path, p, len);
-		free(p);
-	}
-	yyjson_doc_free(yy_doc);
-	yyjson_mut_doc_free(yy_mdoc);
 
 	rlt = DB_OK;
 }
@@ -5144,24 +5100,170 @@ void merge_recursive_yyjson_obj(yyjson_mut_val* yy_mut_obj, yyjson_mut_doc* yy_m
 	}
 }
 
-void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+struct DE_CALC {
+#ifdef ENABLE_QJS
+	JSContext* ctx;
+	JSRuntime* rt;
+#endif
+	DE_CALC()
+	{
+#ifdef ENABLE_QJS
+			// create runtime and context
+			rt = JS_NewRuntime();
+			if (!rt) return;
+			ctx = JS_NewContext(rt);
+			if (!ctx)
+			{
+				JS_FreeRuntime(rt);
+				return;
+			}
+#endif
+	}
+
+	~DE_CALC()
+	{
+#ifdef ENABLE_QJS
+			if(ctx)
+				JS_FreeContext(ctx);
+			if(rt)
+				JS_FreeRuntime(rt);
+#endif
+	}
+
+	bool calc(yyjson_mut_val* val,yyjson_mut_doc* mdoc, string exp) {
+		bool ret = false;
+		JSValue json_val = JS_UNDEFINED;
+		JSValue global = JS_UNDEFINED;
+		JSPropertyEnum* props = nullptr;
+		uint32_t len = 0;
+
+		try
+		{
+			size_t len = 0;
+			char* json_str = yyjson_mut_val_write(val, 0, &len);
+			if (json_str) {
+				json_val = JS_ParseJSON(ctx, json_str, len, "<input>");
+				if (JS_IsException(json_val)) {
+					JSValue exception = JS_GetException(ctx);
+					const char* err_str = JS_ToCString(ctx, exception);
+					string err = DB_STR::utf8_to_gb(err_str);
+					std::cerr << "JSON parse json: " << err << std::endl;
+					JS_FreeCString(ctx, err_str);
+					JS_FreeValue(ctx, exception);
+					return false;
+				}
+				free(json_str);
+			}
+			else {
+				return false;
+			}
+
+
+			// get global object
+			global = JS_GetGlobalObject(ctx);
+
+			// copy properties from JSON to global object
+			uint32_t propCount;
+			if (JS_GetOwnPropertyNames(ctx, &props, &propCount, json_val, JS_GPN_STRING_MASK) < 0) {
+				throw std::runtime_error("getOwnPropertyNames failed");
+			}
+
+			for (uint32_t i = 0; i < propCount; i++) {
+				JSValue val = JS_GetProperty(ctx, json_val, props[i].atom);
+				if (JS_IsException(val)) {
+					JS_FreeAtom(ctx, props[i].atom);
+					continue;
+				}
+
+				JS_SetProperty(ctx, global, props[i].atom, val);
+				JS_FreeAtom(ctx, props[i].atom);
+			}
+
+
+			// evaluate script
+			std::string script = exp;
+			JSValue result = JS_Eval(ctx, script.c_str(), script.size(), "<eval>", JS_EVAL_TYPE_GLOBAL);
+
+			if (JS_IsException(result)) {
+				JSValue exception = JS_GetException(ctx);
+				const char* err_str = JS_ToCString(ctx, exception);
+				string err = DB_STR::utf8_to_gb(err_str);
+				std::cerr << "evaluate script error: " << err << std::endl;
+				JS_FreeCString(ctx, err_str);
+				JS_FreeValue(ctx, exception);
+				ret = false;
+			}
+			else {
+
+				JSValue json_str_val = JS_JSONStringify(ctx, global, JS_UNDEFINED, JS_UNDEFINED);
+				if (JS_IsException(json_str_val)) {
+					ret = false;
+				}
+
+				const char* json_str = JS_ToCString(ctx, json_str_val);
+				if (!json_str) {
+					ret = false;
+				}
+				else {
+					yyjson_read_err yy_err = { 0 };
+					yyjson_doc* yy_doc = yyjson_read_opts(
+						(char*)json_str,
+						strlen(json_str),
+						YYJSON_READ_NOFLAG,
+						NULL,
+						&yy_err
+					);
+					if (!yy_doc) {
+						std::cerr << "parse json error" << std::endl;
+						ret = false;
+					}
+					else {
+						yyjson_val* yy_calc_rlt = yyjson_doc_get_root(yy_doc);
+						merge_recursive_yyjson_obj(val, mdoc, yy_calc_rlt);
+						yyjson_doc_free(yy_doc);
+					}
+					JS_FreeCString(ctx, json_str);
+				}
+				JS_FreeValue(ctx, json_str_val);
+			}
+
+			JS_FreeValue(ctx, result);
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "err: " << e.what() << std::endl;
+			ret = false;
+		}
+		catch (...)
+		{
+			std::cerr << "err: unknown exception" << std::endl;
+			ret = false;
+		}
+
+		// free resources
+		if (!JS_IsUndefined(global)) {
+			for (uint32_t i = 0; i < len; i++) JS_DeleteProperty(ctx, global, props[i].atom, 0);
+			JS_FreeValue(ctx, global);
+		}
+		if (props) {
+			// free property array
+			js_free(ctx, props);
+			props = nullptr;
+		}
+		if (!JS_IsUndefined(json_val)) {
+			JS_FreeValue(ctx, json_val);
+		}
+
+		return ret;
+	}
+};
+
+bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& updateData,string& err)
 {
-	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
-	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
-	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
-	yyjson_val* yyv_row = yyjson_obj_get(params, "row");
-	if (!yyv_row) {
-		err = JSON_STR_VAL("must specify row");
-		return;
+	if (tableName.rfind(".json") == string::npos) {
+		tableName += ".json";
 	}
-	if (!yyv_match) {
-		err = JSON_STR_VAL("must specify match");
-		return;
-	}
-	string tableType = yyjson_get_str(yyv_tableType);
-	string table = yyjson_get_str(yyv_table);
-	string match = yyjson_get_str(yyv_match);
-	string path = m_confPath + "/" + table;
+	string path = m_confPath + "/" + tableName;
 
 	string data;
 	DB_FS::readFile(path, data);
@@ -5179,22 +5281,57 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	);
 	if (!yy_doc) {
 		err = JSON_STR_VAL("wrong table format,json parse error");
-		return;
+		return false;
 	}
 	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
 	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
 
-	CONDITION_SELECTOR cs;
-	cs.init(match);
 
-	size_t len = yyjson_mut_arr_size(yy_mroot);
-	for (size_t i = len - 1; i != (size_t)-1; i--) {
-		yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
-		if (cs.match(obj)) {
-			merge_recursive_yyjson_obj(obj, yy_mdoc, yyv_row);
+	for (size_t i = 0; i < match.size(); i++) {
+		string& m = match[i];
+		string& d = updateData[i];
+
+		bool calcMode = false;
+		if (d.find("{") == 0) {
+
+		}
+		else {
+			calcMode = true;
+		}
+
+		CONDITION_SELECTOR cs;
+		cs.init(m);
+
+		size_t len = yyjson_mut_arr_size(yy_mroot);
+		for (size_t i = len - 1; i != (size_t)-1; i--) {
+			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+			if (cs.match(obj)) {
+				if (calcMode) {
+					DE_CALC calc;
+					calc.calc(obj, yy_mdoc, d);
+				}
+				else {
+					yyjson_doc* yy_update_doc = yyjson_read_opts(
+						(char*)d.data(),
+						d.length(),
+						YYJSON_READ_NOFLAG,
+						NULL,
+						&yy_err
+					);
+					if (!yy_update_doc) {
+						err = JSON_STR_VAL("wrong update data format,json parse error");
+						return false;
+					}
+
+					yyjson_val* yy_update_data = yyjson_doc_get_root(yy_update_doc);
+					merge_recursive_yyjson_obj(obj, yy_mdoc, yy_update_data);
+					yyjson_doc_free(yy_update_doc);
+				}
+			}
 		}
 	}
 
+	size_t len;
 	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 	if (p) {
 		DB_FS::writeFile(path, p, len);
@@ -5202,6 +5339,136 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	}
 	yyjson_doc_free(yy_doc);
 	yyjson_mut_doc_free(yy_mdoc);
+	return true;
+}
+
+bool TDB::tableUpdate( string tableName, const string& match, const string& updateData,string& err)
+{
+	vector<string> matchList;
+	vector<string> updateDataList;
+	matchList.push_back(match);
+	updateDataList.push_back(updateData);
+	return tableUpdate(tableName, matchList, updateDataList,err);
+}
+
+bool TDB::tableInsert( string tableName, const string& row, string& err)
+{
+	yyjson_read_err yy_err = { 0 };
+	yyjson_doc* yy_doc =  yyjson_read_opts(
+		(char*)row.data(),
+		row.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong row format,json parse error");
+		return false;
+	}
+	yyjson_val* yyv_row = yyjson_doc_get_root(yy_doc);
+
+	bool ret = tableInsert(tableName, yyv_row, err);
+
+	yyjson_doc_free(yy_doc);
+	return ret;
+}
+
+bool TDB::tableInsert(string tableName, yyjson_val* yyv_row, string& err)
+{
+	if (tableName.rfind(".json") == string::npos) {
+		tableName += ".json";
+	}
+
+	string path = m_confPath + "/" + tableName;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "")
+		data = "[]";
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return false;
+	}
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+
+	if (yyjson_is_obj(yyv_row)) {
+		yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_row);
+		yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+	}
+	else if (yyjson_is_arr(yyv_row)) {
+		size_t len = yyjson_arr_size(yyv_row);
+		for (size_t i = 0; i < len; i++) {
+			yyjson_val* yyv_oneRow = yyjson_arr_get(yyv_row, i);
+			if (yyjson_is_obj(yyv_oneRow)) {
+				yyjson_mut_val* yy_mut_row = yyjson_val_mut_copy(yy_mdoc, yyv_oneRow);
+				yyjson_mut_arr_append(yy_mroot, yy_mut_row);
+			}
+		}
+	}
+	else {
+		err = JSON_STR_VAL("row must be an object or an array");
+		return false;
+	}
+
+
+	size_t len = 0;
+	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+	if (p) {
+		DB_FS::writeFile(path, p, len);
+		free(p);
+	}
+	yyjson_doc_free(yy_doc);
+	yyjson_mut_doc_free(yy_mdoc);
+	return false;
+}
+
+bool TDB::tableSelect(string tableName, vector<string>& match, string& rlt, string& err)
+{
+
+
+	return false;
+}
+
+void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, string& queryInfo, const string& org, const string& language)
+{
+	yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
+	yyjson_val* yyv_table = yyjson_obj_get(params, "table");
+	yyjson_val* yyv_match = yyjson_obj_get(params, "match");
+	yyjson_val* yyv_row = yyjson_obj_get(params, "row");
+	if (!yyv_row) {
+		err = JSON_STR_VAL("must specify row");
+		return;
+	}
+	if (!yyv_match) {
+		err = JSON_STR_VAL("must specify match");
+		return;
+	}
+	string tableType = yyjson_get_str(yyv_tableType);
+	string table = yyjson_get_str(yyv_table);
+	string match = yyjson_get_str(yyv_match);
+
+	vector<string> matchList;
+	vector<string> updateDataList;
+	matchList.push_back(match);
+	updateDataList.push_back(yyjson_get_str(yyv_row));
+	tableUpdate(table, matchList, updateDataList, err);
+
+	if(err != "")
+	{
+		return;
+	}
+
 	rlt = DB_OK;
 }
 

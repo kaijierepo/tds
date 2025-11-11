@@ -968,6 +968,12 @@ public:
 
 	bool Select(DE_SELECTOR& deSel, SELECT_RLT& result);
 
+	bool tableUpdate(string tableName, vector<string>& match, vector<string>& updateData,string& err);
+	bool tableUpdate(string tableName, const string& match, const string& updateData,string& err);
+	bool tableInsert(string tableName, const string& row, string& err);
+	bool tableInsert(string tableName, yyjson_val* row, string& err);
+	bool tableSelect(string tableName, vector<string>& match, string& rlt, string& err);
+
 	// db.insert functions
 	// insert basic val type
 	void Insert(string strTag, DB_TIME stTime, double& dbVal);
