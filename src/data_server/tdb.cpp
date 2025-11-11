@@ -5267,8 +5267,9 @@ bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& 
 
 	string data;
 	DB_FS::readFile(path, data);
-	if (data == "")
-		data = "[]";
+	if (data == "") {
+        err = JSON_STR_VAL("table not exist");
+	}
 
 	yyjson_read_err yy_err = { 0 };
 	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
