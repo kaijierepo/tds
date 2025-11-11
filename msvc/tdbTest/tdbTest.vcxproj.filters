@@ -7,6 +7,30 @@
     <ClCompile Include="..\..\src\common\dtwrecoge.cpp" />
     <ClCompile Include="..\..\src\common\common.cpp" />
     <ClCompile Include="..\..\src\include\tds.cpp" />
+    <ClCompile Include="..\..\src\script\cutils.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\dtoa.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\libregexp.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\libunicode.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\quickjs.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\quickjs-libc.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\repl.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\script\unicode_data.c">
+      <Filter>qjs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\data_server\tdb.h" />
@@ -15,5 +39,43 @@
     <ClInclude Include="..\..\src\common\dtwrecoge.h" />
     <ClInclude Include="..\..\src\common\common.h" />
     <ClInclude Include="..\..\src\include\tds.h" />
+    <ClInclude Include="..\..\src\script\cutils.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\dtoa.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\libregexp.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\libregexp-opcode.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\libunicode.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\libunicode-table.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\list.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\quickjs.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\quickjs-atom.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\quickjs-libc.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\script\quickjs-opcode.h">
+      <Filter>qjs</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="qjs">
+      <UniqueIdentifier>{4330f071-2ad5-4fa6-8774-1b2d18ce80d4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

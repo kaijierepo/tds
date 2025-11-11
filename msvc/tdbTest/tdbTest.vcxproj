@@ -80,7 +80,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;ENABLE_QJS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -106,9 +106,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_HAS_STD_BYTE=0;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>ENABLE_QJS;_CRT_SECURE_NO_WARNINGS;_HAS_STD_BYTE=0;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>../../src/data_server;../../src/common;../../src/include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../src/data_server;../../src/common;../../src/include;../../src/script;../../src</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
@@ -138,6 +138,14 @@
     <ClCompile Include="..\..\src\common\yyjson.c" />
     <ClCompile Include="..\..\src\data_server\tdb.cpp" />
     <ClCompile Include="..\..\src\include\tds.cpp" />
+    <ClCompile Include="..\..\src\script\cutils.c" />
+    <ClCompile Include="..\..\src\script\dtoa.c" />
+    <ClCompile Include="..\..\src\script\libregexp.c" />
+    <ClCompile Include="..\..\src\script\libunicode.c" />
+    <ClCompile Include="..\..\src\script\quickjs-libc.c" />
+    <ClCompile Include="..\..\src\script\quickjs.c" />
+    <ClCompile Include="..\..\src\script\repl.c" />
+    <ClCompile Include="..\..\src\script\unicode_data.c" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +155,17 @@
     <ClInclude Include="..\..\src\common\yyjson.h" />
     <ClInclude Include="..\..\src\data_server\tdb.h" />
     <ClInclude Include="..\..\src\include\tds.h" />
+    <ClInclude Include="..\..\src\script\cutils.h" />
+    <ClInclude Include="..\..\src\script\dtoa.h" />
+    <ClInclude Include="..\..\src\script\libregexp-opcode.h" />
+    <ClInclude Include="..\..\src\script\libregexp.h" />
+    <ClInclude Include="..\..\src\script\libunicode-table.h" />
+    <ClInclude Include="..\..\src\script\libunicode.h" />
+    <ClInclude Include="..\..\src\script\list.h" />
+    <ClInclude Include="..\..\src\script\quickjs-atom.h" />
+    <ClInclude Include="..\..\src\script\quickjs-libc.h" />
+    <ClInclude Include="..\..\src\script\quickjs-opcode.h" />
+    <ClInclude Include="..\..\src\script\quickjs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
