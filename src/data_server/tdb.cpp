@@ -5286,6 +5286,91 @@ struct DE_CALC {
 	}
 };
 
+
+bool TDB::tableUpdate(string tableName, vector<string>& match, vector<yyjson_val*>& updateData, string& err) {
+	if (tableName.rfind(".json") == string::npos) {
+		tableName += ".json";
+	}
+	string path = m_confPath + "/" + tableName;
+
+	string data;
+	DB_FS::readFile(path, data);
+	if (data == "") {
+		err = JSON_STR_VAL("table not exist");
+	}
+
+	yyjson_read_err yy_err = { 0 };
+	yyjson_mut_doc* yy_mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_doc* yy_doc = yyjson_read_opts(
+		(char*)data.data(),
+		data.length(),
+		YYJSON_READ_NOFLAG,
+		NULL,
+		&yy_err
+	);
+	if (!yy_doc) {
+		err = JSON_STR_VAL("wrong table format,json parse error");
+		return false;
+	}
+	yy_mdoc = yyjson_doc_mut_copy(yy_doc, nullptr);
+	yyjson_mut_val* yy_mroot = yyjson_mut_doc_get_root(yy_mdoc);
+
+
+	for (size_t i = 0; i < match.size(); i++) {
+		string& m = match[i];
+		string& d = updateData[i];
+
+		bool calcMode = false;
+		if (d.find("{") == 0) {
+
+		}
+		else {
+			calcMode = true;
+		}
+
+		CONDITION_SELECTOR cs;
+		cs.init(m);
+
+		size_t len = yyjson_mut_arr_size(yy_mroot);
+		for (size_t i = len - 1; i != (size_t)-1; i--) {
+			yyjson_mut_val* obj = yyjson_mut_arr_get(yy_mroot, i);
+			if (cs.match(obj)) {
+				if (calcMode) {
+					DE_CALC calc;
+					calc.calc(obj, yy_mdoc, d);
+				}
+				else {
+					yyjson_doc* yy_update_doc = yyjson_read_opts(
+						(char*)d.data(),
+						d.length(),
+						YYJSON_READ_NOFLAG,
+						NULL,
+						&yy_err
+					);
+					if (!yy_update_doc) {
+						err = JSON_STR_VAL("wrong update data format,json parse error");
+						return false;
+					}
+
+					yyjson_val* yy_update_data = yyjson_doc_get_root(yy_update_doc);
+					merge_recursive_yyjson_obj(obj, yy_mdoc, yy_update_data);
+					yyjson_doc_free(yy_update_doc);
+				}
+			}
+		}
+	}
+
+	size_t len;
+	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
+	if (p) {
+		DB_FS::writeFile(path, p, len);
+		free(p);
+	}
+	yyjson_doc_free(yy_doc);
+	yyjson_mut_doc_free(yy_mdoc);
+	return true;
+}
+
 bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& updateData,string& err)
 {
 	if (tableName.rfind(".json") == string::npos) {
@@ -5490,7 +5575,7 @@ void TDB::rpc_db_table_update(yyjson_val* params, string& rlt, string& err, stri
 	vector<string> matchList;
 	vector<string> updateDataList;
 	matchList.push_back(match);
-	updateDataList.push_back(yyjson_get_str(yyv_row));
+	updateDataList.push_back(yyv_row);
 	tableUpdate(table, matchList, updateDataList, err);
 
 	if(err != "")
