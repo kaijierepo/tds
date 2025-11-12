@@ -2762,7 +2762,7 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 	//deType is curve but time sel is range,do a curveIdx select to get curve time points before curve select
-	if (deSel.timeSel.isRange() && deSel.deType == "curve") {
+	if ((deSel.timeSel.isRange() || deSel.timeSel.isVarTimePoint()) && deSel.deType == "curve") {
 		DE_SELECTOR deSelIdx = deSel;
 		deSelIdx.deType = "curveIdx";
 
@@ -7036,6 +7036,16 @@ bool TIME_SELECTOR::init(string time)
 		tsa.parseTimeRange(timeRange);
 		atomSelList.push_back(tsa);
 	}
+	else if ("last" == time)
+	{
+		m_dataNum = 1;
+		string timeRange = "2020-01-01 00:00:00~" + DB_TIME::nowStr();
+		parseTimeRange(timeRange);
+		TIME_SELECTOR_ATOM tsa;
+		tsa.timeSetType = TSM_Last;
+		tsa.parseTimeRange(timeRange);
+		atomSelList.push_back(tsa);
+	}
 	else if (time.find("now") != string::npos) {
 		DB_TIME tNow; tNow.setNow();
 		string s = tNow.toStr(false);
@@ -7103,6 +7113,18 @@ bool TIME_SELECTOR::isRange()
 	for (int i = 0; i < atomSelList.size(); i++) {
 		TIME_SELECTOR_ATOM& tsa = atomSelList[i];
 		if (tsa.timeSetType == TSM_Range) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool TIME_SELECTOR::isVarTimePoint()
+{
+	for (int i = 0; i < atomSelList.size(); i++) {
+		TIME_SELECTOR_ATOM& tsa = atomSelList[i];
+		if (tsa.timeSetType == TSM_Last ||
+			tsa.timeSetType == TSM_First) {
 			return true;
 		}
 	}

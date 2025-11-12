@@ -337,6 +337,8 @@ public:
 
 	bool isRange();
 
+	bool isVarTimePoint();
+
 	vector<TIME_SELECTOR_ATOM> atomSelList;
 
 	string timeFmt; //specified time format to return,such as YYYY-MM-DD hh:mm:ss
