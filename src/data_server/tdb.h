@@ -540,6 +540,7 @@ struct DB_LOCK_GUARD {
 struct DE_yyjson {
 	//when as an orignal de, deTime is standard time format with millisecond like 2023-10-01 12:00:00.001
 	//when as an aggr result de, deTime is time group key; groupby day -> 2023-10-01  groupby hour ->2023-10-01 12 
+	//if not grouped ,deTime is time range
 	string deTime; 
 	yyjson_mut_val* val;
 	string fmtTime; 

@@ -4455,6 +4455,27 @@ struct AutoLastDeSet {
 	}
 };
 
+
+bool do_iter(size_t& idx, size_t max, yyjson_val* deList, yyjson_val*& de, bool reverseIter)
+{
+	if (reverseIter) {
+		if (idx == 0)
+			return false;
+		idx--;
+		de = yyjson_arr_get(deList, idx);
+	}
+	else {
+		idx++;
+		if (idx >= max)
+			return false;
+		if(idx==0)
+            de = yyjson_arr_get(deList, 0);
+		else
+			de = unsafe_yyjson_get_next(de);
+	}
+	return true;
+}
+
 bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc)
 {
 	bool needMut = false;
@@ -4506,11 +4527,18 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 			DE_JSON_TYPE deJsonType = DE_J_OBJ;
 
+			max = yyjson_arr_size(deList);
+			bool reverseIter = false;
 			if (deSel.timeSel.atomSelList[0].timeSetType = TSM_Last)
 			{
-				idx = yyjson_arr_size(deList) - 1;
+				reverseIter = true;
+				idx = max;
 			}
-			yyjson_arr_foreach(deList, idx, max, de) {
+			else {
+				idx = -1;
+			}
+
+			while(do_iter(idx,max,deList,de,reverseIter)){
 				//compatible with number save as a string,when in a aggr query,auto cast to number,info tips returneds
 				AutoLastDeSet autoSet(&de, &lastDe);
 				if (idx == 0)
@@ -5574,11 +5602,11 @@ void TDB::rpc_db_insert(string& sParams, string& rlt, string& err, string& query
 }
 
 void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
-	yyjson_val* yyv_val = yyjson_obj_get(params, "val");
+	yyjson_val* yyv_val = yyjson_obj_get(params, m_dbFmt.deItemKey_value.c_str());
 	yyjson_val* yyv_file = yyjson_obj_get(params, "file");
 	if (yyv_val == nullptr && yyv_file == nullptr)
 	{
-		err = JSON_STR_VAL("one of param val or file must be specified");
+		err = JSON_STR_VAL("one of param " + m_dbFmt.deItemKey_value +" or file must be specified");
 	}
 	else
 	{
