@@ -97,7 +97,7 @@ struct DB_TIME {
 	}
 	string toStr(bool enableMS = true) const;
 	bool fromStr(string str);
-	static string nowStr();
+	static string nowStr(bool enalbeMs = true);
 	static string nowStrWithMilli();
 
 	bool operator==(const DB_TIME& right) const {
@@ -343,6 +343,7 @@ public:
 
 	string timeFmt; //specified time format to return,such as YYYY-MM-DD hh:mm:ss
 	int m_dataNum;//how many de to get
+	string timeRangeByDataNum;
 	string error;
 	DE_TIME deTime;
 	bool enable;

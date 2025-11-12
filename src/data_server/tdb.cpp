@@ -2441,6 +2441,16 @@ bool TDB::doAggregateOneGroup(DE_SELECTOR& deSel, std::map<string, vector<string
 				double avg = doAggrOneGroup_avg(deSel, aggrKey, deGroup);
 				pAggrVal = yyjson_mut_real(mut_doc, avg);
 				aggrRlt.deTime = deSel.timeSel.atomSelList[0].selector;
+				if (deSel.timeSel.m_dataNum > 0 && deGroup.size()>0) {
+					yyjson_val* yyv_ts = yyjson_obj_get(deGroup[0], "time");
+					string ts, te;
+					if(yyv_ts)
+						ts = yyjson_get_str(yyv_ts);
+					yyjson_val* yyv_te = yyjson_obj_get(deGroup[deGroup.size() - 1], "time");
+					if(yyv_te)
+						te = yyjson_get_str(yyv_te);
+                    aggrRlt.deTime = DB_STR::format("%s~%s", ts.c_str(), te.c_str());
+				}
 			}
 			else if (aggrType == "max") {
 				double dbMax = -DBL_MAX;
@@ -7063,7 +7073,7 @@ bool TIME_SELECTOR::init(string time)
 	{
 		time = time.substr(0, time.length() - 1);
 		m_dataNum = atoi(time.c_str());
-		string timeRange = "2020-01-01 00:00:00~" + DB_TIME::nowStr();
+		string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
 		parseTimeRange(timeRange);
 		TIME_SELECTOR_ATOM tsa;
 		tsa.timeSetType = TSM_Last;
@@ -7073,7 +7083,7 @@ bool TIME_SELECTOR::init(string time)
 	else if ("last" == time)
 	{
 		m_dataNum = 1;
-		string timeRange = "2020-01-01 00:00:00~" + DB_TIME::nowStr();
+		string timeRange = "2020-01-01 00:00:00.000~" + DB_TIME::nowStr(true);
 		parseTimeRange(timeRange);
 		TIME_SELECTOR_ATOM tsa;
 		tsa.timeSetType = TSM_Last;
@@ -7113,9 +7123,9 @@ bool TIME_SELECTOR::init(string time)
 		int pos2 = dateRange.find("~");
 		if (pos2 == string::npos || dateRange.length() != 21)
 			return false;
-		DB_TIME stDateStart; stDateStart.fromStr(dateRange.substr(0, pos2) + " 00:00:00");
+		DB_TIME stDateStart; stDateStart.fromStr(dateRange.substr(0, pos2) + " 00:00:00.000");
 		int unixDateStart = stDateStart.toUnixTime();
-		DB_TIME stDateEnd; stDateEnd.fromStr(dateRange.substr(pos2 + 1) + " 00:00:00");
+		DB_TIME stDateEnd; stDateEnd.fromStr(dateRange.substr(pos2 + 1) + " 00:00:00.999");
 		int unixDateEnd = stDateEnd.toUnixTime();
 
 		vector<string> timeSelList;
@@ -7269,11 +7279,11 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 		int m = atoi(sMonth.c_str());
 		int d = getMonthLastDay(y, m);
 		string sDayEnd = formatStr("%2d", d);
-		return time + "-01 00:00:00~" + time + "-" + sDayEnd + " 23:59:59";
+		return time + "-01 00:00:00.000~" + time + "-" + sDayEnd + " 23:59:59.999";
 	}
 	//2020-02-02
 	else if (time.length() == 10 && time[4] == '-') {
-		return time + " 00:00:00~" + time + " 23:59:59";
+		return time + " 00:00:00.000~" + time + " 23:59:59.999";
 	}
 	//2020-02-02 11:12:30
 	else if (time.length() == 19 && time[4] == '-') {
@@ -7283,11 +7293,11 @@ string TIME_SELECTOR_ATOM::shortSel2StardardSel(string time)
 	else if (time.length() == 9 && time[4] == '~') {
 		string startYear = time.substr(0, 4);
 		string endYear = time.substr(5, 4);
-		return startYear + "-01-01 00:00:00~" + endYear + "-12-31 23:59:59"; //12月份固定是31天
+		return startYear + "-01-01 00:00:00.000~" + endYear + "-12-31 23:59:59.999"; //12月份固定是31天
 	}
 	//2021
 	else if (time.length() == 4) {
-		return time + "-01-01 00:00:00~" + time + "-12-31 23:59:59"; //12月份固定是31天
+		return time + "-01-01 00:00:00.000~" + time + "-12-31 23:59:59.999"; //12月份固定是31天
 	}
 	return time;
 }
@@ -7818,11 +7828,11 @@ bool DB_TIME::fromStr(string str)
 	return false;
 }
 
-string DB_TIME::nowStr()
+string DB_TIME::nowStr(bool enableMS)
 {
 	DB_TIME t;
 	t.setNow();
-	return t.toStr(false);
+	return t.toStr(enableMS);
 }
 
 string DB_TIME::nowStrWithMilli()
