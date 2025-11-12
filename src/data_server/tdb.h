@@ -97,6 +97,7 @@ struct DB_TIME {
 	}
 	string toStr(bool enableMS = true) const;
 	bool fromStr(string str);
+	int getTimePassSecond();
 	static string nowStr(bool enalbeMs = true);
 	static string nowStrWithMilli();
 
@@ -458,8 +459,12 @@ struct DB_FILE {
 class DB_LOCK {
 public:
 	std::mutex mutex_;
-	std::chrono::steady_clock::time_point last_used_ = std::chrono::steady_clock::now();
+	DB_TIME last_used_;
 	std::atomic<int> ref_count_{ 0 };
+
+	DB_LOCK() {
+		last_used_.setNow();
+	}
 };
 
 class DB_LOCK_POOL {
@@ -469,10 +474,12 @@ public:
 		return pool;
 	}
 
+	static int lockTTL;
+
 	DB_LOCK& get_lock(const std::string& path) {
 		std::lock_guard<std::mutex> lock(pool_mutex_); 
 		auto& entry = locks_[path];
-		entry.last_used_ = std::chrono::steady_clock::now();
+		entry.last_used_.setNow();
 		entry.ref_count_++; // cleaner thread can not check ref_count because pool_mutex_, so in using lock will not be deleted
 		return entry;
 	}
@@ -481,22 +488,19 @@ public:
 		//do not need to lock pool_mutex_,not thread safe ref_count option.
 		//release_lock is called ,then clean thread try to check ref_count,do not clean,then ref_count--
 		//not using lock will not be cleaned, do not cause problem;clean in using lock causes problem
-		lock.last_used_ = std::chrono::steady_clock::now();
 		lock.ref_count_--;
 	}
 
-private:
 	DB_LOCK_POOL() {
 		cleaner_.store(true);
 		std::thread([this]() {
 			while (cleaner_.load()) {
-				std::this_thread::sleep_for(std::chrono::minutes(30));
+				std::this_thread::sleep_for(std::chrono::seconds(DB_LOCK_POOL::lockTTL));
 				std::lock_guard<std::mutex> lock(pool_mutex_);
 				auto now = std::chrono::steady_clock::now();
 				for (auto it = locks_.begin(); it != locks_.end();) {
 					// in pool_mutex_ ,keep ref_count_ check thread safe
-					if (it->second.ref_count_ == 0 &&
-						std::chrono::duration_cast<std::chrono::hours>(now - it->second.last_used_) >= std::chrono::hours(1)) {
+					if (it->second.ref_count_ == 0 && it->second.last_used_.getTimePassSecond() > DB_LOCK_POOL::lockTTL) {
 						it = locks_.erase(it);
 					}
 					else {

@@ -57,6 +57,7 @@ namespace fs = std::filesystem;
 TDB db;
 
 bool DB_LOCK_GUARD::enable = false;
+int DB_LOCK_POOL::lockTTL = 30 * 60;
 
 #include <random>
 #include <cstdio>
@@ -4989,7 +4990,36 @@ bool TDB::Select_Step_doAggregate(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDa
 bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language)
 {
 	bool handled = true;
-	if (method.find("db.") != string::npos) {
+	if (method == "db.getLock") {
+		DB_LOCK_POOL& lp = DB_LOCK_POOL::instance();
+		std::lock_guard<std::mutex> lock(lp.pool_mutex_);
+		rlt += "[";
+		for (auto it = lp.locks_.begin(); it != lp.locks_.end();it++) {
+			if (rlt != "[") {
+				rlt += ",";
+			}
+			rlt += "{\"path\":\"" + it->first + "\",\"refCount\":" + to_string(it->second.ref_count_) + ",\"lastUse\":\"" + it->second.last_used_.toStr() + "\"}";
+		}
+		rlt += "]";
+	}
+	else if (method == "db.getConf") {
+		yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* yyv_conf = yyjson_mut_obj(mdoc);
+		yyjson_mut_obj_add_val(mdoc, yyv_conf, "lockTTL", yyjson_mut_int(mdoc,DB_LOCK_POOL::lockTTL));
+        yyjson_mut_obj_add_val(mdoc, yyv_conf, "confPath", yyjson_mut_str(mdoc, db.m_confPath.c_str()));
+		char* p = yyjson_mut_val_write(yyv_conf,0,nullptr);
+		rlt = p;
+		free(p);
+		yyjson_mut_doc_free(mdoc);
+	}
+	else if (method == "db.setConf") {
+		yyjson_val* yyv = yyjson_obj_get(params, "lockTTL");
+		if (yyv) {
+			DB_LOCK_POOL::lockTTL = yyjson_get_int(yyv);
+		}
+		rlt = DB_OK;
+	}
+	else if (method.find("db.") != string::npos) {
 		yyjson_val* yyv_table = yyjson_obj_get(params, "table");
 		if (yyv_table) {
 			yyjson_val* yyv_tableType = yyjson_obj_get(params, "tableType");
@@ -7826,6 +7856,11 @@ bool DB_TIME::fromStr(string str)
 	throw e;
 
 	return false;
+}
+
+int DB_TIME::getTimePassSecond()
+{
+	return TIME_OPT::calcTimePassSecond(*this);
 }
 
 string DB_TIME::nowStr(bool enableMS)
