@@ -4540,7 +4540,7 @@ bool TDB::Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& ta
 
 			max = yyjson_arr_size(deList);
 			bool reverseIter = false;
-			if (deSel.timeSel.atomSelList[0].timeSetType = TSM_Last)
+			if (deSel.timeSel.atomSelList[0].timeSetType == TSM_Last)
 			{
 				reverseIter = true;
 				idx = max;
