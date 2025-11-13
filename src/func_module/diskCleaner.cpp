@@ -213,6 +213,17 @@ Date parseFolderDate(const std::string& folderName) {
     return { year, month };
 }
 
+Date parseFolderDate2(const std::string& folderName) {
+    int year = std::stoi(folderName.substr(0, 4));
+    int month = std::stoi(folderName.substr(5, 2));
+
+    if (month < 1 || month > 12) {
+        throw std::invalid_argument("Invalid month value");
+    }
+
+    return { year, month };
+}
+
 /**
  * 获取当前日期（年和月）
  * @return 当前日期结构
@@ -266,6 +277,7 @@ std::vector<std::pair<std::string, Date>> getDateFolders(const std::string& dirP
 
     // 正则表达式匹配YYYYMM格式的文件夹名称
     std::regex datePattern(R"(^\d{4}(0[1-9]|1[0-2])$)");
+    std::regex datePattern2(R"(^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$)");
 
     for (const auto& entry : fs::directory_iterator(utf8_to_utf16(dirPath))) {
         if (entry.is_directory()) {
@@ -273,6 +285,15 @@ std::vector<std::pair<std::string, Date>> getDateFolders(const std::string& dirP
             if (std::regex_match(folderName, datePattern)) {
                 try {
                     Date date = parseFolderDate(folderName);
+                    result.emplace_back(folderName, date);
+                }
+                catch (const std::exception& e) {
+                    LOG("Warning: Could not parse folder %s: %s", folderName.c_str(), e.what());
+                }
+            }
+            else if(std::regex_match(folderName, datePattern2)) {
+                try {
+                    Date date = parseFolderDate2(folderName);
                     result.emplace_back(folderName, date);
                 }
                 catch (const std::exception& e) {
