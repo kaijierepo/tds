@@ -95,35 +95,40 @@ static JSValue qjs_val(JSContext* ctx, JSValueConst this_val, int argc, JSValueC
                             return ret;
                         }
                         else {
-                            json jParams;
-                            jParams["tag"] = sTag;
-
                             string sTime = time.get<string>();
-                            jParams["time"] = sTime;
-
+                            string sAggr = "";
                             if (jArgs.size() >= 3) {
                                 json jAggr = jArgs[2];
-                                jParams["aggregate"] = jAggr;
+                                sAggr = jAggr.dump();
                             }
+                            string sParams = "{"
+                                "\"time\":\"" + sTime + "\","
+                                "\"tag\":\"" + sTag + "\","
+                                "\"aggr\":" + sAggr +
+                                "}";
 
-                            json err, rlt;
-                            RPC_SESSION sess;
-                            tds->call("db.select", jParams, err, rlt, sess);
+               
+                            DE_SELECTOR deSel;
+                            SELECT_RLT rlt;
+                            string err;
+                            db.parseDESelector(sParams, deSel, err);
+                            db.Select(deSel, rlt);
 
-                            string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), jParams["aggregate"].dump().c_str());
-                            if (rlt.is_array() && rlt.size() > 0) {
-                                json& jDe = rlt[0];
-                                json& jVal = jDe["val"];
-                                JSValue ret;
-                                jsonValToJsVal(jVal, ctx, ret);
-                                info += jVal.dump();
+                            string info = str::format("val(\"%s\",\"%s\",%s) = ", sTag.c_str(), sTime.c_str(), sAggr.c_str());
+                            if (rlt.dataList.length() > 2) {// 不等于 [] ,非空数组
+                                char* p = (char*)rlt.dataList.c_str() + 1;
+                                rlt.dataList[rlt.dataList.length() - 1] = 0;
+                                JSValue aggrDe = JS_ParseJSON(ctx, p, rlt.dataList.length() - 2, "<yyjson>");
+                                JSValue aggrVal = JS_GetPropertyStr(ctx, aggrDe, "val");
+                                JS_FreeValue(ctx, aggrDe);
+                           
+                                info += p;
                                 pEngine->m_vecOutput.push_back(info);
-                                return ret;
+                                return aggrVal;
                             }
-                            else {
-                                info += "null";
-                                pEngine->m_vecOutput.push_back(info);
-                            }
+                                
+                             info += "null";
+                             pEngine->m_vecOutput.push_back(info);
                         }   
                     }
                 }

@@ -6605,10 +6605,16 @@ bool TDB::setBufferTTL(string bufferTTL)
 bool TDB::parseDESelector(const string& sParams, DE_SELECTOR& deSelector, string& err)
 {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
-	yyjson_val* yyv_params = yyjson_doc_get_root(doc);
-	bool ret = parseDESelector(yyv_params, deSelector, err);
-	yyjson_doc_free(doc);
-	return ret;
+	if (doc) {
+		yyjson_val* yyv_params = yyjson_doc_get_root(doc);
+		bool ret = parseDESelector(yyv_params, deSelector, err);
+		yyjson_doc_free(doc);
+		return ret;
+	}
+	else {
+		err = JSON_STR_VAL("wrong json format,parse err");
+        return false;
+	}
 }
 
 
