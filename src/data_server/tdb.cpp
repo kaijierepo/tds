@@ -5006,7 +5006,9 @@ bool TDB::handleRpc(const string& method, yyjson_val* params, string& rlt, strin
 		yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
 		yyjson_mut_val* yyv_conf = yyjson_mut_obj(mdoc);
 		yyjson_mut_obj_add_val(mdoc, yyv_conf, "lockTTL", yyjson_mut_int(mdoc,DB_LOCK_POOL::lockTTL));
+		yyjson_mut_obj_add_val(mdoc, yyv_conf, "dataPath", yyjson_mut_str(mdoc, db.m_path.c_str()));
         yyjson_mut_obj_add_val(mdoc, yyv_conf, "confPath", yyjson_mut_str(mdoc, db.m_confPath.c_str()));
+        yyjson_mut_obj_add_val(mdoc, yyv_conf, "enableFileLock", yyjson_mut_bool(mdoc, DB_LOCK_GUARD::enable));
 		char* p = yyjson_mut_val_write(yyv_conf,0,nullptr);
 		rlt = p;
 		free(p);
