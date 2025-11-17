@@ -6490,7 +6490,7 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 	string model = tds->conf->getStr("vlmAlarmModel", "");
 	if (model.empty()) {
-		LOG("vlmAlarmModel url not found");
+		LOG("vlmAlarmModel mode not found");
 		return;
 	}
 

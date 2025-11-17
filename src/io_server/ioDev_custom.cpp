@@ -253,7 +253,7 @@ void acq_thread_customDev(ioDev_custom* pDev) {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_ioDevThis = pDev;
@@ -308,7 +308,7 @@ bool ioDev_custom::onRecvDataNotify(unsigned char* pData, size_t iLen) {
 	if (m_onRecvScript != "") {
 		ScriptEngine se;
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		json jRecvData = json::array();
@@ -344,7 +344,7 @@ bool ioDev_custom::onRecvData(unsigned char* pData, size_t iLen) {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		json jRecvData = json::array();
@@ -383,7 +383,7 @@ void ioDev_custom::output(string chanAddr, json jVal, json& rlt, json& err, bool
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		json jOutput;
@@ -449,7 +449,7 @@ bool ioDev_custom::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_globalObj["Req"] = jReq;
