@@ -1592,7 +1592,6 @@ string ScriptEngine::ConfFolder = "";
 
 ScriptEngine::ScriptEngine() {
 	m_ioDevThis = nullptr;
-    m_initTdsFunc = nullptr;
 
     m_bValNullInCalc = false;
     m_reloadFile = false;
@@ -1643,8 +1642,8 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
         JS_SetModuleLoaderFunc(rt, NULL, qjs_module_loader, NULL);
 
 		register_cpp_functions(ctx);
-        if (m_initTdsFunc) {
-            m_initTdsFunc(ctx, m_ioDevThis);
+        for(auto& f : m_engineInitFuncList){
+            f(ctx, m_ioDevThis);
         }
 
         if (si.isExp) {

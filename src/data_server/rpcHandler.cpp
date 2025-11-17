@@ -6451,7 +6451,7 @@ bool rpcHandler::apiAdaptorScript(json& jResult)
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_globalObj["inputJson"] = jResult;

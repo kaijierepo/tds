@@ -642,7 +642,7 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 		se.m_globalObj["AlarmInfo"] = newStatus.toJson(this);
 

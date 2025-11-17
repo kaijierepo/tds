@@ -115,7 +115,7 @@ void scriptThreadTmp(string scriptName, string callerObjTag) {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_tagContext = si.getContextTag();
@@ -179,7 +179,7 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		json jParams = json::parse(params.c_str());
@@ -352,7 +352,7 @@ bool ScriptManager::rpc_runScript(yyjson_val* params_obj, RPC_RESP& rpcResp, RPC
 	}
 
 #ifdef TDS
-	se.m_initTdsFunc = initTdsFunc;
+	se.m_engineInitFuncList.push_back(initTdsFunc);
 
 	if (si.devAddr != "" || si.devId != "") {
 		ioDev* p = nullptr;
@@ -795,7 +795,7 @@ void ScriptManager::exeAllGlobalScripts() {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_tagContext = si.getContextTag();
@@ -841,7 +841,7 @@ void ScriptManager::exeAllVarExpScripts() {
 		ScriptEngine se;
 
 #ifdef TDS
-		se.m_initTdsFunc = initTdsFunc;
+		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
 		se.m_tagContext = info.getContextTag();

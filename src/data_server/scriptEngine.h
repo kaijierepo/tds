@@ -57,7 +57,7 @@ struct SCRIPT_INFO {
 
 class ScriptEngine;
 
-typedef void (*fp_initTdsFunc)(JSContext* ctx, void* pDev);
+typedef void (*fp_engineInitFunc)(JSContext* ctx, void* pCustom);
 typedef void (*fp_callMethod)(string method, string param, string& rlt,string& err);
 typedef void (*fp_callMethodRR)(const string& req,string& resp);
 
@@ -93,7 +93,7 @@ public:
 	// 环境变量脚本行数
 	int m_envVarScriptLine;
 
-	fp_initTdsFunc m_initTdsFunc;
+	vector<fp_engineInitFunc> m_engineInitFuncList;
 	static fp_callMethod  callMethodImp;
 	static fp_callMethodRR callMethodRRImp;
 	static string ScriptFolder;
