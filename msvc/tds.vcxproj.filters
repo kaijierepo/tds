@@ -237,6 +237,9 @@
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
+    <ClCompile Include="..\src\data_server\scriptFunc_jhd.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -496,6 +499,9 @@
       <Filter>common</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
+    <ClInclude Include="..\src\data_server\scriptFunc_jhd.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
