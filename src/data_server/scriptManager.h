@@ -64,6 +64,8 @@ public:
 
 	float m_lastExpScripTimeCost;
 	TIME m_tLastExpScriptRunTime;
+
+	vector<fp_engineInitFunc> m_engineInitFuncList;
 };
 
 extern ScriptManager scriptManager;

@@ -181,6 +181,9 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 #ifdef TDS
 		se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
+		for (int i = 0; i < m_engineInitFuncList.size(); i++) {
+			se.m_engineInitFuncList.push_back(m_engineInitFuncList[i]);
+		}
 
 		json jParams = json::parse(params.c_str());
 
