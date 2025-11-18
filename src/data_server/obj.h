@@ -232,7 +232,11 @@ struct SCHEDULE_TASK {
 
 		v = yyjson_obj_get(conf, "outputVal");
 		if ( v) {
-			outputVal = yyjson_get_str(v);
+			if(yyjson_is_str(v))
+				outputVal = yyjson_get_str(v);
+			else if (yyjson_is_num(v)) {
+				outputVal = to_string(yyjson_get_num(v));
+			}
 		}
 
 		v = yyjson_obj_get(conf, "mode");
