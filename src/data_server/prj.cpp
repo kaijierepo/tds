@@ -491,7 +491,15 @@ void project::rpc_setObj(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION& ses
 		bool ok = true;
 		for (int i = 0; i < yyjson_get_len(params); i++) {
 			yyjson_val* root_item = yyjson_arr_get(params, i);
-			string tag = yyjson_get_str(yyjson_obj_get(root_item, "tag"));
+			yyjson_val* yyv_tag = yyjson_obj_get(root_item, "tag");
+			string tag;
+			if (yyv_tag) {
+				tag = yyjson_get_str(yyv_tag);
+			}
+			else {
+				rpcResp.error = JSON_STR_VAL("param tag missing in set obj");
+				return;
+			}
 
 			string rootTag = "";
 			if (yyjson_obj_get(root_item, "rootTag")) {
