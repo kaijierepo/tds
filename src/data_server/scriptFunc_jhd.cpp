@@ -119,6 +119,8 @@ void initScriptFunc_jhd(JSContext* ctx, void* pDev) {
     JSValue global = JS_GetGlobalObject(ctx);
 
     JS_SetPropertyStr(ctx, global, "getRefCurve", JS_NewCFunction(ctx, qjs_getRefCurve, "getRefCurve", 2));
+
+	JS_FreeValue(ctx, global);
 }
 
 #endif
