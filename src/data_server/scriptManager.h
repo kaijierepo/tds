@@ -4,7 +4,6 @@
 #include "json.hpp"
 #include "tdsSession.h"
 #include "scriptEngine.h"
-#include "scriptFunc_jhd.h"
 
 using json = nlohmann::json;
 using namespace std;
