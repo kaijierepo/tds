@@ -1993,7 +1993,6 @@ void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
     yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);
 }
 
-
 string SCRIPT_INFO::getContextTag() {
     string envTag = rootTag;
     envTag = TAG::addRoot(envTag, callerObjTag);
