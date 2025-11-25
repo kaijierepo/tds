@@ -1987,7 +1987,7 @@ void SCRIPT_RUN_INFO::toJson(yyjson_mut_doc* doc, yyjson_mut_val* yyVal)
     for (auto& iter : tagRefDataTime) {
         string key = iter.first;
         string value = iter.second;
-        yyjson_mut_obj_add_strcpy(doc, yyTagRefDataTime, key.c_str(), value.c_str());
+        yyjson_mut_obj_add_str(doc, yyTagRefDataTime, key.c_str(), value.c_str());
     }
 
     yyjson_mut_obj_add_val(doc, yyVal, "tagRefDataTime", yyTagRefDataTime);
