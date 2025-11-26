@@ -112,5 +112,5 @@ public:
 	unsigned long m_prjWriteLockThread;
 };
 
-extern void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
+extern void g_getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 extern project prj;

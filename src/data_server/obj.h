@@ -495,7 +495,7 @@ public:
 	virtual string getTagWithRoot();
 	string GetStatusSummary();//获得当前状态概要，用于在拓扑图上显示
 	void GetAllChildAlarmInfo(string& strSummary);
-	bool getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector);
+	bool getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 	void getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector);
 	OBJ* getObjByID(string id);
 	void getMpByTagSelector(vector<MP*>& mpList, TAG_SELECTOR& tagSelector);

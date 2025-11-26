@@ -213,13 +213,13 @@ static JSValue qjs_parseTag(JSContext* ctx, JSValueConst this_val, int argc, JSV
             return obj;
         }
         else {
-            std::vector<std::string> vecTags;
             TAG_SELECTOR ts;
+            SELECT_RLT rlt;
             ts.init(sTag);
-            prj.getTagsByTagSelector(vecTags, ts);
+            prj.getTagsByTagSelector(ts,rlt);
             json jTags = json::array();
-            for (size_t i = 0; i < vecTags.size(); i++) {
-                jTags.push_back(vecTags[i]);
+            for (size_t i = 0; i < rlt.tagSet.size(); i++) {
+                jTags.push_back(rlt.tagSet[i]);
             }
             JSValue obj;
             jsonValToJsVal(jTags, ctx, obj);

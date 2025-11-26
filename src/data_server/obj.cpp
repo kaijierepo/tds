@@ -1965,21 +1965,17 @@ void OBJ::GetAllChildAlarmInfo(string& strSummary)
 	}
 }
 
-bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
+bool OBJ::getTagsByTagSelector(TAG_SELECTOR& tagSelector, SELECT_RLT& rlt)
 {
 	//精确匹配直接返回
-	//for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
-	//	string& exp = tagSelector.exactMatchExp[i];
-	//	tags.push_back(exp);
-	//}
 	for (int i = 0; i < tagSelector.exactMatchExp.size(); i++) {
 		string& exp = tagSelector.exactMatchExp[i];
 		vector<OBJ*> tagSet;
 		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
 		for (auto& i : tagSet)
 		{
-			tagSelector.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
-			tagSelector.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
+			rlt.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
+			rlt.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
 		}
 	}
 
@@ -1990,8 +1986,8 @@ bool OBJ::getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector)
 		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
 		for (auto& i : tagSet)
 		{
-			tagSelector.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
-			tagSelector.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
+			rlt.dbFileTagSet.push_back(i->getTag("", tagSelector.rltLanguage));
+			rlt.tagSet.push_back(i->getTag("", tagSelector.selLanguage));
 		}
 	}
 	return true;

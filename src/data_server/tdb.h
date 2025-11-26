@@ -267,9 +267,6 @@ public:
 	string error;
 	string selLanguage;
 	string rltLanguage;
-
-	vector<string> tagSet;  //in query language
-	vector<string> dbFileTagSet;  //in disk storage language
 };
 
 
@@ -791,6 +788,8 @@ struct SELECT_RLT {
 	string query;
 	string calcResult; 
 
+	vector<string> tagSet;  //in query language
+	vector<string> dbFileTagSet;  //in disk storage language
 	vector<vector<DATA_SET*>*>  dataSetBuff; 
 	vector<TAG_FILE_SET*> tagFileSet;
 
@@ -859,7 +858,7 @@ enum DB_TIME_UNIT {
 	BY_YEAR
 };
 
-typedef void (*fp_getTagsByTagSelector)(vector<string>& tags, TAG_SELECTOR& tagSelector);
+typedef void (*fp_getTagsByTagSelector)(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt);
 
 namespace DB_STR {
 	wstring utf8_to_utf16(string instr);
@@ -1024,6 +1023,7 @@ public:
 	//insert
 	void InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal);
 	//select
+	bool Select_Step_selectTags(DE_SELECTOR& deSel, SELECT_RLT& rlt);
 	bool Select_Step_loadFile(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, SELECT_RLT& result);
 	bool Select_Step_loadDataElem(DE_SELECTOR& deSel, vector<TAG_FILE_SET*>& tagDBFileSet, vector<DATA_SET*>& outputDataSet, SELECT_RLT& result, yyjson_mut_doc* rlt_mut_doc);
 	bool Select_Step_FilterByRelation(DE_SELECTOR& deSel, vector<DATA_SET*>& inputDataSet, vector<DATA_SET*>& outputDataSet);

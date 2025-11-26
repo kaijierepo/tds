@@ -2685,6 +2685,46 @@ void TDB::rpc_db_select(string& sParams, string& rlt, string& err, string& query
 	yyjson_doc_free(doc);
 }
 
+//a sub process of selecting process,do not need to execute this process in de selector parsing process
+bool TDB::Select_Step_selectTags(DE_SELECTOR& deSel,SELECT_RLT& rlt) {
+	bool needParseTag = false;
+	if (deSel.tagSel.fuzzyMatchExp.size() != 0) {
+		needParseTag = true; //parse fuzzy tag exp to exact tags
+	}
+	else if (deSel.tagSel.selLanguage != "" && deSel.tagSel.selLanguage != m_dbFmt.language) {
+		needParseTag = true; //parse tags in sel language to db language
+	}
+
+	if (needParseTag) {
+		if (m_getTagsByTagSelector) {
+			//in a none multi language host program,return tagSet directly.
+			//in tds return in rlt
+			m_getTagsByTagSelector(deSel.tagSel, rlt);
+			if (rlt.dbFileTagSet.size() == 0) {
+				rlt.dbFileTagSet = rlt.tagSet;
+			}
+		}
+		else {
+			rlt.error = JSON_STR_VAL("db tagSelector function not inited");
+			return false;
+		}
+	}
+	else {
+		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
+			string& exp = deSel.tagSel.exactMatchExp[i];
+			rlt.tagSet.push_back(exp);
+			rlt.dbFileTagSet.push_back(exp);
+		}
+	}
+
+	//need add tag region into de
+	if (rlt.tagSet.size() > 1 || deSel.splitBy != "tag" || deSel.deType == "curveIdx") {
+		deSel.tagSel.getTag = true;
+	}
+
+	return true;
+}
+
 void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language) {
 	DE_SELECTOR deSel;
 
@@ -2736,39 +2776,35 @@ void TDB::rpc_db_select(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 
 	SELECT_RLT result;
-	if (deSel.tagSel.tagSet.size() == 0) {
-		err = JSON_STR_VAL("specified tag not found");
-	}
-	else {
-		try {
-			if (dbName != "") {
-				tdb->Select(deSel, result);
-			}
-			else {
-				Select(deSel, result);
-			}
 
-			if (result.error != "") {
-				err = result.error;
+	try {
+		if (dbName != "") {
+			tdb->Select(deSel, result);
+		}
+		else {
+			Select(deSel, result);
+		}
+
+		if (result.error != "") {
+			err = result.error;
+		}
+		else {
+			if (deSel.calc != "") {
+				rlt = result.calcResult;
 			}
 			else {
-				if (deSel.calc != "") {
-					rlt = result.calcResult;
-				}
-				else {
-					rlt = result.dataList;
-				}
+				rlt = result.dataList;
 			}
 		}
-		catch (std::exception& e) {
-			string sErr = e.what();
-			err = JSON_STR_VAL(sErr);
-		}
+	}
+	catch (std::exception& e) {
+		string sErr = e.what();
+		err = JSON_STR_VAL(sErr);
 	}
 
 	m_timeUnit = oldTimeUint;
 
-	queryInfo = JSON_STR_VAL("tags:" + DB_STR::format("%d", deSel.tagSel.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount));
+	queryInfo = JSON_STR_VAL("tags:" + DB_STR::format("%d", result.tagSet.size()) + ",files:" + DB_STR::format("%d", result.fileCount) + ",data elements:" + DB_STR::format("%d", result.deCount) + ",rows:" + DB_STR::format("%d", result.rowCount));
 }
 
 bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
@@ -2799,19 +2835,25 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		}
 	}
 
-	bool bRet = true;
-	vector<string> tagSet = deSel.tagSel.tagSet;
+	//select tags
+	bool stepRet = true;
+	stepRet = Select_Step_selectTags(deSel, result);
+	if(!stepRet){
+		return false;
+	}
+	if (result.tagSet.size() == 0) {
+		result.error = JSON_STR_VAL("specified tag not found");
+	}
+	const vector<string>& tagSet = result.tagSet;
 
 	//load file data
 	vector<TAG_FILE_SET*>& tagFileSet = result.tagFileSet;
-	for (int i = 0; i < tagSet.size(); i++) {
+	for (int i = 0; i < result.tagSet.size(); i++) {
 		TAG_FILE_SET& fSet = *(new TAG_FILE_SET());
-		fSet.tag = deSel.tagSel.tagSet[i];
-		fSet.dbFileTag = deSel.tagSel.dbFileTagSet[i];
-
+		fSet.tag = result.tagSet[i];
+		fSet.dbFileTag = result.dbFileTagSet[i];
 		tagFileSet.push_back(&fSet);
 	}
-
 	Select_Step_loadFile(deSel, tagFileSet, result);
 
 	//data buff in processing steps, all will be released in the end
@@ -2891,8 +2933,8 @@ bool TDB::Select(DE_SELECTOR& deSel, SELECT_RLT& result) {
 		}
 
 		//get seleted de, parse files in to de dataset
-		bRet = Select_Step_loadDataElem(deSel, tagFileSet, *set_list, result, rlt_mut_doc);
-		if (!bRet) {
+		stepRet = Select_Step_loadDataElem(deSel, tagFileSet, *set_list, result, rlt_mut_doc);
+		if (!stepRet) {
 			return false;
 		}
 
@@ -3980,11 +4022,6 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 		}
 	}
 
-	//need add tag region into de
-	if (deSel.tagSel.tagSet.size() > 1 || deSel.splitBy != "tag" || deSel.deType == "curveIdx") {
-		deSel.tagSel.getTag = true;
-	}
-
 	yyjson_val* yyv_calc = yyjson_obj_get(yyParams, "calc");
 	if (yyv_calc) {
 		if (yyjson_is_str(yyv_calc)) {
@@ -4011,31 +4048,6 @@ bool TDB::parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSel, string& err)
 	yyjson_val* yyv_timeFill = yyjson_obj_get(yyParams, "timeFill");
 	if (yyv_timeFill && yyjson_is_bool(yyv_timeFill)) {
 		deSel.timeFill = yyjson_get_bool(yyv_timeFill);
-	}
-
-	//check if need tag parse
-	bool needParseTag = false;
-	if (deSel.tagSel.fuzzyMatchExp.size() != 0) {
-		needParseTag = true; //parse fuzzy tag exp to exact tags
-	}
-	else if (deSel.tagSel.selLanguage != "" && deSel.tagSel.selLanguage != m_dbFmt.language) {
-		needParseTag = true; //parse tags in sel language to db language
-	}
-
-	if (needParseTag) {
-		if (m_getTagsByTagSelector)
-			m_getTagsByTagSelector(deSel.tagSel.tagSet, deSel.tagSel);
-		else {
-			err = "db tagSelector function not inited";
-			return false;
-		}
-	}
-	else {
-		for (int i = 0; i < deSel.tagSel.exactMatchExp.size(); i++) {
-			string& exp = deSel.tagSel.exactMatchExp[i];
-			deSel.tagSel.tagSet.push_back(exp);
-			deSel.tagSel.dbFileTagSet.push_back(exp);
-		}
 	}
 
 	return true;

@@ -10,8 +10,8 @@
 
 project prj;
 
-void g_getTagsByTagSelector(vector<string>& tags, TAG_SELECTOR& tagSelector) {
-	prj.getTagsByTagSelector(tags, tagSelector);
+void g_getTagsByTagSelector(TAG_SELECTOR& tagSelector,SELECT_RLT& rlt) {
+	prj.getTagsByTagSelector(tagSelector,rlt);
 }
 
 project::project()
