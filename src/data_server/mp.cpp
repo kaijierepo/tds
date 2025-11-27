@@ -486,10 +486,10 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 
 bool MP::loadStatus(yyjson_val* status)
 {
-	//常量无需加载
-	if (m_ioType == "c") {
-		return true;
-	} 
+	////常量无需加载
+	//if (m_ioType == "c") {
+	//	return true;
+	//} 
 	
 	string sTime;
 	TIME t;
