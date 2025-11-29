@@ -69,6 +69,7 @@ struct OBJ_QUERIER {
 	bool getUnit; //值描述信息是否需要带单位
 	bool getTag;
 
+	string match; //对象信息的自定义条件匹配
 	string language;
 
 	OBJ* pRoot;

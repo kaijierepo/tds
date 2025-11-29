@@ -850,6 +850,14 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 		yyjson_mut_obj_put(conf, key, val);
 	}
 
+	if (q.match != "") {
+		CONDITION_SELECTOR cs;
+		cs.init(q.match);
+		if (!cs.match(conf)) {
+			return false;
+		}
+	}
+
 	return true;
 }
 

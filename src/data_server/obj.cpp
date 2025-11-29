@@ -870,7 +870,6 @@ bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool*
 			}
 		}
 	}
-
 	return true;
 }
 
@@ -1846,6 +1845,9 @@ OBJ_QUERIER OBJ::parseQuerier(json& opt)
 	}
 	if (opt["leafLevel"] != nullptr) {
 		q.leafLevel = opt["leafLevel"].get<string>();
+	}
+	if (opt["match"] != nullptr) {
+		q.match = opt["match"].get<string>();
 	}
 	if (opt["getDetailConf"] != nullptr) {
 		q.getConfDetail = opt["getDetailConf"].get<bool>();
