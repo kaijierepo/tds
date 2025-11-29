@@ -454,9 +454,10 @@ public:
 	OBJ* GetChildObjByName(string strName);
 	MP* GetDescendantMPByName(string strName);
 	OBJ* GetDescendantObjByName(string strName);
+	bool isSelectedByIOType(const string& ioType);
 	//确认自己是否被某类型选中
-	bool isSelectedByLevel(string level);
-	bool isSelectedByType(string type);
+	bool isSelectedByLevel(const string& level);
+	bool isSelectedByType(const string& type);
 	//指定叶子节点类型，将自己作为树枝节点进行判断，确定是否返回。只要在结构上可以包含叶子节点类型的枝干节点都将被返回
 	bool isSelectedByLeafType(string leafType);
 	bool isSelectedByLeafLevel(string leafType);

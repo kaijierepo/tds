@@ -61,7 +61,7 @@ public:
 
 	json strVal2Val(string s);
 
-	bool loadConf(json& conf, bool bCreate = true) override;
+	//bool loadConf(json& conf, bool bCreate = true) override;
 	bool loadConf(yyjson_val* conf, bool bCreate = true) override;
 	bool loadStatus(yyjson_val* status) override;
 	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType = nullptr, const string& user = "admin") override;
@@ -99,7 +99,6 @@ public:
 	MP_STATUS m_mpStatus;
 
 	//配置
-	json m_defaultVal; //默认值，软件刚启动时加载的值
 	string m_valType;//数值类型， bool，模拟量，json等
 	string m_ioType;
 	string m_ioTypeLabel;
@@ -149,6 +148,7 @@ public:
 	// curValValid = false 表示 m_curVal==null
 	string m_orgVal = "null";
 	string m_curVal = "null";
+	string m_defaultVal = "null"; //默认值，软件刚启动时加载的值
 	map<string,string> m_curValAttr;  //与val同级的Attri
 	string m_curFileData = "null";
 	string m_lastVal = "null";

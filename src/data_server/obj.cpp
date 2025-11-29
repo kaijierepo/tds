@@ -591,9 +591,11 @@ void OBJ::recursiveSetOffline()
 bool OBJ::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* parentSelectedByLeafType, const string& user) {
 	//先进行权限判断
 	if (user != "admin" && user != "") {//内部脚本调用时，user == ""
-		string sTag = getTag();
-		if (!userMng.checkTagPermission(user, sTag)) {
-			return false;
+		if (m_level != "mp") {
+			string sTag = getTag();
+			if (!userMng.checkTagPermission(user, sTag)) {
+				return false;
+			}
 		}
 	}
 
@@ -1482,8 +1484,22 @@ OBJ* OBJ::GetDescendantObjByName(string strName)
 	return NULL;
 }
 
+bool OBJ::isSelectedByIOType(const string& ioType) {
+	if (ioType == "")
+		return true;
 
-bool OBJ::isSelectedByLevel(string level)
+	if (m_level != "mp") {
+		return false;
+	}
+
+	MP* pmp = (MP*)this;
+	if (pmp->m_ioType == ioType)
+		return true;
+	return false;
+}
+
+
+bool OBJ::isSelectedByLevel(const string& level)
 {
 	if (level == "" || level == "*")
 		return true;
@@ -1511,7 +1527,7 @@ bool OBJ::isSelectedByLevel(string level)
 	}
 }
 
-bool OBJ::isSelectedByType(string type)
+bool OBJ::isSelectedByType(const string& type)
 {
 	if (type == "") //全选
 		return true;
@@ -1999,6 +2015,10 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 
 		OBJ* p = prj.queryObj(exp, tagSelector.selLanguage);
 		if (p) {
+			if (!p->isSelectedByIOType(tagSelector.ioType)) {
+				continue;
+			}
+
 			objList.push_back(p);
 		}
 	}
@@ -2010,6 +2030,9 @@ void OBJ::getObjByTagSelector(vector<OBJ*>& objList, TAG_SELECTOR& tagSelector) 
 		prj.queryObj(&tagSet, exp, tagSelector.selLanguage, tagSelector.type, tagSelector.level);
 
 		for (auto& i : tagSet) {
+			if (!i->isSelectedByIOType(tagSelector.ioType)) {
+				continue;
+			}
 			objList.push_back(i);
 		}
 	}

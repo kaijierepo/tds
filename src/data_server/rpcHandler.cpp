@@ -2139,6 +2139,10 @@ bool rpcHandler::handleMethodCall_MoMng(string method, json& params, RPC_RESP& r
 			tagSel.selLanguage = session.language;
 			tagSel.init(vecTagSel, rootTag, type,level);
 
+			if (params["ioType"] != nullptr) {
+                tagSel.ioType = params["ioType"].get<string>();
+			}
+
 			string mode = "array";
 			if (params["mode"] != nullptr) {
 				mode = params["mode"].get<string>();

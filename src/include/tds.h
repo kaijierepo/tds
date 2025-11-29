@@ -363,7 +363,9 @@ namespace JSON_STR {
 	{
 		if (s == "true") return true;
 		else if (s == "false") return false;
-		else false;
+		else if (s == "1") return true;
+		else if(s == "0") return false;
+		else return false;
 	}
 	inline string getNull()
 	{

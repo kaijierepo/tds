@@ -265,6 +265,7 @@ public:
 	string type; //object type
 	string level;
 	string error;
+	string ioType;
 	string selLanguage;
 	string rltLanguage;
 };

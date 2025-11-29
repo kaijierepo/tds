@@ -90,7 +90,7 @@ json MP::strVal2Val(string sdv)
 	return jVal;
 }
 
-
+/*
 bool MP::loadConf(json& conf, bool bCreate) {
 	OBJ::loadConf(conf, bCreate);
 
@@ -277,6 +277,7 @@ bool MP::loadConf(json& conf, bool bCreate) {
 
 	return false;
 }
+*/
 
 bool MP::loadConf(yyjson_val* conf, bool bCreate)
 {
@@ -396,25 +397,23 @@ bool MP::loadConf(yyjson_val* conf, bool bCreate)
 
 	yyjson_val* yyDefaultVal = yyjson_obj_get(conf, "defaultVal");
 	if (yyDefaultVal) {
-		//兼容一些错误书写,支持强转
-		if (yyjson_is_str(yyDefaultVal)) {
-			m_defaultVal = strVal2Val(yyjson_get_str(yyDefaultVal));
+		const char* pdv = yyjson_get_str(yyDefaultVal);
+		if(m_valType == VAL_TYPE::str){
+			m_defaultVal = JSON_STR_VAL(pdv);
 		}
-		else {
-			string result;
-
-			size_t len = 0;
-			auto s = yyjson_val_write(yyDefaultVal, YYJSON_WRITE_NOFLAG, &len);
-			if (s) {
-				result = s;
-				free(s);
+		else{
+			if (strcmp(pdv, "") == 0) {
+                m_defaultVal = "null";
 			}
-
-			m_defaultVal = strVal2Val(result);
+			else
+				m_defaultVal = pdv;
 		}
 
-		if (m_defaultVal != nullptr && JSON_STR::is_null(m_curVal)) {
-			m_curVal = m_defaultVal.dump();
+		if (m_defaultVal != "null" && JSON_STR::is_null(m_curVal)) {
+			m_curVal = m_defaultVal;
+		}
+		if (m_ioType == IO_TYPE::Const) {
+            m_curVal = m_defaultVal;
 		}
 	}
 
@@ -604,7 +603,6 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 		}
 
 		if (p->m_strUnit != "") {
-			//conf["unit"] = p->m_strUnit;
 			key = yyjson_mut_strcpy(doc, "unit");
 			val = yyjson_mut_strcpy(doc, p->m_strUnit.c_str());
 			yyjson_mut_obj_put(conf, key, val);
@@ -612,8 +610,6 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 
 		//KB  不等于默认值则保存
 		if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001) {
-			//conf["k"] = p->m_K;
-			//conf["b"] = p->m_B;
 			key = yyjson_mut_strcpy(doc, "k");
 			val = yyjson_mut_real(doc, p->m_K);
 			yyjson_mut_obj_put(conf, key, val);
@@ -630,10 +626,21 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		////默认值 
-		//if (p->m_defaultVal != nullptr) {
-		//	conf["defaultVal"] = p->m_defaultVal;
-		//}
+		//默认值 
+		if (p->m_defaultVal != "" && p->m_defaultVal != "null") {
+			key = yyjson_mut_strcpy(doc, "defaultVal");
+			if (p->m_valType == VAL_TYPE::Float)
+				val = yyjson_mut_real(doc, JSON_STR::get_num(m_defaultVal));
+			else if (p->m_valType == VAL_TYPE::integer)
+				val = yyjson_mut_int(doc, JSON_STR::get_int(m_defaultVal));
+			else if (p->m_valType == VAL_TYPE::boolean)
+				val = yyjson_mut_bool(doc, JSON_STR::get_bool(m_defaultVal));
+			else if (p->m_valType == VAL_TYPE::str)
+				val = yyjson_mut_strcpy(doc, JSON_STR::get_str(m_defaultVal).c_str());
+			else
+				val = yyjson_mut_null(doc);
+			yyjson_mut_obj_put(conf, key, val);
+		}
 
 		//报警限
 		//json alarmLimit;
@@ -754,14 +761,13 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 				}
 			}
 			else {
-				//conf["isEnum"] = false;
 				key = yyjson_mut_strcpy(doc, "isEnum");
 				val = yyjson_mut_false(doc);
 				yyjson_mut_obj_put(conf, key, val);
 			}
 		}
 
-		//降采样
+		//降采样,监控点不再使用降采样，转移到通道进行降采样
 		//if (m_bDownSample) {
 		//	conf["downSample"] = m_bDownSample;
 		//	conf["downSampleInterval"] = m_downSampleInterval;
