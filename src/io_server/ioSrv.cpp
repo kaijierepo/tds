@@ -691,15 +691,17 @@ bool ioServer::loadConfAppend(json& j)
 
 void ioServer::saveConf()
 {
-	json conf;
+	yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
+	yyjson_mut_val* root = yyjson_mut_arr(doc);
 	json opt;
 	opt["getStatus"] = false;
 	opt["getDetail"] = false;
-	toJson(conf,opt);
-	string sConf = conf.dump(3);
-	if (fs::writeFile(tds->conf->confPath + "/io.json",sConf))
+	toJson(root,doc,opt);
+	size_t len = 0;
+	char* p = yyjson_mut_val_write(root,YYJSON_WRITE_PRETTY| YYJSON_WRITE_PRETTY_NO_SPACES,&len);
+	if (p)
 	{
-		
+		fs::writeFile(tds->conf->confPath + "/io.json", p, len);
 	}
 }
 
@@ -1658,62 +1660,95 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 	}
 }
 
+bool ioServer::toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt)
+{
+	lock_conf_shared();
+
+	DEV_QUERIER devQuery;
+	devQuery.parseQueryOpt(opt);
+
+	str::split(devQuery.keywords, devQuery.strKeywords, " ");
+	DEV_STATIS devStatis;
+	vector<ioDev*> filterRlt;
+	queryDev(devQuery, devStatis, filterRlt);
+
+	yyjson_mut_val* key, * val;
+
+	if (devQuery.paging && devQuery.pageSize > 0) {
+		conf = yyjson_mut_obj(doc);
+		size_t recCount = filterRlt.size();
+		size_t pageCount = recCount / devQuery.pageSize;
+		if (recCount % devQuery.pageSize > 0)
+			pageCount++;
+
+		size_t startIdx = devQuery.pageNo * devQuery.pageSize;
+		size_t endIdx = devQuery.pageNo * devQuery.pageSize + devQuery.pageSize;
+		if (endIdx > recCount) {
+			endIdx = recCount;
+		}
+
+		yyjson_mut_val* jDevices = yyjson_mut_arr(doc);
+		for (size_t i = startIdx; i < endIdx; i++) {
+			yyjson_mut_val* jDev = yyjson_mut_obj(doc);
+			DEV_QUERIER query;
+			query.parseQueryOpt(opt);
+			filterRlt[i]->toJson(jDev,doc, query);
+            yyjson_mut_arr_append(jDevices, jDev);
+		}
+
+		yyjson_mut_obj_add_int(doc,conf, "pageNo", devQuery.pageNo);
+        yyjson_mut_obj_add_int(doc,conf, "pageCount", pageCount);
+        yyjson_mut_obj_add_int(doc,conf, "pageSize", devQuery.pageSize);
+
+		//conf["devList"] = jDevices;
+		key = yyjson_mut_str(doc, "devList");
+        yyjson_mut_obj_put(conf, key, jDevices);
+
+		if (devQuery.getStatis) {
+			//conf["statis"] = devStatis.toJson();
+			yyjson_mut_val* yyv_statis = yyjson_mut_obj(doc);
+			devStatis.toJson(yyv_statis,doc);
+			key = yyjson_mut_str(doc, "statis");
+            yyjson_mut_obj_put(conf, key, yyv_statis);
+		}
+	}
+	else {
+		//conf = json::array();
+		conf = yyjson_mut_arr(doc);
+		for (int i = 0; i < filterRlt.size(); i++) {
+			yyjson_mut_val* j = yyjson_mut_obj(doc);
+			filterRlt[i]->toJson(j, doc,devQuery);
+            yyjson_mut_arr_append(conf, j);
+		}
+	}
+
+	unlock_conf_shared();
+	return true;
+}
+
 bool ioServer::toJson(json& conf, json opt)
 {
 	lock_conf_shared();
 
-	//只差找绑定位号属于某个根位号的设备。
-	string rootTag = "";
-	string interfaceType = "net"; //默认没有串口，指定接口类型为*所有才发串口
-	bool paging = false;
-	int pageNo = 0;
-	int pageSize = 0;
-	bool getStatis = false;
-	string keywords = "";
-	string tagBind = "";  
-	if (opt != nullptr)
-	{
-		if(opt.contains("rootTag"))
-			rootTag = opt["rootTag"].get<string>();
-		if (opt.contains("interface"))
-			interfaceType = opt["interface"].get<string>();
-		if (opt.contains("getStatis"))
-			getStatis = opt["getStatis"].get<bool>();
-		if (opt.contains("tag"))
-			tagBind = opt["tag"].get<string>();
-		if(opt.contains("keywords"))
-			keywords = opt["keywords"].get<string>();
-
-		//分页参数
-		if (opt.contains("pageNo") && opt.contains("pageSize")) {
-			paging = true;
-			pageNo = opt["pageNo"].get<int>();
-			pageNo -= 1;
-			if (pageNo < 0)
-				pageNo = 0;
-			pageSize = opt["pageSize"].get<int>();
-		}
-	}
 
 	DEV_QUERIER devQuery;
 	devQuery.parseQueryOpt(opt);
-	devQuery.rootTag = rootTag;
-	devQuery.tag = tagBind;
-	str::split(devQuery.keywords,keywords," ");
+
+	str::split(devQuery.keywords, devQuery.strKeywords," ");
 	DEV_STATIS devStatis;
 	vector<ioDev*> filterRlt;
 	queryDev(devQuery,devStatis, filterRlt);
 	
 
-	if (paging && pageSize>0) {
-		conf = json::object();
+	if (devQuery.paging && devQuery.pageSize>0) {
+		conf = json::object(); 
 		size_t recCount = filterRlt.size();
-		size_t pageCount = recCount / pageSize;
-		if (recCount % pageSize > 0)
+		size_t pageCount = recCount / devQuery.pageSize;
+		if (recCount % devQuery.pageSize > 0)
 			pageCount++;
 
-		size_t startIdx = pageNo * pageSize;
-		size_t endIdx = pageNo * pageSize + pageSize;
+		size_t startIdx = devQuery.pageNo * devQuery.pageSize;
+		size_t endIdx = devQuery.pageNo * devQuery.pageSize + devQuery.pageSize;
 		if (endIdx > recCount) {
 			endIdx = recCount;
 		}
@@ -1727,11 +1762,11 @@ bool ioServer::toJson(json& conf, json opt)
 			jDevices.push_back(j);
 		}
 
-		conf["pageNo"] = pageNo;
+		conf["pageNo"] = devQuery.pageNo;
 		conf["pageCount"] = pageCount;
-		conf["pageSize"] = pageSize;
+		conf["pageSize"] = devQuery.pageSize;
 		conf["devList"] = jDevices;
-		if (getStatis) {
+		if (devQuery.getStatis) {
 			conf["statis"] = devStatis.toJson();
 		}
 	}

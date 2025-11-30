@@ -313,6 +313,419 @@ void ioDev::stop()
 	}
 }
 
+bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
+{
+	lock_conf_shared();
+	yyjson_mut_val* key;
+	yyjson_mut_val* val;
+	//配置数据 - 保存在配置文件中
+	//重构json为yyjson
+	if (querier.getConf) {
+		//conf["addrMode"] = m_addrType;
+		key = yyjson_mut_strcpy(doc, "addrMode");
+		val = yyjson_mut_strcpy(doc, m_addrType.c_str());
+		yyjson_mut_obj_put(conf, key, val);
+        
+		//conf["addr"] = m_jDevAddr;
+		key = yyjson_mut_strcpy(doc, "addr");
+		string s = m_jDevAddr.dump();
+		yyjson_doc* jDoc = yyjson_read(s.c_str(), s.size(), 0);
+		yyjson_val* yyDevAddr = yyjson_doc_get_root(jDoc);
+		yyjson_mut_val* jDevAddrMut = yyjson_val_mut_copy(doc, yyDevAddr);
+        yyjson_mut_obj_put(conf, key, jDevAddrMut);
+        yyjson_doc_free(jDoc);
+
+		//conf["ioMode"] = m_ioMode;
+        key = yyjson_mut_strcpy(doc, "ioMode");
+        val = yyjson_mut_strcpy(doc, m_ioMode.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["type"] = m_devType;
+        key = yyjson_mut_strcpy(doc, "type");
+        val = yyjson_mut_strcpy(doc, m_devType.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+
+		//conf["typeLabel"] = getDevTypeLabel(m_devType);
+        key = yyjson_mut_strcpy(doc, "typeLabel");
+        val = yyjson_mut_strcpy(doc, getDevTypeLabel(m_devType).c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+
+		if (m_devSubType != "") {
+			//conf["subType"] = m_devSubType;
+            key = yyjson_mut_strcpy(doc, "subType");
+            val = yyjson_mut_strcpy(doc, m_devSubType.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+			//conf["subTypeLabel"] = getDevSubTypeLabel(m_devSubType);
+            key = yyjson_mut_strcpy(doc, "subTypeLabel");
+            val = yyjson_mut_strcpy(doc, getDevSubTypeLabel(m_devSubType).c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		//conf["level"] = m_level;
+        key = yyjson_mut_strcpy(doc, "level");
+        val = yyjson_mut_strcpy(doc, m_level.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["manageStatus"] = m_dispositionMode;
+        key = yyjson_mut_strcpy(doc, "manageStatus");
+        val = yyjson_mut_strcpy(doc, m_dispositionMode.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["acqInterval"] = m_fAcqInterval;
+        key = yyjson_mut_strcpy(doc, "acqInterval");
+        val = yyjson_mut_real(doc, m_fAcqInterval);
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["enableAcq"] = m_bEnableAcq;
+        key = yyjson_mut_strcpy(doc, "enableAcq");
+        val = yyjson_mut_bool(doc, m_bEnableAcq);
+        yyjson_mut_obj_put(conf, key, val);
+
+		if (m_strTagBind != "") {
+			//conf["tagBind"] = m_strTagBind;
+            key = yyjson_mut_strcpy(doc, "tagBind");
+            val = yyjson_mut_strcpy(doc, m_strTagBind.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+			
+		if (m_strChanTemplate != "") {
+			//conf["chanTemplate"] = m_strChanTemplate;
+            key = yyjson_mut_strcpy(doc, "chanTemplate");
+			val = yyjson_mut_strcpy(doc, m_strChanTemplate.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		//conf["nodeID"] = m_confNodeId;
+        key = yyjson_mut_strcpy(doc, "nodeID");
+		val = yyjson_mut_strcpy(doc, m_confNodeId.c_str());
+		yyjson_mut_obj_put(conf, key, val);
+
+
+		if (m_acqMode != "") {
+			//conf["acqMode"] = m_acqMode;
+            key = yyjson_mut_strcpy(doc, "acqMode");
+            val = yyjson_mut_strcpy(doc, m_acqMode.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_chanGroup != "") {
+			//conf["chanGroup"] = m_chanGroup;
+            key = yyjson_mut_strcpy(doc, "chanGroup");
+            val = yyjson_mut_strcpy(doc, m_chanGroup.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_chanTimeSync) {
+			//conf["chanTimeSync"] = true;
+            key = yyjson_mut_strcpy(doc, "chanTimeSync");
+            val = yyjson_mut_bool(doc, m_chanTimeSync);
+            yyjson_mut_obj_put(conf, key, val);
+		}
+			
+		//conf["acqAlarm"] = m_acqAlarm;
+        key = yyjson_mut_strcpy(doc, "acqAlarm");
+        val = yyjson_mut_bool(doc, m_acqAlarm);
+        yyjson_mut_obj_put(conf, key, val);
+
+		if (m_strUser != "") {
+			//conf["user"] = m_strUser;
+            key = yyjson_mut_strcpy(doc, "user");
+            val = yyjson_mut_strcpy(doc, m_strUser.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		};
+		if (m_strPwd != "") {
+			//conf["pwd"] = m_strPwd;
+            key = yyjson_mut_strcpy(doc, "pwd");
+			val = yyjson_mut_strcpy(doc, m_strPwd.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_translatorProto != "") {
+			//conf["translatorProto"] = m_translatorProto;
+            key = yyjson_mut_strcpy(doc, "translatorProto");
+            val = yyjson_mut_strcpy(doc, m_translatorProto.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_standAloneIOType != "") {
+			//conf["standAloneIOType"] = m_standAloneIOType;
+            key = yyjson_mut_strcpy(doc, "standAloneIOType");
+            val = yyjson_mut_strcpy(doc, m_standAloneIOType.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_cycleTaskScript != "") {
+			//conf["cycleTaskScript"] = m_cycleTaskScript;
+            key = yyjson_mut_strcpy(doc, "cycleTaskScript");
+            val = yyjson_mut_strcpy(doc, m_cycleTaskScript.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_outputScript != "") {
+			//conf["outputScript"] = m_outputScript;
+            key = yyjson_mut_strcpy(doc, "outputScript");
+			val = yyjson_mut_strcpy(doc, m_outputScript.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_onRecvScript != "") {
+			//conf["onRecvScript"] = m_onRecvScript;
+            key = yyjson_mut_strcpy(doc, "onRecvScript");
+            val = yyjson_mut_strcpy(doc, m_onRecvScript.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+		if (m_tdspScript != "") {
+			//conf["tdspScript"] = m_tdspScript;
+            key = yyjson_mut_strcpy(doc, "tdspScript");
+            val = yyjson_mut_strcpy(doc, m_tdspScript.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bEnableOfflineTimeout) {
+			//conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
+            key = yyjson_mut_strcpy(doc, "enableOfflineTimeout");
+            val = yyjson_mut_bool(doc, m_bEnableOfflineTimeout);
+            yyjson_mut_obj_put(conf, key, val);
+			//conf["offlineTimeout"] = m_offlineTimeout;
+            key = yyjson_mut_strcpy(doc, "offlineTimeout");
+            val = yyjson_mut_int(doc, m_offlineTimeout);
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bEnableHttpHeartbeat) {
+			//conf["enableHttpHeartbeat"] = m_bEnableHttpHeartbeat;
+            key = yyjson_mut_strcpy(doc, "enableHttpHeartbeat");
+            val = yyjson_mut_bool(doc, m_bEnableHttpHeartbeat);
+            yyjson_mut_obj_put(conf, key, val);
+			//conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
+            key = yyjson_mut_strcpy(doc, "httpHeartbeatUrl");
+            val = yyjson_mut_strcpy(doc, m_httpHeartbeatUrl.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bEnablePingOnlineCheck) {
+			//conf["enablePingOnlineCheck"] = m_bEnablePingOnlineCheck;
+            key = yyjson_mut_strcpy(doc, "enablePingOnlineCheck");
+            val = yyjson_mut_bool(doc, m_bEnablePingOnlineCheck);
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_devType == DEV_TYPE::DEV::tdsp_device && m_devSubType == TDSP_SUB_TYPE::childTds) {
+			//conf["tdsVersion"] = m_tdsVersion;
+			key = yyjson_mut_strcpy(doc, "tdsVersion");
+			val = yyjson_mut_strcpy(doc, m_tdsVersion.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+
+			yyjson_mut_val* yyv_serverStauts = yyjson_mut_obj(doc);
+			//conf["serverStatus"]["cpu"] = m_tdsSrvStatus.cpu;
+            key = yyjson_mut_strcpy(doc, "cpu");
+            val = yyjson_mut_real(doc, m_tdsSrvStatus.cpu);
+            yyjson_mut_obj_put(yyv_serverStauts, key, val);
+			
+			//conf["serverStatus"]["mem"] = m_tdsSrvStatus.mem;
+            key = yyjson_mut_strcpy(doc, "mem");
+            val = yyjson_mut_real(doc, m_tdsSrvStatus.mem);
+            yyjson_mut_obj_put(yyv_serverStauts, key, val);
+			
+			//conf["serverStatus"]["handle"] = m_tdsSrvStatus.handle;
+            key = yyjson_mut_strcpy(doc, "handle");
+            val = yyjson_mut_int(doc, m_tdsSrvStatus.handle);
+            yyjson_mut_obj_put(yyv_serverStauts, key, val);
+
+			key = yyjson_mut_strcpy(doc, "serverStatus");
+            yyjson_mut_obj_put(conf, key, yyv_serverStauts);
+
+			//conf["statusUpdateTime"] = m_statusUpdateTime;
+            key = yyjson_mut_strcpy(doc, "statusUpdateTime");
+            val = yyjson_mut_strcpy(doc, m_statusUpdateTime.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+
+			//conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
+            key = yyjson_mut_strcpy(doc, "serverUpgradeStatus");
+            val = yyjson_mut_strcpy(doc, m_childTdsUpgradeStatus.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_reconnectMode != "" && m_reconnectTime > 0) {
+			//json obj = json::object();
+			yyjson_mut_val* yyv_obj = yyjson_mut_obj(doc);
+			//obj["mode"] = m_reconnectMode;
+            key = yyjson_mut_strcpy(doc, "mode");
+            val = yyjson_mut_strcpy(doc, m_reconnectMode.c_str());
+            yyjson_mut_obj_put(yyv_obj, key, val);
+
+			//obj["time"] = m_reconnectTime;
+            key = yyjson_mut_strcpy(doc, "time");
+            val = yyjson_mut_int(doc, m_reconnectTime);
+            yyjson_mut_obj_put(yyv_obj, key, val);
+
+			//conf["reconnect"] = obj;
+            key = yyjson_mut_strcpy(doc, "reconnect");
+			yyjson_mut_obj_put(conf, key, yyv_obj);
+		}
+	}
+
+	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
+	if (querier.getStatus)
+	{
+		if (m_charset != "") {
+			//conf["charset"] = m_charset;
+            key = yyjson_mut_strcpy(doc, "charset");
+            val = yyjson_mut_strcpy(doc, m_charset.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+			
+
+		//conf["online"] = m_bOnline;
+        key = yyjson_mut_strcpy(doc, "online");
+        val = yyjson_mut_bool(doc, m_bOnline);
+        yyjson_mut_obj_put(conf, key, val);
+
+
+		//conf["connected"] = m_bConnected;
+        key = yyjson_mut_strcpy(doc, "connected");
+        val = yyjson_mut_bool(doc, m_bConnected);
+        yyjson_mut_obj_put(conf, key, val);
+
+
+		if (pIOSession != nullptr)
+		{
+			//conf["remoteIP"] = pIOSession->getRemoteAddr();
+            key = yyjson_mut_strcpy(doc, "remoteIP");
+            val = yyjson_mut_strcpy(doc, pIOSession->getRemoteAddr().c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		//详细信息
+		//conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
+        key = yyjson_mut_strcpy(doc, "chanUpdateTime");
+        val = yyjson_mut_strcpy(doc, timeopt::st2str(m_stLastChanDataTime).c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		m_csAlmStatus.lock();
+		if (m_jAlarmStatus != nullptr) {
+			//conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
+            key = yyjson_mut_strcpy(doc, "alarmUpdateTime");
+            val = yyjson_mut_strcpy(doc, timeopt::st2str(m_stLastAlarmStatusTime).c_str());
+            yyjson_mut_obj_put(conf, key, val);
+
+			//conf["alarmStatus"] = m_jAlarmStatus;
+			string s = m_jAlarmStatus.dump();
+            yyjson_doc* tempdoc = yyjson_read(s.c_str(), s.size(), 0);
+			yyjson_val* yyv_as = yyjson_doc_get_root(tempdoc);
+			yyjson_mut_val* jAlmStatusMut = yyjson_val_mut_copy(doc, yyv_as);
+            key = yyjson_mut_strcpy(doc, "alarmStatus");
+            yyjson_mut_obj_put(conf, key, jAlmStatusMut);
+            yyjson_doc_free(tempdoc);
+		}
+		m_csAlmStatus.unlock();
+
+
+		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
+		//conf["ioAddr"] = getIOAddrStr();
+        key = yyjson_mut_strcpy(doc, "ioAddr");
+        val = yyjson_mut_strcpy(doc, getIOAddrStr().c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["addrType"] = m_addrType;
+        key = yyjson_mut_strcpy(doc, "addrType");
+        val = yyjson_mut_strcpy(doc, m_addrType.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
+        key = yyjson_mut_strcpy(doc, "enableAlarm");
+        val = yyjson_mut_bool(doc, tds->conf->enableGlobalAlarm);
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["avgRespTime"] = m_avgTransactionTime;
+        key = yyjson_mut_strcpy(doc, "avgRespTime");
+        val = yyjson_mut_int(doc, m_avgTransactionTime);
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["unhandleRecvPktCount"] = m_unhandledRecvPktCount;
+        key = yyjson_mut_strcpy(doc, "unhandleRecvPktCount");
+        val = yyjson_mut_int(doc, m_unhandledRecvPktCount);
+        yyjson_mut_obj_put(conf, key, val);
+	}
+
+	//备注
+	if (querier.getRemark)
+	{
+		//conf["remark"] = m_remark;
+        key = yyjson_mut_strcpy(doc, "remark");
+        val = yyjson_mut_strcpy(doc, m_remark.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+	}
+
+	//升级状态信息数据
+	if (querier.getUpgradeInfo) {
+		//json jui;
+		//jui = m_upgradeInfo.toJson();
+		yyjson_mut_val* jui = yyjson_mut_obj(doc);
+		m_upgradeInfo.toJson(jui, doc);
+
+		//conf["upgradeInfo"] = jui;
+        key = yyjson_mut_strcpy(doc, "upgradeInfo");
+        yyjson_mut_obj_put(conf, key, jui);
+	}
+
+	if (querier.getDebug) {
+		string s = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
+		//conf["pktAssembleBuff"] = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
+        key = yyjson_mut_strcpy(doc, "pktAssembleBuff");
+        val = yyjson_mut_strcpy(doc, s.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["lastFailReq"] = m_lastFailReq;
+        key = yyjson_mut_strcpy(doc, "lastFailReq");
+        val = yyjson_mut_strcpy(doc, m_lastFailReq.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["lastFailReqTime"] = m_lastFailReqTime;
+        key = yyjson_mut_strcpy(doc, "lastFailReqTime");
+        val = yyjson_mut_strcpy(doc, m_lastFailReqTime.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+	}
+
+	if (querier.getChild)
+	{
+		if (m_vecChildDev.size() > 0)
+		{
+			yyjson_mut_val* children = yyjson_mut_arr(doc);
+			for (auto& i : m_vecChildDev)
+			{
+                yyjson_mut_val* j = yyjson_mut_obj(doc);
+				i->toJson(j, doc, querier);
+                yyjson_mut_arr_append(children, j);
+			}
+
+            key = yyjson_mut_strcpy(doc, "children");
+            yyjson_mut_obj_put(conf, key, children);
+		}
+	}
+
+	if (querier.getChan && m_channels.size() > 0)
+	{
+		//json channels = json::array();
+		yyjson_mut_val* channels = yyjson_mut_arr(doc);
+
+		for (auto& i : m_channels)
+		{
+			//空闲通道作为状态数据，必须指定获取状态才返回
+			if (!querier.getStatus && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare) {
+				continue;
+			}
+			yyjson_mut_val* j = yyjson_mut_obj(doc);
+            i->toJson(j, doc, querier);
+            yyjson_mut_arr_append(channels, j);
+		}
+		//conf["channels"] = channels;
+        key = yyjson_mut_strcpy(doc, "channels");
+        yyjson_mut_obj_put(conf, key, channels);
+        return true;
+	}
+
+	unlock_conf_shared();
+	return true;
+}
+
 bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 {
 	lock_conf_shared();
@@ -1116,6 +1529,27 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 				q.subType.push_back(j.get<string>());
 			}
 		}
+	}
+
+	if (opt.contains("rootTag"))
+		rootTag = opt["rootTag"].get<string>();
+	if (opt.contains("interface"))
+		interfaceType = opt["interface"].get<string>();
+	if (opt.contains("getStatis"))
+		getStatis = opt["getStatis"].get<bool>();
+	if (opt.contains("tag"))
+		tagBind = opt["tag"].get<string>();
+	if (opt.contains("keywords"))
+		strKeywords = opt["keywords"].get<string>();
+
+	//分页参数
+	if (opt.contains("pageNo") && opt.contains("pageSize")) {
+		paging = true;
+		pageNo = opt["pageNo"].get<int>();
+		pageNo -= 1;
+		if (pageNo < 0)
+			pageNo = 0;
+		pageSize = opt["pageSize"].get<int>();
 	}
 }
 

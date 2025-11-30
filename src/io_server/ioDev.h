@@ -51,6 +51,53 @@ public:
 		j["status"] = statusInfo;
 		return j;
 	}
+
+	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+		yyjson_mut_val* key,* val;
+
+		key = yyjson_mut_strcpy(doc, "progress");
+        val = yyjson_mut_strcpy(doc, grogressInfo.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "fileLen");
+        val = yyjson_mut_int(doc, fileLen);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "pktNum");
+        val = yyjson_mut_int(doc, pktNum);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "pktLen");
+        val = yyjson_mut_int(doc, pktLen);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "currentPktNo");
+        val = yyjson_mut_int(doc, currentPktNo);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "fileName");
+        val = yyjson_mut_strcpy(doc, fileName.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "isUpgrading");
+        val = yyjson_mut_bool(doc, isUpgrading);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "version");
+        val = yyjson_mut_strcpy(doc, version.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "devType");
+        val = yyjson_mut_strcpy(doc, devType.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "status");
+        val = yyjson_mut_strcpy(doc, statusInfo.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		return true;
+	}
+
 	int calcPktNum(int pl);
 	bool loadFirmwareFile(string fileName, int pl = 4000);
 };
@@ -106,6 +153,13 @@ struct DEV_QUERIER {
 	vector<string> subType;
 	string standAloneIO;
 	vector<string> keywords;
+	string interfaceType;
+	bool getStatis;
+	string tagBind;
+	string strKeywords;
+	bool paging;
+	int pageNo;
+	int pageSize;
 
 	void parseQueryOpt(json& opt);
 
@@ -119,6 +173,11 @@ struct DEV_QUERIER {
 		getUpgradeInfo = false;
 		getPAB         = false;
 		getDebug       = false;
+		getStatis = false;
+		paging = false;
+		pageNo = 0;
+		pageSize = 0;
+		interfaceType = "net";
 	}
 };
 
@@ -154,6 +213,36 @@ struct DEV_STATIS {
 		jStatis["total"] = iTotal;
 		return jStatis;
 	}
+
+	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc) {
+		yyjson_mut_val* key, * val;
+
+		key = yyjson_mut_strcpy(doc, "online");
+        val = yyjson_mut_int(doc, iOnline);
+        yyjson_mut_obj_put(conf, key, val);
+
+		key = yyjson_mut_strcpy(doc, "offline");
+        val = yyjson_mut_int(doc, iOffline);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "inService");
+        val = yyjson_mut_int(doc, iManaged);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "spare");
+        val = yyjson_mut_int(doc, iSpare);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "channel");
+        val = yyjson_mut_int(doc, iChan);
+        yyjson_mut_obj_put(conf, key, val);
+
+        key = yyjson_mut_strcpy(doc, "total");
+        val = yyjson_mut_int(doc, iTotal);
+        yyjson_mut_obj_put(conf, key, val);
+
+		return true;
+	}
 };
 
 class ioDev : public ICallback_udpSrv, public ICallback_tcpClt
@@ -162,6 +251,7 @@ public:
 	ioDev(void);
 	virtual ~ioDev(void);
 
+	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc,DEV_QUERIER querier);
 	virtual bool toJson(json& conf, DEV_QUERIER querier);
 	virtual bool loadConf(json& conf);
 

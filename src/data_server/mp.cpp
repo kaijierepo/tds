@@ -574,33 +574,103 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 		}
 
 		//conf["saveMode"] = p->m_saveMode;
-		key = yyjson_mut_strcpy(doc, "saveMode");
-		val = yyjson_mut_strcpy(doc, p->m_saveMode.c_str());
-		yyjson_mut_obj_put(conf, key, val);
+		if (p->m_ioType != IO_TYPE::Const) {
+			key = yyjson_mut_strcpy(doc, "saveMode");
+			val = yyjson_mut_strcpy(doc, p->m_saveMode.c_str());
+			yyjson_mut_obj_put(conf, key, val);
 
-		if (p->m_saveMode == DATA_SAVE_MODE::cyclic || p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange){
-			//json saveInterval;
-			//saveInterval["hour"] = p->m_saveInterval.hour;
-			//saveInterval["minute"] = p->m_saveInterval.minute;
-			//saveInterval["second"] = p->m_saveInterval.second;
-			//conf["saveInterval"] = saveInterval;
-			yyjson_mut_val* rootSaveInterval = yyjson_mut_obj(doc);
+			if (p->m_saveMode == DATA_SAVE_MODE::cyclic || p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange) {
+				yyjson_mut_val* rootSaveInterval = yyjson_mut_obj(doc);
 
-			key = yyjson_mut_strcpy(doc, "hour");
-			val = yyjson_mut_int(doc, p->m_saveInterval.hour);
-			yyjson_mut_obj_put(rootSaveInterval, key, val);
+				key = yyjson_mut_strcpy(doc, "hour");
+				val = yyjson_mut_int(doc, p->m_saveInterval.hour);
+				yyjson_mut_obj_put(rootSaveInterval, key, val);
 
-			key = yyjson_mut_strcpy(doc, "minute");
-			val = yyjson_mut_int(doc, p->m_saveInterval.minute);
-			yyjson_mut_obj_put(rootSaveInterval, key, val);
+				key = yyjson_mut_strcpy(doc, "minute");
+				val = yyjson_mut_int(doc, p->m_saveInterval.minute);
+				yyjson_mut_obj_put(rootSaveInterval, key, val);
 
-			key = yyjson_mut_strcpy(doc, "second");
-			val = yyjson_mut_int(doc, p->m_saveInterval.second);
-			yyjson_mut_obj_put(rootSaveInterval, key, val);
+				key = yyjson_mut_strcpy(doc, "second");
+				val = yyjson_mut_int(doc, p->m_saveInterval.second);
+				yyjson_mut_obj_put(rootSaveInterval, key, val);
 
-			key = yyjson_mut_strcpy(doc, "saveInterval");
-			yyjson_mut_obj_put(conf, key, rootSaveInterval);
+				key = yyjson_mut_strcpy(doc, "saveInterval");
+				yyjson_mut_obj_put(conf, key, rootSaveInterval);
+			}
+
+			//KB  不等于默认值则保存
+			if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001) {
+				key = yyjson_mut_strcpy(doc, "k");
+				val = yyjson_mut_real(doc, p->m_K);
+				yyjson_mut_obj_put(conf, key, val);
+
+				key = yyjson_mut_strcpy(doc, "b");
+				val = yyjson_mut_real(doc, p->m_B);
+				yyjson_mut_obj_put(conf, key, val);
+			}
+
+			if (p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange || p->m_saveMode == DATA_SAVE_MODE::onchange) {
+				//conf["deadZone"] = m_deadZone;
+				key = yyjson_mut_strcpy(doc, "deadZone");
+				val = yyjson_mut_real(doc, m_deadZone);
+				yyjson_mut_obj_put(conf, key, val);
+			}
+
+			//报警限
+		//json alarmLimit;
+			yyjson_mut_val* rootAlarmLimit = yyjson_mut_obj(doc);
+			if (m_alarmLimit.enableHigh) {
+				key = yyjson_mut_strcpy(doc, "enableHigh");
+				val = yyjson_mut_bool(doc, m_alarmLimit.enableHigh);
+				yyjson_mut_obj_put(rootAlarmLimit, key, val);
+
+				key = yyjson_mut_strcpy(doc, "high");
+				val = yyjson_mut_real(doc, m_alarmLimit.high);
+				yyjson_mut_obj_put(rootAlarmLimit, key, val);
+			}
+			if (m_alarmLimit.enableLow) {
+				key = yyjson_mut_strcpy(doc, "enableLow");
+				val = yyjson_mut_bool(doc, m_alarmLimit.enableLow);
+				yyjson_mut_obj_put(rootAlarmLimit, key, val);
+
+				key = yyjson_mut_strcpy(doc, "low");
+				val = yyjson_mut_real(doc, m_alarmLimit.low);
+				yyjson_mut_obj_put(rootAlarmLimit, key, val);
+			}
+			if (m_alarmLimit.enableHigh || m_alarmLimit.enableLow) {
+				key = yyjson_mut_strcpy(doc, "alarmLimit");
+				yyjson_mut_obj_put(conf, key, rootAlarmLimit);
+			}
+
+
+			//有效值范围
+			if (m_validRange.enable) {
+				yyjson_mut_val* rootValidRange = yyjson_mut_obj(doc);
+
+				key = yyjson_mut_strcpy(doc, "enable");
+				val = yyjson_mut_bool(doc, m_validRange.enable);
+				yyjson_mut_obj_put(rootValidRange, key, val);
+
+				key = yyjson_mut_strcpy(doc, "min");
+				val = yyjson_mut_real(doc, m_validRange.min);
+				yyjson_mut_obj_put(rootValidRange, key, val);
+
+				key = yyjson_mut_strcpy(doc, "max");
+				val = yyjson_mut_real(doc, m_validRange.max);
+				yyjson_mut_obj_put(rootValidRange, key, val);
+
+				key = yyjson_mut_strcpy(doc, "validRange");
+				yyjson_mut_obj_put(conf, key, rootValidRange);
+			}
+
+			//有效小数位
+			if (m_decimalDigits >= 0) {
+				key = yyjson_mut_strcpy(doc, "decimalDigits");
+				val = yyjson_mut_int(doc, m_decimalDigits);
+				yyjson_mut_obj_put(conf, key, val);
+			}
 		}
+
 
 		if (p->m_strUnit != "") {
 			key = yyjson_mut_strcpy(doc, "unit");
@@ -608,24 +678,7 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		//KB  不等于默认值则保存
-		if (fabs(p->m_K - 1) > 0.000001 || fabs(p->m_B - 0) > 0.000001) {
-			key = yyjson_mut_strcpy(doc, "k");
-			val = yyjson_mut_real(doc, p->m_K);
-			yyjson_mut_obj_put(conf, key, val);
-
-			key = yyjson_mut_strcpy(doc, "b");
-			val = yyjson_mut_real(doc, p->m_B);
-			yyjson_mut_obj_put(conf, key, val);
-		}
-
-		if (p->m_saveMode == DATA_SAVE_MODE::cyclic_onchange || p->m_saveMode == DATA_SAVE_MODE::onchange) {
-			//conf["deadZone"] = m_deadZone;
-			key = yyjson_mut_strcpy(doc, "deadZone");
-			val = yyjson_mut_real(doc, m_deadZone);
-			yyjson_mut_obj_put(conf, key, val);
-		}
-
+		
 		//默认值 
 		if (p->m_defaultVal != "" && p->m_defaultVal != "null") {
 			key = yyjson_mut_strcpy(doc, "defaultVal");
@@ -642,59 +695,7 @@ bool MP::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, OBJ_QUERIER q, bool* 
 			yyjson_mut_obj_put(conf, key, val);
 		}
 
-		//报警限
-		//json alarmLimit;
-		yyjson_mut_val* rootAlarmLimit = yyjson_mut_obj(doc);
-		if (m_alarmLimit.enableHigh) {
-			key = yyjson_mut_strcpy(doc, "enableHigh");
-			val = yyjson_mut_bool(doc, m_alarmLimit.enableHigh);
-			yyjson_mut_obj_put(rootAlarmLimit, key, val);
-
-			key = yyjson_mut_strcpy(doc, "high");
-			val = yyjson_mut_real(doc, m_alarmLimit.high);
-			yyjson_mut_obj_put(rootAlarmLimit, key, val);
-		}
-		if (m_alarmLimit.enableLow) {
-			key = yyjson_mut_strcpy(doc, "enableLow");
-			val = yyjson_mut_bool(doc, m_alarmLimit.enableLow);
-			yyjson_mut_obj_put(rootAlarmLimit, key, val);
-
-			key = yyjson_mut_strcpy(doc, "low");
-			val = yyjson_mut_real(doc, m_alarmLimit.low);
-			yyjson_mut_obj_put(rootAlarmLimit, key, val);
-		}
-		if (m_alarmLimit.enableHigh || m_alarmLimit.enableLow) {
-			key = yyjson_mut_strcpy(doc, "alarmLimit");
-			yyjson_mut_obj_put(conf, key, rootAlarmLimit);
-		}
-
-
-		//有效值范围
-		if (m_validRange.enable) {
-			yyjson_mut_val* rootValidRange = yyjson_mut_obj(doc);
-
-			key = yyjson_mut_strcpy(doc, "enable");
-			val = yyjson_mut_bool(doc, m_validRange.enable);
-			yyjson_mut_obj_put(rootValidRange, key, val);
-
-			key = yyjson_mut_strcpy(doc, "min");
-			val = yyjson_mut_real(doc, m_validRange.min);
-			yyjson_mut_obj_put(rootValidRange, key, val);
-
-			key = yyjson_mut_strcpy(doc, "max");
-			val = yyjson_mut_real(doc, m_validRange.max);
-			yyjson_mut_obj_put(rootValidRange, key, val);
-
-			key = yyjson_mut_strcpy(doc, "validRange");
-			yyjson_mut_obj_put(conf, key, rootValidRange);
-		}
-
-		//有效小数位
-		if (m_decimalDigits >= 0) {
-			key = yyjson_mut_strcpy(doc, "decimalDigits");
-			val = yyjson_mut_int(doc, m_decimalDigits);
-			yyjson_mut_obj_put(conf, key, val);
-		}
+		
 
 		if (p->m_valType == VAL_TYPE::video) {
 			key = yyjson_mut_strcpy(doc, "mediaSrcType");

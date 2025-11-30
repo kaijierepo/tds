@@ -103,6 +103,111 @@ bool ioChannel::loadConf(json& conf)
 	return true;
 }
 
+bool ioChannel::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
+{
+	yyjson_mut_val* key;
+	yyjson_mut_val* val;
+
+	//conf["addr"] = m_jDevAddr;
+	key = yyjson_mut_strcpy(doc, "addr");
+	string s = m_jDevAddr.dump();
+	yyjson_doc* jDoc = yyjson_read(s.c_str(), s.size(), 0);
+	yyjson_val* yyDevAddr = yyjson_doc_get_root(jDoc);
+	yyjson_mut_val* jDevAddrMut = yyjson_val_mut_copy(doc, yyDevAddr);
+	yyjson_mut_obj_put(conf, key, jDevAddrMut);
+	yyjson_doc_free(jDoc);
+
+	if (querier.getConf) {
+		//conf["nodeID"] = m_confNodeId;
+        key = yyjson_mut_strcpy(doc, "nodeID");
+        val = yyjson_mut_strcpy(doc, m_confNodeId.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+			
+		//conf["tagBind"] = m_strTagBind;
+        key = yyjson_mut_strcpy(doc, "tagBind");
+        val = yyjson_mut_strcpy(doc, m_strTagBind.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+		
+		//conf["ioType"] = m_ioType;
+		key = yyjson_mut_strcpy(doc, "ioType");
+		val = yyjson_mut_strcpy(doc, m_ioType.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["valType"] = m_valType;
+        key = yyjson_mut_strcpy(doc, "valType");
+        val = yyjson_mut_strcpy(doc, m_valType.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["name"] = m_name;
+        key = yyjson_mut_strcpy(doc, "name");
+        val = yyjson_mut_strcpy(doc, m_name.c_str());
+        yyjson_mut_obj_put(conf, key, val);
+
+		//conf["k"] = m_k;
+        key = yyjson_mut_strcpy(doc, "k");
+        val = yyjson_mut_real(doc, m_k);
+		yyjson_mut_obj_put(conf, key, val);
+
+		//optional fields
+		if (m_fmt != "") {
+			//conf["fmt"] = m_fmt;
+            key = yyjson_mut_strcpy(doc, "fmt");
+            val = yyjson_mut_strcpy(doc, m_fmt.c_str());
+            yyjson_mut_obj_put(conf, key, val);
+		}
+			
+
+		if (m_byteOrder != "") {
+			//conf["byteOrder"] = m_byteOrder;
+            key = yyjson_mut_strcpy(doc, "byteOrder");
+            val = yyjson_mut_strcpy(doc, m_byteOrder.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bCustomOutputType)
+		{
+			//conf["isCustomOutputType"] = m_bCustomOutputType;
+            key = yyjson_mut_strcpy(doc, "isCustomOutputType");
+            val = yyjson_mut_bool(doc, m_bCustomOutputType);
+            yyjson_mut_obj_put(conf, key, val);
+
+			//conf["customOutputType"] = m_sCustomOutputType;
+            key = yyjson_mut_strcpy(doc, "customOutputType");
+			val = yyjson_mut_strcpy(doc, m_sCustomOutputType.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
+		if (m_bDownSample)
+		{
+			//conf["downSample"] = true;
+            key = yyjson_mut_strcpy(doc, "downSample");
+            val = yyjson_mut_bool(doc, m_bDownSample);
+            yyjson_mut_obj_put(conf, key, val);
+           
+			//conf["downSampleInterval"] = m_iDownSampleInterval;
+            key = yyjson_mut_strcpy(doc, "downSampleInterval");
+            val = yyjson_mut_uint(doc, m_iDownSampleInterval);
+            yyjson_mut_obj_put(conf, key, val);
+		}
+	}
+
+
+	if (querier.getStatus)
+	{
+		//conf["ioTypeLabel"] = m_ioTypeLabel;
+        //key = yyjson_mut_strcpy(doc, "ioTypeLabel");
+        //val = yyjson_mut_strcpy(doc, m_ioTypeLabel.c_str());
+        //yyjson_mut_obj_put(conf, key, val);
+
+		//conf["val"] = m_curVal;
+        //key = yyjson_mut_strcpy(doc, "val");
+        //val = yyjson_mut_strcpy(doc, m_curVal.c_str());
+        //yyjson_mut_obj_put(conf, key, val);
+	}
+
+	return true;
+}
+
 bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 {
 	json jDevAddr;
@@ -151,7 +256,7 @@ bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
 
 	if (querier.getStatus)
 	{
-		conf["ioTypeLabel"] = m_ioTypeLabel;
+		//conf["ioTypeLabel"] = m_ioTypeLabel;
 		conf["val"] = m_curVal;
 	}
 
