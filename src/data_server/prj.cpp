@@ -172,7 +172,7 @@ bool project::saveConfFile() {
 	toJson(mut_root, mut_doc, q);
 
 	size_t len;
-	char* p = yyjson_mut_val_write(mut_root, 0, &len);
+	char* p = yyjson_mut_val_write(mut_root, YYJSON_WRITE_PRETTY_NO_SPACES|YYJSON_WRITE_PRETTY, &len);
 	if (len == 0) {
 		LOG("[error]critical error,mo tree to json fail");
 	}

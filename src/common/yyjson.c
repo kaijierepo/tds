@@ -8148,6 +8148,9 @@ static_inline u8 *yyjson_mut_write_pretty(const yyjson_mut_val *root,
     bool esc = (flg & YYJSON_WRITE_ESCAPE_UNICODE) != 0;
     bool inv = (flg & YYJSON_WRITE_ALLOW_INVALID_UNICODE) != 0;
     usize spaces = (flg & YYJSON_WRITE_PRETTY_TWO_SPACES) ? 2 : 4;
+    if (flg & YYJSON_WRITE_PRETTY_NO_SPACES) {
+        spaces = 0;
+    }
     
     alc_len = estimated_val_num * YYJSON_WRITER_ESTIMATED_PRETTY_RATIO + 64;
     alc_len = size_align_up(alc_len, sizeof(yyjson_mut_write_ctx));

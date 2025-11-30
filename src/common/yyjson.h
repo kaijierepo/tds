@@ -915,7 +915,7 @@ static const yyjson_write_flag YYJSON_WRITE_ALLOW_INVALID_UNICODE   = 1 << 5;
     This flag will override `YYJSON_WRITE_PRETTY` flag. */
 static const yyjson_write_flag YYJSON_WRITE_PRETTY_TWO_SPACES       = 1 << 6;
 
-
+static const yyjson_write_flag YYJSON_WRITE_PRETTY_NO_SPACES = 1 << 7;
 
 /** Result code for JSON writer */
 typedef uint32_t yyjson_write_code;
