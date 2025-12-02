@@ -2718,7 +2718,8 @@ bool TDB::Select_Step_selectTags(DE_SELECTOR& deSel,SELECT_RLT& rlt) {
 	}
 
 	//need add tag region into de
-	if (rlt.tagSet.size() > 1 || deSel.splitBy != "tag" || deSel.deType == "curveIdx") {
+	if ( (rlt.tagSet.size() > 1 && deSel.splitBy != "tag")  //if splitby tag, no need to add tag region in data element
+		|| deSel.deType == "curveIdx") {
 		deSel.tagSel.getTag = true;
 	}
 

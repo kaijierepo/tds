@@ -588,10 +588,10 @@ public:
 	
 	//grouped data before aggregate key is time stamp ,val is de vector
 	map<string, vector<yyjson_val*>> m_origDeGrouped;
-	//ungrouped data before aggregate
+	//ungrouped data before aggregate or without aggr option or no de mutation
 	vector<yyjson_val*> m_orgDe;
 
-	//data after aggregate or without aggr option
+	//data after aggregate 
 	vector<DE_yyjson*> m_afterAggr;
 
 	//   saved custom groupby columns
