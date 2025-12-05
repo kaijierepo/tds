@@ -780,7 +780,13 @@ namespace DB_FS {
 					size_t pos = fi.path.rfind("/");
 					fi.folderPath = fi.path.substr(0, pos);
 					fi.name = fi.path.substr(pos + 1, fi.path.length() - pos - 1);
-					fi.len = fs::file_size(i.path());
+
+					for (auto& entry : fs::recursive_directory_iterator(i.path())) {
+						if (fs::is_regular_file(entry.path())) {
+							fi.len += fs::file_size(entry.path());
+						}
+					}
+
 					auto ftime = fs::last_write_time(i.path());
 					// 将 file_time_type 转换为 system_clock::time_point
 					auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(

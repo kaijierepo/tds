@@ -127,7 +127,7 @@ bool fileExist(string pszFileName) {
 	return  false;
 }
 
-bool writeFile(string path, char* data, size_t len) {
+static bool writeFile(string path, char* data, size_t len) {
 	FILE* fp = nullptr;
 	wstring wpath = charCodec::utf8_to_utf16(path);
 	_wfopen_s(&fp, wpath.c_str(), L"wb");
