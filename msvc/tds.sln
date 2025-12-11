@@ -9,6 +9,8 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		debug|x64 = debug|x64
 		debug|x86 = debug|x86
+		dll - R2|x64 = dll - R2|x64
+		dll - R2|x86 = dll - R2|x86
 		exe - D svn|x64 = exe - D svn|x64
 		exe - D svn|x86 = exe - D svn|x86
 		exe - R svn|x64 = exe - R svn|x64
@@ -21,6 +23,10 @@ Global
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x64.Build.0 = exe - D|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x86.ActiveCfg = exe - D|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.debug|x86.Build.0 = exe - D|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R2|x64.ActiveCfg = dll - R2|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R2|x64.Build.0 = dll - R2|x64
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R2|x86.ActiveCfg = dll - R2|Win32
+		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.dll - R2|x86.Build.0 = dll - R2|Win32
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.ActiveCfg = exe - D svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x64.Build.0 = exe - D svn|x64
 		{544C442E-FCB4-4CFA-82D0-261FF1F58B8B}.exe - D svn|x86.ActiveCfg = exe - D svn|Win32
