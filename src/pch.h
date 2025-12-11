@@ -25,7 +25,10 @@ using namespace std;
 #define GENICAM_MAIN_COMPILER VC141
 
 #ifdef TDSDLL
-#define MG_TLS MG_TLS_NONE// Enable built-in TLS 1.3 stack
+//#define MG_TLS MG_TLS_NONE// Enable built-in TLS 1.3 stack
+#ifndef MG_TLS
+#define MG_TLS MG_TLS_BUILTIN
+#endif
 #elif defined(_WIN32)
 #ifndef MG_TLS
 #define MG_TLS MG_TLS_BUILTIN
