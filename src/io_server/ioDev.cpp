@@ -441,6 +441,13 @@ bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querie
 			val = yyjson_mut_strcpy(doc, m_strPwd.c_str());
 			yyjson_mut_obj_put(conf, key, val);
 		}
+
+		if (m_subTopics != "") {
+			key = yyjson_mut_strcpy(doc, "subTopics");
+			val = yyjson_mut_strcpy(doc, m_subTopics.c_str());
+			yyjson_mut_obj_put(conf, key, val);
+		}
+
 		if (m_translatorProto != "") {
 			//conf["translatorProto"] = m_translatorProto;
             key = yyjson_mut_strcpy(doc, "translatorProto");
@@ -726,183 +733,183 @@ bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querie
 	return true;
 }
 
-bool ioDev::toJson(json& conf, DEV_QUERIER querier)
-{
-	lock_conf_shared();
-
-	//配置数据 - 保存在配置文件中
-	if (querier.getConf) {
-		conf["addrMode"] = m_addrType;
-		conf["addr"] = m_jDevAddr;
-		conf["ioMode"] = m_ioMode;
-		conf["type"] = m_devType;
-		conf["typeLabel"] = getDevTypeLabel(m_devType);
-		if (m_devSubType != "") {
-			conf["subType"] = m_devSubType;
-			conf["subTypeLabel"] = getDevSubTypeLabel(m_devSubType);
-		}
-
-		conf["level"] = m_level;
-		conf["manageStatus"] = m_dispositionMode;
-		conf["acqInterval"] = m_fAcqInterval;
-		conf["enableAcq"] = m_bEnableAcq;
-		if (m_strTagBind != "")
-			conf["tagBind"] = m_strTagBind;
-		if (m_strChanTemplate != "")
-			conf["chanTemplate"] = m_strChanTemplate;
-		conf["nodeID"] = m_confNodeId;
-		if (m_acqMode != "")
-			conf["acqMode"] = m_acqMode;
-		if (m_chanGroup != "")
-			conf["chanGroup"] = m_chanGroup;
-		if (m_chanTimeSync)
-			conf["chanTimeSync"] = true;
-
-		conf["acqAlarm"] = m_acqAlarm;
-		if (m_strUser != "") {
-			conf["user"] = m_strUser;
-		};
-		if (m_strPwd != "") {
-			conf["pwd"] = m_strPwd;
-		}
-		if (m_translatorProto != "") {
-			conf["translatorProto"] = m_translatorProto;
-		}
-		if (m_standAloneIOType != "") {
-			conf["standAloneIOType"] = m_standAloneIOType;
-		}
-		if (m_cycleTaskScript != "") {
-			conf["cycleTaskScript"] = m_cycleTaskScript;
-		}
-		if (m_outputScript != "") {
-			conf["outputScript"] = m_outputScript;
-		}
-		if (m_onRecvScript != "") {
-			conf["onRecvScript"] = m_onRecvScript;
-		}
-		if (m_tdspScript != "") {
-			conf["tdspScript"] = m_tdspScript;
-		}
-
-		if (m_bEnableOfflineTimeout) {
-			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
-			conf["offlineTimeout"] = m_offlineTimeout;
-		}
-
-		if (m_bEnableHttpHeartbeat) {
-			conf["enableHttpHeartbeat"] = m_bEnableHttpHeartbeat;
-			conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
-		}
-
-		if (m_bEnablePingOnlineCheck) {
-			conf["enablePingOnlineCheck"] = m_bEnablePingOnlineCheck;
-		}
-
-		if (m_devType == DEV_TYPE::DEV::tdsp_device && m_devSubType == TDSP_SUB_TYPE::childTds) {
-			conf["tdsVersion"] = m_tdsVersion;
-			conf["serverStatus"]["cpu"] = m_tdsSrvStatus.cpu;
-			conf["serverStatus"]["mem"] = m_tdsSrvStatus.mem;
-			conf["serverStatus"]["handle"] = m_tdsSrvStatus.handle;
-			conf["statusUpdateTime"] = m_statusUpdateTime;
-			conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
-		}
-
-		if (m_reconnectMode != "" && m_reconnectTime > 0) {
-			json obj = json::object();
-
-			obj["mode"] = m_reconnectMode;
-			obj["time"] = m_reconnectTime;
-
-			conf["reconnect"] = obj;
-		}
-	}
-
-	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
-	if (querier.getStatus)
-	{
-		if (m_charset != "")
-			conf["charset"] = m_charset;
-
-		conf["online"] = m_bOnline;
-		conf["connected"] = m_bConnected;
-		if (pIOSession != nullptr)
-		{
-			conf["remoteIP"] = pIOSession->getRemoteAddr();
-		}
-
-		//详细信息
-		conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
-
-		m_csAlmStatus.lock();
-		if (m_jAlarmStatus != nullptr) {
-			conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
-			conf["alarmStatus"] = m_jAlarmStatus;
-		}
-		m_csAlmStatus.unlock();
-
-
-		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
-		conf["ioAddr"] = getIOAddrStr();
-		conf["addrType"] = m_addrType;
-		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
-
-		conf["avgRespTime"] = m_avgTransactionTime;
-		conf["unhandleRecvPktCount"] = m_unhandledRecvPktCount;
-	}
-
-	//备注
-	if (querier.getRemark)
-	{
-		conf["remark"] = m_remark;
-	}
-
-	//升级状态信息数据
-	if (querier.getUpgradeInfo) {
-		json jui;
-		jui = m_upgradeInfo.toJson();
-		conf["upgradeInfo"] = jui;
-	}
-
-	if (querier.getDebug) {
-		conf["pktAssembleBuff"] = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
-		conf["lastFailReq"] = m_lastFailReq;
-		conf["lastFailReqTime"] = m_lastFailReqTime;
-	}
-
-	if (querier.getChild)
-	{
-		if (m_vecChildDev.size() > 0)
-		{
-			json children = json::array();
-			for (auto& i : m_vecChildDev)
-			{
-				json j;
-				i->toJson(j, querier);
-				children.push_back(j);
-			}
-			conf["children"] = children;
-		}
-	}
-
-	if (querier.getChan && m_channels.size() > 0)
-	{
-		json channels = json::array();
-		for (auto& i : m_channels)
-		{
-			//空闲通道作为状态数据，必须指定获取状态才返回
-			if (!querier.getStatus && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare) {
-				continue;
-			}
-			json j;
-			i->toJson(j, querier);
-			channels.push_back(j);
-		}
-		conf["channels"] = channels;
-	}
-
-	unlock_conf_shared();
-	return true;
-}
+//bool ioDev::toJson(json& conf, DEV_QUERIER querier)
+//{
+//	lock_conf_shared();
+//
+//	//配置数据 - 保存在配置文件中
+//	if (querier.getConf) {
+//		conf["addrMode"] = m_addrType;
+//		conf["addr"] = m_jDevAddr;
+//		conf["ioMode"] = m_ioMode;
+//		conf["type"] = m_devType;
+//		conf["typeLabel"] = getDevTypeLabel(m_devType);
+//		if (m_devSubType != "") {
+//			conf["subType"] = m_devSubType;
+//			conf["subTypeLabel"] = getDevSubTypeLabel(m_devSubType);
+//		}
+//
+//		conf["level"] = m_level;
+//		conf["manageStatus"] = m_dispositionMode;
+//		conf["acqInterval"] = m_fAcqInterval;
+//		conf["enableAcq"] = m_bEnableAcq;
+//		if (m_strTagBind != "")
+//			conf["tagBind"] = m_strTagBind;
+//		if (m_strChanTemplate != "")
+//			conf["chanTemplate"] = m_strChanTemplate;
+//		conf["nodeID"] = m_confNodeId;
+//		if (m_acqMode != "")
+//			conf["acqMode"] = m_acqMode;
+//		if (m_chanGroup != "")
+//			conf["chanGroup"] = m_chanGroup;
+//		if (m_chanTimeSync)
+//			conf["chanTimeSync"] = true;
+//
+//		conf["acqAlarm"] = m_acqAlarm;
+//		if (m_strUser != "") {
+//			conf["user"] = m_strUser;
+//		};
+//		if (m_strPwd != "") {
+//			conf["pwd"] = m_strPwd;
+//		}
+//		if (m_translatorProto != "") {
+//			conf["translatorProto"] = m_translatorProto;
+//		}
+//		if (m_standAloneIOType != "") {
+//			conf["standAloneIOType"] = m_standAloneIOType;
+//		}
+//		if (m_cycleTaskScript != "") {
+//			conf["cycleTaskScript"] = m_cycleTaskScript;
+//		}
+//		if (m_outputScript != "") {
+//			conf["outputScript"] = m_outputScript;
+//		}
+//		if (m_onRecvScript != "") {
+//			conf["onRecvScript"] = m_onRecvScript;
+//		}
+//		if (m_tdspScript != "") {
+//			conf["tdspScript"] = m_tdspScript;
+//		}
+//
+//		if (m_bEnableOfflineTimeout) {
+//			conf["enableOfflineTimeout"] = m_bEnableOfflineTimeout;
+//			conf["offlineTimeout"] = m_offlineTimeout;
+//		}
+//
+//		if (m_bEnableHttpHeartbeat) {
+//			conf["enableHttpHeartbeat"] = m_bEnableHttpHeartbeat;
+//			conf["httpHeartbeatUrl"] = m_httpHeartbeatUrl;
+//		}
+//
+//		if (m_bEnablePingOnlineCheck) {
+//			conf["enablePingOnlineCheck"] = m_bEnablePingOnlineCheck;
+//		}
+//
+//		if (m_devType == DEV_TYPE::DEV::tdsp_device && m_devSubType == TDSP_SUB_TYPE::childTds) {
+//			conf["tdsVersion"] = m_tdsVersion;
+//			conf["serverStatus"]["cpu"] = m_tdsSrvStatus.cpu;
+//			conf["serverStatus"]["mem"] = m_tdsSrvStatus.mem;
+//			conf["serverStatus"]["handle"] = m_tdsSrvStatus.handle;
+//			conf["statusUpdateTime"] = m_statusUpdateTime;
+//			conf["serverUpgradeStatus"] = m_childTdsUpgradeStatus;
+//		}
+//
+//		if (m_reconnectMode != "" && m_reconnectTime > 0) {
+//			json obj = json::object();
+//
+//			obj["mode"] = m_reconnectMode;
+//			obj["time"] = m_reconnectTime;
+//
+//			conf["reconnect"] = obj;
+//		}
+//	}
+//
+//	//运行时数据 - 与实际硬件设备关联的状态信息，硬件上送的数据
+//	if (querier.getStatus)
+//	{
+//		if (m_charset != "")
+//			conf["charset"] = m_charset;
+//
+//		conf["online"] = m_bOnline;
+//		conf["connected"] = m_bConnected;
+//		if (pIOSession != nullptr)
+//		{
+//			conf["remoteIP"] = pIOSession->getRemoteAddr();
+//		}
+//
+//		//详细信息
+//		conf["chanUpdateTime"] = timeopt::st2str(m_stLastChanDataTime);
+//
+//		m_csAlmStatus.lock();
+//		if (m_jAlarmStatus != nullptr) {
+//			conf["alarmUpdateTime"] = timeopt::st2str(m_stLastAlarmStatusTime);
+//			conf["alarmStatus"] = m_jAlarmStatus;
+//		}
+//		m_csAlmStatus.unlock();
+//
+//
+//		//动态配置 - 动态生成的配置信息 不保存在配置文件中，仅为方便接口调用者使用
+//		conf["ioAddr"] = getIOAddrStr();
+//		conf["addrType"] = m_addrType;
+//		conf["enableAlarm"] = tds->conf->enableGlobalAlarm;
+//
+//		conf["avgRespTime"] = m_avgTransactionTime;
+//		conf["unhandleRecvPktCount"] = m_unhandledRecvPktCount;
+//	}
+//
+//	//备注
+//	if (querier.getRemark)
+//	{
+//		conf["remark"] = m_remark;
+//	}
+//
+//	//升级状态信息数据
+//	if (querier.getUpgradeInfo) {
+//		json jui;
+//		jui = m_upgradeInfo.toJson();
+//		conf["upgradeInfo"] = jui;
+//	}
+//
+//	if (querier.getDebug) {
+//		conf["pktAssembleBuff"] = str::bytesToHexStr(m_pab.stream, m_pab.iStreamLen);
+//		conf["lastFailReq"] = m_lastFailReq;
+//		conf["lastFailReqTime"] = m_lastFailReqTime;
+//	}
+//
+//	if (querier.getChild)
+//	{
+//		if (m_vecChildDev.size() > 0)
+//		{
+//			json children = json::array();
+//			for (auto& i : m_vecChildDev)
+//			{
+//				json j;
+//				i->toJson(j, querier);
+//				children.push_back(j);
+//			}
+//			conf["children"] = children;
+//		}
+//	}
+//
+//	if (querier.getChan && m_channels.size() > 0)
+//	{
+//		json channels = json::array();
+//		for (auto& i : m_channels)
+//		{
+//			//空闲通道作为状态数据，必须指定获取状态才返回
+//			if (!querier.getStatus && i->m_dispositionMode == DEV_DISPOSITION_MODE::spare) {
+//				continue;
+//			}
+//			json j;
+//			i->toJson(j, querier);
+//			channels.push_back(j);
+//		}
+//		conf["channels"] = channels;
+//	}
+//
+//	unlock_conf_shared();
+//	return true;
+//}
 
 bool ioDev::getStatus(json& status, string opt)
 {
@@ -1133,6 +1140,14 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+	kv = conf.find("subTopics");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if(item.is_string())
+		{
+			m_subTopics = item.get<string>();
+		}
+	}
 
 	kv = conf.find("acqInterval");
 	if (kv != conf.end()) {

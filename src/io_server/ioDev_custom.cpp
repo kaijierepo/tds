@@ -45,58 +45,48 @@ ioDev_custom::~ioDev_custom()
 	stop();
 }
 
-bool ioDev_custom::toJson(json& conf, DEV_QUERIER querier)
+bool ioDev_custom::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
 {
-	ioDev::toJson(conf, querier);
+	ioDev::toJson(conf,doc, querier);
 
 	if (querier.getStatus) {
-		json jRunInfo = json::object();
+		yyjson_mut_val* yyMap = yyjson_mut_obj(doc);
 		if (m_cycleTaskScript != "") {
-			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
-			m_lastRunInfo_cycleAcq.toJson(doc, yyRuninfo);
-			size_t len;
-			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
-			if (p) {
-				json j = json::parse(p);
-				free(p);
-				jRunInfo["cycleAcq"] = j;
-			}
+			yyjson_mut_val* yyInfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_cycleAcq.toJson(doc, yyInfo);
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "cycleAcq");
+			yyjson_mut_obj_put(yyMap, yykey, yyInfo);
 		}
 		else {
-			jRunInfo["cycleAcq"] = nullptr;
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "cycleAcq");
+			yyjson_mut_val* yyVal = yyjson_mut_null(doc);
+            yyjson_mut_obj_put(yyMap, yykey, yyVal);
 		}
 		if (m_outputScript != "") {
-			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
-			m_lastRunInfo_output.toJson(doc, yyRuninfo);
-			size_t len;
-			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
-			if (p) {
-				json j = json::parse(p);
-				free(p);
-				jRunInfo["output"] = j;
-			}
+			yyjson_mut_val* yyInfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_output.toJson(doc, yyInfo);
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "output");
+			yyjson_mut_obj_put(yyMap, yykey, yyInfo);
 		}
 		else {
-			jRunInfo["output"] = nullptr;
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "output");
+			yyjson_mut_val* yyVal = yyjson_mut_null(doc);
+			yyjson_mut_obj_put(yyMap, yykey, yyVal);
 		}
 		if (m_onRecvScript != "") {
-			yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
-			yyjson_mut_val* yyRuninfo = yyjson_mut_obj(doc);
-			m_lastRunInfo_onRecv.toJson(doc, yyRuninfo);
-			size_t len;
-			char* p = yyjson_mut_val_write(yyRuninfo, 0, &len);
-			if (p) {
-				json j = json::parse(p);
-				free(p);
-				jRunInfo["onRecv"] = j;
-			}
+			yyjson_mut_val* yyInfo = yyjson_mut_obj(doc);
+			m_lastRunInfo_onRecv.toJson(doc, yyInfo);
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "onRecv");
+			yyjson_mut_obj_put(yyMap, yykey, yyInfo);
 		}
 		else {
-			jRunInfo["onRecv"] = nullptr;
+			yyjson_mut_val* yykey = yyjson_mut_str(doc, "onRecv");
+			yyjson_mut_val* yyVal = yyjson_mut_null(doc);
+			yyjson_mut_obj_put(yyMap, yykey, yyVal);
 		}
-		conf["scriptStatus"] = jRunInfo;
+
+		yyjson_mut_val* yykey = yyjson_mut_str(doc, "scriptStatus");
+		yyjson_mut_obj_put(conf, yykey, yyMap);
 	}
 
 	return true;

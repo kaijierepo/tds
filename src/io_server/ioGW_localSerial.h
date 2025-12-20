@@ -21,7 +21,7 @@ public:
 	   "stopBits" : 0
 	}
 	*/
-	bool toJson(json& conf, DEV_QUERIER querier) override;
+	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier) override;
 	bool loadConf(json& conf) override;
 	string getConnInfo() override;
 	bool isConnected() override;

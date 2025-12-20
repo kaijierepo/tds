@@ -802,8 +802,17 @@ void ioServer::rpc_addDev(json& params,RPC_RESP& rpcResp, RPC_SESSION sesion)
 		devQuery.getChild = true;
 		devQuery.getChan = true;
 		devQuery.getStatus = true;
-		pd->toJson(params, devQuery);
-		rpcSrv.notify("devAdded", params);
+		yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* j = yyjson_mut_obj(doc);
+		pd->toJson(j,doc, devQuery);
+        char* pps = yyjson_mut_val_write(j, 0,nullptr);
+		string sparams;
+		if(pps){
+			sparams = pps;
+			free(pps);		
+		} 
+		rpcSrv.notify("devAdded", sparams);
+		yyjson_mut_doc_free(doc);		
 		pd->run();
 	}
 	else {
@@ -1726,62 +1735,62 @@ bool ioServer::toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt)
 	return true;
 }
 
-bool ioServer::toJson(json& conf, json opt)
-{
-	lock_conf_shared();
-
-
-	DEV_QUERIER devQuery;
-	devQuery.parseQueryOpt(opt);
-
-	str::split(devQuery.keywords, devQuery.strKeywords," ");
-	DEV_STATIS devStatis;
-	vector<ioDev*> filterRlt;
-	queryDev(devQuery,devStatis, filterRlt);
-	
-
-	if (devQuery.paging && devQuery.pageSize>0) {
-		conf = json::object(); 
-		size_t recCount = filterRlt.size();
-		size_t pageCount = recCount / devQuery.pageSize;
-		if (recCount % devQuery.pageSize > 0)
-			pageCount++;
-
-		size_t startIdx = devQuery.pageNo * devQuery.pageSize;
-		size_t endIdx = devQuery.pageNo * devQuery.pageSize + devQuery.pageSize;
-		if (endIdx > recCount) {
-			endIdx = recCount;
-		}
-
-		json jDevices = json::array();
-		for (size_t i = startIdx; i < endIdx; i++) {
-			json j;
-			DEV_QUERIER query;
-			query.parseQueryOpt(opt);
-			filterRlt[i]->toJson(j, query);
-			jDevices.push_back(j);
-		}
-
-		conf["pageNo"] = devQuery.pageNo;
-		conf["pageCount"] = pageCount;
-		conf["pageSize"] = devQuery.pageSize;
-		conf["devList"] = jDevices;
-		if (devQuery.getStatis) {
-			conf["statis"] = devStatis.toJson();
-		}
-	}
-	else {
-		conf = json::array();
-		for (int i = 0; i < filterRlt.size(); i++) {
-			json j;
-			filterRlt[i]->toJson(j, devQuery);
-			conf.push_back(j);
-		}
-	}
-	
-	unlock_conf_shared();
-	return true;
-}
+//bool ioServer::toJson(json& conf, json opt)
+//{
+//	lock_conf_shared();
+//
+//
+//	DEV_QUERIER devQuery;
+//	devQuery.parseQueryOpt(opt);
+//
+//	str::split(devQuery.keywords, devQuery.strKeywords," ");
+//	DEV_STATIS devStatis;
+//	vector<ioDev*> filterRlt;
+//	queryDev(devQuery,devStatis, filterRlt);
+//	
+//
+//	if (devQuery.paging && devQuery.pageSize>0) {
+//		conf = json::object(); 
+//		size_t recCount = filterRlt.size();
+//		size_t pageCount = recCount / devQuery.pageSize;
+//		if (recCount % devQuery.pageSize > 0)
+//			pageCount++;
+//
+//		size_t startIdx = devQuery.pageNo * devQuery.pageSize;
+//		size_t endIdx = devQuery.pageNo * devQuery.pageSize + devQuery.pageSize;
+//		if (endIdx > recCount) {
+//			endIdx = recCount;
+//		}
+//
+//		json jDevices = json::array();
+//		for (size_t i = startIdx; i < endIdx; i++) {
+//			json j;
+//			DEV_QUERIER query;
+//			query.parseQueryOpt(opt);
+//			filterRlt[i]->toJson(j, query);
+//			jDevices.push_back(j);
+//		}
+//
+//		conf["pageNo"] = devQuery.pageNo;
+//		conf["pageCount"] = pageCount;
+//		conf["pageSize"] = devQuery.pageSize;
+//		conf["devList"] = jDevices;
+//		if (devQuery.getStatis) {
+//			conf["statis"] = devStatis.toJson();
+//		}
+//	}
+//	else {
+//		conf = json::array();
+//		for (int i = 0; i < filterRlt.size(); i++) {
+//			json j;
+//			filterRlt[i]->toJson(j, devQuery);
+//			conf.push_back(j);
+//		}
+//	}
+//	
+//	unlock_conf_shared();
+//	return true;
+//}
 
 bool ioServer::getStatus(json& conf, string opt)
 {
@@ -1837,15 +1846,24 @@ ioDev* ioServer::onChildDevDiscovered(json childDevAddr,string ioSessionAddr, st
 	logger.logInternal(str::format("[ioDev]空闲设备上线，ioAddr=%s,ioSessionAddr=%s,设备类型=%s,子类型=%s",p->getIOAddrStr().c_str(), ioSessionAddr.c_str(), type.c_str(), subType.c_str()));
 
 	//通知设备发现
-	json j;
+	yyjson_mut_doc* doc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* j = yyjson_mut_obj(doc);
 
 	DEV_QUERIER devQuery;
 	devQuery.getConf = true;
 	devQuery.getChan = true;
 	devQuery.getChild = true;
 	devQuery.getStatus = true;
-	p->toJson(j, devQuery);
-	rpcSrv.notify("devDiscovered", j);
+	p->toJson(j,doc, devQuery);
+    char* pps = yyjson_mut_val_write(j, 0, nullptr);
+	string sp;
+	if(pps){
+		sp = pps;
+		free(pps);
+	} 
+	rpcSrv.notify("devDiscovered", sp);
+
+	yyjson_mut_doc_free(doc);
 
 	return p;
 }

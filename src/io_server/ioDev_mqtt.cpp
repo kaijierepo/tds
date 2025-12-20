@@ -104,7 +104,7 @@ void thread_mqtt_comm(void* p)
 
     // 建立 MQTT 连接
     //string server = "mqtt://" + pDev->getIP() + ":" + to_string(pDev->getPort());
-    string server = "mqtt://192.168.6.107:1883";
+    string server = "mqtt://127.0.0.1:1883";
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn,pDev);
     if (c == NULL) {
         MG_ERROR(("Failed to create MQTT connection"));

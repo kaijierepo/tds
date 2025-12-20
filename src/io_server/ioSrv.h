@@ -102,7 +102,7 @@ public:
 
 	//组态信息
 	bool toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt = nullptr);
-	bool toJson(json& conf, json opt = nullptr);
+	//bool toJson(json& conf, json opt = nullptr);
 	bool loadConf();
 	bool loadConfMerge(json& j);
 	bool loadConfAppend(json& j);

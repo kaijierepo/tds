@@ -398,17 +398,17 @@ int ioGW_LocalSerial::parseParity(string s)
 }
 
 
-bool ioGW_LocalSerial::toJson(json& conf, DEV_QUERIER querier)
+bool ioGW_LocalSerial::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
 {
-	ioDev::toJson(conf, querier);
+	ioDev::toJson(conf,doc, querier);
 
 	if (querier.getConf) {
-		json jSerial;
-		jSerial["baudRate"] = m_baudRate;
-		jSerial["byteSize"] = m_byteSize;
-		jSerial["parity"] = m_parity;
-		jSerial["stopBits"] = m_stopBits;
-		conf["serial"] = jSerial;
+		yyjson_mut_val* jSerial = yyjson_mut_obj(nullptr);
+		yyjson_mut_obj_add_int(doc,jSerial, "baudRate", m_baudRate);
+        yyjson_mut_obj_add_int(doc,jSerial, "byteSize", m_byteSize);
+        yyjson_mut_obj_add_strcpy(doc,jSerial, "parity", m_parity.c_str());
+        yyjson_mut_obj_add_strcpy(doc,jSerial, "stopBits", m_stopBits.c_str());
+		yyjson_mut_obj_add_val(doc, conf, "serial", jSerial);
 	}
 	return false;
 }

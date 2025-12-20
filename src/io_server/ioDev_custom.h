@@ -54,7 +54,7 @@ public:
 	ioDev_custom();
 	~ioDev_custom();
 
-	bool toJson(json& conf, DEV_QUERIER querier);
+	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier) override;
 
 	CUSTOM_PDU_TRANSACTION m_transaction;
 	bool handleDevRpcCall(json& jReq, RPC_RESP& rpcResp) override;

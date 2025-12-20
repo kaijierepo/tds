@@ -75,7 +75,7 @@ bool ioDev_dlt645_2007::loadConf(json& conf)
 	}
 }
 
-bool ioDev_dlt645_2007::toJson(json& conf, DEV_QUERIER querier)
+bool ioDev_dlt645_2007::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
 {
 	//lock_conf_shared();
 
@@ -85,7 +85,7 @@ bool ioDev_dlt645_2007::toJson(json& conf, DEV_QUERIER querier)
 
 	//unlock_conf_shared();
 
-	return ioDev::toJson(conf,querier);
+	return ioDev::toJson(conf,doc,querier);
 }
 
 void ioDev_dlt645_2007::output(string chanAddr, json jVal, json& rlt,json& err, bool sync)

@@ -252,7 +252,7 @@ public:
 	virtual ~ioDev(void);
 
 	virtual bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc,DEV_QUERIER querier);
-	virtual bool toJson(json& conf, DEV_QUERIER querier);
+	//virtual bool toJson(json& conf, DEV_QUERIER querier);
 	virtual bool loadConf(json& conf);
 
 	static bool m_defaultOnline;
@@ -323,7 +323,7 @@ public:
 	string m_charset;  //协议文本编码类型
 	string m_strUser;  //某些设备需要用户名和密码才能访问
 	string m_strPwd;
-
+	string m_subTopics;  //mqtt订阅的topic
 	map<string,json> m_mapDevVar;
 
 	bool m_bEnableOfflineTimeout;

@@ -46,7 +46,7 @@ public:
 
 	bool loadConf(json& conf) override;
 	bool toJson(yyjson_mut_val* conf,yyjson_mut_doc* doc, DEV_QUERIER querier) override;
-	bool toJson(json& conf, DEV_QUERIER querier) override;
+	//bool toJson(json& conf, DEV_QUERIER querier) override;
 	bool getChanStatus(json& statusList) override;
 	bool getChanVal(json& valList) override;
 	bool match(string channelNo);

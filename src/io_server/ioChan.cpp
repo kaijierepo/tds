@@ -208,75 +208,75 @@ bool ioChannel::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER qu
 	return true;
 }
 
-bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
-{
-	json jDevAddr;
-	if (m_jDevAddr.is_object()) {
-		for (auto& i : m_jDevAddr.items()) {
-			if (i.value() != nullptr) {
-				jDevAddr[i.key()] = i.value();
-			}
-		}
-	}
-	else {
-		jDevAddr = m_jDevAddr;
-	}
-
-	conf["addr"] = jDevAddr;
-
-	if (querier.getConf) {
-		conf["nodeID"] = m_confNodeId;
-		conf["tagBind"] = m_strTagBind;
-		conf["ioType"] = m_ioType;
-		conf["valType"] = m_valType;
-		conf["name"] = m_name;
-
-		conf["k"] = m_k;
-
-		//optional fields
-		if (m_fmt != "")
-			conf["fmt"] = m_fmt;
-
-		if (m_byteOrder != "")
-			conf["byteOrder"] = m_byteOrder;
-
-		if (m_bCustomOutputType)
-		{
-			conf["isCustomOutputType"] = m_bCustomOutputType;
-			conf["customOutputType"] = m_sCustomOutputType;
-		}
-
-		if (m_bDownSample)
-		{
-			conf["downSample"] = true;
-			conf["downSampleInterval"] = m_iDownSampleInterval;
-		}
-	}
-
-
-	if (querier.getStatus)
-	{
-		//conf["ioTypeLabel"] = m_ioTypeLabel;
-		conf["val"] = m_curVal;
-	}
-
-	return false;
-}
+//bool ioChannel::toJson(json& conf, DEV_QUERIER querier)
+//{
+//	json jDevAddr;
+//	if (m_jDevAddr.is_object()) {
+//		for (auto& i : m_jDevAddr.items()) {
+//			if (i.value() != nullptr) {
+//				jDevAddr[i.key()] = i.value();
+//			}
+//		}
+//	}
+//	else {
+//		jDevAddr = m_jDevAddr;
+//	}
+//
+//	conf["addr"] = jDevAddr;
+//
+//	if (querier.getConf) {
+//		conf["nodeID"] = m_confNodeId;
+//		conf["tagBind"] = m_strTagBind;
+//		conf["ioType"] = m_ioType;
+//		conf["valType"] = m_valType;
+//		conf["name"] = m_name;
+//
+//		conf["k"] = m_k;
+//
+//		//optional fields
+//		if (m_fmt != "")
+//			conf["fmt"] = m_fmt;
+//
+//		if (m_byteOrder != "")
+//			conf["byteOrder"] = m_byteOrder;
+//
+//		if (m_bCustomOutputType)
+//		{
+//			conf["isCustomOutputType"] = m_bCustomOutputType;
+//			conf["customOutputType"] = m_sCustomOutputType;
+//		}
+//
+//		if (m_bDownSample)
+//		{
+//			conf["downSample"] = true;
+//			conf["downSampleInterval"] = m_iDownSampleInterval;
+//		}
+//	}
+//
+//
+//	if (querier.getStatus)
+//	{
+//		//conf["ioTypeLabel"] = m_ioTypeLabel;
+//		conf["val"] = m_curVal;
+//	}
+//
+//	return false;
+//}
 
 bool ioChannel::getChanStatus(json& statusList)
 {
-	json j;
-	DEV_QUERIER query;
-	toJson(j, query);
-	j["val"] = m_curVal;
-	if (timeopt::isValidTime(m_stLastUpdateTime))
-	{
-		j["time"] = timeopt::st2str(m_stLastUpdateTime);
-	}
-	else
-		j["time"] = "?";
-	
-	statusList.push_back(j);
+	//json j;
+	//DEV_QUERIER query;
+	//toJson(j, query);
+	//j["val"] = m_curVal;
+	//if (timeopt::isValidTime(m_stLastUpdateTime))
+	//{
+	//	j["time"] = timeopt::st2str(m_stLastUpdateTime);
+	//}
+	//else
+	//	j["time"] = "?";
+	//
+	//statusList.push_back(j);
 	return true;
 }
 

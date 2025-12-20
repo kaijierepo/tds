@@ -5961,7 +5961,8 @@ string rpcHandler::rpc_openCom(json params, string& error)
 
 void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 {
-	json j;
+	yyjson_mut_doc* mdoc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* j = yyjson_mut_obj(mdoc);
 	if (!params.contains("rootTag"))
 		params["rootTag"] = "";
 
@@ -5977,7 +5978,7 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 		if (p) {
 			DEV_QUERIER query;
 			query.parseQueryOpt(params);
-			p->toJson(j, query);
+			p->toJson(j,mdoc, query);
 		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified ioAddr not found");
@@ -5989,7 +5990,7 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 		if (p) {
 			DEV_QUERIER query;
 			query.parseQueryOpt(params);
-			p->toJson(j, query);
+			p->toJson(j,mdoc, query);
 		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified id not found");
@@ -6002,17 +6003,22 @@ void rpcHandler::rpc_getDev(json params, RPC_RESP& resp, RPC_SESSION& session)
 		if (p) {
 			DEV_QUERIER query;
 			query.parseQueryOpt(params);
-			p->toJson(j, query);
+			p->toJson(j,mdoc, query);
 		}
 		else {
 			resp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "io device with specified bindTag not found");
 		}
 	}
 	else {
-		ioSrv.toJson(j, params);
+		ioSrv.toJson(j,mdoc, params);
 	};
 
-	resp.result = j.dump();
+	char* pRlt = yyjson_mut_val_write(j, 0, nullptr);
+	if(pRlt){
+		resp.result = pRlt;
+		free(pRlt);
+	}	 
+	yyjson_mut_doc_free(mdoc);
 }
 
 void rpcHandler::rpc_getChanStatus(json params, RPC_RESP& resp)
