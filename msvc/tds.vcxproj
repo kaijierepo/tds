@@ -643,6 +643,7 @@
     <ClCompile Include="..\src\io_server\ioDev_modbusRtu.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_modbusSlave.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_modbusTcp.cpp" />
+    <ClCompile Include="..\src\io_server\ioDev_mqtt.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_onvif.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_srvStatus.cpp" />
     <ClCompile Include="..\src\io_server\ioDev_tdsp.cpp" />
@@ -725,6 +726,7 @@
     <ClInclude Include="..\src\io_server\ioDev_modbusRtu.h" />
     <ClInclude Include="..\src\io_server\ioDev_modbusSlave.h" />
     <ClInclude Include="..\src\io_server\ioDev_modbusTcp.h" />
+    <ClInclude Include="..\src\io_server\ioDev_mqtt.h" />
     <ClInclude Include="..\src\io_server\ioDev_onvif.h" />
     <ClInclude Include="..\src\io_server\ioDev_srvStatus.h" />
     <ClInclude Include="..\src\io_server\ioDev_tdsp.h" />
