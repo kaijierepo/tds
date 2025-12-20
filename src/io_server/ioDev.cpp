@@ -959,6 +959,14 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 
+	kv = conf.find("type");
+    if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_string()) {
+			m_devType = item.get<string>();
+		}
+	}
+
 	kv = conf.find("addrType");
 	if (kv != conf.end()) {
 		json& item = kv.value();
