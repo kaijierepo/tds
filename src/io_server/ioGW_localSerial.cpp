@@ -556,7 +556,7 @@ bool ioGW_LocalSerial::isOpen()
 bool ioGW_LocalSerial::OpenCom(string conf)
 {
 	bool ret = false;
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 	if (m_bConnected)
 	{
 		ret = true;
@@ -575,7 +575,7 @@ bool ioGW_LocalSerial::OpenCom(string conf)
 		m_devAddr = getDevAddrStr();
 		ret = OpenCom();
 	}
-	unlock_conf_unique();
+	
 	return ret;
 }
 

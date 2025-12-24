@@ -245,6 +245,8 @@ struct DEV_STATIS {
 	}
 };
 
+
+
 class ioDev : public ICallback_udpSrv, public ICallback_tcpClt
 {
 public:
@@ -614,6 +616,32 @@ public:
 	string m_strErrorInfo;
 
 	virtual void OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSION udpSession) override;
+};
+
+struct DEV_CONF_LOCK_SHARED {
+	DEV_CONF_LOCK_SHARED(ioDev* p) {
+		p->lock_conf_shared();
+		m_p = p;
+	}
+	~DEV_CONF_LOCK_SHARED() {
+		if (m_p)
+			m_p->unlock_conf_shared();
+	}
+
+    ioDev* m_p;
+};
+
+struct DEV_CONF_LOCK_UNIQUE {
+	DEV_CONF_LOCK_UNIQUE(ioDev* p) {
+		p->lock_conf_unique();
+		m_p = p;
+	}
+	~DEV_CONF_LOCK_UNIQUE() {
+		if (m_p)
+			m_p->unlock_conf_unique();
+	}
+
+	ioDev* m_p;
 };
 
 ioDev* createIODev(string type);

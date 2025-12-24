@@ -234,16 +234,17 @@ ioChannel* ioDev_tdsp::createChan(yyjson_val* jVal, string addr) {
 
 bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 	//缓存数据，但不一定是所有通道。后续优化
-	lock_conf_unique();
+	//lock_conf_unique();
 	//m_jAcq = chanData;
-	unlock_conf_unique();
+	//unlock_conf_unique();
+	
 
 	timeopt::now(&m_stLastChanDataTime);
 
 	//更新数据到通道。并更新到绑定对象
 	//列表输入
 	if (yyjson_is_arr(chanData)) {
-		lock_conf_unique();
+		DEV_CONF_LOCK_UNIQUE(this);
 
 		size_t i, iMax;
 		yyjson_val* yyvDe;
@@ -310,7 +311,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 			}
 		}
 
-		unlock_conf_unique();
+		
 	}
 	//树形输入.设备本身也通过 树状位号模式来管理通道，直接转发到数据服务
 	//子服务首次连接发送 acq命令，子服务 首次返回树形全部实时值
@@ -321,7 +322,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 		}
 		//通道key,val模式输入
 		else {
-			lock_conf_unique();
+			DEV_CONF_LOCK_UNIQUE(this);
 
 			size_t i,iMax;
 			yyjson_val* key;
@@ -340,7 +341,7 @@ bool ioDev_tdsp::handle_AcqOrInput(yyjson_val* chanData, yyjson_doc* doc) {
 				}
 			}
 
-			unlock_conf_unique();
+			
 		}
 	}
 
@@ -502,10 +503,10 @@ bool ioDev_tdsp::handleAsynResp(yyjson_val* jResp,yyjson_doc* doc) {
 		}
 		//string sOld = m_jInfo.dump();
 		//string sNew = rlt.dump();
-		//lock_conf_unique();
+		//DEV_CONF_LOCK_UNIQUE(this);
 		//m_jInfo = rlt;
 		//saveInfoBuff();
-		//unlock_conf_unique();
+		//
 
 		//if ( (sOld != sNew) && m_jInfo.contains("deviceType")) {
 		//	string devType = m_jInfo["deviceType"];
@@ -1059,10 +1060,10 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 				}
 				//else if (method == "getDevInfo")
 				//{
-				//	lock_conf_unique();
+				//	DEV_CONF_LOCK_UNIQUE(this);
 				//	m_jInfo = result;
 				//	saveInfoBuff();
-				//	unlock_conf_unique();
+				//	
 				//}
 				else if (method == "output")
 				{

@@ -235,7 +235,7 @@ void ioDev_ModbusSlave::output(ioChannel* pC, json jVal, json& rlt,json& err, bo
 
 void ioDev_ModbusSlave::handle_pduResp_read(PDU_REQ_read* req,PDU_RESP_read* resp)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	PDU_RESP_read* pPduResp = resp;
 	PDU_REQ_read* pPduReq = req;
 
@@ -279,7 +279,7 @@ void ioDev_ModbusSlave::handle_pduResp_read(PDU_REQ_read* req,PDU_RESP_read* res
 	if (vecDevAddr.size() > 0) {
 		input(vecDevAddr, vecVal);
 	}
-	unlock_conf_shared();
+	
 }
 
 bool ioDev_ModbusSlave::isCommBusy()
@@ -838,7 +838,7 @@ void ioDev_ModbusSlave::CommUnlock()
 
 bool ioDev_ModbusSlave::onRecvNotify(unsigned char* pData, size_t iLen)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 
 	vector<string> vecDevAddr;
 	vector<json> vecVal;
@@ -871,7 +871,7 @@ bool ioDev_ModbusSlave::onRecvNotify(unsigned char* pData, size_t iLen)
 	if (vecDevAddr.size() > 0) {
 		input(vecDevAddr, vecVal);
 	}
-	unlock_conf_shared();
+	
 
 
 	return true;

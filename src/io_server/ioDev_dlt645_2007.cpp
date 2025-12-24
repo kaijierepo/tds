@@ -77,13 +77,13 @@ bool ioDev_dlt645_2007::loadConf(json& conf)
 
 bool ioDev_dlt645_2007::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
 {
-	//lock_conf_shared();
+	//DEV_CONF_LOCK_SHARED(this);
 
 	//if (querier.getConf) {
 	//	conf["enableRecvPreamble"] = m_bEnableRecvPreamble;
 	//}
 
-	//unlock_conf_shared();
+	//
 
 	return ioDev::toJson(conf,doc,querier);
 }

@@ -315,7 +315,7 @@ void ioDev::stop()
 
 bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	yyjson_mut_val* key;
 	yyjson_mut_val* val;
 	//配置数据 - 保存在配置文件中
@@ -729,13 +729,13 @@ bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querie
         return true;
 	}
 
-	unlock_conf_shared();
+	
 	return true;
 }
 
 //bool ioDev::toJson(json& conf, DEV_QUERIER querier)
 //{
-//	lock_conf_shared();
+//	DEV_CONF_LOCK_SHARED(this);
 //
 //	//配置数据 - 保存在配置文件中
 //	if (querier.getConf) {
@@ -907,7 +907,7 @@ bool ioDev::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querie
 //		conf["channels"] = channels;
 //	}
 //
-//	unlock_conf_shared();
+//	
 //	return true;
 //}
 
@@ -918,7 +918,7 @@ bool ioDev::getStatus(json& status, string opt)
 
 bool ioDev::getChanVal(json& valList)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_channels.size(); i++)
 	{
 		ioDev* p = m_channels[i];
@@ -930,14 +930,14 @@ bool ioDev::getChanVal(json& valList)
 		ioDev* p = m_vecChildDev[i];
 		p->getChanVal(valList);
 	}
-	unlock_conf_shared();
+	
 	return true;
 }
 
 
 bool ioDev::getChanStatus(json& statusList)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_channels.size(); i++)
 	{
 		ioDev* p = m_channels[i];
@@ -949,13 +949,13 @@ bool ioDev::getChanStatus(json& statusList)
 		ioDev* p = m_vecChildDev[i];
 		p->getChanStatus(statusList);
 	}
-	unlock_conf_shared();
+	
 	return true;
 }
 
 bool ioDev::loadConf(json& conf)
 {
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 
 
 	auto kv = conf.find("addrMode");
@@ -1348,7 +1348,7 @@ bool ioDev::loadConf(json& conf)
 		}
 	}
 		
-	unlock_conf_unique();
+	
 	return true;
 }
 
@@ -1578,7 +1578,7 @@ void DEV_QUERIER::parseQueryOpt(json& opt)
 
 ioDev* ioDev::getIODevByNodeID(string nodeID)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	ioDev* pD = nullptr;
 
 	if (m_confNodeId == nodeID)
@@ -1603,14 +1603,14 @@ ioDev* ioDev::getIODevByNodeID(string nodeID)
 		}
 	}
 
-	unlock_conf_shared();
+	
 	return pD;
 }
 
 bool ioDev::deleteIODevByNodeID(string nodeID)
 {
 	bool ret = false;
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -1632,7 +1632,7 @@ bool ioDev::deleteIODevByNodeID(string nodeID)
 		}
 			
 	}
-	unlock_conf_unique();
+	
 	return ret;
 }
 
@@ -2017,7 +2017,7 @@ string ioDev::getDevAddrStr(bool ignorePort)
 
 ioDev* ioDev::getIODevByIP(string ip) {
 	ioDev* pD = nullptr;
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -2026,13 +2026,13 @@ ioDev* ioDev::getIODevByIP(string ip) {
 			break;
 		}
 	}
-	unlock_conf_shared();
+	
 	return pD;
 }
 
 ioDev* ioDev::getIODevByIPPort(string ipport) {
 	ioDev* pD = nullptr;
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -2044,14 +2044,14 @@ ioDev* ioDev::getIODevByIPPort(string ipport) {
 			break;
 		}
 	}
-	unlock_conf_shared();
+	
 	return pD;
 }
 
 ioDev* ioDev::getIODevById(string id)
 {
 	ioDev* pD = nullptr;
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -2068,14 +2068,14 @@ ioDev* ioDev::getIODevById(string id)
 			break;
 		}
 	}
-	unlock_conf_shared();
+	
 	return pD;
 }
 
 ioDev* ioDev::getIODevByTag(string tag)
 {
 	ioDev* pD = nullptr;
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		ioDev* p = m_vecChildDev[i];
@@ -2097,7 +2097,7 @@ ioDev* ioDev::getIODevByTag(string tag)
 			break;
 		}
 	}
-	unlock_conf_shared();
+	
 	return pD;
 }
 
@@ -2579,7 +2579,7 @@ void ioDev::OnRecvUdpData(unsigned char* recvData, size_t recvDataLen, UDP_SESSI
 
 bool ioDev::addChild(ioDev* p)
 {
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 	p->m_pParent = this;
 	if (p->m_level == "channel")
 	{
@@ -2590,7 +2590,7 @@ bool ioDev::addChild(ioDev* p)
 	{
 		m_vecChildDev.push_back(p);
 	}
-	unlock_conf_unique();
+	
 	return true;
 }
 

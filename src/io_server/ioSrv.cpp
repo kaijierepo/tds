@@ -67,6 +67,7 @@ void IOThread()
 		pIoDev->loadStatusBuff();
 	}
 	ioSrv.unlock_conf_unique();
+	
 
 	while (1)
 	{
@@ -956,7 +957,7 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 	bool bFinded = false;
 	ioDev* p = NULL;
 
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		p = m_vecChildDev[i];
@@ -975,7 +976,7 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 			break;
 		}
 	}
-	unlock_conf_unique();
+	
 
 	if (bFinded)
 	{
@@ -1236,9 +1237,9 @@ ioDev* ioServer::getIODev(string ioAddr, bool bChn, bool ignorePort, string addr
 {
 	ioDev* p = nullptr;
 
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	p = ioDev::getIODev(ioAddr, bChn, ignorePort, addrType);
-	unlock_conf_shared();
+	
 
 	return p;
 }
@@ -1292,30 +1293,30 @@ void ioServer::updateAllChanVal()
 
 void ioServer::clear()
 {
-	lock_conf_unique();
+	DEV_CONF_LOCK_UNIQUE(this);
 	for (int i = 0; i < m_vecChildDev.size(); i++)
 	{
 		delete m_vecChildDev[i];
 	}
 	m_vecChildDev.clear();
-	unlock_conf_unique();
+	
 }
 
 size_t ioServer::getBindedChanCount()
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	size_t count = 0;
 	ioDev::recursiveGetBindedChanCount(this, count);
-	unlock_conf_shared();
+	
 	return count;
 }
 
 size_t ioServer::getChanCount()
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	size_t count = 0;
 	ioDev::recursiveGetChanCount(this, count);
-	unlock_conf_shared();
+	
 	return count;
 }
 
@@ -1671,7 +1672,7 @@ void ioServer::queryDev(DEV_QUERIER devQuerier, DEV_STATIS& devStatis, vector<io
 
 bool ioServer::toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 
 	DEV_QUERIER devQuery;
 	devQuery.parseQueryOpt(opt);
@@ -1731,13 +1732,13 @@ bool ioServer::toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt)
 		}
 	}
 
-	unlock_conf_shared();
+	
 	return true;
 }
 
 //bool ioServer::toJson(json& conf, json opt)
 //{
-//	lock_conf_shared();
+//	DEV_CONF_LOCK_SHARED(this);
 //
 //
 //	DEV_QUERIER devQuery;
@@ -1788,7 +1789,7 @@ bool ioServer::toJson(yyjson_mut_val*& conf, yyjson_mut_doc* doc, json opt)
 //		}
 //	}
 //	
-//	unlock_conf_shared();
+//	
 //	return true;
 //}
 
@@ -1957,7 +1958,7 @@ bool ioServer::handleRpc(const string& method, yyjson_val* params, RPC_RESP& rpc
 
 void ioServer::rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 	map<string, int> devTypeStatis;
 	DEV_STATIS devStatis;
 	//仅支持2级设备
@@ -1995,15 +1996,15 @@ void ioServer::rpc_getDevStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSI
 		  "}"
 		"}";
 
-	unlock_conf_shared();
+	
 }
 
 void ioServer::rpc_getChanStatis(yyjson_val* params, RPC_RESP& rpcResp, RPC_SESSION sesion)
 {
-	lock_conf_shared();
+	DEV_CONF_LOCK_SHARED(this);
 
 
-	unlock_conf_shared();
+	
 }
 
 

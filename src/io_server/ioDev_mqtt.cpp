@@ -4,6 +4,9 @@
 #include "ioChan.h"
 #include "ioSrv.h"
 #include "mongoose.h"
+#include "scriptManager.h"
+#include "scriptEngine.h"
+#include "scriptFunc.h"
 
 
 #define EXIT_FAILURE -1
@@ -103,8 +106,7 @@ void thread_mqtt_comm(void* p)
     opts.topic = mg_str("#");
 
     // 建立 MQTT 连接
-    //string server = "mqtt://" + pDev->getIP() + ":" + to_string(pDev->getPort());
-    string server = "mqtt://127.0.0.1:1883";
+    string server = "mqtt://" + pDev->getIP() + ":" + to_string(pDev->getPort());
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn,pDev);
     if (c == NULL) {
         MG_ERROR(("Failed to create MQTT connection"));
@@ -140,4 +142,41 @@ void ioDev_mqtt::stop()
         timeopt::sleepMilli(100);
     }
     return;
+}
+
+void ioDev_mqtt::onRecvMqttData(string topic, string data)
+{
+     string mqttData = "{"
+         "\"topic\":\"" + topic + "\","
+         "\"data\":\"" + data + "\""
+         "}";
+     
+     setOnline();
+
+     if (m_onRecvScript != "") {
+         ScriptEngine se;
+
+#ifdef TDS
+         se.m_engineInitFuncList.push_back(initTdsFunc);
+#endif
+
+         json jMqttMsg = json::parse(mqttData);
+
+
+         se.m_globalObj["MqttMsg"] = jMqttMsg;
+         se.m_ioDevThis = this;
+
+         SCRIPT_INFO si;
+         scriptManager.getScript(m_onRecvScript, si);
+         se.runScript(si, m_lastRunInfo_onRecv);
+
+         if (se.m_sError != "") {
+             string s = str::format("[warn]脚本执行错误，脚本=%s,错误=%s,设备=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+             LOG(s);
+         }
+         else {
+
+         }
+     }
+     return;
 }
