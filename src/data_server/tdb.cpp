@@ -521,6 +521,7 @@ namespace DB_FS {
 	bool readFile(string path, string& data) {
 		FILE* fp = nullptr;
 		wstring wPath = DB_STR::utf8_to_utf16(path);
+		DB_LOCK_GUARD dbLock(path);
 
 #ifdef _WIN32
 		_wfopen_s(&fp, wPath.c_str(), L"rb");
@@ -549,6 +550,7 @@ namespace DB_FS {
 	bool readFile(string path, char*& pData, int& len)
 	{
 		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
 		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"rb");
 #else
@@ -607,6 +609,7 @@ namespace DB_FS {
 		createFolderOfPath(path);
 
 		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
 		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"wb");
 #else
@@ -635,6 +638,7 @@ namespace DB_FS {
 	bool appendWrite(string path, char* data, size_t len)
 	{
 		FILE* fp = nullptr;
+		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
 		_wfopen_s(&fp, DB_STR::utf8_to_utf16(path).c_str(), L"a");
 #else
@@ -1545,6 +1549,7 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 	}
 	else
 	{
+		DB_LOCK_GUARD dbLock(dataListPath);
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dataListPath).c_str(), L"rb+");
 #else
@@ -1591,7 +1596,6 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 				fileData = "[" + fileData + "]";
 				fwrite(fileData.c_str(), 1, fileData.length(), fp);
 			}
-
 			fclose(fp);
 		}
 	}
@@ -5752,12 +5756,13 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 	}
 
 
-	DB_LOCK_GUARD dbLock(dlPath);
+
 
 	bool bAppend = false;
 	if (fileExist(dlPath))
 	{
 		string appendData = ",{\n  \"time\":\"" + stTime.toStr() + "\",\n    \"" + m_dbFmt.deItemKey_value + "\":" + sVal + "\n}]";
+		DB_LOCK_GUARD dbLock(dlPath);
 #ifdef _WIN32
 		FILE* fp = _wfopen(DB_STR::utf8_to_utf16(dlPath).c_str(), L"rb+");
 #else
@@ -7921,7 +7926,6 @@ bool DB_FILE::loadFile() {
 		pOwnerDB->m_FsBuff.readFile(path, data);
 	}
 	else {
-		DB_LOCK_GUARD dbLock(path);
 		DB_FS::readFile(path, data);
 	}
 
