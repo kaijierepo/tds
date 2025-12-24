@@ -262,6 +262,7 @@ public:
 
 	virtual bool run(); //连接； 执行io任务； 断线重连
 	virtual void stop();
+	virtual void confUpdated() {};
 	bool m_bRunning;
 	semaphore m_evtIO;
 	virtual bool isTdsp() { return false; }

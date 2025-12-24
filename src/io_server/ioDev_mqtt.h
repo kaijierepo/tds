@@ -10,12 +10,15 @@ public:
 
 	bool run() override;
 	void stop() override;
+	void confUpdated() override;
 
 	void onRecvMqttData(string topic, string data);
 
 	bool m_bThreadRunning;
 	bool m_bConnected;
 	bool m_bStop;
+
+	string m_lastSubTopics;
 };
 
 

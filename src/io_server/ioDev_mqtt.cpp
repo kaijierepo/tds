@@ -7,6 +7,7 @@
 #include "scriptManager.h"
 #include "scriptEngine.h"
 #include "scriptFunc.h"
+#include "common.h"
 
 
 #define EXIT_FAILURE -1
@@ -46,41 +47,43 @@ ioDev_mqtt::~ioDev_mqtt()
 
 static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     if (ev == MG_EV_MQTT_OPEN) {
-        LOG("MQTT connected");
         ioDev_mqtt* pDev = (ioDev_mqtt*)c->fn_data;
         pDev->m_bConnected = true;
-
-        struct mg_mqtt_opts sub_opts;
-        sub_opts.topic = mg_str("#");
-        sub_opts.qos = 1;
-        mg_mqtt_sub(c, &sub_opts);
-
-        for (auto i : pDev->m_vecChildDev)
-        {
-            ioChannel* p = (ioChannel*)i;
-            string strTopic = p->getIOAddrStr();
-
+        pDev->setOnline();
+        LOG("[MQTT]connected,%s", pDev->getIOAddrStr().c_str());
+        vector<string> vecTopics;
+        str::split(vecTopics, pDev->m_subTopics, ",");
+        for (int i = 0; i < vecTopics.size(); i++) {
+            string topic = vecTopics[i];
             struct mg_mqtt_opts sub_opts;
-            sub_opts.topic = mg_str(strTopic.c_str());
-            sub_opts.qos = QOS;
+            sub_opts.topic = mg_str(topic.c_str());
+            sub_opts.qos = 0;
             mg_mqtt_sub(c, &sub_opts);
-            LOG("[ioserver]Subscribing to topic %s\n using QoS%d\n\n", strTopic.c_str(), QOS);
         }
+        pDev->m_lastSubTopics = pDev->m_subTopics;
+        LOG("[MQTT]è®¢é˜…topic:%s,qos:%d", pDev->m_subTopics.c_str(), 0);
     }
     else if (ev == MG_EV_MQTT_MSG) {
-        // ÊÕµ½ MQTT ÏûÏ¢
+        // æ”¶åˆ° MQTT æ¶ˆæ¯
         struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
-        LOG(("Received message on topic [%s]: %s", mm->topic.ptr,mm->data.ptr));
+        ioDev_mqtt* pDev = (ioDev_mqtt*)c->fn_data;
+        string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
+        string data = str::fromBuff(mm->data.ptr, mm->data.len);
+        pDev->onRecvMqttData(topic,data);
     }
     else if (ev == MG_EV_CLOSE) {
         ioDev_mqtt* pDev = (ioDev_mqtt*)c->fn_data;
+        LOG("MQTT disconnected,%s",pDev->getIOAddrStr().c_str());
         if (pDev->m_bConnected) {
             pDev->m_bConnected = 0;
         }
     }
     else if (ev == MG_EV_ERROR) {
-        // ´íÎóÊÂ¼ş
+        // é”™è¯¯äº‹ä»¶
         MG_ERROR(("Error: %s", (char*)ev_data));
+    }
+    else if (ev == MG_EV_POLL) {
+ 
     }
 }
 
@@ -89,23 +92,22 @@ void thread_mqtt_comm(void* p)
     ioDev_mqtt* pDev = (ioDev_mqtt*)p;
     pDev->m_bThreadRunning = true;
 
-    struct mg_mgr mgr;  // ÊÂ¼ş¹ÜÀíÆ÷
+    struct mg_mgr mgr;  // äº‹ä»¶ç®¡ç†å™¨
     struct mg_connection* c;
 
     //mg_log_set(MG_LL_VERBOSE);
-    mg_mgr_init(&mgr);  // ³õÊ¼»¯ÊÂ¼ş¹ÜÀíÆ÷
+    mg_mgr_init(&mgr);  // åˆå§‹åŒ–äº‹ä»¶ç®¡ç†å™¨
 
-    // ÅäÖÃ MQTT Á¬½ÓÑ¡Ïî
+    // é…ç½® MQTT è¿æ¥é€‰é¡¹
     struct mg_mqtt_opts opts = { 0 };
-    opts.clean = true;  // Çå³ı»á»°
-    opts.qos = 0;       // QoS 1 Ê±ÎŞ·¨Óëmosquitto½¨Á¢Á¬½Ó£¬ºóĞøÔÙÑĞ¾¿
+    opts.clean = true;  // æ¸…é™¤ä¼šè¯
+    opts.qos = 0;       // QoS 1 æ—¶æ— æ³•ä¸mosquittoå»ºç«‹è¿æ¥ï¼Œåç»­å†ç ”ç©¶
     opts.retain = 0;
-    opts.keepalive = 60; // ±£³ÖÁ¬½ÓÊ±¼ä£¨Ãë£©
+    opts.keepalive = 60; // ä¿æŒè¿æ¥æ—¶é—´ï¼ˆç§’ï¼‰
     opts.version = 4;   
     opts.client_id = mg_str(CLIENTID);
-    opts.topic = mg_str("#");
 
-    // ½¨Á¢ MQTT Á¬½Ó
+    // å»ºç«‹ MQTT è¿æ¥
     string server = "mqtt://" + pDev->getIP() + ":" + to_string(pDev->getPort());
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn,pDev);
     if (c == NULL) {
@@ -113,9 +115,9 @@ void thread_mqtt_comm(void* p)
         return;
     }
 
-    // ÊÂ¼şÑ­»·
+    // äº‹ä»¶å¾ªç¯
     for (;;) {
-        mg_mgr_poll(&mgr, 500);  // Ã¿ÃëÂÖÑ¯Ò»´Î
+        mg_mgr_poll(&mgr, 500);  // æ¯ç§’è½®è¯¢ä¸€æ¬¡
         if (pDev->m_bStop) {
             break;
         }
@@ -144,13 +146,17 @@ void ioDev_mqtt::stop()
     return;
 }
 
+void ioDev_mqtt::confUpdated()
+{
+    if (m_lastSubTopics != m_subTopics) {
+        LOG("[MQTT]è®¢é˜…ä¿®æ”¹ï¼Œè€è®¢é˜…:%s,æ–°è®¢é˜…:%s", m_lastSubTopics.c_str(), m_subTopics.c_str());
+        stop();
+        run();
+    }
+}
+
 void ioDev_mqtt::onRecvMqttData(string topic, string data)
 {
-     string mqttData = "{"
-         "\"topic\":\"" + topic + "\","
-         "\"data\":\"" + data + "\""
-         "}";
-     
      setOnline();
 
      if (m_onRecvScript != "") {
@@ -160,7 +166,10 @@ void ioDev_mqtt::onRecvMqttData(string topic, string data)
          se.m_engineInitFuncList.push_back(initTdsFunc);
 #endif
 
-         json jMqttMsg = json::parse(mqttData);
+         
+         json jMqttMsg = json::object();
+         jMqttMsg["topic"] = topic;
+         jMqttMsg["data"] = data;
 
 
          se.m_globalObj["MqttMsg"] = jMqttMsg;
@@ -171,7 +180,7 @@ void ioDev_mqtt::onRecvMqttData(string topic, string data)
          se.runScript(si, m_lastRunInfo_onRecv);
 
          if (se.m_sError != "") {
-             string s = str::format("[warn]½Å±¾Ö´ĞĞ´íÎó£¬½Å±¾=%s,´íÎó=%s,Éè±¸=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
+             string s = str::format("[warn]è„šæœ¬æ‰§è¡Œé”™è¯¯ï¼Œè„šæœ¬=%s,é”™è¯¯=%s,è®¾å¤‡=%s", si.name.c_str(), se.m_sError.c_str(), getIOAddrStr().c_str());
              LOG(s);
          }
          else {

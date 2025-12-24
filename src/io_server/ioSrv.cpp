@@ -936,6 +936,8 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 				p->stop();
 				p->run();
 			}
+
+			p->confUpdated();
 		}
 		else {
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::TEC_FAIL, "can not find device of specified NodeID:" + sNodeId);
