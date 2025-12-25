@@ -1,5 +1,8 @@
 #pragma once
 #include <atomic>
+#include <string>
+#include <stdexcept>
+#include <memory>
 
 struct SRV_STATUS {
 	double cpu; //%
@@ -36,6 +39,102 @@ struct CPU_USE_INFO {
 };
 
 
+class ProcessDiskIOMonitor {
+private:
+    PDH_HQUERY queryHandle;
+    PDH_HCOUNTER readBytesCounter;
+    PDH_HCOUNTER writeBytesCounter;
+    PDH_HCOUNTER ioDataCounter;
+    DWORD processId;
+    std::string counterPath;
+
+public:
+    ProcessDiskIOMonitor() {
+        processId = GetCurrentProcessId();
+        queryHandle = NULL;
+
+        // 打开查询句柄
+        if (PdhOpenQuery(NULL, NULL, &queryHandle) != ERROR_SUCCESS) {
+            throw std::runtime_error("Failed to open PDH query");
+        }
+
+        //  
+        char processName[MAX_PATH];
+        GetModuleFileNameA(NULL, processName, MAX_PATH);
+        std::string name = std::string(processName);
+        size_t lastSlash = name.find_last_of("\\");
+        if (lastSlash != std::string::npos) {
+            name = name.substr(lastSlash + 1);
+        }
+        name = name.substr(0, name.find_last_of("."));
+
+        counterPath = "\\Process(" + name + ")\\IO Data Bytes/sec";
+        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter) != ERROR_SUCCESS) {
+            // 如果失败，尝试带进程ID的路径
+            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Data Bytes/sec";
+            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter) != ERROR_SUCCESS) {
+                throw std::runtime_error("Failed to add IO Data counter");
+            }
+        }
+
+        counterPath = "\\Process(" + name + ")\\IO Read Bytes/sec";
+        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
+            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Read Bytes/sec";
+            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
+                throw std::runtime_error("Failed to add IO Read counter");
+            }
+        }
+
+        counterPath = "\\Process(" + name + ")\\IO Write Bytes/sec";
+        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
+            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Write Bytes/sec";
+            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
+                throw std::runtime_error("Failed to add IO Write counter");
+            }
+        }
+
+        // 初始收集数据
+        PdhCollectQueryData(queryHandle);
+    }
+
+    ~ProcessDiskIOMonitor() {
+        if (queryHandle) {
+            PdhCloseQuery(queryHandle);
+        }
+    }
+
+    bool GetIOStats(double& readBytes, double& writeBytes, double& totalBytes) {
+        if (PdhCollectQueryData(queryHandle) != ERROR_SUCCESS) {
+            return false;
+        }
+
+        PDH_FMT_COUNTERVALUE counterValue;
+
+        if (PdhGetFormattedCounterValue(readBytesCounter, PDH_FMT_DOUBLE, NULL, &counterValue) == ERROR_SUCCESS) {
+            readBytes = counterValue.doubleValue;
+        }
+        else {
+            return false;
+        }
+
+        if (PdhGetFormattedCounterValue(writeBytesCounter, PDH_FMT_DOUBLE, NULL, &counterValue) == ERROR_SUCCESS) {
+            writeBytes = counterValue.doubleValue;
+        }
+        else {
+            return false;
+        }
+
+        if (PdhGetFormattedCounterValue(ioDataCounter, PDH_FMT_DOUBLE, NULL, &counterValue) == ERROR_SUCCESS) {
+            totalBytes = counterValue.doubleValue;
+        }
+        else {
+            return false;
+        }
+
+        return true;
+    }
+};
+
 
 class StatusServer
 {
@@ -47,6 +146,8 @@ public:
 	bool m_bLogStatus;
 	int m_logInterval;
 	int m_physicalCoreCount;
+
+    std::shared_ptr<ProcessDiskIOMonitor> m_diskIOMonitor;
 
 	unsigned char sessionHandle[4];
 	HANDLE OpenProcessByName(const char* processName);

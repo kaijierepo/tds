@@ -89,6 +89,8 @@ bool StatusServer::run()
 
 	m_physicalCoreCount = GetPhysicalCoreCount();
 
+	m_diskIOMonitor = std::make_shared<ProcessDiskIOMonitor>();
+
 	thread t(cycleAcq_thread_srvStatus, this);
 	t.detach();
 	return true;
@@ -162,6 +164,37 @@ void StatusServer::cycleAcq_srvStatus() {
 				m_srvStatus.pageFile = (double)pmc.PagefileUsage / (double)(1024 * 1024); // unit MB;
 			}
 
+			//disk io
+			string sDiskIo;
+			try {
+				double readBytes = 0, writeBytes = 0, totalBytes = 0;
+				if (m_diskIOMonitor && m_diskIOMonitor->GetIOStats(readBytes, writeBytes, totalBytes)) {
+					//	KB/s
+					readBytes /= 1024.0;
+					writeBytes /= 1024.0;
+					totalBytes /= 1024.0;
+
+					auto mut_doc = yyjson_mut_doc_new(NULL);
+					auto mut_root = yyjson_mut_obj(mut_doc);
+					yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+					yyjson_mut_obj_add_real(mut_doc, mut_root, "readBytes", readBytes);
+					yyjson_mut_obj_add_real(mut_doc, mut_root, "writeBytes", writeBytes);
+					yyjson_mut_obj_add_real(mut_doc, mut_root, "totalBytes", totalBytes);
+
+					char* temp = yyjson_mut_write(mut_doc, 0, 0);
+					yyjson_mut_doc_free(mut_doc);
+					if (temp)
+					{
+						sDiskIo = temp;
+						free(temp);
+					}
+				}
+			}
+			catch (const std::exception& e) {
+				std::cerr << "´íÎó: " << e.what() << std::endl;
+			}
+
 			//get handle count
 			m_srvStatus.handle = GetProcHandleCount(processHandle);
 
@@ -182,6 +215,8 @@ void StatusServer::cycleAcq_srvStatus() {
 				ssdb->Insert("pageFile", dbt, m_srvStatus.pageFile);
 				//ssdb->Insert("disk", dbt, m_srvStatus.disk);
 				ssdb->Insert("handle", dbt, m_srvStatus.handle);
+
+				ssdb->Insert("diskio", sDiskIo, &dbt);
 				
 				for (auto& iter : m_netStatus) {
 					string portId = str::format("port_%d_send", iter.first);
