@@ -943,6 +943,7 @@ public:
 	FS_BUFF m_FsBuff;
 	int m_bufferTTL;
 	DB_TIME_UNIT m_timeUnit;
+	bool m_bAutoUpgrade;
 
 	bool handleRpc(const string& method,yyjson_val* params, string& rlt, string& err, string& queryInfo, string org, string language);
 

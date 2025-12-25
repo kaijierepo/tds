@@ -1138,6 +1138,7 @@ TDB::TDB()
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
 	m_bEnableFsBuff = false;
+	m_bAutoUpgrade = false;
 	m_bufferTTL = 3 * 3600;
 	thread t(bufferManageThread, this);
 	t.detach();
@@ -5772,6 +5773,13 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		{
 			fseek(fp, 0L, SEEK_END);
 			long len = ftell(fp);
+
+			//auto  upgrade compatiable format to standard format
+			if (len > 0 && m_bAutoUpgrade) {
+
+			}
+
+
 			if (len > 0)
 			{
 				fseek(fp, len - 1, SEEK_SET);  //overwrite last ] charactor
