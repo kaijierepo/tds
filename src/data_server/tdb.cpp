@@ -56,7 +56,7 @@ namespace fs = std::filesystem;
 
 TDB db;
 
-bool DB_LOCK_GUARD::enable = false;
+bool DB_LOCK_GUARD::enable = true;
 int DB_LOCK_POOL::lockTTL = 30 * 60;
 
 #include <random>

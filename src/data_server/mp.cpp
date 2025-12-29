@@ -1100,7 +1100,7 @@ OBJ* MP::getParentMo()
 
 void MP::updateVal(string& jstrVal, TIME& dataTime, string& fileData)
 {
-	m_dbFileLock.lock();
+	m_curValLock.lock();
 
 	m_stDataLastUpdate = dataTime;
 	OBJ* pParentMo = getParentMo();
@@ -1114,7 +1114,7 @@ void MP::updateVal(string& jstrVal, TIME& dataTime, string& fileData)
 	if(fileData != "null")
 		m_curFileData = fileData;
 
-	m_dbFileLock.unlock();
+	m_curValLock.unlock();
 
 	calcAlarm();
 
@@ -1197,7 +1197,6 @@ bool MP::needSaveToDB() {
 }
 
 void MP::saveToDB() {
-	m_dbFileLock.lock();
 	timeopt::now(&m_lastSaveTime);
 
 	string sDe = "{";
@@ -1223,7 +1222,6 @@ void MP::saveToDB() {
 	dbt.fromStr(m_stDataLastUpdate.toStr(true));
 
 	db.Insert(getTag().c_str(), sDe, &dbt);
-	m_dbFileLock.unlock();
 }
 
 //该接口保证rlt或者err一定会有一个值返回

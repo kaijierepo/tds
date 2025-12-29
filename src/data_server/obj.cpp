@@ -1002,7 +1002,10 @@ bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
 	if (m_level == "mp") {
 		MP* pmp = (MP*)this;
 		yykey = yyjson_mut_strcpy(doc, "val");
+		pmp->m_curValLock.lock();
 		string sCurVal = pmp->m_curVal;
+		string sTime = pmp->m_stDataLastUpdate.toStr();
+		pmp->m_curValLock.unlock();
 		yyjson_doc* d = yyjson_read(sCurVal.c_str(), sCurVal.size(), 0);
 		yyjson_val* r = yyjson_doc_get_root(d);
 		yyval = yyjson_val_mut_copy(doc, r);
@@ -1010,7 +1013,7 @@ bool OBJ::saveStatus(yyjson_mut_val* statusNode,yyjson_mut_doc* doc)
 		yyjson_mut_obj_put(statusNode, yykey, yyval);
 
 		yykey = yyjson_mut_strcpy(doc, "time");
-		yyval = yyjson_mut_strcpy(doc, pmp->m_stDataLastUpdate.toStr().c_str());
+		yyval = yyjson_mut_strcpy(doc, sTime.c_str());
 		yyjson_mut_obj_put(statusNode, yykey, yyval);
 	}
 

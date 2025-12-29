@@ -79,7 +79,6 @@ public:
 
 	bool needSaveToDB();
 	void saveToDB();
-	mutex m_dbFileLock;
 	void output(json jVal, json& rlt, json& err,bool sync = true);
 	bool IsCurValValid();
 	string getMpTypeLabel();
@@ -146,6 +145,7 @@ public:
 	// hasValue = false 表示从没有收到过数据。lastUpdateTime为无效。
 	// curValValid = true 表示 m_curVal!=null
 	// curValValid = false 表示 m_curVal==null
+	mutex m_curValLock;
 	string m_orgVal = "null";
 	string m_curVal = "null";
 	string m_defaultVal = "null"; //默认值，软件刚启动时加载的值
