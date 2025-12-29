@@ -46,6 +46,7 @@ SOFTWARE.
 #include "statusServer.h"
 #include "common.h"
 #include "rpcHandler_common.h"
+#include "mqttSrv.h"
 
 #include "as_interface.h"
 #ifdef _WIN32
@@ -664,6 +665,8 @@ bool TDS_imp::run(string cmdline) {
 	sockSrv.m_pCallback       = onSockSrvCallback;
 	sockSrv.m_pStatusCallback = onSockSrvStatusCallback;
 	sockSrv.run(ssc);
+
+	mqttSrv.run();
 
 	ioSrv.run(); //先启动ioSrv加载io组态,再启动ds.如果先启动ds可能会把某些managed设备当作spare设备
 	logSrv.run();
