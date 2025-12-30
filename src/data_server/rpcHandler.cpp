@@ -6379,10 +6379,7 @@ void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& se
 				p->setChildMpOnline();
 			}
 
-			if (p->m_level != "mp") {
-				LOG("[对象上线  ]位号:%s", tag.c_str());
-			}
-
+			LOG("[对象上线  ]位号:%s", tag.c_str());
 			rpcSrv.notify("objOnline", params);
 		}
 		rpcResp.result = RPC_OK;
@@ -6403,10 +6400,7 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& s
 				p->setChildMpOffline();
 			}
 
-			if (p->m_level != "mp") {
-				LOG("[对象掉线  ]位号:%s", tag.c_str());
-			}
-
+			LOG("[对象掉线  ]位号:%s", tag.c_str());
 			rpcSrv.notify("onObjOffline", params);
 		}
 	
