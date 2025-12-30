@@ -3245,6 +3245,104 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			rpcResp.error = R"("cannot find file, imagePath:)" + imagePath+R"(")";
 		}
 	}
+	else if (method == "getSimuConf") {
+		// 创建 yyjson_mut_doc 和根数组
+		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* mut_arr = yyjson_mut_arr(mut_doc);
+
+		// 获取所有 MP 对象
+		map<string, MP*> mapAllMP;
+		prj.getMpList(mapAllMP);
+
+		// 遍历所有 MP 对象
+		for (map<string, MP*>::iterator it = mapAllMP.begin(); it != mapAllMP.end(); ++it) {
+			MP* pmp = it->second;
+			if (pmp) {
+				// 创建 JSON 对象
+				yyjson_mut_val* obj = yyjson_mut_obj(mut_doc);
+
+				// 添加 tag、lowLimit、highLimit 和 enable 到 JSON 对象
+				yyjson_mut_obj_add_strcpy(mut_doc, obj, "tag", it->first.c_str());
+				yyjson_mut_obj_add_real(mut_doc, obj, "lowLimit", pmp->m_simuConf.lowLimit);
+				yyjson_mut_obj_add_real(mut_doc, obj, "highLimit", pmp->m_simuConf.highLimit);
+				yyjson_mut_obj_add_bool(mut_doc, obj, "enable", pmp->m_simuConf.enable);
+
+				// 将对象添加到数组
+				yyjson_mut_arr_add_val(mut_arr, obj);
+			}
+		}
+
+		// 设置根节点
+		yyjson_mut_doc_set_root(mut_doc, mut_arr);
+
+		// 将 JSON 转换为字符串
+		size_t len;
+		char* json_str = yyjson_mut_write(mut_doc, YYJSON_WRITE_PRETTY, &len);
+		if (json_str) {
+			rpcResp.result = json_str; // 将 JSON 字符串赋值给 rpcResp.result
+			free(json_str);           // 释放 JSON 字符串内存
+		}
+		else {
+			rpcResp.error = "Failed to generate JSON string.";
+		}
+
+		// 释放 yyjson_mut_doc
+		yyjson_mut_doc_free(mut_doc);
+	}
+	else if (method == "setSimuConf") {
+		for (int i = 0; i < params.size(); i++) {
+			string tag = params[i]["tag"];
+			double lowLimit = params[i]["lowLimit"];
+			double highLimit = params[i]["highLimit"];
+			bool enable = params[i]["enable"];
+
+			// 写入监控点配置
+			MP* pmp = prj.GetMPByTag(tag, "zh");
+			if (pmp) {
+				pmp->m_simuConf.lowLimit = lowLimit;
+				pmp->m_simuConf.highLimit = highLimit;
+				pmp->m_simuConf.enable = enable;
+			}
+		}
+
+		yyjson_mut_doc* mut_doc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* mut_arr = yyjson_mut_arr(mut_doc);
+
+		// 获取所有 MP 对象
+		map<string, MP*> mapAllMP;
+		prj.getMpList(mapAllMP);
+
+		// 遍历所有 MP 对象
+		for (map<string, MP*>::iterator it = mapAllMP.begin(); it != mapAllMP.end(); ++it) {
+			MP* pmp = it->second;
+			if (pmp) {
+				// 创建 JSON 对象
+				yyjson_mut_val* obj = yyjson_mut_obj(mut_doc);
+
+				// 添加 tag、lowLimit、highLimit 和 enable 到 JSON 对象
+				yyjson_mut_obj_add_strcpy(mut_doc, obj, "tag", it->first.c_str());
+				yyjson_mut_obj_add_real(mut_doc, obj, "lowLimit", pmp->m_simuConf.lowLimit);
+				yyjson_mut_obj_add_real(mut_doc, obj, "highLimit", pmp->m_simuConf.highLimit);
+				yyjson_mut_obj_add_bool(mut_doc, obj, "enable", pmp->m_simuConf.enable);
+
+				// 将对象添加到数组
+				yyjson_mut_arr_add_val(mut_arr, obj);
+			}
+		}
+
+		yyjson_mut_doc_set_root(mut_doc, mut_arr);
+
+		size_t len;
+		char* p = yyjson_mut_val_write(mut_arr, YYJSON_WRITE_PRETTY_NO_SPACES | YYJSON_WRITE_PRETTY, &len);
+		if (p) {
+			fs::writeFile(tds->conf->confPath + "/DataSimu.json", p, len);
+			free(p);
+		}
+
+		yyjson_mut_doc_free(mut_doc);
+
+		rpcResp.result = RPC_OK;
+	}
 	else {
 		bHandled = false;
 	}

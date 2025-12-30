@@ -76,6 +76,7 @@ void createConsole()
 }
 #endif
 
+#include "CDataSimu.h"
 
 void chromeThread()
 {
@@ -467,6 +468,11 @@ void loadDeepVersion() {
 #endif
 }
 
+void runDataSimu() {
+	g_pDataSimu = new CDataSimu();
+	g_pDataSimu->startDataSimu();
+}
+
 bool TDS_imp::run(string cmdline) {
 	mg_log_set(MG_LL_NONE);
 
@@ -708,6 +714,10 @@ bool TDS_imp::run(string cmdline) {
 #endif
 
 	g_ComputerStartupTime = getSystemBootTime();
+
+	//开启一个线程,进行数据仿真
+	thread t(runDataSimu);
+	t.detach();
 
 	return true;
 }

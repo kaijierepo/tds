@@ -591,6 +591,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\CDataSimu.cpp" />
     <ClCompile Include="..\src\common\base64.c" />
     <ClCompile Include="..\src\common\common.cpp" />
     <ClCompile Include="..\src\common\dtwrecoge.cpp" />
@@ -671,6 +672,7 @@
     <ClCompile Include="..\src\test.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\CDataSimu.h" />
     <ClInclude Include="..\src\common\base64.h" />
     <ClInclude Include="..\src\common\common.h" />
     <ClInclude Include="..\src\common\DTW.hpp" />

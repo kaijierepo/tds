@@ -55,6 +55,13 @@ namespace DATA_SAVE_MODE {
 struct DATA_SIMU_CONF {
 	double lowLimit;
 	double highLimit;
+	bool enable;
+
+	DATA_SIMU_CONF() {
+		lowLimit = 0;
+		highLimit = 0;
+		enable = false;
+	}
 };
 
 
