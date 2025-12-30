@@ -51,6 +51,8 @@ bool MqttSrv::run() {
                     else if (yyjson_is_str(yy_port)) {
                         conf.port = str::toInt(yyjson_get_str(yy_port));
                     }
+                    yyjson_val* yy_user = yyjson_obj_get(item, "user");
+                    conf.user = yyjson_get_str(yy_user);
                     yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
                     conf.pwd = yyjson_get_str(yy_pwd);
                     yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
@@ -72,7 +74,7 @@ bool MqttSrv::run() {
 	}
 
 	for(int i = 0; i < m_masterDSConf.size(); i++){
-        LOG("[北向MQTT]启动,%s:%d,密码:%s,qos:%d,订阅topic:%s,发送脚�?%s,接收脚本:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+        LOG("[MQTT-DS]started,%s:%d,password:%s,qos:%d,subTopic:%s,sendScript:%s,recvScript:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
         MqttClt* clt = new MqttClt();
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
@@ -105,6 +107,8 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
         for (int i = 0; i < vecTopics.size(); i++) {
             string topic = vecTopics[i];
             struct mg_mqtt_opts sub_opts;
+            sub_opts.user = mg_str(pDev->m_conf.user.c_str());
+            sub_opts.pass = mg_str(pDev->m_conf.pwd.c_str());
             sub_opts.topic = mg_str(topic.c_str());
             sub_opts.qos = 0;
             mg_mqtt_sub(c, &sub_opts);
@@ -172,6 +176,8 @@ void thread_mqtt_client_comm(void* p)
     opts.retain = 0;
     opts.keepalive = 60; 
     opts.version = 4;
+    opts.user = mg_str(pDev->m_conf.user.c_str());
+    opts.pass = mg_str(pDev->m_conf.pwd.c_str());
     opts.client_id = mg_str("tds");
 
     string server = "mqtt://" + pDev->m_conf.ip + ":" + to_string(pDev->m_conf.port);
@@ -266,6 +272,8 @@ void MqttClt::mqttPublish(string topic, string data)
     struct mg_mqtt_opts opts = { 0 };
     opts.topic = mg_str(topic.c_str());
     opts.message = mg_str(data.c_str());
+    opts.user = mg_str(m_conf.user.c_str());
+    opts.pass = mg_str(m_conf.pwd.c_str());
     opts.qos = m_conf.qos;        
     opts.retain = 0;  
 
