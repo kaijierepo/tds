@@ -90,6 +90,7 @@ MqttClt::MqttClt()
     m_bThreadRunning = false;
     m_bConnected = false;
     m_bStop = false;
+    m_bConnectting = false;
 }
 
 MqttClt::~MqttClt()
@@ -101,6 +102,7 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     if (ev == MG_EV_MQTT_OPEN) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
         pDev->m_bConnected = true;
+        pDev->m_bConnectting = false;
         LOG("[MQTT-DS]connected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         vector<string> vecTopics;
         str::split(vecTopics, pDev->m_conf.subTopics, ",");
@@ -125,13 +127,15 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     }
     else if (ev == MG_EV_CLOSE) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
+        pDev->m_bConnectting = false;
         LOG("[MQTT-DS] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         if (pDev->m_bConnected) {
             pDev->m_bConnected = 0;
         }
     }
     else if (ev == MG_EV_ERROR) {
-        MG_ERROR(("Error: %s", (char*)ev_data));
+        MqttClt* pDev = (MqttClt*)c->fn_data;
+        pDev->m_bConnectting = false;
     }
     else if (ev == MG_EV_WAKEUP) {
         MqttClt* pClt = (MqttClt*)c->fn_data;
@@ -182,16 +186,26 @@ void thread_mqtt_client_comm(void* p)
 
     string server = "mqtt://" + pDev->m_conf.ip + ":" + to_string(pDev->m_conf.port);
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
+    pDev->m_lastConnectTime.setNow();
     if (c == NULL) {
         MG_ERROR(("Failed to create MQTT connection"));
         return;
     }
-
+	pDev->m_bConnectting = true;
 
     for (;;) {
         mg_mgr_poll(&mgr, 500);  
         if (pDev->m_bStop) {
             break;
+        }
+        if (pDev->m_bConnected == false && pDev->m_bConnectting == false &&
+            timeopt::calcTimePassMilliSecond(pDev->m_lastConnectTime) > 5000) 
+        {
+            c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
+            pDev->m_lastConnectTime.setNow();
+            if (c) {
+                pDev->m_bConnectting = true;
+            }
         }
     }
 

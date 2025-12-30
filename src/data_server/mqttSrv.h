@@ -2,6 +2,7 @@
 #include <string>
 #include "mongoose.h"
 #include "scriptEngine.h"
+#include "common.h"
 using namespace std;
 
 struct MASTER_SRV_CONF {
@@ -39,7 +40,9 @@ public:
 
 	bool m_bThreadRunning;
 	bool m_bConnected;
+	bool m_bConnectting;
 	bool m_bStop;
+	TIME m_lastConnectTime;
 	string m_lastSubTopics;
 };
 
