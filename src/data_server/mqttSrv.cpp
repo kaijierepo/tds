@@ -72,7 +72,7 @@ bool MqttSrv::run() {
 	}
 
 	for(int i = 0; i < m_masterDSConf.size(); i++){
-        LOG("[北向MQTT]启动,%s:%d,密码:%s,qos:%d,订阅topic:%s,发送脚本:%s,接收脚本:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+        LOG("[北向MQTT]启动,%s:%d,密码:%s,qos:%d,订阅topic:%s,发送脚�?%s,接收脚本:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
         MqttClt* clt = new MqttClt();
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
@@ -99,7 +99,7 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     if (ev == MG_EV_MQTT_OPEN) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
         pDev->m_bConnected = true;
-        LOG("[北向MQTT]connected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
+        LOG("[MQTT-DS]connected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         vector<string> vecTopics;
         str::split(vecTopics, pDev->m_conf.subTopics, ",");
         for (int i = 0; i < vecTopics.size(); i++) {
@@ -110,10 +110,9 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
             mg_mqtt_sub(c, &sub_opts);
         }
         pDev->m_lastSubTopics = pDev->m_conf.subTopics;
-        LOG("[北向MQTT]订阅topic:%s,qos:%d", pDev->m_conf.subTopics.c_str(), 0);
+        LOG("[MQTT-DS]sub topic:%s,qos:%d", pDev->m_conf.subTopics.c_str(), 0);
     }
     else if (ev == MG_EV_MQTT_MSG) {
-        // 收到 MQTT 消息
         struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
         MqttClt* pDev = (MqttClt*)c->fn_data;
         string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
@@ -122,13 +121,12 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     }
     else if (ev == MG_EV_CLOSE) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
-        LOG("[北向MQTT] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
+        LOG("[MQTT-DS] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         if (pDev->m_bConnected) {
             pDev->m_bConnected = 0;
         }
     }
     else if (ev == MG_EV_ERROR) {
-        // 错误事件
         MG_ERROR(("Error: %s", (char*)ev_data));
     }
     else if (ev == MG_EV_WAKEUP) {
@@ -145,8 +143,8 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
             struct mg_mqtt_opts opts = { 0 };
             opts.topic = mg_str(topic.c_str());
             opts.message = mg_str(message.c_str());
-            opts.qos = pClt->m_conf.qos;        // 服务质量: 0, 1, 2
-            opts.retain = 0;  // 是否保留
+            opts.qos = pClt->m_conf.qos;       
+            opts.retain = 0;  
 
             mg_mqtt_pub(c, &opts);
         }
@@ -165,18 +163,17 @@ void thread_mqtt_client_comm(void* p)
     mg_connection*& c = pDev->c;
 
     //mg_log_set(MG_LL_VERBOSE);
-    mg_mgr_init(&mgr);  // 初始化事件管理器
+    mg_mgr_init(&mgr);  
 
-    // 配置 MQTT 连接选项
+
     struct mg_mqtt_opts opts = { 0 };
-    opts.clean = true;  // 清除会话
-    opts.qos = 0;       // QoS 1 时无法与mosquitto建立连接，后续再研究
+    opts.clean = true;  
+    opts.qos = 0;       
     opts.retain = 0;
-    opts.keepalive = 60; // 保持连接时间（秒）
+    opts.keepalive = 60; 
     opts.version = 4;
     opts.client_id = mg_str("tds");
 
-    // 建立 MQTT 连接
     string server = "mqtt://" + pDev->m_conf.ip + ":" + to_string(pDev->m_conf.port);
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
     if (c == NULL) {
@@ -184,9 +181,9 @@ void thread_mqtt_client_comm(void* p)
         return;
     }
 
-    // 事件循环
+
     for (;;) {
-        mg_mgr_poll(&mgr, 500);  // 每秒轮询一次
+        mg_mgr_poll(&mgr, 500);  
         if (pDev->m_bStop) {
             break;
         }
@@ -205,15 +202,20 @@ void thread_mqtt_script(void* p) {
             break;
         }
 
-        if (pDev->m_bThreadRunning && pDev->m_bConnected) {
+        if (pDev->m_bThreadRunning && pDev->m_bConnected && pDev->m_conf.intervel != 0) {
             //ִ�нű�
             string strparams = "";
             string strResult = "";
             string strOutput = "";
-            scriptManager.runScript(pDev->m_conf.cycleScript, strparams, strResult, strOutput);
+            if (pDev->m_conf.cycleScript != "") {
+                scriptManager.runScript(pDev->m_conf.cycleScript, strparams, strResult, strOutput);
+            }
         }        
 
-        timeopt::sleepMilli(pDev->m_conf.intervel * 1000);
+        if(pDev->m_conf.intervel != 0)
+            timeopt::sleepMilli(pDev->m_conf.intervel * 1000);
+
+        timeopt::sleepMilli(100);
     }
 }
 
@@ -243,7 +245,7 @@ void MqttClt::stop()
 void MqttClt::confUpdated()
 {
     if (m_lastSubTopics != m_conf.subTopics) {
-        LOG("[MQTT]订阅修改，老订阅:%s,新订阅:%s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
+        LOG("[MQTT]�����޸ģ������� %s,������ %s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
         stop();
         run(m_conf);
     }
@@ -264,8 +266,8 @@ void MqttClt::mqttPublish(string topic, string data)
     struct mg_mqtt_opts opts = { 0 };
     opts.topic = mg_str(topic.c_str());
     opts.message = mg_str(data.c_str());
-    opts.qos = m_conf.qos;        // 服务质量: 0, 1, 2
-    opts.retain = 0;  // 是否保留
+    opts.qos = m_conf.qos;        
+    opts.retain = 0;  
 
     mg_mqtt_pub(c, &opts);
 }
@@ -293,7 +295,7 @@ void MqttClt::onRecvMqttData(string topic, string data)
         se.runScript(si, m_lastRunInfo_onRecv);
 
         if (se.m_sError != "") {
-            string s = str::format("[warn][北向MQTT]脚本执行错误，脚本=%s,错误=%s,连接=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(),m_conf.port);
+            string s = str::format("[warn][MQTT]run script error,script:%s,err:%s,addr=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(),m_conf.port);
             LOG(s);
         }
         else {
@@ -327,7 +329,7 @@ void MqttClt::onSendTdsNotify(string notify)
         se.runScript(si, m_lastRunInfo_onRecv);
 
         if (se.m_sError != "") {
-            string s = str::format("[warn][北向MQTT]脚本执行错误，脚本=%s,错误=%s,连接=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(), m_conf.port);
+            string s = str::format("[warn][MQTT]run script error,script:%s,err:%s,addr=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(), m_conf.port);
             LOG(s);
         }
         else {

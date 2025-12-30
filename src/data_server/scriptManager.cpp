@@ -185,7 +185,9 @@ bool ScriptManager::runScript(string scriptName, string params, string& result, 
 			se.m_engineInitFuncList.push_back(m_engineInitFuncList[i]);
 		}
 
-		json jParams = json::parse(params.c_str());
+		json jParams;
+		if(params != "")
+			jParams = json::parse(params.c_str());
 
 		se.m_globalObj["Params"] = jParams;
 		se.m_globalObj["Result"] = json::object();
