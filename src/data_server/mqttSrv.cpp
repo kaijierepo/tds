@@ -25,7 +25,7 @@ MqttSrv::~MqttSrv()
 {
 }
 
-void thread_mqtt_script() {
+void thread_mqtt_script(void* p) {
     while (1) {
         //组装参数
         auto mut_doc = yyjson_mut_doc_new(nullptr);
