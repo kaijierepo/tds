@@ -479,7 +479,6 @@ void loadDataSimu() {
 	yyjson_doc* doc = yyjson_read_file(simuConfPath.c_str(), YYJSON_READ_NOFLAG, nullptr, &err);
 
 	if (!doc) {
-		LOG("[error] Failed to read DataSimu.json: " + string(err.msg));
 		return;
 	}
 
