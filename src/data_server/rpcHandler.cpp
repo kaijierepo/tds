@@ -3266,6 +3266,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 				yyjson_mut_obj_add_real(mut_doc, obj, "lowLimit", pmp->m_simuConf.lowLimit);
 				yyjson_mut_obj_add_real(mut_doc, obj, "highLimit", pmp->m_simuConf.highLimit);
 				yyjson_mut_obj_add_bool(mut_doc, obj, "enable", pmp->m_simuConf.enable);
+				yyjson_mut_obj_add_int(mut_doc, obj, "interval", pmp->m_simuConf.interval);
 
 				// 将对象添加到数组
 				yyjson_mut_arr_add_val(mut_arr, obj);
@@ -3295,6 +3296,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 			double lowLimit = params[i]["lowLimit"];
 			double highLimit = params[i]["highLimit"];
 			bool enable = params[i]["enable"];
+			int interval = params[i]["interval"];
 
 			// 写入监控点配置
 			MP* pmp = prj.GetMPByTag(tag, "zh");
@@ -3302,6 +3304,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 				pmp->m_simuConf.lowLimit = lowLimit;
 				pmp->m_simuConf.highLimit = highLimit;
 				pmp->m_simuConf.enable = enable;
+				pmp->m_simuConf.interval = interval;
 			}
 		}
 
@@ -3324,6 +3327,7 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 				yyjson_mut_obj_add_real(mut_doc, obj, "lowLimit", pmp->m_simuConf.lowLimit);
 				yyjson_mut_obj_add_real(mut_doc, obj, "highLimit", pmp->m_simuConf.highLimit);
 				yyjson_mut_obj_add_bool(mut_doc, obj, "enable", pmp->m_simuConf.enable);
+				yyjson_mut_obj_add_int(mut_doc, obj, "interval", pmp->m_simuConf.interval);
 
 				// 将对象添加到数组
 				yyjson_mut_arr_add_val(mut_arr, obj);

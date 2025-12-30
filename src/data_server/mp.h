@@ -56,11 +56,13 @@ struct DATA_SIMU_CONF {
 	double lowLimit;
 	double highLimit;
 	bool enable;
+	int interval;
 
 	DATA_SIMU_CONF() {
 		lowLimit = 0;
 		highLimit = 0;
 		enable = false;
+		interval = 0;
 	}
 };
 

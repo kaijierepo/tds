@@ -504,7 +504,8 @@ void loadDataSimu() {
 					// 更新 MP 对象的模拟配置
 					yyjson_val* lowLimitVal  = yyjson_obj_get(item, "lowLimit");
 					yyjson_val* highLimitVal = yyjson_obj_get(item, "highLimit");
-					yyjson_val* enableVal    = yyjson_obj_get(item, "enable");
+					yyjson_val* enableVal = yyjson_obj_get(item, "enable");
+					yyjson_val* intervalVal = yyjson_obj_get(item, "interval");
 
 					if (yyjson_is_real(lowLimitVal)) {
 						pmp->m_simuConf.lowLimit = yyjson_get_real(lowLimitVal);
@@ -516,6 +517,10 @@ void loadDataSimu() {
 
 					if (yyjson_is_bool(enableVal)) {
 						pmp->m_simuConf.enable = yyjson_get_bool(enableVal);
+					}
+
+					if (yyjson_is_bool(intervalVal)) {
+						pmp->m_simuConf.interval = yyjson_get_int(intervalVal);
 					}
 				}
 			}
