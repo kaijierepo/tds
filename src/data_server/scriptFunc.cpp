@@ -11,6 +11,7 @@
 #include <sstream>
 #include <cstdint>
 #include "mp.h"
+#include "mqttSrv.h"
 
 
 
@@ -231,31 +232,32 @@ static JSValue qjs_parseTag(JSContext* ctx, JSValueConst this_val, int argc, JSV
 }
 
 static JSValue qjs_getObj(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-    json jArgs = engineArrayToJson(ctx, argv, argc);
-    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+    if (argc < 1)
+        return JS_NULL;
 
-    if (jArgs.size() > 0) {
-        json tag = jArgs[0];
-        if (tag.is_string()) {
-            std::string sTag = tag.get<std::string>();
-            sTag = TAG::resolveTag(sTag, pEngine->m_tagContext);
-            OBJ* pObj = prj.queryObj(sTag, "zh");
-            if (pObj) {
-                OBJ_QUERIER query;
-                query.getConf = true;
-                query.getStatus = true;
-                query.getChild = false;
-                query.getMp = false;
-				yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
-				yyjson_mut_val* j = yyjson_mut_obj(doc);
-                pObj->toJson(j, doc,query);
-                JSValue obj = yyVal_to_qjsVal(ctx,j);
-                yyjson_mut_doc_free(doc);
-                return obj;
-            }
-        }
+    JSValue json_str_val = JS_JSONStringify(ctx, argv[0], JS_UNDEFINED, JS_UNDEFINED);
+    if (JS_IsException(json_str_val)) {
+        return JS_UNDEFINED;
     }
 
+    const char* json_str = JS_ToCString(ctx, json_str_val);
+    if (!json_str) {
+        JS_FreeValue(ctx, json_str_val);
+        return JS_UNDEFINED;
+    }
+
+    string sParams = json_str;
+
+    ScriptEngine* pEngine = (ScriptEngine*)JS_GetContextOpaque(ctx);
+
+    RPC_RESP rpcResp;
+    tds->call("getObj", sParams, rpcResp);
+
+    if (rpcResp.result != "") {
+        JSValue js_val = JS_ParseJSON(ctx, json_str, strlen(json_str), "<yyjson>");
+        return js_val;
+    }
+           
     return JS_NULL;
 }
 
@@ -674,6 +676,21 @@ static JSValue qjs_ioDev_input(JSContext* ctx, JSValueConst this_val, int argc, 
     return JS_NewBool(ctx, false);
 }
 
+static JSValue qjs_mqttPublish(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+    if (argc != 2)
+        return JS_NULL;
+
+    std::string topic, data;
+    if (JS_IsString(argv[0])) 
+        topic = JS_ToCString(ctx, argv[0]);
+    if(JS_IsString(argv[1]))
+        data = JS_ToCString(ctx, argv[1]);
+
+    mqttSrv.mqttPublish(topic,data);
+
+    return JS_NULL;
+}
+
 void initTdsFunc(JSContext* ctx, void* pDev) {
     JSValue global = JS_GetGlobalObject(ctx);
 
@@ -685,6 +702,7 @@ void initTdsFunc(JSContext* ctx, void* pDev) {
     JS_SetPropertyStr(ctx, global, "getObj", JS_NewCFunction(ctx, qjs_getObj, "getObj", 1));
     JS_SetPropertyStr(ctx, global, "sum", JS_NewCFunction(ctx, qjs_sum, "sum", 3));
     JS_SetPropertyStr(ctx, global, "avg", JS_NewCFunction(ctx, qjs_avg, "avg", 3));
+    JS_SetPropertyStr(ctx, global, "mqttPub", JS_NewCFunction(ctx, qjs_mqttPublish, "mqttPub", 2));
 
     if (pDev) {
         JSValue dev = JS_NewObject(ctx);

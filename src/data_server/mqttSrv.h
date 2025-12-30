@@ -22,12 +22,17 @@ public:
 	MqttClt();
 	~MqttClt();
 
+	struct mg_mgr mgr;  
+	struct mg_connection* c;
+
 	bool run(MASTER_SRV_CONF conf);
 	void stop();
 	void onRecvMqttData(string topic, string data);
 	void onSendTdsNotify(string notify);
 	void confUpdated();
 	MASTER_SRV_CONF m_conf;
+
+	void mqttPublish(string topic, string data);
 
 	SCRIPT_RUN_INFO m_lastRunInfo_onSend;
 	SCRIPT_RUN_INFO m_lastRunInfo_onRecv;
@@ -45,6 +50,8 @@ public:
 	void stop();
 	MqttSrv();
 	virtual ~MqttSrv();
+
+	void mqttPublish(string topic, string data);
 
 	vector<MASTER_SRV_CONF> m_masterDSConf;
 	vector<MqttClt*> m_mqttClts;

@@ -46,7 +46,11 @@ bool MqttSrv::run() {
 					yyjson_val* yy_ip = yyjson_obj_get(item, "ip");
 					conf.ip = yyjson_get_str(yy_ip);
                     yyjson_val* yy_port = yyjson_obj_get(item, "port");
-                    conf.port = yyjson_get_int(yy_port);
+                    if(yyjson_is_int(yy_port))
+                        conf.port = yyjson_get_int(yy_port);
+                    else if (yyjson_is_str(yy_port)) {
+                        conf.port = str::toInt(yyjson_get_str(yy_port));
+                    }
                     yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
                     conf.pwd = yyjson_get_str(yy_pwd);
                     yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
@@ -68,7 +72,7 @@ bool MqttSrv::run() {
 	}
 
 	for(int i = 0; i < m_masterDSConf.size(); i++){
-        LOG("[±±ÏòMQTT]Æô¶¯,%s:%d,ÃÜÂë:%s,qos:%d,¶©ÔÄtopic:%s,·¢ËÍ½Å±¾:%s,½ÓÊÕ½Å±¾:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
+        LOG("[åŒ—å‘MQTT]å¯åŠ¨,%s:%d,å¯†ç :%s,qos:%d,è®¢é˜…topic:%s,å‘é€è„šæœ¬:%s,æ¥æ”¶è„šæœ¬:%s", m_masterDSConf[i].ip.c_str(), m_masterDSConf[i].port, m_masterDSConf[i].pwd.c_str(), m_masterDSConf[i].qos, m_masterDSConf[i].subTopics.c_str(), m_masterDSConf[i].sendScript.c_str(), m_masterDSConf[i].recvScript.c_str());
         MqttClt* clt = new MqttClt();
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
@@ -95,7 +99,7 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     if (ev == MG_EV_MQTT_OPEN) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
         pDev->m_bConnected = true;
-        LOG("[±±ÏòMQTT]connected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
+        LOG("[åŒ—å‘MQTT]connected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         vector<string> vecTopics;
         str::split(vecTopics, pDev->m_conf.subTopics, ",");
         for (int i = 0; i < vecTopics.size(); i++) {
@@ -106,10 +110,10 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
             mg_mqtt_sub(c, &sub_opts);
         }
         pDev->m_lastSubTopics = pDev->m_conf.subTopics;
-        LOG("[±±ÏòMQTT]¶©ÔÄtopic:%s,qos:%d", pDev->m_conf.subTopics.c_str(), 0);
+        LOG("[åŒ—å‘MQTT]è®¢é˜…topic:%s,qos:%d", pDev->m_conf.subTopics.c_str(), 0);
     }
     else if (ev == MG_EV_MQTT_MSG) {
-        // ÊÕµ½ MQTT ÏûÏ¢
+        // æ”¶åˆ° MQTT æ¶ˆæ¯
         struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
         MqttClt* pDev = (MqttClt*)c->fn_data;
         string topic = str::fromBuff(mm->topic.ptr, mm->topic.len);
@@ -118,14 +122,34 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     }
     else if (ev == MG_EV_CLOSE) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
-        LOG("[±±ÏòMQTT] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
+        LOG("[åŒ—å‘MQTT] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         if (pDev->m_bConnected) {
             pDev->m_bConnected = 0;
         }
     }
     else if (ev == MG_EV_ERROR) {
-        // ´íÎóÊÂ¼ş
+        // é”™è¯¯äº‹ä»¶
         MG_ERROR(("Error: %s", (char*)ev_data));
+    }
+    else if (ev == MG_EV_WAKEUP) {
+        MqttClt* pClt = (MqttClt*)c->fn_data;
+
+
+        struct mg_str* data = (struct mg_str*)ev_data;
+        string s = str::fromBuff(data->ptr, data->len);
+        size_t pos = s.find("\n\n");
+
+        if (pos != string::npos) {
+            string topic = s.substr(0, pos);
+            string message = s.substr(pos + 2);
+            struct mg_mqtt_opts opts = { 0 };
+            opts.topic = mg_str(topic.c_str());
+            opts.message = mg_str(message.c_str());
+            opts.qos = pClt->m_conf.qos;        // æœåŠ¡è´¨é‡: 0, 1, 2
+            opts.retain = 0;  // æ˜¯å¦ä¿ç•™
+
+            mg_mqtt_pub(c, &opts);
+        }
     }
     else if (ev == MG_EV_POLL) {
 
@@ -137,22 +161,22 @@ void thread_mqtt_client_comm(void* p)
     MqttClt* pDev = (MqttClt*)p;
     pDev->m_bThreadRunning = true;
 
-    struct mg_mgr mgr;  // ÊÂ¼ş¹ÜÀíÆ÷
-    struct mg_connection* c;
+    mg_mgr& mgr = pDev->mgr;  
+    mg_connection*& c = pDev->c;
 
     //mg_log_set(MG_LL_VERBOSE);
-    mg_mgr_init(&mgr);  // ³õÊ¼»¯ÊÂ¼ş¹ÜÀíÆ÷
+    mg_mgr_init(&mgr);  // åˆå§‹åŒ–äº‹ä»¶ç®¡ç†å™¨
 
-    // ÅäÖÃ MQTT Á¬½ÓÑ¡Ïî
+    // é…ç½® MQTT è¿æ¥é€‰é¡¹
     struct mg_mqtt_opts opts = { 0 };
-    opts.clean = true;  // Çå³ı»á»°
-    opts.qos = 0;       // QoS 1 Ê±ÎŞ·¨Óëmosquitto½¨Á¢Á¬½Ó£¬ºóĞøÔÙÑĞ¾¿
+    opts.clean = true;  // æ¸…é™¤ä¼šè¯
+    opts.qos = 0;       // QoS 1 æ—¶æ— æ³•ä¸mosquittoå»ºç«‹è¿æ¥ï¼Œåç»­å†ç ”ç©¶
     opts.retain = 0;
-    opts.keepalive = 60; // ±£³ÖÁ¬½ÓÊ±¼ä£¨Ãë£©
+    opts.keepalive = 60; // ä¿æŒè¿æ¥æ—¶é—´ï¼ˆç§’ï¼‰
     opts.version = 4;
     opts.client_id = mg_str("tds");
 
-    // ½¨Á¢ MQTT Á¬½Ó
+    // å»ºç«‹ MQTT è¿æ¥
     string server = "mqtt://" + pDev->m_conf.ip + ":" + to_string(pDev->m_conf.port);
     c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
     if (c == NULL) {
@@ -160,9 +184,9 @@ void thread_mqtt_client_comm(void* p)
         return;
     }
 
-    // ÊÂ¼şÑ­»·
+    // äº‹ä»¶å¾ªç¯
     for (;;) {
-        mg_mgr_poll(&mgr, 500);  // Ã¿ÃëÂÖÑ¯Ò»´Î
+        mg_mgr_poll(&mgr, 500);  // æ¯ç§’è½®è¯¢ä¸€æ¬¡
         if (pDev->m_bStop) {
             break;
         }
@@ -219,10 +243,31 @@ void MqttClt::stop()
 void MqttClt::confUpdated()
 {
     if (m_lastSubTopics != m_conf.subTopics) {
-        LOG("[MQTT]¶©ÔÄĞŞ¸Ä£¬ÀÏ¶©ÔÄ:%s,ĞÂ¶©ÔÄ:%s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
+        LOG("[MQTT]è®¢é˜…ä¿®æ”¹ï¼Œè€è®¢é˜…:%s,æ–°è®¢é˜…:%s", m_lastSubTopics.c_str(), m_conf.subTopics.c_str());
         stop();
         run(m_conf);
     }
+}
+
+void MqttSrv::mqttPublish(string topic, string data)
+{
+    for (int i = 0; i < m_mqttClts.size(); i++) {
+        m_mqttClts[i]->mqttPublish(topic, data);
+    }
+}
+
+void MqttClt::mqttPublish(string topic, string data)
+{
+    //string s = topic + "\n\n" + data;
+    //mg_wakeup(&mgr, c->id, s.c_str(), (int)s.length());  // Respond to parent
+
+    struct mg_mqtt_opts opts = { 0 };
+    opts.topic = mg_str(topic.c_str());
+    opts.message = mg_str(data.c_str());
+    opts.qos = m_conf.qos;        // æœåŠ¡è´¨é‡: 0, 1, 2
+    opts.retain = 0;  // æ˜¯å¦ä¿ç•™
+
+    mg_mqtt_pub(c, &opts);
 }
 
 void MqttClt::onRecvMqttData(string topic, string data)
@@ -248,7 +293,7 @@ void MqttClt::onRecvMqttData(string topic, string data)
         se.runScript(si, m_lastRunInfo_onRecv);
 
         if (se.m_sError != "") {
-            string s = str::format("[warn][±±ÏòMQTT]½Å±¾Ö´ĞĞ´íÎó£¬½Å±¾=%s,´íÎó=%s,Á¬½Ó=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(),m_conf.port);
+            string s = str::format("[warn][åŒ—å‘MQTT]è„šæœ¬æ‰§è¡Œé”™è¯¯ï¼Œè„šæœ¬=%s,é”™è¯¯=%s,è¿æ¥=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(),m_conf.port);
             LOG(s);
         }
         else {
@@ -282,7 +327,7 @@ void MqttClt::onSendTdsNotify(string notify)
         se.runScript(si, m_lastRunInfo_onRecv);
 
         if (se.m_sError != "") {
-            string s = str::format("[warn][±±ÏòMQTT]½Å±¾Ö´ĞĞ´íÎó£¬½Å±¾=%s,´íÎó=%s,Á¬½Ó=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(), m_conf.port);
+            string s = str::format("[warn][åŒ—å‘MQTT]è„šæœ¬æ‰§è¡Œé”™è¯¯ï¼Œè„šæœ¬=%s,é”™è¯¯=%s,è¿æ¥=%s:%d", si.name.c_str(), se.m_sError.c_str(), m_conf.ip.c_str(), m_conf.port);
             LOG(s);
         }
         else {
