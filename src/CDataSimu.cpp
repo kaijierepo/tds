@@ -26,7 +26,6 @@ void runDataSimu(void* p) {
 
 			json val = value;
 			pmp->input(val);
-			pmp->saveToDB();
 		}
 
 		timeopt::sleepMilli(1000 * pmp->m_simuConf.interval);
