@@ -25,6 +25,32 @@ MqttSrv::~MqttSrv()
 {
 }
 
+void thread_mqtt_script() {
+    while (1) {
+        //组装参数
+        auto mut_doc = yyjson_mut_doc_new(nullptr);
+        auto mut_root = yyjson_mut_obj(mut_doc);
+        yyjson_mut_doc_set_root(mut_doc, mut_root);
+
+        char* temp = yyjson_mut_write(mut_doc, 0, 0);
+        string strparams = temp ? temp : "";
+        free(temp);
+        yyjson_mut_doc_free(mut_doc);
+
+        //执行脚本
+        string strResult = "";
+        string strOutput = "";
+        scriptManager.runScript("ThingsBoard周期上送", strparams, strResult, strOutput);
+
+        //脚本返回
+        if (!strResult.empty()) {
+  
+        }
+
+        sleep(1000);
+    }
+}
+
 bool MqttSrv::run() {
 	
 	string s;
@@ -68,6 +94,10 @@ bool MqttSrv::run() {
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
 	}
+
+    thread t(thread_mqtt_script, this);
+    t.detach();
+
     return true;
 }
 
