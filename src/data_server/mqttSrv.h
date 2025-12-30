@@ -11,8 +11,10 @@ struct MASTER_SRV_CONF {
 	string pwd;
 	string subTopics;
 	int qos;
-	string recvScript;
-	string sendScript;
+	string recvScript;       //数据接收脚本
+	string sendScript;		 //数据发送脚本
+	string cycleScript;		 //周期发送脚本
+	int intervel;			 //周期发送间隔
 };
 
 class MqttClt {

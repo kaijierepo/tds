@@ -25,32 +25,6 @@ MqttSrv::~MqttSrv()
 {
 }
 
-void thread_mqtt_script(void* p) {
-    while (1) {
-        //组装参数
-        auto mut_doc = yyjson_mut_doc_new(nullptr);
-        auto mut_root = yyjson_mut_obj(mut_doc);
-        yyjson_mut_doc_set_root(mut_doc, mut_root);
-
-        char* temp = yyjson_mut_write(mut_doc, 0, 0);
-        string strparams = temp ? temp : "";
-        free(temp);
-        yyjson_mut_doc_free(mut_doc);
-
-        //执行脚本
-        string strResult = "";
-        string strOutput = "";
-        scriptManager.runScript("ThingsBoard周期上送", strparams, strResult, strOutput);
-
-        //脚本返回
-        if (!strResult.empty()) {
-  
-        }
-
-        sleep(1000);
-    }
-}
-
 bool MqttSrv::run() {
 	
 	string s;
@@ -65,6 +39,7 @@ bool MqttSrv::run() {
 				yyjson_val* yy_proto = yyjson_obj_get(item, "proto");
 				if (!yy_proto)
 					continue;
+
 				string proto = yyjson_get_str(yy_proto);
                 if (proto == "mqtt") { 
                     MASTER_SRV_CONF conf;
@@ -82,6 +57,10 @@ bool MqttSrv::run() {
                     conf.recvScript = yyjson_get_str(yy_recvScript);
 					yyjson_val* yy_sendScript = yyjson_obj_get(item, "sendScript");
                     conf.sendScript = yyjson_get_str(yy_sendScript);
+                    yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
+                    conf.cycleScript = yyjson_get_str(yy_cycleScript);
+                    yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
+                    conf.intervel = yyjson_get_int(yy_intervel);
 					m_masterDSConf.push_back(conf);
 				}
 			}
@@ -94,9 +73,6 @@ bool MqttSrv::run() {
         clt->run(m_masterDSConf[i]);
         m_mqttClts.push_back(clt);
 	}
-
-    thread t(thread_mqtt_script, this);
-    t.detach();
 
     return true;
 }
@@ -195,15 +171,39 @@ void thread_mqtt_client_comm(void* p)
     mg_mgr_free(&mgr);
 
     pDev->m_bThreadRunning = false;
-    pDev->m_bStop = false;
 }
 
+void thread_mqtt_script(void* p) {
+    MqttClt* pDev = (MqttClt*)p;
+
+    while (1) {
+        if (pDev->m_bStop) {
+            break;
+        }
+
+        if (pDev->m_bThreadRunning && pDev->m_bConnected) {
+            //执行脚本
+            string strparams = "";
+            string strResult = "";
+            string strOutput = "";
+            scriptManager.runScript(pDev->m_conf.cycleScript, strparams, strResult, strOutput);
+        }        
+
+        timeopt::sleepMilli(pDev->m_conf.intervel * 1000);
+    }
+}
 
 bool MqttClt::run(MASTER_SRV_CONF conf)
 {
     m_conf = conf;
+    m_bStop = false;
+
     thread t(thread_mqtt_client_comm, this);
     t.detach();
+
+    thread t2(thread_mqtt_script, this);
+    t2.detach();
+
     return true;
 }
 
