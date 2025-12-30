@@ -52,6 +52,11 @@ namespace DATA_SAVE_MODE {
 	const string cyclic_onchange = "cyclic|onchange";
 }
 
+struct DATA_SIMU_CONF {
+	double lowLimit;
+	double highLimit;
+};
+
 
 class MP : public OBJ
 {
@@ -93,7 +98,7 @@ public:
 	string m_strPusherProxyKey;
 	string m_strPullProxyKey;
 
-
+	DATA_SIMU_CONF m_simuConf;
 
 	MP_STATUS m_mpStatus;
 
