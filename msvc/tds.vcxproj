@@ -610,6 +610,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='dll - D|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\data_server\as_interface.cpp" />
+    <ClCompile Include="..\src\data_server\mqttSrv.cpp" />
     <ClCompile Include="..\src\data_server\rpcHandler_common.cpp" />
     <ClCompile Include="..\src\data_server\scriptEngine.cpp" />
     <ClCompile Include="..\src\data_server\scriptFunc.cpp" />
@@ -691,6 +692,7 @@
     <ClInclude Include="..\src\common\udpSrv.h" />
     <ClInclude Include="..\src\common\yyjson.h" />
     <ClInclude Include="..\src\data_server\as_interface.h" />
+    <ClInclude Include="..\src\data_server\mqttSrv.h" />
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
     <ClInclude Include="..\src\data_server\scriptEngine.h" />
     <ClInclude Include="..\src\data_server\scriptFunc.h" />

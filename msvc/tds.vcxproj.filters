@@ -240,6 +240,9 @@
     <ClCompile Include="..\src\io_server\ioDev_mqtt.cpp">
       <Filter>io_server\io_dev</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\data_server\mqttSrv.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -501,6 +504,9 @@
     <ClInclude Include="..\src\data_server\rpcHandler_common.h" />
     <ClInclude Include="..\src\io_server\ioDev_mqtt.h">
       <Filter>io_server\io_dev</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\data_server\mqttSrv.h">
+      <Filter>data_server</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
