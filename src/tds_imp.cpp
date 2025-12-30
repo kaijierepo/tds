@@ -468,6 +468,64 @@ void loadDeepVersion() {
 #endif
 }
 
+void loadDataSimu() {
+	// 获取所有 MP 对象
+	map<string, MP*> mapAllMP;
+	prj.getMpList(mapAllMP);
+
+	// 读取保存的 JSON 文件
+	string simuConfPath = charCodec::utf8_to_gb(tds->conf->confPath + "/DataSimu.json");
+	yyjson_read_err err;
+	yyjson_doc* doc = yyjson_read_file(simuConfPath.c_str(), YYJSON_READ_NOFLAG, nullptr, &err);
+
+	if (!doc) {
+		LOG("[error] Failed to read DataSimu.json: " + string(err.msg));
+		return;
+	}
+
+	yyjson_val* root = yyjson_doc_get_root(doc);
+
+	// 遍历 JSON 数组
+	size_t idx, max;
+	yyjson_val* item;
+	yyjson_arr_foreach(root, idx, max, item) {
+		if (yyjson_is_obj(item)) {
+			// 获取 tag
+			const char* tag = yyjson_get_str(yyjson_obj_get(item, "tag"));
+			if (!tag) {
+				continue;
+			}
+
+			// 查找对应的 MP 对象
+			auto it = mapAllMP.find(tag);
+			if (it != mapAllMP.end()) {
+				MP* pmp = it->second;
+				if (pmp) {
+					// 更新 MP 对象的模拟配置
+					yyjson_val* lowLimitVal  = yyjson_obj_get(item, "lowLimit");
+					yyjson_val* highLimitVal = yyjson_obj_get(item, "highLimit");
+					yyjson_val* enableVal    = yyjson_obj_get(item, "enable");
+
+					if (yyjson_is_real(lowLimitVal)) {
+						pmp->m_simuConf.lowLimit = yyjson_get_real(lowLimitVal);
+					}
+
+					if (yyjson_is_real(highLimitVal)) {
+						pmp->m_simuConf.highLimit = yyjson_get_real(highLimitVal);
+					}
+
+					if (yyjson_is_bool(enableVal)) {
+						pmp->m_simuConf.enable = yyjson_get_bool(enableVal);
+					}
+				}
+			}
+		}
+	}
+
+	// 释放 JSON 文档
+	yyjson_doc_free(doc);
+}
+
 void runDataSimu() {
 	g_pDataSimu = new CDataSimu();
 	g_pDataSimu->startDataSimu();
@@ -714,6 +772,9 @@ bool TDS_imp::run(string cmdline) {
 #endif
 
 	g_ComputerStartupTime = getSystemBootTime();
+
+	// 加载数据模拟配置
+	loadDataSimu();
 
 	//开启一个线程,进行数据仿真
 	thread t(runDataSimu);
