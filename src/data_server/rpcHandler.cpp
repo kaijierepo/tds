@@ -817,8 +817,17 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.saveImage") {
 			string s = params.dump();
-			db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
-			vlmAlarmCheck(s);
+			if (tds->conf->largeModelType == -1)
+			{
+				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+			}
+			if (tds->conf->largeModelType == 0)
+			{
+				samAlarmCheck(s);
+				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
+			}
+			else if(tds->conf->largeModelType == 1)
+				vlmAlarmCheck(s);
 		}
 		else if (method == "db.setConf") {
 			string s = params.dump();
@@ -6735,6 +6744,207 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 
 	mg_mgr_free(&mgr);
 	yyjson_doc_free(doc);
+}
+
+void rpcHandler::samAlarmCheck(string& sParams) {
+	string url = tds->conf->getStr("samAlarmCheck", "");
+	if (url.empty()) {
+		LOG("samAlarmCheck url not found");
+		return;
+	}
+
+	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+
+	yyjson_mut_doc* outDoc = yyjson_mut_doc_new(NULL);
+	yyjson_mut_val* root_copy = yyjson_val_mut_copy(outDoc, yyjson_doc_get_root(doc));
+	yyjson_mut_doc_set_root(outDoc, root_copy);
+	
+
+	yyjson_mut_val* yyv_params = yyjson_mut_doc_get_root(outDoc);
+
+	yyjson_mut_val* yyv_tag = yyjson_mut_obj_get(yyv_params, "tag");
+	if (yyv_tag == nullptr) {
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(outDoc);
+		LOG("samAlarmCheck tag not found");
+		return;
+	}
+
+	yyjson_mut_val* yyv_time = yyjson_mut_obj_get(yyv_params, "time");
+	if (yyv_time == nullptr) {
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(outDoc);
+		LOG("samAlarmCheck time not found");
+		return;
+	}
+
+	yyjson_mut_val* yyv_img = yyjson_mut_obj_get(yyv_params, "data");
+	if (yyv_img == nullptr) {
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(outDoc);
+		LOG("samAlarmCheck data not found");
+		return;
+	}
+
+	yyjson_mut_val* yyv_info = yyjson_mut_obj_get(yyv_params, "info");
+	if (yyv_info == nullptr) {
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(outDoc);
+		LOG("samAlarmCheck info not found");
+		return;
+	}
+
+	string tag = yyjson_mut_get_str(yyv_tag);
+	string time = yyjson_mut_get_str(yyv_time);
+	string img = yyjson_mut_get_str(yyv_img);
+
+
+
+	if (img.find("data:") == string::npos) {
+		img = "data:image/jpg;base64," + img;
+	}
+
+	struct mg_mgr mgr;
+	mg_mgr_init(&mgr);
+
+	mg_http_data data;
+	struct mg_connection* connect = mg_http_connect(&mgr, url.c_str(), mg_connect_fn, &data);
+
+	if (connect) {
+		std::string protocol, ip, port, path;
+		if (parse_url(url, protocol, ip, port, path)) {
+			// 文件路径
+			const std::string filePath = fs::appPath() + "/sam_command.json";
+
+			// 打开文件
+			std::ifstream file(filePath);
+			if (file.is_open()) {
+				// 读取文件内容
+				std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+				yyjson_doc* samConf = yyjson_read(fileContent.c_str(), fileContent.size(), 0);
+				yyjson_val* samRoot = yyjson_doc_get_root(samConf);
+				yyjson_val* objModel = yyjson_obj_get(samRoot, "model");
+				yyjson_val* objPrompt = yyjson_obj_get(samRoot, "prompt");
+				yyjson_val* objConfidence = yyjson_obj_get(samRoot, "confidence");
+
+		
+				auto mutDoc = yyjson_mut_doc_new(nullptr);
+				auto mutRoot = yyjson_mut_obj(mutDoc);
+
+				yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+				
+				if (objModel)
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", yyjson_get_str(objModel));
+				else
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", "");
+
+				if(objPrompt)
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "prompt", yyjson_get_str(objPrompt));
+				else
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "prompt", "");
+
+				if (objConfidence)
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "confidence", yyjson_get_str(objConfidence));
+				else
+					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "confidence", "");
+
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "image", img.c_str());
+
+						// 关闭文件
+				file.close();
+
+				string body;
+
+				char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+				if (writeResult) {
+					body = writeResult;
+					free(writeResult);
+				}
+				else {
+					LOG("samAlarmCheck yyjson_mut_write failed");
+				}
+
+				yyjson_mut_doc_free(mutDoc);
+				yyjson_doc_free(samConf);
+				mg_printf(connect,
+					"POST %s HTTP/1.0\r\n"
+					"Host: %s\r\n"
+					"Content-Type: application/json\r\n"
+					"Content-Length: %u\r\n"
+					"\r\n"
+					"%s",
+					path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+				);
+
+				TIME tStart;
+				tStart.setNow();
+				while (!data.done && TIME::calcTimePassSecond(tStart) < 60.0) {
+					mg_mgr_poll(&mgr, 100);
+				}
+			}
+			else {
+				LOG("samAlarmCheck read sam_command.json failed");
+				mg_mgr_free(&mgr);
+				yyjson_doc_free(doc);
+				yyjson_mut_doc_free(outDoc);
+				return;
+			}
+		}
+		else {
+			mg_mgr_free(&mgr);
+			yyjson_doc_free(doc);
+			yyjson_mut_doc_free(outDoc);
+			return;
+			LOG("samAlarmCheck url parse failed");
+		}
+	}
+	else {
+		mg_mgr_free(&mgr);
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(outDoc);
+		return;
+		LOG("samAlarmCheck mongoose connect failed");
+	}
+
+	if (data.status == 200) {
+		string result = data.body;
+
+		yyjson_doc* samResult = yyjson_read(result.c_str(), result.length(), 0);
+		yyjson_val* samResultRoot = yyjson_doc_get_root(samResult);
+
+		yyjson_val* samResultArr = yyjson_obj_get(samResultRoot, "results");
+		yyjson_mut_val* outSamResult = yyjson_mut_arr(outDoc);
+		
+
+
+		if (samResultArr && yyjson_arr_size(samResultArr) > 0) 
+		{
+			LOG("samAlarmCheck find anomal");
+			size_t idx = 0;
+			size_t max = 0;
+			yyjson_val* item;
+			yyjson_arr_foreach(samResultArr, idx, max, item)
+			{
+				yyjson_mut_arr_add_val(outSamResult, yyjson_val_mut_copy(outDoc, item));
+			}
+			yyjson_mut_obj_add_val(outDoc, yyv_info, "samObjects", outSamResult);
+		}
+
+		char* temp = yyjson_mut_write(outDoc, 0, 0);
+
+		sParams = temp;
+		free(temp);
+		yyjson_doc_free(samResult);
+	}
+	else {
+		LOG("samAlarmCheck mongoose callback failed, dataStatus %d", data.status);
+	}
+
+	mg_mgr_free(&mgr);
+	yyjson_doc_free(doc);
+	yyjson_mut_doc_free(outDoc);
 }
 
 bool haveNode(string link, string node)

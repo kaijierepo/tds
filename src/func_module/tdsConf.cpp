@@ -144,6 +144,9 @@ ddnsDomainName=        #ddns更新域名。多个域名使用逗号分隔
 #功能模块启用
 enableHMR = 0          #启用http服务器热更新功能
 authDownload = 0       #开启文件下载用户认证
+
+#大模型相关配置
+largeModelType = -1          #-1:不应用大模型     0:sam分割/检测大模型    1:vlm视觉语言大模型    
 )";
 	return s;
 }
@@ -454,6 +457,11 @@ void tdsConfig::loadConf_tds(vector<KV_INI_LINE>& vecConf) {
 		else if (checkKey((key), "apiAdaptorMethod"))
 		{
 			str::split(m_apiAdaptorMethod, val, ",");
+		}
+		//大模型相关
+		else if (checkKey((key), "largeModelType"))
+		{
+			largeModelType = atoi(val.c_str());
 		}
 		
 	}

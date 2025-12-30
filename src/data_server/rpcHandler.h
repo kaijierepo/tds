@@ -165,6 +165,7 @@ public:
 	bool apiAdaptorScript(json& jResult);
 
 	void vlmAlarmCheck(string& sParams);
+	void samAlarmCheck(string& sParams);
 };
 extern rpcHandler rpcSrv;
 

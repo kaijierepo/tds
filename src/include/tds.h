@@ -516,6 +516,9 @@ struct iTDSConf {
 	string m_apiAdaptorScript = "";
 	vector<string> m_apiAdaptorMethod;
 
+	//large Model
+	int largeModelType = -1;
+
 	LOG_ENABLE logEnable;
 
 	virtual int getInt(string key, int iDef) = 0;
