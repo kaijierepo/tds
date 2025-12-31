@@ -29,7 +29,7 @@ public:
 	bool run(MASTER_SRV_CONF conf);
 	void stop();
 	void onRecvMqttData(string topic, string data);
-	void onSendTdsNotify(string notify);
+	void onTdsNotify(string method, string params);
 	void onMqttConnected();
 	void confUpdated();
 	MASTER_SRV_CONF m_conf;
@@ -56,6 +56,7 @@ public:
 	virtual ~MqttSrv();
 
 	void mqttPublish(string topic, string data);
+	void onTdsNotify(string method,string params);
 
 	vector<MASTER_SRV_CONF> m_masterDSConf;
 	vector<MqttClt*> m_mqttClts;

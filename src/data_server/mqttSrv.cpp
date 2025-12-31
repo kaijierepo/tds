@@ -283,6 +283,13 @@ void MqttSrv::mqttPublish(string topic, string data)
     }
 }
 
+void MqttSrv::onTdsNotify(string method, string params)
+{
+    for (int i = 0; i < m_mqttClts.size(); i++) {
+        m_mqttClts[i]->mqttPublish(method, params);
+    }
+}
+
 void MqttClt::mqttPublish(string topic, string data)
 {
     //string s = topic + "\n\n" + data;
@@ -332,9 +339,15 @@ void MqttClt::onRecvMqttData(string topic, string data)
     return;
 }
 
-void MqttClt::onSendTdsNotify(string notify)
+void MqttClt::onTdsNotify(string method,string params)
 {
     if (m_conf.sendScript != "") {
+        //只处理数据更新通知
+        if (method != "onDataUpdate") {
+            return;
+        }
+
+
         ScriptEngine se;
 
 #ifdef TDS
@@ -344,7 +357,8 @@ void MqttClt::onSendTdsNotify(string notify)
 
         json jTdsNotify = json::object();
         //jTdsNotify["topic"] = topic;
-        jTdsNotify["data"] = notify;
+		jTdsNotify["method"] = method;
+        jTdsNotify["params"] = params;
 
 
         se.m_globalObj["TdsNotify"] = jTdsNotify;

@@ -26,6 +26,7 @@
 #include "scriptFunc.h"
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
+#include "mqttSrv.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -6518,6 +6519,8 @@ void rpcHandler::notify(string method, const json& params, bool specialNotify, s
 		}
 	}
 	sockSrv.m_mutexSessions.unlock();
+
+	mqttSrv.onTdsNotify(method, params);
 }
 
 void rpcHandler::notify(string method, string notifyParams, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
