@@ -4779,6 +4779,7 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 					MP* pmp = vecMps[i];
 					if (pmp->needSaveToDB()) {
 						needSave = true;
+						break;
 					}
 				}
 
