@@ -66,7 +66,11 @@ bool MqttSrv::run() {
                     yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
                     conf.cycleScript = yyjson_get_str(yy_cycleScript);
                     yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
-                    conf.intervel = yyjson_get_int(yy_intervel);
+                    if (yyjson_is_int(yy_intervel))
+                        conf.intervel = yyjson_get_int(yy_intervel);
+                    else if (yyjson_is_str(yy_intervel)) {
+                        conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
+                    }
 					m_masterDSConf.push_back(conf);
 				}
 			}
@@ -117,6 +121,7 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
         }
         pDev->m_lastSubTopics = pDev->m_conf.subTopics;
         LOG("[MQTT-DS]sub topic:%s,qos:%d", pDev->m_conf.subTopics.c_str(), 0);
+		pDev->onMqttConnected();
     }
     else if (ev == MG_EV_MQTT_MSG) {
         struct mg_mqtt_message* mm = (struct mg_mqtt_message*)ev_data;
@@ -359,4 +364,8 @@ void MqttClt::onSendTdsNotify(string notify)
         }
     }
     return;
+}
+
+void MqttClt::onMqttConnected()
+{
 }

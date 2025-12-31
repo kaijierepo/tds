@@ -30,6 +30,7 @@ public:
 	void stop();
 	void onRecvMqttData(string topic, string data);
 	void onSendTdsNotify(string notify);
+	void onMqttConnected();
 	void confUpdated();
 	MASTER_SRV_CONF m_conf;
 
