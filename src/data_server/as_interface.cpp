@@ -45,7 +45,7 @@ bool funcImp_rpcHand_notify(string method,  json& js)
 		return false;
 	}
 
-	rpcSrv.notify(method, js);
+	rpcSrv.notify(method, js.dump());
 
 	return true;
 }

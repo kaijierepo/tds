@@ -1056,7 +1056,7 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 					unlock_conf_unique();
 					json jParams;
 					jParams["ioAddr"] = getIOAddrStr();
-					rpcSrv.notify("devConfBuffUpdated", jParams);
+					rpcSrv.notify("devConfBuffUpdated", jParams.dump());
 				}
 				//else if (method == "getDevInfo")
 				//{

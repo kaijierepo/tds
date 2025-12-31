@@ -949,7 +949,7 @@ void TDS_imp::rpcNotify(string method, string params, string sessionId)
 			string s = e.what();
 		}
 	}
-	rpcSrv.notify(method, jParams);
+	rpcSrv.notify(method, jParams.dump());
 }
 
 bool TDS_imp::enableIoLog(string ioAddr, bool bEnable)

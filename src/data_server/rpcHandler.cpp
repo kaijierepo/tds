@@ -1654,7 +1654,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "保存升级包失败," + packagePath;
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				goto UPGRADE_END;
@@ -1672,7 +1672,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 					json j;
 					j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpExeName;
 
-					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 					goto UPGRADE_END;
@@ -1684,7 +1684,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 					json j;
 					j["serverUpgradeStatus"] = "删除文件失败," + tdsPath + "/" + tmpUIName;
 
-					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 					goto UPGRADE_END;
@@ -1699,7 +1699,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "重命名文件失败," + exeName;
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				goto UPGRADE_END;
@@ -1747,7 +1747,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 					json j;
 					j["serverUpgradeStatus"] = "tKeep停止服务失败";
 
-					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 					goto UPGRADE_END;
@@ -1760,7 +1760,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "向tKeep请求超时,请确认tKeep版本或运行情况";
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				goto UPGRADE_END;
@@ -1776,7 +1776,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "解压缩升级包失败," + packagePath + "->" + extractPath;
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				goto UPGRADE_END;
@@ -1787,14 +1787,14 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "压缩包中未包含" + exeName;
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 
 				if (!renameFile(tdsPath + "/", tmpExeName,exeName)) {
 					json j;
 					j["serverUpgradeStatus"] = "压缩包中未包含" + exeName + ",恢复重命名文件失败, " + tmpExeName;
 
-					rpcSrv.notify("onServerUpgradeStatusChange", j);
+					rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 					LOG("[warn]升级失败," + j["serverUpgradeStatus"]);
 				}
 
@@ -1844,7 +1844,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 				json j;
 				j["serverUpgradeStatus"] = "升级成功,等待重启," + timeopt::nowStr(false);
 
-				rpcSrv.notify("onServerUpgradeStatusChange", j);
+				rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 				LOG("[warn]" + j["serverUpgradeStatus"]);
 			}
 
@@ -1856,7 +1856,7 @@ void thread_tds_upgrade(string packageUrl,string packageType) {
 			json j;
 			j["serverUpgradeStatus"] = "下载升级包失败," + packageUrl;
 
-			rpcSrv.notify("onServerUpgradeStatusChange", j);
+			rpcSrv.notify("onServerUpgradeStatusChange", j.dump());
 			LOG("[warn]startServerUpgrade,下载升级包失败");
 		}
 	}
@@ -1932,7 +1932,7 @@ bool rpcHandler::handleMethodCall_gamePad(string method, json& params, RPC_RESP&
 	{
 		json p;
 		p["user"] = session.user;
-		rpcSrv.notify(method, p);
+		rpcSrv.notify(method, p.dump());
 	}
 	else
 	{
@@ -4814,7 +4814,7 @@ void rpcHandler::rpc_input(json params, RPC_RESP& resp, RPC_SESSION& session) {
 				jStatusNotify.push_back(jDe);
 			}
 
-			rpcSrv.notify("onDataUpdate", jStatusNotify);
+			rpcSrv.notify("onDataUpdate", jStatusNotify.dump());
 			resp.result = "\"ok\"";
 		}
 		else {
@@ -6382,7 +6382,7 @@ void rpcHandler::rpc_onObjOnline(json params, RPC_RESP& rpcResp, RPC_SESSION& se
 			}
 
 			LOG("[对象上线  ]位号:%s", tag.c_str());
-			rpcSrv.notify("objOnline", params);
+			rpcSrv.notify("objOnline", params.dump());
 		}
 		rpcResp.result = RPC_OK;
 	}
@@ -6403,7 +6403,7 @@ void rpcHandler::rpc_onObjOffline(json params, RPC_RESP& rpcResp, RPC_SESSION& s
 			}
 
 			LOG("[对象掉线  ]位号:%s", tag.c_str());
-			rpcSrv.notify("onObjOffline", params);
+			rpcSrv.notify("onObjOffline", params.dump());
 		}
 	
 		if (p->m_bChildTds) { //设置所有子对象掉线
@@ -6495,35 +6495,6 @@ void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string t
 	p->sendStr(s);
 }
 
-void rpcHandler::notify(string method, const json& params, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
-	string sp;
-	try { 
-		sp = params.dump();
-	}
-    catch (exception& e) {
-        LOG("json dump error:%s", e.what());
-    }
-
-	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + sp + "}\n\n";
-
-	//apiAdaptorScript(notify);
-
-	string tag = "";
-	WebServer::notifyAllSrvAllWs(method, tag, notify);
-
-	sockSrv.m_mutexSessions.lock();
-	for (auto& i : sockSrv.m_sockSessions) {
-		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
-
-		if (pSession && pSession->isSubscribed(method, tag)) {
-			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
-		}
-	}
-	sockSrv.m_mutexSessions.unlock();
-
-	mqttSrv.onTdsNotify(method, sp);
-}
-
 void rpcHandler::notify(string method, string notifyParams, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + notifyParams + "}\n\n";
 
@@ -6541,6 +6512,8 @@ void rpcHandler::notify(string method, string notifyParams, bool specialNotify, 
 		}
 	}
 	sockSrv.m_mutexSessions.unlock();
+
+	mqttSrv.onTdsNotify(method, notifyParams);
 }
 
 void rpcHandler::statisCall(string method) {

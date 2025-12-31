@@ -152,7 +152,7 @@ static JSValue qjs_notify(JSContext* ctx, JSValueConst this_val, int argc, JSVal
 
         RPC_SESSION session;
         json err, rlt;
-        rpcSrv.notify(method, jParams, true);
+        rpcSrv.notify(method, jParams.dump(), true);
     }
 
     return JS_UNDEFINED;

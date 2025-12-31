@@ -848,7 +848,7 @@ void ioServer::rpc_deleteDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 	{
 		saveConf();
 		rpcResp.result = RPC_OK;
-		rpcSrv.notify("devDeleted", params);
+		rpcSrv.notify("devDeleted", params.dump());
 	}
 	else {
 		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;
@@ -879,7 +879,7 @@ void ioServer::rpc_modifyDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion
 			p->loadConf(devConf);
 	
 			devConf["ioAddr"] = p->getIOAddrStr(); //用于前端提示通知那台设备修改成功了
-			rpcSrv.notify("devModified", devConf);  
+			rpcSrv.notify("devModified", devConf.dump());
 			modified = true;
 
 			//如果绑定对象改变，将缓存在io设备中的实时值同步到当前新绑定的对象，免去向设备请求一次
@@ -984,7 +984,7 @@ void ioServer::rpc_disposeDev(json& params, RPC_RESP& rpcResp, RPC_SESSION sesio
 	{
 		saveConf();
 		rpcResp.result = "\"ok\"";
-		rpcSrv.notify("devDisposed", params);
+		rpcSrv.notify("devDisposed", params.dump());
 	}
 	else {
 		rpcResp.error = "can not find device of specified NodeID:" + sNodeId;

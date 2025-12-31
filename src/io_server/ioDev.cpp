@@ -2243,7 +2243,7 @@ void notifyDevOnline(string sNotify) {
 
 void notifyDevOffline(json jNotify) {
 	string ioAddr = jNotify["ioAddr"];
-	rpcSrv.notify("devOffline", jNotify);
+	rpcSrv.notify("devOffline", jNotify.dump());
 
 	//发给数据服务
 	if (jNotify.contains("tag")) {
