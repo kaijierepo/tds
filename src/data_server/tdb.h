@@ -1066,6 +1066,7 @@ public:
 
 	string parseSuffix(string deFileUrl);
 	static bool fileExist(string pszFileName);
+	static bool folderExist(string pszFileName);
 	string m_name; //database name, same as project name
 	string m_path; // without a slash in the end.  add a slash if you want to compose a path
 	fp_getTagsByTagSelector m_getTagsByTagSelector;

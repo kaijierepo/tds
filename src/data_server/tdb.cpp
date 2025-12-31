@@ -1409,7 +1409,7 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 	}
 
 	string deListFolderPath = getPath_dataFolder(strTag, stTime);
-	if (!fileExist(deListFolderPath)) {
+	if (!folderExist(deListFolderPath)) {
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 	}
 
@@ -1431,7 +1431,7 @@ void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 		//save to a directory name as timestamp
 		if (yyjson_is_arr(yyv_file)) {
 			string deFilesFolder = getDeFilesFolder(deListFolderPath, stTime);
-			if (!fileExist(deFilesFolder)) {
+			if (!folderExist(deFilesFolder)) {
 				DB_FS::createFolderOfPath(deFilesFolder.c_str());
 			}
 
@@ -4124,7 +4124,7 @@ void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time)
 	}
 
 	string deListFolderPath = getPath_dataFolder(strTag, stTime);
-	if (!fileExist(deListFolderPath))
+	if (!folderExist(deListFolderPath))
 		DB_FS::createFolderOfPath(deListFolderPath.c_str());
 
 	yyjson_doc* doc = yyjson_read(sDeIdx.c_str(), sDeIdx.length(), 0);
@@ -5732,7 +5732,7 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 {
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
-	if (!fileExist(folderPath))
+	if (!folderExist(folderPath))
 		DB_FS::createFolderOfPath(folderPath.c_str());
 
 
@@ -7006,6 +7006,25 @@ bool TDB::fileExist(string pszFileName)
 #endif
 }
 
+bool TDB::folderExist(string pszFileName)
+{
+#ifdef _WIN32
+	wstring filePath = DB_STR::utf8_to_utf16(pszFileName);
+	DWORD fileAttributes = GetFileAttributesW(filePath.c_str());
+	return (fileAttributes != INVALID_FILE_ATTRIBUTES && (fileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+#else
+	//std::filesystem::path filePath = charCodec::tds_to_utf16(pszFileName); //for windows
+	std::filesystem::path filePath = pszFileName;
+
+	if (std::filesystem::exists(filePath)) {
+		return true;
+	}
+	else if (std::filesystem::is_directory(filePath)) {
+		return true;
+	}
+	return  false;
+#endif
+}
 
 
 TIME_SELECTOR::TIME_SELECTOR()
