@@ -6861,9 +6861,11 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 	yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
 
 	yyjson_mut_doc* outDoc = yyjson_mut_doc_new(NULL);
-	yyjson_mut_val* root_copy = yyjson_val_mut_copy(outDoc, yyjson_doc_get_root(doc));
-	yyjson_mut_doc_set_root(outDoc, root_copy);
+	yyjson_mut_val* outRoot = yyjson_val_mut_copy(outDoc, yyjson_doc_get_root(doc));
+	yyjson_mut_doc_set_root(outDoc, outRoot);
+	yyjson_mut_val* outInfo = yyjson_mut_obj_get(outRoot, "info");
 	
+
 
 	yyjson_mut_val* yyv_params = yyjson_mut_doc_get_root(outDoc);
 
@@ -6898,7 +6900,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 		LOG("samAlarmCheck info not found");
 		return;
 	}
-
+	
 	string tag = yyjson_mut_get_str(yyv_tag);
 	string time = yyjson_mut_get_str(yyv_time);
 	string img = yyjson_mut_get_str(yyv_img);
@@ -7023,18 +7025,17 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 		yyjson_mut_val* outSamResult = yyjson_mut_arr(outDoc);
 		
 
-
-		if (samResultArr && yyjson_arr_size(samResultArr) > 0) 
+		if (samResultArr && yyjson_arr_size(samResultArr) > 0&& outInfo)
 		{
 			LOG("samAlarmCheck find anomal");
 			size_t idx = 0;
 			size_t max = 0;
 			yyjson_val* item;
+			yyjson_mut_val* objects = yyjson_mut_obj_get(outRoot, "objects");
 			yyjson_arr_foreach(samResultArr, idx, max, item)
 			{
-				yyjson_mut_arr_add_val(outSamResult, yyjson_val_mut_copy(outDoc, item));
+				yyjson_mut_arr_add_val(objects, yyjson_val_mut_copy(outDoc, item));
 			}
-			yyjson_mut_obj_add_val(outDoc, yyv_info, "samObjects", outSamResult);
 		}
 
 		char* temp = yyjson_mut_write(outDoc, 0, 0);
