@@ -114,6 +114,8 @@ public:
 
 	void sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string tag);
 
+	void notify(string method, const json& params, bool specialNotify = false, std::shared_ptr<TDS_SESSION> orgSession = nullptr);
+
 	//genicam steam function
 #ifdef ENABLE_GENICAM
 	string rpc_getStreamInfo(json params, string& error);
