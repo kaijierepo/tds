@@ -1531,6 +1531,8 @@ bool TDB::saveDeToDataListFile(string dataListPath, yyjson_mut_val* yymDe) {
 
 	if (!fileExist(dataListPath.c_str())) //first de to save
 	{
+		DB_FS::createFolderOfPath(dataListPath);
+
 		string fileData;
 
 		size_t len = 0;
