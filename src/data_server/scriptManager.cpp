@@ -747,6 +747,7 @@ void ScriptManager::saveScriptList(string org, std::map<string, SCRIPT_INFO>& sl
 	char* s = yyjson_mut_write(mutDoc, YYJSON_WRITE_PRETTY, &len);
 	if (s) {
 		string str = s;
+		DB_FS::createFolderOfPath(path);
 		DB_FS::writeFile(path, (char*)str.c_str(), str.length());
 
 		free(s);

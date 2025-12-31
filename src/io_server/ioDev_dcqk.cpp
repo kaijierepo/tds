@@ -2420,6 +2420,9 @@ bool saveJpg(string tag, DB_TIME stTime, char* pData, size_t len)
 	char* buff = new char[buffLen];
 	memcpy(buff, pData, len);
 	string path = folder + "/" + stTime.toStampHMS() + ".jpg";
+	if (!TDB::fileExist(path)) {
+		DB_FS::createFolderOfPath(path);
+	}
 	bool ret = DB_FS::writeFile(path, buff, buffLen);
 	delete[] buff;
 	return ret;

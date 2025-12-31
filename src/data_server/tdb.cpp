@@ -5130,7 +5130,9 @@ void TDB::rpc_db_table_delete(yyjson_val* params, string& rlt, string& err, stri
 	string path = m_confPath + "/" + table;
 
 	string data;
-	DB_FS::readFile(path, data);
+	if (!DB_FS::readFile(path, data)) {
+		return;
+	}
 	if (data == "")
 		data = "[]";
 
@@ -5369,6 +5371,7 @@ bool TDB::tableUpdate( string tableName, vector<string>& match, vector<string>& 
 	DB_FS::readFile(path, data);
 	if (data == "") {
         err = JSON_STR_VAL("table not exist");
+		return false;
 	}
 
 	yyjson_read_err yy_err = { 0 };
@@ -5526,6 +5529,9 @@ bool TDB::tableInsert(string tableName, yyjson_val* yyv_row, string& err)
 	size_t len = 0;
 	char* p = yyjson_mut_val_write(yy_mroot, YYJSON_WRITE_PRETTY_TWO_SPACES, &len);
 	if (p) {
+		if (!TDB::fileExist(path)) {
+			DB_FS::createFolderOfPath(path);
+		}
 		DB_FS::writeFile(path, p, len);
 		free(p);
 	}
@@ -5627,6 +5633,9 @@ void TDB::rpc_db_table_select(yyjson_val* params, string& rlt, string& err, stri
 		if (!p) {
 			err = JSON_STR_VAL("generate tdb row id fail");
 			return;
+		}
+		if (!TDB::fileExist(path)) {
+			DB_FS::createFolderOfPath(path);
 		}
 		DB_FS::writeFile(path, p, len);
 	}
@@ -5983,6 +5992,9 @@ int TDB::Merge(string tag, const DB_TIME& stTime, const DB_TIME& stTimeRange1, c
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
 	if (p) {
+		if (!TDB::fileExist(dbFile)) {
+			DB_FS::createFolderOfPath(dbFile);
+		}
 		DB_FS::writeFile(dbFile, p, len);
 		free(p);
 	}
@@ -6217,6 +6229,9 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 	size_t len = 0;
 	char* p = yyjson_mut_write(mut_doc, 0, &len);
 	if (p) {
+		if (!TDB::fileExist(dbFile)) {
+			DB_FS::createFolderOfPath(dbFile);
+		}
 		DB_FS::writeFile(dbFile, p, len);
 		free(p);
 	}
@@ -6236,6 +6251,9 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 				unsigned char* out = new unsigned char[buffLen];
 				memset(out, 0, buffLen);
 				int outLen = tdb_base64_decode(p.c_str(), p.length(), out);
+				if (!TDB::fileExist(one.dbFile1)) {
+					DB_FS::createFolderOfPath(one.dbFile1);
+				}
 				DB_FS::writeFile(one.dbFile1, out, outLen);
 				delete[] out;
 			}
@@ -6243,6 +6261,9 @@ int TDB::Update(string tag, DB_TIME stTime, yyjson_val* yyVal, yyjson_val* updat
 		else {
 			p = yyjson_val_write(vecToBeUpdatedFile[0].yyFileToUpdate, 0, &len);
 			if (p) {
+				if (!TDB::fileExist(vecToBeUpdatedFile[0].dbFile1)) {
+					DB_FS::createFolderOfPath(vecToBeUpdatedFile[0].dbFile1);
+				}
 				DB_FS::writeFile(vecToBeUpdatedFile[0].dbFile1, p, len);
 				free(p);
 			}
@@ -6565,6 +6586,9 @@ string TDB::saveDEFile(yyjson_val* yyvFileInfo, string path, DB_TIME dbTime, str
 	}
 
 	deFilePath = path + "/" + name;
+	if (!TDB::fileExist(deFilePath)) {
+		DB_FS::createFolderOfPath(deFilePath);
+	}
 	//encoded to base64 by default
 	if (type.find("jpg") != string::npos || type.find("grh") != string::npos ||
 		type.find("png") != string::npos ||
@@ -6788,6 +6812,9 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 			memcpy(buff + len + imgInfoSize + 4, "jjpg", 4);
 		}
 
+		if (!TDB::fileExist(path)) {
+			DB_FS::createFolderOfPath(path);
+		}
 		bool ret = DB_FS::writeFile(path, buff, buffLen);
 		delete[] buff;
 
@@ -6937,6 +6964,9 @@ bool TDB::saveImage(string tag, DB_TIME stTime, char* pData, size_t len, string&
 		}
 		else
 		{
+			if (!TDB::fileExist(imageInfoPath)) {
+				DB_FS::createFolderOfPath(imageInfoPath);
+			}
 			bool ret = DB_FS::writeFile(imageInfoPath, (char*)imgInfo.c_str(), imgInfo.size());
 			return ret;
 		}
