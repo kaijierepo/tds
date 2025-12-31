@@ -606,8 +606,6 @@ namespace DB_FS {
 	}
 	bool writeFile(string path, char* data, size_t len)
 	{
-		createFolderOfPath(path);
-
 		FILE* fp = nullptr;
 		DB_LOCK_GUARD dbLock(path);
 #ifdef _WIN32
