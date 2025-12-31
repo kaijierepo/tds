@@ -6495,35 +6495,6 @@ void rpcHandler::sendStreamPusherRegPkt(std::shared_ptr<TDS_SESSION> p, string t
 	p->sendStr(s);
 }
 
-void rpcHandler::notify(string method, const json& params, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
-	string sp;
-	try { 
-		sp = params.dump();
-	}
-    catch (exception& e) {
-        LOG("json dump error:%s", e.what());
-    }
-
-	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + sp + "}\n\n";
-
-	//apiAdaptorScript(notify);
-
-	string tag = "";
-	WebServer::notifyAllSrvAllWs(method, tag, notify);
-
-	sockSrv.m_mutexSessions.lock();
-	for (auto& i : sockSrv.m_sockSessions) {
-		std::shared_ptr<TDS_SESSION> pSession = std::static_pointer_cast<TDS_SESSION>(i.second->appLayerSession);
-
-		if (pSession && pSession->isSubscribed(method, tag)) {
-			sockSrv.sendToSockSession(i.second, (unsigned char*)notify.c_str(), notify.size());
-		}
-	}
-	sockSrv.m_mutexSessions.unlock();
-
-	mqttSrv.onTdsNotify(method, params);
-}
-
 void rpcHandler::notify(string method, string notifyParams, bool specialNotify, std::shared_ptr<TDS_SESSION> orgSession) {
 	string notify = "{\"jsonrpc\":\"2.0\",\"method\":\"" + method + "\",\"params\":" + notifyParams + "}\n\n";
 
@@ -6541,6 +6512,8 @@ void rpcHandler::notify(string method, string notifyParams, bool specialNotify, 
 		}
 	}
 	sockSrv.m_mutexSessions.unlock();
+
+	mqttSrv.onTdsNotify(method, notifyParams);
 }
 
 void rpcHandler::statisCall(string method) {
