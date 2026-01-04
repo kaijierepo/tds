@@ -7995,8 +7995,8 @@ bool DE_SELECTOR::init(const string& params, string& err)
 void DB_TIME::fromUnixTime(time_t iUnix, int milli)
 {
 	if (iUnix > 100000000000) { //unix timestamp with milli
-		iUnix = iUnix / 1000;
 		milli = iUnix % 1000;
+		iUnix = iUnix / 1000;
 	}
 
 	tm time_tm;
