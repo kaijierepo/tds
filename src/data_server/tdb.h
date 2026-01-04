@@ -1017,6 +1017,9 @@ public:
 	map<string, TDB*> m_childDB;
 //private func
 public:
+	// convert old datalist file to new format
+	yyjson_mut_doc* convertJsonFormat(yyjson_doc* original_doc);
+
 	//param parse
 	map<string, vector<string>> getAggrOpt(yyjson_val* jAggr);
 	bool parseDESelector(yyjson_val* yyParams, DE_SELECTOR& deSelector, string& err);

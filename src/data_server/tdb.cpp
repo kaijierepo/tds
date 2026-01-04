@@ -43,6 +43,8 @@ SOFTWARE.
 
 #ifdef _WIN32
 #include <windows.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 
 #if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)
@@ -1136,7 +1138,7 @@ TDB::TDB()
 	m_isGbk = false;
 	m_timeUnit = BY_DAY;
 	m_bEnableFsBuff = false;
-	m_bAutoUpgrade = false;
+	m_bAutoUpgrade = true;
 	m_bufferTTL = 3 * 3600;
 	thread t(bufferManageThread, this);
 	t.detach();
@@ -5738,6 +5740,171 @@ void TDB::rpc_db_insert(yyjson_val* params, string& rlt, string& err, string& qu
 	}
 }
 
+// convert old data
+yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
+	if (!original_doc) return nullptr;
+
+	yyjson_val* root = yyjson_doc_get_root(original_doc);
+	if (!root) return nullptr;
+
+	// new
+	yyjson_mut_doc* new_doc = yyjson_mut_doc_new(nullptr);
+	yyjson_mut_val* new_root = yyjson_mut_arr(new_doc);
+	yyjson_mut_doc_set_root(new_doc, new_root);
+
+	// get
+	yyjson_val* mark = yyjson_obj_get(root, "mark");
+	yyjson_val* data_list = yyjson_obj_get(root, "data_list");
+	yyjson_val* data_lable = yyjson_obj_get(root, "data_lable");
+
+	if (!data_list || !yyjson_is_arr(data_list)) {
+		return new_doc;
+	}
+
+	// parse data_lable
+	std::vector<std::string> labels;
+	if (data_lable && yyjson_is_arr(data_lable)) {
+		size_t idx, max;
+		yyjson_val* label;
+		yyjson_arr_foreach(data_lable, idx, max, label) {
+			if (yyjson_is_str(label)) {
+				labels.push_back(DB_STR::utf8_to_gb(yyjson_get_str(label)));
+			}
+		}
+	}
+
+	// define field index (according to the content of "data_lable")
+	int time_idx = -1;
+	int value_idx = -1;
+	int window_idx = -1;
+	int correct_idx = -1;
+
+	for (size_t i = 0; i < labels.size(); i++) {
+		if (labels[i] == "时间戳") {
+			time_idx = i;
+		}
+		else if (labels[i] == "校正后值") {
+			value_idx = i;
+		}
+		else if (labels[i] == "是否天窗数据") {
+			window_idx = i;
+		}
+		else if (labels[i] == "校正配置值") {
+			correct_idx = i;
+		}
+	}
+
+	// 
+	if (time_idx == -1 || value_idx == -1) {
+		return new_doc;
+	}
+
+	// foreach data_list
+	size_t list_idx, list_max;
+	yyjson_val* list_item;
+	yyjson_arr_foreach(data_list, list_idx, list_max, list_item) {
+		if (!yyjson_is_obj(list_item)) continue;
+
+		// get acq_type
+		yyjson_val* acq_type_val = yyjson_obj_get(list_item, "acq_type");
+		if (!acq_type_val || !yyjson_is_num(acq_type_val)) continue;
+
+		int acq_type = (int)yyjson_get_int(acq_type_val);
+
+		// get data array
+		yyjson_val* data_array = yyjson_obj_get(list_item, "data");
+		if (!data_array || !yyjson_is_arr(data_array)) continue;
+
+		//  foreach data
+		size_t data_idx, data_max;
+		yyjson_val* data_item;
+		yyjson_arr_foreach(data_array, data_idx, data_max, data_item) {
+			if (!yyjson_is_arr(data_item)) continue;
+
+			// 
+			yyjson_val* timestamp_val = yyjson_arr_get(data_item, time_idx);
+			yyjson_val* value_val = yyjson_arr_get(data_item, value_idx);
+
+			if (!timestamp_val || !value_val) continue;
+
+			// 
+			if (!yyjson_is_num(timestamp_val) && !yyjson_is_str(timestamp_val)) continue;
+
+			// 
+			int64_t timestamp_ms = 0;
+			if (yyjson_is_sint(timestamp_val)) {
+				timestamp_ms = yyjson_get_sint(timestamp_val);
+			}
+			else if (yyjson_is_uint(timestamp_val)) {
+				timestamp_ms = (int64_t)yyjson_get_uint(timestamp_val);
+			}
+			else if (yyjson_is_str(timestamp_val)) {
+				try {
+					timestamp_ms = std::stoll(yyjson_get_str(timestamp_val));
+				}
+				catch (...) {
+					continue;
+				}
+			}
+
+			// convert timestamp to string
+			DB_TIME dt;
+			dt.fromUnixTime(timestamp_ms);
+			std::string time_str = dt.toStr();
+
+			yyjson_mut_val* new_obj = yyjson_mut_obj(new_doc);
+
+			yyjson_mut_obj_add_int(new_doc, new_obj, "acqType", acq_type);
+
+			yyjson_mut_obj_add_strcpy(new_doc, new_obj, "time", time_str.c_str());
+
+			auto val_key = yyjson_mut_str(new_doc, m_dbFmt.deItemKey_value.c_str());
+			if (yyjson_is_num(value_val))
+			{
+				yyjson_mut_obj_put(new_obj, val_key, yyjson_mut_real(new_doc, yyjson_get_num(value_val)));
+			}
+			else if (yyjson_is_str(value_val))
+			{
+				string val = yyjson_get_str(value_val);
+				if (val == "-")
+				{
+					yyjson_mut_obj_put(new_obj, val_key, yyjson_mut_str(new_doc, "-"));
+				}
+				else
+				{
+					yyjson_mut_obj_put(new_obj, val_key, yyjson_mut_real(new_doc, stof(val)));
+				}
+			}
+			else
+				yyjson_mut_obj_put(new_obj, val_key, yyjson_val_mut_copy(new_doc, value_val));
+
+
+			// add  windowRepair
+			if (window_idx != -1) {
+				yyjson_val* window_val = yyjson_arr_get(data_item, window_idx);
+				if (window_val && yyjson_is_str(window_val)) {
+					yyjson_mut_obj_add_strcpy(new_doc, new_obj, "windowRepair",
+						yyjson_get_str(window_val));
+				}
+			}
+			
+
+			// add correct
+			if (correct_idx != -1) {
+				yyjson_val* correct_val = yyjson_arr_get(data_item, correct_idx);
+				if (correct_val && yyjson_is_str(correct_val)) {
+					yyjson_mut_obj_add_strcpy(new_doc, new_obj, "correct",
+						yyjson_get_str(correct_val));
+				}
+			}
+
+			//
+			yyjson_mut_arr_append(new_root, new_obj);
+		}
+	}
+
+	return new_doc;
+}
 
 void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 {
@@ -5765,9 +5932,6 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 		m_FsBuff.m_csFsb.unlock();
 	}
 
-
-
-
 	bool bAppend = false;
 	if (fileExist(dlPath))
 	{
@@ -5785,7 +5949,54 @@ void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 
 			//auto  upgrade compatiable format to standard format
 			if (len > 0 && m_bAutoUpgrade) {
+				//check first charactor is '{'
+				fseek(fp, 0L, SEEK_SET);
+				char c;
+				fread(&c, 1, 1, fp);
+				if (c == '{')
+				{
+					//read all data
+					char* p = (char*)malloc(len + 1);
+					fread(p + 1, 1, len - 1, fp);
+					p[0] = c;
+					p[len] = 0;
+#ifdef _WIN32
+					_chsize_s(_fileno(fp), 0);
+#else
+					ftruncate(fileno(fp), 0);
+#endif
+					fseek(fp, 0L, SEEK_SET);
+					
+					// parse JSON
+					yyjson_doc* doc = yyjson_read(p, len, 0);
+					free(p);
+					bool bConvertOld = false;
+					if (doc)
+					{
+						// convert
+						yyjson_mut_doc* new_doc = convertJsonFormat(doc);
 
+						// out
+						if (new_doc) {
+							size_t json_len = 0;
+							char* json_str = yyjson_mut_write(new_doc, YYJSON_WRITE_PRETTY, &json_len);
+							if (json_str) {
+								fwrite(json_str, 1, json_len - 1, fp);
+								bConvertOld = true;
+								free(json_str);
+							}
+
+							yyjson_mut_doc_free(new_doc);
+						}
+
+						yyjson_doc_free(doc);
+					}
+					if (!bConvertOld)
+						fwrite("[", 1, 1, fp);
+					fwrite(appendData.c_str(), 1, appendData.length(), fp);
+					bAppend = true; // end write
+					len = 0; // end write
+				}
 			}
 
 
