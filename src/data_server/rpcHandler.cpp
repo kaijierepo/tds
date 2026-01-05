@@ -817,6 +817,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			db.rpc_db_getBufferStatus(rpcResp.result, rpcResp.error);
 		}
 		else if (method == "db.saveImage") {
+			LOG("begin save image %d", tds->conf->largeModelType);
 			string s = params.dump();
 			if (tds->conf->largeModelType < 0) {
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
@@ -6990,39 +6991,55 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 	}
 
 	if (data.status == 200) {
+		LOG("sam server connect success");
 		string result = data.body;
 
 		yyjson_doc* samResult = yyjson_read(result.c_str(), result.length(), 0);
 		yyjson_val* samResultRoot = yyjson_doc_get_root(samResult);
 		int samStatus = yyjson_get_int(yyjson_obj_get(samResultRoot,"code"));
-		if (samStatus != 200)
-		{
+		if (samStatus != 200){
 			yyjson_doc_free(samResult);
 			LOG("sam server connect faild");
 		}
+		else {
 
-		yyjson_val* samResultArr = yyjson_obj_get(samResultRoot, "objects");
-		yyjson_mut_val* outSamResult = yyjson_mut_arr(outDoc);
-		
+			yyjson_val* samResultArr = yyjson_obj_get(samResultRoot, "objects");
+			char* tmpInfo = nullptr;
+			yyjson_mut_val* outInfo = yyjson_mut_obj_get(outRoot, "info");
 
-		if (samResultArr && yyjson_arr_size(samResultArr) > 0&& outInfo)
-		{
-			LOG("samAlarmCheck find anomal");
-			size_t idx = 0;
-			size_t max = 0;
-			yyjson_val* item;
-			yyjson_mut_val* objects = yyjson_mut_obj_get(outRoot, "objects");
-			yyjson_arr_foreach(samResultArr, idx, max, item)
+			if (samResultArr && yyjson_arr_size(samResultArr) > 0 && outInfo)
 			{
-				yyjson_mut_arr_add_val(objects, yyjson_val_mut_copy(outDoc, item));
+				LOG("samAlarmCheck find anomal");
+				size_t idx = 0;
+				size_t max = 0;
+				yyjson_val* item;
+				
+				string outInfoStr = yyjson_mut_get_str(outInfo);
+				yyjson_doc* tmpDoc = yyjson_read(outInfoStr.c_str(), outInfoStr.size(), 0);
+				yyjson_mut_doc* tmpInfoDoc = yyjson_mut_doc_new(nullptr);
+				yyjson_mut_doc_set_root(tmpInfoDoc, yyjson_val_mut_copy(tmpInfoDoc, yyjson_doc_get_root(tmpDoc)));
+				yyjson_mut_val* tmpRoot = yyjson_mut_doc_get_root(tmpInfoDoc);
+
+				yyjson_mut_val* objects = yyjson_mut_obj_get(tmpRoot, "objContour");
+				yyjson_arr_foreach(samResultArr, idx, max, item)
+				{
+					yyjson_mut_arr_add_val(objects, yyjson_val_mut_copy(outDoc, item));
+				}
+				yyjson_doc_free(tmpDoc);
+				tmpInfo = yyjson_mut_write(tmpInfoDoc, 0, 0);
+				yyjson_mut_doc_free(tmpInfoDoc);
 			}
+			
+			
+			yyjson_mut_obj_remove_key(outRoot, "info");
+			yyjson_mut_obj_add_strcpy(outDoc, outRoot, "info", tmpInfo);
+			char* temp = yyjson_mut_write(outDoc, 0, 0);
+
+			sParams = temp;
+			free(tmpInfo);
+			free(temp);
+			yyjson_doc_free(samResult);
 		}
-
-		char* temp = yyjson_mut_write(outDoc, 0, 0);
-
-		sParams = temp;
-		free(temp);
-		yyjson_doc_free(samResult);
 	}
 	else {
 		LOG("samAlarmCheck mongoose callback failed, dataStatus %d", data.status);
