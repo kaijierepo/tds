@@ -818,17 +818,17 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.saveImage") {
 			string s = params.dump();
-			if (tds->conf->largeModelType == -1)
-			{
+			if (tds->conf->largeModelType < 0) {
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 			}
-			else if (tds->conf->largeModelType == 0)
-			{
+			else if (tds->conf->largeModelType == 0) {
 				samAlarmCheck(s);
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 			}
-			else if(tds->conf->largeModelType == 1)
+			else if (tds->conf->largeModelType == 1) {
+				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 				vlmAlarmCheck(s);
+			}
 		}
 		else if (method == "db.setConf") {
 			string s = params.dump();
