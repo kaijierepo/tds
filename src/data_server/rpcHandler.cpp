@@ -822,7 +822,7 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			{
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 			}
-			if (tds->conf->largeModelType == 0)
+			else if (tds->conf->largeModelType == 0)
 			{
 				samAlarmCheck(s);
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
@@ -6882,7 +6882,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 
 
 	if (img.find("data:") == string::npos) {
-		img = "data:image/jpg;base64," + img;
+		//img = "data:image/jpg;base64," + img;
 	}
 
 	struct mg_mgr mgr;
@@ -6908,14 +6908,14 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				yyjson_val* objModel = yyjson_obj_get(samRoot, "model");
 				yyjson_val* objPrompt = yyjson_obj_get(samRoot, "prompt");
 				yyjson_val* objConfidence = yyjson_obj_get(samRoot, "confidence");
-
 		
 				auto mutDoc = yyjson_mut_doc_new(nullptr);
 				auto mutRoot = yyjson_mut_obj(mutDoc);
 
 				yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-				
+				yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "detectService");
+
 				if (objModel)
 					yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "model", yyjson_get_str(objModel));
 				else
@@ -6951,12 +6951,12 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				yyjson_doc_free(samConf);
 				mg_printf(connect,
 					"POST %s HTTP/1.0\r\n"
-					"Host: %s\r\n"
+					"Host: %s:%s\r\n"
 					"Content-Type: application/json\r\n"
 					"Content-Length: %u\r\n"
 					"\r\n"
 					"%s",
-					path.c_str(), ip.c_str(), (unsigned int)body.size(), body.c_str()
+					path.c_str(), ip.c_str(), port.c_str(),(unsigned int)body.size(), body.c_str()
 				);
 
 				TIME tStart;
@@ -6994,8 +6994,14 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 
 		yyjson_doc* samResult = yyjson_read(result.c_str(), result.length(), 0);
 		yyjson_val* samResultRoot = yyjson_doc_get_root(samResult);
+		int samStatus = yyjson_get_int(yyjson_obj_get(samResultRoot,"code"));
+		if (samStatus != 200)
+		{
+			yyjson_doc_free(samResult);
+			LOG("sam server connect faild");
+		}
 
-		yyjson_val* samResultArr = yyjson_obj_get(samResultRoot, "results");
+		yyjson_val* samResultArr = yyjson_obj_get(samResultRoot, "objects");
 		yyjson_mut_val* outSamResult = yyjson_mut_arr(outDoc);
 		
 
