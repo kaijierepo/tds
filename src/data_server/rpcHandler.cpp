@@ -847,6 +847,23 @@ void processJson(string& sParams) {
 			yyjson_mut_doc_free(tmpInfoDoc);
 		}
 	}
+	else {
+		yyjson_mut_doc* tmpInfoDoc = yyjson_mut_doc_new(nullptr);
+		yyjson_mut_val* tmpInfoRoot = yyjson_mut_obj(tmpInfoDoc);
+		yyjson_mut_doc_set_root(tmpInfoDoc, tmpInfoRoot);
+		yyjson_mut_val* tmpInfoVal = yyjson_mut_obj(tmpInfoDoc);
+		yyjson_mut_val* tmpObjVal = yyjson_mut_arr(tmpInfoDoc);
+		yyjson_mut_obj_add_val(tmpInfoDoc, tmpInfoRoot, "objects", tmpObjVal);
+		char* outInfoChar = yyjson_mut_write(tmpInfoDoc, 0, 0);
+		yyjson_mut_obj_add_strcpy(outDoc, outRoot, "info", outInfoChar);
+		free(outInfoChar);
+		char* outChar = yyjson_mut_write(outDoc, 0, 0);
+		sParams = outChar;
+		free(outChar);
+		yyjson_doc_free(doc);
+		yyjson_mut_doc_free(tmpInfoDoc);
+		yyjson_mut_doc_free(outDoc);
+	}
 }
 
 bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
@@ -7079,6 +7096,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				size_t max = 0;
 				yyjson_val* item;
 				
+
 				string outInfoStr = yyjson_mut_get_str(outInfo);
 				yyjson_doc* tmpDoc = yyjson_read(outInfoStr.c_str(), outInfoStr.size(), 0);
 				yyjson_mut_doc* tmpInfoDoc = yyjson_mut_doc_new(nullptr);
