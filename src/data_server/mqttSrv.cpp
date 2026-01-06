@@ -71,6 +71,8 @@ bool MqttSrv::run() {
                     else if (yyjson_is_str(yy_intervel)) {
                         conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
                     }
+                    yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
+                    conf.clientID = yyjson_get_str(yy_clientID);
 					m_masterDSConf.push_back(conf);
 				}
 			}

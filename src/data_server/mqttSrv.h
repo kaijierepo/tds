@@ -16,6 +16,7 @@ struct MASTER_SRV_CONF {
 	string sendScript;		 //数据发送脚本
 	string cycleScript;		 //周期发送脚本
 	int intervel;			 //周期发送间隔
+	string clientID;
 };
 
 class MqttClt {
