@@ -791,54 +791,62 @@ void processJson(string& sParams) {
 	yyjson_mut_doc* outDoc = yyjson_mut_doc_new(NULL);
 	yyjson_mut_val* outRoot = yyjson_val_mut_copy(outDoc, yyjson_doc_get_root(doc));
 	yyjson_mut_doc_set_root(outDoc, outRoot);
-	string outInfoStr = yyjson_mut_get_str(yyjson_mut_obj_get(outRoot, "info"));
-	
-	yyjson_doc* infoDoc = yyjson_read(outInfoStr.c_str(), outInfoStr.size(), 0);
-	yyjson_mut_doc* tmpInfoDoc = yyjson_mut_doc_new(nullptr);
-	yyjson_mut_doc_set_root(tmpInfoDoc, yyjson_val_mut_copy(tmpInfoDoc, yyjson_doc_get_root(infoDoc)));
-	yyjson_mut_val* tmpRoot = yyjson_mut_doc_get_root(tmpInfoDoc);
-
-	yyjson_mut_val* objVal = yyjson_mut_obj_get(tmpRoot, "objContour");
-
-	// 深拷贝 objVal
-	yyjson_mut_val* objValCopy = yyjson_mut_val_mut_copy(tmpInfoDoc, objVal);
-
-	size_t idx = 0;
-	size_t max = 0;
-	yyjson_mut_val* item;
-
-	yyjson_mut_arr_foreach(objValCopy, idx, max, item)
+	auto infoVal = yyjson_mut_obj_get(outRoot, "info");
+	string outInfoStr = "";
+	if (infoVal)
 	{
-		yyjson_mut_obj_add_strcpy(tmpInfoDoc, item, "name",
-			yyjson_mut_get_str(yyjson_mut_obj_get(item, "type")));
-		yyjson_mut_obj_remove_key(item, "type");
+		outInfoStr = yyjson_mut_get_str(infoVal);
+		if (outInfoStr != "")
+		{
+			yyjson_doc* infoDoc = yyjson_read(outInfoStr.c_str(), outInfoStr.size(), 0);
+			yyjson_mut_doc* tmpInfoDoc = yyjson_mut_doc_new(nullptr);
+			yyjson_mut_doc_set_root(tmpInfoDoc, yyjson_val_mut_copy(tmpInfoDoc, yyjson_doc_get_root(infoDoc)));
+			yyjson_mut_val* tmpRoot = yyjson_mut_doc_get_root(tmpInfoDoc);
 
-		yyjson_mut_val* oldBbox = yyjson_mut_obj_get(item, "bbox");
-		yyjson_mut_val* newBbox = yyjson_mut_obj(tmpInfoDoc);
+			yyjson_mut_val* objVal = yyjson_mut_obj_get(tmpRoot, "objContour");
 
-		yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "x", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 0)));
-		yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "y", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 1)));
-		yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "w", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 2)));
-		yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "h", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 3)));
+			yyjson_mut_val* objValCopy = yyjson_mut_val_mut_copy(tmpInfoDoc, objVal);
 
-		yyjson_mut_obj_remove_key(item, "bbox");
-		yyjson_mut_obj_add_val(tmpInfoDoc, item, "bbox", newBbox);
+			size_t idx = 0;
+			size_t max = 0;
+			yyjson_mut_val* item;
+
+			yyjson_mut_arr_foreach(objValCopy, idx, max, item)
+			{
+				yyjson_mut_obj_add_strcpy(tmpInfoDoc, item, "name",
+					yyjson_mut_get_str(yyjson_mut_obj_get(item, "type")));
+				yyjson_mut_obj_remove_key(item, "type");
+
+				yyjson_mut_val* oldBbox = yyjson_mut_obj_get(item, "bbox");
+				yyjson_mut_val* newBbox = yyjson_mut_obj(tmpInfoDoc);
+
+				yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "x", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 0)));
+				yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "y", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 1)));
+				yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "w", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 2)));
+				yyjson_mut_obj_add_int(tmpInfoDoc, newBbox, "h", yyjson_mut_get_int(yyjson_mut_arr_get(oldBbox, 3)));
+
+				yyjson_mut_obj_remove_key(item, "bbox");
+				yyjson_mut_obj_add_val(tmpInfoDoc, item, "bbox", newBbox);
+			}
+
+			yyjson_mut_obj_add_val(tmpInfoDoc, tmpRoot, "objects", objValCopy);
+
+			yyjson_mut_obj_remove_key(tmpRoot, "objContour");
+
+
+			char* outInfoStrChanged = yyjson_mut_write(tmpInfoDoc, 0, 0);
+			yyjson_mut_obj_remove_key(outRoot, "info");
+			yyjson_mut_obj_add_strcpy(outDoc, outRoot, "info", outInfoStrChanged);
+			free(outInfoStrChanged);
+			char* outChar = yyjson_mut_write(outDoc, 0, 0);
+			sParams= outChar;
+			free(outChar);
+			yyjson_doc_free(doc);
+			yyjson_doc_free(infoDoc);
+			yyjson_mut_doc_free(outDoc);
+			yyjson_mut_doc_free(tmpInfoDoc);
+		}
 	}
-
-	yyjson_mut_obj_add_val(tmpInfoDoc, tmpRoot, "objects", objValCopy);
-
-	yyjson_mut_obj_remove_key(tmpRoot, "objContour");
-
-
-	string outInfoStrChanged = yyjson_mut_write(tmpInfoDoc,0,0);
-	yyjson_mut_obj_remove_key(outRoot, "info");
-	yyjson_mut_obj_add_strcpy(outDoc, outRoot, "info", outInfoStrChanged.c_str());
-
-	sParams = yyjson_mut_write(outDoc, 0, 0);
-	yyjson_doc_free(doc);
-	yyjson_doc_free(infoDoc);
-	yyjson_mut_doc_free(outDoc);
-	yyjson_mut_doc_free(tmpInfoDoc);
 }
 
 bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcResp, RPC_SESSION& session) {
@@ -875,7 +883,6 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 			db.rpc_db_getBufferStatus(rpcResp.result, rpcResp.error);
 		}
 		else if (method == "db.saveImage") {
-			LOG("begin save image %d", tds->conf->largeModelType);
 			string s = params.dump();
 			processJson(s);
 			if (tds->conf->largeModelType < 0) {
@@ -7050,7 +7057,6 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 	}
 
 	if (data.status == 200) {
-		LOG("sam server connect success");
 		string result = data.body;
 
 		yyjson_doc* samResult = yyjson_read(result.c_str(), result.length(), 0);
@@ -7096,9 +7102,9 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 
 			sParams = temp;
 			free(tmpInfo);
-			free(temp);
-			yyjson_doc_free(samResult);
+			free(temp);	
 		}
+		yyjson_doc_free(samResult);
 	}
 	else {
 		LOG("samAlarmCheck mongoose callback failed, dataStatus %d", data.status);
