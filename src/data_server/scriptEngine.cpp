@@ -1063,34 +1063,76 @@ extern "C" {
         if (jArgs.size() == 1) {
             json params = jArgs[0];
             if (params.is_object()) {
-                string err, rlt, dbQi;
-                string sParams = params.dump();
-                db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
+                if (params.contains("table")) {
+                    if (!params.contains("tableType")) {
+                        return JS_NULL;
+                    }
 
-                json jRlt;
-                if (!rlt.empty()) {
-                    jRlt = json::parse(rlt);
-                }
+                    string err, rlt, dbQi;
+                    string sParams = params.dump();
 
-                json jErr;
-                if (!err.empty()) {
-                    jErr = json::parse(err);
-                }
+                    yyjson_doc* doc = yyjson_read(sParams.c_str(), sParams.length(), 0);
+                    yyjson_val* yyv_params = yyjson_doc_get_root(doc);
 
-                if (jRlt != nullptr) {
-                    JSValue jsVal;
-                    jsonValToJsVal(jRlt, ctx, jsVal);
+                    db.rpc_db_table_insert(yyv_params, rlt, err, dbQi, "", "zh");
+                    yyjson_doc_free(doc);
 
-                    return jsVal;
+                    json jRlt;
+                    if (!rlt.empty()) {
+                        jRlt = json::parse(rlt);
+                    }
+
+                    json jErr;
+                    if (!err.empty()) {
+                        jErr = json::parse(err);
+                    }
+
+                    if (jRlt != nullptr) {
+                        JSValue jsVal;
+                        jsonValToJsVal(jRlt, ctx, jsVal);
+
+                        return jsVal;
+                    }
+                    else {
+                        int errCode = jErr["code"].get<int>();
+                        std::string errMsg = jErr["message"].get<std::string>();
+                        std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+                        pEngine->m_vecOutput.push_back(errInfo);
+                        LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                            errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+                    }
                 }
                 else {
-                    int errCode = jErr["code"].get<int>();
-                    std::string errMsg = jErr["message"].get<std::string>();
-                    std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+                    string err, rlt, dbQi;
+                    string sParams = params.dump();
+                    db.rpc_db_insert(sParams, rlt, err, dbQi, "", "zh");
 
-                    pEngine->m_vecOutput.push_back(errInfo);
-                    LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
-                        errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+                    json jRlt;
+                    if (!rlt.empty()) {
+                        jRlt = json::parse(rlt);
+                    }
+
+                    json jErr;
+                    if (!err.empty()) {
+                        jErr = json::parse(err);
+                    }
+
+                    if (jRlt != nullptr) {
+                        JSValue jsVal;
+                        jsonValToJsVal(jRlt, ctx, jsVal);
+
+                        return jsVal;
+                    }
+                    else {
+                        int errCode = jErr["code"].get<int>();
+                        std::string errMsg = jErr["message"].get<std::string>();
+                        std::string errInfo = str::format("函数val执行错误,错误码:%d,错误信息:%s", errCode, errMsg.c_str());
+
+                        pEngine->m_vecOutput.push_back(errInfo);
+                        LOG("[脚本引擎]运行错误,错误信息:%s,\r\n环境位号:%s,脚本用户:%s\r\n脚本:%s",
+                            errInfo.c_str(), pEngine->m_tagContext.c_str(), pEngine->m_user.c_str(), pEngine->m_script.c_str());
+                    }
                 }
             }
         }
