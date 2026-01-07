@@ -1174,7 +1174,7 @@ extern "C" {
         }
 
         return JS_NULL;
-    }
+    } 
 
     static JSValue qjs_db_delete(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         JSValue jsVal = JS_NULL;
