@@ -1176,6 +1176,82 @@ extern "C" {
         return JS_NULL;
     }
 
+    static JSValue qjs_db_delete(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JSValue jsVal = JS_NULL;
+        if (argc == 1) {
+            JSValue jsParams = argv[0];
+            if (JS_IsObject(jsParams)) {
+                string err, rlt, queryInfo;
+                yyjson_doc* yydoc = nullptr;
+                qjsVal_to_yyVal(ctx, jsParams, yydoc);
+
+                if (yydoc) {
+                    yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
+                    db.handleRpc("db.delete", yyParams, rlt, err, queryInfo, "", "zh");
+
+                    string ret;
+                    if (!rlt.empty()) {
+                        ret = "{\"result\":" + rlt;
+                    }
+                    else if (!err.empty()) {
+                        ret = "{\"error\":" + rlt;
+                    }
+                    else {
+                        ret = "{\"error\":\"unhandled\"}";
+                    }
+
+                    if (!queryInfo.empty()) {
+                        ret += ",\"queryInfo\":" + queryInfo;
+                    }
+                    ret += "}";
+
+                    jsVal = JS_ParseJSON(ctx, ret.c_str(), ret.length(), nullptr);
+                    yyjson_doc_free(yydoc);
+                }
+            }
+        }
+
+        return jsVal;
+    }
+
+    static JSValue qjs_db_update(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
+        JSValue jsVal = JS_NULL;
+        if (argc == 1) {
+            JSValue jsParams = argv[0];
+            if (JS_IsObject(jsParams)) {
+                string err, rlt, queryInfo;
+                yyjson_doc* yydoc = nullptr;
+                qjsVal_to_yyVal(ctx, jsParams, yydoc);
+
+                if (yydoc) {
+                    yyjson_val* yyParams = yyjson_doc_get_root(yydoc);
+                    db.handleRpc("db.update", yyParams, rlt, err, queryInfo, "", "zh");
+
+                    string ret;
+                    if (!rlt.empty()) {
+                        ret = "{\"result\":" + rlt;
+                    }
+                    else if (!err.empty()) {
+                        ret = "{\"error\":" + rlt;
+                    }
+                    else {
+                        ret = "{\"error\":\"unhandled\"}";
+                    }
+
+                    if (!queryInfo.empty()) {
+                        ret += ",\"queryInfo\":" + queryInfo;
+                    }
+                    ret += "}";
+
+                    jsVal = JS_ParseJSON(ctx, ret.c_str(), ret.length(), nullptr);
+                    yyjson_doc_free(yydoc);
+                }
+            }
+        }
+
+        return jsVal;
+    }
+
     static JSValue qjs_setConfFile(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         json jArgs = engineArrayToJson(ctx, argv, argc);
 
@@ -1283,6 +1359,8 @@ void register_cpp_functions(JSContext* ctx) {
     JSValue db = JS_NewObject(ctx);
     JS_SetPropertyStr(ctx, db, "select", JS_NewCFunction(ctx, qjs_db_select, "select", 1));
     JS_SetPropertyStr(ctx, db, "insert", JS_NewCFunction(ctx, qjs_db_insert, "insert", 3));
+    JS_SetPropertyStr(ctx, db, "delete", JS_NewCFunction(ctx, qjs_db_delete, "delete", 1));
+    JS_SetPropertyStr(ctx, db, "update", JS_NewCFunction(ctx, qjs_db_update, "update", 1));
     JS_SetPropertyStr(ctx, global, "db", db);
 
     JS_SetPropertyStr(ctx, global, "setConfFile", JS_NewCFunction(ctx, qjs_setConfFile, "setConfFile", 2));
