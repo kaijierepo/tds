@@ -283,6 +283,7 @@ void ioDev_onvif::DoCycleTask() {
 							string imgBase64(out, outLen);
 							delete[] out;
 
+							string info;
 							if (dv_predict) {
 								string modelPath = fs::appPath() + "/onnx/railway_n_250922_832.onnx";
 
@@ -291,7 +292,6 @@ void ioDev_onvif::DoCycleTask() {
 								shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
 								bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
 
-								string info;
 								if (bRC) {
 									info = c_info.get();
 								}
