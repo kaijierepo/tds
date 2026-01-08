@@ -6874,13 +6874,16 @@ void rpcHandler::vlmAlarmCheck(string& sParams) {
 						if (parts.size() == 3) {
 							LOG("%s", parts[0]);
 							if (parts[0].find("正常") == string::npos) {
-								ALARM_INFO ai;
-								ai.tag = tag;
-								ai.type = parts[0];
-								ai.desc = parts[1] + parts[2];
-								ai.level = ALARM_LEVEL::alarm;
-								ai.time = time;
-								almSrv.Add(ai);
+								bool isSamAlarmOpen = tds->conf->getInt("enableDVSAlarm", 0) > 0 ? true : false;
+								if (isSamAlarmOpen) {
+									ALARM_INFO ai;
+									ai.tag = tag;
+									ai.type = parts[0];
+									ai.desc = parts[1] + parts[2];
+									ai.level = ALARM_LEVEL::alarm;
+									ai.time = time;
+									almSrv.Add(ai);
+								}
 							}
 						}					
 					}
@@ -7119,7 +7122,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				//	almSrv.Add(ai);
 				//}
 
-				bool isSamAlarmOpen = tds->conf->getInt("samAlarmOpenAlarmFunction", 0) > 0 ? true : false;
+				bool isSamAlarmOpen = tds->conf->getInt("enableDVSAlarm", 0) > 0 ? true : false;
 				if (isSamAlarmOpen) {
 					ALARM_INFO ai;
 					ai.tag = tag;
