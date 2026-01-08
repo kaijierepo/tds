@@ -227,228 +227,230 @@ void ioDev_onvif::DoCycleTask() {
 					m_curPZTChan = 0;
 				}
 
-				bool valid = false;
-				if (str::isDigits(chanId)) {
-					int presetIdx = atoi(chanId.c_str());
-					ptz_gotoPreset(presetIdx);
+				if (pC->m_bEnable) {
+					bool valid = false;
+					if (str::isDigits(chanId)) {
+						int presetIdx = atoi(chanId.c_str());
+						ptz_gotoPreset(presetIdx);
 
-					valid = true;
-				}
-				else {
-					LOG("onvif chanId invalid");
-				}
-
-				//bool valid = false;
-				//if (chanId.find(",") != string::npos) {
-				//	vector<string> v;
-				//	str::split(v, chanId, ",");
-				//
-				//	if (v.size() == 3) {
-				//		float pan = atof(v[0].c_str());
-				//		float tilt = atof(v[1].c_str());
-				//		float zoom = atof(v[2].c_str());
-				//		ptz_gotoAbsolute(pan, tilt, zoom);
-				//
-				//		valid = true;
-				//	}
-				//}
-				//else {
-				//	if (str::isDigits(chanId)) {
-				//		int presetIdx = atoi(chanId.c_str());
-				//		ptz_gotoPreset(presetIdx);
-				//
-				//		valid = true;
-				//	}
-				//}
-
-				if (valid && pC->m_bEnable) {
-					//等待摄像机移动到位
-					timeopt::sleepMilli(m_chanPollInterval * 1000);
-
-					//拍照
-					onvif_getSnapshotUri();
-
-					TIME time = timeopt::now();
-
-					//deepVision识别
-					string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
-					if (fs::fileExist(imagePath)) {
-						string imageBuff = "";
-						DB_FS::readFile(imagePath, imageBuff);
-
-						int inLen = imageBuff.size();
-						char* out = new char[inLen * 2 + 1];
-						int outLen = tdb_base64_encode((const unsigned char*)imageBuff.c_str(), inLen, out);
-						string imgBase64(out, outLen);
-						delete[] out;
-
-						string modelPath = fs::appPath() + "/onnx/railway_n_250922_832.onnx";
-						
-						size_t c_info_len = 0, c_err_len;
-						shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
-						shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
-						bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
-
-						string info;
-						if (bRC) {
-							info = c_info.get();
-						}
-						else {
-							LOG("onvif dv_predict info failed");
-						}
-
-						//// test
-						//ALARM_INFO ai;
-						//ai.tag = m_strTagBind + "." + pC->m_strTagBind;
-						//ai.type = "视频伤损";
-						//ai.level = ALARM_LEVEL::alarm;
-						//ai.time = time.toStr();
-						//ai.needRecover = false;
-						//almSrv.Add(ai, true);
-
-						//报警
-						if (!info.empty()) {
-							auto doc = yyjson_read(info.c_str(), info.size(), 0);
-							auto root = yyjson_doc_get_root(doc);
-
-							//
-							auto mut_doc = yyjson_mut_doc_new(nullptr);
-							auto mut_root = yyjson_mut_obj(mut_doc);
-
-							yyjson_mut_doc_set_root(mut_doc, mut_root);
-							auto objContourArr = yyjson_mut_arr(mut_doc);
-
-							yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", time.toStr().c_str());
-							yyjson_mut_obj_add_val(mut_doc, mut_root, "objContour", objContourArr);
-
-							//
-							yyjson_val* val;
-							size_t indx = 0, max = 0;
-							bool alarm = false;
-
-							auto objectsObj = yyjson_obj_get(root, "objects");
-							yyjson_arr_foreach(objectsObj, indx, max, val) {
-								auto nameObj = yyjson_obj_get(val, "name");
-								auto confidenceObj = yyjson_obj_get(val, "confidence");
-								auto bbox_yuanObj = yyjson_obj_get(val, "bbox");
-								auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
-								auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
-								auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
-								auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
-								auto maskObj = yyjson_obj_get(val, "mask");
-
-								//
-								auto objContour = yyjson_mut_obj(mut_doc);
-
-								yyjson_mut_obj_add_val(mut_doc, objContour, "type", yyjson_val_mut_copy(mut_doc, nameObj));
-								yyjson_mut_obj_add_val(mut_doc, objContour, "confidence", yyjson_val_mut_copy(mut_doc, confidenceObj));
-
-								auto bboxArr = yyjson_mut_arr(mut_doc);
-								yyjson_mut_obj_add_val(mut_doc, objContour, "bbox", bboxArr);
-
-								yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_x_yuanObj));
-								yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_y_yuanObj));
-								yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_w_yuanObj));
-								yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_h_yuanObj));
-
-								yyjson_mut_obj_add_val(mut_doc, objContour, "mask", yyjson_val_mut_copy(mut_doc, maskObj));
-
-								yyjson_mut_arr_add_val(objContourArr, objContour);
-
-								if (alarm) {
-									continue;
-								}
-
-								auto idxVal = yyjson_obj_get(val, "idx");
-								if (idxVal && yyjson_is_int(idxVal)) {
-									int idx = (int)yyjson_get_int(idxVal);
-									if (idx == 1) {
-										alarm = true;
-									}
-								}
-							}
-
-							if (alarm) {
-								string val = tds->conf->getStr("enableOnvifAlarmToTds", "0");
-								bool enableOnvifAlarmToTds = false;
-								if (val == "true" || val == "1") {
-									enableOnvifAlarmToTds = true;
-								}
-
-								ALARM_INFO ai;
-								ai.tag = m_strTagBind + "." + pC->m_strTagBind;
-								ai.type = "视频伤损";
-								ai.desc = "疑似存在伤损";
-								ai.level = ALARM_LEVEL::L3;
-								ai.time = time.toStr();
-								almSrv.Add(ai, enableOnvifAlarmToTds);
-							}
-
-							char* temp = yyjson_mut_write(mut_doc, 0, 0);
-							if (temp) {
-								info = temp;
-								free(temp);
-							}
-
-							yyjson_doc_free(doc);
-							yyjson_mut_doc_free(mut_doc);
-						}
-
-						string tag = m_strTagBind + "." + pC->m_strTagBind;
-
-						MP* pmp = prj.GetMPByTag(tag, "zh");
-						if (pmp) {
-							int dbStoreInterval = pmp->getSaveInterval();
-
-							if (timeopt::CalcTimePassSecond(pmp->m_lastSaveTime) > dbStoreInterval) {
-								timeopt::now(&pmp->m_lastSaveTime);
-
-								//db
-								DB_TIME dbt;
-								dbt.fromStr(time.toStr());
-
-								string strIndex = "";
-								db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
-
-								//发中心端
-								auto mutDoc = yyjson_mut_doc_new(nullptr);
-								auto mutRoot = yyjson_mut_obj(mutDoc);
-
-								yyjson_mut_doc_set_root(mutDoc, mutRoot);
-
-								yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
-								yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
-								yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
-
-								auto paramsObj = yyjson_mut_obj(mutDoc);
-								yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
-
-								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
-								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
-								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
-
-								if (!info.empty()) {
-									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
-								}
-
-								char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
-								if (writeResult) {
-									string s = writeResult;
-									s += "\n\n";
-									sockSrv.sendToAllSessions(s);
-
-									free(writeResult);
-								}
-
-								yyjson_mut_doc_free(mutDoc);
-							}
-						}
-						else {
-							LOG("onvif pmp not found");
-						}
+						valid = true;
 					}
 					else {
-						LOG("onvif onnx/snapshot.jpg not exist");
+						LOG("onvif chanId invalid");
+					}
+
+					//bool valid = false;
+					//if (chanId.find(",") != string::npos) {
+					//	vector<string> v;
+					//	str::split(v, chanId, ",");
+					//
+					//	if (v.size() == 3) {
+					//		float pan = atof(v[0].c_str());
+					//		float tilt = atof(v[1].c_str());
+					//		float zoom = atof(v[2].c_str());
+					//		ptz_gotoAbsolute(pan, tilt, zoom);
+					//
+					//		valid = true;
+					//	}
+					//}
+					//else {
+					//	if (str::isDigits(chanId)) {
+					//		int presetIdx = atoi(chanId.c_str());
+					//		ptz_gotoPreset(presetIdx);
+					//
+					//		valid = true;
+					//	}
+					//}
+
+					if (valid) {
+						//等待摄像机移动到位
+						timeopt::sleepMilli(m_chanPollInterval * 1000);
+
+						//拍照
+						onvif_getSnapshotUri();
+
+						TIME time = timeopt::now();
+
+						//deepVision识别
+						string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
+						if (fs::fileExist(imagePath)) {
+							string imageBuff = "";
+							DB_FS::readFile(imagePath, imageBuff);
+
+							int inLen = imageBuff.size();
+							char* out = new char[inLen * 2 + 1];
+							int outLen = tdb_base64_encode((const unsigned char*)imageBuff.c_str(), inLen, out);
+							string imgBase64(out, outLen);
+							delete[] out;
+
+							string modelPath = fs::appPath() + "/onnx/railway_n_250922_832.onnx";
+
+							size_t c_info_len = 0, c_err_len;
+							shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
+							shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
+							bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
+
+							string info;
+							if (bRC) {
+								info = c_info.get();
+							}
+							else {
+								LOG("onvif dv_predict info failed");
+							}
+
+							//// test
+							//ALARM_INFO ai;
+							//ai.tag = m_strTagBind + "." + pC->m_strTagBind;
+							//ai.type = "视频伤损";
+							//ai.level = ALARM_LEVEL::alarm;
+							//ai.time = time.toStr();
+							//ai.needRecover = false;
+							//almSrv.Add(ai, true);
+
+							//报警
+							if (!info.empty()) {
+								auto doc = yyjson_read(info.c_str(), info.size(), 0);
+								auto root = yyjson_doc_get_root(doc);
+
+								//
+								auto mut_doc = yyjson_mut_doc_new(nullptr);
+								auto mut_root = yyjson_mut_obj(mut_doc);
+
+								yyjson_mut_doc_set_root(mut_doc, mut_root);
+								auto objContourArr = yyjson_mut_arr(mut_doc);
+
+								yyjson_mut_obj_add_strcpy(mut_doc, mut_root, "time", time.toStr().c_str());
+								yyjson_mut_obj_add_val(mut_doc, mut_root, "objContour", objContourArr);
+
+								//
+								yyjson_val* val;
+								size_t indx = 0, max = 0;
+								bool alarm = false;
+
+								auto objectsObj = yyjson_obj_get(root, "objects");
+								yyjson_arr_foreach(objectsObj, indx, max, val) {
+									auto nameObj = yyjson_obj_get(val, "name");
+									auto confidenceObj = yyjson_obj_get(val, "confidence");
+									auto bbox_yuanObj = yyjson_obj_get(val, "bbox");
+									auto bbox_x_yuanObj = yyjson_obj_get(bbox_yuanObj, "x");
+									auto bbox_y_yuanObj = yyjson_obj_get(bbox_yuanObj, "y");
+									auto bbox_w_yuanObj = yyjson_obj_get(bbox_yuanObj, "w");
+									auto bbox_h_yuanObj = yyjson_obj_get(bbox_yuanObj, "h");
+									auto maskObj = yyjson_obj_get(val, "mask");
+
+									//
+									auto objContour = yyjson_mut_obj(mut_doc);
+
+									yyjson_mut_obj_add_val(mut_doc, objContour, "type", yyjson_val_mut_copy(mut_doc, nameObj));
+									yyjson_mut_obj_add_val(mut_doc, objContour, "confidence", yyjson_val_mut_copy(mut_doc, confidenceObj));
+
+									auto bboxArr = yyjson_mut_arr(mut_doc);
+									yyjson_mut_obj_add_val(mut_doc, objContour, "bbox", bboxArr);
+
+									yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_x_yuanObj));
+									yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_y_yuanObj));
+									yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_w_yuanObj));
+									yyjson_mut_arr_add_val(bboxArr, yyjson_val_mut_copy(mut_doc, bbox_h_yuanObj));
+
+									yyjson_mut_obj_add_val(mut_doc, objContour, "mask", yyjson_val_mut_copy(mut_doc, maskObj));
+
+									yyjson_mut_arr_add_val(objContourArr, objContour);
+
+									if (alarm) {
+										continue;
+									}
+
+									auto idxVal = yyjson_obj_get(val, "idx");
+									if (idxVal && yyjson_is_int(idxVal)) {
+										int idx = (int)yyjson_get_int(idxVal);
+										if (idx == 1) {
+											alarm = true;
+										}
+									}
+								}
+
+								if (alarm) {
+									string val = tds->conf->getStr("enableOnvifAlarmToTds", "0");
+									bool enableOnvifAlarmToTds = false;
+									if (val == "true" || val == "1") {
+										enableOnvifAlarmToTds = true;
+									}
+
+									ALARM_INFO ai;
+									ai.tag = m_strTagBind + "." + pC->m_strTagBind;
+									ai.type = "视频伤损";
+									ai.desc = "疑似存在伤损";
+									ai.level = ALARM_LEVEL::L3;
+									ai.time = time.toStr();
+									almSrv.Add(ai, enableOnvifAlarmToTds);
+								}
+
+								char* temp = yyjson_mut_write(mut_doc, 0, 0);
+								if (temp) {
+									info = temp;
+									free(temp);
+								}
+
+								yyjson_doc_free(doc);
+								yyjson_mut_doc_free(mut_doc);
+							}
+
+							string tag = m_strTagBind + "." + pC->m_strTagBind;
+
+							MP* pmp = prj.GetMPByTag(tag, "zh");
+							if (pmp) {
+								int dbStoreInterval = pmp->getSaveInterval();
+
+								if (timeopt::CalcTimePassSecond(pmp->m_lastSaveTime) > dbStoreInterval) {
+									timeopt::now(&pmp->m_lastSaveTime);
+
+									//db
+									DB_TIME dbt;
+									dbt.fromStr(time.toStr());
+
+									string strIndex = "";
+									db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
+
+									//发中心端
+									auto mutDoc = yyjson_mut_doc_new(nullptr);
+									auto mutRoot = yyjson_mut_obj(mutDoc);
+
+									yyjson_mut_doc_set_root(mutDoc, mutRoot);
+
+									yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
+									yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
+									yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
+
+									auto paramsObj = yyjson_mut_obj(mutDoc);
+									yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+
+									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
+									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
+									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+
+									if (!info.empty()) {
+										yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
+									}
+
+									char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+									if (writeResult) {
+										string s = writeResult;
+										s += "\n\n";
+										sockSrv.sendToAllSessions(s);
+
+										free(writeResult);
+									}
+
+									yyjson_mut_doc_free(mutDoc);
+								}
+							}
+							else {
+								LOG("onvif pmp not found");
+							}
+						}
+						else {
+							LOG("onvif onnx/snapshot.jpg not exist");
+						}
 					}
 				}
 			}
