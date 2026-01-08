@@ -901,7 +901,8 @@ bool rpcHandler::handleMethodCall_db(string method, json& params, RPC_RESP& rpcR
 		}
 		else if (method == "db.saveImage") {
 			string s = params.dump();
-			processJson(s);
+			processJson(s); // 老版本deepvision输出json转为新格式
+
 			if (tds->conf->largeModelType < 0) {
 				db.rpc_db_saveImage(s, rpcResp.result, rpcResp.error, rpcResp.info, session.org, session.language);
 			}
@@ -7089,8 +7090,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 			char* tmpInfo = nullptr;
 			yyjson_mut_val* outInfo = yyjson_mut_obj_get(outRoot, "info");
 
-			if (samResultArr && yyjson_arr_size(samResultArr) > 0 && outInfo)
-			{
+			if (samResultArr && yyjson_arr_size(samResultArr) > 0 && outInfo) {
 				LOG("samAlarmCheck find anomal");
 				size_t idx = 0;
 				size_t max = 0;
@@ -7104,11 +7104,34 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				yyjson_mut_val* tmpRoot = yyjson_mut_doc_get_root(tmpInfoDoc);
 
 				yyjson_mut_val* objects = yyjson_mut_obj_get(tmpRoot, "objects");
-				yyjson_arr_foreach(samResultArr, idx, max, item)
-				{
+				yyjson_arr_foreach(samResultArr, idx, max, item) {
 					yyjson_mut_arr_add_val(objects, yyjson_val_mut_copy(outDoc, item));
 				}
+
+				//MP* pmp = prj.GetMPByTag(tag, "zh");
+				//if (pmp && pmp->m_isSamAlarmOpen) {
+				//	ALARM_INFO ai;
+				//	ai.tag = tag;
+				//	ai.type = "sam大模型异物识别";
+				//	ai.desc = "sam大模型异物识别";
+				//	ai.level = ALARM_LEVEL::alarm;
+				//	ai.time = time;
+				//	almSrv.Add(ai);
+				//}
+
+				bool isSamAlarmOpen = tds->conf->getInt("samAlarmOpenAlarmFunction", 0) > 0 ? true : false;
+				if (isSamAlarmOpen) {
+					ALARM_INFO ai;
+					ai.tag = tag;
+					ai.type = "视频异物";
+					ai.desc = "疑似存在异物";
+					ai.level = ALARM_LEVEL::alarm;
+					ai.time = time;
+					almSrv.Add(ai);
+				}
+
 				yyjson_doc_free(tmpDoc);
+
 				tmpInfo = yyjson_mut_write(tmpInfoDoc, 0, 0);
 				yyjson_mut_doc_free(tmpInfoDoc);
 			}
@@ -7119,6 +7142,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 			char* temp = yyjson_mut_write(outDoc, 0, 0);
 
 			sParams = temp;
+
 			free(tmpInfo);
 			free(temp);	
 		}
