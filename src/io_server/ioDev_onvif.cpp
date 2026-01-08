@@ -213,7 +213,7 @@ void ioDev_onvif::DoCycleTask() {
 
 		int ptzPatrolInterval = tds->conf->getInt("ptzPatrolInterval", 0);
 		if (!m_bPaused) {
-			if (dv_predict && m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > ptzPatrolInterval) {
+			if (m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > ptzPatrolInterval) {
 				LOG("onvif ptzPatrolInterval success");
 				timeopt::now(&m_lastPTZPollTime);
 
@@ -232,7 +232,7 @@ void ioDev_onvif::DoCycleTask() {
 					if (str::isDigits(chanId)) {
 						int presetIdx = atoi(chanId.c_str());
 						ptz_gotoPreset(presetIdx);
-
+						logger.logInternal("goto preset %d", presetIdx);
 						valid = true;
 					}
 					else {
@@ -283,21 +283,23 @@ void ioDev_onvif::DoCycleTask() {
 							string imgBase64(out, outLen);
 							delete[] out;
 
-							string modelPath = fs::appPath() + "/onnx/railway_n_250922_832.onnx";
+							if (dv_predict) {
+								string modelPath = fs::appPath() + "/onnx/railway_n_250922_832.onnx";
 
-							size_t c_info_len = 0, c_err_len;
-							shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
-							shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
-							bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
+								size_t c_info_len = 0, c_err_len;
+								shared_ptr<char> c_info(new char[100000], [](char* p) { delete[] p; });
+								shared_ptr<char> c_err(new char[10000], [](char* p) { delete[] p; });
+								bool bRC = dv_predict(FUNC_TYPE::RailDamange.c_str(), modelPath.c_str(), imageBuff.data(), imageBuff.size(), c_info.get(), c_info_len, c_err.get(), c_err_len);
 
-							string info;
-							if (bRC) {
-								info = c_info.get();
+								string info;
+								if (bRC) {
+									info = c_info.get();
+								}
+								else {
+									LOG("onvif dv_predict info failed");
+								}
 							}
-							else {
-								LOG("onvif dv_predict info failed");
-							}
-
+	
 							//// test
 							//ALARM_INFO ai;
 							//ai.tag = m_strTagBind + "." + pC->m_strTagBind;
