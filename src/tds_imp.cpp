@@ -538,6 +538,8 @@ void runDataSimu() {
 bool TDS_imp::run(string cmdline) {
 	mg_log_set(MG_LL_NONE);
 
+	fs::createFolderOfPath(fs::appPath() + "/temp");
+
 #ifndef DEBUG
  // mg_log_set("0");
 #endif

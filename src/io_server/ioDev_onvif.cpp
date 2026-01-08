@@ -211,12 +211,11 @@ void ioDev_onvif::DoCycleTask() {
 			}
 		}
 
+		// 先移动 -> 等待镜头稳定延时 -> 拍照
+		//
 		int ptzPatrolInterval = tds->conf->getInt("ptzPatrolInterval", 0);
 		if (!m_bPaused) {
-			if (m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) > ptzPatrolInterval) {
-				LOG("onvif ptzPatrolInterval success");
-				timeopt::now(&m_lastPTZPollTime);
-
+			if (m_channels.size() > 0 && timeopt::CalcTimePassSecond(m_lastPTZPollTime) >= ptzPatrolInterval) {
 				//解析通道ptz配置并移动相机
 				ioChannel* pC = m_channels[m_curPZTChan];
 				string chanId = pC->getAddr();
@@ -228,11 +227,14 @@ void ioDev_onvif::DoCycleTask() {
 				}
 
 				if (pC->m_bEnable) {
+					timeopt::now(&m_lastPTZPollTime);
+
 					bool valid = false;
 					if (str::isDigits(chanId)) {
 						int presetIdx = atoi(chanId.c_str());
 						ptz_gotoPreset(presetIdx);
-						logger.logInternal("goto preset %d", presetIdx);
+						string s = str::format("goto preset %d", presetIdx);
+						logger.logInternal(s,false);
 						valid = true;
 					}
 					else {
@@ -272,7 +274,7 @@ void ioDev_onvif::DoCycleTask() {
 						TIME time = timeopt::now();
 
 						//deepVision识别
-						string imagePath = fs::appPath() + "/onnx/snapshot.jpg";
+						string imagePath = fs::appPath() + "/temp/snapshot.jpg";
 						if (fs::fileExist(imagePath)) {
 							string imageBuff = "";
 							DB_FS::readFile(imagePath, imageBuff);
@@ -451,7 +453,7 @@ void ioDev_onvif::DoCycleTask() {
 							}
 						}
 						else {
-							LOG("onvif onnx/snapshot.jpg not exist");
+							LOG("onvif temp/snapshot.jpg not exist");
 						}
 					}
 				}
@@ -981,7 +983,7 @@ bool ioDev_onvif::doOnvifTransaction_getSnapShot() {
 		mg_mgr_free(&mgr);
 
 		if (data.done) {
-			std::ofstream file(fs::appPath() + "/onnx/snapshot.jpg", std::ios::binary);
+			std::ofstream file(fs::appPath() + "/temp/snapshot.jpg", std::ios::binary);
 			if (file) {
 				file.write(data.body.c_str(), data.body.size());
 			}
