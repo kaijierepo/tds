@@ -7112,9 +7112,9 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 				//if (pmp && pmp->m_isSamAlarmOpen) {
 				//	ALARM_INFO ai;
 				//	ai.tag = tag;
-				//	ai.type = "sam大模型异物识别";
-				//	ai.desc = "sam大模型异物识别";
-				//	ai.level = ALARM_LEVEL::alarm;
+				//	ai.type = "视频异物";
+				//	ai.desc = "疑似存在异物";
+				//	ai.level = ALARM_LEVEL::L3;
 				//	ai.time = time;
 				//	almSrv.Add(ai);
 				//}
@@ -7125,7 +7125,7 @@ void rpcHandler::samAlarmCheck(string& sParams) {
 					ai.tag = tag;
 					ai.type = "视频异物";
 					ai.desc = "疑似存在异物";
-					ai.level = ALARM_LEVEL::alarm;
+					ai.level = ALARM_LEVEL::L3;
 					ai.time = time;
 					almSrv.Add(ai);
 				}
