@@ -262,7 +262,7 @@ void ioDev_onvif::DoCycleTask() {
 
 				if (valid) {
 					//等待摄像机移动到位
-					int waitMoveTime = 5000;
+					int waitMoveTime = 15000;
 					timeopt::sleepMilli(waitMoveTime);
 
 					//拍照
@@ -378,7 +378,8 @@ void ioDev_onvif::DoCycleTask() {
 								ALARM_INFO ai;
 								ai.tag = m_strTagBind + "." + pC->m_strTagBind;
 								ai.type = "视频伤损";
-								ai.level = ALARM_LEVEL::alarm;
+								ai.desc = "疑似存在伤损";
+								ai.level = ALARM_LEVEL::L3;
 								ai.time = time.toStr();
 								almSrv.Add(ai, enableOnvifAlarmToTds);
 							}
