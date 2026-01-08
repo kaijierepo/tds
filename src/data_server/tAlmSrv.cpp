@@ -816,6 +816,11 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 		return;
 	}
 
+	//测试位号，方便现场数据测试，但不让他产生报警
+	if (ai.tag.find("[test]") != string::npos) {
+		return;
+	}
+
 	auto start = std::chrono::high_resolution_clock::now();
 	m_latestAddCall.push_back(start);
 	if (m_latestAddCall.size() > 10000) {
@@ -1658,10 +1663,24 @@ void  almServer::getPagedDateSet(vector<ALARM_INFO*> almList,ALM_SELECTOR& almSe
 			yyjson_mut_val* j = nullptr;
 			it->toJson(this, almSel.tagSel.m_rootTag, j, yyDoc);
 			yyjson_mut_arr_append(jDataSet, j);
+
+			size_t len;
+			char* json = nullptr;
+			//使用yyjson_mut_val_write_opts输出jDataSet
+			yyjson_write_err err;
+			json = yyjson_mut_val_write_opts(jDataSet, 0, nullptr, &len, &err);
+
+			if (json) {
+				free(json);
+			}
 		}
 
 		size_t len;
-		char* json = yyjson_mut_val_write(jDataSet, 0, &len);
+		char* json = nullptr;
+		//使用yyjson_mut_val_write_opts输出jDataSet
+		yyjson_write_err err;
+		json = yyjson_mut_val_write_opts(jDataSet, 0, nullptr, &len,&err);
+
 		if (json) {
 			dataSet = json;
 			free(json);
