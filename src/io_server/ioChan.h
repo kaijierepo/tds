@@ -78,7 +78,7 @@ public:
 
 	TIME m_stLastUpdateTime;
 
-
+	bool m_bEnable;
 	bool m_bDownSample;
 	int m_iDownSampleInterval; //in milliSecond
 	TIME m_lastDownSampleTime;

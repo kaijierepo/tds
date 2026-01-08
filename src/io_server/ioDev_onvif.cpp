@@ -260,7 +260,7 @@ void ioDev_onvif::DoCycleTask() {
 				//	}
 				//}
 
-				if (valid) {
+				if (valid && pC->m_bEnable) {
 					//等待摄像机移动到位
 					int waitMoveTime = 15000;
 					timeopt::sleepMilli(waitMoveTime);

@@ -11,6 +11,7 @@ ioChannel::ioChannel()
 	m_b = 0;
 	m_bDownSample = false;
 	m_iDownSampleInterval = 1000;
+	m_bEnable = true;
 }
 
 
@@ -51,6 +52,14 @@ bool ioChannel::loadConf(json& conf)
 		json& item = kv.value();
 		if (item.is_number_integer()) {
 			m_iDownSampleInterval = item.get<int>();
+		}
+	}
+
+	kv = conf.find("enable");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_boolean()) {
+			m_bEnable = item.get<bool>();
 		}
 	}
 
@@ -118,6 +127,10 @@ bool ioChannel::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER qu
 	yyjson_doc_free(jDoc);
 
 	if (querier.getConf) {
+		key = yyjson_mut_strcpy(doc, "enable");
+		val = yyjson_mut_bool(doc, m_bEnable);
+		yyjson_mut_obj_put(conf, key, val);
+
 		//conf["nodeID"] = m_confNodeId;
         key = yyjson_mut_strcpy(doc, "nodeID");
         val = yyjson_mut_strcpy(doc, m_confNodeId.c_str());

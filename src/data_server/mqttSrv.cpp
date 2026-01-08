@@ -384,4 +384,6 @@ void MqttClt::onTdsNotify(string method,string params)
 
 void MqttClt::onMqttConnected()
 {
+    
+    return;
 }
