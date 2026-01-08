@@ -162,6 +162,7 @@ ioDev_onvif::ioDev_onvif() {
 	m_ptzPollInterval = 0;
 	m_bPaused = false;
 	m_pauseResumeInterval = 0;
+	m_chanPollInterval = 15;
 }
 
 ioDev_onvif::~ioDev_onvif()
@@ -262,8 +263,7 @@ void ioDev_onvif::DoCycleTask() {
 
 				if (valid && pC->m_bEnable) {
 					//等待摄像机移动到位
-					int waitMoveTime = 15000;
-					timeopt::sleepMilli(waitMoveTime);
+					timeopt::sleepMilli(m_chanPollInterval * 1000);
 
 					//拍照
 					onvif_getSnapshotUri();
@@ -454,6 +454,39 @@ void ioDev_onvif::DoCycleTask() {
 			}
 		}
 	}
+}
+
+bool ioDev_onvif::toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier)
+{
+	ioDev::toJson(conf, doc, querier);
+
+	DEV_CONF_LOCK_SHARED(this);
+	yyjson_mut_val* key;
+	yyjson_mut_val* val;
+	if (querier.getConf) {
+		key = yyjson_mut_strcpy(doc, "chanPollInterval");
+		val = yyjson_mut_int(doc, m_chanPollInterval);
+		yyjson_mut_obj_put(conf, key, val);
+	}
+
+	return true;
+}
+
+bool ioDev_onvif::loadConf(json& conf)
+{
+	ioDev::loadConf(conf);
+
+	DEV_CONF_LOCK_UNIQUE(this);
+
+	auto kv = conf.find("chanPollInterval");
+	if (kv != conf.end()) {
+		json& item = kv.value();
+		if (item.is_number()) {
+			m_chanPollInterval = item.get<int>();
+		}
+	}
+
+	return true;
 }
 
 bool ioDev_onvif::onRecvPkt(unsigned char* pData, size_t iLen) {

@@ -21,6 +21,9 @@ public:
 	bool run() override;
 	void DoCycleTask() override;
 
+	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier) override;
+	bool loadConf(json& conf) override;
+
 	bool onRecvPkt(unsigned char* pData, size_t iLen) override; //接收到完整的协议数据包
 
 	bool getCurrentVal();
@@ -55,6 +58,7 @@ public:
 	int  m_curPZTChan;
 	TIME m_lastPTZPollTime; //上一次预置位巡检时间
 	int  m_ptzPollInterval; //0
+	int m_chanPollInterval;
 
 	bool m_bPaused;
 	TIME m_pauseResumeTime;
