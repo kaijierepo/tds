@@ -31,14 +31,15 @@ SOFTWARE.
 #include <set>
 #include <mutex>
 #ifdef ENABLE_QJS
-#include <script\cutils.h>
-#include <script\quickjs-libc.h>
-#include <script\quickjs.h>
+#include <script/cutils.h>
+#include <script/quickjs-libc.h>
+#include <script/quickjs.h>
 #endif
 #include "yyjson.h"
 #include <vector>
 #include <string>
 #include <functional>
+#include <thread>
 using namespace std;
 
 class TDB;

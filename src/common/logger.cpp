@@ -4,9 +4,12 @@
 #include <stdarg.h>
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <unistd.h>
 #endif
 #include <iostream>
 #include <ctime>
+#include <limits.h>
 
 //linux console color control
 #define COLOR_(msg, color, ctl) \

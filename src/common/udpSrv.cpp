@@ -11,15 +11,27 @@ using namespace UdpServer;
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
+typedef SOCKET SOCKET_FD;
+#define INVALID_SOCK_FD INVALID_SOCKET
+#define CLOSE_SOCK(fd) closesocket(fd)
+#define SOCK_ERROR_CODE GetLastError()
 #else
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
+typedef int SOCKET_FD;
+#define INVALID_SOCK_FD -1
+#define CLOSE_SOCK(fd) close(fd)
+#define SOCKET_ERROR -1
+#define SOCK_ERROR_CODE errno
+#define u_short unsigned short
 #endif
 
 
@@ -87,42 +99,48 @@ bool udpServer::run_multicast(ICallback_udpSrv* pcb, int localPort, string multi
 
 void udpServer::startMulticast()
 {
+	// 1. 创建UDP套接字（跨平台）
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (-1 == m_sock)
+	if (m_sock == INVALID_SOCK_FD)  // 跨平台无效套接字判断
 	{
-		//int iErr = GetLastError();
-		//LOG("create udp sock error,%d", iErr);
+		// Linux用errno，Windows用WSAGetLastError()（已通过宏统一）
+		printf("create udp sock error, errno:%d\n", SOCK_ERROR_CODE);
 		return;
 	}
-	else {
 
-	}
+	// 2. 设置套接字不被继承（跨平台）
 #ifdef _WIN32
 	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
 #else
 	fcntl(m_sock, F_SETFD, fcntl(m_sock, F_GETFD) | FD_CLOEXEC);
 #endif
 
-	//加入组播组（核心操作）
-	struct ip_mreq mreq;  // Windows 组播成员结构体（无 imr_ifindex 字段）
+	// 3. 加入组播组（核心兼容逻辑）
+	struct ip_mreq mreq;
 	memset(&mreq, 0, sizeof(mreq));
 
-	// 目标组播地址（239.255.255.100 属于全局组播地址，可跨路由器）
-	inet_pton(AF_INET, m_multicastRecvIP.c_str(), &(mreq.imr_multiaddr.s_addr));
-	// 绑定到本地任意网络接口（INADDR_ANY 表示所有接口）
+	// 转换组播地址（inet_pton跨平台，比inet_addr更安全）
+	if (inet_pton(AF_INET, m_multicastRecvIP.c_str(), &(mreq.imr_multiaddr.s_addr)) <= 0) {
+		printf("inet_pton error, errno:%d\n", SOCK_ERROR_CODE);
+		CLOSE_SOCK(m_sock);
+		m_sock = INVALID_SOCK_FD;
+		return;
+	}
 	mreq.imr_interface.s_addr = htonl(INADDR_ANY);
 
+	// 跨平台判断setsockopt返回值 + 关闭套接字
 	if (setsockopt(m_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP,
 		(const char*)&mreq, sizeof(mreq)) == SOCKET_ERROR) {
-		printf( "setsockopt(IP_ADD_MEMBERSHIP) 失败，错误码:%d " , WSAGetLastError() );
-		closesocket(m_sock);
-		m_sock = 0;
+		printf("setsockopt(IP_ADD_MEMBERSHIP) 失败，错误码:%d\n", SOCK_ERROR_CODE);
+		CLOSE_SOCK(m_sock);  // 跨平台关闭套接字
+		m_sock = INVALID_SOCK_FD;
 		return;
 	}
 
+	// 4. 绑定端口和IP（跨平台）
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons((u_short)(m_port));
+	addr.sin_port = htons(m_port);
 	if (m_bindIP == "0.0.0.0")
 	{
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -130,46 +148,56 @@ void udpServer::startMulticast()
 	else
 	{
 		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
-
 	}
-	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
-	if (0 != nBind)
+
+	// Linux bind失败返回-1，Windows返回SOCKET_ERROR（已统一为-1）
+	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));
+	if (nBind != 0)
 	{
 		char sz[200] = { 0 };
-		sprintf(sz, "[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
-		string str = sz;
-		LOG(str);
+		snprintf(sz, sizeof(sz), "[error]UDP port can not bind,IP=%s,Port=%d, errno:%d",
+			m_bindIP.c_str(), m_port, SOCK_ERROR_CODE);
+		std::string str = sz;
+		// LOG(str); // 保留你的日志逻辑
+		CLOSE_SOCK(m_sock);
+		m_sock = INVALID_SOCK_FD;
 		return;
 	}
 
-	//获得已经绑定的端口号
+	// 5. 获取实际绑定的端口号（跨平台）
 	struct sockaddr_in localAddr;
-	int addrLen = sizeof(localAddr);
-	getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen);
-	m_port = ntohs(localAddr.sin_port);
+	socklen_t addrLen = sizeof(localAddr);  // Linux需要socklen_t，Windows兼容int
+	if (getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen) == 0) {
+		m_port = ntohs(localAddr.sin_port);
+	}
 
-
-	thread t(udpRecvThread, this);
+	// 6. 启动接收线程（注意：std::thread需要链接-pthread）
+	std::thread t(udpRecvThread, this);
 	t.detach();
 }
 
+
 bool udpServer::start()
 {
+	// 1. 创建UDP套接字（跨平台判断无效套接字）
 	m_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (-1 == m_sock)
+	if (m_sock == INVALID_SOCK_FD)
 	{
-		int iErr = GetLastError();
-		string s = "create udp sock error," + to_string(iErr);
+		// 跨平台获取错误码（Windows=GetLastError，Linux=errno）
+		int iErr = SOCK_ERROR_CODE;
+		std::string s = "create udp sock error," + std::to_string(iErr);
+		m_lastError = s; // 错误信息存入成员变量
 		return false;
 	}
-	else {
 
-	}
+	// 2. 设置套接字不被继承（跨平台）
 #ifdef _WIN32
 	SetHandleInformation((HANDLE)m_sock, HANDLE_FLAG_INHERIT, 0);
 #else
 	fcntl(m_sock, F_SETFD, fcntl(m_sock, F_GETFD) | FD_CLOEXEC);
 #endif
+
+	// 3. 绑定IP和端口（跨平台）
 	sockaddr_in addr = { 0 };
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons((u_short)(m_port));
@@ -179,28 +207,35 @@ bool udpServer::start()
 	}
 	else
 	{
+		// inet_addr跨平台，但建议用inet_pton更安全（可选）
 		addr.sin_addr.s_addr = inet_addr(m_bindIP.c_str());
-
 	}
-	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));//成功返回0
+
+	// Linux bind失败返回-1，Windows返回SOCKET_ERROR（已统一为-1）
+	int nBind = ::bind(m_sock, (sockaddr*)&addr, sizeof(addr));
 	if (0 != nBind)
 	{
+		// 替换sprintf为snprintf，避免缓冲区溢出（跨平台更安全）
 		char sz[200] = { 0 };
-		sprintf(sz,"[error]UPD port can not bind,IP=%s,Port=%d", m_bindIP.c_str(), m_port);
-		string str = sz;
-		LOG(str);
+		snprintf(sz, sizeof(sz), "[error]UDP port can not bind,IP=%s,Port=%d, errno:%d",
+			m_bindIP.c_str(), m_port, SOCK_ERROR_CODE);
+		std::string str = sz;
+		LOG(str); // 保留你的日志逻辑
 		m_lastError = str;
-		return false;;
+		CLOSE_SOCK(m_sock); // 跨平台关闭套接字
+		m_sock = INVALID_SOCK_FD;
+		return false;
 	}
 
-	//获得已经绑定的端口号
+	// 4. 获取实际绑定的端口号（修复Linux下addrLen类型问题）
 	struct sockaddr_in localAddr;
-	int addrLen = sizeof(localAddr);
-	getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen);
-	m_port = ntohs(localAddr.sin_port);
+	socklen_t addrLen = sizeof(localAddr); // Linux需要socklen_t，Windows兼容int
+	if (getsockname(m_sock, (struct sockaddr*)&localAddr, &addrLen) == 0) {
+		m_port = ntohs(localAddr.sin_port);
+	}
 
-
-	thread t(udpRecvThread, this);
+	// 5. 启动接收线程（std::thread需Linux编译时加-pthread）
+	std::thread t(udpRecvThread, this);
 	t.detach();
 
 	return true;

@@ -2665,10 +2665,10 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		rpcResp.result = j.dump();
 	}
 	else if (method == "unix2time") {
-		time_t unix= params["unix"].get<time_t>();
+		time_t unix_time = params["unix"].get<time_t>();
 		json j;
 		TIME dbt;
-		dbt.fromUnixTime(unix);
+		dbt.fromUnixTime(unix_time);
 		j["time"] = dbt.toStr();
 		rpcResp.result = j.dump();
 	}

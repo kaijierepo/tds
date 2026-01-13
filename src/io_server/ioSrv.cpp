@@ -1427,7 +1427,11 @@ bool ioServer::runAsCloud() {
 		LOG("[error][IO服务    ] 启动失败 端口:" + str::fromInt(tds->conf->tdspPort));
 		if (exitIfPortBindFail) {
 			LOG("[error][IO服务    ] 端口启动失败，退出程序");
+#ifdef _WIN32
 			Sleep(5000);
+#else
+			sleep(5000);
+#endif
 			exit(0);
 		}
 	}

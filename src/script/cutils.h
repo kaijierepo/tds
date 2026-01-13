@@ -286,7 +286,6 @@ struct packed_u32 {
 struct __attribute__((packed)) packed_u32 {
     uint32_t v;
 };
-};
 #endif
 
 #ifdef _MSC_VER
@@ -298,7 +297,6 @@ struct packed_u16 {
 #else
 struct __attribute__((packed)) packed_u16 {
     uint32_t v;
-};
 };
 #endif
 

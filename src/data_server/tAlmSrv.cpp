@@ -660,7 +660,12 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 	}
 #endif
 
+#ifdef _WIN32
 	auto start = std::chrono::high_resolution_clock::now();
+#else
+	auto start = std::chrono::steady_clock::now();
+#endif
+
 	m_latestUpdateCall.push_back(start);
 	if (m_latestUpdateCall.size() > 10000) {
 		m_latestUpdateCall.erase(m_latestUpdateCall.begin());
@@ -748,7 +753,12 @@ void almServer::UpdateSync(ALARM_INFO newStatus, bool notify)
 				m_initParam.func_rpcHand_notify("onAlarmUpdate", j);
 		}
 	}
+
+#ifdef _WIN32
 	auto end = std::chrono::high_resolution_clock::now();
+#else
+	auto end = std::chrono::steady_clock::now();
+#endif
 
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 	float msCost = duration.count() / 1000.0;
@@ -821,7 +831,12 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 		return;
 	}
 
+#ifdef _WIN32
 	auto start = std::chrono::high_resolution_clock::now();
+#else
+	auto start = std::chrono::steady_clock::now();
+#endif
+
 	m_latestAddCall.push_back(start);
 	if (m_latestAddCall.size() > 10000) {
 		m_latestAddCall.erase(m_latestAddCall.begin());
@@ -852,7 +867,12 @@ void almServer::AddSync(ALARM_INFO ai, string& err, bool bNotify)
 		err = "unrecover alarm with the same alarm key already existed,add fail";
 	}	
 
+#ifdef _WIN32
 	auto end = std::chrono::high_resolution_clock::now();
+#else
+	auto end = std::chrono::steady_clock::now();
+#endif
+
 	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
 	float msCost = duration.count() / 1000.0;
 	m_latestAddCallTimeCost.push_back(msCost);

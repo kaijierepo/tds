@@ -430,6 +430,7 @@ std::string execCommand(const char* cmd) {
 }
 
 std::string getSystemBootTime() {
+#ifdef _WIN32
 	std::string output = execCommand("systeminfo");
 	std::string bootTimeLabel =charCodec::utf8_to_gb("系统启动时间:");
 	size_t pos = output.find(bootTimeLabel);
@@ -443,6 +444,29 @@ std::string getSystemBootTime() {
 		}
 	}
 	return "BootTimeNotFound";
+#else
+	// Linux 实现：读取 /proc/stat 获取启动时间戳，转换为本地时间
+	// 步骤1：读取系统启动时间（自开机以来的秒数）
+	std::string uptime_str = execCommand("cat /proc/uptime | awk '{print $1}'");
+	double uptime_seconds = atof(uptime_str.c_str());
+	if (uptime_seconds <= 0) {
+		return "BootTimeNotFound";
+	}
+
+	// 步骤2：获取当前时间戳（秒），减去开机时长 = 启动时间戳
+	time_t now = time(nullptr);
+	time_t boot_timestamp = now - (time_t)uptime_seconds;
+
+	// 步骤3：转换为本地时间字符串（格式和 Windows 对齐，如：2026-01-13 09:00:00）
+	struct tm boot_tm;
+	localtime_r(&boot_timestamp, &boot_tm); // 线程安全版本（替代 localtime）
+
+	char boot_time_buf[64] = { 0 };
+	// 格式化：年-月-日 时:分:秒（和 Windows systeminfo 输出格式兼容）
+	strftime(boot_time_buf, sizeof(boot_time_buf), "%Y-%m-%d %H:%M:%S", &boot_tm);
+
+	return std::string(boot_time_buf);
+#endif
 }
 
 PredictFunc dv_predict = NULL;

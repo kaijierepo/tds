@@ -45,6 +45,9 @@ SOFTWARE.
 #include <windows.h>
 #include <fcntl.h>
 #include <io.h>
+#else
+#include <unistd.h>
+#include <stdio.h>
 #endif
 
 #if (defined(_MSVC_LANG) && _MSVC_LANG < 201703L) || (!defined(_MSVC_LANG) && defined(__cplusplus) && __cplusplus < 201703L)

@@ -13,7 +13,17 @@
 #include "mongoose.h"
 #endif
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <sys/inotify.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <cstring>
+#include <cerrno>
+#define GetLastError() errno
+#endif
 
 #include "tds.h"
 #include "tdb.h"
@@ -560,6 +570,7 @@ extern "C" {
         return timeObj;
     }
 
+#ifdef ENABLE_SERIAL
     static JSValue qjs_openSerial(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc != 5) {
             return JS_NULL;
@@ -753,6 +764,7 @@ extern "C" {
 
         return JS_NULL;
     }
+#endif
 
     static JSValue qjs_arrayToStr(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
         if (argc != 1 || !JS_IsArray(ctx, argv[0])) {
@@ -1346,10 +1358,14 @@ void register_cpp_functions(JSContext* ctx) {
     JS_SetPropertyStr(ctx, global, "Byte", Byte);
 
     JS_SetPropertyStr(ctx, global, "time", JS_NewCFunction(ctx, qjs_time, "time", 0));
+
+#ifdef ENABLE_SERIAL
     JS_SetPropertyStr(ctx, global, "openSerial", JS_NewCFunction(ctx, qjs_openSerial, "openSerial", 5));
     JS_SetPropertyStr(ctx, global, "readSerial", JS_NewCFunction(ctx, qjs_readSerial, "readSerial", 1));
     JS_SetPropertyStr(ctx, global, "writeSerial", JS_NewCFunction(ctx, qjs_writeSerial, "writeSerial", 2));
     JS_SetPropertyStr(ctx, global, "closeSerial", JS_NewCFunction(ctx, qjs_closeSerial, "closeSerial", 1));
+#endif
+
     JS_SetPropertyStr(ctx, global, "arrayToStr", JS_NewCFunction(ctx, qjs_arrayToStr, "arrayToStr", 1));
     JS_SetPropertyStr(ctx, global, "strToArray", JS_NewCFunction(ctx, qjs_strToArray, "strToArray", 1));
     JS_SetPropertyStr(ctx, global, "setReturn", JS_NewCFunction(ctx, qjs_setReturn, "setReturn", 1));
@@ -1557,7 +1573,14 @@ void thread_reloadFile(string filePath) {
     if (filePath.empty()) {
         return;
     }
-    Sleep(1000);//收到通知时，文件可能还在写入，因此等待一点时间再读取
+
+    //收到通知时，文件可能还在写入，因此等待一点时间再读取
+#ifdef _WIN32
+    Sleep(1000);
+#else
+    sleep(1000);
+#endif
+
     string file_data;
     if (DB_FS::readFile(filePath, file_data)) {
         g_mutexScriptFileBuff.lock();
@@ -1568,6 +1591,7 @@ void thread_reloadFile(string filePath) {
 
 //脚本目录下的所有文件，发现文件直接加载到内存
 void thread_watchScriptFile(string scriptPath) {
+#ifdef _WIN32
     if (scriptPath.empty()) {
         return;
     }
@@ -1584,7 +1608,7 @@ void thread_watchScriptFile(string scriptPath) {
         nullptr
     );
     if (h_dir == INVALID_HANDLE_VALUE) {
-        printf("打开目录失败，错误码: %lu\n", GetLastError());
+        LOG("脚本目录打开目录失败，错误码: %lu", GetLastError());
         return;
     }
 
@@ -1616,12 +1640,12 @@ void thread_watchScriptFile(string scriptPath) {
                     continue; // 超时后重试
                 }
                 else if (wait_result != WAIT_OBJECT_0) {
-                    printf("等待事件失败，错误码: %lu\n", GetLastError());
+                    LOG("脚本目录等待事件失败，错误码: %lu", GetLastError());
                     break;
                 }
             }
             else {
-                printf("ReadDirectoryChangesW 失败，错误码: %lu\n", error);
+                LOG("脚本目录ReadDirectoryChangesW 失败，错误码: %lu", error);
                 break;
             }
         }
@@ -1639,7 +1663,7 @@ void thread_watchScriptFile(string scriptPath) {
                     string file_name = utf16_to_utf8(file_name_w);//得到发生变化的文件名
                     file_name = str::replace(file_name, "\\", "/");
                     string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
-                    LOG("[keyinfo]检测到脚本文件改变:" + file_path);
+                    LOG("[keyinfo]脚本目录检测到脚本文件改变:" + file_path);
 					thread th(thread_reloadFile, file_path);
                     th.detach();
                 }
@@ -1657,6 +1681,70 @@ void thread_watchScriptFile(string scriptPath) {
 
     delete[] buffer;
     CloseHandle(h_dir);
+#else
+    // 1. 创建inotify实例
+    int inotify_fd = inotify_init1(IN_NONBLOCK); // 非阻塞模式
+    if (inotify_fd == -1) {
+        LOG("脚本目录inotify_init1 失败，错误码: %d", GetLastError());
+        return;
+    }
+
+    // 2. 添加监控目录（监控文件修改事件）
+    int watch_fd = inotify_add_watch(
+        inotify_fd,
+        scriptPath.c_str(),
+        IN_MODIFY // 监控文件修改（对应Windows的FILE_NOTIFY_CHANGE_LAST_WRITE）
+    );
+    if (watch_fd == -1) {
+        LOG("脚本目录inotify_add_watch 失败，错误码: %d", GetLastError());
+        close(inotify_fd);
+        return;
+    }
+
+    // 3. 事件缓冲区（inotify事件结构大小固定，1024足够）
+    const int BUFFER_SIZE = 1024 * (sizeof(inotify_event) + 256);
+    char* buffer = new char[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+
+    while (true) {
+        // 4. 非阻塞读取事件（无事件时返回-1，errno=EAGAIN）
+        ssize_t len = read(inotify_fd, buffer, BUFFER_SIZE);
+        if (len == -1) {
+            if (errno == EAGAIN) {
+                sleep(100); // 无事件时休眠100ms，避免空轮询
+                continue;
+            }
+            LOG("脚本目录read inotify 失败，错误码: %d", GetLastError());
+            break;
+        }
+
+        // 5. 解析所有事件
+        char* ptr = buffer;
+        while (ptr < buffer + len) {
+            inotify_event* event = (inotify_event*)ptr;
+
+            // 仅处理文件修改事件（排除目录、排除空文件名）
+            if (event->mask & IN_MODIFY && event->len > 0) {
+                std::string file_name = event->name;
+                file_name = str::replace(file_name, "\\", "/");
+                std::string file_path = ScriptEngine::ScriptFolder + "/" + file_name;
+                LOG("[keyinfo]脚本目录检测到脚本文件改变:" + file_path);
+
+                // 异步热加载脚本（和Windows逻辑一致）
+                std::thread th(thread_reloadFile, file_path);
+                th.detach();
+            }
+
+            // 移动到下一个事件
+            ptr += sizeof(inotify_event) + event->len;
+        }
+    }
+
+    // 6. 释放资源
+    inotify_rm_watch(inotify_fd, watch_fd);
+    close(inotify_fd);
+    delete[] buffer;
+#endif
 }
 
 bool loadScriptFile(string path, string& script) {
@@ -1799,7 +1887,11 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
 
             while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
+#ifdef _WIN32
                 Sleep(1);
+#else
+                sleep(1);
+#endif
             }
 
             int state = JS_PromiseState(ctx, evalPromise);

@@ -27,6 +27,15 @@ SOFTWARE.
 
 
 #pragma once
+
+#ifndef IN
+#define IN
+#endif
+
+#ifndef OUT
+#define OUT
+#endif
+
 #include "tds.h"
 #include "tdsConf.h"
 #include "mp.h"

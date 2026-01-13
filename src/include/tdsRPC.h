@@ -43,6 +43,7 @@ in most protocol specificatin,0-255 will be used to define a value of one byte
 #pragma once
 #include <string>
 #include <unordered_set>
+#include <vector>
 using namespace std;
 
 

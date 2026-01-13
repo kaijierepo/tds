@@ -22,6 +22,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+
+#ifdef _WIN32
+#else
+#define _fdopen fdopen
+#define _fileno fileno
+#define _open open
+#define _close close
+#define _lseek lseek
+#define _isatty isatty
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>

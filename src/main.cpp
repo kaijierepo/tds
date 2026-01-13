@@ -45,7 +45,9 @@ SOFTWARE.
 #include <shellapi.h>  //for this:  SHELLEXECUTEINFO
 #endif
 
+#ifdef _WIN32
 bool CmdExecParam(string strParam, uint32_t dwMilliseconds = 0, int nShow = SW_SHOW, const char* lpDirectory = NULL);
+#endif
 
 struct mg_http_data {
 	std::string head;

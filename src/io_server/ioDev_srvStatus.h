@@ -2,7 +2,7 @@
 #include "ioDev.h"
 #include "statusServer.h"
 
-
+#ifdef _WIN32
 class ioDev_srvStatus : public ioDev
 {
 public:
@@ -40,5 +40,5 @@ public:
 	bool calcCpuUse();
 	double m_dbCpuUse;
 };
-
+#endif
 

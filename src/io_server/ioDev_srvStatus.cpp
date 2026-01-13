@@ -5,6 +5,8 @@
 #include "common.h"
 #include "ioSrv.h"
 #include "webSrv.h"
+
+#ifdef _WIN32
 #include <windows.h>
 #include <tlhelp32.h>
 #include <Psapi.h>
@@ -231,4 +233,4 @@ bool ioDev_srvStatus::calcCpuUse()
 	return false;
 }
 
-
+#endif
