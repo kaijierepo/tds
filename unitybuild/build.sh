@@ -1,8 +1,11 @@
+#!/bin/bash
 set -e
 
+# 切换到源码目录
 cd ../src
-pwd
+echo "当前编译目录: $(pwd)"
 
+# ===================== 1. 定义编译参数（保留原有）=====================
 common_flags="\
 -g \
 -DENABLE_ALM_SRV_HOOK_SCRIPT \
@@ -18,7 +21,7 @@ common_flags="\
 -D_HAS_STD_BYTE=0 \
 -DCONF_FILE \
 -D_POSIX_C_SOURCE=200809L \
--D_GNU_SOURCE
+-D_GNU_SOURCE \
 -I ./ \
 -I ./include \
 -I ./script \
@@ -27,6 +30,7 @@ common_flags="\
 -I ./data_server \
 -I ./func_module \
 -I ./mongoose \
+-I ./video \
 -fPIC \
 -pthread \
 "
@@ -42,86 +46,116 @@ cpp_flags="\
 
 linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic"
 
-gcc $common_flags $c_flags -c ./common/base64.c -o ./common/base64.o 
-gcc $common_flags $c_flags -c ./common/miniz.c -o ./common/miniz.o
-gcc $common_flags $c_flags -c ./common/yyjson.c -o ./common/yyjson.o
-gcc $common_flags $c_flags -c ./mongoose/mongoose.c -o ./mongoose/mongoose.o
-gcc $common_flags $c_flags -c ./script/unicode_data.c -o ./script/unicode_data.o
-gcc $common_flags $c_flags -c ./script/cutils.c -o ./script/cutils.o
-gcc $common_flags $c_flags -c ./script/dtoa.c -o ./script/dtoa.o
-gcc $common_flags $c_flags -c ./script/libregexp.c -o ./script/libregexp.o
-gcc $common_flags $c_flags -c ./script/libunicode.c -o ./script/libunicode.o
-gcc $common_flags $c_flags -c ./script/quickjs-libc.c -o ./script/quickjs-libc.o
-gcc $common_flags $c_flags -c ./script/quickjs.c -o ./script/quickjs.o
-gcc $common_flags $c_flags -c ./script/repl.c -o ./script/repl.o
+# ===================== 2. 定义增量编译函数（核心新增）=====================
+# 函数：判断是否需要编译 C 文件（源文件比目标文件新，或目标文件不存在）
+compile_c_if_needed() {
+    local src_file=$1
+    local obj_file=$2
+    # 如果目标文件不存在，或源文件更新时间更晚 → 编译
+    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+        echo "编译 C 文件: $src_file → $obj_file"
+        gcc $common_flags $c_flags -c "$src_file" -o "$obj_file"
+    else
+        echo "跳过 C 文件（未修改）: $src_file"
+    fi
+}
 
-g++ $common_flags $cpp_flags -c ./CDataSimu.cpp -o ./CDataSimu.o
-g++ $common_flags $cpp_flags -c ./main.cpp -o ./main.o
-g++ $common_flags $cpp_flags -c ./pch.cpp -o ./pch.o
-g++ $common_flags $cpp_flags -c ./tds_imp.cpp -o ./tds_imp.o
-g++ $common_flags $cpp_flags -c ./test.cpp -o ./test.o
-g++ $common_flags $cpp_flags -c ./common/common.cpp -o ./common/common.o
-g++ $common_flags $cpp_flags -c ./common/dtwrecoge.cpp -o ./common/dtwrecoge.o
-g++ $common_flags $cpp_flags -c ./common/kvIni.cpp -o ./common/kvIni.o
-g++ $common_flags $cpp_flags -c ./common/logger.cpp -o ./common/logger.o
-g++ $common_flags $cpp_flags -c ./common/md5.cpp -o ./common/md5.o
-g++ $common_flags $cpp_flags -c ./common/memDiag.cpp -o ./common/memDiag.o
-g++ $common_flags $cpp_flags -c ./common/secure.cpp -o ./common/secure.o
-g++ $common_flags $cpp_flags -c ./common/sha1.cpp -o ./common/sha1.o
-g++ $common_flags $cpp_flags -c ./common/sha256.cpp -o ./common/sha256.o
-g++ $common_flags $cpp_flags -c ./common/stream2pkt.cpp -o ./common/stream2pkt.o
-g++ $common_flags $cpp_flags -c ./common/tcpClt.cpp -o ./common/tcpClt.o
-g++ $common_flags $cpp_flags -c ./common/tcpSrv.cpp -o ./common/tcpSrv.o
-g++ $common_flags $cpp_flags -c ./common/udpSrv.cpp -o ./common/udpSrv.o
-g++ $common_flags $cpp_flags -c ./data_server/as_interface.cpp -o ./data_server/as_interface.o
-g++ $common_flags $cpp_flags -c ./data_server/mp.cpp -o ./data_server/mp.o
-g++ $common_flags $cpp_flags -c ./data_server/mqttSrv.cpp -o ./data_server/mqttSrv.o
-g++ $common_flags $cpp_flags -c ./data_server/obj.cpp -o ./data_server/obj.o
-g++ $common_flags $cpp_flags -c ./data_server/prj.cpp -o ./data_server/prj.o
-g++ $common_flags $cpp_flags -c ./data_server/rpcHandler.cpp -o ./data_server/rpcHandler.o
-g++ $common_flags $cpp_flags -c ./data_server/rpcHandler_common.cpp -o ./data_server/rpcHandler_common.o
-g++ $common_flags $cpp_flags -c ./data_server/scriptEngine.cpp -o ./data_server/scriptEngine.o
-g++ $common_flags $cpp_flags -c ./data_server/scriptFunc.cpp -o ./data_server/scriptFunc.o
-g++ $common_flags $cpp_flags -c ./data_server/scriptManager.cpp -o ./data_server/scriptManager.o
-g++ $common_flags $cpp_flags -c ./data_server/tAlmSrv.cpp -o ./data_server/tAlmSrv.o
-g++ $common_flags $cpp_flags -c ./data_server/tdb.cpp -o ./data_server/tdb.o
-g++ $common_flags $cpp_flags -c ./data_server/tdsSession.cpp -o ./data_server/tdsSession.o
-g++ $common_flags $cpp_flags -c ./data_server/tSockSrv.cpp -o ./data_server/tSockSrv.o
-g++ $common_flags $cpp_flags -c ./data_server/webSrv.cpp -o ./data_server/webSrv.o
-g++ $common_flags $cpp_flags -c ./func_module/csvTable.cpp -o ./func_module/csvTable.o
-g++ $common_flags $cpp_flags -c ./func_module/dumpCatch.cpp -o ./func_module/dumpCatch.o
-g++ $common_flags $cpp_flags -c ./func_module/fileUploadSrv.cpp -o ./func_module/fileUploadSrv.o
-g++ $common_flags $cpp_flags -c ./func_module/logServer.cpp -o ./func_module/logServer.o
-g++ $common_flags $cpp_flags -c ./func_module/statusServer.cpp -o ./func_module/statusServer.o
-g++ $common_flags $cpp_flags -c ./func_module/taskServer.cpp -o ./func_module/taskServer.o
-g++ $common_flags $cpp_flags -c ./func_module/tdsConf.cpp -o ./func_module/tdsConf.o
-g++ $common_flags $cpp_flags -c ./func_module/userMng.cpp -o ./func_module/userMng.o
-g++ $common_flags $cpp_flags -c ./include/tds.cpp -o ./include/tds.o
-g++ $common_flags $cpp_flags -c ./io_server/ioChan.cpp -o ./io_server/ioChan.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev.cpp -o ./io_server/ioDev.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_bacnet.cpp -o ./io_server/ioDev_bacnet.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_custom.cpp -o ./io_server/ioDev_custom.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_dcqk.cpp -o ./io_server/ioDev_dcqk.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_dlt645_2007.cpp -o ./io_server/ioDev_dlt645_2007.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_eip.cpp -o ./io_server/ioDev_eip.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_iq60.cpp -o ./io_server/ioDev_iq60.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_modbusRtu.cpp -o ./io_server/ioDev_modbusRtu.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_modbusSlave.cpp -o ./io_server/ioDev_modbusSlave.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_modbusTcp.cpp -o ./io_server/ioDev_modbusTcp.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_mqtt.cpp -o ./io_server/ioDev_mqtt.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_onvif.cpp -o ./io_server/ioDev_onvif.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_srvStatus.cpp -o ./io_server/ioDev_srvStatus.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_tdsp.cpp -o ./io_server/ioDev_tdsp.o
-g++ $common_flags $cpp_flags -c ./io_server/ioDev_visca.cpp -o ./io_server/ioDev_visca.o
-g++ $common_flags $cpp_flags -c ./io_server/ioGW_localSerial.cpp -o ./io_server/ioGW_localSerial.o
-g++ $common_flags $cpp_flags -c ./io_server/ioGW_rs485ToNet.cpp -o ./io_server/ioGW_rs485ToNet.o
-g++ $common_flags $cpp_flags -c ./io_server/ioSrv.cpp -o ./io_server/ioSrv.o
-g++ $common_flags $cpp_flags -c ./io_server/proto_common.cpp -o ./io_server/proto_common.o
-g++ $common_flags $cpp_flags -c ./io_server/proto_eip.cpp -o ./io_server/proto_eip.o
-g++ $common_flags $cpp_flags -c ./io_server/proto_tb3386.cpp -o ./io_server/proto_tb3386.o
-g++ $common_flags $cpp_flags -c ./io_server/proto_ws.cpp -o ./io_server/proto_ws.o
+# 函数：判断是否需要编译 C++ 文件
+compile_cpp_if_needed() {
+    local src_file=$1
+    local obj_file=$2
+    if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
+        echo "编译 C++ 文件: $src_file → $obj_file"
+        g++ $common_flags $cpp_flags -c "$src_file" -o "$obj_file"
+    else
+        echo "跳过 C++ 文件（未修改）: $src_file"
+    fi
+}
 
+# ===================== 3. 增量编译所有文件（替换原有逐条编译）=====================
+# --- 编译 C 文件 ---
+compile_c_if_needed ./common/base64.c ./common/base64.o
+compile_c_if_needed ./common/miniz.c ./common/miniz.o
+compile_c_if_needed ./common/yyjson.c ./common/yyjson.o
+compile_c_if_needed ./mongoose/mongoose.c ./mongoose/mongoose.o
+compile_c_if_needed ./script/unicode_data.c ./script/unicode_data.o
+compile_c_if_needed ./script/cutils.c ./script/cutils.o
+compile_c_if_needed ./script/dtoa.c ./script/dtoa.o
+compile_c_if_needed ./script/libregexp.c ./script/libregexp.o
+compile_c_if_needed ./script/libunicode.c ./script/libunicode.o
+compile_c_if_needed ./script/quickjs-libc.c ./script/quickjs-libc.o
+compile_c_if_needed ./script/quickjs.c ./script/quickjs.o
+compile_c_if_needed ./script/repl.c ./script/repl.o
 
+# --- 编译 C++ 文件 ---
+compile_cpp_if_needed ./CDataSimu.cpp ./CDataSimu.o
+compile_cpp_if_needed ./main.cpp ./main.o
+compile_cpp_if_needed ./pch.cpp ./pch.o
+compile_cpp_if_needed ./tds_imp.cpp ./tds_imp.o
+compile_cpp_if_needed ./test.cpp ./test.o
+compile_cpp_if_needed ./common/common.cpp ./common/common.o
+compile_cpp_if_needed ./common/dtwrecoge.cpp ./common/dtwrecoge.o
+compile_cpp_if_needed ./common/kvIni.cpp ./common/kvIni.o
+compile_cpp_if_needed ./common/logger.cpp ./common/logger.o
+compile_cpp_if_needed ./common/md5.cpp ./common/md5.o
+compile_cpp_if_needed ./common/memDiag.cpp ./common/memDiag.o
+compile_cpp_if_needed ./common/secure.cpp ./common/secure.o
+compile_cpp_if_needed ./common/sha1.cpp ./common/sha1.o
+compile_cpp_if_needed ./common/sha256.cpp ./common/sha256.o
+compile_cpp_if_needed ./common/stream2pkt.cpp ./common/stream2pkt.o
+compile_cpp_if_needed ./common/tcpClt.cpp ./common/tcpClt.o
+compile_cpp_if_needed ./common/tcpSrv.cpp ./common/tcpSrv.o
+compile_cpp_if_needed ./common/udpSrv.cpp ./common/udpSrv.o
+compile_cpp_if_needed ./data_server/as_interface.cpp ./data_server/as_interface.o
+compile_cpp_if_needed ./data_server/mp.cpp ./data_server/mp.o
+compile_cpp_if_needed ./data_server/mqttSrv.cpp ./data_server/mqttSrv.o
+compile_cpp_if_needed ./data_server/obj.cpp ./data_server/obj.o
+compile_cpp_if_needed ./data_server/prj.cpp ./data_server/prj.o
+compile_cpp_if_needed ./data_server/rpcHandler.cpp ./data_server/rpcHandler.o
+compile_cpp_if_needed ./data_server/rpcHandler_common.cpp ./data_server/rpcHandler_common.o
+compile_cpp_if_needed ./data_server/scriptEngine.cpp ./data_server/scriptEngine.o
+compile_cpp_if_needed ./data_server/scriptFunc.cpp ./data_server/scriptFunc.o
+compile_cpp_if_needed ./data_server/scriptManager.cpp ./data_server/scriptManager.o
+compile_cpp_if_needed ./data_server/tAlmSrv.cpp ./data_server/tAlmSrv.o
+compile_cpp_if_needed ./data_server/tdb.cpp ./data_server/tdb.o
+compile_cpp_if_needed ./data_server/tdsSession.cpp ./data_server/tdsSession.o
+compile_cpp_if_needed ./data_server/tSockSrv.cpp ./data_server/tSockSrv.o
+compile_cpp_if_needed ./data_server/webSrv.cpp ./data_server/webSrv.o
+compile_cpp_if_needed ./func_module/csvTable.cpp ./func_module/csvTable.o
+compile_cpp_if_needed ./func_module/dumpCatch.cpp ./func_module/dumpCatch.o
+compile_cpp_if_needed ./func_module/fileUploadSrv.cpp ./func_module/fileUploadSrv.o
+compile_cpp_if_needed ./func_module/logServer.cpp ./func_module/logServer.o
+compile_cpp_if_needed ./func_module/statusServer.cpp ./func_module/statusServer.o
+compile_cpp_if_needed ./func_module/taskServer.cpp ./func_module/taskServer.o
+compile_cpp_if_needed ./func_module/tdsConf.cpp ./func_module/tdsConf.o
+compile_cpp_if_needed ./func_module/userMng.cpp ./func_module/userMng.o
+compile_cpp_if_needed ./include/tds.cpp ./include/tds.o
+compile_cpp_if_needed ./io_server/ioChan.cpp ./io_server/ioChan.o
+compile_cpp_if_needed ./io_server/ioDev.cpp ./io_server/ioDev.o
+compile_cpp_if_needed ./io_server/ioDev_bacnet.cpp ./io_server/ioDev_bacnet.o
+compile_cpp_if_needed ./io_server/ioDev_custom.cpp ./io_server/ioDev_custom.o
+compile_cpp_if_needed ./io_server/ioDev_dcqk.cpp ./io_server/ioDev_dcqk.o
+compile_cpp_if_needed ./io_server/ioDev_dlt645_2007.cpp ./io_server/ioDev_dlt645_2007.o
+compile_cpp_if_needed ./io_server/ioDev_eip.cpp ./io_server/ioDev_eip.o
+compile_cpp_if_needed ./io_server/ioDev_iq60.cpp ./io_server/ioDev_iq60.o
+compile_cpp_if_needed ./io_server/ioDev_modbusRtu.cpp ./io_server/ioDev_modbusRtu.o
+compile_cpp_if_needed ./io_server/ioDev_modbusSlave.cpp ./io_server/ioDev_modbusSlave.o
+compile_cpp_if_needed ./io_server/ioDev_modbusTcp.cpp ./io_server/ioDev_modbusTcp.o
+compile_cpp_if_needed ./io_server/ioDev_mqtt.cpp ./io_server/ioDev_mqtt.o
+compile_cpp_if_needed ./io_server/ioDev_onvif.cpp ./io_server/ioDev_onvif.o
+compile_cpp_if_needed ./io_server/ioDev_srvStatus.cpp ./io_server/ioDev_srvStatus.o
+compile_cpp_if_needed ./io_server/ioDev_tdsp.cpp ./io_server/ioDev_tdsp.o
+compile_cpp_if_needed ./io_server/ioDev_visca.cpp ./io_server/ioDev_visca.o
+compile_cpp_if_needed ./io_server/ioGW_localSerial.cpp ./io_server/ioGW_localSerial.o
+compile_cpp_if_needed ./io_server/ioGW_rs485ToNet.cpp ./io_server/ioGW_rs485ToNet.o
+compile_cpp_if_needed ./io_server/ioSrv.cpp ./io_server/ioSrv.o
+compile_cpp_if_needed ./io_server/proto_common.cpp ./io_server/proto_common.o
+compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
+compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
+compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
+compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
+
+# ===================== 4. 链接生成可执行文件（每次都执行，确保最新）=====================
 obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
@@ -135,7 +169,6 @@ obj_files="\
 ./script/quickjs-libc.o \
 ./script/quickjs.o \
 ./script/repl.o \
-
 ./CDataSimu.o \
 ./main.o \
 ./pch.o \
@@ -201,6 +234,10 @@ obj_files="\
 ./io_server/proto_eip.o \
 ./io_server/proto_tb3386.o \
 ./io_server/proto_ws.o \
+./video/rtspRelay.o \
 "
 
+echo "链接生成可执行文件: ../out/tds/tds"
 g++ $common_flags $cpp_flags $obj_files -o ../out/tds/tds $linkerflags
+
+echo "编译完成！可执行文件路径: $(pwd)/../out/tds/tds"
