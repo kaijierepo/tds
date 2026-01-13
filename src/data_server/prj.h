@@ -8,6 +8,7 @@ using json = nlohmann::json;
 #include <shared_mutex>
 #include "scriptManager.h"
 
+class RTSPRelay;
 
 struct OBJ_TEMPLATE {
 	string type;
@@ -78,6 +79,10 @@ public:
 	map<string, MP*> m_mapAllMP;
 
 	bool m_enableEzviz;
+	bool m_enableZLM;
+
+	map<string, std::unique_ptr<RTSPRelay>> m_mapRtspRelays;
+	mutable std::mutex m_relayMutex; // 保护 m_mapRtspRelays 的互斥锁
 	map<string, EZVIZ_ACCESS_INFO> m_mapEzvizAccess;
 
 public:

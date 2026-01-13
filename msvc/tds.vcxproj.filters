@@ -243,6 +243,10 @@
     <ClCompile Include="..\src\data_server\mqttSrv.cpp">
       <Filter>data_server</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\CDataSimu.cpp" />
+    <ClCompile Include="..\src\video\rtspRelay.cpp">
+      <Filter>data_server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\common\httplib.h">
@@ -506,6 +510,10 @@
       <Filter>io_server\io_dev</Filter>
     </ClInclude>
     <ClInclude Include="..\src\data_server\mqttSrv.h">
+      <Filter>data_server</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\CDataSimu.h" />
+    <ClInclude Include="..\src\video\rtspRelay.h">
       <Filter>data_server</Filter>
     </ClInclude>
   </ItemGroup>

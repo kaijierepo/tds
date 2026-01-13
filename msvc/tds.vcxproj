@@ -670,6 +670,7 @@
     <ClCompile Include="..\src\script\unicode_data.c" />
     <ClCompile Include="..\src\tds_imp.cpp" />
     <ClCompile Include="..\src\test.cpp" />
+    <ClCompile Include="..\src\video\rtspRelay.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\CDataSimu.h" />
@@ -764,6 +765,7 @@
     <ClInclude Include="..\src\script\quickjs.h" />
     <ClInclude Include="..\src\script\unicode_gen_def.h" />
     <ClInclude Include="..\src\tds_imp.h" />
+    <ClInclude Include="..\src\video\rtspRelay.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\src\res\logo.ico" />
