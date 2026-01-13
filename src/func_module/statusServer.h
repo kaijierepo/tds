@@ -53,48 +53,59 @@ public:
         processId = GetCurrentProcessId();
         queryHandle = NULL;
 
-        // 打开查询句柄
-        if (PdhOpenQuery(NULL, NULL, &queryHandle) != ERROR_SUCCESS) {
-            throw std::runtime_error("Failed to open PDH query");
+        try
+        {
+	        // 打开查询句柄
+	        if (PdhOpenQuery(NULL, NULL, &queryHandle) != ERROR_SUCCESS) {
+	            throw std::runtime_error("Failed to open PDH query");
+	        }
+	
+	        //  
+	        char processName[MAX_PATH];
+	        GetModuleFileNameA(NULL, processName, MAX_PATH);
+	        std::string name = std::string(processName);
+	        size_t lastSlash = name.find_last_of("\\");
+	        if (lastSlash != std::string::npos) {
+	            name = name.substr(lastSlash + 1);
+	        }
+	        name = name.substr(0, name.find_last_of("."));
+	
+	        counterPath = "\\Process(" + name + ")\\IO Data Bytes/sec";
+	        auto ret = PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter);
+	        if (ret != ERROR_SUCCESS) {
+	            // 如果失败，尝试带进程ID的路径
+	            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Data Bytes/sec";
+	            ret = PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter);
+	            if (ret != ERROR_SUCCESS) {
+	                throw std::runtime_error("Failed to add IO Data counter");
+	            }
+	        }
+	
+	        counterPath = "\\Process(" + name + ")\\IO Read Bytes/sec";
+	        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
+	            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Read Bytes/sec";
+	            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
+	                throw std::runtime_error("Failed to add IO Read counter");
+	            }
+	        }
+	
+	        counterPath = "\\Process(" + name + ")\\IO Write Bytes/sec";
+	        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
+	            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Write Bytes/sec";
+	            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
+	                throw std::runtime_error("Failed to add IO Write counter");
+	            }
+	        }
+	
+	        // 初始收集数据
+	        PdhCollectQueryData(queryHandle);
         }
-
-        //  
-        char processName[MAX_PATH];
-        GetModuleFileNameA(NULL, processName, MAX_PATH);
-        std::string name = std::string(processName);
-        size_t lastSlash = name.find_last_of("\\");
-        if (lastSlash != std::string::npos) {
-            name = name.substr(lastSlash + 1);
-        }
-        name = name.substr(0, name.find_last_of("."));
-
-        counterPath = "\\Process(" + name + ")\\IO Data Bytes/sec";
-        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter) != ERROR_SUCCESS) {
-            // 如果失败，尝试带进程ID的路径
-            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Data Bytes/sec";
-            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &ioDataCounter) != ERROR_SUCCESS) {
-                throw std::runtime_error("Failed to add IO Data counter");
-            }
-        }
-
-        counterPath = "\\Process(" + name + ")\\IO Read Bytes/sec";
-        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
-            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Read Bytes/sec";
-            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &readBytesCounter) != ERROR_SUCCESS) {
-                throw std::runtime_error("Failed to add IO Read counter");
-            }
-        }
-
-        counterPath = "\\Process(" + name + ")\\IO Write Bytes/sec";
-        if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
-            counterPath = "\\Process(" + name + "#" + std::to_string(processId) + ")\\IO Write Bytes/sec";
-            if (PdhAddCounter(queryHandle, counterPath.c_str(), NULL, &writeBytesCounter) != ERROR_SUCCESS) {
-                throw std::runtime_error("Failed to add IO Write counter");
-            }
-        }
-
-        // 初始收集数据
-        PdhCollectQueryData(queryHandle);
+        catch (...)
+        {
+			if (queryHandle) {
+				PdhCloseQuery(queryHandle);
+			}
+		}
     }
 
     ~ProcessDiskIOMonitor() {
@@ -104,6 +115,7 @@ public:
     }
 
     bool GetIOStats(double& readBytes, double& writeBytes, double& totalBytes) {
+		if (!queryHandle) return false;
         if (PdhCollectQueryData(queryHandle) != ERROR_SUCCESS) {
             return false;
         }
