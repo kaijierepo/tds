@@ -1405,6 +1405,9 @@ string TDB::getDeFilesFolder(string& deListFolder, DB_TIME& time) {
 //1.存数据元文件(曲线、json)或存数据元相关文件(图片) 2.存数据元索引文件或数据元列表文件
 void TDB::Insert(string strTag, string& sDe, DB_TIME* time)
 {
+	if (!m_enableDB)
+		return;
+
 	DB_TIME stTime;
 	if (time) {
 		stTime = *time;
@@ -4122,6 +4125,8 @@ void TDB::Insert(string strTag, double dbVal, DB_TIME* stTime)
 }
 
 void TDB::Insert(string strTag, string& sDeIdx, string& sDeCurve, DB_TIME* time) {
+	if (!m_enableDB)
+		return;
 	DB_TIME stTime;
 	if (time) {
 		stTime = *time;
@@ -5911,6 +5916,8 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 
 void TDB::InsertValJsonStr(string strTag, DB_TIME stTime, string& sVal)
 {
+	if (!m_enableDB)
+		return;
 	string folderPath = getPath_dataFolder(strTag, stTime);
 	string dlPath = folderPath + "/" + m_dbFmt.deListName;
 	if (!folderExist(folderPath))

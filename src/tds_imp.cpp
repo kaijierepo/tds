@@ -688,6 +688,7 @@ bool TDS_imp::run(string cmdline) {
 		::db.m_confPath      = tds->conf->confPath;
 		::db.m_currentPath   = tds->conf->currentPath;
 		::db.m_bEnableFsBuff = tds->conf->getInt("dbBuffer", 0) == 1 ? true : false;
+		::db.m_enableDB = tds->conf->getInt("enableDB", 1) == 1 ? true : false;
 	}
 		
 	prj.loadObjTemplate();
