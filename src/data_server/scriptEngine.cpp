@@ -1,5 +1,5 @@
 #ifdef ENABLE_QJS
-#include "ScriptEngine.h"
+#include "scriptEngine.h"
 #include "cutils.h"
 #include "quickjs-libc.h"
 #include <sstream>
