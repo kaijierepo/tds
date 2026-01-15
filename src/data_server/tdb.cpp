@@ -5780,6 +5780,11 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 			}
 		}
 	}
+	if (labels.empty())
+	{
+		labels.push_back("时间戳");
+		labels.push_back("校正后值");
+	}
 
 	// define field index (according to the content of "data_lable")
 	int time_idx = -1;
@@ -5890,9 +5895,8 @@ yyjson_mut_doc* TDB::convertJsonFormat(yyjson_doc* original_doc) {
 			// add  windowRepair
 			if (window_idx != -1) {
 				yyjson_val* window_val = yyjson_arr_get(data_item, window_idx);
-				if (window_val && yyjson_is_str(window_val)) {
-					yyjson_mut_obj_add_strcpy(new_doc, new_obj, "windowRepair",
-						yyjson_get_str(window_val));
+				if (window_val/* && yyjson_is_str(window_val)*/) {
+					yyjson_mut_obj_add_val(new_doc, new_obj, "windowRepair", yyjson_val_mut_copy(new_doc, window_val));
 				}
 			}
 			
