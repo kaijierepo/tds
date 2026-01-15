@@ -27,7 +27,7 @@
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
-#include "../video/rtspRelay.h"
+#include "video/rtspRelay.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -497,6 +497,60 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 			rpcResp.error = makeRPCError(RPC_ERROR_CODE::MO_specifiedTagNotFound,"specified tag not found");
 		}
 	}
+	else if (method == "startRtspRelay") {
+		string srcUrl = params["srcUrl"];
+		string destUrl = params["destUrl"];
+		{
+			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
+			if (prj.m_mapRtspRelays_urlID.find(srcUrl) != prj.m_mapRtspRelays_urlID.end()) {
+				LOG("[流媒体] RTSPRelay 已在运行 for src url: %s", srcUrl.c_str());
+				return true;
+			}
+		}
+
+		// 2. 创建新的 RTSPRelay
+		auto relay = std::make_unique<RTSPRelay>();
+
+		// 设置回调
+		relay->setFrameCallback([](const uint8_t* data, size_t size, uint32_t timestamp) {
+			// 可以在这里处理帧，例如存档或分析
+			});
+		relay->setStatusCallback([](RTSPRelay::State state, const std::string& msg) {
+			LOG("[RTSPRelay] Status: %d - %s", static_cast<int>(state), msg.c_str());
+			});
+		relay->setErrorCallback([](const std::string& error, int code) {
+			LOG("[RTSPRelay] Error (%d): %s", code, error.c_str());
+			});
+
+
+		// 3. 配置 relay
+		RTSPRelay::Config config;
+		config.source_url = srcUrl; // 源地址
+		// 提取用户名和密码
+		bool isSuccess = relay->extractRtspAuthInfo(config);
+
+		config.target_url = destUrl;
+		config.retry_interval = 3000;
+		config.max_retries = 0; // 无限重试
+		config.rtp_timeout = 10000;
+
+		// 4. 启动 relay
+		LOG("[流媒体] 启动 RTSPRelay (内置模式)，源: %s, 目标: %s",
+			config.source_url.c_str(), config.target_url.c_str());
+
+		if (relay->start(config)) {
+			std::lock_guard<std::mutex> lock(prj.m_relayMutex_urlID);
+			prj.m_mapRtspRelays_urlID[srcUrl] = std::move(relay);
+		}
+		else {
+			LOG("[流媒体] 启动 RTSPRelay 失败 for srcUrl: %s", srcUrl.c_str());
+		}
+
+		rpcResp.result = RPC_OK;
+	}
+	else if (method == "stopRtspRelay") {
+
+	}
 #ifdef ENABLE_GENICAM
 	else if (method == "setStream")
 	{
@@ -725,6 +779,9 @@ bool rpcHandler::handleMethodCall_video(string method, json& params, RPC_RESP& r
 				}
 
 				pushTo = "rtsp://" + pushToIP + "/stream/" + tag;
+			}
+			if (params.contains("pushToUrl")) {
+				pushTo = params["pushToUrl"].get<string>();
 			}
 			bool opend = prj.openStream(tag, pushTo);
 
@@ -3433,72 +3490,6 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		yyjson_mut_doc_free(mut_doc);
 
 		rpcResp.result = RPC_OK;
-	}
-	else if (method == "getRtspRelayList") {
-		std::lock_guard<std::mutex> lock(prj.m_relayMutex);
-		const auto& mapRtspRelays = prj.m_mapRtspRelays;
-
-		// 1. 创建yyjson文档和根对象（JSON数组）
-		yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
-		yyjson_mut_val* root_arr = yyjson_mut_arr(doc);
-		yyjson_mut_doc_set_root(doc, root_arr);
-
-		// 2. 遍历map中的每个RTSPRelay实例
-		for (const auto& pair : mapRtspRelays) {
-			const std::string& relay_key = pair.first;          // map的key（比如RTSP流标识）
-			const std::unique_ptr<RTSPRelay>& relay_ptr = pair.second;
-
-			// 安全检查：跳过空指针
-			if (!relay_ptr) {
-				continue;
-			}
-
-			// 3. 获取当前实例的Statistics统计信息
-			const RTSPRelay::Statistics& stats = relay_ptr->getStatistics();
-
-			// 4. 创建当前relay的JSON对象
-			yyjson_mut_val* relay_obj = yyjson_mut_obj(doc);
-
-			// 4.1 添加map的key（便于识别每个relay）
-			yyjson_mut_obj_add_str(doc, relay_obj, "relay_key", relay_key.c_str());
-
-			// 4.2 逐个添加Statistics的字段到JSON对象
-			// 无符号整数类型字段
-			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_received", stats.frames_received);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_forwarded", stats.frames_forwarded);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_received", stats.bytes_received);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_forwarded", stats.bytes_forwarded);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "reconnect_count", stats.reconnect_count);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "errors", stats.errors);
-
-			// 时间戳字段：转换为秒级整数
-			using namespace std::chrono;
-			uint64_t start_time_ms = duration_cast<seconds>(stats.start_time.time_since_epoch()).count();
-			uint64_t last_frame_time_ms = duration_cast<seconds>(stats.last_frame_time.time_since_epoch()).count();
-			yyjson_mut_obj_add_uint(doc, relay_obj, "start_time_s", start_time_ms);
-			yyjson_mut_obj_add_uint(doc, relay_obj, "last_frame_time_s", last_frame_time_ms);
-
-			// 浮点数类型字段
-			yyjson_mut_obj_add_real(doc, relay_obj, "fps", stats.fps);
-			yyjson_mut_obj_add_real(doc, relay_obj, "bitrate_kbps", stats.bitrate);
-
-			// 4.3 将当前relay的JSON对象添加到根数组
-			yyjson_mut_arr_add_val(root_arr, relay_obj);
-		}
-
-		// 5. 将JSON文档转换为字符串（带格式化，便于阅读）
-		// 如需紧凑格式，将YYJSON_WRITE_PRETTY改为0
-		size_t len;
-		char* json_str = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, &len);
-
-		std::string result;
-		if (json_str) {
-			rpcResp.result = json_str;
-			free(json_str);  // 释放yyjson分配的字符串内存
-		}
-
-		// 6. 释放yyjson文档内存
-		yyjson_mut_doc_free(doc);
 	}
 	else {
 		bHandled = false;

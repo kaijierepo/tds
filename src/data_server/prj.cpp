@@ -374,36 +374,8 @@ void project::getAllVarExpScript()
 	scriptManager.updateVarExpScript(expScripts);
 }
 
-/**
- * @brief 从RTSP URL中提取用户名和密码
- * @param config 配置结构体（包含source_url，输出source_username/source_password）
- * @return 解析成功返回true，失败返回false
- */
-bool extractRtspAuthInfo(RTSPRelay::Config& config) {
-	// 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
-	// 分组说明：
-	// 1: 用户名  2: 密码  3: 剩余部分（IP/端口/路径）
-	const std::regex rtspRegex(R"(^rtsp://([^:]+):([^@]+)@.*$)");
-	std::smatch matchResult;
-
-	// 匹配URL并提取用户名和密码
-	if (std::regex_match(config.source_url, matchResult, rtspRegex)) {
-		if (matchResult.size() >= 3) {
-			config.source_username = matchResult[1].str();
-			config.source_password = matchResult[2].str();
-			return true;
-		}
-	}
-
-	// 若未匹配到（URL无账号密码），清空用户名密码
-	config.source_username = "";
-	config.source_password = "";
-	return false;
-}
-
 bool project::openStream(string tag, string pushTo)
 {
-	m_enableZLM = tds->conf->getInt("enableZLM", 1) != 0;
 	MP* pmp = prj.GetMPByTag(tag, "zh");
 	if (!pmp) {
 		LOG("[流媒体] 请求的位号不存在, tag=" + tag);
@@ -475,7 +447,7 @@ bool project::openStream(string tag, string pushTo)
 		RTSPRelay::Config config;
 		config.source_url = pmp->m_mediaUrl; // 源地址
 		// 提取用户名和密码
-		bool isSuccess = extractRtspAuthInfo(config);
+		bool isSuccess = relay->extractRtspAuthInfo(config);
 
 		config.target_url = pushTo.empty() ? "rtsp://127.0.0.1:554/" + tag : pushTo; // 目标地址
 		config.retry_interval = 3000;

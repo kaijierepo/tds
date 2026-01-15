@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <random>
 #include <cassert>
+#include <regex>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -29,6 +30,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <regex>
 #define SOCKET_ERROR_NUM errno
 #define CLOSE_SOCKET close
 #define SOCKET_TYPE int
@@ -2252,4 +2254,32 @@ void RTSPRelay::logVerbose(const std::string & msg) const {
     if (config_.verbose) {
         std::cout << "[VERBOSE] " << msg << std::endl;
     }
+}
+
+
+/**
+ * @brief 从RTSP URL中提取用户名和密码
+ * @param config 配置结构体（包含source_url，输出source_username/source_password）
+ * @return 解析成功返回true，失败返回false
+ */
+bool RTSPRelay::extractRtspAuthInfo(RTSPRelay::Config& config) {
+    // 正则表达式匹配RTSP URL格式：rtsp://[user:pass@]host[:port]/path
+    // 分组说明：
+    // 1: 用户名  2: 密码  3: 剩余部分（IP/端口/路径）
+    const std::regex rtspRegex(R"(^rtsp://([^:]+):([^@]+)@.*$)");
+    std::smatch matchResult;
+
+    // 匹配URL并提取用户名和密码
+    if (std::regex_match(config.source_url, matchResult, rtspRegex)) {
+        if (matchResult.size() >= 3) {
+            config.source_username = matchResult[1].str();
+            config.source_password = matchResult[2].str();
+            return true;
+        }
+    }
+
+    // 若未匹配到（URL无账号密码），清空用户名密码
+    config.source_username = "";
+    config.source_password = "";
+    return false;
 }

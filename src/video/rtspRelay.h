@@ -109,6 +109,8 @@ public:
     void setFrameCallback(FrameCallback cb);
     void setErrorCallback(ErrorCallback cb);
 
+    bool extractRtspAuthInfo(RTSPRelay::Config& config);
+
 private:
     using SocketHandle = uintptr_t;
     static constexpr SocketHandle kInvalidSocket = static_cast<SocketHandle>(-1);

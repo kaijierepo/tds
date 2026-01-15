@@ -82,6 +82,8 @@ public:
 	bool m_enableZLM;
 
 	map<string, std::unique_ptr<RTSPRelay>> m_mapRtspRelays;
+	map<string, std::unique_ptr<RTSPRelay>> m_mapRtspRelays_urlID;
+	mutable std::mutex m_relayMutex_urlID;
 	mutable std::mutex m_relayMutex; // 保护 m_mapRtspRelays 的互斥锁
 	map<string, EZVIZ_ACCESS_INFO> m_mapEzvizAccess;
 
