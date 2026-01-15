@@ -27,6 +27,7 @@
 #include "ioDev_onvif.h"
 #include "rpcHandler_common.h"
 #include "mqttSrv.h"
+#include "../video/rtspRelay.h"
 
 #ifdef _WIN32
 	#include <shellapi.h>
@@ -3432,6 +3433,72 @@ bool rpcHandler::handleMethodCall_unclassified(string method, json& params, RPC_
 		yyjson_mut_doc_free(mut_doc);
 
 		rpcResp.result = RPC_OK;
+	}
+	else if (method == "getRtspRelayList") {
+		std::lock_guard<std::mutex> lock(prj.m_relayMutex);
+		const auto& mapRtspRelays = prj.m_mapRtspRelays;
+
+		// 1. 创建yyjson文档和根对象（JSON数组）
+		yyjson_mut_doc* doc = yyjson_mut_doc_new(NULL);
+		yyjson_mut_val* root_arr = yyjson_mut_arr(doc);
+		yyjson_mut_doc_set_root(doc, root_arr);
+
+		// 2. 遍历map中的每个RTSPRelay实例
+		for (const auto& pair : mapRtspRelays) {
+			const std::string& relay_key = pair.first;          // map的key（比如RTSP流标识）
+			const std::unique_ptr<RTSPRelay>& relay_ptr = pair.second;
+
+			// 安全检查：跳过空指针
+			if (!relay_ptr) {
+				continue;
+			}
+
+			// 3. 获取当前实例的Statistics统计信息
+			const RTSPRelay::Statistics& stats = relay_ptr->getStatistics();
+
+			// 4. 创建当前relay的JSON对象
+			yyjson_mut_val* relay_obj = yyjson_mut_obj(doc);
+
+			// 4.1 添加map的key（便于识别每个relay）
+			yyjson_mut_obj_add_str(doc, relay_obj, "relay_key", relay_key.c_str());
+
+			// 4.2 逐个添加Statistics的字段到JSON对象
+			// 无符号整数类型字段
+			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_received", stats.frames_received);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "frames_forwarded", stats.frames_forwarded);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_received", stats.bytes_received);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "bytes_forwarded", stats.bytes_forwarded);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "reconnect_count", stats.reconnect_count);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "errors", stats.errors);
+
+			// 时间戳字段：转换为秒级整数
+			using namespace std::chrono;
+			uint64_t start_time_ms = duration_cast<seconds>(stats.start_time.time_since_epoch()).count();
+			uint64_t last_frame_time_ms = duration_cast<seconds>(stats.last_frame_time.time_since_epoch()).count();
+			yyjson_mut_obj_add_uint(doc, relay_obj, "start_time_s", start_time_ms);
+			yyjson_mut_obj_add_uint(doc, relay_obj, "last_frame_time_s", last_frame_time_ms);
+
+			// 浮点数类型字段
+			yyjson_mut_obj_add_real(doc, relay_obj, "fps", stats.fps);
+			yyjson_mut_obj_add_real(doc, relay_obj, "bitrate_kbps", stats.bitrate);
+
+			// 4.3 将当前relay的JSON对象添加到根数组
+			yyjson_mut_arr_add_val(root_arr, relay_obj);
+		}
+
+		// 5. 将JSON文档转换为字符串（带格式化，便于阅读）
+		// 如需紧凑格式，将YYJSON_WRITE_PRETTY改为0
+		size_t len;
+		char* json_str = yyjson_mut_write(doc, YYJSON_WRITE_PRETTY, &len);
+
+		std::string result;
+		if (json_str) {
+			rpcResp.result = json_str;
+			free(json_str);  // 释放yyjson分配的字符串内存
+		}
+
+		// 6. 释放yyjson文档内存
+		yyjson_mut_doc_free(doc);
 	}
 	else {
 		bHandled = false;
