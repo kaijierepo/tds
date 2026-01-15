@@ -214,7 +214,8 @@ void ConnectThread(void* lpParam) {
 				if (p->m_keepAliveTimeout > 0) {
 					if (tcpClient::calcTimePassSecond(p->m_session.stLastActive) > p->m_keepAliveTimeout) {
 						p->DisConnect();
-						printf("disconnect inactive connection %s:%d\r\n", p->m_remoteIP.c_str(), p->m_remotePort);
+						string s = getNowStr() + " disconnect inactive connection " + p->m_remoteIP + to_string(p->m_remotePort);
+						printf(s.c_str());
 					}
 				}
 

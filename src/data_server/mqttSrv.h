@@ -25,7 +25,7 @@ public:
 	~MqttClt();
 
 	struct mg_mgr mgr;  
-	struct mg_connection* c;
+	struct mg_connection* m_cltConn;
 
 	bool run(MASTER_SRV_CONF conf);
 	void stop();
@@ -46,6 +46,7 @@ public:
 	bool m_bStop;
 	TIME m_lastConnectTime;
 	string m_lastSubTopics;
+	int m_socket;
 };
 
 class MqttSrv

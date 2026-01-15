@@ -1433,11 +1433,12 @@ bool ioDev::handleDevRpcCall(json& jReq, RPC_RESP& rpcResp)
 
 	bool sync = jId != nullptr ? true : false;
 	TIME tStart; tStart.setNow();
-	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s,rpcId=%s,sync=%d",
+	LOG("[TDSP路由转发]客户端->设备,ioAddr=%s,method=%s,rpcId=%s,sync=%d,req=%s",
 		getIOAddrStr().c_str(), 
 		method.c_str(),
 		jId.dump().c_str(),
-		sync?1:0);
+		sync?1:0,
+		jReq.dump().c_str());
 	ioDev* pIoDev = this;
 	if (pIoDev->pIOSession == nullptr && pIoDev->m_addrType != DEV_ADDR_MODE::udpServer)
 	{

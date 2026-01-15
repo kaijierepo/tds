@@ -391,23 +391,21 @@ bool project::openStream(string tag, string pushTo)
 	pmp->m_isOpenningStream = true;
 
 	// 如果拉流地址变更，先关闭旧流
-	if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl) {
+	if (pmp->m_mpStatus.m_pullingSrcUrl != pmp->m_mediaUrl && pmp->m_mpStatus.m_pullingSrcUrl != "") {
 		LOG("[流媒体] 监测到媒体源配置变更，先关闭拉流，当前拉流地址:%s, 配置地址:%s",
 			pmp->m_mpStatus.m_pullingSrcUrl.c_str(), pmp->m_mediaUrl.c_str());
-		pmp->stopStreamPull(tag);
-		// 同时也要停止可能存在的 RTSPRelay
+
 		closeStream(tag);
 	}
 
 	bool ret = false;
 	if (m_enableZLM) {
-		// ========== 使用 ZLMediaKit (原逻辑) ==========
-		bool retPull = pmp->startStreamPull();
+		bool retPull = pmp->startStreamPull();   //zlm  addStreamProxy
 		bool pushRet = false;
 		if (pushTo != "") {
 			if (retPull) {
 				timeopt::sleepMilli(500);
-				pushRet = pmp->startStreamPush(pushTo);
+				pushRet = pmp->startStreamPush(pushTo);  //zlm  addStreamPusherProxy
 				LOG("[流媒体] 向上级服务推流（ZLM模式），url=%s", pushTo.c_str());
 				ret = pushRet;
 			}
@@ -417,7 +415,6 @@ bool project::openStream(string tag, string pushTo)
 		}
 	}
 	else {
-		// ========== 使用内置 RTSPRelay (新逻辑) ==========
 		// 1. 检查是否已有 relay 在运行
 		{
 			std::lock_guard<std::mutex> lock(m_relayMutex);
@@ -476,35 +473,33 @@ bool project::openStream(string tag, string pushTo)
 
 bool project::closeStream(string tag)
 {
-	MP* pmp = prj.GetMPByTag(tag, "zh");
-	if (pmp) {
-		// 先尝试关闭 ZLM 流
-		pmp->stopStreamPush();
-		pmp->stopStreamPull(tag);
+	if (m_enableZLM) {
+		MP* pmp = prj.GetMPByTag(tag, "zh");
+		if (pmp) {
+			pmp->stopStreamPush();
+			pmp->stopStreamPull(tag);
+		}
 	}
+	else {
+		// 再尝试关闭 RTSPRelay
+		std::unique_ptr<RTSPRelay> relayToStop;
+		{
+			std::lock_guard<std::mutex> lock(m_relayMutex);
+			auto it = m_mapRtspRelays.find(tag);
+			if (it != m_mapRtspRelays.end()) {
+				relayToStop = std::move(it->second);
+				m_mapRtspRelays.erase(it);
+				LOG("[流媒体] 正在停止 RTSPRelay for tag: %s", tag.c_str());
+			}
+		}
 
-	// 再尝试关闭 RTSPRelay
-	std::unique_ptr<RTSPRelay> relayToStop;
-	{
-		std::lock_guard<std::mutex> lock(m_relayMutex);
-		auto it = m_mapRtspRelays.find(tag);
-		if (it != m_mapRtspRelays.end()) {
-			relayToStop = std::move(it->second);
-			m_mapRtspRelays.erase(it);
-			LOG("[流媒体] 正在停止 RTSPRelay for tag: %s", tag.c_str());
+		// 在锁外停止 relay，避免潜在死锁
+		if (relayToStop) {
+			relayToStop->stop();
+			LOG("[流媒体] RTSPRelay 已停止 for tag: %s", tag.c_str());
 		}
 	}
 
-	// 在锁外停止 relay，避免潜在死锁
-	if (relayToStop) {
-		relayToStop->stop();
-		LOG("[流媒体] RTSPRelay 已停止 for tag: %s", tag.c_str());
-	}
-
-	if (!pmp) {
-		LOG("[流媒体] 请求的位号不存在, tag=" + tag);
-		return false;
-	}
 	return true;
 }
 

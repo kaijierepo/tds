@@ -3658,6 +3658,7 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 	yyjson_val* yytdsSession = yyjson_obj_get(jReq, "tdsSession");
 	yyjson_val* yyioAddr = yyjson_obj_get(jReq, "ioAddr");
 	yyjson_val* yytag = yyjson_obj_get(jReq, "tag");
+	yyjson_val* yyChildTds = yyjson_obj_get(jReq, "childTds");
 
 	if (yytdsSession) {//使用tdsSession进行io透传
 		string tdsSession = yyjson_get_str(yytdsSession);
@@ -3805,21 +3806,24 @@ bool rpcHandler::handleRpcRoute(yyjson_val* jReq, RPC_RESP& rpcResp,std::shared_
 			return true;
 		}*/
 	}
-	//else if (jReq.contains("childTds"))
-	//{
-	//	jReq.erase("user");
-	//	jReq.erase("token");
-	//	pSession->route_childTds = jReq["childTds"];
-	//	ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
-	//	if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
-	//	{
-	//		pIoDev->handleDevRpcCall(jReq, rpcResp, pSession);
-	//	}
-	//	else {
-	//		rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的 TDS下级服务 设备");
-	//	}
-	//	return true;
-	//}
+	else if (yyChildTds)
+	{
+		string s = yyjson_val_write(jReq,0,nullptr);
+		json jReq = json::parse(s);
+		jReq.erase("user");
+		jReq.erase("token");
+		jReq.erase("childTds");
+		pSession->route_childTds = yyjson_get_str(yyChildTds);
+		ioDev* pIoDev = ioSrv.getIODevByTag(pSession->route_childTds);
+		if (pIoDev && pIoDev->m_devSubType == TDSP_SUB_TYPE::childTds)
+		{
+			pIoDev->handleDevRpcCall(jReq, rpcResp);
+		}
+		else {
+			rpcResp.error = makeRPCError(RPC_ERROR_CODE::IO_devNotFound, "未找到与该位号绑定的 TDS下级服务 设备");
+		}
+		return true;
+	}
 	return false;
 }
 

@@ -960,7 +960,8 @@ void ioDev_tdsp::call(string method, json params, json sessionParams, json& resu
 	string ioAddr = getIOAddrStr();
 
 	if (m_devSubType == TDSP_SUB_TYPE::childTds) {
-		req["childTds"] = ioAddr;
+		//格式与主服务作为rpc客户端请求子服务保持一致
+		req.erase("childTds");
 	}
 	else {
 		req["ioAddr"] = ioAddr;

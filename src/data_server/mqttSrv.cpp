@@ -135,8 +135,8 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
     else if (ev == MG_EV_CLOSE) {
         MqttClt* pDev = (MqttClt*)c->fn_data;
         pDev->m_bConnectting = false;
-        LOG("[MQTT-DS] disconnected,%s:%d", pDev->m_conf.ip.c_str(),pDev->m_conf.port);
         if (pDev->m_bConnected) {
+            LOG("[MQTT-DS] disconnected,%s:%d", pDev->m_conf.ip.c_str(), pDev->m_conf.port);
             pDev->m_bConnected = 0;
         }
     }
@@ -165,7 +165,6 @@ static void mqtt_fn(struct mg_connection* c, int ev, void* ev_data) {
         }
     }
     else if (ev == MG_EV_POLL) {
-
     }
 }
 
@@ -175,7 +174,7 @@ void thread_mqtt_client_comm(void* p)
     pDev->m_bThreadRunning = true;
 
     mg_mgr& mgr = pDev->mgr;  
-    mg_connection*& c = pDev->c;
+    mg_connection*& c = pDev->m_cltConn;
 
     //mg_log_set(MG_LL_VERBOSE);
     mg_mgr_init(&mgr);  
@@ -200,12 +199,15 @@ void thread_mqtt_client_comm(void* p)
     }
 	pDev->m_bConnectting = true;
 
-    for (;;) {
-        mg_mgr_poll(&mgr, 500);  
-        if (pDev->m_bStop) {
-            break;
+    while (!pDev->m_bStop) {
+        while (pDev->m_bConnected) {
+            mg_mgr_poll(&mgr, 500);
         }
-        if (pDev->m_bConnected == false && pDev->m_bConnectting == false &&
+
+        timeopt::sleepMilli(100);
+
+        if (pDev->m_bConnected == false && 
+            pDev->m_bConnectting == false &&
             timeopt::calcTimePassMilliSecond(pDev->m_lastConnectTime) > 5000) 
         {
             c = mg_mqtt_connect(&mgr, server.c_str(), &opts, mqtt_fn, pDev);
@@ -297,15 +299,17 @@ void MqttClt::mqttPublish(string topic, string data)
     //string s = topic + "\n\n" + data;
     //mg_wakeup(&mgr, c->id, s.c_str(), (int)s.length());  // Respond to parent
 
-    struct mg_mqtt_opts opts = { 0 };
-    opts.topic = mg_str(topic.c_str());
-    opts.message = mg_str(data.c_str());
-    opts.user = mg_str(m_conf.user.c_str());
-    opts.pass = mg_str(m_conf.pwd.c_str());
-    opts.qos = m_conf.qos;        
-    opts.retain = 0;  
+    if (m_bConnected) {
+        struct mg_mqtt_opts opts = { 0 };
+        opts.topic = mg_str(topic.c_str());
+        opts.message = mg_str(data.c_str());
+        opts.user = mg_str(m_conf.user.c_str());
+        opts.pass = mg_str(m_conf.pwd.c_str());
+        opts.qos = m_conf.qos;
+        opts.retain = 0;
 
-    mg_mqtt_pub(c, &opts);
+        mg_mqtt_pub(m_cltConn, &opts);
+    }
 }
 
 void MqttClt::onRecvMqttData(string topic, string data)

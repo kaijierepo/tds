@@ -1394,7 +1394,7 @@ bool ioServer::runAsCloud() {
 	int mbPort    = tds->conf->getInt("mbPort",    664);
 	int iq60Port  = tds->conf->getInt("iq60Port",  663);
 	int adpPort   = tds->conf->getInt("adpPort",   662); //adaptor接入端口
-	int jepPort   = tds->conf->getInt("jepPort",   6011);
+	int jepPort   = tds->conf->getInt("jepPort",   0); //5011
 
 	m_mapPort2DevType[tdspPort]  = DEV_TYPE_tdsp;
 	m_mapPort2DevType[mbPort]    = DEV_TYPE_rs485_gateway;

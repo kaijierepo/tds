@@ -754,7 +754,7 @@ bool TDS_imp::run(string cmdline) {
 	ssc.masterTdsAddrs  = tds->conf->getStr("masterTds", "");
 	ssc.childTdsIP      = tds->conf->getStr("childTdsIP", "");
 	ssc.tcpSrvPort      = tds->conf->getInt("tcpPort", 670);
-	ssc.udpSrvPort      = tds->conf->getInt("udpPort", 666);
+	ssc.udpSrvPort      = tds->conf->getInt("udpPort", 0);
 	ssc.tcpKeepAliveSec = tds->conf->tcpKeepAliveDS;
 	ssc.tcpClientRegPkt = rpcSrv.getChildTdsRegPkt();
 
