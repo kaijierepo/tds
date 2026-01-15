@@ -415,38 +415,38 @@ void ioDev_onvif::DoCycleTask() {
 									string strIndex = "";
 									db.saveImage(tag, dbt, (char*)imageBuff.c_str(), imageBuff.size(), info, strIndex);
 
-									//发中心端
-									auto mutDoc = yyjson_mut_doc_new(nullptr);
-									auto mutRoot = yyjson_mut_obj(mutDoc);
+								//发中心端
+								auto mutDoc = yyjson_mut_doc_new(nullptr);
+								auto mutRoot = yyjson_mut_obj(mutDoc);
 
-									yyjson_mut_doc_set_root(mutDoc, mutRoot);
+								yyjson_mut_doc_set_root(mutDoc, mutRoot);
 
-									yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
-									yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
-									yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
+								yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "jsonrpc", "2.0");
+								yyjson_mut_obj_add_strcpy(mutDoc, mutRoot, "method", "db.saveImage");
+								yyjson_mut_obj_add_int(mutDoc, mutRoot, "id", 1);
 
-									auto paramsObj = yyjson_mut_obj(mutDoc);
-									yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
+								auto paramsObj = yyjson_mut_obj(mutDoc);
+								yyjson_mut_obj_add_val(mutDoc, mutRoot, "params", paramsObj);
 
-									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
-									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
-									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
+								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "tag", tag.c_str());
+								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "time", time.toStr().c_str());
+								yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "data", imgBase64.c_str());
 
-									if (!info.empty()) {
-										yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
-									}
-
-									char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
-									if (writeResult) {
-										string s = writeResult;
-										s += "\n\n";
-										sockSrv.sendToAllSessions(s);
-
-										free(writeResult);
-									}
-
-									yyjson_mut_doc_free(mutDoc);
+								if (!info.empty()) {
+									yyjson_mut_obj_add_strcpy(mutDoc, paramsObj, "info", info.c_str());
 								}
+
+								char* writeResult = yyjson_mut_write(mutDoc, 0, 0);
+								if (writeResult) {
+									string s = writeResult;
+									s += "\n\n";
+									sockSrv.sendToAllSessions(s);
+
+									free(writeResult);
+								}
+
+								yyjson_mut_doc_free(mutDoc);
+							}
 							}
 							else {
 								LOG("onvif pmp not found");

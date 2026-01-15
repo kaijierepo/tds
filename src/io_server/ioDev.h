@@ -359,6 +359,7 @@ public:
 	//// iodev hierachy tree management
 	virtual ioDev* getIODev(string ioAddr, bool bChn = false, bool ignorePort = false, string addrType = ""); //是否启用中文地址拼音模式查找
 	ioDev* getIODevByNodeID(string nodeID);
+	ioChannel* getChanByNodeID(string nodeID);
 	ioDev* getIODevByTag(string tag);
 	ioDev* getIODevByIP(string ip);
 	ioDev* getIODevByIPPort(string ipport);

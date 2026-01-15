@@ -1234,6 +1234,17 @@ void ioServer::rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION 
 	rpcResp.result = "\"ok\"";
 }
 
+void ioServer::rpc_enableChan(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+	string sNodeId = params["nodeID"].get<string>();
+	bool bFinded = false;
+	ioDev* p = getIODevByNodeID(sNodeId);
+}
+
+void ioServer::rpc_disableChan(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion)
+{
+}
+
 //中文ioAddr查找模式bChn
 ioDev* ioServer::getIODev(string ioAddr, bool bChn, bool ignorePort, string addrType)
 {

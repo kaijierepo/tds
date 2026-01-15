@@ -146,6 +146,8 @@ public:
 	void rpc_stopDevUpgradeProc(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_getChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 	void rpc_setChanTemplate(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_enableChan(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
+	void rpc_disableChan(json& params, RPC_RESP& rpcResp, RPC_SESSION sesion);
 
 	//设备上下线
 	void handleDevOnlineAsyn(string ioAddr, std::shared_ptr<TDS_SESSION> tdsSession);

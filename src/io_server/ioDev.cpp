@@ -1607,6 +1607,31 @@ ioDev* ioDev::getIODevByNodeID(string nodeID)
 	return pD;
 }
 
+ioChannel* ioDev::getChanByNodeID(string nodeID)
+{
+	DEV_CONF_LOCK_SHARED(this);
+	ioDev* pD = nullptr;
+
+	for (int i = 0; i < m_channels.size(); i++) {
+		ioChannel* p = m_channels[i];
+		if (p->m_confNodeId == nodeID)
+		{
+			return p;
+		}
+	}
+
+	for (int i = 0; i < m_vecChildDev.size(); i++)
+	{
+		ioDev* p = m_vecChildDev[i];
+		ioChannel* ptmp = p->getChanByNodeID(nodeID);
+		if(ptmp){
+			return ptmp;
+		}
+	}
+
+	return nullptr;
+}
+
 bool ioDev::deleteIODevByNodeID(string nodeID)
 {
 	bool ret = false;
