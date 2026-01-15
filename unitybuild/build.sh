@@ -44,7 +44,7 @@ cpp_flags="\
 -fpermissive \
 "
 
-linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic"
+linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
 
 # ===================== 2. 定义增量编译函数（核心新增）=====================
 # 函数：判断是否需要编译 C 文件（源文件比目标文件新，或目标文件不存在）
