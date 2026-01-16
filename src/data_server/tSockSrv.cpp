@@ -146,7 +146,7 @@ bool tSockSrv::run(SOCK_SRV_CONF& conf)
 
 			pTcpClt->m_keepAliveTimeout = m_conf.tcpKeepAliveSec;
 			pTcpClt->run(this, addr, m_conf.childTdsIP);
-			m_tcpClt_ParentTds[pTcpClt] = pTcpClt;
+			m_tcpClt_ParentTds.push_back(pTcpClt);
 		}
 	}
 

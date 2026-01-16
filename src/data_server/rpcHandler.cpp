@@ -1069,6 +1069,26 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 
 	}
+	else if (method == "getSockSrvStatus") {
+		rpcResp.result = "{"
+			"\"parentTdsClient\":[";
+
+		for (int i = 0; i < sockSrv.m_tcpClt_ParentTds.size();i++) {
+			tcpClt* clt = sockSrv.m_tcpClt_ParentTds[i];
+			rpcResp.result +=
+				"{"
+					"\"remoteIP\":\"" + clt->m_remoteIP + "\","
+					"\"remotePort\":" + to_string(clt->m_remotePort) + ","
+					"\"lastConnTime\":\"" + clt->lastConnTime + "\","
+				    "\"connected\":" + string(clt->m_bConn?"true":"false") +
+				"}";
+			if (i < sockSrv.m_tcpClt_ParentTds.size() - 1) {
+				rpcResp.result += ",";
+			}
+		}
+
+		rpcResp.result += "]}";
+	}
 	else if (method == "getSessionBuff")
 	{
 		string remoteAddr = params["remoteAddr"].get<string>();
