@@ -16,6 +16,8 @@ std::vector<tcpClt*> m_vecTCPIOCPClient;
 #include <netdb.h>
 #endif
 
+#include "logger.h"
+
 namespace tcpClient {
 	TIME str2time(const std::string& s) {
 		TIME t;
@@ -230,6 +232,7 @@ void ConnectThread(void* lpParam) {
 				p->lastConnTime = getNowStr();
 				p->m_isConnectting = enTcpCltConnectStatus::CONNECT_SOON;
 
+				LOG("tcpClt try reconnect to " + p->m_remoteIP + ":" + to_string(p->m_remotePort));
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
