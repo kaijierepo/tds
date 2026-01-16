@@ -135,7 +135,7 @@ void ThreadDownloadVedio(void* lpParam)
 		LeaveCriticalSection(&pDev->m_csEqp);
 
 		if (!pDev->m_bDownloadVedioing) break;
-		Sleep(100);
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 }
 

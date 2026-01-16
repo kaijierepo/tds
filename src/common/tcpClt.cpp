@@ -330,11 +330,7 @@ void tcpClt::stop()
 	m_bRun = false; 
 	DisConnect();  
 	while (1) {
-#ifdef _WIN32
-		Sleep(1);
-#else
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#endif
 		if (!m_bConnThreadRunning && !m_bRecvThreadRunning)
 			break;
 	}

@@ -123,7 +123,7 @@ void deleteImp(void *ptr)
 			//statis to existed statis info
 			if (infoBuff.used) {
 				while (!infoBuff.dataSetted){
-					Sleep(0);
+					std::this_thread::sleep_for(std::chrono::milliseconds(0));
 				}
 				if (memcmp(infoBuff.stack, callStack, 10) == 0) {
 					infoBuff.allocCount--;
@@ -241,7 +241,7 @@ void MemDiag::parseStdFromTraceRec(int parseTime) {
 void MemDiag::parseStdFromStatisRec() {
 	bool lastStatus = enableMemDiag;
 	enableMemDiag = false;
-	Sleep(50);
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	// 初始化符号引擎 与SymCleanup必须在同一个线程当中执行
 	SymInitialize(g_process, NULL, TRUE);
 
@@ -319,7 +319,7 @@ void MemDiag::clearStatis() {
 void MemDiag::clearTrace() {
 	bool lastStatus = enableMemDiag;
 	enableMemDiag = false;
-	Sleep(50);
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	//for (int i = 0; i < MAX_TRACE_COUNT; i++) {
 	//	g_memAllocInfo[i].used = false;
 	//}
@@ -623,7 +623,7 @@ void MemDiag::rpc_memDiag_getStatis_fromStatis(yyjson_val* params, string& rlt, 
 void MemDiag::rpc_memDiag_getStatis_fromTrace(yyjson_val* params, string& rlt, string& err, MapSnapshot *mapSnapshot) {
 	bool lastStatus = enableMemDiag;
 	enableMemDiag = false;
-	Sleep(50);
+	std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	// 初始化符号引擎 与SymCleanup必须在同一个线程当中执行
 	SymInitialize(g_process, NULL, TRUE);
 

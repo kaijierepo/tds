@@ -170,11 +170,9 @@ void tcpSrv::stop()
 {
 	m_stop = true;
 	while (1) {
-#ifdef _WIN32
-		Sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		if (!m_bStarted)
 			break;
-#endif
 	}
 	m_stop = false;
 }

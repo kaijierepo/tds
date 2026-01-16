@@ -132,7 +132,7 @@ time_t StatusServer::CalcTimePassSecond(SYSTEMTIME lastTime)
 
 void StatusServer::cycleAcq_srvStatus() {
 	while (1) {
-		Sleep(300);
+		std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
 		if (CalcTimePassSecond(m_stLastAcqTime) > m_logInterval){
 			if (processHandle == INVALID_HANDLE_VALUE){

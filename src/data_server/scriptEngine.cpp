@@ -1575,11 +1575,7 @@ void thread_reloadFile(string filePath) {
     }
 
     //收到通知时，文件可能还在写入，因此等待一点时间再读取
-#ifdef _WIN32
-    Sleep(1000);
-#else
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-#endif
 
     string file_data;
     if (DB_FS::readFile(filePath, file_data)) {
@@ -1888,11 +1884,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
             evalPromise = JS_Eval(ctx, m_script.c_str(), m_script.length(), "main.js", JS_EVAL_TYPE_MODULE);
 
             while (JS_PromiseState(ctx, evalPromise) == JS_PROMISE_PENDING) {
-#ifdef _WIN32
-                Sleep(1);
-#else
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
-#endif
             }
 
             int state = JS_PromiseState(ctx, evalPromise);
