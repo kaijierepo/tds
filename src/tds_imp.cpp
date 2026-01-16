@@ -595,6 +595,7 @@ bool TDS_imp::run(string cmdline) {
 	}
 #endif
 
+	logger.m_bEnable = tds->conf->getInt("enableLog", 1) == 1 ? true : false;
 	logger.m_strLogDir = tds->conf->logPath;
 	logger.setLogLevel(tdsConf.logLevel);
 

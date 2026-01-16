@@ -445,7 +445,7 @@ string Clogger::logInternal(string info, bool writeToFile)
 	cout << info;
 	printf("\r\n");
 
-	if (writeToFile && m_strLogDir!="") {
+	if (writeToFile && m_strLogDir!="" && m_bEnable) {
 		//create log path
 		std::lock_guard<mutex> lockGuard(m_lock);
 	
