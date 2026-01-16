@@ -1080,7 +1080,8 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 					"\"remoteIP\":\"" + clt->m_remoteIP + "\","
 					"\"remotePort\":" + to_string(clt->m_remotePort) + ","
 					"\"lastConnTime\":\"" + clt->lastConnTime + "\","
-				    "\"connected\":" + string(clt->m_bConn?"true":"false") +
+				    "\"connected\":" + string(clt->m_bConn?"true":"false") + ","
+					"\"connectting\":" + string(clt->m_isConnectting == enTcpCltConnectStatus::CONNECTING ? "true" : "false") +
 				"}";
 			if (i < sockSrv.m_tcpClt_ParentTds.size() - 1) {
 				rpcResp.result += ",";
