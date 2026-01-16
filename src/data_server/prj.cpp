@@ -376,6 +376,7 @@ void project::getAllVarExpScript()
 
 bool project::openStream(string tag, string pushTo)
 {
+	m_enableZLM = tds->conf->getInt("enableZLM", 0) != 0;
 	MP* pmp = prj.GetMPByTag(tag, "zh");
 	if (!pmp) {
 		LOG("[流媒体] 请求的位号不存在, tag=" + tag);
