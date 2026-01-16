@@ -242,8 +242,8 @@ g++ $common_flags $cpp_flags $obj_files -o ../out/tds/tds $linkerflags
 echo "开始体积优化（仅移除调试信息和压缩）..."
 strip --strip-all ../out/tds/tds
 
-echo "使用 upx 压缩可执行文件（仅压缩，不修改代码）..."
-upx --best --lzma ../out/tds/tds
+#echo "使用 upx 压缩可执行文件（仅压缩，不修改代码）..."
+#upx --best --lzma ../out/tds/tds
 
 echo "编译完成！可执行文件路径: $(pwd)/../out/tds/tds"
 echo "优化后文件大小: $(du -h ../out/tds/tds | awk '{print $1}')"

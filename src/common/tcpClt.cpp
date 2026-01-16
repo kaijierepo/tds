@@ -200,11 +200,7 @@ bool connectThreadRunning = false;
 
 void ConnectThread(void* lpParam) {
 	while (1) {
-#ifdef _WIN32
-		Sleep(500);
-#else
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
-#endif
 
 		for (map<tcpClt*, tcpClt*>::iterator  i = mapAllTcpClt.begin(); i != mapAllTcpClt.end(); i++) {
 			tcpClt* p = i->first;
@@ -232,7 +228,6 @@ void ConnectThread(void* lpParam) {
 				p->lastConnTime = getNowStr();
 				p->m_isConnectting = enTcpCltConnectStatus::CONNECT_SOON;
 
-				LOG("tcpClt try reconnect to " + p->m_remoteIP + ":" + to_string(p->m_remotePort));
 				thread t(AsynConnectThread, p);
 				t.detach();
 			}
