@@ -939,7 +939,7 @@ public:
 	bool Open(string strDBUrl, fp_getTagsByTagSelector f = nullptr,string name="");
 	bool Open_gbk(string strDBUrl, fp_getTagsByTagSelector f = nullptr, string name = "");
 	bool setBufferTTL(string bufferTTL);
-	bool m_enableDB;
+	bool m_enableDB = true;
 	DB_FMT m_dbFmt;
 	bool m_bEnableFsBuff;
 	FS_BUFF m_FsBuff;
