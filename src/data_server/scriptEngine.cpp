@@ -1578,7 +1578,7 @@ void thread_reloadFile(string filePath) {
 #ifdef _WIN32
     Sleep(1000);
 #else
-    sleep(1000);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 #endif
 
     string file_data;
@@ -1711,7 +1711,8 @@ void thread_watchScriptFile(string scriptPath) {
         ssize_t len = read(inotify_fd, buffer, BUFFER_SIZE);
         if (len == -1) {
             if (errno == EAGAIN) {
-                sleep(100); // 无事件时休眠100ms，避免空轮询
+                // 无事件时休眠100ms，避免空轮询
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 continue;
             }
             LOG("脚本目录read inotify 失败，错误码: %d", GetLastError());
@@ -1890,7 +1891,7 @@ bool ScriptEngine::runScript(SCRIPT_INFO& si, SCRIPT_RUN_INFO& sri) {
 #ifdef _WIN32
                 Sleep(1);
 #else
-                sleep(1);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif
             }
 

@@ -254,7 +254,7 @@ void udpServer::stop()
 #ifdef _WIN32
 		Sleep(1);
 #else
-		sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif
 		if (!m_recvThreadRunning) {
 			break;

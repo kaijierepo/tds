@@ -203,7 +203,7 @@ void ConnectThread(void* lpParam) {
 #ifdef _WIN32
 		Sleep(500);
 #else
-		sleep(500);
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 #endif
 
 		for (map<tcpClt*, tcpClt*>::iterator  i = mapAllTcpClt.begin(); i != mapAllTcpClt.end(); i++) {
@@ -338,7 +338,7 @@ void tcpClt::stop()
 #ifdef _WIN32
 		Sleep(1);
 #else
-		sleep(1);
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 #endif
 		if (!m_bConnThreadRunning && !m_bRecvThreadRunning)
 			break;
