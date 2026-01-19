@@ -1506,9 +1506,11 @@ bool MP::startStreamPull() {
 	if (data.status != 0) {
 		LOG("[ZLMediaServer] Status:%d,Response Body:%s", data.status, data.body.c_str());
 
-		json jResp = json::parse(data.body);
-		json jData = jResp["data"];
-		if (jData != nullptr && jData["key"] != nullptr) {
+		if (data.body.find("data")!= string::npos && data.body.find("key") != string::npos) {
+			m_mpStatus.m_pullingSrcUrl = m_mediaUrl;
+			return true;
+		}
+		else if(data.body.find("already exist") != string::npos) {
 			m_mpStatus.m_pullingSrcUrl = m_mediaUrl;
 			return true;
 		}
