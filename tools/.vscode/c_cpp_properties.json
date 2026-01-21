@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/src/common",
+                "${workspaceFolder}/src/data_server",
+                "${workspaceFolder}/src/io_server",
+                "${workspaceFolder}/src/func_module",
+                "${workspaceFolder}/tdspro",
+                "${workspaceFolder}/tdspro/io_server",
+                "${workspaceFolder}/tdspro/func_module",
+                "${workspaceFolder}/src/3rdparty/jerryscript/include/",
+                "${workspaceFolder}/src/3rdparty/openssl/include/"
+            ],
+            "defines": [],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}
