@@ -19,6 +19,8 @@ public:
 	~ioDev_onvif();
 
 	bool run() override;
+	void doImgAcq();
+	void doImgAnalyse(ioChannel* pC);
 	void DoCycleTask() override;
 
 	bool toJson(yyjson_mut_val* conf, yyjson_mut_doc* doc, DEV_QUERIER querier) override;
@@ -57,11 +59,11 @@ public:
 
 	int  m_curPZTChan;
 	TIME m_lastPTZPollTime; //上一次预置位巡检时间
-	int  m_ptzPollInterval; //0
+	int  m_ptzMoveWait; 
 	int m_chanPollInterval;
 
 	bool m_bPaused;
 	TIME m_pauseResumeTime;
 	int  m_pauseResumeInterval;  //0
-
+	bool m_bImgAcqThreadRunning;
 };
