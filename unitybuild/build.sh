@@ -1,53 +1,69 @@
 #!/bin/bash
 set -e
 
-# ===================== 0. 核心配置项（仅保留清理开关）=====================
-# 清理开关：yes=编译前清理 .o 文件，no=不清理（保留增量编译）
-ENABLE_CLEAN="yes"               # 仅需修改这个值即可控制清理逻辑
+# ===================== 0. 核心配置项 =====================
+ENABLE_CLEAN="no"
+TARGET_ARCH="armv7l"  # 仅保留架构配置，静态链接逻辑整合到架构分支中
 
-# 架构配置（不变）
-TARGET_ARCH="armv7l"             # 目标架构：x86_64/armv7l/aarch64
+# 全局变量初始化
 CC=""
 CXX=""
 arch_flags=""
 strip_tool="strip"
+SYSROOT=""
+TOOLCHAIN_PATH=""
+linkerflags=""  
 
-# ===================== 1. 清理逻辑（仅依赖 ENABLE_CLEAN）=====================
+# ===================== 1. 清理逻辑 =====================
 if [ "$ENABLE_CLEAN" = "yes" ]; then
     echo "🧹 开始清理原有 .o 目标文件..."
-    # 切换到源码目录并清理
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
-    # 递归删除所有 .o 文件（核心清理命令）
     find . -name "*.o" -type f -delete
     echo "✅ 清理完成！已删除所有 .o 文件"
 else
     echo "ℹ️  清理功能已禁用（ENABLE_CLEAN=no），保留原有 .o 文件"
-    # 切换到源码目录（不清理，仅保证目录正确）
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
 fi
 
-# ===================== 2. 架构配置逻辑（完全不变）=====================
+# ===================== 2. 架构配置逻辑（整合静态链接）=====================
 case "$TARGET_ARCH" in
     x86_64)
         CC="gcc"
         CXX="g++"
         arch_flags="-m64 -mtune=generic -O2"
         strip_tool="strip"
-        echo "✅ 配置 x86_64 编译环境"
+        # x86_64 默认动态链接
+        linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
+        echo "✅ 配置 x86_64 编译环境（动态链接）"
         ;;
     armv7l)
-        CC="arm-linux-gnueabihf-gcc"
-        CXX="arm-linux-gnueabihf-g++"
+        # Bootlin 工具链的真实路径
+        TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
+        CC="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-gcc"
+        CXX="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-g++"
         arch_flags="-march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4"
-        strip_tool="arm-linux-gnueabihf-strip"
-        echo "✅ 配置 ARM 32位 (armv7l) 编译环境"
+        strip_tool="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-strip"
+        SYSROOT="${TOOLCHAIN_PATH}/arm-buildroot-linux-gnueabihf/sysroot"
+        # armv7l 固定使用混合链接（业务库静态，系统库动态）
+        linkerflags="\
+        -Wl,--start-group \
+        -Wl,-Bstatic \
+        -lcrypto -lssl -lkrb5 -lk5crypto -lcom_err \
+        -Wl,-Bdynamic \
+        -lpthread -lutil -lrt -latomic -ldl -lc \
+        -Wl,--end-group \
+        -static-libgcc -static-libstdc++ \
+        "
+        echo "✅ 配置 ARM 32位 (armv7l) 编译环境（GLIBC 2.31，混合链接）"
         ;;
     aarch64)
         CC="aarch64-linux-gnu-gcc"
         CXX="aarch64-linux-gnu-g++"
         arch_flags="-march=armv8-a -mtune=cortex-a53"
         strip_tool="aarch64-linux-gnu-strip"
-        echo "✅ 配置 ARM 64位 (aarch64) 编译环境"
+        # aarch64 默认动态链接
+        linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
+        echo "✅ 配置 ARM 64位 (aarch64) 编译环境（动态链接）"
         ;;
     *)
         echo "❌ 错误：不支持的架构 $TARGET_ARCH，仅支持 x86_64/armv7l/aarch64"
@@ -55,21 +71,9 @@ case "$TARGET_ARCH" in
         ;;
 esac
 
-# 检查编译器是否安装（不变）
+# 检查编译器是否安装
 if ! command -v $CC &> /dev/null; then
     echo "❌ 错误：未找到 $CC 编译器，请先安装！"
-    echo "📦 安装命令（Ubuntu/Debian）："
-    case "$TARGET_ARCH" in
-        x86_64)
-            echo "  sudo apt install gcc g++"
-            ;;
-        armv7l)
-            echo "  sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf"
-            ;;
-        aarch64)
-            echo "  sudo apt install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu"
-            ;;
-    esac
     exit 1
 fi
 
@@ -77,9 +81,16 @@ echo "📌 当前编译目录: $(pwd)"
 echo "🎯 目标架构: $TARGET_ARCH"
 echo "🔧 编译工具链: $CC / $CXX"
 
-# ===================== 3. 编译参数（不变）=====================
-common_flags="\
-$arch_flags \
+# ===================== 3. 编译参数（模块化重构）=====================
+# --------------------------
+# 3.1 基础架构参数（必选）
+# --------------------------
+common_flags="$arch_flags"
+
+# --------------------------
+# 3.2 功能宏定义（业务开关）
+# --------------------------
+common_flags+=" \
 -DENABLE_ALM_SRV_HOOK_SCRIPT \
 -DENABLE_QJS \
 -DENABLE_QJS_HTTP \
@@ -92,8 +103,20 @@ $arch_flags \
 -DMG_ENABLE_POLL \
 -D_HAS_STD_BYTE=0 \
 -DCONF_FILE \
+"
+
+# --------------------------
+# 3.3 系统兼容宏定义（POSIX/GNU）
+# --------------------------
+common_flags+=" \
 -D_POSIX_C_SOURCE=200809L \
 -D_GNU_SOURCE \
+"
+
+# --------------------------
+# 3.4 头文件包含路径（按模块分类）
+# --------------------------
+common_flags+=" \
 -I ./ \
 -I ./include \
 -I ./script \
@@ -103,10 +126,27 @@ $arch_flags \
 -I ./func_module \
 -I ./mongoose \
 -I ./video \
+"
+
+# --------------------------
+# 3.5 编译特性参数（通用）
+# --------------------------
+common_flags+=" \
 -fPIC \
 -pthread \
 "
 
+# --------------------------
+# 3.6 跨编译专用配置（仅armv7l）
+# --------------------------
+if [ "$TARGET_ARCH" = "armv7l" ]; then
+    common_flags+=" --sysroot=${SYSROOT} "
+    echo "ℹ️  已为 armv7l 添加 sysroot 路径: ${SYSROOT}"
+fi
+
+# --------------------------
+# 3.7 语言标准参数（分离C/C++）
+# --------------------------
 c_flags="\
 -std=gnu99 \
 "
@@ -114,11 +154,10 @@ c_flags="\
 cpp_flags="\
 -std=gnu++17 \
 -fpermissive \
+-Wno-psabi \
 "
 
-linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
-
-# ===================== 4. 增量编译函数（不变）=====================
+# ===================== 4. 增量编译函数 =====================
 compile_c_if_needed() {
     local src_file=$1
     local obj_file=$2
@@ -141,7 +180,7 @@ compile_cpp_if_needed() {
     fi
 }
 
-# ===================== 5. 编译所有文件（不变）=====================
+# ===================== 5. 编译所有文件 =====================
 # --- 编译 C 文件 ---
 compile_c_if_needed ./common/base64.c ./common/base64.o
 compile_c_if_needed ./common/miniz.c ./common/miniz.o
@@ -224,7 +263,7 @@ compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
 compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
 compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
 
-# ===================== 6. 链接生成可执行文件（不变）=====================
+# ===================== 6. 链接生成可执行文件 =====================
 obj_files="\
 ./common/base64.o \
 ./common/miniz.o \
