@@ -434,6 +434,9 @@ void ioDev_onvif::doImgAnalyse(ioChannel* pC) {
 }
 
 void ioDev_onvif::DoCycleTask() {
+	if(m_bRunning == false)
+		return;
+
 	if (timeopt::CalcTimePassSecond(m_stLastAcqTime) > m_fAcqInterval) {
 		if (!m_bWorkingThreadRunning) {
 			timeopt::now(&m_stLastAcqTime);
