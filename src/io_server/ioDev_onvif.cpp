@@ -233,7 +233,13 @@ void ioDev_onvif::doImgAcq() {
 	logger.logInternal(s, false);
 
 	//等待摄像机移动到位
-	timeopt::sleepMilli(m_ptzMoveWait * 1000);
+	TIME tsw; tsw.setNow();
+	while(timeopt::CalcTimePassMilliSecond(tsw) < m_ptzMoveWait * 1000) {
+		if(!m_bRunning) { //热组态时，对象先stop快速推出，对象可能会重建或删除。
+			return;
+		}
+		timeopt::sleepMilli(1);
+	}
 
 	//拍照
 	onvif_getSnapshotUri();
