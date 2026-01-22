@@ -1,20 +1,9 @@
 #!/bin/bash
 set -e
 
-# ===================== 0. 核心配置项 =====================
-ENABLE_CLEAN="no"
-TARGET_ARCH="armv7l"  # 仅保留架构配置，静态链接逻辑整合到架构分支中
-
-# 全局变量初始化
-CC=""
-CXX=""
-arch_flags=""
-strip_tool="strip"
-SYSROOT=""
-TOOLCHAIN_PATH=""
-linkerflags=""  
-
 # ===================== 1. 清理逻辑 =====================
+ENABLE_CLEAN="yes"
+
 if [ "$ENABLE_CLEAN" = "yes" ]; then
     echo "🧹 开始清理原有 .o 目标文件..."
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
@@ -25,51 +14,25 @@ else
     cd ../src || { echo "❌ 错误：无法进入源码目录 ../src"; exit 1; }
 fi
 
-# ===================== 2. 架构配置逻辑（整合静态链接）=====================
-case "$TARGET_ARCH" in
-    x86_64)
-        CC="gcc"
-        CXX="g++"
-        arch_flags="-m64 -mtune=generic -O2"
-        strip_tool="strip"
-        # x86_64 默认动态链接
-        linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
-        echo "✅ 配置 x86_64 编译环境（动态链接）"
-        ;;
-    armv7l)
-        # Bootlin 工具链的真实路径
-        TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
-        CC="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-gcc"
-        CXX="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-g++"
-        arch_flags="-march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4"
-        strip_tool="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-strip"
-        SYSROOT="${TOOLCHAIN_PATH}/arm-buildroot-linux-gnueabihf/sysroot"
-        # armv7l 固定使用混合链接（业务库静态，系统库动态）
-        linkerflags="\
-        -Wl,--start-group \
-        -Wl,-Bstatic \
-        -lcrypto -lssl -lkrb5 -lk5crypto -lcom_err \
-        -Wl,-Bdynamic \
-        -lpthread -lutil -lrt -latomic -ldl -lc \
-        -Wl,--end-group \
-        -static-libgcc -static-libstdc++ \
-        "
-        echo "✅ 配置 ARM 32位 (armv7l) 编译环境（GLIBC 2.31，混合链接）"
-        ;;
-    aarch64)
-        CC="aarch64-linux-gnu-gcc"
-        CXX="aarch64-linux-gnu-g++"
-        arch_flags="-march=armv8-a -mtune=cortex-a53"
-        strip_tool="aarch64-linux-gnu-strip"
-        # aarch64 默认动态链接
-        linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -latomic -ldl"
-        echo "✅ 配置 ARM 64位 (aarch64) 编译环境（动态链接）"
-        ;;
-    *)
-        echo "❌ 错误：不支持的架构 $TARGET_ARCH，仅支持 x86_64/armv7l/aarch64"
-        exit 1
-        ;;
-esac
+# ===================== 2. 固定 armv7l 架构配置（整合静态链接）=====================
+# 直接配置 armv7l 编译环境，删除其他架构分支
+TOOLCHAIN_PATH="/opt/armv7-eabihf--glibc--stable-2020.08-1"
+CC="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-gcc"
+CXX="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-g++"
+arch_flags="-march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4"
+strip_tool="${TOOLCHAIN_PATH}/bin/arm-buildroot-linux-gnueabihf-strip"
+SYSROOT="${TOOLCHAIN_PATH}/arm-buildroot-linux-gnueabihf/sysroot"
+# armv7l 固定使用混合链接（业务库静态，系统库动态）
+linkerflags="\
+-Wl,--start-group \
+-Wl,-Bstatic \
+-lcrypto -lssl -lkrb5 -lk5crypto -lcom_err \
+-Wl,-Bdynamic \
+-lpthread -lutil -lrt -latomic -ldl -lc \
+-Wl,--end-group \
+-static-libgcc -static-libstdc++ \
+"
+echo "✅ 配置 ARM 32位 (armv7l) 编译环境（GLIBC 2.31，混合链接）"
 
 # 检查编译器是否安装
 if ! command -v $CC &> /dev/null; then
@@ -78,7 +41,7 @@ if ! command -v $CC &> /dev/null; then
 fi
 
 echo "📌 当前编译目录: $(pwd)"
-echo "🎯 目标架构: $TARGET_ARCH"
+echo "🎯 目标架构: armv7l（固定）"
 echo "🔧 编译工具链: $CC / $CXX"
 
 # ===================== 3. 编译参数（模块化重构）=====================
@@ -137,12 +100,10 @@ common_flags+=" \
 "
 
 # --------------------------
-# 3.6 跨编译专用配置（仅armv7l）
+# 3.6 跨编译专用配置（armv7l 固定启用）
 # --------------------------
-if [ "$TARGET_ARCH" = "armv7l" ]; then
-    common_flags+=" --sysroot=${SYSROOT} "
-    echo "ℹ️  已为 armv7l 添加 sysroot 路径: ${SYSROOT}"
-fi
+common_flags+=" --sysroot=${SYSROOT} "
+echo "ℹ️  已为 armv7l 添加 sysroot 路径: ${SYSROOT}"
 
 # --------------------------
 # 3.7 语言标准参数（分离C/C++）
@@ -345,8 +306,8 @@ obj_files="\
 ./video/rtspRelay.o \
 "
 
-output_file="../out/tds/tds_$TARGET_ARCH"
-echo "🔗 链接生成 $TARGET_ARCH 可执行文件: $output_file"
+output_file="../out/tds/tds_armv7l"  # 固定输出文件名
+echo "🔗 链接生成 armv7l 可执行文件: $output_file"
 $CXX $common_flags $cpp_flags $obj_files -o $output_file $linkerflags
 
 echo "⚡ 开始体积优化..."
@@ -355,5 +316,5 @@ $strip_tool --strip-all $output_file
 echo "✅ 验证编译结果（文件架构）："
 file $output_file
 
-echo "🎉 编译完成！$TARGET_ARCH 版本可执行文件路径: $output_file"
+echo "🎉 编译完成！armv7l 版本可执行文件路径: $output_file"
 echo "📦 优化后文件大小: $(du -h $output_file | awk '{print $1}')"

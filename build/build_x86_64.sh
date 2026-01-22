@@ -7,6 +7,17 @@ cd ../src
 echo "当前编译目录: $(pwd)"
 echo "目标架构: x86_64"
 
+# ===================== 清理逻辑 =====================
+ENABLE_CLEAN="no"
+
+if [ "$ENABLE_CLEAN" = "yes" ]; then
+    echo "🧹 开始清理原有 .o 目标文件..."
+    find . -name "*.o" -type f -delete
+    echo "✅ 清理完成！已删除所有 .o 文件"
+else
+    echo "ℹ️  清理功能已禁用（ENABLE_CLEAN=no），保留原有 .o 文件"
+fi
+
 # ===================== 1. 定义x86_64专用编译参数 =====================
 common_flags="\
 -DENABLE_ALM_SRV_HOOK_SCRIPT \
@@ -34,7 +45,6 @@ common_flags="\
 -I ./video \
 -fPIC \
 -pthread \
--march=x86-64 -mtune=generic -O2 \
 "
 
 # x86_64架构专用优化参数[5](@ref)
@@ -65,10 +75,8 @@ compile_c_if_needed() {
     if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
         echo "编译 C 文件: $src_file → $obj_file"
         gcc $common_flags $c_flags -c "$src_file" -o "$obj_file"
-        return 0
     else
         echo "跳过 C 文件（未修改）: $src_file"
-        return 1
     fi
 }
 
@@ -78,10 +86,8 @@ compile_cpp_if_needed() {
     if [ ! -f "$obj_file" ] || [ "$src_file" -nt "$obj_file" ]; then
         echo "编译 C++ 文件: $src_file → $obj_file"
         g++ $common_flags $cpp_flags -c "$src_file" -o "$obj_file"
-        return 0
     else
         echo "跳过 C++ 文件（未修改）: $src_file"
-        return 1
     fi
 }
 
@@ -115,7 +121,66 @@ compile_cpp_if_needed ./pch.cpp ./pch.o
 compile_cpp_if_needed ./tds_imp.cpp ./tds_imp.o
 compile_cpp_if_needed ./test.cpp ./test.o
 compile_cpp_if_needed ./common/common.cpp ./common/common.o
-# ...（此处包含您所有的C++文件，与原始列表一致）
+compile_cpp_if_needed ./common/dtwrecoge.cpp ./common/dtwrecoge.o
+compile_cpp_if_needed ./common/kvIni.cpp ./common/kvIni.o
+compile_cpp_if_needed ./common/logger.cpp ./common/logger.o
+compile_cpp_if_needed ./common/md5.cpp ./common/md5.o
+compile_cpp_if_needed ./common/memDiag.cpp ./common/memDiag.o
+compile_cpp_if_needed ./common/secure.cpp ./common/secure.o
+compile_cpp_if_needed ./common/sha1.cpp ./common/sha1.o
+compile_cpp_if_needed ./common/sha256.cpp ./common/sha256.o
+compile_cpp_if_needed ./common/stream2pkt.cpp ./common/stream2pkt.o
+compile_cpp_if_needed ./common/tcpClt.cpp ./common/tcpClt.o
+compile_cpp_if_needed ./common/tcpSrv.cpp ./common/tcpSrv.o
+compile_cpp_if_needed ./common/udpSrv.cpp ./common/udpSrv.o
+compile_cpp_if_needed ./data_server/as_interface.cpp ./data_server/as_interface.o
+compile_cpp_if_needed ./data_server/mp.cpp ./data_server/mp.o
+compile_cpp_if_needed ./data_server/mqttSrv.cpp ./data_server/mqttSrv.o
+compile_cpp_if_needed ./data_server/obj.cpp ./data_server/obj.o
+compile_cpp_if_needed ./data_server/prj.cpp ./data_server/prj.o
+compile_cpp_if_needed ./data_server/rpcHandler.cpp ./data_server/rpcHandler.o
+compile_cpp_if_needed ./data_server/rpcHandler_common.cpp ./data_server/rpcHandler_common.o
+compile_cpp_if_needed ./data_server/scriptEngine.cpp ./data_server/scriptEngine.o
+compile_cpp_if_needed ./data_server/scriptFunc.cpp ./data_server/scriptFunc.o
+compile_cpp_if_needed ./data_server/scriptManager.cpp ./data_server/scriptManager.o
+compile_cpp_if_needed ./data_server/tAlmSrv.cpp ./data_server/tAlmSrv.o
+compile_cpp_if_needed ./data_server/tdb.cpp ./data_server/tdb.o
+compile_cpp_if_needed ./data_server/tdsSession.cpp ./data_server/tdsSession.o
+compile_cpp_if_needed ./data_server/tSockSrv.cpp ./data_server/tSockSrv.o
+compile_cpp_if_needed ./data_server/webSrv.cpp ./data_server/webSrv.o
+compile_cpp_if_needed ./func_module/csvTable.cpp ./func_module/csvTable.o
+compile_cpp_if_needed ./func_module/dumpCatch.cpp ./func_module/dumpCatch.o
+compile_cpp_if_needed ./func_module/fileUploadSrv.cpp ./func_module/fileUploadSrv.o
+compile_cpp_if_needed ./func_module/logServer.cpp ./func_module/logServer.o
+compile_cpp_if_needed ./func_module/statusServer.cpp ./func_module/statusServer.o
+compile_cpp_if_needed ./func_module/taskServer.cpp ./func_module/taskServer.o
+compile_cpp_if_needed ./func_module/tdsConf.cpp ./func_module/tdsConf.o
+compile_cpp_if_needed ./func_module/userMng.cpp ./func_module/userMng.o
+compile_cpp_if_needed ./include/tds.cpp ./include/tds.o
+compile_cpp_if_needed ./io_server/ioChan.cpp ./io_server/ioChan.o
+compile_cpp_if_needed ./io_server/ioDev.cpp ./io_server/ioDev.o
+compile_cpp_if_needed ./io_server/ioDev_bacnet.cpp ./io_server/ioDev_bacnet.o
+compile_cpp_if_needed ./io_server/ioDev_custom.cpp ./io_server/ioDev_custom.o
+compile_cpp_if_needed ./io_server/ioDev_dcqk.cpp ./io_server/ioDev_dcqk.o
+compile_cpp_if_needed ./io_server/ioDev_dlt645_2007.cpp ./io_server/ioDev_dlt645_2007.o
+compile_cpp_if_needed ./io_server/ioDev_eip.cpp ./io_server/ioDev_eip.o
+compile_cpp_if_needed ./io_server/ioDev_iq60.cpp ./io_server/ioDev_iq60.o
+compile_cpp_if_needed ./io_server/ioDev_modbusRtu.cpp ./io_server/ioDev_modbusRtu.o
+compile_cpp_if_needed ./io_server/ioDev_modbusSlave.cpp ./io_server/ioDev_modbusSlave.o
+compile_cpp_if_needed ./io_server/ioDev_modbusTcp.cpp ./io_server/ioDev_modbusTcp.o
+compile_cpp_if_needed ./io_server/ioDev_mqtt.cpp ./io_server/ioDev_mqtt.o
+compile_cpp_if_needed ./io_server/ioDev_onvif.cpp ./io_server/ioDev_onvif.o
+compile_cpp_if_needed ./io_server/ioDev_srvStatus.cpp ./io_server/ioDev_srvStatus.o
+compile_cpp_if_needed ./io_server/ioDev_tdsp.cpp ./io_server/ioDev_tdsp.o
+compile_cpp_if_needed ./io_server/ioDev_visca.cpp ./io_server/ioDev_visca.o
+compile_cpp_if_needed ./io_server/ioGW_localSerial.cpp ./io_server/ioGW_localSerial.o
+compile_cpp_if_needed ./io_server/ioGW_rs485ToNet.cpp ./io_server/ioGW_rs485ToNet.o
+compile_cpp_if_needed ./io_server/ioSrv.cpp ./io_server/ioSrv.o
+compile_cpp_if_needed ./io_server/proto_common.cpp ./io_server/proto_common.o
+compile_cpp_if_needed ./io_server/proto_eip.cpp ./io_server/proto_eip.o
+compile_cpp_if_needed ./io_server/proto_tb3386.cpp ./io_server/proto_tb3386.o
+compile_cpp_if_needed ./io_server/proto_ws.cpp ./io_server/proto_ws.o
+compile_cpp_if_needed ./video/rtspRelay.cpp ./video/rtspRelay.o
 
 # ===================== 7. 链接生成可执行文件 =====================
 echo "链接生成x86_64可执行文件..."
@@ -202,18 +267,20 @@ obj_files="\
 ./video/rtspRelay.o \
 "
 
+output_file="../out/tds/tds_x86_64"
+
 # 链接生成可执行文件
-g++ $common_flags $cpp_flags $obj_files -o ../out/tds_x86_64 $linkerflags
+g++ $common_flags $cpp_flags $obj_files -o $output_file $linkerflags
 
 # ===================== 8. 优化和验证 =====================
 echo "开始体积优化..."
-strip --strip-all ../out/tds_x86_64
+strip --strip-all $output_file
 
 # 验证文件架构
 echo "验证生成文件架构:"
-file ../out/tds_x86_64
+file .$output_file
 
 echo "编译完成！"
-echo "可执行文件: $(pwd)/../out/tds_x86_64"
-echo "文件大小: $(du -h ../out/tds_x86_64 | awk '{print $1}')"
-echo "架构信息: $(file ../out/tds_x86_64 | cut -d: -f2-)"
+echo "可执行文件: $(pwd)/$output_file"
+echo "文件大小: $(du -h $output_file | awk '{print $1}')"
+echo "架构信息: $(file $output_file | cut -d: -f2-)"
