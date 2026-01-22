@@ -494,7 +494,7 @@
       <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
     </Link>
     <PreBuildEvent>
-      <Command>../unitybuild/preBuild.bat</Command>
+      <Command>../build/preBuild.bat</Command>
     </PreBuildEvent>
     <PostBuildEvent>
       <Command>
