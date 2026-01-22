@@ -145,6 +145,37 @@ public:
 
         return true;
     }
+
+	bool GetCumulativeIOCounters(
+		ULONGLONG& readOps,
+		ULONGLONG& writeOps,
+		ULONGLONG& otherOps,
+		ULONGLONG& readBytes,
+		ULONGLONG& writeBytes,
+		ULONGLONG& otherBytes)
+	{
+		readOps = writeOps = otherOps = 0;
+		readBytes = writeBytes = otherBytes = 0;
+
+		//HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, processId);
+		HANDLE hProc = GetCurrentProcess();
+
+		IO_COUNTERS ioCounters;
+		BOOL ok = GetProcessIoCounters(hProc, &ioCounters);
+
+		if (!ok) {
+			return false;
+		}
+
+		readOps = ioCounters.ReadOperationCount;
+		writeOps = ioCounters.WriteOperationCount;
+		otherOps = ioCounters.OtherOperationCount;
+		readBytes = ioCounters.ReadTransferCount;
+		writeBytes = ioCounters.WriteTransferCount;
+		otherBytes = ioCounters.OtherTransferCount;
+
+		return true;
+	}
 };
 
 

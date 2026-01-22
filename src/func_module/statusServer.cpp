@@ -168,7 +168,11 @@ void StatusServer::cycleAcq_srvStatus() {
 			string sDiskIo;
 			try {
 				double readBytes = 0, writeBytes = 0, totalBytes = 0;
-				if (m_diskIOMonitor && m_diskIOMonitor->GetIOStats(readBytes, writeBytes, totalBytes)) {
+				ULONGLONG readOps = 0, writeOps = 0, otherOps = 0;
+				ULONGLONG readBytesCumu = 0, writeBytesCumu = 0, otherBytesCumu = 0;
+				if (m_diskIOMonitor 
+					&& m_diskIOMonitor->GetIOStats(readBytes, writeBytes, totalBytes)
+					&& m_diskIOMonitor->GetCumulativeIOCounters(readOps, writeOps, otherOps, readBytesCumu, writeBytesCumu, otherBytesCumu)) {
 					//	KB/s
 					readBytes /= 1024.0;
 					writeBytes /= 1024.0;
@@ -181,6 +185,11 @@ void StatusServer::cycleAcq_srvStatus() {
 					yyjson_mut_obj_add_real(mut_doc, mut_root, "readBytes", readBytes);
 					yyjson_mut_obj_add_real(mut_doc, mut_root, "writeBytes", writeBytes);
 					yyjson_mut_obj_add_real(mut_doc, mut_root, "totalBytes", totalBytes);
+
+					yyjson_mut_obj_add_int(mut_doc, mut_root, "readOps", readOps);
+					yyjson_mut_obj_add_int(mut_doc, mut_root, "writeOps", writeOps);
+					yyjson_mut_obj_add_int(mut_doc, mut_root, "readBytesCumu", readBytesCumu);
+					yyjson_mut_obj_add_int(mut_doc, mut_root, "writeBytesCumu", writeBytesCumu);
 
 					char* temp = yyjson_mut_write(mut_doc, 0, 0);
 					yyjson_mut_doc_free(mut_doc);
