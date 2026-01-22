@@ -1,4 +1,5 @@
 #!/bin/bash
+ls -l ./build_x86_64.sh
 set -e
 
 # 切换到源码目录
