@@ -21,6 +21,7 @@ stages:
         gccVersion: '9.4'
         commands:
           - 'cd build '
+          - 'chmod 777 ./build_x86_64.sh'
           - ./build_x86_64.sh
         artifacts:
           - name: BUILD_ARTIFACT
