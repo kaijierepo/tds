@@ -20,7 +20,7 @@ stages:
         displayName: GCC 构建
         gccVersion: '9.4'
         commands:
-          - 'cd build '
+          - 'cd /home/tds/build '
           - 'chmod 777 ./build_x86_64.sh'
           - ./build_x86_64.sh
         artifacts:
