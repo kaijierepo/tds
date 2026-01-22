@@ -1,7 +1,7 @@
 #include "diskCleaner.h"
 #include <chrono>
 #include <thread>
-#include "logger.h";
+#include "logger.h"
 #include "kvIni.h"
 
 
