@@ -1,6 +1,6 @@
 version: '1.0'
 name: pipeline-20260122
-displayName: pipeline-20260122
+displayName: x86_64
 triggers:
   trigger: manual
   push:
