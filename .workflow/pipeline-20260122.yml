@@ -21,7 +21,7 @@ stages:
         gccVersion: '9.4'
         commands:
           - 'cd build '
-          - ./build.sh
+          - ./build_x86_64.sh
         artifacts:
           - name: BUILD_ARTIFACT
             path:
