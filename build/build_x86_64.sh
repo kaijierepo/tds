@@ -202,17 +202,17 @@ obj_files="\
 "
 
 # 链接生成可执行文件
-g++ $common_flags $cpp_flags $obj_files -o ../out/tds/tds_x86_64 $linkerflags
+g++ $common_flags $cpp_flags $obj_files -o ../out/tds_x86_64 $linkerflags
 
 # ===================== 8. 优化和验证 =====================
 echo "开始体积优化..."
-strip --strip-all ../out/tds/tds_x86_64
+strip --strip-all ../out/tds_x86_64
 
 # 验证文件架构
 echo "验证生成文件架构:"
-file ../out/tds/tds_x86_64
+file ../out/tds_x86_64
 
 echo "编译完成！"
-echo "可执行文件: $(pwd)/../out/tds/tds_x86_64"
-echo "文件大小: $(du -h ../out/tds/tds_x86_64 | awk '{print $1}')"
-echo "架构信息: $(file ../out/tds/tds_x86_64 | cut -d: -f2-)"
+echo "可执行文件: $(pwd)/../out/tds_x86_64"
+echo "文件大小: $(du -h ../out/tds_x86_64 | awk '{print $1}')"
+echo "架构信息: $(file ../out/tds_x86_64 | cut -d: -f2-)"
