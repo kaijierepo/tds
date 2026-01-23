@@ -4,9 +4,9 @@ set -e
 
 # ===================== 核心控制变量（关键配置）=====================
 # 编译模式：debug（保留调试信息） / release（剥离调试信息）
-BUILD_MODE="debug"
+BUILD_MODE="release"
 # 是否清理原有.o文件
-ENABLE_CLEAN="no"
+ENABLE_CLEAN="yes"
 
 # 切换到源码目录
 cd ../src
@@ -76,7 +76,7 @@ cpp_flags="\
 -fpermissive \
 "
 
-linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -ldl"
+linkerflags="-lpthread -lcrypto -lkrb5 -lssl -lutil -lrt -ldl -static-libgcc -static-libstdc++"
 
 # ===================== 2. 架构检测函数 =====================
 check_architecture() {
