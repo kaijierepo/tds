@@ -573,6 +573,7 @@ struct PLUGIN_INFO {
 class i_tds {
 public:
 	virtual string getVersion() = 0;
+	virtual string getServerID() = 0;
 	virtual string getSvnVersion() = 0;
 	virtual bool setEncodeing(string encoding) = 0; // utf8 or gb2312
 	virtual bool run(string cmdline = "") = 0;

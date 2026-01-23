@@ -1065,6 +1065,10 @@ bool rpcHandler::handleMethodCall_debugFunc(string method, json& params, RPC_RES
 	{
 		rpc_getApiSessionStatus(params, rpcResp, session);
 	}
+	else if(method == "getServerID" || method == "getsid")
+	{ 
+        rpcResp.result = "\"" + tds->getServerID() + "\"";
+	}
 	else if (method == "captureFrame")
 	{
 

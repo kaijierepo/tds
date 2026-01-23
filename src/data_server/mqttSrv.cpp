@@ -52,19 +52,26 @@ bool MqttSrv::run() {
                         conf.port = str::toInt(yyjson_get_str(yy_port));
                     }
                     yyjson_val* yy_user = yyjson_obj_get(item, "user");
-                    conf.user = yyjson_get_str(yy_user);
+                    if(yy_user)
+                        conf.user = yyjson_get_str(yy_user);
                     yyjson_val* yy_pwd = yyjson_obj_get(item, "pwd");
-                    conf.pwd = yyjson_get_str(yy_pwd);
+                    if(yy_pwd)
+                        conf.pwd = yyjson_get_str(yy_pwd);
                     yyjson_val* yy_qos = yyjson_obj_get(item, "qos");
-                    conf.qos = yyjson_get_int(yy_qos);
+                    if(yy_qos)
+                        conf.qos = yyjson_get_int(yy_qos);
                     yyjson_val* yy_subTopics = yyjson_obj_get(item, "subTopics");
-                    conf.subTopics = yyjson_get_str(yy_subTopics);
+                    if (yy_subTopics)
+                        conf.subTopics = yyjson_get_str(yy_subTopics);
                     yyjson_val* yy_recvScript = yyjson_obj_get(item, "recvScript");
-                    conf.recvScript = yyjson_get_str(yy_recvScript);
+                    if(yy_recvScript)
+                        conf.recvScript = yyjson_get_str(yy_recvScript);
 					yyjson_val* yy_sendScript = yyjson_obj_get(item, "sendScript");
-                    conf.sendScript = yyjson_get_str(yy_sendScript);
+                    if(yy_sendScript)
+                        conf.sendScript = yyjson_get_str(yy_sendScript);
                     yyjson_val* yy_cycleScript = yyjson_obj_get(item, "cycleScript");
-                    conf.cycleScript = yyjson_get_str(yy_cycleScript);
+                    if(yy_cycleScript)
+                        conf.cycleScript = yyjson_get_str(yy_cycleScript);
                     yyjson_val* yy_intervel = yyjson_obj_get(item, "intervel");
                     if (yyjson_is_int(yy_intervel))
                         conf.intervel = yyjson_get_int(yy_intervel);
@@ -72,6 +79,7 @@ bool MqttSrv::run() {
                         conf.intervel = str::toInt(yyjson_get_str(yy_intervel));
                     }
                     yyjson_val* yy_clientID = yyjson_obj_get(item, "clientID");
+                    if(yy_clientID)
                     conf.clientID = yyjson_get_str(yy_clientID);
 					m_masterDSConf.push_back(conf);
 				}
