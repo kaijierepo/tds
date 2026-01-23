@@ -7256,9 +7256,7 @@ bool TDB::fileExist(string pszFileName)
 	if (std::filesystem::exists(filePath)) {
 		return true;
 	}
-	else if (std::filesystem::is_directory(filePath)) {
-		return true;
-	}
+
 	return  false;
 #endif
 }
@@ -7273,12 +7271,10 @@ bool TDB::folderExist(string pszFileName)
 	//std::filesystem::path filePath = charCodec::tds_to_utf16(pszFileName); //for windows
 	std::filesystem::path filePath = pszFileName;
 
-	if (std::filesystem::exists(filePath)) {
+	if (std::filesystem::is_directory(filePath)) {
 		return true;
 	}
-	else if (std::filesystem::is_directory(filePath)) {
-		return true;
-	}
+
 	return  false;
 #endif
 }
